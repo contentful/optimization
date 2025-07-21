@@ -1,0 +1,35 @@
+{
+  "private": true,
+  "name": "@contentful/optimization",
+  "description": "Contentful Optimization SDK Suite",
+  "license": "MIT",
+  "scripts": {
+    "build": "pnpm -r build",
+    "clean": "pnpm -r --parallel clean",
+    "docs:generate": "typedoc",
+    "format": "prettier . --check",
+    "format:fix": "prettier . --write",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test:unit": "pnpm -r test:unit",
+    "typecheck": "pnpm -r typecheck",
+    "version:node": "node -v",
+    "version:pnpm": "pnpm -v"
+  },
+  "engines": {
+    "node": ">=16.20.0"
+  },
+  "packageManager": "pnpm@10.13.1+sha512.37ebf1a5c7a30d5fabe0c5df44ee8da4c965ca0c5af3dbab28c3a1681b70a256218d05c81c9c0dcf767ef6b8551eb5b960042b9ed4300c59242336377e01cfad",
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "eslint": "catalog:",
+    "eslint-config-love": "catalog:",
+    "eslint-config-prettier": "catalog:",
+    "jiti": "catalog:",
+    "prettier": "catalog:",
+    "typedoc": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  }
+}

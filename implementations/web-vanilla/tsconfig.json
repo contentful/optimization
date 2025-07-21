@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "./",
+    "module": "CommonJS",
+    "outDir": "./dist"
+  },
+  "include": ["./*.ts", "e2e/**/*", "e2e/**/*.json", "src/**/*", "src/**/*.json"]
+}

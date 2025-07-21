@@ -1,0 +1,32 @@
+{
+  "name": "@contentful/optimization-web",
+  "version": "1.0.0",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "browser": "dist/index.browser.js",
+  "types": "dist/index.d.ts",
+  "publishConfig": {
+    "directory": "dist"
+  },
+  "scripts": {
+    "build": "pnpm clean; rollup -c && tsc -p ./tsconfig.build.json",
+    "clean": "rimraf ./dist ./coverage tsconfig.tsbuildinfo",
+    "dev": "pnpm clean; rollup -c -w",
+    "test:unit": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@contentful/optimization-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@config/rollup-config": "workspace:*",
+    "@vitest/coverage-v8": "catalog:",
+    "rimraf": "catalog:",
+    "rollup": "catalog:",
+    "tslib": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

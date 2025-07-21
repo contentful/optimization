@@ -1,0 +1,15 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "Multiplatform SDK Monorepo Example",
+  "includeVersion": false,
+  "headings": {
+    "document": false,
+    "readme": false
+  },
+  "entryPointStrategy": "packages",
+  "entryPoints": ["platforms/javascript/*"],
+  "packageOptions": {
+    "includeVersion": true,
+    "entryPoints": ["src/index.ts"]
+  }
+}

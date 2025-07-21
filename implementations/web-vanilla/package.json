@@ -1,0 +1,27 @@
+{
+  "private": true,
+  "name": "@implementation/web-vanilla",
+  "description": "Reference implementation for simple HTML projects",
+  "license": "MIT",
+  "scripts": {
+    "build": "pnpm clean; pnpm build:sdk",
+    "build:sdk": "pnpm --filter @contentful/optimization-web build && cp -r ../../platforms/javascript/web/dist ./public/dist",
+    "clean": "rimraf ./public/dist ./coverage ./playwright-report ./test-results tsconfig.tsbuildinfo",
+    "serve": "pnpm build && docker-compose up -d",
+    "serve:stop": "docker-compose down",
+    "test:e2e": "pnpm serve && playwright test; E2E_RESULT=$?; pnpm serve:stop; exit $E2E_RESULT",
+    "test:e2e:codegen": "playwright codegen",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:ui": "pnpm build && playwright test --ui",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@contentful/optimization-web": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "catalog:",
+    "@types/node": "catalog:",
+    "rimraf": "catalog:",
+    "typescript": "catalog:"
+  }
+}
