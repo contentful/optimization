@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "./",
+    "module": "CommonJS",
+    "noEmit": false,
+    "outDir": "./dist"
+  },
+  "include": ["./e2e", "./src"]
+}

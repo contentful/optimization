@@ -1,0 +1,15 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Test SDK page</title>
+    <script src="/dist/index.browser.js"></script>
+  </head>
+  <body>
+    <script>
+      var web = new window.sdk()
+      var p = document.createElement('p')
+      p.innerText = web.name
+      document.body.appendChild(p)
+    </script>
+  </body>
+</html>
