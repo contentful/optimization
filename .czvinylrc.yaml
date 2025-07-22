@@ -1,0 +1,3 @@
+bodyFormat: "{body}\n\n[[{ticket_id}](https://contentful.atlassian.net/browse/{ticket_id})]"
+headerFormat: '{emoji} {type}({scope}): {subject}'
+skipScope: false
