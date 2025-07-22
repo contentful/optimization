@@ -1,0 +1,53 @@
+#!/bin/bash
+
+set -e
+
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT"
+
+# Parse refs from pre-push hook input (see Husky docs or Git docs)
+# Input: <local ref> <local sha> <remote ref> <remote sha>
+read local_ref local_sha remote_ref remote_sha
+
+# If pushing a new branch (remote_sha is 40 zeroes), diff from nothing
+if [[ "$remote_sha" =~ ^0+$ ]]; then
+  range="$local_sha"
+else
+  range="$remote_sha..$local_sha"
+fi
+
+# List workspaces (relative paths)
+workspaces=$(pnpm ls -r --depth -1 --json | jq -r ".[].path" | sed "s|^$REPO_ROOT/||")
+
+# Get changed files in this push
+changed_files=$(git diff --name-only $range)
+
+# Find changed workspaces with tsconfig.json
+changed_workspaces=()
+for workspace in $workspaces; do
+  if echo "$changed_files" | grep -q "^$workspace/"; then
+    [ -f "$workspace/tsconfig.json" ] && changed_workspaces+=("$workspace")
+  fi
+done
+
+if [ ${#changed_workspaces[@]} -eq 0 ]; then
+  echo "No changed workspaces detected for type checking."
+  exit 0
+fi
+
+echo "Type-checking and unit testing changed workspaces:"
+for workspace in "${changed_workspaces[@]}"; do
+  echo "  - $workspace"
+done
+
+for workspace in "${changed_workspaces[@]}"; do
+  pnpm --filter "./$workspace" exec tsc --noEmit
+done
+
+echo "✔ Type checking complete."
+
+for workspace in "${changed_workspaces[@]}"; do
+  pnpm --filter "./$workspace" test:unit
+done
+
+echo "✔ Unit testing complete."
