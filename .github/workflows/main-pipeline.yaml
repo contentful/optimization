@@ -95,7 +95,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
@@ -134,7 +134,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
