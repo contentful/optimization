@@ -1,10 +1,14 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "baseUrl": "./",
     "module": "CommonJS",
     "noEmit": false,
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "paths": {
+      "@contentful/optimization-core": ["../../platforms/javascript/core/src/index.ts"],
+      "@contentful/optimization-node": ["../../platforms/javascript/node/src/index.ts"]
+    }
   },
   "include": ["./e2e", "./src"]
 }

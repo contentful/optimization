@@ -1,7 +1,7 @@
 packages:
-  - configs/*
   - implementations/*
   - platforms/javascript/*
+  - rollup
 
 catalog:
   '@playwright/test': ^1.54.0

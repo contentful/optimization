@@ -76,33 +76,6 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.0.15)(jiti@2.4.2)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0)
 
-  configs/rollup:
-    dependencies:
-      '@rollup/plugin-commonjs':
-        specifier: ^28.0.6
-        version: 28.0.6(rollup@4.45.1)
-      '@rollup/plugin-node-resolve':
-        specifier: ^16.0.1
-        version: 16.0.1(rollup@4.45.1)
-      '@rollup/plugin-swc':
-        specifier: ^0.4.0
-        version: 0.4.0(@swc/core@1.13.1)(rollup@4.45.1)
-      '@rollup/plugin-terser':
-        specifier: ^0.4.4
-        version: 0.4.4(rollup@4.45.1)
-      '@swc/core':
-        specifier: 'catalog:'
-        version: 1.13.1
-      browserslist:
-        specifier: 'catalog:'
-        version: 4.25.1
-      rollup:
-        specifier: ^4.44.1
-        version: 4.45.1
-      tslib:
-        specifier: 'catalog:'
-        version: 2.8.1
-
   implementations/node:
     dependencies:
       '@contentful/optimization-node':
@@ -169,7 +142,7 @@ importers:
     devDependencies:
       '@config/rollup-config':
         specifier: workspace:*
-        version: link:../../../configs/rollup
+        version: link:../../../rollup
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 3.2.4(vitest@3.2.4(@types/node@24.0.15)(jiti@2.4.2)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0))
@@ -198,7 +171,7 @@ importers:
     devDependencies:
       '@config/rollup-config':
         specifier: workspace:*
-        version: link:../../../configs/rollup
+        version: link:../../../rollup
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 3.2.4(vitest@3.2.4(@types/node@24.0.15)(jiti@2.4.2)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0))
@@ -227,7 +200,7 @@ importers:
     devDependencies:
       '@config/rollup-config':
         specifier: workspace:*
-        version: link:../../../configs/rollup
+        version: link:../../../rollup
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 3.2.4(vitest@3.2.4(@types/node@24.0.15)(jiti@2.4.2)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0))
@@ -247,6 +220,33 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.0.15)(jiti@2.4.2)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.0)
     publishDirectory: dist
+
+  rollup:
+    dependencies:
+      '@rollup/plugin-commonjs':
+        specifier: ^28.0.6
+        version: 28.0.6(rollup@4.45.1)
+      '@rollup/plugin-node-resolve':
+        specifier: ^16.0.1
+        version: 16.0.1(rollup@4.45.1)
+      '@rollup/plugin-swc':
+        specifier: ^0.4.0
+        version: 0.4.0(@swc/core@1.13.1)(rollup@4.45.1)
+      '@rollup/plugin-terser':
+        specifier: ^0.4.4
+        version: 0.4.4(rollup@4.45.1)
+      '@swc/core':
+        specifier: 'catalog:'
+        version: 1.13.1
+      browserslist:
+        specifier: 'catalog:'
+        version: 4.25.1
+      rollup:
+        specifier: ^4.44.1
+        version: 4.45.1
+      tslib:
+        specifier: 'catalog:'
+        version: 2.8.1
 
 packages:
 
