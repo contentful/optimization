@@ -6,15 +6,16 @@
   "scripts": {
     "prepare": "husky",
     "build": "pnpm --filter @contentful/* build",
-    "build:all": "pnpm -r build",
+    "build:implementations": "pnpm --filter @implementation/* build",
     "clean": "pnpm -r --parallel clean",
     "docs:generate": "typedoc",
     "format:check": "prettier . --check",
     "format:fix": "prettier . --check --write",
     "lint:check": "eslint .",
     "lint:fix": "eslint . --fix",
+    "test:e2e": "pnpm --filter @implementation/* test:e2e",
     "test:unit": "pnpm --filter @contentful/* test:unit",
-    "test:unit:all": "pnpm -r test:unit",
+    "test:unit:implementations": "pnpm --filter @implementation/* test:unit",
     "typecheck": "pnpm -r typecheck",
     "version:node": "node -v",
     "version:pnpm": "pnpm -v"

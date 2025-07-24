@@ -4,7 +4,14 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   resolve: {
     alias: {
-      '@contentful/optimization-node': path.resolve(__dirname, '../../platforms/javascript/node/'),
+      '@contentful/optimization-core': path.resolve(
+        __dirname,
+        '../../platforms/javascript/core/src/',
+      ),
+      '@contentful/optimization-node': path.resolve(
+        __dirname,
+        '../../platforms/javascript/node/src/',
+      ),
     },
   },
   test: {
