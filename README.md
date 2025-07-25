@@ -53,3 +53,7 @@ SDKs for platforms that are not Javascript-based may utilize Core within a Javas
 ## Reference Implementations
 
 At least one reference implementation is provided for each of the suite's SDKs. These implementations are primarily intended to be used as documentation and for automated E2E testing. As such, there may be multiple reference implementations to cover various common application architecture possibilities where the differences are significant to the integration of the relevant SDK(s).
+
+## Additional Documentation
+
+Lower-level SDK documentation may be found at [https://contentful.github.io/optimization](https://contentful.github.io/optimization)
