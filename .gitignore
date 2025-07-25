@@ -13,6 +13,7 @@ blob-report
 build
 coverage
 dist
+docs
 node_modules
 pids
 playwright-report
