@@ -1,10 +1,18 @@
-import { Core } from '@contentful/optimization-core'
+import Core from '@contentful/optimization-core'
 
-export default class WebSDK extends Core {
+declare global {
+  interface Window {
+    optimization?: Optimization
+  }
+}
+
+export default class Optimization extends Core {
   constructor() {
-    super({ name: 'WebSDK' })
+    super({ name: 'Optimization' })
 
-    // eslint-disable-next-line no-console -- debug
+    // eslint-disable-next-line no-console -- demo
     console.log(this.name)
+
+    window.optimization ??= this
   }
 }

@@ -6,6 +6,6 @@ describe('GET /', () => {
   it('returns the name of the SDK', async () => {
     const response: Response = await request(app).get('/')
 
-    expect(response.text).toEqual('NodeSDK')
+    expect(response.text).toEqual('Optimization')
   })
 })

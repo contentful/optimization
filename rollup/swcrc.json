@@ -1,6 +1,0 @@
-{
-  "env": {
-    "targets": [">0.3%", "Chrome >= 75", "Edge >= 74", "Firefox >= 73", "Safari >= 13"]
-  },
-  "sourceMaps": true
-}

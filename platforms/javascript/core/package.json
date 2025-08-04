@@ -3,24 +3,42 @@
   "version": "1.0.0",
   "license": "MIT",
   "type": "module",
-  "main": "dist/index.cjs",
-  "module": "dist/index.mjs",
+  "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
   "publishConfig": {
     "directory": "dist"
   },
   "scripts": {
-    "build": "pnpm clean; rollup -c && tsc -p ./tsconfig.build.json",
+    "build": "pnpm clean; pnpm build:cjs && pnpm build:esm",
+    "build:cjs": "tsc -p ./tsconfig.cjs.json && pnpm rename:js:cjs && pnpm rename:dts:cts",
+    "build:esm": "tsc -p ./tsconfig.esm.json",
+    "rename:js:cjs": "find ./dist -type f -name \"*.js\" ! -name \"*.cjs\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js}.cjs\"; done && find ./dist -type f -name \"*.js.map\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js.map}.cjs.map\"; done",
+    "rename:dts:cts": "find ./dist -type f -name \"*.d.ts\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.d.ts}.d.cts\"; done",
     "clean": "rimraf ./dist ./coverage tsconfig.tsbuildinfo",
     "dev": "pnpm clean; rollup -c -w",
     "test:unit": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "p-retry": "^6.2.1",
+    "diary": "^0.4.5",
+    "zod": "^4.0.14"
+  },
   "devDependencies": {
-    "@config/rollup-config": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
     "rimraf": "catalog:",
-    "rollup": "catalog:",
     "tslib": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

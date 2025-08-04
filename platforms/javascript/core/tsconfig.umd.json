@@ -1,0 +1,15 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": "./src",
+    "module": "UMD",
+    "moduleResolution": "Node",
+    "noEmit": false,
+    "outDir": "dist",
+    "resolveJsonModule": false,
+    "rootDir": "./src",
+    "verbatimModuleSyntax": false
+  },
+  "include": ["./src/**/*", "./src/**/*.json"],
+  "exclude": ["./src/**/*.test.*"]
+}

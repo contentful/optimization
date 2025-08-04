@@ -1,10 +1,10 @@
-import { Core } from '@contentful/optimization-core'
+import Core from '@contentful/optimization-core'
 
-export default class NodeSDK extends Core {
+export default class Optimization extends Core {
   constructor() {
-    super({ name: 'NodeSDK' })
+    super({ name: 'Optimization' })
 
-    // eslint-disable-next-line no-console -- debug
+    // eslint-disable-next-line no-console -- demo
     console.log(this.name)
   }
 }

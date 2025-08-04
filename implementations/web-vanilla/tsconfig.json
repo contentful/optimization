@@ -2,12 +2,12 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "baseUrl": "./",
-    "module": "CommonJS",
     "outDir": "./dist",
     "paths": {
       "@contentful/optimization-core": ["../../platforms/javascript/core/src/index.ts"],
       "@contentful/optimization-web": ["../../platforms/javascript/web/src/index.ts"]
-    }
+    },
+    "verbatimModuleSyntax": true
   },
   "include": ["./*.ts", "./e2e", "./src/**/*", "./src/**/*.json"]
 }
