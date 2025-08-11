@@ -1,9 +1,9 @@
-import WebSDK from './'
+import Optimization from './'
 
-describe('WebSDK', () => {
+describe('Optimization', () => {
   it('gives itself a name', () => {
-    const web = new WebSDK()
+    const web = new Optimization()
 
-    expect(web.name).toEqual(WebSDK.name)
+    expect(web.name).toEqual(Optimization.name)
   })
 })

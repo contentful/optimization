@@ -1,9 +1,9 @@
-import NodeSDK from './'
+import Optimization from './'
 
-describe('NodeSDK', () => {
+describe('Optimization', () => {
   it('gives itself a name', () => {
-    const node = new NodeSDK()
+    const node = new Optimization()
 
-    expect(node.name).toEqual(NodeSDK.name)
+    expect(node.name).toEqual(Optimization.name)
   })
 })

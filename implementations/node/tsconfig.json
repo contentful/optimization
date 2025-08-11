@@ -3,12 +3,14 @@
   "compilerOptions": {
     "baseUrl": "./",
     "module": "CommonJS",
+    "moduleResolution": "Node",
     "noEmit": false,
     "outDir": "./dist",
     "paths": {
       "@contentful/optimization-core": ["../../platforms/javascript/core/src/index.ts"],
       "@contentful/optimization-node": ["../../platforms/javascript/node/src/index.ts"]
-    }
+    },
+    "verbatimModuleSyntax": false
   },
   "include": ["./e2e", "./src"]
 }

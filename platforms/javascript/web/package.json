@@ -3,17 +3,25 @@
   "version": "1.0.0",
   "license": "MIT",
   "type": "module",
-  "main": "dist/index.cjs",
-  "module": "dist/index.mjs",
-  "browser": "dist/index.browser.js",
-  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.umd.cjs"
+      }
+    }
+  },
   "publishConfig": {
     "directory": "dist"
   },
   "scripts": {
-    "build": "pnpm clean; rollup -c && tsc -p ./tsconfig.build.json",
+    "build": "vite build && tsc -p ./tsconfig.build.json",
     "clean": "rimraf ./dist ./coverage tsconfig.tsbuildinfo",
-    "dev": "pnpm clean; rollup -c -w",
+    "dev": "vite --host",
     "test:unit": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
   },
@@ -21,12 +29,13 @@
     "@contentful/optimization-core": "workspace:*"
   },
   "devDependencies": {
-    "@config/rollup-config": "workspace:*",
     "@vitest/coverage-v8": "catalog:",
+    "happy-dom": "^18.0.1",
     "rimraf": "catalog:",
-    "rollup": "catalog:",
     "tslib": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vite": "^7.1.0",
+    "vitest": "catalog:",
+    "vite-tsconfig-paths": "5.1.4"
   }
 }
