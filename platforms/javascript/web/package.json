@@ -36,6 +36,7 @@
     "typescript": "catalog:",
     "vite": "^7.1.0",
     "vitest": "catalog:",
-    "vite-tsconfig-paths": "5.1.4"
+    "vite-bundle-analyzer": "^1.2.1",
+    "vite-tsconfig-paths": "^5.1.4"
   }
 }

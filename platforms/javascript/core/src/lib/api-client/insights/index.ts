@@ -1,7 +1,7 @@
 import InsightsApiClient from './InsightsApiClient'
 
-export type * from './dto'
+export type * from './InsightsApiClient'
 
-export * from './dto'
+export * from './InsightsApiClient'
 
 export default InsightsApiClient

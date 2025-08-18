@@ -9,7 +9,7 @@ declare global {
 
 class Optimization extends Core {
   constructor() {
-    super({ name: 'Optimization' })
+    super({ name: 'Optimization', clientId: 'temp' })
 
     // eslint-disable-next-line no-console -- demo
     console.log(this.name)

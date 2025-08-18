@@ -14,14 +14,14 @@ export function createTimeoutFetchMethod({
   onRequestTimeout,
   requestTimeout = DEFAULT_REQUEST_TIMEOUT,
 }: TimeoutFetchMethodOptions = {}): FetchMethod {
-  return async (url: string, init: RequestInit) => {
+  return async (url: string | URL, init: RequestInit) => {
     const controller = new AbortController()
 
     const id = setTimeout(() => {
       if (typeof onRequestTimeout === 'function') {
         onRequestTimeout({ apiName })
       } else {
-        logger.error(new Error(`${apiName} API request timed out.`))
+        logger.error(new Error(`${apiName} API request to "${url}" timed out.`))
       }
 
       controller.abort()

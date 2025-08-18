@@ -1,6 +1,6 @@
 import { createProtectedFetchMethod } from './createProtectedFetchMethod'
 
-export type FetchMethod = (url: string, init: RequestInit) => Promise<Response | undefined>
+export type FetchMethod = (url: string | URL, init: RequestInit) => Promise<Response>
 
 export interface BaseFetchMethodOptions {
   apiName?: string
