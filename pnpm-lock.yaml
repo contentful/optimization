@@ -207,8 +207,11 @@ importers:
       vite:
         specifier: ^7.1.0
         version: 7.1.1(@types/node@24.2.0)(jiti@2.5.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
+      vite-bundle-analyzer:
+        specifier: ^1.2.1
+        version: 1.2.1
       vite-tsconfig-paths:
-        specifier: 5.1.4
+        specifier: ^5.1.4
         version: 5.1.4(typescript@5.9.2)(vite@7.1.1(@types/node@24.2.0)(jiti@2.5.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1))
       vitest:
         specifier: ^3.2.4
@@ -2902,6 +2905,10 @@ packages:
   vary@1.1.2:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
+
+  vite-bundle-analyzer@1.2.1:
+    resolution: {integrity: sha512-dpJMQBnVjieMirpHILmgGsZAWU8fGyqK3ckj6O48wdy3fARlH7Mnz7BfYFUsd3ZdbuXjsYe7t5I/q2zsMOd5ig==}
+    hasBin: true
 
   vite-node@3.2.4:
     resolution: {integrity: sha512-EbKSKh+bh1E1IFxeO0pg1n4dvoOTt0UDiXMd/qn++r98+jPO1xtJilvXldeuQ8giIB5IkpjCgMleHMNEsGH6pg==}
@@ -6024,6 +6031,8 @@ snapshots:
   util-deprecate@1.0.2: {}
 
   vary@1.1.2: {}
+
+  vite-bundle-analyzer@1.2.1: {}
 
   vite-node@3.2.4(@types/node@24.2.0)(jiti@2.5.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1):
     dependencies:

@@ -3,7 +3,7 @@ import InsightsApiClient from './InsightsApiClient'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
 
 describe('InsightsApiClient', () => {
-  const config: ApiConfig = { fetchOptions: {} }
+  const config: ApiConfig = { clientId: 'testId', fetchOptions: {} }
 
   it('should create an instance extending ApiClientBase', () => {
     const client = new InsightsApiClient(config)

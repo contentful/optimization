@@ -23,6 +23,63 @@ export interface RetryFetchMethodOptions extends BaseFetchMethodOptions {
   retries?: number
 }
 
+interface RetryFetchCallbackOptions extends RetryFetchMethodOptions {
+  controller: AbortController
+  init: RequestInit
+  url: string | URL
+}
+
+function createRetryFetchCallback({
+  apiName = 'Optimization',
+  controller,
+  fetchMethod = fetch,
+  init,
+  url,
+}: RetryFetchCallbackOptions) {
+  return async () => {
+    try {
+      const response = await fetchMethod(url, init)
+
+      if (response.status === RETRY_RESPONSE_STATUS) {
+        throw new HttpError(
+          `${apiName} API request to "${url}" failed with status: "[${response.status}] ${response.statusText}".`,
+          RETRY_RESPONSE_STATUS,
+        )
+      }
+
+      if (!response.ok) {
+        controller.abort(
+          new Error(
+            `${apiName} API request to "${url}" failed with status: "[${response.status}] ${
+              response.statusText
+            } - traceparent: ${response.headers.get(
+              'traceparent',
+            )}". This request may not be retried`,
+          ),
+        )
+
+        return
+      }
+
+      logger.debug(`${apiName} API response from "${url}":`, response)
+
+      return response
+    } catch (error) {
+      if (error instanceof HttpError && error.status === RETRY_RESPONSE_STATUS) {
+        throw error
+      }
+
+      controller.abort(
+        error instanceof Error
+          ? error
+          : new Error(
+              `${apiName} API request to "${url}" failed with an unknown error. This request may not be retried.`,
+            ),
+      )
+    }
+  }
+}
+
 export function createRetryFetchMethod({
   apiName = 'Optimization',
   fetchMethod = fetch,
@@ -30,69 +87,35 @@ export function createRetryFetchMethod({
   onFailedAttempt,
   retries = DEFAULT_RETRY_COUNT,
 }: RetryFetchMethodOptions = {}): FetchMethod {
-  return async (url: string, init: RequestInit) => {
+  return async (url: string | URL, init: RequestInit) => {
     const controller = new AbortController()
 
-    return await retry<Response | undefined>(
-      async () => {
-        try {
-          const response = await fetchMethod(url, init)
+    let retryResponse: Response | undefined = undefined
 
-          if (!response) {
-            controller.abort(
-              new Error(
-                `${apiName} API request failed with an unknown error. This request may not be retried.`,
-              ),
-            )
+    try {
+      retryResponse = await retry<Response | undefined>(
+        createRetryFetchCallback({ apiName, controller, fetchMethod, init, url }),
+        {
+          minTimeout: intervalTimeout,
+          onFailedAttempt: (options: FetchMethodCallbackOptions) =>
+            onFailedAttempt?.({ ...options, apiName }),
+          retries,
+          signal: controller.signal,
+        },
+      )
+    } catch (error) {
+      // Abort errors caused by timeouts should not bubble up and be reported by third-party tools (e.g. Sentry)
+      if (!(error instanceof Error) || error.name !== 'AbortError') {
+        throw error
+      }
+    }
 
-            return
-          }
+    if (!retryResponse) {
+      throw new Error(
+        `${apiName} API request to "${url}" failed with an unknown error. This request may not be retried.`,
+      )
+    }
 
-          if (response.status === RETRY_RESPONSE_STATUS) {
-            throw new HttpError(
-              `${apiName} API request failed with status: "[${response.status}] ${response.statusText}".`,
-              RETRY_RESPONSE_STATUS,
-            )
-          }
-
-          if (!response.ok) {
-            controller.abort(
-              new Error(
-                `${apiName} API request failed with status: "[${response.status}] ${
-                  response.statusText
-                } - traceparent: ${response.headers.get(
-                  'traceparent',
-                )}". This request may not be retried`,
-              ),
-            )
-
-            return
-          }
-
-          logger.debug(`${apiName} API response:`, response)
-
-          return response
-        } catch (error) {
-          if (error instanceof HttpError && error.status === RETRY_RESPONSE_STATUS) {
-            throw error
-          }
-
-          controller.abort(
-            error instanceof Error
-              ? error
-              : new Error(
-                  `${apiName} API request failed with an unknown error. This request may not be retried.`,
-                ),
-          )
-        }
-      },
-      {
-        minTimeout: intervalTimeout,
-        onFailedAttempt: (options: FetchMethodCallbackOptions) =>
-          onFailedAttempt?.({ ...options, apiName }),
-        retries,
-        signal: controller.signal,
-      },
-    )
+    return retryResponse
   }
 }

@@ -3,7 +3,7 @@ import ExperienceApiClient from './ExperienceApiClient'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
 
 describe('ExperienceApiClient', () => {
-  const config: ApiConfig = { fetchOptions: {} }
+  const config: ApiConfig = { clientId: 'testId', fetchOptions: {} }
 
   it('should create an instance extending ApiClientBase', () => {
     const client = new ExperienceApiClient(config)

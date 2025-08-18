@@ -2,7 +2,7 @@ import CoreBase from './'
 
 class TestCore extends CoreBase {}
 
-const config = { name: 'Test' }
+const config = { name: 'Test', clientId: 'testId' }
 
 describe('CoreBase', () => {
   it('accepts name option', () => {

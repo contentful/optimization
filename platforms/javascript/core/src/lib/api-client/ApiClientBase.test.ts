@@ -1,7 +1,9 @@
 import ApiClientBase, { type ApiConfig } from './ApiClientBase'
 import Fetch from './fetch'
 
-class TestApiClient extends ApiClientBase {}
+class TestApiClient extends ApiClientBase {
+  protected readonly baseUrl = 'https://example.com'
+}
 
 const mockFetchMethod = vi.fn()
 
@@ -13,7 +15,7 @@ describe('ApiClientBase', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.spyOn(Fetch, 'create').mockReturnValue(mockFetchMethod)
-    config = { fetchOptions }
+    config = { clientId: 'testId', fetchOptions }
   })
 
   it('calls createProtectedFetchMethod with correct merged options', () => {

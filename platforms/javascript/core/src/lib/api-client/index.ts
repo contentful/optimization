@@ -1,3 +1,5 @@
+// TODO: Improve three-shaking by reducing barrel exports and using pure annotations on zod schemas
+
 import ApiClient from './ApiClient'
 
 export type * from './experience'

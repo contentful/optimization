@@ -1,27 +1,35 @@
 import type { ApiConfig } from './ApiClientBase'
-import ExperienceApiClient from './experience'
-import InsightsApiClient from './insights'
+import ExperienceApiClient, { type ExperienceApiClientConfig } from './experience'
+import InsightsApiClient, { type InsightsApiClientConfig } from './insights'
 
 export type { ApiConfig }
 
-export interface ApiClientConfig {
-  experience?: Omit<ApiConfig, 'fetchOptions'>
-  insights?: Omit<ApiConfig, 'fetchOptions'>
-  fetchOptions?: ApiConfig['fetchOptions']
+export interface ApiClientConfig extends ApiConfig {
+  experience?: Omit<
+    ExperienceApiClientConfig,
+    'clientId' | 'environment' | 'fetchOptions' | 'preview' | 'baseUrl'
+  >
+  insights?: Omit<
+    InsightsApiClientConfig,
+    'clientId' | 'environment' | 'fetchOptions' | 'preview' | 'baseUrl'
+  >
 }
 
 export default class ApiClient {
   readonly experience: ExperienceApiClient
   readonly insights: InsightsApiClient
 
-  constructor(config?: ApiClientConfig) {
+  constructor(config: ApiClientConfig) {
+    const { experience, insights, ...apiConfig } = config
+
     this.experience = new ExperienceApiClient({
-      fetchOptions: config?.fetchOptions,
-      ...(config?.experience ?? {}),
+      ...apiConfig,
+      ...experience,
     })
+
     this.insights = new InsightsApiClient({
-      fetchOptions: config?.fetchOptions,
-      ...(config?.insights ?? {}),
+      ...apiConfig,
+      ...insights,
     })
   }
 }

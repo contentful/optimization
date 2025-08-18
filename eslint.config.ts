@@ -16,6 +16,7 @@ const config: ConfigArray = typescript.config(
   typescript.configs.stylistic,
   {
     rules: {
+      '@typescript-eslint/no-magic-numbers': ['error', { ignore: [-1, 0, 1] }],
       '@typescript-eslint/class-methods-use-this': [
         'error',
         { ignoreClassesThatImplementAnInterface: true },

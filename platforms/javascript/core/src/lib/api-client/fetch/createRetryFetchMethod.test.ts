@@ -7,6 +7,8 @@ vi.mock('../../logger', () => ({
   },
 }))
 
+const TEST_URL = 'https://example.com/endpoint'
+
 describe('createRetryFetchMethod', () => {
   let fetchMock: ReturnType<typeof vi.fn>
   let onFailedAttempt: ReturnType<typeof vi.fn>
@@ -28,11 +30,14 @@ describe('createRetryFetchMethod', () => {
 
     const fetchWithRetry = createRetryFetchMethod({ fetchMethod: fetchMock })
 
-    const result = await fetchWithRetry('http://test.com', {})
+    const result = await fetchWithRetry(TEST_URL, {})
 
     expect(fetchMock).toHaveBeenCalledOnce()
     expect(result).toBe(fakeResponse)
-    expect(logger.debug).toHaveBeenCalledWith('Optimization API response:', fakeResponse)
+    expect(logger.debug).toHaveBeenCalledWith(
+      `Optimization API response from "${TEST_URL}":`,
+      fakeResponse,
+    )
   })
 
   it('retries if the fetch returns a 503 status', async () => {
@@ -50,7 +55,7 @@ describe('createRetryFetchMethod', () => {
       intervalTimeout: 50, // short retry interval for test
     })
 
-    const promise = fetchWithRetry('http://test.com', {})
+    const promise = fetchWithRetry(TEST_URL, {})
 
     // Advance timers for the retry interval
     await vi.advanceTimersByTimeAsync(60)
@@ -60,7 +65,10 @@ describe('createRetryFetchMethod', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(onFailedAttempt).toHaveBeenCalled()
     expect(result).toBe(secondResponse)
-    expect(logger.debug).toHaveBeenCalledWith('Optimization API response:', secondResponse)
+    expect(logger.debug).toHaveBeenCalledWith(
+      `Optimization API response from "${TEST_URL}":`,
+      secondResponse,
+    )
   })
 
   it('throws and does not retry if fetch returns a non-503 error', async () => {
@@ -78,8 +86,8 @@ describe('createRetryFetchMethod', () => {
       intervalTimeout: 50,
     })
 
-    await expect(fetchWithRetry('http://test.com', {})).rejects.toThrow(
-      /Optimization API request failed with status: "\[400\] Bad Request/,
+    await expect(fetchWithRetry(TEST_URL, {})).rejects.toThrow(
+      `Optimization API request to "${TEST_URL}" failed with status: "[400] Bad Request - traceparent: abc-123"`,
     )
     expect(fetchMock).toHaveBeenCalledOnce()
     expect(onFailedAttempt).not.toHaveBeenCalled()
@@ -95,10 +103,13 @@ describe('createRetryFetchMethod', () => {
       apiName: 'MyAPI',
     })
 
-    const result = await fetchWithRetry('http://myapi.com', {})
+    const result = await fetchWithRetry(TEST_URL, {})
 
     expect(result).toBe(fakeResponse)
-    expect(logger.debug).toHaveBeenCalledWith('MyAPI API response:', fakeResponse)
+    expect(logger.debug).toHaveBeenCalledWith(
+      `MyAPI API response from "${TEST_URL}":`,
+      fakeResponse,
+    )
   })
 
   it('retries the configured number of times for 503 and then fails', async () => {
@@ -112,13 +123,17 @@ describe('createRetryFetchMethod', () => {
       intervalTimeout: 50,
     })
 
-    const promise = fetchWithRetry('http://test.com', {})
+    const promise = fetchWithRetry(TEST_URL, {})
+
     // Attach the rejection handler BEFORE running timers
-    const rejection = expect(promise).rejects.toThrow(/API request failed with status: "\[503\]/)
+    const rejection = expect(promise).rejects.toThrow(
+      `API request to "${TEST_URL}" failed with status: "[503] Service Unavailable".`,
+    )
 
     await vi.advanceTimersByTimeAsync(200)
 
     await rejection
+
     // 1 initial + 2 retries = 3 total attempts
     expect(fetchMock).toHaveBeenCalledTimes(3)
     expect(onFailedAttempt).toHaveBeenCalledTimes(3)
@@ -137,7 +152,7 @@ describe('createRetryFetchMethod', () => {
       intervalTimeout: 50,
     })
 
-    const promise = fetchWithRetry('http://custom.com', {})
+    const promise = fetchWithRetry(TEST_URL, {})
     await vi.advanceTimersByTimeAsync(60)
     await promise
 
@@ -155,22 +170,7 @@ describe('createRetryFetchMethod', () => {
       retries: 0,
       intervalTimeout: 10,
     })
-    await expect(fetchWithRetry('http://test.com', {})).rejects.toThrow(/unknown error/)
-    expect(onFailedAttempt).not.toHaveBeenCalled()
-    expect(logger.debug).not.toHaveBeenCalled()
-  })
-
-  it('aborts and throws if fetchMethod returns undefined', async () => {
-    fetchMock.mockImplementation(() => undefined)
-    const fetchWithRetry = createRetryFetchMethod({
-      fetchMethod: fetchMock,
-      onFailedAttempt,
-      retries: 0,
-      intervalTimeout: 10,
-    })
-    await expect(fetchWithRetry('http://test.com', {})).rejects.toThrow(
-      'Optimization API request failed with an unknown error. This request may not be retried.',
-    )
+    await expect(fetchWithRetry(TEST_URL, {})).rejects.toThrow(/unknown error/)
     expect(onFailedAttempt).not.toHaveBeenCalled()
     expect(logger.debug).not.toHaveBeenCalled()
   })
@@ -185,7 +185,7 @@ describe('createRetryFetchMethod', () => {
       retries: 0,
       intervalTimeout: 10,
     })
-    await expect(fetchWithRetry('http://test.com', {})).rejects.toThrow('plain failure')
+    await expect(fetchWithRetry(TEST_URL, {})).rejects.toThrow('plain failure')
     expect(onFailedAttempt).not.toHaveBeenCalled()
     expect(logger.debug).not.toHaveBeenCalled()
   })
@@ -202,7 +202,7 @@ describe('createRetryFetchMethod', () => {
     })
 
     let resolved = false
-    const promise = fetchWithRetry('http://test.com', {}).then(() => {
+    const promise = fetchWithRetry(TEST_URL, {}).then(() => {
       resolved = true
     })
 

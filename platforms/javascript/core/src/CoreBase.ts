@@ -2,16 +2,16 @@ import Analytics from './analytics'
 import Audience from './audience'
 import Experiments from './experiments'
 import ApiClient from './lib/api-client'
-import type { ApiClientConfig } from './lib/api-client'
+import type { ApiClientConfig, ApiConfig } from './lib/api-client'
 import Personalization from './personalization'
 
 /** Options that may be passed to the Core constructor */
-export interface CoreConfig {
+export interface CoreConfig extends Omit<ApiConfig, 'baseUrl' | 'fetchOptions'> {
   /** The name of the SDK built from this Core class (added for demo purposes) */
   name: string
 
   /** The API client configuration object */
-  api?: ApiClientConfig
+  api?: Omit<ApiClientConfig, 'clientId' | 'environment' | 'preview'>
 }
 
 abstract class CoreBase {
@@ -25,12 +25,14 @@ abstract class CoreBase {
   readonly api: ApiClient
 
   constructor(config: CoreConfig) {
-    const { name, api, ...rest } = config
+    const { name, api, clientId, environment, preview, ...rest } = config
+
+    const apiConfig = { ...api, clientId, environment, preview }
 
     this.name = name // only for demo
-    this.config = rest
+    this.config = { clientId, environment, preview, ...rest }
 
-    this.api = new ApiClient(api)
+    this.api = new ApiClient(apiConfig)
 
     this.analytics = new Analytics(this.api)
     this.audience = new Audience()
