@@ -1,6 +1,6 @@
 import { array, discriminatedUnion, type infer as zInfer } from 'zod/mini'
-import { ComponentViewEvent } from './ComponentViewEvent'
 import { AliasEvent } from './AliasEvent'
+import { ComponentViewEvent } from './ComponentViewEvent'
 import { GroupEvent } from './GroupEvent'
 import { IdentifyEvent } from './IdentifyEvent'
 import { PageViewEvent } from './PageViewEvent'

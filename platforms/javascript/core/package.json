@@ -23,9 +23,10 @@
     "build": "pnpm clean; pnpm build:cjs && pnpm build:esm",
     "build:cjs": "tsc -p ./tsconfig.cjs.json && pnpm rename:js:cjs",
     "build:esm": "tsc -p ./tsconfig.esm.json && pnpm rename:js:mjs",
+    "clean": "rimraf ./dist ./coverage tsconfig.tsbuildinfo",
+    "mocks:serve": "tsx ./src/test/server.ts",
     "rename:js:cjs": "find ./dist -type f -name \"*.js\" ! -name \"*.cjs\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js}.cjs\"; done && find ./dist -type f -name \"*.js.map\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js.map}.cjs.map\"; done",
     "rename:js:mjs": "find ./dist -type f -name \"*.js\" ! -name \"*.mjs\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js}.mjs\"; done && find ./dist -type f -name \"*.js.map\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js.map}.mjs.map\"; done",
-    "clean": "rimraf ./dist ./coverage tsconfig.tsbuildinfo",
     "test:unit": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
   },
@@ -35,9 +36,12 @@
     "zod": "^4.0.14"
   },
   "devDependencies": {
+    "@mswjs/http-middleware": "0.10.3",
     "@vitest/coverage-v8": "catalog:",
+    "msw": "^2.10.5",
     "rimraf": "catalog:",
     "tslib": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

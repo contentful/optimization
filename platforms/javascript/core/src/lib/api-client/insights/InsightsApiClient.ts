@@ -1,19 +1,19 @@
 import { logger } from '../../logger'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
-import { EventBatchArray } from '../experience/dto/event'
+import { BatchEventArray } from './dto/event'
 
 interface RequestOptions {
   /**
-   * Insights analytics events will be queues using the Beacon API
+   * Insights analytics events may be queued using the Beacon API
    *
-   * @default false
+   * @default true
    */
   beacon?: boolean
 }
 
 export interface InsightsApiClientConfig extends ApiConfig, RequestOptions {}
 
-const BASE_URL = 'https://ingest.insights.ninetailed.co'
+export const INSIGHTS_BASE_URL = 'https://ingest.insights.ninetailed.co'
 
 export default class InsightsApiClient extends ApiClientBase {
   protected readonly baseUrl: string
@@ -24,12 +24,12 @@ export default class InsightsApiClient extends ApiClientBase {
 
     const { baseUrl, beacon } = config
 
-    this.baseUrl = baseUrl ?? BASE_URL
+    this.baseUrl = baseUrl ?? INSIGHTS_BASE_URL
     this.beacon = beacon ?? true
   }
 
-  public async sendEventBatches(
-    batches: EventBatchArray,
+  public async sendBatchEvents(
+    batches: BatchEventArray,
     options: RequestOptions = {},
   ): Promise<void> {
     const { beacon = false } = options
@@ -39,7 +39,7 @@ export default class InsightsApiClient extends ApiClientBase {
       this.baseUrl,
     )
 
-    const body = EventBatchArray.parse(batches)
+    const body = BatchEventArray.parse(batches)
 
     if (beacon) {
       const blobData = new Blob([JSON.stringify(body)], {

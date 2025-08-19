@@ -1,4 +1,5 @@
 import {
+  array,
   boolean,
   discriminatedUnion,
   enum as zEnum,
@@ -9,8 +10,8 @@ import {
   object,
   record,
   string,
-  union,
   type infer as zInfer,
+  union,
 } from 'zod/mini'
 
 export const ChangeType = ['Variable'] as const
@@ -38,3 +39,6 @@ export const VariableChange = extend(ChangeBase, {
 
 export const Change = discriminatedUnion('type', [VariableChange])
 export type Change = zInfer<typeof Change>
+
+export const ChangeArray = array(Change)
+export type ChangeArray = zInfer<typeof ChangeArray>

@@ -28,7 +28,7 @@
     "@vitest/coverage-v8": "catalog:",
     "rimraf": "catalog:",
     "supertest": "7.1.3",
-    "tsx": "4.20.3",
+    "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }
