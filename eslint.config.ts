@@ -26,7 +26,7 @@ const config: ConfigArray = typescript.config(
   },
   {
     // https://github.com/vitest-dev/vitest/issues/4543#issuecomment-1824628142
-    files: ['**/src/**/*.test.ts'],
+    files: ['**/src/**/*.test.ts', '**/test/**/*.ts'],
     rules: {
       '@typescript-eslint/init-declarations': 'off',
       '@typescript-eslint/no-floating-promises': 'off',
@@ -35,6 +35,7 @@ const config: ConfigArray = typescript.config(
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/unbound-method': 'off',
+      'max-nested-callbacks': 'off',
       'promise/avoid-new': 'off',
     },
   },

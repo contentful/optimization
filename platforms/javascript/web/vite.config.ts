@@ -2,6 +2,7 @@ import { resolve } from 'node:path'
 import { defineConfig } from 'vitest/config'
 import tsconfigPaths from 'vite-tsconfig-paths'
 import { analyzer } from 'vite-bundle-analyzer'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 export default defineConfig({
   resolve: {
@@ -17,7 +18,16 @@ export default defineConfig({
       fileName: 'index',
     },
   },
-  plugins: [analyzer({ analyzerMode: 'static', openAnalyzer: false }), tsconfigPaths()],
+  plugins: [
+    analyzer({ analyzerMode: 'static', fileName: 'analyzer', openAnalyzer: false }),
+    visualizer({
+      brotliSize: true,
+      filename: 'dist/visualizer.html',
+      gzipSize: true,
+      template: 'flamegraph',
+    }),
+    tsconfigPaths(),
+  ],
   test: {
     environment: 'happy-dom',
     include: ['**/*.test.?(c|m)[jt]s?(x)'],

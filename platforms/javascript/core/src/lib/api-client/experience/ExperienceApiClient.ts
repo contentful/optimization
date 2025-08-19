@@ -8,7 +8,7 @@ import {
   type ProfileRequestData,
   type ProfileRequestOptions,
 } from './dto'
-import { EventArray } from './dto/event'
+import { type BatchEventArray, EventArray } from './dto/event'
 
 type Feature = 'ip-enrichment' | 'location'
 
@@ -58,9 +58,13 @@ interface UpdateProfileParams extends CreateProfileParams {
   profileId: string
 }
 
+interface BatchUpdateProfileParams {
+  events: BatchEventArray
+}
+
 export interface ExperienceApiClientConfig extends ApiConfig, RequestOptions {}
 
-const BASE_URL = 'https://experience.ninetailed.co'
+export const EXPERIENCE_BASE_URL = 'https://experience.ninetailed.co'
 
 export default class ExperienceApiClient extends ApiClientBase {
   protected readonly baseUrl: string
@@ -75,7 +79,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     const { baseUrl, enabledFeatures, ip, locale, plainText, preflight } = config
 
-    this.baseUrl = baseUrl ?? BASE_URL
+    this.baseUrl = baseUrl ?? EXPERIENCE_BASE_URL
     this.enabledFeatures = enabledFeatures
     this.ip = ip
     this.locale = locale
@@ -215,7 +219,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    * This method is intended to be used from server environments.
    */
   public async upsertManyProfiles(
-    { events }: UpdateProfileParams,
+    { events }: BatchUpdateProfileParams,
     options: RequestOptions = {},
   ): Promise<BatchProfileData['profiles']> {
     const requestName = 'Upsert Many Profiles'

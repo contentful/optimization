@@ -1,13 +1,13 @@
-import { array, extend, object, type infer as zInfer } from 'zod/mini'
-import { Change } from './change'
-import { Experience } from './experience'
+import { extend, object, type infer as zInfer } from 'zod/mini'
+import { ChangeArray } from './change'
+import { ExperienceArray } from './experience'
 import { Profile } from './profile'
 import { ResponseEnvelope } from './ResponseEnvelope'
 
 export const ProfileData = object({
   profile: Profile,
-  experiences: array(Experience),
-  changes: array(Change),
+  experiences: ExperienceArray,
+  changes: ChangeArray,
 })
 export type ProfileData = zInfer<typeof ProfileData>
 

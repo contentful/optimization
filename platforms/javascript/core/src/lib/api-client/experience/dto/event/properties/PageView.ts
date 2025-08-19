@@ -1,17 +1,6 @@
-import { catchall, json, object, optional, string, type infer as zInfer } from 'zod/mini'
-import { Query } from './Query'
+import { catchall, json, type infer as zInfer } from 'zod/mini'
+import { Page } from './Page'
 
-export const PageView = catchall(
-  object({
-    path: string(),
-    query: Query,
-    referrer: string(),
-    search: string(),
-    title: string(),
-    url: string(),
-    category: optional(string()),
-  }),
-  json(),
-)
+export const PageView = catchall(Page, json())
 
 export type PageView = zInfer<typeof PageView>
