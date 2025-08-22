@@ -1,8 +1,8 @@
 import { http, type HttpHandler, HttpResponse } from 'msw'
-import type { BatchEventArray } from '../lib/api-client/insights/dto'
+import type { BatchEventArrayType } from '../lib/api-client/insights/dto'
 
 // Minimal in-memory store
-const eventsStore: BatchEventArray = []
+const eventsStore: BatchEventArrayType = []
 
 // Helper to parse JSON whether body is application/json or text/plain
 async function parseJson<T>(req: Request): Promise<T> {
@@ -40,7 +40,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
       `${baseUrl}/v1/organizations/:organizationId/environments/:environmentSlug/events`,
       async ({ request }) => {
         try {
-          const payload = await parseJson<BatchEventArray>(request)
+          const payload = await parseJson<BatchEventArrayType>(request)
 
           eventsStore.push(...payload)
 

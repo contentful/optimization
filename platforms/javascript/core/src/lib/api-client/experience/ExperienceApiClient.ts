@@ -1,14 +1,14 @@
 import { logger } from '../../logger'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
 import {
-  type BatchProfileData,
-  BatchProfileResponse,
-  ProfileResponse,
-  type ProfileData,
-  type ProfileRequestData,
-  type ProfileRequestOptions,
+  type BatchOptimizationDataType,
+  BatchOptimizationResponse,
+  OptimizationResponse,
+  type OptimizationDataType,
+  type OptimizationRequestDataType,
+  type OptimizationRequestOptionsType,
 } from './dto'
-import { type BatchEventArray, EventArray } from './dto/event'
+import { EventArray, type BatchEventArrayType, type EventArrayType } from './dto/event'
 
 type Feature = 'ip-enrichment' | 'location'
 
@@ -51,15 +51,19 @@ interface ProfileMutationRequestOptions {
 }
 
 interface CreateProfileParams {
-  events: EventArray
+  events: EventArrayType
 }
 
 interface UpdateProfileParams extends CreateProfileParams {
   profileId: string
 }
 
+interface UpsertProfileParams extends CreateProfileParams {
+  profileId?: string
+}
+
 interface BatchUpdateProfileParams {
-  events: BatchEventArray
+  events: BatchEventArrayType
 }
 
 export interface ExperienceApiClientConfig extends ApiConfig, RequestOptions {}
@@ -68,11 +72,11 @@ export const EXPERIENCE_BASE_URL = 'https://experience.ninetailed.co'
 
 export default class ExperienceApiClient extends ApiClientBase {
   protected readonly baseUrl: string
-  protected readonly enabledFeatures?: RequestOptions['enabledFeatures']
-  protected readonly ip?: RequestOptions['ip']
-  protected readonly locale?: RequestOptions['locale']
-  protected readonly plainText?: RequestOptions['plainText']
-  protected readonly preflight?: RequestOptions['preflight']
+  private readonly enabledFeatures?: RequestOptions['enabledFeatures']
+  private readonly ip?: RequestOptions['ip']
+  private readonly locale?: RequestOptions['locale']
+  private readonly plainText?: RequestOptions['plainText']
+  private readonly preflight?: RequestOptions['preflight']
 
   constructor(config: ExperienceApiClientConfig) {
     super('Experience', config)
@@ -90,7 +94,7 @@ export default class ExperienceApiClient extends ApiClientBase {
   public async getProfile(
     id: string,
     options: Omit<RequestOptions, 'preflight' | 'plainText'> = {},
-  ): Promise<ProfileData> {
+  ): Promise<OptimizationDataType> {
     if (!id) throw new Error('Valid profile ID required.')
 
     const requestName = 'Get Profile'
@@ -108,7 +112,7 @@ export default class ExperienceApiClient extends ApiClientBase {
         },
       )
 
-      const { data } = ProfileResponse.parse(await response.json())
+      const { data } = OptimizationResponse.parse(await response.json())
 
       logger.debug(`${requestName} request succesfully completed.`)
 
@@ -140,12 +144,12 @@ export default class ExperienceApiClient extends ApiClientBase {
   public async createProfile(
     { events }: CreateProfileParams,
     options: RequestOptions = {},
-  ): Promise<ProfileData> {
+  ): Promise<OptimizationDataType> {
     const requestName = 'Create Profile'
 
     logger.info(`Sending ${requestName} request.`)
 
-    const body: ProfileRequestData = {
+    const body: OptimizationRequestDataType = {
       events: EventArray.parse(events),
       options: this.constructBodyOptions(options),
     }
@@ -159,7 +163,7 @@ export default class ExperienceApiClient extends ApiClientBase {
         options,
       })
 
-      const { data } = ProfileResponse.parse(await response.json())
+      const { data } = OptimizationResponse.parse(await response.json())
 
       logger.debug(`${requestName} request succesfully completed.`)
 
@@ -178,14 +182,14 @@ export default class ExperienceApiClient extends ApiClientBase {
   public async updateProfile(
     { profileId, events }: UpdateProfileParams,
     options: RequestOptions = {},
-  ): Promise<ProfileData> {
+  ): Promise<OptimizationDataType> {
     if (!profileId) throw new Error('Valid profile ID required.')
 
     const requestName = 'Update Profile'
 
     logger.info(`Sending ${requestName} request.`)
 
-    const body: ProfileRequestData = {
+    const body: OptimizationRequestDataType = {
       events: EventArray.parse(events),
       options: this.constructBodyOptions(options),
     }
@@ -199,7 +203,7 @@ export default class ExperienceApiClient extends ApiClientBase {
         options,
       })
 
-      const { data } = ProfileResponse.parse(await response.json())
+      const { data } = OptimizationResponse.parse(await response.json())
 
       logger.debug(`${requestName} request successfully completed.`)
 
@@ -208,6 +212,17 @@ export default class ExperienceApiClient extends ApiClientBase {
       this.logRequestError(error, { requestName })
 
       throw error
+    }
+  }
+
+  public async upsertProfile(
+    { profileId, events }: UpsertProfileParams,
+    options?: RequestOptions,
+  ): Promise<OptimizationDataType> {
+    if (!profileId) {
+      return await this.createProfile({ events }, options)
+    } else {
+      return await this.updateProfile({ profileId, events }, options)
     }
   }
 
@@ -221,12 +236,12 @@ export default class ExperienceApiClient extends ApiClientBase {
   public async upsertManyProfiles(
     { events }: BatchUpdateProfileParams,
     options: RequestOptions = {},
-  ): Promise<BatchProfileData['profiles']> {
+  ): Promise<BatchOptimizationDataType['profiles']> {
     const requestName = 'Upsert Many Profiles'
 
     logger.info(`Sending ${requestName} request.`)
 
-    const body: ProfileRequestData = {
+    const body: OptimizationRequestDataType = {
       events: EventArray.parse(events),
       options: this.constructBodyOptions(options),
     }
@@ -242,7 +257,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
       const {
         data: { profiles },
-      } = BatchProfileResponse.parse(await response.json())
+      } = BatchOptimizationResponse.parse(await response.json())
 
       logger.debug(`${requestName} request successfully completed.`)
 
@@ -256,13 +271,15 @@ export default class ExperienceApiClient extends ApiClientBase {
 
   private constructUrl(path: string, options: RequestOptions): string {
     const url = new URL(path, this.baseUrl)
+    const locale = options.locale ?? this.locale
+    const preflight = options.preflight ?? this.preflight
 
-    if (options.preflight) {
-      url.searchParams.set('type', 'preflight')
+    if (locale) {
+      url.searchParams.set('locale', locale)
     }
 
-    if (options.locale) {
-      url.searchParams.set('locale', options.locale)
+    if (preflight) {
+      url.searchParams.set('type', 'preflight')
     }
 
     return url.toString()
@@ -289,8 +306,8 @@ export default class ExperienceApiClient extends ApiClientBase {
 
   private readonly constructBodyOptions = ({
     enabledFeatures = this.enabledFeatures,
-  }: RequestOptions): ProfileRequestOptions => {
-    const bodyOptions: ProfileRequestOptions = {}
+  }: RequestOptions): OptimizationRequestOptionsType => {
+    const bodyOptions: OptimizationRequestOptionsType = {}
 
     if (enabledFeatures && Array.isArray(enabledFeatures) && enabledFeatures.length > 0) {
       bodyOptions.features = enabledFeatures

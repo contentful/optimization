@@ -7,7 +7,7 @@ import InsightsApiClient, {
 } from './InsightsApiClient'
 import ApiClientBase from '../ApiClientBase'
 import { logger } from '../../logger'
-import { BatchEventArray } from './dto/event'
+import { BatchEventArray, type BatchEventArrayType } from './dto/event'
 
 const ORG_ID = 'org_123'
 const ENV = 'prod'
@@ -26,7 +26,8 @@ function makeClient(overrides: Partial<InsightsApiClientConfig> = {}): InsightsA
   return new InsightsApiClient(config)
 }
 
-function generateBatchEventArray(id: string): BatchEventArray {
+// TODO: Find a better place for this sort of thing
+function generateBatchEventArray(id: string): BatchEventArrayType {
   return [
     {
       profile: {
@@ -82,17 +83,33 @@ function generateBatchEventArray(id: string): BatchEventArray {
   ]
 }
 
+const sendBeaconSpy = vi
+  .fn<(url: string | URL, data?: Blob | null) => boolean>()
+  .mockReturnValue(true)
+
 describe('InsightsApiClient.sendBatchEvents', () => {
   beforeEach(() => {
     server.resetHandlers()
     vi.clearAllMocks()
+
+    // Add navigator to globalThis (avoid using DOM lib in a universal TS library)
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      value: { sendBeacon: sendBeaconSpy },
+    })
   })
 
   afterEach(() => {
+    // Remove navigator from globalThis (avoid using DOM lib in a universal TS library)
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      value: undefined,
+    })
+
     vi.restoreAllMocks()
   })
 
-  it('POSTs batches via fetch when beacon option is not set', async () => {
+  it('POSTs batches via fetch when beacon option is false', async () => {
     const batches = generateBatchEventArray('e1')
 
     // Spy on the schema parser and let it pass-through (or stub if needed)
@@ -120,7 +137,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
 
     server.use(handler)
 
-    const client = makeClient()
+    const client = makeClient({ beacon: false })
 
     await expect(client.sendBatchEvents(batches)).resolves.toBeUndefined()
 
@@ -132,38 +149,21 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('request succesfully completed.'))
   })
 
-  it('uses navigator.sendBeacon when beacon option is true', async () => {
+  it('uses navigator.sendBeacon when beacon by default', async () => {
     const batches = generateBatchEventArray('e2')
 
     // @ts-expect-error -- testing
     vi.spyOn(BatchEventArray, 'parse').mockImplementation((input) => input)
 
-    const { navigator: originalNavigator } = globalThis
-    const sendBeaconSpy = vi
-      .fn<(url: string | URL, data?: BodyInit | null) => boolean>()
-      .mockReturnValue(true)
-
-    // Replace global navigator with a minimal spy-able version
-    Object.defineProperty(globalThis, 'navigator', {
-      configurable: true,
-      value: { sendBeacon: sendBeaconSpy },
-    })
-
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
 
     const client = makeClient()
 
-    await expect(client.sendBatchEvents(batches, { beacon: true })).resolves.toBeUndefined()
+    await expect(client.sendBatchEvents(batches)).resolves.toBeUndefined()
 
     expect(sendBeaconSpy).toHaveBeenCalledTimes(1)
     expect(sendBeaconSpy).toHaveBeenCalledWith(expectedUrl, expect.any(Blob))
     expect(fetchSpy).not.toHaveBeenCalled()
-
-    // Restore original navigator
-    Object.defineProperty(globalThis, 'navigator', {
-      configurable: true,
-      value: originalNavigator,
-    })
   })
 
   it('logs and rethrows on network errors', async () => {
@@ -189,7 +189,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
 
     const client = makeClient()
 
-    await expect(client.sendBatchEvents(batches)).rejects.toBeDefined()
+    await expect(client.sendBatchEvents(batches, { beacon: false })).rejects.toBeDefined()
     expect(logErrorSpy).toHaveBeenCalledTimes(1)
     expect(logErrorSpy).toHaveBeenCalledWith(expect.anything(), {
       requestName: 'Send event batches',

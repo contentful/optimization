@@ -4,4 +4,4 @@ import { UniversalEventProperties } from './UniversalEventProperties'
 export const ScreenEvent = extend(UniversalEventProperties, {
   type: literal('screen'),
 })
-export type ScreenEvent = zInfer<typeof ScreenEvent>
+export type ScreenEventType = zInfer<typeof ScreenEvent>

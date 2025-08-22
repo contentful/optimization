@@ -18,7 +18,7 @@ abstract class ApiClientBase {
   protected readonly environment: string
   protected readonly preview?: boolean
 
-  readonly fetch: FetchMethod
+  protected readonly fetch: FetchMethod
 
   constructor(name: string, { fetchOptions, clientId, environment, preview }: ApiConfig) {
     this.clientId = clientId

@@ -1,9 +1,2 @@
-import Personalization from './Personalization'
-
-export type * from './Mapper'
-export type * from './Personalization'
-
-export * from './Mapper'
-export * from './Personalization'
-
-export default Personalization
+export { default as PersonalizationStateful } from './PersonalizationStateful'
+export { default as PersonalizationStateless } from './PersonalizationStateless'

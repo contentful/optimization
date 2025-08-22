@@ -21,7 +21,7 @@ export function createTimeoutFetchMethod({
       if (typeof onRequestTimeout === 'function') {
         onRequestTimeout({ apiName })
       } else {
-        logger.error(new Error(`${apiName} API request to "${url}" timed out.`))
+        logger.error(new Error(`${apiName} API request to "${url.toString()}" timed out.`))
       }
 
       controller.abort()

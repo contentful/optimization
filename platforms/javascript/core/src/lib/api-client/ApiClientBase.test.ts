@@ -4,10 +4,13 @@ import Fetch from './fetch'
 
 class TestApiClient extends ApiClientBase {
   protected readonly baseUrl = 'https://example.com'
-  // Expose a public hook to call the protected method from tests
-  public triggerLogRequestError(error: unknown, requestName: string): void {
-    // call the protected method
+
+  triggerLogRequestError(error: unknown, requestName: string): void {
     this.logRequestError(error, { requestName })
+  }
+
+  async fetchSomething(): Promise<void> {
+    await this.fetch('https://ecample.com', {})
   }
 }
 
@@ -19,13 +22,17 @@ describe('ApiClientBase', () => {
   let config: ApiConfig
 
   beforeEach(() => {
-    vi.restoreAllMocks()
     vi.spyOn(Fetch, 'create').mockReturnValue(mockFetchMethod)
     config = { clientId: 'testId', fetchOptions }
   })
 
-  it('calls createProtectedFetchMethod with correct merged options', () => {
-    const client = new TestApiClient(name, config)
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('creates fetch method with correct merged options', () => {
+    // eslint-disable-next-line no-new -- testing
+    new TestApiClient(name, config)
     expect(Fetch.create).toHaveBeenCalledTimes(1)
     expect(Fetch.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -33,12 +40,6 @@ describe('ApiClientBase', () => {
         apiName: name,
       }),
     )
-    expect(client.fetch).toBe(mockFetchMethod)
-  })
-
-  it('assigns the fetch property from createProtectedFetchMethod', () => {
-    const client = new TestApiClient(name, config)
-    expect(client.fetch).toBe(mockFetchMethod)
   })
 
   describe('logRequestError', () => {

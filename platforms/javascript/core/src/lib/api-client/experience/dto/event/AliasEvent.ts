@@ -4,4 +4,4 @@ import { UniversalEventProperties } from './UniversalEventProperties'
 export const AliasEvent = extend(UniversalEventProperties, {
   type: literal('alias'),
 })
-export type AliasEvent = zInfer<typeof AliasEvent>
+export type AliasEventType = zInfer<typeof AliasEvent>

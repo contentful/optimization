@@ -1,6 +1,6 @@
-import Core from '@contentful/optimization-core'
+import { CoreStateless } from '@contentful/optimization-core'
 
-class Optimization extends Core {
+class Optimization extends CoreStateless {
   constructor() {
     super({ name: 'Optimization', clientId: 'temp' })
 

@@ -1,7 +1,7 @@
-export type * from './ProfileRequest'
-export type * from './ProfileResponse'
-export type * from './BatchProfileResponse'
+export type * from './OptimizationRequest'
+export type * from './OptimizationResponse'
+export type * from './BatchOptimizationResponse'
 
-export * from './ProfileRequest'
-export * from './ProfileResponse'
-export * from './BatchProfileResponse'
+export * from './OptimizationRequest'
+export * from './OptimizationResponse'
+export * from './BatchOptimizationResponse'

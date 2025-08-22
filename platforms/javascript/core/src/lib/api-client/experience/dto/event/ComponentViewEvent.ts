@@ -8,4 +8,4 @@ export const ComponentViewEvent = extend(UniversalEventProperties, {
   experienceId: optional(string()),
   variantIndex: number(),
 })
-export type ComponentViewEvent = zInfer<typeof ComponentViewEvent>
+export type ComponentViewEventType = zInfer<typeof ComponentViewEvent>
