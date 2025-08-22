@@ -1,4 +1,4 @@
-import Core from '@contentful/optimization-core'
+import { CoreStateful } from '@contentful/optimization-core'
 
 declare global {
   interface Window {
@@ -7,7 +7,7 @@ declare global {
   }
 }
 
-class Optimization extends Core {
+class Optimization extends CoreStateful {
   constructor() {
     super({ name: 'Optimization', clientId: 'temp' })
 

@@ -42,7 +42,7 @@ function createRetryFetchCallback({
 
       if (response.status === RETRY_RESPONSE_STATUS) {
         throw new HttpError(
-          `${apiName} API request to "${url}" failed with status: "[${response.status}] ${response.statusText}".`,
+          `${apiName} API request to "${url.toString()}" failed with status: "[${response.status}] ${response.statusText}".`,
           RETRY_RESPONSE_STATUS,
         )
       }
@@ -50,7 +50,7 @@ function createRetryFetchCallback({
       if (!response.ok) {
         controller.abort(
           new Error(
-            `${apiName} API request to "${url}" failed with status: "[${response.status}] ${
+            `${apiName} API request to "${url.toString()}" failed with status: "[${response.status}] ${
               response.statusText
             } - traceparent: ${response.headers.get(
               'traceparent',
@@ -61,7 +61,7 @@ function createRetryFetchCallback({
         return
       }
 
-      logger.debug(`${apiName} API response from "${url}":`, response)
+      logger.debug(`${apiName} API response from "${url.toString()}":`, response)
 
       return response
     } catch (error) {
@@ -73,7 +73,7 @@ function createRetryFetchCallback({
         error instanceof Error
           ? error
           : new Error(
-              `${apiName} API request to "${url}" failed with an unknown error. This request may not be retried.`,
+              `${apiName} API request to "${url.toString()}" failed with an unknown error. This request may not be retried.`,
             ),
       )
     }
@@ -112,7 +112,7 @@ export function createRetryFetchMethod({
 
     if (!retryResponse) {
       throw new Error(
-        `${apiName} API request to "${url}" failed with an unknown error. This request may not be retried.`,
+        `${apiName} API request to "${url.toString()}" failed with an unknown error. This request may not be retried.`,
       )
     }
 

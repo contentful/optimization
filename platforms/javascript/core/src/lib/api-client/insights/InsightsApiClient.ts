@@ -1,6 +1,6 @@
 import { logger } from '../../logger'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
-import { BatchEventArray } from './dto/event'
+import { BatchEventArray, type BatchEventArrayType } from './dto/event'
 
 interface RequestOptions {
   /**
@@ -15,9 +15,32 @@ export interface InsightsApiClientConfig extends ApiConfig, RequestOptions {}
 
 export const INSIGHTS_BASE_URL = 'https://ingest.insights.ninetailed.co'
 
+interface NavigatorLike {
+  sendBeacon: (url: URL, data?: Blob) => boolean
+}
+
+function hasNavigator(o: unknown): o is { navigator: unknown } {
+  return typeof o === 'object' && o !== null && 'navigator' in o
+}
+
+function isNavigatorLike(x: unknown): x is NavigatorLike {
+  return typeof x === 'object' && x !== null
+}
+
+function getNavigator(): NavigatorLike | undefined {
+  const g: unknown = globalThis
+
+  if (hasNavigator(g)) {
+    const { navigator } = g
+    return isNavigatorLike(navigator) ? navigator : undefined
+  }
+
+  return undefined
+}
+
 export default class InsightsApiClient extends ApiClientBase {
   protected readonly baseUrl: string
-  protected readonly beacon: boolean
+  private readonly beacon: boolean
 
   constructor(config: InsightsApiClientConfig) {
     super('Insights', config)
@@ -29,10 +52,10 @@ export default class InsightsApiClient extends ApiClientBase {
   }
 
   public async sendBatchEvents(
-    batches: BatchEventArray,
+    batches: BatchEventArrayType,
     options: RequestOptions = {},
   ): Promise<void> {
-    const { beacon = false } = options
+    const { beacon = this.beacon } = options
 
     const url = new URL(
       `/v1/organizations/${this.clientId}/environments/${this.environment}/events`,
@@ -41,12 +64,12 @@ export default class InsightsApiClient extends ApiClientBase {
 
     const body = BatchEventArray.parse(batches)
 
-    if (beacon) {
+    if (beacon && hasNavigator(globalThis)) {
       const blobData = new Blob([JSON.stringify(body)], {
         type: 'text/plain',
       })
 
-      navigator.sendBeacon(url, blobData)
+      getNavigator()?.sendBeacon(url, blobData)
 
       return
     }

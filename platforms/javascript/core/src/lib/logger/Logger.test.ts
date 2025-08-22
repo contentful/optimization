@@ -92,7 +92,7 @@ describe('Logger', () => {
   it('passes all additional log arguments in the event messages', () => {
     logger.addSink(testSink)
     logger.info('multiple', 1, 2, 3)
-    expect(receivedEvents[0].messages).toEqual(['multiple', 1, 2, 3])
+    expect(receivedEvents[0]?.messages).toEqual(['multiple', 1, 2, 3])
   })
 
   it('can add, remove, and re-add the same sink', () => {

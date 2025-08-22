@@ -6,4 +6,4 @@ export const TrackEvent = extend(UniversalEventProperties, {
   event: string(),
   properties: record(string(), json()),
 })
-export type TrackEvent = zInfer<typeof TrackEvent>
+export type TrackEventType = zInfer<typeof TrackEvent>

@@ -16,7 +16,7 @@ export const Event = discriminatedUnion('type', [
   ScreenEvent,
   TrackEvent,
 ])
-export type Event = zInfer<typeof Event>
+export type EventType = zInfer<typeof Event>
 
 export const EventArray = array(Event)
-export type EventArray = zInfer<typeof EventArray>
+export type EventArrayType = zInfer<typeof EventArray>

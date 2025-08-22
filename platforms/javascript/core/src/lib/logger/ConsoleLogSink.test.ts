@@ -48,7 +48,7 @@ describe('ConsoleLogSink', () => {
       date: new Date(),
     })
     expect(console.error).toHaveBeenCalledWith('fatal msg')
-    spies.error.mockClear()
+    spies.error?.mockClear()
 
     // 'warn' should log at 'warn' verbosity
     sink.ingest({
@@ -59,7 +59,7 @@ describe('ConsoleLogSink', () => {
       date: new Date(),
     })
     expect(console.warn).toHaveBeenCalledWith('warn msg')
-    spies.warn.mockClear()
+    spies.war?.mockClear()
 
     // 'info' should NOT log at 'warn' verbosity
     sink.ingest({

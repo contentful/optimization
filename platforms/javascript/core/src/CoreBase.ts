@@ -1,9 +1,9 @@
-import Analytics from './analytics'
-import Audience from './audience'
-import Experiments from './experiments'
-import ApiClient from './lib/api-client'
-import type { ApiClientConfig, ApiConfig } from './lib/api-client'
-import Personalization from './personalization'
+import type AnalyticsBase from './analytics/AnalyticsBase'
+import type AudienceBase from './audience/AudienceBase'
+import type ExperimentsBase from './experiments/ExperimentsBase'
+import type FlagsBase from './flags/FlagsBase'
+import type PersonalizationBase from './personalization/PersonalizationBase'
+import ApiClient, { type ApiClientConfig, type ApiConfig } from './lib/api-client'
 
 /** Options that may be passed to the Core constructor */
 export interface CoreConfig extends Omit<ApiConfig, 'baseUrl' | 'fetchOptions'> {
@@ -15,15 +15,17 @@ export interface CoreConfig extends Omit<ApiConfig, 'baseUrl' | 'fetchOptions'> 
 }
 
 abstract class CoreBase {
-  readonly analytics: Analytics
-  readonly audience: Audience
-  readonly experiments: Experiments
-  readonly personalization: Personalization
+  abstract readonly analytics: AnalyticsBase
+  abstract readonly audience: AudienceBase
+  abstract readonly experiments: ExperimentsBase
+  abstract readonly flags: FlagsBase
+  abstract readonly personalization: PersonalizationBase
 
   readonly config: Omit<CoreConfig, 'name'>
   readonly name: string
   readonly api: ApiClient
 
+  // TODO: consent guard
   constructor(config: CoreConfig) {
     const { name, api, clientId, environment, preview, ...rest } = config
 
@@ -33,11 +35,6 @@ abstract class CoreBase {
     this.config = { clientId, environment, preview, ...rest }
 
     this.api = new ApiClient(apiConfig)
-
-    this.analytics = new Analytics(this.api)
-    this.audience = new Audience()
-    this.experiments = new Experiments()
-    this.personalization = new Personalization(this.api)
   }
 }
 

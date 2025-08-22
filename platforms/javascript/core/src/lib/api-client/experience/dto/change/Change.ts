@@ -38,7 +38,7 @@ export const VariableChange = extend(ChangeBase, {
 })
 
 export const Change = discriminatedUnion('type', [VariableChange])
-export type Change = zInfer<typeof Change>
+export type ChangeType = zInfer<typeof Change>
 
 export const ChangeArray = array(Change)
-export type ChangeArray = zInfer<typeof ChangeArray>
+export type ChangeArrayType = zInfer<typeof ChangeArray>

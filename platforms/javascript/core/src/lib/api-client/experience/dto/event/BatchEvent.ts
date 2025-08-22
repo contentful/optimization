@@ -16,7 +16,7 @@ export const BatchEvent = discriminatedUnion('type', [
   extend(ScreenEvent, { anonymousId: string() }),
   extend(TrackEvent, { anonymousId: string() }),
 ])
-export type BatchEvent = zInfer<typeof BatchEvent>
+export type BatchEventType = zInfer<typeof BatchEvent>
 
 export const BatchEventArray = array(BatchEvent)
-export type BatchEventArray = zInfer<typeof BatchEventArray>
+export type BatchEventArrayType = zInfer<typeof BatchEventArray>

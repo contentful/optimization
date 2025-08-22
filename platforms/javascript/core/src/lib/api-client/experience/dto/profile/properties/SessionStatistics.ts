@@ -9,4 +9,4 @@ export const SessionStatistics = object({
   activeSessionLength: number(),
   averageSessionLength: number(),
 })
-export type SessionStatistics = zInfer<typeof SessionStatistics>
+export type SessionStatisticsType = zInfer<typeof SessionStatistics>

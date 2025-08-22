@@ -1,10 +1,11 @@
-// TODO: Real, non-demo implementation (stateless & stateful)
 import mapper from './Mapper'
 
-export default class Experiments {
+abstract class AudienceBase {
   readonly mapper: typeof mapper
 
   constructor() {
     this.mapper = mapper
   }
 }
+
+export default AudienceBase

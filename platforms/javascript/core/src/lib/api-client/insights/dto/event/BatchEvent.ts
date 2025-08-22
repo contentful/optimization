@@ -6,7 +6,7 @@ export const BatchEvent = object({
   profile: Profile,
   events: EventArray,
 })
-export type BatchEvent = zInfer<typeof BatchEvent>
+export type BatchEventType = zInfer<typeof BatchEvent>
 
 export const BatchEventArray = array(BatchEvent)
-export type BatchEventArray = zInfer<typeof BatchEventArray>
+export type BatchEventArrayType = zInfer<typeof BatchEventArray>
