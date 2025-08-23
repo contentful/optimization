@@ -1,9 +1,20 @@
+import type { ChangeArrayType } from './lib/api-client/experience/dto/change'
+import type { ExperienceArrayType } from './lib/api-client/experience/dto/experience'
+import type { ProfileType } from './lib/api-client/experience/dto/profile'
 import type AnalyticsBase from './analytics/AnalyticsBase'
 import type AudienceBase from './audience/AudienceBase'
 import type ExperimentsBase from './experiments/ExperimentsBase'
 import type FlagsBase from './flags/FlagsBase'
 import type PersonalizationBase from './personalization/PersonalizationBase'
 import ApiClient, { type ApiClientConfig, type ApiConfig } from './lib/api-client'
+
+export interface CoreConfigDefaults {
+  audiences?: string[]
+  experiments?: ExperienceArrayType
+  flags?: ChangeArrayType
+  personalizations?: ExperienceArrayType
+  profile?: ProfileType
+}
 
 /** Options that may be passed to the Core constructor */
 export interface CoreConfig extends Omit<ApiConfig, 'baseUrl' | 'fetchOptions'> {
@@ -12,6 +23,8 @@ export interface CoreConfig extends Omit<ApiConfig, 'baseUrl' | 'fetchOptions'> 
 
   /** The API client configuration object */
   api?: Omit<ApiClientConfig, 'clientId' | 'environment' | 'preview'>
+
+  defaults?: CoreConfigDefaults
 }
 
 abstract class CoreBase {
@@ -25,7 +38,6 @@ abstract class CoreBase {
   readonly name: string
   readonly api: ApiClient
 
-  // TODO: consent guard
   constructor(config: CoreConfig) {
     const { name, api, clientId, environment, preview, ...rest } = config
 

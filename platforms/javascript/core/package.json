@@ -31,6 +31,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@preact/signals-core": "1.12.1",
     "p-retry": "^6.2.1",
     "diary": "^0.4.5",
     "zod": "^4.0.14"
