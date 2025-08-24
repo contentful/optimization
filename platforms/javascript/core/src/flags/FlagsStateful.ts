@@ -1,10 +1,23 @@
+import { effect } from '@preact/signals-core'
+import { logger } from '../lib/logger'
+import type { Signals } from '../CoreStateful'
 import FlagsBase from './FlagsBase'
 
 class FlagsStateful extends FlagsBase {
-  constructor() {
+  private readonly flags: Signals['flags']
+
+  constructor(signals: Signals) {
     super()
 
-    void 0 // TODO: Get and subscribe to state
+    const { flags } = signals
+
+    this.flags = flags
+
+    effect(() => {
+      logger.info(
+        `Flags: ${this.flags.value?.length ? Object.keys(this.flags.value).join(', ') : 'none'}`,
+      )
+    })
   }
 }
 

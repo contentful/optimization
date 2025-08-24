@@ -1,15 +1,54 @@
-import type { ProfileType } from '../lib/api-client/experience/dto/profile'
-import type { BatchEventType, EventType } from '../lib/api-client/insights/dto/event'
+import { effect } from '@preact/signals-core'
+import { Guard } from '../lib/decorators'
 import { logger } from '../lib/logger'
+import type ApiClient from '../lib/api-client'
+import type { Signals } from '../CoreStateful'
+import type { BatchEventType, EventType } from '../lib/api-client/insights/dto/event'
 import AnalyticsBase from './AnalyticsBase'
 
 type BatchEventQueue = Map<string, BatchEventType>
 
+@Guard('hasNotConsented', {
+  onBlock: ({ method }) => {
+    logger.info(`Call to AnalyticsStateful.${String(method)} blocked due to lack of consent`)
+  },
+})
 class AnalyticsStateful extends AnalyticsBase {
+  private readonly consent: Signals['consent']
+  private readonly profile: Signals['profile']
   private readonly queue: BatchEventQueue = new Map()
 
-  // TODO: get profile from store
-  track(event: EventType, profile: ProfileType): void {
+  constructor(signals: Signals, api: ApiClient) {
+    super(api)
+
+    const { consent, profile } = signals
+
+    this.consent = consent
+    this.profile = profile
+
+    effect(() => {
+      logger.info(
+        `Analytics ${this.consent.value ? 'will' : 'will not'} be collected due to consent (${this.consent.value})`,
+      )
+    })
+  }
+
+  // @ts-expect-error -- value is read by the decorator
+  private hasNotConsented(): boolean {
+    return !this.consent.value
+  }
+
+  track(event: EventType): void {
+    const {
+      profile: { value: profile },
+    } = this
+
+    if (!profile) {
+      logger.warn('Attempting to emit an event without an Optimization profile')
+
+      return
+    }
+
     logger.debug(`Queueing ${event.type} event for profile ${profile.id}`, event)
 
     const queueItem = this.queue.get(profile.id)
@@ -21,7 +60,8 @@ class AnalyticsStateful extends AnalyticsBase {
     }
   }
 
-  // TODO: flush the queue
+  // TODO: Flush the queue (max events)
+  // TODO: The rest of the owl
 }
 
 export default AnalyticsStateful

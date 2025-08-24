@@ -10,7 +10,7 @@ abstract class PersonalizationBase {
     this.api = api
   }
 
-  abstract page(payload: object): Promise<void>
+  abstract page(payload: object): Promise<void> | void
 }
 
 export default PersonalizationBase
