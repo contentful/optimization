@@ -4,18 +4,18 @@ import type { Signals } from '../CoreStateful'
 import AudienceBase from './AudienceBase'
 
 class AudienceStateful extends AudienceBase {
-  private readonly audiences: Signals['audiences']
+  readonly #audiences: Signals['audiences']
 
   constructor(signals: Signals) {
     super()
 
     const { audiences } = signals
 
-    this.audiences = audiences
+    this.#audiences = audiences
 
     effect(() => {
       logger.info(
-        `Audiences: ${this.audiences.value?.length ? this.audiences.value.join(', ') : 'none'}`,
+        `Audiences: ${this.#audiences.value?.length ? this.#audiences.value.join(', ') : 'none'}`,
       )
     })
   }

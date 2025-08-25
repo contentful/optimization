@@ -4,18 +4,18 @@ import type { Signals } from '../CoreStateful'
 import FlagsBase from './FlagsBase'
 
 class FlagsStateful extends FlagsBase {
-  private readonly flags: Signals['flags']
+  readonly #flags: Signals['flags']
 
   constructor(signals: Signals) {
     super()
 
     const { flags } = signals
 
-    this.flags = flags
+    this.#flags = flags
 
     effect(() => {
       logger.info(
-        `Flags: ${this.flags.value?.length ? Object.keys(this.flags.value).join(', ') : 'none'}`,
+        `Flags: ${this.#flags.value?.length ? Object.keys(this.#flags.value).join(', ') : 'none'}`,
       )
     })
   }

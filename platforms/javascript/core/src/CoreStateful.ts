@@ -59,7 +59,7 @@ class CoreStateful extends CoreBase {
   readonly flags: FlagsStateful
   readonly personalization: PersonalizationStateful
 
-  private readonly signals: Signals = {
+  readonly #signals: Signals = {
     audiences: signal<string[] | undefined>(),
     consent: signal<boolean | undefined>(),
     experiments: signal<ExperienceArrayType | undefined>(),
@@ -69,12 +69,12 @@ class CoreStateful extends CoreBase {
   }
 
   readonly stores: Stores = {
-    audiences: toObservable(this.signals.audiences),
-    consent: toObservable(this.signals.consent),
-    experiments: toObservable(this.signals.experiments),
-    flags: toObservable(this.signals.flags),
-    personalizations: toObservable(this.signals.personalizations),
-    profile: toObservable(this.signals.profile),
+    audiences: toObservable(this.#signals.audiences),
+    consent: toObservable(this.#signals.consent),
+    experiments: toObservable(this.#signals.experiments),
+    flags: toObservable(this.#signals.flags),
+    personalizations: toObservable(this.#signals.personalizations),
+    profile: toObservable(this.#signals.profile),
   }
 
   constructor(config: CoreStatefulConfig) {
@@ -84,15 +84,15 @@ class CoreStateful extends CoreBase {
 
     if (defaults) this.setDefaults(defaults)
 
-    this.analytics = new AnalyticsStateful(this.signals, this.api)
-    this.audience = new AudienceStateful(this.signals)
-    this.experiments = new ExperimentsStateful(this.signals)
-    this.flags = new FlagsStateful(this.signals)
-    this.personalization = new PersonalizationStateful(this.signals, this.api)
+    this.analytics = new AnalyticsStateful(this.#signals, this.api)
+    this.audience = new AudienceStateful(this.#signals)
+    this.experiments = new ExperimentsStateful(this.#signals)
+    this.flags = new FlagsStateful(this.#signals)
+    this.personalization = new PersonalizationStateful(this.#signals, this.api)
   }
 
   public consent(consent: boolean): void {
-    this.signals.consent.value = consent
+    this.#signals.consent.value = consent
   }
 
   private setDefaults(defaults: CoreStatefulConfig['defaults']): void {
@@ -101,12 +101,12 @@ class CoreStateful extends CoreBase {
     const { audiences, consent, experiments, flags, personalizations, profile } = defaults
 
     batch(() => {
-      this.signals.audiences.value = audiences
-      this.signals.consent.value = consent
-      this.signals.experiments.value = experiments
-      this.signals.flags.value = flags
-      this.signals.personalizations.value = personalizations
-      this.signals.profile.value = profile
+      this.#signals.audiences.value = audiences
+      this.#signals.consent.value = consent
+      this.#signals.experiments.value = experiments
+      this.#signals.flags.value = flags
+      this.#signals.personalizations.value = personalizations
+      this.#signals.profile.value = profile
     })
   }
 }
