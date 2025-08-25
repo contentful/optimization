@@ -1,5 +1,5 @@
 import { effect } from '@preact/signals-core'
-import { Guard } from '../lib/decorators'
+import { GuardBy } from '../lib/decorators'
 import { logger } from '../lib/logger'
 import type ApiClient from '../lib/api-client'
 import type { Signals } from '../CoreStateful'
@@ -8,7 +8,7 @@ import PersonalizationBase from './PersonalizationBase'
 
 type EventQueue = Set<EventType>
 
-@Guard('hasNotConsented', {
+@GuardBy('hasNotConsented', {
   onBlock: ({ method }) => {
     logger.info(`Call to AnalyticsStateful.${String(method)} blocked due to lack of consent`)
   },

@@ -1,5 +1,5 @@
 import { effect } from '@preact/signals-core'
-import { Guard } from '../lib/decorators'
+import { GuardBy } from '../lib/decorators'
 import { logger } from '../lib/logger'
 import type ApiClient from '../lib/api-client'
 import type { Signals } from '../CoreStateful'
@@ -8,7 +8,7 @@ import AnalyticsBase from './AnalyticsBase'
 
 type BatchEventQueue = Map<string, BatchEventType>
 
-@Guard('hasNotConsented', {
+@GuardBy('hasNoConsent', {
   onBlock: ({ method }) => {
     logger.info(`Call to AnalyticsStateful.${String(method)} blocked due to lack of consent`)
   },
@@ -34,7 +34,7 @@ class AnalyticsStateful extends AnalyticsBase {
   }
 
   // @ts-expect-error -- value is read by the decorator
-  private hasNotConsented(): boolean {
+  private hasNoConsent(): boolean {
     return !this.consent.value
   }
 

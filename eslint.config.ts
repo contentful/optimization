@@ -28,6 +28,7 @@ const config: ConfigArray = typescript.config(
     // https://github.com/vitest-dev/vitest/issues/4543#issuecomment-1824628142
     files: ['**/src/**/*.test.ts', '**/test/**/*.ts'],
     rules: {
+      '@typescript-eslint/class-methods-use-this': 'off',
       '@typescript-eslint/init-declarations': 'off',
       '@typescript-eslint/no-floating-promises': 'off',
       '@typescript-eslint/no-magic-numbers': 'off',
