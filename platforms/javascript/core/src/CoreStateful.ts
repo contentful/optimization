@@ -24,6 +24,13 @@ export interface Signals {
   profile: Signal<ProfileType | undefined>
 }
 
+export interface Subscription {
+  unsubscribe: () => void
+}
+export interface Observable<T> {
+  subscribe: (next: (v: T) => void) => Subscription
+}
+
 export interface Stores {
   audiences: Observable<string[] | undefined>
   consent: Observable<boolean | undefined>
@@ -31,13 +38,6 @@ export interface Stores {
   flags: Observable<ChangeArrayType | undefined>
   personalizations: Observable<ExperienceArrayType | undefined>
   profile: Observable<ProfileType | undefined>
-}
-
-export interface Subscription {
-  unsubscribe: () => void
-}
-export interface Observable<T> {
-  subscribe: (next: (v: T) => void) => Subscription
 }
 
 function toObservable<T>(s: { value: T }): Observable<T> {
