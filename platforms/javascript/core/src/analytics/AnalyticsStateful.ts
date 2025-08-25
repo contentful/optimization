@@ -14,34 +14,32 @@ type BatchEventQueue = Map<string, BatchEventType>
   },
 })
 class AnalyticsStateful extends AnalyticsBase {
-  private readonly consent: Signals['consent']
-  private readonly profile: Signals['profile']
-  private readonly queue: BatchEventQueue = new Map()
+  readonly #consent: Signals['consent']
+  readonly #profile: Signals['profile']
+  readonly #queue: BatchEventQueue = new Map()
 
   constructor(signals: Signals, api: ApiClient) {
     super(api)
 
     const { consent, profile } = signals
 
-    this.consent = consent
-    this.profile = profile
+    this.#consent = consent
+    this.#profile = profile
 
     effect(() => {
       logger.info(
-        `Analytics ${this.consent.value ? 'will' : 'will not'} be collected due to consent (${this.consent.value})`,
+        `Analytics ${this.#consent.value ? 'will' : 'will not'} be collected due to consent (${this.#consent.value})`,
       )
     })
   }
 
   // @ts-expect-error -- value is read by the decorator
   private hasNoConsent(): boolean {
-    return !this.consent.value
+    return !this.#consent.value
   }
 
   track(event: EventType): void {
-    const {
-      profile: { value: profile },
-    } = this
+    const { value: profile } = this.#profile
 
     if (!profile) {
       logger.warn('Attempting to emit an event without an Optimization profile')
@@ -51,12 +49,12 @@ class AnalyticsStateful extends AnalyticsBase {
 
     logger.debug(`Queueing ${event.type} event for profile ${profile.id}`, event)
 
-    const queueItem = this.queue.get(profile.id)
+    const queueItem = this.#queue.get(profile.id)
 
     if (queueItem) {
       queueItem.events.push(event)
     } else {
-      this.queue.set(profile.id, { profile, events: [event] })
+      this.#queue.set(profile.id, { profile, events: [event] })
     }
   }
 

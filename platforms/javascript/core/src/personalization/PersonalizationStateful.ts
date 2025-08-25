@@ -14,60 +14,60 @@ type EventQueue = Set<EventType>
   },
 })
 class PersonalizationStateful extends PersonalizationBase {
-  private readonly audiences: Signals['audiences']
-  private readonly consent: Signals['consent']
-  private readonly experiments: Signals['experiments']
-  private readonly flags: Signals['flags']
-  private readonly personalizations: Signals['personalizations']
-  private readonly profile: Signals['profile']
-  private readonly queue: EventQueue = new Set()
+  readonly #audiences: Signals['audiences']
+  readonly #consent: Signals['consent']
+  readonly #experiments: Signals['experiments']
+  readonly #flags: Signals['flags']
+  readonly #personalizations: Signals['personalizations']
+  readonly #profile: Signals['profile']
+  readonly #queue: EventQueue = new Set()
 
   constructor(signals: Signals, api: ApiClient) {
     super(api)
 
     const { audiences, consent, experiments, flags, personalizations, profile } = signals
 
-    this.audiences = audiences
-    this.consent = consent
-    this.experiments = experiments
-    this.flags = flags
-    this.personalizations = personalizations
-    this.profile = profile
+    this.#audiences = audiences
+    this.#consent = consent
+    this.#experiments = experiments
+    this.#flags = flags
+    this.#personalizations = personalizations
+    this.#profile = profile
 
     effect(() => {
-      logger.info(`Audiences have been ${this.audiences.value?.length ? 'populated' : 'cleared'}`)
+      logger.info(`Audiences have been ${this.#audiences.value?.length ? 'populated' : 'cleared'}`)
     })
 
     effect(() => {
       logger.info(
-        `Personalization ${this.consent.value ? 'will' : 'will not'} take effect due to consent (${this.consent.value})`,
+        `Personalization ${this.#consent.value ? 'will' : 'will not'} take effect due to consent (${this.#consent.value})`,
       )
     })
 
     effect(() => {
       logger.info(
-        `Experiments have been ${this.experiments.value?.length ? 'populated' : 'cleared'}`,
+        `Experiments have been ${this.#experiments.value?.length ? 'populated' : 'cleared'}`,
       )
     })
 
     effect(() => {
-      logger.info(`Flags have been ${this.flags.value?.length ? 'populated' : 'cleared'}`)
+      logger.info(`Flags have been ${this.#flags.value?.length ? 'populated' : 'cleared'}`)
     })
 
     effect(() => {
       logger.info(
-        `Personalizations have been ${this.personalizations.value?.length ? 'populated' : 'cleared'}`,
+        `Personalizations have been ${this.#personalizations.value?.length ? 'populated' : 'cleared'}`,
       )
     })
 
     effect(() => {
-      logger.info(`Profile has been ${this.profile.value ? 'set' : 'cleared'}`)
+      logger.info(`Profile has been ${this.#profile.value ? 'set' : 'cleared'}`)
     })
   }
 
   page(event: EventType): void {
     // TODO: Logic
-    this.queue.add(event)
+    this.#queue.add(event)
   }
 
   // TODO: Flush the queue (max events)

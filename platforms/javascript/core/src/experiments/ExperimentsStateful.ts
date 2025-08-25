@@ -4,17 +4,17 @@ import type { Signals } from '../CoreStateful'
 import ExperimentsBase from './ExperimentsBase'
 
 class ExperimentsStateful extends ExperimentsBase {
-  private readonly experiments: Signals['experiments']
+  readonly #experiments: Signals['experiments']
 
   constructor(signals: Signals) {
     super()
 
     const { experiments } = signals
 
-    this.experiments = experiments
+    this.#experiments = experiments
 
     effect(() => {
-      logger.info(`User experiments count: ${this.experiments.value?.length}`)
+      logger.info(`User experiments count: ${this.#experiments.value?.length}`)
     })
   }
 }
