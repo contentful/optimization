@@ -146,8 +146,8 @@ importers:
         specifier: ^6.2.1
         version: 6.2.1
       zod:
-        specifier: ^4.0.14
-        version: 4.0.15
+        specifier: ^4.1.1
+        version: 4.1.1
     devDependencies:
       '@mswjs/http-middleware':
         specifier: 0.10.3
@@ -3385,8 +3385,8 @@ packages:
   zod@3.23.8:
     resolution: {integrity: sha512-XBx9AXhXktjUqnepgTiE5flcKIYWi/rme0Eaj+5Y0lftuGBq+jyRu/md4WnuxqgP1ubdpNCsYEYPxrzVHD8d6g==}
 
-  zod@4.0.15:
-    resolution: {integrity: sha512-2IVHb9h4Mt6+UXkyMs0XbfICUh1eUrlJJAOupBHUhLRnKkruawyDddYRCs0Eizt900ntIMk9/4RksYl+FgSpcQ==}
+  zod@4.1.1:
+    resolution: {integrity: sha512-SgMZK/h8Tigt9nnKkfJMvB/mKjiJXaX26xegP4sa+0wHIFVFWVlsQGdhklDmuargBD3Hsi3rsQRIzwJIhTPJHA==}
 
 snapshots:
 
@@ -6882,4 +6882,4 @@ snapshots:
 
   zod@3.23.8: {}
 
-  zod@4.0.15: {}
+  zod@4.1.1: {}
