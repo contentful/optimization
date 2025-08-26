@@ -1,9 +1,8 @@
+import { batch, signal, type Signal } from '@preact/signals-core'
 import type { ChangeArrayType } from './lib/api-client/experience/dto/change'
 import type { ExperienceArrayType } from './lib/api-client/experience/dto/experience'
 import type { ProfileType } from './lib/api-client/experience/dto/profile'
 import type AnalyticsBase from './analytics/AnalyticsBase'
-import type AudienceBase from './audience/AudienceBase'
-import type ExperimentsBase from './experiments/ExperimentsBase'
 import type FlagsBase from './flags/FlagsBase'
 import type PersonalizationBase from './personalization/PersonalizationBase'
 import ApiClient, { type ApiClientConfig, type ApiConfig } from './lib/api-client'
@@ -27,10 +26,26 @@ export interface CoreConfig extends Omit<ApiConfig, 'baseUrl' | 'fetchOptions'> 
   defaults?: CoreConfigDefaults
 }
 
+export interface Signals {
+  audiences: Signal<string[] | undefined>
+  experiences: Signal<ExperienceArrayType | undefined>
+  experiments: Signal<ExperienceArrayType | undefined>
+  flags: Signal<ChangeArrayType | undefined>
+  personalizations: Signal<ExperienceArrayType | undefined>
+  profile: Signal<ProfileType | undefined>
+}
+
+export const signals: Signals = {
+  audiences: signal<string[] | undefined>(),
+  experiences: signal<ExperienceArrayType | undefined>(),
+  experiments: signal<ExperienceArrayType | undefined>(),
+  flags: signal<ChangeArrayType | undefined>(),
+  personalizations: signal<ExperienceArrayType | undefined>(),
+  profile: signal<ProfileType | undefined>(),
+}
+
 abstract class CoreBase {
   abstract readonly analytics: AnalyticsBase
-  abstract readonly audience: AudienceBase
-  abstract readonly experiments: ExperimentsBase
   abstract readonly flags: FlagsBase
   abstract readonly personalization: PersonalizationBase
 
@@ -39,7 +54,19 @@ abstract class CoreBase {
   readonly api: ApiClient
 
   constructor(config: CoreConfig) {
-    const { name, api, clientId, environment, preview, ...rest } = config
+    const { name, api, clientId, defaults, environment, preview, ...rest } = config
+
+    if (defaults) {
+      const { audiences, experiments, flags, personalizations, profile } = defaults
+
+      batch(() => {
+        signals.audiences.value = audiences
+        signals.experiments.value = experiments
+        signals.flags.value = flags
+        signals.personalizations.value = personalizations
+        signals.profile.value = profile
+      })
+    }
 
     const apiConfig = { ...api, clientId, environment, preview }
 

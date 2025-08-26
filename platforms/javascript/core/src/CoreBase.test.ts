@@ -1,19 +1,28 @@
+import { signal } from '@preact/signals-core'
 import { AnalyticsStateless } from './analytics'
-import { AudienceStateless } from './audience'
-import { ExperimentsStateless } from './experiments'
 import { FlagsStateless } from './flags'
 import { PersonalizationStateless } from './personalization'
-import CoreBase from './CoreBase'
+import CoreBase, { type Signals } from './CoreBase'
 import ApiClient from './lib/api-client'
+import type { ExperienceArrayType } from './lib/api-client/experience/dto/experience'
+import type { ChangeArrayType } from './lib/api-client/experience/dto/change'
+import type { ProfileType } from './lib/api-client/experience/dto/profile'
 
 const api = new ApiClient({ clientId: 'client-id' })
 
+const testSignals: Signals = {
+  audiences: signal<string[] | undefined>(),
+  experiences: signal<ExperienceArrayType | undefined>(),
+  experiments: signal<ExperienceArrayType | undefined>(),
+  flags: signal<ChangeArrayType | undefined>(),
+  personalizations: signal<ExperienceArrayType | undefined>(),
+  profile: signal<ProfileType | undefined>(),
+}
+
 class TestCore extends CoreBase {
-  analytics = new AnalyticsStateless(api)
-  audience = new AudienceStateless()
-  experiments = new ExperimentsStateless()
-  flags = new FlagsStateless()
-  personalization = new PersonalizationStateless(api)
+  analytics = new AnalyticsStateless(testSignals, api)
+  flags = new FlagsStateless(testSignals)
+  personalization = new PersonalizationStateless(testSignals, api)
 }
 
 const config = { name: 'Test', clientId: 'testId' }

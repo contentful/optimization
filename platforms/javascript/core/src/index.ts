@@ -3,18 +3,18 @@
 export type * from './lib/logger'
 export type * from './lib/api-client'
 export type * from './analytics'
-export type * from './audience'
-export type * from './experiments'
 export type * from './flags'
 export type * from './personalization'
 
 export * from './lib/logger'
 export * from './lib/api-client'
 export * from './analytics'
-export * from './audience'
-export * from './experiments'
 export * from './flags'
 export * from './personalization'
+
+export type { Signals } from './CoreBase'
+
+export { signals } from './CoreBase'
 
 export { default as CoreStateful } from './CoreStateful'
 export { default as CoreStateless } from './CoreStateless'

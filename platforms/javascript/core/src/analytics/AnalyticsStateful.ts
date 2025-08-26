@@ -1,9 +1,10 @@
-import { effect } from '@preact/signals-core'
+import { effect, type Signal } from '@preact/signals-core'
 import { GuardBy } from '../lib/decorators'
 import { logger } from '../lib/logger'
 import type ApiClient from '../lib/api-client'
-import type { Signals } from '../CoreStateful'
-import type { BatchEventType, EventType } from '../lib/api-client/insights/dto/event'
+import type { BatchEventType, EventType } from '../lib/api-client/insights/dto'
+import type { Signals } from '../CoreBase'
+import { consent } from '../CoreStateful'
 import AnalyticsBase from './AnalyticsBase'
 
 type BatchEventQueue = Map<string, BatchEventType>
@@ -14,17 +15,13 @@ type BatchEventQueue = Map<string, BatchEventType>
   },
 })
 class AnalyticsStateful extends AnalyticsBase {
-  readonly #consent: Signals['consent']
-  readonly #profile: Signals['profile']
+  readonly #consent: Signal<boolean | undefined>
   readonly #queue: BatchEventQueue = new Map()
 
   constructor(signals: Signals, api: ApiClient) {
-    super(api)
-
-    const { consent, profile } = signals
+    super(signals, api)
 
     this.#consent = consent
-    this.#profile = profile
 
     effect(() => {
       logger.info(
@@ -39,7 +36,9 @@ class AnalyticsStateful extends AnalyticsBase {
   }
 
   track(event: EventType): void {
-    const { value: profile } = this.#profile
+    const {
+      profile: { value: profile },
+    } = this
 
     if (!profile) {
       logger.warn('Attempting to emit an event without an Optimization profile')
