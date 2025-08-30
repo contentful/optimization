@@ -1,2 +1,1 @@
-export { default as PersonalizationStateful } from './PersonalizationStateful'
-export { default as PersonalizationStateless } from './PersonalizationStateless'
+export { default as Personalization } from './Personalization'

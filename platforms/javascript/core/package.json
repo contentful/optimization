@@ -31,10 +31,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@preact/signals-core": "1.12.1",
+    "@preact/signals-core": "catalog:",
+    "es-toolkit": "catalog:",
     "p-retry": "^6.2.1",
     "diary": "^0.4.5",
-    "zod": "^4.1.1"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@mswjs/http-middleware": "0.10.3",

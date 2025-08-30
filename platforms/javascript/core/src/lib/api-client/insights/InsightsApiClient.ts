@@ -2,6 +2,7 @@ import { logger } from '../../logger'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
 import { BatchEventArray, type BatchEventArrayType } from './dto/event'
 
+// TODO: consider injecting/passing beacon instead of detecting from globalThis
 interface RequestOptions {
   /**
    * Insights analytics events may be queued using the Beacon API

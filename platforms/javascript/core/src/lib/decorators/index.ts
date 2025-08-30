@@ -1,1 +1,1 @@
-export { GuardBy } from './GuardBy'
+export { guardedBy } from './guardedBy'

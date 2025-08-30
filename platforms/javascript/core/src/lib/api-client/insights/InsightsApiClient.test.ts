@@ -45,6 +45,7 @@ function generateBatchEventArray(id: string): BatchEventArrayType {
             query: {},
             referrer: 'http://example.com',
             search: '',
+            title: 'Document Title',
             url: 'http://example.com/path',
           },
           count: 0,
@@ -62,7 +63,10 @@ function generateBatchEventArray(id: string): BatchEventArrayType {
           context: {
             campaign: {},
             gdpr: { isConsentGiven: true },
-            library: '',
+            library: {
+              name: 'Library',
+              version: '0',
+            },
             location: {},
             locale: '',
             page: {
@@ -70,6 +74,7 @@ function generateBatchEventArray(id: string): BatchEventArrayType {
               query: {},
               referrer: 'http://example.com',
               search: '',
+              title: 'Document Title',
               url: 'http://example.com/path',
             },
           },

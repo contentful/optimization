@@ -1,19 +1,14 @@
 import { AnalyticsStateless } from './analytics'
-import { FlagsStateless } from './flags'
-import { PersonalizationStateless } from './personalization'
-import CoreBase, { type CoreConfig, signals } from './CoreBase'
+import CoreBase, { type CoreConfig } from './CoreBase'
+import type { EventBuilder } from './lib/builders'
 
 class CoreStateless extends CoreBase {
   readonly analytics: AnalyticsStateless
-  readonly flags: FlagsStateless
-  readonly personalization: PersonalizationStateless
 
-  constructor(config: CoreConfig) {
-    super(config)
+  constructor(config: CoreConfig, builder: EventBuilder) {
+    super(config, builder)
 
-    this.analytics = new AnalyticsStateless(signals, this.api)
-    this.flags = new FlagsStateless(signals)
-    this.personalization = new PersonalizationStateless(signals, this.api)
+    this.analytics = new AnalyticsStateless(this.api, builder)
   }
 }
 

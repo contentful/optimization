@@ -16,10 +16,22 @@ const config: ConfigArray = typescript.config(
   typescript.configs.stylistic,
   {
     rules: {
-      '@typescript-eslint/no-magic-numbers': ['error', { ignore: [-1, 0, 1] }],
       '@typescript-eslint/class-methods-use-this': [
         'error',
         { ignoreClassesThatImplementAnInterface: true },
+      ],
+      '@typescript-eslint/no-magic-numbers': ['error', { ignore: [-1, 0, 1] }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          args: 'all',
+          argsIgnorePattern: '^_',
+          caughtErrors: 'all',
+          caughtErrorsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+        },
       ],
       '@typescript-eslint/strict-boolean-expressions': 'off',
     },

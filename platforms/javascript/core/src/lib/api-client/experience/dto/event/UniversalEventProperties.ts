@@ -1,23 +1,15 @@
-import { boolean, iso, object, optional, string } from 'zod/mini'
-import { Campaign, Channel, GeoLocation, Page } from './properties'
+import { boolean, iso, object, optional, string, type infer as zInfer } from 'zod/mini'
+import { App, Campaign, Channel, GeoLocation, Library, Page } from './properties'
 
 export const UniversalEventProperties = object({
   channel: Channel,
   context: object({
-    app: optional(
-      object({
-        name: string(),
-        version: string(),
-      }),
-    ),
+    app: App,
     campaign: Campaign,
     gdpr: object({
       isConsentGiven: boolean(),
     }),
-    library: {
-      name: string(),
-      version: string(),
-    },
+    library: Library,
     locale: string(),
     location: GeoLocation,
     page: Page,
@@ -29,3 +21,5 @@ export const UniversalEventProperties = object({
   timestamp: iso.datetime(),
   userId: optional(string()),
 })
+
+export type UniversalEventPropertiesType = zInfer<typeof UniversalEventProperties>

@@ -1,44 +1,33 @@
-import { effect, type Signal } from '@preact/signals-core'
-import { GuardBy } from '../lib/decorators'
+import {
+  Event,
+  type BatchEventArrayType,
+  type EventArrayType,
+  type EventType,
+} from '../lib/api-client/insights/dto/event'
+import type { ProfileType } from '../lib/api-client/experience/dto/profile'
 import { logger } from '../lib/logger'
-import type ApiClient from '../lib/api-client'
-import type { BatchEventType, EventType } from '../lib/api-client/insights/dto'
-import type { Signals } from '../CoreBase'
-import { consent } from '../CoreStateful'
+import type { ComponentViewBuilderArgs } from '../lib/builders'
+import { guardedBy } from '../lib/decorators'
+import { profile as profileSignal } from '../signals'
 import AnalyticsBase from './AnalyticsBase'
 
-type BatchEventQueue = Map<string, BatchEventType>
+const MAX_QUEUED_EVENTS = 25
 
-@GuardBy('hasNoConsent', {
-  onBlock: ({ method }) => {
-    logger.info(`Call to AnalyticsStateful.${String(method)} blocked due to lack of consent`)
-  },
-})
 class AnalyticsStateful extends AnalyticsBase {
-  readonly #consent: Signal<boolean | undefined>
-  readonly #queue: BatchEventQueue = new Map()
+  readonly #queue = new Map<ProfileType, EventArrayType>()
 
-  constructor(signals: Signals, api: ApiClient) {
-    super(signals, api)
-
-    this.#consent = consent
-
-    effect(() => {
-      logger.info(
-        `Analytics ${this.#consent.value ? 'will' : 'will not'} be collected due to consent (${this.#consent.value})`,
-      )
-    })
+  @guardedBy('hasNoConsent')
+  async trackComponentView(args: ComponentViewBuilderArgs): Promise<void> {
+    await this.#enqueueEvent(this.builder.buildComponentView(args))
   }
 
-  // @ts-expect-error -- value is read by the decorator
-  private hasNoConsent(): boolean {
-    return !this.#consent.value
+  @guardedBy('hasNoConsent')
+  async trackFlagView(args: ComponentViewBuilderArgs): Promise<void> {
+    await this.#enqueueEvent(this.builder.buildFlagView(args))
   }
 
-  track(event: EventType): void {
-    const {
-      profile: { value: profile },
-    } = this
+  async #enqueueEvent(event: EventType): Promise<void> {
+    const { value: profile } = profileSignal
 
     if (!profile) {
       logger.warn('Attempting to emit an event without an Optimization profile')
@@ -48,17 +37,32 @@ class AnalyticsStateful extends AnalyticsBase {
 
     logger.debug(`Queueing ${event.type} event for profile ${profile.id}`, event)
 
-    const queueItem = this.#queue.get(profile.id)
+    const profileEventQueue = this.#queue.get(profile)
 
-    if (queueItem) {
-      queueItem.events.push(event)
+    const validEvent = Event.parse(event)
+
+    if (profileEventQueue) {
+      profileEventQueue.push(validEvent)
     } else {
-      this.#queue.set(profile.id, { profile, events: [event] })
+      this.#queue.set(profile, [validEvent])
     }
+
+    await this.#flushMaxEvents()
   }
 
-  // TODO: Flush the queue (max events)
-  // TODO: The rest of the owl
+  async #flushMaxEvents(): Promise<void> {
+    if (this.#queue.values().toArray().flat().length >= MAX_QUEUED_EVENTS) await this.flush()
+  }
+
+  async flush(): Promise<void> {
+    const batches: BatchEventArrayType = []
+
+    this.#queue.forEach((events, profile) => batches.push({ profile, events }))
+
+    await this.api.insights.sendBatchEvents(batches)
+
+    this.#queue.clear()
+  }
 }
 
 export default AnalyticsStateful

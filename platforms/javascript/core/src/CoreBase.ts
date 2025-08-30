@@ -1,17 +1,15 @@
-import { batch, signal, type Signal } from '@preact/signals-core'
 import type { ChangeArrayType } from './lib/api-client/experience/dto/change'
 import type { ExperienceArrayType } from './lib/api-client/experience/dto/experience'
 import type { ProfileType } from './lib/api-client/experience/dto/profile'
 import type AnalyticsBase from './analytics/AnalyticsBase'
-import type FlagsBase from './flags/FlagsBase'
-import type PersonalizationBase from './personalization/PersonalizationBase'
 import ApiClient, { type ApiClientConfig, type ApiConfig } from './lib/api-client'
+import { batch, changes, consent, experiences, profile } from './signals'
+import type { EventBuilder } from './lib/builders'
+import { Personalization } from './personalization'
 
 export interface CoreConfigDefaults {
-  audiences?: string[]
-  experiments?: ExperienceArrayType
-  flags?: ChangeArrayType
-  personalizations?: ExperienceArrayType
+  changes?: ChangeArrayType
+  experiences?: ExperienceArrayType
   profile?: ProfileType
 }
 
@@ -26,54 +24,46 @@ export interface CoreConfig extends Omit<ApiConfig, 'baseUrl' | 'fetchOptions'> 
   defaults?: CoreConfigDefaults
 }
 
-export interface Signals {
-  audiences: Signal<string[] | undefined>
-  experiences: Signal<ExperienceArrayType | undefined>
-  experiments: Signal<ExperienceArrayType | undefined>
-  flags: Signal<ChangeArrayType | undefined>
-  personalizations: Signal<ExperienceArrayType | undefined>
-  profile: Signal<ProfileType | undefined>
+interface ConsentController {
+  consent: (accept: boolean) => void
 }
 
-export const signals: Signals = {
-  audiences: signal<string[] | undefined>(),
-  experiences: signal<ExperienceArrayType | undefined>(),
-  experiments: signal<ExperienceArrayType | undefined>(),
-  flags: signal<ChangeArrayType | undefined>(),
-  personalizations: signal<ExperienceArrayType | undefined>(),
-  profile: signal<ProfileType | undefined>(),
-}
-
-abstract class CoreBase {
+abstract class CoreBase implements ConsentController {
   abstract readonly analytics: AnalyticsBase
-  abstract readonly flags: FlagsBase
-  abstract readonly personalization: PersonalizationBase
-
+  readonly api: ApiClient
+  readonly builder: EventBuilder
   readonly config: Omit<CoreConfig, 'name'>
   readonly name: string
-  readonly api: ApiClient
+  readonly personalization: Personalization
 
-  constructor(config: CoreConfig) {
+  constructor(config: CoreConfig, builder: EventBuilder) {
     const { name, api, clientId, defaults, environment, preview, ...rest } = config
 
     if (defaults) {
-      const { audiences, experiments, flags, personalizations, profile } = defaults
+      const {
+        changes: defaultChanges,
+        experiences: defaultExperiences,
+        profile: defaultProfile,
+      } = defaults
 
       batch(() => {
-        signals.audiences.value = audiences
-        signals.experiments.value = experiments
-        signals.flags.value = flags
-        signals.personalizations.value = personalizations
-        signals.profile.value = profile
+        changes.value = defaultChanges
+        experiences.value = defaultExperiences
+        profile.value = defaultProfile
       })
     }
 
     const apiConfig = { ...api, clientId, environment, preview }
 
-    this.name = name // only for demo
-    this.config = { clientId, environment, preview, ...rest }
-
     this.api = new ApiClient(apiConfig)
+    this.builder = builder
+    this.config = { clientId, environment, preview, ...rest }
+    this.name = name // only for demo
+    this.personalization = new Personalization(this.api, this.builder)
+  }
+
+  public consent(accept: boolean): void {
+    consent.value = accept
   }
 }
 
