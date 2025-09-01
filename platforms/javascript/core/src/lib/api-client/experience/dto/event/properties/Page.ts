@@ -7,6 +7,7 @@ export const Page = object({
   query: Query,
   referrer: string(),
   search: string(),
+  title: string(),
   url: string(),
 })
 export type PageType = zInfer<typeof Page>

@@ -1,4 +1,4 @@
-import { CoreStateful } from '@contentful/optimization-core'
+import { CoreStateful, EventBuilder } from '@contentful/optimization-core'
 
 declare global {
   interface Window {
@@ -7,9 +7,21 @@ declare global {
   }
 }
 
+// TODO: Decorate builder to automatically gather page data and such
+const builder = new EventBuilder({
+  channel: 'server',
+  library: { name: 'Optimization Web API', version: '0.1.0' },
+})
+
 class Optimization extends CoreStateful {
   constructor() {
-    super({ name: 'Optimization', clientId: 'temp' })
+    super(
+      {
+        name: 'Optimization',
+        clientId: 'temp',
+      },
+      builder,
+    )
 
     // eslint-disable-next-line no-console -- demo
     console.log(this.name)

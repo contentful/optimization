@@ -1,24 +1,51 @@
-import type { ProfileType } from '../lib/api-client/experience/dto/profile'
 import {
   BatchEventArray,
-  type BatchEventArrayType,
   type EventType,
+  type BatchEventArrayType,
 } from '../lib/api-client/insights/dto/event'
 import { logger } from '../lib/logger'
+import { guardedBy } from '../lib/decorators'
+import type { ComponentViewBuilderArgs } from '../lib/builders'
+import { profile as profileSignal } from '../signals'
 import AnalyticsBase from './AnalyticsBase'
+import { ComponentViewEvent } from '../lib/api-client/experience/dto/event'
 
 class AnalyticsStateless extends AnalyticsBase {
-  async track(event: EventType, profile: ProfileType): Promise<void> {
-    logger.debug(`Processing ${event.type} event`, event)
+  @guardedBy('hasNoConsent')
+  async trackComponentView(args: ComponentViewBuilderArgs): Promise<void> {
+    logger.info(`[Analytics] Processing "component view" event`)
 
-    const batchEvents: BatchEventArrayType = BatchEventArray.parse([
+    const event = this.builder.buildComponentView(args)
+
+    const intercepted = await this.interceptor.event.run(event)
+
+    const parsed = ComponentViewEvent.parse(intercepted)
+
+    await this.#sendBatchEvent(parsed)
+  }
+
+  @guardedBy('hasNoConsent')
+  async trackFlagView(args: ComponentViewBuilderArgs): Promise<void> {
+    logger.debug(`[Analytics] Processing "flag view" event`)
+
+    const event = this.builder.buildFlagView(args)
+
+    const intercepted = await this.interceptor.event.run(event)
+
+    const parsed = ComponentViewEvent.parse(intercepted)
+
+    await this.#sendBatchEvent(parsed)
+  }
+
+  async #sendBatchEvent(event: EventType): Promise<void> {
+    const batchEvent: BatchEventArrayType = BatchEventArray.parse([
       {
-        profile,
+        profile: profileSignal.value,
         events: [event],
       },
     ])
 
-    await this.api.insights.sendBatchEvents(batchEvents)
+    await this.api.insights.sendBatchEvents(batchEvent)
   }
 }
 

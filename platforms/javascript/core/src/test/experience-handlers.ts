@@ -25,10 +25,11 @@ function makeDefaultSession(page?: PageType): SessionStatisticsType {
   const query = page?.query ?? {}
   const referrer = page?.referrer ?? ''
   const search = page?.search ?? ''
+  const title = page?.title ?? ''
   return {
     id: 'sess_' + crypto.randomUUID(),
     isReturningVisitor: false,
-    landingPage: { path, url, query, referrer, search },
+    landingPage: { path, url, query, referrer, search, title },
     count: 1,
     activeSessionLength: 0,
     averageSessionLength: 0,

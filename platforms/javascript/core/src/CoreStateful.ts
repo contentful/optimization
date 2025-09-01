@@ -1,11 +1,10 @@
-import { effect, signal } from '@preact/signals-core'
-import type { ProfileType } from './lib/api-client/experience/dto/profile'
+import type { Flags } from './lib/api-client/experience/dto/change'
 import type { ExperienceArrayType } from './lib/api-client/experience/dto/experience'
-import type { ChangeArrayType } from './lib/api-client/experience/dto/change'
+import type { ProfileType } from './lib/api-client/experience/dto/profile'
 import { AnalyticsStateful } from './analytics'
-import { FlagsStateful } from './flags'
-import { PersonalizationStateful } from './personalization'
-import CoreBase, { type CoreConfigDefaults, type CoreConfig, signals } from './CoreBase'
+import CoreBase, { type CoreConfigDefaults, type CoreConfig } from './CoreBase'
+import { consent, effect, experiences, flags, profile } from './signals'
+import type { EventBuilder } from './lib/builders'
 
 export type CoreStatefulConfig = CoreConfig & {
   defaults?: CoreConfigDefaults & {
@@ -16,16 +15,15 @@ export type CoreStatefulConfig = CoreConfig & {
 export interface Subscription {
   unsubscribe: () => void
 }
+
 export interface Observable<T> {
   subscribe: (next: (v: T) => void) => Subscription
 }
 
 export interface States {
-  audiences: Observable<string[] | undefined>
   consent: Observable<boolean | undefined>
-  experiments: Observable<ExperienceArrayType | undefined>
-  flags: Observable<ChangeArrayType | undefined>
-  personalizations: Observable<ExperienceArrayType | undefined>
+  experiences: Observable<ExperienceArrayType | undefined>
+  flags: Observable<Flags | undefined>
   profile: Observable<ProfileType | undefined>
 }
 
@@ -41,33 +39,20 @@ function toObservable<T>(s: { value: T }): Observable<T> {
   }
 }
 
-export const consent = signal<boolean | undefined>()
-
 class CoreStateful extends CoreBase {
   readonly analytics: AnalyticsStateful
-  readonly flags: FlagsStateful
-  readonly personalization: PersonalizationStateful
-  readonly #consent = consent
 
   readonly states: States = {
-    audiences: toObservable(signals.audiences),
-    consent: toObservable(this.#consent),
-    experiments: toObservable(signals.experiments),
-    flags: toObservable(signals.flags),
-    personalizations: toObservable(signals.personalizations),
-    profile: toObservable(signals.profile),
+    consent: toObservable(consent),
+    experiences: toObservable(experiences),
+    flags: toObservable(flags),
+    profile: toObservable(profile),
   }
 
-  constructor(config: CoreStatefulConfig) {
-    super(config)
+  constructor(config: CoreStatefulConfig, builder: EventBuilder) {
+    super(config, builder)
 
-    this.analytics = new AnalyticsStateful(signals, this.api)
-    this.flags = new FlagsStateful(signals)
-    this.personalization = new PersonalizationStateful(signals, this.api)
-  }
-
-  public consent(consent: boolean): void {
-    this.#consent.value = consent
+    this.analytics = new AnalyticsStateful(this.api, builder)
   }
 }
 
