@@ -12,4 +12,4 @@ export const Profile = object({
   location: GeoLocation,
   session: SessionStatistics,
 })
-export type ProfileType = zInfer<typeof Profile>
+export type Profile = zInfer<typeof Profile>

@@ -1,33 +1,33 @@
 import type {
-  ComponentViewEventType,
-  IdentifyEventType,
-  PageViewEventType,
-  TrackEventType,
+  ComponentViewEvent,
+  IdentifyEvent,
+  PageViewEvent,
+  TrackEvent,
 } from '../api-client/experience/dto/event'
 import type {
-  AppType,
-  CampaignType,
-  ChannelType,
-  GeoLocationType,
-  LibraryType,
-  PageType,
-  PageViewType,
-  PropertiesType,
-  TraitsType,
+  App,
+  Campaign,
+  Channel,
+  GeoLocation,
+  Library,
+  Page,
+  PageView,
+  Properties,
+  Traits,
 } from '../api-client/experience/dto/event/properties'
-import type { UniversalEventPropertiesType } from '../api-client/experience/dto/event/UniversalEventProperties'
+import type { UniversalEventProperties } from '../api-client/experience/dto/event/UniversalEventProperties'
 
 export interface EventBuilderConfig {
-  app?: AppType
-  channel: ChannelType
-  library: LibraryType
+  app?: App
+  channel: Channel
+  library: Library
 }
 
 export interface EventBuilderArgs {
-  campaign?: CampaignType
+  campaign?: Campaign
   locale: string
-  location?: GeoLocationType
-  page: PageType
+  location?: GeoLocation
+  page: Page
   userAgent?: string
 }
 
@@ -38,23 +38,23 @@ export interface ComponentViewBuilderArgs extends EventBuilderArgs {
 }
 
 export interface IdentifyBuilderArgs extends EventBuilderArgs {
-  traits: TraitsType
+  traits: Traits
   userId: string
 }
 
 export interface PageViewBuilderArgs extends EventBuilderArgs {
-  properties: PageViewType
+  properties: PageView
 }
 
 export interface TrackBuilderArgs extends EventBuilderArgs {
   event: string
-  properties: PropertiesType
+  properties: Properties
 }
 
 class EventBuilder {
-  app: AppType
-  channel: ChannelType
-  library: LibraryType
+  app: App
+  channel: Channel
+  library: Library
 
   constructor({ app, channel, library }: EventBuilderConfig) {
     this.app = app
@@ -68,7 +68,7 @@ class EventBuilder {
     location = {},
     page,
     userAgent,
-  }: EventBuilderArgs): UniversalEventPropertiesType {
+  }: EventBuilderArgs): UniversalEventProperties {
     const timestamp = new Date().toISOString()
 
     return {
@@ -95,25 +95,25 @@ class EventBuilder {
     experienceId,
     variantIndex,
     ...universal
-  }: ComponentViewBuilderArgs): ComponentViewEventType {
+  }: ComponentViewBuilderArgs): ComponentViewEvent {
     return {
       ...this.buildUniversalEventProperties(universal),
       type: 'component',
-      componentType: 'Entry',
+      component: 'Entry',
       componentId,
       experienceId,
       variantIndex,
     }
   }
 
-  buildFlagView(args: ComponentViewBuilderArgs): ComponentViewEventType {
+  buildFlagView(args: ComponentViewBuilderArgs): ComponentViewEvent {
     return {
       ...this.buildComponentView(args),
-      componentType: 'Variable',
+      component: 'Variable',
     }
   }
 
-  buildIdentify({ traits, userId, ...universal }: IdentifyBuilderArgs): IdentifyEventType {
+  buildIdentify({ traits, userId, ...universal }: IdentifyBuilderArgs): IdentifyEvent {
     return {
       ...this.buildUniversalEventProperties(universal),
       type: 'identify',
@@ -122,7 +122,7 @@ class EventBuilder {
     }
   }
 
-  buildPageView({ properties, ...universal }: PageViewBuilderArgs): PageViewEventType {
+  buildPageView({ properties, ...universal }: PageViewBuilderArgs): PageViewEvent {
     return {
       ...this.buildUniversalEventProperties(universal),
       type: 'page',
@@ -130,7 +130,7 @@ class EventBuilder {
     }
   }
 
-  buildTrack({ event, properties, ...universal }: TrackBuilderArgs): TrackEventType {
+  buildTrack({ event, properties, ...universal }: TrackBuilderArgs): TrackEvent {
     return {
       ...this.buildUniversalEventProperties(universal),
       type: 'track',

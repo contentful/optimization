@@ -1,6 +1,6 @@
 import { logger } from '../lib/logger'
 import type ApiClient from '../lib/api-client'
-import type { OptimizationDataType } from '../lib/api-client'
+import type { OptimizationData } from '../lib/api-client'
 import type {
   ComponentViewBuilderArgs,
   EventBuilder,
@@ -24,11 +24,11 @@ import {
   IdentifyEvent,
   PageViewEvent,
   TrackEvent,
-  type EventType,
+  type ExperienceEvent,
 } from '../lib/api-client/experience/dto/event'
 import ProductBase, { type ConsentGuard } from '../ProductBase'
 
-class Personalization extends ProductBase<EventType> implements ConsentGuard {
+class Personalization extends ProductBase<ExperienceEvent> implements ConsentGuard {
   constructor(api: ApiClient, builder: EventBuilder) {
     super(api, builder)
 
@@ -58,9 +58,7 @@ class Personalization extends ProductBase<EventType> implements ConsentGuard {
   }
 
   @guardedBy('hasNoConsent')
-  async identify(
-    args: IdentifyBuilderArgs & { anonymousId?: string },
-  ): Promise<OptimizationDataType> {
+  async identify(args: IdentifyBuilderArgs & { anonymousId?: string }): Promise<OptimizationData> {
     logger.info('Sending "identify" event')
 
     const event = IdentifyEvent.parse(this.builder.buildIdentify(args))
@@ -69,7 +67,7 @@ class Personalization extends ProductBase<EventType> implements ConsentGuard {
   }
 
   @guardedBy('hasNoConsent')
-  async page(args: PageViewBuilderArgs & { anonymousId?: string }): Promise<OptimizationDataType> {
+  async page(args: PageViewBuilderArgs & { anonymousId?: string }): Promise<OptimizationData> {
     logger.info('Sending "page" event')
 
     const event = PageViewEvent.parse(this.builder.buildPageView(args))
@@ -78,7 +76,7 @@ class Personalization extends ProductBase<EventType> implements ConsentGuard {
   }
 
   @guardedBy('hasNoConsent')
-  async track(args: TrackBuilderArgs & { anonymousId?: string }): Promise<OptimizationDataType> {
+  async track(args: TrackBuilderArgs & { anonymousId?: string }): Promise<OptimizationData> {
     logger.info(`Sending "track" event "${args.event}"`)
 
     const event = TrackEvent.parse(this.builder.buildTrack(args))
@@ -90,7 +88,7 @@ class Personalization extends ProductBase<EventType> implements ConsentGuard {
   @guardedBy('hasNoConsent')
   async trackPersonalization(
     args: ComponentViewBuilderArgs & { anonymousId?: string },
-  ): Promise<OptimizationDataType> {
+  ): Promise<OptimizationData> {
     logger.info(`Sending "track personalization" event`)
 
     const event = ComponentViewEvent.parse(this.builder.buildComponentView(args))
@@ -98,7 +96,7 @@ class Personalization extends ProductBase<EventType> implements ConsentGuard {
     return await this.#upsertProfile(event)
   }
 
-  async #upsertProfile(event: EventType, anonymousId?: string): Promise<OptimizationDataType> {
+  async #upsertProfile(event: ExperienceEvent, anonymousId?: string): Promise<OptimizationData> {
     const intercepted = await this.interceptor.event.run(event)
 
     eventSignal.value = intercepted
@@ -113,7 +111,7 @@ class Personalization extends ProductBase<EventType> implements ConsentGuard {
     return data
   }
 
-  async #updateOutputSignals(data: OptimizationDataType): Promise<void> {
+  async #updateOutputSignals(data: OptimizationData): Promise<void> {
     const intercepted = await this.interceptor.state.run(data)
 
     const { changes, personalizations, profile } = intercepted

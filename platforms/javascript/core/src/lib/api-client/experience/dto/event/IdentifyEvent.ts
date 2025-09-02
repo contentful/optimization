@@ -6,4 +6,4 @@ export const IdentifyEvent = extend(UniversalEventProperties, {
   type: literal('identify'),
   traits: Traits,
 })
-export type IdentifyEventType = zInfer<typeof IdentifyEvent>
+export type IdentifyEvent = zInfer<typeof IdentifyEvent>

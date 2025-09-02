@@ -4,4 +4,4 @@ import { UniversalEventProperties } from './UniversalEventProperties'
 export const GroupEvent = extend(UniversalEventProperties, {
   type: literal('group'),
 })
-export type GroupEventType = zInfer<typeof GroupEvent>
+export type GroupEvent = zInfer<typeof GroupEvent>

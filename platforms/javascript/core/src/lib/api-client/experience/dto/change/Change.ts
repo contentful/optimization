@@ -39,13 +39,13 @@ export const VariableChange = extend(ChangeBase, {
   type: literal('Variable'),
   value: VariableChangeValue,
 })
-export type VariableChangeType = zInfer<typeof VariableChange>
+export type VariableChange = zInfer<typeof VariableChange>
 
-export type JsonType = zInfer<typeof json>
-export type Flags = Record<string, JsonType>
+export type Json = zInfer<typeof json>
+export type Flags = Record<string, Json>
 
 export const Change = discriminatedUnion('type', [VariableChange, UnknownChange])
-export type ChangeType = zInfer<typeof Change>
+export type Change = zInfer<typeof Change>
 
 export const ChangeArray = array(Change)
-export type ChangeArrayType = zInfer<typeof ChangeArray>
+export type ChangeArray = zInfer<typeof ChangeArray>

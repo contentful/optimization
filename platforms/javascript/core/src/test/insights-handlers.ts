@@ -1,13 +1,13 @@
 import { http, type HttpHandler, HttpResponse } from 'msw'
-import type { BatchEventArrayType } from '../lib/api-client/insights/dto'
+import type { BatchInsightsEventArray } from '../lib/api-client/insights/dto'
 
 // Minimal in-memory store
-const eventsStore: BatchEventArrayType = []
+const eventsStore: BatchInsightsEventArray = []
 
 // Helper to parse JSON whether body is application/json or text/plain
 async function parseJson<T>(req: Request): Promise<T> {
-  const contentType = req.headers.get('content-type') ?? ''
-  if (contentType.includes('application/json')) {
+  const content = req.headers.get('content-type') ?? ''
+  if (content.includes('application/json')) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- no worries
     return (await req.json()) as T
   }
@@ -40,7 +40,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
       `${baseUrl}/v1/organizations/:organizationId/environments/:environmentSlug/events`,
       async ({ request }) => {
         try {
-          const payload = await parseJson<BatchEventArrayType>(request)
+          const payload = await parseJson<BatchInsightsEventArray>(request)
 
           eventsStore.push(...payload)
 

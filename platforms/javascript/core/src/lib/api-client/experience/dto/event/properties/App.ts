@@ -7,4 +7,4 @@ export const App = optional(
   }),
 )
 
-export type AppType = zInfer<typeof App>
+export type App = zInfer<typeof App>

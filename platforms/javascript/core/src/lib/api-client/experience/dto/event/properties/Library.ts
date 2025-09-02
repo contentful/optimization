@@ -5,4 +5,4 @@ export const Library = object({
   version: string(),
 })
 
-export type LibraryType = zInfer<typeof Library>
+export type Library = zInfer<typeof Library>

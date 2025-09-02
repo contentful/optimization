@@ -7,4 +7,4 @@ export const Audience = object({
 
   description: optional(prefault(string(), '')),
 })
-export type AudienceType = zInfer<typeof Audience>
+export type Audience = zInfer<typeof Audience>

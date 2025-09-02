@@ -3,9 +3,9 @@ import type ApiClient from '../lib/api-client'
 import type { EventBuilder } from '../lib/builders'
 import { consent, effect, profile } from '../signals'
 import ProductBase, { type ConsentGuard } from '../ProductBase'
-import type { EventType } from '../lib/api-client/insights/dto'
+import type { InsightsEvent } from '../lib/api-client/insights/dto'
 
-abstract class AnalyticsBase extends ProductBase<EventType> implements ConsentGuard {
+abstract class AnalyticsBase extends ProductBase<InsightsEvent> implements ConsentGuard {
   constructor(api: ApiClient, builder: EventBuilder) {
     super(api, builder)
 

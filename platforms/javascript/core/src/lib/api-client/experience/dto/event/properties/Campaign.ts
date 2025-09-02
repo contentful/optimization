@@ -7,4 +7,4 @@ export const Campaign = object({
   term: optional(string()),
   content: optional(string()),
 })
-export type CampaignType = zInfer<typeof Campaign>
+export type Campaign = zInfer<typeof Campaign>

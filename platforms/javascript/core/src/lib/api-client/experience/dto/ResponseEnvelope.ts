@@ -5,4 +5,4 @@ export const ResponseEnvelope = object({
   message: string(),
   error: nullable(boolean()),
 })
-export type ResponseEnvelopeType = zInfer<typeof ResponseEnvelope>
+export type ResponseEnvelope = zInfer<typeof ResponseEnvelope>

@@ -3,4 +3,4 @@ import { Page } from './Page'
 
 export const PageView = catchall(Page, json())
 
-export type PageViewType = zInfer<typeof PageView>
+export type PageView = zInfer<typeof PageView>

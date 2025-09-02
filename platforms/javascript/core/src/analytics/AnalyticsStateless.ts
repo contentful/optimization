@@ -1,8 +1,4 @@
-import {
-  BatchEventArray,
-  type EventType,
-  type BatchEventArrayType,
-} from '../lib/api-client/insights/dto/event'
+import { BatchInsightsEventArray, type InsightsEvent } from '../lib/api-client/insights/dto/event'
 import { logger } from '../lib/logger'
 import { guardedBy } from '../lib/decorators'
 import type { ComponentViewBuilderArgs } from '../lib/builders'
@@ -41,8 +37,8 @@ class AnalyticsStateless extends AnalyticsBase {
     await this.#sendBatchEvent(parsed)
   }
 
-  async #sendBatchEvent(event: EventType): Promise<void> {
-    const batchEvent: BatchEventArrayType = BatchEventArray.parse([
+  async #sendBatchEvent(event: InsightsEvent): Promise<void> {
+    const batchEvent: BatchInsightsEventArray = BatchInsightsEventArray.parse([
       {
         profile: profileSignal.value,
         events: [event],

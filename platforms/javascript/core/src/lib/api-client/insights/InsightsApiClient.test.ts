@@ -7,7 +7,7 @@ import InsightsApiClient, {
 } from './InsightsApiClient'
 import ApiClientBase from '../ApiClientBase'
 import { logger } from '../../logger'
-import { BatchEventArray, type BatchEventArrayType } from './dto/event'
+import { BatchInsightsEventArray } from './dto/event'
 
 const ORG_ID = 'org_123'
 const ENV = 'prod'
@@ -27,7 +27,7 @@ function makeClient(overrides: Partial<InsightsApiClientConfig> = {}): InsightsA
 }
 
 // TODO: Find a better place for this sort of thing
-function generateBatchEventArray(id: string): BatchEventArrayType {
+function generateBatchEventArray(id: string): BatchInsightsEventArray {
   return [
     {
       profile: {
@@ -56,7 +56,7 @@ function generateBatchEventArray(id: string): BatchEventArrayType {
       events: [
         {
           type: 'component',
-          componentType: 'Entry',
+          component: 'Entry',
           componentId: crypto.randomUUID(),
           variantIndex: 0,
           channel: 'web',
@@ -119,7 +119,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
 
     // Spy on the schema parser and let it pass-through (or stub if needed)
     const parseSpy = vi
-      .spyOn(BatchEventArray, 'parse')
+      .spyOn(BatchInsightsEventArray, 'parse')
       // @ts-expect-error -- testing
       .mockImplementation((input) => input)
 
@@ -158,7 +158,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     const batches = generateBatchEventArray('e2')
 
     // @ts-expect-error -- testing
-    vi.spyOn(BatchEventArray, 'parse').mockImplementation((input) => input)
+    vi.spyOn(BatchInsightsEventArray, 'parse').mockImplementation((input) => input)
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
 
@@ -175,7 +175,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     const batches = generateBatchEventArray('e3')
 
     // @ts-expect-error -- testing
-    vi.spyOn(BatchEventArray, 'parse').mockImplementation((input) => input)
+    vi.spyOn(BatchInsightsEventArray, 'parse').mockImplementation((input) => input)
 
     server.use(
       http.post(`${INSIGHTS_BASE_URL}/v1/organizations/:orgId/environments/:env/events`, () =>

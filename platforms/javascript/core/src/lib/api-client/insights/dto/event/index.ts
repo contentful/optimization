@@ -1,5 +1,5 @@
-export type * from './BatchEvent'
-export type * from './Event'
+export type * from './BatchInsightsEvent'
+export type * from './InsightsEvent'
 
-export * from './BatchEvent'
-export * from './Event'
+export * from './BatchInsightsEvent'
+export * from './InsightsEvent'

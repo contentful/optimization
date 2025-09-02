@@ -22,4 +22,4 @@ export const UniversalEventProperties = object({
   userId: optional(string()),
 })
 
-export type UniversalEventPropertiesType = zInfer<typeof UniversalEventProperties>
+export type UniversalEventProperties = zInfer<typeof UniversalEventProperties>

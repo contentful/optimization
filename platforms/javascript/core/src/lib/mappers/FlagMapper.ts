@@ -1,13 +1,9 @@
-import type {
-  ChangeArrayType,
-  Flags,
-  VariableChangeType,
-} from '../api-client/experience/dto/change'
+import type { ChangeArray, Flags, VariableChange } from '../api-client/experience/dto/change'
 
 const FlagMapper = {
-  mapFlags(changes: ChangeArrayType): Flags {
+  mapFlags(changes: ChangeArray): Flags {
     return changes
-      .filter((change): change is VariableChangeType => change.type === 'Variable')
+      .filter((change): change is VariableChange => change.type === 'Variable')
       .reduce<Flags>((acc, { key, value }) => {
         const actualValue =
           typeof value === 'object' &&

@@ -1,6 +1,6 @@
 import { logger } from '../../logger'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
-import { BatchEventArray, type BatchEventArrayType } from './dto/event'
+import { BatchInsightsEventArray } from './dto/event'
 
 // TODO: consider injecting/passing beacon instead of detecting from globalThis
 interface RequestOptions {
@@ -53,7 +53,7 @@ export default class InsightsApiClient extends ApiClientBase {
   }
 
   public async sendBatchEvents(
-    batches: BatchEventArrayType,
+    batches: BatchInsightsEventArray,
     options: RequestOptions = {},
   ): Promise<void> {
     const { beacon = this.beacon } = options
@@ -63,7 +63,7 @@ export default class InsightsApiClient extends ApiClientBase {
       this.baseUrl,
     )
 
-    const body = BatchEventArray.parse(batches)
+    const body = BatchInsightsEventArray.parse(batches)
 
     if (beacon && hasNavigator(globalThis)) {
       const blobData = new Blob([JSON.stringify(body)], {

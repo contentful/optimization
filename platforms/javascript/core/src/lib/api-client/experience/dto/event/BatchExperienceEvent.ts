@@ -7,7 +7,7 @@ import { PageViewEvent } from './PageViewEvent'
 import { ScreenEvent } from './ScreenEvent'
 import { TrackEvent } from './TrackEvent'
 
-export const BatchEvent = discriminatedUnion('type', [
+export const BatchExperienceEvent = discriminatedUnion('type', [
   extend(AliasEvent, { anonymousId: string() }),
   extend(ComponentViewEvent, { anonymousId: string() }),
   extend(GroupEvent, { anonymousId: string() }),
@@ -16,7 +16,7 @@ export const BatchEvent = discriminatedUnion('type', [
   extend(ScreenEvent, { anonymousId: string() }),
   extend(TrackEvent, { anonymousId: string() }),
 ])
-export type BatchEventType = zInfer<typeof BatchEvent>
+export type BatchExperienceEvent = zInfer<typeof BatchExperienceEvent>
 
-export const BatchEventArray = array(BatchEvent)
-export type BatchEventArrayType = zInfer<typeof BatchEventArray>
+export const BatchExperienceEventArray = array(BatchExperienceEvent)
+export type BatchExperienceEventArray = zInfer<typeof BatchExperienceEventArray>

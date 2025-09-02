@@ -18,4 +18,4 @@ export const GeoLocation = object({
   continent: optional(string()),
   timezone: optional(string()),
 })
-export type GeoLocationType = zInfer<typeof GeoLocation>
+export type GeoLocation = zInfer<typeof GeoLocation>

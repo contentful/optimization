@@ -1,10 +1,9 @@
 import {
-  Event,
-  type BatchEventArrayType,
-  type EventArrayType,
-  type EventType,
+  InsightsEvent,
+  type BatchInsightsEventArray,
+  type InsightsEventArray,
 } from '../lib/api-client/insights/dto/event'
-import type { ProfileType } from '../lib/api-client/experience/dto/profile'
+import type { Profile } from '../lib/api-client/experience/dto/profile'
 import { logger } from '../lib/logger'
 import type { ComponentViewBuilderArgs } from '../lib/builders'
 import { guardedBy } from '../lib/decorators'
@@ -14,7 +13,7 @@ import AnalyticsBase from './AnalyticsBase'
 const MAX_QUEUED_EVENTS = 25
 
 class AnalyticsStateful extends AnalyticsBase {
-  readonly #queue = new Map<ProfileType, EventArrayType>()
+  readonly #queue = new Map<Profile, InsightsEventArray>()
 
   @guardedBy('hasNoConsent')
   async trackComponentView(args: ComponentViewBuilderArgs): Promise<void> {
@@ -26,7 +25,7 @@ class AnalyticsStateful extends AnalyticsBase {
     await this.#enqueueEvent(this.builder.buildFlagView(args))
   }
 
-  async #enqueueEvent(event: EventType): Promise<void> {
+  async #enqueueEvent(event: InsightsEvent): Promise<void> {
     const { value: profile } = profileSignal
 
     if (!profile) {
@@ -39,7 +38,7 @@ class AnalyticsStateful extends AnalyticsBase {
 
     const profileEventQueue = this.#queue.get(profile)
 
-    const validEvent = Event.parse(event)
+    const validEvent = InsightsEvent.parse(event)
 
     eventSignal.value = validEvent
 
@@ -57,7 +56,7 @@ class AnalyticsStateful extends AnalyticsBase {
   }
 
   async flush(): Promise<void> {
-    const batches: BatchEventArrayType = []
+    const batches: BatchInsightsEventArray = []
 
     this.#queue.forEach((events, profile) => batches.push({ profile, events }))
 

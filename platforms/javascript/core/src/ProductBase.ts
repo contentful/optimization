@@ -1,5 +1,5 @@
 import type ApiClient from './lib/api-client'
-import type { OptimizationDataType } from './lib/api-client'
+import type { OptimizationData } from './lib/api-client'
 import type { EventBuilder } from './lib/builders'
 import { InterceptorManager } from './lib/interceptor'
 import { consent } from './signals'
@@ -12,7 +12,7 @@ export interface ConsentGuard {
 
 interface InterceptorLifecycle<E> {
   event: InterceptorManager<E>
-  state: InterceptorManager<OptimizationDataType>
+  state: InterceptorManager<OptimizationData>
 }
 
 abstract class ProductBase<E> implements ConsentGuard {
@@ -21,7 +21,7 @@ abstract class ProductBase<E> implements ConsentGuard {
 
   readonly interceptor: InterceptorLifecycle<E> = {
     event: new InterceptorManager<E>(),
-    state: new InterceptorManager<OptimizationDataType>(),
+    state: new InterceptorManager<OptimizationData>(),
   }
 
   constructor(api: ApiClient, builder: EventBuilder) {
