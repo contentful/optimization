@@ -8,7 +8,7 @@ import type { ProfileType } from '../lib/api-client/experience/dto/profile'
 import { logger } from '../lib/logger'
 import type { ComponentViewBuilderArgs } from '../lib/builders'
 import { guardedBy } from '../lib/decorators'
-import { profile as profileSignal } from '../signals'
+import { event as eventSignal, profile as profileSignal } from '../signals'
 import AnalyticsBase from './AnalyticsBase'
 
 const MAX_QUEUED_EVENTS = 25
@@ -40,6 +40,8 @@ class AnalyticsStateful extends AnalyticsBase {
     const profileEventQueue = this.#queue.get(profile)
 
     const validEvent = Event.parse(event)
+
+    eventSignal.value = validEvent
 
     if (profileEventQueue) {
       profileEventQueue.push(validEvent)
