@@ -1,7 +1,7 @@
-export type * from './OptimizationRequest'
-export type * from './OptimizationResponse'
-export type * from './BatchOptimizationResponse'
+export type * from './ExperienceRequest'
+export type * from './ExperienceResponse'
+export type * from './BatchExperienceResponse'
 
-export * from './OptimizationRequest'
-export * from './OptimizationResponse'
-export * from './BatchOptimizationResponse'
+export * from './ExperienceRequest'
+export * from './ExperienceResponse'
+export * from './BatchExperienceResponse'

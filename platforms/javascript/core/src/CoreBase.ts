@@ -3,13 +3,13 @@ import type { ExperienceArrayType } from './lib/api-client/experience/dto/experi
 import type { ProfileType } from './lib/api-client/experience/dto/profile'
 import type AnalyticsBase from './analytics/AnalyticsBase'
 import ApiClient, { type ApiClientConfig, type ApiConfig } from './lib/api-client'
-import { batch, changes, consent, experiences, profile } from './signals'
+import { batch, changes, consent, personalizations, profile } from './signals'
 import type { EventBuilder } from './lib/builders'
 import { Personalization } from './personalization'
 
 export interface CoreConfigDefaults {
   changes?: ChangeArrayType
-  experiences?: ExperienceArrayType
+  personalizations?: ExperienceArrayType
   profile?: ProfileType
 }
 
@@ -42,13 +42,13 @@ abstract class CoreBase implements ConsentController {
     if (defaults) {
       const {
         changes: defaultChanges,
-        experiences: defaultExperiences,
+        personalizations: defaultPersonalizations,
         profile: defaultProfile,
       } = defaults
 
       batch(() => {
         changes.value = defaultChanges
-        experiences.value = defaultExperiences
+        personalizations.value = defaultPersonalizations
         profile.value = defaultProfile
       })
     }

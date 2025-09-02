@@ -1,12 +1,12 @@
 import { logger } from '../../logger'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
 import {
-  type BatchOptimizationDataType,
-  BatchOptimizationResponse,
-  OptimizationResponse,
+  type BatchExperienceDataType,
+  BatchExperienceResponse,
+  ExperienceResponse,
   type OptimizationDataType,
-  type OptimizationRequestDataType,
-  type OptimizationRequestOptionsType,
+  type ExperienceRequestDataType,
+  type ExperienceRequestOptionsType,
 } from './dto'
 import { EventArray, type BatchEventArrayType, type EventArrayType } from './dto/event'
 
@@ -112,7 +112,11 @@ export default class ExperienceApiClient extends ApiClientBase {
         },
       )
 
-      const { data } = OptimizationResponse.parse(await response.json())
+      const {
+        data: { changes, experiences, profile },
+      } = ExperienceResponse.parse(await response.json())
+
+      const data = { changes, personalizations: experiences, profile }
 
       logger.debug(`${requestName} request succesfully completed.`)
 
@@ -149,7 +153,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     logger.info(`Sending ${requestName} request.`)
 
-    const body: OptimizationRequestDataType = {
+    const body: ExperienceRequestDataType = {
       events: EventArray.parse(events),
       options: this.constructBodyOptions(options),
     }
@@ -163,7 +167,11 @@ export default class ExperienceApiClient extends ApiClientBase {
         options,
       })
 
-      const { data } = OptimizationResponse.parse(await response.json())
+      const {
+        data: { changes, experiences, profile },
+      } = ExperienceResponse.parse(await response.json())
+
+      const data = { changes, personalizations: experiences, profile }
 
       logger.debug(`${requestName} request succesfully completed.`)
 
@@ -189,7 +197,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     logger.info(`Sending ${requestName} request.`)
 
-    const body: OptimizationRequestDataType = {
+    const body: ExperienceRequestDataType = {
       events: EventArray.parse(events),
       options: this.constructBodyOptions(options),
     }
@@ -203,7 +211,11 @@ export default class ExperienceApiClient extends ApiClientBase {
         options,
       })
 
-      const { data } = OptimizationResponse.parse(await response.json())
+      const {
+        data: { changes, experiences, profile },
+      } = ExperienceResponse.parse(await response.json())
+
+      const data = { changes, personalizations: experiences, profile }
 
       logger.debug(`${requestName} request successfully completed.`)
 
@@ -236,12 +248,12 @@ export default class ExperienceApiClient extends ApiClientBase {
   public async upsertManyProfiles(
     { events }: BatchUpdateProfileParams,
     options: RequestOptions = {},
-  ): Promise<BatchOptimizationDataType['profiles']> {
+  ): Promise<BatchExperienceDataType['profiles']> {
     const requestName = 'Upsert Many Profiles'
 
     logger.info(`Sending ${requestName} request.`)
 
-    const body: OptimizationRequestDataType = {
+    const body: ExperienceRequestDataType = {
       events: EventArray.parse(events),
       options: this.constructBodyOptions(options),
     }
@@ -257,7 +269,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
       const {
         data: { profiles },
-      } = BatchOptimizationResponse.parse(await response.json())
+      } = BatchExperienceResponse.parse(await response.json())
 
       logger.debug(`${requestName} request successfully completed.`)
 
@@ -306,8 +318,8 @@ export default class ExperienceApiClient extends ApiClientBase {
 
   private readonly constructBodyOptions = ({
     enabledFeatures = this.enabledFeatures,
-  }: RequestOptions): OptimizationRequestOptionsType => {
-    const bodyOptions: OptimizationRequestOptionsType = {}
+  }: RequestOptions): ExperienceRequestOptionsType => {
+    const bodyOptions: ExperienceRequestOptionsType = {}
 
     if (enabledFeatures && Array.isArray(enabledFeatures) && enabledFeatures.length > 0) {
       bodyOptions.features = enabledFeatures

@@ -14,7 +14,7 @@ import {
   changes as changesSignal,
   consent,
   effect,
-  experiences as experiencesSignal,
+  personalizations as personalizationsSignal,
   event as eventSignal,
   profile as profileSignal,
 } from '../signals'
@@ -40,7 +40,7 @@ class Personalization extends ProductBase<EventType> implements ConsentGuard {
 
     effect(() => {
       logger.info(
-        `[Personalization] Experiences have been ${experiencesSignal.value?.length ? 'populated' : 'cleared'}`,
+        `[Personalization] Personalizations have been ${personalizationsSignal.value?.length ? 'populated' : 'cleared'}`,
       )
     })
 
@@ -116,11 +116,12 @@ class Personalization extends ProductBase<EventType> implements ConsentGuard {
   async #updateOutputSignals(data: OptimizationDataType): Promise<void> {
     const intercepted = await this.interceptor.state.run(data)
 
-    const { changes, experiences, profile } = intercepted
+    const { changes, personalizations, profile } = intercepted
 
     batch(() => {
       if (!isEqual(changesSignal.value, changes)) changesSignal.value = changes
-      if (!isEqual(experiencesSignal.value, experiences)) experiencesSignal.value = experiences
+      if (!isEqual(personalizationsSignal.value, personalizations))
+        personalizationsSignal.value = personalizations
       if (!isEqual(profileSignal.value, profile)) profileSignal.value = profile
     })
   }
