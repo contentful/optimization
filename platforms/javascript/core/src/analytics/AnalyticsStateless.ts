@@ -6,7 +6,7 @@ import {
 import { logger } from '../lib/logger'
 import { guardedBy } from '../lib/decorators'
 import type { ComponentViewBuilderArgs } from '../lib/builders'
-import { profile as profileSignal } from '../signals'
+import { event as eventSignal, profile as profileSignal } from '../signals'
 import AnalyticsBase from './AnalyticsBase'
 import { ComponentViewEvent } from '../lib/api-client/experience/dto/event'
 
@@ -21,6 +21,8 @@ class AnalyticsStateless extends AnalyticsBase {
 
     const parsed = ComponentViewEvent.parse(intercepted)
 
+    eventSignal.value = parsed
+
     await this.#sendBatchEvent(parsed)
   }
 
@@ -33,6 +35,8 @@ class AnalyticsStateless extends AnalyticsBase {
     const intercepted = await this.interceptor.event.run(event)
 
     const parsed = ComponentViewEvent.parse(intercepted)
+
+    eventSignal.value = parsed
 
     await this.#sendBatchEvent(parsed)
   }

@@ -3,13 +3,17 @@ import type { ChangeArrayType, Flags } from './lib/api-client/experience/dto/cha
 import type { ExperienceArrayType } from './lib/api-client/experience/dto/experience'
 import type { ProfileType } from './lib/api-client/experience/dto/profile'
 import { FlagMapper } from './lib/mappers'
+import type { EventType as AnalyticsEventType } from './lib/api-client/insights/dto'
+import type { EventType as PersonalizationEventType } from './lib/api-client/experience/dto/event'
 
 export const changes: Signal<ChangeArrayType | undefined> = signal<ChangeArrayType | undefined>()
 
 export const consent = signal<boolean | undefined>()
 
-export const experiences: Signal<ExperienceArrayType | undefined> = signal<
-  ExperienceArrayType | undefined
+export const experiences = signal<ExperienceArrayType | undefined>()
+
+export const event: Signal<AnalyticsEventType | PersonalizationEventType | undefined> = signal<
+  AnalyticsEventType | PersonalizationEventType | undefined
 >()
 
 export const flags = computed<Flags | undefined>(() => FlagMapper.mapFlags(changes.value ?? []))

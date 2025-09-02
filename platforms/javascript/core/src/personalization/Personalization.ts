@@ -15,6 +15,7 @@ import {
   consent,
   effect,
   experiences as experiencesSignal,
+  event as eventSignal,
   profile as profileSignal,
 } from '../signals'
 import { isEqual } from 'es-toolkit'
@@ -100,17 +101,19 @@ class Personalization extends ProductBase<EventType> implements ConsentGuard {
   async #upsertProfile(event: EventType, anonymousId?: string): Promise<OptimizationDataType> {
     const intercepted = await this.interceptor.event.run(event)
 
+    eventSignal.value = intercepted
+
     const data = await this.api.experience.upsertProfile({
       profileId: anonymousId ?? profileSignal.value?.id,
       events: [intercepted],
     })
 
-    await this.#updateSignals(data)
+    await this.#updateOutputSignals(data)
 
     return data
   }
 
-  async #updateSignals(data: OptimizationDataType): Promise<void> {
+  async #updateOutputSignals(data: OptimizationDataType): Promise<void> {
     const intercepted = await this.interceptor.state.run(data)
 
     const { changes, experiences, profile } = intercepted
