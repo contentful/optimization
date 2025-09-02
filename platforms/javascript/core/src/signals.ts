@@ -10,7 +10,7 @@ export const changes: Signal<ChangeArrayType | undefined> = signal<ChangeArrayTy
 
 export const consent = signal<boolean | undefined>()
 
-export const experiences = signal<ExperienceArrayType | undefined>()
+export const personalizations = signal<ExperienceArrayType | undefined>()
 
 export const event: Signal<AnalyticsEventType | PersonalizationEventType | undefined> = signal<
   AnalyticsEventType | PersonalizationEventType | undefined

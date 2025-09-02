@@ -3,7 +3,7 @@ import type { ExperienceArrayType } from './lib/api-client/experience/dto/experi
 import type { ProfileType } from './lib/api-client/experience/dto/profile'
 import { AnalyticsStateful } from './analytics'
 import CoreBase, { type CoreConfigDefaults, type CoreConfig } from './CoreBase'
-import { consent, effect, event, experiences, flags, profile } from './signals'
+import { consent, effect, event, personalizations, flags, profile } from './signals'
 import type { EventBuilder } from './lib/builders'
 import type { EventType as AnalyticsEventType } from './lib/api-client/insights/dto'
 import type { EventType as PersonalizationEventType } from './lib/api-client/experience/dto/event'
@@ -24,7 +24,7 @@ export interface Observable<T> {
 
 export interface States {
   consent: Observable<boolean | undefined>
-  experiences: Observable<ExperienceArrayType | undefined>
+  personalizations: Observable<ExperienceArrayType | undefined>
   eventStream: Observable<AnalyticsEventType | PersonalizationEventType | undefined>
   flags: Observable<Flags | undefined>
   profile: Observable<ProfileType | undefined>
@@ -47,7 +47,7 @@ class CoreStateful extends CoreBase {
 
   readonly states: States = {
     consent: toObservable(consent),
-    experiences: toObservable(experiences),
+    personalizations: toObservable(personalizations),
     eventStream: toObservable(event),
     flags: toObservable(flags),
     profile: toObservable(profile),

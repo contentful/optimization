@@ -5,7 +5,7 @@ import ExperienceApiClient, {
   type ExperienceApiClientConfig,
 } from './ExperienceApiClient'
 import { logger } from '../../logger'
-import { OptimizationResponse, BatchOptimizationResponse } from './dto'
+import { ExperienceResponse, BatchExperienceResponse } from './dto'
 import { EventArray } from './dto/event'
 import { server } from '../../../test/setup'
 
@@ -52,11 +52,11 @@ describe('ExperienceApiClient', () => {
     vi.spyOn(logger, 'warn')
     vi.spyOn(logger, 'error')
 
-    vi.spyOn(OptimizationResponse, 'parse')
+    vi.spyOn(ExperienceResponse, 'parse')
       // @ts-expect-error -- testing
       .mockImplementation((json) => json)
 
-    vi.spyOn(BatchOptimizationResponse, 'parse')
+    vi.spyOn(BatchExperienceResponse, 'parse')
       // @ts-expect-error -- testing
       .mockImplementation((json) => json)
 

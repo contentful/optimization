@@ -1,5 +1,5 @@
 import { http, type HttpHandler, HttpResponse } from 'msw'
-import type { OptimizationDataType, OptimizationRequestDataType } from '../lib/api-client'
+import type { ExperienceDataType, ExperienceRequestDataType } from '../lib/api-client'
 import type {
   BatchEventType,
   BatchEventArrayType,
@@ -143,7 +143,7 @@ async function parseJson<T>(req: Request): Promise<T> {
 // Common response helper
 function buildResponse(
   profile: ProfileType | ProfileType[],
-): OptimizationDataType | OptimizationDataType[] {
+): ExperienceDataType | ExperienceDataType[] {
   if (Array.isArray(profile)) {
     return profile.map((p) => ({ profile: p, experiences: chooseExperiences(p), changes: [] }))
   }
@@ -159,7 +159,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
     http.post(
       `${baseUrl}/v2/organizations/:organizationId/environments/:environmentSlug/profiles`,
       async ({ request }) => {
-        const { events } = await parseJson<OptimizationRequestDataType>(request)
+        const { events } = await parseJson<ExperienceRequestDataType>(request)
         const profile = createProfileFromEvents(events)
         profilesStore.set(profile.id, profile)
         return HttpResponse.json(buildResponse(profile))
@@ -171,7 +171,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
       `${baseUrl}/v2/organizations/:organizationId/environments/:environmentSlug/profiles/:profileId`,
       async ({ params, request }) => {
         const { profileId } = params
-        const { events } = await parseJson<OptimizationRequestDataType>(request)
+        const { events } = await parseJson<ExperienceRequestDataType>(request)
 
         if (!profileId) {
           return HttpResponse.json(
