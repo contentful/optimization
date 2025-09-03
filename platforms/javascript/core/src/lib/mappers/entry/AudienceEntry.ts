@@ -17,9 +17,9 @@ export const AudienceEntryFields = extend(EntryFields, {
    */
   nt_description: optional(string()),
 })
-export type AudienceEntryFieldsType = zInfer<typeof AudienceEntryFields>
+export type AudienceEntryFields = zInfer<typeof AudienceEntryFields>
 
 export const AudienceEntry = extend(Entry, {
   fields: AudienceEntryFields,
 })
-export type AudienceEntryType = zInfer<typeof AudienceEntry>
+export type AudienceEntry = zInfer<typeof AudienceEntry>

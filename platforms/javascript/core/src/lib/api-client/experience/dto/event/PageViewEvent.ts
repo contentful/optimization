@@ -7,4 +7,4 @@ export const PageViewEvent = extend(UniversalEventProperties, {
   name: optional(string()),
   properties: PageView,
 })
-export type PageViewEventType = zInfer<typeof PageViewEvent>
+export type PageViewEvent = zInfer<typeof PageViewEvent>

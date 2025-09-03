@@ -3,9 +3,9 @@ import { UniversalEventProperties } from './UniversalEventProperties'
 
 export const ComponentViewEvent = extend(UniversalEventProperties, {
   type: literal('component'),
-  componentType: union([literal('Entry'), literal('Variable')]),
+  component: union([literal('Entry'), literal('Variable')]),
   componentId: string(),
   experienceId: optional(string()),
   variantIndex: number(),
 })
-export type ComponentViewEventType = zInfer<typeof ComponentViewEvent>
+export type ComponentViewEvent = zInfer<typeof ComponentViewEvent>

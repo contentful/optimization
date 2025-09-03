@@ -10,4 +10,4 @@ export const Page = object({
   title: string(),
   url: string(),
 })
-export type PageType = zInfer<typeof Page>
+export type Page = zInfer<typeof Page>

@@ -1,25 +1,21 @@
 import { http, type HttpHandler, HttpResponse } from 'msw'
-import type { ExperienceDataType, ExperienceRequestDataType } from '../lib/api-client'
+import type { ExperienceData, ExperienceRequestData } from '../lib/api-client'
 import type {
-  BatchEventType,
-  BatchEventArrayType,
-  EventType,
-  EventArrayType,
+  BatchExperienceEvent,
+  BatchExperienceEventArray,
+  ExperienceEvent,
+  ExperienceEventArray,
 } from '../lib/api-client/experience/dto/event'
-import type {
-  GeoLocationType,
-  PageType,
-  TraitsType,
-} from '../lib/api-client/experience/dto/event/properties'
-import type { ExperienceType } from '../lib/api-client/experience/dto/experience'
-import type { ProfileType } from '../lib/api-client/experience/dto/profile'
-import type { SessionStatisticsType } from '../lib/api-client/experience/dto/profile/properties'
+import type { GeoLocation, Page, Traits } from '../lib/api-client/experience/dto/event/properties'
+import type { Experience } from '../lib/api-client/experience/dto/experience'
+import type { Profile } from '../lib/api-client/experience/dto/profile'
+import type { SessionStatistics } from '../lib/api-client/experience/dto/profile/properties'
 
 // Minimal in-memory store
-const profilesStore = new Map<string, ProfileType>()
+const profilesStore = new Map<string, Profile>()
 
 // eslint-disable-next-line complexity -- no worries
-function makeDefaultSession(page?: PageType): SessionStatisticsType {
+function makeDefaultSession(page?: Page): SessionStatistics {
   const path = page?.path ?? '/'
   const url = page?.url ?? 'https://example.com/'
   const query = page?.query ?? {}
@@ -36,14 +32,16 @@ function makeDefaultSession(page?: PageType): SessionStatisticsType {
   }
 }
 
-function isBatchEvent(event: EventType | BatchEventType): event is BatchEventType {
+function isBatchEvent(
+  event: ExperienceEvent | BatchExperienceEvent,
+): event is BatchExperienceEvent {
   return Boolean(Object.keys(event).find((k) => k === 'anonymousId'))
 }
 
 function createProfileFromEvents(
-  events: EventArrayType | BatchEventArrayType,
+  events: ExperienceEventArray | BatchExperienceEventArray,
   explicitId?: string,
-): ProfileType {
+): Profile {
   const [first] = events
 
   if (!first) throw new Error('At least one event must be supplied')
@@ -53,7 +51,7 @@ function createProfileFromEvents(
   const stableId = generatedId
 
   // Merge traits from any identify events (last write wins)
-  const traits = events.reduce<TraitsType>((acc, e) => {
+  const traits = events.reduce<Traits>((acc, e) => {
     if (e.type === 'identify') {
       Object.assign(acc, e.traits)
     }
@@ -61,7 +59,7 @@ function createProfileFromEvents(
   }, {})
 
   // Prefer event-provided location if present
-  const loc: GeoLocationType = Object.assign({}, first.context.location)
+  const loc: GeoLocation = Object.assign({}, first.context.location)
 
   const random = seededRandom(stableId)
   const {
@@ -79,7 +77,7 @@ function createProfileFromEvents(
   }
 }
 
-function updateProfileWithEvents(profile: ProfileType, events: EventArrayType): ProfileType {
+function updateProfileWithEvents(profile: Profile, events: ExperienceEventArray): Profile {
   for (const e of events) {
     if (e.type === 'identify') {
       Object.assign(profile.traits, e.traits)
@@ -101,7 +99,7 @@ function seededRandom(seed: string): number {
   return ((h >>> 0) % 10000) / 10000
 }
 
-function inferAudiences({ traits, page }: { traits?: TraitsType; page?: PageType }): string[] {
+function inferAudiences({ traits, page }: { traits?: Traits; page?: Page }): string[] {
   const out: string[] = []
   if (traits?.countryCode === 'DE') out.push('audience-germany')
   if (traits?.plan === 'pro') out.push('audience-pro')
@@ -109,7 +107,7 @@ function inferAudiences({ traits, page }: { traits?: TraitsType; page?: PageType
   return out
 }
 
-function chooseExperiences(profile: ProfileType): ExperienceType[] {
+function chooseExperiences(profile: Profile): Experience[] {
   // A tiny decision engine just to demonstrate shape
   // You can replace this with any logic or even read from a JSON config.
   const variantIndex = profile.traits.beta ? 1 : profile.random > 0.5 ? 1 : 0
@@ -129,8 +127,8 @@ function chooseExperiences(profile: ProfileType): ExperienceType[] {
 
 // Helper to parse JSON whether body is application/json or text/plain
 async function parseJson<T>(req: Request): Promise<T> {
-  const contentType = req.headers.get('content-type') ?? ''
-  if (contentType.includes('application/json')) {
+  const content = req.headers.get('content-type') ?? ''
+  if (content.includes('application/json')) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- no worries
     return (await req.json()) as T
   }
@@ -141,9 +139,7 @@ async function parseJson<T>(req: Request): Promise<T> {
 }
 
 // Common response helper
-function buildResponse(
-  profile: ProfileType | ProfileType[],
-): ExperienceDataType | ExperienceDataType[] {
+function buildResponse(profile: Profile | Profile[]): ExperienceData | ExperienceData[] {
   if (Array.isArray(profile)) {
     return profile.map((p) => ({ profile: p, experiences: chooseExperiences(p), changes: [] }))
   }
@@ -159,7 +155,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
     http.post(
       `${baseUrl}/v2/organizations/:organizationId/environments/:environmentSlug/profiles`,
       async ({ request }) => {
-        const { events } = await parseJson<ExperienceRequestDataType>(request)
+        const { events } = await parseJson<ExperienceRequestData>(request)
         const profile = createProfileFromEvents(events)
         profilesStore.set(profile.id, profile)
         return HttpResponse.json(buildResponse(profile))
@@ -171,7 +167,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
       `${baseUrl}/v2/organizations/:organizationId/environments/:environmentSlug/profiles/:profileId`,
       async ({ params, request }) => {
         const { profileId } = params
-        const { events } = await parseJson<ExperienceRequestDataType>(request)
+        const { events } = await parseJson<ExperienceRequestData>(request)
 
         if (!profileId) {
           return HttpResponse.json(
@@ -212,10 +208,10 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
     http.post(
       `${baseUrl}/v2/organizations/:organizationId/environments/:environmentSlug/events`,
       async ({ request }) => {
-        const { events } = await parseJson<{ events: BatchEventArrayType }>(request)
+        const { events } = await parseJson<{ events: BatchExperienceEventArray }>(request)
 
         // Group incoming events by anonymousId (or synthesize one per event if missing)
-        const byId = new Map<string, EventType[]>()
+        const byId = new Map<string, ExperienceEvent[]>()
         for (const ev of events) {
           const { anonymousId: id } = ev
           const list = byId.get(id)
@@ -223,7 +219,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
           else byId.set(id, [ev])
         }
 
-        const changed: ProfileType[] = []
+        const changed: Profile[] = []
 
         for (const [id, evs] of byId) {
           let profile = profilesStore.get(id)

@@ -1,14 +1,14 @@
 import { logger } from '../../logger'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
 import {
-  type BatchExperienceDataType,
+  type BatchExperienceData,
   BatchExperienceResponse,
   ExperienceResponse,
-  type OptimizationDataType,
-  type ExperienceRequestDataType,
-  type ExperienceRequestOptionsType,
+  type OptimizationData,
+  type ExperienceRequestData,
+  type ExperienceRequestOptions,
 } from './dto'
-import { EventArray, type BatchEventArrayType, type EventArrayType } from './dto/event'
+import { ExperienceEventArray, type BatchExperienceEventArray } from './dto/event'
 
 type Feature = 'ip-enrichment' | 'location'
 
@@ -51,7 +51,7 @@ interface ProfileMutationRequestOptions {
 }
 
 interface CreateProfileParams {
-  events: EventArrayType
+  events: ExperienceEventArray
 }
 
 interface UpdateProfileParams extends CreateProfileParams {
@@ -63,7 +63,7 @@ interface UpsertProfileParams extends CreateProfileParams {
 }
 
 interface BatchUpdateProfileParams {
-  events: BatchEventArrayType
+  events: BatchExperienceEventArray
 }
 
 export interface ExperienceApiClientConfig extends ApiConfig, RequestOptions {}
@@ -94,7 +94,7 @@ export default class ExperienceApiClient extends ApiClientBase {
   public async getProfile(
     id: string,
     options: Omit<RequestOptions, 'preflight' | 'plainText'> = {},
-  ): Promise<OptimizationDataType> {
+  ): Promise<OptimizationData> {
     if (!id) throw new Error('Valid profile ID required.')
 
     const requestName = 'Get Profile'
@@ -148,13 +148,13 @@ export default class ExperienceApiClient extends ApiClientBase {
   public async createProfile(
     { events }: CreateProfileParams,
     options: RequestOptions = {},
-  ): Promise<OptimizationDataType> {
+  ): Promise<OptimizationData> {
     const requestName = 'Create Profile'
 
     logger.info(`Sending ${requestName} request.`)
 
-    const body: ExperienceRequestDataType = {
-      events: EventArray.parse(events),
+    const body: ExperienceRequestData = {
+      events: ExperienceEventArray.parse(events),
       options: this.constructBodyOptions(options),
     }
 
@@ -190,15 +190,15 @@ export default class ExperienceApiClient extends ApiClientBase {
   public async updateProfile(
     { profileId, events }: UpdateProfileParams,
     options: RequestOptions = {},
-  ): Promise<OptimizationDataType> {
+  ): Promise<OptimizationData> {
     if (!profileId) throw new Error('Valid profile ID required.')
 
     const requestName = 'Update Profile'
 
     logger.info(`Sending ${requestName} request.`)
 
-    const body: ExperienceRequestDataType = {
-      events: EventArray.parse(events),
+    const body: ExperienceRequestData = {
+      events: ExperienceEventArray.parse(events),
       options: this.constructBodyOptions(options),
     }
 
@@ -230,7 +230,7 @@ export default class ExperienceApiClient extends ApiClientBase {
   public async upsertProfile(
     { profileId, events }: UpsertProfileParams,
     options?: RequestOptions,
-  ): Promise<OptimizationDataType> {
+  ): Promise<OptimizationData> {
     if (!profileId) {
       return await this.createProfile({ events }, options)
     } else {
@@ -248,13 +248,13 @@ export default class ExperienceApiClient extends ApiClientBase {
   public async upsertManyProfiles(
     { events }: BatchUpdateProfileParams,
     options: RequestOptions = {},
-  ): Promise<BatchExperienceDataType['profiles']> {
+  ): Promise<BatchExperienceData['profiles']> {
     const requestName = 'Upsert Many Profiles'
 
     logger.info(`Sending ${requestName} request.`)
 
-    const body: ExperienceRequestDataType = {
-      events: EventArray.parse(events),
+    const body: ExperienceRequestData = {
+      events: ExperienceEventArray.parse(events),
       options: this.constructBodyOptions(options),
     }
 
@@ -318,8 +318,8 @@ export default class ExperienceApiClient extends ApiClientBase {
 
   private readonly constructBodyOptions = ({
     enabledFeatures = this.enabledFeatures,
-  }: RequestOptions): ExperienceRequestOptionsType => {
-    const bodyOptions: ExperienceRequestOptionsType = {}
+  }: RequestOptions): ExperienceRequestOptions => {
+    const bodyOptions: ExperienceRequestOptions = {}
 
     if (enabledFeatures && Array.isArray(enabledFeatures) && enabledFeatures.length > 0) {
       bodyOptions.features = enabledFeatures

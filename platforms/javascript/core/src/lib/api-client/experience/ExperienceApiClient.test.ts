@@ -6,16 +6,16 @@ import ExperienceApiClient, {
 } from './ExperienceApiClient'
 import { logger } from '../../logger'
 import { ExperienceResponse, BatchExperienceResponse } from './dto'
-import { EventArray } from './dto/event'
+import { ExperienceEventArray } from './dto/event'
 import { server } from '../../../test/setup'
 
 const ORG_ID = 'org_123'
 const ENV = 'prod'
 
 const getLocaleParam = (url: string): string | null => new URL(url).searchParams.get('locale')
-const getTypeParam = (url: string): string | null => new URL(url).searchParams.get('type')
+const getParam = (url: string): string | null => new URL(url).searchParams.get('type')
 const getPathname = (url: string): string => new URL(url).pathname
-const getContentType = (headers: Headers): string | null => headers.get('Content-Type')
+const getContent = (headers: Headers): string | null => headers.get('Content-Type')
 const getHeader = (headers: Headers, name: string): string | null => headers.get(name)
 const getFeaturesFromBody = (body: unknown): string[] | undefined => {
   if (typeof body !== 'object' || body === null) return undefined
@@ -60,7 +60,7 @@ describe('ExperienceApiClient', () => {
       // @ts-expect-error -- testing
       .mockImplementation((json) => json)
 
-    vi.spyOn(EventArray, 'parse')
+    vi.spyOn(ExperienceEventArray, 'parse')
       // @ts-expect-error -- testing
       .mockImplementation((json) => json)
   })
@@ -132,14 +132,14 @@ describe('ExperienceApiClient', () => {
 
   describe('createProfile', () => {
     it('createProfile sends text/plain by default and includes enabledFeatures in body when provided', async () => {
-      let capturedContentType: string | null = null
+      let capturedContent: string | null = null
       let capturedFeatures: string[] | undefined
 
       server.use(
         http.post(
           `${EXPERIENCE_BASE_URL}/v2/organizations/:org/environments/:env/profiles`,
           async ({ request }) => {
-            capturedContentType = getContentType(request.headers)
+            capturedContent = getContent(request.headers)
             const body = await request.json()
             capturedFeatures = getFeaturesFromBody(body)
 
@@ -154,7 +154,7 @@ describe('ExperienceApiClient', () => {
       expect(result).toBeDefined()
 
       // Defaults to plaintext (no CORS preflight)
-      expect(capturedContentType).toBe('text/plain')
+      expect(capturedContent).toBe('text/plain')
 
       // features only present when provided
       expect(capturedFeatures).toEqual(['location'])
@@ -168,7 +168,7 @@ describe('ExperienceApiClient', () => {
     })
 
     it('createProfile respects per-request overrides: plainText=false, ip header, preflight query', async () => {
-      let contentType: string | null = null
+      let content: string | null = null
       let forcedIp: string | null = null
       let typeQuery: string | null = null
 
@@ -176,9 +176,9 @@ describe('ExperienceApiClient', () => {
         http.post(
           `${EXPERIENCE_BASE_URL}/v2/organizations/:org/environments/:env/profiles`,
           ({ request }) => {
-            contentType = getContentType(request.headers)
+            content = getContent(request.headers)
             forcedIp = getHeader(request.headers, 'X-Force-IP')
-            typeQuery = getTypeParam(request.url)
+            typeQuery = getParam(request.url)
             return HttpResponse.json({ data: { id: 'new_profile' } }, { status: 200 })
           },
         ),
@@ -191,7 +191,7 @@ describe('ExperienceApiClient', () => {
         { plainText: false, ip: '203.0.113.10', preflight: true },
       )
 
-      expect(contentType).toBe('application/json')
+      expect(content).toBe('application/json')
       expect(forcedIp).toBe('203.0.113.10')
       expect(typeQuery).toBe('preflight')
     })
@@ -249,7 +249,7 @@ describe('ExperienceApiClient', () => {
     })
 
     it('client-level defaults (enabledFeatures, ip, plainText) apply when not overridden', async () => {
-      let contentType: string | null = null
+      let content: string | null = null
       let forcedIp: string | null = null
       let features: string[] | undefined
 
@@ -257,7 +257,7 @@ describe('ExperienceApiClient', () => {
         http.post(
           `${EXPERIENCE_BASE_URL}/v2/organizations/:org/environments/:env/profiles/:profileId`,
           async ({ request }) => {
-            contentType = getContentType(request.headers)
+            content = getContent(request.headers)
             forcedIp = getHeader(request.headers, 'X-Force-IP')
             const body = await request.json()
             features = getFeaturesFromBody(body)
@@ -276,7 +276,7 @@ describe('ExperienceApiClient', () => {
       expect(res).toBeDefined()
 
       // Inherited from client config
-      expect(contentType).toBe('application/json')
+      expect(content).toBe('application/json')
       expect(forcedIp).toBe('198.51.100.5')
       expect(features).toEqual(['location'])
     })
@@ -284,13 +284,13 @@ describe('ExperienceApiClient', () => {
 
   describe('upsertManyProfiles', () => {
     it('upsertManyProfiles posts to /events and defaults to application/json (plainText=false)', async () => {
-      let contentType: string | null = null
+      let content: string | null = null
 
       server.use(
         http.post(
           `${EXPERIENCE_BASE_URL}/v2/organizations/:org/environments/:env/events`,
           ({ request }) => {
-            contentType = getContentType(request.headers)
+            content = getContent(request.headers)
             return HttpResponse.json(
               { data: { profiles: [{ id: 'a' }, { id: 'b' }] } },
               { status: 200 },
@@ -303,7 +303,7 @@ describe('ExperienceApiClient', () => {
 
       const profiles = await client.upsertManyProfiles({ events: [] }, {})
       expect(Array.isArray(profiles)).toBe(true)
-      expect(contentType).toBe('application/json')
+      expect(content).toBe('application/json')
     })
   })
 })

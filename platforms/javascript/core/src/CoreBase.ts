@@ -1,6 +1,6 @@
-import type { ChangeArrayType } from './lib/api-client/experience/dto/change'
-import type { ExperienceArrayType } from './lib/api-client/experience/dto/experience'
-import type { ProfileType } from './lib/api-client/experience/dto/profile'
+import type { ChangeArray } from './lib/api-client/experience/dto/change'
+import type { ExperienceArray } from './lib/api-client/experience/dto/experience'
+import type { Profile } from './lib/api-client/experience/dto/profile'
 import type AnalyticsBase from './analytics/AnalyticsBase'
 import ApiClient, { type ApiClientConfig, type ApiConfig } from './lib/api-client'
 import { batch, changes, consent, personalizations, profile } from './signals'
@@ -8,9 +8,9 @@ import type { EventBuilder } from './lib/builders'
 import { Personalization } from './personalization'
 
 export interface CoreConfigDefaults {
-  changes?: ChangeArrayType
-  personalizations?: ExperienceArrayType
-  profile?: ProfileType
+  changes?: ChangeArray
+  personalizations?: ExperienceArray
+  profile?: Profile
 }
 
 /** Options that may be passed to the Core constructor */

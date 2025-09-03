@@ -7,7 +7,7 @@ import { PageViewEvent } from './PageViewEvent'
 import { ScreenEvent } from './ScreenEvent'
 import { TrackEvent } from './TrackEvent'
 
-export const Event = discriminatedUnion('type', [
+export const ExperienceEvent = discriminatedUnion('type', [
   AliasEvent,
   ComponentViewEvent,
   GroupEvent,
@@ -16,7 +16,7 @@ export const Event = discriminatedUnion('type', [
   ScreenEvent,
   TrackEvent,
 ])
-export type EventType = zInfer<typeof Event>
+export type ExperienceEvent = zInfer<typeof ExperienceEvent>
 
-export const EventArray = array(Event)
-export type EventArrayType = zInfer<typeof EventArray>
+export const ExperienceEventArray = array(ExperienceEvent)
+export type ExperienceEventArray = zInfer<typeof ExperienceEventArray>

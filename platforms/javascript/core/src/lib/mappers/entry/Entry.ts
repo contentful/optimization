@@ -10,11 +10,11 @@ import {
 } from 'zod/mini'
 
 export const EntryFields = looseObject(object({}).shape)
-export type EntryFieldsType = zInfer<typeof EntryFields>
+export type EntryFields = zInfer<typeof EntryFields>
 
 const EntryLink = object({
   type: optional(string()),
-  linkType: optional(string()),
+  link: optional(string()),
   id: string(),
 })
 
@@ -32,17 +32,17 @@ export const Entry = object({
     revision: optional(number()),
     space: optional(LinkedEntity),
     environment: optional(LinkedEntity),
-    contentType: optional(LinkedEntity),
+    content: optional(LinkedEntity),
   }),
   fields: EntryFields,
   metadata: optional(
     object({
       tags: array(
         object({
-          sys: extend(EntryLink, { linkType: string() }),
+          sys: extend(EntryLink, { link: string() }),
         }),
       ),
     }),
   ),
 })
-export type EntryType = zInfer<typeof Entry>
+export type Entry = zInfer<typeof Entry>

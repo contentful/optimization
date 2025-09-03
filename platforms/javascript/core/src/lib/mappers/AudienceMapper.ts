@@ -1,12 +1,12 @@
-import { Audience, type AudienceType } from './audience'
-import { AudienceEntry, type AudienceEntryType, type EntryType } from './entry'
+import { Audience } from './audience'
+import { AudienceEntry, type Entry } from './entry'
 
 const AudienceMapper = {
-  isAudienceEntry(entry: EntryType): entry is AudienceEntryType {
+  isAudienceEntry(entry: Entry): entry is AudienceEntry {
     return AudienceEntry.safeParse(entry).success
   },
 
-  mapAudience(audience: AudienceEntryType): AudienceType {
+  mapAudience(audience: AudienceEntry): Audience {
     return Audience.parse({
       id: audience.fields.nt_audience_id,
       name: audience.fields.nt_name,

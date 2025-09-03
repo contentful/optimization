@@ -16,7 +16,7 @@ export const Experience = object({
   variants: record(string(), string()),
   sticky: optional(prefault(boolean(), false)),
 })
-export type ExperienceType = zInfer<typeof Experience>
+export type Experience = zInfer<typeof Experience>
 
 export const ExperienceArray = array(Experience)
-export type ExperienceArrayType = zInfer<typeof ExperienceArray>
+export type ExperienceArray = zInfer<typeof ExperienceArray>
