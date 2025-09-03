@@ -1,6 +1,6 @@
-import { catchall, json, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 import { Page } from './Page'
 
-export const PageView = catchall(Page, json())
+export const PageView = z.catchall(Page, z.json())
 
-export type PageView = zInfer<typeof PageView>
+export type PageView = z.infer<typeof PageView>

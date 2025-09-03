@@ -1,10 +1,10 @@
+import { ComponentViewEvent } from '../lib/api-client/experience/dto/event'
 import { BatchInsightsEventArray, type InsightsEvent } from '../lib/api-client/insights/dto/event'
-import { logger } from '../lib/logger'
-import { guardedBy } from '../lib/decorators'
 import type { ComponentViewBuilderArgs } from '../lib/builders'
+import { guardedBy } from '../lib/decorators'
+import { logger } from '../lib/logger'
 import { event as eventSignal, profile as profileSignal } from '../signals'
 import AnalyticsBase from './AnalyticsBase'
-import { ComponentViewEvent } from '../lib/api-client/experience/dto/event'
 
 class AnalyticsStateless extends AnalyticsBase {
   @guardedBy('hasNoConsent')

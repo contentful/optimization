@@ -1,9 +1,9 @@
-import { array, extend, type infer as zInfer, optional, object } from 'zod/mini'
+import { z } from 'zod/mini'
 import { Profile } from './profile'
 import { ResponseEnvelope } from './ResponseEnvelope'
 
-export const BatchExperienceData = object({ profiles: optional(array(Profile)) })
-export type BatchExperienceData = zInfer<typeof BatchExperienceData>
+export const BatchExperienceData = z.object({ profiles: z.optional(z.array(Profile)) })
+export type BatchExperienceData = z.infer<typeof BatchExperienceData>
 
-export const BatchExperienceResponse = extend(ResponseEnvelope, { data: BatchExperienceData })
-export type BatchExperienceResponse = zInfer<typeof BatchExperienceResponse>
+export const BatchExperienceResponse = z.extend(ResponseEnvelope, { data: BatchExperienceData })
+export type BatchExperienceResponse = z.infer<typeof BatchExperienceResponse>

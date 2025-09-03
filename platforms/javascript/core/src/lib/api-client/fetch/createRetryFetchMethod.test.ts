@@ -1,5 +1,5 @@
-import { createRetryFetchMethod } from './createRetryFetchMethod'
 import { logger } from '../../logger'
+import { createRetryFetchMethod } from './createRetryFetchMethod'
 
 vi.mock('../../logger', () => ({
   logger: {

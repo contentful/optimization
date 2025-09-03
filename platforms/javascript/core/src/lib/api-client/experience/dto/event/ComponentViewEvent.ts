@@ -1,11 +1,11 @@
-import { extend, literal, number, optional, string, union, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 import { UniversalEventProperties } from './UniversalEventProperties'
 
-export const ComponentViewEvent = extend(UniversalEventProperties, {
-  type: literal('component'),
-  component: union([literal('Entry'), literal('Variable')]),
-  componentId: string(),
-  experienceId: optional(string()),
-  variantIndex: number(),
+export const ComponentViewEvent = z.extend(UniversalEventProperties, {
+  type: z.literal('component'),
+  component: z.union([z.literal('Entry'), z.literal('Variable')]),
+  componentId: z.string(),
+  experienceId: z.optional(z.string()),
+  variantIndex: z.number(),
 })
-export type ComponentViewEvent = zInfer<typeof ComponentViewEvent>
+export type ComponentViewEvent = z.infer<typeof ComponentViewEvent>

@@ -1,7 +1,7 @@
-import { extend, literal, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 import { UniversalEventProperties } from './UniversalEventProperties'
 
-export const ScreenEvent = extend(UniversalEventProperties, {
-  type: literal('screen'),
+export const ScreenEvent = z.extend(UniversalEventProperties, {
+  type: z.literal('screen'),
 })
-export type ScreenEvent = zInfer<typeof ScreenEvent>
+export type ScreenEvent = z.infer<typeof ScreenEvent>

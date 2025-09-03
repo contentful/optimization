@@ -1,13 +1,13 @@
-import { object, optional, string, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 import { Query } from './Query'
 
-export const Page = object({
-  category: optional(string()),
-  path: string(),
+export const Page = z.object({
+  category: z.optional(z.string()),
+  path: z.string(),
   query: Query,
-  referrer: string(),
-  search: string(),
-  title: string(),
-  url: string(),
+  referrer: z.string(),
+  search: z.string(),
+  title: z.string(),
+  url: z.string(),
 })
-export type Page = zInfer<typeof Page>
+export type Page = z.infer<typeof Page>

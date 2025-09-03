@@ -1,8 +1,8 @@
-import { object, string, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 
-export const Library = object({
-  name: string(),
-  version: string(),
+export const Library = z.object({
+  name: z.string(),
+  version: z.string(),
 })
 
-export type Library = zInfer<typeof Library>
+export type Library = z.infer<typeof Library>

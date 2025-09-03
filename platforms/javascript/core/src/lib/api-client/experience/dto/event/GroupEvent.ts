@@ -1,7 +1,7 @@
-import { extend, literal, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 import { UniversalEventProperties } from './UniversalEventProperties'
 
-export const GroupEvent = extend(UniversalEventProperties, {
-  type: literal('group'),
+export const GroupEvent = z.extend(UniversalEventProperties, {
+  type: z.literal('group'),
 })
-export type GroupEvent = zInfer<typeof GroupEvent>
+export type GroupEvent = z.infer<typeof GroupEvent>

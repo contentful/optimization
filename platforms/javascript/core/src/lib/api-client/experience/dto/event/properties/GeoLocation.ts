@@ -1,21 +1,21 @@
-import { length, number, object, optional, string, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 
 const COUNTRY_CODE_LENGTH = 2
 
-const Coordinates = object({
-  latitude: number(),
-  longitude: number(),
+const Coordinates = z.object({
+  latitude: z.number(),
+  longitude: z.number(),
 })
 
-export const GeoLocation = object({
-  coordinates: optional(Coordinates),
-  city: optional(string()),
-  postalCode: optional(string()),
-  region: optional(string()),
-  regionCode: optional(string()),
-  country: optional(string()),
-  countryCode: optional(string().check(length(COUNTRY_CODE_LENGTH))),
-  continent: optional(string()),
-  timezone: optional(string()),
+export const GeoLocation = z.object({
+  coordinates: z.optional(Coordinates),
+  city: z.optional(z.string()),
+  postalCode: z.optional(z.string()),
+  region: z.optional(z.string()),
+  regionCode: z.optional(z.string()),
+  country: z.optional(z.string()),
+  countryCode: z.optional(z.string().check(z.length(COUNTRY_CODE_LENGTH))),
+  continent: z.optional(z.string()),
+  timezone: z.optional(z.string()),
 })
-export type GeoLocation = zInfer<typeof GeoLocation>
+export type GeoLocation = z.infer<typeof GeoLocation>

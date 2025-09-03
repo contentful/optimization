@@ -1,48 +1,39 @@
-import {
-  array,
-  extend,
-  looseObject,
-  number,
-  object,
-  optional,
-  string,
-  type infer as zInfer,
-} from 'zod/mini'
+import { z } from 'zod/mini'
 
-export const EntryFields = looseObject(object({}).shape)
-export type EntryFields = zInfer<typeof EntryFields>
+export const EntryFields = z.looseObject(z.object({}).shape)
+export type EntryFields = z.infer<typeof EntryFields>
 
-const EntryLink = object({
-  type: optional(string()),
-  link: optional(string()),
-  id: string(),
+const EntryLink = z.object({
+  type: z.optional(z.string()),
+  link: z.optional(z.string()),
+  id: z.string(),
 })
 
-const LinkedEntity = object({
+const LinkedEntity = z.object({
   sys: EntryLink,
 })
 
-export const Entry = object({
-  sys: object({
-    type: optional(string()),
-    id: string(),
-    createdAt: optional(string()),
-    updatedAt: optional(string()),
-    locale: optional(string()),
-    revision: optional(number()),
-    space: optional(LinkedEntity),
-    environment: optional(LinkedEntity),
-    content: optional(LinkedEntity),
+export const Entry = z.object({
+  sys: z.object({
+    type: z.optional(z.string()),
+    id: z.string(),
+    createdAt: z.optional(z.string()),
+    updatedAt: z.optional(z.string()),
+    locale: z.optional(z.string()),
+    revision: z.optional(z.number()),
+    space: z.optional(LinkedEntity),
+    environment: z.optional(LinkedEntity),
+    content: z.optional(LinkedEntity),
   }),
   fields: EntryFields,
-  metadata: optional(
-    object({
-      tags: array(
-        object({
-          sys: extend(EntryLink, { link: string() }),
+  metadata: z.optional(
+    z.object({
+      tags: z.array(
+        z.object({
+          sys: z.extend(EntryLink, { link: z.string() }),
         }),
       ),
     }),
   ),
 })
-export type Entry = zInfer<typeof Entry>
+export type Entry = z.infer<typeof Entry>

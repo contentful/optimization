@@ -1,6 +1,13 @@
-import { logger } from '../lib/logger'
+import { isEqual } from 'es-toolkit'
 import type ApiClient from '../lib/api-client'
 import type { OptimizationData } from '../lib/api-client'
+import {
+  ComponentViewEvent,
+  IdentifyEvent,
+  PageViewEvent,
+  TrackEvent,
+  type ExperienceEvent,
+} from '../lib/api-client/experience/dto/event'
 import type {
   ComponentViewBuilderArgs,
   EventBuilder,
@@ -9,24 +16,17 @@ import type {
   TrackBuilderArgs,
 } from '../lib/builders'
 import { guardedBy } from '../lib/decorators'
+import { logger } from '../lib/logger'
+import ProductBase, { type ConsentGuard } from '../ProductBase'
 import {
   batch,
   changes as changesSignal,
   consent,
   effect,
-  personalizations as personalizationsSignal,
   event as eventSignal,
   profile as profileSignal,
+  variants as variantsSignal,
 } from '../signals'
-import { isEqual } from 'es-toolkit'
-import {
-  ComponentViewEvent,
-  IdentifyEvent,
-  PageViewEvent,
-  TrackEvent,
-  type ExperienceEvent,
-} from '../lib/api-client/experience/dto/event'
-import ProductBase, { type ConsentGuard } from '../ProductBase'
 
 class Personalization extends ProductBase<ExperienceEvent> implements ConsentGuard {
   constructor(api: ApiClient, builder: EventBuilder) {
@@ -40,7 +40,7 @@ class Personalization extends ProductBase<ExperienceEvent> implements ConsentGua
 
     effect(() => {
       logger.info(
-        `[Personalization] Personalizations have been ${personalizationsSignal.value?.length ? 'populated' : 'cleared'}`,
+        `[Personalization] Variants have been ${variantsSignal.value?.length ? 'populated' : 'cleared'}`,
       )
     })
 
@@ -114,12 +114,11 @@ class Personalization extends ProductBase<ExperienceEvent> implements ConsentGua
   async #updateOutputSignals(data: OptimizationData): Promise<void> {
     const intercepted = await this.interceptor.state.run(data)
 
-    const { changes, personalizations, profile } = intercepted
+    const { changes, variants: personalizations, profile } = intercepted
 
     batch(() => {
       if (!isEqual(changesSignal.value, changes)) changesSignal.value = changes
-      if (!isEqual(personalizationsSignal.value, personalizations))
-        personalizationsSignal.value = personalizations
+      if (!isEqual(variantsSignal.value, personalizations)) variantsSignal.value = personalizations
       if (!isEqual(profileSignal.value, profile)) profileSignal.value = profile
     })
   }

@@ -1,10 +1,10 @@
-import { extend, literal, string, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 import { UniversalEventProperties } from './UniversalEventProperties'
 import { Properties } from './properties'
 
-export const TrackEvent = extend(UniversalEventProperties, {
-  type: literal('track'),
-  event: string(),
+export const TrackEvent = z.extend(UniversalEventProperties, {
+  type: z.literal('track'),
+  event: z.string(),
   properties: Properties,
 })
-export type TrackEvent = zInfer<typeof TrackEvent>
+export type TrackEvent = z.infer<typeof TrackEvent>

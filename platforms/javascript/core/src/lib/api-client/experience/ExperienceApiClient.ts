@@ -1,12 +1,12 @@
 import { logger } from '../../logger'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
 import {
-  type BatchExperienceData,
   BatchExperienceResponse,
   ExperienceResponse,
-  type OptimizationData,
+  type BatchExperienceData,
   type ExperienceRequestData,
   type ExperienceRequestOptions,
+  type OptimizationData,
 } from './dto'
 import { ExperienceEventArray, type BatchExperienceEventArray } from './dto/event'
 
@@ -116,7 +116,7 @@ export default class ExperienceApiClient extends ApiClientBase {
         data: { changes, experiences, profile },
       } = ExperienceResponse.parse(await response.json())
 
-      const data = { changes, personalizations: experiences, profile }
+      const data = { changes, variants: experiences, profile }
 
       logger.debug(`${requestName} request succesfully completed.`)
 
@@ -171,7 +171,7 @@ export default class ExperienceApiClient extends ApiClientBase {
         data: { changes, experiences, profile },
       } = ExperienceResponse.parse(await response.json())
 
-      const data = { changes, personalizations: experiences, profile }
+      const data = { changes, variants: experiences, profile }
 
       logger.debug(`${requestName} request succesfully completed.`)
 
@@ -215,7 +215,7 @@ export default class ExperienceApiClient extends ApiClientBase {
         data: { changes, experiences, profile },
       } = ExperienceResponse.parse(await response.json())
 
-      const data = { changes, personalizations: experiences, profile }
+      const data = { changes, variants: experiences, profile }
 
       logger.debug(`${requestName} request successfully completed.`)
 

@@ -1,13 +1,13 @@
-import { array, minLength, object, optional, string, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 import { ExperienceEventArray } from './event'
 
-export const ExperienceRequestOptions = object({
-  features: optional(array(string())),
+export const ExperienceRequestOptions = z.object({
+  features: z.optional(z.array(z.string())),
 })
-export type ExperienceRequestOptions = zInfer<typeof ExperienceRequestOptions>
+export type ExperienceRequestOptions = z.infer<typeof ExperienceRequestOptions>
 
-export const ExperienceRequestData = object({
-  events: ExperienceEventArray.check(minLength(1)),
-  options: optional(ExperienceRequestOptions),
+export const ExperienceRequestData = z.object({
+  events: ExperienceEventArray.check(z.minLength(1)),
+  options: z.optional(ExperienceRequestOptions),
 })
-export type ExperienceRequestData = zInfer<typeof ExperienceRequestData>
+export type ExperienceRequestData = z.infer<typeof ExperienceRequestData>

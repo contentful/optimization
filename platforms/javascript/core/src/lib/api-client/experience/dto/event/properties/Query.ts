@@ -1,4 +1,4 @@
-import { record, string, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 
-export const Query = record(string(), string())
-export type Query = zInfer<typeof Query>
+export const Query = z.record(z.string(), z.string())
+export type Query = z.infer<typeof Query>

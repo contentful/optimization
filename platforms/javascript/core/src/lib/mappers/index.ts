@@ -1,11 +1,8 @@
 export type * from './AudienceMapper'
-export type * from './FlagMapper'
-export type * from './PersonalizationMapper'
+export type * from './OptimizationMapper'
 
 export * from './AudienceMapper'
-export * from './FlagMapper'
-export * from './PersonalizationMapper'
+export * from './OptimizationMapper'
 
 export { default as AudienceMapper } from './AudienceMapper'
-export { default as FlagMapper } from './FlagMapper'
-export { default as PersonalizationMapper } from './PersonalizationMapper'
+export { default as OptimizationMapper } from './OptimizationMapper'

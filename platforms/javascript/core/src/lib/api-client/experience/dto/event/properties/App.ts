@@ -1,10 +1,10 @@
-import { optional, object, string, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 
-export const App = optional(
-  object({
-    name: string(),
-    version: string(),
+export const App = z.optional(
+  z.object({
+    name: z.string(),
+    version: z.string(),
   }),
 )
 
-export type App = zInfer<typeof App>
+export type App = z.infer<typeof App>

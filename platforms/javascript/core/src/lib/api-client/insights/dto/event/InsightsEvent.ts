@@ -1,8 +1,8 @@
-import { array, discriminatedUnion, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 import { ComponentViewEvent } from '../../../experience/dto/event'
 
-export const InsightsEvent = discriminatedUnion('type', [ComponentViewEvent])
-export type InsightsEvent = zInfer<typeof InsightsEvent>
+export const InsightsEvent = z.discriminatedUnion('type', [ComponentViewEvent])
+export type InsightsEvent = z.infer<typeof InsightsEvent>
 
-export const InsightsEventArray = array(InsightsEvent)
-export type InsightsEventArray = zInfer<typeof InsightsEventArray>
+export const InsightsEventArray = z.array(InsightsEvent)
+export type InsightsEventArray = z.infer<typeof InsightsEventArray>

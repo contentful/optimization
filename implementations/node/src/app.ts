@@ -1,5 +1,5 @@
-import express, { type Express } from 'express'
 import NodeSDK from '@contentful/optimization-node'
+import express, { type Express } from 'express'
 
 const app: Express = express()
 const port = 3000

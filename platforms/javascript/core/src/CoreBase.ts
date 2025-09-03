@@ -1,15 +1,15 @@
-import type { ChangeArray } from './lib/api-client/experience/dto/change'
-import type { ExperienceArray } from './lib/api-client/experience/dto/experience'
-import type { Profile } from './lib/api-client/experience/dto/profile'
 import type AnalyticsBase from './analytics/AnalyticsBase'
 import ApiClient, { type ApiClientConfig, type ApiConfig } from './lib/api-client'
-import { batch, changes, consent, personalizations, profile } from './signals'
+import type { ChangeArray } from './lib/api-client/experience/dto/change'
+import type { Profile } from './lib/api-client/experience/dto/profile'
+import type { SelectedVariantArray } from './lib/api-client/experience/dto/variant'
 import type { EventBuilder } from './lib/builders'
 import { Personalization } from './personalization'
+import { batch, changes, consent, profile, variants } from './signals'
 
 export interface CoreConfigDefaults {
   changes?: ChangeArray
-  personalizations?: ExperienceArray
+  personalizations?: SelectedVariantArray
   profile?: Profile
 }
 
@@ -48,7 +48,7 @@ abstract class CoreBase implements ConsentController {
 
       batch(() => {
         changes.value = defaultChanges
-        personalizations.value = defaultPersonalizations
+        variants.value = defaultPersonalizations
         profile.value = defaultProfile
       })
     }

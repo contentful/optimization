@@ -1,4 +1,4 @@
-import { json, record, string, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 
-export const Traits = record(string(), json())
-export type Traits = zInfer<typeof Traits>
+export const Traits = z.record(z.string(), z.json())
+export type Traits = z.infer<typeof Traits>

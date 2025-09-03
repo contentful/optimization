@@ -1,13 +1,13 @@
 import { http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { server } from '../../../test/setup'
+import { logger } from '../../logger'
+import { BatchExperienceResponse, ExperienceResponse } from './dto'
+import { ExperienceEventArray } from './dto/event'
 import ExperienceApiClient, {
   EXPERIENCE_BASE_URL,
   type ExperienceApiClientConfig,
 } from './ExperienceApiClient'
-import { logger } from '../../logger'
-import { ExperienceResponse, BatchExperienceResponse } from './dto'
-import { ExperienceEventArray } from './dto/event'
-import { server } from '../../../test/setup'
 
 const ORG_ID = 'org_123'
 const ENV = 'prod'

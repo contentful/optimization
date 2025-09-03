@@ -1,20 +1,20 @@
-import { extend, object, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 import { ChangeArray } from './change'
-import { ExperienceArray } from './experience'
 import { Profile } from './profile'
 import { ResponseEnvelope } from './ResponseEnvelope'
+import { SelectedVariantArray } from './variant'
 
-export const ExperienceData = object({
+export const ExperienceData = z.object({
   profile: Profile,
-  experiences: ExperienceArray,
+  experiences: SelectedVariantArray,
   changes: ChangeArray,
 })
-export type ExperienceData = zInfer<typeof ExperienceData>
+export type ExperienceData = z.infer<typeof ExperienceData>
 
-export const ExperienceResponse = extend(ResponseEnvelope, { data: ExperienceData })
-export type ExperienceResponse = zInfer<typeof ExperienceResponse>
+export const ExperienceResponse = z.extend(ResponseEnvelope, { data: ExperienceData })
+export type ExperienceResponse = z.infer<typeof ExperienceResponse>
 
 /** This type is specifically for compatibility outside the API adapter */
 export type OptimizationData = Omit<ExperienceData, 'experiences'> & {
-  personalizations: ExperienceArray
+  variants: SelectedVariantArray
 }

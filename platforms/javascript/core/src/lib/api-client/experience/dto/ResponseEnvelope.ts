@@ -1,8 +1,8 @@
-import { boolean, nullable, object, string, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 
-export const ResponseEnvelope = object({
-  data: object(),
-  message: string(),
-  error: nullable(boolean()),
+export const ResponseEnvelope = z.object({
+  data: z.object(),
+  message: z.string(),
+  error: z.nullable(z.boolean()),
 })
-export type ResponseEnvelope = zInfer<typeof ResponseEnvelope>
+export type ResponseEnvelope = z.infer<typeof ResponseEnvelope>

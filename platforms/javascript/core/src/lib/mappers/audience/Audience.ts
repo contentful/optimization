@@ -1,10 +1,10 @@
-import { object, string, optional, type infer as zInfer, prefault } from 'zod/mini'
+import { z } from 'zod/mini'
 
-export const Audience = object({
-  id: string(),
+export const Audience = z.object({
+  id: z.string(),
 
-  name: optional(prefault(string(), '')),
+  name: z.optional(z.prefault(z.string(), '')),
 
-  description: optional(prefault(string(), '')),
+  description: z.optional(z.prefault(z.string(), '')),
 })
-export type Audience = zInfer<typeof Audience>
+export type Audience = z.infer<typeof Audience>

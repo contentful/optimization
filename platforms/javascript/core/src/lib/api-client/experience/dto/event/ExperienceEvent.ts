@@ -1,4 +1,4 @@
-import { array, discriminatedUnion, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 import { AliasEvent } from './AliasEvent'
 import { ComponentViewEvent } from './ComponentViewEvent'
 import { GroupEvent } from './GroupEvent'
@@ -7,7 +7,7 @@ import { PageViewEvent } from './PageViewEvent'
 import { ScreenEvent } from './ScreenEvent'
 import { TrackEvent } from './TrackEvent'
 
-export const ExperienceEvent = discriminatedUnion('type', [
+export const ExperienceEvent = z.discriminatedUnion('type', [
   AliasEvent,
   ComponentViewEvent,
   GroupEvent,
@@ -16,7 +16,7 @@ export const ExperienceEvent = discriminatedUnion('type', [
   ScreenEvent,
   TrackEvent,
 ])
-export type ExperienceEvent = zInfer<typeof ExperienceEvent>
+export type ExperienceEvent = z.infer<typeof ExperienceEvent>
 
-export const ExperienceEventArray = array(ExperienceEvent)
-export type ExperienceEventArray = zInfer<typeof ExperienceEventArray>
+export const ExperienceEventArray = z.array(ExperienceEvent)
+export type ExperienceEventArray = z.infer<typeof ExperienceEventArray>
