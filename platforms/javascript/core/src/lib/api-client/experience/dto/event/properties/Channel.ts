@@ -1,4 +1,4 @@
-import { literal, union, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 
-export const Channel = union([literal('mobile'), literal('server'), literal('web')])
-export type Channel = zInfer<typeof Channel>
+export const Channel = z.union([z.literal('mobile'), z.literal('server'), z.literal('web')])
+export type Channel = z.infer<typeof Channel>

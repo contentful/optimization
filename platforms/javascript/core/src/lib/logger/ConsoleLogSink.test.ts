@@ -1,6 +1,6 @@
 /* eslint-disable no-console -- testing console */
-import { ConsoleLogSink } from './ConsoleLogSink'
 import type { LogEvent, LogLevels } from 'diary'
+import { ConsoleLogSink } from './ConsoleLogSink'
 
 // Save the original console methods so we can restore after
 const originalConsole = { ...console }

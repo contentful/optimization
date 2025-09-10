@@ -1,10 +1,10 @@
-import { object, optional, string, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 
-export const Campaign = object({
-  name: optional(string()),
-  source: optional(string()),
-  medium: optional(string()),
-  term: optional(string()),
-  content: optional(string()),
+export const Campaign = z.object({
+  name: z.optional(z.string()),
+  source: z.optional(z.string()),
+  medium: z.optional(z.string()),
+  term: z.optional(z.string()),
+  content: z.optional(z.string()),
 })
-export type Campaign = zInfer<typeof Campaign>
+export type Campaign = z.infer<typeof Campaign>

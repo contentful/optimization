@@ -1,12 +1,12 @@
-import { array, object, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 import { Profile } from '../../../experience/dto/profile'
 import { InsightsEventArray } from './InsightsEvent'
 
-export const BatchInsightsEvent = object({
+export const BatchInsightsEvent = z.object({
   profile: Profile,
   events: InsightsEventArray,
 })
-export type BatchInsightsEvent = zInfer<typeof BatchInsightsEvent>
+export type BatchInsightsEvent = z.infer<typeof BatchInsightsEvent>
 
-export const BatchInsightsEventArray = array(BatchInsightsEvent)
-export type BatchInsightsEventArray = zInfer<typeof BatchInsightsEventArray>
+export const BatchInsightsEventArray = z.array(BatchInsightsEvent)
+export type BatchInsightsEventArray = z.infer<typeof BatchInsightsEventArray>

@@ -1,6 +1,6 @@
 /* eslint-disable no-console -- using console */
-import { compare } from 'diary/utils'
 import type { LogEvent, LogLevels } from 'diary'
+import { compare } from 'diary/utils'
 import LogSink from './LogSink'
 
 const consoleMap = {

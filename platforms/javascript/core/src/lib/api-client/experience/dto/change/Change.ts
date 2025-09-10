@@ -1,51 +1,40 @@
-import {
-  array,
-  boolean,
-  discriminatedUnion,
-  enum as zEnum,
-  extend,
-  json,
-  literal,
-  number,
-  object,
-  record,
-  string,
-  type infer as zInfer,
-  union,
-  nullable,
-} from 'zod/mini'
+import { z } from 'zod/mini'
 
 export const ChangeType = ['Variable'] as const
 
-const ChangeBase = object({
-  key: string(),
-  type: union([zEnum(ChangeType), string()]),
-  meta: object({
-    experienceId: string(),
-    variantIndex: number(),
+const ChangeBase = z.object({
+  key: z.string(),
+  type: z.union([z.enum(ChangeType), z.string()]),
+  meta: z.object({
+    experienceId: z.string(),
+    variantIndex: z.number(),
   }),
 })
 
-export const VariableChangeValue = nullable(
-  union([string(), boolean(), number(), record(string(), json())]),
-)
+export const VariableChangeValue = z.union([
+  z.string(),
+  z.boolean(),
+  z.null(),
+  z.number(),
+  z.record(z.string(), z.json()),
+])
 
-const UnknownChange = extend(ChangeBase, {
-  type: string(),
+const UnknownChange = z.extend(ChangeBase, {
+  type: z.string(),
   value: VariableChangeValue,
 })
 
-export const VariableChange = extend(ChangeBase, {
-  type: literal('Variable'),
+export const VariableChange = z.extend(ChangeBase, {
+  type: z.literal('Variable'),
   value: VariableChangeValue,
 })
-export type VariableChange = zInfer<typeof VariableChange>
+export type VariableChange = z.infer<typeof VariableChange>
 
-export type Json = zInfer<typeof json>
+export type Json = z.infer<typeof z.json>
 export type Flags = Record<string, Json>
 
-export const Change = discriminatedUnion('type', [VariableChange, UnknownChange])
-export type Change = zInfer<typeof Change>
+export const Change = z.discriminatedUnion('type', [VariableChange, UnknownChange])
+export type Change = z.infer<typeof Change>
 
-export const ChangeArray = array(Change)
-export type ChangeArray = zInfer<typeof ChangeArray>
+export const ChangeArray = z.array(Change)
+export type ChangeArray = z.infer<typeof ChangeArray>

@@ -1,13 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { http, HttpResponse } from 'msw'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { server } from '../../../test/setup'
+import { logger } from '../../logger'
+import ApiClientBase from '../ApiClientBase'
+import { BatchInsightsEventArray } from './dto/event'
 import InsightsApiClient, {
   INSIGHTS_BASE_URL,
   type InsightsApiClientConfig,
 } from './InsightsApiClient'
-import ApiClientBase from '../ApiClientBase'
-import { logger } from '../../logger'
-import { BatchInsightsEventArray } from './dto/event'
 
 const ORG_ID = 'org_123'
 const ENV = 'prod'

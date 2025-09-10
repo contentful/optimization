@@ -1,4 +1,4 @@
-import Logger, { type LogSink, type LogEvent } from './'
+import Logger, { type LogEvent, type LogSink } from './'
 
 describe('Logger', () => {
   let logger: Logger

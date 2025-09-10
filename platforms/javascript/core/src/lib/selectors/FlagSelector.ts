@@ -1,7 +1,7 @@
 import type { ChangeArray, Flags, VariableChange } from '../api-client/experience/dto/change'
 
-const FlagMapper = {
-  mapFlags(changes: ChangeArray): Flags {
+const FlagSelector = {
+  selectFlags(changes: ChangeArray): Flags {
     return changes
       .filter((change): change is VariableChange => change.type === 'Variable')
       .reduce<Flags>((acc, { key, value }) => {
@@ -20,4 +20,4 @@ const FlagMapper = {
   },
 }
 
-export default FlagMapper
+export default FlagSelector

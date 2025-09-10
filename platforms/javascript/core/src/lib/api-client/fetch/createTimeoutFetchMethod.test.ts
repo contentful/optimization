@@ -1,5 +1,5 @@
-import { createTimeoutFetchMethod } from './createTimeoutFetchMethod'
 import { logger } from '../../logger'
+import { createTimeoutFetchMethod } from './createTimeoutFetchMethod'
 
 vi.mock('../../logger', () => ({
   logger: {

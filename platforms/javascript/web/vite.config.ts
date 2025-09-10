@@ -1,8 +1,8 @@
 import { resolve } from 'node:path'
-import { defineConfig } from 'vitest/config'
-import tsconfigPaths from 'vite-tsconfig-paths'
-import { analyzer } from 'vite-bundle-analyzer'
 import { visualizer } from 'rollup-plugin-visualizer'
+import { analyzer } from 'vite-bundle-analyzer'
+import tsconfigPaths from 'vite-tsconfig-paths'
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   resolve: {

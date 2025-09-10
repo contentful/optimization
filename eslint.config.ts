@@ -20,7 +20,7 @@ const config: ConfigArray = typescript.config(
         'error',
         { ignoreClassesThatImplementAnInterface: true },
       ],
-      '@typescript-eslint/no-magic-numbers': ['error', { ignore: [-1, 0, 1] }],
+      '@typescript-eslint/no-magic-numbers': ['error', { ignore: [-2, -1, 0, 0.5, 1, 2] }],
       '@typescript-eslint/no-unused-vars': [
         'error',
         {

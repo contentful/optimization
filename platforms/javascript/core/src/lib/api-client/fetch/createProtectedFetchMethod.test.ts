@@ -1,10 +1,10 @@
 import type { MockInstance } from 'vitest'
+import { logger } from '../../logger'
 import type { FetchMethod } from './Fetch'
 import {
   createProtectedFetchMethod,
   type ProtectedFetchMethodOptions,
 } from './createProtectedFetchMethod'
-import { logger } from '../../logger'
 import * as createRetryFetchMethodModule from './createRetryFetchMethod'
 import * as createTimeoutFetchMethodModule from './createTimeoutFetchMethod'
 

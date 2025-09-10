@@ -1,25 +1,25 @@
-import { extend, optional, string, type infer as zInfer } from 'zod/mini'
-import { EntryFields, Entry } from './Entry'
+import { z } from 'zod/mini'
+import { Entry, EntryFields } from './Entry'
 
-export const AudienceEntryFields = extend(EntryFields, {
+export const AudienceEntryFields = z.extend(EntryFields, {
   /**
    * The internal id of the audience (Short Text)
    */
-  nt_audience_id: string(),
+  nt_audience_id: z.string(),
 
   /**
    * The name of the audience (Short Text)
    */
-  nt_name: optional(string()),
+  nt_name: z.optional(z.string()),
 
   /**
    * The description of the audience (Short Text)
    */
-  nt_description: optional(string()),
+  nt_description: z.optional(z.string()),
 })
-export type AudienceEntryFields = zInfer<typeof AudienceEntryFields>
+export type AudienceEntryFields = z.infer<typeof AudienceEntryFields>
 
-export const AudienceEntry = extend(Entry, {
+export const AudienceEntry = z.extend(Entry, {
   fields: AudienceEntryFields,
 })
-export type AudienceEntry = zInfer<typeof AudienceEntry>
+export type AudienceEntry = z.infer<typeof AudienceEntry>

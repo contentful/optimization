@@ -1,15 +1,15 @@
-import { array, number, object, string, type infer as zInfer } from 'zod/mini'
+import { z } from 'zod/mini'
 import { GeoLocation } from '../event/properties'
-import { SessionStatistics } from './properties'
 import { Traits } from '../event/properties/Traits'
+import { SessionStatistics } from './properties'
 
-export const Profile = object({
-  id: string(),
-  stableId: string(),
-  random: number(),
-  audiences: array(string()),
+export const Profile = z.object({
+  id: z.string(),
+  stableId: z.string(),
+  random: z.number(),
+  audiences: z.array(z.string()),
   traits: Traits,
   location: GeoLocation,
   session: SessionStatistics,
 })
-export type Profile = zInfer<typeof Profile>
+export type Profile = z.infer<typeof Profile>

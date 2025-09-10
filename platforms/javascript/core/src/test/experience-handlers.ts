@@ -7,9 +7,9 @@ import type {
   ExperienceEventArray,
 } from '../lib/api-client/experience/dto/event'
 import type { GeoLocation, Page, Traits } from '../lib/api-client/experience/dto/event/properties'
-import type { Experience } from '../lib/api-client/experience/dto/experience'
 import type { Profile } from '../lib/api-client/experience/dto/profile'
 import type { SessionStatistics } from '../lib/api-client/experience/dto/profile/properties'
+import type { SelectedVariant } from '../lib/api-client/experience/dto/variant'
 
 // Minimal in-memory store
 const profilesStore = new Map<string, Profile>()
@@ -107,7 +107,7 @@ function inferAudiences({ traits, page }: { traits?: Traits; page?: Page }): str
   return out
 }
 
-function chooseExperiences(profile: Profile): Experience[] {
+function chooseExperiences(profile: Profile): SelectedVariant[] {
   // A tiny decision engine just to demonstrate shape
   // You can replace this with any logic or even read from a JSON config.
   const variantIndex = profile.traits.beta ? 1 : profile.random > 0.5 ? 1 : 0
