@@ -2,61 +2,35 @@ import { logger } from '../../logger'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
 import { BatchInsightsEventArray } from './dto/event'
 
-// TODO: consider injecting/passing beacon instead of detecting from globalThis
 interface RequestOptions {
   /**
-   * Insights analytics events may be queued using the Beacon API
-   *
-   * @default true
+   * `beaconHandler` allows the usage of the Beacon API, or any similar request handler, instead of direct posting of data via `fetch` in the SDK.
    */
-  beacon?: boolean
+  beaconHandler?: (url: string | URL, data: BatchInsightsEventArray) => boolean
 }
 
 export interface InsightsApiClientConfig extends ApiConfig, RequestOptions {}
 
 export const INSIGHTS_BASE_URL = 'https://ingest.insights.ninetailed.co'
 
-interface NavigatorLike {
-  sendBeacon: (url: URL, data?: Blob) => boolean
-}
-
-function hasNavigator(o: unknown): o is { navigator: unknown } {
-  return typeof o === 'object' && o !== null && 'navigator' in o
-}
-
-function isNavigatorLike(x: unknown): x is NavigatorLike {
-  return typeof x === 'object' && x !== null
-}
-
-function getNavigator(): NavigatorLike | undefined {
-  const g: unknown = globalThis
-
-  if (hasNavigator(g)) {
-    const { navigator } = g
-    return isNavigatorLike(navigator) ? navigator : undefined
-  }
-
-  return undefined
-}
-
 export default class InsightsApiClient extends ApiClientBase {
   protected readonly baseUrl: string
-  private readonly beacon: boolean
+  private readonly beaconHandler: RequestOptions['beaconHandler']
 
   constructor(config: InsightsApiClientConfig) {
     super('Insights', config)
 
-    const { baseUrl, beacon } = config
+    const { baseUrl, beaconHandler } = config
 
     this.baseUrl = baseUrl ?? INSIGHTS_BASE_URL
-    this.beacon = beacon ?? true
+    this.beaconHandler = beaconHandler
   }
 
   public async sendBatchEvents(
     batches: BatchInsightsEventArray,
     options: RequestOptions = {},
   ): Promise<void> {
-    const { beacon = this.beacon } = options
+    const { beaconHandler = this.beaconHandler } = options
 
     const url = new URL(
       `/v1/organizations/${this.clientId}/environments/${this.environment}/events`,
@@ -65,21 +39,25 @@ export default class InsightsApiClient extends ApiClientBase {
 
     const body = BatchInsightsEventArray.parse(batches)
 
-    if (beacon && hasNavigator(globalThis)) {
-      const blobData = new Blob([JSON.stringify(body)], {
-        type: 'text/plain',
-      })
+    if (typeof beaconHandler === 'function') {
+      logger.info('Queueing events via beaconHandler')
 
-      getNavigator()?.sendBeacon(url, blobData)
+      const beaconSuccessfullyQueued = beaconHandler(url, body)
 
-      return
+      if (beaconSuccessfullyQueued) {
+        return
+      } else {
+        logger.warn(
+          'beaconHandler failed to queue events; events will be emitted immediately via fetch',
+        )
+      }
     }
 
-    const requestName = 'Send event batches'
+    const requestName = 'Event Batches'
 
-    logger.info(`Sending ${requestName} request.`)
+    logger.info(`Sending ${this.name} API "${requestName}" request.`)
 
-    logger.debug(`${requestName} request Body: `, body)
+    logger.debug(`${this.name} API "${requestName}" request Body: `, body)
 
     try {
       await this.fetch(url, {
@@ -90,7 +68,7 @@ export default class InsightsApiClient extends ApiClientBase {
         body: JSON.stringify(body),
       })
 
-      logger.debug(`${requestName} request succesfully completed.`)
+      logger.debug(`${this.name} API "${requestName}" request succesfully completed.`)
     } catch (error) {
       this.logRequestError(error, { requestName })
 

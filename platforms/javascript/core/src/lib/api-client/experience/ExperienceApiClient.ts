@@ -99,7 +99,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     const requestName = 'Get Profile'
 
-    logger.info(`Sending ${requestName} request.`)
+    logger.info(`Sending ${this.name} API "${requestName}" request.`)
 
     try {
       const response = await this.fetch(
@@ -118,7 +118,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
       const data = { changes, variants: experiences, profile }
 
-      logger.debug(`${requestName} request succesfully completed.`)
+      logger.debug(`${this.name} API "${requestName}" request succesfully completed.`)
 
       return data
     } catch (error) {
@@ -151,14 +151,14 @@ export default class ExperienceApiClient extends ApiClientBase {
   ): Promise<OptimizationData> {
     const requestName = 'Create Profile'
 
-    logger.info(`Sending ${requestName} request.`)
+    logger.info(`Sending ${this.name} API "${requestName}" request.`)
 
     const body: ExperienceRequestData = {
       events: ExperienceEventArray.parse(events),
       options: this.constructBodyOptions(options),
     }
 
-    logger.debug(`${requestName} request body: `, body)
+    logger.debug(`${this.name} API "${requestName}" request body: `, body)
 
     try {
       const response = await this.makeProfileMutationRequest({
@@ -173,7 +173,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
       const data = { changes, variants: experiences, profile }
 
-      logger.debug(`${requestName} request succesfully completed.`)
+      logger.debug(`${this.name} API "${requestName}" request succesfully completed.`)
 
       return data
     } catch (error) {
@@ -195,14 +195,14 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     const requestName = 'Update Profile'
 
-    logger.info(`Sending ${requestName} request.`)
+    logger.info(`Sending ${this.name} API "${requestName}" request.`)
 
     const body: ExperienceRequestData = {
       events: ExperienceEventArray.parse(events),
       options: this.constructBodyOptions(options),
     }
 
-    logger.debug(`${requestName} request Body: `, body)
+    logger.debug(`${this.name} API "${requestName}" request Body: `, body)
 
     try {
       const response = await this.makeProfileMutationRequest({
@@ -217,7 +217,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
       const data = { changes, variants: experiences, profile }
 
-      logger.debug(`${requestName} request successfully completed.`)
+      logger.debug(`${this.name} API "${requestName}" request successfully completed.`)
 
       return data
     } catch (error) {
@@ -251,14 +251,14 @@ export default class ExperienceApiClient extends ApiClientBase {
   ): Promise<BatchExperienceData['profiles']> {
     const requestName = 'Upsert Many Profiles'
 
-    logger.info(`Sending ${requestName} request.`)
+    logger.info(`Sending ${this.name} API "${requestName}" request.`)
 
     const body: ExperienceRequestData = {
       events: ExperienceEventArray.parse(events),
       options: this.constructBodyOptions(options),
     }
 
-    logger.debug(`${requestName} request Body: `, body)
+    logger.debug(`${this.name} API "${requestName}" request Body: `, body)
 
     try {
       const response = await this.makeProfileMutationRequest({
@@ -271,7 +271,7 @@ export default class ExperienceApiClient extends ApiClientBase {
         data: { profiles },
       } = BatchExperienceResponse.parse(await response.json())
 
-      logger.debug(`${requestName} request successfully completed.`)
+      logger.debug(`${this.name} API "${requestName}" request successfully completed.`)
 
       return profiles
     } catch (error) {

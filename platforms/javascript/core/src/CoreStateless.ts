@@ -1,6 +1,6 @@
 import { AnalyticsStateless } from './analytics'
 import CoreBase, { type CoreConfig } from './CoreBase'
-import type { EventBuilder } from './lib/builders'
+import type { EventBuilder } from './lib/api-client/builders'
 
 class CoreStateless extends CoreBase {
   readonly analytics: AnalyticsStateless

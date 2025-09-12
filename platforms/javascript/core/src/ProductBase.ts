@@ -1,6 +1,6 @@
 import type ApiClient from './lib/api-client'
 import type { OptimizationData } from './lib/api-client'
-import type { EventBuilder } from './lib/builders'
+import type { EventBuilder } from './lib/api-client/builders'
 import { InterceptorManager } from './lib/interceptor'
 import { consent } from './signals'
 

@@ -19,12 +19,20 @@ class Optimization extends CoreStateful {
       {
         name: 'Optimization',
         clientId: 'temp',
+        api: {
+          analytics: {
+            beaconHandler: (url, data) => {
+              const blobData = new Blob([JSON.stringify(data)], {
+                type: 'text/plain',
+              })
+
+              return window.navigator.sendBeacon(url, blobData)
+            },
+          },
+        },
       },
       builder,
     )
-
-    // eslint-disable-next-line no-console -- demo
-    console.log(this.name)
 
     window.optimization ??= this
   }

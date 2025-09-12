@@ -88,20 +88,10 @@ function generateBatchEventArray(id: string): BatchInsightsEventArray {
   ]
 }
 
-const sendBeaconSpy = vi
-  .fn<(url: string | URL, data?: Blob | null) => boolean>()
-  .mockReturnValue(true)
-
 describe('InsightsApiClient.sendBatchEvents', () => {
   beforeEach(() => {
     server.resetHandlers()
     vi.clearAllMocks()
-
-    // Add navigator to globalThis (avoid using DOM lib in a universal TS library)
-    Object.defineProperty(globalThis, 'navigator', {
-      configurable: true,
-      value: { sendBeacon: sendBeaconSpy },
-    })
   })
 
   afterEach(() => {
@@ -114,7 +104,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     vi.restoreAllMocks()
   })
 
-  it('POSTs batches via fetch when beacon option is false', async () => {
+  it('POSTs batches via fetch by default', async () => {
     const batches = generateBatchEventArray('e1')
 
     // Spy on the schema parser and let it pass-through (or stub if needed)
@@ -142,37 +132,67 @@ describe('InsightsApiClient.sendBatchEvents', () => {
 
     server.use(handler)
 
-    const client = makeClient({ beacon: false })
+    const client = makeClient()
 
     await expect(client.sendBatchEvents(batches)).resolves.toBeUndefined()
 
     expect(parseSpy).toHaveBeenCalledTimes(1)
     expect(infoSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Sending Send event batches request.'),
+      expect.stringContaining('Sending Insights API "Event Batches" request.'),
     )
     expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('request Body'), batches)
     expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('request succesfully completed.'))
   })
 
-  it('uses navigator.sendBeacon when beacon by default', async () => {
+  it('uses beaconHandler when supplied', async () => {
     const batches = generateBatchEventArray('e2')
 
     // @ts-expect-error -- testing
     vi.spyOn(BatchInsightsEventArray, 'parse').mockImplementation((input) => input)
 
+    const beaconHandler = vi.fn(() => true)
+
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
 
     const client = makeClient()
 
-    await expect(client.sendBatchEvents(batches)).resolves.toBeUndefined()
+    await expect(client.sendBatchEvents(batches, { beaconHandler })).resolves.toBeUndefined()
 
-    expect(sendBeaconSpy).toHaveBeenCalledTimes(1)
-    expect(sendBeaconSpy).toHaveBeenCalledWith(expectedUrl, expect.any(Blob))
+    expect(beaconHandler).toHaveBeenCalledTimes(1)
+    expect(beaconHandler).toHaveBeenCalledWith(expectedUrl, batches)
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 
-  it('logs and rethrows on network errors', async () => {
+  it('POSTs batches via fetch when beaconHandler fails', async () => {
     const batches = generateBatchEventArray('e3')
+
+    const beaconHandler = vi.fn(() => false)
+
+    const infoSpy = vi.spyOn(logger, 'info')
+    const debugSpy = vi.spyOn(logger, 'debug')
+
+    const handler = http.post(
+      `${INSIGHTS_BASE_URL}/v1/organizations/:orgId/environments/:env/events`,
+      () => HttpResponse.json({ ok: true }, { status: 200 }),
+    )
+
+    server.use(handler)
+
+    const client = makeClient()
+
+    await expect(client.sendBatchEvents(batches, { beaconHandler })).resolves.toBeUndefined()
+
+    expect(beaconHandler).toHaveBeenCalledTimes(1)
+    expect(beaconHandler).toHaveBeenCalledWith(expectedUrl, batches)
+    expect(infoSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Sending Insights API "Event Batches" request.'),
+    )
+    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('request Body'), batches)
+    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('request succesfully completed.'))
+  })
+
+  it('logs and rethrows on network errors', async () => {
+    const batches = generateBatchEventArray('e4')
 
     // @ts-expect-error -- testing
     vi.spyOn(BatchInsightsEventArray, 'parse').mockImplementation((input) => input)
@@ -194,10 +214,10 @@ describe('InsightsApiClient.sendBatchEvents', () => {
 
     const client = makeClient()
 
-    await expect(client.sendBatchEvents(batches, { beacon: false })).rejects.toBeDefined()
+    await expect(client.sendBatchEvents(batches)).rejects.toBeDefined()
     expect(logErrorSpy).toHaveBeenCalledTimes(1)
     expect(logErrorSpy).toHaveBeenCalledWith(expect.anything(), {
-      requestName: 'Send event batches',
+      requestName: 'Event Batches',
     })
   })
 })

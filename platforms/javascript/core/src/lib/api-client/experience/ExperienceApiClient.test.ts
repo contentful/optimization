@@ -110,8 +110,10 @@ describe('ExperienceApiClient', () => {
       expect(requested.id).toBe('prof_2')
       expect(requested.locale).toBe('de-DE')
 
-      expect(logger.info).toHaveBeenCalledWith('Sending Get Profile request.')
-      expect(logger.debug).toHaveBeenCalledWith('Get Profile request succesfully completed.')
+      expect(logger.info).toHaveBeenCalledWith('Sending Experience API "Get Profile" request.')
+      expect(logger.debug).toHaveBeenCalledWith(
+        'Experience API "Get Profile" request succesfully completed.',
+      )
     })
 
     it('logs an error when the request fails (network error)', async () => {
@@ -159,12 +161,14 @@ describe('ExperienceApiClient', () => {
       // features only present when provided
       expect(capturedFeatures).toEqual(['location'])
 
-      expect(logger.info).toHaveBeenCalledWith('Sending Create Profile request.')
-      expect(logger.debug).toHaveBeenCalledWith('Create Profile request body: ', {
+      expect(logger.info).toHaveBeenCalledWith('Sending Experience API "Create Profile" request.')
+      expect(logger.debug).toHaveBeenCalledWith('Experience API "Create Profile" request body: ', {
         events: [],
         options: { features: ['location'] },
       })
-      expect(logger.debug).toHaveBeenCalledWith('Create Profile request succesfully completed.')
+      expect(logger.debug).toHaveBeenCalledWith(
+        'Experience API "Create Profile" request succesfully completed.',
+      )
     })
 
     it('createProfile respects per-request overrides: plainText=false, ip header, preflight query', async () => {
