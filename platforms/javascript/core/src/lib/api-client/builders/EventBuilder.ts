@@ -3,7 +3,7 @@ import type {
   IdentifyEvent,
   PageViewEvent,
   TrackEvent,
-} from '../api-client/experience/dto/event'
+} from '../experience/dto/event'
 import type {
   App,
   Campaign,
@@ -14,8 +14,8 @@ import type {
   PageView,
   Properties,
   Traits,
-} from '../api-client/experience/dto/event/properties'
-import type { UniversalEventProperties } from '../api-client/experience/dto/event/UniversalEventProperties'
+} from '../experience/dto/event/properties'
+import type { UniversalEventProperties } from '../experience/dto/event/UniversalEventProperties'
 
 export interface EventBuilderConfig {
   app?: App

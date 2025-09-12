@@ -1,9 +1,9 @@
 import type AnalyticsBase from './analytics/AnalyticsBase'
 import ApiClient, { type ApiClientConfig, type ApiConfig } from './lib/api-client'
+import type { EventBuilder } from './lib/api-client/builders'
 import type { ChangeArray } from './lib/api-client/experience/dto/change'
 import type { Profile } from './lib/api-client/experience/dto/profile'
 import type { SelectedVariantArray } from './lib/api-client/experience/dto/variant'
-import type { EventBuilder } from './lib/builders'
 import { Personalization } from './personalization'
 import { batch, changes, consent, profile, variants } from './signals'
 

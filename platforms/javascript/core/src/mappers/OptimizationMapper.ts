@@ -1,4 +1,4 @@
-import { logger } from '../logger'
+import { logger } from '../lib/logger'
 import AudienceMapper from './AudienceMapper'
 import {
   type Entry,

@@ -1,10 +1,10 @@
+import type { ComponentViewBuilderArgs } from '../lib/api-client/builders'
 import type { Profile } from '../lib/api-client/experience/dto/profile'
 import {
   InsightsEvent,
   type BatchInsightsEventArray,
   type InsightsEventArray,
 } from '../lib/api-client/insights/dto/event'
-import type { ComponentViewBuilderArgs } from '../lib/builders'
 import { guardedBy } from '../lib/decorators'
 import { logger } from '../lib/logger'
 import { event as eventSignal, profile as profileSignal } from '../signals'

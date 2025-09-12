@@ -1,11 +1,11 @@
 import { AnalyticsStateful } from './analytics'
 import CoreBase, { type CoreConfig, type CoreConfigDefaults } from './CoreBase'
+import type { EventBuilder } from './lib/api-client/builders'
 import type { Flags } from './lib/api-client/experience/dto/change'
 import type { ExperienceEvent as PersonalizationEvent } from './lib/api-client/experience/dto/event'
 import type { Profile } from './lib/api-client/experience/dto/profile'
 import type { SelectedVariantArray } from './lib/api-client/experience/dto/variant'
 import type { InsightsEvent as AnalyticsEvent } from './lib/api-client/insights/dto'
-import type { EventBuilder } from './lib/builders'
 import { consent, effect, event, flags, profile, variants } from './signals'
 
 export type CoreStatefulConfig = CoreConfig & {

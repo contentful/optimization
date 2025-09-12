@@ -1,6 +1,13 @@
 import { isEqual } from 'es-toolkit'
 import type ApiClient from '../lib/api-client'
 import type { OptimizationData } from '../lib/api-client'
+import type {
+  ComponentViewBuilderArgs,
+  EventBuilder,
+  IdentifyBuilderArgs,
+  PageViewBuilderArgs,
+  TrackBuilderArgs,
+} from '../lib/api-client/builders'
 import {
   ComponentViewEvent,
   IdentifyEvent,
@@ -8,13 +15,6 @@ import {
   TrackEvent,
   type ExperienceEvent,
 } from '../lib/api-client/experience/dto/event'
-import type {
-  ComponentViewBuilderArgs,
-  EventBuilder,
-  IdentifyBuilderArgs,
-  PageViewBuilderArgs,
-  TrackBuilderArgs,
-} from '../lib/builders'
 import { guardedBy } from '../lib/decorators'
 import { logger } from '../lib/logger'
 import ProductBase, { type ConsentGuard } from '../ProductBase'

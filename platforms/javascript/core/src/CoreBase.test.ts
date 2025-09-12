@@ -1,7 +1,7 @@
 import { AnalyticsStateless } from './analytics'
 import CoreBase, { type CoreConfig } from './CoreBase'
 import ApiClient from './lib/api-client'
-import { EventBuilder } from './lib/builders'
+import { EventBuilder } from './lib/api-client/builders'
 
 const api = new ApiClient({ clientId: 'client-id' })
 const builder = new EventBuilder({ channel: 'server', library: { name: 'TestAPI', version: '0' } })

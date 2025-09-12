@@ -5,11 +5,11 @@ import InsightsApiClient, { type InsightsApiClientConfig } from './insights'
 export type { ApiConfig }
 
 export interface ApiClientConfig extends ApiConfig {
-  experience?: Omit<
+  personalization?: Omit<
     ExperienceApiClientConfig,
     'clientId' | 'environment' | 'fetchOptions' | 'preview' | 'baseUrl'
   >
-  insights?: Omit<
+  analytics?: Omit<
     InsightsApiClientConfig,
     'clientId' | 'environment' | 'fetchOptions' | 'preview' | 'baseUrl'
   >
@@ -20,16 +20,16 @@ export default class ApiClient {
   readonly insights: InsightsApiClient
 
   constructor(config: ApiClientConfig) {
-    const { experience, insights, ...apiConfig } = config
+    const { personalization, analytics, ...apiConfig } = config
 
     this.experience = new ExperienceApiClient({
       ...apiConfig,
-      ...experience,
+      ...personalization,
     })
 
     this.insights = new InsightsApiClient({
       ...apiConfig,
-      ...insights,
+      ...analytics,
     })
   }
 }
