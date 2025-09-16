@@ -23,7 +23,7 @@ const EntryReplacementSelector = {
   ): EntryReplacementComponent | undefined {
     return config.components
       .filter(isEntryReplacementComponent)
-      .find((component) => 'id' in component.baseline && component.baseline.id === baseline.id)
+      .find((component) => component.baseline.id && component.baseline.id === baseline.id)
   },
 }
 

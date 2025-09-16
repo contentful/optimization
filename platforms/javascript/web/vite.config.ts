@@ -10,6 +10,9 @@ export default defineConfig({
       '@contentful/optimization-core': resolve(__dirname, '../core/src/'),
     },
   },
+  esbuild: {
+    target: 'es2022',
+  },
   build: {
     sourcemap: true,
     lib: {

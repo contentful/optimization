@@ -1,13 +1,13 @@
-import NodeSDK from '@contentful/optimization-node'
+import Optimization from '@contentful/optimization-node'
 import express, { type Express } from 'express'
 
 const app: Express = express()
 const port = 3000
 
-const sdk = new NodeSDK()
+const sdk = new Optimization({ clientId: 'whatever' })
 
 app.get('/', (_req, res) => {
-  res.send(sdk.name)
+  res.send(sdk.config.clientId)
 })
 
 app.listen(port, () => {

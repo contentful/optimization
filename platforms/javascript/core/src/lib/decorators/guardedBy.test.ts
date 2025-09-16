@@ -1,9 +1,8 @@
-import { guardedBy, GuardedByBlockedError } from './guardedBy'
+import { guardedBy } from './guardedBy'
 
-// Single generic: function type (args) => return
 const inlineOnBlockedSpy = vi.fn<(name: string, args: readonly unknown[]) => void>()
 
-describe('guardedBy (methods only, sync predicate/onBlocked)', () => {
+describe('guardedBy (methods only, sync predicate/onBlocked, silent block)', () => {
   beforeEach((): void => {
     vi.clearAllMocks()
   })
@@ -69,21 +68,21 @@ describe('guardedBy (methods only, sync predicate/onBlocked)', () => {
       return `ok:${id}`
     }
 
-    // 6) Named onBlocked exists but is NOT a function (ignored, still throws)
+    // 6) Named onBlocked exists but is NOT a function (ignored, still blocks)
     @guardedBy<Fixture>('gate', { onBlocked: 'notFunc' })
     public withNonFunctionHandler(id: string): string {
       return `ok:${id}`
     }
 
-    // 7) Async method (allowed; blocked throws before awaiting)
+    // 7) Async method (allowed; blocked resolves to Promise<undefined>)
     @guardedBy<Fixture>('gate')
     public async doAsync(id: string): Promise<string> {
-      await Promise.resolve()
-      return `ok:${id}`
+      const msg = await Promise.resolve(`ok:${id}`)
+      return msg
     }
   }
 
-  // Separate fixture: misconfigured predicate (non-function) throws on call
+  // Separate fixture: misconfigured predicate (non-function) throws TypeError on call
   class BadFixture {
     public notFunc: unknown = 42
 
@@ -105,13 +104,14 @@ describe('guardedBy (methods only, sync predicate/onBlocked)', () => {
     expect(gateSpy).toHaveBeenCalledWith('doWork', ['A'])
   })
 
-  it('throws GuardedByBlockedError when blocked and no onBlocked', (): void => {
+  it('returns undefined when blocked and no onBlocked', (): void => {
     const fx = new Fixture()
     fx.enabled = false
 
     const gateSpy = vi.spyOn(fx, 'gate')
-    expect(() => fx.doWork('B')).toThrow(GuardedByBlockedError)
+    const result = fx.doWork('B')
 
+    expect(result).toBeUndefined()
     expect(gateSpy).toHaveBeenCalledTimes(1)
     expect(gateSpy).toHaveBeenCalledWith('doWork', ['B'])
   })
@@ -120,21 +120,23 @@ describe('guardedBy (methods only, sync predicate/onBlocked)', () => {
     const fx = new Fixture()
 
     fx.enabled = true // predicate true -> inverted => blocked
-    expect(() => fx.doWorkInverted('C')).toThrow(GuardedByBlockedError)
+    const blocked = fx.doWorkInverted('C')
+    expect(blocked).toBeUndefined()
 
     fx.enabled = false // predicate false -> inverted => allowed
     const ok = fx.doWorkInverted('D')
     expect(ok).toBe('ok:D')
   })
 
-  it('invokes named onBlocked (string key) before throwing', (): void => {
+  it('invokes named onBlocked (string key) when blocked, then returns undefined', (): void => {
     const fx = new Fixture()
     fx.enabled = false
 
     const gateSpy = vi.spyOn(fx, 'gate')
     const handlerSpy = vi.spyOn(fx, 'handleBlocked')
 
-    expect(() => fx.withNamedHandler('E')).toThrow(GuardedByBlockedError)
+    const result = fx.withNamedHandler('E')
+    expect(result).toBeUndefined()
 
     expect(gateSpy).toHaveBeenCalledTimes(1)
     expect(gateSpy).toHaveBeenCalledWith('withNamedHandler', ['E'])
@@ -142,14 +144,15 @@ describe('guardedBy (methods only, sync predicate/onBlocked)', () => {
     expect(handlerSpy).toHaveBeenCalledWith('withNamedHandler', ['E'])
   })
 
-  it('invokes named onBlocked (symbol key) before throwing', (): void => {
+  it('invokes named onBlocked (symbol key) when blocked, then returns undefined', (): void => {
     const fx = new Fixture()
     fx.enabled = false
 
     const gateSpy = vi.spyOn(fx, 'gate')
     const symHandlerSpy = vi.spyOn(fx, ON_BLOCKED_SYM)
 
-    expect(() => fx.withSymbolHandler('S')).toThrow(GuardedByBlockedError)
+    const result = fx.withSymbolHandler('S')
+    expect(result).toBeUndefined()
 
     expect(gateSpy).toHaveBeenCalledTimes(1)
     expect(gateSpy).toHaveBeenCalledWith('withSymbolHandler', ['S'])
@@ -157,13 +160,14 @@ describe('guardedBy (methods only, sync predicate/onBlocked)', () => {
     expect(symHandlerSpy).toHaveBeenCalledWith('withSymbolHandler', ['S'])
   })
 
-  it('invokes inline onBlocked before throwing', (): void => {
+  it('invokes inline onBlocked when blocked, then returns undefined', (): void => {
     const fx = new Fixture()
     fx.enabled = false
 
     const gateSpy = vi.spyOn(fx, 'gate')
 
-    expect(() => fx.withInlineHandler('F')).toThrow(GuardedByBlockedError)
+    const result = fx.withInlineHandler('F')
+    expect(result).toBeUndefined()
 
     expect(gateSpy).toHaveBeenCalledTimes(1)
     expect(gateSpy).toHaveBeenCalledWith('withInlineHandler', ['F'])
@@ -171,15 +175,41 @@ describe('guardedBy (methods only, sync predicate/onBlocked)', () => {
     expect(inlineOnBlockedSpy).toHaveBeenCalledWith('withInlineHandler', ['F'])
   })
 
-  it('ignores named onBlocked when the property is not a function, still throws', (): void => {
+  it('ignores named onBlocked when the property is not a function, still returns undefined', (): void => {
     const fx = new Fixture()
     fx.enabled = false
 
     const gateSpy = vi.spyOn(fx, 'gate')
-    expect(() => fx.withNonFunctionHandler('N')).toThrow(GuardedByBlockedError)
+    const result = fx.withNonFunctionHandler('N')
 
+    expect(result).toBeUndefined()
     expect(gateSpy).toHaveBeenCalledTimes(1)
     expect(gateSpy).toHaveBeenCalledWith('withNonFunctionHandler', ['N'])
+  })
+
+  it('supports decorating async methods: blocked resolves to undefined; allowed resolves to value', async (): Promise<void> => {
+    const fx = new Fixture()
+    const gateSpy = vi.spyOn(fx, 'gate')
+
+    // Blocked: resolves to undefined
+    fx.enabled = false
+    const blocked = await fx.doAsync('X')
+    expect(blocked).toBeUndefined()
+
+    // Allowed: resolves normally
+    fx.enabled = true
+    const val = await fx.doAsync('Y')
+    expect(val).toBe('ok:Y')
+
+    // Both calls counted
+    expect(gateSpy).toHaveBeenCalledTimes(2)
+    expect(gateSpy).toHaveBeenNthCalledWith(1, 'doAsync', ['X'])
+    expect(gateSpy).toHaveBeenNthCalledWith(2, 'doAsync', ['Y'])
+  })
+
+  it('throws a TypeError when the predicate key is not a function (on call)', (): void => {
+    const bad = new BadFixture()
+    expect(() => bad.willThrow('Z')).toThrow(TypeError)
   })
 
   it('handles symbol-named methods (covers nameToString non-string branch)', (): void => {
@@ -189,8 +219,6 @@ describe('guardedBy (methods only, sync predicate/onBlocked)', () => {
       public enabled = true
 
       public gate(name: string, args: readonly unknown[]): boolean {
-        // We expect the decorator to pass the symbol's description ("symMethod")
-        // and forward the args array unchanged.
         return name === 'symMethod' && args.length === 1
       }
 
@@ -211,13 +239,14 @@ describe('guardedBy (methods only, sync predicate/onBlocked)', () => {
   })
 
   it('handles symbol-named methods without description (covers description fallback)', (): void => {
-    const METHOD_SYM_NO_DESC: unique symbol = Symbol(undefined) // no description
+    // eslint-disable-next-line symbol-description -- testing
+    const METHOD_SYM_NO_DESC: unique symbol = Symbol() // no description
 
     class SymFixtureNoDesc {
       public enabled = true
 
       public gate(name: string, args: readonly unknown[]): boolean {
-        // When description is missing, nameToString should use String(symbol) -> "Symbol()"
+        // When description is missing, String(symbol) -> "Symbol()"
         return name === 'Symbol()' && args.length === 1
       }
 
@@ -235,32 +264,5 @@ describe('guardedBy (methods only, sync predicate/onBlocked)', () => {
 
     expect(gateSpy).toHaveBeenCalledTimes(1)
     expect(gateSpy).toHaveBeenCalledWith('Symbol()', ['Q'])
-  })
-
-  it('supports decorating async methods (blocked throws synchronously; allowed resolves)', async (): Promise<void> => {
-    const fx = new Fixture()
-    const gateSpy = vi.spyOn(fx, 'gate')
-
-    // Blocked: throws synchronously even though method is async.
-    fx.enabled = false
-    expect(() => {
-      // Ensure the callback returns void (and avoid floating promises warnings)
-      void fx.doAsync('X')
-    }).toThrow(GuardedByBlockedError)
-
-    // Allowed: resolves normally.
-    fx.enabled = true
-    const val = await fx.doAsync('Y')
-    expect(val).toBe('ok:Y')
-
-    // Both calls are counted now.
-    expect(gateSpy).toHaveBeenCalledTimes(2)
-    expect(gateSpy).toHaveBeenNthCalledWith(1, 'doAsync', ['X'])
-    expect(gateSpy).toHaveBeenNthCalledWith(2, 'doAsync', ['Y'])
-  })
-
-  it('throws a TypeError when the predicate key is not a function (on call)', (): void => {
-    const bad = new BadFixture()
-    expect(() => bad.willThrow('Z')).toThrow(TypeError)
   })
 })

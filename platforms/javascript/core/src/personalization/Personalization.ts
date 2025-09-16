@@ -57,8 +57,8 @@ class Personalization extends ProductBase<ExperienceEvent> implements ConsentGua
     )
   }
 
-  @guardedBy('hasNoConsent')
-  async identify(args: IdentifyBuilderArgs & { anonymousId?: string }): Promise<OptimizationData> {
+  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
+  async identify(args: IdentifyBuilderArgs): Promise<OptimizationData | undefined> {
     logger.info('Sending "identify" event')
 
     const event = IdentifyEvent.parse(this.builder.buildIdentify(args))
@@ -66,8 +66,8 @@ class Personalization extends ProductBase<ExperienceEvent> implements ConsentGua
     return await this.#upsertProfile(event)
   }
 
-  @guardedBy('hasNoConsent')
-  async page(args: PageViewBuilderArgs & { anonymousId?: string }): Promise<OptimizationData> {
+  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
+  async page(args: PageViewBuilderArgs): Promise<OptimizationData> {
     logger.info('Sending "page" event')
 
     const event = PageViewEvent.parse(this.builder.buildPageView(args))
@@ -75,8 +75,8 @@ class Personalization extends ProductBase<ExperienceEvent> implements ConsentGua
     return await this.#upsertProfile(event)
   }
 
-  @guardedBy('hasNoConsent')
-  async track(args: TrackBuilderArgs & { anonymousId?: string }): Promise<OptimizationData> {
+  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
+  async track(args: TrackBuilderArgs): Promise<OptimizationData> {
     logger.info(`Sending "track" event "${args.event}"`)
 
     const event = TrackEvent.parse(this.builder.buildTrack(args))
@@ -85,10 +85,8 @@ class Personalization extends ProductBase<ExperienceEvent> implements ConsentGua
   }
 
   /** AKA sticky component view */
-  @guardedBy('hasNoConsent')
-  async trackPersonalization(
-    args: ComponentViewBuilderArgs & { anonymousId?: string },
-  ): Promise<OptimizationData> {
+  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
+  async trackPersonalization(args: ComponentViewBuilderArgs): Promise<OptimizationData> {
     logger.info(`Sending "track personalization" event`)
 
     const event = ComponentViewEvent.parse(this.builder.buildComponentView(args))
@@ -96,10 +94,12 @@ class Personalization extends ProductBase<ExperienceEvent> implements ConsentGua
     return await this.#upsertProfile(event)
   }
 
-  async #upsertProfile(event: ExperienceEvent, anonymousId?: string): Promise<OptimizationData> {
+  async #upsertProfile(event: ExperienceEvent): Promise<OptimizationData> {
     const intercepted = await this.interceptor.event.run(event)
 
     eventSignal.value = intercepted
+
+    const anonymousId = this.builder.getAnonymousId()
 
     const data = await this.api.experience.upsertProfile({
       profileId: anonymousId ?? profileSignal.value?.id,
@@ -114,12 +114,12 @@ class Personalization extends ProductBase<ExperienceEvent> implements ConsentGua
   async #updateOutputSignals(data: OptimizationData): Promise<void> {
     const intercepted = await this.interceptor.state.run(data)
 
-    const { changes, variants: personalizations, profile } = intercepted
+    const { changes, variants, profile } = intercepted
 
     batch(() => {
       if (!isEqual(changesSignal.value, changes)) changesSignal.value = changes
-      if (!isEqual(variantsSignal.value, personalizations)) variantsSignal.value = personalizations
       if (!isEqual(profileSignal.value, profile)) profileSignal.value = profile
+      if (!isEqual(variantsSignal.value, variants)) variantsSignal.value = variants
     })
   }
 }

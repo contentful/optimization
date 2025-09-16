@@ -26,7 +26,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@contentful/optimization-core": "workspace:*"
+    "@contentful/optimization-core": "workspace:*",
+    "@types/js-cookie": "3.0.6",
+    "es-toolkit": "catalog:",
+    "js-cookie": "3.0.5",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",

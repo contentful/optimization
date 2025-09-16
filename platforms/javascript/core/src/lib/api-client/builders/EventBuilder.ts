@@ -1,17 +1,17 @@
+import { z } from 'zod/mini'
 import type {
   ComponentViewEvent,
   IdentifyEvent,
   PageViewEvent,
   TrackEvent,
 } from '../experience/dto/event'
-import type {
-  App,
+import {
+  type App,
   Campaign,
-  Channel,
+  type Channel,
   GeoLocation,
-  Library,
+  type Library,
   Page,
-  PageView,
   Properties,
   Traits,
 } from '../experience/dto/event/properties'
@@ -21,54 +21,88 @@ export interface EventBuilderConfig {
   app?: App
   channel: Channel
   library: Library
+  getAnonymousId?: () => string | undefined
+  getLocale?: () => string | undefined
+  getPageProperties?: () => Page
+  getUserAgent?: () => string | undefined
 }
 
-export interface EventBuilderArgs {
-  campaign?: Campaign
-  locale: string
-  location?: GeoLocation
-  page: Page
-  userAgent?: string
-}
+const UniversalEventBuilderArgs = z.object({
+  campaign: z.optional(Campaign),
+  locale: z.optional(z.string()),
+  location: z.optional(GeoLocation),
+  page: z.optional(Page),
+  userAgent: z.optional(z.string()),
+})
+export type UniversalEventBuilderArgs = z.infer<typeof UniversalEventBuilderArgs>
 
-export interface ComponentViewBuilderArgs extends EventBuilderArgs {
-  componentId: string
-  experienceId?: string
-  variantIndex: number
-}
+const ComponentViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
+  componentId: z.string(),
+  experienceId: z.optional(z.string()),
+  variantIndex: z.number(),
+})
+export type ComponentViewBuilderArgs = z.infer<typeof ComponentViewBuilderArgs>
 
-export interface IdentifyBuilderArgs extends EventBuilderArgs {
-  traits: Traits
-  userId: string
-}
+const IdentifyBuilderArgs = z.extend(UniversalEventBuilderArgs, {
+  traits: Traits,
+  userId: z.string(),
+})
+export type IdentifyBuilderArgs = z.infer<typeof IdentifyBuilderArgs>
 
-export interface PageViewBuilderArgs extends EventBuilderArgs {
-  properties: PageView
-}
+const PageViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
+  properties: z.optional(z.prefault(Properties, {})),
+})
+export type PageViewBuilderArgs = z.infer<typeof PageViewBuilderArgs>
 
-export interface TrackBuilderArgs extends EventBuilderArgs {
-  event: string
-  properties: Properties
+const TrackBuilderArgs = z.extend(UniversalEventBuilderArgs, {
+  event: z.string(),
+  properties: z.optional(z.prefault(Properties, {})),
+})
+export type TrackBuilderArgs = z.infer<typeof TrackBuilderArgs>
+
+export const DEFAULT_PAGE_PROPERTIES = {
+  path: '',
+  query: {},
+  referrer: '',
+  search: '',
+  title: '',
+  url: '',
 }
 
 class EventBuilder {
-  app: App
+  app?: App
   channel: Channel
   library: Library
+  getAnonymousId: () => string | undefined
+  getLocale: () => string | undefined
+  getPageProperties: () => Page
+  getUserAgent: () => string | undefined
 
-  constructor({ app, channel, library }: EventBuilderConfig) {
+  constructor({
+    app,
+    channel,
+    library,
+    getAnonymousId,
+    getLocale,
+    getPageProperties,
+    getUserAgent,
+  }: EventBuilderConfig) {
     this.app = app
     this.channel = channel
     this.library = library
+    this.getAnonymousId = getAnonymousId ?? (() => undefined)
+    this.getLocale = getLocale ?? (() => 'en-US')
+    this.getPageProperties = getPageProperties ?? (() => DEFAULT_PAGE_PROPERTIES)
+    this.getUserAgent = getUserAgent ?? (() => undefined)
   }
 
-  buildUniversalEventProperties({
+  protected buildUniversalEventProperties({
     campaign = {},
     locale,
     location = {},
     page,
     userAgent,
-  }: EventBuilderArgs): UniversalEventProperties {
+  }: UniversalEventBuilderArgs): UniversalEventProperties {
     const timestamp = new Date().toISOString()
 
     return {
@@ -78,10 +112,10 @@ class EventBuilder {
         campaign,
         gdpr: { isConsentGiven: true },
         library: this.library,
-        locale,
+        locale: locale ?? this.getLocale() ?? 'en-US',
         location,
-        page,
-        userAgent,
+        page: page ?? this.getPageProperties(),
+        userAgent: userAgent ?? this.getUserAgent(),
       },
       messageId: crypto.randomUUID(),
       originalTimestamp: timestamp,
@@ -90,16 +124,14 @@ class EventBuilder {
     }
   }
 
-  buildComponentView({
-    componentId,
-    experienceId,
-    variantIndex,
-    ...universal
-  }: ComponentViewBuilderArgs): ComponentViewEvent {
+  buildComponentView(args: ComponentViewBuilderArgs): ComponentViewEvent {
+    const { componentId, experienceId, variantIndex, ...universal } =
+      ComponentViewBuilderArgs.parse(args)
+
     return {
       ...this.buildUniversalEventProperties(universal),
       type: 'component',
-      component: 'Entry',
+      componentType: 'Entry',
       componentId,
       experienceId,
       variantIndex,
@@ -109,11 +141,13 @@ class EventBuilder {
   buildFlagView(args: ComponentViewBuilderArgs): ComponentViewEvent {
     return {
       ...this.buildComponentView(args),
-      component: 'Variable',
+      componentType: 'Variable',
     }
   }
 
-  buildIdentify({ traits, userId, ...universal }: IdentifyBuilderArgs): IdentifyEvent {
+  buildIdentify(args: IdentifyBuilderArgs): IdentifyEvent {
+    const { traits, userId, ...universal } = IdentifyBuilderArgs.parse(args)
+
     return {
       ...this.buildUniversalEventProperties(universal),
       type: 'identify',
@@ -122,7 +156,9 @@ class EventBuilder {
     }
   }
 
-  buildPageView({ properties, ...universal }: PageViewBuilderArgs): PageViewEvent {
+  buildPageView(args: PageViewBuilderArgs): PageViewEvent {
+    const { properties = {}, ...universal } = PageViewBuilderArgs.parse(args)
+
     return {
       ...this.buildUniversalEventProperties(universal),
       type: 'page',
@@ -130,7 +166,9 @@ class EventBuilder {
     }
   }
 
-  buildTrack({ event, properties, ...universal }: TrackBuilderArgs): TrackEvent {
+  buildTrack(args: TrackBuilderArgs): TrackEvent {
+    const { event, properties = {}, ...universal } = TrackBuilderArgs.parse(args)
+
     return {
       ...this.buildUniversalEventProperties(universal),
       type: 'track',

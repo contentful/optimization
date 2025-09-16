@@ -25,7 +25,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
   return [
     // CORS preflight for Beacon/fetch
     http.options(
-      `${baseUrl}/v1/organizations/:organizationId/environments/:environmentSlug/events`,
+      `${baseUrl}v1/organizations/:organizationId/environments/:environmentSlug/events`,
       () =>
         HttpResponse.text('', {
           status: 204,
@@ -37,7 +37,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
         }),
     ),
     http.post(
-      `${baseUrl}/v1/organizations/:organizationId/environments/:environmentSlug/events`,
+      `${baseUrl}v1/organizations/:organizationId/environments/:environmentSlug/events`,
       async ({ request }) => {
         try {
           const payload = await parseJson<BatchInsightsEventArray>(request)
@@ -58,7 +58,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
     ),
     // Debug endpoint that returns events for a given ID
     http.get(
-      `${baseUrl}/v1/organizations/:organizationId/environments/:environmentSlug/profiles/:profileId`,
+      `${baseUrl}v1/organizations/:organizationId/environments/:environmentSlug/profiles/:profileId`,
       ({ params }) => {
         const { profileId } = params
         const events = eventsStore.filter(

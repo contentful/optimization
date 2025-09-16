@@ -1,13 +1,8 @@
 import { AnalyticsStateless } from './analytics'
 import CoreBase, { type CoreConfig } from './CoreBase'
-import ApiClient from './lib/api-client'
-import { EventBuilder } from './lib/api-client/builders'
-
-const api = new ApiClient({ clientId: 'client-id' })
-const builder = new EventBuilder({ channel: 'server', library: { name: 'TestAPI', version: '0' } })
 
 class TestCore extends CoreBase {
-  analytics = new AnalyticsStateless(api, builder)
+  analytics = new AnalyticsStateless(this.api, this.eventBuilder)
 }
 
 const config: CoreConfig = {
@@ -17,7 +12,7 @@ const config: CoreConfig = {
 
 describe('CoreBase', () => {
   it('accepts name option', () => {
-    const core = new TestCore(config, builder)
+    const core = new TestCore(config)
 
     expect(core.name).toEqual(config.name)
   })

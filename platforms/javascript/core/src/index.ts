@@ -1,19 +1,12 @@
-// TODO: Explore the idea of package path exports for all but CoreBase & subclasses
-// TODO: No barrel exports anywhere
-export type * from './lib/api-client'
-export type * from './lib/api-client/builders'
-export type * from './lib/decorators'
-export type * from './lib/logger'
-export type * from './mappers'
-export type * from './selectors'
+export { batch, effect, signals, type Signal, type Signals } from './signals'
 
 export * from './analytics'
+export * from './CoreBase'
+export * from './global-constants'
 export * from './lib/api-client'
-export * from './lib/api-client/builders'
 export * from './lib/decorators'
 export * from './lib/logger'
-export * from './mappers'
-export * from './selectors'
+export * from './personalization'
 
 export { default as CoreStateful } from './CoreStateful'
 export { default as CoreStateless } from './CoreStateless'

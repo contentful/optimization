@@ -7,7 +7,7 @@ import { event as eventSignal, profile as profileSignal } from '../signals'
 import AnalyticsBase from './AnalyticsBase'
 
 class AnalyticsStateless extends AnalyticsBase {
-  @guardedBy('hasNoConsent')
+  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async trackComponentView(args: ComponentViewBuilderArgs): Promise<void> {
     logger.info(`[Analytics] Processing "component view" event`)
 
@@ -19,10 +19,10 @@ class AnalyticsStateless extends AnalyticsBase {
 
     eventSignal.value = parsed
 
-    await this.#sendBatchEvent(parsed)
+    await this.sendBatchEvent(parsed)
   }
 
-  @guardedBy('hasNoConsent')
+  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async trackFlagView(args: ComponentViewBuilderArgs): Promise<void> {
     logger.debug(`[Analytics] Processing "flag view" event`)
 
@@ -34,10 +34,11 @@ class AnalyticsStateless extends AnalyticsBase {
 
     eventSignal.value = parsed
 
-    await this.#sendBatchEvent(parsed)
+    await this.sendBatchEvent(parsed)
   }
 
-  async #sendBatchEvent(event: InsightsEvent): Promise<void> {
+  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
+  async sendBatchEvent(event: InsightsEvent): Promise<void> {
     const batchEvent: BatchInsightsEventArray = BatchInsightsEventArray.parse([
       {
         profile: profileSignal.value,

@@ -1,6 +1,3 @@
-export type * from './EntryReplacementSelector'
-export type * from './FlagSelector'
-
 export * from './EntryReplacementSelector'
 export * from './FlagSelector'
 

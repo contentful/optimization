@@ -9,10 +9,11 @@ export interface ApiConfig {
   preview?: boolean
 }
 
+export type GlobalApiConfigProperties = 'clientId' | 'environment' | 'fetchOptions' | 'preview'
+
 const DEFAULT_ENVIRONMENT = 'main'
 
 abstract class ApiClientBase {
-  protected abstract readonly baseUrl: string
   protected readonly name: string
   protected readonly clientId: string
   protected readonly environment: string

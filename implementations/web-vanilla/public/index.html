@@ -6,9 +6,11 @@
   </head>
   <body>
     <script>
-      var optimization = new window.Optimization()
+      var optimization = new window.Optimization({ clientId: 'whatever' })
+
       var p = document.createElement('p')
-      p.innerText = optimization.name
+      p.dataset.testid = 'clientId'
+      p.innerText = optimization.config.clientId
       document.body.appendChild(p)
     </script>
   </body>

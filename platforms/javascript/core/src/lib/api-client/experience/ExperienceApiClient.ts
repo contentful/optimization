@@ -68,7 +68,7 @@ interface BatchUpdateProfileParams {
 
 export interface ExperienceApiClientConfig extends ApiConfig, RequestOptions {}
 
-export const EXPERIENCE_BASE_URL = 'https://experience.ninetailed.co'
+export const EXPERIENCE_BASE_URL = 'https://experience.ninetailed.co/'
 
 export default class ExperienceApiClient extends ApiClientBase {
   protected readonly baseUrl: string
@@ -104,7 +104,7 @@ export default class ExperienceApiClient extends ApiClientBase {
     try {
       const response = await this.fetch(
         this.constructUrl(
-          `/v2/organizations/${this.clientId}/environments/${this.environment}/profiles/${id}`,
+          `v2/organizations/${this.clientId}/environments/${this.environment}/profiles/${id}`,
           options,
         ),
         {
@@ -162,7 +162,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     try {
       const response = await this.makeProfileMutationRequest({
-        url: `/v2/organizations/${this.clientId}/environments/${this.environment}/profiles`,
+        url: `v2/organizations/${this.clientId}/environments/${this.environment}/profiles`,
         body,
         options,
       })
@@ -206,7 +206,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     try {
       const response = await this.makeProfileMutationRequest({
-        url: `/v2/organizations/${this.clientId}/environments/${this.environment}/profiles/${profileId}`,
+        url: `v2/organizations/${this.clientId}/environments/${this.environment}/profiles/${profileId}`,
         body,
         options,
       })
@@ -262,7 +262,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     try {
       const response = await this.makeProfileMutationRequest({
-        url: `/v2/organizations/${this.clientId}/environments/${this.environment}/events`,
+        url: `v2/organizations/${this.clientId}/environments/${this.environment}/events`,
         body,
         options: { plainText: false, ...options },
       })

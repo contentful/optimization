@@ -11,7 +11,7 @@ interface RequestOptions {
 
 export interface InsightsApiClientConfig extends ApiConfig, RequestOptions {}
 
-export const INSIGHTS_BASE_URL = 'https://ingest.insights.ninetailed.co'
+export const INSIGHTS_BASE_URL = 'https://ingest.insights.ninetailed.co/'
 
 export default class InsightsApiClient extends ApiClientBase {
   protected readonly baseUrl: string
@@ -33,7 +33,7 @@ export default class InsightsApiClient extends ApiClientBase {
     const { beaconHandler = this.beaconHandler } = options
 
     const url = new URL(
-      `/v1/organizations/${this.clientId}/environments/${this.environment}/events`,
+      `v1/organizations/${this.clientId}/environments/${this.environment}/events`,
       this.baseUrl,
     )
 
