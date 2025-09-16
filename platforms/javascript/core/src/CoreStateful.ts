@@ -1,4 +1,5 @@
-import { AnalyticsStateful } from './analytics'
+import { Analytics } from './analytics'
+import { EventHandlerStateful } from './analytics/EventHandler'
 import CoreBase, { type CoreConfig, type CoreConfigDefaults } from './CoreBase'
 import type { EventBuilder } from './lib/api-client/builders'
 import type { Flags } from './lib/api-client/experience/dto/change'
@@ -43,7 +44,7 @@ function toObservable<T>(s: { value: T }): Observable<T> {
 }
 
 class CoreStateful extends CoreBase {
-  readonly analytics: AnalyticsStateful
+  readonly analytics: Analytics
 
   readonly states: States = {
     consent: toObservable(consent),
@@ -56,7 +57,7 @@ class CoreStateful extends CoreBase {
   constructor(config: CoreStatefulConfig, builder: EventBuilder) {
     super(config, builder)
 
-    this.analytics = new AnalyticsStateful(this.api, builder)
+    this.analytics = new Analytics(this.api, builder, new EventHandlerStateful(this.api))
   }
 }
 

@@ -1,16 +1,18 @@
 import ProductBase, { type ConsentGuard } from '../ProductBase'
 import type ApiClient from '../lib/api-client'
-import type { EventBuilder } from '../lib/api-client/builders'
-import type { Profile } from '../lib/api-client/experience/dto/profile'
+import type { ComponentViewBuilderArgs, EventBuilder } from '../lib/api-client/builders'
 import { InsightsEvent } from '../lib/api-client/insights/dto/event/InsightsEvent'
-
+import { guardedBy } from '../lib/decorators'
 import { logger } from '../lib/logger'
 import { consent, effect, event as eventSignal, profile as profileSignal } from '../signals'
-import type { EventHandler } from './utils'
+import type { EventHandler } from './EventHandler'
 
-abstract class AnalyticsBase extends ProductBase<InsightsEvent> implements ConsentGuard {
-  constructor(api: ApiClient, builder: EventBuilder) {
+class Analytics extends ProductBase<InsightsEvent> implements ConsentGuard {
+  private readonly eventHandler: EventHandler
+
+  constructor(api: ApiClient, builder: EventBuilder, eventsHandler: EventHandler) {
     super(api, builder)
+    this.eventHandler = eventsHandler
 
     effect(() => {
       const id = profileSignal.value?.id
@@ -29,7 +31,19 @@ abstract class AnalyticsBase extends ProductBase<InsightsEvent> implements Conse
     )
   }
 
-  protected async sendEvent(event: InsightsEvent): Promise<void> {
+  @guardedBy('hasNoConsent')
+  public async trackComponentView(args: ComponentViewBuilderArgs): Promise<void> {
+    logger.debug(`[Analytics] Processing "component view" event`)
+    await this.sendEvent(this.builder.buildComponentView(args))
+  }
+
+  @guardedBy('hasNoConsent')
+  public async trackFlagView(args: ComponentViewBuilderArgs): Promise<void> {
+    logger.debug(`[Analytics] Processing "flag view" event`)
+    await this.sendEvent(this.builder.buildFlagView(args))
+  }
+
+  private async sendEvent(event: InsightsEvent): Promise<void> {
     const { value: profile } = profileSignal
 
     if (!profile) {
@@ -44,12 +58,8 @@ abstract class AnalyticsBase extends ProductBase<InsightsEvent> implements Conse
 
     eventSignal.value = validEvent
 
-    await this.events.send(profile, validEvent)
+    await this.eventHandler.send(profile, validEvent)
   }
-
-  abstract trackComponentView(...args: unknown[]): Promise<void> | void
-  abstract trackFlagView(...args: unknown[]): Promise<void> | void
-  protected abstract events: EventHandler<Profile, InsightsEvent>
 }
 
-export default AnalyticsBase
+export default Analytics

@@ -1,4 +1,4 @@
-import type AnalyticsBase from './analytics/AnalyticsBase'
+import type AnalyticsBase from './analytics/Analytics'
 import ApiClient, { type ApiClientConfig, type ApiConfig } from './lib/api-client'
 import type { EventBuilder } from './lib/api-client/builders'
 import type { ChangeArray } from './lib/api-client/experience/dto/change'
