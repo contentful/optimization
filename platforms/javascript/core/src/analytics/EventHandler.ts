@@ -15,10 +15,10 @@ export interface EventHandler {
 
 export class EventHandlerStateful {
   readonly #queue = new Map<Profile, InsightsEvent[]>()
+  readonly #api: ApiClient
 
-  api: ApiClient
   constructor(api: ApiClient) {
-    this.api = api
+    this.#api = api
   }
 
   async #flushMaxEvents(): Promise<void> {
@@ -30,12 +30,12 @@ export class EventHandlerStateful {
 
     this.#queue.forEach((events, profile) => batches.push({ profile, events }))
 
-    await this.api.insights.sendBatchEvents(batches)
+    await this.#api.insights.sendBatchEvents(batches)
 
     this.#queue.clear()
   }
 
-  public async send(p: Profile, validEvent: InsightsEvent): Promise<void> {
+  async send(p: Profile, validEvent: InsightsEvent): Promise<void> {
     const profileEventQueue = this.#queue.get(p)
 
     if (profileEventQueue) {
@@ -49,12 +49,12 @@ export class EventHandlerStateful {
 }
 
 export class EventHandlerStateless implements EventHandler {
-  api: ApiClient
+  readonly #api: ApiClient
   constructor(api: ApiClient) {
-    this.api = api
+    this.#api = api
   }
 
   async send(profile: Profile, validEvent: InsightsEvent): Promise<void> {
-    await this.api.insights.sendBatchEvents([{ profile, events: [validEvent] }])
+    await this.#api.insights.sendBatchEvents([{ profile, events: [validEvent] }])
   }
 }

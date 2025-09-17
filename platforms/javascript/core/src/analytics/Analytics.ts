@@ -10,9 +10,9 @@ import type { EventHandler } from './EventHandler'
 class Analytics extends ProductBase<InsightsEvent> implements ConsentGuard {
   private readonly eventHandler: EventHandler
 
-  constructor(api: ApiClient, builder: EventBuilder, eventsHandler: EventHandler) {
+  constructor(api: ApiClient, builder: EventBuilder, eventHandler: EventHandler) {
     super(api, builder)
-    this.eventHandler = eventsHandler
+    this.eventHandler = eventHandler
 
     effect(() => {
       const id = profileSignal.value?.id
