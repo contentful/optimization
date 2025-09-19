@@ -1,22 +1,23 @@
-import { CoreStateless, EventBuilder } from '@contentful/optimization-core'
+import { type CoreConfig, CoreStateless } from '@contentful/optimization-core'
+import { merge } from 'es-toolkit'
 
-const builder = new EventBuilder({
-  channel: 'server',
-  library: { name: 'Optimization Node API', version: '0.1.0' },
-})
+function mergeConfig(config: CoreConfig): CoreConfig {
+  return merge(
+    {
+      event: {
+        channel: 'web',
+        library: { name: 'Optimization Web API', version: '0.0.0' },
+      },
+    },
+    config,
+  )
+}
 
 class Optimization extends CoreStateless {
-  constructor() {
-    super(
-      {
-        name: 'Optimization',
-        clientId: 'temp',
-      },
-      builder,
-    )
+  constructor(config: CoreConfig) {
+    const mergedConfig: CoreConfig = mergeConfig(config)
 
-    // eslint-disable-next-line no-console -- demo
-    console.log(this.name)
+    super(mergedConfig)
   }
 }
 

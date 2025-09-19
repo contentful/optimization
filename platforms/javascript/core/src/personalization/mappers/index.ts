@@ -1,6 +1,3 @@
-export type * from './AudienceMapper'
-export type * from './OptimizationMapper'
-
 export * from './AudienceMapper'
 export * from './OptimizationMapper'
 

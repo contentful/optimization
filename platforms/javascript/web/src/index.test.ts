@@ -1,9 +1,9 @@
 import Optimization from './'
 
 describe('Optimization', () => {
-  it('gives itself a name', () => {
-    const web = new Optimization()
+  it('sets configured options', () => {
+    const web = new Optimization({ clientId: 'whatever' })
 
-    expect(web.name).toEqual(Optimization.name)
+    expect(web.config.clientId).toEqual('whatever')
   })
 })

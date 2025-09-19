@@ -1,18 +1,10 @@
-import type { ApiConfig } from './ApiClientBase'
+import type { ApiConfig, GlobalApiConfigProperties } from './ApiClientBase'
 import ExperienceApiClient, { type ExperienceApiClientConfig } from './experience'
 import InsightsApiClient, { type InsightsApiClientConfig } from './insights'
 
-export type { ApiConfig }
-
-export interface ApiClientConfig extends ApiConfig {
-  personalization?: Omit<
-    ExperienceApiClientConfig,
-    'clientId' | 'environment' | 'fetchOptions' | 'preview' | 'baseUrl'
-  >
-  analytics?: Omit<
-    InsightsApiClientConfig,
-    'clientId' | 'environment' | 'fetchOptions' | 'preview' | 'baseUrl'
-  >
+export interface ApiClientConfig extends Pick<ApiConfig, GlobalApiConfigProperties> {
+  personalization?: Omit<ExperienceApiClientConfig, GlobalApiConfigProperties>
+  analytics?: Omit<InsightsApiClientConfig, GlobalApiConfigProperties>
 }
 
 export default class ApiClient {

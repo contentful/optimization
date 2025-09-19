@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
-test('displays SDK name', async ({ page }) => {
+test('displays client ID', async ({ page }) => {
   await page.goto('/')
 
-  await expect(page.getByText('Optimization')).toHaveText('Optimization')
+  await expect(page.getByTestId('clientId')).toHaveText('whatever')
 })

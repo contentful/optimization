@@ -1,5 +1,9 @@
 import { http, type HttpHandler, HttpResponse } from 'msw'
-import type { ExperienceData, ExperienceRequestData } from '../lib/api-client'
+import type {
+  BatchExperienceResponse,
+  ExperienceRequestData,
+  ExperienceResponse,
+} from '../lib/api-client'
 import type {
   BatchExperienceEvent,
   BatchExperienceEventArray,
@@ -139,11 +143,15 @@ async function parseJson<T>(req: Request): Promise<T> {
 }
 
 // Common response helper
-function buildResponse(profile: Profile | Profile[]): ExperienceData | ExperienceData[] {
+function buildResponse(profile: Profile | Profile[]): ExperienceResponse | BatchExperienceResponse {
   if (Array.isArray(profile)) {
-    return profile.map((p) => ({ profile: p, experiences: chooseExperiences(p), changes: [] }))
+    return { data: { profiles: profile.map((p) => p) }, message: 'success', error: null }
   }
-  return { profile, experiences: chooseExperiences(profile), changes: [] }
+  return {
+    data: { profile, experiences: chooseExperiences(profile), changes: [] },
+    message: 'success',
+    error: null,
+  }
 }
 
 // ---------------------------------
@@ -151,20 +159,34 @@ function buildResponse(profile: Profile | Profile[]): ExperienceData | Experienc
 // ---------------------------------
 export function getHandlers(baseUrl = '*'): HttpHandler[] {
   return [
+    // CORS preflight
+    http.options('*', () =>
+      HttpResponse.text('', {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      }),
+    ),
+
     // Create profile (upsert by events)
     http.post(
-      `${baseUrl}/v2/organizations/:organizationId/environments/:environmentSlug/profiles`,
+      `${baseUrl}v2/organizations/:organizationId/environments/:environmentSlug/profiles`,
       async ({ request }) => {
         const { events } = await parseJson<ExperienceRequestData>(request)
         const profile = createProfileFromEvents(events)
         profilesStore.set(profile.id, profile)
-        return HttpResponse.json(buildResponse(profile))
+        return HttpResponse.json(buildResponse(profile), {
+          headers: { 'Access-Control-Allow-Origin': '*' },
+        })
       },
     ),
 
     // Update profile by id
     http.post(
-      `${baseUrl}/v2/organizations/:organizationId/environments/:environmentSlug/profiles/:profileId`,
+      `${baseUrl}v2/organizations/:organizationId/environments/:environmentSlug/profiles/:profileId`,
       async ({ params, request }) => {
         const { profileId } = params
         const { events } = await parseJson<ExperienceRequestData>(request)
@@ -172,7 +194,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
         if (!profileId) {
           return HttpResponse.json(
             { message: 'Profile not found', data: {}, error: { code: 'ERR_PROFILE_NOT_FOUND' } },
-            { status: 404 },
+            { status: 404, headers: { 'Access-Control-Allow-Origin': '*' } },
           )
         }
 
@@ -184,29 +206,33 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
           updateProfileWithEvents(profile, events)
         }
 
-        return HttpResponse.json(buildResponse(profile))
+        return HttpResponse.json(buildResponse(profile), {
+          headers: { 'Access-Control-Allow-Origin': '*' },
+        })
       },
     ),
 
     // Get profile by id
     http.get(
-      `${baseUrl}/v2/organizations/:organizationId/environments/:environmentSlug/profiles/:profileId`,
+      `${baseUrl}v2/organizations/:organizationId/environments/:environmentSlug/profiles/:profileId`,
       ({ params }) => {
         const { profileId } = params
         const profile = profileId ? profilesStore.get(profileId.toString()) : undefined
         if (!profile) {
           return HttpResponse.json(
             { message: 'Profile not found', data: {}, error: { code: 'ERR_PROFILE_NOT_FOUND' } },
-            { status: 404 },
+            { status: 404, headers: { 'Access-Control-Allow-Origin': '*' } },
           )
         }
-        return HttpResponse.json(buildResponse(profile))
+        return HttpResponse.json(buildResponse(profile), {
+          headers: { 'Access-Control-Allow-Origin': '*' },
+        })
       },
     ),
 
     // Batch upsert profiles (max limits are not enforced in this mock)
     http.post(
-      `${baseUrl}/v2/organizations/:organizationId/environments/:environmentSlug/events`,
+      `${baseUrl}v2/organizations/:organizationId/environments/:environmentSlug/events`,
       async ({ request }) => {
         const { events } = await parseJson<{ events: BatchExperienceEventArray }>(request)
 
@@ -232,7 +258,9 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
           changed.push(profile)
         }
 
-        return HttpResponse.json(buildResponse(changed))
+        return HttpResponse.json(buildResponse(changed), {
+          headers: { 'Access-Control-Allow-Origin': '*' },
+        })
       },
     ),
   ]

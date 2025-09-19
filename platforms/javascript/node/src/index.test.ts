@@ -2,8 +2,8 @@ import Optimization from './'
 
 describe('Optimization', () => {
   it('gives itself a name', () => {
-    const node = new Optimization()
+    const node = new Optimization({ clientId: 'whatever' })
 
-    expect(node.name).toEqual(Optimization.name)
+    expect(node.config.clientId).toEqual('whatever')
   })
 })

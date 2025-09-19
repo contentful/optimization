@@ -30,7 +30,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@contentful/optimization-core": "workspace:*"
+    "@contentful/optimization-core": "workspace:*",
+    "es-toolkit": "catalog:"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",

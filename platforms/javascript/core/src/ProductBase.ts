@@ -6,7 +6,7 @@ import { consent } from './signals'
 
 export interface ConsentGuard {
   // TODO: Determine whether these methods can be hard-private
-  hasNoConsent: () => boolean
+  hasConsent: () => boolean
   onBlockedByConsent: (name: string, args: unknown[]) => void
 }
 
@@ -29,8 +29,8 @@ abstract class ProductBase<E> implements ConsentGuard {
     this.builder = builder
   }
 
-  hasNoConsent(): boolean {
-    return !consent.value
+  hasConsent(): boolean {
+    return !!consent.value
   }
 
   abstract onBlockedByConsent(name: string, args: unknown[]): void

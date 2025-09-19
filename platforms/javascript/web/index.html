@@ -4,10 +4,25 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + TS</title>
+    <title>Optimization Web SDK Vite</title>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" src="/src/index.ts"></script>
+    <script type="module">
+      var optimization = new Optimization({
+        clientId: 'whatever',
+        logLevel: 'debug',
+        api: {
+          analytics: { baseUrl: 'http://localhost/insights/' },
+          personalization: { baseUrl: 'http://localhost/experience/' },
+        },
+      })
+
+      optimization.states.profile.subscribe((profile) => console.log('profile ID:', profile.id))
+      optimization.states.consent.subscribe((consent) => console.log('consent :', consent))
+
+      optimization.personalization.page({})
+    </script>
   </body>
 </html>

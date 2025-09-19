@@ -4,7 +4,7 @@ import type { ExperienceEvent as PersonalizationEvent } from './lib/api-client/e
 import type { Profile } from './lib/api-client/experience/dto/profile'
 import type { SelectedVariantArray } from './lib/api-client/experience/dto/variant'
 import type { InsightsEvent as AnalyticsEvent } from './lib/api-client/insights/dto'
-import { FlagSelector } from './selectors'
+import { FlagSelector } from './personalization/selectors'
 
 export const changes: Signal<ChangeArray | undefined> = signal<ChangeArray | undefined>()
 
@@ -21,5 +21,23 @@ export const flags = computed<Flags | undefined>(() =>
 )
 
 export const profile: Signal<Profile | undefined> = signal<Profile | undefined>()
+
+export interface Signals {
+  changes: typeof changes
+  consent: typeof consent
+  event: typeof event
+  flags: typeof flags
+  profile: typeof profile
+  variants: typeof variants
+}
+
+export const signals: Signals = {
+  changes,
+  consent,
+  event,
+  flags,
+  profile,
+  variants,
+}
 
 export { batch, effect, type Signal }

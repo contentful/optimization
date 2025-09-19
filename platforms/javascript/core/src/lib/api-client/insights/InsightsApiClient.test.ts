@@ -56,7 +56,7 @@ function generateBatchEventArray(id: string): BatchInsightsEventArray {
       events: [
         {
           type: 'component',
-          component: 'Entry',
+          componentType: 'Entry',
           componentId: crypto.randomUUID(),
           variantIndex: 0,
           channel: 'web',
@@ -117,7 +117,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     const debugSpy = vi.spyOn(logger, 'debug')
 
     const handler = http.post(
-      `${INSIGHTS_BASE_URL}/v1/organizations/:orgId/environments/:env/events`,
+      `${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`,
       async ({ request, params }) => {
         expect(params.orgId).toBe(ORG_ID)
         expect(params.env).toBe(ENV)
@@ -172,7 +172,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     const debugSpy = vi.spyOn(logger, 'debug')
 
     const handler = http.post(
-      `${INSIGHTS_BASE_URL}/v1/organizations/:orgId/environments/:env/events`,
+      `${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`,
       () => HttpResponse.json({ ok: true }, { status: 200 }),
     )
 
@@ -198,7 +198,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     vi.spyOn(BatchInsightsEventArray, 'parse').mockImplementation((input) => input)
 
     server.use(
-      http.post(`${INSIGHTS_BASE_URL}/v1/organizations/:orgId/environments/:env/events`, () =>
+      http.post(`${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`, () =>
         HttpResponse.error(),
       ),
     )

@@ -1,4 +1,15 @@
-import { CoreStateful, EventBuilder } from '@contentful/optimization-core'
+import {
+  ANONYMOUS_ID_COOKIE,
+  type CoreConfig,
+  CoreStateful,
+  effect,
+  signals,
+} from '@contentful/optimization-core'
+import { merge } from 'es-toolkit'
+import Cookies from 'js-cookie'
+import { beaconHandler } from './beacon/beaconHandler'
+import { getLocale, getPageProperties, getUserAgent } from './builders/EventBuilder'
+import LocalStore from './storage/LocalStore'
 
 declare global {
   interface Window {
@@ -7,34 +18,79 @@ declare global {
   }
 }
 
-// TODO: Decorate builder to automatically gather page data and such
-const builder = new EventBuilder({
-  channel: 'server',
-  library: { name: 'Optimization Web API', version: '0.1.0' },
-})
+function mergeConfig({ defaults, logLevel, ...config }: CoreConfig): CoreConfig {
+  return merge(
+    {
+      api: {
+        analytics: { beaconHandler },
+      },
+      defaults: {
+        changes: LocalStore.changes ?? defaults?.changes,
+        consent: LocalStore.consent ?? defaults?.consent,
+        profile: LocalStore.profile ?? defaults?.profile,
+        variants: LocalStore.variants ?? defaults?.variants,
+      },
+      event: {
+        channel: 'web',
+        library: { name: 'Optimization Web API', version: '0.0.0' },
+        getLocale,
+        getPageProperties,
+        getUserAgent,
+      },
+      logLevel: LocalStore.debug ? 'debug' : logLevel,
+    },
+    config,
+  )
+}
 
 class Optimization extends CoreStateful {
-  constructor() {
-    super(
-      {
-        name: 'Optimization',
-        clientId: 'temp',
-        api: {
-          analytics: {
-            beaconHandler: (url, data) => {
-              const blobData = new Blob([JSON.stringify(data)], {
-                type: 'text/plain',
-              })
+  constructor(config: CoreConfig) {
+    if (window.optimization) throw new Error('Optimization is already initialized')
 
-              return window.navigator.sendBeacon(url, blobData)
-            },
-          },
-        },
-      },
-      builder,
-    )
+    const mergedConfig: CoreConfig = mergeConfig(config)
 
-    window.optimization ??= this
+    super(mergedConfig)
+
+    effect(() => {
+      const {
+        changes: { value },
+      } = signals
+
+      LocalStore.changes = value
+    })
+
+    effect(() => {
+      const {
+        consent: { value },
+      } = signals
+
+      LocalStore.consent = value
+    })
+
+    effect(() => {
+      const {
+        profile: { value },
+      } = signals
+
+      LocalStore.profile = value
+
+      const cookieValue = Cookies.get(ANONYMOUS_ID_COOKIE)
+
+      LocalStore.anonymousId = value?.id ?? cookieValue
+
+      // TODO: Allow cookie attributes to be set
+      if (value && value.id !== cookieValue) Cookies.set(ANONYMOUS_ID_COOKIE, value.id)
+    })
+
+    effect(() => {
+      const {
+        variants: { value },
+      } = signals
+
+      LocalStore.variants = value
+    })
+
+    window.optimization = this
   }
 }
 

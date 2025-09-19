@@ -80,7 +80,7 @@ describe('ExperienceApiClient', () => {
 
       server.use(
         http.get(
-          `${EXPERIENCE_BASE_URL}/v2/organizations/:org/environments/:env/profiles/:id`,
+          `${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles/:id`,
           ({ request, params }) => {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- testing
             const { org, env, id } = params as Record<string, string>
@@ -118,9 +118,8 @@ describe('ExperienceApiClient', () => {
 
     it('logs an error when the request fails (network error)', async () => {
       server.use(
-        http.get(
-          `${EXPERIENCE_BASE_URL}/v2/organizations/:org/environments/:env/profiles/:id`,
-          () => HttpResponse.error(),
+        http.get(`${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles/:id`, () =>
+          HttpResponse.error(),
         ),
       )
 
@@ -139,7 +138,7 @@ describe('ExperienceApiClient', () => {
 
       server.use(
         http.post(
-          `${EXPERIENCE_BASE_URL}/v2/organizations/:org/environments/:env/profiles`,
+          `${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles`,
           async ({ request }) => {
             capturedContent = getContent(request.headers)
             const body = await request.json()
@@ -178,7 +177,7 @@ describe('ExperienceApiClient', () => {
 
       server.use(
         http.post(
-          `${EXPERIENCE_BASE_URL}/v2/organizations/:org/environments/:env/profiles`,
+          `${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles`,
           ({ request }) => {
             content = getContent(request.headers)
             forcedIp = getHeader(request.headers, 'X-Force-IP')
@@ -205,7 +204,7 @@ describe('ExperienceApiClient', () => {
 
       server.use(
         http.post(
-          `${EXPERIENCE_BASE_URL}/v2/organizations/:org/environments/:env/profiles`,
+          `${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles`,
           async ({ request }) => {
             rawBody = await request.json()
             return HttpResponse.json({ data: { id: 'new_profile' } }, { status: 200 })
@@ -235,7 +234,7 @@ describe('ExperienceApiClient', () => {
 
       server.use(
         http.post(
-          `${EXPERIENCE_BASE_URL}/v2/organizations/:org/environments/:env/profiles/:profileId`,
+          `${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles/:profileId`,
           ({ request, params }) => {
             const { profileId } = params
             hitPath = getPathname(request.url)
@@ -259,7 +258,7 @@ describe('ExperienceApiClient', () => {
 
       server.use(
         http.post(
-          `${EXPERIENCE_BASE_URL}/v2/organizations/:org/environments/:env/profiles/:profileId`,
+          `${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles/:profileId`,
           async ({ request }) => {
             content = getContent(request.headers)
             forcedIp = getHeader(request.headers, 'X-Force-IP')
@@ -292,7 +291,7 @@ describe('ExperienceApiClient', () => {
 
       server.use(
         http.post(
-          `${EXPERIENCE_BASE_URL}/v2/organizations/:org/environments/:env/events`,
+          `${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/events`,
           ({ request }) => {
             content = getContent(request.headers)
             return HttpResponse.json(

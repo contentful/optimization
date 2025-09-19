@@ -1,4 +1,4 @@
-import type { ChangeArray, Flags, VariableChange } from '../lib/api-client/experience/dto/change'
+import type { ChangeArray, Flags, VariableChange } from '../../lib/api-client/experience/dto/change'
 
 const FlagSelector = {
   selectFlags(changes: ChangeArray): Flags {

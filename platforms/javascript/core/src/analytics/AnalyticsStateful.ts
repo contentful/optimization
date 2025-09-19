@@ -15,13 +15,17 @@ const MAX_QUEUED_EVENTS = 25
 class AnalyticsStateful extends AnalyticsBase {
   readonly #queue = new Map<Profile, InsightsEventArray>()
 
-  @guardedBy('hasNoConsent')
+  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async trackComponentView(args: ComponentViewBuilderArgs): Promise<void> {
+    logger.info(`[Analytics] Processing "component view" event`)
+
     await this.#enqueueEvent(this.builder.buildComponentView(args))
   }
 
-  @guardedBy('hasNoConsent')
+  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async trackFlagView(args: ComponentViewBuilderArgs): Promise<void> {
+    logger.debug(`[Analytics] Processing "flag view" event`)
+
     await this.#enqueueEvent(this.builder.buildFlagView(args))
   }
 
@@ -34,11 +38,13 @@ class AnalyticsStateful extends AnalyticsBase {
       return
     }
 
+    const intercepted = await this.interceptor.event.run(event)
+
+    const validEvent = InsightsEvent.parse(intercepted)
+
     logger.debug(`Queueing ${event.type} event for profile ${profile.id}`, event)
 
     const profileEventQueue = this.#queue.get(profile)
-
-    const validEvent = InsightsEvent.parse(event)
 
     eventSignal.value = validEvent
 
@@ -56,6 +62,8 @@ class AnalyticsStateful extends AnalyticsBase {
   }
 
   async flush(): Promise<void> {
+    logger.debug(`[Analytics] Flushing event queue`)
+
     const batches: BatchInsightsEventArray = []
 
     this.#queue.forEach((events, profile) => batches.push({ profile, events }))
