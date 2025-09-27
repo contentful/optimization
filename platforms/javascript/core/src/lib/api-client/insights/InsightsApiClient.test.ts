@@ -9,18 +9,18 @@ import InsightsApiClient, {
   type InsightsApiClientConfig,
 } from './InsightsApiClient'
 
-const ORG_ID = 'org_123'
-const ENV = 'prod'
+const OPTIMIZATION_KEY = 'key_123'
+const OPTIMIZATION_ENV = 'main'
 
 const expectedUrl = new URL(
-  `/v1/organizations/${ORG_ID}/environments/${ENV}/events`,
+  `/v1/organizations/${OPTIMIZATION_KEY}/environments/${OPTIMIZATION_ENV}/events`,
   INSIGHTS_BASE_URL,
 )
 
 function makeClient(overrides: Partial<InsightsApiClientConfig> = {}): InsightsApiClient {
   const config: InsightsApiClientConfig = {
-    clientId: ORG_ID,
-    environment: ENV,
+    optimizationKey: OPTIMIZATION_KEY,
+    optimizationEnv: OPTIMIZATION_ENV,
     ...overrides,
   }
   return new InsightsApiClient(config)
@@ -119,8 +119,8 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     const handler = http.post(
       `${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`,
       async ({ request, params }) => {
-        expect(params.orgId).toBe(ORG_ID)
-        expect(params.env).toBe(ENV)
+        expect(params.orgId).toBe(OPTIMIZATION_KEY)
+        expect(params.env).toBe(OPTIMIZATION_ENV)
 
         expect(request.headers.get('Content-Type')).toBe('application/json')
         const json = (await request.json()) as unknown

@@ -3,27 +3,34 @@ import Fetch, { type FetchMethod, type ProtectedFetchMethodOptions } from './fet
 
 export interface ApiConfig {
   baseUrl?: string
-  clientId: string
-  environment?: string
+  optimizationEnv?: string
   fetchOptions?: Omit<ProtectedFetchMethodOptions, 'apiName'>
+  optimizationKey: string
   preview?: boolean
 }
 
-export type GlobalApiConfigProperties = 'clientId' | 'environment' | 'fetchOptions' | 'preview'
+export type GlobalApiConfigProperties =
+  | 'optimizationEnv'
+  | 'fetchOptions'
+  | 'optimizationKey'
+  | 'preview'
 
 const DEFAULT_ENVIRONMENT = 'main'
 
 abstract class ApiClientBase {
   protected readonly name: string
-  protected readonly clientId: string
-  protected readonly environment: string
+  protected readonly optimizationKey: string
+  protected readonly optimizationEnv: string
   protected readonly preview?: boolean
 
   protected readonly fetch: FetchMethod
 
-  constructor(name: string, { fetchOptions, clientId, environment, preview }: ApiConfig) {
-    this.clientId = clientId
-    this.environment = environment ?? DEFAULT_ENVIRONMENT
+  constructor(
+    name: string,
+    { fetchOptions, optimizationKey, optimizationEnv: environment, preview }: ApiConfig,
+  ) {
+    this.optimizationKey = optimizationKey
+    this.optimizationEnv = environment ?? DEFAULT_ENVIRONMENT
     this.name = name
     this.preview = Boolean(preview)
 

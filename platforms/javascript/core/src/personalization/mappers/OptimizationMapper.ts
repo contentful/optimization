@@ -2,17 +2,17 @@ import { logger } from '../../lib/logger'
 import AudienceMapper from './AudienceMapper'
 import {
   type Entry,
-  type EntryReplacementVariant,
   ExperimentEntry,
   isEntryReplacementComponent,
   isInlineVariableComponent,
+  type Link,
   OptimizationEntry,
   PersonalizationEntry,
 } from './entry'
 import type { OptimizationConfig } from './optimization'
 
 const OptimizationMapper = {
-  isOptimizationEntry(entry: Entry): entry is OptimizationEntry {
+  isOptimizationEntry(entry: Entry | Link): entry is OptimizationEntry {
     return OptimizationEntry.safeParse(entry).success
   },
 
@@ -87,10 +87,10 @@ const OptimizationMapper = {
 
                   return matchingVariant ?? null
                 })
-                .filter((variant): variant is EntryReplacementVariant => variant !== null)
+                .filter((variant): variant is Entry => (variant && 'sys' in variant) ?? false)
 
               return {
-                type: 'EntryReplacement',
+                type: 'EntryVariant',
                 baseline: component.baseline,
                 variants: processedVariants,
               }

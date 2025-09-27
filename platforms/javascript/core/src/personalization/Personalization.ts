@@ -59,7 +59,7 @@ class Personalization extends ProductBase<ExperienceEvent> implements ConsentGua
 
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async identify(args: IdentifyBuilderArgs): Promise<OptimizationData | undefined> {
-    logger.info('Sending "identify" event')
+    logger.info('[Personalization] Sending "identify" event')
 
     const event = IdentifyEvent.parse(this.builder.buildIdentify(args))
 
@@ -67,8 +67,8 @@ class Personalization extends ProductBase<ExperienceEvent> implements ConsentGua
   }
 
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async page(args: PageViewBuilderArgs): Promise<OptimizationData> {
-    logger.info('Sending "page" event')
+  async page(args: PageViewBuilderArgs = {}): Promise<OptimizationData> {
+    logger.info('[Personalization] Sending "page" event')
 
     const event = PageViewEvent.parse(this.builder.buildPageView(args))
 
@@ -77,7 +77,7 @@ class Personalization extends ProductBase<ExperienceEvent> implements ConsentGua
 
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async track(args: TrackBuilderArgs): Promise<OptimizationData> {
-    logger.info(`Sending "track" event "${args.event}"`)
+    logger.info(`[Personalization] Sending "track" event "${args.event}"`)
 
     const event = TrackEvent.parse(this.builder.buildTrack(args))
 
@@ -87,7 +87,7 @@ class Personalization extends ProductBase<ExperienceEvent> implements ConsentGua
   /** AKA sticky component view */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async trackPersonalization(args: ComponentViewBuilderArgs): Promise<OptimizationData> {
-    logger.info(`Sending "track personalization" event`)
+    logger.info(`[Personalization] Sending "track personalization" event`)
 
     const event = ComponentViewEvent.parse(this.builder.buildComponentView(args))
 

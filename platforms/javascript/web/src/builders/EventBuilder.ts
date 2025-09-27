@@ -1,4 +1,4 @@
-import type { Page, Query } from '@contentful/optimization-core'
+import { logger, type Page, type Query } from '@contentful/optimization-core'
 import LocalStore from '../storage/LocalStore'
 
 function buildQuery(url: string | URL): Query {
@@ -24,14 +24,19 @@ export function getPageProperties(): Page {
     const { referrer, title } = document
 
     return {
+      hash: window.location.hash,
+      height: window.innerHeight,
       path: url.pathname,
       query: buildQuery(url),
       referrer,
       search: url.search,
       title,
       url: url.toString(),
+      width: window.innerWidth,
     }
-  } catch (_error) {
+  } catch (error) {
+    if (error instanceof Error) logger.error(error)
+
     return {
       path: '',
       query: {},

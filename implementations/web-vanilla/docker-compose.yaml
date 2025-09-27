@@ -2,7 +2,10 @@ services:
   web:
     image: nginx:alpine
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./public:/usr/share/nginx/html
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./public:/usr/share/nginx/html:ro
     ports:
       - '80:80'
+    env_file: ./.env
+    restart: unless-stopped

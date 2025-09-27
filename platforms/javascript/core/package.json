@@ -32,9 +32,10 @@
   },
   "dependencies": {
     "@preact/signals-core": "catalog:",
+    "contentful": "^11.7.19",
+    "diary": "^0.4.5",
     "es-toolkit": "catalog:",
     "p-retry": "^6.2.1",
-    "diary": "^0.4.5",
     "zod": "catalog:"
   },
   "devDependencies": {

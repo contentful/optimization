@@ -11,7 +11,7 @@ export const UniversalEventProperties = z.object({
     }),
     library: Library,
     locale: z.string(),
-    location: GeoLocation,
+    location: z.optional(GeoLocation),
     page: Page,
     userAgent: z.optional(z.string()),
   }),

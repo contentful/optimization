@@ -21,6 +21,7 @@
   "devDependencies": {
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",
+    "dotenv": "catalog:",
     "rimraf": "catalog:",
     "typescript": "catalog:"
   }

@@ -23,7 +23,7 @@ describe('ApiClientBase', () => {
 
   beforeEach(() => {
     vi.spyOn(Fetch, 'create').mockReturnValue(mockFetchMethod)
-    config = { clientId: 'testId', fetchOptions }
+    config = { optimizationKey: 'testId', fetchOptions }
   })
 
   afterEach(() => {
