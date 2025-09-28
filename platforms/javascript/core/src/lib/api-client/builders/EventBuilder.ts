@@ -1,3 +1,4 @@
+import { merge } from 'es-toolkit'
 import { z } from 'zod/mini'
 import type {
   ComponentViewEvent,
@@ -50,7 +51,7 @@ const IdentifyBuilderArgs = z.extend(UniversalEventBuilderArgs, {
 export type IdentifyBuilderArgs = z.infer<typeof IdentifyBuilderArgs>
 
 const PageViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
-  properties: z.optional(z.prefault(Properties, {})),
+  properties: z.optional(z.partial(Page)),
 })
 export type PageViewBuilderArgs = z.infer<typeof PageViewBuilderArgs>
 
@@ -99,7 +100,7 @@ class EventBuilder {
   protected buildUniversalEventProperties({
     campaign = {},
     locale,
-    location = {},
+    location,
     page,
     userAgent,
   }: UniversalEventBuilderArgs): UniversalEventProperties {
@@ -156,13 +157,23 @@ class EventBuilder {
     }
   }
 
-  buildPageView(args: PageViewBuilderArgs): PageViewEvent {
+  buildPageView(args: PageViewBuilderArgs = {}): PageViewEvent {
     const { properties = {}, ...universal } = PageViewBuilderArgs.parse(args)
+
+    const pageProperties = this.getPageProperties()
+
+    const merged = merge(
+      {
+        ...pageProperties,
+        title: pageProperties.title ?? DEFAULT_PAGE_PROPERTIES.title,
+      },
+      properties,
+    )
 
     return {
       ...this.buildUniversalEventProperties(universal),
       type: 'page',
-      properties,
+      properties: merged,
     }
   }
 

@@ -30,7 +30,7 @@ function mergeConfig({ defaults, logLevel, ...config }: CoreConfig): CoreConfig 
         profile: LocalStore.profile ?? defaults?.profile,
         variants: LocalStore.variants ?? defaults?.variants,
       },
-      event: {
+      eventBuilder: {
         channel: 'web',
         library: { name: 'Optimization Web API', version: '0.0.0' },
         getLocale,

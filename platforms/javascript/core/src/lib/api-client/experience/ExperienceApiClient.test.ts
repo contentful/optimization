@@ -9,8 +9,8 @@ import ExperienceApiClient, {
   type ExperienceApiClientConfig,
 } from './ExperienceApiClient'
 
-const ORG_ID = 'org_123'
-const ENV = 'prod'
+const OPTIMIZATION_KEY = 'key_123'
+const OPTIMIZATION_ENV = 'main'
 
 const getLocaleParam = (url: string): string | null => new URL(url).searchParams.get('locale')
 const getParam = (url: string): string | null => new URL(url).searchParams.get('type')
@@ -37,8 +37,8 @@ function hasOptionsKey(body: unknown): boolean {
 
 function makeClient(overrides: Partial<ExperienceApiClientConfig> = {}): ExperienceApiClient {
   const config: ExperienceApiClientConfig = {
-    clientId: ORG_ID,
-    environment: ENV,
+    optimizationKey: OPTIMIZATION_KEY,
+    optimizationEnv: OPTIMIZATION_ENV,
     ...overrides,
   }
   return new ExperienceApiClient(config)
@@ -99,8 +99,8 @@ describe('ExperienceApiClient', () => {
       // without locale
       const profile = await client.getProfile('prof_1')
       expect(profile).toBeDefined()
-      expect(requested.org).toBe(ORG_ID)
-      expect(requested.env).toBe(ENV)
+      expect(requested.org).toBe(OPTIMIZATION_KEY)
+      expect(requested.env).toBe(OPTIMIZATION_ENV)
       expect(requested.id).toBe('prof_1')
       expect(requested.locale).toBeNull()
 
@@ -217,7 +217,7 @@ describe('ExperienceApiClient', () => {
       await client.createProfile({ events: [] }, {})
 
       expect(hasOptionsKey(rawBody)).toBe(true)
-      expect(getFeaturesFromBody(rawBody)).toBeUndefined()
+      expect(getFeaturesFromBody(rawBody)).toEqual(['ip-enrichment', 'location'])
     })
   })
 
@@ -243,12 +243,14 @@ describe('ExperienceApiClient', () => {
         ),
       )
 
-      const client = makeClient({ environment: 'prod' })
+      const client = makeClient({ optimizationEnv: OPTIMIZATION_ENV })
 
       const result = await client.updateProfile({ profileId: 'prof_42', events: [] }, {})
 
       expect(result).toBeDefined()
-      expect(hitPath).toBe(`/v2/organizations/${ORG_ID}/environments/${ENV}/profiles/prof_42`)
+      expect(hitPath).toBe(
+        `/v2/organizations/${OPTIMIZATION_KEY}/environments/${OPTIMIZATION_ENV}/profiles/prof_42`,
+      )
     })
 
     it('client-level defaults (enabledFeatures, ip, plainText) apply when not overridden', async () => {

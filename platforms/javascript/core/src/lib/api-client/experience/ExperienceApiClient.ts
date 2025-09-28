@@ -104,7 +104,7 @@ export default class ExperienceApiClient extends ApiClientBase {
     try {
       const response = await this.fetch(
         this.constructUrl(
-          `v2/organizations/${this.clientId}/environments/${this.environment}/profiles/${id}`,
+          `v2/organizations/${this.optimizationKey}/environments/${this.optimizationEnv}/profiles/${id}`,
           options,
         ),
         {
@@ -162,7 +162,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     try {
       const response = await this.makeProfileMutationRequest({
-        url: `v2/organizations/${this.clientId}/environments/${this.environment}/profiles`,
+        url: `v2/organizations/${this.optimizationKey}/environments/${this.optimizationEnv}/profiles`,
         body,
         options,
       })
@@ -206,7 +206,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     try {
       const response = await this.makeProfileMutationRequest({
-        url: `v2/organizations/${this.clientId}/environments/${this.environment}/profiles/${profileId}`,
+        url: `v2/organizations/${this.optimizationKey}/environments/${this.optimizationEnv}/profiles/${profileId}`,
         body,
         options,
       })
@@ -262,7 +262,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     try {
       const response = await this.makeProfileMutationRequest({
-        url: `v2/organizations/${this.clientId}/environments/${this.environment}/events`,
+        url: `v2/organizations/${this.optimizationKey}/environments/${this.optimizationEnv}/events`,
         body,
         options: { plainText: false, ...options },
       })
@@ -323,6 +323,8 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     if (enabledFeatures && Array.isArray(enabledFeatures) && enabledFeatures.length > 0) {
       bodyOptions.features = enabledFeatures
+    } else {
+      bodyOptions.features = ['ip-enrichment', 'location']
     }
 
     return bodyOptions

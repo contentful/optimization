@@ -1,29 +1,26 @@
+import type { Entry, OptimizedEntry } from '../mappers/entry'
 import {
-  isEntryReplacementComponent,
-  type EntryReplacementComponent,
-  type EntryReplacementVariant,
-} from '../mappers/entry'
-import type { OptimizationConfig } from '../mappers/optimization'
+  isEntryVariantComponent,
+  type EntryVariantComponent,
+  type OptimizationConfig,
+} from '../mappers/optimization'
 
 const EntryReplacementSelector = {
-  hasVariants(config: OptimizationConfig, baseline: EntryReplacementVariant): boolean {
-    return EntryReplacementSelector.selectVariants(config, baseline).length > 0
+  hasVariants(config: OptimizationConfig, baseline: OptimizedEntry): boolean {
+    return EntryReplacementSelector.selectRelevantVariants(config, baseline).length > 0
   },
 
-  selectVariants(
-    config: OptimizationConfig,
-    baseline: EntryReplacementVariant,
-  ): EntryReplacementVariant[] {
+  selectRelevantVariants(config: OptimizationConfig, baseline: OptimizedEntry): Entry[] {
     return EntryReplacementSelector.selectBaselineWithVariants(config, baseline)?.variants ?? []
   },
 
   selectBaselineWithVariants(
     config: OptimizationConfig,
-    baseline: EntryReplacementVariant,
-  ): EntryReplacementComponent | undefined {
+    baseline: OptimizedEntry,
+  ): EntryVariantComponent | undefined {
     return config.components
-      .filter(isEntryReplacementComponent)
-      .find((component) => component.baseline.id && component.baseline.id === baseline.id)
+      .filter(isEntryVariantComponent)
+      .find((component) => component.baseline.id && component.baseline.id === baseline.sys.id)
   },
 }
 

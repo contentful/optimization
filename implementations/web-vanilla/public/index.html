@@ -6,11 +6,22 @@
   </head>
   <body>
     <script>
-      var optimization = new window.Optimization({ clientId: 'whatever' })
+      var optimization = new Optimization({
+        optimizationKey: '<!--#echo var="NGINX_NINETAILED_CLIENT_ID" -->',
+        optimizationEnv: '<!--#echo var="NGINX_NINETAILED_ENVIRONMENT" -->',
+        contentToken: '<!--#echo var="NGINX_CONTENTFUL_TOKEN" -->',
+        contentEnv: '<!--#echo var="NGINX_CONTENTFUL_ENVIRONMENT" -->',
+        contentSpaceId: '<!--#echo var="NGINX_CONTENTFUL_SPACE_ID" -->',
+        logLevel: 'debug',
+        api: {
+          analytics: { baseUrl: 'http://localhost/insights/' },
+          personalization: { baseUrl: 'http://localhost/experience/' },
+        },
+      })
 
       var p = document.createElement('p')
-      p.dataset.testid = 'clientId'
-      p.innerText = optimization.config.clientId
+      p.dataset.testid = 'optimizationKey'
+      p.innerText = optimization.config.optimizationKey
       document.body.appendChild(p)
     </script>
   </body>

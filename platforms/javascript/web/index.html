@@ -11,18 +11,42 @@
     <script type="module" src="/src/index.ts"></script>
     <script type="module">
       var optimization = new Optimization({
-        clientId: 'whatever',
+        optimizationKey: '%VITE_NINETAILED_CLIENT_ID%',
+        optimizationEnv: '%VITE_NINETAILED_ENVIRONMENT%',
+        contentToken: '%VITE_CONTENTFUL_TOKEN%',
+        contentEnv: '%VITE_CONTENTFUL_ENVIRONMENT%',
+        contentSpaceId: '%VITE_CONTENTFUL_SPACE_ID%',
         logLevel: 'debug',
-        api: {
-          analytics: { baseUrl: 'http://localhost/insights/' },
-          personalization: { baseUrl: 'http://localhost/experience/' },
-        },
+        // api: {
+        //   analytics: { baseUrl: 'http://localhost/insights/' },
+        //   personalization: { baseUrl: 'http://localhost/experience/' },
+        // },
       })
 
-      optimization.states.profile.subscribe((profile) => console.log('profile ID:', profile.id))
-      optimization.states.consent.subscribe((consent) => console.log('consent :', consent))
+      var profileId
 
-      optimization.personalization.page({})
+      optimization.states.profile.subscribe(async (profile) => {
+        if (!profile || profileId === profile.id) return
+
+        console.log('profile ID:', profile.id)
+
+        profileId = profile.id
+
+        const entry = await optimization.content.getPersonalizedEntry('4WFNEIlY8bzmZcjmjCCUOm', {
+          'fields.internalName': 'Homepage',
+          content_type: 'hero',
+        })
+
+        console.log('entry:', entry)
+      })
+
+      optimization.states.consent.subscribe(async (consent) => {
+        if (!consent) return
+
+        console.log('consent granted')
+
+        await optimization.personalization.page()
+      })
     </script>
   </body>
 </html>

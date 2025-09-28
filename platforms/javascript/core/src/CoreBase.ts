@@ -1,10 +1,11 @@
 import type { LogLevels } from 'diary'
 import type AnalyticsBase from './analytics/AnalyticsBase'
+import { Content, type ContentfulClientConfig } from './content'
 import ApiClient, {
+  EventBuilder,
   type ApiClientConfig,
   type EventBuilderConfig,
   type GlobalApiConfigProperties,
-  EventBuilder,
 } from './lib/api-client'
 import type { ChangeArray } from './lib/api-client/experience/dto/change'
 import type { Profile } from './lib/api-client/experience/dto/profile'
@@ -21,7 +22,9 @@ export interface CoreConfigDefaults {
 }
 
 /** Options that may be passed to the Core constructor */
-export interface CoreConfig extends Pick<ApiClientConfig, GlobalApiConfigProperties> {
+export interface CoreConfig
+  extends Pick<ApiClientConfig, GlobalApiConfigProperties>,
+    ContentfulClientConfig {
   /** The API client configuration object */
   api?: Pick<ApiClientConfig, 'personalization' | 'analytics'>
 
@@ -30,9 +33,6 @@ export interface CoreConfig extends Pick<ApiClientConfig, GlobalApiConfigPropert
   eventBuilder?: EventBuilderConfig
 
   logLevel?: LogLevels
-
-  /** The name of the SDK built from this Core class (added for demo purposes) */
-  name?: string
 }
 
 interface ConsentController {
@@ -44,12 +44,24 @@ abstract class CoreBase implements ConsentController {
   readonly api: ApiClient
   readonly eventBuilder: EventBuilder
   readonly config: Omit<CoreConfig, 'name'>
-  readonly name: string
+  readonly content: Content
   readonly personalization: Personalization
 
   constructor(config: CoreConfig) {
-    const { name, api, clientId, defaults, eventBuilder, environment, logLevel, preview, ...rest } =
-      config
+    this.config = config
+
+    const {
+      api,
+      contentToken,
+      contentEnv,
+      defaults,
+      eventBuilder,
+      logLevel,
+      optimizationEnv,
+      optimizationKey,
+      preview,
+      contentSpaceId,
+    } = config
 
     logger.addSink(new ConsoleLogSink(logLevel))
 
@@ -69,17 +81,30 @@ abstract class CoreBase implements ConsentController {
       })
     }
 
-    const apiConfig = { ...api, clientId, environment, preview }
+    const contentConfig = {
+      contentToken,
+      contentEnv,
+      contentSpaceId,
+    }
+
+    this.content = new Content(contentConfig)
+
+    const apiConfig = {
+      ...api,
+      optimizationKey,
+      optimizationEnv,
+      preview,
+    }
 
     this.api = new ApiClient(apiConfig)
+
     this.eventBuilder = new EventBuilder(
       eventBuilder ?? {
         channel: 'server',
         library: { name: 'Optimization Core', version: '0.0.0' },
       },
     )
-    this.config = { clientId, environment, preview, ...rest }
-    this.name = name ?? 'Core' // only for demo
+
     this.personalization = new Personalization(this.api, this.eventBuilder)
   }
 

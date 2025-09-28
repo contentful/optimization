@@ -8,11 +8,14 @@ export interface ApiClientConfig extends Pick<ApiConfig, GlobalApiConfigProperti
 }
 
 export default class ApiClient {
+  readonly config: ApiConfig
   readonly experience: ExperienceApiClient
   readonly insights: InsightsApiClient
 
   constructor(config: ApiClientConfig) {
     const { personalization, analytics, ...apiConfig } = config
+
+    this.config = apiConfig
 
     this.experience = new ExperienceApiClient({
       ...apiConfig,
