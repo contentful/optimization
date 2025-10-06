@@ -14,8 +14,8 @@
         contentSpaceId: '<!--#echo var="NGINX_CONTENTFUL_SPACE_ID" -->',
         logLevel: 'debug',
         api: {
-          analytics: { baseUrl: 'http://localhost/insights/' },
-          personalization: { baseUrl: 'http://localhost/experience/' },
+          analytics: { baseUrl: '<!--#echo var="NGINX_INSIGHTS_API_BASE_URL" -->' },
+          personalization: { baseUrl: '<!--#echo var="NGINX_EXPERIENCE_API_BASE_URL" -->/' },
         },
       })
 

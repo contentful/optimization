@@ -191,6 +191,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - run: |
+          echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/node/.env
+          echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/node/.env
+          echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/node/.env
+          echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/node/.env
+          echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/node/.env
+          echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/node/.env
+          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost/experience/" >>implementations/node/.env
+          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost/insights/" >>implementations/node/.env
+
       - uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v5
@@ -217,6 +227,16 @@ jobs:
       - uses: docker/setup-compose-action@v1
 
       - uses: actions/checkout@v5
+
+      - run: |
+          echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/web-vanilla/.env
+          echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/web-vanilla/.env
+          echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/web-vanilla/.env
+          echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/web-vanilla/.env
+          echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/web-vanilla/.env
+          echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/web-vanilla/.env
+          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost/experience/" >>implementations/web-vanilla/.env
+          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost/insights/" >>implementations/web-vanilla/.env
 
       - uses: pnpm/action-setup@v4
 
