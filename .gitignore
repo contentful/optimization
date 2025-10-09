@@ -21,3 +21,16 @@ playwright.cache
 temp
 test-results
 tmp
+
+# Build artifacts that shouldn't be in src directories
+**/src/**/*.js
+**/src/**/*.js.map
+**/src/**/*.d.ts.map
+
+# But allow config files
+!**/*.config.js
+!**/babel.config.js
+!**/metro.config.js
+!**/jest.config.js
+!**/webpack.config.js
+!**/rollup.config.js

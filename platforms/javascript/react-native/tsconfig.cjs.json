@@ -1,0 +1,17 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "declaration": false,
+    "declarationMap": false,
+    "emitDeclarationOnly": false,
+    "jsx": "react-native",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "noEmit": false,
+    "outDir": "./dist",
+    "paths": {},
+    "rootDir": "./src"
+  },
+  "include": ["./src/**/*", "./src/**/*.json"],
+  "exclude": ["./src/**/*.test.*"]
+}
