@@ -83,7 +83,8 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     const { baseUrl, enabledFeatures, ip, locale, plainText, preflight } = config
 
-    this.baseUrl = baseUrl ?? EXPERIENCE_BASE_URL
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Set default for anything falsey
+    this.baseUrl = baseUrl || EXPERIENCE_BASE_URL
     this.enabledFeatures = enabledFeatures
     this.ip = ip
     this.locale = locale
@@ -104,7 +105,7 @@ export default class ExperienceApiClient extends ApiClientBase {
     try {
       const response = await this.fetch(
         this.constructUrl(
-          `v2/organizations/${this.optimizationKey}/environments/${this.optimizationEnv}/profiles/${id}`,
+          `v2/organizations/${this.clientId}/environments/${this.environment}/profiles/${id}`,
           options,
         ),
         {
@@ -116,7 +117,7 @@ export default class ExperienceApiClient extends ApiClientBase {
         data: { changes, experiences, profile },
       } = ExperienceResponse.parse(await response.json())
 
-      const data = { changes, variants: experiences, profile }
+      const data = { changes, personalizations: experiences, profile }
 
       logger.debug(`${this.name} API "${requestName}" request succesfully completed.`)
 
@@ -162,7 +163,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     try {
       const response = await this.makeProfileMutationRequest({
-        url: `v2/organizations/${this.optimizationKey}/environments/${this.optimizationEnv}/profiles`,
+        url: `v2/organizations/${this.clientId}/environments/${this.environment}/profiles`,
         body,
         options,
       })
@@ -171,7 +172,7 @@ export default class ExperienceApiClient extends ApiClientBase {
         data: { changes, experiences, profile },
       } = ExperienceResponse.parse(await response.json())
 
-      const data = { changes, variants: experiences, profile }
+      const data = { changes, personalizations: experiences, profile }
 
       logger.debug(`${this.name} API "${requestName}" request succesfully completed.`)
 
@@ -206,7 +207,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     try {
       const response = await this.makeProfileMutationRequest({
-        url: `v2/organizations/${this.optimizationKey}/environments/${this.optimizationEnv}/profiles/${profileId}`,
+        url: `v2/organizations/${this.clientId}/environments/${this.environment}/profiles/${profileId}`,
         body,
         options,
       })
@@ -215,7 +216,7 @@ export default class ExperienceApiClient extends ApiClientBase {
         data: { changes, experiences, profile },
       } = ExperienceResponse.parse(await response.json())
 
-      const data = { changes, variants: experiences, profile }
+      const data = { changes, personalizations: experiences, profile }
 
       logger.debug(`${this.name} API "${requestName}" request successfully completed.`)
 
@@ -262,7 +263,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     try {
       const response = await this.makeProfileMutationRequest({
-        url: `v2/organizations/${this.optimizationKey}/environments/${this.optimizationEnv}/events`,
+        url: `v2/organizations/${this.clientId}/environments/${this.environment}/events`,
         body,
         options: { plainText: false, ...options },
       })

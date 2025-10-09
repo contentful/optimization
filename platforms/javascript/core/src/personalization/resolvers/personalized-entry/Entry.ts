@@ -47,9 +47,12 @@ const TagLink = z.object({
 
 export const Entry = z.object({
   fields: EntryFields,
-  metadata: z.object({
-    tags: z.array(TagLink),
-  }),
+  metadata: z.catchall(
+    z.object({
+      tags: z.array(TagLink),
+    }),
+    z.json(),
+  ),
   sys: z.object({
     type: z.literal('Entry'),
     contentType: ContentTypeLink,

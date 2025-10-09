@@ -4,18 +4,15 @@ import rateLimit from 'express-rate-limit'
 
 const limiter = rateLimit({
   windowMs: 900_000,
-  max: 5,
+  max: 100,
 })
 
 const app: Express = express()
 app.use(limiter)
 
 const sdk = new Optimization({
-  optimizationKey: process.env.VITE_NINETAILED_CLIENT_ID ?? '',
-  optimizationEnv: process.env.VITE_NINETAILED_ENVIRONMENT ?? '',
-  contentToken: process.env.VITE_CONTENTFUL_TOKEN ?? '',
-  contentEnv: process.env.VITE_CONTENTFUL_ENVIRONMENT ?? '',
-  contentSpaceId: process.env.VITE_CONTENTFUL_SPACE_ID ?? '',
+  clientId: process.env.VITE_NINETAILED_CLIENT_ID ?? '',
+  environment: process.env.VITE_NINETAILED_ENVIRONMENT ?? '',
   logLevel: 'debug',
   api: {
     analytics: { baseUrl: process.env.VITE_INSIGHTS_API_BASE_URL },
@@ -23,8 +20,8 @@ const sdk = new Optimization({
   },
 })
 
-app.get('/', (_req, res) => {
-  res.send(sdk.config.optimizationKey)
+app.get('/', limiter, (_req, res) => {
+  res.send(sdk.config.clientId)
 })
 
 const port = 3000
