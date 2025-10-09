@@ -1,0 +1,52 @@
+{
+  "name": "@contentful/optimization-react-native",
+  "version": "1.0.0",
+  "license": "MIT",
+  "type": "commonjs",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "publishConfig": {
+    "directory": "dist"
+  },
+  "scripts": {
+    "build": "pnpm clean; pnpm build:cjs && pnpm build:esm",
+    "build:cjs": "tsc -p ./tsconfig.cjs.json && pnpm rename:js:cjs",
+    "build:esm": "tsc -p ./tsconfig.esm.json && pnpm rename:js:mjs",
+    "rename:js:cjs": "find ./dist -type f -name \"*.js\" ! -name \"*.cjs\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js}.cjs\"; done && find ./dist -type f -name \"*.js.map\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js.map}.cjs.map\"; done",
+    "rename:js:mjs": "find ./dist -type f -name \"*.js\" ! -name \"*.mjs\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js}.mjs\"; done && find ./dist -type f -name \"*.js.map\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js.map}.mjs.map\"; done",
+    "clean": "rimraf ./dist ./coverage tsconfig.tsbuildinfo",
+    "test:unit": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@contentful/optimization-core": "workspace:*",
+    "@react-native-async-storage/async-storage": "^2.1.0",
+    "es-toolkit": "catalog:",
+    "react": "^18.3.1",
+    "react-native": "^0.76.6",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@vitest/coverage-v8": "catalog:",
+    "rimraf": "catalog:",
+    "tslib": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-native": ">=0.70.0"
+  }
+}
