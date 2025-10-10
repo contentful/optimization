@@ -1,3 +1,4 @@
+import type { Entry } from 'contentful'
 import { isEqual } from 'es-toolkit'
 import type ApiClient from '../lib/api-client'
 import type { OptimizationData } from '../lib/api-client'
@@ -24,11 +25,14 @@ import {
   consent,
   effect,
   event as eventSignal,
+  personalizations as personalizationsSignal,
   profile as profileSignal,
-  variants as variantsSignal,
 } from '../signals'
+import { PersonalizedEntryResolver } from './resolvers'
 
 class Personalization extends ProductBase<ExperienceEvent> implements ConsentGuard {
+  readonly personalizedEntryResolver = PersonalizedEntryResolver
+
   constructor(api: ApiClient, builder: EventBuilder) {
     super(api, builder)
 
@@ -40,7 +44,7 @@ class Personalization extends ProductBase<ExperienceEvent> implements ConsentGua
 
     effect(() => {
       logger.info(
-        `[Personalization] Variants have been ${variantsSignal.value?.length ? 'populated' : 'cleared'}`,
+        `[Personalization] Variants have been ${personalizationsSignal.value?.length ? 'populated' : 'cleared'}`,
       )
     })
 
@@ -49,6 +53,10 @@ class Personalization extends ProductBase<ExperienceEvent> implements ConsentGua
         `[Personalization] Personalization ${consent.value ? 'will' : 'will not'} take effect due to consent (${consent.value})`,
       )
     })
+  }
+
+  personalizeEntry(entry: Entry): Entry {
+    return PersonalizedEntryResolver.resolve(entry)
   }
 
   onBlockedByConsent(name: string, args: unknown[]): void {
@@ -114,12 +122,13 @@ class Personalization extends ProductBase<ExperienceEvent> implements ConsentGua
   async #updateOutputSignals(data: OptimizationData): Promise<void> {
     const intercepted = await this.interceptor.state.run(data)
 
-    const { changes, variants, profile } = intercepted
+    const { changes, personalizations, profile } = intercepted
 
     batch(() => {
       if (!isEqual(changesSignal.value, changes)) changesSignal.value = changes
       if (!isEqual(profileSignal.value, profile)) profileSignal.value = profile
-      if (!isEqual(variantsSignal.value, variants)) variantsSignal.value = variants
+      if (!isEqual(personalizationsSignal.value, personalizations))
+        personalizationsSignal.value = personalizations
     })
   }
 }

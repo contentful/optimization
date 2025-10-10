@@ -7,11 +7,8 @@
   <body>
     <script>
       var optimization = new Optimization({
-        optimizationKey: '<!--#echo var="NGINX_NINETAILED_CLIENT_ID" -->',
-        optimizationEnv: '<!--#echo var="NGINX_NINETAILED_ENVIRONMENT" -->',
-        contentToken: '<!--#echo var="NGINX_CONTENTFUL_TOKEN" -->',
-        contentEnv: '<!--#echo var="NGINX_CONTENTFUL_ENVIRONMENT" -->',
-        contentSpaceId: '<!--#echo var="NGINX_CONTENTFUL_SPACE_ID" -->',
+        clientId: '<!--#echo var="NGINX_NINETAILED_CLIENT_ID" -->',
+        environment: '<!--#echo var="NGINX_NINETAILED_ENVIRONMENT" -->',
         logLevel: 'debug',
         api: {
           analytics: { baseUrl: '<!--#echo var="NGINX_INSIGHTS_API_BASE_URL" -->' },
@@ -20,8 +17,8 @@
       })
 
       var p = document.createElement('p')
-      p.dataset.testid = 'optimizationKey'
-      p.innerText = optimization.config.optimizationKey
+      p.dataset.testid = 'clientId'
+      p.innerText = optimization.config.clientId
       document.body.appendChild(p)
     </script>
   </body>

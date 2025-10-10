@@ -33,7 +33,7 @@ export default class InsightsApiClient extends ApiClientBase {
     const { beaconHandler = this.beaconHandler } = options
 
     const url = new URL(
-      `v1/organizations/${this.optimizationKey}/environments/${this.optimizationEnv}/events`,
+      `v1/organizations/${this.clientId}/environments/${this.environment}/events`,
       this.baseUrl,
     )
 

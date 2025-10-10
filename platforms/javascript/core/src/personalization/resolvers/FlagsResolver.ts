@@ -1,7 +1,7 @@
 import type { ChangeArray, Flags, VariableChange } from '../../lib/api-client/experience/dto/change'
 
-const FlagSelector = {
-  selectFlags(changes: ChangeArray): Flags {
+const FlagsResolver = {
+  resolve(changes: ChangeArray): Flags {
     return changes
       .filter((change): change is VariableChange => change.type === 'Variable')
       .reduce<Flags>((acc, { key, value }) => {
@@ -20,4 +20,4 @@ const FlagSelector = {
   },
 }
 
-export default FlagSelector
+export default FlagsResolver

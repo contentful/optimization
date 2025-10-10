@@ -1,6 +1,5 @@
 import type { LogLevels } from 'diary'
 import type AnalyticsBase from './analytics/AnalyticsBase'
-import { Content, type ContentfulClientConfig } from './content'
 import ApiClient, {
   EventBuilder,
   type ApiClientConfig,
@@ -8,23 +7,21 @@ import ApiClient, {
   type GlobalApiConfigProperties,
 } from './lib/api-client'
 import type { ChangeArray } from './lib/api-client/experience/dto/change'
+import type { SelectedPersonalizationArray } from './lib/api-client/experience/dto/personalization'
 import type { Profile } from './lib/api-client/experience/dto/profile'
-import type { SelectedVariantArray } from './lib/api-client/experience/dto/variant'
 import { ConsoleLogSink, logger } from './lib/logger'
 import { Personalization } from './personalization'
-import { batch, changes, consent, profile, variants } from './signals'
+import { batch, changes, consent, personalizations, profile } from './signals'
 
 export interface CoreConfigDefaults {
   changes?: ChangeArray
   consent?: boolean
   profile?: Profile
-  variants?: SelectedVariantArray
+  personalizations?: SelectedPersonalizationArray
 }
 
 /** Options that may be passed to the Core constructor */
-export interface CoreConfig
-  extends Pick<ApiClientConfig, GlobalApiConfigProperties>,
-    ContentfulClientConfig {
+export interface CoreConfig extends Pick<ApiClientConfig, GlobalApiConfigProperties> {
   /** The API client configuration object */
   api?: Pick<ApiClientConfig, 'personalization' | 'analytics'>
 
@@ -44,24 +41,12 @@ abstract class CoreBase implements ConsentController {
   readonly api: ApiClient
   readonly eventBuilder: EventBuilder
   readonly config: Omit<CoreConfig, 'name'>
-  readonly content: Content
   readonly personalization: Personalization
 
   constructor(config: CoreConfig) {
     this.config = config
 
-    const {
-      api,
-      contentToken,
-      contentEnv,
-      defaults,
-      eventBuilder,
-      logLevel,
-      optimizationEnv,
-      optimizationKey,
-      preview,
-      contentSpaceId,
-    } = config
+    const { api, defaults, eventBuilder, logLevel, environment, clientId, preview } = config
 
     logger.addSink(new ConsoleLogSink(logLevel))
 
@@ -69,30 +54,22 @@ abstract class CoreBase implements ConsentController {
       const {
         changes: defaultChanges,
         consent: defaultConsent,
-        variants: defaultVariants,
+        personalizations: defaultPersonalizations,
         profile: defaultProfile,
       } = defaults
 
       batch(() => {
         changes.value = defaultChanges
         consent.value = defaultConsent
-        variants.value = defaultVariants
+        personalizations.value = defaultPersonalizations
         profile.value = defaultProfile
       })
     }
 
-    const contentConfig = {
-      contentToken,
-      contentEnv,
-      contentSpaceId,
-    }
-
-    this.content = new Content(contentConfig)
-
     const apiConfig = {
       ...api,
-      optimizationKey,
-      optimizationEnv,
+      clientId,
+      environment,
       preview,
     }
 

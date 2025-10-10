@@ -1,4 +1,4 @@
-import { ChangeArray, Profile, SelectedVariantArray } from '@contentful/optimization-core'
+import { ChangeArray, Profile, SelectedPersonalizationArray } from '@contentful/optimization-core'
 import type { z } from 'zod/mini'
 
 export const ANONYMOUS_ID = '__ctfl_opt_anonymous_id__'
@@ -6,7 +6,7 @@ export const CONSENT = '__ctfl_opt_consent__'
 export const CHANGES_CACHE = '__ctfl_opt_changes__'
 export const DEBUG_FLAG = '__ctfl_opt_debug__'
 export const PROFILE_CACHE = '__ctfl_opt_profile__'
-export const VARIANT_CACHE = '__ctfl_opt_variants__'
+export const PERSONALIZATIONS_CACHE = '__ctfl_opt_personalizations__'
 
 const LocalStore = {
   get anonymousId(): string | undefined {
@@ -61,12 +61,12 @@ const LocalStore = {
     LocalStore.setCache(PROFILE_CACHE, profile)
   },
 
-  get variants(): SelectedVariantArray | undefined {
-    return LocalStore.getCache(VARIANT_CACHE, SelectedVariantArray)
+  get personalizations(): SelectedPersonalizationArray | undefined {
+    return LocalStore.getCache(PERSONALIZATIONS_CACHE, SelectedPersonalizationArray)
   },
 
-  set variants(variants: SelectedVariantArray | undefined) {
-    LocalStore.setCache(VARIANT_CACHE, variants)
+  set personalizations(personalizations: SelectedPersonalizationArray | undefined) {
+    LocalStore.setCache(PERSONALIZATIONS_CACHE, personalizations)
   },
 
   getCache<T extends z.ZodMiniType>(key: string, parser: T): z.output<T> | undefined {

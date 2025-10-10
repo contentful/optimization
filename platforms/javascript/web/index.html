@@ -5,48 +5,190 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Optimization Web SDK Vite</title>
+    <script src="https://cdn.jsdelivr.net/npm/contentful@latest/dist/contentful.browser.min.js"></script>
+    <style>
+      h1 {
+        padding-inline: 1rem;
+      }
+      main {
+        display: grid;
+        grid-template-columns: repeat(3, calc(100% / 3));
+      }
+      section {
+        overflow: scroll;
+        padding: 1rem;
+      }
+      ol {
+        margin: 0;
+      }
+      form {
+        margin-block: 1rem;
+      }
+      fieldset {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-gap: 1rem;
+      }
+      summary {
+        cursor: pointer;
+      }
+    </style>
   </head>
   <body>
     <div id="app"></div>
     <script type="module" src="/src/index.ts"></script>
     <script type="module">
-      var optimization = new Optimization({
-        optimizationKey: '%VITE_NINETAILED_CLIENT_ID%',
-        optimizationEnv: '%VITE_NINETAILED_ENVIRONMENT%',
-        contentToken: '%VITE_CONTENTFUL_TOKEN%',
-        contentEnv: '%VITE_CONTENTFUL_ENVIRONMENT%',
-        contentSpaceId: '%VITE_CONTENTFUL_SPACE_ID%',
+      new Optimization({
+        clientId: '%VITE_NINETAILED_CLIENT_ID%',
+        environment: '%VITE_NINETAILED_ENVIRONMENT%',
         logLevel: 'debug',
-        // api: {
-        //   analytics: { baseUrl: 'http://localhost/insights/' },
-        //   personalization: { baseUrl: 'http://localhost/experience/' },
-        // },
+        api: {
+          analytics: { baseUrl: '%VITE_INSIGHTS_API_BASE_URL%' },
+          personalization: { baseUrl: '%VITE_EXPERIENCE_API_BASE_URL%' },
+        },
       })
 
-      var profileId
-
-      optimization.states.profile.subscribe(async (profile) => {
-        if (!profile || profileId === profile.id) return
-
-        console.log('profile ID:', profile.id)
-
-        profileId = profile.id
-
-        const entry = await optimization.content.getPersonalizedEntry('4WFNEIlY8bzmZcjmjCCUOm', {
-          'fields.internalName': 'Homepage',
-          content_type: 'hero',
-        })
-
-        console.log('entry:', entry)
+      var contentfulClient = contentful.createClient({
+        accessToken: '%VITE_CONTENTFUL_TOKEN%',
+        environment: '%VITE_CONTENTFUL_ENVIRONMENT%',
+        space: '%VITE_CONTENTFUL_SPACE_ID%',
       })
+
+      const form = document.querySelector('#entry-form')
+      const LAST_ENTRY_ID_KEY = '__nt_last_entry_id__'
+      let profileId
+
+      form.elements.entryId.value = localStorage.getItem(LAST_ENTRY_ID_KEY)
+
+      async function addPersonalizedEntry(entryId) {
+        const template = document.querySelector('#details-template')
+        const clone = template.content.cloneNode(true)
+
+        let entry
+
+        try {
+          entry = await contentfulClient.getEntry(entryId, {
+            include: 10,
+          })
+        } catch (error) {
+          console.error(error)
+
+          clone.querySelector('summary').innerText = `Error for entry ID "${entryId}"`
+          clone.querySelector('pre').innerText = JSON.stringify(error.message)
+
+          template.parentElement.appendChild(clone)
+
+          return
+        }
+
+        const personalizedEntry = optimization.personalization.personalizeEntry(entry)
+
+        clone.querySelector('summary').innerText = personalizedEntry.fields.internalName
+        clone.querySelector('pre').innerText = JSON.stringify(personalizedEntry, null, 2)
+
+        document.querySelector('#entries').appendChild(clone)
+
+        localStorage.setItem(LAST_ENTRY_ID_KEY, entryId)
+      }
 
       optimization.states.consent.subscribe(async (consent) => {
         if (!consent) return
 
-        console.log('consent granted')
-
         await optimization.personalization.page()
       })
+
+      optimization.states.eventStream.subscribe((event) => {
+        if (!event) return
+
+        const template = document.querySelector('#details-template')
+        const clone = template.content.cloneNode(true)
+
+        clone.querySelector('summary').innerText = event.type
+        clone.querySelector('pre').innerText = JSON.stringify(event, null, 2)
+
+        document.querySelector('#event-stream').appendChild(clone)
+      })
+
+      optimization.states.flags.subscribe((flags) => {
+        document.querySelector('#custom-flags').innerText = JSON.stringify(flags, null, 2)
+      })
+
+      optimization.states.profile.subscribe((profile) => {
+        if (!profile || profileId === profile.id) return
+
+        profileId = profile.id
+
+        document.querySelector('#profile').innerText = JSON.stringify(profile, null, 2)
+      })
+
+      optimization.states.personalizations.subscribe((personalizations) => {
+        document.querySelector('#personalizations').innerText = JSON.stringify(
+          personalizations,
+          null,
+          2,
+        )
+      })
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault()
+
+        const data = new FormData(form)
+        const entryId = data.get('entryId')
+
+        await addPersonalizedEntry(entryId)
+      })
     </script>
+
+    <h1>Optimization SDK Dev Testing Dashboard</h1>
+
+    <template id="details-template">
+      <li>
+        <details>
+          <summary></summary>
+          <pre></pre>
+        </details>
+      </li>
+    </template>
+
+    <main>
+      <section>
+        <h3>Server States</h3>
+
+        <details>
+          <summary>Custom Flags</summary>
+          <pre id="custom-flags"></pre>
+        </details>
+
+        <details>
+          <summary>Profile</summary>
+          <pre id="profile"></pre>
+        </details>
+
+        <details>
+          <summary>Personalizations</summary>
+          <pre id="personalizations"></pre>
+        </details>
+      </section>
+
+      <section>
+        <h3>Entries</h3>
+
+        <form id="entry-form">
+          <fieldset>
+            <legend>Resolve Contentful Entry</legend>
+            <input type="text" name="entryId" id="entry-id" />
+            <button type="submit">Submit</button>
+          </fieldset>
+        </form>
+
+        <ol id="entries"></ol>
+      </section>
+
+      <section id="event-stream-panel">
+        <h3>Event Stream</h3>
+
+        <ol id="event-stream"></ol>
+      </section>
+    </main>
   </body>
 </html>

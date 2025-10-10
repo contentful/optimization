@@ -1,5 +1,4 @@
-export * from './mappers'
 export * from './Personalization'
-export * from './selectors'
+export * from './resolvers'
 
 export { default as Personalization } from './Personalization'
