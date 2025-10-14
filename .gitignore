@@ -34,3 +34,7 @@ tmp
 !**/jest.config.js
 !**/webpack.config.js
 !**/rollup.config.js
+
+# React Native implementation uses npm (excluded from pnpm workspace)
+# Don't ignore package-lock.json in implementations/react-native
+!implementations/react-native/package-lock.json
