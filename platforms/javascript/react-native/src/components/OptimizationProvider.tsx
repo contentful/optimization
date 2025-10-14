@@ -1,21 +1,22 @@
+import { logger } from '@contentful/optimization-core'
 import React, { type ReactNode } from 'react'
-import { Text, View } from 'react-native'
 
 export interface OptimizationProviderProps {
   children?: ReactNode
 }
 
 /**
- * Placeholder component for Optimization Provider
- * This is a simple stand-in component that can be imported and used in React Native applications
+ * Optimization Provider Component
+ * This component wraps the application to provide optimization context
+ * It's a pass-through component that renders children without additional UI
  */
 export function OptimizationProvider({ children }: OptimizationProviderProps): React.JSX.Element {
-  return (
-    <View>
-      <Text>Optimization Provider Initialized</Text>
-      {children}
-    </View>
-  )
+  // Log to verify the provider is working
+  React.useEffect(() => {
+    logger.info('Provider initialized')
+  }, [])
+
+  return <>{children}</>
 }
 
 export default OptimizationProvider

@@ -1,4 +1,4 @@
-import { ChangeArray, Profile, SelectedVariantArray } from '@contentful/optimization-core'
+import { ChangeArray, Profile, SelectedPersonalizationArray } from '@contentful/optimization-core'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { z } from 'zod/mini'
 
@@ -7,7 +7,7 @@ export const CONSENT = '__ctfl_opt_consent__'
 export const CHANGES_CACHE = '__ctfl_opt_changes__'
 export const DEBUG_FLAG = '__ctfl_opt_debug__'
 export const PROFILE_CACHE = '__ctfl_opt_profile__'
-export const VARIANT_CACHE = '__ctfl_opt_variants__'
+export const PERSONALIZATIONS_CACHE = '__ctfl_opt_personalizations__'
 
 class AsyncStorageStore {
   private readonly cache = new Map<string, unknown>()
@@ -17,7 +17,14 @@ class AsyncStorageStore {
     if (this.initialized) return
 
     try {
-      const keys = [ANONYMOUS_ID, CONSENT, CHANGES_CACHE, DEBUG_FLAG, PROFILE_CACHE, VARIANT_CACHE]
+      const keys = [
+        ANONYMOUS_ID,
+        CONSENT,
+        CHANGES_CACHE,
+        DEBUG_FLAG,
+        PROFILE_CACHE,
+        PERSONALIZATIONS_CACHE,
+      ]
       const values = await AsyncStorage.multiGet(keys)
 
       for (const [key, value] of values) {
@@ -96,12 +103,12 @@ class AsyncStorageStore {
     this.setCache(PROFILE_CACHE, profile)
   }
 
-  get variants(): SelectedVariantArray | undefined {
-    return this.getCache(VARIANT_CACHE, SelectedVariantArray)
+  get personalizations(): SelectedPersonalizationArray | undefined {
+    return this.getCache(PERSONALIZATIONS_CACHE, SelectedPersonalizationArray)
   }
 
-  set variants(variants: SelectedVariantArray | undefined) {
-    this.setCache(VARIANT_CACHE, variants)
+  set personalizations(personalizations: SelectedPersonalizationArray | undefined) {
+    this.setCache(PERSONALIZATIONS_CACHE, personalizations)
   }
 
   getCache<T extends z.ZodMiniType>(key: string, parser: T): z.output<T> | undefined {

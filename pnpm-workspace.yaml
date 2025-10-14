@@ -20,8 +20,6 @@ catalog:
 
 engineStrict: true
 
-nodeVersion: 16.20.0
-
 onlyBuiltDependencies:
   - esbuild
   - msw
