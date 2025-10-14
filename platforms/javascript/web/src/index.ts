@@ -28,7 +28,7 @@ function mergeConfig({ defaults, logLevel, ...config }: CoreConfig): CoreConfig 
         changes: LocalStore.changes ?? defaults?.changes,
         consent: LocalStore.consent ?? defaults?.consent,
         profile: LocalStore.profile ?? defaults?.profile,
-        variants: LocalStore.variants ?? defaults?.variants,
+        personalizations: LocalStore.personalizations ?? defaults?.personalizations,
       },
       eventBuilder: {
         channel: 'web',
@@ -84,10 +84,10 @@ class Optimization extends CoreStateful {
 
     effect(() => {
       const {
-        variants: { value },
+        personalizations: { value },
       } = signals
 
-      LocalStore.variants = value
+      LocalStore.personalizations = value
     })
 
     window.optimization = this

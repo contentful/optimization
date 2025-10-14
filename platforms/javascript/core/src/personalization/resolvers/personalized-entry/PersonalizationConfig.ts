@@ -6,6 +6,10 @@ export const EntryReplacementVariant = z.object({
 })
 export type EntryReplacementVariant = z.infer<typeof EntryReplacementVariant>
 
+export function isEntryReplacementVariant(variant: unknown): variant is EntryReplacementVariant {
+  return EntryReplacementVariant.safeParse(variant).success
+}
+
 export const EntryReplacementComponent = z.object({
   type: z.optional(z.literal('EntryReplacement')),
   baseline: EntryReplacementVariant,
@@ -14,7 +18,7 @@ export const EntryReplacementComponent = z.object({
 export type EntryReplacementComponent = z.infer<typeof EntryReplacementComponent>
 
 export function isEntryReplacementComponent(
-  component: OptimizationEntryConfigComponent,
+  component: PersonalizationComponent,
 ): component is EntryReplacementComponent {
   return component.type === 'EntryReplacement' || component.type === undefined
 }
@@ -35,22 +39,25 @@ export const InlineVariableComponent = z.object({
 export type InlineVariableComponent = z.infer<typeof InlineVariableComponent>
 
 export function isInlineVariableComponent(
-  component: OptimizationEntryConfigComponent,
+  component: PersonalizationComponent,
 ): component is InlineVariableComponent {
   return component.type === 'InlineVariable'
 }
 
-export const OptimizationEntryConfigComponent = z.discriminatedUnion('type', [
+export const PersonalizationComponent = z.discriminatedUnion('type', [
   EntryReplacementComponent,
   InlineVariableComponent,
 ])
-export type OptimizationEntryConfigComponent = z.infer<typeof OptimizationEntryConfigComponent>
+export type PersonalizationComponent = z.infer<typeof PersonalizationComponent>
 
-export const OptimizationEntryConfig = z.object({
+export const PersonalizationComponentArray = z.array(PersonalizationComponent)
+export type PersonalizationComponentArray = z.infer<typeof PersonalizationComponentArray>
+
+export const PersonalizationConfig = z.object({
   distribution: z.optional(z.prefault(z.array(z.number()), [0.5, 0.5])),
   traffic: z.optional(z.prefault(z.number(), 0)),
   components: z.optional(
-    z.prefault(z.array(OptimizationEntryConfigComponent), [
+    z.prefault(PersonalizationComponentArray, [
       {
         type: 'EntryReplacement',
         baseline: { id: '' },
@@ -60,4 +67,4 @@ export const OptimizationEntryConfig = z.object({
   ),
   sticky: z.optional(z.prefault(z.boolean(), false)),
 })
-export type OptimizationEntryConfig = z.infer<typeof OptimizationEntryConfig>
+export type PersonalizationConfig = z.infer<typeof PersonalizationConfig>
