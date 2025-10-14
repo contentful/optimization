@@ -2,10 +2,10 @@ import { AnalyticsStateful } from './analytics'
 import CoreBase, { type CoreConfig } from './CoreBase'
 import type { Flags } from './lib/api-client/experience/dto/change'
 import type { ExperienceEvent as PersonalizationEvent } from './lib/api-client/experience/dto/event'
+import type { SelectedPersonalizationArray } from './lib/api-client/experience/dto/personalization'
 import type { Profile } from './lib/api-client/experience/dto/profile'
-import type { SelectedVariantArray } from './lib/api-client/experience/dto/variant'
 import type { InsightsEvent as AnalyticsEvent } from './lib/api-client/insights/dto'
-import { consent, effect, event, flags, profile, variants } from './signals'
+import { consent, effect, event, flags, personalizations, profile } from './signals'
 
 export interface Subscription {
   unsubscribe: () => void
@@ -20,7 +20,7 @@ export interface States {
   eventStream: Observable<AnalyticsEvent | PersonalizationEvent | undefined>
   flags: Observable<Flags | undefined>
   profile: Observable<Profile | undefined>
-  variants: Observable<SelectedVariantArray | undefined>
+  personalizations: Observable<SelectedPersonalizationArray | undefined>
 }
 
 function toObservable<T>(s: { value: T }): Observable<T> {
@@ -43,7 +43,7 @@ class CoreStateful extends CoreBase {
     eventStream: toObservable(event),
     flags: toObservable(flags),
     profile: toObservable(profile),
-    variants: toObservable(variants),
+    personalizations: toObservable(personalizations),
   }
 
   constructor(config: CoreConfig) {
