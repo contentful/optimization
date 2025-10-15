@@ -1,6 +1,5 @@
-import type ApiClient from './lib/api-client'
-import type { OptimizationData } from './lib/api-client'
-import type { EventBuilder } from './lib/api-client/builders'
+import type ApiClient from '@contentful/optimization-api-client'
+import type { EventBuilder, OptimizationData } from '@contentful/optimization-api-client'
 import { InterceptorManager } from './lib/interceptor'
 import { consent } from './signals'
 

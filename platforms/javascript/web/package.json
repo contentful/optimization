@@ -34,7 +34,7 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",
-    "happy-dom": "^18.0.1",
+    "happy-dom": "^20.0.2",
     "rimraf": "catalog:",
     "rollup-plugin-visualizer": "^6.0.3",
     "tslib": "catalog:",

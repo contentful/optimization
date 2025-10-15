@@ -1,9 +1,12 @@
+import type {
+  InsightsEvent as AnalyticsEvent,
+  ChangeArray,
+  Flags,
+  ExperienceEvent as PersonalizationEvent,
+  Profile,
+  SelectedPersonalizationArray,
+} from '@contentful/optimization-api-client'
 import { batch, computed, effect, signal, type Signal } from '@preact/signals-core'
-import type { ChangeArray, Flags } from './lib/api-client/experience/dto/change'
-import type { ExperienceEvent as PersonalizationEvent } from './lib/api-client/experience/dto/event'
-import type { SelectedPersonalizationArray } from './lib/api-client/experience/dto/personalization'
-import type { Profile } from './lib/api-client/experience/dto/profile'
-import type { InsightsEvent as AnalyticsEvent } from './lib/api-client/insights/dto'
 import { FlagsResolver } from './personalization/resolvers'
 
 export const changes: Signal<ChangeArray | undefined> = signal<ChangeArray | undefined>()

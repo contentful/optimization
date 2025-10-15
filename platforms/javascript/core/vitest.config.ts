@@ -1,6 +1,12 @@
+import { resolve } from 'node:path'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@contentful/optimization-api-client': resolve(__dirname, '../api-client/src/'),
+    },
+  },
   test: {
     coverage: {
       exclude: ['**/test/*'],

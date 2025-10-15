@@ -8,6 +8,7 @@
     "moduleResolution": "Node",
     "noEmit": false,
     "outDir": "./dist",
+    "paths": {},
     "rootDir": "./src"
   },
   "include": ["./src/**/*", "./src/**/*.json"],

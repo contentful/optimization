@@ -7,6 +7,7 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   resolve: {
     alias: {
+      '@contentful/optimization-api-client': resolve(__dirname, '../api-client/src/'),
       '@contentful/optimization-core': resolve(__dirname, '../core/src/'),
     },
   },

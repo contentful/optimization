@@ -18,6 +18,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "paths": {
+      "@contentful/optimization-api-client": ["./platforms/javascript/api-client/src/index.ts"],
       "@contentful/optimization-core": ["./platforms/javascript/core/src/index.ts"],
       "@contentful/optimization-node": ["./platforms/javascript/node/src/index.ts"],
       "@contentful/optimization-web": ["./platforms/javascript/web/src/index.ts"]

@@ -1,23 +1,22 @@
+import type ApiClient from '@contentful/optimization-api-client'
+import {
+  type ComponentViewBuilderArgs,
+  ComponentViewEvent,
+  type EventBuilder,
+  type ExperienceEvent,
+  type Flags,
+  type IdentifyBuilderArgs,
+  IdentifyEvent,
+  type OptimizationData,
+  type PageViewBuilderArgs,
+  PageViewEvent,
+  type TrackBuilderArgs,
+  TrackEvent,
+} from '@contentful/optimization-api-client'
 import type { Entry } from 'contentful'
 import { isEqual } from 'es-toolkit'
-import type ApiClient from '../lib/api-client'
-import type { OptimizationData } from '../lib/api-client'
-import type {
-  ComponentViewBuilderArgs,
-  EventBuilder,
-  IdentifyBuilderArgs,
-  PageViewBuilderArgs,
-  TrackBuilderArgs,
-} from '../lib/api-client/builders'
-import {
-  ComponentViewEvent,
-  IdentifyEvent,
-  PageViewEvent,
-  TrackEvent,
-  type ExperienceEvent,
-} from '../lib/api-client/experience/dto/event'
+import { logger } from 'logger'
 import { guardedBy } from '../lib/decorators'
-import { logger } from '../lib/logger'
 import ProductBase, { type ConsentGuard } from '../ProductBase'
 import {
   batch,
@@ -25,6 +24,7 @@ import {
   consent,
   effect,
   event as eventSignal,
+  flags as flagsSignal,
   personalizations as personalizationsSignal,
   profile as profileSignal,
 } from '../signals'
@@ -53,6 +53,10 @@ class Personalization extends ProductBase<ExperienceEvent> implements ConsentGua
         `[Personalization] Personalization ${consent.value ? 'will' : 'will not'} take effect due to consent (${consent.value})`,
       )
     })
+  }
+
+  get flags(): Flags | undefined {
+    return flagsSignal.value
   }
 
   personalizeEntry(entry: Entry): Entry {

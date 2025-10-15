@@ -1,6 +1,6 @@
+import type { SelectedPersonalizationArray } from '@contentful/optimization-api-client'
 import type { Entry } from 'contentful'
-import type { SelectedPersonalizationArray } from '../../lib/api-client'
-import { logger } from '../../lib/logger'
+import { logger } from 'logger'
 import { personalizations as personalizationsSignal } from '../../signals'
 import {
   type EntryReplacementComponent,
