@@ -1,7 +1,3 @@
-import type { SelectedPersonalizationArray } from '@contentful/optimization-api-client'
-import type { Entry } from 'contentful'
-import { logger } from 'logger'
-import { personalizations as personalizationsSignal } from '../../signals'
 import {
   type EntryReplacementComponent,
   type EntryReplacementVariant,
@@ -11,7 +7,11 @@ import {
   isPersonalizedEntry,
   type PersonalizationEntry,
   type PersonalizedEntry,
-} from './personalized-entry'
+  type SelectedPersonalizationArray,
+} from '@contentful/optimization-api-client'
+import type { Entry } from 'contentful'
+import { logger } from 'logger'
+import { personalizations as personalizationsSignal } from '../../signals'
 
 const RESOLUTION_WARNING_BASE = '[Personalization] Could not resolve personalized entry variant:'
 
@@ -125,10 +125,8 @@ const PersonalizedEntryResolver = {
     return selectedVariantEntry
   },
 
-  resolve(entry: Entry): Entry {
+  resolve(entry: Entry, personalizations = personalizationsSignal.value): Entry {
     logger.info('[Personalization] Resolving personalized entry for baseline entry', entry.sys.id)
-
-    const { value: personalizations } = personalizationsSignal
 
     if (!personalizations?.length) {
       logger.warn(RESOLUTION_WARNING_BASE, 'no personalizations exist for the current profile')

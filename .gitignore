@@ -5,6 +5,7 @@
 *.pid.lock
 *.seed
 *.tsbuildinfo
+.contentfulrc.json
 .DS_Store
 .env
 .temp

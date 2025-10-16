@@ -1,0 +1,131 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "1MwiFl4z7gkwqGYdvCmr8c",
+        "type": "Entry",
+        "createdAt": "2025-10-15T15:17:39.795Z",
+        "updatedAt": "2025-10-15T15:20:53.843Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 18,
+        "revision": 2,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "mergeTagContent"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "internalTitle": "[Merge Tag Content] Entry With Continent",
+        "text": {
+          "nodeType": "document",
+          "data": {},
+          "content": [
+            {
+              "nodeType": "paragraph",
+              "data": {},
+              "content": [
+                {
+                  "nodeType": "text",
+                  "value": "This is a merge tag content entry that displays the visitor's continent \"",
+                  "marks": [],
+                  "data": {}
+                },
+                {
+                  "nodeType": "embedded-entry-inline",
+                  "data": {
+                    "target": {
+                      "sys": {
+                        "id": "nM127uVevlpDWytfZRyum",
+                        "type": "Link",
+                        "linkType": "Entry"
+                      }
+                    }
+                  },
+                  "content": []
+                },
+                {
+                  "nodeType": "text",
+                  "value": "\" embedded within the text.",
+                  "marks": [],
+                  "data": {}
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "includes": {
+    "Entry": [
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "nM127uVevlpDWytfZRyum",
+          "type": "Entry",
+          "createdAt": "2025-10-15T15:08:43.051Z",
+          "updatedAt": "2025-10-15T15:08:52.541Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 6,
+          "revision": 2,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nt_mergetag"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "nt_name": "[Merge Tag] Continent",
+          "nt_fallback": "Nowhere",
+          "nt_mergetag_id": "location.continent"
+        }
+      }
+    ]
+  }
+}

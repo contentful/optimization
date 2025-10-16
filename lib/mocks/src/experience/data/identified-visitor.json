@@ -1,0 +1,204 @@
+{
+  "data": {
+    "profile": {
+      "id": "89a085900309de9ecef46965112c309d6f00f1aaed7fcb6709eb851c9557ec42",
+      "stableId": "89a085900309de9ecef46965112c309d6f00f1aaed7fcb6709eb851c9557ec42",
+      "random": 0.46249140763247654,
+      "audiences": [
+        "2oVAttk4iWnscOyhDRT8Yl",
+        "2WzXDaWtDmstHl9p8Wufpp",
+        "2y72M2RTXnMpp9GPG8xSzf",
+        "46fHDG7vjxwTbYee5JNVOQ",
+        "4yIqY7AWtzeehCZxtQSDB",
+        "51AL1dMNXkvx1BkQd3wPR1",
+        "56gfPS3OIl77DbH5PZigtr",
+        "5I5wZ2b6MeGP7q1aW1mOHG",
+        "64ducOq8OgG6N0zK3SuRnq"
+      ],
+      "traits": {
+        "identified": true,
+        "whatever": true
+      },
+      "location": {
+        "coordinates": {
+          "latitude": 52.52437,
+          "longitude": 13.41053
+        },
+        "countryCode": "DE",
+        "city": "Berlin",
+        "continent": "EU",
+        "postalCode": "10119",
+        "region": "State of Berlin"
+      },
+      "session": {
+        "id": "d262d649-1e06-4ed6-84fe-138818fb8d9e",
+        "count": 10,
+        "isReturningVisitor": true,
+        "landingPage": {
+          "path": "/",
+          "query": {},
+          "referrer": "",
+          "search": "",
+          "url": "http://localhost:5173/"
+        },
+        "activeSessionLength": 195,
+        "averageSessionLength": 1326.7
+      }
+    },
+    "experiences": [
+      {
+        "experienceId": "1hTtSf1ChvTtBgY6BwBZk1",
+        "variantIndex": 1,
+        "variants": {}
+      },
+      {
+        "experienceId": "1lNQ9YUJfDBQLMR6O0jjP8",
+        "variantIndex": 0,
+        "variants": {
+          "5Rn1R8HqsbcdxMx46qLilf": "5Rn1R8HqsbcdxMx46qLilf"
+        }
+      },
+      {
+        "experienceId": "1TF5UuJZc6sO88byrYZ6f2",
+        "variantIndex": 1,
+        "variants": {}
+      },
+      {
+        "experienceId": "2kT7B3F1GH3sDBo2glpywy",
+        "variantIndex": 1,
+        "variants": {
+          "4WFNEIlY8bzmZcjmjCCUOm": "6v6IuRsAR2AZoAnISXH8oP"
+        }
+      },
+      {
+        "experienceId": "2O4ZmYjJFSn0E8ti8tonut",
+        "variantIndex": 0,
+        "variants": {
+          "qEfH7mk21RnqzUHlL6cIC": "qEfH7mk21RnqzUHlL6cIC"
+        }
+      },
+      {
+        "experienceId": "2qVK4T5lnScbswoyBuGipd",
+        "variantIndex": 1,
+        "variants": {
+          "4ib0hsHWoSOnCVdDkizE8d": "4k6ZyFQnR2POY5IJLLlJRb"
+        }
+      },
+      {
+        "experienceId": "3xYlmUaVqxwctTZRQUu7SJ",
+        "variantIndex": 1,
+        "variants": {
+          "74PjP6eFEOxD66R88LrL76": "6EkBsBtO4AGn43u0SOq4Sz"
+        }
+      },
+      {
+        "experienceId": "44jIanEK8sjH9SoJ5AOa7m",
+        "variantIndex": 1,
+        "variants": {
+          "4LIbcbuqUx6wtfJIvHnyON": ""
+        }
+      },
+      {
+        "experienceId": "4aSQ6HYCrSQP2UktnEGq3X",
+        "variantIndex": 0,
+        "variants": {
+          "3n4FIM0bQNZKQwomidlmZ8": "3n4FIM0bQNZKQwomidlmZ8"
+        }
+      },
+      {
+        "experienceId": "4HpmjxbSGU4KuQNUeGacY1",
+        "variantIndex": 1,
+        "variants": {}
+      },
+      {
+        "experienceId": "53yERfkqYXkg2B18EcdtK5",
+        "variantIndex": 1,
+        "variants": {
+          "7pa5bOx8Z9NmNcr7mISvD": "5daRHDDD7sj0Jm9kutAGou"
+        }
+      },
+      {
+        "experienceId": "5kuc9KgA9q9RXnlbDxDlY",
+        "variantIndex": 0,
+        "variants": {
+          "5XHssysWUDECHzKLzoIsg1": "5XHssysWUDECHzKLzoIsg1"
+        }
+      },
+      {
+        "experienceId": "5us1xFZCsHyIYuzINJMeSV",
+        "variantIndex": 1,
+        "variants": {
+          "6zqoWXyiSrf0ja7I2WGtYj": "7upHpduBBaKCWUqB27oTmX"
+        }
+      },
+      {
+        "experienceId": "603SW4mLeYB4AkPhdU2Jvj",
+        "variantIndex": 1,
+        "variants": {
+          "2Z2WLOx07InSewC3LUB3eX": "3VBvwg9ysjjmnJRTQtIYK4"
+        }
+      },
+      {
+        "experienceId": "6ZbWjihD33P0ZQDi1NBPNj",
+        "variantIndex": 1,
+        "variants": {
+          "74PjP6eFEOxD66R88LrL76": "2ow3EkPI5jKevWoTT2BVG8"
+        }
+      },
+      {
+        "experienceId": "BBvRD6Uv03k69wPwB9Ou6",
+        "variantIndex": 1,
+        "variants": {
+          "xFwgG3oNaOcjzWiGe4vXo": "6iyPl6vfDH5AoClf3MtYlh"
+        }
+      },
+      {
+        "experienceId": "gk5FTARYgB6PEjNMP1jTU",
+        "variantIndex": 1,
+        "variants": {}
+      }
+    ],
+    "changes": [
+      {
+        "key": "plain-text",
+        "value": "Plain Text",
+        "type": "Variable",
+        "meta": {
+          "experienceId": "1hTtSf1ChvTtBgY6BwBZk1",
+          "variantIndex": 1
+        }
+      },
+      {
+        "key": "number",
+        "value": 12345,
+        "type": "Variable",
+        "meta": {
+          "experienceId": "1TF5UuJZc6sO88byrYZ6f2",
+          "variantIndex": 1
+        }
+      },
+      {
+        "key": "json",
+        "value": {
+          "flag": true
+        },
+        "type": "Variable",
+        "meta": {
+          "experienceId": "4HpmjxbSGU4KuQNUeGacY1",
+          "variantIndex": 1
+        }
+      },
+      {
+        "key": "boolean",
+        "value": true,
+        "type": "Variable",
+        "meta": {
+          "experienceId": "gk5FTARYgB6PEjNMP1jTU",
+          "variantIndex": 1
+        }
+      }
+    ]
+  },
+  "error": null,
+  "message": "ok"
+}

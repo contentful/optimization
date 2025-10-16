@@ -1,0 +1,7 @@
+{
+  "deliveryToken": "[CDA Access Token]",
+  "contentFile": "./src/contentful/data/space/ctfl-space-data.json",
+  "environmentId": "[Environment ID]",
+  "managementToken": "[CMA Token (PAT)]",
+  "spaceId": "[Space ID]"
+}

@@ -1,5 +1,5 @@
 import { z } from 'zod/mini'
-import { Profile } from '../../../experience/dto/profile'
+import { Profile } from '../../experience/profile'
 import { InsightsEventArray } from './InsightsEvent'
 
 export const BatchInsightsEvent = z.object({

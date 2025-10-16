@@ -1,14 +1,15 @@
-import { logger } from 'logger'
-import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
 import {
   BatchExperienceResponse,
+  ExperienceEventArray,
   ExperienceResponse,
   type BatchExperienceData,
+  type BatchExperienceEventArray,
   type ExperienceRequestData,
   type ExperienceRequestOptions,
   type OptimizationData,
-} from './dto'
-import { ExperienceEventArray, type BatchExperienceEventArray } from './dto/event'
+} from '@contentful/optimization-api-schemas'
+import { logger } from 'logger'
+import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
 
 type Feature = 'ip-enrichment' | 'location'
 

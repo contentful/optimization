@@ -1,5 +1,5 @@
 import { z } from 'zod/mini'
-import { ComponentViewEvent } from '../../../experience/dto/event'
+import { ComponentViewEvent } from '../../experience/event'
 
 export const InsightsEvent = z.discriminatedUnion('type', [ComponentViewEvent])
 export type InsightsEvent = z.infer<typeof InsightsEvent>

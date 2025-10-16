@@ -59,6 +59,14 @@ class Personalization extends ProductBase<ExperienceEvent> implements ConsentGua
     return flagsSignal.value
   }
 
+  reset(): void {
+    batch(() => {
+      changesSignal.value = undefined
+      profileSignal.value = undefined
+      personalizationsSignal.value = undefined
+    })
+  }
+
   personalizeEntry(entry: Entry): Entry {
     return PersonalizedEntryResolver.resolve(entry)
   }

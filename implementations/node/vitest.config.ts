@@ -8,6 +8,10 @@ export default defineConfig({
         __dirname,
         '../../platforms/javascript/api-client/src/',
       ),
+      '@contentful/optimization-api-schemas': resolve(
+        __dirname,
+        '../../platforms/javascript/api-schemas/src/',
+      ),
       '@contentful/optimization-core': resolve(__dirname, '../../platforms/javascript/core/src/'),
       '@contentful/optimization-node': resolve(__dirname, '../../platforms/javascript/node/src/'),
     },

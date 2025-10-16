@@ -1,9 +1,9 @@
+import { BatchInsightsEventArray } from '@contentful/optimization-api-schemas'
 import { logger } from 'logger'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ApiClientBase from '../ApiClientBase'
 import { server } from '../test/setup'
-import { BatchInsightsEventArray } from './dto/event'
 import InsightsApiClient, {
   INSIGHTS_BASE_URL,
   type InsightsApiClientConfig,
