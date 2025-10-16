@@ -1,15 +1,15 @@
-import type { LogLevels } from 'diary'
-import type AnalyticsBase from './analytics/AnalyticsBase'
 import ApiClient, {
   EventBuilder,
   type ApiClientConfig,
+  type ChangeArray,
   type EventBuilderConfig,
   type GlobalApiConfigProperties,
-} from './lib/api-client'
-import type { ChangeArray } from './lib/api-client/experience/dto/change'
-import type { SelectedPersonalizationArray } from './lib/api-client/experience/dto/personalization'
-import type { Profile } from './lib/api-client/experience/dto/profile'
-import { ConsoleLogSink, logger } from './lib/logger'
+  type Profile,
+  type SelectedPersonalizationArray,
+} from '@contentful/optimization-api-client'
+import type { LogLevels } from 'logger'
+import { ConsoleLogSink, logger } from 'logger'
+import type AnalyticsBase from './analytics/AnalyticsBase'
 import { Personalization } from './personalization'
 import { batch, changes, consent, personalizations, profile } from './signals'
 

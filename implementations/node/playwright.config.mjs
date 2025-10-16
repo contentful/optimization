@@ -72,9 +72,9 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  webServer: {
-    command: 'pnpm --filter "@implementation/node" serve',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !isCI,
-  },
+  // webServer: {
+  //   command: 'pnpm --filter e2e mocks:serve',
+  //   url: 'http://localhost',
+  //   reuseExistingServer: !isCI,
+  // },
 })

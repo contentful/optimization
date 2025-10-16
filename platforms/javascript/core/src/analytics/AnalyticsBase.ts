@@ -1,8 +1,7 @@
+import type ApiClient from '@contentful/optimization-api-client'
+import type { EventBuilder, InsightsEvent } from '@contentful/optimization-api-client'
+import { logger } from 'logger'
 import ProductBase, { type ConsentGuard } from '../ProductBase'
-import type ApiClient from '../lib/api-client'
-import type { EventBuilder } from '../lib/api-client/builders'
-import type { InsightsEvent } from '../lib/api-client/insights/dto'
-import { logger } from '../lib/logger'
 import { consent, effect, profile } from '../signals'
 
 abstract class AnalyticsBase extends ProductBase<InsightsEvent> implements ConsentGuard {

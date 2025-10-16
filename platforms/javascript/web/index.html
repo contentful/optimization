@@ -7,22 +7,67 @@
     <title>Optimization Web SDK Vite</title>
     <script src="https://cdn.jsdelivr.net/npm/contentful@latest/dist/contentful.browser.min.js"></script>
     <style>
-      h1 {
-        padding-inline: 1rem;
+      html,
+      textarea,
+      input,
+      button {
+        font-family:
+          -apple-system,
+          BlinkMacSystemFont,
+          avenir next,
+          avenir,
+          segoe ui,
+          helvetica neue,
+          Adwaita Sans,
+          Cantarell,
+          Ubuntu,
+          roboto,
+          noto,
+          helvetica,
+          arial,
+          sans-serif;
+      }
+      h1,
+      main {
+        max-width: 1040px;
+        margin-inline: auto;
       }
       main {
         display: grid;
-        grid-template-columns: repeat(3, calc(100% / 3));
+        grid-gap: 2rem;
+        grid-template-rows: auto 1fr;
+        grid-template-columns: 1fr auto;
       }
       section {
         overflow: scroll;
-        padding: 1rem;
+
+        &:first-of-type {
+          grid-column: 1 / span 2;
+        }
       }
       ol {
         margin: 0;
       }
       form {
         margin-block: 1rem;
+      }
+      button {
+        cursor: pointer;
+
+        &:not([type]) {
+          appearance: none;
+          background: transparent;
+          border: 0;
+          padding: 0;
+          font-family: inherit;
+          font-size: inherit;
+          text-decoration: underline;
+
+          &:hover,
+          &:active {
+            color: blue;
+          }
+        }
       }
       fieldset {
         display: grid;
@@ -55,15 +100,43 @@
       })
 
       const form = document.querySelector('#entry-form')
-      const LAST_ENTRY_ID_KEY = '__nt_last_entry_id__'
-      let profileId
+      const LAST_ENTRY_ID_KEY = '__ctfl_dev_last_entry_id__'
 
       form.elements.entryId.value = localStorage.getItem(LAST_ENTRY_ID_KEY)
 
-      async function addPersonalizedEntry(entryId) {
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault()
+
+        const data = new FormData(form)
+        const entryId = data.get('entryId')
+
+        await addPersonalizedEntry(entryId, true)
+      })
+
+      const triggers = document.querySelectorAll('section > button')
+      triggers.forEach((trigger) => {
+        trigger.addEventListener('click', () => {
+          trigger.nextElementSibling.showModal()
+        })
+      })
+
+      function createDetailsDialog(title, details) {
         const template = document.querySelector('#details-template')
         const clone = template.content.cloneNode(true)
+        const button = clone.querySelector('button')
+        const pre = clone.querySelector('pre')
 
+        button.innerText = title
+        pre.innerText = JSON.stringify(details, null, 2)
+
+        button.addEventListener('click', () => {
+          button.nextElementSibling.showModal()
+        })
+
+        return clone
+      }
+
+      async function addPersonalizedEntry(entryId, showError = false) {
         let entry
 
         try {
@@ -73,20 +146,24 @@
         } catch (error) {
           console.error(error)
 
-          clone.querySelector('summary').innerText = `Error for entry ID "${entryId}"`
-          clone.querySelector('pre').innerText = JSON.stringify(error.message)
-
-          template.parentElement.appendChild(clone)
+          if (showError)
+            document
+              .querySelector('#entries')
+              .prepend(
+                createDetailsDialog(
+                  `Invalid entry: "${entryId}"`,
+                  'The entry ID is either wrong, belongs to a different environment, or does not apply to the current profile.',
+                ),
+              )
 
           return
         }
 
         const personalizedEntry = optimization.personalization.personalizeEntry(entry)
 
-        clone.querySelector('summary').innerText = personalizedEntry.fields.internalName
-        clone.querySelector('pre').innerText = JSON.stringify(personalizedEntry, null, 2)
-
-        document.querySelector('#entries').appendChild(clone)
+        document
+          .querySelector('#entries')
+          .prepend(createDetailsDialog(personalizedEntry.fields.internalTitle, personalizedEntry))
 
         localStorage.setItem(LAST_ENTRY_ID_KEY, entryId)
       }
@@ -96,17 +173,12 @@
 
         await optimization.personalization.page()
       })
+      optimization.consent(true)
 
       optimization.states.eventStream.subscribe((event) => {
         if (!event) return
 
-        const template = document.querySelector('#details-template')
-        const clone = template.content.cloneNode(true)
-
-        clone.querySelector('summary').innerText = event.type
-        clone.querySelector('pre').innerText = JSON.stringify(event, null, 2)
-
-        document.querySelector('#event-stream').appendChild(clone)
+        document.querySelector('#event-stream').prepend(createDetailsDialog(event.type, event))
       })
 
       optimization.states.flags.subscribe((flags) => {
@@ -114,10 +186,6 @@
       })
 
       optimization.states.profile.subscribe((profile) => {
-        if (!profile || profileId === profile.id) return
-
-        profileId = profile.id
-
         document.querySelector('#profile').innerText = JSON.stringify(profile, null, 2)
       })
 
@@ -127,47 +195,48 @@
           null,
           2,
         )
-      })
 
-      form.addEventListener('submit', async (event) => {
-        event.preventDefault()
+        personalizations.forEach((personalization) => {
+          if (!personalization?.variants) return
 
-        const data = new FormData(form)
-        const entryId = data.get('entryId')
+          const baselines = Object.keys(personalization.variants)
 
-        await addPersonalizedEntry(entryId)
+          if (!baselines.length) return
+
+          addPersonalizedEntry(baselines[0])
+        })
       })
     </script>
 
     <h1>Optimization SDK Dev Testing Dashboard</h1>
 
-    <template id="details-template">
-      <li>
-        <details>
-          <summary></summary>
-          <pre></pre>
-        </details>
-      </li>
-    </template>
-
     <main>
       <section>
         <h3>Server States</h3>
 
-        <details>
-          <summary>Custom Flags</summary>
+        <button>Custom Flags</button>
+        <dialog>
           <pre id="custom-flags"></pre>
-        </details>
-
-        <details>
-          <summary>Profile</summary>
+          <form method="dialog">
+            <button type="submit">Close</button>
+          </form>
+        </dialog>
+        |
+        <button>Profile</button>
+        <dialog>
           <pre id="profile"></pre>
-        </details>
-
-        <details>
-          <summary>Personalizations</summary>
+          <form method="dialog">
+            <button type="submit">Close</button>
+          </form>
+        </dialog>
+        |
+        <button>Personalizations</button>
+        <dialog>
           <pre id="personalizations"></pre>
-        </details>
+          <form method="dialog">
+            <button type="submit">Close</button>
+          </form>
+        </dialog>
       </section>
 
       <section>
@@ -190,5 +259,17 @@
         <ol id="event-stream"></ol>
       </section>
     </main>
+
+    <template id="details-template">
+      <li>
+        <button></button>
+        <dialog>
+          <pre></pre>
+          <form method="dialog">
+            <button type="submit">Close</button>
+          </form>
+        </dialog>
+      </li>
+    </template>
   </body>
 </html>

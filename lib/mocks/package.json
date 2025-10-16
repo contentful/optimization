@@ -1,0 +1,22 @@
+{
+  "private": true,
+  "name": "mocks",
+  "description": "E2E Support Library & Server",
+  "license": "MIT",
+  "main": "src/index.ts",
+  "scripts": {
+    "mocks:serve": "tsx ./src/server.ts"
+  },
+  "dependencies": {
+    "@contentful/optimization-core": "workspace:*",
+    "@mswjs/http-middleware": "0.10.3",
+    "msw": "catalog:",
+    "tslib": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "dotenv": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  }
+}

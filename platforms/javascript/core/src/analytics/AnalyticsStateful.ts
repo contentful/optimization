@@ -1,12 +1,12 @@
-import type { ComponentViewBuilderArgs } from '../lib/api-client/builders'
-import type { Profile } from '../lib/api-client/experience/dto/profile'
 import {
-  InsightsEvent,
   type BatchInsightsEventArray,
+  type ComponentViewBuilderArgs,
+  InsightsEvent,
   type InsightsEventArray,
-} from '../lib/api-client/insights/dto/event'
+  type Profile,
+} from '@contentful/optimization-api-client'
+import { logger } from 'logger'
 import { guardedBy } from '../lib/decorators'
-import { logger } from '../lib/logger'
 import { event as eventSignal, profile as profileSignal } from '../signals'
 import AnalyticsBase from './AnalyticsBase'
 

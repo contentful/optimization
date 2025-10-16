@@ -1,0 +1,22 @@
+{
+  "private": true,
+  "name": "logger",
+  "version": "1.0.0",
+  "license": "MIT",
+  "main": "./src/index.ts",
+  "scripts": {
+    "clean": "rimraf ./dist ./coverage tsconfig.tsbuildinfo",
+    "test:unit": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "diary": "^0.4.5"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "catalog:",
+    "rimraf": "catalog:",
+    "tslib": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
