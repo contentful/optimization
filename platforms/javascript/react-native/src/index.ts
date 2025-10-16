@@ -13,7 +13,7 @@ async function mergeConfig({ defaults, logLevel, ...config }: CoreConfig): Promi
         changes: AsyncStorageStore.changes ?? defaults?.changes,
         consent: AsyncStorageStore.consent ?? defaults?.consent,
         profile: AsyncStorageStore.profile ?? defaults?.profile,
-        variants: AsyncStorageStore.variants ?? defaults?.variants,
+        personalizations: AsyncStorageStore.personalizations ?? defaults?.personalizations,
       },
       eventBuilder: {
         channel: 'react-native',
@@ -63,10 +63,10 @@ class Optimization extends CoreStateful {
 
     effect(() => {
       const {
-        variants: { value },
+        personalizations: { value },
       } = signals
 
-      AsyncStorageStore.variants = value
+      AsyncStorageStore.personalizations = value
     })
   }
 
