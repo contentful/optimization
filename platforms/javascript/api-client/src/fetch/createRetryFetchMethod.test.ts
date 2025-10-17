@@ -4,6 +4,7 @@ import { createRetryFetchMethod } from './createRetryFetchMethod'
 vi.mock('logger', () => ({
   logger: {
     debug: vi.fn(),
+    error: vi.fn(),
   },
 }))
 
@@ -86,8 +87,9 @@ describe('createRetryFetchMethod', () => {
       intervalTimeout: 50,
     })
 
-    await expect(fetchWithRetry(TEST_URL, {})).rejects.toThrow(
-      `Optimization API request to "${TEST_URL}" failed with status: "[400] Bad Request - traceparent: abc-123"`,
+    await expect(fetchWithRetry(TEST_URL, {})).rejects.toThrow(/may not be retried/)
+    expect(logger.error).toHaveBeenCalledWith(
+      'Optimization API request to "https://example.com/endpoint" failed with status: "[400] Bad Request - traceparent: abc-123"',
     )
     expect(fetchMock).toHaveBeenCalledOnce()
     expect(onFailedAttempt).not.toHaveBeenCalled()
@@ -170,7 +172,10 @@ describe('createRetryFetchMethod', () => {
       retries: 0,
       intervalTimeout: 10,
     })
-    await expect(fetchWithRetry(TEST_URL, {})).rejects.toThrow(/unknown error/)
+    await expect(fetchWithRetry(TEST_URL, {})).rejects.toThrow(/may not be retried/)
+    expect(logger.error).toHaveBeenCalledWith(
+      'Optimization API request to "https://example.com/endpoint" failed with an unknown error',
+    )
     expect(onFailedAttempt).not.toHaveBeenCalled()
     expect(logger.debug).not.toHaveBeenCalled()
   })
@@ -185,7 +190,8 @@ describe('createRetryFetchMethod', () => {
       retries: 0,
       intervalTimeout: 10,
     })
-    await expect(fetchWithRetry(TEST_URL, {})).rejects.toThrow('plain failure')
+    await expect(fetchWithRetry(TEST_URL, {})).rejects.toThrow(/may not be retried/)
+    expect(logger.error).toHaveBeenCalledWith('plain failure')
     expect(onFailedAttempt).not.toHaveBeenCalled()
     expect(logger.debug).not.toHaveBeenCalled()
   })
