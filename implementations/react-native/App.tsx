@@ -17,6 +17,7 @@ import {
   View,
 } from 'react-native';
 
+import {logger} from '@contentful/optimization-core';
 import Optimization, {
   OptimizationProvider,
 } from '@contentful/optimization-react-native';
@@ -187,7 +188,7 @@ function App(): React.JSX.Element {
         const environment = process.env.VITE_NINETAILED_ENVIRONMENT ?? 'main';
 
         // Initialize the Optimization SDK
-        await Optimization.create({
+        const sdk = await Optimization.create({
           clientId,
           environment,
         });
@@ -202,6 +203,9 @@ function App(): React.JSX.Element {
 
         // Mark SDK as loaded
         setSdkLoaded(true);
+
+        // SDK instance is available if needed for future use
+        logger.info('SDK initialized:', sdk);
       } catch (error) {
         setSdkError(error instanceof Error ? error.message : 'Unknown error');
       }

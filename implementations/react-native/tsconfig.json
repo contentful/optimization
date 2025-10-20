@@ -1,6 +1,11 @@
 {
-  "extends": "@react-native/typescript-config/tsconfig.json",
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "jsx": "react-native"
-  }
+    "jsx": "react-native",
+    "baseUrl": "../..",
+    "skipLibCheck": true,
+    "moduleResolution": "node"
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "android", "ios"]
 }
