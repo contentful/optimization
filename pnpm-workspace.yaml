@@ -29,9 +29,12 @@ nodeVersion: 20.19.5
 
 onlyBuiltDependencies:
   - contentful-cli
+  - detox
+  - dtrace-provider
   - esbuild
   - msw
   - spawn-sync
+  - unrs-resolver
 
 overrides:
   '@playwright/test': 'catalog:'

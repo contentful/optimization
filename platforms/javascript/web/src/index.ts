@@ -19,16 +19,31 @@ declare global {
 }
 
 function mergeConfig({ defaults, logLevel, ...config }: CoreConfig): CoreConfig {
+  const {
+    consent = LocalStore.consent,
+    analytics: { profile: analyticsProfile = LocalStore.profile } = {},
+    personalization: {
+      changes = LocalStore.changes,
+      profile: personalizationProfile = LocalStore.profile,
+      personalizations = LocalStore.personalizations,
+    } = {},
+  } = defaults ?? {}
+
   return merge(
     {
       api: {
         analytics: { beaconHandler },
       },
       defaults: {
-        changes: LocalStore.changes ?? defaults?.changes,
-        consent: LocalStore.consent ?? defaults?.consent,
-        profile: LocalStore.profile ?? defaults?.profile,
-        personalizations: LocalStore.personalizations ?? defaults?.personalizations,
+        consent,
+        analytics: {
+          profile: analyticsProfile,
+        },
+        personalization: {
+          changes,
+          profile: personalizationProfile,
+          personalizations,
+        },
       },
       eventBuilder: {
         channel: 'web',

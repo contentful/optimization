@@ -1,15 +1,18 @@
 import type ApiClient from '@contentful/optimization-api-client'
 import {
+  type ChangeArray,
   type ComponentViewBuilderArgs,
   ComponentViewEvent,
   type EventBuilder,
-  type ExperienceEvent,
   type Flags,
   type IdentifyBuilderArgs,
   IdentifyEvent,
   type OptimizationData,
   type PageViewBuilderArgs,
   PageViewEvent,
+  type ExperienceEvent as PersonalizationEvent,
+  type Profile,
+  type SelectedPersonalizationArray,
   type TrackBuilderArgs,
   TrackEvent,
 } from '@contentful/optimization-api-client'
@@ -24,17 +27,54 @@ import {
   consent,
   effect,
   event as eventSignal,
+  flags,
   flags as flagsSignal,
+  type Observable,
+  personalizations,
   personalizations as personalizationsSignal,
+  profile,
   profile as profileSignal,
+  toObservable,
 } from '../signals'
 import { PersonalizedEntryResolver } from './resolvers'
 
-class Personalization extends ProductBase<ExperienceEvent> implements ConsentGuard {
+export interface PersonalizationConfigDefaults {
+  changes?: ChangeArray
+  profile?: Profile
+  personalizations?: SelectedPersonalizationArray
+}
+
+export interface PersonalizationStates {
+  flags: Observable<Flags | undefined>
+  profile: Observable<Profile | undefined>
+  personalizations: Observable<SelectedPersonalizationArray | undefined>
+}
+
+class Personalization extends ProductBase<PersonalizationEvent> implements ConsentGuard {
   readonly personalizedEntryResolver = PersonalizedEntryResolver
 
-  constructor(api: ApiClient, builder: EventBuilder) {
+  readonly states: PersonalizationStates = {
+    flags: toObservable(flags),
+    profile: toObservable(profile),
+    personalizations: toObservable(personalizations),
+  }
+
+  constructor(api: ApiClient, builder: EventBuilder, defaults?: PersonalizationConfigDefaults) {
     super(api, builder)
+
+    if (defaults) {
+      const {
+        changes: defaultChanges,
+        personalizations: defaultPersonalizations,
+        profile: defaultProfile,
+      } = defaults
+
+      batch(() => {
+        changesSignal.value = defaultChanges
+        personalizationsSignal.value = defaultPersonalizations
+        profileSignal.value = defaultProfile
+      })
+    }
 
     effect(() => {
       logger.info(
@@ -114,7 +154,7 @@ class Personalization extends ProductBase<ExperienceEvent> implements ConsentGua
     return await this.#upsertProfile(event)
   }
 
-  async #upsertProfile(event: ExperienceEvent): Promise<OptimizationData> {
+  async #upsertProfile(event: PersonalizationEvent): Promise<OptimizationData> {
     const intercepted = await this.interceptor.event.run(event)
 
     eventSignal.value = intercepted
