@@ -25,6 +25,8 @@ catalog:
 
 engineStrict: true
 
+nodeVersion: 20.19.5
+
 onlyBuiltDependencies:
   - contentful-cli
   - esbuild
