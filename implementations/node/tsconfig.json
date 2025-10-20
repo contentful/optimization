@@ -8,6 +8,9 @@
     "outDir": "./dist",
     "paths": {
       "@contentful/optimization-api-client": ["../../platforms/javascript/api-client/src/index.ts"],
+      "@contentful/optimization-api-schemas": [
+        "../../platforms/javascript/api-schemas/src/index.ts"
+      ],
       "@contentful/optimization-core": ["../../platforms/javascript/core/src/index.ts"],
       "@contentful/optimization-node": ["../../platforms/javascript/node/src/index.ts"]
     },

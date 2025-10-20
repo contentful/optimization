@@ -1,0 +1,241 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "7pa5bOx8Z9NmNcr7mISvD",
+        "type": "Entry",
+        "createdAt": "2025-10-13T11:40:26.837Z",
+        "updatedAt": "2025-10-13T11:51:51.432Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 13,
+        "revision": 2,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "content"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "internalTitle": "[Baseline] All Identified or Unidentified Users",
+        "text": "This is a baseline content entry for all identified or unidentified users.",
+        "nt_experiences": [
+          {
+            "sys": {
+              "type": "Link",
+              "linkType": "Entry",
+              "id": "53yERfkqYXkg2B18EcdtK5"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "includes": {
+    "Entry": [
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "4yIqY7AWtzeehCZxtQSDB",
+          "type": "Entry",
+          "createdAt": "2025-10-13T09:32:31.720Z",
+          "updatedAt": "2025-10-13T09:32:31.720Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 10,
+          "revision": 1,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nt_audience"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "nt_name": "Identified Users",
+          "nt_description": "Users who have been identified with an `identified` trait set to `true`",
+          "nt_rules": {
+            "any": [
+              {
+                "all": [
+                  {
+                    "key": "identified",
+                    "type": "identify",
+                    "count": "1",
+                    "value": "true",
+                    "operator": "equal",
+                    "conditions": []
+                  }
+                ]
+              }
+            ]
+          },
+          "nt_audience_id": "4yIqY7AWtzeehCZxtQSDB",
+          "nt_metadata": {
+            "type": "origin"
+          }
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "53yERfkqYXkg2B18EcdtK5",
+          "type": "Entry",
+          "createdAt": "2025-10-13T11:37:27.018Z",
+          "updatedAt": "2025-10-13T11:41:13.578Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 21,
+          "revision": 3,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nt_experience"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "nt_name": "[Personalization] Identified Users",
+          "nt_type": "nt_personalization",
+          "nt_config": {
+            "distribution": [0.1, 0.9],
+            "traffic": 1,
+            "components": [
+              {
+                "baseline": {
+                  "id": "7pa5bOx8Z9NmNcr7mISvD"
+                },
+                "variants": [
+                  {
+                    "id": "5daRHDDD7sj0Jm9kutAGou",
+                    "hidden": false
+                  }
+                ]
+              }
+            ],
+            "primaryMetric": ""
+          },
+          "nt_audience": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Entry",
+              "id": "4yIqY7AWtzeehCZxtQSDB"
+            }
+          },
+          "nt_variants": [
+            {
+              "sys": {
+                "type": "Link",
+                "linkType": "Entry",
+                "id": "5daRHDDD7sj0Jm9kutAGou"
+              }
+            }
+          ],
+          "nt_experience_id": "53yERfkqYXkg2B18EcdtK5",
+          "nt_metadata": {
+            "type": "origin"
+          }
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "5daRHDDD7sj0Jm9kutAGou",
+          "type": "Entry",
+          "createdAt": "2025-10-13T11:37:01.721Z",
+          "updatedAt": "2025-10-13T11:37:18.919Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 11,
+          "revision": 2,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "content"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "internalTitle": "[Variant] Identified Users",
+          "text": "This is a variant content entry for identified users."
+        }
+      }
+    ]
+  }
+}

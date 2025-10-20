@@ -1,22 +1,20 @@
-import { merge } from 'es-toolkit'
-import { z } from 'zod/mini'
-import type {
-  ComponentViewEvent,
-  IdentifyEvent,
-  PageViewEvent,
-  TrackEvent,
-} from '../experience/dto/event'
 import {
   type App,
   Campaign,
   type Channel,
+  type ComponentViewEvent,
   GeoLocation,
+  type IdentifyEvent,
   type Library,
   Page,
+  type PageViewEvent,
   Properties,
+  type TrackEvent,
   Traits,
-} from '../experience/dto/event/properties'
-import type { UniversalEventProperties } from '../experience/dto/event/UniversalEventProperties'
+  type UniversalEventProperties,
+} from '@contentful/optimization-api-schemas'
+import { merge } from 'es-toolkit'
+import { z } from 'zod/mini'
 
 export interface EventBuilderConfig {
   app?: App

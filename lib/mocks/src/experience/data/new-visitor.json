@@ -1,0 +1,127 @@
+{
+  "data": {
+    "profile": {
+      "id": "89a085900309de9ecef46965112c309d6f00f1aaed7fcb6709eb851c9557ec42",
+      "stableId": "89a085900309de9ecef46965112c309d6f00f1aaed7fcb6709eb851c9557ec42",
+      "random": 0.46249140763247654,
+      "audiences": [
+        "1g2FXnBQzxcQfhnaM2NRkn",
+        "2WzXDaWtDmstHl9p8Wufpp",
+        "2y72M2RTXnMpp9GPG8xSzf",
+        "3UTxzKhiki1xeHAdSCJBCS",
+        "51AL1dMNXkvx1BkQd3wPR1",
+        "64ducOq8OgG6N0zK3SuRnq",
+        "6IZl4qhrtb0exmz0ADP0DR"
+      ],
+      "traits": {},
+      "location": {
+        "coordinates": {
+          "latitude": 52.52437,
+          "longitude": 13.41053
+        },
+        "countryCode": "DE",
+        "city": "Berlin",
+        "continent": "EU",
+        "postalCode": "10119",
+        "region": "State of Berlin"
+      },
+      "session": {
+        "id": "d262d649-1e06-4ed6-84fe-138818fb8d9e",
+        "count": 1,
+        "isReturningVisitor": false,
+        "landingPage": {
+          "path": "/",
+          "query": {},
+          "referrer": "",
+          "search": "",
+          "url": "http://localhost:5173/"
+        },
+        "activeSessionLength": 26,
+        "averageSessionLength": 26
+      }
+    },
+    "experiences": [
+      {
+        "experienceId": "1lNQ9YUJfDBQLMR6O0jjP8",
+        "variantIndex": 0,
+        "variants": {
+          "5Rn1R8HqsbcdxMx46qLilf": "5Rn1R8HqsbcdxMx46qLilf"
+        }
+      },
+      {
+        "experienceId": "2cSY1TX0nDfYe4fuIrGQ1K",
+        "variantIndex": 1,
+        "variants": {
+          "2Z2WLOx07InSewC3LUB3eX": "1UFf7qr4mHET3HYuYmcpEj"
+        }
+      },
+      {
+        "experienceId": "2kT7B3F1GH3sDBo2glpywy",
+        "variantIndex": 1,
+        "variants": {
+          "4WFNEIlY8bzmZcjmjCCUOm": "6v6IuRsAR2AZoAnISXH8oP"
+        }
+      },
+      {
+        "experienceId": "2O4ZmYjJFSn0E8ti8tonut",
+        "variantIndex": 0,
+        "variants": {
+          "qEfH7mk21RnqzUHlL6cIC": "qEfH7mk21RnqzUHlL6cIC"
+        }
+      },
+      {
+        "experienceId": "2qVK4T5lnScbswoyBuGipd",
+        "variantIndex": 1,
+        "variants": {
+          "4ib0hsHWoSOnCVdDkizE8d": "4k6ZyFQnR2POY5IJLLlJRb"
+        }
+      },
+      {
+        "experienceId": "44jIanEK8sjH9SoJ5AOa7m",
+        "variantIndex": 1,
+        "variants": {
+          "4LIbcbuqUx6wtfJIvHnyON": ""
+        }
+      },
+      {
+        "experienceId": "4aSQ6HYCrSQP2UktnEGq3X",
+        "variantIndex": 0,
+        "variants": {
+          "3n4FIM0bQNZKQwomidlmZ8": "3n4FIM0bQNZKQwomidlmZ8"
+        }
+      },
+      {
+        "experienceId": "5kuc9KgA9q9RXnlbDxDlY",
+        "variantIndex": 0,
+        "variants": {
+          "5XHssysWUDECHzKLzoIsg1": "5XHssysWUDECHzKLzoIsg1"
+        }
+      },
+      {
+        "experienceId": "6df0DI1BG9GTb9qIcjfkmh",
+        "variantIndex": 1,
+        "variants": {
+          "74PjP6eFEOxD66R88LrL76": "5OYKPG3KHGgKczGtZ5itv9"
+        },
+        "sticky": true
+      },
+      {
+        "experienceId": "6ZbWjihD33P0ZQDi1NBPNj",
+        "variantIndex": 1,
+        "variants": {
+          "74PjP6eFEOxD66R88LrL76": "2ow3EkPI5jKevWoTT2BVG8"
+        }
+      },
+      {
+        "experienceId": "BBvRD6Uv03k69wPwB9Ou6",
+        "variantIndex": 1,
+        "variants": {
+          "xFwgG3oNaOcjzWiGe4vXo": "6iyPl6vfDH5AoClf3MtYlh"
+        }
+      }
+    ],
+    "changes": []
+  },
+  "error": null,
+  "message": "ok"
+}

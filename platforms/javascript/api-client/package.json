@@ -30,6 +30,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@contentful/optimization-api-schemas": "workspace:*",
     "es-toolkit": "catalog:",
     "logger": "workspace:*",
     "p-retry": "^6.2.1",

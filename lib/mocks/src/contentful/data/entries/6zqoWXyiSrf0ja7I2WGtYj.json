@@ -1,0 +1,241 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "6zqoWXyiSrf0ja7I2WGtYj",
+        "type": "Entry",
+        "createdAt": "2025-10-13T12:21:38.146Z",
+        "updatedAt": "2025-10-13T12:24:38.546Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 16,
+        "revision": 3,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "content"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "internalTitle": "[Baseline] All Visitors With or Without a Custom Event",
+        "text": "This is a baseline content entry for all visitors with or without a custom event.",
+        "nt_experiences": [
+          {
+            "sys": {
+              "type": "Link",
+              "linkType": "Entry",
+              "id": "5us1xFZCsHyIYuzINJMeSV"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "includes": {
+    "Entry": [
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "56gfPS3OIl77DbH5PZigtr",
+          "type": "Entry",
+          "createdAt": "2025-10-13T09:27:27.439Z",
+          "updatedAt": "2025-10-13T09:27:27.439Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 13,
+          "revision": 1,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nt_audience"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "nt_name": "Users with a Custom Event",
+          "nt_description": "Users for whom a `custom` event has been triggered at least once",
+          "nt_rules": {
+            "any": [
+              {
+                "all": [
+                  {
+                    "key": "",
+                    "type": "track",
+                    "count": "1",
+                    "value": "custom",
+                    "operator": "greaterThanInclusive",
+                    "conditions": []
+                  }
+                ]
+              }
+            ]
+          },
+          "nt_audience_id": "56gfPS3OIl77DbH5PZigtr",
+          "nt_metadata": {
+            "type": "origin"
+          }
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "5us1xFZCsHyIYuzINJMeSV",
+          "type": "Entry",
+          "createdAt": "2025-10-13T12:23:00.196Z",
+          "updatedAt": "2025-10-13T12:24:02.494Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 16,
+          "revision": 2,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nt_experience"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "nt_name": "[Personalization] Visitors With a Custom Event",
+          "nt_type": "nt_personalization",
+          "nt_config": {
+            "traffic": 1,
+            "components": [
+              {
+                "baseline": {
+                  "id": "6zqoWXyiSrf0ja7I2WGtYj"
+                },
+                "variants": [
+                  {
+                    "id": "7upHpduBBaKCWUqB27oTmX",
+                    "hidden": false
+                  }
+                ]
+              }
+            ],
+            "distribution": [0, 1],
+            "primaryMetric": ""
+          },
+          "nt_audience": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Entry",
+              "id": "56gfPS3OIl77DbH5PZigtr"
+            }
+          },
+          "nt_variants": [
+            {
+              "sys": {
+                "type": "Link",
+                "linkType": "Entry",
+                "id": "7upHpduBBaKCWUqB27oTmX"
+              }
+            }
+          ],
+          "nt_experience_id": "5us1xFZCsHyIYuzINJMeSV",
+          "nt_metadata": {
+            "type": "origin"
+          }
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "7upHpduBBaKCWUqB27oTmX",
+          "type": "Entry",
+          "createdAt": "2025-10-13T12:22:45.756Z",
+          "updatedAt": "2025-10-13T12:22:45.756Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 8,
+          "revision": 1,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "content"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "internalTitle": "[Variant] Visitors With a Custom Event",
+          "text": "This is a variant content entry for visitors with a custom event."
+        }
+      }
+    ]
+  }
+}

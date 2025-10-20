@@ -1,4 +1,4 @@
-import type { BatchInsightsEventArray } from '@contentful/optimization-core'
+import type { BatchInsightsEventArray } from '@contentful/optimization-api-client'
 import { http, type HttpHandler, HttpResponse } from 'msw'
 
 // Minimal in-memory store
@@ -24,17 +24,15 @@ async function parseJson<T>(req: Request): Promise<T> {
 export function getHandlers(baseUrl = '*'): HttpHandler[] {
   return [
     // CORS preflight for Beacon/fetch
-    http.options(
-      `${baseUrl}v1/organizations/:organizationId/environments/:environmentSlug/events`,
-      () =>
-        HttpResponse.text('', {
-          status: 204,
-          headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-          },
-        }),
+    http.options('*', () =>
+      HttpResponse.text('', {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        },
+      }),
     ),
     http.post(
       `${baseUrl}v1/organizations/:organizationId/environments/:environmentSlug/events`,

@@ -1,9 +1,12 @@
+import {
+  BatchExperienceResponse,
+  ExperienceEventArray,
+  ExperienceResponse,
+} from '@contentful/optimization-api-schemas'
 import { logger } from 'logger'
 import { http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { server } from '../test/setup'
-import { BatchExperienceResponse, ExperienceResponse } from './dto'
-import { ExperienceEventArray } from './dto/event'
 import ExperienceApiClient, {
   EXPERIENCE_BASE_URL,
   type ExperienceApiClientConfig,

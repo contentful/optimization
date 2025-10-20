@@ -1,10 +1,12 @@
-import path from 'node:path'
+import { resolve } from 'node:path'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   resolve: {
     alias: {
-      '@contentful/optimization-core': path.resolve(__dirname, '../core/src/index.ts'),
+      '@contentful/optimization-api-client': resolve(__dirname, '../api-client/src/'),
+      '@contentful/optimization-api-schemas': resolve(__dirname, '../api-schemas/src/'),
+      '@contentful/optimization-core': resolve(__dirname, '../core/src/index.ts'),
     },
   },
   test: {

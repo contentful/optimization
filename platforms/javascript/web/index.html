@@ -97,6 +97,9 @@
         accessToken: '%VITE_CONTENTFUL_TOKEN%',
         environment: '%VITE_CONTENTFUL_ENVIRONMENT%',
         space: '%VITE_CONTENTFUL_SPACE_ID%',
+        host: '%VITE_CONTENTFUL_CDA_HOST%',
+        basePath: '%VITE_CONTENTFUL_BASE_PATH%',
+        insecure: Boolean('%VITE_CONTENTFUL_CDA_HOST%'),
       })
 
       const form = document.querySelector('#entry-form')
@@ -144,17 +147,11 @@
             include: 10,
           })
         } catch (error) {
-          console.error(error)
+          const message = `Irrelevant entry: "${entryId}" The entry ID is either wrong, belongs to a different environment, or does not apply to the current profile.`
 
-          if (showError)
-            document
-              .querySelector('#entries')
-              .prepend(
-                createDetailsDialog(
-                  `Invalid entry: "${entryId}"`,
-                  'The entry ID is either wrong, belongs to a different environment, or does not apply to the current profile.',
-                ),
-              )
+          console.warn(message)
+
+          if (showError) document.querySelector('#entries').prepend(createDetailsDialog(message))
 
           return
         }
@@ -196,15 +193,17 @@
           2,
         )
 
-        personalizations.forEach((personalization) => {
-          if (!personalization?.variants) return
+        Promise.all(
+          personalizations?.map(async (personalization) => {
+            if (!personalization?.variants) return
 
-          const baselines = Object.keys(personalization.variants)
+            const baselines = Object.keys(personalization.variants)
 
-          if (!baselines.length) return
+            if (!baselines.length) return
 
-          addPersonalizedEntry(baselines[0])
-        })
+            await addPersonalizedEntry(baselines[0])
+          }) ?? [],
+        )
       })
     </script>
 

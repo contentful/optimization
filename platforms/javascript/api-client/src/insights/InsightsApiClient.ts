@@ -1,6 +1,6 @@
+import { BatchInsightsEventArray } from '@contentful/optimization-api-schemas'
 import { logger } from 'logger'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
-import { BatchInsightsEventArray } from './dto/event'
 
 interface RequestOptions {
   /**
