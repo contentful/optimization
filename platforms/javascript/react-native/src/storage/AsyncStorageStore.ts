@@ -1,9 +1,4 @@
-import {
-  ChangeArray,
-  logger,
-  Profile,
-  SelectedPersonalizationArray,
-} from '@contentful/optimization-core'
+import { ChangeArray, Profile, SelectedPersonalizationArray } from '@contentful/optimization-core'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { z } from 'zod/mini'
 
@@ -49,7 +44,8 @@ class AsyncStorageStore {
 
       this.initialized = true
     } catch (error: unknown) {
-      if (error instanceof Error) logger.error('Failed to initialize AsyncStorageStore:', error)
+      // eslint-disable-next-line no-console -- Logging initialization errors for debugging
+      console.error('Failed to initialize AsyncStorageStore:', error)
     }
   }
 
@@ -133,14 +129,15 @@ class AsyncStorageStore {
     if (data === undefined) {
       this.cache.delete(key)
       AsyncStorage.removeItem(key).catch((error: unknown) => {
-        if (error instanceof Error)
-          logger.error(`Failed to remove ${key} from AsyncStorage:`, error)
+        // eslint-disable-next-line no-console -- Logging storage errors for debugging
+        console.error(`Failed to remove ${key} from AsyncStorage:`, error)
       })
     } else {
       const value = typeof data === 'string' ? data : JSON.stringify(data)
       this.cache.set(key, typeof data === 'string' ? data : data)
       AsyncStorage.setItem(key, value).catch((error: unknown) => {
-        if (error instanceof Error) logger.error(`Failed to set ${key} in AsyncStorage:`, error)
+        // eslint-disable-next-line no-console -- Logging storage errors for debugging
+        console.error(`Failed to set ${key} in AsyncStorage:`, error)
       })
     }
   }
