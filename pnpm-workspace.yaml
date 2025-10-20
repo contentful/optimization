@@ -25,7 +25,7 @@ catalog:
 
 engineStrict: true
 
-nodeVersion: 16.20.0
+nodeVersion: 20.19.5
 
 onlyBuiltDependencies:
   - contentful-cli

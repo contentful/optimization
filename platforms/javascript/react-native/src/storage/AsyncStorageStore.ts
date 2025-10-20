@@ -49,7 +49,7 @@ class AsyncStorageStore {
 
       this.initialized = true
     } catch (error: unknown) {
-      if (error instanceof Error) logger.error('Failed to initialize AsyncStorageStore:', error)
+      logger.error('Failed to initialize AsyncStorageStore:', error)
     }
   }
 
@@ -133,14 +133,13 @@ class AsyncStorageStore {
     if (data === undefined) {
       this.cache.delete(key)
       AsyncStorage.removeItem(key).catch((error: unknown) => {
-        if (error instanceof Error)
-          logger.error(`Failed to remove ${key} from AsyncStorage:`, error)
+        logger.error(`Failed to remove ${key} from AsyncStorage:`, error)
       })
     } else {
       const value = typeof data === 'string' ? data : JSON.stringify(data)
       this.cache.set(key, typeof data === 'string' ? data : data)
       AsyncStorage.setItem(key, value).catch((error: unknown) => {
-        if (error instanceof Error) logger.error(`Failed to set ${key} in AsyncStorage:`, error)
+        logger.error(`Failed to set ${key} in AsyncStorage:`, error)
       })
     }
   }
