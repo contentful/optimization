@@ -7,7 +7,9 @@ class CoreStateless extends CoreBase {
   constructor(config: CoreConfig) {
     super(config)
 
-    this.analytics = new AnalyticsStateless(this.api, this.eventBuilder)
+    const { defaults } = config
+
+    this.analytics = new AnalyticsStateless(this.api, this.eventBuilder, defaults?.analytics)
   }
 }
 

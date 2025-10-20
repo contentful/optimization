@@ -1,23 +1,31 @@
 import ApiClient, {
   EventBuilder,
+  type InsightsEvent as AnalyticsEvent,
   type ApiClientConfig,
-  type ChangeArray,
   type EventBuilderConfig,
   type GlobalApiConfigProperties,
-  type Profile,
-  type SelectedPersonalizationArray,
+  type ExperienceEvent as PersonalizationEvent,
 } from '@contentful/optimization-api-client'
 import type { LogLevels } from 'logger'
 import { ConsoleLogSink, logger } from 'logger'
 import type AnalyticsBase from './analytics/AnalyticsBase'
-import { Personalization } from './personalization'
-import { batch, changes, consent, personalizations, profile } from './signals'
+import type { AnalyticsConfigDefaults, AnalyticsStates } from './analytics/AnalyticsBase'
+import {
+  Personalization,
+  type PersonalizationConfigDefaults,
+  type PersonalizationStates,
+} from './personalization'
+import { consent, event, toObservable, type Observable } from './signals'
 
 export interface CoreConfigDefaults {
-  changes?: ChangeArray
   consent?: boolean
-  profile?: Profile
-  personalizations?: SelectedPersonalizationArray
+  personalization?: PersonalizationConfigDefaults
+  analytics?: AnalyticsConfigDefaults
+}
+
+export interface CoreStates extends AnalyticsStates, PersonalizationStates {
+  consent: Observable<boolean | undefined>
+  eventStream: Observable<AnalyticsEvent | PersonalizationEvent | undefined>
 }
 
 /** Options that may be passed to the Core constructor */
@@ -50,20 +58,9 @@ abstract class CoreBase implements ConsentController {
 
     logger.addSink(new ConsoleLogSink(logLevel))
 
-    if (defaults) {
-      const {
-        changes: defaultChanges,
-        consent: defaultConsent,
-        personalizations: defaultPersonalizations,
-        profile: defaultProfile,
-      } = defaults
-
-      batch(() => {
-        changes.value = defaultChanges
-        consent.value = defaultConsent
-        personalizations.value = defaultPersonalizations
-        profile.value = defaultProfile
-      })
+    if (defaults?.consent !== undefined) {
+      const { consent: defaultConsent } = defaults
+      consent.value = defaultConsent
     }
 
     const apiConfig = {
@@ -82,11 +79,29 @@ abstract class CoreBase implements ConsentController {
       },
     )
 
-    this.personalization = new Personalization(this.api, this.eventBuilder)
+    this.personalization = new Personalization(
+      this.api,
+      this.eventBuilder,
+      defaults?.personalization,
+    )
   }
 
-  public consent(accept: boolean): void {
+  get states(): CoreStates {
+    return {
+      ...this.analytics.states,
+      ...this.personalization.states,
+      consent: toObservable(consent),
+      eventStream: toObservable(event),
+    }
+  }
+
+  consent(accept: boolean): void {
     consent.value = accept
+  }
+
+  /** Do not reset consent, resetting personalization _currently_ also resets analytics' dependencies */
+  reset(): void {
+    this.personalization.reset()
   }
 }
 

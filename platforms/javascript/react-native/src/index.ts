@@ -7,13 +7,28 @@ async function mergeConfig({ defaults, logLevel, ...config }: CoreConfig): Promi
   // Initialize AsyncStorage before reading from it
   await AsyncStorageStore.initialize()
 
+  const {
+    consent = AsyncStorageStore.consent,
+    analytics: { profile: analyticsProfile = AsyncStorageStore.profile } = {},
+    personalization: {
+      changes = AsyncStorageStore.changes,
+      profile: personalizationProfile = AsyncStorageStore.profile,
+      personalizations = AsyncStorageStore.personalizations,
+    } = {},
+  } = defaults ?? {}
+
   return merge(
     {
       defaults: {
-        changes: AsyncStorageStore.changes ?? defaults?.changes,
-        consent: AsyncStorageStore.consent ?? defaults?.consent,
-        profile: AsyncStorageStore.profile ?? defaults?.profile,
-        personalizations: AsyncStorageStore.personalizations ?? defaults?.personalizations,
+        consent,
+        analytics: {
+          profile: analyticsProfile,
+        },
+        personalization: {
+          changes,
+          profile: personalizationProfile,
+          personalizations,
+        },
       },
       eventBuilder: {
         channel: 'react-native',

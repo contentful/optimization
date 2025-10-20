@@ -1,12 +1,29 @@
 import type ApiClient from '@contentful/optimization-api-client'
-import type { EventBuilder, InsightsEvent } from '@contentful/optimization-api-client'
+import type { EventBuilder, InsightsEvent, Profile } from '@contentful/optimization-api-client'
 import { logger } from 'logger'
 import ProductBase, { type ConsentGuard } from '../ProductBase'
-import { consent, effect, profile } from '../signals'
+import { consent, effect, type Observable, profile, toObservable } from '../signals'
+
+export interface AnalyticsConfigDefaults {
+  profile?: Profile
+}
+
+export interface AnalyticsStates {
+  profile: Observable<Profile | undefined>
+}
 
 abstract class AnalyticsBase extends ProductBase<InsightsEvent> implements ConsentGuard {
-  constructor(api: ApiClient, builder: EventBuilder) {
+  readonly states: AnalyticsStates = {
+    profile: toObservable(profile),
+  }
+
+  constructor(api: ApiClient, builder: EventBuilder, defaults?: AnalyticsConfigDefaults) {
     super(api, builder)
+
+    if (defaults?.profile !== undefined) {
+      const { profile: defaultProfile } = defaults
+      profile.value = defaultProfile
+    }
 
     effect(() => {
       const id = profile.value?.id

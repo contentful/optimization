@@ -32,6 +32,26 @@ export interface Signals {
   personalizations: typeof personalizations
 }
 
+export interface Subscription {
+  unsubscribe: () => void
+}
+
+export interface Observable<T> {
+  subscribe: (next: (v: T) => void) => Subscription
+}
+
+export function toObservable<T>(s: { value: T }): Observable<T> {
+  return {
+    subscribe(next) {
+      const dispose = effect(() => {
+        next(s.value)
+      })
+
+      return { unsubscribe: dispose }
+    },
+  }
+}
+
 export const signals: Signals = {
   changes,
   consent,
