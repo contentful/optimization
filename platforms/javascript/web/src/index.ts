@@ -1,5 +1,6 @@
 import {
   ANONYMOUS_ID_COOKIE,
+  type App,
   type CoreConfig,
   CoreStateful,
   effect,
@@ -18,7 +19,11 @@ declare global {
   }
 }
 
-function mergeConfig({ defaults, logLevel, ...config }: CoreConfig): CoreConfig {
+export interface OptimizationWebConfig extends CoreConfig {
+  app?: App
+}
+
+function mergeConfig({ app, defaults, logLevel, ...config }: OptimizationWebConfig): CoreConfig {
   const {
     consent = LocalStore.consent,
     analytics: { profile: analyticsProfile = LocalStore.profile } = {},
@@ -46,6 +51,7 @@ function mergeConfig({ defaults, logLevel, ...config }: CoreConfig): CoreConfig 
         },
       },
       eventBuilder: {
+        app,
         channel: 'web',
         library: { name: 'Optimization Web API', version: '0.0.0' },
         getLocale,
@@ -59,7 +65,7 @@ function mergeConfig({ defaults, logLevel, ...config }: CoreConfig): CoreConfig 
 }
 
 class Optimization extends CoreStateful {
-  constructor(config: CoreConfig) {
+  constructor(config: OptimizationWebConfig) {
     if (window.optimization) throw new Error('Optimization is already initialized')
 
     const mergedConfig: CoreConfig = mergeConfig(config)

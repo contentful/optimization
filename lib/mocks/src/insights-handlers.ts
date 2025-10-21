@@ -1,4 +1,4 @@
-import type { BatchInsightsEventArray } from '@contentful/optimization-api-client'
+import type { BatchInsightsEventArray } from '@contentful/optimization-api-schemas'
 import { http, type HttpHandler, HttpResponse } from 'msw'
 
 // Minimal in-memory store

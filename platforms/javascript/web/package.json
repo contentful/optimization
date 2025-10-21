@@ -19,7 +19,7 @@
     "directory": "dist"
   },
   "scripts": {
-    "build": "vite build && tsc -p ./tsconfig.build.json",
+    "build": "tsc -b ./tsconfig.build.json && vite build",
     "clean": "rimraf ./dist ./coverage tsconfig.tsbuildinfo",
     "dev": "vite --host",
     "test:unit": "vitest run --coverage",
@@ -39,7 +39,7 @@
     "rollup-plugin-visualizer": "^6.0.3",
     "tslib": "catalog:",
     "typescript": "catalog:",
-    "vite": "^7.1.0",
+    "vite": "^7.1.11",
     "vitest": "catalog:",
     "vite-bundle-analyzer": "^1.2.1",
     "vite-tsconfig-paths": "^5.1.4"

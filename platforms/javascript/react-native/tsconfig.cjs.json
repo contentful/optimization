@@ -1,17 +1,18 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "declaration": false,
-    "declarationMap": false,
-    "emitDeclarationOnly": false,
+    "composite": true,
+    "incremental": true,
+    "noEmit": false,
+    "baseUrl": "./src",
     "jsx": "react-native",
     "module": "CommonJS",
     "moduleResolution": "Node",
-    "noEmit": false,
     "outDir": "./dist",
-    "paths": {},
-    "rootDir": "./src"
+    "rootDir": "./src",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo"
   },
   "include": ["./src/**/*", "./src/**/*.json"],
-  "exclude": ["./src/**/*.test.*"]
+  "exclude": ["./src/**/*.test.*"],
+  "references": [{ "path": "../../../universal/core/tsconfig.cjs.json" }]
 }
