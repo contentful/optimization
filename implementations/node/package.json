@@ -6,7 +6,7 @@
   "main": "dist/app.js",
   "types": "dist/app.d.ts",
   "scripts": {
-    "clean": "rimraf ./coverage ./playwright-report ./test-results",
+    "clean": "rimraf ./dist ./coverage ./playwright-report ./test-results",
     "serve": "pnpm serve:mocks && pnpm serve:app",
     "serve:app": "pm2 start --name node-app \"tsx --env-file=.env ./src/app.ts\"",
     "serve:mocks": "pm2 start --name node-mocks \"pnpm --filter mocks mocks:serve\"",

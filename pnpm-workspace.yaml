@@ -1,7 +1,8 @@
 packages:
-  - lib/*
   - implementations/*
+  - lib/*
   - platforms/javascript/*
+  - universal/*
 
 catalog:
   '@playwright/test': ^1.55.1

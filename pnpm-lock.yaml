@@ -305,7 +305,7 @@ importers:
     dependencies:
       '@contentful/optimization-api-schemas':
         specifier: workspace:*
-        version: link:../../platforms/javascript/api-schemas/dist
+        version: link:../../universal/api-schemas/dist
       '@mswjs/http-middleware':
         specifier: 0.10.3
         version: 0.10.3(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))
@@ -347,122 +347,11 @@ importers:
         specifier: ^5.8.3
         version: 5.9.2
 
-  platforms/javascript/api-client:
-    dependencies:
-      '@contentful/optimization-api-schemas':
-        specifier: workspace:*
-        version: link:../api-schemas/dist
-      es-toolkit:
-        specifier: 'catalog:'
-        version: 1.39.10
-      logger:
-        specifier: workspace:*
-        version: link:../../../lib/logger
-      p-retry:
-        specifier: ^6.2.1
-        version: 6.2.1
-      zod:
-        specifier: 'catalog:'
-        version: 4.1.5
-    devDependencies:
-      '@vitest/coverage-v8':
-        specifier: 'catalog:'
-        version: 3.2.4(vitest@3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.5.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1))
-      mocks:
-        specifier: workspace:*
-        version: link:../../../lib/mocks
-      msw:
-        specifier: 'catalog:'
-        version: 2.10.5(@types/node@24.2.0)(typescript@5.9.2)
-      rimraf:
-        specifier: 'catalog:'
-        version: 6.0.1
-      tslib:
-        specifier: 'catalog:'
-        version: 2.8.1
-      typescript:
-        specifier: ^5.8.3
-        version: 5.9.2
-      vitest:
-        specifier: ^3.2.4
-        version: 3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.5.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
-    publishDirectory: dist
-
-  platforms/javascript/api-schemas:
-    dependencies:
-      '@contentful/optimization-api-schemas':
-        specifier: workspace:*
-        version: link:dist
-      contentful:
-        specifier: 'catalog:'
-        version: 11.8.5
-      zod:
-        specifier: 'catalog:'
-        version: 4.1.5
-    devDependencies:
-      rimraf:
-        specifier: 'catalog:'
-        version: 6.0.1
-      tslib:
-        specifier: 'catalog:'
-        version: 2.8.1
-      typescript:
-        specifier: ^5.8.3
-        version: 5.9.2
-    publishDirectory: dist
-
-  platforms/javascript/core:
-    dependencies:
-      '@contentful/optimization-api-client':
-        specifier: workspace:*
-        version: link:../api-client/dist
-      '@preact/signals-core':
-        specifier: 'catalog:'
-        version: 1.12.1
-      contentful:
-        specifier: 'catalog:'
-        version: 11.8.5
-      es-toolkit:
-        specifier: 'catalog:'
-        version: 1.39.10
-      logger:
-        specifier: workspace:*
-        version: link:../../../lib/logger
-      p-retry:
-        specifier: 'catalog:'
-        version: 7.1.0
-      zod:
-        specifier: 'catalog:'
-        version: 4.1.5
-    devDependencies:
-      '@vitest/coverage-v8':
-        specifier: 'catalog:'
-        version: 3.2.4(vitest@3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.5.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1))
-      mocks:
-        specifier: workspace:*
-        version: link:../../../lib/mocks
-      msw:
-        specifier: 'catalog:'
-        version: 2.10.5(@types/node@24.2.0)(typescript@5.9.2)
-      rimraf:
-        specifier: 'catalog:'
-        version: 6.0.1
-      tslib:
-        specifier: 'catalog:'
-        version: 2.8.1
-      typescript:
-        specifier: ^5.8.3
-        version: 5.9.2
-      vitest:
-        specifier: ^3.2.4
-        version: 3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.5.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
-    publishDirectory: dist
-
   platforms/javascript/node:
     dependencies:
       '@contentful/optimization-core':
         specifier: workspace:*
-        version: link:../core/dist
+        version: link:../../../universal/core/dist
       es-toolkit:
         specifier: 'catalog:'
         version: 1.39.10
@@ -488,7 +377,7 @@ importers:
     dependencies:
       '@contentful/optimization-core':
         specifier: workspace:*
-        version: link:../core/dist
+        version: link:../../../universal/core/dist
       '@react-native-async-storage/async-storage':
         specifier: ^2.1.0
         version: 2.2.0(react-native@0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@15.0.1(typescript@5.9.2))(@types/react@18.3.26)(react@18.3.1))
@@ -529,7 +418,7 @@ importers:
     dependencies:
       '@contentful/optimization-core':
         specifier: workspace:*
-        version: link:../core/dist
+        version: link:../../../universal/core/dist
       '@types/js-cookie':
         specifier: 3.0.6
         version: 3.0.6
@@ -562,14 +451,125 @@ importers:
         specifier: ^5.8.3
         version: 5.9.2
       vite:
-        specifier: ^7.1.0
-        version: 7.1.1(@types/node@24.2.0)(jiti@2.5.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
+        specifier: ^7.1.11
+        version: 7.1.11(@types/node@24.2.0)(jiti@2.5.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
       vite-bundle-analyzer:
         specifier: ^1.2.1
         version: 1.2.1
       vite-tsconfig-paths:
         specifier: ^5.1.4
-        version: 5.1.4(typescript@5.9.2)(vite@7.1.1(@types/node@24.2.0)(jiti@2.5.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1))
+        version: 5.1.4(typescript@5.9.2)(vite@7.1.11(@types/node@24.2.0)(jiti@2.5.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1))
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.5.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
+    publishDirectory: dist
+
+  universal/api-client:
+    dependencies:
+      '@contentful/optimization-api-schemas':
+        specifier: workspace:*
+        version: link:../api-schemas/dist
+      es-toolkit:
+        specifier: 'catalog:'
+        version: 1.39.10
+      logger:
+        specifier: workspace:*
+        version: link:../../lib/logger
+      p-retry:
+        specifier: ^6.2.1
+        version: 6.2.1
+      zod:
+        specifier: 'catalog:'
+        version: 4.1.5
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 3.2.4(vitest@3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.5.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1))
+      mocks:
+        specifier: workspace:*
+        version: link:../../lib/mocks
+      msw:
+        specifier: 'catalog:'
+        version: 2.10.5(@types/node@24.2.0)(typescript@5.9.2)
+      rimraf:
+        specifier: 'catalog:'
+        version: 6.0.1
+      tslib:
+        specifier: 'catalog:'
+        version: 2.8.1
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.2
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.5.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
+    publishDirectory: dist
+
+  universal/api-schemas:
+    dependencies:
+      '@contentful/optimization-api-schemas':
+        specifier: workspace:*
+        version: link:dist
+      contentful:
+        specifier: 'catalog:'
+        version: 11.8.5
+      zod:
+        specifier: 'catalog:'
+        version: 4.1.5
+    devDependencies:
+      rimraf:
+        specifier: 'catalog:'
+        version: 6.0.1
+      tslib:
+        specifier: 'catalog:'
+        version: 2.8.1
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.2
+    publishDirectory: dist
+
+  universal/core:
+    dependencies:
+      '@contentful/optimization-api-client':
+        specifier: workspace:*
+        version: link:../api-client/dist
+      '@preact/signals-core':
+        specifier: 'catalog:'
+        version: 1.12.1
+      contentful:
+        specifier: 'catalog:'
+        version: 11.8.5
+      es-toolkit:
+        specifier: 'catalog:'
+        version: 1.39.10
+      logger:
+        specifier: workspace:*
+        version: link:../../lib/logger
+      p-retry:
+        specifier: 'catalog:'
+        version: 7.1.0
+      zod:
+        specifier: 'catalog:'
+        version: 4.1.5
+    devDependencies:
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 3.2.4(vitest@3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.5.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1))
+      mocks:
+        specifier: workspace:*
+        version: link:../../lib/mocks
+      msw:
+        specifier: 'catalog:'
+        version: 2.10.5(@types/node@24.2.0)(typescript@5.9.2)
+      rimraf:
+        specifier: 'catalog:'
+        version: 6.0.1
+      tslib:
+        specifier: 'catalog:'
+        version: 2.8.1
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.2
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.5.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
@@ -690,11 +690,6 @@ packages:
   '@babel/helpers@7.28.4':
     resolution: {integrity: sha512-HFN59MmQXGHVyYadKLVumYsA9dBFun/ldYxipEjzA4196jpLZd8UjEEBLkbEkvfYreDqJhZxYAWFPtrfhNpj4w==}
     engines: {node: '>=6.9.0'}
-
-  '@babel/parser@7.28.0':
-    resolution: {integrity: sha512-jVZGvOxOuNSsuQuLRTh13nU0AogFlw32w/MT+LV6D3sP5WdbW61E77RnkbaO2dUvmPAYrBDJXGn5gGS6tH4j8g==}
-    engines: {node: '>=6.0.0'}
-    hasBin: true
 
   '@babel/parser@7.28.4':
     resolution: {integrity: sha512-yZbBqeM6TkpP9du/I2pUZnJsRMGGvOuIrhjzC1AwHwW+6he4mni6Bp/m8ijn0iOuZuPI2BfkCoSRunpyjnrQKg==}
@@ -1283,10 +1278,6 @@ packages:
 
   '@babel/traverse@7.28.4':
     resolution: {integrity: sha512-YEzuboP2qvQavAcjgQNVgsvHIDv6ZpwXvcvjmyySP2DIMuByS/6ioU5G9pYrWHM6T2YDfc7xga9iNzYOs12CFQ==}
-    engines: {node: '>=6.9.0'}
-
-  '@babel/types@7.28.2':
-    resolution: {integrity: sha512-ruv7Ae4J5dUYULmeXw1gmb7rYRz57OWCPM57pHojnLq/3Z1CK2lNSLTCVjxVk1F/TZHwOZZrOWi0ur95BbLxNQ==}
     engines: {node: '>=6.9.0'}
 
   '@babel/types@7.28.4':
@@ -4289,6 +4280,15 @@ packages:
       picomatch:
         optional: true
 
+  fdir@6.5.0:
+    resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
+    engines: {node: '>=12.0.0'}
+    peerDependencies:
+      picomatch: ^3 || ^4
+    peerDependenciesMeta:
+      picomatch:
+        optional: true
+
   fecha@4.2.3:
     resolution: {integrity: sha512-OP2IUU6HeYKJi3i0z4A19kHMQoLVs4Hc+DPqqxI2h/DPZHTm/vjsfC6P0b4jCMy14XizLBqvndQ+UilD7707Jw==}
 
@@ -7259,6 +7259,10 @@ packages:
     resolution: {integrity: sha512-tX5e7OM1HnYr2+a2C/4V0htOcSQcoSTH9KgJnVvNm5zm/cyEWKJ7j7YutsH9CxMdtOkkLFy2AHrMci9IM8IPZQ==}
     engines: {node: '>=12.0.0'}
 
+  tinyglobby@0.2.15:
+    resolution: {integrity: sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ==}
+    engines: {node: '>=12.0.0'}
+
   tinypool@1.1.1:
     resolution: {integrity: sha512-Zba82s87IFq9A9XmjiX5uZA/ARWDrB03OHlq+Vw1fSdt0I+4/Kutwy8BP4Y/y/aORMo61FQ0vIb5j44vSo5Pkg==}
     engines: {node: ^18.0.0 || >=20.0.0}
@@ -7564,6 +7568,46 @@ packages:
 
   vite@7.1.1:
     resolution: {integrity: sha512-yJ+Mp7OyV+4S+afWo+QyoL9jFWD11QFH0i5i7JypnfTcA1rmgxCbiA8WwAICDEtZ1Z1hzrVhN8R8rGTqkTY8ZQ==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+    hasBin: true
+    peerDependencies:
+      '@types/node': ^24.0.13
+      jiti: '>=1.21.0'
+      less: ^4.0.0
+      lightningcss: ^1.21.0
+      sass: ^1.70.0
+      sass-embedded: ^1.70.0
+      stylus: '>=0.54.8'
+      sugarss: ^5.0.0
+      terser: ^5.16.0
+      tsx: ^4.8.1
+      yaml: ^2.4.2
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+      jiti:
+        optional: true
+      less:
+        optional: true
+      lightningcss:
+        optional: true
+      sass:
+        optional: true
+      sass-embedded:
+        optional: true
+      stylus:
+        optional: true
+      sugarss:
+        optional: true
+      terser:
+        optional: true
+      tsx:
+        optional: true
+      yaml:
+        optional: true
+
+  vite@7.1.11:
+    resolution: {integrity: sha512-uzcxnSDVjAopEUjljkWh8EIrg6tlzrjFUfMcR1EVsRDGwf/ccef0qQPRyOrROwhrTDaApueq+ja+KLPlzR/zdg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
@@ -8019,10 +8063,6 @@ snapshots:
     dependencies:
       '@babel/template': 7.27.2
       '@babel/types': 7.28.4
-
-  '@babel/parser@7.28.0':
-    dependencies:
-      '@babel/types': 7.28.2
 
   '@babel/parser@7.28.4':
     dependencies:
@@ -8737,11 +8777,6 @@ snapshots:
       debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
-
-  '@babel/types@7.28.2':
-    dependencies:
-      '@babel/helper-string-parser': 7.27.1
-      '@babel/helper-validator-identifier': 7.27.1
 
   '@babel/types@7.28.4':
     dependencies:
@@ -12703,6 +12738,10 @@ snapshots:
     optionalDependencies:
       picomatch: 4.0.3
 
+  fdir@6.5.0(picomatch@4.0.3):
+    optionalDependencies:
+      picomatch: 4.0.3
+
   fecha@4.2.3: {}
 
   figlet@1.9.3:
@@ -14490,8 +14529,8 @@ snapshots:
 
   magicast@0.3.5:
     dependencies:
-      '@babel/parser': 7.28.0
-      '@babel/types': 7.28.2
+      '@babel/parser': 7.28.4
+      '@babel/types': 7.28.4
       source-map-js: 1.2.1
 
   make-dir@2.1.0:
@@ -16382,6 +16421,11 @@ snapshots:
       fdir: 6.4.6(picomatch@4.0.3)
       picomatch: 4.0.3
 
+  tinyglobby@0.2.15:
+    dependencies:
+      fdir: 6.5.0(picomatch@4.0.3)
+      picomatch: 4.0.3
+
   tinypool@1.1.1: {}
 
   tinyrainbow@2.0.0: {}
@@ -16674,7 +16718,7 @@ snapshots:
       debug: 4.4.1
       es-module-lexer: 1.7.0
       pathe: 2.0.3
-      vite: 7.1.1(@types/node@24.2.0)(jiti@2.5.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
+      vite: 7.1.11(@types/node@24.2.0)(jiti@2.5.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
     transitivePeerDependencies:
       - '@types/node'
       - jiti
@@ -16689,13 +16733,13 @@ snapshots:
       - tsx
       - yaml
 
-  vite-tsconfig-paths@5.1.4(typescript@5.9.2)(vite@7.1.1(@types/node@24.2.0)(jiti@2.5.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)):
+  vite-tsconfig-paths@5.1.4(typescript@5.9.2)(vite@7.1.11(@types/node@24.2.0)(jiti@2.5.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)):
     dependencies:
       debug: 4.4.1
       globrex: 0.1.2
       tsconfck: 3.1.6(typescript@5.9.2)
     optionalDependencies:
-      vite: 7.1.1(@types/node@24.2.0)(jiti@2.5.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
+      vite: 7.1.11(@types/node@24.2.0)(jiti@2.5.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -16708,6 +16752,22 @@ snapshots:
       postcss: 8.5.6
       rollup: 4.46.2
       tinyglobby: 0.2.14
+    optionalDependencies:
+      '@types/node': 24.2.0
+      fsevents: 2.3.3
+      jiti: 2.5.1
+      terser: 5.43.1
+      tsx: 4.20.3
+      yaml: 2.8.1
+
+  vite@7.1.11(@types/node@24.2.0)(jiti@2.5.1)(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1):
+    dependencies:
+      esbuild: 0.25.8
+      fdir: 6.5.0(picomatch@4.0.3)
+      picomatch: 4.0.3
+      postcss: 8.5.6
+      rollup: 4.46.2
+      tinyglobby: 0.2.15
     optionalDependencies:
       '@types/node': 24.2.0
       fsevents: 2.3.3

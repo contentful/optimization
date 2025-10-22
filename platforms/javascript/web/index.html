@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Optimization Web SDK Vite</title>
+    <title>Optimization SDK Dev Development Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/contentful@latest/dist/contentful.browser.min.js"></script>
     <style>
       html,
@@ -87,6 +87,10 @@
         clientId: '%VITE_NINETAILED_CLIENT_ID%',
         environment: '%VITE_NINETAILED_ENVIRONMENT%',
         logLevel: 'debug',
+        app: {
+          name: document.title,
+          version: '0.0.0',
+        },
         api: {
           analytics: { baseUrl: '%VITE_INSIGHTS_API_BASE_URL%' },
           personalization: { baseUrl: '%VITE_EXPERIENCE_API_BASE_URL%' },
@@ -166,11 +170,8 @@
       }
 
       optimization.states.consent.subscribe(async (consent) => {
-        if (!consent) return
-
-        await optimization.personalization.page()
+        document.querySelector('#consent').innerText = consent ? 'Consented' : 'Unconsented'
       })
-      optimization.consent(true)
 
       optimization.states.eventStream.subscribe((event) => {
         if (!event) return
@@ -205,14 +206,18 @@
           }) ?? [],
         )
       })
+
+      optimization.personalization.page()
     </script>
 
-    <h1>Optimization SDK Dev Testing Dashboard</h1>
+    <h1>Optimization SDK Dev Development Dashboard</h1>
 
     <main>
       <section>
-        <h3>Server States</h3>
+        <h3>States</h3>
 
+        <span id="consent"></span>
+        |
         <button>Custom Flags</button>
         <dialog>
           <pre id="custom-flags"></pre>
