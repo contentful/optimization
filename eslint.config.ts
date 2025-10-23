@@ -5,7 +5,16 @@ import typescript, { type ConfigArray } from 'typescript-eslint'
 
 const config: ConfigArray = typescript.config(
   {
-    ignores: ['**/node_modules', '**/coverage', '**/dist', '**/*.{js,jsx,cjs,mjs}'],
+    ignores: [
+      '**/node_modules',
+      '**/coverage',
+      '**/dist',
+      '**/*.{js,jsx,cjs,mjs}',
+      '**/android/**',
+      '**/ios/**',
+      '**/build/**',
+      '**/.bundle/**',
+    ],
   },
   js.configs.recommended,
   {
@@ -50,6 +59,13 @@ const config: ConfigArray = typescript.config(
       '@typescript-eslint/unbound-method': 'off',
       'max-nested-callbacks': 'off',
       'promise/avoid-new': 'off',
+    },
+  },
+  {
+    // Allow console statements in implementation/demo projects
+    files: ['implementations/**/*.{ts,tsx,js,jsx}'],
+    rules: {
+      'no-console': 'off',
     },
   },
   prettier,
