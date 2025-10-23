@@ -1,5 +1,5 @@
-const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
-const path = require('path');
+const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config')
+const path = require('path')
 
 /**
  * Metro configuration
@@ -9,7 +9,7 @@ const path = require('path');
  */
 
 // Get the workspace root (two levels up from this file)
-const workspaceRoot = path.resolve(__dirname, '../..');
+const workspaceRoot = path.resolve(__dirname, '../..')
 
 const config = {
   watchFolders: [workspaceRoot],
@@ -22,6 +22,30 @@ const config = {
     sourceExts: ['js', 'jsx', 'ts', 'tsx', 'json', 'mjs', 'cjs'],
     // Resolve to browser versions of packages for React Native
     resolveRequest: (context, moduleName, platform) => {
+      // Resolve workspace packages to their source files instead of dist
+      const workspacePackages = {
+        '@contentful/optimization-core': path.resolve(workspaceRoot, 'universal/core/src/index.ts'),
+        '@contentful/optimization-api-client': path.resolve(
+          workspaceRoot,
+          'universal/api-client/src/index.ts',
+        ),
+        '@contentful/optimization-api-schemas': path.resolve(
+          workspaceRoot,
+          'universal/api-schemas/src/index.ts',
+        ),
+        '@contentful/optimization-react-native': path.resolve(
+          workspaceRoot,
+          'platforms/javascript/react-native/src/index.ts',
+        ),
+      }
+
+      if (workspacePackages[moduleName]) {
+        return {
+          filePath: workspacePackages[moduleName],
+          type: 'sourceFile',
+        }
+      }
+
       // Use browser version of diary package (no Node.js dependencies)
       if (moduleName === 'diary') {
         return {
@@ -30,12 +54,12 @@ const config = {
             'node_modules/.pnpm/diary@0.4.5/node_modules/diary/browser.js',
           ),
           type: 'sourceFile',
-        };
+        }
       }
       // Let Metro handle everything else
-      return context.resolveRequest(context, moduleName, platform);
+      return context.resolveRequest(context, moduleName, platform)
     },
   },
-};
+}
 
-module.exports = mergeConfig(getDefaultConfig(__dirname), config);
+module.exports = mergeConfig(getDefaultConfig(__dirname), config)
