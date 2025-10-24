@@ -13,37 +13,55 @@ export const Link = z.object({
 })
 export type Link = z.infer<typeof Link>
 
-const ContentTypeLink = z.object({
+export const ContentTypeLink = z.object({
   sys: z.object({
     type: z.literal('Link'),
     linkType: z.literal('ContentType'),
     id: z.string(),
   }),
 })
+export type ContentTypeLink = z.infer<typeof ContentTypeLink>
 
-const EnvironmentLink = z.object({
+export const EnvironmentLink = z.object({
   sys: z.object({
     type: z.literal('Link'),
     linkType: z.literal('Environment'),
     id: z.string(),
   }),
 })
+export type EnvironmentLink = z.infer<typeof EnvironmentLink>
 
-const SpaceLink = z.object({
+export const SpaceLink = z.object({
   sys: z.object({
     type: z.literal('Link'),
     linkType: z.literal('Space'),
     id: z.string(),
   }),
 })
+export type SpaceLink = z.infer<typeof SpaceLink>
 
-const TagLink = z.object({
+export const TagLink = z.object({
   sys: z.object({
     type: z.literal('Link'),
     linkType: z.literal('Tag'),
     id: z.string(),
   }),
 })
+export type TagLink = z.infer<typeof TagLink>
+
+export const EntrySys = z.object({
+  type: z.literal('Entry'),
+  contentType: ContentTypeLink,
+  publishedVersion: z.number(),
+  id: z.string(),
+  createdAt: z.any(),
+  updatedAt: z.any(),
+  locale: z.optional(z.string()),
+  revision: z.number(),
+  space: SpaceLink,
+  environment: EnvironmentLink,
+})
+export type EntrySys = z.infer<typeof EntrySys>
 
 export const Entry = z.object({
   fields: EntryFields,
@@ -53,18 +71,7 @@ export const Entry = z.object({
     }),
     z.json(),
   ),
-  sys: z.object({
-    type: z.literal('Entry'),
-    contentType: ContentTypeLink,
-    publishedVersion: z.number(),
-    id: z.string(),
-    createdAt: z.any(),
-    updatedAt: z.any(),
-    locale: z.optional(z.string()),
-    revision: z.number(),
-    space: SpaceLink,
-    environment: EnvironmentLink,
-  }),
+  sys: EntrySys,
 })
 export type Entry = z.infer<typeof Entry>
 

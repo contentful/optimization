@@ -118,6 +118,8 @@
         const entryId = data.get('entryId')
 
         await addPersonalizedEntry(entryId, true)
+
+        localStorage.setItem(LAST_ENTRY_ID_KEY, entryId)
       })
 
       const triggers = document.querySelectorAll('section > button')
@@ -143,6 +145,17 @@
         return clone
       }
 
+      function findMergeTagEntries(fragment, mergeTagEntries = []) {
+        if (!fragment?.content) return
+        mergeTagEntries.push(
+          ...fragment.content.filter((item) => item.nodeType.startsWith('embedded')),
+        )
+        fragment.content
+          .filter((item) => 'content' in item)
+          .forEach((item) => findMergeTagEntries(item, mergeTagEntries))
+        return mergeTagEntries
+      }
+
       async function addPersonalizedEntry(entryId, showError = false) {
         let entry
 
@@ -162,11 +175,33 @@
 
         const personalizedEntry = optimization.personalization.personalizeEntry(entry)
 
+        let title = personalizedEntry.fields.internalTitle
+        let mergeTagValues = undefined
+
+        const richTextField = Object.values(personalizedEntry.fields)?.find(
+          (field) => typeof field === 'object' && field?.nodeType === 'document',
+        )
+
+        if (richTextField) {
+          const mergeTagEntries = findMergeTagEntries(richTextField)
+
+          mergeTagValues = mergeTagEntries.map(({ data: { target } }) =>
+            optimization.personalization.getMergeTagValue(target),
+          )
+
+          title = title.concat(': ', mergeTagValues.join(', '))
+        }
+
         document
           .querySelector('#entries')
-          .prepend(createDetailsDialog(personalizedEntry.fields.internalTitle, personalizedEntry))
-
-        localStorage.setItem(LAST_ENTRY_ID_KEY, entryId)
+          .prepend(
+            createDetailsDialog(
+              title,
+              mergeTagValues
+                ? [{ 'Resolved merge tag values': mergeTagValues }, personalizedEntry]
+                : personalizedEntry,
+            ),
+          )
       }
 
       optimization.states.consent.subscribe(async (consent) => {
