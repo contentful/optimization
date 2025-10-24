@@ -1,0 +1,41 @@
+{
+  "private": true,
+  "name": "@implementation/node-web",
+  "description": "Reference implementation for NodeJS Web projects",
+  "license": "MIT",
+  "main": "dist/app.js",
+  "types": "dist/app.d.ts",
+  "scripts": {
+    "clean": "rimraf ./dist ./coverage ./playwright-report ./test-results",
+    "serve": "pnpm serve:mocks && pnpm serve:app",
+    "serve:app": "pm2 start --name node-app \"tsx --env-file=.env ./src/app.ts\"",
+    "serve:mocks": "pm2 start --name node-mocks \"pnpm --filter mocks mocks:serve\"",
+    "serve:stop": "pm2 stop node-app node-mocks && pm2 delete node-app node-mocks",
+    "test:e2e": "pnpm serve && playwright test; E2E_RESULT=$?; pnpm serve:stop; exit $E2E_RESULT",
+    "test:e2e:codegen": "playwright codegen",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:ui": "playwright test --ui",
+    "test:unit": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@contentful/optimization-node": "workspace:*",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "tslib": "catalog:"
+  },
+  "devDependencies": {
+    "@playwright/test": "catalog:",
+    "@types/express": "^5.0.3",
+    "@types/node": "catalog:",
+    "@types/supertest": "6.0.3",
+    "@vitest/coverage-v8": "catalog:",
+    "dotenv": "catalog:",
+    "pm2": "catalog:",
+    "rimraf": "catalog:",
+    "supertest": "7.1.3",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
