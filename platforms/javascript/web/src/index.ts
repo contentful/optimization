@@ -9,7 +9,7 @@ import {
 import { merge } from 'es-toolkit'
 import Cookies from 'js-cookie'
 import { beaconHandler } from './beacon/beaconHandler'
-import { getLocale, getPageProperties, getUserAgent } from './builders/EventBuilder'
+import { getAnonymousId, getLocale, getPageProperties, getUserAgent } from './builders/EventBuilder'
 import LocalStore from './storage/LocalStore'
 
 declare global {
@@ -54,6 +54,7 @@ function mergeConfig({ app, defaults, logLevel, ...config }: OptimizationWebConf
         app,
         channel: 'web',
         library: { name: 'Optimization Web API', version: '0.0.0' },
+        getAnonymousId,
         getLocale,
         getPageProperties,
         getUserAgent,

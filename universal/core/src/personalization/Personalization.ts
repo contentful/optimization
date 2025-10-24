@@ -7,6 +7,7 @@ import {
   type Flags,
   type IdentifyBuilderArgs,
   IdentifyEvent,
+  type MergeTagEntry,
   type OptimizationData,
   type PageViewBuilderArgs,
   PageViewEvent,
@@ -37,6 +38,7 @@ import {
   toObservable,
 } from '../signals'
 import { PersonalizedEntryResolver } from './resolvers'
+import MergeTagValueResolver from './resolvers/MergeTagValueResolver'
 
 export interface PersonalizationProductConfigDefaults {
   changes?: ChangeArray
@@ -56,6 +58,7 @@ export interface PersonalizationStates {
 
 class Personalization extends ProductBase<PersonalizationEvent> implements ConsentGuard {
   readonly personalizedEntryResolver = PersonalizedEntryResolver
+  readonly mergeTagValueResolver = MergeTagValueResolver
 
   readonly states: PersonalizationStates = {
     flags: toObservable(flags),
@@ -129,6 +132,10 @@ class Personalization extends ProductBase<PersonalizationEvent> implements Conse
     return PersonalizedEntryResolver.resolve(entry)
   }
 
+  getMergeTagValue(embeddedEntryNodeTarget: MergeTagEntry): unknown {
+    return MergeTagValueResolver.resolve(embeddedEntryNodeTarget)
+  }
+
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async identify(args: IdentifyBuilderArgs): Promise<OptimizationData | undefined> {
     logger.info('[Personalization] Sending "identify" event')
@@ -172,6 +179,7 @@ class Personalization extends ProductBase<PersonalizationEvent> implements Conse
     eventSignal.value = intercepted
 
     const anonymousId = this.builder.getAnonymousId()
+    if (anonymousId) logger.info('[Personalization] Anonymous ID found:', anonymousId)
 
     const data = await this.api.experience.upsertProfile({
       profileId: anonymousId ?? profileSignal.value?.id,
