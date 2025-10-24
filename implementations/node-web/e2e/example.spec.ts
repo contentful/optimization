@@ -9,7 +9,7 @@ test('responds with the client ID', async ({ request }) => {
 })
 
 test('displays client ID', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('http://localhost:4000/')
 
   await expect(page.getByTestId('clientId')).toHaveText(CLIENT_ID)
 })
