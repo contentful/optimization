@@ -1,0 +1,30 @@
+server {
+  # TODO: consider '<domain>.local' to support multiple hosts
+  server_name localhost;
+
+  ssi on;
+  ssi_types text/html;
+
+  set $NGINX_NINETAILED_CLIENT_ID "${VITE_NINETAILED_CLIENT_ID}";
+  set $NGINX_NINETAILED_ENVIRONMENT "${VITE_NINETAILED_ENVIRONMENT}";
+
+  set $NGINX_CONTENTFUL_TOKEN "${VITE_CONTENTFUL_TOKEN}";
+  set $NGINX_CONTENTFUL_PREVIEW_TOKEN "${VITE_CONTENTFUL_PREVIEW_TOKEN}";
+  set $NGINX_CONTENTFUL_ENVIRONMENT "${VITE_CONTENTFUL_ENVIRONMENT}";
+  set $NGINX_CONTENTFUL_SPACE_ID "${VITE_CONTENTFUL_SPACE_ID}";
+
+  set $NGINX_EXPERIENCE_API_BASE_URL "${VITE_EXPERIENCE_API_BASE_URL}";
+  set $NGINX_INSIGHTS_API_BASE_URL "${VITE_INSIGHTS_API_BASE_URL}";
+
+  listen 80;
+
+  root /usr/share/nginx/html;
+
+  index index.html;
+
+  location / {
+    try_files $uri $uri/ =404;
+  }
+
+  # TODO: add CSP & CORS directives for more thorough testing
+}

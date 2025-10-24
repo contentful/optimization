@@ -7,3 +7,9 @@ test('responds with the client ID', async ({ request }) => {
 
   expect(await response.text()).toEqual(CLIENT_ID)
 })
+
+test('displays client ID', async ({ page }) => {
+  await page.goto('/')
+
+  await expect(page.getByTestId('clientId')).toHaveText(CLIENT_ID)
+})
