@@ -1,7 +1,6 @@
 import { MergeTagEntry, Profile } from '@contentful/optimization-api-client'
 import { get } from 'es-toolkit/compat'
 import { logger } from 'logger'
-import { profile as profileSignal } from '../../signals'
 
 const RESOLUTION_WARNING_BASE = '[Personalization] Could not resolve Merge Tag value:'
 
@@ -19,7 +18,7 @@ const MergeTagValueResolver = {
     })
   },
 
-  getValueFromProfile(id: string, profile: Profile | undefined = profileSignal.value): unknown {
+  getValueFromProfile(id: string, profile?: Profile): unknown {
     const selectors = MergeTagValueResolver.normalizeSelectors(id)
     const matchingSelector = selectors.find((selector) => get(profile, selector))
 
@@ -28,10 +27,7 @@ const MergeTagValueResolver = {
     return get(profile, matchingSelector)
   },
 
-  resolve(
-    mergeTagEntry: MergeTagEntry | undefined,
-    profile: Profile | undefined = profileSignal.value,
-  ): unknown {
+  resolve(mergeTagEntry: MergeTagEntry | undefined, profile?: Profile): unknown {
     if (!Profile.safeParse(profile).success) {
       logger.warn(RESOLUTION_WARNING_BASE, 'no valid profile')
       return

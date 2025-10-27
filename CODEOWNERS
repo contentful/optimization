@@ -1,4 +1,4 @@
 *      @phobetron @maroun9t @maxrawlinger
 
 # github actions
-*.yaml @Lp-Francois
+.github/**/* @phobetron @Lp-Francois

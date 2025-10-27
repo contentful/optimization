@@ -3,6 +3,7 @@ import {
   type App,
   type CoreConfig,
   CoreStateful,
+  type CoreStatefulConfig,
   effect,
   signals,
 } from '@contentful/optimization-core'
@@ -19,11 +20,16 @@ declare global {
   }
 }
 
-export interface OptimizationWebConfig extends CoreConfig {
+export interface OptimizationWebConfig extends CoreStatefulConfig {
   app?: App
 }
 
-function mergeConfig({ app, defaults, logLevel, ...config }: OptimizationWebConfig): CoreConfig {
+function mergeConfig({
+  app,
+  defaults,
+  logLevel,
+  ...config
+}: OptimizationWebConfig): CoreStatefulConfig {
   const {
     consent = LocalStore.consent,
     analytics: { profile: analyticsProfile = LocalStore.profile } = {},

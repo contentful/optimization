@@ -3,48 +3,44 @@ import {
   type ComponentViewBuilderArgs,
   ComponentViewEvent,
   type InsightsEvent,
+  type Profile,
 } from '@contentful/optimization-api-client'
 import { logger } from 'logger'
-import { guardedBy } from '../lib/decorators'
-import { event as eventSignal, profile as profileSignal } from '../signals'
 import AnalyticsBase from './AnalyticsBase'
 
 class AnalyticsStateless extends AnalyticsBase {
-  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async trackComponentView(args: ComponentViewBuilderArgs): Promise<void> {
+  async trackComponentView(args: ComponentViewBuilderArgs & { profile?: Profile }): Promise<void> {
     logger.info(`[Analytics] Processing "component view" event`)
 
-    const event = this.builder.buildComponentView(args)
+    const { profile, ...builderArgs } = args
+
+    const event = this.builder.buildComponentView(builderArgs)
 
     const intercepted = await this.interceptor.event.run(event)
 
     const parsed = ComponentViewEvent.parse(intercepted)
 
-    eventSignal.value = parsed
-
-    await this.sendBatchEvent(parsed)
+    await this.sendBatchEvent(parsed, profile)
   }
 
-  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async trackFlagView(args: ComponentViewBuilderArgs): Promise<void> {
+  async trackFlagView(args: ComponentViewBuilderArgs & { profile?: Profile }): Promise<void> {
     logger.debug(`[Analytics] Processing "flag view" event`)
 
-    const event = this.builder.buildFlagView(args)
+    const { profile, ...builderArgs } = args
+
+    const event = this.builder.buildFlagView(builderArgs)
 
     const intercepted = await this.interceptor.event.run(event)
 
     const parsed = ComponentViewEvent.parse(intercepted)
 
-    eventSignal.value = parsed
-
-    await this.sendBatchEvent(parsed)
+    await this.sendBatchEvent(parsed, profile)
   }
 
-  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async sendBatchEvent(event: InsightsEvent): Promise<void> {
+  async sendBatchEvent(event: InsightsEvent, profile?: Profile): Promise<void> {
     const batchEvent: BatchInsightsEventArray = BatchInsightsEventArray.parse([
       {
-        profile: profileSignal.value,
+        profile,
         events: [event],
       },
     ])

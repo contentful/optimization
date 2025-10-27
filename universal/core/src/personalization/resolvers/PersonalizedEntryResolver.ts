@@ -11,7 +11,6 @@ import {
 } from '@contentful/optimization-api-client'
 import type { Entry } from 'contentful'
 import { logger } from 'logger'
-import { personalizations as personalizationsSignal } from '../../signals'
 
 const RESOLUTION_WARNING_BASE = '[Personalization] Could not resolve personalized entry variant:'
 
@@ -125,7 +124,7 @@ const PersonalizedEntryResolver = {
     return selectedVariantEntry
   },
 
-  resolve(entry: Entry, personalizations = personalizationsSignal.value): Entry {
+  resolve(entry: Entry, personalizations?: SelectedPersonalizationArray): Entry {
     logger.info('[Personalization] Resolving personalized entry for baseline entry', entry.sys.id)
 
     if (!personalizations?.length) {
