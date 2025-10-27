@@ -98,17 +98,17 @@ Tests use Detox's API along with Jest. Example:
 ```javascript
 describe('My Feature', () => {
   beforeAll(async () => {
-    await device.launchApp();
-  });
+    await device.launchApp()
+  })
 
   beforeEach(async () => {
-    await device.reloadReactNative();
-  });
+    await device.reloadReactNative()
+  })
 
   it('should display welcome screen', async () => {
-    await expect(element(by.id('welcomeText'))).toBeVisible();
-  });
-});
+    await expect(element(by.id('welcomeText'))).toBeVisible()
+  })
+})
 ```
 
 ### Test IDs

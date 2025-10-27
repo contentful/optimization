@@ -1,2 +1,8 @@
 docs
 pnpm-lock.yaml
+**/ios/Pods/**
+**/ios/build/**
+**/android/build/**
+**/android/.gradle/**
+**/.bundle/**
+**/node_modules/**
