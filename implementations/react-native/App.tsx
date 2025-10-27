@@ -161,6 +161,10 @@ function App(): React.JSX.Element {
         await Optimization.create({
           clientId,
           environment,
+          logLevel: 'debug', // Enable debug logging to console
+          defaults: {
+            consent: true, // Grant consent for tracking
+          },
         })
 
         // Store SDK info for display
