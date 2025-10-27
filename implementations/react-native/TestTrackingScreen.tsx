@@ -14,7 +14,11 @@ import {
 } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
-import { OptimizationTrackedView, ScrollProvider } from '@contentful/optimization-react-native'
+import {
+  logger,
+  OptimizationTrackedView,
+  ScrollProvider,
+} from '@contentful/optimization-react-native'
 
 interface ThemeColors {
   backgroundColor: string
@@ -39,16 +43,30 @@ export function TestTrackingScreen({
   const [trackedEvents, setTrackedEvents] = useState<string[]>([])
 
   useEffect(() => {
+    logger.debug('[TestTrackingScreen] Setting up event stream subscription')
+
     // Listen to the event stream to capture tracking events
     const subscription = sdk.states.eventStream.subscribe((event) => {
+      logger.debug('[TestTrackingScreen] Received event from stream:', event)
+
       if (event?.type === 'component') {
         const { componentId } = event as { componentId?: string }
         const timestamp = new Date().toLocaleTimeString()
-        setTrackedEvents((prev) => [...prev, `${timestamp}: Tracked "${componentId}"`])
+        logger.debug('[TestTrackingScreen] Component event detected:', componentId)
+        setTrackedEvents((prev) => {
+          const newEvents = [...prev, `${timestamp}: Tracked "${componentId}"`]
+          logger.debug('[TestTrackingScreen] Updated trackedEvents:', newEvents)
+          return newEvents
+        })
+      } else {
+        logger.debug('[TestTrackingScreen] Event is not a component event, type:', event?.type)
       }
     })
 
+    logger.debug('[TestTrackingScreen] Event stream subscription active')
+
     return () => {
+      logger.debug('[TestTrackingScreen] Unsubscribing from event stream')
       subscription.unsubscribe()
     }
   }, [sdk])

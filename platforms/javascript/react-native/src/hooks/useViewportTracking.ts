@@ -1,6 +1,6 @@
 import { logger } from '@contentful/optimization-core'
 import { useCallback, useEffect, useRef } from 'react'
-import { findNodeHandle, type View } from 'react-native'
+import type { LayoutChangeEvent } from 'react-native'
 import { useOptimization } from '../context/OptimizationContext'
 import { useScrollContext } from '../context/ScrollContext'
 
@@ -12,10 +12,11 @@ export interface UseViewportTrackingOptions {
 }
 
 export interface UseViewportTrackingReturn {
-  ref: React.RefObject<View>
   isVisible: boolean
-  onLayout: () => void
+  onLayout: (event: LayoutChangeEvent) => void
 }
+
+const PERCENTAGE_MULTIPLIER = 100
 
 export function useViewportTracking({
   componentId,
@@ -26,43 +27,61 @@ export function useViewportTracking({
   const optimization = useOptimization()
   const { scrollY, viewportHeight } = useScrollContext()
 
-  const viewRef = useRef<View>(null)
   const hasTrackedRef = useRef(false)
-  const dimensionsRef = useRef<{ top: number; height: number } | null>(null)
+  const dimensionsRef = useRef<{ y: number; height: number } | null>(null)
   const isVisibleRef = useRef(false)
 
-  const measureView = useCallback(() => {
-    if (!viewRef.current) return
-
-    const handle = findNodeHandle(viewRef.current)
-    if (!handle) return
-
-    viewRef.current.measureInWindow((_x, y, _width, height) => {
-      if (height > 0) {
-        dimensionsRef.current = { top: y, height }
-        logger.debug(
-          `[ViewportTracking] Measured component ${componentId}: top=${y}, height=${height}`,
-        )
-      }
-    })
-  }, [componentId])
+  const handleLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      const {
+        nativeEvent: {
+          layout: { y, height },
+        },
+      } = event
+      logger.debug(
+        `[ViewportTracking] Layout for ${componentId}: y=${y}, height=${height} (position within ScrollView content)`,
+      )
+      dimensionsRef.current = { y, height }
+    },
+    [componentId],
+  )
 
   const checkVisibility = useCallback(() => {
     const { current: dimensions } = dimensionsRef
 
-    if (hasTrackedRef.current || !dimensions || viewportHeight === 0) {
+    if (hasTrackedRef.current) {
+      logger.debug(`[ViewportTracking] ${componentId} already tracked, skipping`)
       return
     }
 
-    const { top: elementTop, height: elementHeight } = dimensions
-    const elementBottom = elementTop + elementHeight
+    if (!dimensions) {
+      logger.debug(`[ViewportTracking] ${componentId} has no dimensions yet`)
+      return
+    }
 
-    // Calculate visibility based on threshold
-    // For threshold = 1.0 (fully visible), the element must be completely within viewport
-    const visibleTop = Math.max(elementTop, 0)
-    const visibleBottom = Math.min(elementBottom, viewportHeight)
+    if (viewportHeight === 0) {
+      logger.debug(`[ViewportTracking] ${componentId} viewport height is 0`)
+      return
+    }
+
+    // Element's position within the ScrollView content
+    const { y: elementY, height: elementHeight } = dimensions
+    const elementBottom = elementY + elementHeight
+
+    // Calculate what portion of the element is visible in the viewport
+    // The viewport shows content from scrollY to scrollY + viewportHeight
+    const viewportTop = scrollY
+    const viewportBottom = scrollY + viewportHeight
+
+    // Calculate the intersection between element and viewport
+    const visibleTop = Math.max(elementY, viewportTop)
+    const visibleBottom = Math.min(elementBottom, viewportBottom)
     const visibleHeight = Math.max(0, visibleBottom - visibleTop)
     const visibilityRatio = visibleHeight / elementHeight
+
+    logger.debug(
+      `[ViewportTracking] ${componentId} visibility check: elementY=${elementY.toFixed(0)}, elementBottom=${elementBottom.toFixed(0)}, scrollY=${scrollY.toFixed(0)}, viewportHeight=${viewportHeight.toFixed(0)}, viewportTop=${viewportTop.toFixed(0)}, viewportBottom=${viewportBottom.toFixed(0)}, visibleHeight=${visibleHeight.toFixed(0)}, ratio=${visibilityRatio.toFixed(2)}, threshold=${threshold}`,
+    )
 
     const isNowVisible = visibilityRatio >= threshold
 
@@ -80,19 +99,21 @@ export function useViewportTracking({
           experienceId,
           variantIndex,
         })
+        .then(() => {
+          logger.info(`[ViewportTracking] Successfully tracked ${componentId}`)
+        })
         .catch((error: unknown) => {
           logger.error(
             `[ViewportTracking] Failed to track component view for ${componentId}:`,
             error,
           )
         })
+    } else {
+      logger.debug(
+        `[ViewportTracking] ${componentId} is not visible enough (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%)`,
+      )
     }
-  }, [componentId, experienceId, variantIndex, threshold, viewportHeight, optimization])
-
-  // Measure on layout changes
-  const handleLayout = useCallback(() => {
-    measureView()
-  }, [measureView])
+  }, [componentId, experienceId, variantIndex, threshold, scrollY, viewportHeight, optimization])
 
   // Check visibility when scroll position or viewport changes
   useEffect(() => {
@@ -100,7 +121,6 @@ export function useViewportTracking({
   }, [scrollY, viewportHeight, checkVisibility])
 
   return {
-    ref: viewRef,
     isVisible: isVisibleRef.current,
     onLayout: handleLayout,
   }

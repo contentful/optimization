@@ -1,3 +1,4 @@
+import { logger } from '@contentful/optimization-core'
 import React, { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 import {
   ScrollView,
@@ -12,6 +13,8 @@ interface ScrollContextValue {
 }
 
 const ScrollContext = createContext<ScrollContextValue | null>(null)
+
+const SCROLL_LOG_THRESHOLD = 50
 
 export function useScrollContext(): ScrollContextValue {
   const context = useContext(ScrollContext)
@@ -44,6 +47,14 @@ export function ScrollProvider({
       const { contentOffset, layoutMeasurement } = nativeEvent
       const { y: scrollYValue } = contentOffset
       const { height: viewportHeightValue } = layoutMeasurement
+
+      // Only log on significant changes to avoid spam
+      if (Math.abs(scrollYValue - scrollY) > SCROLL_LOG_THRESHOLD || viewportHeight === 0) {
+        logger.debug(
+          `[ScrollProvider] Scroll: y=${scrollYValue.toFixed(0)}, viewport=${viewportHeightValue.toFixed(0)}`,
+        )
+      }
+
       setScrollY(scrollYValue)
       setViewportHeight(viewportHeightValue)
 
@@ -52,7 +63,7 @@ export function ScrollProvider({
         onScroll(event)
       }
     },
-    [onScroll],
+    [onScroll, scrollY, viewportHeight],
   )
 
   const contextValue: ScrollContextValue = {

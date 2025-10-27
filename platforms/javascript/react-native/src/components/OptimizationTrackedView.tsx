@@ -72,7 +72,7 @@ export function OptimizationTrackedView({
   style,
   threshold = 1.0,
 }: OptimizationTrackedViewProps): React.JSX.Element {
-  const { ref, onLayout } = useViewportTracking({
+  const { onLayout } = useViewportTracking({
     componentId,
     experienceId,
     variantIndex,
@@ -80,7 +80,7 @@ export function OptimizationTrackedView({
   })
 
   return (
-    <View ref={ref} style={style} onLayout={onLayout}>
+    <View style={style} onLayout={onLayout}>
       {children}
     </View>
   )
