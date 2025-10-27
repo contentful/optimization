@@ -1,7 +1,10 @@
+// Polyfill crypto.randomUUID() for React Native
+import './polyfills/crypto'
+
 import {
   type CoreConfig,
   CoreStateful,
-  type CoreStatefulConfig,
+  CoreStatefulConfig,
   effect,
   signals,
 } from '@contentful/optimization-core'
@@ -41,7 +44,7 @@ async function mergeConfig({
         },
       },
       eventBuilder: {
-        channel: 'react-native',
+        channel: 'mobile',
         library: { name: 'Optimization React Native API', version: '1.0.0' },
         getLocale,
         getPageProperties,

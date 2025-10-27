@@ -32,9 +32,12 @@
   "dependencies": {
     "@contentful/optimization-core": "workspace:*",
     "@react-native-async-storage/async-storage": "^2.1.0",
+    "es-iterator-helpers": "^1.2.1",
     "es-toolkit": "catalog:",
     "react": "^18.3.1",
     "react-native": "^0.76.6",
+    "react-native-get-random-values": "^2.0.0",
+    "react-native-uuid": "^2.0.3",
     "zod": "catalog:"
   },
   "devDependencies": {

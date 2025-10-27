@@ -14,11 +14,7 @@ import {
 } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
-import {
-  logger,
-  OptimizationTrackedView,
-  ScrollProvider,
-} from '@contentful/optimization-react-native'
+import { OptimizationTrackedView, ScrollProvider } from '@contentful/optimization-react-native'
 
 interface ThemeColors {
   backgroundColor: string
@@ -43,30 +39,16 @@ export function TestTrackingScreen({
   const [trackedEvents, setTrackedEvents] = useState<string[]>([])
 
   useEffect(() => {
-    logger.debug('[TestTrackingScreen] Setting up event stream subscription')
-
     // Listen to the event stream to capture tracking events
     const subscription = sdk.states.eventStream.subscribe((event) => {
-      logger.debug('[TestTrackingScreen] Received event from stream:', event)
-
       if (event?.type === 'component') {
         const { componentId } = event as { componentId?: string }
         const timestamp = new Date().toLocaleTimeString()
-        logger.debug('[TestTrackingScreen] Component event detected:', componentId)
-        setTrackedEvents((prev) => {
-          const newEvents = [...prev, `${timestamp}: Tracked "${componentId}"`]
-          logger.debug('[TestTrackingScreen] Updated trackedEvents:', newEvents)
-          return newEvents
-        })
-      } else {
-        logger.debug('[TestTrackingScreen] Event is not a component event, type:', event?.type)
+        setTrackedEvents((prev) => [...prev, `${timestamp}: Tracked "${componentId}"`])
       }
     })
 
-    logger.debug('[TestTrackingScreen] Event stream subscription active')
-
     return () => {
-      logger.debug('[TestTrackingScreen] Unsubscribing from event stream')
       subscription.unsubscribe()
     }
   }, [sdk])
@@ -132,9 +114,9 @@ export function TestTrackingScreen({
           variantIndex={0}
           style={StyleSheet.flatten([styles.trackedView, { backgroundColor: colors.successColor }])}
         >
-          <Text style={styles.trackedViewTitle}>🎯 Tracked Component</Text>
+          <Text style={styles.trackedViewTitle}>Tracked Component</Text>
           <Text style={styles.trackedViewText}>
-            When this component is fully visible in the viewport, it will fire a tracking event!
+            Testing out viewport tracking here with a tracked component.
           </Text>
           <Text style={styles.trackedViewDetails}>
             Component ID: test-hero-banner{'\n'}

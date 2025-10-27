@@ -24,6 +24,7 @@
   "dependencies": {
     "@contentful/optimization-react-native": "workspace:*",
     "@react-native-async-storage/async-storage": "^2.1.0",
+    "core-js": "^3.46.0",
     "react": "18.3.1",
     "react-native": "0.76.9"
   },
@@ -34,7 +35,6 @@
     "@babel/plugin-transform-class-static-block": "^7.28.3",
     "@babel/plugin-transform-export-namespace-from": "^7.27.1",
     "@babel/plugin-transform-private-methods": "^7.27.1",
-    "@babel/preset-env": "^7.25.3",
     "@babel/runtime": "^7.25.0",
     "@jest/globals": "^29.6.3",
     "@react-native-community/cli": "15.0.1",

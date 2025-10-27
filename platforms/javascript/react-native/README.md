@@ -189,3 +189,14 @@ The SDK automatically configures:
 - **Library**: `'Optimization React Native API'`
 - **Storage**: AsyncStorage for persisting changes, consent, profile, and personalizations
 - **Event Builders**: Mobile-optimized locale, page properties, and user agent detection
+- **Crypto Polyfill**: Automatically polyfills `crypto.randomUUID()` using `react-native-uuid` and `react-native-get-random-values`
+
+### Polyfills
+
+The SDK includes automatic polyfills for React Native to support modern JavaScript features:
+
+- **Iterator Helpers (ES2025)**: Polyfilled using `es-iterator-helpers` to support methods like `.toArray()`, `.filter()`, `.map()` on iterators
+- **`crypto.randomUUID()`**: Polyfilled using `react-native-uuid` to ensure the universal EventBuilder works seamlessly
+- **`crypto.getRandomValues()`**: Polyfilled using `react-native-get-random-values` for secure random number generation
+
+These polyfills are imported automatically when you use the SDK - no additional setup required by your app.
