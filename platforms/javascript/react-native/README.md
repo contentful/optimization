@@ -8,16 +8,37 @@ Contentful Optimization SDK for React Native applications.
 npm install @contentful/optimization-react-native @react-native-async-storage/async-storage
 ```
 
-## Usage
+## Quick Start
 
 ```typescript
-import Optimization, { logger, OptimizationProvider } from '@contentful/optimization-react-native'
+import Optimization, {
+  OptimizationProvider,
+  ScrollProvider,
+  OptimizationTrackedView,
+} from '@contentful/optimization-react-native'
 
 // Initialize the SDK
 const optimization = await Optimization.create({
   clientId: 'your-client-id',
   environment: 'your-environment',
 })
+
+// Wrap your app with the provider
+function App() {
+  return (
+    <OptimizationProvider instance={optimization}>
+      <ScrollProvider>
+        <OptimizationTrackedView
+          componentId="hero-banner"
+          experienceId="exp-123"
+          variantIndex={0}
+        >
+          <YourPersonalizedContent />
+        </OptimizationTrackedView>
+      </ScrollProvider>
+    </OptimizationProvider>
+  )
+}
 ```
 
 ## Features
@@ -26,7 +47,11 @@ This SDK provides all the functionality from `@contentful/optimization-core` plu
 
 ### React Native Specific
 
-- **OptimizationProvider**: React component to wrap your app
+- **OptimizationProvider**: React context provider for accessing the Optimization instance
+- **OptimizationTrackedView**: Automatically track component views when they enter the viewport
+- **ScrollProvider**: Wrapper around ScrollView that enables viewport tracking
+- **useOptimization**: Hook to access the Optimization instance in components
+- **useViewportTracking**: Hook for custom viewport tracking logic
 - **AsyncStorage Integration**: Automatic persistence of state using `@react-native-async-storage/async-storage`
 - **React Native Defaults**: Pre-configured event builders for mobile context
 
@@ -40,33 +65,117 @@ All core SDK features are available directly from this package:
 - **Logger**: `logger` - Logging utilities
 - **Types**: All TypeScript types and interfaces from core and API client
 
-### Example
+### Viewport Tracking
+
+The SDK provides automatic viewport tracking for personalized components. When a tracked component becomes fully visible in the viewport, it automatically sends a component view event.
 
 ```typescript
+import {
+  OptimizationProvider,
+  ScrollProvider,
+  OptimizationTrackedView,
+} from '@contentful/optimization-react-native'
+
+function MyScreen() {
+  return (
+    <OptimizationProvider instance={optimizationInstance}>
+      <ScrollProvider>
+        <OptimizationTrackedView
+          componentId="hero-banner"
+          experienceId="exp-123"
+          variantIndex={0}
+        >
+          <HeroBanner />
+        </OptimizationTrackedView>
+
+        <OptimizationTrackedView
+          componentId="product-card"
+          variantIndex={1}
+        >
+          <ProductCard />
+        </OptimizationTrackedView>
+      </ScrollProvider>
+    </OptimizationProvider>
+  )
+}
+```
+
+**Key Features:**
+
+- Tracks only once per component (when it first becomes fully visible)
+- Works with ScrollView via `ScrollProvider`
+- Requires component to be 100% visible by default
+- Configurable visibility threshold via `threshold` prop (0.0 to 1.0)
+
+### Manual Analytics Tracking
+
+You can also manually track events using the analytics API:
+
+```typescript
+import Optimization, { useOptimization } from '@contentful/optimization-react-native'
+
+// In a component
+function MyComponent() {
+  const optimization = useOptimization()
+
+  const trackManually = async () => {
+    await optimization.analytics.trackComponentView({
+      componentId: 'my-component',
+      experienceId: 'exp-456',
+      variantIndex: 0,
+    })
+  }
+
+  return <Button onPress={trackManually} title="Track" />
+}
+```
+
+### Complete Example
+
+```typescript
+import React, { useEffect, useState } from 'react'
+import { View, Text } from 'react-native'
 import Optimization, {
   logger,
   OptimizationProvider,
+  ScrollProvider,
+  OptimizationTrackedView,
   type CoreConfig,
-  type Profile,
 } from '@contentful/optimization-react-native'
 
 // Use logger
 logger.info('App starting')
 
-// Initialize SDK with config
+// Initialize SDK
 const config: CoreConfig = {
   clientId: 'your-client-id',
   environment: 'main',
   logLevel: 'info',
 }
 
-const sdk = await Optimization.create(config)
-
-// Use in React Native app
 function App() {
+  const [optimization, setOptimization] = useState<Optimization | null>(null)
+
+  useEffect(() => {
+    Optimization.create(config).then(setOptimization)
+  }, [])
+
+  if (!optimization) {
+    return <Text>Loading...</Text>
+  }
+
   return (
-    <OptimizationProvider>
-      {/* Your app content */}
+    <OptimizationProvider instance={optimization}>
+      <ScrollProvider>
+        <View>
+          <OptimizationTrackedView
+            componentId="header"
+            variantIndex={0}
+          >
+            <Text>Personalized Header</Text>
+          </OptimizationTrackedView>
+        </View>
+      </ScrollProvider>
     </OptimizationProvider>
   )
 }

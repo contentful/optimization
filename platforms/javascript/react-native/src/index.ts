@@ -109,5 +109,21 @@ export { logger } from '@contentful/optimization-core'
 
 // Export React Native specific components
 export { OptimizationProvider } from './components/OptimizationProvider'
+export { OptimizationTrackedView } from './components/OptimizationTrackedView'
+export type { OptimizationTrackedViewProps } from './components/OptimizationTrackedView'
+
+// Export scroll context and provider
+export { ScrollProvider, useScrollContext } from './context/ScrollContext'
+export type { ScrollProviderProps } from './context/ScrollContext'
+
+// Export hooks
+export { useOptimization } from './context/OptimizationContext'
+
+// Export viewport tracking hook for advanced usage
+export { useViewportTracking } from './hooks/useViewportTracking'
+export type {
+  UseViewportTrackingOptions,
+  UseViewportTrackingReturn,
+} from './hooks/useViewportTracking'
 
 export default Optimization
