@@ -5,7 +5,7 @@
  * @format
  */
 
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react'
 import {
   ActivityIndicator,
   SafeAreaView,
@@ -15,75 +15,59 @@ import {
   Text,
   useColorScheme,
   View,
-} from 'react-native';
+} from 'react-native'
 
-import {logger} from '@contentful/optimization-core';
-import Optimization, {
-  OptimizationProvider,
-} from '@contentful/optimization-react-native';
+import Optimization, { OptimizationProvider } from '@contentful/optimization-react-native'
 
 interface SDKInfo {
-  clientId: string;
-  environment: string;
-  initialized: boolean;
-  timestamp: string;
+  clientId: string
+  environment: string
+  initialized: boolean
+  timestamp: string
 }
 
 interface ThemeColors {
-  backgroundColor: string;
-  cardBackground: string;
-  textColor: string;
-  mutedTextColor: string;
-  successColor: string;
-  errorColor: string;
+  backgroundColor: string
+  cardBackground: string
+  textColor: string
+  mutedTextColor: string
+  successColor: string
+  errorColor: string
 }
 
 interface SDKStatusCardProps {
-  sdkLoaded: boolean;
-  sdkError: string | null;
-  colors: ThemeColors;
+  sdkLoaded: boolean
+  sdkError: string | null
+  colors: ThemeColors
 }
 
 interface SDKConfigCardProps {
-  sdkInfo: SDKInfo;
-  colors: ThemeColors;
+  sdkInfo: SDKInfo
+  colors: ThemeColors
 }
 
 interface InstructionsCardProps {
-  colors: ThemeColors;
+  colors: ThemeColors
 }
 
-function SDKStatusCard({
-  sdkLoaded,
-  sdkError,
-  colors,
-}: SDKStatusCardProps): React.JSX.Element {
-  const {cardBackground, textColor, mutedTextColor, successColor, errorColor} =
-    colors;
+function SDKStatusCard({ sdkLoaded, sdkError, colors }: SDKStatusCardProps): React.JSX.Element {
+  const { cardBackground, textColor, mutedTextColor, successColor, errorColor } = colors
 
   return (
-    <View
-      style={[styles.card, {backgroundColor: cardBackground}]}
-      testID="sdkStatusCard">
-      <Text style={[styles.cardTitle, {color: textColor}]}>SDK Status</Text>
+    <View style={[styles.card, { backgroundColor: cardBackground }]} testID="sdkStatusCard">
+      <Text style={[styles.cardTitle, { color: textColor }]}>SDK Status</Text>
 
       {!sdkLoaded && !sdkError && (
         <View style={styles.statusRow} testID="sdkInitializing">
           <ActivityIndicator size="small" color={successColor} />
-          <Text style={[styles.statusText, {color: mutedTextColor}]}>
-            Initializing SDK...
-          </Text>
+          <Text style={[styles.statusText, { color: mutedTextColor }]}>Initializing SDK...</Text>
         </View>
       )}
 
       {sdkLoaded && (
         <View style={styles.statusRow} testID="sdkLoaded">
-          <View
-            style={[styles.statusIndicator, {backgroundColor: successColor}]}
-          />
-          <Text
-            style={[styles.statusText, {color: successColor}]}
-            testID="sdkLoadedText">
+          <View style={[styles.statusIndicator, { backgroundColor: successColor }]} />
+          <Text style={[styles.statusText, { color: successColor }]} testID="sdkLoadedText">
             ✓ SDK Loaded Successfully
           </Text>
         </View>
@@ -91,107 +75,80 @@ function SDKStatusCard({
 
       {sdkError && (
         <View style={styles.statusRow} testID="sdkError">
-          <View
-            style={[styles.statusIndicator, {backgroundColor: errorColor}]}
-          />
-          <Text
-            style={[styles.statusText, {color: errorColor}]}
-            testID="sdkErrorText">
+          <View style={[styles.statusIndicator, { backgroundColor: errorColor }]} />
+          <Text style={[styles.statusText, { color: errorColor }]} testID="sdkErrorText">
             ✗ Error: {sdkError}
           </Text>
         </View>
       )}
     </View>
-  );
+  )
 }
 
-function SDKConfigCard({
-  sdkInfo,
-  colors,
-}: SDKConfigCardProps): React.JSX.Element {
-  const {cardBackground, textColor, mutedTextColor} = colors;
+function SDKConfigCard({ sdkInfo, colors }: SDKConfigCardProps): React.JSX.Element {
+  const { cardBackground, textColor, mutedTextColor } = colors
 
   return (
-    <View
-      style={[styles.card, {backgroundColor: cardBackground}]}
-      testID="sdkConfigCard">
-      <Text style={[styles.cardTitle, {color: textColor}]}>Configuration</Text>
+    <View style={[styles.card, { backgroundColor: cardBackground }]} testID="sdkConfigCard">
+      <Text style={[styles.cardTitle, { color: textColor }]}>Configuration</Text>
 
       <View style={styles.infoRow}>
-        <Text style={[styles.infoLabel, {color: mutedTextColor}]}>
-          Client ID:
-        </Text>
-        <Text
-          style={[styles.infoValue, {color: textColor}]}
-          testID="clientIdValue">
+        <Text style={[styles.infoLabel, { color: mutedTextColor }]}>Client ID:</Text>
+        <Text style={[styles.infoValue, { color: textColor }]} testID="clientIdValue">
           {sdkInfo.clientId}
         </Text>
       </View>
 
       <View style={styles.infoRow}>
-        <Text style={[styles.infoLabel, {color: mutedTextColor}]}>
-          Environment:
-        </Text>
-        <Text
-          style={[styles.infoValue, {color: textColor}]}
-          testID="environmentValue">
+        <Text style={[styles.infoLabel, { color: mutedTextColor }]}>Environment:</Text>
+        <Text style={[styles.infoValue, { color: textColor }]} testID="environmentValue">
           {sdkInfo.environment}
         </Text>
       </View>
 
       <View style={styles.infoRow}>
-        <Text style={[styles.infoLabel, {color: mutedTextColor}]}>
-          Initialized At:
-        </Text>
-        <Text
-          style={[styles.infoValue, {color: textColor}]}
-          testID="timestampValue">
+        <Text style={[styles.infoLabel, { color: mutedTextColor }]}>Initialized At:</Text>
+        <Text style={[styles.infoValue, { color: textColor }]} testID="timestampValue">
           {new Date(sdkInfo.timestamp).toLocaleTimeString()}
         </Text>
       </View>
     </View>
-  );
+  )
 }
 
-function InstructionsCard({colors}: InstructionsCardProps): React.JSX.Element {
-  const {cardBackground, textColor, mutedTextColor} = colors;
+function InstructionsCard({ colors }: InstructionsCardProps): React.JSX.Element {
+  const { cardBackground, textColor, mutedTextColor } = colors
 
   return (
-    <View
-      style={[styles.card, {backgroundColor: cardBackground}]}
-      testID="instructionsCard">
-      <Text style={[styles.cardTitle, {color: textColor}]}>Next Steps</Text>
-      <Text
-        style={[styles.instructionText, {color: mutedTextColor}]}
-        testID="instructionsText">
-        • The Optimization SDK is now initialized and ready to use{'\n'}• You
-        can now implement experiences and personalization{'\n'}• Check the
-        console for additional SDK logs{'\n'}• Modify this app to test SDK
-        features
+    <View style={[styles.card, { backgroundColor: cardBackground }]} testID="instructionsCard">
+      <Text style={[styles.cardTitle, { color: textColor }]}>Next Steps</Text>
+      <Text style={[styles.instructionText, { color: mutedTextColor }]} testID="instructionsText">
+        • The Optimization SDK is now initialized and ready to use{'\n'}• You can now implement
+        experiences and personalization{'\n'}• Check the console for additional SDK logs{'\n'}•
+        Modify this app to test SDK features
       </Text>
     </View>
-  );
+  )
 }
 
 function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+  const isDarkMode = useColorScheme() === 'dark'
 
-  const [sdkLoaded, setSdkLoaded] = useState(false);
-  const [sdkError, setSdkError] = useState<string | null>(null);
-  const [sdkInfo, setSdkInfo] = useState<SDKInfo | null>(null);
+  const [sdkLoaded, setSdkLoaded] = useState(false)
+  const [sdkError, setSdkError] = useState<string | null>(null)
+  const [sdkInfo, setSdkInfo] = useState<SDKInfo | null>(null)
 
   useEffect(() => {
     const initSDK = async (): Promise<void> => {
       try {
-        const clientId =
-          process.env.VITE_NINETAILED_CLIENT_ID ?? 'test-client-id';
-        const environment = process.env.VITE_NINETAILED_ENVIRONMENT ?? 'main';
+        const clientId = process.env.NINETAILED_CLIENT_ID ?? 'test-client-id'
+        const environment = process.env.NINETAILED_ENVIRONMENT ?? 'main'
 
         // Initialize the Optimization SDK
-        const sdk = await Optimization.create({
+        await Optimization.create({
           clientId,
           environment,
-        });
+        })
 
         // Store SDK info for display
         setSdkInfo({
@@ -199,20 +156,17 @@ function App(): React.JSX.Element {
           environment,
           initialized: true,
           timestamp: new Date().toISOString(),
-        });
+        })
 
         // Mark SDK as loaded
-        setSdkLoaded(true);
-
-        // SDK instance is available if needed for future use
-        logger.info('SDK initialized:', sdk);
+        setSdkLoaded(true)
       } catch (error) {
-        setSdkError(error instanceof Error ? error.message : 'Unknown error');
+        setSdkError(error instanceof Error ? error.message : 'Unknown error')
       }
-    };
+    }
 
-    void initSDK();
-  }, []);
+    void initSDK()
+  }, [])
 
   const colors: ThemeColors = {
     backgroundColor: isDarkMode ? '#1a1a1a' : '#f5f5f5',
@@ -221,33 +175,24 @@ function App(): React.JSX.Element {
     mutedTextColor: isDarkMode ? '#a0a0a0' : '#666666',
     successColor: '#22c55e',
     errorColor: '#ef4444',
-  };
+  }
 
   return (
     <OptimizationProvider>
-      <SafeAreaView
-        style={[styles.container, {backgroundColor: colors.backgroundColor}]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {/* Header */}
           <View style={styles.header} testID="appHeader">
-            <Text
-              style={[styles.title, {color: colors.textColor}]}
-              testID="appTitle">
+            <Text style={[styles.title, { color: colors.textColor }]} testID="appTitle">
               Contentful Optimization
             </Text>
-            <Text
-              style={[styles.subtitle, {color: colors.mutedTextColor}]}
-              testID="appSubtitle">
+            <Text style={[styles.subtitle, { color: colors.mutedTextColor }]} testID="appSubtitle">
               React Native SDK Demo
             </Text>
           </View>
 
-          <SDKStatusCard
-            sdkLoaded={sdkLoaded}
-            sdkError={sdkError}
-            colors={colors}
-          />
+          <SDKStatusCard sdkLoaded={sdkLoaded} sdkError={sdkError} colors={colors} />
 
           {sdkInfo && <SDKConfigCard sdkInfo={sdkInfo} colors={colors} />}
 
@@ -255,7 +200,7 @@ function App(): React.JSX.Element {
         </ScrollView>
       </SafeAreaView>
     </OptimizationProvider>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -327,6 +272,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
   },
-});
+})
 
-export default App;
+export default App
