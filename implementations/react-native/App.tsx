@@ -13,11 +13,13 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TouchableOpacity,
   useColorScheme,
   View,
 } from 'react-native'
 
 import Optimization, { OptimizationProvider } from '@contentful/optimization-react-native'
+import { TestTrackingScreen } from './TestTrackingScreen'
 
 interface SDKInfo {
   clientId: string
@@ -48,6 +50,7 @@ interface SDKConfigCardProps {
 
 interface InstructionsCardProps {
   colors: ThemeColors
+  onTestTracking: () => void
 }
 
 function SDKStatusCard({ sdkLoaded, sdkError, colors }: SDKStatusCardProps): React.JSX.Element {
@@ -116,7 +119,7 @@ function SDKConfigCard({ sdkInfo, colors }: SDKConfigCardProps): React.JSX.Eleme
   )
 }
 
-function InstructionsCard({ colors }: InstructionsCardProps): React.JSX.Element {
+function InstructionsCard({ colors, onTestTracking }: InstructionsCardProps): React.JSX.Element {
   const { cardBackground, textColor, mutedTextColor } = colors
 
   return (
@@ -127,6 +130,14 @@ function InstructionsCard({ colors }: InstructionsCardProps): React.JSX.Element 
         experiences and personalization{'\n'}• Check the console for additional SDK logs{'\n'}•
         Modify this app to test SDK features
       </Text>
+
+      <TouchableOpacity
+        style={[styles.testButton, { backgroundColor: colors.successColor }]}
+        onPress={onTestTracking}
+        testID="testTrackingButton"
+      >
+        <Text style={styles.testButtonText}>Test Viewport Tracking →</Text>
+      </TouchableOpacity>
     </View>
   )
 }
@@ -137,6 +148,8 @@ function App(): React.JSX.Element {
   const [sdkLoaded, setSdkLoaded] = useState(false)
   const [sdkError, setSdkError] = useState<string | null>(null)
   const [sdkInfo, setSdkInfo] = useState<SDKInfo | null>(null)
+  const [sdk, setSdk] = useState<Optimization | null>(null)
+  const [showTestScreen, setShowTestScreen] = useState(false)
 
   useEffect(() => {
     const initSDK = async (): Promise<void> => {
@@ -158,6 +171,9 @@ function App(): React.JSX.Element {
           timestamp: new Date().toISOString(),
         })
 
+        // Store SDK instance
+        setSdk(sdkInstance)
+
         // Mark SDK as loaded
         setSdkLoaded(true)
       } catch (error) {
@@ -177,29 +193,48 @@ function App(): React.JSX.Element {
     errorColor: '#ef4444',
   }
 
+  // Show test screen if requested and SDK is loaded
+  if (showTestScreen && sdk) {
+    return (
+      <OptimizationProvider instance={sdk}>
+        <TestTrackingScreen
+          colors={colors}
+          onBack={() => {
+            setShowTestScreen(false)
+          }}
+          sdk={sdk}
+        />
+      </OptimizationProvider>
+    )
+  }
+
+  // Main screen
   return (
-    <OptimizationProvider>
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* Header */}
-          <View style={styles.header} testID="appHeader">
-            <Text style={[styles.title, { color: colors.textColor }]} testID="appTitle">
-              Contentful Optimization
-            </Text>
-            <Text style={[styles.subtitle, { color: colors.mutedTextColor }]} testID="appSubtitle">
-              React Native SDK Demo
-            </Text>
-          </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Header */}
+        <View style={styles.header} testID="appHeader">
+          <Text style={[styles.title, { color: colors.textColor }]} testID="appTitle">
+            Contentful Optimization
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.mutedTextColor }]} testID="appSubtitle">
+            React Native SDK Demo
+          </Text>
+        </View>
 
-          <SDKStatusCard sdkLoaded={sdkLoaded} sdkError={sdkError} colors={colors} />
+        <SDKStatusCard sdkLoaded={sdkLoaded} sdkError={sdkError} colors={colors} />
 
-          {sdkInfo && <SDKConfigCard sdkInfo={sdkInfo} colors={colors} />}
+        {sdkInfo && <SDKConfigCard sdkInfo={sdkInfo} colors={colors} />}
 
-          <InstructionsCard colors={colors} />
-        </ScrollView>
-      </SafeAreaView>
-    </OptimizationProvider>
+        <InstructionsCard
+          colors={colors}
+          onTestTracking={() => {
+            setShowTestScreen(true)
+          }}
+        />
+      </ScrollView>
+    </SafeAreaView>
   )
 }
 
@@ -271,6 +306,17 @@ const styles = StyleSheet.create({
   instructionText: {
     fontSize: 14,
     lineHeight: 22,
+  },
+  testButton: {
+    marginTop: 20,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  testButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 })
 
