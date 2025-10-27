@@ -145,7 +145,7 @@ function App(): React.JSX.Element {
         const environment = process.env.NINETAILED_ENVIRONMENT ?? 'main'
 
         // Initialize the Optimization SDK
-        const sdk = await Optimization.create({
+        await Optimization.create({
           clientId,
           environment,
         })
@@ -160,9 +160,6 @@ function App(): React.JSX.Element {
 
         // Mark SDK as loaded
         setSdkLoaded(true)
-
-        // SDK instance is available if needed for future use
-        console.log('SDK initialized:', sdk)
       } catch (error) {
         setSdkError(error instanceof Error ? error.message : 'Unknown error')
       }
