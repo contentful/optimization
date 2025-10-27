@@ -1,4 +1,7 @@
-export * from './Personalization'
 export * from './resolvers'
 
-export { default as Personalization } from './Personalization'
+export * from './PersonalizationStateful'
+export { default as PersonalizationStateful } from './PersonalizationStateful'
+
+export * from './PersonalizationStateless'
+export { default as PersonalizationStateless } from './PersonalizationStateless'

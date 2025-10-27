@@ -1,9 +1,19 @@
-import { type CoreConfig, CoreStateful, effect, signals } from '@contentful/optimization-core'
+import {
+  type CoreConfig,
+  CoreStateful,
+  type CoreStatefulConfig,
+  effect,
+  signals,
+} from '@contentful/optimization-core'
 import { merge } from 'es-toolkit'
 import { getLocale, getPageProperties, getUserAgent } from './builders/EventBuilder'
 import AsyncStorageStore from './storage/AsyncStorageStore'
 
-async function mergeConfig({ defaults, logLevel, ...config }: CoreConfig): Promise<CoreConfig> {
+async function mergeConfig({
+  defaults,
+  logLevel,
+  ...config
+}: CoreStatefulConfig): Promise<CoreConfig> {
   // Initialize AsyncStorage before reading from it
   await AsyncStorageStore.initialize()
 

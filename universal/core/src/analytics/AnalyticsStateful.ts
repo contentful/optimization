@@ -1,19 +1,80 @@
+import type ApiClient from '@contentful/optimization-api-client'
 import {
+  InsightsEvent,
   type BatchInsightsEventArray,
   type ComponentViewBuilderArgs,
-  InsightsEvent,
+  type EventBuilder,
   type InsightsEventArray,
   type Profile,
 } from '@contentful/optimization-api-client'
 import { logger } from 'logger'
+import type { ConsentGuard } from '../Consent'
 import { guardedBy } from '../lib/decorators'
-import { event as eventSignal, profile as profileSignal } from '../signals'
+import type { ProductConfig } from '../ProductBase'
+import {
+  consent,
+  effect,
+  event as eventSignal,
+  profile as profileSignal,
+  toObservable,
+  type Observable,
+} from '../signals'
 import AnalyticsBase from './AnalyticsBase'
+
+export interface AnalyticsProductConfigDefaults {
+  consent?: boolean
+  profile?: Profile
+}
+
+export interface AnalyticsProductConfig extends ProductConfig {
+  defaults?: AnalyticsProductConfigDefaults
+}
+
+export interface AnalyticsStates {
+  profile: Observable<Profile | undefined>
+}
 
 const MAX_QUEUED_EVENTS = 25
 
-class AnalyticsStateful extends AnalyticsBase {
+class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
   readonly #queue = new Map<Profile, InsightsEventArray>()
+
+  readonly states: AnalyticsStates = {
+    profile: toObservable(profileSignal),
+  }
+
+  constructor(api: ApiClient, builder: EventBuilder, config?: AnalyticsProductConfig) {
+    super(api, builder, config)
+
+    const { defaults } = config ?? {}
+
+    if (defaults?.profile !== undefined) {
+      const { profile: defaultProfile } = defaults
+      profileSignal.value = defaultProfile
+    }
+
+    effect(() => {
+      const id = profileSignal.value?.id
+
+      logger.info(
+        `[Analytics] Analytics ${consent.value ? 'will' : 'will not'} be collected due to consent (${consent.value})`,
+      )
+
+      logger.info(`[Analytics] Profile ${id && `with ID ${id}`} has been ${id ? 'set' : 'cleared'}`)
+    })
+  }
+
+  hasConsent(name: string): boolean {
+    if (name === 'trackComponentView') name = 'component'
+
+    return !!consent.value || (this.allowedEvents ?? []).includes(name)
+  }
+
+  onBlockedByConsent(name: string, args: unknown[]): void {
+    logger.warn(
+      `[Anaylytics] Event "${name}" was blocked due to lack of consent; args: ${JSON.stringify(args)}`,
+    )
+  }
 
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async trackComponentView(args: ComponentViewBuilderArgs): Promise<void> {

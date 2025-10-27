@@ -20,8 +20,9 @@ import {
 import type { Entry } from 'contentful'
 import { isEqual } from 'es-toolkit'
 import { logger } from 'logger'
+import type { ConsentGuard } from '../Consent'
 import { guardedBy } from '../lib/decorators'
-import ProductBase, { type ConsentGuard, type ProductConfig } from '../ProductBase'
+import type { ProductConfig } from '../ProductBase'
 import {
   batch,
   changes as changesSignal,
@@ -37,10 +38,12 @@ import {
   profile as profileSignal,
   toObservable,
 } from '../signals'
+import PersonalizationBase from './PersonalizationBase'
 import { PersonalizedEntryResolver } from './resolvers'
 import MergeTagValueResolver from './resolvers/MergeTagValueResolver'
 
 export interface PersonalizationProductConfigDefaults {
+  consent?: boolean
   changes?: ChangeArray
   profile?: Profile
   personalizations?: SelectedPersonalizationArray
@@ -56,10 +59,7 @@ export interface PersonalizationStates {
   personalizations: Observable<SelectedPersonalizationArray | undefined>
 }
 
-class Personalization extends ProductBase<PersonalizationEvent> implements ConsentGuard {
-  readonly personalizedEntryResolver = PersonalizedEntryResolver
-  readonly mergeTagValueResolver = MergeTagValueResolver
-
+class Personalization extends PersonalizationBase implements ConsentGuard {
   readonly states: PersonalizationStates = {
     flags: toObservable(flags),
     profile: toObservable(profile),
@@ -85,6 +85,11 @@ class Personalization extends ProductBase<PersonalizationEvent> implements Conse
       })
     }
 
+    if (defaults?.consent !== undefined) {
+      const { consent: defaultConsent } = defaults
+      consent.value = defaultConsent
+    }
+
     effect(() => {
       logger.info(
         `[Personalization] Profile ${profileSignal.value && `with ID ${profileSignal.value.id}`} has been ${profileSignal.value ? 'set' : 'cleared'}`,
@@ -107,7 +112,7 @@ class Personalization extends ProductBase<PersonalizationEvent> implements Conse
   hasConsent(name: string): boolean {
     if (name === 'trackComponentView') name = 'component'
 
-    return super.hasConsent(name)
+    return !!consent.value || (this.allowedEvents ?? []).includes(name)
   }
 
   onBlockedByConsent(name: string, args: unknown[]): void {
@@ -128,12 +133,18 @@ class Personalization extends ProductBase<PersonalizationEvent> implements Conse
     })
   }
 
-  personalizeEntry(entry: Entry): Entry {
-    return PersonalizedEntryResolver.resolve(entry)
+  personalizeEntry(
+    entry: Entry,
+    personalizations: SelectedPersonalizationArray | undefined = personalizationsSignal.value,
+  ): Entry {
+    return PersonalizedEntryResolver.resolve(entry, personalizations)
   }
 
-  getMergeTagValue(embeddedEntryNodeTarget: MergeTagEntry): unknown {
-    return MergeTagValueResolver.resolve(embeddedEntryNodeTarget)
+  getMergeTagValue(
+    embeddedEntryNodeTarget: MergeTagEntry,
+    profile: Profile | undefined = profileSignal.value,
+  ): unknown {
+    return MergeTagValueResolver.resolve(embeddedEntryNodeTarget, profile)
   }
 
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
@@ -146,7 +157,7 @@ class Personalization extends ProductBase<PersonalizationEvent> implements Conse
   }
 
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async page(args: PageViewBuilderArgs = {}): Promise<OptimizationData> {
+  async page(args: PageViewBuilderArgs): Promise<OptimizationData> {
     logger.info('[Personalization] Sending "page" event')
 
     const event = PageViewEvent.parse(this.builder.buildPageView(args))

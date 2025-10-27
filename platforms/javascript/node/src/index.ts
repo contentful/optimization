@@ -1,12 +1,16 @@
-import { type CoreConfig, CoreStateless } from '@contentful/optimization-core'
+import { type App, type CoreConfig, CoreStateless } from '@contentful/optimization-core'
 import { merge } from 'es-toolkit'
 
-function mergeConfig(config: CoreConfig): CoreConfig {
+export interface OptimizationNodeConfig extends CoreConfig {
+  app?: App
+}
+
+function mergeConfig(config: OptimizationNodeConfig): CoreConfig {
   return merge(
     {
-      event: {
-        channel: 'web',
-        library: { name: 'Optimization Web API', version: '0.0.0' },
+      eventBuilder: {
+        channel: 'server',
+        library: { name: 'Optimization Node API', version: '0.0.0' },
       },
     },
     config,
@@ -14,7 +18,7 @@ function mergeConfig(config: CoreConfig): CoreConfig {
 }
 
 class Optimization extends CoreStateless {
-  constructor(config: CoreConfig) {
+  constructor(config: OptimizationNodeConfig) {
     const mergedConfig: CoreConfig = mergeConfig(config)
 
     super(mergedConfig)

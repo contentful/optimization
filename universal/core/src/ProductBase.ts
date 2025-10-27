@@ -6,17 +6,10 @@ import type {
   ExperienceEventType as PersonalizationEventType,
 } from '@contentful/optimization-api-client'
 import { InterceptorManager } from './lib/interceptor'
-import { consent } from './signals'
 
 export type EventType = AnalyticsEventType | PersonalizationEventType
 
 const defaultAllowedEvents: EventType[] = ['page', 'identify']
-
-export interface ConsentGuard {
-  // TODO: Determine whether these methods can be hard-private
-  hasConsent: (name: string) => boolean
-  onBlockedByConsent: (name: string, args: unknown[]) => void
-}
 
 export interface ProductConfig {
   allowedEvents?: EventType[]
@@ -27,7 +20,7 @@ interface InterceptorLifecycle<E> {
   state: InterceptorManager<OptimizationData>
 }
 
-abstract class ProductBase<E> implements ConsentGuard {
+abstract class ProductBase<E> {
   protected readonly allowedEvents?: string[]
   protected readonly builder: EventBuilder
   protected readonly api: ApiClient
@@ -42,12 +35,6 @@ abstract class ProductBase<E> implements ConsentGuard {
     this.builder = builder
     this.allowedEvents = config?.allowedEvents ?? defaultAllowedEvents
   }
-
-  hasConsent(name: string): boolean {
-    return !!consent.value || (this.allowedEvents ?? []).includes(name)
-  }
-
-  abstract onBlockedByConsent(name: string, args: unknown[]): void
 }
 
 export default ProductBase

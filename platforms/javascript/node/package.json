@@ -26,6 +26,7 @@
     "rename:js:cjs": "find ./dist -type f -name \"*.js\" ! -name \"*.cjs\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js}.cjs\"; done && find ./dist -type f -name \"*.js.map\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js.map}.cjs.map\"; done",
     "rename:js:mjs": "find ./dist -type f -name \"*.js\" ! -name \"*.mjs\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js}.mjs\"; done && find ./dist -type f -name \"*.js.map\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js.map}.mjs.map\"; done",
     "clean": "rimraf ./dist ./coverage tsconfig.tsbuildinfo",
+    "dev": "tsx watch --env-file=.env ./server.ts",
     "test:unit": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
   },
@@ -34,7 +35,11 @@
     "es-toolkit": "catalog:"
   },
   "devDependencies": {
+    "@types/express": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "express": "catalog:",
+    "express-rate-limit": "catalog:",
+    "pug": "^3.0.3",
     "rimraf": "catalog:",
     "tslib": "catalog:",
     "typescript": "catalog:",
