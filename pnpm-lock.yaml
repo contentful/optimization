@@ -9,6 +9,12 @@ catalogs:
     '@preact/signals-core':
       specifier: ^1.12.1
       version: 1.12.1
+    '@types/express':
+      specifier: ^5.0.3
+      version: 5.0.3
+    '@types/supertest':
+      specifier: ^6.0.3
+      version: 6.0.3
     '@vitest/coverage-v8':
       specifier: ^3.2.4
       version: 3.2.4
@@ -21,6 +27,12 @@ catalogs:
     es-toolkit:
       specifier: ^1.39.10
       version: 1.39.10
+    express:
+      specifier: ^5.1.0
+      version: 5.1.0
+    express-rate-limit:
+      specifier: ^8.1.0
+      version: 8.1.0
     msw:
       specifier: ^2.10.5
       version: 2.10.5
@@ -33,6 +45,9 @@ catalogs:
     rimraf:
       specifier: ^6.0.1
       version: 6.0.1
+    supertest:
+      specifier: 7.1.3
+      version: 7.1.3
     tslib:
       specifier: ^2.8.1
       version: 2.8.1
@@ -108,10 +123,10 @@ importers:
         specifier: workspace:*
         version: link:../../platforms/javascript/node/dist
       express:
-        specifier: ^5.1.0
+        specifier: 'catalog:'
         version: 5.1.0
       express-rate-limit:
-        specifier: ^8.1.0
+        specifier: 'catalog:'
         version: 8.1.0(express@5.1.0)
       tslib:
         specifier: 'catalog:'
@@ -121,13 +136,13 @@ importers:
         specifier: ^1.55.1
         version: 1.56.0
       '@types/express':
-        specifier: ^5.0.3
+        specifier: 'catalog:'
         version: 5.0.3
       '@types/node':
         specifier: ^24.0.13
         version: 24.2.0
       '@types/supertest':
-        specifier: 6.0.3
+        specifier: 'catalog:'
         version: 6.0.3
       '@vitest/coverage-v8':
         specifier: 'catalog:'
@@ -142,7 +157,7 @@ importers:
         specifier: 'catalog:'
         version: 6.0.1
       supertest:
-        specifier: 7.1.3
+        specifier: 'catalog:'
         version: 7.1.3
       tsx:
         specifier: 'catalog:'
@@ -160,10 +175,10 @@ importers:
         specifier: workspace:*
         version: link:../../platforms/javascript/node/dist
       express:
-        specifier: ^5.1.0
+        specifier: 'catalog:'
         version: 5.1.0
       express-rate-limit:
-        specifier: ^8.1.0
+        specifier: 'catalog:'
         version: 8.1.0(express@5.1.0)
       tslib:
         specifier: 'catalog:'
@@ -173,13 +188,13 @@ importers:
         specifier: ^1.55.1
         version: 1.56.0
       '@types/express':
-        specifier: ^5.0.3
+        specifier: 'catalog:'
         version: 5.0.3
       '@types/node':
         specifier: ^24.0.13
         version: 24.2.0
       '@types/supertest':
-        specifier: 6.0.3
+        specifier: 'catalog:'
         version: 6.0.3
       '@vitest/coverage-v8':
         specifier: 'catalog:'
@@ -194,7 +209,7 @@ importers:
         specifier: 'catalog:'
         version: 6.0.1
       supertest:
-        specifier: 7.1.3
+        specifier: 'catalog:'
         version: 7.1.3
       tsx:
         specifier: 'catalog:'
@@ -10971,7 +10986,7 @@ snapshots:
     dependencies:
       bytes: 3.1.2
       content-type: 1.0.5
-      debug: 4.4.1
+      debug: 4.4.3
       http-errors: 2.0.0
       iconv-lite: 0.6.3
       on-finished: 2.4.1
@@ -12654,7 +12669,7 @@ snapshots:
       content-type: 1.0.5
       cookie: 0.7.2
       cookie-signature: 1.2.2
-      debug: 4.4.1
+      debug: 4.4.3
       encodeurl: 2.0.0
       escape-html: 1.0.3
       etag: 1.8.1
@@ -12803,7 +12818,7 @@ snapshots:
 
   finalhandler@2.1.0:
     dependencies:
-      debug: 4.4.1
+      debug: 4.4.3
       encodeurl: 2.0.0
       escape-html: 1.0.3
       on-finished: 2.4.1
@@ -15835,7 +15850,7 @@ snapshots:
 
   router@2.2.0:
     dependencies:
-      debug: 4.4.1
+      debug: 4.4.3
       depd: 2.0.0
       is-promise: 4.0.0
       parseurl: 1.3.3
@@ -15946,7 +15961,7 @@ snapshots:
 
   send@1.2.0:
     dependencies:
-      debug: 4.4.1
+      debug: 4.4.3
       encodeurl: 2.0.0
       escape-html: 1.0.3
       etag: 1.8.1
@@ -16321,7 +16336,7 @@ snapshots:
     dependencies:
       component-emitter: 1.3.1
       cookiejar: 2.1.4
-      debug: 4.4.1
+      debug: 4.4.3
       fast-safe-stringify: 2.1.1
       form-data: 4.0.4
       formidable: 3.5.4
