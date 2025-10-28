@@ -21,7 +21,8 @@ const sdk = new Optimization({
 })
 
 app.get('/', limiter, (_req, res) => {
-  res.send(sdk.config.clientId)
+  const response = JSON.stringify({ clientId: sdk.config.clientId })
+  res.send(response)
 })
 
 const port = 3000
