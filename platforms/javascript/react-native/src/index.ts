@@ -112,8 +112,13 @@ export { logger } from '@contentful/optimization-core'
 
 // Export React Native specific components
 export { OptimizationProvider } from './components/OptimizationProvider'
-export { OptimizationTrackedView } from './components/OptimizationTrackedView'
-export type { OptimizationTrackedViewProps } from './components/OptimizationTrackedView'
+
+// Component tracking components
+export { Personalization } from './components/Personalization'
+export type { PersonalizationProps } from './components/Personalization'
+
+export { Analytics } from './components/Analytics'
+export type { AnalyticsProps } from './components/Analytics'
 
 // Export scroll context and provider
 export { ScrollProvider, useScrollContext } from './context/ScrollContext'

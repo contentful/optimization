@@ -8,7 +8,16 @@ export interface UseViewportTrackingOptions {
   componentId: string
   experienceId?: string
   variantIndex: number
+  /**
+   * Minimum visibility ratio (0.0 - 1.0) required to consider component "visible".
+   * Default: 0.8 (80% of the component must be visible in viewport)
+   */
   threshold?: number
+  /**
+   * Minimum time (in milliseconds) the component must be visible before tracking fires.
+   * Default: 2000ms (2 seconds)
+   */
+  viewTimeMs?: number
 }
 
 export interface UseViewportTrackingReturn {
@@ -17,12 +26,15 @@ export interface UseViewportTrackingReturn {
 }
 
 const PERCENTAGE_MULTIPLIER = 100
+const DEFAULT_THRESHOLD = 0.8
+const DEFAULT_VIEW_TIME_MS = 2000
 
 export function useViewportTracking({
   componentId,
   experienceId,
   variantIndex,
-  threshold = 1.0,
+  threshold = DEFAULT_THRESHOLD,
+  viewTimeMs = DEFAULT_VIEW_TIME_MS,
 }: UseViewportTrackingOptions): UseViewportTrackingReturn {
   const optimization = useOptimization()
   const { scrollY, viewportHeight } = useScrollContext()
@@ -30,6 +42,7 @@ export function useViewportTracking({
   const hasTrackedRef = useRef(false)
   const dimensionsRef = useRef<{ y: number; height: number } | null>(null)
   const isVisibleRef = useRef(false)
+  const viewTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const handleLayout = useCallback(
     (event: LayoutChangeEvent) => {
@@ -44,6 +57,50 @@ export function useViewportTracking({
       dimensionsRef.current = { y, height }
     },
     [componentId],
+  )
+
+  const startTrackingTimer = useCallback(
+    (visibilityPercent: number) => {
+      logger.info(
+        `[ViewportTracking] Component ${componentId} became visible (${visibilityPercent.toFixed(1)}%), starting ${viewTimeMs}ms timer`,
+      )
+
+      // Clear any existing timeout
+      if (viewTimeoutRef.current) {
+        clearTimeout(viewTimeoutRef.current)
+      }
+
+      viewTimeoutRef.current = setTimeout(() => {
+        const { current: isVisible } = isVisibleRef
+        const { current: hasTracked } = hasTrackedRef
+
+        if (isVisible && !hasTracked) {
+          hasTrackedRef.current = true
+
+          logger.info(
+            `[ViewportTracking] Component ${componentId} visible for ${viewTimeMs}ms, tracking view`,
+          )
+
+          // Track the component view
+          optimization.analytics
+            .trackComponentView({
+              componentId,
+              experienceId,
+              variantIndex,
+            })
+            .then(() => {
+              logger.info(`[ViewportTracking] Successfully tracked ${componentId}`)
+            })
+            .catch((error: unknown) => {
+              logger.error(
+                `[ViewportTracking] Failed to track component view for ${componentId}:`,
+                error,
+              )
+            })
+        }
+      }, viewTimeMs)
+    },
+    [componentId, experienceId, variantIndex, viewTimeMs, optimization],
   )
 
   const checkVisibility = useCallback(() => {
@@ -64,12 +121,10 @@ export function useViewportTracking({
       return
     }
 
-    // Element's position within the ScrollView content
     const { y: elementY, height: elementHeight } = dimensions
     const elementBottom = elementY + elementHeight
 
     // Calculate what portion of the element is visible in the viewport
-    // The viewport shows content from scrollY to scrollY + viewportHeight
     const viewportTop = scrollY
     const viewportBottom = scrollY + viewportHeight
 
@@ -84,41 +139,41 @@ export function useViewportTracking({
     )
 
     const isNowVisible = visibilityRatio >= threshold
-
+    const { current: wasVisible } = isVisibleRef
     isVisibleRef.current = isNowVisible
 
-    if (isNowVisible) {
-      hasTrackedRef.current = true
+    if (isNowVisible && !wasVisible) {
+      startTrackingTimer(visibilityRatio * PERCENTAGE_MULTIPLIER)
+    } else if (!isNowVisible && wasVisible) {
+      logger.debug(
+        `[ViewportTracking] ${componentId} became invisible (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%), canceling timer`,
+      )
 
-      logger.info(`[ViewportTracking] Component ${componentId} is fully visible, tracking view`)
-
-      // Track the component view
-      optimization.analytics
-        .trackComponentView({
-          componentId,
-          experienceId,
-          variantIndex,
-        })
-        .then(() => {
-          logger.info(`[ViewportTracking] Successfully tracked ${componentId}`)
-        })
-        .catch((error: unknown) => {
-          logger.error(
-            `[ViewportTracking] Failed to track component view for ${componentId}:`,
-            error,
-          )
-        })
-    } else {
+      if (viewTimeoutRef.current) {
+        clearTimeout(viewTimeoutRef.current)
+        viewTimeoutRef.current = null
+      }
+    } else if (!isNowVisible) {
       logger.debug(
         `[ViewportTracking] ${componentId} is not visible enough (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%)`,
       )
     }
-  }, [componentId, experienceId, variantIndex, threshold, scrollY, viewportHeight, optimization])
+  }, [componentId, threshold, scrollY, viewportHeight, startTrackingTimer])
 
   // Check visibility when scroll position or viewport changes
   useEffect(() => {
     checkVisibility()
   }, [scrollY, viewportHeight, checkVisibility])
+
+  // Cleanup timeout on unmount
+  useEffect(
+    () => () => {
+      if (viewTimeoutRef.current) {
+        clearTimeout(viewTimeoutRef.current)
+      }
+    },
+    [],
+  )
 
   return {
     isVisible: isVisibleRef.current,

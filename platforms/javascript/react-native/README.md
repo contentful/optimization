@@ -11,35 +11,83 @@ npm install @contentful/optimization-react-native @react-native-async-storage/as
 ## Quick Start
 
 ```typescript
+import { createClient } from 'contentful'
 import Optimization, {
   OptimizationProvider,
   ScrollProvider,
-  OptimizationTrackedView,
+  Personalization,
+  Analytics,
 } from '@contentful/optimization-react-native'
 
-// Initialize the SDK
+// Initialize the Contentful client
+const contentful = createClient({
+  space: 'your-space-id',
+  accessToken: 'your-access-token',
+})
+
+// Initialize the Optimization SDK
 const optimization = await Optimization.create({
   clientId: 'your-client-id',
   environment: 'your-environment',
 })
 
-// Wrap your app with the provider
+// Fetch a baseline entry with full includes for personalization
+const heroEntry = await contentful.getEntry('hero-baseline-id', {
+  include: 10, // Required to load all variant data
+})
+
+// Wrap your app with the providers
 function App() {
   return (
     <OptimizationProvider instance={optimization}>
       <ScrollProvider>
-        <OptimizationTrackedView
-          componentId="hero-banner"
-          experienceId="exp-123"
-          variantIndex={0}
-        >
-          <YourPersonalizedContent />
-        </OptimizationTrackedView>
+        {/* For personalized entries */}
+        <Personalization baselineEntry={heroEntry}>
+          {(resolvedEntry) => (
+            <HeroComponent
+              title={resolvedEntry.fields.title}
+              image={resolvedEntry.fields.image}
+            />
+          )}
+        </Personalization>
+
+        {/* For non-personalized entries */}
+        <Analytics entry={productEntry}>
+          <ProductCard data={productEntry.fields} />
+        </Analytics>
       </ScrollProvider>
     </OptimizationProvider>
   )
 }
 ```
+
+## Component Tracking
+
+**Important:** When we refer to "component tracking," we're talking about tracking **Contentful entry components** (content entries in your CMS), NOT React Native UI components. The term "component" comes from Contentful's terminology for personalized content entries.
+
+The SDK provides two semantic components for tracking different types of Contentful entries:
+
+### `<Personalization />` - For Personalized Entries
+
+Use this component to track Contentful entries that can be personalized (have `nt_experiences` field). It automatically:
+
+- Resolves the correct variant based on user profile and active personalizations
+- Provides the resolved entry via render prop
+- Tracks component views when visibility and time thresholds are met
+
+### `<Analytics />` - For Non-Personalized Entries
+
+Use this component to track standard Contentful entries you want analytics on (products, articles, etc.). It:
+
+- Tracks any Contentful entry without personalization
+- Uses a simple children pattern (no render prop needed)
+- Same visibility and time tracking as `<Personalization />`
+
+Both components track when an entry:
+
+- Is at least **80% visible** in the viewport (configurable via `threshold` prop)
+- Has been viewed for **2000ms** (2 seconds, configurable via `viewTimeMs` prop)
+- Has not already been tracked (deduplication handled by Core)
 
 ## Features
 
@@ -47,8 +95,9 @@ This SDK provides all the functionality from `@contentful/optimization-core` plu
 
 ### React Native Specific
 
+- **Personalization**: Component for tracking personalized Contentful entries with variant resolution
+- **Analytics**: Component for tracking non-personalized Contentful entries
 - **OptimizationProvider**: React context provider for accessing the Optimization instance
-- **OptimizationTrackedView**: Automatically track component views when they enter the viewport
 - **ScrollProvider**: Wrapper around ScrollView that enables viewport tracking
 - **useOptimization**: Hook to access the Optimization instance in components
 - **useViewportTracking**: Hook for custom viewport tracking logic
@@ -65,47 +114,92 @@ All core SDK features are available directly from this package:
 - **Logger**: `logger` - Logging utilities
 - **Types**: All TypeScript types and interfaces from core and API client
 
-### Viewport Tracking
+### Component Tracking Examples
 
-The SDK provides automatic viewport tracking for personalized components. When a tracked component becomes fully visible in the viewport, it automatically sends a component view event.
+#### Tracking Personalized Entries
+
+The `<Personalization />` component handles variant resolution and tracking for personalized Contentful entries:
 
 ```typescript
-import {
-  OptimizationProvider,
-  ScrollProvider,
-  OptimizationTrackedView,
-} from '@contentful/optimization-react-native'
+import { createClient } from 'contentful'
+import { Personalization } from '@contentful/optimization-react-native'
+
+const contentful = createClient({ /* ... */ })
+
+// Fetch baseline entry with full includes (required for personalization)
+const heroEntry = await contentful.getEntry('hero-baseline-id', {
+  include: 10, // Loads all linked variants and experiences
+})
 
 function MyScreen() {
   return (
-    <OptimizationProvider instance={optimizationInstance}>
-      <ScrollProvider>
-        <OptimizationTrackedView
-          componentId="hero-banner"
-          experienceId="exp-123"
-          variantIndex={0}
-        >
-          <HeroBanner />
-        </OptimizationTrackedView>
-
-        <OptimizationTrackedView
-          componentId="product-card"
-          variantIndex={1}
-        >
-          <ProductCard />
-        </OptimizationTrackedView>
-      </ScrollProvider>
-    </OptimizationProvider>
+    <ScrollProvider>
+      <Personalization baselineEntry={heroEntry}>
+        {(resolvedEntry) => (
+          <View>
+            <Text>{resolvedEntry.fields.title}</Text>
+            <Image source={{ uri: resolvedEntry.fields.image.fields.file.url }} />
+          </View>
+        )}
+      </Personalization>
+    </ScrollProvider>
   )
 }
 ```
 
+#### Tracking Non-Personalized Entries
+
+The `<Analytics />` component tracks views of standard Contentful entries:
+
+```typescript
+import { Analytics } from '@contentful/optimization-react-native'
+
+const productEntry = await contentful.getEntry('product-123')
+
+function ProductScreen() {
+  return (
+    <ScrollProvider>
+      <Analytics entry={productEntry}>
+        <ProductCard
+          name={productEntry.fields.name}
+          price={productEntry.fields.price}
+          image={productEntry.fields.image}
+        />
+      </Analytics>
+    </ScrollProvider>
+  )
+}
+```
+
+#### Custom Tracking Thresholds
+
+Both components support customizable visibility and time thresholds:
+
+```typescript
+<Personalization
+  baselineEntry={entry}
+  viewTimeMs={3000}      // Track after 3 seconds of visibility
+  threshold={0.9}        // Require 90% visibility
+>
+  {(resolvedEntry) => <YourComponent data={resolvedEntry.fields} />}
+</Personalization>
+
+<Analytics
+  entry={entry}
+  viewTimeMs={1500}      // Track after 1.5 seconds
+  threshold={0.5}        // Require 50% visibility
+>
+  <YourComponent />
+</Analytics>
+```
+
 **Key Features:**
 
-- Tracks only once per component (when it first becomes fully visible)
+- Tracks only once per component instance
 - Works with ScrollView via `ScrollProvider`
-- Requires component to be 100% visible by default
-- Configurable visibility threshold via `threshold` prop (0.0 to 1.0)
+- Default: 80% visible for 2000ms (both configurable)
+- `<Personalization />` uses render prop pattern to provide resolved entry
+- `<Analytics />` uses standard children pattern
 
 ### Manual Analytics Tracking
 
@@ -134,19 +228,28 @@ function MyComponent() {
 
 ```typescript
 import React, { useEffect, useState } from 'react'
-import { View, Text } from 'react-native'
+import { View, Text, Image } from 'react-native'
+import { createClient } from 'contentful'
+import type { Entry } from 'contentful'
 import Optimization, {
   logger,
   OptimizationProvider,
   ScrollProvider,
-  OptimizationTrackedView,
+  Personalization,
+  Analytics,
   type CoreConfig,
 } from '@contentful/optimization-react-native'
+
+// Initialize Contentful client
+const contentful = createClient({
+  space: 'your-space-id',
+  accessToken: 'your-access-token',
+})
 
 // Use logger
 logger.info('App starting')
 
-// Initialize SDK
+// Optimization SDK config
 const config: CoreConfig = {
   clientId: 'your-client-id',
   environment: 'main',
@@ -155,12 +258,23 @@ const config: CoreConfig = {
 
 function App() {
   const [optimization, setOptimization] = useState<Optimization | null>(null)
+  const [heroEntry, setHeroEntry] = useState<Entry | null>(null)
+  const [productEntry, setProductEntry] = useState<Entry | null>(null)
 
   useEffect(() => {
-    Optimization.create(config).then(setOptimization)
+    // Initialize SDK and fetch entries
+    Promise.all([
+      Optimization.create(config),
+      contentful.getEntry('hero-baseline-id', { include: 10 }),
+      contentful.getEntry('product-123'),
+    ]).then(([opt, hero, product]) => {
+      setOptimization(opt)
+      setHeroEntry(hero)
+      setProductEntry(product)
+    })
   }, [])
 
-  if (!optimization) {
+  if (!optimization || !heroEntry || !productEntry) {
     return <Text>Loading...</Text>
   }
 
@@ -168,12 +282,23 @@ function App() {
     <OptimizationProvider instance={optimization}>
       <ScrollProvider>
         <View>
-          <OptimizationTrackedView
-            componentId="header"
-            variantIndex={0}
-          >
-            <Text>Personalized Header</Text>
-          </OptimizationTrackedView>
+          {/* Personalized hero section */}
+          <Personalization baselineEntry={heroEntry}>
+            {(resolvedEntry) => (
+              <View>
+                <Text>{resolvedEntry.fields.title}</Text>
+                <Text>{resolvedEntry.fields.description}</Text>
+              </View>
+            )}
+          </Personalization>
+
+          {/* Non-personalized product */}
+          <Analytics entry={productEntry}>
+            <View>
+              <Text>{productEntry.fields.name}</Text>
+              <Text>${productEntry.fields.price}</Text>
+            </View>
+          </Analytics>
         </View>
       </ScrollProvider>
     </OptimizationProvider>

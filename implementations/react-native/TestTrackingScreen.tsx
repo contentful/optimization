@@ -1,5 +1,8 @@
 /**
  * Test Tracking Screen - Demonstrates viewport tracking functionality
+ *
+ * This screen demonstrates both the new Personalization and Analytics components
+ * with mock Contentful entry data.
  */
 
 import React, { useEffect, useState } from 'react'
@@ -14,7 +17,46 @@ import {
 } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
-import { OptimizationTrackedView, ScrollProvider } from '@contentful/optimization-react-native'
+import { Analytics, Personalization, ScrollProvider } from '@contentful/optimization-react-native'
+
+/**
+ * Mock Entry types for demonstration
+ */
+interface MockEntrySys {
+  id: string
+  type: string
+  contentType: {
+    sys: {
+      type: string
+      linkType: string
+      id: string
+    }
+  }
+  createdAt: string
+  updatedAt: string
+  revision: number
+  space: { sys: { type: string; linkType: string; id: string } }
+  environment: { sys: { type: string; linkType: string; id: string } }
+}
+
+interface MockHeroEntry {
+  sys: MockEntrySys
+  fields: {
+    title: string
+    subtitle: string
+  }
+  metadata: { tags: unknown[] }
+}
+
+interface MockProductEntry {
+  sys: MockEntrySys
+  fields: {
+    name: string
+    price: number
+    description: string
+  }
+  metadata: { tags: unknown[] }
+}
 
 interface ThemeColors {
   backgroundColor: string
@@ -29,6 +71,58 @@ interface TestTrackingScreenProps {
   colors: ThemeColors
   onBack: () => void
   sdk: Optimization
+}
+
+/**
+ * Mock Contentful entry data for demonstration
+ */
+const mockPersonalizedEntry: MockHeroEntry = {
+  sys: {
+    id: 'personalized-hero-baseline',
+    type: 'Entry',
+    contentType: {
+      sys: {
+        type: 'Link',
+        linkType: 'ContentType',
+        id: 'hero',
+      },
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    revision: 1,
+    space: { sys: { type: 'Link', linkType: 'Space', id: 'test-space' } },
+    environment: { sys: { type: 'Link', linkType: 'Environment', id: 'master' } },
+  },
+  fields: {
+    title: 'Welcome to Contentful Optimization!',
+    subtitle: 'This hero can be personalized',
+  },
+  metadata: { tags: [] },
+}
+
+const mockProductEntry: MockProductEntry = {
+  sys: {
+    id: 'product-card-123',
+    type: 'Entry',
+    contentType: {
+      sys: {
+        type: 'Link',
+        linkType: 'ContentType',
+        id: 'product',
+      },
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    revision: 1,
+    space: { sys: { type: 'Link', linkType: 'Space', id: 'test-space' } },
+    environment: { sys: { type: 'Link', linkType: 'Environment', id: 'master' } },
+  },
+  fields: {
+    name: 'Premium Widget',
+    price: 99.99,
+    description: 'A non-personalized product entry',
+  },
+  metadata: { tags: [] },
 }
 
 export function TestTrackingScreen({
@@ -62,18 +156,22 @@ export function TestTrackingScreen({
         <TouchableOpacity onPress={onBack} style={styles.backButton} testID="backButton">
           <Text style={[styles.backButtonText, { color: colors.successColor }]}>← Back</Text>
         </TouchableOpacity>
-        <Text style={[styles.testTitle, { color: colors.textColor }]}>Viewport Tracking Test</Text>
+        <Text style={[styles.testTitle, { color: colors.textColor }]}>Component Tracking Test</Text>
       </View>
 
       <ScrollProvider>
-        {/* Filler content to push tracked view below viewport */}
+        {/* Info section */}
         <View style={[styles.fillerSection, { backgroundColor: colors.cardBackground }]}>
           <Text style={[styles.sectionTitle, { color: colors.textColor }]}>
-            Scroll Down to Test Tracking
+            Component Tracking Demo
           </Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor }]}>
-            The tracked component is below the viewport. Scroll down to bring it fully into view and
-            trigger the tracking event.
+            Scroll down to see the new {'<Personalization />'} and {'<Analytics />'} components in
+            action. Each tracks when 80% visible for 2 seconds.
+          </Text>
+          <Text style={[styles.sectionText, { color: colors.mutedTextColor, marginTop: 12 }]}>
+            📝 Note: "Component tracking" refers to tracking Contentful entry components (CMS
+            content), not React Native UI components.
           </Text>
         </View>
 
@@ -81,49 +179,65 @@ export function TestTrackingScreen({
           style={[styles.fillerSection, { backgroundColor: colors.cardBackground }]}
           testID="fillerView1"
         >
-          <Text style={[styles.sectionTitle, { color: colors.textColor }]}>Non-Tracked View 1</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textColor }]}>Spacer Content</Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor }]}>
-            This is a regular view that doesn't track viewport visibility.
+            This creates scrollable content. Keep scrolling to reach the tracked components below...
           </Text>
         </View>
+
+        {/* Personalization component example */}
+        <Personalization
+          baselineEntry={mockPersonalizedEntry}
+          viewTimeMs={2000} // 2 seconds
+          threshold={0.8} // 80% visible
+          style={StyleSheet.flatten([styles.trackedView, { backgroundColor: '#6366f1' }])}
+        >
+          {() => (
+            <View>
+              <Text style={styles.componentLabel}>{'<Personalization />'}</Text>
+              <Text style={styles.trackedViewTitle}>{mockPersonalizedEntry.fields.title}</Text>
+              <Text style={styles.trackedViewText}>{mockPersonalizedEntry.fields.subtitle}</Text>
+              <Text style={styles.trackedViewDetails}>
+                Entry ID: {mockPersonalizedEntry.sys.id}
+                {'\n'}
+                Type: Personalized Hero
+                {'\n'}
+                Tracking: 80% visible for 2000ms
+              </Text>
+            </View>
+          )}
+        </Personalization>
 
         <View
           style={[styles.fillerSection, { backgroundColor: colors.cardBackground }]}
           testID="fillerView2"
         >
-          <Text style={[styles.sectionTitle, { color: colors.textColor }]}>Non-Tracked View 2</Text>
+          <Text style={[styles.sectionTitle, { color: colors.textColor }]}>More Content</Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor }]}>
-            Another regular view to create scrollable content.
+            Keep scrolling to see the Analytics component next...
           </Text>
         </View>
 
-        <View
-          style={[styles.fillerSection, { backgroundColor: colors.cardBackground }]}
-          testID="fillerView3"
+        <Analytics
+          entry={mockProductEntry}
+          viewTimeMs={1500}
+          threshold={0.9}
+          style={StyleSheet.flatten([styles.trackedView, { backgroundColor: '#10b981' }])}
         >
-          <Text style={[styles.sectionTitle, { color: colors.textColor }]}>Non-Tracked View 3</Text>
-          <Text style={[styles.sectionText, { color: colors.mutedTextColor }]}>
-            Keep scrolling down to reach the tracked component...
-          </Text>
-        </View>
-
-        {/* Tracked component */}
-        <OptimizationTrackedView
-          componentId="test-hero-banner"
-          experienceId="exp-test-123"
-          variantIndex={0}
-          style={StyleSheet.flatten([styles.trackedView, { backgroundColor: colors.successColor }])}
-        >
-          <Text style={styles.trackedViewTitle}>Tracked Component</Text>
-          <Text style={styles.trackedViewText}>
-            Testing out viewport tracking here with a tracked component.
-          </Text>
-          <Text style={styles.trackedViewDetails}>
-            Component ID: test-hero-banner{'\n'}
-            Experience ID: exp-test-123{'\n'}
-            Variant Index: 0
-          </Text>
-        </OptimizationTrackedView>
+          <View>
+            <Text style={styles.componentLabel}>{'<Analytics />'}</Text>
+            <Text style={styles.trackedViewTitle}>{mockProductEntry.fields.name}</Text>
+            <Text style={styles.trackedViewText}>${mockProductEntry.fields.price}</Text>
+            <Text style={styles.trackedViewText}>{mockProductEntry.fields.description}</Text>
+            <Text style={styles.trackedViewDetails}>
+              Entry ID: {mockProductEntry.sys.id}
+              {'\n'}
+              Type: Non-personalized Product
+              {'\n'}
+              Tracking: 90% visible for 1500ms (custom)
+            </Text>
+          </View>
+        </Analytics>
 
         {/* Event log */}
         <View style={[styles.eventLog, { backgroundColor: colors.cardBackground }]}>
@@ -196,6 +310,13 @@ const styles = StyleSheet.create({
     marginVertical: 8,
     borderRadius: 12,
     minHeight: 200,
+  },
+  componentLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.7)',
+    marginBottom: 8,
+    letterSpacing: 0.5,
   },
   trackedViewTitle: {
     fontSize: 24,
