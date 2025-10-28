@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@contentful/optimization-node": "workspace:*",
+    "@contentful/optimization-web": "workspace:*",
     "express": "catalog:",
     "express-rate-limit": "catalog:",
     "tslib": "catalog:"

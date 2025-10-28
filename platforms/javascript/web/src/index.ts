@@ -12,6 +12,7 @@ import Cookies from 'js-cookie'
 import { beaconHandler } from './beacon/beaconHandler'
 import { getAnonymousId, getLocale, getPageProperties, getUserAgent } from './builders/EventBuilder'
 import LocalStore from './storage/LocalStore'
+export { ANONYMOUS_ID } from './storage/LocalStore'
 
 declare global {
   interface Window {
