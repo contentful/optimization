@@ -487,6 +487,9 @@ importers:
       "@vitest/coverage-v8":
         specifier: "catalog:"
         version: 3.2.4(vitest@3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.5.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1))
+      contentful:
+        specifier: 'catalog:'
+        version: 11.8.5
       rimraf:
         specifier: "catalog:"
         version: 6.0.1

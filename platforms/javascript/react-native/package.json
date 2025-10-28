@@ -43,6 +43,7 @@
   "devDependencies": {
     "@types/react": "^18.3.18",
     "@vitest/coverage-v8": "catalog:",
+    "contentful": "catalog:",
     "rimraf": "catalog:",
     "tslib": "catalog:",
     "typescript": "catalog:",
