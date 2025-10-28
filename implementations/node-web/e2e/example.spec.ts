@@ -32,5 +32,7 @@ test('profile id is stored in local storage if user is logged in', async ({ page
 
   const state = await context.storageState()
 
-  expect(state.origins[0]?.localStorage).toEqual([{ name: ANONYMOUS_ID, value: id }])
+  const localStorage = state.origins[0]?.localStorage
+
+  expect(localStorage).toEqual([{ name: ANONYMOUS_ID, value: id }])
 })
