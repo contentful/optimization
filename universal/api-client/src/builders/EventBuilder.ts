@@ -43,7 +43,7 @@ const ComponentViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
 export type ComponentViewBuilderArgs = z.infer<typeof ComponentViewBuilderArgs>
 
 const IdentifyBuilderArgs = z.extend(UniversalEventBuilderArgs, {
-  traits: Traits,
+  traits: z.optional(Traits),
   userId: z.string(),
 })
 export type IdentifyBuilderArgs = z.infer<typeof IdentifyBuilderArgs>
@@ -145,7 +145,7 @@ class EventBuilder {
   }
 
   buildIdentify(args: IdentifyBuilderArgs): IdentifyEvent {
-    const { traits, userId, ...universal } = IdentifyBuilderArgs.parse(args)
+    const { traits = {}, userId, ...universal } = IdentifyBuilderArgs.parse(args)
 
     return {
       ...this.buildUniversalEventProperties(universal),

@@ -7,6 +7,7 @@ import {
   isPersonalizedEntry,
   type PersonalizationEntry,
   type PersonalizedEntry,
+  type SelectedPersonalization,
   type SelectedPersonalizationArray,
 } from '@contentful/optimization-api-client'
 import type { Entry } from 'contentful'
@@ -18,51 +19,52 @@ const PersonalizedEntryResolver = {
   getPersonalizationEntry(
     {
       personalizedEntry,
-      personalizations,
+      selectedPersonalizations,
     }: {
       personalizedEntry: PersonalizedEntry
-      personalizations: SelectedPersonalizationArray
+      selectedPersonalizations: SelectedPersonalizationArray
     },
     skipValidation = false,
   ): PersonalizationEntry | undefined {
-    if (!skipValidation && (!personalizations.length || !isPersonalizedEntry(personalizedEntry)))
+    if (
+      !skipValidation &&
+      (!selectedPersonalizations.length || !isPersonalizedEntry(personalizedEntry))
+    )
       return
 
     const personalizationEntry = personalizedEntry.fields.nt_experiences
       .filter((maybePersonalization) => isPersonalizationEntry(maybePersonalization))
       .find((personalization) =>
-        personalizations.some(
+        selectedPersonalizations.some(
           (selectedPersonalization) =>
             selectedPersonalization.experienceId === personalization.sys.id,
         ),
       )
 
-    personalizedEntry.fields.nt_sticky = personalizationEntry?.fields.nt_config?.sticky ?? false
-
     return personalizationEntry
   },
 
-  getSelectedVariantIndex(
+  getSelectedPersonalization(
     {
       personalizationEntry,
-      personalizations,
+      selectedPersonalizations,
     }: {
       personalizationEntry: PersonalizationEntry
-      personalizations: SelectedPersonalizationArray
+      selectedPersonalizations: SelectedPersonalizationArray
     },
     skipValidation = false,
-  ) {
+  ): SelectedPersonalization | undefined {
     if (
       !skipValidation &&
-      (!personalizations.length || !isPersonalizationEntry(personalizationEntry))
+      (!selectedPersonalizations.length || !isPersonalizationEntry(personalizationEntry))
     )
-      return 0
+      return
 
-    const selectedPersonalization = personalizations.find(
+    const selectedPersonalization = selectedPersonalizations.find(
       ({ experienceId }) => experienceId === personalizationEntry.sys.id,
     )
 
-    return selectedPersonalization?.variantIndex ?? 0
+    return selectedPersonalization
   },
 
   getSelectedVariant(
@@ -115,20 +117,24 @@ const PersonalizedEntryResolver = {
       (variant) => variant.sys.id === selectedVariant.id,
     )
 
-    const {
-      fields: { nt_config: originalEntryConfig },
-    } = personalizationEntry
-
-    if (selectedVariantEntry) selectedVariantEntry.fields.nt_config = originalEntryConfig
-
     return selectedVariantEntry
   },
 
-  resolve(entry: Entry, personalizations?: SelectedPersonalizationArray): Entry {
+  decorateSelectedVariantFields(
+    selectedVariantEntry: Entry,
+    selectedPersonalization: SelectedPersonalization | undefined,
+  ) {
+    selectedVariantEntry.fields.nt_personalization = selectedPersonalization ?? {}
+  },
+
+  resolve(entry: Entry, selectedPersonalizations?: SelectedPersonalizationArray): Entry {
     logger.info('[Personalization] Resolving personalized entry for baseline entry', entry.sys.id)
 
-    if (!personalizations?.length) {
-      logger.warn(RESOLUTION_WARNING_BASE, 'no personalizations exist for the current profile')
+    if (!selectedPersonalizations?.length) {
+      logger.warn(
+        RESOLUTION_WARNING_BASE,
+        'no selectedPersonalizations exist for the current profile',
+      )
       return entry
     }
 
@@ -140,7 +146,7 @@ const PersonalizedEntryResolver = {
     const personalizationEntry = PersonalizedEntryResolver.getPersonalizationEntry(
       {
         personalizedEntry: entry,
-        personalizations,
+        selectedPersonalizations,
       },
       true,
     )
@@ -153,13 +159,15 @@ const PersonalizedEntryResolver = {
       return entry
     }
 
-    const selectedVariantIndex = PersonalizedEntryResolver.getSelectedVariantIndex(
+    const selectedPersonalization = PersonalizedEntryResolver.getSelectedPersonalization(
       {
         personalizationEntry,
-        personalizations,
+        selectedPersonalizations,
       },
       true,
     )
+
+    const selectedVariantIndex = selectedPersonalization?.variantIndex ?? 0
 
     if (selectedVariantIndex === 0) {
       logger.info(
@@ -205,6 +213,11 @@ const PersonalizedEntryResolver = {
         `[Personalization] Entry ${entry.sys.id} has been resolved to variant entry ${selectedVariantEntry.sys.id}`,
       )
     }
+
+    PersonalizedEntryResolver.decorateSelectedVariantFields(
+      selectedVariantEntry,
+      selectedPersonalization,
+    )
 
     return selectedVariantEntry
   },
