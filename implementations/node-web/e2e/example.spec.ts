@@ -4,14 +4,19 @@ import { expect, test } from '@playwright/test'
 
 const CLIENT_ID = process.env.VITE_NINETAILED_CLIENT_ID ?? 'error'
 
+const URI = {
+  ssr: 'http://localhost:3000/',
+  csr: 'http://localhost:4000/',
+}
+
 test('test SSR', async ({ request }) => {
-  const response = await request.get('http://localhost:3000/')
+  const response = await request.get(URI.ssr)
 
   expect(await response.json()).toMatchObject({ clientId: CLIENT_ID })
 })
 
 test('test CSR', async ({ page }) => {
-  await page.goto('http://localhost:4000/')
+  await page.goto(URI.csr)
 
   await expect(page.getByTestId('clientId')).toHaveText(CLIENT_ID)
 })
@@ -23,7 +28,7 @@ test('profile id is stored in local storage if user is logged in', async ({ page
     { name: ANONYMOUS_ID_COOKIE, value: id, path: '/', domain: 'localhost' },
   ])
 
-  await page.goto('http://localhost:4000/')
+  await page.goto(URI.csr)
 
   const state = await context.storageState()
 
