@@ -157,22 +157,23 @@ export function TestTrackingScreen({
         </View>
 
         <Analytics
-          entry={mockProductEntry}
+          entry={productEntry}
           viewTimeMs={1500}
           threshold={0.9}
           style={StyleSheet.flatten([styles.trackedView, { backgroundColor: '#10b981' }])}
         >
           <View>
             <Text style={styles.componentLabel}>{'<Analytics />'}</Text>
-            <Text style={styles.trackedViewTitle}>{mockProductEntry.fields.name as string}</Text>
-            <Text style={styles.trackedViewText}>${mockProductEntry.fields.price as number}</Text>
+            <Text style={styles.trackedViewTitle}>
+              {getFieldText(productEntry.fields.internalTitle) || 'Analytics Entry'}
+            </Text>
             <Text style={styles.trackedViewText}>
-              {mockProductEntry.fields.description as string}
+              {getFieldText(productEntry.fields.text) || 'Content loaded from mock server'}
             </Text>
             <Text style={styles.trackedViewDetails}>
-              Entry ID: {mockProductEntry.sys.id}
+              Entry ID: {productEntry.sys.id}
               {'\n'}
-              Type: Non-personalized Product
+              Content Type: {productEntry.sys.contentType?.sys.id ?? 'Unknown'}
               {'\n'}
               Tracking: 90% visible for 1500ms (custom)
             </Text>
