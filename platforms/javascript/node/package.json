@@ -37,6 +37,7 @@
   "devDependencies": {
     "@types/express": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "contentful": "catalog:",
     "express": "catalog:",
     "express-rate-limit": "catalog:",
     "pug": "^3.0.3",
