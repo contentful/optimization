@@ -109,18 +109,6 @@ class Personalization extends PersonalizationBase implements ConsentGuard {
     })
   }
 
-  hasConsent(name: string): boolean {
-    if (name === 'trackComponentView') name = 'component'
-
-    return !!consent.value || (this.allowedEvents ?? []).includes(name)
-  }
-
-  onBlockedByConsent(name: string, args: unknown[]): void {
-    logger.warn(
-      `[Personalization] Event "${name}" was blocked due to lack of consent; args: ${JSON.stringify(args)}`,
-    )
-  }
-
   get flags(): Flags | undefined {
     return flagsSignal.value
   }
@@ -147,39 +135,68 @@ class Personalization extends PersonalizationBase implements ConsentGuard {
     return MergeTagValueResolver.resolve(embeddedEntryNodeTarget, profile)
   }
 
+  hasConsent(name: string): boolean {
+    if (name === 'trackComponentView') name = 'component'
+
+    return !!consent.value || (this.allowedEventTypes ?? []).includes(name)
+  }
+
+  onBlockedByConsent(name: string, args: unknown[]): void {
+    logger.warn(
+      `[Personalization] Event "${name}" was blocked due to lack of consent; args: ${JSON.stringify(args)}`,
+    )
+  }
+
+  isNotDuplicated(_name: string, args: [ComponentViewBuilderArgs, string]): boolean {
+    const [{ componentId: value }, duplicationKey] = args
+
+    const isDuplicated = this.duplicationDetector.isPresent(duplicationKey, value)
+
+    if (!isDuplicated) this.duplicationDetector.addValue(duplicationKey, value)
+
+    return !isDuplicated
+  }
+
+  onBlockedByDuplication(_name: string, args: unknown[]): void {
+    logger.info(
+      `[Analytics] Duplicate "component view" event detected, skipping; args: ${JSON.stringify(args)}`,
+    )
+  }
+
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async identify(args: IdentifyBuilderArgs): Promise<OptimizationData | undefined> {
+  async identify(payload: IdentifyBuilderArgs): Promise<OptimizationData | undefined> {
     logger.info('[Personalization] Sending "identify" event')
 
-    const event = IdentifyEvent.parse(this.builder.buildIdentify(args))
+    const event = IdentifyEvent.parse(this.builder.buildIdentify(payload))
 
     return await this.#upsertProfile(event)
   }
 
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async page(args: PageViewBuilderArgs): Promise<OptimizationData> {
+  async page(payload: PageViewBuilderArgs): Promise<OptimizationData> {
     logger.info('[Personalization] Sending "page" event')
 
-    const event = PageViewEvent.parse(this.builder.buildPageView(args))
+    const event = PageViewEvent.parse(this.builder.buildPageView(payload))
 
     return await this.#upsertProfile(event)
   }
 
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async track(args: TrackBuilderArgs): Promise<OptimizationData> {
-    logger.info(`[Personalization] Sending "track" event "${args.event}"`)
+  async track(payload: TrackBuilderArgs): Promise<OptimizationData> {
+    logger.info(`[Personalization] Sending "track" event "${payload.event}"`)
 
-    const event = TrackEvent.parse(this.builder.buildTrack(args))
+    const event = TrackEvent.parse(this.builder.buildTrack(payload))
 
     return await this.#upsertProfile(event)
   }
 
   /** AKA sticky component view */
+  @guardedBy('isNotDuplicated', { onBlocked: 'onBlockedByDuplication' })
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async trackComponentView(args: ComponentViewBuilderArgs): Promise<OptimizationData> {
+  async trackComponentView(payload: ComponentViewBuilderArgs): Promise<OptimizationData> {
     logger.info(`[Personalization] Sending "track personalization" event`)
 
-    const event = ComponentViewEvent.parse(this.builder.buildComponentView(args))
+    const event = ComponentViewEvent.parse(this.builder.buildComponentView(payload))
 
     return await this.#upsertProfile(event)
   }

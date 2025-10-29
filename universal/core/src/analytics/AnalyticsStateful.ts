@@ -12,6 +12,7 @@ import type { ConsentGuard } from '../Consent'
 import { guardedBy } from '../lib/decorators'
 import type { ProductConfig } from '../ProductBase'
 import {
+  batch,
   consent,
   effect,
   event as eventSignal,
@@ -64,10 +65,17 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
     })
   }
 
+  reset(): void {
+    batch(() => {
+      eventSignal.value = undefined
+      profileSignal.value = undefined
+    })
+  }
+
   hasConsent(name: string): boolean {
     if (name === 'trackComponentView') name = 'component'
 
-    return !!consent.value || (this.allowedEvents ?? []).includes(name)
+    return !!consent.value || (this.allowedEventTypes ?? []).includes(name)
   }
 
   onBlockedByConsent(name: string, args: unknown[]): void {
@@ -76,18 +84,38 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
     )
   }
 
-  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async trackComponentView(args: ComponentViewBuilderArgs): Promise<void> {
-    logger.info(`[Analytics] Processing "component view" event`)
+  isNotDuplicated(_name: string, args: [ComponentViewBuilderArgs, string]): boolean {
+    const [{ componentId: value }, duplicationKey] = args
 
-    await this.#enqueueEvent(this.builder.buildComponentView(args))
+    const isDuplicated = this.duplicationDetector.isPresent(duplicationKey, value)
+
+    if (!isDuplicated) this.duplicationDetector.addValue(duplicationKey, value)
+
+    return !isDuplicated
   }
 
+  onBlockedByDuplication(name: string, args: unknown[]): void {
+    const componentType = name === 'trackFlagView' ? 'flag' : 'component'
+
+    logger.info(
+      `[Analytics] Duplicate "${componentType} view" event detected, skipping; args: ${JSON.stringify(args)}`,
+    )
+  }
+
+  @guardedBy('isNotDuplicated', { onBlocked: 'onBlockedByDuplication' })
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async trackFlagView(args: ComponentViewBuilderArgs): Promise<void> {
+  async trackComponentView(payload: ComponentViewBuilderArgs, _duplicationKey = ''): Promise<void> {
+    logger.info(`[Analytics] Processing "component view" event`)
+
+    await this.#enqueueEvent(this.builder.buildComponentView(payload))
+  }
+
+  @guardedBy('isNotDuplicated', { onBlocked: 'onBlockedByDuplication' })
+  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
+  async trackFlagView(payload: ComponentViewBuilderArgs): Promise<void> {
     logger.debug(`[Analytics] Processing "flag view" event`)
 
-    await this.#enqueueEvent(this.builder.buildFlagView(args))
+    await this.#enqueueEvent(this.builder.buildFlagView(payload))
   }
 
   async #enqueueEvent(event: InsightsEvent): Promise<void> {
