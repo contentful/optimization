@@ -158,38 +158,9 @@ function App(): React.JSX.Element {
         const environment = process.env.NINETAILED_ENVIRONMENT ?? 'main'
 
         // Initialize the Optimization SDK
-        await Optimization.create({
+        const sdkInstance = await Optimization.create({
           clientId,
           environment,
-          logLevel: 'debug', // Enable debug logging to console
-          defaults: {
-            consent: true, // Grant consent for tracking
-            analytics: {
-              profile: {
-                id: 'demo-user-123',
-                stableId: 'demo-stable-id',
-                random: Math.random(),
-                audiences: [],
-                traits: {},
-                location: {},
-                session: {
-                  id: 'session-123',
-                  isReturningVisitor: false,
-                  landingPage: {
-                    path: '/',
-                    query: {},
-                    referrer: '',
-                    search: '',
-                    title: 'Demo App',
-                    url: 'app://',
-                  },
-                  count: 1,
-                  activeSessionLength: 0,
-                  averageSessionLength: 0,
-                },
-              },
-            },
-          },
         })
 
         // Store SDK info for display
