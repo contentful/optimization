@@ -62,13 +62,6 @@ const config: ConfigArray = typescript.config(
       'promise/avoid-new': 'off',
     },
   },
-  {
-    // Allow console statements in implementation/demo projects
-    files: ['implementations/**/*.{ts,tsx,js,jsx}'],
-    rules: {
-      'no-console': 'off',
-    },
-  },
   prettier,
 )
 
