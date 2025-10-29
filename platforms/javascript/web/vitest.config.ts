@@ -1,0 +1,40 @@
+import { resolve } from 'node:path'
+import tsconfigPaths from 'vite-tsconfig-paths'
+import { defineConfig } from 'vitest/config'
+
+export default defineConfig({
+  resolve: {
+    alias: {
+      '@contentful/optimization-api-client': resolve(
+        __dirname,
+        '../../../universal/api-client/src/',
+      ),
+      '@contentful/optimization-api-schemas': resolve(
+        __dirname,
+        '../../../universal/api-schemas/src/',
+      ),
+      '@contentful/optimization-core': resolve(__dirname, '../../../universal/core/src/'),
+    },
+  },
+  esbuild: {
+    target: 'es2022',
+  },
+  build: {
+    sourcemap: true,
+    lib: {
+      entry: resolve(__dirname, 'src/index.ts'),
+      name: 'Optimization',
+      fileName: 'index',
+    },
+  },
+  plugins: [tsconfigPaths()],
+  test: {
+    environment: 'happy-dom',
+    include: ['**/*.test.?(c|m)[jt]s?(x)'],
+    globals: true,
+    coverage: {
+      include: ['src/**/*'],
+      reporter: ['text', 'html'],
+    },
+  },
+})
