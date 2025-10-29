@@ -38,7 +38,7 @@ class CoreStateful extends CoreBase implements ConsentController {
   constructor(config: CoreStatefulConfig) {
     super(config)
 
-    const { allowedEvents, defaults } = config
+    const { allowedEventTypes, defaults, preventedComponentEvents } = config
 
     if (defaults?.consent !== undefined) {
       const { consent: defaultConsent } = defaults
@@ -46,12 +46,14 @@ class CoreStateful extends CoreBase implements ConsentController {
     }
 
     this.analytics = new AnalyticsStateful(this.api, this.eventBuilder, {
-      allowedEvents,
+      allowedEventTypes,
+      preventedComponentEvents,
       defaults: defaults?.analytics,
     })
 
     this.personalization = new PersonalizationStateful(this.api, this.eventBuilder, {
-      allowedEvents,
+      allowedEventTypes,
+      preventedComponentEvents,
       defaults: defaults?.personalization,
     })
   }

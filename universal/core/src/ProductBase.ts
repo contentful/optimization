@@ -1,18 +1,21 @@
 import type ApiClient from '@contentful/optimization-api-client'
 import type {
   InsightsEventType as AnalyticsEventType,
+  ComponentViewBuilderArgs,
   EventBuilder,
   OptimizationData,
   ExperienceEventType as PersonalizationEventType,
 } from '@contentful/optimization-api-client'
 import { InterceptorManager } from './lib/interceptor'
+import ValuePresence from './lib/value-presence/ValuePresence'
 
 export type EventType = AnalyticsEventType | PersonalizationEventType
 
 const defaultAllowedEvents: EventType[] = ['page', 'identify']
 
 export interface ProductConfig {
-  allowedEvents?: EventType[]
+  allowedEventTypes?: EventType[]
+  preventedComponentEvents?: Record<string, ComponentViewBuilderArgs[]>
 }
 
 interface InterceptorLifecycle<E> {
@@ -21,9 +24,10 @@ interface InterceptorLifecycle<E> {
 }
 
 abstract class ProductBase<E> {
-  protected readonly allowedEvents?: string[]
+  protected readonly allowedEventTypes?: string[]
   protected readonly builder: EventBuilder
   protected readonly api: ApiClient
+  protected readonly duplicationDetector: ValuePresence
 
   readonly interceptor: InterceptorLifecycle<E> = {
     event: new InterceptorManager<E>(),
@@ -33,7 +37,8 @@ abstract class ProductBase<E> {
   constructor(api: ApiClient, builder: EventBuilder, config?: ProductConfig) {
     this.api = api
     this.builder = builder
-    this.allowedEvents = config?.allowedEvents ?? defaultAllowedEvents
+    this.allowedEventTypes = config?.allowedEventTypes ?? defaultAllowedEvents
+    this.duplicationDetector = new ValuePresence(config?.preventedComponentEvents)
   }
 }
 
