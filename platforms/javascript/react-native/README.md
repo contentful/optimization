@@ -77,7 +77,7 @@ Use this component to track Contentful entries that can be personalized (have `n
 
 ### `<Analytics />` - For Non-Personalized Entries
 
-Use this component to track standard Contentful entries you want analytics on (products, articles, etc.). It:
+Use this component to track standard Contentful entries you want analytics on (articles, etc.). It:
 
 - Tracks any Contentful entry without personalization
 - Uses a simple children pattern (no render prop needed)
@@ -88,6 +88,52 @@ Both components track when an entry:
 - Is at least **80% visible** in the viewport (configurable via `threshold` prop)
 - Has been viewed for **2000ms** (2 seconds, configurable via `viewTimeMs` prop)
 - Has not already been tracked (deduplication handled by Core)
+
+### ScrollView vs Non-ScrollView Usage
+
+The tracking components work in two modes:
+
+#### Inside ScrollView (Recommended for Scrollable Content)
+
+When used inside a `<ScrollProvider>`, tracking uses the actual scroll position and viewport dimensions:
+
+```tsx
+<ScrollProvider>
+  <Personalization baselineEntry={entry}>
+    {(resolvedEntry) => <HeroComponent data={resolvedEntry} />}
+  </Personalization>
+  <Analytics entry={productEntry}>
+    <ProductCard data={productEntry.fields} />
+  </Analytics>
+</ScrollProvider>
+```
+
+**Benefits:**
+
+- Accurate viewport tracking as user scrolls
+- Works for content that appears below the fold
+- Triggers when component scrolls into view
+
+#### Outside ScrollView (For Non-Scrollable Content)
+
+When used without `<ScrollProvider>`, tracking uses screen dimensions instead:
+
+```tsx
+{/* No ScrollProvider needed for non-scrollable content */}
+<Personalization baselineEntry={entry}>
+  {(resolvedEntry) => <FullScreenHero data={resolvedEntry} />}
+</Personalization>
+
+<Analytics entry={bannerEntry}>
+  <Banner data={bannerEntry.fields} />
+</Analytics>
+```
+
+**Note:** In this mode, `scrollY` is always `0` and viewport height equals the screen height. This is ideal for:
+
+- Full-screen components
+- Non-scrollable layouts
+- Content that's always visible when the screen loads
 
 ## Features
 
@@ -196,8 +242,9 @@ Both components support customizable visibility and time thresholds:
 **Key Features:**
 
 - Tracks only once per component instance
-- Works with ScrollView via `ScrollProvider`
+- Works with or without `ScrollProvider` (automatically adapts)
 - Default: 80% visible for 2000ms (both configurable)
+- Tracking fires even if user never scrolls (checks on initial layout)
 - `<Personalization />` uses render prop pattern to provide resolved entry
 - `<Analytics />` uses standard children pattern
 
@@ -310,11 +357,10 @@ function App() {
 
 The SDK automatically configures:
 
-- **Channel**: `'react-native'`
-- **Library**: `'Optimization React Native API'`
+- **Channel**: `'mobile'`
+- **Library**: `'Optimization React Native SDK'`
 - **Storage**: AsyncStorage for persisting changes, consent, profile, and personalizations
 - **Event Builders**: Mobile-optimized locale, page properties, and user agent detection
-- **Crypto Polyfill**: Automatically polyfills `crypto.randomUUID()` using `react-native-uuid` and `react-native-get-random-values`
 
 ### Polyfills
 

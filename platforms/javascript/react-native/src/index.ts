@@ -45,7 +45,7 @@ async function mergeConfig({
       },
       eventBuilder: {
         channel: 'mobile',
-        library: { name: 'Optimization React Native API', version: '1.0.0' },
+        library: { name: 'Optimization React Native SDK', version: '1.0.0' },
         getLocale,
         getPageProperties,
         getUserAgent,
