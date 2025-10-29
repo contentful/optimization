@@ -18,45 +18,7 @@ import {
 
 import type Optimization from '@contentful/optimization-react-native'
 import { Analytics, Personalization, ScrollProvider } from '@contentful/optimization-react-native'
-
-/**
- * Mock Entry types for demonstration
- */
-interface MockEntrySys {
-  id: string
-  type: string
-  contentType: {
-    sys: {
-      type: string
-      linkType: string
-      id: string
-    }
-  }
-  createdAt: string
-  updatedAt: string
-  revision: number
-  space: { sys: { type: string; linkType: string; id: string } }
-  environment: { sys: { type: string; linkType: string; id: string } }
-}
-
-interface MockHeroEntry {
-  sys: MockEntrySys
-  fields: {
-    title: string
-    subtitle: string
-  }
-  metadata: { tags: unknown[] }
-}
-
-interface MockProductEntry {
-  sys: MockEntrySys
-  fields: {
-    name: string
-    price: number
-    description: string
-  }
-  metadata: { tags: unknown[] }
-}
+import type { Entry } from 'contentful'
 
 interface ThemeColors {
   backgroundColor: string
@@ -75,47 +37,50 @@ interface TestTrackingScreenProps {
 
 /**
  * Mock Contentful entry data for demonstration
+ * Using type assertions since Contentful's Entry types are complex and this is mock data
  */
-const mockPersonalizedEntry: MockHeroEntry = {
+const mockPersonalizedEntry = {
   sys: {
     id: 'personalized-hero-baseline',
-    type: 'Entry',
+    type: 'Entry' as const,
     contentType: {
       sys: {
-        type: 'Link',
-        linkType: 'ContentType',
+        type: 'Link' as const,
+        linkType: 'ContentType' as const,
         id: 'hero',
       },
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     revision: 1,
-    space: { sys: { type: 'Link', linkType: 'Space', id: 'test-space' } },
-    environment: { sys: { type: 'Link', linkType: 'Environment', id: 'master' } },
+    publishedVersion: 1,
+    space: { sys: { type: 'Link' as const, linkType: 'Space' as const, id: 'test-space' } },
+    environment: { sys: { type: 'Link' as const, linkType: 'Environment' as const, id: 'master' } },
   },
   fields: {
     title: 'Welcome to Contentful Optimization!',
     subtitle: 'This hero can be personalized',
   },
   metadata: { tags: [] },
-}
+} as unknown as Entry
 
-const mockProductEntry: MockProductEntry = {
+const mockProductEntry = {
   sys: {
     id: 'product-card-123',
-    type: 'Entry',
+    type: 'Entry' as const,
     contentType: {
       sys: {
-        type: 'Link',
-        linkType: 'ContentType',
+        type: 'Link' as const,
+        linkType: 'ContentType' as const,
         id: 'product',
       },
     },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     revision: 1,
-    space: { sys: { type: 'Link', linkType: 'Space', id: 'test-space' } },
-    environment: { sys: { type: 'Link', linkType: 'Environment', id: 'master' } },
+    publishedVersion: 1,
+    space: { sys: { type: 'Link' as const, linkType: 'Space' as const, id: 'test-space' } },
+    environment: { sys: { type: 'Link' as const, linkType: 'Environment' as const, id: 'master' } },
   },
   fields: {
     name: 'Premium Widget',
@@ -123,7 +88,7 @@ const mockProductEntry: MockProductEntry = {
     description: 'A non-personalized product entry',
   },
   metadata: { tags: [] },
-}
+} as unknown as Entry
 
 export function TestTrackingScreen({
   colors,
@@ -195,8 +160,12 @@ export function TestTrackingScreen({
           {() => (
             <View>
               <Text style={styles.componentLabel}>{'<Personalization />'}</Text>
-              <Text style={styles.trackedViewTitle}>{mockPersonalizedEntry.fields.title}</Text>
-              <Text style={styles.trackedViewText}>{mockPersonalizedEntry.fields.subtitle}</Text>
+              <Text style={styles.trackedViewTitle}>
+                {mockPersonalizedEntry.fields.title as string}
+              </Text>
+              <Text style={styles.trackedViewText}>
+                {mockPersonalizedEntry.fields.subtitle as string}
+              </Text>
               <Text style={styles.trackedViewDetails}>
                 Entry ID: {mockPersonalizedEntry.sys.id}
                 {'\n'}
@@ -226,9 +195,11 @@ export function TestTrackingScreen({
         >
           <View>
             <Text style={styles.componentLabel}>{'<Analytics />'}</Text>
-            <Text style={styles.trackedViewTitle}>{mockProductEntry.fields.name}</Text>
-            <Text style={styles.trackedViewText}>${mockProductEntry.fields.price}</Text>
-            <Text style={styles.trackedViewText}>{mockProductEntry.fields.description}</Text>
+            <Text style={styles.trackedViewTitle}>{mockProductEntry.fields.name as string}</Text>
+            <Text style={styles.trackedViewText}>${mockProductEntry.fields.price as number}</Text>
+            <Text style={styles.trackedViewText}>
+              {mockProductEntry.fields.description as string}
+            </Text>
             <Text style={styles.trackedViewDetails}>
               Entry ID: {mockProductEntry.sys.id}
               {'\n'}

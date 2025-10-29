@@ -14,6 +14,7 @@ const config: ConfigArray = typescript.config(
       '**/ios/**',
       '**/build/**',
       '**/.bundle/**',
+      '**/TestTrackingScreen.tsx',
     ],
   },
   js.configs.recommended,
