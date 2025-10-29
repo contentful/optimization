@@ -2,6 +2,7 @@ import { logger } from '@contentful/optimization-core'
 import React, { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 import {
   ScrollView,
+  type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   type ScrollViewProps,
@@ -16,16 +17,8 @@ const ScrollContext = createContext<ScrollContextValue | null>(null)
 
 const SCROLL_LOG_THRESHOLD = 50
 
-export function useScrollContext(): ScrollContextValue {
+export function useScrollContext(): ScrollContextValue | null {
   const context = useContext(ScrollContext)
-
-  if (!context) {
-    throw new Error(
-      'useScrollContext must be used within a ScrollProvider. ' +
-        'Make sure to wrap your ScrollView with <ScrollProvider>.',
-    )
-  }
-
   return context
 }
 
@@ -36,10 +29,34 @@ export interface ScrollProviderProps extends ScrollViewProps {
 export function ScrollProvider({
   children,
   onScroll,
+  onLayout,
   ...scrollViewProps
 }: ScrollProviderProps): React.JSX.Element {
   const [scrollY, setScrollY] = useState(0)
   const [viewportHeight, setViewportHeight] = useState(0)
+
+  const handleLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      const {
+        nativeEvent: {
+          layout: { height },
+        },
+      } = event
+
+      // Capture viewport height on initial layout
+      // This ensures tracking works even before first scroll
+      if (viewportHeight === 0) {
+        logger.debug(`[ScrollProvider] Initial layout: viewport=${height.toFixed(0)}`)
+        setViewportHeight(height)
+      }
+
+      // Call the user's onLayout handler if provided
+      if (onLayout) {
+        onLayout(event)
+      }
+    },
+    [onLayout, viewportHeight],
+  )
 
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -73,7 +90,12 @@ export function ScrollProvider({
 
   return (
     <ScrollContext.Provider value={contextValue}>
-      <ScrollView {...scrollViewProps} onScroll={handleScroll} scrollEventThrottle={16}>
+      <ScrollView
+        {...scrollViewProps}
+        onLayout={handleLayout}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
         {children}
       </ScrollView>
     </ScrollContext.Provider>

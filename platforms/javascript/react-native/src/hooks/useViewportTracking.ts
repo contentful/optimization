@@ -1,6 +1,6 @@
 import { logger } from '@contentful/optimization-core'
-import { useCallback, useEffect, useRef } from 'react'
-import type { LayoutChangeEvent } from 'react-native'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Dimensions, type LayoutChangeEvent } from 'react-native'
 import { useOptimization } from '../context/OptimizationContext'
 import { useScrollContext } from '../context/ScrollContext'
 
@@ -37,27 +37,31 @@ export function useViewportTracking({
   viewTimeMs = DEFAULT_VIEW_TIME_MS,
 }: UseViewportTrackingOptions): UseViewportTrackingReturn {
   const optimization = useOptimization()
-  const { scrollY, viewportHeight } = useScrollContext()
+  // We invoke useScrollContext here to check if the ScrollProvider is mounted and the scroll context is available.
+  const scrollContext = useScrollContext()
+
+  // Fallback to screen dimensions when used outside ScrollProvider
+  const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height)
+
+  useEffect(() => {
+    if (!scrollContext) {
+      const subscription = Dimensions.addEventListener('change', ({ window }) => {
+        setScreenHeight(window.height)
+      })
+      return () => {
+        subscription.remove()
+      }
+    }
+  }, [scrollContext])
+
+  // Use scroll context if available, otherwise use screen dimensions
+  const scrollY = scrollContext?.scrollY ?? 0
+  const viewportHeight = scrollContext?.viewportHeight ?? screenHeight
 
   const hasTrackedRef = useRef(false)
   const dimensionsRef = useRef<{ y: number; height: number } | null>(null)
   const isVisibleRef = useRef(false)
   const viewTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-
-  const handleLayout = useCallback(
-    (event: LayoutChangeEvent) => {
-      const {
-        nativeEvent: {
-          layout: { y, height },
-        },
-      } = event
-      logger.debug(
-        `[ViewportTracking] Layout for ${componentId}: y=${y}, height=${height} (position within ScrollView content)`,
-      )
-      dimensionsRef.current = { y, height }
-    },
-    [componentId],
-  )
 
   const startTrackingTimer = useCallback(
     (visibilityPercent: number) => {
@@ -103,21 +107,35 @@ export function useViewportTracking({
     [componentId, experienceId, variantIndex, viewTimeMs, optimization],
   )
 
-  const checkVisibility = useCallback(() => {
-    const { current: dimensions } = dimensionsRef
-
+  const canCheckVisibility = useCallback((): boolean => {
     if (hasTrackedRef.current) {
       logger.debug(`[ViewportTracking] ${componentId} already tracked, skipping`)
-      return
+      return false
     }
 
+    const { current: dimensions } = dimensionsRef
     if (!dimensions) {
       logger.debug(`[ViewportTracking] ${componentId} has no dimensions yet`)
-      return
+      return false
     }
 
     if (viewportHeight === 0) {
-      logger.debug(`[ViewportTracking] ${componentId} viewport height is 0`)
+      logger.debug(
+        `[ViewportTracking] ${componentId} viewport height is 0 ${scrollContext ? '(waiting for ScrollView layout)' : '(waiting for screen dimensions)'}`,
+      )
+      return false
+    }
+
+    return true
+  }, [componentId, viewportHeight, scrollContext])
+
+  const checkVisibility = useCallback(() => {
+    if (!canCheckVisibility()) {
+      return
+    }
+
+    const { current: dimensions } = dimensionsRef
+    if (!dimensions) {
       return
     }
 
@@ -135,7 +153,10 @@ export function useViewportTracking({
     const visibilityRatio = visibleHeight / elementHeight
 
     logger.debug(
-      `[ViewportTracking] ${componentId} visibility check: elementY=${elementY.toFixed(0)}, elementBottom=${elementBottom.toFixed(0)}, scrollY=${scrollY.toFixed(0)}, viewportHeight=${viewportHeight.toFixed(0)}, viewportTop=${viewportTop.toFixed(0)}, viewportBottom=${viewportBottom.toFixed(0)}, visibleHeight=${visibleHeight.toFixed(0)}, ratio=${visibilityRatio.toFixed(2)}, threshold=${threshold}`,
+      `[ViewportTracking] ${componentId} visibility check ${scrollContext ? '(ScrollView)' : '(non-scrollable)'}:
+  Element: y=${elementY.toFixed(0)}, bottom=${elementBottom.toFixed(0)}
+  Viewport: scrollY=${scrollY.toFixed(0)}, height=${viewportHeight.toFixed(0)}, top=${viewportTop.toFixed(0)}, bottom=${viewportBottom.toFixed(0)}
+  Visible: height=${visibleHeight.toFixed(0)}, ratio=${visibilityRatio.toFixed(2)}, threshold=${threshold}`,
     )
 
     const isNowVisible = visibilityRatio >= threshold
@@ -158,7 +179,26 @@ export function useViewportTracking({
         `[ViewportTracking] ${componentId} is not visible enough (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%)`,
       )
     }
-  }, [componentId, threshold, scrollY, viewportHeight, startTrackingTimer])
+  }, [canCheckVisibility, componentId, threshold, scrollY, viewportHeight, startTrackingTimer])
+
+  const handleLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      const {
+        nativeEvent: {
+          layout: { y, height },
+        },
+      } = event
+      logger.debug(
+        `[ViewportTracking] Layout for ${componentId}: y=${y}, height=${height} (position within ScrollView content)`,
+      )
+      dimensionsRef.current = { y, height }
+
+      // Check visibility immediately after layout is captured
+      // This ensures tracking works even if user never scrolls
+      checkVisibility()
+    },
+    [componentId, checkVisibility],
+  )
 
   // Check visibility when scroll position or viewport changes
   useEffect(() => {
