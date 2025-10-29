@@ -11,7 +11,7 @@
       },
       "require": {
         "types": "./dist/index.d.ts",
-        "default": "./dist/index.umd.cjs"
+        "default": "./dist/index.cjs"
       }
     }
   },
@@ -19,7 +19,9 @@
     "directory": "dist"
   },
   "scripts": {
-    "build": "tsc -b ./tsconfig.build.json && vite build",
+    "build:esm": "vite build -c vite.esm.config.ts",
+    "build:umd": "vite build -c vite.umd.config.ts",
+    "build": "pnpm clean && tsc -b ./tsconfig.build.json && pnpm build:esm && pnpm build:umd",
     "clean": "rimraf ./dist ./coverage tsconfig.tsbuildinfo",
     "dev": "vite --host",
     "test:unit": "vitest run --coverage",

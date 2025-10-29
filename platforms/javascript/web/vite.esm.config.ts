@@ -1,10 +1,10 @@
 import { resolve } from 'node:path'
 import { visualizer } from 'rollup-plugin-visualizer'
+import { defineConfig, type UserConfig } from 'vite'
 import { analyzer } from 'vite-bundle-analyzer'
 import tsconfigPaths from 'vite-tsconfig-paths'
-import { defineConfig } from 'vitest/config'
 
-export default defineConfig({
+const config: UserConfig = {
   resolve: {
     alias: {
       '@contentful/optimization-api-client': resolve(
@@ -20,14 +20,6 @@ export default defineConfig({
   },
   esbuild: {
     target: 'es2022',
-  },
-  build: {
-    sourcemap: true,
-    lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
-      name: 'Optimization',
-      fileName: 'index',
-    },
   },
   plugins: [
     analyzer({ analyzerMode: 'static', fileName: 'analyzer', openAnalyzer: false }),
@@ -48,4 +40,19 @@ export default defineConfig({
       reporter: ['text', 'html'],
     },
   },
-})
+}
+
+const esm: UserConfig = {
+  ...config,
+  build: {
+    emptyOutDir: false,
+    lib: {
+      entry: resolve(__dirname, 'src/index.ts'),
+      formats: ['es', 'cjs'],
+      fileName: 'index',
+    },
+    sourcemap: true,
+  },
+}
+
+export default defineConfig(esm)
