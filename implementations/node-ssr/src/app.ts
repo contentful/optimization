@@ -19,17 +19,7 @@ const ENVIRONMENT = process.env.VITE_NINETAILED_ENVIRONMENT ?? ''
 const VITE_INSIGHTS_API_BASE_URL = process.env.VITE_INSIGHTS_API_BASE_URL ?? ''
 const VITE_EXPERIENCE_API_BASE_URL = process.env.VITE_EXPERIENCE_API_BASE_URL ?? ''
 
-const sdk = new Optimization({
-  clientId: CLIENT_ID,
-  environment: ENVIRONMENT,
-  logLevel: 'debug',
-  api: {
-    analytics: { baseUrl: VITE_INSIGHTS_API_BASE_URL },
-    personalization: { baseUrl: VITE_EXPERIENCE_API_BASE_URL },
-  },
-})
-
-const html = `<!doctype html>
+const render = (sdk: Optimization): string => `<!doctype html>
 <html>
   <head>
     <title>Test SDK page</title>
@@ -65,11 +55,23 @@ app.get('/', limiter, (req, res) => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- req.cookies is of type any
   const cookies: Record<string, string> = req.cookies
 
+  const sdk = new Optimization({
+    clientId: CLIENT_ID,
+    environment: ENVIRONMENT,
+    logLevel: 'debug',
+    eventBuilder: { getAnonymousId: () => cookies[ANONYMOUS_ID_COOKIE] },
+    api: {
+      analytics: { baseUrl: VITE_INSIGHTS_API_BASE_URL },
+      personalization: { baseUrl: VITE_EXPERIENCE_API_BASE_URL },
+    },
+  })
+
   res.cookie(ANONYMOUS_ID_COOKIE, cookies[ANONYMOUS_ID_COOKIE] ?? 'ssr-profile-id', {
     path: '/',
     domain: 'localhost',
   })
-  res.send(html)
+
+  res.send(render(sdk))
 })
 
 app.use('/dist', express.static('./public/dist'))

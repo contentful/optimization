@@ -1,8 +1,9 @@
 import { type App, type CoreConfig, CoreStateless } from '@contentful/optimization-core'
 import { merge } from 'es-toolkit'
 
-export interface OptimizationNodeConfig extends CoreConfig {
+export interface OptimizationNodeConfig extends Omit<CoreConfig, 'eventBuilder'> {
   app?: App
+  eventBuilder?: Partial<CoreConfig['eventBuilder']>
 }
 
 function mergeConfig(config: OptimizationNodeConfig): CoreConfig {
