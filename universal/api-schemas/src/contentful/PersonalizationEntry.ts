@@ -1,6 +1,7 @@
+import type { Entry } from 'contentful'
 import * as z from 'zod/mini'
 import { AudienceEntry } from './AudienceEntry'
-import { Entry, EntryFields, Link } from './Entry'
+import { CtflEntry, EntryFields, Link } from './CtflEntry'
 import { PersonalizationConfig } from './PersonalizationConfig'
 
 export const PersonalizationType = z.union([
@@ -49,16 +50,16 @@ export const PersonalizationFields = z.extend(EntryFields, {
   /**
    * All used variants of the experience (Contentful references to other Content Types)
    */
-  nt_variants: z.optional(z.prefault(z.array(Entry), [])),
+  nt_variants: z.optional(z.prefault(z.array(z.custom<Entry>()), [])),
 })
 export type PersonalizationFields = z.infer<typeof PersonalizationFields>
 
-export const PersonalizationEntry = z.extend(Entry, {
+export const PersonalizationEntry = z.extend(CtflEntry, {
   fields: PersonalizationFields,
 })
 export type PersonalizationEntry = z.infer<typeof PersonalizationEntry>
 
-export function isPersonalizationEntry(entry: Entry | Link): entry is PersonalizationEntry {
+export function isPersonalizationEntry(entry: CtflEntry | Link): entry is PersonalizationEntry {
   return PersonalizationEntry.safeParse(entry).success
 }
 

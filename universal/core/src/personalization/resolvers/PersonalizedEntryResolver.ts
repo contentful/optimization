@@ -1,6 +1,7 @@
 import {
   type EntryReplacementComponent,
   type EntryReplacementVariant,
+  isEntry,
   isEntryReplacementComponent,
   isEntryReplacementVariant,
   isPersonalizationEntry,
@@ -10,8 +11,17 @@ import {
   type SelectedPersonalization,
   type SelectedPersonalizationArray,
 } from '@contentful/optimization-api-client'
-import type { Entry } from 'contentful'
+import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import { logger } from 'logger'
+
+export interface ResolvedData<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+> {
+  entry: Entry<S, M, L>
+  personalization?: SelectedPersonalization
+}
 
 const RESOLUTION_WARNING_BASE = '[Personalization] Could not resolve personalized entry variant:'
 
@@ -97,7 +107,11 @@ const PersonalizedEntryResolver = {
     return relevantVariants.at(selectedVariantIndex - 1)
   },
 
-  getSelectedVariantEntry(
+  getSelectedVariantEntry<
+    S extends EntrySkeletonType,
+    M extends ChainModifiers = ChainModifiers,
+    L extends LocaleCode = LocaleCode,
+  >(
     {
       personalizationEntry,
       selectedVariant,
@@ -106,7 +120,7 @@ const PersonalizedEntryResolver = {
       selectedVariant: EntryReplacementVariant
     },
     skipValidation = false,
-  ): Entry | undefined {
+  ): Entry<S, M, L> | undefined {
     if (
       !skipValidation &&
       (!isPersonalizationEntry(personalizationEntry) || !isEntryReplacementVariant(selectedVariant))
@@ -117,17 +131,17 @@ const PersonalizedEntryResolver = {
       (variant) => variant.sys.id === selectedVariant.id,
     )
 
-    return selectedVariantEntry
+    return isEntry<S, M, L>(selectedVariantEntry) ? selectedVariantEntry : undefined
   },
 
-  decorateSelectedVariantFields(
-    selectedVariantEntry: Entry,
-    selectedPersonalization: SelectedPersonalization | undefined,
-  ) {
-    selectedVariantEntry.fields.nt_personalization = selectedPersonalization ?? {}
-  },
-
-  resolve(entry: Entry, selectedPersonalizations?: SelectedPersonalizationArray): Entry {
+  resolve<
+    S extends EntrySkeletonType,
+    M extends ChainModifiers = ChainModifiers,
+    L extends LocaleCode = LocaleCode,
+  >(
+    entry: Entry<S, M, L>,
+    selectedPersonalizations?: SelectedPersonalizationArray,
+  ): ResolvedData<S, M, L> {
     logger.info('[Personalization] Resolving personalized entry for baseline entry', entry.sys.id)
 
     if (!selectedPersonalizations?.length) {
@@ -135,12 +149,12 @@ const PersonalizedEntryResolver = {
         RESOLUTION_WARNING_BASE,
         'no selectedPersonalizations exist for the current profile',
       )
-      return entry
+      return { entry }
     }
 
     if (!isPersonalizedEntry(entry)) {
       logger.warn(RESOLUTION_WARNING_BASE, `entry ${entry.sys.id} is not personalized`)
-      return entry
+      return { entry }
     }
 
     const personalizationEntry = PersonalizedEntryResolver.getPersonalizationEntry(
@@ -156,7 +170,7 @@ const PersonalizedEntryResolver = {
         RESOLUTION_WARNING_BASE,
         `could not find a personalization entry for ${entry.sys.id}`,
       )
-      return entry
+      return { entry }
     }
 
     const selectedPersonalization = PersonalizedEntryResolver.getSelectedPersonalization(
@@ -174,7 +188,7 @@ const PersonalizedEntryResolver = {
         `[Personalization] Resolved personalization entry for entry ${entry.sys.id} is baseline`,
       )
 
-      return entry
+      return { entry }
     }
 
     const selectedVariant = PersonalizedEntryResolver.getSelectedVariant(
@@ -191,10 +205,10 @@ const PersonalizedEntryResolver = {
         RESOLUTION_WARNING_BASE,
         `could not find a valid replacement variant entry for ${entry.sys.id}`,
       )
-      return entry
+      return { entry }
     }
 
-    const selectedVariantEntry = PersonalizedEntryResolver.getSelectedVariantEntry(
+    const selectedVariantEntry = PersonalizedEntryResolver.getSelectedVariantEntry<S, M, L>(
       {
         personalizationEntry,
         selectedVariant,
@@ -207,19 +221,14 @@ const PersonalizedEntryResolver = {
         RESOLUTION_WARNING_BASE,
         `could not find a valid replacement variant entry for ${entry.sys.id}`,
       )
-      return entry
+      return { entry }
     } else {
       logger.info(
         `[Personalization] Entry ${entry.sys.id} has been resolved to variant entry ${selectedVariantEntry.sys.id}`,
       )
     }
 
-    PersonalizedEntryResolver.decorateSelectedVariantFields(
-      selectedVariantEntry,
-      selectedPersonalization,
-    )
-
-    return selectedVariantEntry
+    return { entry: selectedVariantEntry, personalization: selectedPersonalization }
   },
 }
 

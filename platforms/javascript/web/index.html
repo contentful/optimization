@@ -173,7 +173,7 @@
           return
         }
 
-        const personalizedEntry = optimization.personalization.personalizeEntry(entry)
+        const { entry: personalizedEntry } = optimization.personalization.personalizeEntry(entry)
 
         let title = personalizedEntry.fields.internalTitle
         let mergeTagValues = undefined

@@ -17,7 +17,7 @@ import {
   type TrackBuilderArgs,
   TrackEvent,
 } from '@contentful/optimization-api-client'
-import type { Entry } from 'contentful'
+import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import { isEqual } from 'es-toolkit'
 import { logger } from 'logger'
 import type { ConsentGuard } from '../Consent'
@@ -39,8 +39,7 @@ import {
   toObservable,
 } from '../signals'
 import PersonalizationBase from './PersonalizationBase'
-import { PersonalizedEntryResolver } from './resolvers'
-import MergeTagValueResolver from './resolvers/MergeTagValueResolver'
+import { MergeTagValueResolver, PersonalizedEntryResolver, type ResolvedData } from './resolvers'
 
 export interface PersonalizationProductConfigDefaults {
   consent?: boolean
@@ -121,11 +120,15 @@ class Personalization extends PersonalizationBase implements ConsentGuard {
     })
   }
 
-  personalizeEntry(
-    entry: Entry,
+  personalizeEntry<
+    S extends EntrySkeletonType,
+    M extends ChainModifiers = ChainModifiers,
+    L extends LocaleCode = LocaleCode,
+  >(
+    entry: Entry<S, M, L>,
     personalizations: SelectedPersonalizationArray | undefined = personalizationsSignal.value,
-  ): Entry {
-    return PersonalizedEntryResolver.resolve(entry, personalizations)
+  ): ResolvedData<S, M, L> {
+    return PersonalizedEntryResolver.resolve<S, M, L>(entry, personalizations)
   }
 
   getMergeTagValue(

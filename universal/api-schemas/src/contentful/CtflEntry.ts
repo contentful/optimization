@@ -1,4 +1,4 @@
-import type { Entry as ContentfulEntry } from 'contentful'
+import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import * as z from 'zod/mini'
 
 export const EntryFields = z.catchall(z.object({}), z.json())
@@ -63,8 +63,8 @@ export const EntrySys = z.object({
 })
 export type EntrySys = z.infer<typeof EntrySys>
 
-export const Entry = z.object({
-  fields: EntryFields,
+export const CtflEntry = z.object({
+  fields: z.unknown(),
   metadata: z.catchall(
     z.object({
       tags: z.array(TagLink),
@@ -73,8 +73,12 @@ export const Entry = z.object({
   ),
   sys: EntrySys,
 })
-export type Entry = z.infer<typeof Entry>
+export type CtflEntry = z.infer<typeof CtflEntry>
 
-export function isEntry(entry: ContentfulEntry | undefined): entry is Entry {
-  return Entry.safeParse(entry).success
+export function isEntry<
+  S extends EntrySkeletonType,
+  M extends ChainModifiers = ChainModifiers,
+  L extends LocaleCode = LocaleCode,
+>(entry: Entry | undefined): entry is Entry<S, M, L> {
+  return CtflEntry.safeParse(entry).success
 }
