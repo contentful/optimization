@@ -22,7 +22,7 @@ test('SSR/ Profile id is stored in local storage if user is logged in', async ({
   context,
   page,
 }) => {
-  await page.goto('http://localhost:3000/')
+  await page.goto(URI.ssr)
 
   const state = await context.storageState()
 
