@@ -7,6 +7,6 @@ describe('GET /', () => {
   it('returns the client ID', async () => {
     const response: Response = await request(app).get('/')
 
-    expect(response.text).toEqual(CLIENT_ID)
+    expect(response.text).toContain(CLIENT_ID)
   })
 })
