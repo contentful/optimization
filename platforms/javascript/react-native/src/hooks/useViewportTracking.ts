@@ -58,11 +58,9 @@ export function useViewportTracking({
 
   const viewportHeight = scrollContext ? scrollContext.viewportHeight : screenHeight
 
-  const hasTrackedRef = useRef(false)
   const dimensionsRef = useRef<{ y: number; height: number } | null>(null)
   const isVisibleRef = useRef(false)
   const viewTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const trackingInProgressRef = useRef(false)
 
   // Store optimization in a ref to prevent unnecessary callback recreations
   const optimizationRef = useRef(optimization)
@@ -82,14 +80,6 @@ export function useViewportTracking({
 
   const startTrackingTimer = useCallback(
     (visibilityPercent: number) => {
-      // Defensive check: already tracked or tracking in progress
-      if (hasTrackedRef.current || trackingInProgressRef.current) {
-        logger.debug(
-          `[ViewportTracking] Skipping timer start for ${componentId} - already tracked: ${hasTrackedRef.current}, in progress: ${trackingInProgressRef.current}`,
-        )
-        return
-      }
-
       logger.info(
         `[ViewportTracking] Component ${componentId} became visible (${visibilityPercent.toFixed(1)}%), starting ${viewTimeMs}ms timer`,
       )
@@ -102,18 +92,10 @@ export function useViewportTracking({
 
       viewTimeoutRef.current = setTimeout(() => {
         const { current: isVisible } = isVisibleRef
-        const { current: hasTracked } = hasTrackedRef
-        const { current: trackingInProgress } = trackingInProgressRef
 
-        logger.debug(
-          `[ViewportTracking] Timer fired for ${componentId} - isVisible: ${isVisible}, hasTracked: ${hasTracked}, trackingInProgress: ${trackingInProgress}`,
-        )
+        logger.debug(`[ViewportTracking] Timer fired for ${componentId} - isVisible: ${isVisible}`)
 
-        if (isVisible && !hasTracked && !trackingInProgress) {
-          // Set both flags immediately to prevent race conditions
-          hasTrackedRef.current = true
-          trackingInProgressRef.current = true
-
+        if (isVisible) {
           logger.info(
             `[ViewportTracking] Component ${componentId} visible for ${viewTimeMs}ms, initiating tracking`,
           )
@@ -122,27 +104,17 @@ export function useViewportTracking({
           const { current: currentOptimization } = optimizationRef
 
           // Track the component view
-          currentOptimization.analytics
-            .trackComponentView({
+          void (async () => {
+            await currentOptimization.analytics.trackComponentView({
               componentId,
               experienceId,
               variantIndex,
             })
-            .then(() => {
-              logger.info(`[ViewportTracking] ✓ Successfully tracked ${componentId}`)
-              trackingInProgressRef.current = false
-            })
-            .catch((error: unknown) => {
-              logger.error(
-                `[ViewportTracking] ✗ Failed to track component view for ${componentId}:`,
-                error,
-              )
-              // Reset flags on error to allow retry
-              hasTrackedRef.current = false
-              trackingInProgressRef.current = false
-            })
+          })()
         } else {
-          logger.debug(`[ViewportTracking] Skipping track for ${componentId} - conditions not met`)
+          logger.debug(
+            `[ViewportTracking] Skipping track for ${componentId} - component no longer visible`,
+          )
         }
       }, viewTimeMs)
     },
@@ -150,11 +122,6 @@ export function useViewportTracking({
   )
 
   const canCheckVisibility = useCallback((): boolean => {
-    if (hasTrackedRef.current) {
-      logger.debug(`[ViewportTracking] ${componentId} already tracked, skipping`)
-      return false
-    }
-
     const { current: dimensions } = dimensionsRef
     if (!dimensions) {
       logger.debug(`[ViewportTracking] ${componentId} has no dimensions yet`)
@@ -202,8 +169,7 @@ export function useViewportTracking({
       `[ViewportTracking] ${componentId} visibility check ${contextType}:
   Element: y=${elementY.toFixed(0)}, bottom=${elementBottom.toFixed(0)}
   Viewport: scrollY=${scrollY.toFixed(0)}, height=${viewportHeight.toFixed(0)}, top=${viewportTop.toFixed(0)}, bottom=${viewportBottom.toFixed(0)}
-  Visible: height=${visibleHeight.toFixed(0)}, ratio=${visibilityRatio.toFixed(2)}, threshold=${threshold}
-  State: hasTracked=${hasTrackedRef.current}, trackingInProgress=${trackingInProgressRef.current}`,
+  Visible: height=${visibleHeight.toFixed(0)}, ratio=${visibilityRatio.toFixed(2)}, threshold=${threshold}`,
     )
 
     const isNowVisible = visibilityRatio >= threshold
