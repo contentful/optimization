@@ -1,8 +1,8 @@
-import { logger, type Page, type Query } from '@contentful/optimization-core'
+import { logger, type Dictionary, type Page } from '@contentful/optimization-core'
 import LocalStore from '../storage/LocalStore'
 
-function buildQuery(url: string | URL): Query {
-  return new URL(url).searchParams.entries().reduce((entries: Query, [k, v]) => {
+function buildQuery(url: string | URL): Dictionary {
+  return new URL(url).searchParams.entries().reduce((entries: Dictionary, [k, v]) => {
     entries[k] = v
     return entries
   }, {})

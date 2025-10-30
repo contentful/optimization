@@ -4,7 +4,7 @@ import { ComponentViewEvent } from './ComponentViewEvent'
 import { GroupEvent } from './GroupEvent'
 import { IdentifyEvent } from './IdentifyEvent'
 import { PageViewEvent } from './PageViewEvent'
-import { ScreenEvent } from './ScreenEvent'
+import { ScreenViewEvent } from './ScreenViewEvent'
 import { TrackEvent } from './TrackEvent'
 
 const Anon = { anonymousId: z.string() }
@@ -15,7 +15,7 @@ export const BatchExperienceEvent = z.discriminatedUnion('type', [
   z.extend(GroupEvent, Anon),
   z.extend(IdentifyEvent, Anon),
   z.extend(PageViewEvent, Anon),
-  z.extend(ScreenEvent, Anon),
+  z.extend(ScreenViewEvent, Anon),
   z.extend(TrackEvent, Anon),
 ])
 export type BatchExperienceEvent = z.infer<typeof BatchExperienceEvent>
