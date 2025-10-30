@@ -27,7 +27,7 @@ test('set Profile id from backend', async ({ context, page }) => {
   expect(state.origins[0]?.localStorage).toEqual([{ name: ANONYMOUS_ID, value: 'ssr-profile-id' }])
 })
 
-test('refresh profile id from backend', async ({ context, page }) => {
+test('backend uses profile id from client', async ({ context, page }) => {
   const id = 'custom-profile-id'
 
   await context.addCookies([
