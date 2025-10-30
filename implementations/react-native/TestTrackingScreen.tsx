@@ -90,7 +90,7 @@ export function TestTrackingScreen({
         <Text style={[styles.testTitle, { color: colors.textColor }]}>Component Tracking Test</Text>
       </View>
 
-      <ScrollProvider>
+      <ScrollProvider testID="scrollView">
         {/* Info section */}
         <View style={[styles.fillerSection, { backgroundColor: colors.cardBackground }]}>
           <Text style={[styles.sectionTitle, { color: colors.textColor }]}>
@@ -125,6 +125,7 @@ export function TestTrackingScreen({
           viewTimeMs={2000} // 2 seconds
           threshold={0.8} // 80% visible
           style={StyleSheet.flatten([styles.trackedView, { backgroundColor: '#6366f1' }])}
+          testID="personalizationComponent"
         >
           {(resolvedEntry) => (
             <View>
@@ -138,7 +139,7 @@ export function TestTrackingScreen({
               <Text style={styles.trackedViewDetails}>
                 Entry ID: {resolvedEntry.sys.id}
                 {'\n'}
-                Content Type: {resolvedEntry.sys.contentType?.sys.id ?? 'Unknown'}
+                Content Type: {resolvedEntry.sys.contentType.sys.id}
                 {'\n'}
                 Tracking: 80% visible for 2000ms
               </Text>
@@ -161,6 +162,7 @@ export function TestTrackingScreen({
           viewTimeMs={1500}
           threshold={0.9}
           style={StyleSheet.flatten([styles.trackedView, { backgroundColor: '#10b981' }])}
+          testID="analyticsComponent"
         >
           <View>
             <Text style={styles.componentLabel}>{'<Analytics />'}</Text>
@@ -173,7 +175,7 @@ export function TestTrackingScreen({
             <Text style={styles.trackedViewDetails}>
               Entry ID: {productEntry.sys.id}
               {'\n'}
-              Content Type: {productEntry.sys.contentType?.sys.id ?? 'Unknown'}
+              Content Type: {productEntry.sys.contentType.sys.id}
               {'\n'}
               Tracking: 90% visible for 1500ms (custom)
             </Text>
@@ -181,7 +183,10 @@ export function TestTrackingScreen({
         </Analytics>
 
         {/* Event log */}
-        <View style={[styles.eventLog, { backgroundColor: colors.cardBackground }]}>
+        <View
+          style={[styles.eventLog, { backgroundColor: colors.cardBackground }]}
+          testID="eventLog"
+        >
           <Text style={[styles.sectionTitle, { color: colors.textColor }]}>Event Log</Text>
           {trackedEvents.length === 0 ? (
             <Text style={[styles.sectionText, { color: colors.mutedTextColor }]}>

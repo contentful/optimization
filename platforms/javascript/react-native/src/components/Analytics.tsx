@@ -43,6 +43,11 @@ export interface AnalyticsProps {
    * Optional style prop for the wrapper View
    */
   style?: StyleProp<ViewStyle>
+
+  /**
+   * Optional testID for testing purposes
+   */
+  testID?: string
 }
 
 /**
@@ -105,6 +110,7 @@ export function Analytics({
   viewTimeMs,
   threshold,
   style,
+  testID,
 }: AnalyticsProps): React.JSX.Element {
   // Set up viewport tracking - the hook extracts tracking metadata from the entry
   const { onLayout } = useViewportTracking({
@@ -114,7 +120,7 @@ export function Analytics({
   })
 
   return (
-    <View style={style} onLayout={onLayout}>
+    <View style={style} onLayout={onLayout} testID={testID}>
       {children}
     </View>
   )

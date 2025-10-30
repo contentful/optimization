@@ -60,6 +60,11 @@ export interface PersonalizationProps {
    * Optional style prop for the wrapper View
    */
   style?: StyleProp<ViewStyle>
+
+  /**
+   * Optional testID for testing purposes
+   */
+  testID?: string
 }
 
 /**
@@ -119,6 +124,7 @@ export function Personalization({
   viewTimeMs,
   threshold,
   style,
+  testID,
 }: PersonalizationProps): React.JSX.Element {
   const optimization = useOptimization()
 
@@ -136,7 +142,7 @@ export function Personalization({
   })
 
   return (
-    <View style={style} onLayout={onLayout}>
+    <View style={style} onLayout={onLayout} testID={testID}>
       {children(resolvedEntry)}
     </View>
   )
