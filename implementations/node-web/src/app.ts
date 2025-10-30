@@ -22,7 +22,35 @@ const sdk = new Optimization({
 
 app.get('/', limiter, (_req, res) => {
   const response = JSON.stringify({ clientId: sdk.config.clientId })
-  res.send(response)
+
+  res.send(`
+<!doctype html>
+<html>
+  <head>
+    <title>Test SDK page</title>
+    <script src="/dist/index.umd.cjs"></script>
+    <script> window.response = ${response} </script>
+  </head>
+  <body>
+    <script>
+      var optimization = new Optimization({
+        clientId: '<!--#echo var="NGINX_NINETAILED_CLIENT_ID" -->',
+        environment: '<!--#echo var="NGINX_NINETAILED_ENVIRONMENT" -->',
+        logLevel: 'debug',
+        api: {
+          analytics: { baseUrl: '<!--#echo var="NGINX_INSIGHTS_API_BASE_URL" -->' },
+          personalization: { baseUrl: '<!--#echo var="NGINX_EXPERIENCE_API_BASE_URL" -->/' },
+        },
+      })
+
+      var p = document.createElement('p')
+      p.dataset.testid = 'clientId'
+      p.innerText = optimization.config.clientId
+      document.body.appendChild(p)
+    </script>
+  </body>
+</html>
+    `)
 })
 
 const port = 3000
