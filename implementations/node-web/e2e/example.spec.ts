@@ -5,8 +5,6 @@ const CLIENT_ID = process.env.VITE_NINETAILED_CLIENT_ID ?? 'error'
 
 const ANONYMOUS_ID = '__ctfl_opt_anonymous_id__'
 
-const ID_VALUE = '2352jkwefbweuhfb'
-
 const URI = {
   ssr: 'http://localhost:3000/',
   csr: 'http://localhost:4000/',
@@ -26,7 +24,7 @@ test('SSR/ Profile id is stored in local storage if user is logged in', async ({
 
   const state = await context.storageState()
 
-  expect(state.origins[0]?.localStorage).toEqual([{ name: ANONYMOUS_ID, value: ID_VALUE }])
+  expect(state.origins[0]?.localStorage).toEqual([{ name: ANONYMOUS_ID, value: 'ssr_profile_id' }])
 })
 
 test('CSR/ check client ID', async ({ page }) => {
@@ -39,13 +37,15 @@ test('CSR/ Profile id is stored in local storage if user is logged in', async ({
   page,
   context,
 }) => {
+  const csrProfileId = 'csr_profile_id'
+
   await context.addCookies([
-    { name: ANONYMOUS_ID_COOKIE, value: ID_VALUE, path: '/', domain: 'localhost' },
+    { name: ANONYMOUS_ID_COOKIE, value: csrProfileId, path: '/', domain: 'localhost' },
   ])
 
   await page.goto(URI.csr)
 
   const state = await context.storageState()
 
-  expect(state.origins[0]?.localStorage).toEqual([{ name: ANONYMOUS_ID, value: ID_VALUE }])
+  expect(state.origins[0]?.localStorage).toEqual([{ name: ANONYMOUS_ID, value: csrProfileId }])
 })
