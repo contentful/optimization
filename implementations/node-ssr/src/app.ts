@@ -1,3 +1,4 @@
+import type { Page } from '@contentful/optimization-api-schemas'
 import Optimization, { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node'
 import cookieParser from 'cookie-parser'
 import express, { type Express } from 'express'
@@ -51,7 +52,30 @@ const render = (sdk: Optimization): string => `<!doctype html>
 </html>
 `
 
-app.get('/', limiter, (req, res) => {
+function getPageProperties(): Page {
+  try {
+    const url = new URL('http://localhost:3000/')
+
+    return {
+      path: url.pathname,
+      query: {},
+      referrer: 'http://localhost:3000/',
+      search: url.search,
+      url: url.toString(),
+    }
+  } catch {
+    return {
+      path: '',
+      query: {},
+      referrer: '',
+      search: '',
+      title: '',
+      url: '',
+    }
+  }
+}
+
+app.get('/', limiter, async (req, res) => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- req.cookies is of type any
   const cookies: Record<string, string> = req.cookies
 
@@ -59,14 +83,21 @@ app.get('/', limiter, (req, res) => {
     clientId: CLIENT_ID,
     environment: ENVIRONMENT,
     logLevel: 'debug',
-    eventBuilder: { getAnonymousId: () => cookies[ANONYMOUS_ID_COOKIE] },
+    eventBuilder: {
+      getAnonymousId: () => cookies[ANONYMOUS_ID_COOKIE],
+      getLocale: () => 'en-US',
+      getUserAgent: () => 'node-js-server',
+      getPageProperties,
+    },
     api: {
       analytics: { baseUrl: VITE_INSIGHTS_API_BASE_URL },
       personalization: { baseUrl: VITE_EXPERIENCE_API_BASE_URL },
     },
   })
 
-  res.cookie(ANONYMOUS_ID_COOKIE, cookies[ANONYMOUS_ID_COOKIE] ?? 'ssr-profile-id', {
+  const { profile } = await sdk.personalization.page({})
+
+  res.cookie(ANONYMOUS_ID_COOKIE, profile.id, {
     path: '/',
     domain: 'localhost',
   })
