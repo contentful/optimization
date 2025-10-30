@@ -16,7 +16,7 @@
     "test:e2e": "pnpm serve && playwright test; E2E_RESULT=$?; pnpm serve:stop; exit $E2E_RESULT",
     "test:e2e:codegen": "playwright codegen",
     "test:e2e:report": "playwright show-report",
-    "test:e2e:ui": "pnpm build && playwright test --ui",
+    "test:e2e:ui": "pnpm build && pnpm serve && playwright test --ui",
     "test:unit": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
   },

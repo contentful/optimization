@@ -53,6 +53,8 @@ app.get('/', limiter, (_req, res) => {
     `)
 })
 
+app.use('/dist', express.static('./public/dist'))
+
 const port = 3000
 
 app.listen(port, () => {
