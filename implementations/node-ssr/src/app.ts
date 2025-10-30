@@ -23,7 +23,7 @@ const sdk = new Optimization({
 
 app.get('/', limiter, (_req, res) => {
   const response = JSON.stringify({ clientId: sdk.config.clientId })
-  res.cookie(ANONYMOUS_ID_COOKIE, 'ssr_profile_id', {
+  res.cookie(ANONYMOUS_ID_COOKIE, 'ssr-profile-id', {
     path: '/',
     domain: 'localhost',
     maxAge: 3600000,
