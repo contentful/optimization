@@ -1,6 +1,8 @@
-import Optimization from '@contentful/optimization-node'
+import Optimization, { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node'
 import express, { type Express } from 'express'
 import rateLimit from 'express-rate-limit'
+
+const ID_VALUE = '2352jkwefbweuhfb'
 
 const limiter = rateLimit({
   windowMs: 900_000,
@@ -8,6 +10,7 @@ const limiter = rateLimit({
 })
 
 const app: Express = express()
+
 app.use(limiter)
 
 const sdk = new Optimization({
@@ -22,6 +25,7 @@ const sdk = new Optimization({
 
 app.get('/', limiter, (_req, res) => {
   const response = JSON.stringify({ clientId: sdk.config.clientId })
+  res.cookie(ANONYMOUS_ID_COOKIE, ID_VALUE, { path: '/', domain: 'localhost', maxAge: 3600000 })
 
   res.send(`
 <!doctype html>

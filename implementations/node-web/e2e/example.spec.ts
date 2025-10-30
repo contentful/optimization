@@ -5,12 +5,14 @@ const CLIENT_ID = process.env.VITE_NINETAILED_CLIENT_ID ?? 'error'
 
 const ANONYMOUS_ID = '__ctfl_opt_anonymous_id__'
 
+const ID_VALUE = '2352jkwefbweuhfb'
+
 const URI = {
   ssr: 'http://localhost:3000/',
   csr: 'http://localhost:4000/',
 }
 
-test('SSR/ smoke test', async ({ request }) => {
+test('SSR/ check client ID', async ({ request }) => {
   const response = await request.get(URI.ssr)
 
   expect(await response.text()).toContain(`"clientId":"${CLIENT_ID}"`)
@@ -20,43 +22,30 @@ test('SSR/ Profile id is stored in local storage if user is logged in', async ({
   context,
   page,
 }) => {
-  const id = '2352jkwefbweuhfb'
-
-  await context.addCookies([
-    { name: ANONYMOUS_ID_COOKIE, value: id, path: '/', domain: 'localhost' },
-  ])
-
   await page.goto('http://localhost:3000/')
 
   const state = await context.storageState()
 
-  expect(state).toEqual([])
-
-  const localStorage = state.origins[0]?.localStorage
-
-  expect(localStorage).toEqual([{ name: ANONYMOUS_ID, value: id }])
+  expect(state.origins[0]?.localStorage).toEqual([{ name: ANONYMOUS_ID, value: ID_VALUE }])
 })
 
-// test('Test CSR', async ({ page }) => {
-//   await page.goto(URI.csr)
+test('CSR/ check client ID', async ({ page }) => {
+  await page.goto(URI.csr)
 
-//   await expect(page.getByTestId('clientId')).toHaveText(CLIENT_ID)
-// })
+  await expect(page.getByTestId('clientId')).toHaveText(CLIENT_ID)
+})
 
-// test('Profile id is stored in local storage if user is logged in', async ({ page, context }) => {
-//   const id = '2352jkwefbweuhfb'
+test('CSR/ Profile id is stored in local storage if user is logged in', async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([
+    { name: ANONYMOUS_ID_COOKIE, value: ID_VALUE, path: '/', domain: 'localhost' },
+  ])
 
-//   await context.addCookies([
-//     { name: ANONYMOUS_ID_COOKIE, value: id, path: '/', domain: 'localhost' },
-//   ])
+  await page.goto(URI.csr)
 
-//   await page.goto(URI.csr)
+  const state = await context.storageState()
 
-//   const state = await context.storageState()
-
-//   expect(state.origins).toEqual([])
-
-//   const localStorage = state.origins[0]?.localStorage
-
-//   expect(localStorage).toEqual([{ name: ANONYMOUS_ID, value: id }])
-// })
+  expect(state.origins[0]?.localStorage).toEqual([{ name: ANONYMOUS_ID, value: ID_VALUE }])
+})
