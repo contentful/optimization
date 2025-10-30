@@ -1,10 +1,10 @@
 import * as z from 'zod/mini'
-import { Query } from './Query'
+import { Dictionary } from './Dictionary'
 
 export const Page = z.catchall(
   z.object({
     path: z.string(),
-    query: Query,
+    query: Dictionary,
     referrer: z.string(),
     search: z.string(),
     title: z.optional(z.string()),
