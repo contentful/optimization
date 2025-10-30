@@ -1,6 +1,7 @@
 import * as z from 'zod/mini'
 import { App, Campaign, Channel, GeoLocation, Library, Page } from './properties'
 
+// TODO: Rework event typing to handle multiple channels (this is harder than it seems)
 export const UniversalEventProperties = z.object({
   channel: Channel,
   context: z.object({
