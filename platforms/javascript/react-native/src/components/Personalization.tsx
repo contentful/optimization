@@ -3,7 +3,6 @@ import React, { useMemo, type ReactNode } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
 import { useOptimization } from '../context/OptimizationContext'
 import { useViewportTracking } from '../hooks/useViewportTracking'
-import { resolveEntryWithMetadata } from '../utils/resolveEntryWithMetadata'
 
 export interface PersonalizationProps {
   /**
@@ -123,22 +122,15 @@ export function Personalization({
 }: PersonalizationProps): React.JSX.Element {
   const optimization = useOptimization()
 
-  // Resolve the entry variant and extract tracking metadata
-  const {
-    entry: resolvedEntry,
-    componentId,
-    experienceId,
-    variantIndex,
-  } = useMemo(
-    () => resolveEntryWithMetadata(baselineEntry, optimization),
+  // Resolve the entry variant using personalizeEntry method
+  const resolvedEntry = useMemo(
+    () => optimization.personalization.personalizeEntry(baselineEntry),
     [baselineEntry, optimization],
   )
 
-  // Set up viewport tracking with the resolved metadata
+  // Set up viewport tracking - the hook extracts tracking metadata from the entry
   const { onLayout } = useViewportTracking({
-    componentId,
-    experienceId,
-    variantIndex,
+    entry: resolvedEntry,
     threshold,
     viewTimeMs,
   })

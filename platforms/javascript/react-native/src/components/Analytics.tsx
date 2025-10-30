@@ -106,19 +106,9 @@ export function Analytics({
   threshold,
   style,
 }: AnalyticsProps): React.JSX.Element {
-  // Extract component ID from entry
-  const {
-    sys: { id: componentId },
-  } = entry
-
-  const variantIndex = 0 // Non-personalized content
-  const experienceId = undefined // No personalization active
-
-  // Set up viewport tracking
+  // Set up viewport tracking - the hook extracts tracking metadata from the entry
   const { onLayout } = useViewportTracking({
-    componentId,
-    experienceId,
-    variantIndex,
+    entry,
     threshold,
     viewTimeMs,
   })
