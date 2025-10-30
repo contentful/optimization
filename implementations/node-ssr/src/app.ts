@@ -26,39 +26,37 @@ const sdk = new Optimization({
   },
 })
 
-const script = `
-<script>
-  var optimization = new Optimization({
-    clientId: '${CLIENT_ID}',
-    environment: '${ENVIRONMENT}',
-    logLevel: 'debug',
-    api: {
-      analytics: { baseUrl: '${VITE_INSIGHTS_API_BASE_URL}' },
-      personalization: { baseUrl: '${VITE_EXPERIENCE_API_BASE_URL}' },
-    },
-  })
-
-  var p = document.createElement('p')
-  p.dataset.testid = 'clientId'
-  p.innerText = optimization.config.clientId
-  document.body.appendChild(p)
-</script>
-`
-
-app.get('/', limiter, (_req, res) => {
-  res.cookie(ANONYMOUS_ID_COOKIE, 'ssr-profile-id', { path: '/', domain: 'localhost' })
-
-  res.send(`
-<!doctype html>
+const html = `<!doctype html>
 <html>
   <head>
     <title>Test SDK page</title>
     <script src="/dist/index.umd.cjs"></script>
     <script> window.response = ${JSON.stringify({ clientId: sdk.config.clientId })} </script>
   </head>
-  <body>${script}</body>
+  <body>
+  <script>
+    var optimization = new Optimization({
+      clientId: '${CLIENT_ID}',
+      environment: '${ENVIRONMENT}',
+      logLevel: 'debug',
+      api: {
+        analytics: { baseUrl: '${VITE_INSIGHTS_API_BASE_URL}' },
+        personalization: { baseUrl: '${VITE_EXPERIENCE_API_BASE_URL}' },
+      },
+    })
+
+    var p = document.createElement('p')
+    p.dataset.testid = 'clientId'
+    p.innerText = optimization.config.clientId
+    document.body.appendChild(p)
+  </script>
+  </body>
 </html>
-    `)
+`
+
+app.get('/', limiter, (_req, res) => {
+  res.cookie(ANONYMOUS_ID_COOKIE, 'ssr-profile-id', { path: '/', domain: 'localhost' })
+  res.send(html)
 })
 
 app.use('/dist', express.static('./public/dist'))
