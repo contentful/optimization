@@ -38,7 +38,7 @@ const html = `<!doctype html>
   </head>
   <body>
   <script>
-    var optimization = new Optimization({
+    const optimization = new Optimization({
       clientId: '${CLIENT_ID}',
       environment: '${ENVIRONMENT}',
       logLevel: 'debug',
@@ -48,10 +48,14 @@ const html = `<!doctype html>
       },
     })
 
-    var p = document.createElement('p')
-    p.dataset.testid = 'clientId'
-    p.innerText = optimization.config.clientId
-    document.body.appendChild(p)
+    function renderElement(id, text) {
+      const p = document.createElement('p')
+      p.dataset.testid = id
+      p.innerText = text
+      document.body.appendChild(p)
+    }
+
+    renderElement('clientId', optimization.config.clientId)
   </script>
   </body>
 </html>
