@@ -1,4 +1,5 @@
 import Optimization, { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node'
+import cookieParser from 'cookie-parser'
 import express, { type Express } from 'express'
 import rateLimit from 'express-rate-limit'
 
@@ -8,6 +9,8 @@ const limiter = rateLimit({
 })
 
 const app: Express = express()
+
+app.use(cookieParser())
 
 app.use(limiter)
 
@@ -54,8 +57,14 @@ const html = `<!doctype html>
 </html>
 `
 
-app.get('/', limiter, (_req, res) => {
-  res.cookie(ANONYMOUS_ID_COOKIE, 'ssr-profile-id', { path: '/', domain: 'localhost' })
+app.get('/', limiter, (req, res) => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- req.cookies is of type any
+  const cookies: Record<string, string> = req.cookies
+
+  res.cookie(ANONYMOUS_ID_COOKIE, cookies[ANONYMOUS_ID_COOKIE] ?? 'ssr-profile-id', {
+    path: '/',
+    domain: 'localhost',
+  })
   res.send(html)
 })
 

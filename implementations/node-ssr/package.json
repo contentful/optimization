@@ -25,6 +25,7 @@
     "@contentful/optimization-web": "workspace:*",
     "express": "catalog:",
     "express-rate-limit": "catalog:",
+    "cookie-parser": "1.4.7",
     "tslib": "catalog:"
   },
   "devDependencies": {
@@ -33,6 +34,7 @@
     "@types/node": "catalog:",
     "@types/supertest": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "@types/cookie-parser": "1.4.7",
     "dotenv": "catalog:",
     "pm2": "catalog:",
     "rimraf": "catalog:",
