@@ -3,8 +3,8 @@ import './polyfills/crypto'
 
 import {
   type CoreConfig,
+  type CoreStatefulConfig,
   CoreStateful,
-  CoreStatefulConfig,
   effect,
   signals,
 } from '@contentful/optimization-core'

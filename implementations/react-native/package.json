@@ -12,6 +12,7 @@
     "start": "react-native start",
     "start:clean": "kill-port 8081 && react-native start --reset-cache",
     "prestart": "kill-port 8081 || true",
+    "serve:mocks": "pnpm --filter mocks serve",
     "test": "jest",
     "test:unit": "echo 'Unit tests skipped - this is a reference implementation app. E2E tests are run separately via Detox.'",
     "e2e:build:ios": "detox build --configuration ios.sim.debug",

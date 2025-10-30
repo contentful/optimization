@@ -44,67 +44,109 @@ export function useViewportTracking({
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height)
 
   useEffect(() => {
-    if (!scrollContext) {
-      const subscription = Dimensions.addEventListener('change', ({ window }) => {
-        setScreenHeight(window.height)
-      })
-      return () => {
-        subscription.remove()
-      }
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setScreenHeight(window.height)
+    })
+    return () => {
+      subscription.remove()
     }
-  }, [scrollContext])
+  }, [])
 
   // Use scroll context if available, otherwise use screen dimensions
-  const scrollY = scrollContext?.scrollY ?? 0
-  const viewportHeight = scrollContext?.viewportHeight ?? screenHeight
+
+  const scrollY = scrollContext ? scrollContext.scrollY : 0
+
+  const viewportHeight = scrollContext ? scrollContext.viewportHeight : screenHeight
 
   const hasTrackedRef = useRef(false)
   const dimensionsRef = useRef<{ y: number; height: number } | null>(null)
   const isVisibleRef = useRef(false)
   const viewTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const trackingInProgressRef = useRef(false)
+
+  // Store optimization in a ref to prevent unnecessary callback recreations
+  const optimizationRef = useRef(optimization)
+  optimizationRef.current = optimization
+
+  logger.debug(
+    `[ViewportTracking] Hook initialized for ${componentId} (experienceId: ${experienceId}, variantIndex: ${variantIndex})`,
+  )
+
+  // Log if hook is being re-created (potential React Strict Mode or unmount/remount issue)
+  useEffect(() => {
+    logger.debug(`[ViewportTracking] Hook mounted/updated for ${componentId}`)
+    return () => {
+      logger.debug(`[ViewportTracking] Hook unmounting for ${componentId}`)
+    }
+  }, [])
 
   const startTrackingTimer = useCallback(
     (visibilityPercent: number) => {
+      // Defensive check: already tracked or tracking in progress
+      if (hasTrackedRef.current || trackingInProgressRef.current) {
+        logger.debug(
+          `[ViewportTracking] Skipping timer start for ${componentId} - already tracked: ${hasTrackedRef.current}, in progress: ${trackingInProgressRef.current}`,
+        )
+        return
+      }
+
       logger.info(
         `[ViewportTracking] Component ${componentId} became visible (${visibilityPercent.toFixed(1)}%), starting ${viewTimeMs}ms timer`,
       )
 
       // Clear any existing timeout
       if (viewTimeoutRef.current) {
+        logger.debug(`[ViewportTracking] Clearing existing timer for ${componentId}`)
         clearTimeout(viewTimeoutRef.current)
       }
 
       viewTimeoutRef.current = setTimeout(() => {
         const { current: isVisible } = isVisibleRef
         const { current: hasTracked } = hasTrackedRef
+        const { current: trackingInProgress } = trackingInProgressRef
 
-        if (isVisible && !hasTracked) {
+        logger.debug(
+          `[ViewportTracking] Timer fired for ${componentId} - isVisible: ${isVisible}, hasTracked: ${hasTracked}, trackingInProgress: ${trackingInProgress}`,
+        )
+
+        if (isVisible && !hasTracked && !trackingInProgress) {
+          // Set both flags immediately to prevent race conditions
           hasTrackedRef.current = true
+          trackingInProgressRef.current = true
 
           logger.info(
-            `[ViewportTracking] Component ${componentId} visible for ${viewTimeMs}ms, tracking view`,
+            `[ViewportTracking] Component ${componentId} visible for ${viewTimeMs}ms, initiating tracking`,
           )
 
+          // Use ref to get current optimization instance
+          const { current: currentOptimization } = optimizationRef
+
           // Track the component view
-          optimization.analytics
+          currentOptimization.analytics
             .trackComponentView({
               componentId,
               experienceId,
               variantIndex,
             })
             .then(() => {
-              logger.info(`[ViewportTracking] Successfully tracked ${componentId}`)
+              logger.info(`[ViewportTracking] ✓ Successfully tracked ${componentId}`)
+              trackingInProgressRef.current = false
             })
             .catch((error: unknown) => {
               logger.error(
-                `[ViewportTracking] Failed to track component view for ${componentId}:`,
+                `[ViewportTracking] ✗ Failed to track component view for ${componentId}:`,
                 error,
               )
+              // Reset flags on error to allow retry
+              hasTrackedRef.current = false
+              trackingInProgressRef.current = false
             })
+        } else {
+          logger.debug(`[ViewportTracking] Skipping track for ${componentId} - conditions not met`)
         }
       }, viewTimeMs)
     },
-    [componentId, experienceId, variantIndex, viewTimeMs, optimization],
+    [componentId, experienceId, variantIndex, viewTimeMs],
   )
 
   const canCheckVisibility = useCallback((): boolean => {
@@ -120,9 +162,10 @@ export function useViewportTracking({
     }
 
     if (viewportHeight === 0) {
-      logger.debug(
-        `[ViewportTracking] ${componentId} viewport height is 0 ${scrollContext ? '(waiting for ScrollView layout)' : '(waiting for screen dimensions)'}`,
-      )
+      const context = scrollContext
+        ? '(waiting for ScrollView layout)'
+        : '(waiting for screen dimensions)'
+      logger.debug(`[ViewportTracking] ${componentId} viewport height is 0 ${context}`)
       return false
     }
 
@@ -130,6 +173,8 @@ export function useViewportTracking({
   }, [componentId, viewportHeight, scrollContext])
 
   const checkVisibility = useCallback(() => {
+    logger.debug(`[ViewportTracking] checkVisibility called for ${componentId}`)
+
     if (!canCheckVisibility()) {
       return
     }
@@ -152,11 +197,13 @@ export function useViewportTracking({
     const visibleHeight = Math.max(0, visibleBottom - visibleTop)
     const visibilityRatio = visibleHeight / elementHeight
 
+    const contextType = scrollContext ? '(ScrollView)' : '(non-scrollable)'
     logger.debug(
-      `[ViewportTracking] ${componentId} visibility check ${scrollContext ? '(ScrollView)' : '(non-scrollable)'}:
+      `[ViewportTracking] ${componentId} visibility check ${contextType}:
   Element: y=${elementY.toFixed(0)}, bottom=${elementBottom.toFixed(0)}
   Viewport: scrollY=${scrollY.toFixed(0)}, height=${viewportHeight.toFixed(0)}, top=${viewportTop.toFixed(0)}, bottom=${viewportBottom.toFixed(0)}
-  Visible: height=${visibleHeight.toFixed(0)}, ratio=${visibilityRatio.toFixed(2)}, threshold=${threshold}`,
+  Visible: height=${visibleHeight.toFixed(0)}, ratio=${visibilityRatio.toFixed(2)}, threshold=${threshold}
+  State: hasTracked=${hasTrackedRef.current}, trackingInProgress=${trackingInProgressRef.current}`,
     )
 
     const isNowVisible = visibilityRatio >= threshold
@@ -164,9 +211,10 @@ export function useViewportTracking({
     isVisibleRef.current = isNowVisible
 
     if (isNowVisible && !wasVisible) {
+      logger.info(`[ViewportTracking] ${componentId} transitioned from invisible to visible`)
       startTrackingTimer(visibilityRatio * PERCENTAGE_MULTIPLIER)
     } else if (!isNowVisible && wasVisible) {
-      logger.debug(
+      logger.info(
         `[ViewportTracking] ${componentId} became invisible (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%), canceling timer`,
       )
 
@@ -178,8 +226,20 @@ export function useViewportTracking({
       logger.debug(
         `[ViewportTracking] ${componentId} is not visible enough (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%)`,
       )
+    } else {
+      logger.debug(
+        `[ViewportTracking] ${componentId} remains visible (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%)`,
+      )
     }
-  }, [canCheckVisibility, componentId, threshold, scrollY, viewportHeight, startTrackingTimer])
+  }, [
+    canCheckVisibility,
+    componentId,
+    threshold,
+    scrollY,
+    viewportHeight,
+    startTrackingTimer,
+    scrollContext,
+  ])
 
   const handleLayout = useCallback(
     (event: LayoutChangeEvent) => {

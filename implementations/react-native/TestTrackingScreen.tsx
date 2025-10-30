@@ -2,7 +2,7 @@
  * Test Tracking Screen - Demonstrates viewport tracking functionality
  *
  * This screen demonstrates both the new Personalization and Analytics components
- * with mock Contentful entry data.
+ * with real Contentful entry data from the mock server.
  */
 
 import React, { useEffect, useState } from 'react'
@@ -33,67 +33,33 @@ interface TestTrackingScreenProps {
   colors: ThemeColors
   onBack: () => void
   sdk: Optimization
+  personalizedEntry: Entry
+  productEntry: Entry
 }
 
 /**
- * Mock Contentful entry data for demonstration
- * Using type assertions since Contentful's Entry types are complex and this is mock data
+ * Helper to safely extract text from Contentful field values
+ * Handles both plain strings and rich text document objects
  */
-const mockPersonalizedEntry = {
-  sys: {
-    id: 'personalized-hero-baseline',
-    type: 'Entry' as const,
-    contentType: {
-      sys: {
-        type: 'Link' as const,
-        linkType: 'ContentType' as const,
-        id: 'hero',
-      },
-    },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    revision: 1,
-    publishedVersion: 1,
-    space: { sys: { type: 'Link' as const, linkType: 'Space' as const, id: 'test-space' } },
-    environment: { sys: { type: 'Link' as const, linkType: 'Environment' as const, id: 'master' } },
-  },
-  fields: {
-    title: 'Welcome to Contentful Optimization!',
-    subtitle: 'This hero can be personalized',
-  },
-  metadata: { tags: [] },
-} as unknown as Entry
+function getFieldText(field: unknown): string {
+  if (typeof field === 'string') {
+    return field
+  }
 
-const mockProductEntry = {
-  sys: {
-    id: 'product-card-123',
-    type: 'Entry' as const,
-    contentType: {
-      sys: {
-        type: 'Link' as const,
-        linkType: 'ContentType' as const,
-        id: 'product',
-      },
-    },
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    revision: 1,
-    publishedVersion: 1,
-    space: { sys: { type: 'Link' as const, linkType: 'Space' as const, id: 'test-space' } },
-    environment: { sys: { type: 'Link' as const, linkType: 'Environment' as const, id: 'master' } },
-  },
-  fields: {
-    name: 'Premium Widget',
-    price: 99.99,
-    description: 'A non-personalized product entry',
-  },
-  metadata: { tags: [] },
-} as unknown as Entry
+  // Handle rich text document
+  if (field && typeof field === 'object' && 'nodeType' in field && field.nodeType === 'document') {
+    return '[Rich Text Content]'
+  }
+
+  return ''
+}
 
 export function TestTrackingScreen({
   colors,
   onBack,
   sdk,
+  personalizedEntry,
+  productEntry,
 }: TestTrackingScreenProps): React.JSX.Element {
   const [trackedEvents, setTrackedEvents] = useState<string[]>([])
 
@@ -131,12 +97,15 @@ export function TestTrackingScreen({
             Component Tracking Demo
           </Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor }]}>
-            Scroll down to see the new {'<Personalization />'} and {'<Analytics />'} components in
-            action. Each tracks when 80% visible for 2 seconds.
+            Scroll down to see the {'<Personalization />'} and {'<Analytics />'} components using
+            real entries from the mock server. Each tracks when visible for a specified duration.
           </Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor, marginTop: 12 }]}>
             📝 Note: "Component tracking" refers to tracking Contentful entry components (CMS
             content), not React Native UI components.
+          </Text>
+          <Text style={[styles.sectionText, { color: colors.mutedTextColor, marginTop: 12 }]}>
+            🔗 Using mock server data - Entry IDs: {personalizedEntry.sys.id}, {productEntry.sys.id}
           </Text>
         </View>
 
@@ -152,24 +121,24 @@ export function TestTrackingScreen({
 
         {/* Personalization component example */}
         <Personalization
-          baselineEntry={mockPersonalizedEntry}
+          baselineEntry={personalizedEntry}
           viewTimeMs={2000} // 2 seconds
           threshold={0.8} // 80% visible
           style={StyleSheet.flatten([styles.trackedView, { backgroundColor: '#6366f1' }])}
         >
-          {() => (
+          {(resolvedEntry) => (
             <View>
               <Text style={styles.componentLabel}>{'<Personalization />'}</Text>
               <Text style={styles.trackedViewTitle}>
-                {mockPersonalizedEntry.fields.title as string}
+                {getFieldText(resolvedEntry.fields.internalTitle) || 'Personalized Content'}
               </Text>
               <Text style={styles.trackedViewText}>
-                {mockPersonalizedEntry.fields.subtitle as string}
+                {getFieldText(resolvedEntry.fields.text) || 'Content loaded from mock server'}
               </Text>
               <Text style={styles.trackedViewDetails}>
-                Entry ID: {mockPersonalizedEntry.sys.id}
+                Entry ID: {resolvedEntry.sys.id}
                 {'\n'}
-                Type: Personalized Hero
+                Content Type: {resolvedEntry.sys.contentType?.sys.id ?? 'Unknown'}
                 {'\n'}
                 Tracking: 80% visible for 2000ms
               </Text>
@@ -306,6 +275,17 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
     fontFamily: 'monospace',
     lineHeight: 18,
+  },
+  statsSection: {
+    padding: 24,
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 12,
+  },
+  statText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
   },
   eventLog: {
     padding: 24,
