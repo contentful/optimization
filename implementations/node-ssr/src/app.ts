@@ -11,13 +11,18 @@ const app: Express = express()
 
 app.use(limiter)
 
+const CLIENT_ID = process.env.VITE_NINETAILED_CLIENT_ID ?? ''
+const ENVIRONMENT = process.env.VITE_NINETAILED_ENVIRONMENT ?? ''
+const VITE_INSIGHTS_API_BASE_URL = process.env.VITE_INSIGHTS_API_BASE_URL ?? ''
+const VITE_EXPERIENCE_API_BASE_URL = process.env.VITE_EXPERIENCE_API_BASE_URL ?? ''
+
 const sdk = new Optimization({
-  clientId: process.env.VITE_NINETAILED_CLIENT_ID ?? '',
-  environment: process.env.VITE_NINETAILED_ENVIRONMENT ?? '',
+  clientId: CLIENT_ID,
+  environment: ENVIRONMENT,
   logLevel: 'debug',
   api: {
-    analytics: { baseUrl: process.env.VITE_INSIGHTS_API_BASE_URL },
-    personalization: { baseUrl: process.env.VITE_EXPERIENCE_API_BASE_URL },
+    analytics: { baseUrl: VITE_INSIGHTS_API_BASE_URL },
+    personalization: { baseUrl: VITE_EXPERIENCE_API_BASE_URL },
   },
 })
 
@@ -40,12 +45,12 @@ app.get('/', limiter, (_req, res) => {
   <body>
     <script>
       var optimization = new Optimization({
-        clientId: '<!--#echo var="NGINX_NINETAILED_CLIENT_ID" -->',
-        environment: '<!--#echo var="NGINX_NINETAILED_ENVIRONMENT" -->',
+        clientId: '${CLIENT_ID}',
+        environment: '${ENVIRONMENT}',
         logLevel: 'debug',
         api: {
-          analytics: { baseUrl: '<!--#echo var="NGINX_INSIGHTS_API_BASE_URL" -->' },
-          personalization: { baseUrl: '<!--#echo var="NGINX_EXPERIENCE_API_BASE_URL" -->/' },
+          analytics: { baseUrl: '${VITE_INSIGHTS_API_BASE_URL}' },
+          personalization: { baseUrl: '${VITE_EXPERIENCE_API_BASE_URL}' },
         },
       })
 
