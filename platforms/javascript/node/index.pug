@@ -2,6 +2,128 @@ doctype html
 html(lang="en")
   head
     title Optimization Node SDK Dev Development Dashboard
+
+    style.
+      html,
+      textarea,
+      input,
+      button {
+        font-family:
+          -apple-system,
+          BlinkMacSystemFont,
+          avenir next,
+          avenir,
+          segoe ui,
+          helvetica neue,
+          Adwaita Sans,
+          Cantarell,
+          Ubuntu,
+          roboto,
+          noto,
+          helvetica,
+          arial,
+          sans-serif;
+      }
+      h1,
+      main {
+        max-width: 1040px;
+        margin-inline: auto;
+      }
+      main {
+        display: grid;
+        grid-gap: 2rem;
+        grid-template-rows: auto 1fr;
+      }
+      section {
+        overflow: scroll;
+
+        &:first-of-type {
+          grid-column: 1 / span 2;
+        }
+      }
+      ol {
+        margin: 0;
+      }
+      form {
+        margin-block: 1rem;
+      }
+      button {
+        cursor: pointer;
+
+        &:not([type]) {
+          appearance: none;
+          background: transparent;
+          border: 0;
+          padding: 0;
+          font-family: inherit;
+          font-size: inherit;
+          text-decoration: underline;
+
+          &:hover,
+          &:active {
+            color: blue;
+          }
+        }
+      }
+      fieldset {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-gap: 1rem;
+      }
+      summary {
+        cursor: pointer;
+      }
+
   body
     h1 Optimization Node SDK Dev Development Dashboard
-    pre= fullProfile
+
+    main
+      section
+        h2 States
+
+        span#consent= consent ? 'Consented' : 'Unconsented'
+        |
+        | |
+        |
+        button Custom Flags
+        dialog
+          pre= JSON.stringify(flags, undefined, 2)
+          form(method='dialog')
+            button(type='submit') Close
+        |
+        | |
+        |
+        button Profile
+        dialog
+          pre= JSON.stringify(profile, undefined, 2)
+          form(method='dialog')
+            button(type='submit') Close
+        |
+        | |
+        |
+        button Personalizations
+        dialog
+          pre= JSON.stringify(personalizations, undefined, 2)
+          form(method='dialog')
+            button(type='submit') Close
+
+      section
+        h2 Entries
+
+        ol
+          each entry in entries
+            li
+              button= entry && entry.fields ? entry.fields.internalTitle : 'oops'
+              dialog
+                pre= entry
+                form(method='dialog')
+                  button(type='submit') Close
+
+    script.
+      const triggers = document.querySelectorAll('section > button, li > button')
+      triggers.forEach((trigger) => {
+        trigger.addEventListener('click', () => {
+          trigger.nextElementSibling.showModal()
+        })
+      })
+

@@ -11,7 +11,9 @@ import type { ProductConfig } from './ProductBase'
 
 /** Options that may be passed to the Core constructor */
 export interface CoreConfig extends Pick<ApiClientConfig, GlobalApiConfigProperties> {
-  allowedEvents?: ProductConfig['allowedEvents']
+  allowedEventTypes?: ProductConfig['allowedEventTypes']
+
+  preventedComponentEvents?: ProductConfig['preventedComponentEvents']
 
   /** The API client configuration object */
   api?: Pick<ApiClientConfig, 'personalization' | 'analytics'>
