@@ -56,6 +56,13 @@ app.get('/', limiter, async (req, res) => {
   const cookies: Record<string, string> = req.cookies
   const url = new URL('http://localhost:3000/')
 
+  const setId = (id: string | undefined): void => {
+    res.cookie(ANONYMOUS_ID_COOKIE, id, {
+      path: '/',
+      domain: 'localhost',
+    })
+  }
+
   const anonymousId = cookies[ANONYMOUS_ID_COOKIE] ?? undefined
 
   const sdk = new Optimization({
@@ -82,16 +89,10 @@ app.get('/', limiter, async (req, res) => {
 
   if (anonymousId) {
     const identified = await sdk.personalization.identify({ userId: anonymousId })
-    res.cookie(ANONYMOUS_ID_COOKIE, identified?.profile.id, {
-      path: '/',
-      domain: 'localhost',
-    })
+    setId(identified?.profile.id)
   } else {
     const { profile } = await sdk.personalization.page({})
-    res.cookie(ANONYMOUS_ID_COOKIE, profile.id, {
-      path: '/',
-      domain: 'localhost',
-    })
+    setId(profile.id)
   }
 
   res.send(render(sdk))
