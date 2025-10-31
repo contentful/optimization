@@ -1,5 +1,5 @@
 export * from './AudienceEntry'
-export * from './Entry'
+export * from './CtflEntry'
 export * from './MergeTagEntry'
 export * from './PersonalizationConfig'
 export * from './PersonalizationEntry'

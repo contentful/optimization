@@ -122,4 +122,7 @@ class Optimization extends CoreStateful {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- protect against non-Web
+if (window) window.Optimization ??= Optimization
+
 export default Optimization

@@ -1,5 +1,5 @@
 import * as z from 'zod/mini'
-import { Entry, EntryFields } from './Entry'
+import { CtflEntry, EntryFields } from './CtflEntry'
 
 export const AudienceEntryFields = z.extend(EntryFields, {
   /**
@@ -19,7 +19,7 @@ export const AudienceEntryFields = z.extend(EntryFields, {
 })
 export type AudienceEntryFields = z.infer<typeof AudienceEntryFields>
 
-export const AudienceEntry = z.extend(Entry, {
+export const AudienceEntry = z.extend(CtflEntry, {
   fields: AudienceEntryFields,
 })
 export type AudienceEntry = z.infer<typeof AudienceEntry>

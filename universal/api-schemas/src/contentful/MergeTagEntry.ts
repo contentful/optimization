@@ -1,7 +1,7 @@
 import * as z from 'zod/mini'
-import { Entry, EntrySys } from './Entry'
+import { CtflEntry, EntrySys } from './CtflEntry'
 
-export const MergeTagEntry = z.extend(Entry, {
+export const MergeTagEntry = z.extend(CtflEntry, {
   fields: z.object({
     nt_name: z.string(),
     nt_fallback: z.optional(z.string()),
