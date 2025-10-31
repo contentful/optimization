@@ -51,7 +51,7 @@ test("BACKEND: can't identify profile id from client", async ({ context, page })
     origins: [origin],
   } = await context.storageState()
 
-  expect(origin?.localStorage).toEqual([{ name: ANONYMOUS_ID, value: customUnidentifiedId }])
+  expect(origin?.localStorage).toEqual([{ name: ANONYMOUS_ID, value: id }])
 })
 
 test('FRONTEND: check client ID rendered from Optimization API on client-side render', async ({
