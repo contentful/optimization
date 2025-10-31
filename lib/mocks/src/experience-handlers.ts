@@ -56,14 +56,12 @@ function hasIdentifyEvent(events: ExperienceEventArray | undefined): boolean {
 }
 
 function getResponseBody(events: ExperienceEventArray | undefined): ExperienceResponse | undefined {
-  let responseBody: ExperienceResponse | undefined = undefined
   if (identified || hasIdentifyEvent(events)) {
     identified = true
-    responseBody = identifiedVisitor
-  } else {
-    responseBody = newVisitor
+    return identifiedVisitor
   }
-  return responseBody
+
+  return newVisitor
 }
 
 // ---------------------------------
@@ -125,8 +123,26 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
             { headers: { 'Access-Control-Allow-Origin': '*' }, status: 400 },
           )
         }
+        const identified = getResponseBody(events)
 
-        return HttpResponse.json(getResponseBody(events), {
+        if (identified) {
+          const {
+            data: {
+              profile: { id, ...profile },
+              ...data
+            },
+            ...rest
+          } = identified
+
+          return HttpResponse.json(
+            { data: { ...data, profile: { id: profileId, ...profile } }, ...rest },
+            {
+              headers: { 'Access-Control-Allow-Origin': '*' },
+            },
+          )
+        }
+
+        return HttpResponse.json(identified, {
           headers: { 'Access-Control-Allow-Origin': '*' },
         })
       },
