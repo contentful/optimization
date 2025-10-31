@@ -43,6 +43,7 @@
     "pug": "^3.0.3",
     "rimraf": "catalog:",
     "tslib": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

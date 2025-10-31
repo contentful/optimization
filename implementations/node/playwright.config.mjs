@@ -73,7 +73,7 @@ export default defineConfig({
 
   /* Run your local dev server before starting the tests */
   // webServer: {
-  //   command: 'pnpm --filter e2e mocks:serve',
+  //   command: 'pnpm --filter e2e serve',
   //   url: 'http://localhost',
   //   reuseExistingServer: !isCI,
   // },

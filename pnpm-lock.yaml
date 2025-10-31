@@ -438,6 +438,9 @@ importers:
       tslib:
         specifier: 'catalog:'
         version: 2.8.1
+      tsx:
+        specifier: 'catalog:'
+        version: 4.20.3
       typescript:
         specifier: ^5.8.3
         version: 5.9.2
