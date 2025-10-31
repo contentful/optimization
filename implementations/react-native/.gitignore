@@ -73,5 +73,6 @@ yarn-error.log
 !.yarn/sdks
 !.yarn/versions
 
-# Local environment configuration
-env.config.ts
+# Local environment configuration - commented out since we use safe defaults
+# Uncomment this line if you need to override with local secrets
+# env.config.ts
