@@ -5,7 +5,29 @@
  * For production, use proper environment variable management.
  */
 
-export const ENV_CONFIG = {
+interface EnvConfig {
+  contentful: {
+    spaceId: string
+    environment: string
+    accessToken: string
+    host: string
+    basePath: string
+  }
+  optimization: {
+    clientId: string
+    environment: string
+  }
+  api: {
+    experienceBaseUrl: string
+    insightsBaseUrl: string
+  }
+  entries: {
+    personalized: string
+    product: string
+  }
+}
+
+export const ENV_CONFIG: EnvConfig = {
   // Contentful Configuration
   contentful: {
     spaceId: process.env.VITE_CONTENTFUL_SPACE_ID ?? 'test-space',
@@ -32,4 +54,4 @@ export const ENV_CONFIG = {
     personalized: process.env.VITE_ENTRY_ID_PERSONALIZED ?? '2Z2WLOx07InSewC3LUB3eX', // Baseline with experiences
     product: process.env.VITE_ENTRY_ID_PRODUCT ?? '1MwiFl4z7gkwqGYdvCmr8c', // Simple content entry
   },
-} as const
+}
