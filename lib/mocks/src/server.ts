@@ -10,6 +10,9 @@ const EXPERIENCE_BASE_URL = process.env.BASE_URL ?? 'http://localhost/experience
 const INSIGHTS_BASE_URL = process.env.BASE_URL ?? 'http://localhost/insights/'
 const PORT = Number(process.env.PORT ?? 80)
 
+// eslint-disable-next-line no-console -- no worries
+console.log('Starting mock server...', PORT)
+
 const app = createServer(
   ...getContentfulHandlers(CONTENTFUL_BASE_URL),
   ...getExperienceHandlers(EXPERIENCE_BASE_URL),
