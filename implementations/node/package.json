@@ -9,7 +9,7 @@
     "clean": "rimraf ./dist ./coverage ./playwright-report ./test-results",
     "serve": "pnpm serve:mocks && pnpm serve:app",
     "serve:app": "pm2 start --name node-app \"tsx --env-file=.env ./src/app.ts\"",
-    "serve:mocks": "pm2 start --name node-mocks \"pnpm --filter mocks mocks:serve\"",
+    "serve:mocks": "pm2 start --name node-mocks \"pnpm --filter mocks serve\"",
     "serve:stop": "pm2 stop node-app node-mocks && pm2 delete node-app node-mocks",
     "test:e2e": "pnpm serve && playwright test; E2E_RESULT=$?; pnpm serve:stop; exit $E2E_RESULT",
     "test:e2e:codegen": "playwright codegen",
