@@ -30,7 +30,7 @@ test('set Profile id from backend', async ({ context, page }) => {
 })
 
 test('backend uses profile id from client', async ({ context, page }) => {
-  const id = 'custom-profile-id'
+  // const id = 'custom-profile-id'  TODO: fix me
 
   await context.addCookies([
     { name: ANONYMOUS_ID_COOKIE, value: id, path: '/', domain: 'localhost' },

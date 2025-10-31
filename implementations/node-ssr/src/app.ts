@@ -1,4 +1,3 @@
-import type { Page } from '@contentful/optimization-api-schemas'
 import Optimization, { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node'
 import cookieParser from 'cookie-parser'
 import express, { type Express } from 'express'
@@ -52,42 +51,28 @@ const render = (sdk: Optimization): string => `<!doctype html>
 </html>
 `
 
-function getPageProperties(): Page {
-  try {
-    const url = new URL('http://localhost:3000/')
-
-    return {
-      path: url.pathname,
-      query: {},
-      referrer: 'http://localhost:3000/',
-      search: url.search,
-      url: url.toString(),
-    }
-  } catch {
-    return {
-      path: '',
-      query: {},
-      referrer: '',
-      search: '',
-      title: '',
-      url: '',
-    }
-  }
-}
-
 app.get('/', limiter, async (req, res) => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- req.cookies is of type any
   const cookies: Record<string, string> = req.cookies
+  const url = new URL('http://localhost:3000/')
+
+  const anonymousId = cookies[ANONYMOUS_ID_COOKIE] ?? undefined
 
   const sdk = new Optimization({
     clientId: CLIENT_ID,
     environment: ENVIRONMENT,
     logLevel: 'debug',
     eventBuilder: {
-      getAnonymousId: () => cookies[ANONYMOUS_ID_COOKIE],
+      getAnonymousId: () => anonymousId,
       getLocale: () => 'en-US',
       getUserAgent: () => 'node-js-server',
-      getPageProperties,
+      getPageProperties: () => ({
+        path: url.pathname,
+        query: {},
+        referrer: 'http://localhost:3000/',
+        search: url.search,
+        url: url.toString(),
+      }),
     },
     api: {
       analytics: { baseUrl: VITE_INSIGHTS_API_BASE_URL },
@@ -95,12 +80,19 @@ app.get('/', limiter, async (req, res) => {
     },
   })
 
-  const { profile } = await sdk.personalization.page({})
-
-  res.cookie(ANONYMOUS_ID_COOKIE, profile.id, {
-    path: '/',
-    domain: 'localhost',
-  })
+  if (anonymousId) {
+    const identified = await sdk.personalization.identify({ userId: anonymousId })
+    res.cookie(ANONYMOUS_ID_COOKIE, identified?.profile.id, {
+      path: '/',
+      domain: 'localhost',
+    })
+  } else {
+    const { profile } = await sdk.personalization.page({})
+    res.cookie(ANONYMOUS_ID_COOKIE, profile.id, {
+      path: '/',
+      domain: 'localhost',
+    })
+  }
 
   res.send(render(sdk))
 })
