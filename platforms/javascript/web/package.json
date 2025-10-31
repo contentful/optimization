@@ -23,7 +23,7 @@
     "build:umd": "vite build -c vite.umd.config.ts",
     "build": "pnpm clean && tsc -b ./tsconfig.build.json && pnpm build:esm && pnpm build:umd",
     "clean": "rimraf ./dist ./coverage tsconfig.tsbuildinfo",
-    "dev": "vite --host",
+    "dev": "vite -c vite.esm.config.ts --host",
     "test:unit": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
   },
