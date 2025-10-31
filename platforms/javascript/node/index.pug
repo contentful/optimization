@@ -113,9 +113,9 @@ html(lang="en")
         ol
           each entry in entries
             li
-              button= entry && entry.fields ? entry.fields.internalTitle : 'oops'
+              button= entry && entry.entry && entry.entry.fields ? entry.entry.fields.internalTitle : 'oops'
               dialog
-                pre= entry
+                pre= JSON.stringify(entry, undefined, 2)
                 form(method='dialog')
                   button(type='submit') Close
 
