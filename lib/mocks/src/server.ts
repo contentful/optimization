@@ -5,9 +5,9 @@ import { getHandlers as getContentfulHandlers } from './contentful-handlers'
 import { getHandlers as getExperienceHandlers } from './experience-handlers'
 import { getHandlers as getInsightsHandlers } from './insights-handlers'
 
-const CONTENTFUL_BASE_URL = process.env.BASE_URL ?? 'http://localhost/contentful/'
-const EXPERIENCE_BASE_URL = process.env.BASE_URL ?? 'http://localhost/experience/'
-const INSIGHTS_BASE_URL = process.env.BASE_URL ?? 'http://localhost/insights/'
+const CONTENTFUL_BASE_URL = process.env.CONTENTFUL_BASE_URL ?? 'http://localhost/contentful/'
+const EXPERIENCE_BASE_URL = process.env.EXPERIENCE_BASE_URL ?? 'http://localhost/experience/'
+const INSIGHTS_BASE_URL = process.env.INSIGHTS_BASE_URL ?? 'http://localhost/insights/'
 const PORT = Number(process.env.PORT ?? 80)
 
 const app = createServer(
