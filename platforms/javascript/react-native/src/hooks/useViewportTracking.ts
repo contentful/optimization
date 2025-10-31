@@ -1,22 +1,22 @@
-import { logger } from '@contentful/optimization-core'
+import { logger, type SelectedPersonalization } from '@contentful/optimization-core'
 import type { Entry } from 'contentful'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Dimensions, type LayoutChangeEvent } from 'react-native'
 import { useOptimization } from '../context/OptimizationContext'
 import { useScrollContext } from '../context/ScrollContext'
 
-interface NtPersonalization {
-  experienceId?: string
-  variantIndex?: number
-  variants?: Record<string, string>
-}
 export interface UseViewportTrackingOptions {
   /**
    * The resolved Contentful entry to track (baseline or variant).
-   * For personalized entries, this should be the result of PersonalizedEntryResolver.resolve().
+   * For personalized entries, this should be the entry from PersonalizedEntryResolver.resolve().entry.
    * For non-personalized entries, pass the entry directly.
    */
   entry: Entry
+  /**
+   * The personalization data from PersonalizedEntryResolver.resolve().personalization.
+   * Required for tracking variant views. Omit for baseline/non-personalized entries.
+   */
+  personalization?: SelectedPersonalization
   /**
    * Minimum visibility ratio (0.0 - 1.0) required to consider component "visible".
    * Default: 0.8 (80% of the component must be visible in viewport)
@@ -39,39 +39,34 @@ const DEFAULT_THRESHOLD = 0.8
 const DEFAULT_VIEW_TIME_MS = 2000
 
 /**
- * Extracts tracking metadata from a resolved entry's nt_personalization field.
- * For variant entries, the metadata is decorated by PersonalizedEntryResolver.decorateSelectedVariantFields().
- * For baseline/non-personalized entries, nt_personalization won't exist.
+ * Extracts tracking metadata from a resolved entry and personalization data.
+ * For variant entries, personalization data is provided by PersonalizedEntryResolver.resolve().personalization.
+ * For baseline/non-personalized entries, personalization will be undefined.
  */
-function extractTrackingMetadata(resolvedEntry: Entry): {
+function extractTrackingMetadata(
+  resolvedEntry: Entry,
+  personalization?: SelectedPersonalization,
+): {
   componentId: string
   experienceId?: string
   variantIndex: number
 } {
-  // Type assertion to access nt_personalization field (not in Contentful's Entry type)
-  // This field is dynamically added by PersonalizedEntryResolver.decorateSelectedVariantFields()
-  const fields = resolvedEntry.fields as Record<string, unknown>
-  // TODO: this must be typed in the future once we have a proper type for `fields`
-  // @ts-expect-error - nt_personalization is dynamically added, not in Entry type
-  const ntPersonalization: NtPersonalization | undefined = fields.nt_personalization
-
-  // If nt_personalization exists, this is a variant entry
-  if (ntPersonalization?.experienceId && ntPersonalization.variantIndex !== undefined) {
+  // If personalization data exists, this is a variant entry
+  if (personalization) {
     // Extract componentId from variants object: find the key whose value matches this entry's ID
-    const { variants } = ntPersonalization
-    const componentId =
-      variants &&
-      Object.keys(variants).find((baselineId) => variants[baselineId] === resolvedEntry.sys.id)
+    const componentId = Object.keys(personalization.variants).find(
+      (baselineId) => personalization.variants[baselineId] === resolvedEntry.sys.id,
+    )
 
     // Fallback to entry.sys.id if variants mapping not found (shouldn't happen, but defensive)
     return {
       componentId: componentId ?? resolvedEntry.sys.id,
-      experienceId: ntPersonalization.experienceId,
-      variantIndex: ntPersonalization.variantIndex,
+      experienceId: personalization.experienceId,
+      variantIndex: personalization.variantIndex,
     }
   }
 
-  // Baseline or non-personalized entry: no nt_personalization, use entry.sys.id as componentId
+  // Baseline or non-personalized entry: no personalization, use entry.sys.id as componentId
   return {
     componentId: resolvedEntry.sys.id,
     experienceId: undefined,
@@ -81,6 +76,7 @@ function extractTrackingMetadata(resolvedEntry: Entry): {
 
 export function useViewportTracking({
   entry,
+  personalization,
   threshold = DEFAULT_THRESHOLD,
   viewTimeMs = DEFAULT_VIEW_TIME_MS,
 }: UseViewportTrackingOptions): UseViewportTrackingReturn {
@@ -88,8 +84,11 @@ export function useViewportTracking({
   // We invoke useScrollContext here to check if the ScrollProvider is mounted and the scroll context is available.
   const scrollContext = useScrollContext()
 
-  // Extract tracking metadata from the entry
-  const { componentId, experienceId, variantIndex } = extractTrackingMetadata(entry)
+  // Extract tracking metadata from the entry and personalization data
+  const { componentId, experienceId, variantIndex } = extractTrackingMetadata(
+    entry,
+    personalization,
+  )
 
   // Fallback to screen dimensions when used outside ScrollProvider
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height)

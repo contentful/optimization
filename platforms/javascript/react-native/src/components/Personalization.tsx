@@ -1,4 +1,5 @@
-import type { Entry } from 'contentful'
+import type { ResolvedData } from '@contentful/optimization-core'
+import type { Entry, EntrySkeletonType } from 'contentful'
 import React, { useMemo, type ReactNode } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
 import { useOptimization } from '../context/OptimizationContext'
@@ -128,22 +129,21 @@ export function Personalization({
 }: PersonalizationProps): React.JSX.Element {
   const optimization = useOptimization()
 
-  // Resolve the entry variant using personalizeEntry method
-  const resolvedEntry = useMemo(
+  const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
     () => optimization.personalization.personalizeEntry(baselineEntry),
     [baselineEntry, optimization],
   )
 
-  // Set up viewport tracking - the hook extracts tracking metadata from the entry
   const { onLayout } = useViewportTracking({
-    entry: resolvedEntry,
+    entry: resolvedData.entry,
+    personalization: resolvedData.personalization,
     threshold,
     viewTimeMs,
   })
 
   return (
     <View style={style} onLayout={onLayout} testID={testID}>
-      {children(resolvedEntry)}
+      {children(resolvedData.entry)}
     </View>
   )
 }
