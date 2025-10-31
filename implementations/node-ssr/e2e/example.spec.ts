@@ -33,25 +33,25 @@ test('BACKEND: generates new Profile id', async ({ context, page }) => {
 })
 
 test('BACKEND: identifies profile id from client', async ({ context, page }) => {
-  const customId = 'custom-profile-id'
-  await context.addCookies([genAnonymousIdCookie(customId)])
+  const customIdentifiedId = 'custom-profile-id'
+  await context.addCookies([genAnonymousIdCookie(customIdentifiedId)])
   await page.goto(URI)
   const {
     origins: [origin],
   } = await context.storageState()
 
-  expect(origin?.localStorage).toEqual([{ name: ANONYMOUS_ID, value: customId }])
+  expect(origin?.localStorage).toEqual([{ name: ANONYMOUS_ID, value: customIdentifiedId }])
 })
 
 test("BACKEND: can't identify profile id from client", async ({ context, page }) => {
-  // const id = 'custom-profile-id'  TODO: fix me
-  await context.addCookies([genAnonymousIdCookie(id)])
+  const customUnidentifiedId = 'custom-profile-id'
+  await context.addCookies([genAnonymousIdCookie(customUnidentifiedId)])
   await page.goto(URI)
   const {
     origins: [origin],
   } = await context.storageState()
 
-  expect(origin?.localStorage).toEqual([{ name: ANONYMOUS_ID, value: id }])
+  expect(origin?.localStorage).toEqual([{ name: ANONYMOUS_ID, value: customUnidentifiedId }])
 })
 
 test('FRONTEND: check client ID rendered from Optimization API on client-side render', async ({
