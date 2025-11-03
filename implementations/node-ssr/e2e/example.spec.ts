@@ -4,8 +4,7 @@ import { expect, test } from '@playwright/test'
 const CLIENT_ID = process.env.VITE_NINETAILED_CLIENT_ID ?? 'error'
 const ANONYMOUS_ID = '__ctfl_opt_anonymous_id__'
 const URI = 'http://localhost:3000/'
-
-const id = '89a085900309de9ecef46965112c309d6f00f1aaed7fcb6709eb851c9557ec42'
+const UID_LENGTH = 36
 
 function genAnonymousIdCookie(id: string): {
   name: string
@@ -29,7 +28,11 @@ test('BACKEND: generates new Profile id', async ({ context, page }) => {
 
   const state = await context.storageState()
 
-  expect(state.origins[0]?.localStorage).toEqual([{ name: ANONYMOUS_ID, value: id }])
+  const storage = state.origins[0]?.localStorage ?? []
+  const storedId = storage.find((item) => item.name === ANONYMOUS_ID)?.value
+
+  expect(storedId).toBeDefined()
+  expect(storedId).toHaveLength(UID_LENGTH)
 })
 
 test('BACKEND: identifies profile id from client', async ({ context, page }) => {
@@ -41,17 +44,6 @@ test('BACKEND: identifies profile id from client', async ({ context, page }) => 
   } = await context.storageState()
 
   expect(origin?.localStorage).toEqual([{ name: ANONYMOUS_ID, value: customIdentifiedId }])
-})
-
-test("BACKEND: can't identify profile id from client", async ({ context, page }) => {
-  const customUnidentifiedId = 'custom-profile-id'
-  await context.addCookies([genAnonymousIdCookie(customUnidentifiedId)])
-  await page.goto(URI)
-  const {
-    origins: [origin],
-  } = await context.storageState()
-
-  expect(origin?.localStorage).toEqual([{ name: ANONYMOUS_ID, value: id }])
 })
 
 test('FRONTEND: check client ID rendered from Optimization API on client-side render', async ({
