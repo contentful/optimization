@@ -1,5 +1,5 @@
 /**
- * Sample React Native App - Contentful Optimization SDK Demo
+ * Sample React Native App - Contentful Optimization SDK Implementation
  * https://github.com/facebook/react-native
  *
  * @format
@@ -190,7 +190,7 @@ function MainScreen({
             Contentful Optimization
           </Text>
           <Text style={[styles.subtitle, { color: colors.mutedTextColor }]} testID="appSubtitle">
-            React Native SDK Demo
+            React Native SDK Implementation
           </Text>
         </View>
 
