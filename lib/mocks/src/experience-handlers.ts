@@ -142,26 +142,8 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
             { headers: { 'Access-Control-Allow-Origin': '*' }, status: 400 },
           )
         }
-        const identified = getResponseBody(events)
 
-        if (identified) {
-          const {
-            data: {
-              profile: { id, ...profile },
-              ...data
-            },
-            ...rest
-          } = identified
-
-          return HttpResponse.json(
-            { data: { ...data, profile: { id: profileId, ...profile } }, ...rest },
-            {
-              headers: { 'Access-Control-Allow-Origin': '*' },
-            },
-          )
-        }
-
-        return HttpResponse.json(identified, {
+        return HttpResponse.json(getResponseBody(profileId.toString(), events), {
           headers: { 'Access-Control-Allow-Origin': '*' },
         })
       },
