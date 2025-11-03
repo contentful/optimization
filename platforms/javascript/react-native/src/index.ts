@@ -1,7 +1,10 @@
+// Polyfill crypto.randomUUID() for React Native
+import './polyfills/crypto'
+
 import {
   type CoreConfig,
-  CoreStateful,
   type CoreStatefulConfig,
+  CoreStateful,
   effect,
   signals,
 } from '@contentful/optimization-core'
@@ -41,8 +44,8 @@ async function mergeConfig({
         },
       },
       eventBuilder: {
-        channel: 'react-native',
-        library: { name: 'Optimization React Native API', version: '1.0.0' },
+        channel: 'mobile',
+        library: { name: 'Optimization React Native SDK', version: '1.0.0' },
         getLocale,
         getPageProperties,
         getUserAgent,
@@ -109,5 +112,26 @@ export { logger } from '@contentful/optimization-core'
 
 // Export React Native specific components
 export { OptimizationProvider } from './components/OptimizationProvider'
+
+// Component tracking components
+export { Personalization } from './components/Personalization'
+export type { PersonalizationProps } from './components/Personalization'
+
+export { Analytics } from './components/Analytics'
+export type { AnalyticsProps } from './components/Analytics'
+
+// Export scroll context and provider
+export { ScrollProvider, useScrollContext } from './context/ScrollContext'
+export type { ScrollProviderProps } from './context/ScrollContext'
+
+// Export hooks
+export { useOptimization } from './context/OptimizationContext'
+
+// Export viewport tracking hook for advanced usage
+export { useViewportTracking } from './hooks/useViewportTracking'
+export type {
+  UseViewportTrackingOptions,
+  UseViewportTrackingReturn,
+} from './hooks/useViewportTracking'
 
 export default Optimization
