@@ -12,6 +12,7 @@
     "start": "react-native start",
     "start:clean": "kill-port 8081 && react-native start --reset-cache",
     "prestart": "kill-port 8081 || true",
+    "serve:mocks": "pnpm --filter mocks serve",
     "test": "jest",
     "test:unit": "echo 'Unit tests skipped - this is a reference implementation app. E2E tests are run separately via Detox.'",
     "e2e:build:ios": "detox build --configuration ios.sim.debug",
@@ -24,6 +25,8 @@
   "dependencies": {
     "@contentful/optimization-react-native": "workspace:*",
     "@react-native-async-storage/async-storage": "^2.1.0",
+    "contentful": "catalog:",
+    "core-js": "^3.46.0",
     "react": "18.3.1",
     "react-native": "0.76.9"
   },
@@ -34,7 +37,6 @@
     "@babel/plugin-transform-class-static-block": "^7.28.3",
     "@babel/plugin-transform-export-namespace-from": "^7.27.1",
     "@babel/plugin-transform-private-methods": "^7.27.1",
-    "@babel/preset-env": "^7.25.3",
     "@babel/runtime": "^7.25.0",
     "@jest/globals": "^29.6.3",
     "@react-native-community/cli": "15.0.1",

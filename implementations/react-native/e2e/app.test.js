@@ -15,7 +15,7 @@ describe('ReactNativeApp - Contentful Optimization SDK', () => {
 
     it('should display app subtitle', async () => {
       await expect(element(by.id('appSubtitle'))).toBeVisible()
-      await expect(element(by.text('React Native SDK Demo'))).toBeVisible()
+      await expect(element(by.text('React Native SDK Implementation'))).toBeVisible()
     })
   })
 

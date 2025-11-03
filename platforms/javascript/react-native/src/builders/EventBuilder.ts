@@ -13,6 +13,7 @@ export function getLocale(): string {
 
 export interface PageProperties {
   path: string
+  query: Record<string, string>
   referrer: string
   search: string
   title: string
@@ -26,6 +27,7 @@ export function getPageProperties(): PageProperties {
   // Basic implementation of "page" properties, will be decided on in NT-1692.
   return {
     path: '/',
+    query: {},
     referrer: '',
     search: '',
     title: 'React Native App',

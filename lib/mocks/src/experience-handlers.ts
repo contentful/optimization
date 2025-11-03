@@ -4,6 +4,7 @@ import {
   ExperienceResponse,
   type ExperienceRequestData,
 } from '@contentful/optimization-api-schemas'
+import { cloneDeep } from 'es-toolkit/compat'
 import { http, HttpResponse, type HttpHandler } from 'msw'
 import { readFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
@@ -15,8 +16,9 @@ const BASE_DIR = resolve(_dirname, './experience/data')
 const newVisitorPath = join(BASE_DIR, `new-visitor.json`)
 const identifiedVisitorPath = join(BASE_DIR, `identified-visitor.json`)
 
-// This mock server currently only supports _one visitor_, which may eventually be identified and remain that way
-let identified = false
+type State = Record<string, boolean>
+
+let identifiedState: State = {}
 
 let newVisitor: ExperienceResponse | undefined = undefined
 readFile(newVisitorPath, 'utf8')
@@ -55,13 +57,30 @@ function hasIdentifyEvent(events: ExperienceEventArray | undefined): boolean {
   return events.some(({ type }) => type === 'identify')
 }
 
-function getResponseBody(events: ExperienceEventArray | undefined): ExperienceResponse | undefined {
+function getResponseBody(
+  profileId?: string,
+  events?: ExperienceEventArray,
+): ExperienceResponse | undefined {
+  profileId ??= crypto.randomUUID()
+
+  const identified = identifiedState[profileId] ?? false
+
+  let responseBody: ExperienceResponse | undefined = undefined
+
   if (identified || hasIdentifyEvent(events)) {
-    identified = true
-    return identifiedVisitor
+    if (profileId) identifiedState[profileId] ||= true
+
+    responseBody = cloneDeep(identifiedVisitor)
+  } else {
+    responseBody = cloneDeep(newVisitor)
   }
 
-  return newVisitor
+  if (responseBody) {
+    responseBody.data.profile.id = profileId
+    responseBody.data.profile.stableId = profileId
+  }
+
+  return responseBody
 }
 
 // ---------------------------------
@@ -95,7 +114,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
           )
         }
 
-        return HttpResponse.json(getResponseBody(events), {
+        return HttpResponse.json(getResponseBody(undefined, events), {
           headers: { 'Access-Control-Allow-Origin': '*' },
         })
       },
@@ -165,7 +184,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
           )
         }
 
-        return HttpResponse.json(identified ? identifiedVisitor : newVisitor, {
+        return HttpResponse.json(getResponseBody(profileId), {
           headers: { 'Access-Control-Allow-Origin': '*' },
         })
       },
@@ -178,6 +197,8 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
         const { events } = await parseJson<{ events: BatchExperienceEventArray }>(request)
         const { success: eventsAreValid } = BatchExperienceEventArray.safeParse(events)
 
+        const profileId = events.find((event) => event.anonymousId)?.anonymousId
+
         if (!eventsAreValid) {
           return HttpResponse.json(
             { error: 'Invalid Batch Event Array' },
@@ -185,11 +206,25 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
           )
         }
 
-        // Just send the identified profile
-        return HttpResponse.json(identifiedVisitor, {
-          headers: { 'Access-Control-Allow-Origin': '*' },
-        })
+        // Just send one, no matter what
+        return HttpResponse.json(
+          { data: { profiles: [getResponseBody(profileId, events)] } },
+          {
+            headers: { 'Access-Control-Allow-Origin': '*' },
+          },
+        )
       },
     ),
+
+    http.post(`${baseUrl}reset-state`, () => {
+      identifiedState = {}
+
+      return HttpResponse.json(
+        { message: 'Internal state has been reset' },
+        {
+          headers: { 'Access-Control-Allow-Origin': '*' },
+        },
+      )
+    }),
   ]
 }
