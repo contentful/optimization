@@ -51,21 +51,10 @@ const render = (sdk: Optimization): string => `<!doctype html>
 </html>
 `
 
-app.get('/', limiter, async (req, res) => {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- req.cookies is of type any
-  const cookies: Record<string, string> = req.cookies
+function initSDK(anonymousId: string | undefined): Optimization {
   const url = new URL('http://localhost:3000/')
 
-  const setId = (id: string | undefined): void => {
-    res.cookie(ANONYMOUS_ID_COOKIE, id, {
-      path: '/',
-      domain: 'localhost',
-    })
-  }
-
-  const anonymousId = cookies[ANONYMOUS_ID_COOKIE] ?? undefined
-
-  const sdk = new Optimization({
+  return new Optimization({
     clientId: CLIENT_ID,
     environment: ENVIRONMENT,
     logLevel: 'debug',
@@ -86,6 +75,20 @@ app.get('/', limiter, async (req, res) => {
       personalization: { baseUrl: VITE_EXPERIENCE_API_BASE_URL },
     },
   })
+}
+
+app.get('/', limiter, async (req, res) => {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- req.cookies is of type any
+  const cookies: Record<string, string> = req.cookies
+  const anonymousId = cookies[ANONYMOUS_ID_COOKIE] ?? undefined
+  const sdk = initSDK(anonymousId)
+
+  const setId = (id: string | undefined): void => {
+    res.cookie(ANONYMOUS_ID_COOKIE, id, {
+      path: '/',
+      domain: 'localhost',
+    })
+  }
 
   if (anonymousId) {
     const identified = await sdk.personalization.identify({ userId: anonymousId })
@@ -95,6 +98,11 @@ app.get('/', limiter, async (req, res) => {
     setId(profile.id)
   }
 
+  res.send(render(sdk))
+})
+
+app.get('/no-cookies', limiter, (_, res) => {
+  const sdk = initSDK(undefined)
   res.send(render(sdk))
 })
 
