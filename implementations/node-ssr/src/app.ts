@@ -83,20 +83,16 @@ app.get('/', limiter, async (req, res) => {
   const anonymousId = cookies[ANONYMOUS_ID_COOKIE] ?? undefined
   const sdk = initSDK(anonymousId)
 
-  const setId = (id: string | undefined): void => {
-    res.cookie(ANONYMOUS_ID_COOKIE, id, {
-      path: '/',
-      domain: 'localhost',
-    })
-  }
+  const identified = anonymousId
+    ? await sdk.personalization.identify({ userId: anonymousId })
+    : undefined
 
-  if (anonymousId) {
-    const identified = await sdk.personalization.identify({ userId: anonymousId })
-    setId(identified?.profile.id)
-  } else {
-    const { profile } = await sdk.personalization.page({})
-    setId(profile.id)
-  }
+  const { profile } = await sdk.personalization.page({ profile: identified?.profile })
+
+  res.cookie(ANONYMOUS_ID_COOKIE, profile.id, {
+    path: '/',
+    domain: 'localhost',
+  })
 
   res.send(render(sdk))
 })
