@@ -1,6 +1,6 @@
 import Optimization, { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node'
 import cookieParser from 'cookie-parser'
-import express, { type Express } from 'express'
+import express, { type Express, type Response } from 'express'
 import rateLimit from 'express-rate-limit'
 
 const limiter = rateLimit({
@@ -77,16 +77,21 @@ function initSDK(anonymousId: string | undefined): Optimization {
   })
 }
 
+function setAnonymousId(res: Response, id: string): void {
+  res.cookie(ANONYMOUS_ID_COOKIE, id, {
+    path: '/',
+    domain: 'localhost',
+  })
+}
+
 app.get('/', limiter, async (req, res) => {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- req.cookies is of type any
   const cookies: Record<string, string> = req.cookies
   const anonymousId = cookies[ANONYMOUS_ID_COOKIE] ?? undefined
   const sdk = initSDK(anonymousId)
   const { profile } = await sdk.personalization.page({})
-  res.cookie(ANONYMOUS_ID_COOKIE, profile.id, {
-    path: '/',
-    domain: 'localhost',
-  })
+
+  setAnonymousId(res, profile.id)
   res.send(render(sdk))
 })
 
@@ -100,11 +105,7 @@ app.get('/user/:userId', limiter, async (req, res) => {
   const identified = await sdk.personalization.identify({ userId: userId ?? '' })
   const { profile } = await sdk.personalization.page({ profile: identified?.profile })
 
-  res.cookie(ANONYMOUS_ID_COOKIE, profile.id, {
-    path: '/',
-    domain: 'localhost',
-  })
-
+  setAnonymousId(res, profile.id)
   res.send(render(sdk))
 })
 
