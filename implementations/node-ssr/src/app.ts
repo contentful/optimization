@@ -107,7 +107,7 @@ app.get('/user/:userId', limiter, async (req, res) => {
   res.send(render(sdk))
 })
 
-app.get('/no-cookies', limiter, (_, res) => {
+app.get('/smoke-test', limiter, (_, res) => {
   const sdk = initSDK(undefined)
   res.send(render(sdk))
 })
