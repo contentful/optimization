@@ -24,6 +24,7 @@ interface EnvConfig {
   entries: {
     personalized: string
     product: string
+    mergeTag: string
   }
 }
 
@@ -53,5 +54,6 @@ export const ENV_CONFIG: EnvConfig = {
   entries: {
     personalized: '2Z2WLOx07InSewC3LUB3eX', // Baseline with experiences
     product: '1MwiFl4z7gkwqGYdvCmr8c', // Simple content entry
+    mergeTag: '1MwiFl4z7gkwqGYdvCmr8c', // Entry with merge tag in rich text
   },
 }
