@@ -27,7 +27,7 @@ abstract class ProductBase<E> {
   protected readonly allowedEventTypes?: string[]
   protected readonly builder: EventBuilder
   protected readonly api: ApiClient
-  protected readonly duplicationDetector: ValuePresence
+  readonly duplicationDetector: ValuePresence
 
   readonly interceptor: InterceptorLifecycle<E> = {
     event: new InterceptorManager<E>(),

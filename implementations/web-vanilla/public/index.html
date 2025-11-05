@@ -2,11 +2,12 @@
 <html>
   <head>
     <title>Test SDK page</title>
-    <script src="/dist/index.umd.cjs"></script>
+    <script type="module" src="/dist/index.umd.cjs"></script>
   </head>
   <body>
-    <script>
-      var optimization = new Optimization({
+    <script type="module">
+      // TODO: Fix the Vite config so we don't need to use `default`
+      var optimization = new Optimization.default({
         clientId: '<!--#echo var="NGINX_NINETAILED_CLIENT_ID" -->',
         environment: '<!--#echo var="NGINX_NINETAILED_ENVIRONMENT" -->',
         logLevel: 'debug',

@@ -77,6 +77,22 @@
       summary {
         cursor: pointer;
       }
+      #entry-elements {
+        display: grid;
+        grid-gap: 2rem;
+        grid-auto-rows: 50dvh;
+        justify-items: center;
+        align-items: center;
+
+        > p {
+          display: grid;
+          width: 100%;
+          height: 100%;
+          justify-items: center;
+          align-items: center;
+          background: #eee;
+        }
+      }
     </style>
   </head>
   <body>
@@ -145,6 +161,60 @@
         return clone
       }
 
+      function createEntryDialog(title, entry, personalization) {
+        const template = document.querySelector('#details-template')
+        const clone = template.content.cloneNode(true)
+        const button = clone.querySelector('button')
+        const p = clone.querySelector('p')
+        const pre = clone.querySelector('pre')
+
+        button.innerText = title
+
+        if (Array.isArray(entry)) {
+          p.innerText = entry[0]
+          p.dataset.ctflEntryId = entry[1].sys?.id
+        } else {
+          p.innerText = entry.fields?.text
+          p.dataset.ctflEntryId = entry.sys?.id
+        }
+
+        if (personalization) {
+          p.dataset.ctflPersonalizationId = personalization?.experienceId
+          p.dataset.ctflSticky = personalization?.sticky
+          p.dataset.ctflVariantIndex = personalization?.variantIndex
+        }
+
+        pre.innerText = JSON.stringify([entry, personalization], null, 2)
+
+        button.addEventListener('click', () => {
+          button.nextElementSibling.showModal()
+        })
+
+        return clone
+      }
+
+      function createEntryElement(entry, personalization) {
+        const template = document.querySelector('#entry-template')
+        const clone = template.content.cloneNode(true)
+        const p = clone.querySelector('p')
+
+        if (Array.isArray(entry)) {
+          p.innerText = entry[0]
+          p.dataset.ctflEntryId = entry[1].sys?.id
+        } else {
+          p.innerText = entry.fields?.text
+          p.dataset.ctflEntryId = entry.sys?.id
+        }
+
+        if (personalization) {
+          p.dataset.ctflPersonalizationId = personalization?.experienceId
+          p.dataset.ctflSticky = personalization?.sticky
+          p.dataset.ctflVariantIndex = personalization?.variantIndex
+        }
+
+        return clone
+      }
+
       function findMergeTagEntries(fragment, mergeTagEntries = []) {
         if (!fragment?.content) return
         mergeTagEntries.push(
@@ -173,7 +243,8 @@
           return
         }
 
-        const { entry: personalizedEntry } = optimization.personalization.personalizeEntry(entry)
+        const { entry: personalizedEntry, personalization } =
+          optimization.personalization.personalizeEntry(entry)
 
         let title = personalizedEntry.fields.internalTitle
         let mergeTagValues = undefined
@@ -195,11 +266,19 @@
         document
           .querySelector('#entries')
           .prepend(
-            createDetailsDialog(
+            createEntryDialog(
               title,
-              mergeTagValues
-                ? [{ 'Resolved merge tag values': mergeTagValues }, personalizedEntry]
-                : personalizedEntry,
+              mergeTagValues ? [title, personalizedEntry] : personalizedEntry,
+              personalization,
+            ),
+          )
+
+        document
+          .querySelector('#entry-elements')
+          .prepend(
+            createEntryElement(
+              mergeTagValues ? [title, personalizedEntry] : personalizedEntry,
+              personalization,
             ),
           )
       }
@@ -222,14 +301,14 @@
         document.querySelector('#profile').innerText = JSON.stringify(profile, null, 2)
       })
 
-      optimization.states.personalizations.subscribe((personalizations) => {
+      optimization.states.personalizations.subscribe(async (personalizations) => {
         document.querySelector('#personalizations').innerText = JSON.stringify(
           personalizations,
           null,
           2,
         )
 
-        Promise.all(
+        await Promise.all(
           personalizations?.map(async (personalization) => {
             if (!personalization?.variants) return
 
@@ -240,6 +319,8 @@
             await addPersonalizedEntry(baselines[0])
           }) ?? [],
         )
+
+        optimization.autoTrackEntryViews()
       })
 
       optimization.personalization.page({})
@@ -297,18 +378,28 @@
 
         <ol id="event-stream"></ol>
       </section>
+
+      <section id="entry-elements"></section>
     </main>
 
     <template id="details-template">
       <li>
         <button></button>
         <dialog>
-          <pre></pre>
+          <p></p>
+          <details>
+            <summary>JSON</summary>
+            <pre></pre>
+          </details>
           <form method="dialog">
             <button type="submit">Close</button>
           </form>
         </dialog>
       </li>
+    </template>
+
+    <template id="entry-template">
+      <p class="entry"></p>
     </template>
   </body>
 </html>

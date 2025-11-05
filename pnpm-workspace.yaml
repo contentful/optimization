@@ -9,8 +9,8 @@ catalog:
   '@preact/signals-core': ^1.12.1
   '@types/express': ^5.0.3
   '@types/node': ^24.0.13
-  '@vitest/coverage-v8': ^3.2.4
   '@types/supertest': ^6.0.3
+  '@vitest/coverage-v8': ^3.2.4
   browserslist: ^4.25.1
   contentful: ^11.7.19
   dotenv: ^17.2.2
@@ -35,6 +35,7 @@ nodeVersion: 20.19.5
 
 onlyBuiltDependencies:
   - contentful-cli
+  - core-js
   - detox
   - dtrace-provider
   - esbuild

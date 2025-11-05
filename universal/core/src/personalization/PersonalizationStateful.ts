@@ -196,7 +196,10 @@ class Personalization extends PersonalizationBase implements ConsentGuard {
   /** AKA sticky component view */
   @guardedBy('isNotDuplicated', { onBlocked: 'onBlockedByDuplication' })
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async trackComponentView(payload: ComponentViewBuilderArgs): Promise<OptimizationData> {
+  async trackComponentView(
+    payload: ComponentViewBuilderArgs,
+    _duplicationKey = '',
+  ): Promise<OptimizationData> {
     logger.info(`[Personalization] Sending "track personalization" event`)
 
     const event = ComponentViewEvent.parse(this.builder.buildComponentView(payload))
