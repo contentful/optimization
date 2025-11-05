@@ -100,8 +100,8 @@ app.get('/', limiter, async (req, res) => {
 app.get('/user/:userId', limiter, async (req, res) => {
   const { userId } = req.params as Record<string, string>
   const sdk = initSDK(getAnonymousIdFromCookies(req.cookies))
-  const identified = await sdk.personalization.identify({ userId: userId ?? '' })
-  const { profile } = await sdk.personalization.page({ profile: identified?.profile })
+  if (userId) await sdk.personalization.identify({ userId })
+  const { profile } = await sdk.personalization.page({})
 
   setAnonymousId(res, profile.id)
   res.send(render(sdk))
