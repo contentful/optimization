@@ -84,11 +84,13 @@ function setAnonymousId(res: Response, id: string): void {
   })
 }
 
+function getAnonymousIdFromCookies(cookies: unknown): string | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- req.cookies is of type any
+  return (cookies as Record<string, string>)[ANONYMOUS_ID_COOKIE] ?? undefined
+}
+
 app.get('/', limiter, async (req, res) => {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- req.cookies is of type any
-  const cookies: Record<string, string> = req.cookies
-  const anonymousId = cookies[ANONYMOUS_ID_COOKIE] ?? undefined
-  const sdk = initSDK(anonymousId)
+  const sdk = initSDK(getAnonymousIdFromCookies(req.cookies))
   const { profile } = await sdk.personalization.page({})
 
   setAnonymousId(res, profile.id)
@@ -97,11 +99,7 @@ app.get('/', limiter, async (req, res) => {
 
 app.get('/user/:userId', limiter, async (req, res) => {
   const { userId } = req.params as Record<string, string>
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- req.cookies is of type any
-  const cookies: Record<string, string> = req.cookies
-  const anonymousId = cookies[ANONYMOUS_ID_COOKIE] ?? undefined
-  const sdk = initSDK(anonymousId)
-
+  const sdk = initSDK(getAnonymousIdFromCookies(req.cookies))
   const identified = await sdk.personalization.identify({ userId: userId ?? '' })
   const { profile } = await sdk.personalization.page({ profile: identified?.profile })
 
