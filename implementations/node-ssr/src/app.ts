@@ -82,11 +82,22 @@ app.get('/', limiter, async (req, res) => {
   const cookies: Record<string, string> = req.cookies
   const anonymousId = cookies[ANONYMOUS_ID_COOKIE] ?? undefined
   const sdk = initSDK(anonymousId)
+  const { profile } = await sdk.personalization.page({})
+  res.cookie(ANONYMOUS_ID_COOKIE, profile.id, {
+    path: '/',
+    domain: 'localhost',
+  })
+  res.send(render(sdk))
+})
 
-  const identified = anonymousId
-    ? await sdk.personalization.identify({ userId: anonymousId })
-    : undefined
+app.get('/user/:userId', limiter, async (req, res) => {
+  const { userId } = req.params as Record<string, string>
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- req.cookies is of type any
+  const cookies: Record<string, string> = req.cookies
+  const anonymousId = cookies[ANONYMOUS_ID_COOKIE] ?? undefined
+  const sdk = initSDK(anonymousId)
 
+  const identified = await sdk.personalization.identify({ userId: userId ?? '' })
   const { profile } = await sdk.personalization.page({ profile: identified?.profile })
 
   res.cookie(ANONYMOUS_ID_COOKIE, profile.id, {

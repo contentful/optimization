@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 
 const CLIENT_ID = process.env.VITE_NINETAILED_CLIENT_ID ?? 'error'
 const ANONYMOUS_ID = '__ctfl_opt_anonymous_id__'
-const URI = 'http://localhost:3000/'
+
 const UID_LENGTH = 36
 
 function genAnonymousIdCookie(id: string): {
@@ -18,13 +18,13 @@ function genAnonymousIdCookie(id: string): {
 test('BACKEND: check client ID rendered from Optimization API on server-side render', async ({
   request,
 }) => {
-  const response = await request.get(URI)
+  const response = await request.get('/')
 
   expect(await response.text()).toContain(`"clientId":"${CLIENT_ID}"`)
 })
 
 test('BACKEND: generates new Profile id', async ({ context, page }) => {
-  await page.goto(URI)
+  await page.goto('/')
 
   const state = await context.storageState()
 
@@ -35,10 +35,10 @@ test('BACKEND: generates new Profile id', async ({ context, page }) => {
   expect(storedId).toHaveLength(UID_LENGTH)
 })
 
-test('BACKEND: identifies profile id from client', async ({ context, page }) => {
+test('BACKEND: identifies profile id and associates it with user id', async ({ context, page }) => {
   const customIdentifiedId = 'custom-profile-id'
   await context.addCookies([genAnonymousIdCookie(customIdentifiedId)])
-  await page.goto(URI)
+  await page.goto(`/user/maximus`)
   const {
     origins: [origin],
   } = await context.storageState()
