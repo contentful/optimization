@@ -18,13 +18,13 @@ import {
 } from 'react-native'
 
 import type { MergeTagEntry, Profile } from '@contentful/optimization-react-native'
-import type { Entry } from 'contentful'
 
 import { InfoCard } from './components/InfoCard'
 import { MergeTagDetailCard } from './components/MergeTagDetailCard'
 import { ProfileCard } from './components/ProfileCard'
 import { TextDisplayCard } from './components/TextDisplayCard'
-import type { MergeTagScreenProps, RichTextField } from './types'
+import type { EntryWithIncludes, MergeTagScreenProps } from './types'
+import { isMergeTagEntry, isRichTextField } from './types'
 import { extractTextFromRichText, findMergeTagEntries } from './utils/richTextUtils'
 
 export function MergeTagScreen({
@@ -53,20 +53,12 @@ export function MergeTagScreen({
 
   useEffect(() => {
     const { fields } = mergeTagEntry
-    const richTextField = Object.values(fields).find((field): field is RichTextField => {
-      if (typeof field !== 'object' || field === null || !('nodeType' in field)) {
-        return false
-      }
-      const fieldWithNodeType = field as { nodeType: unknown }
-      return (
-        typeof fieldWithNodeType.nodeType === 'string' && fieldWithNodeType.nodeType === 'document'
-      )
-    })
+    const richTextField = Object.values(fields).find(isRichTextField)
 
     if (richTextField && profile) {
       const embeddedNodes = findMergeTagEntries(richTextField)
 
-      const entryWithIncludes = mergeTagEntry as { includes?: { Entry?: Entry[] } }
+      const entryWithIncludes = mergeTagEntry as EntryWithIncludes
       const { includes } = entryWithIncludes
       const includedEntries = includes?.Entry ?? []
 
@@ -80,12 +72,13 @@ export function MergeTagScreen({
         const { id: targetId } = sys
         const includedEntry = includedEntries.find((entry) => entry.sys.id === targetId)
 
-        if (includedEntry && includedEntry.sys.contentType.sys.id === 'nt_mergetag') {
-          const mergeTagEntry = includedEntry as MergeTagEntry
-          mergeTagEntriesList.push(mergeTagEntry)
+        if (includedEntry && isMergeTagEntry(includedEntry)) {
+          mergeTagEntriesList.push(includedEntry)
 
-          const resolvedValue = sdk.personalization.getMergeTagValue(mergeTagEntry, profile)
-          const mergeTagFields = mergeTagEntry.fields as { nt_mergetag_id: string }
+          const resolvedValue = sdk.personalization.getMergeTagValue(includedEntry, profile)
+          const mergeTagFields = includedEntry.fields as {
+            nt_mergetag_id: string
+          }
           resolvedValuesList.push({
             id: mergeTagFields.nt_mergetag_id,
             value: resolvedValue,
@@ -98,18 +91,7 @@ export function MergeTagScreen({
     }
   }, [mergeTagEntry, sdk, profile])
 
-  const richTextField = Object.values(mergeTagEntry.fields).find(
-    (field): field is RichTextField => {
-      if (typeof field !== 'object' || field === null || !('nodeType' in field)) {
-        return false
-      }
-
-      const fieldWithNodeType = field as { nodeType: unknown }
-      return (
-        typeof fieldWithNodeType.nodeType === 'string' && fieldWithNodeType.nodeType === 'document'
-      )
-    },
-  )
+  const richTextField = Object.values(mergeTagEntry.fields).find(isRichTextField)
 
   const originalText = richTextField ? extractTextFromRichText(richTextField) : ''
   const resolvedText = originalText.replace(

@@ -3,6 +3,7 @@
  */
 
 import type Optimization from '@contentful/optimization-react-native'
+import type { MergeTagEntry } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 
 export interface ThemeColors {
@@ -37,8 +38,9 @@ export interface RichTextNode {
 }
 
 export interface RichTextField {
-  nodeType: string
-  content?: RichTextNode[]
+  nodeType: 'document'
+  content: RichTextNode[]
+  data: Record<string, unknown>
 }
 
 export interface EmbeddedEntryNode {
@@ -59,3 +61,23 @@ export interface TextNode {
   value: string
 }
 
+export function isRichTextField(field: unknown): field is RichTextField {
+  return (
+    typeof field === 'object' &&
+    field !== null &&
+    'nodeType' in field &&
+    (field as { nodeType: unknown }).nodeType === 'document' &&
+    'content' in field &&
+    Array.isArray((field as { content: unknown }).content)
+  )
+}
+
+export interface EntryWithIncludes extends Entry {
+  includes?: {
+    Entry?: Entry[]
+  }
+}
+
+export function isMergeTagEntry(entry: Entry): entry is MergeTagEntry {
+  return entry.sys.contentType.sys.id === 'nt_mergetag'
+}
