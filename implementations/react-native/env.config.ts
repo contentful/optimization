@@ -24,10 +24,11 @@ interface EnvConfig {
   entries: {
     personalized: string
     product: string
+    mergeTag: string
   }
 }
 
-export const ENV_CONFIG: EnvConfig = {
+export const ENV_CONFIG = {
   // Contentful Configuration
   contentful: {
     spaceId: 'test-space',
@@ -53,5 +54,11 @@ export const ENV_CONFIG: EnvConfig = {
   entries: {
     personalized: '2Z2WLOx07InSewC3LUB3eX', // Baseline with experiences
     product: '1MwiFl4z7gkwqGYdvCmr8c', // Simple content entry
+    mergeTag: '1MwiFl4z7gkwqGYdvCmr8c', // Entry with merge tag in rich text
   },
-}
+} as const satisfies EnvConfig
+
+export const {
+  contentful: { spaceId: CONTENTFUL_SPACE_ID, accessToken: CONTENTFUL_ACCESS_TOKEN },
+  optimization: { clientId: NINETAILED_CLIENT_ID },
+} = ENV_CONFIG
