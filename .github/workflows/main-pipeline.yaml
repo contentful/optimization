@@ -220,7 +220,7 @@ jobs:
 
       - run: pnpm --filter @implementation/node test:e2e
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: ${{ !cancelled() }}
         with:
           name: ci-results-node
@@ -268,7 +268,7 @@ jobs:
 
       - run: pnpm --filter @implementation/web-vanilla test:e2e
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: ${{ !cancelled() }}
         with:
           name: ci-results-web-vanilla
