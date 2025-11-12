@@ -65,10 +65,10 @@ class ElementViewObserver {
   }
 
   /** Observe an element with optional per-element overrides and data. */
-  public observe(element: Element, perElement?: ElementViewElementOptions): void {
+  public observe(element: Element, options?: ElementViewElementOptions): void {
     let state = this.states.get(element)
     if (!state) {
-      state = this.createState(element, perElement)
+      state = this.createState(element, options)
       this.states.set(element, state)
       this.activeStates.add(state)
       this.ensureSweeper()

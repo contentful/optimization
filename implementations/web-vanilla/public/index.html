@@ -2,25 +2,353 @@
 <html>
   <head>
     <title>Test SDK page</title>
-    <script type="module" src="/dist/index.umd.cjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/contentful@latest/dist/contentful.browser.min.js"></script>
+    <script src="/dist/index.umd.cjs"></script>
+    <style>
+      html,
+      textarea,
+      input,
+      button {
+        font-family:
+          -apple-system,
+          BlinkMacSystemFont,
+          avenir next,
+          avenir,
+          segoe ui,
+          helvetica neue,
+          Adwaita Sans,
+          Cantarell,
+          Ubuntu,
+          roboto,
+          noto,
+          helvetica,
+          arial,
+          sans-serif;
+      }
+      h1,
+      main {
+        display: grid;
+        grid-gap: 2rem;
+        grid-template-rows: auto 1fr;
+        grid-template-columns: 1fr auto;
+        max-width: 1040px;
+        margin-inline: auto;
+      }
+      section:first-of-type {
+        grid-column: 1 / span 2;
+      }
+      ol {
+        margin: 0;
+      }
+      summary {
+        cursor: pointer;
+      }
+      button {
+        cursor: pointer;
+
+        &:not([type]) {
+          appearance: none;
+          background: transparent;
+          border: 0;
+          padding: 0;
+          font-family: inherit;
+          font-size: inherit;
+          text-decoration: underline;
+
+          &:hover,
+          &:active {
+            color: blue;
+          }
+        }
+      }
+      #auto-observe,
+      #manually-observe {
+        display: grid;
+        grid-gap: 2rem;
+        grid-auto-rows: 75dvh;
+        justify-items: center;
+        align-items: center;
+        margin-block-end: 2rem;
+
+        > div {
+          display: grid;
+          width: 100%;
+          height: 100%;
+          justify-items: center;
+          align-items: center;
+          background: #eee;
+        }
+      }
+    </style>
   </head>
   <body>
-    <script type="module">
-      // TODO: Fix the Vite config so we don't need to use `default`
-      var optimization = new Optimization.default({
+    <h1>Optimization Web SDK Vanilla JS Implementation E2E Test</h1>
+
+    <main>
+      <section id="utility-panel">
+        <h2>Utilites</h2>
+
+        <span>
+          <button id="consent">Accept Consent</button>
+          <button id="unconsent">Reject Consent</button>
+        </span>
+        |
+        <span>
+          <button id="identify">Identify</button>
+          <button id="unidentify">Reset Profile</button>
+        </span>
+      </section>
+
+      <section>
+        <h2>Entries</h2>
+
+        <div id="auto-observe"></div>
+        <div id="manually-observe"></div>
+      </section>
+
+      <section id="event-stream-panel">
+        <h2>Event Stream</h2>
+
+        <ol id="event-stream"></ol>
+      </section>
+    </main>
+
+    <template id="event-dialog">
+      <li>
+        <button></button>
+        <dialog>
+          <pre></pre>
+          <form method="dialog">
+            <button type="submit">Close</button>
+          </form>
+        </dialog>
+      </li>
+    </template>
+
+    <template id="entry-template">
+      <div class="entry"></div>
+    </template>
+
+    <script>
+      /* --- Standard Initialization Code --- */
+
+      // Initialize Contentful CDA SDK
+      var contentfulClient = contentful.createClient({
+        accessToken: '<!--#echo var="NGINX_CONTENTFUL_TOKEN" -->',
+        environment: '<!--#echo var="NGINX_CONTENTFUL_ENVIRONMENT" -->',
+        space: '<!--#echo var="NGINX_CONTENTFUL_SPACE_ID" -->',
+        host: '<!--#echo var="NGINX_CONTENTFUL_CDA_HOST" -->',
+        basePath: '<!--#echo var="NGINX_CONTENTFUL_BASE_PATH" -->',
+        insecure: Boolean('<!--#echo var="NGINX_CONTENTFUL_CDA_HOST" -->'),
+      })
+
+      // Initialize Contentful Optimization Web SDK
+      var optimization = new Optimization({
         clientId: '<!--#echo var="NGINX_NINETAILED_CLIENT_ID" -->',
         environment: '<!--#echo var="NGINX_NINETAILED_ENVIRONMENT" -->',
         logLevel: 'debug',
+        app: {
+          name: document.title,
+          version: '0.0.0',
+        },
         api: {
           analytics: { baseUrl: '<!--#echo var="NGINX_INSIGHTS_API_BASE_URL" -->' },
-          personalization: { baseUrl: '<!--#echo var="NGINX_EXPERIENCE_API_BASE_URL" -->/' },
+          personalization: { baseUrl: '<!--#echo var="NGINX_EXPERIENCE_API_BASE_URL" -->' },
         },
       })
 
-      var p = document.createElement('p')
-      p.dataset.testid = 'clientId'
-      p.innerText = optimization.config.clientId
-      document.body.appendChild(p)
+      // Auto-track auto-trackable entry views
+      optimization.autoTrackEntryViews()
+
+      // Emit page event
+      optimization.personalization.page()
+
+      /* --- Utility Functionality (for E2E) --- */
+
+      const consent = document.getElementById('consent')
+      const unconsent = document.getElementById('unconsent')
+
+      function toggleConsent(consented = false) {
+        if (consented) {
+          consent.setAttribute('style', 'display: none;')
+          unconsent.removeAttribute('style')
+        } else {
+          consent.removeAttribute('style')
+          unconsent.setAttribute('style', 'display: none;')
+        }
+      }
+
+      consent.addEventListener('click', () => optimization.consent(true))
+      unconsent.addEventListener('click', () => optimization.consent(false))
+
+      const identify = document.getElementById('identify')
+      const unidentify = document.getElementById('unidentify')
+
+      function toggleIdentity(identified = false) {
+        if (identified) {
+          identify.setAttribute('style', 'display: none;')
+          unidentify.removeAttribute('style')
+        } else {
+          identify.removeAttribute('style')
+          unidentify.setAttribute('style', 'display: none;')
+        }
+      }
+
+      identify.addEventListener('click', () =>
+        optimization.personalization.identify({ userId: 'charles', traits: { identified: true } }),
+      )
+      unidentify.addEventListener('click', () => optimization.reset())
+
+      function createEventDialog(title, details) {
+        const template = document.querySelector('#event-dialog')
+        const clone = template.content.cloneNode(true)
+        const dialog = clone.querySelector('dialog')
+        const button = clone.querySelector('button')
+        const pre = clone.querySelector('pre')
+
+        button.innerText = title
+        button.commandForElement = dialog
+        button.command = 'show-modal'
+
+        pre.innerText = JSON.stringify(details, null, 2)
+
+        return clone
+      }
+
+      /* --- Standard Rendering Code --- */
+
+      function isRichText(field) {
+        return field && typeof field === 'object' && field.content !== undefined
+      }
+
+      // "Rich text" renderer
+      function simpleRenderRichText(field, parent) {
+        if (!field || typeof field !== 'object') return
+        if (!parent || !(parent instanceof HTMLElement)) return
+
+        if (field.nodeType === 'document') {
+          field.content.forEach((content) => simpleRenderRichText(content, parent))
+        } else if (field.nodeType === 'paragraph') {
+          const p = document.createElement('p')
+          field.content.forEach((content) => simpleRenderRichText(content, p))
+          parent.appendChild(p)
+        } else if (field.nodeType === 'text') {
+          const span = document.createElement('span')
+          span.innerText = field.value
+          parent.appendChild(span)
+        } else if (field.nodeType === 'embedded-entry-inline') {
+          const span = document.createElement('span')
+          span.innerText = optimization.personalization.getMergeTagValue(field.data.target)
+          parent.appendChild(span)
+        } else {
+          const span = document.createElement('span')
+          span.innerText = '[unknown rich text fragment]'
+          parent.appendChild(span)
+        }
+      }
+
+      // Entry renderer
+      function createEntryElement({ entry, personalization, autoObserve = true }) {
+        const template = document.querySelector('#entry-template')
+        const clone = template.content.cloneNode(true)
+        const div = clone.querySelector('div')
+
+        if (isRichText(entry.fields?.text)) {
+          simpleRenderRichText(entry.fields.text, div)
+        } else {
+          const p = document.createElement('p')
+          p.innerText = entry.fields?.text
+          div.appendChild(p)
+        }
+
+        if (!autoObserve) return clone
+
+        div.dataset.ctflEntryId = entry.sys?.id
+
+        if (personalization) {
+          div.dataset.ctflPersonalizationId = personalization?.experienceId
+          div.dataset.ctflSticky = personalization?.sticky
+          div.dataset.ctflVariantIndex = personalization?.variantIndex
+        }
+
+        return clone
+      }
+
+      // Get the personalized entry and render
+      async function addPersonalizedEntry(entryId, autoObserve = true) {
+        let entry
+
+        try {
+          entry = await contentfulClient.getEntry(entryId, { include: 10 })
+        } catch (error) {
+          console.warn(
+            `Irrelevant entry: "${entryId}" The entry could not be found in the current space`,
+          )
+          return []
+        }
+
+        const { entry: personalizedEntry, personalization } =
+          optimization.personalization.personalizeEntry(entry)
+
+        const entryFragment = createEntryElement({
+          entry: personalizedEntry,
+          personalization,
+          autoObserve,
+        })
+        const element = entryFragment.firstElementChild
+        document
+          .getElementById(autoObserve ? 'auto-observe' : 'manually-observe')
+          .appendChild(entryFragment)
+
+        return [element, personalizedEntry, personalization]
+      }
+
+      const manuallyObservedEntries = [
+        '6zqoWXyiSrf0ja7I2WGtYj',
+        '7pa5bOx8Z9NmNcr7mISvD',
+        'xFwgG3oNaOcjzWiGe4vXo',
+      ]
+      manuallyObservedEntries.forEach(async (entryId) => {
+        const [element, entry, personalization] = await addPersonalizedEntry(entryId, false)
+
+        optimization.trackEntryViewForElement(element, {
+          data: {
+            entryId: entry.sys.id,
+            personalizationId: entry.experienceId,
+            sticky: entry.sticky,
+            variantIndex: entry.variantIndex,
+          },
+        })
+      })
+
+      const autoObservedEntries = [
+        '2Z2WLOx07InSewC3LUB3eX',
+        '4ib0hsHWoSOnCVdDkizE8d',
+        '5XHssysWUDECHzKLzoIsg1',
+      ]
+      autoObservedEntries.forEach((entryId) => addPersonalizedEntry(entryId))
+
+      const mergeTagEntries = ['1MwiFl4z7gkwqGYdvCmr8c']
+      mergeTagEntries.forEach((entryId) => addPersonalizedEntry(entryId))
+
+      /* --- Register observers --- */
+
+      // Subscribe to consent state
+      optimization.states.consent.subscribe(async (consent) => {
+        toggleConsent(consent)
+      })
+
+      // Subscribe to profile state
+      optimization.states.profile.subscribe((profile) => {
+        toggleIdentity(profile && profile.traits && Object.keys(profile.traits).length)
+      })
+
+      // Subscribe to the event stream
+      optimization.states.eventStream.subscribe((event) => {
+        if (!event) return
+
+        document.querySelector('#event-stream').appendChild(createEventDialog(event.type, event))
+      })
     </script>
   </body>
 </html>

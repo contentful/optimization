@@ -194,12 +194,14 @@ jobs:
       - run: |
           echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/node/.env
           echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/node/.env
+          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost/experience/" >>implementations/node/.env
+          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost/insights/" >>implementations/node/.env
           echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/node/.env
           echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/node/.env
           echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/node/.env
           echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/node/.env
-          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost/experience/" >>implementations/node/.env
-          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost/insights/" >>implementations/node/.env
+          echo "VITE_CONTENTFUL_CDA_HOST=localhost" >>implementations/node/.env
+          echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>implementations/node/.env
 
       - uses: pnpm/action-setup@v4
 
@@ -218,6 +220,15 @@ jobs:
 
       - run: pnpm --filter @implementation/node test:e2e
 
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: ci-results-node
+          path: |
+            ./implementations/node/playwright-report/
+            ./implementations/node/test-results/
+          retention-days: 1
+
   e2e-web:
     name: E2E Web Vanilla 🖥️
     runs-on: ubuntu-latest
@@ -231,12 +242,14 @@ jobs:
       - run: |
           echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/web-vanilla/.env
           echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/web-vanilla/.env
+          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>implementations/web-vanilla/.env
+          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>implementations/web-vanilla/.env
           echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/web-vanilla/.env
           echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/web-vanilla/.env
           echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/web-vanilla/.env
           echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/web-vanilla/.env
-          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost/experience/" >>implementations/web-vanilla/.env
-          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost/insights/" >>implementations/web-vanilla/.env
+          echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/web-vanilla/.env
+          echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>implementations/web-vanilla/.env
 
       - uses: pnpm/action-setup@v4
 
@@ -254,3 +267,12 @@ jobs:
       - run: pnpx playwright install --with-deps
 
       - run: pnpm --filter @implementation/web-vanilla test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: ci-results-web-vanilla
+          path: |
+            ./implementations/web-vanilla/playwright-report/
+            ./implementations/web-vanilla/test-results/
+          retention-days: 1

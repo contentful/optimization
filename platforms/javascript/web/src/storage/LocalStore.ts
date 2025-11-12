@@ -9,6 +9,16 @@ export const PROFILE_CACHE = '__ctfl_opt_profile__'
 export const PERSONALIZATIONS_CACHE = '__ctfl_opt_personalizations__'
 
 const LocalStore = {
+  reset(options = { resetConsent: false, resetDebug: false }) {
+    if (options.resetConsent) localStorage.removeItem(CONSENT)
+    if (options.resetDebug) localStorage.removeItem(DEBUG_FLAG)
+
+    localStorage.removeItem(ANONYMOUS_ID)
+    localStorage.removeItem(CHANGES_CACHE)
+    localStorage.removeItem(PROFILE_CACHE)
+    localStorage.removeItem(PERSONALIZATIONS_CACHE)
+  },
+
   get anonymousId(): string | undefined {
     return localStorage.getItem(ANONYMOUS_ID) ?? undefined
   },

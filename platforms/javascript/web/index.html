@@ -29,27 +29,29 @@
       }
       h1,
       main {
-        max-width: 1040px;
-        margin-inline: auto;
-      }
-      main {
         display: grid;
         grid-gap: 2rem;
         grid-template-rows: auto 1fr;
         grid-template-columns: 1fr auto;
+        max-width: 1040px;
+        margin-inline: auto;
       }
-      section {
-        overflow: scroll;
-
-        &:first-of-type {
-          grid-column: 1 / span 2;
-        }
+      section:first-of-type {
+        grid-column: 1 / span 2;
       }
       ol {
         margin: 0;
       }
+      summary {
+        cursor: pointer;
+      }
       form {
         margin-block: 1rem;
+      }
+      fieldset {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-gap: 1rem;
       }
       button {
         cursor: pointer;
@@ -69,22 +71,16 @@
           }
         }
       }
-      fieldset {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        grid-gap: 1rem;
-      }
-      summary {
-        cursor: pointer;
-      }
-      #entry-elements {
+      #auto-observe,
+      #manually-observe {
         display: grid;
         grid-gap: 2rem;
-        grid-auto-rows: 50dvh;
+        grid-auto-rows: 75dvh;
         justify-items: center;
         align-items: center;
+        margin-block-end: 2rem;
 
-        > p {
+        > div {
           display: grid;
           width: 100%;
           height: 100%;
@@ -96,10 +92,125 @@
     </style>
   </head>
   <body>
-    <div id="app"></div>
-    <script type="module" src="/src/index.ts"></script>
+    <h1>Optimization Web SDK Dev Development Dashboard</h1>
+
+    <main>
+      <section>
+        <h2>Utilities</h2>
+
+        <span>
+          <button id="consent">Accept Consent</button>
+          <button id="unconsent">Reject Consent</button>
+        </span>
+        |
+        <span>
+          <button id="identify">Identify</button>
+          <button id="unidentify">Reset Profile</button>
+        </span>
+        |
+        <button commandfor="profile-dialog" command="show-modal">View Custom Flags</button>
+        <dialog id="custom-flags-dialog">
+          <pre id="custom-flags"></pre>
+          <form method="dialog">
+            <button type="submit">Close</button>
+          </form>
+        </dialog>
+        |
+        <button commandfor="profile-dialog" command="show-modal">View Profile</button>
+        <dialog id="profile-dialog">
+          <pre id="profile"></pre>
+          <form method="dialog">
+            <button type="submit">Close</button>
+          </form>
+        </dialog>
+        |
+        <button commandfor="personalizations-dialog" command="show-modal">
+          View Personalizations
+        </button>
+        <dialog id="personalizations-dialog">
+          <pre id="personalizations"></pre>
+          <form method="dialog">
+            <button type="submit">Close</button>
+          </form>
+        </dialog>
+      </section>
+
+      <section>
+        <h2>Entry Data</h2>
+
+        <form id="entry-form">
+          <fieldset>
+            <legend>Resolve Contentful Entry</legend>
+            <input type="text" name="entryId" id="entry-id" />
+            <button type="submit">Submit</button>
+          </fieldset>
+        </form>
+
+        <ol id="entries"></ol>
+      </section>
+
+      <section>
+        <h2>Event Stream</h2>
+
+        <ol id="event-stream"></ol>
+      </section>
+
+      <section>
+        <h2>Entries</h2>
+
+        <div id="auto-observe"></div>
+        <div id="manually-observe"></div>
+      </section>
+    </main>
+
+    <template id="event-dialog">
+      <li>
+        <button></button>
+        <dialog>
+          <pre></pre>
+          <form method="dialog">
+            <button type="submit">Close</button>
+          </form>
+        </dialog>
+      </li>
+    </template>
+
+    <template id="entry-details-dialog">
+      <li>
+        <button></button>
+        <dialog>
+          <div></div>
+          <details>
+            <summary>JSON</summary>
+            <pre></pre>
+          </details>
+          <form method="dialog">
+            <button type="submit">Close</button>
+          </form>
+        </dialog>
+      </li>
+    </template>
+
+    <template id="entry-template">
+      <div class="entry"></div>
+    </template>
+
+    <script type="module" src="/src/Optimization.ts"></script>
     <script type="module">
-      new Optimization({
+      /* --- Standard Initialization Code --- */
+
+      // Initialize Contentful CDA SDK
+      var contentfulClient = contentful.createClient({
+        accessToken: '%VITE_CONTENTFUL_TOKEN%',
+        environment: '%VITE_CONTENTFUL_ENVIRONMENT%',
+        space: '%VITE_CONTENTFUL_SPACE_ID%',
+        host: '%VITE_CONTENTFUL_CDA_HOST%',
+        basePath: '%VITE_CONTENTFUL_BASE_PATH%',
+        insecure: Boolean('%VITE_CONTENTFUL_CDA_HOST%'),
+      })
+
+      // Initialize Contentful Optimization Web SDK
+      var optimization = new Optimization({
         clientId: '%VITE_NINETAILED_CLIENT_ID%',
         environment: '%VITE_NINETAILED_ENVIRONMENT%',
         logLevel: 'debug',
@@ -113,14 +224,247 @@
         },
       })
 
-      var contentfulClient = contentful.createClient({
-        accessToken: '%VITE_CONTENTFUL_TOKEN%',
-        environment: '%VITE_CONTENTFUL_ENVIRONMENT%',
-        space: '%VITE_CONTENTFUL_SPACE_ID%',
-        host: '%VITE_CONTENTFUL_CDA_HOST%',
-        basePath: '%VITE_CONTENTFUL_BASE_PATH%',
-        insecure: Boolean('%VITE_CONTENTFUL_CDA_HOST%'),
+      // Auto-track auto-trackable entry views
+      optimization.autoTrackEntryViews()
+
+      // Emit page event
+      optimization.personalization.page()
+
+      /* --- Utility Functionality --- */
+
+      const consent = document.getElementById('consent')
+      const unconsent = document.getElementById('unconsent')
+
+      function toggleConsent(consented = false) {
+        if (consented) {
+          consent.setAttribute('style', 'display: none;')
+          unconsent.removeAttribute('style')
+        } else {
+          consent.removeAttribute('style')
+          unconsent.setAttribute('style', 'display: none;')
+        }
+      }
+
+      consent.addEventListener('click', () => optimization.consent(true))
+      unconsent.addEventListener('click', () => optimization.consent(false))
+
+      const identify = document.getElementById('identify')
+      const unidentify = document.getElementById('unidentify')
+
+      function toggleIdentity(identified = false) {
+        if (identified) {
+          identify.setAttribute('style', 'display: none;')
+          unidentify.removeAttribute('style')
+        } else {
+          identify.removeAttribute('style')
+          unidentify.setAttribute('style', 'display: none;')
+        }
+      }
+
+      identify.addEventListener('click', () =>
+        optimization.personalization.identify({ userId: 'charles', traits: { identified: true } }),
+      )
+      unidentify.addEventListener('click', () => optimization.reset())
+
+      function createEventDialog(title, details) {
+        const template = document.querySelector('#event-dialog')
+        const clone = template.content.cloneNode(true)
+        const dialog = clone.querySelector('dialog')
+        const button = clone.querySelector('button')
+        const pre = clone.querySelector('pre')
+
+        button.innerText = title
+        button.commandForElement = dialog
+        button.command = 'show-modal'
+
+        pre.innerText = JSON.stringify(details, null, 2)
+
+        return clone
+      }
+
+      function createEntryDialog(title, entry, personalization) {
+        const template = document.querySelector('#entry-details-dialog')
+        const clone = template.content.cloneNode(true)
+        const dialog = clone.querySelector('dialog')
+        const button = clone.querySelector('button')
+        const div = clone.querySelector('div')
+        const pre = clone.querySelector('pre')
+
+        button.innerText = title
+        button.commandForElement = dialog
+        button.command = 'show-modal'
+
+        div.appendChild(createEntryElement({ entry, personalization }))
+
+        div.dataset.ctflEntryId = entry.sys?.id
+
+        if (personalization) {
+          div.dataset.ctflPersonalizationId = personalization?.experienceId
+          div.dataset.ctflSticky = personalization?.sticky
+          div.dataset.ctflVariantIndex = personalization?.variantIndex
+        }
+
+        pre.innerText = JSON.stringify([entry, personalization], null, 2)
+
+        return clone
+      }
+
+      /* --- Standard Rendering Code --- */
+
+      function isRichText(field) {
+        return field && typeof field === 'object' && field.content !== undefined
+      }
+
+      // "Rich text" renderer
+      function simpleRenderRichText(field, parent) {
+        if (!field || typeof field !== 'object') return
+        if (!parent || !(parent instanceof HTMLElement)) return
+
+        if (field.nodeType === 'document') {
+          field.content.forEach((content) => simpleRenderRichText(content, parent))
+        } else if (field.nodeType === 'paragraph') {
+          const p = document.createElement('p')
+          field.content.forEach((content) => simpleRenderRichText(content, p))
+          parent.appendChild(p)
+        } else if (field.nodeType === 'text') {
+          const span = document.createElement('span')
+          span.innerText = field.value
+          parent.appendChild(span)
+        } else if (field.nodeType === 'embedded-entry-inline') {
+          const span = document.createElement('span')
+          span.innerText = optimization.personalization.getMergeTagValue(field.data.target)
+          parent.appendChild(span)
+        } else {
+          const span = document.createElement('span')
+          span.innerText = '[unknown rich text fragment]'
+          parent.appendChild(span)
+        }
+      }
+
+      // Entry renderer
+      function createEntryElement({ entry, personalization, autoObserve = true }) {
+        const template = document.querySelector('#entry-template')
+        const clone = template.content.cloneNode(true)
+        const div = clone.querySelector('div')
+
+        if (isRichText(entry.fields?.text)) {
+          simpleRenderRichText(entry.fields.text, div)
+        } else {
+          const p = document.createElement('p')
+          p.innerText = entry.fields?.text
+          div.appendChild(p)
+        }
+
+        if (!autoObserve) return clone
+
+        div.dataset.ctflEntryId = entry.sys?.id
+
+        if (personalization) {
+          div.dataset.ctflPersonalizationId = personalization?.experienceId
+          div.dataset.ctflSticky = personalization?.sticky
+          div.dataset.ctflVariantIndex = personalization?.variantIndex
+        }
+
+        return clone
+      }
+
+      async function addPersonalizedEntry(entryId, autoObserve = true) {
+        let entry
+
+        try {
+          entry = await contentfulClient.getEntry(entryId, { include: 10 })
+        } catch (error) {
+          console.warn(
+            `Irrelevant entry: "${entryId}" The entry ID is either wrong, belongs to a different environment, or does not apply to the current profile.`,
+          )
+          return []
+        }
+
+        const { entry: personalizedEntry, personalization } =
+          optimization.personalization.personalizeEntry(entry)
+
+        const title = personalizedEntry.fields.internalTitle
+
+        const dialogFragment = createEntryDialog(title, personalizedEntry, personalization)
+        document.getElementById('entries').appendChild(dialogFragment)
+
+        const entryFragment = createEntryElement({
+          entry: personalizedEntry,
+          personalization,
+          autoObserve,
+        })
+        const element = entryFragment.firstElementChild
+        document
+          .getElementById(autoObserve ? 'auto-observe' : 'manually-observe')
+          .appendChild(entryFragment)
+
+        return [element, personalizedEntry, personalization]
+      }
+
+      const manuallyObservedEntries = [
+        '6zqoWXyiSrf0ja7I2WGtYj',
+        '7pa5bOx8Z9NmNcr7mISvD',
+        'xFwgG3oNaOcjzWiGe4vXo',
+      ]
+      manuallyObservedEntries.forEach(async (entryId) => {
+        const [element, entry, personalization] = await addPersonalizedEntry(entryId, false)
+
+        optimization.trackEntryViewForElement(element, {
+          data: {
+            entryId: entry.sys.id,
+            personalizationId: entry.experienceId,
+            sticky: entry.sticky,
+            variantIndex: entry.variantIndex,
+          },
+        })
       })
+
+      const autoObservedEntries = [
+        '2Z2WLOx07InSewC3LUB3eX',
+        '4ib0hsHWoSOnCVdDkizE8d',
+        '5XHssysWUDECHzKLzoIsg1',
+      ]
+      autoObservedEntries.forEach((entryId) => addPersonalizedEntry(entryId))
+
+      const mergeTagEntries = ['1MwiFl4z7gkwqGYdvCmr8c']
+      mergeTagEntries.forEach((entryId) => addPersonalizedEntry(entryId))
+
+      /* --- Register observers --- */
+
+      // Subscribe to consent state
+      optimization.states.consent.subscribe(async (consent) => {
+        toggleConsent(consent)
+      })
+
+      // Subscribe to profile state
+      optimization.states.profile.subscribe((profile) => {
+        document.querySelector('#profile').innerText = JSON.stringify(profile, null, 2)
+
+        toggleIdentity(profile && profile.traits && Object.keys(profile.traits).length)
+      })
+
+      // Subscribe to the event stream
+      optimization.states.eventStream.subscribe((event) => {
+        if (!event) return
+
+        document.querySelector('#event-stream').appendChild(createEventDialog(event.type, event))
+      })
+
+      // Subscribe to flags state
+      optimization.states.flags.subscribe((flags) => {
+        document.querySelector('#custom-flags').innerText = JSON.stringify(flags, null, 2)
+      })
+
+      // Subscribe to personalizations state
+      optimization.states.personalizations.subscribe(async (personalizations) => {
+        document.querySelector('#personalizations').innerText = JSON.stringify(
+          personalizations,
+          null,
+          2,
+        )
+      })
+
+      /* --- Entry Form --- */
 
       const form = document.querySelector('#entry-form')
       const LAST_ENTRY_ID_KEY = '__ctfl_dev_last_entry_id__'
@@ -133,273 +477,10 @@
         const data = new FormData(form)
         const entryId = data.get('entryId')
 
-        await addPersonalizedEntry(entryId, true)
+        await addPersonalizedEntry(entryId)
 
         localStorage.setItem(LAST_ENTRY_ID_KEY, entryId)
       })
-
-      const triggers = document.querySelectorAll('section > button')
-      triggers.forEach((trigger) => {
-        trigger.addEventListener('click', () => {
-          trigger.nextElementSibling.showModal()
-        })
-      })
-
-      function createDetailsDialog(title, details) {
-        const template = document.querySelector('#details-template')
-        const clone = template.content.cloneNode(true)
-        const button = clone.querySelector('button')
-        const pre = clone.querySelector('pre')
-
-        button.innerText = title
-        pre.innerText = JSON.stringify(details, null, 2)
-
-        button.addEventListener('click', () => {
-          button.nextElementSibling.showModal()
-        })
-
-        return clone
-      }
-
-      function createEntryDialog(title, entry, personalization) {
-        const template = document.querySelector('#details-template')
-        const clone = template.content.cloneNode(true)
-        const button = clone.querySelector('button')
-        const p = clone.querySelector('p')
-        const pre = clone.querySelector('pre')
-
-        button.innerText = title
-
-        if (Array.isArray(entry)) {
-          p.innerText = entry[0]
-          p.dataset.ctflEntryId = entry[1].sys?.id
-        } else {
-          p.innerText = entry.fields?.text
-          p.dataset.ctflEntryId = entry.sys?.id
-        }
-
-        if (personalization) {
-          p.dataset.ctflPersonalizationId = personalization?.experienceId
-          p.dataset.ctflSticky = personalization?.sticky
-          p.dataset.ctflVariantIndex = personalization?.variantIndex
-        }
-
-        pre.innerText = JSON.stringify([entry, personalization], null, 2)
-
-        button.addEventListener('click', () => {
-          button.nextElementSibling.showModal()
-        })
-
-        return clone
-      }
-
-      function createEntryElement(entry, personalization) {
-        const template = document.querySelector('#entry-template')
-        const clone = template.content.cloneNode(true)
-        const p = clone.querySelector('p')
-
-        if (Array.isArray(entry)) {
-          p.innerText = entry[0]
-          p.dataset.ctflEntryId = entry[1].sys?.id
-        } else {
-          p.innerText = entry.fields?.text
-          p.dataset.ctflEntryId = entry.sys?.id
-        }
-
-        if (personalization) {
-          p.dataset.ctflPersonalizationId = personalization?.experienceId
-          p.dataset.ctflSticky = personalization?.sticky
-          p.dataset.ctflVariantIndex = personalization?.variantIndex
-        }
-
-        return clone
-      }
-
-      function findMergeTagEntries(fragment, mergeTagEntries = []) {
-        if (!fragment?.content) return
-        mergeTagEntries.push(
-          ...fragment.content.filter((item) => item.nodeType.startsWith('embedded')),
-        )
-        fragment.content
-          .filter((item) => 'content' in item)
-          .forEach((item) => findMergeTagEntries(item, mergeTagEntries))
-        return mergeTagEntries
-      }
-
-      async function addPersonalizedEntry(entryId, showError = false) {
-        let entry
-
-        try {
-          entry = await contentfulClient.getEntry(entryId, {
-            include: 10,
-          })
-        } catch (error) {
-          const message = `Irrelevant entry: "${entryId}" The entry ID is either wrong, belongs to a different environment, or does not apply to the current profile.`
-
-          console.warn(message)
-
-          if (showError) document.querySelector('#entries').prepend(createDetailsDialog(message))
-
-          return
-        }
-
-        const { entry: personalizedEntry, personalization } =
-          optimization.personalization.personalizeEntry(entry)
-
-        let title = personalizedEntry.fields.internalTitle
-        let mergeTagValues = undefined
-
-        const richTextField = Object.values(personalizedEntry.fields)?.find(
-          (field) => typeof field === 'object' && field?.nodeType === 'document',
-        )
-
-        if (richTextField) {
-          const mergeTagEntries = findMergeTagEntries(richTextField)
-
-          mergeTagValues = mergeTagEntries.map(({ data: { target } }) =>
-            optimization.personalization.getMergeTagValue(target),
-          )
-
-          title = title.concat(': ', mergeTagValues.join(', '))
-        }
-
-        document
-          .querySelector('#entries')
-          .prepend(
-            createEntryDialog(
-              title,
-              mergeTagValues ? [title, personalizedEntry] : personalizedEntry,
-              personalization,
-            ),
-          )
-
-        document
-          .querySelector('#entry-elements')
-          .prepend(
-            createEntryElement(
-              mergeTagValues ? [title, personalizedEntry] : personalizedEntry,
-              personalization,
-            ),
-          )
-      }
-
-      optimization.states.consent.subscribe(async (consent) => {
-        document.querySelector('#consent').innerText = consent ? 'Consented' : 'Unconsented'
-      })
-
-      optimization.states.eventStream.subscribe((event) => {
-        if (!event) return
-
-        document.querySelector('#event-stream').prepend(createDetailsDialog(event.type, event))
-      })
-
-      optimization.states.flags.subscribe((flags) => {
-        document.querySelector('#custom-flags').innerText = JSON.stringify(flags, null, 2)
-      })
-
-      optimization.states.profile.subscribe((profile) => {
-        document.querySelector('#profile').innerText = JSON.stringify(profile, null, 2)
-      })
-
-      optimization.states.personalizations.subscribe(async (personalizations) => {
-        document.querySelector('#personalizations').innerText = JSON.stringify(
-          personalizations,
-          null,
-          2,
-        )
-
-        await Promise.all(
-          personalizations?.map(async (personalization) => {
-            if (!personalization?.variants) return
-
-            const baselines = Object.keys(personalization.variants)
-
-            if (!baselines.length) return
-
-            await addPersonalizedEntry(baselines[0])
-          }) ?? [],
-        )
-
-        optimization.autoTrackEntryViews()
-      })
-
-      optimization.personalization.page({})
     </script>
-
-    <h1>Optimization Web SDK Dev Development Dashboard</h1>
-
-    <main>
-      <section>
-        <h2>States</h2>
-
-        <span id="consent"></span>
-        |
-        <button>Custom Flags</button>
-        <dialog>
-          <pre id="custom-flags"></pre>
-          <form method="dialog">
-            <button type="submit">Close</button>
-          </form>
-        </dialog>
-        |
-        <button>Profile</button>
-        <dialog>
-          <pre id="profile"></pre>
-          <form method="dialog">
-            <button type="submit">Close</button>
-          </form>
-        </dialog>
-        |
-        <button>Personalizations</button>
-        <dialog>
-          <pre id="personalizations"></pre>
-          <form method="dialog">
-            <button type="submit">Close</button>
-          </form>
-        </dialog>
-      </section>
-
-      <section>
-        <h2>Entries</h2>
-
-        <form id="entry-form">
-          <fieldset>
-            <legend>Resolve Contentful Entry</legend>
-            <input type="text" name="entryId" id="entry-id" />
-            <button type="submit">Submit</button>
-          </fieldset>
-        </form>
-
-        <ol id="entries"></ol>
-      </section>
-
-      <section id="event-stream-panel">
-        <h2>Event Stream</h2>
-
-        <ol id="event-stream"></ol>
-      </section>
-
-      <section id="entry-elements"></section>
-    </main>
-
-    <template id="details-template">
-      <li>
-        <button></button>
-        <dialog>
-          <p></p>
-          <details>
-            <summary>JSON</summary>
-            <pre></pre>
-          </details>
-          <form method="dialog">
-            <button type="submit">Close</button>
-          </form>
-        </dialog>
-      </li>
-    </template>
-
-    <template id="entry-template">
-      <p class="entry"></p>
-    </template>
   </body>
 </html>
