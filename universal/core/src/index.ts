@@ -8,6 +8,8 @@ export * from './CoreStateful'
 export * from './CoreStateless'
 export * from './global-constants'
 export * from './lib/decorators'
+export * from './lib/interceptor'
+export * from './lib/value-presence'
 export * from './personalization'
 
 export { default as CoreStateful } from './CoreStateful'

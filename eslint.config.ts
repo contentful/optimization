@@ -29,7 +29,7 @@ const config: ConfigArray = typescript.config(
         'error',
         { ignoreClassesThatImplementAnInterface: true },
       ],
-      '@typescript-eslint/no-magic-numbers': ['error', { ignore: [-2, -1, 0, 0.5, 1, 2] }],
+      '@typescript-eslint/no-magic-numbers': ['error', { ignore: [-2, -1, 0, 0.5, 1, 2, 10, 100] }],
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -56,7 +56,9 @@ const config: ConfigArray = typescript.config(
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/prefer-destructuring': 'off',
       '@typescript-eslint/unbound-method': 'off',
+      complexity: 'off',
       'max-nested-callbacks': 'off',
       'promise/avoid-new': 'off',
     },

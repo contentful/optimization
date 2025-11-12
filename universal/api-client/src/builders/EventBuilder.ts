@@ -38,7 +38,7 @@ export type UniversalEventBuilderArgs = z.infer<typeof UniversalEventBuilderArgs
 const ComponentViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
   componentId: z.string(),
   experienceId: z.optional(z.string()),
-  variantIndex: z.number(),
+  variantIndex: z.optional(z.number()),
 })
 export type ComponentViewBuilderArgs = z.infer<typeof ComponentViewBuilderArgs>
 
@@ -133,7 +133,7 @@ class EventBuilder {
       componentType: 'Entry',
       componentId,
       experienceId,
-      variantIndex,
+      variantIndex: variantIndex ?? 0,
     }
   }
 
