@@ -119,7 +119,5 @@ dependencies {
         implementation jscFlavor
     }
 
-    // Detox
-    androidTestImplementation('com.wix:detox:+')
     implementation 'androidx.appcompat:appcompat:1.7.1'
 }
