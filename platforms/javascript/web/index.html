@@ -71,8 +71,8 @@
           }
         }
       }
-      #auto-observe,
-      #manually-observe {
+      #auto-observed,
+      #manually-observed {
         display: grid;
         grid-gap: 2rem;
         grid-auto-rows: 75dvh;
@@ -158,8 +158,20 @@
       <section>
         <h2>Entries</h2>
 
-        <div id="auto-observe"></div>
-        <div id="manually-observe"></div>
+        <div id="auto-observed">
+          <div data-ctfl-entry-id="1MwiFl4z7gkwqGYdvCmr8c">
+            <!-- Merge Tag "Rich Text" Entry -->
+          </div>
+          <div data-ctfl-entry-id="2Z2WLOx07InSewC3LUB3eX"></div>
+          <div data-ctfl-entry-id="4ib0hsHWoSOnCVdDkizE8d"></div>
+          <div data-ctfl-entry-id="5XHssysWUDECHzKLzoIsg1"></div>
+        </div>
+
+        <div id="manually-observed">
+          <div data-entry-id="6zqoWXyiSrf0ja7I2WGtYj"></div>
+          <div data-entry-id="7pa5bOx8Z9NmNcr7mISvD"></div>
+          <div data-entry-id="xFwgG3oNaOcjzWiGe4vXo"></div>
+        </div>
       </section>
     </main>
 
@@ -264,7 +276,11 @@
       identify.addEventListener('click', () =>
         optimization.personalization.identify({ userId: 'charles', traits: { identified: true } }),
       )
-      unidentify.addEventListener('click', () => optimization.reset())
+      unidentify.addEventListener('click', () => {
+        optimization.reset()
+        // Ensure we have a new profile after resetting the old one
+        optimization.personalization.page()
+      })
 
       function createEventDialog(title, details) {
         const template = document.querySelector('#event-dialog')
@@ -294,7 +310,13 @@
         button.commandForElement = dialog
         button.command = 'show-modal'
 
-        div.appendChild(createEntryElement({ entry, personalization }))
+        if (isRichText(entry.fields?.text)) {
+          simpleRenderRichText(entry.fields.text, div)
+        } else {
+          const p = document.createElement('p')
+          p.innerText = entry.fields?.text
+          div.appendChild(p)
+        }
 
         div.dataset.ctflEntryId = entry.sys?.id
 
@@ -309,13 +331,30 @@
         return clone
       }
 
+      const form = document.querySelector('#entry-form')
+      const LAST_ENTRY_ID_KEY = '__ctfl_dev_last_entry_id__'
+
+      form.elements.entryId.value = localStorage.getItem(LAST_ENTRY_ID_KEY)
+
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault()
+
+        const data = new FormData(form)
+        const entryId = data.get('entryId')
+
+        await addPersonalizedEntry(entryId)
+
+        localStorage.setItem(LAST_ENTRY_ID_KEY, entryId)
+      })
+
       /* --- Standard Rendering Code --- */
 
       function isRichText(field) {
         return field && typeof field === 'object' && field.content !== undefined
       }
 
-      // "Rich text" renderer
+      // Barebones "Rich Text" renderer
+      // Full renderer must be customer-supplied, or rendered via ctfl Rich Text libs where possible
       function simpleRenderRichText(field, parent) {
         if (!field || typeof field !== 'object') return
         if (!parent || !(parent instanceof HTMLElement)) return
@@ -332,7 +371,10 @@
           parent.appendChild(span)
         } else if (field.nodeType === 'embedded-entry-inline') {
           const span = document.createElement('span')
+
+          // This is how we can inject MergeTag data into Rich Text
           span.innerText = optimization.personalization.getMergeTagValue(field.data.target)
+
           parent.appendChild(span)
         } else {
           const span = document.createElement('span')
@@ -341,113 +383,59 @@
         }
       }
 
-      // Entry renderer
-      function createEntryElement({ entry, personalization, autoObserve = true }) {
-        const template = document.querySelector('#entry-template')
-        const clone = template.content.cloneNode(true)
-        const div = clone.querySelector('div')
-
-        if (isRichText(entry.fields?.text)) {
-          simpleRenderRichText(entry.fields.text, div)
-        } else {
-          const p = document.createElement('p')
-          p.innerText = entry.fields?.text
-          div.appendChild(p)
-        }
-
-        if (!autoObserve) return clone
-
-        div.dataset.ctflEntryId = entry.sys?.id
-
-        if (personalization) {
-          div.dataset.ctflPersonalizationId = personalization?.experienceId
-          div.dataset.ctflSticky = personalization?.sticky
-          div.dataset.ctflVariantIndex = personalization?.variantIndex
-        }
-
-        return clone
-      }
-
-      async function addPersonalizedEntry(entryId, autoObserve = true) {
-        let entry
+      // Get the personalized entry and render
+      async function addPersonalizedEntry(entryId, element, autoObserve = true) {
+        let rawEntry
 
         try {
-          entry = await contentfulClient.getEntry(entryId, { include: 10 })
+          rawEntry = await contentfulClient.getEntry(entryId, { include: 10 })
         } catch (error) {
-          console.warn(
-            `Irrelevant entry: "${entryId}" The entry ID is either wrong, belongs to a different environment, or does not apply to the current profile.`,
-          )
+          console.warn(`Entry "${entryId}" could not be found in the current space`)
           return []
         }
 
-        const { entry: personalizedEntry, personalization } =
-          optimization.personalization.personalizeEntry(entry)
+        const { entry, personalization } = optimization.personalization.personalizeEntry(rawEntry)
 
-        const title = personalizedEntry.fields.internalTitle
+        if (isRichText(entry.fields?.text)) {
+          const div = document.createElement('div')
+          simpleRenderRichText(entry.fields.text, div)
+          element.replaceChildren(div)
+        } else {
+          const p = document.createElement('p')
+          p.innerText = entry.fields?.text
+          element.replaceChildren(p)
+        }
 
-        const dialogFragment = createEntryDialog(title, personalizedEntry, personalization)
-        document.getElementById('entries').appendChild(dialogFragment)
-
-        const entryFragment = createEntryElement({
-          entry: personalizedEntry,
-          personalization,
-          autoObserve,
-        })
-        const element = entryFragment.firstElementChild
         document
-          .getElementById(autoObserve ? 'auto-observe' : 'manually-observe')
-          .appendChild(entryFragment)
+          .getElementById('entries')
+          .appendChild(createEntryDialog(entry.fields.internalTitle, entry, personalization))
 
-        return [element, personalizedEntry, personalization]
+        // NOTE: Elements that are not auto-observed may still be auto-tracked (see below)
+        if (autoObserve) {
+          // The `data-ctfl-entry-id` data attribute is required for auto-observing
+          element.dataset.ctflEntryId = entry.sys?.id
+
+          // Other standard auto-observing attributes are optional
+          if (personalization) {
+            element.dataset.ctflPersonalizationId = personalization?.experienceId
+            element.dataset.ctflSticky = personalization?.sticky
+            element.dataset.ctflVariantIndex = personalization?.variantIndex
+          }
+        }
+
+        return [entry, personalization]
       }
-
-      const manuallyObservedEntries = [
-        '6zqoWXyiSrf0ja7I2WGtYj',
-        '7pa5bOx8Z9NmNcr7mISvD',
-        'xFwgG3oNaOcjzWiGe4vXo',
-      ]
-      manuallyObservedEntries.forEach(async (entryId) => {
-        const [element, entry, personalization] = await addPersonalizedEntry(entryId, false)
-
-        optimization.trackEntryViewForElement(element, {
-          data: {
-            entryId: entry.sys.id,
-            personalizationId: entry.experienceId,
-            sticky: entry.sticky,
-            variantIndex: entry.variantIndex,
-          },
-        })
-      })
-
-      const autoObservedEntries = [
-        '2Z2WLOx07InSewC3LUB3eX',
-        '4ib0hsHWoSOnCVdDkizE8d',
-        '5XHssysWUDECHzKLzoIsg1',
-      ]
-      autoObservedEntries.forEach((entryId) => addPersonalizedEntry(entryId))
-
-      const mergeTagEntries = ['1MwiFl4z7gkwqGYdvCmr8c']
-      mergeTagEntries.forEach((entryId) => addPersonalizedEntry(entryId))
-
-      /* --- Register observers --- */
-
-      // Subscribe to consent state
-      optimization.states.consent.subscribe(async (consent) => {
-        toggleConsent(consent)
-      })
-
-      // Subscribe to profile state
-      optimization.states.profile.subscribe((profile) => {
-        document.querySelector('#profile').innerText = JSON.stringify(profile, null, 2)
-
-        toggleIdentity(profile && profile.traits && Object.keys(profile.traits).length)
-      })
 
       // Subscribe to the event stream
       optimization.states.eventStream.subscribe((event) => {
         if (!event) return
 
         document.querySelector('#event-stream').appendChild(createEventDialog(event.type, event))
+      })
+
+      // Subscribe to consent state
+      optimization.states.consent.subscribe(async (consent) => {
+        toggleConsent(consent)
       })
 
       // Subscribe to flags state
@@ -464,22 +452,41 @@
         )
       })
 
-      /* --- Entry Form --- */
+      // Subscribe to profile state, find entries in the markup, and render them
+      optimization.states.profile.subscribe((profile) => {
+        if (!profile) return
 
-      const form = document.querySelector('#entry-form')
-      const LAST_ENTRY_ID_KEY = '__ctfl_dev_last_entry_id__'
+        document.querySelector('#profile').innerText = JSON.stringify(profile, null, 2)
 
-      form.elements.entryId.value = localStorage.getItem(LAST_ENTRY_ID_KEY)
+        toggleIdentity(profile.traits && Object.keys(profile.traits).length)
 
-      form.addEventListener('submit', async (event) => {
-        event.preventDefault()
+        // These elements use the standard `data-ctfl-entry-id` attribute and will be auto-observed
+        document.querySelectorAll('[data-ctfl-entry-id]').forEach(async (element) => {
+          const [entry, personalization] = await addPersonalizedEntry(
+            element.dataset.ctflEntryId,
+            element,
+          )
+        })
 
-        const data = new FormData(form)
-        const entryId = data.get('entryId')
+        // These elements do not use the standard `data-ctfl-entry-id` attribute and must be manually observed
+        document.querySelectorAll('[data-entry-id]').forEach(async (element) => {
+          const [entry, personalization] = await addPersonalizedEntry(
+            element.dataset.entryId,
+            element,
+            false,
+          )
 
-        await addPersonalizedEntry(entryId)
-
-        localStorage.setItem(LAST_ENTRY_ID_KEY, entryId)
+          // Manually observe the element for auto-tracking
+          optimization.trackEntryViewForElement(element, {
+            data: {
+              // The `entryId` property is required for auto-tracking
+              entryId: entry.sys.id,
+              personalizationId: entry.experienceId,
+              sticky: entry.sticky,
+              variantIndex: entry.variantIndex,
+            },
+          })
+        })
       })
     </script>
   </body>
