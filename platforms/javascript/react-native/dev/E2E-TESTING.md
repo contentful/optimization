@@ -1,0 +1,176 @@
+# E2E Testing with Detox
+
+This React Native application is configured with [Detox](https://wix.github.io/Detox/) for end-to-end testing.
+
+## Prerequisites
+
+### iOS
+
+- Xcode installed (latest version recommended)
+- iOS Simulator
+- CocoaPods installed
+
+### Android
+
+- Android Studio installed
+- Android SDK
+- An Android emulator configured (recommended: Pixel 7 with API 34)
+- Java Development Kit (JDK)
+
+## Setup
+
+### iOS Setup
+
+1. Install iOS dependencies:
+
+```bash
+cd ios
+pod install
+cd ..
+```
+
+2. Build the app for testing:
+
+```bash
+pnpm run e2e:build:ios
+```
+
+### Android Setup
+
+1. Ensure you have an Android emulator configured. You can check available emulators with:
+
+```bash
+emulator -list-avds
+```
+
+2. If you need to create one, the default configuration expects an emulator named `Pixel_7_API_34`. You can either:
+   - Create an emulator with that name
+   - Or update the `.detoxrc.js` file with your emulator name
+
+3. Build the app for testing:
+
+```bash
+pnpm run e2e:build:android
+```
+
+## Running Tests
+
+### iOS
+
+```bash
+# Build and run tests
+pnpm run e2e:ios
+
+# Or run separately
+pnpm run e2e:build:ios
+pnpm run e2e:test:ios
+```
+
+### Android
+
+```bash
+# Build and run tests
+pnpm run e2e:android
+
+# Or run separately
+pnpm run e2e:build:android
+pnpm run e2e:test:android
+```
+
+## Test Files
+
+- Test files are located in `e2e/`
+- `e2e/app.test.js` - Main application tests
+- `e2e/jest.config.js` - Jest configuration for Detox
+
+## Configuration
+
+The Detox configuration is in `.detoxrc.js`. It includes:
+
+- Build configurations for iOS and Android (debug and release)
+- Device/simulator configurations
+- Test runner settings
+
+## Writing Tests
+
+Tests use Detox's API along with Jest. Example:
+
+```javascript
+describe('My Feature', () => {
+  beforeAll(async () => {
+    await device.launchApp()
+  })
+
+  beforeEach(async () => {
+    await device.reloadReactNative()
+  })
+
+  it('should display welcome screen', async () => {
+    await expect(element(by.id('welcomeText'))).toBeVisible()
+  })
+})
+```
+
+### Test IDs
+
+The app components have been annotated with `testID` props for Detox to identify them:
+
+- `appTitle` - Main app title
+- `appSubtitle` - App subtitle
+- `sdkStatusCard` - SDK status card container
+- `sdkLoaded` - SDK loaded status indicator
+- `sdkConfigCard` - Configuration card
+- `clientIdValue` - Client ID value
+- `environmentValue` - Environment value
+- `instructionsCard` - Instructions card
+
+## Troubleshooting
+
+### iOS
+
+- If you get build errors, try cleaning the build: `rm -rf ios/build`
+- Make sure Xcode is properly configured and you've accepted the license agreement
+- Run `pod install` again if you've made changes to dependencies
+
+### Android
+
+- If the emulator doesn't start, launch it manually before running tests:
+  ```bash
+  emulator -avd Pixel_7_API_34
+  ```
+- Clean the Android build: `cd android && ./gradlew clean && cd ..`
+- Make sure ANDROID_HOME environment variable is set
+
+### General
+
+- Metro bundler issues: Kill Metro and restart with cache reset:
+  ```bash
+  pnpm run start:clean
+  ```
+- Detox issues: Check the [Detox troubleshooting guide](https://wix.github.io/Detox/docs/introduction/troubleshooting)
+
+## CI/CD Integration
+
+Detox tests can be integrated into your CI/CD pipeline. Make sure to:
+
+1. Install all dependencies
+2. Set up simulators/emulators in the CI environment
+3. Build the app
+4. Run tests with appropriate timeout settings
+
+Example for GitHub Actions:
+
+```yaml
+- name: Run Detox tests (iOS)
+  run: |
+    pnpm install
+    cd ios && pod install && cd ..
+    pnpm run e2e:build:ios
+    pnpm run e2e:test:ios
+```
+
+## Resources
+
+- [Detox Documentation](https://wix.github.io/Detox/)
+- [Detox API Reference](https://wix.github.io/Detox/docs/api/actions)
+- [Jest Matchers](https://wix.github.io/Detox/docs/api/matchers)
