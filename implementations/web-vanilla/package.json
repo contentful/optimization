@@ -9,12 +9,14 @@
     "clean": "rimraf ./dist ./public/dist ./coverage ./playwright-report ./test-results tsconfig.tsbuildinfo",
     "serve": "pnpm serve:mocks && pnpm serve:app",
     "serve:app": "pnpm build && docker compose up -d",
+    "serve:app:stop": "docker compose down",
     "serve:mocks": "pm2 start --name web-mocks \"pnpm --filter mocks serve\"",
-    "serve:stop": "docker compose down && pm2 stop web-mocks && pm2 delete web-mocks",
+    "serve:mocks:stop": "pm2 stop web-mocks && pm2 delete web-mocks",
+    "serve:stop": "pnpm serve:app:stop && pnpm serve:mocks:stop",
     "test:e2e": "pnpm serve && playwright test; E2E_RESULT=$?; pnpm serve:stop; exit $E2E_RESULT",
     "test:e2e:codegen": "playwright codegen",
     "test:e2e:report": "playwright show-report",
-    "test:e2e:ui": "pnpm build && playwright test --ui",
+    "test:e2e:ui": "playwright test --ui",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

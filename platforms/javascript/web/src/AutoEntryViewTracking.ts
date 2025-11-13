@@ -20,10 +20,10 @@ export type CtflDataset = DOMStringMap & {
 export type EntryElement = (HTMLElement | SVGElement) & { dataset: CtflDataset }
 
 // This does not support legacy browsers that don't support `dataset` on `SVGElement`
-export function isEntryElement(element: Element): element is EntryElement {
+export function isEntryElement(element?: Element): element is EntryElement {
   const isWeb = typeof HTMLElement !== 'undefined' && typeof SVGElement !== 'undefined'
 
-  if (!isWeb || element.nodeType !== 1) return false
+  if (!isWeb || !element || element.nodeType !== 1) return false
 
   if (!('dataset' in element)) return false
 
@@ -128,23 +128,35 @@ export const createAutoTrackingEntryViewCallback =
     )
   }
 
+function findEntryElement(element: Element): EntryElement | undefined {
+  if (isEntryElement(element)) return element
+
+  const maybeEntryElement = element.querySelector('[data-ctfl-entry-id]') ?? undefined
+
+  return isEntryElement(maybeEntryElement) ? maybeEntryElement : undefined
+}
+
 export const createAutoTrackingEntryExistenceCallback = (
   entryViewObserver: ElementViewObserver,
 ): ElementExistenceObserverOptions => ({
   onRemoved: (elements: readonly Element[]): void => {
     elements.forEach((element) => {
-      if (!entryViewObserver.getStats(element)) return
+      const ctflElement = findEntryElement(element)
 
-      logger.info('[Optimization Web SDK] Auto-removing element:', element)
-      entryViewObserver.unobserve(element)
+      if (!ctflElement || !entryViewObserver.getStats(ctflElement)) return
+
+      logger.info('[Optimization Web SDK] Auto-removing element:', ctflElement)
+      entryViewObserver.unobserve(ctflElement)
     })
   },
   onAdded: (elements: readonly Element[]): void => {
     elements.forEach((element) => {
-      if (!isEntryElement(element)) return
+      const ctflElement = findEntryElement(element)
 
-      logger.info('[Optimization Web SDK] Auto-observing element:', element)
-      entryViewObserver.observe(element)
+      if (!ctflElement) return
+
+      logger.info('[Optimization Web SDK] Auto-observing element:', ctflElement)
+      entryViewObserver.observe(ctflElement)
     })
   },
 })

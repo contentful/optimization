@@ -28,19 +28,23 @@ const MergeTagValueResolver = {
   },
 
   resolve(mergeTagEntry: MergeTagEntry | undefined, profile?: Profile): unknown {
-    if (!Profile.safeParse(profile).success) {
-      logger.warn(RESOLUTION_WARNING_BASE, 'no valid profile')
-      return
-    }
-
     if (!MergeTagValueResolver.isMergeTagEntry(mergeTagEntry)) {
       logger.warn(RESOLUTION_WARNING_BASE, 'supplied entry is not a Merge Tag entry')
       return
     }
 
+    const {
+      fields: { nt_fallback: fallback },
+    } = mergeTagEntry
+
+    if (!Profile.safeParse(profile).success) {
+      logger.warn(RESOLUTION_WARNING_BASE, 'no valid profile')
+      return fallback
+    }
+
     return (
       MergeTagValueResolver.getValueFromProfile(mergeTagEntry.fields.nt_mergetag_id, profile) ??
-      mergeTagEntry.fields.nt_fallback
+      fallback
     )
   },
 }

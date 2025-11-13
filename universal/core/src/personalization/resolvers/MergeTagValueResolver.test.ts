@@ -131,9 +131,9 @@ describe('MergeTagValueResolver', () => {
       expect(MergeTagValueResolver.resolve({}, profile)).toBeUndefined()
     })
 
-    it('should return `undefined` when profile is invalid', () => {
+    it('resolves the fallback value when profile is invalid', () => {
       // @ts-expect-error-next-line
-      expect(MergeTagValueResolver.resolve(mergeTagEntry, {})).toBeUndefined()
+      expect(MergeTagValueResolver.resolve(mergeTagEntry, {})).toEqual('Nowhere')
     })
 
     it('resolves the fallback value when the specified value can not be found', () => {
