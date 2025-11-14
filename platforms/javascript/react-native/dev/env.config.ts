@@ -34,7 +34,7 @@ export const ENV_CONFIG: EnvConfig = {
     spaceId: 'test-space',
     environment: 'master',
     accessToken: 'test-token',
-    host: 'localhost',
+    host: 'localhost:8000',
     basePath: '/contentful',
   },
 
@@ -46,8 +46,8 @@ export const ENV_CONFIG: EnvConfig = {
 
   // Mock Server URLs (for development/testing)
   api: {
-    experienceBaseUrl: 'http://localhost/experience/',
-    insightsBaseUrl: 'http://localhost/insights/',
+    experienceBaseUrl: 'http://localhost:8000/experience/',
+    insightsBaseUrl: 'http://localhost:8000/insights/',
   },
 
   // Entry IDs from mock server
