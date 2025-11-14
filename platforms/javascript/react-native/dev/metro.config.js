@@ -10,12 +10,17 @@ const path = require('path')
 
 // Get the workspace root (four levels up from this file)
 const workspaceRoot = path.resolve(__dirname, '../../../..')
+// Get the SDK root (parent directory where package.json lives)
+const sdkRoot = path.resolve(__dirname, '..')
 
 const config = {
-  watchFolders: [workspaceRoot],
+  projectRoot: sdkRoot,
+  watchFolders: [workspaceRoot, sdkRoot],
   resolver: {
+    // Metro will automatically resolve from projectRoot/node_modules
+    // and follow pnpm symlinks, but we also need workspace root for hoisted deps
     nodeModulesPaths: [
-      path.resolve(__dirname, 'node_modules'),
+      path.resolve(sdkRoot, 'node_modules'),
       path.resolve(workspaceRoot, 'node_modules'),
     ],
     // Allow Metro to resolve .mjs files from the platform packages
@@ -56,8 +61,31 @@ const config = {
           type: 'sourceFile',
         }
       }
-      // Let Metro handle everything else
-      return context.resolveRequest(context, moduleName, platform)
+      // For all other modules, use default resolution
+      // This will follow pnpm symlinks correctly
+      const defaultResolved = context.resolveRequest(context, moduleName, platform)
+      if (defaultResolved) {
+        return defaultResolved
+      }
+
+      // Fallback: try resolving from workspace root if not found
+      // This handles cases where Metro can't follow pnpm symlinks
+      try {
+        const resolvedPath = require.resolve(moduleName, {
+          paths: [
+            path.resolve(sdkRoot, 'node_modules'),
+            path.resolve(workspaceRoot, 'node_modules'),
+            path.resolve(__dirname, 'node_modules'),
+          ],
+        })
+        return {
+          filePath: resolvedPath,
+          type: 'sourceFile',
+        }
+      } catch (e) {
+        // If still not found, return null to let Metro show the error
+        return null
+      }
     },
   },
 }
