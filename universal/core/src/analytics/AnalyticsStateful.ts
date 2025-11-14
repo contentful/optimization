@@ -105,15 +105,15 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
   @guardedBy('isNotDuplicated', { onBlocked: 'onBlockedByDuplication' })
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async trackComponentView(payload: ComponentViewBuilderArgs, _duplicationKey = ''): Promise<void> {
-    logger.info(`[Analytics] Processing "component view" event`)
+    logger.info(`[Analytics] Processing "component view" event for`, payload.componentId)
 
     await this.#enqueueEvent(this.builder.buildComponentView(payload))
   }
 
   @guardedBy('isNotDuplicated', { onBlocked: 'onBlockedByDuplication' })
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async trackFlagView(payload: ComponentViewBuilderArgs): Promise<void> {
-    logger.debug(`[Analytics] Processing "flag view" event`)
+  async trackFlagView(payload: ComponentViewBuilderArgs, _duplicationKey = ''): Promise<void> {
+    logger.debug(`[Analytics] Processing "flag view" event for`, payload.componentId)
 
     await this.#enqueueEvent(this.builder.buildFlagView(payload))
   }

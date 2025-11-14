@@ -138,6 +138,7 @@ function findEntryElement(element: Element): EntryElement | undefined {
 
 export const createAutoTrackingEntryExistenceCallback = (
   entryViewObserver: ElementViewObserver,
+  autoObserveEntryElements = false,
 ): ElementExistenceObserverOptions => ({
   onRemoved: (elements: readonly Element[]): void => {
     elements.forEach((element) => {
@@ -145,18 +146,20 @@ export const createAutoTrackingEntryExistenceCallback = (
 
       if (!ctflElement || !entryViewObserver.getStats(ctflElement)) return
 
-      logger.info('[Optimization Web SDK] Auto-removing element:', ctflElement)
+      logger.info('[Optimization Web SDK] Auto-removing element (remove):', ctflElement)
       entryViewObserver.unobserve(ctflElement)
     })
   },
-  onAdded: (elements: readonly Element[]): void => {
-    elements.forEach((element) => {
-      const ctflElement = findEntryElement(element)
+  onAdded: autoObserveEntryElements
+    ? (elements: readonly Element[]): void => {
+        elements.forEach((element) => {
+          const ctflElement = findEntryElement(element)
 
-      if (!ctflElement) return
+          if (!ctflElement) return
 
-      logger.info('[Optimization Web SDK] Auto-observing element:', ctflElement)
-      entryViewObserver.observe(ctflElement)
-    })
-  },
+          logger.info('[Optimization Web SDK] Auto-observing element (add):', ctflElement)
+          entryViewObserver.observe(ctflElement)
+        })
+      }
+    : undefined,
 })

@@ -47,7 +47,7 @@ const config: ConfigArray = typescript.config(
   },
   {
     // https://github.com/vitest-dev/vitest/issues/4543#issuecomment-1824628142
-    files: ['**/src/**/*.test.ts', '**/test/**/*.ts'],
+    files: ['**/src/**/*.test.ts', '**/src/**/*.spec.ts', '**/test/**/*.ts', '**/e2e/**/*.ts'],
     rules: {
       '@typescript-eslint/class-methods-use-this': 'off',
       '@typescript-eslint/init-declarations': 'off',

@@ -21,7 +21,6 @@ import {
   ElementExistenceObserver,
   type ElementViewElementOptions,
   ElementViewObserver,
-  type ElementViewOptions,
 } from './observers'
 import { LocalStore } from './storage'
 
@@ -34,7 +33,8 @@ declare global {
 
 export interface OptimizationWebConfig extends CoreStatefulConfig {
   app?: App
-  elementViewObserveOptions?: ElementViewOptions
+  autoTrackEntryViews?: boolean
+  autoObserveEntryElements?: boolean
 }
 
 function mergeConfig({
@@ -88,14 +88,20 @@ class Optimization extends CoreStateful {
   #elementViewObserver?: ElementViewObserver = undefined
   #elementExistenceObserver?: ElementExistenceObserver = undefined
 
+  autoObserveEntryElements = false
+  autoTrackEntryViews = false
+
   constructor(config: OptimizationWebConfig) {
     if (window.optimization) throw new Error('Optimization is already initialized')
 
-    const { elementViewObserveOptions: entryViewObserveOptions, ...restConfig } = config
+    const { autoObserveEntryElements, autoTrackEntryViews, ...restConfig } = config
 
     const mergedConfig: CoreConfig = mergeConfig(restConfig)
 
     super(mergedConfig)
+
+    this.autoObserveEntryElements = autoObserveEntryElements ?? false
+    this.autoTrackEntryViews = autoTrackEntryViews ?? false
 
     effect(() => {
       const {
@@ -109,6 +115,10 @@ class Optimization extends CoreStateful {
       const {
         consent: { value },
       } = signals
+
+      if (this.autoTrackEntryViews) {
+        value ? this.startAutoTrackingEntryViews() : this.stopAutoTrackingEntryViews()
+      }
 
       LocalStore.consent = value
     })
@@ -137,7 +147,7 @@ class Optimization extends CoreStateful {
     })
   }
 
-  autoTrackEntryViews(options?: ElementViewElementOptions): void {
+  startAutoTrackingEntryViews(options?: ElementViewElementOptions): void {
     this.#elementViewObserver = new ElementViewObserver(
       createAutoTrackingEntryViewCallback({
         personalization: this.personalization,
@@ -146,8 +156,13 @@ class Optimization extends CoreStateful {
     )
 
     this.#elementExistenceObserver = new ElementExistenceObserver(
-      createAutoTrackingEntryExistenceCallback(this.#elementViewObserver),
+      createAutoTrackingEntryExistenceCallback(
+        this.#elementViewObserver,
+        this.autoObserveEntryElements,
+      ),
     )
+
+    if (!this.autoObserveEntryElements) return
 
     // Fully-automated observation for elements with ctfl data attributes
     const entries = document.querySelectorAll('[data-ctfl-entry-id]')
@@ -169,16 +184,17 @@ class Optimization extends CoreStateful {
   }
 
   untrackEntryViewForElement(element: Element): void {
-    this.#elementViewObserver?.observe(element)
+    logger.info('[Optimization Web SDK] Manually unobserving element:', element)
+    this.#elementViewObserver?.unobserve(element)
   }
 
-  disconnectAutoTrackEntryViews(): void {
+  stopAutoTrackingEntryViews(): void {
     this.#elementExistenceObserver?.disconnect()
     this.#elementViewObserver?.disconnect()
   }
 
   reset(): void {
-    this.disconnectAutoTrackEntryViews()
+    this.stopAutoTrackingEntryViews()
     Cookies.remove(ANONYMOUS_ID_COOKIE)
     LocalStore.reset()
     super.reset()
