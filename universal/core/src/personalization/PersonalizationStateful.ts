@@ -200,7 +200,7 @@ class Personalization extends PersonalizationBase implements ConsentGuard {
     payload: ComponentViewBuilderArgs,
     _duplicationKey = '',
   ): Promise<OptimizationData> {
-    logger.info(`[Personalization] Sending "track personalization" event`)
+    logger.info(`[Personalization] Sending "track personalization" event for`, payload.componentId)
 
     const event = ComponentViewEvent.parse(this.builder.buildComponentView(payload))
 

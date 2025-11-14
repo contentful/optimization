@@ -2,7 +2,6 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Optimization Web SDK Dev Development Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/contentful@latest/dist/contentful.browser.min.js"></script>
@@ -70,6 +69,12 @@
             color: blue;
           }
         }
+      }
+      #event-stream-panel {
+        position: sticky;
+        top: 0;
+        margin-block-start: -1px;
+        padding-block-start: 1px;
       }
       #auto-observed,
       #manually-observed {
@@ -150,9 +155,11 @@
       </section>
 
       <section>
-        <h2>Event Stream</h2>
+        <div id="event-stream-panel">
+          <h2>Event Stream</h2>
 
-        <ol id="event-stream"></ol>
+          <ol id="event-stream"></ol>
+        </div>
       </section>
 
       <section>
@@ -162,15 +169,15 @@
           <div data-ctfl-entry-id="1MwiFl4z7gkwqGYdvCmr8c">
             <!-- Merge Tag "Rich Text" Entry -->
           </div>
-          <div data-ctfl-entry-id="2Z2WLOx07InSewC3LUB3eX"></div>
           <div data-ctfl-entry-id="4ib0hsHWoSOnCVdDkizE8d"></div>
-          <div data-ctfl-entry-id="5XHssysWUDECHzKLzoIsg1"></div>
+          <div data-ctfl-entry-id="xFwgG3oNaOcjzWiGe4vXo"></div>
+          <div data-ctfl-entry-id="2Z2WLOx07InSewC3LUB3eX"></div>
         </div>
 
         <div id="manually-observed">
+          <div data-entry-id="5XHssysWUDECHzKLzoIsg1"></div>
           <div data-entry-id="6zqoWXyiSrf0ja7I2WGtYj"></div>
           <div data-entry-id="7pa5bOx8Z9NmNcr7mISvD"></div>
-          <div data-entry-id="xFwgG3oNaOcjzWiGe4vXo"></div>
         </div>
       </section>
     </main>
@@ -203,10 +210,6 @@
       </li>
     </template>
 
-    <template id="entry-template">
-      <div class="entry"></div>
-    </template>
-
     <script type="module" src="/src/Optimization.ts"></script>
     <script type="module">
       /* --- Standard Initialization Code --- */
@@ -222,10 +225,12 @@
       })
 
       // Initialize Contentful Optimization Web SDK
-      var optimization = new Optimization({
+      window.optimization = new Optimization({
         clientId: '%VITE_NINETAILED_CLIENT_ID%',
         environment: '%VITE_NINETAILED_ENVIRONMENT%',
         logLevel: 'debug',
+        autoObserveEntryElements: true,
+        autoTrackEntryViews: true,
         app: {
           name: document.title,
           version: '0.0.0',
@@ -235,9 +240,6 @@
           personalization: { baseUrl: '%VITE_EXPERIENCE_API_BASE_URL%' },
         },
       })
-
-      // Auto-track auto-trackable entry views
-      optimization.autoTrackEntryViews()
 
       // Emit page event
       optimization.personalization.page()
@@ -426,6 +428,26 @@
         return [entry, personalization]
       }
 
+      const manuallyObservedEntryElements = new Map()
+
+      // Manually observe view elements for auto-tracking
+      function manuallyObserveEntryElement(element, entry, personalization) {
+        optimization.untrackEntryViewForElement(element)
+
+        // Manually observe the element for auto-tracking (does not use `data-ctfl-*` attributes)
+        optimization.trackEntryViewForElement(element, {
+          data: {
+            // The `entryId` property is required for auto-tracking
+            entryId: entry.sys.id,
+            personalizationId: personalization?.experienceId,
+            sticky: personalization?.sticky,
+            variantIndex: personalization?.variantIndex,
+          },
+        })
+
+        manuallyObservedEntryElements.set(element.dataset.entryId, [entry, personalization])
+      }
+
       // Subscribe to the event stream
       optimization.states.eventStream.subscribe((event) => {
         if (!event) return
@@ -436,6 +458,17 @@
       // Subscribe to consent state
       optimization.states.consent.subscribe(async (consent) => {
         toggleConsent(consent)
+
+        if (consent)
+          document.querySelectorAll('[data-entry-id]').forEach((element) => {
+            const settings = manuallyObservedEntryElements.get(element.dataset.entryId)
+
+            if (!settings) return
+
+            const [entry, personalization] = settings
+
+            manuallyObserveEntryElement(element, entry, personalization)
+          })
       })
 
       // Subscribe to flags state
@@ -460,15 +493,10 @@
 
         toggleIdentity(profile.traits && Object.keys(profile.traits).length)
 
-        // These elements use the standard `data-ctfl-entry-id` attribute and will be auto-observed
         document.querySelectorAll('[data-ctfl-entry-id]').forEach(async (element) => {
-          const [entry, personalization] = await addPersonalizedEntry(
-            element.dataset.ctflEntryId,
-            element,
-          )
+          const [entry] = await addPersonalizedEntry(element.dataset.ctflEntryId, element)
         })
 
-        // These elements do not use the standard `data-ctfl-entry-id` attribute and must be manually observed
         document.querySelectorAll('[data-entry-id]').forEach(async (element) => {
           const [entry, personalization] = await addPersonalizedEntry(
             element.dataset.entryId,
@@ -476,16 +504,7 @@
             false,
           )
 
-          // Manually observe the element for auto-tracking
-          optimization.trackEntryViewForElement(element, {
-            data: {
-              // The `entryId` property is required for auto-tracking
-              entryId: entry.sys.id,
-              personalizationId: entry.experienceId,
-              sticky: entry.sticky,
-              variantIndex: entry.variantIndex,
-            },
-          })
+          manuallyObserveEntryElement(element, entry, personalization)
         })
       })
     </script>

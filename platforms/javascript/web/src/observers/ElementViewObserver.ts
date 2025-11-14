@@ -14,11 +14,11 @@
 
 import {
   DEFAULTS,
-  type EffectiveOptions,
+  type EffectiveObserverOptions,
   type ElementState,
   type ElementViewCallback,
   type ElementViewElementOptions,
-  type ElementViewOptions,
+  type ElementViewObserverOptions,
   HAS_DOC,
   type Interval,
   NOW,
@@ -36,14 +36,14 @@ import {
  */
 class ElementViewObserver {
   private readonly callback: ElementViewCallback
-  private readonly opts: EffectiveOptions
+  private readonly opts: EffectiveObserverOptions
   private readonly io: IntersectionObserver
   private readonly states = new WeakMap<Element, ElementState>()
   private readonly activeStates = new Set<ElementState>()
   private boundVisibilityHandler: (() => void) | null = null
   private sweepInterval: Interval | null = null
 
-  public constructor(callback: ElementViewCallback, options?: ElementViewOptions) {
+  public constructor(callback: ElementViewCallback, options?: ElementViewObserverOptions) {
     this.callback = callback
     this.opts = ElementViewObserver.initOptions(options)
     this.io = new IntersectionObserver(
@@ -139,7 +139,7 @@ class ElementViewObserver {
       : null
   }
 
-  private static initOptions(options?: ElementViewOptions): EffectiveOptions {
+  private static initOptions(options?: ElementViewObserverOptions): EffectiveObserverOptions {
     return {
       dwellTimeMs: Num.nonNeg(options?.dwellTimeMs, DEFAULTS.DWELL_MS),
       minVisibleRatio: Num.clamp01(options?.minVisibleRatio, DEFAULTS.RATIO),

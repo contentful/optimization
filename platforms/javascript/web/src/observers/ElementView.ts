@@ -47,7 +47,7 @@ export type ElementViewCallback = (
 ) => void | Promise<void>
 
 /** Observer-level options. */
-export interface ElementViewOptions {
+export interface ElementViewObserverOptions {
   /** Required time before firing. */
   readonly dwellTimeMs?: number
   /** Minimum intersection ratio considered "visible". */
@@ -82,9 +82,9 @@ export interface ElementViewElementOptions {
 }
 
 /** ---- Effective internal option shapes ---- */
-export type EffectiveOptions = Required<
+export type EffectiveObserverOptions = Required<
   Pick<
-    ElementViewOptions,
+    ElementViewObserverOptions,
     | 'dwellTimeMs'
     | 'minVisibleRatio'
     | 'root'
@@ -96,7 +96,10 @@ export type EffectiveOptions = Required<
 >
 
 export type PerElementEffectiveOptions = Required<
-  Pick<EffectiveOptions, 'dwellTimeMs' | 'maxRetries' | 'retryBackoffMs' | 'backoffMultiplier'>
+  Pick<
+    EffectiveObserverOptions,
+    'dwellTimeMs' | 'maxRetries' | 'retryBackoffMs' | 'backoffMultiplier'
+  >
 >
 
 /** Internal per-element state tracked by the observer. */
