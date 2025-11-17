@@ -28,14 +28,6 @@ function App(): React.JSX.Element {
   }, [])
 
   useEffect(() => {
-    if (sdk) {
-      fetchMergeTagEntry(setMergeTagEntry, setSdkError).catch(() => undefined)
-      fetchPersonalizationEntry(setPersonalizationEntry, setSdkError).catch(() => undefined)
-      fetchAnalyticsEntry(setAnalyticsEntry, setSdkError).catch(() => undefined)
-    }
-  }, [sdk])
-
-  useEffect(() => {
     if (!sdk) {
       logger.debug('[App] SDK not initialized')
       return
@@ -54,6 +46,9 @@ function App(): React.JSX.Element {
         `[App] Profile received: ID: ${currentProfile.id}, location.continent: ${String(currentProfile.location.continent)}`,
       )
       setProfile(currentProfile)
+      fetchMergeTagEntry(setMergeTagEntry, setSdkError).catch(() => undefined)
+      fetchPersonalizationEntry(setPersonalizationEntry, setSdkError).catch(() => undefined)
+      fetchAnalyticsEntry(setAnalyticsEntry, setSdkError).catch(() => undefined)
     })
 
     return () => {
