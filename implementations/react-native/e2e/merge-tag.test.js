@@ -1,23 +1,18 @@
 const { expect: jestExpect } = require('@jest/globals')
+const { clearProfileState } = require('./helpers')
 
-describe('Merge Tag Screen', () => {
+describe('Merge Tag Section', () => {
   beforeAll(async () => {
     await device.launchApp()
   })
 
   beforeEach(async () => {
-    await device.reloadReactNative()
+    await clearProfileState()
   })
 
   describe('Merge Tag Rendering', () => {
     it('should display the merge tag section', async () => {
       await waitFor(element(by.id('merge-tag-section')))
-        .toBeVisible()
-        .withTimeout(10000)
-    })
-
-    it('should display the merge tag screen', async () => {
-      await waitFor(element(by.id('merge-tag-screen')))
         .toBeVisible()
         .withTimeout(10000)
     })

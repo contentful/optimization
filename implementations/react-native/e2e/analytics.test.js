@@ -1,6 +1,6 @@
 const { expect: jestExpect } = require('@jest/globals')
 
-describe('Analytics Screen', () => {
+describe('Analytics Section', () => {
   beforeAll(async () => {
     await device.launchApp()
   })
@@ -16,8 +16,8 @@ describe('Analytics Screen', () => {
         .withTimeout(10000)
     })
 
-    it('should display the analytics screen', async () => {
-      await waitFor(element(by.id('analytics-screen')))
+    it('should display the analytics section', async () => {
+      await waitFor(element(by.id('analytics-section')))
         .toBeVisible()
         .withTimeout(10000)
     })
@@ -38,7 +38,7 @@ describe('Analytics Screen', () => {
       const text = await internalTitleElement.getAttributes()
       const titleText = text.text || text.label
       jestExpect(titleText).toBeTruthy()
-      jestExpect(['[Baseline] All New or Return Visitors']).toContain(titleText)
+      jestExpect(titleText).toBe('[Baseline] All New or Return Visitors')
     })
 
     it('should display content text', async () => {
@@ -51,7 +51,7 @@ describe('Analytics Screen', () => {
       const text = await contentTextElement.getAttributes()
       const contentText = text.text || text.label
       jestExpect(contentText).toBeTruthy()
-      jestExpect(['This is a baseline content entry for all users.']).toContain(contentText)
+      jestExpect(contentText).toBe('This is a baseline content entry for all users.')
     })
 
     it('should display entry ID', async () => {
@@ -64,10 +64,10 @@ describe('Analytics Screen', () => {
       const text = await entryIdElement.getAttributes()
       const entryId = text.text || text.label
       jestExpect(entryId).toBeTruthy()
-      jestExpect(['2Z2WLOx07InSewC3LUB3eX']).toContain(entryId)
+      jestExpect(entryId).toBe('2Z2WLOx07InSewC3LUB3eX')
     })
 
-    it.only('should display tracking status', async () => {
+    it('should display tracking status', async () => {
       await waitFor(element(by.id('analytics-tracking-status')))
         .toBeVisible()
         .withTimeout(10000)

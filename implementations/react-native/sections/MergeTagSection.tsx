@@ -46,7 +46,7 @@ export function MergeTagSection({ sdk, mergeTagEntry }: MergeTagSectionProps): R
   }
 
   return (
-    <View testID="merge-tag-screen">
+    <View testID="merge-tag-section">
       <View testID="merge-tag-content">
         <RichTextRenderer richText={richTextField} sdk={sdk} />
       </View>

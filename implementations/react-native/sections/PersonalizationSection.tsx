@@ -28,7 +28,7 @@ export function PersonalizationSection({
     typeof personalizationEntry.fields.text === 'string' ? personalizationEntry.fields.text : ''
 
   return (
-    <View testID="personalization-screen">
+    <View testID="personalization-section">
       <ScrollProvider>
         <Personalization baselineEntry={personalizationEntry}>
           {(resolvedEntry) => (

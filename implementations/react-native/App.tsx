@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { SafeAreaView, ScrollView, StyleSheet, Text } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
 import { OptimizationProvider } from '@contentful/optimization-react-native'
@@ -51,15 +51,9 @@ function App(): React.JSX.Element {
     <OptimizationProvider instance={sdk}>
       <SafeAreaView style={styles.container}>
         <ScrollView>
-          <View testID="merge-tag-section">
-            <MergeTagSection sdk={sdk} mergeTagEntry={mergeTagEntry} />
-          </View>
-          <View testID="personalization-section">
-            <PersonalizationSection sdk={sdk} personalizationEntry={personalizationEntry} />
-          </View>
-          <View testID="analytics-section">
-            <AnalyticsSection sdk={sdk} analyticsEntry={analyticsEntry} />
-          </View>
+          <MergeTagSection sdk={sdk} mergeTagEntry={mergeTagEntry} />
+          <PersonalizationSection sdk={sdk} personalizationEntry={personalizationEntry} />
+          <AnalyticsSection sdk={sdk} analyticsEntry={analyticsEntry} />
         </ScrollView>
       </SafeAreaView>
     </OptimizationProvider>

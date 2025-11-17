@@ -1,5 +1,6 @@
 import type Optimization from '@contentful/optimization-react-native'
 import { logger } from '@contentful/optimization-react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { createClient, type Entry } from 'contentful'
 import AsyncStorageStore from '../../../platforms/javascript/react-native/src/storage/AsyncStorageStore'
 import { ENV_CONFIG } from '../env.config'
@@ -133,4 +134,15 @@ export async function fetchAnalyticsEntry(
     setSdkError,
     errorPrefix: `Failed to fetch analytics entry with ID ${ANALYTICS_ENTRY_ID}`,
   })
+}
+
+export async function clearProfileState(): Promise<void> {
+  try {
+    const keys = ['__ctfl_opt_profile__', '__ctfl_opt_personalizations__', '__ctfl_opt_changes__']
+    await AsyncStorage.multiRemove(keys)
+    logger.info('Profile state cleared successfully')
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    logger.error(`Failed to clear profile state: ${errorMessage}`)
+  }
 }

@@ -26,7 +26,7 @@ export function AnalyticsSection({
       : ''
   const text = typeof analyticsEntry.fields.text === 'string' ? analyticsEntry.fields.text : ''
   return (
-    <View testID="analytics-screen">
+    <View testID="analytics-section">
       <ScrollProvider>
         <Analytics entry={analyticsEntry}>
           <View testID="analytics-content">

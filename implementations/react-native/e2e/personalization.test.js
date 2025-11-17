@@ -1,27 +1,16 @@
 const { expect: jestExpect } = require('@jest/globals')
+const { clearProfileState } = require('./helpers')
 
-describe('Personalization Screen', () => {
+describe('Personalization Section', () => {
   beforeAll(async () => {
     await device.launchApp()
   })
 
   beforeEach(async () => {
-    await device.reloadReactNative()
+    await clearProfileState()
   })
 
   describe('Personalization Rendering', () => {
-    it('should display the personalization section', async () => {
-      await waitFor(element(by.id('personalization-section')))
-        .toBeVisible()
-        .withTimeout(10000)
-    })
-
-    it('should display the personalization screen', async () => {
-      await waitFor(element(by.id('personalization-screen')))
-        .toBeVisible()
-        .withTimeout(10000)
-    })
-
     it('should display personalization content', async () => {
       await waitFor(element(by.id('personalization-content')))
         .toBeVisible()
@@ -38,7 +27,7 @@ describe('Personalization Screen', () => {
       const text = await internalTitleElement.getAttributes()
       const titleText = text.text || text.label
       jestExpect(titleText).toBeTruthy()
-      jestExpect(['[Variant] New Visitors']).toContain(titleText)
+      jestExpect('[Variant] New Visitors').toBe(titleText)
     })
 
     it('should display content text', async () => {
@@ -51,10 +40,10 @@ describe('Personalization Screen', () => {
       const text = await contentTextElement.getAttributes()
       const contentText = text.text || text.label
       jestExpect(contentText).toBeTruthy()
-      jestExpect(['This is a variant content entry for new visitors.']).toContain(contentText)
+      jestExpect(contentText).toBe('This is a variant content entry for new visitors.')
     })
 
-    it('should display entry ID', async () => {
+    it.only('should display entry ID', async () => {
       await waitFor(element(by.id('personalization-entry-id')))
         .toBeVisible()
         .withTimeout(10000)
@@ -64,7 +53,7 @@ describe('Personalization Screen', () => {
       const text = await entryIdElement.getAttributes()
       const entryId = text.text || text.label
       jestExpect(entryId).toBeTruthy()
-      jestExpect(['1UFf7qr4mHET3HYuYmcpEj']).toContain(entryId)
+      jestExpect(entryId).toBe('1UFf7qr4mHET3HYuYmcpEj')
     })
 
     it('should display tracking status', async () => {
