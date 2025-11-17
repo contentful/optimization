@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { Text, View } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
@@ -28,6 +28,7 @@ interface EmbeddedEntryInlineNode {
 interface RichTextRendererProps {
   richText: RichTextField
   sdk: Optimization
+  profile: Profile
 }
 
 function isMergeTagEntry(entry: Entry): entry is MergeTagEntry {
@@ -78,20 +79,6 @@ function resolveMergeTagValue(
   return valueString
 }
 
-function hasMergeTags(node: RichTextNode): boolean {
-  if (isEmbeddedEntryInline(node)) {
-    return isMergeTagEntry(node.data.target)
-  }
-  if (node.content) {
-    return node.content.some(hasMergeTags)
-  }
-  return false
-}
-
-function hasMergeTagsInRichText(richText: RichTextField): boolean {
-  return richText.content.some(hasMergeTags)
-}
-
 function renderEmbeddedEntry(
   node: EmbeddedEntryInlineNode,
   sdk: Optimization,
@@ -110,30 +97,11 @@ function renderEmbeddedEntry(
   return resolveMergeTagValue(includedEntry, sdk, profile)
 }
 
-export function RichTextRenderer({ richText, sdk }: RichTextRendererProps): React.JSX.Element {
-  const [profile, setProfile] = useState<Profile | undefined>(undefined)
-  const containsMergeTags = hasMergeTagsInRichText(richText)
-
-  useEffect(() => {
-    const subscription = sdk.states.profile.subscribe((currentProfile) => {
-      logger.debug(
-        '[RichTextRenderer] Profile received:',
-        currentProfile
-          ? `ID: ${currentProfile.id}, location.continent: ${String(currentProfile.location.continent)}`
-          : 'undefined',
-      )
-      setProfile(currentProfile)
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [sdk])
-
-  if (containsMergeTags && !profile) {
-    return <View testID="rich-text-renderer" />
-  }
-
+export function RichTextRenderer({
+  richText,
+  sdk,
+  profile,
+}: RichTextRendererProps): React.JSX.Element {
   const renderNode = (
     node: RichTextNode,
     index: number,
@@ -156,9 +124,6 @@ export function RichTextRenderer({ richText, sdk }: RichTextRendererProps): Reac
     }
 
     if (isEmbeddedEntryInline(node)) {
-      if (!profile) {
-        return null
-      }
       const mergeTagValue = renderEmbeddedEntry(node, sdk, profile)
       logger.debug(`[RichTextRenderer] Merge tag resolved to: "${mergeTagValue}"`)
       return mergeTagValue
