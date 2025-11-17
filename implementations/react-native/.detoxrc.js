@@ -1,3 +1,5 @@
+const path = require('path')
+
 /** @type {Detox.DetoxConfig} */
 module.exports = {
   testRunner: {
