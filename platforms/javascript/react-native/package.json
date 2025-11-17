@@ -32,7 +32,7 @@
     "dev:ios": "react-native run-ios --projectRoot dev --config dev/metro.config.js",
     "dev:start": "react-native start --projectRoot dev --config dev/metro.config.js",
     "dev:start:clean": "kill-port 8081 && react-native start --reset-cache --projectRoot dev --config dev/metro.config.js",
-    "dev:test": "cd dev && jest"
+    "dev:test": "jest --config dev/jest.config.js"
   },
   "dependencies": {
     "@contentful/optimization-core": "workspace:*",
