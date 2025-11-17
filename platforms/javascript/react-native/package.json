@@ -30,15 +30,8 @@
     "typecheck": "tsc --noEmit",
     "dev:android": "react-native run-android --projectRoot dev --config dev/metro.config.js",
     "dev:ios": "react-native run-ios --projectRoot dev --config dev/metro.config.js",
-    "dev:lint": "cd dev && eslint .",
-    "dev:lint:fix": "cd dev && eslint . --fix",
-    "dev:format": "cd dev && prettier . --check",
-    "dev:format:fix": "cd dev && prettier . --write",
     "dev:start": "react-native start --projectRoot dev --config dev/metro.config.js",
     "dev:start:clean": "kill-port 8081 && react-native start --reset-cache --projectRoot dev --config dev/metro.config.js",
-    "dev:prestart": "kill-port 8081 || true",
-    "dev:serve:mocks": "pnpm --filter mocks serve",
-    "dev:build": "cd dev && react-native bundle --platform ios --dev false --entry-file index.js --bundle-output ios/main.jsbundle --assets-dest ios && react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res",
     "dev:test": "cd dev && jest"
   },
   "dependencies": {
