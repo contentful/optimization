@@ -1,4 +1,4 @@
-describe('ReactNativeApp - Merge Tag Reference Implementation', () => {
+describe('OptimizationImplementationApp - Merge Tag Reference Implementation', () => {
   beforeAll(async () => {
     await device.launchApp()
   })
@@ -9,7 +9,11 @@ describe('ReactNativeApp - Merge Tag Reference Implementation', () => {
 
   describe('Merge Tag Rendering', () => {
     it('should display the merge tag screen', async () => {
-      await waitFor(element(by.text(/This is a merge tag content entry/i)))
+      await waitFor(element(by.id('merge-tag-screen')))
+        .toBeVisible()
+        .withTimeout(10000)
+
+      await waitFor(element(by.text(/merge tag content entry/i)))
         .toBeVisible()
         .withTimeout(10000)
     })
@@ -21,12 +25,17 @@ describe('ReactNativeApp - Merge Tag Reference Implementation', () => {
     })
 
     it('should display resolved merge tag inline with text', async () => {
-      const expectedPattern =
-        /This is a merge tag content entry that displays the visitor's continent/i
-
-      await waitFor(element(by.text(expectedPattern)))
+      await waitFor(element(by.id('merge-tag-content')))
         .toBeVisible()
         .withTimeout(10000)
+
+      await waitFor(element(by.text(/merge tag content entry/i)))
+        .toBeVisible()
+        .withTimeout(5000)
+
+      await waitFor(element(by.text(/continent/i)))
+        .toBeVisible()
+        .withTimeout(5000)
     })
   })
 
