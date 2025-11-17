@@ -37,6 +37,8 @@
   "devDependencies": {
     "@types/express": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "@contentful/rich-text-html-renderer": "catalog:",
+    "@contentful/rich-text-types": "catalog:",
     "contentful": "catalog:",
     "express": "catalog:",
     "express-rate-limit": "catalog:",

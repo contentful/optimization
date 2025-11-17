@@ -23,6 +23,31 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
 
+      - run: |
+          echo "DOTENV_CONFIG_QUIET=true" >>.env
+          echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>.env
+          echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>.env
+          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>.env
+          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>.env
+          echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>.env
+          echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>.env
+          echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>.env
+          echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>.env
+          echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>.env
+          echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>.env
+
+      - run: cp .env implementations/node/
+      - run: cp .env implementations/web-vanilla/
+
+      - uses: actions/cache@v4
+        id: dotenv-cache
+        with:
+          path: |
+            .env
+            implementations/node/.env
+            implementations/web-vanilla/.env
+          key: ${{ runner.os }}-dotenv
+
       - uses: actions/cache@v4
         id: node-modules-cache
         with:
@@ -192,15 +217,16 @@ jobs:
       - uses: actions/checkout@v5
 
       - run: |
+          echo "DOTENV_CONFIG_QUIET=true" >>implementations/node/.env
           echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/node/.env
           echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/node/.env
-          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost/experience/" >>implementations/node/.env
-          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost/insights/" >>implementations/node/.env
+          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>implementations/node/.env
+          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>implementations/node/.env
           echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/node/.env
           echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/node/.env
           echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/node/.env
           echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/node/.env
-          echo "VITE_CONTENTFUL_CDA_HOST=localhost" >>implementations/node/.env
+          echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/node/.env
           echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>implementations/node/.env
 
       - uses: pnpm/action-setup@v4
@@ -239,18 +265,6 @@ jobs:
 
       - uses: actions/checkout@v5
 
-      - run: |
-          echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/web-vanilla/.env
-          echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/web-vanilla/.env
-          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>implementations/web-vanilla/.env
-          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>implementations/web-vanilla/.env
-          echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/web-vanilla/.env
-          echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/web-vanilla/.env
-          echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/web-vanilla/.env
-          echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/web-vanilla/.env
-          echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/web-vanilla/.env
-          echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>implementations/web-vanilla/.env
-
       - uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v6
@@ -261,6 +275,14 @@ jobs:
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            .env
+            implementations/node/.env
+            implementations/web-vanilla/.env
+          key: ${{ runner.os }}-dotenv
 
       - run: pnpm i --prefer-offline --frozen-lockfile
 

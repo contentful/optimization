@@ -6,8 +6,8 @@ import {
   type OptimizationData,
   type PageViewBuilderArgs,
   PageViewEvent,
+  type PartialProfile,
   type ExperienceEvent as PersonalizationEvent,
-  type Profile,
   type TrackBuilderArgs,
   TrackEvent,
 } from '@contentful/optimization-api-client'
@@ -16,50 +16,53 @@ import PersonalizationBase from './PersonalizationBase'
 
 class PersonalizationStateless extends PersonalizationBase {
   async identify(
-    args: IdentifyBuilderArgs & { profile?: Profile },
+    args: IdentifyBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData | undefined> {
     logger.info('[Personalization] Sending "identify" event')
 
-    const { profile } = args
+    const { profile, ...builderArgs } = args
 
-    const event = IdentifyEvent.parse(this.builder.buildIdentify(args))
+    const event = IdentifyEvent.parse(this.builder.buildIdentify(builderArgs))
 
     return await this.#upsertProfile(event, profile)
   }
 
-  async page(args: PageViewBuilderArgs & { profile?: Profile }): Promise<OptimizationData> {
+  async page(args: PageViewBuilderArgs & { profile?: PartialProfile }): Promise<OptimizationData> {
     logger.info('[Personalization] Sending "page" event')
 
-    const { profile } = args
+    const { profile, ...builderArgs } = args
 
-    const event = PageViewEvent.parse(this.builder.buildPageView(args))
+    const event = PageViewEvent.parse(this.builder.buildPageView(builderArgs))
 
     return await this.#upsertProfile(event, profile)
   }
 
-  async track(args: TrackBuilderArgs & { profile?: Profile }): Promise<OptimizationData> {
+  async track(args: TrackBuilderArgs & { profile?: PartialProfile }): Promise<OptimizationData> {
     logger.info(`[Personalization] Sending "track" event "${args.event}"`)
 
-    const { profile } = args
+    const { profile, ...builderArgs } = args
 
-    const event = TrackEvent.parse(this.builder.buildTrack(args))
+    const event = TrackEvent.parse(this.builder.buildTrack(builderArgs))
 
     return await this.#upsertProfile(event, profile)
   }
 
   async trackComponentView(
-    args: ComponentViewBuilderArgs & { profile?: Profile },
+    args: ComponentViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData> {
     logger.info(`[Personalization] Sending "track personalization" event`)
 
-    const { profile } = args
+    const { profile, ...builderArgs } = args
 
-    const event = ComponentViewEvent.parse(this.builder.buildComponentView(args))
+    const event = ComponentViewEvent.parse(this.builder.buildComponentView(builderArgs))
 
     return await this.#upsertProfile(event, profile)
   }
 
-  async #upsertProfile(event: PersonalizationEvent, profile?: Profile): Promise<OptimizationData> {
+  async #upsertProfile(
+    event: PersonalizationEvent,
+    profile?: PartialProfile,
+  ): Promise<OptimizationData> {
     const intercepted = await this.interceptor.event.run(event)
 
     const anonymousId = this.builder.getAnonymousId()

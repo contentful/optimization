@@ -111,7 +111,7 @@ describe('MergeTagValueResolver', () => {
       expect(MergeTagValueResolver.getValueFromProfile('traits_nested.baz.qux', profile)).toEqual(
         'grml',
       )
-      expect(MergeTagValueResolver.getValueFromProfile('traits.non_nested', profile)).toEqual(123)
+      expect(MergeTagValueResolver.getValueFromProfile('traits.non_nested', profile)).toEqual('123')
     })
   })
 

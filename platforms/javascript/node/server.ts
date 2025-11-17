@@ -1,4 +1,10 @@
-import type { SelectedPersonalizationArray } from '@contentful/optimization-api-schemas'
+import type {
+  OptimizationData,
+  PartialProfile,
+  SelectedPersonalization,
+} from '@contentful/optimization-api-schemas'
+import { documentToHtmlString } from '@contentful/rich-text-html-renderer'
+import { type Document, INLINES } from '@contentful/rich-text-types'
 import type { Entry } from 'contentful'
 import * as contentful from 'contentful'
 import express, { type Express } from 'express'
@@ -6,16 +12,9 @@ import rateLimit from 'express-rate-limit'
 import path from 'node:path'
 import Optimization from './src'
 
-interface ContentEntrySkeleton {
-  contentTypeId: 'content'
-  fields: {
-    text: contentful.EntryFieldTypes.Text
-  }
-}
-
 const limiter = rateLimit({
-  windowMs: 900_000,
-  max: 100,
+  windowMs: 30_000,
+  max: 1000,
 })
 
 const app: Express = express()
@@ -43,46 +42,164 @@ const ctfl = contentful.createClient({
   insecure: Boolean(process.env.VITE_CONTENTFUL_CDA_HOST),
 })
 
-async function getEntries(
-  personalizations: SelectedPersonalizationArray = [],
-): Promise<Array<Entry<ContentEntrySkeleton>>> {
-  const possibleEntries: Array<Entry<ContentEntrySkeleton> | undefined> = await Promise.all(
-    personalizations.map(async ({ variants }) => {
-      const baselines = Object.keys(variants)
+interface ContentEntrySkeleton {
+  contentTypeId: 'content'
+  fields: {
+    text: contentful.EntryFieldTypes.Text
+  }
+}
 
-      if (!baselines.length || !baselines[0]) return
+interface ProfileState {
+  consent: boolean
+  userId?: string
+}
 
-      try {
-        return await ctfl.getEntry<ContentEntrySkeleton>(baselines[0], {
-          include: 10,
+const profileState = new Map<string, ProfileState>()
+
+async function getContentfulEntry(
+  entryId: string,
+): Promise<Entry<ContentEntrySkeleton> | undefined> {
+  try {
+    return await ctfl.getEntry<ContentEntrySkeleton>(entryId, {
+      include: 10,
+    })
+  } catch (_error) {}
+}
+
+function isNonEmptyString(s?: unknown): s is string {
+  return s !== undefined && typeof s === 'string' && s.trim().length > 0
+}
+
+function isRichText(field?: unknown): field is Document {
+  return (
+    typeof field === 'object' &&
+    field !== null &&
+    'nodeType' in field &&
+    field.nodeType === 'document'
+  )
+}
+
+function updateState({
+  profileId,
+  consent,
+  userId,
+}: {
+  profileId?: unknown
+  consent?: unknown
+  userId?: unknown
+}): void {
+  if (!isNonEmptyString(profileId)) return
+
+  const stateKey = profileId.trim()
+
+  const state = profileState.get(stateKey) ?? { consent: false }
+
+  if (consent !== undefined) state.consent = consent === 'true'
+
+  if (isNonEmptyString(userId)) state.userId = userId
+
+  profileState.set(stateKey, state)
+}
+
+function resetState(profileId?: unknown): void {
+  if (!isNonEmptyString(profileId)) {
+    profileState.clear()
+    return
+  }
+
+  profileState.set(profileId.trim(), { consent: false })
+}
+
+app.get('/', limiter, async (req, res) => {
+  let profileId = isNonEmptyString(req.query.profileId) ? req.query.profileId.trim() : undefined
+
+  if (req.query.reset === 'true') {
+    resetState(profileId)
+    profileId = undefined
+  } else {
+    updateState({
+      profileId,
+      consent: req.query.consent,
+      userId: req.query.userId,
+    })
+  }
+
+  const { consent, userId } = profileId ? (profileState.get(profileId) ?? {}) : {}
+
+  const requestProfile: PartialProfile | undefined =
+    typeof profileId === 'string' ? { id: profileId } : undefined
+
+  let apiResponse: OptimizationData | undefined = undefined
+
+  if (isNonEmptyString(userId)) {
+    await sdk.personalization.page({ profile: requestProfile })
+    apiResponse = await sdk.personalization.identify({
+      userId,
+      profile: requestProfile,
+    })
+  } else {
+    apiResponse = await sdk.personalization.page({ profile: requestProfile })
+  }
+
+  const { profile, personalizations, changes } = apiResponse ?? {}
+
+  const entryIds: string[] = [
+    '1MwiFl4z7gkwqGYdvCmr8c', // Rich Text field Entry with Merge Tag
+    '4ib0hsHWoSOnCVdDkizE8d',
+    'xFwgG3oNaOcjzWiGe4vXo',
+    '2Z2WLOx07InSewC3LUB3eX',
+    '5XHssysWUDECHzKLzoIsg1',
+    '6zqoWXyiSrf0ja7I2WGtYj',
+    '7pa5bOx8Z9NmNcr7mISvD',
+  ]
+
+  const entries = new Map<
+    string,
+    {
+      entry: Entry<ContentEntrySkeleton>
+      personalization?: SelectedPersonalization
+    }
+  >()
+
+  await Promise.all(
+    entryIds.map(async (entryId) => {
+      const entry = await getContentfulEntry(entryId)
+
+      if (!entry) return
+
+      if (isRichText(entry.fields.text)) {
+        entry.fields.text = documentToHtmlString(entry.fields.text, {
+          renderNode: {
+            [INLINES.EMBEDDED_ENTRY]: (node) => {
+              if (sdk.personalization.mergeTagValueResolver.isMergeTagEntry(node.data.target)) {
+                return (
+                  sdk.personalization.mergeTagValueResolver.resolve(node.data.target, profile) ?? ''
+                )
+              } else {
+                return ''
+              }
+            },
+          },
         })
-      } catch (_error) {}
+      }
+
+      const personalizedEntry = sdk.personalization.personalizedEntryResolver.resolve(
+        entry,
+        personalizations,
+      )
+
+      entries.set(entryId, personalizedEntry)
     }),
   )
 
-  const entries: Array<Entry<ContentEntrySkeleton>> = possibleEntries.filter(
-    (entry): entry is Entry<ContentEntrySkeleton> => entry !== undefined,
-  )
-
-  return entries
-}
-
-app.get('/', limiter, async (_req, res) => {
-  const { profile, personalizations, changes } =
-    (await sdk.personalization.identify({
-      userId: 'charles',
-    })) ?? {}
-
-  const entries = await getEntries(personalizations)
+  const flags = sdk.personalization.flagsResolver.resolve(changes)
 
   const pageData = {
-    consent: false, // Consent is handled manually, server-side
+    consent,
     profile,
     personalizations,
-    entries: entries.map((entry) =>
-      sdk.personalization.personalizedEntryResolver.resolve(entry, personalizations),
-    ),
-    flags: sdk.personalization.flagsResolver.resolve(changes),
+    entries,
+    flags,
   }
 
   res.render('index', { ...pageData })

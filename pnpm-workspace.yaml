@@ -5,6 +5,8 @@ packages:
   - universal/*
 
 catalog:
+  '@contentful/rich-text-html-renderer': ^17.1.6
+  '@contentful/rich-text-types': ^17.2.5
   '@playwright/test': ^1.55.1
   '@preact/signals-core': ^1.12.1
   '@types/express': ^5.0.3

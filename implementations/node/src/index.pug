@@ -1,7 +1,7 @@
 doctype html
 html(lang="en")
   head
-    title Optimization Node SDK Dev Development Dashboard
+    title Optimization Node SDK Implementation E2E Test
 
     style.
       html,
@@ -46,24 +46,6 @@ html(lang="en")
           color: blue;
         }
       }
-      button {
-        cursor: pointer;
-
-        &:not([type]) {
-          appearance: none;
-          background: transparent;
-          border: 0;
-          padding: 0;
-          font-family: inherit;
-          font-size: inherit;
-          text-decoration: underline;
-
-          &:hover,
-          &:active {
-            color: blue;
-          }
-        }
-      }
       #entries > div {
         display: grid;
         grid-gap: 2rem;
@@ -83,60 +65,17 @@ html(lang="en")
       }
 
   body
-    h1 Optimization Node SDK Dev Development Dashboard
+    h1 Optimization Node SDK Implementation E2E Test
 
     main
       section
         h2 States
 
-        - if (consent)
-          a(href=`/?profileId=${profile.id}&consent=false`) Reject Consent
-        - else
-          a(href=`/?profileId=${profile.id}&consent=true`) Accept Consent
-        |
-        | |
-        |
-        - if (profile.traits.identified === true)
-          a(href=`/?reset=true`) Reset Profile
-        - else
-          a(href=`/?profileId=${profile.id}&userId=charles`) Identify
-        |
-        | |
-        |
-        button Custom Flags
-        dialog
-          pre= JSON.stringify(flags, undefined, 2)
-          form(method='dialog')
-            button(type='submit') Close
-        |
-        | |
-        |
-        button Profile
-        dialog
-          pre= JSON.stringify(profile, undefined, 2)
-          form(method='dialog')
-            button(type='submit') Close
-        |
-        | |
-        |
-        button Personalizations
-        dialog
-          pre= JSON.stringify(personalizations, undefined, 2)
-          form(method='dialog')
-            button(type='submit') Close
-
-      section
-        h2 Entry Data
-
-        ol
-          each entryId in Array.from(entries.keys())
-            li
-              - const entry = entries.get(entryId)
-              button= entry.entry && entry.entry.fields ? entry.entry.fields.internalTitle : 'oops'
-              dialog
-                pre= JSON.stringify(entry, undefined, 2)
-                form(method='dialog')
-                  button(type='submit') Close
+        p
+          - if (profile.traits.identified === true)
+            span Identified
+          - else
+            a(href=`/?userId=charles`) Identify
 
       section#entries
         h2 Entries
@@ -204,12 +143,3 @@ html(lang="en")
             data-ctfl-variant-index=(entry7.personalization || {}).variantIndex
           )
             p= entry7.entry.fields.text
-
-    script.
-      const triggers = document.querySelectorAll('section > button, li > button')
-      triggers.forEach((trigger) => {
-        trigger.addEventListener('click', () => {
-          trigger.nextElementSibling.showModal()
-        })
-      })
-

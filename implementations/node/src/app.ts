@@ -1,16 +1,28 @@
-import Optimization from '@contentful/optimization-node'
+import Optimization, {
+  type OptimizationData,
+  type OptimizationNodeConfig,
+  type SelectedPersonalization,
+} from '@contentful/optimization-node'
+import { documentToHtmlString } from '@contentful/rich-text-html-renderer'
+import { INLINES, type Document } from '@contentful/rich-text-types'
+import type { Entry } from 'contentful'
+import * as contentful from 'contentful'
 import express, { type Express } from 'express'
 import rateLimit from 'express-rate-limit'
+import path from 'node:path'
 
 const limiter = rateLimit({
-  windowMs: 900_000,
-  max: 100,
+  windowMs: 30_000,
+  max: 1000,
 })
 
 const app: Express = express()
 app.use(limiter)
 
-const sdk = new Optimization({
+app.set('view engine', 'pug') // configure Pug as the view engine
+app.set('views', path.join(__dirname, '.')) // define the directory for view templates
+
+const optimizationConfig: OptimizationNodeConfig = {
   clientId: process.env.VITE_NINETAILED_CLIENT_ID ?? '',
   environment: process.env.VITE_NINETAILED_ENVIRONMENT ?? '',
   logLevel: 'debug',
@@ -18,10 +30,139 @@ const sdk = new Optimization({
     analytics: { baseUrl: process.env.VITE_INSIGHTS_API_BASE_URL },
     personalization: { baseUrl: process.env.VITE_EXPERIENCE_API_BASE_URL },
   },
+}
+
+const sdk = new Optimization(optimizationConfig)
+
+const ctflConfig: contentful.CreateClientParams = {
+  accessToken: process.env.VITE_CONTENTFUL_TOKEN ?? '',
+  environment: process.env.VITE_CONTENTFUL_ENVIRONMENT ?? '',
+  space: process.env.VITE_CONTENTFUL_SPACE_ID ?? '',
+  host: process.env.VITE_CONTENTFUL_CDA_HOST ?? '',
+  basePath: process.env.VITE_CONTENTFUL_BASE_PATH ?? '',
+  insecure: Boolean(process.env.VITE_CONTENTFUL_CDA_HOST),
+}
+
+const ctfl = contentful.createClient(ctflConfig)
+
+interface ContentEntrySkeleton {
+  contentTypeId: 'content'
+  fields: {
+    text: contentful.EntryFieldTypes.Text | contentful.EntryFieldTypes.RichText
+  }
+}
+
+async function getContentfulEntry(
+  entryId: string,
+): Promise<Entry<ContentEntrySkeleton> | undefined> {
+  try {
+    return await ctfl.getEntry<ContentEntrySkeleton>(entryId, {
+      include: 10,
+    })
+  } catch (_error) {}
+}
+
+function isNonEmptyString(s?: unknown): s is string {
+  return s !== undefined && typeof s === 'string' && s.trim().length > 0
+}
+
+function isRichText(field?: unknown): field is Document {
+  return (
+    typeof field === 'object' &&
+    field !== null &&
+    'nodeType' in field &&
+    field.nodeType === 'document'
+  )
+}
+
+const entryIds: string[] = [
+  '1MwiFl4z7gkwqGYdvCmr8c', // Rich Text field Entry with Merge Tag
+  '4ib0hsHWoSOnCVdDkizE8d',
+  'xFwgG3oNaOcjzWiGe4vXo',
+  '2Z2WLOx07InSewC3LUB3eX',
+  '5XHssysWUDECHzKLzoIsg1',
+  '6zqoWXyiSrf0ja7I2WGtYj',
+  '7pa5bOx8Z9NmNcr7mISvD',
+]
+
+const entries = new Map<string, Entry<ContentEntrySkeleton>>()
+
+Promise.all(
+  entryIds.map(async (entryId) => {
+    const entry = await getContentfulEntry(entryId)
+    if (!entry) return
+    entries.set(entryId, entry)
+  }),
+).catch((error: unknown) => {
+  // eslint-disable-next-line no-console -- debug
+  console.log(error)
 })
 
-app.get('/', limiter, (_req, res) => {
-  res.send(sdk.config.clientId)
+app.get('/', limiter, async (req, res) => {
+  const userId = isNonEmptyString(req.query.userId) ? req.query.userId.trim() : undefined
+
+  let optimizationResponse: OptimizationData | undefined = undefined
+
+  if (isNonEmptyString(userId)) {
+    const pageResponse = await sdk.personalization.page({})
+    optimizationResponse = await sdk.personalization.identify({
+      userId,
+      traits: { identified: true },
+      profile: pageResponse.profile,
+    })
+  } else {
+    optimizationResponse = await sdk.personalization.page({})
+  }
+
+  const { profile, personalizations, changes } = optimizationResponse ?? {}
+
+  const personalizedEntries = new Map<
+    string,
+    {
+      entry: Entry<ContentEntrySkeleton>
+      personalization?: SelectedPersonalization
+    }
+  >()
+
+  entryIds.forEach((entryId) => {
+    const entry = entries.get(entryId)
+
+    if (!entry) return
+
+    if (isRichText(entry.fields.text)) {
+      entry.fields.text = documentToHtmlString(entry.fields.text, {
+        renderNode: {
+          [INLINES.EMBEDDED_ENTRY]: (node) => {
+            if (sdk.personalization.mergeTagValueResolver.isMergeTagEntry(node.data.target)) {
+              return (
+                sdk.personalization.mergeTagValueResolver.resolve(node.data.target, profile) ?? ''
+              )
+            } else {
+              return ''
+            }
+          },
+        },
+      })
+    }
+
+    const personalizedEntry = sdk.personalization.personalizedEntryResolver.resolve(
+      entry,
+      personalizations,
+    )
+
+    personalizedEntries.set(entryId, personalizedEntry)
+  })
+
+  const flags = sdk.personalization.flagsResolver.resolve(changes)
+
+  const pageData = {
+    profile,
+    personalizations,
+    entries: personalizedEntries,
+    flags,
+  }
+
+  res.render('index', { ...pageData })
 })
 
 const port = 3000
