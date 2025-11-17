@@ -20,29 +20,31 @@ export function PersonalizationSection({
     void sdk.personalization.page({ properties: { url: 'personalization' } })
   }, [sdk])
 
-  const internalTitle =
-    typeof personalizationEntry.fields.internalTitle === 'string'
-      ? personalizationEntry.fields.internalTitle
-      : ''
-  const text =
-    typeof personalizationEntry.fields.text === 'string' ? personalizationEntry.fields.text : ''
-
   return (
     <View testID="personalization-section">
       <ScrollProvider>
         <Personalization baselineEntry={personalizationEntry}>
-          {(resolvedEntry) => (
-            <View testID="personalization-content">
-              <Text testID="personalization-internal-title">{internalTitle}</Text>
-              <Text testID="personalization-content-text">{text}</Text>
-              <Text testID="personalization-entry-id">{resolvedEntry.sys.id}</Text>
-              <TrackingStatus
-                sdk={sdk}
-                componentId={personalizationEntry.sys.id}
-                testID="personalization-tracking-status"
-              />
-            </View>
-          )}
+          {(resolvedEntry) => {
+            const internalTitle =
+              typeof resolvedEntry.fields.internalTitle === 'string'
+                ? resolvedEntry.fields.internalTitle
+                : ''
+            const text =
+              typeof resolvedEntry.fields.text === 'string' ? resolvedEntry.fields.text : ''
+
+            return (
+              <View testID="personalization-content">
+                <Text testID="personalization-internal-title">{internalTitle}</Text>
+                <Text testID="personalization-content-text">{text}</Text>
+                <Text testID="personalization-entry-id">{resolvedEntry.sys.id}</Text>
+                <TrackingStatus
+                  sdk={sdk}
+                  componentId={personalizationEntry.sys.id}
+                  testID="personalization-tracking-status"
+                />
+              </View>
+            )
+          }}
         </Personalization>
       </ScrollProvider>
     </View>

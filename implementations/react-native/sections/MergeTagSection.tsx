@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { Text, View } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
+import type { Profile } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 
 import { RichTextRenderer } from '../components/RichTextRenderer'
@@ -9,6 +10,7 @@ import { RichTextRenderer } from '../components/RichTextRenderer'
 interface MergeTagSectionProps {
   sdk: Optimization
   mergeTagEntry: Entry
+  profile: Profile
 }
 
 interface RichTextNode {
@@ -34,7 +36,11 @@ function isRichTextField(field: unknown): field is RichTextField {
   )
 }
 
-export function MergeTagSection({ sdk, mergeTagEntry }: MergeTagSectionProps): React.JSX.Element {
+export function MergeTagSection({
+  sdk,
+  mergeTagEntry,
+  profile,
+}: MergeTagSectionProps): React.JSX.Element {
   useEffect(() => {
     void sdk.personalization.page({ properties: { url: 'merge-tags' } })
   }, [sdk])
@@ -48,7 +54,7 @@ export function MergeTagSection({ sdk, mergeTagEntry }: MergeTagSectionProps): R
   return (
     <View testID="merge-tag-section">
       <View testID="merge-tag-content">
-        <RichTextRenderer richText={richTextField} sdk={sdk} />
+        <RichTextRenderer richText={richTextField} sdk={sdk} profile={profile} />
       </View>
     </View>
   )

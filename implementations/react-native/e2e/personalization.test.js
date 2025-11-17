@@ -43,7 +43,7 @@ describe('Personalization Section', () => {
       jestExpect(contentText).toBe('This is a variant content entry for new visitors.')
     })
 
-    it.only('should display entry ID', async () => {
+    it('should display entry ID', async () => {
       await waitFor(element(by.id('personalization-entry-id')))
         .toBeVisible()
         .withTimeout(10000)
