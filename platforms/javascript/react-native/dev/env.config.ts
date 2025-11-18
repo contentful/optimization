@@ -1,9 +1,7 @@
-/**
- * Environment Configuration for React Native Implementation
- *
- * This file contains the configuration for the mock server.
- * For production, use proper environment variable management.
- */
+import dotenv from 'dotenv'
+import { resolve } from 'node:path'
+
+dotenv.config({ path: resolve(process.cwd(), 'platforms/javascript/react-native/.env') })
 
 interface EnvConfig {
   contentful: {
@@ -28,32 +26,28 @@ interface EnvConfig {
   }
 }
 
-export const ENV_CONFIG: EnvConfig = {
-  // Contentful Configuration
+export const ENV_CONFIG = {
   contentful: {
-    spaceId: 'test-space',
-    environment: 'master',
-    accessToken: 'test-token',
-    host: 'localhost:8000',
-    basePath: '/contentful',
+    spaceId: process.env.CONTENTFUL_SPACE_ID ?? '',
+    environment: process.env.CONTENTFUL_ENVIRONMENT ?? '',
+    accessToken: process.env.CONTENTFUL_TOKEN ?? '',
+    host: process.env.CONTENTFUL_CDA_HOST ?? '',
+    basePath: process.env.CONTENTFUL_BASE_PATH ?? '',
   },
 
-  // Optimization SDK Configuration
   optimization: {
-    clientId: 'test-client-id',
-    environment: 'main',
+    clientId: process.env.NINETAILED_CLIENT_ID ?? '',
+    environment: process.env.NINETAILED_ENVIRONMENT ?? '',
   },
 
-  // Mock Server URLs (for development/testing)
   api: {
-    experienceBaseUrl: 'http://localhost:8000/experience/',
-    insightsBaseUrl: 'http://localhost:8000/insights/',
+    experienceBaseUrl: process.env.EXPERIENCE_API_BASE_URL ?? '',
+    insightsBaseUrl: process.env.INSIGHTS_API_BASE_URL ?? '',
   },
 
-  // Entry IDs from mock server
   entries: {
-    personalized: '2Z2WLOx07InSewC3LUB3eX', // Baseline with experiences
-    product: '1MwiFl4z7gkwqGYdvCmr8c', // Simple content entry
-    mergeTag: '1MwiFl4z7gkwqGYdvCmr8c', // Entry with merge tag in rich text
+    personalized: '2Z2WLOx07InSewC3LUB3eX',
+    product: '1MwiFl4z7gkwqGYdvCmr8c',
+    mergeTag: '1MwiFl4z7gkwqGYdvCmr8c',
   },
-}
+} as const satisfies EnvConfig
