@@ -18,16 +18,24 @@ const MergeTagValueResolver = {
     })
   },
 
-  getValueFromProfile(id: string, profile?: Profile): unknown {
+  getValueFromProfile(id: string, profile?: Profile): string | undefined {
     const selectors = MergeTagValueResolver.normalizeSelectors(id)
     const matchingSelector = selectors.find((selector) => get(profile, selector))
 
-    if (!matchingSelector) return
+    if (!matchingSelector) return undefined
 
-    return get(profile, matchingSelector)
+    const value: unknown = get(profile, matchingSelector)
+
+    if (
+      !value ||
+      (typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean')
+    )
+      return undefined
+
+    return `${value}`
   },
 
-  resolve(mergeTagEntry: MergeTagEntry | undefined, profile?: Profile): unknown {
+  resolve(mergeTagEntry: MergeTagEntry | undefined, profile?: Profile): string | undefined {
     if (!MergeTagValueResolver.isMergeTagEntry(mergeTagEntry)) {
       logger.warn(RESOLUTION_WARNING_BASE, 'supplied entry is not a Merge Tag entry')
       return

@@ -3,13 +3,15 @@ import {
   type ComponentViewBuilderArgs,
   ComponentViewEvent,
   type InsightsEvent,
-  type Profile,
+  type PartialProfile,
 } from '@contentful/optimization-api-client'
 import { logger } from 'logger'
 import AnalyticsBase from './AnalyticsBase'
 
 class AnalyticsStateless extends AnalyticsBase {
-  async trackComponentView(args: ComponentViewBuilderArgs & { profile?: Profile }): Promise<void> {
+  async trackComponentView(
+    args: ComponentViewBuilderArgs & { profile?: PartialProfile },
+  ): Promise<void> {
     logger.info(`[Analytics] Processing "component view" event`)
 
     const { profile, ...builderArgs } = args
@@ -23,7 +25,9 @@ class AnalyticsStateless extends AnalyticsBase {
     await this.sendBatchEvent(parsed, profile)
   }
 
-  async trackFlagView(args: ComponentViewBuilderArgs & { profile?: Profile }): Promise<void> {
+  async trackFlagView(
+    args: ComponentViewBuilderArgs & { profile?: PartialProfile },
+  ): Promise<void> {
     logger.debug(`[Analytics] Processing "flag view" event`)
 
     const { profile, ...builderArgs } = args
@@ -37,7 +41,7 @@ class AnalyticsStateless extends AnalyticsBase {
     await this.sendBatchEvent(parsed, profile)
   }
 
-  async sendBatchEvent(event: InsightsEvent, profile?: Profile): Promise<void> {
+  async sendBatchEvent(event: InsightsEvent, profile?: PartialProfile): Promise<void> {
     const batchEvent: BatchInsightsEventArray = BatchInsightsEventArray.parse([
       {
         profile,

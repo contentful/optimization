@@ -1,9 +1,9 @@
 import * as z from 'zod/mini'
-import { Profile } from '../../experience/profile'
+import { PartialProfile } from '../../experience/profile'
 import { InsightsEventArray } from './InsightsEvent'
 
 export const BatchInsightsEvent = z.object({
-  profile: Profile,
+  profile: PartialProfile,
   events: InsightsEventArray,
 })
 export type BatchInsightsEvent = z.infer<typeof BatchInsightsEvent>
