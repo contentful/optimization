@@ -6,6 +6,7 @@
   "scripts": {
     "pm2:list": "pm2 list",
     "pm2:logs": "pm2 logs",
+    "pm2:delete:all": "pm2 delete all",
     "pm2:stop:all": "pm2 stop all",
     "prepare": "husky",
     "build": "pnpm --filter @contentful/* build",

@@ -2,14 +2,16 @@ import Optimization, {
   type OptimizationData,
   type OptimizationNodeConfig,
   type SelectedPersonalization,
+  type UniversalEventBuilderArgs,
 } from '@contentful/optimization-node'
 import { documentToHtmlString } from '@contentful/rich-text-html-renderer'
 import { INLINES, type Document } from '@contentful/rich-text-types'
 import type { Entry } from 'contentful'
 import * as contentful from 'contentful'
-import express, { type Express } from 'express'
+import express, { type Express, type Request } from 'express'
 import rateLimit from 'express-rate-limit'
 import path from 'node:path'
+import type { ParsedQs } from 'qs'
 
 const limiter = rateLimit({
   windowMs: 30_000,
@@ -98,20 +100,67 @@ Promise.all(
   console.log(error)
 })
 
+type QsPrimitive = string | ParsedQs
+type QsArray = QsPrimitive[] // Note: mixed arrays are allowed by ParsedQs
+type QsValue = QsPrimitive | QsArray | undefined
+
+function toStringValue(value: QsValue): string | null {
+  if (value === undefined) return null
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) {
+    const items = value.map((v) => (typeof v === 'string' ? v : JSON.stringify(v)))
+    return items.join(',')
+  }
+  // value is a ParsedQs object
+  return JSON.stringify(value)
+}
+
+export function getQueryRecordFromRequest(qs: ParsedQs): Record<string, string> {
+  return Object.keys(qs).reduce<Record<string, string>>((acc, key) => {
+    const str = toStringValue(qs[key])
+    if (str !== null) {
+      acc[key] = str
+    }
+    return acc
+  }, {})
+}
+
+function getUniversalEventBuilderArgs(req: Request): UniversalEventBuilderArgs {
+  const url = new URL(req.protocol + '://' + req.get('host') + req.originalUrl)
+  return {
+    locale: req.acceptsLanguages()[0] ?? 'en-US',
+    userAgent: req.get('User-Agent') ?? 'node-js-server',
+    page: {
+      path: req.path,
+      query: getQueryRecordFromRequest(req.query),
+      referrer: req.get('Referer') ?? '',
+      search: url.search,
+      url: req.url,
+    },
+  }
+}
+
 app.get('/', limiter, async (req, res) => {
+  const universalEventBuilderArgs = getUniversalEventBuilderArgs(req)
+
   const userId = isNonEmptyString(req.query.userId) ? req.query.userId.trim() : undefined
 
   let optimizationResponse: OptimizationData | undefined = undefined
 
   if (isNonEmptyString(userId)) {
-    const pageResponse = await sdk.personalization.page({})
+    const pageResponse = await sdk.personalization.page({
+      ...universalEventBuilderArgs,
+    })
     optimizationResponse = await sdk.personalization.identify({
+      ...universalEventBuilderArgs,
       userId,
       traits: { identified: true },
       profile: pageResponse.profile,
     })
   } else {
-    optimizationResponse = await sdk.personalization.page({})
+    optimizationResponse = await sdk.personalization.page({
+      ...universalEventBuilderArgs,
+    })
   }
 
   const { profile, personalizations, changes } = optimizationResponse ?? {}

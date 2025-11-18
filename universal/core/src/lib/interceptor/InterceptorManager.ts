@@ -11,16 +11,16 @@ export type Interceptor<T> = (value: Readonly<T>) => MaybePromise<T>
  * - Interceptors are executed in insertion order.
  */
 export class InterceptorManager<T> {
-  readonly #interceptors = new Map<number, Interceptor<T>>()
-  #nextId = 0
+  private readonly interceptors = new Map<number, Interceptor<T>>()
+  private nextId = 0
 
   /**
    * Add an interceptor. Returns a numeric id that can be used to remove it later.
    */
   add(interceptor: Interceptor<T>): number {
-    const id = this.#nextId
-    this.#nextId += 1
-    this.#interceptors.set(id, interceptor)
+    const { nextId: id } = this
+    this.nextId += 1
+    this.interceptors.set(id, interceptor)
     return id
   }
 
@@ -28,21 +28,21 @@ export class InterceptorManager<T> {
    * Remove an interceptor by id. Returns true if one was removed.
    */
   remove(id: number): boolean {
-    return this.#interceptors.delete(id)
+    return this.interceptors.delete(id)
   }
 
   /**
    * Remove all interceptors.
    */
   clear(): void {
-    this.#interceptors.clear()
+    this.interceptors.clear()
   }
 
   /**
    * How many interceptors are registered.
    */
   count(): number {
-    return this.#interceptors.size
+    return this.interceptors.size
   }
 
   /**
@@ -51,7 +51,7 @@ export class InterceptorManager<T> {
    */
   async run(input: T): Promise<T> {
     // Snapshot to avoid issues if interceptors are added/removed during execution.
-    const fns: ReadonlyArray<Interceptor<T>> = Array.from(this.#interceptors.values())
+    const fns: ReadonlyArray<Interceptor<T>> = Array.from(this.interceptors.values())
 
     let acc: T = input
 
