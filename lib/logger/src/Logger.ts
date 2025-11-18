@@ -5,52 +5,52 @@ import type LogSink from './LogSink'
 export class Logger {
   readonly name = '@contentful/optimization'
 
-  readonly #diary: Diary
-  #sinks: LogSink[] = []
+  private readonly diary: Diary
+  private sinks: LogSink[] = []
 
   constructor() {
-    this.#diary = diary(this.name, this.onLogEvent.bind(this))
+    this.diary = diary(this.name, this.onLogEvent.bind(this))
     enable(this.name)
   }
 
   public addSink(sink: LogSink): void {
-    this.#sinks = [...this.#sinks.filter((existingSink) => existingSink.name !== sink.name), sink]
+    this.sinks = [...this.sinks.filter((existingSink) => existingSink.name !== sink.name), sink]
   }
 
   public removeSink(name: string): void {
-    this.#sinks = this.#sinks.filter((sink) => sink.name !== name)
+    this.sinks = this.sinks.filter((sink) => sink.name !== name)
   }
 
   public removeSinks(): void {
-    this.#sinks = []
+    this.sinks = []
   }
 
   public debug(message: string, ...args: unknown[]): void {
-    this.#diary.debug(message, ...args)
+    this.diary.debug(message, ...args)
   }
 
   public info(message: string, ...args: unknown[]): void {
-    this.#diary.info(message, ...args)
+    this.diary.info(message, ...args)
   }
 
   public log(message: string, ...args: unknown[]): void {
-    this.#diary.log(message, ...args)
+    this.diary.log(message, ...args)
   }
 
   public warn(message: string, ...args: unknown[]): void {
-    this.#diary.warn(message, ...args)
+    this.diary.warn(message, ...args)
   }
 
   public error(message: string | Error, ...args: unknown[]): void {
-    this.#diary.error(message, ...args)
+    this.diary.error(message, ...args)
   }
 
   public fatal(message: string | Error, ...args: unknown[]): void {
-    this.#diary.fatal(message, ...args)
+    this.diary.fatal(message, ...args)
   }
 
   private onLogEvent(event: LogEvent): void {
-    this.#sinks.forEach((sink) => {
+    this.sinks.forEach((sink) => {
       sink.ingest(event)
     })
   }

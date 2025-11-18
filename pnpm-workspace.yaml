@@ -11,6 +11,7 @@ catalog:
   '@preact/signals-core': ^1.12.1
   '@types/express': ^5.0.3
   '@types/node': ^24.0.13
+  '@types/qs': ^6.14.0
   '@types/supertest': ^6.0.3
   '@vitest/coverage-v8': ^3.2.4
   browserslist: ^4.25.1
@@ -22,6 +23,7 @@ catalog:
   msw: ^2.10.5
   p-retry: ^7.1.0
   pm2: ^6.0.13
+  qs: ^6.14.0
   rimraf: ^6.0.1
   rollup: ^4.44.1
   supertest: 7.1.3

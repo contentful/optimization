@@ -26,12 +26,14 @@
     "contentful": "catalog:",
     "express": "catalog:",
     "express-rate-limit": "catalog:",
+    "qs": "catalog:",
     "tslib": "catalog:"
   },
   "devDependencies": {
     "@playwright/test": "catalog:",
     "@types/express": "catalog:",
     "@types/node": "catalog:",
+    "@types/qs": "catalog:",
     "dotenv": "catalog:",
     "pm2": "catalog:",
     "rimraf": "catalog:",

@@ -18,6 +18,9 @@ catalogs:
     '@types/express':
       specifier: ^5.0.3
       version: 5.0.3
+    '@types/qs':
+      specifier: ^6.14.0
+      version: 6.14.0
     '@types/supertest':
       specifier: ^6.0.3
       version: 6.0.3
@@ -48,6 +51,9 @@ catalogs:
     pm2:
       specifier: ^6.0.13
       version: 6.0.13
+    qs:
+      specifier: ^6.14.0
+      version: 6.14.0
     rimraf:
       specifier: ^6.0.1
       version: 6.0.1
@@ -143,6 +149,9 @@ importers:
       express-rate-limit:
         specifier: 'catalog:'
         version: 8.1.0(express@5.1.0)
+      qs:
+        specifier: 'catalog:'
+        version: 6.14.0
       tslib:
         specifier: 'catalog:'
         version: 2.8.1
@@ -156,6 +165,9 @@ importers:
       '@types/node':
         specifier: ^24.0.13
         version: 24.2.0
+      '@types/qs':
+        specifier: 'catalog:'
+        version: 6.14.0
       dotenv:
         specifier: 'catalog:'
         version: 17.2.2
@@ -181,7 +193,7 @@ importers:
         specifier: workspace:*
         version: link:../../platforms/javascript/web/dist
       cookie-parser:
-        specifier: 1.4.7
+        specifier: ^1.4.7
         version: 1.4.7
       express:
         specifier: 'catalog:'
@@ -189,6 +201,9 @@ importers:
       express-rate-limit:
         specifier: 'catalog:'
         version: 8.1.0(express@5.1.0)
+      qs:
+        specifier: 'catalog:'
+        version: 6.14.0
       tslib:
         specifier: 'catalog:'
         version: 2.8.1
@@ -205,6 +220,9 @@ importers:
       '@types/node':
         specifier: ^24.0.13
         version: 24.2.0
+      '@types/qs':
+        specifier: 'catalog:'
+        version: 6.14.0
       '@types/supertest':
         specifier: 'catalog:'
         version: 6.0.3

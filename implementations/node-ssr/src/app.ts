@@ -1,7 +1,11 @@
-import Optimization, { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node'
+import Optimization, {
+  ANONYMOUS_ID_COOKIE,
+  type UniversalEventBuilderArgs,
+} from '@contentful/optimization-node'
 import cookieParser from 'cookie-parser'
-import express, { type Express, type Response } from 'express'
+import express, { type Express, type Request, type Response } from 'express'
 import rateLimit from 'express-rate-limit'
+import type { ParsedQs } from 'qs'
 
 const limiter = rateLimit({
   windowMs: 900_000,
@@ -51,30 +55,59 @@ const render = (sdk: Optimization): string => `<!doctype html>
 </html>
 `
 
-function initSDK(anonymousId: string | undefined): Optimization {
-  const url = new URL('http://localhost:3000/')
+const sdk = new Optimization({
+  clientId: CLIENT_ID,
+  environment: ENVIRONMENT,
+  logLevel: 'debug',
+  api: {
+    analytics: { baseUrl: VITE_INSIGHTS_API_BASE_URL },
+    personalization: { baseUrl: VITE_EXPERIENCE_API_BASE_URL },
+  },
+})
 
-  return new Optimization({
-    clientId: CLIENT_ID,
-    environment: ENVIRONMENT,
-    logLevel: 'debug',
-    eventBuilder: {
-      getAnonymousId: () => anonymousId,
-      getLocale: () => 'en-US',
-      getUserAgent: () => 'node-js-server',
-      getPageProperties: () => ({
-        path: url.pathname,
-        query: {},
-        referrer: 'http://localhost:3000/',
-        search: url.search,
-        url: url.toString(),
-      }),
+type QsPrimitive = string | ParsedQs
+type QsArray = QsPrimitive[] // Note: mixed arrays are allowed by ParsedQs
+type QsValue = QsPrimitive | QsArray | undefined
+
+function toStringValue(value: QsValue): string | null {
+  if (value === undefined) return null
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) {
+    const items = value.map((v) => (typeof v === 'string' ? v : JSON.stringify(v)))
+    return items.join(',')
+  }
+  // value is a ParsedQs object
+  return JSON.stringify(value)
+}
+
+export function getQueryRecordFromRequest(qs: ParsedQs): Record<string, string> {
+  return Object.keys(qs).reduce<Record<string, string>>((acc, key) => {
+    const str = toStringValue(qs[key])
+    if (str !== null) {
+      acc[key] = str
+    }
+    return acc
+  }, {})
+}
+
+function getUniversalEventBuilderArgs(req: Request): UniversalEventBuilderArgs {
+  const url = new URL(req.protocol + '://' + req.get('host') + req.originalUrl)
+  return {
+    locale: req.acceptsLanguages()[0] ?? 'en-US',
+    userAgent: req.get('User-Agent') ?? 'node-js-server',
+    page: {
+      path: req.path,
+      query: getQueryRecordFromRequest(req.query),
+      referrer: req.get('Referer') ?? '',
+      search: url.search,
+      url: req.url,
     },
-    api: {
-      analytics: { baseUrl: VITE_INSIGHTS_API_BASE_URL },
-      personalization: { baseUrl: VITE_EXPERIENCE_API_BASE_URL },
-    },
-  })
+  }
+}
+
+function getAnonymousIdFromCookies(cookies: unknown): string | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- req.cookies is of type any
+  return (cookies as Record<string, string>)[ANONYMOUS_ID_COOKIE] ?? undefined
 }
 
 function setAnonymousId(res: Response, id: string): void {
@@ -84,31 +117,48 @@ function setAnonymousId(res: Response, id: string): void {
   })
 }
 
-function getAnonymousIdFromCookies(cookies: unknown): string | undefined {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- req.cookies is of type any
-  return (cookies as Record<string, string>)[ANONYMOUS_ID_COOKIE] ?? undefined
-}
-
 app.get('/', limiter, async (req, res) => {
-  const sdk = initSDK(getAnonymousIdFromCookies(req.cookies))
-  const { profile } = await sdk.personalization.page({})
+  const universalEventBuilderArgs = getUniversalEventBuilderArgs(req)
+
+  const anonymousId = getAnonymousIdFromCookies(req.cookies)
+
+  const { profile } = await sdk.personalization.page({
+    ...universalEventBuilderArgs,
+    profile: anonymousId ? { id: anonymousId } : undefined,
+  })
 
   setAnonymousId(res, profile.id)
+
   res.send(render(sdk))
 })
 
 app.get('/user/:userId', limiter, async (req, res) => {
-  const { userId } = req.params as Record<string, string>
-  const sdk = initSDK(getAnonymousIdFromCookies(req.cookies))
-  if (userId) await sdk.personalization.identify({ userId })
-  const { profile } = await sdk.personalization.page({})
+  const universalEventBuilderArgs = getUniversalEventBuilderArgs(req)
+
+  const anonymousId = getAnonymousIdFromCookies(req.cookies)
+
+  const {
+    params: { userId },
+  } = req
+
+  if (userId)
+    await sdk.personalization.identify({
+      ...universalEventBuilderArgs,
+      userId,
+      profile: anonymousId ? { id: anonymousId } : undefined,
+    })
+
+  const { profile } = await sdk.personalization.page({
+    ...universalEventBuilderArgs,
+    profile: anonymousId ? { id: anonymousId } : undefined,
+  })
 
   setAnonymousId(res, profile.id)
+
   res.send(render(sdk))
 })
 
 app.get('/smoke-test', limiter, (_, res) => {
-  const sdk = initSDK(undefined)
   res.send(render(sdk))
 })
 

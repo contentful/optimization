@@ -85,8 +85,8 @@ function mergeConfig({
 }
 
 class Optimization extends CoreStateful {
-  #elementViewObserver?: ElementViewObserver = undefined
-  #elementExistenceObserver?: ElementExistenceObserver = undefined
+  private elementViewObserver?: ElementViewObserver = undefined
+  private elementExistenceObserver?: ElementExistenceObserver = undefined
 
   autoObserveEntryElements = false
   autoTrackEntryViews = false
@@ -148,16 +148,16 @@ class Optimization extends CoreStateful {
   }
 
   startAutoTrackingEntryViews(options?: ElementViewElementOptions): void {
-    this.#elementViewObserver = new ElementViewObserver(
+    this.elementViewObserver = new ElementViewObserver(
       createAutoTrackingEntryViewCallback({
         personalization: this.personalization,
         analytics: this.analytics,
       }),
     )
 
-    this.#elementExistenceObserver = new ElementExistenceObserver(
+    this.elementExistenceObserver = new ElementExistenceObserver(
       createAutoTrackingEntryExistenceCallback(
-        this.#elementViewObserver,
+        this.elementViewObserver,
         this.autoObserveEntryElements,
       ),
     )
@@ -172,25 +172,25 @@ class Optimization extends CoreStateful {
 
       logger.info('[Optimization Web SDK] Auto-observing element (init):', element)
 
-      this.#elementViewObserver?.observe(element, {
+      this.elementViewObserver?.observe(element, {
         ...options,
       })
     })
   }
 
+  stopAutoTrackingEntryViews(): void {
+    this.elementExistenceObserver?.disconnect()
+    this.elementViewObserver?.disconnect()
+  }
+
   trackEntryViewForElement(element: Element, options?: ElementViewElementOptions): void {
     logger.info('[Optimization Web SDK] Manually observing element:', element)
-    this.#elementViewObserver?.observe(element, options)
+    this.elementViewObserver?.observe(element, options)
   }
 
   untrackEntryViewForElement(element: Element): void {
     logger.info('[Optimization Web SDK] Manually unobserving element:', element)
-    this.#elementViewObserver?.unobserve(element)
-  }
-
-  stopAutoTrackingEntryViews(): void {
-    this.#elementExistenceObserver?.disconnect()
-    this.#elementViewObserver?.disconnect()
+    this.elementViewObserver?.unobserve(element)
   }
 
   reset(): void {

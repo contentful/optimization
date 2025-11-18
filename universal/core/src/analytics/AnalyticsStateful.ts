@@ -38,7 +38,7 @@ export interface AnalyticsStates {
 const MAX_QUEUED_EVENTS = 25
 
 class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
-  readonly #queue = new Map<Profile, InsightsEventArray>()
+  private readonly queue = new Map<Profile, InsightsEventArray>()
 
   readonly states: AnalyticsStates = {
     profile: toObservable(profileSignal),
@@ -107,7 +107,7 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
   async trackComponentView(payload: ComponentViewBuilderArgs, _duplicationKey = ''): Promise<void> {
     logger.info(`[Analytics] Processing "component view" event for`, payload.componentId)
 
-    await this.#enqueueEvent(this.builder.buildComponentView(payload))
+    await this.enqueueEvent(this.builder.buildComponentView(payload))
   }
 
   @guardedBy('isNotDuplicated', { onBlocked: 'onBlockedByDuplication' })
@@ -115,10 +115,10 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
   async trackFlagView(payload: ComponentViewBuilderArgs, _duplicationKey = ''): Promise<void> {
     logger.debug(`[Analytics] Processing "flag view" event for`, payload.componentId)
 
-    await this.#enqueueEvent(this.builder.buildFlagView(payload))
+    await this.enqueueEvent(this.builder.buildFlagView(payload))
   }
 
-  async #enqueueEvent(event: InsightsEvent): Promise<void> {
+  private async enqueueEvent(event: InsightsEvent): Promise<void> {
     const { value: profile } = profileSignal
 
     if (!profile) {
@@ -133,21 +133,21 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
 
     logger.debug(`Queueing ${event.type} event for profile ${profile.id}`, event)
 
-    const profileEventQueue = this.#queue.get(profile)
+    const profileEventQueue = this.queue.get(profile)
 
     eventSignal.value = validEvent
 
     if (profileEventQueue) {
       profileEventQueue.push(validEvent)
     } else {
-      this.#queue.set(profile, [validEvent])
+      this.queue.set(profile, [validEvent])
     }
 
-    await this.#flushMaxEvents()
+    await this.flushMaxEvents()
   }
 
-  async #flushMaxEvents(): Promise<void> {
-    if (this.#queue.values().toArray().flat().length >= MAX_QUEUED_EVENTS) await this.flush()
+  private async flushMaxEvents(): Promise<void> {
+    if (this.queue.values().toArray().flat().length >= MAX_QUEUED_EVENTS) await this.flush()
   }
 
   async flush(): Promise<void> {
@@ -155,11 +155,11 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
 
     const batches: BatchInsightsEventArray = []
 
-    this.#queue.forEach((events, profile) => batches.push({ profile, events }))
+    this.queue.forEach((events, profile) => batches.push({ profile, events }))
 
     await this.api.insights.sendBatchEvents(batches)
 
-    this.#queue.clear()
+    this.queue.clear()
   }
 }
 

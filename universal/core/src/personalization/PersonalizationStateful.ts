@@ -172,7 +172,7 @@ class Personalization extends PersonalizationBase implements ConsentGuard {
 
     const event = IdentifyEvent.parse(this.builder.buildIdentify(payload))
 
-    return await this.#upsertProfile(event)
+    return await this.upsertProfile(event)
   }
 
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
@@ -181,7 +181,7 @@ class Personalization extends PersonalizationBase implements ConsentGuard {
 
     const event = PageViewEvent.parse(this.builder.buildPageView(payload))
 
-    return await this.#upsertProfile(event)
+    return await this.upsertProfile(event)
   }
 
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
@@ -190,7 +190,7 @@ class Personalization extends PersonalizationBase implements ConsentGuard {
 
     const event = TrackEvent.parse(this.builder.buildTrack(payload))
 
-    return await this.#upsertProfile(event)
+    return await this.upsertProfile(event)
   }
 
   /** AKA sticky component view */
@@ -204,10 +204,10 @@ class Personalization extends PersonalizationBase implements ConsentGuard {
 
     const event = ComponentViewEvent.parse(this.builder.buildComponentView(payload))
 
-    return await this.#upsertProfile(event)
+    return await this.upsertProfile(event)
   }
 
-  async #upsertProfile(event: PersonalizationEvent): Promise<OptimizationData> {
+  private async upsertProfile(event: PersonalizationEvent): Promise<OptimizationData> {
     const intercepted = await this.interceptor.event.run(event)
 
     eventSignal.value = intercepted
@@ -220,12 +220,12 @@ class Personalization extends PersonalizationBase implements ConsentGuard {
       events: [intercepted],
     })
 
-    await this.#updateOutputSignals(data)
+    await this.updateOutputSignals(data)
 
     return data
   }
 
-  async #updateOutputSignals(data: OptimizationData): Promise<void> {
+  private async updateOutputSignals(data: OptimizationData): Promise<void> {
     const intercepted = await this.interceptor.state.run(data)
 
     const { changes, personalizations, profile } = intercepted

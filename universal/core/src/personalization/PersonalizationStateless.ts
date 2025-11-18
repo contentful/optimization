@@ -24,7 +24,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const event = IdentifyEvent.parse(this.builder.buildIdentify(builderArgs))
 
-    return await this.#upsertProfile(event, profile)
+    return await this.upsertProfile(event, profile)
   }
 
   async page(args: PageViewBuilderArgs & { profile?: PartialProfile }): Promise<OptimizationData> {
@@ -34,7 +34,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const event = PageViewEvent.parse(this.builder.buildPageView(builderArgs))
 
-    return await this.#upsertProfile(event, profile)
+    return await this.upsertProfile(event, profile)
   }
 
   async track(args: TrackBuilderArgs & { profile?: PartialProfile }): Promise<OptimizationData> {
@@ -44,7 +44,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const event = TrackEvent.parse(this.builder.buildTrack(builderArgs))
 
-    return await this.#upsertProfile(event, profile)
+    return await this.upsertProfile(event, profile)
   }
 
   async trackComponentView(
@@ -56,10 +56,10 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const event = ComponentViewEvent.parse(this.builder.buildComponentView(builderArgs))
 
-    return await this.#upsertProfile(event, profile)
+    return await this.upsertProfile(event, profile)
   }
 
-  async #upsertProfile(
+  private async upsertProfile(
     event: PersonalizationEvent,
     profile?: PartialProfile,
   ): Promise<OptimizationData> {
