@@ -1,7 +1,14 @@
-import dotenv from 'dotenv'
-import { resolve } from 'node:path'
-
-dotenv.config({ path: resolve(process.cwd(), 'implementations/react-native/.env') })
+import {
+  CONTENTFUL_BASE_PATH,
+  CONTENTFUL_CDA_HOST,
+  CONTENTFUL_ENVIRONMENT,
+  CONTENTFUL_SPACE_ID,
+  CONTENTFUL_TOKEN,
+  EXPERIENCE_API_BASE_URL,
+  INSIGHTS_API_BASE_URL,
+  NINETAILED_CLIENT_ID,
+  NINETAILED_ENVIRONMENT,
+} from '@env'
 
 interface EnvConfig {
   contentful: {
@@ -28,21 +35,21 @@ interface EnvConfig {
 
 export const ENV_CONFIG = {
   contentful: {
-    spaceId: process.env.CONTENTFUL_SPACE_ID ?? '',
-    environment: process.env.CONTENTFUL_ENVIRONMENT ?? '',
-    accessToken: process.env.CONTENTFUL_TOKEN ?? '',
-    host: process.env.CONTENTFUL_CDA_HOST ?? '',
-    basePath: process.env.CONTENTFUL_BASE_PATH ?? '',
+    spaceId: CONTENTFUL_SPACE_ID,
+    environment: CONTENTFUL_ENVIRONMENT,
+    accessToken: CONTENTFUL_TOKEN,
+    host: CONTENTFUL_CDA_HOST,
+    basePath: CONTENTFUL_BASE_PATH,
   },
 
   optimization: {
-    clientId: process.env.NINETAILED_CLIENT_ID ?? '',
-    environment: process.env.NINETAILED_ENVIRONMENT ?? '',
+    clientId: NINETAILED_CLIENT_ID,
+    environment: NINETAILED_ENVIRONMENT,
   },
 
   api: {
-    experienceBaseUrl: process.env.EXPERIENCE_API_BASE_URL ?? '',
-    insightsBaseUrl: process.env.INSIGHTS_API_BASE_URL ?? '',
+    experienceBaseUrl: EXPERIENCE_API_BASE_URL,
+    insightsBaseUrl: INSIGHTS_API_BASE_URL,
   },
 
   entries: {
@@ -53,6 +60,12 @@ export const ENV_CONFIG = {
 } as const satisfies EnvConfig
 
 export const {
-  contentful: { spaceId: CONTENTFUL_SPACE_ID, accessToken: CONTENTFUL_ACCESS_TOKEN },
-  optimization: { clientId: NINETAILED_CLIENT_ID },
+  contentful: { spaceId, accessToken },
+  optimization: { clientId },
 } = ENV_CONFIG
+
+export {
+  accessToken as CONTENTFUL_ACCESS_TOKEN,
+  spaceId as CONTENTFUL_SPACE_ID,
+  clientId as NINETAILED_CLIENT_ID,
+}
