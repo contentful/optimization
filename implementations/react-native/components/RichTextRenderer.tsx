@@ -28,7 +28,7 @@ interface EmbeddedEntryInlineNode {
 interface RichTextRendererProps {
   richText: RichTextField
   sdk: Optimization
-  profile: Profile
+  profile?: Profile
 }
 
 function isMergeTagEntry(entry: Entry): entry is MergeTagEntry {
@@ -61,7 +61,7 @@ function convertToString(value: unknown): string {
 function resolveMergeTagValue(
   includedEntry: MergeTagEntry,
   sdk: Optimization,
-  profile: Profile,
+  profile?: Profile,
 ): string {
   const resolvedValue = sdk.personalization.getMergeTagValue(includedEntry, profile)
 
@@ -82,7 +82,7 @@ function resolveMergeTagValue(
 function renderEmbeddedEntry(
   node: EmbeddedEntryInlineNode,
   sdk: Optimization,
-  profile: Profile,
+  profile?: Profile,
 ): string {
   const {
     data: { target: includedEntry },
