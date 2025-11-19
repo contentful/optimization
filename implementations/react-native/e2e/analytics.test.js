@@ -67,18 +67,14 @@ describe('Analytics Section', () => {
       jestExpect(entryId).toBe('2Z2WLOx07InSewC3LUB3eX')
     })
 
-    it('should display tracking status', async () => {
-      await waitFor(element(by.id('analytics-tracking-status')))
+    it('should display component event', async () => {
+      await waitFor(element(by.id('analytics-content')))
         .toBeVisible()
         .withTimeout(10000)
-
-      await new Promise((resolve) => setTimeout(resolve, 2500))
-
-      const trackingStatusTextElement = element(by.id('analytics-tracking-status-text'))
-      await waitFor(trackingStatusTextElement).toBeVisible().withTimeout(10000)
-
-      const text = await trackingStatusTextElement.getAttributes()
-      jestExpect(text.text || text.label).toBe('Tracked Successfully')
+      await new Promise((resolve) => setTimeout(resolve, 5000))
+      await waitFor(element(by.id('analytics-event-component-2Z2WLOx07InSewC3LUB3eX')))
+        .toBeVisible()
+        .withTimeout(10000)
     })
   })
 })

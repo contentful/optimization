@@ -56,18 +56,14 @@ describe('Personalization Section', () => {
       jestExpect(entryId).toBe('1UFf7qr4mHET3HYuYmcpEj')
     })
 
-    it('should display tracking status', async () => {
-      await waitFor(element(by.id('personalization-tracking-status')))
+    it('should display component event', async () => {
+      await waitFor(element(by.id('personalization-content')))
         .toBeVisible()
         .withTimeout(10000)
-
-      await new Promise((resolve) => setTimeout(resolve, 2500))
-
-      const trackingStatusTextElement = element(by.id('personalization-tracking-status-text'))
-      await waitFor(trackingStatusTextElement).toBeVisible().withTimeout(10000)
-
-      const text = await trackingStatusTextElement.getAttributes()
-      jestExpect(text.text || text.label).toBe('Tracked Successfully')
+      await new Promise((resolve) => setTimeout(resolve, 5000))
+      await waitFor(element(by.id('personalization-event-component-2Z2WLOx07InSewC3LUB3eX')))
+        .toBeVisible()
+        .withTimeout(10000)
     })
   })
 })
