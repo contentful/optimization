@@ -63,13 +63,19 @@ export async function fetchEntries(
         const { items } = response
         if (items.length > 0) {
           const [entry] = items
+          if (!entry) {
+            continue
+          }
 
           // Attach includes to the entry if they exist
           if (response.includes?.Entry) {
-            const entryWithIncludes: Entry & { includes?: { Entry?: Entry[] } } = {
-              ...entry,
-              includes: { Entry: response.includes.Entry },
-            }
+            const entryWithIncludes: Entry & { includes?: { Entry?: Entry[] } } = Object.assign(
+              {},
+              entry,
+              {
+                includes: { Entry: response.includes.Entry },
+              },
+            )
             fetchedEntries.push(entryWithIncludes)
             logger.debug(`Fetched entry ${entryId} with ${response.includes.Entry.length} includes`)
           } else {
