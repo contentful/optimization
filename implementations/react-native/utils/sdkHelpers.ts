@@ -6,9 +6,6 @@ import AsyncStorageStore from '../../../platforms/javascript/react-native/src/st
 import { ENV_CONFIG } from '../env.config'
 
 const INCLUDE_DEPTH = 10
-const {
-  entries: { mergeTag: MERGE_TAG_ENTRY_ID },
-} = ENV_CONFIG
 
 function createContentfulClient(): ReturnType<typeof createClient> {
   return createClient({
@@ -19,57 +16,6 @@ function createContentfulClient(): ReturnType<typeof createClient> {
     basePath: ENV_CONFIG.contentful.basePath,
     insecure: true,
   })
-}
-
-interface FetchEntryOptions {
-  entryId: string
-  setEntry: (entry: Entry | null) => void
-  setSdkError: (error: string) => void
-  errorPrefix: string
-  includeIncludes?: boolean
-}
-
-export async function fetchEntry({
-  entryId,
-  setEntry,
-  setSdkError,
-  errorPrefix,
-  includeIncludes = false,
-}: FetchEntryOptions): Promise<void> {
-  try {
-    const client = createContentfulClient()
-    const response = await client.getEntries({
-      'sys.id': entryId,
-      include: INCLUDE_DEPTH,
-    })
-
-    const { items, includes } = response
-    const [firstItem] = items
-
-    if (!firstItem) {
-      throw new Error(`Entry with ID ${entryId} not found`)
-    }
-
-    if (includeIncludes && includes?.Entry) {
-      const entry: Entry & {
-        includes?: {
-          Entry?: Entry[]
-        }
-      } = {
-        ...firstItem,
-        includes: { Entry: includes.Entry },
-      }
-      setEntry(entry)
-      return
-    }
-
-    setEntry(firstItem)
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    const errorText = `${errorPrefix}: ${errorMessage}`
-    logger.error(errorText)
-    setSdkError(errorText)
-  }
 }
 
 export async function initializeSDK(
@@ -98,17 +44,50 @@ export async function initializeSDK(
   }
 }
 
-export async function fetchMergeTagEntry(
-  setMergeTagEntry: (entry: Entry | null) => void,
+export async function fetchEntries(
+  entryIds: string[],
+  setEntries: (entries: Entry[]) => void,
   setSdkError: (error: string) => void,
 ): Promise<void> {
-  await fetchEntry({
-    entryId: MERGE_TAG_ENTRY_ID,
-    setEntry: setMergeTagEntry,
-    setSdkError,
-    errorPrefix: 'Failed to fetch merge tag entry',
-    includeIncludes: true,
-  })
+  try {
+    const client = createContentfulClient()
+    const fetchedEntries: Entry[] = []
+
+    for (const entryId of entryIds) {
+      try {
+        const response = await client.getEntries({
+          'sys.id': entryId,
+          include: INCLUDE_DEPTH,
+        })
+
+        const { items } = response
+        if (items.length > 0) {
+          const [entry] = items
+
+          // Attach includes to the entry if they exist
+          if (response.includes?.Entry) {
+            const entryWithIncludes: Entry & { includes?: { Entry?: Entry[] } } = {
+              ...entry,
+              includes: { Entry: response.includes.Entry },
+            }
+            fetchedEntries.push(entryWithIncludes)
+            logger.debug(`Fetched entry ${entryId} with ${response.includes.Entry.length} includes`)
+          } else {
+            fetchedEntries.push(entry)
+          }
+        }
+      } catch (_error: unknown) {
+        logger.warn(`Entry "${entryId}" could not be found in the current space`)
+      }
+    }
+
+    setEntries(fetchedEntries)
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    const errorText = `Failed to fetch entries: ${errorMessage}`
+    logger.error(errorText)
+    setSdkError(errorText)
+  }
 }
 
 export async function clearProfileState(): Promise<void> {

@@ -1,8 +1,8 @@
 import React from 'react'
-import { Text, View } from 'react-native'
+import { Text } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
-import type { MergeTagEntry, Profile } from '@contentful/optimization-react-native'
+import type { MergeTagEntry } from '@contentful/optimization-react-native'
 import { logger } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 
@@ -28,11 +28,25 @@ interface EmbeddedEntryInlineNode {
 interface RichTextRendererProps {
   richText: RichTextField
   sdk: Optimization
-  profile?: Profile
+  entry: Entry
 }
 
 function isMergeTagEntry(entry: Entry): entry is MergeTagEntry {
   return entry.sys.contentType.sys.id === 'nt_mergetag'
+}
+
+function isLink(target: unknown): boolean {
+  if (typeof target !== 'object' || target === null) {
+    return false
+  }
+
+  const { sys } = target as { sys?: unknown }
+  if (typeof sys !== 'object' || sys === null) {
+    return false
+  }
+
+  const { type } = sys as { type?: unknown }
+  return type === 'Link'
 }
 
 function isEmbeddedEntryInline(node: RichTextNode): node is EmbeddedEntryInlineNode {
@@ -58,12 +72,8 @@ function convertToString(value: unknown): string {
   return String(value)
 }
 
-function resolveMergeTagValue(
-  includedEntry: MergeTagEntry,
-  sdk: Optimization,
-  profile?: Profile,
-): string {
-  const resolvedValue = sdk.personalization.getMergeTagValue(includedEntry, profile)
+function resolveMergeTagValue(includedEntry: MergeTagEntry, sdk: Optimization): string {
+  const resolvedValue = sdk.personalization.getMergeTagValue(includedEntry)
 
   if (resolvedValue === undefined || resolvedValue === null) {
     logger.error(
@@ -82,71 +92,75 @@ function resolveMergeTagValue(
 function renderEmbeddedEntry(
   node: EmbeddedEntryInlineNode,
   sdk: Optimization,
-  profile?: Profile,
+  parentEntry: Entry,
 ): string {
-  const {
-    data: { target: includedEntry },
-  } = node
+  const { data } = node
+  let { target: includedEntry } = data
 
-  if (!isMergeTagEntry(includedEntry)) {
-    return logAndReturnFallback(
-      `Failed to resolve merge tag: entry with ID "${includedEntry.sys.id}" is not a merge tag entry (contentType: ${includedEntry.sys.contentType.sys.id})`,
+  // If target is a Link reference, resolve it from the parent entry's includes
+  if (isLink(includedEntry)) {
+    logger.debug(
+      `[RichTextRenderer] Target is a Link, resolving from includes: ${includedEntry.sys.id}`,
     )
+
+    // TypeScript type guard to check if entry has includes
+    const entryWithIncludes = parentEntry as Entry & { includes?: { Entry?: Entry[] } }
+
+    if (entryWithIncludes.includes?.Entry) {
+      const resolved = entryWithIncludes.includes.Entry.find(
+        (e) => e.sys.id === includedEntry.sys.id,
+      )
+      if (resolved) {
+        logger.debug(`[RichTextRenderer] Resolved Link ${includedEntry.sys.id} to entry`)
+        includedEntry = resolved
+      } else {
+        return logAndReturnFallback(
+          `Failed to resolve Link reference: ${includedEntry.sys.id} not found in includes`,
+        )
+      }
+    } else {
+      return logAndReturnFallback('Failed to resolve Link reference: no includes available')
+    }
   }
 
-  return resolveMergeTagValue(includedEntry, sdk, profile)
+  if (isMergeTagEntry(includedEntry)) {
+    return resolveMergeTagValue(includedEntry, sdk)
+  }
+
+  return logAndReturnFallback('Failed to resolve merge tag: entry is not a merge tag')
 }
 
 export function RichTextRenderer({
   richText,
   sdk,
-  profile,
+  entry,
 }: RichTextRendererProps): React.JSX.Element {
-  const renderNode = (
-    node: RichTextNode,
-    index: number,
-    paragraphIndex?: number,
-  ): React.ReactNode => {
+  const renderNode = (node: RichTextNode, index: number): React.ReactNode => {
     const textContent = renderTextNode(node)
     if (textContent) {
       return textContent
     }
 
     if (node.nodeType === 'paragraph' && node.content) {
-      const currentParagraphIndex = paragraphIndex ?? 0
       return (
-        <Text key={index} testID={`rich-text-paragraph-${currentParagraphIndex}`}>
-          {node.content.map((child, childIndex) =>
-            renderNode(child, childIndex, currentParagraphIndex),
-          )}
+        <Text key={index}>
+          {node.content.map((child, childIndex) => renderNode(child, childIndex))}
         </Text>
       )
     }
 
     if (isEmbeddedEntryInline(node)) {
-      const mergeTagValue = renderEmbeddedEntry(node, sdk, profile)
+      const mergeTagValue = renderEmbeddedEntry(node, sdk, entry)
       logger.debug(`[RichTextRenderer] Merge tag resolved to: "${mergeTagValue}"`)
       return mergeTagValue
     }
 
     if (node.content) {
-      return node.content.map((child, childIndex) => renderNode(child, childIndex, paragraphIndex))
+      return node.content.map((child, childIndex) => renderNode(child, childIndex))
     }
 
     return null
   }
 
-  let paragraphIndex = 0
-  return (
-    <View testID="rich-text-renderer">
-      {richText.content.map((node, index) => {
-        if (node.nodeType === 'paragraph') {
-          const currentIndex = paragraphIndex
-          paragraphIndex++
-          return renderNode(node, index, currentIndex)
-        }
-        return renderNode(node, index)
-      })}
-    </View>
-  )
+  return <>{richText.content.map((node, index) => renderNode(node, index))}</>
 }

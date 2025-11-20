@@ -1,22 +1,28 @@
 import React, { useEffect, useState } from 'react'
-import { SafeAreaView, ScrollView, StyleSheet, Text } from 'react-native'
+import { SafeAreaView, ScrollView, Text, View } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
-import type { Profile } from '@contentful/optimization-react-native'
-import { OptimizationProvider, logger } from '@contentful/optimization-react-native'
+import { OptimizationProvider } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
+
+import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
 import { ENV_CONFIG } from './env.config'
-import { AnalyticsSection } from './sections/AnalyticsSection'
-import { MergeTagSection } from './sections/MergeTagSection'
-import { PersonalizationSection } from './sections/PersonalizationSection'
-import { fetchEntry, fetchMergeTagEntry, initializeSDK } from './utils/sdkHelpers'
+import { ContentEntry } from './sections/ContentEntry'
+import { fetchEntries, initializeSDK } from './utils/sdkHelpers'
+
+const ENTRY_IDS = [
+  ENV_CONFIG.entries.mergeTag,
+  '4ib0hsHWoSOnCVdDkizE8d',
+  'xFwgG3oNaOcjzWiGe4vXo',
+  ENV_CONFIG.entries.personalized,
+  '5XHssysWUDECHzKLzoIsg1',
+  '6zqoWXyiSrf0ja7I2WGtYj',
+  '7pa5bOx8Z9NmNcr7mISvD',
+]
 
 function App(): React.JSX.Element {
   const [sdk, setSdk] = useState<Optimization | null>(null)
-  const [mergeTagEntry, setMergeTagEntry] = useState<Entry | null>(null)
-  const [personalizationEntry, setPersonalizationEntry] = useState<Entry | null>(null)
-  const [analyticsEntry, setAnalyticsEntry] = useState<Entry | null>(null)
-  const [profile, setProfile] = useState<Profile | undefined>(undefined)
+  const [entries, setEntries] = useState<Entry[]>([])
   const [sdkError, setSdkError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -25,36 +31,17 @@ function App(): React.JSX.Element {
 
   useEffect(() => {
     if (!sdk) {
-      logger.debug('[App] SDK not initialized')
       return
     }
 
-    logger.debug('[App] Triggering profile creation by calling page()')
     void sdk.personalization.page({ properties: { url: 'app' } })
 
-    const subscription = sdk.states.profile.subscribe((currentProfile) => {
-      if (!currentProfile) {
-        logger.debug('[App] Profile is undefined')
+    const subscription = sdk.states.profile.subscribe((profile) => {
+      if (!profile) {
         return
       }
 
-      logger.debug(
-        `[App] Profile received: ID: ${currentProfile.id}, location.continent: ${String(currentProfile.location.continent)}`,
-      )
-      setProfile(currentProfile)
-      fetchMergeTagEntry(setMergeTagEntry, setSdkError).catch(() => undefined)
-      fetchEntry({
-        entryId: ENV_CONFIG.entries.personalized,
-        setEntry: setPersonalizationEntry,
-        setSdkError,
-        errorPrefix: 'Failed to fetch personalization entry',
-      }).catch(() => undefined)
-      fetchEntry({
-        entryId: ENV_CONFIG.entries.personalized,
-        setEntry: setAnalyticsEntry,
-        setSdkError,
-        errorPrefix: 'Failed to fetch analytics entry',
-      }).catch(() => undefined)
+      void fetchEntries(ENTRY_IDS, setEntries, setSdkError)
     })
 
     return () => {
@@ -66,37 +53,24 @@ function App(): React.JSX.Element {
     return <Text>{sdkError}</Text>
   }
 
-  if (!sdk) {
-    return <Text>Loading SDK...</Text>
-  }
-
-  const isLoading = !mergeTagEntry || !personalizationEntry || !analyticsEntry
-
-  if (isLoading) {
-    return <Text>Loading entries...</Text>
-  }
-
-  if (!profile) {
-    return <Text>Loading profile...</Text>
+  if (!sdk || entries.length === 0) {
+    return <Text>Loading...</Text>
   }
 
   return (
     <OptimizationProvider instance={sdk}>
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView>
         <ScrollView>
-          <MergeTagSection sdk={sdk} mergeTagEntry={mergeTagEntry} profile={profile} />
-          <PersonalizationSection sdk={sdk} personalizationEntry={personalizationEntry} />
-          <AnalyticsSection sdk={sdk} analyticsEntry={analyticsEntry} />
+          {entries.map((entry) => (
+            <ContentEntry key={entry.sys.id} entry={entry} sdk={sdk} />
+          ))}
         </ScrollView>
+        <View>
+          <AnalyticsEventDisplay sdk={sdk} />
+        </View>
       </SafeAreaView>
     </OptimizationProvider>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-})
 
 export default App
