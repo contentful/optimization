@@ -28,21 +28,21 @@ interface EnvConfig {
 
 export const ENV_CONFIG = {
   contentful: {
-    spaceId: process.env.CONTENTFUL_SPACE_ID ?? '',
-    environment: process.env.CONTENTFUL_ENVIRONMENT ?? '',
-    accessToken: process.env.CONTENTFUL_TOKEN ?? '',
-    host: process.env.CONTENTFUL_CDA_HOST ?? '',
-    basePath: process.env.CONTENTFUL_BASE_PATH ?? '',
+    spaceId: process.env.VITE_CONTENTFUL_SPACE_ID ?? '',
+    environment: process.env.VITE_CONTENTFUL_ENVIRONMENT ?? '',
+    accessToken: process.env.VITE_CONTENTFUL_TOKEN ?? '',
+    host: process.env.VITE_CONTENTFUL_CDA_HOST ?? '',
+    basePath: process.env.VITE_CONTENTFUL_BASE_PATH ?? '',
   },
 
   optimization: {
-    clientId: process.env.NINETAILED_CLIENT_ID ?? '',
-    environment: process.env.NINETAILED_ENVIRONMENT ?? '',
+    clientId: process.env.VITE_NINETAILED_CLIENT_ID ?? '',
+    environment: process.env.VITE_NINETAILED_ENVIRONMENT ?? '',
   },
 
   api: {
-    experienceBaseUrl: process.env.EXPERIENCE_API_BASE_URL ?? '',
-    insightsBaseUrl: process.env.INSIGHTS_API_BASE_URL ?? '',
+    experienceBaseUrl: process.env.VITE_EXPERIENCE_API_BASE_URL ?? '',
+    insightsBaseUrl: process.env.VITE_INSIGHTS_API_BASE_URL ?? '',
   },
 
   entries: {
