@@ -23,10 +23,16 @@ test.describe('unidentified user', () => {
   })
 
   test('displays unidentified user variants', async ({ page }) => {
+    await expect(page.getByText('This is a level 0 nested baseline entry.')).toBeVisible()
+
+    await expect(page.getByText('This is a level 1 nested baseline entry.')).toBeVisible()
+
+    await expect(page.getByText('This is a level 2 nested baseline entry.')).toBeVisible()
+
     await expect(page.getByText('This is a variant content entry for new visitors.')).toBeVisible()
 
     await expect(
-      page.getByText('This is a baseline content entry for an A/B/C experiment: A'),
+      page.getByText('This is a variant content entry for an A/B/C experiment: B'),
     ).toBeVisible()
 
     await expect(

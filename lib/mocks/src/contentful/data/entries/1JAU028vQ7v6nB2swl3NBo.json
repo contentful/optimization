@@ -1,0 +1,618 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "1JAU028vQ7v6nB2swl3NBo",
+        "type": "Entry",
+        "createdAt": "2025-11-19T15:15:56.682Z",
+        "updatedAt": "2025-11-20T14:12:10.332Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 9,
+        "revision": 2,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "nestedContent"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "internalTitle": "[Baseline Nested] Baseline Level 0",
+        "text": "This is a level 0 nested baseline entry.",
+        "nested": [
+          {
+            "sys": {
+              "type": "Link",
+              "linkType": "Entry",
+              "id": "5i4SdJXw9oDEY0vgO7CwF4"
+            }
+          }
+        ],
+        "nt_experiences": [
+          {
+            "sys": {
+              "type": "Link",
+              "linkType": "Entry",
+              "id": "1FHhEY0xkcCC9R5WCmnjRr"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "includes": {
+    "Entry": [
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "1FHhEY0xkcCC9R5WCmnjRr",
+          "type": "Entry",
+          "createdAt": "2025-11-19T15:17:16.974Z",
+          "updatedAt": "2025-11-19T15:17:16.974Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 17,
+          "revision": 1,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nt_experience"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "nt_name": "[Personalization] Nested Level 0",
+          "nt_description": "This is a root-level personalization with nested personalizations.",
+          "nt_type": "nt_personalization",
+          "nt_config": {
+            "distribution": [0, 1],
+            "traffic": 1,
+            "components": [
+              {
+                "type": "EntryReplacement",
+                "baseline": {
+                  "id": "1JAU028vQ7v6nB2swl3NBo"
+                },
+                "variants": [
+                  {
+                    "id": "2KIWllNZJT205BwOSkMINg",
+                    "hidden": false
+                  }
+                ]
+              }
+            ],
+            "primaryMetric": "fececd8c-d0bd-4a37-bea7-b2f68b782923"
+          },
+          "nt_audience": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Entry",
+              "id": "46fHDG7vjxwTbYee5JNVOQ"
+            }
+          },
+          "nt_variants": [
+            {
+              "sys": {
+                "type": "Link",
+                "linkType": "Entry",
+                "id": "2KIWllNZJT205BwOSkMINg"
+              }
+            }
+          ],
+          "nt_experience_id": "1FHhEY0xkcCC9R5WCmnjRr",
+          "nt_metadata": {
+            "type": "origin"
+          }
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "2KIWllNZJT205BwOSkMINg",
+          "type": "Entry",
+          "createdAt": "2025-11-19T15:16:58.672Z",
+          "updatedAt": "2025-11-20T14:13:12.149Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 6,
+          "revision": 2,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nestedContent"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "internalTitle": "[Variant Nested] Variant Level 0",
+          "text": "This is a level 0 nested variant entry.",
+          "nested": [
+            {
+              "sys": {
+                "type": "Link",
+                "linkType": "Entry",
+                "id": "5i4SdJXw9oDEY0vgO7CwF4"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "46fHDG7vjxwTbYee5JNVOQ",
+          "type": "Entry",
+          "createdAt": "2025-10-13T09:19:35.294Z",
+          "updatedAt": "2025-10-13T09:28:30.370Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 11,
+          "revision": 2,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nt_audience"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "nt_name": "Return Visitors",
+          "nt_description": "Visitors who have previously visited the site",
+          "nt_rules": {
+            "any": [
+              {
+                "all": [
+                  {
+                    "key": "",
+                    "type": "isReturningVisitor",
+                    "count": "1",
+                    "value": true,
+                    "operator": "equal",
+                    "conditions": [
+                      {
+                        "key": {
+                          "id": "session_count",
+                          "key": "session_count",
+                          "label": "session_count",
+                          "value": "session_count",
+                          "useOnce": true,
+                          "category": {
+                            "name": "session_count",
+                            "type": "session_count",
+                            "label": "session_count"
+                          }
+                        },
+                        "value": "1",
+                        "operator": "greaterThan"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "nt_audience_id": "46fHDG7vjxwTbYee5JNVOQ",
+          "nt_metadata": {
+            "type": "origin"
+          }
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "4hDiXxYEFrXHXcQgmdL9Uv",
+          "type": "Entry",
+          "createdAt": "2025-11-20T14:10:23.719Z",
+          "updatedAt": "2025-11-20T14:10:23.719Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 6,
+          "revision": 1,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nestedContent"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "internalTitle": "[Variant Nested] Variant Level 2",
+          "text": "This is a level 2 nested variant entry."
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "5a8ONfBdanJtlJ39WWnH1w",
+          "type": "Entry",
+          "createdAt": "2025-11-19T15:21:11.260Z",
+          "updatedAt": "2025-11-20T14:13:34.548Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 5,
+          "revision": 2,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nestedContent"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "internalTitle": "[Variant Nested] Variant Level 1",
+          "text": "This is a level 1 nested variant entry.",
+          "nested": [
+            {
+              "sys": {
+                "type": "Link",
+                "linkType": "Entry",
+                "id": "uaNY4YJ0HFPAX3gKXiRdX"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "5i4SdJXw9oDEY0vgO7CwF4",
+          "type": "Entry",
+          "createdAt": "2025-11-19T15:19:40.677Z",
+          "updatedAt": "2025-11-20T14:12:40.422Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 6,
+          "revision": 2,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nestedContent"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "internalTitle": "[Baseline Nested] Baseline Level 1",
+          "text": "This is a level 1 nested baseline entry.",
+          "nested": [
+            {
+              "sys": {
+                "type": "Link",
+                "linkType": "Entry",
+                "id": "uaNY4YJ0HFPAX3gKXiRdX"
+              }
+            }
+          ],
+          "nt_experiences": [
+            {
+              "sys": {
+                "type": "Link",
+                "linkType": "Entry",
+                "id": "7DyidZaPB7Jr1gWKjoogg0"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "6IueRX1pS3iMJncbhUQTba",
+          "type": "Entry",
+          "createdAt": "2025-11-20T14:10:46.708Z",
+          "updatedAt": "2025-11-20T14:10:46.708Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 11,
+          "revision": 1,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nt_experience"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "nt_name": "[Personalization] Nested Level 2",
+          "nt_type": "nt_personalization",
+          "nt_config": {
+            "traffic": 1,
+            "components": [
+              {
+                "type": "EntryReplacement",
+                "baseline": {
+                  "id": "uaNY4YJ0HFPAX3gKXiRdX"
+                },
+                "variants": [
+                  {
+                    "id": "4hDiXxYEFrXHXcQgmdL9Uv",
+                    "hidden": false
+                  }
+                ]
+              }
+            ],
+            "distribution": [0, 1],
+            "primaryMetric": "fececd8c-d0bd-4a37-bea7-b2f68b782923"
+          },
+          "nt_variants": [
+            {
+              "sys": {
+                "type": "Link",
+                "linkType": "Entry",
+                "id": "4hDiXxYEFrXHXcQgmdL9Uv"
+              }
+            }
+          ],
+          "nt_experience_id": "6IueRX1pS3iMJncbhUQTba",
+          "nt_metadata": {
+            "type": "origin"
+          }
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "7DyidZaPB7Jr1gWKjoogg0",
+          "type": "Entry",
+          "createdAt": "2025-11-19T15:21:38.872Z",
+          "updatedAt": "2025-11-19T15:21:38.872Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 10,
+          "revision": 1,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nt_experience"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "nt_name": "[Personalization] Nested Level 1",
+          "nt_type": "nt_personalization",
+          "nt_config": {
+            "traffic": 1,
+            "components": [
+              {
+                "type": "EntryReplacement",
+                "baseline": {
+                  "id": "5i4SdJXw9oDEY0vgO7CwF4"
+                },
+                "variants": [
+                  {
+                    "id": "5a8ONfBdanJtlJ39WWnH1w",
+                    "hidden": false
+                  }
+                ]
+              }
+            ],
+            "distribution": [0, 1],
+            "primaryMetric": "fececd8c-d0bd-4a37-bea7-b2f68b782923"
+          },
+          "nt_variants": [
+            {
+              "sys": {
+                "type": "Link",
+                "linkType": "Entry",
+                "id": "5a8ONfBdanJtlJ39WWnH1w"
+              }
+            }
+          ],
+          "nt_experience_id": "7DyidZaPB7Jr1gWKjoogg0",
+          "nt_metadata": {
+            "type": "origin"
+          }
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "uaNY4YJ0HFPAX3gKXiRdX",
+          "type": "Entry",
+          "createdAt": "2025-11-20T14:09:22.675Z",
+          "updatedAt": "2025-11-20T14:24:45.470Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 11,
+          "revision": 3,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nestedContent"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "internalTitle": "[Baseline Nested] Baseline Level 2",
+          "text": "This is a level 2 nested baseline entry.",
+          "nt_experiences": [
+            {
+              "sys": {
+                "type": "Link",
+                "linkType": "Entry",
+                "id": "6IueRX1pS3iMJncbhUQTba"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

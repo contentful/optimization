@@ -6,6 +6,9 @@
     <title>Optimization Web SDK Dev Development Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/contentful@latest/dist/contentful.browser.min.js"></script>
     <style>
+      * {
+        box-sizing: border-box;
+      }
       html,
       textarea,
       input,
@@ -28,12 +31,14 @@
       }
       h1,
       main {
+        max-width: 1040px;
+        margin-inline: auto;
+      }
+      main {
         display: grid;
         grid-gap: 2rem;
         grid-template-rows: auto 1fr;
         grid-template-columns: 1fr auto;
-        max-width: 1040px;
-        margin-inline: auto;
       }
       section:first-of-type {
         grid-column: 1 / span 2;
@@ -71,27 +76,41 @@
         }
       }
       #event-stream-panel {
-        position: sticky;
-        top: 0;
-        margin-block-start: -1px;
-        padding-block-start: 1px;
+        grid-column: 2;
+        grid-row: 2 / span 2;
+
+        > div {
+          position: sticky;
+          top: 0;
+          margin-block-start: -1px;
+          padding-block-start: 1px;
+        }
       }
       #auto-observed,
       #manually-observed {
         display: grid;
         grid-gap: 2rem;
-        grid-auto-rows: 75dvh;
-        justify-items: center;
-        align-items: center;
+        grid-auto-rows: minmax(75dvh, auto);
         margin-block-end: 2rem;
 
         > div {
           display: grid;
+          grid-gap: inherit;
+          grid-auto-rows: inherit;
           width: 100%;
           height: 100%;
-          justify-items: center;
-          align-items: center;
+          padding: 2rem;
           background: #eee;
+          overflow: visible;
+        }
+
+        div.nested {
+          display: grid;
+          grid-gap: inherit;
+          grid-auto-rows: inherit;
+          padding: 1rem;
+          border: 1px solid #ccc;
+          overflow: visible;
         }
       }
     </style>
@@ -154,8 +173,8 @@
         <ol id="entries"></ol>
       </section>
 
-      <section>
-        <div id="event-stream-panel">
+      <section id="event-stream-panel">
+        <div>
           <h2>Event Stream</h2>
 
           <ol id="event-stream"></ol>
@@ -166,6 +185,9 @@
         <h2>Entries</h2>
 
         <div id="auto-observed">
+          <div data-ctfl-entry-id="1JAU028vQ7v6nB2swl3NBo">
+            <!-- Nested Entry -->
+          </div>
           <div data-ctfl-entry-id="1MwiFl4z7gkwqGYdvCmr8c">
             <!-- Merge Tag "Rich Text" Entry -->
           </div>
@@ -294,6 +316,7 @@
         button.innerText = title
         button.commandForElement = dialog
         button.command = 'show-modal'
+        button.dataset.testid = details.componentId ?? details?.properties?.url ?? details.messageId
 
         pre.innerText = JSON.stringify(details, null, 2)
 
@@ -385,17 +408,8 @@
         }
       }
 
-      // Get the personalized entry and render
-      async function addPersonalizedEntry(entryId, element, autoObserve = true) {
-        let rawEntry
-
-        try {
-          rawEntry = await contentfulClient.getEntry(entryId, { include: 10 })
-        } catch (error) {
-          console.warn(`Entry "${entryId}" could not be found in the current space`)
-          return []
-        }
-
+      // Render personalized entries
+      async function renderPersonalizedEntry(rawEntry, element, autoObserve = true) {
         const { entry, personalization } = optimization.personalization.personalizeEntry(rawEntry)
 
         if (isRichText(entry.fields?.text)) {
@@ -406,6 +420,15 @@
           const p = document.createElement('p')
           p.innerText = entry.fields?.text
           element.replaceChildren(p)
+        }
+
+        if (entry.fields?.nested) {
+          const div = document.createElement('div')
+          div.className = 'nested'
+          entry.fields.nested.forEach((nestedEntry) =>
+            renderPersonalizedEntry(nestedEntry, div, autoObserve),
+          )
+          element.appendChild(div)
         }
 
         document
@@ -426,6 +449,20 @@
         }
 
         return [entry, personalization]
+      }
+
+      // Get the personalized entry to render
+      async function addPersonalizedEntry(entryId, element, autoObserve = true) {
+        let rawEntry
+
+        try {
+          rawEntry = await contentfulClient.getEntry(entryId, { include: 10 })
+        } catch (error) {
+          console.warn(`Entry "${entryId}" could not be found in the current space`)
+          return []
+        }
+
+        return renderPersonalizedEntry(rawEntry, element, autoObserve)
       }
 
       const manuallyObservedEntryElements = new Map()
@@ -494,7 +531,7 @@
         toggleIdentity(profile.traits && Object.keys(profile.traits).length)
 
         document.querySelectorAll('[data-ctfl-entry-id]').forEach(async (element) => {
-          const [entry] = await addPersonalizedEntry(element.dataset.ctflEntryId, element)
+          await addPersonalizedEntry(element.dataset.ctflEntryId, element)
         })
 
         document.querySelectorAll('[data-entry-id]').forEach(async (element) => {

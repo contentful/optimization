@@ -1,9 +1,9 @@
 {
   "data": {
     "profile": {
-      "id": "89a085900309de9ecef46965112c309d6f00f1aaed7fcb6709eb851c9557ec42",
-      "stableId": "89a085900309de9ecef46965112c309d6f00f1aaed7fcb6709eb851c9557ec42",
-      "random": 0.46249140763247654,
+      "id": "f0837a67eed5f1c93978f6d53fa948df93897137bcd048366f30ba590420754b",
+      "stableId": "f0837a67eed5f1c93978f6d53fa948df93897137bcd048366f30ba590420754b",
+      "random": 0.9275021184998337,
       "audiences": ["2WzXDaWtDmstHl9p8Wufpp", "2y72M2RTXnMpp9GPG8xSzf", "3UTxzKhiki1xeHAdSCJBCS"],
       "traits": {},
       "location": {
@@ -18,7 +18,7 @@
         "region": "State of Berlin"
       },
       "session": {
-        "id": "d262d649-1e06-4ed6-84fe-138818fb8d9e",
+        "id": "e77eab64-2d8e-4a88-a61c-4ba131f2d374",
         "count": 1,
         "isReturningVisitor": false,
         "landingPage": {
@@ -26,18 +26,39 @@
           "query": {},
           "referrer": "",
           "search": "",
-          "url": "http://localhost:5173/"
+          "url": "http://localhost:3000/"
         },
-        "activeSessionLength": 26,
-        "averageSessionLength": 26
+        "activeSessionLength": 8,
+        "averageSessionLength": 8
       }
     },
     "experiences": [
+      {
+        "experienceId": "1lNQ9YUJfDBQLMR6O0jjP8",
+        "variantIndex": 1,
+        "variants": {
+          "5Rn1R8HqsbcdxMx46qLilf": "5irIOMxcTxfhfteBKTOduP"
+        }
+      },
       {
         "experienceId": "2cSY1TX0nDfYe4fuIrGQ1K",
         "variantIndex": 1,
         "variants": {
           "2Z2WLOx07InSewC3LUB3eX": "1UFf7qr4mHET3HYuYmcpEj"
+        }
+      },
+      {
+        "experienceId": "2kT7B3F1GH3sDBo2glpywy",
+        "variantIndex": 1,
+        "variants": {
+          "4WFNEIlY8bzmZcjmjCCUOm": "6v6IuRsAR2AZoAnISXH8oP"
+        }
+      },
+      {
+        "experienceId": "2O4ZmYjJFSn0E8ti8tonut",
+        "variantIndex": 0,
+        "variants": {
+          "qEfH7mk21RnqzUHlL6cIC": "qEfH7mk21RnqzUHlL6cIC"
         }
       },
       {
@@ -48,10 +69,39 @@
         }
       },
       {
-        "experienceId": "5kuc9KgA9q9RXnlbDxDlY",
+        "experienceId": "44jIanEK8sjH9SoJ5AOa7m",
+        "variantIndex": 1,
+        "variants": {
+          "4LIbcbuqUx6wtfJIvHnyON": ""
+        }
+      },
+      {
+        "experienceId": "4aSQ6HYCrSQP2UktnEGq3X",
         "variantIndex": 0,
         "variants": {
-          "5XHssysWUDECHzKLzoIsg1": "5XHssysWUDECHzKLzoIsg1"
+          "3n4FIM0bQNZKQwomidlmZ8": "3n4FIM0bQNZKQwomidlmZ8"
+        }
+      },
+      {
+        "experienceId": "5kuc9KgA9q9RXnlbDxDlY",
+        "variantIndex": 1,
+        "variants": {
+          "5XHssysWUDECHzKLzoIsg1": "4bmHsNUaEibELHwWCon3dt"
+        }
+      },
+      {
+        "experienceId": "6df0DI1BG9GTb9qIcjfkmh",
+        "variantIndex": 1,
+        "variants": {
+          "74PjP6eFEOxD66R88LrL76": "5OYKPG3KHGgKczGtZ5itv9"
+        },
+        "sticky": true
+      },
+      {
+        "experienceId": "6ZbWjihD33P0ZQDi1NBPNj",
+        "variantIndex": 1,
+        "variants": {
+          "74PjP6eFEOxD66R88LrL76": "2ow3EkPI5jKevWoTT2BVG8"
         }
       },
       {

@@ -1,9 +1,9 @@
 {
   "data": {
     "profile": {
-      "id": "89a085900309de9ecef46965112c309d6f00f1aaed7fcb6709eb851c9557ec42",
-      "stableId": "89a085900309de9ecef46965112c309d6f00f1aaed7fcb6709eb851c9557ec42",
-      "random": 0.46249140763247654,
+      "id": "f0837a67eed5f1c93978f6d53fa948df93897137bcd048366f30ba590420754b",
+      "stableId": "f0837a67eed5f1c93978f6d53fa948df93897137bcd048366f30ba590420754b",
+      "random": 0.9275021184998337,
       "audiences": [
         "2WzXDaWtDmstHl9p8Wufpp",
         "2y72M2RTXnMpp9GPG8xSzf",
@@ -28,7 +28,7 @@
         "region": "State of Berlin"
       },
       "session": {
-        "id": "d262d649-1e06-4ed6-84fe-138818fb8d9e",
+        "id": "27024fb0-325e-4bc0-a9f1-097f968fc37d",
         "count": 10,
         "isReturningVisitor": true,
         "landingPage": {
@@ -36,17 +36,31 @@
           "query": {},
           "referrer": "",
           "search": "",
-          "url": "http://localhost:5173/"
+          "url": "http://localhost:3000/"
         },
-        "activeSessionLength": 195,
-        "averageSessionLength": 1326.7
+        "activeSessionLength": 1605,
+        "averageSessionLength": 1876.3
       }
     },
     "experiences": [
       {
+        "experienceId": "1FHhEY0xkcCC9R5WCmnjRr",
+        "variantIndex": 1,
+        "variants": {
+          "1JAU028vQ7v6nB2swl3NBo": "2KIWllNZJT205BwOSkMINg"
+        }
+      },
+      {
         "experienceId": "1hTtSf1ChvTtBgY6BwBZk1",
         "variantIndex": 1,
         "variants": {}
+      },
+      {
+        "experienceId": "1lNQ9YUJfDBQLMR6O0jjP8",
+        "variantIndex": 1,
+        "variants": {
+          "5Rn1R8HqsbcdxMx46qLilf": "5irIOMxcTxfhfteBKTOduP"
+        }
       },
       {
         "experienceId": "1TF5UuJZc6sO88byrYZ6f2",
@@ -54,10 +68,45 @@
         "variants": {}
       },
       {
+        "experienceId": "2kT7B3F1GH3sDBo2glpywy",
+        "variantIndex": 1,
+        "variants": {
+          "4WFNEIlY8bzmZcjmjCCUOm": "6v6IuRsAR2AZoAnISXH8oP"
+        }
+      },
+      {
+        "experienceId": "2O4ZmYjJFSn0E8ti8tonut",
+        "variantIndex": 0,
+        "variants": {
+          "qEfH7mk21RnqzUHlL6cIC": "qEfH7mk21RnqzUHlL6cIC"
+        }
+      },
+      {
         "experienceId": "2qVK4T5lnScbswoyBuGipd",
         "variantIndex": 1,
         "variants": {
           "4ib0hsHWoSOnCVdDkizE8d": "4k6ZyFQnR2POY5IJLLlJRb"
+        }
+      },
+      {
+        "experienceId": "3xYlmUaVqxwctTZRQUu7SJ",
+        "variantIndex": 1,
+        "variants": {
+          "74PjP6eFEOxD66R88LrL76": "6EkBsBtO4AGn43u0SOq4Sz"
+        }
+      },
+      {
+        "experienceId": "44jIanEK8sjH9SoJ5AOa7m",
+        "variantIndex": 1,
+        "variants": {
+          "4LIbcbuqUx6wtfJIvHnyON": ""
+        }
+      },
+      {
+        "experienceId": "4aSQ6HYCrSQP2UktnEGq3X",
+        "variantIndex": 0,
+        "variants": {
+          "3n4FIM0bQNZKQwomidlmZ8": "3n4FIM0bQNZKQwomidlmZ8"
         }
       },
       {
@@ -74,9 +123,9 @@
       },
       {
         "experienceId": "5kuc9KgA9q9RXnlbDxDlY",
-        "variantIndex": 0,
+        "variantIndex": 1,
         "variants": {
-          "5XHssysWUDECHzKLzoIsg1": "5XHssysWUDECHzKLzoIsg1"
+          "5XHssysWUDECHzKLzoIsg1": "4bmHsNUaEibELHwWCon3dt"
         }
       },
       {
@@ -91,6 +140,27 @@
         "variantIndex": 1,
         "variants": {
           "2Z2WLOx07InSewC3LUB3eX": "3VBvwg9ysjjmnJRTQtIYK4"
+        }
+      },
+      {
+        "experienceId": "6IueRX1pS3iMJncbhUQTba",
+        "variantIndex": 1,
+        "variants": {
+          "uaNY4YJ0HFPAX3gKXiRdX": "4hDiXxYEFrXHXcQgmdL9Uv"
+        }
+      },
+      {
+        "experienceId": "6ZbWjihD33P0ZQDi1NBPNj",
+        "variantIndex": 1,
+        "variants": {
+          "74PjP6eFEOxD66R88LrL76": "2ow3EkPI5jKevWoTT2BVG8"
+        }
+      },
+      {
+        "experienceId": "7DyidZaPB7Jr1gWKjoogg0",
+        "variantIndex": 1,
+        "variants": {
+          "5i4SdJXw9oDEY0vgO7CwF4": "5a8ONfBdanJtlJ39WWnH1w"
         }
       },
       {

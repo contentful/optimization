@@ -191,18 +191,38 @@ class ElementExistenceObserver {
     addedNodes: ReadonlySet<Node>,
     removedNodes: ReadonlySet<Node>,
   ): { added: Set<Element>; removed: Set<Element> } {
-    const added = new Set<Element>()
-    const removed = new Set<Element>()
-
-    for (const node of addedNodes) {
-      if (node instanceof Element && node.isConnected) added.add(node)
-    }
-    for (const node of removedNodes) {
-      if (node instanceof Element) removed.add(node)
-    }
+    const added = ElementExistenceObserver.flattenElements(addedNodes, true)
+    const removed = ElementExistenceObserver.flattenElements(removedNodes, false)
     return { added, removed }
   }
 
+  private static flattenElements(
+    nodes: ReadonlySet<Node>,
+    requireConnected: boolean,
+  ): Set<Element> {
+    const out = new Set<Element>()
+
+    for (const node of nodes) {
+      // If the node itself is an Element, include it
+      if (node instanceof Element) {
+        if (!requireConnected || node.isConnected) out.add(node)
+        // Include all descendant elements
+        node.querySelectorAll('*').forEach((el) => {
+          if (!requireConnected || el.isConnected) out.add(el)
+        })
+        continue
+      }
+
+      // If it's a DocumentFragment (e.g., from templating), include its descendants
+      if (node instanceof DocumentFragment) {
+        node.querySelectorAll('*').forEach((el) => {
+          if (!requireConnected || el.isConnected) out.add(el)
+        })
+      }
+    }
+
+    return out
+  }
   private static cancelIdle(handle: number): void {
     if (HAS_CANCEL_IDLE) {
       window.cancelIdleCallback(handle)
