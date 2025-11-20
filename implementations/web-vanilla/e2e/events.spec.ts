@@ -1,5 +1,18 @@
 import { expect, test } from '@playwright/test'
 
+const variantEntryTexts: Record<string, string> = {
+  '1MwiFl4z7gkwqGYdvCmr8c':
+    'This is a merge tag content entry that displays the visitor\'s continent "EU" embedded within the text.',
+  '4k6ZyFQnR2POY5IJLLlJRb': 'This is a variant content entry for visitors from Europe.',
+  '6iyPl6vfDH5AoClf3MtYlh': 'This is a variant content entry for visitors using a desktop browser.',
+  '1UFf7qr4mHET3HYuYmcpEj': 'This is a variant content entry for new visitors.',
+  '5XHssysWUDECHzKLzoIsg1': 'This is a baseline content entry for an A/B/C experiment: A',
+  '6zqoWXyiSrf0ja7I2WGtYj':
+    'This is a baseline content entry for all visitors with or without a custom event.',
+  '7pa5bOx8Z9NmNcr7mISvD':
+    'This is a baseline content entry for all identified or unidentified users.',
+}
+
 test.describe('events', () => {
   test.describe('without consent', () => {
     test.beforeEach(async ({ page }) => {
@@ -15,17 +28,7 @@ test.describe('events', () => {
     })
 
     test('component view events have not been emitted', async ({ page }) => {
-      const entryTexts = [
-        'This is a merge tag content entry that displays the visitor\'s continent "EU" embedded within the text.',
-        'This is a variant content entry for visitors from Europe.',
-        'This is a variant content entry for visitors using a desktop browser.',
-        'This is a variant content entry for new visitors.',
-        'This is a baseline content entry for an A/B/C experiment: A',
-        'This is a baseline content entry for all visitors with or without a custom event.',
-        'This is a baseline content entry for all identified or unidentified users.',
-      ]
-
-      for (const entryText of entryTexts) {
+      for (const entryText of Object.values(variantEntryTexts)) {
         const element = page.getByText(entryText)
 
         await element.scrollIntoViewIfNeeded()
@@ -59,22 +62,18 @@ test.describe('events', () => {
     })
 
     test('component view events have been emitted', async ({ page }) => {
-      const entryTexts = [
-        'This is a merge tag content entry that displays the visitor\'s continent "EU" embedded within the text.',
-        'This is a variant content entry for visitors from Europe.',
-        'This is a variant content entry for visitors using a desktop browser.',
-        'This is a variant content entry for new visitors.',
-        'This is a baseline content entry for an A/B/C experiment: A',
-        'This is a baseline content entry for all visitors with or without a custom event.',
-        'This is a baseline content entry for all identified or unidentified users.',
-      ]
+      for (const entryId of Object.keys(variantEntryTexts)) {
+        const entryText = variantEntryTexts[entryId]
 
-      for (const entryText of entryTexts) {
+        if (!entryText) continue
+
         const element = page.getByText(entryText)
 
         await element.scrollIntoViewIfNeeded()
 
         await page.clock.fastForward('02:00')
+
+        expect(await page.getByTestId(entryId).innerText()).toEqual('component')
       }
 
       const allComponentEvents = await page

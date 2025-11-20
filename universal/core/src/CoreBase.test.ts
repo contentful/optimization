@@ -1,8 +1,10 @@
 import { AnalyticsStateless } from './analytics'
 import CoreBase, { type CoreConfig } from './CoreBase'
+import { PersonalizationStateless } from './personalization'
 
 class TestCore extends CoreBase {
   analytics = new AnalyticsStateless(this.api, this.eventBuilder)
+  personalization = new PersonalizationStateless(this.api, this.eventBuilder)
 }
 
 const CLIENT_ID = 'key_123'
