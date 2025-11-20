@@ -26,7 +26,7 @@ test.describe('unidentified user', () => {
     await expect(page.getByText('This is a variant content entry for new visitors.')).toBeVisible()
 
     await expect(
-      page.getByText('This is a baseline content entry for an A/B/C experiment: A'),
+      page.getByText('This is a variant content entry for an A/B/C experiment: B'),
     ).toBeVisible()
 
     await expect(

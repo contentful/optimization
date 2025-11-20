@@ -1,0 +1,175 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "uaNY4YJ0HFPAX3gKXiRdX",
+        "type": "Entry",
+        "createdAt": "2025-11-20T14:09:22.675Z",
+        "updatedAt": "2025-11-20T14:24:45.470Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 11,
+        "revision": 3,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "nestedContent"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "internalTitle": "[Baseline Nested] Baseline Level 2",
+        "text": "This is a level 2 nested baseline entry.",
+        "nt_experiences": [
+          {
+            "sys": {
+              "type": "Link",
+              "linkType": "Entry",
+              "id": "6IueRX1pS3iMJncbhUQTba"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "includes": {
+    "Entry": [
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "4hDiXxYEFrXHXcQgmdL9Uv",
+          "type": "Entry",
+          "createdAt": "2025-11-20T14:10:23.719Z",
+          "updatedAt": "2025-11-20T14:10:23.719Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 6,
+          "revision": 1,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nestedContent"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "internalTitle": "[Variant Nested] Variant Level 2",
+          "text": "This is a level 2 nested variant entry."
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "6IueRX1pS3iMJncbhUQTba",
+          "type": "Entry",
+          "createdAt": "2025-11-20T14:10:46.708Z",
+          "updatedAt": "2025-11-20T14:10:46.708Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 11,
+          "revision": 1,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nt_experience"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "nt_name": "[Personalization] Nested Level 2",
+          "nt_type": "nt_personalization",
+          "nt_config": {
+            "traffic": 1,
+            "components": [
+              {
+                "type": "EntryReplacement",
+                "baseline": {
+                  "id": "uaNY4YJ0HFPAX3gKXiRdX"
+                },
+                "variants": [
+                  {
+                    "id": "4hDiXxYEFrXHXcQgmdL9Uv",
+                    "hidden": false
+                  }
+                ]
+              }
+            ],
+            "distribution": [0, 1],
+            "primaryMetric": "fececd8c-d0bd-4a37-bea7-b2f68b782923"
+          },
+          "nt_variants": [
+            {
+              "sys": {
+                "type": "Link",
+                "linkType": "Entry",
+                "id": "4hDiXxYEFrXHXcQgmdL9Uv"
+              }
+            }
+          ],
+          "nt_experience_id": "6IueRX1pS3iMJncbhUQTba",
+          "nt_metadata": {
+            "type": "origin"
+          }
+        }
+      }
+    ]
+  }
+}
