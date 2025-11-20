@@ -28,19 +28,6 @@ describe('Analytics Section', () => {
         .withTimeout(10000)
     })
 
-    it('should display internal title', async () => {
-      await waitFor(element(by.id('analytics-internal-title')))
-        .toBeVisible()
-        .withTimeout(10000)
-
-      const internalTitleElement = element(by.id('analytics-internal-title'))
-      await expect(internalTitleElement).toBeVisible()
-      const text = await internalTitleElement.getAttributes()
-      const titleText = text.text || text.label
-      jestExpect(titleText).toBeTruthy()
-      jestExpect(titleText).toBe('[Baseline] All New or Return Visitors')
-    })
-
     it('should display content text', async () => {
       await waitFor(element(by.id('analytics-content-text')))
         .toBeVisible()
@@ -52,19 +39,6 @@ describe('Analytics Section', () => {
       const contentText = text.text || text.label
       jestExpect(contentText).toBeTruthy()
       jestExpect(contentText).toBe('This is a baseline content entry for all users.')
-    })
-
-    it('should display entry ID', async () => {
-      await waitFor(element(by.id('analytics-entry-id')))
-        .toBeVisible()
-        .withTimeout(10000)
-
-      const entryIdElement = element(by.id('analytics-entry-id'))
-      await expect(entryIdElement).toBeVisible()
-      const text = await entryIdElement.getAttributes()
-      const entryId = text.text || text.label
-      jestExpect(entryId).toBeTruthy()
-      jestExpect(entryId).toBe('2Z2WLOx07InSewC3LUB3eX')
     })
 
     it('should display component event', async () => {

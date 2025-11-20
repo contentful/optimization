@@ -5,15 +5,11 @@ import type Optimization from '@contentful/optimization-react-native'
 import type { Profile } from '@contentful/optimization-react-native'
 import { OptimizationProvider, logger } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
+import { ENV_CONFIG } from './env.config'
 import { AnalyticsSection } from './sections/AnalyticsSection'
 import { MergeTagSection } from './sections/MergeTagSection'
 import { PersonalizationSection } from './sections/PersonalizationSection'
-import {
-  fetchAnalyticsEntry,
-  fetchMergeTagEntry,
-  fetchPersonalizationEntry,
-  initializeSDK,
-} from './utils/sdkHelpers'
+import { fetchEntry, fetchMergeTagEntry, initializeSDK } from './utils/sdkHelpers'
 
 function App(): React.JSX.Element {
   const [sdk, setSdk] = useState<Optimization | null>(null)
@@ -47,8 +43,18 @@ function App(): React.JSX.Element {
       )
       setProfile(currentProfile)
       fetchMergeTagEntry(setMergeTagEntry, setSdkError).catch(() => undefined)
-      fetchPersonalizationEntry(setPersonalizationEntry, setSdkError).catch(() => undefined)
-      fetchAnalyticsEntry(setAnalyticsEntry, setSdkError).catch(() => undefined)
+      fetchEntry({
+        entryId: ENV_CONFIG.entries.personalized,
+        setEntry: setPersonalizationEntry,
+        setSdkError,
+        errorPrefix: 'Failed to fetch personalization entry',
+      }).catch(() => undefined)
+      fetchEntry({
+        entryId: ENV_CONFIG.entries.personalized,
+        setEntry: setAnalyticsEntry,
+        setSdkError,
+        errorPrefix: 'Failed to fetch analytics entry',
+      }).catch(() => undefined)
     })
 
     return () => {

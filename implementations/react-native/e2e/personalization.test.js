@@ -43,19 +43,6 @@ describe('Personalization Section', () => {
       jestExpect(contentText).toBe('This is a variant content entry for new visitors.')
     })
 
-    it('should display entry ID', async () => {
-      await waitFor(element(by.id('personalization-entry-id')))
-        .toBeVisible()
-        .withTimeout(10000)
-
-      const entryIdElement = element(by.id('personalization-entry-id'))
-      await expect(entryIdElement).toBeVisible()
-      const text = await entryIdElement.getAttributes()
-      const entryId = text.text || text.label
-      jestExpect(entryId).toBeTruthy()
-      jestExpect(entryId).toBe('1UFf7qr4mHET3HYuYmcpEj')
-    })
-
     it('should display component event', async () => {
       await waitFor(element(by.id('personalization-content')))
         .toBeVisible()

@@ -7,9 +7,8 @@ import { ENV_CONFIG } from '../env.config'
 
 const INCLUDE_DEPTH = 10
 const {
-  entries: { mergeTag: MERGE_TAG_ENTRY_ID, personalized: PERSONALIZATION_ENTRY_ID },
+  entries: { mergeTag: MERGE_TAG_ENTRY_ID },
 } = ENV_CONFIG
-const ANALYTICS_ENTRY_ID = PERSONALIZATION_ENTRY_ID
 
 function createContentfulClient(): ReturnType<typeof createClient> {
   return createClient({
@@ -30,7 +29,7 @@ interface FetchEntryOptions {
   includeIncludes?: boolean
 }
 
-async function fetchEntry({
+export async function fetchEntry({
   entryId,
   setEntry,
   setSdkError,
@@ -109,30 +108,6 @@ export async function fetchMergeTagEntry(
     setSdkError,
     errorPrefix: 'Failed to fetch merge tag entry',
     includeIncludes: true,
-  })
-}
-
-export async function fetchPersonalizationEntry(
-  setPersonalizationEntry: (entry: Entry | null) => void,
-  setSdkError: (error: string) => void,
-): Promise<void> {
-  await fetchEntry({
-    entryId: PERSONALIZATION_ENTRY_ID,
-    setEntry: setPersonalizationEntry,
-    setSdkError,
-    errorPrefix: 'Failed to fetch personalization entry',
-  })
-}
-
-export async function fetchAnalyticsEntry(
-  setAnalyticsEntry: (entry: Entry | null) => void,
-  setSdkError: (error: string) => void,
-): Promise<void> {
-  await fetchEntry({
-    entryId: ANALYTICS_ENTRY_ID,
-    setEntry: setAnalyticsEntry,
-    setSdkError,
-    errorPrefix: `Failed to fetch analytics entry with ID ${ANALYTICS_ENTRY_ID}`,
   })
 }
 
