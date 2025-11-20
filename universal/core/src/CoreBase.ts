@@ -7,6 +7,7 @@ import ApiClient, {
 import type { LogLevels } from 'logger'
 import { ConsoleLogSink, logger } from 'logger'
 import type AnalyticsBase from './analytics/AnalyticsBase'
+import type PersonalizationBase from './personalization/PersonalizationBase'
 import type { ProductConfig } from './ProductBase'
 
 /** Options that may be passed to the Core constructor */
@@ -25,6 +26,7 @@ export interface CoreConfig extends Pick<ApiClientConfig, GlobalApiConfigPropert
 
 abstract class CoreBase {
   abstract readonly analytics: AnalyticsBase
+  abstract readonly personalization: PersonalizationBase
   readonly api: ApiClient
   readonly eventBuilder: EventBuilder
   readonly config: Omit<CoreConfig, 'name'>

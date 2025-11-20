@@ -230,6 +230,7 @@
         button.innerText = title
         button.commandForElement = dialog
         button.command = 'show-modal'
+        button.dataset.testid = details.componentId ?? details?.properties?.url ?? details.messageId
 
         pre.innerText = JSON.stringify(details, null, 2)
 
