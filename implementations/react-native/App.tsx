@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { SafeAreaView, ScrollView, Text, View } from 'react-native'
+import { Button, SafeAreaView, ScrollView, Text, View } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
 import { OptimizationProvider } from '@contentful/optimization-react-native'
@@ -24,6 +24,7 @@ function App(): React.JSX.Element {
   const [sdk, setSdk] = useState<Optimization | null>(null)
   const [entries, setEntries] = useState<Entry[]>([])
   const [sdkError, setSdkError] = useState<string | null>(null)
+  const [isIdentified, setIsIdentified] = useState<boolean>(false)
 
   useEffect(() => {
     void initializeSDK(setSdk, setSdkError)
@@ -49,6 +50,21 @@ function App(): React.JSX.Element {
     }
   }, [sdk])
 
+  const handleIdentify = (): void => {
+    if (!sdk) return
+
+    void sdk.personalization.identify({ userId: 'charles', traits: { identified: true } })
+    setIsIdentified(true)
+  }
+
+  const handleReset = (): void => {
+    if (!sdk) return
+
+    sdk.reset()
+    void sdk.personalization.page({ properties: { url: 'app' } })
+    setIsIdentified(false)
+  }
+
   if (sdkError) {
     return <Text>{sdkError}</Text>
   }
@@ -60,6 +76,13 @@ function App(): React.JSX.Element {
   return (
     <OptimizationProvider instance={sdk}>
       <SafeAreaView>
+        <View style={{ padding: 10, flexDirection: 'row', gap: 10 }}>
+          {!isIdentified ? (
+            <Button testID="identify-button" title="Identify" onPress={handleIdentify} />
+          ) : (
+            <Button testID="reset-button" title="Reset" onPress={handleReset} />
+          )}
+        </View>
         <ScrollView>
           {entries.map((entry) => (
             <ContentEntry key={entry.sys.id} entry={entry} sdk={sdk} />

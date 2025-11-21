@@ -55,33 +55,12 @@ export async function fetchEntries(
 
     for (const entryId of entryIds) {
       try {
-        const response = await client.getEntries({
-          'sys.id': entryId,
+        const entry = await client.getEntry(entryId, {
           include: INCLUDE_DEPTH,
         })
 
-        const { items } = response
-        if (items.length > 0) {
-          const [entry] = items
-          if (!entry) {
-            continue
-          }
-
-          // Attach includes to the entry if they exist
-          if (response.includes?.Entry) {
-            const entryWithIncludes: Entry & { includes?: { Entry?: Entry[] } } = Object.assign(
-              {},
-              entry,
-              {
-                includes: { Entry: response.includes.Entry },
-              },
-            )
-            fetchedEntries.push(entryWithIncludes)
-            logger.debug(`Fetched entry ${entryId} with ${response.includes.Entry.length} includes`)
-          } else {
-            fetchedEntries.push(entry)
-          }
-        }
+        fetchedEntries.push(entry)
+        logger.debug(`Fetched entry ${entryId}`)
       } catch (_error: unknown) {
         logger.warn(`Entry "${entryId}" could not be found in the current space`)
       }

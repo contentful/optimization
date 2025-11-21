@@ -42,7 +42,7 @@ export function ContentEntry({ entry, sdk }: ContentEntryProps): React.JSX.Eleme
     if (richTextField) {
       return (
         <View testID={`entry-text-${baselineId}`}>
-          <RichTextRenderer richText={richTextField} sdk={sdk} entry={contentEntry} />
+          <RichTextRenderer richText={richTextField} sdk={sdk} />
           <Text>{`[Entry: ${baselineId}]`}</Text>
         </View>
       )

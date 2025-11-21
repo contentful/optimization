@@ -7,7 +7,14 @@ describe('identified user', () => {
 
   beforeEach(async () => {
     await clearProfileState()
-    // TODO: Add identify logic when SDK method is exposed
+
+    await waitFor(element(by.id('identify-button')))
+      .toBeVisible()
+      .withTimeout(10000)
+
+    await element(by.id('identify-button')).tap()
+
+    await device.reloadReactNative()
   })
 
   describe('common variants', () => {
@@ -62,23 +69,20 @@ describe('identified user', () => {
 
   describe('identified user variants', () => {
     it('should display variant for return visitors', async () => {
-      // NOTE: Since identification is not yet implemented (see TODO in beforeEach),
-      // this will show the baseline (new visitor) instead of the variant (return visitor)
       await waitFor(element(by.id('entry-text-2Z2WLOx07InSewC3LUB3eX')))
         .toBeVisible()
         .withTimeout(10000)
 
-      // Expecting baseline for new visitors since user identification is not implemented
       await expect(
         element(
           by.label(
-            'This is a variant content entry for new visitors. [Entry: 2Z2WLOx07InSewC3LUB3eX]',
+            'This is a variant content entry for return visitors. [Entry: 2Z2WLOx07InSewC3LUB3eX]',
           ),
         ),
       ).toBeVisible()
     })
 
-    it('should display baseline for A/B/C experiment', async () => {
+    it('should display variant B for A/B/C experiment', async () => {
       await waitFor(element(by.id('entry-text-5XHssysWUDECHzKLzoIsg1')))
         .toBeVisible()
         .withTimeout(10000)
@@ -86,41 +90,35 @@ describe('identified user', () => {
       await expect(
         element(
           by.label(
-            'This is a baseline content entry for an A/B/C experiment: A [Entry: 5XHssysWUDECHzKLzoIsg1]',
+            'This is a variant content entry for an A/B/C experiment: B [Entry: 5XHssysWUDECHzKLzoIsg1]',
           ),
         ),
       ).toBeVisible()
     })
 
     it('should display variant for visitors with custom event', async () => {
-      // NOTE: Since identification is not yet implemented (see TODO in beforeEach),
-      // this will show the baseline instead of the variant
       await waitFor(element(by.id('entry-text-6zqoWXyiSrf0ja7I2WGtYj')))
         .toBeVisible()
         .withTimeout(10000)
 
-      // Expecting baseline since user identification is not implemented
       await expect(
         element(
           by.label(
-            'This is a baseline content entry for all visitors with or without a custom event. [Entry: 6zqoWXyiSrf0ja7I2WGtYj]',
+            'This is a variant content entry for visitors with a custom event. [Entry: 6zqoWXyiSrf0ja7I2WGtYj]',
           ),
         ),
       ).toBeVisible()
     })
 
     it('should display variant for identified users', async () => {
-      // NOTE: Since identification is not yet implemented (see TODO in beforeEach),
-      // this will show the baseline instead of the variant
       await waitFor(element(by.id('entry-text-7pa5bOx8Z9NmNcr7mISvD')))
         .toBeVisible()
         .withTimeout(10000)
 
-      // Expecting baseline since user identification is not implemented
       await expect(
         element(
           by.label(
-            'This is a baseline content entry for all identified or unidentified users. [Entry: 7pa5bOx8Z9NmNcr7mISvD]',
+            'This is a variant content entry for identified users. [Entry: 7pa5bOx8Z9NmNcr7mISvD]',
           ),
         ),
       ).toBeVisible()

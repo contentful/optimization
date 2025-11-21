@@ -28,7 +28,6 @@ interface EmbeddedEntryInlineNode {
 interface RichTextRendererProps {
   richText: RichTextField
   sdk: Optimization
-  entry: Entry
 }
 
 function isMergeTagEntry(entry: Entry): entry is MergeTagEntry {
@@ -89,38 +88,14 @@ function resolveMergeTagValue(includedEntry: MergeTagEntry, sdk: Optimization): 
   return valueString
 }
 
-function renderEmbeddedEntry(
-  node: EmbeddedEntryInlineNode,
-  sdk: Optimization,
-  parentEntry: Entry,
-): string {
+function renderEmbeddedEntry(node: EmbeddedEntryInlineNode, sdk: Optimization): string {
   const { data } = node
-  let { target: includedEntry } = data
+  const { target: includedEntry } = data
 
-  // If target is a Link reference, resolve it from the parent entry's includes
   if (isLink(includedEntry)) {
-    logger.debug(
-      `[RichTextRenderer] Target is a Link, resolving from includes: ${includedEntry.sys.id}`,
+    return logAndReturnFallback(
+      `Target is still a Link after Contentful SDK resolution: ${includedEntry.sys.id}. This should not happen when using getEntry() with include parameter.`,
     )
-
-    // TypeScript type guard to check if entry has includes
-    const entryWithIncludes = parentEntry as Entry & { includes?: { Entry?: Entry[] } }
-
-    if (entryWithIncludes.includes?.Entry) {
-      const resolved = entryWithIncludes.includes.Entry.find(
-        (e) => e.sys.id === includedEntry.sys.id,
-      )
-      if (resolved) {
-        logger.debug(`[RichTextRenderer] Resolved Link ${includedEntry.sys.id} to entry`)
-        includedEntry = resolved
-      } else {
-        return logAndReturnFallback(
-          `Failed to resolve Link reference: ${includedEntry.sys.id} not found in includes`,
-        )
-      }
-    } else {
-      return logAndReturnFallback('Failed to resolve Link reference: no includes available')
-    }
   }
 
   if (isMergeTagEntry(includedEntry)) {
@@ -130,11 +105,7 @@ function renderEmbeddedEntry(
   return logAndReturnFallback('Failed to resolve merge tag: entry is not a merge tag')
 }
 
-export function RichTextRenderer({
-  richText,
-  sdk,
-  entry,
-}: RichTextRendererProps): React.JSX.Element {
+export function RichTextRenderer({ richText, sdk }: RichTextRendererProps): React.JSX.Element {
   const renderNode = (node: RichTextNode, index: number): React.ReactNode => {
     const textContent = renderTextNode(node)
     if (textContent) {
@@ -150,7 +121,7 @@ export function RichTextRenderer({
     }
 
     if (isEmbeddedEntryInline(node)) {
-      const mergeTagValue = renderEmbeddedEntry(node, sdk, entry)
+      const mergeTagValue = renderEmbeddedEntry(node, sdk)
       logger.debug(`[RichTextRenderer] Merge tag resolved to: "${mergeTagValue}"`)
       return mergeTagValue
     }
