@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
 
@@ -48,19 +48,19 @@ export function AnalyticsEventDisplay({ sdk }: AnalyticsEventDisplayProps): Reac
 
   if (events.length === 0) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.title}>Analytics Events</Text>
-        <Text style={styles.noEvents}>No events tracked yet</Text>
+      <View>
+        <Text>Analytics Events</Text>
+        <Text>No events tracked yet</Text>
       </View>
     )
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Analytics Events</Text>
+    <View>
+      <Text>Analytics Events</Text>
       {events.map((event, index) => (
-        <View key={index} style={styles.eventItem}>
-          <Text style={styles.eventText}>
+        <View key={index}>
+          <Text>
             {event.type}
             {event.componentId ? ` - Component: ${event.componentId}` : ''}
           </Text>
@@ -69,27 +69,3 @@ export function AnalyticsEventDisplay({ sdk }: AnalyticsEventDisplayProps): Reac
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    backgroundColor: '#f5f5f5',
-    borderTopWidth: 2,
-    borderTopColor: '#333',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  noEvents: {
-    fontStyle: 'italic',
-    color: '#666',
-  },
-  eventItem: {
-    paddingVertical: 4,
-  },
-  eventText: {
-    fontSize: 14,
-  },
-})
