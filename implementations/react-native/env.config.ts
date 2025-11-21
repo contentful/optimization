@@ -1,9 +1,14 @@
-/**
- * Environment Configuration for React Native Implementation
- *
- * This file contains the configuration for the mock server.
- * For production, use proper environment variable management.
- */
+import {
+  VITE_CONTENTFUL_BASE_PATH,
+  VITE_CONTENTFUL_CDA_HOST,
+  VITE_CONTENTFUL_ENVIRONMENT,
+  VITE_CONTENTFUL_SPACE_ID,
+  VITE_CONTENTFUL_TOKEN,
+  VITE_EXPERIENCE_API_BASE_URL,
+  VITE_INSIGHTS_API_BASE_URL,
+  VITE_NINETAILED_CLIENT_ID,
+  VITE_NINETAILED_ENVIRONMENT,
+} from '@env'
 
 interface EnvConfig {
   contentful: {
@@ -29,36 +34,38 @@ interface EnvConfig {
 }
 
 export const ENV_CONFIG = {
-  // Contentful Configuration
   contentful: {
-    spaceId: 'test-space',
-    environment: 'master',
-    accessToken: 'test-token',
-    host: 'localhost',
-    basePath: '/contentful',
+    spaceId: VITE_CONTENTFUL_SPACE_ID,
+    environment: VITE_CONTENTFUL_ENVIRONMENT,
+    accessToken: VITE_CONTENTFUL_TOKEN,
+    host: VITE_CONTENTFUL_CDA_HOST,
+    basePath: VITE_CONTENTFUL_BASE_PATH,
   },
 
-  // Optimization SDK Configuration
   optimization: {
-    clientId: 'test-client-id',
-    environment: 'main',
+    clientId: VITE_NINETAILED_CLIENT_ID,
+    environment: VITE_NINETAILED_ENVIRONMENT,
   },
 
-  // Mock Server URLs (for development/testing)
   api: {
-    experienceBaseUrl: 'http://localhost/experience/',
-    insightsBaseUrl: 'http://localhost/insights/',
+    experienceBaseUrl: VITE_EXPERIENCE_API_BASE_URL,
+    insightsBaseUrl: VITE_INSIGHTS_API_BASE_URL,
   },
 
-  // Entry IDs from mock server
   entries: {
-    personalized: '2Z2WLOx07InSewC3LUB3eX', // Baseline with experiences
-    product: '1MwiFl4z7gkwqGYdvCmr8c', // Simple content entry
-    mergeTag: '1MwiFl4z7gkwqGYdvCmr8c', // Entry with merge tag in rich text
+    personalized: '2Z2WLOx07InSewC3LUB3eX',
+    product: '1MwiFl4z7gkwqGYdvCmr8c',
+    mergeTag: '1MwiFl4z7gkwqGYdvCmr8c',
   },
 } as const satisfies EnvConfig
 
 export const {
-  contentful: { spaceId: CONTENTFUL_SPACE_ID, accessToken: CONTENTFUL_ACCESS_TOKEN },
-  optimization: { clientId: NINETAILED_CLIENT_ID },
+  contentful: { spaceId, accessToken },
+  optimization: { clientId },
 } = ENV_CONFIG
+
+export {
+  accessToken as CONTENTFUL_ACCESS_TOKEN,
+  spaceId as CONTENTFUL_SPACE_ID,
+  clientId as NINETAILED_CLIENT_ID,
+}

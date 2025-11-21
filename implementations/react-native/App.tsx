@@ -1,57 +1,99 @@
 import React, { useEffect, useState } from 'react'
-import { SafeAreaView, StyleSheet, Text } from 'react-native'
+import { Button, SafeAreaView, ScrollView, Text, View } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
 import { OptimizationProvider } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 
-import { MergeTagScreen } from './screens/MergeTagScreen'
-import { fetchMergeTagEntry, initializeSDK } from './utils/sdkHelpers'
+import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
+import { ENV_CONFIG } from './env.config'
+import { ContentEntry } from './sections/ContentEntry'
+import { fetchEntries, initializeSDK } from './utils/sdkHelpers'
+
+const ENTRY_IDS = [
+  ENV_CONFIG.entries.mergeTag,
+  '4ib0hsHWoSOnCVdDkizE8d',
+  'xFwgG3oNaOcjzWiGe4vXo',
+  ENV_CONFIG.entries.personalized,
+  '5XHssysWUDECHzKLzoIsg1',
+  '6zqoWXyiSrf0ja7I2WGtYj',
+  '7pa5bOx8Z9NmNcr7mISvD',
+]
 
 function App(): React.JSX.Element {
   const [sdk, setSdk] = useState<Optimization | null>(null)
-  const [mergeTagEntry, setMergeTagEntry] = useState<Entry | null>(null)
+  const [entries, setEntries] = useState<Entry[]>([])
   const [sdkError, setSdkError] = useState<string | null>(null)
+  const [isIdentified, setIsIdentified] = useState<boolean>(false)
 
   useEffect(() => {
     void initializeSDK(setSdk, setSdkError)
   }, [])
 
   useEffect(() => {
-    if (sdk) {
-      void fetchMergeTagEntry(setMergeTagEntry, setSdkError)
+    if (!sdk) {
+      return
+    }
+
+    void sdk.personalization.page({ properties: { url: 'app' } })
+
+    const subscription = sdk.states.profile.subscribe((profile) => {
+      if (!profile) {
+        return
+      }
+
+      void fetchEntries(ENTRY_IDS, setEntries, setSdkError)
+    })
+
+    return () => {
+      subscription.unsubscribe()
     }
   }, [sdk])
 
-  if (sdkError) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Text>{sdkError}</Text>
-      </SafeAreaView>
-    )
+  const handleIdentify = (): void => {
+    if (!sdk) return
+
+    void sdk.personalization.identify({ userId: 'charles', traits: { identified: true } })
+    setIsIdentified(true)
   }
 
-  if (!sdk || !mergeTagEntry) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Text>Loading...</Text>
-      </SafeAreaView>
-    )
+  const handleReset = (): void => {
+    if (!sdk) return
+
+    sdk.reset()
+    void sdk.personalization.page({ properties: { url: 'app' } })
+    setIsIdentified(false)
+  }
+
+  if (sdkError) {
+    return <Text>{sdkError}</Text>
+  }
+
+  if (!sdk || entries.length === 0) {
+    return <Text>Loading...</Text>
   }
 
   return (
     <OptimizationProvider instance={sdk}>
-      <MergeTagScreen sdk={sdk} mergeTagEntry={mergeTagEntry} />
+      <SafeAreaView>
+        <View style={{ padding: 10, flexDirection: 'row', gap: 10 }}>
+          {!isIdentified ? (
+            <Button testID="identify-button" title="Identify" onPress={handleIdentify} />
+          ) : (
+            <Button testID="reset-button" title="Reset" onPress={handleReset} />
+          )}
+        </View>
+        <ScrollView>
+          {entries.map((entry) => (
+            <ContentEntry key={entry.sys.id} entry={entry} sdk={sdk} />
+          ))}
+        </ScrollView>
+        <View>
+          <AnalyticsEventDisplay sdk={sdk} />
+        </View>
+      </SafeAreaView>
     </OptimizationProvider>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-})
 
 export default App

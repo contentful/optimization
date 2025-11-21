@@ -1,3 +1,5 @@
+const path = require('path')
+
 /** @type {Detox.DetoxConfig} */
 module.exports = {
   testRunner: {
@@ -12,26 +14,33 @@ module.exports = {
   apps: {
     'ios.debug': {
       type: 'ios.app',
-      binaryPath: 'ios/build/Build/Products/Debug-iphonesimulator/ReactNativeApp.app',
-      build:
-        'xcodebuild -workspace ios/ReactNativeApp.xcworkspace -scheme ReactNativeApp -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build',
+      binaryPath: path.join(
+        __dirname,
+        'ios/build/Build/Products/Debug-iphonesimulator/OptimizationImplementationApp.app',
+      ),
+      build: `cd ${__dirname} && xcodebuild -workspace ios/OptimizationImplementationApp.xcworkspace -scheme OptimizationImplementationApp -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build`,
+      launchArgs: {
+        detoxPrintBusyIdleResources: 'YES',
+      },
     },
     'ios.release': {
       type: 'ios.app',
-      binaryPath: 'ios/build/Build/Products/Release-iphonesimulator/ReactNativeApp.app',
-      build:
-        'xcodebuild -workspace ios/ReactNativeApp.xcworkspace -scheme ReactNativeApp -configuration Release -sdk iphonesimulator -derivedDataPath ios/build',
+      binaryPath: path.join(
+        __dirname,
+        'ios/build/Build/Products/Release-iphonesimulator/OptimizationImplementationApp.app',
+      ),
+      build: `cd ${__dirname} && xcodebuild -workspace ios/OptimizationImplementationApp.xcworkspace -scheme OptimizationImplementationApp -configuration Release -sdk iphonesimulator -derivedDataPath ios/build`,
     },
     'android.debug': {
       type: 'android.apk',
-      binaryPath: 'android/app/build/outputs/apk/debug/app-debug.apk',
-      build: 'cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug',
+      binaryPath: path.join(__dirname, 'android/app/build/outputs/apk/debug/app-debug.apk'),
+      build: `cd ${__dirname}/android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug`,
       reversePorts: [8081],
     },
     'android.release': {
       type: 'android.apk',
-      binaryPath: 'android/app/build/outputs/apk/release/app-release.apk',
-      build: 'cd android && ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release',
+      binaryPath: path.join(__dirname, 'android/app/build/outputs/apk/release/app-release.apk'),
+      build: `cd ${__dirname}/android && ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release`,
     },
   },
   devices: {

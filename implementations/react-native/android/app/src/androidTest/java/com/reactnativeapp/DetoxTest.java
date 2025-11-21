@@ -1,4 +1,4 @@
-package com.reactnativeapp;
+package com.optimizationimplementationapp;
 
 import com.wix.detox.Detox;
 import com.wix.detox.config.DetoxConfig;
@@ -22,7 +22,7 @@ public class DetoxTest {
         DetoxConfig detoxConfig = new DetoxConfig();
         detoxConfig.idlePolicyConfig.masterTimeoutSec = 90;
         detoxConfig.idlePolicyConfig.idleResourceTimeoutSec = 60;
-        detoxConfig.rnContextLoadTimeoutSec = (com.reactnativeapp.BuildConfig.DEBUG ? 180 : 60);
+        detoxConfig.rnContextLoadTimeoutSec = (com.optimizationimplementationapp.BuildConfig.DEBUG ? 180 : 60);
 
         Detox.runTests(mActivityRule, detoxConfig);
     }

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react'
-import { Text, View } from 'react-native'
+import React from 'react'
+import { Text } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
-import type { MergeTagEntry, Profile } from '@contentful/optimization-react-native'
+import type { MergeTagEntry } from '@contentful/optimization-react-native'
 import { logger } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 
@@ -34,6 +34,20 @@ function isMergeTagEntry(entry: Entry): entry is MergeTagEntry {
   return entry.sys.contentType.sys.id === 'nt_mergetag'
 }
 
+function isLink(target: unknown): boolean {
+  if (typeof target !== 'object' || target === null) {
+    return false
+  }
+
+  const { sys } = target as { sys?: unknown }
+  if (typeof sys !== 'object' || sys === null) {
+    return false
+  }
+
+  const { type } = sys as { type?: unknown }
+  return type === 'Link'
+}
+
 function isEmbeddedEntryInline(node: RichTextNode): node is EmbeddedEntryInlineNode {
   return node.nodeType === 'embedded-entry-inline'
 }
@@ -57,12 +71,8 @@ function convertToString(value: unknown): string {
   return String(value)
 }
 
-function resolveMergeTagValue(
-  includedEntry: MergeTagEntry,
-  sdk: Optimization,
-  profile: Profile,
-): string {
-  const resolvedValue = sdk.personalization.getMergeTagValue(includedEntry, profile)
+function resolveMergeTagValue(includedEntry: MergeTagEntry, sdk: Optimization): string {
+  const resolvedValue = sdk.personalization.getMergeTagValue(includedEntry)
 
   if (resolvedValue === undefined || resolvedValue === null) {
     logger.error(
@@ -78,48 +88,24 @@ function resolveMergeTagValue(
   return valueString
 }
 
-function renderEmbeddedEntry(
-  node: EmbeddedEntryInlineNode,
-  sdk: Optimization,
-  profile: Profile | undefined,
-): string {
-  const {
-    data: { target: includedEntry },
-  } = node
+function renderEmbeddedEntry(node: EmbeddedEntryInlineNode, sdk: Optimization): string {
+  const { data } = node
+  const { target: includedEntry } = data
 
-  if (!isMergeTagEntry(includedEntry)) {
+  if (isLink(includedEntry)) {
     return logAndReturnFallback(
-      `Failed to resolve merge tag: entry with ID "${includedEntry.sys.id}" is not a merge tag entry (contentType: ${includedEntry.sys.contentType.sys.id})`,
+      `Target is still a Link after Contentful SDK resolution: ${includedEntry.sys.id}. This should not happen when using getEntry() with include parameter.`,
     )
   }
 
-  if (!profile) {
-    return logAndReturnFallback(
-      `Failed to resolve merge tag: no profile available for merge tag "${includedEntry.fields.nt_name}" (ID: ${includedEntry.sys.id})`,
-    )
+  if (isMergeTagEntry(includedEntry)) {
+    return resolveMergeTagValue(includedEntry, sdk)
   }
 
-  return resolveMergeTagValue(includedEntry, sdk, profile)
+  return logAndReturnFallback('Failed to resolve merge tag: entry is not a merge tag')
 }
 
 export function RichTextRenderer({ richText, sdk }: RichTextRendererProps): React.JSX.Element {
-  const [profile, setProfile] = useState<Profile | undefined>(undefined)
-  useEffect(() => {
-    const subscription = sdk.states.profile.subscribe((currentProfile) => {
-      logger.debug(
-        '[RichTextRenderer] Profile received:',
-        currentProfile
-          ? `ID: ${currentProfile.id}, location.continent: ${String(currentProfile.location.continent)}`
-          : 'undefined',
-      )
-      setProfile(currentProfile)
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [sdk])
-
   const renderNode = (node: RichTextNode, index: number): React.ReactNode => {
     const textContent = renderTextNode(node)
     if (textContent) {
@@ -135,7 +121,9 @@ export function RichTextRenderer({ richText, sdk }: RichTextRendererProps): Reac
     }
 
     if (isEmbeddedEntryInline(node)) {
-      return renderEmbeddedEntry(node, sdk, profile)
+      const mergeTagValue = renderEmbeddedEntry(node, sdk)
+      logger.debug(`[RichTextRenderer] Merge tag resolved to: "${mergeTagValue}"`)
+      return mergeTagValue
     }
 
     if (node.content) {
@@ -145,5 +133,5 @@ export function RichTextRenderer({ richText, sdk }: RichTextRendererProps): Reac
     return null
   }
 
-  return <View>{richText.content.map((node, index) => renderNode(node, index))}</View>
+  return <>{richText.content.map((node, index) => renderNode(node, index))}</>
 }

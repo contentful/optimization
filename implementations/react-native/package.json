@@ -1,5 +1,5 @@
 {
-  "name": "ReactNativeApp",
+  "name": "OptimizationImplementationReactNative",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -50,9 +50,11 @@
     "@types/react-test-renderer": "^18.0.0",
     "babel-jest": "^29.6.3",
     "detox": "^20.43.0",
+    "dotenv": "catalog:",
     "jest": "^29.6.3",
     "jest-circus": "^30.2.0",
     "kill-port": "^2.0.1",
+    "react-native-dotenv": "^3.4.11",
     "react-test-renderer": "18.3.1",
     "typescript": "5.0.4"
   }
