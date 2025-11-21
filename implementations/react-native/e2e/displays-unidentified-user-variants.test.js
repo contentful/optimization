@@ -20,7 +20,7 @@ describe('unidentified user', () => {
       await expect(
         element(
           by.label(
-            'This is a merge tag content entry that displays the visitor\'s continent "EU" embedded within the text.\n[Entry: 1MwiFl4z7gkwqGYdvCmr8c]',
+            'This is a merge tag content entry that displays the visitor\'s continent "EU" embedded within the text. [Entry: 1MwiFl4z7gkwqGYdvCmr8c]',
           ),
         ),
       ).toBeVisible()
@@ -36,7 +36,7 @@ describe('unidentified user', () => {
       await expect(
         element(
           by.label(
-            'This is a variant content entry for visitors from Europe.\n[Entry: 4ib0hsHWoSOnCVdDkizE8d]',
+            'This is a variant content entry for visitors from Europe. [Entry: 4ib0hsHWoSOnCVdDkizE8d]',
           ),
         ),
       ).toBeVisible()
@@ -52,7 +52,7 @@ describe('unidentified user', () => {
       await expect(
         element(
           by.label(
-            'This is a variant content entry for visitors using a desktop browser.\n[Entry: xFwgG3oNaOcjzWiGe4vXo]',
+            'This is a variant content entry for visitors using a desktop browser. [Entry: xFwgG3oNaOcjzWiGe4vXo]',
           ),
         ),
       ).toBeVisible()
@@ -68,7 +68,7 @@ describe('unidentified user', () => {
       await expect(
         element(
           by.label(
-            'This is a variant content entry for new visitors.\n[Entry: 2Z2WLOx07InSewC3LUB3eX]',
+            'This is a variant content entry for new visitors. [Entry: 2Z2WLOx07InSewC3LUB3eX]',
           ),
         ),
       ).toBeVisible()
@@ -82,7 +82,7 @@ describe('unidentified user', () => {
       await expect(
         element(
           by.label(
-            'This is a baseline content entry for an A/B/C experiment: A\n[Entry: 5XHssysWUDECHzKLzoIsg1]',
+            'This is a baseline content entry for an A/B/C experiment: A [Entry: 5XHssysWUDECHzKLzoIsg1]',
           ),
         ),
       ).toBeVisible()
@@ -96,7 +96,7 @@ describe('unidentified user', () => {
       await expect(
         element(
           by.label(
-            'This is a baseline content entry for all visitors with or without a custom event.\n[Entry: 6zqoWXyiSrf0ja7I2WGtYj]',
+            'This is a baseline content entry for all visitors with or without a custom event. [Entry: 6zqoWXyiSrf0ja7I2WGtYj]',
           ),
         ),
       ).toBeVisible()
@@ -110,7 +110,7 @@ describe('unidentified user', () => {
       await expect(
         element(
           by.label(
-            'This is a baseline content entry for all identified or unidentified users.\n[Entry: 7pa5bOx8Z9NmNcr7mISvD]',
+            'This is a baseline content entry for all identified or unidentified users. [Entry: 7pa5bOx8Z9NmNcr7mISvD]',
           ),
         ),
       ).toBeVisible()
