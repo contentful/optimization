@@ -5,15 +5,21 @@ import { getHandlers as getContentfulHandlers } from './contentful-handlers'
 import { getHandlers as getExperienceHandlers } from './experience-handlers'
 import { getHandlers as getInsightsHandlers } from './insights-handlers'
 
-const CONTENTFUL_BASE_URL = process.env.CONTENTFUL_BASE_URL ?? 'http://localhost:8000/contentful/'
-const EXPERIENCE_BASE_URL = process.env.EXPERIENCE_BASE_URL ?? 'http://localhost:8000/experience/'
-const INSIGHTS_BASE_URL = process.env.INSIGHTS_BASE_URL ?? 'http://localhost:8000/insights/'
+const CONTENTFUL_PATH = '/contentful/'
+const EXPERIENCE_PATH = '/experience/'
+const INSIGHTS_PATH = '/insights/'
+
 const PORT = Number(process.env.PORT ?? 8000)
+const BASE_HOST = process.env.BASE_HOST ?? 'http://localhost:8000'
+
+const CONTENTFUL_BASE_URL = process.env.CONTENTFUL_BASE_URL ?? `${BASE_HOST}${CONTENTFUL_PATH}`
+const EXPERIENCE_BASE_URL = process.env.EXPERIENCE_BASE_URL ?? `${BASE_HOST}${EXPERIENCE_PATH}`
+const INSIGHTS_BASE_URL = process.env.INSIGHTS_BASE_URL ?? `${BASE_HOST}${INSIGHTS_PATH}`
 
 const app = createServer(
-  ...getContentfulHandlers(CONTENTFUL_BASE_URL),
-  ...getExperienceHandlers(EXPERIENCE_BASE_URL),
-  ...getInsightsHandlers(INSIGHTS_BASE_URL),
+  ...getContentfulHandlers(`*${CONTENTFUL_PATH}`),
+  ...getExperienceHandlers(`*${EXPERIENCE_PATH}`),
+  ...getInsightsHandlers(`*${INSIGHTS_PATH}`),
 )
 
 app.listen(PORT, () => {
