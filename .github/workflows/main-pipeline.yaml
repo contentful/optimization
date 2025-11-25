@@ -302,10 +302,12 @@ jobs:
   e2e-react-native-android:
     name: E2E React Native Android 📱
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     needs: setup
+    env:
+      DETOX_AVD_NAME: test
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v4
 
@@ -313,13 +315,6 @@ jobs:
         with:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
-
-      - uses: actions/cache@v4
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-
-      - run: pnpm i --prefer-offline --frozen-lockfile
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -329,6 +324,52 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+
+      - uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - run: pnpm i --prefer-offline --frozen-lockfile
+
+      - name: Create .env file for React Native
+        run: |
+          cat > implementations/react-native/.env << 'EOF'
+          VITE_NINETAILED_CLIENT_ID=${{ secrets.NINETAILED_CLIENT_ID }}
+          VITE_NINETAILED_ENVIRONMENT=${{ secrets.NINETAILED_ENVIRONMENT }}
+          VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/
+          VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/
+          VITE_CONTENTFUL_TOKEN=${{ secrets.CONTENTFUL_TOKEN }}
+          VITE_CONTENTFUL_ENVIRONMENT=${{ secrets.CONTENTFUL_ENVIRONMENT }}
+          VITE_CONTENTFUL_SPACE_ID=${{ secrets.CONTENTFUL_SPACE_ID }}
+          VITE_CONTENTFUL_CDA_HOST=localhost:8000
+          VITE_CONTENTFUL_BASE_PATH=contentful
+          EOF
+
+      - name: Start Mock Server
+        run: |
+          pnpm --filter mocks serve > /tmp/mock-server.log 2>&1 &
+          echo $! > /tmp/mock-server.pid
+          for i in {1..30}; do
+            if nc -z localhost 8000 2>/dev/null; then
+              echo "Mock server is ready"
+              break
+            fi
+            echo "Waiting for mock server... ($i/30)"
+            sleep 1
+          done
+          if ! nc -z localhost 8000 2>/dev/null; then
+            echo "Mock server failed to start:"
+            cat /tmp/mock-server.log
+            exit 1
+          fi
+
+      - name: Start Metro Bundler
+        run: |
+          cd implementations/react-native
+          npx react-native start --port 8081 > /tmp/metro.log 2>&1 &
+          echo $! > /tmp/metro.pid
+          sleep 15
 
       - name: Cache Gradle dependencies
         uses: actions/cache@v4
@@ -341,32 +382,40 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Cache Android SDK
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ env.ANDROID_HOME }}/cmdline-tools
-            ${{ env.ANDROID_HOME }}/platforms
-            ${{ env.ANDROID_HOME }}/platform-tools
-            ${{ env.ANDROID_HOME }}/build-tools
-            ${{ env.ANDROID_HOME }}/system-images
-          key: ${{ runner.os }}-android-sdk-34-${{ hashFiles('implementations/react-native/.detoxrc.js') }}
-          restore-keys: |
-            ${{ runner.os }}-android-sdk-34-
-            ${{ runner.os }}-android-sdk-
-
-      - name: Start Android Emulator
+      - name: Run Android E2E Tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
           arch: x86_64
           target: google_apis
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          avd-name: test
+          force-avd-creation: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot-save
           disable-animations: true
+          emulator-boot-timeout: 600
           script: |
+            echo "Setting up adb reverse port forwarding..."
+            adb reverse tcp:8000 tcp:8000
+            adb reverse tcp:8081 tcp:8081
+            echo "Building Android app..."
             cd implementations/react-native
             pnpm run e2e:build:android
+            echo "Running E2E tests..."
             pnpm run test:e2e:android
+
+      - name: Upload Metro logs on failure
+        if: failure()
+        run: |
+          echo "=== Metro Bundler Logs ===" 
+          cat /tmp/metro.log || echo "No metro logs found"
+          echo "=== Mock Server Logs ==="
+          cat /tmp/mock-server.log || echo "No mock server logs found"
+
+      - name: Stop Metro and Mock Server
+        if: always()
+        run: |
+          kill $(cat /tmp/metro.pid) 2>/dev/null || true
+          kill $(cat /tmp/mock-server.pid) 2>/dev/null || true
 
       - uses: actions/upload-artifact@v5
         if: always()
@@ -376,4 +425,6 @@ jobs:
             implementations/react-native/android/app/build/outputs/
             implementations/react-native/.detox/
             implementations/react-native/android/app/build/reports/
+            /tmp/metro.log
+            /tmp/mock-server.log
           retention-days: 7
