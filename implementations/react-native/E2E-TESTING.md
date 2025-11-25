@@ -158,16 +158,65 @@ Detox tests can be integrated into your CI/CD pipeline. Make sure to:
 3. Build the app
 4. Run tests with appropriate timeout settings
 
-Example for GitHub Actions:
+### GitHub Actions
+
+The project includes a GitHub Actions workflow (`.github/workflows/main-pipeline.yaml`) that runs Android e2e tests on pull requests.
+
+#### Testing Headless Locally (Before CI)
+
+To test the headless emulator setup locally before pushing to CI:
+
+1. **Start emulator in headless mode:**
+
+   ```bash
+   emulator -avd Pixel_7_API_34 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect &
+   ```
+
+2. **Wait for emulator to boot:**
+
+   ```bash
+   adb wait-for-device
+   timeout 120 bash -c 'while [[ "$(adb shell getprop sys.boot_completed)" != "1" ]]; do sleep 5; done'
+   ```
+
+3. **Run tests:**
+
+   ```bash
+   cd implementations/react-native
+   pnpm run e2e:build:android
+   pnpm run test:e2e:android
+   ```
+
+4. **Stop emulator:**
+   ```bash
+   adb emu kill
+   ```
+
+#### CI Workflow Example
+
+The CI workflow uses `reactivecircus/android-emulator-runner` action which handles emulator lifecycle automatically. The action creates its own AVD, so no manual AVD creation is needed:
 
 ```yaml
-- name: Run Detox tests (iOS)
-  run: |
-    pnpm install
-    cd ios && pod install && cd ..
-    pnpm run e2e:build:ios
-    pnpm run e2e:test:ios
+- name: Start Android Emulator
+  uses: reactivecircus/android-emulator-runner@v2
+  with:
+    api-level: 34
+    arch: x86_64
+    target: google_apis
+    emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+    disable-animations: true
+    script: |
+      cd implementations/react-native
+      pnpm run e2e:build:android
+      pnpm run test:e2e:android
 ```
+
+**Important Notes:**
+
+- The `android-emulator-runner` action automatically creates and manages the AVD
+- No need to manually create an AVD or cache it
+- The action handles emulator startup and shutdown
+- Use `target: google_apis` for Google APIs system images
 
 ## Resources
 

@@ -1,8 +1,9 @@
-import dotenv from 'dotenv'
-import { resolve } from 'node:path'
-
-dotenv.config({ path: resolve(process.cwd(), 'platforms/javascript/react-native/.env') })
-
+/**
+ * Environment Configuration for React Native Implementation
+ *
+ * This file contains the configuration for the mock server.
+ * For production, use proper environment variable management.
+ */
 interface EnvConfig {
   contentful: {
     spaceId: string

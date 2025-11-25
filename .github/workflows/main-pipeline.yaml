@@ -298,3 +298,82 @@ jobs:
             ./implementations/web-vanilla/playwright-report/
             ./implementations/web-vanilla/test-results/
           retention-days: 1
+
+  e2e-react-native-android:
+    name: E2E React Native Android 📱
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: setup
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+
+      - uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - run: pnpm i --prefer-offline --frozen-lockfile
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            implementations/react-native/android/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('implementations/react-native/android/**/*.gradle*', 'implementations/react-native/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Cache Android SDK
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ANDROID_HOME }}/cmdline-tools
+            ${{ env.ANDROID_HOME }}/platforms
+            ${{ env.ANDROID_HOME }}/platform-tools
+            ${{ env.ANDROID_HOME }}/build-tools
+            ${{ env.ANDROID_HOME }}/system-images
+          key: ${{ runner.os }}-android-sdk-34-${{ hashFiles('implementations/react-native/.detoxrc.js') }}
+          restore-keys: |
+            ${{ runner.os }}-android-sdk-34-
+            ${{ runner.os }}-android-sdk-
+
+      - name: Start Android Emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: |
+            cd implementations/react-native
+            pnpm run e2e:build:android
+            pnpm run test:e2e:android
+
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: ci-results-react-native-android
+          path: |
+            implementations/react-native/android/app/build/outputs/
+            implementations/react-native/.detox/
+            implementations/react-native/android/app/build/reports/
+          retention-days: 7
