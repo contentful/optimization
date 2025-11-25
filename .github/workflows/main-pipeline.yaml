@@ -301,6 +301,7 @@ jobs:
 
   e2e-react-native-android:
     name: E2E React Native Android 📱
+<<<<<<< HEAD
     runs-on: ubuntu-22.04
     timeout-minutes: 60
     needs: setup
@@ -323,6 +324,13 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+=======
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: setup
+    steps:
+      - uses: actions/checkout@v5
+>>>>>>> b27ff28 ([NT-1910] Update from main and reset previous changes onto branch)
 
       - uses: pnpm/action-setup@v4
 
@@ -331,6 +339,16 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
 
+<<<<<<< HEAD
+=======
+      - uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - run: pnpm i --prefer-offline --frozen-lockfile
+
+>>>>>>> b27ff28 ([NT-1910] Update from main and reset previous changes onto branch)
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -340,6 +358,7 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+<<<<<<< HEAD
       - uses: actions/cache@v4
         with:
           path: node_modules
@@ -386,6 +405,8 @@ jobs:
           echo $! > /tmp/metro.pid
           sleep 15
 
+=======
+>>>>>>> b27ff28 ([NT-1910] Update from main and reset previous changes onto branch)
       - name: Cache Gradle dependencies
         uses: actions/cache@v4
         with:
@@ -397,6 +418,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+<<<<<<< HEAD
       - name: Run Android E2E Tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -433,6 +455,34 @@ jobs:
         run: |
           kill $(cat /tmp/metro.pid) 2>/dev/null || true
           kill $(cat /tmp/mock-server.pid) 2>/dev/null || true
+=======
+      - name: Cache Android SDK
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.ANDROID_HOME }}/cmdline-tools
+            ${{ env.ANDROID_HOME }}/platforms
+            ${{ env.ANDROID_HOME }}/platform-tools
+            ${{ env.ANDROID_HOME }}/build-tools
+            ${{ env.ANDROID_HOME }}/system-images
+          key: ${{ runner.os }}-android-sdk-34-${{ hashFiles('implementations/react-native/.detoxrc.js') }}
+          restore-keys: |
+            ${{ runner.os }}-android-sdk-34-
+            ${{ runner.os }}-android-sdk-
+
+      - name: Start Android Emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: |
+            cd implementations/react-native
+            pnpm run e2e:build:android
+            pnpm run test:e2e:android
+>>>>>>> b27ff28 ([NT-1910] Update from main and reset previous changes onto branch)
 
       - uses: actions/upload-artifact@v5
         if: always()
@@ -442,6 +492,9 @@ jobs:
             implementations/react-native/android/app/build/outputs/
             implementations/react-native/.detox/
             implementations/react-native/android/app/build/reports/
+<<<<<<< HEAD
             /tmp/metro.log
             /tmp/mock-server.log
+=======
+>>>>>>> b27ff28 ([NT-1910] Update from main and reset previous changes onto branch)
           retention-days: 7

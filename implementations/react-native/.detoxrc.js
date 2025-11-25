@@ -81,13 +81,13 @@ module.exports = {
     'android.debug': {
       type: 'android.apk',
       binaryPath: path.join(__dirname, 'android/app/build/outputs/apk/debug/app-debug.apk'),
-      build: `cd ${__dirname}/android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug`,
+      build: `cd ${__dirname}/android && export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug`,
       reversePorts: [8081],
     },
     'android.release': {
       type: 'android.apk',
       binaryPath: path.join(__dirname, 'android/app/build/outputs/apk/release/app-release.apk'),
-      build: `cd ${__dirname}/android && ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release`,
+      build: `cd ${__dirname}/android && export JAVA_HOME=/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home && ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release`,
     },
   },
   devices: {

@@ -235,7 +235,18 @@ To test the headless emulator setup locally before pushing to CI:
 3. **Run tests:**
 
    ```bash
+<<<<<<< HEAD
    pnpm --filter @implementation/react-native run test:e2e:android:full
+=======
+   cd implementations/react-native
+   pnpm run e2e:build:android
+   pnpm run test:e2e:android
+   ```
+
+4. **Stop emulator:**
+   ```bash
+   adb emu kill
+>>>>>>> b27ff28 ([NT-1910] Update from main and reset previous changes onto branch)
    ```
 
 #### CI Workflow Example
@@ -253,8 +264,13 @@ The CI workflow uses `reactivecircus/android-emulator-runner` action which handl
     disable-animations: true
     script: |
       cd implementations/react-native
+<<<<<<< HEAD
       pnpm run test:e2e:android:build
       pnpm run test:e2e:android:run
+=======
+      pnpm run e2e:build:android
+      pnpm run test:e2e:android
+>>>>>>> b27ff28 ([NT-1910] Update from main and reset previous changes onto branch)
 ```
 
 **Important Notes:**
