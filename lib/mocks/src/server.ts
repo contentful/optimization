@@ -10,11 +10,13 @@ const EXPERIENCE_PATH = '/experience/'
 const INSIGHTS_PATH = '/insights/'
 
 const PORT = Number(process.env.PORT ?? 8000)
-const BASE_HOST = process.env.BASE_HOST ?? 'http://localhost:8000'
+const BASE_HOST = process.env.BASE_HOST ?? 'http://localhost'
 
-const CONTENTFUL_BASE_URL = process.env.CONTENTFUL_BASE_URL ?? `${BASE_HOST}${CONTENTFUL_PATH}`
-const EXPERIENCE_BASE_URL = process.env.EXPERIENCE_BASE_URL ?? `${BASE_HOST}${EXPERIENCE_PATH}`
-const INSIGHTS_BASE_URL = process.env.INSIGHTS_BASE_URL ?? `${BASE_HOST}${INSIGHTS_PATH}`
+const CONTENTFUL_BASE_URL =
+  process.env.CONTENTFUL_BASE_URL ?? `${BASE_HOST}:${PORT}${CONTENTFUL_PATH}`
+const EXPERIENCE_BASE_URL =
+  process.env.EXPERIENCE_BASE_URL ?? `${BASE_HOST}:${PORT}${EXPERIENCE_PATH}`
+const INSIGHTS_BASE_URL = process.env.INSIGHTS_BASE_URL ?? `${BASE_HOST}:${PORT}${INSIGHTS_PATH}`
 
 const app = createServer(
   ...getContentfulHandlers(`*${CONTENTFUL_PATH}`),
