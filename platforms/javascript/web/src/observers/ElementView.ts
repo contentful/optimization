@@ -2,11 +2,10 @@
  * Shared types, tunables, environment helpers, and state utilities for ElementViewObserver.
  */
 
+import { CAN_ADD_LISTENERS } from '../global-constants'
+
 export type Timer = ReturnType<typeof setTimeout>
 export type Interval = ReturnType<typeof setInterval>
-
-export const HAS_DOC =
-  typeof document !== 'undefined' && typeof document.addEventListener === 'function'
 
 /** High-resolution time when available. */
 export const NOW = (): number =>
@@ -16,7 +15,7 @@ export const NOW = (): number =>
 
 /** Page visibility helper (true when no document is available). */
 export const isPageVisible = (): boolean =>
-  !HAS_DOC ? true : document.visibilityState === 'visible'
+  !CAN_ADD_LISTENERS ? true : document.visibilityState === 'visible'
 
 /** ---- Tunables ---- */
 export const DEFAULTS = {

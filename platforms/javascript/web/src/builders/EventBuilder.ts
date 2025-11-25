@@ -1,15 +1,10 @@
 import { logger, type Dictionary, type Page } from '@contentful/optimization-core'
-import LocalStore from '../storage/LocalStore'
 
 function buildQuery(url: string | URL): Dictionary {
   return new URL(url).searchParams.entries().reduce((entries: Dictionary, [k, v]) => {
     entries[k] = v
     return entries
   }, {})
-}
-
-export function getAnonymousId(): string | undefined {
-  return LocalStore.anonymousId
 }
 
 export function getLocale(): string {

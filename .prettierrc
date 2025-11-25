@@ -1,6 +1,7 @@
 {
   "plugins": ["prettier-plugin-organize-imports"],
   "printWidth": 100,
+  "proseWrap": "always",
   "singleQuote": true,
   "semi": false
 }

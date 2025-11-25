@@ -2,8 +2,6 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "baseUrl": "./",
-    "module": "CommonJS",
-    "moduleResolution": "Node",
     "outDir": "./dist",
     "paths": {
       "@contentful/optimization-api-client": ["../../universal/api-client/src/index.ts"],
@@ -12,7 +10,7 @@
       "@contentful/optimization-node": ["../../platforms/javascript/node/src/index.ts"]
     },
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
-    "verbatimModuleSyntax": false
+    "verbatimModuleSyntax": true
   },
   "include": ["./e2e", "**/*.ts", "./src/**/*", "./src/**/*.json"]
 }

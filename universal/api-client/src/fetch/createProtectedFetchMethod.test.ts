@@ -24,7 +24,6 @@ describe('createProtectedFetchMethod', () => {
   const options: ProtectedFetchMethodOptions = {
     intervalTimeout: 100,
     requestTimeout: 2000,
-    requestName: 'TestRequest',
     retries: 2,
   }
 
@@ -71,7 +70,7 @@ describe('createProtectedFetchMethod', () => {
 
     expect(() => createProtectedFetchMethod(options)).toThrow(abortError)
     expect(warnSpy).toHaveBeenCalledWith(
-      'TestRequest request aborted due to network issues. This request may not be retried.',
+      'The request aborted due to network issues. This request may not be retried.',
     )
     expect(errorSpy).not.toHaveBeenCalled()
   })
@@ -84,7 +83,7 @@ describe('createProtectedFetchMethod', () => {
 
     expect(() => createProtectedFetchMethod(options)).toThrow(someError)
     expect(errorSpy).toHaveBeenCalledWith(
-      'TestRequest request failed with error: [NetworkError] Something went wrong',
+      'The request failed with error: [NetworkError] Something went wrong',
     )
     expect(warnSpy).not.toHaveBeenCalled()
   })

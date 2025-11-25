@@ -28,10 +28,8 @@ export async function initializeSDK(
     const sdkInstance = await Optimization.create({
       clientId: ENV_CONFIG.optimization.clientId,
       environment: ENV_CONFIG.optimization.environment,
-      api: {
-        personalization: { baseUrl: ENV_CONFIG.api.experienceBaseUrl },
-        analytics: { baseUrl: ENV_CONFIG.api.insightsBaseUrl },
-      },
+      personalization: { baseUrl: ENV_CONFIG.api.experienceBaseUrl },
+      analytics: { baseUrl: ENV_CONFIG.api.insightsBaseUrl },
       logLevel: 'debug',
     })
 

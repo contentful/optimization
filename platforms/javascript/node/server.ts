@@ -27,10 +27,8 @@ const sdk = new Optimization({
   clientId: process.env.VITE_NINETAILED_CLIENT_ID ?? '',
   environment: process.env.VITE_NINETAILED_ENVIRONMENT ?? '',
   logLevel: 'debug',
-  api: {
-    analytics: { baseUrl: process.env.VITE_INSIGHTS_API_BASE_URL },
-    personalization: { baseUrl: process.env.VITE_EXPERIENCE_API_BASE_URL },
-  },
+  analytics: { baseUrl: process.env.VITE_INSIGHTS_API_BASE_URL },
+  personalization: { baseUrl: process.env.VITE_EXPERIENCE_API_BASE_URL },
 })
 
 const ctfl = contentful.createClient({
@@ -141,7 +139,7 @@ app.get('/', limiter, async (req, res) => {
     apiResponse = await sdk.personalization.page({ profile: requestProfile })
   }
 
-  const { profile, personalizations, changes } = apiResponse ?? {}
+  const { profile, personalizations, changes } = apiResponse
 
   const entryIds: string[] = [
     '1MwiFl4z7gkwqGYdvCmr8c', // Rich Text field Entry with Merge Tag

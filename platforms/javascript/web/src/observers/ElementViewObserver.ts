@@ -3,7 +3,6 @@
  * - Tracks cumulative visible time per element
  * - Fires a sync/async callback exactly once per observed element
  * - Retries on failure with exponential backoff (retry scope is per "visibility cycle")
- * - Uses WeakRef to avoid strong element references (with a safe fallback when unavailable)
  * - Pauses when the page/tab is hidden; resumes cleanly
  * - Coalesces retries to avoid duplicate concurrent attempts
  * - Supports per-element overrides and optional data on observe()
@@ -12,6 +11,7 @@
  * Assumes DOM environment (browser).
  */
 
+import { CAN_ADD_LISTENERS } from '../global-constants'
 import {
   DEFAULTS,
   type EffectiveObserverOptions,
@@ -19,7 +19,6 @@ import {
   type ElementViewCallback,
   type ElementViewElementOptions,
   type ElementViewObserverOptions,
-  HAS_DOC,
   type Interval,
   NOW,
   Num,
@@ -56,7 +55,7 @@ class ElementViewObserver {
         threshold: this.opts.minVisibleRatio === 0 ? [0] : [0, this.opts.minVisibleRatio],
       },
     )
-    if (HAS_DOC) {
+    if (CAN_ADD_LISTENERS) {
       this.boundVisibilityHandler = () => {
         this.onPageVisibilityChange()
       }
@@ -100,7 +99,7 @@ class ElementViewObserver {
       s.strongRef = null
     }
     this.activeStates.clear()
-    if (HAS_DOC && this.boundVisibilityHandler) {
+    if (CAN_ADD_LISTENERS && this.boundVisibilityHandler) {
       document.removeEventListener('visibilitychange', this.boundVisibilityHandler)
       this.boundVisibilityHandler = null
     }
@@ -407,7 +406,7 @@ class ElementViewObserver {
   }
 
   private sweepOrphans(): void {
-    if (!HAS_DOC) return
+    if (!CAN_ADD_LISTENERS) return
     for (const state of Array.from(this.activeStates)) {
       const element = derefElement(state)
       if (!element) {

@@ -34,7 +34,7 @@ export class ConsoleLogSink extends LogSink {
   constructor(verbosity?: LogLevels) {
     super()
 
-    this.verbosity = verbosity ?? 'fatal'
+    this.verbosity = verbosity ?? 'error'
   }
 
   ingest(event: LogEvent): void {

@@ -14,13 +14,14 @@ import {
   createAutoTrackingEntryViewCallback,
   isEntryElement,
 } from './AutoEntryViewTracking'
-import { beaconHandler } from './beacon'
-import { getAnonymousId, getLocale, getPageProperties, getUserAgent } from './builders'
+import { getLocale, getPageProperties, getUserAgent } from './builders'
 import { ANONYMOUS_ID_COOKIE } from './global-constants'
+import { beaconHandler, createVisibilityChangeListener } from './handlers'
 import {
   ElementExistenceObserver,
   type ElementViewElementOptions,
   ElementViewObserver,
+  type ElementViewObserverOptions,
 } from './observers'
 import { LocalStore } from './storage'
 
@@ -34,7 +35,6 @@ declare global {
 export interface OptimizationWebConfig extends CoreStatefulConfig {
   app?: App
   autoTrackEntryViews?: boolean
-  autoObserveEntryElements?: boolean
 }
 
 function mergeConfig({
@@ -55,9 +55,7 @@ function mergeConfig({
 
   return merge(
     {
-      api: {
-        analytics: { beaconHandler },
-      },
+      analytics: { beaconHandler },
       defaults: {
         consent,
         analytics: {
@@ -73,11 +71,11 @@ function mergeConfig({
         app,
         channel: 'web',
         library: { name: 'Optimization Web API', version: '0.0.0' },
-        getAnonymousId,
         getLocale,
         getPageProperties,
         getUserAgent,
       },
+      getAnonymousId: () => LocalStore.anonymousId,
       logLevel: LocalStore.debug ? 'debug' : logLevel,
     },
     config,
@@ -88,20 +86,23 @@ class Optimization extends CoreStateful {
   private elementViewObserver?: ElementViewObserver = undefined
   private elementExistenceObserver?: ElementExistenceObserver = undefined
 
-  autoObserveEntryElements = false
-  autoTrackEntryViews = false
+  private autoTrackEntryViews = false
 
   constructor(config: OptimizationWebConfig) {
-    if (window.optimization) throw new Error('Optimization is already initialized')
+    if (typeof window !== 'undefined' && window.optimization)
+      throw new Error('Optimization is already initialized')
 
-    const { autoObserveEntryElements, autoTrackEntryViews, ...restConfig } = config
+    const { autoTrackEntryViews, ...restConfig } = config
 
     const mergedConfig: CoreConfig = mergeConfig(restConfig)
 
     super(mergedConfig)
 
-    this.autoObserveEntryElements = autoObserveEntryElements ?? false
-    this.autoTrackEntryViews = autoTrackEntryViews ?? false
+    this.autoTrackEntryViews = true
+
+    createVisibilityChangeListener(async () => {
+      await this.analytics.flush()
+    })
 
     effect(() => {
       const {
@@ -134,7 +135,6 @@ class Optimization extends CoreStateful {
 
       LocalStore.anonymousId = value?.id ?? cookieValue
 
-      // TODO: Allow cookie attributes to be set
       if (value && value.id !== cookieValue) Cookies.set(ANONYMOUS_ID_COOKIE, value.id)
     })
 
@@ -145,24 +145,18 @@ class Optimization extends CoreStateful {
 
       LocalStore.personalizations = value
     })
+
+    if (typeof window !== 'undefined') window.optimization ??= this
   }
 
-  startAutoTrackingEntryViews(options?: ElementViewElementOptions): void {
-    this.elementViewObserver = new ElementViewObserver(
-      createAutoTrackingEntryViewCallback({
-        personalization: this.personalization,
-        analytics: this.analytics,
-      }),
-    )
+  startAutoTrackingEntryViews(options?: ElementViewObserverOptions): void {
+    this.autoTrackEntryViews = true
+
+    this.elementViewObserver = new ElementViewObserver(createAutoTrackingEntryViewCallback(this))
 
     this.elementExistenceObserver = new ElementExistenceObserver(
-      createAutoTrackingEntryExistenceCallback(
-        this.elementViewObserver,
-        this.autoObserveEntryElements,
-      ),
+      createAutoTrackingEntryExistenceCallback(this.elementViewObserver, true),
     )
-
-    if (!this.autoObserveEntryElements) return
 
     // Fully-automated observation for elements with ctfl data attributes
     const entries = document.querySelectorAll('[data-ctfl-entry-id]')
@@ -201,7 +195,6 @@ class Optimization extends CoreStateful {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- protect against non-Web
-if (window) window.Optimization ??= Optimization
+if (typeof window !== 'undefined') window.Optimization ??= Optimization
 
 export default Optimization

@@ -1,0 +1,18 @@
+MD013:
+  line_length: 100
+  tables: false
+MD024:
+  siblings_only: true
+MD033:
+  allowed_elements:
+    - a
+    - details
+    - div
+    - h1
+    - h2
+    - h3
+    - img
+    - p
+    - summary
+MD041:
+  allow_preamble: true
