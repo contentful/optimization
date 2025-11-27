@@ -6,10 +6,15 @@ import { Analytics, Personalization, ScrollProvider } from '@contentful/optimiza
 import type { Entry } from 'contentful'
 
 import { RichTextRenderer, getRichTextContent } from '../components/RichTextRenderer'
+import { NestedContentEntry } from './NestedContentEntry'
 
 interface ContentEntryProps {
   entry: Entry
   sdk: Optimization
+}
+
+function isNestedContentType(entry: Entry): boolean {
+  return entry.sys.contentType?.sys?.id === 'nestedContent'
 }
 
 interface RichTextNode {
@@ -36,6 +41,10 @@ function isRichTextField(field: unknown): field is RichTextField {
 }
 
 export function ContentEntry({ entry, sdk }: ContentEntryProps): React.JSX.Element {
+  if (isNestedContentType(entry)) {
+    return <NestedContentEntry entry={entry} />
+  }
+
   const renderContent = (contentEntry: Entry, baselineId: string): React.JSX.Element => {
     const richTextField = Object.values(contentEntry.fields).find(isRichTextField)
 

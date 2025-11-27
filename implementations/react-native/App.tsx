@@ -18,6 +18,7 @@ const ENTRY_IDS = [
   '5XHssysWUDECHzKLzoIsg1',
   '6zqoWXyiSrf0ja7I2WGtYj',
   '7pa5bOx8Z9NmNcr7mISvD',
+  ENV_CONFIG.entries.nested,
 ]
 
 function App(): React.JSX.Element {

@@ -54,10 +54,80 @@ METRO_PORT="${METRO_PORT:-8081}"
 SKIP_BUILD="${SKIP_BUILD:-false}"
 CI="${CI:-false}"
 
+TEST_FILE=""
+TEST_NAME_PATTERN=""
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
+
+usage() {
+    cat << EOF
+Usage: $(basename "$0") [OPTIONS] [TEST_FILE]
+
+Run React Native Android E2E tests with Detox.
+
+Arguments:
+  TEST_FILE              Path to a specific test file to run (e.g., e2e/my-test.test.js)
+
+Options:
+  -t, --testNamePattern PATTERN   Run only tests matching the given pattern
+  --skip-build                    Skip the Android build step
+  -h, --help                      Show this help message
+
+Environment Variables:
+  MOCK_SERVER_PORT    Port for mock server (default: 8000)
+  METRO_PORT          Port for Metro bundler (default: 8081)
+  SKIP_BUILD          Set to 'true' to skip build (default: false)
+  CI                  Set to 'true' for CI mode (default: false)
+
+Examples:
+  $(basename "$0")                                           # Run all tests
+  $(basename "$0") e2e/my-test.test.js                       # Run specific test file
+  $(basename "$0") -t "should display variant"               # Run tests matching pattern
+  $(basename "$0") e2e/my-test.test.js -t "should display"   # Combine file and pattern
+EOF
+}
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -t|--testNamePattern)
+                if [[ -z "${2:-}" ]]; then
+                    log_error "Option $1 requires a pattern argument"
+                    usage
+                    exit 1
+                fi
+                TEST_NAME_PATTERN="$2"
+                shift 2
+                ;;
+            --skip-build)
+                SKIP_BUILD="true"
+                shift
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            -*)
+                log_error "Unknown option: $1"
+                usage
+                exit 1
+                ;;
+            *)
+                if [[ -z "$TEST_FILE" ]]; then
+                    TEST_FILE="$1"
+                else
+                    log_error "Multiple test files not supported. Got: $TEST_FILE and $1"
+                    usage
+                    exit 1
+                fi
+                shift
+                ;;
+        esac
+    done
+}
 
 log_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
@@ -270,16 +340,34 @@ run_tests() {
     log_info "Running E2E tests..."
     
     cd "$RN_DIR"
-    pnpm run test:e2e:android:run
+    
+    local detox_args=("test" "--configuration" "android.emu.debug")
+    
+    if [[ -n "$TEST_NAME_PATTERN" ]]; then
+        detox_args+=("--testNamePattern" "$TEST_NAME_PATTERN")
+        log_info "Filtering tests by pattern: $TEST_NAME_PATTERN"
+    fi
+    
+    if [[ -n "$TEST_FILE" ]]; then
+        detox_args+=("$TEST_FILE")
+        log_info "Running test file: $TEST_FILE"
+    fi
+    
+    log_info "Executing: detox ${detox_args[*]}"
+    npx detox "${detox_args[@]}"
     
     log_info "E2E tests complete"
 }
 
 main() {
+    parse_args "$@"
+    
     log_info "=== React Native Android E2E Test Runner ==="
     log_info "Root directory: $ROOT_DIR"
     log_info "React Native directory: $RN_DIR"
     log_info "CI mode: $CI"
+    [[ -n "$TEST_FILE" ]] && log_info "Test file: $TEST_FILE"
+    [[ -n "$TEST_NAME_PATTERN" ]] && log_info "Test pattern: $TEST_NAME_PATTERN"
     
     create_env_file
     
