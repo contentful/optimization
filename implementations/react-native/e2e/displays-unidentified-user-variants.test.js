@@ -116,4 +116,48 @@ describe('unidentified user', () => {
       ).toBeVisible()
     })
   })
+
+  describe('nested personalization baselines', () => {
+    it('should display level 0 nested baseline for new visitors', async () => {
+      await waitFor(element(by.id('entry-text-1JAU028vQ7v6nB2swl3NBo')))
+        .toBeVisible()
+        .withTimeout(10000)
+
+      await expect(
+        element(
+          by.label(
+            'This is a level 0 nested baseline entry. [Entry: 1JAU028vQ7v6nB2swl3NBo]',
+          ),
+        ),
+      ).toBeVisible()
+    })
+
+    it('should display level 1 nested baseline for new visitors', async () => {
+      await waitFor(element(by.id('nested-content-entry-1JAU028vQ7v6nB2swl3NBo')))
+        .toBeVisible()
+        .withTimeout(10000)
+
+      await expect(
+        element(
+          by.label(
+            'This is a level 1 nested baseline entry. [Entry: 1JAU028vQ7v6nB2swl3NBo]',
+          ),
+        ),
+      ).toBeVisible()
+    })
+
+    it('should display level 2 nested baseline for new visitors', async () => {
+      await waitFor(element(by.id('nested-content-entry-1JAU028vQ7v6nB2swl3NBo')))
+        .toBeVisible()
+        .withTimeout(10000)
+
+      await expect(
+        element(
+          by.label(
+            'This is a level 2 nested baseline entry. [Entry: 1JAU028vQ7v6nB2swl3NBo]',
+          ),
+        ),
+      ).toBeVisible()
+    })
+  })
 })
