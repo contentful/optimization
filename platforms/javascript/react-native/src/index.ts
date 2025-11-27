@@ -117,6 +117,9 @@ export { OptimizationProvider } from './components/OptimizationProvider'
 export { Personalization } from './components/Personalization'
 export type { PersonalizationProps } from './components/Personalization'
 
+export { NestedPersonalization } from './components/NestedPersonalization'
+export type { NestedPersonalizationProps } from './components/NestedPersonalization'
+
 export { Analytics } from './components/Analytics'
 export type { AnalyticsProps } from './components/Analytics'
 
