@@ -394,14 +394,15 @@ jobs:
           disable-animations: true
           emulator-boot-timeout: 600
           script: |
+            echo "Verifying JAVA_HOME: $JAVA_HOME"
+            java -version
             echo "Setting up adb reverse port forwarding..."
             adb reverse tcp:8000 tcp:8000
             adb reverse tcp:8081 tcp:8081
             echo "Building Android app..."
-            cd implementations/react-native
-            pnpm run e2e:build:android
+            pnpm --filter @implementation/react-native e2e:build:android
             echo "Running E2E tests..."
-            pnpm run test:e2e:android
+            pnpm --filter @implementation/react-native test:e2e:android
 
       - name: Upload Metro logs on failure
         if: failure()
