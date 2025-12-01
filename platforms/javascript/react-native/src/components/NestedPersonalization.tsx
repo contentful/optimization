@@ -135,17 +135,18 @@ export function NestedPersonalization({
     viewTimeMs,
   })
 
-  const resolvedEntry = resolvedData.entry as NestedEntry
+  const { entry: resolvedEntry } = resolvedData as { entry: NestedEntry }
+  const { fields } = resolvedEntry
 
   const nestedChildren = useMemo(() => {
-    const nestedEntries = resolvedEntry.fields?.nested
+    const { nested: nestedEntries } = fields
     if (!nestedEntries || !Array.isArray(nestedEntries) || nestedEntries.length === 0) {
       return null
     }
 
     return nestedEntries.map((nestedEntry, index) => (
       <NestedPersonalization
-        key={nestedEntry.sys?.id ?? `nested-${depth}-${index}`}
+        key={nestedEntry.sys.id}
         baselineEntry={nestedEntry}
         viewTimeMs={viewTimeMs}
         threshold={threshold}
@@ -155,7 +156,7 @@ export function NestedPersonalization({
         {children}
       </NestedPersonalization>
     ))
-  }, [resolvedEntry.fields?.nested, children, viewTimeMs, threshold, depth, testID])
+  }, [fields.nested, children, viewTimeMs, threshold, depth, testID])
 
   return (
     <View style={style} onLayout={onLayout} testID={testID}>
@@ -165,4 +166,3 @@ export function NestedPersonalization({
 }
 
 export default NestedPersonalization
-
