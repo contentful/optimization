@@ -127,43 +127,37 @@ describe('identified user', () => {
 
   describe('nested personalization variants', () => {
     it('should display level 0 nested variant for return visitors', async () => {
-      await waitFor(element(by.id('entry-text-1JAU028vQ7v6nB2swl3NBo')))
+      await waitFor(element(by.id('entry-text-2KIWllNZJT205BwOSkMINg')))
         .toBeVisible()
         .withTimeout(10000)
 
       await expect(
         element(
-          by.label(
-            'This is a level 0 nested variant entry. [Entry: 1JAU028vQ7v6nB2swl3NBo]',
-          ),
+          by.label('This is a level 0 nested variant entry. [Entry: 2KIWllNZJT205BwOSkMINg]'),
         ),
       ).toBeVisible()
     })
 
     it('should display level 1 nested variant for return visitors', async () => {
-      await waitFor(element(by.id('nested-content-entry-1JAU028vQ7v6nB2swl3NBo')))
+      await waitFor(element(by.id('entry-text-5a8ONfBdanJtlJ39WWnH1w')))
         .toBeVisible()
         .withTimeout(10000)
 
       await expect(
         element(
-          by.label(
-            'This is a level 1 nested variant entry. [Entry: 1JAU028vQ7v6nB2swl3NBo]',
-          ),
+          by.label('This is a level 1 nested variant entry. [Entry: 5a8ONfBdanJtlJ39WWnH1w]'),
         ),
       ).toBeVisible()
     })
 
     it('should display level 2 nested variant for return visitors', async () => {
-      await waitFor(element(by.id('nested-content-entry-1JAU028vQ7v6nB2swl3NBo')))
+      await waitFor(element(by.id('entry-text-4hDiXxYEFrXHXcQgmdL9Uv')))
         .toBeVisible()
         .withTimeout(10000)
 
       await expect(
         element(
-          by.label(
-            'This is a level 2 nested variant entry. [Entry: 1JAU028vQ7v6nB2swl3NBo]',
-          ),
+          by.label('This is a level 2 nested variant entry. [Entry: 4hDiXxYEFrXHXcQgmdL9Uv]'),
         ),
       ).toBeVisible()
     })

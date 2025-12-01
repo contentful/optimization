@@ -21,17 +21,17 @@ export function NestedContentEntry({ entry }: NestedContentEntryProps): React.JS
               typeof resolvedEntry.fields.text === 'string'
                 ? resolvedEntry.fields.text
                 : 'No content'
-            const fullLabel = `${text} [Entry: ${entry.sys.id}]`
+            const fullLabel = `${text} [Entry: ${resolvedEntry.sys.id}]`
 
             return (
               <View style={styles.entryContent}>
                 <View
-                  testID={`entry-text-${entry.sys.id}`}
+                  testID={`entry-text-${resolvedEntry.sys.id}`}
                   accessibilityLabel={fullLabel}
                   style={styles.textContainer}
                 >
                   <Text style={styles.text}>{text}</Text>
-                  <Text style={styles.entryId}>{`[Entry: ${entry.sys.id}]`}</Text>
+                  <Text style={styles.entryId}>{`[Entry: ${resolvedEntry.sys.id}]`}</Text>
                 </View>
                 {nestedChildren && <View style={styles.nestedContainer}>{nestedChildren}</View>}
               </View>
@@ -67,4 +67,3 @@ const styles = StyleSheet.create({
     paddingLeft: 8,
   },
 })
-

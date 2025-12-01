@@ -14,7 +14,7 @@ interface ContentEntryProps {
 }
 
 function isNestedContentType(entry: Entry): boolean {
-  return entry.sys.contentType?.sys?.id === 'nestedContent'
+  return entry.sys.contentType.sys.id === 'nestedContent'
 }
 
 interface RichTextNode {

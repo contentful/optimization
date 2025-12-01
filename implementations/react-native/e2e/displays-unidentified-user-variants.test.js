@@ -125,37 +125,31 @@ describe('unidentified user', () => {
 
       await expect(
         element(
-          by.label(
-            'This is a level 0 nested baseline entry. [Entry: 1JAU028vQ7v6nB2swl3NBo]',
-          ),
+          by.label('This is a level 0 nested baseline entry. [Entry: 1JAU028vQ7v6nB2swl3NBo]'),
         ),
       ).toBeVisible()
     })
 
     it('should display level 1 nested baseline for new visitors', async () => {
-      await waitFor(element(by.id('nested-content-entry-1JAU028vQ7v6nB2swl3NBo')))
+      await waitFor(element(by.id('entry-text-5i4SdJXw9oDEY0vgO7CwF4')))
         .toBeVisible()
         .withTimeout(10000)
 
       await expect(
         element(
-          by.label(
-            'This is a level 1 nested baseline entry. [Entry: 1JAU028vQ7v6nB2swl3NBo]',
-          ),
+          by.label('This is a level 1 nested baseline entry. [Entry: 5i4SdJXw9oDEY0vgO7CwF4]'),
         ),
       ).toBeVisible()
     })
 
     it('should display level 2 nested baseline for new visitors', async () => {
-      await waitFor(element(by.id('nested-content-entry-1JAU028vQ7v6nB2swl3NBo')))
+      await waitFor(element(by.id('entry-text-uaNY4YJ0HFPAX3gKXiRdX')))
         .toBeVisible()
         .withTimeout(10000)
 
       await expect(
         element(
-          by.label(
-            'This is a level 2 nested baseline entry. [Entry: 1JAU028vQ7v6nB2swl3NBo]',
-          ),
+          by.label('This is a level 2 nested baseline entry. [Entry: uaNY4YJ0HFPAX3gKXiRdX]'),
         ),
       ).toBeVisible()
     })
