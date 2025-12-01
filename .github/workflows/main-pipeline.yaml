@@ -301,13 +301,19 @@ jobs:
 
   e2e-react-native-android:
     name: E2E React Native Android 📱
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
     needs: setup
     env:
       DETOX_AVD_NAME: test
     steps:
       - uses: actions/checkout@v6
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
 
       - uses: pnpm/action-setup@v4
 
@@ -385,14 +391,14 @@ jobs:
       - name: Run Android E2E Tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: 33
           arch: x86_64
           target: google_apis
           avd-name: test
           force-avd-creation: true
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot-save
           disable-animations: true
-          emulator-boot-timeout: 600
+          emulator-boot-timeout: 300
           script: |
             echo "Verifying JAVA_HOME: $JAVA_HOME"
             java -version
