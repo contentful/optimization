@@ -76,6 +76,12 @@ The easiest way to run Android E2E tests is using the all-in-one script:
 ./scripts/run-e2e-android.sh
 ```
 
+Or from the root `optimization` directory:
+
+```bash
+pnpm --filter @implementation/react-native run e2e:run:android
+```
+
 This script handles the complete E2E testing workflow automatically:
 
 1. **Creates `.env` configuration** - Generates a `.env` file with mock server URLs and test credentials

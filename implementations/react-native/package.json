@@ -20,7 +20,8 @@
     "e2e:build:android": "detox build --configuration android.emu.debug",
     "test:e2e:android": "detox test --configuration android.emu.debug",
     "e2e:ios": "pnpm run e2e:build:ios && pnpm run test:e2e:ios",
-    "e2e:android": "pnpm run e2e:build:android && pnpm run test:e2e:android"
+    "e2e:android": "pnpm run e2e:build:android && pnpm run test:e2e:android",
+    "e2e:run:android": "./scripts/run-e2e-android.sh"
   },
   "dependencies": {
     "@contentful/optimization-react-native": "workspace:*",
