@@ -55,7 +55,6 @@
     "detox": "^20.43.0",
     "dotenv": "catalog:",
     "jest": "^29.6.3",
-    "react-native-dotenv": "^3.4.11",
     "jest-circus": "^30.2.0",
     "kill-port": "^2.0.1",
     "react-native-dotenv": "^3.4.11",
