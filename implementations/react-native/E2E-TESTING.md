@@ -32,7 +32,7 @@ cd ..
 2. Build the app for testing:
 
 ```bash
-pnpm run test:e2e:ios:build
+pnpm run e2e:build:ios
 ```
 
 ### Android Setup
@@ -50,7 +50,7 @@ emulator -list-avds
 3. Build the app for testing:
 
 ```bash
-pnpm run test:e2e:android:build
+pnpm run e2e:build:android
 ```
 
 ## Running Tests
@@ -59,11 +59,11 @@ pnpm run test:e2e:android:build
 
 ```bash
 # Build and run tests
-pnpm run test:e2e:ios
+pnpm run e2e:ios
 
 # Or run separately
-pnpm run test:e2e:ios:build
-pnpm run test:e2e:ios:run
+pnpm run e2e:build:ios
+pnpm run e2e:test:ios
 ```
 
 ### Android
@@ -74,12 +74,6 @@ The easiest way to run Android E2E tests is using the all-in-one script:
 
 ```bash
 ./scripts/run-e2e-android.sh
-```
-
-Or from the root `optimization` directory:
-
-```bash
-pnpm --filter @implementation/react-native run e2e:run:android
 ```
 
 This script handles the complete E2E testing workflow automatically:
@@ -123,11 +117,11 @@ If you need more control, you can run each step separately:
 
 ```bash
 # Build and run tests
-pnpm run test:e2e:android
+pnpm run e2e:android
 
 # Or run separately
-pnpm run test:e2e:android:build
-pnpm run test:e2e:android:run
+pnpm run e2e:build:android
+pnpm run e2e:test:android
 ```
 
 ## Test Files
@@ -235,9 +229,6 @@ To test the headless emulator setup locally before pushing to CI:
 3. **Run tests:**
 
    ```bash
-<<<<<<< HEAD
-   pnpm --filter @implementation/react-native run test:e2e:android:full
-=======
    cd implementations/react-native
    pnpm run e2e:build:android
    pnpm run test:e2e:android
@@ -246,7 +237,6 @@ To test the headless emulator setup locally before pushing to CI:
 4. **Stop emulator:**
    ```bash
    adb emu kill
->>>>>>> b27ff28 ([NT-1910] Update from main and reset previous changes onto branch)
    ```
 
 #### CI Workflow Example
@@ -264,13 +254,8 @@ The CI workflow uses `reactivecircus/android-emulator-runner` action which handl
     disable-animations: true
     script: |
       cd implementations/react-native
-<<<<<<< HEAD
-      pnpm run test:e2e:android:build
-      pnpm run test:e2e:android:run
-=======
       pnpm run e2e:build:android
       pnpm run test:e2e:android
->>>>>>> b27ff28 ([NT-1910] Update from main and reset previous changes onto branch)
 ```
 
 **Important Notes:**
