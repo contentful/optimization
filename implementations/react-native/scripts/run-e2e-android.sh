@@ -1,4 +1,40 @@
 #!/usr/bin/env bash
+#
+# run-e2e-android.sh - One-shot Android E2E Test Runner
+#
+# This script orchestrates the complete Android E2E testing workflow by:
+#   1. Creating a .env file with mock server configuration
+#   2. Starting the mock API server (from lib/mocks)
+#   3. Starting the Metro bundler for React Native
+#   4. Setting up adb reverse port forwarding so the emulator can reach localhost
+#   5. Building the Android app (via Detox)
+#   6. Running the E2E test suite
+#   7. Cleaning up all background processes on exit
+#
+# Environment Variables:
+#   MOCK_SERVER_PORT  - Port for mock API server (default: 8000)
+#   METRO_PORT        - Port for Metro bundler (default: 8081)
+#   SKIP_BUILD        - Set to "true" to skip the Android build step (default: false)
+#   CI                - Set to "true" when running in CI environment (default: false)
+#   VITE_NINETAILED_CLIENT_ID    - Ninetailed client ID (default: test-client-id)
+#   VITE_NINETAILED_ENVIRONMENT  - Ninetailed environment (default: main)
+#
+# Usage:
+#   ./scripts/run-e2e-android.sh              # Full run with build
+#   SKIP_BUILD=true ./scripts/run-e2e-android.sh  # Skip build step
+#
+# Prerequisites:
+#   - Android emulator running (or will be started by CI action)
+#   - Android SDK installed with adb in PATH
+#   - pnpm dependencies installed at monorepo root
+#
+# Logs:
+#   All logs are written to implementations/react-native/logs/:
+#     - mock-server.log  - Mock API server output
+#     - metro.log        - Metro bundler output
+#     - device.log       - Android device logcat output
+#
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

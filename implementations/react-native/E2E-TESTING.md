@@ -68,6 +68,53 @@ pnpm run e2e:test:ios
 
 ### Android
 
+#### One-Shot Script (Recommended)
+
+The easiest way to run Android E2E tests is using the all-in-one script:
+
+```bash
+./scripts/run-e2e-android.sh
+```
+
+This script handles the complete E2E testing workflow automatically:
+
+1. **Creates `.env` configuration** - Generates a `.env` file with mock server URLs and test credentials
+2. **Starts mock API server** - Launches the mock server from `lib/mocks` on port 8000
+3. **Starts Metro bundler** - Starts the React Native bundler on port 8081
+4. **Sets up adb reverse** - Configures port forwarding so the emulator can reach localhost services
+5. **Builds the Android app** - Runs the Detox build for Android
+6. **Runs E2E tests** - Executes the Detox test suite
+7. **Cleans up** - Automatically stops all background processes on exit (including on errors)
+
+**Environment variables** you can use to customize behavior:
+
+| Variable           | Default | Description                                  |
+| ------------------ | ------- | -------------------------------------------- |
+| `MOCK_SERVER_PORT` | `8000`  | Port for the mock API server                 |
+| `METRO_PORT`       | `8081`  | Port for Metro bundler                       |
+| `SKIP_BUILD`       | `false` | Set to `true` to skip the Android build step |
+| `CI`               | `false` | Set to `true` when running in CI environment |
+
+**Example with custom options:**
+
+```bash
+# Skip build if you've already built recently
+SKIP_BUILD=true ./scripts/run-e2e-android.sh
+
+# Use different ports
+MOCK_SERVER_PORT=9000 METRO_PORT=8082 ./scripts/run-e2e-android.sh
+```
+
+**Logs** are written to `implementations/react-native/logs/`:
+
+- `mock-server.log` - Mock API server output
+- `metro.log` - Metro bundler output
+- `device.log` - Android device logcat output (React Native logs)
+
+#### Manual Steps
+
+If you need more control, you can run each step separately:
+
 ```bash
 # Build and run tests
 pnpm run e2e:android
