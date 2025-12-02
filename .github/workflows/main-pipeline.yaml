@@ -242,7 +242,7 @@ jobs:
 
       - run: pnpm i --prefer-offline --frozen-lockfile
 
-      - run: pnpx playwright install --with-deps
+      - run: pnpm --filter @implementation/node exec playwright install --with-deps
 
       - run: pnpm --filter @implementation/node test:e2e
 
@@ -286,7 +286,7 @@ jobs:
 
       - run: pnpm i --prefer-offline --frozen-lockfile
 
-      - run: pnpx playwright install --with-deps
+      - run: pnpm --filter @implementation/web-vanilla exec playwright install --with-deps
 
       - run: pnpm --filter @implementation/web-vanilla test:e2e
 
