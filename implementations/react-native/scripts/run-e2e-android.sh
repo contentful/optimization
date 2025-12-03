@@ -261,7 +261,7 @@ build_android() {
     log_info "Building Android app..."
     
     cd "$RN_DIR"
-    pnpm run e2e:build:android
+    pnpm run test:e2e:android:build
     
     log_info "Android build complete"
 }
@@ -270,7 +270,7 @@ run_tests() {
     log_info "Running E2E tests..."
     
     cd "$RN_DIR"
-    pnpm run test:e2e:android
+    pnpm run test:e2e:android:run
     
     log_info "E2E tests complete"
 }
