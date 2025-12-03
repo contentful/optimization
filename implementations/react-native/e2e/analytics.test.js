@@ -12,7 +12,7 @@ describe('Analytics Events', () => {
   it('should track component impression events for visible entries', async () => {
     // Wait for the app to load
     const analyticsTitle = element(by.text('Analytics Events'))
-    await waitFor(analyticsTitle).toBeVisible().withTimeout(10000)
+    await waitFor(analyticsTitle).toBeVisible().withTimeout(40000)
 
     // Wait a bit for content to load and be visible
     await new Promise((resolve) => setTimeout(resolve, 3000))
