@@ -32,7 +32,7 @@ cd ..
 2. Build the app for testing:
 
 ```bash
-pnpm run e2e:build:ios
+pnpm run test:e2e:ios:build
 ```
 
 ### Android Setup
@@ -50,7 +50,7 @@ emulator -list-avds
 3. Build the app for testing:
 
 ```bash
-pnpm run e2e:build:android
+pnpm run test:e2e:android:build
 ```
 
 ## Running Tests
@@ -59,11 +59,11 @@ pnpm run e2e:build:android
 
 ```bash
 # Build and run tests
-pnpm run e2e:ios
+pnpm run test:e2e:ios
 
 # Or run separately
-pnpm run e2e:build:ios
-pnpm run e2e:test:ios
+pnpm run test:e2e:ios:build
+pnpm run test:e2e:ios:run
 ```
 
 ### Android
@@ -123,11 +123,11 @@ If you need more control, you can run each step separately:
 
 ```bash
 # Build and run tests
-pnpm run e2e:android
+pnpm run test:e2e:android
 
 # Or run separately
-pnpm run e2e:build:android
-pnpm run e2e:test:android
+pnpm run test:e2e:android:build
+pnpm run test:e2e:android:run
 ```
 
 ## Test Files
@@ -235,7 +235,7 @@ To test the headless emulator setup locally before pushing to CI:
 3. **Run tests:**
 
    ```bash
-   pnpm --filter @implementation/react-native run e2e:android:full
+   pnpm --filter @implementation/react-native run test:e2e:android:full
    ```
 
 #### CI Workflow Example
@@ -253,8 +253,8 @@ The CI workflow uses `reactivecircus/android-emulator-runner` action which handl
     disable-animations: true
     script: |
       cd implementations/react-native
-      pnpm run e2e:build:android
-      pnpm run test:e2e:android
+      pnpm run test:e2e:android:build
+      pnpm run test:e2e:android:run
 ```
 
 **Important Notes:**

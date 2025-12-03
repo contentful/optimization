@@ -416,9 +416,9 @@ jobs:
             adb reverse tcp:8000 tcp:8000
             adb reverse tcp:8081 tcp:8081
             echo "Building Android app..."
-            pnpm --filter @implementation/react-native e2e:build:android
+            pnpm --filter @implementation/react-native test:e2e:android:build
             echo "Running E2E tests..."
-            pnpm --filter @implementation/react-native test:e2e:android
+            pnpm --filter @implementation/react-native test:e2e:android:run
 
       - name: Upload Metro logs on failure
         if: failure()
