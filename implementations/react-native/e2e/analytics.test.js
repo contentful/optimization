@@ -19,7 +19,7 @@ describe('Analytics Events', () => {
 
     // Look for component events with entry IDs
     // The merge tag entry should trigger a component event
-    const componentEvent = element(by.text(/component - Component: 1MwiFl4z7gkwqGYdvCmr8c/i))
+    const componentEvent = element(by.label('component - Component: 1MwiFl4z7gkwqGYdvCmr8c'))
     await waitFor(componentEvent).toBeVisible().withTimeout(15000)
   })
 })
