@@ -340,21 +340,7 @@ run_tests() {
     log_info "Running E2E tests..."
     
     cd "$RN_DIR"
-    
-    local detox_args=("test" "--configuration" "android.emu.debug")
-    
-    if [[ -n "$TEST_NAME_PATTERN" ]]; then
-        detox_args+=("--testNamePattern" "$TEST_NAME_PATTERN")
-        log_info "Filtering tests by pattern: $TEST_NAME_PATTERN"
-    fi
-    
-    if [[ -n "$TEST_FILE" ]]; then
-        detox_args+=("$TEST_FILE")
-        log_info "Running test file: $TEST_FILE"
-    fi
-    
-    log_info "Executing: detox ${detox_args[*]}"
-    npx detox "${detox_args[@]}"
+    pnpm run test:e2e:android:run
     
     log_info "E2E tests complete"
 }
