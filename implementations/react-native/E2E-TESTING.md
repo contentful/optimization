@@ -235,14 +235,7 @@ To test the headless emulator setup locally before pushing to CI:
 3. **Run tests:**
 
    ```bash
-   cd implementations/react-native
-   pnpm run e2e:build:android
-   pnpm run test:e2e:android
-   ```
-
-4. **Stop emulator:**
-   ```bash
-   adb emu kill
+   pnpm --filter @implementation/react-native run e2e:android:full
    ```
 
 #### CI Workflow Example
