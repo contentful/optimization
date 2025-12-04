@@ -5,10 +5,17 @@ import { View, type StyleProp, type ViewStyle } from 'react-native'
 import { useOptimization } from '../context/OptimizationContext'
 import { useViewportTracking } from '../hooks/useViewportTracking'
 
+interface NestedEntry extends Entry {
+  fields: Entry['fields'] & {
+    nested?: Entry[]
+  }
+}
+
 export interface PersonalizationProps {
   /**
    * The baseline Contentful entry fetched with { include: 10 }.
    * Must include nt_experiences field with linked personalization data.
+   * May contain a `nested` field with child entries that are also personalized.
    *
    * @example
    * ```typescript
@@ -20,14 +27,15 @@ export interface PersonalizationProps {
   baselineEntry: Entry
 
   /**
-   * Render prop that receives the resolved variant entry.
+   * Render prop that receives the resolved variant entry and optional nested children.
    * Called with the baseline entry if no personalization matches,
    * or with the selected variant entry if personalization applies.
    *
    * @param resolvedEntry - The entry to display (baseline or variant)
+   * @param nestedChildren - Pre-rendered nested personalization components (if any)
    * @returns ReactNode to render
    *
-   * @example
+   * @example Basic usage without nesting
    * ```tsx
    * <Personalization baselineEntry={entry}>
    *   {(resolvedEntry) => (
@@ -38,8 +46,22 @@ export interface PersonalizationProps {
    *   )}
    * </Personalization>
    * ```
+   *
+   * @example With nested entries
+   * ```tsx
+   * <Personalization baselineEntry={pageEntry}>
+   *   {(resolvedEntry, nestedChildren) => (
+   *     <View>
+   *       <Text>{resolvedEntry.fields.title}</Text>
+   *       <View style={styles.sections}>
+   *         {nestedChildren}
+   *       </View>
+   *     </View>
+   *   )}
+   * </Personalization>
+   * ```
    */
-  children: (resolvedEntry: Entry) => ReactNode
+  children: (resolvedEntry: Entry, nestedChildren?: ReactNode) => ReactNode
 
   /**
    * Minimum time (in milliseconds) the component must be visible
@@ -66,6 +88,12 @@ export interface PersonalizationProps {
    * Optional testID for testing purposes
    */
   testID?: string
+
+  /**
+   * Current nesting depth (used internally for tracking)
+   * @internal
+   */
+  depth?: number
 }
 
 /**
@@ -74,6 +102,10 @@ export interface PersonalizationProps {
  * Tracks views of personalized Contentful entry components (content entries in your CMS).
  * This component handles variant resolution and automatically tracks component views when
  * the entry meets visibility and time thresholds.
+ *
+ * Supports recursive personalization of Contentful entries that may contain nested
+ * personalized entries. When entries have a `nested` field with child entries, this
+ * component resolves personalization at each level and tracks views independently.
  *
  * **Important:** "Component tracking" refers to tracking Contentful entry components,
  * NOT React Native UI components. The term "component" comes from Contentful's
@@ -112,12 +144,32 @@ export interface PersonalizationProps {
  * </Personalization>
  * ```
  *
+ * @example With Nested Content
+ * ```tsx
+ * <ScrollProvider>
+ *   <Personalization baselineEntry={pageEntry}>
+ *     {(resolvedEntry, nestedChildren) => (
+ *       <View>
+ *         <Text>{resolvedEntry.fields.title}</Text>
+ *         <View style={styles.sections}>
+ *           {nestedChildren}
+ *         </View>
+ *       </View>
+ *     )}
+ *   </Personalization>
+ * </ScrollProvider>
+ * ```
+ *
  * @remarks
  * - Must be used within an OptimizationProvider
  * - Must be used within a ScrollProvider
  * - Tracks only once per component instance
  * - Default: tracks when 80% visible for 2000ms
  * - Handles non-personalized entries gracefully (returns baseline)
+ * - Tracks views independently for each nesting level
+ * - Each nested entry resolves its own personalization independently
+ * - Supports unlimited nesting depth
+ * - Child entries are rendered via the `nested` field on the resolved entry
  */
 export function Personalization({
   baselineEntry,
@@ -126,6 +178,7 @@ export function Personalization({
   threshold,
   style,
   testID,
+  depth = 0,
 }: PersonalizationProps): React.JSX.Element {
   const optimization = useOptimization()
 
@@ -141,9 +194,32 @@ export function Personalization({
     viewTimeMs,
   })
 
+  const { entry: resolvedEntry } = resolvedData as { entry: NestedEntry }
+  const { fields } = resolvedEntry
+
+  const nestedChildren = useMemo(() => {
+    const { nested: nestedEntries } = fields
+    if (!nestedEntries || !Array.isArray(nestedEntries) || nestedEntries.length === 0) {
+      return null
+    }
+
+    return nestedEntries.map((nestedEntry, index) => (
+      <Personalization
+        key={nestedEntry.sys.id}
+        baselineEntry={nestedEntry}
+        viewTimeMs={viewTimeMs}
+        threshold={threshold}
+        depth={depth + 1}
+        testID={testID ? `${testID}-nested-${index}` : undefined}
+      >
+        {children}
+      </Personalization>
+    ))
+  }, [fields, children, viewTimeMs, threshold, depth, testID])
+
   return (
     <View style={style} onLayout={onLayout} testID={testID}>
-      {children(resolvedData.entry)}
+      {children(resolvedData.entry, nestedChildren)}
     </View>
   )
 }
