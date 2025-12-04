@@ -301,7 +301,7 @@ jobs:
 
   e2e-react-native-android:
     name: E2E React Native Android 📱
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     needs: setup
     env:
