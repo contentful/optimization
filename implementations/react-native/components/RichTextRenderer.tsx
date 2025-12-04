@@ -105,6 +105,27 @@ function renderEmbeddedEntry(node: EmbeddedEntryInlineNode, sdk: Optimization): 
   return logAndReturnFallback('Failed to resolve merge tag: entry is not a merge tag')
 }
 
+function extractTextContent(node: RichTextNode, sdk: Optimization): string {
+  const textContent = renderTextNode(node)
+  if (textContent) {
+    return textContent
+  }
+
+  if (isEmbeddedEntryInline(node)) {
+    return renderEmbeddedEntry(node, sdk)
+  }
+
+  if (node.content) {
+    return node.content.map((child) => extractTextContent(child, sdk)).join('')
+  }
+
+  return ''
+}
+
+export function getRichTextContent(richText: RichTextField, sdk: Optimization): string {
+  return richText.content.map((node) => extractTextContent(node, sdk)).join(' ')
+}
+
 export function RichTextRenderer({ richText, sdk }: RichTextRendererProps): React.JSX.Element {
   const renderNode = (node: RichTextNode, index: number): React.ReactNode => {
     const textContent = renderTextNode(node)

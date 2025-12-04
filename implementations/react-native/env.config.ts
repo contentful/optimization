@@ -9,6 +9,7 @@ import {
   VITE_NINETAILED_CLIENT_ID,
   VITE_NINETAILED_ENVIRONMENT,
 } from '@env'
+import { Platform } from 'react-native'
 
 interface EnvConfig {
   contentful: {
@@ -33,12 +34,21 @@ interface EnvConfig {
   }
 }
 
+const ANDROID_LOCALHOST = '10.0.2.2'
+
+function getAndroidCompatibleUrl(url: string): string {
+  if (Platform.OS !== 'android') {
+    return url
+  }
+  return url.replace(/localhost/g, ANDROID_LOCALHOST)
+}
+
 export const ENV_CONFIG = {
   contentful: {
     spaceId: VITE_CONTENTFUL_SPACE_ID,
     environment: VITE_CONTENTFUL_ENVIRONMENT,
     accessToken: VITE_CONTENTFUL_TOKEN,
-    host: VITE_CONTENTFUL_CDA_HOST,
+    host: getAndroidCompatibleUrl(VITE_CONTENTFUL_CDA_HOST),
     basePath: VITE_CONTENTFUL_BASE_PATH,
   },
 
@@ -48,8 +58,8 @@ export const ENV_CONFIG = {
   },
 
   api: {
-    experienceBaseUrl: VITE_EXPERIENCE_API_BASE_URL,
-    insightsBaseUrl: VITE_INSIGHTS_API_BASE_URL,
+    experienceBaseUrl: getAndroidCompatibleUrl(VITE_EXPERIENCE_API_BASE_URL),
+    insightsBaseUrl: getAndroidCompatibleUrl(VITE_INSIGHTS_API_BASE_URL),
   },
 
   entries: {

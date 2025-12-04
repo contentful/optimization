@@ -120,6 +120,6 @@ dependencies {
     }
 
     // Detox
-    androidTestImplementation('com.wix:detox:+')
+    androidTestImplementation('com.wix:detox:20.46.0')
     implementation 'androidx.appcompat:appcompat:1.7.1'
 }

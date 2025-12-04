@@ -32,7 +32,7 @@ cd ..
 2. Build the app for testing:
 
 ```bash
-pnpm run e2e:build:ios
+pnpm run test:e2e:ios:build
 ```
 
 ### Android Setup
@@ -50,7 +50,7 @@ emulator -list-avds
 3. Build the app for testing:
 
 ```bash
-pnpm run e2e:build:android
+pnpm run test:e2e:android:build
 ```
 
 ## Running Tests
@@ -59,22 +59,75 @@ pnpm run e2e:build:android
 
 ```bash
 # Build and run tests
-pnpm run e2e:ios
+pnpm run test:e2e:ios
 
 # Or run separately
-pnpm run e2e:build:ios
-pnpm run e2e:test:ios
+pnpm run test:e2e:ios:build
+pnpm run test:e2e:ios:run
 ```
 
 ### Android
 
+#### One-Shot Script (Recommended)
+
+The easiest way to run Android E2E tests is using the all-in-one script:
+
+```bash
+./scripts/run-e2e-android.sh
+```
+
+Or from the root `optimization` directory:
+
+```bash
+pnpm --filter @implementation/react-native run e2e:run:android
+```
+
+This script handles the complete E2E testing workflow automatically:
+
+1. **Creates `.env` configuration** - Generates a `.env` file with mock server URLs and test credentials
+2. **Starts mock API server** - Launches the mock server from `lib/mocks` on port 8000
+3. **Starts Metro bundler** - Starts the React Native bundler on port 8081
+4. **Sets up adb reverse** - Configures port forwarding so the emulator can reach localhost services
+5. **Builds the Android app** - Runs the Detox build for Android
+6. **Runs E2E tests** - Executes the Detox test suite
+7. **Cleans up** - Automatically stops all background processes on exit (including on errors)
+
+**Environment variables** you can use to customize behavior:
+
+| Variable           | Default | Description                                  |
+| ------------------ | ------- | -------------------------------------------- |
+| `MOCK_SERVER_PORT` | `8000`  | Port for the mock API server                 |
+| `METRO_PORT`       | `8081`  | Port for Metro bundler                       |
+| `SKIP_BUILD`       | `false` | Set to `true` to skip the Android build step |
+| `CI`               | `false` | Set to `true` when running in CI environment |
+
+**Example with custom options:**
+
+```bash
+# Skip build if you've already built recently
+SKIP_BUILD=true ./scripts/run-e2e-android.sh
+
+# Use different ports
+MOCK_SERVER_PORT=9000 METRO_PORT=8082 ./scripts/run-e2e-android.sh
+```
+
+**Logs** are written to `implementations/react-native/logs/`:
+
+- `mock-server.log` - Mock API server output
+- `metro.log` - Metro bundler output
+- `device.log` - Android device logcat output (React Native logs)
+
+#### Manual Steps
+
+If you need more control, you can run each step separately:
+
 ```bash
 # Build and run tests
-pnpm run e2e:android
+pnpm run test:e2e:android
 
 # Or run separately
-pnpm run e2e:build:android
-pnpm run e2e:test:android
+pnpm run test:e2e:android:build
+pnpm run test:e2e:android:run
 ```
 
 ## Test Files
@@ -158,16 +211,58 @@ Detox tests can be integrated into your CI/CD pipeline. Make sure to:
 3. Build the app
 4. Run tests with appropriate timeout settings
 
-Example for GitHub Actions:
+### GitHub Actions
+
+The project includes a GitHub Actions workflow (`.github/workflows/main-pipeline.yaml`) that runs Android e2e tests on pull requests.
+
+#### Testing Headless Locally (Before CI)
+
+To test the headless emulator setup locally before pushing to CI:
+
+1. **Start emulator in headless mode:**
+
+   ```bash
+   emulator -avd Pixel_7_API_34 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect &
+   ```
+
+2. **Wait for emulator to boot:**
+
+   ```bash
+   adb wait-for-device
+   timeout 120 bash -c 'while [[ "$(adb shell getprop sys.boot_completed)" != "1" ]]; do sleep 5; done'
+   ```
+
+3. **Run tests:**
+
+   ```bash
+   pnpm --filter @implementation/react-native run test:e2e:android:full
+   ```
+
+#### CI Workflow Example
+
+The CI workflow uses `reactivecircus/android-emulator-runner` action which handles emulator lifecycle automatically. The action creates its own AVD, so no manual AVD creation is needed:
 
 ```yaml
-- name: Run Detox tests (iOS)
-  run: |
-    pnpm install
-    cd ios && pod install && cd ..
-    pnpm run e2e:build:ios
-    pnpm run e2e:test:ios
+- name: Start Android Emulator
+  uses: reactivecircus/android-emulator-runner@v2
+  with:
+    api-level: 34
+    arch: x86_64
+    target: google_apis
+    emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+    disable-animations: true
+    script: |
+      cd implementations/react-native
+      pnpm run test:e2e:android:build
+      pnpm run test:e2e:android:run
 ```
+
+**Important Notes:**
+
+- The `android-emulator-runner` action automatically creates and manages the AVD
+- No need to manually create an AVD or cache it
+- The action handles emulator startup and shutdown
+- Use `target: google_apis` for Google APIs system images
 
 ## Resources
 

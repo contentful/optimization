@@ -74,7 +74,7 @@ describe('unidentified user', () => {
       ).toBeVisible()
     })
 
-    it('should display baseline for A/B/C experiment', async () => {
+    it('should display variant B for A/B/C experiment', async () => {
       await waitFor(element(by.id('entry-text-5XHssysWUDECHzKLzoIsg1')))
         .toBeVisible()
         .withTimeout(10000)
@@ -82,7 +82,7 @@ describe('unidentified user', () => {
       await expect(
         element(
           by.label(
-            'This is a baseline content entry for an A/B/C experiment: A [Entry: 5XHssysWUDECHzKLzoIsg1]',
+            'This is a variant content entry for an A/B/C experiment: B [Entry: 5XHssysWUDECHzKLzoIsg1]',
           ),
         ),
       ).toBeVisible()

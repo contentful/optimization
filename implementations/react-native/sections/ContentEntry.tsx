@@ -5,7 +5,7 @@ import type Optimization from '@contentful/optimization-react-native'
 import { Analytics, Personalization, ScrollProvider } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 
-import { RichTextRenderer } from '../components/RichTextRenderer'
+import { RichTextRenderer, getRichTextContent } from '../components/RichTextRenderer'
 
 interface ContentEntryProps {
   entry: Entry
@@ -40,8 +40,11 @@ export function ContentEntry({ entry, sdk }: ContentEntryProps): React.JSX.Eleme
     const richTextField = Object.values(contentEntry.fields).find(isRichTextField)
 
     if (richTextField) {
+      const textContent = getRichTextContent(richTextField, sdk)
+      const fullLabel = `${textContent} [Entry: ${baselineId}]`
+
       return (
-        <View testID={`entry-text-${baselineId}`}>
+        <View testID={`entry-text-${baselineId}`} accessibilityLabel={fullLabel}>
           <RichTextRenderer richText={richTextField} sdk={sdk} />
           <Text>{`[Entry: ${baselineId}]`}</Text>
         </View>
@@ -50,9 +53,10 @@ export function ContentEntry({ entry, sdk }: ContentEntryProps): React.JSX.Eleme
 
     const text =
       typeof contentEntry.fields.text === 'string' ? contentEntry.fields.text : 'No content'
+    const fullLabel = `${text} [Entry: ${baselineId}]`
 
     return (
-      <View testID={`entry-text-${baselineId}`}>
+      <View testID={`entry-text-${baselineId}`} accessibilityLabel={fullLabel}>
         <Text>{text}</Text>
         <Text>{`[Entry: ${baselineId}]`}</Text>
       </View>

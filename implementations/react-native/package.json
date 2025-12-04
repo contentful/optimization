@@ -1,5 +1,5 @@
 {
-  "name": "OptimizationImplementationReactNative",
+  "name": "@implementation/react-native",
   "version": "0.0.1",
   "private": true,
   "scripts": {
@@ -15,12 +15,13 @@
     "serve:mocks": "pnpm --filter mocks serve",
     "test": "jest",
     "test:unit": "echo 'Unit tests skipped - this is a reference implementation app. E2E tests are run separately via Detox.'",
-    "e2e:build:ios": "detox build --configuration ios.sim.debug",
-    "test:e2e:ios": "detox test --configuration ios.sim.debug",
-    "e2e:build:android": "detox build --configuration android.emu.debug",
-    "test:e2e:android": "detox test --configuration android.emu.debug",
-    "e2e:ios": "pnpm run e2e:build:ios && pnpm run test:e2e:ios",
-    "e2e:android": "pnpm run e2e:build:android && pnpm run test:e2e:android"
+    "test:e2e:ios:build": "detox build --configuration ios.sim.debug",
+    "test:e2e:ios:run": "detox test --configuration ios.sim.debug",
+    "test:e2e:ios": "pnpm run test:e2e:ios:build && pnpm run test:e2e:ios:run",
+    "test:e2e:android:build": "detox build --configuration android.emu.debug",
+    "test:e2e:android:run": "detox test --configuration android.emu.debug",
+    "test:e2e:android": "pnpm run test:e2e:android:build && pnpm run test:e2e:android:run",
+    "test:e2e:android:full": "./scripts/run-e2e-android.sh"
   },
   "dependencies": {
     "@contentful/optimization-react-native": "workspace:*",
@@ -43,6 +44,8 @@
     "@react-native-community/cli-platform-android": "15.0.1",
     "@react-native-community/cli-platform-ios": "15.0.1",
     "@react-native/babel-preset": "0.76.9",
+    "@react-native/codegen": "0.76.9",
+    "@react-native/gradle-plugin": "0.76.9",
     "@react-native/metro-config": "0.76.9",
     "@react-native/typescript-config": "0.76.9",
     "@testing-library/react-native": "^13.3.3",
