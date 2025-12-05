@@ -1,5 +1,5 @@
 import React from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { Text, View } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
 import { Analytics, Personalization, ScrollProvider } from '@contentful/optimization-react-native'
@@ -73,7 +73,7 @@ export function ContentEntry({ entry, sdk }: ContentEntryProps): React.JSX.Eleme
   }
 
   return (
-    <View style={styles.container} testID={`content-entry-${entry.sys.id}`}>
+    <View testID={`content-entry-${entry.sys.id}`}>
       <ScrollProvider>
         <Personalization baselineEntry={entry}>
           {(resolvedEntry) => (
@@ -88,7 +88,3 @@ export function ContentEntry({ entry, sdk }: ContentEntryProps): React.JSX.Eleme
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {},
-})
