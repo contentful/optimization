@@ -1,7 +1,7 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 
-import { NestedPersonalization, ScrollProvider } from '@contentful/optimization-react-native'
+import { Personalization, ScrollProvider } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 
 interface NestedContentEntryProps {
@@ -12,10 +12,7 @@ export function NestedContentEntry({ entry }: NestedContentEntryProps): React.JS
   return (
     <View style={styles.container} testID={`nested-content-entry-${entry.sys.id}`}>
       <ScrollProvider>
-        <NestedPersonalization
-          baselineEntry={entry}
-          testID={`nested-personalization-${entry.sys.id}`}
-        >
+        <Personalization baselineEntry={entry} testID={`nested-personalization-${entry.sys.id}`}>
           {(resolvedEntry, nestedChildren) => {
             const text =
               typeof resolvedEntry.fields.text === 'string'
@@ -37,7 +34,7 @@ export function NestedContentEntry({ entry }: NestedContentEntryProps): React.JS
               </View>
             )
           }}
-        </NestedPersonalization>
+        </Personalization>
       </ScrollProvider>
     </View>
   )
