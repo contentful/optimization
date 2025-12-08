@@ -1,4 +1,4 @@
-const { clearProfileState } = require('./helpers')
+const { clearProfileState, ELEMENT_VISIBILITY_TIMEOUT } = require('./helpers')
 
 describe('Analytics Events', () => {
   beforeAll(async () => {
@@ -12,7 +12,7 @@ describe('Analytics Events', () => {
   it('should track component impression events for visible entries', async () => {
     // Wait for the app to load
     const analyticsTitle = element(by.text('Analytics Events'))
-    await waitFor(analyticsTitle).toBeVisible().withTimeout(40000)
+    await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     // Wait a bit for content to load and be visible
     await new Promise((resolve) => setTimeout(resolve, 3000))
@@ -20,6 +20,6 @@ describe('Analytics Events', () => {
     // Look for component events with entry IDs
     // The merge tag entry should trigger a component event
     const componentEvent = element(by.label('component - Component: 1MwiFl4z7gkwqGYdvCmr8c'))
-    await waitFor(componentEvent).toBeVisible().withTimeout(15000)
+    await waitFor(componentEvent).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
   })
 })

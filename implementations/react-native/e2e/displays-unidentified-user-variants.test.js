@@ -1,4 +1,4 @@
-const { clearProfileState } = require('./helpers')
+const { clearProfileState, ELEMENT_VISIBILITY_TIMEOUT } = require('./helpers')
 
 describe('unidentified user', () => {
   beforeAll(async () => {
@@ -14,7 +14,7 @@ describe('unidentified user', () => {
       // Wait for the entry text to appear
       await waitFor(element(by.id('entry-text-1MwiFl4z7gkwqGYdvCmr8c')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       // Verify the element contains the merge tag text - check for key parts
       await expect(
@@ -30,7 +30,7 @@ describe('unidentified user', () => {
       // Wait for the entry text to appear
       await waitFor(element(by.id('entry-text-4ib0hsHWoSOnCVdDkizE8d')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       // Check for the variant text
       await expect(
@@ -46,7 +46,7 @@ describe('unidentified user', () => {
       // Wait for the entry text to appear
       await waitFor(element(by.id('entry-text-xFwgG3oNaOcjzWiGe4vXo')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       // Check for the variant text
       await expect(
@@ -63,7 +63,7 @@ describe('unidentified user', () => {
     it('should display variant for new visitors', async () => {
       await waitFor(element(by.id('entry-text-2Z2WLOx07InSewC3LUB3eX')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       await expect(
         element(
@@ -77,7 +77,7 @@ describe('unidentified user', () => {
     it('should display variant B for A/B/C experiment', async () => {
       await waitFor(element(by.id('entry-text-5XHssysWUDECHzKLzoIsg1')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       await expect(
         element(
@@ -91,7 +91,7 @@ describe('unidentified user', () => {
     it('should display baseline for visitors with or without custom event', async () => {
       await waitFor(element(by.id('entry-text-6zqoWXyiSrf0ja7I2WGtYj')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       await expect(
         element(
@@ -105,7 +105,7 @@ describe('unidentified user', () => {
     it('should display baseline for all identified or unidentified users', async () => {
       await waitFor(element(by.id('entry-text-7pa5bOx8Z9NmNcr7mISvD')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       await expect(
         element(
@@ -121,7 +121,7 @@ describe('unidentified user', () => {
     it('should display level 0 nested baseline for new visitors', async () => {
       await waitFor(element(by.id('entry-text-1JAU028vQ7v6nB2swl3NBo')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       await expect(
         element(
@@ -133,7 +133,7 @@ describe('unidentified user', () => {
     it('should display level 1 nested baseline for new visitors', async () => {
       await waitFor(element(by.id('entry-text-5i4SdJXw9oDEY0vgO7CwF4')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       await expect(
         element(
@@ -145,7 +145,7 @@ describe('unidentified user', () => {
     it('should display level 2 nested baseline for new visitors', async () => {
       await waitFor(element(by.id('entry-text-uaNY4YJ0HFPAX3gKXiRdX')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       await expect(
         element(

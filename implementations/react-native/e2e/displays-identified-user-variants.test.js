@@ -1,4 +1,4 @@
-const { clearProfileState } = require('./helpers')
+const { clearProfileState, ELEMENT_VISIBILITY_TIMEOUT } = require('./helpers')
 
 describe('identified user', () => {
   beforeAll(async () => {
@@ -10,7 +10,7 @@ describe('identified user', () => {
 
     await waitFor(element(by.id('identify-button')))
       .toBeVisible()
-      .withTimeout(10000)
+      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     await element(by.id('identify-button')).tap()
 
@@ -22,7 +22,7 @@ describe('identified user', () => {
       // Wait for the entry text to appear
       await waitFor(element(by.id('entry-text-1MwiFl4z7gkwqGYdvCmr8c')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       // Verify the element contains the merge tag text - check for key parts
       await expect(
@@ -38,7 +38,7 @@ describe('identified user', () => {
       // Wait for the entry text to appear
       await waitFor(element(by.id('entry-text-4ib0hsHWoSOnCVdDkizE8d')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       // Check for the variant text
       await expect(
@@ -54,7 +54,7 @@ describe('identified user', () => {
       // Wait for the entry text to appear
       await waitFor(element(by.id('entry-text-xFwgG3oNaOcjzWiGe4vXo')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       // Check for the variant text
       await expect(
@@ -71,7 +71,7 @@ describe('identified user', () => {
     it('should display variant for return visitors', async () => {
       await waitFor(element(by.id('entry-text-2Z2WLOx07InSewC3LUB3eX')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       await expect(
         element(
@@ -85,7 +85,7 @@ describe('identified user', () => {
     it('should display variant B for A/B/C experiment', async () => {
       await waitFor(element(by.id('entry-text-5XHssysWUDECHzKLzoIsg1')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       await expect(
         element(
@@ -99,7 +99,7 @@ describe('identified user', () => {
     it('should display variant for visitors with custom event', async () => {
       await waitFor(element(by.id('entry-text-6zqoWXyiSrf0ja7I2WGtYj')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       await expect(
         element(
@@ -113,7 +113,7 @@ describe('identified user', () => {
     it('should display variant for identified users', async () => {
       await waitFor(element(by.id('entry-text-7pa5bOx8Z9NmNcr7mISvD')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       await expect(
         element(
@@ -129,7 +129,7 @@ describe('identified user', () => {
     it('should display level 0 nested variant for return visitors', async () => {
       await waitFor(element(by.id('entry-text-2KIWllNZJT205BwOSkMINg')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       await expect(
         element(
@@ -141,7 +141,7 @@ describe('identified user', () => {
     it('should display level 1 nested variant for return visitors', async () => {
       await waitFor(element(by.id('entry-text-5a8ONfBdanJtlJ39WWnH1w')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       await expect(
         element(
@@ -153,7 +153,7 @@ describe('identified user', () => {
     it('should display level 2 nested variant for return visitors', async () => {
       await waitFor(element(by.id('entry-text-4hDiXxYEFrXHXcQgmdL9Uv')))
         .toBeVisible()
-        .withTimeout(10000)
+        .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
       await expect(
         element(
