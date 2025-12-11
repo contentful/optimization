@@ -7,15 +7,17 @@
  * - Two optional per-kind callbacks + one aggregate callback
  */
 
+import { CAN_ADD_LISTENERS } from '../global-constants'
+
 export const DEFAULT_IDLE_TIMEOUT_MS = 100
 export const DEFAULT_MAX_CHUNK = 250
 export const MIN_IDLE_TIMEOUT_MS = 16 // ~1 frame
 export const MIN_MAX_CHUNK = 1
 
-export const CAN_USE_DOM = typeof window !== 'undefined' && typeof document !== 'undefined'
-export const HAS_MUTATION_OBSERVER = CAN_USE_DOM && typeof MutationObserver !== 'undefined'
-export const HAS_IDLE_CALLBACK = CAN_USE_DOM && typeof window.requestIdleCallback === 'function'
-export const HAS_CANCEL_IDLE = CAN_USE_DOM && typeof window.cancelIdleCallback === 'function'
+export const HAS_MUTATION_OBSERVER = CAN_ADD_LISTENERS && typeof MutationObserver !== 'undefined'
+export const HAS_IDLE_CALLBACK =
+  CAN_ADD_LISTENERS && typeof window.requestIdleCallback === 'function'
+export const HAS_CANCEL_IDLE = CAN_ADD_LISTENERS && typeof window.cancelIdleCallback === 'function'
 
 export interface MutationChange {
   readonly added: ReadonlySet<Element>
@@ -65,7 +67,7 @@ class ElementExistenceObserver {
       onError,
     } = options
 
-    this.root = ElementExistenceObserver.isNode(root) ? root : CAN_USE_DOM ? document : null
+    this.root = ElementExistenceObserver.isNode(root) ? root : CAN_ADD_LISTENERS ? document : null
 
     this.idleTimeoutMs = ElementExistenceObserver.sanitizeInt(
       idleTimeoutMs,
@@ -158,7 +160,7 @@ class ElementExistenceObserver {
   }
 
   private static isNode(value: unknown): value is Node {
-    return CAN_USE_DOM && typeof Node !== 'undefined' && value instanceof Node
+    return CAN_ADD_LISTENERS && typeof Node !== 'undefined' && value instanceof Node
   }
 
   private static sanitizeInt(value: unknown, fallback: number, min: number): number {
@@ -226,7 +228,7 @@ class ElementExistenceObserver {
   private static cancelIdle(handle: number): void {
     if (HAS_CANCEL_IDLE) {
       window.cancelIdleCallback(handle)
-    } else if (CAN_USE_DOM) {
+    } else if (CAN_ADD_LISTENERS) {
       window.clearTimeout(handle)
     }
   }
@@ -282,7 +284,7 @@ class ElementExistenceObserver {
       if (index < items.length) {
         if (HAS_IDLE_CALLBACK) {
           window.requestIdleCallback(run, { timeout: this.idleTimeoutMs })
-        } else if (CAN_USE_DOM) {
+        } else if (CAN_ADD_LISTENERS) {
           window.setTimeout(run, this.idleTimeoutMs)
         }
       }

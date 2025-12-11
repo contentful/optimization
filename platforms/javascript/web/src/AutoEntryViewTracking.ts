@@ -1,8 +1,4 @@
-import {
-  type AnalyticsStateful,
-  logger,
-  type PersonalizationStateful,
-} from '@contentful/optimization-core'
+import { type CoreStateful, logger } from '@contentful/optimization-core'
 import type {
   ElementExistenceObserverOptions,
   ElementViewCallbackInfo,
@@ -64,13 +60,7 @@ function parseVariantIndex(variantIndex: string | undefined): number | undefined
 }
 
 export const createAutoTrackingEntryViewCallback =
-  ({
-    personalization,
-    analytics,
-  }: {
-    personalization: PersonalizationStateful
-    analytics: AnalyticsStateful
-  }) =>
+  (core: CoreStateful) =>
   async (element: Element, info: ElementViewCallbackInfo): Promise<void> => {
     if (!isEntryData(info.data) && !isEntryElement(element)) return
 
@@ -103,25 +93,16 @@ export const createAutoTrackingEntryViewCallback =
 
     if (!entryId) {
       logger.warn(
-        '[Element View Observer Callback] No entry data found; please add data attributes or observe with data info',
+        '[Optimization Web SDK] No entry data found in entry view observer callback; please add data attributes or observe with data info',
       )
       return
     }
 
-    if (sticky)
-      await personalization.trackComponentView(
-        {
-          componentId: entryId,
-          experienceId: personalizationId,
-          variantIndex,
-        },
-        duplicationScope,
-      )
-
-    await analytics.trackComponentView(
+    await core.trackComponentView(
       {
         componentId: entryId,
         experienceId: personalizationId,
+        sticky,
         variantIndex,
       },
       duplicationScope,
@@ -146,7 +127,7 @@ export const createAutoTrackingEntryExistenceCallback = (
 
       if (!ctflElement || !entryViewObserver.getStats(ctflElement)) return
 
-      logger.info('[Optimization Web SDK] Auto-removing element (remove):', ctflElement)
+      logger.info('[Optimization Web SDK] Auto-unobserving element (remove):', ctflElement)
       entryViewObserver.unobserve(ctflElement)
     })
   },

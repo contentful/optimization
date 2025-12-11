@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "logger",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "license": "MIT",
   "main": "./src/index.ts",
   "scripts": {

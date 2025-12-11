@@ -251,16 +251,13 @@
         clientId: '%VITE_NINETAILED_CLIENT_ID%',
         environment: '%VITE_NINETAILED_ENVIRONMENT%',
         logLevel: 'debug',
-        autoObserveEntryElements: true,
         autoTrackEntryViews: true,
         app: {
           name: document.title,
           version: '0.0.0',
         },
-        api: {
-          analytics: { baseUrl: '%VITE_INSIGHTS_API_BASE_URL%' },
-          personalization: { baseUrl: '%VITE_EXPERIENCE_API_BASE_URL%' },
-        },
+        analytics: { baseUrl: '%VITE_INSIGHTS_API_BASE_URL%' },
+        personalization: { baseUrl: '%VITE_EXPERIENCE_API_BASE_URL%' },
       })
 
       // Emit page event

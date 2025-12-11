@@ -1,13 +1,14 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "name": "Multiplatform SDK Monorepo Example",
+  "name": "Contentful Personalization & Analytics",
   "includeVersion": false,
   "headings": {
     "document": false,
     "readme": false
   },
   "entryPointStrategy": "packages",
-  "entryPoints": ["platforms/javascript/*"],
+  "entryPoints": ["platforms/javascript/*", "universal/*"],
+  "projectDocuments": ["CONTRIBUTING.md"],
   "packageOptions": {
     "includeVersion": true,
     "entryPoints": ["src/index.ts"]
