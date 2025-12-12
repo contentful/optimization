@@ -1,7 +1,7 @@
 {
   "private": true,
   "name": "mocks",
-  "description": "E2E Support Library & Server",
+  "description": "Testing Support Library & Server",
   "license": "MIT",
   "main": "src/index.ts",
   "scripts": {

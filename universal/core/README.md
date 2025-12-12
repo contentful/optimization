@@ -6,7 +6,7 @@
 
 <h1 align="center">Contentful Personalization & Analytics</h1>
 
-<h3 align="center">Core SDK</h3>
+<h3 align="center">Optimization Core SDK</h3>
 
 <div align="center">
 
@@ -42,7 +42,10 @@ other SDKs descend from the Core SDK.
     - [`track`](#track)
     - [`trackComponentView`](#trackcomponentview)
     - [`trackFlagView`](#trackflagview)
-- [Stateful-only Core Methods and Properties](#stateful-only-core-methods-and-properties)
+- [Stateful-only Core Methods](#stateful-only-core-methods)
+  - [`consent`](#consent)
+  - [`reset`](#reset)
+- [Stateful-only Core Properties](#stateful-only-core-properties)
 
 <!-- mtoc-end -->
 </details>
@@ -120,10 +123,15 @@ Configuration method signatures:
 
 ### Analytics Options
 
-| Option          | Required? | Default                                    | Description                                                              |
-| --------------- | --------- | ------------------------------------------ | ------------------------------------------------------------------------ |
-| `baseUrl`       | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                            |
-| `beaconHandler` | No        | `undefined`                                | Handler used to enqueue events via the Beacon API or a similar mechanism |
+| Option    | Required? | Default                                    | Description                   |
+| --------- | --------- | ------------------------------------------ | ----------------------------- |
+| `baseUrl` | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API |
+
+The following configuration options apply only in stateful environments:
+
+| Option          | Required? | Default     | Description                                                              |
+| --------------- | --------- | ----------- | ------------------------------------------------------------------------ |
+| `beaconHandler` | No        | `undefined` | Handler used to enqueue events via the Beacon API or a similar mechanism |
 
 Configuration method signatures:
 
@@ -134,23 +142,25 @@ Configuration method signatures:
 Event builder options should only be supplied when building an SDK on top of Core or any of its
 descendent SDKs.
 
-| Option              | Required? | Default                         | Description                                                                        |
-| ------------------- | --------- | ------------------------------- | ---------------------------------------------------------------------------------- |
-| `app`               | No        | `undefined`                     | The application definition used to attribute events to a specific consumer app     |
-| `channel`           | Yes       | N/A                             | The channel that identifies where events originate from (e.g. `'web'`, `'mobile'`) |
-| `library`           | Yes       | N/A                             | The client library metadata that is attached to all events                         |
-| `getLocale`         | No        | `() => 'en-US'`                 | Function used to resolve the locale for outgoing events                            |
-| `getPageProperties` | No        | `() => DEFAULT_PAGE_PROPERTIES` | Function that returns the current page properties                                  |
-| `getUserAgent`      | No        | `() => undefined`               | Function used to obtain the current user agent string when applicable              |
-
-The `get*` functions are most useful in stateful environments. Stateless environments should set the
-related data directly via Event Builder method arguments.
+| Option    | Required? | Default     | Description                                                                        |
+| --------- | --------- | ----------- | ---------------------------------------------------------------------------------- |
+| `app`     | No        | `undefined` | The application definition used to attribute events to a specific consumer app     |
+| `channel` | Yes       | N/A         | The channel that identifies where events originate from (e.g. `'web'`, `'mobile'`) |
+| `library` | Yes       | N/A         | The client library metadata that is attached to all events                         |
 
 The `channel` option may contain one of the following values:
 
 - `web`
 - `mobile`
 - `server`
+
+The following configuration options apply only in stateful environments:
+
+| Option              | Required? | Default                         | Description                                                           |
+| ------------------- | --------- | ------------------------------- | --------------------------------------------------------------------- |
+| `getLocale`         | No        | `() => 'en-US'`                 | Function used to resolve the locale for outgoing events               |
+| `getPageProperties` | No        | `() => DEFAULT_PAGE_PROPERTIES` | Function that returns the current page properties                     |
+| `getUserAgent`      | No        | `() => undefined`               | Function used to obtain the current user agent string when applicable |
 
 Configuration method signatures:
 
@@ -172,10 +182,10 @@ Configuration method signatures:
 
 ### Fetch Options
 
-Fetch options allow for configuration of both a Fetch API-compatible fetch method and the
-retry/timeout logic integrated into the Optimization API Client. Specify the `fetchMethod` when the
-host application environment does not offer a `fetch` method that is compatible with the standard
-Fetch API in its global scope.
+Fetch options allow for configuration of a Fetch API-compatible fetch method and the retry/timeout
+logic integrated into the Optimization API Client. Specify the `fetchMethod` when the host
+application environment does not offer a `fetch` method that is compatible with the standard Fetch
+API in its global scope.
 
 | Option             | Required? | Default     | Description                                                           |
 | ------------------ | --------- | ----------- | --------------------------------------------------------------------- |
@@ -188,7 +198,7 @@ Fetch API in its global scope.
 
 Configuration method signatures:
 
-- `fetchMethod`: `(url: string \| URL, init: RequestInit) => Promise<Response>`
+- `fetchMethod`: `(url: string | URL, init: RequestInit) => Promise<Response>`
 - `onFailedAttempt` and `onRequestTimeout`: `(options: FetchMethodCallbackOptions) => void`
 
 ### Personalization Options
@@ -333,14 +343,22 @@ Arguments:
 - `duplicationScope`: Arbitrary string that may be used to scope component view duplication; used in
   Stateful implementations
 
-## Stateful-only Core Methods and Properties
+## Stateful-only Core Methods
 
-The following methods are unique to stateful implementations:
+### `consent`
 
-- `consent(accept: boolean)`: Update consent state
-- `reset`: Reset internal state; consent is preserved
+Updates the user consent state.
 
-The following properties are unique to stateful implementations:
+Arguments:
+
+- `accept`: A boolean value specifying whether the user has accepted (`true`) or denied (`false`). A
+  value of `undefined` implies that the user has not yet explicitly chosen whether to consent.
+
+### `reset`
+
+Resets all internal state _except_ consent. This method expects no arguments and returns no value.
+
+## Stateful-only Core Properties
 
 - `states`: Returns an object mapping of observables for all internal states
 
