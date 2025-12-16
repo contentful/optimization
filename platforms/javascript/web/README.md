@@ -113,7 +113,7 @@ Configuration method signatures:
 | Option          | Required? | Default                                    | Description                                                              |
 | --------------- | --------- | ------------------------------------------ | ------------------------------------------------------------------------ |
 | `baseUrl`       | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                            |
-| `beaconHandler` | No        | `undefined`                                | Handler used to enqueue events via the Beacon API or a similar mechanism |
+| `beaconHandler` | No        | Built-in beacon API integration            | Handler used to enqueue events via the Beacon API or a similar mechanism |
 
 Configuration method signatures:
 
@@ -129,9 +129,9 @@ descendent SDKs.
 | `app`               | No        | `undefined`                                          | The application definition used to attribute events to a specific consumer app     |
 | `channel`           | No        | `'web'`                                              | The channel that identifies where events originate from (e.g. `'web'`, `'mobile'`) |
 | `library`           | No        | `{ name: 'Optimization Web API', version: '0.0.0' }` | The client library metadata that is attached to all events                         |
-| `getLocale`         | No        | `() => 'en-US'`                                      | Function used to resolve the locale for outgoing events                            |
-| `getPageProperties` | No        | `() => DEFAULT_PAGE_PROPERTIES`                      | Function that returns the current page properties                                  |
-| `getUserAgent`      | No        | `() => undefined`                                    | Function used to obtain the current user agent string when applicable              |
+| `getLocale`         | No        | Built-in locale resolution                           | Function used to resolve the locale for outgoing events                            |
+| `getPageProperties` | No        | Built-in page properties resolution                  | Function that returns the current page properties                                  |
+| `getUserAgent`      | No        | Built-in user agent resolution                       | Function used to obtain the current user agent string when applicable              |
 
 The `channel` option may contain one of the following values:
 
