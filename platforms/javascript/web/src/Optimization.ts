@@ -177,7 +177,7 @@ class Optimization extends CoreStateful {
     this.elementViewObserver?.disconnect()
   }
 
-  trackEntryViewForElement(element: Element, options?: ElementViewElementOptions): void {
+  trackEntryViewForElement(element: Element, options: ElementViewElementOptions): void {
     logger.info('[Optimization Web SDK] Manually observing element:', element)
     this.elementViewObserver?.observe(element, options)
   }

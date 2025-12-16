@@ -54,8 +54,7 @@ Install using an NPM-compatible package manager, pnpm for example:
 pnpm install @contentful/optimization-node
 ```
 
-Import the Optimization class, depending on the target environment; both CJS and ESM module systems
-are supported, ESM preferred:
+Import the Optimization class; both CJS and ESM module systems are supported, ESM preferred:
 
 ```ts
 import Optimization from '@contentful/optimization-node'
