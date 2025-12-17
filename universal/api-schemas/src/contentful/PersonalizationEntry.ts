@@ -84,6 +84,11 @@ export const PersonalizationFields = z.extend(EntryFields, {
    * array when omitted.
    */
   nt_variants: z.optional(z.prefault(z.array(z.custom<Entry>()), [])),
+
+  /**
+   * The personalization/experience ID related to this personalization entry.
+   */
+  nt_experience_id: z.string(),
 })
 
 /**
