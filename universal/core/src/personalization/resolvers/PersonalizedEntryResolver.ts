@@ -64,7 +64,7 @@ const PersonalizedEntryResolver = {
    * })
    * ```
    * @remarks
-   * A personalization entry is a personalization configutation object supplied in a
+   * A personalization entry is a personalization configuration object supplied in a
    * `PersonalizedEntry.nt_experiences` array. A personalized entry may relate to
    * multiple personalizations.
    */
@@ -86,10 +86,9 @@ const PersonalizedEntryResolver = {
 
     const personalizationEntry = personalizedEntry.fields.nt_experiences
       .filter((maybePersonalization) => isPersonalizationEntry(maybePersonalization))
-      .find((personalization) =>
+      .find((personalizationEntry) =>
         selectedPersonalizations.some(
-          (selectedPersonalization) =>
-            selectedPersonalization.experienceId === personalization.sys.id,
+          ({ experienceId }) => experienceId === personalizationEntry.fields.nt_experience_id,
         ),
       )
 
@@ -130,7 +129,7 @@ const PersonalizedEntryResolver = {
       return
 
     const selectedPersonalization = selectedPersonalizations.find(
-      ({ experienceId }) => experienceId === personalizationEntry.sys.id,
+      ({ experienceId }) => experienceId === personalizationEntry.fields.nt_experience_id,
     )
 
     return selectedPersonalization
