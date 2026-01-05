@@ -6,7 +6,6 @@ test.describe('unidentified user', () => {
     await page.waitForLoadState('domcontentloaded')
   })
 
-
   test('displays common variants', async ({ page }) => {
     await expect(
       page.getByText(
