@@ -322,6 +322,11 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      - name: Install PulseAudio compatibility for emulator
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpulse0
+
       - uses: pnpm/action-setup@v4
 
       - uses: actions/setup-node@v6
