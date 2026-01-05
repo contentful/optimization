@@ -123,9 +123,6 @@ const render = (sdk: Optimization, identified?: string): string => `<!doctype ht
 
       window.optimization = optimization
 
-      // Reset optimization state for unidentified users
-      ${!identified ? `optimization.reset();` : ""}
-
       optimization.personalization.page();
 
   </script>
