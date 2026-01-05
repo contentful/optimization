@@ -22,11 +22,11 @@ const CLIENT_ID = process.env.VITE_NINETAILED_CLIENT_ID ?? ''
 const ENVIRONMENT = process.env.VITE_NINETAILED_ENVIRONMENT ?? ''
 const VITE_INSIGHTS_API_BASE_URL = process.env.VITE_INSIGHTS_API_BASE_URL ?? ''
 const VITE_EXPERIENCE_API_BASE_URL = process.env.VITE_EXPERIENCE_API_BASE_URL ?? ''
-const CONTENTFUL_TOKEN = process.env.CONTENTFUL_TOKEN ?? ''
-const CONTENTFUL_ENVIRONMENT = process.env.CONTENTFUL_ENVIRONMENT ?? 'master'
-const CONTENTFUL_SPACE_ID = process.env.CONTENTFUL_SPACE_ID ?? ''
-const CONTENTFUL_CDA_HOST = process.env.CONTENTFUL_CDA_HOST ?? 'cdn.contentful.com'
-const CONTENTFUL_BASE_PATH = process.env.CONTENTFUL_BASE_PATH ?? ''
+const CONTENTFUL_TOKEN = process.env.VITE_CONTENTFUL_TOKEN ?? ''
+const CONTENTFUL_ENVIRONMENT = process.env.VITE_NINETAILED_ENVIRONMENT ?? ''
+const CONTENTFUL_SPACE_ID = process.env.VITE_CONTENTFUL_SPACE_ID ?? ''
+const CONTENTFUL_CDA_HOST = process.env.VITE_CONTENTFUL_CDA_HOST ?? ''
+const CONTENTFUL_BASE_PATH = process.env.VITE_CONTENTFUL_BASE_PATH ?? ''
 
 const render = (sdk: Optimization): string => `<!doctype html>
 <html lang="en">
