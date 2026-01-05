@@ -2,25 +2,20 @@ import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-core'
 import { expect, test } from '@playwright/test'
 
 const ANONYMOUS_ID = '__ctfl_opt_anonymous_id__'
+const CUSTOM_IDENTIFIED_ID = 'custom-profile-id'
 
 test.describe('identified user', () => {
-  let customIdentifiedId: string
-
   test.beforeEach(async ({ page, context }) => {
-    customIdentifiedId = 'custom-profile-id'
     const cookie = {
       name: ANONYMOUS_ID_COOKIE,
-      value: customIdentifiedId,
+      value: CUSTOM_IDENTIFIED_ID,
       path: '/',
       domain: 'localhost',
     }
-
     await context.addCookies([cookie])
     await page.goto(`/user/someone`)
     await page.waitForLoadState('domcontentloaded')
   })
-
-  //  SETUP TESTS
 
   test('identifies profile id and associates it with user id', async ({ context }) => {
     const state = await context.storageState()
@@ -29,7 +24,7 @@ test.describe('identified user', () => {
     const storedId = storage.find((item) => item.name === ANONYMOUS_ID)?.value
 
     expect(storedId).toBeDefined()
-    expect(storedId).toEqual(customIdentifiedId)
+    expect(storedId).toEqual(CUSTOM_IDENTIFIED_ID)
   })
 
   // RENDERING TESTS
