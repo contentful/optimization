@@ -28,7 +28,7 @@ const CONTENTFUL_SPACE_ID = process.env.VITE_CONTENTFUL_SPACE_ID ?? ''
 const CONTENTFUL_CDA_HOST = process.env.VITE_CONTENTFUL_CDA_HOST ?? ''
 const CONTENTFUL_BASE_PATH = process.env.VITE_CONTENTFUL_BASE_PATH ?? ''
 
-const render = (sdk: Optimization, identified?: string): string => `<!doctype html>
+const render = (identified?: string): string => `<!doctype html>
 <html lang="en">
   <head>
     <title>Node ESR SDK Implementation E2E Test</title>
@@ -38,7 +38,6 @@ const render = (sdk: Optimization, identified?: string): string => `<!doctype ht
     <script src="https://cdn.jsdelivr.net/npm/contentful@latest/dist/contentful.browser.min.js" > </script>
     <script src="/dist/index.umd.cjs" ></script>
     <link rel="stylesheet" href="/assets/style.css" />
-    <script> window.CLIENT_ID = "${sdk.config.clientId}" </script>
   </head>
   <body>
     <h1>Node ESR SDK Implementation E2E Test</h1>
@@ -182,7 +181,7 @@ app.get('/', limiter, async (req, res) => {
   const universalEventBuilderArgs = getUniversalEventBuilderArgs(req)
   const { profile } = await sdk.personalization.page({ ...universalEventBuilderArgs })
   setAnonymousId(res, profile.id)
-  res.send(render(sdk))
+  res.send(render())
 })
 
 app.get('/user/:userId', limiter, async (req, res) => {
@@ -210,11 +209,11 @@ app.get('/user/:userId', limiter, async (req, res) => {
 
   setAnonymousId(res, profile.id)
 
-  res.send(render(sdk, userId))
+  res.send(render(userId))
 })
 
 app.get('/smoke-test', limiter, (_, res) => {
-  res.send(render(sdk))
+  res.send(render())
 })
 
 app.use('/dist', express.static('./public/dist'))
