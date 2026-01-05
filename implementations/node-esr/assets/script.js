@@ -14,22 +14,7 @@ function toggleConsent(consented = false) {
 consent.addEventListener('click', () => optimization.consent(true))
 unconsent.addEventListener('click', () => optimization.consent(false))
 
-function createEventDialog(title, details) {
-    const template = document.querySelector('#event-dialog')
-    const clone = template.content.cloneNode(true)
-    const dialog = clone.querySelector('dialog')
-    const button = clone.querySelector('button')
-    const pre = clone.querySelector('pre')
 
-    button.innerText = title
-    button.commandForElement = dialog
-    button.command = 'show-modal'
-    button.dataset.testid = details.componentId ?? details?.properties?.url ?? details.messageId
-
-    pre.innerText = JSON.stringify(details, null, 2)
-
-    return clone
-}
 
 /* --- Standard Rendering Code --- */
 
@@ -139,13 +124,6 @@ function manuallyObserveEntryElement(element, entry, personalization) {
 
     manuallyObservedEntryElements.set(element.dataset.entryId, [entry, personalization])
 }
-
-// Subscribe to the event stream
-optimization.states.eventStream.subscribe((event) => {
-    if (!event) return
-
-    document.querySelector('#event-stream').appendChild(createEventDialog(event.type, event))
-})
 
 // Subscribe to consent state
 optimization.states.consent.subscribe(async (consent) => {

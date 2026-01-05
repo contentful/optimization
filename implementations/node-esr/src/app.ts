@@ -76,13 +76,6 @@ const render = (sdk: Optimization, identified?: string): string => `<!doctype ht
           <div data-entry-id="7pa5bOx8Z9NmNcr7mISvD"></div>
         </div>
       </section>
-      <section>
-        <div id="event-stream-panel">
-          <h2>Event Stream</h2>
-
-          <ol id="event-stream"></ol>
-        </div>
-      </section>
     </main>
     <template id="event-dialog">
       <li>
