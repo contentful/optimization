@@ -46,10 +46,6 @@ const render = (sdk: Optimization, identified?: string): string => `<!doctype ht
       <section id="utility-panel">
         <h2>Utilites</h2>
         <span>
-          <button id="consent">Accept Consent</button>
-          <button id="unconsent">Reject Consent</button>
-        </span>
-        <span>
         ${
           identified
             ? `<a href="/" >Reset Profile for: ${identified}</a>`
@@ -115,9 +111,7 @@ const render = (sdk: Optimization, identified?: string): string => `<!doctype ht
 
 
       window.optimization = optimization
-
       optimization.personalization.page();
-
   </script>
   <script src="/assets/script.js"></script>
   </body>

@@ -1,21 +1,3 @@
-const consent = document.getElementById('consent')
-const unconsent = document.getElementById('unconsent')
-
-function toggleConsent(consented = false) {
-    if (consented) {
-        consent.setAttribute('style', 'display: none;')
-        unconsent.removeAttribute('style')
-    } else {
-        consent.removeAttribute('style')
-        unconsent.setAttribute('style', 'display: none;')
-    }
-}
-
-consent.addEventListener('click', () => optimization.consent(true))
-unconsent.addEventListener('click', () => optimization.consent(false))
-
-
-
 /* --- Standard Rendering Code --- */
 
 function isRichText(field) {
@@ -124,22 +106,6 @@ function manuallyObserveEntryElement(element, entry, personalization) {
 
     manuallyObservedEntryElements.set(element.dataset.entryId, [entry, personalization])
 }
-
-// Subscribe to consent state
-optimization.states.consent.subscribe(async (consent) => {
-    toggleConsent(consent)
-
-    if (consent)
-        document.querySelectorAll('[data-entry-id]').forEach((element) => {
-            const settings = manuallyObservedEntryElements.get(element.dataset.entryId)
-
-            if (!settings) return
-
-            const [entry, personalization] = settings
-
-            manuallyObserveEntryElement(element, entry, personalization)
-        })
-})
 
 // Subscribe to profile state, find entries in the markup, and render them
 optimization.states.profile.subscribe((profile) => {
