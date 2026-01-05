@@ -1,68 +1,101 @@
 import Optimization, {
-  ANONYMOUS_ID_COOKIE,
+  type OptimizationData,
+  type OptimizationNodeConfig,
+  type SelectedPersonalization,
   type UniversalEventBuilderArgs,
 } from '@contentful/optimization-node'
-import cookieParser from 'cookie-parser'
-import express, { type Express, type Request, type Response } from 'express'
+import { documentToHtmlString } from '@contentful/rich-text-html-renderer'
+import { INLINES, type Document } from '@contentful/rich-text-types'
+import type { Entry } from 'contentful'
+import * as contentful from 'contentful'
+import express, { type Express, type Request } from 'express'
 import rateLimit from 'express-rate-limit'
+import path from 'node:path'
 import type { ParsedQs } from 'qs'
 
 const limiter = rateLimit({
-  windowMs: 900_000,
-  max: 100,
+  windowMs: 30_000,
+  max: 1000,
 })
 
 const app: Express = express()
-
-app.use(cookieParser())
-
 app.use(limiter)
 
-const CLIENT_ID = process.env.VITE_NINETAILED_CLIENT_ID ?? ''
-const ENVIRONMENT = process.env.VITE_NINETAILED_ENVIRONMENT ?? ''
-const VITE_INSIGHTS_API_BASE_URL = process.env.VITE_INSIGHTS_API_BASE_URL ?? ''
-const VITE_EXPERIENCE_API_BASE_URL = process.env.VITE_EXPERIENCE_API_BASE_URL ?? ''
+app.set('view engine', 'pug') // configure Pug as the view engine
+app.set('views', path.join(__dirname, '.')) // define the directory for view templates
 
-const render = (sdk: Optimization): string => `<!doctype html>
-<html>
-  <head>
-    <title>Test SDK page</title>
-    <script src="/dist/index.umd.cjs"></script>
-    <script> window.response = ${JSON.stringify({ clientId: sdk.config.clientId })} </script>
-  </head>
-  <body>
-  <script>
-    const optimization = new Optimization({
-      clientId: '${CLIENT_ID}',
-      environment: '${ENVIRONMENT}',
-      logLevel: 'debug',
-      api: {
-        analytics: { baseUrl: '${VITE_INSIGHTS_API_BASE_URL}' },
-        personalization: { baseUrl: '${VITE_EXPERIENCE_API_BASE_URL}' },
-      },
-    })
-
-    function renderElement(id, text) {
-      const p = document.createElement('p')
-      p.dataset.testid = id
-      p.innerText = text
-      document.body.appendChild(p)
-    }
-
-    renderElement('clientId', optimization.config.clientId)
-  </script>
-  </body>
-</html>
-`
-
-const sdk = new Optimization({
-  clientId: CLIENT_ID,
-  environment: ENVIRONMENT,
+const optimizationConfig: OptimizationNodeConfig = {
+  clientId: process.env.VITE_NINETAILED_CLIENT_ID ?? '',
+  environment: process.env.VITE_NINETAILED_ENVIRONMENT ?? '',
   logLevel: 'debug',
-  api: {
-    analytics: { baseUrl: VITE_INSIGHTS_API_BASE_URL },
-    personalization: { baseUrl: VITE_EXPERIENCE_API_BASE_URL },
-  },
+  analytics: { baseUrl: process.env.VITE_INSIGHTS_API_BASE_URL },
+  personalization: { baseUrl: process.env.VITE_EXPERIENCE_API_BASE_URL },
+}
+
+const sdk = new Optimization(optimizationConfig)
+
+const ctflConfig: contentful.CreateClientParams = {
+  accessToken: process.env.VITE_CONTENTFUL_TOKEN ?? '',
+  environment: process.env.VITE_CONTENTFUL_ENVIRONMENT ?? '',
+  space: process.env.VITE_CONTENTFUL_SPACE_ID ?? '',
+  host: process.env.VITE_CONTENTFUL_CDA_HOST ?? '',
+  basePath: process.env.VITE_CONTENTFUL_BASE_PATH ?? '',
+  insecure: Boolean(process.env.VITE_CONTENTFUL_CDA_HOST),
+}
+
+const ctfl = contentful.createClient(ctflConfig)
+
+interface ContentEntrySkeleton {
+  contentTypeId: 'content'
+  fields: {
+    text: contentful.EntryFieldTypes.Text | contentful.EntryFieldTypes.RichText
+  }
+}
+
+async function getContentfulEntry(
+  entryId: string,
+): Promise<Entry<ContentEntrySkeleton> | undefined> {
+  try {
+    return await ctfl.getEntry<ContentEntrySkeleton>(entryId, {
+      include: 10,
+    })
+  } catch (_error) {}
+}
+
+function isNonEmptyString(s?: unknown): s is string {
+  return s !== undefined && typeof s === 'string' && s.trim().length > 0
+}
+
+function isRichText(field?: unknown): field is Document {
+  return (
+    typeof field === 'object' &&
+    field !== null &&
+    'nodeType' in field &&
+    field.nodeType === 'document'
+  )
+}
+
+const entryIds: string[] = [
+  '1MwiFl4z7gkwqGYdvCmr8c', // Rich Text field Entry with Merge Tag
+  '4ib0hsHWoSOnCVdDkizE8d',
+  'xFwgG3oNaOcjzWiGe4vXo',
+  '2Z2WLOx07InSewC3LUB3eX',
+  '5XHssysWUDECHzKLzoIsg1',
+  '6zqoWXyiSrf0ja7I2WGtYj',
+  '7pa5bOx8Z9NmNcr7mISvD',
+]
+
+const entries = new Map<string, Entry<ContentEntrySkeleton>>()
+
+Promise.all(
+  entryIds.map(async (entryId) => {
+    const entry = await getContentfulEntry(entryId)
+    if (!entry) return
+    entries.set(entryId, entry)
+  }),
+).catch((error: unknown) => {
+  // eslint-disable-next-line no-console -- debug
+  console.log(error)
 })
 
 type QsPrimitive = string | ParsedQs
@@ -105,64 +138,79 @@ function getUniversalEventBuilderArgs(req: Request): UniversalEventBuilderArgs {
   }
 }
 
-function getAnonymousIdFromCookies(cookies: unknown): string | undefined {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- req.cookies is of type any
-  return (cookies as Record<string, string>)[ANONYMOUS_ID_COOKIE] ?? undefined
-}
-
-function setAnonymousId(res: Response, id: string): void {
-  res.cookie(ANONYMOUS_ID_COOKIE, id, {
-    path: '/',
-    domain: 'localhost',
-  })
-}
-
 app.get('/', limiter, async (req, res) => {
   const universalEventBuilderArgs = getUniversalEventBuilderArgs(req)
 
-  const anonymousId = getAnonymousIdFromCookies(req.cookies)
+  const userId = isNonEmptyString(req.query.userId) ? req.query.userId.trim() : undefined
 
-  const { profile } = await sdk.personalization.page({
-    ...universalEventBuilderArgs,
-    profile: anonymousId ? { id: anonymousId } : undefined,
-  })
+  let optimizationResponse: OptimizationData | undefined = undefined
 
-  setAnonymousId(res, profile.id)
-
-  res.send(render(sdk))
-})
-
-app.get('/user/:userId', limiter, async (req, res) => {
-  const universalEventBuilderArgs = getUniversalEventBuilderArgs(req)
-
-  const anonymousId = getAnonymousIdFromCookies(req.cookies)
-
-  const {
-    params: { userId },
-  } = req
-
-  if (userId)
-    await sdk.personalization.identify({
+  if (isNonEmptyString(userId)) {
+    const pageResponse = await sdk.personalization.page({
+      ...universalEventBuilderArgs,
+    })
+    optimizationResponse = await sdk.personalization.identify({
       ...universalEventBuilderArgs,
       userId,
-      profile: anonymousId ? { id: anonymousId } : undefined,
+      traits: { identified: true },
+      profile: pageResponse.profile,
     })
+  } else {
+    optimizationResponse = await sdk.personalization.page({
+      ...universalEventBuilderArgs,
+    })
+  }
 
-  const { profile } = await sdk.personalization.page({
-    ...universalEventBuilderArgs,
-    profile: anonymousId ? { id: anonymousId } : undefined,
+  const { profile, personalizations, changes } = optimizationResponse
+
+  const personalizedEntries = new Map<
+    string,
+    {
+      entry: Entry<ContentEntrySkeleton>
+      personalization?: SelectedPersonalization
+    }
+  >()
+
+  entryIds.forEach((entryId) => {
+    const entry = entries.get(entryId)
+
+    if (!entry) return
+
+    if (isRichText(entry.fields.text)) {
+      entry.fields.text = documentToHtmlString(entry.fields.text, {
+        renderNode: {
+          [INLINES.EMBEDDED_ENTRY]: (node) => {
+            if (sdk.personalization.mergeTagValueResolver.isMergeTagEntry(node.data.target)) {
+              return (
+                sdk.personalization.mergeTagValueResolver.resolve(node.data.target, profile) ?? ''
+              )
+            } else {
+              return ''
+            }
+          },
+        },
+      })
+    }
+
+    const personalizedEntry = sdk.personalization.personalizedEntryResolver.resolve(
+      entry,
+      personalizations,
+    )
+
+    personalizedEntries.set(entryId, personalizedEntry)
   })
 
-  setAnonymousId(res, profile.id)
+  const flags = sdk.personalization.flagsResolver.resolve(changes)
 
-  res.send(render(sdk))
+  const pageData = {
+    profile,
+    personalizations,
+    entries: personalizedEntries,
+    flags,
+  }
+
+  res.render('index', { ...pageData })
 })
-
-app.get('/smoke-test', limiter, (_, res) => {
-  res.send(render(sdk))
-})
-
-app.use('/dist', express.static('./public/dist'))
 
 const port = 3000
 

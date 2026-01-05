@@ -8,10 +8,31 @@ import {
 import { logger } from 'logger'
 import AnalyticsBase from './AnalyticsBase'
 
+/**
+ * Arguments for tracking a component/flag view in stateless mode.
+ *
+ * @public
+ * @remarks
+ * The `profile` is optional; when omitted, the APIs may infer identity via
+ * other means.
+ */
+export type TrackViewArgs = ComponentViewBuilderArgs & { profile?: PartialProfile }
+
+/**
+ * Stateless analytics implementation that sends each event immediately in a
+ * single‑event batch.
+ *
+ * @public
+ */
 class AnalyticsStateless extends AnalyticsBase {
-  async trackComponentView(
-    args: ComponentViewBuilderArgs & { profile?: PartialProfile },
-  ): Promise<void> {
+  /**
+   * Build, intercept, validate, and send a component view event.
+   *
+   * @param args - {@link TrackViewArgs} used to build the event. Includes an
+   * optional partial profile.
+   * @returns A promise that resolves once the batch has been sent.
+   */
+  async trackComponentView(args: TrackViewArgs): Promise<void> {
     logger.info(`[Analytics] Processing "component view" event`)
 
     const { profile, ...builderArgs } = args
@@ -25,9 +46,14 @@ class AnalyticsStateless extends AnalyticsBase {
     await this.sendBatchEvent(parsed, profile)
   }
 
-  async trackFlagView(
-    args: ComponentViewBuilderArgs & { profile?: PartialProfile },
-  ): Promise<void> {
+  /**
+   * Build, intercept, validate, and send a flag view event.
+   *
+   * @param args - {@link TrackViewArgs} used to build the event. Includes an
+   * optional partial profile.
+   * @returns A promise that resolves once the batch has been sent.
+   */
+  async trackFlagView(args: TrackViewArgs): Promise<void> {
     logger.debug(`[Analytics] Processing "flag view" event`)
 
     const { profile, ...builderArgs } = args
@@ -41,7 +67,15 @@ class AnalyticsStateless extends AnalyticsBase {
     await this.sendBatchEvent(parsed, profile)
   }
 
-  async sendBatchEvent(event: InsightsEvent, profile?: PartialProfile): Promise<void> {
+  /**
+   * Send a single {@link InsightsEvent} wrapped in a one‑item batch.
+   *
+   * @param event - The event to send.
+   * @param profile - Optional partial profile to attach to the batch.
+   * @returns A promise that resolves when the API call completes.
+   * @internal
+   */
+  private async sendBatchEvent(event: InsightsEvent, profile?: PartialProfile): Promise<void> {
     const batchEvent: BatchInsightsEventArray = BatchInsightsEventArray.parse([
       {
         profile,

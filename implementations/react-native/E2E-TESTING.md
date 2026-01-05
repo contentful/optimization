@@ -1,6 +1,7 @@
 # E2E Testing with Detox
 
-This React Native application is configured with [Detox](https://wix.github.io/Detox/) for end-to-end testing.
+This React Native application is configured with [Detox](https://wix.github.io/Detox/) for
+end-to-end testing.
 
 ## Prerequisites
 
@@ -43,7 +44,8 @@ pnpm run test:e2e:ios:build
 emulator -list-avds
 ```
 
-2. If you need to create one, the default configuration expects an emulator named `Pixel_7_API_34`. You can either:
+2. If you need to create one, the default configuration expects an emulator named `Pixel_7_API_34`.
+   You can either:
    - Create an emulator with that name
    - Or update the `.detoxrc.js` file with your emulator name
 
@@ -84,7 +86,8 @@ pnpm --filter @implementation/react-native run e2e:run:android
 
 This script handles the complete E2E testing workflow automatically:
 
-1. **Creates `.env` configuration** - Generates a `.env` file with mock server URLs and test credentials
+1. **Creates `.env` configuration** - Generates a `.env` file with mock server URLs and test
+   credentials
 2. **Starts mock API server** - Launches the mock server from `lib/mocks` on port 8000
 3. **Starts Metro bundler** - Starts the React Native bundler on port 8081
 4. **Sets up adb reverse** - Configures port forwarding so the emulator can reach localhost services
@@ -200,7 +203,8 @@ The app components have been annotated with `testID` props for Detox to identify
   ```bash
   pnpm run start:clean
   ```
-- Detox issues: Check the [Detox troubleshooting guide](https://wix.github.io/Detox/docs/introduction/troubleshooting)
+- Detox issues: Check the
+  [Detox troubleshooting guide](https://wix.github.io/Detox/docs/introduction/troubleshooting)
 
 ## CI/CD Integration
 
@@ -213,7 +217,8 @@ Detox tests can be integrated into your CI/CD pipeline. Make sure to:
 
 ### GitHub Actions
 
-The project includes a GitHub Actions workflow (`.github/workflows/main-pipeline.yaml`) that runs Android e2e tests on pull requests.
+The project includes a GitHub Actions workflow (`.github/workflows/main-pipeline.yaml`) that runs
+Android e2e tests on pull requests.
 
 #### Testing Headless Locally (Before CI)
 
@@ -240,7 +245,8 @@ To test the headless emulator setup locally before pushing to CI:
 
 #### CI Workflow Example
 
-The CI workflow uses `reactivecircus/android-emulator-runner` action which handles emulator lifecycle automatically. The action creates its own AVD, so no manual AVD creation is needed:
+The CI workflow uses `reactivecircus/android-emulator-runner` action which handles emulator
+lifecycle automatically. The action creates its own AVD, so no manual AVD creation is needed:
 
 ```yaml
 - name: Start Android Emulator

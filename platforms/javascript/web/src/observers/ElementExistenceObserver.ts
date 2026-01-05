@@ -7,36 +7,114 @@
  * - Two optional per-kind callbacks + one aggregate callback
  */
 
+import { CAN_ADD_LISTENERS } from '../global-constants'
+
+/**
+ * Default idle timeout (in milliseconds) used when scheduling processing
+ * of mutation records.
+ */
 export const DEFAULT_IDLE_TIMEOUT_MS = 100
+
+/**
+ * Default maximum number of elements delivered in a single callback chunk.
+ */
 export const DEFAULT_MAX_CHUNK = 250
+
+/**
+ * Lower bound for idle timeout to avoid ultra-tight loops (~1 animation frame).
+ */
 export const MIN_IDLE_TIMEOUT_MS = 16 // ~1 frame
+
+/**
+ * Lower bound for maximum chunk size (must deliver at least one element).
+ */
 export const MIN_MAX_CHUNK = 1
 
-export const CAN_USE_DOM = typeof window !== 'undefined' && typeof document !== 'undefined'
-export const HAS_MUTATION_OBSERVER = CAN_USE_DOM && typeof MutationObserver !== 'undefined'
-export const HAS_IDLE_CALLBACK = CAN_USE_DOM && typeof window.requestIdleCallback === 'function'
-export const HAS_CANCEL_IDLE = CAN_USE_DOM && typeof window.cancelIdleCallback === 'function'
+/**
+ * True when the environment supports `MutationObserver` and can add listeners.
+ */
+export const HAS_MUTATION_OBSERVER = CAN_ADD_LISTENERS && typeof MutationObserver !== 'undefined'
 
+/**
+ * True when the environment supports `window.requestIdleCallback`.
+ */
+export const HAS_IDLE_CALLBACK =
+  CAN_ADD_LISTENERS && typeof window.requestIdleCallback === 'function'
+
+/**
+ * True when the environment supports `window.cancelIdleCallback`.
+ */
+export const HAS_CANCEL_IDLE = CAN_ADD_LISTENERS && typeof window.cancelIdleCallback === 'function'
+
+/**
+ * Aggregate description of changes observed in a batch of mutation records.
+ */
 export interface MutationChange {
+  /** Set of elements that were added. */
   readonly added: ReadonlySet<Element>
+  /** Set of elements that were removed. */
   readonly removed: ReadonlySet<Element>
+  /** Raw mutation records that produced this change. */
   readonly records: readonly MutationRecord[]
 }
 
+/**
+ * Callback invoked when elements have been added.
+ */
 export type AddedCallback = (elements: readonly Element[]) => unknown
+
+/**
+ * Callback invoked when elements have been removed.
+ */
 export type RemovedCallback = (elements: readonly Element[]) => unknown
+
+/**
+ * Callback invoked when a batch of mutation records has been coalesced.
+ */
 export type MutationChangeCallback = (change: MutationChange) => unknown
 
+/**
+ * Options for configuring {@link ElementExistenceObserver}.
+ */
 export interface ElementExistenceObserverOptions {
+  /**
+   * Root node to observe for changes. Defaults to `document` where possible.
+   */
   readonly root?: Node
+  /**
+   * Idle timeout in milliseconds used when scheduling processing of mutations.
+   */
   readonly idleTimeoutMs?: number
+  /**
+   * Maximum number of elements delivered per callback chunk.
+   */
   readonly maxChunk?: number
+  /**
+   * Callback invoked with the aggregate change payload (added/removed plus raw records).
+   */
   readonly onChange?: MutationChangeCallback
+  /**
+   * Callback invoked with per-kind additions (batched/chunked).
+   */
   readonly onAdded?: AddedCallback
+  /**
+   * Callback invoked with per-kind removals (batched/chunked).
+   */
   readonly onRemoved?: RemovedCallback
+  /**
+   * Optional error handler for callback failures.
+   */
   readonly onError?: (error: unknown) => void
 }
 
+/**
+ * Observe the existence of elements under a root node and deliver coalesced
+ * add/remove notifications in idle time.
+ *
+ * @remarks
+ * In non-DOM / SSR environments, the observer becomes a safe no-op, and
+ * mutation handling is disabled.
+ */
 class ElementExistenceObserver {
   private readonly observer?: MutationObserver
 
@@ -54,6 +132,11 @@ class ElementExistenceObserver {
   private idleHandle: number | null = null
   private disconnected = false
 
+  /**
+   * Create a new element existence observer.
+   *
+   * @param options - Optional configuration for root, callbacks, and batching.
+   */
   public constructor(options: ElementExistenceObserverOptions = {}) {
     const {
       root,
@@ -65,7 +148,7 @@ class ElementExistenceObserver {
       onError,
     } = options
 
-    this.root = ElementExistenceObserver.isNode(root) ? root : CAN_USE_DOM ? document : null
+    this.root = ElementExistenceObserver.isNode(root) ? root : CAN_ADD_LISTENERS ? document : null
 
     this.idleTimeoutMs = ElementExistenceObserver.sanitizeInt(
       idleTimeoutMs,
@@ -97,11 +180,16 @@ class ElementExistenceObserver {
     // Else: SSR / non-DOM env — stay dormant; methods become safe no-ops.
   }
 
-  /** True if the watcher is actively observing (i.e., in a browser with MutationObserver). */
+  /**
+   * True if the watcher is actively observing (i.e., in a browser with MutationObserver).
+   */
   public isActive(): boolean {
     return !!this.observer && !this.disconnected
   }
 
+  /**
+   * Stop observing and clear any pending work.
+   */
   public disconnect(): void {
     if (this.disconnected) return
     this.disconnected = true
@@ -116,6 +204,12 @@ class ElementExistenceObserver {
     this.scheduled = false
   }
 
+  /**
+   * Synchronously process any pending mutation records.
+   *
+   * @remarks
+   * Cancels any outstanding idle callbacks or timeouts and delivers changes immediately.
+   */
   public flush(): void {
     if (!this.isActive()) return
 
@@ -129,6 +223,9 @@ class ElementExistenceObserver {
     this.processNow()
   }
 
+  /**
+   * Schedule processing of pending records using idle time or a timeout.
+   */
   private scheduleProcess(): void {
     if (!this.isActive() || this.scheduled) return
     this.scheduled = true
@@ -144,6 +241,9 @@ class ElementExistenceObserver {
       : window.setTimeout(run, this.idleTimeoutMs)
   }
 
+  /**
+   * Process all currently pending mutation records immediately.
+   */
   private processNow(): void {
     if (!this.isActive() || this.pendingRecords.length === 0) return
 
@@ -157,16 +257,26 @@ class ElementExistenceObserver {
     this.deliverPerKind(removed, added) // removals first, then additions
   }
 
+  /**
+   * Narrow a value to `Node` when the DOM is available.
+   */
   private static isNode(value: unknown): value is Node {
-    return CAN_USE_DOM && typeof Node !== 'undefined' && value instanceof Node
+    return CAN_ADD_LISTENERS && typeof Node !== 'undefined' && value instanceof Node
   }
 
+  /**
+   * Normalize a numeric option to a finite integer and enforce a minimum.
+   */
   private static sanitizeInt(value: unknown, fallback: number, min: number): number {
     if (typeof value !== 'number' || !Number.isFinite(value)) return fallback
     const truncated = Math.trunc(value)
     return truncated >= min ? truncated : min
   }
 
+  /**
+   * Coalesce a set of mutation records into net added and removed nodes,
+   * ignoring transient moves.
+   */
   private static coalesce(records: readonly MutationRecord[]): {
     addedNodes: Set<Node>
     removedNodes: Set<Node>
@@ -187,6 +297,9 @@ class ElementExistenceObserver {
     return { addedNodes, removedNodes }
   }
 
+  /**
+   * Convert node-level sets into element-only sets, including descendants.
+   */
   private static toElementSets(
     addedNodes: ReadonlySet<Node>,
     removedNodes: ReadonlySet<Node>,
@@ -196,6 +309,10 @@ class ElementExistenceObserver {
     return { added, removed }
   }
 
+  /**
+   * Collect all elements (and descendants) from a set of nodes, optionally
+   * filtering out disconnected nodes.
+   */
   private static flattenElements(
     nodes: ReadonlySet<Node>,
     requireConnected: boolean,
@@ -223,20 +340,31 @@ class ElementExistenceObserver {
 
     return out
   }
+
+  /**
+   * Cancel a previously scheduled idle callback or fallback timeout.
+   */
   private static cancelIdle(handle: number): void {
     if (HAS_CANCEL_IDLE) {
       window.cancelIdleCallback(handle)
-    } else if (CAN_USE_DOM) {
+    } else if (CAN_ADD_LISTENERS) {
       window.clearTimeout(handle)
     }
   }
 
+  /**
+   * Drain and return the current list of pending mutation records.
+   */
   private drainPending(): MutationRecord[] {
     const { pendingRecords: out } = this
     this.pendingRecords = []
     return out
   }
 
+  /**
+   * Deliver the aggregate change payload (added, removed, records) to the
+   * `onChange` callback if configured.
+   */
   private deliverAggregate(
     added: ReadonlySet<Element>,
     removed: ReadonlySet<Element>,
@@ -247,6 +375,10 @@ class ElementExistenceObserver {
     this.safeCall(() => this.onChange?.(payload))
   }
 
+  /**
+   * Deliver per-kind added/removed elements to their respective callbacks in
+   * chunks if necessary.
+   */
   private deliverPerKind(removed: ReadonlySet<Element>, added: ReadonlySet<Element>): void {
     const removedArr = removed.size > 0 ? [...removed] : []
     const addedArr = added.size > 0 ? [...added] : []
@@ -259,6 +391,10 @@ class ElementExistenceObserver {
     }
   }
 
+  /**
+   * Dispatch element arrays in chunks to respect the configured `maxChunk`
+   * and avoid blocking the main thread.
+   */
   private dispatchChunked(
     items: readonly Element[],
     fn: (chunk: readonly Element[]) => unknown,
@@ -282,7 +418,7 @@ class ElementExistenceObserver {
       if (index < items.length) {
         if (HAS_IDLE_CALLBACK) {
           window.requestIdleCallback(run, { timeout: this.idleTimeoutMs })
-        } else if (CAN_USE_DOM) {
+        } else if (CAN_ADD_LISTENERS) {
           window.setTimeout(run, this.idleTimeoutMs)
         }
       }

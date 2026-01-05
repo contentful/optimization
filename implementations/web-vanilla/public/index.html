@@ -182,16 +182,13 @@
         clientId: '<!--#echo var="NGINX_NINETAILED_CLIENT_ID" -->',
         environment: '<!--#echo var="NGINX_NINETAILED_ENVIRONMENT" -->',
         logLevel: 'debug',
-        autoObserveEntryElements: true,
         autoTrackEntryViews: true,
         app: {
           name: document.title,
           version: '0.0.0',
         },
-        api: {
-          analytics: { baseUrl: '<!--#echo var="NGINX_INSIGHTS_API_BASE_URL" -->' },
-          personalization: { baseUrl: '<!--#echo var="NGINX_EXPERIENCE_API_BASE_URL" -->' },
-        },
+        analytics: { baseUrl: '<!--#echo var="NGINX_INSIGHTS_API_BASE_URL" -->' },
+        personalization: { baseUrl: '<!--#echo var="NGINX_EXPERIENCE_API_BASE_URL" -->' },
       })
 
       // Emit page event

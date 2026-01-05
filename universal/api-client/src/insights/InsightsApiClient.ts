@@ -2,21 +2,99 @@ import { BatchInsightsEventArray } from '@contentful/optimization-api-schemas'
 import { logger } from 'logger'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
 
+/**
+ * Default base URL for the Insights ingest API.
+ *
+ * @public
+ */
+export const INSIGHTS_BASE_URL = 'https://ingest.insights.ninetailed.co/'
+
+/**
+ * Options that control how Insights events are sent.
+ *
+ * @public
+ */
 interface RequestOptions {
   /**
-   * `beaconHandler` allows the usage of the Beacon API, or any similar request handler, instead of direct posting of data via `fetch` in the SDK.
+   * Handler used to enqueue events via the Beacon API or a similar mechanism.
+   *
+   * @param url - Target URL for the batched events.
+   * @param data - Array of batched insights events to be sent.
+   * @returns `true` if the events were successfully queued, `false` otherwise.
+   *
+   * @remarks
+   * When provided, this handler is preferred over direct `fetch` calls. If it
+   * returns `false`, the client falls back to emitting events immediately via
+   * `fetch`.
    */
   beaconHandler?: (url: string | URL, data: BatchInsightsEventArray) => boolean
 }
 
+/**
+ * Configuration for {@link InsightsApiClient}.
+ *
+ * @public
+ */
 export interface InsightsApiClientConfig extends ApiConfig, RequestOptions {}
 
-export const INSIGHTS_BASE_URL = 'https://ingest.insights.ninetailed.co/'
-
+/**
+ * Client for sending analytics and insights events to the Ninetailed Insights API.
+ *
+ * @public
+ *
+ * @remarks
+ * This client is optimized for sending batched events, optionally using a
+ * custom beacon-like handler when available.
+ *
+ * @example
+ * ```ts
+ * const insightsClient = new InsightsApiClient({
+ *   clientId: 'org-id',
+ *   environment: 'main',
+ *   preview: false,
+ * })
+ *
+ * await insightsClient.sendBatchEvents([
+ *   {
+ *     profile: { id: 'profile-123', ... },
+ *     events: [
+ *       {
+ *         type: 'track',
+ *         event: 'button_clicked',
+ *         properties: { id: 'primary-cta' },
+ *       },
+ *     ],
+ *   }
+ * ])
+ * ```
+ */
 export default class InsightsApiClient extends ApiClientBase {
+  /**
+   * Base URL used for Insights API requests.
+   */
   protected readonly baseUrl: string
+
+  /**
+   * Optional handler used to enqueue events via the Beacon API or a similar mechanism.
+   */
   private readonly beaconHandler: RequestOptions['beaconHandler']
 
+  /**
+   * Creates a new {@link InsightsApiClient} instance.
+   *
+   * @param config - Configuration for the Insights API client.
+   *
+   * @example
+   * ```ts
+   * const client = new InsightsApiClient({
+   *   clientId: 'org-id',
+   *   environment: 'main',
+   *   beaconHandler: (url, data) => {
+   *     return navigator.sendBeacon(url.toString(), JSON.stringify(data))
+   *   },
+   * })
+   * ```
+   */
   constructor(config: InsightsApiClientConfig) {
     super('Insights', config)
 
@@ -26,6 +104,40 @@ export default class InsightsApiClient extends ApiClientBase {
     this.beaconHandler = beaconHandler
   }
 
+  /**
+   * Sends batches of insights events to the Ninetailed Insights API.
+   *
+   * @param batches - Array of event batches to send.
+   * @param options - Optional request options, including a per-call `beaconHandler`.
+   * @returns A promise that resolves when the events have been sent or queued.
+   *
+   * @remarks
+   * If a `beaconHandler` is provided (either in the method call or in the
+   * client configuration) it will be invoked first. When the handler returns
+   * `true`, the events are considered successfully queued and no network
+   * request is made by this method.
+   *
+   * If the handler is missing or returns `false`, the events are emitted
+   * immediately via `fetch`.
+   *
+   * @throws {@link Error}
+   * Rethrows any error originating from the underlying `fetch` call.
+   *
+   * @example
+   * ```ts
+   * await insightsClient.sendBatchEvents(batches)
+   * ```
+   *
+   * @example
+   * ```ts
+   * // Override beaconHandler for a single call
+   * await insightsClient.sendBatchEvents(batches, {
+   *   beaconHandler: (url, data) => {
+   *     return navigator.sendBeacon(url.toString(), JSON.stringify(data))
+   *   },
+   * })
+   * ```
+   */
   public async sendBatchEvents(
     batches: BatchInsightsEventArray,
     options: RequestOptions = {},

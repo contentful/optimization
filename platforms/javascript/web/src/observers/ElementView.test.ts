@@ -4,7 +4,6 @@ import {
   clearFireTimer,
   DEFAULTS,
   derefElement,
-  HAS_DOC,
   isPageVisible,
   NOW,
   Num,
@@ -58,12 +57,6 @@ afterEach(() => {
 })
 
 describe('Environment flags', () => {
-  it('HAS_DOC reflects presence of document.addEventListener', () => {
-    expect(HAS_DOC).toBe(
-      typeof document !== 'undefined' && typeof document.addEventListener === 'function',
-    )
-  })
-
   it('isPageVisible follows document.visibilityState (visible)', () => {
     setVisibilityState('visible')
     expect(isPageVisible()).toBe(true)

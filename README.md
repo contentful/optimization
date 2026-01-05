@@ -1,59 +1,121 @@
-# Contentful Optimization SDK Suite
+<p align="center">
+  <a href="https://www.contentful.com/developers/docs/personalization/">
+    <img alt="Contentful Logo" title="Contentful" src="./contentful-icon.png" width="150">
+  </a>
+</p>
 
-The Optimization SDK suite implements functionality for Contentful's Personalization and Analytics products.
+<h1 align="center">Contentful Personalization & Analytics</h1>
 
-## Optimization Core Library
+<h3 align="center">Optimization SDK Suite</h3>
 
-The [Optimization Core SDK](./platforms/javascript/core/README.md) includes the following general features:
+<div align="center">
 
-- API adapters
-- Universal logic and utilities
-- Abstract classes and building blocks for platform- and framework-specific integrations
+[Readme](./README.md) · [Reference](https://contentful.github.io/optimization) ·
+[Contributing](./CONTRIBUTING.md)
 
-The Core SDK is written in Typescript and compiled to Javascript
+</div>
 
-## Javascript Platform
+## Introduction
 
-The Optimization SDK suite supports three Javascript environments:
+A [pnpm](https://pnpm.io/) monorepo hosting a Suite of SDKs that implement functionality for
+Contentful's [Personalization](https://www.contentful.com/developers/docs/personalization/) and
+[Analytics](https://www.contentful.com/developers/docs/analytics/overview/) products.
 
-- [Node](./platforms/javascript/node/README.md) (TBC)
-- [Web](./platforms/javascript/web/README.md) (TBC)
-- React Native (TBC)
+**What is Contentful?**
 
-Mobile applications that heavily utilize Web technologies, such as those built using Tauri or Ionic, may be able to use the Web Optimization SDK.
+Contentful provides content infrastructure for digital teams to power websites, apps, and devices.
+Unlike a CMS, Contentful was built to integrate with the modern software stack. It offers a central
+hub for structured content, powerful management and delivery APIs, and a customizable web app that
+enables developers and content creators to ship their products faster.
 
-### Frameworks
+<details>
+  <summary>Table of Contents</summary>
+<!-- mtoc-start -->
 
-Framework-specific SDKs will be provided for the following popular frameworks:
+- [Optimization SDKs](#optimization-sdks)
+- [Reference Implementations](#reference-implementations)
+- [Universal Libraries](#universal-libraries)
+- [Shared Internal Libraries](#shared-internal-libraries)
+- [Get Involved](#get-involved)
+- [License](#license)
+- [Code of Conduct](#code-of-conduct)
 
-- Angular (TBC)
-- NestJS (TBC)
-- React (TBC)
-- Svelte (TBC)
-- Vue (TBC)
+<!-- mtoc-end -->
+</details>
 
-There may also be SDKs provided for various meta-frameworks and/or hybrid frameworks, such as:
+## Optimization SDKs
 
-- Meteor (TBC)
-- Next.js (TBC)
-- Nuxt (TBC)
-- SvelteKit (TBC)
+Optimization SDKs are organized in a hierarchy based on platform, environment, and optionally,
+framework. Each SDK builds on top of the common SDK for its platform, environment, and so on, to
+ensure functionality is reasonably shared and consistent.
 
-Not every framework or architecture can be directly supported by a dedicated SDK. However, we will attempt to cover other integration possibilities via documentation.
+- [Optimization Core SDK](./universal/core/README.md)
+  - iOS
+    - iOS Swift SDK (TBD)
+  - Android
+    - Android Kotlin SDK (TBD)
+    - Android Java SDK (TBD)
+  - _JavaScript_
+    - [Node SDK](/platforms/javascript/node/README.md)
+      - Nest.js SDK (TBD)
+    - [React Native SDK](/platforms/javascript/react-native/README.md)
+    - [Web SDK](/platforms/javascript/web/README.md)
+      - Angular SDK (TBD)
+      - React SDK (TBD)
+      - Svelte SDK (TBD)
+      - Vue SDK (TBD)
 
-## Native Platforms
-
-The Optimization SDK suite will support the following native platforms:
-
-- Android (TBC)
-- iOS (TBC)
-
-SDKs for platforms that are not Javascript-based may utilize Core within a Javascript context, to avoid duplication of logic.
+> [!NOTE]
+>
+> The JavaScript platform includes React Native, which could be considered a JavaScript development
+> environment for native platforms.
 
 ## Reference Implementations
 
-At least one reference implementation is provided for each of the suite's SDKs. These implementations are primarily intended to be used as documentation and for automated E2E testing. As such, there may be multiple reference implementations to cover various common application architecture possibilities where the differences are significant to the integration of the relevant SDK(s).
+The SDK Suite's reference implementations are intended to serve the following purposes:
 
-## Additional Documentation
+- E2E testing of critical SDK functionality
+- Clear and simple documentation of common SDK use cases with absolutely no extraneous content or
+  functionality
 
-Lower-level SDK documentation may be found at [https://contentful.github.io/optimization](https://contentful.github.io/optimization)
+> [!WARNING]
+>
+> Reference implementations may share some similarities with projects commonly labeled examples,
+> demos, or playgrounds, but are more sparse and strictly maintained
+
+## Universal Libraries
+
+These libraries may be used independently of other libraries and SDKs in the Optimization SDK Suite.
+They are relied upon by all SDKs, with their exported values and functionality exposed throughout
+the SDK hierarchy.
+
+- [API Client Library](./universal/api-client/README.md) for the Experience & Insights APIs
+- [API Schemas Library](./universal/api-schemas/README.md) maintains Zod validation schemas and
+  TypeScript types for working with Experience API request and response payloads
+
+## Shared Internal Libraries
+
+Libraries that are shared internally among Optimization SDKs, and are not currently published, are
+located within the `/lib` folder in the project root.
+
+- [Logger](/lib/logger/README.md) is a simple logging abstraction utility
+- [Mocks](/lib/mocks/README.md) supplies testing fixtures and data, as well as mock server
+  implementations used in both unit and end to end tests throughout the SDK suite
+
+## Get Involved
+
+We appreciate any help on our repositories. For more details about how to contribute see our
+[CONTRIBUTING](https://github.com/contentful/contentful.js/blob/master/CONTRIBUTING.md) document.
+
+## License
+
+This repository is published under the [MIT](LICENSE) license.
+
+## Code of Conduct
+
+We want to provide a safe, inclusive, welcoming, and harassment-free space and experience for all
+participants, regardless of gender identity and expression, sexual orientation, disability, physical
+appearance, socioeconomic status, body size, ethnicity, nationality, level of experience, age,
+religion (or lack thereof), or other identity markers.
+
+[Read our full Code of Conduct](https://www.contentful.com/developers/code-of-conduct/).

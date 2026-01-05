@@ -14,29 +14,64 @@ import {
   createAutoTrackingEntryViewCallback,
   isEntryElement,
 } from './AutoEntryViewTracking'
-import { beaconHandler } from './beacon'
-import { getAnonymousId, getLocale, getPageProperties, getUserAgent } from './builders'
+import { getLocale, getPageProperties, getUserAgent } from './builders'
 import { ANONYMOUS_ID_COOKIE } from './global-constants'
+import { beaconHandler, createVisibilityChangeListener } from './handlers'
 import {
   ElementExistenceObserver,
   type ElementViewElementOptions,
   ElementViewObserver,
+  type ElementViewObserverOptions,
 } from './observers'
 import { LocalStore } from './storage'
 
 declare global {
   interface Window {
+    /** Global Optimization class constructor attached by the Web SDK. */
     Optimization?: typeof Optimization
+    /** Singleton instance created by the Web SDK initializer. */
     optimization?: Optimization
   }
 }
 
+/**
+ * Configuration options for the Optimization Web SDK.
+ *
+ * @public
+ * @remarks
+ * Extends {@link CoreStatefulConfig} with Web-specific options such as the
+ * application descriptor and automatic entry view tracking.
+ */
 export interface OptimizationWebConfig extends CoreStatefulConfig {
+  /**
+   * Application metadata used to identify the Web app in downstream events.
+   */
   app?: App
+
+  /**
+   * Whether the SDK should automatically track entry views based on DOM
+   * attributes and observers.
+   *
+   * @defaultValue `false`
+   */
   autoTrackEntryViews?: boolean
-  autoObserveEntryElements?: boolean
 }
 
+/**
+ * Merge user-supplied Web configuration with sensible defaults for the
+ * stateful core and browser environment.
+ *
+ * @param config - Incoming Web SDK configuration.
+ * @returns A fully composed {@link CoreStatefulConfig} object.
+ *
+ * @internal
+ * @remarks
+ * This helper wires together:
+ * - consent/profile/personalizations from LocalStore,
+ * - Web-specific eventBuilder functions (locale, page, user agent),
+ * - beacon-based analytics flushing,
+ * - and anonymous ID retrieval.
+ */
 function mergeConfig({
   app,
   defaults,
@@ -55,9 +90,7 @@ function mergeConfig({
 
   return merge(
     {
-      api: {
-        analytics: { beaconHandler },
-      },
+      analytics: { beaconHandler },
       defaults: {
         consent,
         analytics: {
@@ -73,35 +106,71 @@ function mergeConfig({
         app,
         channel: 'web',
         library: { name: 'Optimization Web API', version: '0.0.0' },
-        getAnonymousId,
         getLocale,
         getPageProperties,
         getUserAgent,
       },
+      getAnonymousId: () => LocalStore.anonymousId,
       logLevel: LocalStore.debug ? 'debug' : logLevel,
     },
     config,
   )
 }
 
+/**
+ * Stateful Web SDK built on top of {@link CoreStateful}.
+ *
+ * @public
+ * @remarks
+ * Provides browser-specific wiring:
+ * - automatic persistence of consent, profile, and personalizations,
+ * - cookie-based anonymous ID handling,
+ * - automatic entry view tracking via IntersectionObserver and MutationObserver,
+ * - and visibility-change based flushing of analytics events.
+ *
+ * A singleton instance is attached to `window.optimization` when constructed
+ * in a browser environment.
+ */
 class Optimization extends CoreStateful {
   private elementViewObserver?: ElementViewObserver = undefined
   private elementExistenceObserver?: ElementExistenceObserver = undefined
 
-  autoObserveEntryElements = false
-  autoTrackEntryViews = false
+  private autoTrackEntryViews = false
 
+  /**
+   * Create a new Optimization Web SDK instance.
+   *
+   * @param config - Web SDK configuration.
+   *
+   * @throws If an `Optimization` instance has already been initialized on
+   * `window.optimization`.
+   *
+   * @example
+   * ```ts
+   * import Optimization from '@contentful/optimization-web'
+   *
+   * const optimization = new Optimization({
+   *   clientId: 'abc-123',
+   *   environment: 'main',
+   *   autoTrackEntryViews: true,
+   * })
+   * ```
+   */
   constructor(config: OptimizationWebConfig) {
-    if (window.optimization) throw new Error('Optimization is already initialized')
+    if (typeof window !== 'undefined' && window.optimization)
+      throw new Error('Optimization is already initialized')
 
-    const { autoObserveEntryElements, autoTrackEntryViews, ...restConfig } = config
+    const { autoTrackEntryViews, ...restConfig } = config
 
     const mergedConfig: CoreConfig = mergeConfig(restConfig)
 
     super(mergedConfig)
 
-    this.autoObserveEntryElements = autoObserveEntryElements ?? false
-    this.autoTrackEntryViews = autoTrackEntryViews ?? false
+    this.autoTrackEntryViews = true
+
+    createVisibilityChangeListener(async () => {
+      await this.analytics.flush()
+    })
 
     effect(() => {
       const {
@@ -134,7 +203,6 @@ class Optimization extends CoreStateful {
 
       LocalStore.anonymousId = value?.id ?? cookieValue
 
-      // TODO: Allow cookie attributes to be set
       if (value && value.id !== cookieValue) Cookies.set(ANONYMOUS_ID_COOKIE, value.id)
     })
 
@@ -145,24 +213,30 @@ class Optimization extends CoreStateful {
 
       LocalStore.personalizations = value
     })
+
+    if (typeof window !== 'undefined') window.optimization ??= this
   }
 
-  startAutoTrackingEntryViews(options?: ElementViewElementOptions): void {
-    this.elementViewObserver = new ElementViewObserver(
-      createAutoTrackingEntryViewCallback({
-        personalization: this.personalization,
-        analytics: this.analytics,
-      }),
-    )
+  /**
+   * Enable automatic entry view tracking for elements with `data-ctfl-*`
+   * attributes and start observing the document.
+   *
+   * @param options - Optional per-element observer defaults for dwell time,
+   *   retries, and backoff behavior.
+   *
+   * @example
+   * ```ts
+   * optimization.startAutoTrackingEntryViews({ dwellTimeMs: 1000 })
+   * ```
+   */
+  startAutoTrackingEntryViews(options?: ElementViewObserverOptions): void {
+    this.autoTrackEntryViews = true
+
+    this.elementViewObserver = new ElementViewObserver(createAutoTrackingEntryViewCallback(this))
 
     this.elementExistenceObserver = new ElementExistenceObserver(
-      createAutoTrackingEntryExistenceCallback(
-        this.elementViewObserver,
-        this.autoObserveEntryElements,
-      ),
+      createAutoTrackingEntryExistenceCallback(this.elementViewObserver, true),
     )
-
-    if (!this.autoObserveEntryElements) return
 
     // Fully-automated observation for elements with ctfl data attributes
     const entries = document.querySelectorAll('[data-ctfl-entry-id]')
@@ -178,21 +252,67 @@ class Optimization extends CoreStateful {
     })
   }
 
+  /**
+   * Disable automatic entry view tracking and disconnect underlying observers.
+   *
+   * @example
+   * ```ts
+   * optimization.stopAutoTrackingEntryViews()
+   * ```
+   */
   stopAutoTrackingEntryViews(): void {
     this.elementExistenceObserver?.disconnect()
     this.elementViewObserver?.disconnect()
   }
 
-  trackEntryViewForElement(element: Element, options?: ElementViewElementOptions): void {
+  /**
+   * Begin tracking entry views for a specific element, using the Web SDK’s
+   * dwell-time and retry logic.
+   *
+   * @param element - Element to observe.
+   * @param options - Per-element observer options and callback data.
+   *
+   * @example
+   * ```ts
+   * const element = document.querySelector('#hero')!
+   * optimization.trackEntryViewForElement(element, {
+   *   dwellTimeMs: 1500,
+   *   data: { entryId: 'xyz' },
+   * })
+   * ```
+   */
+  trackEntryViewForElement(element: Element, options: ElementViewElementOptions): void {
     logger.info('[Optimization Web SDK] Manually observing element:', element)
     this.elementViewObserver?.observe(element, options)
   }
 
+  /**
+   * Stop tracking entry views for a specific element.
+   *
+   * @param element - Element to stop observing.
+   *
+   * @example
+   * ```ts
+   * optimization.untrackEntryViewForElement(element)
+   * ```
+   */
   untrackEntryViewForElement(element: Element): void {
     logger.info('[Optimization Web SDK] Manually unobserving element:', element)
     this.elementViewObserver?.unobserve(element)
   }
 
+  /**
+   * Reset all Web SDK state:
+   * - stops auto-tracking entry views,
+   * - clears the anonymous ID cookie,
+   * - clears LocalStore caches,
+   * - and delegates to {@link CoreStateful.reset} for underlying state reset.
+   *
+   * @example
+   * ```ts
+   * optimization.reset()
+   * ```
+   */
   reset(): void {
     this.stopAutoTrackingEntryViews()
     Cookies.remove(ANONYMOUS_ID_COOKIE)
@@ -201,7 +321,6 @@ class Optimization extends CoreStateful {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- protect against non-Web
-if (window) window.Optimization ??= Optimization
+if (typeof window !== 'undefined') window.Optimization ??= Optimization
 
 export default Optimization

@@ -1,1 +1,1 @@
-export * from './SelectedPersonalizations'
+export * from './SelectedPersonalization'

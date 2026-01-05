@@ -2,14 +2,54 @@ import { logger } from 'logger'
 import retry from 'p-retry'
 import type { BaseFetchMethodOptions, FetchMethod, FetchMethodCallbackOptions } from './Fetch'
 
+/**
+ * Default interval (in milliseconds) between retry attempts.
+ *
+ * @internal
+ */
 const DEFAULT_INTERVAL_TIMEOUT = 0
+
+/**
+ * Default number of retry attempts.
+ *
+ * @internal
+ */
 const DEFAULT_RETRY_COUNT = 1
+
+/**
+ * HTTP status code that triggers a retry.
+ *
+ * @internal
+ *
+ * @remarks
+ * This value is currently fixed to `503 Service Unavailable`.
+ */
 const RETRY_RESPONSE_STATUS = 503
+
+/**
+ * Default HTTP status code used for {@link HttpError}.
+ *
+ * @internal
+ */
 const HTTP_ERROR_RESPONSE_STATUS = 500
 
+/**
+ * Error type representing HTTP failures with an associated status code.
+ *
+ * @internal
+ */
 class HttpError extends Error {
+  /**
+   * The HTTP status code associated with the error.
+   */
   public status: number
 
+  /**
+   * Creates a new {@link HttpError}.
+   *
+   * @param message - Description of the error.
+   * @param status - HTTP status code associated with the error.
+   */
   constructor(message: string, status: number = HTTP_ERROR_RESPONSE_STATUS) {
     super(message)
     Object.setPrototypeOf(this, HttpError.prototype)
@@ -17,18 +57,68 @@ class HttpError extends Error {
   }
 }
 
+/**
+ * Configuration options for {@link createRetryFetchMethod}.
+ */
 export interface RetryFetchMethodOptions extends BaseFetchMethodOptions {
+  /**
+   * Delay (in milliseconds) between retry attempts.
+   *
+   * @remarks
+   * Defaults to {@link DEFAULT_INTERVAL_TIMEOUT}.
+   */
   intervalTimeout?: number
+
+  /**
+   * Callback invoked whenever a retry attempt fails.
+   *
+   * @param options - Information about the failed attempt.
+   *
+   * @remarks
+   * This callback is invoked with additional metadata such as the attempt
+   * number and the number of retries left.
+   */
   onFailedAttempt?: (options: FetchMethodCallbackOptions) => void
+
+  /**
+   * Maximum number of retry attempts.
+   *
+   * @remarks
+   * Defaults to {@link DEFAULT_RETRY_COUNT}.
+   */
   retries?: number
 }
 
+/**
+ * Internal configuration passed to the retry callback.
+ *
+ * @internal
+ */
 interface RetryFetchCallbackOptions extends RetryFetchMethodOptions {
+  /**
+   * Abort controller used to cancel the underlying fetch requests.
+   */
   controller: AbortController
+
+  /**
+   * Initialization options passed to the `fetch` implementation.
+   */
   init: RequestInit
+
+  /**
+   * Request URL.
+   */
   url: string | URL
 }
 
+/**
+ * Creates a callback function used by `p-retry` to perform a fetch with retry logic.
+ *
+ * @param options - Internal options controlling the retry behavior.
+ * @returns A function that, when invoked, performs the fetch and applies retry rules.
+ *
+ * @internal
+ */
 function createRetryFetchCallback({
   apiName = 'Optimization',
   controller,
@@ -78,6 +168,34 @@ function createRetryFetchCallback({
   }
 }
 
+/**
+ * Creates a {@link FetchMethod} that retries failed requests according to the
+ * provided configuration.
+ *
+ * @param options - Configuration options that control retry behavior.
+ * @returns A {@link FetchMethod} that automatically retries qualifying failures.
+ *
+ * @remarks
+ * This wrapper integrates with `p-retry` and uses an {@link AbortController}
+ * to cancel pending requests when a non-retriable error occurs.
+ *
+ * @throws {@link Error}
+ * Thrown when the request cannot be retried and no successful response is obtained.
+ *
+ * @example
+ * ```ts
+ * const fetchWithRetry = createRetryFetchMethod({
+ *   apiName: 'Optimization',
+ *   retries: 3,
+ *   intervalTimeout: 200,
+ *   onFailedAttempt: ({ attemptNumber, retriesLeft }) => {
+ *     console.warn(`Attempt ${attemptNumber} failed. Retries left: ${retriesLeft}`)
+ *   },
+ * })
+ *
+ * const response = await fetchWithRetry('https://example.com', { method: 'GET' })
+ * ```
+ */
 export function createRetryFetchMethod({
   apiName = 'Optimization',
   fetchMethod = fetch,

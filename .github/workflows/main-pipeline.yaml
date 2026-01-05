@@ -36,19 +36,19 @@ jobs:
           echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>.env
           echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>.env
 
-      - run: cp .env implementations/node/
+      - run: cp .env implementations/node-ssr/
       - run: cp .env implementations/web-vanilla/
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         id: dotenv-cache
         with:
           path: |
             .env
-            implementations/node/.env
+            implementations/node-ssr/.env
             implementations/web-vanilla/.env
           key: ${{ runner.os }}-dotenv
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         id: node-modules-cache
         with:
           path: node_modules
@@ -78,7 +78,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         if: steps.filter.outputs.lock == 'true'
         with:
           path: node_modules
@@ -86,12 +86,10 @@ jobs:
 
       - if: steps.filter.outputs.lock == 'true'
         run: >
-          echo "In case of error, please see ./CONTRIBUTING.md"
-          pnpx license-checker \
-          --summary \
-          --production \
-          --relativeLicensePath \
-          --onlyAllow 'MIT;Apache-2.0;ISC;BSD-3-Clause;BSD-2-Clause;MIT*;Apache 2.0;Unlicense;Unlicensed;:CC0-1.0;CC-BY-4.0;WTFPL;0BSD;UNLICENSED;Python-2.0;MPL-2.0;CC-BY-3.0;CC0-1.0'
+          echo "In case of error, please see ./CONTRIBUTING.md" pnpx license-checker \ --summary \
+          --production \ --relativeLicensePath \ --onlyAllow
+          'MIT;Apache-2.0;ISC;BSD-3-Clause;BSD-2-Clause;MIT*;Apache
+          2.0;Unlicense;Unlicensed;:CC0-1.0;CC-BY-4.0;WTFPL;0BSD;UNLICENSED;Python-2.0;MPL-2.0;CC-BY-3.0;CC0-1.0'
 
   format:
     name: Format Check 🎨
@@ -107,7 +105,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
@@ -130,7 +128,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
@@ -153,7 +151,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
@@ -176,7 +174,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
@@ -199,7 +197,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
@@ -217,17 +215,17 @@ jobs:
       - uses: actions/checkout@v6
 
       - run: |
-          echo "DOTENV_CONFIG_QUIET=true" >>implementations/node/.env
-          echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/node/.env
-          echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/node/.env
-          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>implementations/node/.env
-          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>implementations/node/.env
-          echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/node/.env
-          echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/node/.env
-          echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/node/.env
-          echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/node/.env
-          echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/node/.env
-          echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>implementations/node/.env
+          echo "DOTENV_CONFIG_QUIET=true" >>implementations/node-ssr/.env
+          echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/node-ssr/.env
+          echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/node-ssr/.env
+          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>implementations/node-ssr/.env
+          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>implementations/node-ssr/.env
+          echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/node-ssr/.env
+          echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/node-ssr/.env
+          echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/node-ssr/.env
+          echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/node-ssr/.env
+          echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/node-ssr/.env
+          echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>implementations/node-ssr/.env
 
       - uses: pnpm/action-setup@v4
 
@@ -235,7 +233,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
@@ -246,13 +244,13 @@ jobs:
 
       - run: pnpm --filter @implementation/node test:e2e
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
         with:
           name: ci-results-node
           path: |
-            ./implementations/node/playwright-report/
-            ./implementations/node/test-results/
+            ./implementations/node-ssr/playwright-report/
+            ./implementations/node-ssr/test-results/
           retention-days: 1
 
   e2e-web:
@@ -271,16 +269,16 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: |
             .env
-            implementations/node/.env
+            implementations/node-ssr/.env
             implementations/web-vanilla/.env
           key: ${{ runner.os }}-dotenv
 
@@ -290,7 +288,7 @@ jobs:
 
       - run: pnpm --filter @implementation/web-vanilla test:e2e
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
         with:
           name: ci-results-web-vanilla
@@ -301,7 +299,7 @@ jobs:
 
   e2e-react-native-android:
     name: E2E React Native Android 📱
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     needs: setup
     env:
@@ -332,7 +330,7 @@ jobs:
           cache: 'pnpm'
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -340,7 +338,7 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
@@ -387,13 +385,16 @@ jobs:
           sleep 15
 
       - name: Cache Gradle dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
             implementations/react-native/android/.gradle
-          key: ${{ runner.os }}-gradle-${{ hashFiles('implementations/react-native/android/**/*.gradle*', 'implementations/react-native/android/gradle/wrapper/gradle-wrapper.properties') }}
+          key:
+            ${{ runner.os }}-gradle-${{
+            hashFiles('implementations/react-native/android/**/*.gradle*',
+            'implementations/react-native/android/gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
@@ -405,7 +406,8 @@ jobs:
           target: google_apis
           avd-name: test
           force-avd-creation: true
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot-save
+          emulator-options:
+            -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot-save
           disable-animations: true
           emulator-boot-timeout: 300
           disk-size: 6G
@@ -423,7 +425,7 @@ jobs:
       - name: Upload Metro logs on failure
         if: failure()
         run: |
-          echo "=== Metro Bundler Logs ===" 
+          echo "=== Metro Bundler Logs ==="
           cat /tmp/metro.log || echo "No metro logs found"
           echo "=== Mock Server Logs ==="
           cat /tmp/mock-server.log || echo "No mock server logs found"
@@ -434,7 +436,7 @@ jobs:
           kill $(cat /tmp/metro.pid) 2>/dev/null || true
           kill $(cat /tmp/mock-server.pid) 2>/dev/null || true
 
-      - uses: actions/upload-artifact@v5
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: ci-results-react-native-android

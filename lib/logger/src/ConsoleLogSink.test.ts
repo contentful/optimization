@@ -26,9 +26,9 @@ describe('ConsoleLogSink', () => {
     Object.assign(console, originalConsole)
   })
 
-  it('defaults to fatal verbosity', () => {
+  it('defaults to `error` verbosity', () => {
     const sink = new ConsoleLogSink()
-    expect(sink.verbosity).toBe('fatal')
+    expect(sink.verbosity).toBe('error')
   })
 
   it('uses the provided verbosity', () => {

@@ -8,6 +8,12 @@ Contentful Optimization SDK for React Native applications.
 npm install @contentful/optimization-react-native @react-native-async-storage/async-storage
 ```
 
+## Reference Implementation
+
+- [React Native](/implementations/react-native/README.md): Example application that displays
+  personalized content, with builds targeted for both Android and iOS (TODO: update link when README
+  is added)
+
 ## Quick Start
 
 ```typescript
@@ -63,13 +69,16 @@ function App() {
 
 ## Component Tracking
 
-**Important:** When we refer to "component tracking," we're talking about tracking **Contentful entry components** (content entries in your CMS), NOT React Native UI components. The term "component" comes from Contentful's terminology for personalized content entries.
+**Important:** When we refer to "component tracking," we're talking about tracking **Contentful
+entry components** (content entries in your CMS), NOT React Native UI components. The term
+"component" comes from Contentful's terminology for personalized content entries.
 
 The SDK provides two semantic components for tracking different types of Contentful entries:
 
 ### `<Personalization />` - For Personalized Entries
 
-Use this component to track Contentful entries that can be personalized (have `nt_experiences` field). It automatically:
+Use this component to track Contentful entries that can be personalized (have `nt_experiences`
+field). It automatically:
 
 - Resolves the correct variant based on user profile and active personalizations
 - Provides the resolved entry via render prop
@@ -95,7 +104,8 @@ The tracking components work in two modes:
 
 #### Inside ScrollView (Recommended for Scrollable Content)
 
-When used inside a `<ScrollProvider>`, tracking uses the actual scroll position and viewport dimensions:
+When used inside a `<ScrollProvider>`, tracking uses the actual scroll position and viewport
+dimensions:
 
 ```tsx
 <ScrollProvider>
@@ -129,7 +139,8 @@ When used without `<ScrollProvider>`, tracking uses screen dimensions instead:
 </Analytics>
 ```
 
-**Note:** In this mode, `scrollY` is always `0` and viewport height equals the screen height. This is ideal for:
+**Note:** In this mode, `scrollY` is always `0` and viewport height equals the screen height. This
+is ideal for:
 
 - Full-screen components
 - Non-scrollable layouts
@@ -137,17 +148,20 @@ When used without `<ScrollProvider>`, tracking uses screen dimensions instead:
 
 ## Features
 
-This SDK provides all the functionality from `@contentful/optimization-core` plus React Native-specific features:
+This SDK provides all the functionality from `@contentful/optimization-core` plus React
+Native-specific features:
 
 ### React Native Specific
 
-- **Personalization**: Component for tracking personalized Contentful entries with variant resolution
+- **Personalization**: Component for tracking personalized Contentful entries with variant
+  resolution
 - **Analytics**: Component for tracking non-personalized Contentful entries
 - **OptimizationProvider**: React context provider for accessing the Optimization instance
 - **ScrollProvider**: Wrapper around ScrollView that enables viewport tracking
 - **useOptimization**: Hook to access the Optimization instance in components
 - **useViewportTracking**: Hook for custom viewport tracking logic
-- **AsyncStorage Integration**: Automatic persistence of state using `@react-native-async-storage/async-storage`
+- **AsyncStorage Integration**: Automatic persistence of state using
+  `@react-native-async-storage/async-storage`
 - **React Native Defaults**: Pre-configured event builders for mobile context
 
 ### Core Functionality (Re-exported)
@@ -164,7 +178,8 @@ All core SDK features are available directly from this package:
 
 #### Tracking Personalized Entries
 
-The `<Personalization />` component handles variant resolution and tracking for personalized Contentful entries:
+The `<Personalization />` component handles variant resolution and tracking for personalized
+Contentful entries:
 
 ```typescript
 import { createClient } from 'contentful'
@@ -366,8 +381,12 @@ The SDK automatically configures:
 
 The SDK includes automatic polyfills for React Native to support modern JavaScript features:
 
-- **Iterator Helpers (ES2025)**: Polyfilled using `es-iterator-helpers` to support methods like `.toArray()`, `.filter()`, `.map()` on iterators
-- **`crypto.randomUUID()`**: Polyfilled using `react-native-uuid` to ensure the universal EventBuilder works seamlessly
-- **`crypto.getRandomValues()`**: Polyfilled using `react-native-get-random-values` for secure random number generation
+- **Iterator Helpers (ES2025)**: Polyfilled using `es-iterator-helpers` to support methods like
+  `.toArray()`, `.filter()`, `.map()` on iterators
+- **`crypto.randomUUID()`**: Polyfilled using `react-native-uuid` to ensure the universal
+  EventBuilder works seamlessly
+- **`crypto.getRandomValues()`**: Polyfilled using `react-native-get-random-values` for secure
+  random number generation
 
-These polyfills are imported automatically when you use the SDK - no additional setup required by your app.
+These polyfills are imported automatically when you use the SDK - no additional setup required by
+your app.
