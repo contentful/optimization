@@ -1,35 +1,49 @@
-import { type Response, expect, test } from '@playwright/test'
-
-const CLIENT_ID = process.env.VITE_NINETAILED_CLIENT_ID ?? 'error'
-const ANONYMOUS_ID = '__ctfl_opt_anonymous_id__'
-const UID_LENGTH = 36
+import { expect, test } from '@playwright/test'
 
 test.describe('unidentified user', () => {
-  let response: Response | null = null
-
   test.beforeEach(async ({ page }) => {
-    response = await page.goto('/')
+    await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
   })
 
-  test('check client ID rendered from Optimization API on server-side render', async () => {
-    expect(await response?.text()).toContain(`"${CLIENT_ID}"`)
+
+  test('displays common variants', async ({ page }) => {
+    await expect(
+      page.getByText(
+        'This is a merge tag content entry that displays the visitor\'s continent "EU" embedded within the text.',
+      ),
+    ).toBeVisible()
+
+    await expect(
+      page.getByText('This is a variant content entry for visitors from Europe.'),
+    ).toBeVisible()
+
+    await expect(
+      page.getByText('This is a variant content entry for visitors using a desktop browser.'),
+    ).toBeVisible()
   })
 
-  // test('check client ID rendered from Optimization API on client-side render', async ({ page }) => {
-  //   await expect(page.getByTestId('clientId')).toHaveText(CLIENT_ID)
-  // })
+  test('displays unidentified user variants', async ({ page }) => {
+    await expect(page.getByText('This is a level 0 nested baseline entry.')).toBeVisible()
 
+    await expect(page.getByText('This is a level 1 nested baseline entry.')).toBeVisible()
 
-  test('generates new Profile id', async ({ context, page }) => {
-    await page.goto('/')
+    await expect(page.getByText('This is a level 2 nested baseline entry.')).toBeVisible()
 
-    const state = await context.storageState()
+    await expect(page.getByText('This is a variant content entry for new visitors.')).toBeVisible()
 
-    const storage = state.origins[0]?.localStorage ?? []
-    const storedId = storage.find((item) => item.name === ANONYMOUS_ID)?.value
+    await expect(
+      page.getByText('This is a variant content entry for an A/B/C experiment: B'),
+    ).toBeVisible()
 
-    expect(storedId).toBeDefined()
-    expect(storedId).toHaveLength(UID_LENGTH)
+    await expect(
+      page.getByText(
+        'This is a baseline content entry for all visitors with or without a custom event.',
+      ),
+    ).toBeVisible()
+
+    await expect(
+      page.getByText('This is a baseline content entry for all identified or unidentified users.'),
+    ).toBeVisible()
   })
 })
