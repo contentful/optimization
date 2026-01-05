@@ -38,7 +38,7 @@ const render = (sdk: Optimization): string => `<!doctype html>
     <script src="https://cdn.jsdelivr.net/npm/contentful@latest/dist/contentful.browser.min.js" > </script>
     <script src="/dist/index.umd.cjs" ></script>
     <link rel="stylesheet" href="/assets/style.css" />
-    <script> window.response = ${JSON.stringify({ clientId: sdk.config.clientId })} </script>
+    <script> window.CLIENT_ID = "${sdk.config.clientId}" </script>
   </head>
   <body>
     <h1>Node ESR SDK Implementation E2E Test</h1>

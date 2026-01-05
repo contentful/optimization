@@ -23,7 +23,7 @@ test.describe('identified user', () => {
   })
 
   test('check client ID rendered from Optimization API on server-side render', async () => {
-    expect(await response?.text()).toContain(`"clientId":"${CLIENT_ID}"`)
+    expect(await response?.text()).toContain(`"${CLIENT_ID}"`)
   })
 
   test('check client ID rendered from Optimization API on client-side render', async ({ page }) => {
