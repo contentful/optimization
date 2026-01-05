@@ -413,15 +413,38 @@ jobs:
           force-avd-creation: true
           emulator-options:
             -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot-save
+            -dns-server 8.8.8.8
           disable-animations: true
           emulator-boot-timeout: 300
           disk-size: 6G
           script: |
             echo "Verifying JAVA_HOME: $JAVA_HOME"
             java -version
+            echo "Configuring emulator network..."
+            adb shell settings put global http_proxy :0
+            adb shell setprop net.dns1 8.8.8.8
+            adb shell setprop net.dns2 8.8.4.4
+            echo "Waiting for emulator network to stabilize..."
+            sleep 5
             echo "Setting up adb reverse port forwarding..."
             adb reverse tcp:8000 tcp:8000
             adb reverse tcp:8081 tcp:8081
+            echo "Verifying adb reverse is set up..."
+            adb reverse --list
+            echo "Verifying mock server is reachable from emulator..."
+            for i in {1..10}; do
+              if adb shell "curl -s --connect-timeout 5 http://localhost:8000/experience/info" > /dev/null 2>&1; then
+                echo "Mock server is reachable from emulator!"
+                break
+              fi
+              if [ $i -eq 10 ]; then
+                echo "Warning: Could not verify mock server connectivity after 10 attempts"
+                echo "Trying 10.0.2.2 directly..."
+                adb shell "curl -v --connect-timeout 5 http://10.0.2.2:8000/experience/info" || true
+              fi
+              echo "Attempt $i/10: Waiting for mock server to be reachable..."
+              sleep 2
+            done
             echo "Building Android app..."
             pnpm --filter @implementation/react-native test:e2e:android:build
             echo "Running E2E tests..."

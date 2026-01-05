@@ -82,7 +82,7 @@ module.exports = {
       type: 'android.apk',
       binaryPath: path.join(__dirname, 'android/app/build/outputs/apk/debug/app-debug.apk'),
       build: `cd ${__dirname}/android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug`,
-      reversePorts: [8081],
+      reversePorts: [8081, 8000],
     },
     'android.release': {
       type: 'android.apk',
