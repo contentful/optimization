@@ -14,28 +14,6 @@ function toggleConsent(consented = false) {
 consent.addEventListener('click', () => optimization.consent(true))
 unconsent.addEventListener('click', () => optimization.consent(false))
 
-const identify = document.getElementById('identify')
-const unidentify = document.getElementById('unidentify')
-
-function toggleIdentity(identified = false) {
-    if (identified) {
-        identify.setAttribute('style', 'display: none;')
-        unidentify.removeAttribute('style')
-    } else {
-        identify.removeAttribute('style')
-        unidentify.setAttribute('style', 'display: none;')
-    }
-}
-
-identify.addEventListener('click', () =>
-    optimization.personalization.identify({ userId: 'charles', traits: { identified: true } }),
-)
-unidentify.addEventListener('click', () => {
-    optimization.reset()
-    // Ensure we have a new profile after resetting the old one
-    optimization.personalization.page()
-})
-
 function createEventDialog(title, details) {
     const template = document.querySelector('#event-dialog')
     const clone = template.content.cloneNode(true)
@@ -188,8 +166,6 @@ optimization.states.consent.subscribe(async (consent) => {
 // Subscribe to profile state, find entries in the markup, and render them
 optimization.states.profile.subscribe((profile) => {
     if (!profile) return
-
-    toggleIdentity(profile.traits && Object.keys(profile.traits).length)
 
     document.querySelectorAll('[data-ctfl-entry-id]').forEach(async (element) => {
         await addPersonalizedEntry(element.dataset.ctflEntryId, element)

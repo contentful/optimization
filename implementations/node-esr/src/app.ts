@@ -28,7 +28,7 @@ const CONTENTFUL_SPACE_ID = process.env.VITE_CONTENTFUL_SPACE_ID ?? ''
 const CONTENTFUL_CDA_HOST = process.env.VITE_CONTENTFUL_CDA_HOST ?? ''
 const CONTENTFUL_BASE_PATH = process.env.VITE_CONTENTFUL_BASE_PATH ?? ''
 
-const render = (sdk: Optimization): string => `<!doctype html>
+const render = (sdk: Optimization, identified?: string): string => `<!doctype html>
 <html lang="en">
   <head>
     <title>Node ESR SDK Implementation E2E Test</title>
@@ -50,8 +50,11 @@ const render = (sdk: Optimization): string => `<!doctype html>
           <button id="unconsent">Reject Consent</button>
         </span>
         <span>
-          <button id="identify">Identify</button>
-          <button id="unidentify">Reset Profile</button>
+        ${
+          identified
+            ? `<a href="/" >Reset Profile for: ${identified}</a>`
+            : '<a href="/user/someone" >Identify</a>'
+        }
         </span>
       </section>
       <section>
@@ -117,9 +120,14 @@ const render = (sdk: Optimization): string => `<!doctype html>
         personalization: { baseUrl: '${VITE_EXPERIENCE_API_BASE_URL}' },
       })
 
+
       window.optimization = optimization
-      // Emit page event
-      optimization.personalization.page()
+
+      // Reset optimization state for unidentified users
+      ${!identified ? `optimization.reset();` : ""}
+
+      optimization.personalization.page();
+
   </script>
   <script src="/assets/script.js"></script>
   </body>
@@ -188,16 +196,8 @@ function setAnonymousId(res: Response, id: string): void {
 
 app.get('/', limiter, async (req, res) => {
   const universalEventBuilderArgs = getUniversalEventBuilderArgs(req)
-
-  const anonymousId = getAnonymousIdFromCookies(req.cookies)
-
-  const { profile } = await sdk.personalization.page({
-    ...universalEventBuilderArgs,
-    profile: anonymousId ? { id: anonymousId } : undefined,
-  })
-
+  const { profile } = await sdk.personalization.page({ ...universalEventBuilderArgs })
   setAnonymousId(res, profile.id)
-
   res.send(render(sdk))
 })
 
@@ -210,12 +210,14 @@ app.get('/user/:userId', limiter, async (req, res) => {
     params: { userId },
   } = req
 
-  if (userId)
+  if (userId) {
     await sdk.personalization.identify({
       ...universalEventBuilderArgs,
       userId,
       profile: anonymousId ? { id: anonymousId } : undefined,
+      traits: { identified: true },
     })
+  }
 
   const { profile } = await sdk.personalization.page({
     ...universalEventBuilderArgs,
@@ -224,7 +226,7 @@ app.get('/user/:userId', limiter, async (req, res) => {
 
   setAnonymousId(res, profile.id)
 
-  res.send(render(sdk))
+  res.send(render(sdk, userId))
 })
 
 app.get('/smoke-test', limiter, (_, res) => {
