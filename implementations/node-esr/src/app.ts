@@ -45,12 +45,10 @@ const render = (sdk: Optimization): string => `<!doctype html>
     <main>
       <section id="utility-panel">
         <h2>Utilites</h2>
-
         <span>
           <button id="consent">Accept Consent</button>
           <button id="unconsent">Reject Consent</button>
         </span>
-        |
         <span>
           <button id="identify">Identify</button>
           <button id="unidentify">Reset Profile</button>
@@ -229,7 +227,7 @@ app.get('/user/:userId', limiter, async (req, res) => {
   res.send(render(sdk))
 })
 
-app.get('/smoke-test', limiter, async (_, res) => {
+app.get('/smoke-test', limiter, (_, res) => {
   res.send(render(sdk))
 })
 
