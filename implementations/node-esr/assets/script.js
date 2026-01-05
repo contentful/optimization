@@ -1,0 +1,207 @@
+const consent = document.getElementById('consent')
+const unconsent = document.getElementById('unconsent')
+
+function toggleConsent(consented = false) {
+    if (consented) {
+        consent.setAttribute('style', 'display: none;')
+        unconsent.removeAttribute('style')
+    } else {
+        consent.removeAttribute('style')
+        unconsent.setAttribute('style', 'display: none;')
+    }
+}
+
+consent.addEventListener('click', () => optimization.consent(true))
+unconsent.addEventListener('click', () => optimization.consent(false))
+
+const identify = document.getElementById('identify')
+const unidentify = document.getElementById('unidentify')
+
+function toggleIdentity(identified = false) {
+    if (identified) {
+        identify.setAttribute('style', 'display: none;')
+        unidentify.removeAttribute('style')
+    } else {
+        identify.removeAttribute('style')
+        unidentify.setAttribute('style', 'display: none;')
+    }
+}
+
+identify.addEventListener('click', () =>
+    optimization.personalization.identify({ userId: 'charles', traits: { identified: true } }),
+)
+unidentify.addEventListener('click', () => {
+    optimization.reset()
+    // Ensure we have a new profile after resetting the old one
+    optimization.personalization.page()
+})
+
+function createEventDialog(title, details) {
+    const template = document.querySelector('#event-dialog')
+    const clone = template.content.cloneNode(true)
+    const dialog = clone.querySelector('dialog')
+    const button = clone.querySelector('button')
+    const pre = clone.querySelector('pre')
+
+    button.innerText = title
+    button.commandForElement = dialog
+    button.command = 'show-modal'
+    button.dataset.testid = details.componentId ?? details?.properties?.url ?? details.messageId
+
+    pre.innerText = JSON.stringify(details, null, 2)
+
+    return clone
+}
+
+/* --- Standard Rendering Code --- */
+
+function isRichText(field) {
+    return field && typeof field === 'object' && field.content !== undefined
+}
+
+// Barebones "Rich Text" renderer
+// Full renderer must be customer-supplied, or rendered via ctfl Rich Text libs where possible
+function simpleRenderRichText(field, parent) {
+    if (!field || typeof field !== 'object') return
+    if (!parent || !(parent instanceof HTMLElement)) return
+
+    if (field.nodeType === 'document') {
+        field.content.forEach((content) => simpleRenderRichText(content, parent))
+    } else if (field.nodeType === 'paragraph') {
+        const p = document.createElement('p')
+        field.content.forEach((content) => simpleRenderRichText(content, p))
+        parent.appendChild(p)
+    } else if (field.nodeType === 'text') {
+        const span = document.createElement('span')
+        span.innerText = field.value
+        parent.appendChild(span)
+    } else if (field.nodeType === 'embedded-entry-inline') {
+        const span = document.createElement('span')
+
+        // This is how we can inject MergeTag data into Rich Text
+        span.innerText = optimization.personalization.getMergeTagValue(field.data.target)
+
+        parent.appendChild(span)
+    } else {
+        const span = document.createElement('span')
+        span.innerText = '[unknown rich text fragment]'
+        parent.appendChild(span)
+    }
+}
+
+// Render personalized entries
+async function renderPersonalizedEntry(rawEntry, element, autoObserve = true) {
+    const { entry, personalization } = optimization.personalization.personalizeEntry(rawEntry)
+
+    if (isRichText(entry.fields?.text)) {
+        const div = document.createElement('div')
+        simpleRenderRichText(entry.fields.text, div)
+        element.replaceChildren(div)
+    } else {
+        const p = document.createElement('p')
+        p.innerText = entry.fields?.text
+        element.replaceChildren(p)
+    }
+
+    if (entry.fields?.nested) {
+        const div = document.createElement('div')
+        div.className = 'nested'
+        entry.fields.nested.forEach((nestedEntry) =>
+            renderPersonalizedEntry(nestedEntry, div, autoObserve),
+        )
+        element.appendChild(div)
+    }
+
+    // NOTE: Elements that are not auto-observed may still be auto-tracked (see below)
+    if (autoObserve) {
+        // The `data-ctfl - entry - id` data attribute is required for auto-observing
+        element.dataset.ctflEntryId = entry.sys?.id
+
+        // Other standard auto-observing attributes are optional
+        if (personalization) {
+            element.dataset.ctflPersonalizationId = personalization?.experienceId
+            element.dataset.ctflSticky = personalization?.sticky
+            element.dataset.ctflVariantIndex = personalization?.variantIndex
+        }
+    }
+
+    return [entry, personalization]
+}
+
+// Get the personalized entry to render
+async function addPersonalizedEntry(entryId, element, autoObserve = true) {
+    let rawEntry
+
+    try {
+        rawEntry = await contentfulClient.getEntry(entryId, { include: 10 })
+    } catch (error) {
+        console.warn(`Entry "${entryId}" could not be found in the current space`)
+        return []
+    }
+
+    return renderPersonalizedEntry(rawEntry, element, autoObserve)
+}
+
+const manuallyObservedEntryElements = new Map()
+
+// Manually observe view elements for auto-tracking
+function manuallyObserveEntryElement(element, entry, personalization) {
+    optimization.untrackEntryViewForElement(element)
+
+    // Manually observe the element for auto-tracking (does not use `data - ctfl -* ` attributes)
+    optimization.trackEntryViewForElement(element, {
+        data: {
+            // The `entryId` property is required for auto-tracking
+            entryId: entry.sys.id,
+            personalizationId: personalization?.experienceId,
+            sticky: personalization?.sticky,
+            variantIndex: personalization?.variantIndex,
+        },
+    })
+
+    manuallyObservedEntryElements.set(element.dataset.entryId, [entry, personalization])
+}
+
+// Subscribe to the event stream
+optimization.states.eventStream.subscribe((event) => {
+    if (!event) return
+
+    document.querySelector('#event-stream').appendChild(createEventDialog(event.type, event))
+})
+
+// Subscribe to consent state
+optimization.states.consent.subscribe(async (consent) => {
+    toggleConsent(consent)
+
+    if (consent)
+        document.querySelectorAll('[data-entry-id]').forEach((element) => {
+            const settings = manuallyObservedEntryElements.get(element.dataset.entryId)
+
+            if (!settings) return
+
+            const [entry, personalization] = settings
+
+            manuallyObserveEntryElement(element, entry, personalization)
+        })
+})
+
+// Subscribe to profile state, find entries in the markup, and render them
+optimization.states.profile.subscribe((profile) => {
+    if (!profile) return
+
+    toggleIdentity(profile.traits && Object.keys(profile.traits).length)
+
+    document.querySelectorAll('[data-ctfl-entry-id]').forEach(async (element) => {
+        await addPersonalizedEntry(element.dataset.ctflEntryId, element)
+    })
+
+    document.querySelectorAll('[data-entry-id]').forEach(async (element) => {
+        const [entry, personalization] = await addPersonalizedEntry(
+            element.dataset.entryId,
+            element,
+            false,
+        )
+
+        manuallyObserveEntryElement(element, entry, personalization)
+    })
+})
