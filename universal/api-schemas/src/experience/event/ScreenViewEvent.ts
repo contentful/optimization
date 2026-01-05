@@ -1,6 +1,21 @@
 import * as z from 'zod/mini'
-import { UniversalEventProperties } from './UniversalEventProperties'
-import { Properties } from './properties'
+import { UniversalEventContext, UniversalEventProperties } from './UniversalEventProperties'
+import { Properties, Screen } from './properties'
+
+/**
+ * Zod schema describing event context properties specific to screen events
+ */
+export const ScreenEventContext = z.extend(UniversalEventContext, {
+  /**
+   * Screen context for events that occur within a web page.
+   */
+  screen: Screen,
+})
+
+/**
+ * TypeScript type inferred from {@link ScreenEventContext}.
+ */
+export type ScreenEventContext = z.infer<typeof ScreenEventContext>
 
 /**
  * Zod schema describing a `screen` view event.
@@ -23,11 +38,17 @@ export const ScreenViewEvent = z.extend(UniversalEventProperties, {
   name: z.string(),
 
   /**
-   * Additional properties describing the screen context.
+   * Optional properties describing the screen context.
    *
    * @see Properties
    */
-  properties: Properties,
+  properties: z.optional(Properties),
+
+  /*
+   * Override the context property of {@link UniversalEventProperties}
+   * with a screen-specific context
+   */
+  context: ScreenEventContext,
 })
 
 /**
