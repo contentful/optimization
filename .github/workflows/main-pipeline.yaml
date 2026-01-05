@@ -39,7 +39,7 @@ jobs:
       - run: cp .env implementations/node-ssr/
       - run: cp .env implementations/web-vanilla/
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         id: dotenv-cache
         with:
           path: |
@@ -48,7 +48,7 @@ jobs:
             implementations/web-vanilla/.env
           key: ${{ runner.os }}-dotenv
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         id: node-modules-cache
         with:
           path: node_modules
@@ -78,7 +78,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         if: steps.filter.outputs.lock == 'true'
         with:
           path: node_modules
@@ -105,7 +105,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
@@ -128,7 +128,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
@@ -151,7 +151,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
@@ -174,7 +174,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
@@ -197,7 +197,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
@@ -233,7 +233,7 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
@@ -269,12 +269,12 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: |
             .env
@@ -338,7 +338,7 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: node_modules
           key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
@@ -385,7 +385,7 @@ jobs:
           sleep 15
 
       - name: Cache Gradle dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.gradle/caches
