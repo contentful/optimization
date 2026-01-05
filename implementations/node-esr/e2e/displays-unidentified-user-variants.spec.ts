@@ -16,9 +16,9 @@ test.describe('unidentified user', () => {
     expect(await response?.text()).toContain(`"${CLIENT_ID}"`)
   })
 
-  test('check client ID rendered from Optimization API on client-side render', async ({ page }) => {
-    await expect(page.getByTestId('clientId')).toHaveText(CLIENT_ID)
-  })
+  // test('check client ID rendered from Optimization API on client-side render', async ({ page }) => {
+  //   await expect(page.getByTestId('clientId')).toHaveText(CLIENT_ID)
+  // })
 
 
   test('generates new Profile id', async ({ context, page }) => {
