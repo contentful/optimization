@@ -14,9 +14,7 @@ const limiter = rateLimit({
 })
 
 const app: Express = express()
-
 app.use(cookieParser())
-
 app.use(limiter)
 
 const config = {
@@ -87,8 +85,6 @@ const render = (identified?: string): string => `<!doctype html>
 </html>
 `
 
-const sdk = new Optimization(config.optimization)
-
 type QsPrimitive = string | ParsedQs
 type QsArray = QsPrimitive[] // Note: mixed arrays are allowed by ParsedQs
 type QsValue = QsPrimitive | QsArray | undefined
@@ -141,55 +137,46 @@ function setAnonymousId(res: Response, id: string): void {
   })
 }
 
-app.get('/', limiter, async (req, res) => {
-  const universalEventBuilderArgs = getUniversalEventBuilderArgs(req)
-  const { profile } = await sdk.personalization.page({ ...universalEventBuilderArgs })
-  setAnonymousId(res, profile.id)
-  res.send(render())
-})
-
 async function getProfile(
-  universalEventBuilderArgs: UniversalEventBuilderArgs,
+  req: Request,
   userId?: string,
   anonymousId?: string,
 ): Promise<OptimizationData> {
-  if (userId) {
-    const { profile } = await sdk.personalization.identify({
-      ...universalEventBuilderArgs,
-      userId,
-      profile: anonymousId ? { id: anonymousId } : undefined,
-      traits: { identified: true },
-    })
+  const sdk = new Optimization(config.optimization)
+  const args = getUniversalEventBuilderArgs(req)
+  const cookieProfile = anonymousId ? { id: anonymousId } : undefined
 
-    return await sdk.personalization.page({
-      ...universalEventBuilderArgs,
-      profile: anonymousId ? { id: anonymousId } : { id: profile.id },
-    })
+  if (!userId) {
+    return await sdk.personalization.page({ ...args, profile: cookieProfile })
   }
 
+  const { profile } = await sdk.personalization.identify({
+    ...args,
+    userId,
+    profile: cookieProfile,
+    traits: { identified: true },
+  })
+
   return await sdk.personalization.page({
-    ...universalEventBuilderArgs,
-    profile: anonymousId ? { id: anonymousId } : undefined,
+    ...args,
+    profile: cookieProfile ?? { id: profile.id },
   })
 }
 
-app.get('/user/:userId', limiter, async (req, res) => {
-  const anonymousId = getAnonymousIdFromCookies(req.cookies)
-
-  const {
-    params: { userId },
-  } = req
-
-  const { profile } = await getProfile(getUniversalEventBuilderArgs(req), userId, anonymousId)
-
+app.get('/', limiter, async (req, res) => {
+  const { profile } = await getProfile(req)
+  
   setAnonymousId(res, profile.id)
-  res.send(render(userId))
-})
-
-app.get('/smoke-test', limiter, (_, res) => {
   res.send(render())
 })
+app.get('/smoke-test', limiter, (_, res) => res.send(render()))
+app.get('/user/:userId', limiter, async (req, res) => {
+  const anonymousId = getAnonymousIdFromCookies(req.cookies)
+  const { profile } = await getProfile(req, req.params.userId, anonymousId)
 
+  setAnonymousId(res, profile.id)
+  res.send(render(req.params.userId))
+})
 app.use('/dist', express.static('./public/dist'))
 app.use('/assets', express.static('./assets'))
 
