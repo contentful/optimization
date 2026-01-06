@@ -1,9 +1,13 @@
 /* --- Standard Rendering Code --- */
 
 const contentfulClient = contentful.createClient(CONFIG.contentful)
-const optimization = new Optimization({ ...CONFIG.optimization, autoTrackEntryViews: true, app: { name: document.title, version: '0.0.0' } })
+const optimization = new Optimization({
+  ...CONFIG.optimization,
+  autoTrackEntryViews: true,
+  app: { name: document.title, version: '0.0.0' },
+})
 
-optimization.personalization.page();
+optimization.personalization.page()
 
 function isRichText(field) {
   return field && typeof field === 'object' && field.content !== undefined
@@ -115,7 +119,9 @@ async function manuallyObserveEntryElement(element) {
 optimization.states.profile.subscribe((profile) => {
   if (!profile) return
 
-  document.querySelectorAll('[data-ctfl-entry-id]').forEach((element) => addPersonalizedEntry(element.dataset.ctflEntryId, element))
+  document
+    .querySelectorAll('[data-ctfl-entry-id]')
+    .forEach((element) => addPersonalizedEntry(element.dataset.ctflEntryId, element))
 
   document.querySelectorAll('[data-entry-id]').forEach(manuallyObserveEntryElement)
 })
