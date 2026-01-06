@@ -14,7 +14,7 @@ import path from 'node:path'
 import type { ParsedQs } from 'qs'
 
 const limiter = rateLimit({
-  windowMs: 30_000,
+  windowMs: 900_000,
   max: 1000,
 })
 
