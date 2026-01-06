@@ -5,7 +5,6 @@ const ANONYMOUS_ID = '__ctfl_opt_anonymous_id__'
 const CUSTOM_PROFILE_ID = 'custom-profile-id'
 
 test.describe('identified user with profileId', () => {
-
   test.beforeEach(async ({ page, context }) => {
     // user is already identified with a custom profile id
     await context.addCookies([
