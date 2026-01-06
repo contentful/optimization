@@ -519,6 +519,8 @@
         )
       })
 
+      let initialized = false
+
       // Subscribe to profile state, find entries in the markup, and render them
       optimization.states.profile.subscribe((profile) => {
         if (!profile) return
@@ -526,6 +528,8 @@
         document.querySelector('#profile').innerText = JSON.stringify(profile, null, 2)
 
         toggleIdentity(profile.traits && Object.keys(profile.traits).length)
+
+        if (initialized) return
 
         document.querySelectorAll('[data-ctfl-entry-id]').forEach(async (element) => {
           await addPersonalizedEntry(element.dataset.ctflEntryId, element)
@@ -540,6 +544,8 @@
 
           manuallyObserveEntryElement(element, entry, personalization)
         })
+
+        initialized = true
       })
     </script>
   </body>

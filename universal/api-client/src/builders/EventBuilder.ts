@@ -7,8 +7,12 @@ import {
   type IdentifyEvent,
   type Library,
   Page,
+  PageEventContext,
   type PageViewEvent,
   Properties,
+  Screen,
+  ScreenEventContext,
+  type ScreenViewEvent,
   type TrackEvent,
   Traits,
   type UniversalEventProperties,
@@ -104,6 +108,7 @@ const UniversalEventBuilderArgs = z.object({
   locale: z.optional(z.string()),
   location: z.optional(GeoLocation),
   page: z.optional(Page),
+  screen: z.optional(Screen),
   userAgent: z.optional(z.string()),
 })
 
@@ -155,6 +160,21 @@ const PageViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
  * {@link EventBuilderConfig.getPageProperties}.
  */
 export type PageViewBuilderArgs = z.infer<typeof PageViewBuilderArgs>
+
+const ScreenViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
+  name: z.string(),
+  properties: Properties,
+})
+
+/**
+ * Arguments for constructing screen view events.
+ *
+ * @public
+ * @remarks
+ * Any properties passed here are merged with the base screen properties from
+ * {@link EventBuilderConfig.getScreenProperties}.
+ */
+export type ScreenViewBuilderArgs = z.infer<typeof ScreenViewBuilderArgs>
 
 const TrackBuilderArgs = z.extend(UniversalEventBuilderArgs, {
   event: z.string(),
@@ -301,6 +321,7 @@ class EventBuilder {
     locale,
     location,
     page,
+    screen,
     userAgent,
   }: UniversalEventBuilderArgs): UniversalEventProperties {
     const timestamp = new Date().toISOString()
@@ -315,6 +336,7 @@ class EventBuilder {
         locale: locale ?? this.getLocale() ?? 'en-US',
         location,
         page: page ?? this.getPageProperties(),
+        screen,
         userAgent: userAgent ?? this.getUserAgent(),
       },
       messageId: crypto.randomUUID(),
@@ -451,10 +473,55 @@ class EventBuilder {
       properties,
     )
 
+    const {
+      context: { screen: _, ...universalContext },
+      ...universalProperties
+    } = this.buildUniversalEventProperties(universal)
+
+    const context = PageEventContext.parse(universalContext)
+
     return {
-      ...this.buildUniversalEventProperties(universal),
+      ...universalProperties,
+      context,
       type: 'page',
       properties: merged,
+    }
+  }
+
+  /**
+   * Builds a screen view event payload.
+   *
+   * @param args - {@link ScreenViewBuilderArgs} arguments for the screen view event.
+   * @returns A {@link ScreenViewEvent} payload.
+   *
+   * @public
+   *
+   * @example
+   * ```ts
+   * const event = builder.buildScreenView({
+   *   name: 'home',
+   *   properties: {
+   *     title: 'Home Screen',
+   *   },
+   * })
+   * ```
+   */
+  buildScreenView(args: ScreenViewBuilderArgs): ScreenViewEvent {
+    const { name, properties, ...universal } = ScreenViewBuilderArgs.parse(args)
+
+    const {
+      context: { page: _, ...universalContext },
+      ...universalProperties
+    } = this.buildUniversalEventProperties(universal)
+
+    const context = ScreenEventContext.parse(universalContext)
+
+    return {
+      ...universalProperties,
+      context,
+      type: 'screen',
+      name,
+      properties,
     }
   }
 
