@@ -75,7 +75,7 @@ function App(): React.JSX.Element {
 
   return (
     <OptimizationProvider instance={sdk}>
-      <SafeAreaView>
+      <SafeAreaView style={{ flex: 1 }}>
         <View style={{ padding: 10, flexDirection: 'row', gap: 10 }}>
           {!isIdentified ? (
             <Button testID="identify-button" title="Identify" onPress={handleIdentify} />
@@ -83,12 +83,12 @@ function App(): React.JSX.Element {
             <Button testID="reset-button" title="Reset" onPress={handleReset} />
           )}
         </View>
-        <ScrollView>
+        <ScrollView style={{ flex: 1 }}>
           {entries.map((entry) => (
             <ContentEntry key={entry.sys.id} entry={entry} sdk={sdk} />
           ))}
         </ScrollView>
-        <View>
+        <View style={{ padding: 10 }}>
           <AnalyticsEventDisplay sdk={sdk} />
         </View>
       </SafeAreaView>
