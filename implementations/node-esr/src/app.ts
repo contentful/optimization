@@ -19,15 +19,23 @@ app.use(cookieParser())
 
 app.use(limiter)
 
-const CLIENT_ID = process.env.VITE_NINETAILED_CLIENT_ID ?? ''
-const ENVIRONMENT = process.env.VITE_NINETAILED_ENVIRONMENT ?? ''
-const VITE_INSIGHTS_API_BASE_URL = process.env.VITE_INSIGHTS_API_BASE_URL ?? ''
-const VITE_EXPERIENCE_API_BASE_URL = process.env.VITE_EXPERIENCE_API_BASE_URL ?? ''
-const CONTENTFUL_TOKEN = process.env.VITE_CONTENTFUL_TOKEN ?? ''
-const CONTENTFUL_ENVIRONMENT = process.env.VITE_NINETAILED_ENVIRONMENT ?? ''
-const CONTENTFUL_SPACE_ID = process.env.VITE_CONTENTFUL_SPACE_ID ?? ''
-const CONTENTFUL_CDA_HOST = process.env.VITE_CONTENTFUL_CDA_HOST ?? ''
-const CONTENTFUL_BASE_PATH = process.env.VITE_CONTENTFUL_BASE_PATH ?? ''
+const config = {
+  contentful: {
+    accessToken: process.env.VITE_CONTENTFUL_TOKEN,
+    environment: process.env.VITE_NINETAILED_ENVIRONMENT,
+    space: process.env.VITE_CONTENTFUL_SPACE_ID,
+    host: process.env.VITE_CONTENTFUL_CDA_HOST,
+    basePath: process.env.VITE_CONTENTFUL_BASE_PATH,
+    insecure: Boolean(process.env.VITE_CONTENTFUL_CDA_HOST),
+  },
+  optimization: {
+    clientId: process.env.VITE_NINETAILED_CLIENT_ID ?? '',
+    environment: process.env.VITE_NINETAILED_ENVIRONMENT,
+    logLevel: 'debug',
+    analytics: { baseUrl: process.env.VITE_INSIGHTS_API_BASE_URL },
+    personalization: { baseUrl: process.env.VITE_EXPERIENCE_API_BASE_URL },
+  },
+} as const
 
 const render = (identified?: string): string => `<!doctype html>
 <html lang="en">
@@ -84,42 +92,13 @@ const render = (identified?: string): string => `<!doctype html>
         </dialog>
       </li>
   </template>
-  <script>
-      // Initialize Contentful CDA SDK
-      const contentfulClient = contentful.createClient({
-        accessToken: '${CONTENTFUL_TOKEN}',
-        environment: '${CONTENTFUL_ENVIRONMENT}',
-        space: '${CONTENTFUL_SPACE_ID}',
-        host: '${CONTENTFUL_CDA_HOST}',
-        basePath: '${CONTENTFUL_BASE_PATH}',
-        insecure: Boolean('${CONTENTFUL_CDA_HOST}'),
-      })
-      // Initialize Contentful Optimization Web SDK
-      const optimization = new Optimization({
-        clientId: '${CLIENT_ID}',
-        environment: '${ENVIRONMENT}',
-        logLevel: 'debug',
-        autoTrackEntryViews: true,
-        app: {
-          name: document.title,
-          version: '0.0.0',
-        },
-        analytics: { baseUrl: '${VITE_INSIGHTS_API_BASE_URL}' },
-        personalization: { baseUrl: '${VITE_EXPERIENCE_API_BASE_URL}' },
-      })
-  </script>
+  <script> const CONFIG = ${JSON.stringify(config)} </script>
   <script src="/assets/script.js"></script>
   </body>
 </html>
 `
 
-const sdk = new Optimization({
-  clientId: CLIENT_ID,
-  environment: ENVIRONMENT,
-  logLevel: 'debug',
-  analytics: { baseUrl: VITE_INSIGHTS_API_BASE_URL },
-  personalization: { baseUrl: VITE_EXPERIENCE_API_BASE_URL },
-})
+const sdk = new Optimization(config.optimization)
 
 type QsPrimitive = string | ParsedQs
 type QsArray = QsPrimitive[] // Note: mixed arrays are allowed by ParsedQs

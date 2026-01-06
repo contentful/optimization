@@ -1,8 +1,9 @@
 /* --- Standard Rendering Code --- */
 
-window.optimization = optimization
-optimization.personalization.page();
+const contentfulClient = contentful.createClient(CONFIG.contentful)
+const optimization = new Optimization({ ...CONFIG.optimization, autoTrackEntryViews: true, app: { name: document.title, version: '0.0.0' } })
 
+optimization.personalization.page();
 
 function isRichText(field) {
   return field && typeof field === 'object' && field.content !== undefined
