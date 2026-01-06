@@ -10,7 +10,7 @@ import type { ParsedQs } from 'qs'
 
 const limiter = rateLimit({
   windowMs: 900_000,
-  max: 100,
+  max: 1000,
 })
 
 const app: Express = express()
