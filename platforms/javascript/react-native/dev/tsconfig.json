@@ -1,0 +1,17 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-native",
+    "baseUrl": "./",
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "paths": {
+      "@contentful/optimization-api-client": ["../../../universal/api-client/src/index.ts"],
+      "@contentful/optimization-api-schemas": ["../../../universal/api-schemas/src/index.ts"],
+      "@contentful/optimization-core": ["../../../universal/core/src/index.ts"],
+      "@contentful/optimization-react-native": ["../src/index.ts"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "android", "ios"]
+}

@@ -1600,6 +1600,27 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - Yoga
+  - RNCClipboard (1.16.3):
+    - DoubleConversion
+    - glog
+    - hermes-engine
+    - RCT-Folly (= 2024.10.14.00)
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - Yoga
   - SocketRocket (0.7.1)
   - Yoga (0.0.0)
 
@@ -1671,6 +1692,7 @@ DEPENDENCIES:
   - ReactCodegen (from `build/generated/ios`)
   - ReactCommon/turbomodule/core (from `../../node_modules/react-native/ReactCommon`)
   - "RNCAsyncStorage (from `../../node_modules/@react-native-async-storage/async-storage`)"
+  - "RNCClipboard (from `../../node_modules/@react-native-clipboard/clipboard`)"
   - Yoga (from `../../node_modules/react-native/ReactCommon/yoga`)
 
 SPEC REPOS:
@@ -1809,6 +1831,8 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/react-native/ReactCommon"
   RNCAsyncStorage:
     :path: "../../node_modules/@react-native-async-storage/async-storage"
+  RNCClipboard:
+    :path: "../../node_modules/@react-native-clipboard/clipboard"
   Yoga:
     :path: "../../node_modules/react-native/ReactCommon/yoga"
 
@@ -1878,9 +1902,10 @@ SPEC CHECKSUMS:
   ReactCodegen: f988c0cd0ce008b02754d6bcdb747dc3ed78976e
   ReactCommon: 300d8d9c5cb1a6cd79a67cf5d8f91e4d477195f9
   RNCAsyncStorage: 87a74d13ba0128f853817e45e21c4051e1f2cd45
+  RNCClipboard: 262883046d0e23aea2407f6bce72211d68a9ca8b
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: feb4910aba9742cfedc059e2b2902e22ffe9954a
 
 PODFILE CHECKSUM: c838d7c5e1fcc380b60532bbbf17d5f4ff454f28
 
-COCOAPODS: 1.16.2
+COCOAPODS: 1.15.2
