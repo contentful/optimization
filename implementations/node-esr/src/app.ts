@@ -165,7 +165,7 @@ async function getProfile(
 
 app.get('/', limiter, async (req, res) => {
   const { profile } = await getProfile(req)
-  
+
   setAnonymousId(res, profile.id)
   res.send(render())
 })
