@@ -130,11 +130,13 @@ function getAnonymousIdFromCookies(cookies: unknown): string | undefined {
   return (cookies as Record<string, string>)[ANONYMOUS_ID_COOKIE] ?? undefined
 }
 
-function setAnonymousId(res: Response, id: string): void {
+function respond(res: Response, id: string, userId?: string): void {
   res.cookie(ANONYMOUS_ID_COOKIE, id, {
     path: '/',
     domain: 'localhost',
   })
+
+  res.send(render(userId))
 }
 
 async function getProfile(
@@ -165,17 +167,15 @@ async function getProfile(
 
 app.get('/', limiter, async (req, res) => {
   const { profile } = await getProfile(req)
-
-  setAnonymousId(res, profile.id)
-  res.send(render())
+  
+  respond(res, profile.id)
 })
 app.get('/smoke-test', limiter, (_, res) => res.send(render()))
 app.get('/user/:userId', limiter, async (req, res) => {
   const anonymousId = getAnonymousIdFromCookies(req.cookies)
   const { profile } = await getProfile(req, req.params.userId, anonymousId)
 
-  setAnonymousId(res, profile.id)
-  res.send(render(req.params.userId))
+  respond(res, profile.id, req.params.userId)
 })
 app.use('/dist', express.static('./public/dist'))
 app.use('/assets', express.static('./assets'))
