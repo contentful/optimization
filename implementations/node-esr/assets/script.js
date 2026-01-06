@@ -1,5 +1,9 @@
 /* --- Standard Rendering Code --- */
 
+window.optimization = optimization
+optimization.personalization.page();
+
+
 function isRichText(field) {
   return field && typeof field === 'object' && field.content !== undefined
 }

@@ -86,7 +86,7 @@ const render = (identified?: string): string => `<!doctype html>
   </template>
   <script>
       // Initialize Contentful CDA SDK
-      var contentfulClient = contentful.createClient({
+      const contentfulClient = contentful.createClient({
         accessToken: '${CONTENTFUL_TOKEN}',
         environment: '${CONTENTFUL_ENVIRONMENT}',
         space: '${CONTENTFUL_SPACE_ID}',
@@ -94,9 +94,8 @@ const render = (identified?: string): string => `<!doctype html>
         basePath: '${CONTENTFUL_BASE_PATH}',
         insecure: Boolean('${CONTENTFUL_CDA_HOST}'),
       })
-
       // Initialize Contentful Optimization Web SDK
-      var optimization = new Optimization({
+      const optimization = new Optimization({
         clientId: '${CLIENT_ID}',
         environment: '${ENVIRONMENT}',
         logLevel: 'debug',
@@ -108,10 +107,6 @@ const render = (identified?: string): string => `<!doctype html>
         analytics: { baseUrl: '${VITE_INSIGHTS_API_BASE_URL}' },
         personalization: { baseUrl: '${VITE_EXPERIENCE_API_BASE_URL}' },
       })
-
-
-      window.optimization = optimization
-      optimization.personalization.page();
   </script>
   <script src="/assets/script.js"></script>
   </body>
