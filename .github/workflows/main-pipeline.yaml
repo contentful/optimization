@@ -262,17 +262,17 @@ jobs:
       - uses: actions/checkout@v6
 
       - run: |
-          echo "DOTENV_CONFIG_QUIET=true" >>implementations/node-ssr/.env
-          echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/node-ssr/.env
-          echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/node-ssr/.env
-          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>implementations/node-ssr/.env
-          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>implementations/node-ssr/.env
-          echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/node-ssr/.env
-          echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/node-ssr/.env
-          echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/node-ssr/.env
-          echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/node-ssr/.env
-          echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/node-ssr/.env
-          echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>implementations/node-ssr/.env
+          echo "DOTENV_CONFIG_QUIET=true" >>implementations/node-esr/.env
+          echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/node-esr/.env
+          echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/node-esr/.env
+          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>implementations/node-esr/.env
+          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>implementations/node-esr/.env
+          echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/node-esr/.env
+          echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/node-esr/.env
+          echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/node-esr/.env
+          echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/node-esr/.env
+          echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/node-esr/.env
+          echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>implementations/node-esr/.env
 
       - uses: pnpm/action-setup@v4
 
