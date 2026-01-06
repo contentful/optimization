@@ -75,22 +75,23 @@ async function renderPersonalizedEntry(rawEntry, element, autoObserve = true) {
 
 // Get the personalized entry to render
 async function addPersonalizedEntry(entryId, element, autoObserve = true) {
-  let rawEntry
-
   try {
-    rawEntry = await contentfulClient.getEntry(entryId, { include: 10 })
+    const entry = await contentfulClient.getEntry(entryId, { include: 10 })
+    return renderPersonalizedEntry(entry, element, autoObserve)
   } catch (error) {
     console.warn(`Entry "${entryId}" could not be found in the current space`)
     return []
   }
-
-  return renderPersonalizedEntry(rawEntry, element, autoObserve)
 }
 
-const manuallyObservedEntryElements = new Map()
-
 // Manually observe view elements for auto-tracking
-function manuallyObserveEntryElement(element, entry, personalization) {
+async function manuallyObserveEntryElement(element) {
+  const [entry, personalization] = await addPersonalizedEntry(
+    element.dataset.entryId,
+    element,
+    false,
+  )
+
   optimization.untrackEntryViewForElement(element)
 
   // Manually observe the element for auto-tracking (does not use `data - ctfl -* ` attributes)
@@ -103,25 +104,13 @@ function manuallyObserveEntryElement(element, entry, personalization) {
       variantIndex: personalization?.variantIndex,
     },
   })
-
-  manuallyObservedEntryElements.set(element.dataset.entryId, [entry, personalization])
 }
 
 // Subscribe to profile state, find entries in the markup, and render them
 optimization.states.profile.subscribe((profile) => {
   if (!profile) return
 
-  document.querySelectorAll('[data-ctfl-entry-id]').forEach(async (element) => {
-    await addPersonalizedEntry(element.dataset.ctflEntryId, element)
-  })
+  document.querySelectorAll('[data-ctfl-entry-id]').forEach((element) => addPersonalizedEntry(element.dataset.ctflEntryId, element))
 
-  document.querySelectorAll('[data-entry-id]').forEach(async (element) => {
-    const [entry, personalization] = await addPersonalizedEntry(
-      element.dataset.entryId,
-      element,
-      false,
-    )
-
-    manuallyObserveEntryElement(element, entry, personalization)
-  })
+  document.querySelectorAll('[data-entry-id]').forEach(manuallyObserveEntryElement)
 })
