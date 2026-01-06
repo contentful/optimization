@@ -24,7 +24,12 @@ const app = createServer(
   ...getInsightsHandlers(`*${INSIGHTS_PATH}`),
 )
 
-app.listen(PORT, () => {
+const HOST = process.env.HOST ?? '0.0.0.0'
+
+app.listen(PORT, HOST, () => {
+  // eslint-disable-next-line no-console -- no worries
+  console.log(`Mock server listening on ${HOST}:${PORT}`)
+
   // eslint-disable-next-line no-console -- no worries
   console.log(`Mock Experience API running at "${EXPERIENCE_BASE_URL}" on port "${PORT}"`)
 
