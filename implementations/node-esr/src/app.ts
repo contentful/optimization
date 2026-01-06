@@ -1,5 +1,6 @@
 import Optimization, {
   ANONYMOUS_ID_COOKIE,
+  type OptimizationData,
   type UniversalEventBuilderArgs,
 } from '@contentful/optimization-node'
 import cookieParser from 'cookie-parser'
@@ -184,31 +185,42 @@ app.get('/', limiter, async (req, res) => {
   res.send(render())
 })
 
-app.get('/user/:userId', limiter, async (req, res) => {
-  const universalEventBuilderArgs = getUniversalEventBuilderArgs(req)
+async function getProfile(
+  universalEventBuilderArgs: UniversalEventBuilderArgs,
+  userId?: string,
+  anonymousId?: string,
+): Promise<OptimizationData> {
+  
+  if (userId) {
+    const { profile } = await sdk.personalization.identify({
+      ...universalEventBuilderArgs,
+      userId,
+      profile: anonymousId ? { id: anonymousId } : undefined,
+      traits: { identified: true },
+    })
 
+    return await sdk.personalization.page({
+      ...universalEventBuilderArgs,
+      profile: anonymousId ? { id: anonymousId } : { id: profile.id },
+    })
+  }
+
+  return await sdk.personalization.page({
+    ...universalEventBuilderArgs,
+    profile: anonymousId ? { id: anonymousId } : undefined,
+  })
+}
+
+app.get('/user/:userId', limiter, async (req, res) => {
   const anonymousId = getAnonymousIdFromCookies(req.cookies)
 
   const {
     params: { userId },
   } = req
 
-  if (userId) {
-    await sdk.personalization.identify({
-      ...universalEventBuilderArgs,
-      userId,
-      profile: anonymousId ? { id: anonymousId } : undefined,
-      traits: { identified: true },
-    })
-  }
-
-  const { profile } = await sdk.personalization.page({
-    ...universalEventBuilderArgs,
-    profile: anonymousId ? { id: anonymousId } : undefined,
-  })
+  const { profile } = await getProfile(getUniversalEventBuilderArgs(req), userId, anonymousId)
 
   setAnonymousId(res, profile.id)
-
   res.send(render(userId))
 })
 
