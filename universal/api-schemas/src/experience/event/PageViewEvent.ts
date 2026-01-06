@@ -1,6 +1,21 @@
 import * as z from 'zod/mini'
-import { UniversalEventProperties } from './UniversalEventProperties'
+import { UniversalEventContext, UniversalEventProperties } from './UniversalEventProperties'
 import { Page } from './properties'
+
+/**
+ * Zod schema describing event context properties specific to page events
+ */
+export const PageEventContext = z.extend(UniversalEventContext, {
+  /**
+   * Page context for events that occur within a web page.
+   */
+  page: Page,
+})
+
+/**
+ * TypeScript type inferred from {@link PageEventContext}.
+ */
+export type PageEventContext = z.infer<typeof PageEventContext>
 
 /**
  * Zod schema describing a `page` view event.
@@ -29,6 +44,12 @@ export const PageViewEvent = z.extend(UniversalEventProperties, {
    * Page-level properties such as URL, path, and referrer.
    */
   properties: Page,
+
+  /*
+   * Override the context property of {@link UniversalEventProperties}
+   * with a page-specific context
+   */
+  context: PageEventContext,
 })
 
 /**
