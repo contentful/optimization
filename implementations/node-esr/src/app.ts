@@ -49,20 +49,20 @@ const render = (identified?: string): string => `<!doctype html>
     <link rel="stylesheet" href="/assets/style.css" />
   </head>
   <body>
-    <h1>Node ESR SDK Implementation E2E Test</h1>
-    <main>
-      <section id="utility-panel">
-        <h2>Utilites</h2>
-        <span>
+  <h1>Node ESR SDK Implementation E2E Test</h1>
+  <main>
+    <section id="utility-panel">
+      <h2>Utilites</h2>
+      <span>
         ${
           identified
             ? `<a href="/" >Reset Profile for: ${identified}</a>`
             : '<a href="/user/someone" >Identify</a>'
         }
-        </span>
-      </section>
-      <section>
-        <h2>Entries</h2>
+      </span>
+    </section>
+    <section>
+      <h2>Entries</h2>
         <div id="auto-observed">
           <div data-ctfl-entry-id="1JAU028vQ7v6nB2swl3NBo">
             <!-- Nested Entry -->
@@ -79,19 +79,8 @@ const render = (identified?: string): string => `<!doctype html>
           <div data-entry-id="6zqoWXyiSrf0ja7I2WGtYj"></div>
           <div data-entry-id="7pa5bOx8Z9NmNcr7mISvD"></div>
         </div>
-      </section>
-    </main>
-    <template id="event-dialog">
-      <li>
-        <button></button>
-        <dialog>
-          <pre></pre>
-          <form method="dialog">
-            <button type="submit">Close</button>
-          </form>
-        </dialog>
-      </li>
-  </template>
+    </section>
+  </main>
   <script> const CONFIG = ${JSON.stringify(config)} </script>
   <script src="/assets/script.js"></script>
   </body>
