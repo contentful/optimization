@@ -190,7 +190,6 @@ async function getProfile(
   userId?: string,
   anonymousId?: string,
 ): Promise<OptimizationData> {
-  
   if (userId) {
     const { profile } = await sdk.personalization.identify({
       ...universalEventBuilderArgs,
