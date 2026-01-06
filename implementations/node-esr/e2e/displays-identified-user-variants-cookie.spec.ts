@@ -26,4 +26,44 @@ test.describe('identified user with profileId', () => {
     expect(storedId).toBeDefined()
     expect(storedId).toEqual(CUSTOM_PROFILE_ID)
   })
+
+  test('displays common variants', async ({ page }) => {
+    await expect(
+      page.getByText(
+        'This is a merge tag content entry that displays the visitor\'s continent "EU" embedded within the text.',
+      ),
+    ).toBeVisible()
+
+    await expect(
+      page.getByText('This is a variant content entry for visitors from Europe.'),
+    ).toBeVisible()
+
+    await expect(
+      page.getByText('This is a variant content entry for visitors using a desktop browser.'),
+    ).toBeVisible()
+  })
+
+  test('displays identified user variants', async ({ page }) => {
+    await expect(page.getByText('This is a level 0 nested variant entry.')).toBeVisible()
+
+    await expect(page.getByText('This is a level 1 nested variant entry.')).toBeVisible()
+
+    await expect(page.getByText('This is a level 2 nested variant entry.')).toBeVisible()
+
+    await expect(
+      page.getByText('This is a variant content entry for return visitors.'),
+    ).toBeVisible()
+
+    await expect(
+      page.getByText('This is a variant content entry for an A/B/C experiment: B'),
+    ).toBeVisible()
+
+    await expect(
+      page.getByText('This is a variant content entry for visitors with a custom event.'),
+    ).toBeVisible()
+
+    await expect(
+      page.getByText('This is a variant content entry for identified users.'),
+    ).toBeVisible()
+  })
 })
