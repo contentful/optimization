@@ -167,7 +167,7 @@ async function getProfile(
 
 app.get('/', limiter, async (req, res) => {
   const { profile } = await getProfile(req)
-  
+
   respond(res, profile.id)
 })
 app.get('/smoke-test', limiter, (_, res) => res.send(render()))
