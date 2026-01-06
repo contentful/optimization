@@ -240,9 +240,9 @@ jobs:
 
       - run: pnpm i --prefer-offline --frozen-lockfile
 
-      - run: pnpm --filter @implementation/node exec playwright install --with-deps
+      - run: pnpm --filter @implementation/node-ssr exec playwright install --with-deps
 
-      - run: pnpm --filter @implementation/node test:e2e-ssr
+      - run: pnpm --filter @implementation/node-ssr test:e2e-ssr
 
       - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
@@ -287,9 +287,9 @@ jobs:
 
       - run: pnpm i --prefer-offline --frozen-lockfile
 
-      - run: pnpm --filter @implementation/node exec playwright install --with-deps
+      - run: pnpm --filter @implementation/node-esr exec playwright install --with-deps
 
-      - run: pnpm --filter @implementation/node test:e2e
+      - run: pnpm --filter @implementation/node-esr test:e2e
 
       - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
