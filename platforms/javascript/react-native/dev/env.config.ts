@@ -15,7 +15,7 @@ const VITE_CONTENTFUL_TOKEN = 'test-token'
 const VITE_CONTENTFUL_ENVIRONMENT = 'master'
 const VITE_CONTENTFUL_SPACE_ID = 'test-space'
 const VITE_CONTENTFUL_CDA_HOST = 'localhost:8000'
-const VITE_CONTENTFUL_BASE_PATH = /contentful/
+const VITE_CONTENTFUL_BASE_PATH = '/contentful/'
 
 interface EnvConfig {
   contentful: {
