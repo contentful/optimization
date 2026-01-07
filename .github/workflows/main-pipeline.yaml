@@ -206,8 +206,8 @@ jobs:
 
       - run: pnpm test:unit
 
-  e2e-node:
-    name: E2E Node 🖥️
+  e2e-node-ssr:
+    name: E2E Node SSR 🖥️
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: setup
@@ -240,17 +240,64 @@ jobs:
 
       - run: pnpm i --prefer-offline --frozen-lockfile
 
-      - run: pnpm --filter @implementation/node exec playwright install --with-deps
+      - run: pnpm --filter @implementation/node-ssr exec playwright install --with-deps
 
-      - run: pnpm --filter @implementation/node test:e2e
+      - run: pnpm --filter @implementation/node-ssr test:e2e
 
       - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
         with:
-          name: ci-results-node
+          name: ci-results-node-ssr
           path: |
             ./implementations/node-ssr/playwright-report/
             ./implementations/node-ssr/test-results/
+          retention-days: 1
+
+  e2e-node-esr:
+    name: E2E Node ESR 🖥️
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: setup
+    steps:
+      - uses: actions/checkout@v6
+
+      - run: |
+          echo "DOTENV_CONFIG_QUIET=true" >>implementations/node-esr/.env
+          echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/node-esr/.env
+          echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/node-esr/.env
+          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>implementations/node-esr/.env
+          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>implementations/node-esr/.env
+          echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/node-esr/.env
+          echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/node-esr/.env
+          echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/node-esr/.env
+          echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/node-esr/.env
+          echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/node-esr/.env
+          echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>implementations/node-esr/.env
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - uses: actions/cache@v5
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - run: pnpm i --prefer-offline --frozen-lockfile
+
+      - run: pnpm --filter @implementation/node-esr exec playwright install --with-deps
+
+      - run: pnpm --filter @implementation/node-esr test:e2e
+
+      - uses: actions/upload-artifact@v6
+        if: ${{ !cancelled() }}
+        with:
+          name: ci-results-node-esr
+          path: |
+            ./implementations/node-esr/playwright-report/
+            ./implementations/node-esr/test-results/
           retention-days: 1
 
   e2e-web:

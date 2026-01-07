@@ -201,7 +201,7 @@ class Optimization extends CoreStateful {
 
       const cookieValue = Cookies.get(ANONYMOUS_ID_COOKIE)
 
-      LocalStore.anonymousId = value?.id ?? cookieValue
+      LocalStore.anonymousId = cookieValue ?? value?.id
 
       if (value && value.id !== cookieValue) Cookies.set(ANONYMOUS_ID_COOKIE, value.id)
     })
