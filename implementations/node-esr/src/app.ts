@@ -134,7 +134,7 @@ function respond(res: Response, id: string, userId?: string): void {
   res.cookie(ANONYMOUS_ID_COOKIE, id, {
     path: '/',
     httpOnly: true,
-    sameSite: "lax", // good default for same-site apps
+    sameSite: 'lax', // good default for same-site apps
   })
 
   res.send(render(userId))
