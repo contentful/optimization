@@ -1,9 +1,24 @@
+import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node'
 import { expect, test } from '@playwright/test'
+const ANONYMOUS_ID = '__ctfl_opt_anonymous_id__'
 
 test.describe('identified user', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(`/user/someone`)
     await page.waitForLoadState('domcontentloaded')
+  })
+
+  test('profile id is stored in localStorage and taken from cookies', async ({ context }) => {
+    const cookies = await context.cookies()
+    const anonymousId = cookies.find((cookie) => cookie.name === ANONYMOUS_ID_COOKIE)?.value
+    expect(anonymousId).toBeDefined()
+
+    const state = await context.storageState()
+    const storage = state.origins[0]?.localStorage ?? []
+    const storedId = storage.find((item) => item.name === ANONYMOUS_ID)?.value
+
+    expect(storedId).toBeDefined()
+    expect(storedId).toEqual(anonymousId)
   })
 
   test('displays common variants', async ({ page }) => {
