@@ -171,11 +171,11 @@ app.get('/', limiter, async (req, res) => {
   respond(res, profile.id)
 })
 app.get('/smoke-test', limiter, (_, res) => res.send(render()))
-app.get('/user/:userId', limiter, async (req, res) => {
+app.get('/user/:id', limiter, async (req, res) => {
   const anonymousId = getAnonymousIdFromCookies(req.cookies)
-  const { profile } = await getProfile(req, req.params.userId, anonymousId)
+  const { profile } = await getProfile(req, req.params.id, anonymousId)
 
-  respond(res, profile.id, req.params.userId)
+  respond(res, profile.id, req.params.id)
 })
 app.use('/dist', express.static('./public/dist'))
 app.use('/assets', express.static('./assets'))

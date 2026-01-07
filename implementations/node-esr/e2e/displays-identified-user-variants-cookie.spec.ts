@@ -15,7 +15,7 @@ test.describe('identified user with profileId', () => {
         domain: 'localhost',
       },
     ])
-    await page.goto(`/user/someoneelse2`)
+    await page.goto(`/user/someone`)
     await page.waitForLoadState('domcontentloaded')
   })
 
