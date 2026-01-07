@@ -29,8 +29,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@contentful/optimization-core": "workspace:*",
-    "@contentful/optimization-react-native": "workspace:*"
+    "@contentful/optimization-core": "workspace:*"
   },
   "devDependencies": {
     "@react-native-clipboard/clipboard": "^1.15.0",
