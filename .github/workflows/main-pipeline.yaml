@@ -247,7 +247,7 @@ jobs:
       - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
         with:
-          name: ci-results-node
+          name: ci-results-node-ssr
           path: |
             ./implementations/node-ssr/playwright-report/
             ./implementations/node-ssr/test-results/
@@ -294,7 +294,7 @@ jobs:
       - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
         with:
-          name: ci-results-node
+          name: ci-results-node-esr
           path: |
             ./implementations/node-esr/playwright-report/
             ./implementations/node-esr/test-results/
