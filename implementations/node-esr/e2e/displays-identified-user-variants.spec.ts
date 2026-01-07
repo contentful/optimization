@@ -1,17 +1,5 @@
-import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node'
-import { type BrowserContext, expect, test } from '@playwright/test'
-const ANONYMOUS_ID = '__ctfl_opt_anonymous_id__'
-
-async function getAnonymousIdFromCookie(context: BrowserContext): Promise<string | undefined> {
-  const cookies = await context.cookies()
-  return cookies.find((cookie) => cookie.name === ANONYMOUS_ID_COOKIE)?.value
-}
-
-async function getAnonymousIdFromStorage(context: BrowserContext): Promise<string | undefined> {
-  const state = await context.storageState()
-  const storage = state.origins[0]?.localStorage ?? []
-  return storage.find((item) => item.name === ANONYMOUS_ID)?.value
-}
+import { expect, test } from '@playwright/test'
+import { getAnonymousIdFromCookie, getAnonymousIdFromStorage } from './utils'
 
 test.describe('identified user', () => {
   test.beforeEach(async ({ page }) => {
@@ -22,7 +10,7 @@ test.describe('identified user', () => {
   test('profile id is stored in localStorage and taken from cookies', async ({ context }) => {
     const cookieId = await getAnonymousIdFromCookie(context)
     const storedId = await getAnonymousIdFromStorage(context)
-    
+
     expect(cookieId).toBeDefined()
     expect(storedId).toBeDefined()
     expect(storedId).toEqual(cookieId)
