@@ -13,13 +13,15 @@ export const changes: Signal<ChangeArray | undefined> = signal<ChangeArray | und
 
 export const consent = signal<boolean | undefined>()
 
-export const personalizations = signal<SelectedPersonalizationArray | undefined>()
-
 export const event: Signal<AnalyticsEvent | PersonalizationEvent | undefined> = signal<
   AnalyticsEvent | PersonalizationEvent | undefined
 >()
 
 export const flags = computed<Flags | undefined>(() => FlagsResolver.resolve(changes.value ?? []))
+
+export const online = signal<boolean | undefined>(true)
+
+export const personalizations = signal<SelectedPersonalizationArray | undefined>()
 
 export const profile: Signal<Profile | undefined> = signal<Profile | undefined>()
 
@@ -28,8 +30,9 @@ export interface Signals {
   consent: typeof consent
   event: typeof event
   flags: typeof flags
-  profile: typeof profile
+  online: typeof online
   personalizations: typeof personalizations
+  profile: typeof profile
 }
 
 export interface Subscription {
@@ -57,8 +60,9 @@ export const signals: Signals = {
   consent,
   event,
   flags,
-  profile,
+  online,
   personalizations,
+  profile,
 }
 
 export { batch, effect, type Signal }

@@ -1,22 +1,20 @@
 import type ApiClient from '@contentful/optimization-api-client'
 import {
+  type InsightsEvent as AnalyticsEvent,
   type ChangeArray,
   type ComponentViewBuilderArgs,
-  ComponentViewEvent,
   type EventBuilder,
   type Flags,
   type IdentifyBuilderArgs,
-  IdentifyEvent,
   type Json,
   type MergeTagEntry,
   type OptimizationData,
   type PageViewBuilderArgs,
-  PageViewEvent,
-  type ExperienceEvent as PersonalizationEvent,
+  ExperienceEvent as PersonalizationEvent,
+  type ExperienceEventArray as PersonalizationEventArray,
   type Profile,
   type SelectedPersonalizationArray,
   type TrackBuilderArgs,
-  TrackEvent,
 } from '@contentful/optimization-api-client'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import { isEqual } from 'es-toolkit'
@@ -27,11 +25,12 @@ import type { ProductConfig } from '../ProductBase'
 import {
   batch,
   changes as changesSignal,
-  consent,
+  consent as consentSignal,
   effect,
   event as eventSignal,
   flags as flagsSignal,
   type Observable,
+  online as onlineSignal,
   personalizations as personalizationsSignal,
   profile as profileSignal,
   toObservable,
@@ -83,6 +82,8 @@ export interface PersonalizationProductConfig extends ProductConfig {
  * @public
  */
 export interface PersonalizationStates {
+  /** Observable stream of the latest {@link AnalyticsEvent} or {@link PersonalizationEvent} (or `undefined`). */
+  eventStream: Observable<AnalyticsEvent | PersonalizationEvent | undefined>
   /** Live view of effective flags for the current profile (if available). */
   flags: Observable<Flags | undefined>
   /** Live view of the current profile. */
@@ -103,8 +104,12 @@ export interface PersonalizationStates {
  * back into signals.
  */
 class PersonalizationStateful extends PersonalizationBase implements ConsentGuard {
+  /** In‑memory queue for offline events keyed by profile. */
+  private readonly offlineQueue = new Set<PersonalizationEvent>()
+
   /** Exposed observable state references. */
   readonly states: PersonalizationStates = {
+    eventStream: toObservable(eventSignal),
     flags: toObservable(flagsSignal),
     profile: toObservable(profileSignal),
     personalizations: toObservable(personalizationsSignal),
@@ -145,7 +150,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
 
     if (defaults?.consent !== undefined) {
       const { consent: defaultConsent } = defaults
-      consent.value = defaultConsent
+      consentSignal.value = defaultConsent
     }
 
     this.getAnonymousId = getAnonymousId ?? (() => undefined)
@@ -165,8 +170,12 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
 
     effect(() => {
       logger.info(
-        `[Personalization] Personalization ${consent.value ? 'will' : 'will not'} take effect due to consent (${consent.value})`,
+        `[Personalization] Personalization ${consentSignal.value ? 'will' : 'will not'} take effect due to consent (${consentSignal.value})`,
       )
+    })
+
+    effect(() => {
+      if (onlineSignal.value) void this.flush()
     })
   }
 
@@ -179,6 +188,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
   reset(): void {
     batch(() => {
       changesSignal.value = undefined
+      eventSignal.value = undefined
       profileSignal.value = undefined
       personalizationsSignal.value = undefined
     })
@@ -241,7 +251,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    */
   hasConsent(name: string): boolean {
     return (
-      !!consent.value ||
+      !!consentSignal.value ||
       (this.allowedEventTypes ?? []).includes(
         name === 'trackComponentView' || name === 'trackFlagView' ? 'component' : name,
       )
@@ -298,12 +308,12 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * @returns The resulting {@link OptimizationData} for the identified user.
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async identify(payload: IdentifyBuilderArgs): Promise<OptimizationData> {
+  async identify(payload: IdentifyBuilderArgs): Promise<OptimizationData | undefined> {
     logger.info('[Personalization] Sending "identify" event')
 
-    const event = IdentifyEvent.parse(this.builder.buildIdentify(payload))
+    const event = this.builder.buildIdentify(payload)
 
-    return await this.upsertProfile(event)
+    return await this.sendOrEnqueueEvent(event)
   }
 
   /**
@@ -313,12 +323,12 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * @returns The evaluated {@link OptimizationData} for this page view.
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async page(payload: PageViewBuilderArgs): Promise<OptimizationData> {
+  async page(payload: PageViewBuilderArgs): Promise<OptimizationData | undefined> {
     logger.info('[Personalization] Sending "page" event')
 
-    const event = PageViewEvent.parse(this.builder.buildPageView(payload))
+    const event = this.builder.buildPageView(payload)
 
-    return await this.upsertProfile(event)
+    return await this.sendOrEnqueueEvent(event)
   }
 
   /**
@@ -328,12 +338,12 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * @returns The evaluated {@link OptimizationData} for this event.
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async track(payload: TrackBuilderArgs): Promise<OptimizationData> {
+  async track(payload: TrackBuilderArgs): Promise<OptimizationData | undefined> {
     logger.info(`[Personalization] Sending "track" event "${payload.event}"`)
 
-    const event = TrackEvent.parse(this.builder.buildTrack(payload))
+    const event = this.builder.buildTrack(payload)
 
-    return await this.upsertProfile(event)
+    return await this.sendOrEnqueueEvent(event)
   }
 
   @guardedBy('isNotDuplicated', { onBlocked: 'onBlockedByDuplication' })
@@ -348,19 +358,56 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
   async trackComponentView(
     payload: ComponentViewBuilderArgs,
     _duplicationScope = '',
-  ): Promise<OptimizationData> {
+  ): Promise<OptimizationData | undefined> {
     logger.info(`[Personalization] Sending "track personalization" event for`, payload.componentId)
 
-    const event = ComponentViewEvent.parse(this.builder.buildComponentView(payload))
+    const event = this.builder.buildComponentView(payload)
 
-    return await this.upsertProfile(event)
+    return await this.sendOrEnqueueEvent(event)
   }
 
   /**
-   * Intercept and submit a single event to the Experience API, updating output
-   * signals with the returned state.
+   * Intercept, validate, and place an event into the offline eventd queue; then
+   * trigger a size‑based flush if necessary.
    *
-   * @param event - The event to submit.
+   * @param event - The event to enqueue.
+   */
+  private async sendOrEnqueueEvent(
+    event: PersonalizationEvent,
+  ): Promise<OptimizationData | undefined> {
+    const intercepted = await this.interceptor.event.run(event)
+
+    const validEvent = PersonalizationEvent.parse(intercepted)
+
+    eventSignal.value = validEvent
+
+    if (onlineSignal.value) return await this.upsertProfile([validEvent])
+
+    logger.debug(`Queueing ${validEvent.type} event`, validEvent)
+
+    this.offlineQueue.add(validEvent)
+
+    return undefined
+  }
+
+  /**
+   * Flush the offline queue
+   */
+  async flush(): Promise<void> {
+    if (this.offlineQueue.size === 0) return
+
+    logger.debug(`[Personalization] Flushing offline event queue`)
+
+    await this.upsertProfile(Array.from(this.offlineQueue))
+
+    this.offlineQueue.clear()
+  }
+
+  /**
+   * Submit events to the Experience API, updating output signals with the
+   * returned state.
+   *
+   * @param events - The events to submit.
    * @returns The {@link OptimizationData} returned by the service.
    * @internal
    * @privateRemarks
@@ -368,17 +415,13 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * take precedence over the `id` property of the current {@link Profile}
    * signal value
    */
-  private async upsertProfile(event: PersonalizationEvent): Promise<OptimizationData> {
-    const intercepted = await this.interceptor.event.run(event)
-
-    eventSignal.value = intercepted
-
+  private async upsertProfile(events: PersonalizationEventArray): Promise<OptimizationData> {
     const anonymousId = this.getAnonymousId()
     if (anonymousId) logger.info('[Personalization] Anonymous ID found:', anonymousId)
 
     const data = await this.api.experience.upsertProfile({
       profileId: anonymousId ?? profileSignal.value?.id,
-      events: [intercepted],
+      events,
     })
 
     await this.updateOutputSignals(data)

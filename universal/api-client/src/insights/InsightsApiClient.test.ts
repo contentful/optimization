@@ -134,7 +134,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
 
     const client = makeClient()
 
-    await expect(client.sendBatchEvents(batches)).resolves.toBeUndefined()
+    await expect(client.sendBatchEvents(batches)).resolves.toBe(true)
 
     expect(parseSpy).toHaveBeenCalledTimes(1)
     expect(infoSpy).toHaveBeenCalledWith(
@@ -156,7 +156,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
 
     const client = makeClient()
 
-    await expect(client.sendBatchEvents(batches, { beaconHandler })).resolves.toBeUndefined()
+    await expect(client.sendBatchEvents(batches, { beaconHandler })).resolves.toBe(true)
 
     expect(beaconHandler).toHaveBeenCalledTimes(1)
     expect(beaconHandler).toHaveBeenCalledWith(expectedUrl, batches)
@@ -180,7 +180,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
 
     const client = makeClient()
 
-    await expect(client.sendBatchEvents(batches, { beaconHandler })).resolves.toBeUndefined()
+    await expect(client.sendBatchEvents(batches, { beaconHandler })).resolves.toBe(true)
 
     expect(beaconHandler).toHaveBeenCalledTimes(1)
     expect(beaconHandler).toHaveBeenCalledWith(expectedUrl, batches)
@@ -191,7 +191,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('request succesfully completed.'))
   })
 
-  it('logs and rethrows on network errors', async () => {
+  it('logs and returns false on network errors', async () => {
     const batches = generateBatchEventArray('e4')
 
     // @ts-expect-error -- testing
@@ -214,7 +214,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
 
     const client = makeClient()
 
-    await expect(client.sendBatchEvents(batches)).rejects.toBeDefined()
+    await expect(client.sendBatchEvents(batches)).resolves.toBe(false)
     expect(logErrorSpy).toHaveBeenCalledTimes(1)
     expect(logErrorSpy).toHaveBeenCalledWith(expect.anything(), {
       requestName: 'Event Batches',

@@ -1,22 +1,31 @@
 import type {
   InsightsEvent as AnalyticsEvent,
+  ChangeArray,
   ExperienceEvent as PersonalizationEvent,
+  Profile,
+  SelectedPersonalizationArray,
 } from '@contentful/optimization-api-client'
-import {
-  AnalyticsStateful,
-  type AnalyticsProductConfigDefaults,
-  type AnalyticsStates,
-} from './analytics'
+import { AnalyticsStateful, type AnalyticsStates } from './analytics'
 import type { ConsentController } from './Consent'
 import CoreBase, { type CoreConfig } from './CoreBase'
 import {
   PersonalizationStateful,
   type PersonalizationProductConfig,
-  type PersonalizationProductConfigDefaults,
   type PersonalizationStates,
 } from './personalization'
 import type { ProductConfig } from './ProductBase'
-import { consent, event, toObservable, type Observable } from './signals'
+import {
+  batch,
+  changes,
+  consent,
+  event,
+  flags,
+  online,
+  personalizations,
+  profile,
+  toObservable,
+  type Observable,
+} from './signals'
 
 /**
  * Combined observable state exposed by the stateful core.
@@ -40,10 +49,12 @@ export interface CoreStates extends AnalyticsStates, PersonalizationStates {
 export interface CoreConfigDefaults {
   /** Global consent default applied at construction time. */
   consent?: boolean
-  /** Defaults forwarded to the personalization product. */
-  personalization?: Omit<PersonalizationProductConfigDefaults, 'consent'>
-  /** Defaults forwarded to the analytics product. */
-  analytics?: Omit<AnalyticsProductConfigDefaults, 'consent'>
+  /** Default active profile used for personalization and analytics. */
+  profile?: Profile
+  /** Initial diff of changes produced by the service. */
+  changes?: ChangeArray
+  /** Preselected personalization variants (e.g., winning treatments). */
+  personalizations?: SelectedPersonalizationArray
 }
 
 /**
@@ -117,8 +128,8 @@ class CoreStateful extends CoreBase implements ConsentController {
       allowedEventTypes,
       preventedComponentEvents,
       defaults: {
-        consent: defaults?.consent ?? undefined,
-        ...defaults?.analytics,
+        consent: defaults?.consent,
+        profile: defaults?.profile,
       },
     })
 
@@ -127,8 +138,10 @@ class CoreStateful extends CoreBase implements ConsentController {
       getAnonymousId,
       preventedComponentEvents,
       defaults: {
-        consent: defaults?.consent ?? undefined,
-        ...defaults?.personalization,
+        consent: defaults?.consent,
+        changes: defaults?.changes,
+        profile: defaults?.profile,
+        personalizations: defaults?.personalizations,
       },
     })
   }
@@ -138,10 +151,11 @@ class CoreStateful extends CoreBase implements ConsentController {
    */
   get states(): CoreStates {
     return {
-      ...this.analytics.states,
-      ...this.personalization.states,
       consent: toObservable(consent),
       eventStream: toObservable(event),
+      flags: toObservable(flags),
+      personalizations: toObservable(personalizations),
+      profile: toObservable(profile),
     }
   }
 
@@ -153,7 +167,23 @@ class CoreStateful extends CoreBase implements ConsentController {
    * consequence of the current shared-state design.
    */
   reset(): void {
-    this.personalization.reset()
+    batch(() => {
+      event.value = undefined
+      changes.value = undefined
+      profile.value = undefined
+      personalizations.value = undefined
+    })
+  }
+
+  /**
+   * Flush the queues for both the analytics and personalization products.
+   * @remarks
+   * The personalization queue is only populated if events have been triggered
+   * while a device is offline.
+   */
+  async flush(): Promise<void> {
+    await this.analytics.flush()
+    await this.personalization.flush()
   }
 
   /**
@@ -163,6 +193,15 @@ class CoreStateful extends CoreBase implements ConsentController {
    */
   consent(accept: boolean): void {
     consent.value = accept
+  }
+
+  /**
+   * Update online state
+   *
+   * @param isOnline - `true` if the browser is online; `false` otherwise.
+   */
+  protected online(isOnline: boolean): void {
+    online.value = isOnline
   }
 }
 

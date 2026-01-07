@@ -152,7 +152,7 @@ abstract class CoreBase {
    */
   async identify(
     payload: IdentifyBuilderArgs & { profile?: PartialProfile },
-  ): Promise<OptimizationData> {
+  ): Promise<OptimizationData | undefined> {
     return await this.personalization.identify(payload)
   }
 
@@ -164,7 +164,7 @@ abstract class CoreBase {
    */
   async page(
     payload: PageViewBuilderArgs & { profile?: PartialProfile },
-  ): Promise<OptimizationData> {
+  ): Promise<OptimizationData | undefined> {
     return await this.personalization.page(payload)
   }
 
@@ -174,7 +174,9 @@ abstract class CoreBase {
    * @param payload - Track builder arguments.
    * @returns The evaluated {@link OptimizationData} for this event.
    */
-  async track(payload: TrackBuilderArgs & { profile?: PartialProfile }): Promise<OptimizationData> {
+  async track(
+    payload: TrackBuilderArgs & { profile?: PartialProfile },
+  ): Promise<OptimizationData | undefined> {
     return await this.personalization.track(payload)
   }
 

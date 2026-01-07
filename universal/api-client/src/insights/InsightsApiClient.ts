@@ -120,18 +120,18 @@ export default class InsightsApiClient extends ApiClientBase {
    * If the handler is missing or returns `false`, the events are emitted
    * immediately via `fetch`.
    *
-   * @throws {@link Error}
-   * Rethrows any error originating from the underlying `fetch` call.
+   * @returns A boolean value that is true when either the event batch is successfully
+   * queued by the beacon handler or a direct request is successfully sent.
    *
    * @example
    * ```ts
-   * await insightsClient.sendBatchEvents(batches)
+   * const success = await insightsClient.sendBatchEvents(batches)
    * ```
    *
    * @example
    * ```ts
    * // Override beaconHandler for a single call
-   * await insightsClient.sendBatchEvents(batches, {
+   * const success = await insightsClient.sendBatchEvents(batches, {
    *   beaconHandler: (url, data) => {
    *     return navigator.sendBeacon(url.toString(), JSON.stringify(data))
    *   },
@@ -141,7 +141,7 @@ export default class InsightsApiClient extends ApiClientBase {
   public async sendBatchEvents(
     batches: BatchInsightsEventArray,
     options: RequestOptions = {},
-  ): Promise<void> {
+  ): Promise<boolean> {
     const { beaconHandler = this.beaconHandler } = options
 
     const url = new URL(
@@ -157,7 +157,7 @@ export default class InsightsApiClient extends ApiClientBase {
       const beaconSuccessfullyQueued = beaconHandler(url, body)
 
       if (beaconSuccessfullyQueued) {
-        return
+        return true
       } else {
         logger.warn(
           'beaconHandler failed to queue events; events will be emitted immediately via fetch',
@@ -178,13 +178,16 @@ export default class InsightsApiClient extends ApiClientBase {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
+        keepalive: true,
       })
 
       logger.debug(`${this.name} API "${requestName}" request succesfully completed.`)
+
+      return true
     } catch (error) {
       this.logRequestError(error, { requestName })
 
-      throw error
+      return false
     }
   }
 }

@@ -160,31 +160,31 @@ abstract class PersonalizationBase
    * Identify the current profile/visitor to associate traits with a profile.
    *
    * @param payload - Identify builder payload.
-   * @returns The resulting {@link OptimizationData} for the identified user.
+   * @returns The resulting {@link OptimizationData} for the identified user if the device is online.
    */
-  abstract identify(payload: IdentifyBuilderArgs): Promise<OptimizationData>
+  abstract identify(payload: IdentifyBuilderArgs): Promise<OptimizationData | undefined>
 
   /**
    * Record a page view.
    *
    * @param payload - Page view builder payload.
-   * @returns The evaluated {@link OptimizationData} for this page view.
+   * @returns The evaluated {@link OptimizationData} for this page view if the device is online.
    */
-  abstract page(payload: PageViewBuilderArgs): Promise<OptimizationData>
+  abstract page(payload: PageViewBuilderArgs): Promise<OptimizationData | undefined>
 
   /**
    * Record a custom track event.
    *
    * @param payload - Track builder payload.
-   * @returns The evaluated {@link OptimizationData} for this event.
+   * @returns The evaluated {@link OptimizationData} for this event if the device is online.
    */
-  abstract track(payload: TrackBuilderArgs): Promise<OptimizationData>
+  abstract track(payload: TrackBuilderArgs): Promise<OptimizationData | undefined>
 
   /**
    * Record a "sticky" component view.
    *
    * @param payload - "Sticky" component view builder payload.
-   * @returns The evaluated {@link OptimizationData} for this component view.
+   * @returns The evaluated {@link OptimizationData} for this component view if the device is online.
    * @remarks
    * This method is intended to be called only when a component is considered
    * "sticky".
@@ -194,7 +194,7 @@ abstract class PersonalizationBase
   abstract trackComponentView(
     payload: ComponentViewBuilderArgs,
     duplicationScope?: string,
-  ): Promise<OptimizationData>
+  ): Promise<OptimizationData | undefined>
 }
 
 export default PersonalizationBase

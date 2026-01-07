@@ -248,6 +248,7 @@ export default class ExperienceApiClient extends ApiClientBase {
       method: 'POST',
       headers: this.constructHeaders(options),
       body: JSON.stringify(body),
+      keepalive: true,
     })
   }
 
