@@ -519,6 +519,8 @@
         )
       })
 
+      let initialized = false
+
       // Subscribe to profile state, find entries in the markup, and render them
       optimization.states.profile.subscribe((profile) => {
         if (!profile) return
