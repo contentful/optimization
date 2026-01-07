@@ -7,15 +7,18 @@ test.describe('identified user', () => {
     await page.waitForLoadState('domcontentloaded')
   })
 
-  test('profile id is stored in localStorage and taken from cookies', async ({ context }) => {
+  test('should store profile id in cookie', async ({ context }) => {
+    const cookieId = await getAnonymousIdFromCookie(context)
+    expect(cookieId).toBeDefined()
+  })
+
+  test('should sync profile id between cookie and localStorage', async ({ context }) => {
     const cookieId = await getAnonymousIdFromCookie(context)
     const storedId = await getAnonymousIdFromStorage(context)
 
-    expect(cookieId).toBeDefined()
     expect(storedId).toBeDefined()
     expect(storedId).toEqual(cookieId)
   })
-
   test('displays common variants', async ({ page }) => {
     await expect(
       page.getByText(

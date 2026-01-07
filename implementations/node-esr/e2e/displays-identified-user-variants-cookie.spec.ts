@@ -1,6 +1,6 @@
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-core'
 import { expect, test } from '@playwright/test'
-import { getAnonymousIdFromStorage } from './utils'
+import { getAnonymousIdFromCookie, getAnonymousIdFromStorage } from './utils'
 
 const CUSTOM_PROFILE_ID = 'custom-profile-id'
 
@@ -12,18 +12,26 @@ test.describe('identified user with profileId', () => {
         name: ANONYMOUS_ID_COOKIE,
         value: CUSTOM_PROFILE_ID,
         path: '/',
-        domain: 'localhost',
+        httpOnly: true,
+        sameSite: 'Lax', // good default for same-site apps
       },
     ])
     await page.goto(`/user/someone`)
     await page.waitForLoadState('domcontentloaded')
   })
 
-  test('profile id is stored in localStorage', async ({ context }) => {
+  test('should preserve custom profile id in cookie', async ({ context }) => {
+    const cookieId = await getAnonymousIdFromCookie(context)
+    expect(cookieId).toBeDefined()
+    expect(cookieId).toEqual(CUSTOM_PROFILE_ID)
+  })
+
+  test('should sync profile id between cookie and localStorage', async ({ context }) => {
+    const cookieId = await getAnonymousIdFromCookie(context)
     const storedId = await getAnonymousIdFromStorage(context)
 
     expect(storedId).toBeDefined()
-    expect(storedId).toEqual(CUSTOM_PROFILE_ID)
+    expect(storedId).toEqual(cookieId)
   })
 
   test('displays common variants', async ({ page }) => {
