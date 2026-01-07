@@ -19,6 +19,7 @@ test.describe('identified user', () => {
     expect(storedId).toBeDefined()
     expect(storedId).toEqual(cookieId)
   })
+
   test('displays common variants', async ({ page }) => {
     await expect(
       page.getByText(

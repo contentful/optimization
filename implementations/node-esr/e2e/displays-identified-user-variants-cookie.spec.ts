@@ -4,15 +4,15 @@ import { getAnonymousIdFromCookie, getAnonymousIdFromStorage } from './utils'
 
 const CUSTOM_PROFILE_ID = 'custom-profile-id'
 
-test.describe('identified user with profileId', () => {
+test.describe('identified user: cookie', () => {
   test.beforeEach(async ({ page, context }) => {
     // user is already identified with a custom profile id
     await context.addCookies([
       {
         name: ANONYMOUS_ID_COOKIE,
         value: CUSTOM_PROFILE_ID,
+        domain: 'localhost',
         path: '/',
-        httpOnly: true,
         sameSite: 'Lax', // good default for same-site apps
       },
     ])
