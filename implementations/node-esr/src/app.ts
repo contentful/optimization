@@ -132,7 +132,7 @@ function getAnonymousIdFromCookies(cookies: unknown): string | undefined {
 
 function respond(res: Response, id: string, userId?: string): void {
   res.cookie(ANONYMOUS_ID_COOKIE, id, {
-    path: '/user/someone',
+    path: '/',
     domain: 'localhost',
   })
 

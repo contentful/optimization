@@ -11,7 +11,7 @@ test.describe('identified user with profileId', () => {
       {
         name: ANONYMOUS_ID_COOKIE,
         value: CUSTOM_PROFILE_ID,
-        path: '/user/someone',
+        path: '/',
         domain: 'localhost',
       },
     ])
