@@ -79,6 +79,10 @@ export interface PersonalizationProps {
  * NOT React Native UI components. The term "component" comes from Contentful's
  * terminology for personalized content entries.
  *
+ * For nested personalized entries, customers should handle nesting logic in their own
+ * implementation by wrapping each nested entry in its own `<Personalization>` component.
+ * This gives full control over how nested content is detected and rendered.
+ *
  * @example Basic Usage
  * ```tsx
  * import { Personalization } from '@contentful/optimization-react-native'
@@ -110,6 +114,29 @@ export interface PersonalizationProps {
  * >
  *   {(resolvedEntry) => <YourComponent data={resolvedEntry.fields} />}
  * </Personalization>
+ * ```
+ *
+ * @example Customer-Controlled Nested Content
+ * ```tsx
+ * function renderNestedContent(entry: Entry): React.JSX.Element {
+ *   return (
+ *     <Personalization baselineEntry={entry}>
+ *       {(resolvedEntry) => {
+ *         const nestedEntries = resolvedEntry.fields.nested as Entry[] | undefined
+ *         return (
+ *           <View>
+ *             <Text>{resolvedEntry.fields.title}</Text>
+ *             {nestedEntries?.map((nestedEntry) => (
+ *               <View key={nestedEntry.sys.id}>
+ *                 {renderNestedContent(nestedEntry)}
+ *               </View>
+ *             ))}
+ *           </View>
+ *         )
+ *       }}
+ *     </Personalization>
+ *   )
+ * }
  * ```
  *
  * @remarks
