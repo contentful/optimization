@@ -12,10 +12,6 @@ interface ContentEntryProps {
   sdk: Optimization
 }
 
-function isNestedContentType(entry: Entry): boolean {
-  return entry.sys.contentType.sys.id === 'nestedContent'
-}
-
 interface RichTextNode {
   nodeType: string
   data?: unknown
@@ -39,64 +35,7 @@ function isRichTextField(field: unknown): field is RichTextField {
   )
 }
 
-function isEntryArray(value: unknown): value is Entry[] {
-  if (!Array.isArray(value) || value.length === 0) {
-    return false
-  }
-  const firstItem: unknown = value[0]
-  if (typeof firstItem !== 'object' || firstItem === null || !('sys' in firstItem)) {
-    return false
-  }
-  const { sys } = firstItem as { sys: unknown }
-  if (typeof sys !== 'object' || sys === null || !('id' in sys)) {
-    return false
-  }
-  return typeof (sys as { id: unknown }).id === 'string'
-}
-
-function getNestedEntries(fields: Entry['fields']): Entry[] | undefined {
-  const { nested } = fields
-  if (isEntryArray(nested)) {
-    return nested
-  }
-  return undefined
-}
-
-function renderNestedContent(resolvedEntry: Entry): React.JSX.Element {
-  const text =
-    typeof resolvedEntry.fields.text === 'string' ? resolvedEntry.fields.text : 'No content'
-  const fullLabel = `${text} [Entry: ${resolvedEntry.sys.id}]`
-
-  const nestedEntries = getNestedEntries(resolvedEntry.fields)
-
-  return (
-    <View>
-      <View testID={`entry-text-${resolvedEntry.sys.id}`} accessibilityLabel={fullLabel}>
-        <Text>{text}</Text>
-        <Text>{`[Entry: ${resolvedEntry.sys.id}]`}</Text>
-      </View>
-      {nestedEntries?.map((nestedEntry) => (
-        <Personalization key={nestedEntry.sys.id} baselineEntry={nestedEntry}>
-          {renderNestedContent}
-        </Personalization>
-      ))}
-    </View>
-  )
-}
-
 export function ContentEntry({ entry, sdk }: ContentEntryProps): React.JSX.Element {
-  if (isNestedContentType(entry)) {
-    return (
-      <View testID={`nested-content-entry-${entry.sys.id}`}>
-        <ScrollProvider>
-          <Personalization baselineEntry={entry} testID={`nested-personalization-${entry.sys.id}`}>
-            {renderNestedContent}
-          </Personalization>
-        </ScrollProvider>
-      </View>
-    )
-  }
-
   const renderContent = (contentEntry: Entry, baselineId: string): React.JSX.Element => {
     const richTextField = Object.values(contentEntry.fields).find(isRichTextField)
 

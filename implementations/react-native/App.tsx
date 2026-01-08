@@ -8,6 +8,7 @@ import type { Entry } from 'contentful'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
 import { ENV_CONFIG } from './env.config'
 import { ContentEntry } from './sections/ContentEntry'
+import { NestedContentEntry } from './sections/NestedContentEntry'
 import { fetchEntries, initializeSDK } from './utils/sdkHelpers'
 
 const ENTRY_IDS = [
@@ -18,6 +19,7 @@ const ENTRY_IDS = [
   '5XHssysWUDECHzKLzoIsg1',
   '6zqoWXyiSrf0ja7I2WGtYj',
   '7pa5bOx8Z9NmNcr7mISvD',
+  ENV_CONFIG.entries.nested,
 ]
 
 function App(): React.JSX.Element {
@@ -84,9 +86,13 @@ function App(): React.JSX.Element {
           )}
         </View>
         <ScrollView style={{ flex: 1 }}>
-          {entries.map((entry) => (
-            <ContentEntry key={entry.sys.id} entry={entry} sdk={sdk} />
-          ))}
+          {entries.map((entry) =>
+            entry.sys.contentType.sys.id === 'nestedContent' ? (
+              <NestedContentEntry key={entry.sys.id} entry={entry} />
+            ) : (
+              <ContentEntry key={entry.sys.id} entry={entry} sdk={sdk} />
+            ),
+          )}
         </ScrollView>
         <View style={{ padding: 10 }}>
           <AnalyticsEventDisplay sdk={sdk} />
