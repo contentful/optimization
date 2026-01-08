@@ -247,6 +247,21 @@ function collectExperienceIds(entries: readonly Entry[]): readonly string[] {
   return ids
 }
 
+function collectPersonalizationIds(entries: readonly Entry[]): readonly string[] {
+  const ids: string[] = []
+  const seen = new Set<string>()
+  for (const entry of entries) {
+    const typeId = getContentTypeId(entry)
+    if (typeId !== 'nt_personalization') continue
+    const id = getSysId(entry)
+    if (id && !seen.has(id)) {
+      seen.add(id)
+      ids.push(id)
+    }
+  }
+  return ids
+}
+
 async function processEntries(entryIds: readonly string[], outputDir: string): Promise<void> {
   for (const id of entryIds) {
     const outPath = path.join(outputDir, `${id}.json`)
@@ -281,7 +296,11 @@ async function main(): Promise<void> {
   const mergeTagIds = collectMergeTagIds(entries)
   const audienceIds = collectAudienceIds(entries)
   const experienceIds = collectExperienceIds(entries)
-  await processEntries([...baselineIds, ...mergeTagIds, ...audienceIds, ...experienceIds], outRoot)
+  const personalizationIds = collectPersonalizationIds(entries)
+  await processEntries(
+    [...baselineIds, ...mergeTagIds, ...audienceIds, ...experienceIds, ...personalizationIds],
+    outRoot,
+  )
 
   console.info('Done.')
 }
