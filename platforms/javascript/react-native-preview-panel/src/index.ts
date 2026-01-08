@@ -49,6 +49,7 @@ export type {
   AudienceToggleProps,
   AudienceWithExperiences,
   BadgeProps,
+  ContentfulEntry,
   ExperienceCardProps,
   ExperienceDefinition,
   JsonViewerProps,
@@ -68,6 +69,9 @@ export type {
   VariantDistribution,
   VariantSelectorProps,
 } from './types'
+
+// Utilities for enriching definitions with Contentful entry data
+export { enrichAudienceDefinitions, enrichExperienceDefinitions } from './utils'
 
 // Theme and styles (for custom theming)
 export { commonStyles } from './styles/common'

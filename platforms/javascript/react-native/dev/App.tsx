@@ -20,6 +20,11 @@ import {
 import type Optimization from '@contentful/optimization-react-native'
 import type { MergeTagEntry, Profile } from '@contentful/optimization-react-native'
 import { OptimizationProvider } from '@contentful/optimization-react-native'
+import type {
+  AudienceDefinition,
+  ContentfulEntry,
+  ExperienceDefinition,
+} from '@contentful/optimization-react-native-preview-panel'
 import { PreviewPanel } from '@contentful/optimization-react-native-preview-panel'
 import type { Entry } from 'contentful'
 import { LoadingScreen } from './components/LoadingScreen'
@@ -28,7 +33,14 @@ import { SDKConfigCard } from './components/SDKConfigCard'
 import { SDKStatusCard } from './components/SDKStatusCard'
 import { TestTrackingScreen } from './TestTrackingScreen'
 import type { SDKInfo, ThemeColors } from './types'
-import { fetchEntriesFromMockServer, fetchMergeTagEntry, initializeSDK } from './utils/sdkHelpers'
+import {
+  createAudienceDefinitionsFromEntries,
+  createExperienceDefinitionsFromEntries,
+  fetchEntriesByContentType,
+  fetchEntriesFromMockServer,
+  fetchMergeTagEntry,
+  initializeSDK,
+} from './utils/sdkHelpers'
 
 type ScreenType = 'home' | 'tracking' | 'preview'
 
@@ -130,6 +142,10 @@ function App(): React.JSX.Element {
   const [mergeTagDetails, setMergeTagDetails] = useState<MergeTagEntry[]>([])
   const [entriesLoading, setEntriesLoading] = useState(false)
   const [isIdentified, setIsIdentified] = useState(false)
+  const [audienceEntries, setAudienceEntries] = useState<ContentfulEntry[]>([])
+  const [experienceEntries, setExperienceEntries] = useState<ContentfulEntry[]>([])
+  const [audienceDefinitions, setAudienceDefinitions] = useState<AudienceDefinition[]>([])
+  const [experienceDefinitions, setExperienceDefinitions] = useState<ExperienceDefinition[]>([])
 
   useEffect(() => {
     async function initialize(): Promise<void> {
@@ -143,6 +159,28 @@ function App(): React.JSX.Element {
       }
     }
     void initialize()
+  }, [])
+
+  useEffect(() => {
+    async function fetchContentfulEntries(): Promise<void> {
+      try {
+        const [audiences, experiences] = await Promise.all([
+          fetchEntriesByContentType('nt_audience'),
+          fetchEntriesByContentType('nt_experience'),
+        ])
+        const audienceEntriesData = audiences as ContentfulEntry[]
+        const experienceEntriesData = experiences as ContentfulEntry[]
+
+        setAudienceEntries(audienceEntriesData)
+        setExperienceEntries(experienceEntriesData)
+
+        setAudienceDefinitions(createAudienceDefinitionsFromEntries(audienceEntriesData))
+        setExperienceDefinitions(createExperienceDefinitionsFromEntries(experienceEntriesData))
+      } catch (_error) {
+        // Silently fail - entries may not be available in all environments
+      }
+    }
+    void fetchContentfulEntries()
   }, [])
 
   useEffect(() => {
@@ -289,7 +327,13 @@ function App(): React.JSX.Element {
               )}
             </View>
           </View>
-          <PreviewPanel showHeader={true} />
+          <PreviewPanel
+            showHeader={true}
+            audienceDefinitions={audienceDefinitions}
+            experienceDefinitions={experienceDefinitions}
+            audienceEntries={audienceEntries}
+            experienceEntries={experienceEntries}
+          />
         </SafeAreaView>
       </OptimizationProvider>
     )

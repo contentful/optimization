@@ -28,6 +28,29 @@ export interface VariantDistribution {
   variantRef: string
   /** Optional traffic percentage (0-100) */
   percentage?: number
+  /** Optional human-readable name from Contentful entry */
+  name?: string
+}
+
+// ============================================================================
+// Contentful Entry Types (for enrichment)
+// ============================================================================
+
+/**
+ * Generic Contentful entry structure used for enriching definitions.
+ * This is a simplified type that captures the essential fields needed
+ * for mapping Contentful entries to preview panel definitions.
+ */
+export interface ContentfulEntry {
+  sys: {
+    id: string
+    contentType?: {
+      sys: {
+        id: string
+      }
+    }
+  }
+  fields: Record<string, unknown>
 }
 
 /**
@@ -173,6 +196,18 @@ export interface PreviewPanelProps {
    * When provided, enables experience display with human-readable names and grouping.
    */
   experienceDefinitions?: ExperienceDefinition[]
+  /**
+   * Raw Contentful entries for nt_audience content type.
+   * When provided along with audienceDefinitions, the panel will enrich
+   * the definitions with human-readable names from these entries.
+   */
+  audienceEntries?: ContentfulEntry[]
+  /**
+   * Raw Contentful entries for nt_experience content type.
+   * When provided along with experienceDefinitions, the panel will enrich
+   * the definitions with human-readable names and variant names from these entries.
+   */
+  experienceEntries?: ContentfulEntry[]
 }
 
 /**

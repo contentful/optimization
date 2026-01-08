@@ -42,6 +42,14 @@ const getPercentageStyles = (isSelected: boolean, isAudienceActive: boolean): St
   !isAudienceActive && styles.percentageLabelInactive,
 ]
 
+/** Get the display label for a variant */
+const getVariantLabel = (variant: VariantDistribution): string => {
+  if (variant.name) {
+    return variant.name
+  }
+  return variant.index === 0 ? 'Baseline' : `Variant ${variant.index}`
+}
+
 /** Single variant button within the selector */
 const VariantButton = ({
   variant,
@@ -51,7 +59,7 @@ const VariantButton = ({
   isAudienceActive,
   onSelect,
 }: VariantButtonProps): React.JSX.Element => {
-  const variantLabel = variant.index === 0 ? 'Baseline' : `Variant ${variant.index}`
+  const variantLabel = getVariantLabel(variant)
   const percentageLabel = variant.percentage != null ? `${variant.percentage}%` : null
 
   return (

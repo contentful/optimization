@@ -1,5 +1,5 @@
 import { logger } from '@contentful/optimization-core'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Alert, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native'
 import {
   useCollapsibleControl,
@@ -9,12 +9,32 @@ import {
 } from '../hooks'
 import { commonStyles } from '../styles/common'
 import { colors, spacing, typography } from '../styles/theme'
-import type { AudienceOverrideState, PreviewPanelProps } from '../types'
+import type { AudienceOverrideState, PreviewActions, PreviewPanelProps } from '../types'
+import { enrichAudienceDefinitions, enrichExperienceDefinitions } from '../utils'
 import { AudienceSection } from './AudienceSection'
 import { OverridesSection } from './OverridesSection'
 import { PersonalizationsSection } from './PersonalizationsSection'
 import { ProfileSection } from './ProfileSection'
 import { ActionButton, SearchBar } from './shared'
+
+function applyAudienceOverride(
+  audienceId: string,
+  state: AudienceOverrideState,
+  actions: PreviewActions,
+): void {
+  const actionMap: Record<AudienceOverrideState, () => void> = {
+    on: () => {
+      actions.activateAudience(audienceId)
+    },
+    off: () => {
+      actions.deactivateAudience(audienceId)
+    },
+    default: () => {
+      actions.resetAudienceOverride(audienceId)
+    },
+  }
+  actionMap[state]()
+}
 
 /**
  * Preview Panel for Contentful Optimization React Native SDK
@@ -39,18 +59,23 @@ import { ActionButton, SearchBar } from './shared'
  *       <PreviewPanel
  *         audienceDefinitions={audienceDefinitions}
  *         experienceDefinitions={experienceDefinitions}
+ *         audienceEntries={audienceEntries}
+ *         experienceEntries={experienceEntries}
  *       />
  *     </OptimizationProvider>
  *   )
  * }
  * ```
  */
+// eslint-disable-next-line complexity -- Preview panel requires multiple hooks and conditional renders for full SDK state display
 export function PreviewPanel({
   showHeader = true,
   style,
   onVisibilityChange,
   audienceDefinitions = [],
   experienceDefinitions = [],
+  audienceEntries = [],
+  experienceEntries = [],
 }: PreviewPanelProps): React.JSX.Element {
   const previewState = usePreviewState()
   const { profile, personalizations, consent, isLoading } = previewState
@@ -68,10 +93,21 @@ export function PreviewPanel({
     initializeCollapsible,
   } = useCollapsibleControl({ initiallyOpen: false })
 
+  // Enrich definitions with Contentful entry data (names, descriptions)
+  const enrichedAudienceDefinitions = useMemo(
+    () => enrichAudienceDefinitions(audienceDefinitions, audienceEntries),
+    [audienceDefinitions, audienceEntries],
+  )
+
+  const enrichedExperienceDefinitions = useMemo(
+    () => enrichExperienceDefinitions(experienceDefinitions, experienceEntries),
+    [experienceDefinitions, experienceEntries],
+  )
+
   // Compute audiences with experiences using the new hook
   const { audiencesWithExperiences, hasData: hasDefinitions } = usePreviewData({
-    audienceDefinitions,
-    experienceDefinitions,
+    audienceDefinitions: enrichedAudienceDefinitions,
+    experienceDefinitions: enrichedExperienceDefinitions,
     previewState,
     overrides,
   })
@@ -80,18 +116,7 @@ export function PreviewPanel({
   const handleAudienceToggle = useCallback(
     (audienceId: string, state: AudienceOverrideState) => {
       logger.debug('[PreviewPanel] Audience toggle:', { audienceId, state })
-
-      switch (state) {
-        case 'on':
-          actions.activateAudience(audienceId)
-          break
-        case 'off':
-          actions.deactivateAudience(audienceId)
-          break
-        case 'default':
-          actions.resetAudienceOverride(audienceId)
-          break
-      }
+      applyAudienceOverride(audienceId, state, actions)
     },
     [actions],
   )
