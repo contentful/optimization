@@ -16,7 +16,11 @@ import {
 } from './AutoEntryViewTracking'
 import { getLocale, getPageProperties, getUserAgent } from './builders'
 import { ANONYMOUS_ID_COOKIE } from './global-constants'
-import { beaconHandler, createVisibilityChangeListener } from './handlers'
+import {
+  beaconHandler,
+  createOnlineChangeListener,
+  createVisibilityChangeListener,
+} from './handlers'
 import {
   ElementExistenceObserver,
   type ElementViewElementOptions,
@@ -80,12 +84,9 @@ function mergeConfig({
 }: OptimizationWebConfig): CoreStatefulConfig {
   const {
     consent = LocalStore.consent,
-    analytics: { profile: analyticsProfile = LocalStore.profile } = {},
-    personalization: {
-      changes = LocalStore.changes,
-      profile: personalizationProfile = LocalStore.profile,
-      personalizations = LocalStore.personalizations,
-    } = {},
+    profile = LocalStore.profile,
+    changes = LocalStore.changes,
+    personalizations = LocalStore.personalizations,
   } = defaults ?? {}
 
   return merge(
@@ -93,14 +94,9 @@ function mergeConfig({
       analytics: { beaconHandler },
       defaults: {
         consent,
-        analytics: {
-          profile: analyticsProfile,
-        },
-        personalization: {
-          changes,
-          profile: personalizationProfile,
-          personalizations,
-        },
+        changes,
+        profile,
+        personalizations,
       },
       eventBuilder: {
         app,
@@ -126,7 +122,8 @@ function mergeConfig({
  * - automatic persistence of consent, profile, and personalizations,
  * - cookie-based anonymous ID handling,
  * - automatic entry view tracking via IntersectionObserver and MutationObserver,
- * - and visibility-change based flushing of analytics events.
+ * - online-change based flushing of events,
+ * - and visibility-change based flushing of events.
  *
  * A singleton instance is attached to `window.optimization` when constructed
  * in a browser environment.
@@ -168,8 +165,12 @@ class Optimization extends CoreStateful {
 
     this.autoTrackEntryViews = true
 
+    createOnlineChangeListener((isOnline) => {
+      this.online(isOnline)
+    })
+
     createVisibilityChangeListener(async () => {
-      await this.analytics.flush()
+      await this.flush()
     })
 
     effect(() => {

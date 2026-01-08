@@ -1,10 +1,11 @@
 import type ApiClient from '@contentful/optimization-api-client'
 import {
-  InsightsEvent,
+  InsightsEvent as AnalyticsEvent,
   type BatchInsightsEventArray,
   type ComponentViewBuilderArgs,
   type EventBuilder,
   type InsightsEventArray,
+  type ExperienceEvent as PersonalizationEvent,
   type Profile,
 } from '@contentful/optimization-api-client'
 import { logger } from 'logger'
@@ -16,6 +17,7 @@ import {
   consent,
   effect,
   event as eventSignal,
+  online as onlineSignal,
   profile as profileSignal,
   toObservable,
   type Observable,
@@ -52,6 +54,8 @@ export interface AnalyticsProductConfig extends ProductConfig {
  * @public
  */
 export interface AnalyticsStates {
+  /** Observable stream of the latest {@link AnalyticsEvent} or {@link PersonalizationEvent} (or `undefined`). */
+  eventStream: Observable<AnalyticsEvent | PersonalizationEvent | undefined>
   /** Observable stream of the active {@link Profile} (or `undefined`). */
   profile: Observable<Profile | undefined>
 }
@@ -73,6 +77,7 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
 
   /** Exposed observable state references. */
   readonly states: AnalyticsStates = {
+    eventStream: toObservable(eventSignal),
     profile: toObservable(profileSignal),
   }
 
@@ -101,6 +106,10 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
       )
 
       logger.info(`[Analytics] Profile ${id && `with ID ${id}`} has been ${id ? 'set' : 'cleared'}`)
+    })
+
+    effect(() => {
+      if (onlineSignal.value) void this.flush()
     })
   }
 
@@ -214,7 +223,7 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    *
    * @param event - The event to enqueue.
    */
-  private async enqueueEvent(event: InsightsEvent): Promise<void> {
+  private async enqueueEvent(event: AnalyticsEvent): Promise<void> {
     const { value: profile } = profileSignal
 
     if (!profile) {
@@ -225,9 +234,9 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
 
     const intercepted = await this.interceptor.event.run(event)
 
-    const validEvent = InsightsEvent.parse(intercepted)
+    const validEvent = AnalyticsEvent.parse(intercepted)
 
-    logger.debug(`Queueing ${event.type} event for profile ${profile.id}`, event)
+    logger.debug(`Queueing ${validEvent.type} event for profile ${profile.id}`, validEvent)
 
     const profileEventQueue = this.queue.get(profile)
 
@@ -264,9 +273,9 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
 
     if (!batches.length) return
 
-    await this.api.insights.sendBatchEvents(batches)
+    const sendSuccess = await this.api.insights.sendBatchEvents(batches)
 
-    this.queue.clear()
+    if (sendSuccess) this.queue.clear()
   }
 }
 

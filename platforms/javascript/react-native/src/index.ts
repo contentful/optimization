@@ -22,26 +22,18 @@ async function mergeConfig({
 
   const {
     consent = AsyncStorageStore.consent,
-    analytics: { profile: analyticsProfile = AsyncStorageStore.profile } = {},
-    personalization: {
-      changes = AsyncStorageStore.changes,
-      profile: personalizationProfile = AsyncStorageStore.profile,
-      personalizations = AsyncStorageStore.personalizations,
-    } = {},
+    profile = AsyncStorageStore.profile,
+    changes = AsyncStorageStore.changes,
+    personalizations = AsyncStorageStore.personalizations,
   } = defaults ?? {}
 
   return merge(
     {
       defaults: {
         consent,
-        analytics: {
-          profile: analyticsProfile,
-        },
-        personalization: {
-          changes,
-          profile: personalizationProfile,
-          personalizations,
-        },
+        profile,
+        changes,
+        personalizations,
       },
       eventBuilder: {
         channel: 'mobile',
