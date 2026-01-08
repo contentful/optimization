@@ -48,17 +48,18 @@ export const useCollapsibleControl = ({
     [initiallyOpen],
   )
 
-  // Toggle all collapsibles
+  // Toggle all collapsibles between expanded/collapsed
   const toggleAllCollapsibles = useCallback(() => {
     setCollapsibleStates((prev) => {
       const next = new Map(prev)
-      const newValue = !allCollapsiblesOpen
+      const allCurrentlyOpen = prev.size > 0 && Array.from(prev.values()).every(Boolean)
+      const newValue = !allCurrentlyOpen
       next.forEach((_, key) => {
         next.set(key, newValue)
       })
       return next
     })
-  }, [allCollapsiblesOpen])
+  }, [])
 
   // Set all collapsibles to a specific state
   const setAllCollapsibles = useCallback((open: boolean) => {

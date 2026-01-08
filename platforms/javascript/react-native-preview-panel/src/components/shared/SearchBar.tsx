@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback } from 'react'
 import { StyleSheet, TextInput, TouchableOpacity, View } from 'react-native'
 import { borderRadius, colors, spacing, typography } from '../../styles/theme'
 import type { SearchBarProps } from '../../types'
@@ -7,8 +7,7 @@ import type { SearchBarProps } from '../../types'
  * Search input component for filtering audiences and experiences.
  *
  * Features:
- * - Debounced input handling
- * - Clear button when text is present
+ * - Controlled input with clear button
  * - Search icon indicator
  */
 export const SearchBar = ({
@@ -17,21 +16,9 @@ export const SearchBar = ({
   placeholder = 'Search audiences and experiences...',
   style,
 }: SearchBarProps): React.JSX.Element => {
-  const [localValue, setLocalValue] = useState(value)
-
-  // Debounce handler - updates local state immediately but debounces parent callback
-  const handleChangeText = useCallback(
-    (text: string) => {
-      setLocalValue(text)
-      onChangeText(text)
-    },
-    [onChangeText],
-  )
-
-  const handleClear = (): void => {
-    setLocalValue('')
+  const handleClear = useCallback((): void => {
     onChangeText('')
-  }
+  }, [onChangeText])
 
   return (
     <View style={[styles.container, style]}>
@@ -43,8 +30,8 @@ export const SearchBar = ({
       {/* Input */}
       <TextInput
         style={styles.input}
-        value={localValue}
-        onChangeText={handleChangeText}
+        value={value}
+        onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={colors.text.muted}
         autoCapitalize="none"
@@ -56,7 +43,7 @@ export const SearchBar = ({
       />
 
       {/* Clear Button */}
-      {localValue.length > 0 && (
+      {value.length > 0 && (
         <TouchableOpacity
           style={styles.clearButton}
           onPress={handleClear}
