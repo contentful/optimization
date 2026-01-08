@@ -217,6 +217,36 @@ function collectMergeTagIds(entries: readonly Entry[]): readonly string[] {
   return ids
 }
 
+function collectAudienceIds(entries: readonly Entry[]): readonly string[] {
+  const ids: string[] = []
+  const seen = new Set<string>()
+  for (const entry of entries) {
+    const typeId = getContentTypeId(entry)
+    if (typeId !== 'nt_audience') continue
+    const id = getSysId(entry)
+    if (id && !seen.has(id)) {
+      seen.add(id)
+      ids.push(id)
+    }
+  }
+  return ids
+}
+
+function collectExperienceIds(entries: readonly Entry[]): readonly string[] {
+  const ids: string[] = []
+  const seen = new Set<string>()
+  for (const entry of entries) {
+    const typeId = getContentTypeId(entry)
+    if (typeId !== 'nt_experience') continue
+    const id = getSysId(entry)
+    if (id && !seen.has(id)) {
+      seen.add(id)
+      ids.push(id)
+    }
+  }
+  return ids
+}
+
 async function processEntries(entryIds: readonly string[], outputDir: string): Promise<void> {
   for (const id of entryIds) {
     const outPath = path.join(outputDir, `${id}.json`)
@@ -249,7 +279,9 @@ async function main(): Promise<void> {
 
   const baselineIds = collectBaselineIds(entries)
   const mergeTagIds = collectMergeTagIds(entries)
-  await processEntries([...baselineIds, ...mergeTagIds], outRoot)
+  const audienceIds = collectAudienceIds(entries)
+  const experienceIds = collectExperienceIds(entries)
+  await processEntries([...baselineIds, ...mergeTagIds, ...audienceIds, ...experienceIds], outRoot)
 
   console.info('Done.')
 }
