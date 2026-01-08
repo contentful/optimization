@@ -33,6 +33,7 @@
 #     - mock-server.log  - Mock API server output
 #     - metro.log        - Metro bundler output
 #     - device.log       - Android device logcat output
+#     - test-results.log - E2E test execution results (pass/fail status)
 #
 
 set -euo pipefail
@@ -45,6 +46,7 @@ LOG_DIR="${RN_DIR}/logs"
 MOCK_SERVER_LOG="${LOG_DIR}/mock-server.log"
 METRO_LOG="${LOG_DIR}/metro.log"
 DEVICE_LOG="${LOG_DIR}/device.log"
+TEST_LOG="${LOG_DIR}/test-results.log"
 MOCK_SERVER_PID=""
 METRO_PID=""
 LOGCAT_PID=""
@@ -54,10 +56,80 @@ METRO_PORT="${METRO_PORT:-8081}"
 SKIP_BUILD="${SKIP_BUILD:-false}"
 CI="${CI:-false}"
 
+TEST_FILE=""
+TEST_NAME_PATTERN=""
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
+
+usage() {
+    cat << EOF
+Usage: $(basename "$0") [OPTIONS] [TEST_FILE]
+
+Run React Native Android E2E tests with Detox.
+
+Arguments:
+  TEST_FILE              Path to a specific test file to run (e.g., e2e/my-test.test.js)
+
+Options:
+  -t, --testNamePattern PATTERN   Run only tests matching the given pattern
+  --skip-build                    Skip the Android build step
+  -h, --help                      Show this help message
+
+Environment Variables:
+  MOCK_SERVER_PORT    Port for mock server (default: 8000)
+  METRO_PORT          Port for Metro bundler (default: 8081)
+  SKIP_BUILD          Set to 'true' to skip build (default: false)
+  CI                  Set to 'true' for CI mode (default: false)
+
+Examples:
+  $(basename "$0")                                           # Run all tests
+  $(basename "$0") e2e/my-test.test.js                       # Run specific test file
+  $(basename "$0") -t "should display variant"               # Run tests matching pattern
+  $(basename "$0") e2e/my-test.test.js -t "should display"   # Combine file and pattern
+EOF
+}
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -t|--testNamePattern)
+                if [[ -z "${2:-}" ]]; then
+                    log_error "Option $1 requires a pattern argument"
+                    usage
+                    exit 1
+                fi
+                TEST_NAME_PATTERN="$2"
+                shift 2
+                ;;
+            --skip-build)
+                SKIP_BUILD="true"
+                shift
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            -*)
+                log_error "Unknown option: $1"
+                usage
+                exit 1
+                ;;
+            *)
+                if [[ -z "$TEST_FILE" ]]; then
+                    TEST_FILE="$1"
+                else
+                    log_error "Multiple test files not supported. Got: $TEST_FILE and $1"
+                    usage
+                    exit 1
+                fi
+                shift
+                ;;
+        esac
+    done
+}
 
 log_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
@@ -268,18 +340,45 @@ build_android() {
 
 run_tests() {
     log_info "Running E2E tests..."
+    log_info "Test results will be saved to: $TEST_LOG"
+    
+    mkdir -p "$LOG_DIR"
     
     cd "$RN_DIR"
-    pnpm run test:e2e:android:run
     
-    log_info "E2E tests complete"
+    local test_cmd="pnpm run test:e2e:android:run"
+    
+    if [[ -n "$TEST_FILE" ]]; then
+        test_cmd="$test_cmd $TEST_FILE"
+    fi
+    
+    if [[ -n "$TEST_NAME_PATTERN" ]]; then
+        test_cmd="$test_cmd --testNamePattern \"$TEST_NAME_PATTERN\""
+    fi
+    
+    set +e
+    eval "$test_cmd" 2>&1 | tee "$TEST_LOG"
+    local test_exit_code="${PIPESTATUS[0]}"
+    set -e
+    
+    if [[ $test_exit_code -eq 0 ]]; then
+        log_info "E2E tests completed successfully"
+    else
+        log_error "E2E tests failed with exit code $test_exit_code"
+        log_error "Check test results in: $TEST_LOG"
+        exit $test_exit_code
+    fi
 }
 
 main() {
+    parse_args "$@"
+    
     log_info "=== React Native Android E2E Test Runner ==="
     log_info "Root directory: $ROOT_DIR"
     log_info "React Native directory: $RN_DIR"
     log_info "CI mode: $CI"
+    [[ -n "$TEST_FILE" ]] && log_info "Test file: $TEST_FILE"
+    [[ -n "$TEST_NAME_PATTERN" ]] && log_info "Test pattern: $TEST_NAME_PATTERN"
     
     create_env_file
     

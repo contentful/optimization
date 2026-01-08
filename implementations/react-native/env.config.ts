@@ -31,6 +31,7 @@ interface EnvConfig {
     personalized: string
     product: string
     mergeTag: string
+    nested: string
   }
 }
 
@@ -66,6 +67,7 @@ export const ENV_CONFIG = {
     personalized: '2Z2WLOx07InSewC3LUB3eX',
     product: '1MwiFl4z7gkwqGYdvCmr8c',
     mergeTag: '1MwiFl4z7gkwqGYdvCmr8c',
+    nested: '1JAU028vQ7v6nB2swl3NBo',
   },
 } as const satisfies EnvConfig
 
