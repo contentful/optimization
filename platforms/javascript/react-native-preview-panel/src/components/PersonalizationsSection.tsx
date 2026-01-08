@@ -16,6 +16,7 @@ export function PersonalizationsSection({
   overrides,
   onSetVariant,
   onResetOverride,
+  experienceNames = {},
 }: PersonalizationsSectionProps): React.JSX.Element {
   if (!personalizations || personalizations.length === 0) {
     return (
@@ -60,6 +61,7 @@ export function PersonalizationsSection({
         const variantCount = Object.keys(variants).length + 1
         const { [experienceId]: override } = overrides
         const currentVariant = override?.variantIndex ?? variantIndex
+        const displayName = experienceNames[experienceId] ?? experienceId
 
         return (
           <View key={experienceId} style={styles.experienceItem}>
@@ -69,7 +71,7 @@ export function PersonalizationsSection({
                 copyToClipboard(experienceId, 'Experience ID')
               }}
             >
-              <Text style={styles.experienceTitle}>{experienceId}</Text>
+              <Text style={styles.experienceTitle}>{displayName}</Text>
               <Text style={styles.experienceSubtitle}>
                 Current: {currentVariant === 0 ? 'Baseline' : `Variant ${currentVariant}`}
                 {override && ' (Override)'}

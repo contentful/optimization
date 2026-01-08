@@ -1,1 +1,5 @@
-export { enrichAudienceDefinitions, enrichExperienceDefinitions } from './entryMappers'
+export {
+  createExperienceNameMap,
+  enrichAudienceDefinitions,
+  enrichExperienceDefinitions,
+} from './entryMappers'

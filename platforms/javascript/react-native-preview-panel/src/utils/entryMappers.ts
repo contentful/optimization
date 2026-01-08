@@ -33,6 +33,15 @@ interface ExperienceEntryFields {
 }
 
 /**
+ * Fields expected on an nt_personalization Contentful entry
+ */
+interface PersonalizationEntryFields {
+  nt_personalization_id?: string
+  nt_experience_id?: string
+  nt_name?: string
+}
+
+/**
  * Fields expected on a variant content entry
  */
 interface VariantEntryFields {
@@ -59,6 +68,13 @@ function hasExperienceFields(fields: unknown): fields is ExperienceEntryFields {
  * Type guard to check if fields have variant entry fields
  */
 function hasVariantFields(fields: unknown): fields is VariantEntryFields {
+  return typeof fields === 'object' && fields !== null
+}
+
+/**
+ * Type guard to check if fields have personalization entry fields
+ */
+function hasPersonalizationFields(fields: unknown): fields is PersonalizationEntryFields {
   return typeof fields === 'object' && fields !== null
 }
 
@@ -213,4 +229,29 @@ export function enrichExperienceDefinitions(
       distribution: enrichedDistribution,
     }
   })
+}
+
+/**
+ * Creates a lookup map of experience/personalization IDs to their human-readable names.
+ * Used to enrich the personalizations section with names from Contentful entries.
+ *
+ * @param entries - Contentful entries of type nt_personalization
+ * @returns Map of experienceId to name
+ */
+export function createExperienceNameMap(entries: ContentfulEntry[]): Record<string, string> {
+  const nameMap: Record<string, string> = {}
+
+  entries.forEach((entry) => {
+    const fields: unknown = entry.fields
+    if (hasPersonalizationFields(fields)) {
+      const id = fields.nt_personalization_id ?? fields.nt_experience_id ?? entry.sys.id
+
+      const { nt_name: name } = fields
+      if (name) {
+        nameMap[id] = name
+      }
+    }
+  })
+
+  return nameMap
 }

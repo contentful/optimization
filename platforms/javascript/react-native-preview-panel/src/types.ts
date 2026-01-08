@@ -208,6 +208,12 @@ export interface PreviewPanelProps {
    * the definitions with human-readable names and variant names from these entries.
    */
   experienceEntries?: ContentfulEntry[]
+  /**
+   * Raw Contentful entries for nt_personalization content type.
+   * When provided, the panel will enrich the personalizations section
+   * with human-readable names from these entries.
+   */
+  personalizationEntries?: ContentfulEntry[]
 }
 
 /**
@@ -319,6 +325,8 @@ export interface PersonalizationsSectionProps {
   onSetVariant: (experienceId: string, variantIndex: number) => void
   /** Reset override handler */
   onResetOverride: (experienceId: string) => void
+  /** Optional map of experienceId to human-readable name from Contentful entries */
+  experienceNames?: Record<string, string>
 }
 
 /**

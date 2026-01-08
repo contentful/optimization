@@ -144,6 +144,7 @@ function App(): React.JSX.Element {
   const [isIdentified, setIsIdentified] = useState(false)
   const [audienceEntries, setAudienceEntries] = useState<ContentfulEntry[]>([])
   const [experienceEntries, setExperienceEntries] = useState<ContentfulEntry[]>([])
+  const [personalizationEntries, setPersonalizationEntries] = useState<ContentfulEntry[]>([])
   const [audienceDefinitions, setAudienceDefinitions] = useState<AudienceDefinition[]>([])
   const [experienceDefinitions, setExperienceDefinitions] = useState<ExperienceDefinition[]>([])
 
@@ -164,15 +165,18 @@ function App(): React.JSX.Element {
   useEffect(() => {
     async function fetchContentfulEntries(): Promise<void> {
       try {
-        const [audiences, experiences] = await Promise.all([
+        const [audiences, experiences, personalizations] = await Promise.all([
           fetchEntriesByContentType('nt_audience'),
           fetchEntriesByContentType('nt_experience'),
+          fetchEntriesByContentType('nt_personalization'),
         ])
         const audienceEntriesData = audiences as ContentfulEntry[]
         const experienceEntriesData = experiences as ContentfulEntry[]
+        const personalizationEntriesData = personalizations as ContentfulEntry[]
 
         setAudienceEntries(audienceEntriesData)
         setExperienceEntries(experienceEntriesData)
+        setPersonalizationEntries(personalizationEntriesData)
 
         setAudienceDefinitions(createAudienceDefinitionsFromEntries(audienceEntriesData))
         setExperienceDefinitions(createExperienceDefinitionsFromEntries(experienceEntriesData))
@@ -333,6 +337,7 @@ function App(): React.JSX.Element {
             experienceDefinitions={experienceDefinitions}
             audienceEntries={audienceEntries}
             experienceEntries={experienceEntries}
+            personalizationEntries={personalizationEntries}
           />
         </SafeAreaView>
       </OptimizationProvider>

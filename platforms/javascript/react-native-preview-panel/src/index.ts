@@ -71,7 +71,11 @@ export type {
 } from './types'
 
 // Utilities for enriching definitions with Contentful entry data
-export { enrichAudienceDefinitions, enrichExperienceDefinitions } from './utils'
+export {
+  createExperienceNameMap,
+  enrichAudienceDefinitions,
+  enrichExperienceDefinitions,
+} from './utils'
 
 // Theme and styles (for custom theming)
 export { commonStyles } from './styles/common'
