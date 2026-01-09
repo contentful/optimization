@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { commonStyles } from '../styles/common'
-import { spacing } from '../styles/theme'
+import { colors, spacing } from '../styles/theme'
 import type { AudienceSectionProps, AudienceWithExperiences } from '../types'
 import { AudienceItem } from './AudienceItem'
 import { CollapseToggleButton, Section } from './shared'
@@ -174,7 +174,7 @@ const styles = StyleSheet.create({
   },
   emptyHint: {
     fontSize: 12,
-    color: '#8e8e93',
+    color: colors.text.muted,
     marginTop: spacing.sm,
     textAlign: 'center',
   },
