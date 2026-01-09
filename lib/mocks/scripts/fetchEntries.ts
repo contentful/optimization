@@ -177,6 +177,24 @@ async function writeJsonFile(filePath: string, data: string): Promise<void> {
 // Domain logic
 // -----------------------------------
 
+function collectIdsByContentType(
+  entries: readonly Entry[],
+  contentTypeId: string,
+): readonly string[] {
+  const ids: string[] = []
+  const seen = new Set<string>()
+  for (const entry of entries) {
+    const typeId = getContentTypeId(entry)
+    if (typeId !== contentTypeId) continue
+    const id = getSysId(entry)
+    if (id && !seen.has(id)) {
+      seen.add(id)
+      ids.push(id)
+    }
+  }
+  return ids
+}
+
 function collectBaselineIds(entries: readonly Entry[]): readonly string[] {
   const ids: string[] = []
   const seen = new Set<string>()
@@ -203,63 +221,19 @@ function collectBaselineIds(entries: readonly Entry[]): readonly string[] {
 }
 
 function collectMergeTagIds(entries: readonly Entry[]): readonly string[] {
-  const ids: string[] = []
-  const seen = new Set<string>()
-  for (const entry of entries) {
-    const typeId = getContentTypeId(entry)
-    if (typeId !== 'mergeTagContent') continue
-    const id = getSysId(entry)
-    if (id && !seen.has(id)) {
-      seen.add(id)
-      ids.push(id)
-    }
-  }
-  return ids
+  return collectIdsByContentType(entries, 'mergeTagContent')
 }
 
 function collectAudienceIds(entries: readonly Entry[]): readonly string[] {
-  const ids: string[] = []
-  const seen = new Set<string>()
-  for (const entry of entries) {
-    const typeId = getContentTypeId(entry)
-    if (typeId !== 'nt_audience') continue
-    const id = getSysId(entry)
-    if (id && !seen.has(id)) {
-      seen.add(id)
-      ids.push(id)
-    }
-  }
-  return ids
+  return collectIdsByContentType(entries, 'nt_audience')
 }
 
 function collectExperienceIds(entries: readonly Entry[]): readonly string[] {
-  const ids: string[] = []
-  const seen = new Set<string>()
-  for (const entry of entries) {
-    const typeId = getContentTypeId(entry)
-    if (typeId !== 'nt_experience') continue
-    const id = getSysId(entry)
-    if (id && !seen.has(id)) {
-      seen.add(id)
-      ids.push(id)
-    }
-  }
-  return ids
+  return collectIdsByContentType(entries, 'nt_experience')
 }
 
 function collectPersonalizationIds(entries: readonly Entry[]): readonly string[] {
-  const ids: string[] = []
-  const seen = new Set<string>()
-  for (const entry of entries) {
-    const typeId = getContentTypeId(entry)
-    if (typeId !== 'nt_personalization') continue
-    const id = getSysId(entry)
-    if (id && !seen.has(id)) {
-      seen.add(id)
-      ids.push(id)
-    }
-  }
-  return ids
+  return collectIdsByContentType(entries, 'nt_personalization')
 }
 
 async function processEntries(entryIds: readonly string[], outputDir: string): Promise<void> {
