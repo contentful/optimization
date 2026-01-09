@@ -106,7 +106,7 @@ export function VariantSelector({
   const isExperiment = experience.type === 'nt_experiment'
 
   return (
-    <View style={[styles.container, isExperiment && styles.containerVertical]}>
+    <View style={styles.container}>
       {experience.distribution.map((variant) => (
         <VariantButton
           key={variant.index}
@@ -126,12 +126,8 @@ export function VariantSelector({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  containerVertical: {
     flexDirection: 'column',
+    alignItems: 'flex-start',
     gap: spacing.sm,
   },
   variantButton: {
@@ -141,11 +137,9 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
     borderWidth: 1,
     borderColor: colors.border.secondary,
-    minWidth: 80,
   },
   variantButtonVertical: {
     borderRadius: borderRadius.md,
-    minWidth: undefined,
   },
   variantButtonSelected: {
     backgroundColor: colors.cp.normal, // Uses Contentful Personalization brand color
@@ -162,7 +156,6 @@ const styles = StyleSheet.create({
   variantLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
   variantLabel: {
     fontSize: typography.fontSize.sm,
