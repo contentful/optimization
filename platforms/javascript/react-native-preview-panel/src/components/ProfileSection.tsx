@@ -1,15 +1,10 @@
-import Clipboard from '@react-native-clipboard/clipboard'
 import React from 'react'
-import { Alert, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import { commonStyles } from '../styles/common'
 import { spacing } from '../styles/theme'
 import type { ProfileSectionProps } from '../types'
+import { copyToClipboard } from '../utils'
 import { JsonViewer, ListItem, Section } from './shared'
-
-function copyToClipboard(text: string, label: string): void {
-  Clipboard.setString(text)
-  Alert.alert('Copied', `${label} copied to clipboard`)
-}
 
 export function ProfileSection({ profile, isLoading }: ProfileSectionProps): React.JSX.Element {
   if (isLoading) {

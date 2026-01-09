@@ -1,15 +1,10 @@
-import Clipboard from '@react-native-clipboard/clipboard'
 import React from 'react'
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { commonStyles } from '../styles/common'
 import { borderRadius, colors, spacing, typography } from '../styles/theme'
 import type { PersonalizationsSectionProps } from '../types'
+import { copyToClipboard } from '../utils'
 import { ActionButton, Section } from './shared'
-
-function copyToClipboard(text: string, label: string): void {
-  Clipboard.setString(text)
-  Alert.alert('Copied', `${label} copied to clipboard`)
-}
 
 export function PersonalizationsSection({
   personalizations,

@@ -1,28 +1,14 @@
-import Clipboard from '@react-native-clipboard/clipboard'
 import React, { useCallback, useState } from 'react'
-import {
-  Alert,
-  LayoutAnimation,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  UIManager,
-  View,
-} from 'react-native'
+import { LayoutAnimation, Platform, StyleSheet, Text, UIManager, View } from 'react-native'
 import { borderRadius, colors, spacing, typography } from '../styles/theme'
 import type { AudienceItemProps, ExperienceDefinition, PersonalizationOverride } from '../types'
+import { copyToClipboard } from '../utils'
+import { AudienceItemHeader } from './AudienceItemHeader'
 import { ExperienceCard } from './ExperienceCard'
-import { AudienceToggle, QualificationIndicator } from './shared'
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true)
-}
-
-const copyToClipboard = (text: string, label: string): void => {
-  Clipboard.setString(text)
-  Alert.alert('Copied', `${label} copied to clipboard`)
 }
 
 interface RenderExperienceCardParams {
@@ -140,112 +126,11 @@ export const AudienceItem = ({
   )
 }
 
-/** Header component for AudienceItem */
-const AudienceItemHeader = ({
-  audience,
-  experiences,
-  isExpanded,
-  isQualified,
-  overrideState,
-  onToggleExpand,
-  onLongPress,
-  onToggle,
-}: {
-  audience: { id: string; name: string; description?: string }
-  experiences: ExperienceDefinition[]
-  isExpanded: boolean
-  isQualified: boolean
-  overrideState: 'on' | 'off' | 'default'
-  onToggleExpand: () => void
-  onLongPress: () => void
-  onToggle: (state: 'on' | 'off' | 'default') => void
-}): React.JSX.Element => (
-  <View style={styles.header}>
-    <TouchableOpacity
-      style={styles.headerLeft}
-      onPress={onToggleExpand}
-      onLongPress={onLongPress}
-      activeOpacity={0.7}
-    >
-      <Text style={styles.expandIcon}>{isExpanded ? '▼' : '▶'}</Text>
-      <View style={styles.audienceInfo}>
-        <View style={styles.nameRow}>
-          <Text style={styles.audienceName} numberOfLines={isExpanded ? undefined : 2}>
-            {audience.name}
-          </Text>
-          {isQualified && <QualificationIndicator style={styles.qualificationBadge} />}
-        </View>
-        {audience.description ? (
-          <Text style={styles.audienceDescription} numberOfLines={isExpanded ? undefined : 1}>
-            {audience.description}
-          </Text>
-        ) : null}
-        <Text style={styles.experienceCount}>
-          {experiences.length} experience{experiences.length !== 1 ? 's' : ''}
-        </Text>
-      </View>
-    </TouchableOpacity>
-    <View style={styles.headerRight}>
-      <AudienceToggle value={overrideState} onValueChange={onToggle} audienceId={audience.id} />
-    </View>
-  </View>
-)
-
 const styles = StyleSheet.create({
   container: {
     backgroundColor: colors.background.secondary, // gray-50 to match web panel
     borderRadius: borderRadius.md,
     overflow: 'hidden',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.md,
-  },
-  headerLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-  },
-  headerRight: {
-    flexShrink: 0,
-  },
-  expandIcon: {
-    fontSize: typography.fontSize.xl,
-    color: colors.text.primary,
-    marginTop: 3, // Align with text baseline
-    width: 20,
-    height: 20,
-  },
-  audienceInfo: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  audienceName: {
-    fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
-    color: colors.text.primary,
-    flexShrink: 1,
-  },
-  qualificationBadge: {
-    marginTop: 1,
-  },
-  audienceDescription: {
-    fontSize: typography.fontSize.xs,
-    color: colors.text.secondary,
-  },
-  experienceCount: {
-    fontSize: typography.fontSize.xs,
-    color: colors.text.muted,
   },
   experienceList: {
     paddingHorizontal: spacing.md,
