@@ -1,15 +1,10 @@
-import React, { useCallback, useState } from 'react'
-import { LayoutAnimation, Platform, StyleSheet, Text, UIManager, View } from 'react-native'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { Animated, StyleSheet, Text, View } from 'react-native'
 import { borderRadius, colors, spacing, typography } from '../styles/theme'
 import type { AudienceItemProps, ExperienceDefinition, PersonalizationOverride } from '../types'
 import { copyToClipboard } from '../utils'
 import { AudienceItemHeader } from './AudienceItemHeader'
 import { ExperienceCard } from './ExperienceCard'
-
-// Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true)
-}
 
 interface RenderExperienceCardParams {
   experience: ExperienceDefinition
@@ -75,12 +70,29 @@ export function AudienceItem({
   const isControlled = controlledExpanded !== undefined && onToggleExpand !== undefined
   const isExpanded = isControlled ? controlledExpanded : localExpanded
   const { audience, experiences, isQualified, isActive, overrideState } = audienceWithExperiences
+  const maxHeightValue = experiences.length * 100
+  // Animation state
+  const { current: animatedValue } = useRef(new Animated.Value(isExpanded ? 1 : 0))
+  const [shouldRenderContent, setShouldRenderContent] = useState(isExpanded)
+
+  useEffect(() => {
+    if (isExpanded) {
+      setShouldRenderContent(true)
+    }
+
+    Animated.timing(animatedValue, {
+      toValue: isExpanded ? 1 : 0,
+      duration: 250,
+      useNativeDriver: false, // Height and opacity animations don't support native driver in standard Views
+    }).start(({ finished }) => {
+      if (finished && !isExpanded) {
+        setShouldRenderContent(false)
+      }
+    })
+  }, [isExpanded, animatedValue])
 
   const handleToggleExpand = useCallback((): void => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut)
     if (isControlled) {
-      // onToggleExpand is guaranteed to be defined when isControlled is true
-
       onToggleExpand()
     } else {
       setLocalExpanded((prev) => !prev)
@@ -90,6 +102,17 @@ export function AudienceItem({
   const handleLongPress = useCallback((): void => {
     copyToClipboard(audience.id, 'Audience ID')
   }, [audience.id])
+
+  // Interpolations for smooth transition
+  const opacity = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 1],
+  })
+
+  const maxHeight = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, maxHeightValue], // Large enough value to accommodate content
+  })
 
   return (
     <View style={styles.container}>
@@ -104,8 +127,8 @@ export function AudienceItem({
         onToggle={onToggle}
       />
 
-      {isExpanded && (
-        <View style={styles.experienceList}>
+      {shouldRenderContent && (
+        <Animated.View style={[styles.experienceList, { opacity, maxHeight }]}>
           {experiences.length > 0 ? (
             experiences.map((exp) =>
               renderExperienceCard({
@@ -120,7 +143,7 @@ export function AudienceItem({
               <Text style={styles.emptyText}>No experiences target this audience</Text>
             </View>
           )}
-        </View>
+        </Animated.View>
       )}
     </View>
   )
@@ -128,7 +151,7 @@ export function AudienceItem({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.background.secondary, // gray-50 to match web panel
+    backgroundColor: colors.background.secondary,
     borderRadius: borderRadius.md,
     overflow: 'hidden',
   },
