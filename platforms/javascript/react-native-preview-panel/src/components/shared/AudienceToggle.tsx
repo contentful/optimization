@@ -17,47 +17,49 @@ const toggleStates: Array<{ value: AudienceOverrideState; label: string }> = [
  * - "Auto" (default): Let SDK determine based on evaluation
  * - "Off": Force the audience to be inactive
  */
-export const AudienceToggle = ({
+export function AudienceToggle({
   value,
   onValueChange,
   disabled = false,
   audienceId,
-}: AudienceToggleProps): React.JSX.Element => (
-  <View
-    style={[styles.container, disabled && styles.disabled]}
-    accessibilityRole="radiogroup"
-    accessibilityLabel={`Audience toggle for ${audienceId}`}
-  >
-    {toggleStates.map((state) => {
-      const isSelected = value === state.value
+}: AudienceToggleProps): React.JSX.Element {
+  return (
+    <View
+      style={[styles.container, disabled && styles.disabled]}
+      accessibilityRole="radiogroup"
+      accessibilityLabel={`Audience toggle for ${audienceId}`}
+    >
+      {toggleStates.map((state) => {
+        const isSelected = value === state.value
 
-      return (
-        <TouchableOpacity
-          key={state.value}
-          style={[
-            styles.button,
-            isSelected && styles.buttonSelected,
-            isSelected && getSelectedStyle(state.value),
-          ]}
-          onPress={() => {
-            onValueChange(state.value)
-          }}
-          disabled={disabled}
-          accessibilityRole="radio"
-          accessibilityState={{ checked: isSelected, disabled }}
-          accessibilityLabel={`Set audience to ${state.label}`}
-          activeOpacity={0.7}
-        >
-          <Text style={[styles.buttonText, isSelected && styles.buttonTextSelected]}>
-            {state.label}
-          </Text>
-        </TouchableOpacity>
-      )
-    })}
-  </View>
-)
+        return (
+          <TouchableOpacity
+            key={state.value}
+            style={[
+              styles.button,
+              isSelected && styles.buttonSelected,
+              isSelected && getSelectedStyle(state.value),
+            ]}
+            onPress={() => {
+              onValueChange(state.value)
+            }}
+            disabled={disabled}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: isSelected, disabled }}
+            accessibilityLabel={`Set audience to ${state.label}`}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.buttonText, isSelected && styles.buttonTextSelected]}>
+              {state.label}
+            </Text>
+          </TouchableOpacity>
+        )
+      })}
+    </View>
+  )
+}
 
-const getSelectedStyle = (state: AudienceOverrideState): { backgroundColor: string } => {
+function getSelectedStyle(state: AudienceOverrideState): { backgroundColor: string } {
   switch (state) {
     case 'on':
       return { backgroundColor: colors.action.activate }

@@ -10,10 +10,10 @@ import { CollapseToggleButton, Section } from './shared'
  * Filters audiences based on search query.
  * Matches against audience name and experience names.
  */
-const filterAudiences = (
+function filterAudiences(
   audiences: AudienceWithExperiences[],
   query: string,
-): AudienceWithExperiences[] => {
+): AudienceWithExperiences[] {
   if (!query.trim()) {
     return audiences
   }
@@ -46,7 +46,7 @@ const filterAudiences = (
  * - Toggle controls for audience overrides
  * - Empty state when no audiences match search
  */
-export const AudienceSection = ({
+export function AudienceSection({
   audiencesWithExperiences,
   onAudienceToggle,
   onSetVariant,
@@ -58,7 +58,7 @@ export const AudienceSection = ({
   onToggleAllExpand,
   allExpanded = false,
   initializeCollapsible,
-}: AudienceSectionProps): React.JSX.Element => {
+}: AudienceSectionProps): React.JSX.Element {
   // Filter audiences based on search query
   const filteredAudiences = useMemo(
     () => filterAudiences(audiencesWithExperiences, searchQuery),

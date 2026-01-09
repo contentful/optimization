@@ -10,12 +10,12 @@ import type { SearchBarProps } from '../../types'
  * - Controlled input with clear button
  * - Search icon indicator
  */
-export const SearchBar = ({
+export function SearchBar({
   value,
   onChangeText,
   placeholder = 'Search audiences and experiences...',
   style,
-}: SearchBarProps): React.JSX.Element => {
+}: SearchBarProps): React.JSX.Element {
   const handleClear = useCallback((): void => {
     onChangeText('')
   }, [onChangeText])
@@ -60,22 +60,26 @@ export const SearchBar = ({
 /**
  * Simple search icon component
  */
-const SearchIcon = (): React.JSX.Element => (
-  <View style={iconStyles.searchIcon}>
-    <View style={iconStyles.searchCircle} />
-    <View style={iconStyles.searchHandle} />
-  </View>
-)
+function SearchIcon(): React.JSX.Element {
+  return (
+    <View style={iconStyles.searchIcon}>
+      <View style={iconStyles.searchCircle} />
+      <View style={iconStyles.searchHandle} />
+    </View>
+  )
+}
 
 /**
  * Simple clear/X icon component
  */
-const ClearIcon = (): React.JSX.Element => (
-  <View style={iconStyles.clearContainer}>
-    <View style={[iconStyles.clearLine, iconStyles.clearLine1]} />
-    <View style={[iconStyles.clearLine, iconStyles.clearLine2]} />
-  </View>
-)
+function ClearIcon(): React.JSX.Element {
+  return (
+    <View style={iconStyles.clearContainer}>
+      <View style={[iconStyles.clearLine, iconStyles.clearLine1]} />
+      <View style={[iconStyles.clearLine, iconStyles.clearLine2]} />
+    </View>
+  )
+}
 
 const styles = StyleSheet.create({
   container: {

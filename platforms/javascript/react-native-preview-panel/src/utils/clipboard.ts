@@ -7,7 +7,7 @@ import { Alert } from 'react-native'
  * @param text The text to copy
  * @param label A label describing the text (used in the alert)
  */
-export const copyToClipboard = (text: string, label: string): void => {
+export function copyToClipboard(text: string, label: string): void {
   Clipboard.setString(text)
   Alert.alert('Copied', `${label} copied to clipboard`)
 }

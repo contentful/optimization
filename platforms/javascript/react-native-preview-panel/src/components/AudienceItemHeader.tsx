@@ -16,7 +16,7 @@ interface AudienceItemHeaderProps {
 }
 
 /** Header component for AudienceItem */
-export const AudienceItemHeader = ({
+export function AudienceItemHeader({
   audience,
   experiences,
   isExpanded,
@@ -25,42 +25,44 @@ export const AudienceItemHeader = ({
   onToggleExpand,
   onLongPress,
   onToggle,
-}: AudienceItemHeaderProps): React.JSX.Element => (
-  <View style={styles.header}>
-    <TouchableOpacity onPress={onToggleExpand} onLongPress={onLongPress} activeOpacity={0.7}>
-      <View style={styles.nameRow}>
-        <Text style={styles.audienceName} numberOfLines={isExpanded ? undefined : 2}>
-          {audience.name}
-        </Text>
-        {isQualified && <QualificationIndicator style={styles.qualificationBadge} />}
-      </View>
-    </TouchableOpacity>
-
-    <View style={styles.headerMain}>
-      <TouchableOpacity
-        style={styles.headerLeft}
-        onPress={onToggleExpand}
-        onLongPress={onLongPress}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.expandIcon}>{isExpanded ? '▼' : '▶'}</Text>
-        <View style={styles.audienceInfo}>
-          {audience.description ? (
-            <Text style={styles.audienceDescription} numberOfLines={isExpanded ? undefined : 1}>
-              {audience.description}
-            </Text>
-          ) : null}
-          <Text style={styles.experienceCount}>
-            {experiences.length} experience{experiences.length !== 1 ? 's' : ''}
+}: AudienceItemHeaderProps): React.JSX.Element {
+  return (
+    <View style={styles.header}>
+      <TouchableOpacity onPress={onToggleExpand} onLongPress={onLongPress} activeOpacity={0.7}>
+        <View style={styles.nameRow}>
+          <Text style={styles.audienceName} numberOfLines={isExpanded ? undefined : 2}>
+            {audience.name}
           </Text>
+          {isQualified && <QualificationIndicator style={styles.qualificationBadge} />}
         </View>
       </TouchableOpacity>
-      <View style={styles.headerRight}>
-        <AudienceToggle value={overrideState} onValueChange={onToggle} audienceId={audience.id} />
+
+      <View style={styles.headerMain}>
+        <TouchableOpacity
+          style={styles.headerLeft}
+          onPress={onToggleExpand}
+          onLongPress={onLongPress}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.expandIcon}>{isExpanded ? '▼' : '▶'}</Text>
+          <View style={styles.audienceInfo}>
+            {audience.description ? (
+              <Text style={styles.audienceDescription} numberOfLines={isExpanded ? undefined : 1}>
+                {audience.description}
+              </Text>
+            ) : null}
+            <Text style={styles.experienceCount}>
+              {experiences.length} experience{experiences.length !== 1 ? 's' : ''}
+            </Text>
+          </View>
+        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <AudienceToggle value={overrideState} onValueChange={onToggle} audienceId={audience.id} />
+        </View>
       </View>
     </View>
-  </View>
-)
+  )
+}
 
 const styles = StyleSheet.create({
   header: {

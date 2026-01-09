@@ -13,20 +13,22 @@ interface CollapseToggleButtonProps {
  * Button to collapse or expand all audience sections at once.
  * Styled to match the web panel's CollapsiblesToggleButton component.
  */
-export const CollapseToggleButton = ({
+export function CollapseToggleButton({
   allExpanded,
   onToggle,
-}: CollapseToggleButtonProps): React.JSX.Element => (
-  <TouchableOpacity
-    style={styles.button}
-    onPress={onToggle}
-    activeOpacity={0.7}
-    accessibilityRole="button"
-    accessibilityLabel={allExpanded ? 'Collapse all sections' : 'Expand all sections'}
-  >
-    <Text style={styles.buttonText}>{allExpanded ? 'Collapse all' : 'Expand all'}</Text>
-  </TouchableOpacity>
-)
+}: CollapseToggleButtonProps): React.JSX.Element {
+  return (
+    <TouchableOpacity
+      style={styles.button}
+      onPress={onToggle}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={allExpanded ? 'Collapse all sections' : 'Expand all sections'}
+    >
+      <Text style={styles.buttonText}>{allExpanded ? 'Collapse all' : 'Expand all'}</Text>
+    </TouchableOpacity>
+  )
+}
 
 const styles = StyleSheet.create({
   button: {

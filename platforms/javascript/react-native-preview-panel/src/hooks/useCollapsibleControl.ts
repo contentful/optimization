@@ -24,9 +24,9 @@ interface UseCollapsibleControlResult {
  * Hook for managing collapsible state across multiple items.
  * Used to implement "Collapse All / Expand All" functionality.
  */
-export const useCollapsibleControl = ({
+export function useCollapsibleControl({
   initiallyOpen = false,
-}: UseCollapsibleControlParams = {}): UseCollapsibleControlResult => {
+}: UseCollapsibleControlParams = {}): UseCollapsibleControlResult {
   const [collapsibleStates, setCollapsibleStates] = useState<Map<string, boolean>>(new Map())
 
   // Check if all collapsibles are open

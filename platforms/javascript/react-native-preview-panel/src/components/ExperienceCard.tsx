@@ -15,7 +15,7 @@ import { VariantSelector } from './VariantSelector'
  * - Variant selector with qualification indicators
  * - Override indicator and reset button
  */
-export const ExperienceCard = ({
+export function ExperienceCard({
   experience,
   isAudienceActive,
   currentVariantIndex,
@@ -23,7 +23,7 @@ export const ExperienceCard = ({
   onSetVariant,
   onReset,
   hasOverride,
-}: ExperienceCardProps): React.JSX.Element => {
+}: ExperienceCardProps): React.JSX.Element {
   const isExperiment = experience.type === 'nt_experiment'
   const typeLabel = isExperiment ? 'Experiment' : 'Personalization'
   const typeBadgeVariant: BadgeProps['variant'] = isExperiment ? 'experiment' : 'personalization'

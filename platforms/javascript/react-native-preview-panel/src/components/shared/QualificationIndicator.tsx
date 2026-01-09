@@ -7,19 +7,21 @@ import type { QualificationIndicatorProps } from '../../types'
  * Visual indicator showing that a user naturally qualifies for an audience or variant.
  * Displays as a green dot with optional tooltip text.
  */
-export const QualificationIndicator = ({
+export function QualificationIndicator({
   tooltipContent = 'Naturally qualifies',
   style,
-}: QualificationIndicatorProps): React.JSX.Element => (
-  <View
-    style={[styles.container, style]}
-    accessibilityLabel={tooltipContent}
-    accessibilityRole="text"
-  >
-    <View style={styles.dot} />
-    <Text style={styles.label}>Qualified</Text>
-  </View>
-)
+}: QualificationIndicatorProps): React.JSX.Element {
+  return (
+    <View
+      style={[styles.container, style]}
+      accessibilityLabel={tooltipContent}
+      accessibilityRole="text"
+    >
+      <View style={styles.dot} />
+      <Text style={styles.label}>Qualified</Text>
+    </View>
+  )
+}
 
 const styles = StyleSheet.create({
   container: {

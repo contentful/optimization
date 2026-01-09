@@ -17,33 +17,39 @@ interface VariantButtonProps {
 }
 
 /** Get button styles based on state */
-const getButtonStyles = (
+function getButtonStyles(
   isSelected: boolean,
   isExperiment: boolean,
   isAudienceActive: boolean,
-): StyleArray => [
-  styles.variantButton,
-  isExperiment && styles.variantButtonVertical,
-  isSelected && styles.variantButtonSelected,
-  !isAudienceActive && styles.variantButtonInactive,
-]
+): StyleArray {
+  return [
+    styles.variantButton,
+    isExperiment && styles.variantButtonVertical,
+    isSelected && styles.variantButtonSelected,
+    !isAudienceActive && styles.variantButtonInactive,
+  ]
+}
 
 /** Get label styles based on state */
-const getLabelStyles = (isSelected: boolean, isAudienceActive: boolean): StyleArray => [
-  styles.variantLabel,
-  isSelected && styles.variantLabelSelected,
-  !isAudienceActive && styles.variantLabelInactive,
-]
+function getLabelStyles(isSelected: boolean, isAudienceActive: boolean): StyleArray {
+  return [
+    styles.variantLabel,
+    isSelected && styles.variantLabelSelected,
+    !isAudienceActive && styles.variantLabelInactive,
+  ]
+}
 
 /** Get percentage label styles based on state */
-const getPercentageStyles = (isSelected: boolean, isAudienceActive: boolean): StyleArray => [
-  styles.percentageLabel,
-  isSelected && styles.percentageLabelSelected,
-  !isAudienceActive && styles.percentageLabelInactive,
-]
+function getPercentageStyles(isSelected: boolean, isAudienceActive: boolean): StyleArray {
+  return [
+    styles.percentageLabel,
+    isSelected && styles.percentageLabelSelected,
+    !isAudienceActive && styles.percentageLabelInactive,
+  ]
+}
 
 /** Get the display label for a variant */
-const getVariantLabel = (variant: VariantDistribution): string => {
+function getVariantLabel(variant: VariantDistribution): string {
   if (variant.name) {
     return variant.name
   }
@@ -51,14 +57,14 @@ const getVariantLabel = (variant: VariantDistribution): string => {
 }
 
 /** Single variant button within the selector */
-const VariantButton = ({
+function VariantButton({
   variant,
   isSelected,
   isQualified,
   isExperiment,
   isAudienceActive,
   onSelect,
-}: VariantButtonProps): React.JSX.Element => {
+}: VariantButtonProps): React.JSX.Element {
   const variantLabel = getVariantLabel(variant)
   const percentageLabel = variant.percentage != null ? `${variant.percentage}%` : null
 
@@ -90,13 +96,13 @@ const VariantButton = ({
  * - For personalizations: horizontal button group
  * - For experiments: vertical list with distribution percentages
  */
-export const VariantSelector = ({
+export function VariantSelector({
   experience,
   selectedIndex,
   onSelect,
   isAudienceActive,
   qualifiedIndex,
-}: VariantSelectorProps): React.JSX.Element => {
+}: VariantSelectorProps): React.JSX.Element {
   const isExperiment = experience.type === 'nt_experiment'
 
   return (

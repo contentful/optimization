@@ -43,12 +43,12 @@ interface UsePreviewDataResult {
  * Experiences without a specific audience are grouped under an
  * "All Visitors" fallback audience.
  */
-export const usePreviewData = ({
+export function usePreviewData({
   audienceDefinitions,
   experienceDefinitions,
   previewState,
   overrides,
-}: UsePreviewDataParams): UsePreviewDataResult => {
+}: UsePreviewDataParams): UsePreviewDataResult {
   const { profile } = previewState
 
   // Get the set of audience IDs that the user qualifies for from the API

@@ -22,12 +22,12 @@ interface RenderExperienceCardParams {
 }
 
 /** Renders a single experience card with override handling */
-const renderExperienceCard = ({
+function renderExperienceCard({
   experience,
   experienceOverrides,
   isActive,
   handlers,
-}: RenderExperienceCardParams): React.JSX.Element => {
+}: RenderExperienceCardParams): React.JSX.Element {
   const { [experience.id]: override } = experienceOverrides
   const hasOverride = override != null
   const currentVariantIndex = hasOverride ? override.variantIndex : 0
@@ -62,7 +62,7 @@ const renderExperienceCard = ({
  * - Controlled: Pass isExpanded and onToggleExpand props
  * - Uncontrolled: Component manages its own expansion state
  */
-export const AudienceItem = ({
+export function AudienceItem({
   audienceWithExperiences,
   onToggle,
   onSetVariant,
@@ -70,7 +70,7 @@ export const AudienceItem = ({
   experienceOverrides,
   isExpanded: controlledExpanded,
   onToggleExpand,
-}: AudienceItemProps): React.JSX.Element => {
+}: AudienceItemProps): React.JSX.Element {
   const [localExpanded, setLocalExpanded] = useState(false)
   const isControlled = controlledExpanded !== undefined && onToggleExpand !== undefined
   const isExpanded = isControlled ? controlledExpanded : localExpanded
