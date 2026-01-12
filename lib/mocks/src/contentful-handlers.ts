@@ -139,13 +139,6 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
         const entryId = url.searchParams.get('sys.id')
         const contentType = url.searchParams.get('content_type')
 
-        if (!entryId && !contentType) {
-          return HttpResponse.json(
-            { error: 'Missing "sys.id" or "content_type" query parameter.' },
-            { headers: CORS_HEADERS, status: 400 },
-          )
-        }
-
         if (contentType) {
           return await handleContentTypeQuery(contentType)
         }
