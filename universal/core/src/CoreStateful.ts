@@ -35,7 +35,7 @@ import {
  *
  * @public
  */
-export interface PreviewPanelCompatibleObject {
+export interface PreviewPanelSignalObject {
   /** Signals instance that will be populated by registerPreviewPanel */
   signals: Signals | null
 }
@@ -221,12 +221,12 @@ class CoreStateful extends CoreBase implements ConsentController {
    * Register a preview panel compatible object to receive direct signal access.
    * This enables the preview panel to modify SDK state for testing and simulation.
    *
-   * @param previewPanel - An object implementing PreviewPanelCompatibleObject
+   * @param previewPanel - An object implementing PreviewPanelSignalObject
    * @remarks
    * This method is intended for use by the Preview Panel component.
    * Direct signal access allows immediate state updates without API calls.
    */
-  registerPreviewPanel(previewPanel: PreviewPanelCompatibleObject): void {
+  registerPreviewPanel(previewPanel: PreviewPanelSignalObject): void {
     previewPanel.signals = signals
   }
 }

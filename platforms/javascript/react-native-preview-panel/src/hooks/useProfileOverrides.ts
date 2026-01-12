@@ -1,7 +1,7 @@
 import {
   logger,
   type OptimizationData,
-  type PreviewPanelCompatibleObject,
+  type PreviewPanelSignalObject,
   type SelectedPersonalizationArray,
   type Signals,
 } from '@contentful/optimization-core'
@@ -75,7 +75,7 @@ export function useProfileOverrides(): {
   // Register with SDK and set up interceptor on mount
   useEffect(() => {
     // Create a preview panel compatible object to receive signals
-    const previewPanelObject: PreviewPanelCompatibleObject = {
+    const previewPanelObject: PreviewPanelSignalObject = {
       signals: null,
     }
 
