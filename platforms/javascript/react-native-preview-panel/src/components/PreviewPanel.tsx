@@ -10,14 +10,9 @@ import {
 import { commonStyles } from '../styles/common'
 import { colors, spacing, typography } from '../styles/theme'
 import type { AudienceOverrideState, PreviewActions, PreviewPanelProps } from '../types'
-import {
-  createAudienceDefinitions,
-  createExperienceDefinitions,
-  createExperienceNameMap,
-} from '../utils'
+import { createAudienceDefinitions, createExperienceDefinitions } from '../utils'
 import { AudienceSection } from './AudienceSection'
 import { OverridesSection } from './OverridesSection'
-import { PersonalizationsSection } from './PersonalizationsSection'
 import { ProfileSection } from './ProfileSection'
 import { ActionButton, SearchBar } from './shared'
 
@@ -77,7 +72,6 @@ export function PreviewPanel({
   onVisibilityChange,
   audienceEntries = [],
   experienceEntries = [],
-  personalizationEntries = [],
 }: PreviewPanelProps): React.JSX.Element {
   const previewState = usePreviewState()
   const { profile, personalizations, consent, isLoading } = previewState
@@ -104,12 +98,6 @@ export function PreviewPanel({
   const experienceDefinitions = useMemo(
     () => createExperienceDefinitions(experienceEntries),
     [experienceEntries],
-  )
-
-  // Create name lookup map for personalizations section
-  const experienceNames = useMemo(
-    () => createExperienceNameMap(personalizationEntries),
-    [personalizationEntries],
   )
 
   // Compute audiences with experiences using the new hook
@@ -208,14 +196,6 @@ export function PreviewPanel({
         )}
 
         <ProfileSection profile={profile} isLoading={isLoading} />
-
-        <PersonalizationsSection
-          personalizations={personalizations}
-          overrides={overrides.personalizations}
-          onSetVariant={actions.setVariantOverride}
-          onResetOverride={actions.resetPersonalizationOverride}
-          experienceNames={experienceNames}
-        />
 
         <OverridesSection
           overrides={overrides}

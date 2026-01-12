@@ -138,7 +138,6 @@ function App(): React.JSX.Element {
   const [isIdentified, setIsIdentified] = useState(false)
   const [audienceEntries, setAudienceEntries] = useState<ContentfulEntry[]>([])
   const [experienceEntries, setExperienceEntries] = useState<ContentfulEntry[]>([])
-  const [personalizationEntries, setPersonalizationEntries] = useState<ContentfulEntry[]>([])
 
   useEffect(() => {
     async function initialize(): Promise<void> {
@@ -157,7 +156,7 @@ function App(): React.JSX.Element {
   useEffect(() => {
     async function fetchContentfulEntries(): Promise<void> {
       try {
-        const [audiences, experiences, personalizations] = await Promise.all([
+        const [audiences, experiences] = await Promise.all([
           fetchEntriesByContentType('nt_audience'),
           fetchEntriesByContentType('nt_experience'),
           fetchEntriesByContentType('nt_personalization'),
@@ -165,7 +164,6 @@ function App(): React.JSX.Element {
 
         setAudienceEntries(audiences as ContentfulEntry[])
         setExperienceEntries(experiences as ContentfulEntry[])
-        setPersonalizationEntries(personalizations as ContentfulEntry[])
       } catch (_error) {
         // Silently fail - entries may not be available in all environments
       }
@@ -321,7 +319,6 @@ function App(): React.JSX.Element {
             showHeader={true}
             audienceEntries={audienceEntries}
             experienceEntries={experienceEntries}
-            personalizationEntries={personalizationEntries}
           />
         </SafeAreaView>
       </OptimizationProvider>
