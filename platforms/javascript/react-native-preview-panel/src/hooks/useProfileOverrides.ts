@@ -67,6 +67,9 @@ export function useProfileOverrides(): {
   // Store current overrides in a ref so the interceptor can access latest values
   const overridesRef = useRef<OverrideState>(initialOverrideState)
 
+  // Store the last un-overridden data from the API
+  const lastActualDataRef = useRef<OptimizationData | null>(null)
+
   // Keep overridesRef in sync with state
   useEffect(() => {
     overridesRef.current = overrides
@@ -88,6 +91,9 @@ export function useProfileOverrides(): {
     // Register state interceptor to preserve overrides when API responses arrive
     interceptorIdRef.current = optimization.personalization.interceptor.state.add(
       (data: OptimizationData): OptimizationData => {
+        // Cache the un-overridden data
+        lastActualDataRef.current = data
+
         const { current: currentOverrides } = overridesRef
 
         // If no personalization overrides, pass through unchanged
@@ -245,15 +251,26 @@ export function useProfileOverrides(): {
     logger.info('[PreviewPanel] Resetting all overrides')
     setOverrides(initialOverrideState)
 
-    // Clear signal overrides - restore to API values would require re-fetching
-    // For now, just clear the overrides tracking
+    // Restore signals to actual data if we have it
+    if (lastActualDataRef.current && signalsRef.current) {
+      const {
+        current: { personalizations, profile, changes },
+      } = lastActualDataRef
+      const { current: signals } = signalsRef
+
+      signals.personalizations.value = personalizations
+      signals.profile.value = profile
+      signals.changes.value = changes
+      logger.debug('[PreviewPanel] Restored signals to actual data')
+    }
   }, [])
 
   const resetSdkState = useCallback(() => {
-    logger.info('[PreviewPanel] Resetting SDK state')
-    optimization.reset()
-    setOverrides(initialOverrideState)
-  }, [optimization])
+    logger.info('[PreviewPanel] Resetting SDK state to actual')
+    // Instead of completely clearing the SDK state with optimization.reset(),
+    // we just clear our overrides and restore the last known actual state from the API.
+    resetAllOverrides()
+  }, [resetAllOverrides])
 
   const actions: PreviewActions = {
     activateAudience,

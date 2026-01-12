@@ -156,8 +156,8 @@ export function PreviewPanel({
 
   const handleResetSdk = (): void => {
     Alert.alert(
-      'Reset SDK State',
-      'This will reset the profile and all personalizations. Continue?',
+      'Reset to Actual State',
+      'This will clear all manual overrides and restore the SDK state to the values last received from the API. Continue?',
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Reset', style: 'destructive', onPress: actions.resetSdkState },
@@ -234,7 +234,7 @@ export function PreviewPanel({
       {/* Footer */}
       <View style={commonStyles.footer}>
         <ActionButton
-          label="Reset SDK State"
+          label="Reset to Actual State"
           variant="destructive"
           onPress={handleResetSdk}
           style={styles.resetButton}

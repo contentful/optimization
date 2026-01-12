@@ -172,7 +172,7 @@ export interface PreviewActions {
   resetPersonalizationOverride: (experienceId: string) => void
   /** Reset all overrides */
   resetAllOverrides: () => void
-  /** Reset SDK state (profile, personalizations) */
+  /** Reset SDK state to actual by clearing all overrides */
   resetSdkState: () => void
 }
 
