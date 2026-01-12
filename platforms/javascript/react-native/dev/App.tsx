@@ -20,11 +20,7 @@ import {
 import type Optimization from '@contentful/optimization-react-native'
 import type { MergeTagEntry, Profile } from '@contentful/optimization-react-native'
 import { OptimizationProvider } from '@contentful/optimization-react-native'
-import type {
-  AudienceDefinition,
-  ContentfulEntry,
-  ExperienceDefinition,
-} from '@contentful/optimization-react-native-preview-panel'
+import type { ContentfulEntry } from '@contentful/optimization-react-native-preview-panel'
 import { PreviewPanel } from '@contentful/optimization-react-native-preview-panel'
 import type { Entry } from 'contentful'
 import { LoadingScreen } from './components/LoadingScreen'
@@ -34,8 +30,6 @@ import { SDKStatusCard } from './components/SDKStatusCard'
 import { TestTrackingScreen } from './TestTrackingScreen'
 import type { SDKInfo, ThemeColors } from './types'
 import {
-  createAudienceDefinitionsFromEntries,
-  createExperienceDefinitionsFromEntries,
   fetchEntriesByContentType,
   fetchEntriesFromMockServer,
   fetchMergeTagEntry,
@@ -145,8 +139,6 @@ function App(): React.JSX.Element {
   const [audienceEntries, setAudienceEntries] = useState<ContentfulEntry[]>([])
   const [experienceEntries, setExperienceEntries] = useState<ContentfulEntry[]>([])
   const [personalizationEntries, setPersonalizationEntries] = useState<ContentfulEntry[]>([])
-  const [audienceDefinitions, setAudienceDefinitions] = useState<AudienceDefinition[]>([])
-  const [experienceDefinitions, setExperienceDefinitions] = useState<ExperienceDefinition[]>([])
 
   useEffect(() => {
     async function initialize(): Promise<void> {
@@ -170,16 +162,10 @@ function App(): React.JSX.Element {
           fetchEntriesByContentType('nt_experience'),
           fetchEntriesByContentType('nt_personalization'),
         ])
-        const audienceEntriesData = audiences as ContentfulEntry[]
-        const experienceEntriesData = experiences as ContentfulEntry[]
-        const personalizationEntriesData = personalizations as ContentfulEntry[]
 
-        setAudienceEntries(audienceEntriesData)
-        setExperienceEntries(experienceEntriesData)
-        setPersonalizationEntries(personalizationEntriesData)
-
-        setAudienceDefinitions(createAudienceDefinitionsFromEntries(audienceEntriesData))
-        setExperienceDefinitions(createExperienceDefinitionsFromEntries(experienceEntriesData))
+        setAudienceEntries(audiences as ContentfulEntry[])
+        setExperienceEntries(experiences as ContentfulEntry[])
+        setPersonalizationEntries(personalizations as ContentfulEntry[])
       } catch (_error) {
         // Silently fail - entries may not be available in all environments
       }
@@ -333,8 +319,6 @@ function App(): React.JSX.Element {
           </View>
           <PreviewPanel
             showHeader={true}
-            audienceDefinitions={audienceDefinitions}
-            experienceDefinitions={experienceDefinitions}
             audienceEntries={audienceEntries}
             experienceEntries={experienceEntries}
             personalizationEntries={personalizationEntries}

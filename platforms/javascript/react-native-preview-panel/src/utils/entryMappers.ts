@@ -79,28 +79,6 @@ function hasPersonalizationFields(fields: unknown): fields is PersonalizationEnt
 }
 
 /**
- * Extracts the audience ID from an entry, checking both nt_audience_id field and sys.id
- */
-function getAudienceId(entry: ContentfulEntry): string {
-  const fields: unknown = entry.fields
-  if (hasAudienceFields(fields)) {
-    return fields.nt_audience_id ?? entry.sys.id
-  }
-  return entry.sys.id
-}
-
-/**
- * Extracts the experience ID from an entry, checking both nt_experience_id field and sys.id
- */
-function getExperienceId(entry: ContentfulEntry): string {
-  const fields: unknown = entry.fields
-  if (hasExperienceFields(fields)) {
-    return fields.nt_experience_id ?? entry.sys.id
-  }
-  return entry.sys.id
-}
-
-/**
  * Gets the display name for a variant entry
  */
 function getVariantName(entry: ContentfulEntry): string | undefined {
@@ -112,43 +90,17 @@ function getVariantName(entry: ContentfulEntry): string | undefined {
 }
 
 /**
- * Enriches audience definitions with names from Contentful entries.
- * Maps entries by nt_audience_id or sys.id to find matching definitions.
- *
- * @param definitions - Original audience definitions from optimization API
- * @param entries - Contentful entries of type nt_audience
- * @returns Enriched audience definitions with names from entries
+ * Gets the variant reference ID for a given index from the experience config.
  */
-export function enrichAudienceDefinitions(
-  definitions: AudienceDefinition[],
-  entries: ContentfulEntry[],
-): AudienceDefinition[] {
-  if (entries.length === 0) {
-    return definitions
+function getVariantRefForIndex(
+  index: number,
+  config: NonNullable<ExperienceEntryFields['nt_config']>,
+): string {
+  const firstComponent = config.components?.[0]
+  if (index === 0) {
+    return firstComponent?.baseline?.id ?? ''
   }
-
-  const entryMap = new Map<string, ContentfulEntry>()
-  entries.forEach((entry) => {
-    const audienceId = getAudienceId(entry)
-    entryMap.set(audienceId, entry)
-  })
-
-  return definitions.map((definition) => {
-    const entry = entryMap.get(definition.id)
-    if (!entry) {
-      return definition
-    }
-
-    const fields: unknown = entry.fields
-    if (hasAudienceFields(fields)) {
-      return {
-        ...definition,
-        name: fields.nt_name ?? definition.name,
-        description: fields.nt_description ?? definition.description,
-      }
-    }
-    return definition
-  })
+  return firstComponent?.variants?.[index - 1]?.id ?? ''
 }
 
 /**
@@ -173,60 +125,74 @@ function buildVariantEntryMap(experienceEntries: ContentfulEntry[]): Map<string,
 }
 
 /**
- * Enriches experience definitions with names from Contentful entries.
- * Maps entries by nt_experience_id or sys.id to find matching definitions.
- * Also enriches variant distributions with names from linked variant entries.
+ * Creates AudienceDefinition array from Contentful nt_audience entries.
+ * Converts raw CMS entries into the internal definition format.
  *
- * @param definitions - Original experience definitions from optimization API
- * @param entries - Contentful entries of type nt_experience
- * @returns Enriched experience definitions with names from entries
+ * @param entries - Contentful entries of type nt_audience
+ * @returns Array of audience definitions with id, name, and description
  */
-export function enrichExperienceDefinitions(
-  definitions: ExperienceDefinition[],
-  entries: ContentfulEntry[],
-): ExperienceDefinition[] {
-  if (entries.length === 0) {
-    return definitions
-  }
-
-  const entryMap = new Map<string, ContentfulEntry>()
-  entries.forEach((entry) => {
-    const experienceId = getExperienceId(entry)
-    entryMap.set(experienceId, entry)
-  })
-
-  const variantEntryMap = buildVariantEntryMap(entries)
-
-  return definitions.map((definition) => {
-    const entry = entryMap.get(definition.id)
-    if (!entry) {
-      return definition
-    }
-
+export function createAudienceDefinitions(entries: ContentfulEntry[]): AudienceDefinition[] {
+  return entries.map((entry) => {
     const fields: unknown = entry.fields
-
-    const enrichedDistribution: VariantDistribution[] = definition.distribution.map((variant) => {
-      const variantEntry = variantEntryMap.get(variant.variantRef)
-      if (!variantEntry) {
-        return variant
-      }
-
+    if (hasAudienceFields(fields)) {
       return {
-        ...variant,
-        name: getVariantName(variantEntry),
-      }
-    })
-
-    if (hasExperienceFields(fields)) {
-      return {
-        ...definition,
-        name: fields.nt_name ?? definition.name,
-        distribution: enrichedDistribution,
+        id: fields.nt_audience_id ?? entry.sys.id,
+        name: fields.nt_name ?? fields.nt_audience_id ?? entry.sys.id,
+        description: fields.nt_description,
       }
     }
     return {
-      ...definition,
-      distribution: enrichedDistribution,
+      id: entry.sys.id,
+      name: entry.sys.id,
+    }
+  })
+}
+
+/**
+ * Creates ExperienceDefinition array from Contentful nt_experience entries.
+ * Converts raw CMS entries into the internal definition format, including
+ * variant distribution with names extracted from linked entries.
+ *
+ * @param entries - Contentful entries of type nt_experience
+ * @returns Array of experience definitions with full variant information
+ */
+export function createExperienceDefinitions(entries: ContentfulEntry[]): ExperienceDefinition[] {
+  const variantEntryMap = buildVariantEntryMap(entries)
+
+  return entries.map((entry) => {
+    const fields: unknown = entry.fields
+    if (!hasExperienceFields(fields)) {
+      return {
+        id: entry.sys.id,
+        name: entry.sys.id,
+        type: 'nt_personalization' as const,
+        distribution: [],
+      }
+    }
+
+    const { nt_config: config } = fields
+    const distribution: VariantDistribution[] = []
+
+    if (config?.distribution) {
+      config.distribution.forEach((percentage, index) => {
+        const variantRef = getVariantRefForIndex(index, config)
+        const variantEntry = variantEntryMap.get(variantRef)
+
+        distribution.push({
+          index,
+          variantRef,
+          percentage: Math.round(percentage * 100),
+          name: variantEntry ? getVariantName(variantEntry) : undefined,
+        })
+      })
+    }
+
+    return {
+      id: fields.nt_experience_id ?? entry.sys.id,
+      name: fields.nt_name ?? entry.sys.id,
+      type: fields.nt_type ?? 'nt_personalization',
+      distribution,
+      audience: fields.nt_audience ? { id: fields.nt_audience.sys.id } : undefined,
     }
   })
 }

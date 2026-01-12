@@ -70,11 +70,11 @@ export type {
   VariantSelectorProps,
 } from './types'
 
-// Utilities for enriching definitions with Contentful entry data
+// Utilities for creating definitions from Contentful entries
 export {
+  createAudienceDefinitions,
+  createExperienceDefinitions,
   createExperienceNameMap,
-  enrichAudienceDefinitions,
-  enrichExperienceDefinitions,
 } from './utils'
 
 // Theme and styles (for custom theming)

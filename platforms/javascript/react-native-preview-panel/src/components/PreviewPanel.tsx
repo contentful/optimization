@@ -11,9 +11,9 @@ import { commonStyles } from '../styles/common'
 import { colors, spacing, typography } from '../styles/theme'
 import type { AudienceOverrideState, PreviewActions, PreviewPanelProps } from '../types'
 import {
+  createAudienceDefinitions,
+  createExperienceDefinitions,
   createExperienceNameMap,
-  enrichAudienceDefinitions,
-  enrichExperienceDefinitions,
 } from '../utils'
 import { AudienceSection } from './AudienceSection'
 import { OverridesSection } from './OverridesSection'
@@ -61,23 +61,20 @@ function applyAudienceOverride(
  *     <OptimizationProvider instance={sdk}>
  *       <YourAppContent />
  *       <PreviewPanel
- *         audienceDefinitions={audienceDefinitions}
- *         experienceDefinitions={experienceDefinitions}
  *         audienceEntries={audienceEntries}
  *         experienceEntries={experienceEntries}
+ *         personalizationEntries={personalizationEntries}
  *       />
  *     </OptimizationProvider>
  *   )
  * }
  * ```
  */
-// eslint-disable-next-line complexity -- Preview panel requires multiple hooks and conditional renders for full SDK state display
+
 export function PreviewPanel({
   showHeader = true,
   style,
   onVisibilityChange,
-  audienceDefinitions = [],
-  experienceDefinitions = [],
   audienceEntries = [],
   experienceEntries = [],
   personalizationEntries = [],
@@ -98,15 +95,15 @@ export function PreviewPanel({
     initializeCollapsible,
   } = useCollapsibleControl({ initiallyOpen: false })
 
-  // Enrich definitions with Contentful entry data (names, descriptions)
-  const enrichedAudienceDefinitions = useMemo(
-    () => enrichAudienceDefinitions(audienceDefinitions, audienceEntries),
-    [audienceDefinitions, audienceEntries],
+  // Create definitions from Contentful entries
+  const audienceDefinitions = useMemo(
+    () => createAudienceDefinitions(audienceEntries),
+    [audienceEntries],
   )
 
-  const enrichedExperienceDefinitions = useMemo(
-    () => enrichExperienceDefinitions(experienceDefinitions, experienceEntries),
-    [experienceDefinitions, experienceEntries],
+  const experienceDefinitions = useMemo(
+    () => createExperienceDefinitions(experienceEntries),
+    [experienceEntries],
   )
 
   // Create name lookup map for personalizations section
@@ -117,8 +114,8 @@ export function PreviewPanel({
 
   // Compute audiences with experiences using the new hook
   const { audiencesWithExperiences, hasData: hasDefinitions } = usePreviewData({
-    audienceDefinitions: enrichedAudienceDefinitions,
-    experienceDefinitions: enrichedExperienceDefinitions,
+    audienceDefinitions,
+    experienceDefinitions,
     previewState,
     overrides,
   })

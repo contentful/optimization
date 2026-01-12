@@ -185,31 +185,19 @@ export interface PreviewPanelProps {
   /** Called when the panel visibility changes */
   onVisibilityChange?: (isVisible: boolean) => void
   /**
-   * Audience definitions from your CMS or configuration.
-   * When provided, enables the audience browser with human-readable names.
-   */
-  audienceDefinitions?: AudienceDefinition[]
-  /**
-   * Experience definitions from your CMS or configuration.
-   * When provided, enables experience display with human-readable names and grouping.
-   */
-  experienceDefinitions?: ExperienceDefinition[]
-  /**
    * Raw Contentful entries for nt_audience content type.
-   * When provided along with audienceDefinitions, the panel will enrich
-   * the definitions with human-readable names from these entries.
+   * The panel will automatically convert these to internal audience definitions.
    */
   audienceEntries?: ContentfulEntry[]
   /**
    * Raw Contentful entries for nt_experience content type.
-   * When provided along with experienceDefinitions, the panel will enrich
-   * the definitions with human-readable names and variant names from these entries.
+   * The panel will automatically convert these to internal experience definitions,
+   * including variant information from linked entries.
    */
   experienceEntries?: ContentfulEntry[]
   /**
    * Raw Contentful entries for nt_personalization content type.
-   * When provided, the panel will enrich the personalizations section
-   * with human-readable names from these entries.
+   * Used to display human-readable names in the personalizations section.
    */
   personalizationEntries?: ContentfulEntry[]
 }
