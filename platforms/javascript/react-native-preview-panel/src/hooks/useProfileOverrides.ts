@@ -98,13 +98,12 @@ export function useProfileOverrides(): {
         logger.debug('[PreviewPanel] Intercepting state update to preserve overrides')
 
         // Merge API response with our overrides
-        const overriddenPersonalizations = applyPersonalizationOverrides(
-          data.personalizations,
-          currentOverrides.personalizations,
-        )
         return {
           ...data,
-          ...(overriddenPersonalizations && { personalizations: overriddenPersonalizations }),
+          personalizations: applyPersonalizationOverrides(
+            data.personalizations,
+            currentOverrides.personalizations,
+          ),
         }
       },
     )
