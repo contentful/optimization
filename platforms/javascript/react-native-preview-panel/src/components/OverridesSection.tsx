@@ -3,28 +3,16 @@ import { Alert, StyleSheet, Text, View } from 'react-native'
 import { commonStyles } from '../styles/common'
 import { spacing } from '../styles/theme'
 import type { OverridesSectionProps } from '../types'
-import { ActionButton, ListItem, Section } from './shared'
+import { ListItem, Section } from './shared'
 
 export function OverridesSection({
   overrides,
-  onResetAll,
   onResetAudience,
   onResetPersonalization,
 }: OverridesSectionProps): React.JSX.Element {
   const audienceOverrides = Object.values(overrides.audiences)
   const personalizationOverrides = Object.values(overrides.personalizations)
   const totalOverrides = audienceOverrides.length + personalizationOverrides.length
-
-  const handleResetAll = (): void => {
-    Alert.alert(
-      'Reset All Overrides',
-      'This will clear all audience and personalization overrides. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Reset', style: 'destructive', onPress: onResetAll },
-      ],
-    )
-  }
 
   const handleResetAudience = (audienceId: string): void => {
     Alert.alert('Reset Override', `Remove override for audience "${audienceId}"?`, [
@@ -111,11 +99,6 @@ export function OverridesSection({
           ))}
         </View>
       )}
-
-      {/* Reset All Button */}
-      <View style={styles.resetAllContainer}>
-        <ActionButton label="Reset All Overrides" variant="destructive" onPress={handleResetAll} />
-      </View>
     </Section>
   )
 }
@@ -126,10 +109,6 @@ const styles = StyleSheet.create({
   },
   subsection: {
     marginBottom: spacing.lg,
-  },
-  resetAllContainer: {
-    marginTop: spacing.md,
-    alignItems: 'center',
   },
 })
 

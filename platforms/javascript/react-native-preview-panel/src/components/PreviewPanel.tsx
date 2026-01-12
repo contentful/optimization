@@ -222,7 +222,6 @@ export function PreviewPanel({
 
         <OverridesSection
           overrides={overrides}
-          onResetAll={actions.resetAllOverrides}
           onResetAudience={actions.resetAudienceOverride}
           onResetPersonalization={actions.resetPersonalizationOverride}
         />

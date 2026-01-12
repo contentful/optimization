@@ -247,8 +247,10 @@ export function useProfileOverrides(): {
     [updatePersonalizationsSignal],
   )
 
-  const resetAllOverrides = useCallback(() => {
-    logger.info('[PreviewPanel] Resetting all overrides')
+  const resetSdkState = useCallback(() => {
+    logger.info('[PreviewPanel] Resetting SDK state to actual')
+    // Instead of completely clearing the SDK state with optimization.reset(),
+    // we just clear our overrides and restore the last known actual state from the API.
     setOverrides(initialOverrideState)
 
     // Restore signals to actual data if we have it
@@ -265,20 +267,12 @@ export function useProfileOverrides(): {
     }
   }, [])
 
-  const resetSdkState = useCallback(() => {
-    logger.info('[PreviewPanel] Resetting SDK state to actual')
-    // Instead of completely clearing the SDK state with optimization.reset(),
-    // we just clear our overrides and restore the last known actual state from the API.
-    resetAllOverrides()
-  }, [resetAllOverrides])
-
   const actions: PreviewActions = {
     activateAudience,
     deactivateAudience,
     resetAudienceOverride,
     setVariantOverride,
     resetPersonalizationOverride,
-    resetAllOverrides,
     resetSdkState,
   }
 

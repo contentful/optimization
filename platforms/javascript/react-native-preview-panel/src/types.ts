@@ -170,8 +170,6 @@ export interface PreviewActions {
   setVariantOverride: (experienceId: string, variantIndex: number) => void
   /** Reset a specific personalization override */
   resetPersonalizationOverride: (experienceId: string) => void
-  /** Reset all overrides */
-  resetAllOverrides: () => void
   /** Reset SDK state to actual by clearing all overrides */
   resetSdkState: () => void
 }
@@ -335,8 +333,6 @@ export interface PersonalizationsSectionProps {
 export interface OverridesSectionProps {
   /** Current override state */
   overrides: OverrideState
-  /** Reset all overrides handler */
-  onResetAll: () => void
   /** Reset specific audience override */
   onResetAudience: (audienceId: string) => void
   /** Reset specific personalization override */
