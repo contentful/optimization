@@ -23,9 +23,22 @@ import {
   online,
   personalizations,
   profile,
+  signals,
   toObservable,
   type Observable,
+  type Signals,
 } from './signals'
+
+/**
+ * Interface for objects that can be registered with the preview panel system.
+ * When registered, the object receives direct access to SDK signals for state manipulation.
+ *
+ * @public
+ */
+export interface PreviewPanelCompatibleObject {
+  /** Signals instance that will be populated by registerPreviewPanel */
+  signals: Signals | null
+}
 
 /**
  * Combined observable state exposed by the stateful core.
@@ -202,6 +215,19 @@ class CoreStateful extends CoreBase implements ConsentController {
    */
   protected online(isOnline: boolean): void {
     online.value = isOnline
+  }
+
+  /**
+   * Register a preview panel compatible object to receive direct signal access.
+   * This enables the preview panel to modify SDK state for testing and simulation.
+   *
+   * @param previewPanel - An object implementing PreviewPanelCompatibleObject
+   * @remarks
+   * This method is intended for use by the Preview Panel component.
+   * Direct signal access allows immediate state updates without API calls.
+   */
+  registerPreviewPanel(previewPanel: PreviewPanelCompatibleObject): void {
+    previewPanel.signals = signals
   }
 }
 
