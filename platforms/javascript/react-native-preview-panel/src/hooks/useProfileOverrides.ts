@@ -24,11 +24,9 @@ const initialOverrideState: OverrideState = {
  * This merges the user's manual overrides with the data from the API.
  */
 function applyPersonalizationOverrides(
-  apiPersonalizations: SelectedPersonalizationArray | undefined,
+  apiPersonalizations: SelectedPersonalizationArray,
   overrides: Record<string, PersonalizationOverride>,
-): SelectedPersonalizationArray | undefined {
-  if (!apiPersonalizations) return undefined
-
+): SelectedPersonalizationArray {
   const overrideEntries = Object.values(overrides)
   if (overrideEntries.length === 0) return apiPersonalizations
 
@@ -139,10 +137,8 @@ export function useProfileOverrides(): {
         newOverrides,
       )
 
-      if (updatedPersonalizations) {
-        signals.personalizations.value = updatedPersonalizations
-        logger.debug('[PreviewPanel] Updated personalizations signal directly')
-      }
+      signals.personalizations.value = updatedPersonalizations
+      logger.debug('[PreviewPanel] Updated personalizations signal directly')
     },
     [],
   )
