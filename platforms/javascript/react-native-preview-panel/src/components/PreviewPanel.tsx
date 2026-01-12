@@ -100,6 +100,27 @@ export function PreviewPanel({
     [experienceEntries],
   )
 
+  // Create name maps for display in OverridesSection
+  const audienceNames = useMemo(
+    () =>
+      audienceDefinitions.reduce<Record<string, string>>((acc, audience) => {
+        const { id, name } = audience
+        acc[id] = name
+        return acc
+      }, {}),
+    [audienceDefinitions],
+  )
+
+  const experienceNames = useMemo(
+    () =>
+      experienceDefinitions.reduce<Record<string, string>>((acc, experience) => {
+        const { id, name } = experience
+        acc[id] = name
+        return acc
+      }, {}),
+    [experienceDefinitions],
+  )
+
   // Compute audiences with experiences using the new hook
   const { audiencesWithExperiences, hasData: hasDefinitions } = usePreviewData({
     audienceDefinitions,
@@ -201,6 +222,8 @@ export function PreviewPanel({
           overrides={overrides}
           onResetAudience={actions.resetAudienceOverride}
           onResetPersonalization={actions.resetPersonalizationOverride}
+          audienceNames={audienceNames}
+          experienceNames={experienceNames}
         />
 
         {/* Bottom spacing */}

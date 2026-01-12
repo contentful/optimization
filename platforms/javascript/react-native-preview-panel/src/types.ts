@@ -325,6 +325,10 @@ export interface OverridesSectionProps {
   onResetAudience: (audienceId: string) => void
   /** Reset specific personalization override */
   onResetPersonalization: (experienceId: string) => void
+  /** Optional map of audienceId to human-readable name */
+  audienceNames?: Record<string, string>
+  /** Optional map of experienceId to human-readable name */
+  experienceNames?: Record<string, string>
 }
 
 // ============================================================================

@@ -9,13 +9,20 @@ export function OverridesSection({
   overrides,
   onResetAudience,
   onResetPersonalization,
+  audienceNames = {},
+  experienceNames = {},
 }: OverridesSectionProps): React.JSX.Element {
   const audienceOverrides = Object.values(overrides.audiences)
   const personalizationOverrides = Object.values(overrides.personalizations)
   const totalOverrides = audienceOverrides.length + personalizationOverrides.length
 
+  const getAudienceName = (audienceId: string): string => audienceNames[audienceId] ?? audienceId
+  const getExperienceName = (experienceId: string): string =>
+    experienceNames[experienceId] ?? experienceId
+
   const handleResetAudience = (audienceId: string): void => {
-    Alert.alert('Reset Override', `Remove override for audience "${audienceId}"?`, [
+    const name = getAudienceName(audienceId)
+    Alert.alert('Reset Override', `Remove override for audience "${name}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Reset',
@@ -27,7 +34,8 @@ export function OverridesSection({
   }
 
   const handleResetPersonalization = (experienceId: string): void => {
-    Alert.alert('Reset Override', `Remove override for experience "${experienceId}"?`, [
+    const name = getExperienceName(experienceId)
+    Alert.alert('Reset Override', `Remove override for experience "${name}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Reset',
@@ -63,9 +71,8 @@ export function OverridesSection({
           {audienceOverrides.map((override) => (
             <ListItem
               key={override.audienceId}
-              label={override.audienceId}
+              label={getAudienceName(override.audienceId)}
               value={override.isActive ? 'Activated' : 'Deactivated'}
-              badge={{ label: 'Override', variant: 'override' }}
               action={{
                 label: 'Reset',
                 variant: 'reset',
@@ -85,9 +92,8 @@ export function OverridesSection({
           {personalizationOverrides.map((override) => (
             <ListItem
               key={override.experienceId}
-              label={override.experienceId}
+              label={getExperienceName(override.experienceId)}
               value={override.variantIndex === 0 ? 'Baseline' : `Variant ${override.variantIndex}`}
-              badge={{ label: 'Override', variant: 'override' }}
               action={{
                 label: 'Reset',
                 variant: 'reset',
