@@ -76,6 +76,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background.tertiary,
     borderRadius: borderRadius.md,
     padding: 2,
+    alignSelf: 'flex-start',
   },
   disabled: {
     opacity: 0.5,

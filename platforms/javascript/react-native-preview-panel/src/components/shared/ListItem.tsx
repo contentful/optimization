@@ -50,9 +50,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
   },
-  badgeContainer: {
-    marginLeft: spacing.sm,
-  },
+  badgeContainer: {},
   actionContainer: {
     marginLeft: spacing.md,
   },

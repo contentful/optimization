@@ -70,7 +70,8 @@ export function AudienceItem({
   const isControlled = controlledExpanded !== undefined && onToggleExpand !== undefined
   const isExpanded = isControlled ? controlledExpanded : localExpanded
   const { audience, experiences, isQualified, isActive, overrideState } = audienceWithExperiences
-  const maxHeightValue = experiences.length * 100
+  const maxHeightPerExperience = 1000
+  const maxHeightValue = experiences.length * maxHeightPerExperience
   // Animation state
   const { current: animatedValue } = useRef(new Animated.Value(isExpanded ? 1 : 0))
   const [shouldRenderContent, setShouldRenderContent] = useState(isExpanded)

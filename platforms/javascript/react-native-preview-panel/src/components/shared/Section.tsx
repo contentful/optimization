@@ -22,7 +22,7 @@ export function Section({
   const HeaderComponent = collapsible ? TouchableOpacity : View
 
   return (
-    <View style={[commonStyles.card, style]}>
+    <View style={[commonStyles.card, styles.container, style]}>
       <HeaderComponent
         style={styles.header}
         onPress={collapsible ? toggleCollapse : undefined}
@@ -37,6 +37,9 @@ export function Section({
 }
 
 const styles = StyleSheet.create({
+  container: {
+    padding: spacing.md,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

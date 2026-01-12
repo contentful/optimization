@@ -37,28 +37,26 @@ export function AudienceItemHeader({
         </View>
       </TouchableOpacity>
 
-      <View style={styles.headerMain}>
-        <TouchableOpacity
-          style={styles.headerLeft}
-          onPress={onToggleExpand}
-          onLongPress={onLongPress}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.expandIcon}>{isExpanded ? '▼' : '▶'}</Text>
-          <View style={styles.audienceInfo}>
-            {audience.description ? (
-              <Text style={styles.audienceDescription} numberOfLines={isExpanded ? undefined : 1}>
-                {audience.description}
-              </Text>
-            ) : null}
-            <Text style={styles.experienceCount}>
-              {experiences.length} experience{experiences.length !== 1 ? 's' : ''}
-            </Text>
-          </View>
-        </TouchableOpacity>
-        <View style={styles.headerRight}>
-          <AudienceToggle value={overrideState} onValueChange={onToggle} audienceId={audience.id} />
-        </View>
+      <TouchableOpacity
+        style={styles.expandRow}
+        onPress={onToggleExpand}
+        onLongPress={onLongPress}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.expandIcon}>{isExpanded ? '▼' : '▶'}</Text>
+        <Text style={styles.experienceCount}>
+          {experiences.length} experience{experiences.length !== 1 ? 's' : ''}
+        </Text>
+      </TouchableOpacity>
+
+      {audience.description ? (
+        <Text style={styles.audienceDescription} numberOfLines={isExpanded ? undefined : 2}>
+          {audience.description}
+        </Text>
+      ) : null}
+
+      <View style={styles.toggleRow}>
+        <AudienceToggle value={overrideState} onValueChange={onToggle} audienceId={audience.id} />
       </View>
     </View>
   )
@@ -71,31 +69,19 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     gap: spacing.sm,
   },
-  headerMain: {
+  expandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  headerLeft: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     gap: spacing.sm,
-  },
-  headerRight: {
-    flexShrink: 0,
   },
   expandIcon: {
     fontSize: typography.fontSize.xl,
     color: colors.text.primary,
-    marginTop: 3, // Align with text baseline
     width: 20,
     height: 20,
   },
-  audienceInfo: {
-    flex: 1,
-    gap: spacing.xs,
+  toggleRow: {
+    marginTop: spacing.xs,
   },
   nameRow: {
     flexDirection: 'row',
