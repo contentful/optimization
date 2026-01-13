@@ -108,17 +108,16 @@ export function PreviewPanel({
   const handleAudienceToggle = useCallback(
     (audienceId: string, state: AudienceOverrideState) => {
       logger.debug('[PreviewPanel] Audience toggle:', { audienceId, state })
-      const experiences = getExperiencesForAudience(audienceId)
 
       switch (state) {
         case 'on':
-          actions.activateAudience(audienceId, experiences)
+          actions.activateAudience(audienceId, getExperiencesForAudience(audienceId))
           break
         case 'off':
-          actions.deactivateAudience(audienceId, experiences)
+          actions.deactivateAudience(audienceId, getExperiencesForAudience(audienceId))
           break
         case 'default':
-          actions.resetAudienceOverride(audienceId, experiences)
+          actions.resetAudienceOverride(audienceId)
           break
       }
     },

@@ -152,11 +152,13 @@ export function useProfileOverrides(): {
   const setAudienceOverride = useCallback(
     (
       audienceId: string,
-      experiences: ExperienceDefinition[],
       isActive: boolean,
       variantIndex: number,
+      experiences: ExperienceDefinition[],
     ) => {
       logger.info('[PreviewPanel] Setting audience override:', { audienceId, isActive })
+
+      const experienceIds = experiences.map((exp) => exp.id)
 
       setOverrides((prev) => {
         const newPersonalizations = { ...prev.personalizations }
@@ -172,7 +174,7 @@ export function useProfileOverrides(): {
           ...prev,
           audiences: {
             ...prev.audiences,
-            [audienceId]: { audienceId, isActive, source: 'manual' },
+            [audienceId]: { audienceId, isActive, source: 'manual', experienceIds },
           },
           personalizations: newPersonalizations,
         }
@@ -183,29 +185,32 @@ export function useProfileOverrides(): {
 
   const activateAudience = useCallback(
     (audienceId: string, experiences: ExperienceDefinition[]) => {
-      setAudienceOverride(audienceId, experiences, true, 1)
+      setAudienceOverride(audienceId, true, 1, experiences)
     },
     [setAudienceOverride],
   )
 
   const deactivateAudience = useCallback(
     (audienceId: string, experiences: ExperienceDefinition[]) => {
-      setAudienceOverride(audienceId, experiences, false, 0)
+      setAudienceOverride(audienceId, false, 0, experiences)
     },
     [setAudienceOverride],
   )
 
   const resetAudienceOverride = useCallback(
-    (audienceId: string, experiences: ExperienceDefinition[]) => {
+    (audienceId: string) => {
       logger.info('[PreviewPanel] Resetting audience override:', audienceId)
 
       setOverrides((prev) => {
-        const experienceIds = new Set(experiences.map((exp) => exp.id))
+        // Get the stored experience IDs from the audience override
+        const storedExperienceIds = prev.audiences[audienceId]?.experienceIds ?? []
+        const experienceIdSet = new Set(storedExperienceIds)
+
         const newPersonalizations = Object.fromEntries(
-          Object.entries(prev.personalizations).filter(([key]) => !experienceIds.has(key)),
+          Object.entries(prev.personalizations).filter(([key]) => !experienceIdSet.has(key)),
         ) as Record<string, PersonalizationOverride>
 
-        if (experiences.length > 0) {
+        if (storedExperienceIds.length > 0) {
           updatePersonalizationsSignal(newPersonalizations)
         }
 

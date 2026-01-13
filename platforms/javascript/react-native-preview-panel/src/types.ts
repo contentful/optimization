@@ -144,6 +144,8 @@ export interface AudienceOverride {
   isActive: boolean
   /** Source of the override - 'manual' for user-initiated */
   source: 'manual'
+  /** Experience IDs that were set with this audience override */
+  experienceIds: string[]
 }
 
 /**
@@ -184,12 +186,12 @@ export interface PreviewState {
  * Actions available in the preview panel
  */
 export interface PreviewActions {
-  /** Activate an audience override and optionally set variant index to 1 for associated experiences */
+  /** Activate an audience override and set variant index to 1 for associated experiences */
   activateAudience: (audienceId: string, experiences: ExperienceDefinition[]) => void
-  /** Deactivate an audience override and optionally set variant index to 0 for associated experiences */
+  /** Deactivate an audience override and set variant index to 0 for associated experiences */
   deactivateAudience: (audienceId: string, experiences: ExperienceDefinition[]) => void
-  /** Reset a specific audience override and optionally reset associated experience overrides */
-  resetAudienceOverride: (audienceId: string, experiences: ExperienceDefinition[]) => void
+  /** Reset a specific audience override and its associated experience overrides */
+  resetAudienceOverride: (audienceId: string) => void
   /** Set a personalization variant override */
   setVariantOverride: (experienceId: string, variantIndex: number) => void
   /** Reset a specific personalization override */
@@ -335,7 +337,7 @@ export interface OverridesSectionProps {
   /** Current override state */
   overrides: OverrideState
   /** Reset specific audience override */
-  onResetAudience: (audienceId: string, experiences: ExperienceDefinition[]) => void
+  onResetAudience: (audienceId: string) => void
   /** Reset specific personalization override */
   onResetPersonalization: (experienceId: string) => void
   /** Optional map of audienceId to human-readable name */
