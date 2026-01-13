@@ -1,8 +1,6 @@
+export { applyAudienceToggle } from './audienceToggleHelper'
 export * from './clipboard'
-export {
-  fetchAllEntriesByContentType,
-  fetchAudienceAndExperienceEntries,
-} from './contentfulUtils'
+export { fetchAllEntriesByContentType, fetchAudienceAndExperienceEntries } from './contentfulUtils'
 export {
   createAudienceDefinitions,
   createExperienceDefinitions,

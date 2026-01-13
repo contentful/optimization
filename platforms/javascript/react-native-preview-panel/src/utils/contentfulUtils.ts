@@ -29,8 +29,9 @@ export async function fetchAllEntriesByContentType(
       limit: BATCH_SIZE,
     })
 
-    allEntries.push(...response.items)
-    total = response.total
+    const { items, total: responseTotal } = response
+    allEntries.push(...items)
+    total = responseTotal
     skip += BATCH_SIZE
 
     logger.debug(`[contentfulUtils] Fetched ${contentType} batch`, {

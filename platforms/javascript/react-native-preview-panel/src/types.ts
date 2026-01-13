@@ -69,12 +69,12 @@ export interface ContentfulEntryCollection {
  * This allows the panel to fetch audience and experience entries directly.
  */
 export interface ContentfulClient {
-  getEntries(query: {
+  getEntries: (query: {
     content_type: string
     include?: number
     skip?: number
     limit?: number
-  }): Promise<ContentfulEntryCollection>
+  }) => Promise<ContentfulEntryCollection>
 }
 
 /**

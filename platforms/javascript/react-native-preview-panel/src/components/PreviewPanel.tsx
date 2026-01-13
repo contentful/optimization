@@ -1,36 +1,20 @@
 import { logger } from '@contentful/optimization-core'
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import {
-  ActivityIndicator,
-  Alert,
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native'
+import React, { useCallback, useEffect, useState } from 'react'
+import { Alert, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native'
 import {
   useCollapsibleControl,
+  useContentfulEntries,
+  useDefinitions,
   usePreviewData,
   usePreviewState,
   useProfileOverrides,
 } from '../hooks'
 import { commonStyles } from '../styles/common'
 import { colors, spacing, typography } from '../styles/theme'
-import type {
-  AudienceOverrideState,
-  ContentfulEntry,
-  ExperienceDefinition,
-  PreviewPanelProps,
-} from '../types'
-import {
-  createAudienceDefinitions,
-  createExperienceDefinitions,
-  fetchAudienceAndExperienceEntries,
-} from '../utils'
-import { AudienceSection } from './AudienceSection'
+import type { AudienceOverrideState, ExperienceDefinition, PreviewPanelProps } from '../types'
+import { applyAudienceToggle } from '../utils'
 import { OverridesSection } from './OverridesSection'
+import { PreviewPanelContent } from './PreviewPanelContent'
 import { ProfileSection } from './ProfileSection'
 import { ActionButton, SearchBar } from './shared'
 
@@ -77,11 +61,13 @@ export function PreviewPanel({
   const { profile, personalizations, consent, isLoading } = previewState
   const { overrides, actions } = useProfileOverrides()
 
-  // Contentful entries state
-  const [audienceEntries, setAudienceEntries] = useState<ContentfulEntry[]>([])
-  const [experienceEntries, setExperienceEntries] = useState<ContentfulEntry[]>([])
-  const [entriesLoading, setEntriesLoading] = useState(true)
-  const [entriesError, setEntriesError] = useState<string | null>(null)
+  // Contentful entries state (using custom hook)
+  const {
+    audienceEntries,
+    experienceEntries,
+    isLoading: entriesLoading,
+    error: entriesError,
+  } = useContentfulEntries(contentfulClient)
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('')
@@ -95,59 +81,9 @@ export function PreviewPanel({
     initializeCollapsible,
   } = useCollapsibleControl({ initiallyOpen: false })
 
-  // Fetch Contentful entries on mount with pagination
-  useEffect(() => {
-    async function fetchContentfulEntries(): Promise<void> {
-      setEntriesLoading(true)
-      setEntriesError(null)
-
-      try {
-        const { audiences, experiences } = await fetchAudienceAndExperienceEntries(contentfulClient)
-        setAudienceEntries(audiences)
-        setExperienceEntries(experiences)
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-        logger.error('[PreviewPanel] Failed to fetch entries:', errorMessage)
-        setEntriesError(errorMessage)
-      } finally {
-        setEntriesLoading(false)
-      }
-    }
-
-    void fetchContentfulEntries()
-  }, [contentfulClient])
-
-  // Create definitions from Contentful entries
-  const audienceDefinitions = useMemo(
-    () => createAudienceDefinitions(audienceEntries),
-    [audienceEntries],
-  )
-
-  const experienceDefinitions = useMemo(
-    () => createExperienceDefinitions(experienceEntries),
-    [experienceEntries],
-  )
-
-  // Create name maps for display in OverridesSection
-  const audienceNames = useMemo(
-    () =>
-      audienceDefinitions.reduce<Record<string, string>>((acc, audience) => {
-        const { id, name } = audience
-        acc[id] = name
-        return acc
-      }, {}),
-    [audienceDefinitions],
-  )
-
-  const experienceNames = useMemo(
-    () =>
-      experienceDefinitions.reduce<Record<string, string>>((acc, experience) => {
-        const { id, name } = experience
-        acc[id] = name
-        return acc
-      }, {}),
-    [experienceDefinitions],
-  )
+  // Create definitions and name maps from Contentful entries
+  const { audienceDefinitions, experienceDefinitions, audienceNames, experienceNames } =
+    useDefinitions(audienceEntries, experienceEntries)
 
   // Compute audiences with experiences using the new hook
   const { audiencesWithExperiences, hasData: hasDefinitions } = usePreviewData({
@@ -170,24 +106,7 @@ export function PreviewPanel({
     (audienceId: string, state: AudienceOverrideState) => {
       logger.debug('[PreviewPanel] Audience toggle:', { audienceId, state })
       const experiences = getExperiencesForAudience(audienceId)
-
-      if (state === 'on') {
-        actions.activateAudience(audienceId)
-        experiences.forEach((exp) => {
-          actions.setVariantOverride(exp.id, 1) // Show first personalized variant
-        })
-      } else if (state === 'off') {
-        actions.deactivateAudience(audienceId)
-        experiences.forEach((exp) => {
-          actions.setVariantOverride(exp.id, 0) // Show baseline
-        })
-      } else {
-        // 'default' - reset to API values
-        actions.resetAudienceOverride(audienceId)
-        experiences.forEach((exp) => {
-          actions.resetPersonalizationOverride(exp.id)
-        })
-      }
+      applyAudienceToggle(audienceId, state, experiences, actions)
     },
     [actions, getExperiencesForAudience],
   )
@@ -253,38 +172,22 @@ export function PreviewPanel({
 
       {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Loading state for entries */}
-        {entriesLoading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.accent.primary} />
-            <Text style={styles.loadingText}>Loading audiences and experiences...</Text>
-          </View>
-        )}
-
-        {/* Error state for entries */}
-        {entriesError && !entriesLoading && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorTitle}>Failed to load entries</Text>
-            <Text style={styles.errorText}>{entriesError}</Text>
-          </View>
-        )}
-
-        {/* Audience & Experience Browser - show if definitions are provided and not loading */}
-        {!entriesLoading && !entriesError && hasDefinitions && (
-          <AudienceSection
-            audiencesWithExperiences={audiencesWithExperiences}
-            onAudienceToggle={handleAudienceToggle}
-            onSetVariant={actions.setVariantOverride}
-            onResetExperience={actions.resetPersonalizationOverride}
-            experienceOverrides={overrides.personalizations}
-            searchQuery={searchQuery}
-            isAudienceExpanded={isCollapsibleOpen}
-            onToggleAudienceExpand={toggleCollapsible}
-            onToggleAllExpand={toggleAllCollapsibles}
-            allExpanded={allCollapsiblesOpen}
-            initializeCollapsible={initializeCollapsible}
-          />
-        )}
+        <PreviewPanelContent
+          isLoading={entriesLoading}
+          error={entriesError}
+          hasDefinitions={hasDefinitions}
+          audiencesWithExperiences={audiencesWithExperiences}
+          onAudienceToggle={handleAudienceToggle}
+          onSetVariant={actions.setVariantOverride}
+          onResetExperience={actions.resetPersonalizationOverride}
+          experienceOverrides={overrides.personalizations}
+          searchQuery={searchQuery}
+          isAudienceExpanded={isCollapsibleOpen}
+          onToggleAudienceExpand={toggleCollapsible}
+          onToggleAllExpand={toggleAllCollapsibles}
+          allExpanded={allCollapsiblesOpen}
+          initializeCollapsible={initializeCollapsible}
+        />
 
         <ProfileSection profile={profile} isLoading={isLoading} />
 
@@ -339,34 +242,6 @@ const styles = StyleSheet.create({
   resetButton: {
     width: '100%',
     paddingVertical: spacing.md,
-  },
-  loadingContainer: {
-    padding: spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    marginTop: spacing.md,
-    fontSize: typography.fontSize.md,
-    color: colors.text.secondary,
-  },
-  errorContainer: {
-    margin: spacing.lg,
-    padding: spacing.lg,
-    backgroundColor: colors.background.secondary,
-    borderRadius: 8,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.action.destructive,
-  },
-  errorTitle: {
-    fontSize: typography.fontSize.md,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.action.destructive,
-    marginBottom: spacing.xs,
-  },
-  errorText: {
-    fontSize: typography.fontSize.sm,
-    color: colors.text.secondary,
   },
 })
 

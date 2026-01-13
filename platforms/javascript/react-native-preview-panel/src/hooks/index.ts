@@ -1,4 +1,6 @@
 export { useCollapsibleControl } from './useCollapsibleControl'
+export { useContentfulEntries } from './useContentfulEntries'
+export { useDefinitions } from './useDefinitions'
 export { usePreviewData } from './usePreviewData'
 export { usePreviewState } from './usePreviewState'
 export { useProfileOverrides } from './useProfileOverrides'
