@@ -108,4 +108,3 @@ export async function fetchMergeTagEntry(setMergeTagEntry: (entry: Entry) => voi
 
   setMergeTagEntry(mergeTagEntryData)
 }
-

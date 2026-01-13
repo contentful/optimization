@@ -156,7 +156,6 @@ function App(): React.JSX.Element {
     void initialize()
   }, [])
 
-
   useEffect(() => {
     if (!sdk) return
 
