@@ -17,6 +17,7 @@ interface PreviewPanelContentProps {
   onSetVariant: (experienceId: string, variantIndex: number) => void
   onResetExperience: (experienceId: string) => void
   experienceOverrides: Record<string, PersonalizationOverride>
+  sdkVariantIndices: Record<string, number>
   searchQuery: string
   isAudienceExpanded: (audienceId: string) => boolean
   onToggleAudienceExpand: (audienceId: string) => void
@@ -34,6 +35,7 @@ export function PreviewPanelContent({
   onSetVariant,
   onResetExperience,
   experienceOverrides,
+  sdkVariantIndices,
   searchQuery,
   isAudienceExpanded,
   onToggleAudienceExpand,
@@ -70,6 +72,7 @@ export function PreviewPanelContent({
       onSetVariant={onSetVariant}
       onResetExperience={onResetExperience}
       experienceOverrides={experienceOverrides}
+      sdkVariantIndices={sdkVariantIndices}
       searchQuery={searchQuery}
       isAudienceExpanded={isAudienceExpanded}
       onToggleAudienceExpand={onToggleAudienceExpand}

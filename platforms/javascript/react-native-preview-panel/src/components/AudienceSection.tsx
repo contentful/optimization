@@ -52,6 +52,7 @@ export function AudienceSection({
   onSetVariant,
   onResetExperience,
   experienceOverrides,
+  sdkVariantIndices,
   searchQuery = '',
   isAudienceExpanded,
   onToggleAudienceExpand,
@@ -140,6 +141,7 @@ export function AudienceSection({
             onSetVariant={onSetVariant}
             onResetExperience={onResetExperience}
             experienceOverrides={experienceOverrides}
+            sdkVariantIndices={sdkVariantIndices}
             isExpanded={
               hasCollapsibleControl
                 ? isAudienceExpanded(audienceWithExperiences.audience.id)

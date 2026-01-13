@@ -9,6 +9,7 @@ import { ExperienceCard } from './ExperienceCard'
 interface RenderExperienceCardParams {
   experience: ExperienceDefinition
   experienceOverrides: Record<string, PersonalizationOverride>
+  sdkVariantIndices: Record<string, number>
   isActive: boolean
   handlers: {
     onSetVariant: (experienceId: string, variantIndex: number) => void
@@ -20,12 +21,15 @@ interface RenderExperienceCardParams {
 function renderExperienceCard({
   experience,
   experienceOverrides,
+  sdkVariantIndices,
   isActive,
   handlers,
 }: RenderExperienceCardParams): React.JSX.Element {
   const { [experience.id]: override } = experienceOverrides
   const hasOverride = override != null
-  const currentVariantIndex = hasOverride ? override.variantIndex : 0
+  // Use SDK's actual variant index as the default, falling back to 0 if not present
+  const sdkVariantIndex = sdkVariantIndices[experience.id] ?? 0
+  const currentVariantIndex = hasOverride ? override.variantIndex : sdkVariantIndex
   const { onSetVariant, onResetExperience } = handlers
 
   return (
@@ -34,7 +38,7 @@ function renderExperienceCard({
       experience={experience}
       isAudienceActive={isActive}
       currentVariantIndex={currentVariantIndex}
-      defaultVariantIndex={0}
+      defaultVariantIndex={sdkVariantIndex}
       onSetVariant={(variantIndex) => {
         onSetVariant(experience.id, variantIndex)
       }}
@@ -63,6 +67,7 @@ export function AudienceItem({
   onSetVariant,
   onResetExperience,
   experienceOverrides,
+  sdkVariantIndices,
   isExpanded: controlledExpanded,
   onToggleExpand,
 }: AudienceItemProps): React.JSX.Element {
@@ -135,6 +140,7 @@ export function AudienceItem({
               renderExperienceCard({
                 experience: exp,
                 experienceOverrides,
+                sdkVariantIndices,
                 isActive,
                 handlers: { onSetVariant, onResetExperience },
               }),

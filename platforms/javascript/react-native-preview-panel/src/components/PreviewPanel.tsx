@@ -86,7 +86,11 @@ export function PreviewPanel({
     useDefinitions(audienceEntries, experienceEntries)
 
   // Compute audiences with experiences using the new hook
-  const { audiencesWithExperiences, hasData: hasDefinitions } = usePreviewData({
+  const {
+    audiencesWithExperiences,
+    hasData: hasDefinitions,
+    sdkVariantIndices,
+  } = usePreviewData({
     audienceDefinitions,
     experienceDefinitions,
     previewState,
@@ -181,6 +185,7 @@ export function PreviewPanel({
           onSetVariant={actions.setVariantOverride}
           onResetExperience={actions.resetPersonalizationOverride}
           experienceOverrides={overrides.personalizations}
+          sdkVariantIndices={sdkVariantIndices}
           searchQuery={searchQuery}
           isAudienceExpanded={isCollapsibleOpen}
           onToggleAudienceExpand={toggleCollapsible}

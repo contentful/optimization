@@ -31,6 +31,8 @@ interface UsePreviewDataResult {
   unassociatedExperiences: ExperienceDefinition[]
   /** Whether any data is available */
   hasData: boolean
+  /** Map of experienceId to variantIndex from SDK personalizations */
+  sdkVariantIndices: Record<string, number>
 }
 
 /**
@@ -49,13 +51,23 @@ export function usePreviewData({
   previewState,
   overrides,
 }: UsePreviewDataParams): UsePreviewDataResult {
-  const { profile } = previewState
+  const { profile, personalizations } = previewState
 
   // Get the set of audience IDs that the user qualifies for from the API
   const qualifiedAudienceIds = useMemo(
     () => new Set(profile?.audiences ?? []),
     [profile?.audiences],
   )
+
+  // Create a lookup of experienceId -> variantIndex from SDK personalizations
+  const sdkVariantIndices = useMemo(() => {
+    if (!personalizations) return {}
+    return personalizations.reduce<Record<string, number>>((acc, p) => {
+      const { experienceId, variantIndex } = p
+      acc[experienceId] = variantIndex
+      return acc
+    }, {})
+  }, [personalizations])
 
   // Find experiences without an associated audience (global experiences)
   const unassociatedExperiences = useMemo(() => {
@@ -151,6 +163,7 @@ export function usePreviewData({
     audiencesWithExperiences,
     unassociatedExperiences,
     hasData,
+    sdkVariantIndices,
   }
 }
 

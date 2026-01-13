@@ -362,6 +362,8 @@ export interface AudienceSectionProps {
   onResetExperience: (experienceId: string) => void
   /** Current experience variant overrides */
   experienceOverrides: Record<string, PersonalizationOverride>
+  /** Map of experienceId to variantIndex from SDK personalizations */
+  sdkVariantIndices: Record<string, number>
   /** Search query for filtering */
   searchQuery?: string
   /** Check if a specific audience is expanded */
@@ -390,6 +392,8 @@ export interface AudienceItemProps {
   onResetExperience: (experienceId: string) => void
   /** Current experience variant overrides */
   experienceOverrides: Record<string, PersonalizationOverride>
+  /** Map of experienceId to variantIndex from SDK personalizations */
+  sdkVariantIndices: Record<string, number>
   /** Whether the item is expanded (controlled mode) */
   isExpanded?: boolean
   /** Handler for expansion toggle (controlled mode) */
