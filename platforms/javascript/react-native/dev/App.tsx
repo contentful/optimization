@@ -19,8 +19,10 @@ import {
 
 import type Optimization from '@contentful/optimization-react-native'
 import type { MergeTagEntry, Profile } from '@contentful/optimization-react-native'
-import { OptimizationProvider } from '@contentful/optimization-react-native'
-import { PreviewPanel } from '@contentful/optimization-react-native-preview-panel'
+import {
+  OptimizationPreviewPanel,
+  OptimizationProvider,
+} from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 import { createClient } from 'contentful'
 import { LoadingScreen } from './components/LoadingScreen'
@@ -300,7 +302,7 @@ function App(): React.JSX.Element {
               )}
             </View>
           </View>
-          <PreviewPanel showHeader={true} contentfulClient={contentfulClient} />
+          <OptimizationPreviewPanel showHeader={true} contentfulClient={contentfulClient} />
         </SafeAreaView>
       </OptimizationProvider>
     )

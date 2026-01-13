@@ -126,4 +126,8 @@ export type {
   UseViewportTrackingReturn,
 } from './hooks/useViewportTracking'
 
+// Preview Panel
+export { PreviewPanel as OptimizationPreviewPanel } from './preview/components/PreviewPanel'
+export type { ContentfulClient, PreviewPanelProps } from './preview/types'
+
 export default Optimization

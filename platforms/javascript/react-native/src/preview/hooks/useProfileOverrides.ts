@@ -5,8 +5,8 @@ import {
   type SelectedPersonalizationArray,
   type Signals,
 } from '@contentful/optimization-core'
-import { useOptimization } from '@contentful/optimization-react-native'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useOptimization } from '../../context/OptimizationContext'
 import type {
   AudienceOverride,
   ExperienceDefinition,

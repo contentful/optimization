@@ -22,9 +22,6 @@
       "@contentful/optimization-core": ["./universal/core/src/index.ts"],
       "@contentful/optimization-node": ["./platforms/javascript/node/src/index.ts"],
       "@contentful/optimization-react-native": ["./platforms/javascript/react-native/src/index.ts"],
-      "@contentful/optimization-react-native-preview-panel": [
-        "./platforms/javascript/react-native-preview-panel/src/index.ts"
-      ],
       "@contentful/optimization-web": ["./platforms/javascript/web/src/index.ts"]
     },
     "removeComments": false,

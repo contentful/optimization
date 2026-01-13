@@ -1,6 +1,6 @@
 import { logger, type Profile, type SelectedPersonalization } from '@contentful/optimization-core'
-import { useOptimization } from '@contentful/optimization-react-native'
 import { useEffect, useState } from 'react'
+import { useOptimization } from '../../context/OptimizationContext'
 import type { PreviewState } from '../types'
 
 /**

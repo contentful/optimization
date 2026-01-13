@@ -31,7 +31,7 @@ import { ActionButton, SearchBar } from './shared'
  *
  * @example
  * ```tsx
- * import { PreviewPanel } from '@contentful/optimization-react-native-preview-panel'
+ * import { OptimizationPreviewPanel, OptimizationProvider } from '@contentful/optimization-react-native'
  * import { createClient } from 'contentful'
  *
  * const contentfulClient = createClient({
@@ -43,7 +43,7 @@ import { ActionButton, SearchBar } from './shared'
  *   return (
  *     <OptimizationProvider instance={sdk}>
  *       <YourAppContent />
- *       <PreviewPanel contentfulClient={contentfulClient} />
+ *       <OptimizationPreviewPanel contentfulClient={contentfulClient} />
  *     </OptimizationProvider>
  *   )
  * }

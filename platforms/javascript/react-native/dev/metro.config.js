@@ -40,10 +40,6 @@ const config = {
           workspaceRoot,
           'platforms/javascript/react-native/src/index.ts',
         ),
-        '@contentful/optimization-react-native-preview-panel': path.resolve(
-          workspaceRoot,
-          'platforms/javascript/react-native-preview-panel/src/index.ts',
-        ),
       }
 
       if (workspacePackages[moduleName]) {

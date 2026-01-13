@@ -1,7 +1,0 @@
-{
-  "compilerOptions": {
-    "jsx": "react-native"
-  },
-  "extends": "../../../tsconfig.base.json",
-  "include": ["./src/**/*", "./src/**/*.json"]
-}
