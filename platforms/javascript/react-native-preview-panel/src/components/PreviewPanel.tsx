@@ -9,31 +9,12 @@ import {
 } from '../hooks'
 import { commonStyles } from '../styles/common'
 import { colors, spacing, typography } from '../styles/theme'
-import type { AudienceOverrideState, PreviewActions, PreviewPanelProps } from '../types'
+import type { AudienceOverrideState, ExperienceDefinition, PreviewPanelProps } from '../types'
 import { createAudienceDefinitions, createExperienceDefinitions } from '../utils'
 import { AudienceSection } from './AudienceSection'
 import { OverridesSection } from './OverridesSection'
 import { ProfileSection } from './ProfileSection'
 import { ActionButton, SearchBar } from './shared'
-
-function applyAudienceOverride(
-  audienceId: string,
-  state: AudienceOverrideState,
-  actions: PreviewActions,
-): void {
-  const actionMap: Record<AudienceOverrideState, () => void> = {
-    on: () => {
-      actions.activateAudience(audienceId)
-    },
-    off: () => {
-      actions.deactivateAudience(audienceId)
-    },
-    default: () => {
-      actions.resetAudienceOverride(audienceId)
-    },
-  }
-  actionMap[state]()
-}
 
 /**
  * Preview Panel for Contentful Optimization React Native SDK
@@ -129,13 +110,39 @@ export function PreviewPanel({
     overrides,
   })
 
+  const getExperiencesForAudience = useCallback(
+    (audienceId: string): ExperienceDefinition[] => {
+      const audienceData = audiencesWithExperiences.find((a) => a.audience.id === audienceId)
+      return audienceData?.experiences ?? []
+    },
+    [audiencesWithExperiences],
+  )
+
   // Handle audience toggle changes
   const handleAudienceToggle = useCallback(
     (audienceId: string, state: AudienceOverrideState) => {
       logger.debug('[PreviewPanel] Audience toggle:', { audienceId, state })
-      applyAudienceOverride(audienceId, state, actions)
+      const experiences = getExperiencesForAudience(audienceId)
+
+      if (state === 'on') {
+        actions.activateAudience(audienceId)
+        experiences.forEach((exp) => {
+          actions.setVariantOverride(exp.id, 1) // Show first personalized variant
+        })
+      } else if (state === 'off') {
+        actions.deactivateAudience(audienceId)
+        experiences.forEach((exp) => {
+          actions.setVariantOverride(exp.id, 0) // Show baseline
+        })
+      } else {
+        // 'default' - reset to API values
+        actions.resetAudienceOverride(audienceId)
+        experiences.forEach((exp) => {
+          actions.resetPersonalizationOverride(exp.id)
+        })
+      }
     },
-    [actions],
+    [actions, getExperiencesForAudience],
   )
 
   // Notify visibility change on mount/unmount
