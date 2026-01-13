@@ -9,6 +9,7 @@ import { useOptimization } from '@contentful/optimization-react-native'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
   AudienceOverride,
+  ExperienceDefinition,
   OverrideState,
   PersonalizationOverride,
   PreviewActions,
@@ -148,54 +149,77 @@ export function useProfileOverrides(): {
     [],
   )
 
-  const activateAudience = useCallback((audienceId: string) => {
-    logger.info('[PreviewPanel] Activating audience override:', audienceId)
+  const setAudienceOverride = useCallback(
+    (
+      audienceId: string,
+      experiences: ExperienceDefinition[],
+      isActive: boolean,
+      variantIndex: number,
+    ) => {
+      logger.info('[PreviewPanel] Setting audience override:', { audienceId, isActive })
 
-    setOverrides((prev) => {
-      const newOverride: AudienceOverride = {
-        audienceId,
-        isActive: true,
-        source: 'manual',
-      }
-      return {
-        ...prev,
-        audiences: {
-          ...prev.audiences,
-          [audienceId]: newOverride,
-        },
-      }
-    })
-  }, [])
+      setOverrides((prev) => {
+        const newPersonalizations = { ...prev.personalizations }
+        experiences.forEach((exp) => {
+          newPersonalizations[exp.id] = { experienceId: exp.id, variantIndex }
+        })
 
-  const deactivateAudience = useCallback((audienceId: string) => {
-    logger.info('[PreviewPanel] Deactivating audience override:', audienceId)
+        if (experiences.length > 0) {
+          updatePersonalizationsSignal(newPersonalizations)
+        }
 
-    setOverrides((prev) => {
-      const newOverride: AudienceOverride = {
-        audienceId,
-        isActive: false,
-        source: 'manual',
-      }
-      return {
-        ...prev,
-        audiences: {
-          ...prev.audiences,
-          [audienceId]: newOverride,
-        },
-      }
-    })
-  }, [])
+        return {
+          ...prev,
+          audiences: {
+            ...prev.audiences,
+            [audienceId]: { audienceId, isActive, source: 'manual' },
+          },
+          personalizations: newPersonalizations,
+        }
+      })
+    },
+    [updatePersonalizationsSignal],
+  )
 
-  const resetAudienceOverride = useCallback((audienceId: string) => {
-    logger.info('[PreviewPanel] Resetting audience override:', audienceId)
+  const activateAudience = useCallback(
+    (audienceId: string, experiences: ExperienceDefinition[]) => {
+      setAudienceOverride(audienceId, experiences, true, 1)
+    },
+    [setAudienceOverride],
+  )
 
-    setOverrides((prev) => ({
-      ...prev,
-      audiences: Object.fromEntries(
-        Object.entries(prev.audiences).filter(([key]) => key !== audienceId),
-      ) as Record<string, AudienceOverride>,
-    }))
-  }, [])
+  const deactivateAudience = useCallback(
+    (audienceId: string, experiences: ExperienceDefinition[]) => {
+      setAudienceOverride(audienceId, experiences, false, 0)
+    },
+    [setAudienceOverride],
+  )
+
+  const resetAudienceOverride = useCallback(
+    (audienceId: string, experiences: ExperienceDefinition[]) => {
+      logger.info('[PreviewPanel] Resetting audience override:', audienceId)
+
+      setOverrides((prev) => {
+        const experienceIds = new Set(experiences.map((exp) => exp.id))
+        const newPersonalizations = Object.fromEntries(
+          Object.entries(prev.personalizations).filter(([key]) => !experienceIds.has(key)),
+        ) as Record<string, PersonalizationOverride>
+
+        if (experiences.length > 0) {
+          updatePersonalizationsSignal(newPersonalizations)
+        }
+
+        return {
+          ...prev,
+          audiences: Object.fromEntries(
+            Object.entries(prev.audiences).filter(([key]) => key !== audienceId),
+          ) as Record<string, AudienceOverride>,
+          personalizations: newPersonalizations,
+        }
+      })
+    },
+    [updatePersonalizationsSignal],
+  )
 
   const setVariantOverride = useCallback(
     (experienceId: string, variantIndex: number) => {

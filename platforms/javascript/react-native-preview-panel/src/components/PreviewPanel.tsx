@@ -12,7 +12,6 @@ import {
 import { commonStyles } from '../styles/common'
 import { colors, spacing, typography } from '../styles/theme'
 import type { AudienceOverrideState, ExperienceDefinition, PreviewPanelProps } from '../types'
-import { applyAudienceToggle } from '../utils'
 import { OverridesSection } from './OverridesSection'
 import { PreviewPanelContent } from './PreviewPanelContent'
 import { ProfileSection } from './ProfileSection'
@@ -110,7 +109,18 @@ export function PreviewPanel({
     (audienceId: string, state: AudienceOverrideState) => {
       logger.debug('[PreviewPanel] Audience toggle:', { audienceId, state })
       const experiences = getExperiencesForAudience(audienceId)
-      applyAudienceToggle(audienceId, state, experiences, actions)
+
+      switch (state) {
+        case 'on':
+          actions.activateAudience(audienceId, experiences)
+          break
+        case 'off':
+          actions.deactivateAudience(audienceId, experiences)
+          break
+        case 'default':
+          actions.resetAudienceOverride(audienceId, experiences)
+          break
+      }
     },
     [actions, getExperiencesForAudience],
   )

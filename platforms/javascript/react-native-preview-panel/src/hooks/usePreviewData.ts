@@ -93,8 +93,9 @@ export function usePreviewData({
       const isQualified = qualifiedAudienceIds.has(audience.id)
 
       // Determine override state
-      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- dynamic key access
-      const audienceOverride = overrides.audiences[audience.id]
+      const {
+        audiences: { [audience.id]: audienceOverride },
+      } = overrides
       let overrideState: AudienceOverrideState = 'default'
       if (audienceOverride) {
         overrideState = audienceOverride.isActive ? 'on' : 'off'
@@ -126,8 +127,9 @@ export function usePreviewData({
       }
 
       // Check for override on the fallback audience
-      // eslint-disable-next-line @typescript-eslint/prefer-destructuring -- constant key access
-      const allVisitorsOverride = overrides.audiences[ALL_VISITORS_AUDIENCE_ID]
+      const {
+        audiences: { [ALL_VISITORS_AUDIENCE_ID]: allVisitorsOverride },
+      } = overrides
       let overrideState: AudienceOverrideState = 'default'
       if (allVisitorsOverride) {
         overrideState = allVisitorsOverride.isActive ? 'on' : 'off'
