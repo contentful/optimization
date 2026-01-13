@@ -19,15 +19,22 @@ import {
 
 import type Optimization from '@contentful/optimization-react-native'
 import type { MergeTagEntry, Profile } from '@contentful/optimization-react-native'
-import { OptimizationProvider } from '@contentful/optimization-react-native'
+import {
+  OptimizationPreviewPanel,
+  OptimizationProvider,
+} from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
+import { createClient } from 'contentful'
 import { LoadingScreen } from './components/LoadingScreen'
 import { MergeTagDetailCard } from './components/MergeTagDetailCard'
 import { SDKConfigCard } from './components/SDKConfigCard'
 import { SDKStatusCard } from './components/SDKStatusCard'
+import { ENV_CONFIG } from './env.config'
 import { TestTrackingScreen } from './TestTrackingScreen'
 import type { SDKInfo, ThemeColors } from './types'
 import { fetchEntriesFromMockServer, fetchMergeTagEntry, initializeSDK } from './utils/sdkHelpers'
+
+type ScreenType = 'home' | 'tracking' | 'preview'
 
 function getThemeColors(isDarkMode: boolean): ThemeColors {
   return {
@@ -109,6 +116,15 @@ function findMergeTagEntries(richTextField: {
   return embeddedNodes
 }
 
+const contentfulClient = createClient({
+  space: ENV_CONFIG.contentful.spaceId,
+  environment: ENV_CONFIG.contentful.environment,
+  accessToken: ENV_CONFIG.contentful.accessToken,
+  host: ENV_CONFIG.contentful.host,
+  basePath: ENV_CONFIG.contentful.basePath,
+  insecure: true,
+})
+
 // eslint-disable-next-line complexity -- Main app component requires conditional rendering and state management logic
 function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark'
@@ -118,7 +134,7 @@ function App(): React.JSX.Element {
   const [sdkError, setSdkError] = useState<string | null>(null)
   const [sdkInfo, setSdkInfo] = useState<SDKInfo | null>(null)
   const [sdk, setSdk] = useState<Optimization | null>(null)
-  const [showTestScreen, setShowTestScreen] = useState(false)
+  const [currentScreen, setCurrentScreen] = useState<ScreenType>('home')
   const [personalizedEntry, setPersonalizedEntry] = useState<Entry | null>(null)
   const [productEntry, setProductEntry] = useState<Entry | null>(null)
   const [mergeTagEntry, setMergeTagEntry] = useState<Entry | null>(null)
@@ -126,6 +142,7 @@ function App(): React.JSX.Element {
   const [resolvedValues, setResolvedValues] = useState<Array<{ id: string; value: unknown }>>([])
   const [mergeTagDetails, setMergeTagDetails] = useState<MergeTagEntry[]>([])
   const [entriesLoading, setEntriesLoading] = useState(false)
+  const [isIdentified, setIsIdentified] = useState(false)
 
   useEffect(() => {
     async function initialize(): Promise<void> {
@@ -143,6 +160,9 @@ function App(): React.JSX.Element {
 
   useEffect(() => {
     if (!sdk) return
+
+    // Trigger the Experience API to populate profile and personalizations
+    void sdk.personalization.page({ properties: { url: 'dev-app' } })
 
     const subscription = sdk.states.profile.subscribe((currentProfile) => {
       setProfile(currentProfile)
@@ -210,15 +230,32 @@ function App(): React.JSX.Element {
   }
 
   const handleTestTracking = (): void => {
-    setShowTestScreen(true)
+    setCurrentScreen('tracking')
     void fetchEntries()
   }
 
-  const handleBack = (): void => {
-    setShowTestScreen(false)
+  const handleShowPreview = (): void => {
+    setCurrentScreen('preview')
   }
 
-  if (showTestScreen && sdk && personalizedEntry && productEntry) {
+  const handleBack = (): void => {
+    setCurrentScreen('home')
+  }
+
+  const handleIdentify = (): void => {
+    if (!sdk) return
+    void sdk.personalization.identify({ userId: 'demo-user', traits: { identified: true } })
+    setIsIdentified(true)
+  }
+
+  const handleReset = (): void => {
+    if (!sdk) return
+    sdk.reset()
+    void sdk.personalization.page({ properties: { url: 'dev-app' } })
+    setIsIdentified(false)
+  }
+
+  if (currentScreen === 'tracking' && sdk && personalizedEntry && productEntry) {
     return (
       <OptimizationProvider instance={sdk}>
         <TestTrackingScreen
@@ -232,8 +269,43 @@ function App(): React.JSX.Element {
     )
   }
 
-  if (showTestScreen && entriesLoading) {
+  if (currentScreen === 'tracking' && entriesLoading) {
     return <LoadingScreen colors={colors} isDarkMode={isDarkMode} />
+  }
+
+  if (currentScreen === 'preview' && sdk) {
+    return (
+      <OptimizationProvider instance={sdk}>
+        <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
+          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+          <View style={[styles.previewHeader, { backgroundColor: colors.cardBackground }]}>
+            <TouchableOpacity onPress={handleBack} style={styles.backButtonCompact}>
+              <Text style={[styles.backButtonText, { color: colors.textColor }]}>← Back</Text>
+            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              {!isIdentified ? (
+                <TouchableOpacity
+                  style={[styles.headerButton, { backgroundColor: colors.successColor }]}
+                  onPress={handleIdentify}
+                  testID="identifyButton"
+                >
+                  <Text style={styles.headerButtonText}>Identify</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.headerButton, { backgroundColor: colors.errorColor }]}
+                  onPress={handleReset}
+                  testID="resetButton"
+                >
+                  <Text style={styles.headerButtonText}>Reset</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+          <OptimizationPreviewPanel showHeader={true} contentfulClient={contentfulClient} />
+        </SafeAreaView>
+      </OptimizationProvider>
+    )
   }
 
   if (!sdk) {
@@ -276,6 +348,20 @@ function App(): React.JSX.Element {
               testID="testTrackingButton"
             >
               <Text style={styles.buttonText}>Test Component Tracking</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
+            <Text style={[styles.cardTitle, { color: colors.textColor }]}>Preview Panel</Text>
+            <Text style={[styles.description, { color: colors.mutedTextColor }]}>
+              Debug and inspect the SDK state, profile, personalizations, and overrides.
+            </Text>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: '#007AFF' }]}
+              onPress={handleShowPreview}
+              testID="previewPanelButton"
+            >
+              <Text style={styles.buttonText}>Open Preview Panel</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -336,6 +422,40 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#ffffff',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  backButton: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e1e5e9',
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e1e5e9',
+  },
+  backButtonCompact: {
+    padding: 8,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  headerButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+  },
+  headerButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
     fontWeight: '600',
   },
 })

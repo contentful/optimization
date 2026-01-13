@@ -3,6 +3,31 @@
 This React Native application is configured with [Detox](https://wix.github.io/Detox/) for
 end-to-end testing.
 
+## Quick Start (Android)
+
+For a fresh machine, run the automated setup script:
+
+```bash
+./scripts/setup-android-e2e.sh
+```
+
+This script will install all required dependencies (Node.js, pnpm, Java, Android SDK, emulator) and
+configure your environment. After setup completes, restart your terminal and run:
+
+```bash
+# Start the emulator
+emulator -avd Pixel_7_API_34 &
+
+# Run E2E tests
+./scripts/run-e2e-android.sh
+```
+
+For CI environments, use:
+
+```bash
+./scripts/setup-android-e2e.sh --ci
+```
+
 ## Prerequisites
 
 ### iOS
@@ -13,10 +38,10 @@ end-to-end testing.
 
 ### Android
 
-- Android Studio installed
+- Android Studio installed (or use the setup script above)
 - Android SDK
 - An Android emulator configured (recommended: Pixel 7 with API 34)
-- Java Development Kit (JDK)
+- Java Development Kit (JDK 17)
 
 ## Setup
 

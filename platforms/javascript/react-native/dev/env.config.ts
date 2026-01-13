@@ -4,6 +4,19 @@
  * This file contains the configuration for the mock server.
  * For production, use proper environment variable management.
  */
+
+import { Platform } from 'react-native'
+
+const VITE_NINETAILED_CLIENT_ID = 'test-client-id'
+const VITE_NINETAILED_ENVIRONMENT = 'main'
+const VITE_EXPERIENCE_API_BASE_URL = 'http://localhost:8000/experience/'
+const VITE_INSIGHTS_API_BASE_URL = 'http://localhost:8000/insights/'
+const VITE_CONTENTFUL_TOKEN = 'test-token'
+const VITE_CONTENTFUL_ENVIRONMENT = 'master'
+const VITE_CONTENTFUL_SPACE_ID = 'test-space'
+const VITE_CONTENTFUL_CDA_HOST = 'localhost:8000'
+const VITE_CONTENTFUL_BASE_PATH = '/contentful/'
+
 interface EnvConfig {
   contentful: {
     spaceId: string
@@ -27,23 +40,32 @@ interface EnvConfig {
   }
 }
 
+const ANDROID_LOCALHOST = '10.0.2.2'
+
+function getAndroidCompatibleUrl(url: string): string {
+  if (Platform.OS !== 'android') {
+    return url
+  }
+  return url.replace(/localhost/g, ANDROID_LOCALHOST)
+}
+
 export const ENV_CONFIG = {
   contentful: {
-    spaceId: process.env.VITE_CONTENTFUL_SPACE_ID ?? '',
-    environment: process.env.VITE_CONTENTFUL_ENVIRONMENT ?? '',
-    accessToken: process.env.VITE_CONTENTFUL_TOKEN ?? '',
-    host: process.env.VITE_CONTENTFUL_CDA_HOST ?? '',
-    basePath: process.env.VITE_CONTENTFUL_BASE_PATH ?? '',
+    spaceId: VITE_CONTENTFUL_SPACE_ID,
+    environment: VITE_CONTENTFUL_ENVIRONMENT,
+    accessToken: VITE_CONTENTFUL_TOKEN,
+    host: getAndroidCompatibleUrl(VITE_CONTENTFUL_CDA_HOST),
+    basePath: VITE_CONTENTFUL_BASE_PATH,
   },
 
   optimization: {
-    clientId: process.env.VITE_NINETAILED_CLIENT_ID ?? '',
-    environment: process.env.VITE_NINETAILED_ENVIRONMENT ?? '',
+    clientId: VITE_NINETAILED_CLIENT_ID,
+    environment: VITE_NINETAILED_ENVIRONMENT,
   },
 
   api: {
-    experienceBaseUrl: process.env.VITE_EXPERIENCE_API_BASE_URL ?? '',
-    insightsBaseUrl: process.env.VITE_INSIGHTS_API_BASE_URL ?? '',
+    experienceBaseUrl: getAndroidCompatibleUrl(VITE_EXPERIENCE_API_BASE_URL),
+    insightsBaseUrl: getAndroidCompatibleUrl(VITE_INSIGHTS_API_BASE_URL),
   },
 
   entries: {
