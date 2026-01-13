@@ -54,6 +54,30 @@ export interface ContentfulEntry {
 }
 
 /**
+ * Entry collection response from Contentful client.
+ * Includes pagination metadata for batched fetching.
+ */
+export interface ContentfulEntryCollection {
+  items: ContentfulEntry[]
+  total: number
+  skip: number
+  limit: number
+}
+
+/**
+ * Minimal Contentful client interface required by the PreviewPanel.
+ * This allows the panel to fetch audience and experience entries directly.
+ */
+export interface ContentfulClient {
+  getEntries(query: {
+    content_type: string
+    include?: number
+    skip?: number
+    limit?: number
+  }): Promise<ContentfulEntryCollection>
+}
+
+/**
  * Experience definition from the optimization platform.
  * Represents a personalization or experiment configuration.
  */
@@ -185,21 +209,10 @@ export interface PreviewPanelProps {
   /** Called when the panel visibility changes */
   onVisibilityChange?: (isVisible: boolean) => void
   /**
-   * Raw Contentful entries for nt_audience content type.
-   * The panel will automatically convert these to internal audience definitions.
+   * Contentful client instance used to fetch audience and experience entries.
+   * The panel will automatically fetch nt_audience and nt_experience content types.
    */
-  audienceEntries?: ContentfulEntry[]
-  /**
-   * Raw Contentful entries for nt_experience content type.
-   * The panel will automatically convert these to internal experience definitions,
-   * including variant information from linked entries.
-   */
-  experienceEntries?: ContentfulEntry[]
-  /**
-   * Raw Contentful entries for nt_personalization content type.
-   * Used to display human-readable names in the personalizations section.
-   */
-  personalizationEntries?: ContentfulEntry[]
+  contentfulClient: ContentfulClient
 }
 
 /**

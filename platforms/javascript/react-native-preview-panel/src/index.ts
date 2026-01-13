@@ -12,69 +12,73 @@ export { VariantSelector } from './components/VariantSelector'
 
 // Shared UI primitives
 export {
-  ActionButton,
-  AudienceToggle,
-  Badge,
-  CollapseToggleButton,
-  JsonViewer,
-  ListItem,
-  QualificationIndicator,
-  SearchBar,
-  Section,
+    ActionButton,
+    AudienceToggle,
+    Badge,
+    CollapseToggleButton,
+    JsonViewer,
+    ListItem,
+    QualificationIndicator,
+    SearchBar,
+    Section
 } from './components/shared'
 
 // Hooks
 export {
-  useCollapsibleControl,
-  usePreviewData,
-  usePreviewState,
-  useProfileOverrides,
+    useCollapsibleControl,
+    usePreviewData,
+    usePreviewState,
+    useProfileOverrides
 } from './hooks'
 
 // Constants
 export {
-  ALL_VISITORS_AUDIENCE_DESCRIPTION,
-  ALL_VISITORS_AUDIENCE_ID,
-  ALL_VISITORS_AUDIENCE_NAME,
+    ALL_VISITORS_AUDIENCE_DESCRIPTION,
+    ALL_VISITORS_AUDIENCE_ID,
+    ALL_VISITORS_AUDIENCE_NAME
 } from './constants'
 
 // Types
 export type {
-  ActionButtonProps,
-  AudienceDefinition,
-  AudienceItemProps,
-  AudienceOverride,
-  AudienceOverrideState,
-  AudienceSectionProps,
-  AudienceToggleProps,
-  AudienceWithExperiences,
-  BadgeProps,
-  ContentfulEntry,
-  ExperienceCardProps,
-  ExperienceDefinition,
-  JsonViewerProps,
-  ListItemProps,
-  OverrideState,
-  OverridesSectionProps,
-  PersonalizationOverride,
-  PersonalizationsSectionProps,
-  PreviewActions,
-  PreviewData,
-  PreviewPanelProps,
-  PreviewState,
-  ProfileSectionProps,
-  QualificationIndicatorProps,
-  SearchBarProps,
-  SectionProps,
-  VariantDistribution,
-  VariantSelectorProps,
+    ActionButtonProps,
+    AudienceDefinition,
+    AudienceItemProps,
+    AudienceOverride,
+    AudienceOverrideState,
+    AudienceSectionProps,
+    AudienceToggleProps,
+    AudienceWithExperiences,
+    BadgeProps,
+    ContentfulClient,
+    ContentfulEntry,
+    ContentfulEntryCollection,
+    ExperienceCardProps,
+    ExperienceDefinition,
+    JsonViewerProps,
+    ListItemProps,
+    OverrideState,
+    OverridesSectionProps,
+    PersonalizationOverride,
+    PersonalizationsSectionProps,
+    PreviewActions,
+    PreviewData,
+    PreviewPanelProps,
+    PreviewState,
+    ProfileSectionProps,
+    QualificationIndicatorProps,
+    SearchBarProps,
+    SectionProps,
+    VariantDistribution,
+    VariantSelectorProps
 } from './types'
 
 // Utilities for creating definitions from Contentful entries
 export {
-  createAudienceDefinitions,
-  createExperienceDefinitions,
-  createExperienceNameMap,
+    createAudienceDefinitions,
+    createExperienceDefinitions,
+    createExperienceNameMap,
+    fetchAllEntriesByContentType,
+    fetchAudienceAndExperienceEntries
 } from './utils'
 
 // Theme and styles (for custom theming)

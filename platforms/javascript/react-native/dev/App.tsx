@@ -20,21 +20,17 @@ import {
 import type Optimization from '@contentful/optimization-react-native'
 import type { MergeTagEntry, Profile } from '@contentful/optimization-react-native'
 import { OptimizationProvider } from '@contentful/optimization-react-native'
-import type { ContentfulEntry } from '@contentful/optimization-react-native-preview-panel'
 import { PreviewPanel } from '@contentful/optimization-react-native-preview-panel'
 import type { Entry } from 'contentful'
+import { createClient } from 'contentful'
 import { LoadingScreen } from './components/LoadingScreen'
 import { MergeTagDetailCard } from './components/MergeTagDetailCard'
 import { SDKConfigCard } from './components/SDKConfigCard'
 import { SDKStatusCard } from './components/SDKStatusCard'
+import { ENV_CONFIG } from './env.config'
 import { TestTrackingScreen } from './TestTrackingScreen'
 import type { SDKInfo, ThemeColors } from './types'
-import {
-  fetchEntriesByContentType,
-  fetchEntriesFromMockServer,
-  fetchMergeTagEntry,
-  initializeSDK,
-} from './utils/sdkHelpers'
+import { fetchEntriesFromMockServer, fetchMergeTagEntry, initializeSDK } from './utils/sdkHelpers'
 
 type ScreenType = 'home' | 'tracking' | 'preview'
 
@@ -118,6 +114,15 @@ function findMergeTagEntries(richTextField: {
   return embeddedNodes
 }
 
+const contentfulClient = createClient({
+  space: ENV_CONFIG.contentful.spaceId,
+  environment: ENV_CONFIG.contentful.environment,
+  accessToken: ENV_CONFIG.contentful.accessToken,
+  host: ENV_CONFIG.contentful.host,
+  basePath: ENV_CONFIG.contentful.basePath,
+  insecure: true,
+})
+
 // eslint-disable-next-line complexity -- Main app component requires conditional rendering and state management logic
 function App(): React.JSX.Element {
   const isDarkMode = useColorScheme() === 'dark'
@@ -136,8 +141,6 @@ function App(): React.JSX.Element {
   const [mergeTagDetails, setMergeTagDetails] = useState<MergeTagEntry[]>([])
   const [entriesLoading, setEntriesLoading] = useState(false)
   const [isIdentified, setIsIdentified] = useState(false)
-  const [audienceEntries, setAudienceEntries] = useState<ContentfulEntry[]>([])
-  const [experienceEntries, setExperienceEntries] = useState<ContentfulEntry[]>([])
 
   useEffect(() => {
     async function initialize(): Promise<void> {
@@ -153,23 +156,6 @@ function App(): React.JSX.Element {
     void initialize()
   }, [])
 
-  useEffect(() => {
-    async function fetchContentfulEntries(): Promise<void> {
-      try {
-        const [audiences, experiences] = await Promise.all([
-          fetchEntriesByContentType('nt_audience'),
-          fetchEntriesByContentType('nt_experience'),
-          fetchEntriesByContentType('nt_personalization'),
-        ])
-
-        setAudienceEntries(audiences as ContentfulEntry[])
-        setExperienceEntries(experiences as ContentfulEntry[])
-      } catch (_error) {
-        // Silently fail - entries may not be available in all environments
-      }
-    }
-    void fetchContentfulEntries()
-  }, [])
 
   useEffect(() => {
     if (!sdk) return
@@ -315,11 +301,7 @@ function App(): React.JSX.Element {
               )}
             </View>
           </View>
-          <PreviewPanel
-            showHeader={true}
-            audienceEntries={audienceEntries}
-            experienceEntries={experienceEntries}
-          />
+          <PreviewPanel showHeader={true} contentfulClient={contentfulClient} />
         </SafeAreaView>
       </OptimizationProvider>
     )

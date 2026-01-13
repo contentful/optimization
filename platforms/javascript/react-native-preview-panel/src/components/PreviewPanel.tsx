@@ -1,6 +1,15 @@
 import { logger } from '@contentful/optimization-core'
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Alert, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native'
+import {
+  ActivityIndicator,
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native'
 import {
   useCollapsibleControl,
   usePreviewData,
@@ -9,8 +18,17 @@ import {
 } from '../hooks'
 import { commonStyles } from '../styles/common'
 import { colors, spacing, typography } from '../styles/theme'
-import type { AudienceOverrideState, ExperienceDefinition, PreviewPanelProps } from '../types'
-import { createAudienceDefinitions, createExperienceDefinitions } from '../utils'
+import type {
+  AudienceOverrideState,
+  ContentfulEntry,
+  ExperienceDefinition,
+  PreviewPanelProps,
+} from '../types'
+import {
+  createAudienceDefinitions,
+  createExperienceDefinitions,
+  fetchAudienceAndExperienceEntries,
+} from '../utils'
 import { AudienceSection } from './AudienceSection'
 import { OverridesSection } from './OverridesSection'
 import { ProfileSection } from './ProfileSection'
@@ -31,16 +49,18 @@ import { ActionButton, SearchBar } from './shared'
  * @example
  * ```tsx
  * import { PreviewPanel } from '@contentful/optimization-react-native-preview-panel'
+ * import { createClient } from 'contentful'
+ *
+ * const contentfulClient = createClient({
+ *   space: 'your-space-id',
+ *   accessToken: 'your-access-token',
+ * })
  *
  * function App() {
  *   return (
  *     <OptimizationProvider instance={sdk}>
  *       <YourAppContent />
- *       <PreviewPanel
- *         audienceEntries={audienceEntries}
- *         experienceEntries={experienceEntries}
- *         personalizationEntries={personalizationEntries}
- *       />
+ *       <PreviewPanel contentfulClient={contentfulClient} />
  *     </OptimizationProvider>
  *   )
  * }
@@ -51,12 +71,17 @@ export function PreviewPanel({
   showHeader = true,
   style,
   onVisibilityChange,
-  audienceEntries = [],
-  experienceEntries = [],
+  contentfulClient,
 }: PreviewPanelProps): React.JSX.Element {
   const previewState = usePreviewState()
   const { profile, personalizations, consent, isLoading } = previewState
   const { overrides, actions } = useProfileOverrides()
+
+  // Contentful entries state
+  const [audienceEntries, setAudienceEntries] = useState<ContentfulEntry[]>([])
+  const [experienceEntries, setExperienceEntries] = useState<ContentfulEntry[]>([])
+  const [entriesLoading, setEntriesLoading] = useState(true)
+  const [entriesError, setEntriesError] = useState<string | null>(null)
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('')
@@ -69,6 +94,28 @@ export function PreviewPanel({
     allCollapsiblesOpen,
     initializeCollapsible,
   } = useCollapsibleControl({ initiallyOpen: false })
+
+  // Fetch Contentful entries on mount with pagination
+  useEffect(() => {
+    async function fetchContentfulEntries(): Promise<void> {
+      setEntriesLoading(true)
+      setEntriesError(null)
+
+      try {
+        const { audiences, experiences } = await fetchAudienceAndExperienceEntries(contentfulClient)
+        setAudienceEntries(audiences)
+        setExperienceEntries(experiences)
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        logger.error('[PreviewPanel] Failed to fetch entries:', errorMessage)
+        setEntriesError(errorMessage)
+      } finally {
+        setEntriesLoading(false)
+      }
+    }
+
+    void fetchContentfulEntries()
+  }, [contentfulClient])
 
   // Create definitions from Contentful entries
   const audienceDefinitions = useMemo(
@@ -193,8 +240,8 @@ export function PreviewPanel({
         </View>
       )}
 
-      {/* Search Bar - only show if we have definitions */}
-      {hasDefinitions && (
+      {/* Search Bar - only show if we have definitions and not loading */}
+      {!entriesLoading && hasDefinitions && (
         <View style={styles.searchContainer}>
           <SearchBar
             value={searchQuery}
@@ -206,8 +253,24 @@ export function PreviewPanel({
 
       {/* Content */}
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Audience & Experience Browser - show if definitions are provided */}
-        {hasDefinitions && (
+        {/* Loading state for entries */}
+        {entriesLoading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.accent.primary} />
+            <Text style={styles.loadingText}>Loading audiences and experiences...</Text>
+          </View>
+        )}
+
+        {/* Error state for entries */}
+        {entriesError && !entriesLoading && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorTitle}>Failed to load entries</Text>
+            <Text style={styles.errorText}>{entriesError}</Text>
+          </View>
+        )}
+
+        {/* Audience & Experience Browser - show if definitions are provided and not loading */}
+        {!entriesLoading && !entriesError && hasDefinitions && (
           <AudienceSection
             audiencesWithExperiences={audiencesWithExperiences}
             onAudienceToggle={handleAudienceToggle}
@@ -276,6 +339,34 @@ const styles = StyleSheet.create({
   resetButton: {
     width: '100%',
     paddingVertical: spacing.md,
+  },
+  loadingContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: spacing.md,
+    fontSize: typography.fontSize.md,
+    color: colors.text.secondary,
+  },
+  errorContainer: {
+    margin: spacing.lg,
+    padding: spacing.lg,
+    backgroundColor: colors.background.secondary,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.action.destructive,
+  },
+  errorTitle: {
+    fontSize: typography.fontSize.md,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.action.destructive,
+    marginBottom: spacing.xs,
+  },
+  errorText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
   },
 })
 

@@ -109,24 +109,3 @@ export async function fetchMergeTagEntry(setMergeTagEntry: (entry: Entry) => voi
   setMergeTagEntry(mergeTagEntryData)
 }
 
-export async function fetchEntriesByContentType(contentTypeId: string): Promise<Entry[]> {
-  const {
-    contentful: { spaceId, environment, accessToken, host, basePath },
-  } = ENV_CONFIG
-
-  const contentful = createClient({
-    space: spaceId,
-    environment,
-    accessToken,
-    host,
-    basePath,
-    insecure: true,
-  })
-
-  const response = await contentful.getEntries({
-    content_type: contentTypeId,
-    include: 10,
-  })
-
-  return response.items
-}
