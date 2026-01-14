@@ -1,0 +1,209 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "BBvRD6Uv03k69wPwB9Ou6",
+        "type": "Entry",
+        "createdAt": "2025-10-14T08:23:35.930Z",
+        "updatedAt": "2025-10-14T08:23:35.930Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 12,
+        "revision": 1,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "nt_experience"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "nt_name": "[Personalization] Visitors using a Desktop Browser",
+        "nt_type": "nt_personalization",
+        "nt_config": {
+          "distribution": [0, 1],
+          "traffic": 1,
+          "components": [
+            {
+              "baseline": {
+                "id": "xFwgG3oNaOcjzWiGe4vXo"
+              },
+              "variants": [
+                {
+                  "id": "6iyPl6vfDH5AoClf3MtYlh",
+                  "hidden": false
+                }
+              ]
+            }
+          ],
+          "primaryMetric": ""
+        },
+        "nt_audience": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Entry",
+            "id": "2y72M2RTXnMpp9GPG8xSzf"
+          }
+        },
+        "nt_variants": [
+          {
+            "sys": {
+              "type": "Link",
+              "linkType": "Entry",
+              "id": "6iyPl6vfDH5AoClf3MtYlh"
+            }
+          }
+        ],
+        "nt_experience_id": "BBvRD6Uv03k69wPwB9Ou6",
+        "nt_metadata": {
+          "type": "origin"
+        }
+      }
+    }
+  ],
+  "includes": {
+    "Entry": [
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "2y72M2RTXnMpp9GPG8xSzf",
+          "type": "Entry",
+          "createdAt": "2025-10-13T09:23:36.156Z",
+          "updatedAt": "2025-10-13T09:30:02.493Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 11,
+          "revision": 2,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nt_audience"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "nt_name": "Desktop Users",
+          "nt_description": "Users who have visited the site with a desktop browser",
+          "nt_rules": {
+            "any": [
+              {
+                "all": [
+                  {
+                    "key": "",
+                    "type": "device",
+                    "count": "1",
+                    "value": "",
+                    "operator": "equal",
+                    "conditions": [
+                      {
+                        "key": {
+                          "id": "type",
+                          "key": "type",
+                          "label": "type",
+                          "value": "type",
+                          "useOnce": true,
+                          "category": {
+                            "name": "type",
+                            "type": "type",
+                            "label": "type"
+                          }
+                        },
+                        "value": "desktop",
+                        "operator": "equal"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "nt_audience_id": "2y72M2RTXnMpp9GPG8xSzf",
+          "nt_metadata": {
+            "type": "origin"
+          }
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "6iyPl6vfDH5AoClf3MtYlh",
+          "type": "Entry",
+          "createdAt": "2025-10-14T08:23:23.916Z",
+          "updatedAt": "2025-10-14T08:23:23.916Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 7,
+          "revision": 1,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "content"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "internalTitle": "[Variant] Visitors Using a Desktop Browser",
+          "text": "This is a variant content entry for visitors using a desktop browser."
+        }
+      }
+    ]
+  }
+}

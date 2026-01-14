@@ -111,10 +111,10 @@
               "id": "uelxcuo7v97l"
             }
           },
-          "id": "6IueRX1pS3iMJncbhUQTba",
+          "id": "4yIqY7AWtzeehCZxtQSDB",
           "type": "Entry",
-          "createdAt": "2025-11-20T14:10:46.708Z",
-          "updatedAt": "2025-11-20T14:10:46.708Z",
+          "createdAt": "2025-10-13T09:32:31.720Z",
+          "updatedAt": "2025-10-13T09:32:31.720Z",
           "environment": {
             "sys": {
               "id": "master",
@@ -122,8 +122,68 @@
               "linkType": "Environment"
             }
           },
-          "publishedVersion": 11,
+          "publishedVersion": 10,
           "revision": 1,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nt_audience"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "nt_name": "Identified Users",
+          "nt_description": "Users who have been identified with an `identified` trait set to `true`",
+          "nt_rules": {
+            "any": [
+              {
+                "all": [
+                  {
+                    "key": "identified",
+                    "type": "identify",
+                    "count": "1",
+                    "value": "true",
+                    "operator": "equal",
+                    "conditions": []
+                  }
+                ]
+              }
+            ]
+          },
+          "nt_audience_id": "4yIqY7AWtzeehCZxtQSDB",
+          "nt_metadata": {
+            "type": "origin"
+          }
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "6IueRX1pS3iMJncbhUQTba",
+          "type": "Entry",
+          "createdAt": "2025-11-20T14:10:46.708Z",
+          "updatedAt": "2025-11-20T16:16:46.663Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 13,
+          "revision": 2,
           "contentType": {
             "sys": {
               "type": "Link",
@@ -154,6 +214,13 @@
             ],
             "distribution": [0, 1],
             "primaryMetric": "fececd8c-d0bd-4a37-bea7-b2f68b782923"
+          },
+          "nt_audience": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Entry",
+              "id": "4yIqY7AWtzeehCZxtQSDB"
+            }
           },
           "nt_variants": [
             {

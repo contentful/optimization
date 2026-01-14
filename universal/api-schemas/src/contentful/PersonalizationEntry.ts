@@ -109,6 +109,18 @@ export const PersonalizationEntry = z.extend(CtflEntry, {
 export type PersonalizationEntry = z.infer<typeof PersonalizationEntry>
 
 /**
+ * Zod schema describing a Personalization entry "skeleton".
+ */
+export const PersonalizationEntrySkeleton = z.extend(PersonalizationEntry, {
+  contentTypeId: z.literal('nt_experience'),
+})
+
+/**
+ * TypeScript type inferred from {@link PersonalizationEntrySkeleton}.
+ */
+export type PersonalizationEntrySkeleton = z.infer<typeof PersonalizationEntrySkeleton>
+
+/**
  * Type guard for {@link PersonalizationEntry}.
  *
  * @param entry - Contentful entry or link to test.

@@ -1,0 +1,87 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "3MRuZPQ5EdwDqzUDRgOo7c",
+        "type": "Entry",
+        "createdAt": "2025-10-13T09:21:05.092Z",
+        "updatedAt": "2025-10-13T09:29:04.634Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 11,
+        "revision": 2,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "nt_audience"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "nt_name": "Mobile Users",
+        "nt_description": "Users who have visited the site from a mobile browser",
+        "nt_rules": {
+          "any": [
+            {
+              "all": [
+                {
+                  "key": "",
+                  "type": "device",
+                  "count": "1",
+                  "value": "",
+                  "operator": "equal",
+                  "conditions": [
+                    {
+                      "key": {
+                        "id": "type",
+                        "key": "type",
+                        "label": "type",
+                        "value": "type",
+                        "useOnce": true,
+                        "category": {
+                          "name": "type",
+                          "type": "type",
+                          "label": "type"
+                        }
+                      },
+                      "value": "mobile",
+                      "operator": "equal"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "nt_audience_id": "3MRuZPQ5EdwDqzUDRgOo7c",
+        "nt_metadata": {
+          "type": "origin"
+        }
+      }
+    }
+  ]
+}

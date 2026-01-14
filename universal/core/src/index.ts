@@ -1,4 +1,12 @@
-export { batch, effect, signals, type Signal, type Signals } from './signals'
+export {
+  batch,
+  effect,
+  signalFns,
+  signals,
+  type Signal,
+  type SignalFns,
+  type Signals,
+} from './signals'
 
 export * from '@contentful/optimization-api-client'
 export * from 'logger'

@@ -1,0 +1,70 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "2WzXDaWtDmstHl9p8Wufpp",
+        "type": "Entry",
+        "createdAt": "2025-10-13T09:11:33.088Z",
+        "updatedAt": "2025-10-13T09:11:33.088Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 9,
+        "revision": 1,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "nt_audience"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "nt_name": "Europe Visitors",
+        "nt_description": "Visitors located in Europe",
+        "nt_rules": {
+          "any": [
+            {
+              "all": [
+                {
+                  "key": "continent",
+                  "type": "location",
+                  "count": "1",
+                  "value": "EU",
+                  "operator": "equal",
+                  "conditions": []
+                }
+              ]
+            }
+          ]
+        },
+        "nt_audience_id": "2WzXDaWtDmstHl9p8Wufpp",
+        "nt_metadata": {
+          "type": "origin"
+        }
+      }
+    }
+  ]
+}

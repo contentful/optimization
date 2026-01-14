@@ -35,6 +35,12 @@ export interface Signals {
   profile: typeof profile
 }
 
+export interface SignalFns {
+  batch: typeof batch
+  computed: typeof computed
+  effect: typeof effect
+}
+
 export interface Subscription {
   unsubscribe: () => void
 }
@@ -63,6 +69,12 @@ export const signals: Signals = {
   online,
   personalizations,
   profile,
+}
+
+export const signalFns: SignalFns = {
+  batch,
+  computed,
+  effect,
 }
 
 export { batch, effect, type Signal }

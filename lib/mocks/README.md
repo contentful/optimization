@@ -97,7 +97,7 @@ Ensure your `.contentfulrc.json` file contains data for the new Contentful space
 the following command:
 
 ```sh
-pnpm --filter mocks upload:stfl:space
+pnpm --filter mocks upload:ctfl:space
 ```
 
 Automatic upload of entry data is not yet directly supported by this package.

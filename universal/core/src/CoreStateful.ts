@@ -23,9 +23,11 @@ import {
   online,
   personalizations,
   profile,
+  signalFns,
   signals,
   toObservable,
   type Observable,
+  type SignalFns,
   type Signals,
 } from './signals'
 
@@ -37,7 +39,9 @@ import {
  */
 export interface PreviewPanelSignalObject {
   /** Signals instance that will be populated by registerPreviewPanel */
-  signals: Signals | null
+  signals: Signals | null | undefined
+  /** Signal functions that can be used across micro-frontend barriers */
+  signalFns: SignalFns | null | undefined
 }
 
 /**
@@ -238,6 +242,7 @@ class CoreStateful extends CoreBase implements ConsentController {
    */
   registerPreviewPanel(previewPanel: PreviewPanelSignalObject): void {
     previewPanel.signals = signals
+    previewPanel.signalFns = signalFns
   }
 }
 

@@ -1,0 +1,13 @@
+{
+  "ts": "2026-01-17T13:18:44.740Z",
+  "level": "error",
+  "error": {
+    "errno": -2,
+    "code": "ENOENT",
+    "syscall": "open",
+    "path": "/Users/charles.hudson/Projects/contentful/optimization/lib/mocks/src/contentful/data/space/ctfl-space-data.json",
+    "stacktrace": [
+      "Error: ENOENT: no such file or directory, open '/Users/charles.hudson/Projects/contentful/optimization/lib/mocks/src/contentful/data/space/ctfl-space-data.json'"
+    ]
+  }
+}

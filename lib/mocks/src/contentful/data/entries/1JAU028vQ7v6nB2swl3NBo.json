@@ -83,7 +83,7 @@
           "id": "1FHhEY0xkcCC9R5WCmnjRr",
           "type": "Entry",
           "createdAt": "2025-11-19T15:17:16.974Z",
-          "updatedAt": "2025-11-19T15:17:16.974Z",
+          "updatedAt": "2025-11-20T16:17:09.233Z",
           "environment": {
             "sys": {
               "id": "master",
@@ -91,8 +91,8 @@
               "linkType": "Environment"
             }
           },
-          "publishedVersion": 17,
-          "revision": 1,
+          "publishedVersion": 19,
+          "revision": 2,
           "contentType": {
             "sys": {
               "type": "Link",
@@ -107,7 +107,6 @@
           "nt_description": "This is a root-level personalization with nested personalizations.",
           "nt_type": "nt_personalization",
           "nt_config": {
-            "distribution": [0, 1],
             "traffic": 1,
             "components": [
               {
@@ -123,13 +122,14 @@
                 ]
               }
             ],
+            "distribution": [0, 1],
             "primaryMetric": "fececd8c-d0bd-4a37-bea7-b2f68b782923"
           },
           "nt_audience": {
             "sys": {
               "type": "Link",
               "linkType": "Entry",
-              "id": "46fHDG7vjxwTbYee5JNVOQ"
+              "id": "4yIqY7AWtzeehCZxtQSDB"
             }
           },
           "nt_variants": [
@@ -209,83 +209,6 @@
               "id": "uelxcuo7v97l"
             }
           },
-          "id": "46fHDG7vjxwTbYee5JNVOQ",
-          "type": "Entry",
-          "createdAt": "2025-10-13T09:19:35.294Z",
-          "updatedAt": "2025-10-13T09:28:30.370Z",
-          "environment": {
-            "sys": {
-              "id": "master",
-              "type": "Link",
-              "linkType": "Environment"
-            }
-          },
-          "publishedVersion": 11,
-          "revision": 2,
-          "contentType": {
-            "sys": {
-              "type": "Link",
-              "linkType": "ContentType",
-              "id": "nt_audience"
-            }
-          },
-          "locale": "en-US"
-        },
-        "fields": {
-          "nt_name": "Return Visitors",
-          "nt_description": "Visitors who have previously visited the site",
-          "nt_rules": {
-            "any": [
-              {
-                "all": [
-                  {
-                    "key": "",
-                    "type": "isReturningVisitor",
-                    "count": "1",
-                    "value": true,
-                    "operator": "equal",
-                    "conditions": [
-                      {
-                        "key": {
-                          "id": "session_count",
-                          "key": "session_count",
-                          "label": "session_count",
-                          "value": "session_count",
-                          "useOnce": true,
-                          "category": {
-                            "name": "session_count",
-                            "type": "session_count",
-                            "label": "session_count"
-                          }
-                        },
-                        "value": "1",
-                        "operator": "greaterThan"
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          },
-          "nt_audience_id": "46fHDG7vjxwTbYee5JNVOQ",
-          "nt_metadata": {
-            "type": "origin"
-          }
-        }
-      },
-      {
-        "metadata": {
-          "tags": [],
-          "concepts": []
-        },
-        "sys": {
-          "space": {
-            "sys": {
-              "type": "Link",
-              "linkType": "Space",
-              "id": "uelxcuo7v97l"
-            }
-          },
           "id": "4hDiXxYEFrXHXcQgmdL9Uv",
           "type": "Entry",
           "createdAt": "2025-11-20T14:10:23.719Z",
@@ -311,6 +234,66 @@
         "fields": {
           "internalTitle": "[Variant Nested] Variant Level 2",
           "text": "This is a level 2 nested variant entry."
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "4yIqY7AWtzeehCZxtQSDB",
+          "type": "Entry",
+          "createdAt": "2025-10-13T09:32:31.720Z",
+          "updatedAt": "2025-10-13T09:32:31.720Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 10,
+          "revision": 1,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nt_audience"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "nt_name": "Identified Users",
+          "nt_description": "Users who have been identified with an `identified` trait set to `true`",
+          "nt_rules": {
+            "any": [
+              {
+                "all": [
+                  {
+                    "key": "identified",
+                    "type": "identify",
+                    "count": "1",
+                    "value": "true",
+                    "operator": "equal",
+                    "conditions": []
+                  }
+                ]
+              }
+            ]
+          },
+          "nt_audience_id": "4yIqY7AWtzeehCZxtQSDB",
+          "nt_metadata": {
+            "type": "origin"
+          }
         }
       },
       {
@@ -436,7 +419,7 @@
           "id": "6IueRX1pS3iMJncbhUQTba",
           "type": "Entry",
           "createdAt": "2025-11-20T14:10:46.708Z",
-          "updatedAt": "2025-11-20T14:10:46.708Z",
+          "updatedAt": "2025-11-20T16:16:46.663Z",
           "environment": {
             "sys": {
               "id": "master",
@@ -444,8 +427,8 @@
               "linkType": "Environment"
             }
           },
-          "publishedVersion": 11,
-          "revision": 1,
+          "publishedVersion": 13,
+          "revision": 2,
           "contentType": {
             "sys": {
               "type": "Link",
@@ -476,6 +459,13 @@
             ],
             "distribution": [0, 1],
             "primaryMetric": "fececd8c-d0bd-4a37-bea7-b2f68b782923"
+          },
+          "nt_audience": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Entry",
+              "id": "4yIqY7AWtzeehCZxtQSDB"
+            }
           },
           "nt_variants": [
             {
@@ -508,7 +498,7 @@
           "id": "7DyidZaPB7Jr1gWKjoogg0",
           "type": "Entry",
           "createdAt": "2025-11-19T15:21:38.872Z",
-          "updatedAt": "2025-11-19T15:21:38.872Z",
+          "updatedAt": "2025-11-20T16:16:25.829Z",
           "environment": {
             "sys": {
               "id": "master",
@@ -516,8 +506,8 @@
               "linkType": "Environment"
             }
           },
-          "publishedVersion": 10,
-          "revision": 1,
+          "publishedVersion": 12,
+          "revision": 2,
           "contentType": {
             "sys": {
               "type": "Link",
@@ -548,6 +538,13 @@
             ],
             "distribution": [0, 1],
             "primaryMetric": "fececd8c-d0bd-4a37-bea7-b2f68b782923"
+          },
+          "nt_audience": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Entry",
+              "id": "4yIqY7AWtzeehCZxtQSDB"
+            }
           },
           "nt_variants": [
             {

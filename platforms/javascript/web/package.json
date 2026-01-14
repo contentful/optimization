@@ -36,14 +36,14 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",
-    "happy-dom": "^20.0.2",
+    "happy-dom": "catalog:",
     "rimraf": "catalog:",
-    "rollup-plugin-visualizer": "^6.0.3",
+    "rollup-plugin-visualizer": "catalog:",
     "tslib": "catalog:",
     "typescript": "catalog:",
-    "vite": "^7.1.11",
+    "vite": "catalog:",
     "vitest": "catalog:",
-    "vite-bundle-analyzer": "^1.2.1",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-bundle-analyzer": "catalog:",
+    "vite-tsconfig-paths": "catalog:"
   }
 }

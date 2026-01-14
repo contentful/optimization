@@ -60,7 +60,7 @@ export function useProfileOverrides(): {
   const [overrides, setOverrides] = useState<OverrideState>(initialOverrideState)
 
   // Store signals reference obtained from SDK registration
-  const signalsRef = useRef<Signals | null>(null)
+  const signalsRef = useRef<Signals | null | undefined>(null)
 
   // Store interceptor ID for cleanup
   const interceptorIdRef = useRef<number | null>(null)
@@ -81,6 +81,7 @@ export function useProfileOverrides(): {
     // Create a preview panel compatible object to receive signals
     const previewPanelObject: PreviewPanelSignalObject = {
       signals: null,
+      signalFns: null,
     }
 
     // Register with the SDK to get signal access

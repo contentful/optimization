@@ -84,6 +84,22 @@ export const SpaceLink = z.object({
 export type SpaceLink = z.infer<typeof SpaceLink>
 
 /**
+ * Zod schema representing a Contentful Taxonomy Concept link.
+ */
+const TaxonomyConceptLink = z.object({
+  sys: z.object({
+    type: z.literal('Link'),
+    linkType: z.literal('TaxonomyConcept'),
+    id: z.string(),
+  }),
+})
+
+/**
+ * TypeScript type inferred from {@link TaxonomyConceptLink}.
+ */
+export type TaxonomyConceptLink = z.infer<typeof TaxonomyConceptLink>
+
+/**
  * Zod schema representing a Contentful Tag link.
  */
 export const TagLink = z.object({
@@ -141,12 +157,10 @@ export const CtflEntry = z.object({
   /**
    * Contentful metadata, including tags.
    */
-  metadata: z.catchall(
-    z.object({
-      tags: z.array(TagLink),
-    }),
-    z.json(),
-  ),
+  metadata: z.object({
+    tags: z.array(TagLink),
+    concepts: z.optional(z.array(TaxonomyConceptLink)),
+  }),
 
   /**
    * System-managed properties describing the entry.

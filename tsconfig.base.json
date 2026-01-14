@@ -5,6 +5,7 @@
     "declarationMap": true,
     "erasableSyntaxOnly": true,
     "esModuleInterop": true,
+    "experimentalDecorators": false,
     "importHelpers": true,
     "isolatedModules": true,
     "jsx": "react",

@@ -1,0 +1,70 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "716kDnZAaRC8jQwllThSSd",
+        "type": "Entry",
+        "createdAt": "2025-10-13T09:14:00.752Z",
+        "updatedAt": "2025-10-13T09:14:00.752Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 8,
+        "revision": 1,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "nt_audience"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "nt_name": "South America Visitors",
+        "nt_description": "Visitors located in South America",
+        "nt_rules": {
+          "any": [
+            {
+              "all": [
+                {
+                  "type": "location",
+                  "count": "1",
+                  "key": "continent",
+                  "operator": "equal",
+                  "value": "SA",
+                  "conditions": []
+                }
+              ]
+            }
+          ]
+        },
+        "nt_audience_id": "716kDnZAaRC8jQwllThSSd",
+        "nt_metadata": {
+          "type": "origin"
+        }
+      }
+    }
+  ]
+}

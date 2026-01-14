@@ -1,0 +1,70 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "3gYGBfUtLw331jrtgnbIqg",
+        "type": "Entry",
+        "createdAt": "2025-10-13T09:15:50.553Z",
+        "updatedAt": "2025-10-13T09:15:50.553Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 7,
+        "revision": 1,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "nt_audience"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "nt_name": "Oceania Visitors",
+        "nt_description": "Visitors located in Oceania",
+        "nt_rules": {
+          "any": [
+            {
+              "all": [
+                {
+                  "type": "location",
+                  "count": "1",
+                  "key": "continent",
+                  "operator": "equal",
+                  "value": "OC",
+                  "conditions": []
+                }
+              ]
+            }
+          ]
+        },
+        "nt_audience_id": "3gYGBfUtLw331jrtgnbIqg",
+        "nt_metadata": {
+          "type": "origin"
+        }
+      }
+    }
+  ]
+}

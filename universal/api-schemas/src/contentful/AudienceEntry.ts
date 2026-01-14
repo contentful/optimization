@@ -52,3 +52,15 @@ export const AudienceEntry = z.extend(CtflEntry, {
  * TypeScript type inferred from {@link AudienceEntry}.
  */
 export type AudienceEntry = z.infer<typeof AudienceEntry>
+
+/**
+ * Zod "skeleton" schema for a Contentful Audience entry, including `contentTypeId`.
+ */
+export const AudienceEntrySkeleton = z.extend(AudienceEntry, {
+  contentTypeId: z.literal('nt_audience'),
+})
+
+/**
+ * TypeScript type inferred from {@link AudienceEntrySkeleton}.
+ */
+export type AudienceEntrySkeleton = z.infer<typeof AudienceEntrySkeleton>

@@ -350,6 +350,4 @@ class Optimization extends CoreStateful {
   }
 }
 
-if (typeof window !== 'undefined') window.Optimization ??= Optimization
-
 export default Optimization

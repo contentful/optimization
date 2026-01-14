@@ -1,0 +1,70 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "aQ6NF4I6qkhcEdnst0uWt",
+        "type": "Entry",
+        "createdAt": "2025-10-13T09:14:54.040Z",
+        "updatedAt": "2025-10-13T09:14:54.040Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 7,
+        "revision": 1,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "nt_audience"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "nt_name": "Asia Visitors",
+        "nt_description": "Visitors located in Asia",
+        "nt_rules": {
+          "any": [
+            {
+              "all": [
+                {
+                  "type": "location",
+                  "count": "1",
+                  "key": "continent",
+                  "operator": "equal",
+                  "value": "AS",
+                  "conditions": []
+                }
+              ]
+            }
+          ]
+        },
+        "nt_audience_id": "aQ6NF4I6qkhcEdnst0uWt",
+        "nt_metadata": {
+          "type": "origin"
+        }
+      }
+    }
+  ]
+}

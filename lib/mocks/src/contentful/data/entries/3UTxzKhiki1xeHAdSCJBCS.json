@@ -1,0 +1,70 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "3UTxzKhiki1xeHAdSCJBCS",
+        "type": "Entry",
+        "createdAt": "2025-10-13T09:18:15.564Z",
+        "updatedAt": "2025-10-13T09:27:55.973Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 10,
+        "revision": 2,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "nt_audience"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "nt_name": "New Visitors",
+        "nt_description": "Visitors who have never visited the site",
+        "nt_rules": {
+          "any": [
+            {
+              "all": [
+                {
+                  "key": "",
+                  "type": "isReturningVisitor",
+                  "count": "1",
+                  "value": false,
+                  "operator": "equal",
+                  "conditions": []
+                }
+              ]
+            }
+          ]
+        },
+        "nt_audience_id": "3UTxzKhiki1xeHAdSCJBCS",
+        "nt_metadata": {
+          "type": "origin"
+        }
+      }
+    }
+  ]
+}
