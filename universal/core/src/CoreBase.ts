@@ -1,4 +1,5 @@
 import ApiClient, {
+  type InsightsEvent as AnalyticsEvent,
   type ApiClientConfig,
   type ChangeArray,
   type ComponentViewBuilderArgs,
@@ -13,6 +14,7 @@ import ApiClient, {
   type OptimizationData,
   type PageViewBuilderArgs,
   type PartialProfile,
+  type ExperienceEvent as PersonalizationEvent,
   type Profile,
   type SelectedPersonalizationArray,
   type TrackBuilderArgs,
@@ -21,8 +23,21 @@ import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'conte
 import type { LogLevels } from 'logger'
 import { ConsoleLogSink, logger } from 'logger'
 import type AnalyticsBase from './analytics/AnalyticsBase'
+import { InterceptorManager } from './lib/interceptor'
 import type { ResolvedData } from './personalization'
 import type PersonalizationBase from './personalization/PersonalizationBase'
+
+/**
+ * Lifecycle container for event and state interceptors.
+ *
+ * @public
+ */
+export interface LifecycleInterceptors {
+  /** Interceptors invoked for individual events prior to validation/sending. */
+  event: InterceptorManager<AnalyticsEvent | PersonalizationEvent>
+  /** Interceptors invoked before optimization state updates. */
+  state: InterceptorManager<OptimizationData>
+}
 
 /**
  * Options for configuring the {@link CoreBase} runtime and underlying clients.
@@ -66,6 +81,11 @@ abstract class CoreBase {
   readonly eventBuilder: EventBuilder
   /** Resolved core configuration (minus any name metadata). */
   readonly config: Omit<CoreConfig, 'name'>
+
+  readonly interceptors: LifecycleInterceptors = {
+    event: new InterceptorManager<AnalyticsEvent | PersonalizationEvent>(),
+    state: new InterceptorManager<OptimizationData>(),
+  }
 
   /**
    * Create the core with API client and logging preconfigured.

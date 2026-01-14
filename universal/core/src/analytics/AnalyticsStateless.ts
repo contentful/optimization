@@ -39,7 +39,7 @@ class AnalyticsStateless extends AnalyticsBase {
 
     const event = this.builder.buildComponentView(builderArgs)
 
-    const intercepted = await this.interceptor.event.run(event)
+    const intercepted = await this.interceptors.event.run(event)
 
     const parsed = ComponentViewEvent.parse(intercepted)
 
@@ -60,7 +60,7 @@ class AnalyticsStateless extends AnalyticsBase {
 
     const event = this.builder.buildFlagView(builderArgs)
 
-    const intercepted = await this.interceptor.event.run(event)
+    const intercepted = await this.interceptors.event.run(event)
 
     const parsed = ComponentViewEvent.parse(intercepted)
 
