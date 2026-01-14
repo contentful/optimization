@@ -161,8 +161,9 @@ function App(): React.JSX.Element {
   useEffect(() => {
     if (!sdk) return
 
-    // Trigger the Experience API to populate profile and personalizations
-    void sdk.personalization.page({ properties: { url: 'dev-app' } })
+    // Demonstrate direct screen tracking via sdk.screen()
+    // This sends a "screen" event to track this screen view
+    void sdk.screen({ name: 'Home', properties: { source: 'dev-app-direct' } })
 
     const subscription = sdk.states.profile.subscribe((currentProfile) => {
       setProfile(currentProfile)

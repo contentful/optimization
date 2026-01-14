@@ -11,6 +11,7 @@ import {
   ExperienceEvent as PersonalizationEvent,
   type ExperienceEventArray as PersonalizationEventArray,
   type Profile,
+  type ScreenViewBuilderArgs,
   type SelectedPersonalizationArray,
   type TrackBuilderArgs,
 } from '@contentful/optimization-api-client'
@@ -254,17 +255,15 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * Determine whether the named operation is permitted based on consent and
    * allowed event type configuration.
    *
-   * @param name - Method name; `trackComponentView` is normalized to
-   * `'component'` for allow‑list checks.
+   * @param name - Method name; `trackComponentView` and `trackFlagView` are
+   * normalized to `'component'` for allow‑list checks.
    * @returns `true` if the operation is permitted; otherwise `false`.
    */
   hasConsent(name: string): boolean {
-    return (
-      !!consentSignal.value ||
-      (this.allowedEventTypes ?? []).includes(
-        name === 'trackComponentView' || name === 'trackFlagView' ? 'component' : name,
-      )
-    )
+    const normalizedName =
+      name === 'trackComponentView' || name === 'trackFlagView' ? 'component' : name
+
+    return !!consentSignal.value || (this.allowedEventTypes ?? []).includes(normalizedName)
   }
 
   /**
@@ -336,6 +335,21 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
     logger.info('[Personalization] Sending "page" event')
 
     const event = this.builder.buildPageView(payload)
+
+    return await this.sendOrEnqueueEvent(event)
+  }
+
+  /**
+   * Record a screen view and update optimization state.
+   *
+   * @param payload - Screen view builder payload.
+   * @returns The evaluated {@link OptimizationData} for this screen view.
+   */
+  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
+  async screen(payload: ScreenViewBuilderArgs): Promise<OptimizationData | undefined> {
+    logger.info(`[Personalization] Sending "screen" event for "${payload.name}"`)
+
+    const event = this.builder.buildScreenView(payload)
 
     return await this.sendOrEnqueueEvent(event)
   }
