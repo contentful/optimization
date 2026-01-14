@@ -1,6 +1,8 @@
 import js from '@eslint/js'
 import love from 'eslint-config-love'
 import prettier from 'eslint-config-prettier'
+import { configs as lit } from 'eslint-plugin-lit'
+import { configs as wc } from 'eslint-plugin-wc'
 import typescript, { type ConfigArray } from 'typescript-eslint'
 
 const config: ConfigArray = typescript.config(
@@ -46,6 +48,8 @@ const config: ConfigArray = typescript.config(
       '@typescript-eslint/strict-boolean-expressions': 'off',
     },
   },
+  wc['flat/best-practice'],
+  lit['flat/recommended'],
   {
     // https://github.com/vitest-dev/vitest/issues/4543#issuecomment-1824628142
     files: ['**/src/**/*.test.ts', '**/src/**/*.spec.ts', '**/test/**/*.ts', '**/e2e/**/*.ts'],

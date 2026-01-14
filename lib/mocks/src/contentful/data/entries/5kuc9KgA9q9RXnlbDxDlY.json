@@ -1,0 +1,178 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "5kuc9KgA9q9RXnlbDxDlY",
+        "type": "Entry",
+        "createdAt": "2025-10-17T11:05:42.251Z",
+        "updatedAt": "2025-10-17T11:05:42.251Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 13,
+        "revision": 1,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "nt_experience"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "nt_name": "[Experiment] A/B/C",
+        "nt_type": "nt_experiment",
+        "nt_config": {
+          "distribution": [0.3333333333333333, 0.3333333333333333, 0.3333333333333333],
+          "traffic": 1,
+          "components": [
+            {
+              "type": "EntryReplacement",
+              "baseline": {
+                "id": "5XHssysWUDECHzKLzoIsg1"
+              },
+              "variants": [
+                {
+                  "id": "4bmHsNUaEibELHwWCon3dt",
+                  "hidden": false
+                },
+                {
+                  "id": "5CwnS3VDOncGMK83M3tNfz",
+                  "hidden": false
+                }
+              ]
+            }
+          ],
+          "primaryMetric": "fececd8c-d0bd-4a37-bea7-b2f68b782923",
+          "distributionType": "even-split"
+        },
+        "nt_variants": [
+          {
+            "sys": {
+              "type": "Link",
+              "linkType": "Entry",
+              "id": "4bmHsNUaEibELHwWCon3dt"
+            }
+          },
+          {
+            "sys": {
+              "type": "Link",
+              "linkType": "Entry",
+              "id": "5CwnS3VDOncGMK83M3tNfz"
+            }
+          }
+        ],
+        "nt_experience_id": "5kuc9KgA9q9RXnlbDxDlY",
+        "nt_metadata": {
+          "type": "origin"
+        }
+      }
+    }
+  ],
+  "includes": {
+    "Entry": [
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "4bmHsNUaEibELHwWCon3dt",
+          "type": "Entry",
+          "createdAt": "2025-10-17T11:04:59.561Z",
+          "updatedAt": "2025-10-17T11:04:59.561Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 3,
+          "revision": 1,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "content"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "internalTitle": "[Variant] B",
+          "text": "This is a variant content entry for an A/B/C experiment: B"
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "5CwnS3VDOncGMK83M3tNfz",
+          "type": "Entry",
+          "createdAt": "2025-10-17T11:05:23.054Z",
+          "updatedAt": "2025-10-17T11:05:23.054Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 3,
+          "revision": 1,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "content"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "internalTitle": "[Variant] C",
+          "text": "This is a variant content entry for an A/B/C experiment: C"
+        }
+      }
+    ]
+  }
+}

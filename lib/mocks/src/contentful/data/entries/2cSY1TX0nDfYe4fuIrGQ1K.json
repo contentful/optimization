@@ -1,0 +1,193 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "2cSY1TX0nDfYe4fuIrGQ1K",
+        "type": "Entry",
+        "createdAt": "2025-10-13T10:23:14.486Z",
+        "updatedAt": "2025-10-13T10:38:55.495Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 30,
+        "revision": 5,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "nt_experience"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "nt_name": "[Personalization] New Visitors",
+        "nt_description": "This is a personalization based on whether a user is new or returning",
+        "nt_type": "nt_personalization",
+        "nt_config": {
+          "traffic": 1,
+          "components": [
+            {
+              "baseline": {
+                "id": "2Z2WLOx07InSewC3LUB3eX"
+              },
+              "variants": [
+                {
+                  "id": "1UFf7qr4mHET3HYuYmcpEj",
+                  "hidden": false
+                }
+              ]
+            }
+          ],
+          "distribution": [0, 1],
+          "primaryMetric": ""
+        },
+        "nt_audience": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Entry",
+            "id": "3UTxzKhiki1xeHAdSCJBCS"
+          }
+        },
+        "nt_variants": [
+          {
+            "sys": {
+              "type": "Link",
+              "linkType": "Entry",
+              "id": "1UFf7qr4mHET3HYuYmcpEj"
+            }
+          }
+        ],
+        "nt_experience_id": "2cSY1TX0nDfYe4fuIrGQ1K",
+        "nt_metadata": {
+          "type": "origin"
+        }
+      }
+    }
+  ],
+  "includes": {
+    "Entry": [
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "1UFf7qr4mHET3HYuYmcpEj",
+          "type": "Entry",
+          "createdAt": "2025-10-13T10:30:20.193Z",
+          "updatedAt": "2025-10-13T10:30:20.193Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 5,
+          "revision": 1,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "content"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "internalTitle": "[Variant] New Visitors",
+          "text": "This is a variant content entry for new visitors."
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "3UTxzKhiki1xeHAdSCJBCS",
+          "type": "Entry",
+          "createdAt": "2025-10-13T09:18:15.564Z",
+          "updatedAt": "2025-10-13T09:27:55.973Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 10,
+          "revision": 2,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nt_audience"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "nt_name": "New Visitors",
+          "nt_description": "Visitors who have never visited the site",
+          "nt_rules": {
+            "any": [
+              {
+                "all": [
+                  {
+                    "key": "",
+                    "type": "isReturningVisitor",
+                    "count": "1",
+                    "value": false,
+                    "operator": "equal",
+                    "conditions": []
+                  }
+                ]
+              }
+            ]
+          },
+          "nt_audience_id": "3UTxzKhiki1xeHAdSCJBCS",
+          "nt_metadata": {
+            "type": "origin"
+          }
+        }
+      }
+    ]
+  }
+}

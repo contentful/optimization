@@ -156,7 +156,7 @@ function mergeConfig({
       eventBuilder: {
         app,
         channel: 'web',
-        library: { name: 'Optimization Web API', version: OPTIMIZATION_WEB_SDK_VERSION },
+        library: { name: 'Optimization Web SDK', version: OPTIMIZATION_WEB_SDK_VERSION },
         getLocale,
         getPageProperties,
         getUserAgent,
@@ -447,12 +447,5 @@ class Optimization extends CoreStateful {
     super.reset()
   }
 }
-
-/**
- * Attach the class constructor to the global `window` object in browsers.
- *
- * @internal
- */
-if (typeof window !== 'undefined') window.Optimization ??= Optimization
 
 export default Optimization

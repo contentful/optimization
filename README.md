@@ -63,7 +63,8 @@ ensure functionality is reasonably shared and consistent.
     - [Node SDK](/platforms/javascript/node/README.md)
       - Nest.js SDK (TBD)
     - [React Native SDK](/platforms/javascript/react-native/README.md)
-    - [Web SDK](/platforms/javascript/web/README.md)
+    - [Web SDK](/platforms/javascript/web/README.md) and
+      [Web Preview Panel](/platforms/javascript/web-preview-panel/README.md)
       - Angular SDK (TBD)
       - React SDK (TBD)
       - Svelte SDK (TBD)

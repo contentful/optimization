@@ -80,7 +80,7 @@ Import the Optimization class; both CJS and ESM module systems are supported, ES
 import Optimization from '@contentful/optimization-web'
 ```
 
-Configure and initialize the Optimization Node SDK:
+Configure and initialize the Optimization Web SDK:
 
 ```ts
 const optimization = new Optimization({ clientId: 'abc123' })
@@ -148,7 +148,7 @@ descendent SDKs.
 | ------------------- | --------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `app`               | No        | `undefined`                                          | The application definition used to attribute events to a specific consumer app     |
 | `channel`           | No        | `'web'`                                              | The channel that identifies where events originate from (e.g. `'web'`, `'mobile'`) |
-| `library`           | No        | `{ name: 'Optimization Web API', version: '0.0.0' }` | The client library metadata that is attached to all events                         |
+| `library`           | No        | `{ name: 'Optimization Web SDK', version: '0.0.0' }` | The client library metadata that is attached to all events                         |
 | `getLocale`         | No        | Built-in locale resolution                           | Function used to resolve the locale for outgoing events                            |
 | `getPageProperties` | No        | Built-in page properties resolution                  | Function that returns the current page properties                                  |
 | `getUserAgent`      | No        | Built-in user agent resolution                       | Function used to obtain the current user agent string when applicable              |

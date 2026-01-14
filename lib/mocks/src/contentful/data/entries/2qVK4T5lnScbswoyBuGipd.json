@@ -1,0 +1,192 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "2qVK4T5lnScbswoyBuGipd",
+        "type": "Entry",
+        "createdAt": "2025-10-13T12:00:52.906Z",
+        "updatedAt": "2025-10-13T12:04:17.168Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 15,
+        "revision": 2,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "nt_experience"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "nt_name": "[Personalization] Visitors from Europe",
+        "nt_type": "nt_personalization",
+        "nt_config": {
+          "traffic": 1,
+          "components": [
+            {
+              "baseline": {
+                "id": "4ib0hsHWoSOnCVdDkizE8d"
+              },
+              "variants": [
+                {
+                  "id": "4k6ZyFQnR2POY5IJLLlJRb",
+                  "hidden": false
+                }
+              ]
+            }
+          ],
+          "distribution": [0, 1],
+          "primaryMetric": ""
+        },
+        "nt_audience": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Entry",
+            "id": "2WzXDaWtDmstHl9p8Wufpp"
+          }
+        },
+        "nt_variants": [
+          {
+            "sys": {
+              "type": "Link",
+              "linkType": "Entry",
+              "id": "4k6ZyFQnR2POY5IJLLlJRb"
+            }
+          }
+        ],
+        "nt_experience_id": "2qVK4T5lnScbswoyBuGipd",
+        "nt_metadata": {
+          "type": "origin"
+        }
+      }
+    }
+  ],
+  "includes": {
+    "Entry": [
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "2WzXDaWtDmstHl9p8Wufpp",
+          "type": "Entry",
+          "createdAt": "2025-10-13T09:11:33.088Z",
+          "updatedAt": "2025-10-13T09:11:33.088Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 9,
+          "revision": 1,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nt_audience"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "nt_name": "Europe Visitors",
+          "nt_description": "Visitors located in Europe",
+          "nt_rules": {
+            "any": [
+              {
+                "all": [
+                  {
+                    "key": "continent",
+                    "type": "location",
+                    "count": "1",
+                    "value": "EU",
+                    "operator": "equal",
+                    "conditions": []
+                  }
+                ]
+              }
+            ]
+          },
+          "nt_audience_id": "2WzXDaWtDmstHl9p8Wufpp",
+          "nt_metadata": {
+            "type": "origin"
+          }
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "4k6ZyFQnR2POY5IJLLlJRb",
+          "type": "Entry",
+          "createdAt": "2025-10-13T12:00:42.658Z",
+          "updatedAt": "2025-10-13T12:00:42.658Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 5,
+          "revision": 1,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "content"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "internalTitle": "[Variant] Visitors from Europe",
+          "text": "This is a variant content entry for visitors from Europe."
+        }
+      }
+    ]
+  }
+}

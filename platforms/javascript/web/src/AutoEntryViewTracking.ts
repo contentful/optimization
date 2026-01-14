@@ -15,6 +15,8 @@ export type CtflDataset = DOMStringMap & {
   ctflEntryId: string
   /** Optional duplication scope key for de-duplication across views. */
   ctflDuplicationScope?: string
+  /** Optional baseline ID associated with the personalized entry. */
+  ctflBaselineId?: string
   /** Optional personalization/experience ID associated with the entry. */
   ctflPersonalizationId?: string
   /** Whether this component view should be treated as sticky. */

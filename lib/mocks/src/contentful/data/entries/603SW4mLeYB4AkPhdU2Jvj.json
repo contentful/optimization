@@ -1,0 +1,210 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "603SW4mLeYB4AkPhdU2Jvj",
+        "type": "Entry",
+        "createdAt": "2025-10-13T10:40:23.022Z",
+        "updatedAt": "2026-01-22T16:38:31.569Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 16,
+        "revision": 3,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "nt_experience"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "nt_name": "[Personalization] Return Visitors",
+        "nt_type": "nt_personalization",
+        "nt_config": {
+          "distribution": [0, 1],
+          "traffic": 1,
+          "components": [
+            {
+              "baseline": {
+                "id": "2Z2WLOx07InSewC3LUB3eX"
+              },
+              "variants": [
+                {
+                  "id": "3VBvwg9ysjjmnJRTQtIYK4",
+                  "hidden": false
+                }
+              ],
+              "type": "EntryReplacement"
+            }
+          ],
+          "primaryMetric": ""
+        },
+        "nt_audience": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Entry",
+            "id": "46fHDG7vjxwTbYee5JNVOQ"
+          }
+        },
+        "nt_variants": [
+          {
+            "sys": {
+              "type": "Link",
+              "linkType": "Entry",
+              "id": "3VBvwg9ysjjmnJRTQtIYK4"
+            }
+          }
+        ],
+        "nt_experience_id": "603SW4mLeYB4AkPhdU2Jvj",
+        "nt_metadata": {
+          "type": "origin"
+        }
+      }
+    }
+  ],
+  "includes": {
+    "Entry": [
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "3VBvwg9ysjjmnJRTQtIYK4",
+          "type": "Entry",
+          "createdAt": "2025-10-13T10:31:00.367Z",
+          "updatedAt": "2025-10-13T10:35:33.195Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 8,
+          "revision": 2,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "content"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "internalTitle": "[Variant] Return Visitors",
+          "text": "This is a variant content entry for return visitors."
+        }
+      },
+      {
+        "metadata": {
+          "tags": [],
+          "concepts": []
+        },
+        "sys": {
+          "space": {
+            "sys": {
+              "type": "Link",
+              "linkType": "Space",
+              "id": "uelxcuo7v97l"
+            }
+          },
+          "id": "46fHDG7vjxwTbYee5JNVOQ",
+          "type": "Entry",
+          "createdAt": "2025-10-13T09:19:35.294Z",
+          "updatedAt": "2025-10-13T09:28:30.370Z",
+          "environment": {
+            "sys": {
+              "id": "master",
+              "type": "Link",
+              "linkType": "Environment"
+            }
+          },
+          "publishedVersion": 11,
+          "revision": 2,
+          "contentType": {
+            "sys": {
+              "type": "Link",
+              "linkType": "ContentType",
+              "id": "nt_audience"
+            }
+          },
+          "locale": "en-US"
+        },
+        "fields": {
+          "nt_name": "Return Visitors",
+          "nt_description": "Visitors who have previously visited the site",
+          "nt_rules": {
+            "any": [
+              {
+                "all": [
+                  {
+                    "key": "",
+                    "type": "isReturningVisitor",
+                    "count": "1",
+                    "value": true,
+                    "operator": "equal",
+                    "conditions": [
+                      {
+                        "key": {
+                          "id": "session_count",
+                          "key": "session_count",
+                          "label": "session_count",
+                          "value": "session_count",
+                          "useOnce": true,
+                          "category": {
+                            "name": "session_count",
+                            "type": "session_count",
+                            "label": "session_count"
+                          }
+                        },
+                        "value": "1",
+                        "operator": "greaterThan"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "nt_audience_id": "46fHDG7vjxwTbYee5JNVOQ",
+          "nt_metadata": {
+            "type": "origin"
+          }
+        }
+      }
+    ]
+  }
+}

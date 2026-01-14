@@ -6,7 +6,7 @@ import type {
   Profile,
   SelectedPersonalizationArray,
 } from '@contentful/optimization-api-client'
-import { batch, computed, effect, signal, type Signal } from '@preact/signals-core'
+import { batch, computed, effect, signal, type Signal, untracked } from '@preact/signals-core'
 import { FlagsResolver } from './personalization/resolvers'
 
 export const changes: Signal<ChangeArray | undefined> = signal<ChangeArray | undefined>()
@@ -33,6 +33,13 @@ export interface Signals {
   online: typeof online
   personalizations: typeof personalizations
   profile: typeof profile
+}
+
+export interface SignalFns {
+  batch: typeof batch
+  computed: typeof computed
+  effect: typeof effect
+  untracked: typeof untracked
 }
 
 export interface Subscription {
@@ -63,6 +70,13 @@ export const signals: Signals = {
   online,
   personalizations,
   profile,
+}
+
+export const signalFns: SignalFns = {
+  batch,
+  computed,
+  effect,
+  untracked,
 }
 
 export { batch, effect, type Signal }

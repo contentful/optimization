@@ -1,0 +1,70 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "4yIqY7AWtzeehCZxtQSDB",
+        "type": "Entry",
+        "createdAt": "2025-10-13T09:32:31.720Z",
+        "updatedAt": "2025-10-13T09:32:31.720Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 10,
+        "revision": 1,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "nt_audience"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "nt_name": "Identified Users",
+        "nt_description": "Users who have been identified with an `identified` trait set to `true`",
+        "nt_rules": {
+          "any": [
+            {
+              "all": [
+                {
+                  "key": "identified",
+                  "type": "identify",
+                  "count": "1",
+                  "value": "true",
+                  "operator": "equal",
+                  "conditions": []
+                }
+              ]
+            }
+          ]
+        },
+        "nt_audience_id": "4yIqY7AWtzeehCZxtQSDB",
+        "nt_metadata": {
+          "type": "origin"
+        }
+      }
+    }
+  ]
+}

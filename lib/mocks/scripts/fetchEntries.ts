@@ -220,6 +220,10 @@ function collectBaselineIds(entries: readonly Entry[]): readonly string[] {
   return ids
 }
 
+function collectNestedContentIds(entries: readonly Entry[]): readonly string[] {
+  return collectIdsByContentType(entries, 'nestedContent')
+}
+
 function collectMergeTagIds(entries: readonly Entry[]): readonly string[] {
   return collectIdsByContentType(entries, 'mergeTagContent')
 }
@@ -267,12 +271,20 @@ async function main(): Promise<void> {
   }
 
   const baselineIds = collectBaselineIds(entries)
+  const nestedContentIds = collectNestedContentIds(entries)
   const mergeTagIds = collectMergeTagIds(entries)
   const audienceIds = collectAudienceIds(entries)
   const experienceIds = collectExperienceIds(entries)
   const personalizationIds = collectPersonalizationIds(entries)
   await processEntries(
-    [...baselineIds, ...mergeTagIds, ...audienceIds, ...experienceIds, ...personalizationIds],
+    [
+      ...baselineIds,
+      ...nestedContentIds,
+      ...mergeTagIds,
+      ...audienceIds,
+      ...experienceIds,
+      ...personalizationIds,
+    ],
     outRoot,
   )
 
