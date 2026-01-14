@@ -1,7 +1,4 @@
-import type {
-  InsightsEvent as AnalyticsEvent,
-  ComponentViewBuilderArgs,
-} from '@contentful/optimization-api-client'
+import type { ComponentViewBuilderArgs } from '@contentful/optimization-api-client'
 import ProductBase from '../ProductBase'
 
 /**
@@ -12,7 +9,7 @@ import ProductBase from '../ProductBase'
  * Concrete analytics classes should implement the component/flag view tracking
  * methods below. This base is not part of the public API.
  */
-abstract class AnalyticsBase extends ProductBase<AnalyticsEvent> {
+abstract class AnalyticsBase extends ProductBase {
   /**
    * Track a UI component view event.
    *

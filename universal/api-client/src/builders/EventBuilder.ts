@@ -288,14 +288,8 @@ class EventBuilder {
    * })
    * ```
    */
-  constructor({
-    app,
-    channel,
-    library,
-    getLocale,
-    getPageProperties,
-    getUserAgent,
-  }: EventBuilderConfig) {
+  constructor(config: EventBuilderConfig) {
+    const { app, channel, library, getLocale, getPageProperties, getUserAgent } = config
     this.app = app
     this.channel = channel
     this.library = library

@@ -54,8 +54,17 @@ class CoreStateless extends CoreBase {
   constructor(config: CoreStatelessConfig) {
     super(config)
 
-    this.analytics = new AnalyticsStateless(this.api, this.eventBuilder)
-    this.personalization = new PersonalizationStateless(this.api, this.eventBuilder)
+    this.analytics = new AnalyticsStateless({
+      api: this.api,
+      builder: this.eventBuilder,
+      interceptors: this.interceptors,
+    })
+
+    this.personalization = new PersonalizationStateless({
+      api: this.api,
+      builder: this.eventBuilder,
+      interceptors: this.interceptors,
+    })
   }
 }
 

@@ -1,9 +1,7 @@
-import type ApiClient from '@contentful/optimization-api-client'
 import {
   type InsightsEvent as AnalyticsEvent,
   type ChangeArray,
   type ComponentViewBuilderArgs,
-  type EventBuilder,
   type Flags,
   type IdentifyBuilderArgs,
   type Json,
@@ -21,7 +19,7 @@ import { isEqual } from 'es-toolkit'
 import { logger } from 'logger'
 import type { ConsentGuard } from '../Consent'
 import { guardedBy } from '../lib/decorators'
-import type { ProductConfig } from '../ProductBase'
+import type { ProductBaseOptions, ProductConfig } from '../ProductBase'
 import {
   batch,
   changes as changesSignal,
@@ -93,6 +91,17 @@ export interface PersonalizationStates {
 }
 
 /**
+ * Options for configuring {@link PersonalizationStateful} functionality.
+ *
+ * @public
+ * @see {@link ProductBaseOptions}
+ */
+export type PersonalizationStatefulOptions = ProductBaseOptions & {
+  /** Configuration specific to the Personalization product */
+  config?: PersonalizationProductConfig
+}
+
+/**
  * Stateful personalization product that manages consent, profile, flags, and
  * selected variants while emitting Experience events and updating state.
  *
@@ -125,12 +134,12 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
   /**
    * Create a new stateful personalization instance.
    *
-   * @param api - Optimization API client used to upsert profiles.
-   * @param builder - Event builder for constructing experience events.
-   * @param config - Optional configuration, including default state values.
+   * @param options - Options to configure the personalization product for stateful environments.
    */
-  constructor(api: ApiClient, builder: EventBuilder, config?: PersonalizationProductConfig) {
-    super(api, builder, config)
+  constructor(options: PersonalizationStatefulOptions) {
+    const { api, builder, config, interceptors } = options
+
+    super({ api, builder, config, interceptors })
 
     const { defaults, getAnonymousId } = config ?? {}
 
@@ -375,7 +384,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
   private async sendOrEnqueueEvent(
     event: PersonalizationEvent,
   ): Promise<OptimizationData | undefined> {
-    const intercepted = await this.interceptor.event.run(event)
+    const intercepted = await this.interceptors.event.run(event)
 
     const validEvent = PersonalizationEvent.parse(intercepted)
 
@@ -436,7 +445,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * @internal
    */
   private async updateOutputSignals(data: OptimizationData): Promise<void> {
-    const intercepted = await this.interceptor.state.run(data)
+    const intercepted = await this.interceptors.state.run(data)
 
     const { changes, personalizations, profile } = intercepted
 

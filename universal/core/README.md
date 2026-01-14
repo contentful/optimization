@@ -46,6 +46,8 @@ other SDKs descend from the Core SDK.
   - [`consent`](#consent)
   - [`reset`](#reset)
 - [Stateful-only Core Properties](#stateful-only-core-properties)
+- [Interceptors](#interceptors)
+  - [Life-cycle Interceptors](#life-cycle-interceptors)
 
 <!-- mtoc-end -->
 </details>
@@ -361,14 +363,42 @@ Resets all internal state _except_ consent. This method expects no arguments and
 ## Stateful-only Core Properties
 
 - `states`: Returns an object mapping of observables for all internal states
-
-The following observables are exposed via the `states` property:
-
-- `consent`: The current state of user consent
-- `eventStream`: The latest event to be queued
-- `flags`: All current resolved Custom Flags
-- `profile`: The current user profile
-- `personalizations`: The current collection of selected personalizations
+  - `consent`: The current state of user consent
+  - `eventStream`: The latest event to be queued
+  - `flags`: All current resolved Custom Flags
+  - `profile`: The current user profile
+  - `personalizations`: The current collection of selected personalizations
 
 Each state except `consent` and `eventStream` is updated internally whenever a response from the
 Experience API contains a new or updated respective state.
+
+Example `states` observable usage:
+
+```ts
+optimization.states.profile.subscribe((profile) => {
+  console.log(`Profile ${profile.id} updated!`)
+})
+```
+
+## Interceptors
+
+Interceptors may be used to read and/or modify data flowing through the Core SDK.
+
+### Life-cycle Interceptors
+
+- `event`: Intercepts an event's data _before_ it is queued and/or emitted
+- `state`: Intercepts state data retrieved from an Experience API call _before_ updating the SDK's
+  internal state
+
+Example interceptor usage:
+
+```ts
+optimization.interceptors.event((event) => {
+  event.properties.timestamp = new Date().toISOString()
+})
+```
+
+> [!WARNING]
+>
+> Interceptors are intended to enable low-level interoperability; to simply read and react to
+> Optimization SDK events, use the `states` observables.

@@ -1,9 +1,7 @@
-import type ApiClient from '@contentful/optimization-api-client'
 import {
   InsightsEvent as AnalyticsEvent,
   type BatchInsightsEventArray,
   type ComponentViewBuilderArgs,
-  type EventBuilder,
   type InsightsEventArray,
   type ExperienceEvent as PersonalizationEvent,
   type Profile,
@@ -11,7 +9,7 @@ import {
 import { logger } from 'logger'
 import type { ConsentGuard } from '../Consent'
 import { guardedBy } from '../lib/decorators'
-import type { ProductConfig } from '../ProductBase'
+import type { ProductBaseOptions, ProductConfig } from '../ProductBase'
 import {
   batch,
   consent,
@@ -61,6 +59,17 @@ export interface AnalyticsStates {
 }
 
 /**
+ * Options for configuring {@link AnalyticsStateful} functionality.
+ *
+ * @public
+ * @see {@link ProductBaseOptions}
+ */
+export type AnalyticsStatefulOptions = ProductBaseOptions & {
+  /** Configuration specific to the Analytics product */
+  config?: AnalyticsProductConfig
+}
+
+/**
  * Maximum number of queued events before an automatic flush is triggered.
  */
 const MAX_QUEUED_EVENTS = 25
@@ -84,12 +93,12 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
   /**
    * Create a new stateful analytics instance.
    *
-   * @param api - Optimization API client.
-   * @param builder - Event builder for constructing events.
-   * @param config - Product configuration and default state values.
+   * @param options - Options to configure the analytics product for stateful environments.
    */
-  constructor(api: ApiClient, builder: EventBuilder, config?: AnalyticsProductConfig) {
-    super(api, builder, config)
+  constructor(options: AnalyticsStatefulOptions) {
+    const { api, builder, config, interceptors } = options
+
+    super({ api, builder, config, interceptors })
 
     const { defaults } = config ?? {}
 
@@ -232,7 +241,7 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
       return
     }
 
-    const intercepted = await this.interceptor.event.run(event)
+    const intercepted = await this.interceptors.event.run(event)
 
     const validEvent = AnalyticsEvent.parse(intercepted)
 

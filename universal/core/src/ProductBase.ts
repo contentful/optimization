@@ -2,10 +2,9 @@ import type ApiClient from '@contentful/optimization-api-client'
 import type {
   InsightsEventType as AnalyticsEventType,
   EventBuilder,
-  OptimizationData,
   ExperienceEventType as PersonalizationEventType,
 } from '@contentful/optimization-api-client'
-import { InterceptorManager } from './lib/interceptor'
+import type { LifecycleInterceptors } from './CoreBase'
 import ValuePresence from './lib/value-presence/ValuePresence'
 
 /**
@@ -52,15 +51,19 @@ export interface ProductConfig {
 }
 
 /**
- * Lifecycle container for event and state interceptors.
+ * Options for configuring the common functionality of {@link ProductBase} descendents.
  *
- * @internal
+ * @public
  */
-interface InterceptorLifecycle<E> {
-  /** Interceptors invoked for individual events prior to validation/sending. */
-  event: InterceptorManager<E>
-  /** Interceptors invoked before optimization state updates. */
-  state: InterceptorManager<OptimizationData>
+export interface ProductBaseOptions {
+  /** Optimization API client. */
+  api: ApiClient
+  /** Event builder for constructing events. */
+  builder: EventBuilder
+  /** Optional configuration for allow‑lists and duplication prevention. */
+  config?: ProductConfig
+  /** Lifecycle container for event and state interceptors. */
+  interceptors: LifecycleInterceptors
 }
 
 /**
@@ -72,7 +75,7 @@ interface InterceptorLifecycle<E> {
  * Concrete implementations (e.g., analytics) should extend this class and
  * expose their own public methods.
  */
-abstract class ProductBase<E> {
+abstract class ProductBase {
   /**
    * Allow‑list of event {@link AnalyticsEventType | type keys} permitted when consent is not present.
    */
@@ -91,23 +94,20 @@ abstract class ProductBase<E> {
   readonly duplicationDetector: ValuePresence
 
   /** Interceptors that can mutate/augment outgoing events or optimization state. */
-  readonly interceptor: InterceptorLifecycle<E> = {
-    event: new InterceptorManager<E>(),
-    state: new InterceptorManager<OptimizationData>(),
-  }
+  readonly interceptors: LifecycleInterceptors
 
   /**
    * Creates a new product base instance.
    *
-   * @param api - Optimization API client.
-   * @param builder - Event builder for constructing events.
-   * @param config - Optional configuration for allow‑lists and duplication prevention.
+   * @param options - Options for configuring the functionality common among products.
    */
-  constructor(api: ApiClient, builder: EventBuilder, config?: ProductConfig) {
+  constructor(options: ProductBaseOptions) {
+    const { api, builder, config, interceptors } = options
+    this.allowedEventTypes = config?.allowedEventTypes ?? defaultAllowedEvents
     this.api = api
     this.builder = builder
-    this.allowedEventTypes = config?.allowedEventTypes ?? defaultAllowedEvents
     this.duplicationDetector = new ValuePresence(config?.preventedComponentEvents)
+    this.interceptors = interceptors
   }
 }
 

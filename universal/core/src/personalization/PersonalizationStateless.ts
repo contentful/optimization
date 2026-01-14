@@ -111,7 +111,7 @@ class PersonalizationStateless extends PersonalizationBase {
     event: PersonalizationEvent,
     profile?: PartialProfile,
   ): Promise<OptimizationData> {
-    const intercepted = await this.interceptor.event.run(event)
+    const intercepted = await this.interceptors.event.run(event)
 
     const data = await this.api.experience.upsertProfile({
       profileId: profile?.id,
