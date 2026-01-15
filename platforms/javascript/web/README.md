@@ -55,6 +55,8 @@ This SDK implements functionality specific to the Web environment, based on the
   - [Automatic Entry View Tracking](#automatic-entry-view-tracking)
   - [Manual Entry Element Observation](#manual-entry-element-observation)
   - [Automatic Entry Element Observation](#automatic-entry-element-observation)
+- [Interceptors](#interceptors)
+  - [Life-cycle Interceptors](#life-cycle-interceptors)
 
 <!-- mtoc-end -->
 </details>
@@ -460,3 +462,26 @@ Example:
 ```html
 <div data-ctfl-entry-id="abc-123">Entry Content</div>
 ```
+
+## Interceptors
+
+Interceptors may be used to read and/or modify data flowing through the Core SDK.
+
+### Life-cycle Interceptors
+
+- `event`: Intercepts an event's data _before_ it is queued and/or emitted
+- `state`: Intercepts state data retrieved from an Experience API call _before_ updating the SDK's
+  internal state
+
+Example interceptor usage:
+
+```ts
+optimization.interceptors.event((event) => {
+  event.properties.timestamp = new Date().toISOString()
+})
+```
+
+> [!WARNING]
+>
+> Interceptors are intended to enable low-level interoperability; to simply read and react to
+> Optimization SDK events, use the `states` observables.
