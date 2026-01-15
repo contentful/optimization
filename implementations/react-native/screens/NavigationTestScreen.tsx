@@ -10,7 +10,7 @@ import type {
 } from '../types/navigationTypes'
 import { adaptNavigationState, toRecord } from '../utils/navigationHelpers'
 import { NavigationHome } from './NavigationHome'
-import { NavigationViewOne } from './NavigationViewOne'
+import { NavigationViewTest } from './NavigationViewTest'
 
 const Stack = createNativeStackNavigator<NavigationTestStackParamList>()
 
@@ -58,7 +58,9 @@ export function NavigationTestScreen({ onClose }: NavigationTestScreenProps): Re
           >
             <Stack.Navigator screenOptions={{ headerShown: false }}>
               <Stack.Screen name="NavigationHome" component={NavigationHome} />
-              <Stack.Screen name="NavigationViewOne" component={NavigationViewOne} />
+              <Stack.Screen name="NavigationViewOne">
+                {() => <NavigationViewTest testIdSuffix="one" />}
+              </Stack.Screen>
             </Stack.Navigator>
           </NavigationContainer>
         )}

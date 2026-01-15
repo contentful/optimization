@@ -4,7 +4,11 @@ import { Text, View } from 'react-native'
 import type { ScreenViewEvent } from '../types/navigationTypes'
 import { isScreenViewEvent } from '../utils/navigationHelpers'
 
-export function NavigationViewOne(): React.JSX.Element {
+interface NavigationViewTestProps {
+  testIdSuffix: string
+}
+
+export function NavigationViewTest({ testIdSuffix }: NavigationViewTestProps): React.JSX.Element {
   const optimization = useOptimization()
   const [lastScreenEvent, setLastScreenEvent] = useState<ScreenViewEvent | null>(null)
 
@@ -22,7 +26,7 @@ export function NavigationViewOne(): React.JSX.Element {
 
   return (
     <View
-      testID="navigation-view-one"
+      testID={`navigation-view-test-${testIdSuffix}`}
       style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
     >
       <Text testID="last-screen-event">{lastScreenEvent?.name}</Text>

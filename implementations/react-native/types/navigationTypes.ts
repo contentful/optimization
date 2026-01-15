@@ -3,6 +3,7 @@ import type { ParamListBase } from '@react-navigation/native'
 export interface NavigationTestStackParamList extends ParamListBase {
   NavigationHome: undefined
   NavigationViewOne: undefined
+  NavigationViewTwo: undefined
 }
 
 export interface ScreenViewEvent {
