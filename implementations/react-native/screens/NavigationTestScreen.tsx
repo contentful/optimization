@@ -1,4 +1,7 @@
-import { OptimizationNavigationContainer } from '@contentful/optimization-react-native'
+import {
+  OptimizationNavigationContainer,
+  useOptimization,
+} from '@contentful/optimization-react-native'
 import type {
   NavigationContainerRef,
   NavigationState,
@@ -6,12 +9,30 @@ import type {
 } from '@react-navigation/native'
 import { NavigationContainer } from '@react-navigation/native'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
-import React, { useRef } from 'react'
-import { Button, View } from 'react-native'
+import React, { useEffect, useRef, useState } from 'react'
+import { Button, Text, View } from 'react-native'
 
 interface NavigationTestStackParamList extends ParamListBase {
   NavigationHome: undefined
   NavigationViewOne: undefined
+}
+
+interface ScreenViewEvent {
+  type: string
+  name: string
+  properties?: Record<string, unknown>
+  context?: Record<string, unknown>
+}
+
+function isScreenViewEvent(event: unknown): event is ScreenViewEvent {
+  return (
+    event !== null &&
+    typeof event === 'object' &&
+    'type' in event &&
+    event.type === 'screen' &&
+    'name' in event &&
+    typeof event.name === 'string'
+  )
 }
 
 const Stack = createNativeStackNavigator<NavigationTestStackParamList>()
@@ -35,7 +56,29 @@ function NavigationHome({
 }
 
 function NavigationViewOne(): React.JSX.Element {
-  return <View testID="navigation-view-one" />
+  const optimization = useOptimization()
+  const [lastScreenEvent, setLastScreenEvent] = useState<ScreenViewEvent | null>(null)
+
+  useEffect(() => {
+    const subscription = optimization.states.eventStream.subscribe((event: unknown) => {
+      if (isScreenViewEvent(event)) {
+        setLastScreenEvent(event)
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [optimization])
+
+  return (
+    <View
+      testID="navigation-view-one"
+      style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+    >
+      <Text testID="last-screen-event">{lastScreenEvent?.name}</Text>
+    </View>
+  )
 }
 
 interface NavigationTestScreenProps {
@@ -51,9 +94,7 @@ function toRecord(params: object | undefined): Record<string, unknown> | undefin
   return result
 }
 
-function adaptNavigationState(
-  state: NavigationState | undefined,
-):
+function adaptNavigationState(state: NavigationState | undefined):
   | {
       index: number
       routes: Array<{ name: string; key: string; params?: Record<string, unknown> }>

@@ -127,6 +127,7 @@ export function OptimizationNavigationContainer({
       void currentOptimization.screen({
         name: screenName,
         properties,
+        screen: { name: screenName },
       })
     },
     [includeParams],

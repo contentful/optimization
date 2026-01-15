@@ -1971,6 +1971,7 @@ SPEC CHECKSUMS:
   ReactCodegen: f853a20cc9125c5521c8766b4b49375fec20648b
   ReactCommon: 300d8d9c5cb1a6cd79a67cf5d8f91e4d477195f9
   RNCAsyncStorage: 87a74d13ba0128f853817e45e21c4051e1f2cd45
+  RNScreens: b31a78e0ad400e1ebca64016a0d3f45cbde507eb
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
   Yoga: feb4910aba9742cfedc059e2b2902e22ffe9954a
 
