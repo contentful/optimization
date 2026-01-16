@@ -3,8 +3,16 @@ import CoreBase, { type CoreConfig } from './CoreBase'
 import { PersonalizationStateless } from './personalization'
 
 class TestCore extends CoreBase {
-  analytics = new AnalyticsStateless(this.api, this.eventBuilder)
-  personalization = new PersonalizationStateless(this.api, this.eventBuilder)
+  analytics = new AnalyticsStateless({
+    api: this.api,
+    builder: this.eventBuilder,
+    interceptors: this.interceptors,
+  })
+  personalization = new PersonalizationStateless({
+    api: this.api,
+    builder: this.eventBuilder,
+    interceptors: this.interceptors,
+  })
 }
 
 const CLIENT_ID = 'key_123'

@@ -6,7 +6,6 @@ import type {
   MergeTagEntry,
   OptimizationData,
   PageViewBuilderArgs,
-  ExperienceEvent as PersonalizationEvent,
   Profile,
   SelectedPersonalizationArray,
   TrackBuilderArgs,
@@ -81,10 +80,7 @@ interface ResolverMethods {
  * identify, page, and track events. This base wires in shared singleton
  * resolvers used to fetch/resolve personalized data.
  */
-abstract class PersonalizationBase
-  extends ProductBase<PersonalizationEvent>
-  implements ResolverMethods
-{
+abstract class PersonalizationBase extends ProductBase implements ResolverMethods {
   /**
    * Static {@link FlagsResolver | resolver} for evaluating personalized
    * custom flags.

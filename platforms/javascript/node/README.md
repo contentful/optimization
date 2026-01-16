@@ -42,6 +42,8 @@ The Optimization Node SDK implements functionality specific to Node environments
     - [`track`](#track)
     - [`trackComponentView`](#trackcomponentview)
     - [`trackFlagView`](#trackflagview)
+- [Interceptors](#interceptors)
+  - [Life-cycle Interceptors](#life-cycle-interceptors)
 
 <!-- mtoc-end -->
 </details>
@@ -257,3 +259,26 @@ Arguments:
 
 - `payload`\*: Component view event builder arguments object, including an optional `profile`
   property with a `PartialProfile` value that requires only an `id`
+
+## Interceptors
+
+Interceptors may be used to read and/or modify data flowing through the Core SDK.
+
+### Life-cycle Interceptors
+
+- `event`: Intercepts an event's data _before_ it is queued and/or emitted
+- `state`: Intercepts state data retrieved from an Experience API call _before_ updating the SDK's
+  internal state
+
+Example interceptor usage:
+
+```ts
+optimization.interceptors.event((event) => {
+  event.properties.timestamp = new Date().toISOString()
+})
+```
+
+> [!WARNING]
+>
+> Interceptors are intended to enable low-level interoperability; to simply read and react to
+> Optimization SDK events, use the `states` observables.

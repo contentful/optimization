@@ -90,7 +90,7 @@ export function useProfileOverrides(): {
     logger.info('[PreviewPanel] Registered with SDK, signals access obtained')
 
     // Register state interceptor to preserve overrides when API responses arrive
-    interceptorIdRef.current = optimization.personalization.interceptor.state.add(
+    interceptorIdRef.current = optimization.interceptors.state.add(
       (data: OptimizationData): OptimizationData => {
         // Cache the un-overridden data
         lastActualDataRef.current = data
@@ -120,7 +120,7 @@ export function useProfileOverrides(): {
     // Cleanup on unmount
     return () => {
       if (interceptorIdRef.current !== null) {
-        optimization.personalization.interceptor.state.remove(interceptorIdRef.current)
+        optimization.interceptors.state.remove(interceptorIdRef.current)
         logger.info('[PreviewPanel] State interceptor removed')
       }
       signalsRef.current = null

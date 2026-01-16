@@ -137,25 +137,35 @@ class CoreStateful extends CoreBase implements ConsentController {
       consent.value = defaultConsent
     }
 
-    this.analytics = new AnalyticsStateful(this.api, this.eventBuilder, {
-      allowedEventTypes,
-      preventedComponentEvents,
-      defaults: {
-        consent: defaults?.consent,
-        profile: defaults?.profile,
+    this.analytics = new AnalyticsStateful({
+      api: this.api,
+      builder: this.eventBuilder,
+      config: {
+        allowedEventTypes,
+        preventedComponentEvents,
+        defaults: {
+          consent: defaults?.consent,
+          profile: defaults?.profile,
+        },
       },
+      interceptors: this.interceptors,
     })
 
-    this.personalization = new PersonalizationStateful(this.api, this.eventBuilder, {
-      allowedEventTypes,
-      getAnonymousId,
-      preventedComponentEvents,
-      defaults: {
-        consent: defaults?.consent,
-        changes: defaults?.changes,
-        profile: defaults?.profile,
-        personalizations: defaults?.personalizations,
+    this.personalization = new PersonalizationStateful({
+      api: this.api,
+      builder: this.eventBuilder,
+      config: {
+        allowedEventTypes,
+        getAnonymousId,
+        preventedComponentEvents,
+        defaults: {
+          consent: defaults?.consent,
+          changes: defaults?.changes,
+          profile: defaults?.profile,
+          personalizations: defaults?.personalizations,
+        },
       },
+      interceptors: this.interceptors,
     })
   }
 
