@@ -94,6 +94,8 @@ export function NavigationTestScreen({ onClose }: NavigationTestScreenProps): Re
                     onNavigateNext={() => {
                       navigation.navigate('NavigationViewTwo')
                     }}
+                    nextButtonTitle="Go to View Two"
+                    nextButtonTestId="go-to-view-two-button"
                   />
                 )}
               </Stack.Screen>
@@ -103,6 +105,8 @@ export function NavigationTestScreen({ onClose }: NavigationTestScreenProps): Re
                     testIdSuffix="two"
                     lastScreenEventName={screenEventLog[screenEventLog.length - 1]}
                     screenEventLog={screenEventLog}
+                    nextButtonTitle="Go to View Two"
+                    nextButtonTestId="go-to-view-two-button"
                   />
                 )}
               </Stack.Screen>

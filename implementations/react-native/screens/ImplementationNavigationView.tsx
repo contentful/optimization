@@ -6,8 +6,8 @@ interface ImplementationNavigationViewProps {
   lastScreenEventName?: string
   screenEventLog: string[]
   onNavigateNext?: () => void
-  nextButtonTitle?: string
-  nextButtonTestId?: string
+  nextButtonTitle: string
+  nextButtonTestId: string
 }
 
 export function ImplementationNavigationView({
@@ -26,11 +26,7 @@ export function ImplementationNavigationView({
       <Text testID="last-screen-event">{lastScreenEventName}</Text>
       <Text testID="screen-event-log">{screenEventLog.join(',')}</Text>
       {onNavigateNext ? (
-        <Button
-          testID={nextButtonTestId ?? 'go-to-view-two-button'}
-          title={nextButtonTitle ?? 'Go to View Two'}
-          onPress={onNavigateNext}
-        />
+        <Button testID={nextButtonTestId} title={nextButtonTitle} onPress={onNavigateNext} />
       ) : null}
     </View>
   )
