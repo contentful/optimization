@@ -24,6 +24,28 @@ export function NavigationTestScreen({ onClose }: NavigationTestScreenProps): Re
   const navigationRef = useRef<NavigationContainerRef<NavigationTestStackParamList>>(null)
   const optimization = useOptimization()
   const [screenEventLog, setScreenEventLog] = useState<string[]>([])
+  const lastScreenEventName = screenEventLog.at(-1)
+
+  const renderNavigationView = ({
+    testIdSuffix,
+    nextButtonTitle,
+    nextButtonTestId,
+    onNavigateNext,
+  }: {
+    testIdSuffix: string
+    nextButtonTitle: string
+    nextButtonTestId: string
+    onNavigateNext?: () => void
+  }): React.JSX.Element => (
+    <ImplementationNavigationView
+      testIdSuffix={testIdSuffix}
+      lastScreenEventName={lastScreenEventName}
+      screenEventLog={screenEventLog}
+      onNavigateNext={onNavigateNext}
+      nextButtonTitle={nextButtonTitle}
+      nextButtonTestId={nextButtonTestId}
+    />
+  )
 
   useEffect(() => {
     const subscription = optimization.states.eventStream.subscribe((event: unknown) => {
@@ -86,29 +108,25 @@ export function NavigationTestScreen({ onClose }: NavigationTestScreenProps): Re
                     NavigationTestStackParamList,
                     'NavigationViewOne'
                   >
-                }) => (
-                  <ImplementationNavigationView
-                    testIdSuffix="one"
-                    lastScreenEventName={screenEventLog[screenEventLog.length - 1]}
-                    screenEventLog={screenEventLog}
-                    onNavigateNext={() => {
+                }) =>
+                  renderNavigationView({
+                    testIdSuffix: 'one',
+                    nextButtonTitle: 'Go to View Two',
+                    nextButtonTestId: 'go-to-view-two-button',
+                    onNavigateNext: () => {
                       navigation.navigate('NavigationViewTwo')
-                    }}
-                    nextButtonTitle="Go to View Two"
-                    nextButtonTestId="go-to-view-two-button"
-                  />
-                )}
+                    },
+                  })
+                }
               </Stack.Screen>
               <Stack.Screen name="NavigationViewTwo">
-                {() => (
-                  <ImplementationNavigationView
-                    testIdSuffix="two"
-                    lastScreenEventName={screenEventLog[screenEventLog.length - 1]}
-                    screenEventLog={screenEventLog}
-                    nextButtonTitle="Go to View Two"
-                    nextButtonTestId="go-to-view-two-button"
-                  />
-                )}
+                {() =>
+                  renderNavigationView({
+                    testIdSuffix: 'two',
+                    nextButtonTitle: 'Go to View Two',
+                    nextButtonTestId: 'go-to-view-two-button',
+                  })
+                }
               </Stack.Screen>
             </Stack.Navigator>
           </NavigationContainer>
