@@ -44,7 +44,7 @@ describe('navigation screen tracking', () => {
       .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     const screenEventLogText = await getScreenEventLogText()
-    jestExpect(screenEventLogText).toBe('NavigationViewOne')
+    jestExpect(screenEventLogText).toBe('NavigationHome,NavigationViewOne')
   })
 
   it('should track multiple view visits in order', async () => {
@@ -124,6 +124,8 @@ describe('navigation screen tracking', () => {
       .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     const screenEventLogText = await getScreenEventLogText()
-    jestExpect(screenEventLogText).toBe('NavigationViewOne,NavigationViewTwo,NavigationViewOne')
+    jestExpect(screenEventLogText).toBe(
+      'NavigationHome,NavigationViewOne,NavigationViewTwo,NavigationViewOne',
+    )
   })
 })
