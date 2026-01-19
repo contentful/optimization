@@ -1,7 +1,10 @@
 import { OptimizationNavigationContainer } from '@contentful/optimization-react-native'
 import type { NavigationContainerRef } from '@react-navigation/native'
 import { NavigationContainer } from '@react-navigation/native'
-import { createNativeStackNavigator } from '@react-navigation/native-stack'
+import {
+  createNativeStackNavigator,
+  type NativeStackNavigationProp,
+} from '@react-navigation/native-stack'
 import React, { useRef } from 'react'
 import { Button, View } from 'react-native'
 import type {
@@ -9,8 +12,8 @@ import type {
   NavigationTestStackParamList,
 } from '../types/navigationTypes'
 import { adaptNavigationState, toRecord } from '../utils/navigationHelpers'
+import { ImplementationNavigationView } from './ImplementationNavigationView'
 import { NavigationHome } from './NavigationHome'
-import { NavigationViewTest } from './NavigationViewTest'
 
 const Stack = createNativeStackNavigator<NavigationTestStackParamList>()
 
@@ -59,7 +62,24 @@ export function NavigationTestScreen({ onClose }: NavigationTestScreenProps): Re
             <Stack.Navigator screenOptions={{ headerShown: false }}>
               <Stack.Screen name="NavigationHome" component={NavigationHome} />
               <Stack.Screen name="NavigationViewOne">
-                {() => <NavigationViewTest testIdSuffix="one" />}
+                {({
+                  navigation,
+                }: {
+                  navigation: NativeStackNavigationProp<
+                    NavigationTestStackParamList,
+                    'NavigationViewOne'
+                  >
+                }) => (
+                  <ImplementationNavigationView
+                    testIdSuffix="one"
+                    onNavigateNext={() => {
+                      navigation.navigate('NavigationViewTwo')
+                    }}
+                  />
+                )}
+              </Stack.Screen>
+              <Stack.Screen name="NavigationViewTwo">
+                {() => <ImplementationNavigationView testIdSuffix="two" />}
               </Stack.Screen>
             </Stack.Navigator>
           </NavigationContainer>

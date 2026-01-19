@@ -1,14 +1,22 @@
 import { useOptimization } from '@contentful/optimization-react-native'
 import React, { useEffect, useState } from 'react'
-import { Text, View } from 'react-native'
+import { Button, Text, View } from 'react-native'
 import type { ScreenViewEvent } from '../types/navigationTypes'
 import { isScreenViewEvent } from '../utils/navigationHelpers'
 
-interface NavigationViewTestProps {
+interface ImplementationNavigationViewProps {
   testIdSuffix: string
+  onNavigateNext?: () => void
+  nextButtonTitle?: string
+  nextButtonTestId?: string
 }
 
-export function NavigationViewTest({ testIdSuffix }: NavigationViewTestProps): React.JSX.Element {
+export function ImplementationNavigationView({
+  testIdSuffix,
+  onNavigateNext,
+  nextButtonTitle,
+  nextButtonTestId,
+}: ImplementationNavigationViewProps): React.JSX.Element {
   const optimization = useOptimization()
   const [lastScreenEvent, setLastScreenEvent] = useState<ScreenViewEvent | null>(null)
 
@@ -30,6 +38,13 @@ export function NavigationViewTest({ testIdSuffix }: NavigationViewTestProps): R
       style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
     >
       <Text testID="last-screen-event">{lastScreenEvent?.name}</Text>
+      {onNavigateNext ? (
+        <Button
+          testID={nextButtonTestId ?? 'go-to-view-two-button'}
+          title={nextButtonTitle ?? 'Go to View Two'}
+          onPress={onNavigateNext}
+        />
+      ) : null}
     </View>
   )
 }
