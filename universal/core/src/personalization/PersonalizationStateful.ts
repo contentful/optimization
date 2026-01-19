@@ -255,15 +255,17 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * Determine whether the named operation is permitted based on consent and
    * allowed event type configuration.
    *
-   * @param name - Method name; `trackComponentView` and `trackFlagView` are
-   * normalized to `'component'` for allow‑list checks.
+   * @param name - Method name; `trackComponentView` is normalized to
+   * `'component'` for allow‑list checks.
    * @returns `true` if the operation is permitted; otherwise `false`.
    */
   hasConsent(name: string): boolean {
-    const normalizedName =
-      name === 'trackComponentView' || name === 'trackFlagView' ? 'component' : name
-
-    return !!consentSignal.value || (this.allowedEventTypes ?? []).includes(normalizedName)
+    return (
+      !!consentSignal.value ||
+      (this.allowedEventTypes ?? []).includes(
+        name === 'trackComponentView' || name === 'trackFlagView' ? 'component' : name,
+      )
+    )
   }
 
   /**
