@@ -11,10 +11,15 @@ async function getScreenEventLogText() {
 describe('navigation screen tracking', () => {
   beforeAll(async () => {
     await device.launchApp()
+    await device.disableSynchronization()
   })
 
   beforeEach(async () => {
     await clearProfileState()
+  })
+
+  afterAll(async () => {
+    await device.enableSynchronization()
   })
 
   it('should track a single view visit', async () => {
