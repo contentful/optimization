@@ -18,6 +18,7 @@
     "format:fix": "prettier . --check --write",
     "lint:check": "eslint .",
     "lint:fix": "eslint . --fix",
+    "notices:generate": "pnpm --filter \"@contentful/*\" licenses list --prod --json | pnpm dlx @quantco/pnpm-licenses generate-disclaimer --json-input --output-file THIRD_PARTY_NOTICES.txt",
     "serve:mocks": "pnpm --filter mocks serve",
     "test:e2e": "pnpm --parallel --filter @implementation/* test:e2e",
     "test:unit": "pnpm --filter @contentful/* test:unit",
