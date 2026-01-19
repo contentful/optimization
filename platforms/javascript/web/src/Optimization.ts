@@ -183,6 +183,7 @@ class Optimization extends CoreStateful {
 
     if (cookieValue && cookieValue !== LocalStore.anonymousId) {
       this.reset()
+      LocalStore.anonymousId = cookieValue
       this.setAnonymousId(cookieValue)
     }
 
