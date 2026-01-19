@@ -181,12 +181,6 @@ class Optimization extends CoreStateful {
       expires: mergedConfig.cookie?.expires ?? EXPIRATION_DAYS_DEFAULT,
     }
 
-    if (cookieValue && cookieValue !== LocalStore.anonymousId) {
-      this.reset()
-      LocalStore.anonymousId = cookieValue
-      this.setAnonymousId(cookieValue)
-    }
-
     this.autoTrackEntryViews = true
 
     createOnlineChangeListener((isOnline) => {
@@ -223,11 +217,7 @@ class Optimization extends CoreStateful {
       } = signals
 
       LocalStore.profile = value
-      LocalStore.anonymousId = value?.id
-
-      if (value && Cookies.get(ANONYMOUS_ID_COOKIE) !== value.id) {
-        this.setAnonymousId(value.id)
-      }
+      this.setAnonymousId(value?.id)
     })
 
     effect(() => {
@@ -238,11 +228,22 @@ class Optimization extends CoreStateful {
       LocalStore.personalizations = value
     })
 
+    if (cookieValue && cookieValue !== LocalStore.anonymousId) {
+      this.reset()
+      this.setAnonymousId(cookieValue)
+    }
+
     if (typeof window !== 'undefined') window.optimization ??= this
   }
 
-  private setAnonymousId(value: string): void {
+  private setAnonymousId(value?: string): void {
+    if (!value) {
+      Cookies.remove(ANONYMOUS_ID_COOKIE)
+      LocalStore.anonymousId = undefined
+      return
+    }
     Cookies.set(ANONYMOUS_ID_COOKIE, value, this.cookieAttributes)
+    LocalStore.anonymousId = value
   }
 
   /**
