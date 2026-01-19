@@ -81,8 +81,11 @@ module.exports = {
     'android.debug': {
       type: 'android.apk',
       binaryPath: path.join(__dirname, 'android/app/build/outputs/apk/debug/app-debug.apk'),
-      build: `cd ${__dirname}/android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug`,
+      build: `cd ${__dirname}/android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug -PnewArchEnabled=false`,
       reversePorts: [8081],
+      launchArgs: {
+        detoxDisableSynchronization: 'YES',
+      },
     },
     'android.release': {
       type: 'android.apk',

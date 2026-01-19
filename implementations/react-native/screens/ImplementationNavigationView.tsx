@@ -1,11 +1,10 @@
-import { useOptimization } from '@contentful/optimization-react-native'
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { Button, Text, View } from 'react-native'
-import type { ScreenViewEvent } from '../types/navigationTypes'
-import { isScreenViewEvent } from '../utils/navigationHelpers'
 
 interface ImplementationNavigationViewProps {
   testIdSuffix: string
+  lastScreenEventName?: string
+  screenEventLog: string[]
   onNavigateNext?: () => void
   nextButtonTitle?: string
   nextButtonTestId?: string
@@ -13,31 +12,19 @@ interface ImplementationNavigationViewProps {
 
 export function ImplementationNavigationView({
   testIdSuffix,
+  lastScreenEventName,
+  screenEventLog,
   onNavigateNext,
   nextButtonTitle,
   nextButtonTestId,
 }: ImplementationNavigationViewProps): React.JSX.Element {
-  const optimization = useOptimization()
-  const [lastScreenEvent, setLastScreenEvent] = useState<ScreenViewEvent | null>(null)
-
-  useEffect(() => {
-    const subscription = optimization.states.eventStream.subscribe((event: unknown) => {
-      if (isScreenViewEvent(event)) {
-        setLastScreenEvent(event)
-      }
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [optimization])
-
   return (
     <View
       testID={`navigation-view-test-${testIdSuffix}`}
       style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
     >
-      <Text testID="last-screen-event">{lastScreenEvent?.name}</Text>
+      <Text testID="last-screen-event">{lastScreenEventName}</Text>
+      <Text testID="screen-event-log">{screenEventLog.join(',')}</Text>
       {onNavigateNext ? (
         <Button
           testID={nextButtonTestId ?? 'go-to-view-two-button'}

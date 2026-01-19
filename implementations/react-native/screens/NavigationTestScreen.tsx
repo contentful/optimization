@@ -1,17 +1,20 @@
-import { OptimizationNavigationContainer } from '@contentful/optimization-react-native'
+import {
+  OptimizationNavigationContainer,
+  useOptimization,
+} from '@contentful/optimization-react-native'
 import type { NavigationContainerRef } from '@react-navigation/native'
 import { NavigationContainer } from '@react-navigation/native'
 import {
   createNativeStackNavigator,
   type NativeStackNavigationProp,
 } from '@react-navigation/native-stack'
-import React, { useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Button, View } from 'react-native'
 import type {
   NavigationTestScreenProps,
   NavigationTestStackParamList,
 } from '../types/navigationTypes'
-import { adaptNavigationState, toRecord } from '../utils/navigationHelpers'
+import { adaptNavigationState, isScreenViewEvent, toRecord } from '../utils/navigationHelpers'
 import { ImplementationNavigationView } from './ImplementationNavigationView'
 import { NavigationHome } from './NavigationHome'
 
@@ -19,6 +22,20 @@ const Stack = createNativeStackNavigator<NavigationTestStackParamList>()
 
 export function NavigationTestScreen({ onClose }: NavigationTestScreenProps): React.JSX.Element {
   const navigationRef = useRef<NavigationContainerRef<NavigationTestStackParamList>>(null)
+  const optimization = useOptimization()
+  const [screenEventLog, setScreenEventLog] = useState<string[]>([])
+
+  useEffect(() => {
+    const subscription = optimization.states.eventStream.subscribe((event: unknown) => {
+      if (isScreenViewEvent(event)) {
+        setScreenEventLog((prev) => [...prev, event.name])
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [optimization])
 
   return (
     <View style={{ flex: 1 }}>
@@ -72,6 +89,8 @@ export function NavigationTestScreen({ onClose }: NavigationTestScreenProps): Re
                 }) => (
                   <ImplementationNavigationView
                     testIdSuffix="one"
+                    lastScreenEventName={screenEventLog[screenEventLog.length - 1]}
+                    screenEventLog={screenEventLog}
                     onNavigateNext={() => {
                       navigation.navigate('NavigationViewTwo')
                     }}
@@ -79,7 +98,13 @@ export function NavigationTestScreen({ onClose }: NavigationTestScreenProps): Re
                 )}
               </Stack.Screen>
               <Stack.Screen name="NavigationViewTwo">
-                {() => <ImplementationNavigationView testIdSuffix="two" />}
+                {() => (
+                  <ImplementationNavigationView
+                    testIdSuffix="two"
+                    lastScreenEventName={screenEventLog[screenEventLog.length - 1]}
+                    screenEventLog={screenEventLog}
+                  />
+                )}
               </Stack.Screen>
             </Stack.Navigator>
           </NavigationContainer>
