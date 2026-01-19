@@ -204,6 +204,8 @@ jobs:
 
       - run: pnpm i --prefer-offline --frozen-lockfile
 
+      - run: pnpm --filter @contentful/optimization-react-native test:unit
+
       - run: pnpm test:unit
 
   e2e-node-ssr:
