@@ -1,6 +1,5 @@
 import {
   type App,
-  type CoreConfig,
   CoreStateful,
   type CoreStatefulConfig,
   effect,
@@ -38,6 +37,16 @@ declare global {
   }
 }
 
+interface CookieAttributes {
+  domain?: string
+  /**
+   * Determines the expiration date of the cookie as the number of days until the cookie expires.
+   */
+  expires?: number
+}
+
+const EXPIRATION_DAYS_DEFAULT = 365
+
 /**
  * Configuration options for the Optimization Web SDK.
  *
@@ -59,6 +68,8 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
    * @defaultValue `false`
    */
   autoTrackEntryViews?: boolean
+
+  cookie?: CookieAttributes
 }
 
 /**
@@ -131,8 +142,8 @@ function mergeConfig({
 class Optimization extends CoreStateful {
   private elementViewObserver?: ElementViewObserver = undefined
   private elementExistenceObserver?: ElementExistenceObserver = undefined
-
   private autoTrackEntryViews = false
+  private readonly cookieAttributes?: CookieAttributes = undefined
 
   /**
    * Create a new Optimization Web SDK instance.
@@ -159,9 +170,16 @@ class Optimization extends CoreStateful {
 
     const { autoTrackEntryViews, ...restConfig } = config
 
-    const mergedConfig: CoreConfig = mergeConfig(restConfig)
+    const mergedConfig: OptimizationWebConfig = mergeConfig(restConfig)
 
     super(mergedConfig)
+
+    const cookieValue = Cookies.get(ANONYMOUS_ID_COOKIE)
+
+    this.cookieAttributes = {
+      domain: mergedConfig.cookie?.domain,
+      expires: mergedConfig.cookie?.expires ?? EXPIRATION_DAYS_DEFAULT,
+    }
 
     this.autoTrackEntryViews = true
 
@@ -199,12 +217,7 @@ class Optimization extends CoreStateful {
       } = signals
 
       LocalStore.profile = value
-
-      const cookieValue = Cookies.get(ANONYMOUS_ID_COOKIE)
-
-      LocalStore.anonymousId = value?.id ?? cookieValue
-
-      if (value && value.id !== cookieValue) Cookies.set(ANONYMOUS_ID_COOKIE, value.id)
+      this.setAnonymousId(value?.id)
     })
 
     effect(() => {
@@ -215,7 +228,22 @@ class Optimization extends CoreStateful {
       LocalStore.personalizations = value
     })
 
+    if (cookieValue && cookieValue !== LocalStore.anonymousId) {
+      this.reset()
+      this.setAnonymousId(cookieValue)
+    }
+
     if (typeof window !== 'undefined') window.optimization ??= this
+  }
+
+  private setAnonymousId(value?: string): void {
+    if (!value) {
+      Cookies.remove(ANONYMOUS_ID_COOKIE)
+      LocalStore.anonymousId = undefined
+      return
+    }
+    Cookies.set(ANONYMOUS_ID_COOKIE, value, this.cookieAttributes)
+    LocalStore.anonymousId = value
   }
 
   /**
