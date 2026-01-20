@@ -17,7 +17,12 @@ import {
 } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
-import { Analytics, Personalization, ScrollProvider } from '@contentful/optimization-react-native'
+import {
+  Analytics,
+  Personalization,
+  ScrollProvider,
+  useScreenTracking,
+} from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 
 interface ThemeColors {
@@ -63,13 +68,24 @@ export function TestTrackingScreen({
 }: TestTrackingScreenProps): React.JSX.Element {
   const [trackedEvents, setTrackedEvents] = useState<string[]>([])
 
+  // Demonstrate automatic screen tracking with the useScreenTracking hook
+  // This will track a "screen" event when the component mounts
+  useScreenTracking({
+    name: 'ComponentTrackingTest',
+    properties: { source: 'dev-app' },
+  })
+
   useEffect(() => {
     // Listen to the event stream to capture tracking events
     const subscription = sdk.states.eventStream.subscribe((event) => {
       if (event?.type === 'component') {
         const { componentId } = event as { componentId?: string }
         const timestamp = new Date().toLocaleTimeString()
-        setTrackedEvents((prev) => [...prev, `${timestamp}: Tracked "${componentId}"`])
+        setTrackedEvents((prev) => [...prev, `${timestamp}: Tracked component "${componentId}"`])
+      } else if (event?.type === 'screen') {
+        const { name } = event as { name?: string }
+        const timestamp = new Date().toLocaleTimeString()
+        setTrackedEvents((prev) => [...prev, `${timestamp}: Tracked screen "${name}"`])
       }
     })
 

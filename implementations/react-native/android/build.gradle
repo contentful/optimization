@@ -29,4 +29,22 @@ allprojects {
     }
 }
 
+subprojects { subproject ->
+    afterEvaluate {
+        if (subproject.plugins.hasPlugin("com.android.library") || subproject.plugins.hasPlugin("com.android.application")) {
+            subproject.android {
+                packagingOptions {
+                    jniLibs {
+                        pickFirsts += [
+                            '**/libfbjni.so',
+                            '**/libreactnative.so',
+                            '**/libc++_shared.so',
+                        ]
+                    }
+                }
+            }
+        }
+    }
+}
+
 apply plugin: "com.facebook.react.rootproject"

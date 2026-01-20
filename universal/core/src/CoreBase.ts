@@ -16,6 +16,7 @@ import ApiClient, {
   type PartialProfile,
   type ExperienceEvent as PersonalizationEvent,
   type Profile,
+  type ScreenViewBuilderArgs,
   type SelectedPersonalizationArray,
   type TrackBuilderArgs,
 } from '@contentful/optimization-api-client'
@@ -186,6 +187,18 @@ abstract class CoreBase {
     payload: PageViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData | undefined> {
     return await this.personalization.page(payload)
+  }
+
+  /**
+   * Convenience wrapper for sending a `screen` event via personalization.
+   *
+   * @param payload - Screen view builder arguments.
+   * @returns The evaluated {@link OptimizationData} for this screen view.
+   */
+  async screen(
+    payload: ScreenViewBuilderArgs & { profile?: PartialProfile },
+  ): Promise<OptimizationData | undefined> {
+    return await this.personalization.screen(payload)
   }
 
   /**

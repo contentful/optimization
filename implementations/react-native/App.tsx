@@ -7,6 +7,7 @@ import type { Entry } from 'contentful'
 
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
 import { ENV_CONFIG } from './env.config'
+import { NavigationTestScreen } from './screens/NavigationTestScreen'
 import { ContentEntry } from './sections/ContentEntry'
 import { NestedContentEntry } from './sections/NestedContentEntry'
 import { fetchEntries, initializeSDK } from './utils/sdkHelpers'
@@ -27,6 +28,7 @@ function App(): React.JSX.Element {
   const [entries, setEntries] = useState<Entry[]>([])
   const [sdkError, setSdkError] = useState<string | null>(null)
   const [isIdentified, setIsIdentified] = useState<boolean>(false)
+  const [showNavigationTest, setShowNavigationTest] = useState<boolean>(false)
 
   useEffect(() => {
     void initializeSDK(setSdk, setSdkError)
@@ -75,15 +77,36 @@ function App(): React.JSX.Element {
     return <Text>Loading...</Text>
   }
 
+  if (showNavigationTest) {
+    return (
+      <OptimizationProvider instance={sdk}>
+        <SafeAreaView style={{ flex: 1 }}>
+          <NavigationTestScreen
+            onClose={() => {
+              setShowNavigationTest(false)
+            }}
+          />
+        </SafeAreaView>
+      </OptimizationProvider>
+    )
+  }
+
   return (
     <OptimizationProvider instance={sdk}>
       <SafeAreaView>
-        <View style={{ padding: 10, flexDirection: 'row', gap: 10 }}>
+        <View style={{ padding: 10, gap: 10, flexDirection: 'row' }}>
           {!isIdentified ? (
             <Button testID="identify-button" title="Identify" onPress={handleIdentify} />
           ) : (
             <Button testID="reset-button" title="Reset" onPress={handleReset} />
           )}
+          <Button
+            testID="navigation-test-button"
+            title="Navigation Test"
+            onPress={() => {
+              setShowNavigationTest(true)
+            }}
+          />
         </View>
         <ScrollView>
           {entries.map((entry) =>

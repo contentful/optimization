@@ -8,6 +8,8 @@ import {
   PageViewEvent,
   type PartialProfile,
   type ExperienceEvent as PersonalizationEvent,
+  type ScreenViewBuilderArgs,
+  ScreenViewEvent,
   type TrackBuilderArgs,
   TrackEvent,
 } from '@contentful/optimization-api-client'
@@ -59,6 +61,24 @@ class PersonalizationStateless extends PersonalizationBase {
     const { profile, ...builderArgs } = payload
 
     const event = PageViewEvent.parse(this.builder.buildPageView(builderArgs))
+
+    return await this.upsertProfile(event, profile)
+  }
+
+  /**
+   * Record a screen view.
+   *
+   * @param payload - Screen view builder arguments with an optional partial profile.
+   * @returns The evaluated {@link OptimizationData} for this screen view.
+   */
+  async screen(
+    payload: ScreenViewBuilderArgs & { profile?: PartialProfile },
+  ): Promise<OptimizationData> {
+    logger.info(`[Personalization] Sending "screen" event for "${payload.name}"`)
+
+    const { profile, ...builderArgs } = payload
+
+    const event = ScreenViewEvent.parse(this.builder.buildScreenView(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }

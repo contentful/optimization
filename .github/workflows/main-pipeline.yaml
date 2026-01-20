@@ -354,6 +354,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Install PulseAudio library
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpulse0
+
       - name: Free Disk Space
         run: |
           sudo rm -rf /usr/share/dotnet

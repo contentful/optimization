@@ -11,6 +11,7 @@ import {
   ExperienceEvent as PersonalizationEvent,
   type ExperienceEventArray as PersonalizationEventArray,
   type Profile,
+  type ScreenViewBuilderArgs,
   type SelectedPersonalizationArray,
   type TrackBuilderArgs,
 } from '@contentful/optimization-api-client'
@@ -336,6 +337,21 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
     logger.info('[Personalization] Sending "page" event')
 
     const event = this.builder.buildPageView(payload)
+
+    return await this.sendOrEnqueueEvent(event)
+  }
+
+  /**
+   * Record a screen view and update optimization state.
+   *
+   * @param payload - Screen view builder payload.
+   * @returns The evaluated {@link OptimizationData} for this screen view.
+   */
+  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
+  async screen(payload: ScreenViewBuilderArgs): Promise<OptimizationData | undefined> {
+    logger.info(`[Personalization] Sending "screen" event for "${payload.name}"`)
+
+    const event = this.builder.buildScreenView(payload)
 
     return await this.sendOrEnqueueEvent(event)
   }

@@ -126,6 +126,14 @@ export type {
   UseViewportTrackingReturn,
 } from './hooks/useViewportTracking'
 
+// Export screen tracking hook
+export { useScreenTracking } from './hooks/useScreenTracking'
+export type { UseScreenTrackingOptions, UseScreenTrackingReturn } from './hooks/useScreenTracking'
+
+// Export navigation container wrapper for automatic screen tracking
+export { OptimizationNavigationContainer } from './components/OptimizationNavigationContainer'
+export type { OptimizationNavigationContainerProps } from './components/OptimizationNavigationContainer'
+
 // Preview Panel
 export { PreviewPanel as OptimizationPreviewPanel } from './preview/components/PreviewPanel'
 export type { ContentfulClient, PreviewPanelProps } from './preview/types'

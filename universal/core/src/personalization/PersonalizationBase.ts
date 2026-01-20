@@ -7,6 +7,7 @@ import type {
   OptimizationData,
   PageViewBuilderArgs,
   Profile,
+  ScreenViewBuilderArgs,
   SelectedPersonalizationArray,
   TrackBuilderArgs,
 } from '@contentful/optimization-api-client'
@@ -167,6 +168,14 @@ abstract class PersonalizationBase extends ProductBase implements ResolverMethod
    * @returns The evaluated {@link OptimizationData} for this page view if the device is online.
    */
   abstract page(payload: PageViewBuilderArgs): Promise<OptimizationData | undefined>
+
+  /**
+   * Record a screen view.
+   *
+   * @param payload - Screen view builder payload.
+   * @returns The evaluated {@link OptimizationData} for this screen view if the device is online.
+   */
+  abstract screen(payload: ScreenViewBuilderArgs): Promise<OptimizationData | undefined>
 
   /**
    * Record a custom track event.
