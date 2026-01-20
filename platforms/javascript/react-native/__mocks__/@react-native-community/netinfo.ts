@@ -14,10 +14,7 @@ export function resetMock(): void {
 
 export default {
   addEventListener: (
-    callback: (state: {
-      isInternetReachable: boolean | null
-      isConnected: boolean | null
-    }) => void,
+    callback: (state: { isInternetReachable: boolean | null; isConnected: boolean | null }) => void,
   ) => {
     capturedCallback = callback
     return mockUnsubscribe

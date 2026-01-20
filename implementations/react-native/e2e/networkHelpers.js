@@ -14,9 +14,7 @@ async function disableNetwork() {
   // Enable airplane mode
   await device.executeShellCommand('settings put global airplane_mode_on 1')
   // Broadcast the change so apps receive the connectivity update via NetInfo
-  await device.executeShellCommand(
-    'am broadcast -a android.intent.action.AIRPLANE_MODE_CHANGED',
-  )
+  await device.executeShellCommand('am broadcast -a android.intent.action.AIRPLANE_MODE_CHANGED')
   // Wait for the state change to propagate
   await new Promise((resolve) => setTimeout(resolve, 1000))
 }
@@ -28,9 +26,7 @@ async function enableNetwork() {
   // Disable airplane mode
   await device.executeShellCommand('settings put global airplane_mode_on 0')
   // Broadcast the change
-  await device.executeShellCommand(
-    'am broadcast -a android.intent.action.AIRPLANE_MODE_CHANGED',
-  )
+  await device.executeShellCommand('am broadcast -a android.intent.action.AIRPLANE_MODE_CHANGED')
   // Wait for the state change to propagate and network to reconnect
   await new Promise((resolve) => setTimeout(resolve, 2000))
 }
@@ -58,9 +54,7 @@ async function enableWifi() {
  * @returns {Promise<boolean>} True if airplane mode is enabled.
  */
 async function isAirplaneModeEnabled() {
-  const result = await device.executeShellCommand(
-    'settings get global airplane_mode_on',
-  )
+  const result = await device.executeShellCommand('settings get global airplane_mode_on')
   return result.trim() === '1'
 }
 

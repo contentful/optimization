@@ -20,9 +20,7 @@ describe('Offline Behavior', () => {
   it('should continue to track events while offline', async () => {
     // Wait for app to load and initial content to appear
     const analyticsTitle = element(by.text('Analytics Events'))
-    await waitFor(analyticsTitle)
-      .toBeVisible()
-      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
+    await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     // Wait for initial events to be tracked
     await new Promise((resolve) => setTimeout(resolve, 2000))
@@ -43,9 +41,7 @@ describe('Offline Behavior', () => {
   it('should recover gracefully when network is restored', async () => {
     // Wait for app to load
     const analyticsTitle = element(by.text('Analytics Events'))
-    await waitFor(analyticsTitle)
-      .toBeVisible()
-      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
+    await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     // Go offline
     await disableNetwork()
@@ -61,17 +57,13 @@ describe('Offline Behavior', () => {
 
     // Should be able to interact with the app after reconnection
     const identifyButton = element(by.id('identify-button'))
-    await waitFor(identifyButton)
-      .toBeVisible()
-      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
+    await waitFor(identifyButton).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
   })
 
   it('should handle rapid network state changes', async () => {
     // Wait for app to load
     const analyticsTitle = element(by.text('Analytics Events'))
-    await waitFor(analyticsTitle)
-      .toBeVisible()
-      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
+    await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     // Rapidly toggle network state
     await disableNetwork()
@@ -83,23 +75,17 @@ describe('Offline Behavior', () => {
     await enableNetwork()
 
     // App should still be stable
-    await waitFor(analyticsTitle)
-      .toBeVisible()
-      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
+    await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     // App should remain functional
     const identifyButton = element(by.id('identify-button'))
-    await waitFor(identifyButton)
-      .toBeVisible()
-      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
+    await waitFor(identifyButton).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
   })
 
   it('should queue events offline and eventually flush when online', async () => {
     // Wait for app to load
     const analyticsTitle = element(by.text('Analytics Events'))
-    await waitFor(analyticsTitle)
-      .toBeVisible()
-      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
+    await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     // Let initial loading complete
     await new Promise((resolve) => setTimeout(resolve, 2000))

@@ -62,9 +62,7 @@ export function AnalyticsEventDisplay({ sdk }: AnalyticsEventDisplayProps): Reac
       <Text testID="events-count">Events: {events.length}</Text>
       {events.map((event, index) => (
         <View key={index} testID={`event-${index}`}>
-          <Text
-            accessibilityLabel={`${event.type} - Component: ${event.componentId ?? 'none'}`}
-          >
+          <Text accessibilityLabel={`${event.type} - Component: ${event.componentId ?? 'none'}`}>
             {event.type}
             {event.componentId ? ` - Component: ${event.componentId}` : ''}
           </Text>
