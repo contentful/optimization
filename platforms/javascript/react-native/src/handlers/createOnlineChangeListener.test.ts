@@ -30,7 +30,9 @@ describe('createOnlineChangeListener', () => {
       expect(typeof cleanup).toBe('function')
 
       // Cleanup should be a no-op that doesn't throw
-      expect(() => cleanup()).not.toThrow()
+      expect(() => {
+        cleanup()
+      }).not.toThrow()
 
       // Callback should never be called when NetInfo is not installed
       expect(callback).not.toHaveBeenCalled()
