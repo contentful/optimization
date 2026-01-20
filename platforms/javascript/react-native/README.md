@@ -8,6 +8,12 @@ Contentful Optimization SDK for React Native applications.
 npm install @contentful/optimization-react-native @react-native-async-storage/async-storage
 ```
 
+For offline support (recommended), also install:
+
+```bash
+npm install @react-native-community/netinfo
+```
+
 ## Reference Implementation
 
 - [React Native](/implementations/react-native/README.md): Example application that displays
@@ -376,6 +382,37 @@ The SDK automatically configures:
 - **Library**: `'Optimization React Native SDK'`
 - **Storage**: AsyncStorage for persisting changes, consent, profile, and personalizations
 - **Event Builders**: Mobile-optimized locale, page properties, and user agent detection
+
+## Offline Support
+
+The SDK automatically detects network connectivity changes and handles events appropriately when the
+device goes offline. To enable this feature, install the optional peer dependency:
+
+```bash
+npm install @react-native-community/netinfo
+```
+
+Once installed, the SDK will:
+
+- **Queue events** when the device is offline
+- **Automatically flush** queued events when connectivity is restored
+- **Flush events** when the app goes to background (to prevent data loss)
+
+No additional configuration is required - the SDK handles everything automatically.
+
+### How It Works
+
+The SDK uses `@react-native-community/netinfo` to monitor network state changes. It prioritizes
+`isInternetReachable` (actual internet connectivity) over `isConnected` (network interface
+availability) for accurate detection.
+
+| Platform | Native API Used       |
+| -------- | --------------------- |
+| iOS      | `NWPathMonitor`       |
+| Android  | `ConnectivityManager` |
+
+If `@react-native-community/netinfo` is not installed, the SDK will log a warning and continue
+without offline detection. Events will still work normally when online.
 
 ### Polyfills
 
