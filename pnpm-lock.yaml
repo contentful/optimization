@@ -523,6 +523,9 @@ importers:
       '@react-native-clipboard/clipboard':
         specifier: ^1.15.0
         version: 1.16.3(react-native@0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@15.0.1(typescript@5.9.2))(@types/react@18.3.26)(react@18.3.1))(react@18.3.1)
+      '@react-native-community/netinfo':
+        specifier: '>=9.0.0'
+        version: 11.4.1(react-native@0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@15.0.1(typescript@5.9.2))(@types/react@18.3.26)(react@18.3.1))
       es-iterator-helpers:
         specifier: ^1.2.1
         version: 1.2.1
@@ -2210,6 +2213,11 @@ packages:
     resolution: {integrity: sha512-xIGPytx2bj5HxFk0c7S25AVuJowHmEFg5LFC9XosKc0TSOjP1r6zGC6OqC/arQV/pNuqmZN2IFnpgJn0Bn+hhQ==}
     engines: {node: '>=18'}
     hasBin: true
+
+  '@react-native-community/netinfo@11.4.1':
+    resolution: {integrity: sha512-B0BYAkghz3Q2V09BF88RA601XursIEA111tnc2JOaN7axJWmNefmfjZqw/KdSxKZp7CZUuPpjBmz/WCR9uaHYg==}
+    peerDependencies:
+      react-native: '>=0.59'
 
   '@react-native/assets-registry@0.76.9':
     resolution: {integrity: sha512-pN0Ws5xsjWOZ8P37efh0jqHHQmq+oNGKT4AyAoKRpxBDDDmlAmpaYjer9Qz7PpDKF+IUyRjF/+rBsM50a8JcUg==}
@@ -9911,6 +9919,10 @@ snapshots:
       - typescript
       - utf-8-validate
 
+  '@react-native-community/netinfo@11.4.1(react-native@0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@15.0.1(typescript@5.9.2))(@types/react@18.3.26)(react@18.3.1))':
+    dependencies:
+      react-native: 0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@15.0.1(typescript@5.9.2))(@types/react@18.3.26)(react@18.3.1)
+
   '@react-native/assets-registry@0.76.9': {}
 
   '@react-native/babel-plugin-codegen@0.76.9(@babel/preset-env@7.28.3(@babel/core@7.28.4))':
@@ -10052,7 +10064,9 @@ snapshots:
     transitivePeerDependencies:
       - '@babel/core'
       - '@babel/preset-env'
+      - bufferutil
       - supports-color
+      - utf-8-validate
 
   '@react-native/normalize-colors@0.76.9': {}
 
