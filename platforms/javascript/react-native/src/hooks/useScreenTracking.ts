@@ -38,6 +38,8 @@ export interface UseScreenTrackingReturn {
   trackScreen: () => Promise<OptimizationData | undefined>
 }
 
+const EMPTY_PROPERTIES: Properties = {}
+
 /**
  * Hook for tracking screen views in React Native.
  *
@@ -76,7 +78,6 @@ export interface UseScreenTrackingReturn {
  *
  * @public
  */
-const EMPTY_PROPERTIES: Properties = {}
 
 export function useScreenTracking({
   name,
