@@ -48,19 +48,23 @@ export function AnalyticsEventDisplay({ sdk }: AnalyticsEventDisplayProps): Reac
 
   if (events.length === 0) {
     return (
-      <View>
+      <View testID="analytics-events-container">
         <Text>Analytics Events</Text>
-        <Text>No events tracked yet</Text>
+        <Text testID="no-events-message">No events tracked yet</Text>
+        <Text testID="events-count">Events: 0</Text>
       </View>
     )
   }
 
   return (
-    <View>
+    <View testID="analytics-events-container">
       <Text>Analytics Events</Text>
+      <Text testID="events-count">Events: {events.length}</Text>
       {events.map((event, index) => (
-        <View key={index}>
-          <Text>
+        <View key={index} testID={`event-${index}`}>
+          <Text
+            accessibilityLabel={`${event.type} - Component: ${event.componentId ?? 'none'}`}
+          >
             {event.type}
             {event.componentId ? ` - Component: ${event.componentId}` : ''}
           </Text>
