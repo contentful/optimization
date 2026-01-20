@@ -281,15 +281,12 @@ setup_ios() {
         pod cache clean --all 2>/dev/null || true
     fi
     
-    # Check if pods need to be installed
-    if [[ ! -d "Pods" ]] || [[ "$CLEAN_BUILD" == true ]]; then
-        log_info "Installing CocoaPods..."
-        # Clean existing pods to avoid null byte issues in monorepos
+    log_info "Installing CocoaPods..."
+    # Clean existing pods to avoid null byte issues in monorepos
+    if [[ "$CLEAN_BUILD" == true ]]; then
         rm -rf Pods Podfile.lock 2>/dev/null || true
-        pod install --repo-update
-    else
-        log_info "Pods already installed, skipping..."
     fi
+    pod install --repo-update
     
     log_info "iOS setup complete"
 }
