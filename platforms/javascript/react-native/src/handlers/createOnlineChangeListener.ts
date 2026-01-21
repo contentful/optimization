@@ -9,6 +9,17 @@ import { logger } from '@contentful/optimization-core'
  */
 type Callback = (isOnline: boolean) => Promise<void> | void
 
+interface NetInfoState {
+  isInternetReachable: boolean | null
+  isConnected: boolean | null
+}
+
+interface NetInfoModule {
+  default: {
+    addEventListener: (listener: (state: NetInfoState) => void) => () => void
+  }
+}
+
 /**
  * Create an online/offline listener that invokes a callback whenever the device transitions
  * between connectivity states, and returns a cleanup function to remove the listener.
@@ -47,17 +58,6 @@ export function createOnlineChangeListener(callback: Callback): () => void {
   }
 
   try {
-    interface NetInfoState {
-      isInternetReachable: boolean | null
-      isConnected: boolean | null
-    }
-
-    interface NetInfoModule {
-      default: {
-        addEventListener: (listener: (state: NetInfoState) => void) => () => void
-      }
-    }
-
     const isNetInfoModule = (mod: unknown): mod is NetInfoModule => {
       if (typeof mod !== 'object' || mod === null || !('default' in mod)) {
         return false
