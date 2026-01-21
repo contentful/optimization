@@ -74,6 +74,7 @@ Arguments:
   TEST_FILE              Path to a specific test file to run (e.g., e2e/my-test.test.js)
 
 Options:
+  --test-file TEST_FILE           Run only the specified test file
   -t, --testNamePattern PATTERN   Run only tests matching the given pattern
   --skip-build                    Skip the Android build step
   -h, --help                      Show this help message
@@ -87,6 +88,7 @@ Environment Variables:
 Examples:
   $(basename "$0")                                           # Run all tests
   $(basename "$0") e2e/my-test.test.js                       # Run specific test file
+  $(basename "$0") --test-file e2e/my-test.test.js           # Run specific test file
   $(basename "$0") -t "should display variant"               # Run tests matching pattern
   $(basename "$0") e2e/my-test.test.js -t "should display"   # Combine file and pattern
 EOF
@@ -95,6 +97,20 @@ EOF
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
+            --test-file)
+                if [[ -z "${2:-}" ]]; then
+                    log_error "Option $1 requires a test file argument"
+                    usage
+                    exit 1
+                fi
+                if [[ -n "$TEST_FILE" ]]; then
+                    log_error "Multiple test files not supported. Got: $TEST_FILE and $2"
+                    usage
+                    exit 1
+                fi
+                TEST_FILE="$2"
+                shift 2
+                ;;
             -t|--testNamePattern)
                 if [[ -z "${2:-}" ]]; then
                     log_error "Option $1 requires a pattern argument"
