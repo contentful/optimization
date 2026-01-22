@@ -116,10 +116,8 @@ function App(): React.JSX.Element {
               <ContentEntry key={entry.sys.id} entry={entry} sdk={sdk} />
             ),
           )}
-        </ScrollView>
-        <View>
           <AnalyticsEventDisplay sdk={sdk} />
-        </View>
+        </ScrollView>
       </SafeAreaView>
     </OptimizationProvider>
   )

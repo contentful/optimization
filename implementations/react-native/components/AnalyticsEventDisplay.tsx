@@ -35,7 +35,7 @@ export function AnalyticsEventDisplay({ sdk }: AnalyticsEventDisplayProps): Reac
           newEvent.componentId = componentId
         }
 
-        setEvents((prev) => [...prev, newEvent])
+        setEvents((prev) => [newEvent, ...prev])
       }
     }
 
@@ -57,11 +57,15 @@ export function AnalyticsEventDisplay({ sdk }: AnalyticsEventDisplayProps): Reac
   }
 
   return (
-    <View testID="analytics-events-container">
-      <Text>Analytics Events</Text>
+    <View testID="analytics-events-container" style={{ padding: 10 }}>
+      <Text style={{ fontWeight: 'bold', marginBottom: 5 }}>Analytics Events</Text>
       <Text testID="events-count">Events: {events.length}</Text>
       {events.map((event, index) => (
-        <View key={index} testID={`event-${index}`}>
+        <View
+          key={`${event.timestamp}-${index}`}
+          testID={`event-${index}`}
+          style={{ marginTop: 5 }}
+        >
           <Text accessibilityLabel={`${event.type} - Component: ${event.componentId ?? 'none'}`}>
             {event.type}
             {event.componentId ? ` - Component: ${event.componentId}` : ''}
