@@ -60,18 +60,22 @@ export function AnalyticsEventDisplay({ sdk }: AnalyticsEventDisplayProps): Reac
     <View testID="analytics-events-container" style={{ padding: 10 }}>
       <Text style={{ fontWeight: 'bold', marginBottom: 5 }}>Analytics Events</Text>
       <Text testID="events-count">Events: {events.length}</Text>
-      {events.map((event, index) => (
-        <View
-          key={`${event.timestamp}-${index}`}
-          testID={`event-${index}`}
-          style={{ marginTop: 5 }}
-        >
-          <Text accessibilityLabel={`${event.type} - Component: ${event.componentId ?? 'none'}`}>
-            {event.type}
-            {event.componentId ? ` - Component: ${event.componentId}` : ''}
-          </Text>
-        </View>
-      ))}
+      {events.map((event, index) => {
+        const accessibilityLabel = `${event.type} - Component: ${event.componentId ?? 'none'}`
+        return (
+          <View
+            key={`${event.timestamp}-${index}`}
+            testID={`event-${index}`}
+            accessibilityLabel={accessibilityLabel}
+            style={{ marginTop: 5 }}
+          >
+            <Text>
+              {event.type}
+              {event.componentId ? ` - Component: ${event.componentId}` : ''}
+            </Text>
+          </View>
+        )
+      })}
     </View>
   )
 }
