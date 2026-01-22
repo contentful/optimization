@@ -1,88 +1,60 @@
 name: Main Pipeline
 
-# This is a pre-NX workflow. Format, linting, type safety and unit tests are run for all
-# publishable packages.
-#
-# NX integration and/or other optimizations will happen separately.
-
 on:
   pull_request:
 
 jobs:
   setup:
     name: pnpm install 🛠️
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: pnpm/action-setup@v4
+      - uses: namespacelabs/nscloud-checkout-action@v8
 
       - uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
-          cache: 'pnpm'
+          package-manager-cache: false
 
-      - run: |
-          echo "DOTENV_CONFIG_QUIET=true" >>.env
-          echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>.env
-          echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>.env
-          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>.env
-          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>.env
-          echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>.env
-          echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>.env
-          echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>.env
-          echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>.env
-          echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>.env
-          echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>.env
+      - uses: pnpm/action-setup@v4
 
-      - run: cp .env implementations/node-ssr/
-      - run: cp .env implementations/web-vanilla/
-
-      - uses: actions/cache@v5
-        id: dotenv-cache
+      - name: Set up pnpm cache (Namespace)
+        uses: namespacelabs/nscloud-cache-action@v1
         with:
-          path: |
-            .env
-            implementations/node-ssr/.env
-            implementations/web-vanilla/.env
-          key: ${{ runner.os }}-dotenv
+          cache: pnpm
 
-      - uses: actions/cache@v5
-        id: node-modules-cache
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-
-      - if: steps.node-modules-cache.outputs.cache-hit != 'true'
-        run: pnpm i --prefer-offline --frozen-lockfile
+      - run: pnpm install --prefer-offline --frozen-lockfile
 
   license-check:
     name: License Check 📄
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     needs: setup
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
+      - uses: namespacelabs/nscloud-checkout-action@v8
 
       - uses: dorny/paths-filter@v3
-        id: changes
+        id: filter
         with:
           filters: |
             lock:
               - 'pnpm-lock.yaml'
 
-      - uses: pnpm/action-setup@v4
-
       - uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
+          package-manager-cache: false
 
-      - uses: actions/cache@v5
+      - uses: pnpm/action-setup@v4
+
+      - name: Set up pnpm cache (Namespace)
         if: steps.filter.outputs.lock == 'true'
+        uses: namespacelabs/nscloud-cache-action@v1
         with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          cache: pnpm
+
+      - if: steps.filter.outputs.lock == 'true'
+        run: pnpm install --prefer-offline --frozen-lockfile
 
       - if: steps.filter.outputs.lock == 'true'
         run: >
@@ -93,126 +65,121 @@ jobs:
 
   format:
     name: Format Check 🎨
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     needs: setup
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: pnpm/action-setup@v4
+      - uses: namespacelabs/nscloud-checkout-action@v8
 
       - uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
+          package-manager-cache: false
 
-      - uses: actions/cache@v5
+      - uses: pnpm/action-setup@v4
+
+      - uses: namespacelabs/nscloud-cache-action@v1
         with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          cache: pnpm
 
-      - run: pnpm i --prefer-offline --frozen-lockfile
-
+      - run: pnpm install --prefer-offline --frozen-lockfile
       - run: pnpm format:check
 
   build:
     name: Build 📦
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     needs: setup
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: pnpm/action-setup@v4
+      - uses: namespacelabs/nscloud-checkout-action@v8
 
       - uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
+          package-manager-cache: false
 
-      - uses: actions/cache@v5
+      - uses: pnpm/action-setup@v4
+
+      - uses: namespacelabs/nscloud-cache-action@v1
         with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          cache: pnpm
 
-      - run: pnpm i --prefer-offline --frozen-lockfile
-
+      - run: pnpm install --prefer-offline --frozen-lockfile
       - run: pnpm build
 
   type-check:
     name: Type Check 🔷
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     needs: setup
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: pnpm/action-setup@v4
+      - uses: namespacelabs/nscloud-checkout-action@v8
 
       - uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
+          package-manager-cache: false
 
-      - uses: actions/cache@v5
+      - uses: pnpm/action-setup@v4
+
+      - uses: namespacelabs/nscloud-cache-action@v1
         with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          cache: pnpm
 
-      - run: pnpm i --prefer-offline --frozen-lockfile
-
+      - run: pnpm install --prefer-offline --frozen-lockfile
       - run: pnpm typecheck
 
   lint:
     name: Lint 🎨
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     needs: setup
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: pnpm/action-setup@v4
+      - uses: namespacelabs/nscloud-checkout-action@v8
 
       - uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
+          package-manager-cache: false
 
-      - uses: actions/cache@v5
+      - uses: pnpm/action-setup@v4
+
+      - uses: namespacelabs/nscloud-cache-action@v1
         with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          cache: pnpm
 
-      - run: pnpm i --prefer-offline --frozen-lockfile
-
+      - run: pnpm install --prefer-offline --frozen-lockfile
       - run: pnpm lint:check
 
   test:
     name: Test 🧪
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     needs: setup
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: pnpm/action-setup@v4
+      - uses: namespacelabs/nscloud-checkout-action@v8
 
       - uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
+          package-manager-cache: false
 
-      - uses: actions/cache@v5
+      - uses: pnpm/action-setup@v4
+
+      - uses: namespacelabs/nscloud-cache-action@v1
         with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          cache: pnpm
 
-      - run: pnpm i --prefer-offline --frozen-lockfile
-
+      - run: pnpm install --prefer-offline --frozen-lockfile
       - run: pnpm test:unit
 
   e2e-node-ssr:
     name: E2E Node SSR 🖥️
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     needs: setup
     steps:
-      - uses: actions/checkout@v6
+      - uses: namespacelabs/nscloud-checkout-action@v8
 
       - run: |
           echo "DOTENV_CONFIG_QUIET=true" >>implementations/node-ssr/.env
@@ -227,21 +194,23 @@ jobs:
           echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/node-ssr/.env
           echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>implementations/node-ssr/.env
 
-      - uses: pnpm/action-setup@v4
-
       - uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
+          package-manager-cache: false
 
-      - uses: actions/cache@v5
+      - uses: pnpm/action-setup@v4
+
+      - name: Set up caches (Namespace)
+        uses: namespacelabs/nscloud-cache-action@v1
         with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          cache: |
+            pnpm
+            playwright
+            apt
 
-      - run: pnpm i --prefer-offline --frozen-lockfile
-
+      - run: pnpm install --prefer-offline --frozen-lockfile
       - run: pnpm --filter @implementation/node-ssr exec playwright install --with-deps
-
       - run: pnpm --filter @implementation/node-ssr test:e2e
 
       - uses: actions/upload-artifact@v6
@@ -255,11 +224,11 @@ jobs:
 
   e2e-node-esr:
     name: E2E Node ESR 🖥️
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     needs: setup
     steps:
-      - uses: actions/checkout@v6
+      - uses: namespacelabs/nscloud-checkout-action@v8
 
       - run: |
           echo "DOTENV_CONFIG_QUIET=true" >>implementations/node-esr/.env
@@ -274,21 +243,23 @@ jobs:
           echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/node-esr/.env
           echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>implementations/node-esr/.env
 
-      - uses: pnpm/action-setup@v4
-
       - uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
+          package-manager-cache: false
 
-      - uses: actions/cache@v5
+      - uses: pnpm/action-setup@v4
+
+      - name: Set up caches (Namespace)
+        uses: namespacelabs/nscloud-cache-action@v1
         with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          cache: |
+            pnpm
+            playwright
+            apt
 
-      - run: pnpm i --prefer-offline --frozen-lockfile
-
+      - run: pnpm install --prefer-offline --frozen-lockfile
       - run: pnpm --filter @implementation/node-esr exec playwright install --with-deps
-
       - run: pnpm --filter @implementation/node-esr test:e2e
 
       - uses: actions/upload-artifact@v6
@@ -302,37 +273,49 @@ jobs:
 
   e2e-web:
     name: E2E Web Vanilla 🖥️
-    runs-on: ubuntu-latest
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     needs: setup
     steps:
       - uses: docker/setup-compose-action@v1
 
-      - uses: actions/checkout@v6
+      - uses: namespacelabs/nscloud-checkout-action@v8
 
-      - uses: pnpm/action-setup@v4
+      - name: Create .env and copy to implementations
+        run: |
+          cat > .env << 'EOF'
+          DOTENV_CONFIG_QUIET=true
+          VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}
+          VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}
+          VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/
+          VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/
+          VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}
+          VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}
+          VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}
+          VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}
+          VITE_CONTENTFUL_CDA_HOST=localhost:8000
+          VITE_CONTENTFUL_BASE_PATH=contentful
+          EOF
+          cp .env implementations/node-ssr/
+          cp .env implementations/web-vanilla/
 
       - uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
+          package-manager-cache: false
 
-      - uses: actions/cache@v5
+      - uses: pnpm/action-setup@v4
+
+      - name: Set up caches (Namespace)
+        uses: namespacelabs/nscloud-cache-action@v1
         with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          cache: |
+            pnpm
+            playwright
+            apt
 
-      - uses: actions/cache@v5
-        with:
-          path: |
-            .env
-            implementations/node-ssr/.env
-            implementations/web-vanilla/.env
-          key: ${{ runner.os }}-dotenv
-
-      - run: pnpm i --prefer-offline --frozen-lockfile
-
+      - run: pnpm install --prefer-offline --frozen-lockfile
       - run: pnpm --filter @implementation/web-vanilla exec playwright install --with-deps
-
       - run: pnpm --filter @implementation/web-vanilla test:e2e
 
       - uses: actions/upload-artifact@v6
@@ -346,40 +329,68 @@ jobs:
 
   e2e-react-native-android:
     name: E2E React Native Android 📱
-    runs-on: ubuntu-24.04
+    runs-on: namespace-profile-linux-16-vcpu-32-gb-ram-optimal
     timeout-minutes: 60
     needs: setup
     env:
       DETOX_AVD_NAME: test
+      CI: 'true'
+      # Conservative defaults; adjust if you want more parallelism
+      GRADLE_OPTS: >-
+        -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx4g
+        -Dkotlin.daemon.jvm.options=-Xmx2g
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Install PulseAudio library
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libpulse0
-
-      - name: Free Disk Space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android/sdk/ndk
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache/CodeQL
-          sudo docker image prune --all --force
-          df -h
-
-      - name: Enable KVM
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      - uses: pnpm/action-setup@v4
+      - uses: namespacelabs/nscloud-checkout-action@v8
 
       - uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
-          cache: 'pnpm'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@v4
+
+      - name: Set Android SDK environment variables
+        run: |
+          echo "ANDROID_SDK_ROOT=$HOME/.android/sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$HOME/.android/sdk" >> "$GITHUB_ENV"
+
+      - name: Prepare cache directories
+        run: |
+          mkdir -p "$HOME/.android/sdk" "$HOME/.android/avd" "$HOME/.android/cache"
+
+      - name: Set up caches (Namespace)
+        uses: namespacelabs/nscloud-cache-action@v1
+        with:
+          cache: |
+            apt
+            pnpm
+            gradle
+          path: |
+            ~/.android/sdk
+            ~/.android/avd
+            ~/.android/cache
+
+      - name: Install system dependencies (Android emulator + React Native)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ca-certificates curl unzip zip git \
+            python3 python3-pip build-essential \
+            netcat-openbsd watchman \
+            cpu-checker \
+            libgl1 libnss3 libx11-6 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 libxtst6 \
+            libxi6 libxrender1 libxkbcommon0 libgbm1 libdbus-1-3 libdrm2 libpulse0
+          sudo apt-get install -y --no-install-recommends libasound2 || sudo apt-get install -y --no-install-recommends libasound2t64
+
+      - name: Verify KVM is available
+        run: |
+          if [ ! -e /dev/kvm ]; then
+            echo "/dev/kvm not found; Android hardware acceleration will not work." >&2
+            exit 1
+          fi
+          ls -l /dev/kvm
+          # Optional diagnostic; may return non-zero if permissions are restrictive.
+          sudo kvm-ok || true
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -390,12 +401,8 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - uses: actions/cache@v5
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-node-modules-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-
-      - run: pnpm i --prefer-offline --frozen-lockfile
+      - name: Install JS dependencies
+        run: pnpm install --prefer-offline --frozen-lockfile
 
       - name: Create .env file for React Native
         run: |
@@ -411,16 +418,20 @@ jobs:
           VITE_CONTENTFUL_BASE_PATH=contentful
           EOF
 
+      - name: Build Android app (Detox)
+        run: |
+          pnpm --filter @implementation/react-native test:e2e:android:build
+
       - name: Start Mock Server
         run: |
           pnpm --filter mocks serve > /tmp/mock-server.log 2>&1 &
           echo $! > /tmp/mock-server.pid
-          for i in {1..30}; do
+          for i in {1..60}; do
             if nc -z localhost 8000 2>/dev/null; then
               echo "Mock server is ready"
               break
             fi
-            echo "Waiting for mock server... ($i/30)"
+            echo "Waiting for mock server... ($i/60)"
             sleep 1
           done
           if ! nc -z localhost 8000 2>/dev/null; then
@@ -434,23 +445,21 @@ jobs:
           cd implementations/react-native
           npx react-native start --port 8081 > /tmp/metro.log 2>&1 &
           echo $! > /tmp/metro.pid
-          sleep 15
+          for i in {1..60}; do
+            if nc -z localhost 8081 2>/dev/null; then
+              echo "Metro is ready"
+              break
+            fi
+            echo "Waiting for Metro... ($i/60)"
+            sleep 1
+          done
+          if ! nc -z localhost 8081 2>/dev/null; then
+            echo "Metro failed to start:"
+            cat /tmp/metro.log
+            exit 1
+          fi
 
-      - name: Cache Gradle dependencies
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            implementations/react-native/android/.gradle
-          key:
-            ${{ runner.os }}-gradle-${{
-            hashFiles('implementations/react-native/android/**/*.gradle*',
-            'implementations/react-native/android/gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Run Android E2E Tests
+      - name: Run Android E2E Tests (emulator)
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 33
@@ -458,21 +467,22 @@ jobs:
           target: google_apis
           avd-name: test
           force-avd-creation: true
-          emulator-options:
-            -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot-save
+          emulator-boot-timeout: 600
+          cores: 6
+          ram-size: 4096M
+          disk-size: 8G
           disable-animations: true
-          emulator-boot-timeout: 300
-          disk-size: 6G
+          emulator-options:
+            -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot
+            -no-snapshot-save
           script: |
             echo "Verifying JAVA_HOME: $JAVA_HOME"
             java -version
             echo "Setting up adb reverse port forwarding..."
             adb reverse tcp:8000 tcp:8000
             adb reverse tcp:8081 tcp:8081
-            echo "Building Android app..."
-            pnpm --filter @implementation/react-native test:e2e:android:build
             echo "Running E2E tests..."
-            pnpm --filter @implementation/react-native test:e2e:android:run
+            pnpm --filter @implementation/react-native test:e2e:android:run --retries 2
 
       - name: Upload Metro logs on failure
         if: failure()
