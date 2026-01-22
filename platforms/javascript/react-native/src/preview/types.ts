@@ -218,6 +218,16 @@ export interface PreviewPanelProps {
 }
 
 /**
+ * Props for PreviewPanelOverlay component
+ */
+export interface PreviewPanelOverlayProps extends Omit<PreviewPanelProps, 'style'> {
+  /** App content that the overlay wraps */
+  children: React.ReactNode
+  /** Optional positioning overrides for the floating action button */
+  fabPosition?: { bottom?: number; right?: number }
+}
+
+/**
  * Props for Section component
  */
 export interface SectionProps {

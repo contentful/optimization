@@ -1,5 +1,6 @@
 // Main component
 export { PreviewPanel } from './components/PreviewPanel'
+export { PreviewPanelOverlay } from './components/PreviewPanelOverlay'
 
 // Feature components (for advanced customization)
 export { AudienceItem } from './components/AudienceItem'
@@ -62,6 +63,7 @@ export type {
   PersonalizationsSectionProps,
   PreviewActions,
   PreviewData,
+  PreviewPanelOverlayProps,
   PreviewPanelProps,
   PreviewState,
   ProfileSectionProps,
