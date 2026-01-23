@@ -67,6 +67,7 @@ export function AnalyticsEventDisplay({ sdk }: AnalyticsEventDisplayProps): Reac
             key={`${event.timestamp}-${index}`}
             testID={`event-${index}`}
             accessibilityLabel={accessibilityLabel}
+            accessible={true}
             style={{ marginTop: 5 }}
           >
             <Text>
