@@ -37,6 +37,10 @@ interface EnvConfig {
     personalized: string
     product: string
     mergeTag: string
+    deviceType: string
+    visitorType: string
+    location: string
+    customEvent: string
   }
 }
 
@@ -72,5 +76,9 @@ export const ENV_CONFIG = {
     personalized: '2Z2WLOx07InSewC3LUB3eX',
     product: '1MwiFl4z7gkwqGYdvCmr8c',
     mergeTag: '1MwiFl4z7gkwqGYdvCmr8c',
+    deviceType: 'xFwgG3oNaOcjzWiGe4vXo',
+    visitorType: '2Z2WLOx07InSewC3LUB3eX',
+    location: '4ib0hsHWoSOnCVdDkizE8d',
+    customEvent: '6zqoWXyiSrf0ja7I2WGtYj',
   },
 } as const satisfies EnvConfig

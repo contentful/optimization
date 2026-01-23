@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
+import { PreviewOverrideProvider } from '../context/PreviewOverrideContext'
 import { colors, shadows, spacing, typography } from '../styles/theme'
 import type { PreviewPanelOverlayProps } from '../types'
 import { PreviewPanel } from './PreviewPanel'
@@ -98,47 +99,49 @@ export function PreviewPanelOverlay({
   ]
 
   return (
-    <View style={styles.container}>
-      {children}
-      <TouchableOpacity
-        accessibilityLabel="Open Preview Panel"
-        accessibilityRole="button"
-        onPress={handleOpen}
-        style={fabStyle}
-      >
-        <Text style={styles.fabText}>P</Text>
-      </TouchableOpacity>
-      <Modal
-        animationType="slide"
-        onRequestClose={() => {
-          handleClose(false)
-        }}
-        presentationStyle="pageSheet"
-        transparent={false}
-        visible={isVisible}
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <Animated.View style={[styles.modalContent, { transform: [{ translateY: dragY }] }]}>
-            <View style={styles.modalHeader} {...panResponder.panHandlers}>
-              <View style={styles.dragHandle} />
-              <Pressable
-                accessibilityLabel="Close Preview Panel"
-                accessibilityRole="button"
-                onPress={() => {
-                  handleClose(false)
-                }}
-                style={styles.closeButton}
-              >
-                <Text style={styles.closeButtonText}>×</Text>
-              </Pressable>
-            </View>
-            <View style={styles.panelContainer}>
-              <PreviewPanel {...previewPanelProps} />
-            </View>
-          </Animated.View>
-        </SafeAreaView>
-      </Modal>
-    </View>
+    <PreviewOverrideProvider>
+      <View style={styles.container}>
+        {children}
+        <TouchableOpacity
+          accessibilityLabel="Open Preview Panel"
+          accessibilityRole="button"
+          onPress={handleOpen}
+          style={fabStyle}
+        >
+          <Text style={styles.fabText}>P</Text>
+        </TouchableOpacity>
+        <Modal
+          animationType="slide"
+          onRequestClose={() => {
+            handleClose(false)
+          }}
+          presentationStyle="pageSheet"
+          transparent={false}
+          visible={isVisible}
+        >
+          <SafeAreaView style={styles.modalContainer}>
+            <Animated.View style={[styles.modalContent, { transform: [{ translateY: dragY }] }]}>
+              <View style={styles.modalHeader} {...panResponder.panHandlers}>
+                <View style={styles.dragHandle} />
+                <Pressable
+                  accessibilityLabel="Close Preview Panel"
+                  accessibilityRole="button"
+                  onPress={() => {
+                    handleClose(false)
+                  }}
+                  style={styles.closeButton}
+                >
+                  <Text style={styles.closeButtonText}>×</Text>
+                </Pressable>
+              </View>
+              <View style={styles.panelContainer}>
+                <PreviewPanel {...previewPanelProps} />
+              </View>
+            </Animated.View>
+          </SafeAreaView>
+        </Modal>
+      </View>
+    </PreviewOverrideProvider>
   )
 }
 

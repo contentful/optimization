@@ -27,11 +27,18 @@ import { MergeTagDetailCard } from './components/MergeTagDetailCard'
 import { SDKConfigCard } from './components/SDKConfigCard'
 import { SDKStatusCard } from './components/SDKStatusCard'
 import { ENV_CONFIG } from './env.config'
+import { PersonalizationDemoScreen } from './PersonalizationDemoScreen'
 import { TestTrackingScreen } from './TestTrackingScreen'
 import type { SDKInfo, ThemeColors } from './types'
-import { fetchEntriesFromMockServer, fetchMergeTagEntry, initializeSDK } from './utils/sdkHelpers'
+import {
+  type DemoEntries,
+  fetchDemoEntries,
+  fetchEntriesFromMockServer,
+  fetchMergeTagEntry,
+  initializeSDK,
+} from './utils/sdkHelpers'
 
-type ScreenType = 'home' | 'tracking'
+type ScreenType = 'home' | 'tracking' | 'personalization'
 
 function getThemeColors(isDarkMode: boolean): ThemeColors {
   return {
@@ -139,6 +146,8 @@ function App(): React.JSX.Element {
   const [resolvedValues, setResolvedValues] = useState<Array<{ id: string; value: unknown }>>([])
   const [mergeTagDetails, setMergeTagDetails] = useState<MergeTagEntry[]>([])
   const [entriesLoading, setEntriesLoading] = useState(false)
+  const [demoEntries, setDemoEntries] = useState<DemoEntries | null>(null)
+  const [demoEntriesLoading, setDemoEntriesLoading] = useState(false)
 
   useEffect(() => {
     async function initialize(): Promise<void> {
@@ -231,8 +240,43 @@ function App(): React.JSX.Element {
     void fetchEntries()
   }
 
+  const handleDemoPersonalization = (): void => {
+    setCurrentScreen('personalization')
+    setDemoEntriesLoading(true)
+    fetchDemoEntries()
+      .then((entries) => {
+        setDemoEntries(entries)
+      })
+      .catch((error) => {
+        setSdkError(
+          `Failed to fetch demo entries: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        )
+      })
+      .finally(() => {
+        setDemoEntriesLoading(false)
+      })
+  }
+
   const handleBack = (): void => {
     setCurrentScreen('home')
+  }
+
+  if (currentScreen === 'personalization' && sdk && demoEntries) {
+    return (
+      <OptimizationProvider instance={sdk}>
+        <PreviewPanelOverlay contentfulClient={contentfulClient}>
+          <PersonalizationDemoScreen
+            colors={colors}
+            onBack={handleBack}
+            demoEntries={demoEntries}
+          />
+        </PreviewPanelOverlay>
+      </OptimizationProvider>
+    )
+  }
+
+  if (currentScreen === 'personalization' && demoEntriesLoading) {
+    return <LoadingScreen colors={colors} isDarkMode={isDarkMode} />
   }
 
   if (currentScreen === 'tracking' && sdk && personalizedEntry && productEntry) {
@@ -301,6 +345,23 @@ function App(): React.JSX.Element {
                 testID="testTrackingButton"
               >
                 <Text style={styles.buttonText}>Test Component Tracking</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
+              <Text style={[styles.cardTitle, { color: colors.textColor }]}>
+                Personalization Demo
+              </Text>
+              <Text style={[styles.description, { color: colors.mutedTextColor }]}>
+                View personalized content cards that update in real-time when you change variant
+                selections in the PreviewPanel.
+              </Text>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: '#10b981' }]}
+                onPress={handleDemoPersonalization}
+                testID="demoPersonalizationButton"
+              >
+                <Text style={styles.buttonText}>Demo Personalization</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>

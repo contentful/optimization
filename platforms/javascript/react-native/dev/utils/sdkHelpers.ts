@@ -108,3 +108,40 @@ export async function fetchMergeTagEntry(setMergeTagEntry: (entry: Entry) => voi
 
   setMergeTagEntry(mergeTagEntryData)
 }
+
+export interface DemoEntries {
+  deviceType: Entry
+  visitorType: Entry
+  location: Entry
+  customEvent: Entry
+}
+
+export async function fetchDemoEntries(): Promise<DemoEntries> {
+  const {
+    contentful: { spaceId, environment, accessToken, host, basePath },
+    entries: { deviceType, visitorType, location, customEvent },
+  } = ENV_CONFIG
+
+  const contentful = createClient({
+    space: spaceId,
+    environment,
+    accessToken,
+    host,
+    basePath,
+    insecure: true,
+  })
+
+  const [deviceTypeEntry, visitorTypeEntry, locationEntry, customEventEntry] = await Promise.all([
+    contentful.getEntry(deviceType, { include: 10 }),
+    contentful.getEntry(visitorType, { include: 10 }),
+    contentful.getEntry(location, { include: 10 }),
+    contentful.getEntry(customEvent, { include: 10 }),
+  ])
+
+  return {
+    deviceType: deviceTypeEntry,
+    visitorType: visitorTypeEntry,
+    location: locationEntry,
+    customEvent: customEventEntry,
+  }
+}

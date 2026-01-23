@@ -1,13 +1,13 @@
 import { logger } from '@contentful/optimization-core'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useState } from 'react'
 import { Alert, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native'
+import PreviewOverrideContext from '../context/PreviewOverrideContext'
 import {
   useCollapsibleControl,
   useContentfulEntries,
   useDefinitions,
   usePreviewData,
-  usePreviewState,
-  useProfileOverrides,
+  usePreviewState
 } from '../hooks'
 import { commonStyles } from '../styles/common'
 import { colors, spacing, typography } from '../styles/theme'
@@ -58,7 +58,26 @@ export function PreviewPanel({
 }: PreviewPanelProps): React.JSX.Element {
   const previewState = usePreviewState()
   const { profile, personalizations, consent, isLoading } = previewState
-  const { overrides, actions } = useProfileOverrides()
+
+  // Try to get overrides from context (provided by PreviewPanelOverlay)
+  const contextValue = useContext(PreviewOverrideContext)
+  const overrides = contextValue?.overrides
+  const actions = contextValue?.actions
+
+  if (!overrides || !actions) {
+    return (
+      <View style={commonStyles.container}>
+        <Text>PreviewPanelOverlay must be mounted to use PreviewPanel</Text>
+        <ActionButton
+          label="Open Preview Panel"
+          variant="primary"
+          onPress={() => {
+            console.log('Open Preview Panel')
+          }}
+        />
+      </View>
+    )
+  }
 
   // Contentful entries state (using custom hook)
   const {
