@@ -1,13 +1,13 @@
 import { logger } from '@contentful/optimization-core'
-import React, { useCallback, useContext, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Alert, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native'
-import PreviewOverrideContext from '../context/PreviewOverrideContext'
+import { usePreviewOverrides } from '../context/PreviewOverrideContext'
 import {
   useCollapsibleControl,
   useContentfulEntries,
   useDefinitions,
   usePreviewData,
-  usePreviewState
+  usePreviewState,
 } from '../hooks'
 import { commonStyles } from '../styles/common'
 import { colors, spacing, typography } from '../styles/theme'
@@ -16,6 +16,22 @@ import { OverridesSection } from './OverridesSection'
 import { PreviewPanelContent } from './PreviewPanelContent'
 import { ProfileSection } from './ProfileSection'
 import { ActionButton, SearchBar } from './shared'
+
+function formatConsentText(consent: boolean | undefined): string {
+  if (consent === undefined) return '—'
+  return consent ? 'Yes' : 'No'
+}
+
+function PreviewPanelHeader({ consent }: { consent: boolean | undefined }): React.JSX.Element {
+  return (
+    <View style={commonStyles.header}>
+      <Text style={commonStyles.title}>Preview Panel</Text>
+      <View style={styles.consentBadge}>
+        <Text style={styles.consentText}>Consent: {formatConsentText(consent)}</Text>
+      </View>
+    </View>
+  )
+}
 
 /**
  * Preview Panel for Contentful Optimization React Native SDK
@@ -59,25 +75,9 @@ export function PreviewPanel({
   const previewState = usePreviewState()
   const { profile, personalizations, consent, isLoading } = previewState
 
-  // Try to get overrides from context (provided by PreviewPanelOverlay)
-  const contextValue = useContext(PreviewOverrideContext)
-  const overrides = contextValue?.overrides
-  const actions = contextValue?.actions
-
-  if (!overrides || !actions) {
-    return (
-      <View style={commonStyles.container}>
-        <Text>PreviewPanelOverlay must be mounted to use PreviewPanel</Text>
-        <ActionButton
-          label="Open Preview Panel"
-          variant="primary"
-          onPress={() => {
-            console.log('Open Preview Panel')
-          }}
-        />
-      </View>
-    )
-  }
+  // Get overrides from context (provided by PreviewOverrideProvider via PreviewPanelOverlay)
+  // Throws an error if used outside of PreviewPanelOverlay
+  const { overrides, actions } = usePreviewOverrides()
 
   // Contentful entries state (using custom hook)
   const {
@@ -180,16 +180,7 @@ export function PreviewPanel({
     <SafeAreaView style={[commonStyles.container, style]}>
       <StatusBar barStyle="dark-content" />
       {/* Header */}
-      {showHeader && (
-        <View style={commonStyles.header}>
-          <Text style={commonStyles.title}>Preview Panel</Text>
-          <View style={styles.consentBadge}>
-            <Text style={styles.consentText}>
-              Consent: {consent === undefined ? '—' : consent ? 'Yes' : 'No'}
-            </Text>
-          </View>
-        </View>
-      )}
+      {showHeader && <PreviewPanelHeader consent={consent} />}
 
       {/* Search Bar - only show if we have definitions and not loading */}
       {!entriesLoading && hasDefinitions && (

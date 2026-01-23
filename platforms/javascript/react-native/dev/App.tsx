@@ -247,7 +247,7 @@ function App(): React.JSX.Element {
       .then((entries) => {
         setDemoEntries(entries)
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         setSdkError(
           `Failed to fetch demo entries: ${error instanceof Error ? error.message : 'Unknown error'}`,
         )
