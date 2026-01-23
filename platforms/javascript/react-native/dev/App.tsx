@@ -19,7 +19,7 @@ import {
 
 import type Optimization from '@contentful/optimization-react-native'
 import type { MergeTagEntry, Profile } from '@contentful/optimization-react-native'
-import { OptimizationProvider, PreviewPanelOverlay } from '@contentful/optimization-react-native'
+import { OptimizationRoot } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 import { createClient } from 'contentful'
 import { LoadingScreen } from './components/LoadingScreen'
@@ -263,15 +263,9 @@ function App(): React.JSX.Element {
 
   if (currentScreen === 'personalization' && sdk && demoEntries) {
     return (
-      <OptimizationProvider instance={sdk}>
-        <PreviewPanelOverlay contentfulClient={contentfulClient}>
-          <PersonalizationDemoScreen
-            colors={colors}
-            onBack={handleBack}
-            demoEntries={demoEntries}
-          />
-        </PreviewPanelOverlay>
-      </OptimizationProvider>
+      <OptimizationRoot instance={sdk} previewPanel={{ enabled: true, contentfulClient }}>
+        <PersonalizationDemoScreen colors={colors} onBack={handleBack} demoEntries={demoEntries} />
+      </OptimizationRoot>
     )
   }
 
@@ -281,17 +275,15 @@ function App(): React.JSX.Element {
 
   if (currentScreen === 'tracking' && sdk && personalizedEntry && productEntry) {
     return (
-      <OptimizationProvider instance={sdk}>
-        <PreviewPanelOverlay contentfulClient={contentfulClient}>
-          <TestTrackingScreen
-            colors={colors}
-            onBack={handleBack}
-            sdk={sdk}
-            personalizedEntry={personalizedEntry}
-            productEntry={productEntry}
-          />
-        </PreviewPanelOverlay>
-      </OptimizationProvider>
+      <OptimizationRoot instance={sdk} previewPanel={{ enabled: true, contentfulClient }}>
+        <TestTrackingScreen
+          colors={colors}
+          onBack={handleBack}
+          sdk={sdk}
+          personalizedEntry={personalizedEntry}
+          productEntry={productEntry}
+        />
+      </OptimizationRoot>
     )
   }
 
@@ -304,70 +296,63 @@ function App(): React.JSX.Element {
   }
 
   return (
-    <OptimizationProvider instance={sdk}>
-      <PreviewPanelOverlay contentfulClient={contentfulClient}>
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
-          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-          <ScrollView contentContainerStyle={styles.scrollContent}>
-            <View style={styles.header} testID="appHeader">
-              <Text style={[styles.title, { color: colors.textColor }]} testID="appTitle">
-                Contentful Optimization
-              </Text>
-              <Text
-                style={[styles.subtitle, { color: colors.mutedTextColor }]}
-                testID="appSubtitle"
-              >
-                React Native SDK Implementation
-              </Text>
-            </View>
+    <OptimizationRoot instance={sdk} previewPanel={{ enabled: true, contentfulClient }}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.header} testID="appHeader">
+            <Text style={[styles.title, { color: colors.textColor }]} testID="appTitle">
+              Contentful Optimization
+            </Text>
+            <Text style={[styles.subtitle, { color: colors.mutedTextColor }]} testID="appSubtitle">
+              React Native SDK Implementation
+            </Text>
+          </View>
 
-            <SDKStatusCard sdkLoaded={sdkLoaded} sdkError={sdkError} colors={colors} />
+          <SDKStatusCard sdkLoaded={sdkLoaded} sdkError={sdkError} colors={colors} />
 
-            {sdkInfo && <SDKConfigCard sdkInfo={sdkInfo} colors={colors} />}
-            {mergeTagDetails.length > 0 && (
-              <MergeTagDetailCard
-                mergeTagDetails={mergeTagDetails}
-                resolvedValues={resolvedValues}
-                colors={colors}
-              />
-            )}
+          {sdkInfo && <SDKConfigCard sdkInfo={sdkInfo} colors={colors} />}
+          {mergeTagDetails.length > 0 && (
+            <MergeTagDetailCard
+              mergeTagDetails={mergeTagDetails}
+              resolvedValues={resolvedValues}
+              colors={colors}
+            />
+          )}
 
-            <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
-              <Text style={[styles.cardTitle, { color: colors.textColor }]}>
-                Component Tracking
-              </Text>
-              <Text style={[styles.description, { color: colors.mutedTextColor }]}>
-                Test viewport tracking with the Personalization and Analytics components.
-              </Text>
-              <TouchableOpacity
-                style={[styles.button, { backgroundColor: colors.accentColor }]}
-                onPress={handleTestTracking}
-                testID="testTrackingButton"
-              >
-                <Text style={styles.buttonText}>Test Component Tracking</Text>
-              </TouchableOpacity>
-            </View>
+          <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
+            <Text style={[styles.cardTitle, { color: colors.textColor }]}>Component Tracking</Text>
+            <Text style={[styles.description, { color: colors.mutedTextColor }]}>
+              Test viewport tracking with the Personalization and Analytics components.
+            </Text>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: colors.accentColor }]}
+              onPress={handleTestTracking}
+              testID="testTrackingButton"
+            >
+              <Text style={styles.buttonText}>Test Component Tracking</Text>
+            </TouchableOpacity>
+          </View>
 
-            <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
-              <Text style={[styles.cardTitle, { color: colors.textColor }]}>
-                Personalization Demo
-              </Text>
-              <Text style={[styles.description, { color: colors.mutedTextColor }]}>
-                View personalized content cards that update in real-time when you change variant
-                selections in the PreviewPanel.
-              </Text>
-              <TouchableOpacity
-                style={[styles.button, { backgroundColor: '#10b981' }]}
-                onPress={handleDemoPersonalization}
-                testID="demoPersonalizationButton"
-              >
-                <Text style={styles.buttonText}>Demo Personalization</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        </SafeAreaView>
-      </PreviewPanelOverlay>
-    </OptimizationProvider>
+          <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
+            <Text style={[styles.cardTitle, { color: colors.textColor }]}>
+              Personalization Demo
+            </Text>
+            <Text style={[styles.description, { color: colors.mutedTextColor }]}>
+              View personalized content cards that update in real-time when you change variant
+              selections in the PreviewPanel.
+            </Text>
+            <TouchableOpacity
+              style={[styles.button, { backgroundColor: '#10b981' }]}
+              onPress={handleDemoPersonalization}
+              testID="demoPersonalizationButton"
+            >
+              <Text style={styles.buttonText}>Demo Personalization</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    </OptimizationRoot>
   )
 }
 

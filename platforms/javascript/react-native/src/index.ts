@@ -104,6 +104,8 @@ export { logger } from '@contentful/optimization-core'
 
 // Export React Native specific components
 export { OptimizationProvider } from './components/OptimizationProvider'
+export { OptimizationRoot } from './components/OptimizationRoot'
+export type { OptimizationRootProps, PreviewPanelConfig } from './components/OptimizationRoot'
 
 // Component tracking components
 export { Personalization } from './components/Personalization'
