@@ -92,13 +92,21 @@ export function useProfileOverrides(): {
     // Capture current signal state as the initial "actual" data
     // This ensures we have data to restore to even if no API calls happen after mounting
     if (signalsRef.current && !lastActualDataRef.current) {
-      const { personalizations, profile, changes } = signalsRef.current
-      lastActualDataRef.current = {
-        personalizations: personalizations.value,
-        profile: profile.value,
-        changes: changes.value,
-      } as OptimizationData
-      logger.debug('[PreviewPanel] Captured initial signal state as actual data')
+      const { current } = signalsRef
+      const {
+        personalizations: { value: personalizations },
+        profile: { value: profile },
+        changes: { value: changes },
+      } = current
+      if (personalizations && profile && changes) {
+        const actualData: OptimizationData = {
+          personalizations,
+          profile,
+          changes,
+        }
+        lastActualDataRef.current = actualData
+        logger.debug('[PreviewPanel] Captured initial signal state as actual data')
+      }
     }
 
     // Register state interceptor to preserve overrides when API responses arrive

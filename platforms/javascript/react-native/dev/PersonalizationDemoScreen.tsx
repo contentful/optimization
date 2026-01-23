@@ -94,12 +94,10 @@ export function PersonalizationDemoScreen({
 
       <ScrollProvider testID="demoScrollView">
         <View style={[styles.infoSection, { backgroundColor: colors.cardBackground }]}>
-          <Text style={[styles.sectionTitle, { color: colors.textColor }]}>
-            PreviewPanel Demo
-          </Text>
+          <Text style={[styles.sectionTitle, { color: colors.textColor }]}>PreviewPanel Demo</Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor }]}>
-            Open the PreviewPanel to toggle audience overrides or select specific variants.
-            The cards below will update in real-time to show the resolved personalized content.
+            Open the PreviewPanel to toggle audience overrides or select specific variants. The
+            cards below will update in real-time to show the resolved personalized content.
           </Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor, marginTop: 8 }]}>
             Each card represents a different personalization type: Device Type, Visitor Type,
@@ -141,11 +139,7 @@ export function PersonalizationDemoScreen({
           testID="locationCard"
         >
           {(resolvedEntry) => (
-            <ContentCard
-              entry={resolvedEntry}
-              label="Location Personalization"
-              color="#10b981"
-            />
+            <ContentCard entry={resolvedEntry} label="Location Personalization" color="#10b981" />
           )}
         </Personalization>
 
