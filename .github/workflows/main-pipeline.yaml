@@ -465,6 +465,7 @@ jobs:
           api-level: 33
           arch: x86_64
           target: google_apis
+          profile: pixel_tablet
           avd-name: test
           force-avd-creation: true
           emulator-boot-timeout: 600
