@@ -93,7 +93,7 @@ function App(): React.JSX.Element {
 
   return (
     <OptimizationProvider instance={sdk}>
-      <SafeAreaView>
+      <SafeAreaView style={{ flex: 1 }}>
         <View style={{ padding: 10, gap: 10, flexDirection: 'row' }}>
           {!isIdentified ? (
             <Button testID="identify-button" title="Identify" onPress={handleIdentify} />
@@ -108,7 +108,7 @@ function App(): React.JSX.Element {
             }}
           />
         </View>
-        <ScrollView>
+        <ScrollView testID="main-scroll-view">
           {entries.map((entry) =>
             entry.sys.contentType.sys.id === 'nestedContent' ? (
               <NestedContentEntry key={entry.sys.id} entry={entry} />
@@ -116,10 +116,8 @@ function App(): React.JSX.Element {
               <ContentEntry key={entry.sys.id} entry={entry} sdk={sdk} />
             ),
           )}
-        </ScrollView>
-        <View>
           <AnalyticsEventDisplay sdk={sdk} />
-        </View>
+        </ScrollView>
       </SafeAreaView>
     </OptimizationProvider>
   )

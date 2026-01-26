@@ -41,9 +41,9 @@ function getAvailableEmulator() {
     return selectedAvd
   } catch (error) {
     console.warn(
-      `Warning: Could not detect available emulators: ${error.message}. Falling back to Pixel_8_Pro_API_33`,
+      `Warning: Could not detect available emulators: ${error.message}. Falling back to 'test' (default AVD name)`,
     )
-    return 'Pixel_8_Pro_API_33'
+    return 'test'
   }
 }
 
@@ -68,6 +68,7 @@ module.exports = {
       build: `cd ${__dirname} && xcodebuild -workspace ios/OptimizationImplementationApp.xcworkspace -scheme OptimizationImplementationApp -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build`,
       launchArgs: {
         detoxPrintBusyIdleResources: 'YES',
+        disableLogBox: 'YES',
       },
     },
     'ios.release': {
@@ -85,6 +86,7 @@ module.exports = {
       reversePorts: [8081],
       launchArgs: {
         detoxDisableSynchronization: 'YES',
+        disableLogBox: 'YES',
       },
     },
     'android.release': {
@@ -97,7 +99,7 @@ module.exports = {
     simulator: {
       type: 'ios.simulator',
       device: {
-        type: 'iPhone 15 Pro',
+        type: 'iPad Pro 13-inch (M4)',
       },
     },
     emulator: {

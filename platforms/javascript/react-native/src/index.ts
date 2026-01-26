@@ -10,6 +10,7 @@ import {
 } from '@contentful/optimization-core'
 import { merge } from 'es-toolkit'
 import { getLocale, getPageProperties, getUserAgent } from './builders/EventBuilder'
+import { createAppStateChangeListener, createOnlineChangeListener } from './handlers'
 import AsyncStorageStore from './storage/AsyncStorageStore'
 
 async function mergeConfig({
@@ -49,8 +50,22 @@ async function mergeConfig({
 }
 
 class Optimization extends CoreStateful {
+  private readonly cleanupOnlineListener: () => void
+
+  private readonly cleanupAppStateListener: () => void
+
   private constructor(config: CoreConfig) {
     super(config)
+
+    // Set up online/offline detection
+    this.cleanupOnlineListener = createOnlineChangeListener((isOnline) => {
+      this.online(isOnline)
+    })
+
+    // Set up app state change detection to flush events when app backgrounds
+    this.cleanupAppStateListener = createAppStateChangeListener(async () => {
+      await this.flush()
+    })
 
     // Set up effects to sync state with AsyncStorage
     effect(() => {
@@ -93,6 +108,17 @@ class Optimization extends CoreStateful {
   static async create(config: CoreConfig): Promise<Optimization> {
     const mergedConfig = await mergeConfig(config)
     return new Optimization(mergedConfig)
+  }
+
+  /**
+   * Clean up event listeners and resources.
+   *
+   * @remarks
+   * Call this method when the SDK instance is no longer needed to prevent memory leaks.
+   */
+  destroy(): void {
+    this.cleanupOnlineListener()
+    this.cleanupAppStateListener()
   }
 }
 

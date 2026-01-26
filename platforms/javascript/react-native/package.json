@@ -83,8 +83,14 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
+    "@react-native-community/netinfo": ">=9.0.0",
     "react": ">=18.0.0",
     "react-native": ">=0.70.0"
+  },
+  "peerDependenciesMeta": {
+    "@react-native-community/netinfo": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=18"

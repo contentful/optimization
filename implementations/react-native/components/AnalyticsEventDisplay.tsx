@@ -35,7 +35,7 @@ export function AnalyticsEventDisplay({ sdk }: AnalyticsEventDisplayProps): Reac
           newEvent.componentId = componentId
         }
 
-        setEvents((prev) => [...prev, newEvent])
+        setEvents((prev) => [newEvent, ...prev])
       }
     }
 
@@ -48,24 +48,38 @@ export function AnalyticsEventDisplay({ sdk }: AnalyticsEventDisplayProps): Reac
 
   if (events.length === 0) {
     return (
-      <View>
+      <View testID="analytics-events-container">
         <Text>Analytics Events</Text>
-        <Text>No events tracked yet</Text>
+        <Text testID="no-events-message">No events tracked yet</Text>
+        <Text testID="events-count">Events: 0</Text>
       </View>
     )
   }
 
   return (
-    <View>
-      <Text>Analytics Events</Text>
-      {events.map((event, index) => (
-        <View key={index}>
-          <Text>
-            {event.type}
-            {event.componentId ? ` - Component: ${event.componentId}` : ''}
-          </Text>
-        </View>
-      ))}
+    <View testID="analytics-events-container" style={{ padding: 10 }}>
+      <Text style={{ fontWeight: 'bold', marginBottom: 5 }}>Analytics Events</Text>
+      <Text testID="events-count">Events: {events.length}</Text>
+      {events.map((event, index) => {
+        const accessibilityLabel = `${event.type} - Component: ${event.componentId ?? 'none'}`
+        const testID = event.componentId
+          ? `event-${event.type}-${event.componentId}`
+          : `event-${event.type}-${index}`
+        return (
+          <View
+            key={`${event.timestamp}-${index}`}
+            testID={testID}
+            accessibilityLabel={accessibilityLabel}
+            accessible={true}
+            style={{ marginTop: 5 }}
+          >
+            <Text>
+              {event.type}
+              {event.componentId ? ` - Component: ${event.componentId}` : ''}
+            </Text>
+          </View>
+        )
+      })}
     </View>
   )
 }
