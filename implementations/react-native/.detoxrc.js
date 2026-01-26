@@ -68,6 +68,7 @@ module.exports = {
       build: `cd ${__dirname} && xcodebuild -workspace ios/OptimizationImplementationApp.xcworkspace -scheme OptimizationImplementationApp -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build`,
       launchArgs: {
         detoxPrintBusyIdleResources: 'YES',
+        disableLogBox: 'YES',
       },
     },
     'ios.release': {
@@ -85,6 +86,7 @@ module.exports = {
       reversePorts: [8081],
       launchArgs: {
         detoxDisableSynchronization: 'YES',
+        disableLogBox: 'YES',
       },
     },
     'android.release': {

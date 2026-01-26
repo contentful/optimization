@@ -19,7 +19,10 @@ describe('Analytics Events', () => {
 
     // Look for component events with entry IDs
     // The merge tag entry should trigger a component event
-    const componentEvent = element(by.label('component - Component: 1MwiFl4z7gkwqGYdvCmr8c'))
-    await waitFor(componentEvent).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
+    // Use waitFor().whileElement().scroll() pattern to scroll until element is visible
+    await waitFor(element(by.id('event-component-1MwiFl4z7gkwqGYdvCmr8c')))
+      .toBeVisible()
+      .whileElement(by.id('main-scroll-view'))
+      .scroll(500, 'down')
   })
 })
