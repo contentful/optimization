@@ -19,10 +19,7 @@ import {
 
 import type Optimization from '@contentful/optimization-react-native'
 import type { MergeTagEntry, Profile } from '@contentful/optimization-react-native'
-import {
-  OptimizationPreviewPanel,
-  OptimizationProvider,
-} from '@contentful/optimization-react-native'
+import { OptimizationRoot } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 import { createClient } from 'contentful'
 import { LoadingScreen } from './components/LoadingScreen'
@@ -30,11 +27,18 @@ import { MergeTagDetailCard } from './components/MergeTagDetailCard'
 import { SDKConfigCard } from './components/SDKConfigCard'
 import { SDKStatusCard } from './components/SDKStatusCard'
 import { ENV_CONFIG } from './env.config'
+import { PersonalizationDemoScreen } from './PersonalizationDemoScreen'
 import { TestTrackingScreen } from './TestTrackingScreen'
 import type { SDKInfo, ThemeColors } from './types'
-import { fetchEntriesFromMockServer, fetchMergeTagEntry, initializeSDK } from './utils/sdkHelpers'
+import {
+  type DemoEntries,
+  fetchDemoEntries,
+  fetchEntriesFromMockServer,
+  fetchMergeTagEntry,
+  initializeSDK,
+} from './utils/sdkHelpers'
 
-type ScreenType = 'home' | 'tracking' | 'preview'
+type ScreenType = 'home' | 'tracking' | 'personalization'
 
 function getThemeColors(isDarkMode: boolean): ThemeColors {
   return {
@@ -142,7 +146,8 @@ function App(): React.JSX.Element {
   const [resolvedValues, setResolvedValues] = useState<Array<{ id: string; value: unknown }>>([])
   const [mergeTagDetails, setMergeTagDetails] = useState<MergeTagEntry[]>([])
   const [entriesLoading, setEntriesLoading] = useState(false)
-  const [isIdentified, setIsIdentified] = useState(false)
+  const [demoEntries, setDemoEntries] = useState<DemoEntries | null>(null)
+  const [demoEntriesLoading, setDemoEntriesLoading] = useState(false)
 
   useEffect(() => {
     async function initialize(): Promise<void> {
@@ -235,30 +240,42 @@ function App(): React.JSX.Element {
     void fetchEntries()
   }
 
-  const handleShowPreview = (): void => {
-    setCurrentScreen('preview')
+  const handleDemoPersonalization = (): void => {
+    setCurrentScreen('personalization')
+    setDemoEntriesLoading(true)
+    fetchDemoEntries()
+      .then((entries) => {
+        setDemoEntries(entries)
+      })
+      .catch((error: unknown) => {
+        setSdkError(
+          `Failed to fetch demo entries: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        )
+      })
+      .finally(() => {
+        setDemoEntriesLoading(false)
+      })
   }
 
   const handleBack = (): void => {
     setCurrentScreen('home')
   }
 
-  const handleIdentify = (): void => {
-    if (!sdk) return
-    void sdk.personalization.identify({ userId: 'demo-user', traits: { identified: true } })
-    setIsIdentified(true)
+  if (currentScreen === 'personalization' && sdk && demoEntries) {
+    return (
+      <OptimizationRoot instance={sdk} previewPanel={{ enabled: true, contentfulClient }}>
+        <PersonalizationDemoScreen colors={colors} onBack={handleBack} demoEntries={demoEntries} />
+      </OptimizationRoot>
+    )
   }
 
-  const handleReset = (): void => {
-    if (!sdk) return
-    sdk.reset()
-    void sdk.personalization.page({ properties: { url: 'dev-app' } })
-    setIsIdentified(false)
+  if (currentScreen === 'personalization' && demoEntriesLoading) {
+    return <LoadingScreen colors={colors} isDarkMode={isDarkMode} />
   }
 
   if (currentScreen === 'tracking' && sdk && personalizedEntry && productEntry) {
     return (
-      <OptimizationProvider instance={sdk}>
+      <OptimizationRoot instance={sdk} previewPanel={{ enabled: true, contentfulClient }}>
         <TestTrackingScreen
           colors={colors}
           onBack={handleBack}
@@ -266,7 +283,7 @@ function App(): React.JSX.Element {
           personalizedEntry={personalizedEntry}
           productEntry={productEntry}
         />
-      </OptimizationProvider>
+      </OptimizationRoot>
     )
   }
 
@@ -274,47 +291,12 @@ function App(): React.JSX.Element {
     return <LoadingScreen colors={colors} isDarkMode={isDarkMode} />
   }
 
-  if (currentScreen === 'preview' && sdk) {
-    return (
-      <OptimizationProvider instance={sdk}>
-        <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
-          <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-          <View style={[styles.previewHeader, { backgroundColor: colors.cardBackground }]}>
-            <TouchableOpacity onPress={handleBack} style={styles.backButtonCompact}>
-              <Text style={[styles.backButtonText, { color: colors.textColor }]}>← Back</Text>
-            </TouchableOpacity>
-            <View style={styles.headerActions}>
-              {!isIdentified ? (
-                <TouchableOpacity
-                  style={[styles.headerButton, { backgroundColor: colors.successColor }]}
-                  onPress={handleIdentify}
-                  testID="identifyButton"
-                >
-                  <Text style={styles.headerButtonText}>Identify</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.headerButton, { backgroundColor: colors.errorColor }]}
-                  onPress={handleReset}
-                  testID="resetButton"
-                >
-                  <Text style={styles.headerButtonText}>Reset</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-          <OptimizationPreviewPanel showHeader={true} contentfulClient={contentfulClient} />
-        </SafeAreaView>
-      </OptimizationProvider>
-    )
-  }
-
   if (!sdk) {
     return <LoadingScreen colors={colors} isDarkMode={isDarkMode} />
   }
 
   return (
-    <OptimizationProvider instance={sdk}>
+    <OptimizationRoot instance={sdk} previewPanel={{ enabled: true, contentfulClient }}>
       <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -353,21 +335,24 @@ function App(): React.JSX.Element {
           </View>
 
           <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
-            <Text style={[styles.cardTitle, { color: colors.textColor }]}>Preview Panel</Text>
+            <Text style={[styles.cardTitle, { color: colors.textColor }]}>
+              Personalization Demo
+            </Text>
             <Text style={[styles.description, { color: colors.mutedTextColor }]}>
-              Debug and inspect the SDK state, profile, personalizations, and overrides.
+              View personalized content cards that update in real-time when you change variant
+              selections in the PreviewPanel.
             </Text>
             <TouchableOpacity
-              style={[styles.button, { backgroundColor: '#007AFF' }]}
-              onPress={handleShowPreview}
-              testID="previewPanelButton"
+              style={[styles.button, { backgroundColor: '#10b981' }]}
+              onPress={handleDemoPersonalization}
+              testID="demoPersonalizationButton"
             >
-              <Text style={styles.buttonText}>Open Preview Panel</Text>
+              <Text style={styles.buttonText}>Demo Personalization</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
       </SafeAreaView>
-    </OptimizationProvider>
+    </OptimizationRoot>
   )
 }
 
@@ -423,40 +408,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: '600',
-  },
-  backButton: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e1e5e9',
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  previewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e1e5e9',
-  },
-  backButtonCompact: {
-    padding: 8,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  headerButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-  },
-  headerButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
     fontWeight: '600',
   },
 })

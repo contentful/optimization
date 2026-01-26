@@ -1,6 +1,6 @@
-import type { ResolvedData } from '@contentful/optimization-core'
+import type { ResolvedData, SelectedPersonalizationArray } from '@contentful/optimization-core'
 import type { Entry, EntrySkeletonType } from 'contentful'
-import React, { useMemo, type ReactNode } from 'react'
+import React, { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
 import { useOptimization } from '../context/OptimizationContext'
 import { useViewportTracking } from '../hooks/useViewportTracking'
@@ -156,9 +156,25 @@ export function Personalization({
 }: PersonalizationProps): React.JSX.Element {
   const optimization = useOptimization()
 
+  // Subscribe to personalizations signal for reactivity
+  // This ensures the component re-renders when variants change (e.g., from PreviewPanel)
+  const [personalizations, setPersonalizations] = useState<
+    SelectedPersonalizationArray | undefined
+  >(undefined)
+
+  useEffect(() => {
+    const subscription = optimization.states.personalizations.subscribe((p) => {
+      setPersonalizations(p)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [optimization])
+
   const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
-    () => optimization.personalization.personalizeEntry(baselineEntry),
-    [baselineEntry, optimization],
+    () => optimization.personalization.personalizeEntry(baselineEntry, personalizations),
+    [baselineEntry, optimization, personalizations],
   )
 
   const { onLayout } = useViewportTracking({

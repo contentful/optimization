@@ -1,5 +1,9 @@
 // Main component
 export { PreviewPanel } from './components/PreviewPanel'
+export { PreviewPanelOverlay } from './components/PreviewPanelOverlay'
+
+// Context (for advanced usage)
+export { PreviewOverrideProvider, usePreviewOverrides } from './context/PreviewOverrideContext'
 
 // Feature components (for advanced customization)
 export { AudienceItem } from './components/AudienceItem'
@@ -62,6 +66,7 @@ export type {
   PersonalizationsSectionProps,
   PreviewActions,
   PreviewData,
+  PreviewPanelOverlayProps,
   PreviewPanelProps,
   PreviewState,
   ProfileSectionProps,

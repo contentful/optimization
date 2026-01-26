@@ -130,6 +130,8 @@ export { logger } from '@contentful/optimization-core'
 
 // Export React Native specific components
 export { OptimizationProvider } from './components/OptimizationProvider'
+export { OptimizationRoot } from './components/OptimizationRoot'
+export type { OptimizationRootProps, PreviewPanelConfig } from './components/OptimizationRoot'
 
 // Component tracking components
 export { Personalization } from './components/Personalization'
@@ -162,6 +164,7 @@ export type { OptimizationNavigationContainerProps } from './components/Optimiza
 
 // Preview Panel
 export { PreviewPanel as OptimizationPreviewPanel } from './preview/components/PreviewPanel'
-export type { ContentfulClient, PreviewPanelProps } from './preview/types'
+export { PreviewPanelOverlay } from './preview/components/PreviewPanelOverlay'
+export type { ContentfulClient, PreviewPanelOverlayProps, PreviewPanelProps } from './preview/types'
 
 export default Optimization
