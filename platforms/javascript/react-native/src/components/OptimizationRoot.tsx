@@ -1,5 +1,6 @@
 import React, { type ReactNode } from 'react'
 import type Optimization from '../'
+import { LiveUpdatesProvider } from '../context/LiveUpdatesContext'
 import { PreviewPanelOverlay } from '../preview/components/PreviewPanelOverlay'
 import type { ContentfulClient } from '../preview/types'
 import { OptimizationProvider } from './OptimizationProvider'
@@ -52,6 +53,19 @@ export interface OptimizationRootProps {
   previewPanel?: PreviewPanelConfig
 
   /**
+   * Whether Personalization components should react to state changes in real-time.
+   * When false (default), components "lock" to the first variant they receive,
+   * preventing UI flashing when user actions change their qualification.
+   * When true, components update immediately when personalizations change.
+   *
+   * Note: Live updates are always enabled when the preview panel is open,
+   * regardless of this setting.
+   *
+   * @default false
+   */
+  liveUpdates?: boolean
+
+  /**
    * Children components that will have access to the Optimization instance
    */
   children: ReactNode
@@ -101,10 +115,19 @@ export interface OptimizationRootProps {
  *   <App />
  * </OptimizationRoot>
  * ```
+ *
+ * @example
+ * With live updates enabled globally:
+ * ```tsx
+ * <OptimizationRoot instance={optimization} liveUpdates={true}>
+ *   <App />
+ * </OptimizationRoot>
+ * ```
  */
 export function OptimizationRoot({
   instance,
   previewPanel,
+  liveUpdates = false,
   children,
 }: OptimizationRootProps): React.JSX.Element {
   const content = previewPanel?.enabled ? (
@@ -120,7 +143,11 @@ export function OptimizationRoot({
     <>{children}</>
   )
 
-  return <OptimizationProvider instance={instance}>{content}</OptimizationProvider>
+  return (
+    <OptimizationProvider instance={instance}>
+      <LiveUpdatesProvider globalLiveUpdates={liveUpdates}>{content}</LiveUpdatesProvider>
+    </OptimizationProvider>
+  )
 }
 
 export default OptimizationRoot

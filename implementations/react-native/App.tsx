@@ -7,6 +7,7 @@ import type { Entry } from 'contentful'
 
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
 import { ENV_CONFIG } from './env.config'
+import { LiveUpdatesTestScreen } from './screens/LiveUpdatesTestScreen'
 import { NavigationTestScreen } from './screens/NavigationTestScreen'
 import { ContentEntry } from './sections/ContentEntry'
 import { NestedContentEntry } from './sections/NestedContentEntry'
@@ -29,6 +30,7 @@ function App(): React.JSX.Element {
   const [sdkError, setSdkError] = useState<string | null>(null)
   const [isIdentified, setIsIdentified] = useState<boolean>(false)
   const [showNavigationTest, setShowNavigationTest] = useState<boolean>(false)
+  const [showLiveUpdatesTest, setShowLiveUpdatesTest] = useState<boolean>(false)
 
   useEffect(() => {
     void initializeSDK(setSdk, setSdkError)
@@ -91,6 +93,17 @@ function App(): React.JSX.Element {
     )
   }
 
+  if (showLiveUpdatesTest) {
+    return (
+      <LiveUpdatesTestScreen
+        sdk={sdk}
+        onClose={() => {
+          setShowLiveUpdatesTest(false)
+        }}
+      />
+    )
+  }
+
   return (
     <OptimizationProvider instance={sdk}>
       <SafeAreaView style={{ flex: 1 }}>
@@ -105,6 +118,13 @@ function App(): React.JSX.Element {
             title="Navigation Test"
             onPress={() => {
               setShowNavigationTest(true)
+            }}
+          />
+          <Button
+            testID="live-updates-test-button"
+            title="Live Updates Test"
+            onPress={() => {
+              setShowLiveUpdatesTest(true)
             }}
           />
         </View>

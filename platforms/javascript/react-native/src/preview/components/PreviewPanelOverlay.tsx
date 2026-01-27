@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Animated,
   Modal,
@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native'
+import { useLiveUpdates } from '../../context/LiveUpdatesContext'
 import { PreviewOverrideProvider } from '../context/PreviewOverrideContext'
 import { colors, shadows, spacing, typography } from '../styles/theme'
 import type { PreviewPanelOverlayProps } from '../types'
@@ -28,6 +29,13 @@ export function PreviewPanelOverlay({
 }: PreviewPanelOverlayProps): React.JSX.Element {
   const [isVisible, setIsVisible] = useState(false)
   const { current: dragY } = useRef(new Animated.Value(0))
+  const liveUpdatesContext = useLiveUpdates()
+
+  // Sync preview panel visibility with LiveUpdatesContext
+  // This enables live updates in Personalization components when the panel is open
+  useEffect(() => {
+    liveUpdatesContext?.setPreviewPanelVisible(isVisible)
+  }, [isVisible, liveUpdatesContext])
 
   const handleOpen = useCallback(() => {
     setIsVisible(true)

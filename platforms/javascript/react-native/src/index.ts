@@ -145,6 +145,7 @@ export { ScrollProvider, useScrollContext } from './context/ScrollContext'
 export type { ScrollProviderProps } from './context/ScrollContext'
 
 // Export hooks
+export { useLiveUpdates } from './context/LiveUpdatesContext'
 export { useOptimization } from './context/OptimizationContext'
 
 // Export viewport tracking hook for advanced usage

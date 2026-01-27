@@ -25,7 +25,7 @@ npm install @react-native-community/netinfo
 ```typescript
 import { createClient } from 'contentful'
 import Optimization, {
-  OptimizationProvider,
+  OptimizationRoot,
   ScrollProvider,
   Personalization,
   Analytics,
@@ -48,10 +48,16 @@ const heroEntry = await contentful.getEntry('hero-baseline-id', {
   include: 10, // Required to load all variant data
 })
 
-// Wrap your app with the providers
+// Wrap your app with OptimizationRoot
 function App() {
   return (
-    <OptimizationProvider instance={optimization}>
+    <OptimizationRoot
+      instance={optimization}
+      previewPanel={{
+        enabled: __DEV__, // Enable preview panel in development
+        contentfulClient: contentful,
+      }}
+    >
       <ScrollProvider>
         {/* For personalized entries */}
         <Personalization baselineEntry={heroEntry}>
@@ -68,7 +74,7 @@ function App() {
           <ProductCard data={productEntry.fields} />
         </Analytics>
       </ScrollProvider>
-    </OptimizationProvider>
+    </OptimizationRoot>
   )
 }
 ```
@@ -152,6 +158,153 @@ is ideal for:
 - Non-scrollable layouts
 - Content that's always visible when the screen loads
 
+## OptimizationRoot
+
+`OptimizationRoot` is the recommended way to set up the SDK. It combines `OptimizationProvider` with
+optional preview panel functionality:
+
+```tsx
+import Optimization, {
+  OptimizationRoot,
+  ScrollProvider,
+} from '@contentful/optimization-react-native'
+import { createClient } from 'contentful'
+
+const contentfulClient = createClient({
+  space: 'your-space-id',
+  accessToken: 'your-access-token',
+})
+
+const optimization = await Optimization.create({
+  clientId: 'your-client-id',
+  environment: 'your-environment',
+})
+
+function App() {
+  return (
+    <OptimizationRoot
+      instance={optimization}
+      previewPanel={{
+        enabled: __DEV__, // Only show in development
+        contentfulClient: contentfulClient,
+      }}
+    >
+      <ScrollProvider>{/* Your app content */}</ScrollProvider>
+    </OptimizationRoot>
+  )
+}
+```
+
+### Preview Panel
+
+When `previewPanel.enabled` is `true`, a floating action button appears that opens the preview
+panel. The panel allows developers to:
+
+- Browse and override audience membership
+- Select specific variants for experiences
+- View current profile information
+- Test personalizations without modifying actual user data
+
+```tsx
+<OptimizationRoot
+  instance={optimization}
+  previewPanel={{
+    enabled: true,
+    contentfulClient: contentfulClient,
+    fabPosition: { bottom: 50, right: 20 }, // Optional: customize button position
+    showHeader: true, // Optional: show header in panel
+    onVisibilityChange: (isVisible) => {
+      console.log('Preview panel visible:', isVisible)
+    },
+  }}
+>
+  {/* ... */}
+</OptimizationRoot>
+```
+
+## Live Updates Behavior
+
+By default, `<Personalization />` components **lock to the first variant they receive**. This
+prevents UI "flashing" when user actions (like identifying or taking actions that change audience
+membership) cause them to qualify for different personalizations mid-session.
+
+### Default Behavior (Recommended)
+
+```tsx
+// User sees Variant A on initial load
+<Personalization baselineEntry={heroEntry}>
+  {(resolvedEntry) => <Hero data={resolvedEntry.fields} />}
+</Personalization>
+
+// Even if the user later qualifies for Variant B (e.g., after identify()),
+// they continue to see Variant A until the component unmounts
+```
+
+This provides a stable user experience where content doesn't unexpectedly change while the user is
+viewing it.
+
+### Enabling Live Updates
+
+There are three ways to enable live updates (immediate reactions to personalization changes):
+
+#### 1. Preview Panel (Automatic)
+
+When the preview panel is open, **all** `<Personalization />` components automatically enable live
+updates. This allows developers to test different variants without refreshing the screen:
+
+```tsx
+<OptimizationRoot instance={optimization} previewPanel={{ enabled: true, contentfulClient }}>
+  {/* All Personalization components will live-update when panel is open */}
+</OptimizationRoot>
+```
+
+#### 2. Global Setting via OptimizationRoot
+
+Enable live updates for all `<Personalization />` components in your app:
+
+```tsx
+<OptimizationRoot
+  instance={optimization}
+  liveUpdates={true} // All components react to changes immediately
+>
+  {/* ... */}
+</OptimizationRoot>
+```
+
+#### 3. Per-Component Override
+
+Enable or disable live updates for specific components:
+
+```tsx
+// This component will always react to changes immediately
+<Personalization baselineEntry={dashboardEntry} liveUpdates={true}>
+  {(resolvedEntry) => <Dashboard data={resolvedEntry.fields} />}
+</Personalization>
+
+// This component locks to first variant, even if global liveUpdates is true
+<Personalization baselineEntry={heroEntry} liveUpdates={false}>
+  {(resolvedEntry) => <Hero data={resolvedEntry.fields} />}
+</Personalization>
+```
+
+### Priority Order
+
+The live updates setting is determined for a particular `<Personalization/>` component in this order
+(highest to lowest priority):
+
+1. **Preview panel open** - Always enables live updates (cannot be overridden)
+2. **Component `liveUpdates` prop** - Per-component override
+3. **`OptimizationRoot` `liveUpdates` prop** - Global setting
+4. **Default** - Lock to first variant (`false`)
+
+| Preview Panel | Global Setting | Component Prop | Result           |
+| ------------- | -------------- | -------------- | ---------------- |
+| Open          | any            | any            | Live updates ON  |
+| Closed        | `true`         | `undefined`    | Live updates ON  |
+| Closed        | `false`        | `true`         | Live updates ON  |
+| Closed        | `true`         | `false`        | Live updates OFF |
+| Closed        | `false`        | `undefined`    | Live updates OFF |
+
 ## Features
 
 This SDK provides all the functionality from `@contentful/optimization-core` plus React
@@ -159,12 +312,15 @@ Native-specific features:
 
 ### React Native Specific
 
+- **OptimizationRoot**: Recommended wrapper that combines provider with optional preview panel
 - **Personalization**: Component for tracking personalized Contentful entries with variant
-  resolution
+  resolution and configurable live updates
 - **Analytics**: Component for tracking non-personalized Contentful entries
 - **OptimizationProvider**: React context provider for accessing the Optimization instance
 - **ScrollProvider**: Wrapper around ScrollView that enables viewport tracking
+- **Preview Panel**: Built-in debugging interface for testing personalizations
 - **useOptimization**: Hook to access the Optimization instance in components
+- **useLiveUpdates**: Hook to access live updates configuration
 - **useViewportTracking**: Hook for custom viewport tracking logic
 - **AsyncStorage Integration**: Automatic persistence of state using
   `@react-native-async-storage/async-storage`
@@ -301,7 +457,7 @@ import { createClient } from 'contentful'
 import type { Entry } from 'contentful'
 import Optimization, {
   logger,
-  OptimizationProvider,
+  OptimizationRoot,
   ScrollProvider,
   Personalization,
   Analytics,
@@ -347,7 +503,13 @@ function App() {
   }
 
   return (
-    <OptimizationProvider instance={optimization}>
+    <OptimizationRoot
+      instance={optimization}
+      previewPanel={{
+        enabled: __DEV__,
+        contentfulClient: contentful,
+      }}
+    >
       <ScrollProvider>
         <View>
           {/* Personalized hero section */}
@@ -369,7 +531,7 @@ function App() {
           </Analytics>
         </View>
       </ScrollProvider>
-    </OptimizationProvider>
+    </OptimizationRoot>
   )
 }
 ```

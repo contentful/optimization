@@ -2,6 +2,7 @@ import type { ResolvedData, SelectedPersonalizationArray } from '@contentful/opt
 import type { Entry, EntrySkeletonType } from 'contentful'
 import React, { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
+import { useLiveUpdates } from '../context/LiveUpdatesContext'
 import { useOptimization } from '../context/OptimizationContext'
 import { useViewportTracking } from '../hooks/useViewportTracking'
 
@@ -66,6 +67,20 @@ export interface PersonalizationProps {
    * Optional testID for testing purposes
    */
   testID?: string
+
+  /**
+   * Whether this component should react to personalization state changes in real-time.
+   * When undefined, inherits from OptimizationRoot's liveUpdates setting.
+   * When false (or inherited as false), the component "locks" to the first variant
+   * it receives, preventing UI flashing when user actions change their qualification.
+   * When true, the component updates immediately when personalizations change.
+   *
+   * Note: Live updates are always enabled when the preview panel is open,
+   * regardless of this setting.
+   *
+   * @default undefined (inherits from OptimizationRoot)
+   */
+  liveUpdates?: boolean
 }
 
 /**
@@ -116,6 +131,16 @@ export interface PersonalizationProps {
  * </Personalization>
  * ```
  *
+ * @example Live Updates for a Specific Component
+ * ```tsx
+ * <Personalization
+ *   baselineEntry={entry}
+ *   liveUpdates={true}     // Enable live updates for this component only
+ * >
+ *   {(resolvedEntry) => <DynamicComponent data={resolvedEntry.fields} />}
+ * </Personalization>
+ * ```
+ *
  * @example Customer-Controlled Nested Content
  * ```tsx
  * function renderNestedContent(entry: Entry): React.JSX.Element {
@@ -145,6 +170,8 @@ export interface PersonalizationProps {
  * - Tracks only once per component instance
  * - Default: tracks when 80% visible for 2000ms
  * - Handles non-personalized entries gracefully (returns baseline)
+ * - By default, locks to first variant to prevent UI flashing
+ * - Live updates always enabled when preview panel is open
  */
 export function Personalization({
   baselineEntry,
@@ -153,28 +180,46 @@ export function Personalization({
   threshold,
   style,
   testID,
+  liveUpdates,
 }: PersonalizationProps): React.JSX.Element {
   const optimization = useOptimization()
+  const liveUpdatesContext = useLiveUpdates()
 
-  // Subscribe to personalizations signal for reactivity
-  // This ensures the component re-renders when variants change (e.g., from PreviewPanel)
-  const [personalizations, setPersonalizations] = useState<
+  // Determine if live updates should be enabled for this component:
+  // 1. Preview panel visible always enables live updates (highest priority)
+  // 2. Per-component liveUpdates prop overrides global setting
+  // 3. Global liveUpdates from OptimizationRoot
+  // 4. Default: lock on first non-undefined value
+  const shouldLiveUpdate =
+    liveUpdatesContext?.previewPanelVisible === true ||
+    (liveUpdates ?? liveUpdatesContext?.globalLiveUpdates ?? false)
+
+  // Track personalization state with lock-on-first-value behavior
+  // When shouldLiveUpdate is false, we only accept the first non-undefined value
+  const [lockedPersonalizations, setLockedPersonalizations] = useState<
     SelectedPersonalizationArray | undefined
   >(undefined)
 
   useEffect(() => {
     const subscription = optimization.states.personalizations.subscribe((p) => {
-      setPersonalizations(p)
+      if (shouldLiveUpdate) {
+        // Live updates enabled - always update state
+        setLockedPersonalizations(p)
+      } else if (lockedPersonalizations === undefined && p !== undefined) {
+        // First non-undefined value - lock it
+        setLockedPersonalizations(p)
+      }
+      // Otherwise ignore updates (we're locked to the initial value)
     })
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [optimization])
+  }, [optimization, shouldLiveUpdate, lockedPersonalizations])
 
   const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
-    () => optimization.personalization.personalizeEntry(baselineEntry, personalizations),
-    [baselineEntry, optimization, personalizations],
+    () => optimization.personalization.personalizeEntry(baselineEntry, lockedPersonalizations),
+    [baselineEntry, optimization, lockedPersonalizations],
   )
 
   const { onLayout } = useViewportTracking({
