@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Button, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Button, SafeAreaView, ScrollView, Text, View } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
 import {
@@ -19,69 +19,6 @@ interface LiveUpdatesTestScreenProps {
   onClose: () => void
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  controlPanel: {
-    padding: 16,
-    backgroundColor: '#e8e8e8',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-  },
-  controlPanelTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 12,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    gap: 16,
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#ccc',
-  },
-  statusItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statusLabel: {
-    fontSize: 12,
-    color: '#666',
-  },
-  statusValue: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  section: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  sectionDescription: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 8,
-  },
-  loadingText: {
-    padding: 16,
-    textAlign: 'center',
-  },
-})
-
 interface ContentSectionsProps {
   entry: Entry
   onSimulatePreviewPanel: () => void
@@ -97,24 +34,18 @@ function ContentSections({
 
   return (
     <>
-      <View style={styles.controlPanel}>
-        <View style={styles.buttonRow}>
+      <View>
+        <View>
           <Button
             testID="simulate-preview-panel-button"
             title={isPreviewPanelSimulated ? 'Close Preview Panel' : 'Simulate Preview Panel'}
             onPress={onSimulatePreviewPanel}
           />
         </View>
-        <View style={styles.statusRow}>
-          <View style={styles.statusItem}>
-            <Text style={styles.statusLabel}>Preview Panel:</Text>
-            <Text
-              testID="preview-panel-status"
-              style={[
-                styles.statusValue,
-                { color: liveUpdatesContext?.previewPanelVisible ? 'green' : 'red' },
-              ]}
-            >
+        <View>
+          <View>
+            <Text>Preview Panel:</Text>
+            <Text testID="preview-panel-status">
               {liveUpdatesContext?.previewPanelVisible ? 'Open' : 'Closed'}
             </Text>
           </View>
@@ -122,11 +53,9 @@ function ContentSections({
       </View>
 
       <ScrollView testID="live-updates-scroll-view">
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Default Behavior (inherits global setting)</Text>
-          <Text style={styles.sectionDescription}>
-            No liveUpdates prop - inherits from OptimizationRoot (false)
-          </Text>
+        <View>
+          <Text>Default Behavior (inherits global setting)</Text>
+          <Text>No liveUpdates prop - inherits from OptimizationRoot (false)</Text>
           <ScrollProvider>
             <Personalization baselineEntry={entry} testID="default-personalization">
               {(resolvedEntry) => (
@@ -136,11 +65,9 @@ function ContentSections({
           </ScrollProvider>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Live Updates Enabled (liveUpdates=true)</Text>
-          <Text style={styles.sectionDescription}>
-            Always updates when personalization state changes
-          </Text>
+        <View>
+          <Text>Live Updates Enabled (liveUpdates=true)</Text>
+          <Text>Always updates when personalization state changes</Text>
           <ScrollProvider>
             <Personalization baselineEntry={entry} liveUpdates={true} testID="live-personalization">
               {(resolvedEntry) => (
@@ -150,11 +77,9 @@ function ContentSections({
           </ScrollProvider>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Locked (liveUpdates=false)</Text>
-          <Text style={styles.sectionDescription}>
-            Never updates - locks to first variant received
-          </Text>
+        <View>
+          <Text>Locked (liveUpdates=false)</Text>
+          <Text>Never updates - locks to first variant received</Text>
           <ScrollProvider>
             <Personalization
               baselineEntry={entry}
@@ -227,8 +152,8 @@ export function LiveUpdatesTestScreen({
 
   if (error) {
     return (
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.loadingText}>{error}</Text>
+      <SafeAreaView>
+        <Text>{error}</Text>
         <Button testID="close-live-updates-test-button" title="Close" onPress={onClose} />
       </SafeAreaView>
     )
@@ -236,8 +161,8 @@ export function LiveUpdatesTestScreen({
 
   if (isLoading || !entry) {
     return (
-      <SafeAreaView style={styles.container}>
-        <Text style={styles.loadingText}>Loading...</Text>
+      <SafeAreaView>
+        <Text>Loading...</Text>
       </SafeAreaView>
     )
   }
@@ -248,10 +173,10 @@ export function LiveUpdatesTestScreen({
       liveUpdates={globalLiveUpdates}
       key={`${globalLiveUpdates}-${isPreviewPanelSimulated}`}
     >
-      <SafeAreaView style={styles.container}>
-        <View style={styles.controlPanel}>
-          <Text style={styles.controlPanelTitle}>Live Updates Test Controls</Text>
-          <View style={styles.buttonRow}>
+      <SafeAreaView>
+        <View>
+          <Text>Live Updates Test Controls</Text>
+          <View>
             <Button testID="close-live-updates-test-button" title="Close" onPress={onClose} />
             {!isIdentified ? (
               <Button
@@ -268,24 +193,14 @@ export function LiveUpdatesTestScreen({
               onPress={handleToggleGlobalLiveUpdates}
             />
           </View>
-          <View style={styles.statusRow}>
-            <View style={styles.statusItem}>
-              <Text style={styles.statusLabel}>Identified:</Text>
-              <Text
-                testID="identified-status"
-                style={[styles.statusValue, { color: isIdentified ? 'green' : 'red' }]}
-              >
-                {isIdentified ? 'Yes' : 'No'}
-              </Text>
+          <View>
+            <View>
+              <Text>Identified:</Text>
+              <Text testID="identified-status">{isIdentified ? 'Yes' : 'No'}</Text>
             </View>
-            <View style={styles.statusItem}>
-              <Text style={styles.statusLabel}>Global Live Updates:</Text>
-              <Text
-                testID="global-live-updates-status"
-                style={[styles.statusValue, { color: globalLiveUpdates ? 'green' : 'red' }]}
-              >
-                {globalLiveUpdates ? 'ON' : 'OFF'}
-              </Text>
+            <View>
+              <Text>Global Live Updates:</Text>
+              <Text testID="global-live-updates-status">{globalLiveUpdates ? 'ON' : 'OFF'}</Text>
             </View>
           </View>
         </View>
