@@ -189,7 +189,7 @@ export function LiveUpdatesTestScreen({
       await fetchEntries(
         [ENV_CONFIG.entries.personalized],
         (entries) => {
-          if (entries.length > 0) {
+          if (entries.length > 0 && entries[0] !== undefined) {
             setEntry(entries[0])
           } else {
             setError('No entry found')
