@@ -7,7 +7,7 @@ permissions:
 on:
   workflow_dispatch:
     inputs:
-      version_type:
+      bump_type:
         description: 'Version bump type'
         required: false
         type: choice
@@ -54,13 +54,9 @@ jobs:
       - name: Execute version bump and get version
         id: release-version
         run: |
-          VERSION_TYPE="${{ github.event.inputs.version_type }}"
+          BUMP="${{ github.event.inputs.bump_type }}"
 
-          if [ -n "$VERSION_TYPE" ]; then
-            pnpm nx release $VERSION_TYPE --skip-publish --verbose --first-release
-          else
-            pnpm nx release --verbose --skip-publish --first-release
-          fi
+          pnpm nx release ${BUMP:-""} --skip-publish --verbose --first-release
 
           LATEST_TAG=$(git describe --tags --abbrev=0)
           echo "version=$LATEST_TAG" >> $GITHUB_OUTPUT
