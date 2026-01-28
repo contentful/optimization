@@ -100,8 +100,8 @@ export function PreviewPanelOverlay({
     [dragY, handleClose],
   )
 
-  const fabStyle = [
-    styles.fab,
+  const fabWrapperStyle = [
+    styles.fabWrapper,
     {
       bottom: fabPosition?.bottom ?? DEFAULT_FAB_POSITION.bottom,
       right: fabPosition?.right ?? DEFAULT_FAB_POSITION.right,
@@ -112,20 +112,22 @@ export function PreviewPanelOverlay({
     <PreviewOverrideProvider>
       <View style={styles.container}>
         {children}
-        <Pressable
-          accessibilityLabel="Open Preview Panel"
-          accessibilityRole="button"
-          android_ripple={null}
-          onPress={handleOpen}
-          style={() => fabStyle}
-        >
-          {({ pressed }: { pressed: boolean }) => (
-            <>
-              {pressed && <Image source={fabRipple} style={styles.fabRipple} />}
-              <Image source={fabIcon} style={styles.fabIcon} />
-            </>
-          )}
-        </Pressable>
+        <View style={fabWrapperStyle}>
+          <Pressable
+            accessibilityLabel="Open Preview Panel"
+            accessibilityRole="button"
+            android_ripple={null}
+            onPress={handleOpen}
+            style={() => styles.fabButton}
+          >
+            {({ pressed }: { pressed: boolean }) => (
+              <>
+                {pressed && <Image source={fabRipple} style={styles.fabRipple} />}
+                <Image source={fabIcon} style={styles.fabIcon} />
+              </>
+            )}
+          </Pressable>
+        </View>
         <Modal
           animationType="slide"
           onRequestClose={() => {
@@ -165,19 +167,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  fab: {
+  fabWrapper: {
     position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.24,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabButton: {
     width: 56,
     height: 56,
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#EADDFF',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.24,
-    shadowRadius: 8,
-    elevation: 8,
     overflow: 'hidden',
   },
   fabRipple: {
