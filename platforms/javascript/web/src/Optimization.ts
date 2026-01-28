@@ -4,6 +4,7 @@ import {
   type CoreStatefulConfig,
   effect,
   logger,
+  SDK_VERSION,
   signals,
 } from '@contentful/optimization-core'
 import { merge } from 'es-toolkit'
@@ -112,7 +113,7 @@ function mergeConfig({
       eventBuilder: {
         app,
         channel: 'web',
-        library: { name: 'Optimization Web API', version: '0.0.0' },
+        library: { name: 'Optimization Web API', version: SDK_VERSION },
         getLocale,
         getPageProperties,
         getUserAgent,

@@ -6,6 +6,7 @@ import {
   type CoreStatefulConfig,
   CoreStateful,
   effect,
+  SDK_VERSION,
   signals,
 } from '@contentful/optimization-core'
 import { merge } from 'es-toolkit'
@@ -38,7 +39,7 @@ async function mergeConfig({
       },
       eventBuilder: {
         channel: 'mobile',
-        library: { name: 'Optimization React Native SDK', version: '1.0.0' },
+        library: { name: 'Optimization React Native SDK', version: SDK_VERSION },
         getLocale,
         getPageProperties,
         getUserAgent,
