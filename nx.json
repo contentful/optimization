@@ -6,7 +6,7 @@
     "projectsRelationship": "fixed",
     "git": {
       "commit": false,
-      "tag": false
+      "tag": true
     },
     "changelog": {
       "workspaceChangelog": true,
