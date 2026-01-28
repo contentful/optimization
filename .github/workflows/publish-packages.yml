@@ -103,10 +103,6 @@ jobs:
           cat release-notes.md >> $GITHUB_STEP_SUMMARY
           echo "Changelog generated for $RELEASE_VERSION"
 
-      - name: Push changes
-        run: |
-          git push origin main --follow-tags
-
       - name: Upload release workspace
         uses: actions/upload-artifact@v4
         with:
