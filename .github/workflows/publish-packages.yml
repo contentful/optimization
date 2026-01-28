@@ -65,47 +65,30 @@ jobs:
           LATEST_TAG=$(git describe --tags --abbrev=0)
           echo "version=$LATEST_TAG" >> $GITHUB_OUTPUT
 
-          # Create release notes with package list
-          echo "## 📦 Published Packages" > release-notes.md
-          echo "" >> release-notes.md
-
-          for project in $(jq -r '.release.projects[]' nx.json); do
-            if [ -f "$project/package.json" ]; then
-              pkg_name=$(jq -r '.name' "$project/package.json")
-              echo "- $pkg_name@${LATEST_TAG}" >> release-notes.md
-            fi
-          done
-
-          echo "" >> release-notes.md
-          cat "CHANGELOG.md" >> release-notes.md
-          cat release-notes.md >> $GITHUB_STEP_SUMMARY
-
+          echo "# 📦 Released" >> $GITHUB_STEP_SUMMARY
+          cat "CHANGELOG.md" >> $GITHUB_STEP_SUMMARY
           echo "Released version: $LATEST_TAG"
-          echo "## 📦 Released $LATEST_TAG" >> $GITHUB_STEP_SUMMARY
 
       - name: Update SDK version
         run: |
-              VERSION=$(echo "${{ steps.release-version.outputs.version }}" | sed 's/^v//')
-              VERSION_CODE="export const SDK_VERSION = '$VERSION';"
+          VERSION=$(echo "${{ steps.release-version.outputs.version }}" | sed 's/^v//')
+          VERSION_CODE="export const SDK_VERSION = '$VERSION';"
 
-              echo "$VERSION_CODE" > platforms/javascript/node/src/version.ts
-              echo "$VERSION_CODE" > platforms/javascript/web/src/version.ts
-              echo "$VERSION_CODE" > platforms/javascript/react-native/src/version.ts
+          echo "$VERSION_CODE" > platforms/javascript/node/src/version.ts
+          echo "$VERSION_CODE" > platforms/javascript/web/src/version.ts
+          echo "$VERSION_CODE" > platforms/javascript/react-native/src/version.ts
 
       - name: Build packages
         run: pnpm build
-
-
 
       - name: Upload release workspace
         uses: actions/upload-artifact@v4
         with:
           name: release-workspace
           path: |
+            CHANGELOG.md
             universal/*/dist/
             platforms/javascript/*/dist/
-            CHANGELOG.md
-            release-notes.md
             universal/*/package.json
             platforms/javascript/*/package.json
           retention-days: 7
@@ -139,16 +122,16 @@ jobs:
         with:
           name: release-workspace
 
-      - name: Publish packages
-        run: pnpm nx release publish --verbose --first-release
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # - name: Publish packages
+      #   run: pnpm nx release publish --verbose --first-release
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.prepare.outputs.version }}
-          name: Release ${{ needs.prepare.outputs.version }}
-          body_path: release-notes.md
-          draft: false
-          prerelease: false
+      # - name: Create GitHub Release
+      #   uses: softprops/action-gh-release@v2
+      #   with:
+      #     tag_name: ${{ needs.prepare.outputs.version }}
+      #     name: Release ${{ needs.prepare.outputs.version }}
+      #     body_path: CHANGELOG.md
+      #     draft: false
+      #     prerelease: false
