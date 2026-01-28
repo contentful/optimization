@@ -57,13 +57,29 @@ jobs:
           VERSION_TYPE="${{ github.event.inputs.version_type }}"
 
           if [ -n "$VERSION_TYPE" ]; then
-            pnpm nx release version $VERSION_TYPE --verbose --first-release
+            pnpm nx release $VERSION_TYPE --skip-publish --verbose --first-release
           else
-            pnpm nx release version --verbose --first-release
+            pnpm nx release --verbose --skip-publish --first-release
           fi
 
           LATEST_TAG=$(git describe --tags --abbrev=0)
           echo "version=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+          # Create release notes with package list
+          echo "## 📦 Published Packages" > release-notes.md
+          echo "" >> release-notes.md
+
+          for project in $(jq -r '.release.projects[]' nx.json); do
+            if [ -f "$project/package.json" ]; then
+              pkg_name=$(jq -r '.name' "$project/package.json")
+              echo "- $pkg_name@${LATEST_TAG}" >> release-notes.md
+            fi
+          done
+
+          echo "" >> release-notes.md
+          cat "CHANGELOG.md" >> release-notes.md
+          cat release-notes.md >> $GITHUB_STEP_SUMMARY
+
           echo "Released version: $LATEST_TAG"
           echo "## 📦 Released $LATEST_TAG" >> $GITHUB_STEP_SUMMARY
 
@@ -79,29 +95,7 @@ jobs:
       - name: Build packages
         run: pnpm build
 
-      - name: Generate changelog and release notes
-        run: |
-          RELEASE_VERSION="${{ steps.release-version.outputs.version }}"
-          VERSION_NUMBER="${RELEASE_VERSION#v}"
 
-          pnpm nx release changelog $VERSION_NUMBER --verbose --first-release
-
-          # Create release notes with package list
-          echo "## 📦 Published Packages" > release-notes.md
-          echo "" >> release-notes.md
-
-          for project in $(jq -r '.release.projects[]' nx.json); do
-            if [ -f "$project/package.json" ]; then
-              pkg_name=$(jq -r '.name' "$project/package.json")
-              echo "- $pkg_name@${RELEASE_VERSION}" >> release-notes.md
-            fi
-          done
-
-          echo "" >> release-notes.md
-          cat "CHANGELOG.md" >> release-notes.md
-
-          cat release-notes.md >> $GITHUB_STEP_SUMMARY
-          echo "Changelog generated for $RELEASE_VERSION"
 
       - name: Upload release workspace
         uses: actions/upload-artifact@v4
