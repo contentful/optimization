@@ -17,7 +17,8 @@
     "dist/**/*"
   ],
   "publishConfig": {
-    "directory": "dist"
+    "directory": "dist",
+    "access": "public"
   },
   "scripts": {
     "build": "pnpm clean; pnpm build:cjs && pnpm build:esm",

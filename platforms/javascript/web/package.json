@@ -16,7 +16,8 @@
     }
   },
   "publishConfig": {
-    "directory": "dist"
+    "directory": "dist",
+    "access": "public"
   },
   "scripts": {
     "build:esm": "vite build -c vite.esm.config.ts",
