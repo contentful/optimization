@@ -61,7 +61,6 @@ jobs:
           LATEST_TAG=$(git describe --tags --abbrev=0)
           echo "version=$LATEST_TAG" >> $GITHUB_OUTPUT
 
-          echo "# CHANGELOG" >> $GITHUB_STEP_SUMMARY
           cat "CHANGELOG.md" >> $GITHUB_STEP_SUMMARY
           echo "Released version: $LATEST_TAG"
 
