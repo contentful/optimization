@@ -1,18 +1,20 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Animated,
+  Image,
   Modal,
   PanResponder,
   Pressable,
   SafeAreaView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native'
 import { useLiveUpdates } from '../../context/LiveUpdatesContext'
+import fabIcon from '../assets/fab-icon.png'
+import fabRipple from '../assets/fab-ripple.png'
 import { PreviewOverrideProvider } from '../context/PreviewOverrideContext'
-import { colors, shadows, spacing, typography } from '../styles/theme'
+import { colors, spacing, typography } from '../styles/theme'
 import type { PreviewPanelOverlayProps } from '../types'
 import { PreviewPanel } from './PreviewPanel'
 
@@ -110,14 +112,20 @@ export function PreviewPanelOverlay({
     <PreviewOverrideProvider>
       <View style={styles.container}>
         {children}
-        <TouchableOpacity
+        <Pressable
           accessibilityLabel="Open Preview Panel"
           accessibilityRole="button"
+          android_ripple={null}
           onPress={handleOpen}
-          style={fabStyle}
+          style={() => fabStyle}
         >
-          <Text style={styles.fabText}>P</Text>
-        </TouchableOpacity>
+          {({ pressed }: { pressed: boolean }) => (
+            <>
+              {pressed && <Image source={fabRipple} style={styles.fabRipple} />}
+              <Image source={fabIcon} style={styles.fabIcon} />
+            </>
+          )}
+        </Pressable>
         <Modal
           animationType="slide"
           onRequestClose={() => {
@@ -164,13 +172,25 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.cp.normal,
-    ...shadows.md,
+    backgroundColor: '#EADDFF',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.24,
+    shadowRadius: 8,
+    elevation: 8,
+    overflow: 'hidden',
   },
-  fabText: {
-    color: colors.text.inverse,
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
+  fabRipple: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    bottom: -10,
+    right: -10,
+    resizeMode: 'contain',
+  },
+  fabIcon: {
+    width: 20,
+    height: 20,
   },
   modalContainer: {
     flex: 1,
