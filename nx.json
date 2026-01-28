@@ -2,30 +2,18 @@
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
   "plugins": ["@nx/js"],
   "release": {
-    "projects": [
-      "universal/api-schemas",
-      "universal/api-client",
-      "universal/core",
-      "platforms/javascript/node",
-      "platforms/javascript/web",
-      "platforms/javascript/react-native"
-    ],
+    "projects": ["universal/*", "platforms/javascript/*"],
     "projectsRelationship": "fixed",
+    "git": {
+      "commit": false,
+      "tag": false
+    },
     "changelog": {
       "workspaceChangelog": true,
-      "projectChangelogs": false,
-      "git": {
-        "commit": false,
-        "tag": false
-      }
+      "projectChangelogs": false
     },
     "version": {
-      "conventionalCommits": true,
-      "git": {
-        "commit": false,
-        "tag": true,
-        "tagMessage": "Release ${version}"
-      }
+      "conventionalCommits": true
     }
   }
 }
