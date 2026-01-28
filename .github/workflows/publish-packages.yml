@@ -1,0 +1,149 @@
+name: Release Pipeline
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: false
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+  # TODO: remove me before merging to main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  prepare:
+    name: 🔍 Prepare Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.release-version.outputs.version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Execute version bump and get version
+        id: release-version
+        run: |
+          VERSION_TYPE="${{ github.event.inputs.version_type }}"
+
+          if [ -n "$VERSION_TYPE" ]; then
+            pnpm nx release version $VERSION_TYPE --verbose --first-release
+          else
+            pnpm nx release version --verbose --first-release
+          fi
+
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          echo "version=$LATEST_TAG" >> $GITHUB_OUTPUT
+          echo "Released version: $LATEST_TAG"
+
+          echo "## 📦 Released $LATEST_TAG" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate GitHub release notes
+        run: |
+          RELEASE_VERSION="${{ steps.release-version.outputs.version }}"
+          VERSION_NUMBER="${RELEASE_VERSION#v}"
+
+          pnpm nx release changelog $VERSION_NUMBER --verbose --first-release
+
+          # Create release notes with package list
+          echo "## 📦 Published Packages\n" > release-notes.md
+
+          for project in $(jq -r '.release.projects[]' nx.json); do
+            if [ -f "$project/package.json" ]; then
+              pkg_name=$(jq -r '.name' "$project/package.json")
+              echo "- $pkg_name@${RELEASE_VERSION}" >> release-notes.md
+            fi
+          done
+
+          echo "\n## 🔄 Changelog\n" >> release-notes.md
+          cat "CHANGELOG.md" >> release-notes.md
+
+          cat release-notes.md >> $GITHUB_STEP_SUMMARY
+          echo "Changelog generated for $RELEASE_VERSION"
+
+      - name: Upload release workspace
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-workspace
+          path: |
+            universal/*/dist/
+            platforms/javascript/*/dist/
+            CHANGELOG.md
+            release-notes.md
+            universal/*/package.json
+            platforms/javascript/*/package.json
+          retention-days: 7
+
+  publish:
+    name: 📦 Publish to Registry
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: prepare
+    environment:
+      name: npm-registry
+      url: https://www.npmjs.com/org/contentful
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Download release workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: release-workspace
+
+      # - name: Publish packages
+      #   run: pnpm nx release publish --verbose --first-release
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # - name: Create GitHub Release
+      #   uses: softprops/action-gh-release@v2
+      #   with:
+      #     tag_name: ${{ needs.prepare.outputs.version }}
+      #     name: Release ${{ needs.prepare.outputs.version }}
+      #     body_path: release-notes.md
+      #     draft: false
+      #     prerelease: false
