@@ -11,7 +11,6 @@ export * from './lib/decorators'
 export * from './lib/interceptor'
 export * from './lib/value-presence'
 export * from './personalization'
-export * from './version'
 
 export { default as CoreStateful } from './CoreStateful'
 export { default as CoreStateless } from './CoreStateless'

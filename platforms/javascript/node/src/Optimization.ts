@@ -1,5 +1,6 @@
-import { type App, type CoreStatelessConfig, CoreStateless, SDK_VERSION } from '@contentful/optimization-core'
+import { type App, type CoreStatelessConfig, CoreStateless } from '@contentful/optimization-core'
 import { merge } from 'es-toolkit'
+import { SDK_VERSION } from './version'
 
 /**
  * Configuration for the Node-specific Optimization SDK.

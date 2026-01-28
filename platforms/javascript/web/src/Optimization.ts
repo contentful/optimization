@@ -4,7 +4,6 @@ import {
   type CoreStatefulConfig,
   effect,
   logger,
-  SDK_VERSION,
   signals,
 } from '@contentful/optimization-core'
 import { merge } from 'es-toolkit'
@@ -28,6 +27,7 @@ import {
   type ElementViewObserverOptions,
 } from './observers'
 import { LocalStore } from './storage'
+import { SDK_VERSION } from './version'
 
 declare global {
   interface Window {

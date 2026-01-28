@@ -6,13 +6,13 @@ import {
   type CoreStatefulConfig,
   CoreStateful,
   effect,
-  SDK_VERSION,
   signals,
 } from '@contentful/optimization-core'
 import { merge } from 'es-toolkit'
 import { getLocale, getPageProperties, getUserAgent } from './builders/EventBuilder'
 import { createAppStateChangeListener, createOnlineChangeListener } from './handlers'
 import AsyncStorageStore from './storage/AsyncStorageStore'
+import { SDK_VERSION } from './version'
 
 async function mergeConfig({
   defaults,
