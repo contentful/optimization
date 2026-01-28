@@ -46,7 +46,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-
       - name: Configure git
         run: |
           git config user.name "github-actions[bot]"
@@ -70,8 +69,12 @@ jobs:
 
       - name: Update SDK version
         run: |
-          VERSION=$(echo "${{ steps.release-version.outputs.version }}" | sed 's/^v//')
-          echo "export const SDK_VERSION = '$VERSION';" > universal/core/src/version.ts
+              VERSION=$(echo "${{ steps.release-version.outputs.version }}" | sed 's/^v//')
+              VERSION_CODE="export const SDK_VERSION = '$VERSION';"
+
+              echo "$VERSION_CODE" > platforms/javascript/node/src/version.ts
+              echo "$VERSION_CODE" > platforms/javascript/web/src/version.ts
+              echo "$VERSION_CODE" > platforms/javascript/react-native/src/version.ts
 
       - name: Build packages
         run: pnpm build
