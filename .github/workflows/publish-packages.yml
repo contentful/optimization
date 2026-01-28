@@ -77,7 +77,8 @@ jobs:
           pnpm nx release changelog $VERSION_NUMBER --verbose --first-release
 
           # Create release notes with package list
-          echo "## 📦 Published Packages\n" > release-notes.md
+          echo "## 📦 Published Packages" > release-notes.md
+          echo "" >> release-notes.md
 
           for project in $(jq -r '.release.projects[]' nx.json); do
             if [ -f "$project/package.json" ]; then
@@ -86,7 +87,7 @@ jobs:
             fi
           done
 
-          echo "\n## 🔄 Changelog\n" >> release-notes.md
+          echo "" >> release-notes.md
           cat "CHANGELOG.md" >> release-notes.md
 
           cat release-notes.md >> $GITHUB_STEP_SUMMARY
