@@ -12,6 +12,5 @@
     "tsBuildInfoFile": "./dist/.tsbuildinfo"
   },
   "include": ["./src/**/*", "./src/**/*.json"],
-  "exclude": ["./src/**/*.test.*"],
-  "references": [{ "path": "../../../universal/core/tsconfig.esm.json" }]
+  "exclude": ["./src/**/*.test.*"]
 }
