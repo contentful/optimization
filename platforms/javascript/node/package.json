@@ -17,7 +17,7 @@
     "dist/**/*"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
+    "build": "tsup",
     "clean": "rimraf ./dist ./coverage tsconfig.tsbuildinfo",
     "dev": "tsx watch --env-file=.env ./server.ts",
     "test:unit": "vitest run --coverage",
