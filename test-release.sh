@@ -61,11 +61,23 @@ if [[ -f "CHANGELOG.md" ]]; then
     head -20 CHANGELOG.md
 fi
 
-# Clean up
-echo "Test completed - resetting changes..."
-git reset --soft "$ORIGINAL_COMMIT"
+# Clean up but keep pkgs/
+echo "Test completed - resetting changes but keeping generated packages..."
+
+# Move pkgs to a temp location
+PKG_TMP=$(mktemp -d)
+mv "$PACK_DIR" "$PKG_TMP/"
+
+# Reset and clean everything else
+git reset --hard "$ORIGINAL_COMMIT"
 if [[ "$LATEST_TAG" != "No tags found" ]]; then
     git tag -d "$LATEST_TAG" > /dev/null 2>&1
     echo "Deleted tag: $LATEST_TAG"
 fi
-echo "Changes reset successfully"
+git clean -fdx
+
+# Move pkgs back
+mv "$PKG_TMP/$PACK_DIR" .
+rmdir "$PKG_TMP"
+
+echo "Changes reset successfully, pkgs/ folder preserved."
