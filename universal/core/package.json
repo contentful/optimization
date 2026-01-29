@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@contentful/optimization-api-client": "workspace:*",
+    "@contentful/optimization-api-schemas": "workspace:*",
     "@preact/signals-core": "catalog:",
     "contentful": "catalog:",
     "es-toolkit": "catalog:",

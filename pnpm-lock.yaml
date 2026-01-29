@@ -784,6 +784,9 @@ importers:
       '@contentful/optimization-api-client':
         specifier: workspace:*
         version: link:../api-client
+      '@contentful/optimization-api-schemas':
+        specifier: workspace:*
+        version: link:../api-schemas
       '@preact/signals-core':
         specifier: 'catalog:'
         version: 1.12.1
