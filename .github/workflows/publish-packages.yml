@@ -83,10 +83,11 @@ jobs:
           name: release-workspace
           path: |
             CHANGELOG.md
-            universal/*/dist/
-            platforms/javascript/*/dist/
             universal/*/package.json
+            universal/*/dist/
             platforms/javascript/*/package.json
+            platforms/javascript/*/src/version.ts
+            platforms/javascript/*/dist/
           retention-days: 7
 
   publish:
