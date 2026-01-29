@@ -8,7 +8,7 @@
     "moduleResolution": "Node",
     "outDir": "./dist",
     "rootDir": "./src",
-    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo"
   },
   "include": ["./src/**/*", "./src/**/*.json"],
   "exclude": ["./src/**/*.test.*", "./src/test/**/*"],
