@@ -16,9 +16,6 @@
   "files": [
     "dist/**/*"
   ],
-  "publishConfig": {
-    "access": "public"
-  },
   "scripts": {
     "build": "tsup",
     "clean": "rimraf ./dist ./coverage tsconfig.tsbuildinfo",
