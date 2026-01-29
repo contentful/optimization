@@ -1,4 +1,9 @@
 {
   "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "logger": ["../../lib/logger/src/index.ts"]
+    }
+  },
   "include": ["./src/**/*", "./src/**/*.json"]
 }
