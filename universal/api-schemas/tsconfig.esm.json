@@ -3,7 +3,7 @@
   "compilerOptions": {
     "composite": true,
     "incremental": true,
-    "noEmit": false,
+    "noEmit": true,
     "module": "ESNext",
     "moduleResolution": "bundler",
     "outDir": "./dist",

@@ -13,6 +13,5 @@
     "tsBuildInfoFile": "./dist/.tsbuildinfo"
   },
   "include": ["./src/**/*", "./src/**/*.json"],
-  "exclude": ["./src/**/*.test.*"],
-  "references": [{ "path": "../../../universal/core/tsconfig.cjs.json" }]
+  "exclude": ["./src/**/*.test.*"]
 }
