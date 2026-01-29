@@ -29,7 +29,7 @@ echo "Latest version: $LATEST_TAG"
 
 if [[ "$LATEST_TAG" != "No tags found" ]]; then
     VERSION=$(echo "$LATEST_TAG" | sed 's/^v//')
-    VERSION_CODE="export const SDK_VERSION = '$VERSION'; // Auto-generated pre-build."
+    VERSION_CODE="export const SDK_VERSION = '$VERSION' // Auto-generated pre-build."
     
     echo "$VERSION_CODE" > platforms/javascript/node/src/version.ts
     echo "$VERSION_CODE" > platforms/javascript/web/src/version.ts
