@@ -29,7 +29,6 @@
   "dependencies": {
     "@contentful/optimization-api-schemas": "workspace:*",
     "es-toolkit": "catalog:",
-    "logger": "workspace:*",
     "p-retry": "^6.2.1",
     "zod": "catalog:"
   },
@@ -37,6 +36,7 @@
     "@vitest/coverage-v8": "catalog:",
     "mocks": "workspace:*",
     "msw": "catalog:",
+    "logger": "workspace:*",
     "rimraf": "catalog:",
     "tslib": "catalog:",
     "tsup": "catalog:",

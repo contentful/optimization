@@ -31,7 +31,6 @@
     "@preact/signals-core": "catalog:",
     "contentful": "catalog:",
     "es-toolkit": "catalog:",
-    "logger": "workspace:*",
     "p-retry": "catalog:",
     "zod": "catalog:"
   },
@@ -39,6 +38,7 @@
     "@vitest/coverage-v8": "catalog:",
     "mocks": "workspace:*",
     "msw": "catalog:",
+    "logger": "workspace:*",
     "rimraf": "catalog:",
     "tslib": "catalog:",
     "tsup": "catalog:",
