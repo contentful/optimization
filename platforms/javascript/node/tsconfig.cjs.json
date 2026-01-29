@@ -1,16 +1,7 @@
 {
-  "extends": "../../../tsconfig.base.json",
+  "extends": "./tsconfig.json",
   "compilerOptions": {
-    "composite": true,
-    "incremental": true,
-    "noEmit": false,
-    "baseUrl": "./src",
     "module": "CommonJS",
-    "moduleResolution": "Node",
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "tsBuildInfoFile": "./dist/.tsbuildinfo"
-  },
-  "include": ["./src/**/*", "./src/**/*.json"],
-  "exclude": ["./src/**/*.test.*"]
+    "moduleResolution": "Node"
+  }
 }
