@@ -1,6 +1,9 @@
 // Polyfill crypto.randomUUID() for React Native
 import './polyfills/crypto'
 
+// Import image type declarations to ensure they're included in the compilation
+import './images'
+
 import {
   type CoreConfig,
   type CoreStatefulConfig,

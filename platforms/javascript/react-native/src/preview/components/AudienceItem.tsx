@@ -30,7 +30,7 @@ function renderExperienceCard({
   // Use SDK's actual variant index as the default, falling back to 0 if not present
   const sdkVariantIndex = sdkVariantIndices[experience.id] ?? 0
   const currentVariantIndex = hasOverride ? override.variantIndex : sdkVariantIndex
-  const { onSetVariant, onResetExperience } = handlers
+  const { onSetVariant } = handlers
 
   return (
     <ExperienceCard
@@ -42,13 +42,6 @@ function renderExperienceCard({
       onSetVariant={(variantIndex) => {
         onSetVariant(experience.id, variantIndex)
       }}
-      onReset={
-        hasOverride
-          ? () => {
-              onResetExperience(experience.id)
-            }
-          : undefined
-      }
       hasOverride={hasOverride}
     />
   )

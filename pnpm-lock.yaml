@@ -144,7 +144,7 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.5.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
 
-  implementations/node-esr:
+  implementations/node-ssr-only:
     dependencies:
       '@contentful/optimization-node':
         specifier: workspace:*
@@ -152,6 +152,68 @@ importers:
       '@contentful/optimization-web':
         specifier: workspace:*
         version: link:../../platforms/javascript/web
+      cookie-parser:
+        specifier: ^1.4.7
+        version: 1.4.7
+      express:
+        specifier: 'catalog:'
+        version: 5.1.0
+      express-rate-limit:
+        specifier: 'catalog:'
+        version: 8.1.0(express@5.1.0)
+      qs:
+        specifier: 'catalog:'
+        version: 6.14.0
+      tslib:
+        specifier: 'catalog:'
+        version: 2.8.1
+    devDependencies:
+      '@playwright/test':
+        specifier: ^1.57.0
+        version: 1.57.0
+      '@types/express':
+        specifier: 'catalog:'
+        version: 5.0.3
+      '@types/node':
+        specifier: ^24.0.13
+        version: 24.2.0
+      '@types/qs':
+        specifier: 'catalog:'
+        version: 6.14.0
+      dotenv:
+        specifier: 'catalog:'
+        version: 17.2.2
+      pm2:
+        specifier: 'catalog:'
+        version: 6.0.13
+      rimraf:
+        specifier: 'catalog:'
+        version: 6.0.1
+      tsx:
+        specifier: 'catalog:'
+        version: 4.20.3
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.2
+
+  implementations/node-ssr-web-vanilla:
+    dependencies:
+      '@contentful/optimization-node':
+        specifier: workspace:*
+        version: link:../../platforms/javascript/node
+      '@contentful/rich-text-html-renderer':
+        specifier: 'catalog:'
+        version: 17.1.6(babel-plugin-macros@3.1.0)
+      '@contentful/rich-text-types':
+        specifier: 'catalog:'
+        version: 17.2.5(babel-plugin-macros@3.1.0)
+      contentful:
+        specifier: 'catalog:'
+        version: 11.8.5
+        version: link:../../platforms/javascript/node/dist
+      '@contentful/optimization-web':
+        specifier: workspace:*
+        version: link:../../platforms/javascript/web/dist
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -210,61 +272,6 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.5.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
-
-  implementations/node-ssr:
-    dependencies:
-      '@contentful/optimization-node':
-        specifier: workspace:*
-        version: link:../../platforms/javascript/node
-      '@contentful/rich-text-html-renderer':
-        specifier: 'catalog:'
-        version: 17.1.6(babel-plugin-macros@3.1.0)
-      '@contentful/rich-text-types':
-        specifier: 'catalog:'
-        version: 17.2.5(babel-plugin-macros@3.1.0)
-      contentful:
-        specifier: 'catalog:'
-        version: 11.8.5
-      express:
-        specifier: 'catalog:'
-        version: 5.1.0
-      express-rate-limit:
-        specifier: 'catalog:'
-        version: 8.1.0(express@5.1.0)
-      qs:
-        specifier: 'catalog:'
-        version: 6.14.0
-      tslib:
-        specifier: 'catalog:'
-        version: 2.8.1
-    devDependencies:
-      '@playwright/test':
-        specifier: ^1.57.0
-        version: 1.57.0
-      '@types/express':
-        specifier: 'catalog:'
-        version: 5.0.3
-      '@types/node':
-        specifier: ^24.0.13
-        version: 24.2.0
-      '@types/qs':
-        specifier: 'catalog:'
-        version: 6.14.0
-      dotenv:
-        specifier: 'catalog:'
-        version: 17.2.2
-      pm2:
-        specifier: 'catalog:'
-        version: 6.0.13
-      rimraf:
-        specifier: 'catalog:'
-        version: 6.0.1
-      tsx:
-        specifier: 'catalog:'
-        version: 4.20.3
-      typescript:
-        specifier: ^5.8.3
-        version: 5.9.2
 
   implementations/react-native:
     dependencies:
@@ -11482,7 +11489,7 @@ snapshots:
       '@typescript-eslint/types': 8.39.0
       '@typescript-eslint/typescript-estree': 8.39.0(typescript@5.9.2)
       '@typescript-eslint/visitor-keys': 8.39.0
-      debug: 4.4.1
+      debug: 4.4.3
       eslint: 9.32.0(jiti@2.5.1)
       typescript: 5.9.2
     transitivePeerDependencies:
@@ -11526,7 +11533,7 @@ snapshots:
       '@typescript-eslint/tsconfig-utils': 8.39.0(typescript@5.9.2)
       '@typescript-eslint/types': 8.39.0
       '@typescript-eslint/visitor-keys': 8.39.0
-      debug: 4.4.1
+      debug: 4.4.3
       fast-glob: 3.3.3
       is-glob: 4.0.3
       minimatch: 9.0.5

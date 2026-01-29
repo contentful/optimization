@@ -424,16 +424,16 @@ main() {
     create_env_file
     
     install_dependencies
-    
-    start_mock_server
-    
-    start_metro
-    
+
     if [[ "$PLATFORM" == "ios" ]]; then
         setup_ios
     else
         setup_android
     fi
+    
+    start_mock_server
+    
+    start_metro
     
     show_server_info
     

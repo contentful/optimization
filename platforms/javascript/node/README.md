@@ -73,10 +73,11 @@ const optimization = new Optimization({ clientId: 'abc123' })
 Reference implementations illustrate how the SDK may be used under common scenarios, as well as
 select less-common scenarios, with the most basic example solution possible.
 
-- [Node SSR](/implementations/node-ssr/README.md): Example application that uses the Node SDK to
-  render a personalized Web page
-- [Node ESR](/implementations/node-esr/README.md): Example application demonstrating simple profile
-  synchronization between the Node and [Web](../web/README.md) SDKs via cookie
+- [Node SSR Only](/implementations/node-ssr-only/README.md): Example application that uses the Node
+  SDK to render a personalized Web page
+- [Node SSR + Web Vanilla](/implementations/node-ssr-web-vanilla/README.md): Example application
+  demonstrating simple profile synchronization between the Node and [Web](../web/README.md) SDKs via
+  cookie
 
 ## Configuration
 

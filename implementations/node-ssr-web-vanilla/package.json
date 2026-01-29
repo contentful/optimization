@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "@implementation/node-esr",
+  "name": "@implementation/node-ssr-web-vanilla",
   "description": "Reference implementation for NodeJS Web projects",
   "license": "MIT",
   "main": "dist/app.js",
