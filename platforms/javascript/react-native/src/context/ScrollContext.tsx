@@ -1,4 +1,4 @@
-import { logger } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core'
 import React, { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 import {
   ScrollView,
@@ -8,7 +8,7 @@ import {
   type ScrollViewProps,
 } from 'react-native'
 
-const LOG_LOCATION = 'RN:Scroll'
+const logger = createScopedLogger('RN:Scroll')
 
 interface ScrollContextValue {
   scrollY: number
@@ -48,7 +48,7 @@ export function ScrollProvider({
       // Capture viewport height on initial layout
       // This ensures tracking works even before first scroll
       if (viewportHeight === 0) {
-        logger.debug(LOG_LOCATION, `Initial layout: viewport=${height.toFixed(0)}`)
+        logger.debug(`Initial layout: viewport=${height.toFixed(0)}`)
         setViewportHeight(height)
       }
 
@@ -70,7 +70,6 @@ export function ScrollProvider({
       // Only log on significant changes to avoid spam
       if (Math.abs(scrollYValue - scrollY) > SCROLL_LOG_THRESHOLD || viewportHeight === 0) {
         logger.debug(
-          LOG_LOCATION,
           `Scroll: y=${scrollYValue.toFixed(0)}, viewport=${viewportHeightValue.toFixed(0)}`,
         )
       }

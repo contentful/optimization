@@ -1,6 +1,6 @@
-import { logger, type Dictionary, type Page } from '@contentful/optimization-core'
+import { createScopedLogger, type Dictionary, type Page } from '@contentful/optimization-core'
 
-const LOG_LOCATION = 'Web:EventBuilder'
+const logger = createScopedLogger('Web:EventBuilder')
 
 /**
  * Build a plain-object representation of the query string from a URL.
@@ -66,7 +66,7 @@ export function getPageProperties(): Page {
       width: window.innerWidth,
     }
   } catch (error) {
-    if (error instanceof Error) logger.error(LOG_LOCATION, 'Failed to get page properties:', error)
+    if (error instanceof Error) logger.error('Failed to get page properties:', error)
 
     return {
       path: '',

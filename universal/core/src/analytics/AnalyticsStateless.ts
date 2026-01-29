@@ -5,10 +5,10 @@ import {
   type InsightsEvent,
   type PartialProfile,
 } from '@contentful/optimization-api-client'
-import { logger } from 'logger'
+import { createScopedLogger } from 'logger'
 import AnalyticsBase from './AnalyticsBase'
 
-const LOG_LOCATION = 'Analytics'
+const logger = createScopedLogger('Analytics')
 
 /**
  * Arguments for tracking a component/flag view in stateless mode.
@@ -35,7 +35,7 @@ class AnalyticsStateless extends AnalyticsBase {
    * @returns A promise that resolves once the batch has been sent.
    */
   async trackComponentView(args: TrackViewArgs): Promise<void> {
-    logger.info(LOG_LOCATION, 'Processing "component view" event')
+    logger.info('Processing "component view" event')
 
     const { profile, ...builderArgs } = args
 
@@ -56,7 +56,7 @@ class AnalyticsStateless extends AnalyticsBase {
    * @returns A promise that resolves once the batch has been sent.
    */
   async trackFlagView(args: TrackViewArgs): Promise<void> {
-    logger.debug(LOG_LOCATION, 'Processing "flag view" event')
+    logger.debug('Processing "flag view" event')
 
     const { profile, ...builderArgs } = args
 

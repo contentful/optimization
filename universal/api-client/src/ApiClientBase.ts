@@ -1,5 +1,7 @@
-import { logger } from 'logger'
+import { createScopedLogger } from 'logger'
 import Fetch, { type FetchMethod, type ProtectedFetchMethodOptions } from './fetch'
+
+const logger = createScopedLogger('ApiClient')
 
 /**
  * Default Contentful environment used when none is explicitly provided.
@@ -128,18 +130,17 @@ abstract class ApiClientBase {
    *
    * @remarks
    * Abort errors are logged at `warn` level and other errors at `error` level.
+   * The log message includes the client name for better debugging context.
    */
   protected logRequestError(error: unknown, { requestName }: { requestName: string }): void {
     if (error instanceof Error) {
       if (error.name === 'AbortError') {
         logger.warn(
-          this.name,
-          `"${requestName}" request aborted due to network issues. This request may not be retried.`,
+          `[${this.name}] "${requestName}" request aborted due to network issues. This request may not be retried.`,
         )
       } else {
         logger.error(
-          this.name,
-          `"${requestName}" request failed with error: [${error.name}] ${error.message}`,
+          `[${this.name}] "${requestName}" request failed with error: [${error.name}] ${error.message}`,
         )
       }
     }

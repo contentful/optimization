@@ -7,8 +7,12 @@ const callbackHolder: {
 
 const mockRemove = vi.fn()
 const mockLogger = {
-  error: vi.fn(),
+  debug: vi.fn(),
+  info: vi.fn(),
+  log: vi.fn(),
   warn: vi.fn(),
+  error: vi.fn(),
+  fatal: vi.fn(),
 }
 
 describe('createAppStateChangeListener', () => {
@@ -20,6 +24,26 @@ describe('createAppStateChangeListener', () => {
     // Set up mocks before each test
     vi.doMock('@contentful/optimization-core', () => ({
       logger: mockLogger,
+      createScopedLogger: (location: string) => ({
+        debug: (message: string, ...args: unknown[]): void => {
+          mockLogger.debug(location, message, ...args)
+        },
+        info: (message: string, ...args: unknown[]): void => {
+          mockLogger.info(location, message, ...args)
+        },
+        log: (message: string, ...args: unknown[]): void => {
+          mockLogger.log(location, message, ...args)
+        },
+        warn: (message: string, ...args: unknown[]): void => {
+          mockLogger.warn(location, message, ...args)
+        },
+        error: (message: string | Error, ...args: unknown[]): void => {
+          mockLogger.error(location, message, ...args)
+        },
+        fatal: (message: string | Error, ...args: unknown[]): void => {
+          mockLogger.fatal(location, message, ...args)
+        },
+      }),
     }))
 
     vi.doMock('react-native', () => ({

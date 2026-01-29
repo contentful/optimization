@@ -1,9 +1,9 @@
-import { logger } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core'
 import React, { type ReactNode } from 'react'
 import type Optimization from '../'
 import OptimizationContext from '../context/OptimizationContext'
 
-const LOG_LOCATION = 'RN:Provider'
+const logger = createScopedLogger('RN:Provider')
 
 export interface OptimizationProviderProps {
   /**
@@ -42,7 +42,7 @@ export function OptimizationProvider({
 }: OptimizationProviderProps): React.JSX.Element {
   // Log to verify the provider is working
   React.useEffect(() => {
-    logger.info(LOG_LOCATION, 'Provider initialized')
+    logger.info('Provider initialized')
   }, [])
 
   return (

@@ -1,5 +1,5 @@
 import {
-  logger,
+  createScopedLogger,
   type OptimizationData,
   type PreviewPanelSignalObject,
   type SelectedPersonalizationArray,
@@ -15,7 +15,7 @@ import type {
   PreviewActions,
 } from '../types'
 
-const LOG_LOCATION = 'RN:Preview'
+const logger = createScopedLogger('RN:Preview')
 
 const initialOverrideState: OverrideState = {
   audiences: {},
@@ -89,7 +89,7 @@ export function useProfileOverrides(): {
     optimization.registerPreviewPanel(previewPanelObject)
     ;({ signals: signalsRef.current } = previewPanelObject)
 
-    logger.info(LOG_LOCATION, 'Registered with SDK, signals access obtained')
+    logger.info('Registered with SDK, signals access obtained')
 
     // Capture current signal state as the initial "actual" data
     // This ensures we have data to restore to even if no API calls happen after mounting
@@ -107,7 +107,7 @@ export function useProfileOverrides(): {
           changes,
         }
         lastActualDataRef.current = actualData
-        logger.debug(LOG_LOCATION, 'Captured initial signal state as actual data')
+        logger.debug('Captured initial signal state as actual data')
       }
     }
 
@@ -124,7 +124,7 @@ export function useProfileOverrides(): {
           return data
         }
 
-        logger.debug(LOG_LOCATION, 'Intercepting state update to preserve overrides')
+        logger.debug('Intercepting state update to preserve overrides')
 
         // Merge API response with our overrides
         return {
@@ -137,13 +137,13 @@ export function useProfileOverrides(): {
       },
     )
 
-    logger.info(LOG_LOCATION, 'State interceptor registered')
+    logger.info('State interceptor registered')
 
     // Cleanup on unmount
     return () => {
       if (interceptorIdRef.current !== null) {
         optimization.interceptors.state.remove(interceptorIdRef.current)
-        logger.info(LOG_LOCATION, 'State interceptor removed')
+        logger.info('State interceptor removed')
       }
       signalsRef.current = null
     }
@@ -166,7 +166,7 @@ export function useProfileOverrides(): {
       )
 
       signals.personalizations.value = updatedPersonalizations
-      logger.debug(LOG_LOCATION, 'Updated personalizations signal directly')
+      logger.debug('Updated personalizations signal directly')
     },
     [],
   )
@@ -178,7 +178,7 @@ export function useProfileOverrides(): {
       variantIndex: number,
       experiences: ExperienceDefinition[],
     ) => {
-      logger.info(LOG_LOCATION, 'Setting audience override:', { audienceId, isActive })
+      logger.info('Setting audience override:', { audienceId, isActive })
 
       const experienceIds = experiences.map((exp) => exp.id)
 
@@ -221,7 +221,7 @@ export function useProfileOverrides(): {
 
   const resetAudienceOverride = useCallback(
     (audienceId: string) => {
-      logger.info(LOG_LOCATION, 'Resetting audience override:', audienceId)
+      logger.info('Resetting audience override:', audienceId)
 
       setOverrides((prev) => {
         // Get the stored experience IDs from the audience override
@@ -250,7 +250,7 @@ export function useProfileOverrides(): {
 
   const setVariantOverride = useCallback(
     (experienceId: string, variantIndex: number) => {
-      logger.info(LOG_LOCATION, 'Setting variant override:', {
+      logger.info('Setting variant override:', {
         experienceId,
         variantIndex,
       })
@@ -279,7 +279,7 @@ export function useProfileOverrides(): {
 
   const resetPersonalizationOverride = useCallback(
     (experienceId: string) => {
-      logger.info(LOG_LOCATION, 'Resetting personalization override:', experienceId)
+      logger.info('Resetting personalization override:', experienceId)
 
       setOverrides((prev) => {
         const newPersonalizations = Object.fromEntries(
@@ -299,7 +299,7 @@ export function useProfileOverrides(): {
   )
 
   const resetSdkState = useCallback(() => {
-    logger.info(LOG_LOCATION, 'Resetting SDK state to actual')
+    logger.info('Resetting SDK state to actual')
     // Instead of completely clearing the SDK state with optimization.reset(),
     // we just clear our overrides and restore the last known actual state from the API.
     setOverrides(initialOverrideState)
@@ -314,7 +314,7 @@ export function useProfileOverrides(): {
       signals.personalizations.value = personalizations
       signals.profile.value = profile
       signals.changes.value = changes
-      logger.debug(LOG_LOCATION, 'Restored signals to actual data')
+      logger.debug('Restored signals to actual data')
     }
   }, [])
 

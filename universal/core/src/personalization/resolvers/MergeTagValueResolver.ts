@@ -1,8 +1,8 @@
 import { MergeTagEntry, Profile } from '@contentful/optimization-api-client'
 import { get } from 'es-toolkit/compat'
-import { logger } from 'logger'
+import { createScopedLogger } from 'logger'
 
-const LOG_LOCATION = 'Personalization'
+const logger = createScopedLogger('Personalization')
 
 /** Base string for log messages when merge-tag resolution fails. */
 const RESOLUTION_WARNING_BASE = 'Could not resolve Merge Tag value:'
@@ -105,10 +105,7 @@ const MergeTagValueResolver = {
    */
   resolve(mergeTagEntry: MergeTagEntry | undefined, profile?: Profile): string | undefined {
     if (!MergeTagValueResolver.isMergeTagEntry(mergeTagEntry)) {
-      logger.warn(
-        LOG_LOCATION,
-        `${RESOLUTION_WARNING_BASE} supplied entry is not a Merge Tag entry`,
-      )
+      logger.warn(`${RESOLUTION_WARNING_BASE} supplied entry is not a Merge Tag entry`)
       return
     }
 
@@ -117,7 +114,7 @@ const MergeTagValueResolver = {
     } = mergeTagEntry
 
     if (!Profile.safeParse(profile).success) {
-      logger.warn(LOG_LOCATION, `${RESOLUTION_WARNING_BASE} no valid profile`)
+      logger.warn(`${RESOLUTION_WARNING_BASE} no valid profile`)
       return fallback
     }
 

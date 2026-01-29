@@ -1,4 +1,4 @@
-import { logger } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core'
 import React, { useCallback, useEffect, useState } from 'react'
 import { Alert, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native'
 import { usePreviewOverrides } from '../context/PreviewOverrideContext'
@@ -17,7 +17,7 @@ import { PreviewPanelContent } from './PreviewPanelContent'
 import { ProfileSection } from './ProfileSection'
 import { ActionButton, SearchBar } from './shared'
 
-const LOG_LOCATION = 'RN:Preview'
+const logger = createScopedLogger('RN:Preview')
 
 function formatConsentText(consent: boolean | undefined): string {
   if (consent === undefined) return '—'
@@ -128,7 +128,7 @@ export function PreviewPanel({
   // Handle audience toggle changes
   const handleAudienceToggle = useCallback(
     (audienceId: string, state: AudienceOverrideState) => {
-      logger.debug(LOG_LOCATION, 'Audience toggle:', { audienceId, state })
+      logger.debug('Audience toggle:', { audienceId, state })
 
       switch (state) {
         case 'on':
@@ -147,18 +147,18 @@ export function PreviewPanel({
 
   // Notify visibility change on mount/unmount
   useEffect(() => {
-    logger.info(LOG_LOCATION, 'Panel mounted')
+    logger.info('Panel mounted')
     onVisibilityChange?.(true)
 
     return () => {
-      logger.info(LOG_LOCATION, 'Panel unmounted')
+      logger.info('Panel unmounted')
       onVisibilityChange?.(false)
     }
   }, [onVisibilityChange])
 
   // Log state changes
   useEffect(() => {
-    logger.debug(LOG_LOCATION, 'State updated:', {
+    logger.debug('State updated:', {
       profileId: profile?.id,
       personalizationsCount: personalizations?.length ?? 0,
       consent,

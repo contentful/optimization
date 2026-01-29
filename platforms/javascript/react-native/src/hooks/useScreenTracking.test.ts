@@ -27,6 +27,14 @@ vi.mock('@contentful/optimization-core', () => ({
     error: vi.fn(),
     warn: vi.fn(),
   },
+  createScopedLogger: () => ({
+    debug: vi.fn(),
+    info: vi.fn(),
+    log: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    fatal: vi.fn(),
+  }),
 }))
 
 // Create mock optimization instance

@@ -1,8 +1,8 @@
-import { logger } from 'logger'
+import { createScopedLogger } from 'logger'
 import retry from 'p-retry'
 import type { BaseFetchMethodOptions, FetchMethod, FetchMethodCallbackOptions } from './Fetch'
 
-const LOG_LOCATION = 'ApiClient:Retry'
+const logger = createScopedLogger('ApiClient:Retry')
 
 /**
  * Default interval (in milliseconds) between retry attempts.
@@ -141,7 +141,6 @@ function createRetryFetchCallback({
 
       if (!response.ok) {
         logger.error(
-          LOG_LOCATION,
           `Request to "${url.toString()}" failed with status: [${response.status}] ${response.statusText} - traceparent: ${response.headers.get('traceparent')}`,
         )
 
@@ -150,7 +149,7 @@ function createRetryFetchCallback({
         return
       }
 
-      logger.debug(LOG_LOCATION, `Response from "${url.toString()}":`, response)
+      logger.debug(`Response from "${url.toString()}":`, response)
 
       return response
     } catch (error) {
@@ -159,7 +158,6 @@ function createRetryFetchCallback({
       }
 
       logger.error(
-        LOG_LOCATION,
         error instanceof Error
           ? error.message
           : `Request to "${url.toString()}" failed with an unknown error`,

@@ -1,12 +1,16 @@
-import { logger } from 'logger'
+import { createLoggerMock } from 'mocks'
 import { createRetryFetchMethod } from './createRetryFetchMethod'
 
-vi.mock('logger', () => ({
-  logger: {
-    debug: vi.fn(),
-    error: vi.fn(),
-  },
+const mockLogger = vi.hoisted(() => ({
+  debug: vi.fn(),
+  info: vi.fn(),
+  log: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  fatal: vi.fn(),
 }))
+
+vi.mock('logger', () => createLoggerMock(mockLogger))
 
 const TEST_URL = 'https://example.com/endpoint'
 
@@ -35,7 +39,7 @@ describe('createRetryFetchMethod', () => {
 
     expect(fetchMock).toHaveBeenCalledOnce()
     expect(result).toBe(fakeResponse)
-    expect(logger.debug).toHaveBeenCalledWith(
+    expect(mockLogger.debug).toHaveBeenCalledWith(
       'ApiClient:Retry',
       `Response from "${TEST_URL}":`,
       fakeResponse,
@@ -67,7 +71,7 @@ describe('createRetryFetchMethod', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(onFailedAttempt).toHaveBeenCalled()
     expect(result).toBe(secondResponse)
-    expect(logger.debug).toHaveBeenCalledWith(
+    expect(mockLogger.debug).toHaveBeenCalledWith(
       'ApiClient:Retry',
       `Response from "${TEST_URL}":`,
       secondResponse,
@@ -90,13 +94,13 @@ describe('createRetryFetchMethod', () => {
     })
 
     await expect(fetchWithRetry(TEST_URL, {})).rejects.toThrow(/may not be retried/)
-    expect(logger.error).toHaveBeenCalledWith(
+    expect(mockLogger.error).toHaveBeenCalledWith(
       'ApiClient:Retry',
       `Request to "${TEST_URL}" failed with status: [400] Bad Request - traceparent: abc-123`,
     )
     expect(fetchMock).toHaveBeenCalledOnce()
     expect(onFailedAttempt).not.toHaveBeenCalled()
-    expect(logger.debug).not.toHaveBeenCalled()
+    expect(mockLogger.debug).not.toHaveBeenCalled()
   })
 
   it('calls logger.debug with log location', async () => {
@@ -111,7 +115,7 @@ describe('createRetryFetchMethod', () => {
     const result = await fetchWithRetry(TEST_URL, {})
 
     expect(result).toBe(fakeResponse)
-    expect(logger.debug).toHaveBeenCalledWith(
+    expect(mockLogger.debug).toHaveBeenCalledWith(
       'ApiClient:Retry',
       `Response from "${TEST_URL}":`,
       fakeResponse,
@@ -177,12 +181,12 @@ describe('createRetryFetchMethod', () => {
       intervalTimeout: 10,
     })
     await expect(fetchWithRetry(TEST_URL, {})).rejects.toThrow(/may not be retried/)
-    expect(logger.error).toHaveBeenCalledWith(
+    expect(mockLogger.error).toHaveBeenCalledWith(
       'ApiClient:Retry',
       `Request to "${TEST_URL}" failed with an unknown error`,
     )
     expect(onFailedAttempt).not.toHaveBeenCalled()
-    expect(logger.debug).not.toHaveBeenCalled()
+    expect(mockLogger.debug).not.toHaveBeenCalled()
   })
 
   it('aborts and throws if fetchMethod throws an Error instance (non-503)', async () => {
@@ -196,9 +200,9 @@ describe('createRetryFetchMethod', () => {
       intervalTimeout: 10,
     })
     await expect(fetchWithRetry(TEST_URL, {})).rejects.toThrow(/may not be retried/)
-    expect(logger.error).toHaveBeenCalledWith('ApiClient:Retry', 'plain failure')
+    expect(mockLogger.error).toHaveBeenCalledWith('ApiClient:Retry', 'plain failure')
     expect(onFailedAttempt).not.toHaveBeenCalled()
-    expect(logger.debug).not.toHaveBeenCalled()
+    expect(mockLogger.debug).not.toHaveBeenCalled()
   })
 
   it('waits intervalTimeout between retries', async () => {

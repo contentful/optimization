@@ -1,7 +1,7 @@
-import { logger } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core'
 import type { ContentfulClient, ContentfulEntry } from '../types'
 
-const LOG_LOCATION = 'RN:Preview'
+const logger = createScopedLogger('RN:Preview')
 const BATCH_SIZE = 100
 
 /**
@@ -35,7 +35,7 @@ export async function fetchAllEntriesByContentType(
     total = responseTotal
     skip += BATCH_SIZE
 
-    logger.debug(LOG_LOCATION, `Fetched ${contentType} batch`, {
+    logger.debug(`Fetched ${contentType} batch`, {
       fetched: response.items.length,
       accumulated: allEntries.length,
       total,
@@ -54,14 +54,14 @@ export async function fetchAllEntriesByContentType(
 export async function fetchAudienceAndExperienceEntries(
   client: ContentfulClient,
 ): Promise<{ audiences: ContentfulEntry[]; experiences: ContentfulEntry[] }> {
-  logger.debug(LOG_LOCATION, 'Fetching audience and experience entries...')
+  logger.debug('Fetching audience and experience entries...')
 
   const [audiences, experiences] = await Promise.all([
     fetchAllEntriesByContentType(client, 'nt_audience'),
     fetchAllEntriesByContentType(client, 'nt_experience'),
   ])
 
-  logger.debug(LOG_LOCATION, 'All entries fetched successfully', {
+  logger.debug('All entries fetched successfully', {
     audienceCount: audiences.length,
     experienceCount: experiences.length,
   })

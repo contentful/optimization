@@ -8,10 +8,10 @@ import {
   type ExperienceRequestOptions,
   type OptimizationData,
 } from '@contentful/optimization-api-schemas'
-import { logger } from 'logger'
+import { createScopedLogger } from 'logger'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
 
-const LOG_LOCATION = 'ApiClient:Experience'
+const logger = createScopedLogger('ApiClient:Experience')
 
 /**
  * Default base URL for the Experience API.
@@ -204,7 +204,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     const requestName = 'Get Profile'
 
-    logger.info(LOG_LOCATION, `Sending "${requestName}" request`)
+    logger.info(`Sending "${requestName}" request`)
 
     try {
       const response = await this.fetch(
@@ -223,7 +223,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
       const data = { changes, personalizations: experiences, profile }
 
-      logger.debug(LOG_LOCATION, `"${requestName}" request successfully completed`)
+      logger.debug(`"${requestName}" request successfully completed`)
 
       return data
     } catch (error) {
@@ -277,14 +277,14 @@ export default class ExperienceApiClient extends ApiClientBase {
   ): Promise<OptimizationData> {
     const requestName = 'Create Profile'
 
-    logger.info(LOG_LOCATION, `Sending "${requestName}" request`)
+    logger.info(`Sending "${requestName}" request`)
 
     const body: ExperienceRequestData = {
       events: ExperienceEventArray.parse(events),
       options: this.constructBodyOptions(options),
     }
 
-    logger.debug(LOG_LOCATION, `"${requestName}" request body:`, body)
+    logger.debug(`"${requestName}" request body:`, body)
 
     try {
       const response = await this.makeProfileMutationRequest({
@@ -299,7 +299,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
       const data = { changes, personalizations: experiences, profile }
 
-      logger.debug(LOG_LOCATION, `"${requestName}" request successfully completed`)
+      logger.debug(`"${requestName}" request successfully completed`)
 
       return data
     } catch (error) {
@@ -335,14 +335,14 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     const requestName = 'Update Profile'
 
-    logger.info(LOG_LOCATION, `Sending "${requestName}" request`)
+    logger.info(`Sending "${requestName}" request`)
 
     const body: ExperienceRequestData = {
       events: ExperienceEventArray.parse(events),
       options: this.constructBodyOptions(options),
     }
 
-    logger.debug(LOG_LOCATION, `"${requestName}" request body:`, body)
+    logger.debug(`"${requestName}" request body:`, body)
 
     try {
       const response = await this.makeProfileMutationRequest({
@@ -357,7 +357,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
       const data = { changes, personalizations: experiences, profile }
 
-      logger.debug(LOG_LOCATION, `"${requestName}" request successfully completed`)
+      logger.debug(`"${requestName}" request successfully completed`)
 
       return data
     } catch (error) {
@@ -423,14 +423,14 @@ export default class ExperienceApiClient extends ApiClientBase {
   ): Promise<BatchExperienceData['profiles']> {
     const requestName = 'Upsert Many Profiles'
 
-    logger.info(LOG_LOCATION, `Sending "${requestName}" request`)
+    logger.info(`Sending "${requestName}" request`)
 
     const body: ExperienceRequestData = {
       events: ExperienceEventArray.parse(events),
       options: this.constructBodyOptions(options),
     }
 
-    logger.debug(LOG_LOCATION, `"${requestName}" request body:`, body)
+    logger.debug(`"${requestName}" request body:`, body)
 
     try {
       const response = await this.makeProfileMutationRequest({
@@ -443,7 +443,7 @@ export default class ExperienceApiClient extends ApiClientBase {
         data: { profiles },
       } = BatchExperienceResponse.parse(await response.json())
 
-      logger.debug(LOG_LOCATION, `"${requestName}" request successfully completed`)
+      logger.debug(`"${requestName}" request successfully completed`)
 
       return profiles
     } catch (error) {

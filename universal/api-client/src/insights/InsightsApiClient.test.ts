@@ -1,5 +1,5 @@
 import { BatchInsightsEventArray } from '@contentful/optimization-api-schemas'
-import { logger } from 'logger'
+import { createLoggerMock } from 'mocks'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ApiClientBase from '../ApiClientBase'
@@ -8,6 +8,17 @@ import InsightsApiClient, {
   INSIGHTS_BASE_URL,
   type InsightsApiClientConfig,
 } from './InsightsApiClient'
+
+const mockLogger = vi.hoisted(() => ({
+  debug: vi.fn(),
+  info: vi.fn(),
+  log: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  fatal: vi.fn(),
+}))
+
+vi.mock('logger', () => createLoggerMock(mockLogger))
 
 const CLIENT_ID = 'key_123'
 const ENVIRONMENT = 'main'
@@ -113,9 +124,6 @@ describe('InsightsApiClient.sendBatchEvents', () => {
       // @ts-expect-error -- testing
       .mockImplementation((input) => input)
 
-    const infoSpy = vi.spyOn(logger, 'info')
-    const debugSpy = vi.spyOn(logger, 'debug')
-
     const handler = http.post(
       `${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`,
       async ({ request, params }) => {
@@ -137,13 +145,16 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     await expect(client.sendBatchEvents(batches)).resolves.toBe(true)
 
     expect(parseSpy).toHaveBeenCalledTimes(1)
-    expect(infoSpy).toHaveBeenCalledWith('ApiClient:Insights', 'Sending "Event Batches" request')
-    expect(debugSpy).toHaveBeenCalledWith(
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      'ApiClient:Insights',
+      'Sending "Event Batches" request',
+    )
+    expect(mockLogger.debug).toHaveBeenCalledWith(
       'ApiClient:Insights',
       expect.stringContaining('request body'),
       batches,
     )
-    expect(debugSpy).toHaveBeenCalledWith(
+    expect(mockLogger.debug).toHaveBeenCalledWith(
       'ApiClient:Insights',
       expect.stringContaining('request successfully completed'),
     )
@@ -173,9 +184,6 @@ describe('InsightsApiClient.sendBatchEvents', () => {
 
     const beaconHandler = vi.fn(() => false)
 
-    const infoSpy = vi.spyOn(logger, 'info')
-    const debugSpy = vi.spyOn(logger, 'debug')
-
     const handler = http.post(
       `${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`,
       () => HttpResponse.json({ ok: true }, { status: 200 }),
@@ -189,13 +197,16 @@ describe('InsightsApiClient.sendBatchEvents', () => {
 
     expect(beaconHandler).toHaveBeenCalledTimes(1)
     expect(beaconHandler).toHaveBeenCalledWith(expectedUrl, batches)
-    expect(infoSpy).toHaveBeenCalledWith('ApiClient:Insights', 'Sending "Event Batches" request')
-    expect(debugSpy).toHaveBeenCalledWith(
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      'ApiClient:Insights',
+      'Sending "Event Batches" request',
+    )
+    expect(mockLogger.debug).toHaveBeenCalledWith(
       'ApiClient:Insights',
       expect.stringContaining('request body'),
       batches,
     )
-    expect(debugSpy).toHaveBeenCalledWith(
+    expect(mockLogger.debug).toHaveBeenCalledWith(
       'ApiClient:Insights',
       expect.stringContaining('request successfully completed'),
     )

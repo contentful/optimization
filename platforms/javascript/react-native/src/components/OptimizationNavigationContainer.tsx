@@ -1,10 +1,10 @@
-import { logger, type Properties } from '@contentful/optimization-core'
+import { createScopedLogger, type Properties } from '@contentful/optimization-core'
 import type React from 'react'
 import { useCallback, useRef } from 'react'
 import * as z from 'zod/mini'
 import { useOptimization } from '../context/OptimizationContext'
 
-const LOG_LOCATION = 'RN:Navigation'
+const logger = createScopedLogger('RN:Navigation')
 
 /**
  * Converts route params to JSON-safe format using Zod validation.
@@ -124,7 +124,7 @@ export function OptimizationNavigationContainer({
 
       const properties: Properties = includeParams && params ? { params: paramsToJson(params) } : {}
 
-      logger.info(LOG_LOCATION, `Tracking screen: "${screenName}"`)
+      logger.info(`Tracking screen: "${screenName}"`)
 
       void currentOptimization.screen({
         name: screenName,

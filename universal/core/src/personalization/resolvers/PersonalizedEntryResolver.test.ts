@@ -13,20 +13,25 @@ import {
 import type { Entry } from 'contentful'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { logger } from 'logger'
 import { personalizedEntry as personalizedEntryFixture } from '../../test/fixtures/personalizedEntry'
 import { selectedPersonalizations as selectedPersonalizationsFixture } from '../../test/fixtures/selectedPersonalizations'
 import PersonalizedEntryResolver from './PersonalizedEntryResolver'
 
-vi.mock('logger', () => ({
-  logger: {
-    debug: vi.fn(),
-    info: vi.fn(),
-    warn: vi.fn(),
-  },
+const mockLogger = vi.hoisted(() => ({
+  debug: vi.fn(),
+  info: vi.fn(),
+  log: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  fatal: vi.fn(),
 }))
 
-const mockedLogger = vi.mocked(logger)
+vi.mock('logger', async () => {
+  const { createLoggerMock } = await import('mocks')
+  return createLoggerMock(mockLogger)
+})
+
+const mockedLogger = vi.mocked(mockLogger)
 
 const RESOLUTION_WARNING_BASE = 'Could not resolve personalized entry variant:'
 

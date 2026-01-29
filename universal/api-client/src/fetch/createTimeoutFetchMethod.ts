@@ -1,7 +1,7 @@
-import { logger } from 'logger'
+import { createScopedLogger } from 'logger'
 import type { BaseFetchMethodOptions, FetchMethod, FetchMethodCallbackOptions } from './Fetch'
 
-const LOG_LOCATION = 'ApiClient:Timeout'
+const logger = createScopedLogger('ApiClient:Timeout')
 
 /**
  * Default timeout (in milliseconds) for outgoing requests.
@@ -73,7 +73,7 @@ export function createTimeoutFetchMethod({
       if (typeof onRequestTimeout === 'function') {
         onRequestTimeout({ apiName })
       } else {
-        logger.error(LOG_LOCATION, `Request to "${url.toString()}" timed out`)
+        logger.error(`Request to "${url.toString()}" timed out`)
       }
 
       controller.abort()

@@ -1,6 +1,17 @@
-import { logger } from 'logger'
+import { createLoggerMock } from 'mocks'
 import ApiClientBase, { type ApiConfig } from './ApiClientBase'
 import Fetch from './fetch'
+
+const mockLogger = vi.hoisted(() => ({
+  debug: vi.fn(),
+  info: vi.fn(),
+  log: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  fatal: vi.fn(),
+}))
+
+vi.mock('logger', () => createLoggerMock(mockLogger))
 
 class TestApiClient extends ApiClientBase {
   protected readonly baseUrl = 'https://example.com'
@@ -45,8 +56,6 @@ describe('ApiClientBase', () => {
   describe('logRequestError', () => {
     it('logs a warning for AbortError', () => {
       const client = new TestApiClient(name, config)
-      const warnSpy = vi.spyOn(logger, 'warn')
-      const errorSpy = vi.spyOn(logger, 'error')
 
       const err = new Error('Request aborted')
       err.name = 'AbortError'
@@ -54,18 +63,16 @@ describe('ApiClientBase', () => {
 
       client.triggerLogRequestError(err, requestName)
 
-      expect(warnSpy).toHaveBeenCalledTimes(1)
-      expect(warnSpy).toHaveBeenCalledWith(
-        name,
-        `"${requestName}" request aborted due to network issues. This request may not be retried.`,
+      expect(mockLogger.warn).toHaveBeenCalledTimes(1)
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        'ApiClient',
+        `[${name}] "${requestName}" request aborted due to network issues. This request may not be retried.`,
       )
-      expect(errorSpy).not.toHaveBeenCalled()
+      expect(mockLogger.error).not.toHaveBeenCalled()
     })
 
     it('logs an error for non-abort Errors', () => {
       const client = new TestApiClient(name, config)
-      const warnSpy = vi.spyOn(logger, 'warn')
-      const errorSpy = vi.spyOn(logger, 'error')
 
       const err = new Error('Boom')
       // err.name remains "Error"
@@ -73,24 +80,22 @@ describe('ApiClientBase', () => {
 
       client.triggerLogRequestError(err, requestName)
 
-      expect(errorSpy).toHaveBeenCalledTimes(1)
-      expect(errorSpy).toHaveBeenCalledWith(
-        name,
-        `"${requestName}" request failed with error: [${err.name}] ${err.message}`,
+      expect(mockLogger.error).toHaveBeenCalledTimes(1)
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'ApiClient',
+        `[${name}] "${requestName}" request failed with error: [${err.name}] ${err.message}`,
       )
-      expect(warnSpy).not.toHaveBeenCalled()
+      expect(mockLogger.warn).not.toHaveBeenCalled()
     })
 
     it('does nothing for non-Error values', () => {
       const client = new TestApiClient(name, config)
-      const warnSpy = vi.spyOn(logger, 'warn')
-      const errorSpy = vi.spyOn(logger, 'error')
 
       // Pass something that is not an instance of Error
       client.triggerLogRequestError('not-an-error', 'deleteAsset')
 
-      expect(warnSpy).not.toHaveBeenCalled()
-      expect(errorSpy).not.toHaveBeenCalled()
+      expect(mockLogger.warn).not.toHaveBeenCalled()
+      expect(mockLogger.error).not.toHaveBeenCalled()
     })
   })
 })

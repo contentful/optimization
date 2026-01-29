@@ -13,10 +13,10 @@ import {
   type TrackBuilderArgs,
   TrackEvent,
 } from '@contentful/optimization-api-client'
-import { logger } from 'logger'
+import { createScopedLogger } from 'logger'
 import PersonalizationBase from './PersonalizationBase'
 
-const LOG_LOCATION = 'Personalization'
+const logger = createScopedLogger('Personalization')
 
 /**
  * Stateless personalization implementation that immediately validates and sends
@@ -40,7 +40,7 @@ class PersonalizationStateless extends PersonalizationBase {
   async identify(
     payload: IdentifyBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData> {
-    logger.info(LOG_LOCATION, 'Sending "identify" event')
+    logger.info('Sending "identify" event')
 
     const { profile, ...builderArgs } = payload
 
@@ -58,7 +58,7 @@ class PersonalizationStateless extends PersonalizationBase {
   async page(
     payload: PageViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData> {
-    logger.info(LOG_LOCATION, 'Sending "page" event')
+    logger.info('Sending "page" event')
 
     const { profile, ...builderArgs } = payload
 
@@ -76,7 +76,7 @@ class PersonalizationStateless extends PersonalizationBase {
   async screen(
     payload: ScreenViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData> {
-    logger.info(LOG_LOCATION, `Sending "screen" event for "${payload.name}"`)
+    logger.info(`Sending "screen" event for "${payload.name}"`)
 
     const { profile, ...builderArgs } = payload
 
@@ -92,7 +92,7 @@ class PersonalizationStateless extends PersonalizationBase {
    * @returns The evaluated {@link OptimizationData} for this event.
    */
   async track(payload: TrackBuilderArgs & { profile?: PartialProfile }): Promise<OptimizationData> {
-    logger.info(LOG_LOCATION, `Sending "track" event "${payload.event}"`)
+    logger.info(`Sending "track" event "${payload.event}"`)
 
     const { profile, ...builderArgs } = payload
 
@@ -110,7 +110,7 @@ class PersonalizationStateless extends PersonalizationBase {
   async trackComponentView(
     payload: ComponentViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData> {
-    logger.info(LOG_LOCATION, 'Sending "track personalization" event')
+    logger.info('Sending "track personalization" event')
 
     const { profile, ...builderArgs } = payload
 

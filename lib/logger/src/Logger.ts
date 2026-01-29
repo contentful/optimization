@@ -58,3 +58,35 @@ export class Logger {
 }
 
 export const logger = new Logger()
+
+export interface ScopedLogger {
+  debug: (message: string, ...args: unknown[]) => void
+  info: (message: string, ...args: unknown[]) => void
+  log: (message: string, ...args: unknown[]) => void
+  warn: (message: string, ...args: unknown[]) => void
+  error: (message: string | Error, ...args: unknown[]) => void
+  fatal: (message: string | Error, ...args: unknown[]) => void
+}
+
+export function createScopedLogger(location: string): ScopedLogger {
+  return {
+    debug: (message: string, ...args: unknown[]) => {
+      logger.debug(location, message, ...args)
+    },
+    info: (message: string, ...args: unknown[]) => {
+      logger.info(location, message, ...args)
+    },
+    log: (message: string, ...args: unknown[]) => {
+      logger.log(location, message, ...args)
+    },
+    warn: (message: string, ...args: unknown[]) => {
+      logger.warn(location, message, ...args)
+    },
+    error: (message: string | Error, ...args: unknown[]) => {
+      logger.error(location, message, ...args)
+    },
+    fatal: (message: string | Error, ...args: unknown[]) => {
+      logger.fatal(location, message, ...args)
+    },
+  }
+}

@@ -1,7 +1,7 @@
-import { logger } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core'
 import { AppState } from 'react-native'
 
-const LOG_LOCATION = 'RN:AppState'
+const logger = createScopedLogger('RN:AppState')
 
 /**
  * Callback invoked when the app transitions to background or inactive state.
@@ -42,7 +42,7 @@ export function createAppStateChangeListener(callback: Callback): () => void {
         try {
           await callback()
         } catch (error) {
-          logger.error(LOG_LOCATION, 'Error in app state callback:', error)
+          logger.error('Error in app state callback:', error)
         }
       })()
     }

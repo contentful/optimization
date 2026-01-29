@@ -1,11 +1,16 @@
-import { logger } from 'logger'
+import { createLoggerMock } from 'mocks'
 import { createTimeoutFetchMethod } from './createTimeoutFetchMethod'
 
-vi.mock('logger', () => ({
-  logger: {
-    error: vi.fn(),
-  },
+const mockLogger = vi.hoisted(() => ({
+  debug: vi.fn(),
+  info: vi.fn(),
+  log: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  fatal: vi.fn(),
 }))
+
+vi.mock('logger', () => createLoggerMock(mockLogger))
 
 describe('createTimeoutFetchMethod', () => {
   let fetchMock: ReturnType<typeof vi.fn>
@@ -44,7 +49,7 @@ describe('createTimeoutFetchMethod', () => {
 
     expect(result).toBe(fakeResponse)
     expect(onRequestTimeout).not.toHaveBeenCalled()
-    expect(logger.error).not.toHaveBeenCalled()
+    expect(mockLogger.error).not.toHaveBeenCalled()
   })
 
   it('calls onRequestTimeout if fetch times out', () => {
@@ -62,7 +67,7 @@ describe('createTimeoutFetchMethod', () => {
     vi.advanceTimersByTime(1000)
 
     expect(onRequestTimeout).toHaveBeenCalledWith({ apiName: 'CustomAPI' })
-    expect(logger.error).not.toHaveBeenCalled()
+    expect(mockLogger.error).not.toHaveBeenCalled()
   })
 
   it('calls logger.error if no onRequestTimeout is provided', () => {
@@ -78,7 +83,7 @@ describe('createTimeoutFetchMethod', () => {
 
     vi.advanceTimersByTime(500)
 
-    expect(logger.error).toHaveBeenCalled()
+    expect(mockLogger.error).toHaveBeenCalled()
     expect(onRequestTimeout).not.toHaveBeenCalled()
   })
 })
