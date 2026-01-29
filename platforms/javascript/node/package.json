@@ -21,11 +21,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "pnpm clean; pnpm build:cjs && pnpm build:esm",
-    "build:cjs": "tsc -b ./tsconfig.cjs.json && pnpm rename:js:cjs",
-    "build:esm": "tsc -b ./tsconfig.esm.json && pnpm rename:js:mjs",
-    "rename:js:cjs": "find ./dist -type f -name \"*.js\" ! -name \"*.cjs\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js}.cjs\"; done && find ./dist -type f -name \"*.js.map\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js.map}.cjs.map\"; done",
-    "rename:js:mjs": "find ./dist -type f -name \"*.js\" ! -name \"*.mjs\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js}.mjs\"; done && find ./dist -type f -name \"*.js.map\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js.map}.mjs.map\"; done",
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
     "clean": "rimraf ./dist ./coverage tsconfig.tsbuildinfo",
     "dev": "tsx watch --env-file=.env ./server.ts",
     "test:unit": "vitest run --coverage",
@@ -47,6 +43,7 @@
     "rimraf": "catalog:",
     "tslib": "catalog:",
     "tsx": "catalog:",
+    "tsup": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }
