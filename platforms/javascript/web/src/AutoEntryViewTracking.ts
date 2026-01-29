@@ -5,6 +5,8 @@ import type {
   ElementViewObserver,
 } from './observers'
 
+const LOG_LOCATION = 'Web:AutoTracking'
+
 /**
  * Data attributes used by the Web SDK to identify and configure tracked entries.
  */
@@ -151,7 +153,8 @@ export const createAutoTrackingEntryViewCallback =
 
     if (!entryId) {
       logger.warn(
-        '[Optimization Web SDK] No entry data found in entry view observer callback; please add data attributes or observe with data info',
+        LOG_LOCATION,
+        'No entry data found in entry view observer callback; please add data attributes or observe with data info',
       )
       return
     }
@@ -207,7 +210,7 @@ export const createAutoTrackingEntryExistenceCallback = (
 
       if (!ctflElement || !entryViewObserver.getStats(ctflElement)) return
 
-      logger.info('[Optimization Web SDK] Auto-unobserving element (remove):', ctflElement)
+      logger.info(LOG_LOCATION, 'Auto-unobserving element (remove):', ctflElement)
       entryViewObserver.unobserve(ctflElement)
     })
   },
@@ -218,7 +221,7 @@ export const createAutoTrackingEntryExistenceCallback = (
 
           if (!ctflElement) return
 
-          logger.info('[Optimization Web SDK] Auto-observing element (add):', ctflElement)
+          logger.info(LOG_LOCATION, 'Auto-observing element (add):', ctflElement)
           entryViewObserver.observe(ctflElement)
         })
       }

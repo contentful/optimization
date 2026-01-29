@@ -133,11 +133,13 @@ abstract class ApiClientBase {
     if (error instanceof Error) {
       if (error.name === 'AbortError') {
         logger.warn(
-          `${this.name} API ${requestName} request aborted due to network issues. This request may not be retried.`,
+          this.name,
+          `"${requestName}" request aborted due to network issues. This request may not be retried.`,
         )
       } else {
         logger.error(
-          `${this.name} API ${requestName} request failed with error: [${error.name}] ${error.message}`,
+          this.name,
+          `"${requestName}" request failed with error: [${error.name}] ${error.message}`,
         )
       }
     }

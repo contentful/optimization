@@ -1,6 +1,8 @@
 import { logger } from '@contentful/optimization-core'
 import { CAN_ADD_LISTENERS } from '../global-constants'
 
+const LOG_LOCATION = 'Web:Network'
+
 /**
  * Callback invoked when the browser's connectivity state changes.
  *
@@ -45,7 +47,7 @@ export function createOnlineChangeListener(callback: Callback): () => void {
       try {
         await callback(isOnline)
       } catch (error) {
-        logger.error('Error in online state callback:', error)
+        logger.error(LOG_LOCATION, 'Error in online state callback:', error)
       }
     })()
   }

@@ -1,6 +1,8 @@
 import { logger } from '@contentful/optimization-core'
 import { CAN_ADD_LISTENERS } from '../global-constants'
 
+const LOG_LOCATION = 'Web:Visibility'
+
 /**
  * Event type for browser page-hide / visibility-change events.
  *
@@ -58,10 +60,7 @@ export function createVisibilityChangeListener(callback: Callback): () => void {
         await callback(event)
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown error'
-        logger.error(
-          '[Optimization Web SDK] Error encountered while handling page visibility change:',
-          message,
-        )
+        logger.error(LOG_LOCATION, 'Error handling page visibility change:', message)
       }
     })()
   }

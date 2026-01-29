@@ -4,6 +4,8 @@ import { useCallback, useRef } from 'react'
 import * as z from 'zod/mini'
 import { useOptimization } from '../context/OptimizationContext'
 
+const LOG_LOCATION = 'RN:Navigation'
+
 /**
  * Converts route params to JSON-safe format using Zod validation.
  * React Navigation params are JSON-serializable by contract.
@@ -122,7 +124,7 @@ export function OptimizationNavigationContainer({
 
       const properties: Properties = includeParams && params ? { params: paramsToJson(params) } : {}
 
-      logger.info(`[NavigationTracking] Tracking screen: "${screenName}"`)
+      logger.info(LOG_LOCATION, `Tracking screen: "${screenName}"`)
 
       void currentOptimization.screen({
         name: screenName,

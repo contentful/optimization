@@ -6,6 +6,8 @@ import {
 } from './createTimeoutFetchMethod'
 import type { FetchMethod } from './Fetch'
 
+const LOG_LOCATION = 'ApiClient:Fetch'
+
 /**
  * Options for {@link createProtectedFetchMethod}, combining timeout and retry behavior.
  */
@@ -52,9 +54,12 @@ export function createProtectedFetchMethod(options: ProtectedFetchMethodOptions)
   } catch (error) {
     if (error instanceof Error) {
       if (error.name === 'AbortError') {
-        logger.warn(`The request aborted due to network issues. This request may not be retried.`)
+        logger.warn(
+          LOG_LOCATION,
+          'Request aborted due to network issues. This request may not be retried.',
+        )
       } else {
-        logger.error(`The request failed with error: [${error.name}] ${error.message}`)
+        logger.error(LOG_LOCATION, `Request failed with error: [${error.name}] ${error.message}`)
       }
     }
     throw error

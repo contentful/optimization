@@ -4,6 +4,7 @@ import { createClient, type Entry } from 'contentful'
 import AsyncStorageStore from '../../../platforms/javascript/react-native/src/storage/AsyncStorageStore'
 import { ENV_CONFIG } from '../env.config'
 
+const LOG_LOCATION = 'Demo:Helpers'
 const INCLUDE_DEPTH = 10
 
 function createContentfulClient(): ReturnType<typeof createClient> {
@@ -56,9 +57,9 @@ export async function fetchEntries(
         })
 
         fetchedEntries.push(entry)
-        logger.debug(`Fetched entry ${entryId}`)
+        logger.debug(LOG_LOCATION, `Fetched entry ${entryId}`)
       } catch (_error: unknown) {
-        logger.warn(`Entry "${entryId}" could not be found in the current space`)
+        logger.warn(LOG_LOCATION, `Entry "${entryId}" could not be found in the current space`)
       }
     }
 
@@ -66,7 +67,7 @@ export async function fetchEntries(
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     const errorText = `Failed to fetch entries: ${errorMessage}`
-    logger.error(errorText)
+    logger.error(LOG_LOCATION, errorText)
     setSdkError(errorText)
   }
 }
@@ -75,9 +76,9 @@ export async function clearProfileState(): Promise<void> {
   try {
     const keys = ['__ctfl_opt_profile__', '__ctfl_opt_personalizations__', '__ctfl_opt_changes__']
     await AsyncStorage.multiRemove(keys)
-    logger.info('Profile state cleared successfully')
+    logger.info(LOG_LOCATION, 'Profile state cleared successfully')
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    logger.error(`Failed to clear profile state: ${errorMessage}`)
+    logger.error(LOG_LOCATION, `Failed to clear profile state: ${errorMessage}`)
   }
 }

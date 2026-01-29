@@ -3,6 +3,8 @@ import React, { type ReactNode } from 'react'
 import type Optimization from '../'
 import OptimizationContext from '../context/OptimizationContext'
 
+const LOG_LOCATION = 'RN:Provider'
+
 export interface OptimizationProviderProps {
   /**
    * The Optimization instance to provide to child components
@@ -40,7 +42,7 @@ export function OptimizationProvider({
 }: OptimizationProviderProps): React.JSX.Element {
   // Log to verify the provider is working
   React.useEffect(() => {
-    logger.info('[OptimizationProvider] Provider initialized')
+    logger.info(LOG_LOCATION, 'Provider initialized')
   }, [])
 
   return (

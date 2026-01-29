@@ -2,6 +2,8 @@ import { logger, type OptimizationData, type Properties } from '@contentful/opti
 import { useCallback, useEffect, useRef } from 'react'
 import { useOptimization } from '../context/OptimizationContext'
 
+const LOG_LOCATION = 'RN:ScreenTracking'
+
 /**
  * Options for the useScreenTracking hook.
  *
@@ -103,7 +105,7 @@ export function useScreenTracking({
     const { current: currentProperties } = propertiesRef
     const { current: currentOptimization } = optimizationRef
 
-    logger.info(`[ScreenTracking] Tracking screen: "${currentName}"`)
+    logger.info(LOG_LOCATION, `Tracking screen: "${currentName}"`)
 
     try {
       const result = await currentOptimization.screen({
@@ -115,7 +117,8 @@ export function useScreenTracking({
       return result
     } catch (error) {
       logger.error(
-        `[ScreenTracking] Failed to track screen "${currentName}":`,
+        LOG_LOCATION,
+        `Failed to track screen "${currentName}":`,
         error instanceof Error ? error.message : String(error),
       )
       return undefined

@@ -17,6 +17,8 @@ import { PreviewPanelContent } from './PreviewPanelContent'
 import { ProfileSection } from './ProfileSection'
 import { ActionButton, SearchBar } from './shared'
 
+const LOG_LOCATION = 'RN:Preview'
+
 function formatConsentText(consent: boolean | undefined): string {
   if (consent === undefined) return '—'
   return consent ? 'Yes' : 'No'
@@ -126,7 +128,7 @@ export function PreviewPanel({
   // Handle audience toggle changes
   const handleAudienceToggle = useCallback(
     (audienceId: string, state: AudienceOverrideState) => {
-      logger.debug('[PreviewPanel] Audience toggle:', { audienceId, state })
+      logger.debug(LOG_LOCATION, 'Audience toggle:', { audienceId, state })
 
       switch (state) {
         case 'on':
@@ -145,18 +147,18 @@ export function PreviewPanel({
 
   // Notify visibility change on mount/unmount
   useEffect(() => {
-    logger.info('[PreviewPanel] Panel mounted')
+    logger.info(LOG_LOCATION, 'Panel mounted')
     onVisibilityChange?.(true)
 
     return () => {
-      logger.info('[PreviewPanel] Panel unmounted')
+      logger.info(LOG_LOCATION, 'Panel unmounted')
       onVisibilityChange?.(false)
     }
   }, [onVisibilityChange])
 
   // Log state changes
   useEffect(() => {
-    logger.debug('[PreviewPanel] State updated:', {
+    logger.debug(LOG_LOCATION, 'State updated:', {
       profileId: profile?.id,
       personalizationsCount: personalizations?.length ?? 0,
       consent,

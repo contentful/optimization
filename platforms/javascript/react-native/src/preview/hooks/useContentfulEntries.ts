@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import type { ContentfulClient, ContentfulEntry } from '../types'
 import { fetchAudienceAndExperienceEntries } from '../utils'
 
+const LOG_LOCATION = 'RN:Preview'
+
 interface ContentfulEntriesState {
   audienceEntries: ContentfulEntry[]
   experienceEntries: ContentfulEntry[]
@@ -31,7 +33,7 @@ export function useContentfulEntries(contentfulClient: ContentfulClient): Conten
         setExperienceEntries(experiences)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-        logger.error('[useContentfulEntries] Failed to fetch entries:', errorMessage)
+        logger.error(LOG_LOCATION, 'Failed to fetch entries:', errorMessage)
         setError(errorMessage)
       } finally {
         setIsLoading(false)

@@ -7,6 +7,8 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { z } from 'zod/mini'
 
+const LOG_LOCATION = 'RN:Storage'
+
 export const ANONYMOUS_ID = '__ctfl_opt_anonymous_id__'
 export const CONSENT = '__ctfl_opt_consent__'
 export const CHANGES_CACHE = '__ctfl_opt_changes__'
@@ -49,7 +51,7 @@ class AsyncStorageStore {
 
       this.initialized = true
     } catch (error: unknown) {
-      logger.error('Failed to initialize AsyncStorageStore:', error)
+      logger.error(LOG_LOCATION, 'Failed to initialize AsyncStorageStore:', error)
     }
   }
 
@@ -133,13 +135,13 @@ class AsyncStorageStore {
     if (data === undefined) {
       this.cache.delete(key)
       AsyncStorage.removeItem(key).catch((error: unknown) => {
-        logger.error(`Failed to remove ${key} from AsyncStorage:`, error)
+        logger.error(LOG_LOCATION, `Failed to remove ${key} from AsyncStorage:`, error)
       })
     } else {
       const value = typeof data === 'string' ? data : JSON.stringify(data)
       this.cache.set(key, typeof data === 'string' ? data : data)
       AsyncStorage.setItem(key, value).catch((error: unknown) => {
-        logger.error(`Failed to set ${key} in AsyncStorage:`, error)
+        logger.error(LOG_LOCATION, `Failed to set ${key} in AsyncStorage:`, error)
       })
     }
   }

@@ -2,6 +2,8 @@ import { BatchInsightsEventArray } from '@contentful/optimization-api-schemas'
 import { logger } from 'logger'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
 
+const LOG_LOCATION = 'ApiClient:Insights'
+
 /**
  * Default base URL for the Insights ingest API.
  *
@@ -152,7 +154,7 @@ export default class InsightsApiClient extends ApiClientBase {
     const body = BatchInsightsEventArray.parse(batches)
 
     if (typeof beaconHandler === 'function') {
-      logger.info('Queueing events via beaconHandler')
+      logger.debug(LOG_LOCATION, 'Queueing events via beaconHandler')
 
       const beaconSuccessfullyQueued = beaconHandler(url, body)
 
@@ -160,6 +162,7 @@ export default class InsightsApiClient extends ApiClientBase {
         return true
       } else {
         logger.warn(
+          LOG_LOCATION,
           'beaconHandler failed to queue events; events will be emitted immediately via fetch',
         )
       }
@@ -167,9 +170,9 @@ export default class InsightsApiClient extends ApiClientBase {
 
     const requestName = 'Event Batches'
 
-    logger.info(`Sending ${this.name} API "${requestName}" request.`)
+    logger.info(LOG_LOCATION, `Sending "${requestName}" request`)
 
-    logger.debug(`${this.name} API "${requestName}" request Body: `, body)
+    logger.debug(LOG_LOCATION, `"${requestName}" request body:`, body)
 
     try {
       await this.fetch(url, {
@@ -181,7 +184,7 @@ export default class InsightsApiClient extends ApiClientBase {
         keepalive: true,
       })
 
-      logger.debug(`${this.name} API "${requestName}" request succesfully completed.`)
+      logger.debug(LOG_LOCATION, `"${requestName}" request successfully completed`)
 
       return true
     } catch (error) {

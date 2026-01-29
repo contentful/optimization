@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { useOptimization } from '../../context/OptimizationContext'
 import type { PreviewState } from '../types'
 
+const LOG_LOCATION = 'RN:Preview'
+
 /**
  * Hook that subscribes to SDK signals and provides the current preview state.
  * Uses the Optimization SDK's observable pattern to react to state changes.
@@ -19,46 +21,46 @@ export function usePreviewState(): PreviewState {
 
   // Subscribe to profile changes
   useEffect(() => {
-    logger.debug('[PreviewPanel] Subscribing to profile state')
+    logger.debug(LOG_LOCATION, 'Subscribing to profile state')
 
     const subscription = optimization.states.profile.subscribe((p) => {
-      logger.debug('[PreviewPanel] Profile updated:', p?.id)
+      logger.debug(LOG_LOCATION, 'Profile updated:', p?.id)
       setProfile(p)
       setIsLoading(false)
     })
 
     return () => {
-      logger.debug('[PreviewPanel] Unsubscribing from profile state')
+      logger.debug(LOG_LOCATION, 'Unsubscribing from profile state')
       subscription.unsubscribe()
     }
   }, [optimization])
 
   // Subscribe to personalizations changes
   useEffect(() => {
-    logger.debug('[PreviewPanel] Subscribing to personalizations state')
+    logger.debug(LOG_LOCATION, 'Subscribing to personalizations state')
 
     const subscription = optimization.states.personalizations.subscribe((p) => {
-      logger.debug('[PreviewPanel] Personalizations updated:', p?.length ?? 0, 'items')
+      logger.debug(LOG_LOCATION, 'Personalizations updated:', p?.length ?? 0, 'items')
       setPersonalizations(p)
     })
 
     return () => {
-      logger.debug('[PreviewPanel] Unsubscribing from personalizations state')
+      logger.debug(LOG_LOCATION, 'Unsubscribing from personalizations state')
       subscription.unsubscribe()
     }
   }, [optimization])
 
   // Subscribe to consent changes
   useEffect(() => {
-    logger.debug('[PreviewPanel] Subscribing to consent state')
+    logger.debug(LOG_LOCATION, 'Subscribing to consent state')
 
     const subscription = optimization.states.consent.subscribe((c) => {
-      logger.debug('[PreviewPanel] Consent updated:', c)
+      logger.debug(LOG_LOCATION, 'Consent updated:', c)
       setConsent(c)
     })
 
     return () => {
-      logger.debug('[PreviewPanel] Unsubscribing from consent state')
+      logger.debug(LOG_LOCATION, 'Unsubscribing from consent state')
       subscription.unsubscribe()
     }
   }, [optimization])
