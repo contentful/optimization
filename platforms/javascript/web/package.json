@@ -20,9 +20,7 @@
     "access": "public"
   },
   "scripts": {
-    "build:esm": "vite build -c vite.esm.config.ts",
-    "build:umd": "vite build -c vite.umd.config.ts",
-    "build": "pnpm clean && tsc -b ./tsconfig.build.json && pnpm build:esm && pnpm build:umd",
+    "build": "pnpm clean && tsup src/index.ts --format cjs,esm --dts --clean",
     "clean": "rimraf ./dist ./coverage tsconfig.tsbuildinfo",
     "dev": "vite -c vite.esm.config.ts --host",
     "test:unit": "vitest run --coverage",
@@ -45,6 +43,7 @@
     "vite": "^7.1.11",
     "vitest": "catalog:",
     "vite-bundle-analyzer": "^1.2.1",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "tsup": "catalog:"
   }
 }
