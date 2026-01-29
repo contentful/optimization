@@ -1,5 +1,8 @@
 name: Main Pipeline
 
+permissions:
+  contents: read
+
 on:
   pull_request:
 
@@ -173,8 +176,8 @@ jobs:
       - run: pnpm install --prefer-offline --frozen-lockfile
       - run: pnpm test:unit
 
-  e2e-node-ssr:
-    name: E2E Node SSR 🖥️
+  e2e-node-ssr-only:
+    name: E2E Node SSR Only 🖥️
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     needs: setup
@@ -182,17 +185,17 @@ jobs:
       - uses: namespacelabs/nscloud-checkout-action@v8
 
       - run: |
-          echo "DOTENV_CONFIG_QUIET=true" >>implementations/node-ssr/.env
-          echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/node-ssr/.env
-          echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/node-ssr/.env
-          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>implementations/node-ssr/.env
-          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>implementations/node-ssr/.env
-          echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/node-ssr/.env
-          echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/node-ssr/.env
-          echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/node-ssr/.env
-          echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/node-ssr/.env
-          echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/node-ssr/.env
-          echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>implementations/node-ssr/.env
+          echo "DOTENV_CONFIG_QUIET=true" >>implementations/node-ssr-only/.env
+          echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/node-ssr-only/.env
+          echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/node-ssr-only/.env
+          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>implementations/node-ssr-only/.env
+          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>implementations/node-ssr-only/.env
+          echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/node-ssr-only/.env
+          echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/node-ssr-only/.env
+          echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/node-ssr-only/.env
+          echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/node-ssr-only/.env
+          echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/node-ssr-only/.env
+          echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>implementations/node-ssr-only/.env
 
       - uses: actions/setup-node@v6
         with:
@@ -210,20 +213,20 @@ jobs:
             apt
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - run: pnpm --filter @implementation/node-ssr exec playwright install --with-deps
-      - run: pnpm --filter @implementation/node-ssr test:e2e
+      - run: pnpm --filter @implementation/node-ssr-only exec playwright install --with-deps
+      - run: pnpm --filter @implementation/node-ssr-only test:e2e
 
       - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
         with:
-          name: ci-results-node-ssr
+          name: ci-results-node-ssr-only
           path: |
-            ./implementations/node-ssr/playwright-report/
-            ./implementations/node-ssr/test-results/
+            ./implementations/node-ssr-only/playwright-report/
+            ./implementations/node-ssr-only/test-results/
           retention-days: 1
 
-  e2e-node-esr:
-    name: E2E Node ESR 🖥️
+  e2e-node-ssr-web-vanilla:
+    name: E2E Node SSR + Web Vanilla 🖥️
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     needs: setup
@@ -231,17 +234,17 @@ jobs:
       - uses: namespacelabs/nscloud-checkout-action@v8
 
       - run: |
-          echo "DOTENV_CONFIG_QUIET=true" >>implementations/node-esr/.env
-          echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/node-esr/.env
-          echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/node-esr/.env
-          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>implementations/node-esr/.env
-          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>implementations/node-esr/.env
-          echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/node-esr/.env
-          echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/node-esr/.env
-          echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/node-esr/.env
-          echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/node-esr/.env
-          echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/node-esr/.env
-          echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>implementations/node-esr/.env
+          echo "DOTENV_CONFIG_QUIET=true" >>implementations/node-ssr-web-vanilla/.env
+          echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/node-ssr-web-vanilla/.env
+          echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/node-ssr-web-vanilla/.env
+          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>implementations/node-ssr-web-vanilla/.env
+          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>implementations/node-ssr-web-vanilla/.env
+          echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/node-ssr-web-vanilla/.env
+          echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/node-ssr-web-vanilla/.env
+          echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/node-ssr-web-vanilla/.env
+          echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/node-ssr-web-vanilla/.env
+          echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/node-ssr-web-vanilla/.env
+          echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>implementations/node-ssr-web-vanilla/.env
 
       - uses: actions/setup-node@v6
         with:
@@ -259,16 +262,16 @@ jobs:
             apt
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - run: pnpm --filter @implementation/node-esr exec playwright install --with-deps
-      - run: pnpm --filter @implementation/node-esr test:e2e
+      - run: pnpm --filter @implementation/node-ssr-web-vanilla exec playwright install --with-deps
+      - run: pnpm --filter @implementation/node-ssr-web-vanilla test:e2e
 
       - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
         with:
-          name: ci-results-node-esr
+          name: ci-results-node-ssr-web-vanilla
           path: |
-            ./implementations/node-esr/playwright-report/
-            ./implementations/node-esr/test-results/
+            ./implementations/node-ssr-web-vanilla/playwright-report/
+            ./implementations/node-ssr-web-vanilla/test-results/
           retention-days: 1
 
   e2e-web:
@@ -296,7 +299,7 @@ jobs:
           VITE_CONTENTFUL_CDA_HOST=localhost:8000
           VITE_CONTENTFUL_BASE_PATH=contentful
           EOF
-          cp .env implementations/node-ssr/
+          cp .env implementations/node-ssr-only/
           cp .env implementations/web-vanilla/
 
       - uses: actions/setup-node@v6

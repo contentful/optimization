@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "@implementation/node-ssr",
+  "name": "@implementation/node-ssr-only",
   "description": "Reference implementation for NodeJS projects",
   "license": "MIT",
   "main": "dist/app.js",
