@@ -38,7 +38,7 @@ function PreviewPanelHeader({ consent }: { consent: boolean | undefined }): Reac
  *
  * A comprehensive debugging interface that displays:
  * - Browsable list of audiences with human-readable names
- * - Three-state toggle for audience overrides (On/Off/Auto)
+ * - Three-state toggle for audience overrides (On/Off/Default)
  * - Experience cards with variant selection
  * - Search functionality for audiences and experiences
  * - Current profile information (ID, traits, audiences)

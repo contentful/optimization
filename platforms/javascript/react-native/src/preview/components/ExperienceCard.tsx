@@ -2,7 +2,7 @@ import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { borderRadius, colors, shadows, spacing, typography } from '../styles/theme'
 import type { BadgeProps, ExperienceCardProps } from '../types'
-import { ActionButton, Badge } from './shared'
+import { Badge } from './shared'
 import { VariantSelector } from './VariantSelector'
 
 /**
@@ -21,7 +21,6 @@ export function ExperienceCard({
   currentVariantIndex,
   defaultVariantIndex,
   onSetVariant,
-  onReset,
   hasOverride,
 }: ExperienceCardProps): React.JSX.Element {
   const isExperiment = experience.type === 'nt_experiment'
@@ -51,13 +50,6 @@ export function ExperienceCard({
           qualifiedIndex={defaultVariantIndex}
         />
       </View>
-
-      {/* Reset button when overridden */}
-      {hasOverride && onReset && (
-        <View style={styles.resetSection}>
-          <ActionButton label="Reset to Default" variant="reset" onPress={onReset} />
-        </View>
-      )}
     </View>
   )
 }

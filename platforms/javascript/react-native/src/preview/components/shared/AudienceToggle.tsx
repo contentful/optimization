@@ -5,7 +5,7 @@ import type { AudienceOverrideState, AudienceToggleProps } from '../../types'
 
 const toggleStates: Array<{ value: AudienceOverrideState; label: string }> = [
   { value: 'on', label: 'On' },
-  { value: 'default', label: 'Auto' },
+  { value: 'default', label: 'Default' },
   { value: 'off', label: 'Off' },
 ]
 
@@ -14,7 +14,7 @@ const toggleStates: Array<{ value: AudienceOverrideState; label: string }> = [
  *
  * States:
  * - "On": Force the audience to be active
- * - "Auto" (default): Let SDK determine based on evaluation
+ * - "Default": Let SDK determine based on evaluation
  * - "Off": Force the audience to be inactive
  */
 export function AudienceToggle({

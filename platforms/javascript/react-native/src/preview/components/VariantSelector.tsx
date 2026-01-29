@@ -1,11 +1,11 @@
 import React from 'react'
-import type { StyleProp, TextStyle, ViewStyle } from 'react-native'
+import type { StyleProp, ViewStyle } from 'react-native'
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { borderRadius, colors, spacing, typography } from '../styles/theme'
 import type { VariantDistribution, VariantSelectorProps } from '../types'
 import { QualificationIndicator } from './shared'
 
-type StyleArray = Array<StyleProp<ViewStyle | TextStyle>>
+type StyleArray = Array<StyleProp<ViewStyle>>
 
 interface VariantButtonProps {
   variant: VariantDistribution
@@ -16,35 +16,12 @@ interface VariantButtonProps {
   onSelect: () => void
 }
 
-/** Get button styles based on state */
-function getButtonStyles(
-  isSelected: boolean,
-  isExperiment: boolean,
-  isAudienceActive: boolean,
-): StyleArray {
+/** Get card styles based on state */
+function getCardStyles(isSelected: boolean, isAudienceActive: boolean): StyleArray {
   return [
-    styles.variantButton,
-    isExperiment && styles.variantButtonVertical,
-    isSelected && styles.variantButtonSelected,
-    !isAudienceActive && styles.variantButtonInactive,
-  ]
-}
-
-/** Get label styles based on state */
-function getLabelStyles(isSelected: boolean, isAudienceActive: boolean): StyleArray {
-  return [
-    styles.variantLabel,
-    isSelected && styles.variantLabelSelected,
-    !isAudienceActive && styles.variantLabelInactive,
-  ]
-}
-
-/** Get percentage label styles based on state */
-function getPercentageStyles(isSelected: boolean, isAudienceActive: boolean): StyleArray {
-  return [
-    styles.percentageLabel,
-    isSelected && styles.percentageLabelSelected,
-    !isAudienceActive && styles.percentageLabelInactive,
+    styles.variantCard,
+    isSelected && styles.variantCardSelected,
+    !isAudienceActive && styles.variantCardInactive,
   ]
 }
 
@@ -56,7 +33,16 @@ function getVariantLabel(variant: VariantDistribution): string {
   return variant.index === 0 ? 'Baseline' : `Variant ${variant.index}`
 }
 
-/** Single variant button within the selector */
+/** Radio button component */
+function RadioButton({ isSelected }: { isSelected: boolean }): React.JSX.Element {
+  return (
+    <View style={[styles.radioOuter, isSelected && styles.radioOuterSelected]}>
+      {isSelected && <View style={styles.radioInner} />}
+    </View>
+  )
+}
+
+/** Single variant card within the selector */
 function VariantButton({
   variant,
   isSelected,
@@ -70,7 +56,7 @@ function VariantButton({
 
   return (
     <TouchableOpacity
-      style={getButtonStyles(isSelected, isExperiment, isAudienceActive)}
+      style={getCardStyles(isSelected, isAudienceActive)}
       onPress={onSelect}
       activeOpacity={0.7}
       accessibilityRole="radio"
@@ -78,13 +64,22 @@ function VariantButton({
       accessibilityLabel={`${variantLabel}${percentageLabel ? `, ${percentageLabel}` : ''}`}
     >
       <View style={styles.variantContent}>
-        <View style={styles.variantLabelRow}>
-          <Text style={getLabelStyles(isSelected, isAudienceActive)}>{variantLabel}</Text>
-          {isQualified && <QualificationIndicator style={styles.qualificationIndicator} />}
+        <View style={styles.labelContainer}>
+          <View style={styles.variantLabelRow}>
+            <Text style={[styles.variantLabel, !isAudienceActive && styles.variantLabelInactive]}>
+              {variantLabel}
+            </Text>
+            {isQualified && <QualificationIndicator style={styles.qualificationIndicator} />}
+          </View>
+          {isExperiment && percentageLabel != null && (
+            <Text
+              style={[styles.percentageLabel, !isAudienceActive && styles.percentageLabelInactive]}
+            >
+              {percentageLabel}
+            </Text>
+          )}
         </View>
-        {isExperiment && percentageLabel != null && (
-          <Text style={getPercentageStyles(isSelected, isAudienceActive)}>{percentageLabel}</Text>
-        )}
+        <RadioButton isSelected={isSelected} />
       </View>
     </TouchableOpacity>
   )
@@ -127,25 +122,20 @@ export function VariantSelector({
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'column',
-    alignItems: 'flex-start',
     gap: spacing.sm,
   },
-  variantButton: {
+  variantCard: {
     backgroundColor: colors.background.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.border.secondary,
+    borderColor: colors.border.primary,
   },
-  variantButtonVertical: {
-    borderRadius: borderRadius.md,
-  },
-  variantButtonSelected: {
-    backgroundColor: colors.cp.normal, // Uses Contentful Personalization brand color
+  variantCardSelected: {
     borderColor: colors.cp.normal,
   },
-  variantButtonInactive: {
+  variantCardInactive: {
     opacity: 0.6,
   },
   variantContent: {
@@ -153,18 +143,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  labelContainer: {
+    flex: 1,
+  },
   variantLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   variantLabel: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography.fontSize.md,
     fontWeight: typography.fontWeight.medium,
     color: colors.text.primary,
-  },
-  variantLabelSelected: {
-    color: colors.text.inverse,
-    fontWeight: typography.fontWeight.semibold,
   },
   variantLabelInactive: {
     color: colors.text.muted,
@@ -174,14 +163,30 @@ const styles = StyleSheet.create({
   },
   percentageLabel: {
     fontSize: typography.fontSize.sm,
-    color: colors.text.secondary,
-    marginLeft: spacing.md,
-  },
-  percentageLabelSelected: {
-    color: colors.text.inverse,
+    color: colors.text.muted,
+    marginTop: spacing.xs,
   },
   percentageLabelInactive: {
     color: colors.text.muted,
+  },
+  radioOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: colors.border.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: spacing.md,
+  },
+  radioOuterSelected: {
+    borderColor: colors.cp.normal,
+  },
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.cp.normal,
   },
 })
 
