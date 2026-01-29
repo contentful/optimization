@@ -137,11 +137,16 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     await expect(client.sendBatchEvents(batches)).resolves.toBe(true)
 
     expect(parseSpy).toHaveBeenCalledTimes(1)
-    expect(infoSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Sending Insights API "Event Batches" request.'),
+    expect(infoSpy).toHaveBeenCalledWith('ApiClient:Insights', 'Sending "Event Batches" request')
+    expect(debugSpy).toHaveBeenCalledWith(
+      'ApiClient:Insights',
+      expect.stringContaining('request body'),
+      batches,
     )
-    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('request Body'), batches)
-    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('request succesfully completed.'))
+    expect(debugSpy).toHaveBeenCalledWith(
+      'ApiClient:Insights',
+      expect.stringContaining('request successfully completed'),
+    )
   })
 
   it('uses beaconHandler when supplied', async () => {
@@ -184,11 +189,16 @@ describe('InsightsApiClient.sendBatchEvents', () => {
 
     expect(beaconHandler).toHaveBeenCalledTimes(1)
     expect(beaconHandler).toHaveBeenCalledWith(expectedUrl, batches)
-    expect(infoSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Sending Insights API "Event Batches" request.'),
+    expect(infoSpy).toHaveBeenCalledWith('ApiClient:Insights', 'Sending "Event Batches" request')
+    expect(debugSpy).toHaveBeenCalledWith(
+      'ApiClient:Insights',
+      expect.stringContaining('request body'),
+      batches,
     )
-    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('request Body'), batches)
-    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('request succesfully completed.'))
+    expect(debugSpy).toHaveBeenCalledWith(
+      'ApiClient:Insights',
+      expect.stringContaining('request successfully completed'),
+    )
   })
 
   it('logs and returns false on network errors', async () => {

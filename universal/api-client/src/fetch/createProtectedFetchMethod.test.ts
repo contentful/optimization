@@ -70,7 +70,8 @@ describe('createProtectedFetchMethod', () => {
 
     expect(() => createProtectedFetchMethod(options)).toThrow(abortError)
     expect(warnSpy).toHaveBeenCalledWith(
-      'The request aborted due to network issues. This request may not be retried.',
+      'ApiClient:Fetch',
+      'Request aborted due to network issues. This request may not be retried.',
     )
     expect(errorSpy).not.toHaveBeenCalled()
   })
@@ -83,7 +84,8 @@ describe('createProtectedFetchMethod', () => {
 
     expect(() => createProtectedFetchMethod(options)).toThrow(someError)
     expect(errorSpy).toHaveBeenCalledWith(
-      'The request failed with error: [NetworkError] Something went wrong',
+      'ApiClient:Fetch',
+      'Request failed with error: [NetworkError] Something went wrong',
     )
     expect(warnSpy).not.toHaveBeenCalled()
   })

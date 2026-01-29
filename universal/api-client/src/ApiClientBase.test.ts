@@ -56,7 +56,8 @@ describe('ApiClientBase', () => {
 
       expect(warnSpy).toHaveBeenCalledTimes(1)
       expect(warnSpy).toHaveBeenCalledWith(
-        `${name} API ${requestName} request aborted due to network issues. This request may not be retried.`,
+        name,
+        `"${requestName}" request aborted due to network issues. This request may not be retried.`,
       )
       expect(errorSpy).not.toHaveBeenCalled()
     })
@@ -74,7 +75,8 @@ describe('ApiClientBase', () => {
 
       expect(errorSpy).toHaveBeenCalledTimes(1)
       expect(errorSpy).toHaveBeenCalledWith(
-        `${name} API ${requestName} request failed with error: [${err.name}] ${err.message}`,
+        name,
+        `"${requestName}" request failed with error: [${err.name}] ${err.message}`,
       )
       expect(warnSpy).not.toHaveBeenCalled()
     })

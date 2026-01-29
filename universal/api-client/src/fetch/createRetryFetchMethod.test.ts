@@ -36,7 +36,8 @@ describe('createRetryFetchMethod', () => {
     expect(fetchMock).toHaveBeenCalledOnce()
     expect(result).toBe(fakeResponse)
     expect(logger.debug).toHaveBeenCalledWith(
-      `Optimization API response from "${TEST_URL}":`,
+      'ApiClient:Retry',
+      `Response from "${TEST_URL}":`,
       fakeResponse,
     )
   })
@@ -67,7 +68,8 @@ describe('createRetryFetchMethod', () => {
     expect(onFailedAttempt).toHaveBeenCalled()
     expect(result).toBe(secondResponse)
     expect(logger.debug).toHaveBeenCalledWith(
-      `Optimization API response from "${TEST_URL}":`,
+      'ApiClient:Retry',
+      `Response from "${TEST_URL}":`,
       secondResponse,
     )
   })
@@ -89,14 +91,15 @@ describe('createRetryFetchMethod', () => {
 
     await expect(fetchWithRetry(TEST_URL, {})).rejects.toThrow(/may not be retried/)
     expect(logger.error).toHaveBeenCalledWith(
-      'Optimization API request to "https://example.com/endpoint" failed with status: "[400] Bad Request - traceparent: abc-123"',
+      'ApiClient:Retry',
+      `Request to "${TEST_URL}" failed with status: [400] Bad Request - traceparent: abc-123`,
     )
     expect(fetchMock).toHaveBeenCalledOnce()
     expect(onFailedAttempt).not.toHaveBeenCalled()
     expect(logger.debug).not.toHaveBeenCalled()
   })
 
-  it('calls logger.debug with custom apiName', async () => {
+  it('calls logger.debug with log location', async () => {
     const fakeResponse = new Response('ok', { status: 200 })
     fetchMock.mockResolvedValue(fakeResponse)
 
@@ -109,7 +112,8 @@ describe('createRetryFetchMethod', () => {
 
     expect(result).toBe(fakeResponse)
     expect(logger.debug).toHaveBeenCalledWith(
-      `MyAPI API response from "${TEST_URL}":`,
+      'ApiClient:Retry',
+      `Response from "${TEST_URL}":`,
       fakeResponse,
     )
   })
@@ -174,7 +178,8 @@ describe('createRetryFetchMethod', () => {
     })
     await expect(fetchWithRetry(TEST_URL, {})).rejects.toThrow(/may not be retried/)
     expect(logger.error).toHaveBeenCalledWith(
-      'Optimization API request to "https://example.com/endpoint" failed with an unknown error',
+      'ApiClient:Retry',
+      `Request to "${TEST_URL}" failed with an unknown error`,
     )
     expect(onFailedAttempt).not.toHaveBeenCalled()
     expect(logger.debug).not.toHaveBeenCalled()
@@ -191,7 +196,7 @@ describe('createRetryFetchMethod', () => {
       intervalTimeout: 10,
     })
     await expect(fetchWithRetry(TEST_URL, {})).rejects.toThrow(/may not be retried/)
-    expect(logger.error).toHaveBeenCalledWith('plain failure')
+    expect(logger.error).toHaveBeenCalledWith('ApiClient:Retry', 'plain failure')
     expect(onFailedAttempt).not.toHaveBeenCalled()
     expect(logger.debug).not.toHaveBeenCalled()
   })

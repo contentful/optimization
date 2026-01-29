@@ -114,7 +114,11 @@ describe('createAppStateChangeListener', () => {
 
     await vi.waitFor(() => {
       expect(callback).toHaveBeenCalled()
-      expect(mockLogger.error).toHaveBeenCalledWith('Error in app state callback:', error)
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'RN:AppState',
+        'Error in app state callback:',
+        error,
+      )
     })
   })
 
@@ -130,7 +134,11 @@ describe('createAppStateChangeListener', () => {
 
     await vi.waitFor(() => {
       expect(callback).toHaveBeenCalled()
-      expect(mockLogger.error).toHaveBeenCalledWith('Error in app state callback:', error)
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'RN:AppState',
+        'Error in app state callback:',
+        error,
+      )
     })
   })
 

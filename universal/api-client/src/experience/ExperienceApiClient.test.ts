@@ -113,9 +113,13 @@ describe('ExperienceApiClient', () => {
       expect(requested.id).toBe('prof_2')
       expect(requested.locale).toBe('de-DE')
 
-      expect(logger.info).toHaveBeenCalledWith('Sending Experience API "Get Profile" request.')
+      expect(logger.info).toHaveBeenCalledWith(
+        'ApiClient:Experience',
+        'Sending "Get Profile" request',
+      )
       expect(logger.debug).toHaveBeenCalledWith(
-        'Experience API "Get Profile" request succesfully completed.',
+        'ApiClient:Experience',
+        '"Get Profile" request successfully completed',
       )
     })
 
@@ -163,13 +167,21 @@ describe('ExperienceApiClient', () => {
       // features only present when provided
       expect(capturedFeatures).toEqual(['location'])
 
-      expect(logger.info).toHaveBeenCalledWith('Sending Experience API "Create Profile" request.')
-      expect(logger.debug).toHaveBeenCalledWith('Experience API "Create Profile" request body: ', {
-        events: [],
-        options: { features: ['location'] },
-      })
+      expect(logger.info).toHaveBeenCalledWith(
+        'ApiClient:Experience',
+        'Sending "Create Profile" request',
+      )
       expect(logger.debug).toHaveBeenCalledWith(
-        'Experience API "Create Profile" request succesfully completed.',
+        'ApiClient:Experience',
+        '"Create Profile" request body:',
+        {
+          events: [],
+          options: { features: ['location'] },
+        },
+      )
+      expect(logger.debug).toHaveBeenCalledWith(
+        'ApiClient:Experience',
+        '"Create Profile" request successfully completed',
       )
     })
 
