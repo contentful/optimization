@@ -69,15 +69,22 @@ async function loadAllEntries(): Promise<Array<Record<string, unknown>>> {
 
 const CORS_HEADERS = { 'Access-Control-Allow-Origin': '*' }
 
-async function handleContentTypeQuery(contentType: string): Promise<Response> {
+async function handleContentTypeQuery(contentType: string, cursor = false): Promise<Response> {
   try {
     const allEntries = await loadAllEntries()
     const filtered = allEntries.filter((e) => getContentTypeId(e) === contentType)
 
-    return HttpResponse.json(
-      { sys: { type: 'Array' }, total: filtered.length, skip: 0, limit: 100, items: filtered },
-      { headers: CORS_HEADERS, status: 200 },
-    )
+    if (cursor) {
+      return HttpResponse.json(
+        { sys: { type: 'Array' }, limit: 100, pages: {}, items: filtered },
+        { headers: CORS_HEADERS, status: 200 },
+      )
+    } else {
+      return HttpResponse.json(
+        { sys: { type: 'Array' }, total: filtered.length, skip: 0, limit: 100, items: filtered },
+        { headers: CORS_HEADERS, status: 200 },
+      )
+    }
   } catch {
     return HttpResponse.json(
       { error: 'Failed to load entries.' },
@@ -138,9 +145,10 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
         const url = new URL(request.url)
         const entryId = url.searchParams.get('sys.id')
         const contentType = url.searchParams.get('content_type')
+        const cursor = url.searchParams.get('cursor')
 
         if (contentType) {
-          return await handleContentTypeQuery(contentType)
+          return await handleContentTypeQuery(contentType, cursor === 'true')
         }
 
         if (entryId) {
