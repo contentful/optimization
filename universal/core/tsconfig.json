@@ -2,7 +2,8 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "paths": {
-      "logger": ["../../lib/logger/src/index.ts"]
+      "logger": ["../../lib/logger/src/index.ts"],
+      "mocks": ["../../lib/mocks/src/index.ts"]
     }
   },
   "include": ["./src/**/*", "./src/**/*.json"]

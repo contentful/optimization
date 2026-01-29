@@ -35,7 +35,6 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",
-    "mocks": "workspace:*",
     "msw": "catalog:",
     "rimraf": "catalog:",
     "tslib": "catalog:",
