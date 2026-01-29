@@ -67,7 +67,8 @@ jobs:
       - name: Update SDK version
         run: |
           VERSION=$(echo "${{ steps.release-version.outputs.version }}" | sed 's/^v//')
-          VERSION_CODE="export const SDK_VERSION = '$VERSION';"
+          VERSION_CODE="export const SDK_VERSION = '$VERSION'; // generated at before build time"
+
 
           echo "$VERSION_CODE" > platforms/javascript/node/src/version.ts
           echo "$VERSION_CODE" > platforms/javascript/web/src/version.ts
