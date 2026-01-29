@@ -148,10 +148,10 @@ importers:
     dependencies:
       '@contentful/optimization-node':
         specifier: workspace:*
-        version: link:../../platforms/javascript/node/dist
+        version: link:../../platforms/javascript/node
       '@contentful/optimization-web':
         specifier: workspace:*
-        version: link:../../platforms/javascript/web/dist
+        version: link:../../platforms/javascript/web
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7
@@ -215,7 +215,7 @@ importers:
     dependencies:
       '@contentful/optimization-node':
         specifier: workspace:*
-        version: link:../../platforms/javascript/node/dist
+        version: link:../../platforms/javascript/node
       '@contentful/rich-text-html-renderer':
         specifier: 'catalog:'
         version: 17.1.6(babel-plugin-macros@3.1.0)
@@ -270,7 +270,7 @@ importers:
     dependencies:
       '@contentful/optimization-react-native':
         specifier: workspace:*
-        version: link:../../platforms/javascript/react-native/dist
+        version: link:../../platforms/javascript/react-native
       '@react-native-async-storage/async-storage':
         specifier: ^2.1.0
         version: 2.2.0(react-native@0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@15.0.1(typescript@5.9.2))(@types/react@18.3.26)(react@18.3.1))
@@ -391,7 +391,7 @@ importers:
     dependencies:
       '@contentful/optimization-web':
         specifier: workspace:*
-        version: link:../../platforms/javascript/web/dist
+        version: link:../../platforms/javascript/web
     devDependencies:
       '@playwright/test':
         specifier: ^1.57.0
@@ -438,7 +438,7 @@ importers:
     dependencies:
       '@contentful/optimization-api-schemas':
         specifier: workspace:*
-        version: link:../../universal/api-schemas/dist
+        version: link:../../universal/api-schemas
       '@mswjs/http-middleware':
         specifier: 0.10.3
         version: 0.10.3(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))
@@ -484,7 +484,7 @@ importers:
     dependencies:
       '@contentful/optimization-core':
         specifier: workspace:*
-        version: link:../../../universal/core/dist
+        version: link:../../../universal/core
       es-toolkit:
         specifier: 'catalog:'
         version: 1.39.10
@@ -531,13 +531,12 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.5.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
-    publishDirectory: dist
 
   platforms/javascript/react-native:
     dependencies:
       '@contentful/optimization-core':
         specifier: workspace:*
-        version: link:../../../universal/core/dist
+        version: link:../../../universal/core
       '@react-native-async-storage/async-storage':
         specifier: ^2.1.0
         version: 2.2.0(react-native@0.76.9(@babel/core@7.28.4)(@babel/preset-env@7.28.3(@babel/core@7.28.4))(@react-native-community/cli@15.0.1(typescript@5.9.2))(@types/react@18.3.26)(react@18.3.1))
@@ -665,13 +664,12 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.5.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
-    publishDirectory: dist
 
   platforms/javascript/web:
     dependencies:
       '@contentful/optimization-core':
         specifier: workspace:*
-        version: link:../../../universal/core/dist
+        version: link:../../../universal/core
       '@types/js-cookie':
         specifier: 3.0.6
         version: 3.0.6
@@ -718,13 +716,12 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.5.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
-    publishDirectory: dist
 
   universal/api-client:
     dependencies:
       '@contentful/optimization-api-schemas':
         specifier: workspace:*
-        version: link:../api-schemas/dist
+        version: link:../api-schemas
       es-toolkit:
         specifier: 'catalog:'
         version: 1.39.10
@@ -759,13 +756,12 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.5.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
-    publishDirectory: dist
 
   universal/api-schemas:
     dependencies:
       '@contentful/optimization-api-schemas':
         specifier: workspace:*
-        version: link:dist
+        version: 'link:'
       contentful:
         specifier: 'catalog:'
         version: 11.8.5
@@ -785,13 +781,12 @@ importers:
       typescript:
         specifier: ^5.8.3
         version: 5.9.2
-    publishDirectory: dist
 
   universal/core:
     dependencies:
       '@contentful/optimization-api-client':
         specifier: workspace:*
-        version: link:../api-client/dist
+        version: link:../api-client
       '@preact/signals-core':
         specifier: 'catalog:'
         version: 1.12.1
@@ -832,7 +827,6 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.5.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
-    publishDirectory: dist
 
 packages:
 

@@ -16,7 +16,6 @@
     }
   },
   "publishConfig": {
-    "directory": "dist",
     "access": "public"
   },
   "scripts": {

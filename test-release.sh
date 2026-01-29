@@ -46,6 +46,15 @@ pnpm build
 echo "Found dist directories:"
 find . -name "dist" -type d | grep -E "(universal|platforms/javascript)" | head -10
 
+
+# Pack packages into a specific folder
+PACK_DIR="pkgs"
+mkdir -p "$PACK_DIR"
+echo "Packing packages into $PACK_DIR..."
+pnpm pack --recursive --filter "@contentful/*" --pack-destination "$PACK_DIR"
+
+
+
 # Show changelog
 if [[ -f "CHANGELOG.md" ]]; then
     echo "Recent changelog entries:"
