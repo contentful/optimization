@@ -1,4 +1,4 @@
-import { mockLogger } from '../test/mockLogger'
+import { mockLogger } from 'mocks'
 import { createRetryFetchMethod } from './createRetryFetchMethod'
 
 const TEST_URL = 'https://example.com/endpoint'

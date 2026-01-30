@@ -1,4 +1,4 @@
-import { mockLogger } from '../test/mockLogger'
+import { mockLogger } from 'mocks'
 import { createTimeoutFetchMethod } from './createTimeoutFetchMethod'
 
 describe('createTimeoutFetchMethod', () => {

@@ -1,3 +1,4 @@
+import { createLoggerMock } from 'mocks/loggerMock'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Create mock holder
@@ -15,29 +16,7 @@ describe('createOnlineChangeListener', () => {
     vi.clearAllMocks()
     vi.resetModules()
 
-    vi.doMock('@contentful/optimization-core', () => ({
-      logger: mockLogger,
-      createScopedLogger: (location: string) => ({
-        debug: (message: string, ...args: unknown[]): void => {
-          mockLogger.debug(location, message, ...args)
-        },
-        info: (message: string, ...args: unknown[]): void => {
-          mockLogger.info(location, message, ...args)
-        },
-        log: (message: string, ...args: unknown[]): void => {
-          mockLogger.log(location, message, ...args)
-        },
-        warn: (message: string, ...args: unknown[]): void => {
-          mockLogger.warn(location, message, ...args)
-        },
-        error: (message: string | Error, ...args: unknown[]): void => {
-          mockLogger.error(location, message, ...args)
-        },
-        fatal: (message: string | Error, ...args: unknown[]): void => {
-          mockLogger.fatal(location, message, ...args)
-        },
-      }),
-    }))
+    vi.doMock('@contentful/optimization-core', () => createLoggerMock(mockLogger))
   })
 
   describe('when NetInfo is not installed', () => {

@@ -1,7 +1,6 @@
-import { experienceApiHandlers } from 'mocks'
+import { experienceApiHandlers, loggerMock, resetMockLogger } from 'mocks'
 import { setupServer } from 'msw/node'
 import { vi } from 'vitest'
-import { loggerMock, resetMockLogger } from './mockLogger'
 
 vi.mock('logger', () => loggerMock)
 

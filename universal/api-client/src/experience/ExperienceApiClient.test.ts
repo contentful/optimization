@@ -3,9 +3,9 @@ import {
   ExperienceEventArray,
   ExperienceResponse,
 } from '@contentful/optimization-api-schemas'
+import { mockLogger } from 'mocks'
 import { http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { mockLogger } from '../test/mockLogger'
 import { server } from '../test/setup'
 import ExperienceApiClient, {
   EXPERIENCE_BASE_URL,

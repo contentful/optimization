@@ -51,6 +51,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
+    "mocks": "workspace:*",
     "@babel/plugin-proposal-decorators": "^7.28.0",
     "@babel/plugin-transform-class-properties": "^7.27.1",
     "@babel/plugin-transform-class-static-block": "^7.28.3",

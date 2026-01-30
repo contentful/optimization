@@ -1,6 +1,6 @@
+import { mockLogger } from 'mocks'
 import ApiClientBase, { type ApiConfig } from './ApiClientBase'
 import Fetch from './fetch'
-import { mockLogger } from './test/mockLogger'
 
 class TestApiClient extends ApiClientBase {
   protected readonly baseUrl = 'https://example.com'

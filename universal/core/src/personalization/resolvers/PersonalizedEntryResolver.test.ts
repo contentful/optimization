@@ -11,25 +11,12 @@ import {
   type SelectedPersonalizationArray,
 } from '@contentful/optimization-api-client'
 import type { Entry } from 'contentful'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
+import { mockLogger } from 'mocks'
 import { personalizedEntry as personalizedEntryFixture } from '../../test/fixtures/personalizedEntry'
 import { selectedPersonalizations as selectedPersonalizationsFixture } from '../../test/fixtures/selectedPersonalizations'
 import PersonalizedEntryResolver from './PersonalizedEntryResolver'
-
-const mockLogger = vi.hoisted(() => ({
-  debug: vi.fn(),
-  info: vi.fn(),
-  log: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  fatal: vi.fn(),
-}))
-
-vi.mock('logger', async () => {
-  const { createLoggerMock } = await import('mocks')
-  return createLoggerMock(mockLogger)
-})
 
 const mockedLogger = vi.mocked(mockLogger)
 
@@ -79,11 +66,6 @@ const getEuropeVariantConfig = (): EntryReplacementVariant => {
 
   return maybeVariant
 }
-
-beforeEach(() => {
-  mockedLogger.info.mockClear()
-  mockedLogger.warn.mockClear()
-})
 
 describe('PersonalizedEntryResolver', () => {
   describe('getPersonalizationEntry', () => {

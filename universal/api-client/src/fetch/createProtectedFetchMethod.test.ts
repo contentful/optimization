@@ -1,5 +1,5 @@
+import { mockLogger } from 'mocks'
 import type { MockInstance } from 'vitest'
-import { mockLogger } from '../test/mockLogger'
 import type { FetchMethod } from './Fetch'
 import {
   createProtectedFetchMethod,
