@@ -1,16 +1,5 @@
-import { createLoggerMock } from 'mocks'
+import { mockLogger } from '../test/mockLogger'
 import { createRetryFetchMethod } from './createRetryFetchMethod'
-
-const mockLogger = vi.hoisted(() => ({
-  debug: vi.fn(),
-  info: vi.fn(),
-  log: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  fatal: vi.fn(),
-}))
-
-vi.mock('logger', () => createLoggerMock(mockLogger))
 
 const TEST_URL = 'https://example.com/endpoint'
 

@@ -3,25 +3,14 @@ import {
   ExperienceEventArray,
   ExperienceResponse,
 } from '@contentful/optimization-api-schemas'
-import { createLoggerMock } from 'mocks'
 import { http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { mockLogger } from '../test/mockLogger'
 import { server } from '../test/setup'
 import ExperienceApiClient, {
   EXPERIENCE_BASE_URL,
   type ExperienceApiClientConfig,
 } from './ExperienceApiClient'
-
-const mockLogger = vi.hoisted(() => ({
-  debug: vi.fn(),
-  info: vi.fn(),
-  log: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  fatal: vi.fn(),
-}))
-
-vi.mock('logger', () => createLoggerMock(mockLogger))
 
 const CLIENT_ID = 'key_123'
 const ENVIRONMENT = 'main'

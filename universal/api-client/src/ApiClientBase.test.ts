@@ -1,17 +1,6 @@
-import { createLoggerMock } from 'mocks'
 import ApiClientBase, { type ApiConfig } from './ApiClientBase'
 import Fetch from './fetch'
-
-const mockLogger = vi.hoisted(() => ({
-  debug: vi.fn(),
-  info: vi.fn(),
-  log: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  fatal: vi.fn(),
-}))
-
-vi.mock('logger', () => createLoggerMock(mockLogger))
+import { mockLogger } from './test/mockLogger'
 
 class TestApiClient extends ApiClientBase {
   protected readonly baseUrl = 'https://example.com'

@@ -7,6 +7,15 @@ export interface MockLogger {
   fatal: (...args: unknown[]) => void
 }
 
+export interface MockScopedLogger {
+  debug: (message: string, ...args: unknown[]) => void
+  info: (message: string, ...args: unknown[]) => void
+  log: (message: string, ...args: unknown[]) => void
+  warn: (message: string, ...args: unknown[]) => void
+  error: (message: string | Error, ...args: unknown[]) => void
+  fatal: (message: string | Error, ...args: unknown[]) => void
+}
+
 /**
  * Creates a mock module for the logger package that includes both the global logger
  * and the createScopedLogger factory. The scoped logger routes calls to the mock logger
@@ -33,7 +42,7 @@ export interface MockLogger {
  */
 export function createLoggerMock(mockLogger: MockLogger): {
   logger: MockLogger
-  createScopedLogger: (location: string) => MockLogger
+  createScopedLogger: (location: string) => MockScopedLogger
 } {
   return {
     logger: mockLogger,

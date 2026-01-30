@@ -1,24 +1,13 @@
 import { BatchInsightsEventArray } from '@contentful/optimization-api-schemas'
-import { createLoggerMock } from 'mocks'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ApiClientBase from '../ApiClientBase'
+import { mockLogger } from '../test/mockLogger'
 import { server } from '../test/setup'
 import InsightsApiClient, {
   INSIGHTS_BASE_URL,
   type InsightsApiClientConfig,
 } from './InsightsApiClient'
-
-const mockLogger = vi.hoisted(() => ({
-  debug: vi.fn(),
-  info: vi.fn(),
-  log: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  fatal: vi.fn(),
-}))
-
-vi.mock('logger', () => createLoggerMock(mockLogger))
 
 const CLIENT_ID = 'key_123'
 const ENVIRONMENT = 'main'

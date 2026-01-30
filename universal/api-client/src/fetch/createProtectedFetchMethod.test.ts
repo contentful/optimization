@@ -1,5 +1,5 @@
-import { createLoggerMock } from 'mocks'
 import type { MockInstance } from 'vitest'
+import { mockLogger } from '../test/mockLogger'
 import type { FetchMethod } from './Fetch'
 import {
   createProtectedFetchMethod,
@@ -7,17 +7,6 @@ import {
 } from './createProtectedFetchMethod'
 import * as createRetryFetchMethodModule from './createRetryFetchMethod'
 import * as createTimeoutFetchMethodModule from './createTimeoutFetchMethod'
-
-const mockLogger = vi.hoisted(() => ({
-  debug: vi.fn(),
-  info: vi.fn(),
-  log: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  fatal: vi.fn(),
-}))
-
-vi.mock('logger', () => createLoggerMock(mockLogger))
 
 vi.mock('./createRetryFetchMethod')
 vi.mock('./createTimeoutFetchMethod')

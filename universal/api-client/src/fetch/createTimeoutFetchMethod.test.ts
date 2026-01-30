@@ -1,16 +1,5 @@
-import { createLoggerMock } from 'mocks'
+import { mockLogger } from '../test/mockLogger'
 import { createTimeoutFetchMethod } from './createTimeoutFetchMethod'
-
-const mockLogger = vi.hoisted(() => ({
-  debug: vi.fn(),
-  info: vi.fn(),
-  log: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  fatal: vi.fn(),
-}))
-
-vi.mock('logger', () => createLoggerMock(mockLogger))
 
 describe('createTimeoutFetchMethod', () => {
   let fetchMock: ReturnType<typeof vi.fn>
