@@ -1,9 +1,10 @@
-import ApiClient, {
+import {
+  ApiClient,
+  EventBuilder,
   type InsightsEvent as AnalyticsEvent,
   type ApiClientConfig,
   type ChangeArray,
   type ComponentViewBuilderArgs,
-  EventBuilder,
   type EventBuilderConfig,
   type ExperienceApiClientConfig,
   type GlobalApiConfigProperties,

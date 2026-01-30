@@ -11,7 +11,8 @@
       "@contentful/optimization-core": ["../../universal/core/src/index.ts"],
       "@contentful/optimization-react-native": [
         "../../platforms/javascript/react-native/src/index.ts"
-      ]
+      ],
+      "logger": ["../../lib/logger/src/index.ts"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"],

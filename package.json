@@ -9,7 +9,7 @@
     "pm2:delete:all": "pm2 delete all",
     "pm2:stop:all": "pm2 stop all",
     "prepare": "husky",
-    "build": "pnpm --filter @contentful/* build",
+    "build": "pnpm --filter logger --filter @contentful/* build",
     "build:implementations": "pnpm --filter @implementation/* build",
     "clean": "pnpm -r --parallel clean",
     "docs:generate": "typedoc",

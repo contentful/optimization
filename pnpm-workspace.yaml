@@ -7,8 +7,10 @@ packages:
 catalog:
   '@contentful/rich-text-html-renderer': ^17.1.6
   '@contentful/rich-text-types': ^17.2.5
+  '@microsoft/api-extractor': ^7.56.0
   '@playwright/test': ^1.57.0
   '@preact/signals-core': ^1.12.1
+  '@rslib/core': ^0.19.4
   '@types/express': ^5.0.3
   '@types/node': ^24.0.13
   '@types/qs': ^6.14.0
@@ -16,6 +18,7 @@ catalog:
   '@vitest/coverage-v8': ^3.2.4
   browserslist: ^4.25.1
   contentful: ^11.7.19
+  diary: ^0.4.5
   dotenv: ^17.2.2
   es-toolkit: ^1.39.10
   express: ^5.1.0
@@ -25,7 +28,7 @@ catalog:
   pm2: ^6.0.13
   qs: ^6.14.0
   rimraf: ^6.0.1
-  supertest: 7.1.3
+  supertest: ^7.1.3
   tslib: ^2.8.1
   tsx: ^4.20.3
   typescript: ^5.8.3
