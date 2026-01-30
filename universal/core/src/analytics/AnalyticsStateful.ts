@@ -6,7 +6,7 @@ import {
   type ExperienceEvent as PersonalizationEvent,
   type Profile,
 } from '@contentful/optimization-api-client'
-import { logger } from 'logger'
+import { createScopedLogger } from 'logger'
 import type { ConsentGuard } from '../Consent'
 import { guardedBy } from '../lib/decorators'
 import type { ProductBaseOptions, ProductConfig } from '../ProductBase'
@@ -21,6 +21,8 @@ import {
   type Observable,
 } from '../signals'
 import AnalyticsBase from './AnalyticsBase'
+
+const logger = createScopedLogger('Analytics')
 
 /**
  * Default analytics state values applied at construction time.
@@ -111,10 +113,10 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
       const id = profileSignal.value?.id
 
       logger.info(
-        `[Analytics] Analytics ${consent.value ? 'will' : 'will not'} be collected due to consent (${consent.value})`,
+        `Analytics ${consent.value ? 'will' : 'will not'} be collected due to consent (${consent.value})`,
       )
 
-      logger.info(`[Analytics] Profile ${id && `with ID ${id}`} has been ${id ? 'set' : 'cleared'}`)
+      logger.debug(`Profile ${id && `with ID ${id}`} has been ${id ? 'set' : 'cleared'}`)
     })
 
     effect(() => {
@@ -157,7 +159,7 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    */
   onBlockedByConsent(name: string, payload: unknown[]): void {
     logger.warn(
-      `[Anaylytics] Event "${name}" was blocked due to lack of consent; payload: ${JSON.stringify(payload)}`,
+      `Event "${name}" was blocked due to lack of consent; payload: ${JSON.stringify(payload)}`,
     )
   }
 
@@ -188,8 +190,8 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
   onBlockedByDuplication(name: string, payload: unknown[]): void {
     const componentType = name === 'trackFlagView' ? 'flag' : 'component'
 
-    logger.info(
-      `[Analytics] Duplicate "${componentType} view" event detected, skipping; payload: ${JSON.stringify(payload)}`,
+    logger.debug(
+      `Duplicate "${componentType} view" event detected, skipping; payload: ${JSON.stringify(payload)}`,
     )
   }
 
@@ -206,7 +208,7 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
     payload: ComponentViewBuilderArgs,
     _duplicationScope = '',
   ): Promise<void> {
-    logger.info(`[Analytics] Processing "component view" event for`, payload.componentId)
+    logger.info(`Processing "component view" event for ${payload.componentId}`)
 
     await this.enqueueEvent(this.builder.buildComponentView(payload))
   }
@@ -221,7 +223,7 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
   @guardedBy('isNotDuplicated', { onBlocked: 'onBlockedByDuplication' })
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async trackFlagView(payload: ComponentViewBuilderArgs, _duplicationScope = ''): Promise<void> {
-    logger.debug(`[Analytics] Processing "flag view" event for`, payload.componentId)
+    logger.debug(`Processing "flag view" event for ${payload.componentId}`)
 
     await this.enqueueEvent(this.builder.buildFlagView(payload))
   }
@@ -274,7 +276,7 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    * profile in a stateful application.
    */
   async flush(): Promise<void> {
-    logger.debug(`[Analytics] Flushing event queue`)
+    logger.debug('Flushing event queue')
 
     const batches: BatchInsightsEventArray = []
 

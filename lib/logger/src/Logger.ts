@@ -5,12 +5,18 @@ import type LogSink from './LogSink'
 export class Logger {
   readonly name = '@contentful/optimization'
 
+  private readonly PREFIX_PARTS = ['Ctfl', 'O10n']
+  private readonly DELIMITER = ':'
   private readonly diary: Diary
   private sinks: LogSink[] = []
 
   constructor() {
     this.diary = diary(this.name, this.onLogEvent.bind(this))
     enable(this.name)
+  }
+
+  private assembleLocationPrefix(logLocation: string): string {
+    return `[${[...this.PREFIX_PARTS, logLocation].join(this.DELIMITER)}]`
   }
 
   public addSink(sink: LogSink): void {
@@ -25,28 +31,28 @@ export class Logger {
     this.sinks = []
   }
 
-  public debug(message: string, ...args: unknown[]): void {
-    this.diary.debug(message, ...args)
+  public debug(logLocation: string, message: string, ...args: unknown[]): void {
+    this.diary.debug(`${this.assembleLocationPrefix(logLocation)} ${message}`, ...args)
   }
 
-  public info(message: string, ...args: unknown[]): void {
-    this.diary.info(message, ...args)
+  public info(logLocation: string, message: string, ...args: unknown[]): void {
+    this.diary.info(`${this.assembleLocationPrefix(logLocation)} ${message}`, ...args)
   }
 
-  public log(message: string, ...args: unknown[]): void {
-    this.diary.log(message, ...args)
+  public log(logLocation: string, message: string, ...args: unknown[]): void {
+    this.diary.log(`${this.assembleLocationPrefix(logLocation)} ${message}`, ...args)
   }
 
-  public warn(message: string, ...args: unknown[]): void {
-    this.diary.warn(message, ...args)
+  public warn(logLocation: string, message: string, ...args: unknown[]): void {
+    this.diary.warn(`${this.assembleLocationPrefix(logLocation)} ${message}`, ...args)
   }
 
-  public error(message: string | Error, ...args: unknown[]): void {
-    this.diary.error(message, ...args)
+  public error(logLocation: string, message: string | Error, ...args: unknown[]): void {
+    this.diary.error(`${this.assembleLocationPrefix(logLocation)} ${message}`, ...args)
   }
 
-  public fatal(message: string | Error, ...args: unknown[]): void {
-    this.diary.fatal(message, ...args)
+  public fatal(logLocation: string, message: string | Error, ...args: unknown[]): void {
+    this.diary.fatal(`${this.assembleLocationPrefix(logLocation)} ${message}`, ...args)
   }
 
   private onLogEvent(event: LogEvent): void {
@@ -57,3 +63,35 @@ export class Logger {
 }
 
 export const logger = new Logger()
+
+export interface ScopedLogger {
+  debug: (message: string, ...args: unknown[]) => void
+  info: (message: string, ...args: unknown[]) => void
+  log: (message: string, ...args: unknown[]) => void
+  warn: (message: string, ...args: unknown[]) => void
+  error: (message: string | Error, ...args: unknown[]) => void
+  fatal: (message: string | Error, ...args: unknown[]) => void
+}
+
+export function createScopedLogger(location: string): ScopedLogger {
+  return {
+    debug: (message: string, ...args: unknown[]) => {
+      logger.debug(location, message, ...args)
+    },
+    info: (message: string, ...args: unknown[]) => {
+      logger.info(location, message, ...args)
+    },
+    log: (message: string, ...args: unknown[]) => {
+      logger.log(location, message, ...args)
+    },
+    warn: (message: string, ...args: unknown[]) => {
+      logger.warn(location, message, ...args)
+    },
+    error: (message: string | Error, ...args: unknown[]) => {
+      logger.error(location, message, ...args)
+    },
+    fatal: (message: string | Error, ...args: unknown[]) => {
+      logger.fatal(location, message, ...args)
+    },
+  }
+}

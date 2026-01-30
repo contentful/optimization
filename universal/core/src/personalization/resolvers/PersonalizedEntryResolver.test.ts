@@ -11,23 +11,16 @@ import {
   type SelectedPersonalizationArray,
 } from '@contentful/optimization-api-client'
 import type { Entry } from 'contentful'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
-import { logger } from 'logger'
+import { mockLogger } from 'mocks'
 import { personalizedEntry as personalizedEntryFixture } from '../../test/fixtures/personalizedEntry'
 import { selectedPersonalizations as selectedPersonalizationsFixture } from '../../test/fixtures/selectedPersonalizations'
 import PersonalizedEntryResolver from './PersonalizedEntryResolver'
 
-vi.mock('logger', () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-  },
-}))
+const mockedLogger = vi.mocked(mockLogger)
 
-const mockedLogger = vi.mocked(logger)
-
-const RESOLUTION_WARNING_BASE = '[Personalization] Could not resolve personalized entry variant:'
+const RESOLUTION_WARNING_BASE = 'Could not resolve personalized entry variant:'
 
 const getPersonalizedEntry = (): PersonalizedEntry => {
   if (!isPersonalizedEntry(personalizedEntryFixture)) {
@@ -73,11 +66,6 @@ const getEuropeVariantConfig = (): EntryReplacementVariant => {
 
   return maybeVariant
 }
-
-beforeEach(() => {
-  mockedLogger.info.mockClear()
-  mockedLogger.warn.mockClear()
-})
 
 describe('PersonalizedEntryResolver', () => {
   describe('getPersonalizationEntry', () => {
@@ -291,13 +279,13 @@ describe('PersonalizedEntryResolver', () => {
       expect(result.entry).toBe(personalizedEntryFixture)
       expect(result.personalization).toBeUndefined()
 
-      expect(mockedLogger.info).toHaveBeenCalledWith(
-        '[Personalization] Resolving personalized entry for baseline entry',
-        personalizedEntryFixture.sys.id,
+      expect(mockedLogger.debug).toHaveBeenCalledWith(
+        'Personalization',
+        `Resolving personalized entry for baseline entry ${personalizedEntryFixture.sys.id}`,
       )
       expect(mockedLogger.warn).toHaveBeenCalledWith(
-        RESOLUTION_WARNING_BASE,
-        'no selectedPersonalizations exist for the current profile',
+        'Personalization',
+        `${RESOLUTION_WARNING_BASE} no selectedPersonalizations exist for the current profile`,
       )
     })
 
@@ -319,8 +307,8 @@ describe('PersonalizedEntryResolver', () => {
       expect(result.personalization).toBeUndefined()
 
       expect(mockedLogger.warn).toHaveBeenCalledWith(
-        RESOLUTION_WARNING_BASE,
-        `entry ${nonPersonalizedEntry.sys.id} is not personalized`,
+        'Personalization',
+        `${RESOLUTION_WARNING_BASE} entry ${nonPersonalizedEntry.sys.id} is not personalized`,
       )
     })
 
@@ -341,8 +329,8 @@ describe('PersonalizedEntryResolver', () => {
       expect(result.personalization).toBeUndefined()
 
       expect(mockedLogger.warn).toHaveBeenCalledWith(
-        RESOLUTION_WARNING_BASE,
-        `could not find a personalization entry for ${personalizedEntryFixture.sys.id}`,
+        'Personalization',
+        `${RESOLUTION_WARNING_BASE} could not find a personalization entry for ${personalizedEntryFixture.sys.id}`,
       )
     })
 
@@ -363,8 +351,9 @@ describe('PersonalizedEntryResolver', () => {
       expect(result.entry).toBe(personalizedEntryFixture)
       expect(result.personalization).toBeUndefined()
 
-      expect(mockedLogger.info).toHaveBeenCalledWith(
-        `[Personalization] Resolved personalization entry for entry ${personalizedEntryFixture.sys.id} is baseline`,
+      expect(mockedLogger.debug).toHaveBeenCalledWith(
+        'Personalization',
+        `Resolved personalization entry for entry ${personalizedEntryFixture.sys.id} is baseline`,
       )
     })
 
@@ -386,8 +375,8 @@ describe('PersonalizedEntryResolver', () => {
       expect(result.personalization).toBeUndefined()
 
       expect(mockedLogger.warn).toHaveBeenCalledWith(
-        RESOLUTION_WARNING_BASE,
-        `could not find a valid replacement variant entry for ${personalizedEntryFixture.sys.id}`,
+        'Personalization',
+        `${RESOLUTION_WARNING_BASE} could not find a valid replacement variant entry for ${personalizedEntryFixture.sys.id}`,
       )
     })
 
@@ -409,8 +398,8 @@ describe('PersonalizedEntryResolver', () => {
         expect(result.personalization).toBeUndefined()
 
         expect(mockedLogger.warn).toHaveBeenCalledWith(
-          RESOLUTION_WARNING_BASE,
-          `could not find a valid replacement variant entry for ${personalizedEntry.sys.id}`,
+          'Personalization',
+          `${RESOLUTION_WARNING_BASE} could not find a valid replacement variant entry for ${personalizedEntry.sys.id}`,
         )
       } finally {
         // Restore variants for other tests
@@ -432,12 +421,13 @@ describe('PersonalizedEntryResolver', () => {
         }),
       )
 
-      expect(mockedLogger.info).toHaveBeenCalledWith(
-        '[Personalization] Resolving personalized entry for baseline entry',
-        personalizedEntryFixture.sys.id,
+      expect(mockedLogger.debug).toHaveBeenCalledWith(
+        'Personalization',
+        `Resolving personalized entry for baseline entry ${personalizedEntryFixture.sys.id}`,
       )
-      expect(mockedLogger.info).toHaveBeenCalledWith(
-        `[Personalization] Entry ${personalizedEntryFixture.sys.id} has been resolved to variant entry 4k6ZyFQnR2POY5IJLLlJRb`,
+      expect(mockedLogger.debug).toHaveBeenCalledWith(
+        'Personalization',
+        `Entry ${personalizedEntryFixture.sys.id} has been resolved to variant entry 4k6ZyFQnR2POY5IJLLlJRb`,
       )
     })
   })

@@ -1,9 +1,11 @@
-import { logger, type SelectedPersonalization } from '@contentful/optimization-core'
+import { createScopedLogger, type SelectedPersonalization } from '@contentful/optimization-core'
 import type { Entry } from 'contentful'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Dimensions, type LayoutChangeEvent } from 'react-native'
 import { useOptimization } from '../context/OptimizationContext'
 import { useScrollContext } from '../context/ScrollContext'
+
+const logger = createScopedLogger('RN:ViewportTracking')
 
 export interface UseViewportTrackingOptions {
   /**
@@ -117,38 +119,36 @@ export function useViewportTracking({
   optimizationRef.current = optimization
 
   logger.debug(
-    `[ViewportTracking] Hook initialized for ${componentId} (experienceId: ${experienceId}, variantIndex: ${variantIndex})`,
+    `Hook initialized for ${componentId} (experienceId: ${experienceId}, variantIndex: ${variantIndex})`,
   )
 
   // Log if hook is being re-created (potential React Strict Mode or unmount/remount issue)
   useEffect(() => {
-    logger.debug(`[ViewportTracking] Hook mounted/updated for ${componentId}`)
+    logger.debug(`Hook mounted/updated for ${componentId}`)
     return () => {
-      logger.debug(`[ViewportTracking] Hook unmounting for ${componentId}`)
+      logger.debug(`Hook unmounting for ${componentId}`)
     }
   }, [])
 
   const startTrackingTimer = useCallback(
     (visibilityPercent: number) => {
       logger.info(
-        `[ViewportTracking] Component ${componentId} became visible (${visibilityPercent.toFixed(1)}%), starting ${viewTimeMs}ms timer`,
+        `Component ${componentId} became visible (${visibilityPercent.toFixed(1)}%), starting ${viewTimeMs}ms timer`,
       )
 
       // Clear any existing timeout
       if (viewTimeoutRef.current) {
-        logger.debug(`[ViewportTracking] Clearing existing timer for ${componentId}`)
+        logger.debug(`Clearing existing timer for ${componentId}`)
         clearTimeout(viewTimeoutRef.current)
       }
 
       viewTimeoutRef.current = setTimeout(() => {
         const { current: isVisible } = isVisibleRef
 
-        logger.debug(`[ViewportTracking] Timer fired for ${componentId} - isVisible: ${isVisible}`)
+        logger.debug(`Timer fired for ${componentId} - isVisible: ${isVisible}`)
 
         if (isVisible) {
-          logger.info(
-            `[ViewportTracking] Component ${componentId} visible for ${viewTimeMs}ms, initiating tracking`,
-          )
+          logger.info(`Component ${componentId} visible for ${viewTimeMs}ms, initiating tracking`)
 
           // Use ref to get current optimization instance
           const { current: currentOptimization } = optimizationRef
@@ -162,9 +162,7 @@ export function useViewportTracking({
             })
           })()
         } else {
-          logger.debug(
-            `[ViewportTracking] Skipping track for ${componentId} - component no longer visible`,
-          )
+          logger.debug(`Skipping track for ${componentId} - component no longer visible`)
         }
       }, viewTimeMs)
     },
@@ -174,7 +172,7 @@ export function useViewportTracking({
   const canCheckVisibility = useCallback((): boolean => {
     const { current: dimensions } = dimensionsRef
     if (!dimensions) {
-      logger.debug(`[ViewportTracking] ${componentId} has no dimensions yet`)
+      logger.debug(`${componentId} has no dimensions yet`)
       return false
     }
 
@@ -182,7 +180,7 @@ export function useViewportTracking({
       const context = scrollContext
         ? '(waiting for ScrollView layout)'
         : '(waiting for screen dimensions)'
-      logger.debug(`[ViewportTracking] ${componentId} viewport height is 0 ${context}`)
+      logger.debug(`${componentId} viewport height is 0 ${context}`)
       return false
     }
 
@@ -190,7 +188,7 @@ export function useViewportTracking({
   }, [componentId, viewportHeight, scrollContext])
 
   const checkVisibility = useCallback(() => {
-    logger.debug(`[ViewportTracking] checkVisibility called for ${componentId}`)
+    logger.debug(`checkVisibility called for ${componentId}`)
 
     if (!canCheckVisibility()) {
       return
@@ -216,7 +214,7 @@ export function useViewportTracking({
 
     const contextType = scrollContext ? '(ScrollView)' : '(non-scrollable)'
     logger.debug(
-      `[ViewportTracking] ${componentId} visibility check ${contextType}:
+      `${componentId} visibility check ${contextType}:
   Element: y=${elementY.toFixed(0)}, bottom=${elementBottom.toFixed(0)}
   Viewport: scrollY=${scrollY.toFixed(0)}, height=${viewportHeight.toFixed(0)}, top=${viewportTop.toFixed(0)}, bottom=${viewportBottom.toFixed(0)}
   Visible: height=${visibleHeight.toFixed(0)}, ratio=${visibilityRatio.toFixed(2)}, threshold=${threshold}`,
@@ -227,11 +225,11 @@ export function useViewportTracking({
     isVisibleRef.current = isNowVisible
 
     if (isNowVisible && !wasVisible) {
-      logger.info(`[ViewportTracking] ${componentId} transitioned from invisible to visible`)
+      logger.info(`${componentId} transitioned from invisible to visible`)
       startTrackingTimer(visibilityRatio * PERCENTAGE_MULTIPLIER)
     } else if (!isNowVisible && wasVisible) {
       logger.info(
-        `[ViewportTracking] ${componentId} became invisible (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%), canceling timer`,
+        `${componentId} became invisible (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%), canceling timer`,
       )
 
       if (viewTimeoutRef.current) {
@@ -240,11 +238,11 @@ export function useViewportTracking({
       }
     } else if (!isNowVisible) {
       logger.debug(
-        `[ViewportTracking] ${componentId} is not visible enough (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%)`,
+        `${componentId} is not visible enough (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%)`,
       )
     } else {
       logger.debug(
-        `[ViewportTracking] ${componentId} remains visible (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%)`,
+        `${componentId} remains visible (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%)`,
       )
     }
   }, [
@@ -265,7 +263,7 @@ export function useViewportTracking({
         },
       } = event
       logger.debug(
-        `[ViewportTracking] Layout for ${componentId}: y=${y}, height=${height} (position within ScrollView content)`,
+        `Layout for ${componentId}: y=${y}, height=${height} (position within ScrollView content)`,
       )
       dimensionsRef.current = { y, height }
 

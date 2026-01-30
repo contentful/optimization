@@ -12,7 +12,9 @@ import {
   type SelectedPersonalizationArray,
 } from '@contentful/optimization-api-client'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
-import { logger } from 'logger'
+import { createScopedLogger } from 'logger'
+
+const logger = createScopedLogger('Personalization')
 
 /**
  * Result returned by {@link PersonalizedEntryResolver.resolve}.
@@ -34,7 +36,7 @@ export interface ResolvedData<
 }
 
 /** Base string for resolver warning messages. */
-const RESOLUTION_WARNING_BASE = '[Personalization] Could not resolve personalized entry variant:'
+const RESOLUTION_WARNING_BASE = 'Could not resolve personalized entry variant:'
 
 /**
  * Resolve a personalized Contentful entry to the correct variant for the current
@@ -256,18 +258,17 @@ const PersonalizedEntryResolver = {
     entry: Entry<S, M, L>,
     selectedPersonalizations?: SelectedPersonalizationArray,
   ): ResolvedData<S, M, L> {
-    logger.info('[Personalization] Resolving personalized entry for baseline entry', entry.sys.id)
+    logger.debug(`Resolving personalized entry for baseline entry ${entry.sys.id}`)
 
     if (!selectedPersonalizations?.length) {
       logger.warn(
-        RESOLUTION_WARNING_BASE,
-        'no selectedPersonalizations exist for the current profile',
+        `${RESOLUTION_WARNING_BASE} no selectedPersonalizations exist for the current profile`,
       )
       return { entry }
     }
 
     if (!isPersonalizedEntry(entry)) {
-      logger.warn(RESOLUTION_WARNING_BASE, `entry ${entry.sys.id} is not personalized`)
+      logger.warn(`${RESOLUTION_WARNING_BASE} entry ${entry.sys.id} is not personalized`)
       return { entry }
     }
 
@@ -281,8 +282,7 @@ const PersonalizedEntryResolver = {
 
     if (!personalizationEntry) {
       logger.warn(
-        RESOLUTION_WARNING_BASE,
-        `could not find a personalization entry for ${entry.sys.id}`,
+        `${RESOLUTION_WARNING_BASE} could not find a personalization entry for ${entry.sys.id}`,
       )
       return { entry }
     }
@@ -298,9 +298,7 @@ const PersonalizedEntryResolver = {
     const selectedVariantIndex = selectedPersonalization?.variantIndex ?? 0
 
     if (selectedVariantIndex === 0) {
-      logger.info(
-        `[Personalization] Resolved personalization entry for entry ${entry.sys.id} is baseline`,
-      )
+      logger.debug(`Resolved personalization entry for entry ${entry.sys.id} is baseline`)
 
       return { entry }
     }
@@ -316,8 +314,7 @@ const PersonalizedEntryResolver = {
 
     if (!selectedVariant) {
       logger.warn(
-        RESOLUTION_WARNING_BASE,
-        `could not find a valid replacement variant entry for ${entry.sys.id}`,
+        `${RESOLUTION_WARNING_BASE} could not find a valid replacement variant entry for ${entry.sys.id}`,
       )
       return { entry }
     }
@@ -332,13 +329,12 @@ const PersonalizedEntryResolver = {
 
     if (!selectedVariantEntry) {
       logger.warn(
-        RESOLUTION_WARNING_BASE,
-        `could not find a valid replacement variant entry for ${entry.sys.id}`,
+        `${RESOLUTION_WARNING_BASE} could not find a valid replacement variant entry for ${entry.sys.id}`,
       )
       return { entry }
     } else {
-      logger.info(
-        `[Personalization] Entry ${entry.sys.id} has been resolved to variant entry ${selectedVariantEntry.sys.id}`,
+      logger.debug(
+        `Entry ${entry.sys.id} has been resolved to variant entry ${selectedVariantEntry.sys.id}`,
       )
     }
 

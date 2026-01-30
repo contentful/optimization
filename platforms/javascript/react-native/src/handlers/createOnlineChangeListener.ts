@@ -1,4 +1,6 @@
-import { logger } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core'
+
+const logger = createScopedLogger('RN:Network')
 
 /**
  * Callback invoked when the device's connectivity state changes.
@@ -90,9 +92,7 @@ export function createOnlineChangeListener(callback: Callback): () => void {
 
     return unsubscribe
   } catch {
-    logger.warn(
-      '[Optimization RN SDK] @react-native-community/netinfo not installed. Offline detection disabled.',
-    )
+    logger.warn('@react-native-community/netinfo not installed. Offline detection disabled.')
     return () => undefined
   }
 }

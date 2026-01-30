@@ -17,7 +17,7 @@ import {
 } from '@contentful/optimization-api-client'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import { isEqual } from 'es-toolkit'
-import { logger } from 'logger'
+import { createScopedLogger } from 'logger'
 import type { ConsentGuard } from '../Consent'
 import { guardedBy } from '../lib/decorators'
 import type { ProductBaseOptions, ProductConfig } from '../ProductBase'
@@ -36,6 +36,8 @@ import {
 } from '../signals'
 import PersonalizationBase from './PersonalizationBase'
 import type { ResolvedData } from './resolvers'
+
+const logger = createScopedLogger('Personalization')
 
 /**
  * Default state values for {@link PersonalizationStateful} applied at construction time.
@@ -167,20 +169,20 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
 
     // Log signal changes for observability
     effect(() => {
-      logger.info(
-        `[Personalization] Profile ${profileSignal.value && `with ID ${profileSignal.value.id}`} has been ${profileSignal.value ? 'set' : 'cleared'}`,
+      logger.debug(
+        `Profile ${profileSignal.value && `with ID ${profileSignal.value.id}`} has been ${profileSignal.value ? 'set' : 'cleared'}`,
+      )
+    })
+
+    effect(() => {
+      logger.debug(
+        `Variants have been ${personalizationsSignal.value?.length ? 'populated' : 'cleared'}`,
       )
     })
 
     effect(() => {
       logger.info(
-        `[Personalization] Variants have been ${personalizationsSignal.value?.length ? 'populated' : 'cleared'}`,
-      )
-    })
-
-    effect(() => {
-      logger.info(
-        `[Personalization] Personalization ${consentSignal.value ? 'will' : 'will not'} take effect due to consent (${consentSignal.value})`,
+        `Personalization ${consentSignal.value ? 'will' : 'will not'} take effect due to consent (${consentSignal.value})`,
       )
     })
 
@@ -276,7 +278,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    */
   onBlockedByConsent(name: string, payload: unknown[]): void {
     logger.warn(
-      `[Personalization] Event "${name}" was blocked due to lack of consent; payload: ${JSON.stringify(payload)}`,
+      `Event "${name}" was blocked due to lack of consent; payload: ${JSON.stringify(payload)}`,
     )
   }
 
@@ -305,8 +307,8 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * @param payload - The original arguments supplied to the operation.
    */
   onBlockedByDuplication(_name: string, payload: unknown[]): void {
-    logger.info(
-      `[Analytics] Duplicate "component view" event detected, skipping; payload: ${JSON.stringify(payload)}`,
+    logger.debug(
+      `Duplicate "component view" event detected, skipping; payload: ${JSON.stringify(payload)}`,
     )
   }
 
@@ -319,7 +321,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async identify(payload: IdentifyBuilderArgs): Promise<OptimizationData | undefined> {
-    logger.info('[Personalization] Sending "identify" event')
+    logger.info('Sending "identify" event')
 
     const event = this.builder.buildIdentify(payload)
 
@@ -334,7 +336,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async page(payload: PageViewBuilderArgs): Promise<OptimizationData | undefined> {
-    logger.info('[Personalization] Sending "page" event')
+    logger.info('Sending "page" event')
 
     const event = this.builder.buildPageView(payload)
 
@@ -349,7 +351,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async screen(payload: ScreenViewBuilderArgs): Promise<OptimizationData | undefined> {
-    logger.info(`[Personalization] Sending "screen" event for "${payload.name}"`)
+    logger.info(`Sending "screen" event for "${payload.name}"`)
 
     const event = this.builder.buildScreenView(payload)
 
@@ -364,7 +366,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async track(payload: TrackBuilderArgs): Promise<OptimizationData | undefined> {
-    logger.info(`[Personalization] Sending "track" event "${payload.event}"`)
+    logger.info(`Sending "track" event "${payload.event}"`)
 
     const event = this.builder.buildTrack(payload)
 
@@ -384,7 +386,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
     payload: ComponentViewBuilderArgs,
     _duplicationScope = '',
   ): Promise<OptimizationData | undefined> {
-    logger.info(`[Personalization] Sending "track personalization" event for`, payload.componentId)
+    logger.info(`Sending "track personalization" event for ${payload.componentId}`)
 
     const event = this.builder.buildComponentView(payload)
 
@@ -421,7 +423,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
   async flush(): Promise<void> {
     if (this.offlineQueue.size === 0) return
 
-    logger.debug(`[Personalization] Flushing offline event queue`)
+    logger.debug('Flushing offline event queue')
 
     await this.upsertProfile(Array.from(this.offlineQueue))
 
@@ -442,7 +444,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    */
   private async upsertProfile(events: PersonalizationEventArray): Promise<OptimizationData> {
     const anonymousId = this.getAnonymousId()
-    if (anonymousId) logger.info('[Personalization] Anonymous ID found:', anonymousId)
+    if (anonymousId) logger.debug(`Anonymous ID found: ${anonymousId}`)
 
     const data = await this.api.experience.upsertProfile({
       profileId: anonymousId ?? profileSignal.value?.id,

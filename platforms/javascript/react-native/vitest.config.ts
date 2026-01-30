@@ -7,6 +7,7 @@ export default defineConfig({
       '@contentful/optimization-api-client': resolve(__dirname, '../api-client/src/'),
       '@contentful/optimization-api-schemas': resolve(__dirname, '../api-schemas/src/'),
       '@contentful/optimization-core': resolve(__dirname, '../core/src/index.ts'),
+      'mocks/loggerMock': resolve(__dirname, '../../../lib/mocks/src/loggerMock.ts'),
     },
   },
   test: {

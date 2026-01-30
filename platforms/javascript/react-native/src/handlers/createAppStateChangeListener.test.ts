@@ -1,3 +1,4 @@
+import { createLoggerMock } from 'mocks/loggerMock'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Create a holder for the AppState callback
@@ -7,8 +8,12 @@ const callbackHolder: {
 
 const mockRemove = vi.fn()
 const mockLogger = {
-  error: vi.fn(),
+  debug: vi.fn(),
+  info: vi.fn(),
+  log: vi.fn(),
   warn: vi.fn(),
+  error: vi.fn(),
+  fatal: vi.fn(),
 }
 
 describe('createAppStateChangeListener', () => {
@@ -18,9 +23,7 @@ describe('createAppStateChangeListener', () => {
     vi.resetModules()
 
     // Set up mocks before each test
-    vi.doMock('@contentful/optimization-core', () => ({
-      logger: mockLogger,
-    }))
+    vi.doMock('@contentful/optimization-core', () => createLoggerMock(mockLogger))
 
     vi.doMock('react-native', () => ({
       AppState: {
@@ -114,7 +117,11 @@ describe('createAppStateChangeListener', () => {
 
     await vi.waitFor(() => {
       expect(callback).toHaveBeenCalled()
-      expect(mockLogger.error).toHaveBeenCalledWith('Error in app state callback:', error)
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'RN:AppState',
+        'Error in app state callback:',
+        error,
+      )
     })
   })
 
@@ -130,7 +137,11 @@ describe('createAppStateChangeListener', () => {
 
     await vi.waitFor(() => {
       expect(callback).toHaveBeenCalled()
-      expect(mockLogger.error).toHaveBeenCalledWith('Error in app state callback:', error)
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        'RN:AppState',
+        'Error in app state callback:',
+        error,
+      )
     })
   })
 

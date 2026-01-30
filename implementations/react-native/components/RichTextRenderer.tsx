@@ -3,8 +3,10 @@ import { Text } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
 import type { MergeTagEntry } from '@contentful/optimization-react-native'
-import { logger } from '@contentful/optimization-react-native'
+import { createScopedLogger } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
+
+const logger = createScopedLogger('Demo:RichText')
 
 interface RichTextNode {
   nodeType: string
@@ -60,7 +62,7 @@ function renderTextNode(node: RichTextNode): string | null {
 }
 
 function logAndReturnFallback(message: string): string {
-  logger.error(`[RichTextRenderer] ${message}`)
+  logger.error(message)
   return '[Merge Tag]'
 }
 
@@ -76,14 +78,14 @@ function resolveMergeTagValue(includedEntry: MergeTagEntry, sdk: Optimization): 
 
   if (resolvedValue === undefined || resolvedValue === null) {
     logger.error(
-      `[RichTextRenderer] Failed to resolve merge tag: getMergeTagValue returned ${String(resolvedValue)} for merge tag "${includedEntry.fields.nt_name}" (nt_mergetag_id: ${includedEntry.fields.nt_mergetag_id})`,
+      `Failed to resolve merge tag: getMergeTagValue returned ${String(resolvedValue)} for merge tag "${includedEntry.fields.nt_name}" (nt_mergetag_id: ${includedEntry.fields.nt_mergetag_id})`,
     )
     return includedEntry.fields.nt_fallback?.toString() ?? '[Merge Tag]'
   }
 
   const valueString = convertToString(resolvedValue)
   logger.debug(
-    `[RichTextRenderer] Successfully resolved merge tag "${includedEntry.fields.nt_name}" to value: ${valueString}`,
+    `Successfully resolved merge tag "${includedEntry.fields.nt_name}" to value: ${valueString}`,
   )
   return valueString
 }
@@ -143,7 +145,7 @@ export function RichTextRenderer({ richText, sdk }: RichTextRendererProps): Reac
 
     if (isEmbeddedEntryInline(node)) {
       const mergeTagValue = renderEmbeddedEntry(node, sdk)
-      logger.debug(`[RichTextRenderer] Merge tag resolved to: "${mergeTagValue}"`)
+      logger.debug(`Merge tag resolved to: "${mergeTagValue}"`)
       return mergeTagValue
     }
 

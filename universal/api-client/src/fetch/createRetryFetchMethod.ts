@@ -1,6 +1,8 @@
-import { logger } from 'logger'
+import { createScopedLogger } from 'logger'
 import retry from 'p-retry'
 import type { BaseFetchMethodOptions, FetchMethod, FetchMethodCallbackOptions } from './Fetch'
+
+const logger = createScopedLogger('ApiClient:Retry')
 
 /**
  * Default interval (in milliseconds) between retry attempts.
@@ -138,18 +140,17 @@ function createRetryFetchCallback({
       }
 
       if (!response.ok) {
-        logger.error(
-          `${apiName} API request to "${url.toString()}" failed with status: "[${response.status}] ${
-            response.statusText
-          } - traceparent: ${response.headers.get('traceparent')}"`,
+        const httpError = new Error(
+          `Request to "${url.toString()}" failed with status: [${response.status}] ${response.statusText} - traceparent: ${response.headers.get('traceparent')}`,
         )
+        logger.error('Request failed with non-OK status:', httpError)
 
         controller.abort()
 
         return
       }
 
-      logger.debug(`${apiName} API response from "${url.toString()}":`, response)
+      logger.debug(`Response from "${url.toString()}":`, response)
 
       return response
     } catch (error) {
@@ -157,11 +158,7 @@ function createRetryFetchCallback({
         throw error
       }
 
-      logger.error(
-        error instanceof Error
-          ? error.message
-          : `${apiName} API request to "${url.toString()}" failed with an unknown error`,
-      )
+      logger.error(`Request to "${url.toString()}" failed:`, error)
 
       controller.abort()
     }

@@ -1,5 +1,5 @@
 import { BatchInsightsEventArray } from '@contentful/optimization-api-schemas'
-import { logger } from 'logger'
+import { mockLogger } from 'mocks'
 import { http, HttpResponse } from 'msw'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ApiClientBase from '../ApiClientBase'
@@ -113,9 +113,6 @@ describe('InsightsApiClient.sendBatchEvents', () => {
       // @ts-expect-error -- testing
       .mockImplementation((input) => input)
 
-    const infoSpy = vi.spyOn(logger, 'info')
-    const debugSpy = vi.spyOn(logger, 'debug')
-
     const handler = http.post(
       `${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`,
       async ({ request, params }) => {
@@ -137,11 +134,19 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     await expect(client.sendBatchEvents(batches)).resolves.toBe(true)
 
     expect(parseSpy).toHaveBeenCalledTimes(1)
-    expect(infoSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Sending Insights API "Event Batches" request.'),
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      'ApiClient:Insights',
+      'Sending "Event Batches" request',
     )
-    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('request Body'), batches)
-    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('request succesfully completed.'))
+    expect(mockLogger.debug).toHaveBeenCalledWith(
+      'ApiClient:Insights',
+      expect.stringContaining('request body'),
+      batches,
+    )
+    expect(mockLogger.debug).toHaveBeenCalledWith(
+      'ApiClient:Insights',
+      expect.stringContaining('request successfully completed'),
+    )
   })
 
   it('uses beaconHandler when supplied', async () => {
@@ -168,9 +173,6 @@ describe('InsightsApiClient.sendBatchEvents', () => {
 
     const beaconHandler = vi.fn(() => false)
 
-    const infoSpy = vi.spyOn(logger, 'info')
-    const debugSpy = vi.spyOn(logger, 'debug')
-
     const handler = http.post(
       `${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`,
       () => HttpResponse.json({ ok: true }, { status: 200 }),
@@ -184,11 +186,19 @@ describe('InsightsApiClient.sendBatchEvents', () => {
 
     expect(beaconHandler).toHaveBeenCalledTimes(1)
     expect(beaconHandler).toHaveBeenCalledWith(expectedUrl, batches)
-    expect(infoSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Sending Insights API "Event Batches" request.'),
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      'ApiClient:Insights',
+      'Sending "Event Batches" request',
     )
-    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('request Body'), batches)
-    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('request succesfully completed.'))
+    expect(mockLogger.debug).toHaveBeenCalledWith(
+      'ApiClient:Insights',
+      expect.stringContaining('request body'),
+      batches,
+    )
+    expect(mockLogger.debug).toHaveBeenCalledWith(
+      'ApiClient:Insights',
+      expect.stringContaining('request successfully completed'),
+    )
   })
 
   it('logs and returns false on network errors', async () => {

@@ -4,6 +4,10 @@
   "description": "Testing Support Library & Server",
   "license": "MIT",
   "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./loggerMock": "./src/loggerMock.ts"
+  },
   "scripts": {
     "config:ctfl:list": "contentful config list",
     "fetch:ctfl": "pnpm fetch:ctfl:space && pnpm fetch:ctfl:entries",
@@ -29,6 +33,7 @@
     "fs-extra": "^11.3.2",
     "p-retry": "catalog:",
     "tsx": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

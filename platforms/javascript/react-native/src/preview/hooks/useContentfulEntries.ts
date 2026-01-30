@@ -1,7 +1,9 @@
-import { logger } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core'
 import { useEffect, useState } from 'react'
 import type { ContentfulClient, ContentfulEntry } from '../types'
 import { fetchAudienceAndExperienceEntries } from '../utils'
+
+const logger = createScopedLogger('RN:Preview')
 
 interface ContentfulEntriesState {
   audienceEntries: ContentfulEntry[]
@@ -31,7 +33,7 @@ export function useContentfulEntries(contentfulClient: ContentfulClient): Conten
         setExperienceEntries(experiences)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-        logger.error('[useContentfulEntries] Failed to fetch entries:', errorMessage)
+        logger.error('Failed to fetch entries:', err)
         setError(errorMessage)
       } finally {
         setIsLoading(false)

@@ -2,8 +2,8 @@ import {
   type App,
   CoreStateful,
   type CoreStatefulConfig,
+  createScopedLogger,
   effect,
-  logger,
   signals,
 } from '@contentful/optimization-core'
 import { merge } from 'es-toolkit'
@@ -27,6 +27,8 @@ import {
   type ElementViewObserverOptions,
 } from './observers'
 import { LocalStore } from './storage'
+
+const logger = createScopedLogger('Web:SDK')
 
 declare global {
   interface Window {
@@ -273,7 +275,7 @@ class Optimization extends CoreStateful {
     entries.forEach((element) => {
       if (!isEntryElement(element)) return
 
-      logger.info('[Optimization Web SDK] Auto-observing element (init):', element)
+      logger.info('Auto-observing element (init):', element)
 
       this.elementViewObserver?.observe(element, {
         ...options,
@@ -311,7 +313,7 @@ class Optimization extends CoreStateful {
    * ```
    */
   trackEntryViewForElement(element: Element, options: ElementViewElementOptions): void {
-    logger.info('[Optimization Web SDK] Manually observing element:', element)
+    logger.info('Manually observing element:', element)
     this.elementViewObserver?.observe(element, options)
   }
 
@@ -326,7 +328,7 @@ class Optimization extends CoreStateful {
    * ```
    */
   untrackEntryViewForElement(element: Element): void {
-    logger.info('[Optimization Web SDK] Manually unobserving element:', element)
+    logger.info('Manually unobserving element:', element)
     this.elementViewObserver?.unobserve(element)
   }
 

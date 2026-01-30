@@ -128,8 +128,8 @@ class Optimization extends CoreStateful {
 // Re-export all core functionality to provide a single entry point
 export * from '@contentful/optimization-core'
 
-// Explicitly re-export logger for better IDE support
-export { logger } from '@contentful/optimization-core'
+// Explicitly re-export logger utilities for better IDE support
+export { createScopedLogger, logger } from '@contentful/optimization-core'
 
 // Export React Native specific components
 export { OptimizationProvider } from './components/OptimizationProvider'

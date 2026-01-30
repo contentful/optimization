@@ -1,4 +1,4 @@
-import { logger } from 'logger'
+import { mockLogger } from 'mocks'
 import type { MockInstance } from 'vitest'
 import type { FetchMethod } from './Fetch'
 import {
@@ -7,13 +7,6 @@ import {
 } from './createProtectedFetchMethod'
 import * as createRetryFetchMethodModule from './createRetryFetchMethod'
 import * as createTimeoutFetchMethodModule from './createTimeoutFetchMethod'
-
-vi.mock('logger', () => ({
-  logger: {
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
-}))
 
 vi.mock('./createRetryFetchMethod')
 vi.mock('./createTimeoutFetchMethod')
@@ -35,8 +28,6 @@ describe('createProtectedFetchMethod', () => {
       options: createRetryFetchMethodModule.RetryFetchMethodOptions & { fetchMethod: FetchMethod },
     ) => FetchMethod
   >
-  let warnSpy: MockInstance<(msg: string) => void>
-  let errorSpy: MockInstance<(msg: string) => void>
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -45,8 +36,6 @@ describe('createProtectedFetchMethod', () => {
       'createTimeoutFetchMethod',
     )
     createRetryFetchMethodSpy = vi.spyOn(createRetryFetchMethodModule, 'createRetryFetchMethod')
-    warnSpy = vi.spyOn(logger, 'warn')
-    errorSpy = vi.spyOn(logger, 'error')
 
     createTimeoutFetchMethodSpy.mockReturnValue(timeoutFetchMethod)
     createRetryFetchMethodSpy.mockReturnValue(retryFetchMethod)
@@ -69,10 +58,11 @@ describe('createProtectedFetchMethod', () => {
     })
 
     expect(() => createProtectedFetchMethod(options)).toThrow(abortError)
-    expect(warnSpy).toHaveBeenCalledWith(
-      'The request aborted due to network issues. This request may not be retried.',
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      'ApiClient:Fetch',
+      'Request aborted due to network issues. This request may not be retried.',
     )
-    expect(errorSpy).not.toHaveBeenCalled()
+    expect(mockLogger.error).not.toHaveBeenCalled()
   })
 
   it('logs and throws on generic error', () => {
@@ -82,10 +72,8 @@ describe('createProtectedFetchMethod', () => {
     })
 
     expect(() => createProtectedFetchMethod(options)).toThrow(someError)
-    expect(errorSpy).toHaveBeenCalledWith(
-      'The request failed with error: [NetworkError] Something went wrong',
-    )
-    expect(warnSpy).not.toHaveBeenCalled()
+    expect(mockLogger.error).toHaveBeenCalledWith('ApiClient:Fetch', 'Request failed:', someError)
+    expect(mockLogger.warn).not.toHaveBeenCalled()
   })
 
   it('rethrows non-Error errors without logging', () => {
@@ -96,7 +84,7 @@ describe('createProtectedFetchMethod', () => {
     })
 
     expect(() => createProtectedFetchMethod(options)).toThrow(nonError)
-    expect(errorSpy).not.toHaveBeenCalled()
-    expect(warnSpy).not.toHaveBeenCalled()
+    expect(mockLogger.error).not.toHaveBeenCalled()
+    expect(mockLogger.warn).not.toHaveBeenCalled()
   })
 })

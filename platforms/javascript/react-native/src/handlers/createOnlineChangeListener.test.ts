@@ -1,16 +1,22 @@
+import { createLoggerMock } from 'mocks/loggerMock'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Create mock holder
-const mockLogger = { error: vi.fn(), warn: vi.fn() }
+const mockLogger = {
+  debug: vi.fn(),
+  info: vi.fn(),
+  log: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  fatal: vi.fn(),
+}
 
 describe('createOnlineChangeListener', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.resetModules()
 
-    vi.doMock('@contentful/optimization-core', () => ({
-      logger: mockLogger,
-    }))
+    vi.doMock('@contentful/optimization-core', () => createLoggerMock(mockLogger))
   })
 
   describe('when NetInfo is not installed', () => {
@@ -25,7 +31,8 @@ describe('createOnlineChangeListener', () => {
       const cleanup = createOnlineChangeListener(callback)
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        '[Optimization RN SDK] @react-native-community/netinfo not installed. Offline detection disabled.',
+        'RN:Network',
+        '@react-native-community/netinfo not installed. Offline detection disabled.',
       )
       expect(typeof cleanup).toBe('function')
 
@@ -49,7 +56,8 @@ describe('createOnlineChangeListener', () => {
       const cleanup = createOnlineChangeListener(callback)
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        '[Optimization RN SDK] @react-native-community/netinfo not installed. Offline detection disabled.',
+        'RN:Network',
+        '@react-native-community/netinfo not installed. Offline detection disabled.',
       )
       expect(typeof cleanup).toBe('function')
     })
@@ -65,7 +73,8 @@ describe('createOnlineChangeListener', () => {
       const cleanup = createOnlineChangeListener(callback)
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        '[Optimization RN SDK] @react-native-community/netinfo not installed. Offline detection disabled.',
+        'RN:Network',
+        '@react-native-community/netinfo not installed. Offline detection disabled.',
       )
       expect(typeof cleanup).toBe('function')
     })
@@ -81,7 +90,8 @@ describe('createOnlineChangeListener', () => {
       const cleanup = createOnlineChangeListener(callback)
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
-        '[Optimization RN SDK] @react-native-community/netinfo not installed. Offline detection disabled.',
+        'RN:Network',
+        '@react-native-community/netinfo not installed. Offline detection disabled.',
       )
       expect(typeof cleanup).toBe('function')
     })

@@ -1,10 +1,12 @@
-import { logger } from 'logger'
+import { createScopedLogger } from 'logger'
 import { createRetryFetchMethod, type RetryFetchMethodOptions } from './createRetryFetchMethod'
 import {
   createTimeoutFetchMethod,
   type TimeoutFetchMethodOptions,
 } from './createTimeoutFetchMethod'
 import type { FetchMethod } from './Fetch'
+
+const logger = createScopedLogger('ApiClient:Fetch')
 
 /**
  * Options for {@link createProtectedFetchMethod}, combining timeout and retry behavior.
@@ -52,9 +54,9 @@ export function createProtectedFetchMethod(options: ProtectedFetchMethodOptions)
   } catch (error) {
     if (error instanceof Error) {
       if (error.name === 'AbortError') {
-        logger.warn(`The request aborted due to network issues. This request may not be retried.`)
+        logger.warn('Request aborted due to network issues. This request may not be retried.')
       } else {
-        logger.error(`The request failed with error: [${error.name}] ${error.message}`)
+        logger.error('Request failed:', error)
       }
     }
     throw error

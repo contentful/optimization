@@ -1,5 +1,7 @@
-import { logger } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core'
 import { AppState } from 'react-native'
+
+const logger = createScopedLogger('RN:AppState')
 
 /**
  * Callback invoked when the app transitions to background or inactive state.

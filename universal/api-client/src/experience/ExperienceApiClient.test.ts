@@ -3,7 +3,7 @@ import {
   ExperienceEventArray,
   ExperienceResponse,
 } from '@contentful/optimization-api-schemas'
-import { logger } from 'logger'
+import { mockLogger } from 'mocks'
 import { http, HttpResponse } from 'msw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { server } from '../test/setup'
@@ -50,10 +50,7 @@ function makeClient(overrides: Partial<ExperienceApiClientConfig> = {}): Experie
 describe('ExperienceApiClient', () => {
   beforeEach(() => {
     server.resetHandlers()
-    vi.spyOn(logger, 'info')
-    vi.spyOn(logger, 'debug')
-    vi.spyOn(logger, 'warn')
-    vi.spyOn(logger, 'error')
+    vi.clearAllMocks()
 
     vi.spyOn(ExperienceResponse, 'parse')
       // @ts-expect-error -- testing
@@ -113,9 +110,13 @@ describe('ExperienceApiClient', () => {
       expect(requested.id).toBe('prof_2')
       expect(requested.locale).toBe('de-DE')
 
-      expect(logger.info).toHaveBeenCalledWith('Sending Experience API "Get Profile" request.')
-      expect(logger.debug).toHaveBeenCalledWith(
-        'Experience API "Get Profile" request succesfully completed.',
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'ApiClient:Experience',
+        'Sending "Get Profile" request',
+      )
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'ApiClient:Experience',
+        '"Get Profile" request successfully completed',
       )
     })
 
@@ -130,7 +131,7 @@ describe('ExperienceApiClient', () => {
       await expect(client.getProfile('x')).rejects.toBeDefined()
 
       // The base client logs errors via logger.error on non-abort errors
-      expect(logger.error).toHaveBeenCalled()
+      expect(mockLogger.error).toHaveBeenCalled()
     })
   })
 
@@ -163,13 +164,21 @@ describe('ExperienceApiClient', () => {
       // features only present when provided
       expect(capturedFeatures).toEqual(['location'])
 
-      expect(logger.info).toHaveBeenCalledWith('Sending Experience API "Create Profile" request.')
-      expect(logger.debug).toHaveBeenCalledWith('Experience API "Create Profile" request body: ', {
-        events: [],
-        options: { features: ['location'] },
-      })
-      expect(logger.debug).toHaveBeenCalledWith(
-        'Experience API "Create Profile" request succesfully completed.',
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        'ApiClient:Experience',
+        'Sending "Create Profile" request',
+      )
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'ApiClient:Experience',
+        '"Create Profile" request body:',
+        {
+          events: [],
+          options: { features: ['location'] },
+        },
+      )
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        'ApiClient:Experience',
+        '"Create Profile" request successfully completed',
       )
     })
 

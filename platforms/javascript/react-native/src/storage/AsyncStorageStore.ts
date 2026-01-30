@@ -1,11 +1,13 @@
 import {
   ChangeArray,
-  logger,
+  createScopedLogger,
   Profile,
   SelectedPersonalizationArray,
 } from '@contentful/optimization-core'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { z } from 'zod/mini'
+
+const logger = createScopedLogger('RN:Storage')
 
 export const ANONYMOUS_ID = '__ctfl_opt_anonymous_id__'
 export const CONSENT = '__ctfl_opt_consent__'

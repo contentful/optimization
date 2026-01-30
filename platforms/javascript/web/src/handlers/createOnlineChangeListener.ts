@@ -1,5 +1,7 @@
-import { logger } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core'
 import { CAN_ADD_LISTENERS } from '../global-constants'
+
+const logger = createScopedLogger('Web:Network')
 
 /**
  * Callback invoked when the browser's connectivity state changes.
