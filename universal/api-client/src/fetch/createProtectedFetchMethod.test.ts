@@ -72,10 +72,7 @@ describe('createProtectedFetchMethod', () => {
     })
 
     expect(() => createProtectedFetchMethod(options)).toThrow(someError)
-    expect(mockLogger.error).toHaveBeenCalledWith(
-      'ApiClient:Fetch',
-      'Request failed with error: [NetworkError] Something went wrong',
-    )
+    expect(mockLogger.error).toHaveBeenCalledWith('ApiClient:Fetch', 'Request failed:', someError)
     expect(mockLogger.warn).not.toHaveBeenCalled()
   })
 

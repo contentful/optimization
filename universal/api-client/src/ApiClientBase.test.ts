@@ -72,7 +72,8 @@ describe('ApiClientBase', () => {
       expect(mockLogger.error).toHaveBeenCalledTimes(1)
       expect(mockLogger.error).toHaveBeenCalledWith(
         'ApiClient',
-        `[${name}] "${requestName}" request failed with error: [${err.name}] ${err.message}`,
+        `[${name}] "${requestName}" request failed:`,
+        err,
       )
       expect(mockLogger.warn).not.toHaveBeenCalled()
     })

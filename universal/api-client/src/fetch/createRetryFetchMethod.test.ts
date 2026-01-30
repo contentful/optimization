@@ -85,7 +85,10 @@ describe('createRetryFetchMethod', () => {
     await expect(fetchWithRetry(TEST_URL, {})).rejects.toThrow(/may not be retried/)
     expect(mockLogger.error).toHaveBeenCalledWith(
       'ApiClient:Retry',
-      `Request to "${TEST_URL}" failed with status: [400] Bad Request - traceparent: abc-123`,
+      'Request failed with non-OK status:',
+      expect.objectContaining({
+        message: `Request to "${TEST_URL}" failed with status: [400] Bad Request - traceparent: abc-123`,
+      }),
     )
     expect(fetchMock).toHaveBeenCalledOnce()
     expect(onFailedAttempt).not.toHaveBeenCalled()
@@ -172,15 +175,17 @@ describe('createRetryFetchMethod', () => {
     await expect(fetchWithRetry(TEST_URL, {})).rejects.toThrow(/may not be retried/)
     expect(mockLogger.error).toHaveBeenCalledWith(
       'ApiClient:Retry',
-      `Request to "${TEST_URL}" failed with an unknown error`,
+      `Request to "${TEST_URL}" failed:`,
+      'something weird',
     )
     expect(onFailedAttempt).not.toHaveBeenCalled()
     expect(mockLogger.debug).not.toHaveBeenCalled()
   })
 
   it('aborts and throws if fetchMethod throws an Error instance (non-503)', async () => {
+    const error = new Error('plain failure')
     fetchMock.mockImplementation(() => {
-      throw new Error('plain failure')
+      throw error
     })
     const fetchWithRetry = createRetryFetchMethod({
       fetchMethod: fetchMock,
@@ -189,7 +194,11 @@ describe('createRetryFetchMethod', () => {
       intervalTimeout: 10,
     })
     await expect(fetchWithRetry(TEST_URL, {})).rejects.toThrow(/may not be retried/)
-    expect(mockLogger.error).toHaveBeenCalledWith('ApiClient:Retry', 'plain failure')
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      'ApiClient:Retry',
+      `Request to "${TEST_URL}" failed:`,
+      error,
+    )
     expect(onFailedAttempt).not.toHaveBeenCalled()
     expect(mockLogger.debug).not.toHaveBeenCalled()
   })
