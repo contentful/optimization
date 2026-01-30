@@ -33,7 +33,7 @@ export function useContentfulEntries(contentfulClient: ContentfulClient): Conten
         setExperienceEntries(experiences)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-        logger.error('Failed to fetch entries:', errorMessage)
+        logger.error('Failed to fetch entries:', err)
         setError(errorMessage)
       } finally {
         setIsLoading(false)

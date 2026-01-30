@@ -67,7 +67,7 @@ export async function fetchEntries(
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     const errorText = `Failed to fetch entries: ${errorMessage}`
-    logger.error(errorText)
+    logger.error('Failed to fetch entries:', error)
     setSdkError(errorText)
   }
 }
@@ -78,7 +78,6 @@ export async function clearProfileState(): Promise<void> {
     await AsyncStorage.multiRemove(keys)
     logger.info('Profile state cleared successfully')
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    logger.error(`Failed to clear profile state: ${errorMessage}`)
+    logger.error('Failed to clear profile state:', error)
   }
 }

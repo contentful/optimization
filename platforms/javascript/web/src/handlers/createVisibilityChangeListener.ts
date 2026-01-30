@@ -59,8 +59,7 @@ export function createVisibilityChangeListener(callback: Callback): () => void {
       try {
         await callback(event)
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error'
-        logger.error('Error handling page visibility change:', message)
+        logger.error('Error handling page visibility change:', error)
       }
     })()
   }

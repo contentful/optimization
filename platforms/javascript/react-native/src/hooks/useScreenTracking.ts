@@ -120,10 +120,7 @@ export function useScreenTracking({
       hasTrackedRef.current = true
       return result
     } catch (error) {
-      logger.error(
-        `Failed to track screen "${currentName}":`,
-        error instanceof Error ? error.message : String(error),
-      )
+      logger.error(`Failed to track screen "${currentName}":`, error)
       return undefined
     }
   }, [])

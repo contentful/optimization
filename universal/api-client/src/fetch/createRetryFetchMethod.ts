@@ -140,9 +140,10 @@ function createRetryFetchCallback({
       }
 
       if (!response.ok) {
-        logger.error(
+        const httpError = new Error(
           `Request to "${url.toString()}" failed with status: [${response.status}] ${response.statusText} - traceparent: ${response.headers.get('traceparent')}`,
         )
+        logger.error('Request failed with non-OK status:', httpError)
 
         controller.abort()
 
@@ -157,11 +158,7 @@ function createRetryFetchCallback({
         throw error
       }
 
-      logger.error(
-        error instanceof Error
-          ? error.message
-          : `Request to "${url.toString()}" failed with an unknown error`,
-      )
+      logger.error(`Request to "${url.toString()}" failed:`, error)
 
       controller.abort()
     }

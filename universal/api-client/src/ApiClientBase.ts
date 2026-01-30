@@ -139,9 +139,7 @@ abstract class ApiClientBase {
           `[${this.name}] "${requestName}" request aborted due to network issues. This request may not be retried.`,
         )
       } else {
-        logger.error(
-          `[${this.name}] "${requestName}" request failed with error: [${error.name}] ${error.message}`,
-        )
+        logger.error(`[${this.name}] "${requestName}" request failed:`, error)
       }
     }
   }

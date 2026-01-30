@@ -56,7 +56,7 @@ export function createProtectedFetchMethod(options: ProtectedFetchMethodOptions)
       if (error.name === 'AbortError') {
         logger.warn('Request aborted due to network issues. This request may not be retried.')
       } else {
-        logger.error(`Request failed with error: [${error.name}] ${error.message}`)
+        logger.error('Request failed:', error)
       }
     }
     throw error
