@@ -5,13 +5,18 @@ import type LogSink from './LogSink'
 export class Logger {
   readonly name = '@contentful/optimization'
 
-  private readonly PREFIX = '[Ctfl:O10n'
+  private readonly PREFIX_PARTS = ['Ctfl', 'O10n']
+  private readonly DELIMITER = ':'
   private readonly diary: Diary
   private sinks: LogSink[] = []
 
   constructor() {
     this.diary = diary(this.name, this.onLogEvent.bind(this))
     enable(this.name)
+  }
+
+  private assembleLocationPrefix(logLocation: string): string {
+    return `[${[...this.PREFIX_PARTS, logLocation].join(this.DELIMITER)}]`
   }
 
   public addSink(sink: LogSink): void {
@@ -27,27 +32,27 @@ export class Logger {
   }
 
   public debug(logLocation: string, message: string, ...args: unknown[]): void {
-    this.diary.debug(`${this.PREFIX}:${logLocation}] ${message}`, ...args)
+    this.diary.debug(`${this.assembleLocationPrefix(logLocation)} ${message}`, ...args)
   }
 
   public info(logLocation: string, message: string, ...args: unknown[]): void {
-    this.diary.info(`${this.PREFIX}:${logLocation}] ${message}`, ...args)
+    this.diary.info(`${this.assembleLocationPrefix(logLocation)} ${message}`, ...args)
   }
 
   public log(logLocation: string, message: string, ...args: unknown[]): void {
-    this.diary.log(`${this.PREFIX}:${logLocation}] ${message}`, ...args)
+    this.diary.log(`${this.assembleLocationPrefix(logLocation)} ${message}`, ...args)
   }
 
   public warn(logLocation: string, message: string, ...args: unknown[]): void {
-    this.diary.warn(`${this.PREFIX}:${logLocation}] ${message}`, ...args)
+    this.diary.warn(`${this.assembleLocationPrefix(logLocation)} ${message}`, ...args)
   }
 
   public error(logLocation: string, message: string | Error, ...args: unknown[]): void {
-    this.diary.error(`${this.PREFIX}:${logLocation}] ${message}`, ...args)
+    this.diary.error(`${this.assembleLocationPrefix(logLocation)} ${message}`, ...args)
   }
 
   public fatal(logLocation: string, message: string | Error, ...args: unknown[]): void {
-    this.diary.fatal(`${this.PREFIX}:${logLocation}] ${message}`, ...args)
+    this.diary.fatal(`${this.assembleLocationPrefix(logLocation)} ${message}`, ...args)
   }
 
   private onLogEvent(event: LogEvent): void {
