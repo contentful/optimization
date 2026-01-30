@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "plugins": ["@nx/js"],
+  "release": {
+    "projects": ["universal/*", "platforms/javascript/*"],
+    "projectsRelationship": "fixed",
+    "git": {
+      "commit": false,
+      "tag": true
+    },
+    "changelog": {
+      "workspaceChangelog": true,
+      "projectChangelogs": false
+    },
+    "version": {
+      "conventionalCommits": true
+    }
+  }
+}

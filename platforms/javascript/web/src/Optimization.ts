@@ -27,6 +27,7 @@ import {
   type ElementViewObserverOptions,
 } from './observers'
 import { LocalStore } from './storage'
+import { SDK_VERSION } from './version'
 
 const logger = createScopedLogger('Web:SDK')
 
@@ -114,7 +115,7 @@ function mergeConfig({
       eventBuilder: {
         app,
         channel: 'web',
-        library: { name: 'Optimization Web API', version: '0.0.0' },
+        library: { name: 'Optimization Web API', version: SDK_VERSION },
         getLocale,
         getPageProperties,
         getUserAgent,

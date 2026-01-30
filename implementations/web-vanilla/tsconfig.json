@@ -4,7 +4,10 @@
     "baseUrl": "./",
     "outDir": "./dist",
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "paths": {
+      "logger": ["../../lib/logger/src/index.ts"]
+    }
   },
   "include": ["./*.ts", "./e2e", "./src/**/*", "./src/**/*.json"]
 }

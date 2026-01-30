@@ -16,9 +16,6 @@
   "files": [
     "dist/**/*"
   ],
-  "publishConfig": {
-    "directory": "dist"
-  },
   "scripts": {
     "build": "pnpm clean; pnpm build:cjs && pnpm build:esm",
     "build:cjs": "tsc -b ./tsconfig.cjs.json && pnpm rename:js:cjs",
@@ -80,6 +77,7 @@
     "react-test-renderer": "18.3.1",
     "rimraf": "catalog:",
     "tslib": "catalog:",
+    "tsup": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   },

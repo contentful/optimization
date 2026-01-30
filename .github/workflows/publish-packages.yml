@@ -1,0 +1,134 @@
+name: Release Pipeline
+
+permissions:
+  contents: write
+  pull-requests: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump_type:
+        description: 'Version bump type'
+        required: false
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+  # TODO: remove me before merging to main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  prepare:
+    name: 🔍 Prepare Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      version: ${{ steps.release-version.outputs.version }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Execute version bump and get version
+        id: release-version
+        run: |
+          BUMP="${{ github.event.inputs.bump_type }}"
+
+          pnpm nx release ${BUMP:-""} --skip-publish --verbose --first-release
+
+          LATEST_TAG=$(git describe --tags --abbrev=0)
+          echo "version=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+          cat "CHANGELOG.md" >> $GITHUB_STEP_SUMMARY
+          echo "Released version: $LATEST_TAG"
+
+      - name: Update SDK version
+        run: |
+          VERSION=$(echo "${{ steps.release-version.outputs.version }}" | sed 's/^v//')
+          VERSION_CODE="export const SDK_VERSION = '$VERSION' // Auto-generated pre-build."
+
+
+          echo "$VERSION_CODE" > platforms/javascript/node/src/version.ts
+          echo "$VERSION_CODE" > platforms/javascript/web/src/version.ts
+          echo "$VERSION_CODE" > platforms/javascript/react-native/src/version.ts
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Upload release workspace
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-workspace
+          path: |
+            CHANGELOG.md
+            universal/*/package.json
+            universal/*/dist/
+            platforms/javascript/*/package.json
+            platforms/javascript/*/src/version.ts
+            platforms/javascript/*/dist/
+          retention-days: 7
+
+  publish:
+    name: 📦 Publish to Registry
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: prepare
+    environment:
+      name: npm-registry
+      url: https://www.npmjs.com/org/contentful
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Download release workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: release-workspace
+
+      # - name: Publish packages
+      #   run: pnpm nx release publish --verbose --first-release
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # - name: Create GitHub Release
+      #   uses: softprops/action-gh-release@v2
+      #   with:
+      #     tag_name: ${{ needs.prepare.outputs.version }}
+      #     name: Release ${{ needs.prepare.outputs.version }}
+      #     body_path: CHANGELOG.md
+      #     draft: false
+      #     prerelease: false

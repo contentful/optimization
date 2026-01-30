@@ -96,3 +96,5 @@ yarn-error.log
 # Local environment configuration - commented out since we use safe defaults
 # Uncomment this line if you need to override with local secrets
 # env.config.ts
+
+.nx/

@@ -15,6 +15,7 @@ import { merge } from 'es-toolkit'
 import { getLocale, getPageProperties, getUserAgent } from './builders/EventBuilder'
 import { createAppStateChangeListener, createOnlineChangeListener } from './handlers'
 import AsyncStorageStore from './storage/AsyncStorageStore'
+import { SDK_VERSION } from './version'
 
 async function mergeConfig({
   defaults,
@@ -41,7 +42,7 @@ async function mergeConfig({
       },
       eventBuilder: {
         channel: 'mobile',
-        library: { name: 'Optimization React Native SDK', version: '1.0.0' },
+        library: { name: 'Optimization React Native SDK', version: SDK_VERSION },
         getLocale,
         getPageProperties,
         getUserAgent,
