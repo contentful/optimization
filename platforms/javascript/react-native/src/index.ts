@@ -41,7 +41,7 @@ async function mergeConfig({
       },
       eventBuilder: {
         channel: 'mobile',
-        library: { name: 'Optimization React Native SDK', version: '1.0.0' },
+        library: { name: 'Optimization React Native SDK', version: '0.0.0' },
         getLocale,
         getPageProperties,
         getUserAgent,
@@ -129,7 +129,7 @@ class Optimization extends CoreStateful {
 export * from '@contentful/optimization-core'
 
 // Explicitly re-export logger utilities for better IDE support
-export { createScopedLogger, logger } from '@contentful/optimization-core'
+export { createScopedLogger } from '@contentful/optimization-core'
 
 // Export React Native specific components
 export { OptimizationProvider } from './components/OptimizationProvider'

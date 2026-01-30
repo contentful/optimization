@@ -3,29 +3,9 @@
   "version": "0.0.0",
   "license": "MIT",
   "type": "commonjs",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
-    }
-  },
-  "files": [
-    "dist/**/*"
-  ],
-  "publishConfig": {
-    "directory": "dist"
-  },
   "scripts": {
-    "build": "pnpm clean; pnpm build:cjs && pnpm build:esm",
-    "build:cjs": "tsc -b ./tsconfig.cjs.json && pnpm rename:js:cjs",
-    "build:esm": "tsc -b ./tsconfig.esm.json && pnpm rename:js:mjs",
-    "rename:js:cjs": "find ./dist -type f -name \"*.js\" ! -name \"*.cjs\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js}.cjs\"; done && find ./dist -type f -name \"*.js.map\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js.map}.cjs.map\"; done",
-    "rename:js:mjs": "find ./dist -type f -name \"*.js\" ! -name \"*.mjs\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js}.mjs\"; done && find ./dist -type f -name \"*.js.map\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js.map}.mjs.map\"; done",
-    "clean": "rimraf ./dist ./coverage tsconfig.tsbuildinfo",
+    "build": "pnpm clean; rslib build",
+    "clean": "rimraf ./.rslib ./dist ./coverage tsconfig.tsbuildinfo",
     "test:unit": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "dev:android": "cd dev && react-native run-android",
@@ -59,6 +39,7 @@
     "@babel/plugin-transform-private-methods": "^7.27.1",
     "@babel/runtime": "^7.25.0",
     "@jest/globals": "^29.6.3",
+    "@microsoft/api-extractor": "catalog:",
     "@react-native-community/cli": "15.0.1",
     "@react-native-community/cli-platform-android": "15.0.1",
     "@react-native-community/cli-platform-ios": "15.0.1",
@@ -66,8 +47,10 @@
     "@react-native/metro-config": "0.76.9",
     "@react-native/typescript-config": "0.76.9",
     "@testing-library/react-native": "^13.3.3",
+    "@types/node": "catalog:",
     "@types/react": "^18.3.18",
     "@types/react-test-renderer": "^18.0.0",
+    "@rslib/core": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "babel-jest": "^29.6.3",
     "contentful": "catalog:",
@@ -95,5 +78,16 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
   }
 }

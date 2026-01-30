@@ -5,9 +5,10 @@
 *.pid.lock
 *.seed
 *.tsbuildinfo
-.contentfulrc.json
 .DS_Store
+.contentfulrc.json
 .env
+.rslib
 .temp
 .tmp
 blob-report

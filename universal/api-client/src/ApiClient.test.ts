@@ -1,4 +1,4 @@
-import ApiClient, { type ApiConfig } from './'
+import { ApiClient, type ApiConfig } from './'
 import ExperienceApiClient from './experience'
 import InsightsApiClient from './insights'
 

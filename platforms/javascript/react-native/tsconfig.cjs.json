@@ -1,13 +1,13 @@
 {
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
+    "baseUrl": "./src",
     "composite": true,
     "incremental": true,
-    "noEmit": false,
-    "baseUrl": "./src",
     "jsx": "react-native",
     "module": "CommonJS",
     "moduleResolution": "Node",
+    "noEmit": false,
     "outDir": "./dist",
     "rootDir": "./src",
     "tsBuildInfoFile": "./dist/.tsbuildinfo"

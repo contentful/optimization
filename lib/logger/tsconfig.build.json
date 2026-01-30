@@ -1,16 +1,17 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "./tsconfig.json",
   "compilerOptions": {
     "composite": true,
+    "declarationMap": true,
     "incremental": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "noEmit": false,
-    "module": "ESNext",
-    "moduleResolution": "bundler",
     "outDir": "./dist",
+    "paths": {},
     "rootDir": "./src",
+    "types": ["node"],
     "tsBuildInfoFile": "./dist/.tsbuildinfo"
   },
   "include": ["./src/**/*", "./src/**/*.json"],
-  "exclude": ["./src/**/*.test.*", "./src/test/**/*"],
-  "references": [{ "path": "../api-schemas/tsconfig.esm.json" }]
+  "exclude": ["./src/**/*.test.*", "./src/test/**/*"]
 }

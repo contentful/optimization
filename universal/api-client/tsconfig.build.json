@@ -1,16 +1,21 @@
 {
-  "extends": "../../tsconfig.base.json",
+  "extends": "./tsconfig.json",
   "compilerOptions": {
     "composite": true,
+    "declarationMap": true,
     "incremental": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "noEmit": false,
-    "module": "CommonJS",
-    "moduleResolution": "Node",
     "outDir": "./dist",
+    "paths": {},
     "rootDir": "./src",
+    "types": ["node"],
     "tsBuildInfoFile": "./dist/.tsbuildinfo"
   },
   "include": ["./src/**/*", "./src/**/*.json"],
   "exclude": ["./src/**/*.test.*", "./src/test/**/*"],
-  "references": [{ "path": "../api-client/tsconfig.cjs.json" }]
+  "references": [
+    { "path": "../../lib/logger/tsconfig.build.json" },
+    { "path": "../api-schemas/tsconfig.build.json" }
+  ]
 }

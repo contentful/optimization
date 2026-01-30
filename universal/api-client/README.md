@@ -59,7 +59,7 @@ pnpm install @contentful/optimization-api-client
 Import the API client; both CJS and ESM module systems are supported, ESM preferred:
 
 ```ts
-import ApiClient from '@contentful/optimization-api-client'
+import { ApiClient } from '@contentful/optimization-api-client'
 ```
 
 Configure and initialize the API Client:
