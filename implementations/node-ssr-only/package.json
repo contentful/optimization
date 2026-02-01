@@ -17,6 +17,7 @@
     "test:e2e:codegen": "playwright codegen",
     "test:e2e:report": "playwright show-report",
     "test:e2e:ui": "playwright test --ui",
+    "test:unit": "echo \"No unit tests necessary\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

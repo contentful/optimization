@@ -10,7 +10,7 @@
     "paths": {},
     "rootDir": "./src",
     "types": ["node"],
-    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+    "tsBuildInfoFile": "./.tsbuildinfo"
   },
   "include": ["./src/**/*", "./src/**/*.json"],
   "exclude": ["./src/**/*.test.*", "./src/test/**/*"]

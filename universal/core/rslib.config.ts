@@ -15,6 +15,9 @@ export default defineConfig({
   source: {
     tsconfigPath: './tsconfig.build.json',
     decorators: { version: '2022-03' }, // stage-3 decorators
+    define: {
+      __OPTIMIZATION_VERSION__: JSON.stringify(process.env.RELEASE_VERSION ?? '0.0.0'),
+    },
   },
 
   lib: [

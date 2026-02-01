@@ -39,11 +39,10 @@ const render = (identified?: string): string => `<!doctype html>
 <html lang="en">
   <head>
     <title>Node ESR SDK Implementation E2E Test</title>
-    <script src="/dist/index.umd.cjs"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.jsdelivr.net/npm/contentful@latest/dist/contentful.browser.min.js" > </script>
-    <script src="/dist/index.umd.cjs" ></script>
+    <script src="/dist/contentful-optimization-web.umd.cjs"></script>
     <link rel="stylesheet" href="/assets/style.css" />
   </head>
   <body>

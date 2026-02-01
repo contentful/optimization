@@ -10,7 +10,7 @@
       "@contentful/optimization-node": ["../../platforms/javascript/node/src/index.ts"],
       "logger": ["../../lib/logger/src/index.ts"]
     },
-    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "tsBuildInfoFile": "./.tsbuildinfo",
     "verbatimModuleSyntax": true
   },
   "include": ["./e2e", "**/*.ts", "./src/**/*", "./src/**/*.json"]

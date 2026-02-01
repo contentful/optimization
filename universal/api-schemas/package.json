@@ -3,9 +3,24 @@
   "version": "0.0.0",
   "license": "MIT",
   "type": "commonjs",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/**/*"
+  ],
   "scripts": {
     "build": "pnpm clean; rslib build",
-    "clean": "rimraf ./.rslib ./dist tsconfig.tsbuildinfo",
+    "clean": "rimraf ./.rslib ./dist .tsbuildinfo",
+    "test:unit": "echo \"No unit tests necessary\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -20,16 +35,5 @@
     "rimraf": "catalog:",
     "tslib": "catalog:",
     "typescript": "catalog:"
-  },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "require": "./dist/index.cjs",
-      "import": "./dist/index.mjs"
-    },
-    "./package.json": "./package.json"
   }
 }

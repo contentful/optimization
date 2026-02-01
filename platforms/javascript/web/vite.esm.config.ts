@@ -5,6 +5,9 @@ import { analyzer } from 'vite-bundle-analyzer'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
 const config: UserConfig = {
+  define: {
+    __OPTIMIZATION_VERSION__: JSON.stringify(process.env.RELEASE_VERSION ?? '0.0.0'),
+  },
   resolve: {
     alias: {
       '@contentful/optimization-api-client': resolve(

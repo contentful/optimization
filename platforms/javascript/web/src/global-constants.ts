@@ -1,3 +1,9 @@
+// eslint-disable-next-line @typescript-eslint/naming-convention -- Replaced at build-time
+declare const __OPTIMIZATION_VERSION__: string | undefined
+
+export const OPTIMIZATION_WEB_SDK_VERSION =
+  typeof __OPTIMIZATION_VERSION__ === 'string' ? __OPTIMIZATION_VERSION__ : '0.0.0'
+
 /**
  * Name of the cookie used by the Optimization Core to persist an anonymous ID.
  *

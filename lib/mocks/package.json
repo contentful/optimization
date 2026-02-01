@@ -9,12 +9,16 @@
     ".": "./src/index.ts",
     "./loggerMock": "./src/loggerMock.ts"
   },
+  "files": [
+    "dist/**/*"
+  ],
   "scripts": {
     "config:ctfl:list": "contentful config list",
     "fetch:ctfl": "pnpm fetch:ctfl:space && pnpm fetch:ctfl:entries",
     "fetch:ctfl:entries": "tsx ./scripts/fetchEntries.ts",
     "fetch:ctfl:space": "contentful space export --config .contentfulrc.json",
     "serve": "tsx ./src/server.ts",
+    "test:unit": "echo \"No unit tests necessary\"",
     "upload:ctfl:space": "read -p 'This will overwrite your space data! Do you really want to do this? (y/N)' yn && [ \"$yn\" = 'y' ] && pnpm import:ctfl:confirmed",
     "upload:ctfl:space:confirmed": "contentful space import --config .contentfulrc.json"
   },

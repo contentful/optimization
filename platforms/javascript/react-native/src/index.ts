@@ -13,6 +13,7 @@ import {
 } from '@contentful/optimization-core'
 import { merge } from 'es-toolkit'
 import { getLocale, getPageProperties, getUserAgent } from './builders/EventBuilder'
+import { OPTIMIZATION_REACT_NATIVE_SDK_VERSION } from './global-constants'
 import { createAppStateChangeListener, createOnlineChangeListener } from './handlers'
 import AsyncStorageStore from './storage/AsyncStorageStore'
 
@@ -41,7 +42,10 @@ async function mergeConfig({
       },
       eventBuilder: {
         channel: 'mobile',
-        library: { name: 'Optimization React Native SDK', version: '0.0.0' },
+        library: {
+          name: 'Optimization React Native SDK',
+          version: OPTIMIZATION_REACT_NATIVE_SDK_VERSION,
+        },
         getLocale,
         getPageProperties,
         getUserAgent,
@@ -127,9 +131,6 @@ class Optimization extends CoreStateful {
 
 // Re-export all core functionality to provide a single entry point
 export * from '@contentful/optimization-core'
-
-// Explicitly re-export logger utilities for better IDE support
-export { createScopedLogger } from '@contentful/optimization-core'
 
 // Export React Native specific components
 export { OptimizationProvider } from './components/OptimizationProvider'

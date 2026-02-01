@@ -11,7 +11,7 @@
     "moduleResolution": "bundler",
     "outDir": "dist",
     "rootDir": "./src",
-    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+    "tsBuildInfoFile": "./.tsbuildinfo"
   },
   "include": ["./src/**/*", "./src/**/*.json"],
   "exclude": ["./src/**/*.test.*"],

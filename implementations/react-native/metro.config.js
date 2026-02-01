@@ -24,6 +24,7 @@ const config = {
     resolveRequest: (context, moduleName, platform) => {
       // Resolve workspace packages to their source files instead of dist
       const workspacePackages = {
+        logger: path.resolve(workspaceRoot, 'lib/logger/src/index.ts'),
         '@contentful/optimization-core': path.resolve(workspaceRoot, 'universal/core/src/index.ts'),
         '@contentful/optimization-api-client': path.resolve(
           workspaceRoot,

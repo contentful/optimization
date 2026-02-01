@@ -25,6 +25,7 @@ import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'conte
 import type { LogLevels } from 'logger'
 import { ConsoleLogSink, logger } from 'logger'
 import type AnalyticsBase from './analytics/AnalyticsBase'
+import { OPTIMIZATION_CORE_SDK_VERSION } from './global-constants'
 import { InterceptorManager } from './lib/interceptor'
 import type { ResolvedData } from './personalization'
 import type PersonalizationBase from './personalization/PersonalizationBase'
@@ -117,7 +118,7 @@ abstract class CoreBase {
     this.eventBuilder = new EventBuilder(
       eventBuilder ?? {
         channel: 'server',
-        library: { name: 'Optimization Core', version: '0.0.0' },
+        library: { name: 'Optimization Core', version: OPTIMIZATION_CORE_SDK_VERSION },
       },
     )
   }
