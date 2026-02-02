@@ -23,6 +23,13 @@ jobs:
   publish:
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     steps:
+      - name: Retrieve Secrets from Vault
+        id: vault
+        uses: contentful/vault-github-actions/action@v1
+        with:
+          url: ${{ secrets.VAULT_URL }}
+          template-preset: semantic-release
+
       - name: Derive release version
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
@@ -38,6 +45,7 @@ jobs:
           ref:
             ${{ github.event_name == 'workflow_dispatch' && 'main' || github.event.release.tag_name
             }}
+          token: ${{ steps.vault.outputs.GITHUB_PACKAGES_WRITE_TOKEN }}
 
       - uses: actions/setup-node@v6
         with:
@@ -79,16 +87,8 @@ jobs:
             ./pkgs/
           retention-days: 3
 
-      # TODO: This commented block is here in case we need to use the vault
-      # - name: Retrieve Secrets from Vault
-      #   id: vault
-      #   uses: contentful/vault-github-actions/action@v1
-      #   with:
-      #     url: ${{ secrets.VAULT_URL }}
-      #     template-preset: semantic-release
-
       - name: Publish
         if: github.event_name == 'release' || inputs.publish
         run: pnpm -r --filter "@contentful/contentful-*" publish --access public --no-git-checks
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ steps.vault.outputs.GITHUB_PACKAGES_WRITE_TOKEN }}
