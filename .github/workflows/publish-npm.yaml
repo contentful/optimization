@@ -2,9 +2,8 @@ name: Publish to NPM
 
 permissions:
   contents: read
-  packages: read
-  attestations: write
   id-token: write
+  packages: write
 
 on:
   release:
@@ -21,21 +20,18 @@ on:
 
 jobs:
   publish:
-    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
+    runs-on: ubuntu-latest
     steps:
-      - uses: namespacelabs/nscloud-checkout-action@v8
-        with:
-          ref:
-            ${{ github.event_name == 'workflow_dispatch' && 'main' || github.event.release.tag_name
-            }}
-          token: ${{ steps.vault.outputs.GITHUB_PACKAGES_WRITE_TOKEN }}
-
       - name: Retrieve Secrets from Vault
         id: vault
-        uses: contentful/vault-github-actions/action@v1
+        uses: hashicorp/vault-action@v3.4.0
         with:
           url: ${{ secrets.VAULT_URL }}
-          template-preset: semantic-release
+          role: ${{ github.event.repository.name }}-github-action
+          method: jwt
+          path: github-actions
+          secrets: |
+            secret/data/github/github_packages_write GITHUB_PACKAGES_WRITE_TOKEN | GITHUB_PACKAGES_WRITE_TOKEN;
 
       - name: Derive release version
         run: |
@@ -47,20 +43,19 @@ jobs:
           echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
           echo "RELEASE_VERSION=${TAG#v}" >> "$GITHUB_ENV"
 
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.sha }}
+
       - uses: actions/setup-node@v6
         with:
           node-version-file: '.nvmrc'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@contentful'
           package-manager-cache: false
 
       - uses: pnpm/action-setup@v4
 
-      - uses: namespacelabs/nscloud-cache-action@v1
-        with:
-          cache: pnpm
-
-      - run: pnpm install --prefer-offline --frozen-lockfile
+      - run: |
+          pnpm install --prefer-offline --frozen-lockfile
 
       - name: Bump package.json versions
         run: |
@@ -75,21 +70,25 @@ jobs:
           RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
 
       - name: Create packages for troubleshooting
-        if: ${{ !cancelled() }}
         run: pnpm pack --recursive --filter "@contentful/optimization-*" --pack-destination pkgs
 
       - name: Upload packages for troubleshooting
         uses: actions/upload-artifact@v6
-        if: ${{ !cancelled() }}
         with:
           name: ci-optimization-sdk-packages
           path: |
             ./pkgs/
           retention-days: 3
 
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@contentful'
+          package-manager-cache: false
+
       - name: Publish
         if: github.event_name == 'release' || inputs.publish
-        run: pnpm -r --filter "@contentful/contentful-*" publish --access public --no-git-checks
+        run: pnpm -r --filter "@contentful/optimization-*" publish --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ steps.vault.outputs.GITHUB_PACKAGES_WRITE_TOKEN }}
-          # NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
