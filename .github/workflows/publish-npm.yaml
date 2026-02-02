@@ -23,6 +23,13 @@ jobs:
   publish:
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     steps:
+      - uses: namespacelabs/nscloud-checkout-action@v8
+        with:
+          ref:
+            ${{ github.event_name == 'workflow_dispatch' && 'main' || github.event.release.tag_name
+            }}
+          token: ${{ steps.vault.outputs.GITHUB_PACKAGES_WRITE_TOKEN }}
+
       - name: Retrieve Secrets from Vault
         id: vault
         uses: contentful/vault-github-actions/action@v1
@@ -39,13 +46,6 @@ jobs:
           fi
           echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
           echo "RELEASE_VERSION=${TAG#v}" >> "$GITHUB_ENV"
-
-      - uses: namespacelabs/nscloud-checkout-action@v8
-        with:
-          ref:
-            ${{ github.event_name == 'workflow_dispatch' && 'main' || github.event.release.tag_name
-            }}
-          token: ${{ steps.vault.outputs.GITHUB_PACKAGES_WRITE_TOKEN }}
 
       - uses: actions/setup-node@v6
         with:
