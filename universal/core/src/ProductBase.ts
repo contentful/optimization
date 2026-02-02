@@ -1,6 +1,6 @@
-import type ApiClient from '@contentful/optimization-api-client'
 import type {
   InsightsEventType as AnalyticsEventType,
+  ApiClient,
   EventBuilder,
   ExperienceEventType as PersonalizationEventType,
 } from '@contentful/optimization-api-client'

@@ -3,16 +3,34 @@
   "name": "logger",
   "version": "0.0.0",
   "license": "MIT",
-  "main": "./src/index.ts",
+  "type": "commonjs",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/**/*"
+  ],
   "scripts": {
-    "clean": "rimraf ./dist ./coverage tsconfig.tsbuildinfo",
+    "build": "pnpm clean; rslib build",
+    "clean": "rimraf ./.rslib ./dist ./coverage .tsbuildinfo",
     "test:unit": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "diary": "^0.4.5"
+    "diary": "catalog:"
   },
   "devDependencies": {
+    "@microsoft/api-extractor": "catalog:",
+    "@rslib/core": "catalog:",
+    "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "rimraf": "catalog:",
     "tslib": "catalog:",

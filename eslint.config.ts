@@ -6,14 +6,15 @@ import typescript, { type ConfigArray } from 'typescript-eslint'
 const config: ConfigArray = typescript.config(
   {
     ignores: [
-      '**/node_modules',
+      '**/*.{js,jsx,cjs,mjs}',
+      '**/.bundle/**',
+      '**/.rslib',
+      '**/android/**',
+      '**/build/**',
       '**/coverage',
       '**/dist',
-      '**/*.{js,jsx,cjs,mjs}',
-      '**/android/**',
       '**/ios/**',
-      '**/build/**',
-      '**/.bundle/**',
+      '**/node_modules',
     ],
   },
   js.configs.recommended,

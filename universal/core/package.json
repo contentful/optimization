@@ -9,23 +9,17 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
-    }
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist/**/*"
   ],
-  "publishConfig": {
-    "directory": "dist"
-  },
   "scripts": {
-    "build": "pnpm clean; pnpm build:cjs && pnpm build:esm",
-    "build:cjs": "tsc -b ./tsconfig.cjs.json && pnpm rename:js:cjs",
-    "build:esm": "tsc -b ./tsconfig.esm.json && pnpm rename:js:mjs",
-    "clean": "rimraf ./dist ./coverage tsconfig.tsbuildinfo",
-    "rename:js:cjs": "find ./dist -type f -name \"*.js\" ! -name \"*.cjs\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js}.cjs\"; done && find ./dist -type f -name \"*.js.map\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js.map}.cjs.map\"; done",
-    "rename:js:mjs": "find ./dist -type f -name \"*.js\" ! -name \"*.mjs\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js}.mjs\"; done && find ./dist -type f -name \"*.js.map\" -print0 | while IFS= read -r -d '' file; do mv \"$file\" \"${file%.js.map}.mjs.map\"; done",
+    "build": "pnpm clean; rslib build",
+    "clean": "rimraf ./.rslib ./dist ./coverage .tsbuildinfo",
     "test:unit": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
   },
@@ -33,13 +27,17 @@
     "@contentful/optimization-api-client": "workspace:*",
     "@preact/signals-core": "catalog:",
     "contentful": "catalog:",
+    "diary": "catalog:",
     "es-toolkit": "catalog:",
-    "logger": "workspace:*",
     "p-retry": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@microsoft/api-extractor": "catalog:",
+    "@rslib/core": "catalog:",
+    "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "logger": "workspace:*",
     "mocks": "workspace:*",
     "msw": "catalog:",
     "rimraf": "catalog:",

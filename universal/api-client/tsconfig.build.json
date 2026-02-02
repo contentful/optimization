@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "declarationMap": true,
+    "incremental": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noEmit": false,
+    "outDir": "./dist",
+    "paths": {},
+    "rootDir": "./src",
+    "types": ["node"],
+    "tsBuildInfoFile": "./.tsbuildinfo"
+  },
+  "include": ["./src/**/*", "./src/**/*.json"],
+  "exclude": ["./src/**/*.test.*", "./src/test/**/*"],
+  "references": [
+    { "path": "../../lib/logger/tsconfig.build.json" },
+    { "path": "../api-schemas/tsconfig.build.json" }
+  ]
+}

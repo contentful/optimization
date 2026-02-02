@@ -14,7 +14,7 @@ import {
   isEntryElement,
 } from './AutoEntryViewTracking'
 import { getLocale, getPageProperties, getUserAgent } from './builders'
-import { ANONYMOUS_ID_COOKIE } from './global-constants'
+import { ANONYMOUS_ID_COOKIE, OPTIMIZATION_WEB_SDK_VERSION } from './global-constants'
 import {
   beaconHandler,
   createOnlineChangeListener,
@@ -114,7 +114,7 @@ function mergeConfig({
       eventBuilder: {
         app,
         channel: 'web',
-        library: { name: 'Optimization Web API', version: '0.0.0' },
+        library: { name: 'Optimization Web API', version: OPTIMIZATION_WEB_SDK_VERSION },
         getLocale,
         getPageProperties,
         getUserAgent,

@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "declarationMap": true,
+    "incremental": true,
+    "jsx": "react-native",
+    "lib": ["ESNext"],
+    "noEmit": false,
+    "outDir": "./dist",
+    "paths": {},
+    "rootDir": "./src",
+    "types": ["node"],
+    "tsBuildInfoFile": "./.tsbuildinfo"
+  },
+  "include": ["./src/**/*", "./src/**/*.json"],
+  "exclude": ["./src/**/*.test.*", "./src/test/**/*"],
+  "references": [
+    { "path": "../../../lib/logger/tsconfig.build.json" },
+    { "path": "../../../universal/api-schemas/tsconfig.build.json" },
+    { "path": "../../../universal/api-client/tsconfig.build.json" },
+    { "path": "../../../universal/core/tsconfig.build.json" }
+  ]
+}

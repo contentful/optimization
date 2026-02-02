@@ -5,6 +5,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@contentful/optimization-api-schemas': resolve(__dirname, '../api-schemas/src/'),
+      logger: resolve(__dirname, '../../lib/logger/src/'),
     },
   },
   test: {

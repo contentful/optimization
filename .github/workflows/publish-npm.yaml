@@ -1,0 +1,92 @@
+name: Publish to NPM
+
+permissions:
+  contents: read
+  packages: write
+  attestations: write
+  id-token: write
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag (e.g. v1.2.3)'
+        required: true
+      publish:
+        description: 'Actually publish'
+        type: boolean
+        default: false
+
+jobs:
+  publish:
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
+    steps:
+      - name: Derive release version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG='${{ github.event.release.tag_name }}'
+          else
+            TAG='${{ inputs.tag }}'
+          fi
+          echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+          echo "RELEASE_VERSION=${TAG#v}" >> "$GITHUB_ENV"
+
+      - uses: namespacelabs/nscloud-checkout-action@v8
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@contentful'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: namespacelabs/nscloud-cache-action@v1
+        with:
+          cache: pnpm
+
+      - run: pnpm install --prefer-offline --frozen-lockfile
+
+      - name: Bump package.json versions
+        run: |
+          pnpm -r --filter "@contentful/optimization-*" exec \
+            npm --no-git-tag-version --force version "$RELEASE_VERSION"
+        env:
+          RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
+
+      - name: Build
+        run: pnpm build
+        env:
+          RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
+
+      - name: Create packages for troubleshooting
+        if: ${{ !cancelled() }}
+        run: pnpm pack --recursive --filter "@contentful/optimization-*" --pack-destination pkgs
+
+      - name: Upload packages for troubleshooting
+        uses: actions/upload-artifact@v6
+        if: ${{ !cancelled() }}
+        with:
+          name: ci-optimization-sdk-packages
+          path: |
+            ./pkgs/
+          retention-days: 3
+
+      # TODO: This commented block is here in case we need to use the vault
+      # - name: Retrieve Secrets from Vault
+      #   id: vault
+      #   uses: contentful/vault-github-actions/action@v1
+      #   with:
+      #     url: ${{ secrets.VAULT_URL }}
+      #     template-preset: semantic-release
+
+      - name: Publish
+        if: github.event_name == 'release' || inputs.publish
+        run: pnpm -r --filter "@contentful/contentful-*" publish --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
