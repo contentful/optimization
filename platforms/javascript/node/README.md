@@ -15,6 +15,10 @@
 
 </div>
 
+> [!WARNING]
+>
+> The Optimization SDK Suite is currently ALPHA! Breaking changes may be published at any time.
+
 The Optimization Node SDK implements functionality specific to Node environments, based on the
 [Optimization Core Library](/universal/core/README.md). This SDK is part of the
 [Contentful Optimization SDK Suite](/README.md).

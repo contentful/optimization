@@ -15,6 +15,10 @@
 
 </div>
 
+> [!WARNING]
+>
+> The Optimization SDK Suite is currently ALPHA! Breaking changes may be published at any time.
+
 This is a reference implementation for the
 [Optimization Node SDK](../../platforms/javascript/node/README.md) and is part of the
 [Contentful Optimization SDK Suite](../../README.md).

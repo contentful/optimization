@@ -1,5 +1,9 @@
 # @contentful/optimization-react-native
 
+> [!WARNING]
+>
+> The Optimization SDK Suite is currently ALPHA! Breaking changes may be published at any time.
+
 Contentful Optimization SDK for React Native applications.
 
 ## Installation

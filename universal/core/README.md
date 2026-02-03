@@ -15,6 +15,10 @@
 
 </div>
 
+> [!WARNING]
+>
+> The Optimization SDK Suite is currently ALPHA! Breaking changes may be published at any time.
+
 The Optimization Core SDK encapsulates all platform-agnostic functionality and business logic. All
 other SDKs descend from the Core SDK.
 

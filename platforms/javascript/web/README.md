@@ -15,6 +15,10 @@
 
 </div>
 
+> [!WARNING]
+>
+> The Optimization SDK Suite is currently ALPHA! Breaking changes may be published at any time.
+
 This SDK implements functionality specific to the Web environment, based on the
 [Optimization Core Library](/universal/core/README.md). This SDK is part of the
 [Contentful Optimization SDK Suite](/README.md).
