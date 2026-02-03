@@ -15,6 +15,10 @@
 
 </div>
 
+> [!WARNING]
+>
+> The Optimization SDK Suite is currently ALPHA! Breaking changes may be published at any time.
+
 The Contentful Optimization API Schema Library is a collection of Zod Mini schemas and their
 inferred TypeScript types. These schemas help provide run-time validation when working with requests
 and responses for the APIs referenced within Optimization SDKs.
