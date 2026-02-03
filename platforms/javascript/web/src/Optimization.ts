@@ -1,4 +1,16 @@
+/**
+ * Web SDK entrypoint for Contentful Optimization.
+ *
+ * @packageDocumentation
+ * @remarks
+ * Exposes a browser-wired {@link Optimization} class built on top of {@link CoreStateful}.
+ * When executed in a browser environment, the constructor attaches a singleton instance
+ * to `window.optimization` and the class constructor to `window.Optimization` for
+ * script-tag / global usage.
+ */
+
 import {
+  ANONYMOUS_ID_COOKIE_LEGACY,
   type App,
   CoreStateful,
   type CoreStatefulConfig,
@@ -28,6 +40,11 @@ import {
 } from './observers'
 import { LocalStore } from './storage'
 
+/**
+ * Scoped logger used by the Web SDK.
+ *
+ * @internal
+ */
 const logger = createScopedLogger('Web:SDK')
 
 declare global {
@@ -39,14 +56,33 @@ declare global {
   }
 }
 
+/**
+ * Supported cookie attributes for the Web SDK.
+ *
+ * @public
+ * @remarks
+ * These options are passed to {@link Cookies.set} when persisting the anonymous ID.
+ */
 interface CookieAttributes {
+  /**
+   * Cookie domain attribute.
+   *
+   * @remarks
+   * If omitted, the browser will scope the cookie to the current host.
+   */
   domain?: string
+
   /**
    * Determines the expiration date of the cookie as the number of days until the cookie expires.
    */
   expires?: number
 }
 
+/**
+ * Default cookie expiration (in days) used when no explicit value is provided.
+ *
+ * @internal
+ */
 const EXPIRATION_DAYS_DEFAULT = 365
 
 /**
@@ -71,6 +107,12 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
    */
   autoTrackEntryViews?: boolean
 
+  /**
+   * Cookie configuration used for persisting the anonymous identifier.
+   *
+   * @remarks
+   * Use this to control the cookie domain and expiration.
+   */
   cookie?: CookieAttributes
 }
 
@@ -142,9 +184,32 @@ function mergeConfig({
  * in a browser environment.
  */
 class Optimization extends CoreStateful {
+  /**
+   * Observer responsible for element view/dwell-time tracking.
+   *
+   * @internal
+   */
   private elementViewObserver?: ElementViewObserver = undefined
+
+  /**
+   * Observer responsible for detecting entry elements added/removed in the DOM.
+   *
+   * @internal
+   */
   private elementExistenceObserver?: ElementExistenceObserver = undefined
+
+  /**
+   * Whether automatic entry view tracking is enabled.
+   *
+   * @internal
+   */
   private autoTrackEntryViews = false
+
+  /**
+   * Cookie attributes used when persisting the anonymous identifier.
+   *
+   * @internal
+   */
   private readonly cookieAttributes?: CookieAttributes = undefined
 
   /**
@@ -176,14 +241,15 @@ class Optimization extends CoreStateful {
 
     super(mergedConfig)
 
-    const cookieValue = Cookies.get(ANONYMOUS_ID_COOKIE)
+    const legacyCookieValue = Cookies.get(ANONYMOUS_ID_COOKIE_LEGACY)
+    const cookieValue = legacyCookieValue ?? Cookies.get(ANONYMOUS_ID_COOKIE)
+
+    this.autoTrackEntryViews = true
 
     this.cookieAttributes = {
       domain: mergedConfig.cookie?.domain,
       expires: mergedConfig.cookie?.expires ?? EXPIRATION_DAYS_DEFAULT,
     }
-
-    this.autoTrackEntryViews = true
 
     createOnlineChangeListener((isOnline) => {
       this.online(isOnline)
@@ -230,14 +296,36 @@ class Optimization extends CoreStateful {
       LocalStore.personalizations = value
     })
 
-    if (cookieValue && cookieValue !== LocalStore.anonymousId) {
-      this.reset()
-      this.setAnonymousId(cookieValue)
-    }
+    this.initializeFromCookieValues(cookieValue, legacyCookieValue)
 
     if (typeof window !== 'undefined') window.optimization ??= this
   }
 
+  /**
+   * Initialize anonymous ID state from cookies.
+   *
+   * @internal
+   * @remarks
+   * Reads the legacy anonymous ID cookie (if present), migrates to the current cookie,
+   * and ensures SDK state is reset when the persisted anonymous ID differs from the
+   * in-memory value.
+   */
+  private initializeFromCookieValues(cookieValue?: string, legacyCookieValue?: string): void {
+    if (legacyCookieValue) Cookies.remove(ANONYMOUS_ID_COOKIE_LEGACY)
+
+    if (cookieValue && cookieValue !== LocalStore.anonymousId) {
+      this.reset()
+      this.setAnonymousId(cookieValue)
+    }
+  }
+
+  /**
+   * Persist (or clear) the anonymous ID in both cookies and {@link LocalStore}.
+   *
+   * @param value - Anonymous identifier to persist. If omitted, clears persisted state.
+   *
+   * @internal
+   */
   private setAnonymousId(value?: string): void {
     if (!value) {
       Cookies.remove(ANONYMOUS_ID_COOKIE)
@@ -303,6 +391,10 @@ class Optimization extends CoreStateful {
    * @param element - Element to observe.
    * @param options - Per-element observer options and callback data.
    *
+   * @remarks
+   * This method relies on an initialized {@link ElementViewObserver}. If automatic
+   * tracking has not been started, the call is a no-op.
+   *
    * @example
    * ```ts
    * const element = document.querySelector('#hero')!
@@ -321,6 +413,10 @@ class Optimization extends CoreStateful {
    * Stop tracking entry views for a specific element.
    *
    * @param element - Element to stop observing.
+   *
+   * @remarks
+   * This method relies on an initialized {@link ElementViewObserver}. If automatic
+   * tracking has not been started, the call is a no-op.
    *
    * @example
    * ```ts
@@ -352,6 +448,11 @@ class Optimization extends CoreStateful {
   }
 }
 
+/**
+ * Attach the class constructor to the global `window` object in browsers.
+ *
+ * @internal
+ */
 if (typeof window !== 'undefined') window.Optimization ??= Optimization
 
 export default Optimization

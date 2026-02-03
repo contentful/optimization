@@ -28,6 +28,7 @@ This SDK implements functionality specific to the Web environment, based on the
 <!-- mtoc-start -->
 
 - [Getting Started](#getting-started)
+  - [Usage in Vanilla JS Web Pages](#usage-in-vanilla-js-web-pages)
 - [Reference Implementations](#reference-implementations)
 - [Configuration](#configuration)
   - [Top-level Configuration Options](#top-level-configuration-options)
@@ -83,6 +84,19 @@ Configure and initialize the Optimization Node SDK:
 
 ```ts
 const optimization = new Optimization({ clientId: 'abc123' })
+```
+
+### Usage in Vanilla JS Web Pages
+
+Alternatively, the Web SDK can be used directly within an HTML file:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@contentful/optimization-web@0.1.0-alpha/dist/contentful-optimization-web.umd.cjs"></script>
+<script>
+  new Optimization({ clientId: 'abc123' })
+  // is equal to:
+  // window.optimization = new Optimization({ clientId: 'abc123' })
+</script>
 ```
 
 ## Reference Implementations

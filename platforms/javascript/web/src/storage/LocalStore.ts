@@ -1,47 +1,16 @@
-import { ChangeArray, Profile, SelectedPersonalizationArray } from '@contentful/optimization-core'
+import {
+  ANONYMOUS_ID_KEY,
+  ANONYMOUS_ID_KEY_LEGACY,
+  ChangeArray,
+  CHANGES_CACHE_KEY,
+  CONSENT_KEY,
+  DEBUG_FLAG_KEY,
+  PERSONALIZATIONS_CACHE_KEY,
+  Profile,
+  PROFILE_CACHE_KEY,
+  SelectedPersonalizationArray,
+} from '@contentful/optimization-core'
 import type { z } from 'zod/mini'
-
-/**
- * LocalStorage key for the anonymous identifier used by the Web SDK.
- *
- * @internal
- */
-export const ANONYMOUS_ID = '__ctfl_opt_anonymous_id__'
-
-/**
- * LocalStorage key for the persisted consent status.
- *
- * @internal
- */
-export const CONSENT = '__ctfl_opt_consent__'
-
-/**
- * LocalStorage key for cached Custom Flags.
- *
- * @internal
- */
-export const CHANGES_CACHE = '__ctfl_opt_changes__'
-
-/**
- * LocalStorage key for the debug flag toggle.
- *
- * @internal
- */
-export const DEBUG_FLAG = '__ctfl_opt_debug__'
-
-/**
- * LocalStorage key for cached profile data.
- *
- * @internal
- */
-export const PROFILE_CACHE = '__ctfl_opt_profile__'
-
-/**
- * LocalStorage key for cached selected personalizations.
- *
- * @internal
- */
-export const PERSONALIZATIONS_CACHE = '__ctfl_opt_personalizations__'
 
 /**
  * Local storage abstraction used by the Web SDK to persist optimization state.
@@ -64,20 +33,24 @@ const LocalStore = {
    * ```
    */
   reset(options = { resetConsent: false, resetDebug: false }) {
-    if (options.resetConsent) localStorage.removeItem(CONSENT)
-    if (options.resetDebug) localStorage.removeItem(DEBUG_FLAG)
+    if (options.resetConsent) localStorage.removeItem(CONSENT_KEY)
+    if (options.resetDebug) localStorage.removeItem(DEBUG_FLAG_KEY)
 
-    localStorage.removeItem(ANONYMOUS_ID)
-    localStorage.removeItem(CHANGES_CACHE)
-    localStorage.removeItem(PROFILE_CACHE)
-    localStorage.removeItem(PERSONALIZATIONS_CACHE)
+    localStorage.removeItem(ANONYMOUS_ID_KEY)
+    localStorage.removeItem(CHANGES_CACHE_KEY)
+    localStorage.removeItem(PROFILE_CACHE_KEY)
+    localStorage.removeItem(PERSONALIZATIONS_CACHE_KEY)
   },
 
   /**
    * Anonymous identifier currently stored in localStorage, if any.
    */
   get anonymousId(): string | undefined {
-    return localStorage.getItem(ANONYMOUS_ID) ?? undefined
+    const legacyAnonymousIdValue = localStorage.getItem(ANONYMOUS_ID_KEY_LEGACY)
+
+    if (legacyAnonymousIdValue) localStorage.removeItem(ANONYMOUS_ID_KEY_LEGACY)
+
+    return legacyAnonymousIdValue ?? localStorage.getItem(ANONYMOUS_ID_KEY) ?? undefined
   },
 
   /**
@@ -86,7 +59,7 @@ const LocalStore = {
    * @param id - The new identifier, or `undefined` to clear it.
    */
   set anonymousId(id: string | undefined) {
-    LocalStore.setCache(ANONYMOUS_ID, id)
+    LocalStore.setCache(ANONYMOUS_ID_KEY, id)
   },
 
   /**
@@ -96,7 +69,7 @@ const LocalStore = {
    * `denied`, or `undefined` when no value is stored.
    */
   get consent(): boolean | undefined {
-    const consent = localStorage.getItem(CONSENT)
+    const consent = localStorage.getItem(CONSENT_KEY)
 
     switch (consent) {
       case 'accepted':
@@ -116,7 +89,7 @@ const LocalStore = {
   set consent(consent: boolean | undefined) {
     const translated = consent ? 'accepted' : 'denied'
 
-    LocalStore.setCache(CONSENT, consent === undefined ? undefined : translated)
+    LocalStore.setCache(CONSENT_KEY, consent === undefined ? undefined : translated)
   },
 
   /**
@@ -125,7 +98,7 @@ const LocalStore = {
    * @returns `true` or `false` when stored, or `undefined` otherwise.
    */
   get debug(): boolean | undefined {
-    const debug = localStorage.getItem(DEBUG_FLAG)
+    const debug = localStorage.getItem(DEBUG_FLAG_KEY)
 
     return debug ? debug === 'true' : undefined
   },
@@ -136,14 +109,14 @@ const LocalStore = {
    * @param debug - New flag value or `undefined` to remove.
    */
   set debug(debug: boolean | undefined) {
-    LocalStore.setCache(DEBUG_FLAG, debug)
+    LocalStore.setCache(DEBUG_FLAG_KEY, debug)
   },
 
   /**
    * Cached Custom Flags change array, if present.
    */
   get changes(): ChangeArray | undefined {
-    return LocalStore.getCache(CHANGES_CACHE, ChangeArray)
+    return LocalStore.getCache(CHANGES_CACHE_KEY, ChangeArray)
   },
 
   /**
@@ -152,14 +125,14 @@ const LocalStore = {
    * @param changes - New changes to store, or `undefined` to remove.
    */
   set changes(changes: ChangeArray | undefined) {
-    LocalStore.setCache(CHANGES_CACHE, changes)
+    LocalStore.setCache(CHANGES_CACHE_KEY, changes)
   },
 
   /**
    * Cached profile from the personalization service, if present.
    */
   get profile(): Profile | undefined {
-    return LocalStore.getCache(PROFILE_CACHE, Profile)
+    return LocalStore.getCache(PROFILE_CACHE_KEY, Profile)
   },
 
   /**
@@ -168,14 +141,14 @@ const LocalStore = {
    * @param profile - New profile to store, or `undefined` to remove.
    */
   set profile(profile: Profile | undefined) {
-    LocalStore.setCache(PROFILE_CACHE, profile)
+    LocalStore.setCache(PROFILE_CACHE_KEY, profile)
   },
 
   /**
    * Cached selected personalizations, if present.
    */
   get personalizations(): SelectedPersonalizationArray | undefined {
-    return LocalStore.getCache(PERSONALIZATIONS_CACHE, SelectedPersonalizationArray)
+    return LocalStore.getCache(PERSONALIZATIONS_CACHE_KEY, SelectedPersonalizationArray)
   },
 
   /**
@@ -184,7 +157,7 @@ const LocalStore = {
    * @param personalizations - New selections to store, or `undefined` to remove.
    */
   set personalizations(personalizations: SelectedPersonalizationArray | undefined) {
-    LocalStore.setCache(PERSONALIZATIONS_CACHE, personalizations)
+    LocalStore.setCache(PERSONALIZATIONS_CACHE_KEY, personalizations)
   },
 
   /**

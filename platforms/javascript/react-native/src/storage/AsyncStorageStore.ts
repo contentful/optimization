@@ -1,20 +1,19 @@
 import {
+  ANONYMOUS_ID_KEY,
   ChangeArray,
+  CHANGES_CACHE_KEY,
+  CONSENT_KEY,
   createScopedLogger,
+  DEBUG_FLAG_KEY,
+  PERSONALIZATIONS_CACHE_KEY,
   Profile,
+  PROFILE_CACHE_KEY,
   SelectedPersonalizationArray,
 } from '@contentful/optimization-core'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { z } from 'zod/mini'
 
 const logger = createScopedLogger('RN:Storage')
-
-export const ANONYMOUS_ID = '__ctfl_opt_anonymous_id__'
-export const CONSENT = '__ctfl_opt_consent__'
-export const CHANGES_CACHE = '__ctfl_opt_changes__'
-export const DEBUG_FLAG = '__ctfl_opt_debug__'
-export const PROFILE_CACHE = '__ctfl_opt_profile__'
-export const PERSONALIZATIONS_CACHE = '__ctfl_opt_personalizations__'
 
 class AsyncStorageStore {
   private readonly cache = new Map<string, unknown>()
@@ -25,12 +24,12 @@ class AsyncStorageStore {
 
     try {
       const keys = [
-        ANONYMOUS_ID,
-        CONSENT,
-        CHANGES_CACHE,
-        DEBUG_FLAG,
-        PROFILE_CACHE,
-        PERSONALIZATIONS_CACHE,
+        ANONYMOUS_ID_KEY,
+        CONSENT_KEY,
+        CHANGES_CACHE_KEY,
+        DEBUG_FLAG_KEY,
+        PROFILE_CACHE_KEY,
+        PERSONALIZATIONS_CACHE_KEY,
       ]
       const values = await AsyncStorage.multiGet(keys)
 
@@ -39,7 +38,7 @@ class AsyncStorageStore {
           try {
             this.cache.set(
               key,
-              key === ANONYMOUS_ID || key === CONSENT || key === DEBUG_FLAG
+              key === ANONYMOUS_ID_KEY || key === CONSENT_KEY || key === DEBUG_FLAG_KEY
                 ? value
                 : JSON.parse(value),
             )
@@ -56,16 +55,16 @@ class AsyncStorageStore {
   }
 
   get anonymousId(): string | undefined {
-    const value = this.cache.get(ANONYMOUS_ID)
+    const value = this.cache.get(ANONYMOUS_ID_KEY)
     return typeof value === 'string' ? value : undefined
   }
 
   set anonymousId(id: string | undefined) {
-    this.setCache(ANONYMOUS_ID, id)
+    this.setCache(ANONYMOUS_ID_KEY, id)
   }
 
   get consent(): boolean | undefined {
-    const value = this.cache.get(CONSENT)
+    const value = this.cache.get(CONSENT_KEY)
     const consent = typeof value === 'string' ? value : undefined
 
     switch (consent) {
@@ -80,41 +79,41 @@ class AsyncStorageStore {
 
   set consent(consent: boolean | undefined) {
     const translated = consent ? 'accepted' : 'denied'
-    this.setCache(CONSENT, consent === undefined ? undefined : translated)
+    this.setCache(CONSENT_KEY, consent === undefined ? undefined : translated)
   }
 
   get debug(): boolean | undefined {
-    const value = this.cache.get(DEBUG_FLAG)
+    const value = this.cache.get(DEBUG_FLAG_KEY)
     const debug = typeof value === 'string' ? value : undefined
     return debug ? debug === 'true' : undefined
   }
 
   set debug(debug: boolean | undefined) {
-    this.setCache(DEBUG_FLAG, debug)
+    this.setCache(DEBUG_FLAG_KEY, debug)
   }
 
   get changes(): ChangeArray | undefined {
-    return this.getCache(CHANGES_CACHE, ChangeArray)
+    return this.getCache(CHANGES_CACHE_KEY, ChangeArray)
   }
 
   set changes(changes: ChangeArray | undefined) {
-    this.setCache(CHANGES_CACHE, changes)
+    this.setCache(CHANGES_CACHE_KEY, changes)
   }
 
   get profile(): Profile | undefined {
-    return this.getCache(PROFILE_CACHE, Profile)
+    return this.getCache(PROFILE_CACHE_KEY, Profile)
   }
 
   set profile(profile: Profile | undefined) {
-    this.setCache(PROFILE_CACHE, profile)
+    this.setCache(PROFILE_CACHE_KEY, profile)
   }
 
   get personalizations(): SelectedPersonalizationArray | undefined {
-    return this.getCache(PERSONALIZATIONS_CACHE, SelectedPersonalizationArray)
+    return this.getCache(PERSONALIZATIONS_CACHE_KEY, SelectedPersonalizationArray)
   }
 
   set personalizations(personalizations: SelectedPersonalizationArray | undefined) {
-    this.setCache(PERSONALIZATIONS_CACHE, personalizations)
+    this.setCache(PERSONALIZATIONS_CACHE_KEY, personalizations)
   }
 
   getCache<T extends z.ZodMiniType>(key: string, parser: T): z.output<T> | undefined {
