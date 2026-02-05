@@ -1,0 +1,50 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "4hDiXxYEFrXHXcQgmdL9Uv",
+        "type": "Entry",
+        "createdAt": "2025-11-20T14:10:23.719Z",
+        "updatedAt": "2025-11-20T14:10:23.719Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 6,
+        "revision": 1,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "nestedContent"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "internalTitle": "[Variant Nested] Variant Level 2",
+        "text": "This is a level 2 nested variant entry."
+      }
+    }
+  ]
+}

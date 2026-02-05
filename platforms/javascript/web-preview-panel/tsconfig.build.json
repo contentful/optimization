@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "incremental": true,
+    "noEmit": false,
+    "baseUrl": "./src",
+    "emitDeclarationOnly": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "outDir": "dist",
+    "rootDir": "./src",
+    "tsBuildInfoFile": "./dist/.tsbuildinfo"
+  },
+  "include": ["./src/**/*", "./src/**/*.json"],
+  "exclude": ["./src/**/*.test.*"],
+  "extends": "../../../tsconfig.base.json",
+  "references": [{ "path": "../web/tsconfig.build.json" }]
+}

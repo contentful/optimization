@@ -1,0 +1,3 @@
+import attachOptimizationPreviewPanel from './attachOptimizationPreviewPanel'
+
+export default attachOptimizationPreviewPanel

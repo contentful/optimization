@@ -1,0 +1,70 @@
+{
+  "sys": {
+    "type": "Array"
+  },
+  "total": 1,
+  "skip": 0,
+  "limit": 100,
+  "items": [
+    {
+      "metadata": {
+        "tags": [],
+        "concepts": []
+      },
+      "sys": {
+        "space": {
+          "sys": {
+            "type": "Link",
+            "linkType": "Space",
+            "id": "uelxcuo7v97l"
+          }
+        },
+        "id": "56gfPS3OIl77DbH5PZigtr",
+        "type": "Entry",
+        "createdAt": "2025-10-13T09:27:27.439Z",
+        "updatedAt": "2025-10-13T09:27:27.439Z",
+        "environment": {
+          "sys": {
+            "id": "master",
+            "type": "Link",
+            "linkType": "Environment"
+          }
+        },
+        "publishedVersion": 13,
+        "revision": 1,
+        "contentType": {
+          "sys": {
+            "type": "Link",
+            "linkType": "ContentType",
+            "id": "nt_audience"
+          }
+        },
+        "locale": "en-US"
+      },
+      "fields": {
+        "nt_name": "Users with a Custom Event",
+        "nt_description": "Users for whom a `custom` event has been triggered at least once",
+        "nt_rules": {
+          "any": [
+            {
+              "all": [
+                {
+                  "key": "",
+                  "type": "track",
+                  "count": "1",
+                  "value": "custom",
+                  "operator": "greaterThanInclusive",
+                  "conditions": []
+                }
+              ]
+            }
+          ]
+        },
+        "nt_audience_id": "56gfPS3OIl77DbH5PZigtr",
+        "nt_metadata": {
+          "type": "origin"
+        }
+      }
+    }
+  ]
+}

@@ -377,7 +377,7 @@
           "id": "603SW4mLeYB4AkPhdU2Jvj",
           "type": "Entry",
           "createdAt": "2025-10-13T10:40:23.022Z",
-          "updatedAt": "2025-11-19T13:45:30.072Z",
+          "updatedAt": "2026-01-22T16:38:31.569Z",
           "environment": {
             "sys": {
               "id": "master",
@@ -385,8 +385,8 @@
               "linkType": "Environment"
             }
           },
-          "publishedVersion": 14,
-          "revision": 2,
+          "publishedVersion": 16,
+          "revision": 3,
           "contentType": {
             "sys": {
               "type": "Link",
@@ -400,7 +400,7 @@
           "nt_name": "[Personalization] Return Visitors",
           "nt_type": "nt_personalization",
           "nt_config": {
-            "distribution": [0.1, 0.9],
+            "distribution": [0, 1],
             "traffic": 1,
             "components": [
               {

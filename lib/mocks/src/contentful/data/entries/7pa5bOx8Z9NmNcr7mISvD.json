@@ -134,7 +134,7 @@
           "id": "53yERfkqYXkg2B18EcdtK5",
           "type": "Entry",
           "createdAt": "2025-10-13T11:37:27.018Z",
-          "updatedAt": "2025-10-13T11:41:13.578Z",
+          "updatedAt": "2026-01-23T12:02:52.840Z",
           "environment": {
             "sys": {
               "id": "master",
@@ -142,8 +142,8 @@
               "linkType": "Environment"
             }
           },
-          "publishedVersion": 21,
-          "revision": 3,
+          "publishedVersion": 23,
+          "revision": 4,
           "contentType": {
             "sys": {
               "type": "Link",
@@ -157,7 +157,7 @@
           "nt_name": "[Personalization] Identified Users",
           "nt_type": "nt_personalization",
           "nt_config": {
-            "distribution": [0.1, 0.9],
+            "distribution": [0, 1],
             "traffic": 1,
             "components": [
               {

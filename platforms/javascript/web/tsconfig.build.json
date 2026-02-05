@@ -1,5 +1,4 @@
 {
-  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
     "incremental": true,
@@ -15,5 +14,6 @@
   },
   "include": ["./src/**/*", "./src/**/*.json"],
   "exclude": ["./src/**/*.test.*"],
+  "extends": "../../../tsconfig.base.json",
   "references": [{ "path": "../../../universal/core/tsconfig.build.json" }]
 }
