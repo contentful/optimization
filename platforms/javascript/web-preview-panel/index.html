@@ -354,6 +354,8 @@
 
         div.dataset.ctflEntryId = entry.sys?.id
 
+        if (entry.fields.nt_experiences) element.dataset.ctflBaselineId = entry.sys?.id
+
         if (personalization) {
           div.dataset.ctflPersonalizationId = personalization?.experienceId
           div.dataset.ctflSticky = personalization?.sticky

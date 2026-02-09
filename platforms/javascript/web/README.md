@@ -91,7 +91,7 @@ const optimization = new Optimization({ clientId: 'abc123' })
 Alternatively, the Web SDK can be used directly within an HTML file:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@contentful/optimization-web@0.1.0-alpha/dist/contentful-optimization-web.umd.cjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@contentful/optimization-web@latest/dist/contentful-optimization-web.umd.js"></script>
 <script>
   new Optimization({ clientId: 'abc123' })
   // is equal to:

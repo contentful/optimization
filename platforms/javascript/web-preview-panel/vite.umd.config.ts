@@ -2,6 +2,7 @@ import { resolve } from 'node:path'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { defineConfig, type UserConfig } from 'vite'
 import { analyzer } from 'vite-bundle-analyzer'
+import umdFormatResolver from 'vite-plugin-resolve-umd-format'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
 const config: UserConfig = {
@@ -24,6 +25,7 @@ const config: UserConfig = {
   },
   plugins: [
     analyzer({ analyzerMode: 'static', fileName: 'analyzer', openAnalyzer: false }),
+    umdFormatResolver(),
     visualizer({
       brotliSize: true,
       filename: 'dist/visualizer.html',
@@ -50,7 +52,7 @@ const umd: UserConfig = {
     lib: {
       entry: resolve(__dirname, 'src/attachOptimizationPreviewPanel.ts'),
       formats: ['umd'],
-      fileName: 'index',
+      fileName: 'contentful-optimization-web-preview-panel',
       name: 'attachOptimizationPreviewPanel',
     },
     sourcemap: true,
