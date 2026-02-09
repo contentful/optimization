@@ -806,7 +806,6 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.6.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
-    publishDirectory: dist
 
   universal/api-client:
     dependencies:
