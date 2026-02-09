@@ -105,11 +105,17 @@ const registerPreviewInterceptor: PreviewInterceptor = (
     }
   })
 
-export default async function attachOptimizationPreviewPanel(
-  contentfulClient: ContentfulClientApi<ChainModifiers>,
-  optimization: Optimization,
-  nonce: string | undefined,
-): Promise<void> {
+interface AttachOptimizationPreviewPanelArgs {
+  contentful: ContentfulClientApi<ChainModifiers>
+  optimization: Optimization
+  nonce: string | undefined
+}
+
+export default async function attachOptimizationPreviewPanel({
+  contentful,
+  optimization,
+  nonce,
+}: AttachOptimizationPreviewPanelArgs): Promise<void> {
   canDefineComponents()
 
   if (nonce !== undefined) {
@@ -132,8 +138,8 @@ export default async function attachOptimizationPreviewPanel(
 
   const [audiences, personalizations]: [audiences: Entry[], personalizations: Entry[]] =
     await Promise.all([
-      getAllEntries<AudienceEntrySkeleton>(contentfulClient, 'nt_audience'),
-      getAllEntries<PersonalizationEntrySkeleton>(contentfulClient, 'nt_experience'),
+      getAllEntries<AudienceEntrySkeleton>(contentful, 'nt_audience'),
+      getAllEntries<PersonalizationEntrySkeleton>(contentful, 'nt_experience'),
     ])
 
   defineCtflOptPreviewIndicator()

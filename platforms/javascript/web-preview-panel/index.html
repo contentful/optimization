@@ -266,7 +266,11 @@
         personalization: { baseUrl: '%VITE_EXPERIENCE_API_BASE_URL%' },
       })
 
-      await attachOptimizationPreviewPanel(contentfulClient, optimization, 'nonce-string')
+      await attachOptimizationPreviewPanel({
+        contentful: contentfulClient,
+        optimization,
+        nonce: 'nonce-string',
+      })
 
       // Emit page event
       optimization.personalization.page()
