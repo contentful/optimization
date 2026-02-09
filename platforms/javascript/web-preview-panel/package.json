@@ -15,9 +15,9 @@
       }
     }
   },
-  "publishConfig": {
-    "directory": "dist"
-  },
+  "files": [
+    "dist/**/*"
+  ],
   "scripts": {
     "build:esm": "vite build -c vite.esm.config.ts",
     "build:umd": "vite build -c vite.umd.config.ts",
