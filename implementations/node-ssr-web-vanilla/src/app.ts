@@ -42,7 +42,7 @@ const render = (identified?: string): string => `<!doctype html>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.jsdelivr.net/npm/contentful@latest/dist/contentful.browser.min.js" > </script>
-    <script src="/dist/contentful-optimization-web.umd.cjs"></script>
+    <script src="/dist/contentful-optimization-web.umd.js"></script>
     <link rel="stylesheet" href="/assets/style.css" />
   </head>
   <body>

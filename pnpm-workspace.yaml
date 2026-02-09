@@ -37,6 +37,7 @@ catalog:
   vite: ^7.1.11
   vitest: ^3.2.4
   vite-bundle-analyzer: ^1.2.1
+  vite-plugin-resolve-umd-format: ^1.0.0
   vite-tsconfig-paths: ^5.1.4
   zod: ^4.1.5
 
