@@ -125,6 +125,7 @@ export class CtflOptPreviewAudience extends LitElement {
     }
   }
 
+  // TODO: Support audience-wide personalization switch
   protected render(): TemplateResult {
     return html`
       <div class="details">

@@ -150,9 +150,16 @@ export default async function attachOptimizationPreviewPanel(
 
   panel.overrides = overrides
   panel.audiences = audiences.filter((audience) => isAudienceEntry(audience))
-  panel.personalizations = personalizations.filter((personalization) =>
-    isPersonalizationEntry(personalization),
-  )
+  panel.personalizations = personalizations
+    .filter((personalization) => isPersonalizationEntry(personalization))
+    // TODO: Support custom flags
+    .filter(
+      (personalization) =>
+        isPersonalizationEntry(personalization) &&
+        !personalization.fields.nt_config?.components?.some(
+          (component) => component.type === 'InlineVariable',
+        ),
+    )
 
   registerPreviewInterceptor(panel, optimization.interceptors.state, overrides)
 
