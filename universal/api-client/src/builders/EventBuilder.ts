@@ -516,12 +516,14 @@ class EventBuilder {
 
     const context = parseWithFriendlyError(ScreenEventContext, universalContext)
 
+    const merged = { name, ...properties }
+
     return {
       ...universalProperties,
       context,
       type: 'screen',
       name,
-      properties,
+      properties: merged,
     }
   }
 

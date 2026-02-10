@@ -125,7 +125,10 @@ export function OptimizationNavigationContainer({
     (screenName: string, params?: Record<string, unknown>) => {
       const { current: currentOptimization } = optimizationRef
 
-      const properties: Properties = includeParams && params ? { params: paramsToJson(params) } : {}
+      const properties: Properties = {
+        name: screenName,
+        ...(includeParams && params ? { params: paramsToJson(params) } : {}),
+      }
 
       logger.info(`Tracking screen: "${screenName}"`)
 
