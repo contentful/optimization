@@ -6,7 +6,6 @@ import type {
   OptimizationData,
   PersonalizationEntry,
   PersonalizationEntrySkeleton,
-  PreviewPanelSignalObject,
   SelectedPersonalizationArray,
 } from '@contentful/optimization-web'
 import type { ChainModifiers, ContentfulClientApi, Entry } from 'contentful'
@@ -122,16 +121,9 @@ export default async function attachOptimizationPreviewPanel({
     window.litNonce = nonce
   }
 
-  const previewPanelIntegration: PreviewPanelSignalObject = {
-    signals: undefined,
-    signalFns: undefined,
-  }
+  const { signals, signalFns } = optimization.registerPreviewPanel()
 
-  optimization.registerPreviewPanel(previewPanelIntegration)
-
-  const { signals, signalFns } = previewPanelIntegration
-
-  if (!signals || !signalFns)
+  if (signals === undefined || signalFns === undefined || signals === null || signalFns === null)
     throw new Error(
       '[Optimization Preview Panel] The preview panel failed to find optimization states',
     )
