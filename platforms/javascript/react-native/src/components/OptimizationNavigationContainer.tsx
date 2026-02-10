@@ -1,10 +1,8 @@
-import { createScopedLogger, type Properties } from '@contentful/optimization-core'
+import type { Properties } from '@contentful/optimization-core'
 import type React from 'react'
 import { useCallback, useRef } from 'react'
 import * as z from 'zod/mini'
-import { useOptimization } from '../context/OptimizationContext'
-
-const logger = createScopedLogger('RN:Navigation')
+import { useScreenTrackingCallback } from '../hooks/useScreenTracking'
 
 /**
  * @internal
@@ -42,7 +40,7 @@ export interface OptimizationNavigationContainerProps {
    * Render prop that receives navigation props to spread onto the `NavigationContainer`.
    */
   children: (props: {
-    ref: React.RefObject<NavigationContainerRef | null>
+    ref: React.RefObject<NavigationContainerRef>
     onReady: () => void
     onStateChange: (state: NavigationState | undefined) => void
   }) => React.ReactNode
@@ -113,32 +111,20 @@ export function OptimizationNavigationContainer({
   onReady: userOnReady,
   includeParams = false,
 }: OptimizationNavigationContainerProps): React.ReactNode {
-  const optimization = useOptimization()
-  const navigationRef = useRef<NavigationContainerRef | null>(null)
+  const trackScreenView = useScreenTrackingCallback()
+  const navigationRef = useRef<NavigationContainerRef>(null)
   const routeNameRef = useRef<string | undefined>(undefined)
-
-  // Store optimization in a ref to prevent unnecessary callback recreations
-  const optimizationRef = useRef(optimization)
-  optimizationRef.current = optimization
 
   const trackScreen = useCallback(
     (screenName: string, params?: Record<string, unknown>) => {
-      const { current: currentOptimization } = optimizationRef
-
       const properties: Properties = {
         name: screenName,
         ...(includeParams && params ? { params: paramsToJson(params) } : {}),
       }
 
-      logger.info(`Tracking screen: "${screenName}"`)
-
-      void currentOptimization.screen({
-        name: screenName,
-        properties,
-        screen: { name: screenName },
-      })
+      trackScreenView(screenName, properties)
     },
-    [includeParams],
+    [includeParams, trackScreenView],
   )
 
   const handleReady = useCallback(() => {

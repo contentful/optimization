@@ -233,7 +233,11 @@ export type {
   UseViewportTrackingReturn,
 } from './hooks/useViewportTracking'
 
-export { useScreenTracking } from './hooks/useScreenTracking'
+// Export screen tracking hooks
+export {
+  useScreenTracking,
+  useScreenTrackingCallback,
+} from './hooks/useScreenTracking'
 export type { UseScreenTrackingOptions, UseScreenTrackingReturn } from './hooks/useScreenTracking'
 
 export { OptimizationNavigationContainer } from './components/OptimizationNavigationContainer'
