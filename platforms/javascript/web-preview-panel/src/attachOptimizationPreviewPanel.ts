@@ -123,7 +123,7 @@ export default async function attachOptimizationPreviewPanel({
 
   const { signals, signalFns } = optimization.registerPreviewPanel()
 
-  if (signals === undefined || signalFns === undefined || signals === null || signalFns === null)
+  if (!signals || !signalFns)
     throw new Error(
       '[Optimization Preview Panel] The preview panel failed to find optimization states',
     )
