@@ -240,9 +240,13 @@ class CoreStateful extends CoreBase implements ConsentController {
    * This method is intended for use by the Preview Panel component.
    * Direct signal access allows immediate state updates without API calls.
    */
-  registerPreviewPanel(previewPanel: PreviewPanelSignalObject): void {
-    previewPanel.signals = signals
-    previewPanel.signalFns = signalFns
+  registerPreviewPanel(previewPanel?: PreviewPanelSignalObject): PreviewPanelSignalObject {
+    if (previewPanel) {
+      previewPanel.signals = signals
+      previewPanel.signalFns = signalFns
+    }
+
+    return { signals, signalFns }
   }
 }
 
