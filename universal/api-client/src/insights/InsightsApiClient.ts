@@ -102,7 +102,8 @@ export default class InsightsApiClient extends ApiClientBase {
 
     const { baseUrl, beaconHandler } = config
 
-    this.baseUrl = baseUrl ?? INSIGHTS_BASE_URL
+    // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- Set default for anything falsey
+    this.baseUrl = baseUrl || INSIGHTS_BASE_URL
     this.beaconHandler = beaconHandler
   }
 
