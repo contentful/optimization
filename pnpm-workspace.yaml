@@ -2,6 +2,7 @@ packages:
   - implementations/*
   - lib/*
   - platforms/javascript/*
+  - platforms/javascript/web-frameworks/*
   - universal/*
 
 catalog:

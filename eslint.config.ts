@@ -9,6 +9,7 @@ const config: ConfigArray = typescript.config(
   {
     ignores: [
       '**/*.{js,jsx,cjs,mjs}',
+      '**/*.min.js',
       '**/.bundle/**',
       '**/.rslib',
       '**/android/**',

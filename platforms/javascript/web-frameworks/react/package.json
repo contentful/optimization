@@ -1,0 +1,55 @@
+{
+  "name": "@contentful/optimization-react-web",
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "build:esm": "vite build -c vite.esm.config.ts",
+    "build": "pnpm clean && tsc -b ./tsconfig.build.json && pnpm build:esm",
+    "clean": "rimraf ./dist ./coverage .tsbuildinfo",
+    "dev": "vite -c vite.esm.config.ts --host",
+    "test:unit": "mkdir -p coverage/.tmp && vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "validate": "pnpm typecheck && pnpm test:unit && pnpm build"
+  },
+  "dependencies": {
+    "@contentful/optimization-web": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.7",
+    "@vitest/coverage-v8": "catalog:",
+    "happy-dom": "catalog:",
+    "msw": "catalog:",
+    "mocks": "workspace:*",
+    "rimraf": "catalog:",
+    "rollup-plugin-visualizer": "catalog:",
+    "tslib": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-bundle-analyzer": "catalog:",
+    "vite-tsconfig-paths": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  }
+}

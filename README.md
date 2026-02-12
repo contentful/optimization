@@ -111,6 +111,8 @@ located within the `/lib` folder in the project root.
 
 We appreciate any help on our repositories. For more details about how to contribute see our
 [CONTRIBUTING](https://github.com/contentful/contentful.js/blob/master/CONTRIBUTING.md) document.
+Project governance and engineering guardrails are defined in
+[`/.specify/memory/constitution.md`](./.specify/memory/constitution.md).
 
 ## License
 

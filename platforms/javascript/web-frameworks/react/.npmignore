@@ -1,0 +1,8 @@
+src/
+coverage/
+node_modules/
+*.log
+.vscode/
+.idea/
+*.tmp
+*.swp
