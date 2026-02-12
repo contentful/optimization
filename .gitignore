@@ -17,6 +17,7 @@ coverage
 dist
 docs
 node_modules
+pkgs
 pids
 playwright-report
 playwright.cache

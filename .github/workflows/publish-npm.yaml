@@ -70,7 +70,7 @@ jobs:
           RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
 
       - name: Create packages for troubleshooting
-        run: pnpm pack --recursive --filter "@contentful/optimization-*" --pack-destination pkgs
+        run: pnpm pack --filter "@contentful/optimization-*" --pack-destination pkgs
 
       - name: Upload packages for troubleshooting
         uses: actions/upload-artifact@v6

@@ -224,9 +224,6 @@ importers:
       '@contentful/optimization-node':
         specifier: workspace:*
         version: link:../../platforms/javascript/node
-      '@contentful/optimization-web':
-        specifier: workspace:*
-        version: link:../../platforms/javascript/web
       cookie-parser:
         specifier: ^1.4.7
         version: 1.4.7

@@ -10,7 +10,7 @@ import * as contentful from 'contentful'
 import express, { type Express } from 'express'
 import rateLimit from 'express-rate-limit'
 import path from 'node:path'
-import Optimization from './src'
+import { Optimization } from './src'
 
 const limiter = rateLimit({
   windowMs: 30_000,
