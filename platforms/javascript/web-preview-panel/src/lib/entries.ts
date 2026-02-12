@@ -1,3 +1,4 @@
+import type { AudienceEntry, PersonalizationEntry } from '@contentful/optimization-web'
 import type {
   ChainModifiers,
   ContentfulClientApi,
@@ -15,6 +16,16 @@ type CursorQuery<S extends EntrySkeletonType, M extends ChainModifiers> = Partia
 interface CursorResponse<S extends EntrySkeletonType, M extends ChainModifiers> {
   items: Array<Entry<S, M>>
   pages?: { next?: string }
+}
+
+export function isAudienceEntry(audience: Entry): audience is AudienceEntry {
+  return audience.sys.contentType.sys.id === 'nt_audience'
+}
+
+export function isPersonalizationEntry(
+  personalization: Entry,
+): personalization is PersonalizationEntry {
+  return personalization.sys.contentType.sys.id === 'nt_experience'
 }
 
 export async function getAllEntries<

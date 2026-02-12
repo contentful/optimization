@@ -28,7 +28,7 @@ export type PersonalizationType = z.infer<typeof PersonalizationType>
  * Extends the generic {@link EntryFields} with personalization-specific
  * properties such as name, description, type, config, audience, and variants.
  */
-export const PersonalizationFields = z.extend(EntryFields, {
+export const PersonalizationEntryFields = z.extend(EntryFields, {
   /**
    * The name of the personalization (Short Text).
    */
@@ -92,15 +92,15 @@ export const PersonalizationFields = z.extend(EntryFields, {
 })
 
 /**
- * TypeScript type inferred from {@link PersonalizationFields}.
+ * TypeScript type inferred from {@link PersonalizationEntryFields}.
  */
-export type PersonalizationFields = z.infer<typeof PersonalizationFields>
+export type PersonalizationEntryFields = z.infer<typeof PersonalizationEntryFields>
 
 /**
  * Zod schema describing a Personalization entry, which is associated with a {@link PersonalizedEntry } via its `fields.nt_experiences`.
  */
 export const PersonalizationEntry = z.extend(CtflEntry, {
-  fields: PersonalizationFields,
+  fields: PersonalizationEntryFields,
 })
 
 /**
@@ -111,8 +111,9 @@ export type PersonalizationEntry = z.infer<typeof PersonalizationEntry>
 /**
  * Zod schema describing a Personalization entry "skeleton".
  */
-export const PersonalizationEntrySkeleton = z.extend(PersonalizationEntry, {
+export const PersonalizationEntrySkeleton = z.object({
   contentTypeId: z.literal('nt_experience'),
+  fields: PersonalizationEntryFields,
 })
 
 /**
