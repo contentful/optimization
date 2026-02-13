@@ -3,14 +3,17 @@
   "version": "0.0.0",
   "license": "MIT",
   "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.mts",
   "exports": {
     ".": {
       "import": {
-        "types": "./dist/index.d.ts",
+        "types": "./dist/index.d.mts",
         "default": "./dist/index.js"
       },
       "require": {
-        "types": "./dist/index.d.ts",
+        "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
     }
@@ -21,7 +24,7 @@
   "scripts": {
     "build:esm": "vite --configLoader runner build -c vite.esm.config.ts",
     "build:umd": "vite --configLoader runner build -c vite.umd.config.ts",
-    "build": "pnpm clean && tsc -b ./tsconfig.build.json && pnpm build:esm && pnpm build:umd",
+    "build": "pnpm clean && tsc -b ./tsconfig.build.json && pnpm build:esm && pnpm build:umd && build-tools emit-dual-dts ./dist",
     "clean": "rimraf ./dist ./coverage .tsbuildinfo",
     "dev": "vite -c vite.esm.config.ts --host",
     "test:unit": "vitest run --coverage",

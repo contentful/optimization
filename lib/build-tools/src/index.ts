@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import type { PackageJson } from 'type-fest'
 
+export { emitDualDts } from './emitDualDts'
+
 export function hasPackageName(
   packageJson: unknown,
 ): packageJson is PackageJson & { name: string } {

@@ -1,6 +1,5 @@
-import {
+import Optimization, {
   ANONYMOUS_ID_COOKIE,
-  Optimization,
   type OptimizationData,
   type UniversalEventBuilderArgs,
 } from '@contentful/optimization-node'

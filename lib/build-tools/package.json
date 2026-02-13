@@ -3,6 +3,10 @@
   "name": "build-tools",
   "version": "0.0.0",
   "license": "MIT",
+  "type": "module",
+  "bin": {
+    "build-tools": "./bin/build-tools.ts"
+  },
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts"
@@ -13,6 +17,9 @@
   "scripts": {
     "test:unit": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "tsx": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",

@@ -60,8 +60,18 @@ const esm: UserConfig = {
     emptyOutDir: false,
     lib: {
       entry: path.resolve(__dirname, 'src/index.ts'),
-      formats: ['es', 'cjs'],
       fileName: 'index',
+    },
+    rollupOptions: {
+      output: [
+        {
+          format: 'es',
+        },
+        {
+          format: 'cjs',
+          exports: 'named',
+        },
+      ],
     },
     sourcemap: true,
   },
