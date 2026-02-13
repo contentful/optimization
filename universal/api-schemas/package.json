@@ -2,15 +2,20 @@
   "name": "@contentful/optimization-api-schemas",
   "version": "0.0.0",
   "license": "MIT",
-  "type": "commonjs",
+  "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "require": "./dist/index.cjs",
-      "import": "./dist/index.mjs"
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./package.json": "./package.json"
   },
@@ -18,7 +23,7 @@
     "dist/**/*"
   ],
   "scripts": {
-    "build": "pnpm clean; rslib build",
+    "build": "pnpm clean; rslib build && build-tools emit-dual-dts ./dist",
     "clean": "rimraf ./.rslib ./dist .tsbuildinfo",
     "test:unit": "echo \"No unit tests necessary\"",
     "typecheck": "tsc --noEmit"
@@ -29,6 +34,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "build-tools": "workspace:*",
     "@microsoft/api-extractor": "catalog:",
     "@rslib/core": "catalog:",
     "@types/node": "catalog:",

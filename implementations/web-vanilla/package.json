@@ -4,8 +4,8 @@
   "description": "Reference implementation for simple HTML projects",
   "license": "MIT",
   "scripts": {
-    "build": "pnpm clean; pnpm build:sdk",
-    "build:sdk": "pnpm --filter '../../platforms/javascript/(api-schemas|api-client|core|web)' build && cp -r ../../platforms/javascript/web/dist ./public/dist",
+    "build": "pnpm clean; pnpm -w build && pnpm build:sdk",
+    "build:sdk": "cp -r ../../platforms/javascript/web/dist ./public/dist",
     "clean": "rimraf ./dist ./public/dist ./coverage ./playwright-report ./test-results .tsbuildinfo",
     "serve": "pnpm serve:mocks && pnpm serve:app",
     "serve:app": "pnpm build && docker compose up -d",

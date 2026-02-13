@@ -6,8 +6,8 @@
   "main": "dist/app.js",
   "types": "dist/app.d.ts",
   "scripts": {
-    "build": "pnpm clean; pnpm build:sdk",
-    "build:sdk": "pnpm --filter '../../platforms/javascript/(api-schemas|api-client|core|web)' build && mkdir -p ./public/dist && cp -r ../../platforms/javascript/web/dist ./public",
+    "build": "pnpm clean; pnpm -w build && pnpm build:sdk",
+    "build:sdk": "mkdir -p ./public/dist && cp -r ../../platforms/javascript/web/dist ./public",
     "clean": "rimraf ./dist ./public/dist ./coverage ./playwright-report ./test-results .tsbuildinfo",
     "serve": "pnpm serve:mocks && pnpm serve:app",
     "serve:app": "pnpm build && pm2 start --name esr-app \"tsx --env-file=.env ./src/app.ts\"",

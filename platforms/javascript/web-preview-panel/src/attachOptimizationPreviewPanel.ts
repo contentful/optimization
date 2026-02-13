@@ -1,6 +1,6 @@
+import type Optimization from '@contentful/optimization-web'
 import type {
   AudienceEntrySkeleton,
-  Optimization,
   OptimizationData,
   PersonalizationEntry,
   PersonalizationEntrySkeleton,
