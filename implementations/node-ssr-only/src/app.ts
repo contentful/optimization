@@ -1,4 +1,5 @@
-import Optimization, {
+import {
+  Optimization,
   type OptimizationData,
   type OptimizationNodeConfig,
   type SelectedPersonalization,

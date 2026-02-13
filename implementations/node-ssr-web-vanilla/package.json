@@ -24,7 +24,6 @@
   },
   "dependencies": {
     "@contentful/optimization-node": "workspace:*",
-    "@contentful/optimization-web": "workspace:*",
     "cookie-parser": "^1.4.7",
     "express": "catalog:",
     "express-rate-limit": "catalog:",

@@ -56,8 +56,9 @@ export type AudienceEntry = z.infer<typeof AudienceEntry>
 /**
  * Zod "skeleton" schema for a Contentful Audience entry, including `contentTypeId`.
  */
-export const AudienceEntrySkeleton = z.extend(AudienceEntry, {
+export const AudienceEntrySkeleton = z.object({
   contentTypeId: z.literal('nt_audience'),
+  fields: AudienceEntryFields,
 })
 
 /**
