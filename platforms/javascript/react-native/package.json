@@ -67,6 +67,7 @@
     "@rslib/core": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "babel-jest": "^29.6.3",
+    "build-tools": "workspace:*",
     "contentful": "catalog:",
     "core-js": "^3.46.0",
     "dotenv": "catalog:",

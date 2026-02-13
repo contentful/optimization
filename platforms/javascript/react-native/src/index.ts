@@ -13,7 +13,10 @@ import {
 } from '@contentful/optimization-core'
 import { merge } from 'es-toolkit'
 import { getLocale, getPageProperties, getUserAgent } from './builders/EventBuilder'
-import { OPTIMIZATION_REACT_NATIVE_SDK_VERSION } from './global-constants'
+import {
+  OPTIMIZATION_REACT_NATIVE_SDK_NAME,
+  OPTIMIZATION_REACT_NATIVE_SDK_VERSION,
+} from './global-constants'
 import { createAppStateChangeListener, createOnlineChangeListener } from './handlers'
 import AsyncStorageStore from './storage/AsyncStorageStore'
 
@@ -43,7 +46,7 @@ async function mergeConfig({
       eventBuilder: {
         channel: 'mobile',
         library: {
-          name: 'Optimization React Native SDK',
+          name: OPTIMIZATION_REACT_NATIVE_SDK_NAME,
           version: OPTIMIZATION_REACT_NATIVE_SDK_VERSION,
         },
         getLocale,

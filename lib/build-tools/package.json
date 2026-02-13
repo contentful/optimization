@@ -1,0 +1,25 @@
+{
+  "private": true,
+  "name": "build-tools",
+  "version": "0.0.0",
+  "license": "MIT",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "test:unit": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "tslib": "catalog:",
+    "type-fest": "^4.41.0",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

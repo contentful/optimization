@@ -1,5 +1,6 @@
 import { AnalyticsStateless } from './analytics'
 import CoreBase, { type CoreConfig } from './CoreBase'
+import { OPTIMIZATION_CORE_SDK_NAME } from './global-constants'
 import { PersonalizationStateless } from './personalization'
 
 class TestCore extends CoreBase {
@@ -28,5 +29,6 @@ describe('CoreBase', () => {
     const core = new TestCore(config)
 
     expect(core.config).toEqual(config)
+    expect(core.eventBuilder.library.name).toEqual(OPTIMIZATION_CORE_SDK_NAME)
   })
 })
