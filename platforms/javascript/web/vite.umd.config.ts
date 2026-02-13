@@ -1,25 +1,34 @@
-import { resolve } from 'node:path'
+import { getPackageName } from 'build-tools'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { defineConfig, type UserConfig } from 'vite'
 import { analyzer } from 'vite-bundle-analyzer'
 import umdFormatResolver from 'vite-plugin-resolve-umd-format'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
+/* eslint-disable @typescript-eslint/naming-convention -- standardized var names */
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const packageName = getPackageName(__dirname, '@contentful/optimization-web')
+/* eslint-enable @typescript-eslint/naming-convention -- standardized var names */
+
 const config: UserConfig = {
   define: {
     __OPTIMIZATION_VERSION__: JSON.stringify(process.env.RELEASE_VERSION ?? '0.0.0'),
+    __OPTIMIZATION_PACKAGE_NAME__: JSON.stringify(packageName),
   },
   resolve: {
     alias: {
-      '@contentful/optimization-api-client': resolve(
+      '@contentful/optimization-api-client': path.resolve(
         __dirname,
         '../../../universal/api-client/src/',
       ),
-      '@contentful/optimization-api-schemas': resolve(
+      '@contentful/optimization-api-schemas': path.resolve(
         __dirname,
         '../../../universal/api-schemas/src/',
       ),
-      '@contentful/optimization-core': resolve(__dirname, '../../../universal/core/src/'),
+      '@contentful/optimization-core': path.resolve(__dirname, '../../../universal/core/src/'),
     },
   },
   esbuild: {
@@ -52,7 +61,7 @@ const umd: UserConfig = {
   build: {
     emptyOutDir: false,
     lib: {
-      entry: resolve(__dirname, 'src/Optimization.ts'),
+      entry: path.resolve(__dirname, 'src/Optimization.ts'),
       formats: ['umd'],
       fileName: 'contentful-optimization-web',
       name: 'Optimization',

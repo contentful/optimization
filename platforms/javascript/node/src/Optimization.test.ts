@@ -1,5 +1,6 @@
 import type { CoreConfig } from '@contentful/optimization-core'
 import Optimization from './Optimization'
+import { OPTIMIZATION_NODE_SDK_NAME } from './global-constants'
 
 const CLIENT_ID = 'key_123'
 const ENVIRONMENT = 'main'
@@ -14,5 +15,6 @@ describe('Optimization', () => {
     const node = new Optimization(config)
 
     expect(node.config.clientId).toEqual(CLIENT_ID)
+    expect(node.eventBuilder.library.name).toEqual(OPTIMIZATION_NODE_SDK_NAME)
   })
 })

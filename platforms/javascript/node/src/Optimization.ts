@@ -1,6 +1,6 @@
 import { type App, type CoreStatelessConfig, CoreStateless } from '@contentful/optimization-core'
 import { merge } from 'es-toolkit'
-import { OPTIMIZATION_NODE_SDK_VERSION } from './global-constants'
+import { OPTIMIZATION_NODE_SDK_NAME, OPTIMIZATION_NODE_SDK_VERSION } from './global-constants'
 
 /**
  * Configuration for the Node-specific Optimization SDK.
@@ -50,7 +50,7 @@ function mergeConfig(config: OptimizationNodeConfig): CoreStatelessConfig {
     eventBuilder: {
       app,
       channel: 'server',
-      library: { name: 'Optimization Node API', version: OPTIMIZATION_NODE_SDK_VERSION },
+      library: { name: OPTIMIZATION_NODE_SDK_NAME, version: OPTIMIZATION_NODE_SDK_VERSION },
     },
   }
   return merge(defaultConfig, restConfig)

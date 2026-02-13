@@ -1,4 +1,7 @@
 import { defineConfig } from '@rslib/core'
+import { getPackageName } from 'build-tools'
+
+const packageName = getPackageName(__dirname, '@contentful/optimization-node')
 
 const common = {
   bundle: true,
@@ -17,6 +20,7 @@ export default defineConfig({
     decorators: { version: '2022-03' }, // stage-3 decorators
     define: {
       __OPTIMIZATION_VERSION__: JSON.stringify(process.env.RELEASE_VERSION ?? '0.0.0'),
+      __OPTIMIZATION_PACKAGE_NAME__: JSON.stringify(packageName),
     },
   },
 

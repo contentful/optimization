@@ -36,6 +36,7 @@
     "@types/express": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "build-tools": "workspace:*",
     "contentful": "catalog:",
     "express": "catalog:",
     "express-rate-limit": "catalog:",

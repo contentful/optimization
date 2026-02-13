@@ -19,8 +19,8 @@
     "dist/**/*"
   ],
   "scripts": {
-    "build:esm": "vite build -c vite.esm.config.ts",
-    "build:umd": "vite build -c vite.umd.config.ts",
+    "build:esm": "vite --configLoader runner build -c vite.esm.config.ts",
+    "build:umd": "vite --configLoader runner build -c vite.umd.config.ts",
     "build": "pnpm clean && tsc -b ./tsconfig.build.json && pnpm build:esm && pnpm build:umd",
     "clean": "rimraf ./dist ./coverage .tsbuildinfo",
     "dev": "vite -c vite.esm.config.ts --host",
@@ -36,6 +36,7 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "catalog:",
+    "build-tools": "workspace:*",
     "happy-dom": "catalog:",
     "rimraf": "catalog:",
     "rollup-plugin-visualizer": "catalog:",

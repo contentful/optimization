@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { OPTIMIZATION_REACT_NATIVE_SDK_NAME } from './global-constants'
 
 // Mock React Native before importing anything else
 vi.mock('react-native', () => ({
@@ -29,5 +30,6 @@ describe('Optimization React Native', () => {
   it('should pass basic smoke test', () => {
     // Basic smoke test to ensure the package structure is valid
     expect(true).toBe(true)
+    expect(OPTIMIZATION_REACT_NATIVE_SDK_NAME).toBe('@contentful/optimization-react-native')
   })
 })

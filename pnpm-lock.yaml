@@ -429,6 +429,27 @@ importers:
         specifier: ^5.8.3
         version: 5.9.2
 
+  lib/build-tools:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.13
+        version: 24.2.0
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 3.2.4(vitest@3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.6.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1))
+      tslib:
+        specifier: 'catalog:'
+        version: 2.8.1
+      type-fest:
+        specifier: ^4.41.0
+        version: 4.41.0
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.2
+      vitest:
+        specifier: ^3.2.4
+        version: 3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.6.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1)
+
   lib/logger:
     dependencies:
       diary:
@@ -539,6 +560,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 3.2.4(vitest@3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.6.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1))
+      build-tools:
+        specifier: workspace:*
+        version: link:../../../lib/build-tools
       contentful:
         specifier: 'catalog:'
         version: 11.10.2
@@ -669,6 +693,9 @@ importers:
       babel-jest:
         specifier: ^29.6.3
         version: 29.7.0(@babel/core@7.28.4)
+      build-tools:
+        specifier: workspace:*
+        version: link:../../../lib/build-tools
       contentful:
         specifier: 'catalog:'
         version: 11.10.2
@@ -730,6 +757,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 3.2.4(vitest@3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.6.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1))
+      build-tools:
+        specifier: workspace:*
+        version: link:../../../lib/build-tools
       happy-dom:
         specifier: 'catalog:'
         version: 20.0.2
@@ -932,6 +962,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: 'catalog:'
         version: 3.2.4(vitest@3.2.4(@types/node@24.2.0)(happy-dom@20.0.2)(jiti@2.6.1)(msw@2.10.5(@types/node@24.2.0)(typescript@5.9.2))(terser@5.43.1)(tsx@4.20.3)(yaml@2.8.1))
+      build-tools:
+        specifier: workspace:*
+        version: link:../../lib/build-tools
       logger:
         specifier: workspace:*
         version: link:../../lib/logger
