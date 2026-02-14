@@ -10,15 +10,15 @@ import {
   type PersonalizedEntry,
   type SelectedPersonalizationArray,
 } from '@contentful/optimization-api-client'
+import { describe, expect, it, rs } from '@rstest/core'
 import type { Entry } from 'contentful'
-import { describe, expect, it, vi } from 'vitest'
 
 import { mockLogger } from 'mocks'
 import { personalizedEntry as personalizedEntryFixture } from '../../test/fixtures/personalizedEntry'
 import { selectedPersonalizations as selectedPersonalizationsFixture } from '../../test/fixtures/selectedPersonalizations'
 import PersonalizedEntryResolver from './PersonalizedEntryResolver'
 
-const mockedLogger = vi.mocked(mockLogger)
+const mockedLogger = rs.mocked(mockLogger)
 
 const RESOLUTION_WARNING_BASE = 'Could not resolve personalized entry variant:'
 

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import ElementExistenceObserver, {
   DEFAULT_IDLE_TIMEOUT_MS,
   MIN_IDLE_TIMEOUT_MS,
@@ -59,7 +59,7 @@ const routeIdleThroughTimeout = (): { restore: () => void } => {
       },
     }
   }
-  const ricSpy = vi
+  const ricSpy = rs
     .spyOn(window, 'requestIdleCallback')
     .mockImplementation(
       (
@@ -73,7 +73,7 @@ const routeIdleThroughTimeout = (): { restore: () => void } => {
         return window.setTimeout(run, timeout)
       },
     )
-  const cicSpy = vi.spyOn(window, 'cancelIdleCallback').mockImplementation((handle: number) => {
+  const cicSpy = rs.spyOn(window, 'cancelIdleCallback').mockImplementation((handle: number) => {
     window.clearTimeout(handle)
   })
   return {
@@ -90,16 +90,16 @@ describe('ElementExistenceObserver', () => {
   beforeEach(() => {
     // Save & stub global MutationObserver with our controllable stub.
     ;({ MutationObserver: originalMO } = window)
-    vi.stubGlobal('MutationObserver', MOStub)
+    rs.stubGlobal('MutationObserver', MOStub)
     instances.length = 0
     document.body.innerHTML = ''
   })
 
   afterEach(() => {
     // Restore global state and timers/spies between tests.
-    vi.restoreAllMocks()
-    vi.useRealTimers()
-    vi.stubGlobal('MutationObserver', originalMO)
+    rs.restoreAllMocks()
+    rs.useRealTimers()
+    rs.stubGlobal('MutationObserver', originalMO)
     document.body.innerHTML = ''
   })
 
@@ -107,7 +107,7 @@ describe('ElementExistenceObserver', () => {
     const root = document.createElement('div')
     document.body.append(root)
 
-    const onChange = vi.fn()
+    const onChange = rs.fn()
     const eo = new ElementExistenceObserver({ root, onChange, idleTimeoutMs: MIN_IDLE_TIMEOUT_MS })
 
     // Prepare an actual Element so isConnected === true for "added".
@@ -147,16 +147,16 @@ describe('ElementExistenceObserver', () => {
     document.body.append(root)
 
     const events: string[] = []
-    const onChange = vi.fn(
+    const onChange = rs.fn(
       ({ added, removed }: { added: ReadonlySet<Element>; removed: ReadonlySet<Element> }) => {
         events.push('change')
         expect(added.size + removed.size > 0).toBe(true)
       },
     )
-    const onRemoved = vi.fn(() => {
+    const onRemoved = rs.fn(() => {
       events.push('removed')
     })
-    const onAdded = vi.fn(() => {
+    const onAdded = rs.fn(() => {
       events.push('added')
     })
 
@@ -192,9 +192,9 @@ describe('ElementExistenceObserver', () => {
     const root = document.createElement('div')
     document.body.append(root)
 
-    const onChange = vi.fn()
-    const onAdded = vi.fn()
-    const onRemoved = vi.fn()
+    const onChange = rs.fn()
+    const onAdded = rs.fn()
+    const onRemoved = rs.fn()
     const eo = new ElementExistenceObserver({
       root,
       onChange,
@@ -234,9 +234,9 @@ describe('ElementExistenceObserver', () => {
     const root = document.createElement('div')
     document.body.append(root)
 
-    const onChange = vi.fn()
-    const onAdded = vi.fn()
-    const onRemoved = vi.fn()
+    const onChange = rs.fn()
+    const onAdded = rs.fn()
+    const onRemoved = rs.fn()
     const eo = new ElementExistenceObserver({
       root,
       onChange,
@@ -260,13 +260,13 @@ describe('ElementExistenceObserver', () => {
   })
 
   it('chunks per-kind delivery according to maxChunk across idle slices', () => {
-    vi.useFakeTimers()
+    rs.useFakeTimers()
     const { restore } = routeIdleThroughTimeout()
 
     const root = document.createElement('div')
     document.body.append(root)
 
-    const onAdded = vi.fn()
+    const onAdded = rs.fn()
     const maxChunk = 3
     const eo = new ElementExistenceObserver({
       root,
@@ -302,7 +302,7 @@ describe('ElementExistenceObserver', () => {
     }
 
     // Subsequent chunks are scheduled via idle (routed through setTimeout).
-    vi.runOnlyPendingTimers()
+    rs.runOnlyPendingTimers()
     expect(onAdded).toHaveBeenCalledTimes(2)
     {
       const {
@@ -315,7 +315,7 @@ describe('ElementExistenceObserver', () => {
       expect(c).toBe(elements[5])
     }
 
-    vi.runOnlyPendingTimers()
+    rs.runOnlyPendingTimers()
     expect(onAdded).toHaveBeenCalledTimes(3)
     {
       const {
@@ -331,13 +331,13 @@ describe('ElementExistenceObserver', () => {
   })
 
   it('flush() processes immediately and cancels pending idle work', () => {
-    vi.useFakeTimers()
+    rs.useFakeTimers()
     const { restore } = routeIdleThroughTimeout()
 
     const root = document.createElement('div')
     document.body.append(root)
 
-    const onAdded = vi.fn()
+    const onAdded = rs.fn()
     const eo = new ElementExistenceObserver({
       root,
       onAdded,
@@ -355,7 +355,7 @@ describe('ElementExistenceObserver', () => {
     expect(onAdded).toHaveBeenCalledTimes(1)
 
     // Any pending idle work should have been canceled by flush().
-    vi.runOnlyPendingTimers()
+    rs.runOnlyPendingTimers()
     expect(onAdded).toHaveBeenCalledTimes(1)
 
     eo.disconnect()
@@ -367,11 +367,11 @@ describe('ElementExistenceObserver', () => {
     document.body.append(root)
 
     const errors: unknown[] = []
-    const onError = vi.fn((error: unknown) => {
+    const onError = rs.fn((error: unknown) => {
       errors.push(error)
     })
-    const onChange = vi.fn(async () => await Promise.reject(new Error('async-aggregate')))
-    const onAdded = vi.fn(() => {
+    const onChange = rs.fn(async () => await Promise.reject(new Error('async-aggregate')))
+    const onAdded = rs.fn(() => {
       throw new Error('sync-added')
     })
 

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Optimization Web SDK Dev Development Dashboard</title>
+    <title>Optimization Web SDK + Preview Dev Development Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/contentful@latest/dist/contentful.browser.min.js"></script>
     <style>
       * {
@@ -75,6 +75,12 @@
           }
         }
       }
+      #utility-panel {
+        position: sticky;
+        top: 0;
+        padding-block-end: 1rem;
+        background: #fff;
+      }
       #event-stream-panel {
         grid-column: 2;
         grid-row: 2 / span 2;
@@ -116,10 +122,10 @@
     </style>
   </head>
   <body>
-    <h1>Optimization Web SDK Dev Development Dashboard</h1>
+    <h1>Optimization Web SDK + Preview Dev Development Dashboard</h1>
 
     <main>
-      <section>
+      <section id="utility-panel">
         <h2>Utilities</h2>
 
         <span>
@@ -235,40 +241,36 @@
       </li>
     </template>
 
-    <script type="module" src="/src/dev.ts"></script>
     <script type="module">
-      // Load Optimization Web SDK via Vite alias (dev only!)
-      await import('optimization/dev')
-
       /* --- Standard Initialization Code --- */
 
       // Initialize Contentful CDA SDK
       var contentfulClient = contentful.createClient({
-        accessToken: '%VITE_CONTENTFUL_TOKEN%',
-        environment: '%VITE_CONTENTFUL_ENVIRONMENT%',
-        space: '%VITE_CONTENTFUL_SPACE_ID%',
-        host: '%VITE_CONTENTFUL_CDA_HOST%',
-        basePath: '%VITE_CONTENTFUL_BASE_PATH%',
-        insecure: Boolean('%VITE_CONTENTFUL_CDA_HOST%'),
+        accessToken: '<%= PUBLIC_CONTENTFUL_TOKEN %>',
+        environment: '<%= PUBLIC_CONTENTFUL_ENVIRONMENT %>',
+        space: '<%= PUBLIC_CONTENTFUL_SPACE_ID %>',
+        host: '<%= PUBLIC_CONTENTFUL_CDA_HOST %>',
+        basePath: '<%= PUBLIC_CONTENTFUL_BASE_PATH %>',
+        insecure: Boolean('<%= PUBLIC_CONTENTFUL_CDA_HOST %>'),
       })
 
       // Initialize Contentful Optimization Web SDK
-      var optimization = new Optimization({
-        clientId: '%VITE_NINETAILED_CLIENT_ID%',
-        environment: '%VITE_NINETAILED_ENVIRONMENT%',
+      new Optimization({
+        clientId: '<%= PUBLIC_NINETAILED_CLIENT_ID %>',
+        environment: '<%= PUBLIC_NINETAILED_ENVIRONMENT %>',
         logLevel: 'debug',
         autoTrackEntryViews: true,
         app: {
           name: document.title,
           version: '0.0.0',
         },
-        analytics: { baseUrl: '%VITE_INSIGHTS_API_BASE_URL%' },
-        personalization: { baseUrl: '%VITE_EXPERIENCE_API_BASE_URL%' },
+        analytics: { baseUrl: '<%= PUBLIC_INSIGHTS_API_BASE_URL %>' },
+        personalization: { baseUrl: '<%= PUBLIC_EXPERIENCE_API_BASE_URL %>' },
       })
 
       await attachOptimizationPreviewPanel({
         contentful: contentfulClient,
-        optimization,
+        optimization: window.optimization,
         nonce: 'nonce-string',
       })
 
@@ -354,7 +356,7 @@
 
         div.dataset.ctflEntryId = entry.sys?.id
 
-        if (entry.fields.nt_experiences) element.dataset.ctflBaselineId = entry.sys?.id
+        if (entry.fields.nt_experiences) div.dataset.ctflBaselineId = entry.sys?.id
 
         if (personalization) {
           div.dataset.ctflPersonalizationId = personalization?.experienceId
@@ -521,13 +523,6 @@
         })
       }
 
-      // Subscribe to the event stream
-      optimization.states.eventStream.subscribe((event) => {
-        if (!event) return
-
-        document.querySelector('#event-stream').appendChild(createEventDialog(event.type, event))
-      })
-
       // Subscribe to consent state
       optimization.states.consent.subscribe(async (consent) => {
         toggleConsent(consent)
@@ -544,9 +539,11 @@
           })
       })
 
-      // Subscribe to flags state
-      optimization.states.flags.subscribe((flags) => {
-        document.querySelector('#custom-flags').innerText = JSON.stringify(flags, null, 2)
+      // Subscribe to the event stream
+      optimization.states.eventStream.subscribe((event) => {
+        if (!event) return
+
+        document.querySelector('#event-stream').appendChild(createEventDialog(event.type, event))
       })
 
       // Subscribe to personalizations state
@@ -569,6 +566,11 @@
         document.querySelector('#profile').innerText = JSON.stringify(profile, null, 2)
 
         toggleIdentity(profile.traits && Object.keys(profile.traits).length)
+      })
+
+      // Subscribe to flags state
+      optimization.states.flags.subscribe((flags) => {
+        document.querySelector('#custom-flags').innerText = JSON.stringify(flags, null, 2)
       })
     </script>
   </body>

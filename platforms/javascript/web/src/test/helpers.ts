@@ -1,5 +1,5 @@
 // tests/utils.ts
-import { vi } from 'vitest'
+import { rs } from '@rstest/core'
 
 export interface IOEntryInit {
   target: Element
@@ -182,6 +182,6 @@ export function deferred<T = void>(): {
 
 /** Advance timers and flush microtasks. */
 export async function advance(ms: number): Promise<void> {
-  vi.advanceTimersByTime(ms)
+  rs.advanceTimersByTime(ms)
   await Promise.resolve()
 }

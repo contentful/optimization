@@ -4,18 +4,18 @@ import { createRetryFetchMethod } from './createRetryFetchMethod'
 const TEST_URL = 'https://example.com/endpoint'
 
 describe('createRetryFetchMethod', () => {
-  let fetchMock: ReturnType<typeof vi.fn>
-  let onFailedAttempt: ReturnType<typeof vi.fn>
+  let fetchMock: ReturnType<typeof rs.fn>
+  let onFailedAttempt: ReturnType<typeof rs.fn>
 
   beforeEach(() => {
-    fetchMock = vi.fn()
-    onFailedAttempt = vi.fn()
-    vi.useFakeTimers()
-    vi.clearAllMocks()
+    fetchMock = rs.fn()
+    onFailedAttempt = rs.fn()
+    rs.useFakeTimers()
+    rs.clearAllMocks()
   })
 
   afterEach(() => {
-    vi.useRealTimers()
+    rs.useRealTimers()
   })
 
   it('calls fetchMethod and returns the response when successful', async () => {
@@ -53,7 +53,7 @@ describe('createRetryFetchMethod', () => {
     const promise = fetchWithRetry(TEST_URL, {})
 
     // Advance timers for the retry interval
-    await vi.advanceTimersByTimeAsync(60)
+    await rs.advanceTimersByTimeAsync(60)
 
     const result = await promise
 
@@ -132,7 +132,7 @@ describe('createRetryFetchMethod', () => {
       `API request to "${TEST_URL}" failed with status: "[503] Service Unavailable".`,
     )
 
-    await vi.advanceTimersByTimeAsync(200)
+    await rs.advanceTimersByTimeAsync(200)
 
     await rejection
 
@@ -155,7 +155,7 @@ describe('createRetryFetchMethod', () => {
     })
 
     const promise = fetchWithRetry(TEST_URL, {})
-    await vi.advanceTimersByTimeAsync(60)
+    await rs.advanceTimersByTimeAsync(60)
     await promise
 
     expect(onFailedAttempt).toHaveBeenCalledWith(expect.objectContaining({ apiName: 'CustomAPI' }))
@@ -224,12 +224,12 @@ describe('createRetryFetchMethod', () => {
     expect(resolved).toBe(false)
 
     // Advance time less than intervalTimeout; second attempt shouldn't happen yet
-    await vi.advanceTimersByTimeAsync(1000)
+    await rs.advanceTimersByTimeAsync(1000)
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resolved).toBe(false)
 
     // Advance time to cover the retry interval; second attempt and resolution happen
-    await vi.advanceTimersByTimeAsync(234)
+    await rs.advanceTimersByTimeAsync(234)
     expect(fetchMock).toHaveBeenCalledTimes(2)
     await promise
     expect(resolved).toBe(true)

@@ -1,5 +1,45 @@
-import type { Mock } from 'vitest'
-import { vi } from 'vitest'
+interface MockFn {
+  (...args: unknown[]): unknown
+  mockClear: () => void
+}
+
+interface MockingApi {
+  fn: () => MockFn
+}
+
+function hasFn(value: unknown): value is MockingApi {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  return typeof Reflect.get(value, 'fn') === 'function'
+}
+
+function getGlobalCandidate(name: 'rs' | 'vi'): unknown {
+  if (name === 'rs') {
+    return 'rs' in globalThis ? Reflect.get(globalThis, 'rs') : undefined
+  }
+
+  return 'vi' in globalThis ? Reflect.get(globalThis, 'vi') : undefined
+}
+
+function resolveMockingApi(): MockingApi {
+  const rsCandidate = getGlobalCandidate('rs')
+  if (hasFn(rsCandidate)) {
+    return rsCandidate
+  }
+
+  const viCandidate = getGlobalCandidate('vi')
+  if (hasFn(viCandidate)) {
+    return viCandidate
+  }
+
+  throw new Error('No test mock API available. Expected global "rs" (Rstest) or "vi" (Vitest).')
+}
+
+function createMockFn(): MockFn {
+  return resolveMockingApi().fn()
+}
 
 export interface MockLogger {
   debug: (...args: unknown[]) => void
@@ -49,8 +89,6 @@ export interface MockScopedLogger {
   fatal: (message: string | Error, ...args: unknown[]) => void
 }
 
-type MockFn = Mock<(...args: unknown[]) => void>
-
 export interface TestMockLogger {
   debug: MockFn
   info: MockFn
@@ -76,15 +114,15 @@ export interface TestMockLogger {
  * ```
  */
 export const mockLogger: TestMockLogger = {
-  debug: vi.fn(),
-  info: vi.fn(),
-  log: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  fatal: vi.fn(),
-  addSink: vi.fn(),
-  removeSink: vi.fn(),
-  removeSinks: vi.fn(),
+  debug: createMockFn(),
+  info: createMockFn(),
+  log: createMockFn(),
+  warn: createMockFn(),
+  error: createMockFn(),
+  fatal: createMockFn(),
+  addSink: createMockFn(),
+  removeSink: createMockFn(),
+  removeSinks: createMockFn(),
 }
 
 export interface LoggerMockModule {

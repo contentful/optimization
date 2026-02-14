@@ -1,8 +1,8 @@
+import { rs } from '@rstest/core'
 import { experienceApiHandlers, loggerMock, resetMockLogger } from 'mocks'
 import { setupServer } from 'msw/node'
-import { vi } from 'vitest'
 
-vi.mock('logger', () => loggerMock)
+rs.mock('logger', () => loggerMock)
 
 export const server = setupServer(...experienceApiHandlers.getHandlers())
 

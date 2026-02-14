@@ -33,15 +33,15 @@ describe('ElementViewObserver', () => {
   }
 
   beforeEach(() => {
-    vi.useFakeTimers()
+    rs.useFakeTimers()
     setDocumentVisibility('visible')
-    vi.spyOn(ElementView, 'withJitter').mockImplementation((n: number) => n)
-    vi.spyOn(ElementView, 'NOW').mockImplementation(() => Date.now())
+    rs.spyOn(ElementView, 'withJitter').mockImplementation((n: number) => n)
+    rs.spyOn(ElementView, 'NOW').mockImplementation(() => Date.now())
   })
 
   afterEach(() => {
-    vi.clearAllTimers()
-    vi.restoreAllMocks()
+    rs.clearAllTimers()
+    rs.restoreAllMocks()
   })
 
   afterAll(() => {
@@ -50,7 +50,7 @@ describe('ElementViewObserver', () => {
 
   it('fires callback once after dwell time when element becomes visible', async () => {
     const el = makeElement()
-    const cb = vi.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
+    const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
     const obs = new ElementViewObserver(cb, {
       minVisibleRatio: 0.5,
@@ -79,7 +79,7 @@ describe('ElementViewObserver', () => {
 
   it('accumulates visible time across visibility toggles', async () => {
     const el = makeElement()
-    const cb = vi.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
+    const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
     const obs = new ElementViewObserver(cb, { dwellTimeMs: 1000 })
     obs.observe(el)
@@ -118,7 +118,7 @@ describe('ElementViewObserver', () => {
 
   it('pauses timers when page becomes hidden and resumes cleanly', async () => {
     const el = makeElement()
-    const cb = vi.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
+    const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
     const obs = new ElementViewObserver(cb, { dwellTimeMs: 500 })
     obs.observe(el)
     const inst = mustGetIO()
@@ -156,7 +156,7 @@ describe('ElementViewObserver', () => {
 
   it('supports per-element overrides and passes data to callback', async () => {
     const el = makeElement()
-    const cb = vi.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
+    const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
     const obs = new ElementViewObserver(cb, {
       dwellTimeMs: 10_000,
       minVisibleRatio: 0.8,
@@ -187,7 +187,7 @@ describe('ElementViewObserver', () => {
 
   it('exposes readonly stats snapshot via getStats()', async () => {
     const el = makeElement()
-    const cb = vi.fn().mockResolvedValue(undefined)
+    const cb = rs.fn().mockResolvedValue(undefined)
     const obs = new ElementViewObserver(cb, { dwellTimeMs: 200 })
     obs.observe(el)
     const inst = mustGetIO()
@@ -224,7 +224,7 @@ describe('ElementViewObserver', () => {
   it('coalesces attempts (no duplicate concurrent calls) and retries with exponential backoff', async () => {
     const el = makeElement()
     const firstAttempt = deferred()
-    const cb = vi
+    const cb = rs
       .fn<(e: Element, m: Meta) => Promise<void>>()
       .mockImplementationOnce(async () => {
         await firstAttempt.promise
@@ -259,7 +259,7 @@ describe('ElementViewObserver', () => {
     await Promise.resolve()
 
     // Step to the next scheduled timer (200ms backoff) -> attempt #2
-    await vi.advanceTimersToNextTimerAsync()
+    await rs.advanceTimersToNextTimerAsync()
     expect(cb).toHaveBeenCalledTimes(2)
 
     // Allow attempt #2 rejection to schedule the next retry (400ms)
@@ -267,18 +267,18 @@ describe('ElementViewObserver', () => {
     await Promise.resolve()
 
     // Step to the next scheduled timer (400ms backoff) -> attempt #3 (success)
-    await vi.advanceTimersToNextTimerAsync()
+    await rs.advanceTimersToNextTimerAsync()
     expect(cb).toHaveBeenCalledTimes(3)
 
     // No more timers should cause additional attempts
     // (Optionally drain any stragglers; count stays at 3)
-    await vi.runOnlyPendingTimersAsync()
+    await rs.runOnlyPendingTimersAsync()
     expect(cb).toHaveBeenCalledTimes(3)
   })
 
   it('stops pending retry when element becomes not visible and clears when visible again', async () => {
     const el = makeElement()
-    const cb = vi
+    const cb = rs
       .fn<(e: Element, m: Meta) => Promise<void>>()
       .mockRejectedValue(new Error('always-fail'))
 
@@ -313,8 +313,8 @@ describe('ElementViewObserver', () => {
 
   it('unobserve() cancels timers and removes internal state; sweep stops when inactive', async () => {
     const el = makeElement()
-    const cb = vi.fn().mockResolvedValue(undefined)
-    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval')
+    const cb = rs.fn().mockResolvedValue(undefined)
+    const setIntervalSpy = rs.spyOn(globalThis, 'setInterval')
 
     const obs = new ElementViewObserver(cb, { dwellTimeMs: 10_000 })
     obs.observe(el)
@@ -323,7 +323,7 @@ describe('ElementViewObserver', () => {
 
     const inst = mustGetIO()
     inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 1 })
-    expect(vi.getTimerCount()).toBeGreaterThan(0)
+    expect(rs.getTimerCount()).toBeGreaterThan(0)
 
     obs.unobserve(el)
     await advance(0)
@@ -333,8 +333,8 @@ describe('ElementViewObserver', () => {
 
   it('sweeps orphaned states for disconnected or dropped elements', async () => {
     const el = makeElement()
-    const cb = vi.fn().mockResolvedValue(undefined)
-    const derefSpy = vi.spyOn(ElementView, 'derefElement')
+    const cb = rs.fn().mockResolvedValue(undefined)
+    const derefSpy = rs.spyOn(ElementView, 'derefElement')
 
     const obs = new ElementViewObserver(cb, { dwellTimeMs: 1_000 })
 
@@ -361,9 +361,9 @@ describe('ElementViewObserver', () => {
   // No unnecessary async/await (satisfies @typescript-eslint/require-await)
   it('disconnect() clears everything and removes visibility listener', () => {
     const el = makeElement()
-    const cb = vi.fn().mockResolvedValue(undefined)
-    const addSpy = vi.spyOn(document, 'addEventListener')
-    const removeSpy = vi.spyOn(document, 'removeEventListener')
+    const cb = rs.fn().mockResolvedValue(undefined)
+    const addSpy = rs.spyOn(document, 'addEventListener')
+    const removeSpy = rs.spyOn(document, 'removeEventListener')
 
     const obs = new ElementViewObserver(cb, { dwellTimeMs: 100 })
     expect(addSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function))
@@ -371,7 +371,7 @@ describe('ElementViewObserver', () => {
     obs.observe(el)
     obs.disconnect()
 
-    expect(vi.getTimerCount()).toBe(0)
+    expect(rs.getTimerCount()).toBe(0)
     expect(removeSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function))
   })
 })

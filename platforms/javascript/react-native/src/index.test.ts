@@ -1,29 +1,29 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, rs } from '@rstest/core'
 import { OPTIMIZATION_REACT_NATIVE_SDK_NAME } from './global-constants'
 
 // Mock React Native before importing anything else
-vi.mock('react-native', () => ({
+rs.mock('react-native', () => ({
   Platform: { OS: 'ios' },
-  Dimensions: { get: vi.fn(() => ({ width: 375, height: 667 })) },
+  Dimensions: { get: rs.fn(() => ({ width: 375, height: 667 })) },
   NativeModules: {},
 }))
 
 // Mock AsyncStorage
-vi.mock('@react-native-async-storage/async-storage', () => ({
+rs.mock('@react-native-async-storage/async-storage', () => ({
   default: {
-    getItem: vi.fn(),
-    setItem: vi.fn(),
-    removeItem: vi.fn(),
+    getItem: rs.fn(),
+    setItem: rs.fn(),
+    removeItem: rs.fn(),
   },
 }))
 
 // Mock React
-vi.mock('react', () => ({
+rs.mock('react', () => ({
   default: {},
-  createContext: vi.fn(() => ({})),
-  useContext: vi.fn(),
-  useMemo: vi.fn(<T>(fn: () => T) => fn()),
-  createElement: vi.fn(),
+  createContext: rs.fn(() => ({})),
+  useContext: rs.fn(),
+  useMemo: rs.fn(<T>(fn: () => T) => fn()),
+  createElement: rs.fn(),
 }))
 
 describe('Optimization React Native', () => {

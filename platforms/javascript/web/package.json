@@ -4,13 +4,13 @@
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
+  "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
   "exports": {
     ".": {
       "import": {
         "types": "./dist/index.d.mts",
-        "default": "./dist/index.js"
+        "default": "./dist/index.mjs"
       },
       "require": {
         "types": "./dist/index.d.cts",
@@ -22,12 +22,13 @@
     "dist/**/*"
   ],
   "scripts": {
-    "build:esm": "vite --configLoader runner build -c vite.esm.config.ts",
-    "build:umd": "vite --configLoader runner build -c vite.umd.config.ts",
-    "build": "pnpm clean && tsc -b ./tsconfig.build.json && pnpm build:esm && pnpm build:umd && build-tools emit-dual-dts ./dist",
-    "clean": "rimraf ./dist ./coverage .tsbuildinfo",
-    "dev": "vite -c vite.esm.config.ts --host",
-    "test:unit": "vitest run --coverage",
+    "build": "pnpm clean && pnpm build:dist",
+    "build:ci": "pnpm build:dist",
+    "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
+    "build:rsdoctor": "RSDOCTOR=true rslib build",
+    "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo",
+    "dev": "rsbuild dev --host 0.0.0.0 -c rsbuild.config.ts",
+    "test:unit": "rstest run --coverage",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -38,17 +39,14 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "catalog:",
+    "@rsbuild/core": "catalog:",
+    "@rslib/core": "catalog:",
+    "@rstest/core": "catalog:",
+    "@rstest/coverage-istanbul": "catalog:",
     "build-tools": "workspace:*",
     "happy-dom": "catalog:",
     "rimraf": "catalog:",
-    "rollup-plugin-visualizer": "catalog:",
     "tslib": "catalog:",
-    "typescript": "catalog:",
-    "vite": "catalog:",
-    "vitest": "catalog:",
-    "vite-bundle-analyzer": "catalog:",
-    "vite-plugin-resolve-umd-format": "catalog:",
-    "vite-tsconfig-paths": "catalog:"
+    "typescript": "catalog:"
   }
 }

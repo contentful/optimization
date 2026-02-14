@@ -23,10 +23,12 @@
     "dist/**/*"
   ],
   "scripts": {
-    "build": "pnpm clean; rslib build && build-tools emit-dual-dts ./dist",
+    "build": "pnpm clean; pnpm build:dist",
+    "build:ci": "pnpm build:dist",
+    "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
     "clean": "rimraf ./.rslib ./dist ./coverage .tsbuildinfo",
     "dev": "tsx watch --env-file=.env ./server.ts",
-    "test:unit": "vitest run --coverage",
+    "test:unit": "rstest run --coverage",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -40,7 +42,8 @@
     "@rslib/core": "catalog:",
     "@types/express": "catalog:",
     "@types/node": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
+    "@rstest/core": "catalog:",
+    "@rstest/coverage-istanbul": "catalog:",
     "build-tools": "workspace:*",
     "contentful": "catalog:",
     "express": "catalog:",
@@ -49,7 +52,6 @@
     "rimraf": "catalog:",
     "tslib": "catalog:",
     "tsx": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
+    "typescript": "catalog:"
   }
 }

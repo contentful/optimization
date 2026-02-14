@@ -1,7 +1,7 @@
 import { BatchInsightsEventArray } from '@contentful/optimization-api-schemas'
+import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { mockLogger } from 'mocks'
 import { http, HttpResponse } from 'msw'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ApiClientBase from '../ApiClientBase'
 import { server } from '../test/setup'
 import InsightsApiClient, {
@@ -91,7 +91,7 @@ function generateBatchEventArray(id: string): BatchInsightsEventArray {
 describe('InsightsApiClient.sendBatchEvents', () => {
   beforeEach(() => {
     server.resetHandlers()
-    vi.clearAllMocks()
+    rs.clearAllMocks()
   })
 
   afterEach(() => {
@@ -101,14 +101,14 @@ describe('InsightsApiClient.sendBatchEvents', () => {
       value: undefined,
     })
 
-    vi.restoreAllMocks()
+    rs.restoreAllMocks()
   })
 
   it('POSTs batches via fetch by default', async () => {
     const batches = generateBatchEventArray('e1')
 
     // Spy on the schema parser and let it pass-through (or stub if needed)
-    const parseSpy = vi
+    const parseSpy = rs
       .spyOn(BatchInsightsEventArray, 'parse')
       // @ts-expect-error -- testing
       .mockImplementation((input) => input)
@@ -153,11 +153,11 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     const batches = generateBatchEventArray('e2')
 
     // @ts-expect-error -- testing
-    vi.spyOn(BatchInsightsEventArray, 'parse').mockImplementation((input) => input)
+    rs.spyOn(BatchInsightsEventArray, 'parse').mockImplementation((input) => input)
 
-    const beaconHandler = vi.fn(() => true)
+    const beaconHandler = rs.fn(() => true)
 
-    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    const fetchSpy = rs.spyOn(globalThis, 'fetch')
 
     const client = makeClient()
 
@@ -171,7 +171,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
   it('POSTs batches via fetch when beaconHandler fails', async () => {
     const batches = generateBatchEventArray('e3')
 
-    const beaconHandler = vi.fn(() => false)
+    const beaconHandler = rs.fn(() => false)
 
     const handler = http.post(
       `${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`,
@@ -205,7 +205,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     const batches = generateBatchEventArray('e4')
 
     // @ts-expect-error -- testing
-    vi.spyOn(BatchInsightsEventArray, 'parse').mockImplementation((input) => input)
+    rs.spyOn(BatchInsightsEventArray, 'parse').mockImplementation((input) => input)
 
     server.use(
       http.post(`${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`, () =>
@@ -214,7 +214,7 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     )
 
     // Spy on the inherited method from ApiClientBase prototype
-    const logErrorSpy = vi.spyOn(
+    const logErrorSpy = rs.spyOn(
       // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- testing
       ApiClientBase.prototype as unknown as {
         logRequestError: (e: unknown, m: { requestName: string }) => void

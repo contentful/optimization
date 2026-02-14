@@ -201,9 +201,9 @@ dev/
 
 The app connects to the mock server by default. Configuration is in `env.config.ts`:
 
-- `VITE_EXPERIENCE_API_BASE_URL`: Experience API endpoint
-- `VITE_INSIGHTS_API_BASE_URL`: Insights API endpoint
-- `VITE_CONTENTFUL_CDA_HOST`: Contentful mock server host
+- `PUBLIC_EXPERIENCE_API_BASE_URL`: Experience API endpoint
+- `PUBLIC_INSIGHTS_API_BASE_URL`: Insights API endpoint
+- `PUBLIC_CONTENTFUL_CDA_HOST`: Contentful mock server host
 
 ## What This App Tests
 

@@ -1,34 +1,40 @@
+import { beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { createLoggerMock } from 'mocks/loggerMock'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Create mock holder
 const mockLogger = {
-  debug: vi.fn(),
-  info: vi.fn(),
-  log: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  fatal: vi.fn(),
+  debug: rs.fn(),
+  info: rs.fn(),
+  log: rs.fn(),
+  warn: rs.fn(),
+  error: rs.fn(),
+  fatal: rs.fn(),
+}
+
+const flushAsyncImports = async (): Promise<void> => {
+  await Promise.resolve()
+  await Promise.resolve()
 }
 
 describe('createOnlineChangeListener', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    vi.resetModules()
+    rs.clearAllMocks()
+    rs.resetModules()
 
-    vi.doMock('@contentful/optimization-core', () => createLoggerMock(mockLogger))
+    rs.doMock('@contentful/optimization-core', () => createLoggerMock(mockLogger))
   })
 
   describe('when NetInfo is not installed', () => {
     it('should log warning and return no-op cleanup when module throws on require', async () => {
-      vi.doMock('@react-native-community/netinfo', () => {
+      rs.doMock('@react-native-community/netinfo', () => {
         throw new Error('Cannot find module')
       })
 
       const { createOnlineChangeListener } = await import('./createOnlineChangeListener')
-      const callback = vi.fn()
+      const callback = rs.fn()
 
       const cleanup = createOnlineChangeListener(callback)
+      await flushAsyncImports()
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
         'RN:Network',
@@ -46,14 +52,15 @@ describe('createOnlineChangeListener', () => {
     })
 
     it('should log warning when NetInfo module has invalid structure (null default)', async () => {
-      vi.doMock('@react-native-community/netinfo', () => ({
+      rs.doMock('@react-native-community/netinfo', () => ({
         default: null,
       }))
 
       const { createOnlineChangeListener } = await import('./createOnlineChangeListener')
-      const callback = vi.fn()
+      const callback = rs.fn()
 
       const cleanup = createOnlineChangeListener(callback)
+      await flushAsyncImports()
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
         'RN:Network',
@@ -63,14 +70,15 @@ describe('createOnlineChangeListener', () => {
     })
 
     it('should log warning when NetInfo module has no addEventListener', async () => {
-      vi.doMock('@react-native-community/netinfo', () => ({
+      rs.doMock('@react-native-community/netinfo', () => ({
         default: {},
       }))
 
       const { createOnlineChangeListener } = await import('./createOnlineChangeListener')
-      const callback = vi.fn()
+      const callback = rs.fn()
 
       const cleanup = createOnlineChangeListener(callback)
+      await flushAsyncImports()
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
         'RN:Network',
@@ -80,14 +88,15 @@ describe('createOnlineChangeListener', () => {
     })
 
     it('should log warning when addEventListener is not a function', async () => {
-      vi.doMock('@react-native-community/netinfo', () => ({
+      rs.doMock('@react-native-community/netinfo', () => ({
         default: { addEventListener: 'not a function' },
       }))
 
       const { createOnlineChangeListener } = await import('./createOnlineChangeListener')
-      const callback = vi.fn()
+      const callback = rs.fn()
 
       const cleanup = createOnlineChangeListener(callback)
+      await flushAsyncImports()
 
       expect(mockLogger.warn).toHaveBeenCalledWith(
         'RN:Network',
@@ -99,23 +108,25 @@ describe('createOnlineChangeListener', () => {
 
   describe('type guard isNetInfoModule', () => {
     it('should reject module without default export', async () => {
-      vi.doMock('@react-native-community/netinfo', () => ({}))
+      rs.doMock('@react-native-community/netinfo', () => ({}))
 
       const { createOnlineChangeListener } = await import('./createOnlineChangeListener')
-      const callback = vi.fn()
+      const callback = rs.fn()
 
       createOnlineChangeListener(callback)
+      await flushAsyncImports()
 
       expect(mockLogger.warn).toHaveBeenCalled()
     })
 
     it('should reject non-object module', async () => {
-      vi.doMock('@react-native-community/netinfo', () => 'string module')
+      rs.doMock('@react-native-community/netinfo', () => 'string module')
 
       const { createOnlineChangeListener } = await import('./createOnlineChangeListener')
-      const callback = vi.fn()
+      const callback = rs.fn()
 
       createOnlineChangeListener(callback)
+      await flushAsyncImports()
 
       expect(mockLogger.warn).toHaveBeenCalled()
     })

@@ -16,8 +16,8 @@
 #   METRO_PORT        - Port for Metro bundler (default: 8081)
 #   SKIP_BUILD        - Set to "true" to skip the Android build step (default: false)
 #   CI                - Set to "true" when running in CI environment (default: false)
-#   VITE_NINETAILED_CLIENT_ID    - Ninetailed client ID (default: test-client-id)
-#   VITE_NINETAILED_ENVIRONMENT  - Ninetailed environment (default: main)
+#   PUBLIC_NINETAILED_CLIENT_ID    - Ninetailed client ID (default: test-client-id)
+#   PUBLIC_NINETAILED_ENVIRONMENT  - Ninetailed environment (default: main)
 #
 # Usage:
 #   ./scripts/run-e2e-android.sh              # Full run with build
@@ -249,15 +249,15 @@ create_env_file() {
     log_info "Creating .env file..."
     
     cat > "${RN_DIR}/.env" << EOF
-VITE_NINETAILED_CLIENT_ID=${VITE_NINETAILED_CLIENT_ID:-test-client-id}
-VITE_NINETAILED_ENVIRONMENT=${VITE_NINETAILED_ENVIRONMENT:-main}
-VITE_EXPERIENCE_API_BASE_URL=http://localhost:${MOCK_SERVER_PORT}/experience/
-VITE_INSIGHTS_API_BASE_URL=http://localhost:${MOCK_SERVER_PORT}/insights/
-VITE_CONTENTFUL_TOKEN=${VITE_CONTENTFUL_TOKEN:-test-token}
-VITE_CONTENTFUL_ENVIRONMENT=${VITE_CONTENTFUL_ENVIRONMENT:-master}
-VITE_CONTENTFUL_SPACE_ID=${VITE_CONTENTFUL_SPACE_ID:-test-space}
-VITE_CONTENTFUL_CDA_HOST=localhost:${MOCK_SERVER_PORT}
-VITE_CONTENTFUL_BASE_PATH=/contentful/
+PUBLIC_NINETAILED_CLIENT_ID=${PUBLIC_NINETAILED_CLIENT_ID:-test-client-id}
+PUBLIC_NINETAILED_ENVIRONMENT=${PUBLIC_NINETAILED_ENVIRONMENT:-main}
+PUBLIC_EXPERIENCE_API_BASE_URL=http://localhost:${MOCK_SERVER_PORT}/experience/
+PUBLIC_INSIGHTS_API_BASE_URL=http://localhost:${MOCK_SERVER_PORT}/insights/
+PUBLIC_CONTENTFUL_TOKEN=${PUBLIC_CONTENTFUL_TOKEN:-test-token}
+PUBLIC_CONTENTFUL_ENVIRONMENT=${PUBLIC_CONTENTFUL_ENVIRONMENT:-master}
+PUBLIC_CONTENTFUL_SPACE_ID=${PUBLIC_CONTENTFUL_SPACE_ID:-test-space}
+PUBLIC_CONTENTFUL_CDA_HOST=localhost:${MOCK_SERVER_PORT}
+PUBLIC_CONTENTFUL_BASE_PATH=/contentful/
 EOF
     
     log_info ".env file created at ${RN_DIR}/.env"

@@ -23,7 +23,9 @@
     "dist/**/*"
   ],
   "scripts": {
-    "build": "pnpm clean; rslib build && build-tools emit-dual-dts ./dist",
+    "build": "pnpm clean; pnpm build:dist",
+    "build:ci": "pnpm build:dist",
+    "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
     "clean": "rimraf ./.rslib ./dist .tsbuildinfo",
     "test:unit": "echo \"No unit tests necessary\"",
     "typecheck": "tsc --noEmit"

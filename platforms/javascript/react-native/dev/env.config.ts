@@ -7,15 +7,15 @@
 
 import { Platform } from 'react-native'
 
-const VITE_NINETAILED_CLIENT_ID = 'test-client-id'
-const VITE_NINETAILED_ENVIRONMENT = 'main'
-const VITE_EXPERIENCE_API_BASE_URL = 'http://localhost:8000/experience/'
-const VITE_INSIGHTS_API_BASE_URL = 'http://localhost:8000/insights/'
-const VITE_CONTENTFUL_TOKEN = 'test-token'
-const VITE_CONTENTFUL_ENVIRONMENT = 'master'
-const VITE_CONTENTFUL_SPACE_ID = 'test-space'
-const VITE_CONTENTFUL_CDA_HOST = 'localhost:8000'
-const VITE_CONTENTFUL_BASE_PATH = '/contentful/'
+const PUBLIC_NINETAILED_CLIENT_ID = 'test-client-id'
+const PUBLIC_NINETAILED_ENVIRONMENT = 'main'
+const PUBLIC_EXPERIENCE_API_BASE_URL = 'http://localhost:8000/experience/'
+const PUBLIC_INSIGHTS_API_BASE_URL = 'http://localhost:8000/insights/'
+const PUBLIC_CONTENTFUL_TOKEN = 'test-token'
+const PUBLIC_CONTENTFUL_ENVIRONMENT = 'master'
+const PUBLIC_CONTENTFUL_SPACE_ID = 'test-space'
+const PUBLIC_CONTENTFUL_CDA_HOST = 'localhost:8000'
+const PUBLIC_CONTENTFUL_BASE_PATH = '/contentful/'
 
 interface EnvConfig {
   contentful: {
@@ -55,21 +55,21 @@ function getAndroidCompatibleUrl(url: string): string {
 
 export const ENV_CONFIG = {
   contentful: {
-    spaceId: VITE_CONTENTFUL_SPACE_ID,
-    environment: VITE_CONTENTFUL_ENVIRONMENT,
-    accessToken: VITE_CONTENTFUL_TOKEN,
-    host: getAndroidCompatibleUrl(VITE_CONTENTFUL_CDA_HOST),
-    basePath: VITE_CONTENTFUL_BASE_PATH,
+    spaceId: PUBLIC_CONTENTFUL_SPACE_ID,
+    environment: PUBLIC_CONTENTFUL_ENVIRONMENT,
+    accessToken: PUBLIC_CONTENTFUL_TOKEN,
+    host: getAndroidCompatibleUrl(PUBLIC_CONTENTFUL_CDA_HOST),
+    basePath: PUBLIC_CONTENTFUL_BASE_PATH,
   },
 
   optimization: {
-    clientId: VITE_NINETAILED_CLIENT_ID,
-    environment: VITE_NINETAILED_ENVIRONMENT,
+    clientId: PUBLIC_NINETAILED_CLIENT_ID,
+    environment: PUBLIC_NINETAILED_ENVIRONMENT,
   },
 
   api: {
-    experienceBaseUrl: getAndroidCompatibleUrl(VITE_EXPERIENCE_API_BASE_URL),
-    insightsBaseUrl: getAndroidCompatibleUrl(VITE_INSIGHTS_API_BASE_URL),
+    experienceBaseUrl: getAndroidCompatibleUrl(PUBLIC_EXPERIENCE_API_BASE_URL),
+    insightsBaseUrl: getAndroidCompatibleUrl(PUBLIC_INSIGHTS_API_BASE_URL),
   },
 
   entries: {

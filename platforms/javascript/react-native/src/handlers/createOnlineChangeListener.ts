@@ -22,6 +22,29 @@ interface NetInfoModule {
   }
 }
 
+const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null
+
+const isNetInfoModule = (mod: unknown): mod is NetInfoModule => {
+  if (!isObjectRecord(mod)) {
+    return false
+  }
+
+  const { default: defaultExport } = mod
+
+  return isObjectRecord(defaultExport) && typeof defaultExport.addEventListener === 'function'
+}
+
+const loadNetInfoModule = async (): Promise<NetInfoModule> => {
+  const mod: unknown = await import('@react-native-community/netinfo')
+
+  if (!isNetInfoModule(mod)) {
+    throw new Error('Invalid NetInfo module')
+  }
+
+  return mod
+}
+
 /**
  * Create an online/offline listener that invokes a callback whenever the device transitions
  * between connectivity states, and returns a cleanup function to remove the listener.
@@ -49,6 +72,9 @@ interface NetInfoModule {
  * ```
  */
 export function createOnlineChangeListener(callback: Callback): () => void {
+  const state = { didDispose: false }
+  let unsubscribe: () => void = () => undefined
+
   const emit = (isOnline: boolean): void => {
     void (async () => {
       try {
@@ -59,40 +85,28 @@ export function createOnlineChangeListener(callback: Callback): () => void {
     })()
   }
 
-  try {
-    const isNetInfoModule = (mod: unknown): mod is NetInfoModule => {
-      if (typeof mod !== 'object' || mod === null || !('default' in mod)) {
-        return false
+  void (async () => {
+    try {
+      const { default: NetInfo } = await loadNetInfoModule()
+
+      if (state.didDispose) {
+        return
       }
-      const { default: defaultExport } = mod as { default: unknown }
-      return (
-        typeof defaultExport === 'object' &&
-        defaultExport !== null &&
-        'addEventListener' in defaultExport &&
-        typeof (defaultExport as { addEventListener: unknown }).addEventListener === 'function'
-      )
+
+      unsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
+        // Use isInternetReachable for actual connectivity (can ping external server)
+        // Fall back to isConnected if reachability check unavailable (null)
+        // Default to true if both are null to avoid false offline states
+        const isOnline = state.isInternetReachable ?? state.isConnected ?? true
+        emit(isOnline)
+      })
+    } catch {
+      logger.warn('@react-native-community/netinfo not installed. Offline detection disabled.')
     }
+  })()
 
-    // eslint-disable-next-line @typescript-eslint/no-require-imports -- Dynamic require to gracefully handle missing optional peer dependency
-    const NetInfoModule: unknown = require('@react-native-community/netinfo')
-
-    if (!isNetInfoModule(NetInfoModule)) {
-      throw new Error('Invalid NetInfo module')
-    }
-
-    const { default: NetInfo } = NetInfoModule
-
-    const unsubscribe: () => void = NetInfo.addEventListener((state: NetInfoState) => {
-      // Use isInternetReachable for actual connectivity (can ping external server)
-      // Fall back to isConnected if reachability check unavailable (null)
-      // Default to true if both are null to avoid false offline states
-      const isOnline = state.isInternetReachable ?? state.isConnected ?? true
-      emit(isOnline)
-    })
-
-    return unsubscribe
-  } catch {
-    logger.warn('@react-native-community/netinfo not installed. Offline detection disabled.')
-    return () => undefined
+  return () => {
+    state.didDispose = true
+    unsubscribe()
   }
 }

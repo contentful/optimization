@@ -19,7 +19,7 @@
     "test:e2e:codegen": "playwright codegen",
     "test:e2e:report": "playwright show-report",
     "test:e2e:ui": "playwright test --ui",
-    "test:unit": "vitest run --coverage",
+    "test:unit": "rstest run --coverage",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -36,14 +36,14 @@
     "@types/node": "catalog:",
     "@types/qs": "catalog:",
     "@types/supertest": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
+    "@rstest/core": "catalog:",
+    "@rstest/coverage-istanbul": "catalog:",
     "@types/cookie-parser": "1.4.7",
     "dotenv": "catalog:",
     "pm2": "catalog:",
     "rimraf": "catalog:",
     "supertest": "catalog:",
     "tsx": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
+    "typescript": "catalog:"
   }
 }

@@ -23,9 +23,11 @@
     "dist/**/*"
   ],
   "scripts": {
-    "build": "pnpm clean; rslib build && build-tools emit-dual-dts ./dist",
+    "build": "pnpm clean; pnpm build:dist",
+    "build:ci": "pnpm build:dist",
+    "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
     "clean": "rimraf ./.rslib ./dist ./coverage .tsbuildinfo",
-    "test:unit": "vitest run --coverage",
+    "test:unit": "rstest run --coverage",
     "typecheck": "tsc --noEmit",
     "dev:android": "cd dev && react-native run-android",
     "dev:ios": "cd dev && react-native run-ios",
@@ -70,7 +72,8 @@
     "@types/react": "^18.3.18",
     "@types/react-test-renderer": "^18.0.0",
     "@rslib/core": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
+    "@rstest/core": "catalog:",
+    "@rstest/coverage-istanbul": "catalog:",
     "babel-jest": "^29.6.3",
     "build-tools": "workspace:*",
     "contentful": "catalog:",
@@ -83,8 +86,7 @@
     "react-test-renderer": "18.3.1",
     "rimraf": "catalog:",
     "tslib": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
+    "typescript": "catalog:"
   },
   "peerDependencies": {
     "@react-native-community/netinfo": ">=9.0.0",

@@ -21,26 +21,26 @@ const limiter = rateLimit({
 const app: Express = express()
 app.use(limiter)
 
-app.set('view engine', 'pug') // configure Pug as the view engine
+app.set('view engine', 'ejs') // configure EJS as the view engine
 app.set('views', path.join(__dirname, '.')) // define the directory for view templates
 
 const optimizationConfig: OptimizationNodeConfig = {
-  clientId: process.env.VITE_NINETAILED_CLIENT_ID ?? '',
-  environment: process.env.VITE_NINETAILED_ENVIRONMENT ?? '',
+  clientId: process.env.PUBLIC_NINETAILED_CLIENT_ID ?? '',
+  environment: process.env.PUBLIC_NINETAILED_ENVIRONMENT ?? '',
   logLevel: 'debug',
-  analytics: { baseUrl: process.env.VITE_INSIGHTS_API_BASE_URL },
-  personalization: { baseUrl: process.env.VITE_EXPERIENCE_API_BASE_URL },
+  analytics: { baseUrl: process.env.PUBLIC_INSIGHTS_API_BASE_URL },
+  personalization: { baseUrl: process.env.PUBLIC_EXPERIENCE_API_BASE_URL },
 }
 
 const sdk = new Optimization(optimizationConfig)
 
 const ctflConfig: contentful.CreateClientParams = {
-  accessToken: process.env.VITE_CONTENTFUL_TOKEN ?? '',
-  environment: process.env.VITE_CONTENTFUL_ENVIRONMENT ?? '',
-  space: process.env.VITE_CONTENTFUL_SPACE_ID ?? '',
-  host: process.env.VITE_CONTENTFUL_CDA_HOST ?? '',
-  basePath: process.env.VITE_CONTENTFUL_BASE_PATH ?? '',
-  insecure: Boolean(process.env.VITE_CONTENTFUL_CDA_HOST),
+  accessToken: process.env.PUBLIC_CONTENTFUL_TOKEN ?? '',
+  environment: process.env.PUBLIC_CONTENTFUL_ENVIRONMENT ?? '',
+  space: process.env.PUBLIC_CONTENTFUL_SPACE_ID ?? '',
+  host: process.env.PUBLIC_CONTENTFUL_CDA_HOST ?? '',
+  basePath: process.env.PUBLIC_CONTENTFUL_BASE_PATH ?? '',
+  insecure: Boolean(process.env.PUBLIC_CONTENTFUL_CDA_HOST),
 }
 
 const ctfl = contentful.createClient(ctflConfig)

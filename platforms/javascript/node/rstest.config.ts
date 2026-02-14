@@ -1,5 +1,7 @@
+import { defineConfig } from '@rstest/core'
 import { resolve } from 'node:path'
-import { defineConfig } from 'vitest/config'
+
+const coverageReporters = process.env.CI === 'true' ? ['text-summary', 'lcov'] : ['text', 'html']
 
 export default defineConfig({
   resolve: {
@@ -16,13 +18,11 @@ export default defineConfig({
       logger: resolve(__dirname, '../../../lib/logger/src/'),
     },
   },
-  test: {
-    environment: 'node',
-    include: ['**/*.test.?(c|m)[jt]s?(x)'],
-    globals: true,
-    coverage: {
-      include: ['src/**/*'],
-      reporter: ['text', 'html'],
-    },
+  include: ['**/*.test.?(c|m)[jt]s?(x)'],
+  globals: true,
+  testEnvironment: 'node',
+  coverage: {
+    include: ['src/**/*'],
+    reporters: coverageReporters,
   },
 })

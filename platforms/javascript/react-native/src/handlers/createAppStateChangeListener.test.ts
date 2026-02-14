@@ -1,31 +1,48 @@
+import { beforeEach, describe, expect, it, rs } from '@rstest/core'
 import { createLoggerMock } from 'mocks/loggerMock'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Create a holder for the AppState callback
 const callbackHolder: {
   callback: ((nextAppState: 'active' | 'background' | 'inactive') => void) | null
 } = { callback: null }
 
-const mockRemove = vi.fn()
+const mockRemove = rs.fn()
 const mockLogger = {
-  debug: vi.fn(),
-  info: vi.fn(),
-  log: vi.fn(),
-  warn: vi.fn(),
-  error: vi.fn(),
-  fatal: vi.fn(),
+  debug: rs.fn(),
+  info: rs.fn(),
+  log: rs.fn(),
+  warn: rs.fn(),
+  error: rs.fn(),
+  fatal: rs.fn(),
+}
+
+async function waitForExpectation(assertion: () => void): Promise<void> {
+  const deadline = Date.now() + 1000
+
+  while (Date.now() < deadline) {
+    try {
+      assertion()
+      return
+    } catch {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 10)
+      })
+    }
+  }
+
+  assertion()
 }
 
 describe('createAppStateChangeListener', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    rs.clearAllMocks()
     callbackHolder.callback = null
-    vi.resetModules()
+    rs.resetModules()
 
     // Set up mocks before each test
-    vi.doMock('@contentful/optimization-core', () => createLoggerMock(mockLogger))
+    rs.doMock('@contentful/optimization-core', () => createLoggerMock(mockLogger))
 
-    vi.doMock('react-native', () => ({
+    rs.doMock('react-native', () => ({
       AppState: {
         addEventListener: (
           event: string,
@@ -42,7 +59,7 @@ describe('createAppStateChangeListener', () => {
 
   it('should register a listener with AppState and return cleanup function', async () => {
     const { createAppStateChangeListener } = await import('./createAppStateChangeListener')
-    const callback = vi.fn()
+    const callback = rs.fn()
 
     const cleanup = createAppStateChangeListener(callback)
 
@@ -52,35 +69,35 @@ describe('createAppStateChangeListener', () => {
 
   it('should invoke callback when app goes to background', async () => {
     const { createAppStateChangeListener } = await import('./createAppStateChangeListener')
-    const callback = vi.fn()
+    const callback = rs.fn()
 
     createAppStateChangeListener(callback)
 
     // Simulate app going to background
     callbackHolder.callback?.('background')
 
-    await vi.waitFor(() => {
+    await waitForExpectation(() => {
       expect(callback).toHaveBeenCalled()
     })
   })
 
   it('should invoke callback when app goes to inactive', async () => {
     const { createAppStateChangeListener } = await import('./createAppStateChangeListener')
-    const callback = vi.fn()
+    const callback = rs.fn()
 
     createAppStateChangeListener(callback)
 
     // Simulate app going to inactive
     callbackHolder.callback?.('inactive')
 
-    await vi.waitFor(() => {
+    await waitForExpectation(() => {
       expect(callback).toHaveBeenCalled()
     })
   })
 
   it('should NOT invoke callback when app returns to active', async () => {
     const { createAppStateChangeListener } = await import('./createAppStateChangeListener')
-    const callback = vi.fn()
+    const callback = rs.fn()
 
     createAppStateChangeListener(callback)
 
@@ -95,7 +112,7 @@ describe('createAppStateChangeListener', () => {
 
   it('should call subscription.remove() when cleanup function is called', async () => {
     const { createAppStateChangeListener } = await import('./createAppStateChangeListener')
-    const callback = vi.fn()
+    const callback = rs.fn()
 
     const cleanup = createAppStateChangeListener(callback)
     cleanup()
@@ -106,7 +123,7 @@ describe('createAppStateChangeListener', () => {
   it('should log error but not crash when callback throws synchronously', async () => {
     const { createAppStateChangeListener } = await import('./createAppStateChangeListener')
     const error = new Error('Callback error')
-    const callback = vi.fn().mockImplementation(() => {
+    const callback = rs.fn().mockImplementation(() => {
       throw error
     })
 
@@ -115,7 +132,7 @@ describe('createAppStateChangeListener', () => {
     // Simulate app going to background
     callbackHolder.callback?.('background')
 
-    await vi.waitFor(() => {
+    await waitForExpectation(() => {
       expect(callback).toHaveBeenCalled()
       expect(mockLogger.error).toHaveBeenCalledWith(
         'RN:AppState',
@@ -128,14 +145,14 @@ describe('createAppStateChangeListener', () => {
   it('should log error but not crash when async callback rejects', async () => {
     const { createAppStateChangeListener } = await import('./createAppStateChangeListener')
     const error = new Error('Async callback error')
-    const callback = vi.fn().mockRejectedValue(error)
+    const callback = rs.fn().mockRejectedValue(error)
 
     createAppStateChangeListener(callback)
 
     // Simulate app going to background
     callbackHolder.callback?.('background')
 
-    await vi.waitFor(() => {
+    await waitForExpectation(() => {
       expect(callback).toHaveBeenCalled()
       expect(mockLogger.error).toHaveBeenCalledWith(
         'RN:AppState',
@@ -147,14 +164,14 @@ describe('createAppStateChangeListener', () => {
 
   it('should handle multiple state transitions', async () => {
     const { createAppStateChangeListener } = await import('./createAppStateChangeListener')
-    const callback = vi.fn()
+    const callback = rs.fn()
 
     createAppStateChangeListener(callback)
 
     // Simulate going to background
     callbackHolder.callback?.('background')
 
-    await vi.waitFor(() => {
+    await waitForExpectation(() => {
       expect(callback).toHaveBeenCalledTimes(1)
     })
 
@@ -170,21 +187,21 @@ describe('createAppStateChangeListener', () => {
     // Simulate going to inactive
     callbackHolder.callback?.('inactive')
 
-    await vi.waitFor(() => {
+    await waitForExpectation(() => {
       expect(callback).toHaveBeenCalledTimes(2)
     })
   })
 
   it('should handle async callbacks that resolve successfully', async () => {
     const { createAppStateChangeListener } = await import('./createAppStateChangeListener')
-    const callback = vi.fn().mockResolvedValue(undefined)
+    const callback = rs.fn().mockResolvedValue(undefined)
 
     createAppStateChangeListener(callback)
 
     // Simulate app going to background
     callbackHolder.callback?.('background')
 
-    await vi.waitFor(() => {
+    await waitForExpectation(() => {
       expect(callback).toHaveBeenCalled()
     })
 
