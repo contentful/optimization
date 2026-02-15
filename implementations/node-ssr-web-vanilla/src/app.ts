@@ -19,19 +19,19 @@ app.use(limiter)
 
 const config = {
   contentful: {
-    accessToken: process.env.VITE_CONTENTFUL_TOKEN,
-    environment: process.env.VITE_NINETAILED_ENVIRONMENT,
-    space: process.env.VITE_CONTENTFUL_SPACE_ID,
-    host: process.env.VITE_CONTENTFUL_CDA_HOST,
-    basePath: process.env.VITE_CONTENTFUL_BASE_PATH,
-    insecure: Boolean(process.env.VITE_CONTENTFUL_CDA_HOST),
+    accessToken: process.env.PUBLIC_CONTENTFUL_TOKEN,
+    environment: process.env.PUBLIC_NINETAILED_ENVIRONMENT,
+    space: process.env.PUBLIC_CONTENTFUL_SPACE_ID,
+    host: process.env.PUBLIC_CONTENTFUL_CDA_HOST,
+    basePath: process.env.PUBLIC_CONTENTFUL_BASE_PATH,
+    insecure: Boolean(process.env.PUBLIC_CONTENTFUL_CDA_HOST),
   },
   optimization: {
-    clientId: process.env.VITE_NINETAILED_CLIENT_ID ?? '',
-    environment: process.env.VITE_NINETAILED_ENVIRONMENT,
+    clientId: process.env.PUBLIC_NINETAILED_CLIENT_ID ?? '',
+    environment: process.env.PUBLIC_NINETAILED_ENVIRONMENT,
     logLevel: 'debug',
-    analytics: { baseUrl: process.env.VITE_INSIGHTS_API_BASE_URL },
-    personalization: { baseUrl: process.env.VITE_EXPERIENCE_API_BASE_URL },
+    analytics: { baseUrl: process.env.PUBLIC_INSIGHTS_API_BASE_URL },
+    personalization: { baseUrl: process.env.PUBLIC_EXPERIENCE_API_BASE_URL },
   },
 } as const
 

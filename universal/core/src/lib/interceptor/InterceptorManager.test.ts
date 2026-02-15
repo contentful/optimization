@@ -56,14 +56,14 @@ describe('InterceptorManager', () => {
   })
 
   it('executes interceptors in insertion order (sync + async) and pipes transformed values', async () => {
-    const addTimestamp = vi.fn(
+    const addTimestamp = rs.fn(
       (evt: Readonly<Event>): Event => ({
         ...evt,
         timestamp: evt.timestamp ?? '2025-09-01T00:00:00.000Z',
       }),
     )
 
-    const addFlagAsync = vi.fn(async (evt: Readonly<Event>): Promise<Event> => {
+    const addFlagAsync = rs.fn(async (evt: Readonly<Event>): Promise<Event> => {
       await Promise.resolve()
       return {
         ...evt,
@@ -71,7 +71,7 @@ describe('InterceptorManager', () => {
       }
     })
 
-    const redactSecret = vi.fn((evt: Readonly<Event>): Event => {
+    const redactSecret = rs.fn((evt: Readonly<Event>): Event => {
       const nextPayload: Record<string, unknown> = { ...evt.payload }
       if (Object.prototype.hasOwnProperty.call(nextPayload, 'secret')) {
         nextPayload.secret = '[REDACTED]'
@@ -134,7 +134,7 @@ describe('InterceptorManager', () => {
   })
 
   it('snapshots the interceptor list during run(): adds/removes during a run do not affect that run', async () => {
-    const dynamicSpy = vi.fn(
+    const dynamicSpy = rs.fn(
       (evt: Readonly<Event>): Event => ({
         ...evt,
         payload: { ...evt.payload, dynamic: true },
@@ -143,14 +143,14 @@ describe('InterceptorManager', () => {
 
     let firstId = -1
 
-    const first = vi.fn((evt: Readonly<Event>): Event => {
+    const first = rs.fn((evt: Readonly<Event>): Event => {
       const removed = manager.remove(firstId)
       expect(removed).toBe(true)
       manager.add(dynamicSpy)
       return evt
     })
 
-    const second = vi.fn(
+    const second = rs.fn(
       (evt: Readonly<Event>): Event => ({
         ...evt,
         payload: { ...evt.payload, afterFirst: true },

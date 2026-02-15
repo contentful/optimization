@@ -1,10 +1,10 @@
 import { guardedBy } from './guardedBy'
 
-const inlineOnBlockedSpy = vi.fn<(name: string, args: readonly unknown[]) => void>()
+const inlineOnBlockedSpy = rs.fn<(name: string, args: readonly unknown[]) => void>()
 
 describe('guardedBy (methods only, sync predicate/onBlocked, silent block)', () => {
   beforeEach((): void => {
-    vi.clearAllMocks()
+    rs.clearAllMocks()
   })
 
   const ON_BLOCKED_SYM: unique symbol = Symbol('onBlockedSym')
@@ -96,7 +96,7 @@ describe('guardedBy (methods only, sync predicate/onBlocked, silent block)', () 
     const fx = new Fixture()
     fx.enabled = true
 
-    const gateSpy = vi.spyOn(fx, 'gate')
+    const gateSpy = rs.spyOn(fx, 'gate')
     const result = fx.doWork('A')
 
     expect(result).toBe('ok:A')
@@ -108,7 +108,7 @@ describe('guardedBy (methods only, sync predicate/onBlocked, silent block)', () 
     const fx = new Fixture()
     fx.enabled = false
 
-    const gateSpy = vi.spyOn(fx, 'gate')
+    const gateSpy = rs.spyOn(fx, 'gate')
     const result = fx.doWork('B')
 
     expect(result).toBeUndefined()
@@ -132,8 +132,8 @@ describe('guardedBy (methods only, sync predicate/onBlocked, silent block)', () 
     const fx = new Fixture()
     fx.enabled = false
 
-    const gateSpy = vi.spyOn(fx, 'gate')
-    const handlerSpy = vi.spyOn(fx, 'handleBlocked')
+    const gateSpy = rs.spyOn(fx, 'gate')
+    const handlerSpy = rs.spyOn(fx, 'handleBlocked')
 
     const result = fx.withNamedHandler('E')
     expect(result).toBeUndefined()
@@ -148,8 +148,9 @@ describe('guardedBy (methods only, sync predicate/onBlocked, silent block)', () 
     const fx = new Fixture()
     fx.enabled = false
 
-    const gateSpy = vi.spyOn(fx, 'gate')
-    const symHandlerSpy = vi.spyOn(fx, ON_BLOCKED_SYM)
+    const gateSpy = rs.spyOn(fx, 'gate')
+    const symHandlerSpy = rs.fn<(name: string, args: readonly unknown[]) => void>()
+    fx[ON_BLOCKED_SYM] = symHandlerSpy
 
     const result = fx.withSymbolHandler('S')
     expect(result).toBeUndefined()
@@ -164,7 +165,7 @@ describe('guardedBy (methods only, sync predicate/onBlocked, silent block)', () 
     const fx = new Fixture()
     fx.enabled = false
 
-    const gateSpy = vi.spyOn(fx, 'gate')
+    const gateSpy = rs.spyOn(fx, 'gate')
 
     const result = fx.withInlineHandler('F')
     expect(result).toBeUndefined()
@@ -179,7 +180,7 @@ describe('guardedBy (methods only, sync predicate/onBlocked, silent block)', () 
     const fx = new Fixture()
     fx.enabled = false
 
-    const gateSpy = vi.spyOn(fx, 'gate')
+    const gateSpy = rs.spyOn(fx, 'gate')
     const result = fx.withNonFunctionHandler('N')
 
     expect(result).toBeUndefined()
@@ -189,7 +190,7 @@ describe('guardedBy (methods only, sync predicate/onBlocked, silent block)', () 
 
   it('supports decorating async methods: blocked resolves to undefined; allowed resolves to value', async (): Promise<void> => {
     const fx = new Fixture()
-    const gateSpy = vi.spyOn(fx, 'gate')
+    const gateSpy = rs.spyOn(fx, 'gate')
 
     // Blocked: resolves to undefined
     fx.enabled = false
@@ -229,7 +230,7 @@ describe('guardedBy (methods only, sync predicate/onBlocked, silent block)', () 
     }
 
     const fx = new SymFixture()
-    const gateSpy = vi.spyOn(fx, 'gate')
+    const gateSpy = rs.spyOn(fx, 'gate')
 
     const result = fx[METHOD_SYM]('Z')
     expect(result).toBe('ok:Z')
@@ -257,7 +258,7 @@ describe('guardedBy (methods only, sync predicate/onBlocked, silent block)', () 
     }
 
     const fx = new SymFixtureNoDesc()
-    const gateSpy = vi.spyOn(fx, 'gate')
+    const gateSpy = rs.spyOn(fx, 'gate')
 
     const result = fx[METHOD_SYM_NO_DESC]('Q')
     expect(result).toBe('ok:Q')

@@ -6,7 +6,80 @@ permissions:
 on:
   pull_request:
 
+concurrency:
+  group: main-pipeline-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  changes:
+    name: Detect Changes 🔎
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
+    outputs:
+      build: ${{ steps.filter.outputs.build }}
+      unit: ${{ steps.filter.outputs.unit }}
+      e2e_node_ssr_only: ${{ steps.filter.outputs.e2e_node_ssr_only }}
+      e2e_node_ssr_web_vanilla: ${{ steps.filter.outputs.e2e_node_ssr_web_vanilla }}
+      e2e_web: ${{ steps.filter.outputs.e2e_web }}
+      e2e_react_native_android: ${{ steps.filter.outputs.e2e_react_native_android }}
+    steps:
+      - uses: namespacelabs/nscloud-checkout-action@v8
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            build:
+              - 'lib/**'
+              - 'platforms/**'
+              - 'universal/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'tsconfig*.json'
+              - '.github/workflows/main-pipeline.yaml'
+            unit:
+              - 'lib/**'
+              - 'platforms/**'
+              - 'universal/**'
+              - '**/rstest.config.ts'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.github/workflows/main-pipeline.yaml'
+            e2e_node_ssr_only:
+              - 'implementations/node-ssr-only/**'
+              - 'lib/**'
+              - 'platforms/**'
+              - 'universal/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - '.github/workflows/main-pipeline.yaml'
+            e2e_node_ssr_web_vanilla:
+              - 'implementations/node-ssr-web-vanilla/**'
+              - 'lib/**'
+              - 'platforms/**'
+              - 'universal/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - '.github/workflows/main-pipeline.yaml'
+            e2e_web:
+              - 'implementations/web-vanilla/**'
+              - 'lib/**'
+              - 'platforms/**'
+              - 'universal/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - '.github/workflows/main-pipeline.yaml'
+            e2e_react_native_android:
+              - 'implementations/react-native/**'
+              - 'platforms/javascript/react-native/**'
+              - 'lib/**'
+              - 'platforms/**'
+              - 'universal/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - '.github/workflows/main-pipeline.yaml'
+
   setup:
     name: pnpm install 🛠️
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
@@ -92,7 +165,8 @@ jobs:
     name: Build 📦
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
-    needs: setup
+    needs: [setup, changes]
+    if: needs.changes.outputs.build == 'true'
     steps:
       - uses: namespacelabs/nscloud-checkout-action@v8
 
@@ -108,7 +182,7 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - run: pnpm build
+      - run: pnpm build:ci
 
   type-check:
     name: Type Check 🔷
@@ -154,11 +228,23 @@ jobs:
       - run: pnpm install --prefer-offline --frozen-lockfile
       - run: pnpm lint:check
 
-  test:
-    name: Test 🧪
+  test-unit:
+    name: Test 🧪 (${{ matrix.package }})
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
-    needs: setup
+    needs: [setup, changes]
+    if: needs.changes.outputs.unit == 'true'
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - package: '@contentful/optimization-api-schemas'
+          - package: '@contentful/optimization-api-client'
+          - package: '@contentful/optimization-core'
+          - package: '@contentful/optimization-node'
+          - package: '@contentful/optimization-web'
+          - package: '@contentful/optimization-web-preview-panel'
+          - package: '@contentful/optimization-react-native'
     steps:
       - uses: namespacelabs/nscloud-checkout-action@v8
 
@@ -174,28 +260,29 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - run: pnpm test:unit
+      - run: pnpm --filter ${{ matrix.package }} test:unit
 
   e2e-node-ssr-only:
     name: E2E Node SSR Only 🖥️
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
-    needs: setup
+    needs: [setup, changes]
+    if: needs.changes.outputs.e2e_node_ssr_only == 'true'
     steps:
       - uses: namespacelabs/nscloud-checkout-action@v8
 
       - run: |
           echo "DOTENV_CONFIG_QUIET=true" >>implementations/node-ssr-only/.env
-          echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/node-ssr-only/.env
-          echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/node-ssr-only/.env
-          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>implementations/node-ssr-only/.env
-          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>implementations/node-ssr-only/.env
-          echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/node-ssr-only/.env
-          echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/node-ssr-only/.env
-          echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/node-ssr-only/.env
-          echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/node-ssr-only/.env
-          echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/node-ssr-only/.env
-          echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>implementations/node-ssr-only/.env
+          echo "PUBLIC_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/node-ssr-only/.env
+          echo "PUBLIC_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/node-ssr-only/.env
+          echo "PUBLIC_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>implementations/node-ssr-only/.env
+          echo "PUBLIC_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>implementations/node-ssr-only/.env
+          echo "PUBLIC_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/node-ssr-only/.env
+          echo "PUBLIC_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/node-ssr-only/.env
+          echo "PUBLIC_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/node-ssr-only/.env
+          echo "PUBLIC_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/node-ssr-only/.env
+          echo "PUBLIC_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/node-ssr-only/.env
+          echo "PUBLIC_CONTENTFUL_BASE_PATH=contentful" >>implementations/node-ssr-only/.env
 
       - uses: actions/setup-node@v6
         with:
@@ -229,22 +316,23 @@ jobs:
     name: E2E Node SSR + Web Vanilla 🖥️
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
-    needs: setup
+    needs: [setup, changes]
+    if: needs.changes.outputs.e2e_node_ssr_web_vanilla == 'true'
     steps:
       - uses: namespacelabs/nscloud-checkout-action@v8
 
       - run: |
           echo "DOTENV_CONFIG_QUIET=true" >>implementations/node-ssr-web-vanilla/.env
-          echo "VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/node-ssr-web-vanilla/.env
-          echo "VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/node-ssr-web-vanilla/.env
-          echo "VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>implementations/node-ssr-web-vanilla/.env
-          echo "VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>implementations/node-ssr-web-vanilla/.env
-          echo "VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/node-ssr-web-vanilla/.env
-          echo "VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/node-ssr-web-vanilla/.env
-          echo "VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/node-ssr-web-vanilla/.env
-          echo "VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/node-ssr-web-vanilla/.env
-          echo "VITE_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/node-ssr-web-vanilla/.env
-          echo "VITE_CONTENTFUL_BASE_PATH=contentful" >>implementations/node-ssr-web-vanilla/.env
+          echo "PUBLIC_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/node-ssr-web-vanilla/.env
+          echo "PUBLIC_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/node-ssr-web-vanilla/.env
+          echo "PUBLIC_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>implementations/node-ssr-web-vanilla/.env
+          echo "PUBLIC_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>implementations/node-ssr-web-vanilla/.env
+          echo "PUBLIC_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/node-ssr-web-vanilla/.env
+          echo "PUBLIC_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/node-ssr-web-vanilla/.env
+          echo "PUBLIC_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/node-ssr-web-vanilla/.env
+          echo "PUBLIC_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/node-ssr-web-vanilla/.env
+          echo "PUBLIC_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/node-ssr-web-vanilla/.env
+          echo "PUBLIC_CONTENTFUL_BASE_PATH=contentful" >>implementations/node-ssr-web-vanilla/.env
 
       - uses: actions/setup-node@v6
         with:
@@ -278,7 +366,8 @@ jobs:
     name: E2E Web Vanilla 🖥️
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
-    needs: setup
+    needs: [setup, changes]
+    if: needs.changes.outputs.e2e_web == 'true'
     steps:
       - uses: docker/setup-compose-action@v1
 
@@ -288,16 +377,16 @@ jobs:
         run: |
           cat > .env << 'EOF'
           DOTENV_CONFIG_QUIET=true
-          VITE_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}
-          VITE_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}
-          VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/
-          VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/
-          VITE_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}
-          VITE_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}
-          VITE_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}
-          VITE_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}
-          VITE_CONTENTFUL_CDA_HOST=localhost:8000
-          VITE_CONTENTFUL_BASE_PATH=contentful
+          PUBLIC_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}
+          PUBLIC_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}
+          PUBLIC_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/
+          PUBLIC_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/
+          PUBLIC_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}
+          PUBLIC_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}
+          PUBLIC_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}
+          PUBLIC_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}
+          PUBLIC_CONTENTFUL_CDA_HOST=localhost:8000
+          PUBLIC_CONTENTFUL_BASE_PATH=contentful
           EOF
           cp .env implementations/node-ssr-only/
           cp .env implementations/web-vanilla/
@@ -334,7 +423,8 @@ jobs:
     name: E2E React Native Android 📱
     runs-on: namespace-profile-linux-16-vcpu-32-gb-ram-optimal
     timeout-minutes: 60
-    needs: setup
+    needs: [setup, changes]
+    if: needs.changes.outputs.e2e_react_native_android == 'true'
     env:
       DETOX_AVD_NAME: test
       CI: 'true'
@@ -410,15 +500,15 @@ jobs:
       - name: Create .env file for React Native
         run: |
           cat > implementations/react-native/.env << 'EOF'
-          VITE_NINETAILED_CLIENT_ID=${{ secrets.NINETAILED_CLIENT_ID }}
-          VITE_NINETAILED_ENVIRONMENT=${{ secrets.NINETAILED_ENVIRONMENT }}
-          VITE_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/
-          VITE_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/
-          VITE_CONTENTFUL_TOKEN=${{ secrets.CONTENTFUL_TOKEN }}
-          VITE_CONTENTFUL_ENVIRONMENT=${{ secrets.CONTENTFUL_ENVIRONMENT }}
-          VITE_CONTENTFUL_SPACE_ID=${{ secrets.CONTENTFUL_SPACE_ID }}
-          VITE_CONTENTFUL_CDA_HOST=localhost:8000
-          VITE_CONTENTFUL_BASE_PATH=contentful
+          PUBLIC_NINETAILED_CLIENT_ID=${{ secrets.NINETAILED_CLIENT_ID }}
+          PUBLIC_NINETAILED_ENVIRONMENT=${{ secrets.NINETAILED_ENVIRONMENT }}
+          PUBLIC_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/
+          PUBLIC_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/
+          PUBLIC_CONTENTFUL_TOKEN=${{ secrets.CONTENTFUL_TOKEN }}
+          PUBLIC_CONTENTFUL_ENVIRONMENT=${{ secrets.CONTENTFUL_ENVIRONMENT }}
+          PUBLIC_CONTENTFUL_SPACE_ID=${{ secrets.CONTENTFUL_SPACE_ID }}
+          PUBLIC_CONTENTFUL_CDA_HOST=localhost:8000
+          PUBLIC_CONTENTFUL_BASE_PATH=contentful
           EOF
 
       - name: Build Android app (Detox)

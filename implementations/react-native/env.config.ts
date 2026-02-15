@@ -1,13 +1,13 @@
 import {
-  VITE_CONTENTFUL_BASE_PATH,
-  VITE_CONTENTFUL_CDA_HOST,
-  VITE_CONTENTFUL_ENVIRONMENT,
-  VITE_CONTENTFUL_SPACE_ID,
-  VITE_CONTENTFUL_TOKEN,
-  VITE_EXPERIENCE_API_BASE_URL,
-  VITE_INSIGHTS_API_BASE_URL,
-  VITE_NINETAILED_CLIENT_ID,
-  VITE_NINETAILED_ENVIRONMENT,
+  PUBLIC_CONTENTFUL_BASE_PATH,
+  PUBLIC_CONTENTFUL_CDA_HOST,
+  PUBLIC_CONTENTFUL_ENVIRONMENT,
+  PUBLIC_CONTENTFUL_SPACE_ID,
+  PUBLIC_CONTENTFUL_TOKEN,
+  PUBLIC_EXPERIENCE_API_BASE_URL,
+  PUBLIC_INSIGHTS_API_BASE_URL,
+  PUBLIC_NINETAILED_CLIENT_ID,
+  PUBLIC_NINETAILED_ENVIRONMENT,
 } from '@env'
 import { Platform } from 'react-native'
 
@@ -46,21 +46,21 @@ function getAndroidCompatibleUrl(url: string): string {
 
 export const ENV_CONFIG = {
   contentful: {
-    spaceId: VITE_CONTENTFUL_SPACE_ID,
-    environment: VITE_CONTENTFUL_ENVIRONMENT,
-    accessToken: VITE_CONTENTFUL_TOKEN,
-    host: getAndroidCompatibleUrl(VITE_CONTENTFUL_CDA_HOST),
-    basePath: VITE_CONTENTFUL_BASE_PATH,
+    spaceId: PUBLIC_CONTENTFUL_SPACE_ID,
+    environment: PUBLIC_CONTENTFUL_ENVIRONMENT,
+    accessToken: PUBLIC_CONTENTFUL_TOKEN,
+    host: getAndroidCompatibleUrl(PUBLIC_CONTENTFUL_CDA_HOST),
+    basePath: PUBLIC_CONTENTFUL_BASE_PATH,
   },
 
   optimization: {
-    clientId: VITE_NINETAILED_CLIENT_ID,
-    environment: VITE_NINETAILED_ENVIRONMENT,
+    clientId: PUBLIC_NINETAILED_CLIENT_ID,
+    environment: PUBLIC_NINETAILED_ENVIRONMENT,
   },
 
   api: {
-    experienceBaseUrl: getAndroidCompatibleUrl(VITE_EXPERIENCE_API_BASE_URL),
-    insightsBaseUrl: getAndroidCompatibleUrl(VITE_INSIGHTS_API_BASE_URL),
+    experienceBaseUrl: getAndroidCompatibleUrl(PUBLIC_EXPERIENCE_API_BASE_URL),
+    insightsBaseUrl: getAndroidCompatibleUrl(PUBLIC_INSIGHTS_API_BASE_URL),
   },
 
   entries: {

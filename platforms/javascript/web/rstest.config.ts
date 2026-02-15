@@ -1,6 +1,7 @@
+import { defineConfig } from '@rstest/core'
 import { resolve } from 'node:path'
-import tsconfigPaths from 'vite-tsconfig-paths'
-import { defineConfig } from 'vitest/config'
+
+const coverageReporters = process.env.CI === 'true' ? ['text-summary', 'lcov'] : ['text', 'html']
 
 export default defineConfig({
   resolve: {
@@ -17,25 +18,11 @@ export default defineConfig({
       logger: resolve(__dirname, '../../../lib/logger/src/'),
     },
   },
-  esbuild: {
-    target: 'es2022',
-  },
-  build: {
-    sourcemap: true,
-    lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
-      name: 'Optimization',
-      fileName: 'index',
-    },
-  },
-  plugins: [tsconfigPaths()],
-  test: {
-    environment: 'happy-dom',
-    include: ['**/*.test.?(c|m)[jt]s?(x)'],
-    globals: true,
-    coverage: {
-      include: ['src/**/*'],
-      reporter: ['text', 'html'],
-    },
+  include: ['**/*.test.?(c|m)[jt]s?(x)'],
+  globals: true,
+  testEnvironment: 'happy-dom',
+  coverage: {
+    include: ['src/**/*'],
+    reporters: coverageReporters,
   },
 })

@@ -1,4 +1,3 @@
-// @vitest-environment happy-dom
 import {
   cancelRetry,
   clearFireTimer,
@@ -47,13 +46,13 @@ const setVisibilityState = (state: 'visible' | 'hidden'): void => {
 }
 
 beforeEach(() => {
-  vi.useRealTimers()
+  rs.useRealTimers()
 })
 
 afterEach(() => {
-  vi.restoreAllMocks()
-  vi.unstubAllGlobals()
-  vi.useRealTimers()
+  rs.restoreAllMocks()
+  rs.unstubAllGlobals()
+  rs.useRealTimers()
 })
 
 describe('Environment flags', () => {
@@ -70,8 +69,8 @@ describe('Environment flags', () => {
 
 describe('NOW', () => {
   it('uses performance.now() when available', () => {
-    const perfSpy = vi.spyOn(performance, 'now').mockReturnValue(42)
-    const dateSpy = vi.spyOn(Date, 'now')
+    const perfSpy = rs.spyOn(performance, 'now').mockReturnValue(42)
+    const dateSpy = rs.spyOn(Date, 'now')
     expect(NOW()).toBe(42)
     expect(perfSpy).toHaveBeenCalledTimes(1)
     expect(dateSpy).not.toHaveBeenCalled()
@@ -79,11 +78,11 @@ describe('NOW', () => {
 
   it('falls back to Date.now() when performance is undefined', () => {
     const { performance: originalPerf } = globalThis
-    vi.stubGlobal('performance', undefined)
-    const dateSpy = vi.spyOn(Date, 'now').mockReturnValue(123456)
+    rs.stubGlobal('performance', undefined)
+    const dateSpy = rs.spyOn(Date, 'now').mockReturnValue(123456)
     expect(NOW()).toBe(123456)
     // restore immediately to keep other tests safe
-    vi.stubGlobal('performance', originalPerf)
+    rs.stubGlobal('performance', originalPerf)
     expect(dateSpy).toHaveBeenCalledTimes(1)
   })
 })
@@ -93,21 +92,21 @@ describe('withJitter', () => {
     const base = 100
     const span = Math.max(1, Math.floor(base / DEFAULTS.JITTER_DIVISOR))
 
-    vi.spyOn(Math, 'random').mockReturnValueOnce(0) // +0
+    rs.spyOn(Math, 'random').mockReturnValueOnce(0) // +0
     expect(withJitter(base)).toBe(base)
 
-    vi.spyOn(Math, 'random').mockReturnValueOnce(0.5) // +floor(0.5*span)
+    rs.spyOn(Math, 'random').mockReturnValueOnce(0.5) // +floor(0.5*span)
     expect(withJitter(base)).toBe(base + Math.floor(0.5 * span))
 
-    vi.spyOn(Math, 'random').mockReturnValueOnce(0.9999) // +(span-1)
+    rs.spyOn(Math, 'random').mockReturnValueOnce(0.9999) // +(span-1)
     expect(withJitter(base)).toBe(base + (span - 1))
   })
 
   it('handles small bases (0, 1) using max(1, ...)', () => {
-    vi.spyOn(Math, 'random').mockReturnValueOnce(0.7)
+    rs.spyOn(Math, 'random').mockReturnValueOnce(0.7)
     expect(withJitter(0)).toBe(0)
 
-    vi.spyOn(Math, 'random').mockReturnValueOnce(0.2)
+    rs.spyOn(Math, 'random').mockReturnValueOnce(0.2)
     expect(withJitter(1)).toBe(1)
   })
 })
@@ -140,13 +139,13 @@ describe('Num helpers', () => {
 
 describe('Timer utilities', () => {
   beforeEach(() => {
-    vi.useFakeTimers()
+    rs.useFakeTimers()
   })
 
   it('clearFireTimer clears existing handle and nulls it', () => {
     const handle = setTimeout(() => undefined, 1000)
     const state = makeState({ fireTimer: handle })
-    const clearSpy = vi.spyOn(globalThis, 'clearTimeout')
+    const clearSpy = rs.spyOn(globalThis, 'clearTimeout')
     clearFireTimer(state)
     expect(clearSpy).toHaveBeenCalledTimes(1)
     expect(clearSpy).toHaveBeenCalledWith(handle)
@@ -155,7 +154,7 @@ describe('Timer utilities', () => {
 
   it('clearFireTimer is no-op when null', () => {
     const state = makeState({ fireTimer: null })
-    const clearSpy = vi.spyOn(globalThis, 'clearTimeout')
+    const clearSpy = rs.spyOn(globalThis, 'clearTimeout')
     clearFireTimer(state)
     expect(clearSpy).not.toHaveBeenCalled()
     expect(state.fireTimer).toBeNull()
@@ -164,7 +163,7 @@ describe('Timer utilities', () => {
   it('cancelRetry clears existing handle and resets scheduling', () => {
     const handle = setTimeout(() => undefined, 1000)
     const state = makeState({ retryTimer: handle, retryScheduledAt: 12345 })
-    const clearSpy = vi.spyOn(globalThis, 'clearTimeout')
+    const clearSpy = rs.spyOn(globalThis, 'clearTimeout')
     cancelRetry(state)
     expect(clearSpy).toHaveBeenCalledTimes(1)
     expect(clearSpy).toHaveBeenCalledWith(handle)
@@ -174,7 +173,7 @@ describe('Timer utilities', () => {
 
   it('cancelRetry is no-op when null, but still nulls retryScheduledAt', () => {
     const state = makeState({ retryTimer: null, retryScheduledAt: 555 })
-    const clearSpy = vi.spyOn(globalThis, 'clearTimeout')
+    const clearSpy = rs.spyOn(globalThis, 'clearTimeout')
     cancelRetry(state)
     expect(clearSpy).not.toHaveBeenCalled()
     expect(state.retryTimer).toBeNull()

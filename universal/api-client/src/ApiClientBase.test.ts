@@ -14,7 +14,7 @@ class TestApiClient extends ApiClientBase {
   }
 }
 
-const mockFetchMethod = vi.fn()
+const mockFetchMethod = rs.fn()
 
 describe('ApiClientBase', () => {
   const name = 'MyAPI'
@@ -22,12 +22,12 @@ describe('ApiClientBase', () => {
   let config: ApiConfig
 
   beforeEach(() => {
-    vi.spyOn(Fetch, 'create').mockReturnValue(mockFetchMethod)
+    rs.spyOn(Fetch, 'create').mockReturnValue(mockFetchMethod)
     config = { clientId: 'testId', fetchOptions }
   })
 
   afterEach(() => {
-    vi.restoreAllMocks()
+    rs.restoreAllMocks()
   })
 
   it('creates fetch method with correct merged options', () => {

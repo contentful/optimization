@@ -15,18 +15,19 @@
     "dist/**/*"
   ],
   "scripts": {
-    "test:unit": "vitest run --coverage",
+    "test:unit": "rstest run --coverage",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@rsdoctor/rspack-plugin": "catalog:",
     "tsx": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
+    "@rstest/core": "catalog:",
+    "@rstest/coverage-istanbul": "catalog:",
     "tslib": "catalog:",
     "type-fest": "^4.41.0",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
+    "typescript": "catalog:"
   }
 }

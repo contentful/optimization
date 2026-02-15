@@ -1,3 +1,4 @@
+import { rs } from '@rstest/core'
 import Logger, { type LogEvent, type LogSink } from '.'
 
 const TEST_LOCATION = 'LoggerTest'
@@ -24,8 +25,8 @@ describe('Logger', () => {
   })
 
   it('adds and removes sinks correctly', () => {
-    const ingest1 = vi.fn()
-    const ingest2 = vi.fn()
+    const ingest1 = rs.fn()
+    const ingest2 = rs.fn()
     const sink1: LogSink = { name: 'sink1', ingest: ingest1 }
     const sink2: LogSink = { name: 'sink2', ingest: ingest2 }
 
@@ -52,8 +53,8 @@ describe('Logger', () => {
   })
 
   it('replaces a sink with the same name', () => {
-    const ingest1 = vi.fn()
-    const ingest2 = vi.fn()
+    const ingest1 = rs.fn()
+    const ingest2 = rs.fn()
     const sink1: LogSink = { name: 'mySink', ingest: ingest1 }
     const sink2: LogSink = { name: 'mySink', ingest: ingest2 }
 

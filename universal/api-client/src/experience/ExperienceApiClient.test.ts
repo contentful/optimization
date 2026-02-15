@@ -3,9 +3,9 @@ import {
   ExperienceEventArray,
   ExperienceResponse,
 } from '@contentful/optimization-api-schemas'
+import { afterEach, describe, expect, it, rs } from '@rstest/core'
 import { mockLogger } from 'mocks'
 import { http, HttpResponse } from 'msw'
-import { afterEach, describe, expect, it, vi } from 'vitest'
 import { server } from '../test/setup'
 import ExperienceApiClient, {
   EXPERIENCE_BASE_URL,
@@ -50,23 +50,23 @@ function makeClient(overrides: Partial<ExperienceApiClientConfig> = {}): Experie
 describe('ExperienceApiClient', () => {
   beforeEach(() => {
     server.resetHandlers()
-    vi.clearAllMocks()
+    rs.clearAllMocks()
 
-    vi.spyOn(ExperienceResponse, 'parse')
+    rs.spyOn(ExperienceResponse, 'parse')
       // @ts-expect-error -- testing
       .mockImplementation((json) => json)
 
-    vi.spyOn(BatchExperienceResponse, 'parse')
+    rs.spyOn(BatchExperienceResponse, 'parse')
       // @ts-expect-error -- testing
       .mockImplementation((json) => json)
 
-    vi.spyOn(ExperienceEventArray, 'parse')
+    rs.spyOn(ExperienceEventArray, 'parse')
       // @ts-expect-error -- testing
       .mockImplementation((json) => json)
   })
 
   afterEach(() => {
-    vi.restoreAllMocks()
+    rs.restoreAllMocks()
   })
 
   describe('getProfile', () => {

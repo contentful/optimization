@@ -1,11 +1,11 @@
-import { vi } from 'vitest'
+import { rs } from '@rstest/core'
 
 // Manual mock for @react-native-community/netinfo
 
 export let capturedCallback:
   | ((state: { isInternetReachable: boolean | null; isConnected: boolean | null }) => void)
   | null = null
-export const mockUnsubscribe = vi.fn()
+export const mockUnsubscribe = rs.fn()
 
 export function resetMock(): void {
   capturedCallback = null

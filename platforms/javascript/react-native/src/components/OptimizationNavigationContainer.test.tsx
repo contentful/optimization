@@ -1,46 +1,46 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, rs } from '@rstest/core'
 
 // Mock React Native
-vi.mock('react-native', () => ({
+rs.mock('react-native', () => ({
   Platform: { OS: 'ios' },
   Dimensions: {
-    get: vi.fn(() => ({ width: 375, height: 667 })),
-    addEventListener: vi.fn(() => ({ remove: vi.fn() })),
+    get: rs.fn(() => ({ width: 375, height: 667 })),
+    addEventListener: rs.fn(() => ({ remove: rs.fn() })),
   },
   NativeModules: {},
 }))
 
 // Mock AsyncStorage
-vi.mock('@react-native-async-storage/async-storage', () => ({
+rs.mock('@react-native-async-storage/async-storage', () => ({
   default: {
-    getItem: vi.fn(),
-    setItem: vi.fn(),
-    removeItem: vi.fn(),
+    getItem: rs.fn(),
+    setItem: rs.fn(),
+    removeItem: rs.fn(),
   },
 }))
 
 // Mock @contentful/optimization-core
-vi.mock('@contentful/optimization-core', () => ({
+rs.mock('@contentful/optimization-core', () => ({
   logger: {
-    info: vi.fn(),
-    debug: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
+    info: rs.fn(),
+    debug: rs.fn(),
+    error: rs.fn(),
+    warn: rs.fn(),
   },
   createScopedLogger: () => ({
-    debug: vi.fn(),
-    info: vi.fn(),
-    log: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-    fatal: vi.fn(),
+    debug: rs.fn(),
+    info: rs.fn(),
+    log: rs.fn(),
+    warn: rs.fn(),
+    error: rs.fn(),
+    fatal: rs.fn(),
   }),
 }))
 
 // Mock useOptimization hook
-vi.mock('../context/OptimizationContext', () => ({
+rs.mock('../context/OptimizationContext', () => ({
   useOptimization: () => ({
-    screen: vi.fn().mockResolvedValue({ profile: {}, changes: [], personalizations: [] }),
+    screen: rs.fn().mockResolvedValue({ profile: {}, changes: [], personalizations: [] }),
   }),
 }))
 

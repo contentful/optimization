@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { getPackageName, hasPackageName } from './index'
+import { getPackageName, hasPackageName } from './package'
 
 describe('hasPackageName', () => {
   it('returns true when name is a string', () => {

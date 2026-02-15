@@ -68,11 +68,13 @@
           }
         }
       }
+      #utility-panel,
       #event-stream-panel {
         position: sticky;
         top: 0;
         margin-block-start: -1px;
         padding-block-start: 1px;
+        background: #fff;
       }
       #auto-observed,
       #manually-observed {
@@ -315,6 +317,9 @@
           // The `data-ctfl-entry-id` data attribute is required for auto-observing
           element.dataset.ctflEntryId = entry.sys?.id
 
+          // Store the baseline ID so we can continue updating
+          if (entry.fields.nt_experiences) element.dataset.ctflBaselineId = entry.sys?.id
+
           // Other standard auto-observing attributes are optional
           if (personalization) {
             element.dataset.ctflPersonalizationId = personalization?.experienceId
@@ -360,12 +365,25 @@
         manuallyObservedEntryElements.set(element.dataset.entryId, [entry, personalization])
       }
 
-      // Subscribe to the event stream
-      optimization.states.eventStream.subscribe((event) => {
-        if (!event) return
+      // Render all the entries
+      function renderEntries() {
+        document.querySelectorAll('[data-ctfl-entry-id]').forEach(async (element) => {
+          await addPersonalizedEntry(
+            element.dataset.ctflBaselineId ?? element.dataset.ctflEntryId,
+            element,
+          )
+        })
 
-        document.querySelector('#event-stream').appendChild(createEventDialog(event.type, event))
-      })
+        document.querySelectorAll('[data-entry-id]').forEach(async (element) => {
+          const [entry, personalization] = await addPersonalizedEntry(
+            element.dataset.entryId,
+            element,
+            false,
+          )
+
+          manuallyObserveEntryElement(element, entry, personalization)
+        })
+      }
 
       // Subscribe to consent state
       optimization.states.consent.subscribe(async (consent) => {
@@ -383,25 +401,25 @@
           })
       })
 
+      // Subscribe to the event stream
+      optimization.states.eventStream.subscribe((event) => {
+        if (!event) return
+
+        document.querySelector('#event-stream').appendChild(createEventDialog(event.type, event))
+      })
+
+      // Subscribe to personalizations state
+      optimization.states.personalizations.subscribe(async (personalizations) => {
+        if (!personalizations) return
+
+        renderEntries()
+      })
+
       // Subscribe to profile state, find entries in the markup, and render them
       optimization.states.profile.subscribe((profile) => {
         if (!profile) return
 
         toggleIdentity(profile.traits && Object.keys(profile.traits).length)
-
-        document.querySelectorAll('[data-ctfl-entry-id]').forEach(async (element) => {
-          await addPersonalizedEntry(element.dataset.ctflEntryId, element)
-        })
-
-        document.querySelectorAll('[data-entry-id]').forEach(async (element) => {
-          const [entry, personalization] = await addPersonalizedEntry(
-            element.dataset.entryId,
-            element,
-            false,
-          )
-
-          manuallyObserveEntryElement(element, entry, personalization)
-        })
       })
     </script>
   </body>

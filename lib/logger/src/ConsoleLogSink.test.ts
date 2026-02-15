@@ -1,4 +1,5 @@
 /* eslint-disable no-console -- testing console */
+import { rs } from '@rstest/core'
 import type { LogEvent, LogLevels } from 'diary'
 import { ConsoleLogSink } from './ConsoleLogSink'
 
@@ -6,16 +7,16 @@ import { ConsoleLogSink } from './ConsoleLogSink'
 const originalConsole = { ...console }
 
 describe('ConsoleLogSink', () => {
-  let spies: Record<string, ReturnType<typeof vi.fn>>
+  let spies: Record<string, ReturnType<typeof rs.fn>>
   const loggerName = '@contentful/optimization'
 
   beforeEach(() => {
     spies = {
-      debug: vi.fn(),
-      info: vi.fn(),
-      log: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
+      debug: rs.fn(),
+      info: rs.fn(),
+      log: rs.fn(),
+      warn: rs.fn(),
+      error: rs.fn(),
     }
     // Patch console methods
     Object.assign(console, spies)

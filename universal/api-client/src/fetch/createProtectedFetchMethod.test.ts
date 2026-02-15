@@ -1,6 +1,4 @@
 import { mockLogger } from 'mocks'
-import type { MockInstance } from 'vitest'
-import type { FetchMethod } from './Fetch'
 import {
   createProtectedFetchMethod,
   type ProtectedFetchMethodOptions,
@@ -8,34 +6,28 @@ import {
 import * as createRetryFetchMethodModule from './createRetryFetchMethod'
 import * as createTimeoutFetchMethodModule from './createTimeoutFetchMethod'
 
-vi.mock('./createRetryFetchMethod')
-vi.mock('./createTimeoutFetchMethod')
+rs.mock('./createRetryFetchMethod', { mock: true })
+rs.mock('./createTimeoutFetchMethod', { mock: true })
 
 describe('createProtectedFetchMethod', () => {
-  const timeoutFetchMethod = vi.fn()
-  const retryFetchMethod = vi.fn()
+  const timeoutFetchMethod = rs.fn()
+  const retryFetchMethod = rs.fn()
   const options: ProtectedFetchMethodOptions = {
     intervalTimeout: 100,
     requestTimeout: 2000,
     retries: 2,
   }
 
-  let createTimeoutFetchMethodSpy: MockInstance<
-    (options?: createTimeoutFetchMethodModule.TimeoutFetchMethodOptions) => FetchMethod
-  >
-  let createRetryFetchMethodSpy: MockInstance<
-    (
-      options: createRetryFetchMethodModule.RetryFetchMethodOptions & { fetchMethod: FetchMethod },
-    ) => FetchMethod
-  >
+  let createTimeoutFetchMethodSpy: ReturnType<typeof rs.spyOn>
+  let createRetryFetchMethodSpy: ReturnType<typeof rs.spyOn>
 
   beforeEach(() => {
-    vi.clearAllMocks()
-    createTimeoutFetchMethodSpy = vi.spyOn(
+    rs.clearAllMocks()
+    createTimeoutFetchMethodSpy = rs.spyOn(
       createTimeoutFetchMethodModule,
       'createTimeoutFetchMethod',
     )
-    createRetryFetchMethodSpy = vi.spyOn(createRetryFetchMethodModule, 'createRetryFetchMethod')
+    createRetryFetchMethodSpy = rs.spyOn(createRetryFetchMethodModule, 'createRetryFetchMethod')
 
     createTimeoutFetchMethodSpy.mockReturnValue(timeoutFetchMethod)
     createRetryFetchMethodSpy.mockReturnValue(retryFetchMethod)

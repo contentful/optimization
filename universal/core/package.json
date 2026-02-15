@@ -23,9 +23,11 @@
     "dist/**/*"
   ],
   "scripts": {
-    "build": "pnpm clean; rslib build && build-tools emit-dual-dts ./dist",
+    "build": "pnpm clean; pnpm build:dist",
+    "build:ci": "pnpm build:dist",
+    "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
     "clean": "rimraf ./.rslib ./dist ./coverage .tsbuildinfo",
-    "test:unit": "vitest run --coverage",
+    "test:unit": "rstest run --coverage",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -41,14 +43,14 @@
     "@microsoft/api-extractor": "catalog:",
     "@rslib/core": "catalog:",
     "@types/node": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
+    "@rstest/core": "catalog:",
+    "@rstest/coverage-istanbul": "catalog:",
     "build-tools": "workspace:*",
     "logger": "workspace:*",
     "mocks": "workspace:*",
     "msw": "catalog:",
     "rimraf": "catalog:",
     "tslib": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
+    "typescript": "catalog:"
   }
 }

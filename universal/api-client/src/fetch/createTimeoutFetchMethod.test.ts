@@ -2,19 +2,19 @@ import { mockLogger } from 'mocks'
 import { createTimeoutFetchMethod } from './createTimeoutFetchMethod'
 
 describe('createTimeoutFetchMethod', () => {
-  let fetchMock: ReturnType<typeof vi.fn>
-  let onRequestTimeout: ReturnType<typeof vi.fn>
+  let fetchMock: ReturnType<typeof rs.fn>
+  let onRequestTimeout: ReturnType<typeof rs.fn>
 
   beforeEach(() => {
-    fetchMock = vi.fn()
-    onRequestTimeout = vi.fn()
-    vi.useFakeTimers()
-    vi.clearAllTimers()
-    vi.clearAllMocks()
+    fetchMock = rs.fn()
+    onRequestTimeout = rs.fn()
+    rs.useFakeTimers()
+    rs.clearAllTimers()
+    rs.clearAllMocks()
   })
 
   afterEach(() => {
-    vi.useRealTimers()
+    rs.useRealTimers()
   })
 
   it('calls fetchMethod and resolves response before timeout', async () => {
@@ -53,7 +53,7 @@ describe('createTimeoutFetchMethod', () => {
 
     fetchWithTimeout('http://timeout.com', {})
 
-    vi.advanceTimersByTime(1000)
+    rs.advanceTimersByTime(1000)
 
     expect(onRequestTimeout).toHaveBeenCalledWith({ apiName: 'CustomAPI' })
     expect(mockLogger.error).not.toHaveBeenCalled()
@@ -70,7 +70,7 @@ describe('createTimeoutFetchMethod', () => {
 
     fetchWithTimeout('http://fail.com', {})
 
-    vi.advanceTimersByTime(500)
+    rs.advanceTimersByTime(500)
 
     expect(mockLogger.error).toHaveBeenCalled()
     expect(onRequestTimeout).not.toHaveBeenCalled()

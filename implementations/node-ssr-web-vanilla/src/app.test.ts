@@ -1,12 +1,12 @@
 import request, { type Response } from 'supertest'
 import app from './app'
 
-const CLIENT_ID = process.env.VITE_NINETAILED_CLIENT_ID ?? 'error'
+const CLIENT_ID = process.env.PUBLIC_NINETAILED_CLIENT_ID ?? ''
 
 describe('GET /', () => {
   it('returns the client ID', async () => {
     const response: Response = await request(app).get('/smoke-test')
 
-    expect(response.text).toContain(`"${CLIENT_ID}"`)
+    expect(response.text).toContain(`"clientId":"${CLIENT_ID}"`)
   })
 })
