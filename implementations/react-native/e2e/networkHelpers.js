@@ -2,6 +2,7 @@ const { execFile } = require('node:child_process')
 const { promisify } = require('node:util')
 
 const execFileAsync = promisify(execFile)
+const sleep = promisify(setTimeout)
 
 /**
  * Network control helpers for Android emulator E2E tests.
@@ -17,30 +18,73 @@ async function runAdbShell(command) {
   return stdout
 }
 
+async function waitForAirplaneModeState(expectedEnabled, timeoutMs = 3000, pollMs = 200) {
+  const attempts = Math.ceil(timeoutMs / pollMs)
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    if ((await isAirplaneModeEnabled()) === expectedEnabled) {
+      return true
+    }
+    await sleep(pollMs)
+  }
+
+  return false
+}
+
 /**
  * Disable all network connectivity on the Android emulator by enabling airplane mode.
  * This is the most reliable way to simulate offline state as it triggers
  * system-wide connectivity changes that @react-native-community/netinfo detects.
  */
 async function disableNetwork() {
+  if (await isAirplaneModeEnabled()) {
+    return
+  }
+
   // Enable airplane mode
   await runAdbShell(['settings', 'put', 'global', 'airplane_mode_on', '1'])
   // Broadcast the change so apps receive the connectivity update via NetInfo
-  await runAdbShell(['am', 'broadcast', '-a', 'android.intent.action.AIRPLANE_MODE_CHANGED'])
-  // Wait for the state change to propagate
-  await new Promise((resolve) => setTimeout(resolve, 1000))
+  await runAdbShell([
+    'am',
+    'broadcast',
+    '-a',
+    'android.intent.action.AIRPLANE_MODE_CHANGED',
+    '--ez',
+    'state',
+    'true',
+  ])
+  // Wait for state transition only as long as needed.
+  const stateApplied = await waitForAirplaneModeState(true)
+  if (!stateApplied) {
+    await sleep(300)
+  }
 }
 
 /**
  * Re-enable network connectivity on the Android emulator by disabling airplane mode.
  */
 async function enableNetwork() {
+  if (!(await isAirplaneModeEnabled())) {
+    return
+  }
+
   // Disable airplane mode
   await runAdbShell(['settings', 'put', 'global', 'airplane_mode_on', '0'])
   // Broadcast the change
-  await runAdbShell(['am', 'broadcast', '-a', 'android.intent.action.AIRPLANE_MODE_CHANGED'])
-  // Wait for the state change to propagate and network to reconnect
-  await new Promise((resolve) => setTimeout(resolve, 2000))
+  await runAdbShell([
+    'am',
+    'broadcast',
+    '-a',
+    'android.intent.action.AIRPLANE_MODE_CHANGED',
+    '--ez',
+    'state',
+    'false',
+  ])
+  // Wait for state transition only as long as needed.
+  const stateApplied = await waitForAirplaneModeState(false)
+  if (!stateApplied) {
+    await sleep(500)
+  }
 }
 
 /**
@@ -50,7 +94,7 @@ async function enableNetwork() {
  */
 async function disableWifi() {
   await runAdbShell(['svc', 'wifi', 'disable'])
-  await new Promise((resolve) => setTimeout(resolve, 500))
+  await sleep(500)
 }
 
 /**
@@ -58,7 +102,7 @@ async function disableWifi() {
  */
 async function enableWifi() {
   await runAdbShell(['svc', 'wifi', 'enable'])
-  await new Promise((resolve) => setTimeout(resolve, 1000))
+  await sleep(1000)
 }
 
 /**

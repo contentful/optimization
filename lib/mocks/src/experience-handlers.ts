@@ -15,26 +15,56 @@ const _dirname = dirname(_filename)
 const BASE_DIR = resolve(_dirname, './experience/data')
 const newVisitorPath = join(BASE_DIR, `new-visitor.json`)
 const identifiedVisitorPath = join(BASE_DIR, `identified-visitor.json`)
+const CORS_HEADERS = { 'Access-Control-Allow-Origin': '*' }
 
 type State = Record<string, boolean>
 
 let identifiedState: State = {}
 
 let newVisitor: ExperienceResponse | undefined = undefined
-readFile(newVisitorPath, 'utf8')
-  .then((data) => ExperienceResponse.parse(JSON.parse(data)))
-  .then((data) => (newVisitor = data))
-  .catch((error: unknown) => {
-    void error
+let identifiedVisitor: ExperienceResponse | undefined = undefined
+let fixtureLoadPromise: Promise<void> | undefined = undefined
+let fixtureLoadError: unknown = undefined
+
+async function loadFixtures(): Promise<void> {
+  const [newVisitorData, identifiedVisitorData] = await Promise.all([
+    readFile(newVisitorPath, 'utf8'),
+    readFile(identifiedVisitorPath, 'utf8'),
+  ])
+
+  newVisitor = ExperienceResponse.parse(JSON.parse(newVisitorData))
+  identifiedVisitor = ExperienceResponse.parse(JSON.parse(identifiedVisitorData))
+}
+
+async function ensureFixturesLoaded(): Promise<void> {
+  fixtureLoadPromise ??= loadFixtures().catch((error: unknown) => {
+    fixtureLoadError = error
+    throw error
   })
 
-let identifiedVisitor: ExperienceResponse | undefined = undefined
-readFile(identifiedVisitorPath, 'utf8')
-  .then((data) => ExperienceResponse.parse(JSON.parse(data)))
-  .then((data) => (identifiedVisitor = data))
-  .catch((error: unknown) => {
-    void error
-  })
+  await fixtureLoadPromise
+}
+
+function fixturesUnavailableResponse(): Response {
+  const message =
+    fixtureLoadError instanceof Error
+      ? fixtureLoadError.message
+      : 'Experience fixtures are not available'
+
+  return HttpResponse.json(
+    { error: 'Fixtures unavailable', message },
+    { headers: CORS_HEADERS, status: 503 },
+  )
+}
+
+function getLoadedFixtures(): {
+  identifiedVisitor: ExperienceResponse
+  newVisitor: ExperienceResponse
+} {
+  if (!newVisitor || !identifiedVisitor) throw new Error('Experience fixtures not loaded')
+
+  return { identifiedVisitor, newVisitor }
+}
 
 // Helper to parse JSON whether body is application/json or text/plain
 async function parseJson<T>(req: Request): Promise<T> {
@@ -57,28 +87,22 @@ function hasIdentifyEvent(events: ExperienceEventArray | undefined): boolean {
   return events.some(({ type }) => type === 'identify')
 }
 
-function getResponseBody(
-  profileId?: string,
-  events?: ExperienceEventArray,
-): ExperienceResponse | undefined {
+function getResponseBody(profileId?: string, events?: ExperienceEventArray): ExperienceResponse {
+  const fixtures = getLoadedFixtures()
+
   profileId ??= crypto.randomUUID()
 
   const identified = identifiedState[profileId] ?? false
 
-  let responseBody: ExperienceResponse | undefined = undefined
+  let responseBody: ExperienceResponse = cloneDeep(fixtures.newVisitor)
 
   if (identified || hasIdentifyEvent(events)) {
-    if (profileId) identifiedState[profileId] ||= true
-
-    responseBody = cloneDeep(identifiedVisitor)
-  } else {
-    responseBody = cloneDeep(newVisitor)
+    identifiedState[profileId] = true
+    responseBody = cloneDeep(fixtures.identifiedVisitor)
   }
 
-  if (responseBody) {
-    responseBody.data.profile.id = profileId
-    responseBody.data.profile.stableId = profileId
-  }
+  responseBody.data.profile.id = profileId
+  responseBody.data.profile.stableId = profileId
 
   return responseBody
 }
@@ -104,18 +128,24 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
     http.post(
       `${baseUrl}v2/organizations/:organizationId/environments/:environment/profiles`,
       async ({ request }) => {
+        try {
+          await ensureFixturesLoaded()
+        } catch {
+          return fixturesUnavailableResponse()
+        }
+
         const { events } = await parseJson<ExperienceRequestData>(request)
         const { success: eventsAreValid } = ExperienceEventArray.safeParse(events)
 
         if (!eventsAreValid) {
           return HttpResponse.json(
             { error: 'Invalid Event Array' },
-            { headers: { 'Access-Control-Allow-Origin': '*' }, status: 400 },
+            { headers: CORS_HEADERS, status: 400 },
           )
         }
 
         return HttpResponse.json(getResponseBody(undefined, events), {
-          headers: { 'Access-Control-Allow-Origin': '*' },
+          headers: CORS_HEADERS,
         })
       },
     ),
@@ -124,12 +154,18 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
     http.post(
       `${baseUrl}v2/organizations/:organizationId/environments/:environment/profiles/:profileId`,
       async ({ params, request }) => {
+        try {
+          await ensureFixturesLoaded()
+        } catch {
+          return fixturesUnavailableResponse()
+        }
+
         const { profileId } = params
 
         if (!profileId) {
           return HttpResponse.json(
             { message: 'Profile not found', data: {}, error: { code: 'ERR_PROFILE_NOT_FOUND' } },
-            { headers: { 'Access-Control-Allow-Origin': '*' }, status: 404 },
+            { headers: CORS_HEADERS, status: 404 },
           )
         }
 
@@ -139,12 +175,12 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
         if (!eventsAreValid) {
           return HttpResponse.json(
             { error: 'Invalid Event Array' },
-            { headers: { 'Access-Control-Allow-Origin': '*' }, status: 400 },
+            { headers: CORS_HEADERS, status: 400 },
           )
         }
 
         return HttpResponse.json(getResponseBody(profileId.toString(), events), {
-          headers: { 'Access-Control-Allow-Origin': '*' },
+          headers: CORS_HEADERS,
         })
       },
     ),
@@ -152,22 +188,32 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
     // Get profile by id
     http.get(
       `${baseUrl}v2/organizations/:organizationId/environments/:environment/profiles/:profileId`,
-      ({ params }) => {
+      async ({ params }) => {
+        try {
+          await ensureFixturesLoaded()
+        } catch {
+          return fixturesUnavailableResponse()
+        }
+
+        const fixtures = getLoadedFixtures()
         const { profileId } = params
 
         if (
           !profileId ||
           typeof profileId !== 'string' ||
-          ![identifiedVisitor?.data.profile.id, newVisitor?.data.profile.id].includes(profileId)
+          ![
+            fixtures.identifiedVisitor.data.profile.id,
+            fixtures.newVisitor.data.profile.id,
+          ].includes(profileId)
         ) {
           return HttpResponse.json(
             { message: 'Profile not found', data: {}, error: { code: 'ERR_PROFILE_NOT_FOUND' } },
-            { status: 404, headers: { 'Access-Control-Allow-Origin': '*' } },
+            { status: 404, headers: CORS_HEADERS },
           )
         }
 
         return HttpResponse.json(getResponseBody(profileId), {
-          headers: { 'Access-Control-Allow-Origin': '*' },
+          headers: CORS_HEADERS,
         })
       },
     ),
@@ -176,6 +222,12 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
     http.post(
       `${baseUrl}v2/organizations/:organizationId/environments/:environment/events`,
       async ({ request }) => {
+        try {
+          await ensureFixturesLoaded()
+        } catch {
+          return fixturesUnavailableResponse()
+        }
+
         const { events } = await parseJson<{ events: BatchExperienceEventArray }>(request)
         const { success: eventsAreValid } = BatchExperienceEventArray.safeParse(events)
 
@@ -184,7 +236,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
         if (!eventsAreValid) {
           return HttpResponse.json(
             { error: 'Invalid Batch Event Array' },
-            { headers: { 'Access-Control-Allow-Origin': '*' }, status: 400 },
+            { headers: CORS_HEADERS, status: 400 },
           )
         }
 
@@ -192,7 +244,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
         return HttpResponse.json(
           { data: { profiles: [getResponseBody(profileId, events)] } },
           {
-            headers: { 'Access-Control-Allow-Origin': '*' },
+            headers: CORS_HEADERS,
           },
         )
       },
@@ -204,7 +256,7 @@ export function getHandlers(baseUrl = '*'): HttpHandler[] {
       return HttpResponse.json(
         { message: 'Internal state has been reset' },
         {
-          headers: { 'Access-Control-Allow-Origin': '*' },
+          headers: CORS_HEADERS,
         },
       )
     }),

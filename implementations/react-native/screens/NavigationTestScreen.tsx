@@ -1,5 +1,6 @@
 import {
   OptimizationNavigationContainer,
+  type OptimizationNavigationContainerProps,
   useOptimization,
 } from '@contentful/optimization-react-native'
 import type { NavigationContainerRef } from '@react-navigation/native'
@@ -19,6 +20,10 @@ import { ImplementationNavigationView } from './ImplementationNavigationView'
 import { NavigationHome } from './NavigationHome'
 
 const Stack = createNativeStackNavigator<NavigationTestStackParamList>()
+
+function NavigationContainerTracking(props: OptimizationNavigationContainerProps): React.ReactNode {
+  return OptimizationNavigationContainer(props)
+}
 
 export function NavigationTestScreen({ onClose }: NavigationTestScreenProps): React.JSX.Element {
   const navigationRef = useRef<NavigationContainerRef<NavigationTestStackParamList>>(null)
@@ -64,7 +69,7 @@ export function NavigationTestScreen({ onClose }: NavigationTestScreenProps): Re
       <View>
         <Button testID="close-navigation-test-button" title="Close" onPress={onClose} />
       </View>
-      <OptimizationNavigationContainer>
+      <NavigationContainerTracking>
         {(navigationProps) => (
           <NavigationContainer
             independent
@@ -131,7 +136,7 @@ export function NavigationTestScreen({ onClose }: NavigationTestScreenProps): Re
             </Stack.Navigator>
           </NavigationContainer>
         )}
-      </OptimizationNavigationContainer>
+      </NavigationContainerTracking>
     </View>
   )
 }

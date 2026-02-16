@@ -6,6 +6,8 @@ import Optimization, {
 import cookieParser from 'cookie-parser'
 import express, { type Express, type Request, type Response } from 'express'
 import rateLimit from 'express-rate-limit'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { ParsedQs } from 'qs'
 
 const limiter = rateLimit({
@@ -16,6 +18,14 @@ const limiter = rateLimit({
 const app: Express = express()
 app.use(cookieParser())
 app.use(limiter)
+
+/* eslint-disable @typescript-eslint/naming-convention -- standardized var names */
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+/* eslint-enable @typescript-eslint/naming-convention -- standardized var names */
+
+app.set('view engine', 'ejs')
+app.set('views', path.join(__dirname, '.'))
 
 const config = {
   contentful: {
@@ -34,55 +44,6 @@ const config = {
     personalization: { baseUrl: process.env.PUBLIC_EXPERIENCE_API_BASE_URL },
   },
 } as const
-
-const render = (identified?: string): string => `<!doctype html>
-<html lang="en">
-  <head>
-    <title>Node ESR SDK Implementation E2E Test</title>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="https://cdn.jsdelivr.net/npm/contentful@latest/dist/contentful.browser.min.js" > </script>
-    <script src="/dist/contentful-optimization-web.umd.js"></script>
-    <link rel="stylesheet" href="/assets/style.css" />
-  </head>
-  <body>
-  <h1>Node ESR SDK Implementation E2E Test</h1>
-  <main>
-    <section id="utility-panel">
-      <h2>Utilites</h2>
-      <span>
-        ${
-          identified
-            ? `<a href="/" >Reset Profile for: ${identified}</a>`
-            : '<a href="/user/someone" >Identify</a>'
-        }
-      </span>
-    </section>
-    <section>
-      <h2>Entries</h2>
-        <div id="auto-observed">
-          <div data-ctfl-entry-id="1JAU028vQ7v6nB2swl3NBo">
-            <!-- Nested Entry -->
-          </div>
-          <div data-ctfl-entry-id="1MwiFl4z7gkwqGYdvCmr8c">
-            <!-- Merge Tag "Rich Text" Entry -->
-          </div>
-          <div data-ctfl-entry-id="4ib0hsHWoSOnCVdDkizE8d"></div>
-          <div data-ctfl-entry-id="xFwgG3oNaOcjzWiGe4vXo"></div>
-          <div data-ctfl-entry-id="2Z2WLOx07InSewC3LUB3eX"></div>
-        </div>
-        <div id="manually-observed">
-          <div data-entry-id="5XHssysWUDECHzKLzoIsg1"></div>
-          <div data-entry-id="6zqoWXyiSrf0ja7I2WGtYj"></div>
-          <div data-entry-id="7pa5bOx8Z9NmNcr7mISvD"></div>
-        </div>
-    </section>
-  </main>
-  <script> const CONFIG = ${JSON.stringify(config)} </script>
-  <script src="/assets/script.js"></script>
-  </body>
-</html>
-`
 
 type QsPrimitive = string | ParsedQs
 type QsArray = QsPrimitive[] // Note: mixed arrays are allowed by ParsedQs
@@ -135,7 +96,7 @@ function respond(res: Response, id: string, userId?: string): void {
     sameSite: 'lax', // good default for same-site apps
   })
 
-  res.send(render(userId))
+  res.render('index', { config, identified: userId })
 }
 
 async function getProfile(
@@ -169,15 +130,17 @@ app.get('/', limiter, async (req, res) => {
 
   respond(res, profile.id)
 })
-app.get('/smoke-test', limiter, (_, res) => res.send(render()))
+app.get('/smoke-test', limiter, (_, res) => {
+  res.render('index', { config })
+})
 app.get('/user/:id', limiter, async (req, res) => {
   const anonymousId = getAnonymousIdFromCookies(req.cookies)
-  const { profile } = await getProfile(req, req.params.id, anonymousId)
+  const userId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
+  const { profile } = await getProfile(req, userId, anonymousId)
 
-  respond(res, profile.id, req.params.id)
+  respond(res, profile.id, userId)
 })
 app.use('/dist', express.static('./public/dist'))
-app.use('/assets', express.static('./assets'))
 
 const port = 3000
 

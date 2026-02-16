@@ -5,9 +5,14 @@
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
+  "react-native": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
   "exports": {
     ".": {
+      "react-native": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
       "import": {
         "types": "./dist/index.d.mts",
         "default": "./dist/index.mjs"
@@ -89,6 +94,8 @@
     "typescript": "catalog:"
   },
   "peerDependencies": {
+    "@react-native-async-storage/async-storage": ">=2.1.0",
+    "@react-native-clipboard/clipboard": ">=1.15.0",
     "@react-native-community/netinfo": ">=9.0.0",
     "react": ">=18.0.0",
     "react-native": ">=0.70.0"

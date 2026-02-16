@@ -10,7 +10,7 @@
     "serve": "pnpm serve:mocks && pnpm serve:app",
     "serve:app": "pm2 start --name node-app \"tsx --env-file=.env ./src/app.ts\"",
     "serve:app:stop": "pm2 stop node-app && pm2 delete node-app",
-    "serve:mocks": "pm2 start --name node-mocks \"pnpm --filter mocks serve\"",
+    "serve:mocks": "pm2 start --name node-mocks \"pnpm --dir ../../lib/mocks serve\"",
     "serve:mocks:stop": "pm2 stop node-mocks && pm2 delete node-mocks",
     "serve:stop": "pnpm serve:app:stop; pnpm serve:mocks:stop",
     "test:e2e": "pnpm serve && playwright test; E2E_RESULT=$?; pnpm serve:stop; exit $E2E_RESULT",
@@ -21,25 +21,33 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@contentful/optimization-node": "workspace:*",
-    "@contentful/rich-text-html-renderer": "catalog:",
-    "@contentful/rich-text-types": "catalog:",
-    "contentful": "catalog:",
-    "ejs": "catalog:",
-    "express": "catalog:",
-    "express-rate-limit": "catalog:",
-    "qs": "catalog:",
-    "tslib": "catalog:"
+    "@contentful/optimization-node": "0.0.0",
+    "@contentful/rich-text-html-renderer": "^17.1.6",
+    "@contentful/rich-text-types": "^17.2.5",
+    "contentful": "^11.10.2",
+    "ejs": "^3.1.10",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "qs": "^6.14.0",
+    "tslib": "^2.8.1"
   },
   "devDependencies": {
-    "@playwright/test": "catalog:",
-    "@types/express": "catalog:",
-    "@types/node": "catalog:",
-    "@types/qs": "catalog:",
-    "dotenv": "catalog:",
-    "pm2": "catalog:",
-    "rimraf": "catalog:",
-    "tsx": "catalog:",
-    "typescript": "catalog:"
+    "@playwright/test": "^1.57.0",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.0.13",
+    "@types/qs": "^6.14.0",
+    "dotenv": "^17.2.2",
+    "pm2": "^6.0.13",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "@contentful/optimization-api-client": "file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz",
+      "@contentful/optimization-api-schemas": "file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz",
+      "@contentful/optimization-core": "file:../../pkgs/contentful-optimization-core-0.0.0.tgz",
+      "@contentful/optimization-node": "file:../../pkgs/contentful-optimization-node-0.0.0.tgz"
+    }
   }
 }

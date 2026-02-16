@@ -15,6 +15,10 @@
 #   MOCK_SERVER_PORT  - Port for mock API server (default: 8000)
 #   METRO_PORT        - Port for Metro bundler (default: 8081)
 #   SKIP_BUILD        - Set to "true" to skip the Android build step (default: false)
+#   METRO_VERBOSE     - Set to "true" to run Metro with --verbose logging (default: false)
+#   ENABLE_DEVICE_LOGCAT - Set to "true" to stream adb logcat during tests (default: false)
+#   DISABLE_EMULATOR_ANIMATIONS - Set to "false" to keep animation scales unchanged (default: true)
+#   STREAM_BACKGROUND_LOGS - Set to "true" to stream mock/Metro logs to stdout (default: false)
 #   CI                - Set to "true" when running in CI environment (default: false)
 #   PUBLIC_NINETAILED_CLIENT_ID    - Ninetailed client ID (default: test-client-id)
 #   PUBLIC_NINETAILED_ENVIRONMENT  - Ninetailed environment (default: main)
@@ -55,6 +59,10 @@ MOCK_SERVER_PORT="${MOCK_SERVER_PORT:-8000}"
 METRO_PORT="${METRO_PORT:-8081}"
 SKIP_BUILD="${SKIP_BUILD:-false}"
 CI="${CI:-false}"
+METRO_VERBOSE="${METRO_VERBOSE:-false}"
+ENABLE_DEVICE_LOGCAT="${ENABLE_DEVICE_LOGCAT:-false}"
+DISABLE_EMULATOR_ANIMATIONS="${DISABLE_EMULATOR_ANIMATIONS:-true}"
+STREAM_BACKGROUND_LOGS="${STREAM_BACKGROUND_LOGS:-false}"
 
 TEST_FILE=""
 TEST_NAME_PATTERN=""
@@ -83,6 +91,10 @@ Environment Variables:
   MOCK_SERVER_PORT    Port for mock server (default: 8000)
   METRO_PORT          Port for Metro bundler (default: 8081)
   SKIP_BUILD          Set to 'true' to skip build (default: false)
+  METRO_VERBOSE       Set to 'true' to run Metro with --verbose logging (default: false)
+  ENABLE_DEVICE_LOGCAT Set to 'true' to stream adb logcat output (default: false)
+  DISABLE_EMULATOR_ANIMATIONS Set to 'false' to keep emulator animations enabled (default: true)
+  STREAM_BACKGROUND_LOGS Set to 'true' to stream mock/Metro logs to stdout (default: false)
   CI                  Set to 'true' for CI mode (default: false)
 
 Examples:
@@ -159,20 +171,45 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+stop_process_tree() {
+    local pid="$1"
+    local name="$2"
+    local timeout_seconds="${3:-5}"
+    local elapsed=0
+
+    if [[ -z "$pid" ]] || ! kill -0 "$pid" 2>/dev/null; then
+        return 0
+    fi
+
+    log_info "Stopping ${name} (PID: ${pid})..."
+
+    # Attempt graceful shutdown first.
+    pkill -TERM -P "$pid" 2>/dev/null || true
+    kill -TERM "$pid" 2>/dev/null || true
+
+    while kill -0 "$pid" 2>/dev/null && [[ $elapsed -lt $timeout_seconds ]]; do
+        sleep 1
+        ((elapsed++))
+    done
+
+    if kill -0 "$pid" 2>/dev/null; then
+        log_warn "${name} did not stop within ${timeout_seconds}s; force killing..."
+        pkill -KILL -P "$pid" 2>/dev/null || true
+        kill -KILL "$pid" 2>/dev/null || true
+    fi
+
+    wait "$pid" 2>/dev/null || true
+}
+
 cleanup() {
     log_info "Cleaning up background processes..."
     
-    if [[ -n "$LOGCAT_PID" ]] && kill -0 "$LOGCAT_PID" 2>/dev/null; then
-        log_info "Stopping adb logcat (PID: $LOGCAT_PID)..."
-        kill "$LOGCAT_PID" 2>/dev/null || true
-        wait "$LOGCAT_PID" 2>/dev/null || true
+    if [[ -n "$LOGCAT_PID" ]]; then
+        stop_process_tree "$LOGCAT_PID" "adb logcat" 3
     fi
     
     if [[ -n "$METRO_PID" ]]; then
-        log_info "Stopping Metro bundler (PID: $METRO_PID) and its process group..."
-        pkill -P "$METRO_PID" 2>/dev/null || true
-        kill "$METRO_PID" 2>/dev/null || true
-        wait "$METRO_PID" 2>/dev/null || true
+        stop_process_tree "$METRO_PID" "Metro bundler" 8
     fi
     
     if lsof -ti:"${METRO_PORT}" > /dev/null 2>&1; then
@@ -181,10 +218,7 @@ cleanup() {
     fi
     
     if [[ -n "$MOCK_SERVER_PID" ]]; then
-        log_info "Stopping mock server (PID: $MOCK_SERVER_PID) and its process group..."
-        pkill -P "$MOCK_SERVER_PID" 2>/dev/null || true
-        kill "$MOCK_SERVER_PID" 2>/dev/null || true
-        wait "$MOCK_SERVER_PID" 2>/dev/null || true
+        stop_process_tree "$MOCK_SERVER_PID" "mock server" 8
     fi
     
     if lsof -ti:"${MOCK_SERVER_PORT}" > /dev/null 2>&1; then
@@ -245,6 +279,33 @@ wait_for_port() {
     return 1
 }
 
+wait_for_metro_ready() {
+    local port="$1"
+    local max_attempts="${2:-60}"
+    local attempt=1
+    local status_url="http://localhost:${port}/status"
+
+    log_info "Waiting for Metro status endpoint to report ready..."
+
+    while [[ $attempt -le $max_attempts ]]; do
+        local response=""
+        response="$(curl -fsS "$status_url" 2>/dev/null || true)"
+
+        if [[ "$response" == "packager-status:running" ]]; then
+            log_info "Metro status is ready"
+            return 0
+        fi
+
+        echo -n "."
+        sleep 1
+        ((attempt++))
+    done
+
+    echo ""
+    log_error "Metro status endpoint did not report ready after $max_attempts seconds"
+    return 1
+}
+
 create_env_file() {
     log_info "Creating .env file..."
     
@@ -275,7 +336,11 @@ start_mock_server() {
     fi
     
     cd "$ROOT_DIR"
-    pnpm --filter mocks serve 2>&1 | tee "$MOCK_SERVER_LOG" &
+    if [[ "$STREAM_BACKGROUND_LOGS" == "true" ]]; then
+        pnpm --dir "$ROOT_DIR/lib/mocks" serve 2>&1 | tee "$MOCK_SERVER_LOG" &
+    else
+        pnpm --dir "$ROOT_DIR/lib/mocks" serve > "$MOCK_SERVER_LOG" 2>&1 &
+    fi
     MOCK_SERVER_PID=$!
     
     log_info "Mock server started with PID: $MOCK_SERVER_PID"
@@ -296,16 +361,31 @@ start_metro() {
     
     npx kill-port "$METRO_PORT" 2>/dev/null || true
     
-    npx react-native start --port "$METRO_PORT" --verbose 2>&1 | tee "$METRO_LOG" &
+    local metro_cmd=(npx react-native start --port "$METRO_PORT")
+    if [[ "$METRO_VERBOSE" == "true" ]]; then
+        metro_cmd+=(--verbose)
+    fi
+
+    if [[ "$STREAM_BACKGROUND_LOGS" == "true" ]]; then
+        "${metro_cmd[@]}" 2>&1 | tee "$METRO_LOG" &
+    else
+        "${metro_cmd[@]}" > "$METRO_LOG" 2>&1 &
+    fi
     METRO_PID=$!
     
     log_info "Metro bundler started with PID: $METRO_PID"
     
-    log_info "Waiting for Metro bundler to initialize..."
-    sleep 10
-    
-    if ! kill -0 "$METRO_PID" 2>/dev/null; then
-        log_error "Metro bundler failed to start. Check logs at: $METRO_LOG"
+    if ! wait_for_port "${METRO_PORT}" "Metro bundler" 60; then
+        if ! kill -0 "$METRO_PID" 2>/dev/null; then
+            log_error "Metro bundler process exited unexpectedly. Check logs at: $METRO_LOG"
+        else
+            log_error "Metro bundler did not become ready on port ${METRO_PORT}. Check logs at: $METRO_LOG"
+        fi
+        cat "$METRO_LOG"
+        exit 1
+    fi
+
+    if ! wait_for_metro_ready "${METRO_PORT}" 60; then
         cat "$METRO_LOG"
         exit 1
     fi
@@ -331,13 +411,29 @@ setup_adb_reverse() {
     
     adb reverse tcp:${METRO_PORT} tcp:${METRO_PORT}
     log_info "Port ${METRO_PORT} forwarded to emulator"
+
+    if [[ "$DISABLE_EMULATOR_ANIMATIONS" == "true" ]]; then
+        log_info "Disabling emulator animations for faster UI transitions..."
+        for animation_scale in window_animation_scale transition_animation_scale animator_duration_scale; do
+            if adb shell settings put global "${animation_scale}" 0 > /dev/null 2>&1; then
+                log_info "Set ${animation_scale}=0"
+            else
+                log_warn "Could not set ${animation_scale}=0; continuing"
+            fi
+        done
+    else
+        log_info "Skipping emulator animation changes (DISABLE_EMULATOR_ANIMATIONS=false)"
+    fi
     
-    log_info "Setting up adb logcat to display device logs..."
-    adb logcat -c
-    adb logcat ReactNative:V ReactNativeJS:V *:S 2>&1 | tee -a "$DEVICE_LOG" &
-    LOGCAT_PID=$!
-    
-    log_info "Device logs will be displayed and saved to $DEVICE_LOG (PID: $LOGCAT_PID)"
+    if [[ "$ENABLE_DEVICE_LOGCAT" == "true" ]]; then
+        log_info "Starting adb logcat (ENABLE_DEVICE_LOGCAT=true)..."
+        adb logcat -c
+        adb logcat ReactNative:V ReactNativeJS:V *:S 2>&1 | tee -a "$DEVICE_LOG" &
+        LOGCAT_PID=$!
+        log_info "Device logs will be displayed and saved to $DEVICE_LOG (PID: $LOGCAT_PID)"
+    else
+        log_info "Skipping adb logcat (set ENABLE_DEVICE_LOGCAT=true to enable)"
+    fi
 }
 
 build_android() {
@@ -412,4 +508,3 @@ main() {
 }
 
 main "$@"
-

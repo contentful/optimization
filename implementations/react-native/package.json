@@ -12,7 +12,7 @@
     "start": "react-native start",
     "start:clean": "kill-port 8081 && react-native start --reset-cache",
     "prestart": "kill-port 8081 || true",
-    "serve:mocks": "pnpm --filter mocks serve",
+    "serve:mocks": "pnpm --dir ../../lib/mocks serve",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:unit": "echo 'Unit tests skipped - this is a reference implementation app. E2E tests are run separately via Detox.'",
@@ -20,17 +20,18 @@
     "test:e2e:ios:run": "detox test --configuration ios.sim.debug",
     "test:e2e:ios": "pnpm run test:e2e:ios:build && pnpm run test:e2e:ios:run",
     "test:e2e:android:build": "detox build --configuration android.emu.debug",
-    "test:e2e:android:run": "detox test --configuration android.emu.debug",
+    "test:e2e:android:run": "detox test --configuration android.emu.debug --loglevel fatal --record-logs none --take-screenshots none --record-videos none",
     "test:e2e:android": "pnpm run test:e2e:android:build && pnpm run test:e2e:android:run",
     "test:e2e:android:full": "./scripts/run-e2e-android.sh"
   },
   "dependencies": {
-    "@contentful/optimization-react-native": "workspace:*",
+    "@contentful/optimization-react-native": "0.0.0",
     "@react-native-async-storage/async-storage": "^2.1.0",
+    "@react-native-clipboard/clipboard": "^1.15.0",
     "@react-native-community/netinfo": "^11.4.1",
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.11.0",
-    "contentful": "catalog:",
+    "contentful": "^11.10.2",
     "core-js": "^3.46.0",
     "react": "18.3.1",
     "react-native": "0.76.9",
@@ -58,13 +59,21 @@
     "@types/react": "^18.2.6",
     "@types/react-test-renderer": "^18.0.0",
     "babel-jest": "^29.6.3",
-    "detox": "^20.43.0",
-    "dotenv": "catalog:",
+    "detox": "20.47.0",
+    "dotenv": "^17.2.2",
     "jest": "^29.6.3",
     "jest-circus": "^30.2.0",
     "kill-port": "^2.0.1",
     "react-native-dotenv": "^3.4.11",
     "react-test-renderer": "18.3.1",
-    "typescript": "5.0.4"
+    "typescript": "^5.8.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "@contentful/optimization-api-client": "file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz",
+      "@contentful/optimization-api-schemas": "file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz",
+      "@contentful/optimization-core": "file:../../pkgs/contentful-optimization-core-0.0.0.tgz",
+      "@contentful/optimization-react-native": "file:../../pkgs/contentful-optimization-react-native-0.0.0.tgz"
+    }
   }
 }

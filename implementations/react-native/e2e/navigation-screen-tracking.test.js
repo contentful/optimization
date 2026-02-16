@@ -15,7 +15,7 @@ describe('navigation screen tracking', () => {
   })
 
   beforeEach(async () => {
-    await clearProfileState()
+    await clearProfileState({ requireFreshAppInstance: true })
   })
 
   afterAll(async () => {
