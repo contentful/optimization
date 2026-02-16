@@ -22,8 +22,8 @@ function isEntry(value: unknown): value is Entry {
 function renderNestedContentItem(resolvedEntry: Entry): React.JSX.Element {
   const text = typeof resolvedEntry.fields.text === 'string' ? resolvedEntry.fields.text : ''
   const nestedEntries = Array.isArray(resolvedEntry.fields.nested)
-    ? resolvedEntry.fields.nested
-    : undefined
+    ? (resolvedEntry.fields.nested as unknown[])
+    : []
   const fullLabel = `${text} [Entry: ${resolvedEntry.sys.id}]`
 
   return (
@@ -32,7 +32,7 @@ function renderNestedContentItem(resolvedEntry: Entry): React.JSX.Element {
         <Text>{text}</Text>
         <Text>{`[Entry: ${resolvedEntry.sys.id}]`}</Text>
       </View>
-      {nestedEntries?.filter(isEntry).map((nestedEntry) => (
+      {nestedEntries.filter(isEntry).map((nestedEntry) => (
         <Personalization key={nestedEntry.sys.id} baselineEntry={nestedEntry}>
           {renderNestedContentItem}
         </Personalization>

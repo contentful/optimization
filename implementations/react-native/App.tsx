@@ -107,7 +107,7 @@ function App(): React.JSX.Element {
   return (
     <OptimizationProvider instance={sdk}>
       <SafeAreaView style={{ flex: 1 }}>
-        <View style={{ padding: 10, gap: 10, flexDirection: 'row' }}>
+        <View style={{ padding: 10, gap: 10, flexDirection: 'row', flexWrap: 'wrap' }}>
           {!isIdentified ? (
             <Button testID="identify-button" title="Identify" onPress={handleIdentify} />
           ) : (

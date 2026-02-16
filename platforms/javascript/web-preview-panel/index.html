@@ -308,13 +308,16 @@
         }
       }
 
-      identify.addEventListener('click', () =>
-        optimization.personalization.identify({ userId: 'charles', traits: { identified: true } }),
-      )
-      unidentify.addEventListener('click', () => {
+      identify.addEventListener('click', async () => {
+        await optimization.personalization.identify({
+          userId: 'charles',
+          traits: { identified: true },
+        })
+      })
+      unidentify.addEventListener('click', async () => {
         optimization.reset()
         // Ensure we have a new profile after resetting the old one
-        optimization.personalization.page()
+        await optimization.personalization.page()
       })
 
       function createEventDialog(title, details) {
@@ -421,6 +424,8 @@
         }
       }
 
+      let renderEntriesPromise = Promise.resolve()
+
       // Render personalized entries
       async function renderPersonalizedEntry(rawEntry, element, autoObserve = true) {
         const { entry, personalization } = optimization.personalization.personalizeEntry(rawEntry)
@@ -438,9 +443,11 @@
         if (entry.fields?.nested) {
           const div = document.createElement('div')
           div.className = 'nested'
-          entry.fields.nested.forEach((nestedEntry) =>
-            renderPersonalizedEntry(nestedEntry, div, autoObserve),
-          )
+
+          for (const nestedEntry of entry.fields.nested) {
+            await renderPersonalizedEntry(nestedEntry, div, autoObserve)
+          }
+
           element.appendChild(div)
         }
 
@@ -485,6 +492,8 @@
 
       // Manually observe view elements for auto-tracking
       function manuallyObserveEntryElement(element, entry, personalization) {
+        if (!entry?.sys?.id) return
+
         optimization.untrackEntryViewForElement(element)
 
         // Manually observe the element for auto-tracking (does not use `data-ctfl-*` attributes)
@@ -502,25 +511,44 @@
       }
 
       // Render all the entries
-      function renderEntries() {
+      async function renderEntries() {
         document.getElementById('entries').replaceChildren()
 
-        document.querySelectorAll('[data-ctfl-entry-id]').forEach(async (element) => {
-          await addPersonalizedEntry(
-            element.dataset.ctflBaselineId ?? element.dataset.ctflEntryId,
-            element,
-          )
-        })
+        const autoObservedElements = Array.from(document.querySelectorAll('[data-ctfl-entry-id]'))
 
-        document.querySelectorAll('[data-entry-id]').forEach(async (element) => {
-          const [entry, personalization] = await addPersonalizedEntry(
-            element.dataset.entryId,
-            element,
-            false,
-          )
+        await Promise.all(
+          autoObservedElements.map(async (element) => {
+            await addPersonalizedEntry(
+              element.dataset.ctflBaselineId ?? element.dataset.ctflEntryId,
+              element,
+              true,
+            )
+          }),
+        )
 
-          manuallyObserveEntryElement(element, entry, personalization)
-        })
+        const manuallyObservedElements = Array.from(document.querySelectorAll('[data-entry-id]'))
+
+        await Promise.all(
+          manuallyObservedElements.map(async (element) => {
+            const [entry, personalization] = await addPersonalizedEntry(
+              element.dataset.entryId,
+              element,
+              false,
+            )
+
+            if (!entry) return
+
+            manuallyObserveEntryElement(element, entry, personalization)
+          }),
+        )
+      }
+
+      function scheduleRenderEntries() {
+        renderEntriesPromise = renderEntriesPromise
+          .catch(() => undefined)
+          .then(() => renderEntries())
+
+        return renderEntriesPromise
       }
 
       // Subscribe to consent state
@@ -556,7 +584,7 @@
           2,
         )
 
-        renderEntries()
+        void scheduleRenderEntries()
       })
 
       // Subscribe to profile state, find entries in the markup, and render them

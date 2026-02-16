@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   changes:
-    name: Detect Changes 🔎
+    name: 🔎 Detect Changes
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     outputs:
       build: ${{ steps.filter.outputs.build }}
@@ -81,7 +81,7 @@ jobs:
               - '.github/workflows/main-pipeline.yaml'
 
   setup:
-    name: pnpm install 🛠️
+    name: 🛠️ pnpm install
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     steps:
@@ -102,7 +102,7 @@ jobs:
       - run: pnpm install --prefer-offline --frozen-lockfile
 
   license-check:
-    name: License Check 📄
+    name: 📄 License Check
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     needs: setup
     timeout-minutes: 15
@@ -140,7 +140,7 @@ jobs:
           2.0;Unlicense;Unlicensed;:CC0-1.0;CC-BY-4.0;WTFPL;0BSD;UNLICENSED;Python-2.0;MPL-2.0;CC-BY-3.0;CC0-1.0'
 
   format:
-    name: Format Check 🎨
+    name: 🎨 Format Check
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     needs: setup
     timeout-minutes: 15
@@ -162,11 +162,14 @@ jobs:
       - run: pnpm format:check
 
   build:
-    name: Build 📦
+    name: 📦 Build
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     needs: [setup, changes]
-    if: needs.changes.outputs.build == 'true'
+    if: >-
+      needs.changes.outputs.build == 'true' || needs.changes.outputs.e2e_node_ssr_only == 'true' ||
+      needs.changes.outputs.e2e_node_ssr_web_vanilla == 'true' || needs.changes.outputs.e2e_web ==
+      'true' || needs.changes.outputs.e2e_react_native_android == 'true'
     steps:
       - uses: namespacelabs/nscloud-checkout-action@v8
 
@@ -183,9 +186,20 @@ jobs:
 
       - run: pnpm install --prefer-offline --frozen-lockfile
       - run: pnpm build:ci
+      - name: Pack SDK tarballs for implementations
+        run: |
+          rm -rf pkgs
+          mkdir -p pkgs
+          pnpm run pack:pkgs
+      - uses: actions/upload-artifact@v6
+        with:
+          name: sdk-package-tarballs
+          path: pkgs/*.tgz
+          if-no-files-found: error
+          retention-days: 1
 
   type-check:
-    name: Type Check 🔷
+    name: 🔷 Type Check
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     needs: setup
     timeout-minutes: 15
@@ -207,7 +221,7 @@ jobs:
       - run: pnpm typecheck
 
   lint:
-    name: Lint 🎨
+    name: 🎨 Lint
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     needs: setup
     timeout-minutes: 15
@@ -226,10 +240,19 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --prefer-offline --frozen-lockfile
+      - run: pnpm build:pkgs
+      - run: pnpm store prune
+      - run:
+          pnpm --dir implementations/node-ssr-only --ignore-workspace install --no-frozen-lockfile
+      - run:
+          pnpm --dir implementations/node-ssr-web-vanilla --ignore-workspace install
+          --no-frozen-lockfile
+      - run: pnpm --dir implementations/web-vanilla --ignore-workspace install --no-frozen-lockfile
+      - run: pnpm --dir implementations/react-native --ignore-workspace install --no-frozen-lockfile
       - run: pnpm lint:check
 
   test-unit:
-    name: Test 🧪 (${{ matrix.package }})
+    name: 🧪 Test (${{ matrix.package }})
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     needs: [setup, changes]
@@ -263,10 +286,10 @@ jobs:
       - run: pnpm --filter ${{ matrix.package }} test:unit
 
   e2e-node-ssr-only:
-    name: E2E Node SSR Only 🖥️
+    name: 🖥️ E2E Node SSR Only
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
-    needs: [setup, changes]
+    needs: [setup, changes, build]
     if: needs.changes.outputs.e2e_node_ssr_only == 'true'
     steps:
       - uses: namespacelabs/nscloud-checkout-action@v8
@@ -300,8 +323,17 @@ jobs:
             apt
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - run: pnpm --filter @implementation/node-ssr-only exec playwright install --with-deps
-      - run: pnpm --filter @implementation/node-ssr-only test:e2e
+      - uses: actions/download-artifact@v6
+        with:
+          name: sdk-package-tarballs
+          path: pkgs
+      - run: pnpm store prune
+      - run:
+          pnpm --dir implementations/node-ssr-only --ignore-workspace install --no-frozen-lockfile
+      - run:
+          pnpm --dir implementations/node-ssr-only --ignore-workspace exec playwright install
+          --with-deps
+      - run: pnpm --dir implementations/node-ssr-only --ignore-workspace test:e2e
 
       - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
@@ -313,10 +345,10 @@ jobs:
           retention-days: 1
 
   e2e-node-ssr-web-vanilla:
-    name: E2E Node SSR + Web Vanilla 🖥️
+    name: 🖥️ E2E Node SSR + Web Vanilla
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
-    needs: [setup, changes]
+    needs: [setup, changes, build]
     if: needs.changes.outputs.e2e_node_ssr_web_vanilla == 'true'
     steps:
       - uses: namespacelabs/nscloud-checkout-action@v8
@@ -350,8 +382,18 @@ jobs:
             apt
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - run: pnpm --filter @implementation/node-ssr-web-vanilla exec playwright install --with-deps
-      - run: pnpm --filter @implementation/node-ssr-web-vanilla test:e2e
+      - uses: actions/download-artifact@v6
+        with:
+          name: sdk-package-tarballs
+          path: pkgs
+      - run: pnpm store prune
+      - run:
+          pnpm --dir implementations/node-ssr-web-vanilla --ignore-workspace install
+          --no-frozen-lockfile
+      - run:
+          pnpm --dir implementations/node-ssr-web-vanilla --ignore-workspace exec playwright install
+          --with-deps
+      - run: pnpm --dir implementations/node-ssr-web-vanilla --ignore-workspace test:e2e
 
       - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
@@ -363,10 +405,10 @@ jobs:
           retention-days: 1
 
   e2e-web:
-    name: E2E Web Vanilla 🖥️
+    name: 🖥️ E2E Web Vanilla
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
-    needs: [setup, changes]
+    needs: [setup, changes, build]
     if: needs.changes.outputs.e2e_web == 'true'
     steps:
       - uses: docker/setup-compose-action@v1
@@ -407,8 +449,16 @@ jobs:
             apt
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - run: pnpm --filter @implementation/web-vanilla exec playwright install --with-deps
-      - run: pnpm --filter @implementation/web-vanilla test:e2e
+      - uses: actions/download-artifact@v6
+        with:
+          name: sdk-package-tarballs
+          path: pkgs
+      - run: pnpm store prune
+      - run: pnpm --dir implementations/web-vanilla --ignore-workspace install --no-frozen-lockfile
+      - run:
+          pnpm --dir implementations/web-vanilla --ignore-workspace exec playwright install
+          --with-deps
+      - run: pnpm --dir implementations/web-vanilla --ignore-workspace test:e2e
 
       - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
@@ -420,10 +470,10 @@ jobs:
           retention-days: 1
 
   e2e-react-native-android:
-    name: E2E React Native Android 📱
+    name: 📱 E2E React Native Android
     runs-on: namespace-profile-linux-16-vcpu-32-gb-ram-optimal
     timeout-minutes: 60
-    needs: [setup, changes]
+    needs: [setup, changes, build]
     if: needs.changes.outputs.e2e_react_native_android == 'true'
     env:
       DETOX_AVD_NAME: test
@@ -497,6 +547,19 @@ jobs:
       - name: Install JS dependencies
         run: pnpm install --prefer-offline --frozen-lockfile
 
+      - name: Download SDK package tarballs
+        uses: actions/download-artifact@v6
+        with:
+          name: sdk-package-tarballs
+          path: pkgs
+
+      - name: Prune pnpm store metadata cache
+        run: pnpm store prune
+
+      - name: Install React Native implementation dependencies
+        run: >
+          pnpm --dir implementations/react-native --ignore-workspace install --no-frozen-lockfile
+
       - name: Create .env file for React Native
         run: |
           cat > implementations/react-native/.env << 'EOF'
@@ -513,11 +576,11 @@ jobs:
 
       - name: Build Android app (Detox)
         run: |
-          pnpm --filter @implementation/react-native test:e2e:android:build
+          pnpm --dir implementations/react-native --ignore-workspace test:e2e:android:build
 
       - name: Start Mock Server
         run: |
-          pnpm --filter mocks serve > /tmp/mock-server.log 2>&1 &
+          pnpm --dir lib/mocks serve > /tmp/mock-server.log 2>&1 &
           echo $! > /tmp/mock-server.pid
           for i in {1..60}; do
             if nc -z localhost 8000 2>/dev/null; then
@@ -576,7 +639,7 @@ jobs:
             adb reverse tcp:8000 tcp:8000
             adb reverse tcp:8081 tcp:8081
             echo "Running E2E tests..."
-            pnpm --filter @implementation/react-native test:e2e:android:run --retries 2
+            pnpm --dir implementations/react-native --ignore-workspace test:e2e:android:run --retries 2
 
       - name: Upload Metro logs on failure
         if: failure()

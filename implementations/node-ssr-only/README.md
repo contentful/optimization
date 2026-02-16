@@ -47,7 +47,7 @@ All steps should be run from the monorepo root.
 4. Start the mock API and application servers:
 
    ```sh
-   pnpm --filter @implementations/node-ssr-only serve
+   pnpm --dir implementations/node-ssr-only --ignore-workspace serve
    ```
 
 5. The application can be accessed via Web browser at `http://localhost:3000`
@@ -55,10 +55,33 @@ All steps should be run from the monorepo root.
 6. Stop the mock API and application servers:
 
    ```sh
-   pnpm --filter @implementations/node-ssr-only serve:stop
+   pnpm --dir implementations/node-ssr-only --ignore-workspace serve:stop
    ```
 
 See `implementations/node-ssr-only/package.json` for more commands.
+
+## Running From Root Scripts
+
+You can run this implementation from the monorepo root via the root `package.json` implementation
+scripts.
+
+1. Start servers:
+
+   ```sh
+   pnpm run implementation:node-ssr-only -- serve
+   ```
+
+2. Stop servers:
+
+   ```sh
+   pnpm run implementation:node-ssr-only -- serve:stop
+   ```
+
+3. Run E2E:
+
+   ```sh
+   pnpm run implementation:node-ssr-only -- test:e2e
+   ```
 
 ## Running E2E Tests
 
@@ -67,17 +90,17 @@ E2E tests are run using Playwright.
 1. Install Playwright dependencies:
 
    ```sh
-   pnpm --filter @implementation/node-ssr-only exec playwright install --with-deps
+   pnpm --dir implementations/node-ssr-only --ignore-workspace exec playwright install --with-deps
    ```
 
 2. Run the E2E test suite:
 
    ```sh
-   pnpm --filter @implementation/node-ssr-only test:e2e
+   pnpm --dir implementations/node-ssr-only --ignore-workspace test:e2e
    ```
 
    The tests can alternatively be run using Playwright's GUI:
 
    ```sh
-   pnpm --filter @implementation/node-ssr-only test:e2e:ui
+   pnpm --dir implementations/node-ssr-only --ignore-workspace test:e2e:ui
    ```

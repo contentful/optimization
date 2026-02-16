@@ -4,12 +4,19 @@ test.describe('identified user', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
 
     const identify = page.getByRole('button', { name: 'Identify' })
     await identify.click()
+    await expect(page.getByRole('button', { name: 'Reset Profile' })).toBeVisible()
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByRole('button', { name: 'Reset Profile' })).toBeVisible()
+    await expect(
+      page.getByText('This is a variant content entry for identified users.'),
+    ).toBeVisible()
   })
 
   test('displays common variants', async ({ page }) => {

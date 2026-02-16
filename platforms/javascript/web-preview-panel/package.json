@@ -26,7 +26,7 @@
     "build:ci": "pnpm build:dist",
     "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
     "build:rsdoctor": "RSDOCTOR=true rslib build",
-    "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage tsconfig.tsbuildinfo",
+    "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo",
     "dev": "rsbuild dev --host 0.0.0.0 -c rsbuild.config.ts",
     "test:unit": "echo \"TODO: Unit tests\"",
     "typecheck": "tsc --noEmit"

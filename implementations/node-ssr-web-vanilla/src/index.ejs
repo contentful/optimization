@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="en">
   <head>
+    <title>Node SSR + Web SDK Implementation E2E Test</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Optimization Web SDK Vanilla JS Implementation E2E Test</title>
     <script src="https://cdn.jsdelivr.net/npm/contentful@latest/dist/contentful.browser.min.js"></script>
     <script src="/dist/contentful-optimization-web.umd.js"></script>
     <style>
@@ -44,32 +44,15 @@
       section:first-of-type {
         grid-column: 1 / span 2;
       }
-      ol {
-        margin: 0;
+      a {
+        color: inherit;
+        text-decoration: underline;
       }
-      summary {
-        cursor: pointer;
+      a:hover,
+      a:active {
+        color: blue;
       }
-      button {
-        cursor: pointer;
-
-        &:not([type]) {
-          appearance: none;
-          background: transparent;
-          border: 0;
-          padding: 0;
-          font-family: inherit;
-          font-size: inherit;
-          text-decoration: underline;
-
-          &:hover,
-          &:active {
-            color: blue;
-          }
-        }
-      }
-      #utility-panel,
-      #event-stream-panel {
+      #utility-panel {
         position: sticky;
         top: 0;
         margin-block-start: -1px;
@@ -106,26 +89,20 @@
     </style>
   </head>
   <body>
-    <h1>Optimization Web SDK Vanilla JS Implementation E2E Test</h1>
-
+    <h1>Node SSR + Web SDK Implementation E2E Test</h1>
     <main>
       <section id="utility-panel">
         <h2>Utilites</h2>
-
         <span>
-          <button id="consent">Accept Consent</button>
-          <button id="unconsent">Reject Consent</button>
-        </span>
-        |
-        <span>
-          <button id="identify">Identify</button>
-          <button id="unidentify">Reset Profile</button>
+          <% if (typeof identified !== 'undefined' && identified) { %>
+            <a href="/">Reset Profile for: <%= identified %></a>
+          <% } else { %>
+            <a href="/user/someone">Identify</a>
+          <% } %>
         </span>
       </section>
-
       <section>
         <h2>Entries</h2>
-
         <div id="auto-observed">
           <div data-ctfl-entry-id="1JAU028vQ7v6nB2swl3NBo">
             <!-- Nested Entry -->
@@ -137,124 +114,28 @@
           <div data-ctfl-entry-id="xFwgG3oNaOcjzWiGe4vXo"></div>
           <div data-ctfl-entry-id="2Z2WLOx07InSewC3LUB3eX"></div>
         </div>
-
         <div id="manually-observed">
           <div data-entry-id="5XHssysWUDECHzKLzoIsg1"></div>
           <div data-entry-id="6zqoWXyiSrf0ja7I2WGtYj"></div>
           <div data-entry-id="7pa5bOx8Z9NmNcr7mISvD"></div>
         </div>
       </section>
-
-      <section>
-        <div id="event-stream-panel">
-          <h2>Event Stream</h2>
-
-          <ol id="event-stream"></ol>
-        </div>
-      </section>
     </main>
-
-    <template id="event-dialog">
-      <li>
-        <button></button>
-        <dialog>
-          <pre></pre>
-          <form method="dialog">
-            <button type="submit">Close</button>
-          </form>
-        </dialog>
-      </li>
-    </template>
-
+    <script>
+      const CONFIG = <%- JSON.stringify(config) %>
+    </script>
     <script>
       /* --- Standard Initialization Code --- */
 
-      // Initialize Contentful CDA SDK
-      var contentfulClient = contentful.createClient({
-        accessToken: '<!--#echo var="NGINX_CONTENTFUL_TOKEN" -->',
-        environment: '<!--#echo var="NGINX_CONTENTFUL_ENVIRONMENT" -->',
-        space: '<!--#echo var="NGINX_CONTENTFUL_SPACE_ID" -->',
-        host: '<!--#echo var="NGINX_CONTENTFUL_CDA_HOST" -->',
-        basePath: '<!--#echo var="NGINX_CONTENTFUL_BASE_PATH" -->',
-        insecure: Boolean('<!--#echo var="NGINX_CONTENTFUL_CDA_HOST" -->'),
-      })
-
-      // Initialize Contentful Optimization Web SDK
-      window.optimization = new Optimization({
-        clientId: '<!--#echo var="NGINX_NINETAILED_CLIENT_ID" -->',
-        environment: '<!--#echo var="NGINX_NINETAILED_ENVIRONMENT" -->',
-        logLevel: 'debug',
+      const contentfulClient = contentful.createClient(CONFIG.contentful)
+      const optimization = new Optimization({
+        ...CONFIG.optimization,
         autoTrackEntryViews: true,
-        app: {
-          name: document.title,
-          version: '0.0.0',
-        },
-        analytics: { baseUrl: '<!--#echo var="NGINX_INSIGHTS_API_BASE_URL" -->' },
-        personalization: { baseUrl: '<!--#echo var="NGINX_EXPERIENCE_API_BASE_URL" -->' },
+        app: { name: document.title, version: '0.0.0' },
       })
 
       // Emit page event
       optimization.personalization.page()
-
-      /* --- Utility Functionality (for E2E) --- */
-
-      const consent = document.getElementById('consent')
-      const unconsent = document.getElementById('unconsent')
-
-      function toggleConsent(consented = false) {
-        if (consented) {
-          consent.setAttribute('style', 'display: none;')
-          unconsent.removeAttribute('style')
-        } else {
-          consent.removeAttribute('style')
-          unconsent.setAttribute('style', 'display: none;')
-        }
-      }
-
-      consent.addEventListener('click', () => optimization.consent(true))
-      unconsent.addEventListener('click', () => optimization.consent(false))
-
-      const identify = document.getElementById('identify')
-      const unidentify = document.getElementById('unidentify')
-
-      function toggleIdentity(identified = false) {
-        if (identified) {
-          identify.setAttribute('style', 'display: none;')
-          unidentify.removeAttribute('style')
-        } else {
-          identify.removeAttribute('style')
-          unidentify.setAttribute('style', 'display: none;')
-        }
-      }
-
-      identify.addEventListener('click', async () => {
-        await optimization.personalization.identify({
-          userId: 'charles',
-          traits: { identified: true },
-        })
-      })
-      unidentify.addEventListener('click', async () => {
-        optimization.reset()
-        // Ensure we have a new profile after resetting the old one
-        await optimization.personalization.page()
-      })
-
-      function createEventDialog(title, details) {
-        const template = document.querySelector('#event-dialog')
-        const clone = template.content.cloneNode(true)
-        const dialog = clone.querySelector('dialog')
-        const button = clone.querySelector('button')
-        const pre = clone.querySelector('pre')
-
-        button.innerText = title
-        button.commandForElement = dialog
-        button.command = 'show-modal'
-        button.dataset.testid = details.componentId ?? details?.properties?.url ?? details.messageId
-
-        pre.innerText = JSON.stringify(details, null, 2)
-
-        return clone
-      }
 
       /* --- Standard Rendering Code --- */
 
@@ -340,19 +221,14 @@
 
       // Get the personalized entry to render
       async function addPersonalizedEntry(entryId, element, autoObserve = true) {
-        let rawEntry
-
         try {
-          rawEntry = await contentfulClient.getEntry(entryId, { include: 10 })
+          const entry = await contentfulClient.getEntry(entryId, { include: 10 })
+          return renderPersonalizedEntry(entry, element, autoObserve)
         } catch (error) {
           console.warn(`Entry "${entryId}" could not be found in the current space`)
           return []
         }
-
-        return renderPersonalizedEntry(rawEntry, element, autoObserve)
       }
-
-      const manuallyObservedEntryElements = new Map()
 
       // Manually observe view elements for auto-tracking
       function manuallyObserveEntryElement(element, entry, personalization) {
@@ -370,8 +246,6 @@
             variantIndex: personalization?.variantIndex,
           },
         })
-
-        manuallyObservedEntryElements.set(element.dataset.entryId, [entry, personalization])
       }
 
       // Render all the entries
@@ -413,41 +287,11 @@
         return renderEntriesPromise
       }
 
-      // Subscribe to consent state
-      optimization.states.consent.subscribe(async (consent) => {
-        toggleConsent(consent)
-
-        if (consent)
-          document.querySelectorAll('[data-entry-id]').forEach((element) => {
-            const settings = manuallyObservedEntryElements.get(element.dataset.entryId)
-
-            if (!settings) return
-
-            const [entry, personalization] = settings
-
-            manuallyObserveEntryElement(element, entry, personalization)
-          })
-      })
-
-      // Subscribe to the event stream
-      optimization.states.eventStream.subscribe((event) => {
-        if (!event) return
-
-        document.querySelector('#event-stream').appendChild(createEventDialog(event.type, event))
-      })
-
-      // Subscribe to personalizations state
+      // Subscribe to personalizations state and render entries when selections are available
       optimization.states.personalizations.subscribe(async (personalizations) => {
         if (!personalizations) return
 
         void scheduleRenderEntries()
-      })
-
-      // Subscribe to profile state, find entries in the markup, and render them
-      optimization.states.profile.subscribe((profile) => {
-        if (!profile) return
-
-        toggleIdentity(profile.traits && Object.keys(profile.traits).length)
       })
     </script>
   </body>

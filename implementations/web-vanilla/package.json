@@ -4,13 +4,13 @@
   "description": "Reference implementation for simple HTML projects",
   "license": "MIT",
   "scripts": {
-    "build": "pnpm clean; pnpm -w build && pnpm build:sdk",
-    "build:sdk": "cp -r ../../platforms/javascript/web/dist ./public/dist",
+    "build": "pnpm clean && pnpm build:sdk",
+    "build:sdk": "mkdir -p ./public/dist && cp -r ./node_modules/@contentful/optimization-web/dist/. ./public/dist",
     "clean": "rimraf ./dist ./public/dist ./coverage ./playwright-report ./test-results .tsbuildinfo",
     "serve": "pnpm serve:mocks && pnpm serve:app",
     "serve:app": "pnpm build && docker compose up -d",
     "serve:app:stop": "docker compose down",
-    "serve:mocks": "pm2 start --name web-mocks \"pnpm --filter mocks serve\"",
+    "serve:mocks": "pm2 start --name web-mocks \"pnpm --dir ../../lib/mocks serve\"",
     "serve:mocks:stop": "pm2 stop web-mocks && pm2 delete web-mocks",
     "serve:stop": "pnpm serve:app:stop && pnpm serve:mocks:stop",
     "test:e2e": "pnpm serve && playwright test; E2E_RESULT=$?; pnpm serve:stop; exit $E2E_RESULT",
@@ -21,14 +21,22 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@contentful/optimization-web": "workspace:*"
+    "@contentful/optimization-web": "0.0.0"
   },
   "devDependencies": {
-    "@playwright/test": "catalog:",
-    "@types/node": "catalog:",
-    "dotenv": "catalog:",
-    "pm2": "catalog:",
-    "rimraf": "catalog:",
-    "typescript": "catalog:"
+    "@playwright/test": "^1.57.0",
+    "@types/node": "^24.0.13",
+    "dotenv": "^17.2.2",
+    "pm2": "^6.0.13",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.8.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "@contentful/optimization-api-client": "file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz",
+      "@contentful/optimization-api-schemas": "file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz",
+      "@contentful/optimization-core": "file:../../pkgs/contentful-optimization-core-0.0.0.tgz",
+      "@contentful/optimization-web": "file:../../pkgs/contentful-optimization-web-0.0.0.tgz"
+    }
   }
 }

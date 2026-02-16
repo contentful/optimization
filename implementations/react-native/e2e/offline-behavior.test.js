@@ -1,5 +1,22 @@
 const { disableNetwork, enableNetwork } = require('./networkHelpers')
-const { clearProfileState, ELEMENT_VISIBILITY_TIMEOUT } = require('./helpers')
+const {
+  clearProfileState,
+  ELEMENT_VISIBILITY_TIMEOUT,
+  getElementTextById,
+  waitForElementTextById,
+  waitForEventsCountAtLeast,
+} = require('./helpers')
+
+const pause = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+function parseEventsCount(text) {
+  const match = /Events:\s*(\d+)/.exec(text)
+  return match && match[1] ? Number(match[1]) : 0
+}
+
+async function getEventsCount() {
+  return parseEventsCount(await getElementTextById('events-count'))
+}
 
 describe('Offline Behavior', () => {
   beforeAll(async () => {
@@ -23,19 +40,22 @@ describe('Offline Behavior', () => {
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     // Wait for initial events to be tracked
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    await waitForEventsCountAtLeast(1)
 
     // Go offline
     await disableNetwork()
 
+    const eventsBeforeIdentify = await getEventsCount()
+
     // Trigger an action that generates an analytics event (identify)
     await element(by.id('identify-button')).tap()
 
-    // Verify the event was tracked locally (appears in the analytics display)
-    // The identify event should show up even when offline
-    await waitFor(element(by.text(/identify/i)))
-      .toBeVisible()
-      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
+    // Verify the event counter increased while offline.
+    await waitForElementTextById(
+      'events-count',
+      (text) => parseEventsCount(text) >= eventsBeforeIdentify + 1,
+      ELEMENT_VISIBILITY_TIMEOUT,
+    )
   })
 
   it('should recover gracefully when network is restored', async () => {
@@ -46,8 +66,8 @@ describe('Offline Behavior', () => {
     // Go offline
     await disableNetwork()
 
-    // Wait a moment while offline
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    // Allow offline state to stabilize before reconnecting.
+    await pause(1000)
 
     // Go back online
     await enableNetwork()
@@ -67,11 +87,11 @@ describe('Offline Behavior', () => {
 
     // Rapidly toggle network state
     await disableNetwork()
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    await pause(500)
     await enableNetwork()
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    await pause(500)
     await disableNetwork()
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    await pause(500)
     await enableNetwork()
 
     // App should still be stable
@@ -87,30 +107,30 @@ describe('Offline Behavior', () => {
     const analyticsTitle = element(by.text('Analytics Events'))
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-    // Let initial loading complete
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    // Wait for initial events to be tracked
+    await waitForEventsCountAtLeast(1)
 
     // Go offline
     await disableNetwork()
 
+    const eventsBeforeIdentify = await getEventsCount()
+
     // Trigger identify which creates analytics events
     await element(by.id('identify-button')).tap()
 
-    // Wait a moment for local event tracking
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    // Verify event shows in local display
-    await waitFor(element(by.text(/identify/i)))
-      .toBeVisible()
-      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
+    // Verify event counter increased while still offline.
+    await waitForElementTextById(
+      'events-count',
+      (text) => parseEventsCount(text) >= eventsBeforeIdentify + 1,
+      ELEMENT_VISIBILITY_TIMEOUT,
+    )
 
     // Go back online - events should flush
     await enableNetwork()
 
-    // Wait for flush to complete
-    await new Promise((resolve) => setTimeout(resolve, 3000))
-
-    // App should still show the event (it was tracked successfully)
-    await expect(element(by.text(/identify/i))).toBeVisible()
+    // App should remain functional after reconnect and preserve identified state.
+    await waitFor(element(by.id('reset-button')))
+      .toBeVisible()
+      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
   })
 })

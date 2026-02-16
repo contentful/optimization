@@ -1,7 +1,6 @@
 import Optimization, { createScopedLogger } from '@contentful/optimization-react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { createClient, type Entry } from 'contentful'
-import AsyncStorageStore from '../../../platforms/javascript/react-native/src/storage/AsyncStorageStore'
 import { ENV_CONFIG } from '../env.config'
 
 const logger = createScopedLogger('Demo:Helpers')
@@ -23,9 +22,6 @@ export async function initializeSDK(
   setSdkError: (error: string) => void,
 ): Promise<void> {
   try {
-    await AsyncStorageStore.initialize()
-    AsyncStorageStore.consent = true
-
     const sdkInstance = await Optimization.create({
       clientId: ENV_CONFIG.optimization.clientId,
       environment: ENV_CONFIG.optimization.environment,
@@ -33,6 +29,7 @@ export async function initializeSDK(
       analytics: { baseUrl: ENV_CONFIG.api.insightsBaseUrl },
       logLevel: 'debug',
     })
+    sdkInstance.consent(true)
 
     setSdk(sdkInstance)
   } catch (error: unknown) {
@@ -47,15 +44,14 @@ export async function fetchEntries(
   setSdkError: (error: string) => void,
 ): Promise<void> {
   try {
-    const client = createContentfulClient()
+    const contentfulClient = createContentfulClient()
     const fetchedEntries: Entry[] = []
 
     for (const entryId of entryIds) {
       try {
-        const entry = await client.getEntry(entryId, {
+        const entry = await contentfulClient.getEntry(entryId, {
           include: INCLUDE_DEPTH,
         })
-
         fetchedEntries.push(entry)
         logger.debug(`Fetched entry ${entryId}`)
       } catch (_error: unknown) {

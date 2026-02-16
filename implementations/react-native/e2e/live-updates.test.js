@@ -1,4 +1,10 @@
-const { clearProfileState, ELEMENT_VISIBILITY_TIMEOUT } = require('./helpers')
+const {
+  clearProfileState,
+  ELEMENT_VISIBILITY_TIMEOUT,
+  getElementTextById,
+  tapIfVisibleById,
+  waitForTextEqualsById,
+} = require('./helpers')
 
 describe('live updates behavior', () => {
   beforeAll(async () => {
@@ -20,7 +26,7 @@ describe('live updates behavior', () => {
   })
 
   afterEach(async () => {
-    await element(by.id('close-live-updates-test-button')).tap()
+    await tapIfVisibleById('close-live-updates-test-button')
 
     await waitFor(element(by.id('live-updates-test-button')))
       .toBeVisible()
@@ -33,8 +39,7 @@ describe('live updates behavior', () => {
         .toBeVisible()
         .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-      const initialDefaultEntryId = element(by.id('default-entry-id'))
-      await expect(initialDefaultEntryId).toBeVisible()
+      const initialDefaultEntryIdText = await getElementTextById('default-entry-id')
 
       await element(by.id('live-updates-identify-button')).tap()
 
@@ -42,9 +47,7 @@ describe('live updates behavior', () => {
         .toHaveText('Yes')
         .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      await expect(element(by.id('default-entry-id'))).toBeVisible()
+      await waitForTextEqualsById('default-entry-id', initialDefaultEntryIdText)
     })
   })
 
@@ -66,8 +69,6 @@ describe('live updates behavior', () => {
         .toHaveText('Yes')
         .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
       await expect(element(by.id('default-entry-id'))).toBeVisible()
     })
 
@@ -82,15 +83,15 @@ describe('live updates behavior', () => {
         .toBeVisible()
         .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
+      const initialLockedEntryIdText = await getElementTextById('locked-entry-id')
+
       await element(by.id('live-updates-identify-button')).tap()
 
       await waitFor(element(by.id('identified-status')))
         .toHaveText('Yes')
         .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      await expect(element(by.id('locked-entry-id'))).toBeVisible()
+      await waitForTextEqualsById('locked-entry-id', initialLockedEntryIdText)
     })
   })
 
@@ -110,8 +111,6 @@ describe('live updates behavior', () => {
         .toHaveText('Yes')
         .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
       await expect(element(by.id('live-entry-id'))).toBeVisible()
     })
   })
@@ -128,15 +127,15 @@ describe('live updates behavior', () => {
         .toBeVisible()
         .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
+      const initialLockedEntryIdText = await getElementTextById('locked-entry-id')
+
       await element(by.id('live-updates-identify-button')).tap()
 
       await waitFor(element(by.id('identified-status')))
         .toHaveText('Yes')
         .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      await expect(element(by.id('locked-entry-id'))).toBeVisible()
+      await waitForTextEqualsById('locked-entry-id', initialLockedEntryIdText)
     })
   })
 
@@ -169,8 +168,6 @@ describe('live updates behavior', () => {
       await waitFor(element(by.id('identified-status')))
         .toHaveText('Yes')
         .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
-
-      await new Promise((resolve) => setTimeout(resolve, 1500))
 
       await expect(element(by.id('default-entry-id'))).toBeVisible()
       await expect(element(by.id('live-entry-id'))).toBeVisible()

@@ -1,4 +1,8 @@
-const { clearProfileState, ELEMENT_VISIBILITY_TIMEOUT } = require('./helpers')
+const {
+  clearProfileState,
+  ELEMENT_VISIBILITY_TIMEOUT,
+  waitForEventsCountAtLeast,
+} = require('./helpers')
 
 describe('Analytics Events', () => {
   beforeAll(async () => {
@@ -14,8 +18,8 @@ describe('Analytics Events', () => {
     const analyticsTitle = element(by.text('Analytics Events'))
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-    // Wait a bit for content to load and be visible
-    await new Promise((resolve) => setTimeout(resolve, 3000))
+    // Wait until the analytics stream has emitted events.
+    await waitForEventsCountAtLeast(1)
 
     // Look for component events with entry IDs
     // The merge tag entry should trigger a component event

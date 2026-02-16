@@ -1,5 +1,4 @@
 packages:
-  - implementations/*
   - lib/*
   - platforms/javascript/*
   - universal/*
@@ -31,7 +30,7 @@ catalog:
   happy-dom: ^20.0.2
   msw: ^2.10.5
   p-retry: ^7.1.0
-  pm2: ^6.0.13
+  pm2: ^6.0.14
   qs: ^6.14.0
   rimraf: ^6.0.1
   supertest: ^7.1.3

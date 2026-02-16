@@ -39,7 +39,7 @@ All steps should be run from the monorepo root.
    pnpm --stream build
    ```
 
-3. Configure the environment in a `.env` file in `implementations/node-web` based on the
+3. Configure the environment in a `.env` file in `implementations/web-vanilla` based on the
    `.env.example` included file. The file is pre-populated with values that are valid only against
    the mock server implementation. To test the implementation against a live server environment, see
    the [mocks package](/lib/mocks/README.md) for information on how to set up Contentful space with
@@ -47,7 +47,7 @@ All steps should be run from the monorepo root.
 4. Start the mock API and application servers:
 
    ```sh
-   pnpm --filter @implementations/node-web serve
+   pnpm --dir implementations/web-vanilla --ignore-workspace serve
    ```
 
 5. The application can be accessed via Web browser at `http://localhost:3000`
@@ -55,10 +55,33 @@ All steps should be run from the monorepo root.
 6. Stop the mock API and application servers:
 
    ```sh
-   pnpm --filter @implementations/node-web serve:stop
+   pnpm --dir implementations/web-vanilla --ignore-workspace serve:stop
    ```
 
-See `implementations/node-web/package.json` for more commands.
+See `implementations/web-vanilla/package.json` for more commands.
+
+## Running From Root Scripts
+
+You can run this implementation from the monorepo root via the root `package.json` implementation
+scripts.
+
+1. Start servers:
+
+   ```sh
+   pnpm run implementation:web-vanilla -- serve
+   ```
+
+2. Stop servers:
+
+   ```sh
+   pnpm run implementation:web-vanilla -- serve:stop
+   ```
+
+3. Run E2E:
+
+   ```sh
+   pnpm run implementation:web-vanilla -- test:e2e
+   ```
 
 ## Running E2E Tests
 
@@ -67,17 +90,17 @@ E2E tests are run using Playwright.
 1. Install Playwright dependencies:
 
    ```sh
-   pnpm --filter @implementation/node-web exec playwright install --with-deps
+   pnpm --dir implementations/web-vanilla --ignore-workspace exec playwright install --with-deps
    ```
 
 2. Run the E2E test suite:
 
    ```sh
-   pnpm --filter @implementation/node-web test:e2e
+   pnpm --dir implementations/web-vanilla --ignore-workspace test:e2e
    ```
 
    The tests can alternatively be run using Playwright's GUI:
 
    ```sh
-   pnpm --filter @implementation/node-web test:e2e:ui
+   pnpm --dir implementations/web-vanilla --ignore-workspace test:e2e:ui
    ```
