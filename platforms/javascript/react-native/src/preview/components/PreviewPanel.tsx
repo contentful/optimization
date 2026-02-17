@@ -1,6 +1,7 @@
 import { createScopedLogger } from '@contentful/optimization-core'
 import React, { useCallback, useEffect, useState } from 'react'
-import { Alert, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native'
+import { Alert, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { usePreviewOverrides } from '../context/PreviewOverrideContext'
 import {
   useCollapsibleControl,

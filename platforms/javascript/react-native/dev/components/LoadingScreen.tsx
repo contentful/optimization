@@ -1,5 +1,6 @@
 import React from 'react'
-import { ActivityIndicator, SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, StatusBar, StyleSheet, Text, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import type { LoadingScreenProps } from '../types'
 
 export function LoadingScreen({ colors, isDarkMode }: LoadingScreenProps): React.JSX.Element {

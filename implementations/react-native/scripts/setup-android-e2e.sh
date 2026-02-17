@@ -42,11 +42,12 @@ ROOT_DIR="$(cd "$RN_DIR/../.." && pwd)"
 NODE_VERSION="24.11.1"
 PNPM_VERSION="10.22.0"
 JAVA_VERSION="17"
-ANDROID_BUILD_TOOLS_VERSION="35.0.0"
-ANDROID_PLATFORM_VERSION="35"
-ANDROID_API_LEVEL="34"
-ANDROID_EMULATOR_NAME="Pixel_7_API_34"
-NDK_VERSION="26.1.10909125"
+ANDROID_BUILD_TOOLS_VERSION="36.0.0"
+ANDROID_PLATFORM_VERSION="36"
+ANDROID_API_LEVEL="36"
+ANDROID_EMULATOR_NAME="Pixel_7_API_36"
+NDK_VERSION="27.1.12297006"
+ANDROID_CMDLINE_TOOLS_VERSION="20.0"
 
 # Flags
 CI_MODE="${CI:-false}"
@@ -54,11 +55,11 @@ SKIP_EMULATOR="false"
 VERBOSE="false"
 
 # Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+YELLOW=$'\033[1;33m'
+BLUE=$'\033[0;34m'
+NC=$'\033[0m'
 
 # Detect OS
 detect_os() {
@@ -404,17 +405,27 @@ setup_android_sdk() {
     # Create SDK directory
     mkdir -p "$ANDROID_HOME"
     
-    # Download command-line tools if not present
+    # Download command-line tools if missing or outdated
     local cmdline_tools_dir="$ANDROID_HOME/cmdline-tools/latest"
-    
-    if [[ ! -d "$cmdline_tools_dir" ]]; then
-        log_step "Downloading Android command-line tools..."
-        
+
+    local installed_cmdline_tools_version=""
+    if [[ -f "$cmdline_tools_dir/source.properties" ]]; then
+        installed_cmdline_tools_version=$(grep "^Pkg.Revision=" "$cmdline_tools_dir/source.properties" | cut -d'=' -f2 || true)
+    fi
+
+    if [[ ! -d "$cmdline_tools_dir" ]] || [[ "$installed_cmdline_tools_version" != "$ANDROID_CMDLINE_TOOLS_VERSION" ]]; then
+        if [[ -n "$installed_cmdline_tools_version" ]]; then
+            log_step "Updating Android command-line tools from $installed_cmdline_tools_version to $ANDROID_CMDLINE_TOOLS_VERSION..."
+            rm -rf "$cmdline_tools_dir"
+        else
+            log_step "Downloading Android command-line tools..."
+        fi
+
         local cmdline_tools_url=""
         if [[ "$OS" == "macos" ]]; then
-            cmdline_tools_url="https://dl.google.com/android/repository/commandlinetools-mac-11076708_latest.zip"
+            cmdline_tools_url="https://dl.google.com/android/repository/commandlinetools-mac-14742923_latest.zip"
         else
-            cmdline_tools_url="https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
+            cmdline_tools_url="https://dl.google.com/android/repository/commandlinetools-linux-14742923_latest.zip"
         fi
         
         local tmp_dir=$(mktemp -d)
@@ -427,7 +438,7 @@ setup_android_sdk() {
         
         log_info "Android command-line tools downloaded"
     else
-        log_info "Android command-line tools already installed"
+        log_info "Android command-line tools already installed ($installed_cmdline_tools_version)"
     fi
     
     # Add to PATH

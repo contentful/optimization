@@ -4,7 +4,7 @@ import {
   useOptimization,
 } from '@contentful/optimization-react-native'
 import type { NavigationContainerRef } from '@react-navigation/native'
-import { NavigationContainer } from '@react-navigation/native'
+import { NavigationContainer, NavigationIndependentTree } from '@react-navigation/native'
 import {
   createNativeStackNavigator,
   type NativeStackNavigationProp,
@@ -71,70 +71,71 @@ export function NavigationTestScreen({ onClose }: NavigationTestScreenProps): Re
       </View>
       <NavigationContainerTracking>
         {(navigationProps) => (
-          <NavigationContainer
-            independent
-            ref={navigationRef}
-            onReady={() => {
-              const route = navigationRef.current?.getCurrentRoute()
-              if (route) {
-                Object.assign(navigationProps.ref, {
-                  current: {
-                    getCurrentRoute: () => ({
-                      name: route.name,
-                      params: toRecord(route.params),
-                    }),
-                  },
-                })
-              }
-              navigationProps.onReady()
-            }}
-            onStateChange={(state) => {
-              const route = navigationRef.current?.getCurrentRoute()
-              if (route) {
-                Object.assign(navigationProps.ref, {
-                  current: {
-                    getCurrentRoute: () => ({
-                      name: route.name,
-                      params: toRecord(route.params),
-                    }),
-                  },
-                })
-              }
-              navigationProps.onStateChange(adaptNavigationState(state))
-            }}
-          >
-            <Stack.Navigator screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="NavigationHome" component={NavigationHome} />
-              <Stack.Screen name="NavigationViewOne">
-                {({
-                  navigation,
-                }: {
-                  navigation: NativeStackNavigationProp<
-                    NavigationTestStackParamList,
-                    'NavigationViewOne'
-                  >
-                }) =>
-                  renderNavigationView({
-                    testIdSuffix: 'one',
-                    nextButtonTitle: 'Go to View Two',
-                    nextButtonTestId: 'go-to-view-two-button',
-                    onNavigateNext: () => {
-                      navigation.navigate('NavigationViewTwo')
+          <NavigationIndependentTree>
+            <NavigationContainer
+              ref={navigationRef}
+              onReady={() => {
+                const route = navigationRef.current?.getCurrentRoute()
+                if (route) {
+                  Object.assign(navigationProps.ref, {
+                    current: {
+                      getCurrentRoute: () => ({
+                        name: route.name,
+                        params: toRecord(route.params),
+                      }),
                     },
                   })
                 }
-              </Stack.Screen>
-              <Stack.Screen name="NavigationViewTwo">
-                {() =>
-                  renderNavigationView({
-                    testIdSuffix: 'two',
-                    nextButtonTitle: 'Go to View Two',
-                    nextButtonTestId: 'go-to-view-two-button',
+                navigationProps.onReady()
+              }}
+              onStateChange={(state) => {
+                const route = navigationRef.current?.getCurrentRoute()
+                if (route) {
+                  Object.assign(navigationProps.ref, {
+                    current: {
+                      getCurrentRoute: () => ({
+                        name: route.name,
+                        params: toRecord(route.params),
+                      }),
+                    },
                   })
                 }
-              </Stack.Screen>
-            </Stack.Navigator>
-          </NavigationContainer>
+                navigationProps.onStateChange(adaptNavigationState(state))
+              }}
+            >
+              <Stack.Navigator screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="NavigationHome" component={NavigationHome} />
+                <Stack.Screen name="NavigationViewOne">
+                  {({
+                    navigation,
+                  }: {
+                    navigation: NativeStackNavigationProp<
+                      NavigationTestStackParamList,
+                      'NavigationViewOne'
+                    >
+                  }) =>
+                    renderNavigationView({
+                      testIdSuffix: 'one',
+                      nextButtonTitle: 'Go to View Two',
+                      nextButtonTestId: 'go-to-view-two-button',
+                      onNavigateNext: () => {
+                        navigation.navigate('NavigationViewTwo')
+                      },
+                    })
+                  }
+                </Stack.Screen>
+                <Stack.Screen name="NavigationViewTwo">
+                  {() =>
+                    renderNavigationView({
+                      testIdSuffix: 'two',
+                      nextButtonTitle: 'Go to View Two',
+                      nextButtonTestId: 'go-to-view-two-button',
+                    })
+                  }
+                </Stack.Screen>
+              </Stack.Navigator>
+            </NavigationContainer>
+          </NavigationIndependentTree>
         )}
       </NavigationContainerTracking>
     </View>

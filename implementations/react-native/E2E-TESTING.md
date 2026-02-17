@@ -16,7 +16,7 @@ configure your environment. After setup completes, restart your terminal and run
 
 ```bash
 # Start the emulator
-emulator -avd Pixel_7_API_34 &
+emulator -avd Pixel_7_API_36 &
 
 # Run E2E tests
 ./scripts/run-e2e-android.sh
@@ -40,7 +40,7 @@ For CI environments, use:
 
 - Android Studio installed (or use the setup script above)
 - Android SDK
-- An Android emulator configured (recommended: Pixel 7 with API 34)
+- An Android emulator configured (recommended: Pixel 7 with API 36)
 - Java Development Kit (JDK 17)
 
 ## Setup
@@ -69,7 +69,7 @@ pnpm run test:e2e:ios:build
 emulator -list-avds
 ```
 
-2. If you need to create one, the default configuration expects an emulator named `Pixel_7_API_34`.
+2. If you need to create one, the default configuration expects an emulator named `Pixel_7_API_36`.
    You can either:
    - Create an emulator with that name
    - Or update the `.detoxrc.js` file with your emulator name
@@ -183,7 +183,8 @@ describe('My Feature', () => {
   })
 
   beforeEach(async () => {
-    await device.reloadReactNative()
+    await device.terminateApp()
+    await device.launchApp({ newInstance: true })
   })
 
   it('should display welcome screen', async () => {
@@ -217,7 +218,7 @@ The app components have been annotated with `testID` props for Detox to identify
 
 - If the emulator doesn't start, launch it manually before running tests:
   ```bash
-  emulator -avd Pixel_7_API_34
+  emulator -avd Pixel_7_API_36
   ```
 - Clean the Android build: `cd android && ./gradlew clean && cd ..`
 - Make sure ANDROID_HOME environment variable is set
@@ -252,7 +253,7 @@ To test the headless emulator setup locally before pushing to CI:
 1. **Start emulator in headless mode:**
 
    ```bash
-   emulator -avd Pixel_7_API_34 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect &
+   emulator -avd Pixel_7_API_36 -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect &
    ```
 
 2. **Wait for emulator to boot:**
@@ -277,7 +278,7 @@ lifecycle automatically. The action creates its own AVD, so no manual AVD creati
 - name: Start Android Emulator
   uses: reactivecircus/android-emulator-runner@v2
   with:
-    api-level: 34
+    api-level: 36
     arch: x86_64
     target: google_apis
     emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect

@@ -14,7 +14,16 @@ describe('identified user', () => {
 
     await element(by.id('identify-button')).tap()
 
-    await device.reloadReactNative()
+    await waitFor(element(by.id('reset-button')))
+      .toBeVisible()
+      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
+
+    await device.terminateApp()
+    await device.launchApp({ newInstance: true })
+
+    await waitFor(element(by.id('identify-button')))
+      .toBeVisible()
+      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
   })
 
   describe('common variants', () => {

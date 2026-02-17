@@ -43,19 +43,19 @@ packages:
     resolution: {integrity: sha512-tu1gfmZI59hQ7qKhmGOV0dA5brxhsc+LOfPwBsQQMDAVy5kVpTrKf/AGlL2y9QhKHu/NtCrwX/ZrmRFgtGEtIA==}
 
   '@contentful/optimization-api-client@file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz':
-    resolution: {integrity: sha512-5w7Zl33loWfHB0VsOdpTpIzSllO+PnOdl1qdDABf6hN5cQSrW7Z1pmYlgPYpBGhE+uVcc8HYoUQQteN8bqpASQ==, tarball: file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz}
+    resolution: {integrity: sha512-OdvgZu8rCZEvSXUA3fj0DPeqSEvuAoMBVTRZyng91KMQgeTqmEaFQqQapD9sbvJj7ePor5eyLNiWUjf4qIZ/pQ==, tarball: file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/optimization-api-schemas@file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz':
-    resolution: {integrity: sha512-HKxQ/nrJiZw278MAcaCceGoSkCDdAQFpJhSin4jFEUBTpn6PeaheZKWLR0r5uGKax2EQDp7ZWaes/4WeSLeRxQ==, tarball: file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz}
+    resolution: {integrity: sha512-CbVtO5GX2j4nPmg1tXek1qGFmavM8vWrfFcSsgyJffOD8L65pOEuyO++W9sU3hVEg4LoxE1InSi5xOZaM7jrgg==, tarball: file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/optimization-core@file:../../pkgs/contentful-optimization-core-0.0.0.tgz':
-    resolution: {integrity: sha512-eKzBZv6YBRSq90htemSYEP5K6T5X+2lqzUuOgFzdrV+K2yNl7ZWLjJRkgZqxf+QEFhIuQUfy5QXxtBZEhTva0Q==, tarball: file:../../pkgs/contentful-optimization-core-0.0.0.tgz}
+    resolution: {integrity: sha512-VVsh+cOie1KoBPj7ykJPCfK75esCsjhL27DRQEDsPPAUiXtTVV5QIX1Y98ek9zgcFiYiZWGi3S2oMAbWjteRNg==, tarball: file:../../pkgs/contentful-optimization-core-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/optimization-web@file:../../pkgs/contentful-optimization-web-0.0.0.tgz':
-    resolution: {integrity: sha512-ax9TqQ7vZiYBv9Vtj6yrNrAgIx8ihoxMKThylCt5pGewmVSG0EuTiTIEwGWTe3dmlW0XKJI5/x5tIFIN1OvH1A==, tarball: file:../../pkgs/contentful-optimization-web-0.0.0.tgz}
+    resolution: {integrity: sha512-1NqMKcimmkauJGGtb9dMqUFWK/nOM9+5xApvxeQzk815NqM32aroFbotzFnItNtJPkleWq00KELMDzxfnwHcdQ==, tarball: file:../../pkgs/contentful-optimization-web-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/rich-text-types@16.8.5':

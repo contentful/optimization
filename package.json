@@ -32,7 +32,15 @@
     "prepare": "husky",
     "serve:mocks": "pnpm --dir lib/mocks serve",
     "setup:e2e": "pnpm run build:pkgs && pnpm run implementation:run -- --all -- implementation:install && pnpm run playwright:install && pnpm run playwright:install-deps",
+    "setup:e2e:node-ssr-only": "pnpm run build:pkgs && pnpm run implementation:run -- node-ssr-only implementation:install && pnpm run implementation:run -- node-ssr-only implementation:setup:e2e",
+    "setup:e2e:node-ssr-web-vanilla": "pnpm run build:pkgs && pnpm run implementation:run -- node-ssr-web-vanilla implementation:install && pnpm run implementation:run -- node-ssr-web-vanilla implementation:setup:e2e",
+    "setup:e2e:react-native": "pnpm run build:pkgs && pnpm run implementation:run -- react-native implementation:install && pnpm run implementation:run -- react-native implementation:setup:e2e",
+    "setup:e2e:web-vanilla": "pnpm run build:pkgs && pnpm run implementation:run -- web-vanilla implementation:install && pnpm run implementation:run -- web-vanilla implementation:setup:e2e",
     "test:e2e": "pnpm run setup:e2e && pnpm run implementation:run -- --all -- implementation:test:e2e:run",
+    "test:e2e:node-ssr-only": "pnpm run setup:e2e:node-ssr-only && pnpm run implementation:run -- node-ssr-only implementation:test:e2e:run",
+    "test:e2e:node-ssr-web-vanilla": "pnpm run setup:e2e:node-ssr-web-vanilla && pnpm run implementation:run -- node-ssr-web-vanilla implementation:test:e2e:run",
+    "test:e2e:react-native": "pnpm run setup:e2e:react-native && pnpm run implementation:run -- react-native implementation:test:e2e:run",
+    "test:e2e:web-vanilla": "pnpm run setup:e2e:web-vanilla && pnpm run implementation:run -- web-vanilla implementation:test:e2e:run",
     "test:unit": "pnpm --filter @contentful/* test:unit",
     "test:unit:ci": "CI=true pnpm run test:unit",
     "typecheck": "pnpm -r typecheck",
@@ -40,14 +48,14 @@
     "version:pnpm": "pnpm -v"
   },
   "engines": {
-    "node": ">=16.20.0"
+    "node": ">=20.19.0"
   },
   "packageManager": "pnpm@10.29.3+sha512.498e1fb4cca5aa06c1dcf2611e6fafc50972ffe7189998c409e90de74566444298ffe43e6cd2acdc775ba1aa7cc5e092a8b7054c811ba8c5770f84693d33d2dc",
   "devDependencies": {
-    "@eslint/js": "^9.39.2",
+    "@eslint/js": "^10.0.1",
     "commitizen": "^4.3.1",
     "cz-vinyl": "^2.5.4",
-    "eslint": "^9.39.2",
+    "eslint": "^10.0.0",
     "eslint-config-love": "^121.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-lit": "^2.2.1",

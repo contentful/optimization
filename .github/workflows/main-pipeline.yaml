@@ -223,7 +223,10 @@ jobs:
   lint:
     name: 🎨 Lint
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
-    needs: setup
+    needs: [setup, build]
+    if: >-
+      always() && needs.setup.result == 'success' && (needs.build.result == 'success' ||
+      needs.build.result == 'skipped')
     timeout-minutes: 15
     steps:
       - uses: namespacelabs/nscloud-checkout-action@v8
@@ -240,7 +243,13 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - run: pnpm build:pkgs
+      - uses: actions/download-artifact@v6
+        if: needs.build.result == 'success'
+        with:
+          name: sdk-package-tarballs
+          path: pkgs
+      - if: needs.build.result == 'skipped'
+        run: pnpm build:pkgs
       - run: pnpm store prune
       - run: pnpm run implementation:install -- --no-frozen-lockfile
       - run: pnpm lint
@@ -608,7 +617,7 @@ jobs:
       - name: Run Android E2E Tests (emulator)
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 33
+          api-level: 36
           arch: x86_64
           target: google_apis
           profile: pixel_tablet
