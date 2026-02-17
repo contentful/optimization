@@ -1,4 +1,5 @@
 import { defineConfig } from '@rslib/core'
+import { maybeEnableRsDoctor } from 'build-tools'
 
 const common = {
   bundle: true,
@@ -36,6 +37,10 @@ export default defineConfig({
       redirect: {
         dts: { path: false },
       },
+
+      tools: {
+        rspack: maybeEnableRsDoctor,
+      },
     },
 
     {
@@ -47,6 +52,10 @@ export default defineConfig({
         filename: { js: '[name].cjs' },
         sourceMap: true,
         cleanDistPath: false,
+      },
+
+      tools: {
+        rspack: maybeEnableRsDoctor,
       },
     },
   ],

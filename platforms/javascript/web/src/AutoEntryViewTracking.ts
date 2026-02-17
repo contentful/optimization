@@ -42,7 +42,7 @@ export type EntryElement = (HTMLElement | SVGElement) & { dataset: CtflDataset }
 export function isEntryElement(element?: Element): element is EntryElement {
   const isWeb = typeof HTMLElement !== 'undefined' && typeof SVGElement !== 'undefined'
 
-  if (!isWeb || !element || element.nodeType !== 1) return false
+  if (!isWeb || element?.nodeType !== 1) return false
 
   if (!('dataset' in element)) return false
 

@@ -25,7 +25,7 @@
     "build": "pnpm clean && pnpm build:dist",
     "build:ci": "pnpm build:dist",
     "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
-    "build:rsdoctor": "RSDOCTOR=true rslib build",
+    "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist",
     "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo",
     "dev": "rsbuild dev --host 0.0.0.0 -c rsbuild.config.ts",
     "test:unit": "echo \"TODO: Unit tests\"",

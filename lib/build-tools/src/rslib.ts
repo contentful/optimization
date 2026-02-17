@@ -3,7 +3,11 @@ import { RsdoctorRspackPlugin } from '@rsdoctor/rspack-plugin'
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
 
-export const maybeEnableRsDoctor = (config: { plugins?: unknown }): void => {
+export const maybeEnableRsDoctor = (config: {
+  plugins?: unknown
+  output?: unknown
+  devtool?: unknown
+}): void => {
   if (process.env.RSDOCTOR !== 'true') {
     return
   }
@@ -11,6 +15,10 @@ export const maybeEnableRsDoctor = (config: { plugins?: unknown }): void => {
   if (!Array.isArray(config.plugins)) {
     return
   }
+
+  // Rsdoctor's bundle plugin warns for every build when devtool is enabled
+  // because it rewrites devtoolModuleFilenameTemplate internally.
+  config.devtool = false
 
   config.plugins.push(
     new RsdoctorRspackPlugin({

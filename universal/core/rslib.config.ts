@@ -1,5 +1,5 @@
 import { defineConfig } from '@rslib/core'
-import { getPackageName } from 'build-tools'
+import { getPackageName, maybeEnableRsDoctor } from 'build-tools'
 
 const packageName = getPackageName(__dirname, '@contentful/optimization-core')
 
@@ -43,6 +43,10 @@ export default defineConfig({
       redirect: {
         dts: { path: false },
       },
+
+      tools: {
+        rspack: maybeEnableRsDoctor,
+      },
     },
 
     {
@@ -54,6 +58,10 @@ export default defineConfig({
         filename: { js: '[name].cjs' },
         sourceMap: true,
         cleanDistPath: false,
+      },
+
+      tools: {
+        rspack: maybeEnableRsDoctor,
       },
     },
   ],

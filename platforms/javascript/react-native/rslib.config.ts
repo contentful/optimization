@@ -1,5 +1,5 @@
 import { defineConfig } from '@rslib/core'
-import { getPackageName } from 'build-tools'
+import { getPackageName, maybeEnableRsDoctor } from 'build-tools'
 import path from 'node:path'
 
 const packageName = getPackageName(__dirname, '@contentful/optimization-react-native')
@@ -32,6 +32,11 @@ function keepReactNativeRuntimeExternals(config: { externals?: unknown }): void 
       : []
 
   config.externals = [...existingExternals, ...runtimeExternals]
+}
+
+function configureRspack(config: { externals?: unknown; plugins?: unknown }): void {
+  keepReactNativeRuntimeExternals(config)
+  maybeEnableRsDoctor(config)
 }
 
 const common = {
@@ -85,7 +90,7 @@ export default defineConfig({
         dts: { path: false },
       },
       tools: {
-        rspack: keepReactNativeRuntimeExternals,
+        rspack: configureRspack,
       },
     },
 
@@ -100,7 +105,7 @@ export default defineConfig({
         cleanDistPath: false,
       },
       tools: {
-        rspack: keepReactNativeRuntimeExternals,
+        rspack: configureRspack,
       },
     },
   ],
