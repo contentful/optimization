@@ -90,7 +90,7 @@ wrappers used by these commands.
 | `pnpm version:node`                        | Prints the local Node.js version.                                                   |
 | `pnpm version:pnpm`                        | Prints the local pnpm version.                                                      |
 
-> ![NOTE]
+> [!NOTE]
 >
 > Before running `pnpm lint` or `pnpm:lint:fix`, you must run `pnpm build`, `pnpm build:pkgs`, and
 > `pnpm implementation:install` to avoid linter warnings in reference implementation packages.
