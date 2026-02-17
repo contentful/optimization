@@ -3,15 +3,19 @@ import love from 'eslint-config-love'
 import prettier from 'eslint-config-prettier'
 import { configs as lit } from 'eslint-plugin-lit'
 import { configs as wc } from 'eslint-plugin-wc'
-import { defineConfig } from 'eslint/config'
+import { defineConfig, type Config } from 'eslint/config'
 import typescript from 'typescript-eslint'
 
+// `eslint-config-love` currently exposes FlatConfig types that don't line up with ESLint v10 helpers.
+// eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion
+const loveConfig = love as unknown as Config
 const strictConfigs = Array.isArray(typescript.configs.strict)
   ? typescript.configs.strict
   : [typescript.configs.strict]
 const stylisticConfigs = Array.isArray(typescript.configs.stylistic)
   ? typescript.configs.stylistic
   : [typescript.configs.stylistic]
+const { pathname: tsconfigRootDir } = new URL('.', import.meta.url)
 
 export default defineConfig(
   {
@@ -23,6 +27,7 @@ export default defineConfig(
       '**/build/**',
       '**/coverage',
       '**/dist',
+      'docs/media/**',
       '**/ios/**',
       '**/node_modules',
     ],
@@ -30,7 +35,16 @@ export default defineConfig(
   js.configs.recommended,
   {
     files: ['**/*.{js,jsx,cjs,mjs,ts,tsx}'],
-    ...love,
+    ...loveConfig,
+  },
+  {
+    files: ['**/*.{js,jsx,cjs,mjs,ts,tsx}'],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir,
+      },
+    },
   },
   ...strictConfigs,
   ...stylisticConfigs,
@@ -54,6 +68,13 @@ export default defineConfig(
         },
       ],
       '@typescript-eslint/strict-boolean-expressions': 'off',
+      'eslint-comments/disable-enable-pair': 'off',
+      'eslint-comments/no-aggregating-enable': 'off',
+      'eslint-comments/no-duplicate-disable': 'off',
+      'eslint-comments/no-unlimited-disable': 'off',
+      'eslint-comments/no-unused-enable': 'off',
+      'eslint-comments/require-description': 'off',
+      'no-useless-assignment': 'off',
     },
   },
   wc['flat/best-practice'],

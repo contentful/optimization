@@ -7,7 +7,6 @@
 
 import React, { useEffect, useState } from 'react'
 import {
-  SafeAreaView,
   ScrollView,
   StatusBar,
   StyleSheet,
@@ -16,6 +15,7 @@ import {
   useColorScheme,
   View,
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 import type Optimization from '@contentful/optimization-react-native'
 import type { MergeTagEntry, Profile } from '@contentful/optimization-react-native'

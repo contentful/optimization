@@ -46,7 +46,7 @@ export interface OptimizationNavigationContainerProps {
    * Receives props that should be spread onto the NavigationContainer.
    */
   children: (props: {
-    ref: React.RefObject<NavigationContainerRef>
+    ref: React.RefObject<NavigationContainerRef | null>
     onReady: () => void
     onStateChange: (state: NavigationState | undefined) => void
   }) => React.ReactNode
@@ -111,7 +111,7 @@ export function OptimizationNavigationContainer({
   includeParams = false,
 }: OptimizationNavigationContainerProps): React.ReactNode {
   const optimization = useOptimization()
-  const navigationRef = useRef<NavigationContainerRef>(null)
+  const navigationRef = useRef<NavigationContainerRef | null>(null)
   const routeNameRef = useRef<string | undefined>(undefined)
 
   // Store optimization in a ref to prevent unnecessary callback recreations

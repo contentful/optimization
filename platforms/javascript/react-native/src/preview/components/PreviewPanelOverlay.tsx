@@ -5,11 +5,11 @@ import {
   Modal,
   PanResponder,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLiveUpdates } from '../../context/LiveUpdatesContext'
 import fabIcon from '../assets/fab-icon.png'
 import fabRipple from '../assets/fab-ripple.png'
