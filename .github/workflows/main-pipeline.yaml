@@ -242,14 +242,8 @@ jobs:
       - run: pnpm install --prefer-offline --frozen-lockfile
       - run: pnpm build:pkgs
       - run: pnpm store prune
-      - run:
-          pnpm --dir implementations/node-ssr-only --ignore-workspace install --no-frozen-lockfile
-      - run:
-          pnpm --dir implementations/node-ssr-web-vanilla --ignore-workspace install
-          --no-frozen-lockfile
-      - run: pnpm --dir implementations/web-vanilla --ignore-workspace install --no-frozen-lockfile
-      - run: pnpm --dir implementations/react-native --ignore-workspace install --no-frozen-lockfile
-      - run: pnpm lint:check
+      - run: pnpm run implementation:install -- --no-frozen-lockfile
+      - run: pnpm lint
 
   test-unit:
     name: 🧪 Test (${{ matrix.package }})
@@ -328,12 +322,10 @@ jobs:
           name: sdk-package-tarballs
           path: pkgs
       - run: pnpm store prune
+      - run: pnpm run implementation:node-ssr-only -- implementation:install -- --no-frozen-lockfile
       - run:
-          pnpm --dir implementations/node-ssr-only --ignore-workspace install --no-frozen-lockfile
-      - run:
-          pnpm --dir implementations/node-ssr-only --ignore-workspace exec playwright install
-          --with-deps
-      - run: pnpm --dir implementations/node-ssr-only --ignore-workspace test:e2e
+          pnpm run implementation:node-ssr-only -- implementation:playwright:install -- --with-deps
+      - run: pnpm run implementation:node-ssr-only -- implementation:test:e2e:run
 
       - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
@@ -388,12 +380,12 @@ jobs:
           path: pkgs
       - run: pnpm store prune
       - run:
-          pnpm --dir implementations/node-ssr-web-vanilla --ignore-workspace install
+          pnpm run implementation:node-ssr-web-vanilla -- implementation:install --
           --no-frozen-lockfile
       - run:
-          pnpm --dir implementations/node-ssr-web-vanilla --ignore-workspace exec playwright install
+          pnpm run implementation:node-ssr-web-vanilla -- implementation:playwright:install --
           --with-deps
-      - run: pnpm --dir implementations/node-ssr-web-vanilla --ignore-workspace test:e2e
+      - run: pnpm run implementation:node-ssr-web-vanilla -- implementation:test:e2e:run
 
       - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
@@ -454,11 +446,9 @@ jobs:
           name: sdk-package-tarballs
           path: pkgs
       - run: pnpm store prune
-      - run: pnpm --dir implementations/web-vanilla --ignore-workspace install --no-frozen-lockfile
-      - run:
-          pnpm --dir implementations/web-vanilla --ignore-workspace exec playwright install
-          --with-deps
-      - run: pnpm --dir implementations/web-vanilla --ignore-workspace test:e2e
+      - run: pnpm run implementation:web-vanilla -- implementation:install -- --no-frozen-lockfile
+      - run: pnpm run implementation:web-vanilla -- implementation:playwright:install -- --with-deps
+      - run: pnpm run implementation:web-vanilla -- implementation:test:e2e:run
 
       - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
@@ -558,7 +548,7 @@ jobs:
 
       - name: Install React Native implementation dependencies
         run: >
-          pnpm --dir implementations/react-native --ignore-workspace install --no-frozen-lockfile
+          pnpm run implementation:react-native -- implementation:install -- --no-frozen-lockfile
 
       - name: Create .env file for React Native
         run: |
@@ -576,7 +566,7 @@ jobs:
 
       - name: Build Android app (Detox)
         run: |
-          pnpm --dir implementations/react-native --ignore-workspace test:e2e:android:build
+          pnpm run implementation:react-native -- test:e2e:android:build
 
       - name: Start Mock Server
         run: |
@@ -639,7 +629,7 @@ jobs:
             adb reverse tcp:8000 tcp:8000
             adb reverse tcp:8081 tcp:8081
             echo "Running E2E tests..."
-            pnpm --dir implementations/react-native --ignore-workspace test:e2e:android:run --retries 2
+            pnpm run implementation:react-native -- test:e2e:android:run -- --retries 2
 
       - name: Upload Metro logs on failure
         if: failure()

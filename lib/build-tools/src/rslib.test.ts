@@ -16,12 +16,13 @@ describe('maybeEnableRsDoctor', () => {
   it('adds RsDoctor plugin when RSDOCTOR=true and plugins is an array', () => {
     process.env.RSDOCTOR = 'true'
 
-    const config = { plugins: [] as unknown[] }
+    const config = { plugins: [] as unknown[], devtool: 'source-map' as unknown }
 
     maybeEnableRsDoctor(config)
 
     expect(config.plugins).toHaveLength(1)
     expect(config.plugins[0]).toBeInstanceOf(RsdoctorRspackPlugin)
+    expect(config.devtool).toBe(false)
   })
 
   it('does nothing when RSDOCTOR is not true', () => {
@@ -43,6 +44,19 @@ describe('maybeEnableRsDoctor', () => {
     expect(() => {
       maybeEnableRsDoctor({ plugins: {} })
     }).not.toThrow()
+  })
+
+  it('disables devtool to prevent repeated Rsdoctor warning noise', () => {
+    process.env.RSDOCTOR = 'true'
+
+    const config: {
+      plugins: unknown[]
+      devtool?: unknown
+    } = { plugins: [] as unknown[] }
+
+    maybeEnableRsDoctor(config)
+
+    expect(config.devtool).toBe(false)
   })
 })
 

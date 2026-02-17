@@ -3,9 +3,17 @@ import love from 'eslint-config-love'
 import prettier from 'eslint-config-prettier'
 import { configs as lit } from 'eslint-plugin-lit'
 import { configs as wc } from 'eslint-plugin-wc'
-import typescript, { type ConfigArray } from 'typescript-eslint'
+import { defineConfig } from 'eslint/config'
+import typescript from 'typescript-eslint'
 
-const config: ConfigArray = typescript.config(
+const strictConfigs = Array.isArray(typescript.configs.strict)
+  ? typescript.configs.strict
+  : [typescript.configs.strict]
+const stylisticConfigs = Array.isArray(typescript.configs.stylistic)
+  ? typescript.configs.stylistic
+  : [typescript.configs.stylistic]
+
+export default defineConfig(
   {
     ignores: [
       '**/*.{js,jsx,cjs,mjs}',
@@ -24,8 +32,8 @@ const config: ConfigArray = typescript.config(
     files: ['**/*.{js,jsx,cjs,mjs,ts,tsx}'],
     ...love,
   },
-  typescript.configs.strict,
-  typescript.configs.stylistic,
+  ...strictConfigs,
+  ...stylisticConfigs,
   {
     rules: {
       '@typescript-eslint/class-methods-use-this': [
@@ -70,5 +78,3 @@ const config: ConfigArray = typescript.config(
   },
   prettier,
 )
-
-export default config

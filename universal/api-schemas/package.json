@@ -26,6 +26,7 @@
     "build": "pnpm clean; pnpm build:dist",
     "build:ci": "pnpm build:dist",
     "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
+    "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist",
     "clean": "rimraf ./.rslib ./dist .tsbuildinfo",
     "test:unit": "echo \"No unit tests necessary\"",
     "typecheck": "tsc --noEmit"

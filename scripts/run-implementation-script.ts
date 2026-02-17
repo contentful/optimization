@@ -143,7 +143,7 @@ function runAction(
 ): number {
   switch (requestedAction) {
     case 'implementation:install':
-      return runPnpm(implementation.name, ['install'])
+      return runPnpm(implementation.name, ['install', ...actionArgs])
     case 'implementation:build:run': {
       if (implementation.scripts.has('build')) {
         const buildExitCode = runScript(implementation.name, 'build')
@@ -164,7 +164,7 @@ function runAction(
         return SUCCESS_EXIT_CODE
       }
 
-      return runPnpm(implementation.name, ['exec', 'playwright', 'install'])
+      return runPnpm(implementation.name, ['exec', 'playwright', 'install', ...actionArgs])
     case 'implementation:playwright:install-deps':
       if (!implementation.usesPlaywright) {
         process.stdout.write(
@@ -178,18 +178,18 @@ function runAction(
         return SUCCESS_EXIT_CODE
       }
 
-      return runPnpm(implementation.name, ['exec', 'playwright', 'install-deps'])
+      return runPnpm(implementation.name, ['exec', 'playwright', 'install-deps', ...actionArgs])
     case 'implementation:setup:e2e': {
       const playwrightInstallExitCode = runAction(
         implementation,
         'implementation:playwright:install',
-        [],
+        actionArgs,
       )
       if (playwrightInstallExitCode !== SUCCESS_EXIT_CODE) {
         return playwrightInstallExitCode
       }
 
-      return runAction(implementation, 'implementation:playwright:install-deps', [])
+      return runAction(implementation, 'implementation:playwright:install-deps', actionArgs)
     }
     case 'implementation:test:e2e:run':
       if (implementation.scripts.has('test:e2e:android:full')) {
