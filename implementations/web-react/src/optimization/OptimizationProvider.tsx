@@ -3,7 +3,7 @@ import { getOptimization, type OptimizationInstance } from './createOptimization
 
 export interface OptimizationContextValue {
   sdk: OptimizationInstance | undefined
-  isReadable: boolean
+  isReady: boolean
   error: Error | undefined
 }
 
@@ -13,12 +13,12 @@ export function OptimizationProvider({ children }: PropsWithChildren): JSX.Eleme
   const value = useMemo<OptimizationContextValue>(() => {
     try {
       const sdk = getOptimization()
-      return { sdk, isReadable: true, error: undefined }
+      return { sdk, isReady: true, error: undefined }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown Optimization init error'
       return {
         sdk: undefined,
-        isReadable: false,
+        isReady: false,
         error: error instanceof Error ? error : new Error(message),
       }
     }

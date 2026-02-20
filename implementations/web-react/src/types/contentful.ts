@@ -1,3 +1,5 @@
+import type { Entry } from 'contentful'
+
 export interface ContentfulSys {
   id: string
   contentType: {
@@ -19,14 +21,7 @@ export interface RichTextDocument {
   content: RichTextNode[]
 }
 
-export interface ContentfulEntry {
-  sys: ContentfulSys
-  fields: {
-    text?: string | RichTextDocument
-    nested?: ContentfulEntry[]
-    [key: string]: unknown
-  }
-}
+export type ContentfulEntry = Entry
 
 export interface ContentfulCollectionResponse {
   items: ContentfulEntry[]
@@ -85,7 +80,7 @@ export function isContentfulEntry(value: unknown): value is ContentfulEntry {
     return false
   }
 
-  if (!hasStringId(sys)) {
+  if (!hasStringId(sys) || !('metadata' in value)) {
     return false
   }
 

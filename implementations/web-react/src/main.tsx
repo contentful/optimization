@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import { OptimizationProvider } from './optimization/OptimizationProvider'
 
 function main(): void {
   const rootElement = document.getElementById('root')
@@ -11,7 +12,9 @@ function main(): void {
 
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
-      <App />
+      <OptimizationProvider>
+        <App />
+      </OptimizationProvider>
     </React.StrictMode>,
   )
 }
