@@ -1,21 +1,14 @@
 import { type JSX, useEffect, useMemo } from 'react'
 import { useAnalytics } from '../optimization/hooks/useAnalytics'
 import { usePersonalization } from '../optimization/hooks/usePersonalization'
-import type { ContentfulEntry } from '../types/contentful'
+import { isContentfulEntry, type ContentfulEntry } from '../types/contentful'
 
 interface NestedContentItemProps {
   entry: ContentfulEntry
 }
 
 function isEntry(value: unknown): value is ContentfulEntry {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'sys' in value &&
-    typeof value.sys === 'object' &&
-    value.sys !== null &&
-    'id' in value.sys
-  )
+  return isContentfulEntry(value)
 }
 
 function renderText(contentEntry: ContentfulEntry): string {

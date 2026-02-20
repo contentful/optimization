@@ -36,39 +36,44 @@ type RequiredEnvKey =
   | 'PUBLIC_INSIGHTS_API_BASE_URL'
   | 'PUBLIC_NINETAILED_CLIENT_ID'
   | 'PUBLIC_NINETAILED_ENVIRONMENT'
-type EnvSource = ImportMetaEnv
-
-function getEnvSource(): EnvSource {
-  return import.meta.env
-}
-
-function readRequired(source: EnvSource, key: RequiredEnvKey): string {
-  const { [key]: value } = source
-
+function readRequired(key: RequiredEnvKey, value: string | undefined): string {
   if (!value || value.trim().length === 0) {
     throw new Error(`Missing required environment variable: ${key}`)
   }
 
-  return value
+  return value.trim()
 }
-
-const source = getEnvSource()
 
 export const ENV_CONFIG = {
   contentful: {
-    accessToken: readRequired(source, 'PUBLIC_CONTENTFUL_TOKEN'),
-    basePath: readRequired(source, 'PUBLIC_CONTENTFUL_BASE_PATH'),
-    environment: readRequired(source, 'PUBLIC_CONTENTFUL_ENVIRONMENT'),
-    host: readRequired(source, 'PUBLIC_CONTENTFUL_CDA_HOST'),
-    spaceId: readRequired(source, 'PUBLIC_CONTENTFUL_SPACE_ID'),
+    accessToken: readRequired('PUBLIC_CONTENTFUL_TOKEN', import.meta.env.PUBLIC_CONTENTFUL_TOKEN),
+    basePath: readRequired('PUBLIC_CONTENTFUL_BASE_PATH', import.meta.env.PUBLIC_CONTENTFUL_BASE_PATH),
+    environment: readRequired(
+      'PUBLIC_CONTENTFUL_ENVIRONMENT',
+      import.meta.env.PUBLIC_CONTENTFUL_ENVIRONMENT,
+    ),
+    host: readRequired('PUBLIC_CONTENTFUL_CDA_HOST', import.meta.env.PUBLIC_CONTENTFUL_CDA_HOST),
+    spaceId: readRequired('PUBLIC_CONTENTFUL_SPACE_ID', import.meta.env.PUBLIC_CONTENTFUL_SPACE_ID),
   },
   optimization: {
-    clientId: readRequired(source, 'PUBLIC_NINETAILED_CLIENT_ID'),
-    environment: readRequired(source, 'PUBLIC_NINETAILED_ENVIRONMENT'),
+    clientId: readRequired(
+      'PUBLIC_NINETAILED_CLIENT_ID',
+      import.meta.env.PUBLIC_NINETAILED_CLIENT_ID,
+    ),
+    environment: readRequired(
+      'PUBLIC_NINETAILED_ENVIRONMENT',
+      import.meta.env.PUBLIC_NINETAILED_ENVIRONMENT,
+    ),
   },
   api: {
-    experienceBaseUrl: readRequired(source, 'PUBLIC_EXPERIENCE_API_BASE_URL'),
-    insightsBaseUrl: readRequired(source, 'PUBLIC_INSIGHTS_API_BASE_URL'),
+    experienceBaseUrl: readRequired(
+      'PUBLIC_EXPERIENCE_API_BASE_URL',
+      import.meta.env.PUBLIC_EXPERIENCE_API_BASE_URL,
+    ),
+    insightsBaseUrl: readRequired(
+      'PUBLIC_INSIGHTS_API_BASE_URL',
+      import.meta.env.PUBLIC_INSIGHTS_API_BASE_URL,
+    ),
   },
   entries: {
     abTest: '5XHssysWUDECHzKLzoIsg1',

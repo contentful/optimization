@@ -17,6 +17,9 @@ importers:
       '@contentful/optimization-web':
         specifier: file:../../pkgs/contentful-optimization-web-0.0.0.tgz
         version: file:../../pkgs/contentful-optimization-web-0.0.0.tgz
+      contentful:
+        specifier: ^11.10.3
+        version: 11.10.3
       react:
         specifier: ^19.2.0
         version: 19.2.4

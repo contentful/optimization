@@ -68,7 +68,11 @@ export default function App(): JSX.Element {
     void fetchEntries(ENTRY_IDS)
       .then((nextEntries) => {
         setEntries(nextEntries)
-        setEntriesError(null)
+        setEntriesError(
+          nextEntries.length === 0
+            ? 'No entries were loaded. Verify mock server and Contentful env configuration.'
+            : null,
+        )
       })
       .catch((fetchError: unknown) => {
         const message =

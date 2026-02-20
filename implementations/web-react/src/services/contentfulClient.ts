@@ -17,6 +17,14 @@ function createContentfulClient(): ReturnType<typeof createClient> {
 
 const contentfulClient = createContentfulClient()
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function hasItemsArray(value: unknown): value is { items: unknown[] } {
+  return isRecord(value) && Array.isArray(value.items)
+}
+
 function toContentfulEntry(value: unknown): ContentfulEntry {
   if (!isContentfulEntry(value)) {
     throw new Error('Contentful response did not contain a valid entry shape')
@@ -27,8 +35,22 @@ function toContentfulEntry(value: unknown): ContentfulEntry {
 
 export async function fetchEntry(entryId: string): Promise<ContentfulEntry | undefined> {
   try {
-    const entry = await contentfulClient.getEntry(entryId, { include: INCLUDE_DEPTH })
-    return toContentfulEntry(entry)
+    const response: unknown = await contentfulClient.getEntries({
+      include: INCLUDE_DEPTH,
+      'sys.id': entryId,
+    })
+
+    if (!hasItemsArray(response) || response.items.length === 0) {
+      return undefined
+    }
+
+    const { items } = response
+    const [firstEntry] = items
+    if (!firstEntry) {
+      return undefined
+    }
+
+    return toContentfulEntry(firstEntry)
   } catch {
     return undefined
   }
