@@ -9,7 +9,7 @@ function createOptimizationConfig(): OptimizationConfig {
     clientId: ENV_CONFIG.optimization.clientId,
     environment: ENV_CONFIG.optimization.environment,
     logLevel: 'debug',
-    autoTrackEntryViews: false,
+    autoTrackEntryViews: true,
     app: {
       name: 'Optimization SDK - React Web Reference',
       version: '0.1.0',
@@ -33,8 +33,10 @@ export function createOptimization(): OptimizationInstance {
   }
 }
 
-const optimzationInstance = createOptimization()
+let optimizationInstance: OptimizationInstance | undefined = undefined
 
 export function getOptimization(): OptimizationInstance {
-  return optimzationInstance
+  optimizationInstance ??= createOptimization()
+
+  return optimizationInstance
 }
