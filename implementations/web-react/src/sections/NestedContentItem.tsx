@@ -1,4 +1,4 @@
-import { type JSX, useMemo } from 'react'
+import { useMemo, type JSX } from 'react'
 import { usePersonalization } from '../optimization/hooks/usePersonalization'
 import { isContentfulEntry, type ContentfulEntry } from '../types/contentful'
 
@@ -46,7 +46,9 @@ export function NestedContentItem({ entry }: NestedContentItemProps): JSX.Elemen
     [personalization],
   )
 
-  const nestedEntries = Array.isArray(resolvedEntry.fields.nested) ? resolvedEntry.fields.nested : []
+  const nestedEntries = Array.isArray(resolvedEntry.fields.nested)
+    ? resolvedEntry.fields.nested
+    : []
 
   const text = renderText(resolvedEntry)
   const fullLabel = `${text} [Entry: ${resolvedEntry.sys.id}]`

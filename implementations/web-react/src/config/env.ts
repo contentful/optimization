@@ -47,7 +47,10 @@ function readRequired(key: RequiredEnvKey, value: string | undefined): string {
 export const ENV_CONFIG = {
   contentful: {
     accessToken: readRequired('PUBLIC_CONTENTFUL_TOKEN', import.meta.env.PUBLIC_CONTENTFUL_TOKEN),
-    basePath: readRequired('PUBLIC_CONTENTFUL_BASE_PATH', import.meta.env.PUBLIC_CONTENTFUL_BASE_PATH),
+    basePath: readRequired(
+      'PUBLIC_CONTENTFUL_BASE_PATH',
+      import.meta.env.PUBLIC_CONTENTFUL_BASE_PATH,
+    ),
     environment: readRequired(
       'PUBLIC_CONTENTFUL_ENVIRONMENT',
       import.meta.env.PUBLIC_CONTENTFUL_ENVIRONMENT,

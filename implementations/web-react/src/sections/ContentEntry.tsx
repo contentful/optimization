@@ -124,7 +124,11 @@ export function ContentEntry({ entry, observation }: ContentEntryProps): JSX.Ele
         data-testid={`content-${entry.sys.id}`}
       >
         <div data-testid={`entry-text-${entry.sys.id}`} aria-label={fullLabel}>
-          {richTextField ? <RichTextRenderer richText={richTextField} /> : <p>{getEntryText(resolvedEntry)}</p>}
+          {richTextField ? (
+            <RichTextRenderer richText={richTextField} />
+          ) : (
+            <p>{getEntryText(resolvedEntry)}</p>
+          )}
           <p>{`[Entry: ${entry.sys.id}]`}</p>
         </div>
       </div>

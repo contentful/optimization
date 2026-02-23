@@ -1,12 +1,17 @@
 # Web React Reference Implementation
 
-Reference implementation demonstrating `@contentful/optimization-web` usage in a React web application.
+Reference implementation demonstrating `@contentful/optimization-web` usage in a React web
+application.
 
-> **Note:** This implementation uses [Rsbuild](https://rsbuild.dev/) for consistency with the SDK build tooling. If you're creating your own React application, you can use any build tool you prefer (Vite, Create React App, Next.js, etc.) — the SDK integration patterns demonstrated here will work the same way.
+> **Note:** This implementation uses [Rsbuild](https://rsbuild.dev/) for consistency with the SDK
+> build tooling. If you're creating your own React application, you can use any build tool you
+> prefer (Vite, Create React App, Next.js, etc.) — the SDK integration patterns demonstrated here
+> will work the same way.
 
 ## Overview
 
-This implementation provides a thin React adapter layer over `@contentful/optimization-web`, demonstrating:
+This implementation provides a thin React adapter layer over `@contentful/optimization-web`,
+demonstrating:
 
 - `OptimizationProvider` context for SDK state management
 - React hooks for SDK state subscriptions
@@ -108,7 +113,8 @@ web-react/
 
 ## SDK Integration Patterns
 
-This implementation demonstrates how to build a React adapter for `@contentful/optimization-web`. Key patterns include:
+This implementation demonstrates how to build a React adapter for `@contentful/optimization-web`.
+Key patterns include:
 
 ### Provider Setup
 

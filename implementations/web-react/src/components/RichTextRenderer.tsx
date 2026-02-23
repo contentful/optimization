@@ -75,7 +75,9 @@ function renderRichTextNode(
   if (node.nodeType === 'paragraph' && Array.isArray(node.content)) {
     return (
       <p key={key}>
-        {node.content.map((child, index) => renderRichTextNode(child, getMergeTagValue, `${key}-p-${index}`))}
+        {node.content.map((child, index) =>
+          renderRichTextNode(child, getMergeTagValue, `${key}-p-${index}`),
+        )}
       </p>
     )
   }

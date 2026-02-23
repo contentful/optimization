@@ -11,7 +11,9 @@ test.describe('identified user', () => {
   })
 
   test('renders identified variants', async ({ page }) => {
-    await expect(page.getByText('This is a variant content entry for identified users.')).toBeVisible()
+    await expect(
+      page.getByText('This is a variant content entry for identified users.'),
+    ).toBeVisible()
     await expect(page.getByText('This is a level 0 nested variant entry.')).toBeVisible()
   })
 })
