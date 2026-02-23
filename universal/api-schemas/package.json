@@ -28,7 +28,7 @@
     "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
     "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist",
     "clean": "rimraf ./.rslib ./dist .tsbuildinfo",
-    "test:unit": "echo \"No unit tests necessary\"",
+    "test:unit": "rstest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -40,6 +40,7 @@
     "build-tools": "workspace:*",
     "@microsoft/api-extractor": "catalog:",
     "@rslib/core": "catalog:",
+    "@rstest/core": "catalog:",
     "@types/node": "catalog:",
     "rimraf": "catalog:",
     "tslib": "catalog:",

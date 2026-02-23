@@ -6,6 +6,7 @@ import {
   type OptimizationData,
   type PageViewBuilderArgs,
   PageViewEvent,
+  parse,
   type PartialProfile,
   type ExperienceEvent as PersonalizationEvent,
   type ScreenViewBuilderArgs,
@@ -44,7 +45,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = IdentifyEvent.parse(this.builder.buildIdentify(builderArgs))
+    const event = parse(IdentifyEvent, this.builder.buildIdentify(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -62,7 +63,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = PageViewEvent.parse(this.builder.buildPageView(builderArgs))
+    const event = parse(PageViewEvent, this.builder.buildPageView(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -80,7 +81,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = ScreenViewEvent.parse(this.builder.buildScreenView(builderArgs))
+    const event = parse(ScreenViewEvent, this.builder.buildScreenView(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -96,7 +97,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = TrackEvent.parse(this.builder.buildTrack(builderArgs))
+    const event = parse(TrackEvent, this.builder.buildTrack(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -114,7 +115,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = ComponentViewEvent.parse(this.builder.buildComponentView(builderArgs))
+    const event = parse(ComponentViewEvent, this.builder.buildComponentView(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }

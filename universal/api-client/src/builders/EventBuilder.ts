@@ -9,6 +9,7 @@ import {
   Page,
   PageEventContext,
   type PageViewEvent,
+  parse,
   Properties,
   Screen,
   ScreenEventContext,
@@ -358,8 +359,10 @@ class EventBuilder {
    * ```
    */
   buildComponentView(args: ComponentViewBuilderArgs): ComponentViewEvent {
-    const { componentId, experienceId, variantIndex, ...universal } =
-      ComponentViewBuilderArgs.parse(args)
+    const { componentId, experienceId, variantIndex, ...universal } = parse(
+      ComponentViewBuilderArgs,
+      args,
+    )
 
     return {
       ...this.buildUniversalEventProperties(universal),
@@ -420,7 +423,7 @@ class EventBuilder {
    * ```
    */
   buildIdentify(args: IdentifyBuilderArgs): IdentifyEvent {
-    const { traits = {}, userId, ...universal } = IdentifyBuilderArgs.parse(args)
+    const { traits = {}, userId, ...universal } = parse(IdentifyBuilderArgs, args)
 
     return {
       ...this.buildUniversalEventProperties(universal),
@@ -455,7 +458,7 @@ class EventBuilder {
    * ```
    */
   buildPageView(args: PageViewBuilderArgs = {}): PageViewEvent {
-    const { properties = {}, ...universal } = PageViewBuilderArgs.parse(args)
+    const { properties = {}, ...universal } = parse(PageViewBuilderArgs, args)
 
     const pageProperties = this.getPageProperties()
 
@@ -472,7 +475,7 @@ class EventBuilder {
       ...universalProperties
     } = this.buildUniversalEventProperties(universal)
 
-    const context = PageEventContext.parse(universalContext)
+    const context = parse(PageEventContext, universalContext)
 
     return {
       ...universalProperties,
@@ -501,14 +504,14 @@ class EventBuilder {
    * ```
    */
   buildScreenView(args: ScreenViewBuilderArgs): ScreenViewEvent {
-    const { name, properties, ...universal } = ScreenViewBuilderArgs.parse(args)
+    const { name, properties, ...universal } = parse(ScreenViewBuilderArgs, args)
 
     const {
       context: { page: _, ...universalContext },
       ...universalProperties
     } = this.buildUniversalEventProperties(universal)
 
-    const context = ScreenEventContext.parse(universalContext)
+    const context = parse(ScreenEventContext, universalContext)
 
     return {
       ...universalProperties,
@@ -536,7 +539,7 @@ class EventBuilder {
    * ```
    */
   buildTrack(args: TrackBuilderArgs): TrackEvent {
-    const { event, properties = {}, ...universal } = TrackBuilderArgs.parse(args)
+    const { event, properties = {}, ...universal } = parse(TrackBuilderArgs, args)
 
     return {
       ...this.buildUniversalEventProperties(universal),
