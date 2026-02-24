@@ -4,13 +4,12 @@ export type OptimizationInstance = Optimization
 export type OptimizationConfig = ConstructorParameters<typeof Optimization>[0]
 
 const OPTIMIZATION_CLIENT_ID =
-  import.meta.env.PUBLIC_NINETAILED_CLIENT_ID?.trim() || 'mock-client-id'
-const OPTIMIZATION_ENVIRONMENT =
-  import.meta.env.PUBLIC_NINETAILED_ENVIRONMENT?.trim() || 'main'
+  import.meta.env.PUBLIC_NINETAILED_CLIENT_ID?.trim() ?? 'mock-client-id'
+const OPTIMIZATION_ENVIRONMENT = import.meta.env.PUBLIC_NINETAILED_ENVIRONMENT?.trim() ?? 'main'
 const EXPERIENCE_API_BASE_URL =
-  import.meta.env.PUBLIC_EXPERIENCE_API_BASE_URL?.trim() || 'http://localhost:8000/experience/'
+  import.meta.env.PUBLIC_EXPERIENCE_API_BASE_URL?.trim() ?? 'http://localhost:8000/experience/'
 const INSIGHTS_API_BASE_URL =
-  import.meta.env.PUBLIC_INSIGHTS_API_BASE_URL?.trim() || 'http://localhost:8000/insights/'
+  import.meta.env.PUBLIC_INSIGHTS_API_BASE_URL?.trim() ?? 'http://localhost:8000/insights/'
 
 function createOptimizationConfig(): OptimizationConfig {
   return {

@@ -6,6 +6,6 @@ export interface ContentEntryFields {
   nested?: EntryFieldTypes.Array<EntryFieldTypes.EntryLink<ContentEntrySkeleton>>
 }
 
-export type ContentEntrySkeleton = EntrySkeletonType<ContentEntryFields, string>
+export type ContentEntrySkeleton = EntrySkeletonType<ContentEntryFields>
 export type ContentfulEntry = Entry<ContentEntrySkeleton>
 export type RichTextDocument = Document

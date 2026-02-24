@@ -89,11 +89,10 @@ Copy `.env.example` to `.env` and configure:
 cp .env.example .env
 ```
 
-See `.env.example` for available configuration options.
-The implementation reads from `import.meta.env` directly and falls back to local mock-safe defaults,
-so it can run without extra env wiring.
-To use local mock Contentful endpoints, set `PUBLIC_CONTENTFUL_CDA_HOST=localhost:8000` and
-`PUBLIC_CONTENTFUL_BASE_PATH=contentful`.
+See `.env.example` for available configuration options. The implementation reads from
+`import.meta.env` directly and falls back to local mock-safe defaults, so it can run without extra
+env wiring. To use local mock Contentful endpoints, set `PUBLIC_CONTENTFUL_CDA_HOST=localhost:8000`
+and `PUBLIC_CONTENTFUL_BASE_PATH=contentful`.
 
 ## Project Structure
 

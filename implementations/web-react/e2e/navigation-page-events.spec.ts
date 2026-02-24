@@ -26,8 +26,6 @@ test.describe('navigation page events', () => {
     await expect(page).toHaveURL(/\/$/)
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
 
-    await expect
-      .poll(async () => await pageEventLocator.count())
-      .toBeGreaterThan(afterPageTwoCount)
+    await expect.poll(async () => await pageEventLocator.count()).toBeGreaterThan(afterPageTwoCount)
   })
 })

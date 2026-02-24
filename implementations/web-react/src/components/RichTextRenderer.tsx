@@ -1,9 +1,9 @@
-import type { JSX } from 'react'
 import { documentToReactComponents, type Options } from '@contentful/rich-text-react-renderer'
 import { INLINES } from '@contentful/rich-text-types'
+import type { JSX } from 'react'
 import {
-  type UsePersonalizationResult,
   usePersonalization,
+  type UsePersonalizationResult,
 } from '../optimization/hooks/usePersonalization'
 import type { RichTextDocument } from '../types/contentful'
 
@@ -20,6 +20,7 @@ interface RichTextRendererProps {
 
 type MergeTagValueResolver = UsePersonalizationResult['getMergeTagValue']
 type MergeTagEntry = Parameters<MergeTagValueResolver>[0]
+const EMBEDDED_ENTRY_NODE_TYPE = 'embedded-entry-inline'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -64,7 +65,11 @@ function extractTextContent(node: RichTextNode, getMergeTagValue: MergeTagValueR
     return node.value
   }
 
-  if (node.nodeType === INLINES.EMBEDDED_ENTRY && isRecord(node.data) && 'target' in node.data) {
+  if (
+    node.nodeType === EMBEDDED_ENTRY_NODE_TYPE &&
+    isRecord(node.data) &&
+    'target' in node.data
+  ) {
     return getMergeTagText(node.data.target, getMergeTagValue)
   }
 
