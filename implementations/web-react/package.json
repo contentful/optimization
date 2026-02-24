@@ -16,7 +16,7 @@
     "serve:mocks": "pm2 start --name web-react-mocks \"pnpm --dir ../../lib/mocks serve\"",
     "serve:mocks:stop": "pm2 stop web-react-mocks && pm2 delete web-react-mocks",
     "serve:stop": "pnpm serve:mocks:stop",
-    "test:e2e": "pnpm serve && playwright test; E2E_RESULT=$?; pnpm serve:stop; exit $E2E_RESULT",
+    "test:e2e": "playwright test",
     "test:e2e:codegen": "playwright codegen",
     "test:e2e:report": "playwright show-report",
     "test:e2e:ui": "playwright test --ui",
@@ -24,6 +24,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@contentful/rich-text-react-renderer": "^16.1.6",
+    "@contentful/rich-text-types": "^17.2.5",
     "@contentful/optimization-web": "0.0.0",
     "contentful": "^11.10.3",
     "react": "^19.2.0",

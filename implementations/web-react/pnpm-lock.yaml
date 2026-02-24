@@ -17,6 +17,12 @@ importers:
       '@contentful/optimization-web':
         specifier: file:../../pkgs/contentful-optimization-web-0.0.0.tgz
         version: file:../../pkgs/contentful-optimization-web-0.0.0.tgz
+      '@contentful/rich-text-react-renderer':
+        specifier: ^16.1.6
+        version: 16.1.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@contentful/rich-text-types':
+        specifier: ^17.2.5
+        version: 17.2.5
       contentful:
         specifier: ^11.10.3
         version: 11.10.3
@@ -63,6 +69,10 @@ importers:
 
 packages:
 
+  '@babel/runtime@7.28.6':
+    resolution: {integrity: sha512-05WQkdpL9COIMz4LjTxGpPNCdlpyimKppYNoJ5Di5EUObifl8t4tuLuUBBZEpoLYOmfvIWrsp9fCl0HoPRVTdA==}
+    engines: {node: '>=6.9.0'}
+
   '@contentful/content-source-maps@0.11.44':
     resolution: {integrity: sha512-tu1gfmZI59hQ7qKhmGOV0dA5brxhsc+LOfPwBsQQMDAVy5kVpTrKf/AGlL2y9QhKHu/NtCrwX/ZrmRFgtGEtIA==}
 
@@ -82,8 +92,19 @@ packages:
     resolution: {integrity: sha512-1NqMKcimmkauJGGtb9dMqUFWK/nOM9+5xApvxeQzk815NqM32aroFbotzFnItNtJPkleWq00KELMDzxfnwHcdQ==, tarball: file:../../pkgs/contentful-optimization-web-0.0.0.tgz}
     version: 0.0.0
 
+  '@contentful/rich-text-react-renderer@16.1.6':
+    resolution: {integrity: sha512-Pt0KfEnB7UP53gUKupUZjsUCHR7CiDbVyMdMmuyzYT6lNvjR7+KKYWP9eU2TOfVaXy7PxF1XEpBjSALDOHUNKQ==}
+    engines: {node: '>=6.0.0'}
+    peerDependencies:
+      react: ^16.8.6 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.6 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
   '@contentful/rich-text-types@16.8.5':
     resolution: {integrity: sha512-q18RJuJCOuYveGiCIjE5xLCQc5lZ3L2Qgxrlg/H2YEobDFqdtmklazRi1XwEWaK3tMg6yVXBzKKkQfLB4qW14A==}
+    engines: {node: '>=6.0.0'}
+
+  '@contentful/rich-text-types@17.2.5':
+    resolution: {integrity: sha512-EA5vTfROZePoPmSlqLVd+luL/ev8CjnI20y6vWFVPlLRxQbv4XytXRzatydPE63CqfsPylF7NCn2z8rTLhnWfg==}
     engines: {node: '>=6.0.0'}
 
   '@emnapi/core@1.8.1':
@@ -98,6 +119,25 @@ packages:
   '@isaacs/cliui@9.0.0':
     resolution: {integrity: sha512-AokJm4tuBHillT+FpMtxQ60n8ObyXBatq7jD2/JA9dxbDDokKQm8KMht5ibGzLVU9IJDIKK4TPKgMHEYMn3lMg==}
     engines: {node: '>=18'}
+
+  '@lingui/core@5.9.1':
+    resolution: {integrity: sha512-gnrh3YMo3yGI7NrYvVL5vtIap2fPahl2OAR0P9Fl/eW6GFPUGhhjIcxqxAg48/Nd4lTAzBCGwPCP+u2DzAIzEA==}
+    engines: {node: '>=20.0.0'}
+    peerDependencies:
+      '@lingui/babel-plugin-lingui-macro': 5.9.1
+      babel-plugin-macros: 2 || 3
+    peerDependenciesMeta:
+      '@lingui/babel-plugin-lingui-macro':
+        optional: true
+      babel-plugin-macros:
+        optional: true
+
+  '@lingui/message-utils@5.9.1':
+    resolution: {integrity: sha512-2hj2PqHQU7hI+2+JiViOPmeTmms/8Xl1i/AWd59hwaf+lbqDFKc8CmeZNeAvrM+D7FeYgX1/mDoQvWAkLZNYjQ==}
+    engines: {node: '>=20.0.0'}
+
+  '@messageformat/parser@5.1.1':
+    resolution: {integrity: sha512-3p0YRGCcTUCYvBKLIxtDDyrJ0YijGIwrTRu1DT8gIviIDZru8H23+FkY6MJBzM1n9n20CiM4VeDYuBsrrwnLjg==}
 
   '@module-federation/error-codes@0.22.0':
     resolution: {integrity: sha512-xF9SjnEy7vTdx+xekjPCV5cIHOGCkdn3pIxo9vU7gEZMIw0SvAEdsy6Uh17xaCpm8V0FWvR0SZoK9Ik6jGOaug==}
@@ -151,7 +191,6 @@ packages:
     resolution: {integrity: sha512-ABca4ceT4N+Tv/GtotnWAeXZUZuM/9AQyCyKYyKnpk4yoA7QIAuBt6Hkgpw8kActYlew2mvckXkvx0FfoInnLg==}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   '@rsbuild/core@1.7.3':
     resolution: {integrity: sha512-kI1oQvCXbQYxUvQPnDLdjSX4gFsbrFNpuUj6jXEJ7IcJ74Q+n4oeFj74/8tKerhxhe0L90m/ZQfzLeN5ORGA9w==}
@@ -177,25 +216,21 @@ packages:
     resolution: {integrity: sha512-eQfcsaxhFrv5FmtaA7+O1F9/2yFDNIoPZzV/ZvqvFz5bBXVc4FAm/1fVpBg8Po/kX1h0chBc7Xkpry3cabFW8w==}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   '@rspack/binding-linux-arm64-musl@1.7.6':
     resolution: {integrity: sha512-DfQXKiyPIl7i1yECHy4eAkSmlUzzsSAbOjgMuKn7pudsWf483jg0UUYutNgXSlBjc/QSUp7906Cg8oty9OfwPA==}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   '@rspack/binding-linux-x64-gnu@1.7.6':
     resolution: {integrity: sha512-NdA+2X3lk2GGrMMnTGyYTzM3pn+zNjaqXqlgKmFBXvjfZqzSsKq3pdD1KHZCd5QHN+Fwvoszj0JFsquEVhE1og==}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   '@rspack/binding-linux-x64-musl@1.7.6':
     resolution: {integrity: sha512-rEy6MHKob02t/77YNgr6dREyJ0e0tv1X6Xsg8Z5E7rPXead06zefUbfazj4RELYySWnM38ovZyJAkPx/gOn3VA==}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   '@rspack/binding-wasm32-wasi@1.7.6':
     resolution: {integrity: sha512-YupOrz0daSG+YBbCIgpDgzfMM38YpChv+afZpaxx5Ml7xPeAZIIdgWmLHnQ2rts73N2M1NspAiBwV00Xx0N4Vg==}
@@ -656,6 +691,10 @@ packages:
     resolution: {integrity: sha512-41Cifkg6e8TylSpdtTpeLVMqvSBEVzTttHvERD741+pnZ8ANv0004MRL43QKPDlK9cGvNp6NZWZUBlbGXYxxng==}
     engines: {node: '>=0.12.0'}
 
+  is-plain-obj@3.0.0:
+    resolution: {integrity: sha512-gwsOE28k+23GP1B6vFl1oVh/WOzmawBrKwo5Ev6wMKzPkaXaCDIQKzLnvsA42DRlbVTWorkgTKIviAKCWkfUwA==}
+    engines: {node: '>=10'}
+
   jackspeak@4.2.3:
     resolution: {integrity: sha512-ykkVRwrYvFm1nb2AJfKKYPr0emF6IiXDYUaFx4Zn9ZuIH7MrzEZ3sD5RlqGXNRpHtvUHJyOnCEFxOlNDtGo7wg==}
     engines: {node: 20 || >=22}
@@ -670,6 +709,9 @@ packages:
 
   js-git@0.7.8:
     resolution: {integrity: sha512-+E5ZH/HeRnoc/LW0AmAyhU+mNcWBzAKE+30+IDMLSLbbK+Tdt02AdkOKq9u15rlJsDEGFqtgckc8ZM59LhhiUA==}
+
+  js-sha256@0.10.1:
+    resolution: {integrity: sha512-5obBtsz9301ULlsgggLg542s/jqtddfOpV5KJc4hajc9JV8GeY2gZHSVpYBn4nWqAUTJ9v+xwtbJ1mIBgIH5Vw==}
 
   js-yaml@4.1.1:
     resolution: {integrity: sha512-qQKT4zQxXl8lLwBtHMWwaTcGfFOZviOJet3Oy/xmGk2gZH677CJM9EvtfdSkgWcATZhj/55JZ0rmy3myCT5lsA==}
@@ -723,6 +765,9 @@ packages:
 
   module-details-from-path@1.0.4:
     resolution: {integrity: sha512-EGWKgxALGMgzvxYF1UyGTy0HXX/2vHLkw6+NvDKW2jypWbHpjQuj4UMcqQWXHERJhVGKikolT06G3bcKe4fi7w==}
+
+  moo@0.5.2:
+    resolution: {integrity: sha512-iSAJLHYKnX41mKcJKjqvnAN9sf0LMDTXDEvFv+ffuRR9a1MIuXLjMNL6EsnDHSkKLTWNqQQ5uo61P4EbU4NU+Q==}
 
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
@@ -1038,6 +1083,8 @@ packages:
 
 snapshots:
 
+  '@babel/runtime@7.28.6': {}
+
   '@contentful/content-source-maps@0.11.44':
     dependencies:
       '@vercel/stega': 0.1.2
@@ -1082,7 +1129,24 @@ snapshots:
     transitivePeerDependencies:
       - debug
 
+  '@contentful/rich-text-react-renderer@16.1.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
+    dependencies:
+      '@contentful/rich-text-types': 17.2.5
+      react: 19.2.4
+      react-dom: 19.2.4(react@19.2.4)
+    transitivePeerDependencies:
+      - '@lingui/babel-plugin-lingui-macro'
+      - babel-plugin-macros
+
   '@contentful/rich-text-types@16.8.5': {}
+
+  '@contentful/rich-text-types@17.2.5':
+    dependencies:
+      '@lingui/core': 5.9.1
+      is-plain-obj: 3.0.0
+    transitivePeerDependencies:
+      - '@lingui/babel-plugin-lingui-macro'
+      - babel-plugin-macros
 
   '@emnapi/core@1.8.1':
     dependencies:
@@ -1101,6 +1165,20 @@ snapshots:
     optional: true
 
   '@isaacs/cliui@9.0.0': {}
+
+  '@lingui/core@5.9.1':
+    dependencies:
+      '@babel/runtime': 7.28.6
+      '@lingui/message-utils': 5.9.1
+
+  '@lingui/message-utils@5.9.1':
+    dependencies:
+      '@messageformat/parser': 5.1.1
+      js-sha256: 0.10.1
+
+  '@messageformat/parser@5.1.1':
+    dependencies:
+      moo: 0.5.2
 
   '@module-federation/error-codes@0.22.0': {}
 
@@ -1662,6 +1740,8 @@ snapshots:
 
   is-number@7.0.0: {}
 
+  is-plain-obj@3.0.0: {}
+
   jackspeak@4.2.3:
     dependencies:
       '@isaacs/cliui': 9.0.0
@@ -1676,6 +1756,8 @@ snapshots:
       culvert: 0.1.2
       git-sha1: 0.1.2
       pako: 0.2.9
+
+  js-sha256@0.10.1: {}
 
   js-yaml@4.1.1:
     dependencies:
@@ -1714,6 +1796,8 @@ snapshots:
   mkdirp@1.0.4: {}
 
   module-details-from-path@1.0.4: {}
+
+  moo@0.5.2: {}
 
   ms@2.1.3: {}
 
