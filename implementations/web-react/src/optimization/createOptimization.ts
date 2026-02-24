@@ -45,8 +45,7 @@ export function createOptimization(): OptimizationInstance {
     const config = createOptimizationConfig()
     return new Optimization(config)
   } catch (error) {
-    const message = error instanceof 
-      Error ? error.message : 'Unknown Optimization init error'
+    const message = error instanceof Error ? error.message : 'Unknown Optimization init error'
     throw new OptimizationInitializationError(
       `Failed to initialize Optimization SDK: ${message}`,
       error,
