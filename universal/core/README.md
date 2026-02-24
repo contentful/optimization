@@ -49,6 +49,7 @@ other SDKs descend from the Core SDK.
 - [Stateful-only Core Methods](#stateful-only-core-methods)
   - [`consent`](#consent)
   - [`reset`](#reset)
+  - [`registerPreviewPanel` (preview tooling only)](#registerpreviewpanel-preview-tooling-only)
 - [Stateful-only Core Properties](#stateful-only-core-properties)
 - [Interceptors](#interceptors)
   - [Life-cycle Interceptors](#life-cycle-interceptors)
@@ -100,6 +101,11 @@ In stateful environments, Core maintains state internally for consent, an event 
 profile-related data that is commonly obtained from requests to the Experience API. These states are
 exposed externally as read-only observables.
 
+> [!IMPORTANT]
+>
+> `CoreStateful` uses module-global state by design. Initialize exactly one stateful instance per
+> JavaScript runtime and reuse it.
+
 ## Configuration
 
 ### Top-level Configuration Options
@@ -116,16 +122,17 @@ exposed externally as read-only observables.
 
 The following configuration options apply only in stateful environments:
 
-| Option                     | Required? | Default                | Description                                                       |
-| -------------------------- | --------- | ---------------------- | ----------------------------------------------------------------- |
-| `allowedEventTypes`        | No        | `['identify', 'page']` | Allow-listed event types permitted when consent is not set        |
-| `defaults`                 | No        | `undefined`            | Set of default state values applied on initialization             |
-| `getAnonymousId`           | No        | `undefined`            | Function used to obtain an anonymous user identifier              |
-| `preventedComponentEvents` | No        | `undefined`            | Initial duplication prevention configuration for component events |
+| Option              | Required? | Default                | Description                                                |
+| ------------------- | --------- | ---------------------- | ---------------------------------------------------------- |
+| `allowedEventTypes` | No        | `['identify', 'page']` | Allow-listed event types permitted when consent is not set |
+| `defaults`          | No        | `undefined`            | Set of default state values applied on initialization      |
+| `getAnonymousId`    | No        | `undefined`            | Function used to obtain an anonymous user identifier       |
+| `onEventBlocked`    | No        | `undefined`            | Callback invoked when an event call is blocked by guards   |
 
 Configuration method signatures:
 
 - `getAnonymousId`: `() => string | undefined`
+- `onEventBlocked`: `(event: BlockedEvent) => void`
 
 ### Analytics Options
 
@@ -135,13 +142,49 @@ Configuration method signatures:
 
 The following configuration options apply only in stateful environments:
 
-| Option          | Required? | Default     | Description                                                              |
-| --------------- | --------- | ----------- | ------------------------------------------------------------------------ |
-| `beaconHandler` | No        | `undefined` | Handler used to enqueue events via the Beacon API or a similar mechanism |
+| Option          | Required? | Default               | Description                                                              |
+| --------------- | --------- | --------------------- | ------------------------------------------------------------------------ |
+| `beaconHandler` | No        | `undefined`           | Handler used to enqueue events via the Beacon API or a similar mechanism |
+| `queuePolicy`   | No        | See method signatures | Queue flush retry/backoff/circuit policy for stateful analytics          |
 
 Configuration method signatures:
 
 - `beaconHandler`: `(url: string | URL, data: BatchInsightsEventArray) => boolean`
+- `queuePolicy`:
+
+  ```ts
+  {
+    baseBackoffMs?: number,
+    maxBackoffMs?: number,
+    jitterRatio?: number,
+    maxConsecutiveFailures?: number,
+    circuitOpenMs?: number,
+    onFlushFailure?: (context: QueueFlushFailureContext) => void,
+    onCircuitOpen?: (context: QueueFlushFailureContext) => void,
+    onFlushRecovered?: (context: QueueFlushRecoveredContext) => void
+  }
+  ```
+
+  Supporting callback payloads:
+
+  ```ts
+  type QueueFlushFailureContext = {
+    consecutiveFailures: number
+    queuedBatches: number
+    queuedEvents: number
+    retryDelayMs: number
+  }
+
+  type QueueFlushRecoveredContext = {
+    consecutiveFailures: number
+  }
+  ```
+
+  Notes:
+  - Invalid numeric values fall back to defaults.
+  - `jitterRatio` is clamped to `[0, 1]`.
+  - `maxBackoffMs` is normalized to be at least `baseBackoffMs`.
+  - Failed flush attempts include both `false` responses and thrown send errors.
 
 ### Event Builder Options
 
@@ -207,6 +250,13 @@ Configuration method signatures:
 - `fetchMethod`: `(url: string | URL, init: RequestInit) => Promise<Response>`
 - `onFailedAttempt` and `onRequestTimeout`: `(options: FetchMethodCallbackOptions) => void`
 
+> [!NOTE]
+>
+> Core inherits the API Client retry contract: default retries intentionally apply only to HTTP
+> `503` responses (`Service Unavailable`). This is deliberate and aligned with current Experience
+> and Insights API expectations; do not broaden retry status handling without an explicit API
+> contract change.
+
 ### Personalization Options
 
 | Option            | Required? | Default                               | Description                                                         |
@@ -217,6 +267,61 @@ Configuration method signatures:
 | `locale`          | No        | `'en-US'` (in API)                    | Locale used to translate `location.city` and `location.country`     |
 | `plainText`       | No        | `false`                               | Sends performance-critical endpoints in plain text                  |
 | `preflight`       | No        | `false`                               | Instructs the API to aggregate a new profile state but not store it |
+
+The following configuration options apply only in stateful environments:
+
+| Option        | Required? | Default               | Description                                                                 |
+| ------------- | --------- | --------------------- | --------------------------------------------------------------------------- |
+| `queuePolicy` | No        | See method signatures | Queue and flush-retry policy for stateful personalization offline buffering |
+
+Configuration method signatures:
+
+- `queuePolicy`:
+
+  ```ts
+  {
+    maxEvents?: number,
+    onDrop?: (context: PersonalizationOfflineQueueDropContext) => void,
+    flushPolicy?: {
+      baseBackoffMs?: number,
+      maxBackoffMs?: number,
+      jitterRatio?: number,
+      maxConsecutiveFailures?: number,
+      circuitOpenMs?: number,
+      onFlushFailure?: (context: QueueFlushFailureContext) => void,
+      onCircuitOpen?: (context: QueueFlushFailureContext) => void,
+      onFlushRecovered?: (context: QueueFlushRecoveredContext) => void
+    }
+  }
+  ```
+
+  Supporting callback payloads:
+
+  ```ts
+  type PersonalizationOfflineQueueDropContext = {
+    droppedCount: number
+    droppedEvents: ExperienceEventArray
+    maxEvents: number
+    queuedEvents: number
+  }
+
+  type QueueFlushFailureContext = {
+    consecutiveFailures: number
+    queuedBatches: number
+    queuedEvents: number
+    retryDelayMs: number
+  }
+
+  type QueueFlushRecoveredContext = {
+    consecutiveFailures: number
+  }
+  ```
+
+  Notes:
+  - Default `maxEvents` is `100`.
+  - If the queue is full while offline, oldest events are dropped first.
+  - `onDrop` is best-effort; callback errors are swallowed.
+  - `flushPolicy` uses the same normalization semantics as `analytics.queuePolicy`.
 
 ## Core Methods
 
@@ -334,8 +439,6 @@ Arguments:
 
 - `payload`\*: Component view event builder arguments object, including an optional `profile`
   property with a `PartialProfile` value that requires only an `id`
-- `duplicationScope`: Arbitrary string that may be used to scope component view duplication; used in
-  Stateful implementations
 
 #### `trackFlagView`
 
@@ -346,8 +449,6 @@ Arguments:
 
 - `payload`\*: Component view event builder arguments object, including an optional `profile`
   property with a `PartialProfile` value that requires only an `id`
-- `duplicationScope`: Arbitrary string that may be used to scope component view duplication; used in
-  Stateful implementations
 
 ## Stateful-only Core Methods
 
@@ -364,17 +465,39 @@ Arguments:
 
 Resets all internal state _except_ consent. This method expects no arguments and returns no value.
 
+### `registerPreviewPanel` (preview tooling only)
+
+Registers a preview consumer object and exposes internal signal references used by first-party
+preview tooling.
+
+Arguments:
+
+- `previewPanel`: Optional object that receives `signals` and `signalFns` references
+
+Returns:
+
+- An object containing `signals` and `signalFns`
+
+> [!IMPORTANT]
+>
+> This method intentionally exposes mutable internal signals for preview tooling. The Web and React
+> Native preview panels are tightly coupled by design and rely on this bridge (plus state
+> interceptors) to apply immediate local overrides without network round-trips. This coupling is
+> deliberate and necessary for preview functionality.
+
 ## Stateful-only Core Properties
 
 - `states`: Returns an object mapping of observables for all internal states
   - `consent`: The current state of user consent
+  - `blockedEventStream`: The latest blocked event payload
   - `eventStream`: The latest event to be queued
   - `flags`: All current resolved Custom Flags
   - `profile`: The current user profile
   - `personalizations`: The current collection of selected personalizations
 
-Each state except `consent` and `eventStream` is updated internally whenever a response from the
-Experience API contains a new or updated respective state.
+The `blockedEventStream` state is updated whenever a call is blocked by consent guards. Each state
+except `consent`, `eventStream`, and `blockedEventStream` is updated internally whenever a response
+from the Experience API contains a new or updated respective state.
 
 Example `states` observable usage:
 

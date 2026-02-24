@@ -35,6 +35,7 @@ It also explains what to do in case you want to set up the project locally and r
 - [Code Style](#code-style)
 - [Documentation](#documentation)
 - [Troubleshooting CI Issues](#troubleshooting-ci-issues)
+  - [E2E Coverage and Environment](#e2e-coverage-and-environment)
   - [License Check Failure](#license-check-failure)
 
 <!-- mtoc-end -->
@@ -169,13 +170,46 @@ automatically with each new version.
 
 ## Troubleshooting CI Issues
 
+### E2E Coverage and Environment
+
+`Main Pipeline` runs implementation E2E jobs when path filters request them for both:
+
+- pull requests
+- pushes to `main`
+
+This is an intentional CI policy:
+
+- E2E execution is path-filtered to reduce CI runtime and cost.
+- CI E2E runs against local mock services via checked-in `.env.example` values to keep runs
+  deterministic and stable.
+- Production/live-server E2E is a manual verification step when needed; it is intentionally not part
+  of default CI.
+
+This mapping is deliberate and authoritative:
+
+| E2E job                    | Path filter scope (plus shared SDK paths)                                 |
+| -------------------------- | ------------------------------------------------------------------------- |
+| `e2e_node_ssr_only`        | `implementations/node-ssr-only/**`                                        |
+| `e2e_node_ssr_web_vanilla` | `implementations/node-ssr-web-vanilla/**`                                 |
+| `e2e_web`                  | `implementations/web-vanilla/**`                                          |
+| `e2e_react_native_android` | `implementations/react-native/**`, `platforms/javascript/react-native/**` |
+
+Skipping an implementation E2E job because its filter did not match is expected behavior, not a CI
+coverage defect.
+
+If a change should trigger an implementation E2E job but does not match the current filters, update
+the path filters in `.github/workflows/main-pipeline.yaml` in the same pull request.
+
+E2E setup does not depend on repository secrets. Each implementation creates `.env` from its own
+checked-in `.env.example` file in CI, which keeps fork PR behavior aligned with internal PRs.
+
 ### License Check Failure
 
-Run `licence-check` locally:
+Run `license-checker` locally:
 
 ```sh
-pnpx license-check --summary
-pnpx license-check > licenses.txt
+pnpx license-checker --summary
+pnpx license-checker > licenses.txt
 ```
 
 If the license for a package merely has a spelling or formatting difference from an existing entry

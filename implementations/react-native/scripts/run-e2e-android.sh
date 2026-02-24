@@ -3,7 +3,7 @@
 # run-e2e-android.sh - One-shot Android E2E Test Runner
 #
 # This script orchestrates the complete Android E2E testing workflow by:
-#   1. Creating a .env file with mock server configuration
+#   1. Creating a .env file from .env.example
 #   2. Starting the mock API server (from lib/mocks)
 #   3. Starting the Metro bundler for React Native
 #   4. Setting up adb reverse port forwarding so the emulator can reach localhost
@@ -20,8 +20,7 @@
 #   DISABLE_EMULATOR_ANIMATIONS - Set to "false" to keep animation scales unchanged (default: true)
 #   STREAM_BACKGROUND_LOGS - Set to "true" to stream mock/Metro logs to stdout (default: false)
 #   CI                - Set to "true" when running in CI environment (default: false)
-#   PUBLIC_NINETAILED_CLIENT_ID    - Ninetailed client ID (default: test-client-id)
-#   PUBLIC_NINETAILED_ENVIRONMENT  - Ninetailed environment (default: main)
+#   PUBLIC_*           - Optional overrides for values loaded from .env.example
 #
 # Usage:
 #   ./scripts/run-e2e-android.sh              # Full run with build
@@ -306,21 +305,43 @@ wait_for_metro_ready() {
     return 1
 }
 
+append_env_override() {
+    local key="$1"
+    local value="${2:-}"
+
+    if [[ -z "$value" ]]; then
+        return 0
+    fi
+
+    printf '%s="%s"\n' "$key" "$value" >> "${RN_DIR}/.env"
+}
+
 create_env_file() {
-    log_info "Creating .env file..."
-    
-    cat > "${RN_DIR}/.env" << EOF
-PUBLIC_NINETAILED_CLIENT_ID=${PUBLIC_NINETAILED_CLIENT_ID:-test-client-id}
-PUBLIC_NINETAILED_ENVIRONMENT=${PUBLIC_NINETAILED_ENVIRONMENT:-main}
-PUBLIC_EXPERIENCE_API_BASE_URL=http://localhost:${MOCK_SERVER_PORT}/experience/
-PUBLIC_INSIGHTS_API_BASE_URL=http://localhost:${MOCK_SERVER_PORT}/insights/
-PUBLIC_CONTENTFUL_TOKEN=${PUBLIC_CONTENTFUL_TOKEN:-test-token}
-PUBLIC_CONTENTFUL_ENVIRONMENT=${PUBLIC_CONTENTFUL_ENVIRONMENT:-master}
-PUBLIC_CONTENTFUL_SPACE_ID=${PUBLIC_CONTENTFUL_SPACE_ID:-test-space}
-PUBLIC_CONTENTFUL_CDA_HOST=localhost:${MOCK_SERVER_PORT}
-PUBLIC_CONTENTFUL_BASE_PATH=/contentful/
-EOF
-    
+    local env_template="${RN_DIR}/.env.example"
+
+    log_info "Creating .env file from .env.example..."
+
+    if [[ ! -f "$env_template" ]]; then
+        log_error "Missing env template: ${env_template}"
+        exit 1
+    fi
+
+    cp "$env_template" "${RN_DIR}/.env"
+
+    # Keep API endpoints and host aligned with the selected mock server port.
+    append_env_override "PUBLIC_EXPERIENCE_API_BASE_URL" "http://localhost:${MOCK_SERVER_PORT}/experience/"
+    append_env_override "PUBLIC_INSIGHTS_API_BASE_URL" "http://localhost:${MOCK_SERVER_PORT}/insights/"
+    append_env_override "PUBLIC_CONTENTFUL_CDA_HOST" "localhost:${MOCK_SERVER_PORT}"
+
+    # Allow optional runtime overrides for values loaded from .env.example.
+    append_env_override "PUBLIC_NINETAILED_CLIENT_ID" "${PUBLIC_NINETAILED_CLIENT_ID:-}"
+    append_env_override "PUBLIC_NINETAILED_ENVIRONMENT" "${PUBLIC_NINETAILED_ENVIRONMENT:-}"
+    append_env_override "PUBLIC_CONTENTFUL_TOKEN" "${PUBLIC_CONTENTFUL_TOKEN:-}"
+    append_env_override "PUBLIC_CONTENTFUL_PREVIEW_TOKEN" "${PUBLIC_CONTENTFUL_PREVIEW_TOKEN:-}"
+    append_env_override "PUBLIC_CONTENTFUL_ENVIRONMENT" "${PUBLIC_CONTENTFUL_ENVIRONMENT:-}"
+    append_env_override "PUBLIC_CONTENTFUL_SPACE_ID" "${PUBLIC_CONTENTFUL_SPACE_ID:-}"
+    append_env_override "PUBLIC_CONTENTFUL_BASE_PATH" "${PUBLIC_CONTENTFUL_BASE_PATH:-}"
+
     log_info ".env file created at ${RN_DIR}/.env"
 }
 

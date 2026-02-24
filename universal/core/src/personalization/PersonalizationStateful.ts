@@ -19,11 +19,20 @@ import {
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import { isEqual } from 'es-toolkit'
 import { createScopedLogger } from 'logger'
+import type { BlockedEvent } from '../BlockedEvent'
 import type { ConsentGuard } from '../Consent'
 import { guardedBy } from '../lib/decorators'
+import { toPositiveInt } from '../lib/number'
+import {
+  type QueueFlushPolicy,
+  QueueFlushRuntime,
+  type ResolvedQueueFlushPolicy,
+  resolveQueueFlushPolicy,
+} from '../lib/queue'
 import type { ProductBaseOptions, ProductConfig } from '../ProductBase'
 import {
   batch,
+  blockedEvent as blockedEventSignal,
   changes as changesSignal,
   consent as consentSignal,
   effect,
@@ -66,6 +75,11 @@ export interface PersonalizationProductConfig extends ProductConfig {
   defaults?: PersonalizationProductConfigDefaults
 
   /**
+   * Policy that controls the offline personalization queue size and drop telemetry.
+   */
+  queuePolicy?: PersonalizationQueuePolicy
+
+  /**
    * Function used to obtain an anonymous user identifier.
    *
    * @remarks
@@ -79,11 +93,52 @@ export interface PersonalizationProductConfig extends ProductConfig {
 }
 
 /**
+ * Context payload emitted when offline personalization events are dropped due to queue bounds.
+ *
+ * @public
+ */
+export interface PersonalizationOfflineQueueDropContext {
+  /** Number of dropped events. */
+  droppedCount: number
+  /** Dropped events in oldest-first order. */
+  droppedEvents: PersonalizationEventArray
+  /** Configured queue max size. */
+  maxEvents: number
+  /** Queue size after enqueueing the current event. */
+  queuedEvents: number
+}
+
+/**
+ * Policy options for the stateful personalization offline queue.
+ *
+ * @public
+ */
+export interface PersonalizationQueuePolicy {
+  /**
+   * Maximum number of personalization events retained while offline.
+   */
+  maxEvents?: number
+
+  /**
+   * Callback invoked whenever oldest events are dropped due to queue bounds.
+   */
+  onDrop?: (context: PersonalizationOfflineQueueDropContext) => void
+
+  /**
+   * Policy that controls offline queue flush retries, backoff, and circuit
+   * behavior after repeated failures.
+   */
+  flushPolicy?: QueueFlushPolicy
+}
+
+/**
  * Observables exposed by {@link PersonalizationStateful} that mirror internal signals.
  *
  * @public
  */
 export interface PersonalizationStates {
+  /** Observable stream of the latest blocked event payload (or `undefined`). */
+  blockedEventStream: Observable<BlockedEvent | undefined>
   /** Observable stream of the latest {@link AnalyticsEvent} or {@link PersonalizationEvent} (or `undefined`). */
   eventStream: Observable<AnalyticsEvent | PersonalizationEvent | undefined>
   /** Live view of effective flags for the current profile (if available). */
@@ -105,6 +160,22 @@ export type PersonalizationStatefulOptions = ProductBaseOptions & {
   config?: PersonalizationProductConfig
 }
 
+const OFFLINE_QUEUE_MAX_EVENTS = 100
+
+interface ResolvedQueuePolicy {
+  maxEvents: number
+  onDrop?: PersonalizationQueuePolicy['onDrop']
+  flushPolicy: ResolvedQueueFlushPolicy
+}
+
+const resolvePersonalizationQueuePolicy = (
+  policy: PersonalizationQueuePolicy | undefined,
+): ResolvedQueuePolicy => ({
+  maxEvents: toPositiveInt(policy?.maxEvents, OFFLINE_QUEUE_MAX_EVENTS),
+  onDrop: policy?.onDrop,
+  flushPolicy: resolveQueueFlushPolicy(policy?.flushPolicy),
+})
+
 /**
  * Stateful personalization product that manages consent, profile, flags, and
  * selected variants while emitting Experience events and updating state.
@@ -117,11 +188,16 @@ export type PersonalizationStatefulOptions = ProductBaseOptions & {
  * back into signals.
  */
 class PersonalizationStateful extends PersonalizationBase implements ConsentGuard {
-  /** In‑memory queue for offline events keyed by profile. */
+  /** In-memory ordered queue for offline personalization events. */
   private readonly offlineQueue = new Set<PersonalizationEvent>()
+  /** Resolved offline queue policy values. */
+  private readonly queuePolicy: ResolvedQueuePolicy
+  /** Shared queue flush retry runtime state machine. */
+  private readonly flushRuntime: QueueFlushRuntime
 
   /** Exposed observable state references. */
   readonly states: PersonalizationStates = {
+    blockedEventStream: toObservable(blockedEventSignal),
     eventStream: toObservable(eventSignal),
     flags: toObservable(flagsSignal),
     profile: toObservable(profileSignal),
@@ -149,7 +225,18 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
 
     super({ api, builder, config, interceptors })
 
-    const { defaults, getAnonymousId } = config ?? {}
+    const { defaults, getAnonymousId, queuePolicy } = config ?? {}
+
+    this.queuePolicy = resolvePersonalizationQueuePolicy(queuePolicy)
+    this.flushRuntime = new QueueFlushRuntime({
+      policy: this.queuePolicy.flushPolicy,
+      onRetry: () => {
+        void this.flush()
+      },
+      onCallbackError: (callbackName, error) => {
+        logger.warn(`Personalization flush policy callback "${callbackName}" failed`, error)
+      },
+    })
 
     if (defaults) {
       const {
@@ -192,7 +279,10 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
     })
 
     effect(() => {
-      if (onlineSignal.value) void this.flush()
+      if (!onlineSignal.value) return
+
+      this.flushRuntime.clearScheduledRetry()
+      void this.flush({ force: true })
     })
   }
 
@@ -207,8 +297,11 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * ```
    */
   reset(): void {
+    this.flushRuntime.reset()
+
     batch(() => {
       changesSignal.value = undefined
+      blockedEventSignal.value = undefined
       eventSignal.value = undefined
       profileSignal.value = undefined
       personalizationsSignal.value = undefined
@@ -305,48 +398,11 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * personalization.onBlockedByConsent('track', [payload])
    * ```
    */
-  onBlockedByConsent(name: string, payload: unknown[]): void {
+  onBlockedByConsent(name: string, payload: readonly unknown[]): void {
     logger.warn(
       `Event "${name}" was blocked due to lack of consent; payload: ${JSON.stringify(payload)}`,
     )
-  }
-
-  /**
-   * Guard used to suppress duplicate component view events for the same
-   * component based on a duplication key and the component identifier.
-   *
-   * @param _name - Operation name (unused).
-   * @param payload - Tuple `[builderArgs, duplicationScope]`.
-   * @returns `true` if the event is NOT a duplicate and should proceed.
-   * @example
-   * ```ts
-   * if (personalization.isNotDuplicated('trackComponentView', [{ componentId: 'hero' }, 'page'])) { ... }
-   * ```
-   */
-  isNotDuplicated(_name: string, payload: [ComponentViewBuilderArgs, string]): boolean {
-    const [{ componentId: value }, duplicationScope] = payload
-
-    const isDuplicated = this.duplicationDetector.isPresent(duplicationScope, value)
-
-    if (!isDuplicated) this.duplicationDetector.addValue(duplicationScope, value)
-
-    return !isDuplicated
-  }
-
-  /**
-   * Hook invoked when an operation is blocked by the duplication guard.
-   *
-   * @param _name - The blocked operation name (unused).
-   * @param payload - The original arguments supplied to the operation.
-   * @example
-   * ```ts
-   * personalization.onBlockedByDuplication('trackComponentView', [payload])
-   * ```
-   */
-  onBlockedByDuplication(_name: string, payload: unknown[]): void {
-    logger.debug(
-      `Duplicate "component view" event detected, skipping; payload: ${JSON.stringify(payload)}`,
-    )
+    this.reportBlockedEvent('consent', 'personalization', name, payload)
   }
 
   /**
@@ -430,18 +486,15 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * Record a "sticky" component view and update optimization state.
    *
    * @param payload - Component view builder payload.
-   * @param _duplicationScope - Optional duplication scope key used to suppress duplicates.
    * @returns The evaluated {@link OptimizationData} for this component view.
    * @example
    * ```ts
    * const data = await personalization.trackComponentView({ componentId: 'hero-banner' })
    * ```
    */
-  @guardedBy('isNotDuplicated', { onBlocked: 'onBlockedByDuplication' })
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async trackComponentView(
     payload: ComponentViewBuilderArgs,
-    _duplicationScope = '',
   ): Promise<OptimizationData | undefined> {
     logger.info(`Sending "track personalization" event for ${payload.componentId}`)
 
@@ -469,27 +522,143 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
 
     logger.debug(`Queueing ${validEvent.type} event`, validEvent)
 
-    this.offlineQueue.add(validEvent)
+    this.enqueueOfflineEvent(validEvent)
 
     return undefined
   }
 
   /**
-   * Flush the offline queue.
+   * Enqueue an offline event, dropping oldest events first when queue bounds are reached.
+   *
+   * @param event - Event to enqueue.
+   */
+  private enqueueOfflineEvent(event: PersonalizationEvent): void {
+    let droppedEvents: PersonalizationEventArray = []
+
+    if (this.offlineQueue.size >= this.queuePolicy.maxEvents) {
+      const dropCount = this.offlineQueue.size - this.queuePolicy.maxEvents + 1
+      droppedEvents = this.dropOldestOfflineEvents(dropCount)
+
+      if (droppedEvents.length > 0) {
+        logger.warn(
+          `Dropped ${droppedEvents.length} oldest personalization offline event(s) due to queue limit (${this.queuePolicy.maxEvents})`,
+        )
+      }
+    }
+
+    this.offlineQueue.add(event)
+
+    if (droppedEvents.length > 0) {
+      this.invokeQueueDropCallback({
+        droppedCount: droppedEvents.length,
+        droppedEvents,
+        maxEvents: this.queuePolicy.maxEvents,
+        queuedEvents: this.offlineQueue.size,
+      })
+    }
+  }
+
+  /**
+   * Drop oldest offline events from the queue.
+   *
+   * @param count - Number of oldest events to drop.
+   * @returns Dropped events in oldest-first order.
+   */
+  private dropOldestOfflineEvents(count: number): PersonalizationEventArray {
+    const droppedEvents: PersonalizationEventArray = []
+
+    for (let index = 0; index < count; index += 1) {
+      const oldestEvent = this.offlineQueue.values().next()
+      if (oldestEvent.done) break
+
+      this.offlineQueue.delete(oldestEvent.value)
+      droppedEvents.push(oldestEvent.value)
+    }
+
+    return droppedEvents
+  }
+
+  /**
+   * Invoke offline queue drop callback in a fault-tolerant manner.
+   *
+   * @param context - Drop callback payload.
+   */
+  private invokeQueueDropCallback(context: PersonalizationOfflineQueueDropContext): void {
+    try {
+      this.queuePolicy.onDrop?.(context)
+    } catch (error) {
+      logger.warn('Personalization offline queue drop callback failed', error)
+    }
+  }
+
+  /**
+   * Flush the offline queue
+   *
+   * @param options - Optional flush controls.
+   * @param options.force - When `true`, bypass offline/backoff/circuit gates and attempt immediately.
    *
    * @example
    * ```ts
    * await personalization.flush()
-   * ```
    */
-  async flush(): Promise<void> {
-    if (this.offlineQueue.size === 0) return
+  async flush(options: { force?: boolean } = {}): Promise<void> {
+    await this.flushOfflineQueue(options)
+  }
+
+  /**
+   * Flush queued offline events using retry/circuit guards.
+   *
+   * @param options - Flush controls.
+   * @param options.force - When true, bypass online/backoff/circuit gates.
+   */
+  private async flushOfflineQueue(options: { force?: boolean } = {}): Promise<void> {
+    const { force = false } = options
+
+    if (this.flushRuntime.shouldSkip({ force, isOnline: !!onlineSignal.value })) return
+
+    if (this.offlineQueue.size === 0) {
+      this.flushRuntime.clearScheduledRetry()
+      return
+    }
 
     logger.debug('Flushing offline event queue')
 
-    await this.upsertProfile(Array.from(this.offlineQueue))
+    const queuedEvents = Array.from(this.offlineQueue)
+    this.flushRuntime.markFlushStarted()
 
-    this.offlineQueue.clear()
+    try {
+      const sendSuccess = await this.tryUpsertQueuedEvents(queuedEvents)
+
+      if (sendSuccess) {
+        queuedEvents.forEach((event) => {
+          this.offlineQueue.delete(event)
+        })
+        this.flushRuntime.handleFlushSuccess()
+      } else {
+        this.flushRuntime.handleFlushFailure({
+          queuedBatches: this.offlineQueue.size > 0 ? 1 : 0,
+          queuedEvents: this.offlineQueue.size,
+        })
+      }
+    } finally {
+      this.flushRuntime.markFlushFinished()
+    }
+  }
+
+  /**
+   * Attempt to send queued events to the Experience API.
+   *
+   * @param events - Snapshot of queued events to send.
+   * @returns `true` when send succeeds; otherwise `false`.
+   */
+  private async tryUpsertQueuedEvents(events: PersonalizationEventArray): Promise<boolean> {
+    try {
+      await this.upsertProfile(events)
+      return true
+    } catch (error) {
+      logger.warn('Personalization offline queue flush request threw an error', error)
+      return false
+    }
   }
 
   /**

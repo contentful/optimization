@@ -12,8 +12,8 @@ export interface ApiClientConfig extends Pick<ApiConfig, GlobalApiConfigProperti
    * Configuration for the personalization (Experience) API client.
    *
    * @remarks
-   * Any properties shared with {@link ApiConfig} are taken from the top-level
-   * config and overridden by this object when specified.
+   * Shared fields (`clientId`, `environment`, `fetchOptions`) are inherited
+   * from top-level config; this object is for Experience-specific options.
    */
   personalization?: Omit<ExperienceApiClientConfig, GlobalApiConfigProperties>
 
@@ -21,8 +21,8 @@ export interface ApiClientConfig extends Pick<ApiConfig, GlobalApiConfigProperti
    * Configuration for the analytics (Insights) API client.
    *
    * @remarks
-   * Any properties shared with {@link ApiConfig} are taken from the top-level
-   * config and overridden by this object when specified.
+   * Shared fields (`clientId`, `environment`, `fetchOptions`) are inherited
+   * from top-level config; this object is for Insights-specific options.
    */
   analytics?: Omit<InsightsApiClientConfig, GlobalApiConfigProperties>
 }
@@ -84,7 +84,12 @@ export default class ApiClient {
    * @param config - Global API client configuration with optional per-client overrides.
    */
   constructor(config: ApiClientConfig) {
-    const { personalization, analytics, ...apiConfig } = config
+    const { personalization, analytics, clientId, environment, fetchOptions } = config
+    const apiConfig: ApiConfig = {
+      clientId,
+      environment,
+      fetchOptions,
+    }
 
     this.config = apiConfig
 

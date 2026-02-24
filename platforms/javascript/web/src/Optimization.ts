@@ -219,6 +219,20 @@ class Optimization extends CoreStateful {
   private readonly cookieAttributes?: CookieAttributes = undefined
 
   /**
+   * Cleanup function for online/offline listener bindings.
+   *
+   * @internal
+   */
+  private readonly cleanupOnlineListener!: () => void
+
+  /**
+   * Cleanup function for visibility listener bindings.
+   *
+   * @internal
+   */
+  private readonly cleanupVisibilityListener!: () => void
+
+  /**
    * Create a new Optimization Web SDK instance.
    *
    * @param config - Web SDK configuration.
@@ -250,18 +264,18 @@ class Optimization extends CoreStateful {
     const legacyCookieValue = Cookies.get(ANONYMOUS_ID_COOKIE_LEGACY)
     const cookieValue = legacyCookieValue ?? Cookies.get(ANONYMOUS_ID_COOKIE)
 
-    this.autoTrackEntryViews = true
+    this.autoTrackEntryViews = autoTrackEntryViews ?? false
 
     this.cookieAttributes = {
       domain: mergedConfig.cookie?.domain,
       expires: mergedConfig.cookie?.expires ?? EXPIRATION_DAYS_DEFAULT,
     }
 
-    createOnlineChangeListener((isOnline) => {
+    this.cleanupOnlineListener = createOnlineChangeListener((isOnline) => {
       this.online(isOnline)
     })
 
-    createVisibilityChangeListener(async () => {
+    this.cleanupVisibilityListener = createVisibilityChangeListener(async () => {
       await this.flush()
     })
 
@@ -474,6 +488,25 @@ class Optimization extends CoreStateful {
     Cookies.remove(ANONYMOUS_ID_COOKIE)
     LocalStore.reset()
     super.reset()
+  }
+
+  /**
+   * Destroy the Web SDK instance and release runtime resources.
+   *
+   * @remarks
+   * Intended for explicit teardown in tests and hot-reload paths. This does not
+   * clear persisted user state.
+   */
+  destroy(): void {
+    this.stopAutoTrackingEntryViews()
+    this.cleanupOnlineListener()
+    this.cleanupVisibilityListener()
+
+    if (typeof window !== 'undefined' && window.optimization === this) {
+      delete window.optimization
+    }
+
+    super.destroy()
   }
 }
 

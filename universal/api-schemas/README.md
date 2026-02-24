@@ -85,6 +85,8 @@ requests conform to current API specifications.
 ### Essential Experience API Request Schemas
 
 - `ExperienceRequestData`: Zod schema describing the data payload for an experience request
+- `BatchExperienceRequestData`: Zod schema describing the data payload for a batch experience
+  request; requires at least one batch event
 - `ExperienceEvent`: Zod schema union of supported experience/personalization events
 - `BatchExperienceEvent`: Zod schema describing each valid experience/personalization event within a
   batch; Similar to `ExperienceEvent`, but with an additional `anonymousId` member on each event
@@ -105,7 +107,9 @@ Experience/personalization event schemas:
 - `ExperienceResponse`: Zod schema describing a full Experience API response; includes a `data`
   object with `changes`, `experiences`, and `profile` properties
 - `BatchExperienceResponse`: Zod schema describing a batch experience response from the Experience
-  API; includes a `profiles` collection
+  API; includes a `data` payload described by `BatchExperienceResponseData`
+- `BatchExperienceResponseData`: Zod schema describing the `data` payload for
+  `BatchExperienceResponse`
 - `Change`: Union of supported change types, which currently only includes `VariableChange`; this
   change type is used for Custom Flags
 - `SelectedPersonalization`: Zod schema describing a selected personalization outcome for a user

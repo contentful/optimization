@@ -5,6 +5,9 @@ permissions:
 
 on:
   pull_request:
+  push:
+    branches:
+      - main
 
 concurrency:
   group: main-pipeline-${{ github.ref }}
@@ -28,6 +31,10 @@ jobs:
       - uses: dorny/paths-filter@v3
         id: filter
         with:
+          # Intentional CI policy:
+          # - Implementation E2E jobs run only for implementations relevant to changed paths.
+          # - Skipped E2E jobs due to unmatched filters are expected behavior.
+          # - Keep this mapping aligned with CONTRIBUTING.md ("E2E Coverage and Environment").
           filters: |
             build:
               - 'lib/**'
@@ -47,6 +54,7 @@ jobs:
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - '.github/workflows/main-pipeline.yaml'
+            # Node SSR Only implementation E2E coverage scope.
             e2e_node_ssr_only:
               - 'implementations/node-ssr-only/**'
               - 'lib/**'
@@ -55,6 +63,7 @@ jobs:
               - 'package.json'
               - 'pnpm-lock.yaml'
               - '.github/workflows/main-pipeline.yaml'
+            # Node SSR + Web Vanilla implementation E2E coverage scope.
             e2e_node_ssr_web_vanilla:
               - 'implementations/node-ssr-web-vanilla/**'
               - 'lib/**'
@@ -63,6 +72,7 @@ jobs:
               - 'package.json'
               - 'pnpm-lock.yaml'
               - '.github/workflows/main-pipeline.yaml'
+            # Web Vanilla implementation E2E coverage scope.
             e2e_web:
               - 'implementations/web-vanilla/**'
               - 'lib/**'
@@ -71,6 +81,7 @@ jobs:
               - 'package.json'
               - 'pnpm-lock.yaml'
               - '.github/workflows/main-pipeline.yaml'
+            # React + Web SDK implementation E2E coverage scope.
             e2e_web_react:
               - 'implementations/web-react/**'
               - 'lib/**'
@@ -79,6 +90,7 @@ jobs:
               - 'package.json'
               - 'pnpm-lock.yaml'
               - '.github/workflows/main-pipeline.yaml'
+            # React Native Android implementation E2E coverage scope.
             e2e_react_native_android:
               - 'implementations/react-native/**'
               - 'platforms/javascript/react-native/**'
@@ -142,11 +154,13 @@ jobs:
         run: pnpm install --prefer-offline --frozen-lockfile
 
       - if: steps.filter.outputs.lock == 'true'
-        run: >
-          echo "In case of error, please see ./CONTRIBUTING.md" pnpx license-checker \ --summary \
-          --production \ --relativeLicensePath \ --onlyAllow
-          'MIT;Apache-2.0;ISC;BSD-3-Clause;BSD-2-Clause;MIT*;Apache
-          2.0;Unlicense;Unlicensed;:CC0-1.0;CC-BY-4.0;WTFPL;0BSD;UNLICENSED;Python-2.0;MPL-2.0;CC-BY-3.0;CC0-1.0'
+        run: |
+          echo "In case of error, please see ./CONTRIBUTING.md"
+          pnpx license-checker \
+            --summary \
+            --production \
+            --relativeLicensePath \
+            --onlyAllow 'MIT;Apache-2.0;ISC;BSD-3-Clause;BSD-2-Clause;MIT*;Apache 2.0;Unlicense;Unlicensed;:CC0-1.0;CC-BY-4.0;WTFPL;0BSD;UNLICENSED;Python-2.0;MPL-2.0;CC-BY-3.0;CC0-1.0'
 
   format:
     name: 🎨 Format Check
@@ -306,18 +320,8 @@ jobs:
     steps:
       - uses: namespacelabs/nscloud-checkout-action@v8
 
-      - run: |
-          echo "DOTENV_CONFIG_QUIET=true" >>implementations/node-ssr-only/.env
-          echo "PUBLIC_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/node-ssr-only/.env
-          echo "PUBLIC_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/node-ssr-only/.env
-          echo "PUBLIC_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>implementations/node-ssr-only/.env
-          echo "PUBLIC_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>implementations/node-ssr-only/.env
-          echo "PUBLIC_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/node-ssr-only/.env
-          echo "PUBLIC_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/node-ssr-only/.env
-          echo "PUBLIC_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/node-ssr-only/.env
-          echo "PUBLIC_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/node-ssr-only/.env
-          echo "PUBLIC_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/node-ssr-only/.env
-          echo "PUBLIC_CONTENTFUL_BASE_PATH=contentful" >>implementations/node-ssr-only/.env
+      - name: Create .env from .env.example
+        run: cp implementations/node-ssr-only/.env.example implementations/node-ssr-only/.env
 
       - uses: actions/setup-node@v6
         with:
@@ -363,18 +367,10 @@ jobs:
     steps:
       - uses: namespacelabs/nscloud-checkout-action@v8
 
-      - run: |
-          echo "DOTENV_CONFIG_QUIET=true" >>implementations/node-ssr-web-vanilla/.env
-          echo "PUBLIC_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}" >>implementations/node-ssr-web-vanilla/.env
-          echo "PUBLIC_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}" >>implementations/node-ssr-web-vanilla/.env
-          echo "PUBLIC_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/" >>implementations/node-ssr-web-vanilla/.env
-          echo "PUBLIC_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/" >>implementations/node-ssr-web-vanilla/.env
-          echo "PUBLIC_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}" >>implementations/node-ssr-web-vanilla/.env
-          echo "PUBLIC_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}" >>implementations/node-ssr-web-vanilla/.env
-          echo "PUBLIC_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}" >>implementations/node-ssr-web-vanilla/.env
-          echo "PUBLIC_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}" >>implementations/node-ssr-web-vanilla/.env
-          echo "PUBLIC_CONTENTFUL_CDA_HOST=localhost:8000" >>implementations/node-ssr-web-vanilla/.env
-          echo "PUBLIC_CONTENTFUL_BASE_PATH=contentful" >>implementations/node-ssr-web-vanilla/.env
+      - name: Create .env from .env.example
+        run: >
+          cp implementations/node-ssr-web-vanilla/.env.example
+          implementations/node-ssr-web-vanilla/.env
 
       - uses: actions/setup-node@v6
         with:
@@ -425,23 +421,8 @@ jobs:
 
       - uses: namespacelabs/nscloud-checkout-action@v8
 
-      - name: Create .env and copy to implementations
-        run: |
-          cat > .env << 'EOF'
-          DOTENV_CONFIG_QUIET=true
-          PUBLIC_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}
-          PUBLIC_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}
-          PUBLIC_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/
-          PUBLIC_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/
-          PUBLIC_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}
-          PUBLIC_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}
-          PUBLIC_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}
-          PUBLIC_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}
-          PUBLIC_CONTENTFUL_CDA_HOST=localhost:8000
-          PUBLIC_CONTENTFUL_BASE_PATH=contentful
-          EOF
-          cp .env implementations/node-ssr-only/
-          cp .env implementations/web-vanilla/
+      - name: Create .env from .env.example
+        run: cp implementations/web-vanilla/.env.example implementations/web-vanilla/.env
 
       - uses: actions/setup-node@v6
         with:
@@ -478,7 +459,7 @@ jobs:
           retention-days: 1
 
   e2e-web-react:
-    name: 🖥️ E2E Web React
+    name: 🖥️ E2E React + Web SDK
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     needs: [setup, changes, build]
@@ -486,23 +467,8 @@ jobs:
     steps:
       - uses: namespacelabs/nscloud-checkout-action@v8
 
-      - name: Create .env and copy to implementations
-        run: |
-          cat > .env << 'EOF'
-          DOTENV_CONFIG_QUIET=true
-          PUBLIC_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}
-          PUBLIC_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}
-          PUBLIC_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/
-          PUBLIC_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/
-          PUBLIC_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}
-          PUBLIC_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}
-          PUBLIC_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}
-          PUBLIC_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}
-          PUBLIC_CONTENTFUL_CDA_HOST=localhost:8000
-          PUBLIC_CONTENTFUL_BASE_PATH=contentful
-          EOF
-          cp .env implementations/node-ssr-only/
-          cp .env implementations/web-react/
+      - name: Create .env from .env.example
+        run: cp implementations/web-react/.env.example implementations/web-react/.env
 
       - uses: actions/setup-node@v6
         with:
@@ -527,6 +493,7 @@ jobs:
       - run: pnpm store prune
       - run: pnpm run implementation:web-react -- implementation:install -- --no-frozen-lockfile
       - run: pnpm run implementation:web-react -- implementation:playwright:install -- --with-deps
+
       - name: Start Web React app and mocks
         run: |
           pnpm run implementation:web-react -- serve:mocks > /tmp/web-react-mocks.log 2>&1
@@ -564,6 +531,7 @@ jobs:
           cat /tmp/web-react-mocks.log || true
           echo "=== pm2 list ==="
           pm2 list || true
+
       - name: Stop Web React app and mocks
         if: ${{ always() }}
         run: |
@@ -670,19 +638,8 @@ jobs:
         run: >
           pnpm run implementation:react-native -- implementation:install -- --no-frozen-lockfile
 
-      - name: Create .env file for React Native
-        run: |
-          cat > implementations/react-native/.env << 'EOF'
-          PUBLIC_NINETAILED_CLIENT_ID=${{ secrets.NINETAILED_CLIENT_ID }}
-          PUBLIC_NINETAILED_ENVIRONMENT=${{ secrets.NINETAILED_ENVIRONMENT }}
-          PUBLIC_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/
-          PUBLIC_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/
-          PUBLIC_CONTENTFUL_TOKEN=${{ secrets.CONTENTFUL_TOKEN }}
-          PUBLIC_CONTENTFUL_ENVIRONMENT=${{ secrets.CONTENTFUL_ENVIRONMENT }}
-          PUBLIC_CONTENTFUL_SPACE_ID=${{ secrets.CONTENTFUL_SPACE_ID }}
-          PUBLIC_CONTENTFUL_CDA_HOST=localhost:8000
-          PUBLIC_CONTENTFUL_BASE_PATH=contentful
-          EOF
+      - name: Create .env from .env.example
+        run: cp implementations/react-native/.env.example implementations/react-native/.env
 
       - name: Build Android app (Detox)
         run: |

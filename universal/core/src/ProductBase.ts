@@ -4,8 +4,12 @@ import type {
   EventBuilder,
   ExperienceEventType as PersonalizationEventType,
 } from '@contentful/optimization-api-client'
+import { createScopedLogger } from 'logger'
+import type { BlockedEvent, BlockedEventProduct, BlockedEventReason } from './BlockedEvent'
 import type { LifecycleInterceptors } from './CoreBase'
-import ValuePresence from './lib/value-presence/ValuePresence'
+import { blockedEvent } from './signals'
+
+const logger = createScopedLogger('ProductBase')
 
 /**
  * Union of all event {@link AnalyticsEventType | type keys} that this package may emit.
@@ -39,15 +43,13 @@ export interface ProductConfig {
   allowedEventTypes?: EventType[]
 
   /**
-   * A map of duplication keys to a list of component IDs that should be
-   * considered duplicates and therefore suppressed.
+   * Callback invoked whenever an event call is blocked by guards.
    *
    * @remarks
-   * The actual duplication check is performed by {@link ValuePresence}. The
-   * keys of this record are used as duplication scopes. An empty string `''`
-   * is converted to an `undefined` scope when specific scopes are not required.
+   * This callback is best-effort. Any exception thrown by the callback is
+   * swallowed to keep event handling fault tolerant.
    */
-  preventedComponentEvents?: Record<string, string[]>
+  onEventBlocked?: (event: BlockedEvent) => void
 }
 
 /**
@@ -60,7 +62,7 @@ export interface ProductBaseOptions {
   api: ApiClient
   /** Event builder for constructing events. */
   builder: EventBuilder
-  /** Optional configuration for allow‑lists and duplication prevention. */
+  /** Optional configuration for allow‑lists and guard callbacks. */
   config?: ProductConfig
   /** Lifecycle container for event and state interceptors. */
   interceptors: LifecycleInterceptors
@@ -87,14 +89,11 @@ abstract class ProductBase {
   /** Optimization API client used to send events to the Experience and Insights APIs. */
   protected readonly api: ApiClient
 
-  /**
-   * Deduplication helper used to track previously seen values within optional
-   * scopes
-   */
-  readonly duplicationDetector: ValuePresence
-
   /** Interceptors that can mutate/augment outgoing events or optimization state. */
   readonly interceptors: LifecycleInterceptors
+
+  /** Optional callback invoked when an event call is blocked. */
+  protected readonly onEventBlocked?: ProductConfig['onEventBlocked']
 
   /**
    * Creates a new product base instance.
@@ -106,8 +105,33 @@ abstract class ProductBase {
     this.allowedEventTypes = config?.allowedEventTypes ?? defaultAllowedEvents
     this.api = api
     this.builder = builder
-    this.duplicationDetector = new ValuePresence(config?.preventedComponentEvents)
     this.interceptors = interceptors
+    this.onEventBlocked = config?.onEventBlocked
+  }
+
+  /**
+   * Publish blocked event metadata to both callback and blocked event signal.
+   *
+   * @param reason - Reason the method call was blocked.
+   * @param product - Product that blocked the method call.
+   * @param method - Name of the blocked method.
+   * @param args - Original blocked call arguments.
+   */
+  protected reportBlockedEvent(
+    reason: BlockedEventReason,
+    product: BlockedEventProduct,
+    method: string,
+    args: readonly unknown[],
+  ): void {
+    const event: BlockedEvent = { reason, product, method, args }
+
+    try {
+      this.onEventBlocked?.(event)
+    } catch (error) {
+      logger.warn(`onEventBlocked callback failed for method "${method}"`, error)
+    }
+
+    blockedEvent.value = event
   }
 }
 

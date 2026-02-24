@@ -36,6 +36,7 @@ This SDK implements functionality specific to the Web environment, based on the
   - [Event Builder Options](#event-builder-options)
   - [Fetch Options](#fetch-options)
   - [Personalization Options](#personalization-options)
+  - [Persistence Behavior](#persistence-behavior)
 - [Optimization Properties](#optimization-properties)
 - [Optimization Methods](#optimization-methods)
   - [Top-level Methods](#top-level-methods)
@@ -86,6 +87,11 @@ Configure and initialize the Optimization Web SDK:
 const optimization = new Optimization({ clientId: 'abc123' })
 ```
 
+> [!IMPORTANT]
+>
+> Initialize the Web SDK once per page runtime. Reuse `window.optimization` (or your own singleton
+> container binding) instead of creating additional instances.
+
 ### Usage in Vanilla JS Web Pages
 
 Alternatively, the Web SDK can be used directly within an HTML file:
@@ -108,25 +114,26 @@ Alternatively, the Web SDK can be used directly within an HTML file:
 
 ### Top-level Configuration Options
 
-| Option                     | Required? | Default                       | Description                                                                    |
-| -------------------------- | --------- | ----------------------------- | ------------------------------------------------------------------------------ |
-| `allowedEventTypes`        | No        | `['identify', 'page']`        | Allow-listed event types permitted when consent is not set                     |
-| `analytics`                | No        | See "Analytics Options"       | Configuration specific to the Analytics/Insights API                           |
-| `app`                      | No        | `undefined`                   | The application definition used to attribute events to a specific consumer app |
-| `autoTrackEntryViews`      | No        | `false`                       | Opt-in automated tracking of entry/component views                             |
-| `clientId`                 | Yes       | N/A                           | The Optimization API key                                                       |
-| `defaults`                 | No        | `undefined`                   | Set of default state values applied on initialization                          |
-| `environment`              | No        | `'main'`                      | The environment identifier                                                     |
-| `eventBuilder`             | No        | See "Event Builder Options"   | Event builder configuration (channel/library metadata, etc.)                   |
-| `fetchOptions`             | No        | See "Fetch Options"           | Configuration for Fetch timeout and retry functionality                        |
-| `getAnonymousId`           | No        | `undefined`                   | Function used to obtain an anonymous user identifier                           |
-| `logLevel`                 | No        | `'error'`                     | Minimum log level for the default console sink                                 |
-| `personalization`          | No        | See "Personalization Options" | Configuration specific to the Personalization/Experience API                   |
-| `preventedComponentEvents` | No        | `undefined`                   | Initial duplication prevention configuration for component events              |
+| Option                | Required? | Default                       | Description                                                                    |
+| --------------------- | --------- | ----------------------------- | ------------------------------------------------------------------------------ |
+| `allowedEventTypes`   | No        | `['identify', 'page']`        | Allow-listed event types permitted when consent is not set                     |
+| `analytics`           | No        | See "Analytics Options"       | Configuration specific to the Analytics/Insights API                           |
+| `app`                 | No        | `undefined`                   | The application definition used to attribute events to a specific consumer app |
+| `autoTrackEntryViews` | No        | `false`                       | Opt-in automated tracking of entry/component views                             |
+| `clientId`            | Yes       | N/A                           | The Optimization API key                                                       |
+| `defaults`            | No        | `undefined`                   | Set of default state values applied on initialization                          |
+| `environment`         | No        | `'main'`                      | The environment identifier                                                     |
+| `eventBuilder`        | No        | See "Event Builder Options"   | Event builder configuration (channel/library metadata, etc.)                   |
+| `fetchOptions`        | No        | See "Fetch Options"           | Configuration for Fetch timeout and retry functionality                        |
+| `getAnonymousId`      | No        | `undefined`                   | Function used to obtain an anonymous user identifier                           |
+| `logLevel`            | No        | `'error'`                     | Minimum log level for the default console sin                                  |
+| `onEventBlocked`      | No        | `undefined`                   | Callback invoked when an event call is blocked by guards                       |
+| `personalization`     | No        | See "Personalization Options" | Configuration specific to the Personalization/Experience API                   |
 
 Configuration method signatures:
 
 - `getAnonymousId`: `() => string | undefined`
+- `onEventBlocked`: `(event: BlockedEvent) => void`
 
 ### Analytics Options
 
@@ -135,9 +142,50 @@ Configuration method signatures:
 | `baseUrl`       | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                            |
 | `beaconHandler` | No        | Built-in beacon API integration            | Handler used to enqueue events via the Beacon API or a similar mechanism |
 
+The following configuration options apply only in stateful environments:
+
+| Option        | Required? | Default               | Description                                                     |
+| ------------- | --------- | --------------------- | --------------------------------------------------------------- |
+| `queuePolicy` | No        | See method signatures | Queue flush retry/backoff/circuit policy for stateful analytics |
+
 Configuration method signatures:
 
 - `beaconHandler`: `(url: string | URL, data: BatchInsightsEventArray) => boolean`
+- `queuePolicy`:
+
+  ```ts
+  {
+    baseBackoffMs?: number,
+    maxBackoffMs?: number,
+    jitterRatio?: number,
+    maxConsecutiveFailures?: number,
+    circuitOpenMs?: number,
+    onFlushFailure?: (context: QueueFlushFailureContext) => void,
+    onCircuitOpen?: (context: QueueFlushFailureContext) => void,
+    onFlushRecovered?: (context: QueueFlushRecoveredContext) => void
+  }
+  ```
+
+  Supporting callback payloads:
+
+  ```ts
+  type QueueFlushFailureContext = {
+    consecutiveFailures: number
+    queuedBatches: number
+    queuedEvents: number
+    retryDelayMs: number
+  }
+
+  type QueueFlushRecoveredContext = {
+    consecutiveFailures: number
+  }
+  ```
+
+  Notes:
+  - Invalid numeric values fall back to defaults.
+  - `jitterRatio` is clamped to `[0, 1]`.
+  - `maxBackoffMs` is normalized to be at least `baseBackoffMs`.
+  - Failed flush attempts include both `false` responses and thrown send errors.
 
 ### Event Builder Options
 
@@ -198,6 +246,12 @@ Configuration method signatures:
 - `fetchMethod`: `(url: string | URL, init: RequestInit) => Promise<Response>`
 - `onFailedAttempt` and `onRequestTimeout`: `(options: FetchMethodCallbackOptions) => void`
 
+> [!NOTE]
+>
+> Web SDK fetch retry behavior intentionally matches the shared API Client contract: default retries
+> apply only to HTTP `503` responses (`Service Unavailable`). This is deliberate and aligned with
+> current Experience and Insights API expectations.
+
 ### Personalization Options
 
 | Option            | Required? | Default                               | Description                                                         |
@@ -209,6 +263,67 @@ Configuration method signatures:
 | `plainText`       | No        | `false`                               | Sends performance-critical endpoints in plain text                  |
 | `preflight`       | No        | `false`                               | Instructs the API to aggregate a new profile state but not store it |
 
+The following configuration options apply only in stateful environments:
+
+| Option        | Required? | Default               | Description                                                                 |
+| ------------- | --------- | --------------------- | --------------------------------------------------------------------------- |
+| `queuePolicy` | No        | See method signatures | Queue and flush-retry policy for stateful personalization offline buffering |
+
+Configuration method signatures:
+
+- `queuePolicy`:
+
+  ```ts
+  {
+    maxEvents?: number,
+    onDrop?: (context: PersonalizationOfflineQueueDropContext) => void,
+    flushPolicy?: {
+      baseBackoffMs?: number,
+      maxBackoffMs?: number,
+      jitterRatio?: number,
+      maxConsecutiveFailures?: number,
+      circuitOpenMs?: number,
+      onFlushFailure?: (context: QueueFlushFailureContext) => void,
+      onCircuitOpen?: (context: QueueFlushFailureContext) => void,
+      onFlushRecovered?: (context: QueueFlushRecoveredContext) => void
+    }
+  }
+  ```
+
+  Supporting callback payloads:
+
+  ```ts
+  type PersonalizationOfflineQueueDropContext = {
+    droppedCount: number
+    droppedEvents: ExperienceEventArray
+    maxEvents: number
+    queuedEvents: number
+  }
+
+  type QueueFlushFailureContext = {
+    consecutiveFailures: number
+    queuedBatches: number
+    queuedEvents: number
+    retryDelayMs: number
+  }
+
+  type QueueFlushRecoveredContext = {
+    consecutiveFailures: number
+  }
+  ```
+
+  Notes:
+  - Default `maxEvents` is `100`.
+  - If the queue is full while offline, oldest events are dropped first.
+  - `onDrop` is best-effort; callback errors are swallowed.
+  - `flushPolicy` uses the same normalization semantics as `analytics.queuePolicy`.
+
+### Persistence Behavior
+
+Web storage persistence is best-effort. If `localStorage` writes fail (for example due to quota or
+access restrictions), the SDK continues operating with in-memory state and will retry persistence on
+future writes.
+
 ## Optimization Properties
 
 - `states`: Returns an object mapping of observables for all internal states
@@ -216,13 +331,15 @@ Configuration method signatures:
 The following observables are exposed via the `states` property:
 
 - `consent`: The current state of user consent
+- `blockedEventStream`: The latest blocked event payload
 - `eventStream`: The latest event to be queued
 - `flags`: All current resolved Custom Flags
 - `profile`: The current user profile
 - `personalizations`: The current collection of selected personalizations
 
-Each state except `consent` and `eventStream` is updated internally whenever a response from the
-Experience API contains a new or updated respective state.
+The `blockedEventStream` state is updated whenever a call is blocked by consent guards. Each state
+except `consent`, `eventStream`, and `blockedEventStream` is updated internally whenever a response
+from the Experience API contains a new or updated respective state.
 
 ## Optimization Methods
 
@@ -401,7 +518,6 @@ Arguments:
 
 - `payload`\*: Component view event builder arguments object, including an optional `profile`
   property with a `PartialProfile` value that requires only an `id`
-- `duplicationScope`: Arbitrary string that may be used to scope component view duplication
 
 #### `trackFlagView`
 
@@ -412,7 +528,6 @@ Arguments:
 
 - `payload`\*: Component view event builder arguments object, including an optional `profile`
   property with a `PartialProfile` value that requires only an `id`
-- `duplicationScope`: Arbitrary string that may be used to scope component view duplication
 
 ## Entry View Tracking
 
@@ -443,8 +558,6 @@ integration solution.
 To track an element as an entry-related element, call the `trackEntryViewForElement` method with the
 element to be tracked, as well as the `data` option set with the following data members:
 
-- `duplicationScope`: Key to differentiate between entry views when the same entry may be tracked in
-  multiple locations
 - `entryId`\*: The ID of the content entry to be tracked; should be the selected variant if the
   entry is personalized
 - `personalizationId`: The ID of the personalization/experience entry associated with the content
@@ -464,8 +577,6 @@ optimization.trackEntryViewForElement(element, { data: { entryId: 'abc-123', ...
 Elements that are associated to entries using the following data attributes will be automatically
 detected for observation and view tracking:
 
-- `data-ctfl-duplication-scope`: Key to differentiate between entry views when the same entry may be
-  tracked in multiple locations
 - `data-ctfl-entry-id`\*: The ID of the content entry to be tracked; should be the selected variant
   if the entry is personalized
 - `data-ctfl-personalization-id`: The ID of the personalization/experience entry associated with the

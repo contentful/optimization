@@ -14,31 +14,17 @@ abstract class AnalyticsBase extends ProductBase {
    * Track a UI component view event.
    *
    * @param payload - Component view builder arguments.
-   * @param duplicationScope - Optional string used to scope duplication used in Stateful
-   * implementations.
    * @returns A promise that resolves when processing is complete (or `void`).
-   * @privateRemarks
-   * Duplication prevention should be handled in Stateful implementations
    */
-  abstract trackComponentView(
-    payload: ComponentViewBuilderArgs,
-    duplicationScope?: string,
-  ): Promise<void> | void
+  abstract trackComponentView(payload: ComponentViewBuilderArgs): Promise<void> | void
 
   /**
    * Track a flag (feature) view event.
    *
    * @param payload - Flag view builder arguments.
-   * @param duplicationScope - Optional string used to scope duplication used in Stateful
-   * implementations.
    * @returns A promise that resolves when processing is complete (or `void`).
-   * @privateRemarks
-   * Duplication prevention should be handled in Stateful implementations
    */
-  abstract trackFlagView(
-    payload: ComponentViewBuilderArgs,
-    duplicationScope?: string,
-  ): Promise<void> | void
+  abstract trackFlagView(payload: ComponentViewBuilderArgs): Promise<void> | void
 }
 
 export default AnalyticsBase

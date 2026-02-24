@@ -7,9 +7,12 @@ import type {
   SelectedPersonalizationArray,
 } from '@contentful/optimization-api-client'
 import { batch, computed, effect, signal, type Signal, untracked } from '@preact/signals-core'
+import type { BlockedEvent } from './BlockedEvent'
 import { FlagsResolver } from './personalization/resolvers'
 
 export const changes: Signal<ChangeArray | undefined> = signal<ChangeArray | undefined>()
+
+export const blockedEvent: Signal<BlockedEvent | undefined> = signal<BlockedEvent | undefined>()
 
 export const consent = signal<boolean | undefined>()
 
@@ -26,6 +29,7 @@ export const personalizations = signal<SelectedPersonalizationArray | undefined>
 export const profile: Signal<Profile | undefined> = signal<Profile | undefined>()
 
 export interface Signals {
+  blockedEvent: typeof blockedEvent
   changes: typeof changes
   consent: typeof consent
   event: typeof event
@@ -63,6 +67,7 @@ export function toObservable<T>(s: { value: T }): Observable<T> {
 }
 
 export const signals: Signals = {
+  blockedEvent,
   changes,
   consent,
   event,

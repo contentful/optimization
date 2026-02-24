@@ -32,7 +32,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@contentful/optimization-api-schemas": "workspace:*",
     "contentful": "catalog:",
     "zod": "catalog:"
   },

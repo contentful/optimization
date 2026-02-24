@@ -4,6 +4,7 @@ import {
   ChangeArray,
   CHANGES_CACHE_KEY,
   CONSENT_KEY,
+  createScopedLogger,
   DEBUG_FLAG_KEY,
   PERSONALIZATIONS_CACHE_KEY,
   Profile,
@@ -11,6 +12,8 @@ import {
   SelectedPersonalizationArray,
 } from '@contentful/optimization-core'
 import type { z } from 'zod/mini'
+
+const logger = createScopedLogger('Web:LocalStore')
 
 /**
  * Local storage abstraction used by the Web SDK to persist optimization state.
@@ -35,13 +38,13 @@ const LocalStore = {
    * ```
    */
   reset(options = { resetConsent: false, resetDebug: false }) {
-    if (options.resetConsent) localStorage.removeItem(CONSENT_KEY)
-    if (options.resetDebug) localStorage.removeItem(DEBUG_FLAG_KEY)
+    if (options.resetConsent) LocalStore.setCache(CONSENT_KEY, undefined)
+    if (options.resetDebug) LocalStore.setCache(DEBUG_FLAG_KEY, undefined)
 
-    localStorage.removeItem(ANONYMOUS_ID_KEY)
-    localStorage.removeItem(CHANGES_CACHE_KEY)
-    localStorage.removeItem(PROFILE_CACHE_KEY)
-    localStorage.removeItem(PERSONALIZATIONS_CACHE_KEY)
+    LocalStore.setCache(ANONYMOUS_ID_KEY, undefined)
+    LocalStore.setCache(CHANGES_CACHE_KEY, undefined)
+    LocalStore.setCache(PROFILE_CACHE_KEY, undefined)
+    LocalStore.setCache(PERSONALIZATIONS_CACHE_KEY, undefined)
   },
 
   /**
@@ -52,7 +55,7 @@ const LocalStore = {
   get anonymousId(): string | undefined {
     const legacyAnonymousIdValue = localStorage.getItem(ANONYMOUS_ID_KEY_LEGACY)
 
-    if (legacyAnonymousIdValue) localStorage.removeItem(ANONYMOUS_ID_KEY_LEGACY)
+    if (legacyAnonymousIdValue) LocalStore.setCache(ANONYMOUS_ID_KEY_LEGACY, undefined)
 
     return legacyAnonymousIdValue ?? localStorage.getItem(ANONYMOUS_ID_KEY) ?? undefined
   },
@@ -183,9 +186,13 @@ const LocalStore = {
 
     if (!cacheString) return
 
-    const parsedCache = parser.safeParse(JSON.parse(cacheString))
+    try {
+      const parsedCache = parser.safeParse(JSON.parse(cacheString))
 
-    if (parsedCache.success) return parsedCache.data
+      if (parsedCache.success) return parsedCache.data
+    } catch {}
+
+    LocalStore.setCache(key, undefined)
   },
 
   /**
@@ -194,13 +201,19 @@ const LocalStore = {
    * @param key - LocalStorage key to write to.
    * @param data - Value to store. Strings are written as-is; other values
    * are JSON-stringified.
-   * @returns Nothing.
+   * @remarks
+   * Persistence failures are swallowed so the SDK can continue operating in
+   * restricted storage environments (e.g. quota exhaustion, denied access).
    */
   setCache(key: string, data: unknown): void {
-    if (data === undefined) {
-      localStorage.removeItem(key)
-    } else {
-      localStorage.setItem(key, typeof data === 'string' ? data : JSON.stringify(data))
+    try {
+      if (data === undefined) {
+        localStorage.removeItem(key)
+      } else {
+        localStorage.setItem(key, typeof data === 'string' ? data : JSON.stringify(data))
+      }
+    } catch (error) {
+      logger.warn(`Failed to persist localStorage key "${key}"`, error)
     }
   },
 }
