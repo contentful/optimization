@@ -40,7 +40,7 @@ export interface OptimizationNavigationContainerProps {
    * Render prop that receives navigation props to spread onto the `NavigationContainer`.
    */
   children: (props: {
-    ref: React.RefObject<NavigationContainerRef>
+    ref: React.RefObject<NavigationContainerRef | null>
     onReady: () => void
     onStateChange: (state: NavigationState | undefined) => void
   }) => React.ReactNode
