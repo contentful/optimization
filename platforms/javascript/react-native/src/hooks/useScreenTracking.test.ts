@@ -103,6 +103,7 @@ describe('useScreenTracking', () => {
     expect(mockScreen).toHaveBeenCalledWith({
       name: 'TestScreen',
       properties: { customProp: 'value' },
+      screen: { name: 'TestScreen' },
     })
   })
 
@@ -119,6 +120,7 @@ describe('useScreenTracking', () => {
     expect(mockScreen).toHaveBeenCalledWith({
       name: 'MinimalScreen',
       properties: {},
+      screen: { name: 'MinimalScreen' },
     })
   })
 
