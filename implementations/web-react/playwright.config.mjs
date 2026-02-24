@@ -17,7 +17,7 @@ export default defineConfig({
   workers: isCI ? 1 : undefined,
   reporter: [['html', { open: 'never' }]],
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:3001',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3001',
     trace: 'on-first-retry',
   },
   projects: [

@@ -8,6 +8,11 @@ test.describe('identified user', () => {
 
     await page.getByRole('button', { name: 'Identify' }).click()
     await expect(page.getByRole('button', { name: 'Reset Profile' })).toBeVisible()
+
+    await page.reload()
+    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
+    await expect(page.getByRole('button', { name: 'Reset Profile' })).toBeVisible()
   })
 
   test('renders identified variants', async ({ page }) => {
