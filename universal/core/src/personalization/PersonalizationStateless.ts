@@ -6,13 +6,13 @@ import {
   type OptimizationData,
   type PageViewBuilderArgs,
   PageViewEvent,
-  parse,
   type PartialProfile,
   type ExperienceEvent as PersonalizationEvent,
   type ScreenViewBuilderArgs,
   ScreenViewEvent,
   type TrackBuilderArgs,
   TrackEvent,
+  validate,
 } from '@contentful/optimization-api-client'
 import { createScopedLogger } from 'logger'
 import PersonalizationBase from './PersonalizationBase'
@@ -45,7 +45,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = parse(IdentifyEvent, this.builder.buildIdentify(builderArgs))
+    const event = validate(IdentifyEvent, this.builder.buildIdentify(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -63,7 +63,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = parse(PageViewEvent, this.builder.buildPageView(builderArgs))
+    const event = validate(PageViewEvent, this.builder.buildPageView(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -81,7 +81,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = parse(ScreenViewEvent, this.builder.buildScreenView(builderArgs))
+    const event = validate(ScreenViewEvent, this.builder.buildScreenView(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -97,7 +97,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = parse(TrackEvent, this.builder.buildTrack(builderArgs))
+    const event = validate(TrackEvent, this.builder.buildTrack(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -115,7 +115,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = parse(ComponentViewEvent, this.builder.buildComponentView(builderArgs))
+    const event = validate(ComponentViewEvent, this.builder.buildComponentView(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }

@@ -9,7 +9,6 @@ import {
   Page,
   PageEventContext,
   type PageViewEvent,
-  parse,
   Properties,
   Screen,
   ScreenEventContext,
@@ -17,6 +16,7 @@ import {
   type TrackEvent,
   Traits,
   type UniversalEventProperties,
+  validate,
 } from '@contentful/optimization-api-schemas'
 import { merge } from 'es-toolkit'
 import * as z from 'zod/mini'
@@ -359,7 +359,7 @@ class EventBuilder {
    * ```
    */
   buildComponentView(args: ComponentViewBuilderArgs): ComponentViewEvent {
-    const { componentId, experienceId, variantIndex, ...universal } = parse(
+    const { componentId, experienceId, variantIndex, ...universal } = validate(
       ComponentViewBuilderArgs,
       args,
     )
@@ -423,7 +423,7 @@ class EventBuilder {
    * ```
    */
   buildIdentify(args: IdentifyBuilderArgs): IdentifyEvent {
-    const { traits = {}, userId, ...universal } = parse(IdentifyBuilderArgs, args)
+    const { traits = {}, userId, ...universal } = validate(IdentifyBuilderArgs, args)
 
     return {
       ...this.buildUniversalEventProperties(universal),
@@ -458,7 +458,7 @@ class EventBuilder {
    * ```
    */
   buildPageView(args: PageViewBuilderArgs = {}): PageViewEvent {
-    const { properties = {}, ...universal } = parse(PageViewBuilderArgs, args)
+    const { properties = {}, ...universal } = validate(PageViewBuilderArgs, args)
 
     const pageProperties = this.getPageProperties()
 
@@ -475,7 +475,7 @@ class EventBuilder {
       ...universalProperties
     } = this.buildUniversalEventProperties(universal)
 
-    const context = parse(PageEventContext, universalContext)
+    const context = validate(PageEventContext, universalContext)
 
     return {
       ...universalProperties,
@@ -504,14 +504,14 @@ class EventBuilder {
    * ```
    */
   buildScreenView(args: ScreenViewBuilderArgs): ScreenViewEvent {
-    const { name, properties, ...universal } = parse(ScreenViewBuilderArgs, args)
+    const { name, properties, ...universal } = validate(ScreenViewBuilderArgs, args)
 
     const {
       context: { page: _, ...universalContext },
       ...universalProperties
     } = this.buildUniversalEventProperties(universal)
 
-    const context = parse(ScreenEventContext, universalContext)
+    const context = validate(ScreenEventContext, universalContext)
 
     return {
       ...universalProperties,
@@ -539,7 +539,7 @@ class EventBuilder {
    * ```
    */
   buildTrack(args: TrackBuilderArgs): TrackEvent {
-    const { event, properties = {}, ...universal } = parse(TrackBuilderArgs, args)
+    const { event, properties = {}, ...universal } = validate(TrackBuilderArgs, args)
 
     return {
       ...this.buildUniversalEventProperties(universal),

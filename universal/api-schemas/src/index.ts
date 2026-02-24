@@ -1,4 +1,4 @@
-export { parse } from './validation'
+export { validate } from './validation'
 
 export * from './contentful'
 export * from './experience'
