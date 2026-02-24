@@ -11,7 +11,7 @@
     "clean": "rimraf ./dist ./coverage ./playwright-report ./test-results .tsbuildinfo",
     "preview": "rsbuild preview",
     "serve": "pnpm serve:mocks && pnpm serve:app",
-    "serve:app": "pnpm build && rsbuild preview --host 127.0.0.1 --port 3001",
+    "serve:app": "pnpm build && rsbuild preview --host localhost --port 3001",
     "serve:app:stop": "echo 'Rsbuild preview stops automatically'",
     "serve:mocks": "pm2 start --name web-react-mocks \"pnpm --dir ../../lib/mocks serve\"",
     "serve:mocks:stop": "pm2 stop web-react-mocks && pm2 delete web-react-mocks",

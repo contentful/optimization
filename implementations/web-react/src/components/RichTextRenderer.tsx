@@ -3,7 +3,14 @@ import {
   type UsePersonalizationResult,
   usePersonalization,
 } from '../optimization/hooks/usePersonalization'
-import type { RichTextDocument, RichTextNode } from '../types/contentful'
+import type { RichTextDocument } from '../types/contentful'
+
+interface RichTextNode {
+  nodeType: string
+  content?: RichTextNode[]
+  data?: Record<string, unknown>
+  value?: string
+}
 
 interface EmbeddedEntryInlineNode extends RichTextNode {
   nodeType: 'embedded-entry-inline'

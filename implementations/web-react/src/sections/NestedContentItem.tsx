@@ -1,6 +1,6 @@
 import { useMemo, type JSX } from 'react'
 import { usePersonalization } from '../optimization/hooks/usePersonalization'
-import { isContentfulEntry, type ContentfulEntry } from '../types/contentful'
+import type { ContentfulEntry } from '../types/contentful'
 
 interface NestedContentItemProps {
   entry: ContentfulEntry
@@ -13,7 +13,7 @@ interface PersonalizationMeta {
 }
 
 function isEntry(value: unknown): value is ContentfulEntry {
-  return isContentfulEntry(value)
+  return typeof value === 'object' && value !== null && 'sys' in value && 'fields' in value
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
