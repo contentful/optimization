@@ -1,17 +1,21 @@
 import { createClient } from 'contentful'
-import { ENV_CONFIG } from '../config/env'
 import type { ContentEntrySkeleton, ContentfulEntry } from '../types/contentful'
 
 const INCLUDE_DEPTH = 10
+const CONTENTFUL_ACCESS_TOKEN = import.meta.env.PUBLIC_CONTENTFUL_TOKEN?.trim() || ''
+const CONTENTFUL_BASE_PATH = import.meta.env.PUBLIC_CONTENTFUL_BASE_PATH?.trim()
+const CONTENTFUL_ENVIRONMENT = import.meta.env.PUBLIC_CONTENTFUL_ENVIRONMENT?.trim() || ''
+const CONTENTFUL_HOST = import.meta.env.PUBLIC_CONTENTFUL_CDA_HOST?.trim() || ''
+const CONTENTFUL_SPACE_ID = import.meta.env.PUBLIC_CONTENTFUL_SPACE_ID?.trim() || ''
 
 function createContentfulClient(): ReturnType<typeof createClient> {
   return createClient({
-    accessToken: ENV_CONFIG.contentful.accessToken,
-    basePath: ENV_CONFIG.contentful.basePath,
-    environment: ENV_CONFIG.contentful.environment,
-    host: ENV_CONFIG.contentful.host,
-    insecure: ENV_CONFIG.contentful.host.includes('localhost'),
-    space: ENV_CONFIG.contentful.spaceId,
+    accessToken: CONTENTFUL_ACCESS_TOKEN,
+    environment: CONTENTFUL_ENVIRONMENT,
+    host: CONTENTFUL_HOST,
+    insecure: CONTENTFUL_HOST.includes('localhost'),
+    space: CONTENTFUL_SPACE_ID,
+    ...(CONTENTFUL_BASE_PATH ? { basePath: CONTENTFUL_BASE_PATH } : {}),
   })
 }
 

@@ -1,13 +1,21 @@
 import Optimization from '@contentful/optimization-web'
-import { ENV_CONFIG } from '../config/env'
 
 export type OptimizationInstance = Optimization
 export type OptimizationConfig = ConstructorParameters<typeof Optimization>[0]
 
+const OPTIMIZATION_CLIENT_ID =
+  import.meta.env.PUBLIC_NINETAILED_CLIENT_ID?.trim() || 'mock-client-id'
+const OPTIMIZATION_ENVIRONMENT =
+  import.meta.env.PUBLIC_NINETAILED_ENVIRONMENT?.trim() || 'main'
+const EXPERIENCE_API_BASE_URL =
+  import.meta.env.PUBLIC_EXPERIENCE_API_BASE_URL?.trim() || 'http://localhost:8000/experience/'
+const INSIGHTS_API_BASE_URL =
+  import.meta.env.PUBLIC_INSIGHTS_API_BASE_URL?.trim() || 'http://localhost:8000/insights/'
+
 function createOptimizationConfig(): OptimizationConfig {
   return {
-    clientId: ENV_CONFIG.optimization.clientId,
-    environment: ENV_CONFIG.optimization.environment,
+    clientId: OPTIMIZATION_CLIENT_ID,
+    environment: OPTIMIZATION_ENVIRONMENT,
     logLevel: 'debug',
     autoTrackEntryViews: true,
     app: {
@@ -15,10 +23,10 @@ function createOptimizationConfig(): OptimizationConfig {
       version: '0.1.0',
     },
     analytics: {
-      baseUrl: ENV_CONFIG.api.insightsBaseUrl,
+      baseUrl: INSIGHTS_API_BASE_URL,
     },
     personalization: {
-      baseUrl: ENV_CONFIG.api.experienceBaseUrl,
+      baseUrl: EXPERIENCE_API_BASE_URL,
     },
   }
 }

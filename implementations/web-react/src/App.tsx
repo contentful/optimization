@@ -1,6 +1,5 @@
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
-import { ENV_CONFIG } from './config/env'
 import { useOptimization } from './optimization/hooks/useOptimization'
 import { useOptimizationState } from './optimization/hooks/useOptimizationState'
 import { ContentEntry } from './sections/ContentEntry'
@@ -9,17 +8,17 @@ import { fetchEntries } from './services/contentfulClient'
 import type { ContentfulEntry } from './types/contentful'
 
 const AUTO_OBSERVED_ENTRY_IDS = [
-  ENV_CONFIG.entries.nested,
-  ENV_CONFIG.entries.mergeTag,
-  ENV_CONFIG.entries.commonRegion,
-  ENV_CONFIG.entries.commonDesktop,
-  ENV_CONFIG.entries.personalized,
+  '1JAU028vQ7v6nB2swl3NBo',
+  '1MwiFl4z7gkwqGYdvCmr8c',
+  '4ib0hsHWoSOnCVdDkizE8d',
+  'xFwgG3oNaOcjzWiGe4vXo',
+  '2Z2WLOx07InSewC3LUB3eX',
 ] as const
 
 const MANUALLY_OBSERVED_ENTRY_IDS = [
-  ENV_CONFIG.entries.abTest,
-  ENV_CONFIG.entries.withCustomEvent,
-  ENV_CONFIG.entries.identified,
+  '5XHssysWUDECHzKLzoIsg1',
+  '6zqoWXyiSrf0ja7I2WGtYj',
+  '7pa5bOx8Z9NmNcr7mISvD',
 ] as const
 
 const ENTRY_IDS = [...AUTO_OBSERVED_ENTRY_IDS, ...MANUALLY_OBSERVED_ENTRY_IDS] as const
