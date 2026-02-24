@@ -16,6 +16,7 @@ demonstrating:
 - `OptimizationProvider` context for SDK state management
 - React hooks for SDK state subscriptions
 - Personalization resolution and variant rendering
+- Rich Text rendering via `@contentful/rich-text-react-renderer`
 - Analytics event tracking
 - Live updates behavior
 - SPA navigation tracking

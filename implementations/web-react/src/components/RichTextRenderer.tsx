@@ -1,4 +1,6 @@
 import type { JSX } from 'react'
+import { documentToReactComponents, type Options } from '@contentful/rich-text-react-renderer'
+import { INLINES } from '@contentful/rich-text-types'
 import {
   type UsePersonalizationResult,
   usePersonalization,
@@ -12,27 +14,15 @@ interface RichTextNode {
   value?: string
 }
 
-interface EmbeddedEntryInlineNode extends RichTextNode {
-  nodeType: 'embedded-entry-inline'
-  data: {
-    target: unknown
-  }
-}
-
 interface RichTextRendererProps {
   richText: RichTextDocument
 }
 
 type MergeTagValueResolver = UsePersonalizationResult['getMergeTagValue']
 type MergeTagEntry = Parameters<MergeTagValueResolver>[0]
-type RenderedRichTextNode = JSX.Element | string | null | RenderedRichTextNode[]
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
-}
-
-function isEmbeddedEntryInline(node: RichTextNode): node is EmbeddedEntryInlineNode {
-  return node.nodeType === 'embedded-entry-inline' && isRecord(node.data) && 'target' in node.data
 }
 
 function isLink(target: unknown): target is { sys: { type: 'Link' } } {
@@ -61,69 +51,21 @@ function isMergeTagEntry(entry: unknown): entry is MergeTagEntry {
   return contentType.sys.id === 'nt_mergetag'
 }
 
-function renderText(node: RichTextNode): string | null {
+function getMergeTagText(target: unknown, getMergeTagValue: MergeTagValueResolver): string {
+  if (isLink(target) || !isMergeTagEntry(target)) {
+    return '[Merge Tag]'
+  }
+
+  return getMergeTagValue(target)
+}
+
+function extractTextContent(node: RichTextNode, getMergeTagValue: MergeTagValueResolver): string {
   if (node.nodeType === 'text' && typeof node.value === 'string') {
     return node.value
   }
 
-  return null
-}
-
-function renderRichTextNode(
-  node: RichTextNode,
-  getMergeTagValue: MergeTagValueResolver,
-  key: string,
-): RenderedRichTextNode {
-  const text = renderText(node)
-  if (text !== null) {
-    return text
-  }
-
-  if (node.nodeType === 'paragraph' && Array.isArray(node.content)) {
-    return (
-      <p key={key}>
-        {node.content.map((child, index) =>
-          renderRichTextNode(child, getMergeTagValue, `${key}-p-${index}`),
-        )}
-      </p>
-    )
-  }
-
-  if (isEmbeddedEntryInline(node)) {
-    const { data } = node
-    const { target } = data
-
-    if (isLink(target) || !isMergeTagEntry(target)) {
-      return '[Merge Tag]'
-    }
-
-    return getMergeTagValue(target)
-  }
-
-  if (Array.isArray(node.content)) {
-    return node.content.map((child, index) =>
-      renderRichTextNode(child, getMergeTagValue, `${key}-c-${index}`),
-    )
-  }
-
-  return null
-}
-
-function extractTextContent(node: RichTextNode, getMergeTagValue: MergeTagValueResolver): string {
-  const text = renderText(node)
-  if (text !== null) {
-    return text
-  }
-
-  if (isEmbeddedEntryInline(node)) {
-    const { data } = node
-    const { target } = data
-
-    if (isLink(target) || !isMergeTagEntry(target)) {
-      return '[Merge Tag]'
-    }
-
-    return getMergeTagValue(target)
+  if (node.nodeType === INLINES.EMBEDDED_ENTRY && isRecord(node.data) && 'target' in node.data) {
+    return getMergeTagText(node.data.target, getMergeTagValue)
   }
 
   if (Array.isArray(node.content)) {
@@ -145,12 +87,18 @@ export function getRichTextContent(
 
 export function RichTextRenderer({ richText }: RichTextRendererProps): JSX.Element {
   const { getMergeTagValue } = usePersonalization()
+  const renderOptions: Options = {
+    renderNode: {
+      [INLINES.EMBEDDED_ENTRY]: (node): string => {
+        const { data } = node
+        if (!isRecord(data) || !('target' in data)) {
+          return '[Merge Tag]'
+        }
 
-  return (
-    <>
-      {richText.content.map((node, index) =>
-        renderRichTextNode(node, getMergeTagValue, `root-${index}`),
-      )}
-    </>
-  )
+        return getMergeTagText(data.target, getMergeTagValue)
+      },
+    },
+  }
+
+  return <>{documentToReactComponents(richText, renderOptions)}</>
 }
