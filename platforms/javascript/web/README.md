@@ -114,13 +114,13 @@ Alternatively, the Web SDK can be used directly within an HTML file:
 | `analytics`                | No        | See "Analytics Options"       | Configuration specific to the Analytics/Insights API                           |
 | `app`                      | No        | `undefined`                   | The application definition used to attribute events to a specific consumer app |
 | `autoTrackEntryViews`      | No        | `false`                       | Opt-in automated tracking of entry/component views                             |
-| `clientId`                 | Yes       | N/A                           | The Ninetailed API Key which can be found in the Ninetailed Admin app          |
+| `clientId`                 | Yes       | N/A                           | The Optimization API key                                                       |
 | `defaults`                 | No        | `undefined`                   | Set of default state values applied on initialization                          |
-| `environment`              | No        | `'main'`                      | The Ninetailed environment configured in the Ninetailed Admin app              |
+| `environment`              | No        | `'main'`                      | The environment identifier                                                     |
 | `eventBuilder`             | No        | See "Event Builder Options"   | Event builder configuration (channel/library metadata, etc.)                   |
 | `fetchOptions`             | No        | See "Fetch Options"           | Configuration for Fetch timeout and retry functionality                        |
 | `getAnonymousId`           | No        | `undefined`                   | Function used to obtain an anonymous user identifier                           |
-| `logLevel`                 | No        | `'error'`                     | Minimum log level for the default console sin                                  |
+| `logLevel`                 | No        | `'error'`                     | Minimum log level for the default console sink                                 |
 | `personalization`          | No        | See "Personalization Options" | Configuration specific to the Personalization/Experience API                   |
 | `preventedComponentEvents` | No        | `undefined`                   | Initial duplication prevention configuration for component events              |
 

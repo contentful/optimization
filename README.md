@@ -110,7 +110,7 @@ located within the `/lib` folder in the project root.
 ## Get Involved
 
 We appreciate any help on our repositories. For more details about how to contribute see our
-[CONTRIBUTING](https://github.com/contentful/contentful.js/blob/master/CONTRIBUTING.md) document.
+[CONTRIBUTING](/CONTRIBUTING.md) document.
 
 ## License
 

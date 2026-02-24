@@ -1,87 +1,196 @@
-# @contentful/optimization-react-native
+<p align="center">
+  <a href="https://www.contentful.com/developers/docs/personalization/">
+    <img alt="Contentful Logo" title="Contentful" src="../../../contentful-icon.png" width="150">
+  </a>
+</p>
+
+<h1 align="center">Contentful Personalization & Analytics</h1>
+
+<h3 align="center">Optimization React Native SDK</h3>
+
+<div align="center">
+
+[Readme](./README.md) · [Reference](https://contentful.github.io/optimization) ·
+[Contributing](/CONTRIBUTING.md)
+
+</div>
 
 > [!WARNING]
 >
 > The Optimization SDK Suite is currently ALPHA! Breaking changes may be published at any time.
 
-Contentful Optimization SDK for React Native applications.
+The Optimization React Native SDK implements functionality specific to React Native applications,
+based on the [Optimization Core Library](/universal/core/README.md). This SDK is part of the
+[Contentful Optimization SDK Suite](/README.md).
 
-## Installation
+<details>
+  <summary>Table of Contents</summary>
+<!-- mtoc-start -->
 
-```bash
-npm install @contentful/optimization-react-native @react-native-async-storage/async-storage
+- [Getting Started](#getting-started)
+- [Reference Implementation](#reference-implementation)
+- [Configuration](#configuration)
+  - [Top-level Configuration Options](#top-level-configuration-options)
+  - [Analytics Options](#analytics-options)
+  - [Event Builder Options](#event-builder-options)
+  - [Fetch Options](#fetch-options)
+  - [Personalization Options](#personalization-options)
+- [Component Tracking](#component-tracking)
+  - [`<Personalization />` - For Personalized Entries](#personalization----for-personalized-entries)
+  - [`<Analytics />` - For Non-Personalized Entries](#analytics----for-non-personalized-entries)
+  - [ScrollView vs Non-ScrollView Usage](#scrollview-vs-non-scrollview-usage)
+  - [Custom Tracking Thresholds](#custom-tracking-thresholds)
+  - [Manual Analytics Tracking](#manual-analytics-tracking)
+- [OptimizationRoot](#optimizationroot)
+  - [Preview Panel](#preview-panel)
+- [Live Updates Behavior](#live-updates-behavior)
+  - [Default Behavior (Recommended)](#default-behavior-recommended)
+  - [Enabling Live Updates](#enabling-live-updates)
+  - [Priority Order](#priority-order)
+- [React Native-Specific Defaults](#react-native-specific-defaults)
+- [Offline Support](#offline-support)
+  - [How It Works](#how-it-works)
+- [Polyfills](#polyfills)
+
+<!-- mtoc-end -->
+</details>
+
+## Getting Started
+
+Install using an NPM-compatible package manager, pnpm for example:
+
+```sh
+pnpm install @contentful/optimization-react-native @react-native-async-storage/async-storage
 ```
 
 For offline support (recommended), also install:
 
-```bash
-npm install @react-native-community/netinfo
+```sh
+pnpm install @react-native-community/netinfo
+```
+
+Import the Optimization class; both CJS and ESM module systems are supported, ESM preferred:
+
+```ts
+import Optimization from '@contentful/optimization-react-native'
+```
+
+Configure and initialize the Optimization React Native SDK:
+
+```ts
+const optimization = await Optimization.create({
+  clientId: 'your-client-id',
+  environment: 'main',
+})
 ```
 
 ## Reference Implementation
 
 - [React Native](/implementations/react-native/README.md): Example application that displays
-  personalized content, with builds targeted for both Android and iOS (TODO: update link when README
-  is added)
+  personalized content, with builds targeted for both Android and iOS
 
-## Quick Start
+## Configuration
 
-```typescript
-import { createClient } from 'contentful'
-import Optimization, {
-  OptimizationRoot,
-  ScrollProvider,
-  Personalization,
-  Analytics,
-} from '@contentful/optimization-react-native'
+### Top-level Configuration Options
 
-// Initialize the Contentful client
-const contentful = createClient({
-  space: 'your-space-id',
-  accessToken: 'your-access-token',
-})
+| Option                     | Required? | Default                       | Description                                                       |
+| -------------------------- | --------- | ----------------------------- | ----------------------------------------------------------------- |
+| `allowedEventTypes`        | No        | `['identify', 'page']`        | Allow-listed event types permitted when consent is not set        |
+| `analytics`                | No        | See "Analytics Options"       | Configuration specific to the Analytics/Insights API              |
+| `clientId`                 | Yes       | N/A                           | The Optimization API key                                          |
+| `defaults`                 | No        | `undefined`                   | Set of default state values applied on initialization             |
+| `environment`              | No        | `'main'`                      | The environment identifier                                        |
+| `eventBuilder`             | No        | See "Event Builder Options"   | Event builder configuration (channel/library metadata, etc.)      |
+| `fetchOptions`             | No        | See "Fetch Options"           | Configuration for Fetch timeout and retry functionality           |
+| `getAnonymousId`           | No        | `undefined`                   | Function used to obtain an anonymous user identifier              |
+| `logLevel`                 | No        | `'error'`                     | Minimum log level for the default console sink                    |
+| `personalization`          | No        | See "Personalization Options" | Configuration specific to the Personalization/Experience API      |
+| `preventedComponentEvents` | No        | `undefined`                   | Initial duplication prevention configuration for component events |
 
-// Initialize the Optimization SDK
-const optimization = await Optimization.create({
-  clientId: 'your-client-id',
-  environment: 'your-environment',
-})
+Configuration method signatures:
 
-// Fetch a baseline entry with full includes for personalization
-const heroEntry = await contentful.getEntry('hero-baseline-id', {
-  include: 10, // Required to load all variant data
-})
+- `getAnonymousId`: `() => string | undefined`
 
-// Wrap your app with OptimizationRoot
-function App() {
-  return (
-    <OptimizationRoot
-      instance={optimization}
-      previewPanel={{
-        enabled: __DEV__, // Enable preview panel in development
-        contentfulClient: contentful,
-      }}
-    >
-      <ScrollProvider>
-        {/* For personalized entries */}
-        <Personalization baselineEntry={heroEntry}>
-          {(resolvedEntry) => (
-            <HeroComponent
-              title={resolvedEntry.fields.title}
-              image={resolvedEntry.fields.image}
-            />
-          )}
-        </Personalization>
+### Analytics Options
 
-        {/* For non-personalized entries */}
-        <Analytics entry={productEntry}>
-          <ProductCard data={productEntry.fields} />
-        </Analytics>
-      </ScrollProvider>
-    </OptimizationRoot>
-  )
-}
-```
+| Option          | Required? | Default                                    | Description                                                              |
+| --------------- | --------- | ------------------------------------------ | ------------------------------------------------------------------------ |
+| `baseUrl`       | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                            |
+| `beaconHandler` | No        | `undefined`                                | Handler used to enqueue events via the Beacon API or a similar mechanism |
+
+Configuration method signatures:
+
+- `beaconHandler`: `(url: string | URL, data: BatchInsightsEventArray) => boolean`
+
+### Event Builder Options
+
+Event builder options should only be supplied when building an SDK on top of the Optimization React
+Native SDK or any of its descendent SDKs.
+
+| Option              | Required? | Default                                                               | Description                                                                        |
+| ------------------- | --------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `app`               | No        | `undefined`                                                           | The application definition used to attribute events to a specific consumer app     |
+| `channel`           | No        | `'mobile'`                                                            | The channel that identifies where events originate from (e.g. `'web'`, `'mobile'`) |
+| `library`           | No        | `{ name: 'Optimization React Native SDK', version: '<pkg version>' }` | The client library metadata that is attached to all events                         |
+| `getLocale`         | No        | Built-in locale resolution                                            | Function used to resolve the locale for outgoing events                            |
+| `getPageProperties` | No        | Built-in page properties resolution                                   | Function that returns the current page properties                                  |
+| `getUserAgent`      | No        | Built-in user agent resolution                                        | Function used to obtain the current user agent string when applicable              |
+
+The `channel` option may contain one of the following values:
+
+- `web`
+- `mobile`
+- `server`
+
+Configuration method signatures:
+
+- `getLocale`: `() => string | undefined`
+- `getPageProperties`:
+
+  ```ts
+  () => {
+    path: string,
+    query: Record<string, string>,
+    referrer: string,
+    search: string,
+    title?: string,
+    url: string
+  }
+  ```
+
+- `getUserAgent`: `() => string | undefined`
+
+### Fetch Options
+
+Fetch options allow for configuration of a Fetch API-compatible fetch method and the retry/timeout
+logic integrated into the Optimization API Client. Specify the `fetchMethod` when the host
+application environment does not offer a `fetch` method that is compatible with the standard Fetch
+API in its global scope.
+
+| Option             | Required? | Default     | Description                                                           |
+| ------------------ | --------- | ----------- | --------------------------------------------------------------------- |
+| `fetchMethod`      | No        | `undefined` | Signature of a fetch method used by the API clients                   |
+| `intervalTimeout`  | No        | `0`         | Delay (in milliseconds) between retry attempts                        |
+| `onFailedAttempt`  | No        | `undefined` | Callback invoked whenever a retry attempt fails                       |
+| `onRequestTimeout` | No        | `undefined` | Callback invoked when a request exceeds the configured timeout        |
+| `requestTimeout`   | No        | `3000`      | Maximum time (in milliseconds) to wait for a response before aborting |
+| `retries`          | No        | `1`         | Maximum number of retry attempts                                      |
+
+Configuration method signatures:
+
+- `fetchMethod`: `(url: string | URL, init: RequestInit) => Promise<Response>`
+- `onFailedAttempt` and `onRequestTimeout`: `(options: FetchMethodCallbackOptions) => void`
+
+### Personalization Options
+
+| Option            | Required? | Default                               | Description                                                         |
+| ----------------- | --------- | ------------------------------------- | ------------------------------------------------------------------- |
+| `baseUrl`         | No        | `'https://experience.ninetailed.co/'` | Base URL for the Experience API                                     |
+| `enabledFeatures` | No        | `['ip-enrichment', 'location']`       | Enabled features which the API may use for each request             |
+| `ip`              | No        | `undefined`                           | IP address to override the API behavior for IP analysis             |
+| `locale`          | No        | `'en-US'` (in API)                    | Locale used to translate `location.city` and `location.country`     |
+| `plainText`       | No        | `false`                               | Sends performance-critical endpoints in plain text                  |
+| `preflight`       | No        | `false`                               | Instructs the API to aggregate a new profile state but not store it |
 
 ## Component Tracking
 
@@ -145,7 +254,6 @@ dimensions:
 When used without `<ScrollProvider>`, tracking uses screen dimensions instead:
 
 ```tsx
-{/* No ScrollProvider needed for non-scrollable content */}
 <Personalization baselineEntry={entry}>
   {(resolvedEntry) => <FullScreenHero data={resolvedEntry} />}
 </Personalization>
@@ -161,6 +269,59 @@ is ideal for:
 - Full-screen components
 - Non-scrollable layouts
 - Content that's always visible when the screen loads
+
+### Custom Tracking Thresholds
+
+Both components support customizable visibility and time thresholds:
+
+```typescript
+<Personalization
+  baselineEntry={entry}
+  viewTimeMs={3000}      // Track after 3 seconds of visibility
+  threshold={0.9}        // Require 90% visibility
+>
+  {(resolvedEntry) => <YourComponent data={resolvedEntry.fields} />}
+</Personalization>
+
+<Analytics
+  entry={entry}
+  viewTimeMs={1500}      // Track after 1.5 seconds
+  threshold={0.5}        // Require 50% visibility
+>
+  <YourComponent />
+</Analytics>
+```
+
+**Key Features:**
+
+- Tracks only once per component instance
+- Works with or without `ScrollProvider` (automatically adapts)
+- Default: 80% visible for 2000ms (both configurable)
+- Tracking fires even if user never scrolls (checks on initial layout)
+- `<Personalization />` uses render prop pattern to provide resolved entry
+- `<Analytics />` uses standard children pattern
+
+### Manual Analytics Tracking
+
+You can also manually track events using the analytics API:
+
+```typescript
+import Optimization, { useOptimization } from '@contentful/optimization-react-native'
+
+function MyComponent() {
+  const optimization = useOptimization()
+
+  const trackManually = async () => {
+    await optimization.analytics.trackComponentView({
+      componentId: 'my-component',
+      experienceId: 'exp-456',
+      variantIndex: 0,
+    })
+  }
+
+  return <Button onPress={trackManually} title="Track" />
+}
+```
 
 ## OptimizationRoot
 
@@ -267,10 +428,7 @@ updates. This allows developers to test different variants without refreshing th
 Enable live updates for all `<Personalization />` components in your app:
 
 ```tsx
-<OptimizationRoot
-  instance={optimization}
-  liveUpdates={true} // All components react to changes immediately
->
+<OptimizationRoot instance={optimization} liveUpdates={true}>
   {/* ... */}
 </OptimizationRoot>
 ```
@@ -309,237 +467,6 @@ The live updates setting is determined for a particular `<Personalization/>` com
 | Closed        | `true`         | `false`        | Live updates OFF |
 | Closed        | `false`        | `undefined`    | Live updates OFF |
 
-## Features
-
-This SDK provides all the functionality from `@contentful/optimization-core` plus React
-Native-specific features:
-
-### React Native Specific
-
-- **OptimizationRoot**: Recommended wrapper that combines provider with optional preview panel
-- **Personalization**: Component for tracking personalized Contentful entries with variant
-  resolution and configurable live updates
-- **Analytics**: Component for tracking non-personalized Contentful entries
-- **OptimizationProvider**: React context provider for accessing the Optimization instance
-- **ScrollProvider**: Wrapper around ScrollView that enables viewport tracking
-- **Preview Panel**: Built-in debugging interface for testing personalizations
-- **useOptimization**: Hook to access the Optimization instance in components
-- **useLiveUpdates**: Hook to access live updates configuration
-- **useViewportTracking**: Hook for custom viewport tracking logic
-- **AsyncStorage Integration**: Automatic persistence of state using
-  `@react-native-async-storage/async-storage`
-- **React Native Defaults**: Pre-configured event builders for mobile context
-
-### Core Functionality (Re-exported)
-
-All core SDK features are available directly from this package:
-
-- **Analytics**: `AnalyticsStateful`, `AnalyticsStateless` - Track user events
-- **Personalization**: `Personalization` class and resolvers - Deliver personalized content
-- **Signals**: `batch`, `effect`, `signals` - Reactive state management
-- **Logger**: `logger` - Logging utilities
-- **Types**: All TypeScript types and interfaces from core and API client
-
-### Component Tracking Examples
-
-#### Tracking Personalized Entries
-
-The `<Personalization />` component handles variant resolution and tracking for personalized
-Contentful entries:
-
-```typescript
-import { createClient } from 'contentful'
-import { Personalization } from '@contentful/optimization-react-native'
-
-const contentful = createClient({ /* ... */ })
-
-// Fetch baseline entry with full includes (required for personalization)
-const heroEntry = await contentful.getEntry('hero-baseline-id', {
-  include: 10, // Loads all linked variants and experiences
-})
-
-function MyScreen() {
-  return (
-    <ScrollProvider>
-      <Personalization baselineEntry={heroEntry}>
-        {(resolvedEntry) => (
-          <View>
-            <Text>{resolvedEntry.fields.title}</Text>
-            <Image source={{ uri: resolvedEntry.fields.image.fields.file.url }} />
-          </View>
-        )}
-      </Personalization>
-    </ScrollProvider>
-  )
-}
-```
-
-#### Tracking Non-Personalized Entries
-
-The `<Analytics />` component tracks views of standard Contentful entries:
-
-```typescript
-import { Analytics } from '@contentful/optimization-react-native'
-
-const productEntry = await contentful.getEntry('product-123')
-
-function ProductScreen() {
-  return (
-    <ScrollProvider>
-      <Analytics entry={productEntry}>
-        <ProductCard
-          name={productEntry.fields.name}
-          price={productEntry.fields.price}
-          image={productEntry.fields.image}
-        />
-      </Analytics>
-    </ScrollProvider>
-  )
-}
-```
-
-#### Custom Tracking Thresholds
-
-Both components support customizable visibility and time thresholds:
-
-```typescript
-<Personalization
-  baselineEntry={entry}
-  viewTimeMs={3000}      // Track after 3 seconds of visibility
-  threshold={0.9}        // Require 90% visibility
->
-  {(resolvedEntry) => <YourComponent data={resolvedEntry.fields} />}
-</Personalization>
-
-<Analytics
-  entry={entry}
-  viewTimeMs={1500}      // Track after 1.5 seconds
-  threshold={0.5}        // Require 50% visibility
->
-  <YourComponent />
-</Analytics>
-```
-
-**Key Features:**
-
-- Tracks only once per component instance
-- Works with or without `ScrollProvider` (automatically adapts)
-- Default: 80% visible for 2000ms (both configurable)
-- Tracking fires even if user never scrolls (checks on initial layout)
-- `<Personalization />` uses render prop pattern to provide resolved entry
-- `<Analytics />` uses standard children pattern
-
-### Manual Analytics Tracking
-
-You can also manually track events using the analytics API:
-
-```typescript
-import Optimization, { useOptimization } from '@contentful/optimization-react-native'
-
-// In a component
-function MyComponent() {
-  const optimization = useOptimization()
-
-  const trackManually = async () => {
-    await optimization.analytics.trackComponentView({
-      componentId: 'my-component',
-      experienceId: 'exp-456',
-      variantIndex: 0,
-    })
-  }
-
-  return <Button onPress={trackManually} title="Track" />
-}
-```
-
-### Complete Example
-
-```typescript
-import React, { useEffect, useState } from 'react'
-import { View, Text, Image } from 'react-native'
-import { createClient } from 'contentful'
-import type { Entry } from 'contentful'
-import Optimization, {
-  logger,
-  OptimizationRoot,
-  ScrollProvider,
-  Personalization,
-  Analytics,
-  type CoreConfig,
-} from '@contentful/optimization-react-native'
-
-// Initialize Contentful client
-const contentful = createClient({
-  space: 'your-space-id',
-  accessToken: 'your-access-token',
-})
-
-// Use logger
-logger.info('App starting')
-
-// Optimization SDK config
-const config: CoreConfig = {
-  clientId: 'your-client-id',
-  environment: 'main',
-  logLevel: 'info',
-}
-
-function App() {
-  const [optimization, setOptimization] = useState<Optimization | null>(null)
-  const [heroEntry, setHeroEntry] = useState<Entry | null>(null)
-  const [productEntry, setProductEntry] = useState<Entry | null>(null)
-
-  useEffect(() => {
-    // Initialize SDK and fetch entries
-    Promise.all([
-      Optimization.create(config),
-      contentful.getEntry('hero-baseline-id', { include: 10 }),
-      contentful.getEntry('product-123'),
-    ]).then(([opt, hero, product]) => {
-      setOptimization(opt)
-      setHeroEntry(hero)
-      setProductEntry(product)
-    })
-  }, [])
-
-  if (!optimization || !heroEntry || !productEntry) {
-    return <Text>Loading...</Text>
-  }
-
-  return (
-    <OptimizationRoot
-      instance={optimization}
-      previewPanel={{
-        enabled: __DEV__,
-        contentfulClient: contentful,
-      }}
-    >
-      <ScrollProvider>
-        <View>
-          {/* Personalized hero section */}
-          <Personalization baselineEntry={heroEntry}>
-            {(resolvedEntry) => (
-              <View>
-                <Text>{resolvedEntry.fields.title}</Text>
-                <Text>{resolvedEntry.fields.description}</Text>
-              </View>
-            )}
-          </Personalization>
-
-          {/* Non-personalized product */}
-          <Analytics entry={productEntry}>
-            <View>
-              <Text>{productEntry.fields.name}</Text>
-              <Text>${productEntry.fields.price}</Text>
-            </View>
-          </Analytics>
-        </View>
-      </ScrollProvider>
-    </OptimizationRoot>
-  )
-}
-```
-
 ## React Native-Specific Defaults
 
 The SDK automatically configures:
@@ -554,8 +481,8 @@ The SDK automatically configures:
 The SDK automatically detects network connectivity changes and handles events appropriately when the
 device goes offline. To enable this feature, install the optional peer dependency:
 
-```bash
-npm install @react-native-community/netinfo
+```sh
+pnpm install @react-native-community/netinfo
 ```
 
 Once installed, the SDK will:
@@ -580,7 +507,7 @@ availability) for accurate detection.
 If `@react-native-community/netinfo` is not installed, the SDK will log a warning and continue
 without offline detection. Events will still work normally when online.
 
-### Polyfills
+## Polyfills
 
 The SDK includes automatic polyfills for React Native to support modern JavaScript features:
 

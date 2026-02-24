@@ -91,11 +91,11 @@ select less-common scenarios, with the most basic example solution possible.
 | ----------------- | --------- | ----------------------------- | ------------------------------------------------------------------------------ |
 | `analytics`       | No        | See "Analytics Options"       | Configuration specific to the Analytics/Insights API                           |
 | `app`             | No        | `undefined`                   | The application definition used to attribute events to a specific consumer app |
-| `clientId`        | Yes       | N/A                           | The Ninetailed API Key which can be found in the Ninetailed Admin app          |
-| `environment`     | No        | `'main'`                      | The Ninetailed environment configured in the Ninetailed Admin app              |
+| `clientId`        | Yes       | N/A                           | The Optimization API key                                                       |
+| `environment`     | No        | `'main'`                      | The environment identifier                                                     |
 | `eventBuilder`    | No        | See "Event Builder Options"   | Event builder configuration (channel/library metadata, etc.)                   |
 | `fetchOptions`    | No        | See "Fetch Options"           | Configuration for Fetch timeout and retry functionality                        |
-| `logLevel`        | No        | `'error'`                     | Minimum log level for the default console sin                                  |
+| `logLevel`        | No        | `'error'`                     | Minimum log level for the default console sink                                 |
 | `personalization` | No        | See "Personalization Options" | Configuration specific to the Personalization/Experience API                   |
 
 ### Analytics Options
@@ -254,6 +254,7 @@ Arguments:
 
 - `payload`\*: Component view event builder arguments object, including an optional `profile`
   property with a `PartialProfile` value that requires only an `id`
+- `duplicationScope`: Arbitrary string that may be used to scope component view duplication
 
 #### `trackFlagView`
 
@@ -264,6 +265,7 @@ Arguments:
 
 - `payload`\*: Component view event builder arguments object, including an optional `profile`
   property with a `PartialProfile` value that requires only an `id`
+- `duplicationScope`: Arbitrary string that may be used to scope component view duplication
 
 ## Interceptors
 
@@ -285,5 +287,4 @@ optimization.interceptors.event((event) => {
 
 > [!WARNING]
 >
-> Interceptors are intended to enable low-level interoperability; to simply read and react to
-> Optimization SDK events, use the `states` observables.
+> Interceptors are intended to enable low-level interoperability and should be used with care.

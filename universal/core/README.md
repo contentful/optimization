@@ -104,15 +104,15 @@ exposed externally as read-only observables.
 
 ### Top-level Configuration Options
 
-| Option            | Required? | Default                       | Description                                                           |
-| ----------------- | --------- | ----------------------------- | --------------------------------------------------------------------- |
-| `analytics`       | No        | See "Analytics Options"       | Configuration specific to the Analytics/Insights API                  |
-| `clientId`        | Yes       | N/A                           | The Ninetailed API Key which can be found in the Ninetailed Admin app |
-| `environment`     | No        | `'main'`                      | The Ninetailed environment configured in the Ninetailed Admin app     |
-| `eventBuilder`    | No        | See "Event Builder Options"   | Event builder configuration (channel/library metadata, etc.)          |
-| `fetchOptions`    | No        | See "Fetch Options"           | Configuration for Fetch timeout and retry functionality               |
-| `logLevel`        | No        | `'error'`                     | Minimum log level for the default console sin                         |
-| `personalization` | No        | See "Personalization Options" | Configuration specific to the Personalization/Experience API          |
+| Option            | Required? | Default                       | Description                                                  |
+| ----------------- | --------- | ----------------------------- | ------------------------------------------------------------ |
+| `analytics`       | No        | See "Analytics Options"       | Configuration specific to the Analytics/Insights API         |
+| `clientId`        | Yes       | N/A                           | The Optimization API key                                     |
+| `environment`     | No        | `'main'`                      | The environment identifier                                   |
+| `eventBuilder`    | No        | See "Event Builder Options"   | Event builder configuration (channel/library metadata, etc.) |
+| `fetchOptions`    | No        | See "Fetch Options"           | Configuration for Fetch timeout and retry functionality      |
+| `logLevel`        | No        | `'error'`                     | Minimum log level for the default console sink               |
+| `personalization` | No        | See "Personalization Options" | Configuration specific to the Personalization/Experience API |
 
 The following configuration options apply only in stateful environments:
 
