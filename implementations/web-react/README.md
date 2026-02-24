@@ -71,7 +71,10 @@ pnpm typecheck
 ### E2E Tests
 
 ```bash
-# Run E2E tests (starts mocks, builds app, runs Playwright)
+# In terminal 1: start mocks + app preview
+pnpm run implementation:web-react serve
+
+# In terminal 2: run Playwright tests
 pnpm run implementation:web-react test:e2e
 
 # Interactive Playwright UI
@@ -127,7 +130,7 @@ import { OptimizationProvider } from './optimization'
 
 function App() {
   return (
-    <OptimizationProvider config={sdkConfig}>
+    <OptimizationProvider>
       <YourApp />
     </OptimizationProvider>
   )
@@ -141,7 +144,8 @@ import { usePersonalization, useOptimization } from './optimization'
 
 function MyComponent() {
   const { sdk, isReady } = useOptimization()
-  const variant = usePersonalization(experience, baseEntry)
+  const { resolveEntry } = usePersonalization()
+  const resolved = resolveEntry(baseEntry)
 
   // ...
 }
@@ -153,10 +157,10 @@ function MyComponent() {
 import { useAnalytics } from './optimization'
 
 function TrackedComponent() {
-  const { trackView, trackEvent } = useAnalytics()
+  const { trackView } = useAnalytics()
 
   useEffect(() => {
-    trackView('component-id')
+    void trackView({ componentId: 'component-id' })
   }, [])
 
   // ...

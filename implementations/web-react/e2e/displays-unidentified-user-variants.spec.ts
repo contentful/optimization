@@ -4,7 +4,7 @@ test.describe('unidentified user', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForLoadState('networkidle')
+    await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
   })
 
   test('renders utility panel and entries', async ({ page }) => {

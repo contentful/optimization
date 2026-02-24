@@ -1,8 +1,9 @@
 import { type JSX, useEffect, useMemo, useRef } from 'react'
-import { RichTextRenderer, getRichTextContent } from '../components/RichTextRenderer'
+import { RichTextRenderer } from '../components/RichTextRenderer'
 import { useOptimization } from '../optimization/hooks/useOptimization'
 import { usePersonalization } from '../optimization/hooks/usePersonalization'
 import type { ContentfulEntry, RichTextDocument } from '../types/contentful'
+import { isRecord } from '../utils/typeGuards'
 
 interface ContentEntryProps {
   entry: ContentfulEntry
@@ -26,10 +27,6 @@ function isRichTextField(field: unknown): field is RichTextDocument {
   )
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
 function getPersonalizationMeta(value: unknown): PersonalizationMeta {
   if (!isRecord(value)) {
     return {}
@@ -43,18 +40,12 @@ function getPersonalizationMeta(value: unknown): PersonalizationMeta {
 }
 
 function getEntryText(contentEntry: ContentfulEntry): string {
-  const richTextField = Object.values(contentEntry.fields).find(isRichTextField)
-
-  if (richTextField) {
-    return ''
-  }
-
   return typeof contentEntry.fields.text === 'string' ? contentEntry.fields.text : 'No content'
 }
 
 export function ContentEntry({ entry, observation }: ContentEntryProps): JSX.Element {
   const { sdk, isReady } = useOptimization()
-  const { resolveEntry, getMergeTagValue } = usePersonalization()
+  const { resolveEntry } = usePersonalization()
   const containerRef = useRef<HTMLDivElement | null>(null)
 
   const resolved = useMemo(() => resolveEntry(entry), [entry, resolveEntry])
@@ -93,9 +84,7 @@ export function ContentEntry({ entry, observation }: ContentEntryProps): JSX.Ele
 
   const richTextField = Object.values(resolvedEntry.fields).find(isRichTextField)
 
-  const fullLabel = richTextField
-    ? `${getRichTextContent(richTextField, getMergeTagValue)} [Entry: ${entry.sys.id}]`
-    : `${getEntryText(resolvedEntry)} [Entry: ${entry.sys.id}]`
+  const fullLabel = `Entry: ${resolvedEntry.sys.id}`
 
   const autoTrackingAttributes =
     observation === 'auto'

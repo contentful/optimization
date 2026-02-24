@@ -6,6 +6,7 @@ import {
   type UsePersonalizationResult,
 } from '../optimization/hooks/usePersonalization'
 import type { RichTextDocument } from '../types/contentful'
+import { isRecord } from '../utils/typeGuards'
 
 interface RichTextNode {
   nodeType: string
@@ -21,10 +22,6 @@ interface RichTextRendererProps {
 type MergeTagValueResolver = UsePersonalizationResult['getMergeTagValue']
 type MergeTagEntry = Parameters<MergeTagValueResolver>[0]
 const EMBEDDED_ENTRY_NODE_TYPE = 'embedded-entry-inline'
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
 
 function isLink(target: unknown): target is { sys: { type: 'Link' } } {
   if (!isRecord(target) || !isRecord(target.sys)) {
@@ -70,7 +67,7 @@ function extractTextContent(node: RichTextNode, getMergeTagValue: MergeTagValueR
   }
 
   if (Array.isArray(node.content)) {
-    return node.content.map((child) => extractTextContent(child, getMergeTagValue)).join('')
+    return node.content.map((child) => extractTextContent(child, getMergeTagValue)).join(' ')
   }
 
   return ''

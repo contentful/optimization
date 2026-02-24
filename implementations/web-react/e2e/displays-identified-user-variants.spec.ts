@@ -4,14 +4,14 @@ test.describe('identified user', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForLoadState('networkidle')
+    await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Identify' }).click()
     await expect(page.getByRole('button', { name: 'Reset Profile' })).toBeVisible()
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForLoadState('networkidle')
+    await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Reset Profile' })).toBeVisible()
   })
 
@@ -28,7 +28,7 @@ test.describe('identified user', () => {
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForLoadState('networkidle')
+    await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
 
     await expect(page.getByRole('button', { name: 'Identify' })).toBeVisible()
     await expect(

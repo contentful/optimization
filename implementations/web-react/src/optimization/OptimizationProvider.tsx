@@ -12,6 +12,8 @@ export const OptimizationContext = createContext<OptimizationContextValue | unde
 export function OptimizationProvider({ children }: PropsWithChildren): JSX.Element {
   const value = useMemo<OptimizationContextValue>(() => {
     try {
+      // Intentionally use a singleton SDK instance to avoid re-initialization during
+      // React StrictMode double invocation in development.
       const sdk = getOptimization()
       return { sdk, isReady: true, error: undefined }
     } catch (error) {

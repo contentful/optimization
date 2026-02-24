@@ -13,7 +13,7 @@ test.describe('consent gating', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForLoadState('networkidle')
+    await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
   })
 
   test('allows page events without consent but gates component view events', async ({ page }) => {

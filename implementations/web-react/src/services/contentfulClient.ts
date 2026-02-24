@@ -7,6 +7,15 @@ const CONTENTFUL_BASE_PATH = import.meta.env.PUBLIC_CONTENTFUL_BASE_PATH?.trim()
 const CONTENTFUL_ENVIRONMENT = import.meta.env.PUBLIC_CONTENTFUL_ENVIRONMENT?.trim() ?? ''
 const CONTENTFUL_HOST = import.meta.env.PUBLIC_CONTENTFUL_CDA_HOST?.trim() ?? ''
 const CONTENTFUL_SPACE_ID = import.meta.env.PUBLIC_CONTENTFUL_SPACE_ID?.trim() ?? ''
+const MISSING_ENV_ERROR = [
+  ['PUBLIC_CONTENTFUL_TOKEN', CONTENTFUL_ACCESS_TOKEN],
+  ['PUBLIC_CONTENTFUL_ENVIRONMENT', CONTENTFUL_ENVIRONMENT],
+  ['PUBLIC_CONTENTFUL_SPACE_ID', CONTENTFUL_SPACE_ID],
+  ['PUBLIC_CONTENTFUL_CDA_HOST', CONTENTFUL_HOST],
+]
+  .filter(([, value]) => value.length === 0)
+  .map(([key]) => key)
+  .join(', ')
 
 function createContentfulClient(): ReturnType<typeof createClient> {
   return createClient({
@@ -21,7 +30,19 @@ function createContentfulClient(): ReturnType<typeof createClient> {
 
 const contentfulClient = createContentfulClient()
 
+export function getContentfulConfigError(): string | null {
+  if (MISSING_ENV_ERROR.length === 0) {
+    return null
+  }
+
+  return `Missing required Contentful env vars: ${MISSING_ENV_ERROR}. See implementations/web-react/.env.example.`
+}
+
 export async function fetchEntry(entryId: string): Promise<ContentfulEntry | undefined> {
+  if (getContentfulConfigError()) {
+    return undefined
+  }
+
   try {
     return await contentfulClient.getEntry<ContentEntrySkeleton>(entryId, {
       include: INCLUDE_DEPTH,

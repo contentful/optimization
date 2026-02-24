@@ -4,7 +4,7 @@ test.describe('navigation page events', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
-    await page.waitForLoadState('networkidle')
+    await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
   })
 
   test('emits page events on route navigation', async ({ page }) => {

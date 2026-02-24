@@ -10,6 +10,24 @@ const EXPERIENCE_API_BASE_URL =
   import.meta.env.PUBLIC_EXPERIENCE_API_BASE_URL?.trim() ?? 'http://localhost:8000/experience/'
 const INSIGHTS_API_BASE_URL =
   import.meta.env.PUBLIC_INSIGHTS_API_BASE_URL?.trim() ?? 'http://localhost:8000/insights/'
+const OPTIMIZATION_LOG_LEVEL = import.meta.env.PUBLIC_OPTIMIZATION_LOG_LEVEL?.trim().toLowerCase()
+type OptimizationLogLevel = 'debug' | 'warn' | 'error'
+
+function resolveLogLevel(): OptimizationLogLevel {
+  if (OPTIMIZATION_LOG_LEVEL === 'debug') {
+    return 'debug'
+  }
+
+  if (OPTIMIZATION_LOG_LEVEL === 'warn') {
+    return 'warn'
+  }
+
+  if (OPTIMIZATION_LOG_LEVEL === 'error') {
+    return 'error'
+  }
+
+  return import.meta.env.DEV ? 'debug' : 'warn'
+}
 
 class OptimizationInitializationError extends Error {
   public readonly cause: unknown
@@ -25,7 +43,7 @@ function createOptimizationConfig(): OptimizationConfig {
   return {
     clientId: OPTIMIZATION_CLIENT_ID,
     environment: OPTIMIZATION_ENVIRONMENT,
-    logLevel: 'debug',
+    logLevel: resolveLogLevel(),
     autoTrackEntryViews: true,
     app: {
       name: 'Optimization SDK - React Web Reference',
@@ -56,6 +74,7 @@ export function createOptimization(): OptimizationInstance {
 let optimizationInstance: OptimizationInstance | undefined = undefined
 
 export function getOptimization(): OptimizationInstance {
+  // Keep a single process-wide instance for this reference implementation.
   optimizationInstance ??= createOptimization()
 
   return optimizationInstance

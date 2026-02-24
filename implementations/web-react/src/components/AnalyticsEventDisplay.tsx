@@ -1,17 +1,14 @@
-import { type JSX, useEffect, useState } from 'react'
+import { type JSX, useEffect, useRef, useState } from 'react'
 import { useOptimization } from '../optimization/hooks/useOptimization'
+import { isRecord } from '../utils/typeGuards'
 
 interface AnalyticsEvent {
+  id: string
   componentId?: string
-  timestamp: number
   type: string
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-function toAnalyticsEvent(event: unknown): AnalyticsEvent | undefined {
+function toAnalyticsEvent(event: unknown, id: string): AnalyticsEvent | undefined {
   if (!isRecord(event) || typeof event.type !== 'string') {
     return undefined
   }
@@ -19,8 +16,8 @@ function toAnalyticsEvent(event: unknown): AnalyticsEvent | undefined {
   const componentId = typeof event.componentId === 'string' ? event.componentId : undefined
 
   return {
+    id,
     componentId,
-    timestamp: Date.now(),
     type: event.type,
   }
 }
@@ -28,6 +25,7 @@ function toAnalyticsEvent(event: unknown): AnalyticsEvent | undefined {
 export function AnalyticsEventDisplay(): JSX.Element {
   const { sdk, isReady } = useOptimization()
   const [events, setEvents] = useState<AnalyticsEvent[]>([])
+  const nextId = useRef(0)
 
   useEffect(() => {
     if (!isReady || sdk === undefined) {
@@ -36,7 +34,9 @@ export function AnalyticsEventDisplay(): JSX.Element {
     }
 
     const subscription = sdk.states.eventStream.subscribe((event: unknown) => {
-      const nextEvent = toAnalyticsEvent(event)
+      const id = `event-${nextId.current}`
+      nextId.current += 1
+      const nextEvent = toAnalyticsEvent(event, id)
       if (!nextEvent) {
         return
       }
@@ -56,14 +56,13 @@ export function AnalyticsEventDisplay(): JSX.Element {
       {events.length === 0 ? <p data-testid="no-events-message">No events tracked yet</p> : null}
 
       <ul>
-        {events.map((event, index) => {
-          const key = `${event.timestamp}-${index}`
+        {events.map((event) => {
           const testId = event.componentId
             ? `event-${event.type}-${event.componentId}`
-            : `event-${event.type}-${index}`
+            : `event-${event.type}-${event.id}`
 
           return (
-            <li key={key} data-testid={testId}>
+            <li key={event.id} data-testid={testId}>
               {event.type}
               {event.componentId ? ` - Component: ${event.componentId}` : ''}
             </li>

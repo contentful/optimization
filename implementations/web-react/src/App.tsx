@@ -7,7 +7,7 @@ import { useOptimization } from './optimization/hooks/useOptimization'
 import { useOptimizationState } from './optimization/hooks/useOptimizationState'
 import { HomePage } from './pages/HomePage'
 import { PageTwoPage } from './pages/PageTwoPage'
-import { fetchEntries } from './services/contentfulClient'
+import { fetchEntries, getContentfulConfigError } from './services/contentfulClient'
 import type { ContentfulEntry } from './types/contentful'
 
 function isIdentifiedProfile(profile: unknown): boolean {
@@ -50,6 +50,12 @@ export default function App(): JSX.Element {
 
   useEffect(() => {
     if (!isReady || sdk === undefined) {
+      return
+    }
+
+    const configError = getContentfulConfigError()
+    if (configError) {
+      setEntriesError(configError)
       return
     }
 
