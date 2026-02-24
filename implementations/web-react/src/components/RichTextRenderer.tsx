@@ -65,11 +65,7 @@ function extractTextContent(node: RichTextNode, getMergeTagValue: MergeTagValueR
     return node.value
   }
 
-  if (
-    node.nodeType === EMBEDDED_ENTRY_NODE_TYPE &&
-    isRecord(node.data) &&
-    'target' in node.data
-  ) {
+  if (node.nodeType === EMBEDDED_ENTRY_NODE_TYPE && isRecord(node.data) && 'target' in node.data) {
     return getMergeTagText(node.data.target, getMergeTagValue)
   }
 
