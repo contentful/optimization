@@ -1,27 +1,14 @@
 import { type JSX, useEffect, useMemo, useState } from 'react'
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
+import { ENTRY_IDS } from './config/entries'
+import { HOME_PATH, PAGE_TWO_PATH } from './config/routes'
 import { useOptimization } from './optimization/hooks/useOptimization'
 import { useOptimizationState } from './optimization/hooks/useOptimizationState'
-import { ContentEntry } from './sections/ContentEntry'
-import { NestedContentEntry } from './sections/NestedContentEntry'
+import { HomePage } from './pages/HomePage'
+import { PageTwoPage } from './pages/PageTwoPage'
 import { fetchEntries } from './services/contentfulClient'
 import type { ContentfulEntry } from './types/contentful'
-
-const AUTO_OBSERVED_ENTRY_IDS = [
-  '1JAU028vQ7v6nB2swl3NBo',
-  '1MwiFl4z7gkwqGYdvCmr8c',
-  '4ib0hsHWoSOnCVdDkizE8d',
-  'xFwgG3oNaOcjzWiGe4vXo',
-  '2Z2WLOx07InSewC3LUB3eX',
-] as const
-
-const MANUALLY_OBSERVED_ENTRY_IDS = [
-  '5XHssysWUDECHzKLzoIsg1',
-  '6zqoWXyiSrf0ja7I2WGtYj',
-  '7pa5bOx8Z9NmNcr7mISvD',
-] as const
-
-const ENTRY_IDS = [...AUTO_OBSERVED_ENTRY_IDS, ...MANUALLY_OBSERVED_ENTRY_IDS] as const
 
 function isIdentifiedProfile(profile: unknown): boolean {
   if (typeof profile !== 'object' || profile === null) {
@@ -45,11 +32,8 @@ function toEntryMap(entries: ContentfulEntry[]): Map<string, ContentfulEntry> {
   return new Map(entries.map((entry) => [entry.sys.id, entry]))
 }
 
-function isConsentAccepted(consent: boolean | undefined): boolean {
-  return consent === true
-}
-
 export default function App(): JSX.Element {
+  const location = useLocation()
   const { sdk, isReady, error } = useOptimization()
   const { consent, profile, personalizations } = useOptimizationState(sdk?.states)
 
@@ -61,8 +45,8 @@ export default function App(): JSX.Element {
       return
     }
 
-    void sdk.personalization.page({ properties: { url: 'app' } })
-  }, [isReady, sdk])
+    void sdk.personalization.page({ properties: { url: location.pathname } })
+  }, [isReady, location.pathname, sdk])
 
   useEffect(() => {
     if (!isReady || sdk === undefined) {
@@ -106,7 +90,6 @@ export default function App(): JSX.Element {
     }
 
     sdk.reset()
-    void sdk.personalization.page({ properties: { url: 'app' } })
   }
 
   const handleConsent = (accepted: boolean): void => {
@@ -135,78 +118,33 @@ export default function App(): JSX.Element {
 
   return (
     <main style={{ display: 'grid', gap: 24 }}>
-      <section id="utility-panel">
-        <h2>Utilities</h2>
+      <nav style={{ display: 'flex', gap: 12 }}>
+        <Link data-testid="link-home" to={HOME_PATH}>
+          Home
+        </Link>
+        <Link data-testid="link-page-two" to={PAGE_TWO_PATH}>
+          Go to Page Two
+        </Link>
+      </nav>
 
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {isConsentAccepted(consent) ? (
-            <button
-              data-testid="unconsent-button"
-              onClick={() => {
-                handleConsent(false)
-              }}
-              type="button"
-            >
-              Reject Consent
-            </button>
-          ) : (
-            <button
-              data-testid="consent-button"
-              onClick={() => {
-                handleConsent(true)
-              }}
-              type="button"
-            >
-              Accept Consent
-            </button>
-          )}
-
-          {!isIdentified ? (
-            <button data-testid="identify-button" onClick={handleIdentify} type="button">
-              Identify
-            </button>
-          ) : (
-            <button data-testid="reset-button" onClick={handleReset} type="button">
-              Reset Profile
-            </button>
-          )}
-        </div>
-
-        <p data-testid="consent-status">Consent: {String(consent)}</p>
-        <p data-testid="personalizations-count">Personalizations: {personalizationCount}</p>
-      </section>
-
-      <section>
-        <h2>Auto Observed Entries</h2>
-        <div id="auto-observed" style={{ display: 'grid', gap: 16 }}>
-          {AUTO_OBSERVED_ENTRY_IDS.map((entryId) => {
-            const entry = entriesById.get(entryId)
-            if (!entry) {
-              return null
-            }
-
-            if (entry.sys.contentType.sys.id === 'nestedContent') {
-              return <NestedContentEntry key={entry.sys.id} entry={entry} />
-            }
-
-            return <ContentEntry key={entry.sys.id} entry={entry} observation="auto" />
-          })}
-        </div>
-      </section>
-
-      <section>
-        <h2>Manually Observed Entries</h2>
-        <div id="manually-observed" style={{ display: 'grid', gap: 16 }}>
-          {MANUALLY_OBSERVED_ENTRY_IDS.map((entryId) => {
-            const entry = entriesById.get(entryId)
-            if (!entry) {
-              return null
-            }
-
-            return <ContentEntry key={entry.sys.id} entry={entry} observation="manual" />
-          })}
-        </div>
-      </section>
+      <Routes>
+        <Route
+          path={HOME_PATH}
+          element={
+            <HomePage
+              consent={consent}
+              entriesById={entriesById}
+              isIdentified={isIdentified}
+              personalizationCount={personalizationCount}
+              onConsentChange={handleConsent}
+              onIdentify={handleIdentify}
+              onReset={handleReset}
+            />
+          }
+        />
+        <Route path={PAGE_TWO_PATH} element={<PageTwoPage />} />
+        <Route path="*" element={<Navigate replace to={HOME_PATH} />} />
+      </Routes>
 
       <AnalyticsEventDisplay />
     </main>

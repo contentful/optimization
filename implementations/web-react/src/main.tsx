@@ -1,5 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { OptimizationProvider } from './optimization/OptimizationProvider'
 
@@ -12,9 +13,11 @@ function main(): void {
 
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
-      <OptimizationProvider>
-        <App />
-      </OptimizationProvider>
+      <BrowserRouter>
+        <OptimizationProvider>
+          <App />
+        </OptimizationProvider>
+      </BrowserRouter>
     </React.StrictMode>,
   )
 }

@@ -19,7 +19,7 @@ demonstrating:
 - Rich Text rendering via `@contentful/rich-text-react-renderer`
 - Analytics event tracking
 - Live updates behavior
-- SPA navigation tracking
+- SPA navigation tracking with React Router v7
 - Offline queue/recovery handling
 
 ## Prerequisites
