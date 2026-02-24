@@ -11,6 +11,16 @@ const EXPERIENCE_API_BASE_URL =
 const INSIGHTS_API_BASE_URL =
   import.meta.env.PUBLIC_INSIGHTS_API_BASE_URL?.trim() ?? 'http://localhost:8000/insights/'
 
+class OptimizationInitializationError extends Error {
+  public readonly cause: unknown
+
+  public constructor(message: string, cause: unknown) {
+    super(message)
+    this.name = 'OptimizationInitializationError'
+    this.cause = cause
+  }
+}
+
 function createOptimizationConfig(): OptimizationConfig {
   return {
     clientId: OPTIMIZATION_CLIENT_ID,
@@ -35,8 +45,12 @@ export function createOptimization(): OptimizationInstance {
     const config = createOptimizationConfig()
     return new Optimization(config)
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown Optimization init error'
-    throw new Error(`Failed to initialize Optimization SDK: ${message}`)
+    const message = error instanceof 
+      Error ? error.message : 'Unknown Optimization init error'
+    throw new OptimizationInitializationError(
+      `Failed to initialize Optimization SDK: ${message}`,
+      error,
+    )
   }
 }
 
