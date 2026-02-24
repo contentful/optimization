@@ -6,13 +6,13 @@ import {
   type OptimizationData,
   type PageViewBuilderArgs,
   PageViewEvent,
+  parseWithFriendlyError,
   type PartialProfile,
   type ExperienceEvent as PersonalizationEvent,
   type ScreenViewBuilderArgs,
   ScreenViewEvent,
   type TrackBuilderArgs,
   TrackEvent,
-  validate,
 } from '@contentful/optimization-api-client'
 import { createScopedLogger } from 'logger'
 import PersonalizationBase from './PersonalizationBase'
@@ -45,7 +45,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = validate(IdentifyEvent, this.builder.buildIdentify(builderArgs))
+    const event = parseWithFriendlyError(IdentifyEvent, this.builder.buildIdentify(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -63,7 +63,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = validate(PageViewEvent, this.builder.buildPageView(builderArgs))
+    const event = parseWithFriendlyError(PageViewEvent, this.builder.buildPageView(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -81,7 +81,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = validate(ScreenViewEvent, this.builder.buildScreenView(builderArgs))
+    const event = parseWithFriendlyError(ScreenViewEvent, this.builder.buildScreenView(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -97,7 +97,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = validate(TrackEvent, this.builder.buildTrack(builderArgs))
+    const event = parseWithFriendlyError(TrackEvent, this.builder.buildTrack(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -115,7 +115,10 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = validate(ComponentViewEvent, this.builder.buildComponentView(builderArgs))
+    const event = parseWithFriendlyError(
+      ComponentViewEvent,
+      this.builder.buildComponentView(builderArgs),
+    )
 
     return await this.upsertProfile(event, profile)
   }

@@ -8,13 +8,13 @@ import {
   type MergeTagEntry,
   type OptimizationData,
   type PageViewBuilderArgs,
+  parseWithFriendlyError,
   ExperienceEvent as PersonalizationEvent,
   type ExperienceEventArray as PersonalizationEventArray,
   type Profile,
   type ScreenViewBuilderArgs,
   type SelectedPersonalizationArray,
   type TrackBuilderArgs,
-  validate,
 } from '@contentful/optimization-api-client'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import { isEqual } from 'es-toolkit'
@@ -405,7 +405,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
   ): Promise<OptimizationData | undefined> {
     const intercepted = await this.interceptors.event.run(event)
 
-    const validEvent = validate(PersonalizationEvent, intercepted)
+    const validEvent = parseWithFriendlyError(PersonalizationEvent, intercepted)
 
     eventSignal.value = validEvent
 

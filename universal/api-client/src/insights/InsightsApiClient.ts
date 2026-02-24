@@ -1,4 +1,7 @@
-import { BatchInsightsEventArray, validate } from '@contentful/optimization-api-schemas'
+import {
+  BatchInsightsEventArray,
+  parseWithFriendlyError,
+} from '@contentful/optimization-api-schemas'
 import { createScopedLogger } from 'logger'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
 
@@ -152,7 +155,7 @@ export default class InsightsApiClient extends ApiClientBase {
       this.baseUrl,
     )
 
-    const body = validate(BatchInsightsEventArray, batches)
+    const body = parseWithFriendlyError(BatchInsightsEventArray, batches)
 
     if (typeof beaconHandler === 'function') {
       logger.debug('Queueing events via beaconHandler')

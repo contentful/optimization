@@ -1,5 +1,4 @@
 import * as z from 'zod/mini'
-import { validate } from './index'
 
 describe('zod/mini en locale configuration', () => {
   it('produces descriptive error messages instead of generic "Invalid input"', () => {
@@ -66,7 +65,7 @@ describe('z.prettifyError', () => {
 describe('validate', () => {
   it('returns parsed data on valid input', () => {
     const schema = z.object({ name: z.string(), age: z.number() })
-    const result = validate(schema, { name: 'Alice', age: 30 })
+    const result = parseWithFriendlyError(schema, { name: 'Alice', age: 30 })
 
     expect(result).toEqual({ name: 'Alice', age: 30 })
   })
@@ -74,10 +73,10 @@ describe('validate', () => {
   it('throws an Error (not ZodError) with prettified message on invalid input', () => {
     const schema = z.object({ userId: z.string(), count: z.number() })
 
-    expect(() => validate(schema, { count: 'bad' })).toThrow(Error)
+    expect(() => parseWithFriendlyError(schema, { count: 'bad' })).toThrow(Error)
 
     try {
-      validate(schema, { count: 'bad' })
+      parseWithFriendlyError(schema, { count: 'bad' })
     } catch (error) {
       expect(error).toBeInstanceOf(Error)
       if (error instanceof Error) {
@@ -93,7 +92,7 @@ describe('validate', () => {
     })
 
     try {
-      validate(schema, { context: { locale: 42 } })
+      parseWithFriendlyError(schema, { context: { locale: 42 } })
     } catch (error) {
       if (error instanceof Error) {
         expect(error.message).toContain('context.locale')
@@ -105,7 +104,7 @@ describe('validate', () => {
     const schema = z.object({
       value: z.prefault(z.number(), 0),
     })
-    const result = validate(schema, {})
+    const result = parseWithFriendlyError(schema, {})
 
     expect(result.value).toBe(0)
   })

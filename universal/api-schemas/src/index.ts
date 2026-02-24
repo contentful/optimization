@@ -1,4 +1,4 @@
-export { validate } from './validation'
+export { parseWithFriendlyError } from './validation'
 
 export * from './contentful'
 export * from './experience'
