@@ -34,9 +34,19 @@ declare global {
   }
 }
 
+/** @internal */
 let defaults: SelectedPersonalizationArray = []
+
+/** @internal */
 const overrides = new Map<string, number>()
 
+/**
+ * Throws if a preview panel element already exists in the DOM.
+ *
+ * @throws Error if the panel has already been attached.
+ *
+ * @internal
+ */
 function canDefineComponents(): void {
   const existing = document.querySelector(CTFL_OPT_PREVIEW_PANEL_TAG)
 
@@ -44,12 +54,41 @@ function canDefineComponents(): void {
     throw new Error('[Optimization Preview Panel] The preview panel has already been attached')
 }
 
+/**
+ * Configuration for {@link attachOptimizationPreviewPanel}.
+ *
+ * @internal
+ */
 interface AttachOptimizationPreviewPanelArgs {
+  /** Contentful client used to fetch audience and personalization entries. */
   contentful: ContentfulClientApi<ChainModifiers>
+  /** Optimization Web SDK instance to register the preview panel with. */
   optimization: Optimization
+  /** Optional CSP nonce passed to the Lit framework for style injection. */
   nonce: string | undefined
 }
 
+/**
+ * Attaches the Optimization preview panel to the DOM as a Web Component.
+ *
+ * Registers all custom elements, fetches audiences and personalizations from
+ * Contentful, wires up state interceptors, and appends the panel to
+ * `document.body`.
+ *
+ * @param args - Configuration containing the Contentful client, Optimization instance, and optional CSP nonce.
+ * @returns Resolves once the panel has been appended to the document body.
+ * @throws Error if the preview panel has already been attached.
+ * @throws Error if optimization states cannot be obtained during registration.
+ *
+ * @example
+ * ```ts
+ * import attachOptimizationPreviewPanel from '@contentful/optimization-web-preview-panel'
+ *
+ * await attachOptimizationPreviewPanel({ contentful: client, optimization, nonce: undefined })
+ * ```
+ *
+ * @public
+ */
 export default async function attachOptimizationPreviewPanel({
   contentful,
   optimization,

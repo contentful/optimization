@@ -48,11 +48,16 @@ function renderExperienceCard({
 }
 
 /**
- * Individual audience row with collapsible experience list.
+ * Individual audience row with a collapsible experience list.
  *
- * Supports both controlled and uncontrolled expansion modes:
- * - Controlled: Pass isExpanded and onToggleExpand props
- * - Uncontrolled: Component manages its own expansion state
+ * @param props - Component props
+ * @returns The rendered audience item with expandable experience cards
+ *
+ * @remarks
+ * Supports controlled mode (pass `isExpanded` and `onToggleExpand`) or
+ * uncontrolled mode (component manages its own expansion state).
+ *
+ * @public
  */
 export function AudienceItem({
   audienceWithExperiences,

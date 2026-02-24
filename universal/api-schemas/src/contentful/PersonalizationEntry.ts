@@ -10,6 +10,8 @@ import { PersonalizationConfig } from './PersonalizationConfig'
  * @remarks
  * `nt_experiment` represents experiments (A/B tests), and `nt_personalization`
  * represents always-on personalized experiences.
+ *
+ * @public
  */
 export const PersonalizationType = z.union([
   z.literal('nt_experiment'),
@@ -18,6 +20,8 @@ export const PersonalizationType = z.union([
 
 /**
  * TypeScript type inferred from {@link PersonalizationType}.
+ *
+ * @public
  */
 export type PersonalizationType = z.infer<typeof PersonalizationType>
 
@@ -27,6 +31,8 @@ export type PersonalizationType = z.infer<typeof PersonalizationType>
  * @remarks
  * Extends the generic {@link EntryFields} with personalization-specific
  * properties such as name, description, type, config, audience, and variants.
+ *
+ * @public
  */
 export const PersonalizationEntryFields = z.extend(EntryFields, {
   /**
@@ -93,11 +99,15 @@ export const PersonalizationEntryFields = z.extend(EntryFields, {
 
 /**
  * TypeScript type inferred from {@link PersonalizationEntryFields}.
+ *
+ * @public
  */
 export type PersonalizationEntryFields = z.infer<typeof PersonalizationEntryFields>
 
 /**
  * Zod schema describing a Personalization entry, which is associated with a {@link PersonalizedEntry } via its `fields.nt_experiences`.
+ *
+ * @public
  */
 export const PersonalizationEntry = z.extend(CtflEntry, {
   fields: PersonalizationEntryFields,
@@ -105,11 +115,15 @@ export const PersonalizationEntry = z.extend(CtflEntry, {
 
 /**
  * TypeScript type inferred from {@link PersonalizationEntry}.
+ *
+ * @public
  */
 export type PersonalizationEntry = z.infer<typeof PersonalizationEntry>
 
 /**
  * Zod schema describing a Personalization entry "skeleton".
+ *
+ * @public
  */
 export const PersonalizationEntrySkeleton = z.object({
   contentTypeId: z.literal('nt_experience'),
@@ -118,6 +132,8 @@ export const PersonalizationEntrySkeleton = z.object({
 
 /**
  * TypeScript type inferred from {@link PersonalizationEntrySkeleton}.
+ *
+ * @public
  */
 export type PersonalizationEntrySkeleton = z.infer<typeof PersonalizationEntrySkeleton>
 
@@ -126,6 +142,15 @@ export type PersonalizationEntrySkeleton = z.infer<typeof PersonalizationEntrySk
  *
  * @param entry - Contentful entry or link to test.
  * @returns `true` if the value conforms to {@link PersonalizationEntry}, otherwise `false`.
+ *
+ * @example
+ * ```ts
+ * if (isPersonalizationEntry(entry)) {
+ *   console.log(entry.fields.nt_name);
+ * }
+ * ```
+ *
+ * @public
  */
 export function isPersonalizationEntry(entry: CtflEntry | Link): entry is PersonalizationEntry {
   return PersonalizationEntry.safeParse(entry).success
@@ -136,10 +161,14 @@ export function isPersonalizationEntry(entry: CtflEntry | Link): entry is Person
  *
  * @remarks
  * Each element may be a {@link Link} or a fully resolved {@link PersonalizationEntry}.
+ *
+ * @public
  */
 export const PersonalizationEntryArray = z.array(z.union([Link, PersonalizationEntry]))
 
 /**
  * TypeScript type inferred from {@link PersonalizationEntryArray}.
+ *
+ * @public
  */
 export type PersonalizationEntryArray = z.infer<typeof PersonalizationEntryArray>

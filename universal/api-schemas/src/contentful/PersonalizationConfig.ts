@@ -5,6 +5,8 @@ import * as z from 'zod/mini'
  *
  * @remarks
  * Each variant is identified by an `id` and may be marked as `hidden`.
+ *
+ * @public
  */
 export const EntryReplacementVariant = z.object({
   /**
@@ -22,6 +24,8 @@ export const EntryReplacementVariant = z.object({
 
 /**
  * TypeScript type inferred from {@link EntryReplacementVariant}.
+ *
+ * @public
  */
 export type EntryReplacementVariant = z.infer<typeof EntryReplacementVariant>
 
@@ -30,6 +34,15 @@ export type EntryReplacementVariant = z.infer<typeof EntryReplacementVariant>
  *
  * @param variant - Value to test.
  * @returns `true` if `variant` conforms to {@link EntryReplacementVariant}, otherwise `false`.
+ *
+ * @example
+ * ```ts
+ * if (isEntryReplacementVariant(variant)) {
+ *   console.log(variant.id);
+ * }
+ * ```
+ *
+ * @public
  */
 export function isEntryReplacementVariant(variant: unknown): variant is EntryReplacementVariant {
   return EntryReplacementVariant.safeParse(variant).success
@@ -40,6 +53,8 @@ export function isEntryReplacementVariant(variant: unknown): variant is EntryRep
  *
  * @remarks
  * This component replaces a baseline entry with one of several variants.
+ *
+ * @public
  */
 export const EntryReplacementComponent = z.object({
   /**
@@ -63,6 +78,8 @@ export const EntryReplacementComponent = z.object({
 
 /**
  * TypeScript type inferred from {@link EntryReplacementComponent}.
+ *
+ * @public
  */
 export type EntryReplacementComponent = z.infer<typeof EntryReplacementComponent>
 
@@ -71,6 +88,15 @@ export type EntryReplacementComponent = z.infer<typeof EntryReplacementComponent
  *
  * @param component - Personalization component to test.
  * @returns `true` if the component is an EntryReplacement component, otherwise `false`.
+ *
+ * @example
+ * ```ts
+ * if (isEntryReplacementComponent(component)) {
+ *   console.log(component.baseline.id);
+ * }
+ * ```
+ *
+ * @public
  */
 export function isEntryReplacementComponent(
   component: PersonalizationComponent,
@@ -83,6 +109,8 @@ export function isEntryReplacementComponent(
  *
  * @remarks
  * The value may be a primitive or a JSON object.
+ *
+ * @public
  */
 export const InlineVariableVariant = z.object({
   /**
@@ -93,6 +121,8 @@ export const InlineVariableVariant = z.object({
 
 /**
  * Enumeration of supported inline variable value types.
+ *
+ * @public
  */
 export const InlineVariableComponentValueType = z.enum(['Boolean', 'Number', 'Object', 'String'])
 
@@ -101,6 +131,8 @@ export const InlineVariableComponentValueType = z.enum(['Boolean', 'Number', 'Ob
  *
  * @remarks
  * Used to vary scalar or object values in templates.
+ *
+ * @public
  */
 export const InlineVariableComponent = z.object({
   /**
@@ -131,6 +163,8 @@ export const InlineVariableComponent = z.object({
 
 /**
  * TypeScript type inferred from {@link InlineVariableComponent}.
+ *
+ * @public
  */
 export type InlineVariableComponent = z.infer<typeof InlineVariableComponent>
 
@@ -139,6 +173,15 @@ export type InlineVariableComponent = z.infer<typeof InlineVariableComponent>
  *
  * @param component - Personalization component to test.
  * @returns `true` if the component is an InlineVariable component, otherwise `false`.
+ *
+ * @example
+ * ```ts
+ * if (isInlineVariableComponent(component)) {
+ *   console.log(component.key, component.valueType);
+ * }
+ * ```
+ *
+ * @public
  */
 export function isInlineVariableComponent(
   component: PersonalizationComponent,
@@ -148,6 +191,8 @@ export function isInlineVariableComponent(
 
 /**
  * Discriminated union of all supported personalization components.
+ *
+ * @public
  */
 export const PersonalizationComponent = z.discriminatedUnion('type', [
   EntryReplacementComponent,
@@ -156,16 +201,22 @@ export const PersonalizationComponent = z.discriminatedUnion('type', [
 
 /**
  * TypeScript type inferred from {@link PersonalizationComponent}.
+ *
+ * @public
  */
 export type PersonalizationComponent = z.infer<typeof PersonalizationComponent>
 
 /**
  * Zod schema representing an array of {@link PersonalizationComponent} items.
+ *
+ * @public
  */
 export const PersonalizationComponentArray = z.array(PersonalizationComponent)
 
 /**
  * TypeScript type inferred from {@link PersonalizationComponentArray}.
+ *
+ * @public
  */
 export type PersonalizationComponentArray = z.infer<typeof PersonalizationComponentArray>
 
@@ -174,6 +225,8 @@ export type PersonalizationComponentArray = z.infer<typeof PersonalizationCompon
  *
  * @remarks
  * Provides distribution, traffic allocation, component definitions, and sticky behavior.
+ *
+ * @public
  */
 export const PersonalizationConfig = z.object({
   /**
@@ -216,5 +269,7 @@ export const PersonalizationConfig = z.object({
 
 /**
  * TypeScript type inferred from {@link PersonalizationConfig}.
+ *
+ * @public
  */
 export type PersonalizationConfig = z.infer<typeof PersonalizationConfig>

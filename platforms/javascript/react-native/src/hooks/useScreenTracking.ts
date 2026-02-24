@@ -9,7 +9,7 @@ import { useOptimization } from '../context/OptimizationContext'
 const logger = createScopedLogger('RN:ScreenTracking')
 
 /**
- * Options for the useScreenTracking hook.
+ * Options for the {@link useScreenTracking} hook.
  *
  * @public
  */
@@ -26,20 +26,21 @@ export interface UseScreenTrackingOptions {
 
   /**
    * Whether to automatically track the screen on mount.
-   * @default true
+   *
+   * @defaultValue true
    */
   trackOnMount?: boolean
 }
 
 /**
- * Return type for the useScreenTracking hook.
+ * Return value of the {@link useScreenTracking} hook.
  *
  * @public
  */
 export interface UseScreenTrackingReturn {
   /**
    * Manually trigger screen tracking.
-   * Useful when `trackOnMount` is false or for re-tracking.
+   * Useful when `trackOnMount` is `false` or for re-tracking.
    */
   trackScreen: () => Promise<OptimizationData | undefined>
 }
@@ -47,14 +48,12 @@ export interface UseScreenTrackingReturn {
 const EMPTY_PROPERTIES: Properties = {}
 
 /**
- * Hook for tracking screen views in React Native.
- *
- * By default, tracks the screen automatically when the component mounts.
- * Set `trackOnMount: false` to disable automatic tracking and use the
- * returned `trackScreen` function for manual control.
+ * Tracks screen views in React Native. By default, tracks automatically on mount.
  *
  * @param options - Screen tracking options
- * @returns Object containing `trackScreen` function for manual triggering
+ * @returns Object containing a `trackScreen` function for manual triggering
+ *
+ * @throws Error if called outside of an {@link OptimizationProvider}
  *
  * @example
  * ```tsx
@@ -68,11 +67,10 @@ const EMPTY_PROPERTIES: Properties = {}
  * function DetailsScreen() {
  *   const { trackScreen } = useScreenTracking({
  *     name: 'Details',
- *     trackOnMount: false
+ *     trackOnMount: false,
  *   })
  *
  *   useEffect(() => {
- *     // Track after data loads
  *     if (dataLoaded) {
  *       trackScreen()
  *     }

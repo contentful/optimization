@@ -6,6 +6,8 @@ import { CtflEntry, EntryFields } from './CtflEntry'
  *
  * @remarks
  * Extends the base {@link EntryFields} with audience-specific properties.
+ *
+ * @public
  */
 export const AudienceEntryFields = z.extend(EntryFields, {
   /**
@@ -35,6 +37,8 @@ export const AudienceEntryFields = z.extend(EntryFields, {
 
 /**
  * TypeScript type inferred from {@link AudienceEntryFields}.
+ *
+ * @public
  */
 export type AudienceEntryFields = z.infer<typeof AudienceEntryFields>
 
@@ -43,6 +47,8 @@ export type AudienceEntryFields = z.infer<typeof AudienceEntryFields>
  *
  * @remarks
  * Extends the generic {@link CtflEntry} with {@link AudienceEntryFields} as the `fields` payload.
+ *
+ * @public
  */
 export const AudienceEntry = z.extend(CtflEntry, {
   fields: AudienceEntryFields,
@@ -50,11 +56,15 @@ export const AudienceEntry = z.extend(CtflEntry, {
 
 /**
  * TypeScript type inferred from {@link AudienceEntry}.
+ *
+ * @public
  */
 export type AudienceEntry = z.infer<typeof AudienceEntry>
 
 /**
  * Zod "skeleton" schema for a Contentful Audience entry, including `contentTypeId`.
+ *
+ * @public
  */
 export const AudienceEntrySkeleton = z.object({
   contentTypeId: z.literal('nt_audience'),
@@ -63,5 +73,7 @@ export const AudienceEntrySkeleton = z.object({
 
 /**
  * TypeScript type inferred from {@link AudienceEntrySkeleton}.
+ *
+ * @public
  */
 export type AudienceEntrySkeleton = z.infer<typeof AudienceEntrySkeleton>

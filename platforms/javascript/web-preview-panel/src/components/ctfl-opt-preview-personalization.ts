@@ -2,43 +2,110 @@ import type { PersonalizationEntry } from '@contentful/optimization-web'
 import { css, html, LitElement, nothing, type TemplateResult } from 'lit'
 import { property } from 'lit/decorators.js'
 
+/**
+ * Payload emitted by {@link CtflOptPreviewPersonalization} when a variant radio
+ * selection changes.
+ *
+ * @public
+ */
 export interface RecordRadioGroupChangeDetail {
+  /** Experience ID identifying the personalization that changed. */
   key: string
+  /** Zero-based index of the newly selected variant. */
   value: number
 }
+
+/**
+ * Custom event carrying a {@link RecordRadioGroupChangeDetail} payload.
+ *
+ * @public
+ */
 export type RecordRadioGroupChangeEvent = CustomEvent<RecordRadioGroupChangeDetail>
 
+/**
+ * Type guard that checks whether an event is a {@link RecordRadioGroupChangeEvent}.
+ *
+ * @param event - The DOM event to check.
+ * @returns `true` if the event is a `CustomEvent` with `key` and `value` in its detail.
+ *
+ * @example
+ * ```ts
+ * element.addEventListener('change', (event) => {
+ *   if (isRecordRadioGroupChangeEvent(event)) {
+ *     console.log(event.detail.key, event.detail.value)
+ *   }
+ * })
+ * ```
+ *
+ * @public
+ */
 export function isRecordRadioGroupChangeEvent(event: Event): event is RecordRadioGroupChangeEvent {
   if (!(event instanceof CustomEvent)) return false
   return 'key' in event.detail && 'value' in event.detail
 }
 
+/**
+ * Custom element tag name for {@link CtflOptPreviewPersonalization}.
+ *
+ * @public
+ */
 export const CTFL_OPT_PREVIEW_PERSONALIZATION_TAG = 'ctfl-opt-preview-personalization' as const
 
+/**
+ * Type guard that checks whether an element is a {@link CtflOptPreviewPersonalization}.
+ *
+ * @param element - The element to check.
+ * @returns `true` if the element's tag matches {@link CTFL_OPT_PREVIEW_PERSONALIZATION_TAG}.
+ *
+ * @example
+ * ```ts
+ * if (isCtflOptPreviewPersonalization(el)) {
+ *   el.personalization = entry
+ * }
+ * ```
+ *
+ * @public
+ */
 export function isCtflOptPreviewPersonalization(
   element?: Element,
 ): element is CtflOptPreviewPersonalization {
   return element?.tagName === CTFL_OPT_PREVIEW_PERSONALIZATION_TAG.toUpperCase()
 }
 
+/** @internal */
 const percentageFormatter = new Intl.NumberFormat(undefined, {
   style: 'percent',
 })
 
+/**
+ * Renders a single personalization as a radio-group fieldset, allowing the
+ * user to select which variant to preview.
+ *
+ * Emits a `change` {@link RecordRadioGroupChangeEvent} when a variant is selected.
+ *
+ * @see {@link LitElement}
+ *
+ * @public
+ */
 export class CtflOptPreviewPersonalization extends LitElement {
+  /** The personalization entry whose variants are rendered. */
   @property({ attribute: false })
   accessor personalization: PersonalizationEntry | undefined = undefined
 
+  /** Index of the variant the visitor naturally qualifies for, if any. */
   @property({ attribute: false })
   accessor naturalValue: number | undefined = undefined
 
+  /** Index of the currently selected variant. */
   @property({ attribute: false })
   accessor value = 0
 
+  /** @internal */
   private get _experienceId(): string | undefined {
     return this.personalization?.fields.nt_experience_id
   }
 
+  /** @internal */
   private _onChange(e: Event): void {
     if (this._experienceId === undefined) return
 
@@ -56,6 +123,18 @@ export class CtflOptPreviewPersonalization extends LitElement {
     )
   }
 
+  /**
+   * Renders the variant radio buttons, or the text `"None"` when no distribution exists.
+   *
+   * @returns Template for the variant list.
+   *
+   * @example
+   * ```ts
+   * html`${this.variantsTemplate()}`
+   * ```
+   *
+   * @public
+   */
   variantsTemplate(): TemplateResult | string {
     if (!this.personalization?.fields.nt_config?.distribution?.length) return 'None'
 
@@ -68,6 +147,20 @@ export class CtflOptPreviewPersonalization extends LitElement {
     `
   }
 
+  /**
+   * Renders a single variant as a labelled radio input.
+   *
+   * @param dist - Distribution weight of this variant (0–1).
+   * @param index - Zero-based index of the variant.
+   * @returns Template for one variant radio button, or `undefined` when the personalization is unset.
+   *
+   * @example
+   * ```ts
+   * html`${this.variantTemplate(0.5, 1)}`
+   * ```
+   *
+   * @public
+   */
   variantTemplate(dist: number, index: number): TemplateResult | undefined {
     if (!this.personalization) return
 
@@ -97,6 +190,7 @@ export class CtflOptPreviewPersonalization extends LitElement {
     `
   }
 
+  /** @internal */
   protected render(): TemplateResult {
     return html`
       <fieldset>
@@ -249,6 +343,16 @@ export class CtflOptPreviewPersonalization extends LitElement {
   `
 }
 
+/**
+ * Registers the {@link CtflOptPreviewPersonalization} custom element if not already defined.
+ *
+ * @example
+ * ```ts
+ * defineCtflOptPreviewPersonalization()
+ * ```
+ *
+ * @public
+ */
 export function defineCtflOptPreviewPersonalization(): void {
   if (!customElements.get(CTFL_OPT_PREVIEW_PERSONALIZATION_TAG)) {
     customElements.define(CTFL_OPT_PREVIEW_PERSONALIZATION_TAG, CtflOptPreviewPersonalization)

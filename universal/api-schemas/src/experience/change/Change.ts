@@ -6,6 +6,8 @@ import * as z from 'zod/mini'
  * @remarks
  * Currently only the `'Variable'` change type is supported, but the union
  * in {@link ChangeBase} allows for additional types to be introduced.
+ *
+ * @public
  */
 export const ChangeType = ['Variable'] as const
 
@@ -14,6 +16,8 @@ export const ChangeType = ['Variable'] as const
  *
  * @remarks
  * This base is extended by specific change types such as {@link VariableChange}.
+ *
+ * @internal
  */
 const ChangeBase = z.object({
   /**
@@ -53,6 +57,8 @@ const ChangeBase = z.object({
  *
  * @remarks
  * Supports primitives and JSON objects keyed by strings.
+ *
+ * @public
  */
 export const VariableChangeValue = z.union([
   z.string(),
@@ -68,6 +74,8 @@ export const VariableChangeValue = z.union([
  * @remarks
  * This can be used to handle forward-compatible change payloads where
  * the `type` is not recognized.
+ *
+ * @public
  */
 export const UnknownChange = z.extend(ChangeBase, {
   /**
@@ -83,6 +91,8 @@ export const UnknownChange = z.extend(ChangeBase, {
 
 /**
  * TypeScript type inferred from {@link UnknownChange}.
+ *
+ * @public
  */
 export type UnknownChange = z.infer<typeof UnknownChange>
 
@@ -91,6 +101,8 @@ export type UnknownChange = z.infer<typeof UnknownChange>
  *
  * @remarks
  * The `value` must conform to {@link VariableChangeValue}.
+ *
+ * @public
  */
 export const VariableChange = z.extend(ChangeBase, {
   /**
@@ -106,6 +118,8 @@ export const VariableChange = z.extend(ChangeBase, {
 
 /**
  * TypeScript type inferred from {@link VariableChange}.
+ *
+ * @public
  */
 export type VariableChange = z.infer<typeof VariableChange>
 
@@ -114,11 +128,15 @@ export type VariableChange = z.infer<typeof VariableChange>
  *
  * @remarks
  * Represents any JSON-serializable value.
+ *
+ * @public
  */
 export type Json = z.infer<typeof z.json>
 
 /**
  * Map of Custom Flag keys to JSON values.
+ *
+ * @public
  */
 export type Flags = Record<string, Json>
 
@@ -127,20 +145,28 @@ export type Flags = Record<string, Json>
  *
  * @remarks
  * Currently only {@link VariableChange} is included.
+ *
+ * @public
  */
 export const Change = z.discriminatedUnion('type', [VariableChange])
 
 /**
  * TypeScript type inferred from {@link Change}.
+ *
+ * @public
  */
 export type Change = z.infer<typeof Change>
 
 /**
  * Zod schema representing an array of {@link Change} items.
+ *
+ * @public
  */
 export const ChangeArray = z.array(Change)
 
 /**
  * TypeScript type inferred from {@link ChangeArray}.
+ *
+ * @public
  */
 export type ChangeArray = z.infer<typeof ChangeArray>

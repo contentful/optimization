@@ -4,11 +4,12 @@ import { borderRadius, colors, spacing, typography } from '../../styles/theme'
 import type { SearchBarProps } from '../../types'
 
 /**
- * Search input component for filtering audiences and experiences.
+ * Controlled search input with a clear button for filtering audiences and experiences.
  *
- * Features:
- * - Controlled input with clear button
- * - Search icon indicator
+ * @param props - Component props
+ * @returns The rendered search bar
+ *
+ * @public
  */
 export function SearchBar({
   value,

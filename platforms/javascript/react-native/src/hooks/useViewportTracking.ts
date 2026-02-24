@@ -7,32 +7,47 @@ import { useScrollContext } from '../context/ScrollContext'
 
 const logger = createScopedLogger('RN:ViewportTracking')
 
+/**
+ * Options for the {@link useViewportTracking} hook.
+ *
+ * @public
+ */
 export interface UseViewportTrackingOptions {
   /**
    * The resolved Contentful entry to track (baseline or variant).
-   * For personalized entries, this should be the entry from PersonalizedEntryResolver.resolve().entry.
-   * For non-personalized entries, pass the entry directly.
    */
   entry: Entry
+
   /**
-   * The personalization data from PersonalizedEntryResolver.resolve().personalization.
-   * Required for tracking variant views. Omit for baseline/non-personalized entries.
+   * Personalization data for variant tracking. Omit for baseline/non-personalized entries.
    */
   personalization?: SelectedPersonalization
+
   /**
-   * Minimum visibility ratio (0.0 - 1.0) required to consider component "visible".
-   * Default: 0.8 (80% of the component must be visible in viewport)
+   * Minimum visibility ratio (0.0 - 1.0) required to consider the component "visible".
+   *
+   * @defaultValue 0.8
    */
   threshold?: number
+
   /**
    * Minimum time (in milliseconds) the component must be visible before tracking fires.
-   * Default: 2000ms (2 seconds)
+   *
+   * @defaultValue 2000
    */
   viewTimeMs?: number
 }
 
+/**
+ * Return value of the {@link useViewportTracking} hook.
+ *
+ * @public
+ */
 export interface UseViewportTrackingReturn {
+  /** Whether the tracked element is currently visible in the viewport. */
   isVisible: boolean
+
+  /** Layout callback to attach to the tracked View's `onLayout` prop. */
   onLayout: (event: LayoutChangeEvent) => void
 }
 
@@ -41,9 +56,9 @@ const DEFAULT_THRESHOLD = 0.8
 const DEFAULT_VIEW_TIME_MS = 2000
 
 /**
- * Extracts tracking metadata from a resolved entry and personalization data.
- * For variant entries, personalization data is provided by PersonalizedEntryResolver.resolve().personalization.
- * For baseline/non-personalized entries, personalization will be undefined.
+ * Extracts tracking metadata from a resolved entry and optional personalization data.
+ *
+ * @internal
  */
 function extractTrackingMetadata(
   resolvedEntry: Entry,
@@ -76,6 +91,38 @@ function extractTrackingMetadata(
   }
 }
 
+/**
+ * Tracks whether a component is visible in the viewport and fires a component view
+ * event when visibility and time thresholds are met.
+ *
+ * @param options - Tracking options including the entry, thresholds, and personalization data
+ * @returns An object with `isVisible` state and an `onLayout` callback for the tracked View
+ *
+ * @throws Error if called outside of an {@link OptimizationProvider}
+ *
+ * @remarks
+ * Uses {@link useScrollContext} if available, otherwise falls back to screen dimensions.
+ * The hook tracks only once per component instance — subsequent visibility events are ignored.
+ *
+ * @example
+ * ```tsx
+ * function TrackedEntry({ entry }: { entry: Entry }) {
+ *   const { onLayout, isVisible } = useViewportTracking({
+ *     entry,
+ *     threshold: 0.8,
+ *     viewTimeMs: 2000,
+ *   })
+ *
+ *   return (
+ *     <View onLayout={onLayout}>
+ *       <Text>{isVisible ? 'Visible' : 'Hidden'}</Text>
+ *     </View>
+ *   )
+ * }
+ * ```
+ *
+ * @public
+ */
 export function useViewportTracking({
   entry,
   personalization,

@@ -11,6 +11,8 @@ import { UniversalEventProperties } from './UniversalEventProperties'
  * (for example, anonymous and authenticated IDs) with the same user.
  *
  * Extends {@link UniversalEventProperties} with a fixed `type` field.
+ *
+ * @public
  */
 export const AliasEvent = z.extend(UniversalEventProperties, {
   /**
@@ -21,5 +23,7 @@ export const AliasEvent = z.extend(UniversalEventProperties, {
 
 /**
  * TypeScript type inferred from {@link AliasEvent}.
+ *
+ * @public
  */
 export type AliasEvent = z.infer<typeof AliasEvent>

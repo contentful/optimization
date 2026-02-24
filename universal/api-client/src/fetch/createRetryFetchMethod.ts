@@ -21,10 +21,10 @@ const DEFAULT_RETRY_COUNT = 1
 /**
  * HTTP status code that triggers a retry.
  *
- * @internal
- *
  * @remarks
  * This value is currently fixed to `503 Service Unavailable`.
+ *
+ * @internal
  */
 const RETRY_RESPONSE_STATUS = 503
 
@@ -61,13 +61,14 @@ class HttpError extends Error {
 
 /**
  * Configuration options for {@link createRetryFetchMethod}.
+ *
+ * @public
  */
 export interface RetryFetchMethodOptions extends BaseFetchMethodOptions {
   /**
    * Delay (in milliseconds) between retry attempts.
    *
-   * @remarks
-   * Defaults to {@link DEFAULT_INTERVAL_TIMEOUT}.
+   * @defaultValue `0`
    */
   intervalTimeout?: number
 
@@ -85,8 +86,7 @@ export interface RetryFetchMethodOptions extends BaseFetchMethodOptions {
   /**
    * Maximum number of retry attempts.
    *
-   * @remarks
-   * Defaults to {@link DEFAULT_RETRY_COUNT}.
+   * @defaultValue `1`
    */
   retries?: number
 }
@@ -172,12 +172,12 @@ function createRetryFetchCallback({
  * @param options - Configuration options that control retry behavior.
  * @returns A {@link FetchMethod} that automatically retries qualifying failures.
  *
+ * @throws {@link Error}
+ * Thrown when the request cannot be retried and no successful response is obtained.
+ *
  * @remarks
  * This wrapper integrates with `p-retry` and uses an {@link AbortController}
  * to cancel pending requests when a non-retriable error occurs.
- *
- * @throws {@link Error}
- * Thrown when the request cannot be retried and no successful response is obtained.
  *
  * @example
  * ```ts
@@ -192,6 +192,8 @@ function createRetryFetchCallback({
  *
  * const response = await fetchWithRetry('https://example.com', { method: 'GET' })
  * ```
+ *
+ * @public
  */
 export function createRetryFetchMethod({
   apiName = 'Optimization',

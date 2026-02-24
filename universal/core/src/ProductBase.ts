@@ -45,7 +45,7 @@ export interface ProductConfig {
    * @remarks
    * The actual duplication check is performed by {@link ValuePresence}. The
    * keys of this record are used as duplication scopes. An empty string `''`
-   * is converted to an `indefined` scope when specific scopes are not required.
+   * is converted to an `undefined` scope when specific scopes are not required.
    */
   preventedComponentEvents?: Record<string, string[]>
 }

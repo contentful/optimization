@@ -4,7 +4,11 @@ import { createScopedLogger } from 'logger'
 
 const logger = createScopedLogger('Personalization')
 
-/** Base string for log messages when merge-tag resolution fails. */
+/**
+ * Base string for log messages when merge-tag resolution fails.
+ *
+ * @internal
+ */
 const RESOLUTION_WARNING_BASE = 'Could not resolve Merge Tag value:'
 
 /**
@@ -64,13 +68,13 @@ const MergeTagValueResolver = {
    * @param id - Merge-tag identifier.
    * @param profile - Profile from which to resolve the value.
    * @returns A stringified primitive if found; otherwise `undefined`.
+   * @remarks
+   * Only string/number/boolean primitives are returned; objects/arrays are ignored.
    * @example
    * ```ts
    * const value = MergeTagValueResolver.getValueFromProfile('user_email', profile)
    * if (value) sendEmailTo(value)
    * ```
-   * @remarks
-   * Only string/number/boolean primitives are returned; objects/arrays are ignored.
    */
   getValueFromProfile(id: string, profile?: Profile): string | undefined {
     const selectors = MergeTagValueResolver.normalizeSelectors(id)

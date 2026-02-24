@@ -13,8 +13,12 @@ interface ContentfulEntriesState {
 }
 
 /**
- * Hook to fetch audience and experience entries from Contentful.
- * Handles loading state and error handling.
+ * Fetches audience and experience entries from Contentful on mount.
+ *
+ * @param contentfulClient - The Contentful client to use for fetching
+ * @returns Loading state, error state, and the fetched audience/experience entries
+ *
+ * @internal
  */
 export function useContentfulEntries(contentfulClient: ContentfulClient): ContentfulEntriesState {
   const [audienceEntries, setAudienceEntries] = useState<ContentfulEntry[]>([])

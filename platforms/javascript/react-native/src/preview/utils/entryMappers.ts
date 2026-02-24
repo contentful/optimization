@@ -5,18 +5,14 @@ import type {
   VariantDistribution,
 } from '../types'
 
-/**
- * Fields expected on an nt_audience Contentful entry
- */
+/** @internal */
 interface AudienceEntryFields {
   nt_audience_id?: string
   nt_name?: string
   nt_description?: string
 }
 
-/**
- * Fields expected on an nt_experience Contentful entry
- */
+/** @internal */
 interface ExperienceEntryFields {
   nt_experience_id?: string
   nt_name?: string
@@ -32,55 +28,41 @@ interface ExperienceEntryFields {
   nt_variants?: Array<{ sys: { id: string } }>
 }
 
-/**
- * Fields expected on an nt_personalization Contentful entry
- */
+/** @internal */
 interface PersonalizationEntryFields {
   nt_personalization_id?: string
   nt_experience_id?: string
   nt_name?: string
 }
 
-/**
- * Fields expected on a variant content entry
- */
+/** @internal */
 interface VariantEntryFields {
   internalTitle?: string
   title?: string
   name?: string
 }
 
-/**
- * Type guard to check if fields have audience entry fields
- */
+/** @internal */
 function hasAudienceFields(fields: unknown): fields is AudienceEntryFields {
   return typeof fields === 'object' && fields !== null
 }
 
-/**
- * Type guard to check if fields have experience entry fields
- */
+/** @internal */
 function hasExperienceFields(fields: unknown): fields is ExperienceEntryFields {
   return typeof fields === 'object' && fields !== null
 }
 
-/**
- * Type guard to check if fields have variant entry fields
- */
+/** @internal */
 function hasVariantFields(fields: unknown): fields is VariantEntryFields {
   return typeof fields === 'object' && fields !== null
 }
 
-/**
- * Type guard to check if fields have personalization entry fields
- */
+/** @internal */
 function hasPersonalizationFields(fields: unknown): fields is PersonalizationEntryFields {
   return typeof fields === 'object' && fields !== null
 }
 
-/**
- * Gets the display name for a variant entry
- */
+/** @internal */
 function getVariantName(entry: ContentfulEntry): string | undefined {
   const fields: unknown = entry.fields
   if (hasVariantFields(fields)) {
@@ -89,9 +71,7 @@ function getVariantName(entry: ContentfulEntry): string | undefined {
   return undefined
 }
 
-/**
- * Gets the variant reference ID for a given index from the experience config.
- */
+/** @internal */
 function getVariantRefForIndex(
   index: number,
   config: NonNullable<ExperienceEntryFields['nt_config']>,
@@ -103,10 +83,7 @@ function getVariantRefForIndex(
   return firstComponent?.variants?.[index - 1]?.id ?? ''
 }
 
-/**
- * Builds a map of variant entry IDs to their entries from experience entries.
- * Extracts linked variant entries from the experience entry includes.
- */
+/** @internal */
 function buildVariantEntryMap(experienceEntries: ContentfulEntry[]): Map<string, ContentfulEntry> {
   const variantMap = new Map<string, ContentfulEntry>()
 
@@ -125,11 +102,12 @@ function buildVariantEntryMap(experienceEntries: ContentfulEntry[]): Map<string,
 }
 
 /**
- * Creates AudienceDefinition array from Contentful nt_audience entries.
- * Converts raw CMS entries into the internal definition format.
+ * Creates {@link AudienceDefinition} instances from Contentful `nt_audience` entries.
  *
- * @param entries - Contentful entries of type nt_audience
- * @returns Array of audience definitions with id, name, and description
+ * @param entries - Contentful entries of type `nt_audience`
+ * @returns Array of audience definitions
+ *
+ * @public
  */
 export function createAudienceDefinitions(entries: ContentfulEntry[]): AudienceDefinition[] {
   return entries.map((entry) => {
@@ -149,12 +127,13 @@ export function createAudienceDefinitions(entries: ContentfulEntry[]): AudienceD
 }
 
 /**
- * Creates ExperienceDefinition array from Contentful nt_experience entries.
- * Converts raw CMS entries into the internal definition format, including
- * variant distribution with names extracted from linked entries.
+ * Creates {@link ExperienceDefinition} instances from Contentful `nt_experience` entries,
+ * including variant distribution with names extracted from linked entries.
  *
- * @param entries - Contentful entries of type nt_experience
+ * @param entries - Contentful entries of type `nt_experience`
  * @returns Array of experience definitions with full variant information
+ *
+ * @public
  */
 export function createExperienceDefinitions(entries: ContentfulEntry[]): ExperienceDefinition[] {
   const variantEntryMap = buildVariantEntryMap(entries)
@@ -199,10 +178,11 @@ export function createExperienceDefinitions(entries: ContentfulEntry[]): Experie
 
 /**
  * Creates a lookup map of experience/personalization IDs to their human-readable names.
- * Used to enrich the personalizations section with names from Contentful entries.
  *
- * @param entries - Contentful entries of type nt_personalization
- * @returns Map of experienceId to name
+ * @param entries - Contentful entries of type `nt_personalization`
+ * @returns Record mapping experience IDs to display names
+ *
+ * @public
  */
 export function createExperienceNameMap(entries: ContentfulEntry[]): Record<string, string> {
   const nameMap: Record<string, string> = {}

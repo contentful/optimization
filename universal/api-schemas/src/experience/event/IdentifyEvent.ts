@@ -9,6 +9,8 @@ import { Traits } from './properties/Traits'
  * Identify events attach user traits to a known identity.
  *
  * Extends {@link UniversalEventProperties} with a `traits` payload.
+ *
+ * @public
  */
 export const IdentifyEvent = z.extend(UniversalEventProperties, {
   /**
@@ -26,5 +28,7 @@ export const IdentifyEvent = z.extend(UniversalEventProperties, {
 
 /**
  * TypeScript type inferred from {@link IdentifyEvent}.
+ *
+ * @public
  */
 export type IdentifyEvent = z.infer<typeof IdentifyEvent>

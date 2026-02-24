@@ -8,11 +8,15 @@ import * as z from 'zod/mini'
  * This is modeled as a catch-all map from string keys to JSON-compatible values.
  * The strong typing ot consumer-specified Contentful Entry fields is not
  * validated by these schemas.
+ *
+ * @public
  */
 export const EntryFields = z.catchall(z.object({}), z.json())
 
 /**
  * TypeScript type inferred from {@link EntryFields}.
+ *
+ * @public
  */
 export type EntryFields = z.infer<typeof EntryFields>
 
@@ -21,6 +25,8 @@ export type EntryFields = z.infer<typeof EntryFields>
  *
  * @remarks
  * This is used for references to other Contentful resources where `linkType` is not constrained.
+ *
+ * @public
  */
 export const Link = z.object({
   sys: z.object({
@@ -32,11 +38,15 @@ export const Link = z.object({
 
 /**
  * TypeScript type inferred from {@link Link}.
+ *
+ * @public
  */
 export type Link = z.infer<typeof Link>
 
 /**
  * Zod schema representing a Contentful ContentType link.
+ *
+ * @public
  */
 export const ContentTypeLink = z.object({
   sys: z.object({
@@ -48,11 +58,15 @@ export const ContentTypeLink = z.object({
 
 /**
  * TypeScript type inferred from {@link ContentTypeLink}.
+ *
+ * @public
  */
 export type ContentTypeLink = z.infer<typeof ContentTypeLink>
 
 /**
  * Zod schema representing a Contentful Environment link.
+ *
+ * @public
  */
 export const EnvironmentLink = z.object({
   sys: z.object({
@@ -64,11 +78,15 @@ export const EnvironmentLink = z.object({
 
 /**
  * TypeScript type inferred from {@link EnvironmentLink}.
+ *
+ * @public
  */
 export type EnvironmentLink = z.infer<typeof EnvironmentLink>
 
 /**
  * Zod schema representing a Contentful Space link.
+ *
+ * @public
  */
 export const SpaceLink = z.object({
   sys: z.object({
@@ -80,11 +98,15 @@ export const SpaceLink = z.object({
 
 /**
  * TypeScript type inferred from {@link SpaceLink}.
+ *
+ * @public
  */
 export type SpaceLink = z.infer<typeof SpaceLink>
 
 /**
  * Zod schema representing a Contentful Taxonomy Concept link.
+ *
+ * @internal
  */
 const TaxonomyConceptLink = z.object({
   sys: z.object({
@@ -96,11 +118,15 @@ const TaxonomyConceptLink = z.object({
 
 /**
  * TypeScript type inferred from {@link TaxonomyConceptLink}.
+ *
+ * @public
  */
 export type TaxonomyConceptLink = z.infer<typeof TaxonomyConceptLink>
 
 /**
  * Zod schema representing a Contentful Tag link.
+ *
+ * @public
  */
 export const TagLink = z.object({
   sys: z.object({
@@ -112,6 +138,8 @@ export const TagLink = z.object({
 
 /**
  * TypeScript type inferred from {@link TagLink}.
+ *
+ * @public
  */
 export type TagLink = z.infer<typeof TagLink>
 
@@ -121,6 +149,8 @@ export type TagLink = z.infer<typeof TagLink>
  * @remarks
  * This mirrors the structure of `Entry['sys']` from the Contentful SDK with
  * a subset of fields used by this library.
+ *
+ * @public
  */
 export const EntrySys = z.object({
   type: z.literal('Entry'),
@@ -137,6 +167,8 @@ export const EntrySys = z.object({
 
 /**
  * TypeScript type inferred from {@link EntrySys}.
+ *
+ * @public
  */
 export type EntrySys = z.infer<typeof EntrySys>
 
@@ -147,6 +179,8 @@ export type EntrySys = z.infer<typeof EntrySys>
  * This model is intentionally loose: `fields` is any JSON-compliant object and
  * `metadata` is modeled as a catch-all object that must contain an array of
  * {@link TagLink} tags.
+ *
+ * @public
  */
 export const CtflEntry = z.object({
   /**
@@ -170,6 +204,8 @@ export const CtflEntry = z.object({
 
 /**
  * TypeScript type inferred from {@link CtflEntry}.
+ *
+ * @public
  */
 export type CtflEntry = z.infer<typeof CtflEntry>
 
@@ -184,6 +220,16 @@ export type CtflEntry = z.infer<typeof CtflEntry>
  * @param entry - The value to test.
  * @returns `true` if the object conforms to {@link CtflEntry} and can be treated
  * as a typed {@link Entry}, otherwise `false`.
+ *
+ * @example
+ * ```ts
+ * const entry = await client.getEntry('my-entry-id');
+ * if (isEntry<MySkeleton>(entry)) {
+ *   console.log(entry.fields.myField);
+ * }
+ * ```
+ *
+ * @public
  */
 export function isEntry<
   S extends EntrySkeletonType,

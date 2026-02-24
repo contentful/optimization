@@ -1,16 +1,23 @@
 /**
- * Shared types, tunables, environment helpers, and state utilities for ElementViewObserver.
+ * Shared types, tunables, environment helpers, and state utilities for
+ * {@link ElementViewObserver}.
+ *
+ * @internal
  */
 
 import { CAN_ADD_LISTENERS } from '../global-constants'
 
 /**
  * Timer handle type returned by `setTimeout`.
+ *
+ * @public
  */
 export type Timer = ReturnType<typeof setTimeout>
 
 /**
  * Interval handle type returned by `setInterval`.
+ *
+ * @public
  */
 export type Interval = ReturnType<typeof setInterval>
 
@@ -18,6 +25,13 @@ export type Interval = ReturnType<typeof setInterval>
  * Get a high-resolution timestamp when available.
  *
  * @returns A timestamp in milliseconds since an arbitrary origin.
+ *
+ * @example
+ * ```ts
+ * const start = NOW()
+ * ```
+ *
+ * @public
  */
 export const NOW = (): number =>
   typeof performance !== 'undefined' && typeof performance.now === 'function'
@@ -28,6 +42,15 @@ export const NOW = (): number =>
  * Determine whether the current page is visible.
  *
  * @returns `true` if the page is visible or no document is available, otherwise `false`.
+ *
+ * @example
+ * ```ts
+ * if (isPageVisible()) {
+ *   scheduleCallback()
+ * }
+ * ```
+ *
+ * @public
  */
 export const isPageVisible = (): boolean =>
   !CAN_ADD_LISTENERS ? true : document.visibilityState === 'visible'
@@ -36,6 +59,8 @@ export const isPageVisible = (): boolean =>
 
 /**
  * Default tuning values for {@link ElementViewObserver}.
+ *
+ * @public
  */
 export const DEFAULTS = {
   /** Default dwell time in ms before firing. */
@@ -59,6 +84,13 @@ export const DEFAULTS = {
  *
  * @param base - Base delay in ms.
  * @returns Jittered delay in ms.
+ *
+ * @example
+ * ```ts
+ * const delay = withJitter(300)
+ * ```
+ *
+ * @public
  */
 export const withJitter = (base: number): number =>
   base + Math.floor(Math.random() * Math.max(1, Math.floor(base / DEFAULTS.JITTER_DIVISOR)))
@@ -67,6 +99,8 @@ export const withJitter = (base: number): number =>
 
 /**
  * Information passed to the element view callback.
+ *
+ * @public
  */
 export interface ElementViewCallbackInfo {
   /** Total number of milliseconds the element has been visible. */
@@ -80,6 +114,8 @@ export interface ElementViewCallbackInfo {
 /**
  * Callback invoked once per element after the dwell requirement is met,
  * with retries on failure.
+ *
+ * @public
  */
 export type ElementViewCallback = (
   element: Element,
@@ -88,6 +124,8 @@ export type ElementViewCallback = (
 
 /**
  * Observer-level options that apply to all observed elements.
+ *
+ * @public
  */
 export interface ElementViewObserverOptions {
   /** Required visible time (in ms) before the callback is fired. */
@@ -108,6 +146,8 @@ export interface ElementViewObserverOptions {
 
 /**
  * Per-element overrides and data passed to the callback.
+ *
+ * @public
  */
 export interface ElementViewElementOptions {
   /** Per-element dwell time override in ms. */
@@ -131,6 +171,8 @@ export interface ElementViewElementOptions {
 
 /**
  * Fully-resolved observer-level options used internally.
+ *
+ * @internal
  */
 export type EffectiveObserverOptions = Required<
   Pick<
@@ -147,6 +189,8 @@ export type EffectiveObserverOptions = Required<
 
 /**
  * Fully-resolved per-element overrides used internally.
+ *
+ * @internal
  */
 export type PerElementEffectiveOptions = Required<
   Pick<
@@ -157,6 +201,8 @@ export type PerElementEffectiveOptions = Required<
 
 /**
  * Internal per-element state tracked by the observer.
+ *
+ * @internal
  */
 export interface ElementState {
   /** WeakRef path (modern browsers). */
@@ -193,6 +239,8 @@ export interface ElementState {
 
 /**
  * Small numeric sanitizers.
+ *
+ * @public
  */
 export const Num = {
   /** Use the provided number or fall back when the value is not numeric. */
@@ -212,6 +260,9 @@ export const Num = {
  * Clear a scheduled fire timer, if present.
  *
  * @param state - Element state whose fire timer should be cleared.
+ * @returns Nothing.
+ *
+ * @public
  */
 export const clearFireTimer = (state: ElementState): void => {
   if (state.fireTimer !== null) {
@@ -224,6 +275,9 @@ export const clearFireTimer = (state: ElementState): void => {
  * Cancel a scheduled retry timer, if present.
  *
  * @param state - Element state whose retry timer should be cleared.
+ * @returns Nothing.
+ *
+ * @public
  */
 export const cancelRetry = (state: ElementState): void => {
   if (state.retryTimer !== null) {
@@ -238,6 +292,8 @@ export const cancelRetry = (state: ElementState): void => {
  *
  * @param state - Element state containing refs.
  * @returns The underlying element or `null` if no longer available.
+ *
+ * @public
  */
 export const derefElement = (state: ElementState): Element | null => {
   if (state.ref && typeof state.ref.deref === 'function') {

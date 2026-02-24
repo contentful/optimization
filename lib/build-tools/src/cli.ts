@@ -6,6 +6,19 @@ function printUsage(): void {
   )
 }
 
+/**
+ * CLI entry point that parses arguments and dispatches to the appropriate command.
+ *
+ * @param argv - Command-line arguments (excluding the interpreter and script paths).
+ * @returns Nothing.
+ *
+ * @example
+ * ```typescript
+ * main(['emit-dual-dts', './dist'])
+ * ```
+ *
+ * @public
+ */
 export function main(argv: string[]): void {
   const [command, distDir = './dist'] = argv
 

@@ -5,6 +5,8 @@ import * as z from 'zod/mini'
  *
  * @remarks
  * Identifies the client library that produced the event.
+ *
+ * @public
  */
 export const Library = z.object({
   /**
@@ -20,5 +22,7 @@ export const Library = z.object({
 
 /**
  * TypeScript type inferred from {@link Library}.
+ *
+ * @public
  */
 export type Library = z.infer<typeof Library>

@@ -73,6 +73,8 @@ export type AnalyticsStatefulOptions = ProductBaseOptions & {
 
 /**
  * Maximum number of queued events before an automatic flush is triggered.
+ *
+ * @internal
  */
 const MAX_QUEUED_EVENTS = 25
 
@@ -96,6 +98,10 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    * Create a new stateful analytics instance.
    *
    * @param options - Options to configure the analytics product for stateful environments.
+   * @example
+   * ```ts
+   * const analytics = new AnalyticsStateful({ api, builder, config: { defaults: { consent: true } }, interceptors })
+   * ```
    */
   constructor(options: AnalyticsStatefulOptions) {
     const { api, builder, config, interceptors } = options
@@ -126,6 +132,11 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
 
   /**
    * Reset analytics‑related signals and the last emitted event.
+   *
+   * @example
+   * ```ts
+   * analytics.reset()
+   * ```
    */
   reset(): void {
     batch(() => {
@@ -141,6 +152,10 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    * @param name - The method name; `'trackComponentView'` is normalized
    * to `'component'` for allow‑list checks.
    * @returns `true` if the operation is permitted; otherwise `false`.
+   * @example
+   * ```ts
+   * if (analytics.hasConsent('track')) { ... }
+   * ```
    */
   hasConsent(name: string): boolean {
     return (
@@ -156,6 +171,10 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    *
    * @param name - The blocked operation name.
    * @param payload - The original arguments supplied to the operation.
+   * @example
+   * ```ts
+   * analytics.onBlockedByConsent('track', [payload])
+   * ```
    */
   onBlockedByConsent(name: string, payload: unknown[]): void {
     logger.warn(
@@ -170,6 +189,10 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    * @param _name - The operation name (unused).
    * @param payload - Tuple of [builderArgs, duplicationScope].
    * @returns `true` if the event is NOT a duplicate and should proceed.
+   * @example
+   * ```ts
+   * if (analytics.isNotDuplicated('trackComponentView', [{ componentId: 'hero' }, 'page'])) { ... }
+   * ```
    */
   isNotDuplicated(_name: string, payload: [ComponentViewBuilderArgs, string]): boolean {
     const [{ componentId: value }, duplicationScope] = payload
@@ -186,6 +209,10 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    *
    * @param name - The blocked operation name.
    * @param payload - The original arguments supplied to the operation.
+   * @example
+   * ```ts
+   * analytics.onBlockedByDuplication('trackComponentView', [payload])
+   * ```
    */
   onBlockedByDuplication(name: string, payload: unknown[]): void {
     const componentType = name === 'trackFlagView' ? 'flag' : 'component'
@@ -200,7 +227,12 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    *
    * @param payload - Component view builder arguments.
    * @param _duplicationScope - Optional string used to scope duplication (used
-   * by guards); an empty string `''` is converted to the `undefined` scope
+   * by guards); an empty string `''` is converted to the `undefined` scope.
+   * @returns A promise that resolves when the event has been queued.
+   * @example
+   * ```ts
+   * await analytics.trackComponentView({ componentId: 'hero-banner' })
+   * ```
    */
   @guardedBy('isNotDuplicated', { onBlocked: 'onBlockedByDuplication' })
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
@@ -218,7 +250,12 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    *
    * @param payload - Flag view builder arguments.
    * @param _duplicationScope - Optional string used to scope duplication (used
-   * by guards); an empty string `''` is converted to the `undefined` scope
+   * by guards); an empty string `''` is converted to the `undefined` scope.
+   * @returns A promise that resolves when the event has been queued.
+   * @example
+   * ```ts
+   * await analytics.trackFlagView({ componentId: 'feature-flag-123' })
+   * ```
    */
   @guardedBy('isNotDuplicated', { onBlocked: 'onBlockedByDuplication' })
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
@@ -274,6 +311,10 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    * Send all queued events grouped by profile and clear the queue.
    * @remarks Only under rare circumstances should there be more than one
    * profile in a stateful application.
+   * @example
+   * ```ts
+   * await analytics.flush()
+   * ```
    */
   async flush(): Promise<void> {
     logger.debug('Flushing event queue')

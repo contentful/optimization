@@ -10,6 +10,9 @@ import {
 
 const logger = createScopedLogger('RN:Scroll')
 
+/**
+ * @internal
+ */
 interface ScrollContextValue {
   scrollY: number
   viewportHeight: number
@@ -19,15 +22,58 @@ const ScrollContext = createContext<ScrollContextValue | null>(null)
 
 const SCROLL_LOG_THRESHOLD = 50
 
+/**
+ * Returns the current scroll position and viewport height from the nearest {@link ScrollProvider}.
+ *
+ * @returns The scroll context value, or `null` if not within a {@link ScrollProvider}
+ *
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const scroll = useScrollContext()
+ *   return <Text>Scroll Y: {scroll?.scrollY ?? 0}</Text>
+ * }
+ * ```
+ *
+ * @public
+ */
 export function useScrollContext(): ScrollContextValue | null {
   const context = useContext(ScrollContext)
   return context
 }
 
+/**
+ * Props for the {@link ScrollProvider} component. Extends React Native's `ScrollViewProps`.
+ *
+ * @public
+ */
 export interface ScrollProviderProps extends ScrollViewProps {
   children: ReactNode
 }
 
+/**
+ * Wraps a `ScrollView` and provides scroll position context to child components
+ * for viewport-based tracking.
+ *
+ * @param props - ScrollView props plus children
+ * @returns A `ScrollView` wrapped in a scroll context provider
+ *
+ * @remarks
+ * When {@link Personalization} or {@link Analytics} components are placed inside a
+ * `ScrollProvider`, they use the actual scroll position for visibility calculations.
+ * Without a `ScrollProvider`, they fall back to screen dimensions.
+ *
+ * @example
+ * ```tsx
+ * <ScrollProvider>
+ *   <Personalization baselineEntry={entry}>
+ *     {(resolved) => <HeroComponent data={resolved} />}
+ *   </Personalization>
+ * </ScrollProvider>
+ * ```
+ *
+ * @public
+ */
 export function ScrollProvider({
   children,
   onScroll,

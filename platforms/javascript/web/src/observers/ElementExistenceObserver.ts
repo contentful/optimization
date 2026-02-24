@@ -12,42 +12,58 @@ import { CAN_ADD_LISTENERS } from '../global-constants'
 /**
  * Default idle timeout (in milliseconds) used when scheduling processing
  * of mutation records.
+ *
+ * @public
  */
 export const DEFAULT_IDLE_TIMEOUT_MS = 100
 
 /**
  * Default maximum number of elements delivered in a single callback chunk.
+ *
+ * @public
  */
 export const DEFAULT_MAX_CHUNK = 250
 
 /**
  * Lower bound for idle timeout to avoid ultra-tight loops (~1 animation frame).
+ *
+ * @public
  */
 export const MIN_IDLE_TIMEOUT_MS = 16 // ~1 frame
 
 /**
  * Lower bound for maximum chunk size (must deliver at least one element).
+ *
+ * @public
  */
 export const MIN_MAX_CHUNK = 1
 
 /**
  * True when the environment supports `MutationObserver` and can add listeners.
+ *
+ * @public
  */
 export const HAS_MUTATION_OBSERVER = CAN_ADD_LISTENERS && typeof MutationObserver !== 'undefined'
 
 /**
  * True when the environment supports `window.requestIdleCallback`.
+ *
+ * @public
  */
 export const HAS_IDLE_CALLBACK =
   CAN_ADD_LISTENERS && typeof window.requestIdleCallback === 'function'
 
 /**
  * True when the environment supports `window.cancelIdleCallback`.
+ *
+ * @public
  */
 export const HAS_CANCEL_IDLE = CAN_ADD_LISTENERS && typeof window.cancelIdleCallback === 'function'
 
 /**
  * Aggregate description of changes observed in a batch of mutation records.
+ *
+ * @public
  */
 export interface MutationChange {
   /** Set of elements that were added. */
@@ -60,21 +76,29 @@ export interface MutationChange {
 
 /**
  * Callback invoked when elements have been added.
+ *
+ * @public
  */
 export type AddedCallback = (elements: readonly Element[]) => unknown
 
 /**
  * Callback invoked when elements have been removed.
+ *
+ * @public
  */
 export type RemovedCallback = (elements: readonly Element[]) => unknown
 
 /**
  * Callback invoked when a batch of mutation records has been coalesced.
+ *
+ * @public
  */
 export type MutationChangeCallback = (change: MutationChange) => unknown
 
 /**
  * Options for configuring {@link ElementExistenceObserver}.
+ *
+ * @public
  */
 export interface ElementExistenceObserverOptions {
   /**
@@ -114,6 +138,10 @@ export interface ElementExistenceObserverOptions {
  * @remarks
  * In non-DOM / SSR environments, the observer becomes a safe no-op, and
  * mutation handling is disabled.
+ *
+ * @see {@link ElementExistenceObserverOptions}
+ *
+ * @public
  */
 class ElementExistenceObserver {
   private readonly observer?: MutationObserver
@@ -136,6 +164,14 @@ class ElementExistenceObserver {
    * Create a new element existence observer.
    *
    * @param options - Optional configuration for root, callbacks, and batching.
+   *
+   * @example
+   * ```ts
+   * const observer = new ElementExistenceObserver({
+   *   onAdded: (elements) => console.log('added', elements),
+   *   onRemoved: (elements) => console.log('removed', elements),
+   * })
+   * ```
    */
   public constructor(options: ElementExistenceObserverOptions = {}) {
     const {
@@ -182,6 +218,13 @@ class ElementExistenceObserver {
 
   /**
    * True if the watcher is actively observing (i.e., in a browser with MutationObserver).
+   *
+   * @returns `true` when observing, `false` when disconnected or in a non-DOM environment.
+   *
+   * @example
+   * ```ts
+   * if (observer.isActive()) { /* ... *\/ }
+   * ```
    */
   public isActive(): boolean {
     return !!this.observer && !this.disconnected
@@ -189,6 +232,13 @@ class ElementExistenceObserver {
 
   /**
    * Stop observing and clear any pending work.
+   *
+   * @returns Nothing.
+   *
+   * @example
+   * ```ts
+   * observer.disconnect()
+   * ```
    */
   public disconnect(): void {
     if (this.disconnected) return
@@ -207,8 +257,15 @@ class ElementExistenceObserver {
   /**
    * Synchronously process any pending mutation records.
    *
+   * @returns Nothing.
+   *
    * @remarks
    * Cancels any outstanding idle callbacks or timeouts and delivers changes immediately.
+   *
+   * @example
+   * ```ts
+   * observer.flush()
+   * ```
    */
   public flush(): void {
     if (!this.isActive()) return
@@ -225,6 +282,8 @@ class ElementExistenceObserver {
 
   /**
    * Schedule processing of pending records using idle time or a timeout.
+   *
+   * @internal
    */
   private scheduleProcess(): void {
     if (!this.isActive() || this.scheduled) return
@@ -243,6 +302,8 @@ class ElementExistenceObserver {
 
   /**
    * Process all currently pending mutation records immediately.
+   *
+   * @internal
    */
   private processNow(): void {
     if (!this.isActive() || this.pendingRecords.length === 0) return
@@ -259,6 +320,8 @@ class ElementExistenceObserver {
 
   /**
    * Narrow a value to `Node` when the DOM is available.
+   *
+   * @internal
    */
   private static isNode(value: unknown): value is Node {
     return CAN_ADD_LISTENERS && typeof Node !== 'undefined' && value instanceof Node
@@ -266,6 +329,8 @@ class ElementExistenceObserver {
 
   /**
    * Normalize a numeric option to a finite integer and enforce a minimum.
+   *
+   * @internal
    */
   private static sanitizeInt(value: unknown, fallback: number, min: number): number {
     if (typeof value !== 'number' || !Number.isFinite(value)) return fallback
@@ -276,6 +341,8 @@ class ElementExistenceObserver {
   /**
    * Coalesce a set of mutation records into net added and removed nodes,
    * ignoring transient moves.
+   *
+   * @internal
    */
   private static coalesce(records: readonly MutationRecord[]): {
     addedNodes: Set<Node>
@@ -299,6 +366,8 @@ class ElementExistenceObserver {
 
   /**
    * Convert node-level sets into element-only sets, including descendants.
+   *
+   * @internal
    */
   private static toElementSets(
     addedNodes: ReadonlySet<Node>,
@@ -312,6 +381,8 @@ class ElementExistenceObserver {
   /**
    * Collect all elements (and descendants) from a set of nodes, optionally
    * filtering out disconnected nodes.
+   *
+   * @internal
    */
   private static flattenElements(
     nodes: ReadonlySet<Node>,
@@ -343,6 +414,8 @@ class ElementExistenceObserver {
 
   /**
    * Cancel a previously scheduled idle callback or fallback timeout.
+   *
+   * @internal
    */
   private static cancelIdle(handle: number): void {
     if (HAS_CANCEL_IDLE) {
@@ -354,6 +427,8 @@ class ElementExistenceObserver {
 
   /**
    * Drain and return the current list of pending mutation records.
+   *
+   * @internal
    */
   private drainPending(): MutationRecord[] {
     const { pendingRecords: out } = this
@@ -364,6 +439,8 @@ class ElementExistenceObserver {
   /**
    * Deliver the aggregate change payload (added, removed, records) to the
    * `onChange` callback if configured.
+   *
+   * @internal
    */
   private deliverAggregate(
     added: ReadonlySet<Element>,
@@ -378,6 +455,8 @@ class ElementExistenceObserver {
   /**
    * Deliver per-kind added/removed elements to their respective callbacks in
    * chunks if necessary.
+   *
+   * @internal
    */
   private deliverPerKind(removed: ReadonlySet<Element>, added: ReadonlySet<Element>): void {
     const removedArr = removed.size > 0 ? [...removed] : []
@@ -394,6 +473,8 @@ class ElementExistenceObserver {
   /**
    * Dispatch element arrays in chunks to respect the configured `maxChunk`
    * and avoid blocking the main thread.
+   *
+   * @internal
    */
   private dispatchChunked(
     items: readonly Element[],
@@ -429,6 +510,8 @@ class ElementExistenceObserver {
 
   /**
    * Normalize sync/async callbacks and centralize error handling.
+   *
+   * @internal
    */
   private safeCall(invoke: () => unknown): void {
     try {

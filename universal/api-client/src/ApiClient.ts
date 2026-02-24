@@ -30,8 +30,6 @@ export interface ApiClientConfig extends Pick<ApiConfig, GlobalApiConfigProperti
 /**
  * Aggregated API client providing access to Experience and Insights APIs.
  *
- * @public
- *
  * @remarks
  * This client encapsulates shared configuration and exposes dedicated
  * sub-clients for personalization and analytics use cases.
@@ -41,7 +39,6 @@ export interface ApiClientConfig extends Pick<ApiConfig, GlobalApiConfigProperti
  * const client = new ApiClient({
  *   clientId: 'org-id',
  *   environment: 'main',
- *   preview: false,
  *   personalization: {
  *     // experience-specific overrides
  *   },
@@ -51,22 +48,33 @@ export interface ApiClientConfig extends Pick<ApiConfig, GlobalApiConfigProperti
  * })
  *
  * const profile = await client.experience.getProfile('profile-id')
- * const batch = await client.insights.upsertManyProfiles({ events: batchEvents })
+ * await client.insights.sendBatchEvents(batches)
  * ```
+ *
+ * @see {@link ExperienceApiClient}
+ * @see {@link InsightsApiClient}
+ *
+ * @public
  */
 export default class ApiClient {
   /**
    * Shared configuration applied to both Experience and Insights clients.
+   *
+   * @see {@link ApiConfig}
    */
   readonly config: ApiConfig
 
   /**
    * Client for personalization and experience-related operations.
+   *
+   * @see {@link ExperienceApiClient}
    */
   readonly experience: ExperienceApiClient
 
   /**
    * Client for analytics and insights-related operations.
+   *
+   * @see {@link InsightsApiClient}
    */
   readonly insights: InsightsApiClient
 

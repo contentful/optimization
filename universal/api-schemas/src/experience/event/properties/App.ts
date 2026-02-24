@@ -8,6 +8,8 @@ import * as z from 'zod/mini'
  * analytics events, such as its name and version.
  *
  * The entire object is optional; when omitted, no app context is attached.
+ *
+ * @public
  */
 export const App = z.optional(
   z.object({
@@ -25,5 +27,7 @@ export const App = z.optional(
 
 /**
  * TypeScript type inferred from {@link App}.
+ *
+ * @public
  */
 export type App = z.infer<typeof App>

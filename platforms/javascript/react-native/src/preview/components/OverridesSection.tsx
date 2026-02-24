@@ -5,6 +5,14 @@ import { spacing } from '../styles/theme'
 import type { OverridesSectionProps } from '../types'
 import { ListItem, Section } from './shared'
 
+/**
+ * Displays all active audience and personalization overrides with reset controls.
+ *
+ * @param props - Component props
+ * @returns The rendered overrides section
+ *
+ * @public
+ */
 export function OverridesSection({
   overrides,
   onResetAudience,

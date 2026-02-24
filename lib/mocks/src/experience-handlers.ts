@@ -107,9 +107,22 @@ function getResponseBody(profileId?: string, events?: ExperienceEventArray): Exp
   return responseBody
 }
 
-// ---------------------------------
-// MSW handlers for Experience API v2
-// ---------------------------------
+/**
+ * Returns MSW request handlers that mock the Experience API v2 endpoints.
+ *
+ * @param baseUrl - URL prefix prepended to each route pattern.
+ * @returns An array of {@link HttpHandler} instances for use with MSW.
+ *
+ * @example
+ * ```typescript
+ * import { setupServer } from 'msw/node'
+ * import { getHandlers } from './experience-handlers'
+ *
+ * const server = setupServer(...getHandlers())
+ * ```
+ *
+ * @public
+ */
 export function getHandlers(baseUrl = '*'): HttpHandler[] {
   return [
     // CORS preflight

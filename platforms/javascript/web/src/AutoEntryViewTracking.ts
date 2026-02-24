@@ -5,10 +5,17 @@ import type {
   ElementViewObserver,
 } from './observers'
 
+/**
+ * Scoped logger used by automatic entry view tracking.
+ *
+ * @internal
+ */
 const logger = createScopedLogger('Web:AutoTracking')
 
 /**
  * Data attributes used by the Web SDK to identify and configure tracked entries.
+ *
+ * @public
  */
 export type CtflDataset = DOMStringMap & {
   /** Entry ID associated with the element. */
@@ -30,6 +37,8 @@ export type CtflDataset = DOMStringMap & {
  *
  * @remarks
  * This does not support legacy browsers that do not expose `dataset` on `SVGElement`.
+ *
+ * @public
  */
 export type EntryElement = (HTMLElement | SVGElement) & { dataset: CtflDataset }
 
@@ -38,6 +47,15 @@ export type EntryElement = (HTMLElement | SVGElement) & { dataset: CtflDataset }
  *
  * @param element - Candidate element.
  * @returns `true` if the element exposes a valid `ctflEntryId` dataset property.
+ *
+ * @example
+ * ```ts
+ * if (isEntryElement(el)) {
+ *   console.log(el.dataset.ctflEntryId)
+ * }
+ * ```
+ *
+ * @public
  */
 export function isEntryElement(element?: Element): element is EntryElement {
   const isWeb = typeof HTMLElement !== 'undefined' && typeof SVGElement !== 'undefined'
@@ -59,6 +77,8 @@ export function isEntryElement(element?: Element): element is EntryElement {
 
 /**
  * Normalized entry data resolved either from `dataset` or explicit callback data.
+ *
+ * @public
  */
 export interface EntryData {
   /** Optional duplication scope used for de-duplication. */
@@ -78,6 +98,15 @@ export interface EntryData {
  *
  * @param data - Unknown value to validate.
  * @returns `true` if the object contains a non-empty entryId string.
+ *
+ * @example
+ * ```ts
+ * if (isEntryData(info.data)) {
+ *   console.log(info.data.entryId)
+ * }
+ * ```
+ *
+ * @public
  */
 export function isEntryData(data?: unknown): data is EntryData {
   if (!data) return false
@@ -90,6 +119,8 @@ export function isEntryData(data?: unknown): data is EntryData {
  *
  * @param sticky - Raw sticky string from dataset.
  * @returns `true` when the value equals `"true"` (case-insensitive); otherwise `false`.
+ *
+ * @internal
  */
 function parseSticky(sticky: string | undefined): boolean {
   return (sticky?.trim().toLowerCase() ?? '') === 'true'
@@ -100,6 +131,8 @@ function parseSticky(sticky: string | undefined): boolean {
  *
  * @param variantIndex - Raw variantIndex string from dataset.
  * @returns Parsed number when valid and safe, otherwise `undefined`.
+ *
+ * @internal
  */
 function parseVariantIndex(variantIndex: string | undefined): number | undefined {
   if (variantIndex === undefined || !/^\d+$/.test(variantIndex)) return undefined
@@ -120,6 +153,8 @@ function parseVariantIndex(variantIndex: string | undefined): number | undefined
  * const observer = new ElementViewObserver(callback, { dwellTimeMs: 1000 })
  * observer.observe(element, { data: { entryId: 'xyz' } })
  * ```
+ *
+ * @public
  */
 export const createAutoTrackingEntryViewCallback =
   (core: CoreStateful) =>
@@ -176,6 +211,8 @@ export const createAutoTrackingEntryViewCallback =
  *
  * @param element - Starting element.
  * @returns The matching entry element, if any.
+ *
+ * @internal
  */
 function findEntryElement(element: Element): EntryElement | undefined {
   if (isEntryElement(element)) return element
@@ -192,7 +229,7 @@ function findEntryElement(element: Element): EntryElement | undefined {
  * @param entryViewObserver - ElementViewObserver instance to manage.
  * @param autoObserveEntryElements - When `true`, automatically start observing
  *   newly-added entry elements.
- * @returns Options object suitable for constructing an ElementExistenceObserver.
+ * @returns Options object suitable for constructing an {@link ElementExistenceObserver}.
  *
  * @example
  * ```ts
@@ -200,6 +237,8 @@ function findEntryElement(element: Element): EntryElement | undefined {
  * const existenceOpts = createAutoTrackingEntryExistenceCallback(viewObserver, true)
  * const existenceObserver = new ElementExistenceObserver(existenceOpts)
  * ```
+ *
+ * @public
  */
 export const createAutoTrackingEntryExistenceCallback = (
   entryViewObserver: ElementViewObserver,

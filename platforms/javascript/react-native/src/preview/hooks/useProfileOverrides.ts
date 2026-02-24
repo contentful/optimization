@@ -23,8 +23,7 @@ const initialOverrideState: OverrideState = {
 }
 
 /**
- * Applies personalization overrides to the API response data.
- * This merges the user's manual overrides with the data from the API.
+ * @internal
  */
 function applyPersonalizationOverrides(
   apiPersonalizations: SelectedPersonalizationArray,
@@ -46,13 +45,16 @@ function applyPersonalizationOverrides(
 }
 
 /**
- * Hook for managing profile and personalization overrides in the preview panel.
- * Provides local state for overrides and actions to modify them.
+ * Manages profile and personalization overrides in the preview panel.
  *
- * When an SDK instance is provided, this hook will:
- * 1. Register with the SDK to get direct signal access
- * 2. Register a state interceptor to preserve overrides when API responses arrive
- * 3. Modify signals directly when overrides change for immediate UI updates
+ * Registers with the SDK to get direct signal access and sets up a state
+ * interceptor to preserve overrides when API responses arrive.
+ *
+ * @returns An object containing the current override state and available actions
+ *
+ * @throws Error if called outside of an {@link OptimizationProvider}
+ *
+ * @internal
  */
 export function useProfileOverrides(): {
   overrides: OverrideState

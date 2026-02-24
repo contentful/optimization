@@ -4,6 +4,14 @@ import { commonStyles } from '../../styles/common'
 import { colors, opacity, spacing, typography } from '../../styles/theme'
 import type { SectionProps } from '../../types'
 
+/**
+ * Card-style section with a title and optional collapse/expand behavior.
+ *
+ * @param props - Component props
+ * @returns The rendered section
+ *
+ * @public
+ */
 export function Section({
   title,
   collapsible = false,

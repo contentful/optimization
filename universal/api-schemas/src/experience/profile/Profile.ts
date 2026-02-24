@@ -9,6 +9,8 @@ import { SessionStatistics } from './properties'
  * @remarks
  * Represents the server-side view of a profile, including identifiers,
  * traits, audiences, location, and session statistics.
+ *
+ * @public
  */
 export const Profile = z.object({
   /**
@@ -41,27 +43,29 @@ export const Profile = z.object({
   /**
    * Traits describing the profile (user-level attributes).
    *
-   * @see Traits
+   * @see {@link Traits}
    */
   traits: Traits,
 
   /**
    * Geo-location information associated with the profile.
    *
-   * @see GeoLocation
+   * @see {@link GeoLocation}
    */
   location: GeoLocation,
 
   /**
    * Aggregated session statistics for the profile.
    *
-   * @see SessionStatistics
+   * @see {@link SessionStatistics}
    */
   session: SessionStatistics,
 })
 
 /**
  * TypeScript type inferred from {@link Profile}.
+ *
+ * @public
  */
 export type Profile = z.infer<typeof Profile>
 
@@ -72,6 +76,8 @@ export type Profile = z.infer<typeof Profile>
  * @remarks
  * This schema enforces the presence of an `id` field and allows additional
  * JSON-serializable properties via `z.catchall`.
+ *
+ * @public
  */
 export const PartialProfile = z.catchall(
   z.object({
@@ -88,5 +94,7 @@ export const PartialProfile = z.catchall(
 
 /**
  * TypeScript type inferred from {@link PartialProfile}.
+ *
+ * @public
  */
 export type PartialProfile = z.infer<typeof PartialProfile>

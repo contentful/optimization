@@ -16,6 +16,7 @@ abstract class AnalyticsBase extends ProductBase {
    * @param payload - Component view builder arguments.
    * @param duplicationScope - Optional string used to scope duplication used in Stateful
    * implementations.
+   * @returns A promise that resolves when processing is complete (or `void`).
    * @privateRemarks
    * Duplication prevention should be handled in Stateful implementations
    */

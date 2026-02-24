@@ -6,14 +6,12 @@ import { Badge } from './shared'
 import { VariantSelector } from './VariantSelector'
 
 /**
- * Card component displaying an experience with its variants.
- * Styled to match the web panel's ExperienceCard component.
+ * Displays an experience with a type badge, name, variant selector, and override indicator.
  *
- * Shows:
- * - Type badge (Experiment vs Personalization)
- * - Experience name
- * - Variant selector with qualification indicators
- * - Override indicator and reset button
+ * @param props - Component props
+ * @returns The rendered experience card
+ *
+ * @public
  */
 export function ExperienceCard({
   experience,

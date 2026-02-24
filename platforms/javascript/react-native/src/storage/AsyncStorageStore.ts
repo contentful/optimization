@@ -15,10 +15,25 @@ import type { z } from 'zod/mini'
 
 const logger = createScopedLogger('RN:Storage')
 
+/**
+ * Persistent storage adapter backed by `@react-native-async-storage/async-storage`.
+ *
+ * Provides in-memory caching with write-through to AsyncStorage for SDK state
+ * such as profile, changes, consent, and personalizations.
+ *
+ * @internal
+ */
 class AsyncStorageStore {
   private readonly cache = new Map<string, unknown>()
   private initialized = false
 
+  /**
+   * Loads all known keys from AsyncStorage into the in-memory cache.
+   *
+   * @returns A promise that resolves when initialization is complete
+   *
+   * @internal
+   */
   async initialize(): Promise<void> {
     if (this.initialized) return
 
@@ -54,6 +69,9 @@ class AsyncStorageStore {
     }
   }
 
+  /**
+   * @returns The stored anonymous user identifier, or `undefined` if not set
+   */
   get anonymousId(): string | undefined {
     const value = this.cache.get(ANONYMOUS_ID_KEY)
     return typeof value === 'string' ? value : undefined
@@ -63,6 +81,9 @@ class AsyncStorageStore {
     this.setCache(ANONYMOUS_ID_KEY, id)
   }
 
+  /**
+   * @returns The stored consent state: `true` for accepted, `false` for denied, `undefined` if unset
+   */
   get consent(): boolean | undefined {
     const value = this.cache.get(CONSENT_KEY)
     const consent = typeof value === 'string' ? value : undefined
@@ -82,6 +103,9 @@ class AsyncStorageStore {
     this.setCache(CONSENT_KEY, consent === undefined ? undefined : translated)
   }
 
+  /**
+   * @returns Whether the debug flag is set
+   */
   get debug(): boolean | undefined {
     const value = this.cache.get(DEBUG_FLAG_KEY)
     const debug = typeof value === 'string' ? value : undefined
@@ -92,6 +116,9 @@ class AsyncStorageStore {
     this.setCache(DEBUG_FLAG_KEY, debug)
   }
 
+  /**
+   * @returns The cached change array, or `undefined` if not present
+   */
   get changes(): ChangeArray | undefined {
     return this.getCache(CHANGES_CACHE_KEY, ChangeArray)
   }
@@ -100,6 +127,9 @@ class AsyncStorageStore {
     this.setCache(CHANGES_CACHE_KEY, changes)
   }
 
+  /**
+   * @returns The cached user profile, or `undefined` if not present
+   */
   get profile(): Profile | undefined {
     return this.getCache(PROFILE_CACHE_KEY, Profile)
   }
@@ -108,6 +138,9 @@ class AsyncStorageStore {
     this.setCache(PROFILE_CACHE_KEY, profile)
   }
 
+  /**
+   * @returns The cached personalization selections, or `undefined` if not present
+   */
   get personalizations(): SelectedPersonalizationArray | undefined {
     return this.getCache(PERSONALIZATIONS_CACHE_KEY, SelectedPersonalizationArray)
   }

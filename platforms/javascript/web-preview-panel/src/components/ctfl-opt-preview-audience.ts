@@ -13,56 +13,123 @@ import type {
   RecordRadioGroupChangeEvent,
 } from './ctfl-opt-preview-personalization'
 
+/**
+ * Payload emitted when an audience section is expanded or collapsed.
+ *
+ * @public
+ */
 export interface AudienceContentToggleDetail {
+  /** Audience entry ID that was toggled. */
   key: string
+  /** Whether the section is now open. */
   open: boolean
 }
+
+/**
+ * Custom event carrying an {@link AudienceContentToggleDetail} payload.
+ *
+ * @public
+ */
 export type AudienceContentToggleEvent = CustomEvent<AudienceContentToggleDetail>
 
+/**
+ * Event name dispatched when an audience section is toggled open or closed.
+ *
+ * @public
+ */
 export const CTFL_OPT_PREVIEW_AUDIENCE_CONTENT_TOGGLE =
   'ctfl_opt_preview_audience_content_toggle' as const
+
+/**
+ * Custom element tag name for {@link CtflOptPreviewAudience}.
+ *
+ * @public
+ */
 export const CTFL_OPT_PREVIEW_AUDIENCE_TAG = 'ctfl-opt-preview-audience' as const
 
+/**
+ * Event name dispatched when a personalization variant selection changes
+ * within an audience group.
+ *
+ * @public
+ */
 export const CTFL_OPT_PREVIEW_PERSONALIZATION_CHANGE =
   'ctfl-opt-preview-personalization-change' as const
 
+/**
+ * Type guard that checks whether an element is a {@link CtflOptPreviewAudience}.
+ *
+ * @param element - The element to check.
+ * @returns `true` if the element's tag matches {@link CTFL_OPT_PREVIEW_AUDIENCE_TAG}.
+ *
+ * @example
+ * ```ts
+ * if (isCtflOptPreviewAudience(el)) {
+ *   el.audience = audienceEntry
+ * }
+ * ```
+ *
+ * @public
+ */
 export function isCtflOptPreviewAudience(element?: Element): element is CtflOptPreviewAudience {
   return element?.tagName === CTFL_OPT_PREVIEW_AUDIENCE_TAG.toUpperCase()
 }
 
+/**
+ * Collapsible audience section that groups {@link CtflOptPreviewPersonalization}
+ * components under a single audience heading.
+ *
+ * Consumes the {@link profileContext} and {@link overridesContext} from the
+ * parent panel to determine natural qualification and active overrides.
+ *
+ * @see {@link LitElement}
+ *
+ * @public
+ */
 export class CtflOptPreviewAudience extends LitElement {
+  /** Whether the audience section is expanded. */
   @property({ type: Boolean, reflect: true })
   accessor open = true
 
+  /** The audience entry this section represents. */
   @property({ attribute: false })
   accessor audience: AudienceEntry | undefined = undefined
 
+  /** Personalizations that target this audience. */
   @property({ attribute: false })
   accessor personalizations: PersonalizationEntry[] = []
 
+  /** Default selected personalizations before any overrides are applied. */
   @property({ attribute: false })
   accessor defaultSelectedPersonalizations: SelectedPersonalizationArray = []
 
+  /** Visitor profile consumed from the parent panel context. */
   @consume({ context: profileContext, subscribe: true })
   @property({ attribute: false })
   accessor profile: Profile | undefined = undefined
 
+  /** Active variant overrides consumed from the parent panel context. */
   @consume({ context: overridesContext, subscribe: true })
   @property({ attribute: false })
   accessor overrides: Map<string, number> | undefined = undefined
 
+  /** @internal */
   @state()
   accessor natural = false
 
+  /** @internal */
   @state()
   accessor valuesByKey: Record<string, number> = {}
 
+  /** @internal */
   private defaultsByKey: Record<string, number> = {}
 
+  /** @internal */
   private get _audienceId(): string | undefined {
     return this.audience?.sys.id
   }
 
+  /** @internal */
   private _toggleContent(): void {
     this.open = !this.open
 
@@ -77,6 +144,7 @@ export class CtflOptPreviewAudience extends LitElement {
     )
   }
 
+  /** @internal */
   private _onPersonalizationChange(event: RecordRadioGroupChangeEvent): void {
     const {
       detail: { key, value },
@@ -92,6 +160,7 @@ export class CtflOptPreviewAudience extends LitElement {
     )
   }
 
+  /** @internal */
   protected willUpdate(changed: PropertyValues<this>): void {
     if (changed.has('profile'))
       this.natural = Boolean(this._audienceId && this.profile?.audiences.includes(this._audienceId))
@@ -125,6 +194,7 @@ export class CtflOptPreviewAudience extends LitElement {
     }
   }
 
+  /** @internal */
   // TODO: Support audience-wide personalization switch
   protected render(): TemplateResult {
     return html`
@@ -238,6 +308,16 @@ export class CtflOptPreviewAudience extends LitElement {
   `
 }
 
+/**
+ * Registers the {@link CtflOptPreviewAudience} custom element if not already defined.
+ *
+ * @example
+ * ```ts
+ * defineCtflOptPreviewAudience()
+ * ```
+ *
+ * @public
+ */
 export function defineCtflOptPreviewAudience(): void {
   if (!customElements.get(CTFL_OPT_PREVIEW_AUDIENCE_TAG)) {
     customElements.define(CTFL_OPT_PREVIEW_AUDIENCE_TAG, CtflOptPreviewAudience)

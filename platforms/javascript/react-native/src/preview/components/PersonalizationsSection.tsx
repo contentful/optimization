@@ -6,6 +6,14 @@ import type { PersonalizationsSectionProps } from '../types'
 import { copyToClipboard } from '../utils'
 import { ActionButton, Section } from './shared'
 
+/**
+ * Displays active personalizations with variant controls and override management.
+ *
+ * @param props - Component props
+ * @returns The rendered personalizations section
+ *
+ * @public
+ */
 export function PersonalizationsSection({
   personalizations,
   overrides,
