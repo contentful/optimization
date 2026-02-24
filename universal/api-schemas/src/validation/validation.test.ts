@@ -1,5 +1,7 @@
 import * as z from 'zod/mini'
 
+import { parseWithFriendlyError } from '.'
+
 describe('zod/mini en locale configuration', () => {
   it('produces descriptive error messages instead of generic "Invalid input"', () => {
     const schema = z.object({ userId: z.string() })
