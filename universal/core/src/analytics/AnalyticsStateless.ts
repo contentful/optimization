@@ -3,6 +3,7 @@ import {
   type ComponentViewBuilderArgs,
   ComponentViewEvent,
   type InsightsEvent,
+  parseWithFriendlyError,
   type PartialProfile,
 } from '@contentful/optimization-api-client'
 import { createScopedLogger } from 'logger'
@@ -47,7 +48,7 @@ class AnalyticsStateless extends AnalyticsBase {
 
     const intercepted = await this.interceptors.event.run(event)
 
-    const parsed = ComponentViewEvent.parse(intercepted)
+    const parsed = parseWithFriendlyError(ComponentViewEvent, intercepted)
 
     await this.sendBatchEvent(parsed, profile)
   }
@@ -72,7 +73,7 @@ class AnalyticsStateless extends AnalyticsBase {
 
     const intercepted = await this.interceptors.event.run(event)
 
-    const parsed = ComponentViewEvent.parse(intercepted)
+    const parsed = parseWithFriendlyError(ComponentViewEvent, intercepted)
 
     await this.sendBatchEvent(parsed, profile)
   }
@@ -86,7 +87,7 @@ class AnalyticsStateless extends AnalyticsBase {
    * @internal
    */
   private async sendBatchEvent(event: InsightsEvent, profile?: PartialProfile): Promise<void> {
-    const batchEvent: BatchInsightsEventArray = BatchInsightsEventArray.parse([
+    const batchEvent: BatchInsightsEventArray = parseWithFriendlyError(BatchInsightsEventArray, [
       {
         profile,
         events: [event],

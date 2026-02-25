@@ -107,11 +107,13 @@ describe('InsightsApiClient.sendBatchEvents', () => {
   it('POSTs batches via fetch by default', async () => {
     const batches = generateBatchEventArray('e1')
 
-    // Spy on the schema parser and let it pass-through (or stub if needed)
-    const parseSpy = rs
-      .spyOn(BatchInsightsEventArray, 'parse')
-      // @ts-expect-error -- testing
-      .mockImplementation((input) => input)
+    const parseSpy = rs.spyOn(BatchInsightsEventArray, 'safeParse').mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- testing: bypassing schema validation
+      ((input: unknown) => ({
+        success: true,
+        data: input,
+      })) as typeof BatchInsightsEventArray.safeParse,
+    )
 
     const handler = http.post(
       `${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`,
@@ -152,8 +154,13 @@ describe('InsightsApiClient.sendBatchEvents', () => {
   it('uses beaconHandler when supplied', async () => {
     const batches = generateBatchEventArray('e2')
 
-    // @ts-expect-error -- testing
-    rs.spyOn(BatchInsightsEventArray, 'parse').mockImplementation((input) => input)
+    rs.spyOn(BatchInsightsEventArray, 'safeParse').mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- testing: bypassing schema validation
+      ((input: unknown) => ({
+        success: true,
+        data: input,
+      })) as typeof BatchInsightsEventArray.safeParse,
+    )
 
     const beaconHandler = rs.fn(() => true)
 
@@ -204,8 +211,13 @@ describe('InsightsApiClient.sendBatchEvents', () => {
   it('logs and returns false on network errors', async () => {
     const batches = generateBatchEventArray('e4')
 
-    // @ts-expect-error -- testing
-    rs.spyOn(BatchInsightsEventArray, 'parse').mockImplementation((input) => input)
+    rs.spyOn(BatchInsightsEventArray, 'safeParse').mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- testing: bypassing schema validation
+      ((input: unknown) => ({
+        success: true,
+        data: input,
+      })) as typeof BatchInsightsEventArray.safeParse,
+    )
 
     server.use(
       http.post(`${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`, () =>

@@ -9,6 +9,7 @@ import {
   Page,
   PageEventContext,
   type PageViewEvent,
+  parseWithFriendlyError,
   Properties,
   Screen,
   ScreenEventContext,
@@ -361,8 +362,10 @@ class EventBuilder {
    * @public
    */
   buildComponentView(args: ComponentViewBuilderArgs): ComponentViewEvent {
-    const { componentId, experienceId, variantIndex, ...universal } =
-      ComponentViewBuilderArgs.parse(args)
+    const { componentId, experienceId, variantIndex, ...universal } = parseWithFriendlyError(
+      ComponentViewBuilderArgs,
+      args,
+    )
 
     return {
       ...this.buildUniversalEventProperties(universal),
@@ -423,7 +426,7 @@ class EventBuilder {
    * @public
    */
   buildIdentify(args: IdentifyBuilderArgs): IdentifyEvent {
-    const { traits = {}, userId, ...universal } = IdentifyBuilderArgs.parse(args)
+    const { traits = {}, userId, ...universal } = parseWithFriendlyError(IdentifyBuilderArgs, args)
 
     return {
       ...this.buildUniversalEventProperties(universal),
@@ -458,7 +461,7 @@ class EventBuilder {
    * @public
    */
   buildPageView(args: PageViewBuilderArgs = {}): PageViewEvent {
-    const { properties = {}, ...universal } = PageViewBuilderArgs.parse(args)
+    const { properties = {}, ...universal } = parseWithFriendlyError(PageViewBuilderArgs, args)
 
     const pageProperties = this.getPageProperties()
 
@@ -475,7 +478,7 @@ class EventBuilder {
       ...universalProperties
     } = this.buildUniversalEventProperties(universal)
 
-    const context = PageEventContext.parse(universalContext)
+    const context = parseWithFriendlyError(PageEventContext, universalContext)
 
     return {
       ...universalProperties,
@@ -504,14 +507,14 @@ class EventBuilder {
    * @public
    */
   buildScreenView(args: ScreenViewBuilderArgs): ScreenViewEvent {
-    const { name, properties, ...universal } = ScreenViewBuilderArgs.parse(args)
+    const { name, properties, ...universal } = parseWithFriendlyError(ScreenViewBuilderArgs, args)
 
     const {
       context: { page: _, ...universalContext },
       ...universalProperties
     } = this.buildUniversalEventProperties(universal)
 
-    const context = ScreenEventContext.parse(universalContext)
+    const context = parseWithFriendlyError(ScreenEventContext, universalContext)
 
     return {
       ...universalProperties,
@@ -539,7 +542,7 @@ class EventBuilder {
    * @public
    */
   buildTrack(args: TrackBuilderArgs): TrackEvent {
-    const { event, properties = {}, ...universal } = TrackBuilderArgs.parse(args)
+    const { event, properties = {}, ...universal } = parseWithFriendlyError(TrackBuilderArgs, args)
 
     return {
       ...this.buildUniversalEventProperties(universal),

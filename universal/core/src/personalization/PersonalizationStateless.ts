@@ -6,6 +6,7 @@ import {
   type OptimizationData,
   type PageViewBuilderArgs,
   PageViewEvent,
+  parseWithFriendlyError,
   type PartialProfile,
   type ExperienceEvent as PersonalizationEvent,
   type ScreenViewBuilderArgs,
@@ -48,7 +49,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = IdentifyEvent.parse(this.builder.buildIdentify(builderArgs))
+    const event = parseWithFriendlyError(IdentifyEvent, this.builder.buildIdentify(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -70,7 +71,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = PageViewEvent.parse(this.builder.buildPageView(builderArgs))
+    const event = parseWithFriendlyError(PageViewEvent, this.builder.buildPageView(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -92,7 +93,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = ScreenViewEvent.parse(this.builder.buildScreenView(builderArgs))
+    const event = parseWithFriendlyError(ScreenViewEvent, this.builder.buildScreenView(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -112,7 +113,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = TrackEvent.parse(this.builder.buildTrack(builderArgs))
+    const event = parseWithFriendlyError(TrackEvent, this.builder.buildTrack(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -134,7 +135,10 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = ComponentViewEvent.parse(this.builder.buildComponentView(builderArgs))
+    const event = parseWithFriendlyError(
+      ComponentViewEvent,
+      this.builder.buildComponentView(builderArgs),
+    )
 
     return await this.upsertProfile(event, profile)
   }

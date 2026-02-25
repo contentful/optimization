@@ -625,6 +625,9 @@ importers:
       '@rslib/core':
         specifier: 'catalog:'
         version: 0.19.6(@microsoft/api-extractor@7.56.3(@types/node@24.10.13))(typescript@5.9.3)
+      '@rstest/core':
+        specifier: 'catalog:'
+        version: 0.8.5(happy-dom@20.6.1)
       '@types/node':
         specifier: ^24.0.13
         version: 24.10.13

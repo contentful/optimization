@@ -1,5 +1,6 @@
 import {
   InsightsEvent as AnalyticsEvent,
+  parseWithFriendlyError,
   type BatchInsightsEventArray,
   type ComponentViewBuilderArgs,
   type InsightsEventArray,
@@ -282,7 +283,7 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
 
     const intercepted = await this.interceptors.event.run(event)
 
-    const validEvent = AnalyticsEvent.parse(intercepted)
+    const validEvent = parseWithFriendlyError(AnalyticsEvent, intercepted)
 
     logger.debug(`Queueing ${validEvent.type} event for profile ${profile.id}`, validEvent)
 

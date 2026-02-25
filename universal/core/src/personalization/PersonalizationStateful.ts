@@ -8,6 +8,7 @@ import {
   type MergeTagEntry,
   type OptimizationData,
   type PageViewBuilderArgs,
+  parseWithFriendlyError,
   ExperienceEvent as PersonalizationEvent,
   type ExperienceEventArray as PersonalizationEventArray,
   type Profile,
@@ -460,7 +461,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
   ): Promise<OptimizationData | undefined> {
     const intercepted = await this.interceptors.event.run(event)
 
-    const validEvent = PersonalizationEvent.parse(intercepted)
+    const validEvent = parseWithFriendlyError(PersonalizationEvent, intercepted)
 
     eventSignal.value = validEvent
 
