@@ -239,8 +239,8 @@ The tracking components work in two modes:
 
 #### Inside ScrollView (Recommended for Scrollable Content)
 
-When used inside a `<OptimizationScrollProvider>`, tracking uses the actual scroll position and viewport
-dimensions:
+When used inside a `<OptimizationScrollProvider>`, tracking uses the actual scroll position and
+viewport dimensions:
 
 ```tsx
 <OptimizationScrollProvider>

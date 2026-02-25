@@ -9,7 +9,7 @@ import React from 'react'
 import { StatusBar, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import { Personalization, OptimizationScrollProvider } from '@contentful/optimization-react-native'
+import { OptimizationScrollProvider, Personalization } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 import type { DemoEntries } from './utils/sdkHelpers'
 

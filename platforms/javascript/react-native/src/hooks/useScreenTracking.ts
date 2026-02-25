@@ -55,10 +55,7 @@ const EMPTY_PROPERTIES: Properties = {}
  *
  * @public
  */
-export function useScreenTrackingCallback(): (
-  name: string,
-  properties?: Properties,
-) => void {
+export function useScreenTrackingCallback(): (name: string, properties?: Properties) => void {
   const optimization = useOptimization()
   const optimizationRef = useRef(optimization)
   optimizationRef.current = optimization
