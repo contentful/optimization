@@ -7,6 +7,8 @@ import { CtflEntry, EntrySys } from './CtflEntry'
  * @remarks
  * Extends {@link CtflEntry} with merge-tag-specific fields and constrains the
  * `contentType` to the `nt_mergetag` content type.
+ *
+ * @public
  */
 export const MergeTagEntry = z.extend(CtflEntry, {
   fields: z.object({
@@ -42,5 +44,7 @@ export const MergeTagEntry = z.extend(CtflEntry, {
 
 /**
  * TypeScript type inferred from {@link MergeTagEntry}.
+ *
+ * @public
  */
 export type MergeTagEntry = z.infer<typeof MergeTagEntry>

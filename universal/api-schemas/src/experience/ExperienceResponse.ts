@@ -10,6 +10,8 @@ import { ResponseEnvelope } from './ResponseEnvelope'
  * @remarks
  * Contains the evaluated profile, selected personalizations, and computed
  * changes that should be applied on the client.
+ *
+ * @public
  */
 export const ExperienceData = z.object({
   /**
@@ -34,6 +36,8 @@ export const ExperienceData = z.object({
 
 /**
  * TypeScript type inferred from {@link ExperienceData}.
+ *
+ * @public
  */
 export type ExperienceData = z.infer<typeof ExperienceData>
 
@@ -42,11 +46,15 @@ export type ExperienceData = z.infer<typeof ExperienceData>
  *
  * @remarks
  * Extends {@link ResponseEnvelope} with {@link ExperienceData} as the `data` payload.
+ *
+ * @public
  */
 export const ExperienceResponse = z.extend(ResponseEnvelope, { data: ExperienceData })
 
 /**
  * TypeScript type inferred from {@link ExperienceResponse}.
+ *
+ * @public
  */
 export type ExperienceResponse = z.infer<typeof ExperienceResponse>
 
@@ -56,6 +64,8 @@ export type ExperienceResponse = z.infer<typeof ExperienceResponse>
  * @remarks
  * This type mirrors {@link ExperienceData} but replaces the `experiences`
  * field with `personalizations` while preserving the rest of the structure.
+ *
+ * @public
  */
 export type OptimizationData = Omit<ExperienceData, 'experiences'> & {
   /**

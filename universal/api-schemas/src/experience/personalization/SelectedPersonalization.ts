@@ -7,6 +7,8 @@ import * as z from 'zod/mini'
  * Represents the result of choosing a specific variant for a given
  * experience, along with additional metadata such as whether the
  * selection is sticky.
+ *
+ * @public
  */
 export const SelectedPersonalization = z.object({
   /**
@@ -45,6 +47,8 @@ export const SelectedPersonalization = z.object({
 
 /**
  * TypeScript type inferred from {@link SelectedPersonalization}.
+ *
+ * @public
  */
 export type SelectedPersonalization = z.infer<typeof SelectedPersonalization>
 
@@ -53,10 +57,14 @@ export type SelectedPersonalization = z.infer<typeof SelectedPersonalization>
  *
  * @remarks
  * Useful when multiple experiences are evaluated at once.
+ *
+ * @public
  */
 export const SelectedPersonalizationArray = z.array(SelectedPersonalization)
 
 /**
  * TypeScript type inferred from {@link SelectedPersonalizationArray}.
+ *
+ * @public
  */
 export type SelectedPersonalizationArray = z.infer<typeof SelectedPersonalizationArray>

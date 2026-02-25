@@ -4,8 +4,12 @@ import { colors, spacing, typography } from '../../styles/theme'
 import type { QualificationIndicatorProps } from '../../types'
 
 /**
- * Visual indicator showing that a user naturally qualifies for an audience or variant.
- * Displays as a green dot with optional tooltip text.
+ * Green dot indicator showing that a user naturally qualifies for an audience or variant.
+ *
+ * @param props - Component props
+ * @returns The rendered qualification indicator
+ *
+ * @public
  */
 export function QualificationIndicator({
   tooltipContent = 'Naturally qualifies',

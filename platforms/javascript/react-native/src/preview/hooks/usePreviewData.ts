@@ -36,14 +36,17 @@ interface UsePreviewDataResult {
 }
 
 /**
- * Hook that combines audience and experience definitions with SDK state
- * to produce a unified view of all optimization data.
+ * Combines audience and experience definitions with SDK state to produce
+ * a unified view of all optimization data, grouped by audience.
  *
- * This enables displaying human-readable names and grouping experiences
- * by their target audience.
+ * @param params - Audience/experience definitions, preview state, and overrides
+ * @returns Audiences with experiences, unassociated experiences, and SDK variant indices
  *
+ * @remarks
  * Experiences without a specific audience are grouped under an
  * "All Visitors" fallback audience.
+ *
+ * @internal
  */
 export function usePreviewData({
   audienceDefinitions,

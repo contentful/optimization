@@ -7,6 +7,8 @@ import * as z from 'zod/mini'
  * @remarks
  * Concrete responses extend this schema and refine the `data` property
  * to a more specific shape.
+ *
+ * @public
  */
 export const ResponseEnvelope = z.object({
   /**
@@ -34,5 +36,7 @@ export const ResponseEnvelope = z.object({
 
 /**
  * TypeScript type inferred from {@link ResponseEnvelope}.
+ *
+ * @public
  */
 export type ResponseEnvelope = z.infer<typeof ResponseEnvelope>

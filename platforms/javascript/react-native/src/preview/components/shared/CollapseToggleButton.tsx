@@ -11,7 +11,11 @@ interface CollapseToggleButtonProps {
 
 /**
  * Button to collapse or expand all audience sections at once.
- * Styled to match the web panel's CollapsiblesToggleButton component.
+ *
+ * @param props - Component props
+ * @returns The rendered toggle button
+ *
+ * @public
  */
 export function CollapseToggleButton({
   allExpanded,

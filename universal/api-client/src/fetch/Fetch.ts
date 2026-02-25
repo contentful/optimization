@@ -7,8 +7,6 @@ import { createProtectedFetchMethod } from './createProtectedFetchMethod'
  * @param init - Initialization options passed to `fetch`.
  * @returns A promise that resolves with the {@link Response}.
  *
- * @public
- *
  * @remarks
  * This abstraction allows the underlying implementation to be replaced,
  * for example in tests or different runtime environments.
@@ -19,6 +17,8 @@ import { createProtectedFetchMethod } from './createProtectedFetchMethod'
  *   return fetch(url, init)
  * }
  * ```
+ *
+ * @public
  */
 export type FetchMethod = (url: string | URL, init: RequestInit) => Promise<Response>
 
@@ -49,10 +49,10 @@ export interface BaseFetchMethodOptions {
 /**
  * Options passed to callback functions invoked by fetch wrappers.
  *
- * @public
- *
  * @remarks
  * Not all fields are guaranteed to be present in all callback scenarios.
+ *
+ * @public
  */
 export interface FetchMethodCallbackOptions {
   /**
@@ -96,7 +96,7 @@ const Fetch = {
    * const response = await fetchMethod('https://example.com', { method: 'GET' })
    * ```
    *
-   * @see createProtectedFetchMethod
+   * @see {@link createProtectedFetchMethod}
    */
   create: createProtectedFetchMethod,
 }

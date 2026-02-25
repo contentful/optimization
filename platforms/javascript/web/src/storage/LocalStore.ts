@@ -27,6 +27,8 @@ const LocalStore = {
    *
    * @param options - Optional flags controlling whether consent and debug keys
    *   should also be removed.
+   * @returns Nothing.
+   *
    * @example
    * ```ts
    * LocalStore.reset({ resetConsent: true, resetDebug: true })
@@ -44,6 +46,8 @@ const LocalStore = {
 
   /**
    * Anonymous identifier currently stored in localStorage, if any.
+   *
+   * @returns The stored anonymous ID string, or `undefined` when absent.
    */
   get anonymousId(): string | undefined {
     const legacyAnonymousIdValue = localStorage.getItem(ANONYMOUS_ID_KEY_LEGACY)
@@ -114,6 +118,8 @@ const LocalStore = {
 
   /**
    * Cached Custom Flags change array, if present.
+   *
+   * @returns The parsed change array or `undefined` when absent or invalid.
    */
   get changes(): ChangeArray | undefined {
     return LocalStore.getCache(CHANGES_CACHE_KEY, ChangeArray)
@@ -130,6 +136,8 @@ const LocalStore = {
 
   /**
    * Cached profile from the personalization service, if present.
+   *
+   * @returns The parsed profile or `undefined` when absent or invalid.
    */
   get profile(): Profile | undefined {
     return LocalStore.getCache(PROFILE_CACHE_KEY, Profile)
@@ -146,6 +154,8 @@ const LocalStore = {
 
   /**
    * Cached selected personalizations, if present.
+   *
+   * @returns The parsed personalizations array or `undefined` when absent or invalid.
    */
   get personalizations(): SelectedPersonalizationArray | undefined {
     return LocalStore.getCache(PERSONALIZATIONS_CACHE_KEY, SelectedPersonalizationArray)
@@ -184,6 +194,7 @@ const LocalStore = {
    * @param key - LocalStorage key to write to.
    * @param data - Value to store. Strings are written as-is; other values
    * are JSON-stringified.
+   * @returns Nothing.
    */
   setCache(key: string, data: unknown): void {
     if (data === undefined) {

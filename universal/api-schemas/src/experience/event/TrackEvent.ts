@@ -10,6 +10,8 @@ import { Properties } from './properties'
  * the more specific event types (page, screen, identify, etc.).
  *
  * Extends {@link UniversalEventProperties}.
+ *
+ * @public
  */
 export const TrackEvent = z.extend(UniversalEventProperties, {
   /**
@@ -30,5 +32,7 @@ export const TrackEvent = z.extend(UniversalEventProperties, {
 
 /**
  * TypeScript type inferred from {@link TrackEvent}.
+ *
+ * @public
  */
 export type TrackEvent = z.infer<typeof TrackEvent>

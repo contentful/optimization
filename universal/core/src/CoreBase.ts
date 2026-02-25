@@ -85,6 +85,7 @@ abstract class CoreBase {
   /** Resolved core configuration (minus any name metadata). */
   readonly config: Omit<CoreConfig, 'name'>
 
+  /** Lifecycle interceptors for events and state updates. */
   readonly interceptors: LifecycleInterceptors = {
     event: new InterceptorManager<AnalyticsEvent | PersonalizationEvent>(),
     state: new InterceptorManager<OptimizationData>(),
@@ -127,10 +128,14 @@ abstract class CoreBase {
    * Get the value of a custom flag derived from a set of optimization changes.
    *
    * @param name - The flag key to resolve.
-   * @param changes - Optional change list to resolve from
+   * @param changes - Optional change list to resolve from.
    * @returns The resolved JSON value for the flag if available.
    * @remarks
    * This is a convenience wrapper around personalization’s flag resolution.
+   * @example
+   * ```ts
+   * const darkMode = core.getCustomFlag('dark-mode', data.changes)
+   * ```
    */
   getCustomFlag(name: string, changes?: ChangeArray): Json {
     return this.personalization.getCustomFlag(name, changes)
@@ -147,6 +152,10 @@ abstract class CoreBase {
    * @param personalizations - Optional selection array for the current profile.
    * @returns {@link ResolvedData} containing the resolved entry and
    *   personalization metadata (if any).
+   * @example
+   * ```ts
+   * const { entry, personalization } = core.personalizeEntry(baselineEntry, data.personalizations)
+   * ```
    */
   personalizeEntry<
     S extends EntrySkeletonType,
@@ -162,6 +171,10 @@ abstract class CoreBase {
    * @param embeddedEntryNodeTarget - The merge-tag entry node to resolve.
    * @param profile - Optional profile used for value lookup.
    * @returns The resolved value (typically a string) or `undefined` if not found.
+   * @example
+   * ```ts
+   * const name = core.getMergeTagValue(mergeTagNode, profile)
+   * ```
    */
   getMergeTagValue(embeddedEntryNodeTarget: MergeTagEntry, profile?: Profile): unknown {
     return this.personalization.getMergeTagValue(embeddedEntryNodeTarget, profile)
@@ -172,6 +185,10 @@ abstract class CoreBase {
    *
    * @param payload - Identify builder arguments.
    * @returns The resulting {@link OptimizationData} for the identified user.
+   * @example
+   * ```ts
+   * const data = await core.identify({ userId: 'user-123', traits: { plan: 'pro' } })
+   * ```
    */
   async identify(
     payload: IdentifyBuilderArgs & { profile?: PartialProfile },
@@ -184,6 +201,10 @@ abstract class CoreBase {
    *
    * @param payload - Page view builder arguments.
    * @returns The evaluated {@link OptimizationData} for this page view.
+   * @example
+   * ```ts
+   * const data = await core.page({ properties: { title: 'Home' } })
+   * ```
    */
   async page(
     payload: PageViewBuilderArgs & { profile?: PartialProfile },
@@ -196,6 +217,10 @@ abstract class CoreBase {
    *
    * @param payload - Screen view builder arguments.
    * @returns The evaluated {@link OptimizationData} for this screen view.
+   * @example
+   * ```ts
+   * const data = await core.screen({ name: 'HomeScreen' })
+   * ```
    */
   async screen(
     payload: ScreenViewBuilderArgs & { profile?: PartialProfile },
@@ -208,6 +233,10 @@ abstract class CoreBase {
    *
    * @param payload - Track builder arguments.
    * @returns The evaluated {@link OptimizationData} for this event.
+   * @example
+   * ```ts
+   * const data = await core.track({ event: 'button_click', properties: { label: 'Buy' } })
+   * ```
    */
   async track(
     payload: TrackBuilderArgs & { profile?: PartialProfile },
@@ -227,6 +256,10 @@ abstract class CoreBase {
    * @remarks
    * The sticky behavior is delegated to personalization; analytics is always
    * invoked regardless of `sticky`.
+   * @example
+   * ```ts
+   * await core.trackComponentView({ componentId: 'hero-banner', sticky: true })
+   * ```
    */
   async trackComponentView(
     payload: ComponentViewBuilderArgs & { profile?: PartialProfile },
@@ -246,6 +279,10 @@ abstract class CoreBase {
    * @param duplicationScope - Optional string used to scope duplication used in Stateful
    * implementations
    * @returns A promise that resolves when processing completes.
+   * @example
+   * ```ts
+   * await core.trackFlagView({ componentId: 'feature-flag-123' })
+   * ```
    */
   async trackFlagView(payload: ComponentViewBuilderArgs, duplicationScope?: string): Promise<void> {
     await this.analytics.trackFlagView(payload, duplicationScope)

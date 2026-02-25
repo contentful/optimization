@@ -15,6 +15,10 @@
 
 </div>
 
+> [!WARNING]
+>
+> The Optimization SDK Suite is currently ALPHA! Breaking changes may be published at any time.
+
 The Contentful Optimization API Client Library provides methods for interfacing with Contentful's
 Experience and Insights APIs, which serve its Personalization and Analytics products.
 
@@ -72,13 +76,13 @@ const client = new ApiClient({ clientId: 'abc123' })
 
 ### Top-level Configuration Options
 
-| Option            | Required? | Default                       | Description                                                           |
-| ----------------- | --------- | ----------------------------- | --------------------------------------------------------------------- |
-| `analytics`       | No        | See "Analytics Options"       | Configuration specific to the Analytics/Insights API                  |
-| `clientId`        | Yes       | N/A                           | The Ninetailed API Key which can be found in the Ninetailed Admin app |
-| `environment`     | No        | `'main'`                      | The Ninetailed environment configured in the Ninetailed Admin app     |
-| `fetchOptions`    | No        | See "Fetch Options"           | Configuration for Fetch timeout and retry functionality               |
-| `personalization` | No        | See "Personalization Options" | Configuration specific to the Personalization/Experience API          |
+| Option            | Required? | Default                       | Description                                                  |
+| ----------------- | --------- | ----------------------------- | ------------------------------------------------------------ |
+| `analytics`       | No        | See "Analytics Options"       | Configuration specific to the Analytics/Insights API         |
+| `clientId`        | Yes       | N/A                           | The Optimization API key                                     |
+| `environment`     | No        | `'main'`                      | The environment identifier                                   |
+| `fetchOptions`    | No        | See "Fetch Options"           | Configuration for Fetch timeout and retry functionality      |
+| `personalization` | No        | See "Personalization Options" | Configuration specific to the Personalization/Experience API |
 
 ### Fetch Options
 

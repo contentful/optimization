@@ -7,6 +7,8 @@ import { ExperienceEventArray } from './event'
  * @remarks
  * These options can be used to enable or filter specific features when
  * evaluating experiences.
+ *
+ * @public
  */
 export const ExperienceRequestOptions = z.object({
   /**
@@ -17,6 +19,8 @@ export const ExperienceRequestOptions = z.object({
 
 /**
  * TypeScript type inferred from {@link ExperienceRequestOptions}.
+ *
+ * @public
  */
 export type ExperienceRequestOptions = z.infer<typeof ExperienceRequestOptions>
 
@@ -26,6 +30,8 @@ export type ExperienceRequestOptions = z.infer<typeof ExperienceRequestOptions>
  * @remarks
  * Contains the list of events to be evaluated plus optional request
  * configuration.
+ *
+ * @public
  */
 export const ExperienceRequestData = z.object({
   /**
@@ -44,5 +50,7 @@ export const ExperienceRequestData = z.object({
 
 /**
  * TypeScript type inferred from {@link ExperienceRequestData}.
+ *
+ * @public
  */
 export type ExperienceRequestData = z.infer<typeof ExperienceRequestData>

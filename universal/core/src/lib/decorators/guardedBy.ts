@@ -20,6 +20,8 @@ type BlockHandler = (methodName: string, args: readonly unknown[]) => void
  *
  * @remarks
  * Users do not call this directly; it's returned by {@link guardedBy}.
+ *
+ * @internal
  */
 type GuardedByFunction<T extends object> = <A extends readonly unknown[], R>(
   value: (...args: A) => R,

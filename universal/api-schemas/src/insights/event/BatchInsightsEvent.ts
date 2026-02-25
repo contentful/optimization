@@ -8,25 +8,29 @@ import { InsightsEventArray } from './InsightsEvent'
  * @remarks
  * Combines a {@link PartialProfile} with one or more Insights events
  * to be sent to the Contentful Insights API.
+ *
+ * @public
  */
 export const BatchInsightsEvent = z.object({
   /**
    * Partial profile information used to associate events with a user.
    *
-   * @see PartialProfile
+   * @see {@link PartialProfile}
    */
   profile: PartialProfile,
 
   /**
    * Insights events that should be recorded for this profile.
    *
-   * @see InsightsEventArray
+   * @see {@link InsightsEventArray}
    */
   events: InsightsEventArray,
 })
 
 /**
  * TypeScript type inferred from {@link BatchInsightsEvent}.
+ *
+ * @public
  */
 export type BatchInsightsEvent = z.infer<typeof BatchInsightsEvent>
 
@@ -35,10 +39,14 @@ export type BatchInsightsEvent = z.infer<typeof BatchInsightsEvent>
  *
  * @remarks
  * Useful when sending multiple profile/event batches in a single request.
+ *
+ * @public
  */
 export const BatchInsightsEventArray = z.array(BatchInsightsEvent)
 
 /**
  * TypeScript type inferred from {@link BatchInsightsEventArray}.
+ *
+ * @public
  */
 export type BatchInsightsEventArray = z.infer<typeof BatchInsightsEventArray>

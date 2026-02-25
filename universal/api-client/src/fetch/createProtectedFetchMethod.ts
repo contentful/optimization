@@ -10,6 +10,11 @@ const logger = createScopedLogger('ApiClient:Fetch')
 
 /**
  * Options for {@link createProtectedFetchMethod}, combining timeout and retry behavior.
+ *
+ * @see {@link RetryFetchMethodOptions}
+ * @see {@link TimeoutFetchMethodOptions}
+ *
+ * @public
  */
 export interface ProtectedFetchMethodOptions
   extends RetryFetchMethodOptions, TimeoutFetchMethodOptions {}
@@ -20,16 +25,15 @@ export interface ProtectedFetchMethodOptions
  * @param options - Configuration options for both timeout and retry behavior.
  * @returns A {@link FetchMethod} that applies timeout and retry logic to requests.
  *
+ * @throws {@link Error}
+ * Rethrows the original error after logging, including abort errors.
+ *
  * @remarks
  * The resulting method first wraps the base fetch with a timeout (via
  * {@link createTimeoutFetchMethod}), then applies retry behavior (via
  * {@link createRetryFetchMethod}).
  *
- * If an error is thrown during configuration or request execution, it is logged
- * using {@link logger}.
- *
- * @throws {@link Error}
- * Rethrows the original error after logging, including abort errors.
+ * If an error is thrown during configuration or request execution, it is logged.
  *
  * @example
  * ```ts
@@ -43,6 +47,8 @@ export interface ProtectedFetchMethodOptions
  *   method: 'GET',
  * })
  * ```
+ *
+ * @public
  */
 export function createProtectedFetchMethod(options: ProtectedFetchMethodOptions): FetchMethod {
   try {

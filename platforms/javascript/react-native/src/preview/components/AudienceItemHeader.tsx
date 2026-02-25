@@ -15,7 +15,15 @@ interface AudienceItemHeaderProps {
   onToggle: (state: 'on' | 'off' | 'default') => void
 }
 
-/** Header component for AudienceItem */
+/**
+ * Header for an {@link AudienceItem}, displaying the audience name, experience count,
+ * description, qualification indicator, and audience toggle.
+ *
+ * @param props - Component props
+ * @returns The rendered header
+ *
+ * @internal
+ */
 export function AudienceItemHeader({
   audience,
   experiences,

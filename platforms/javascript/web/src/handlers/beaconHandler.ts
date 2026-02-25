@@ -8,7 +8,6 @@ import type { BatchInsightsEventArray } from '@contentful/optimization-core'
  * @returns `true` if the user agent successfully queued the data for transfer,
  * otherwise `false`.
  *
- * @public
  * @remarks
  * This is intended for fire-and-forget flushing of analytics events during
  * lifecycle transitions (e.g., page unload or visibility change).
@@ -20,6 +19,8 @@ import type { BatchInsightsEventArray } from '@contentful/optimization-core'
  *   // Optionally fall back to XHR/fetch
  * }
  * ```
+ *
+ * @public
  */
 export function beaconHandler(url: string | URL, events: BatchInsightsEventArray): boolean {
   const blobData = new Blob([JSON.stringify(events)], {

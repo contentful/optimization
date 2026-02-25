@@ -5,6 +5,8 @@ import * as z from 'zod/mini'
  *
  * @remarks
  * These fields typically mirror UTM parameters used for marketing campaigns.
+ *
+ * @public
  */
 export const Campaign = z.object({
   /**
@@ -35,5 +37,7 @@ export const Campaign = z.object({
 
 /**
  * TypeScript type inferred from {@link Campaign}.
+ *
+ * @public
  */
 export type Campaign = z.infer<typeof Campaign>

@@ -6,6 +6,14 @@ import type { JsonViewerProps } from '../../types'
 
 const PREVIEW_LINES = 3
 
+/**
+ * Expandable JSON viewer with a truncated preview and full expansion.
+ *
+ * @param props - Component props
+ * @returns The rendered JSON viewer
+ *
+ * @public
+ */
 export function JsonViewer({
   data,
   initiallyExpanded = false,

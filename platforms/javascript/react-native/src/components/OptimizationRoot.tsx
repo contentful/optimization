@@ -6,43 +6,46 @@ import type { ContentfulClient } from '../preview/types'
 import { OptimizationProvider } from './OptimizationProvider'
 
 /**
- * Configuration options for the preview panel feature
+ * Configuration options for the preview panel feature.
+ *
+ * @public
  */
 export interface PreviewPanelConfig {
   /**
    * Whether the preview panel is enabled.
-   * When true, a floating action button will appear that opens the preview panel.
+   * When `true`, a floating action button appears that opens the preview panel.
    */
   enabled: boolean
 
   /**
-   * Contentful client instance used to fetch audience and experience entries.
-   * The panel will automatically fetch nt_audience and nt_experience content types.
+   * Contentful client instance used to fetch `nt_audience` and `nt_experience` entries.
    */
   contentfulClient: ContentfulClient
 
   /**
-   * Optional positioning overrides for the floating action button
+   * Optional positioning overrides for the floating action button.
    */
   fabPosition?: { bottom?: number; right?: number }
 
   /**
-   * Called when the panel visibility changes
+   * Called when the panel visibility changes.
    */
   onVisibilityChange?: (isVisible: boolean) => void
 
   /**
-   * Whether to show the header with title in the preview panel
+   * Whether to show the header with title in the preview panel.
    */
   showHeader?: boolean
 }
 
 /**
- * Props for the OptimizationRoot component
+ * Props for the {@link OptimizationRoot} component.
+ *
+ * @public
  */
 export interface OptimizationRootProps {
   /**
-   * The Optimization instance to provide to child components
+   * The Optimization instance to provide to child components.
    */
   instance: Optimization
 
@@ -53,40 +56,34 @@ export interface OptimizationRootProps {
   previewPanel?: PreviewPanelConfig
 
   /**
-   * Whether Personalization components should react to state changes in real-time.
-   * When false (default), components "lock" to the first variant they receive,
-   * preventing UI flashing when user actions change their qualification.
-   * When true, components update immediately when personalizations change.
+   * Whether {@link Personalization} components should react to state changes in real-time.
    *
-   * Note: Live updates are always enabled when the preview panel is open,
+   * @remarks
+   * Live updates are always enabled when the preview panel is open,
    * regardless of this setting.
    *
-   * @default false
+   * @defaultValue false
    */
   liveUpdates?: boolean
 
   /**
-   * Children components that will have access to the Optimization instance
+   * Children components that will have access to the Optimization instance.
    */
   children: ReactNode
 }
 
 /**
- * OptimizationRoot Component
+ * Recommended top-level wrapper that combines {@link OptimizationProvider} with optional
+ * preview panel and live updates support.
  *
- * A convenience wrapper that combines the OptimizationProvider with optional
- * preview panel functionality. This is the recommended way to integrate the
- * Optimization SDK into your React Native app.
+ * @param props - Component props
+ * @returns The provider tree wrapping children
  *
- * The component follows the common "Root" pattern used by other React Native
- * libraries like GestureHandlerRootView, SafeAreaProvider, and NavigationContainer.
- *
- * @example
- * Basic usage without preview panel:
+ * @example Basic usage
  * ```tsx
  * const optimization = await Optimization.create({
  *   clientId: 'your-client-id',
- *   environment: 'master'
+ *   environment: 'main',
  * })
  *
  * <OptimizationRoot instance={optimization}>
@@ -94,35 +91,31 @@ export interface OptimizationRootProps {
  * </OptimizationRoot>
  * ```
  *
- * @example
- * With preview panel enabled:
+ * @example With preview panel
  * ```tsx
- * import { createClient } from 'contentful'
- *
- * const contentfulClient = createClient({
- *   space: 'your-space-id',
- *   accessToken: 'your-access-token'
- * })
- *
  * <OptimizationRoot
  *   instance={optimization}
  *   previewPanel={{
- *     enabled: true,
- *     contentfulClient: contentfulClient,
- *     fabPosition: { bottom: 50, right: 20 }
+ *     enabled: __DEV__,
+ *     contentfulClient,
+ *     fabPosition: { bottom: 50, right: 20 },
  *   }}
  * >
  *   <App />
  * </OptimizationRoot>
  * ```
  *
- * @example
- * With live updates enabled globally:
+ * @example With global live updates
  * ```tsx
  * <OptimizationRoot instance={optimization} liveUpdates={true}>
  *   <App />
  * </OptimizationRoot>
  * ```
+ *
+ * @see {@link OptimizationProvider}
+ * @see {@link Personalization} for per-component live updates override
+ *
+ * @public
  */
 export function OptimizationRoot({
   instance,

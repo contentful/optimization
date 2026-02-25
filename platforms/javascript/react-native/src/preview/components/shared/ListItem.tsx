@@ -6,6 +6,14 @@ import type { ListItemProps } from '../../types'
 import { ActionButton } from './ActionButton'
 import { Badge } from './Badge'
 
+/**
+ * List item with optional value, subtitle, badge, and action button.
+ *
+ * @param props - Component props
+ * @returns The rendered list item
+ *
+ * @public
+ */
 export function ListItem({
   label,
   value,

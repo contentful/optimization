@@ -1,3 +1,9 @@
+/**
+ * Optimization Core SDK — platform-agnostic personalization and analytics.
+ *
+ * @packageDocumentation
+ */
+
 export {
   batch,
   effect,

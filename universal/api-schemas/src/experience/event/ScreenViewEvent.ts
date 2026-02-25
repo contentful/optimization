@@ -3,17 +3,21 @@ import { UniversalEventContext, UniversalEventProperties } from './UniversalEven
 import { Properties, Screen } from './properties'
 
 /**
- * Zod schema describing event context properties specific to screen events
+ * Zod schema describing event context properties specific to screen events.
+ *
+ * @public
  */
 export const ScreenEventContext = z.extend(UniversalEventContext, {
   /**
-   * Screen context for events that occur within a web page.
+   * Screen context for events that occur within a mobile or TV application.
    */
   screen: Screen,
 })
 
 /**
  * TypeScript type inferred from {@link ScreenEventContext}.
+ *
+ * @public
  */
 export type ScreenEventContext = z.infer<typeof ScreenEventContext>
 
@@ -25,6 +29,8 @@ export type ScreenEventContext = z.infer<typeof ScreenEventContext>
  * to track navigation between screens.
  *
  * Extends {@link UniversalEventProperties}.
+ *
+ * @public
  */
 export const ScreenViewEvent = z.extend(UniversalEventProperties, {
   /**
@@ -40,18 +46,20 @@ export const ScreenViewEvent = z.extend(UniversalEventProperties, {
   /**
    * Optional properties describing the screen context.
    *
-   * @see Properties
+   * @see {@link Properties}
    */
   properties: z.optional(Properties),
 
-  /*
+  /**
    * Override the context property of {@link UniversalEventProperties}
-   * with a screen-specific context
+   * with a screen-specific context.
    */
   context: ScreenEventContext,
 })
 
 /**
  * TypeScript type inferred from {@link ScreenViewEvent}.
+ *
+ * @public
  */
 export type ScreenViewEvent = z.infer<typeof ScreenViewEvent>

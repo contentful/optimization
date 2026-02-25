@@ -3,10 +3,14 @@ import React, { type ReactNode } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
 import { useViewportTracking } from '../hooks/useViewportTracking'
 
+/**
+ * Props for the {@link Analytics} component.
+ *
+ * @public
+ */
 export interface AnalyticsProps {
   /**
    * The Contentful entry to track (non-personalized content).
-   * Can be any entry fetched from Contentful.
    *
    * @example
    * ```typescript
@@ -16,10 +20,8 @@ export interface AnalyticsProps {
   entry: Entry
 
   /**
-   * Child components to render. The entry is NOT provided via
-   * render prop since no resolution is needed.
-   *
-   * Use the entry directly in your components as needed.
+   * Child components to render. Unlike {@link Personalization}, this uses
+   * a standard children pattern since no variant resolution is needed.
    */
   children: ReactNode
 
@@ -27,52 +29,46 @@ export interface AnalyticsProps {
    * Minimum time (in milliseconds) the component must be visible
    * before tracking fires.
    *
-   * @default 2000 (2 seconds)
+   * @defaultValue 2000
    */
   viewTimeMs?: number
 
   /**
    * Minimum visibility ratio (0.0 - 1.0) required to consider
-   * component "visible".
+   * the component "visible".
    *
-   * @default 0.8 (80% of the component must be visible in viewport)
+   * @defaultValue 0.8
    */
   threshold?: number
 
   /**
-   * Optional style prop for the wrapper View
+   * Optional style prop for the wrapper View.
    */
   style?: StyleProp<ViewStyle>
 
   /**
-   * Optional testID for testing purposes
+   * Optional testID for testing purposes.
    */
   testID?: string
 }
 
 /**
- * Analytics Component
+ * Tracks views of non-personalized Contentful entry components (content entries).
  *
- * Tracks views of non-personalized Contentful entry components (content entries in your CMS).
- * This component automatically tracks component views when the entry meets visibility
- * and time thresholds.
+ * Use this component for standard Contentful entries you want analytics on
+ * (products, articles, etc.) that are not personalized.
  *
- * **Important:** "Component tracking" refers to tracking Contentful entry components,
- * NOT React Native UI components. The term "component" comes from Contentful's
- * terminology for content entries.
+ * @param props - Component props
+ * @returns A wrapper View with viewport tracking attached
  *
- * Use this component for standard Contentful entries you want to track views on
- * (products, articles, etc.) that are NOT personalized. For personalized entries,
- * use the `<Personalization />` component instead.
+ * @remarks
+ * Must be used within an {@link OptimizationProvider}. Works with or without a
+ * {@link ScrollProvider} — when outside a ScrollProvider, screen dimensions are
+ * used instead. Tracks with `variantIndex: 0` and no `experienceId` to indicate
+ * baseline/non-personalized content.
  *
  * @example Basic Usage
  * ```tsx
- * import { Analytics } from '@contentful/optimization-react-native'
- * import { createClient } from 'contentful'
- *
- * const contentful = createClient({ ... })
- * const productEntry = await contentful.getEntry('product-123')
- *
  * <ScrollProvider>
  *   <Analytics entry={productEntry}>
  *     <ProductCard
@@ -87,22 +83,16 @@ export interface AnalyticsProps {
  * ```tsx
  * <Analytics
  *   entry={articleEntry}
- *   viewTimeMs={1500}    // Track after 1.5s visible
- *   threshold={0.9}      // Require 90% visibility
+ *   viewTimeMs={1500}
+ *   threshold={0.9}
  * >
  *   <ArticleCard data={articleEntry.fields} />
  * </Analytics>
  * ```
  *
- * @remarks
- * - Must be used within an OptimizationProvider
- * - Must be used within a ScrollProvider
- * - Tracks only once per component instance
- * - Default: tracks when 80% visible for 2000ms
- * - Sets variantIndex to 0 (indicates non-personalized/baseline content)
- * - Sets experienceId to undefined (no personalization active)
- *
  * @see {@link Personalization} for tracking personalized entries
+ *
+ * @public
  */
 export function Analytics({
   entry,

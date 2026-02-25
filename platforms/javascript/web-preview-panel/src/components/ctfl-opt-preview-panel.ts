@@ -15,58 +15,108 @@ import {
 import { overridesContext, profileContext } from '../lib/contexts'
 import type { AudienceContentToggleEvent } from './ctfl-opt-preview-audience'
 
+/**
+ * Event name dispatched when the user resets the preview panel overrides.
+ *
+ * @public
+ */
 export const CTFL_OPT_PREVIEW_PANEL_RESET = 'ctfl-opt-preview-panel-reset'
+
+/**
+ * Custom element tag name for {@link CtflOptPreviewPanel}.
+ *
+ * @public
+ */
 export const CTFL_OPT_PREVIEW_PANEL_TAG = 'ctfl-opt-preview-panel'
 
+/**
+ * Type guard that checks whether an element is a {@link CtflOptPreviewPanel}.
+ *
+ * @param element - The element to check.
+ * @returns `true` if the element's tag matches {@link CTFL_OPT_PREVIEW_PANEL_TAG}.
+ *
+ * @example
+ * ```ts
+ * if (isCtflOptPreviewPanel(el)) {
+ *   el.audiences = audiences
+ * }
+ * ```
+ *
+ * @public
+ */
 export function isCtflOptPreviewPanel(element?: Element): element is CtflOptPreviewPanel {
   return element?.tagName === CTFL_OPT_PREVIEW_PANEL_TAG.toUpperCase()
 }
 
+/** @internal */
 function compareCount(a?: unknown[], b?: unknown[]): boolean {
   return (a?.length ?? 0) < (b?.length ?? 0)
 }
 
+/** @internal */
 function compareString(a?: string, b?: string): boolean {
   return (a ?? 'a') < (b ?? 'a')
 }
 
+/**
+ * Root preview panel web component that provides the slide-out drawer UI.
+ *
+ * Groups personalizations by audience and allows the user to override which
+ * variant is previewed. Provides {@link profileContext} and
+ * {@link overridesContext} to child components.
+ *
+ * @see {@link LitElement}
+ *
+ * @public
+ */
 export class CtflOptPreviewPanel extends LitElement {
+  /** All audience entries fetched from Contentful. */
   @property({ attribute: false })
   accessor audiences: AudienceEntry[] = []
 
+  /** All personalization entries fetched from Contentful. */
   @property({ attribute: false })
   accessor personalizations: PersonalizationEntry[] = []
 
+  /** Default personalization selections before any user overrides. */
   @property({ attribute: false })
   accessor defaultSelectedPersonalizations: SelectedPersonalizationArray = []
 
+  /** Visitor profile provided to child components via Lit context. */
   @provide({ context: profileContext })
   @property({ attribute: false })
   accessor profile: Profile | undefined = undefined
 
+  /** Active variant override map provided to child components via Lit context. */
   @provide({ context: overridesContext })
   @property({ attribute: false })
   accessor overrides: Map<string, number> | undefined = undefined
 
+  /** @internal */
   @state()
   private accessor _drawerOpened = false
 
+  /** @internal */
   @state()
   private accessor _audienceContentOpenByKey: Record<string, boolean> = {}
 
+  /** @internal */
   @state()
   private accessor _audiencePersonalizations = new Map<AudienceEntry, PersonalizationEntry[]>()
 
+  /** @internal */
   @state()
   private accessor _audienceDefaultSelectedPersonalizations = new Map<
     AudienceEntry,
     SelectedPersonalizationArray
   >()
 
+  /** @internal */
   private _anyAudienceContentClosed(): boolean {
     return Object.values(this._audienceContentOpenByKey).some((v) => !v)
   }
 
+  /** @internal */
   private _onAudienceContentToggle(event: AudienceContentToggleEvent): void {
     const {
       detail: { key, open },
@@ -74,6 +124,7 @@ export class CtflOptPreviewPanel extends LitElement {
     this._audienceContentOpenByKey = { ...this._audienceContentOpenByKey, [key]: open }
   }
 
+  /** @internal */
   private _toggleAllAudienceContent(): void {
     const open = this._anyAudienceContentClosed()
     this._audienceContentOpenByKey = Object.keys(this._audienceContentOpenByKey).reduce(
@@ -85,6 +136,7 @@ export class CtflOptPreviewPanel extends LitElement {
     )
   }
 
+  /** @internal */
   private _reset(): void {
     this.dispatchEvent(
       new CustomEvent(CTFL_OPT_PREVIEW_PANEL_RESET, {
@@ -94,6 +146,7 @@ export class CtflOptPreviewPanel extends LitElement {
     )
   }
 
+  /** @internal */
   protected willUpdate(changed: PropertyValues<this>): void {
     if (
       changed.has('audiences') ||
@@ -165,6 +218,7 @@ export class CtflOptPreviewPanel extends LitElement {
     }
   }
 
+  /** @internal */
   protected render(): TemplateResult {
     return html`
       <button
@@ -417,6 +471,16 @@ export class CtflOptPreviewPanel extends LitElement {
   `
 }
 
+/**
+ * Registers the {@link CtflOptPreviewPanel} custom element if not already defined.
+ *
+ * @example
+ * ```ts
+ * defineCtflOptPreviewPanel()
+ * ```
+ *
+ * @public
+ */
 export function defineCtflOptPreviewPanel(): void {
   if (!customElements.get(CTFL_OPT_PREVIEW_PANEL_TAG)) {
     customElements.define(CTFL_OPT_PREVIEW_PANEL_TAG, CtflOptPreviewPanel)

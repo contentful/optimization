@@ -34,6 +34,10 @@ class AnalyticsStateless extends AnalyticsBase {
    * @param args - {@link TrackViewArgs} used to build the event. Includes an
    * optional partial profile.
    * @returns A promise that resolves once the batch has been sent.
+   * @example
+   * ```ts
+   * await analytics.trackComponentView({ componentId: 'hero-banner', profile: { id: 'user-1' } })
+   * ```
    */
   async trackComponentView(args: TrackViewArgs): Promise<void> {
     logger.info('Processing "component view" event')
@@ -55,6 +59,10 @@ class AnalyticsStateless extends AnalyticsBase {
    * @param args - {@link TrackViewArgs} used to build the event. Includes an
    * optional partial profile.
    * @returns A promise that resolves once the batch has been sent.
+   * @example
+   * ```ts
+   * await analytics.trackFlagView({ componentId: 'feature-flag-123' })
+   * ```
    */
   async trackFlagView(args: TrackViewArgs): Promise<void> {
     logger.debug('Processing "flag view" event')

@@ -139,6 +139,10 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * Create a new stateful personalization instance.
    *
    * @param options - Options to configure the personalization product for stateful environments.
+   * @example
+   * ```ts
+   * const personalization = new PersonalizationStateful({ api, builder, config: { getAnonymousId }, interceptors })
+   * ```
    */
   constructor(options: PersonalizationStatefulOptions) {
     const { api, builder, config, interceptors } = options
@@ -197,6 +201,10 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    *
    * @remarks
    * Clears `changes`, `profile`, and selected `personalizations`.
+   * @example
+   * ```ts
+   * personalization.reset()
+   * ```
    */
   reset(): void {
     batch(() => {
@@ -211,6 +219,10 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * Get the specified Custom Flag's value (derived from the signal).
    * @param name - The name or key of the Custom Flag.
    * @returns The current value of the Custom Flag if found.
+   * @example
+   * ```ts
+   * const flagValue = personalization.getCustomFlag('dark-mode')
+   * ```
    * */
   getCustomFlag(name: string, changes: ChangeArray | undefined = changesSignal.value): Json {
     return super.getCustomFlag(name, changes)
@@ -226,6 +238,10 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * @param entry - The entry to personalize.
    * @param personalizations - Optional selections; defaults to the current signal value.
    * @returns The resolved entry data.
+   * @example
+   * ```ts
+   * const { entry } = personalization.personalizeEntry(baselineEntry)
+   * ```
    */
   personalizeEntry<
     S extends EntrySkeletonType,
@@ -246,6 +262,10 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * @returns The resolved value (type depends on the tag).
    * @remarks
    * Merge tags are references to profile data that can be substituted into content.
+   * @example
+   * ```ts
+   * const name = personalization.getMergeTagValue(mergeTagNode)
+   * ```
    */
   getMergeTagValue(
     embeddedEntryNodeTarget: MergeTagEntry,
@@ -261,6 +281,10 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * @param name - Method name; `trackComponentView` is normalized to
    * `'component'` for allow‑list checks.
    * @returns `true` if the operation is permitted; otherwise `false`.
+   * @example
+   * ```ts
+   * if (personalization.hasConsent('track')) { ... }
+   * ```
    */
   hasConsent(name: string): boolean {
     return (
@@ -276,6 +300,10 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    *
    * @param name - The blocked operation name.
    * @param payload - The original arguments supplied to the operation.
+   * @example
+   * ```ts
+   * personalization.onBlockedByConsent('track', [payload])
+   * ```
    */
   onBlockedByConsent(name: string, payload: unknown[]): void {
     logger.warn(
@@ -290,6 +318,10 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * @param _name - Operation name (unused).
    * @param payload - Tuple `[builderArgs, duplicationScope]`.
    * @returns `true` if the event is NOT a duplicate and should proceed.
+   * @example
+   * ```ts
+   * if (personalization.isNotDuplicated('trackComponentView', [{ componentId: 'hero' }, 'page'])) { ... }
+   * ```
    */
   isNotDuplicated(_name: string, payload: [ComponentViewBuilderArgs, string]): boolean {
     const [{ componentId: value }, duplicationScope] = payload
@@ -306,6 +338,10 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    *
    * @param _name - The blocked operation name (unused).
    * @param payload - The original arguments supplied to the operation.
+   * @example
+   * ```ts
+   * personalization.onBlockedByDuplication('trackComponentView', [payload])
+   * ```
    */
   onBlockedByDuplication(_name: string, payload: unknown[]): void {
     logger.debug(
@@ -319,6 +355,10 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    *
    * @param payload - Identify builder payload.
    * @returns The resulting {@link OptimizationData} for the identified user.
+   * @example
+   * ```ts
+   * const data = await personalization.identify({ userId: 'user-123' })
+   * ```
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async identify(payload: IdentifyBuilderArgs): Promise<OptimizationData | undefined> {
@@ -334,6 +374,10 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    *
    * @param payload - Page view builder payload.
    * @returns The evaluated {@link OptimizationData} for this page view.
+   * @example
+   * ```ts
+   * const data = await personalization.page({ properties: { title: 'Home' } })
+   * ```
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async page(payload: PageViewBuilderArgs): Promise<OptimizationData | undefined> {
@@ -349,6 +393,10 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    *
    * @param payload - Screen view builder payload.
    * @returns The evaluated {@link OptimizationData} for this screen view.
+   * @example
+   * ```ts
+   * const data = await personalization.screen({ name: 'HomeScreen' })
+   * ```
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async screen(payload: ScreenViewBuilderArgs): Promise<OptimizationData | undefined> {
@@ -364,6 +412,10 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    *
    * @param payload - Track builder payload.
    * @returns The evaluated {@link OptimizationData} for this event.
+   * @example
+   * ```ts
+   * const data = await personalization.track({ event: 'button_click' })
+   * ```
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async track(payload: TrackBuilderArgs): Promise<OptimizationData | undefined> {
@@ -374,15 +426,19 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
     return await this.sendOrEnqueueEvent(event)
   }
 
-  @guardedBy('isNotDuplicated', { onBlocked: 'onBlockedByDuplication' })
-  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   /**
    * Record a "sticky" component view and update optimization state.
    *
    * @param payload - Component view builder payload.
    * @param _duplicationScope - Optional duplication scope key used to suppress duplicates.
    * @returns The evaluated {@link OptimizationData} for this component view.
+   * @example
+   * ```ts
+   * const data = await personalization.trackComponentView({ componentId: 'hero-banner' })
+   * ```
    */
+  @guardedBy('isNotDuplicated', { onBlocked: 'onBlockedByDuplication' })
+  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
   async trackComponentView(
     payload: ComponentViewBuilderArgs,
     _duplicationScope = '',
@@ -395,7 +451,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
   }
 
   /**
-   * Intercept, validate, and place an event into the offline eventd queue; then
+   * Intercept, validate, and place an event into the offline event queue; then
    * trigger a size‑based flush if necessary.
    *
    * @param event - The event to enqueue.
@@ -419,7 +475,12 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
   }
 
   /**
-   * Flush the offline queue
+   * Flush the offline queue.
+   *
+   * @example
+   * ```ts
+   * await personalization.flush()
+   * ```
    */
   async flush(): Promise<void> {
     if (this.offlineQueue.size === 0) return

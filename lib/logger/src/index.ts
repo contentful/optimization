@@ -1,3 +1,8 @@
+/**
+ * Contentful Optimization SDK Logger - provides structured logging with configurable sinks.
+ *
+ * @packageDocumentation
+ */
 import type { LogLevels } from 'diary'
 
 import { Logger } from './Logger'

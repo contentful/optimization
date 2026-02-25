@@ -7,6 +7,8 @@ import { Page } from '../../event/properties'
  * @remarks
  * Captures both per-session metrics (such as `activeSessionLength`) and
  * aggregate metrics (such as `averageSessionLength`) for a given profile.
+ *
+ * @public
  */
 export const SessionStatistics = z.object({
   /**
@@ -28,7 +30,7 @@ export const SessionStatistics = z.object({
    * @remarks
    * Represents the first page the user visited in this session.
    *
-   * @see Page
+   * @see {@link Page}
    */
   landingPage: Page,
 
@@ -56,5 +58,7 @@ export const SessionStatistics = z.object({
 
 /**
  * TypeScript type inferred from {@link SessionStatistics}.
+ *
+ * @public
  */
 export type SessionStatistics = z.infer<typeof SessionStatistics>

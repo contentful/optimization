@@ -8,6 +8,8 @@ import { PersonalizationEntryArray } from './PersonalizationEntry'
  *
  * @remarks
  * Extends {@link CtflEntry} and adds `nt_experiences` to the `fields` object.
+ *
+ * @public
  */
 export const PersonalizedEntry = z.extend(CtflEntry, {
   fields: z.extend(EntryFields, {
@@ -20,6 +22,8 @@ export const PersonalizedEntry = z.extend(CtflEntry, {
 
 /**
  * TypeScript type inferred from {@link PersonalizedEntry}.
+ *
+ * @public
  */
 export type PersonalizedEntry = z.infer<typeof PersonalizedEntry>
 
@@ -28,6 +32,15 @@ export type PersonalizedEntry = z.infer<typeof PersonalizedEntry>
  *
  * @param entry - Contentful entry to test.
  * @returns `true` if the entry conforms to {@link PersonalizedEntry}, otherwise `false`.
+ *
+ * @example
+ * ```ts
+ * if (isPersonalizedEntry(entry)) {
+ *   console.log(entry.fields.nt_experiences);
+ * }
+ * ```
+ *
+ * @public
  */
 export function isPersonalizedEntry(entry: Entry | undefined): entry is PersonalizedEntry {
   return PersonalizedEntry.safeParse(entry).success

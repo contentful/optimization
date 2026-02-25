@@ -17,7 +17,7 @@ export const INSIGHTS_BASE_URL = 'https://ingest.insights.ninetailed.co/'
 /**
  * Options that control how Insights events are sent.
  *
- * @public
+ * @internal
  */
 interface RequestOptions {
   /**
@@ -45,8 +45,6 @@ export interface InsightsApiClientConfig extends ApiConfig, RequestOptions {}
 /**
  * Client for sending analytics and insights events to the Ninetailed Insights API.
  *
- * @public
- *
  * @remarks
  * This client is optimized for sending batched events, optionally using a
  * custom beacon-like handler when available.
@@ -56,7 +54,6 @@ export interface InsightsApiClientConfig extends ApiConfig, RequestOptions {}
  * const insightsClient = new InsightsApiClient({
  *   clientId: 'org-id',
  *   environment: 'main',
- *   preview: false,
  * })
  *
  * await insightsClient.sendBatchEvents([
@@ -72,6 +69,10 @@ export interface InsightsApiClientConfig extends ApiConfig, RequestOptions {}
  *   }
  * ])
  * ```
+ *
+ * @see {@link ApiClientBase}
+ *
+ * @public
  */
 export default class InsightsApiClient extends ApiClientBase {
   /**
@@ -115,7 +116,8 @@ export default class InsightsApiClient extends ApiClientBase {
    *
    * @param batches - Array of event batches to send.
    * @param options - Optional request options, including a per-call `beaconHandler`.
-   * @returns A promise that resolves when the events have been sent or queued.
+   * @returns `true` when the event batch is successfully queued by the beacon
+   * handler or a direct request is successfully sent, `false` otherwise.
    *
    * @remarks
    * If a `beaconHandler` is provided (either in the method call or in the
@@ -125,9 +127,6 @@ export default class InsightsApiClient extends ApiClientBase {
    *
    * If the handler is missing or returns `false`, the events are emitted
    * immediately via `fetch`.
-   *
-   * @returns A boolean value that is true when either the event batch is successfully
-   * queued by the beacon handler or a direct request is successfully sent.
    *
    * @example
    * ```ts

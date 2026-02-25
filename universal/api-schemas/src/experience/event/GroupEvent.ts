@@ -11,6 +11,8 @@ import { UniversalEventProperties } from './UniversalEventProperties'
  * or other grouping construct.
  *
  * Extends {@link UniversalEventProperties}.
+ *
+ * @public
  */
 export const GroupEvent = z.extend(UniversalEventProperties, {
   /**
@@ -21,5 +23,7 @@ export const GroupEvent = z.extend(UniversalEventProperties, {
 
 /**
  * TypeScript type inferred from {@link GroupEvent}.
+ *
+ * @public
  */
 export type GroupEvent = z.infer<typeof GroupEvent>
