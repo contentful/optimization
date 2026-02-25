@@ -13,3 +13,5 @@ export const MANUALLY_OBSERVED_ENTRY_IDS = [
 ] as const
 
 export const ENTRY_IDS = [...AUTO_OBSERVED_ENTRY_IDS, ...MANUALLY_OBSERVED_ENTRY_IDS] as const
+
+export const LIVE_UPDATES_ENTRY_ID = '2Z2WLOx07InSewC3LUB3eX' as const

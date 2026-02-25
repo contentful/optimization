@@ -1,10 +1,11 @@
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
-import { ENTRY_IDS } from './config/entries'
+import { ENTRY_IDS, LIVE_UPDATES_ENTRY_ID } from './config/entries'
 import { HOME_PATH, PAGE_TWO_PATH } from './config/routes'
 import { useOptimization } from './optimization/hooks/useOptimization'
 import { useOptimizationState } from './optimization/hooks/useOptimizationState'
+import { LiveUpdatesProvider } from './optimization/liveUpdates/LiveUpdatesContext'
 import { HomePage } from './pages/HomePage'
 import { PageTwoPage } from './pages/PageTwoPage'
 import { fetchEntries, getContentfulConfigError } from './services/contentfulClient'
@@ -39,6 +40,7 @@ export default function App(): JSX.Element {
 
   const [entries, setEntries] = useState<ContentfulEntry[]>([])
   const [entriesError, setEntriesError] = useState<string | null>(null)
+  const [globalLiveUpdates, setGlobalLiveUpdates] = useState(false)
 
   useEffect(() => {
     if (!isReady || sdk === undefined) {
@@ -81,6 +83,7 @@ export default function App(): JSX.Element {
     () => (Array.isArray(personalizations) ? personalizations.length : 0),
     [personalizations],
   )
+  const liveUpdatesBaselineEntry = entriesById.get(LIVE_UPDATES_ENTRY_ID)
 
   const handleIdentify = (): void => {
     if (!isReady || sdk === undefined) {
@@ -122,6 +125,10 @@ export default function App(): JSX.Element {
     return <p>Loading entries...</p>
   }
 
+  if (!liveUpdatesBaselineEntry) {
+    return <p>Live updates baseline entry is missing from fetched entries.</p>
+  }
+
   return (
     <main style={{ display: 'grid', gap: 24 }}>
       <nav style={{ display: 'flex', gap: 12 }}>
@@ -137,15 +144,22 @@ export default function App(): JSX.Element {
         <Route
           path={HOME_PATH}
           element={
-            <HomePage
-              consent={consent}
-              entriesById={entriesById}
-              isIdentified={isIdentified}
-              personalizationCount={personalizationCount}
-              onConsentChange={handleConsent}
-              onIdentify={handleIdentify}
-              onReset={handleReset}
-            />
+            <LiveUpdatesProvider globalLiveUpdates={globalLiveUpdates}>
+              <HomePage
+                consent={consent}
+                entriesById={entriesById}
+                globalLiveUpdates={globalLiveUpdates}
+                isIdentified={isIdentified}
+                liveUpdatesBaselineEntry={liveUpdatesBaselineEntry}
+                personalizationCount={personalizationCount}
+                onConsentChange={handleConsent}
+                onIdentify={handleIdentify}
+                onReset={handleReset}
+                onToggleGlobalLiveUpdates={() => {
+                  setGlobalLiveUpdates((previous) => !previous)
+                }}
+              />
+            </LiveUpdatesProvider>
           }
         />
         <Route path={PAGE_TWO_PATH} element={<PageTwoPage />} />
