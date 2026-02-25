@@ -682,7 +682,7 @@ jobs:
             echo "Setting up adb reverse port forwarding..."
             adb reverse tcp:8000 tcp:8000
             echo "Running E2E tests..."
-            pnpm run implementation:react-native -- test:e2e:android:run:release -- --retries 1 --workers 3
+            pnpm run implementation:react-native -- test:e2e:android:run:release -- --retries 1
 
       - name: Upload logs on failure
         if: failure()
