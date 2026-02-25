@@ -6,7 +6,7 @@ import type Optimization from '@contentful/optimization-react-native'
 import {
   OptimizationRoot,
   Personalization,
-  ScrollProvider,
+  OptimizationScrollProvider,
   useLiveUpdates,
 } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
@@ -57,31 +57,31 @@ function ContentSections({
         <View>
           <Text>Default Behavior (inherits global setting)</Text>
           <Text>No liveUpdates prop - inherits from OptimizationRoot (false)</Text>
-          <ScrollProvider>
+          <OptimizationScrollProvider>
             <Personalization baselineEntry={entry} testID="default-personalization">
               {(resolvedEntry) => (
                 <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="default" />
               )}
             </Personalization>
-          </ScrollProvider>
+          </OptimizationScrollProvider>
         </View>
 
         <View>
           <Text>Live Updates Enabled (liveUpdates=true)</Text>
           <Text>Always updates when personalization state changes</Text>
-          <ScrollProvider>
+          <OptimizationScrollProvider>
             <Personalization baselineEntry={entry} liveUpdates={true} testID="live-personalization">
               {(resolvedEntry) => (
                 <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="live" />
               )}
             </Personalization>
-          </ScrollProvider>
+          </OptimizationScrollProvider>
         </View>
 
         <View>
           <Text>Locked (liveUpdates=false)</Text>
           <Text>Never updates - locks to first variant received</Text>
-          <ScrollProvider>
+          <OptimizationScrollProvider>
             <Personalization
               baselineEntry={entry}
               liveUpdates={false}
@@ -91,7 +91,7 @@ function ContentSections({
                 <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="locked" />
               )}
             </Personalization>
-          </ScrollProvider>
+          </OptimizationScrollProvider>
         </View>
       </ScrollView>
     </>

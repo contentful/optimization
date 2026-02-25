@@ -23,9 +23,9 @@ const ScrollContext = createContext<ScrollContextValue | null>(null)
 const SCROLL_LOG_THRESHOLD = 50
 
 /**
- * Returns the current scroll position and viewport height from the nearest {@link ScrollProvider}.
+ * Returns the current scroll position and viewport height from the nearest {@link OptimizationScrollProvider}.
  *
- * @returns The scroll context value, or `null` if not within a {@link ScrollProvider}
+ * @returns The scroll context value, or `null` if not within a {@link OptimizationScrollProvider}
  *
  * @example
  * ```tsx
@@ -43,11 +43,11 @@ export function useScrollContext(): ScrollContextValue | null {
 }
 
 /**
- * Props for the {@link ScrollProvider} component. Extends React Native's `ScrollViewProps`.
+ * Props for the {@link OptimizationScrollProvider} component. Extends React Native's `ScrollViewProps`.
  *
  * @public
  */
-export interface ScrollProviderProps extends ScrollViewProps {
+export interface OptimizationScrollProviderProps extends ScrollViewProps {
   children: ReactNode
 }
 
@@ -60,26 +60,26 @@ export interface ScrollProviderProps extends ScrollViewProps {
  *
  * @remarks
  * When {@link Personalization} or {@link Analytics} components are placed inside a
- * `ScrollProvider`, they use the actual scroll position for visibility calculations.
- * Without a `ScrollProvider`, they fall back to screen dimensions.
+ * `OptimizationScrollProvider`, they use the actual scroll position for visibility calculations.
+ * Without a `OptimizationScrollProvider`, they fall back to screen dimensions.
  *
  * @example
  * ```tsx
- * <ScrollProvider>
+ * <OptimizationScrollProvider>
  *   <Personalization baselineEntry={entry}>
  *     {(resolved) => <HeroComponent data={resolved} />}
  *   </Personalization>
- * </ScrollProvider>
+ * </OptimizationScrollProvider>
  * ```
  *
  * @public
  */
-export function ScrollProvider({
+export function OptimizationScrollProvider({
   children,
   onScroll,
   onLayout,
   ...scrollViewProps
-}: ScrollProviderProps): React.JSX.Element {
+}: OptimizationScrollProviderProps): React.JSX.Element {
   const [scrollY, setScrollY] = useState(0)
   const [viewportHeight, setViewportHeight] = useState(0)
 
