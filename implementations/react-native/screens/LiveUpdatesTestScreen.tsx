@@ -5,8 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import type Optimization from '@contentful/optimization-react-native'
 import {
   OptimizationRoot,
-  Personalization,
   OptimizationScrollProvider,
+  Personalization,
   useLiveUpdates,
 } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
