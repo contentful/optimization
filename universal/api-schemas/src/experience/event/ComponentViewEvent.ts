@@ -9,6 +9,8 @@ import { UniversalEventProperties } from './UniversalEventProperties'
  * entries or variables within a personalized experience.
  *
  * Extends {@link UniversalEventProperties}.
+ *
+ * @public
  */
 export const ComponentViewEvent = z.extend(UniversalEventProperties, {
   /**
@@ -48,5 +50,7 @@ export const ComponentViewEvent = z.extend(UniversalEventProperties, {
 
 /**
  * TypeScript type inferred from {@link ComponentViewEvent}.
+ *
+ * @public
  */
 export type ComponentViewEvent = z.infer<typeof ComponentViewEvent>

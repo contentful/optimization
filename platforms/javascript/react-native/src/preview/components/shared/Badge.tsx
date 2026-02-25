@@ -44,7 +44,11 @@ const variantStyles = {
 
 /**
  * Small badge component for status indicators and labels.
- * Styled to match the web panel's badge design.
+ *
+ * @param props - Component props
+ * @returns The rendered badge
+ *
+ * @public
  */
 export function Badge({ label, variant }: BadgeProps): React.JSX.Element {
   const { [variant]: variantStyle } = variantStyles

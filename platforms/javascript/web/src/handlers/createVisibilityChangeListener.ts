@@ -25,7 +25,6 @@ type Callback = (event: HideEvent) => Promise<void> | void
  * when a pagehide event occurs. May return a promise.
  * @returns A function that removes all registered event listeners when called.
  *
- * @public
  * @remarks
  * The callback is guaranteed to be invoked at most once per hide cycle until
  * the next visibility or page show event resets the internal state. If the
@@ -41,6 +40,8 @@ type Callback = (event: HideEvent) => Promise<void> | void
  * // Later, when teardown is needed:
  * cleanup()
  * ```
+ *
+ * @public
  */
 export function createVisibilityChangeListener(callback: Callback): () => void {
   if (!CAN_ADD_LISTENERS) {

@@ -52,17 +52,23 @@ describe('ExperienceApiClient', () => {
     server.resetHandlers()
     rs.clearAllMocks()
 
-    rs.spyOn(ExperienceResponse, 'parse')
-      // @ts-expect-error -- testing
-      .mockImplementation((json) => json)
+    rs.spyOn(ExperienceResponse, 'safeParse').mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- testing: bypassing schema validation
+      ((json: unknown) => ({ success: true, data: json })) as typeof ExperienceResponse.safeParse,
+    )
 
-    rs.spyOn(BatchExperienceResponse, 'parse')
-      // @ts-expect-error -- testing
-      .mockImplementation((json) => json)
+    rs.spyOn(BatchExperienceResponse, 'safeParse').mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- testing: bypassing schema validation
+      ((json: unknown) => ({
+        success: true,
+        data: json,
+      })) as typeof BatchExperienceResponse.safeParse,
+    )
 
-    rs.spyOn(ExperienceEventArray, 'parse')
-      // @ts-expect-error -- testing
-      .mockImplementation((json) => json)
+    rs.spyOn(ExperienceEventArray, 'safeParse').mockImplementation(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- testing: bypassing schema validation
+      ((json: unknown) => ({ success: true, data: json })) as typeof ExperienceEventArray.safeParse,
+    )
   })
 
   afterEach(() => {

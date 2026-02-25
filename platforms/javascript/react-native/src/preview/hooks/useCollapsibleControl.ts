@@ -21,8 +21,13 @@ interface UseCollapsibleControlResult {
 }
 
 /**
- * Hook for managing collapsible state across multiple items.
- * Used to implement "Collapse All / Expand All" functionality.
+ * Manages collapsible state across multiple items to implement
+ * "Collapse All / Expand All" functionality.
+ *
+ * @param params - Optional configuration for initial open state
+ * @returns Functions and state for controlling collapsible items
+ *
+ * @internal
  */
 export function useCollapsibleControl({
   initiallyOpen = false,

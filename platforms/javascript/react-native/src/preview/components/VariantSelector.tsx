@@ -88,8 +88,14 @@ function VariantButton({
 /**
  * Selector component for choosing experience variants.
  *
- * - For personalizations: horizontal button group
- * - For experiments: vertical list with distribution percentages
+ * @param props - Component props
+ * @returns The rendered variant selector
+ *
+ * @remarks
+ * Renders a vertical list of radio-style variant cards. For experiments,
+ * distribution percentages are displayed alongside variant names.
+ *
+ * @public
  */
 export function VariantSelector({
   experience,

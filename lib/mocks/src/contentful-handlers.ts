@@ -124,7 +124,26 @@ async function handleEntryIdQuery(entryId: string): Promise<Response> {
   }
 }
 
-// TODO: Figure out how to make fixtures available from both server (this package) and test (dependent packages) contexts
+/**
+ * Returns MSW request handlers that mock the Contentful Content Delivery API.
+ *
+ * @param baseUrl - URL prefix prepended to each route pattern.
+ * @returns An array of {@link HttpHandler} instances for use with MSW.
+ *
+ * @remarks
+ * TODO: Figure out how to make fixtures available from both server (this package)
+ * and test (dependent packages) contexts.
+ *
+ * @example
+ * ```typescript
+ * import { setupServer } from 'msw/node'
+ * import { getHandlers } from './contentful-handlers'
+ *
+ * const server = setupServer(...getHandlers())
+ * ```
+ *
+ * @public
+ */
 export function getHandlers(baseUrl = '*'): HttpHandler[] {
   return [
     // CORS preflight for Beacon/fetch

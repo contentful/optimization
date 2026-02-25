@@ -1,8 +1,16 @@
-// Polyfill crypto.randomUUID() for React Native
-import './polyfills/crypto'
+/**
+ * Contentful Optimization React Native SDK.
+ *
+ * @remarks
+ * Implements React Native-specific functionality on top of the Optimization Core Library.
+ * Provides components for personalization, analytics tracking, and a preview panel for
+ * debugging personalizations during development.
+ *
+ * @packageDocumentation
+ */
 
-// Import image type declarations to ensure they're included in the compilation
 import './images'
+import './polyfills/crypto'
 
 import {
   type CoreConfig,
@@ -20,12 +28,20 @@ import {
 import { createAppStateChangeListener, createOnlineChangeListener } from './handlers'
 import AsyncStorageStore from './storage/AsyncStorageStore'
 
+/**
+ * Merges user-supplied configuration with React Native-specific defaults
+ * and values restored from AsyncStorage.
+ *
+ * @param config - The user-supplied SDK configuration
+ * @returns Fully resolved configuration with defaults applied
+ *
+ * @internal
+ */
 async function mergeConfig({
   defaults,
   logLevel,
   ...config
 }: CoreStatefulConfig): Promise<CoreConfig> {
-  // Initialize AsyncStorage before reading from it
   await AsyncStorageStore.initialize()
 
   const {
@@ -59,6 +75,28 @@ async function mergeConfig({
   )
 }
 
+/**
+ * Main entry point for the Contentful Optimization React Native SDK.
+ *
+ * Extends {@link CoreStateful} with React Native-specific behavior including
+ * AsyncStorage persistence, network connectivity detection via
+ * `@react-native-community/netinfo`, and automatic event flushing when the
+ * app backgrounds.
+ *
+ * @example
+ * ```ts
+ * import Optimization from '@contentful/optimization-react-native'
+ *
+ * const optimization = await Optimization.create({
+ *   clientId: 'your-client-id',
+ *   environment: 'main',
+ * })
+ * ```
+ *
+ * @see {@link CoreStateful}
+ *
+ * @public
+ */
 class Optimization extends CoreStateful {
   private readonly cleanupOnlineListener: () => void
 
@@ -67,17 +105,14 @@ class Optimization extends CoreStateful {
   private constructor(config: CoreConfig) {
     super(config)
 
-    // Set up online/offline detection
     this.cleanupOnlineListener = createOnlineChangeListener((isOnline) => {
       this.online(isOnline)
     })
 
-    // Set up app state change detection to flush events when app backgrounds
     this.cleanupAppStateListener = createAppStateChangeListener(async () => {
       await this.flush()
     })
 
-    // Set up effects to sync state with AsyncStorage
     effect(() => {
       const {
         changes: { value },
@@ -115,16 +150,39 @@ class Optimization extends CoreStateful {
     })
   }
 
+  /**
+   * Creates and initializes a new Optimization instance with React Native defaults.
+   *
+   * @param config - SDK configuration options
+   * @returns A fully initialized Optimization instance
+   *
+   * @example
+   * ```ts
+   * const optimization = await Optimization.create({
+   *   clientId: 'your-client-id',
+   *   environment: 'main',
+   * })
+   * ```
+   *
+   * @public
+   */
   static async create(config: CoreConfig): Promise<Optimization> {
     const mergedConfig = await mergeConfig(config)
     return new Optimization(mergedConfig)
   }
 
   /**
-   * Clean up event listeners and resources.
+   * Cleans up event listeners and resources.
    *
    * @remarks
    * Call this method when the SDK instance is no longer needed to prevent memory leaks.
+   *
+   * @example
+   * ```ts
+   * optimization.destroy()
+   * ```
+   *
+   * @public
    */
   destroy(): void {
     this.cleanupOnlineListener()
@@ -132,45 +190,36 @@ class Optimization extends CoreStateful {
   }
 }
 
-// Re-export all core functionality to provide a single entry point
 export * from '@contentful/optimization-core'
 
-// Export React Native specific components
 export { OptimizationProvider } from './components/OptimizationProvider'
 export { OptimizationRoot } from './components/OptimizationRoot'
 export type { OptimizationRootProps, PreviewPanelConfig } from './components/OptimizationRoot'
 
-// Component tracking components
 export { Personalization } from './components/Personalization'
 export type { PersonalizationProps } from './components/Personalization'
 
 export { Analytics } from './components/Analytics'
 export type { AnalyticsProps } from './components/Analytics'
 
-// Export scroll context and provider
 export { ScrollProvider, useScrollContext } from './context/ScrollContext'
 export type { ScrollProviderProps } from './context/ScrollContext'
 
-// Export hooks
 export { useLiveUpdates } from './context/LiveUpdatesContext'
 export { useOptimization } from './context/OptimizationContext'
 
-// Export viewport tracking hook for advanced usage
 export { useViewportTracking } from './hooks/useViewportTracking'
 export type {
   UseViewportTrackingOptions,
   UseViewportTrackingReturn,
 } from './hooks/useViewportTracking'
 
-// Export screen tracking hook
 export { useScreenTracking } from './hooks/useScreenTracking'
 export type { UseScreenTrackingOptions, UseScreenTrackingReturn } from './hooks/useScreenTracking'
 
-// Export navigation container wrapper for automatic screen tracking
 export { OptimizationNavigationContainer } from './components/OptimizationNavigationContainer'
 export type { OptimizationNavigationContainerProps } from './components/OptimizationNavigationContainer'
 
-// Preview Panel
 export { PreviewPanel as OptimizationPreviewPanel } from './preview/components/PreviewPanel'
 export { PreviewPanelOverlay } from './preview/components/PreviewPanelOverlay'
 export type { ContentfulClient, PreviewPanelOverlayProps, PreviewPanelProps } from './preview/types'

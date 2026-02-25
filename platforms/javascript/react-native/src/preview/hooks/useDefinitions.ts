@@ -10,8 +10,14 @@ interface UseDefinitionsResult {
 }
 
 /**
- * Hook to create definitions and name maps from Contentful entries.
- * Memoizes the computed values for performance.
+ * Creates memoized audience/experience definitions and name lookup maps
+ * from raw Contentful entries.
+ *
+ * @param audienceEntries - Raw Contentful `nt_audience` entries
+ * @param experienceEntries - Raw Contentful `nt_experience` entries
+ * @returns Definitions arrays and name maps
+ *
+ * @internal
  */
 export function useDefinitions(
   audienceEntries: ContentfulEntry[],

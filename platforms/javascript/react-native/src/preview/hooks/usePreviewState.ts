@@ -10,8 +10,13 @@ import type { PreviewState } from '../types'
 const logger = createScopedLogger('RN:Preview')
 
 /**
- * Hook that subscribes to SDK signals and provides the current preview state.
- * Uses the Optimization SDK's observable pattern to react to state changes.
+ * Subscribes to SDK signals and provides the current preview state.
+ *
+ * @returns The current profile, personalizations, consent, and loading state
+ *
+ * @throws Error if called outside of an {@link OptimizationProvider}
+ *
+ * @internal
  */
 export function usePreviewState(): PreviewState {
   const optimization = useOptimization()

@@ -23,11 +23,12 @@ function buildQuery(url: string | URL): Dictionary {
  * @returns The first language from `navigator.languages`, or `navigator.language`
  * if `languages` is not available.
  *
- * @public
  * @example
  * ```ts
  * const locale = getLocale()
  * ```
+ *
+ * @public
  */
 export function getLocale(): string {
   const { languages, language } = navigator
@@ -42,12 +43,13 @@ export function getLocale(): string {
  * metadata. If an error occurs while reading from `window` or `document`,
  * a minimal object with empty strings and no query parameters is returned.
  *
- * @public
  * @example
  * ```ts
  * const page = getPageProperties()
  * optimization.page({ name: page.title, properties: page })
  * ```
+ *
+ * @public
  */
 export function getPageProperties(): Page {
   try {
@@ -84,11 +86,12 @@ export function getPageProperties(): Page {
  *
  * @returns The value of `navigator.userAgent`.
  *
- * @public
  * @example
  * ```ts
  * const ua = getUserAgent()
  * ```
+ *
+ * @public
  */
 export function getUserAgent(): string {
   return navigator.userAgent

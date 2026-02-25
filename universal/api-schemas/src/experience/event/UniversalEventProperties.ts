@@ -8,6 +8,8 @@ import { App, Campaign, Channel, GeoLocation, Library, Page, Screen } from './pr
  * @remarks
  * The `page` and screen` properties are optional, but should usually be
  * omitted for event types that are not `page` or `screen`
+ *
+ * @public
  */
 export const UniversalEventContext = z.object({
   /**
@@ -50,6 +52,12 @@ export const UniversalEventContext = z.object({
    */
   userAgent: z.optional(z.string()),
 })
+
+/**
+ * TypeScript type inferred from {@link UniversalEventContext}.
+ *
+ * @public
+ */
 export type UniversalEventContext = z.infer<typeof UniversalEventContext>
 
 /**
@@ -58,12 +66,14 @@ export type UniversalEventContext = z.infer<typeof UniversalEventContext>
  * @remarks
  * These properties capture common metadata such as channel, context,
  * timestamps, and user identifiers.
+ *
+ * @public
  */
 export const UniversalEventProperties = z.object({
   /**
    * Channel from which the event originated.
    *
-   * @see Channel
+   * @see {@link Channel}
    */
   channel: Channel,
 
@@ -115,5 +125,7 @@ export const UniversalEventProperties = z.object({
 
 /**
  * TypeScript type inferred from {@link UniversalEventProperties}.
+ *
+ * @public
  */
 export type UniversalEventProperties = z.infer<typeof UniversalEventProperties>

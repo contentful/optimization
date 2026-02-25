@@ -13,6 +13,8 @@ import { TrackEvent } from './TrackEvent'
  * @remarks
  * This object is merged into each event type in a batch to associate the
  * event with an `anonymousId`.
+ *
+ * @internal
  */
 const Anon = { anonymousId: z.string() }
 
@@ -22,6 +24,8 @@ const Anon = { anonymousId: z.string() }
  * @remarks
  * This is a discriminated union on the `type` field that supports all event
  * types used in batch ingestion, each extended with an `anonymousId`.
+ *
+ * @public
  */
 export const BatchExperienceEvent = z.discriminatedUnion('type', [
   z.extend(AliasEvent, Anon),
@@ -35,15 +39,21 @@ export const BatchExperienceEvent = z.discriminatedUnion('type', [
 
 /**
  * TypeScript type inferred from {@link BatchExperienceEvent}.
+ *
+ * @public
  */
 export type BatchExperienceEvent = z.infer<typeof BatchExperienceEvent>
 
 /**
  * Zod schema describing an array of {@link BatchExperienceEvent} items.
+ *
+ * @public
  */
 export const BatchExperienceEventArray = z.array(BatchExperienceEvent)
 
 /**
  * TypeScript type inferred from {@link BatchExperienceEventArray}.
+ *
+ * @public
  */
 export type BatchExperienceEventArray = z.infer<typeof BatchExperienceEventArray>

@@ -32,6 +32,8 @@ interface RichTextRendererProps {
   sdk: Optimization
 }
 
+type RenderedRichTextNode = string | React.JSX.Element | RenderedRichTextNode[] | null
+
 function isMergeTagEntry(entry: Entry): entry is MergeTagEntry {
   return entry.sys.contentType.sys.id === 'nt_mergetag'
 }
@@ -129,7 +131,7 @@ export function getRichTextContent(richText: RichTextField, sdk: Optimization): 
 }
 
 export function RichTextRenderer({ richText, sdk }: RichTextRendererProps): React.JSX.Element {
-  const renderNode = (node: RichTextNode, index: number): React.ReactNode => {
+  const renderNode = (node: RichTextNode, index: number): RenderedRichTextNode => {
     const textContent = renderTextNode(node)
     if (textContent) {
       return textContent

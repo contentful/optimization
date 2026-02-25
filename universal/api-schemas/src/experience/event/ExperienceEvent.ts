@@ -13,6 +13,8 @@ import { TrackEvent } from './TrackEvent'
  * @remarks
  * This discriminated union aggregates all event types used by the
  * personalization/experience tracking system.
+ *
+ * @public
  */
 export const ExperienceEvent = z.discriminatedUnion('type', [
   AliasEvent,
@@ -26,20 +28,28 @@ export const ExperienceEvent = z.discriminatedUnion('type', [
 
 /**
  * TypeScript type inferred from {@link ExperienceEvent}.
+ *
+ * @public
  */
 export type ExperienceEvent = z.infer<typeof ExperienceEvent>
 
 /**
  * Union of all possible `type` values for {@link ExperienceEvent}.
+ *
+ * @public
  */
 export type ExperienceEventType = ExperienceEvent['type']
 
 /**
  * Zod schema describing an array of {@link ExperienceEvent} items.
+ *
+ * @public
  */
 export const ExperienceEventArray = z.array(ExperienceEvent)
 
 /**
  * TypeScript type inferred from {@link ExperienceEventArray}.
+ *
+ * @public
  */
 export type ExperienceEventArray = z.infer<typeof ExperienceEventArray>

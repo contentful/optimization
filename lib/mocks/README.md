@@ -76,7 +76,7 @@ server as a detached daemon.
 ## Updating Local Mocks & Fixtures
 
 To fetch space configuration data (Content Types, etc.) and entries in a given space, use the
-folloowing command:
+following command:
 
 ```sh
 pnpm --filter mocks fetch:ctfl

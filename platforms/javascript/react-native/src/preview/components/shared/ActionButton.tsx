@@ -35,6 +35,14 @@ const variantStyles = {
   },
 } as const
 
+/**
+ * Styled button with variant-based coloring for preview panel actions.
+ *
+ * @param props - Component props
+ * @returns The rendered button
+ *
+ * @public
+ */
 export function ActionButton({
   label,
   variant,

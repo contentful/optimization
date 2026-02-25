@@ -10,8 +10,13 @@ interface PreviewOverrideContextValue {
 const PreviewOverrideContext = createContext<PreviewOverrideContextValue | null>(null)
 
 /**
- * Hook to access the preview override state and actions.
- * Must be used within a PreviewOverrideProvider.
+ * Returns the preview override state and actions from the nearest {@link PreviewOverrideProvider}.
+ *
+ * @returns The current override state and action handlers
+ *
+ * @throws Error if called outside of a {@link PreviewOverrideProvider}
+ *
+ * @internal
  */
 export function usePreviewOverrides(): PreviewOverrideContextValue {
   const context = useContext(PreviewOverrideContext)
@@ -31,14 +36,16 @@ interface PreviewOverrideProviderProps {
 }
 
 /**
- * Provider that manages preview override state.
+ * Hosts preview override state and SDK registration logic, allowing the
+ * {@link PreviewPanel} to be unmounted/remounted without losing state.
  *
- * This provider hosts the override state and SDK registration logic,
- * allowing the PreviewPanel to be unmounted/remounted (e.g., when Modal closes)
- * without losing state.
+ * @param props - Provider props
+ * @returns A context provider wrapping the children
  *
- * The provider should wrap the entire app content that uses PreviewPanel,
- * which is typically done by PreviewPanelOverlay.
+ * @remarks
+ * Typically wrapped by {@link PreviewPanelOverlay} — not used directly.
+ *
+ * @internal
  */
 export function PreviewOverrideProvider({
   children,

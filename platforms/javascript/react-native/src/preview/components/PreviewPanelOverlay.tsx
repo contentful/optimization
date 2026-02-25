@@ -5,11 +5,11 @@ import {
   Modal,
   PanResponder,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   View,
 } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useLiveUpdates } from '../../context/LiveUpdatesContext'
 import fabIcon from '../assets/fab-icon.png'
 import fabRipple from '../assets/fab-ripple.png'
@@ -24,6 +24,23 @@ const DRAG_DISMISS_DISTANCE = 300
 const ANIMATION_DURATION_MS = 200
 const DRAG_HANDLE_HEIGHT = 4
 
+/**
+ * Renders app content with a floating action button that opens the {@link PreviewPanel}
+ * in a bottom-sheet modal. Wraps children in a {@link PreviewOverrideProvider} to
+ * persist override state across modal open/close cycles.
+ *
+ * @param props - Component props
+ * @returns The app content with the floating button and modal overlay
+ *
+ * @example
+ * ```tsx
+ * <PreviewPanelOverlay contentfulClient={contentfulClient}>
+ *   <App />
+ * </PreviewPanelOverlay>
+ * ```
+ *
+ * @public
+ */
 export function PreviewPanelOverlay({
   children,
   fabPosition,

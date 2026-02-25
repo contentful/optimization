@@ -9,9 +9,13 @@ const BATCH_SIZE = 100
  * handling pagination automatically by batching requests.
  *
  * @param client - The Contentful client instance
- * @param contentType - The content type ID to fetch (e.g., 'nt_audience', 'nt_experience')
- * @param include - Depth of linked entries to resolve (default: 10)
+ * @param contentType - The content type ID to fetch (e.g., `'nt_audience'`, `'nt_experience'`)
+ * @param include - Depth of linked entries to resolve
  * @returns Promise resolving to an array of all entries
+ *
+ * @defaultValue include is `10`
+ *
+ * @public
  */
 export async function fetchAllEntriesByContentType(
   client: ContentfulClient,
@@ -50,6 +54,8 @@ export async function fetchAllEntriesByContentType(
  *
  * @param client - The Contentful client instance
  * @returns Promise resolving to an object containing audience and experience entries
+ *
+ * @public
  */
 export async function fetchAudienceAndExperienceEntries(
   client: ContentfulClient,

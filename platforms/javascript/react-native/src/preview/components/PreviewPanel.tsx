@@ -1,6 +1,7 @@
 import { createScopedLogger } from '@contentful/optimization-core'
 import React, { useCallback, useEffect, useState } from 'react'
-import { Alert, SafeAreaView, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native'
+import { Alert, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { usePreviewOverrides } from '../context/PreviewOverrideContext'
 import {
   useCollapsibleControl,
@@ -19,11 +20,13 @@ import { ActionButton, SearchBar } from './shared'
 
 const logger = createScopedLogger('RN:Preview')
 
+/** @internal */
 function formatConsentText(consent: boolean | undefined): string {
   if (consent === undefined) return '—'
   return consent ? 'Yes' : 'No'
 }
 
+/** @internal */
 function PreviewPanelHeader({ consent }: { consent: boolean | undefined }): React.JSX.Element {
   return (
     <View style={commonStyles.header}>
@@ -36,16 +39,17 @@ function PreviewPanelHeader({ consent }: { consent: boolean | undefined }): Reac
 }
 
 /**
- * Preview Panel for Contentful Optimization React Native SDK
+ * Comprehensive debugging interface for the Optimization React Native SDK.
  *
- * A comprehensive debugging interface that displays:
- * - Browsable list of audiences with human-readable names
- * - Three-state toggle for audience overrides (On/Off/Default)
- * - Experience cards with variant selection
- * - Search functionality for audiences and experiences
- * - Current profile information (ID, traits, audiences)
- * - Active personalizations with variant controls
- * - Override management with reset capabilities
+ * Displays audiences, experiences, variant selectors, profile information,
+ * and override management controls.
+ *
+ * @param props - Component props
+ * @returns The rendered preview panel
+ *
+ * @remarks
+ * Must be used within a {@link PreviewOverrideProvider} (typically provided by
+ * {@link PreviewPanelOverlay} or {@link OptimizationRoot}).
  *
  * @example
  * ```tsx
@@ -66,6 +70,8 @@ function PreviewPanelHeader({ consent }: { consent: boolean | undefined }): Reac
  *   )
  * }
  * ```
+ *
+ * @public
  */
 
 export function PreviewPanel({

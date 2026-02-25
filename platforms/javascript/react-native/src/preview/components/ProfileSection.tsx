@@ -6,6 +6,14 @@ import type { ProfileSectionProps } from '../types'
 import { copyToClipboard } from '../utils'
 import { JsonViewer, ListItem, Section } from './shared'
 
+/**
+ * Displays the current user profile including ID, traits, audiences, and full JSON.
+ *
+ * @param props - Component props
+ * @returns The rendered profile section
+ *
+ * @public
+ */
 export function ProfileSection({ profile, isLoading }: ProfileSectionProps): React.JSX.Element {
   if (isLoading) {
     return (

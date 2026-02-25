@@ -7,8 +7,7 @@ import { AudienceItem } from './AudienceItem'
 import { CollapseToggleButton, Section } from './shared'
 
 /**
- * Filters audiences based on search query.
- * Matches against audience name and experience names.
+ * @internal
  */
 function filterAudiences(
   audiences: AudienceWithExperiences[],
@@ -37,14 +36,13 @@ function filterAudiences(
 }
 
 /**
- * Section component displaying all audiences with their experiences.
+ * Displays all audiences with their experiences, search filtering,
+ * and collapse/expand controls.
  *
- * Features:
- * - Searchable list of audiences
- * - Each audience can be expanded to show experiences
- * - Collapse All / Expand All button
- * - Toggle controls for audience overrides
- * - Empty state when no audiences match search
+ * @param props - Component props
+ * @returns The rendered audience section
+ *
+ * @public
  */
 export function AudienceSection({
   audiencesWithExperiences,

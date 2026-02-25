@@ -20,7 +20,6 @@ type Callback = (isOnline: boolean) => Promise<void> | void
  *   May return a promise.
  * @returns A function that removes the registered event listeners when called.
  *
- * @public
  * @remarks
  * - If the environment cannot add listeners (e.g., SSR), a no-op cleanup function is returned.
  * - If `navigator.onLine` is available, the callback is invoked immediately with the initial state.
@@ -34,6 +33,8 @@ type Callback = (isOnline: boolean) => Promise<void> | void
  * // Later:
  * cleanup()
  * ```
+ *
+ * @public
  */
 export function createOnlineChangeListener(callback: Callback): () => void {
   if (!CAN_ADD_LISTENERS) {

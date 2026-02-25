@@ -12,6 +12,8 @@ const DEFAULT_REQUEST_TIMEOUT = 3000
 
 /**
  * Configuration options for {@link createTimeoutFetchMethod}.
+ *
+ * @public
  */
 export interface TimeoutFetchMethodOptions extends BaseFetchMethodOptions {
   /**
@@ -29,8 +31,7 @@ export interface TimeoutFetchMethodOptions extends BaseFetchMethodOptions {
   /**
    * Maximum time (in milliseconds) to wait for a response before aborting the request.
    *
-   * @remarks
-   * Defaults to {@link DEFAULT_REQUEST_TIMEOUT}.
+   * @defaultValue `3000`
    */
   requestTimeout?: number
 }
@@ -59,6 +60,8 @@ export interface TimeoutFetchMethodOptions extends BaseFetchMethodOptions {
  * ```
  *
  * @see {@link TimeoutFetchMethodOptions}
+ *
+ * @public
  */
 export function createTimeoutFetchMethod({
   apiName = 'Optimization',

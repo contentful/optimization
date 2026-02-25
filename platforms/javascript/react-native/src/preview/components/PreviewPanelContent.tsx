@@ -26,6 +26,15 @@ interface PreviewPanelContentProps {
   initializeCollapsible: (audienceId: string) => void
 }
 
+/**
+ * Renders the main content area of the preview panel, handling loading,
+ * error, and empty states before displaying the audience section.
+ *
+ * @param props - Component props
+ * @returns The rendered content, or `null` if no definitions are available
+ *
+ * @internal
+ */
 export function PreviewPanelContent({
   isLoading,
   error,

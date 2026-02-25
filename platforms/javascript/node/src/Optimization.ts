@@ -5,11 +5,14 @@ import { OPTIMIZATION_NODE_SDK_NAME, OPTIMIZATION_NODE_SDK_VERSION } from './glo
 /**
  * Configuration for the Node-specific Optimization SDK.
  *
- * @public
  * @remarks
- * This configuration extends {@link CoreConfig} but allows partial overrides
- * of the event-builder configuration. SDKs commonly inject their own library
- * metadata or channel definitions.
+ * This configuration extends {@link CoreStatelessConfig} but allows partial
+ * overrides of the event-builder configuration. SDKs commonly inject their own
+ * library metadata or channel definitions.
+ *
+ * @see {@link CoreStatelessConfig}
+ *
+ * @public
  */
 export interface OptimizationNodeConfig extends Omit<CoreStatelessConfig, 'eventBuilder'> {
   /**
@@ -25,8 +28,8 @@ export interface OptimizationNodeConfig extends Omit<CoreStatelessConfig, 'event
    *
    * @remarks
    * Any provided fields are merged with the default Node SDK metadata.
-   * This differs from {@link CoreConfig.eventBuilder}, which expects a
-   * full configuration object.
+   * This differs from {@link CoreStatelessConfig} eventBuilder, which expects
+   * a full configuration object.
    */
   eventBuilder?: Partial<Omit<CoreStatelessConfig['eventBuilder'], 'app'>>
 }
@@ -35,13 +38,14 @@ export interface OptimizationNodeConfig extends Omit<CoreStatelessConfig, 'event
  * Merge user-supplied configuration with defaults for the Node SDK.
  *
  * @param config - The input configuration supplied by the caller.
- * @returns A fully composed {@link CoreConfig} object suitable for
+ * @returns A fully composed {@link CoreStatelessConfig} object suitable for
  *          constructing the core runtime.
  *
- * @internal
  * @remarks
  * Ensures that the Node SDK always identifies itself via a `server` channel
  * and a `library` metadata block unless explicitly overridden.
+ *
+ * @internal
  */
 function mergeConfig(config: OptimizationNodeConfig): CoreStatelessConfig {
   const { app, ...restConfig } = config
@@ -59,7 +63,6 @@ function mergeConfig(config: OptimizationNodeConfig): CoreStatelessConfig {
 /**
  * Node-specific Optimization SDK built on {@link CoreStateless}.
  *
- * @public
  * @remarks
  * This class adapts the stateless Optimization Core for Node runtimes by
  * applying environment-appropriate defaults (e.g., server channel, Node SDK
@@ -78,6 +81,10 @@ function mergeConfig(config: OptimizationNodeConfig): CoreStatelessConfig {
  *
  * await sdk.track({ event: 'server_event', properties: { id: 1 } })
  * ```
+ *
+ * @see {@link CoreStateless}
+ *
+ * @public
  */
 class Optimization extends CoreStateless {
   /**
@@ -85,6 +92,13 @@ class Optimization extends CoreStateless {
    *
    * @param config - Partial Node-specific configuration. Any eventBuilder
    *                 fields provided are merged with Node's defaults.
+   *
+   * @example
+   * ```ts
+   * import Optimization from '@contentful/optimization-node'
+   *
+   * const optimization = new Optimization({ clientId: 'my-client-id' })
+   * ```
    */
   constructor(config: OptimizationNodeConfig) {
     const mergedConfig: CoreStatelessConfig = mergeConfig(config)

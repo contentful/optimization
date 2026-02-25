@@ -28,8 +28,7 @@ export interface ApiConfig {
   /**
    * Contentful environment identifier.
    *
-   * @remarks
-   * Defaults to `main` when not provided.
+   * @defaultValue `'main'`
    */
   environment?: string
 
@@ -57,8 +56,6 @@ export type GlobalApiConfigProperties = 'environment' | 'fetchOptions' | 'client
 /**
  * Base class for API clients that provides shared configuration and error logging.
  *
- * @internal
- *
  * @remarks
  * This abstract class is intended for internal use within the package and
  * should not be treated as part of the public API surface.
@@ -83,6 +80,8 @@ export type GlobalApiConfigProperties = 'environment' | 'fetchOptions' | 'client
  *   }
  * }
  * ```
+ *
+ * @internal
  */
 abstract class ApiClientBase {
   /**
@@ -125,8 +124,6 @@ abstract class ApiClientBase {
    * @param error - The error thrown by the underlying operation.
    * @param options - Additional metadata about the request.
    * @param options.requestName - Human-readable name of the request operation.
-   *
-   * @protected
    *
    * @remarks
    * Abort errors are logged at `warn` level and other errors at `error` level.

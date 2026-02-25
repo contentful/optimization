@@ -2,10 +2,12 @@ import Clipboard from '@react-native-clipboard/clipboard'
 import { Alert } from 'react-native'
 
 /**
- * Copies text to the clipboard and shows an alert.
+ * Copies text to the clipboard and shows a confirmation alert.
  *
- * @param text The text to copy
- * @param label A label describing the text (used in the alert)
+ * @param text - The text to copy
+ * @param label - A label describing the text (shown in the alert title)
+ *
+ * @internal
  */
 export function copyToClipboard(text: string, label: string): void {
   Clipboard.setString(text)

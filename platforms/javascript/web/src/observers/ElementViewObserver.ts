@@ -37,6 +37,10 @@ import {
  * @remarks
  * Uses IntersectionObserver under the hood and maintains per-element state to
  * track visibility, accumulated dwell time, and retry scheduling.
+ *
+ * @see {@link ElementViewObserverOptions}
+ *
+ * @public
  */
 class ElementViewObserver {
   private readonly callback: ElementViewCallback
@@ -53,6 +57,14 @@ class ElementViewObserver {
    * @param callback - Callback invoked once per element when dwell/visibility
    *   requirements are met.
    * @param options - Optional observer-level tuning options.
+   *
+   * @example
+   * ```ts
+   * const observer = new ElementViewObserver(
+   *   (element, info) => { console.log(element, info.totalVisibleMs) },
+   *   { dwellTimeMs: 1000 },
+   * )
+   * ```
    */
   public constructor(callback: ElementViewCallback, options?: ElementViewObserverOptions) {
     this.callback = callback
@@ -80,6 +92,12 @@ class ElementViewObserver {
    *
    * @param element - Element to observe.
    * @param options - Optional per-element overrides and callback data.
+   * @returns Nothing.
+   *
+   * @example
+   * ```ts
+   * observer.observe(element, { dwellTimeMs: 2000, data: { entryId: 'abc' } })
+   * ```
    */
   public observe(element: Element, options?: ElementViewElementOptions): void {
     let state = this.states.get(element)
@@ -96,6 +114,12 @@ class ElementViewObserver {
    * Stop observing an element and release its state and timers.
    *
    * @param element - Element to stop observing.
+   * @returns Nothing.
+   *
+   * @example
+   * ```ts
+   * observer.unobserve(element)
+   * ```
    */
   public unobserve(element: Element): void {
     this.io.unobserve(element)
@@ -112,6 +136,13 @@ class ElementViewObserver {
 
   /**
    * Disconnect the underlying IntersectionObserver and clear all state.
+   *
+   * @returns Nothing.
+   *
+   * @example
+   * ```ts
+   * observer.disconnect()
+   * ```
    */
   public disconnect(): void {
     this.io.disconnect()
@@ -134,6 +165,12 @@ class ElementViewObserver {
    *
    * @param element - Element for which to retrieve stats.
    * @returns A subset of {@link ElementState} or `null` if no state is tracked.
+   *
+   * @example
+   * ```ts
+   * const stats = observer.getStats(element)
+   * if (stats) console.log(stats.accumulatedMs)
+   * ```
    */
   public getStats(
     element: Element,
@@ -165,6 +202,8 @@ class ElementViewObserver {
 
   /**
    * Normalize high-level observer options into an effective configuration.
+   *
+   * @internal
    */
   private static initOptions(options?: ElementViewObserverOptions): EffectiveObserverOptions {
     return {
@@ -181,6 +220,8 @@ class ElementViewObserver {
   /**
    * Create a new per-element state object using observer defaults and any
    * per-element overrides.
+   *
+   * @internal
    */
   private createState(element: Element, options?: ElementViewElementOptions): ElementState {
     const opts: PerElementEffectiveOptions = {
@@ -211,6 +252,8 @@ class ElementViewObserver {
 
   /**
    * Handle page visibility changes by pausing/resuming timers and retries.
+   *
+   * @internal
    */
   private onPageVisibilityChange(): void {
     const now = NOW()
@@ -231,6 +274,8 @@ class ElementViewObserver {
    * @remarks
    * Freezes dwell time accumulation and converts any active retry into a
    * pending retry with remaining delay.
+   *
+   * @internal
    */
   private static onHidden(state: ElementState, now: number): void {
     if (state.done) return
@@ -254,6 +299,8 @@ class ElementViewObserver {
 
   /**
    * Update a state in response to the page becoming visible again.
+   *
+   * @internal
    */
   private onResume(state: ElementState, now: number): void {
     if (state.done) return
@@ -274,6 +321,8 @@ class ElementViewObserver {
   /**
    * Handle IntersectionObserver notifications and update per-element
    * visibility state.
+   *
+   * @internal
    */
   private onIntersect(entries: readonly IntersectionObserverEntry[]): void {
     const now = NOW()
@@ -291,6 +340,8 @@ class ElementViewObserver {
 
   /**
    * Mark a state as visible and schedule the callback if dwell time is met.
+   *
+   * @internal
    */
   private onVisible(state: ElementState, now: number): void {
     state.lastKnownVisible = true
@@ -311,6 +362,8 @@ class ElementViewObserver {
 
   /**
    * Mark a state as not visible and cancel any scheduled callback or retry.
+   *
+   * @internal
    */
   private static onNotVisible(state: ElementState, now: number): void {
     state.lastKnownVisible = false
@@ -329,6 +382,8 @@ class ElementViewObserver {
   /**
    * Schedule firing of the callback when the remaining dwell requirement is met,
    * if appropriate for the current state.
+   *
+   * @internal
    */
   private scheduleFireIfDue(state: ElementState, now: number): void {
     if (state.done || state.inFlight || state.fireTimer !== null || state.pendingRetry) return
@@ -347,6 +402,8 @@ class ElementViewObserver {
 
   /**
    * Schedule a retry attempt after a delay, if the element is currently visible.
+   *
+   * @internal
    */
   private scheduleRetry(state: ElementState, delayMs: number): void {
     state.pendingRetry = true
@@ -363,6 +420,8 @@ class ElementViewObserver {
   /**
    * Immediately attempt to fire the callback for a state and record the
    * total dwell time used for this attempt.
+   *
+   * @internal
    */
   private trigger(state: ElementState): void {
     if (state.done || state.inFlight) return
@@ -379,6 +438,8 @@ class ElementViewObserver {
    *
    * @param state - State to attempt the callback for.
    * @param preTotal - Optional precomputed dwell time in ms.
+   *
+   * @internal
    */
   private async attemptCallback(state: ElementState, preTotal?: number): Promise<void> {
     if (state.done || state.inFlight) return
@@ -404,6 +465,8 @@ class ElementViewObserver {
   /**
    * Handle a successful callback attempt by marking the state as done and
    * unobserving the element.
+   *
+   * @internal
    */
   private onAttemptSuccess(state: ElementState, element: Element): void {
     state.inFlight = false
@@ -414,6 +477,8 @@ class ElementViewObserver {
   /**
    * Handle a failed callback attempt by either scheduling another retry or
    * marking the state as exhausted.
+   *
+   * @internal
    */
   private onAttemptFailure(state: ElementState): void {
     state.inFlight = false
@@ -435,6 +500,8 @@ class ElementViewObserver {
 
   /**
    * Handle the case where the maximum number of retries has been exceeded.
+   *
+   * @internal
    */
   private onRetriesExceeded(state: ElementState): void {
     cancelRetry(state)
@@ -448,6 +515,8 @@ class ElementViewObserver {
   /**
    * Finalize a state for an element that has been garbage-collected or otherwise
    * lost, ensuring timers are cleared and state maps are cleaned up.
+   *
+   * @internal
    */
   private finalizeDroppedState(state: ElementState): void {
     clearFireTimer(state)
@@ -464,6 +533,8 @@ class ElementViewObserver {
   /**
    * Attempt to unobserve an element and fall back to manual cleanup if an
    * error occurs.
+   *
+   * @internal
    */
   private safeAutoUnobserve(element: Element, state: ElementState): void {
     try {
@@ -481,6 +552,8 @@ class ElementViewObserver {
 
   /**
    * Ensure there is an active sweeper interval to clean up orphaned states.
+   *
+   * @internal
    */
   private ensureSweeper(): void {
     if (this.sweepInterval !== null) return
@@ -491,6 +564,8 @@ class ElementViewObserver {
 
   /**
    * Stop the sweeper interval if running.
+   *
+   * @internal
    */
   private stopSweeper(): void {
     if (this.sweepInterval === null) return
@@ -500,6 +575,8 @@ class ElementViewObserver {
 
   /**
    * Stop the sweeper interval when there are no active states left.
+   *
+   * @internal
    */
   private maybeStopSweeper(): void {
     if (this.activeStates.size === 0) this.stopSweeper()
@@ -508,6 +585,8 @@ class ElementViewObserver {
   /**
    * Remove state for elements that are no longer present in the document or
    * whose references have been lost.
+   *
+   * @internal
    */
   private sweepOrphans(): void {
     if (!CAN_ADD_LISTENERS) return

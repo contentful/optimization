@@ -9,6 +9,7 @@ import {
   Page,
   PageEventContext,
   type PageViewEvent,
+  parseWithFriendlyError,
   Properties,
   Screen,
   ScreenEventContext,
@@ -23,7 +24,6 @@ import * as z from 'zod/mini'
 /**
  * Configuration options for creating an {@link EventBuilder} instance.
  *
- * @public
  * @remarks
  * The configuration is typically provided by the host application to adapt
  * event payloads to the runtime environment (browser, framework, etc.).
@@ -45,6 +45,8 @@ import * as z from 'zod/mini'
  *   }),
  * })
  * ```
+ *
+ * @public
  */
 export interface EventBuilderConfig {
   /**
@@ -141,9 +143,10 @@ const IdentifyBuilderArgs = z.extend(UniversalEventBuilderArgs, {
 /**
  * Arguments for constructing identify events.
  *
- * @public
  * @remarks
  * Traits are merged by the API; only specified properties may be overwritten.
+ *
+ * @public
  */
 export type IdentifyBuilderArgs = z.infer<typeof IdentifyBuilderArgs>
 
@@ -154,10 +157,11 @@ const PageViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
 /**
  * Arguments for constructing page view events.
  *
- * @public
  * @remarks
  * Any properties passed here are merged with the base page properties from
  * {@link EventBuilderConfig.getPageProperties}.
+ *
+ * @public
  */
 export type PageViewBuilderArgs = z.infer<typeof PageViewBuilderArgs>
 
@@ -169,10 +173,11 @@ const ScreenViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
 /**
  * Arguments for constructing screen view events.
  *
- * @public
  * @remarks
  * Any properties passed here are merged with the base screen properties from
  * {@link EventBuilderConfig.getScreenProperties}.
+ *
+ * @public
  */
 export type ScreenViewBuilderArgs = z.infer<typeof ScreenViewBuilderArgs>
 
@@ -191,8 +196,6 @@ export type TrackBuilderArgs = z.infer<typeof TrackBuilderArgs>
 /**
  * Default page properties used when no explicit page information is available.
  *
- * @public
- *
  * @defaultValue
  * ```ts
  * {
@@ -207,6 +210,8 @@ export type TrackBuilderArgs = z.infer<typeof TrackBuilderArgs>
  *
  * @remarks
  * Values are required by the API; values may not be `undefined`. Empty values are valid.
+ *
+ * @public
  */
 export const DEFAULT_PAGE_PROPERTIES = {
   path: '',
@@ -218,12 +223,14 @@ export const DEFAULT_PAGE_PROPERTIES = {
 }
 
 /**
- * Internal helper class for building analytics and personalization events.
+ * Helper class for building analytics and personalization events.
  *
  * @remarks
  * This class coordinates configuration and argument validation to produce
  * strongly-typed event payloads compatible with
  * `@contentful/optimization-api-schemas`.
+ *
+ * @see {@link EventBuilderConfig}
  *
  * @public
  */
@@ -275,7 +282,6 @@ class EventBuilder {
    *
    * @param config - Configuration used to customize event payloads.
    *
-   * @internal
    * @remarks
    * Callers are expected to reuse a single instance when possible to avoid
    * repeatedly reconfiguring the builder.
@@ -303,8 +309,6 @@ class EventBuilder {
    *
    * @param args - Arguments overriding the default context values.
    * @returns A fully populated {@link UniversalEventProperties} object.
-   *
-   * @protected
    *
    * @remarks
    * This method is used internally by the specific event-builder methods
@@ -346,8 +350,6 @@ class EventBuilder {
    * @param args - {@link ComponentViewBuilderArgs} arguments describing the component view.
    * @returns A {@link ComponentViewEvent} describing the view.
    *
-   * @public
-   *
    * @example
    * ```ts
    * const event = builder.buildComponentView({
@@ -356,10 +358,14 @@ class EventBuilder {
    *   variantIndex: 1,
    * })
    * ```
+   *
+   * @public
    */
   buildComponentView(args: ComponentViewBuilderArgs): ComponentViewEvent {
-    const { componentId, experienceId, variantIndex, ...universal } =
-      ComponentViewBuilderArgs.parse(args)
+    const { componentId, experienceId, variantIndex, ...universal } = parseWithFriendlyError(
+      ComponentViewBuilderArgs,
+      args,
+    )
 
     return {
       ...this.buildUniversalEventProperties(universal),
@@ -377,8 +383,6 @@ class EventBuilder {
    * @param args - {@link ComponentViewBuilderArgs} arguments describing the Custom Flag view.
    * @returns A {@link ComponentViewEvent} describing the view.
    *
-   * @public
-   *
    * @remarks
    * This is a specialized variant of {@link EventBuilder.buildComponentView}
    * that sets `componentType` to `'Variable'`.
@@ -390,6 +394,8 @@ class EventBuilder {
    *   experienceId: 'personalization-123',
    * })
    * ```
+   *
+   * @public
    */
   buildFlagView(args: ComponentViewBuilderArgs): ComponentViewEvent {
     return {
@@ -404,8 +410,6 @@ class EventBuilder {
    * @param args - {@link IdentifyBuilderArgs} arguments describing the identified user.
    * @returns An {@link IdentifyEvent} payload.
    *
-   * @public
-   *
    * @remarks
    * - Traits are merged by the API; only specified properties may be overwritten.
    * - The User ID is consumer-specified and should not contain the value of any
@@ -418,9 +422,11 @@ class EventBuilder {
    *   traits: { plan: 'pro' },
    * })
    * ```
+   *
+   * @public
    */
   buildIdentify(args: IdentifyBuilderArgs): IdentifyEvent {
-    const { traits = {}, userId, ...universal } = IdentifyBuilderArgs.parse(args)
+    const { traits = {}, userId, ...universal } = parseWithFriendlyError(IdentifyBuilderArgs, args)
 
     return {
       ...this.buildUniversalEventProperties(universal),
@@ -435,8 +441,6 @@ class EventBuilder {
    *
    * @param args - Optional {@link PageViewBuilderArgs} overrides for the page view event.
    * @returns A {@link PageViewEvent} payload.
-   *
-   * @public
    *
    * @remarks
    * Page properties are created by merging:
@@ -453,9 +457,11 @@ class EventBuilder {
    *   },
    * })
    * ```
+   *
+   * @public
    */
   buildPageView(args: PageViewBuilderArgs = {}): PageViewEvent {
-    const { properties = {}, ...universal } = PageViewBuilderArgs.parse(args)
+    const { properties = {}, ...universal } = parseWithFriendlyError(PageViewBuilderArgs, args)
 
     const pageProperties = this.getPageProperties()
 
@@ -472,7 +478,7 @@ class EventBuilder {
       ...universalProperties
     } = this.buildUniversalEventProperties(universal)
 
-    const context = PageEventContext.parse(universalContext)
+    const context = parseWithFriendlyError(PageEventContext, universalContext)
 
     return {
       ...universalProperties,
@@ -488,8 +494,6 @@ class EventBuilder {
    * @param args - {@link ScreenViewBuilderArgs} arguments for the screen view event.
    * @returns A {@link ScreenViewEvent} payload.
    *
-   * @public
-   *
    * @example
    * ```ts
    * const event = builder.buildScreenView({
@@ -499,16 +503,18 @@ class EventBuilder {
    *   },
    * })
    * ```
+   *
+   * @public
    */
   buildScreenView(args: ScreenViewBuilderArgs): ScreenViewEvent {
-    const { name, properties, ...universal } = ScreenViewBuilderArgs.parse(args)
+    const { name, properties, ...universal } = parseWithFriendlyError(ScreenViewBuilderArgs, args)
 
     const {
       context: { page: _, ...universalContext },
       ...universalProperties
     } = this.buildUniversalEventProperties(universal)
 
-    const context = ScreenEventContext.parse(universalContext)
+    const context = parseWithFriendlyError(ScreenEventContext, universalContext)
 
     return {
       ...universalProperties,
@@ -525,8 +531,6 @@ class EventBuilder {
    * @param args - {@link TrackBuilderArgs} arguments describing the tracked event.
    * @returns A {@link TrackEvent} payload.
    *
-   * @public
-   *
    * @example
    * ```ts
    * const event = builder.buildTrack({
@@ -534,9 +538,11 @@ class EventBuilder {
    *   properties: { id: 'primary-cta', location: 'hero' },
    * })
    * ```
+   *
+   * @public
    */
   buildTrack(args: TrackBuilderArgs): TrackEvent {
-    const { event, properties = {}, ...universal } = TrackBuilderArgs.parse(args)
+    const { event, properties = {}, ...universal } = parseWithFriendlyError(TrackBuilderArgs, args)
 
     return {
       ...this.buildUniversalEventProperties(universal),

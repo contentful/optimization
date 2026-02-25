@@ -2,6 +2,7 @@ import {
   BatchExperienceResponse,
   ExperienceEventArray,
   ExperienceResponse,
+  parseWithFriendlyError,
   type BatchExperienceData,
   type BatchExperienceEventArray,
   type ExperienceRequestData,
@@ -22,11 +23,15 @@ export const EXPERIENCE_BASE_URL = 'https://experience.ninetailed.co/'
 
 /**
  * Feature flags supported by the Experience API.
+ *
+ * @internal
  */
 type Feature = 'ip-enrichment' | 'location'
 
 /**
  * Options that control how requests to the Experience API are handled.
+ *
+ * @internal
  */
 interface RequestOptions {
   /**
@@ -86,6 +91,8 @@ interface ProfileMutationRequestOptions {
 
 /**
  * Parameters used when creating a profile.
+ *
+ * @internal
  */
 interface CreateProfileParams {
   /**
@@ -96,6 +103,8 @@ interface CreateProfileParams {
 
 /**
  * Parameters used when updating an existing profile.
+ *
+ * @internal
  */
 interface UpdateProfileParams extends CreateProfileParams {
   /**
@@ -106,6 +115,8 @@ interface UpdateProfileParams extends CreateProfileParams {
 
 /**
  * Parameters used when creating or updating a profile.
+ *
+ * @internal
  */
 interface UpsertProfileParams extends CreateProfileParams {
   /**
@@ -116,6 +127,8 @@ interface UpsertProfileParams extends CreateProfileParams {
 
 /**
  * Parameters used when performing a batch profile update.
+ *
+ * @internal
  */
 interface BatchUpdateProfileParams {
   /**
@@ -126,13 +139,13 @@ interface BatchUpdateProfileParams {
 
 /**
  * Configuration for {@link ExperienceApiClient}.
+ *
+ * @public
  */
 export interface ExperienceApiClientConfig extends ApiConfig, RequestOptions {}
 
 /**
  * Client for interacting with the Experience API.
- *
- * @public
  *
  * @remarks
  * This client is responsible for reading and mutating Ninetailed profiles
@@ -147,6 +160,10 @@ export interface ExperienceApiClientConfig extends ApiConfig, RequestOptions {}
  *
  * const profile = await client.getProfile('profile-id')
  * ```
+ *
+ * @see {@link ApiClientBase}
+ *
+ * @public
  */
 export default class ExperienceApiClient extends ApiClientBase {
   /**
@@ -219,7 +236,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
       const {
         data: { changes, experiences, profile },
-      } = ExperienceResponse.parse(await response.json())
+      } = parseWithFriendlyError(ExperienceResponse, await response.json())
 
       const data = { changes, personalizations: experiences, profile }
 
@@ -280,7 +297,7 @@ export default class ExperienceApiClient extends ApiClientBase {
     logger.info(`Sending "${requestName}" request`)
 
     const body: ExperienceRequestData = {
-      events: ExperienceEventArray.parse(events),
+      events: parseWithFriendlyError(ExperienceEventArray, events),
       options: this.constructBodyOptions(options),
     }
 
@@ -295,7 +312,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
       const {
         data: { changes, experiences, profile },
-      } = ExperienceResponse.parse(await response.json())
+      } = parseWithFriendlyError(ExperienceResponse, await response.json())
 
       const data = { changes, personalizations: experiences, profile }
 
@@ -338,7 +355,7 @@ export default class ExperienceApiClient extends ApiClientBase {
     logger.info(`Sending "${requestName}" request`)
 
     const body: ExperienceRequestData = {
-      events: ExperienceEventArray.parse(events),
+      events: parseWithFriendlyError(ExperienceEventArray, events),
       options: this.constructBodyOptions(options),
     }
 
@@ -353,7 +370,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
       const {
         data: { changes, experiences, profile },
-      } = ExperienceResponse.parse(await response.json())
+      } = parseWithFriendlyError(ExperienceResponse, await response.json())
 
       const data = { changes, personalizations: experiences, profile }
 
@@ -426,7 +443,7 @@ export default class ExperienceApiClient extends ApiClientBase {
     logger.info(`Sending "${requestName}" request`)
 
     const body: ExperienceRequestData = {
-      events: ExperienceEventArray.parse(events),
+      events: parseWithFriendlyError(ExperienceEventArray, events),
       options: this.constructBodyOptions(options),
     }
 
@@ -441,7 +458,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
       const {
         data: { profiles },
-      } = BatchExperienceResponse.parse(await response.json())
+      } = parseWithFriendlyError(BatchExperienceResponse, await response.json())
 
       logger.debug(`"${requestName}" request successfully completed`)
 

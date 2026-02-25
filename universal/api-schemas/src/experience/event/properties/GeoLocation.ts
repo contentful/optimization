@@ -5,6 +5,8 @@ import * as z from 'zod/mini'
  *
  * @remarks
  * Typically corresponds to ISO 3166-1 alpha-2 country codes.
+ *
+ * @internal
  */
 const COUNTRY_CODE_LENGTH = 2
 
@@ -13,6 +15,8 @@ const COUNTRY_CODE_LENGTH = 2
  *
  * @remarks
  * Latitude and longitude are expressed in decimal degrees.
+ *
+ * @internal
  */
 const Coordinates = z.object({
   /**
@@ -31,6 +35,8 @@ const Coordinates = z.object({
  *
  * @remarks
  * All properties are optional and may be derived from IP or device data.
+ *
+ * @public
  */
 export const GeoLocation = z.object({
   /**
@@ -88,5 +94,7 @@ export const GeoLocation = z.object({
 
 /**
  * TypeScript type inferred from {@link GeoLocation}.
+ *
+ * @public
  */
 export type GeoLocation = z.infer<typeof GeoLocation>

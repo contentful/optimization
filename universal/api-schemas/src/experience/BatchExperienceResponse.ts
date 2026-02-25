@@ -8,6 +8,8 @@ import { ResponseEnvelope } from './ResponseEnvelope'
  * @remarks
  * A batch request may return zero or more profiles. When no profiles are
  * returned, `profiles` may be omitted or an empty array.
+ *
+ * @public
  */
 export const BatchExperienceData = z.object({
   /**
@@ -18,6 +20,8 @@ export const BatchExperienceData = z.object({
 
 /**
  * TypeScript type inferred from {@link BatchExperienceData}.
+ *
+ * @public
  */
 export type BatchExperienceData = z.infer<typeof BatchExperienceData>
 
@@ -27,10 +31,14 @@ export type BatchExperienceData = z.infer<typeof BatchExperienceData>
  * @remarks
  * Extends {@link ResponseEnvelope} with {@link BatchExperienceData} as the
  * `data` payload.
+ *
+ * @public
  */
 export const BatchExperienceResponse = z.extend(ResponseEnvelope, { data: BatchExperienceData })
 
 /**
  * TypeScript type inferred from {@link BatchExperienceResponse}.
+ *
+ * @public
  */
 export type BatchExperienceResponse = z.infer<typeof BatchExperienceResponse>

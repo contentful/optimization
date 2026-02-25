@@ -35,7 +35,11 @@ export interface ResolvedData<
   personalization?: SelectedPersonalization
 }
 
-/** Base string for resolver warning messages. */
+/**
+ * Base string for resolver warning messages.
+ *
+ * @internal
+ */
 const RESOLUTION_WARNING_BASE = 'Could not resolve personalized entry variant:'
 
 /**
@@ -58,6 +62,10 @@ const PersonalizedEntryResolver = {
    * @param params - Object containing the baseline personalized entry and the selections.
    * @param skipValidation - When `true`, skip type/shape validation for perf.
    * @returns The matching {@link PersonalizationEntry}, or `undefined` if not found/invalid.
+   * @remarks
+   * A personalization entry is a personalization configuration object supplied in a
+   * `PersonalizedEntry.nt_experiences` array. A personalized entry may relate to
+   * multiple personalizations.
    * @example
    * ```ts
    * const personalizationEntry = PersonalizedEntryResolver.getPersonalizationEntry({
@@ -65,10 +73,6 @@ const PersonalizedEntryResolver = {
    *   selectedPersonalizations
    * })
    * ```
-   * @remarks
-   * A personalization entry is a personalization configuration object supplied in a
-   * `PersonalizedEntry.nt_experiences` array. A personalized entry may relate to
-   * multiple personalizations.
    */
   getPersonalizationEntry(
     {
@@ -103,6 +107,9 @@ const PersonalizedEntryResolver = {
    * @param params - Object with the target personalization entry and selections.
    * @param skipValidation - When `true`, skip type checks.
    * @returns The matching {@link SelectedPersonalization}, if present.
+   * @remarks
+   * Selected personalizations are supplied by the Experience API in the
+   * `experiences` response data property.
    * @example
    * ```ts
    * const selectedPersonalization = PersonalizedEntryResolver.getSelectedPersonalization({
@@ -110,9 +117,6 @@ const PersonalizedEntryResolver = {
    *   selectedPersonalizations
    * })
    * ```
-   * @remarks
-   * Selected personalizations are supplied by the Experience API in the
-   * `experiences` response data property.
    */
   getSelectedPersonalization(
     {
@@ -143,6 +147,10 @@ const PersonalizedEntryResolver = {
    * @param params - Baseline entry, personalization entry, and 1‑based variant index.
    * @param skipValidation - When `true`, skip type checks.
    * @returns The {@link EntryReplacementVariant} for the component, if any.
+   * @remarks
+   * Entry replacement variants are variant configurations specified in a
+   * personalization configuration component's `variants` array supplied by the
+   * personalized entry via its `nt_config` field.
    * @example
    * ```ts
    * const selectedVariant = PersonalizedEntryResolver.getSelectedVariant({
@@ -151,10 +159,6 @@ const PersonalizedEntryResolver = {
    *   selectedVariantIndex: 2 // second variant (1‑based)
    * })
    * ```
-   * @remarks
-   * Entry replacement variants are variant configurations specified in a
-   * personalization configuration component's `variants` array supplied by the
-   * personalized entry via its `nt_config` field.
    */
   getSelectedVariant(
     {
@@ -195,6 +199,9 @@ const PersonalizedEntryResolver = {
    * @param params - Personalization entry and selected variant.
    * @param skipValidation - When `true`, skip type checks.
    * @returns The resolved entry typed as {@link Entry} or `undefined`.
+   * @remarks
+   * A personalized entry will resolve either to the baseline (the entry
+   * supplied as `personalizedEntry`) or the selected variant.
    * @example
    * ```ts
    * const selectedVariantEntry = PersonalizedEntryResolver.getSelectedVariantEntry<{ fields: unknown }>({
@@ -202,9 +209,6 @@ const PersonalizedEntryResolver = {
    *   selectedVariant
    * })
    * ```
-   * @remarks
-   * A personalized entry will resolve either to the baseline (the entry
-   * supplied as `personalizedEntry`) or the selected variant.
    */
   getSelectedVariantEntry<
     S extends EntrySkeletonType,

@@ -61,32 +61,36 @@ wrappers used by these commands.
 
 | Command                                    | Description                                                                         |
 | ------------------------------------------ | ----------------------------------------------------------------------------------- |
-| `pnpm format:check`                        | Checks repository formatting with Prettier.                                         |
-| `pnpm format:fix`                          | Applies Prettier formatting changes across the repository.                          |
-| `pnpm lint:check`                          | Runs ESLint checks without modifying files.                                         |
-| `pnpm lint:fix`                            | Runs ESLint and automatically applies fixable issues.                               |
-| `pnpm typecheck`                           | Runs TypeScript type checks across all workspaces.                                  |
-| `pnpm build`                               | Builds the logger and all `@contentful/*` packages.                                 |
 | `pnpm build:pkgs`                          | Builds packages, then creates tarballs for all `@contentful/*` packages in `pkgs/`. |
+| `pnpm build`                               | Builds the logger and all `@contentful/*` packages.                                 |
 | `pnpm clean`                               | Removes build artifacts across all workspaces.                                      |
-| `pnpm test:unit`                           | Runs unit tests for all `@contentful/*` packages.                                   |
 | `pnpm docs:generate`                       | Generates TypeDoc output from code and linked markdown docs.                        |
 | `pnpm docs:watch`                          | Watches files and rebuilds TypeDoc output during documentation work.                |
-| `pnpm setup:e2e`                           | Prepares all reference implementations and browser dependencies for E2E tests.      |
-| `pnpm test:e2e`                            | Runs end-to-end tests across all reference implementations.                         |
-| `pnpm serve:mocks`                         | Starts the shared mock services used by local testing flows.                        |
-| `pnpm implementation:run`                  | Runs the shared implementation script runner with custom arguments.                 |
-| `pnpm implementation:web-vanilla`          | Runs the implementation helper for the Web Vanilla reference app.                   |
+| `pnpm format:check`                        | Checks repository formatting with Prettier.                                         |
+| `pnpm format:fix`                          | Applies Prettier formatting changes across the repository.                          |
+| `pnpm implementation:install`              | Runs implementation-specific install steps across all reference apps.               |
 | `pnpm implementation:node-ssr-only`        | Runs the implementation helper for the Node SSR Only reference app.                 |
 | `pnpm implementation:node-ssr-web-vanilla` | Runs the implementation helper for the Node SSR + Web Vanilla reference app.        |
 | `pnpm implementation:react-native`         | Runs the implementation helper for the React Native reference app.                  |
-| `pnpm implementation:install`              | Runs implementation-specific install steps across all reference apps.               |
-| `pnpm playwright:install`                  | Installs Playwright browser binaries across implementations.                        |
+| `pnpm implementation:run`                  | Runs the shared implementation script runner with custom arguments.                 |
+| `pnpm implementation:web-vanilla`          | Runs the implementation helper for the Web Vanilla reference app.                   |
+| `pnpm lint:check`                          | Runs ESLint checks without modifying files.                                         |
+| `pnpm lint:fix`                            | Runs ESLint and automatically applies fixable issues.                               |
 | `pnpm playwright:install-deps`             | Installs Playwright system dependencies across implementations.                     |
+| `pnpm playwright:install`                  | Installs Playwright browser binaries across implementations.                        |
+| `pnpm pm2:delete:all`                      | Removes all PM2-managed local processes from PM2.                                   |
 | `pnpm pm2:list`                            | Shows PM2-managed local processes used by reference implementations.                |
 | `pnpm pm2:logs`                            | Streams logs for PM2-managed local processes.                                       |
 | `pnpm pm2:stop:all`                        | Stops all PM2-managed local processes.                                              |
-| `pnpm pm2:delete:all`                      | Removes all PM2-managed local processes from PM2.                                   |
+| `pnpm serve:mocks`                         | Starts the shared mock services used by local testing flows.                        |
+| `pnpm setup:e2e`                           | Prepares all reference implementations and browser dependencies for E2E tests.      |
+| `pnpm test:e2e:node-ssr-only`              | Runs E2E tests for the Node SSR Only reference implementation.                      |
+| `pnpm test:e2e:node-ssr-web-vanilla`       | Runs E2E tests for the Node SSR + Web Vanilla reference implementation.             |
+| `pnpm test:e2e:react-native`               | Runs E2E tests for the React Native reference implementation.                       |
+| `pnpm test:e2e:web-vanilla`                | Runs E2E tests for the Web Vanilla reference implementation.                        |
+| `pnpm test:e2e`                            | Runs end-to-end tests across all reference implementations.                         |
+| `pnpm test:unit`                           | Runs unit tests for all `@contentful/*` packages.                                   |
+| `pnpm typecheck`                           | Runs TypeScript type checks across all workspaces.                                  |
 | `pnpm version:node`                        | Prints the local Node.js version.                                                   |
 | `pnpm version:pnpm`                        | Prints the local pnpm version.                                                      |
 

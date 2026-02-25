@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { Button, SafeAreaView, ScrollView, Text, View } from 'react-native'
+import { Button, ScrollView, Text, View } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 import type Optimization from '@contentful/optimization-react-native'
 import {

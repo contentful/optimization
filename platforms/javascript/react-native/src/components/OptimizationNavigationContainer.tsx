@@ -7,16 +7,14 @@ import { useOptimization } from '../context/OptimizationContext'
 const logger = createScopedLogger('RN:Navigation')
 
 /**
- * Converts route params to JSON-safe format using Zod validation.
- * React Navigation params are JSON-serializable by contract.
+ * @internal
  */
 function paramsToJson(params: Record<string, unknown>): z.core.util.JSONType {
   return z.json().parse(JSON.parse(JSON.stringify(params)))
 }
 
 /**
- * Navigation state type from React Navigation.
- * This is a minimal type definition to avoid requiring @react-navigation/native as a dependency.
+ * @internal
  */
 interface NavigationState {
   index: number
@@ -28,53 +26,58 @@ interface NavigationState {
 }
 
 /**
- * Ref type for the navigation container.
- * This is a minimal type definition to avoid requiring @react-navigation/native as a dependency.
+ * @internal
  */
 interface NavigationContainerRef {
   getCurrentRoute: () => { name: string; params?: Record<string, unknown> } | undefined
 }
 
 /**
- * Props for OptimizationNavigationContainer
+ * Props for the {@link OptimizationNavigationContainer} component.
  *
  * @public
  */
 export interface OptimizationNavigationContainerProps {
   /**
-   * Function to render the NavigationContainer.
-   * Receives props that should be spread onto the NavigationContainer.
+   * Render prop that receives navigation props to spread onto the `NavigationContainer`.
    */
   children: (props: {
-    ref: React.RefObject<NavigationContainerRef>
+    ref: React.RefObject<NavigationContainerRef | null>
     onReady: () => void
     onStateChange: (state: NavigationState | undefined) => void
   }) => React.ReactNode
 
   /**
    * Optional callback called when the navigation state changes.
-   * Called after screen tracking is performed.
+   * Invoked after screen tracking is performed.
    */
   onStateChange?: (state: NavigationState | undefined) => void
 
   /**
    * Optional callback called when the navigation container is ready.
-   * Called after the initial screen is tracked.
+   * Invoked after the initial screen is tracked.
    */
   onReady?: () => void
 
   /**
    * Whether to include route params in the screen event properties.
-   * @default false
+   *
+   * @defaultValue false
    */
   includeParams?: boolean
 }
 
 /**
- * Wrapper component that provides automatic screen tracking for React Navigation.
+ * Wraps React Navigation's `NavigationContainer` to automatically track screen views
+ * when the active route changes.
  *
- * This component uses a render prop pattern to wrap React Navigation's NavigationContainer
- * and automatically track screen views when the active route changes.
+ * @param props - Component props
+ * @returns The rendered children with tracking callbacks injected
+ *
+ * @remarks
+ * Must be used within an {@link OptimizationProvider}. Uses a render prop pattern so
+ * that navigation props (`ref`, `onReady`, `onStateChange`) can be spread onto the
+ * `NavigationContainer` without requiring a direct dependency on `@react-navigation/native`.
  *
  * @example
  * ```tsx
@@ -111,7 +114,7 @@ export function OptimizationNavigationContainer({
   includeParams = false,
 }: OptimizationNavigationContainerProps): React.ReactNode {
   const optimization = useOptimization()
-  const navigationRef = useRef<NavigationContainerRef>(null)
+  const navigationRef = useRef<NavigationContainerRef | null>(null)
   const routeNameRef = useRef<string | undefined>(undefined)
 
   // Store optimization in a ref to prevent unnecessary callback recreations

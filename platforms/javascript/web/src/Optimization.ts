@@ -1,12 +1,13 @@
 /**
  * Web SDK entrypoint for Contentful Optimization.
  *
- * @packageDocumentation
  * @remarks
  * Exposes a browser-wired {@link Optimization} class built on top of {@link CoreStateful}.
  * When executed in a browser environment, the constructor attaches a singleton instance
  * to `window.optimization` and the class constructor to `window.Optimization` for
  * script-tag / global usage.
+ *
+ * @internal
  */
 
 import {
@@ -127,13 +128,14 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
  * @param config - Incoming Web SDK configuration.
  * @returns A fully composed {@link CoreStatefulConfig} object.
  *
- * @internal
  * @remarks
  * This helper wires together:
  * - consent/profile/personalizations from LocalStore,
  * - Web-specific eventBuilder functions (locale, page, user agent),
  * - beacon-based analytics flushing,
  * - and anonymous ID retrieval.
+ *
+ * @internal
  */
 function mergeConfig({
   app,
@@ -308,11 +310,16 @@ class Optimization extends CoreStateful {
   /**
    * Initialize anonymous ID state from cookies.
    *
-   * @internal
+   * @param cookieValue - Anonymous ID read from the current or legacy cookie.
+   * @param legacyCookieValue - Anonymous ID read from the legacy cookie, if present.
+   * @returns Nothing.
+   *
    * @remarks
    * Reads the legacy anonymous ID cookie (if present), migrates to the current cookie,
    * and ensures SDK state is reset when the persisted anonymous ID differs from the
    * in-memory value.
+   *
+   * @internal
    */
   private initializeFromCookieValues(cookieValue?: string, legacyCookieValue?: string): void {
     if (legacyCookieValue) Cookies.remove(ANONYMOUS_ID_COOKIE_LEGACY)
@@ -327,6 +334,7 @@ class Optimization extends CoreStateful {
    * Persist (or clear) the anonymous ID in both cookies and {@link LocalStore}.
    *
    * @param value - Anonymous identifier to persist. If omitted, clears persisted state.
+   * @returns Nothing.
    *
    * @internal
    */
@@ -346,11 +354,14 @@ class Optimization extends CoreStateful {
    *
    * @param options - Optional per-element observer defaults for dwell time,
    *   retries, and backoff behavior.
+   * @returns Nothing.
    *
    * @example
    * ```ts
    * optimization.startAutoTrackingEntryViews({ dwellTimeMs: 1000 })
    * ```
+   *
+   * @public
    */
   startAutoTrackingEntryViews(options?: ElementViewObserverOptions): void {
     this.autoTrackEntryViews = true
@@ -378,10 +389,14 @@ class Optimization extends CoreStateful {
   /**
    * Disable automatic entry view tracking and disconnect underlying observers.
    *
+   * @returns Nothing.
+   *
    * @example
    * ```ts
    * optimization.stopAutoTrackingEntryViews()
    * ```
+   *
+   * @public
    */
   stopAutoTrackingEntryViews(): void {
     this.elementExistenceObserver?.disconnect()
@@ -394,6 +409,7 @@ class Optimization extends CoreStateful {
    *
    * @param element - Element to observe.
    * @param options - Per-element observer options and callback data.
+   * @returns Nothing.
    *
    * @remarks
    * This method relies on an initialized {@link ElementViewObserver}. If automatic
@@ -407,6 +423,8 @@ class Optimization extends CoreStateful {
    *   data: { entryId: 'xyz' },
    * })
    * ```
+   *
+   * @public
    */
   trackEntryViewForElement(element: Element, options: ElementViewElementOptions): void {
     logger.info('Manually observing element:', element)
@@ -417,6 +435,7 @@ class Optimization extends CoreStateful {
    * Stop tracking entry views for a specific element.
    *
    * @param element - Element to stop observing.
+   * @returns Nothing.
    *
    * @remarks
    * This method relies on an initialized {@link ElementViewObserver}. If automatic
@@ -426,6 +445,8 @@ class Optimization extends CoreStateful {
    * ```ts
    * optimization.untrackEntryViewForElement(element)
    * ```
+   *
+   * @public
    */
   untrackEntryViewForElement(element: Element): void {
     logger.info('Manually unobserving element:', element)
@@ -439,10 +460,14 @@ class Optimization extends CoreStateful {
    * - clears LocalStore caches,
    * - and delegates to {@link CoreStateful.reset} for underlying state reset.
    *
+   * @returns Nothing.
+   *
    * @example
    * ```ts
    * optimization.reset()
    * ```
+   *
+   * @public
    */
   reset(): void {
     this.stopAutoTrackingEntryViews()

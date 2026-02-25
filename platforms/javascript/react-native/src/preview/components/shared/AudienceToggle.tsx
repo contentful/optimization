@@ -10,12 +10,12 @@ const toggleStates: Array<{ value: AudienceOverrideState; label: string }> = [
 ]
 
 /**
- * Three-state toggle for audience override control.
+ * Three-state toggle for audience override control (On / Default / Off).
  *
- * States:
- * - "On": Force the audience to be active
- * - "Default": Let SDK determine based on evaluation
- * - "Off": Force the audience to be inactive
+ * @param props - Component props
+ * @returns The rendered toggle group
+ *
+ * @public
  */
 export function AudienceToggle({
   value,

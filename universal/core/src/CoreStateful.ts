@@ -106,10 +106,12 @@ export interface CoreStatefulConfig extends CoreConfig {
  * Core runtime that constructs stateful product instances and exposes shared
  * states, including consent and the event stream.
  *
- * @public
  * @remarks
+ * Extends {@link CoreBase} with stateful capabilities, including
+ * consent management via {@link ConsentController}.
  * @see {@link CoreBase}
  * @see {@link ConsentController}
+ * @public
  */
 class CoreStateful extends CoreBase implements ConsentController {
   /** Stateful analytics product. */
@@ -175,6 +177,8 @@ class CoreStateful extends CoreBase implements ConsentController {
 
   /**
    * Expose merged observable state for consumers.
+   *
+   * @returns The combined {@link CoreStates} observable object.
    */
   get states(): CoreStates {
     return {
@@ -192,6 +196,10 @@ class CoreStateful extends CoreBase implements ConsentController {
    * @remarks
    * Resetting personalization also resets analytics dependencies as a
    * consequence of the current shared-state design.
+   * @example
+   * ```ts
+   * core.reset()
+   * ```
    */
   reset(): void {
     batch(() => {
@@ -207,6 +215,10 @@ class CoreStateful extends CoreBase implements ConsentController {
    * @remarks
    * The personalization queue is only populated if events have been triggered
    * while a device is offline.
+   * @example
+   * ```ts
+   * await core.flush()
+   * ```
    */
   async flush(): Promise<void> {
     await this.analytics.flush()
@@ -217,6 +229,10 @@ class CoreStateful extends CoreBase implements ConsentController {
    * Update consent state
    *
    * @param accept - `true` if the user has granted consent; `false` otherwise.
+   * @example
+   * ```ts
+   * core.consent(true)
+   * ```
    */
   consent(accept: boolean): void {
     consent.value = accept
@@ -226,6 +242,10 @@ class CoreStateful extends CoreBase implements ConsentController {
    * Update online state
    *
    * @param isOnline - `true` if the browser is online; `false` otherwise.
+   * @example
+   * ```ts
+   * this.online(navigator.onLine)
+   * ```
    */
   protected online(isOnline: boolean): void {
     online.value = isOnline
@@ -239,6 +259,11 @@ class CoreStateful extends CoreBase implements ConsentController {
    * @remarks
    * This method is intended for use by the Preview Panel component.
    * Direct signal access allows immediate state updates without API calls.
+   * @returns An object containing the SDK's signals and signal functions.
+   * @example
+   * ```ts
+   * const signalAccess = core.registerPreviewPanel(previewPanel)
+   * ```
    */
   registerPreviewPanel(previewPanel?: PreviewPanelSignalObject): PreviewPanelSignalObject {
     if (previewPanel) {

@@ -6,6 +6,7 @@ import {
   type OptimizationData,
   type PageViewBuilderArgs,
   PageViewEvent,
+  parseWithFriendlyError,
   type PartialProfile,
   type ExperienceEvent as PersonalizationEvent,
   type ScreenViewBuilderArgs,
@@ -36,6 +37,10 @@ class PersonalizationStateless extends PersonalizationBase {
    * @param payload - Identify builder arguments with an optional partial
    * profile to attach to the upsert request.
    * @returns The resulting {@link OptimizationData} for the identified user.
+   * @example
+   * ```ts
+   * const data = await personalization.identify({ userId: 'user-123', profile: { id: 'anon-1' } })
+   * ```
    */
   async identify(
     payload: IdentifyBuilderArgs & { profile?: PartialProfile },
@@ -44,7 +49,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = IdentifyEvent.parse(this.builder.buildIdentify(builderArgs))
+    const event = parseWithFriendlyError(IdentifyEvent, this.builder.buildIdentify(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -54,6 +59,10 @@ class PersonalizationStateless extends PersonalizationBase {
    *
    * @param payload - Page view builder arguments with an optional partial profile.
    * @returns The evaluated {@link OptimizationData} for this page view.
+   * @example
+   * ```ts
+   * const data = await personalization.page({ properties: { title: 'Home' }, profile: { id: 'anon-1' } })
+   * ```
    */
   async page(
     payload: PageViewBuilderArgs & { profile?: PartialProfile },
@@ -62,7 +71,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = PageViewEvent.parse(this.builder.buildPageView(builderArgs))
+    const event = parseWithFriendlyError(PageViewEvent, this.builder.buildPageView(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -72,6 +81,10 @@ class PersonalizationStateless extends PersonalizationBase {
    *
    * @param payload - Screen view builder arguments with an optional partial profile.
    * @returns The evaluated {@link OptimizationData} for this screen view.
+   * @example
+   * ```ts
+   * const data = await personalization.screen({ name: 'HomeScreen', profile: { id: 'anon-1' } })
+   * ```
    */
   async screen(
     payload: ScreenViewBuilderArgs & { profile?: PartialProfile },
@@ -80,7 +93,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = ScreenViewEvent.parse(this.builder.buildScreenView(builderArgs))
+    const event = parseWithFriendlyError(ScreenViewEvent, this.builder.buildScreenView(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -90,13 +103,17 @@ class PersonalizationStateless extends PersonalizationBase {
    *
    * @param payload - Track builder arguments with an optional partial profile.
    * @returns The evaluated {@link OptimizationData} for this event.
+   * @example
+   * ```ts
+   * const data = await personalization.track({ event: 'purchase', profile: { id: 'anon-1' } })
+   * ```
    */
   async track(payload: TrackBuilderArgs & { profile?: PartialProfile }): Promise<OptimizationData> {
     logger.info(`Sending "track" event "${payload.event}"`)
 
     const { profile, ...builderArgs } = payload
 
-    const event = TrackEvent.parse(this.builder.buildTrack(builderArgs))
+    const event = parseWithFriendlyError(TrackEvent, this.builder.buildTrack(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -106,6 +123,10 @@ class PersonalizationStateless extends PersonalizationBase {
    *
    * @param payload - Component view builder arguments with an optional partial profile.
    * @returns The evaluated {@link OptimizationData} for this component view.
+   * @example
+   * ```ts
+   * const data = await personalization.trackComponentView({ componentId: 'hero', profile: { id: 'anon-1' } })
+   * ```
    */
   async trackComponentView(
     payload: ComponentViewBuilderArgs & { profile?: PartialProfile },
@@ -114,7 +135,10 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = ComponentViewEvent.parse(this.builder.buildComponentView(builderArgs))
+    const event = parseWithFriendlyError(
+      ComponentViewEvent,
+      this.builder.buildComponentView(builderArgs),
+    )
 
     return await this.upsertProfile(event, profile)
   }

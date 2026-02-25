@@ -1,55 +1,55 @@
 import React, { createContext, useContext, useState, type ReactNode } from 'react'
 
+/**
+ * @internal
+ */
 interface LiveUpdatesContextValue {
-  /**
-   * Whether live updates are enabled globally via OptimizationRoot.
-   * When true, all Personalization components will immediately react to state changes.
-   */
   globalLiveUpdates: boolean
-
-  /**
-   * Whether the preview panel is currently visible.
-   * When true, live updates are enabled regardless of other settings.
-   */
   previewPanelVisible: boolean
-
-  /**
-   * Sets the preview panel visibility state.
-   * Called by PreviewPanelOverlay when the modal opens/closes.
-   */
   setPreviewPanelVisible: (visible: boolean) => void
 }
 
 const LiveUpdatesContext = createContext<LiveUpdatesContextValue | null>(null)
 
 /**
- * Hook to access live updates configuration.
- * Returns context values for determining if live updates should be enabled.
+ * Returns the live updates configuration from the nearest {@link LiveUpdatesProvider}.
  *
- * @returns The live updates context value, or null if not within a provider
+ * @returns The live updates context value, or `null` if not within a provider
+ *
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const liveUpdates = useLiveUpdates()
+ *   const isLive = liveUpdates?.globalLiveUpdates ?? false
+ *   return <Text>{isLive ? 'Live' : 'Locked'}</Text>
+ * }
+ * ```
+ *
+ * @public
  */
 export function useLiveUpdates(): LiveUpdatesContextValue | null {
   return useContext(LiveUpdatesContext)
 }
 
+/**
+ * @internal
+ */
 interface LiveUpdatesProviderProps {
-  /**
-   * Whether live updates are enabled globally.
-   * Defaults to false (lock on first value behavior).
-   */
   globalLiveUpdates?: boolean
-
   children: ReactNode
 }
 
 /**
- * Provider that manages live updates configuration for Personalization components.
+ * Manages live updates configuration for {@link Personalization} components.
  *
- * This provider tracks:
- * - Global live updates setting from OptimizationRoot
- * - Preview panel visibility for automatic live updates during testing
+ * @param props - Provider props
+ * @returns A context provider wrapping the children
  *
- * The provider should wrap the entire app content, typically done by OptimizationRoot.
+ * @remarks
+ * Typically wrapped by {@link OptimizationRoot} — not used directly. Tracks the global
+ * live updates setting and preview panel visibility state.
+ *
+ * @internal
  */
 export function LiveUpdatesProvider({
   globalLiveUpdates = false,

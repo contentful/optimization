@@ -1,11 +1,13 @@
 import * as z from 'zod/mini'
 
 /**
- * Zod schema describing Web page-level properties for events.
+ * Zod schema describing screen-level properties for events.
  *
  * @remarks
- * The base object describes standard page attributes, while additional
+ * The base object describes standard screen attributes, while additional
  * JSON properties may be present due to the use of `z.catchall`.
+ *
+ * @public
  */
 export const Screen = z.catchall(
   z.object({
@@ -18,6 +20,8 @@ export const Screen = z.catchall(
 )
 
 /**
- * TypeScript type inferred from {@link Page}.
+ * TypeScript type inferred from {@link Screen}.
+ *
+ * @public
  */
 export type Screen = z.infer<typeof Screen>

@@ -18,16 +18,62 @@ interface CursorResponse<S extends EntrySkeletonType, M extends ChainModifiers> 
   pages?: { next?: string }
 }
 
+/**
+ * Type guard that checks whether a Contentful entry is an {@link AudienceEntry}.
+ *
+ * @param audience - The entry to check.
+ * @returns `true` if the entry's content type is `nt_audience`.
+ *
+ * @example
+ * ```ts
+ * const filtered = entries.filter(isAudienceEntry)
+ * ```
+ *
+ * @public
+ */
 export function isAudienceEntry(audience: Entry): audience is AudienceEntry {
   return audience.sys.contentType.sys.id === 'nt_audience'
 }
 
+/**
+ * Type guard that checks whether a Contentful entry is a {@link PersonalizationEntry}.
+ *
+ * @param personalization - The entry to check.
+ * @returns `true` if the entry's content type is `nt_experience`.
+ *
+ * @example
+ * ```ts
+ * const filtered = entries.filter(isPersonalizationEntry)
+ * ```
+ *
+ * @public
+ */
 export function isPersonalizationEntry(
   personalization: Entry,
 ): personalization is PersonalizationEntry {
   return personalization.sys.contentType.sys.id === 'nt_experience'
 }
 
+/**
+ * Fetches all entries of a given content type using cursor-based pagination.
+ *
+ * @typeParam S - The entry skeleton type constraining the content type query.
+ * @typeParam M - Chain modifiers for the Contentful client.
+ * @param client - Contentful client instance.
+ * @param contentTypeId - The content type ID to query.
+ * @param query - Additional query parameters merged into each request.
+ * @param pageSize - Number of entries per page.
+ * @returns All matching entries across all pages.
+ *
+ * @defaultValue `pageSize` is `100`.
+ *
+ * @example
+ * ```ts
+ * const audiences = await getAllEntries<AudienceEntrySkeleton>(client, 'nt_audience')
+ * ```
+ *
+ * @public
+ */
 export async function getAllEntries<
   S extends EntrySkeletonType,
   M extends ChainModifiers = ChainModifiers,

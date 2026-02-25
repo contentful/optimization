@@ -3,7 +3,9 @@ import { UniversalEventContext, UniversalEventProperties } from './UniversalEven
 import { Page } from './properties'
 
 /**
- * Zod schema describing event context properties specific to page events
+ * Zod schema describing event context properties specific to page events.
+ *
+ * @public
  */
 export const PageEventContext = z.extend(UniversalEventContext, {
   /**
@@ -14,6 +16,8 @@ export const PageEventContext = z.extend(UniversalEventContext, {
 
 /**
  * TypeScript type inferred from {@link PageEventContext}.
+ *
+ * @public
  */
 export type PageEventContext = z.infer<typeof PageEventContext>
 
@@ -25,6 +29,8 @@ export type PageEventContext = z.infer<typeof PageEventContext>
  *
  * Extends {@link UniversalEventProperties} with optional `name` and
  * page-level {@link Page} properties.
+ *
+ * @public
  */
 export const PageViewEvent = z.extend(UniversalEventProperties, {
   /**
@@ -45,14 +51,16 @@ export const PageViewEvent = z.extend(UniversalEventProperties, {
    */
   properties: Page,
 
-  /*
+  /**
    * Override the context property of {@link UniversalEventProperties}
-   * with a page-specific context
+   * with a page-specific context.
    */
   context: PageEventContext,
 })
 
 /**
  * TypeScript type inferred from {@link PageViewEvent}.
+ *
+ * @public
  */
 export type PageViewEvent = z.infer<typeof PageViewEvent>

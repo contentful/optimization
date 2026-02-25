@@ -18,9 +18,22 @@ async function parseJson<T>(req: Request): Promise<T> {
   return JSON.parse(raw) as T
 }
 
-// ---------------------------------
-// MSW handlers for Insights API v1
-// ---------------------------------
+/**
+ * Returns MSW request handlers that mock the Insights API v1 endpoints.
+ *
+ * @param baseUrl - URL prefix prepended to each route pattern.
+ * @returns An array of {@link HttpHandler} instances for use with MSW.
+ *
+ * @example
+ * ```typescript
+ * import { setupServer } from 'msw/node'
+ * import { getHandlers } from './insights-handlers'
+ *
+ * const server = setupServer(...getHandlers())
+ * ```
+ *
+ * @public
+ */
 export function getHandlers(baseUrl = '*'): HttpHandler[] {
   return [
     // CORS preflight for Beacon/fetch
