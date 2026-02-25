@@ -518,7 +518,35 @@ jobs:
       - run: pnpm store prune
       - run: pnpm run implementation:web-react -- implementation:install -- --no-frozen-lockfile
       - run: pnpm run implementation:web-react -- implementation:playwright:install -- --with-deps
+      - name: Start Web React app and mocks
+        run: |
+          pnpm run implementation:web-react -- serve > /tmp/web-react-serve.log 2>&1 &
+          echo $! > /tmp/web-react-serve.pid
+
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:3001 >/dev/null && curl -fsS http://localhost:8000 >/dev/null; then
+              echo "Web React app and mocks are ready"
+              exit 0
+            fi
+            echo "Waiting for Web React app + mocks... ($i/90)"
+            sleep 1
+          done
+
+          echo "Web React services failed to start in time"
+          echo "=== web-react serve logs ==="
+          cat /tmp/web-react-serve.log || true
+          exit 1
       - run: pnpm run implementation:web-react -- implementation:test:e2e:run
+      - name: Dump Web React logs on failure
+        if: ${{ failure() }}
+        run: |
+          echo "=== web-react serve logs ==="
+          cat /tmp/web-react-serve.log || true
+      - name: Stop Web React app and mocks
+        if: ${{ always() }}
+        run: |
+          kill "$(cat /tmp/web-react-serve.pid)" 2>/dev/null || true
+          pnpm run implementation:web-react -- serve:stop || true
 
       - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
