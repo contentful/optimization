@@ -22,7 +22,7 @@
     "test:e2e:android:build": "detox build --configuration android.emu.debug",
     "test:e2e:android:build:release": "detox build --configuration android.emu.release",
     "test:e2e:android:run": "detox test --configuration android.emu.debug --loglevel fatal --record-logs none --take-screenshots none --record-videos none",
-    "test:e2e:android:run:release": "detox test --configuration android.emu.release --loglevel fatal --record-logs none --take-screenshots none --record-videos none -w 3",
+    "test:e2e:android:run:release": "detox test --configuration android.emu.release --loglevel fatal --record-logs none --take-screenshots none --record-videos none",
     "test:e2e:android": "pnpm run test:e2e:android:build && pnpm run test:e2e:android:run",
     "test:e2e:android:full": "./scripts/run-e2e-android.sh"
   },
