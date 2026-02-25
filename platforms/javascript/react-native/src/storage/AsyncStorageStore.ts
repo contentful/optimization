@@ -14,6 +14,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { z } from 'zod/mini'
 
 const logger = createScopedLogger('RN:Storage')
+const STRUCTURED_CACHE_PARSERS: Record<string, z.ZodMiniType> = {
+  [CHANGES_CACHE_KEY]: ChangeArray,
+  [PROFILE_CACHE_KEY]: Profile,
+  [PERSONALIZATIONS_CACHE_KEY]: SelectedPersonalizationArray,
+}
+const STRING_CACHE_KEYS = new Set([ANONYMOUS_ID_KEY, CONSENT_KEY, DEBUG_FLAG_KEY])
 
 /**
  * Persistent storage adapter backed by `@react-native-async-storage/async-storage`.
@@ -49,17 +55,29 @@ class AsyncStorageStore {
       const values = await AsyncStorage.multiGet(keys)
 
       for (const [key, value] of values) {
-        if (value) {
-          try {
-            this.cache.set(
-              key,
-              key === ANONYMOUS_ID_KEY || key === CONSENT_KEY || key === DEBUG_FLAG_KEY
-                ? value
-                : JSON.parse(value),
-            )
-          } catch {
-            this.cache.set(key, value)
-          }
+        if (!value) continue
+
+        if (STRING_CACHE_KEYS.has(key)) {
+          this.cache.set(key, value)
+          continue
+        }
+
+        const { [key]: parser } = STRUCTURED_CACHE_PARSERS
+        if (!parser) continue
+
+        let json: unknown = undefined
+        try {
+          json = JSON.parse(value)
+        } catch {
+          this.invalidateCacheKey(key, 'malformed JSON')
+          continue
+        }
+
+        const parsed = parser.safeParse(json)
+        if (parsed.success) {
+          this.cache.set(key, parsed.data)
+        } else {
+          this.invalidateCacheKey(key, 'schema validation failed')
         }
       }
 
@@ -154,13 +172,11 @@ class AsyncStorageStore {
 
     if (!cacheValue) return
 
-    try {
-      const parsedCache = parser.safeParse(cacheValue)
-      if (parsedCache.success) return parsedCache.data
-    } catch {
-      // Parsing failed, return undefined
-      return undefined
-    }
+    const parsedCache = parser.safeParse(cacheValue)
+    if (parsedCache.success) return parsedCache.data
+
+    this.invalidateCacheKey(key, 'schema validation failed')
+    return undefined
   }
 
   setCache(key: string, data: unknown): void {
@@ -176,6 +192,13 @@ class AsyncStorageStore {
         logger.error(`Failed to set ${key} in AsyncStorage:`, error)
       })
     }
+  }
+
+  private invalidateCacheKey(key: string, reason: string): void {
+    this.cache.delete(key)
+    AsyncStorage.removeItem(key).catch((error: unknown) => {
+      logger.error(`Failed to remove invalid ${key} from AsyncStorage (${reason}):`, error)
+    })
   }
 }
 

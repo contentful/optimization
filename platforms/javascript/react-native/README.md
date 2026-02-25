@@ -192,6 +192,11 @@ Configuration method signatures:
 | `plainText`       | No        | `false`                               | Sends performance-critical endpoints in plain text                  |
 | `preflight`       | No        | `false`                               | Instructs the API to aggregate a new profile state but not store it |
 
+> [!IMPORTANT]
+>
+> Call `Optimization.create(...)` once per app runtime and share the returned instance. In tests or
+> hot-reload workflows, call `destroy()` before creating a replacement instance.
+
 ## Component Tracking
 
 **Important:** When we refer to "component tracking," we're talking about tracking **Contentful
@@ -221,7 +226,6 @@ Both components track when an entry:
 
 - Is at least **80% visible** in the viewport (configurable via `threshold` prop)
 - Has been viewed for **2000ms** (2 seconds, configurable via `viewTimeMs` prop)
-- Has not already been tracked (deduplication handled by Core)
 
 ### ScrollView vs Non-ScrollView Usage
 
@@ -370,6 +374,12 @@ panel. The panel allows developers to:
 - View current profile information
 - Test personalizations without modifying actual user data
 
+> [!IMPORTANT]
+>
+> The React Native preview panel is intentionally tightly coupled to Core preview internals. It uses
+> `registerPreviewPanel(...)`, direct signal updates, and state interceptors by design to apply
+> immediate local overrides and keep preview behavior aligned with the Web preview panel.
+
 ```tsx
 <OptimizationRoot
   instance={optimization}
@@ -475,6 +485,15 @@ The SDK automatically configures:
 - **Library**: `'Optimization React Native SDK'`
 - **Storage**: AsyncStorage for persisting changes, consent, profile, and personalizations
 - **Event Builders**: Mobile-optimized locale, page properties, and user agent detection
+
+### Persistence Behavior
+
+AsyncStorage persistence is best-effort. If AsyncStorage write/remove calls fail, the SDK keeps
+running with in-memory state and retries persistence on future writes.
+
+Structured cached values (`changes`, `profile`, `personalizations`) are schema-validated on load and
+access. Malformed JSON or schema-invalid values are automatically removed from in-memory cache and
+AsyncStorage.
 
 ## Offline Support
 

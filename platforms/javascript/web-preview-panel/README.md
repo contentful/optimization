@@ -62,6 +62,13 @@ attachOptimizationPreviewPanel(contentfulClient, optimization)
 The `attachOptimizationPreviewPanel` function automatically attaches itself to the DOM and adds the
 toggle button with which the panel can be opened.
 
+> [!IMPORTANT]
+>
+> The preview panel is intentionally tightly coupled to the Optimization Web SDK internals. It uses
+> the preview bridge provided by `optimization.registerPreviewPanel(...)` and state interceptors to
+> read and mutate internal state for local preview overrides. This coupling is deliberate and
+> required for preview behavior parity.
+
 ## Content Security Policy Support
 
 In order to comply with strict CSP policies, a nonce can be supplied to the

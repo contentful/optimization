@@ -1,3 +1,4 @@
+export * from './BatchExperienceRequest'
 export * from './BatchExperienceResponse'
 export * from './change'
 export * from './event'

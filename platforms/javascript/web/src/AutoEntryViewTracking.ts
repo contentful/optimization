@@ -20,8 +20,6 @@ const logger = createScopedLogger('Web:AutoTracking')
 export type CtflDataset = DOMStringMap & {
   /** Entry ID associated with the element. */
   ctflEntryId: string
-  /** Optional duplication scope key for de-duplication across views. */
-  ctflDuplicationScope?: string
   /** Optional baseline ID associated with the personalized entry. */
   ctflBaselineId?: string
   /** Optional personalization/experience ID associated with the entry. */
@@ -81,8 +79,6 @@ export function isEntryElement(element?: Element): element is EntryElement {
  * @public
  */
 export interface EntryData {
-  /** Optional duplication scope used for de-duplication. */
-  duplicationScope?: string
   /** ID of the Contentful entry. */
   entryId: string
   /** Optional personalization/experience ID. */
@@ -161,7 +157,6 @@ export const createAutoTrackingEntryViewCallback =
   async (element: Element, info: ElementViewCallbackInfo): Promise<void> => {
     if (!isEntryData(info.data) && !isEntryElement(element)) return
 
-    let duplicationScope: string | undefined = undefined
     let entryId: string | undefined = undefined
     let personalizationId: string | undefined = undefined
     let sticky: boolean | undefined = undefined
@@ -169,15 +164,11 @@ export const createAutoTrackingEntryViewCallback =
 
     if (isEntryData(info.data)) {
       ;({
-        data: { duplicationScope, entryId, personalizationId, sticky, variantIndex },
+        data: { entryId, personalizationId, sticky, variantIndex },
       } = info)
     } else if (isEntryElement(element)) {
       ;({
-        dataset: {
-          ctflDuplicationScope: duplicationScope,
-          ctflEntryId: entryId,
-          ctflPersonalizationId: personalizationId,
-        },
+        dataset: { ctflEntryId: entryId, ctflPersonalizationId: personalizationId },
       } = element)
 
       const {
@@ -195,15 +186,12 @@ export const createAutoTrackingEntryViewCallback =
       return
     }
 
-    await core.trackComponentView(
-      {
-        componentId: entryId,
-        experienceId: personalizationId,
-        sticky,
-        variantIndex,
-      },
-      duplicationScope,
-    )
+    await core.trackComponentView({
+      componentId: entryId,
+      experienceId: personalizationId,
+      sticky,
+      variantIndex,
+    })
   }
 
 /**

@@ -5,9 +5,14 @@ import type {
   Profile,
   SelectedPersonalizationArray,
 } from '@contentful/optimization-api-client'
-import { AnalyticsStateful, type AnalyticsStates } from './analytics'
+import { AnalyticsStateful, type AnalyticsProductConfig, type AnalyticsStates } from './analytics'
+import type { BlockedEvent } from './BlockedEvent'
 import type { ConsentController } from './Consent'
 import CoreBase, { type CoreConfig } from './CoreBase'
+import {
+  acquireStatefulRuntimeSingleton,
+  releaseStatefulRuntimeSingleton,
+} from './lib/singleton/StatefulRuntimeSingleton'
 import {
   PersonalizationStateful,
   type PersonalizationProductConfig,
@@ -16,6 +21,7 @@ import {
 import type { ProductConfig } from './ProductBase'
 import {
   batch,
+  blockedEvent,
   changes,
   consent,
   event,
@@ -54,6 +60,8 @@ export interface PreviewPanelSignalObject {
 export interface CoreStates extends AnalyticsStates, PersonalizationStates {
   /** Current consent value (if any). */
   consent: Observable<boolean | undefined>
+  /** Stream of the most recent blocked event payload. */
+  blockedEventStream: Observable<BlockedEvent | undefined>
   /** Stream of the most recent event emitted (analytics or personalization). */
   eventStream: Observable<AnalyticsEvent | PersonalizationEvent | undefined>
 }
@@ -75,12 +83,77 @@ export interface CoreConfigDefaults {
 }
 
 /**
+ * Stateful analytics configuration.
+ *
+ * @public
+ */
+export type CoreStatefulAnalyticsConfig = NonNullable<CoreConfig['analytics']> & {
+  /**
+   * Queue policy for stateful analytics event buffering and flush retries.
+   *
+   * @see {@link AnalyticsProductConfig.queuePolicy}
+   */
+  queuePolicy?: AnalyticsProductConfig['queuePolicy']
+}
+
+/**
+ * Stateful personalization configuration.
+ *
+ * @public
+ */
+export type CoreStatefulPersonalizationConfig = NonNullable<CoreConfig['personalization']> & {
+  /**
+   * Queue policy for stateful personalization offline event buffering.
+   *
+   * @see {@link PersonalizationProductConfig.queuePolicy}
+   */
+  queuePolicy?: PersonalizationProductConfig['queuePolicy']
+}
+
+const splitScopedQueuePolicy = <
+  TQueuePolicy,
+  TScopedConfig extends {
+    queuePolicy?: TQueuePolicy
+  },
+>(
+  config: TScopedConfig | undefined,
+): {
+  apiConfig: Omit<TScopedConfig, 'queuePolicy'> | undefined
+  queuePolicy: TQueuePolicy | undefined
+} => {
+  if (config === undefined) {
+    return {
+      apiConfig: undefined,
+      queuePolicy: undefined,
+    }
+  }
+
+  const { queuePolicy, ...apiConfig } = config
+  const resolvedApiConfig = Object.keys(apiConfig).length > 0 ? apiConfig : undefined
+
+  return {
+    apiConfig: resolvedApiConfig,
+    queuePolicy,
+  }
+}
+
+/**
  * Configuration for {@link CoreStateful}.
  *
  * @public
  * @see {@link CoreConfig}
  */
 export interface CoreStatefulConfig extends CoreConfig {
+  /**
+   * Configuration for the analytics (Insights) API client plus stateful queue behavior.
+   */
+  analytics?: CoreStatefulAnalyticsConfig
+
+  /**
+   * Configuration for the personalization (Experience) API client plus stateful queue behavior.
+   */
+  personalization?: CoreStatefulPersonalizationConfig
+
   /**
    * Allow-listed event type strings permitted when consent is not set.
    *
@@ -95,16 +168,16 @@ export interface CoreStatefulConfig extends CoreConfig {
   getAnonymousId?: PersonalizationProductConfig['getAnonymousId']
 
   /**
-   * Initial duplication prevention configuration for component events.
-   *
-   * @see {@link ProductConfig.preventedComponentEvents}
+   * Callback invoked whenever an event call is blocked by checks.
    */
-  preventedComponentEvents?: ProductConfig['preventedComponentEvents']
+  onEventBlocked?: ProductConfig['onEventBlocked']
 }
+
+let statefulInstanceCounter = 0
 
 /**
  * Core runtime that constructs stateful product instances and exposes shared
- * states, including consent and the event stream.
+ * states, including consent, blocked events, and the event stream.
  *
  * @remarks
  * Extends {@link CoreBase} with stateful capabilities, including
@@ -114,6 +187,9 @@ export interface CoreStatefulConfig extends CoreConfig {
  * @public
  */
 class CoreStateful extends CoreBase implements ConsentController {
+  private readonly singletonOwner: string
+  private destroyed = false
+
   /** Stateful analytics product. */
   readonly analytics: AnalyticsStateful
   /** Stateful personalization product. */
@@ -134,45 +210,84 @@ class CoreStateful extends CoreBase implements ConsentController {
    * ```
    */
   constructor(config: CoreStatefulConfig) {
-    super(config)
-
-    const { allowedEventTypes, defaults, getAnonymousId, preventedComponentEvents } = config
-
-    if (defaults?.consent !== undefined) {
-      const { consent: defaultConsent } = defaults
-      consent.value = defaultConsent
+    const { apiConfig: analyticsApiConfig, queuePolicy: analyticsRuntimeQueuePolicy } =
+      splitScopedQueuePolicy<AnalyticsProductConfig['queuePolicy'], CoreStatefulAnalyticsConfig>(
+        config.analytics,
+      )
+    const { apiConfig: personalizationApiConfig, queuePolicy: personalizationRuntimeQueuePolicy } =
+      splitScopedQueuePolicy<
+        PersonalizationProductConfig['queuePolicy'],
+        CoreStatefulPersonalizationConfig
+      >(config.personalization)
+    const baseConfig: CoreConfig = {
+      ...config,
+      analytics: analyticsApiConfig,
+      personalization: personalizationApiConfig,
     }
 
-    this.analytics = new AnalyticsStateful({
-      api: this.api,
-      builder: this.eventBuilder,
-      config: {
-        allowedEventTypes,
-        preventedComponentEvents,
-        defaults: {
-          consent: defaults?.consent,
-          profile: defaults?.profile,
-        },
-      },
-      interceptors: this.interceptors,
-    })
+    super(baseConfig)
 
-    this.personalization = new PersonalizationStateful({
-      api: this.api,
-      builder: this.eventBuilder,
-      config: {
-        allowedEventTypes,
-        getAnonymousId,
-        preventedComponentEvents,
-        defaults: {
-          consent: defaults?.consent,
-          changes: defaults?.changes,
-          profile: defaults?.profile,
-          personalizations: defaults?.personalizations,
+    this.singletonOwner = `CoreStateful#${++statefulInstanceCounter}`
+    acquireStatefulRuntimeSingleton(this.singletonOwner)
+
+    try {
+      const { allowedEventTypes, defaults, getAnonymousId, onEventBlocked } = config
+
+      if (defaults?.consent !== undefined) {
+        const { consent: defaultConsent } = defaults
+        consent.value = defaultConsent
+      }
+
+      this.analytics = new AnalyticsStateful({
+        api: this.api,
+        builder: this.eventBuilder,
+        config: {
+          allowedEventTypes,
+          queuePolicy: analyticsRuntimeQueuePolicy,
+          onEventBlocked,
+          defaults: {
+            consent: defaults?.consent,
+            profile: defaults?.profile,
+          },
         },
-      },
-      interceptors: this.interceptors,
-    })
+        interceptors: this.interceptors,
+      })
+
+      this.personalization = new PersonalizationStateful({
+        api: this.api,
+        builder: this.eventBuilder,
+        config: {
+          allowedEventTypes,
+          getAnonymousId,
+          queuePolicy: personalizationRuntimeQueuePolicy,
+          onEventBlocked,
+          defaults: {
+            consent: defaults?.consent,
+            changes: defaults?.changes,
+            profile: defaults?.profile,
+            personalizations: defaults?.personalizations,
+          },
+        },
+        interceptors: this.interceptors,
+      })
+    } catch (error) {
+      releaseStatefulRuntimeSingleton(this.singletonOwner)
+      throw error
+    }
+  }
+
+  /**
+   * Release singleton ownership for stateful runtime usage.
+   *
+   * @remarks
+   * This method is idempotent and should be called when a stateful SDK instance
+   * is no longer needed (e.g. tests, hot reload, explicit teardown).
+   */
+  destroy(): void {
+    if (this.destroyed) return
+
+    this.destroyed = true
+    releaseStatefulRuntimeSingleton(this.singletonOwner)
   }
 
   /**
@@ -182,6 +297,7 @@ class CoreStateful extends CoreBase implements ConsentController {
    */
   get states(): CoreStates {
     return {
+      blockedEventStream: toObservable(blockedEvent),
       consent: toObservable(consent),
       eventStream: toObservable(event),
       flags: toObservable(flags),
@@ -203,6 +319,7 @@ class CoreStateful extends CoreBase implements ConsentController {
    */
   reset(): void {
     batch(() => {
+      blockedEvent.value = undefined
       event.value = undefined
       changes.value = undefined
       profile.value = undefined

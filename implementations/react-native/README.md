@@ -89,7 +89,7 @@ Android E2E tests use Detox.
    ```
 
    This command:
-   - creates `.env` values for E2E
+   - creates `.env` from `.env.example` for E2E
    - starts the mock server and Metro
    - configures adb reverse
    - builds the Android app (unless skipped)

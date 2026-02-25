@@ -111,8 +111,8 @@ pnpm --filter @implementation/react-native run e2e:run:android
 
 This script handles the complete E2E testing workflow automatically:
 
-1. **Creates `.env` configuration** - Generates a `.env` file with mock server URLs and test
-   credentials
+1. **Creates `.env` configuration** - Copies `.env.example` to `.env`, then applies the selected
+   mock server port and optional `PUBLIC_*` overrides
 2. **Starts mock API server** - Launches the mock server from `lib/mocks` on port 8000
 3. **Starts Metro bundler** - Starts the React Native bundler on port 8081
 4. **Sets up adb reverse** - Configures port forwarding so the emulator can reach localhost services
@@ -244,7 +244,7 @@ Detox tests can be integrated into your CI/CD pipeline. Make sure to:
 ### GitHub Actions
 
 The project includes a GitHub Actions workflow (`.github/workflows/main-pipeline.yaml`) that runs
-Android e2e tests on pull requests.
+Android e2e tests for pull requests and for pushes to `main` when path filters request them.
 
 #### Testing Headless Locally (Before CI)
 

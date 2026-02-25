@@ -193,12 +193,9 @@ abstract class PersonalizationBase extends ProductBase implements ResolverMethod
    * @remarks
    * This method is intended to be called only when a component is considered
    * "sticky".
-   * @privateRemarks
-   * Duplication prevention should be handled in Stateful implementations.
    */
   abstract trackComponentView(
     payload: ComponentViewBuilderArgs,
-    duplicationScope?: string,
   ): Promise<OptimizationData | undefined>
 }
 

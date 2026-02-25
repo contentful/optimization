@@ -105,6 +105,15 @@ Configuration method signatures:
 - `fetchMethod`: `(url: string \| URL, init: RequestInit) => Promise<Response>`
 - `onFailedAttempt` and `onRequestTimeout`: `(options: FetchMethodCallbackOptions) => void`
 
+> [!NOTE]
+>
+> Retry behavior is intentionally fixed to HTTP `503` responses (`Service Unavailable`) for the
+> default SDK transport policy. This matches current Experience and Insights API expectations: `503`
+> is treated as the transient availability signal, while other response classes are handled by
+> caller logic and are intentionally not retried by default. Treat this as deliberate contract
+> behavior, not a transport gap; broaden retry status handling only with an explicit API contract
+> change.
+
 ### Analytics Options
 
 | Option          | Required? | Default                                    | Description                                                              |
@@ -135,8 +144,8 @@ Configuration method signatures:
 
 ### Experience API
 
-Experience API methods are scoped to the client's `personalization` member. All singular
-personalization methods return a `Promise` that resolves with the following data:
+Experience API methods are scoped to the client's `experience` member. All singular experience
+methods return a `Promise` that resolves with the following data:
 
 ```json
 {
@@ -160,21 +169,21 @@ personalization methods return a `Promise` that resolves with the following data
 
 ```ts
 const client = new ApiClient({ clientId: 'abc123' })
-const { profile } = await client.personalization.getProfile('profile-123', { locale: 'de-DE' })
+const { profile } = await client.experience.getProfile('profile-123', { locale: 'de-DE' })
 ```
 
 #### Create a New Profile
 
 ```ts
 const client = new ApiClient({ clientId: 'abc123' })
-const { profile } = await client.personalization.createProfile({ events: [...] }, { locale: 'de-DE' })
+const { profile } = await client.experience.createProfile({ events: [...] }, { locale: 'de-DE' })
 ```
 
 #### Update an Existing Profile
 
 ```ts
 const client = new ApiClient({ clientId: 'abc123' })
-const { profile } = await client.personalization.updateProfile(
+const { profile } = await client.experience.updateProfile(
   {
     profileId: 'profile-123',
     events: [...],
@@ -187,7 +196,7 @@ const { profile } = await client.personalization.updateProfile(
 
 ```ts
 const client = new ApiClient({ clientId: 'abc123' })
-const { profile } = await client.personalization.upsertProfile(
+const { profile } = await client.experience.upsertProfile(
   {
     profileId,
     events: [...],
@@ -199,27 +208,34 @@ const { profile } = await client.personalization.upsertProfile(
 #### Upsert Many Profiles
 
 The `upsertManyProfiles` method returns a `Promise` that resolves with an array of user profiles.
-Each event should have an additional `anonymousId` property set to the associated anonymous ID or
-profile ID.
+The `events` array must contain at least one event. Each event should have an additional
+`anonymousId` property set to the associated anonymous ID or profile ID.
 
 ```ts
 const client = new ApiClient({ clientId: 'abc123' })
-const profiles = await client.personalization.upsertManyProfiles(
-  { events: [...]},
+const profiles = await client.experience.upsertManyProfiles(
+  {
+    events: [
+      {
+        anonymousId: 'anon-123',
+        // valid Experience event payload fields
+      },
+    ],
+  },
   { locale: 'de-DE' },
 )
 ```
 
 ### Insights API
 
-Insights API methods are scoped to the client's `analytics` member. All analytics methods return a
-`Promise` that resolves to `void` (no value).
+Insights API methods are scoped to the client's `insights` member. The batch send method returns a
+`Promise` that resolves to `boolean`.
 
 #### Send Batch Events
 
 ```ts
 const client = new ApiClient({ clientId: 'abc123' })
-await client.analytics.sendBatchEvents([
+await client.insights.sendBatchEvents([
   {
     profile: { id: 'abc-123', ... },
     events: [{ type: 'track', ... }],

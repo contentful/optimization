@@ -2,10 +2,14 @@ import React from 'react'
 import { Text, View } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
-import { Analytics, Personalization, ScrollProvider } from '@contentful/optimization-react-native'
+import {
+  Analytics,
+  isPersonalizedEntry,
+  Personalization,
+} from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 
-import { RichTextRenderer, getRichTextContent } from '../components/RichTextRenderer'
+import { getRichTextContent, RichTextRenderer } from '../components/RichTextRenderer'
 
 interface ContentEntryProps {
   entry: Entry
@@ -65,17 +69,19 @@ export function ContentEntry({ entry, sdk }: ContentEntryProps): React.JSX.Eleme
 
   return (
     <View testID={`content-entry-${entry.sys.id}`}>
-      <ScrollProvider>
+      {isPersonalizedEntry(entry) ? (
         <Personalization baselineEntry={entry}>
           {(resolvedEntry) => (
-            <Analytics entry={resolvedEntry}>
-              <View testID={`content-${entry.sys.id}`}>
-                {renderContent(resolvedEntry, entry.sys.id)}
-              </View>
-            </Analytics>
+            <View testID={`content-${entry.sys.id}`}>
+              {renderContent(resolvedEntry, entry.sys.id)}
+            </View>
           )}
         </Personalization>
-      </ScrollProvider>
+      ) : (
+        <Analytics entry={entry}>
+          <View testID={`content-${entry.sys.id}`}>{renderContent(entry, entry.sys.id)}</View>
+        </Analytics>
+      )}
     </View>
   )
 }

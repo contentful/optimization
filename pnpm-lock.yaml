@@ -609,9 +609,6 @@ importers:
 
   universal/api-schemas:
     dependencies:
-      '@contentful/optimization-api-schemas':
-        specifier: workspace:*
-        version: 'link:'
       contentful:
         specifier: 'catalog:'
         version: 11.10.3

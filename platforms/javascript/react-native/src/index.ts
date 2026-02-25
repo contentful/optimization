@@ -75,6 +75,8 @@ async function mergeConfig({
   )
 }
 
+let activeOptimizationInstance: Optimization | undefined = undefined
+
 /**
  * Main entry point for the Contentful Optimization React Native SDK.
  *
@@ -167,8 +169,18 @@ class Optimization extends CoreStateful {
    * @public
    */
   static async create(config: CoreConfig): Promise<Optimization> {
+    if (activeOptimizationInstance) {
+      throw new Error(
+        'Optimization React Native SDK is already initialized. Reuse the existing instance.',
+      )
+    }
+
     const mergedConfig = await mergeConfig(config)
-    return new Optimization(mergedConfig)
+
+    const instance = new Optimization(mergedConfig)
+    activeOptimizationInstance = instance
+
+    return instance
   }
 
   /**
@@ -187,6 +199,12 @@ class Optimization extends CoreStateful {
   destroy(): void {
     this.cleanupOnlineListener()
     this.cleanupAppStateListener()
+
+    if (activeOptimizationInstance === this) {
+      activeOptimizationInstance = undefined
+    }
+
+    super.destroy()
   }
 }
 

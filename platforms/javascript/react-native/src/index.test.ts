@@ -5,6 +5,11 @@ import { OPTIMIZATION_REACT_NATIVE_SDK_NAME } from './global-constants'
 rs.mock('react-native', () => ({
   Platform: { OS: 'ios' },
   Dimensions: { get: rs.fn(() => ({ width: 375, height: 667 })) },
+  AppState: {
+    addEventListener: rs.fn(() => ({
+      remove: rs.fn(),
+    })),
+  },
   NativeModules: {},
 }))
 
@@ -12,8 +17,15 @@ rs.mock('react-native', () => ({
 rs.mock('@react-native-async-storage/async-storage', () => ({
   default: {
     getItem: rs.fn(),
+    multiGet: rs.fn().mockResolvedValue([]),
     setItem: rs.fn(),
     removeItem: rs.fn(),
+  },
+}))
+
+rs.mock('@react-native-community/netinfo', () => ({
+  default: {
+    addEventListener: rs.fn(() => () => undefined),
   },
 }))
 

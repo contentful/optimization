@@ -77,19 +77,19 @@ packages:
     resolution: {integrity: sha512-tu1gfmZI59hQ7qKhmGOV0dA5brxhsc+LOfPwBsQQMDAVy5kVpTrKf/AGlL2y9QhKHu/NtCrwX/ZrmRFgtGEtIA==}
 
   '@contentful/optimization-api-client@file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz':
-    resolution: {integrity: sha512-OdvgZu8rCZEvSXUA3fj0DPeqSEvuAoMBVTRZyng91KMQgeTqmEaFQqQapD9sbvJj7ePor5eyLNiWUjf4qIZ/pQ==, tarball: file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz}
+    resolution: {integrity: sha512-oBMPRO3Jg6OwkCTPNa4w3b4em+Ds4qphQXKjp+3cblm1DhwOwhpPQYj3bpinWa5G4nAUje8KMsp570uII3K17A==, tarball: file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/optimization-api-schemas@file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz':
-    resolution: {integrity: sha512-CbVtO5GX2j4nPmg1tXek1qGFmavM8vWrfFcSsgyJffOD8L65pOEuyO++W9sU3hVEg4LoxE1InSi5xOZaM7jrgg==, tarball: file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz}
+    resolution: {integrity: sha512-q9yGS3kX+jqrU5JeZZVleQbXbVIshJtOTNYp6sG66hK5vu+conLgqG2ZjGLqLI1LY01BxMBS5G2i9Wi//cOlsQ==, tarball: file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/optimization-core@file:../../pkgs/contentful-optimization-core-0.0.0.tgz':
-    resolution: {integrity: sha512-VVsh+cOie1KoBPj7ykJPCfK75esCsjhL27DRQEDsPPAUiXtTVV5QIX1Y98ek9zgcFiYiZWGi3S2oMAbWjteRNg==, tarball: file:../../pkgs/contentful-optimization-core-0.0.0.tgz}
+    resolution: {integrity: sha512-OQ2V/cmKS/b+jwjV4HYrbUb3XfsNVs2A4sn2hGxZTJkiiUhmCEhobVbhtEM6dakhyhDrV+T/rfXVWx4wwOx3Pg==, tarball: file:../../pkgs/contentful-optimization-core-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/optimization-web@file:../../pkgs/contentful-optimization-web-0.0.0.tgz':
-    resolution: {integrity: sha512-1NqMKcimmkauJGGtb9dMqUFWK/nOM9+5xApvxeQzk815NqM32aroFbotzFnItNtJPkleWq00KELMDzxfnwHcdQ==, tarball: file:../../pkgs/contentful-optimization-web-0.0.0.tgz}
+    resolution: {integrity: sha512-T1wJuQgqTlTdXX1ZvM/o0v0mur9ADSPLIbUjsu0KYlyRG46fsL3XNzRTJjNGj5ekw0779JflffLVh9eLMGx7Gw==, tarball: file:../../pkgs/contentful-optimization-web-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/rich-text-react-renderer@16.1.6':
@@ -191,6 +191,7 @@ packages:
     resolution: {integrity: sha512-ABca4ceT4N+Tv/GtotnWAeXZUZuM/9AQyCyKYyKnpk4yoA7QIAuBt6Hkgpw8kActYlew2mvckXkvx0FfoInnLg==}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@rsbuild/core@1.7.3':
     resolution: {integrity: sha512-kI1oQvCXbQYxUvQPnDLdjSX4gFsbrFNpuUj6jXEJ7IcJ74Q+n4oeFj74/8tKerhxhe0L90m/ZQfzLeN5ORGA9w==}
@@ -216,21 +217,25 @@ packages:
     resolution: {integrity: sha512-eQfcsaxhFrv5FmtaA7+O1F9/2yFDNIoPZzV/ZvqvFz5bBXVc4FAm/1fVpBg8Po/kX1h0chBc7Xkpry3cabFW8w==}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@rspack/binding-linux-arm64-musl@1.7.6':
     resolution: {integrity: sha512-DfQXKiyPIl7i1yECHy4eAkSmlUzzsSAbOjgMuKn7pudsWf483jg0UUYutNgXSlBjc/QSUp7906Cg8oty9OfwPA==}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@rspack/binding-linux-x64-gnu@1.7.6':
     resolution: {integrity: sha512-NdA+2X3lk2GGrMMnTGyYTzM3pn+zNjaqXqlgKmFBXvjfZqzSsKq3pdD1KHZCd5QHN+Fwvoszj0JFsquEVhE1og==}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@rspack/binding-linux-x64-musl@1.7.6':
     resolution: {integrity: sha512-rEy6MHKob02t/77YNgr6dREyJ0e0tv1X6Xsg8Z5E7rPXead06zefUbfazj4RELYySWnM38ovZyJAkPx/gOn3VA==}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@rspack/binding-wasm32-wasi@1.7.6':
     resolution: {integrity: sha512-YupOrz0daSG+YBbCIgpDgzfMM38YpChv+afZpaxx5Ml7xPeAZIIdgWmLHnQ2rts73N2M1NspAiBwV00Xx0N4Vg==}

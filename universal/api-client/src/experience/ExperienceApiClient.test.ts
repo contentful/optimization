@@ -2,6 +2,8 @@ import {
   BatchExperienceResponse,
   ExperienceEventArray,
   ExperienceResponse,
+  type BatchExperienceEvent,
+  type ExperienceEvent,
 } from '@contentful/optimization-api-schemas'
 import { afterEach, describe, expect, it, rs } from '@rstest/core'
 import { mockLogger } from 'mocks'
@@ -36,6 +38,47 @@ const getFeaturesFromBody = (body: unknown): string[] | undefined => {
 
 function hasOptionsKey(body: unknown): boolean {
   return typeof body === 'object' && body !== null && 'options' in body
+}
+
+function makeBatchTrackEvent(anonymousId: string): BatchExperienceEvent {
+  return {
+    anonymousId,
+    type: 'track',
+    event: 'test-event',
+    properties: {},
+    channel: 'web',
+    context: {
+      app: { name: 'test-app', version: '1.0.0' },
+      campaign: {},
+      gdpr: { isConsentGiven: true },
+      library: { name: 'test-lib', version: '1.0.0' },
+      locale: 'en-US',
+    },
+    messageId: `msg-${anonymousId}`,
+    originalTimestamp: '2026-01-01T00:00:00.000Z',
+    sentAt: '2026-01-01T00:00:00.000Z',
+    timestamp: '2026-01-01T00:00:00.000Z',
+  }
+}
+
+function makeTrackEvent(event = 'test-event'): ExperienceEvent {
+  return {
+    type: 'track',
+    event,
+    properties: {},
+    channel: 'web',
+    context: {
+      app: { name: 'test-app', version: '1.0.0' },
+      campaign: {},
+      gdpr: { isConsentGiven: true },
+      library: { name: 'test-lib', version: '1.0.0' },
+      locale: 'en-US',
+    },
+    messageId: `msg-${event}`,
+    originalTimestamp: '2026-01-01T00:00:00.000Z',
+    sentAt: '2026-01-01T00:00:00.000Z',
+    timestamp: '2026-01-01T00:00:00.000Z',
+  }
 }
 
 function makeClient(overrides: Partial<ExperienceApiClientConfig> = {}): ExperienceApiClient {
@@ -160,8 +203,9 @@ describe('ExperienceApiClient', () => {
       )
 
       const client = makeClient()
+      const events = [makeTrackEvent('create-profile-enabled-features')]
 
-      const result = await client.createProfile({ events: [] }, { enabledFeatures: ['location'] })
+      const result = await client.createProfile({ events }, { enabledFeatures: ['location'] })
       expect(result).toBeDefined()
 
       // Defaults to plaintext (no CORS preflight)
@@ -178,7 +222,7 @@ describe('ExperienceApiClient', () => {
         'ApiClient:Experience',
         '"Create Profile" request body:',
         {
-          events: [],
+          events,
           options: { features: ['location'] },
         },
       )
@@ -206,9 +250,10 @@ describe('ExperienceApiClient', () => {
       )
 
       const client = makeClient()
+      const events = [makeTrackEvent('create-profile-overrides')]
 
       await client.createProfile(
-        { events: [] },
+        { events },
         { plainText: false, ip: '203.0.113.10', preflight: true },
       )
 
@@ -231,20 +276,27 @@ describe('ExperienceApiClient', () => {
       )
 
       const client = makeClient()
+      const events = [makeTrackEvent('create-profile-defaults')]
 
-      await client.createProfile({ events: [] }, {})
+      await client.createProfile({ events }, {})
 
       expect(hasOptionsKey(rawBody)).toBe(true)
       expect(getFeaturesFromBody(rawBody)).toEqual(['ip-enrichment', 'location'])
+    })
+
+    it('throws when createProfile is called with an empty events array', async () => {
+      const client = makeClient()
+
+      await expect(client.createProfile({ events: [] }, {})).rejects.toBeDefined()
     })
   })
 
   describe('updateProfile', () => {
     it('throws on empty profile id', async () => {
       const client = makeClient()
-      await expect(client.updateProfile({ profileId: '', events: [] })).rejects.toThrowError(
-        'Valid profile ID required.',
-      )
+      await expect(
+        client.updateProfile({ profileId: '', events: [makeTrackEvent('empty-profile-id')] }),
+      ).rejects.toThrowError('Valid profile ID required.')
     })
 
     it('updateProfile posts to the correct URL with provided profileId', async () => {
@@ -262,8 +314,9 @@ describe('ExperienceApiClient', () => {
       )
 
       const client = makeClient({ environment: ENVIRONMENT })
+      const events = [makeTrackEvent('update-profile-url')]
 
-      const result = await client.updateProfile({ profileId: 'prof_42', events: [] }, {})
+      const result = await client.updateProfile({ profileId: 'prof_42', events }, {})
 
       expect(result).toBeDefined()
       expect(hitPath).toBe(
@@ -294,8 +347,9 @@ describe('ExperienceApiClient', () => {
         ip: '198.51.100.5',
         plainText: false,
       })
+      const events = [makeTrackEvent('update-profile-defaults')]
 
-      const res = await client.updateProfile({ profileId: 'p', events: [] }, {})
+      const res = await client.updateProfile({ profileId: 'p', events }, {})
       expect(res).toBeDefined()
 
       // Inherited from client config
@@ -303,17 +357,45 @@ describe('ExperienceApiClient', () => {
       expect(forcedIp).toBe('198.51.100.5')
       expect(features).toEqual(['location'])
     })
+
+    it('throws when updateProfile is called with an empty events array', async () => {
+      const client = makeClient()
+
+      await expect(
+        client.updateProfile({ profileId: 'prof_42', events: [] }, {}),
+      ).rejects.toBeDefined()
+    })
   })
 
   describe('upsertManyProfiles', () => {
     it('upsertManyProfiles posts to /events and defaults to application/json (plainText=false)', async () => {
       let content: string | null = null
+      let anonymousId: string | undefined
 
       server.use(
         http.post(
           `${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/events`,
-          ({ request }) => {
+          async ({ request }) => {
             content = getContent(request.headers)
+            const body = await request.json()
+
+            if (typeof body === 'object' && body !== null && 'events' in body) {
+              const { events } = body as { events?: unknown[] }
+              const firstEvent = events?.[0]
+
+              if (
+                typeof firstEvent === 'object' &&
+                firstEvent !== null &&
+                'anonymousId' in firstEvent
+              ) {
+                const firstEventAnonymousId = Reflect.get(firstEvent, 'anonymousId')
+
+                if (typeof firstEventAnonymousId === 'string') {
+                  anonymousId = firstEventAnonymousId
+                }
+              }
+            }
+
             return HttpResponse.json(
               { data: { profiles: [{ id: 'a' }, { id: 'b' }] } },
               { status: 200 },
@@ -324,9 +406,19 @@ describe('ExperienceApiClient', () => {
 
       const client = makeClient()
 
-      const profiles = await client.upsertManyProfiles({ events: [] }, {})
+      const profiles = await client.upsertManyProfiles(
+        { events: [makeBatchTrackEvent('anon-1')] },
+        {},
+      )
       expect(Array.isArray(profiles)).toBe(true)
       expect(content).toBe('application/json')
+      expect(anonymousId).toBe('anon-1')
+    })
+
+    it('throws when upsertManyProfiles is called with an empty event batch', async () => {
+      const client = makeClient()
+
+      await expect(client.upsertManyProfiles({ events: [] }, {})).rejects.toBeDefined()
     })
   })
 })

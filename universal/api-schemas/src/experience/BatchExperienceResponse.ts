@@ -11,7 +11,7 @@ import { ResponseEnvelope } from './ResponseEnvelope'
  *
  * @public
  */
-export const BatchExperienceData = z.object({
+export const BatchExperienceResponseData = z.object({
   /**
    * Profiles evaluated or affected by the batch experience request.
    */
@@ -19,22 +19,24 @@ export const BatchExperienceData = z.object({
 })
 
 /**
- * TypeScript type inferred from {@link BatchExperienceData}.
+ * TypeScript type inferred from {@link BatchExperienceResponseData}.
  *
  * @public
  */
-export type BatchExperienceData = z.infer<typeof BatchExperienceData>
+export type BatchExperienceResponseData = z.infer<typeof BatchExperienceResponseData>
 
 /**
  * Zod schema describing a batch experience response from the Experience API.
  *
  * @remarks
- * Extends {@link ResponseEnvelope} with {@link BatchExperienceData} as the
+ * Extends {@link ResponseEnvelope} with {@link BatchExperienceResponseData} as the
  * `data` payload.
  *
  * @public
  */
-export const BatchExperienceResponse = z.extend(ResponseEnvelope, { data: BatchExperienceData })
+export const BatchExperienceResponse = z.extend(ResponseEnvelope, {
+  data: BatchExperienceResponseData,
+})
 
 /**
  * TypeScript type inferred from {@link BatchExperienceResponse}.

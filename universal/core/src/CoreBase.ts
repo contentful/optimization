@@ -103,15 +103,24 @@ abstract class CoreBase {
   constructor(config: CoreConfig) {
     this.config = config
 
-    const { analytics, personalization, eventBuilder, logLevel, environment, clientId } = config
+    const {
+      analytics,
+      personalization,
+      eventBuilder,
+      logLevel,
+      environment,
+      clientId,
+      fetchOptions,
+    } = config
 
     logger.addSink(new ConsoleLogSink(logLevel))
 
-    const apiConfig = {
-      ...analytics,
-      ...personalization,
+    const apiConfig: ApiClientConfig = {
       clientId,
       environment,
+      fetchOptions,
+      analytics,
+      personalization,
     }
 
     this.api = new ApiClient(apiConfig)
@@ -250,8 +259,6 @@ abstract class CoreBase {
    * @param payload - Component view builder arguments. When `payload.sticky` is
    *   `true`, the event will also be sent via personalization as a sticky
    *   component view.
-   * @param duplicationScope - Optional string used to scope duplication used in Stateful
-   * implementations
    * @returns A promise that resolves when all delegated calls complete.
    * @remarks
    * The sticky behavior is delegated to personalization; analytics is always
@@ -263,29 +270,26 @@ abstract class CoreBase {
    */
   async trackComponentView(
     payload: ComponentViewBuilderArgs & { profile?: PartialProfile },
-    duplicationScope?: string,
   ): Promise<OptimizationData | undefined> {
     if (payload.sticky) {
-      return await this.personalization.trackComponentView(payload, duplicationScope)
+      return await this.personalization.trackComponentView(payload)
     }
 
-    await this.analytics.trackComponentView(payload, duplicationScope)
+    await this.analytics.trackComponentView(payload)
   }
 
   /**
    * Track a feature flag view via analytics.
    *
    * @param payload - Component view builder arguments used to build the flag view event.
-   * @param duplicationScope - Optional string used to scope duplication used in Stateful
-   * implementations
    * @returns A promise that resolves when processing completes.
    * @example
    * ```ts
    * await core.trackFlagView({ componentId: 'feature-flag-123' })
    * ```
    */
-  async trackFlagView(payload: ComponentViewBuilderArgs, duplicationScope?: string): Promise<void> {
-    await this.analytics.trackFlagView(payload, duplicationScope)
+  async trackFlagView(payload: ComponentViewBuilderArgs): Promise<void> {
+    await this.analytics.trackFlagView(payload)
   }
 }
 

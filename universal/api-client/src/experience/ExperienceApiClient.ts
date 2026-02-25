@@ -1,11 +1,12 @@
 import {
+  BatchExperienceRequestData,
   BatchExperienceResponse,
   ExperienceEventArray,
+  ExperienceRequestData,
   ExperienceResponse,
   parseWithFriendlyError,
-  type BatchExperienceData,
   type BatchExperienceEventArray,
-  type ExperienceRequestData,
+  type BatchExperienceResponseData,
   type ExperienceRequestOptions,
   type OptimizationData,
 } from '@contentful/optimization-api-schemas'
@@ -296,10 +297,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     logger.info(`Sending "${requestName}" request`)
 
-    const body: ExperienceRequestData = {
-      events: parseWithFriendlyError(ExperienceEventArray, events),
-      options: this.constructBodyOptions(options),
-    }
+    const body = this.constructExperienceRequestBody(events, options)
 
     logger.debug(`"${requestName}" request body:`, body)
 
@@ -354,10 +352,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
     logger.info(`Sending "${requestName}" request`)
 
-    const body: ExperienceRequestData = {
-      events: parseWithFriendlyError(ExperienceEventArray, events),
-      options: this.constructBodyOptions(options),
-    }
+    const body = this.constructExperienceRequestBody(events, options)
 
     logger.debug(`"${requestName}" request body:`, body)
 
@@ -419,8 +414,9 @@ export default class ExperienceApiClient extends ApiClientBase {
    * @returns The list of profiles affected by the batch operation.
    *
    * @remarks
-   * Every event must contain an anonymous ID. Profiles will be created or
-   * updated according to the anonymous ID.
+   * Batch requests must contain at least one event. Every event must contain
+   * an anonymous ID. Profiles will be created or updated according to the
+   * anonymous ID.
    *
    * This method is intended to be used from server environments.
    *
@@ -428,8 +424,8 @@ export default class ExperienceApiClient extends ApiClientBase {
    * ```ts
    * const profiles = await client.upsertManyProfiles({
    *   events: [
-   *     [{ type: 'identify', userId: 'user-1' }],
-   *     [{ type: 'identify', userId: 'user-2' }],
+   *     { anonymousId: 'anon-1', type: 'identify', ... },
+   *     { anonymousId: 'anon-2', type: 'identify', ... },
    *   ],
    * })
    * ```
@@ -437,15 +433,15 @@ export default class ExperienceApiClient extends ApiClientBase {
   public async upsertManyProfiles(
     { events }: BatchUpdateProfileParams,
     options: RequestOptions = {},
-  ): Promise<BatchExperienceData['profiles']> {
+  ): Promise<BatchExperienceResponseData['profiles']> {
     const requestName = 'Upsert Many Profiles'
 
     logger.info(`Sending "${requestName}" request`)
 
-    const body: ExperienceRequestData = {
-      events: parseWithFriendlyError(ExperienceEventArray, events),
+    const body = parseWithFriendlyError(BatchExperienceRequestData, {
+      events,
       options: this.constructBodyOptions(options),
-    }
+    })
 
     logger.debug(`"${requestName}" request body:`, body)
 
@@ -542,5 +538,24 @@ export default class ExperienceApiClient extends ApiClientBase {
     }
 
     return bodyOptions
+  }
+
+  /**
+   * Construct and validate the singular Experience mutation request payload.
+   *
+   * @param events - Events that should be evaluated by the Experience API.
+   * @param options - Request options that may contribute body options.
+   * @returns Validated singular Experience request body.
+   *
+   * @internal
+   */
+  private constructExperienceRequestBody(
+    events: ExperienceEventArray,
+    options: RequestOptions,
+  ): ExperienceRequestData {
+    return ExperienceRequestData.parse({
+      events: parseWithFriendlyError(ExperienceEventArray, events),
+      options: this.constructBodyOptions(options),
+    })
   }
 }

@@ -549,19 +549,19 @@ packages:
     resolution: {integrity: sha512-tu1gfmZI59hQ7qKhmGOV0dA5brxhsc+LOfPwBsQQMDAVy5kVpTrKf/AGlL2y9QhKHu/NtCrwX/ZrmRFgtGEtIA==}
 
   '@contentful/optimization-api-client@file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz':
-    resolution: {integrity: sha512-OdvgZu8rCZEvSXUA3fj0DPeqSEvuAoMBVTRZyng91KMQgeTqmEaFQqQapD9sbvJj7ePor5eyLNiWUjf4qIZ/pQ==, tarball: file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz}
+    resolution: {integrity: sha512-oBMPRO3Jg6OwkCTPNa4w3b4em+Ds4qphQXKjp+3cblm1DhwOwhpPQYj3bpinWa5G4nAUje8KMsp570uII3K17A==, tarball: file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/optimization-api-schemas@file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz':
-    resolution: {integrity: sha512-CbVtO5GX2j4nPmg1tXek1qGFmavM8vWrfFcSsgyJffOD8L65pOEuyO++W9sU3hVEg4LoxE1InSi5xOZaM7jrgg==, tarball: file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz}
+    resolution: {integrity: sha512-q9yGS3kX+jqrU5JeZZVleQbXbVIshJtOTNYp6sG66hK5vu+conLgqG2ZjGLqLI1LY01BxMBS5G2i9Wi//cOlsQ==, tarball: file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/optimization-core@file:../../pkgs/contentful-optimization-core-0.0.0.tgz':
-    resolution: {integrity: sha512-VVsh+cOie1KoBPj7ykJPCfK75esCsjhL27DRQEDsPPAUiXtTVV5QIX1Y98ek9zgcFiYiZWGi3S2oMAbWjteRNg==, tarball: file:../../pkgs/contentful-optimization-core-0.0.0.tgz}
+    resolution: {integrity: sha512-OQ2V/cmKS/b+jwjV4HYrbUb3XfsNVs2A4sn2hGxZTJkiiUhmCEhobVbhtEM6dakhyhDrV+T/rfXVWx4wwOx3Pg==, tarball: file:../../pkgs/contentful-optimization-core-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/optimization-react-native@file:../../pkgs/contentful-optimization-react-native-0.0.0.tgz':
-    resolution: {integrity: sha512-SEiNmBAV1YOYE8mcyJprpQIyqjXV2ThcnYyLZTPGyE11+s3dK40aUTZ27JW6Hqo6QS4cpOzZNsnZFn75nJ9bLA==, tarball: file:../../pkgs/contentful-optimization-react-native-0.0.0.tgz}
+    resolution: {integrity: sha512-3y19iStvy6t3b3wOzgSyv7MI4qnu2LTBQx6mMaJfBN5Uz5iAJoHO6fosoc51tuLl/MeqOTUxgwBS0ktx/W4i1g==, tarball: file:../../pkgs/contentful-optimization-react-native-0.0.0.tgz}
     version: 0.0.0
     engines: {node: '>=18'}
     peerDependencies:
