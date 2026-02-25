@@ -7,18 +7,46 @@ test.describe('unidentified user', () => {
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
   })
 
-  test('renders utility panel and entries', async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Auto Observed Entries' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Manually Observed Entries' })).toBeVisible()
-
+  test('displays common variants', async ({ page }) => {
     await expect(
       page.getByText(
         'This is a merge tag content entry that displays the visitor\'s continent "EU" embedded within the text.',
       ),
     ).toBeVisible()
 
+    await expect(
+      page.getByText('This is a variant content entry for visitors from Europe.'),
+    ).toBeVisible()
+
+    await expect(
+      page.getByText('This is a variant content entry for visitors using a desktop browser.'),
+    ).toBeVisible()
+  })
+
+  test('displays unidentified user variants', async ({ page }) => {
+    await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Auto Observed Entries' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Manually Observed Entries' })).toBeVisible()
+
     await expect(page.getByText('This is a level 0 nested baseline entry.')).toBeVisible()
-    await expect(page.getByText('This is a variant content entry for new visitors.')).toBeVisible()
+    await expect(page.getByText('This is a level 1 nested baseline entry.')).toBeVisible()
+    await expect(page.getByText('This is a level 2 nested baseline entry.')).toBeVisible()
+
+    await expect(
+      page
+        .getByTestId('entry-text-2Z2WLOx07InSewC3LUB3eX')
+        .getByText('This is a variant content entry for new visitors.'),
+    ).toBeVisible()
+    await expect(
+      page.getByText('This is a variant content entry for an A/B/C experiment: B'),
+    ).toBeVisible()
+    await expect(
+      page.getByText(
+        'This is a baseline content entry for all visitors with or without a custom event.',
+      ),
+    ).toBeVisible()
+    await expect(
+      page.getByText('This is a baseline content entry for all identified or unidentified users.'),
+    ).toBeVisible()
   })
 })
