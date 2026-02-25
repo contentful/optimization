@@ -20,6 +20,7 @@ jobs:
       e2e_node_ssr_only: ${{ steps.filter.outputs.e2e_node_ssr_only }}
       e2e_node_ssr_web_vanilla: ${{ steps.filter.outputs.e2e_node_ssr_web_vanilla }}
       e2e_web: ${{ steps.filter.outputs.e2e_web }}
+      e2e_web_react: ${{ steps.filter.outputs.e2e_web_react }}
       e2e_react_native_android: ${{ steps.filter.outputs.e2e_react_native_android }}
     steps:
       - uses: namespacelabs/nscloud-checkout-action@v8
@@ -64,6 +65,14 @@ jobs:
               - '.github/workflows/main-pipeline.yaml'
             e2e_web:
               - 'implementations/web-vanilla/**'
+              - 'lib/**'
+              - 'platforms/**'
+              - 'universal/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - '.github/workflows/main-pipeline.yaml'
+            e2e_web_react:
+              - 'implementations/web-react/**'
               - 'lib/**'
               - 'platforms/**'
               - 'universal/**'
@@ -466,6 +475,108 @@ jobs:
           path: |
             ./implementations/web-vanilla/playwright-report/
             ./implementations/web-vanilla/test-results/
+          retention-days: 1
+
+  e2e-web-react:
+    name: 🖥️ E2E Web React
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
+    timeout-minutes: 15
+    needs: [setup, changes, build]
+    if: needs.changes.outputs.e2e_web_react == 'true'
+    steps:
+      - uses: namespacelabs/nscloud-checkout-action@v8
+
+      - name: Create .env and copy to implementations
+        run: |
+          cat > .env << 'EOF'
+          DOTENV_CONFIG_QUIET=true
+          PUBLIC_NINETAILED_CLIENT_ID=${{secrets.NINETAILED_CLIENT_ID}}
+          PUBLIC_NINETAILED_ENVIRONMENT=${{secrets.NINETAILED_ENVIRONMENT}}
+          PUBLIC_EXPERIENCE_API_BASE_URL=http://localhost:8000/experience/
+          PUBLIC_INSIGHTS_API_BASE_URL=http://localhost:8000/insights/
+          PUBLIC_CONTENTFUL_TOKEN=${{secrets.CONTENTFUL_TOKEN}}
+          PUBLIC_CONTENTFUL_PREVIEW_TOKEN=${{secrets.CONTENTFUL_PREVIEW_TOKEN}}
+          PUBLIC_CONTENTFUL_ENVIRONMENT=${{secrets.CONTENTFUL_ENVIRONMENT}}
+          PUBLIC_CONTENTFUL_SPACE_ID=${{secrets.CONTENTFUL_SPACE_ID}}
+          PUBLIC_CONTENTFUL_CDA_HOST=localhost:8000
+          PUBLIC_CONTENTFUL_BASE_PATH=contentful
+          EOF
+          cp .env implementations/node-ssr-only/
+          cp .env implementations/web-react/
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@v4
+
+      - name: Set up caches (Namespace)
+        uses: namespacelabs/nscloud-cache-action@v1
+        with:
+          cache: |
+            pnpm
+            playwright
+            apt
+
+      - run: pnpm install --prefer-offline --frozen-lockfile
+      - uses: actions/download-artifact@v6
+        with:
+          name: sdk-package-tarballs
+          path: pkgs
+      - run: pnpm store prune
+      - run: pnpm run implementation:web-react -- implementation:install -- --no-frozen-lockfile
+      - run: pnpm run implementation:web-react -- implementation:playwright:install -- --with-deps
+      - name: Start Web React app and mocks
+        run: |
+          pnpm run implementation:web-react -- serve:mocks > /tmp/web-react-mocks.log 2>&1
+          pnpm run implementation:web-react -- build > /tmp/web-react-build.log 2>&1
+          pnpm --dir implementations/web-react exec rsbuild preview --host localhost --port 3001 > /tmp/web-react-app.log 2>&1 &
+          echo $! > /tmp/web-react-app.pid
+
+          for i in $(seq 1 90); do
+            # Use a plain HTTP probe (no --fail): we only need to know the server is listening.
+            if curl -sS http://localhost:3001 >/dev/null; then
+              echo "Web React app is ready"
+              exit 0
+            fi
+            echo "Waiting for Web React app... ($i/90)"
+            sleep 1
+          done
+
+          echo "Web React app failed to start in time"
+          echo "=== web-react build logs ==="
+          cat /tmp/web-react-build.log || true
+          echo "=== web-react app logs ==="
+          cat /tmp/web-react-app.log || true
+          echo "=== web-react mocks logs ==="
+          cat /tmp/web-react-mocks.log || true
+          exit 1
+      - run: pnpm run implementation:web-react -- implementation:test:e2e:run
+      - name: Dump Web React logs on failure
+        if: ${{ failure() }}
+        run: |
+          echo "=== web-react build logs ==="
+          cat /tmp/web-react-build.log || true
+          echo "=== web-react app logs ==="
+          cat /tmp/web-react-app.log || true
+          echo "=== web-react mocks logs ==="
+          cat /tmp/web-react-mocks.log || true
+          echo "=== pm2 list ==="
+          pm2 list || true
+      - name: Stop Web React app and mocks
+        if: ${{ always() }}
+        run: |
+          kill "$(cat /tmp/web-react-app.pid)" 2>/dev/null || true
+          pnpm run implementation:web-react -- serve:stop || true
+
+      - uses: actions/upload-artifact@v6
+        if: ${{ !cancelled() }}
+        with:
+          name: ci-results-web-react
+          path: |
+            ./implementations/web-react/playwright-report/
+            ./implementations/web-react/test-results/
           retention-days: 1
 
   e2e-react-native-android:

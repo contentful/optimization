@@ -16,6 +16,7 @@
     "implementation:node-ssr-only": "pnpm run implementation:run -- node-ssr-only",
     "implementation:node-ssr-web-vanilla": "pnpm run implementation:run -- node-ssr-web-vanilla",
     "implementation:react-native": "pnpm run implementation:run -- react-native",
+    "implementation:web-react": "pnpm run implementation:run -- web-react",
     "implementation:install": "pnpm run implementation:run -- --all -- implementation:install",
     "implementation:run": "tsx ./scripts/run-implementation-script.ts",
     "implementation:web-vanilla": "pnpm run implementation:run -- web-vanilla",
