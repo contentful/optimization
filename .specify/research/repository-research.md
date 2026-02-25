@@ -37,10 +37,10 @@
 ### Size and Test Surface
 
 - Code files (`ts/tsx/js/jsx/mjs/cjs`) across `universal`, `platforms`, `lib`, `implementations`:
-  `328`
-- Code LOC across same surface: `33,606`
+  `357`
+- Code LOC across same surface: `37,084`
 - Unit test files in SDK and shared libraries (`universal`, `platforms`, `lib`): `35`
-- Implementation test/e2e files (`implementations`): `16`
+- Implementation test/e2e files (`implementations`): `20`
 
 ### Top-Level Responsibilities
 
@@ -55,20 +55,21 @@
 
 | Package                                      | Path                                     | Layer                    | Approx LOC | Test Files |
 | -------------------------------------------- | ---------------------------------------- | ------------------------ | ---------: | ---------: |
-| `@contentful/optimization-api-schemas`       | `universal/api-schemas`                  | Contracts                |      2,280 |          0 |
-| `@contentful/optimization-api-client`        | `universal/api-client`                   | Transport client         |      3,334 |          7 |
-| `@contentful/optimization-core`              | `universal/core`                         | Runtime core             |      7,371 |         12 |
-| `@contentful/optimization-node`              | `platforms/javascript/node`              | Platform adapter         |        465 |          1 |
-| `@contentful/optimization-web`               | `platforms/javascript/web`               | Platform adapter         |      4,034 |          5 |
-| `@contentful/optimization-web-preview-panel` | `platforms/javascript/web-preview-panel` | Preview tooling          |      1,413 |          0 |
-| `@contentful/optimization-react-native`      | `platforms/javascript/react-native`      | Platform adapter         |      9,280 |          6 |
-| `logger`                                     | `lib/logger`                             | Internal utility         |        462 |          2 |
-| `mocks`                                      | `lib/mocks`                              | Internal testing infra   |      1,051 |          0 |
-| `build-tools`                                | `lib/build-tools`                        | Internal build helpers   |        293 |          2 |
+| `@contentful/optimization-api-schemas`       | `universal/api-schemas`                  | Contracts                |      2,791 |          1 |
+| `@contentful/optimization-api-client`        | `universal/api-client`                   | Transport client         |      3,406 |          7 |
+| `@contentful/optimization-core`              | `universal/core`                         | Runtime core             |      7,205 |         11 |
+| `@contentful/optimization-node`              | `platforms/javascript/node`              | Platform adapter         |        505 |          1 |
+| `@contentful/optimization-web`               | `platforms/javascript/web`               | Platform adapter         |      4,346 |          5 |
+| `@contentful/optimization-web-preview-panel` | `platforms/javascript/web-preview-panel` | Preview tooling          |      1,863 |          0 |
+| `@contentful/optimization-react-native`      | `platforms/javascript/react-native`      | Platform adapter         |      9,683 |          6 |
+| `logger`                                     | `lib/logger`                             | Internal utility         |        682 |          2 |
+| `mocks`                                      | `lib/mocks`                              | Internal testing infra   |      1,190 |          0 |
+| `build-tools`                                | `lib/build-tools`                        | Internal build helpers   |        393 |          2 |
 | `@implementation/node-ssr-only`              | `implementations/node-ssr-only`          | Reference implementation |        389 |          2 |
 | `@implementation/node-ssr-web-vanilla`       | `implementations/node-ssr-web-vanilla`   | Reference implementation |        461 |          4 |
 | `@implementation/web-vanilla`                | `implementations/web-vanilla`            | Reference implementation |        282 |          3 |
-| `@implementation/react-native`               | `implementations/react-native`           | Reference implementation |      2,491 |          7 |
+| `@implementation/web-react`                  | `implementations/web-react`              | Reference implementation |      1,264 |          4 |
+| `@implementation/react-native`               | `implementations/react-native`           | Reference implementation |      2,624 |          7 |
 
 ### Internal Dependency Direction (Validated)
 
@@ -107,7 +108,7 @@ graph LR
   A --> J
 ```
 
-- Local package graph is acyclic (`cycle: no` in validation script).
+- Local package graph is acyclic (`cycle: no` from current manifest graph validation).
 - `pnpm-workspace.yaml` includes `lib/*`, `platforms/javascript/*`, `universal/*`; implementations
   are intentionally outside workspace and consume packed SDK tarballs via overrides.
 
@@ -136,16 +137,17 @@ graph LR
     consent).
   - preview bridge method `registerPreviewPanel()` returns mutable `signals` and `signalFns`.
 
-### 3) Consent, Blocking, and Duplication Semantics
+### 3) Consent and Blocking Semantics
 
 - `ProductBase` defaults pre-consent allow-list to `['page', 'identify']`.
+- Stateful products normalize `trackComponentView`/`trackFlagView` to `component` for allow-list
+  evaluation.
 - Guarding is method-level via stage-3 decorator `@guardedBy`:
   - synchronous predicate gating.
   - optional `onBlocked` hook.
   - blocked async methods return `Promise<undefined>` to preserve call shape.
 - Blocked event payload is structured and emitted to signal/callback:
-  - `{ reason: 'consent'|'duplication', product, method, args }`.
-- Duplication is handled via scoped `ValuePresence` detector for component/flag view methods.
+  - `{ reason: 'consent', product, method, args }`.
 
 ### 4) Stateful Queue and Flush Behavior
 
@@ -315,7 +317,8 @@ graph LR
 - Main pipeline (`.github/workflows/main-pipeline.yaml`):
   - path-filtered change detection for build/unit/e2e workloads,
   - install/setup, license checks, format, build, typecheck, lint, package-matrix unit tests,
-  - per-implementation e2e jobs including dedicated RN Android emulator lane.
+  - per-implementation e2e jobs (`node-ssr-only`, `node-ssr-web-vanilla`, `web-vanilla`,
+    `web-react`) plus dedicated RN Android emulator lane.
 - Publish workflow (`publish-npm.yaml`):
   - release/manual dispatch,
   - version derivation from tag,
@@ -331,6 +334,7 @@ graph LR
   - Node SSR only,
   - Node SSR + Web vanilla,
   - Web vanilla,
+  - Web React + Web SDK,
   - React Native (Detox Android lane in CI).
 - Constitution explicitly positions reference implementations as required verification gates for
   user-visible behavior changes.
@@ -376,7 +380,7 @@ graph LR
 ### DEC-005: Guard behavior is decorator-based and synchronous
 
 - `status`: `accepted`
-- `decision`: Use stage-3 `@guardedBy` wrappers for consent/duplication guard composition.
+- `decision`: Use stage-3 `@guardedBy` wrappers for consent guard composition.
 - `rationale`: Consistent guard semantics without repeated inline guard logic.
 - `alternatives_considered`: inline method-level checks; middleware chains per product.
 - `consequences`: decorator support required in build pipeline.
@@ -457,19 +461,20 @@ graph LR
 
 ### RSK-001: SpecKit template bootstrap is incomplete
 
-- `severity`: `medium`
-- `evidence`: constitution sync report flags missing `.specify/templates/*` artifacts and command
-  templates.
+- `severity`: `low`
+- `evidence`: `.specify/templates/commands/` artifacts referenced by constitution sync guidance are
+  still absent.
 - `impact`: plan/spec/task workflows cannot be fully constitution-enforced through local template
-  checks.
-- `mitigation`: bootstrap the missing template set and wire compliance checks into contributor
-  workflow.
+  command checks.
+- `mitigation`: add the missing command template set under `.specify/templates/commands/` and wire
+  compliance checks into contributor workflow.
 
 ### RSK-002: Contract and preview packages have thin direct unit-test coverage
 
 - `severity`: `medium`
 - `evidence`:
-  - `universal/api-schemas` has no unit test suite.
+  - `universal/api-schemas` has a unit suite, but coverage is narrow (validation utility-centric;
+    limited direct schema-shape edge tests).
   - `platforms/javascript/web-preview-panel` has no unit test suite (`test:unit` is TODO/no-op).
 - `impact`: schema regressions or preview override regressions may primarily surface via downstream
   integration tests.
@@ -489,7 +494,8 @@ graph LR
 ## Appendix B: Quality and Delivery Snapshot
 
 - Main CI lanes: `setup`, `license-check`, `format`, `build`, `type-check`, `lint`, per-package unit
-  matrix, per-implementation e2e.
+  matrix, per-implementation e2e (`node-ssr-only`, `node-ssr-web-vanilla`, `web-vanilla`,
+  `web-react`, `react-native`).
 - RN Android e2e lane provisions emulator, mock server, Metro bundler, and runs Detox suites.
 - Publish lane bumps package versions from release tags and publishes built artifacts after
   build/pack steps.

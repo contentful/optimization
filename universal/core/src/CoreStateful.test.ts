@@ -54,15 +54,47 @@ const getPersonalizationFlushPolicyBaseBackoffMs = (core: CoreStateful): number 
   return typeof baseBackoffMs === 'number' ? baseBackoffMs : undefined
 }
 
+const getPersonalizationAllowedEventTypes = (core: CoreStateful): string[] | undefined => {
+  const allowedEventTypes = Reflect.get(core.personalization, 'allowedEventTypes')
+
+  if (!Array.isArray(allowedEventTypes)) {
+    return
+  }
+
+  return allowedEventTypes.filter((eventType): eventType is string => typeof eventType === 'string')
+}
+
 const config: CoreStatefulConfig = {
   clientId: 'key_123',
   environment: 'main',
+}
+
+class CoreStatefulTestHarness extends CoreStateful {
+  getOnlineState(): boolean {
+    return this.online
+  }
+
+  setOnlineState(isOnline: boolean): void {
+    this.online = isOnline
+  }
 }
 
 describe('CoreStateful blocked event handling', () => {
   const createdCores: CoreStateful[] = []
   const createCoreStateful = (overrides: Partial<CoreStatefulConfig> = {}): CoreStateful => {
     const core = new CoreStateful({
+      ...config,
+      ...overrides,
+    })
+
+    createdCores.push(core)
+
+    return core
+  }
+  const createCoreStatefulHarness = (
+    overrides: Partial<CoreStatefulConfig> = {},
+  ): CoreStatefulTestHarness => {
+    const core = new CoreStatefulTestHarness({
       ...config,
       ...overrides,
     })
@@ -78,6 +110,7 @@ describe('CoreStateful blocked event handling', () => {
       signals.changes.value = undefined
       signals.consent.value = undefined
       signals.event.value = undefined
+      signals.online.value = true
       signals.personalizations.value = undefined
       signals.profile.value = undefined
     })
@@ -136,6 +169,12 @@ describe('CoreStateful blocked event handling', () => {
     expect(signals.blockedEvent.value).toBeUndefined()
   })
 
+  it('defaults allowedEventTypes to identify/page/screen in core', () => {
+    const core = createCoreStateful()
+
+    expect(getPersonalizationAllowedEventTypes(core)).toEqual(['identify', 'page', 'screen'])
+  })
+
   it('uses analytics.queuePolicy when provided', () => {
     const core = createCoreStateful({
       analytics: {
@@ -175,5 +214,24 @@ describe('CoreStateful blocked event handling', () => {
     expect(() => {
       createCoreStateful()
     }).not.toThrow()
+  })
+
+  it('exposes online state through protected accessor pair', () => {
+    const core = createCoreStatefulHarness()
+
+    expect(core.getOnlineState()).toBe(true)
+
+    core.setOnlineState(false)
+
+    expect(core.getOnlineState()).toBe(false)
+    expect(signals.online.value).toBe(false)
+  })
+
+  it('returns false when online signal is undefined', () => {
+    const core = createCoreStatefulHarness()
+
+    signals.online.value = undefined
+
+    expect(core.getOnlineState()).toBe(false)
   })
 })

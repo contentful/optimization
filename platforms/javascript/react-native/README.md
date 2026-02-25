@@ -39,6 +39,8 @@ based on the [Optimization Core Library](/universal/core/README.md). This SDK is
   - [`<Personalization />` - For Personalized Entries](#personalization----for-personalized-entries)
   - [`<Analytics />` - For Non-Personalized Entries](#analytics----for-non-personalized-entries)
   - [ScrollView vs Non-ScrollView Usage](#scrollview-vs-non-scrollview-usage)
+    - [Inside ScrollView (Recommended for Scrollable Content)](#inside-scrollview-recommended-for-scrollable-content)
+    - [Outside ScrollView (For Non-Scrollable Content)](#outside-scrollview-for-non-scrollable-content)
   - [Custom Tracking Thresholds](#custom-tracking-thresholds)
   - [Manual Analytics Tracking](#manual-analytics-tracking)
 - [OptimizationRoot](#optimizationroot)
@@ -46,8 +48,12 @@ based on the [Optimization Core Library](/universal/core/README.md). This SDK is
 - [Live Updates Behavior](#live-updates-behavior)
   - [Default Behavior (Recommended)](#default-behavior-recommended)
   - [Enabling Live Updates](#enabling-live-updates)
+    - [1. Preview Panel (Automatic)](#1-preview-panel-automatic)
+    - [2. Global Setting via OptimizationRoot](#2-global-setting-via-optimizationroot)
+    - [3. Per-Component Override](#3-per-component-override)
   - [Priority Order](#priority-order)
 - [React Native-Specific Defaults](#react-native-specific-defaults)
+  - [Persistence Behavior](#persistence-behavior)
 - [Offline Support](#offline-support)
   - [How It Works](#how-it-works)
 - [Polyfills](#polyfills)
@@ -95,7 +101,7 @@ const optimization = await Optimization.create({
 
 | Option                     | Required? | Default                       | Description                                                       |
 | -------------------------- | --------- | ----------------------------- | ----------------------------------------------------------------- |
-| `allowedEventTypes`        | No        | `['identify', 'page']`        | Allow-listed event types permitted when consent is not set        |
+| `allowedEventTypes`        | No        | `['identify', 'screen']`      | Allow-listed event types permitted when consent is not set        |
 | `analytics`                | No        | See "Analytics Options"       | Configuration specific to the Analytics/Insights API              |
 | `clientId`                 | Yes       | N/A                           | The Optimization API key                                          |
 | `defaults`                 | No        | `undefined`                   | Set of default state values applied on initialization             |

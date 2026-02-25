@@ -25,7 +25,7 @@ export type EventType = AnalyticsEventType | PersonalizationEventType
  * @privateRemarks These defaults are only applied when a consumer does not provide
  * {@link ProductConfig.allowedEventTypes}.
  */
-const defaultAllowedEvents: EventType[] = ['page', 'identify']
+const defaultAllowedEvents: EventType[] = ['identify', 'page', 'screen']
 
 /**
  * Common configuration for all product implementations.
@@ -37,7 +37,7 @@ export interface ProductConfig {
    * The set of event type strings that are allowed to be sent even if consent is
    * not granted.
    *
-   * @defaultValue `['page', 'identify']`
+   * @defaultValue `['identify', 'page', 'screen']`
    * @remarks These types are compared against the `type` property of events.
    */
   allowedEventTypes?: EventType[]

@@ -122,12 +122,12 @@ exposed externally as read-only observables.
 
 The following configuration options apply only in stateful environments:
 
-| Option              | Required? | Default                | Description                                                |
-| ------------------- | --------- | ---------------------- | ---------------------------------------------------------- |
-| `allowedEventTypes` | No        | `['identify', 'page']` | Allow-listed event types permitted when consent is not set |
-| `defaults`          | No        | `undefined`            | Set of default state values applied on initialization      |
-| `getAnonymousId`    | No        | `undefined`            | Function used to obtain an anonymous user identifier       |
-| `onEventBlocked`    | No        | `undefined`            | Callback invoked when an event call is blocked by guards   |
+| Option              | Required? | Default                          | Description                                                |
+| ------------------- | --------- | -------------------------------- | ---------------------------------------------------------- |
+| `allowedEventTypes` | No        | `['identify', 'page', 'screen']` | Allow-listed event types permitted when consent is not set |
+| `defaults`          | No        | `undefined`                      | Set of default state values applied on initialization      |
+| `getAnonymousId`    | No        | `undefined`                      | Function used to obtain an anonymous user identifier       |
+| `onEventBlocked`    | No        | `undefined`                      | Callback invoked when an event call is blocked by guards   |
 
 Configuration method signatures:
 

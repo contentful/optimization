@@ -356,15 +356,29 @@ class CoreStateful extends CoreBase implements ConsentController {
   }
 
   /**
-   * Update online state
+   * Read current online state.
    *
-   * @param isOnline - `true` if the browser is online; `false` otherwise.
    * @example
    * ```ts
-   * this.online(navigator.onLine)
+   * if (this.online) {
+   *   await this.flush()
+   * }
    * ```
    */
-  protected online(isOnline: boolean): void {
+  protected get online(): boolean {
+    return online.value ?? false
+  }
+
+  /**
+   * Update online state.
+   *
+   * @param isOnline - `true` if the runtime is online; `false` otherwise.
+   * @example
+   * ```ts
+   * this.online = navigator.onLine
+   * ```
+   */
+  protected set online(isOnline: boolean) {
     online.value = isOnline
   }
 
