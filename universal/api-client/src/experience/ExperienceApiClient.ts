@@ -2,6 +2,7 @@ import {
   BatchExperienceResponse,
   ExperienceEventArray,
   ExperienceResponse,
+  parseWithFriendlyError,
   type BatchExperienceData,
   type BatchExperienceEventArray,
   type ExperienceRequestData,
@@ -219,7 +220,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
       const {
         data: { changes, experiences, profile },
-      } = ExperienceResponse.parse(await response.json())
+      } = parseWithFriendlyError(ExperienceResponse, await response.json())
 
       const data = { changes, personalizations: experiences, profile }
 
@@ -280,7 +281,7 @@ export default class ExperienceApiClient extends ApiClientBase {
     logger.info(`Sending "${requestName}" request`)
 
     const body: ExperienceRequestData = {
-      events: ExperienceEventArray.parse(events),
+      events: parseWithFriendlyError(ExperienceEventArray, events),
       options: this.constructBodyOptions(options),
     }
 
@@ -295,7 +296,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
       const {
         data: { changes, experiences, profile },
-      } = ExperienceResponse.parse(await response.json())
+      } = parseWithFriendlyError(ExperienceResponse, await response.json())
 
       const data = { changes, personalizations: experiences, profile }
 
@@ -338,7 +339,7 @@ export default class ExperienceApiClient extends ApiClientBase {
     logger.info(`Sending "${requestName}" request`)
 
     const body: ExperienceRequestData = {
-      events: ExperienceEventArray.parse(events),
+      events: parseWithFriendlyError(ExperienceEventArray, events),
       options: this.constructBodyOptions(options),
     }
 
@@ -353,7 +354,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
       const {
         data: { changes, experiences, profile },
-      } = ExperienceResponse.parse(await response.json())
+      } = parseWithFriendlyError(ExperienceResponse, await response.json())
 
       const data = { changes, personalizations: experiences, profile }
 
@@ -426,7 +427,7 @@ export default class ExperienceApiClient extends ApiClientBase {
     logger.info(`Sending "${requestName}" request`)
 
     const body: ExperienceRequestData = {
-      events: ExperienceEventArray.parse(events),
+      events: parseWithFriendlyError(ExperienceEventArray, events),
       options: this.constructBodyOptions(options),
     }
 
@@ -441,7 +442,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
       const {
         data: { profiles },
-      } = BatchExperienceResponse.parse(await response.json())
+      } = parseWithFriendlyError(BatchExperienceResponse, await response.json())
 
       logger.debug(`"${requestName}" request successfully completed`)
 
