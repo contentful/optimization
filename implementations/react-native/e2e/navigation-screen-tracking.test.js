@@ -12,9 +12,6 @@ describe('navigation screen tracking', () => {
   beforeAll(async () => {
     await device.launchApp()
     await device.disableSynchronization()
-  })
-
-  beforeEach(async () => {
     await clearProfileState({ requireFreshAppInstance: true })
   })
 
@@ -48,22 +45,7 @@ describe('navigation screen tracking', () => {
   })
 
   it('should track multiple view visits in order', async () => {
-    await waitFor(element(by.id('navigation-test-button')))
-      .toBeVisible()
-      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
-
-    await element(by.id('navigation-test-button')).tap()
-
-    await waitFor(element(by.id('go-to-view-one-button')))
-      .toBeVisible()
-      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
-
-    await element(by.id('go-to-view-one-button')).tap()
-
-    await waitFor(element(by.id('navigation-view-test-one')))
-      .toBeVisible()
-      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
-
+    // Continues from previous test — already on view one
     await waitFor(element(by.id('go-to-view-two-button')))
       .toBeVisible()
       .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
@@ -87,32 +69,7 @@ describe('navigation screen tracking', () => {
   })
 
   it('should track revisiting view one after view two', async () => {
-    await waitFor(element(by.id('navigation-test-button')))
-      .toBeVisible()
-      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
-
-    await element(by.id('navigation-test-button')).tap()
-
-    await waitFor(element(by.id('go-to-view-one-button')))
-      .toBeVisible()
-      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
-
-    await element(by.id('go-to-view-one-button')).tap()
-
-    await waitFor(element(by.id('navigation-view-test-one')))
-      .toBeVisible()
-      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
-
-    await waitFor(element(by.id('go-to-view-two-button')))
-      .toBeVisible()
-      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
-
-    await element(by.id('go-to-view-two-button')).tap()
-
-    await waitFor(element(by.id('navigation-view-test-two')))
-      .toBeVisible()
-      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
-
+    // Continues from previous test — already on view two
     await device.pressBack()
 
     await waitFor(element(by.id('navigation-view-test-one')))

@@ -1,5 +1,5 @@
 // Timeout value for waiting for elements to become visible (in milliseconds)
-const ELEMENT_VISIBILITY_TIMEOUT = 10000 // 120 seconds
+const ELEMENT_VISIBILITY_TIMEOUT = process.env.CI ? 5000 : 10000
 
 function sleep(timeout) {
   return new Promise((resolve) => setTimeout(resolve, timeout))
@@ -99,14 +99,14 @@ async function clearProfileState(options = {}) {
     }
 
     // Fast path: reset in-app and keep the current app instance.
-    if (await tapIfVisibleById('reset-button', 3000)) {
+    if (await tapIfVisibleById('reset-button', 1500)) {
       await waitFor(element(by.id('identify-button')))
         .toBeVisible()
         .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
       return
     }
 
-    if (await isVisibleById('identify-button', 3000)) {
+    if (await isVisibleById('identify-button', 1500)) {
       return
     }
   } catch {

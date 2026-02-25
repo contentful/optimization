@@ -55,7 +55,7 @@ module.exports = {
       config: 'e2e/jest.config.js',
     },
     jest: {
-      setupTimeout: 120000,
+      setupTimeout: 180000,
     },
   },
   apps: {
@@ -82,7 +82,7 @@ module.exports = {
     'android.debug': {
       type: 'android.apk',
       binaryPath: path.join(__dirname, 'android/app/build/outputs/apk/debug/app-debug.apk'),
-      build: `cd ${__dirname}/android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug`,
+      build: `cd ${__dirname}/android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug${process.env.CI ? ' -PreactNativeArchitectures=x86_64' : ''}`,
       reversePorts: [8081],
       launchArgs: {
         detoxDisableSynchronization: 'YES',
@@ -92,7 +92,10 @@ module.exports = {
     'android.release': {
       type: 'android.apk',
       binaryPath: path.join(__dirname, 'android/app/build/outputs/apk/release/app-release.apk'),
-      build: `cd ${__dirname}/android && ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release`,
+      build: `cd ${__dirname}/android && ./gradlew assembleRelease assembleAndroidTest -DtestBuildType=release${process.env.CI ? ' -PreactNativeArchitectures=x86_64' : ''}`,
+      launchArgs: {
+        disableLogBox: 'YES',
+      },
     },
   },
   devices: {
