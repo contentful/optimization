@@ -98,9 +98,7 @@ function LiveUpdatesPersonalization({
   )
 }
 
-export function LiveUpdatesSection({
-  baselineEntry,
-}: LiveUpdatesSectionProps): JSX.Element {
+export function LiveUpdatesSection({ baselineEntry }: LiveUpdatesSectionProps): JSX.Element {
   const liveUpdatesContext = useLiveUpdates()
   const remountKey = `${liveUpdatesContext?.globalLiveUpdates ?? false}-${liveUpdatesContext?.previewPanelVisible ?? false}`
 
