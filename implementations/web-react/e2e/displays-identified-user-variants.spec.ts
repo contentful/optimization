@@ -6,13 +6,13 @@ test.describe('identified user', () => {
     await page.waitForLoadState('domcontentloaded')
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
 
-    await page.getByRole('button', { name: 'Identify' }).click()
-    await expect(page.getByRole('button', { name: 'Reset Profile' })).toBeVisible()
+    await page.getByTestId('live-updates-identify-button').click()
+    await expect(page.getByTestId('live-updates-reset-button')).toBeVisible()
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Reset Profile' })).toBeVisible()
+    await expect(page.getByTestId('live-updates-reset-button')).toBeVisible()
   })
 
   test('displays common variants', async ({ page }) => {
@@ -51,14 +51,14 @@ test.describe('identified user', () => {
   })
 
   test('reset persists unidentified state across reload', async ({ page }) => {
-    await page.getByRole('button', { name: 'Reset Profile' }).click()
-    await expect(page.getByRole('button', { name: 'Identify' })).toBeVisible()
+    await page.getByTestId('live-updates-reset-button').click()
+    await expect(page.getByTestId('live-updates-identify-button')).toBeVisible()
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
 
-    await expect(page.getByRole('button', { name: 'Identify' })).toBeVisible()
+    await expect(page.getByTestId('live-updates-identify-button')).toBeVisible()
     await expect(
       page.getByText('This is a baseline content entry for all identified or unidentified users.'),
     ).toBeVisible()
