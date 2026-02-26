@@ -142,6 +142,67 @@ describe('ElementExistenceObserver', () => {
     eo.disconnect()
   })
 
+  it('starts inactive without subscribers and lazily activates on subscribe', () => {
+    const root = document.createElement('div')
+    document.body.append(root)
+
+    const eo = new ElementExistenceObserver({ root })
+
+    expect(eo.isActive()).toBe(false)
+
+    const unsubscribe = eo.subscribe({ onAdded: () => undefined })
+
+    expect(eo.isActive()).toBe(true)
+
+    unsubscribe()
+
+    expect(eo.isActive()).toBe(false)
+
+    eo.disconnect()
+  })
+
+  it('supports explicit unsubscribe with the original subscriber reference', () => {
+    const root = document.createElement('div')
+    document.body.append(root)
+
+    const subscriber = { onAdded: () => undefined }
+    const eo = new ElementExistenceObserver({ root })
+
+    eo.subscribe(subscriber)
+
+    expect(eo.isActive()).toBe(true)
+
+    eo.unsubscribe(subscriber)
+
+    expect(eo.isActive()).toBe(false)
+
+    eo.disconnect()
+  })
+
+  it('multicasts to all subscribers', () => {
+    const root = document.createElement('div')
+    document.body.append(root)
+
+    const onAddedA = rs.fn()
+    const onAddedB = rs.fn()
+
+    const eo = new ElementExistenceObserver({ root })
+    eo.subscribe({ onAdded: onAddedA })
+    eo.subscribe({ onAdded: onAddedB })
+
+    const [mo] = instances
+
+    const el = document.createElement('div')
+    root.append(el)
+    mo?.emit([{ addedNodes: [el], removedNodes: [] }])
+    eo.flush()
+
+    expect(onAddedA).toHaveBeenCalledTimes(1)
+    expect(onAddedB).toHaveBeenCalledTimes(1)
+
+    eo.disconnect()
+  })
+
   it('delivers aggregate first, then per-kind (removed before added)', () => {
     const root = document.createElement('div')
     document.body.append(root)

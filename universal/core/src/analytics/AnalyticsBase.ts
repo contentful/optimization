@@ -19,6 +19,14 @@ abstract class AnalyticsBase extends ProductBase {
   abstract trackComponentView(payload: ComponentViewBuilderArgs): Promise<void> | void
 
   /**
+   * Track a UI component click event.
+   *
+   * @param payload - Component click builder arguments.
+   * @returns A promise that resolves when processing is complete (or `void`).
+   */
+  abstract trackComponentClick(payload: ComponentViewBuilderArgs): Promise<void> | void
+
+  /**
    * Track a flag (feature) view event.
    *
    * @param payload - Flag view builder arguments.

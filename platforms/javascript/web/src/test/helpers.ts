@@ -1,7 +1,13 @@
 // tests/utils.ts
 import { rs } from '@rstest/core'
+import {
+  EntryInteractionTrackerHost,
+  type EntryInteractionDetector,
+} from '../entry-tracking/EntryInteractionTrackerHost'
+import ElementExistenceObserver from '../entry-tracking/registry/ElementExistenceObserver'
+import { EntryElementRegistry } from '../entry-tracking/registry/EntryElementRegistry'
 
-export interface IOEntryInit {
+interface IOEntryInit {
   target: Element
   isIntersecting: boolean
   intersectionRatio: number
@@ -171,13 +177,43 @@ export function deferred<T = void>(): {
   resolve: (v: T | PromiseLike<T>) => void
   reject: (e?: unknown) => void
 } {
-  let resolve!: (v: T | PromiseLike<T>) => void
-  let reject!: (e?: unknown) => void
+  let resolve: (v: T | PromiseLike<T>) => void = () => {
+    throw new Error('Deferred resolver not initialized')
+  }
+  let reject: (e?: unknown) => void = () => {
+    throw new Error('Deferred rejecter not initialized')
+  }
   const promise = new Promise<T>((_resolve, _reject) => {
     resolve = _resolve
     reject = _reject
   })
   return { promise, resolve, reject }
+}
+
+interface EntryTrackingHarness<TStartOptions = never, TElementOptions = never> {
+  readonly entryElementRegistry: EntryElementRegistry
+  readonly entryExistenceObserver: ElementExistenceObserver
+  readonly tracker: EntryInteractionTrackerHost<TStartOptions, TElementOptions>
+  readonly cleanup: () => void
+}
+
+export function createEntryTrackingHarness<TStartOptions = never, TElementOptions = never>(
+  detector: EntryInteractionDetector<TStartOptions, TElementOptions>,
+): EntryTrackingHarness<TStartOptions, TElementOptions> {
+  const entryExistenceObserver = new ElementExistenceObserver()
+  const entryElementRegistry = new EntryElementRegistry(entryExistenceObserver)
+  const tracker = new EntryInteractionTrackerHost(detector, entryElementRegistry)
+
+  return {
+    entryElementRegistry,
+    entryExistenceObserver,
+    tracker,
+    cleanup: (): void => {
+      tracker.stop()
+      entryElementRegistry.disconnect()
+      entryExistenceObserver.disconnect()
+    },
+  }
 }
 
 /** Advance timers and flush microtasks. */

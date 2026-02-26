@@ -15,18 +15,14 @@ import {
   type App,
   CoreStateful,
   type CoreStatefulConfig,
-  createScopedLogger,
   effect,
   signals,
 } from '@contentful/optimization-core'
-import { merge } from 'es-toolkit'
+import { merge } from 'es-toolkit/object'
 import Cookies from 'js-cookie'
-import {
-  createAutoTrackingEntryExistenceCallback,
-  createAutoTrackingEntryViewCallback,
-  isEntryElement,
-} from './AutoEntryViewTracking'
 import { getLocale, getPageProperties, getUserAgent } from './builders'
+import type { AutoTrackEntryInteractionOptions, EntryInteractionApi } from './entry-tracking'
+import { EntryInteractionRuntime } from './entry-tracking/EntryInteractionRuntime'
 import {
   ANONYMOUS_ID_COOKIE,
   OPTIMIZATION_WEB_SDK_NAME,
@@ -37,20 +33,7 @@ import {
   createOnlineChangeListener,
   createVisibilityChangeListener,
 } from './handlers'
-import {
-  ElementExistenceObserver,
-  type ElementViewElementOptions,
-  ElementViewObserver,
-  type ElementViewObserverOptions,
-} from './observers'
 import { LocalStore } from './storage'
-
-/**
- * Scoped logger used by the Web SDK.
- *
- * @internal
- */
-const logger = createScopedLogger('Web:SDK')
 
 declare global {
   interface Window {
@@ -96,7 +79,7 @@ const EXPIRATION_DAYS_DEFAULT = 365
  * @public
  * @remarks
  * Extends {@link CoreStatefulConfig} with Web-specific options such as the
- * application descriptor and automatic entry view tracking.
+ * application descriptor and automatic tracked entry interactions.
  */
 export interface OptimizationWebConfig extends CoreStatefulConfig {
   /**
@@ -105,12 +88,14 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
   app?: App
 
   /**
-   * Whether the SDK should automatically track entry views based on DOM
-   * attributes and observers.
+   * Controls automatic tracking behavior for entry interactions.
    *
-   * @defaultValue `false`
+   * @remarks
+   * Supports entry interactions via the `views` and `clicks` interactions.
+   *
+   * @defaultValue `{ views: false, clicks: false }`
    */
-  autoTrackEntryViews?: boolean
+  autoTrackEntryInteraction?: AutoTrackEntryInteractionOptions
 
   /**
    * Cookie configuration used for persisting the anonymous identifier.
@@ -120,6 +105,13 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
    */
   cookie?: CookieAttributes
 }
+
+/**
+ * Public tracking API exposed by {@link Optimization#tracking}.
+ *
+ * @public
+ */
+export type OptimizationTrackingApi = EntryInteractionApi
 
 /**
  * Merge user-supplied Web configuration with sensible defaults for the
@@ -151,7 +143,7 @@ function mergeConfig({
     personalizations = LocalStore.personalizations,
   } = defaults ?? {}
 
-  const mergedConfig = merge(
+  const mergedConfig: CoreStatefulConfig = merge(
     {
       analytics: { beaconHandler },
       defaults: {
@@ -174,10 +166,9 @@ function mergeConfig({
     config,
   )
 
-  return {
-    ...mergedConfig,
-    allowedEventTypes: allowedEventTypes ?? ['identify', 'page'],
-  }
+  mergedConfig.allowedEventTypes ??= allowedEventTypes ?? ['identify', 'page']
+
+  return mergedConfig
 }
 
 /**
@@ -188,7 +179,7 @@ function mergeConfig({
  * Provides browser-specific wiring:
  * - automatic persistence of consent, profile, and personalizations,
  * - cookie-based anonymous ID handling,
- * - automatic entry view tracking via IntersectionObserver and MutationObserver,
+ * - automatic tracked entry interactions (currently views and clicks),
  * - online-change based flushing of events,
  * - and visibility-change based flushing of events.
  *
@@ -197,25 +188,17 @@ function mergeConfig({
  */
 class Optimization extends CoreStateful {
   /**
-   * Observer responsible for element view/dwell-time tracking.
+   * Tracked entry interaction runtime state and trackers.
    *
    * @internal
    */
-  private elementViewObserver?: ElementViewObserver = undefined
-
+  private readonly entryInteractionRuntime: EntryInteractionRuntime
   /**
-   * Observer responsible for detecting entry elements added/removed in the DOM.
+   * Namespaced tracking controls for automatic and per-element entry interactions.
    *
-   * @internal
+   * @public
    */
-  private elementExistenceObserver?: ElementExistenceObserver = undefined
-
-  /**
-   * Whether automatic entry view tracking is enabled.
-   *
-   * @internal
-   */
-  private autoTrackEntryViews = false
+  public readonly tracking: OptimizationTrackingApi
 
   /**
    * Cookie attributes used when persisting the anonymous identifier.
@@ -229,14 +212,14 @@ class Optimization extends CoreStateful {
    *
    * @internal
    */
-  private readonly cleanupOnlineListener!: () => void
+  private readonly cleanupOnlineListener: () => void
 
   /**
    * Cleanup function for visibility listener bindings.
    *
    * @internal
    */
-  private readonly cleanupVisibilityListener!: () => void
+  private readonly cleanupVisibilityListener: () => void
 
   /**
    * Create a new Optimization Web SDK instance.
@@ -253,7 +236,7 @@ class Optimization extends CoreStateful {
    * const optimization = new Optimization({
    *   clientId: 'abc-123',
    *   environment: 'main',
-   *   autoTrackEntryViews: true,
+   *   autoTrackEntryInteraction: { views: true },
    * })
    * ```
    */
@@ -261,7 +244,7 @@ class Optimization extends CoreStateful {
     if (typeof window !== 'undefined' && window.optimization)
       throw new Error('Optimization is already initialized')
 
-    const { autoTrackEntryViews, ...restConfig } = config
+    const { autoTrackEntryInteraction, ...restConfig } = config
 
     const mergedConfig: OptimizationWebConfig = mergeConfig(restConfig)
 
@@ -270,7 +253,10 @@ class Optimization extends CoreStateful {
     const legacyCookieValue = Cookies.get(ANONYMOUS_ID_COOKIE_LEGACY)
     const cookieValue = legacyCookieValue ?? Cookies.get(ANONYMOUS_ID_COOKIE)
 
-    this.autoTrackEntryViews = autoTrackEntryViews ?? false
+    const entryInteractionRuntime = new EntryInteractionRuntime(this, autoTrackEntryInteraction)
+    const { tracking } = entryInteractionRuntime
+    this.entryInteractionRuntime = entryInteractionRuntime
+    this.tracking = tracking
 
     this.cookieAttributes = {
       domain: mergedConfig.cookie?.domain,
@@ -298,10 +284,7 @@ class Optimization extends CoreStateful {
         consent: { value },
       } = signals
 
-      if (this.autoTrackEntryViews) {
-        value ? this.startAutoTrackingEntryViews() : this.stopAutoTrackingEntryViews()
-      }
-
+      this.entryInteractionRuntime.syncAutoTrackedEntryInteractions(!!value)
       LocalStore.consent = value
     })
 
@@ -369,113 +352,8 @@ class Optimization extends CoreStateful {
   }
 
   /**
-   * Enable automatic entry view tracking for elements with `data-ctfl-*`
-   * attributes and start observing the document.
-   *
-   * @param options - Optional per-element observer defaults for dwell time,
-   *   retries, and backoff behavior.
-   * @returns Nothing.
-   *
-   * @example
-   * ```ts
-   * optimization.startAutoTrackingEntryViews({ dwellTimeMs: 1000 })
-   * ```
-   *
-   * @public
-   */
-  startAutoTrackingEntryViews(options?: ElementViewObserverOptions): void {
-    this.autoTrackEntryViews = true
-
-    this.elementViewObserver = new ElementViewObserver(createAutoTrackingEntryViewCallback(this))
-
-    this.elementExistenceObserver = new ElementExistenceObserver(
-      createAutoTrackingEntryExistenceCallback(this.elementViewObserver, true),
-    )
-
-    // Fully-automated observation for elements with ctfl data attributes
-    const entries = document.querySelectorAll('[data-ctfl-entry-id]')
-
-    entries.forEach((element) => {
-      if (!isEntryElement(element)) return
-
-      logger.info('Auto-observing element (init):', element)
-
-      this.elementViewObserver?.observe(element, {
-        ...options,
-      })
-    })
-  }
-
-  /**
-   * Disable automatic entry view tracking and disconnect underlying observers.
-   *
-   * @returns Nothing.
-   *
-   * @example
-   * ```ts
-   * optimization.stopAutoTrackingEntryViews()
-   * ```
-   *
-   * @public
-   */
-  stopAutoTrackingEntryViews(): void {
-    this.elementExistenceObserver?.disconnect()
-    this.elementViewObserver?.disconnect()
-  }
-
-  /**
-   * Begin tracking entry views for a specific element, using the Web SDK’s
-   * dwell-time and retry logic.
-   *
-   * @param element - Element to observe.
-   * @param options - Per-element observer options and callback data.
-   * @returns Nothing.
-   *
-   * @remarks
-   * This method relies on an initialized {@link ElementViewObserver}. If automatic
-   * tracking has not been started, the call is a no-op.
-   *
-   * @example
-   * ```ts
-   * const element = document.querySelector('#hero')!
-   * optimization.trackEntryViewForElement(element, {
-   *   dwellTimeMs: 1500,
-   *   data: { entryId: 'xyz' },
-   * })
-   * ```
-   *
-   * @public
-   */
-  trackEntryViewForElement(element: Element, options: ElementViewElementOptions): void {
-    logger.info('Manually observing element:', element)
-    this.elementViewObserver?.observe(element, options)
-  }
-
-  /**
-   * Stop tracking entry views for a specific element.
-   *
-   * @param element - Element to stop observing.
-   * @returns Nothing.
-   *
-   * @remarks
-   * This method relies on an initialized {@link ElementViewObserver}. If automatic
-   * tracking has not been started, the call is a no-op.
-   *
-   * @example
-   * ```ts
-   * optimization.untrackEntryViewForElement(element)
-   * ```
-   *
-   * @public
-   */
-  untrackEntryViewForElement(element: Element): void {
-    logger.info('Manually unobserving element:', element)
-    this.elementViewObserver?.unobserve(element)
-  }
-
-  /**
    * Reset all Web SDK state:
-   * - stops auto-tracking entry views,
+   * - stops auto-tracked entry interactions,
    * - clears the anonymous ID cookie,
    * - clears LocalStore caches,
    * - and delegates to {@link CoreStateful.reset} for underlying state reset.
@@ -490,7 +368,7 @@ class Optimization extends CoreStateful {
    * @public
    */
   reset(): void {
-    this.stopAutoTrackingEntryViews()
+    this.entryInteractionRuntime.reset()
     Cookies.remove(ANONYMOUS_ID_COOKIE)
     LocalStore.reset()
     super.reset()
@@ -504,7 +382,7 @@ class Optimization extends CoreStateful {
    * clear persisted user state.
    */
   destroy(): void {
-    this.stopAutoTrackingEntryViews()
+    this.entryInteractionRuntime.destroy()
     this.cleanupOnlineListener()
     this.cleanupVisibilityListener()
 

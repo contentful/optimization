@@ -5,7 +5,7 @@
  * @internal
  */
 
-import { CAN_ADD_LISTENERS } from '../global-constants'
+import { CAN_ADD_LISTENERS } from '../../global-constants'
 
 /**
  * Timer handle type returned by `setTimeout`.
@@ -67,33 +67,9 @@ export const DEFAULTS = {
   DWELL_MS: 1000,
   /** Default minimum intersection ratio considered visible. */
   RATIO: 0.1,
-  /** Default maximum retry attempts. */
-  MAX_RETRIES: 2,
-  /** Default initial backoff delay for retries in ms. */
-  BACKOFF_MS: 300,
-  /** Default exponential backoff multiplier. */
-  MULTIPLIER: 2,
-  /** Divisor used to compute jitter magnitude. */
-  JITTER_DIVISOR: 2,
   /** Interval for sweeping orphaned states in ms. */
   SWEEP_INTERVAL_MS: 30000,
 } as const
-
-/**
- * Add small random jitter to a base delay to reduce thundering herd effects.
- *
- * @param base - Base delay in ms.
- * @returns Jittered delay in ms.
- *
- * @example
- * ```ts
- * const delay = withJitter(300)
- * ```
- *
- * @public
- */
-export const withJitter = (base: number): number =>
-  base + Math.floor(Math.random() * Math.max(1, Math.floor(base / DEFAULTS.JITTER_DIVISOR)))
 
 /** ---- Public Types ---- */
 
@@ -112,8 +88,7 @@ export interface ElementViewCallbackInfo {
 }
 
 /**
- * Callback invoked once per element after the dwell requirement is met,
- * with retries on failure.
+ * Callback invoked once per element after the dwell requirement is met.
  *
  * @public
  */
@@ -136,12 +111,6 @@ export interface ElementViewObserverOptions {
   readonly root?: Element | Document | null
   /** IntersectionObserver rootMargin. Default: `"0px"`. */
   readonly rootMargin?: string
-  /** Max callback retry attempts on failure. */
-  readonly maxRetries?: number
-  /** Initial backoff delay in ms for retries. */
-  readonly retryBackoffMs?: number
-  /** Exponential backoff multiplier. */
-  readonly backoffMultiplier?: number
 }
 
 /**
@@ -152,12 +121,6 @@ export interface ElementViewObserverOptions {
 export interface ElementViewElementOptions {
   /** Per-element dwell time override in ms. */
   readonly dwellTimeMs?: number
-  /** Per-element optional max callback retry attempts on failures. */
-  readonly maxRetries?: number
-  /** Per-element optional initial backoff delay in ms for retrie. */
-  readonly retryBackoffMs?: number
-  /** Per-element optional exponential backoff multiplier. */
-  readonly backoffMultiplier?: number
   /** Arbitrary data to pass through to the callback for this element. */
   readonly data?: unknown
   /**
@@ -175,16 +138,7 @@ export interface ElementViewElementOptions {
  * @internal
  */
 export type EffectiveObserverOptions = Required<
-  Pick<
-    ElementViewObserverOptions,
-    | 'dwellTimeMs'
-    | 'minVisibleRatio'
-    | 'root'
-    | 'rootMargin'
-    | 'maxRetries'
-    | 'retryBackoffMs'
-    | 'backoffMultiplier'
-  >
+  Pick<ElementViewObserverOptions, 'dwellTimeMs' | 'minVisibleRatio' | 'root' | 'rootMargin'>
 >
 
 /**
@@ -192,12 +146,7 @@ export type EffectiveObserverOptions = Required<
  *
  * @internal
  */
-export type PerElementEffectiveOptions = Required<
-  Pick<
-    EffectiveObserverOptions,
-    'dwellTimeMs' | 'maxRetries' | 'retryBackoffMs' | 'backoffMultiplier'
-  >
->
+export type PerElementEffectiveOptions = Required<Pick<EffectiveObserverOptions, 'dwellTimeMs'>>
 
 /**
  * Internal per-element state tracked by the observer.
@@ -219,17 +168,9 @@ export interface ElementState {
   visibleSince: number | null
   /** Timer handle for firing the callback after dwell time. */
   fireTimer: Timer | null
-  /** Timer handle for scheduled retry. */
-  retryTimer: Timer | null
-  /** Timestamp when retry was scheduled. */
-  retryScheduledAt: number | null
-  /** Delay used for the current retry. */
-  retryDelayMs: number | null
-  /** True if a retry is pending but not yet scheduled. */
-  pendingRetry: boolean
   /** Number of attempts performed so far. */
   attempts: number
-  /** True once the callback has succeeded or retries are exhausted. */
+  /** True once the callback attempt has settled for this element. */
   done: boolean
   /** True while a callback attempt is in flight. */
   inFlight: boolean
@@ -251,9 +192,6 @@ export const Num = {
   /** Ensure a non-negative value. */
   nonNeg: (value: number | undefined, fallback: number): number =>
     Math.max(0, Num.n(value, fallback)),
-  /** Ensure a value of at least 1. */
-  atLeast1: (value: number | undefined, fallback: number): number =>
-    Math.max(1, Num.n(value, fallback)),
 }
 
 /**
@@ -269,22 +207,6 @@ export const clearFireTimer = (state: ElementState): void => {
     clearTimeout(state.fireTimer)
     state.fireTimer = null
   }
-}
-
-/**
- * Cancel a scheduled retry timer, if present.
- *
- * @param state - Element state whose retry timer should be cleared.
- * @returns Nothing.
- *
- * @public
- */
-export const cancelRetry = (state: ElementState): void => {
-  if (state.retryTimer !== null) {
-    clearTimeout(state.retryTimer)
-    state.retryTimer = null
-  }
-  state.retryScheduledAt = null
 }
 
 /**

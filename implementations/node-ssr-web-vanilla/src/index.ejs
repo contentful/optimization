@@ -44,6 +44,27 @@
       section:first-of-type {
         grid-column: 1 / span 2;
       }
+      summary {
+        cursor: pointer;
+      }
+      button {
+        cursor: pointer;
+
+        &:not([type]) {
+          appearance: none;
+          background: transparent;
+          border: 0;
+          padding: 0;
+          font-family: inherit;
+          font-size: inherit;
+          text-decoration: underline;
+
+          &:hover,
+          &:active {
+            color: blue;
+          }
+        }
+      }
       a {
         color: inherit;
         text-decoration: underline;
@@ -52,7 +73,8 @@
       a:active {
         color: blue;
       }
-      #utility-panel {
+      #utility-panel,
+      #event-stream-panel {
         position: sticky;
         top: 0;
         margin-block-start: -1px;
@@ -66,7 +88,8 @@
         grid-auto-rows: minmax(75dvh, auto);
         margin-block-end: 2rem;
 
-        > div {
+        > div,
+        > button {
           display: grid;
           grid-gap: inherit;
           grid-auto-rows: inherit;
@@ -77,6 +100,12 @@
           overflow: visible;
         }
 
+        > button {
+          appearance: none;
+          border: 0;
+          text-align: left;
+        }
+
         div.nested {
           display: grid;
           grid-gap: inherit;
@@ -84,6 +113,10 @@
           padding: 1rem;
           border: 1px solid #ccc;
           overflow: visible;
+        }
+
+        [data-e2e-entry-inline='true'] {
+          display: block;
         }
       }
     </style>
@@ -93,6 +126,11 @@
     <main>
       <section id="utility-panel">
         <h2>Utilites</h2>
+        <span>
+          <button id="consent">Accept Consent</button>
+          <button id="unconsent">Reject Consent</button>
+        </span>
+        |
         <span>
           <% if (typeof identified !== 'undefined' && identified) { %>
             <a href="/">Reset Profile for: <%= identified %></a>
@@ -110,9 +148,25 @@
           <div data-ctfl-entry-id="1MwiFl4z7gkwqGYdvCmr8c">
             <!-- Merge Tag "Rich Text" Entry -->
           </div>
-          <div data-ctfl-entry-id="4ib0hsHWoSOnCVdDkizE8d"></div>
-          <div data-ctfl-entry-id="xFwgG3oNaOcjzWiGe4vXo"></div>
-          <div data-ctfl-entry-id="2Z2WLOx07InSewC3LUB3eX"></div>
+          <button
+            type="button"
+            data-testid="entry-click-direct-entry"
+            data-e2e-click-scenario="direct"
+            data-ctfl-entry-id="4ib0hsHWoSOnCVdDkizE8d"
+          ></button>
+          <div
+            data-testid="entry-click-descendant-entry"
+            data-e2e-click-scenario="descendant"
+            data-ctfl-entry-id="xFwgG3oNaOcjzWiGe4vXo"
+          ></div>
+          <button type="button" data-testid="entry-click-ancestor-wrapper">
+            <span
+              data-testid="entry-click-ancestor-entry"
+              data-e2e-click-scenario="ancestor"
+              data-e2e-entry-inline="true"
+              data-ctfl-entry-id="2Z2WLOx07InSewC3LUB3eX"
+            ></span>
+          </button>
         </div>
         <div id="manually-observed">
           <div data-entry-id="5XHssysWUDECHzKLzoIsg1"></div>
@@ -120,7 +174,27 @@
           <div data-entry-id="7pa5bOx8Z9NmNcr7mISvD"></div>
         </div>
       </section>
+      <section>
+        <div id="event-stream-panel">
+          <h2>Event Stream</h2>
+
+          <ol id="event-stream"></ol>
+        </div>
+      </section>
     </main>
+
+    <template id="event-dialog">
+      <li>
+        <button></button>
+        <dialog>
+          <pre></pre>
+          <form method="dialog">
+            <button type="submit">Close</button>
+          </form>
+        </dialog>
+      </li>
+    </template>
+
     <script>
       const CONFIG = <%- JSON.stringify(config) %>
     </script>
@@ -128,14 +202,50 @@
       /* --- Standard Initialization Code --- */
 
       const contentfulClient = contentful.createClient(CONFIG.contentful)
-      const optimization = new Optimization({
+      window.optimization = new Optimization({
         ...CONFIG.optimization,
-        autoTrackEntryViews: true,
+        autoTrackEntryInteraction: { views: true, clicks: true },
         app: { name: document.title, version: '0.0.0' },
       })
+      const optimization = window.optimization
 
       // Emit page event
       optimization.personalization.page()
+
+      /* --- Utility Functionality (for E2E) --- */
+
+      const consent = document.getElementById('consent')
+      const unconsent = document.getElementById('unconsent')
+
+      function toggleConsent(consented = false) {
+        if (consented) {
+          consent.setAttribute('style', 'display: none;')
+          unconsent.removeAttribute('style')
+        } else {
+          consent.removeAttribute('style')
+          unconsent.setAttribute('style', 'display: none;')
+        }
+      }
+
+      consent.addEventListener('click', () => optimization.consent(true))
+      unconsent.addEventListener('click', () => optimization.consent(false))
+
+      function createEventDialog(title, details) {
+        const template = document.querySelector('#event-dialog')
+        const clone = template.content.cloneNode(true)
+        const dialog = clone.querySelector('dialog')
+        const button = clone.querySelector('button')
+        const pre = clone.querySelector('pre')
+
+        button.innerText = title
+        button.commandForElement = dialog
+        button.command = 'show-modal'
+        button.dataset.testid = details.componentId ?? details?.properties?.url ?? details.messageId
+
+        pre.innerText = JSON.stringify(details, null, 2)
+
+        return clone
+      }
 
       /* --- Standard Rendering Code --- */
 
@@ -173,20 +283,33 @@
         }
       }
 
+      function decorateClickableEntryScenario(element) {
+        if (element.dataset.e2eClickScenario !== 'descendant') return
+
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.dataset.testid = 'entry-click-descendant-button'
+        button.innerText = 'Trigger entry click tracking from descendant button'
+
+        element.appendChild(button)
+      }
+
       let renderEntriesPromise = Promise.resolve()
 
       // Render personalized entries
       async function renderPersonalizedEntry(rawEntry, element, autoObserve = true) {
         const { entry, personalization } = optimization.personalization.personalizeEntry(rawEntry)
+        const renderInline =
+          element.dataset.e2eEntryInline === 'true' || element.tagName === 'BUTTON'
 
         if (isRichText(entry.fields?.text)) {
           const div = document.createElement('div')
           simpleRenderRichText(entry.fields.text, div)
           element.replaceChildren(div)
         } else {
-          const p = document.createElement('p')
-          p.innerText = entry.fields?.text
-          element.replaceChildren(p)
+          const textElement = document.createElement(renderInline ? 'span' : 'p')
+          textElement.innerText = entry.fields?.text
+          element.replaceChildren(textElement)
         }
 
         if (entry.fields?.nested) {
@@ -199,6 +322,8 @@
 
           element.appendChild(div)
         }
+
+        decorateClickableEntryScenario(element)
 
         // NOTE: Elements that are not auto-observed may still be auto-tracked (see below)
         if (autoObserve) {
@@ -234,10 +359,10 @@
       function manuallyObserveEntryElement(element, entry, personalization) {
         if (!entry?.sys?.id) return
 
-        optimization.untrackEntryViewForElement(element)
+        optimization.tracking.unobserve('views', element)
 
         // Manually observe the element for auto-tracking (does not use `data-ctfl-*` attributes)
-        optimization.trackEntryViewForElement(element, {
+        optimization.tracking.observe('views', element, {
           data: {
             // The `entryId` property is required for auto-tracking
             entryId: entry.sys.id,
@@ -286,6 +411,16 @@
 
         return renderEntriesPromise
       }
+
+      optimization.states.consent.subscribe((consent) => {
+        toggleConsent(consent)
+      })
+
+      optimization.states.eventStream.subscribe((event) => {
+        if (!event) return
+
+        document.querySelector('#event-stream').appendChild(createEventDialog(event.type, event))
+      })
 
       // Subscribe to personalizations state and render entries when selections are available
       optimization.states.personalizations.subscribe(async (personalizations) => {

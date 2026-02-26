@@ -1,5 +1,6 @@
 import { createScopedLogger } from '@contentful/optimization-core'
 import { CAN_ADD_LISTENERS } from '../global-constants'
+import { safeCall } from '../lib'
 
 const logger = createScopedLogger('Web:Visibility')
 
@@ -56,13 +57,14 @@ export function createVisibilityChangeListener(callback: Callback): () => void {
     if (handled) return
     handled = true
 
-    void (async () => {
-      try {
+    safeCall(
+      async () => {
         await callback(event)
-      } catch (error) {
+      },
+      (error) => {
         logger.error('Error handling page visibility change:', error)
-      }
-    })()
+      },
+    )
   }
 
   const resetHandled = (): void => {

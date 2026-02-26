@@ -17,7 +17,7 @@ import {
   type TrackBuilderArgs,
 } from '@contentful/optimization-api-client'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
-import { isEqual } from 'es-toolkit'
+import { isEqual } from 'es-toolkit/predicate'
 import { createScopedLogger } from 'logger'
 import type { BlockedEvent } from '../BlockedEvent'
 import type { ConsentGuard } from '../Consent'

@@ -92,23 +92,23 @@ packages:
     resolution: {integrity: sha512-tu1gfmZI59hQ7qKhmGOV0dA5brxhsc+LOfPwBsQQMDAVy5kVpTrKf/AGlL2y9QhKHu/NtCrwX/ZrmRFgtGEtIA==}
 
   '@contentful/optimization-api-client@file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz':
-    resolution: {integrity: sha512-oBMPRO3Jg6OwkCTPNa4w3b4em+Ds4qphQXKjp+3cblm1DhwOwhpPQYj3bpinWa5G4nAUje8KMsp570uII3K17A==, tarball: file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz}
+    resolution: {integrity: sha512-QT7bRfw3WkvbA4ZO7c4TCGVqcCprrOFu8orQtTucOEyHpS1SBdV8gp5wqt5QBXIclqXdaSA5QSv24XW7j5FtDg==, tarball: file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/optimization-api-schemas@file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz':
-    resolution: {integrity: sha512-q9yGS3kX+jqrU5JeZZVleQbXbVIshJtOTNYp6sG66hK5vu+conLgqG2ZjGLqLI1LY01BxMBS5G2i9Wi//cOlsQ==, tarball: file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz}
+    resolution: {integrity: sha512-5VTkmQX7jz3xO0bEiFXaK8E7JVpY/+uRavMRQmeNddk5AY9+t7QivIQ+1Z/iCsorWB4FXtWyqd/Kb/DrFSe67w==, tarball: file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/optimization-core@file:../../pkgs/contentful-optimization-core-0.0.0.tgz':
-    resolution: {integrity: sha512-OQ2V/cmKS/b+jwjV4HYrbUb3XfsNVs2A4sn2hGxZTJkiiUhmCEhobVbhtEM6dakhyhDrV+T/rfXVWx4wwOx3Pg==, tarball: file:../../pkgs/contentful-optimization-core-0.0.0.tgz}
+    resolution: {integrity: sha512-rRbDTfepzgq+HnxPann3t0/29OCvJqaeHYSUHTd/pwXmrIrNWSW+5Ao3V1q8SGj43chszsyQhIUdZBwtPEXTIw==, tarball: file:../../pkgs/contentful-optimization-core-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/optimization-node@file:../../pkgs/contentful-optimization-node-0.0.0.tgz':
-    resolution: {integrity: sha512-nMpzxBFPs22Y3+Tiv9rIp1sWxyKXFpg8rr+plySbqmy193C42oSyRsV3g73v0U5OCEsstJ3MvwHtrRPlPH+1HQ==, tarball: file:../../pkgs/contentful-optimization-node-0.0.0.tgz}
+    resolution: {integrity: sha512-yIHEs0Pr9PkCZ2rhFeKr3vOVC6qY7BrUm90EpsJRuqIUoK+f2Wc2WwaJuL7GuVedCxZj28haJNkik3nETRciiA==, tarball: file:../../pkgs/contentful-optimization-node-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/optimization-web@file:../../pkgs/contentful-optimization-web-0.0.0.tgz':
-    resolution: {integrity: sha512-T1wJuQgqTlTdXX1ZvM/o0v0mur9ADSPLIbUjsu0KYlyRG46fsL3XNzRTJjNGj5ekw0779JflffLVh9eLMGx7Gw==, tarball: file:../../pkgs/contentful-optimization-web-0.0.0.tgz}
+    resolution: {integrity: sha512-uHHB/Dtb8VzQbfA/m6YZDrx80Q0j3dYgrrZWUlpGX/VKGquyYS8NMWQR3MIu2jKql6htBBHwkt7L/WL18O0yVg==, tarball: file:../../pkgs/contentful-optimization-web-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/rich-text-types@16.8.5':
@@ -496,9 +496,6 @@ packages:
 
   '@types/range-parser@1.2.7':
     resolution: {integrity: sha512-hKormJbkJqzQGhziax5PItDUTMAM9uE2XXQmM37dyd4hVM+5aVl7oVxMVUiVQn2oCQFN/LKCZdvSM0pFRqbSmQ==}
-
-  '@types/retry@0.12.2':
-    resolution: {integrity: sha512-XISRgDJ2Tc5q4TRqvgJtzsRkFYNJzZrhTdtMoGVBttwzzQJkPnS3WWTFc7kuDRoPtPakl+T+OfdEUjYJj7Jbow==}
 
   '@types/send@1.2.1':
     resolution: {integrity: sha512-arsCikDvlU99zl1g69TcAB3mzZPpxgw0UQnaHeC1Nwb015xp8bknZv5rIfri9xTOcMuaVgvabfIRA7PSZVuZIQ==}
@@ -1023,10 +1020,6 @@ packages:
     resolution: {integrity: sha512-xelSayHH36ZgE7ZWhli7pW34hNbNl8Ojv5KVmkJD4hBdD3th8Tfk9vYasLM+mXWOZhFkgZfxhLSnrwRr4elSSg==}
     engines: {node: '>=0.10.0'}
 
-  is-network-error@1.3.0:
-    resolution: {integrity: sha512-6oIwpsgRfnDiyEDLMay/GqCl3HoAtH5+RUKW29gYkL0QA+ipzpDLA16yQs7/RHCSu+BwgbJaOUqa4A99qNVQVw==}
-    engines: {node: '>=16'}
-
   is-number@7.0.0:
     resolution: {integrity: sha512-41Cifkg6e8TylSpdtTpeLVMqvSBEVzTttHvERD741+pnZ8ANv0004MRL43QKPDlK9cGvNp6NZWZUBlbGXYxxng==}
     engines: {node: '>=0.12.0'}
@@ -1190,14 +1183,6 @@ packages:
   once@1.4.0:
     resolution: {integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==}
 
-  p-retry@6.2.1:
-    resolution: {integrity: sha512-hEt02O4hUct5wtwg4H4KcWgDdm+l1bOaEy/hWzd8xtXB9BqxTWBBhb+2ImAtH4Cv4rPjV76xN3Zumqk3k3AhhQ==}
-    engines: {node: '>=16.17'}
-
-  p-retry@7.1.1:
-    resolution: {integrity: sha512-J5ApzjyRkkf601HpEeykoiCvzHQjWxPAHhyjFcEUP2SWq0+35NKh8TLhpLw+Dkq5TZBFvUM6UigdE9hIVYTl5w==}
-    engines: {node: '>=20'}
-
   pac-proxy-agent@7.2.0:
     resolution: {integrity: sha512-TEB8ESquiLMc0lV8vcd5Ql/JAKAoyzHFXaStwjkzpOpC5Yv+pIzLfHvjTSdf3vpa2bMiUQrg9i6276yn8666aA==}
     engines: {node: '>= 14'}
@@ -1323,10 +1308,6 @@ packages:
     resolution: {integrity: sha512-RfqAvLnMl313r7c9oclB1HhUEAezcpLjz95wFH4LVuhk9JF/r22qmVP9AMmOU4vMX7Q8pN8jwNg/CSpdFnMjTQ==}
     engines: {node: '>= 0.4'}
     hasBin: true
-
-  retry@0.13.1:
-    resolution: {integrity: sha512-XQBQ3I8W1Cge0Seh+6gjj03LbmRFWuoszgK9ooCpwYIrhhoO80pfq4cUkU5DkknwfOfFteRwlZ56PYOGYyFWdg==}
-    engines: {node: '>= 4'}
 
   rimraf@6.1.3:
     resolution: {integrity: sha512-LKg+Cr2ZF61fkcaK1UdkH2yEBBKnYjTyWzTJT6KNPcSPaiT7HSdhtMXQuN5wkTX0Xu72KQ1l8S42rlmexS2hSA==}
@@ -1540,7 +1521,6 @@ snapshots:
       '@contentful/optimization-api-schemas': file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz
       diary: 0.4.5
       es-toolkit: 1.44.0
-      p-retry: 6.2.1
       zod: 4.3.6
     transitivePeerDependencies:
       - debug
@@ -1559,7 +1539,6 @@ snapshots:
       contentful: 11.10.3
       diary: 0.4.5
       es-toolkit: 1.44.0
-      p-retry: 7.1.1
       zod: 4.3.6
     transitivePeerDependencies:
       - debug
@@ -1926,8 +1905,6 @@ snapshots:
   '@types/qs@6.14.0': {}
 
   '@types/range-parser@1.2.7': {}
-
-  '@types/retry@0.12.2': {}
 
   '@types/send@1.2.1':
     dependencies:
@@ -2486,8 +2463,6 @@ snapshots:
     dependencies:
       is-extglob: 2.1.1
 
-  is-network-error@1.3.0: {}
-
   is-number@7.0.0: {}
 
   is-promise@4.0.0: {}
@@ -2621,16 +2596,6 @@ snapshots:
   once@1.4.0:
     dependencies:
       wrappy: 1.0.2
-
-  p-retry@6.2.1:
-    dependencies:
-      '@types/retry': 0.12.2
-      is-network-error: 1.3.0
-      retry: 0.13.1
-
-  p-retry@7.1.1:
-    dependencies:
-      is-network-error: 1.3.0
 
   pac-proxy-agent@7.2.0:
     dependencies:
@@ -2821,8 +2786,6 @@ snapshots:
       is-core-module: 2.16.1
       path-parse: 1.0.7
       supports-preserve-symlinks-flag: 1.0.0
-
-  retry@0.13.1: {}
 
   rimraf@6.1.3:
     dependencies:

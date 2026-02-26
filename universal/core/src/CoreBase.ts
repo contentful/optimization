@@ -279,6 +279,20 @@ abstract class CoreBase {
   }
 
   /**
+   * Track a component click via analytics.
+   *
+   * @param payload - Component click builder arguments.
+   * @returns A promise that resolves when processing completes.
+   * @example
+   * ```ts
+   * await core.trackComponentClick({ componentId: 'hero-banner' })
+   * ```
+   */
+  async trackComponentClick(payload: ComponentViewBuilderArgs): Promise<void> {
+    await this.analytics.trackComponentClick(payload)
+  }
+
+  /**
    * Track a feature flag view via analytics.
    *
    * @param payload - Component view builder arguments used to build the flag view event.

@@ -1,17 +1,17 @@
 import * as z from 'zod/mini'
 import { ComponentViewEvent } from '../../experience/event'
+import { ComponentClickEvent } from './ComponentClickEvent'
 
 /**
  * Zod schema describing an Insights event.
  *
  * @remarks
- * Currently, Insights events are limited to {@link ComponentViewEvent},
- * but this discriminated union can be extended with additional event
- * types in the future.
+ * Insights events currently include {@link ComponentViewEvent} and
+ * {@link ComponentClickEvent}.
  *
  * @public
  */
-export const InsightsEvent = z.discriminatedUnion('type', [ComponentViewEvent])
+export const InsightsEvent = z.discriminatedUnion('type', [ComponentViewEvent, ComponentClickEvent])
 
 /**
  * TypeScript type inferred from {@link InsightsEvent}.

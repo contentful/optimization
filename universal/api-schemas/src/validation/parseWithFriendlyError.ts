@@ -1,5 +1,5 @@
-import { en } from 'zod/locales'
 import * as z from 'zod/mini'
+import en from 'zod/v4/locales/en.js'
 
 z.config(en())
 

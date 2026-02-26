@@ -28,6 +28,9 @@
     "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist",
     "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo",
     "dev": "rsbuild dev --host 0.0.0.0 -c rsbuild.config.ts",
+    "size:script": "tsx ./scripts/check-bundle-size.ts",
+    "size:check": "pnpm build:dist && pnpm size:script",
+    "size:report": "pnpm size:script --report-only",
     "test:unit": "rstest run --coverage",
     "typecheck": "tsc --noEmit"
   },
@@ -43,10 +46,12 @@
     "@rslib/core": "catalog:",
     "@rstest/core": "catalog:",
     "@rstest/coverage-istanbul": "catalog:",
+    "@types/node": "catalog:",
     "build-tools": "workspace:*",
     "happy-dom": "catalog:",
     "rimraf": "catalog:",
     "tslib": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:"
   }
 }

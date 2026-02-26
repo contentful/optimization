@@ -27,7 +27,10 @@ function makeClient(overrides: Partial<InsightsApiClientConfig> = {}): InsightsA
 }
 
 // TODO: Find a better place for this sort of thing
-function generateBatchEventArray(id: string): BatchInsightsEventArray {
+function generateBatchEventArray(
+  id: string,
+  eventType: 'component' | 'component_click' = 'component',
+): BatchInsightsEventArray {
   return [
     {
       profile: {
@@ -55,7 +58,7 @@ function generateBatchEventArray(id: string): BatchInsightsEventArray {
       },
       events: [
         {
-          type: 'component',
+          type: eventType,
           componentType: 'Entry',
           componentId: crypto.randomUUID(),
           variantIndex: 0,
@@ -173,6 +176,25 @@ describe('InsightsApiClient.sendBatchEvents', () => {
     expect(beaconHandler).toHaveBeenCalledTimes(1)
     expect(beaconHandler).toHaveBeenCalledWith(expectedUrl, batches)
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('accepts and POSTs component_click events', async () => {
+    const batches = generateBatchEventArray('e2-click', 'component_click')
+
+    const handler = http.post(
+      `${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`,
+      async ({ request }) => {
+        const json = (await request.json()) as unknown
+        expect(json).toEqual(batches)
+        return HttpResponse.json({ ok: true }, { status: 200 })
+      },
+    )
+
+    server.use(handler)
+
+    const client = makeClient()
+
+    await expect(client.sendBatchEvents(batches)).resolves.toBe(true)
   })
 
   it('POSTs batches via fetch when beaconHandler fails', async () => {
