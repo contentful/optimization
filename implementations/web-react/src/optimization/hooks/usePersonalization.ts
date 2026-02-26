@@ -58,8 +58,7 @@ export function usePersonalization(): UsePersonalizationResult {
       resolveEntry: (
         baselineEntry: BaselineEntry,
         selectedPersonalizations?: PersonalizationSelection,
-      ): PersonalizeResult =>
-        sdk.personalization.personalizeEntry(baselineEntry, selectedPersonalizations),
+      ): PersonalizeResult => sdk.personalizeEntry(baselineEntry, selectedPersonalizations),
 
       getMergeTagValue: (mergeTagEntry: MergeTagTarget): string =>
         toStringValue(sdk.personalization.getMergeTagValue(mergeTagEntry)),
