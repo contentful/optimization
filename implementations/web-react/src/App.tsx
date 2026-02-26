@@ -8,7 +8,11 @@ import { useOptimizationState } from './optimization/hooks/useOptimizationState'
 import { LiveUpdatesProvider } from './optimization/liveUpdates/LiveUpdatesContext'
 import { HomePage } from './pages/HomePage'
 import { PageTwoPage } from './pages/PageTwoPage'
-import { fetchEntries, getContentfulConfigError } from './services/contentfulClient'
+import {
+  fetchEntries,
+  getContentfulClient,
+  getContentfulConfigError,
+} from './services/contentfulClient'
 import type { ContentfulEntry } from './types/contentful'
 
 function isIdentifiedProfile(profile: unknown): boolean {
@@ -144,7 +148,10 @@ export default function App(): JSX.Element {
         <Route
           path={HOME_PATH}
           element={
-            <LiveUpdatesProvider globalLiveUpdates={globalLiveUpdates}>
+            <LiveUpdatesProvider
+              globalLiveUpdates={globalLiveUpdates}
+              previewPanel={{ contentful: getContentfulClient(), optimization: sdk }}
+            >
               <HomePage
                 consent={consent}
                 entriesById={entriesById}

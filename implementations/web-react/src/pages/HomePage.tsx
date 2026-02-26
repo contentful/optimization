@@ -87,11 +87,11 @@ export function HomePage({
           <button
             data-testid="simulate-preview-panel-button"
             onClick={() => {
-              liveUpdatesContext?.setPreviewPanelVisible(!isPreviewPanelOpen)
+              liveUpdatesContext?.togglePreviewPanel()
             }}
             type="button"
           >
-            {isPreviewPanelOpen ? 'Close Preview Panel' : 'Simulate Preview Panel'}
+            {isPreviewPanelOpen ? 'Close Preview Panel' : 'Open Preview Panel'}
           </button>
         </div>
 

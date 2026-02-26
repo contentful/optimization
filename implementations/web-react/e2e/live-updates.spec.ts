@@ -19,6 +19,7 @@ test.describe('live updates behavior', () => {
     await expect(page.getByTestId('preview-panel-status')).toHaveText('Closed')
     await expect(page.getByTestId('global-live-updates-status')).toHaveText('OFF')
     await expect(page.getByTestId('identified-status')).toHaveText('No')
+    await expect(page.locator('ctfl-opt-preview-panel')).toHaveCount(1)
     await expect
       .poll(async () => {
         const text = await page.getByTestId('personalizations-count').innerText()
