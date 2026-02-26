@@ -22,6 +22,9 @@ demonstrating:
 - SPA navigation tracking with React Router v7
 - Offline queue/recovery handling
 
+The live updates section demonstrates the same parity scenarios directly in-page (default, forced
+on, and locked), while keeping the main entry rendering flow customer-oriented.
+
 ## Prerequisites
 
 - Node.js >= 16.20.0

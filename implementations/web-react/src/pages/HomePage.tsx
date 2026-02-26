@@ -2,7 +2,7 @@ import type { JSX } from 'react'
 import { AUTO_OBSERVED_ENTRY_IDS, MANUALLY_OBSERVED_ENTRY_IDS } from '../config/entries'
 import { useLiveUpdates } from '../optimization/liveUpdates/LiveUpdatesContext'
 import { ContentEntry } from '../sections/ContentEntry'
-import { LiveUpdatesSection } from '../sections/LiveUpdatesSection'
+import { LiveUpdatesExampleEntry } from '../sections/LiveUpdatesExampleEntry'
 import { NestedContentEntry } from '../sections/NestedContentEntry'
 import type { ContentfulEntry } from '../types/contentful'
 
@@ -104,7 +104,37 @@ export function HomePage({
 
       <section>
         <h2>Live Updates</h2>
-        <LiveUpdatesSection baselineEntry={liveUpdatesBaselineEntry} />
+        <p>
+          Toggle global live updates and identify the user to verify how entries update. Optional
+          per-component control is available through the <code>liveUpdates</code> prop.
+        </p>
+        <div data-testid="live-updates-examples" style={{ display: 'grid', gap: 16 }}>
+          <section data-testid="live-updates-default">
+            <h3>Default (inherits global setting)</h3>
+            <LiveUpdatesExampleEntry
+              baselineEntry={liveUpdatesBaselineEntry}
+              testIdPrefix="live-default"
+            />
+          </section>
+
+          <section data-testid="live-updates-enabled">
+            <h3>Always On (liveUpdates=true)</h3>
+            <LiveUpdatesExampleEntry
+              baselineEntry={liveUpdatesBaselineEntry}
+              liveUpdates={true}
+              testIdPrefix="live-enabled"
+            />
+          </section>
+
+          <section data-testid="live-updates-locked">
+            <h3>Locked (liveUpdates=false)</h3>
+            <LiveUpdatesExampleEntry
+              baselineEntry={liveUpdatesBaselineEntry}
+              liveUpdates={false}
+              testIdPrefix="live-locked"
+            />
+          </section>
+        </div>
       </section>
 
       <section>

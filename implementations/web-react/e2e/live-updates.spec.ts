@@ -20,6 +20,7 @@ test.describe('live updates behavior', () => {
     await expect(page.getByTestId('global-live-updates-status')).toHaveText('OFF')
     await expect(page.getByTestId('identified-status')).toHaveText('No')
     await expect(page.locator('ctfl-opt-preview-panel')).toHaveCount(1)
+    await expect(page.getByTestId('live-updates-examples')).toBeVisible()
     await expect
       .poll(async () => {
         const text = await page.getByTestId('personalizations-count').innerText()
@@ -32,11 +33,13 @@ test.describe('live updates behavior', () => {
   test('default behavior locks to first value when global live updates is OFF', async ({
     page,
   }) => {
-    const initialDefaultEntryId = await getEntryId(page.getByTestId('default-entry-id'))
+    const initialDefaultEntryId = await getEntryId(page.getByTestId('entry-id-live-default'))
 
     await identify(page)
 
-    await expect(page.getByTestId('default-entry-id')).toHaveText(`Entry: ${initialDefaultEntryId}`)
+    await expect(page.getByTestId('entry-id-live-default')).toHaveText(
+      `Entry: ${initialDefaultEntryId}`,
+    )
   })
 
   test('global live updates ON updates default component while locked component stays fixed', async ({
@@ -45,31 +48,33 @@ test.describe('live updates behavior', () => {
     await page.getByTestId('toggle-global-live-updates-button').click()
     await expect(page.getByTestId('global-live-updates-status')).toHaveText('ON')
 
-    const initialDefaultEntryId = await getEntryId(page.getByTestId('default-entry-id'))
-    const initialLockedEntryId = await getEntryId(page.getByTestId('locked-entry-id'))
+    const initialDefaultEntryId = await getEntryId(page.getByTestId('entry-id-live-default'))
+    const initialLockedEntryId = await getEntryId(page.getByTestId('entry-id-live-locked'))
 
     await identify(page)
 
     await expect
-      .poll(async () => await getEntryId(page.getByTestId('default-entry-id')))
+      .poll(async () => await getEntryId(page.getByTestId('entry-id-live-default')))
       .not.toBe(initialDefaultEntryId)
-    await expect(page.getByTestId('locked-entry-id')).toHaveText(`Entry: ${initialLockedEntryId}`)
+    await expect(page.getByTestId('entry-id-live-locked')).toHaveText(
+      `Entry: ${initialLockedEntryId}`,
+    )
   })
 
   test('per-component liveUpdates=true updates even when global live updates is OFF', async ({
     page,
   }) => {
-    const initialLiveEntryId = await getEntryId(page.getByTestId('live-entry-id'))
+    const initialLiveEntryId = await getEntryId(page.getByTestId('entry-id-live-enabled'))
 
     await identify(page)
 
     await expect
-      .poll(async () => await getEntryId(page.getByTestId('live-entry-id')))
+      .poll(async () => await getEntryId(page.getByTestId('entry-id-live-enabled')))
       .not.toBe(initialLiveEntryId)
   })
 
   test('preview-panel override enables updates for locked components', async ({ page }) => {
-    const initialLockedEntryId = await getEntryId(page.getByTestId('locked-entry-id'))
+    const initialLockedEntryId = await getEntryId(page.getByTestId('entry-id-live-locked'))
 
     await page.getByTestId('simulate-preview-panel-button').click()
     await expect(page.getByTestId('preview-panel-status')).toHaveText('Open')
@@ -77,7 +82,7 @@ test.describe('live updates behavior', () => {
     await identify(page)
 
     await expect
-      .poll(async () => await getEntryId(page.getByTestId('locked-entry-id')))
+      .poll(async () => await getEntryId(page.getByTestId('entry-id-live-locked')))
       .not.toBe(initialLockedEntryId)
   })
 
@@ -103,20 +108,20 @@ test.describe('live updates behavior', () => {
     await expect(page.getByTestId('identified-status')).toHaveText('No')
   })
 
-  test('renders all three personalization sections and entry content', async ({ page }) => {
-    await expect(page.getByTestId('default-personalization')).toBeVisible()
-    await expect(page.getByTestId('live-personalization')).toBeVisible()
-    await expect(page.getByTestId('locked-personalization')).toBeVisible()
+  test('renders default, enabled, and locked examples', async ({ page }) => {
+    await expect(page.getByTestId('live-updates-default')).toBeVisible()
+    await expect(page.getByTestId('live-updates-enabled')).toBeVisible()
+    await expect(page.getByTestId('live-updates-locked')).toBeVisible()
 
-    await expect(page.getByTestId('default-container')).toBeVisible()
-    await expect(page.getByTestId('live-container')).toBeVisible()
-    await expect(page.getByTestId('locked-container')).toBeVisible()
+    await expect(page.getByTestId('content-live-default')).toBeVisible()
+    await expect(page.getByTestId('content-live-enabled')).toBeVisible()
+    await expect(page.getByTestId('content-live-locked')).toBeVisible()
 
-    await expect(page.getByTestId('default-text')).toBeVisible()
-    await expect(page.getByTestId('live-text')).toBeVisible()
-    await expect(page.getByTestId('locked-text')).toBeVisible()
-    await expect(page.getByTestId('default-entry-id')).toBeVisible()
-    await expect(page.getByTestId('live-entry-id')).toBeVisible()
-    await expect(page.getByTestId('locked-entry-id')).toBeVisible()
+    await expect(page.getByTestId('entry-text-live-default')).toBeVisible()
+    await expect(page.getByTestId('entry-text-live-enabled')).toBeVisible()
+    await expect(page.getByTestId('entry-text-live-locked')).toBeVisible()
+    await expect(page.getByTestId('entry-id-live-default')).toBeVisible()
+    await expect(page.getByTestId('entry-id-live-enabled')).toBeVisible()
+    await expect(page.getByTestId('entry-id-live-locked')).toBeVisible()
   })
 })
