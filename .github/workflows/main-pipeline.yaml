@@ -188,11 +188,7 @@ jobs:
     name: 📦 Build
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
-    needs: [setup, changes]
-    if: >-
-      needs.changes.outputs.build == 'true' || needs.changes.outputs.e2e_node_ssr_only == 'true' ||
-      needs.changes.outputs.e2e_node_ssr_web_vanilla == 'true' || needs.changes.outputs.e2e_web ==
-      'true' || needs.changes.outputs.e2e_react_native_android == 'true'
+    needs: setup
     steps:
       - uses: namespacelabs/nscloud-checkout-action@v8
 
