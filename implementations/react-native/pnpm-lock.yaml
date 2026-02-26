@@ -557,11 +557,11 @@ packages:
     version: 0.0.0
 
   '@contentful/optimization-core@file:../../pkgs/contentful-optimization-core-0.0.0.tgz':
-    resolution: {integrity: sha512-OQ2V/cmKS/b+jwjV4HYrbUb3XfsNVs2A4sn2hGxZTJkiiUhmCEhobVbhtEM6dakhyhDrV+T/rfXVWx4wwOx3Pg==, tarball: file:../../pkgs/contentful-optimization-core-0.0.0.tgz}
+    resolution: {integrity: sha512-WuV0q3BPKqu/eXXASy9s/HlN6rKt9jsEwXZqwu/EsmiAppJlJCQTaToppXYet6w2MxJF6ORm13FeQ+XuxcHDgQ==, tarball: file:../../pkgs/contentful-optimization-core-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/optimization-react-native@file:../../pkgs/contentful-optimization-react-native-0.0.0.tgz':
-    resolution: {integrity: sha512-3y19iStvy6t3b3wOzgSyv7MI4qnu2LTBQx6mMaJfBN5Uz5iAJoHO6fosoc51tuLl/MeqOTUxgwBS0ktx/W4i1g==, tarball: file:../../pkgs/contentful-optimization-react-native-0.0.0.tgz}
+    resolution: {integrity: sha512-WUThstPi4KPevPUY3rdkrSVj3o1wvNJwYu8XbE3+4sVAhxHE0ZDYLe7PtyNopSfFJSp7inFLhTmVXb9Jo8vzlQ==, tarball: file:../../pkgs/contentful-optimization-react-native-0.0.0.tgz}
     version: 0.0.0
     engines: {node: '>=18'}
     peerDependencies:

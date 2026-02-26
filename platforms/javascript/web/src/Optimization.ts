@@ -139,6 +139,7 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
  */
 function mergeConfig({
   app,
+  allowedEventTypes,
   defaults,
   logLevel,
   ...config
@@ -150,7 +151,7 @@ function mergeConfig({
     personalizations = LocalStore.personalizations,
   } = defaults ?? {}
 
-  return merge(
+  const mergedConfig = merge(
     {
       analytics: { beaconHandler },
       defaults: {
@@ -172,6 +173,11 @@ function mergeConfig({
     },
     config,
   )
+
+  return {
+    ...mergedConfig,
+    allowedEventTypes: allowedEventTypes ?? ['identify', 'page'],
+  }
 }
 
 /**
@@ -272,7 +278,7 @@ class Optimization extends CoreStateful {
     }
 
     this.cleanupOnlineListener = createOnlineChangeListener((isOnline) => {
-      this.online(isOnline)
+      this.online = isOnline
     })
 
     this.cleanupVisibilityListener = createVisibilityChangeListener(async () => {

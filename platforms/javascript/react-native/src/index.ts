@@ -13,14 +13,12 @@ import './images'
 import './polyfills/crypto'
 
 import {
-  type CoreConfig,
   type CoreStatefulConfig,
   CoreStateful,
   effect,
   signals,
 } from '@contentful/optimization-core'
 import { merge } from 'es-toolkit'
-import { getLocale, getPageProperties, getUserAgent } from './builders/EventBuilder'
 import {
   OPTIMIZATION_REACT_NATIVE_SDK_NAME,
   OPTIMIZATION_REACT_NATIVE_SDK_VERSION,
@@ -38,10 +36,11 @@ import AsyncStorageStore from './storage/AsyncStorageStore'
  * @internal
  */
 async function mergeConfig({
+  allowedEventTypes,
   defaults,
   logLevel,
   ...config
-}: CoreStatefulConfig): Promise<CoreConfig> {
+}: CoreStatefulConfig): Promise<CoreStatefulConfig> {
   await AsyncStorageStore.initialize()
 
   const {
@@ -51,7 +50,7 @@ async function mergeConfig({
     personalizations = AsyncStorageStore.personalizations,
   } = defaults ?? {}
 
-  return merge(
+  const mergedConfig = merge(
     {
       defaults: {
         consent,
@@ -65,14 +64,16 @@ async function mergeConfig({
           name: OPTIMIZATION_REACT_NATIVE_SDK_NAME,
           version: OPTIMIZATION_REACT_NATIVE_SDK_VERSION,
         },
-        getLocale,
-        getPageProperties,
-        getUserAgent,
       },
       logLevel: AsyncStorageStore.debug ? 'debug' : logLevel,
     },
     config,
   )
+
+  return {
+    ...mergedConfig,
+    allowedEventTypes: allowedEventTypes ?? ['identify', 'screen'],
+  }
 }
 
 let activeOptimizationInstance: Optimization | undefined = undefined
@@ -104,11 +105,11 @@ class Optimization extends CoreStateful {
 
   private readonly cleanupAppStateListener: () => void
 
-  private constructor(config: CoreConfig) {
+  private constructor(config: CoreStatefulConfig) {
     super(config)
 
     this.cleanupOnlineListener = createOnlineChangeListener((isOnline) => {
-      this.online(isOnline)
+      this.online = isOnline
     })
 
     this.cleanupAppStateListener = createAppStateChangeListener(async () => {
@@ -168,7 +169,7 @@ class Optimization extends CoreStateful {
    *
    * @public
    */
-  static async create(config: CoreConfig): Promise<Optimization> {
+  static async create(config: CoreStatefulConfig): Promise<Optimization> {
     if (activeOptimizationInstance) {
       throw new Error(
         'Optimization React Native SDK is already initialized. Reuse the existing instance.',

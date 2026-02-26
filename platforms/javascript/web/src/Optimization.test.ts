@@ -16,6 +16,16 @@ const getAutoTrackEntryViews = (optimization: Optimization): boolean | undefined
   return typeof value === 'boolean' ? value : undefined
 }
 
+const getAllowedEventTypes = (optimization: Optimization): string[] | undefined => {
+  const value = Reflect.get(optimization.personalization, 'allowedEventTypes')
+
+  if (!Array.isArray(value)) {
+    return
+  }
+
+  return value.filter((eventType): eventType is string => typeof eventType === 'string')
+}
+
 describe('Optimization', () => {
   beforeEach(() => {
     delete window.optimization
@@ -44,6 +54,21 @@ describe('Optimization', () => {
     const web = new Optimization({ ...config, autoTrackEntryViews: true })
 
     expect(getAutoTrackEntryViews(web)).toBe(true)
+  })
+
+  it('defaults allowedEventTypes to identify/page for web', () => {
+    const web = new Optimization(config)
+
+    expect(getAllowedEventTypes(web)).toEqual(['identify', 'page'])
+  })
+
+  it('uses user-provided allowedEventTypes when configured', () => {
+    const web = new Optimization({
+      ...config,
+      allowedEventTypes: ['identify', 'page', 'screen'],
+    })
+
+    expect(getAllowedEventTypes(web)).toEqual(['identify', 'page', 'screen'])
   })
 
   it('forwards onEventBlocked callback to core stateful guards', async () => {
