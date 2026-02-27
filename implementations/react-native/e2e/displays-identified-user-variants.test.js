@@ -3,9 +3,6 @@ const { clearProfileState, ELEMENT_VISIBILITY_TIMEOUT } = require('./helpers')
 describe('identified user', () => {
   beforeAll(async () => {
     await device.launchApp()
-  })
-
-  beforeEach(async () => {
     await clearProfileState()
 
     await waitFor(element(by.id('identify-button')))
