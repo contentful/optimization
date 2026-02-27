@@ -11,9 +11,7 @@ async function getEventsCount(page: Page): Promise<number> {
 }
 
 async function expectEventsToIncrease(page: Page, baselineCount: number): Promise<void> {
-  await expect
-    .poll(async () => await getEventsCount(page))
-    .toBeGreaterThan(baselineCount)
+  await expect.poll(async () => await getEventsCount(page)).toBeGreaterThan(baselineCount)
 }
 
 async function setOffline(context: BrowserContext, offline: boolean): Promise<void> {

@@ -38,7 +38,10 @@ function toEntryMap(entries: ContentfulEntry[]): Map<string, ContentfulEntry> {
   return new Map(entries.map((entry) => [entry.sys.id, entry]))
 }
 
-export default function App({ globalLiveUpdates, onToggleGlobalLiveUpdates }: AppProps): JSX.Element {
+export default function App({
+  globalLiveUpdates,
+  onToggleGlobalLiveUpdates,
+}: AppProps): JSX.Element {
   const location = useLocation()
   const { sdk, isReady, error } = useOptimization()
   const { consent, profile, personalizations } = useOptimizationState(sdk?.states)

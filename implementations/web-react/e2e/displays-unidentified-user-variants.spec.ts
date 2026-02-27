@@ -18,14 +18,22 @@ test.describe('unidentified user', () => {
     await expect(
       continentEntry
         .getByText('This is a variant content entry for visitors from Europe.')
-        .or(continentEntry.getByText('This is a baseline content entry for visitors from any continent.')),
+        .or(
+          continentEntry.getByText(
+            'This is a baseline content entry for visitors from any continent.',
+          ),
+        ),
     ).toBeVisible()
 
     const deviceEntry = page.getByTestId('entry-text-xFwgG3oNaOcjzWiGe4vXo')
     await expect(
       deviceEntry
         .getByText('This is a variant content entry for visitors using a desktop browser.')
-        .or(deviceEntry.getByText('This is a baseline content entry for all visitors using any device.')),
+        .or(
+          deviceEntry.getByText(
+            'This is a baseline content entry for all visitors using any device.',
+          ),
+        ),
     ).toBeVisible()
   })
 
