@@ -9,6 +9,7 @@ overrides:
   '@contentful/optimization-api-schemas': file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz
   '@contentful/optimization-core': file:../../pkgs/contentful-optimization-core-0.0.0.tgz
   '@contentful/optimization-web': file:../../pkgs/contentful-optimization-web-0.0.0.tgz
+  '@contentful/optimization-web-preview-panel': file:../../pkgs/contentful-optimization-web-preview-panel-0.0.0.tgz
 
 importers:
 
@@ -17,6 +18,9 @@ importers:
       '@contentful/optimization-web':
         specifier: file:../../pkgs/contentful-optimization-web-0.0.0.tgz
         version: file:../../pkgs/contentful-optimization-web-0.0.0.tgz
+      '@contentful/optimization-web-preview-panel':
+        specifier: file:../../pkgs/contentful-optimization-web-preview-panel-0.0.0.tgz
+        version: file:../../pkgs/contentful-optimization-web-preview-panel-0.0.0.tgz
       '@contentful/rich-text-react-renderer':
         specifier: ^16.1.6
         version: 16.1.6(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -85,11 +89,15 @@ packages:
     version: 0.0.0
 
   '@contentful/optimization-core@file:../../pkgs/contentful-optimization-core-0.0.0.tgz':
-    resolution: {integrity: sha512-OQ2V/cmKS/b+jwjV4HYrbUb3XfsNVs2A4sn2hGxZTJkiiUhmCEhobVbhtEM6dakhyhDrV+T/rfXVWx4wwOx3Pg==, tarball: file:../../pkgs/contentful-optimization-core-0.0.0.tgz}
+    resolution: {integrity: sha512-paR1XVmSUgDC8BoZqPRziMEq5eRH5uCuzglBjt9FYMp4inbDGhrJy8JnKntqn377AvAenZDMt4hyW70IvJBSzA==, tarball: file:../../pkgs/contentful-optimization-core-0.0.0.tgz}
+    version: 0.0.0
+
+  '@contentful/optimization-web-preview-panel@file:../../pkgs/contentful-optimization-web-preview-panel-0.0.0.tgz':
+    resolution: {integrity: sha512-ACb4aT+ymp3YiW6xfT3zFUc0qF4NH7M1sTo9sJ6csz+hO7P9U/NnrkyI0Hu5TWs2d+Z09anp4LwvkWNokY4Wdw==, tarball: file:../../pkgs/contentful-optimization-web-preview-panel-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/optimization-web@file:../../pkgs/contentful-optimization-web-0.0.0.tgz':
-    resolution: {integrity: sha512-T1wJuQgqTlTdXX1ZvM/o0v0mur9ADSPLIbUjsu0KYlyRG46fsL3XNzRTJjNGj5ekw0779JflffLVh9eLMGx7Gw==, tarball: file:../../pkgs/contentful-optimization-web-0.0.0.tgz}
+    resolution: {integrity: sha512-3MmE9Xae3EWKKrgyHP5Iwt1RQJODuW/0KCAq5Zw/a2jjjq4FUx5FYCzDpmVPcEDArb0pSdQpJlnD5raGxP6Z6Q==, tarball: file:../../pkgs/contentful-optimization-web-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/rich-text-react-renderer@16.1.6':
@@ -135,6 +143,15 @@ packages:
   '@lingui/message-utils@5.9.1':
     resolution: {integrity: sha512-2hj2PqHQU7hI+2+JiViOPmeTmms/8Xl1i/AWd59hwaf+lbqDFKc8CmeZNeAvrM+D7FeYgX1/mDoQvWAkLZNYjQ==}
     engines: {node: '>=20.0.0'}
+
+  '@lit-labs/ssr-dom-shim@1.5.1':
+    resolution: {integrity: sha512-Aou5UdlSpr5whQe8AA/bZG0jMj96CoJIWbGfZ91qieWu5AWUMKw8VR/pAkQkJYvBNhmCcWnZlyyk5oze8JIqYA==}
+
+  '@lit/context@1.1.6':
+    resolution: {integrity: sha512-M26qDE6UkQbZA2mQ3RjJ3Gzd8TxP+/0obMgE5HfkfLhEEyYE3Bui4A5XHiGPjy0MUGAyxB3QgVuw2ciS0kHn6A==}
+
+  '@lit/reactive-element@2.1.2':
+    resolution: {integrity: sha512-pbCDiVMnne1lYUIaYNN5wrwQXDtHaYtg7YEFPeW+hws6U47WeFvISGUWekPGKWOP1ygrs0ef0o1VJMk1exos5A==}
 
   '@messageformat/parser@5.1.1':
     resolution: {integrity: sha512-3p0YRGCcTUCYvBKLIxtDDyrJ0YijGIwrTRu1DT8gIviIDZru8H23+FkY6MJBzM1n9n20CiM4VeDYuBsrrwnLjg==}
@@ -305,6 +322,9 @@ packages:
 
   '@types/retry@0.12.2':
     resolution: {integrity: sha512-XISRgDJ2Tc5q4TRqvgJtzsRkFYNJzZrhTdtMoGVBttwzzQJkPnS3WWTFc7kuDRoPtPakl+T+OfdEUjYJj7Jbow==}
+
+  '@types/trusted-types@2.0.7':
+    resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
 
   '@vercel/stega@0.1.2':
     resolution: {integrity: sha512-P7mafQXjkrsoyTRppnt0N21udKS9wUmLXHRyP9saLXLHw32j/FgUJ3FscSWgvSqRs4cj7wKZtwqJEvWJ2jbGmA==}
@@ -728,6 +748,15 @@ packages:
   json-stringify-safe@5.0.1:
     resolution: {integrity: sha512-ZClg6AaYvamvYEE82d3Iyd3vSSIjQ+odgjaTzRuO3s7toCdFKczob2i0zCh7JE8kWn17yvAWhUVxvqGwUalsRA==}
 
+  lit-element@4.2.2:
+    resolution: {integrity: sha512-aFKhNToWxoyhkNDmWZwEva2SlQia+jfG0fjIWV//YeTaWrVnOxD89dPKfigCUspXFmjzOEUQpOkejH5Ly6sG0w==}
+
+  lit-html@3.3.2:
+    resolution: {integrity: sha512-Qy9hU88zcmaxBXcc10ZpdK7cOLXvXpRoBxERdtqV9QOrfpMZZ6pSYP91LhpPtap3sFMUiL7Tw2RImbe0Al2/kw==}
+
+  lit@3.3.2:
+    resolution: {integrity: sha512-NF9zbsP79l4ao2SNrH3NkfmFgN/hBYSQo90saIVI1o5GpjAdCPVstVzO1MrLOakHoEhYkrtRjPK6Ob521aoYWQ==}
+
   lodash@4.17.23:
     resolution: {integrity: sha512-LgVTMpQtIopCi79SJeDiP0TfWi5CNEc/L/aRdTh3yIvmZXTnheWpKjSZhnvMl8iXbC1tFg9gdHHDMLoV7CnG+w==}
 
@@ -1124,6 +1153,16 @@ snapshots:
     transitivePeerDependencies:
       - debug
 
+  '@contentful/optimization-web-preview-panel@file:../../pkgs/contentful-optimization-web-preview-panel-0.0.0.tgz':
+    dependencies:
+      '@contentful/optimization-web': file:../../pkgs/contentful-optimization-web-0.0.0.tgz
+      '@lit/context': 1.1.6
+      contentful: 11.10.3
+      es-toolkit: 1.44.0
+      lit: 3.3.2
+    transitivePeerDependencies:
+      - debug
+
   '@contentful/optimization-web@file:../../pkgs/contentful-optimization-web-0.0.0.tgz':
     dependencies:
       '@contentful/optimization-core': file:../../pkgs/contentful-optimization-core-0.0.0.tgz
@@ -1180,6 +1219,16 @@ snapshots:
     dependencies:
       '@messageformat/parser': 5.1.1
       js-sha256: 0.10.1
+
+  '@lit-labs/ssr-dom-shim@1.5.1': {}
+
+  '@lit/context@1.1.6':
+    dependencies:
+      '@lit/reactive-element': 2.1.2
+
+  '@lit/reactive-element@2.1.2':
+    dependencies:
+      '@lit-labs/ssr-dom-shim': 1.5.1
 
   '@messageformat/parser@5.1.1':
     dependencies:
@@ -1381,6 +1430,8 @@ snapshots:
       csstype: 3.2.3
 
   '@types/retry@0.12.2': {}
+
+  '@types/trusted-types@2.0.7': {}
 
   '@vercel/stega@0.1.2': {}
 
@@ -1773,6 +1824,22 @@ snapshots:
       foreach: 2.0.6
 
   json-stringify-safe@5.0.1: {}
+
+  lit-element@4.2.2:
+    dependencies:
+      '@lit-labs/ssr-dom-shim': 1.5.1
+      '@lit/reactive-element': 2.1.2
+      lit-html: 3.3.2
+
+  lit-html@3.3.2:
+    dependencies:
+      '@types/trusted-types': 2.0.7
+
+  lit@3.3.2:
+    dependencies:
+      '@lit/reactive-element': 2.1.2
+      lit-element: 4.2.2
+      lit-html: 3.3.2
 
   lodash@4.17.23: {}
 

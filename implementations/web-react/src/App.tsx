@@ -1,7 +1,13 @@
+import { Profile } from '@contentful/optimization-web'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
-import { ENTRY_IDS, LIVE_UPDATES_ENTRY_ID } from './config/entries'
+import {
+  AUTO_OBSERVED_ENTRY_IDS,
+  ENTRY_IDS,
+  LIVE_UPDATES_ENTRY_ID,
+  MANUALLY_OBSERVED_ENTRY_IDS,
+} from './config/entries'
 import { HOME_PATH, PAGE_TWO_PATH } from './config/routes'
 import { useOptimization } from './optimization/hooks/useOptimization'
 import { useOptimizationState } from './optimization/hooks/useOptimizationState'
@@ -15,17 +21,18 @@ import {
 } from './services/contentfulClient'
 import type { ContentfulEntry } from './types/contentful'
 
-function isIdentifiedProfile(profile: unknown): boolean {
-  if (typeof profile !== 'object' || profile === null) {
+function isIdentifiedProfile(profile: Profile | undefined): boolean {
+  if (typeof profile !== 'object' || profile === undefined || profile === null) {
     return false
   }
 
-  const record = profile as { traits?: unknown }
+  const record = profile
   if (typeof record.traits !== 'object' || record.traits === null) {
     return false
   }
 
-  const traits = record.traits as { identified?: unknown }
+  const traits = record.traits
+  console.log('Profile traits:', traits)
   return Boolean(traits.identified)
 }
 
@@ -88,6 +95,8 @@ export default function App(): JSX.Element {
     [personalizations],
   )
   const liveUpdatesBaselineEntry = entriesById.get(LIVE_UPDATES_ENTRY_ID)
+  const hasPageTwoEntries =
+    entriesById.has(AUTO_OBSERVED_ENTRY_IDS[4]) && entriesById.has(MANUALLY_OBSERVED_ENTRY_IDS[0])
 
   const handleIdentify = (): void => {
     if (!isReady || sdk === undefined) {
@@ -133,6 +142,10 @@ export default function App(): JSX.Element {
     return <p>Live updates baseline entry is missing from fetched entries.</p>
   }
 
+  if (!hasPageTwoEntries) {
+    return <p>Page Two demo entries are missing from fetched entries.</p>
+  }
+
   return (
     <main style={{ display: 'grid', gap: 24 }}>
       <nav style={{ display: 'flex', gap: 12 }}>
@@ -169,7 +182,12 @@ export default function App(): JSX.Element {
             </LiveUpdatesProvider>
           }
         />
-        <Route path={PAGE_TWO_PATH} element={<PageTwoPage />} />
+        <Route
+          path={PAGE_TWO_PATH}
+          element={
+            <PageTwoPage consent={consent} entriesById={entriesById} isIdentified={isIdentified} />
+          }
+        />
         <Route path="*" element={<Navigate replace to={HOME_PATH} />} />
       </Routes>
 
