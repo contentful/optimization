@@ -1,7 +1,13 @@
+import type { Profile } from '@contentful/optimization-web'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
-import { ENTRY_IDS } from './config/entries'
+import {
+  ENTRY_IDS,
+  LIVE_UPDATES_ENTRY_ID,
+  PAGE_TWO_AUTO_ENTRY_ID,
+  PAGE_TWO_MANUAL_ENTRY_ID,
+} from './config/entries'
 import { HOME_PATH, PAGE_TWO_PATH } from './config/routes'
 import { useOptimization } from './optimization/hooks/useOptimization'
 import { useOptimizationState } from './optimization/hooks/useOptimizationState'
@@ -10,17 +16,17 @@ import { PageTwoPage } from './pages/PageTwoPage'
 import { fetchEntries, getContentfulConfigError } from './services/contentfulClient'
 import type { ContentfulEntry } from './types/contentful'
 
-function isIdentifiedProfile(profile: unknown): boolean {
-  if (typeof profile !== 'object' || profile === null) {
+interface AppProps {
+  globalLiveUpdates: boolean
+  onToggleGlobalLiveUpdates: () => void
+}
+
+function isIdentifiedProfile(profile: Profile | undefined): boolean {
+  if (profile === undefined) {
     return false
   }
 
-  const record = profile as { traits?: unknown }
-  if (typeof record.traits !== 'object' || record.traits === null) {
-    return false
-  }
-
-  const traits = record.traits as { identified?: unknown }
+  const { traits } = profile
   return Boolean(traits.identified)
 }
 
@@ -32,7 +38,10 @@ function toEntryMap(entries: ContentfulEntry[]): Map<string, ContentfulEntry> {
   return new Map(entries.map((entry) => [entry.sys.id, entry]))
 }
 
-export default function App(): JSX.Element {
+export default function App({
+  globalLiveUpdates,
+  onToggleGlobalLiveUpdates,
+}: AppProps): JSX.Element {
   const location = useLocation()
   const { sdk, isReady, error } = useOptimization()
   const { consent, profile, personalizations } = useOptimizationState(sdk?.states)
@@ -81,6 +90,9 @@ export default function App(): JSX.Element {
     () => (Array.isArray(personalizations) ? personalizations.length : 0),
     [personalizations],
   )
+  const liveUpdatesBaselineEntry = entriesById.get(LIVE_UPDATES_ENTRY_ID)
+  const hasPageTwoEntries =
+    entriesById.has(PAGE_TWO_AUTO_ENTRY_ID) && entriesById.has(PAGE_TWO_MANUAL_ENTRY_ID)
 
   const handleIdentify = (): void => {
     if (!isReady || sdk === undefined) {
@@ -122,6 +134,14 @@ export default function App(): JSX.Element {
     return <p>Loading entries...</p>
   }
 
+  if (!liveUpdatesBaselineEntry) {
+    return <p>Live updates baseline entry is missing from fetched entries.</p>
+  }
+
+  if (!hasPageTwoEntries) {
+    return <p>Page Two demo entries are missing from fetched entries.</p>
+  }
+
   return (
     <main style={{ display: 'grid', gap: 24 }}>
       <nav style={{ display: 'flex', gap: 12 }}>
@@ -140,15 +160,23 @@ export default function App(): JSX.Element {
             <HomePage
               consent={consent}
               entriesById={entriesById}
+              globalLiveUpdates={globalLiveUpdates}
               isIdentified={isIdentified}
+              liveUpdatesBaselineEntry={liveUpdatesBaselineEntry}
               personalizationCount={personalizationCount}
               onConsentChange={handleConsent}
               onIdentify={handleIdentify}
               onReset={handleReset}
+              onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates}
             />
           }
         />
-        <Route path={PAGE_TWO_PATH} element={<PageTwoPage />} />
+        <Route
+          path={PAGE_TWO_PATH}
+          element={
+            <PageTwoPage consent={consent} entriesById={entriesById} isIdentified={isIdentified} />
+          }
+        />
         <Route path="*" element={<Navigate replace to={HOME_PATH} />} />
       </Routes>
 

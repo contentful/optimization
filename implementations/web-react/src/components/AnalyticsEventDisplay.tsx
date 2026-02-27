@@ -5,7 +5,27 @@ import { isRecord } from '../utils/typeGuards'
 interface AnalyticsEvent {
   id: string
   componentId?: string
+  pageUrl?: string
   type: string
+}
+
+function toPageUrl(event: Record<string, unknown>): string | undefined {
+  const { properties } = event
+  if (!isRecord(properties)) {
+    return undefined
+  }
+
+  const { url } = properties
+  if (typeof url !== 'string' || url.length === 0) {
+    return undefined
+  }
+
+  try {
+    const normalized = new URL(url, window.location.origin)
+    return normalized.pathname
+  } catch {
+    return url
+  }
 }
 
 function toAnalyticsEvent(event: unknown, id: string): AnalyticsEvent | undefined {
@@ -14,10 +34,12 @@ function toAnalyticsEvent(event: unknown, id: string): AnalyticsEvent | undefine
   }
 
   const componentId = typeof event.componentId === 'string' ? event.componentId : undefined
+  const pageUrl = event.type === 'page' ? toPageUrl(event) : undefined
 
   return {
     id,
     componentId,
+    pageUrl,
     type: event.type,
   }
 }
@@ -61,10 +83,15 @@ export function AnalyticsEventDisplay(): JSX.Element {
             ? `event-${event.type}-${event.componentId}`
             : `event-${event.type}-${event.id}`
 
+          const label = event.componentId
+            ? `${event.type} - Component: ${event.componentId}`
+            : event.pageUrl
+              ? `${event.type} - URL: ${event.pageUrl}`
+              : event.type
+
           return (
             <li key={event.id} data-testid={testId}>
-              {event.type}
-              {event.componentId ? ` - Component: ${event.componentId}` : ''}
+              {label}
             </li>
           )
         })}

@@ -27,6 +27,7 @@
     "@contentful/rich-text-react-renderer": "^16.1.6",
     "@contentful/rich-text-types": "^17.2.5",
     "@contentful/optimization-web": "0.0.0",
+    "@contentful/optimization-web-preview-panel": "0.0.0",
     "contentful": "^11.10.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -49,7 +50,8 @@
       "@contentful/optimization-api-client": "file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz",
       "@contentful/optimization-api-schemas": "file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz",
       "@contentful/optimization-core": "file:../../pkgs/contentful-optimization-core-0.0.0.tgz",
-      "@contentful/optimization-web": "file:../../pkgs/contentful-optimization-web-0.0.0.tgz"
+      "@contentful/optimization-web": "file:../../pkgs/contentful-optimization-web-0.0.0.tgz",
+      "@contentful/optimization-web-preview-panel": "file:../../pkgs/contentful-optimization-web-preview-panel-0.0.0.tgz"
     }
   }
 }

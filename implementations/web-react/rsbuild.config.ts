@@ -7,6 +7,11 @@ export default defineConfig({
     entry: {
       index: './src/main.tsx',
     },
+    define: {
+      ENABLE_PREVIEW_PANEL: JSON.stringify(
+        process.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true',
+      ),
+    },
   },
   html: {
     template: './index.html',

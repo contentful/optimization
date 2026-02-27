@@ -30,6 +30,10 @@ function createContentfulClient(): ReturnType<typeof createClient> {
 
 const contentfulClient = createContentfulClient()
 
+export function getContentfulClient(): ReturnType<typeof createClient> {
+  return contentfulClient
+}
+
 export function getContentfulConfigError(): string | null {
   if (MISSING_ENV_ERROR.length === 0) {
     return null

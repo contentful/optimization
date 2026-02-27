@@ -5,14 +5,21 @@ import { useOptimization } from './useOptimization'
 type PersonalizationApi = Optimization['personalization']
 type BaselineEntry = Parameters<PersonalizationApi['personalizeEntry']>[0]
 type PersonalizeResult = ReturnType<PersonalizationApi['personalizeEntry']>
+export type PersonalizationSelection = Parameters<PersonalizationApi['personalizeEntry']>[1]
 type MergeTagTarget = Parameters<PersonalizationApi['getMergeTagValue']>[0]
 
 export interface UsePersonalizationResult {
-  resolveEntry: (baselineEntry: BaselineEntry) => PersonalizeResult
+  resolveEntry: (
+    baselineEntry: BaselineEntry,
+    selectedPersonalizations?: PersonalizationSelection,
+  ) => PersonalizeResult
   getMergeTagValue: (mergeTagEntry: MergeTagTarget) => string
 }
 
-function fallbackResolveEntry(baselineEntry: BaselineEntry): PersonalizeResult {
+function fallbackResolveEntry(
+  baselineEntry: BaselineEntry,
+  _selectedPersonalizations?: PersonalizationSelection,
+): PersonalizeResult {
   return { entry: baselineEntry }
 }
 
@@ -48,8 +55,10 @@ export function usePersonalization(): UsePersonalizationResult {
     }
 
     return {
-      resolveEntry: (baselineEntry: BaselineEntry): PersonalizeResult =>
-        sdk.personalization.personalizeEntry(baselineEntry),
+      resolveEntry: (
+        baselineEntry: BaselineEntry,
+        selectedPersonalizations?: PersonalizationSelection,
+      ): PersonalizeResult => sdk.personalizeEntry(baselineEntry, selectedPersonalizations),
 
       getMergeTagValue: (mergeTagEntry: MergeTagTarget): string =>
         toStringValue(sdk.personalization.getMergeTagValue(mergeTagEntry)),
