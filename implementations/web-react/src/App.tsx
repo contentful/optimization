@@ -11,15 +11,15 @@ import {
 import { HOME_PATH, PAGE_TWO_PATH } from './config/routes'
 import { useOptimization } from './optimization/hooks/useOptimization'
 import { useOptimizationState } from './optimization/hooks/useOptimizationState'
-import { LiveUpdatesProvider } from './optimization/liveUpdates/LiveUpdatesContext'
 import { HomePage } from './pages/HomePage'
 import { PageTwoPage } from './pages/PageTwoPage'
-import {
-  fetchEntries,
-  getContentfulClient,
-  getContentfulConfigError,
-} from './services/contentfulClient'
+import { fetchEntries, getContentfulConfigError } from './services/contentfulClient'
 import type { ContentfulEntry } from './types/contentful'
+
+interface AppProps {
+  globalLiveUpdates: boolean
+  onToggleGlobalLiveUpdates: () => void
+}
 
 function isIdentifiedProfile(profile: Profile | undefined): boolean {
   if (profile === undefined) {
@@ -38,14 +38,13 @@ function toEntryMap(entries: ContentfulEntry[]): Map<string, ContentfulEntry> {
   return new Map(entries.map((entry) => [entry.sys.id, entry]))
 }
 
-export default function App(): JSX.Element {
+export default function App({ globalLiveUpdates, onToggleGlobalLiveUpdates }: AppProps): JSX.Element {
   const location = useLocation()
   const { sdk, isReady, error } = useOptimization()
   const { consent, profile, personalizations } = useOptimizationState(sdk?.states)
 
   const [entries, setEntries] = useState<ContentfulEntry[]>([])
   const [entriesError, setEntriesError] = useState<string | null>(null)
-  const [globalLiveUpdates, setGlobalLiveUpdates] = useState(false)
 
   useEffect(() => {
     if (!isReady || sdk === undefined) {
@@ -155,25 +154,18 @@ export default function App(): JSX.Element {
         <Route
           path={HOME_PATH}
           element={
-            <LiveUpdatesProvider
+            <HomePage
+              consent={consent}
+              entriesById={entriesById}
               globalLiveUpdates={globalLiveUpdates}
-              previewPanel={{ contentful: getContentfulClient(), optimization: sdk }}
-            >
-              <HomePage
-                consent={consent}
-                entriesById={entriesById}
-                globalLiveUpdates={globalLiveUpdates}
-                isIdentified={isIdentified}
-                liveUpdatesBaselineEntry={liveUpdatesBaselineEntry}
-                personalizationCount={personalizationCount}
-                onConsentChange={handleConsent}
-                onIdentify={handleIdentify}
-                onReset={handleReset}
-                onToggleGlobalLiveUpdates={() => {
-                  setGlobalLiveUpdates((previous) => !previous)
-                }}
-              />
-            </LiveUpdatesProvider>
+              isIdentified={isIdentified}
+              liveUpdatesBaselineEntry={liveUpdatesBaselineEntry}
+              personalizationCount={personalizationCount}
+              onConsentChange={handleConsent}
+              onIdentify={handleIdentify}
+              onReset={handleReset}
+              onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates}
+            />
           }
         />
         <Route

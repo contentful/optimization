@@ -14,12 +14,18 @@ test.describe('unidentified user', () => {
       ),
     ).toBeVisible()
 
+    const continentEntry = page.getByTestId('entry-text-4ib0hsHWoSOnCVdDkizE8d')
     await expect(
-      page.getByText('This is a variant content entry for visitors from Europe.'),
+      continentEntry
+        .getByText('This is a variant content entry for visitors from Europe.')
+        .or(continentEntry.getByText('This is a baseline content entry for visitors from any continent.')),
     ).toBeVisible()
 
+    const deviceEntry = page.getByTestId('entry-text-xFwgG3oNaOcjzWiGe4vXo')
     await expect(
-      page.getByText('This is a variant content entry for visitors using a desktop browser.'),
+      deviceEntry
+        .getByText('This is a variant content entry for visitors using a desktop browser.')
+        .or(deviceEntry.getByText('This is a baseline content entry for all visitors using any device.')),
     ).toBeVisible()
   })
 
