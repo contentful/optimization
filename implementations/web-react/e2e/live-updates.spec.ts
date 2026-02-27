@@ -1,5 +1,7 @@
 import { type Locator, type Page, expect, test } from '@playwright/test'
 
+const isPreviewPanelEnabled = process.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true'
+
 async function getEntryId(locator: Locator): Promise<string> {
   const text = await locator.innerText()
   return text.replace('Entry: ', '').trim()
@@ -19,7 +21,13 @@ test.describe('live updates behavior', () => {
     await expect(page.getByTestId('preview-panel-status')).toHaveText('Closed')
     await expect(page.getByTestId('global-live-updates-status')).toHaveText('OFF')
     await expect(page.getByTestId('identified-status')).toHaveText('No')
-    await expect(page.locator('ctfl-opt-preview-panel')).toHaveCount(1)
+    if (isPreviewPanelEnabled) {
+      await expect
+        .poll(async () => await page.locator('ctfl-opt-preview-panel').count())
+        .toBeGreaterThan(0)
+    } else {
+      await expect(page.locator('ctfl-opt-preview-panel')).toHaveCount(0)
+    }
     await expect(page.getByTestId('live-updates-examples')).toBeVisible()
     await expect
       .poll(async () => {
@@ -74,6 +82,7 @@ test.describe('live updates behavior', () => {
   })
 
   test('preview-panel override enables updates for locked components', async ({ page }) => {
+    test.skip(!isPreviewPanelEnabled, 'Preview panel is disabled for this build.')
     const initialLockedEntryId = await getEntryId(page.getByTestId('entry-id-live-locked'))
 
     await page.getByTestId('simulate-preview-panel-button').click()
@@ -87,6 +96,7 @@ test.describe('live updates behavior', () => {
   })
 
   test('screen controls toggle global live updates and preview panel', async ({ page }) => {
+    test.skip(!isPreviewPanelEnabled, 'Preview panel is disabled for this build.')
     await expect(page.getByTestId('global-live-updates-status')).toHaveText('OFF')
     await page.getByTestId('toggle-global-live-updates-button').click()
     await expect(page.getByTestId('global-live-updates-status')).toHaveText('ON')

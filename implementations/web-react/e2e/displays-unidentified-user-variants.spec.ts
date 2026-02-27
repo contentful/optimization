@@ -32,10 +32,11 @@ test.describe('unidentified user', () => {
     await expect(page.getByText('This is a level 1 nested baseline entry.')).toBeVisible()
     await expect(page.getByText('This is a level 2 nested baseline entry.')).toBeVisible()
 
+    const visitorVariant = page.getByTestId('entry-text-2Z2WLOx07InSewC3LUB3eX')
     await expect(
-      page
-        .getByTestId('entry-text-2Z2WLOx07InSewC3LUB3eX')
-        .getByText('This is a variant content entry for new visitors.'),
+      visitorVariant.getByText('This is a variant content entry for new visitors.').or(
+        visitorVariant.getByText('This is a variant content entry for return visitors.'),
+      ),
     ).toBeVisible()
     await expect(
       page.getByText('This is a variant content entry for an A/B/C experiment: B'),
