@@ -48,6 +48,7 @@ function getPreviewPanelToggleButton(): HTMLButtonElement | null {
 }
 
 function isPreviewPanelOpen(toggleButton: HTMLButtonElement): boolean {
+  // TODO: Replace this class-based check with a supported preview panel open-state API.
   return toggleButton.classList.contains('opened')
 }
 
@@ -62,6 +63,8 @@ async function attachPreviewPanel(previewPanel: PreviewPanelConfig): Promise<voi
     return
   }
 
+  // TODO: Add a production-dead-code branch so preview panel attachment is tree-shakeable
+  // in docs/reference builds and does not always pull preview panel code into customer bundles.
   const attachment = attachOptimizationPreviewPanel({
     contentful: toPreviewPanelContentful(previewPanel.contentful),
     optimization: previewPanel.optimization,
