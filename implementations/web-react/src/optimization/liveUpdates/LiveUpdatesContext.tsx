@@ -1,5 +1,5 @@
-import attachOptimizationPreviewPanel from '@contentful/optimization-web-preview-panel'
 import type { ContentfulClientApi } from 'contentful'
+import type attachOptimizationPreviewPanel from '@contentful/optimization-web-preview-panel'
 import {
   createContext,
   type JSX,
@@ -20,7 +20,8 @@ interface LiveUpdatesContextValue {
 }
 
 const LiveUpdatesContext = createContext<LiveUpdatesContextValue | undefined>(undefined)
-type PreviewPanelContentful = Parameters<typeof attachOptimizationPreviewPanel>[0]['contentful']
+type PreviewPanelAttacher = typeof attachOptimizationPreviewPanel
+type PreviewPanelContentful = Parameters<PreviewPanelAttacher>[0]['contentful']
 
 interface PreviewPanelConfig {
   contentful: ContentfulClientApi<undefined>
@@ -57,14 +58,20 @@ function toPreviewPanelContentful(client: ContentfulClientApi<undefined>): Previ
 }
 
 async function attachPreviewPanel(previewPanel: PreviewPanelConfig): Promise<void> {
+  if (!__ENABLE_PREVIEW_PANEL__) {
+    return
+  }
+
   const existing = previewPanelAttachments.get(previewPanel.optimization)
   if (existing) {
     await existing
     return
   }
 
-  // TODO: Add a production-dead-code branch so preview panel attachment is tree-shakeable
-  // in docs/reference builds and does not always pull preview panel code into customer bundles.
+  // Preview panel is demo-only and disabled by default for production-style builds.
+  const { default: attachOptimizationPreviewPanel }: { default: PreviewPanelAttacher } = await import(
+    '@contentful/optimization-web-preview-panel'
+  )
   const attachment = attachOptimizationPreviewPanel({
     contentful: toPreviewPanelContentful(previewPanel.contentful),
     optimization: previewPanel.optimization,

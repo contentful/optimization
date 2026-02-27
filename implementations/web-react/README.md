@@ -100,6 +100,9 @@ See `.env.example` for available configuration options. The implementation reads
 env wiring. To use local mock Contentful endpoints, set `PUBLIC_CONTENTFUL_CDA_HOST=localhost:8000`
 and `PUBLIC_CONTENTFUL_BASE_PATH=contentful`.
 
+Preview panel attachment is gated behind `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL`. Set it to
+`true` for development demos that need preview panel behavior.
+
 ## Project Structure
 
 ```
