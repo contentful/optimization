@@ -1,38 +1,58 @@
 {
-  "name": "react-web",
-  "version": "1.0.0",
-  "private": true,
+  "name": "@contentful/optimization-react-web",
+  "version": "0.0.0",
+  "license": "MIT",
   "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/**/*"
+  ],
   "scripts": {
-    "build": "rsbuild build",
-    "dev": "rsbuild dev --open",
-    "format": "prettier --write .",
-    "lint": "eslint .",
-    "preview": "rsbuild preview",
-    "test": "rstest",
-    "test:watch": "rstest --watch"
+    "build": "pnpm clean && pnpm build:dist",
+    "build:ci": "pnpm build:dist",
+    "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
+    "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist",
+    "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo",
+    "dev": "rsbuild dev --host 0.0.0.0 -c rsbuild.config.ts",
+    "test:unit": "rstest run --coverage",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "@contentful/optimization-web": "workspace:*",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.1",
-    "@rsbuild/core": "^1.7.1",
+    "@rsbuild/core": "catalog:",
     "@rsbuild/plugin-react": "^1.4.2",
-    "@rstest/core": "^0.7.8",
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.1",
-    "@types/react": "^19.2.7",
+    "@rslib/core": "catalog:",
+    "@rstest/core": "catalog:",
+    "@rstest/coverage-istanbul": "catalog:",
+    "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "eslint": "^9.39.1",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.4.24",
-    "globals": "^16.5.0",
-    "happy-dom": "^20.0.11",
-    "prettier": "^3.7.3",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.48.0"
+    "build-tools": "workspace:*",
+    "happy-dom": "catalog:",
+    "rimraf": "catalog:",
+    "tslib": "catalog:",
+    "typescript": "catalog:"
+  },
+  "peerDependencies": {
+    "react": ">=18.3.1",
+    "react-dom": ">=18.3.1"
   }
 }

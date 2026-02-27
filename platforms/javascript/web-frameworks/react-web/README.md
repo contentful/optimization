@@ -1,36 +1,42 @@
-# Rsbuild project
+# React Web SDK
 
-## Setup
+Scaffold package for `@contentful/optimization-react-web`.
 
-Install the dependencies:
+## Status
 
-```bash
-pnpm install
+This package is scaffold-only and not production-ready.
+
+- Runtime behavior is intentionally out of scope for this initial setup.
+- API semantics and React Native parity details are TODO in follow-up tickets.
+
+## Purpose
+
+`@contentful/optimization-react-web` is intended to become the React framework layer on top of
+`@contentful/optimization-web`.
+
+## Development
+
+From repository root:
+
+```sh
+pnpm --filter @contentful/optimization-react-web build
+pnpm --filter @contentful/optimization-react-web typecheck
+pnpm --filter @contentful/optimization-react-web test:unit
+pnpm --filter @contentful/optimization-react-web dev
 ```
 
-## Get started
+From this package directory:
 
-Start the dev server, and the app will be available at [http://localhost:3000](http://localhost:3000).
-
-```bash
-pnpm run dev
+```sh
+pnpm build
+pnpm typecheck
+pnpm test:unit
+pnpm dev
 ```
 
-Build the app for production:
+## Current Contents
 
-```bash
-pnpm run build
-```
-
-Preview the production build locally:
-
-```bash
-pnpm run preview
-```
-
-## Learn more
-
-To learn more about Rsbuild, check out the following resources:
-
-- [Rsbuild documentation](https://rsbuild.rs) - explore Rsbuild features and APIs.
-- [Rsbuild GitHub repository](https://github.com/web-infra-dev/rsbuild) - your feedback and contributions are welcome!
+- package metadata and dual module exports
+- `rslib`/`rsbuild`/`rstest`/TypeScript baseline aligned with Web SDK patterns
+- placeholder React-facing API surface (provider/root/personalization/analytics/hooks)
+- scaffold dev dashboard sections for consent, identify/reset, state, events, and entries
