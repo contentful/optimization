@@ -53,35 +53,31 @@ function ContentSections({
         </View>
       </View>
 
-      <ScrollView testID="live-updates-scroll-view">
-        <View>
-          <Text>Default Behavior (inherits global setting)</Text>
-          <Text>No liveUpdates prop - inherits from OptimizationRoot (false)</Text>
-          <OptimizationScrollProvider>
+      <OptimizationScrollProvider>
+        <ScrollView testID="live-updates-scroll-view">
+          <View>
+            <Text>Default Behavior (inherits global setting)</Text>
+            <Text>No liveUpdates prop - inherits from OptimizationRoot (false)</Text>
             <Personalization baselineEntry={entry} testID="default-personalization">
               {(resolvedEntry) => (
                 <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="default" />
               )}
             </Personalization>
-          </OptimizationScrollProvider>
-        </View>
+          </View>
 
-        <View>
-          <Text>Live Updates Enabled (liveUpdates=true)</Text>
-          <Text>Always updates when personalization state changes</Text>
-          <OptimizationScrollProvider>
+          <View>
+            <Text>Live Updates Enabled (liveUpdates=true)</Text>
+            <Text>Always updates when personalization state changes</Text>
             <Personalization baselineEntry={entry} liveUpdates={true} testID="live-personalization">
               {(resolvedEntry) => (
                 <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="live" />
               )}
             </Personalization>
-          </OptimizationScrollProvider>
-        </View>
+          </View>
 
-        <View>
-          <Text>Locked (liveUpdates=false)</Text>
-          <Text>Never updates - locks to first variant received</Text>
-          <OptimizationScrollProvider>
+          <View>
+            <Text>Locked (liveUpdates=false)</Text>
+            <Text>Never updates - locks to first variant received</Text>
             <Personalization
               baselineEntry={entry}
               liveUpdates={false}
@@ -91,9 +87,9 @@ function ContentSections({
                 <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="locked" />
               )}
             </Personalization>
-          </OptimizationScrollProvider>
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
+      </OptimizationScrollProvider>
     </>
   )
 }
