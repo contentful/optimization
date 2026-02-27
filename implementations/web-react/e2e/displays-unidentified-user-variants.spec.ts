@@ -34,9 +34,9 @@ test.describe('unidentified user', () => {
 
     const visitorVariant = page.getByTestId('entry-text-2Z2WLOx07InSewC3LUB3eX')
     await expect(
-      visitorVariant.getByText('This is a variant content entry for new visitors.').or(
-        visitorVariant.getByText('This is a variant content entry for return visitors.'),
-      ),
+      visitorVariant
+        .getByText('This is a variant content entry for new visitors.')
+        .or(visitorVariant.getByText('This is a variant content entry for return visitors.')),
     ).toBeVisible()
     await expect(
       page.getByText('This is a variant content entry for an A/B/C experiment: B'),

@@ -16,4 +16,4 @@ interface ImportMeta {
   readonly env: ImportMetaEnv
 }
 
-declare const __ENABLE_PREVIEW_PANEL__: boolean
+declare const ENABLE_PREVIEW_PANEL: boolean

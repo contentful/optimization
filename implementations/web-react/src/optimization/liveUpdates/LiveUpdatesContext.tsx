@@ -1,5 +1,5 @@
-import type { ContentfulClientApi } from 'contentful'
 import type attachOptimizationPreviewPanel from '@contentful/optimization-web-preview-panel'
+import type { ContentfulClientApi } from 'contentful'
 import {
   createContext,
   type JSX,
@@ -58,7 +58,7 @@ function toPreviewPanelContentful(client: ContentfulClientApi<undefined>): Previ
 }
 
 async function attachPreviewPanel(previewPanel: PreviewPanelConfig): Promise<void> {
-  if (!__ENABLE_PREVIEW_PANEL__) {
+  if (!ENABLE_PREVIEW_PANEL) {
     return
   }
 
@@ -69,9 +69,8 @@ async function attachPreviewPanel(previewPanel: PreviewPanelConfig): Promise<voi
   }
 
   // Preview panel is demo-only and disabled by default for production-style builds.
-  const { default: attachOptimizationPreviewPanel }: { default: PreviewPanelAttacher } = await import(
-    '@contentful/optimization-web-preview-panel'
-  )
+  const { default: attachOptimizationPreviewPanel }: { default: PreviewPanelAttacher } =
+    await import('@contentful/optimization-web-preview-panel')
   const attachment = attachOptimizationPreviewPanel({
     contentful: toPreviewPanelContentful(previewPanel.contentful),
     optimization: previewPanel.optimization,

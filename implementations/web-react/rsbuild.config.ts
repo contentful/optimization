@@ -8,7 +8,7 @@ export default defineConfig({
       index: './src/main.tsx',
     },
     define: {
-      __ENABLE_PREVIEW_PANEL__: JSON.stringify(
+      ENABLE_PREVIEW_PANEL: JSON.stringify(
         process.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true',
       ),
     },
