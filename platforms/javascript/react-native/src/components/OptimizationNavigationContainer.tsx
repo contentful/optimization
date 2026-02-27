@@ -1,10 +1,8 @@
-import { createScopedLogger, type Properties } from '@contentful/optimization-core'
+import type { Properties } from '@contentful/optimization-core'
 import type React from 'react'
 import { useCallback, useRef } from 'react'
 import * as z from 'zod/mini'
-import { useOptimization } from '../context/OptimizationContext'
-
-const logger = createScopedLogger('RN:Navigation')
+import { useScreenTrackingCallback } from '../hooks/useScreenTracking'
 
 /**
  * @internal
@@ -113,29 +111,20 @@ export function OptimizationNavigationContainer({
   onReady: userOnReady,
   includeParams = false,
 }: OptimizationNavigationContainerProps): React.ReactNode {
-  const optimization = useOptimization()
-  const navigationRef = useRef<NavigationContainerRef | null>(null)
+  const trackScreenView = useScreenTrackingCallback()
+  const navigationRef = useRef<NavigationContainerRef>(null)
   const routeNameRef = useRef<string | undefined>(undefined)
-
-  // Store optimization in a ref to prevent unnecessary callback recreations
-  const optimizationRef = useRef(optimization)
-  optimizationRef.current = optimization
 
   const trackScreen = useCallback(
     (screenName: string, params?: Record<string, unknown>) => {
-      const { current: currentOptimization } = optimizationRef
-
-      const properties: Properties = includeParams && params ? { params: paramsToJson(params) } : {}
-
-      logger.info(`Tracking screen: "${screenName}"`)
-
-      void currentOptimization.screen({
+      const properties: Properties = {
         name: screenName,
-        properties,
-        screen: { name: screenName },
-      })
+        ...(includeParams && params ? { params: paramsToJson(params) } : {}),
+      }
+
+      trackScreenView(screenName, properties)
     },
-    [includeParams],
+    [includeParams, trackScreenView],
   )
 
   const handleReady = useCallback(() => {

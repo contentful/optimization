@@ -12,8 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import type Optimization from '@contentful/optimization-react-native'
 import {
   Analytics,
+  OptimizationScrollProvider,
   Personalization,
-  ScrollProvider,
   useScreenTracking,
 } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
@@ -99,7 +99,7 @@ export function TestTrackingScreen({
         <Text style={[styles.testTitle, { color: colors.textColor }]}>Component Tracking Test</Text>
       </View>
 
-      <ScrollProvider testID="scrollView">
+      <OptimizationScrollProvider testID="scrollView">
         {/* Info section */}
         <View style={[styles.fillerSection, { backgroundColor: colors.cardBackground }]}>
           <Text style={[styles.sectionTitle, { color: colors.textColor }]}>
@@ -216,7 +216,7 @@ export function TestTrackingScreen({
 
         {/* Bottom spacer */}
         <View style={styles.bottomSpacer} />
-      </ScrollProvider>
+      </OptimizationScrollProvider>
     </SafeAreaView>
   )
 }

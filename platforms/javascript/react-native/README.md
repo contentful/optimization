@@ -239,18 +239,18 @@ The tracking components work in two modes:
 
 #### Inside ScrollView (Recommended for Scrollable Content)
 
-When used inside a `<ScrollProvider>`, tracking uses the actual scroll position and viewport
-dimensions:
+When used inside a `<OptimizationScrollProvider>`, tracking uses the actual scroll position and
+viewport dimensions:
 
 ```tsx
-<ScrollProvider>
+<OptimizationScrollProvider>
   <Personalization baselineEntry={entry}>
     {(resolvedEntry) => <HeroComponent data={resolvedEntry} />}
   </Personalization>
   <Analytics entry={productEntry}>
     <ProductCard data={productEntry.fields} />
   </Analytics>
-</ScrollProvider>
+</OptimizationScrollProvider>
 ```
 
 **Benefits:**
@@ -261,7 +261,7 @@ dimensions:
 
 #### Outside ScrollView (For Non-Scrollable Content)
 
-When used without `<ScrollProvider>`, tracking uses screen dimensions instead:
+When used without `<OptimizationScrollProvider>`, tracking uses screen dimensions instead:
 
 ```tsx
 <Personalization baselineEntry={entry}>
@@ -305,7 +305,7 @@ Both components support customizable visibility and time thresholds:
 **Key Features:**
 
 - Tracks only once per component instance
-- Works with or without `ScrollProvider` (automatically adapts)
+- Works with or without `OptimizationScrollProvider` (automatically adapts)
 - Default: 80% visible for 2000ms (both configurable)
 - Tracking fires even if user never scrolls (checks on initial layout)
 - `<Personalization />` uses render prop pattern to provide resolved entry
@@ -341,7 +341,7 @@ optional preview panel functionality:
 ```tsx
 import Optimization, {
   OptimizationRoot,
-  ScrollProvider,
+  OptimizationScrollProvider,
 } from '@contentful/optimization-react-native'
 import { createClient } from 'contentful'
 
@@ -364,7 +364,7 @@ function App() {
         contentfulClient: contentfulClient,
       }}
     >
-      <ScrollProvider>{/* Your app content */}</ScrollProvider>
+      <OptimizationScrollProvider>{/* Your app content */}</OptimizationScrollProvider>
     </OptimizationRoot>
   )
 }

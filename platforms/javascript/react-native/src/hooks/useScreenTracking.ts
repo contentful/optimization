@@ -48,7 +48,37 @@ export interface UseScreenTrackingReturn {
 const EMPTY_PROPERTIES: Properties = {}
 
 /**
- * Tracks screen views in React Native. By default, tracks automatically on mount.
+ * Returns a stable callback to track screen views with dynamic names.
+ * Use this when screen names are not known at render time (e.g. navigation state).
+ *
+ * @returns A function that tracks a screen view given name and optional properties.
+ *
+ * @public
+ */
+export function useScreenTrackingCallback(): (name: string, properties?: Properties) => void {
+  const optimization = useOptimization()
+  const optimizationRef = useRef(optimization)
+  optimizationRef.current = optimization
+
+  return useCallback((name: string, properties?: Properties) => {
+    const { current: currentOptimization } = optimizationRef
+
+    logger.info(`Tracking screen: "${name}"`)
+
+    void currentOptimization.screen({
+      name,
+      properties: properties ?? EMPTY_PROPERTIES,
+      screen: { name },
+    })
+  }, [])
+}
+
+/**
+ * Hook for tracking screen views in React Native.
+ *
+ * By default, tracks the screen automatically when the component mounts.
+ * Set `trackOnMount: false` to disable automatic tracking and use the
+ * returned `trackScreen` function for manual control.
  *
  * @param options - Screen tracking options
  * @returns Object containing a `trackScreen` function for manual triggering
@@ -113,6 +143,7 @@ export function useScreenTracking({
       const result = await currentOptimization.screen({
         name: currentName,
         properties: currentProperties,
+        screen: { name: currentName },
       })
 
       hasTrackedRef.current = true

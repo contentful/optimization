@@ -3,7 +3,7 @@ import type { Entry } from 'contentful'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Dimensions, type LayoutChangeEvent } from 'react-native'
 import { useOptimization } from '../context/OptimizationContext'
-import { useScrollContext } from '../context/ScrollContext'
+import { useScrollContext } from '../context/OptimizationScrollContext'
 
 const logger = createScopedLogger('RN:ViewportTracking')
 
@@ -130,7 +130,7 @@ export function useViewportTracking({
   viewTimeMs = DEFAULT_VIEW_TIME_MS,
 }: UseViewportTrackingOptions): UseViewportTrackingReturn {
   const optimization = useOptimization()
-  // We invoke useScrollContext here to check if the ScrollProvider is mounted and the scroll context is available.
+  // We invoke useScrollContext here to check if the OptimizationScrollProvider is mounted and the scroll context is available.
   const scrollContext = useScrollContext()
 
   // Extract tracking metadata from the entry and personalization data
@@ -139,7 +139,7 @@ export function useViewportTracking({
     personalization,
   )
 
-  // Fallback to screen dimensions when used outside ScrollProvider
+  // Fallback to screen dimensions when used outside OptimizationScrollProvider
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height)
 
   useEffect(() => {

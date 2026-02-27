@@ -114,7 +114,8 @@ and runtime polyfill side effects.
 - **FR-014**: `Optimization.destroy()` MUST delegate to `CoreStateful.destroy()`.
 - **FR-015**: Package root exports MUST include all `@contentful/optimization-core` exports plus
   React Native APIs (`OptimizationProvider`, `OptimizationRoot`, `Personalization`, `Analytics`,
-  `ScrollProvider`, context hooks, tracking hooks, navigation container, and preview exports).
+  `OptimizationScrollProvider`, context hooks, tracking hooks, navigation container, and preview
+  exports).
 - **FR-016**: Package default export MUST be the `Optimization` class.
 - **FR-017**: `OPTIMIZATION_REACT_NATIVE_SDK_NAME` MUST resolve from build-time replacement when
   available, otherwise `'@contentful/optimization-react-native'`.

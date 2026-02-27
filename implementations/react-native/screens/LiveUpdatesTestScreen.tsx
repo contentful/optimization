@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
-import { Button, ScrollView, Text, View } from 'react-native'
+import { Button, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import type Optimization from '@contentful/optimization-react-native'
 import {
   OptimizationRoot,
+  OptimizationScrollProvider,
   Personalization,
-  ScrollProvider,
   useLiveUpdates,
 } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
@@ -53,47 +53,41 @@ function ContentSections({
         </View>
       </View>
 
-      <ScrollView testID="live-updates-scroll-view">
+      <OptimizationScrollProvider testID="live-updates-scroll-view">
         <View>
           <Text>Default Behavior (inherits global setting)</Text>
           <Text>No liveUpdates prop - inherits from OptimizationRoot (false)</Text>
-          <ScrollProvider>
-            <Personalization baselineEntry={entry} testID="default-personalization">
-              {(resolvedEntry) => (
-                <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="default" />
-              )}
-            </Personalization>
-          </ScrollProvider>
+          <Personalization baselineEntry={entry} testID="default-personalization">
+            {(resolvedEntry) => (
+              <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="default" />
+            )}
+          </Personalization>
         </View>
 
         <View>
           <Text>Live Updates Enabled (liveUpdates=true)</Text>
           <Text>Always updates when personalization state changes</Text>
-          <ScrollProvider>
-            <Personalization baselineEntry={entry} liveUpdates={true} testID="live-personalization">
-              {(resolvedEntry) => (
-                <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="live" />
-              )}
-            </Personalization>
-          </ScrollProvider>
+          <Personalization baselineEntry={entry} liveUpdates={true} testID="live-personalization">
+            {(resolvedEntry) => (
+              <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="live" />
+            )}
+          </Personalization>
         </View>
 
         <View>
           <Text>Locked (liveUpdates=false)</Text>
           <Text>Never updates - locks to first variant received</Text>
-          <ScrollProvider>
-            <Personalization
-              baselineEntry={entry}
-              liveUpdates={false}
-              testID="locked-personalization"
-            >
-              {(resolvedEntry) => (
-                <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="locked" />
-              )}
-            </Personalization>
-          </ScrollProvider>
+          <Personalization
+            baselineEntry={entry}
+            liveUpdates={false}
+            testID="locked-personalization"
+          >
+            {(resolvedEntry) => (
+              <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="locked" />
+            )}
+          </Personalization>
         </View>
-      </ScrollView>
+      </OptimizationScrollProvider>
     </>
   )
 }

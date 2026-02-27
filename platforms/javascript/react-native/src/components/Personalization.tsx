@@ -99,7 +99,7 @@ export interface PersonalizationProps {
  * @remarks
  * "Component tracking" refers to tracking Contentful entry components (content entries),
  * not React Native UI components. Must be used within an {@link OptimizationProvider}.
- * Works with or without a {@link ScrollProvider} — when outside a ScrollProvider,
+ * Works with or without a {@link OptimizationScrollProvider} — when outside a OptimizationScrollProvider,
  * screen dimensions are used instead.
  *
  * By default the component locks to the first variant it receives to prevent UI
@@ -108,7 +108,7 @@ export interface PersonalizationProps {
  *
  * @example Basic Usage
  * ```tsx
- * <ScrollProvider>
+ * <OptimizationScrollProvider>
  *   <Personalization baselineEntry={baselineEntry}>
  *     {(resolvedEntry) => (
  *       <HeroComponent
@@ -117,7 +117,7 @@ export interface PersonalizationProps {
  *       />
  *     )}
  *   </Personalization>
- * </ScrollProvider>
+ * </OptimizationScrollProvider>
  * ```
  *
  * @example Custom Thresholds

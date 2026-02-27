@@ -37,15 +37,15 @@ component tree so visibility tracking and personalization update behavior are co
 
 **Why this priority**: Scroll/live-update context directly drives tracking and rendering behavior.
 
-**Independent Test**: Render within `ScrollProvider` and `LiveUpdatesProvider`, simulate layout and
-scroll events, and verify context values and forwarding callbacks.
+**Independent Test**: Render within `OptimizationScrollProvider` and `LiveUpdatesProvider`, simulate
+layout and scroll events, and verify context values and forwarding callbacks.
 
 **Acceptance Scenarios**:
 
-1. **Given** `ScrollProvider` receives layout/scroll events, **When** handlers execute, **Then**
-   `scrollY` and `viewportHeight` context values are updated.
-2. **Given** caller passes `onLayout`/`onScroll` to `ScrollProvider`, **When** provider handlers
-   run, **Then** caller handlers are invoked.
+1. **Given** `OptimizationScrollProvider` receives layout/scroll events, **When** handlers execute,
+   **Then** `scrollY` and `viewportHeight` context values are updated.
+2. **Given** caller passes `onLayout`/`onScroll` to `OptimizationScrollProvider`, **When** provider
+   handlers run, **Then** caller handlers are invoked.
 3. **Given** `LiveUpdatesProvider`, **When** consumers call `useLiveUpdates()`, **Then** they
    receive `globalLiveUpdates`, `previewPanelVisible`, and `setPreviewPanelVisible`.
 
@@ -76,8 +76,8 @@ provider hierarchy plus preview visibility synchronization.
 
 - `useScrollContext()` and `useLiveUpdates()` may return `null` outside providers and must be safe
   for optional consumption.
-- `ScrollProvider` must initialize viewport tracking on layout so children can track before first
-  scroll event.
+- `OptimizationScrollProvider` must initialize viewport tracking on layout so children can track
+  before first scroll event.
 - `OptimizationRoot.liveUpdates` defaults to `false` when omitted.
 - Preview overlay should preserve override state across modal open/close cycles via dedicated
   override provider.
@@ -93,13 +93,16 @@ provider hierarchy plus preview visibility synchronization.
 - **FR-004**: `OptimizationProvider` MUST log provider initialization on mount.
 - **FR-005**: `ScrollContext` MUST expose `scrollY` and `viewportHeight` values.
 - **FR-006**: `useScrollContext()` MUST return `ScrollContext` value or `null` outside provider.
-- **FR-007**: `ScrollProvider` MUST render a `ScrollView` wrapped by `ScrollContext.Provider`.
-- **FR-008**: `ScrollProvider` layout handling MUST initialize viewport height from first layout
-  event when current value is zero.
-- **FR-009**: `ScrollProvider` scroll handling MUST update `scrollY` and `viewportHeight` from
-  native scroll event payload.
-- **FR-010**: `ScrollProvider` MUST forward caller-provided `onLayout` and `onScroll` callbacks.
-- **FR-011**: `ScrollProvider` MUST set `scrollEventThrottle={16}` on the underlying `ScrollView`.
+- **FR-007**: `OptimizationScrollProvider` MUST render a `ScrollView` wrapped by
+  `ScrollContext.Provider`.
+- **FR-008**: `OptimizationScrollProvider` layout handling MUST initialize viewport height from
+  first layout event when current value is zero.
+- **FR-009**: `OptimizationScrollProvider` scroll handling MUST update `scrollY` and
+  `viewportHeight` from native scroll event payload.
+- **FR-010**: `OptimizationScrollProvider` MUST forward caller-provided `onLayout` and `onScroll`
+  callbacks.
+- **FR-011**: `OptimizationScrollProvider` MUST set `scrollEventThrottle={16}` on the underlying
+  `ScrollView`.
 - **FR-012**: `LiveUpdatesContext` MUST expose `globalLiveUpdates`, `previewPanelVisible`, and
   `setPreviewPanelVisible`.
 - **FR-013**: `LiveUpdatesProvider` MUST default `globalLiveUpdates` to `false` when omitted.

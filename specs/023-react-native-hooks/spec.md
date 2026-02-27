@@ -32,17 +32,17 @@ and verify `trackComponentView` dispatch when threshold and dwell requirements a
 ### User Story 2 - Resolve Visibility Across Scroll and Non-Scroll Layouts (Priority: P1)
 
 As a component maintainer, I need viewport calculations to work both inside and outside
-`ScrollProvider` so tracking can run in scrollable and fixed layouts.
+`OptimizationScrollProvider` so tracking can run in scrollable and fixed layouts.
 
 **Why this priority**: Tracking must adapt to different screen structures without extra logic.
 
-**Independent Test**: Run `useViewportTracking` with and without `ScrollProvider` context and verify
-viewport calculations and metadata extraction.
+**Independent Test**: Run `useViewportTracking` with and without `OptimizationScrollProvider`
+context and verify viewport calculations and metadata extraction.
 
 **Acceptance Scenarios**:
 
-1. **Given** `ScrollProvider` context exists, **When** visibility checks run, **Then** calculations
-   use context `scrollY` and `viewportHeight`.
+1. **Given** `OptimizationScrollProvider` context exists, **When** visibility checks run, **Then**
+   calculations use context `scrollY` and `viewportHeight`.
 2. **Given** no scroll context, **When** visibility checks run, **Then** calculations use screen
    dimensions and update on dimension changes.
 3. **Given** personalization metadata is provided, **When** tracking metadata is derived, **Then**

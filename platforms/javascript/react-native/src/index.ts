@@ -221,8 +221,8 @@ export type { PersonalizationProps } from './components/Personalization'
 export { Analytics } from './components/Analytics'
 export type { AnalyticsProps } from './components/Analytics'
 
-export { ScrollProvider, useScrollContext } from './context/ScrollContext'
-export type { ScrollProviderProps } from './context/ScrollContext'
+export { OptimizationScrollProvider, useScrollContext } from './context/OptimizationScrollContext'
+export type { OptimizationScrollProviderProps } from './context/OptimizationScrollContext'
 
 export { useLiveUpdates } from './context/LiveUpdatesContext'
 export { useOptimization } from './context/OptimizationContext'
@@ -233,7 +233,8 @@ export type {
   UseViewportTrackingReturn,
 } from './hooks/useViewportTracking'
 
-export { useScreenTracking } from './hooks/useScreenTracking'
+// Export screen tracking hooks
+export { useScreenTracking, useScreenTrackingCallback } from './hooks/useScreenTracking'
 export type { UseScreenTrackingOptions, UseScreenTrackingReturn } from './hooks/useScreenTracking'
 
 export { OptimizationNavigationContainer } from './components/OptimizationNavigationContainer'

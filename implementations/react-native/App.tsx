@@ -3,7 +3,10 @@ import { Button, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import type Optimization from '@contentful/optimization-react-native'
-import { OptimizationProvider, ScrollProvider } from '@contentful/optimization-react-native'
+import {
+  OptimizationProvider,
+  OptimizationScrollProvider,
+} from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
@@ -129,7 +132,7 @@ function App(): React.JSX.Element {
             }}
           />
         </View>
-        <ScrollProvider testID="main-scroll-view">
+        <OptimizationScrollProvider testID="main-scroll-view">
           {entries.map((entry) =>
             entry.sys.contentType.sys.id === 'nestedContent' ? (
               <NestedContentEntry key={entry.sys.id} entry={entry} />
@@ -138,7 +141,7 @@ function App(): React.JSX.Element {
             ),
           )}
           <AnalyticsEventDisplay sdk={sdk} />
-        </ScrollProvider>
+        </OptimizationScrollProvider>
       </SafeAreaView>
     </OptimizationProvider>
   )

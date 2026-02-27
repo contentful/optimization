@@ -63,20 +63,20 @@ export interface AnalyticsProps {
  *
  * @remarks
  * Must be used within an {@link OptimizationProvider}. Works with or without a
- * {@link ScrollProvider} — when outside a ScrollProvider, screen dimensions are
+ * {@link OptimizationScrollProvider} — when outside a OptimizationScrollProvider, screen dimensions are
  * used instead. Tracks with `variantIndex: 0` and no `experienceId` to indicate
  * baseline/non-personalized content.
  *
  * @example Basic Usage
  * ```tsx
- * <ScrollProvider>
+ * <OptimizationScrollProvider>
  *   <Analytics entry={productEntry}>
  *     <ProductCard
  *       name={productEntry.fields.name}
  *       price={productEntry.fields.price}
  *     />
  *   </Analytics>
- * </ScrollProvider>
+ * </OptimizationScrollProvider>
  * ```
  *
  * @example Custom Thresholds
