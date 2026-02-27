@@ -1,12 +1,12 @@
-import { Profile } from '@contentful/optimization-web'
+import type { Profile } from '@contentful/optimization-web'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
 import {
-  AUTO_OBSERVED_ENTRY_IDS,
   ENTRY_IDS,
   LIVE_UPDATES_ENTRY_ID,
-  MANUALLY_OBSERVED_ENTRY_IDS,
+  PAGE_TWO_AUTO_ENTRY_ID,
+  PAGE_TWO_MANUAL_ENTRY_ID,
 } from './config/entries'
 import { HOME_PATH, PAGE_TWO_PATH } from './config/routes'
 import { useOptimization } from './optimization/hooks/useOptimization'
@@ -22,17 +22,11 @@ import {
 import type { ContentfulEntry } from './types/contentful'
 
 function isIdentifiedProfile(profile: Profile | undefined): boolean {
-  if (typeof profile !== 'object' || profile === undefined || profile === null) {
+  if (profile === undefined) {
     return false
   }
 
-  const record = profile
-  if (typeof record.traits !== 'object' || record.traits === null) {
-    return false
-  }
-
-  const traits = record.traits
-  console.log('Profile traits:', traits)
+  const { traits } = profile
   return Boolean(traits.identified)
 }
 
@@ -96,7 +90,7 @@ export default function App(): JSX.Element {
   )
   const liveUpdatesBaselineEntry = entriesById.get(LIVE_UPDATES_ENTRY_ID)
   const hasPageTwoEntries =
-    entriesById.has(AUTO_OBSERVED_ENTRY_IDS[4]) && entriesById.has(MANUALLY_OBSERVED_ENTRY_IDS[0])
+    entriesById.has(PAGE_TWO_AUTO_ENTRY_ID) && entriesById.has(PAGE_TWO_MANUAL_ENTRY_ID)
 
   const handleIdentify = (): void => {
     if (!isReady || sdk === undefined) {

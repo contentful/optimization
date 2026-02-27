@@ -1,6 +1,6 @@
 import { type JSX, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { AUTO_OBSERVED_ENTRY_IDS, MANUALLY_OBSERVED_ENTRY_IDS } from '../config/entries'
+import { PAGE_TWO_AUTO_ENTRY_ID, PAGE_TWO_MANUAL_ENTRY_ID } from '../config/entries'
 import { HOME_PATH } from '../config/routes'
 import { useAnalytics } from '../optimization/hooks/useAnalytics'
 import { ContentEntry } from '../sections/ContentEntry'
@@ -14,8 +14,8 @@ interface PageTwoPageProps {
 
 export function PageTwoPage({ consent, entriesById, isIdentified }: PageTwoPageProps): JSX.Element {
   const { trackView } = useAnalytics()
-  const pageTwoAutoEntry = entriesById.get(AUTO_OBSERVED_ENTRY_IDS[4])
-  const pageTwoManualEntry = entriesById.get(MANUALLY_OBSERVED_ENTRY_IDS[0])
+  const pageTwoAutoEntry = entriesById.get(PAGE_TWO_AUTO_ENTRY_ID)
+  const pageTwoManualEntry = entriesById.get(PAGE_TWO_MANUAL_ENTRY_ID)
 
   useEffect(() => {
     void trackView({ componentId: 'page-two-hero' })
