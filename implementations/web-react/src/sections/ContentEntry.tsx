@@ -16,6 +16,34 @@ interface PersonalizationMeta {
   variantIndex?: number
 }
 
+interface EntryViewElementOptions {
+  readonly dwellTimeMs?: number
+  readonly data?: {
+    readonly entryId: string
+    readonly personalizationId?: string
+    readonly sticky?: boolean
+    readonly variantIndex?: number
+  }
+}
+
+interface TrackingApi {
+  observe: (interaction: 'views', element: Element, options: EntryViewElementOptions) => void
+  unobserve: (interaction: 'views', element: Element) => void
+}
+
+interface TrackingApiOwner {
+  tracking: TrackingApi
+}
+
+function hasTrackingApi(value: unknown): value is TrackingApiOwner {
+  if (!isRecord(value)) return false
+
+  const { tracking } = value
+  if (!isRecord(tracking)) return false
+
+  return typeof tracking.observe === 'function' && typeof tracking.unobserve === 'function'
+}
+
 function isRichTextField(field: unknown): field is RichTextDocument {
   return (
     typeof field === 'object' &&
@@ -57,7 +85,7 @@ export function ContentEntry({ entry, observation }: ContentEntryProps): JSX.Ele
   )
 
   useEffect(() => {
-    if (!isReady || sdk === undefined || observation !== 'manual') {
+    if (!isReady || sdk === undefined || observation !== 'manual' || !hasTrackingApi(sdk)) {
       return
     }
 
@@ -66,19 +94,21 @@ export function ContentEntry({ entry, observation }: ContentEntryProps): JSX.Ele
       return
     }
 
-    sdk.untrackEntryViewForElement(element)
+    sdk.tracking.unobserve('views', element)
 
-    sdk.trackEntryViewForElement(element, {
+    const options: EntryViewElementOptions = {
       data: {
         entryId: resolvedEntry.sys.id,
         personalizationId: experienceId,
         sticky,
         variantIndex,
       },
-    })
+    }
+
+    sdk.tracking.observe('views', element, options)
 
     return () => {
-      sdk.untrackEntryViewForElement(element)
+      sdk.tracking.unobserve('views', element)
     }
   }, [experienceId, isReady, observation, resolvedEntry.sys.id, sdk, sticky, variantIndex])
 

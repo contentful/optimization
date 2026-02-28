@@ -38,6 +38,9 @@ importers:
       core-js:
         specifier: ^3.46.0
         version: 3.48.0
+      hermes-compiler:
+        specifier: 250829098.0.7
+        version: 250829098.0.7
       react:
         specifier: 19.2.3
         version: 19.2.3
@@ -549,19 +552,19 @@ packages:
     resolution: {integrity: sha512-tu1gfmZI59hQ7qKhmGOV0dA5brxhsc+LOfPwBsQQMDAVy5kVpTrKf/AGlL2y9QhKHu/NtCrwX/ZrmRFgtGEtIA==}
 
   '@contentful/optimization-api-client@file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz':
-    resolution: {integrity: sha512-oBMPRO3Jg6OwkCTPNa4w3b4em+Ds4qphQXKjp+3cblm1DhwOwhpPQYj3bpinWa5G4nAUje8KMsp570uII3K17A==, tarball: file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz}
+    resolution: {integrity: sha512-QT7bRfw3WkvbA4ZO7c4TCGVqcCprrOFu8orQtTucOEyHpS1SBdV8gp5wqt5QBXIclqXdaSA5QSv24XW7j5FtDg==, tarball: file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/optimization-api-schemas@file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz':
-    resolution: {integrity: sha512-q9yGS3kX+jqrU5JeZZVleQbXbVIshJtOTNYp6sG66hK5vu+conLgqG2ZjGLqLI1LY01BxMBS5G2i9Wi//cOlsQ==, tarball: file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz}
+    resolution: {integrity: sha512-5VTkmQX7jz3xO0bEiFXaK8E7JVpY/+uRavMRQmeNddk5AY9+t7QivIQ+1Z/iCsorWB4FXtWyqd/Kb/DrFSe67w==, tarball: file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/optimization-core@file:../../pkgs/contentful-optimization-core-0.0.0.tgz':
-    resolution: {integrity: sha512-WuV0q3BPKqu/eXXASy9s/HlN6rKt9jsEwXZqwu/EsmiAppJlJCQTaToppXYet6w2MxJF6ORm13FeQ+XuxcHDgQ==, tarball: file:../../pkgs/contentful-optimization-core-0.0.0.tgz}
+    resolution: {integrity: sha512-rRbDTfepzgq+HnxPann3t0/29OCvJqaeHYSUHTd/pwXmrIrNWSW+5Ao3V1q8SGj43chszsyQhIUdZBwtPEXTIw==, tarball: file:../../pkgs/contentful-optimization-core-0.0.0.tgz}
     version: 0.0.0
 
   '@contentful/optimization-react-native@file:../../pkgs/contentful-optimization-react-native-0.0.0.tgz':
-    resolution: {integrity: sha512-WUThstPi4KPevPUY3rdkrSVj3o1wvNJwYu8XbE3+4sVAhxHE0ZDYLe7PtyNopSfFJSp7inFLhTmVXb9Jo8vzlQ==, tarball: file:../../pkgs/contentful-optimization-react-native-0.0.0.tgz}
+    resolution: {integrity: sha512-MwMnAmhyTmL6ALuTtL6AMo3mrnhxNeKpqKTsALBsQV0skym4p5IVuWlcjRWFV7wvj7vsEX+1+4ykLzDZvRulGw==, tarball: file:../../pkgs/contentful-optimization-react-native-0.0.0.tgz}
     version: 0.0.0
     engines: {node: '>=18'}
     peerDependencies:
@@ -1047,9 +1050,6 @@ packages:
 
   '@types/react@19.2.14':
     resolution: {integrity: sha512-ilcTH/UniCkMdtexkoCN0bI7pMcJDvmQFPvuPvmEaYA/NSfFTAgdUSLAoVjaRJm7+6PvcM+q1zYOwS4wTYMF9w==}
-
-  '@types/retry@0.12.2':
-    resolution: {integrity: sha512-XISRgDJ2Tc5q4TRqvgJtzsRkFYNJzZrhTdtMoGVBttwzzQJkPnS3WWTFc7kuDRoPtPakl+T+OfdEUjYJj7Jbow==}
 
   '@types/stack-utils@2.0.3':
     resolution: {integrity: sha512-9aEbYZ3TbYMznPdcdr3SmIrLXwC/AKZXQeCf9Pgao5CKb8CyHuEX5jzWPTkvregvhRJHcpRO6BFoGW9ycaOkYw==}
@@ -2278,10 +2278,6 @@ packages:
     resolution: {integrity: sha512-5KoIu2Ngpyek75jXodFvnafB6DJgr3u8uuK0LEZJjrU19DrMD3EVERaR8sjz8CCGgpZvxPl9SuE1GMVPFHx1mw==}
     engines: {node: '>= 0.4'}
 
-  is-network-error@1.3.0:
-    resolution: {integrity: sha512-6oIwpsgRfnDiyEDLMay/GqCl3HoAtH5+RUKW29gYkL0QA+ipzpDLA16yQs7/RHCSu+BwgbJaOUqa4A99qNVQVw==}
-    engines: {node: '>=16'}
-
   is-number-object@1.1.1:
     resolution: {integrity: sha512-lZhclumE1G6VYD8VHe35wFaIif+CTy5SJIi5+3y4psDgWu4wPDoBhF8NxUOinEc7pHgiTsT6MaBb92rKhhD+Xw==}
     engines: {node: '>= 0.4'}
@@ -3016,14 +3012,6 @@ packages:
     resolution: {integrity: sha512-LaNjtRWUBY++zB5nE/NwcaoMylSPk+S+ZHNB1TzdbMJMny6dynpAGt7X/tl/QYq3TIeE6nxHppbo2LGymrG5Pw==}
     engines: {node: '>=10'}
 
-  p-retry@6.2.1:
-    resolution: {integrity: sha512-hEt02O4hUct5wtwg4H4KcWgDdm+l1bOaEy/hWzd8xtXB9BqxTWBBhb+2ImAtH4Cv4rPjV76xN3Zumqk3k3AhhQ==}
-    engines: {node: '>=16.17'}
-
-  p-retry@7.1.1:
-    resolution: {integrity: sha512-J5ApzjyRkkf601HpEeykoiCvzHQjWxPAHhyjFcEUP2SWq0+35NKh8TLhpLw+Dkq5TZBFvUM6UigdE9hIVYTl5w==}
-    engines: {node: '>=20'}
-
   p-try@2.2.0:
     resolution: {integrity: sha512-R4nPAVTAU0B9D35/Gk3uJf/7XYbQcyohSKdvAxIRSNghFl4e71hVoGnBNQz9cWaXxO2I10KTC+3jMdvvoKw6dQ==}
     engines: {node: '>=6'}
@@ -3296,10 +3284,6 @@ packages:
 
   retry@0.12.0:
     resolution: {integrity: sha512-9LkiTwjUh6rT555DtE9rTX+BKByPfrMzEAtnlEtdEwr3Nkffwiihqe2bWADg+OQRjt9gl6ICdmB/ZFDCGAtSow==}
-    engines: {node: '>= 4'}
-
-  retry@0.13.1:
-    resolution: {integrity: sha512-XQBQ3I8W1Cge0Seh+6gjj03LbmRFWuoszgK9ooCpwYIrhhoO80pfq4cUkU5DkknwfOfFteRwlZ56PYOGYyFWdg==}
     engines: {node: '>= 4'}
 
   reusify@1.1.0:
@@ -4401,7 +4385,6 @@ snapshots:
       '@contentful/optimization-api-schemas': file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz
       diary: 0.4.5
       es-toolkit: 1.44.0
-      p-retry: 6.2.1
       zod: 4.3.6
     transitivePeerDependencies:
       - debug
@@ -4420,7 +4403,6 @@ snapshots:
       contentful: 11.10.3
       diary: 0.4.5
       es-toolkit: 1.44.0
-      p-retry: 7.1.1
       zod: 4.3.6
     transitivePeerDependencies:
       - debug
@@ -5252,8 +5234,6 @@ snapshots:
   '@types/react@19.2.14':
     dependencies:
       csstype: 3.2.3
-
-  '@types/retry@0.12.2': {}
 
   '@types/stack-utils@2.0.3': {}
 
@@ -6587,8 +6567,6 @@ snapshots:
 
   is-negative-zero@2.0.3: {}
 
-  is-network-error@1.3.0: {}
-
   is-number-object@1.1.1:
     dependencies:
       call-bound: 1.0.4
@@ -7723,16 +7701,6 @@ snapshots:
     dependencies:
       p-limit: 3.1.0
 
-  p-retry@6.2.1:
-    dependencies:
-      '@types/retry': 0.12.2
-      is-network-error: 1.3.0
-      retry: 0.13.1
-
-  p-retry@7.1.1:
-    dependencies:
-      is-network-error: 1.3.0
-
   p-try@2.2.0: {}
 
   package-json-from-dist@1.0.1: {}
@@ -8038,8 +8006,6 @@ snapshots:
       signal-exit: 3.0.7
 
   retry@0.12.0: {}
-
-  retry@0.13.1: {}
 
   reusify@1.1.0: {}
 

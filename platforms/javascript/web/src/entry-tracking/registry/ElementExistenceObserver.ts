@@ -7,7 +7,32 @@
  * - Two optional per-kind callbacks + one aggregate callback
  */
 
-import { CAN_ADD_LISTENERS } from '../global-constants'
+import {
+  CAN_ADD_LISTENERS,
+  HAS_CANCEL_IDLE,
+  HAS_IDLE_CALLBACK,
+  HAS_MUTATION_OBSERVER,
+} from '../../global-constants'
+import { safeCall } from '../../lib'
+
+const isNode = (value: unknown): value is Node =>
+  CAN_ADD_LISTENERS && typeof Node !== 'undefined' && value instanceof Node
+
+const scheduleIdle = (run: () => void, timeoutMs: number): number =>
+  HAS_IDLE_CALLBACK
+    ? window.requestIdleCallback(run, { timeout: timeoutMs })
+    : window.setTimeout(run, timeoutMs)
+
+const cancelIdle = (handle: number): void => {
+  if (HAS_CANCEL_IDLE) {
+    window.cancelIdleCallback(handle)
+    return
+  }
+
+  if (CAN_ADD_LISTENERS) {
+    window.clearTimeout(handle)
+  }
+}
 
 /**
  * Default idle timeout (in milliseconds) used when scheduling processing
@@ -22,7 +47,7 @@ export const DEFAULT_IDLE_TIMEOUT_MS = 100
  *
  * @public
  */
-export const DEFAULT_MAX_CHUNK = 250
+const DEFAULT_MAX_CHUNK = 250
 
 /**
  * Lower bound for idle timeout to avoid ultra-tight loops (~1 animation frame).
@@ -36,36 +61,14 @@ export const MIN_IDLE_TIMEOUT_MS = 16 // ~1 frame
  *
  * @public
  */
-export const MIN_MAX_CHUNK = 1
-
-/**
- * True when the environment supports `MutationObserver` and can add listeners.
- *
- * @public
- */
-export const HAS_MUTATION_OBSERVER = CAN_ADD_LISTENERS && typeof MutationObserver !== 'undefined'
-
-/**
- * True when the environment supports `window.requestIdleCallback`.
- *
- * @public
- */
-export const HAS_IDLE_CALLBACK =
-  CAN_ADD_LISTENERS && typeof window.requestIdleCallback === 'function'
-
-/**
- * True when the environment supports `window.cancelIdleCallback`.
- *
- * @public
- */
-export const HAS_CANCEL_IDLE = CAN_ADD_LISTENERS && typeof window.cancelIdleCallback === 'function'
+const MIN_MAX_CHUNK = 1
 
 /**
  * Aggregate description of changes observed in a batch of mutation records.
  *
  * @public
  */
-export interface MutationChange {
+interface MutationChange {
   /** Set of elements that were added. */
   readonly added: ReadonlySet<Element>
   /** Set of elements that were removed. */
@@ -79,40 +82,28 @@ export interface MutationChange {
  *
  * @public
  */
-export type AddedCallback = (elements: readonly Element[]) => unknown
+type AddedCallback = (elements: readonly Element[]) => unknown
 
 /**
  * Callback invoked when elements have been removed.
  *
  * @public
  */
-export type RemovedCallback = (elements: readonly Element[]) => unknown
+type RemovedCallback = (elements: readonly Element[]) => unknown
 
 /**
  * Callback invoked when a batch of mutation records has been coalesced.
  *
  * @public
  */
-export type MutationChangeCallback = (change: MutationChange) => unknown
+type MutationChangeCallback = (change: MutationChange) => unknown
 
 /**
- * Options for configuring {@link ElementExistenceObserver}.
+ * Subscriber callbacks for {@link ElementExistenceObserver}.
  *
  * @public
  */
-export interface ElementExistenceObserverOptions {
-  /**
-   * Root node to observe for changes. Defaults to `document` where possible.
-   */
-  readonly root?: Node
-  /**
-   * Idle timeout in milliseconds used when scheduling processing of mutations.
-   */
-  readonly idleTimeoutMs?: number
-  /**
-   * Maximum number of elements delivered per callback chunk.
-   */
-  readonly maxChunk?: number
+interface ElementExistenceObserverSubscriber {
   /**
    * Callback invoked with the aggregate change payload (added/removed plus raw records).
    */
@@ -132,6 +123,26 @@ export interface ElementExistenceObserverOptions {
 }
 
 /**
+ * Options for configuring {@link ElementExistenceObserver}.
+ *
+ * @public
+ */
+interface ElementExistenceObserverOptions extends ElementExistenceObserverSubscriber {
+  /**
+   * Root node to observe for changes. Defaults to `document` where possible.
+   */
+  readonly root?: Node
+  /**
+   * Idle timeout in milliseconds used when scheduling processing of mutations.
+   */
+  readonly idleTimeoutMs?: number
+  /**
+   * Maximum number of elements delivered per callback chunk.
+   */
+  readonly maxChunk?: number
+}
+
+/**
  * Observe the existence of elements under a root node and deliver coalesced
  * add/remove notifications in idle time.
  *
@@ -144,16 +155,13 @@ export interface ElementExistenceObserverOptions {
  * @public
  */
 class ElementExistenceObserver {
-  private readonly observer?: MutationObserver
+  private observer?: MutationObserver
 
   private readonly root: Node | null
   private readonly idleTimeoutMs: number
   private readonly maxChunk: number
 
-  private readonly onChange?: MutationChangeCallback
-  private readonly onAdded?: AddedCallback
-  private readonly onRemoved?: RemovedCallback
-  private readonly onError?: (error: unknown) => void
+  private readonly subscribers = new Set<ElementExistenceObserverSubscriber>()
 
   private pendingRecords: MutationRecord[] = []
   private scheduled = false
@@ -178,13 +186,13 @@ class ElementExistenceObserver {
       root,
       idleTimeoutMs = DEFAULT_IDLE_TIMEOUT_MS,
       maxChunk = DEFAULT_MAX_CHUNK,
-      onChange,
       onAdded,
-      onRemoved,
+      onChange,
       onError,
+      onRemoved,
     } = options
 
-    this.root = ElementExistenceObserver.isNode(root) ? root : CAN_ADD_LISTENERS ? document : null
+    this.root = isNode(root) ? root : CAN_ADD_LISTENERS ? document : null
 
     this.idleTimeoutMs = ElementExistenceObserver.sanitizeInt(
       idleTimeoutMs,
@@ -193,27 +201,49 @@ class ElementExistenceObserver {
     )
     this.maxChunk = ElementExistenceObserver.sanitizeInt(maxChunk, DEFAULT_MAX_CHUNK, MIN_MAX_CHUNK)
 
-    this.onChange = onChange
-    this.onAdded = onAdded
-    this.onRemoved = onRemoved
-    this.onError = onError
+    const initialSubscriber = ElementExistenceObserver.toSubscriber({
+      onAdded,
+      onChange,
+      onError,
+      onRemoved,
+    })
 
-    if (HAS_MUTATION_OBSERVER && this.root) {
-      this.observer = new MutationObserver((records) => {
-        for (const record of records) {
-          if (record.addedNodes.length > 0 || record.removedNodes.length > 0) {
-            this.pendingRecords.push(record)
-          }
-        }
-        if (this.pendingRecords.length > 0) this.scheduleProcess()
-      })
-
-      this.observer.observe(this.root, {
-        childList: true,
-        subtree: true,
-      })
+    if (initialSubscriber) {
+      this.subscribers.add(initialSubscriber)
     }
-    // Else: SSR / non-DOM env — stay dormant; methods become safe no-ops.
+
+    this.ensureObserver()
+  }
+
+  /**
+   * Subscribe to coalesced mutation events.
+   *
+   * @param subscriber - Callback collection to receive mutation updates.
+   * @returns Cleanup function that removes this subscription.
+   */
+  public subscribe(subscriber: ElementExistenceObserverSubscriber): () => void {
+    if (this.disconnected) return () => undefined
+
+    const normalized = ElementExistenceObserver.toSubscriber(subscriber)
+
+    if (!normalized) return () => undefined
+
+    this.subscribers.add(normalized)
+    this.ensureObserver()
+
+    return (): void => {
+      this.unsubscribe(normalized)
+    }
+  }
+
+  /**
+   * Remove an existing subscription.
+   *
+   * @param subscriber - Subscriber to remove.
+   */
+  public unsubscribe(subscriber: ElementExistenceObserverSubscriber): void {
+    this.subscribers.delete(subscriber)
+    this.maybeStopObserver()
   }
 
   /**
@@ -245,10 +275,12 @@ class ElementExistenceObserver {
     this.disconnected = true
 
     this.observer?.disconnect()
+    this.observer = undefined
+    this.subscribers.clear()
     this.pendingRecords = []
 
     if (this.idleHandle !== null) {
-      ElementExistenceObserver.cancelIdle(this.idleHandle)
+      cancelIdle(this.idleHandle)
       this.idleHandle = null
     }
     this.scheduled = false
@@ -268,16 +300,60 @@ class ElementExistenceObserver {
    * ```
    */
   public flush(): void {
+    this.ensureObserver()
     if (!this.isActive()) return
 
     if (this.idleHandle !== null) {
-      ElementExistenceObserver.cancelIdle(this.idleHandle)
+      cancelIdle(this.idleHandle)
       this.idleHandle = null
     }
     if (!this.scheduled && this.pendingRecords.length === 0) return
 
     this.scheduled = false
     this.processNow()
+  }
+
+  /**
+   * Start observing mutations when supported and at least one subscriber exists.
+   *
+   * @internal
+   */
+  private ensureObserver(): void {
+    if (this.disconnected || this.observer) return
+    if (!HAS_MUTATION_OBSERVER || !this.root || this.subscribers.size === 0) return
+
+    this.observer = new MutationObserver((records) => {
+      for (const record of records) {
+        if (record.addedNodes.length > 0 || record.removedNodes.length > 0) {
+          this.pendingRecords.push(record)
+        }
+      }
+      if (this.pendingRecords.length > 0) this.scheduleProcess()
+    })
+
+    this.observer.observe(this.root, {
+      childList: true,
+      subtree: true,
+    })
+  }
+
+  /**
+   * Stop observing and clear queued work when no subscribers remain.
+   *
+   * @internal
+   */
+  private maybeStopObserver(): void {
+    if (this.subscribers.size > 0 || !this.observer) return
+
+    this.observer.disconnect()
+    this.observer = undefined
+    this.pendingRecords = []
+
+    if (this.idleHandle !== null) {
+      cancelIdle(this.idleHandle)
+      this.idleHandle = null
+    }
+    this.scheduled = false
   }
 
   /**
@@ -295,9 +371,7 @@ class ElementExistenceObserver {
       this.processNow()
     }
 
-    this.idleHandle = HAS_IDLE_CALLBACK
-      ? window.requestIdleCallback(run, { timeout: this.idleTimeoutMs })
-      : window.setTimeout(run, this.idleTimeoutMs)
+    this.idleHandle = scheduleIdle(run, this.idleTimeoutMs)
   }
 
   /**
@@ -319,12 +393,23 @@ class ElementExistenceObserver {
   }
 
   /**
-   * Narrow a value to `Node` when the DOM is available.
+   * Normalize and validate subscriber callback collection.
    *
    * @internal
    */
-  private static isNode(value: unknown): value is Node {
-    return CAN_ADD_LISTENERS && typeof Node !== 'undefined' && value instanceof Node
+  private static toSubscriber(
+    subscriber: ElementExistenceObserverSubscriber,
+  ): ElementExistenceObserverSubscriber | undefined {
+    if (
+      !subscriber.onAdded &&
+      !subscriber.onChange &&
+      !subscriber.onError &&
+      !subscriber.onRemoved
+    ) {
+      return undefined
+    }
+
+    return subscriber
   }
 
   /**
@@ -391,17 +476,14 @@ class ElementExistenceObserver {
     const out = new Set<Element>()
 
     for (const node of nodes) {
-      // If the node itself is an Element, include it
       if (node instanceof Element) {
         if (!requireConnected || node.isConnected) out.add(node)
-        // Include all descendant elements
         node.querySelectorAll('*').forEach((el) => {
           if (!requireConnected || el.isConnected) out.add(el)
         })
         continue
       }
 
-      // If it's a DocumentFragment (e.g., from templating), include its descendants
       if (node instanceof DocumentFragment) {
         node.querySelectorAll('*').forEach((el) => {
           if (!requireConnected || el.isConnected) out.add(el)
@@ -410,19 +492,6 @@ class ElementExistenceObserver {
     }
 
     return out
-  }
-
-  /**
-   * Cancel a previously scheduled idle callback or fallback timeout.
-   *
-   * @internal
-   */
-  private static cancelIdle(handle: number): void {
-    if (HAS_CANCEL_IDLE) {
-      window.cancelIdleCallback(handle)
-    } else if (CAN_ADD_LISTENERS) {
-      window.clearTimeout(handle)
-    }
   }
 
   /**
@@ -447,9 +516,16 @@ class ElementExistenceObserver {
     removed: ReadonlySet<Element>,
     records: readonly MutationRecord[],
   ): void {
-    if (!this.onChange) return
+    if (this.subscribers.size === 0) return
     const payload: MutationChange = { added, removed, records }
-    this.safeCall(() => this.onChange?.(payload))
+
+    for (const subscriber of this.subscribers) {
+      const { onChange, onError } = subscriber
+
+      if (!onChange) continue
+
+      safeCall(() => onChange(payload), onError)
+    }
   }
 
   /**
@@ -459,14 +535,20 @@ class ElementExistenceObserver {
    * @internal
    */
   private deliverPerKind(removed: ReadonlySet<Element>, added: ReadonlySet<Element>): void {
+    if (this.subscribers.size === 0) return
+
     const removedArr = removed.size > 0 ? [...removed] : []
     const addedArr = added.size > 0 ? [...added] : []
 
-    if (this.onRemoved && removedArr.length > 0) {
-      this.dispatchChunked(removedArr, this.onRemoved)
-    }
-    if (this.onAdded && addedArr.length > 0) {
-      this.dispatchChunked(addedArr, this.onAdded)
+    for (const subscriber of this.subscribers) {
+      const { onAdded, onError, onRemoved } = subscriber
+
+      if (onRemoved && removedArr.length > 0) {
+        this.dispatchChunked(removedArr, onRemoved, onError)
+      }
+      if (onAdded && addedArr.length > 0) {
+        this.dispatchChunked(addedArr, onAdded, onError)
+      }
     }
   }
 
@@ -479,11 +561,12 @@ class ElementExistenceObserver {
   private dispatchChunked(
     items: readonly Element[],
     fn: (chunk: readonly Element[]) => unknown,
+    onError?: (error: unknown) => void,
   ): void {
     if (!this.isActive() || items.length === 0) return
 
     if (items.length <= this.maxChunk) {
-      this.safeCall(() => fn(items))
+      safeCall(() => fn(items), onError)
       return
     }
 
@@ -494,34 +577,12 @@ class ElementExistenceObserver {
       const chunk = items.slice(index, end)
       index = end
 
-      this.safeCall(() => fn(chunk))
+      safeCall(() => fn(chunk), onError)
 
-      if (index < items.length) {
-        if (HAS_IDLE_CALLBACK) {
-          window.requestIdleCallback(run, { timeout: this.idleTimeoutMs })
-        } else if (CAN_ADD_LISTENERS) {
-          window.setTimeout(run, this.idleTimeoutMs)
-        }
-      }
+      if (index < items.length) scheduleIdle(run, this.idleTimeoutMs)
     }
 
     run()
-  }
-
-  /**
-   * Normalize sync/async callbacks and centralize error handling.
-   *
-   * @internal
-   */
-  private safeCall(invoke: () => unknown): void {
-    try {
-      const result = invoke()
-      Promise.resolve(result).catch((error: unknown) => {
-        this.onError?.(error)
-      })
-    } catch (error) {
-      this.onError?.(error)
-    }
   }
 }
 

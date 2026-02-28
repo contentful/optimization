@@ -238,7 +238,15 @@ const client = new ApiClient({ clientId: 'abc123' })
 await client.insights.sendBatchEvents([
   {
     profile: { id: 'abc-123', ... },
-    events: [{ type: 'track', ... }],
+    events: [
+      {
+        type: 'component',
+        componentId: 'hero-banner',
+        componentType: 'Entry',
+        variantIndex: 0,
+        ...,
+      },
+    ],
   }
 ])
 ```
@@ -291,10 +299,13 @@ Configuration method signatures:
 
 #### Event Builder Configured Methods
 
+- `buildComponentClick`: Builds a component click event payload for a Contentful entry-based
+  component
 - `buildComponentView`: Builds a component view event payload for a Contentful entry-based component
 - `buildFlagView`: Builds a component view payload event for a Custom Flag component
 - `buildIdentify`: Builds an identify event payload to associate a user ID with traits
 - `buildPageView`: Builds a page view event payload
+- `buildScreenView`: Builds a screen view event payload
 - `buildTrack`: Builds a track event payload for arbitrary user actions
 
 See the

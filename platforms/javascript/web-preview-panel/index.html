@@ -259,7 +259,7 @@
         clientId: '<%= PUBLIC_NINETAILED_CLIENT_ID %>',
         environment: '<%= PUBLIC_NINETAILED_ENVIRONMENT %>',
         logLevel: 'debug',
-        autoTrackEntryViews: true,
+        autoTrackEntryInteraction: { views: true },
         app: {
           name: document.title,
           version: '0.0.0',
@@ -494,10 +494,10 @@
       function manuallyObserveEntryElement(element, entry, personalization) {
         if (!entry?.sys?.id) return
 
-        optimization.untrackEntryViewForElement(element)
+        optimization.tracking.unobserve('views', element)
 
         // Manually observe the element for auto-tracking (does not use `data-ctfl-*` attributes)
-        optimization.trackEntryViewForElement(element, {
+        optimization.tracking.observe('views', element, {
           data: {
             // The `entryId` property is required for auto-tracking
             entryId: entry.sys.id,

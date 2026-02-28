@@ -43,12 +43,16 @@ other SDKs descend from the Core SDK.
   - [Personalization and Analytics Event Methods](#personalization-and-analytics-event-methods)
     - [`identify`](#identify)
     - [`page`](#page)
+    - [`screen`](#screen)
     - [`track`](#track)
     - [`trackComponentView`](#trackcomponentview)
+    - [`trackComponentClick`](#trackcomponentclick)
     - [`trackFlagView`](#trackflagview)
 - [Stateful-only Core Methods](#stateful-only-core-methods)
   - [`consent`](#consent)
   - [`reset`](#reset)
+  - [`flush`](#flush)
+  - [`destroy`](#destroy)
   - [`registerPreviewPanel` (preview tooling only)](#registerpreviewpanel-preview-tooling-only)
 - [Stateful-only Core Properties](#stateful-only-core-properties)
 - [Interceptors](#interceptors)
@@ -396,7 +400,16 @@ Arguments:
 
 ### Personalization and Analytics Event Methods
 
-Each method except `trackFlagView` may return an `OptimizationData` object containing:
+Only the following methods may return an `OptimizationData` object:
+
+- `identify`
+- `page`
+- `screen`
+- `track`
+- `trackComponentView` (when `payload.sticky` is `true`)
+
+`trackComponentClick` and `trackFlagView` return no data. When returned, `OptimizationData`
+contains:
 
 - `changes`: Currently used for Custom Flags
 - `personalizations`: Selected personalizations for the profile
@@ -420,6 +433,15 @@ Arguments:
 - `payload`\*: Page view event builder arguments object, including an optional `profile` property
   with a `PartialProfile` value that requires only an `id`
 
+#### `screen`
+
+Record a personalization screen view.
+
+Arguments:
+
+- `payload`\*: Screen view event builder arguments object, including an optional `profile` property
+  with a `PartialProfile` value that requires only an `id`
+
 #### `track`
 
 Record a personalization custom track event.
@@ -440,15 +462,30 @@ Arguments:
 - `payload`\*: Component view event builder arguments object, including an optional `profile`
   property with a `PartialProfile` value that requires only an `id`
 
+#### `trackComponentClick`
+
+Record an analytics component click event.
+
+Returns:
+
+- `void`
+
+Arguments:
+
+- `payload`\*: Component click event builder arguments object
+
 #### `trackFlagView`
 
 Track a feature flag view via analytics. This is functionally the same as a non-sticky component
 view event.
 
+Returns:
+
+- `void`
+
 Arguments:
 
-- `payload`\*: Component view event builder arguments object, including an optional `profile`
-  property with a `PartialProfile` value that requires only an `id`
+- `payload`\*: Component view event builder arguments object
 
 ## Stateful-only Core Methods
 
@@ -458,12 +495,21 @@ Updates the user consent state.
 
 Arguments:
 
-- `accept`: A boolean value specifying whether the user has accepted (`true`) or denied (`false`). A
-  value of `undefined` implies that the user has not yet explicitly chosen whether to consent.
+- `accept`: A boolean value specifying whether the user has accepted (`true`) or denied (`false`)
 
 ### `reset`
 
 Resets all internal state _except_ consent. This method expects no arguments and returns no value.
+
+### `flush`
+
+Flushes queued analytics and personalization events. This method expects no arguments and returns a
+`Promise<void>`.
+
+### `destroy`
+
+Releases singleton ownership for stateful runtime usage. This is intended for explicit teardown
+paths, such as tests or hot-reload workflows. This method expects no arguments and returns no value.
 
 ### `registerPreviewPanel` (preview tooling only)
 

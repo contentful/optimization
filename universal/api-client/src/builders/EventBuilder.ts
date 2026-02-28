@@ -2,6 +2,7 @@ import {
   type App,
   Campaign,
   type Channel,
+  type ComponentClickEvent,
   type ComponentViewEvent,
   GeoLocation,
   type IdentifyEvent,
@@ -18,7 +19,7 @@ import {
   Traits,
   type UniversalEventProperties,
 } from '@contentful/optimization-api-schemas'
-import { merge } from 'es-toolkit'
+import { merge } from 'es-toolkit/object'
 import * as z from 'zod/mini'
 
 /**
@@ -370,6 +371,39 @@ class EventBuilder {
     return {
       ...this.buildUniversalEventProperties(universal),
       type: 'component',
+      componentType: 'Entry',
+      componentId,
+      experienceId,
+      variantIndex: variantIndex ?? 0,
+    }
+  }
+
+  /**
+   * Builds a component click event payload for a Contentful entry-based component.
+   *
+   * @param args - {@link ComponentViewBuilderArgs} arguments describing the component click.
+   * @returns A {@link ComponentClickEvent} describing the click.
+   *
+   * @example
+   * ```ts
+   * const event = builder.buildComponentClick({
+   *   componentId: 'entry-123',
+   *   experienceId: 'personalization-123',
+   *   variantIndex: 1,
+   * })
+   * ```
+   *
+   * @public
+   */
+  buildComponentClick(args: ComponentViewBuilderArgs): ComponentClickEvent {
+    const { componentId, experienceId, variantIndex, ...universal } = parseWithFriendlyError(
+      ComponentViewBuilderArgs,
+      args,
+    )
+
+    return {
+      ...this.buildUniversalEventProperties(universal),
+      type: 'component_click',
       componentType: 'Entry',
       componentId,
       experienceId,

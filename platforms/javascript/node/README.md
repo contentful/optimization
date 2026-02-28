@@ -43,8 +43,10 @@ The Optimization Node SDK implements functionality specific to Node environments
   - [Personalization and Analytics Event Methods](#personalization-and-analytics-event-methods)
     - [`identify`](#identify)
     - [`page`](#page)
+    - [`screen`](#screen)
     - [`track`](#track)
     - [`trackComponentView`](#trackcomponentview)
+    - [`trackComponentClick`](#trackcomponentclick)
     - [`trackFlagView`](#trackflagview)
 - [Interceptors](#interceptors)
   - [Life-cycle Interceptors](#life-cycle-interceptors)
@@ -211,7 +213,16 @@ Arguments:
 
 ### Personalization and Analytics Event Methods
 
-Each method except `trackFlagView` may return an `OptimizationData` object containing:
+Only the following methods may return an `OptimizationData` object:
+
+- `identify`
+- `page`
+- `screen`
+- `track`
+- `trackComponentView` (when `payload.sticky` is `true`)
+
+`trackComponentClick` and `trackFlagView` return no data. When returned, `OptimizationData`
+contains:
 
 - `changes`: Currently used for Custom Flags
 - `personalizations`: Selected personalizations for the profile
@@ -235,6 +246,15 @@ Arguments:
 - `payload`\*: Page view event builder arguments object, including an optional `profile` property
   with a `PartialProfile` value that requires only an `id`
 
+#### `screen`
+
+Record a personalization screen view.
+
+Arguments:
+
+- `payload`\*: Screen view event builder arguments object, including an optional `profile` property
+  with a `PartialProfile` value that requires only an `id`
+
 #### `track`
 
 Record a personalization custom track event.
@@ -254,18 +274,31 @@ Arguments:
 
 - `payload`\*: Component view event builder arguments object, including an optional `profile`
   property with a `PartialProfile` value that requires only an `id`
-- `duplicationScope`: Arbitrary string that may be used to scope component view duplication
+
+#### `trackComponentClick`
+
+Record an analytics component click event.
+
+Returns:
+
+- `void`
+
+Arguments:
+
+- `payload`\*: Component click event builder arguments object
 
 #### `trackFlagView`
 
 Track a feature flag view via analytics. This is functionally the same as a non-sticky component
 view event.
 
+Returns:
+
+- `void`
+
 Arguments:
 
-- `payload`\*: Component view event builder arguments object, including an optional `profile`
-  property with a `PartialProfile` value that requires only an `id`
-- `duplicationScope`: Arbitrary string that may be used to scope component view duplication
+- `payload`\*: Component view event builder arguments object
 
 ## Interceptors
 

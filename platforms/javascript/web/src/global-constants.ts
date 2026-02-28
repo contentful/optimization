@@ -43,6 +43,13 @@ export const OPTIMIZATION_WEB_SDK_NAME =
 export { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-core'
 
 /**
+ * Selector used to locate tracked entry elements in the DOM.
+ *
+ * @public
+ */
+export const ENTRY_SELECTOR = '[data-ctfl-entry-id]'
+
+/**
  * Flag indicating whether the current environment can safely add DOM
  * event listeners.
  *
@@ -64,3 +71,28 @@ export const CAN_ADD_LISTENERS =
   typeof window !== 'undefined' &&
   typeof document !== 'undefined' &&
   typeof document.addEventListener === 'function'
+
+/**
+ * Flag indicating whether the current environment supports `MutationObserver`
+ * and can safely add DOM event listeners.
+ *
+ * @public
+ */
+export const HAS_MUTATION_OBSERVER = CAN_ADD_LISTENERS && typeof MutationObserver !== 'undefined'
+
+/**
+ * Flag indicating whether the current environment supports
+ * `window.requestIdleCallback` and can safely add DOM event listeners.
+ *
+ * @public
+ */
+export const HAS_IDLE_CALLBACK =
+  CAN_ADD_LISTENERS && typeof window.requestIdleCallback === 'function'
+
+/**
+ * Flag indicating whether the current environment supports
+ * `window.cancelIdleCallback` and can safely add DOM event listeners.
+ *
+ * @public
+ */
+export const HAS_CANCEL_IDLE = CAN_ADD_LISTENERS && typeof window.cancelIdleCallback === 'function'

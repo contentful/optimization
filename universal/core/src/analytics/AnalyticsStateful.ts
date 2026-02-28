@@ -89,6 +89,12 @@ export type AnalyticsStatefulOptions = ProductBaseOptions & {
  * @internal
  */
 const MAX_QUEUED_EVENTS = 25
+const ANALYTICS_METHOD_EVENT_TYPE_MAP: Readonly<Record<string, string>> = {
+  trackComponentView: 'component',
+  trackFlagView: 'component',
+  trackComponentClick: 'component_click',
+}
+
 interface QueuedProfileEvents {
   profile: Profile
   events: InsightsEventArray
@@ -167,8 +173,9 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    * Determine whether the named operation is permitted based on consent and
    * allowed event type configuration.
    *
-   * @param name - The method name; `'trackComponentView'` is normalized
-   * to `'component'` for allow‑list checks.
+   * @param name - The method name; component view/flag methods are normalized
+   * to `'component'` and component click methods are normalized to `'component_click'`
+   * for allow‑list checks.
    * @returns `true` if the operation is permitted; otherwise `false`.
    * @example
    * ```ts
@@ -176,12 +183,9 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    * ```
    */
   hasConsent(name: string): boolean {
-    return (
-      !!consent.value ||
-      (this.allowedEventTypes ?? []).includes(
-        name === 'trackComponentView' || name === 'trackFlagView' ? 'component' : name,
-      )
-    )
+    const mappedEventType = ANALYTICS_METHOD_EVENT_TYPE_MAP[name] ?? name
+
+    return !!consent.value || (this.allowedEventTypes ?? []).includes(mappedEventType)
   }
 
   /**
@@ -217,6 +221,23 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
     logger.info(`Processing "component view" event for ${payload.componentId}`)
 
     await this.enqueueEvent(this.builder.buildComponentView(payload))
+  }
+
+  /**
+   * Queue a component click event for the active profile.
+   *
+   * @param payload - Component click builder arguments.
+   * @returns A promise that resolves when the event has been queued.
+   * @example
+   * ```ts
+   * await analytics.trackComponentClick({ componentId: 'hero-banner' })
+   * ```
+   */
+  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
+  async trackComponentClick(payload: ComponentViewBuilderArgs): Promise<void> {
+    logger.info(`Processing "component click" event for ${payload.componentId}`)
+
+    await this.enqueueEvent(this.builder.buildComponentClick(payload))
   }
 
   /**

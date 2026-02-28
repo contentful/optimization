@@ -1,5 +1,4 @@
 import { createScopedLogger } from 'logger'
-import retry from 'p-retry'
 import type { BaseFetchMethodOptions, FetchMethod, FetchMethodCallbackOptions } from './Fetch'
 
 const logger = createScopedLogger('ApiClient:Retry')
@@ -114,10 +113,13 @@ interface RetryFetchCallbackOptions extends RetryFetchMethodOptions {
 }
 
 /**
- * Creates a callback function used by `p-retry` to perform a fetch with retry logic.
+ * Creates a callback function used by the retry loop to perform a protected fetch attempt.
  *
- * @param options - Internal options controlling the retry behavior.
- * @returns A function that, when invoked, performs the fetch and applies retry rules.
+ * @param options - Internal options controlling request execution and retry classification.
+ * @returns A function that performs one fetch attempt and either:
+ * - returns a successful {@link Response},
+ * - throws {@link HttpError} for retriable `503` responses, or
+ * - aborts and returns `undefined` for non-retriable failures.
  *
  * @internal
  */
@@ -166,6 +168,27 @@ function createRetryFetchCallback({
 }
 
 /**
+ * Waits for the configured retry delay between attempts.
+ *
+ * @param intervalTimeout - Delay in milliseconds before the next retry attempt.
+ * @returns A promise that resolves immediately when delay is non-positive,
+ * otherwise after the timeout elapses.
+ *
+ * @internal
+ */
+async function delayRetry(intervalTimeout: number): Promise<void> {
+  if (intervalTimeout <= 0) {
+    return
+  }
+
+  const { promise, resolve } = Promise.withResolvers<undefined>()
+  setTimeout(() => {
+    resolve(undefined)
+  }, intervalTimeout)
+  await promise
+}
+
+/**
  * Creates a {@link FetchMethod} that retries failed requests according to the
  * provided configuration.
  *
@@ -176,7 +199,7 @@ function createRetryFetchCallback({
  * Thrown when the request cannot be retried and no successful response is obtained.
  *
  * @remarks
- * This wrapper integrates with `p-retry` and uses an {@link AbortController}
+ * This wrapper uses a lightweight internal retry loop and an {@link AbortController}
  * to cancel pending requests when a non-retriable error occurs.
  *
  * @example
@@ -204,31 +227,46 @@ export function createRetryFetchMethod({
 }: RetryFetchMethodOptions = {}): FetchMethod {
   return async (url: string | URL, init: RequestInit) => {
     const controller = new AbortController()
+    const maxAttempts = retries + 1
+    const attemptFetch = createRetryFetchCallback({
+      apiName,
+      controller,
+      fetchMethod,
+      init,
+      url,
+    })
 
-    let retryResponse: Response | undefined = undefined
+    for (let attemptNumber = 1; attemptNumber <= maxAttempts; attemptNumber++) {
+      try {
+        const response = await attemptFetch()
 
-    try {
-      retryResponse = await retry<Response | undefined>(
-        createRetryFetchCallback({ apiName, controller, fetchMethod, init, url }),
-        {
-          minTimeout: intervalTimeout,
-          onFailedAttempt: (options: FetchMethodCallbackOptions) =>
-            onFailedAttempt?.({ ...options, apiName }),
-          retries,
-          signal: controller.signal,
-        },
-      )
-    } catch (error) {
-      // Abort errors caused by timeouts should not bubble up and be reported by third-party tools (e.g. Sentry)
-      if (!(error instanceof Error) || error.name !== 'AbortError') {
-        throw error
+        if (response) {
+          return response
+        }
+
+        break
+      } catch (error) {
+        if (!(error instanceof HttpError) || error.status !== RETRY_RESPONSE_STATUS) {
+          throw error
+        }
+
+        const retriesLeft = maxAttempts - attemptNumber
+
+        onFailedAttempt?.({
+          apiName,
+          error,
+          attemptNumber,
+          retriesLeft,
+        } satisfies FetchMethodCallbackOptions)
+
+        if (retriesLeft === 0) {
+          throw error
+        }
+
+        await delayRetry(intervalTimeout)
       }
     }
 
-    if (!retryResponse) {
-      throw new Error(`${apiName} API request to "${url.toString()}" may not be retried.`)
-    }
-
-    return retryResponse
+    throw new Error(`${apiName} API request to "${url.toString()}" may not be retried.`)
   }
 }

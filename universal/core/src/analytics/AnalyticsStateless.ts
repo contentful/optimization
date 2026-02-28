@@ -1,9 +1,8 @@
 import {
+  InsightsEvent as AnalyticsEvent,
   BatchInsightsEventArray,
-  type ComponentViewBuilderArgs,
-  ComponentViewEvent,
-  type InsightsEvent,
   parseWithFriendlyError,
+  type ComponentViewBuilderArgs,
   type PartialProfile,
 } from '@contentful/optimization-api-client'
 import { createScopedLogger } from 'logger'
@@ -46,11 +45,28 @@ class AnalyticsStateless extends AnalyticsBase {
 
     const event = this.builder.buildComponentView(builderArgs)
 
-    const intercepted = await this.interceptors.event.run(event)
+    await this.sendBatchEvent(event, profile)
+  }
 
-    const parsed = parseWithFriendlyError(ComponentViewEvent, intercepted)
+  /**
+   * Build, intercept, validate, and send a component click event.
+   *
+   * @param args - {@link TrackViewArgs} used to build the event. Includes an
+   * optional partial profile.
+   * @returns A promise that resolves once the batch has been sent.
+   * @example
+   * ```ts
+   * await analytics.trackComponentClick({ componentId: 'hero-banner', profile: { id: 'user-1' } })
+   * ```
+   */
+  async trackComponentClick(args: TrackViewArgs): Promise<void> {
+    logger.info('Processing "component click" event')
 
-    await this.sendBatchEvent(parsed, profile)
+    const { profile, ...builderArgs } = args
+
+    const event = this.builder.buildComponentClick(builderArgs)
+
+    await this.sendBatchEvent(event, profile)
   }
 
   /**
@@ -71,26 +87,26 @@ class AnalyticsStateless extends AnalyticsBase {
 
     const event = this.builder.buildFlagView(builderArgs)
 
-    const intercepted = await this.interceptors.event.run(event)
-
-    const parsed = parseWithFriendlyError(ComponentViewEvent, intercepted)
-
-    await this.sendBatchEvent(parsed, profile)
+    await this.sendBatchEvent(event, profile)
   }
 
   /**
-   * Send a single {@link InsightsEvent} wrapped in a one‑item batch.
+   * Send a single {@link AnalyticsEvent} wrapped in a one‑item batch.
    *
    * @param event - The event to send.
    * @param profile - Optional partial profile to attach to the batch.
    * @returns A promise that resolves when the API call completes.
    * @internal
    */
-  private async sendBatchEvent(event: InsightsEvent, profile?: PartialProfile): Promise<void> {
+  private async sendBatchEvent(event: AnalyticsEvent, profile?: PartialProfile): Promise<void> {
+    const intercepted = await this.interceptors.event.run(event)
+
+    const parsed = parseWithFriendlyError(AnalyticsEvent, intercepted)
+
     const batchEvent: BatchInsightsEventArray = parseWithFriendlyError(BatchInsightsEventArray, [
       {
         profile,
-        events: [event],
+        events: [parsed],
       },
     ])
 

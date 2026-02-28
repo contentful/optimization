@@ -143,8 +143,9 @@ describe('AnalyticsStateful.flush policy', () => {
     profile.value = sameProfileId
 
     await analytics.trackFlagView({ componentId: 'promo-flag' })
+    await analytics.trackComponentClick({ componentId: 'hero-cta' })
 
-    expect(getQueuedEventCount(analytics)).toBe(2)
+    expect(getQueuedEventCount(analytics)).toBe(3)
     expect(getQueuedBatchCount(analytics)).toBe(1)
 
     await analytics.flush()
@@ -159,7 +160,7 @@ describe('AnalyticsStateful.flush policy', () => {
         profile: sameProfileId,
       }),
     )
-    expect(batches?.[0]?.events).toHaveLength(2)
+    expect(batches?.[0]?.events).toHaveLength(3)
     expect(batches?.[0]?.events[0]).toEqual(
       expect.objectContaining({
         componentId: 'hero-banner',
@@ -170,6 +171,13 @@ describe('AnalyticsStateful.flush policy', () => {
       expect.objectContaining({
         componentId: 'promo-flag',
         componentType: 'Variable',
+      }),
+    )
+    expect(batches?.[0]?.events[2]).toEqual(
+      expect.objectContaining({
+        type: 'component_click',
+        componentId: 'hero-cta',
+        componentType: 'Entry',
       }),
     )
 
