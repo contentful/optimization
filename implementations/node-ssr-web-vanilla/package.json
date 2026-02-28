@@ -7,7 +7,7 @@
   "types": "dist/app.d.ts",
   "scripts": {
     "build": "pnpm clean && pnpm build:sdk",
-    "build:sdk": "mkdir -p ./public/dist && cp -r ./node_modules/@contentful/optimization-web/dist/. ./public/dist",
+    "build:sdk": "mkdir -p ./public/dist && cp -r ./node_modules/@contentful/optimization-web/dist/. ./public/dist && cp ./node_modules/@contentful/optimization-web-preview-panel/dist/contentful-optimization-web-preview-panel.umd.js* ./public/dist",
     "clean": "rimraf ./dist ./public/dist ./coverage ./playwright-report ./test-results .tsbuildinfo",
     "serve": "pnpm serve:mocks && pnpm serve:app",
     "serve:app": "pnpm build && pm2 start --name esr-app \"tsx --env-file=.env ./src/app.ts\"",
@@ -25,6 +25,7 @@
   "dependencies": {
     "@contentful/optimization-node": "0.0.0",
     "@contentful/optimization-web": "0.0.0",
+    "@contentful/optimization-web-preview-panel": "0.0.0",
     "cookie-parser": "^1.4.7",
     "ejs": "^3.1.10",
     "express": "^5.2.1",
@@ -55,7 +56,8 @@
       "@contentful/optimization-api-schemas": "file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz",
       "@contentful/optimization-core": "file:../../pkgs/contentful-optimization-core-0.0.0.tgz",
       "@contentful/optimization-node": "file:../../pkgs/contentful-optimization-node-0.0.0.tgz",
-      "@contentful/optimization-web": "file:../../pkgs/contentful-optimization-web-0.0.0.tgz"
+      "@contentful/optimization-web": "file:../../pkgs/contentful-optimization-web-0.0.0.tgz",
+      "@contentful/optimization-web-preview-panel": "file:../../pkgs/contentful-optimization-web-preview-panel-0.0.0.tgz"
     }
   }
 }

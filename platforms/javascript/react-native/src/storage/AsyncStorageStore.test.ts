@@ -2,7 +2,7 @@ import {
   CHANGES_CACHE_KEY,
   PERSONALIZATIONS_CACHE_KEY,
   PROFILE_CACHE_KEY,
-} from '@contentful/optimization-core'
+} from '@contentful/optimization-core/constants'
 import { beforeEach, describe, expect, it, rs } from '@rstest/core'
 
 interface AsyncStorageStoreInstance {

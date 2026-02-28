@@ -1,4 +1,4 @@
-import { ENTRY_SELECTOR } from '../../global-constants'
+import { ENTRY_SELECTOR } from '../../constants'
 import { safeCall } from '../../lib'
 import { isEntryElement, type EntryElement } from '../resolveComponentTrackingPayload'
 import type ElementExistenceObserver from './ElementExistenceObserver'

@@ -518,11 +518,32 @@ preview tooling.
 
 Arguments:
 
-- `previewPanel`: Optional object that receives `signals` and `signalFns` references
+- `previewPanel`: Required object that receives symbol-keyed signal bridge values
 
 Returns:
 
-- An object containing `signals` and `signalFns`
+- `void`
+
+Bridge symbols:
+
+- `PREVIEW_PANEL_SIGNALS_SYMBOL`: key used to expose internal `signals`
+- `PREVIEW_PANEL_SIGNAL_FNS_SYMBOL`: key used to expose internal `signalFns`
+
+Example:
+
+```ts
+import {
+  PREVIEW_PANEL_SIGNAL_FNS_SYMBOL,
+  PREVIEW_PANEL_SIGNALS_SYMBOL,
+  type PreviewPanelSignalObject,
+} from '@contentful/optimization-core'
+
+const previewBridge: PreviewPanelSignalObject = {}
+optimization.registerPreviewPanel(previewBridge)
+
+const signals = previewBridge[PREVIEW_PANEL_SIGNALS_SYMBOL]
+const signalFns = previewBridge[PREVIEW_PANEL_SIGNAL_FNS_SYMBOL]
+```
 
 > [!IMPORTANT]
 >

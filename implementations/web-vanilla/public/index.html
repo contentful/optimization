@@ -6,6 +6,7 @@
     <title>Optimization Web SDK Vanilla JS Implementation E2E Test</title>
     <script src="https://cdn.jsdelivr.net/npm/contentful@latest/dist/contentful.browser.min.js"></script>
     <script src="/dist/contentful-optimization-web.umd.js"></script>
+    <script src="/dist/contentful-optimization-web-preview-panel.umd.js"></script>
     <style>
       * {
         box-sizing: border-box;
@@ -218,6 +219,12 @@
         },
         analytics: { baseUrl: '<!--#echo var="NGINX_INSIGHTS_API_BASE_URL" -->' },
         personalization: { baseUrl: '<!--#echo var="NGINX_EXPERIENCE_API_BASE_URL" -->' },
+      })
+
+      attachOptimizationPreviewPanel({
+        contentful: contentfulClient,
+        optimization: window.optimization,
+        nonce: 'nonce-string',
       })
 
       // Emit page event

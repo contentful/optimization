@@ -4,8 +4,13 @@ import type {
   OptimizationData,
   PersonalizationEntry,
   PersonalizationEntrySkeleton,
+  PreviewPanelSignalObject,
   SelectedPersonalizationArray,
 } from '@contentful/optimization-web'
+import {
+  PREVIEW_PANEL_SIGNAL_FNS_SYMBOL,
+  PREVIEW_PANEL_SIGNALS_SYMBOL,
+} from '@contentful/optimization-web/symbols'
 import type { ChainModifiers, ContentfulClientApi, Entry } from 'contentful'
 import {
   CTFL_OPT_PREVIEW_PERSONALIZATION_CHANGE,
@@ -13,10 +18,12 @@ import {
 } from './components/ctfl-opt-preview-audience'
 import { defineCtflOptPreviewIndicator } from './components/ctfl-opt-preview-indicator'
 import {
+  CTFL_OPT_PREVIEW_PANEL_DRAWER_TOGGLE,
   CTFL_OPT_PREVIEW_PANEL_RESET,
   CTFL_OPT_PREVIEW_PANEL_TAG,
   defineCtflOptPreviewPanel,
   isCtflOptPreviewPanel,
+  isDrawerToggleEvent,
 } from './components/ctfl-opt-preview-panel'
 import {
   defineCtflOptPreviewPersonalization,
@@ -98,7 +105,13 @@ export default async function attachOptimizationPreviewPanel({
 
   if (nonce !== undefined) window.litNonce = nonce
 
-  const { signals, signalFns } = optimization.registerPreviewPanel()
+  const previewPanelSignalObject: PreviewPanelSignalObject = {}
+
+  optimization.registerPreviewPanel(previewPanelSignalObject)
+
+  const signals = Reflect.get(previewPanelSignalObject, PREVIEW_PANEL_SIGNALS_SYMBOL)
+  const signalFns = Reflect.get(previewPanelSignalObject, PREVIEW_PANEL_SIGNAL_FNS_SYMBOL)
+
   if (!signals || !signalFns)
     throw new Error(
       '[Optimization Preview Panel] The preview panel failed to find optimization states',
@@ -142,6 +155,16 @@ export default async function attachOptimizationPreviewPanel({
     }
   })
 
+  panel.addEventListener(CTFL_OPT_PREVIEW_PANEL_DRAWER_TOGGLE, (event: Event) => {
+    if (!isDrawerToggleEvent(event)) return
+
+    const {
+      detail: { value: open },
+    } = event
+
+    signals.previewPanelOpen.value = open
+  })
+
   panel.addEventListener(CTFL_OPT_PREVIEW_PERSONALIZATION_CHANGE, (event: Event) => {
     if (!isRecordRadioGroupChangeEvent(event)) return
 
@@ -169,4 +192,6 @@ export default async function attachOptimizationPreviewPanel({
   })
 
   document.body.appendChild(panel)
+
+  signals.previewPanelAttached.value = true
 }

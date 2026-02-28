@@ -1,15 +1,17 @@
 import {
-  ANONYMOUS_ID_KEY,
   ChangeArray,
-  CHANGES_CACHE_KEY,
-  CONSENT_KEY,
   createScopedLogger,
-  DEBUG_FLAG_KEY,
-  PERSONALIZATIONS_CACHE_KEY,
   Profile,
-  PROFILE_CACHE_KEY,
   SelectedPersonalizationArray,
 } from '@contentful/optimization-core'
+import {
+  ANONYMOUS_ID_KEY,
+  CHANGES_CACHE_KEY,
+  CONSENT_KEY,
+  DEBUG_FLAG_KEY,
+  PERSONALIZATIONS_CACHE_KEY,
+  PROFILE_CACHE_KEY,
+} from '@contentful/optimization-core/constants'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { z } from 'zod/mini'
 

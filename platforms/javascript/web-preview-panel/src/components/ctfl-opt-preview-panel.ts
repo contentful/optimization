@@ -8,12 +8,16 @@ import { provide } from '@lit/context'
 import { groupBy } from 'es-toolkit'
 import { css, html, LitElement, type PropertyValues, type TemplateResult } from 'lit'
 import { property, state } from 'lit/decorators.js'
-import {
-  ALL_VISITORS_FALLBACK_AUDIENCE,
-  ALL_VISITORS_FALLBACK_AUDIENCE_ID,
-} from '../global-constants'
+import { ALL_VISITORS_FALLBACK_AUDIENCE, ALL_VISITORS_FALLBACK_AUDIENCE_ID } from '../constants'
 import { overridesContext, profileContext } from '../lib/contexts'
 import type { AudienceContentToggleEvent } from './ctfl-opt-preview-audience'
+
+/**
+ * Custom element tag name for {@link CtflOptPreviewPanel}.
+ *
+ * @public
+ */
+export const CTFL_OPT_PREVIEW_PANEL_TAG = 'ctfl-opt-preview-panel'
 
 /**
  * Event name dispatched when the user resets the preview panel overrides.
@@ -23,11 +27,50 @@ import type { AudienceContentToggleEvent } from './ctfl-opt-preview-audience'
 export const CTFL_OPT_PREVIEW_PANEL_RESET = 'ctfl-opt-preview-panel-reset'
 
 /**
- * Custom element tag name for {@link CtflOptPreviewPanel}.
+ * Event name dispatched when the user opens or closes the preview panel drawer.
  *
  * @public
  */
-export const CTFL_OPT_PREVIEW_PANEL_TAG = 'ctfl-opt-preview-panel'
+export const CTFL_OPT_PREVIEW_PANEL_DRAWER_TOGGLE = 'ctfl-opt-preview-panel-drawer-toggle'
+
+/**
+ * Payload emitted when the preview panel drawer is opened or closed.
+ *
+ * @public
+ */
+export interface DrawerToggleDetail {
+  /** Whether the drawer is now open. */
+  value: boolean
+}
+
+/**
+ * Custom event carrying an {@link DrawerToggleDetail} payload.
+ *
+ * @public
+ */
+export type DrawerToggleEvent = CustomEvent<DrawerToggleDetail>
+
+/**
+ * Type guard that checks whether an event is a {@link DrawerToggleEvent}.
+ *
+ * @param event - The DOM event to check.
+ * @returns `true` if the event is a `CustomEvent` with `value` in its detail.
+ *
+ * @example
+ * ```ts
+ * element.addEventListener('change', (event) => {
+ *   if (isDrawerToggleEvent(event)) {
+ *     console.log(event.detail.value)
+ *   }
+ * })
+ * ```
+ *
+ * @public
+ */
+export function isDrawerToggleEvent(event: Event): event is DrawerToggleEvent {
+  if (!(event instanceof CustomEvent)) return false
+  return 'value' in event.detail
+}
 
 /**
  * Type guard that checks whether an element is a {@link CtflOptPreviewPanel}.
@@ -98,6 +141,10 @@ export class CtflOptPreviewPanel extends LitElement {
 
   /** @internal */
   @state()
+  private accessor _drawerBodyMounted = false
+
+  /** @internal */
+  @state()
   private accessor _audienceContentOpenByKey: Record<string, boolean> = {}
 
   /** @internal */
@@ -112,7 +159,7 @@ export class CtflOptPreviewPanel extends LitElement {
   >()
 
   /** @internal */
-  private _anyAudienceContentClosed(): boolean {
+  private get _anyAudienceContentClosed(): boolean {
     return Object.values(this._audienceContentOpenByKey).some((v) => !v)
   }
 
@@ -126,7 +173,7 @@ export class CtflOptPreviewPanel extends LitElement {
 
   /** @internal */
   private _toggleAllAudienceContent(): void {
-    const open = this._anyAudienceContentClosed()
+    const { _anyAudienceContentClosed: open } = this
     this._audienceContentOpenByKey = Object.keys(this._audienceContentOpenByKey).reduce(
       (acc: Record<string, boolean>, id) => {
         acc[id] = open
@@ -144,6 +191,45 @@ export class CtflOptPreviewPanel extends LitElement {
         composed: true,
       }),
     )
+  }
+
+  /** @internal */
+  private _setDrawerOpened(open: boolean): void {
+    if (open) this._drawerBodyMounted = true
+    this._drawerOpened = open
+    this.toggleAttribute('data-open', open)
+
+    this.dispatchEvent(
+      new CustomEvent<DrawerToggleDetail>(CTFL_OPT_PREVIEW_PANEL_DRAWER_TOGGLE, {
+        detail: { value: open },
+        bubbles: true,
+        composed: true,
+      }),
+    )
+  }
+
+  /** @internal */
+  private _toggleDrawer(): void {
+    this._setDrawerOpened(!this._drawerOpened)
+  }
+
+  /** @internal */
+  private readonly _onTransitionEnd = (event: TransitionEvent): void => {
+    if (event.currentTarget !== this) return
+    if (event.propertyName !== 'transform') return
+    if (!this._drawerOpened) this._drawerBodyMounted = false
+  }
+
+  /** @internal */
+  connectedCallback(): void {
+    super.connectedCallback()
+    this.addEventListener('transitionend', this._onTransitionEnd)
+  }
+
+  /** @internal */
+  disconnectedCallback(): void {
+    this.removeEventListener('transitionend', this._onTransitionEnd)
+    super.disconnectedCallback()
   }
 
   /** @internal */
@@ -224,7 +310,7 @@ export class CtflOptPreviewPanel extends LitElement {
       <button
         class="toggle-drawer ${this._drawerOpened ? 'opened' : 'closed'}"
         @click=${() => {
-          this._drawerOpened = !this._drawerOpened
+          this._toggleDrawer()
         }}
       >
         <svg viewBox="0 0 1203 284">
@@ -239,7 +325,12 @@ export class CtflOptPreviewPanel extends LitElement {
         </svg>
       </button>
 
-      <div class="body" ?inert=${!this._drawerOpened}>
+      <div
+        class="body"
+        ?hidden=${!this._drawerBodyMounted}
+        ?inert=${!this._drawerOpened}
+        aria-hidden=${this._drawerOpened ? 'false' : 'true'}
+      >
         <div class="header">
           <p class="heading">Personalization Preview</p>
           <p class="subheading">Select an audience to segment preview content.</p>
@@ -252,7 +343,7 @@ export class CtflOptPreviewPanel extends LitElement {
               this._toggleAllAudienceContent()
             }}
           >
-            ${this._anyAudienceContentClosed() ? 'Expand all' : 'Collapse all'}
+            ${this._anyAudienceContentClosed ? 'Expand all' : 'Collapse all'}
           </button>
         </p>
 
@@ -277,7 +368,7 @@ export class CtflOptPreviewPanel extends LitElement {
         <div class="footer">
           <button
             @click=${() => {
-              this._drawerOpened = false
+              this._toggleDrawer()
             }}
           >
             Close
@@ -331,7 +422,7 @@ export class CtflOptPreviewPanel extends LitElement {
       transition-property: transform;
     }
 
-    :host:has(.toggle-drawer.opened) {
+    :host([data-open]) {
       transform: translate(0px, 0px);
     }
 

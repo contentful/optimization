@@ -31,7 +31,7 @@ export const OPTIMIZATION_CORE_SDK_NAME =
  *
  * @example
  * ```ts
- * import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-core'
+ * import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-core/constants'
  * const profileId = request.cookies[ANONYMOUS_ID_COOKIE]
  * ```
  */

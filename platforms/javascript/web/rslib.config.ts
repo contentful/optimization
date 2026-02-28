@@ -51,6 +51,13 @@ export default defineConfig({
     {
       ...common,
       format: 'esm',
+      source: {
+        entry: {
+          index: './src/index.ts',
+          constants: './src/constants.ts',
+          symbols: './src/symbols.ts',
+        },
+      },
       output: {
         distPath: { root: 'dist' },
         filename: { js: '[name].mjs' },
@@ -76,6 +83,13 @@ export default defineConfig({
     {
       ...common,
       format: 'cjs',
+      source: {
+        entry: {
+          index: './src/index.ts',
+          constants: './src/constants.ts',
+          symbols: './src/symbols.ts',
+        },
+      },
       output: {
         distPath: { root: 'dist' },
         filename: { js: '[name].cjs' },

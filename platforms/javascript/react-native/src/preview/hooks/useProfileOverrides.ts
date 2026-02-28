@@ -5,6 +5,7 @@ import {
   type SelectedPersonalizationArray,
   type Signals,
 } from '@contentful/optimization-core'
+import { PREVIEW_PANEL_SIGNALS_SYMBOL } from '@contentful/optimization-core/symbols'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useOptimization } from '../../context/OptimizationContext'
 import type {
@@ -83,14 +84,12 @@ export function useProfileOverrides(): {
   // Register with SDK and set up interceptor on mount
   useEffect(() => {
     // Create a preview panel compatible object to receive signals
-    const previewPanelObject: PreviewPanelSignalObject = {
-      signals: null,
-      signalFns: null,
-    }
+    const previewPanelObject: PreviewPanelSignalObject = {}
 
     // Register with the SDK to get signal access
     optimization.registerPreviewPanel(previewPanelObject)
-    ;({ signals: signalsRef.current } = previewPanelObject)
+    const registeredSignals = Reflect.get(previewPanelObject, PREVIEW_PANEL_SIGNALS_SYMBOL)
+    signalsRef.current = registeredSignals
 
     logger.info('Registered with SDK, signals access obtained')
 

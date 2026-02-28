@@ -28,6 +28,8 @@ import {
   flags,
   online,
   personalizations,
+  previewPanelAttached,
+  previewPanelOpen,
   profile,
   signalFns,
   signals,
@@ -36,18 +38,18 @@ import {
   type SignalFns,
   type Signals,
 } from './signals'
+import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from './symbols'
 
 /**
- * Interface for objects that can be registered with the preview panel system.
- * When registered, the object receives direct access to SDK signals for state manipulation.
+ * Symbol-keyed signal bridge shared between core and first-party preview tooling.
  *
  * @public
  */
 export interface PreviewPanelSignalObject {
-  /** Signals instance that will be populated by registerPreviewPanel */
-  signals: Signals | null | undefined
-  /** Signal functions that can be used across micro-frontend barriers */
-  signalFns: SignalFns | null | undefined
+  /** Signals instance populated by {@link CoreStateful.registerPreviewPanel}. */
+  [PREVIEW_PANEL_SIGNALS_SYMBOL]?: Signals | null | undefined
+  /** Signal helper functions populated by {@link CoreStateful.registerPreviewPanel}. */
+  [PREVIEW_PANEL_SIGNAL_FNS_SYMBOL]?: SignalFns | null | undefined
 }
 
 /**
@@ -60,6 +62,10 @@ export interface PreviewPanelSignalObject {
 export interface CoreStates extends AnalyticsStates, PersonalizationStates {
   /** Current consent value (if any). */
   consent: Observable<boolean | undefined>
+  /** Whether the preview panel has been attached to the host runtime. */
+  previewPanelAttached: Observable<boolean>
+  /** Whether the preview panel is currently open in the host runtime. */
+  previewPanelOpen: Observable<boolean>
   /** Stream of the most recent blocked event payload. */
   blockedEventStream: Observable<BlockedEvent | undefined>
   /** Stream of the most recent event emitted (analytics or personalization). */
@@ -302,12 +308,14 @@ class CoreStateful extends CoreBase implements ConsentController {
       eventStream: toObservable(event),
       flags: toObservable(flags),
       personalizations: toObservable(personalizations),
+      previewPanelAttached: toObservable(previewPanelAttached),
+      previewPanelOpen: toObservable(previewPanelOpen),
       profile: toObservable(profile),
     }
   }
 
   /**
-   * Reset internal state. Consent is intentionally preserved.
+   * Reset internal state. Consent and preview panel state are intentionally preserved.
    *
    * @remarks
    * Resetting personalization also resets analytics dependencies as a
@@ -390,19 +398,15 @@ class CoreStateful extends CoreBase implements ConsentController {
    * @remarks
    * This method is intended for use by the Preview Panel component.
    * Direct signal access allows immediate state updates without API calls.
-   * @returns An object containing the SDK's signals and signal functions.
    * @example
    * ```ts
-   * const signalAccess = core.registerPreviewPanel(previewPanel)
+   * const previewBridge: PreviewPanelSignalObject = {}
+   * core.registerPreviewPanel(previewBridge)
    * ```
    */
-  registerPreviewPanel(previewPanel?: PreviewPanelSignalObject): PreviewPanelSignalObject {
-    if (previewPanel) {
-      previewPanel.signals = signals
-      previewPanel.signalFns = signalFns
-    }
-
-    return { signals, signalFns }
+  registerPreviewPanel(previewPanel: PreviewPanelSignalObject): void {
+    Reflect.set(previewPanel, PREVIEW_PANEL_SIGNALS_SYMBOL, signals)
+    Reflect.set(previewPanel, PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, signalFns)
   }
 }
 

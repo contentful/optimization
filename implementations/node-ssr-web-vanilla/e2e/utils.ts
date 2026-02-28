@@ -1,4 +1,4 @@
-import { ANONYMOUS_ID_COOKIE, ANONYMOUS_ID_KEY } from '@contentful/optimization-core'
+import { ANONYMOUS_ID_COOKIE, ANONYMOUS_ID_KEY } from '@contentful/optimization-node/constants'
 import type { BrowserContext } from '@playwright/test'
 
 export async function getAnonymousIdFromCookie(
