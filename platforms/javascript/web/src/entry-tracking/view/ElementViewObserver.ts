@@ -10,7 +10,7 @@
  */
 
 import { createScopedLogger } from '@contentful/optimization-core'
-import { CAN_ADD_LISTENERS } from '../../global-constants'
+import { CAN_ADD_LISTENERS } from '../../constants'
 import { safeCallAsync } from '../../lib'
 import {
   DEFAULTS,

@@ -8,14 +8,13 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
 } from 'react'
 import type { OptimizationInstance } from '../createOptimization'
+import { useOptimizationState } from '../hooks/useOptimizationState'
 
 interface LiveUpdatesContextValue {
   globalLiveUpdates: boolean
   previewPanelVisible: boolean
-  setPreviewPanelVisible: (visible: boolean) => void
   togglePreviewPanel: () => void
 }
 
@@ -46,11 +45,6 @@ function getPreviewPanelToggleButton(): HTMLButtonElement | null {
 
   const toggleButton = panelElement.shadowRoot?.querySelector(PREVIEW_PANEL_TOGGLE_SELECTOR)
   return toggleButton instanceof HTMLButtonElement ? toggleButton : null
-}
-
-function isPreviewPanelOpen(toggleButton: HTMLButtonElement): boolean {
-  // TODO: Replace this class-based check with a supported preview panel open-state API.
-  return toggleButton.classList.contains('opened')
 }
 
 function toPreviewPanelContentful(client: ContentfulClientApi<undefined>): PreviewPanelContentful {
@@ -93,72 +87,26 @@ export function LiveUpdatesProvider({
   globalLiveUpdates,
   previewPanel,
 }: LiveUpdatesProviderProps): JSX.Element {
-  const [previewPanelVisible, setPreviewPanelVisible] = useState(false)
+  const { previewPanelAttached, previewPanelOpen } = useOptimizationState(
+    previewPanel.optimization.states,
+  )
+  const previewPanelVisible = previewPanelAttached === true && previewPanelOpen === true
 
   const togglePreviewPanel = useCallback((): void => {
     const toggleButton = getPreviewPanelToggleButton()
     if (toggleButton) {
       toggleButton.click()
-      setPreviewPanelVisible(isPreviewPanelOpen(toggleButton))
-      return
     }
-
-    setPreviewPanelVisible((previous) => !previous)
   }, [])
 
   useEffect(() => {
-    const observerRef: { current: MutationObserver | null } = { current: null }
-    const retryTimerRef: { current: ReturnType<typeof setInterval> | null } = { current: null }
-    const stoppedRef: { current: boolean } = { current: false }
-
-    const connect = (): void => {
-      const toggleButton = getPreviewPanelToggleButton()
-      if (!toggleButton) {
-        return
-      }
-
-      setPreviewPanelVisible(isPreviewPanelOpen(toggleButton))
-      observerRef.current = new MutationObserver(() => {
-        setPreviewPanelVisible(isPreviewPanelOpen(toggleButton))
-      })
-      observerRef.current.observe(toggleButton, { attributes: true, attributeFilter: ['class'] })
-    }
-
-    void attachPreviewPanel(previewPanel)
-      .then(() => {
-        if (stoppedRef.current) {
-          return
-        }
-
-        connect()
-        if (observerRef.current === null) {
-          retryTimerRef.current = setInterval(() => {
-            if (observerRef.current !== null || stoppedRef.current) {
-              return
-            }
-
-            connect()
-          }, 100)
-        }
-      })
-      .catch(() => {
-        setPreviewPanelVisible(false)
-      })
-
-    return () => {
-      stoppedRef.current = true
-      observerRef.current?.disconnect()
-      if (retryTimerRef.current !== null) {
-        clearInterval(retryTimerRef.current)
-      }
-    }
-  }, [previewPanel])
+    void attachPreviewPanel(previewPanel).catch(() => undefined)
+  }, [previewPanel.contentful, previewPanel.optimization])
 
   const value = useMemo<LiveUpdatesContextValue>(
     () => ({
       globalLiveUpdates,
       previewPanelVisible,
-      setPreviewPanelVisible,
       togglePreviewPanel,
     }),
     [globalLiveUpdates, previewPanelVisible, togglePreviewPanel],

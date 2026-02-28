@@ -1,7 +1,7 @@
 import { EXPERIENCE_BASE_URL } from '@contentful/optimization-api-client'
 import { AnalyticsStateless } from './analytics'
+import { OPTIMIZATION_CORE_SDK_NAME } from './constants'
 import CoreBase, { type CoreConfig } from './CoreBase'
-import { OPTIMIZATION_CORE_SDK_NAME } from './global-constants'
 import { PersonalizationStateless } from './personalization'
 
 class TestCore extends CoreBase {

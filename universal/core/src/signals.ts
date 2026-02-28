@@ -24,6 +24,10 @@ export const flags = computed<Flags | undefined>(() => FlagsResolver.resolve(cha
 
 export const online = signal<boolean | undefined>(true)
 
+export const previewPanelAttached = signal<boolean>(false)
+
+export const previewPanelOpen = signal<boolean>(false)
+
 export const personalizations = signal<SelectedPersonalizationArray | undefined>()
 
 export const profile: Signal<Profile | undefined> = signal<Profile | undefined>()
@@ -35,6 +39,8 @@ export interface Signals {
   event: typeof event
   flags: typeof flags
   online: typeof online
+  previewPanelAttached: typeof previewPanelAttached
+  previewPanelOpen: typeof previewPanelOpen
   personalizations: typeof personalizations
   profile: typeof profile
 }
@@ -73,6 +79,8 @@ export const signals: Signals = {
   event,
   flags,
   online,
+  previewPanelAttached,
+  previewPanelOpen,
   personalizations,
   profile,
 }

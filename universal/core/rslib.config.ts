@@ -16,6 +16,11 @@ const common = {
 
 export default defineConfig({
   source: {
+    entry: {
+      index: './src/index.ts',
+      constants: './src/constants.ts',
+      symbols: './src/symbols.ts',
+    },
     tsconfigPath: './tsconfig.build.json',
     decorators: { version: '2022-03' }, // stage-3 decorators
     define: {

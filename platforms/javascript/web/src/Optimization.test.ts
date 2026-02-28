@@ -1,6 +1,6 @@
 import type { CoreConfig, TrackBuilderArgs } from '@contentful/optimization-core'
 import Optimization from './Optimization'
-import { OPTIMIZATION_WEB_SDK_NAME } from './global-constants'
+import { OPTIMIZATION_WEB_SDK_NAME } from './constants'
 
 const CLIENT_ID = 'key_123'
 const ENVIRONMENT = 'main'

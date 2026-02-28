@@ -1,5 +1,5 @@
 import { createScopedLogger } from '@contentful/optimization-core'
-import { CAN_ADD_LISTENERS } from '../global-constants'
+import { CAN_ADD_LISTENERS } from '../constants'
 import { safeCall } from '../lib'
 
 const logger = createScopedLogger('Web:Visibility')

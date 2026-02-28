@@ -143,7 +143,7 @@ function runAction(
 ): number {
   switch (requestedAction) {
     case 'implementation:install':
-      return runPnpm(implementation.name, ['install', ...actionArgs])
+      return runPnpm(implementation.name, ['install', '--force', ...actionArgs])
     case 'implementation:build:run': {
       if (implementation.scripts.has('build')) {
         const buildExitCode = runScript(implementation.name, 'build')

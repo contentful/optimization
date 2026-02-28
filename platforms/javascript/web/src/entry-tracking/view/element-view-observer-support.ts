@@ -5,7 +5,7 @@
  * @internal
  */
 
-import { CAN_ADD_LISTENERS } from '../../global-constants'
+import { CAN_ADD_LISTENERS } from '../../constants'
 
 /**
  * Timer handle type returned by `setTimeout`.

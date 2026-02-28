@@ -101,8 +101,8 @@ retry scheduling, circuit opening, and recovery callbacks.
 - **FR-007**: `CoreStateful.reset()` MUST clear blocked/event/changes/profile/personalizations and
   MUST NOT clear consent.
 - **FR-008**: `CoreStateful.flush()` MUST flush analytics queue then personalization queue.
-- **FR-009**: `CoreStateful.registerPreviewPanel()` MUST expose mutable `signals` and `signalFns`,
-  mutating provided preview object when supplied.
+- **FR-009**: `CoreStateful.registerPreviewPanel()` MUST mutate the provided preview object with
+  symbol-keyed mutable bridge values for `signals` and `signalFns` (no return-value contract).
 - **FR-010**: Stateful products MUST implement consent checks through `guardedBy` using `hasConsent`
   and `onBlockedByConsent`.
 - **FR-011**: Consent checks MUST allow events when consent is true or when event type appears in

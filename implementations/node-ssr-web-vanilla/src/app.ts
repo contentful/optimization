@@ -1,8 +1,8 @@
 import Optimization, {
-  ANONYMOUS_ID_COOKIE,
   type OptimizationData,
   type UniversalEventBuilderArgs,
 } from '@contentful/optimization-node'
+import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import cookieParser from 'cookie-parser'
 import express, { type Express, type Request, type Response } from 'express'
 import rateLimit from 'express-rate-limit'

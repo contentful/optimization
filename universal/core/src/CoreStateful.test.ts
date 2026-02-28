@@ -3,8 +3,12 @@ import type {
   TrackBuilderArgs,
 } from '@contentful/optimization-api-client'
 import type { BlockedEvent } from './BlockedEvent'
-import CoreStateful, { type CoreStatefulConfig } from './CoreStateful'
-import { batch, signals } from './signals'
+import CoreStateful, {
+  type CoreStatefulConfig,
+  type PreviewPanelSignalObject,
+} from './CoreStateful'
+import { batch, signalFns, signals } from './signals'
+import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from './symbols'
 
 const getAnalyticsQueuePolicyBaseBackoffMs = (core: CoreStateful): number | undefined => {
   const flushRuntime = Reflect.get(core.analytics, 'flushRuntime')
@@ -112,6 +116,8 @@ describe('CoreStateful blocked event handling', () => {
       signals.event.value = undefined
       signals.online.value = true
       signals.personalizations.value = undefined
+      signals.previewPanelAttached.value = false
+      signals.previewPanelOpen.value = false
       signals.profile.value = undefined
     })
   })
@@ -233,5 +239,40 @@ describe('CoreStateful blocked event handling', () => {
     signals.online.value = undefined
 
     expect(core.getOnlineState()).toBe(false)
+  })
+
+  it('exposes preview panel states and preserves them on reset', () => {
+    const core = createCoreStateful()
+    const attachedValues: boolean[] = []
+    const openValues: boolean[] = []
+    const attachedSubscription = core.states.previewPanelAttached.subscribe((value) => {
+      attachedValues.push(value)
+    })
+    const openSubscription = core.states.previewPanelOpen.subscribe((value) => {
+      openValues.push(value)
+    })
+
+    signals.previewPanelAttached.value = true
+    signals.previewPanelOpen.value = true
+
+    core.reset()
+
+    expect(signals.previewPanelAttached.value).toBe(true)
+    expect(signals.previewPanelOpen.value).toBe(true)
+    expect(attachedValues).toEqual([false, true])
+    expect(openValues).toEqual([false, true])
+
+    attachedSubscription.unsubscribe()
+    openSubscription.unsubscribe()
+  })
+
+  it('registers preview bridge values on symbol keys', () => {
+    const core = createCoreStateful()
+    const previewBridge: PreviewPanelSignalObject = {}
+
+    core.registerPreviewPanel(previewBridge)
+
+    expect(previewBridge[PREVIEW_PANEL_SIGNALS_SYMBOL]).toBe(signals)
+    expect(previewBridge[PREVIEW_PANEL_SIGNAL_FNS_SYMBOL]).toBe(signalFns)
   })
 })

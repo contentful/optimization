@@ -35,12 +35,12 @@ export const OPTIMIZATION_WEB_SDK_NAME =
  *
  * @example
  * ```ts
- * import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-web/global-constants'
+ * import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-web/constants'
  *
  * const anonId = Cookies.get(ANONYMOUS_ID_COOKIE)
  * ```
  */
-export { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-core'
+export { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-core/constants'
 
 /**
  * Selector used to locate tracked entry elements in the DOM.
@@ -60,7 +60,7 @@ export const ENTRY_SELECTOR = '[data-ctfl-entry-id]'
  *
  * @example
  * ```ts
- * import { CAN_ADD_LISTENERS } from '@contentful/optimization-web/global-constants'
+ * import { CAN_ADD_LISTENERS } from '@contentful/optimization-web/constants'
  *
  * if (CAN_ADD_LISTENERS) {
  *   window.addEventListener('resize', onResize)

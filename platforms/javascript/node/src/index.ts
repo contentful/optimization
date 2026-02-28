@@ -12,7 +12,7 @@ import Optimization from './Optimization'
 
 export * from '@contentful/optimization-core'
 
-export * from './global-constants'
+export { OPTIMIZATION_NODE_SDK_NAME, OPTIMIZATION_NODE_SDK_VERSION } from './constants'
 export * from './Optimization'
 
 export default Optimization

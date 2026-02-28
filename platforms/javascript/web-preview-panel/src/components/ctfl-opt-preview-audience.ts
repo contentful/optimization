@@ -14,6 +14,21 @@ import type {
 } from './ctfl-opt-preview-personalization'
 
 /**
+ * Custom element tag name for {@link CtflOptPreviewAudience}.
+ *
+ * @public
+ */
+export const CTFL_OPT_PREVIEW_AUDIENCE_TAG = 'ctfl-opt-preview-audience' as const
+
+/**
+ * Event name dispatched when an audience section is toggled open or closed.
+ *
+ * @public
+ */
+export const CTFL_OPT_PREVIEW_AUDIENCE_CONTENT_TOGGLE =
+  'ctfl_opt_preview_audience_content_toggle' as const
+
+/**
  * Payload emitted when an audience section is expanded or collapsed.
  *
  * @public
@@ -31,21 +46,6 @@ export interface AudienceContentToggleDetail {
  * @public
  */
 export type AudienceContentToggleEvent = CustomEvent<AudienceContentToggleDetail>
-
-/**
- * Event name dispatched when an audience section is toggled open or closed.
- *
- * @public
- */
-export const CTFL_OPT_PREVIEW_AUDIENCE_CONTENT_TOGGLE =
-  'ctfl_opt_preview_audience_content_toggle' as const
-
-/**
- * Custom element tag name for {@link CtflOptPreviewAudience}.
- *
- * @public
- */
-export const CTFL_OPT_PREVIEW_AUDIENCE_TAG = 'ctfl-opt-preview-audience' as const
 
 /**
  * Event name dispatched when a personalization variant selection changes

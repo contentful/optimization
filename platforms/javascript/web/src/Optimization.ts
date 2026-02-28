@@ -11,23 +11,23 @@
  */
 
 import {
-  ANONYMOUS_ID_COOKIE_LEGACY,
   type App,
   CoreStateful,
   type CoreStatefulConfig,
   effect,
   signals,
 } from '@contentful/optimization-core'
+import { ANONYMOUS_ID_COOKIE_LEGACY } from '@contentful/optimization-core/constants'
 import { merge } from 'es-toolkit/object'
 import Cookies from 'js-cookie'
 import { getLocale, getPageProperties, getUserAgent } from './builders'
-import type { AutoTrackEntryInteractionOptions, EntryInteractionApi } from './entry-tracking'
-import { EntryInteractionRuntime } from './entry-tracking/EntryInteractionRuntime'
 import {
   ANONYMOUS_ID_COOKIE,
   OPTIMIZATION_WEB_SDK_NAME,
   OPTIMIZATION_WEB_SDK_VERSION,
-} from './global-constants'
+} from './constants'
+import type { AutoTrackEntryInteractionOptions, EntryInteractionApi } from './entry-tracking'
+import { EntryInteractionRuntime } from './entry-tracking/EntryInteractionRuntime'
 import {
   beaconHandler,
   createOnlineChangeListener,

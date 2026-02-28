@@ -25,7 +25,7 @@ import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'conte
 import type { LogLevels } from 'logger'
 import { ConsoleLogSink, logger } from 'logger'
 import type AnalyticsBase from './analytics/AnalyticsBase'
-import { OPTIMIZATION_CORE_SDK_NAME, OPTIMIZATION_CORE_SDK_VERSION } from './global-constants'
+import { OPTIMIZATION_CORE_SDK_NAME, OPTIMIZATION_CORE_SDK_VERSION } from './constants'
 import { InterceptorManager } from './lib/interceptor'
 import type { ResolvedData } from './personalization'
 import type PersonalizationBase from './personalization/PersonalizationBase'

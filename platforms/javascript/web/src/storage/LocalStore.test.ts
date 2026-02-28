@@ -6,7 +6,7 @@ import {
   DEBUG_FLAG_KEY,
   PERSONALIZATIONS_CACHE_KEY,
   PROFILE_CACHE_KEY,
-} from '@contentful/optimization-core'
+} from '@contentful/optimization-core/constants'
 import LocalStore from './LocalStore'
 
 describe('LocalStore', () => {

@@ -1,16 +1,18 @@
 import {
-  ANONYMOUS_ID_KEY,
-  ANONYMOUS_ID_KEY_LEGACY,
   ChangeArray,
-  CHANGES_CACHE_KEY,
-  CONSENT_KEY,
   createScopedLogger,
-  DEBUG_FLAG_KEY,
-  PERSONALIZATIONS_CACHE_KEY,
   Profile,
-  PROFILE_CACHE_KEY,
   SelectedPersonalizationArray,
 } from '@contentful/optimization-core'
+import {
+  ANONYMOUS_ID_KEY,
+  ANONYMOUS_ID_KEY_LEGACY,
+  CHANGES_CACHE_KEY,
+  CONSENT_KEY,
+  DEBUG_FLAG_KEY,
+  PERSONALIZATIONS_CACHE_KEY,
+  PROFILE_CACHE_KEY,
+} from '@contentful/optimization-core/constants'
 import type { z } from 'zod/mini'
 
 const logger = createScopedLogger('Web:LocalStore')

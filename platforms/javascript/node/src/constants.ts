@@ -26,7 +26,7 @@ export const OPTIMIZATION_NODE_SDK_NAME =
     : '@contentful/optimization-node'
 
 /**
- * Re-export of the anonymous-ID cookie name used by the Optimization Core.
+ * Re-exports of anonymous identifier constants used by the Optimization Core.
  *
  * @remarks
  * This constant is surfaced here to provide a stable import path for Node SDK
@@ -36,13 +36,15 @@ export const OPTIMIZATION_NODE_SDK_NAME =
  *
  * @example
  * ```ts
- * import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node'
- * const id = request.cookies[ANONYMOUS_ID_COOKIE]
+ * import { ANONYMOUS_ID_COOKIE, ANONYMOUS_ID_KEY } from '@contentful/optimization-node/constants'
+ * const cookieId = request.cookies[ANONYMOUS_ID_COOKIE]
+ * const storageId = localStorage.getItem(ANONYMOUS_ID_KEY)
  * ```
  *
- * @see {@link ANONYMOUS_ID_COOKIE} in `@contentful/optimization-core` for the
+ * @see {@link ANONYMOUS_ID_COOKIE} and {@link ANONYMOUS_ID_KEY} in
+ * `@contentful/optimization-core` for the
  * authoritative definition and documentation.
  *
  * @public
  */
-export { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-core'
+export { ANONYMOUS_ID_COOKIE, ANONYMOUS_ID_KEY } from '@contentful/optimization-core/constants'

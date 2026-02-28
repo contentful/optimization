@@ -14,7 +14,15 @@ import Optimization from './Optimization'
 export * from '@contentful/optimization-core'
 
 export * from './builders/EventBuilder'
-export * from './global-constants'
+export {
+  CAN_ADD_LISTENERS,
+  ENTRY_SELECTOR,
+  HAS_CANCEL_IDLE,
+  HAS_IDLE_CALLBACK,
+  HAS_MUTATION_OBSERVER,
+  OPTIMIZATION_WEB_SDK_NAME,
+  OPTIMIZATION_WEB_SDK_VERSION,
+} from './constants'
 export * from './handlers/beaconHandler'
 export * from './storage/LocalStore'
 

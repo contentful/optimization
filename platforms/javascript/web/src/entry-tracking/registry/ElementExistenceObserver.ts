@@ -12,7 +12,7 @@ import {
   HAS_CANCEL_IDLE,
   HAS_IDLE_CALLBACK,
   HAS_MUTATION_OBSERVER,
-} from '../../global-constants'
+} from '../../constants'
 import { safeCall } from '../../lib'
 
 const isNode = (value: unknown): value is Node =>

@@ -9,6 +9,13 @@ interface Observable<TValue> {
   subscribe: (next: (value: TValue) => void) => Subscription
 }
 
+interface PreviewPanelStates {
+  previewPanelAttached?: Observable<boolean>
+  previewPanelOpen?: Observable<boolean>
+}
+
+type OptimizationStateSource = CoreStates & PreviewPanelStates
+
 type StateValue<TKey extends keyof CoreStates> = Parameters<
   Parameters<CoreStates[TKey]['subscribe']>[0]
 >[0]
@@ -18,6 +25,8 @@ export interface OptimizationStateSnapshot {
   eventStream: StateValue<'eventStream'> | undefined
   flags: StateValue<'flags'> | undefined
   personalizations: StateValue<'personalizations'> | undefined
+  previewPanelAttached: boolean | undefined
+  previewPanelOpen: boolean | undefined
   profile: StateValue<'profile'> | undefined
 }
 
@@ -43,11 +52,15 @@ function useObservableState<TValue>(
   return value
 }
 
-export function useOptimizationState(sdk: CoreStates | undefined): OptimizationStateSnapshot {
+export function useOptimizationState(
+  sdk: OptimizationStateSource | undefined,
+): OptimizationStateSnapshot {
   const consent = useObservableState(sdk?.consent)
   const eventStream = useObservableState(sdk?.eventStream)
   const flags = useObservableState(sdk?.flags)
   const personalizations = useObservableState(sdk?.personalizations)
+  const previewPanelAttached = useObservableState(sdk?.previewPanelAttached)
+  const previewPanelOpen = useObservableState(sdk?.previewPanelOpen)
   const profile = useObservableState(sdk?.profile)
 
   return {
@@ -55,6 +68,8 @@ export function useOptimizationState(sdk: CoreStates | undefined): OptimizationS
     eventStream,
     flags,
     personalizations,
+    previewPanelAttached,
+    previewPanelOpen,
     profile,
   }
 }
