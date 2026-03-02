@@ -50,8 +50,7 @@ Use `OptimizationRoot` as the standard top-level wrapper:
 
 ```tsx
 import { OptimizationRoot } from '@contentful/optimization-react-web'
-
-<OptimizationRoot instance={optimization}>
+;<OptimizationRoot instance={optimization}>
   <App />
 </OptimizationRoot>
 ```

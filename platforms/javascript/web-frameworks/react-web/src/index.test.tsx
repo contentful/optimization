@@ -1,3 +1,5 @@
+import Optimization from '@contentful/optimization-web'
+import { renderToString } from 'react-dom/server'
 import {
   LiveUpdatesProvider,
   OptimizationContext,
@@ -8,10 +10,13 @@ import {
   useOptimization,
   usePersonalization,
 } from './index'
-import { renderToString } from 'react-dom/server'
-import type { OptimizationWebSdk } from './types'
 
-const optimizationInstance = { sdk: 'test-instance' } as unknown as OptimizationWebSdk
+const optimizationInstance = new Optimization({
+  clientId: 'test-client-id',
+  environment: 'main',
+  analytics: { baseUrl: 'http://localhost:8000/insights/' },
+  personalization: { baseUrl: 'http://localhost:8000/experience/' },
+})
 
 describe('@contentful/optimization-react-web core providers', () => {
   it('exports core API symbols', () => {
@@ -26,7 +31,7 @@ describe('@contentful/optimization-react-web core providers', () => {
   })
 
   it('provides optimization instance via OptimizationProvider', () => {
-    let capturedInstance: OptimizationWebSdk | null = null
+    let capturedInstance: Optimization | null = null
 
     function Probe(): null {
       capturedInstance = useOptimization()
@@ -91,7 +96,7 @@ describe('@contentful/optimization-react-web core providers', () => {
   })
 
   it('returns null from useLiveUpdates outside provider', () => {
-    let capturedContext: ReturnType<typeof useLiveUpdates> = undefined as never
+    let capturedContext: ReturnType<typeof useLiveUpdates> = null
 
     function Probe(): null {
       capturedContext = useLiveUpdates()
@@ -104,7 +109,7 @@ describe('@contentful/optimization-react-web core providers', () => {
   })
 
   it('provides both optimization instance and live updates via OptimizationRoot', () => {
-    let capturedInstance: OptimizationWebSdk | null = null
+    let capturedInstance: Optimization | null = null
     let capturedGlobalLiveUpdates: boolean | null = null
 
     function Probe(): null {
