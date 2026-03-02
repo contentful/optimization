@@ -1,13 +1,14 @@
 # React Web SDK
 
-Scaffold package for `@contentful/optimization-react-web`.
+React Web SDK package for `@contentful/optimization-react-web`.
 
 ## Status
 
-This package is scaffold-only and not production-ready.
+Core root/provider primitives are implemented.
 
-- Runtime behavior is intentionally out of scope for this initial setup.
-- API semantics and React Native parity details are TODO in follow-up tickets.
+- `OptimizationProvider` + `useOptimization()` context behavior
+- `LiveUpdatesProvider` + `useLiveUpdates()` global live updates context
+- `OptimizationRoot` provider composition and defaults
 
 ## Purpose
 
@@ -38,5 +39,51 @@ pnpm dev
 
 - package metadata and dual module exports
 - `rslib`/`rsbuild`/`rstest`/TypeScript baseline aligned with Web SDK patterns
-- placeholder React-facing API surface in `src/` (provider/root/personalization/analytics/hooks)
+- core provider/root/context primitives in `src/`
 - scaffold dev dashboard harness in `dev/` for consent, identify/reset, state, events, and entries
+
+## Usage
+
+### Recommended Wrapper
+
+Use `OptimizationRoot` as the standard top-level wrapper:
+
+```tsx
+import { OptimizationRoot } from '@contentful/optimization-react-web'
+
+<OptimizationRoot instance={optimization}>
+  <App />
+</OptimizationRoot>
+```
+
+`OptimizationRoot` composition order:
+
+1. `OptimizationProvider` (outermost)
+2. `LiveUpdatesProvider`
+3. application children
+
+### Provider Requirements
+
+- `OptimizationProvider` requires `instance`.
+- `OptimizationRoot` requires `instance`.
+- `OptimizationRoot.liveUpdates` is optional and defaults to `false`.
+
+### Hooks
+
+- `useOptimization()` returns the current SDK instance.
+- `useOptimization()` throws if used outside `OptimizationProvider`.
+- `useLiveUpdates()` returns the live updates context or `null` outside `LiveUpdatesProvider`.
+
+### Live Updates Resolution Semantics
+
+Consumers should resolve live updates behavior with:
+
+```ts
+const isLiveUpdatesEnabled = componentLiveUpdates ?? liveUpdatesContext?.globalLiveUpdates ?? false
+```
+
+This gives:
+
+- component-level `liveUpdates` prop override first
+- then root-level `liveUpdates`
+- then default `false`
