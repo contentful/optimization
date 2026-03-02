@@ -35,7 +35,6 @@
     "@contentful/optimization-api-schemas": "workspace:*",
     "diary": "catalog:",
     "es-toolkit": "catalog:",
-    "p-retry": "^6.2.1",
     "zod": "catalog:"
   },
   "devDependencies": {

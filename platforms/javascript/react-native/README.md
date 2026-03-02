@@ -383,8 +383,9 @@ panel. The panel allows developers to:
 > [!IMPORTANT]
 >
 > The React Native preview panel is intentionally tightly coupled to Core preview internals. It uses
-> `registerPreviewPanel(...)`, direct signal updates, and state interceptors by design to apply
-> immediate local overrides and keep preview behavior aligned with the Web preview panel.
+> symbol-keyed `registerPreviewPanel(...)` bridge access, direct signal updates, and state
+> interceptors by design to apply immediate local overrides and keep preview behavior aligned with
+> the Web preview panel.
 
 ```tsx
 <OptimizationRoot

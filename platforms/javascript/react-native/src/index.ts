@@ -22,7 +22,7 @@ import { merge } from 'es-toolkit'
 import {
   OPTIMIZATION_REACT_NATIVE_SDK_NAME,
   OPTIMIZATION_REACT_NATIVE_SDK_VERSION,
-} from './global-constants'
+} from './constants'
 import { createAppStateChangeListener, createOnlineChangeListener } from './handlers'
 import AsyncStorageStore from './storage/AsyncStorageStore'
 

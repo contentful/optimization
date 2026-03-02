@@ -8,7 +8,7 @@ import {
   PageViewEvent,
   parseWithFriendlyError,
   type PartialProfile,
-  type ExperienceEvent as PersonalizationEvent,
+  ExperienceEvent as PersonalizationEvent,
   type ScreenViewBuilderArgs,
   ScreenViewEvent,
   type TrackBuilderArgs,
@@ -158,10 +158,11 @@ class PersonalizationStateless extends PersonalizationBase {
     profile?: PartialProfile,
   ): Promise<OptimizationData> {
     const intercepted = await this.interceptors.event.run(event)
+    const validEvent = parseWithFriendlyError(PersonalizationEvent, intercepted)
 
     const data = await this.api.experience.upsertProfile({
       profileId: profile?.id,
-      events: [intercepted],
+      events: [validEvent],
     })
 
     return data

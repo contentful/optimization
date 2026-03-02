@@ -1,7 +1,7 @@
 # Feature Specification: Optimization Web State Management
 
 **Feature Branch**: `[015-web-state-management]`  
-**Created**: 2026-02-26  
+**Created**: 2026-02-27  
 **Status**: Draft  
 **Input**: User description: "Examine the current functionality in `@contentful/optimization-web`
 package and derive SpecKit-compatible specifications."
@@ -16,7 +16,7 @@ to be restored from browser persistence so user context survives page reloads.
 **Why this priority**: Persisted state continuity is required for stable personalization behavior.
 
 **Independent Test**: Pre-populate localStorage/cookies, initialize `Optimization`, and verify
-defaults and anonymous ID migration/reset behavior.
+merged defaults plus anonymous ID migration/reset behavior.
 
 **Acceptance Scenarios**:
 
@@ -31,13 +31,13 @@ defaults and anonymous ID migration/reset behavior.
 
 ### User Story 2 - Keep Runtime Signals and Persistence in Sync (Priority: P1)
 
-As a maintainer, I need state signal changes mirrored to localStorage/cookies so runtime mutations
-from API responses and consent actions are persisted automatically.
+As a maintainer, I need signal changes mirrored to localStorage/cookies so runtime mutations from
+API responses and consent actions are persisted automatically.
 
 **Why this priority**: Without synchronization effects, persisted state diverges from runtime state.
 
 **Independent Test**: Update core signals (`consent`, `profile`, `changes`, `personalizations`) and
-assert corresponding LocalStore and cookie writes.
+assert corresponding LocalStore/cookie writes and consent-gated interaction runtime behavior.
 
 **Acceptance Scenarios**:
 
@@ -45,8 +45,9 @@ assert corresponding LocalStore and cookie writes.
    latest value.
 2. **Given** `signals.profile` updates with `profile.id`, **When** effects run, **Then** anonymous
    ID cookie and LocalStore anonymous ID are updated.
-3. **Given** `signals.consent` updates and auto-tracking is enabled, **When** consent changes,
-   **Then** auto entry tracking starts on consented state and stops otherwise.
+3. **Given** `signals.consent` updates and auto-tracked entry interactions are configured, **When**
+   consent changes, **Then** all configured interactions are started on consented state and stopped
+   otherwise.
 
 ---
 
@@ -66,19 +67,20 @@ throws and expected cleanup behavior.
    **Then** values resolve as `undefined` and invalid cache entries are removed.
 2. **Given** localStorage write/remove exceptions, **When** LocalStore updates occur, **Then**
    errors are swallowed and SDK continues.
-3. **Given** `optimization.reset()`, **When** invoked, **Then** entry tracking stops, anonymous ID
-   cookie is removed, LocalStore runtime caches are cleared, and core reset is executed.
+3. **Given** `optimization.reset()`, **When** invoked, **Then** entry interaction tracking stops,
+   anonymous ID cookie is removed, LocalStore runtime caches are cleared, and core reset is
+   executed.
 
 ---
 
 ### Edge Cases
 
 - `LocalStore.reset()` defaults to preserving consent and debug flags unless explicitly requested.
-- `optimization.reset()` must preserve consent by default because LocalStore reset does not clear it
+- `optimization.reset()` preserves consent by default because `LocalStore.reset()` does not clear it
   and core reset intentionally retains consent.
 - Setting anonymous ID to `undefined` must clear both cookie and localStorage anonymous ID key.
 - Cookie expiration defaults to 365 days when not provided.
-- LocalStore consent values must map `'accepted' -> true`, `'denied' -> false`, anything else ->
+- LocalStore consent values map `'accepted' -> true`, `'denied' -> false`, and all other values ->
   `undefined`.
 - Legacy localStorage anonymous ID key must be removed after migration.
 
@@ -103,10 +105,10 @@ throws and expected cleanup behavior.
 - **FR-011**: Profile synchronization MUST call anonymous ID persistence with `profile?.id`.
 - **FR-012**: Effects MUST synchronize `signals.personalizations.value` to
   `LocalStore.personalizations`.
-- **FR-013**: Consent effect MUST gate automatic entry view tracking: start when consent truthy and
-  `autoTrackEntryViews` is enabled; stop otherwise.
-- **FR-014**: `Optimization.reset()` MUST stop auto entry tracking, clear anonymous ID cookie, clear
-  LocalStore runtime caches, and delegate to `CoreStateful.reset()`.
+- **FR-013**: Consent synchronization MUST gate automatic tracked entry interactions: configured
+  interactions start when consent is truthy and stop when consent is falsy.
+- **FR-014**: `Optimization.reset()` MUST reset entry interaction runtime state, clear anonymous ID
+  cookie, clear LocalStore runtime caches, and delegate to `CoreStateful.reset()`.
 - **FR-015**: `Optimization.destroy()` MUST NOT clear persisted user state by default.
 - **FR-016**: `LocalStore.anonymousId` getter MUST prefer legacy key when present and remove legacy
   key after read.
@@ -123,7 +125,8 @@ throws and expected cleanup behavior.
 
 - **LocalStore**: Browser localStorage abstraction for persisted optimization state.
 - **Anonymous ID Persistence**: Cookie + localStorage identity synchronization contract.
-- **Signal Synchronization Effects**: Reactive bridges from core signals to browser persistence.
+- **Signal Synchronization Effects**: Reactive bridges from core signals to browser persistence and
+  consent-gated interaction runtime behavior.
 - **Reset Semantics**: Coordinated local and core state cleanup behavior for Web runtime.
 
 ## Success Criteria _(mandatory)_
@@ -133,8 +136,8 @@ throws and expected cleanup behavior.
 - **SC-001**: Initialization tests confirm persisted localStorage/cookie values are restored and
   legacy cookie migration logic applies correctly.
 - **SC-002**: Signal synchronization tests confirm consent/profile/changes/personalizations writes
-  are persisted automatically.
-- **SC-003**: Reset tests confirm anonymous ID cleanup, LocalStore cleanup, and core reset
-  delegation.
+  are persisted automatically and consent gates configured auto-tracked interactions.
+- **SC-003**: Reset tests confirm anonymous ID cleanup, LocalStore cleanup, entry interaction
+  runtime reset, and core reset delegation.
 - **SC-004**: Fault-injection tests confirm malformed cache values and storage exceptions never
   crash runtime behavior.

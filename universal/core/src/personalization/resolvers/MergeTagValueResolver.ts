@@ -1,5 +1,5 @@
 import { MergeTagEntry, Profile } from '@contentful/optimization-api-client'
-import { get } from 'es-toolkit/compat'
+import get from 'es-toolkit/compat/get'
 import { createScopedLogger } from 'logger'
 
 const logger = createScopedLogger('Personalization')

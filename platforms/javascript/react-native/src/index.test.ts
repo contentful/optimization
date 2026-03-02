@@ -1,5 +1,5 @@
 import { describe, expect, it, rs } from '@rstest/core'
-import { OPTIMIZATION_REACT_NATIVE_SDK_NAME } from './global-constants'
+import { OPTIMIZATION_REACT_NATIVE_SDK_NAME } from './constants'
 
 // Mock React Native before importing anything else
 rs.mock('react-native', () => ({

@@ -16,6 +16,26 @@
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
+    },
+    "./constants": {
+      "import": {
+        "types": "./dist/constants.d.mts",
+        "default": "./dist/constants.mjs"
+      },
+      "require": {
+        "types": "./dist/constants.d.cts",
+        "default": "./dist/constants.cjs"
+      }
+    },
+    "./symbols": {
+      "import": {
+        "types": "./dist/symbols.d.mts",
+        "default": "./dist/symbols.mjs"
+      },
+      "require": {
+        "types": "./dist/symbols.d.cts",
+        "default": "./dist/symbols.cjs"
+      }
     }
   },
   "files": [
@@ -28,6 +48,9 @@
     "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist",
     "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo",
     "dev": "rsbuild dev --host 0.0.0.0 -c rsbuild.config.ts",
+    "size:script": "tsx ./scripts/check-bundle-size.ts",
+    "size:check": "pnpm build:dist && pnpm size:script",
+    "size:report": "pnpm size:script --report-only",
     "test:unit": "rstest run --coverage",
     "typecheck": "tsc --noEmit"
   },
@@ -43,10 +66,12 @@
     "@rslib/core": "catalog:",
     "@rstest/core": "catalog:",
     "@rstest/coverage-istanbul": "catalog:",
+    "@types/node": "catalog:",
     "build-tools": "workspace:*",
     "happy-dom": "catalog:",
     "rimraf": "catalog:",
     "tslib": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:"
   }
 }

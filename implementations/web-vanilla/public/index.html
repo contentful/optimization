@@ -6,6 +6,7 @@
     <title>Optimization Web SDK Vanilla JS Implementation E2E Test</title>
     <script src="https://cdn.jsdelivr.net/npm/contentful@latest/dist/contentful.browser.min.js"></script>
     <script src="/dist/contentful-optimization-web.umd.js"></script>
+    <script src="/dist/contentful-optimization-web-preview-panel.umd.js"></script>
     <style>
       * {
         box-sizing: border-box;
@@ -83,7 +84,8 @@
         grid-auto-rows: minmax(75dvh, auto);
         margin-block-end: 2rem;
 
-        > div {
+        > div,
+        > button {
           display: grid;
           grid-gap: inherit;
           grid-auto-rows: inherit;
@@ -94,6 +96,12 @@
           overflow: visible;
         }
 
+        > button {
+          appearance: none;
+          border: 0;
+          text-align: left;
+        }
+
         div.nested {
           display: grid;
           grid-gap: inherit;
@@ -101,6 +109,10 @@
           padding: 1rem;
           border: 1px solid #ccc;
           overflow: visible;
+        }
+
+        [data-e2e-entry-inline='true'] {
+          display: block;
         }
       }
     </style>
@@ -133,9 +145,25 @@
           <div data-ctfl-entry-id="1MwiFl4z7gkwqGYdvCmr8c">
             <!-- Merge Tag "Rich Text" Entry -->
           </div>
-          <div data-ctfl-entry-id="4ib0hsHWoSOnCVdDkizE8d"></div>
-          <div data-ctfl-entry-id="xFwgG3oNaOcjzWiGe4vXo"></div>
-          <div data-ctfl-entry-id="2Z2WLOx07InSewC3LUB3eX"></div>
+          <button
+            type="button"
+            data-testid="entry-click-direct-entry"
+            data-e2e-click-scenario="direct"
+            data-ctfl-entry-id="4ib0hsHWoSOnCVdDkizE8d"
+          ></button>
+          <div
+            data-testid="entry-click-descendant-entry"
+            data-e2e-click-scenario="descendant"
+            data-ctfl-entry-id="xFwgG3oNaOcjzWiGe4vXo"
+          ></div>
+          <button type="button" data-testid="entry-click-ancestor-wrapper">
+            <span
+              data-testid="entry-click-ancestor-entry"
+              data-e2e-click-scenario="ancestor"
+              data-e2e-entry-inline="true"
+              data-ctfl-entry-id="2Z2WLOx07InSewC3LUB3eX"
+            ></span>
+          </button>
         </div>
 
         <div id="manually-observed">
@@ -184,13 +212,19 @@
         clientId: '<!--#echo var="NGINX_NINETAILED_CLIENT_ID" -->',
         environment: '<!--#echo var="NGINX_NINETAILED_ENVIRONMENT" -->',
         logLevel: 'debug',
-        autoTrackEntryViews: true,
+        autoTrackEntryInteraction: { views: true, clicks: true },
         app: {
           name: document.title,
           version: '0.0.0',
         },
         analytics: { baseUrl: '<!--#echo var="NGINX_INSIGHTS_API_BASE_URL" -->' },
         personalization: { baseUrl: '<!--#echo var="NGINX_EXPERIENCE_API_BASE_URL" -->' },
+      })
+
+      attachOptimizationPreviewPanel({
+        contentful: contentfulClient,
+        optimization: window.optimization,
+        nonce: 'nonce-string',
       })
 
       // Emit page event
@@ -292,20 +326,33 @@
         }
       }
 
+      function decorateClickableEntryScenario(element) {
+        if (element.dataset.e2eClickScenario !== 'descendant') return
+
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.dataset.testid = 'entry-click-descendant-button'
+        button.innerText = 'Trigger entry click tracking from descendant button'
+
+        element.appendChild(button)
+      }
+
       let renderEntriesPromise = Promise.resolve()
 
       // Render personalized entries
       async function renderPersonalizedEntry(rawEntry, element, autoObserve = true) {
         const { entry, personalization } = optimization.personalization.personalizeEntry(rawEntry)
+        const renderInline =
+          element.dataset.e2eEntryInline === 'true' || element.tagName === 'BUTTON'
 
         if (isRichText(entry.fields?.text)) {
           const div = document.createElement('div')
           simpleRenderRichText(entry.fields.text, div)
           element.replaceChildren(div)
         } else {
-          const p = document.createElement('p')
-          p.innerText = entry.fields?.text
-          element.replaceChildren(p)
+          const textElement = document.createElement(renderInline ? 'span' : 'p')
+          textElement.innerText = entry.fields?.text
+          element.replaceChildren(textElement)
         }
 
         if (entry.fields?.nested) {
@@ -318,6 +365,8 @@
 
           element.appendChild(div)
         }
+
+        decorateClickableEntryScenario(element)
 
         // NOTE: Elements that are not auto-observed may still be auto-tracked (see below)
         if (autoObserve) {
@@ -358,10 +407,10 @@
       function manuallyObserveEntryElement(element, entry, personalization) {
         if (!entry?.sys?.id) return
 
-        optimization.untrackEntryViewForElement(element)
+        optimization.tracking.unobserve('views', element)
 
         // Manually observe the element for auto-tracking (does not use `data-ctfl-*` attributes)
-        optimization.trackEntryViewForElement(element, {
+        optimization.tracking.observe('views', element, {
           data: {
             // The `entryId` property is required for auto-tracking
             entryId: entry.sys.id,

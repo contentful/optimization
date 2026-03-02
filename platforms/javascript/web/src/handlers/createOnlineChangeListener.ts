@@ -1,5 +1,6 @@
 import { createScopedLogger } from '@contentful/optimization-core'
-import { CAN_ADD_LISTENERS } from '../global-constants'
+import { CAN_ADD_LISTENERS } from '../constants'
+import { safeCall } from '../lib'
 
 const logger = createScopedLogger('Web:Network')
 
@@ -44,13 +45,14 @@ export function createOnlineChangeListener(callback: Callback): () => void {
   }
 
   const emit = (isOnline: boolean): void => {
-    void (async () => {
-      try {
+    safeCall(
+      async () => {
         await callback(isOnline)
-      } catch (error) {
+      },
+      (error) => {
         logger.error('Error in online state callback:', error)
-      }
-    })()
+      },
+    )
   }
 
   const onOnline = (): void => {

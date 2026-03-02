@@ -96,7 +96,8 @@ the SDK hierarchy.
 
 - [API Client Library](./universal/api-client/README.md) for the Experience & Insights APIs
 - [API Schemas Library](./universal/api-schemas/README.md) maintains Zod validation schemas and
-  TypeScript types for working with Experience API request and response payloads
+  TypeScript types for working with Experience API request/response payloads and Insights event
+  payloads
 
 ## Shared Internal Libraries
 

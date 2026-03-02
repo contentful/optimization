@@ -1,4 +1,4 @@
-import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-core'
+import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import { expect, test } from '@playwright/test'
 import { getAnonymousIdFromCookie, getAnonymousIdFromStorage } from './utils'
 

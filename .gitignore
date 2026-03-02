@@ -8,6 +8,7 @@
 .DS_Store
 .contentfulrc.json
 .env
+.pnpm-store
 .rslib
 .rsdoctor
 .temp
@@ -25,6 +26,11 @@ playwright.cache
 temp
 test-results
 tmp
+
+# pnpm lockfiles: keep root + detached implementation packages
+**/pnpm-lock.yaml
+!/pnpm-lock.yaml
+!/implementations/**/pnpm-lock.yaml
 
 # Xcode
 #
