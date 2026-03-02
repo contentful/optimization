@@ -1,0 +1,64 @@
+:root {
+  color-scheme: light;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.dashboard {
+  margin: 0 auto;
+  max-width: 1200px;
+  padding: 2rem 1.5rem 3rem;
+}
+
+.dashboard__header h1 {
+  margin: 0;
+  font-size: 1.625rem;
+}
+
+.dashboard__header p {
+  margin: 0.5rem 0 0;
+  color: #334155;
+}
+
+.dashboard__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.dashboard__card {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  min-height: 140px;
+}
+
+.dashboard__card h2 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.dashboard__card p {
+  margin-bottom: 0;
+  color: #334155;
+  line-height: 1.4;
+}

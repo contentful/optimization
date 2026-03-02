@@ -66,7 +66,7 @@ ensure functionality is reasonably shared and consistent.
     - [Web SDK](/platforms/javascript/web/README.md) and
       [Web Preview Panel](/platforms/javascript/web-preview-panel/README.md)
       - Angular SDK (TBD)
-      - React SDK (TBD)
+      - [React Web SDK](/platforms/javascript/web-frameworks/react-web/README.md)
       - Svelte SDK (TBD)
       - Vue SDK (TBD)
 
