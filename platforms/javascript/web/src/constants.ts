@@ -79,20 +79,3 @@ export const CAN_ADD_LISTENERS =
  * @public
  */
 export const HAS_MUTATION_OBSERVER = CAN_ADD_LISTENERS && typeof MutationObserver !== 'undefined'
-
-/**
- * Flag indicating whether the current environment supports
- * `window.requestIdleCallback` and can safely add DOM event listeners.
- *
- * @public
- */
-export const HAS_IDLE_CALLBACK =
-  CAN_ADD_LISTENERS && typeof window.requestIdleCallback === 'function'
-
-/**
- * Flag indicating whether the current environment supports
- * `window.cancelIdleCallback` and can safely add DOM event listeners.
- *
- * @public
- */
-export const HAS_CANCEL_IDLE = CAN_ADD_LISTENERS && typeof window.cancelIdleCallback === 'function'

@@ -267,11 +267,12 @@ jobs:
         with:
           name: sdk-package-tarballs
           path: pkgs
+      - run: pnpm lint
       - if: needs.build.result == 'skipped'
         run: pnpm build:pkgs
       - run: pnpm store prune
       - run: pnpm run implementation:install -- --no-frozen-lockfile
-      - run: pnpm lint
+      - run: pnpm implementation:lint
 
   test-unit:
     name: 🧪 Test (${{ matrix.package }})

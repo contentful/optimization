@@ -50,6 +50,7 @@
   },
   "devDependencies": {
     "@rsbuild/core": "catalog:",
+    "@rsdoctor/cli": "catalog:",
     "@rslib/core": "catalog:",
     "build-tools": "workspace:*",
     "rimraf": "catalog:",

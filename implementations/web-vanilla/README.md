@@ -11,13 +11,13 @@
 <div align="center">
 
 [Readme](./README.md) · [Reference](https://contentful.github.io/optimization) ·
-[Contributing](/CONTRIBUTING.md)
+[Contributing](../../CONTRIBUTING.md)
 
 </div>
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is currently ALPHA! Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
 
 This is a reference implementation for the
 [Optimization Web SDK](../../platforms/javascript/web/README.md) and is part of the
@@ -42,8 +42,8 @@ All steps should be run from the monorepo root.
 3. Configure the environment in a `.env` file in `implementations/web-vanilla` based on the
    `.env.example` included file. The file is pre-populated with values that are valid only against
    the mock server implementation. To test the implementation against a live server environment, see
-   the [mocks package](/lib/mocks/README.md) for information on how to set up Contentful space with
-   test data.
+   the [mocks package](../../lib/mocks/README.md) for information on how to set up Contentful space
+   with test data.
 4. Start the mock API and application servers:
 
    ```sh

@@ -166,7 +166,11 @@ describe('CoreStateful blocked event handling', () => {
       defaults: { consent: true },
       onEventBlocked,
     })
-    const payload: ComponentViewBuilderArgs = { componentId: 'hero-banner' }
+    const payload: ComponentViewBuilderArgs = {
+      componentId: 'hero-banner',
+      componentViewId: 'hero-banner-view-id',
+      viewDurationMs: 1000,
+    }
 
     await core.trackComponentView(payload)
     await core.trackComponentView(payload)

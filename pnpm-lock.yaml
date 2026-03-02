@@ -21,6 +21,9 @@ catalogs:
     '@rsbuild/core':
       specifier: ^1.7.3
       version: 1.7.3
+    '@rsdoctor/cli':
+      specifier: ^1.5.2
+      version: 1.5.2
     '@rsdoctor/rspack-plugin':
       specifier: ^1.5.2
       version: 1.5.2
@@ -186,6 +189,9 @@ importers:
       '@microsoft/api-extractor':
         specifier: 'catalog:'
         version: 7.57.6(@types/node@24.10.13)
+      '@rsdoctor/cli':
+        specifier: 'catalog:'
+        version: 1.5.2(@rsbuild/core@1.7.3)(@rsdoctor/client@1.5.2)(@rspack/core@1.7.6(@swc/helpers@0.5.19))
       '@rslib/core':
         specifier: 'catalog:'
         version: 0.19.6(@microsoft/api-extractor@7.57.6(@types/node@24.10.13))(typescript@5.9.3)
@@ -278,6 +284,9 @@ importers:
       '@microsoft/api-extractor':
         specifier: 'catalog:'
         version: 7.57.6(@types/node@24.10.13)
+      '@rsdoctor/cli':
+        specifier: 'catalog:'
+        version: 1.5.2(@rsbuild/core@1.7.3)(@rsdoctor/client@1.5.2)(@rspack/core@1.7.6(@swc/helpers@0.5.19))
       '@rslib/core':
         specifier: 'catalog:'
         version: 0.19.6(@microsoft/api-extractor@7.57.6(@types/node@24.10.13))(typescript@5.9.3)
@@ -405,6 +414,9 @@ importers:
       '@react-native/typescript-config':
         specifier: 0.84.0
         version: 0.84.0
+      '@rsdoctor/cli':
+        specifier: 'catalog:'
+        version: 1.5.2(@rsbuild/core@1.7.3)(@rsdoctor/client@1.5.2)(@rspack/core@1.7.6(@swc/helpers@0.5.19))
       '@rslib/core':
         specifier: 'catalog:'
         version: 0.19.6(@microsoft/api-extractor@7.57.6(@types/node@24.10.13))(typescript@5.9.3)
@@ -474,15 +486,6 @@ importers:
       '@contentful/optimization-core':
         specifier: workspace:*
         version: link:../../../universal/core
-      '@types/js-cookie':
-        specifier: 3.0.6
-        version: 3.0.6
-      es-toolkit:
-        specifier: 'catalog:'
-        version: 1.44.0
-      js-cookie:
-        specifier: 3.0.5
-        version: 3.0.5
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -490,6 +493,9 @@ importers:
       '@rsbuild/core':
         specifier: 'catalog:'
         version: 1.7.3
+      '@rsdoctor/cli':
+        specifier: 'catalog:'
+        version: 1.5.2(@rsbuild/core@1.7.3)(@rsdoctor/client@1.5.2)(@rspack/core@1.7.6(@swc/helpers@0.5.19))
       '@rslib/core':
         specifier: 'catalog:'
         version: 0.19.6(@microsoft/api-extractor@7.57.6(@types/node@24.10.13))(typescript@5.9.3)
@@ -591,6 +597,9 @@ importers:
       '@rsbuild/core':
         specifier: 'catalog:'
         version: 1.7.3
+      '@rsdoctor/cli':
+        specifier: 'catalog:'
+        version: 1.5.2(@rsbuild/core@1.7.3)(@rsdoctor/client@1.5.2)(@rspack/core@1.7.6(@swc/helpers@0.5.19))
       '@rslib/core':
         specifier: 'catalog:'
         version: 0.19.6(@microsoft/api-extractor@7.57.6(@types/node@24.10.13))(typescript@5.9.3)
@@ -625,6 +634,9 @@ importers:
       '@microsoft/api-extractor':
         specifier: 'catalog:'
         version: 7.57.6(@types/node@24.10.13)
+      '@rsdoctor/cli':
+        specifier: 'catalog:'
+        version: 1.5.2(@rsbuild/core@1.7.3)(@rsdoctor/client@1.5.2)(@rspack/core@1.7.6(@swc/helpers@0.5.19))
       '@rslib/core':
         specifier: 'catalog:'
         version: 0.19.6(@microsoft/api-extractor@7.57.6(@types/node@24.10.13))(typescript@5.9.3)
@@ -671,6 +683,9 @@ importers:
       '@microsoft/api-extractor':
         specifier: 'catalog:'
         version: 7.57.6(@types/node@24.10.13)
+      '@rsdoctor/cli':
+        specifier: 'catalog:'
+        version: 1.5.2(@rsbuild/core@1.7.3)(@rsdoctor/client@1.5.2)(@rspack/core@1.7.6(@swc/helpers@0.5.19))
       '@rslib/core':
         specifier: 'catalog:'
         version: 0.19.6(@microsoft/api-extractor@7.57.6(@types/node@24.10.13))(typescript@5.9.3)
@@ -717,6 +732,9 @@ importers:
       '@microsoft/api-extractor':
         specifier: 'catalog:'
         version: 7.57.6(@types/node@24.10.13)
+      '@rsdoctor/cli':
+        specifier: 'catalog:'
+        version: 1.5.2(@rsbuild/core@1.7.3)(@rsdoctor/client@1.5.2)(@rspack/core@1.7.6(@swc/helpers@0.5.19))
       '@rslib/core':
         specifier: 'catalog:'
         version: 0.19.6(@microsoft/api-extractor@7.57.6(@types/node@24.10.13))(typescript@5.9.3)
@@ -2185,6 +2203,12 @@ packages:
     peerDependencies:
       '@rsbuild/core': ^1.0.0 || ^2.0.0-0
 
+  '@rsdoctor/cli@1.5.2':
+    resolution: {integrity: sha512-wLilQTbrwr+8D6GK9uYBC2Gd8Aj0GTscB9M1pa0CIfrjc7zQKe0dQmEzKo6PnfFYYOtyIZFkto4/Oy5ppaNJnA==}
+    hasBin: true
+    peerDependencies:
+      '@rsdoctor/client': 1.5.2
+
   '@rsdoctor/client@1.5.2':
     resolution: {integrity: sha512-fufNlCiA4+MDj3ZW8ssEdRI9mwawdqSSYvqOOK01+NNIg3TuQNgEdnF/QVGnkxKLgVXJCtUdOKaZtUq1bwnJVQ==}
 
@@ -2503,9 +2527,6 @@ packages:
 
   '@types/istanbul-reports@3.0.4':
     resolution: {integrity: sha512-pk2B1NWalF9toCRu6gjBzR69syFjP4Od8WRAX+0mmf9lAjCRicLOWc+ZrxZHx/0XRjotgkF9t6iaMJ+aXcOdZQ==}
-
-  '@types/js-cookie@3.0.6':
-    resolution: {integrity: sha512-wkw9yd1kEXOPnvEeEV1Go1MmxtBJL0RR79aOTAApecWFVu7w0NNXNqhcWgvw2YgZDYadliXkl14pa3WXw5jlCQ==}
 
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
@@ -3123,6 +3144,7 @@ packages:
   basic-ftp@5.1.0:
     resolution: {integrity: sha512-RkaJzeJKDbaDWTIPiJwubyljaEPwpVWkm9Rt5h9Nd6h7tEXTJ3VB4qxdZBioV7JO5yLUaOKwz7vDOzlncUsegw==}
     engines: {node: '>=10.0.0'}
+    deprecated: Security vulnerability fixed in 5.2.0, please upgrade
 
   bfj@8.0.0:
     resolution: {integrity: sha512-6KJe4gFrZ4lhmvWcUIj37yFAs36mi2FZXuTkw6udZ/QsX/znFypW4SatqcLA5K5T4BAWgJZD73UFEJJQxuJjoA==}
@@ -5272,10 +5294,6 @@ packages:
   joi@18.0.2:
     resolution: {integrity: sha512-RuCOQMIt78LWnktPoeBL0GErkNaJPTBGcYuyaBvUOQSpcpcLfWrHPPihYdOGbV5pam9VTWbeoF7TsGiHugcjGA==}
     engines: {node: '>= 20'}
-
-  js-cookie@3.0.5:
-    resolution: {integrity: sha512-cEiJEAEoIbWfCZYKWhVwFuvPX1gETRYPw6LlaTKoxD3s2AkXzkCjnp6h0V77ozyqj0jakteJ4YqDJT830+lVGw==}
-    engines: {node: '>=14'}
 
   js-git@0.7.8:
     resolution: {integrity: sha512-+E5ZH/HeRnoc/LW0AmAyhU+mNcWBzAKE+30+IDMLSLbbK+Tdt02AdkOKq9u15rlJsDEGFqtgckc8ZM59LhhiUA==}
@@ -9443,6 +9461,23 @@ snapshots:
     transitivePeerDependencies:
       - webpack-hot-middleware
 
+  '@rsdoctor/cli@1.5.2(@rsbuild/core@1.7.3)(@rsdoctor/client@1.5.2)(@rspack/core@1.7.6(@swc/helpers@0.5.19))':
+    dependencies:
+      '@rsdoctor/client': 1.5.2
+      '@rsdoctor/core': 1.5.2(@rsbuild/core@1.7.3)(@rspack/core@1.7.6(@swc/helpers@0.5.19))
+      '@rsdoctor/graph': 1.5.2(@rspack/core@1.7.6(@swc/helpers@0.5.19))
+      '@rsdoctor/sdk': 1.5.2(@rspack/core@1.7.6(@swc/helpers@0.5.19))
+      '@rsdoctor/types': 1.5.2(@rspack/core@1.7.6(@swc/helpers@0.5.19))
+      '@rsdoctor/utils': 1.5.2(@rspack/core@1.7.6(@swc/helpers@0.5.19))
+      ora: 5.4.1
+    transitivePeerDependencies:
+      - '@rsbuild/core'
+      - '@rspack/core'
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+      - webpack
+
   '@rsdoctor/client@1.5.2': {}
 
   '@rsdoctor/core@1.5.2(@rsbuild/core@1.7.3)(@rspack/core@1.7.6(@swc/helpers@0.5.19))':
@@ -9836,8 +9871,6 @@ snapshots:
   '@types/istanbul-reports@3.0.4':
     dependencies:
       '@types/istanbul-lib-report': 3.0.3
-
-  '@types/js-cookie@3.0.6': {}
 
   '@types/json-schema@7.0.15': {}
 
@@ -12657,7 +12690,7 @@ snapshots:
   inquirer@2.0.0:
     dependencies:
       ansi-escapes: 1.4.0
-      chalk: 1.1.1
+      chalk: 1.1.3
       cli-cursor: 1.0.2
       cli-width: 2.2.1
       external-editor: 1.1.1
@@ -13505,8 +13538,6 @@ snapshots:
       '@hapi/tlds': 1.1.6
       '@hapi/topo': 6.0.2
       '@standard-schema/spec': 1.1.0
-
-  js-cookie@3.0.5: {}
 
   js-git@0.7.8:
     dependencies:

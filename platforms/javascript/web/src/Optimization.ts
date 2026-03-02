@@ -18,8 +18,6 @@ import {
   signals,
 } from '@contentful/optimization-core'
 import { ANONYMOUS_ID_COOKIE_LEGACY } from '@contentful/optimization-core/constants'
-import { merge } from 'es-toolkit/object'
-import Cookies from 'js-cookie'
 import { getLocale, getPageProperties, getUserAgent } from './builders'
 import {
   ANONYMOUS_ID_COOKIE,
@@ -33,6 +31,7 @@ import {
   createOnlineChangeListener,
   createVisibilityChangeListener,
 } from './handlers'
+import { getCookie, removeCookie, setCookie } from './lib/cookies'
 import { LocalStore } from './storage'
 
 declare global {
@@ -113,6 +112,19 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
  */
 export type OptimizationTrackingApi = EntryInteractionApi
 
+function resolveDefaultState(
+  defaults: CoreStatefulConfig['defaults'] | undefined,
+): NonNullable<CoreStatefulConfig['defaults']> {
+  const {
+    consent = LocalStore.consent,
+    profile = LocalStore.profile,
+    changes = LocalStore.changes,
+    personalizations = LocalStore.personalizations,
+  } = defaults ?? {}
+
+  return { consent, changes, profile, personalizations }
+}
+
 /**
  * Merge user-supplied Web configuration with sensible defaults for the
  * stateful core and browser environment.
@@ -136,35 +148,34 @@ function mergeConfig({
   logLevel,
   ...config
 }: OptimizationWebConfig): CoreStatefulConfig {
-  const {
-    consent = LocalStore.consent,
-    profile = LocalStore.profile,
-    changes = LocalStore.changes,
-    personalizations = LocalStore.personalizations,
-  } = defaults ?? {}
-
-  const mergedConfig: CoreStatefulConfig = merge(
-    {
-      analytics: { beaconHandler },
-      defaults: {
-        consent,
-        changes,
-        profile,
-        personalizations,
-      },
-      eventBuilder: {
-        app,
-        channel: 'web',
-        library: { name: OPTIMIZATION_WEB_SDK_NAME, version: OPTIMIZATION_WEB_SDK_VERSION },
-        getLocale,
-        getPageProperties,
-        getUserAgent,
-      },
-      getAnonymousId: () => LocalStore.anonymousId,
-      logLevel: LocalStore.debug ? 'debug' : logLevel,
+  const baseDefaults = resolveDefaultState(defaults)
+  const { eventBuilder: configuredEventBuilder } = config
+  const mergedConfig: CoreStatefulConfig = {
+    ...config,
+    analytics: {
+      beaconHandler,
+      ...config.analytics,
     },
-    config,
-  )
+    defaults: {
+      ...baseDefaults,
+      ...defaults,
+    },
+    eventBuilder: {
+      app,
+      channel: 'web',
+      getLocale,
+      getPageProperties,
+      getUserAgent,
+      ...configuredEventBuilder,
+      library: {
+        name: OPTIMIZATION_WEB_SDK_NAME,
+        version: OPTIMIZATION_WEB_SDK_VERSION,
+        ...configuredEventBuilder?.library,
+      },
+    },
+    getAnonymousId: config.getAnonymousId ?? (() => LocalStore.anonymousId),
+    logLevel: LocalStore.debug ? 'debug' : logLevel,
+  }
 
   mergedConfig.allowedEventTypes ??= allowedEventTypes ?? ['identify', 'page']
 
@@ -250,8 +261,8 @@ class Optimization extends CoreStateful {
 
     super(mergedConfig)
 
-    const legacyCookieValue = Cookies.get(ANONYMOUS_ID_COOKIE_LEGACY)
-    const cookieValue = legacyCookieValue ?? Cookies.get(ANONYMOUS_ID_COOKIE)
+    const legacyCookieValue = getCookie(ANONYMOUS_ID_COOKIE_LEGACY)
+    const cookieValue = legacyCookieValue ?? getCookie(ANONYMOUS_ID_COOKIE)
 
     const entryInteractionRuntime = new EntryInteractionRuntime(this, autoTrackEntryInteraction)
     const { tracking } = entryInteractionRuntime
@@ -325,7 +336,7 @@ class Optimization extends CoreStateful {
    * @internal
    */
   private initializeFromCookieValues(cookieValue?: string, legacyCookieValue?: string): void {
-    if (legacyCookieValue) Cookies.remove(ANONYMOUS_ID_COOKIE_LEGACY)
+    if (legacyCookieValue) removeCookie(ANONYMOUS_ID_COOKIE_LEGACY, this.cookieAttributes)
 
     if (cookieValue && cookieValue !== LocalStore.anonymousId) {
       this.reset()
@@ -343,11 +354,11 @@ class Optimization extends CoreStateful {
    */
   private setAnonymousId(value?: string): void {
     if (!value) {
-      Cookies.remove(ANONYMOUS_ID_COOKIE)
+      removeCookie(ANONYMOUS_ID_COOKIE, this.cookieAttributes)
       LocalStore.anonymousId = undefined
       return
     }
-    Cookies.set(ANONYMOUS_ID_COOKIE, value, this.cookieAttributes)
+    setCookie(ANONYMOUS_ID_COOKIE, value, this.cookieAttributes)
     LocalStore.anonymousId = value
   }
 
@@ -369,7 +380,7 @@ class Optimization extends CoreStateful {
    */
   reset(): void {
     this.entryInteractionRuntime.reset()
-    Cookies.remove(ANONYMOUS_ID_COOKIE)
+    removeCookie(ANONYMOUS_ID_COOKIE, this.cookieAttributes)
     LocalStore.reset()
     super.reset()
   }

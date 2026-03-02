@@ -10,6 +10,7 @@ import {
 
 const defaultPerElOpts: PerElementEffectiveOptions = {
   dwellTimeMs: 1000,
+  viewDurationUpdateIntervalMs: 5000,
 }
 
 const makeState = (overrides: Partial<ElementState> = {}): ElementState => ({
@@ -21,6 +22,7 @@ const makeState = (overrides: Partial<ElementState> = {}): ElementState => ({
   visibleSince: null,
   fireTimer: null,
   attempts: 0,
+  componentViewId: null,
   done: false,
   inFlight: false,
   lastKnownVisible: false,

@@ -11,13 +11,13 @@
 <div align="center">
 
 [Readme](./README.md) · [Reference](https://contentful.github.io/optimization) ·
-[Contributing](/CONTRIBUTING.md)
+[Contributing](../../CONTRIBUTING.md)
 
 </div>
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is currently ALPHA! Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
 
 The Contentful Optimization API Client Library provides methods for interfacing with Contentful's
 Experience and Insights APIs, which serve its Personalization and Analytics products.
@@ -309,5 +309,5 @@ Configuration method signatures:
 - `buildTrack`: Builds a track event payload for arbitrary user actions
 
 See the
-[Event Builder documentation](../classes/_contentful_optimization-api-client.EventBuilder.html) for
-more information regarding arguments and return values.
+[Event Builder documentation](https://contentful.github.io/optimization/classes/_contentful_optimization-api-client.EventBuilder.html)
+for more information regarding arguments and return values.

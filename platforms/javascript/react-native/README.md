@@ -11,17 +11,17 @@
 <div align="center">
 
 [Readme](./README.md) · [Reference](https://contentful.github.io/optimization) ·
-[Contributing](/CONTRIBUTING.md)
+[Contributing](../../../CONTRIBUTING.md)
 
 </div>
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is currently ALPHA! Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
 
 The Optimization React Native SDK implements functionality specific to React Native applications,
-based on the [Optimization Core Library](/universal/core/README.md). This SDK is part of the
-[Contentful Optimization SDK Suite](/README.md).
+based on the [Optimization Core Library](../../../universal/core/README.md). This SDK is part of the
+[Contentful Optimization SDK Suite](../../../README.md).
 
 <details>
   <summary>Table of Contents</summary>
@@ -92,7 +92,7 @@ const optimization = await Optimization.create({
 
 ## Reference Implementation
 
-- [React Native](/implementations/react-native/README.md): Example application that displays
+- [React Native](../../../implementations/react-native/README.md): Example application that displays
   personalized content, with builds targeted for both Android and iOS
 
 ## Configuration

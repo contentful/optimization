@@ -2,9 +2,9 @@
 
 **Feature Branch**: `[003-experience-api-schemas]`  
 **Created**: 2026-02-26  
-**Status**: Draft  
-**Input**: User description: "Derive SpecKit-compatible specifications for Experience API schemas in
-`@contentful/optimization-api-schemas`."
+**Status**: Current (Pre-release)  
+**Input**: Repository behavior review for the current pre-release implementation (validated
+2026-03-02).
 
 ## User Scenarios & Testing _(mandatory)_
 

@@ -2,8 +2,8 @@
  * Lean IntersectionObserver-based dwell tracker for entry component views.
  *
  * Behavior:
- * - Fires callback once per observed element after dwell threshold in a single
- *   visibility cycle (no cross-cycle accumulation)
+ * - Fires callback after dwell threshold, then continues firing periodic
+ *   duration updates while the same visibility cycle remains active
  * - Pauses/resumes dwell timers across page visibility changes
  * - Coalesces concurrent callback attempts per element
  * - Sweeps orphan/disconnected element state to avoid leaks
@@ -29,6 +29,7 @@ import {
 } from './element-view-observer-support'
 
 const logger = createScopedLogger('Web:ElementViewObserver')
+const createComponentViewId = (): string => crypto.randomUUID()
 
 const addVisibilityChangeListener = (handler: () => void): (() => void) | undefined => {
   if (!CAN_ADD_LISTENERS) return undefined
@@ -41,8 +42,8 @@ const addVisibilityChangeListener = (handler: () => void): (() => void) | undefi
 }
 
 /**
- * Observe elements with `IntersectionObserver` and invoke a callback once each
- * element satisfies its configured dwell-time visibility requirement.
+ * Observe elements with `IntersectionObserver` and invoke a callback once dwell
+ * is satisfied, then emit periodic duration updates while visible.
  *
  * @public
  */
@@ -123,6 +124,10 @@ class ElementViewObserver {
   private static initOptions(options?: ElementViewObserverOptions): EffectiveObserverOptions {
     return {
       dwellTimeMs: Num.nonNeg(options?.dwellTimeMs, DEFAULTS.DWELL_MS),
+      viewDurationUpdateIntervalMs: Num.nonNeg(
+        options?.viewDurationUpdateIntervalMs,
+        DEFAULTS.VIEW_DURATION_UPDATE_INTERVAL_MS,
+      ),
       minVisibleRatio: Num.clamp01(options?.minVisibleRatio, DEFAULTS.RATIO),
       root: options?.root ?? null,
       rootMargin: options?.rootMargin ?? '0px',
@@ -132,6 +137,10 @@ class ElementViewObserver {
   private createState(element: Element, options?: ElementViewElementOptions): ElementState {
     const opts: PerElementEffectiveOptions = {
       dwellTimeMs: Num.nonNeg(options?.dwellTimeMs, this.opts.dwellTimeMs),
+      viewDurationUpdateIntervalMs: Num.nonNeg(
+        options?.viewDurationUpdateIntervalMs,
+        this.opts.viewDurationUpdateIntervalMs,
+      ),
     }
 
     const hasWeakRef = typeof WeakRef === 'function'
@@ -145,6 +154,7 @@ class ElementViewObserver {
       visibleSince: null,
       fireTimer: null,
       attempts: 0,
+      componentViewId: null,
       done: false,
       inFlight: false,
       lastKnownVisible: false,
@@ -210,6 +220,7 @@ class ElementViewObserver {
     if (!state.lastKnownVisible) {
       state.lastKnownVisible = true
       state.accumulatedMs = 0
+      state.componentViewId = createComponentViewId()
       state.visibleSince = isPageVisible() ? now : null
       clearFireTimer(state)
 
@@ -232,6 +243,7 @@ class ElementViewObserver {
     state.accumulatedMs = 0
     state.visibleSince = null
     state.attempts = 0
+    state.componentViewId = null
     clearFireTimer(state)
   }
 
@@ -241,14 +253,15 @@ class ElementViewObserver {
       state.inFlight ||
       state.fireTimer !== null ||
       !state.lastKnownVisible ||
-      !isPageVisible()
+      !isPageVisible() ||
+      state.componentViewId === null
     ) {
       return
     }
 
     const elapsed =
       state.accumulatedMs + (state.visibleSince !== null ? now - state.visibleSince : 0)
-    const remaining = state.opts.dwellTimeMs - elapsed
+    const remaining = ElementViewObserver.getRemainingMsUntilNextFire(state, elapsed)
 
     if (remaining <= 0) {
       this.trigger(state, now)
@@ -272,7 +285,7 @@ class ElementViewObserver {
   }
 
   private trigger(state: ElementState, now: number): void {
-    if (state.done || state.inFlight) return
+    if (state.done || state.inFlight || state.componentViewId === null) return
 
     if (state.visibleSince !== null) {
       state.accumulatedMs += now - state.visibleSince
@@ -286,7 +299,7 @@ class ElementViewObserver {
   }
 
   private async attemptCallback(state: ElementState, totalVisibleMs: number): Promise<void> {
-    if (state.done || state.inFlight) return
+    if (state.done || state.inFlight || state.componentViewId === null) return
 
     const element = derefElement(state)
 
@@ -297,23 +310,40 @@ class ElementViewObserver {
 
     state.inFlight = true
     state.attempts += 1
+    const { componentViewId } = state
 
     await safeCallAsync(
       async () => {
-        await this.callback(element, { totalVisibleMs, attempts: state.attempts, data: state.data })
+        await this.callback(element, {
+          totalVisibleMs,
+          componentViewId,
+          attempts: state.attempts,
+          data: state.data,
+        })
       },
       (error) => {
         logger.error('Error in element view callback:', error)
       },
     )
 
-    this.onAttemptSettled(state, element)
+    this.onAttemptSettled(state)
   }
 
-  private onAttemptSettled(state: ElementState, element: Element): void {
+  private onAttemptSettled(state: ElementState): void {
     state.inFlight = false
-    state.done = true
-    this.safeAutoUnobserve(element, state)
+
+    if (state.done || !state.lastKnownVisible || !isPageVisible()) return
+
+    const now = NOW()
+    state.visibleSince ??= now
+    this.scheduleFireIfDue(state, now)
+  }
+
+  private static getRemainingMsUntilNextFire(state: ElementState, elapsedMs: number): number {
+    const requiredElapsedMs =
+      state.opts.dwellTimeMs + state.attempts * state.opts.viewDurationUpdateIntervalMs
+
+    return requiredElapsedMs - elapsedMs
   }
 
   private finalizeDroppedState(state: ElementState): void {

@@ -125,7 +125,7 @@ describe('EntryClickTracker', () => {
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.start()
-    tracker.trackElement(entry, { data: { entryId: 'manual-entry' } })
+    tracker.enableElement(entry, { data: { entryId: 'manual-entry' } })
 
     entry.click()
 
@@ -148,8 +148,8 @@ describe('EntryClickTracker', () => {
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.start()
-    tracker.trackElement(entry, { data: { entryId: 'manual-entry' } })
-    tracker.untrackElement(entry)
+    tracker.enableElement(entry, { data: { entryId: 'manual-entry' } })
+    tracker.clearElement(entry)
 
     entry.click()
 
@@ -234,7 +234,90 @@ describe('EntryClickTracker', () => {
     cleanup()
   })
 
-  it('keeps manual data after auto-add when manually tracked before start', () => {
+  it('disables auto-tracked elements when explicitly disabled', () => {
+    const entry = document.createElement('button')
+    entry.dataset.ctflEntryId = 'dataset-entry'
+    document.body.append(entry)
+
+    const { core, trackComponentClick } = createCore()
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
+
+    tracker.start()
+    tracker.disableElement(entry)
+
+    entry.click()
+
+    expect(trackComponentClick).not.toHaveBeenCalled()
+
+    cleanup()
+  })
+
+  it('disables click tracking for auto-tracked entries via data-ctfl-track-clicks=false', () => {
+    const entry = document.createElement('button')
+    entry.dataset.ctflEntryId = 'dataset-entry'
+    entry.dataset.ctflTrackClicks = 'false'
+    document.body.append(entry)
+
+    const { core, trackComponentClick } = createCore()
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
+
+    tracker.start()
+    entry.click()
+
+    expect(trackComponentClick).not.toHaveBeenCalled()
+
+    cleanup()
+  })
+
+  it('force-enables click tracking via data-ctfl-track-clicks=true when auto-tracking is disabled', () => {
+    const entry = document.createElement('button')
+    entry.dataset.ctflEntryId = 'dataset-entry'
+    entry.dataset.ctflTrackClicks = 'true'
+    document.body.append(entry)
+
+    const { core, trackComponentClick } = createCore()
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
+
+    tracker.setAuto(false)
+    tracker.start()
+    entry.click()
+
+    expect(trackComponentClick).toHaveBeenCalledTimes(1)
+    expect(trackComponentClick).toHaveBeenCalledWith(
+      expect.objectContaining({
+        componentId: 'dataset-entry',
+      }),
+    )
+
+    cleanup()
+  })
+
+  it('uses manual click overrides over data attributes and falls back after clear', () => {
+    const entry = document.createElement('button')
+    entry.dataset.ctflEntryId = 'dataset-entry'
+    entry.dataset.ctflTrackClicks = 'false'
+    document.body.append(entry)
+
+    const { core, trackComponentClick } = createCore()
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
+
+    tracker.start()
+    tracker.enableElement(entry, { data: { entryId: 'manual-entry' } })
+    entry.click()
+    tracker.clearElement(entry)
+    entry.click()
+
+    expect(trackComponentClick).toHaveBeenCalledTimes(1)
+    expect(trackComponentClick).toHaveBeenCalledWith(
+      expect.objectContaining({
+        componentId: 'manual-entry',
+      }),
+    )
+
+    cleanup()
+  })
+
+  it('keeps manual data after auto-add when force-enabled before start', () => {
     const entry = document.createElement('button')
     entry.dataset.ctflEntryId = 'dataset-before-start'
     document.body.append(entry)
@@ -242,7 +325,7 @@ describe('EntryClickTracker', () => {
     const { core, trackComponentClick } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
-    tracker.trackElement(entry, { data: { entryId: 'manual-before-start' } })
+    tracker.enableElement(entry, { data: { entryId: 'manual-before-start' } })
     tracker.start()
     entry.click()
 
@@ -256,22 +339,20 @@ describe('EntryClickTracker', () => {
     cleanup()
   })
 
-  it('stops tracking removed auto entries after mutation flush', async () => {
+  it('stops tracking removed auto entries after mutation processing', async () => {
     const entry = document.createElement('button')
     entry.dataset.ctflEntryId = 'entry-removed'
     document.body.append(entry)
 
     const { core, trackComponentClick } = createCore()
-    const { cleanup, entryExistenceObserver, tracker } = createEntryTrackingHarness(
-      createEntryClickDetector(core),
-    )
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.start()
     entry.click()
 
     document.body.removeChild(entry)
     await Promise.resolve()
-    entryExistenceObserver.flush()
+    await Promise.resolve()
 
     entry.click()
 
