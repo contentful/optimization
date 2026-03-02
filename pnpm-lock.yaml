@@ -515,6 +515,55 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
+  platforms/javascript/web-frameworks/react-web:
+    dependencies:
+      '@contentful/optimization-web':
+        specifier: workspace:*
+        version: link:../../web
+      react:
+        specifier: 19.2.3
+        version: 19.2.3
+      react-dom:
+        specifier: 19.2.3
+        version: 19.2.3(react@19.2.3)
+    devDependencies:
+      '@rsbuild/core':
+        specifier: 'catalog:'
+        version: 1.7.3
+      '@rsbuild/plugin-react':
+        specifier: ^1.4.2
+        version: 1.4.5(@rsbuild/core@1.7.3)
+      '@rslib/core':
+        specifier: 'catalog:'
+        version: 0.19.6(@microsoft/api-extractor@7.56.3(@types/node@24.10.13))(typescript@5.9.3)
+      '@rstest/core':
+        specifier: 'catalog:'
+        version: 0.8.5(happy-dom@20.6.1)
+      '@rstest/coverage-istanbul':
+        specifier: 'catalog:'
+        version: 0.2.1(@rstest/core@0.8.5(happy-dom@20.6.1))
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      build-tools:
+        specifier: workspace:*
+        version: link:../../../../lib/build-tools
+      happy-dom:
+        specifier: 'catalog:'
+        version: 20.6.1
+      rimraf:
+        specifier: 'catalog:'
+        version: 6.1.3
+      tslib:
+        specifier: 'catalog:'
+        version: 2.8.1
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
   platforms/javascript/web-preview-panel:
     dependencies:
       '@contentful/optimization-web':
@@ -2129,6 +2178,11 @@ packages:
       '@rsbuild/core':
         optional: true
 
+  '@rsbuild/plugin-react@1.4.5':
+    resolution: {integrity: sha512-eS2sXCedgGA/7bLu8yVtn48eE/GyPbXx4Q7OcutB01IQ1D2y8WSMBys4nwfrecy19utvw4NPn4gYDy52316+vg==}
+    peerDependencies:
+      '@rsbuild/core': ^1.0.0 || ^2.0.0-0
+
   '@rsdoctor/client@1.5.2':
     resolution: {integrity: sha512-fufNlCiA4+MDj3ZW8ssEdRI9mwawdqSSYvqOOK01+NNIg3TuQNgEdnF/QVGnkxKLgVXJCtUdOKaZtUq1bwnJVQ==}
 
@@ -2243,6 +2297,15 @@ packages:
 
   '@rspack/lite-tapable@1.1.0':
     resolution: {integrity: sha512-E2B0JhYFmVAwdDiG14+DW0Di4Ze4Jg10Pc4/lILUrd5DRCaklduz2OvJ5HYQ6G+hd+WTzqQb3QnDNfK4yvAFYw==}
+
+  '@rspack/plugin-react-refresh@1.6.1':
+    resolution: {integrity: sha512-eqqW5645VG3CzGzFgNg5HqNdHVXY+567PGjtDhhrM8t67caxmsSzRmT5qfoEIfBcGgFkH9vEg7kzXwmCYQdQDw==}
+    peerDependencies:
+      react-refresh: '>=0.10.0 <1.0.0'
+      webpack-hot-middleware: 2.x
+    peerDependenciesMeta:
+      webpack-hot-middleware:
+        optional: true
 
   '@rstest/core@0.8.5':
     resolution: {integrity: sha512-4E9pXpy2Jxy1+J4mqGnsVQn7gVnkIv2lA7AbwAY0Zy90jJo+YCchpTGosba/jhBJJhETRAr3GIkPUECxFoyQ9A==}
@@ -2462,6 +2525,11 @@ packages:
 
   '@types/range-parser@1.2.7':
     resolution: {integrity: sha512-hKormJbkJqzQGhziax5PItDUTMAM9uE2XXQmM37dyd4hVM+5aVl7oVxMVUiVQn2oCQFN/LKCZdvSM0pFRqbSmQ==}
+
+  '@types/react-dom@19.2.3':
+    resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
+    peerDependencies:
+      '@types/react': ^19.2.0
 
   '@types/react-test-renderer@19.1.0':
     resolution: {integrity: sha512-XD0WZrHqjNrxA/MaR9O22w/RNidWR9YZmBdRGI7wcnWGrv/3dA8wKCJ8m63Sn+tLJhcjmuhOi629N66W6kgWzQ==}
@@ -4593,6 +4661,9 @@ packages:
     resolution: {integrity: sha512-HRcs+2mr52W0K+x8RzcLzuPPmVIKMSv97RGHy0Ea9y/mpcaK+xTrjICA04KAHi4GRzxliNqNJEFYWHghy3rSfQ==}
     engines: {node: '>= 6.0.0'}
 
+  html-entities@2.6.0:
+    resolution: {integrity: sha512-kig+rMn/QOVRvr7c86gQ8lWXq+Hkv6CbAH1hLu+RG338StTpE8Z0b44SDVaqVu7HGKf27frdmUYEs9hTUX/cLQ==}
+
   html-escaper@2.0.2:
     resolution: {integrity: sha512-H2iMtd0I4Mt5eYiapRdIDjp+XzelXQ0tFE4JS7YFwFevXXMmOp9myNrUvCg0D6ws8iqkRPBfKHgbwig1SmlLfg==}
 
@@ -6332,6 +6403,11 @@ packages:
   react-devtools-core@6.1.5:
     resolution: {integrity: sha512-ePrwPfxAnB+7hgnEr8vpKxL9cmnp7F322t8oqcPshbIQQhDKgFDW4tjhF2wjVbdXF9O/nyuy3sQWd9JGpiLPvA==}
 
+  react-dom@19.2.3:
+    resolution: {integrity: sha512-yELu4WmLPw5Mr/lmeEpox5rw3RETacE++JgHqQzd2dg+YbJuat3jH4ingc+WPZhxaoFzdv9y33G+F7Nl5O0GBg==}
+    peerDependencies:
+      react: ^19.2.3
+
   react-is@18.3.1:
     resolution: {integrity: sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==}
 
@@ -6371,6 +6447,10 @@ packages:
 
   react-refresh@0.14.2:
     resolution: {integrity: sha512-jCvmsr+1IUSMUyzOkRcvnVbX3ZYC6g9TDrDbFuFmRDq7PD4yaGbLKNQL6k2jnArV8hjYxh7hVhAZB6s9HDGpZA==}
+    engines: {node: '>=0.10.0'}
+
+  react-refresh@0.18.0:
+    resolution: {integrity: sha512-QgT5//D3jfjJb6Gsjxv0Slpj23ip+HtOpnNgnb2S5zU3CB26G/IDPGoy4RJB42wzFE46DRsstbW6tKHoKbhAxw==}
     engines: {node: '>=0.10.0'}
 
   react-test-renderer@19.2.3:
@@ -9357,6 +9437,14 @@ snapshots:
     optionalDependencies:
       '@rsbuild/core': 1.7.3
 
+  '@rsbuild/plugin-react@1.4.5(@rsbuild/core@1.7.3)':
+    dependencies:
+      '@rsbuild/core': 1.7.3
+      '@rspack/plugin-react-refresh': 1.6.1(react-refresh@0.18.0)
+      react-refresh: 0.18.0
+    transitivePeerDependencies:
+      - webpack-hot-middleware
+
   '@rsdoctor/client@1.5.2': {}
 
   '@rsdoctor/core@1.5.2(@rsbuild/core@1.7.3)(@rspack/core@1.7.6(@swc/helpers@0.5.18))':
@@ -9518,6 +9606,12 @@ snapshots:
       '@swc/helpers': 0.5.18
 
   '@rspack/lite-tapable@1.1.0': {}
+
+  '@rspack/plugin-react-refresh@1.6.1(react-refresh@0.18.0)':
+    dependencies:
+      error-stack-parser: 2.1.4
+      html-entities: 2.6.0
+      react-refresh: 0.18.0
 
   '@rstest/core@0.8.5(happy-dom@20.6.1)':
     dependencies:
@@ -9767,6 +9861,10 @@ snapshots:
   '@types/qs@6.14.0': {}
 
   '@types/range-parser@1.2.7': {}
+
+  '@types/react-dom@19.2.3(@types/react@19.2.14)':
+    dependencies:
+      '@types/react': 19.2.14
 
   '@types/react-test-renderer@19.1.0':
     dependencies:
@@ -12444,6 +12542,8 @@ snapshots:
 
   hoopy@0.1.4: {}
 
+  html-entities@2.6.0: {}
+
   html-escaper@2.0.2: {}
 
   htmlparser2@10.0.0:
@@ -14737,6 +14837,11 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
+  react-dom@19.2.3(react@19.2.3):
+    dependencies:
+      react: 19.2.3
+      scheduler: 0.27.0
+
   react-is@18.3.1: {}
 
   react-is@19.2.4: {}
@@ -14807,6 +14912,8 @@ snapshots:
       - utf-8-validate
 
   react-refresh@0.14.2: {}
+
+  react-refresh@0.18.0: {}
 
   react-test-renderer@19.2.3(react@19.2.3):
     dependencies:

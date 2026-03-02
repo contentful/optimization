@@ -1,13 +1,15 @@
-import type { ReactNode } from 'react'
+import type { PropsWithChildren, ReactElement } from 'react'
 
 import { OptimizationProvider } from '../provider/OptimizationProvider'
 import type { OptimizationWebSdkOrNull } from '../types'
 
-export interface OptimizationRootProps {
-  readonly children?: ReactNode
+export interface OptimizationRootProps extends PropsWithChildren {
   readonly optimization?: OptimizationWebSdkOrNull
 }
 
-export function OptimizationRoot({ children, optimization }: OptimizationRootProps): ReactNode {
+export function OptimizationRoot({
+  children,
+  optimization,
+}: OptimizationRootProps): ReactElement {
   return <OptimizationProvider optimization={optimization}>{children}</OptimizationProvider>
 }
