@@ -541,7 +541,7 @@ importers:
         version: 1.4.5(@rsbuild/core@1.7.3)
       '@rslib/core':
         specifier: 'catalog:'
-        version: 0.19.6(@microsoft/api-extractor@7.56.3(@types/node@24.10.13))(typescript@5.9.3)
+        version: 0.19.6(@microsoft/api-extractor@7.57.6(@types/node@24.10.13))(typescript@5.9.3)
       '@rstest/core':
         specifier: 'catalog:'
         version: 0.8.5(happy-dom@20.6.1)
