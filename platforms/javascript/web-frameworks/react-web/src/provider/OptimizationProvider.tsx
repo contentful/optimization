@@ -1,12 +1,17 @@
 import type { PropsWithChildren, ReactElement } from 'react'
 
-import type { OptimizationWebSdkOrNull } from '../types'
+import { OptimizationContext } from '../context/OptimizationContext'
+import type { OptimizationWebSdk } from '../types'
 
 export interface OptimizationProviderProps extends PropsWithChildren {
-  readonly optimization?: OptimizationWebSdkOrNull
+  readonly instance: OptimizationWebSdk
 }
 
-export function OptimizationProvider({ children }: OptimizationProviderProps): ReactElement {
-  // Scaffold placeholder: context wiring will be implemented in follow-up tickets.
-  return <>{children}</>
+export function OptimizationProvider({
+  children,
+  instance,
+}: OptimizationProviderProps): ReactElement {
+  return (
+    <OptimizationContext.Provider value={{ instance }}>{children}</OptimizationContext.Provider>
+  )
 }
