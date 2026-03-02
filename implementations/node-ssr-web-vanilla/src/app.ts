@@ -2,6 +2,7 @@ import Optimization, {
   type OptimizationData,
   type UniversalEventBuilderArgs,
 } from '@contentful/optimization-node'
+import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import cookieParser from 'cookie-parser'
 import express, { type Express, type Request, type Response } from 'express'
 import rateLimit from 'express-rate-limit'
@@ -84,15 +85,13 @@ function getUniversalEventBuilderArgs(req: Request): UniversalEventBuilderArgs {
   }
 }
 
-const anonymousIdCookie = 'ctfl-opt-aid'
-
 function getAnonymousIdFromCookies(cookies: unknown): string | undefined {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- req.cookies is of type any
-  return (cookies as Record<string, string>)[anonymousIdCookie] ?? undefined
+  return (cookies as Record<string, string>)[ANONYMOUS_ID_COOKIE] ?? undefined
 }
 
 function respond(res: Response, id: string, userId?: string): void {
-  res.cookie(anonymousIdCookie, id, {
+  res.cookie(ANONYMOUS_ID_COOKIE, id, {
     path: '/',
     sameSite: 'lax', // good default for same-site apps
   })
