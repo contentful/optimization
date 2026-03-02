@@ -38,5 +38,5 @@ pnpm dev
 
 - package metadata and dual module exports
 - `rslib`/`rsbuild`/`rstest`/TypeScript baseline aligned with Web SDK patterns
-- placeholder React-facing API surface (provider/root/personalization/analytics/hooks)
-- scaffold dev dashboard sections for consent, identify/reset, state, events, and entries
+- placeholder React-facing API surface in `src/` (provider/root/personalization/analytics/hooks)
+- scaffold dev dashboard harness in `dev/` for consent, identify/reset, state, events, and entries

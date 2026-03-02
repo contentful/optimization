@@ -14,7 +14,7 @@
     "tsBuildInfoFile": "./.tsbuildinfo"
   },
   "include": ["./src/**/*", "./src/**/*.json"],
-  "exclude": ["./src/**/*.test.*", "./src/dev/**/*"],
+  "exclude": ["./src/**/*.test.*", "./dev/**/*"],
   "extends": "../../../../tsconfig.base.json",
   "references": [{ "path": "../../web/tsconfig.build.json" }]
 }

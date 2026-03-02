@@ -26,7 +26,7 @@ export default defineConfig({
   plugins: [pluginReact()],
   source: {
     entry: {
-      index: './src/dev/main.tsx',
+      index: './dev/main.tsx',
     },
     tsconfigPath: './tsconfig.json',
     define: {
