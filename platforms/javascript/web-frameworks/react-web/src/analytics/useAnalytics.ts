@@ -9,8 +9,14 @@ export interface UseAnalyticsResult {
 export function useAnalytics(): UseAnalyticsResult {
   // Scaffold placeholder: analytics calls will proxy to the web SDK in follow-up work.
   return {
-    track: async (_input: AnalyticsEventInput): Promise<void> => {},
-    identify: async (_id: string): Promise<void> => {},
-    reset: async (): Promise<void> => {},
+    track: async (_input: AnalyticsEventInput): Promise<void> => {
+      await Promise.resolve()
+    },
+    identify: async (_id: string): Promise<void> => {
+      await Promise.resolve()
+    },
+    reset: async (): Promise<void> => {
+      await Promise.resolve()
+    },
   }
 }

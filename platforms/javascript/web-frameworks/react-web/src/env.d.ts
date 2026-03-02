@@ -1,3 +1,3 @@
-/// <reference types="@rsbuild/core/types" />
+import '@rsbuild/core/types'
 
 declare module '*.css'
