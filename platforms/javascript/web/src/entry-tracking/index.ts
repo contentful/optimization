@@ -7,7 +7,7 @@ export * from './view/ElementViewObserver'
 export { default as ElementViewObserver } from './view/ElementViewObserver'
 
 export * from './click/createEntryClickDetector'
-export * from './EntryInteractionTrackerHost'
+export type * from './EntryInteractionDetector'
 export * from './registry/EntryElementRegistry'
 export * from './resolveAutoTrackEntryInteractionOptions'
 export * from './resolveComponentTrackingPayload'

@@ -110,6 +110,18 @@ const getQueuedBatchCount = (analytics: AnalyticsStateful): number => {
   return queue instanceof Map ? queue.size : 0
 }
 
+const createViewPayload = (
+  componentId: string,
+): {
+  componentId: string
+  componentViewId: string
+  viewDurationMs: number
+} => ({
+  componentId,
+  componentViewId: `${componentId}-view-id`,
+  viewDurationMs: 1000,
+})
+
 describe('AnalyticsStateful.flush policy', () => {
   beforeEach(() => {
     batch(() => {
@@ -131,7 +143,7 @@ describe('AnalyticsStateful.flush policy', () => {
       .mockResolvedValue(true)
     const analytics = createAnalytics({ sendBatchEvents })
 
-    await analytics.trackComponentView({ componentId: 'hero-banner' })
+    await analytics.trackComponentView(createViewPayload('hero-banner'))
 
     const sameProfileId: Profile = {
       ...DEFAULT_PROFILE,
@@ -142,7 +154,7 @@ describe('AnalyticsStateful.flush policy', () => {
 
     profile.value = sameProfileId
 
-    await analytics.trackFlagView({ componentId: 'promo-flag' })
+    await analytics.trackFlagView(createViewPayload('promo-flag'))
     await analytics.trackComponentClick({ componentId: 'hero-cta' })
 
     expect(getQueuedEventCount(analytics)).toBe(3)
@@ -207,7 +219,7 @@ describe('AnalyticsStateful.flush policy', () => {
       },
     })
 
-    await analytics.trackComponentView({ componentId: 'hero-banner' })
+    await analytics.trackComponentView(createViewPayload('hero-banner'))
     await analytics.flush()
 
     expect(sendBatchEvents).toHaveBeenCalledTimes(1)
@@ -256,7 +268,7 @@ describe('AnalyticsStateful.flush policy', () => {
       },
     })
 
-    await analytics.trackComponentView({ componentId: 'hero-banner' })
+    await analytics.trackComponentView(createViewPayload('hero-banner'))
     await analytics.flush()
 
     expect(sendBatchEvents).toHaveBeenCalledTimes(1)
@@ -300,7 +312,7 @@ describe('AnalyticsStateful.flush policy', () => {
       },
     })
 
-    await analytics.trackComponentView({ componentId: 'hero-banner' })
+    await analytics.trackComponentView(createViewPayload('hero-banner'))
     await analytics.flush()
 
     expect(sendBatchEvents).toHaveBeenCalledTimes(1)
@@ -336,7 +348,7 @@ describe('AnalyticsStateful.flush policy', () => {
       },
     })
 
-    await analytics.trackComponentView({ componentId: 'hero-banner' })
+    await analytics.trackComponentView(createViewPayload('hero-banner'))
     await analytics.flush()
 
     expect(sendBatchEvents).toHaveBeenCalledTimes(1)

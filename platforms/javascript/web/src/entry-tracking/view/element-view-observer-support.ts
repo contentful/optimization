@@ -65,6 +65,8 @@ export const isPageVisible = (): boolean =>
 export const DEFAULTS = {
   /** Default dwell time in ms before firing. */
   DWELL_MS: 1000,
+  /** Default view-duration update interval in ms after dwell has fired. */
+  VIEW_DURATION_UPDATE_INTERVAL_MS: 5000,
   /** Default minimum intersection ratio considered visible. */
   RATIO: 0.1,
   /** Interval for sweeping orphaned states in ms. */
@@ -81,6 +83,8 @@ export const DEFAULTS = {
 export interface ElementViewCallbackInfo {
   /** Total number of milliseconds the element has been visible. */
   readonly totalVisibleMs: number
+  /** UUID identifying the active view session for the observed element. */
+  readonly componentViewId: string
   /** How many attempts have been made (including the current one). */
   readonly attempts: number
   /** Optional user data associated with the element. */
@@ -88,7 +92,7 @@ export interface ElementViewCallbackInfo {
 }
 
 /**
- * Callback invoked once per element after the dwell requirement is met.
+ * Callback invoked after dwell is met and on periodic duration updates while visible.
  *
  * @public
  */
@@ -105,6 +109,8 @@ export type ElementViewCallback = (
 export interface ElementViewObserverOptions {
   /** Required visible time (in ms) before the callback is fired. */
   readonly dwellTimeMs?: number
+  /** Interval (in ms) for view-duration callback updates after dwell fires. */
+  readonly viewDurationUpdateIntervalMs?: number
   /** Minimum intersection ratio (0-1) considered visible. */
   readonly minVisibleRatio?: number
   /** IntersectionObserver root. Default: null (viewport). */
@@ -121,6 +127,8 @@ export interface ElementViewObserverOptions {
 export interface ElementViewElementOptions {
   /** Per-element dwell time override in ms. */
   readonly dwellTimeMs?: number
+  /** Per-element override of view-duration update interval in ms. */
+  readonly viewDurationUpdateIntervalMs?: number
   /** Arbitrary data to pass through to the callback for this element. */
   readonly data?: unknown
   /**
@@ -138,7 +146,10 @@ export interface ElementViewElementOptions {
  * @internal
  */
 export type EffectiveObserverOptions = Required<
-  Pick<ElementViewObserverOptions, 'dwellTimeMs' | 'minVisibleRatio' | 'root' | 'rootMargin'>
+  Pick<
+    ElementViewObserverOptions,
+    'dwellTimeMs' | 'viewDurationUpdateIntervalMs' | 'minVisibleRatio' | 'root' | 'rootMargin'
+  >
 >
 
 /**
@@ -146,7 +157,9 @@ export type EffectiveObserverOptions = Required<
  *
  * @internal
  */
-export type PerElementEffectiveOptions = Required<Pick<EffectiveObserverOptions, 'dwellTimeMs'>>
+export type PerElementEffectiveOptions = Required<
+  Pick<EffectiveObserverOptions, 'dwellTimeMs' | 'viewDurationUpdateIntervalMs'>
+>
 
 /**
  * Internal per-element state tracked by the observer.
@@ -170,6 +183,8 @@ export interface ElementState {
   fireTimer: Timer | null
   /** Number of attempts performed so far. */
   attempts: number
+  /** UUID identifying the active view session while visible. */
+  componentViewId: string | null
   /** True once the callback attempt has settled for this element. */
   done: boolean
   /** True while a callback attempt is in flight. */

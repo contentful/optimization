@@ -1,146 +1,234 @@
+import * as clickDetectorModule from './click/createEntryClickDetector'
+import type { EntryInteractionDetector } from './EntryInteractionDetector'
 import { EntryInteractionRuntime } from './EntryInteractionRuntime'
-import { EntryInteractionTrackerHost } from './EntryInteractionTrackerHost'
 import ElementExistenceObserver from './registry/ElementExistenceObserver'
 import { EntryElementRegistry } from './registry/EntryElementRegistry'
+import * as viewDetectorModule from './view/createEntryViewDetector'
 
-function createRuntime(autoTrack?: { clicks?: boolean; views?: boolean }): EntryInteractionRuntime {
+interface DetectorMocks<
+  TStartOptions = never,
+  TElementOptions = never,
+> extends EntryInteractionDetector<TStartOptions, TElementOptions> {
+  start: ReturnType<typeof rs.fn>
+  stop: ReturnType<typeof rs.fn>
+  setAuto: ReturnType<typeof rs.fn>
+  onEntryAdded: ReturnType<typeof rs.fn>
+  onEntryRemoved: ReturnType<typeof rs.fn>
+  onError: ReturnType<typeof rs.fn>
+  enableElement: ReturnType<typeof rs.fn>
+  disableElement: ReturnType<typeof rs.fn>
+  clearElement: ReturnType<typeof rs.fn>
+}
+
+const createDetectorMocks = <TStartOptions, TElementOptions>(): DetectorMocks<
+  TStartOptions,
+  TElementOptions
+> => ({
+  start: rs.fn(),
+  stop: rs.fn(),
+  setAuto: rs.fn(),
+  onEntryAdded: rs.fn(),
+  onEntryRemoved: rs.fn(),
+  onError: rs.fn(),
+  enableElement: rs.fn(),
+  disableElement: rs.fn(),
+  clearElement: rs.fn(),
+})
+
+function createRuntime(autoTrack?: { clicks?: boolean; views?: boolean }): {
+  runtime: EntryInteractionRuntime
+  clickDetector: DetectorMocks<undefined, { data?: unknown }>
+  viewDetector: DetectorMocks<
+    | {
+        dwellTimeMs?: number
+        minVisibleRatio?: number
+        viewDurationUpdateIntervalMs?: number
+      }
+    | undefined,
+    {
+      data?: unknown
+      dwellTimeMs?: number
+      viewDurationUpdateIntervalMs?: number
+    }
+  >
+} {
   const core = {
     trackComponentClick: rs.fn().mockResolvedValue(undefined),
     trackComponentView: rs.fn().mockResolvedValue(undefined),
   }
+  const clickDetector = createDetectorMocks<undefined, { data?: unknown }>()
+  const viewDetector = createDetectorMocks<
+    | {
+        dwellTimeMs?: number
+        minVisibleRatio?: number
+        viewDurationUpdateIntervalMs?: number
+      }
+    | undefined,
+    { data?: unknown; dwellTimeMs?: number; viewDurationUpdateIntervalMs?: number }
+  >()
 
-  return new EntryInteractionRuntime(core, autoTrack)
+  rs.spyOn(clickDetectorModule, 'createEntryClickDetector').mockReturnValue(clickDetector)
+  rs.spyOn(viewDetectorModule, 'createEntryViewDetector').mockReturnValue(viewDetector)
+
+  return {
+    runtime: new EntryInteractionRuntime(core, autoTrack),
+    clickDetector,
+    viewDetector,
+  }
 }
 
 describe('EntryInteractionRuntime', () => {
+  const isAutoTrackState = (value: unknown): value is Record<'clicks' | 'views', boolean> => {
+    if (!value || typeof value !== 'object') return false
+
+    const clicks = Reflect.get(value, 'clicks')
+    const views = Reflect.get(value, 'views')
+
+    return typeof clicks === 'boolean' && typeof views === 'boolean'
+  }
+
+  const getAutoTrack = (runtime: EntryInteractionRuntime): Record<'clicks' | 'views', boolean> => {
+    const value = Reflect.get(runtime, 'autoTrack')
+
+    if (!isAutoTrackState(value)) {
+      throw new Error('Expected runtime auto-track state to be available')
+    }
+
+    return value
+  }
+
   afterEach(() => {
     rs.restoreAllMocks()
   })
 
   it('enables interactions through tracking API and forwards start options', () => {
-    const startSpy = rs
-      .spyOn(EntryInteractionTrackerHost.prototype, 'start')
-      .mockImplementation(() => undefined)
-    const stopSpy = rs
-      .spyOn(EntryInteractionTrackerHost.prototype, 'stop')
-      .mockImplementation(() => undefined)
-
-    const runtime = createRuntime()
+    const { clickDetector, runtime, viewDetector } = createRuntime()
 
     runtime.tracking.enable('clicks')
     runtime.tracking.enable('views', { dwellTimeMs: 250, minVisibleRatio: 0.25 })
 
-    expect(runtime.autoTrackEntryInteractions.clicks).toBe(true)
-    expect(runtime.autoTrackEntryInteractions.views).toBe(true)
-    expect(stopSpy).toHaveBeenCalledTimes(2)
-    expect(startSpy).toHaveBeenCalledTimes(2)
-    expect(startSpy).toHaveBeenNthCalledWith(1)
-    expect(startSpy).toHaveBeenNthCalledWith(2, {
+    expect(getAutoTrack(runtime).clicks).toBe(true)
+    expect(getAutoTrack(runtime).views).toBe(true)
+    expect(clickDetector.setAuto).toHaveBeenCalledWith(true)
+    expect(viewDetector.setAuto).toHaveBeenCalledWith(true)
+    expect(clickDetector.start).toHaveBeenCalledWith()
+    expect(viewDetector.start).toHaveBeenCalledWith({
       dwellTimeMs: 250,
       minVisibleRatio: 0.25,
     })
   })
 
-  it('forwards observe and unobserve to the respective interaction tracker', () => {
-    const trackSpy = rs
-      .spyOn(EntryInteractionTrackerHost.prototype, 'trackElement')
-      .mockImplementation(() => undefined)
-    const untrackSpy = rs
-      .spyOn(EntryInteractionTrackerHost.prototype, 'untrackElement')
-      .mockImplementation(() => undefined)
-    const runtime = createRuntime()
+  it('disables interactions globally by setting their auto-track flag to false', () => {
+    const { clickDetector, runtime } = createRuntime({ clicks: true })
+
+    runtime.tracking.enable('clicks')
+    runtime.tracking.disable('clicks')
+
+    expect(getAutoTrack(runtime).clicks).toBe(false)
+    expect(clickDetector.stop).toHaveBeenCalledTimes(1)
+  })
+
+  it('forwards per-element override APIs to interaction trackers', () => {
+    const { runtime, viewDetector } = createRuntime()
     const element = document.createElement('div')
 
-    runtime.tracking.observe('clicks', element, { data: { entryId: 'click-entry' } })
-    runtime.tracking.observe('views', element, {
+    runtime.tracking.enable('views')
+    runtime.tracking.enableElement('views', element, {
       data: { entryId: 'view-entry' },
       dwellTimeMs: 10,
     })
-    runtime.tracking.unobserve('clicks', element)
-    runtime.tracking.unobserve('views', element)
+    runtime.tracking.disableElement('views', element)
+    runtime.tracking.clearElement('views', element)
 
-    expect(trackSpy).toHaveBeenCalledTimes(2)
-    expect(trackSpy).toHaveBeenNthCalledWith(1, element, { data: { entryId: 'click-entry' } })
-    expect(trackSpy).toHaveBeenNthCalledWith(2, element, {
+    expect(viewDetector.enableElement).toHaveBeenCalledWith(element, {
       data: { entryId: 'view-entry' },
       dwellTimeMs: 10,
     })
-    expect(untrackSpy).toHaveBeenCalledTimes(2)
-    expect(untrackSpy).toHaveBeenNthCalledWith(1, element)
-    expect(untrackSpy).toHaveBeenNthCalledWith(2, element)
+    expect(viewDetector.disableElement).toHaveBeenCalledWith(element)
+    expect(viewDetector.clearElement).toHaveBeenCalledWith(element)
+  })
+
+  it('allows force-enabled elements to run when global auto-tracking is disabled', () => {
+    const { clickDetector, runtime } = createRuntime({ clicks: false })
+    const element = document.createElement('div')
+
+    runtime.tracking.enableElement('clicks', element, { data: { entryId: 'entry-1' } })
+
+    expect(clickDetector.start).toHaveBeenCalledTimes(1)
+    expect(clickDetector.setAuto).toHaveBeenCalledWith(false)
+  })
+
+  it('stops force-enabled-only interactions after clearing the final override', () => {
+    const { clickDetector, runtime } = createRuntime({ clicks: false })
+    const element = document.createElement('div')
+
+    runtime.tracking.enableElement('clicks', element, { data: { entryId: 'entry-1' } })
+    runtime.tracking.clearElement('clicks', element)
+
+    expect(clickDetector.stop).toHaveBeenCalledTimes(1)
   })
 
   it('syncs auto-tracked interactions with consent state', () => {
-    const startSpy = rs
-      .spyOn(EntryInteractionTrackerHost.prototype, 'start')
-      .mockImplementation(() => undefined)
-    const stopSpy = rs
-      .spyOn(EntryInteractionTrackerHost.prototype, 'stop')
-      .mockImplementation(() => undefined)
-    const runtime = createRuntime({ clicks: true, views: true })
+    const { clickDetector, runtime, viewDetector } = createRuntime({ clicks: true, views: true })
 
     runtime.syncAutoTrackedEntryInteractions(true)
-    expect(startSpy).toHaveBeenCalledTimes(2)
-    expect(stopSpy).toHaveBeenCalledTimes(2)
+    expect(clickDetector.start).toHaveBeenCalledTimes(1)
+    expect(viewDetector.start).toHaveBeenCalledTimes(1)
 
     runtime.syncAutoTrackedEntryInteractions(false)
-    expect(startSpy).toHaveBeenCalledTimes(2)
-    expect(stopSpy).toHaveBeenCalledTimes(4)
+    expect(clickDetector.stop).toHaveBeenCalledTimes(1)
+    expect(viewDetector.stop).toHaveBeenCalledTimes(1)
   })
 
   it('does not start or stop interactions when auto-tracking is disabled', () => {
-    const startSpy = rs
-      .spyOn(EntryInteractionTrackerHost.prototype, 'start')
-      .mockImplementation(() => undefined)
-    const stopSpy = rs
-      .spyOn(EntryInteractionTrackerHost.prototype, 'stop')
-      .mockImplementation(() => undefined)
-    const runtime = createRuntime({ clicks: false, views: false })
+    const { clickDetector, runtime, viewDetector } = createRuntime({ clicks: false, views: false })
 
     runtime.syncAutoTrackedEntryInteractions(true)
     runtime.syncAutoTrackedEntryInteractions(false)
 
-    expect(startSpy).not.toHaveBeenCalled()
-    expect(stopSpy).not.toHaveBeenCalled()
+    expect(clickDetector.start).not.toHaveBeenCalled()
+    expect(viewDetector.start).not.toHaveBeenCalled()
+    expect(clickDetector.stop).not.toHaveBeenCalled()
+    expect(viewDetector.stop).not.toHaveBeenCalled()
   })
 
-  it('disables a single interaction through tracking API', () => {
-    const stopSpy = rs
-      .spyOn(EntryInteractionTrackerHost.prototype, 'stop')
-      .mockImplementation(() => undefined)
-    const runtime = createRuntime()
+  it('restarts an interaction when re-enabled with new start options', () => {
+    const { runtime, viewDetector } = createRuntime()
 
-    runtime.tracking.disable('clicks')
+    runtime.tracking.enable('views', { dwellTimeMs: 50 })
+    runtime.tracking.enable('views', { dwellTimeMs: 100 })
 
-    expect(stopSpy).toHaveBeenCalledTimes(1)
+    expect(viewDetector.stop).toHaveBeenCalledTimes(1)
+    expect(viewDetector.start).toHaveBeenCalledTimes(2)
+    expect(viewDetector.start).toHaveBeenNthCalledWith(2, { dwellTimeMs: 100 })
   })
 
-  it('reset stops all interaction trackers', () => {
-    const stopSpy = rs
-      .spyOn(EntryInteractionTrackerHost.prototype, 'stop')
-      .mockImplementation(() => undefined)
-    const runtime = createRuntime()
+  it('reset stops all interaction trackers and clears element overrides', () => {
+    const { clickDetector, runtime, viewDetector } = createRuntime({ clicks: false })
+    const element = document.createElement('div')
 
+    runtime.tracking.enableElement('clicks', element, { data: { entryId: 'entry-reset' } })
     runtime.reset()
+    runtime.tracking.clearElement('clicks', element)
 
-    expect(stopSpy).toHaveBeenCalledTimes(2)
+    expect(clickDetector.stop).toHaveBeenCalledTimes(1)
+    expect(viewDetector.stop).toHaveBeenCalledTimes(1)
+    expect(clickDetector.clearElement).not.toHaveBeenCalled()
   })
 
   it('destroy stops trackers and disconnects shared registry and observer', () => {
-    const stopSpy = rs
-      .spyOn(EntryInteractionTrackerHost.prototype, 'stop')
-      .mockImplementation(() => undefined)
+    const { clickDetector, runtime, viewDetector } = createRuntime()
     const registryDisconnectSpy = rs
       .spyOn(EntryElementRegistry.prototype, 'disconnect')
       .mockImplementation(() => undefined)
     const observerDisconnectSpy = rs
       .spyOn(ElementExistenceObserver.prototype, 'disconnect')
       .mockImplementation(() => undefined)
-    const runtime = createRuntime()
 
     runtime.destroy()
 
-    expect(stopSpy).toHaveBeenCalledTimes(2)
+    expect(clickDetector.stop).toHaveBeenCalledTimes(1)
+    expect(viewDetector.stop).toHaveBeenCalledTimes(1)
     expect(registryDisconnectSpy).toHaveBeenCalledTimes(1)
     expect(observerDisconnectSpy).toHaveBeenCalledTimes(1)
   })

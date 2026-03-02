@@ -1,4 +1,7 @@
-import type { ComponentViewBuilderArgs } from '@contentful/optimization-api-client'
+import type {
+  ComponentClickBuilderArgs,
+  ComponentViewBuilderArgs,
+} from '@contentful/optimization-api-client'
 import ProductBase from '../ProductBase'
 
 /**
@@ -24,7 +27,7 @@ abstract class AnalyticsBase extends ProductBase {
    * @param payload - Component click builder arguments.
    * @returns A promise that resolves when processing is complete (or `void`).
    */
-  abstract trackComponentClick(payload: ComponentViewBuilderArgs): Promise<void> | void
+  abstract trackComponentClick(payload: ComponentClickBuilderArgs): Promise<void> | void
 
   /**
    * Track a flag (feature) view event.

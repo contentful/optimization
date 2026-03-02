@@ -45,6 +45,7 @@ It also explains what to do in case you want to set up the project locally and r
 
 The following software is required for testing and maintaining Optimization SDK Suite packages:
 
+- [Node.js](https://nodejs.org/) (minimum `20.19.0`; `24.13.0` recommended to match `.nvmrc`)
 - [pnpm](https://pnpm.io/installation)
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) or any Docker-compatible
   container manager
@@ -73,9 +74,12 @@ wrappers used by these commands.
 | `pnpm implementation:node-ssr-only`        | Runs the implementation helper for the Node SSR Only reference app.                 |
 | `pnpm implementation:node-ssr-web-vanilla` | Runs the implementation helper for the Node SSR + Web Vanilla reference app.        |
 | `pnpm implementation:react-native`         | Runs the implementation helper for the React Native reference app.                  |
-| `pnpm implementation:run`                  | Runs the shared implementation script runner with custom arguments.                 |
+| `pnpm implementation:web-react`            | Runs the implementation helper for the Web React reference app.                     |
 | `pnpm implementation:web-vanilla`          | Runs the implementation helper for the Web Vanilla reference app.                   |
-| `pnpm lint:check`                          | Runs ESLint checks without modifying files.                                         |
+| `pnpm implementation:run`                  | Runs the shared implementation script runner with custom arguments.                 |
+| `pnpm implementation:lint`                 | Runs ESLint checks across `implementations/`.                                       |
+| `pnpm implementation:lint:fix`             | Runs ESLint with autofix across `implementations/`.                                 |
+| `pnpm lint`                                | Runs ESLint checks for workspace packages (`lib`, `platforms`, `universal`).        |
 | `pnpm lint:fix`                            | Runs ESLint and automatically applies fixable issues.                               |
 | `pnpm playwright:install-deps`             | Installs Playwright system dependencies across implementations.                     |
 | `pnpm playwright:install`                  | Installs Playwright browser binaries across implementations.                        |
@@ -85,9 +89,11 @@ wrappers used by these commands.
 | `pnpm pm2:stop:all`                        | Stops all PM2-managed local processes.                                              |
 | `pnpm serve:mocks`                         | Starts the shared mock services used by local testing flows.                        |
 | `pnpm setup:e2e`                           | Prepares all reference implementations and browser dependencies for E2E tests.      |
+| `pnpm setup:e2e:web-react`                 | Prepares the Web React implementation for E2E tests.                                |
 | `pnpm test:e2e:node-ssr-only`              | Runs E2E tests for the Node SSR Only reference implementation.                      |
 | `pnpm test:e2e:node-ssr-web-vanilla`       | Runs E2E tests for the Node SSR + Web Vanilla reference implementation.             |
 | `pnpm test:e2e:react-native`               | Runs E2E tests for the React Native reference implementation.                       |
+| `pnpm test:e2e:web-react`                  | Runs E2E tests for the Web React reference implementation.                          |
 | `pnpm test:e2e:web-vanilla`                | Runs E2E tests for the Web Vanilla reference implementation.                        |
 | `pnpm test:e2e`                            | Runs end-to-end tests across all reference implementations.                         |
 | `pnpm test:unit`                           | Runs unit tests for all `@contentful/*` packages.                                   |
@@ -97,7 +103,7 @@ wrappers used by these commands.
 
 > [!NOTE]
 >
-> Before running `pnpm lint` or `pnpm:lint:fix`, you must run `pnpm build`, `pnpm build:pkgs`, and
+> Before running `pnpm implementation:lint` or `pnpm implementation:lint:fix`, run
 > `pnpm implementation:install` to avoid linter warnings in reference implementation packages.
 
 ### Implementation Helper Usage

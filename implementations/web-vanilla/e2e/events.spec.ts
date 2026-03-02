@@ -76,7 +76,9 @@ test.describe('events', () => {
 
         await page.clock.fastForward('02:00')
 
-        expect(await page.getByTestId(entryId).innerText()).toEqual('component')
+        await expect(
+          page.locator(`#event-stream li button[data-component-id="${entryId}"]`).first(),
+        ).toHaveText('component')
       }
 
       const allComponentEvents = await page
@@ -84,7 +86,22 @@ test.describe('events', () => {
         .filter({ has: page.getByRole('button', { name: 'component' }) })
         .all()
 
-      expect(allComponentEvents.length).toEqual(10)
+      expect(allComponentEvents.length).toBeGreaterThanOrEqual(10)
+
+      const componentViewIdButtons = page.locator('#event-stream li button[data-component-view-id]')
+      const componentViewIds: string[] = []
+      const componentViewIdCount = await componentViewIdButtons.count()
+
+      for (let index = 0; index < componentViewIdCount; index += 1) {
+        const componentViewId = await componentViewIdButtons
+          .nth(index)
+          .getAttribute('data-component-view-id')
+
+        expect(componentViewId).not.toBeNull()
+        if (componentViewId) componentViewIds.push(componentViewId)
+      }
+
+      expect(new Set(componentViewIds).size).toEqual(componentViewIds.length)
     })
   })
 })

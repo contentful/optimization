@@ -27,7 +27,7 @@ on, and locked), while keeping the main entry rendering flow customer-oriented.
 
 ## Prerequisites
 
-- Node.js >= 16.20.0
+- Node.js >= 20.19.0 (24.13.0 recommended to match `.nvmrc`)
 - pnpm 10.x
 
 ## Setup
@@ -177,4 +177,4 @@ function TrackedComponent() {
 
 - [React Native Implementation](../react-native/) - Reference implementation for React Native
 - [Web Vanilla Implementation](../web-vanilla/) - Reference implementation for vanilla JavaScript
-- [@contentful/optimization-web](../../../platforms/javascript/web/) - Web SDK package
+- [@contentful/optimization-web](../../platforms/javascript/web/README.md) - Web SDK package

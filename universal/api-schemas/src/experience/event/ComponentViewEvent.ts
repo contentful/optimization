@@ -17,6 +17,20 @@ export const ComponentViewEvent = z.extend(InteractionEventProperties, {
    * Discriminator indicating that this event is a component view.
    */
   type: z.literal('component'),
+  /**
+   * Monotonically increasing visible duration for the active component view.
+   *
+   * @remarks
+   * This value is updated and re-emitted while the same view remains active.
+   */
+  viewDurationMs: z.number(),
+  /**
+   * UUID identifying a single active component view session.
+   *
+   * @remarks
+   * Multiple events emitted for the same active view share this identifier.
+   */
+  componentViewId: z.string(),
 })
 
 /**

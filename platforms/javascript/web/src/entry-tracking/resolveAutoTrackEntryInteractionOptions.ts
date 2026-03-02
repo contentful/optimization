@@ -18,6 +18,8 @@ export interface EntryClickInteractionElementOptions {
 export interface EntryViewInteractionStartOptions {
   /** Required visible time (in ms) before the callback is fired. */
   readonly dwellTimeMs?: number
+  /** Interval (in ms) for emitting updated view-duration events while visible. */
+  readonly viewDurationUpdateIntervalMs?: number
   /** Minimum intersection ratio (0-1) considered visible. */
   readonly minVisibleRatio?: number
   /** IntersectionObserver root. Default: null (viewport). */
@@ -32,6 +34,8 @@ export interface EntryViewInteractionStartOptions {
 export interface EntryViewInteractionElementOptions {
   /** Per-element dwell time override in ms. */
   readonly dwellTimeMs?: number
+  /** Per-element override of view-duration update interval in ms. */
+  readonly viewDurationUpdateIntervalMs?: number
   /** Arbitrary data to pass through to the callback for this element. */
   readonly data?: unknown
 }
@@ -52,8 +56,10 @@ interface EntryInteractionElementOptionsMap {
 export interface EntryInteractionTracker<TStartOptions = never, TElementOptions = never> {
   start: (options?: TStartOptions) => void
   stop: () => void
-  trackElement?: (element: Element, options: TElementOptions) => void
-  untrackElement?: (element: Element) => void
+  setAuto?: (enabled: boolean) => void
+  enableElement?: (element: Element, options?: TElementOptions) => void
+  disableElement?: (element: Element) => void
+  clearElement?: (element: Element) => void
 }
 
 /**
@@ -118,10 +124,11 @@ export interface EntryInteractionApi {
     options?: EntryInteractionStartOptions<TInteraction>,
   ) => void
   disable: (interaction: EntryInteraction) => void
-  observe: <TInteraction extends EntryElementInteraction>(
+  enableElement: <TInteraction extends EntryElementInteraction>(
     interaction: TInteraction,
     element: Element,
-    options: EntryInteractionElementOptions<TInteraction>,
+    options?: EntryInteractionElementOptions<TInteraction>,
   ) => void
-  unobserve: (interaction: EntryElementInteraction, element: Element) => void
+  disableElement: (interaction: EntryElementInteraction, element: Element) => void
+  clearElement: (interaction: EntryElementInteraction, element: Element) => void
 }

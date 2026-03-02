@@ -11,6 +11,7 @@ import ElementViewObserver from './ElementViewObserver'
 
 interface Meta {
   totalVisibleMs: number
+  componentViewId: string
   attempts: number
   data?: unknown
 }
@@ -20,7 +21,12 @@ function isRecord(x: unknown): x is Record<string, unknown> {
 }
 
 function isMeta(x: unknown): x is Meta {
-  return isRecord(x) && typeof x.totalVisibleMs === 'number' && typeof x.attempts === 'number'
+  return (
+    isRecord(x) &&
+    typeof x.totalVisibleMs === 'number' &&
+    typeof x.componentViewId === 'string' &&
+    typeof x.attempts === 'number'
+  )
 }
 
 describe('ElementViewObserver', () => {
@@ -47,7 +53,7 @@ describe('ElementViewObserver', () => {
     io.restore()
   })
 
-  it('fires callback once after dwell time when element becomes visible', async () => {
+  it('fires callback after dwell time when element becomes visible', async () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
@@ -68,12 +74,46 @@ describe('ElementViewObserver', () => {
     expect(cb).toHaveBeenCalledTimes(1)
     expect(cb).toHaveBeenCalledWith(
       el,
-      expect.objectContaining({ attempts: 1, totalVisibleMs: 1000 }),
+      expect.objectContaining({
+        attempts: 1,
+        totalVisibleMs: 1000,
+        componentViewId: expect.any(String),
+      }),
     )
 
     inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 0.9 })
     await advance(2000)
     expect(cb).toHaveBeenCalledTimes(1)
+  })
+
+  it('emits duration updates at configured intervals while still visible', async () => {
+    const el = makeElement()
+    const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
+
+    const obs = new ElementViewObserver(cb, {
+      dwellTimeMs: 1000,
+      viewDurationUpdateIntervalMs: 5000,
+    })
+
+    obs.observe(el)
+
+    const inst = mustGetIO()
+    inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 1 })
+
+    await advance(1000)
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    await advance(5000)
+    expect(cb).toHaveBeenCalledTimes(2)
+
+    const firstMeta = cb.mock.calls[0]?.[1]
+    const secondMeta = cb.mock.calls[1]?.[1]
+    if (!isMeta(firstMeta) || !isMeta(secondMeta)) {
+      throw new Error('Unexpected callback payload')
+    }
+
+    expect(secondMeta.totalVisibleMs).toBe(6000)
+    expect(secondMeta.componentViewId).toBe(firstMeta.componentViewId)
   })
 
   it('does not accumulate dwell across separate visibility intersections', async () => {
@@ -109,10 +149,38 @@ describe('ElementViewObserver', () => {
 
       if (isMeta(metaCandidate)) {
         expect(metaCandidate.totalVisibleMs).toBe(1000)
+        expect(metaCandidate.componentViewId).toEqual(expect.any(String))
       } else {
         throw new Error('Unexpected meta payload for first callback')
       }
     }
+  })
+
+  it('assigns a new componentViewId for each new visibility cycle', async () => {
+    const el = makeElement()
+    const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
+
+    const obs = new ElementViewObserver(cb, { dwellTimeMs: 100 })
+    obs.observe(el)
+
+    const inst = mustGetIO()
+    inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 1 })
+    await advance(100)
+
+    inst.trigger({ target: el, isIntersecting: false, intersectionRatio: 0 })
+
+    inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 1 })
+    await advance(100)
+
+    expect(cb).toHaveBeenCalledTimes(2)
+
+    const firstMeta = cb.mock.calls[0]?.[1]
+    const secondMeta = cb.mock.calls[1]?.[1]
+    if (!isMeta(firstMeta) || !isMeta(secondMeta)) {
+      throw new Error('Unexpected callback payload')
+    }
+
+    expect(firstMeta.componentViewId).not.toBe(secondMeta.componentViewId)
   })
 
   it('pauses dwell timers when hidden and resumes with remaining dwell time', async () => {
@@ -151,6 +219,7 @@ describe('ElementViewObserver', () => {
 
       if (isMeta(metaCandidate)) {
         expect(metaCandidate.totalVisibleMs).toBe(500)
+        expect(metaCandidate.componentViewId).toEqual(expect.any(String))
       } else {
         throw new Error('Unexpected meta payload for first callback')
       }
@@ -182,6 +251,7 @@ describe('ElementViewObserver', () => {
       expect.objectContaining<Partial<Meta>>({
         attempts: 1,
         totalVisibleMs: 50,
+        componentViewId: expect.any(String),
         data: { id: 'xyz' },
       }),
     )
@@ -214,13 +284,22 @@ describe('ElementViewObserver', () => {
     expect(cb).toHaveBeenCalledTimes(1)
   })
 
-  it('does not retry after callback failure', async () => {
+  it('continues scheduled updates after callback failure', async () => {
     const el = makeElement()
-    const cb = rs
-      .fn<(e: Element, m: Meta) => Promise<void>>()
-      .mockRejectedValue(new Error('fail-once'))
+    let calls = 0
+    const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockImplementation(async () => {
+      calls += 1
+      if (calls === 1) {
+        throw new Error('fail-once')
+      }
 
-    const obs = new ElementViewObserver(cb, { dwellTimeMs: 0 })
+      await Promise.resolve()
+    })
+
+    const obs = new ElementViewObserver(cb, {
+      dwellTimeMs: 0,
+      viewDurationUpdateIntervalMs: 1000,
+    })
     obs.observe(el)
 
     const inst = mustGetIO()
@@ -232,9 +311,8 @@ describe('ElementViewObserver', () => {
 
     expect(cb).toHaveBeenCalledTimes(1)
 
-    inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 1 })
     await advance(1000)
-    expect(cb).toHaveBeenCalledTimes(1)
+    expect(cb).toHaveBeenCalledTimes(2)
   })
 
   it('unobserve cancels pending dwell timers', async () => {

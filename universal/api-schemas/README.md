@@ -11,13 +11,13 @@
 <div align="center">
 
 [Readme](./README.md) · [Reference](https://contentful.github.io/optimization) ·
-[Contributing](/CONTRIBUTING.md)
+[Contributing](../../CONTRIBUTING.md)
 
 </div>
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is currently ALPHA! Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
 
 The Contentful Optimization API Schema Library is a collection of Zod Mini schemas and their
 inferred TypeScript types. These schemas help provide run-time validation when working with requests

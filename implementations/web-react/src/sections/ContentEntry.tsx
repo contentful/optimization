@@ -27,8 +27,8 @@ interface EntryViewElementOptions {
 }
 
 interface TrackingApi {
-  observe: (interaction: 'views', element: Element, options: EntryViewElementOptions) => void
-  unobserve: (interaction: 'views', element: Element) => void
+  enableElement: (interaction: 'views', element: Element, options?: EntryViewElementOptions) => void
+  clearElement: (interaction: 'views', element: Element) => void
 }
 
 interface TrackingApiOwner {
@@ -41,7 +41,7 @@ function hasTrackingApi(value: unknown): value is TrackingApiOwner {
   const { tracking } = value
   if (!isRecord(tracking)) return false
 
-  return typeof tracking.observe === 'function' && typeof tracking.unobserve === 'function'
+  return typeof tracking.enableElement === 'function' && typeof tracking.clearElement === 'function'
 }
 
 function isRichTextField(field: unknown): field is RichTextDocument {
@@ -94,8 +94,6 @@ export function ContentEntry({ entry, observation }: ContentEntryProps): JSX.Ele
       return
     }
 
-    sdk.tracking.unobserve('views', element)
-
     const options: EntryViewElementOptions = {
       data: {
         entryId: resolvedEntry.sys.id,
@@ -105,10 +103,10 @@ export function ContentEntry({ entry, observation }: ContentEntryProps): JSX.Ele
       },
     }
 
-    sdk.tracking.observe('views', element, options)
+    sdk.tracking.enableElement('views', element, options)
 
     return () => {
-      sdk.tracking.unobserve('views', element)
+      sdk.tracking.clearElement('views', element)
     }
   }, [experienceId, isReady, observation, resolvedEntry.sys.id, sdk, sticky, variantIndex])
 

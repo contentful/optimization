@@ -54,6 +54,14 @@ export interface UseViewportTrackingReturn {
 const PERCENTAGE_MULTIPLIER = 100
 const DEFAULT_THRESHOLD = 0.8
 const DEFAULT_VIEW_TIME_MS = 2000
+const HEX_RADIX = 16
+const createComponentViewId = (): string => {
+  try {
+    return globalThis.crypto.randomUUID()
+  } catch {
+    return `rn-${Date.now()}-${Math.random().toString(HEX_RADIX).slice(2)}`
+  }
+}
 
 /**
  * Extracts tracking metadata from a resolved entry and optional personalization data.
@@ -160,6 +168,7 @@ export function useViewportTracking({
   const dimensionsRef = useRef<{ y: number; height: number } | null>(null)
   const isVisibleRef = useRef(false)
   const viewTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const viewSessionIdRef = useRef<string | null>(null)
 
   // Store optimization in a ref to prevent unnecessary callback recreations
   const optimizationRef = useRef(optimization)
@@ -182,6 +191,7 @@ export function useViewportTracking({
       logger.info(
         `Component ${componentId} became visible (${visibilityPercent.toFixed(1)}%), starting ${viewTimeMs}ms timer`,
       )
+      viewSessionIdRef.current = createComponentViewId()
 
       // Clear any existing timeout
       if (viewTimeoutRef.current) {
@@ -199,13 +209,16 @@ export function useViewportTracking({
 
           // Use ref to get current optimization instance
           const { current: currentOptimization } = optimizationRef
+          const componentViewId = viewSessionIdRef.current ?? createComponentViewId()
 
           // Track the component view
           void (async () => {
             await currentOptimization.analytics.trackComponentView({
               componentId,
+              componentViewId,
               experienceId,
               variantIndex,
+              viewDurationMs: viewTimeMs,
             })
           })()
         } else {
@@ -283,6 +296,7 @@ export function useViewportTracking({
         clearTimeout(viewTimeoutRef.current)
         viewTimeoutRef.current = null
       }
+      viewSessionIdRef.current = null
     } else if (!isNowVisible) {
       logger.debug(
         `${componentId} is not visible enough (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%)`,

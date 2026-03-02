@@ -122,11 +122,25 @@ const UniversalEventBuilderArgs = z.object({
  */
 export type UniversalEventBuilderArgs = z.infer<typeof UniversalEventBuilderArgs>
 
-const ComponentViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
+const ComponentInteractionBuilderArgsBase = z.extend(UniversalEventBuilderArgs, {
   componentId: z.string(),
   experienceId: z.optional(z.string()),
   variantIndex: z.optional(z.number()),
+})
+
+/**
+ * Arguments shared by component view and click events.
+ *
+ * @public
+ */
+export type ComponentInteractionBuilderArgsBase = z.infer<
+  typeof ComponentInteractionBuilderArgsBase
+>
+
+const ComponentViewBuilderArgs = z.extend(ComponentInteractionBuilderArgsBase, {
   sticky: z.optional(z.boolean()),
+  componentViewId: z.string(),
+  viewDurationMs: z.number(),
 })
 
 /**
@@ -135,6 +149,15 @@ const ComponentViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
  * @public
  */
 export type ComponentViewBuilderArgs = z.infer<typeof ComponentViewBuilderArgs>
+
+const ComponentClickBuilderArgs = ComponentInteractionBuilderArgsBase
+
+/**
+ * Arguments for constructing component click events.
+ *
+ * @public
+ */
+export type ComponentClickBuilderArgs = z.infer<typeof ComponentClickBuilderArgs>
 
 const IdentifyBuilderArgs = z.extend(UniversalEventBuilderArgs, {
   traits: z.optional(Traits),
@@ -355,33 +378,41 @@ class EventBuilder {
    * ```ts
    * const event = builder.buildComponentView({
    *   componentId: 'entry-123',
+   *   componentViewId: crypto.randomUUID(),
    *   experienceId: 'personalization-123',
    *   variantIndex: 1,
+   *   viewDurationMs: 1_000,
    * })
    * ```
    *
    * @public
    */
   buildComponentView(args: ComponentViewBuilderArgs): ComponentViewEvent {
-    const { componentId, experienceId, variantIndex, ...universal } = parseWithFriendlyError(
-      ComponentViewBuilderArgs,
-      args,
-    )
+    const {
+      componentId,
+      componentViewId,
+      experienceId,
+      variantIndex,
+      viewDurationMs,
+      ...universal
+    } = parseWithFriendlyError(ComponentViewBuilderArgs, args)
 
     return {
       ...this.buildUniversalEventProperties(universal),
       type: 'component',
       componentType: 'Entry',
       componentId,
+      componentViewId,
       experienceId,
       variantIndex: variantIndex ?? 0,
+      viewDurationMs,
     }
   }
 
   /**
    * Builds a component click event payload for a Contentful entry-based component.
    *
-   * @param args - {@link ComponentViewBuilderArgs} arguments describing the component click.
+   * @param args - {@link ComponentClickBuilderArgs} arguments describing the component click.
    * @returns A {@link ComponentClickEvent} describing the click.
    *
    * @example
@@ -395,9 +426,9 @@ class EventBuilder {
    *
    * @public
    */
-  buildComponentClick(args: ComponentViewBuilderArgs): ComponentClickEvent {
+  buildComponentClick(args: ComponentClickBuilderArgs): ComponentClickEvent {
     const { componentId, experienceId, variantIndex, ...universal } = parseWithFriendlyError(
-      ComponentViewBuilderArgs,
+      ComponentClickBuilderArgs,
       args,
     )
 
@@ -425,7 +456,9 @@ class EventBuilder {
    * ```ts
    * const event = builder.buildFlagView({
    *   componentId: 'feature-flag-key',
+   *   componentViewId: crypto.randomUUID(),
    *   experienceId: 'personalization-123',
+   *   viewDurationMs: 1_000,
    * })
    * ```
    *

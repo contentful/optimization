@@ -14,6 +14,12 @@ export type CtflDataset = DOMStringMap & {
   ctflSticky?: 'true' | 'false'
   /** Optional variant index for personalized variants (non-negative integer). */
   ctflVariantIndex?: string
+  /** Optional per-element override for automatic click tracking (`'true'`/`'false'`). */
+  ctflTrackClicks?: 'true' | 'false'
+  /** Optional per-element override for automatic view tracking (`'true'`/`'false'`). */
+  ctflTrackViews?: 'true' | 'false'
+  /** Optional per-element view-duration update interval override in milliseconds. */
+  ctflViewDurationUpdateIntervalMs?: string
 }
 
 /**
@@ -42,6 +48,16 @@ export interface EntryData {
   variantIndex?: number
 }
 
+const asNonEmptyString = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') return undefined
+  return value.trim() ? value : undefined
+}
+
+const isHtmlOrSvgElement = (value: unknown): value is HTMLElement | SVGElement => {
+  if (typeof HTMLElement === 'undefined' || typeof SVGElement === 'undefined') return false
+  return value instanceof HTMLElement || value instanceof SVGElement
+}
+
 /**
  * Type guard that determines whether a given element is a tracked entry element.
  *
@@ -51,13 +67,9 @@ export interface EntryData {
  * @public
  */
 export function isEntryElement(element?: Element): element is EntryElement {
-  if (typeof HTMLElement === 'undefined' || typeof SVGElement === 'undefined') return false
-  if (!(element instanceof HTMLElement || element instanceof SVGElement)) return false
+  if (!isHtmlOrSvgElement(element)) return false
 
-  const {
-    dataset: { ctflEntryId: entryId },
-  } = element
-  return typeof entryId === 'string' && entryId.trim().length > 0
+  return !!asNonEmptyString(element.dataset.ctflEntryId)
 }
 
 /**
@@ -70,30 +82,20 @@ export function isEntryElement(element?: Element): element is EntryElement {
  */
 export function isEntryData(data?: unknown): data is EntryData {
   if (!data || typeof data !== 'object') return false
-
-  const { entryId } = data as Partial<EntryData>
-  return typeof entryId === 'string' && entryId.trim().length > 0
+  return !!asNonEmptyString((data as Partial<EntryData>).entryId)
 }
 
-function parseSticky(sticky: string | undefined): boolean {
-  return (sticky?.trim().toLowerCase() ?? '') === 'true'
-}
+const parseSticky = (sticky: string | undefined): boolean =>
+  (sticky?.trim().toLowerCase() ?? '') === 'true'
 
-function parseVariantIndex(variantIndex: string | undefined): number | undefined {
-  if (variantIndex === undefined || !/^\d+$/.test(variantIndex)) return undefined
+const parseVariantIndex = (variantIndex: string | undefined): number | undefined => {
+  if (!variantIndex || !/^\d+$/.test(variantIndex)) return undefined
+
   const n = Number(variantIndex)
   return Number.isSafeInteger(n) ? n : undefined
 }
 
-/**
- * Resolve normalized entry metadata directly from an entry element dataset.
- *
- * @param element - Candidate entry element.
- * @returns Parsed entry metadata when the element is a valid entry; otherwise `undefined`.
- *
- * @internal
- */
-function resolveEntryDataFromElement(element: Element): EntryData | undefined {
+const resolveEntryDataFromElement = (element: Element): EntryData | undefined => {
   if (!isEntryElement(element)) return undefined
 
   const {
@@ -113,17 +115,9 @@ function resolveEntryDataFromElement(element: Element): EntryData | undefined {
   }
 }
 
-/**
- * Resolve normalized entry metadata by preferring explicit data over element dataset data.
- *
- * @param data - Optional explicit data associated with the element.
- * @param element - Candidate entry element.
- * @returns Resolved metadata or `undefined` when no valid data source is available.
- *
- * @internal
- */
-function resolveEntryData(data: unknown, element: Element): EntryData | undefined {
-  return isEntryData(data) ? data : resolveEntryDataFromElement(element)
+const resolveEntryData = (data: unknown, element: Element): EntryData | undefined => {
+  if (isEntryData(data)) return data
+  return resolveEntryDataFromElement(element)
 }
 
 /**

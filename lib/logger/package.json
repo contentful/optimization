@@ -38,6 +38,7 @@
   "devDependencies": {
     "build-tools": "workspace:*",
     "@microsoft/api-extractor": "catalog:",
+    "@rsdoctor/cli": "catalog:",
     "@rslib/core": "catalog:",
     "@types/node": "catalog:",
     "@rstest/core": "catalog:",

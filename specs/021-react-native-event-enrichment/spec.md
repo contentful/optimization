@@ -1,9 +1,10 @@
 # Feature Specification: Optimization React Native Event Enrichment
 
-**Feature Branch**: `[021-react-native-event-enrichment]` **Created**: 2026-02-26 **Status**: Draft
-**Input**: User description: "Examine the current functionality in
-`@contentful/optimization-react-native` package and derive SpecKit-compatible specifications that
-could have guided its development."
+**Feature Branch**: `[021-react-native-event-enrichment]`  
+**Created**: 2026-02-26  
+**Status**: Current (Pre-release)  
+**Input**: Repository behavior review for the current pre-release implementation (validated
+2026-03-02).
 
 ## User Scenarios & Testing _(mandatory)_
 

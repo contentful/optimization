@@ -56,13 +56,11 @@
   },
   "dependencies": {
     "@contentful/optimization-core": "workspace:*",
-    "@types/js-cookie": "3.0.6",
-    "es-toolkit": "catalog:",
-    "js-cookie": "3.0.5",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@rsbuild/core": "catalog:",
+    "@rsdoctor/cli": "catalog:",
     "@rslib/core": "catalog:",
     "@rstest/core": "catalog:",
     "@rstest/coverage-istanbul": "catalog:",

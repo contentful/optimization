@@ -17,7 +17,7 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is currently ALPHA! Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
 
 ## Introduction
 
@@ -55,20 +55,20 @@ ensure functionality is reasonably shared and consistent.
 
 - [Optimization Core SDK](./universal/core/README.md)
   - iOS
-    - iOS Swift SDK (TBD)
+    - iOS Swift SDK (planned)
   - Android
-    - Android Kotlin SDK (TBD)
-    - Android Java SDK (TBD)
+    - Android Kotlin SDK (planned)
+    - Android Java SDK (planned)
   - _JavaScript_
-    - [Node SDK](/platforms/javascript/node/README.md)
-      - Nest.js SDK (TBD)
-    - [React Native SDK](/platforms/javascript/react-native/README.md)
-    - [Web SDK](/platforms/javascript/web/README.md) and
-      [Web Preview Panel](/platforms/javascript/web-preview-panel/README.md)
-      - Angular SDK (TBD)
-      - [React Web SDK](/platforms/javascript/web-frameworks/react-web/README.md)
-      - Svelte SDK (TBD)
-      - Vue SDK (TBD)
+    - [Node SDK](./platforms/javascript/node/README.md)
+      - Nest.js SDK (planned)
+    - [React Native SDK](./platforms/javascript/react-native/README.md)
+    - [Web SDK](./platforms/javascript/web/README.md) and
+      [Web Preview Panel](./platforms/javascript/web-preview-panel/README.md)
+      - Angular SDK (planned)
+      - [React Web SDK](./platforms/javascript/web-frameworks/react-web/README.md)
+      - Svelte SDK (planned)
+      - Vue SDK (planned)
 
 > [!NOTE]
 >
@@ -104,14 +104,14 @@ the SDK hierarchy.
 Libraries that are shared internally among Optimization SDKs, and are not currently published, are
 located within the `/lib` folder in the project root.
 
-- [Logger](/lib/logger/README.md) is a simple logging abstraction utility
-- [Mocks](/lib/mocks/README.md) supplies testing fixtures and data, as well as mock server
+- [Logger](./lib/logger/README.md) is a simple logging abstraction utility
+- [Mocks](./lib/mocks/README.md) supplies testing fixtures and data, as well as mock server
   implementations used in both unit and end to end tests throughout the SDK suite
 
 ## Get Involved
 
 We appreciate any help on our repositories. For more details about how to contribute see our
-[CONTRIBUTING](/CONTRIBUTING.md) document.
+[CONTRIBUTING](./CONTRIBUTING.md) document.
 
 ## License
 

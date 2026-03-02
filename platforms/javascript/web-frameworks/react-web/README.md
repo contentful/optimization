@@ -4,10 +4,12 @@ Scaffold package for `@contentful/optimization-react-web`.
 
 ## Status
 
-This package is scaffold-only and not production-ready.
+This package is currently scaffold-only and pre-release.
 
-- Runtime behavior is intentionally out of scope for this initial setup.
-- API semantics and React Native parity details are TODO in follow-up tickets.
+- Runtime behavior beyond the current placeholder surface is intentionally out of scope for this
+  phase.
+- React Web API semantics and parity coverage with other SDK layers are tracked as planned follow-up
+  work.
 
 ## Purpose
 
