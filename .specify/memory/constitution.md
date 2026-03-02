@@ -1,28 +1,3 @@
-<!--
-Sync Impact Report
-- Version change: N/A -> 1.0.0
-- Modified principles:
-  - N/A (initial adoption) -> I. Layered Composition and Dependency Direction
-  - N/A (initial adoption) -> II. Contract-First API Boundaries
-  - N/A (initial adoption) -> III. Consent and Data Stewardship by Default
-  - N/A (initial adoption) -> IV. Cross-Layer Parity and Target Packaging
-  - N/A (initial adoption) -> V. Reference Implementations as Verification Gates
-- Added sections:
-  - Core Principles
-  - Architecture and Packaging Standards
-  - Development Workflow and Quality Gates
-  - Governance
-- Removed sections:
-  - None (initial adoption)
-- Templates requiring updates:
-  - pending: .specify/templates/plan-template.md (file missing)
-  - pending: .specify/templates/spec-template.md (file missing)
-  - pending: .specify/templates/tasks-template.md (file missing)
-  - pending: .specify/templates/commands/*.md (directory missing)
-- Follow-up TODOs:
-  - TODO(TEMPLATE_BOOTSTRAP): Initialize .specify/templates artifacts so constitution checks are enforceable in plan/spec/tasks/commands flows.
--->
-
 # Contentful Optimization SDK Suite Constitution
 
 ## Core Principles

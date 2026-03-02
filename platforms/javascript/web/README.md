@@ -11,17 +11,17 @@
 <div align="center">
 
 [Readme](./README.md) · [Reference](https://contentful.github.io/optimization) ·
-[Contributing](/CONTRIBUTING.md)
+[Contributing](../../../CONTRIBUTING.md)
 
 </div>
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is currently ALPHA! Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
 
 This SDK implements functionality specific to the Web environment, based on the
-[Optimization Core Library](/universal/core/README.md). This SDK is part of the
-[Contentful Optimization SDK Suite](/README.md).
+[Optimization Core Library](../../../universal/core/README.md). This SDK is part of the
+[Contentful Optimization SDK Suite](../../../README.md).
 
 <details>
   <summary>Table of Contents</summary>
@@ -46,8 +46,9 @@ This SDK implements functionality specific to the Web environment, based on the
     - [`destroy`](#destroy)
     - [`tracking.enable`](#trackingenable)
     - [`tracking.disable`](#trackingdisable)
-    - [`tracking.observe`](#trackingobserve)
-    - [`tracking.unobserve`](#trackingunobserve)
+    - [`tracking.enableElement`](#trackingenableelement)
+    - [`tracking.disableElement`](#trackingdisableelement)
+    - [`tracking.clearElement`](#trackingclearelement)
   - [Personalization Data Resolution Methods](#personalization-data-resolution-methods)
     - [`getCustomFlag`](#getcustomflag)
     - [`personalizeEntry`](#personalizeentry)
@@ -112,8 +113,9 @@ Alternatively, the Web SDK can be used directly within an HTML file:
 
 ## Reference Implementations
 
-- [Web Vanilla](/implementations/web-vanilla/README.md): Example static Web page that renders and
-  emits analytics events for personalized content using a vanilla JS drop-in build of the Web SDK
+- [Web Vanilla](../../../implementations/web-vanilla/README.md): Example static Web page that
+  renders and emits analytics events for personalized content using a vanilla JS drop-in build of
+  the Web SDK
 
 ## Configuration
 
@@ -342,8 +344,8 @@ future writes.
 ## Optimization Properties
 
 - `states`: Returns an object mapping of observables for all internal states
-- `tracking`: Namespaced entry-interaction tracking API with `enable`, `disable`, `observe`, and
-  `unobserve`
+- `tracking`: Namespaced entry-interaction tracking API with `enable`, `disable`, `enableElement`,
+  `disableElement`, and `clearElement`
 
 The following observables are exposed via the `states` property:
 
@@ -412,53 +414,58 @@ When `interaction` is `'clicks'`, no additional startup options are currently su
 
 #### `tracking.disable`
 
-Stops and cleans up automatic tracking for a specific entry interaction.
+Disables automatic tracking for a specific entry interaction.
 
 Arguments:
 
 - `interaction`: The interaction type to stop tracking (for example, `'views'` or `'clicks'`)
 
-This method returns no value.
+This method returns no value. If force-enabled element overrides exist for that interaction, those
+overrides can keep the detector active.
 
 > [!WARNING]
 >
 > This method is called internally for auto-enabled interactions in `autoTrackEntryInteraction` when
 > consent has not been given.
 
-#### `tracking.observe`
+#### `tracking.enableElement`
 
-Manually observes a given element for a specific entry interaction.
+Manually force-enables tracking for a specific element and interaction.
 
 Arguments:
 
 - `interaction`: The interaction type to track (for example, `'views'` or `'clicks'`)
 - `element`: A DOM element that directly contains the entry content to be tracked
-- `options`\*: Per-element options used to refine observation
+- `options`: Optional per-element options
   - when `interaction` is `'views'`:
-    - `data`: Entry-specific data to send to the `IntersectionObserver` callback; see "Entry View
-      Tracking"
+    - `data`: Entry-specific data used for payload extraction; see "Entry View Tracking"
     - `dwellTimeMs`: Per-element override of the required time before emitting the view event
   - when `interaction` is `'clicks'`:
-    - `data`: Entry-specific data for click payload extraction; same shape as view-tracking data
+    - `data`: Entry-specific data used for click payload extraction
 
-> [!INFO]
->
-> This method does not need to be called if the given element is auto-observable as an entry; see
-> "Entry View Tracking"
+`enableElement` can be used even when automatic tracking for the interaction is disabled.
 
-#### `tracking.unobserve`
+#### `tracking.disableElement`
 
-Manually stops observing a given element for a specific entry interaction.
+Manually force-disables tracking for a specific element and interaction.
 
 Arguments:
 
-- `interaction`: The interaction type to stop tracking (for example, `'views'` or `'clicks'`)
-- `element`: A DOM element that directly contains entry content that is already tracked
+- `interaction`: The interaction type to disable (for example, `'views'` or `'clicks'`)
+- `element`: The target DOM element
 
-> [!INFO]
->
-> This method does not need to be called if the given element is auto-observable as an entry; see
-> "Entry View Tracking"
+`disableElement` takes precedence over automatic tracking for that element.
+
+#### `tracking.clearElement`
+
+Clears a manual element override for a specific interaction.
+
+Arguments:
+
+- `interaction`: The interaction type to clear (for example, `'views'` or `'clicks'`)
+- `element`: The target DOM element
+
+After `clearElement`, the element falls back to automatic behavior for that interaction.
 
 ### Personalization Data Resolution Methods
 
@@ -642,8 +649,9 @@ Different integration patterns can show different relative performance:
 In practice, callback and transport work (for example, `trackComponentView` processing and event
 delivery) often dominates overall cost once a view is detected.
 
-For best runtime behavior, observe only relevant elements, unobserve elements that are no longer
-needed, and choose stable `minVisibleRatio` and `dwellTimeMs` values that match your UI behavior.
+For best runtime behavior, track only relevant elements, disable tracking for elements that are no
+longer needed, and choose stable `minVisibleRatio` and `dwellTimeMs` values that match your UI
+behavior.
 
 ### Entry Click Tracking
 
@@ -681,9 +689,19 @@ exclusively on JavaScript-assigned `onclick` properties.
 
 ### Manual Entry Element Observation
 
-To track an element as an entry-related element, call the `tracking.observe('views', ...)` or
-`tracking.observe('clicks', ...)` method with the element to be tracked. The optional `data` option
-supports the following members:
+To override tracking behavior for a specific element, use:
+
+- `tracking.enableElement('views', element, options)` or
+  `tracking.enableElement('clicks', element, options)` to force-enable tracking for that element
+- `tracking.disableElement('views', element)` or `tracking.disableElement('clicks', element)` to
+  force-disable tracking for that element
+- `tracking.clearElement('views', element)` or `tracking.clearElement('clicks', element)` to remove
+  a manual override and return to automatic behavior
+
+Manual API overrides take precedence over data-attribute overrides (see below). After
+`clearElement`, the element falls back to attribute overrides first, then normal automatic behavior.
+
+The optional `data` option supports the following members:
 
 - `entryId`\*: The ID of the content entry to be tracked; should be the selected variant if the
   entry is personalized
@@ -696,7 +714,7 @@ supports the following members:
 Example:
 
 ```ts
-optimization.tracking.observe('views', element, {
+optimization.tracking.enableElement('views', element, {
   data: { entryId: 'abc-123', ... },
 })
 ```
@@ -714,6 +732,10 @@ detected for observation and entry-interaction tracking:
   variant; ignored if the entry is not personalized
 - `data-ctfl-variant-index`: The index of the selected variant; only required if the entry is
   personalized
+- `data-ctfl-track-views`: Optional per-element override for view tracking (`true` = force-enable,
+  `false` = force-disable)
+- `data-ctfl-track-clicks`: Optional per-element override for click tracking (`true` = force-enable,
+  `false` = force-disable)
 
 Example:
 

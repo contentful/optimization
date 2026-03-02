@@ -2,6 +2,7 @@ import {
   InsightsEvent as AnalyticsEvent,
   BatchInsightsEventArray,
   parseWithFriendlyError,
+  type ComponentClickBuilderArgs,
   type ComponentViewBuilderArgs,
   type PartialProfile,
 } from '@contentful/optimization-api-client'
@@ -18,7 +19,8 @@ const logger = createScopedLogger('Analytics')
  * The `profile` is optional; when omitted, the APIs may infer identity via
  * other means.
  */
-export type TrackViewArgs = ComponentViewBuilderArgs & { profile?: PartialProfile }
+export type TrackComponentViewArgs = ComponentViewBuilderArgs & { profile?: PartialProfile }
+export type TrackComponentClickArgs = ComponentClickBuilderArgs & { profile?: PartialProfile }
 
 /**
  * Stateless analytics implementation that sends each event immediately in a
@@ -30,7 +32,7 @@ class AnalyticsStateless extends AnalyticsBase {
   /**
    * Build, intercept, validate, and send a component view event.
    *
-   * @param args - {@link TrackViewArgs} used to build the event. Includes an
+   * @param args - {@link TrackComponentViewArgs} used to build the event. Includes an
    * optional partial profile.
    * @returns A promise that resolves once the batch has been sent.
    * @example
@@ -38,7 +40,7 @@ class AnalyticsStateless extends AnalyticsBase {
    * await analytics.trackComponentView({ componentId: 'hero-banner', profile: { id: 'user-1' } })
    * ```
    */
-  async trackComponentView(args: TrackViewArgs): Promise<void> {
+  async trackComponentView(args: TrackComponentViewArgs): Promise<void> {
     logger.info('Processing "component view" event')
 
     const { profile, ...builderArgs } = args
@@ -51,7 +53,7 @@ class AnalyticsStateless extends AnalyticsBase {
   /**
    * Build, intercept, validate, and send a component click event.
    *
-   * @param args - {@link TrackViewArgs} used to build the event. Includes an
+   * @param args - {@link TrackComponentClickArgs} used to build the event. Includes an
    * optional partial profile.
    * @returns A promise that resolves once the batch has been sent.
    * @example
@@ -59,7 +61,7 @@ class AnalyticsStateless extends AnalyticsBase {
    * await analytics.trackComponentClick({ componentId: 'hero-banner', profile: { id: 'user-1' } })
    * ```
    */
-  async trackComponentClick(args: TrackViewArgs): Promise<void> {
+  async trackComponentClick(args: TrackComponentClickArgs): Promise<void> {
     logger.info('Processing "component click" event')
 
     const { profile, ...builderArgs } = args
@@ -72,7 +74,7 @@ class AnalyticsStateless extends AnalyticsBase {
   /**
    * Build, intercept, validate, and send a flag view event.
    *
-   * @param args - {@link TrackViewArgs} used to build the event. Includes an
+   * @param args - {@link TrackComponentViewArgs} used to build the event. Includes an
    * optional partial profile.
    * @returns A promise that resolves once the batch has been sent.
    * @example
@@ -80,7 +82,7 @@ class AnalyticsStateless extends AnalyticsBase {
    * await analytics.trackFlagView({ componentId: 'feature-flag-123' })
    * ```
    */
-  async trackFlagView(args: TrackViewArgs): Promise<void> {
+  async trackFlagView(args: TrackComponentViewArgs): Promise<void> {
     logger.debug('Processing "flag view" event')
 
     const { profile, ...builderArgs } = args

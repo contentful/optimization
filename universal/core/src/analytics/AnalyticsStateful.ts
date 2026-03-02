@@ -2,6 +2,7 @@ import {
   InsightsEvent as AnalyticsEvent,
   parseWithFriendlyError,
   type BatchInsightsEventArray,
+  type ComponentClickBuilderArgs,
   type ComponentViewBuilderArgs,
   type InsightsEventArray,
   type ExperienceEvent as PersonalizationEvent,
@@ -234,7 +235,7 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    * ```
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async trackComponentClick(payload: ComponentViewBuilderArgs): Promise<void> {
+  async trackComponentClick(payload: ComponentClickBuilderArgs): Promise<void> {
     logger.info(`Processing "component click" event for ${payload.componentId}`)
 
     await this.enqueueEvent(this.builder.buildComponentClick(payload))

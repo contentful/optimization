@@ -87,6 +87,7 @@
     "@react-native/babel-preset": "0.84.0",
     "@react-native/metro-config": "0.84.0",
     "@react-native/typescript-config": "0.84.0",
+    "@rsdoctor/cli": "catalog:",
     "@rslib/core": "catalog:",
     "@rstest/core": "catalog:",
     "@rstest/coverage-istanbul": "catalog:",

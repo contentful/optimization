@@ -1,9 +1,6 @@
 // tests/utils.ts
 import { rs } from '@rstest/core'
-import {
-  EntryInteractionTrackerHost,
-  type EntryInteractionDetector,
-} from '../entry-tracking/EntryInteractionTrackerHost'
+import type { EntryInteractionDetector } from '../entry-tracking/EntryInteractionDetector'
 import ElementExistenceObserver from '../entry-tracking/registry/ElementExistenceObserver'
 import { EntryElementRegistry } from '../entry-tracking/registry/EntryElementRegistry'
 
@@ -193,7 +190,14 @@ export function deferred<T = void>(): {
 interface EntryTrackingHarness<TStartOptions = never, TElementOptions = never> {
   readonly entryElementRegistry: EntryElementRegistry
   readonly entryExistenceObserver: ElementExistenceObserver
-  readonly tracker: EntryInteractionTrackerHost<TStartOptions, TElementOptions>
+  readonly tracker: {
+    start: (options?: TStartOptions) => void
+    stop: () => void
+    setAuto: (enabled: boolean) => void
+    enableElement: (element: Element, options?: TElementOptions) => void
+    disableElement: (element: Element) => void
+    clearElement: (element: Element) => void
+  }
   readonly cleanup: () => void
 }
 
@@ -202,7 +206,35 @@ export function createEntryTrackingHarness<TStartOptions = never, TElementOption
 ): EntryTrackingHarness<TStartOptions, TElementOptions> {
   const entryExistenceObserver = new ElementExistenceObserver()
   const entryElementRegistry = new EntryElementRegistry(entryExistenceObserver)
-  const tracker = new EntryInteractionTrackerHost(detector, entryElementRegistry)
+  let cleanupRegistrySubscription: (() => void) | undefined = undefined
+
+  const tracker = {
+    start: (options?: TStartOptions): void => {
+      detector.start(options)
+      cleanupRegistrySubscription = entryElementRegistry.subscribe({
+        onAdded: detector.onEntryAdded,
+        onRemoved: detector.onEntryRemoved,
+        onError: detector.onError,
+      })
+    },
+    stop: (): void => {
+      cleanupRegistrySubscription?.()
+      cleanupRegistrySubscription = undefined
+      detector.stop()
+    },
+    setAuto: (enabled: boolean): void => {
+      detector.setAuto?.(enabled)
+    },
+    enableElement: (element: Element, options?: TElementOptions): void => {
+      detector.enableElement?.(element, options)
+    },
+    disableElement: (element: Element): void => {
+      detector.disableElement?.(element)
+    },
+    clearElement: (element: Element): void => {
+      detector.clearElement?.(element)
+    },
+  }
 
   return {
     entryElementRegistry,

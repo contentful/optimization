@@ -21,9 +21,9 @@ const reportOnly = process.argv.includes('--report-only')
 
 /* eslint-disable @typescript-eslint/no-magic-numbers -- bundle budgets are explicit byte thresholds. */
 const gzipBudgets = new Map<string, number>([
-  ['index.mjs', 6680],
-  ['index.cjs', 7530],
-  ['contentful-optimization-web.umd.js', 30900],
+  ['index.mjs', 7200],
+  ['index.cjs', 8100],
+  ['contentful-optimization-web.umd.js', 31200],
 ])
 /* eslint-enable @typescript-eslint/no-magic-numbers -- bundle budgets are explicit byte thresholds. */
 const results: BundleSizeResult[] = []

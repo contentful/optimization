@@ -1,7 +1,8 @@
 import { createScopedLogger, type CoreStateful } from '@contentful/optimization-core'
-import type { EntryInteractionDetector } from '../EntryInteractionTrackerHost'
+import type { EntryInteractionDetector } from '../EntryInteractionDetector'
 import type { EntryClickInteractionElementOptions } from '../resolveAutoTrackEntryInteractionOptions'
 import { resolveComponentTrackingPayload as resolveTrackedComponentPayload } from '../resolveComponentTrackingPayload'
+import { resolveEntryInteractionElementOverride } from '../resolveEntryInteractionElementOverride'
 
 const logger = createScopedLogger('Web:EntryClickTracking')
 
@@ -32,12 +33,22 @@ const CLICKABLE_SELECTOR = [
  */
 interface TrackedEntryState {
   auto: boolean
-  manual: boolean
-  manualData: unknown
+  overrideEnabled?: boolean
+  attributeOverrideEnabled?: boolean
+  overrideData: unknown
 }
 
-function isTrackedEntryState(state: TrackedEntryState | undefined): boolean {
-  return Boolean(state && (state.auto || state.manual))
+function isTrackedEntryState(
+  state: TrackedEntryState | undefined,
+  autoTrackingEnabled: boolean,
+): boolean {
+  if (!state) return false
+  if (state.overrideEnabled === false) return false
+  if (state.overrideEnabled === true) return true
+  if (state.attributeOverrideEnabled === false) return false
+  if (state.attributeOverrideEnabled === true) return true
+
+  return autoTrackingEnabled && state.auto
 }
 
 function hasOnclickPropertyHandler(element: Element): boolean {
@@ -69,6 +80,7 @@ export function createEntryClickDetector(
 ): EntryInteractionDetector<undefined, EntryClickElementOptions> {
   const trackedEntries = new Map<Element, TrackedEntryState>()
   let listening = false
+  let autoTrackingEnabled = true
 
   /**
    * Resolve tracked-entry ownership and clickability from an event target.
@@ -87,7 +99,7 @@ export function createEntryClickDetector(
     while (current) {
       const state = trackedEntries.get(current)
 
-      if (!trackedEntryElement && isTrackedEntryState(state)) {
+      if (!trackedEntryElement && isTrackedEntryState(state, autoTrackingEnabled)) {
         trackedEntryElement = current
       }
 
@@ -117,10 +129,16 @@ export function createEntryClickDetector(
     element: Element,
   ): ReturnType<typeof resolveTrackedComponentPayload> => {
     const state = trackedEntries.get(element)
-    const data = state?.manual ? state.manualData : undefined
+    const data = state?.overrideEnabled ? state.overrideData : undefined
 
     return resolveTrackedComponentPayload(data, element)
   }
+
+  const createDefaultTrackedEntryState = (): TrackedEntryState => ({
+    auto: false,
+    overrideEnabled: undefined,
+    overrideData: undefined,
+  })
 
   const onDocumentClick = (event: MouseEvent): void => {
     const eventTarget = toEventTargetElement(event)
@@ -157,43 +175,49 @@ export function createEntryClickDetector(
       listening = false
       trackedEntries.clear()
     },
+    setAuto: (enabled): void => {
+      autoTrackingEnabled = enabled
+    },
     onEntryAdded: (entryElement): void => {
-      const state = trackedEntries.get(entryElement)
-
-      if (!state) {
-        trackedEntries.set(entryElement, {
-          auto: true,
-          manual: false,
-          manualData: undefined,
-        })
-        return
-      }
-
+      const state = trackedEntries.get(entryElement) ?? createDefaultTrackedEntryState()
       state.auto = true
+      state.attributeOverrideEnabled = resolveEntryInteractionElementOverride(
+        'clicks',
+        entryElement,
+      )
+      trackedEntries.set(entryElement, state)
     },
     onEntryRemoved: (entryElement): void => {
-      trackedEntries.delete(entryElement)
-    },
-    trackElement: (element, options): void => {
-      logger.info('Manually tracking click interaction for element:', element)
-      const { data } = options
-      const state = trackedEntries.get(element) ?? {
-        auto: false,
-        manual: false,
-        manualData: undefined,
-      }
-      state.manual = true
-      state.manualData = data
-      trackedEntries.set(element, state)
-    },
-    untrackElement: (element): void => {
-      logger.info('Manually untracking click interaction for element:', element)
-      const state = trackedEntries.get(element)
-
+      const state = trackedEntries.get(entryElement)
       if (!state) return
 
-      state.manual = false
-      state.manualData = undefined
+      state.auto = false
+      if (state.overrideEnabled !== undefined) return
+
+      trackedEntries.delete(entryElement)
+    },
+    enableElement: (element, options): void => {
+      logger.info('Manually tracking click interaction for element:', element)
+      const state = trackedEntries.get(element) ?? createDefaultTrackedEntryState()
+      state.overrideEnabled = true
+      state.overrideData = options?.data
+      trackedEntries.set(element, state)
+    },
+    disableElement: (element): void => {
+      logger.info('Manually disabling click interaction for element:', element)
+      const state = trackedEntries.get(element)
+      const nextState = state ?? createDefaultTrackedEntryState()
+      nextState.overrideEnabled = false
+      nextState.overrideData = undefined
+      trackedEntries.set(element, nextState)
+    },
+    clearElement: (element): void => {
+      logger.info('Manually clearing click interaction override for element:', element)
+      const state = trackedEntries.get(element)
+      if (!state) return
+
+      state.overrideEnabled = undefined
+      state.overrideData = undefined
 
       if (state.auto) return
 

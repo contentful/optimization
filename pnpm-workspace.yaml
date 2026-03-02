@@ -13,6 +13,7 @@ catalog:
   '@rsbuild/core': ^1.7.3
   '@rstest/core': ^0.8.5
   '@rstest/coverage-istanbul': ^0.2.1
+  '@rsdoctor/cli': ^1.5.2
   '@rsdoctor/rspack-plugin': ^1.5.2
   '@rslib/core': ^0.19.6
   '@types/express': ^5.0.6

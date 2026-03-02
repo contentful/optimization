@@ -26,7 +26,7 @@ function isAutoTrackState(value: unknown): value is AutoTrackState {
 
 const getAutoTrackState = (optimization: Optimization): AutoTrackState | undefined => {
   const runtime = Reflect.get(optimization, 'entryInteractionRuntime')
-  const value = Reflect.get(runtime, 'autoTrackEntryInteractions')
+  const value = Reflect.get(runtime, 'autoTrack')
 
   return isAutoTrackState(value) ? value : undefined
 }
@@ -97,11 +97,12 @@ describe('Optimization', () => {
     const element = document.createElement('div')
 
     web.tracking.enable('views')
-    web.tracking.observe('views', element, { data: { entryId: 'entry-123' } })
-    web.tracking.unobserve('views', element)
+    web.tracking.enableElement('views', element, { data: { entryId: 'entry-123' } })
+    web.tracking.disableElement('views', element)
+    web.tracking.clearElement('views', element)
     web.tracking.disable('views')
 
-    expect(getAutoTrackEntryViews(web)).toBe(true)
+    expect(getAutoTrackEntryViews(web)).toBe(false)
   })
 
   it('supports generic interaction APIs for entry click tracking', () => {
@@ -109,11 +110,12 @@ describe('Optimization', () => {
     const element = document.createElement('div')
 
     web.tracking.enable('clicks')
-    web.tracking.observe('clicks', element, { data: { entryId: 'entry-123' } })
-    web.tracking.unobserve('clicks', element)
+    web.tracking.enableElement('clicks', element, { data: { entryId: 'entry-123' } })
+    web.tracking.disableElement('clicks', element)
+    web.tracking.clearElement('clicks', element)
     web.tracking.disable('clicks')
 
-    expect(getAutoTrackEntryClicks(web)).toBe(true)
+    expect(getAutoTrackEntryClicks(web)).toBe(false)
   })
 
   it('defaults allowedEventTypes to identify/page for web', () => {

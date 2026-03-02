@@ -109,6 +109,10 @@ function stripLeadingSeparator(argv: string[]): void {
   }
 }
 
+function hasExplicitFrozenLockfileFlag(args: readonly string[]): boolean {
+  return args.includes('--frozen-lockfile') || args.includes('--no-frozen-lockfile')
+}
+
 function runPnpm(implementation: string, args: readonly string[]): number {
   const commandArgs = ['--dir', `implementations/${implementation}`, '--ignore-workspace', ...args]
 
@@ -142,8 +146,15 @@ function runAction(
   actionArgs: readonly string[],
 ): number {
   switch (requestedAction) {
-    case 'implementation:install':
-      return runPnpm(implementation.name, ['install', '--force', ...actionArgs])
+    case 'implementation:install': {
+      const installArgs = ['install', '--force', ...actionArgs]
+
+      if (!hasExplicitFrozenLockfileFlag(actionArgs)) {
+        installArgs.push('--no-frozen-lockfile')
+      }
+
+      return runPnpm(implementation.name, installArgs)
+    }
     case 'implementation:build:run': {
       if (implementation.scripts.has('build')) {
         const buildExitCode = runScript(implementation.name, 'build')

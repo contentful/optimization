@@ -2,9 +2,9 @@
 
 **Feature Branch**: `[012-core-personalized-data-resolution]`  
 **Created**: 2026-02-26  
-**Status**: Draft  
-**Input**: User description: "Examine the current functionality in `@contentful/optimization-core`
-package and derive SpecKit-compatible specifications."
+**Status**: Current (Pre-release)  
+**Input**: Repository behavior review for the current pre-release implementation (validated
+2026-03-02).
 
 ## User Scenarios & Testing _(mandatory)_
 

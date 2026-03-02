@@ -33,16 +33,12 @@ export const maybeEnableRsDoctor = (config: {
     return
   }
 
-  // Rsdoctor's bundle plugin warns for every build when devtool is enabled
-  // because it rewrites devtoolModuleFilenameTemplate internally.
-  config.devtool = false
-
   config.plugins.push(
     new RsdoctorRspackPlugin({
       disableClientServer: true,
       // Keep output deterministic and local to the package.
       output: {
-        reportDir: '.rsdoctor',
+        reportDir: 'coverage',
       },
     }),
   )

@@ -4,6 +4,7 @@ import {
   type InsightsEvent as AnalyticsEvent,
   type ApiClientConfig,
   type ChangeArray,
+  type ComponentClickBuilderArgs,
   type ComponentViewBuilderArgs,
   type EventBuilderConfig,
   type ExperienceApiClientConfig,
@@ -288,7 +289,7 @@ abstract class CoreBase {
    * await core.trackComponentClick({ componentId: 'hero-banner' })
    * ```
    */
-  async trackComponentClick(payload: ComponentViewBuilderArgs): Promise<void> {
+  async trackComponentClick(payload: ComponentClickBuilderArgs): Promise<void> {
     await this.analytics.trackComponentClick(payload)
   }
 

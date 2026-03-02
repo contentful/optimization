@@ -31,6 +31,69 @@ function generateBatchEventArray(
   id: string,
   eventType: 'component' | 'component_click' = 'component',
 ): BatchInsightsEventArray {
+  const event =
+    eventType === 'component'
+      ? {
+          type: 'component' as const,
+          componentType: 'Entry' as const,
+          componentId: crypto.randomUUID(),
+          componentViewId: crypto.randomUUID(),
+          viewDurationMs: 1000,
+          variantIndex: 0,
+          channel: 'web' as const,
+          context: {
+            campaign: {},
+            gdpr: { isConsentGiven: true },
+            library: {
+              name: 'Library',
+              version: '0',
+            },
+            location: {},
+            locale: '',
+            page: {
+              path: '/path',
+              query: {},
+              referrer: 'http://example.com',
+              search: '',
+              title: 'Document Title',
+              url: 'http://example.com/path',
+            },
+          },
+          messageId: crypto.randomUUID(),
+          originalTimestamp: new Date().toISOString(),
+          sentAt: new Date().toISOString(),
+          timestamp: new Date().toISOString(),
+        }
+      : {
+          type: 'component_click' as const,
+          componentType: 'Entry' as const,
+          componentId: crypto.randomUUID(),
+          variantIndex: 0,
+          channel: 'web' as const,
+          context: {
+            campaign: {},
+            gdpr: { isConsentGiven: true },
+            library: {
+              name: 'Library',
+              version: '0',
+            },
+            location: {},
+            locale: '',
+            page: {
+              path: '/path',
+              query: {},
+              referrer: 'http://example.com',
+              search: '',
+              title: 'Document Title',
+              url: 'http://example.com/path',
+            },
+          },
+          messageId: crypto.randomUUID(),
+          originalTimestamp: new Date().toISOString(),
+          sentAt: new Date().toISOString(),
+          timestamp: new Date().toISOString(),
+        }
+
   return [
     {
       profile: {
@@ -56,37 +119,7 @@ function generateBatchEventArray(
           activeSessionLength: 1,
         },
       },
-      events: [
-        {
-          type: eventType,
-          componentType: 'Entry',
-          componentId: crypto.randomUUID(),
-          variantIndex: 0,
-          channel: 'web',
-          context: {
-            campaign: {},
-            gdpr: { isConsentGiven: true },
-            library: {
-              name: 'Library',
-              version: '0',
-            },
-            location: {},
-            locale: '',
-            page: {
-              path: '/path',
-              query: {},
-              referrer: 'http://example.com',
-              search: '',
-              title: 'Document Title',
-              url: 'http://example.com/path',
-            },
-          },
-          messageId: crypto.randomUUID(),
-          originalTimestamp: new Date().toISOString(),
-          sentAt: new Date().toISOString(),
-          timestamp: new Date().toISOString(),
-        },
-      ],
+      events: [event],
     },
   ]
 }

@@ -11,17 +11,17 @@
 <div align="center">
 
 [Readme](./README.md) · [Reference](https://contentful.github.io/optimization) ·
-[Contributing](/CONTRIBUTING.md)
+[Contributing](../../../CONTRIBUTING.md)
 
 </div>
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is currently ALPHA! Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
 
 The Optimization Node SDK implements functionality specific to Node environments, based on the
-[Optimization Core Library](/universal/core/README.md). This SDK is part of the
-[Contentful Optimization SDK Suite](/README.md).
+[Optimization Core Library](../../../universal/core/README.md). This SDK is part of the
+[Contentful Optimization SDK Suite](../../../README.md).
 
 <details>
   <summary>Table of Contents</summary>
@@ -79,11 +79,11 @@ const optimization = new Optimization({ clientId: 'abc123' })
 Reference implementations illustrate how the SDK may be used under common scenarios, as well as
 select less-common scenarios, with the most basic example solution possible.
 
-- [Node SSR Only](/implementations/node-ssr-only/README.md): Example application that uses the Node
-  SDK to render a personalized Web page
-- [Node SSR + Web Vanilla](/implementations/node-ssr-web-vanilla/README.md): Example application
-  demonstrating simple profile synchronization between the Node and [Web](../web/README.md) SDKs via
-  cookie
+- [Node SSR Only](../../../implementations/node-ssr-only/README.md): Example application that uses
+  the Node SDK to render a personalized Web page
+- [Node SSR + Web Vanilla](../../../implementations/node-ssr-web-vanilla/README.md): Example
+  application demonstrating simple profile synchronization between the Node and
+  [Web](../web/README.md) SDKs via cookie
 
 ## Configuration
 

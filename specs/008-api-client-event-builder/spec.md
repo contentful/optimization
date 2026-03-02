@@ -2,9 +2,9 @@
 
 **Feature Branch**: `[008-api-client-event-builder]`  
 **Created**: 2026-02-26  
-**Status**: Draft  
-**Input**: User description: "Derive SpecKit-compatible specs from current Event Builder
-functionality in `@contentful/optimization-api-client`."
+**Status**: Current (Pre-release)  
+**Input**: Repository behavior review for the current pre-release implementation (validated
+2026-03-02).
 
 ## User Scenarios & Testing _(mandatory)_
 
