@@ -90,6 +90,39 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(capturedGlobalLiveUpdates).toBe(true)
   })
 
+  it('returns null from useLiveUpdates outside provider', () => {
+    let capturedContext: ReturnType<typeof useLiveUpdates> = undefined as never
+
+    function Probe(): null {
+      capturedContext = useLiveUpdates()
+      return null
+    }
+
+    renderToString(<Probe />)
+
+    expect(capturedContext).toBeNull()
+  })
+
+  it('provides both optimization instance and live updates via OptimizationRoot', () => {
+    let capturedInstance: OptimizationWebSdk | null = null
+    let capturedGlobalLiveUpdates: boolean | null = null
+
+    function Probe(): null {
+      capturedInstance = useOptimization()
+      capturedGlobalLiveUpdates = useLiveUpdates()?.globalLiveUpdates ?? null
+      return null
+    }
+
+    renderToString(
+      <OptimizationRoot instance={optimizationInstance} liveUpdates={true}>
+        <Probe />
+      </OptimizationRoot>,
+    )
+
+    expect(capturedInstance).toBe(optimizationInstance)
+    expect(capturedGlobalLiveUpdates).toBe(true)
+  })
+
   it('supports live updates fallback semantics for dependent components', () => {
     const results: boolean[] = []
 

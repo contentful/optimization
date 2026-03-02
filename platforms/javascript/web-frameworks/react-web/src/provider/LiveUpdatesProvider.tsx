@@ -1,5 +1,5 @@
-import { PropsWithChildren, ReactElement, useContext } from 'react'
-import { LiveUpdatesContext, LiveUpdatesContextValue } from '../context/LiveUpdatesContext'
+import { PropsWithChildren, ReactElement } from 'react'
+import { LiveUpdatesContext } from '../context/LiveUpdatesContext'
 
 export interface LiveUpdatesProviderProps extends PropsWithChildren {
   readonly globalLiveUpdates?: boolean
@@ -14,8 +14,4 @@ export function LiveUpdatesProvider({
       {children}
     </LiveUpdatesContext.Provider>
   )
-}
-
-export function useLiveUpdates(): LiveUpdatesContextValue | null {
-  return useContext(LiveUpdatesContext)
 }
