@@ -25,7 +25,7 @@ export default defineConfig({
   globals: true,
   testEnvironment: 'happy-dom',
   coverage: {
-    include: ['src/**/*'],
+    include: ['src/**/*.ts', 'src/**/*.tsx'],
     reporters: coverageReporters,
   },
 })
