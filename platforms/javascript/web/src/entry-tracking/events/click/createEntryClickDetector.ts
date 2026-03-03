@@ -1,8 +1,8 @@
 import { createScopedLogger, type CoreStateful } from '@contentful/optimization-core'
-import type { EntryInteractionDetector } from '../EntryInteractionDetector'
-import type { EntryClickInteractionElementOptions } from '../resolveAutoTrackEntryInteractionOptions'
-import { resolveComponentTrackingPayload as resolveTrackedComponentPayload } from '../resolveComponentTrackingPayload'
-import { resolveEntryInteractionElementOverride } from '../resolveEntryInteractionElementOverride'
+import type { EntryInteractionDetector } from '../../EntryInteractionDetector'
+import type { EntryClickInteractionElementOptions } from '../../resolveAutoTrackEntryInteractionOptions'
+import { resolveComponentTrackingPayload as resolveTrackedComponentPayload } from '../../resolveComponentTrackingPayload'
+import { resolveEntryInteractionElementOverride } from '../../resolveEntryInteractionElementOverride'
 
 const logger = createScopedLogger('Web:EntryClickTracking')
 

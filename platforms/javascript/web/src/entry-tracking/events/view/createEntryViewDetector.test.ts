@@ -1,4 +1,4 @@
-import { advance, createEntryTrackingHarness, installIOPolyfill } from '../../test/helpers'
+import { advance, createEntryTrackingHarness, installIOPolyfill } from '../../../test/helpers'
 import { createEntryViewDetector, type EntryViewTrackingCore } from './createEntryViewDetector'
 
 function createCore(): {
@@ -246,6 +246,44 @@ describe('EntryViewTracker', () => {
         componentId: 'entry-periodic-view',
         componentViewId: firstPayload?.componentViewId,
         viewDurationMs: 1000,
+      }),
+    )
+
+    cleanup()
+  })
+
+  it('emits a final duration update when an observed entry leaves view', async () => {
+    const entry = document.createElement('div')
+    entry.dataset.ctflEntryId = 'entry-view-final'
+    document.body.append(entry)
+
+    const { core, trackComponentView } = createCore()
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
+
+    tracker.start({ dwellTimeMs: 0, viewDurationUpdateIntervalMs: 10_000 })
+
+    const instance = io.getLast()
+
+    if (!instance) {
+      throw new Error('IntersectionObserver polyfill instance not found')
+    }
+
+    instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
+    await advance(0)
+    await advance(500)
+    instance.trigger({ target: entry, isIntersecting: false, intersectionRatio: 0 })
+    await Promise.resolve()
+
+    expect(trackComponentView).toHaveBeenCalledTimes(2)
+
+    const firstPayload = trackComponentView.mock.calls[0]?.[0]
+    const secondPayload = trackComponentView.mock.calls[1]?.[0]
+
+    expect(secondPayload).toEqual(
+      expect.objectContaining({
+        componentId: 'entry-view-final',
+        componentViewId: firstPayload?.componentViewId,
+        viewDurationMs: 500,
       }),
     )
 

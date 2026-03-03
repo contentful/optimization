@@ -40,14 +40,38 @@ export interface EntryViewInteractionElementOptions {
   readonly data?: unknown
 }
 
+/**
+ * Start options for automatic entry hover tracking.
+ */
+export interface EntryHoverInteractionStartOptions {
+  /** Required hover time (in ms) before the first hover event is emitted. */
+  readonly dwellTimeMs?: number
+  /** Interval (in ms) for emitting updated hover-duration events while hovered. */
+  readonly hoverDurationUpdateIntervalMs?: number
+}
+
+/**
+ * Per-element options for hover interaction tracking.
+ */
+export interface EntryHoverInteractionElementOptions {
+  /** Per-element dwell time override in ms. */
+  readonly dwellTimeMs?: number
+  /** Per-element override of hover-duration update interval in ms. */
+  readonly hoverDurationUpdateIntervalMs?: number
+  /** Arbitrary data to pass through to the callback for this element. */
+  readonly data?: unknown
+}
+
 interface EntryInteractionStartOptionsMap {
   clicks: undefined
   views: EntryViewInteractionStartOptions | undefined
+  hovers: EntryHoverInteractionStartOptions | undefined
 }
 
 interface EntryInteractionElementOptionsMap {
   clicks: EntryClickInteractionElementOptions
   views: EntryViewInteractionElementOptions
+  hovers: EntryHoverInteractionElementOptions
 }
 
 /**
@@ -74,6 +98,10 @@ export interface EntryInteractionTrackers {
     EntryInteractionStartOptionsMap['views'],
     EntryInteractionElementOptionsMap['views']
   >
+  hovers: EntryInteractionTracker<
+    EntryInteractionStartOptionsMap['hovers'],
+    EntryInteractionElementOptionsMap['hovers']
+  >
 }
 
 /**
@@ -98,6 +126,7 @@ export function resolveAutoTrackEntryInteractionOptions(
   return {
     clicks: options?.clicks ?? false,
     views: options?.views ?? false,
+    hovers: options?.hovers ?? false,
   }
 }
 

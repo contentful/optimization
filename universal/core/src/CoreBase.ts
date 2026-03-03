@@ -5,6 +5,7 @@ import {
   type ApiClientConfig,
   type ChangeArray,
   type ComponentClickBuilderArgs,
+  type ComponentHoverBuilderArgs,
   type ComponentViewBuilderArgs,
   type EventBuilderConfig,
   type ExperienceApiClientConfig,
@@ -291,6 +292,20 @@ abstract class CoreBase {
    */
   async trackComponentClick(payload: ComponentClickBuilderArgs): Promise<void> {
     await this.analytics.trackComponentClick(payload)
+  }
+
+  /**
+   * Track a component hover via analytics.
+   *
+   * @param payload - Component hover builder arguments.
+   * @returns A promise that resolves when processing completes.
+   * @example
+   * ```ts
+   * await core.trackComponentHover({ componentId: 'hero-banner' })
+   * ```
+   */
+  async trackComponentHover(payload: ComponentHoverBuilderArgs): Promise<void> {
+    await this.analytics.trackComponentHover(payload)
   }
 
   /**

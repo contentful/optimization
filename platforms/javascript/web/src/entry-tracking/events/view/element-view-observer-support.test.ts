@@ -26,6 +26,7 @@ const makeState = (overrides: Partial<ElementState> = {}): ElementState => ({
   done: false,
   inFlight: false,
   lastKnownVisible: false,
+  pendingFinal: false,
   ...overrides,
 })
 

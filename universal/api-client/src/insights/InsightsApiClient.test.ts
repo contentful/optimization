@@ -29,70 +29,56 @@ function makeClient(overrides: Partial<InsightsApiClientConfig> = {}): InsightsA
 // TODO: Find a better place for this sort of thing
 function generateBatchEventArray(
   id: string,
-  eventType: 'component' | 'component_click' = 'component',
+  eventType: 'component' | 'component_click' | 'component_hover' = 'component',
 ): BatchInsightsEventArray {
+  const baseEvent = {
+    componentType: 'Entry' as const,
+    componentId: crypto.randomUUID(),
+    variantIndex: 0,
+    channel: 'web' as const,
+    context: {
+      campaign: {},
+      gdpr: { isConsentGiven: true },
+      library: {
+        name: 'Library',
+        version: '0',
+      },
+      location: {},
+      locale: '',
+      page: {
+        path: '/path',
+        query: {},
+        referrer: 'http://example.com',
+        search: '',
+        title: 'Document Title',
+        url: 'http://example.com/path',
+      },
+    },
+    messageId: crypto.randomUUID(),
+    originalTimestamp: new Date().toISOString(),
+    sentAt: new Date().toISOString(),
+    timestamp: new Date().toISOString(),
+  }
+
   const event =
     eventType === 'component'
       ? {
+          ...baseEvent,
           type: 'component' as const,
-          componentType: 'Entry' as const,
-          componentId: crypto.randomUUID(),
           componentViewId: crypto.randomUUID(),
           viewDurationMs: 1000,
-          variantIndex: 0,
-          channel: 'web' as const,
-          context: {
-            campaign: {},
-            gdpr: { isConsentGiven: true },
-            library: {
-              name: 'Library',
-              version: '0',
-            },
-            location: {},
-            locale: '',
-            page: {
-              path: '/path',
-              query: {},
-              referrer: 'http://example.com',
-              search: '',
-              title: 'Document Title',
-              url: 'http://example.com/path',
-            },
-          },
-          messageId: crypto.randomUUID(),
-          originalTimestamp: new Date().toISOString(),
-          sentAt: new Date().toISOString(),
-          timestamp: new Date().toISOString(),
         }
-      : {
-          type: 'component_click' as const,
-          componentType: 'Entry' as const,
-          componentId: crypto.randomUUID(),
-          variantIndex: 0,
-          channel: 'web' as const,
-          context: {
-            campaign: {},
-            gdpr: { isConsentGiven: true },
-            library: {
-              name: 'Library',
-              version: '0',
-            },
-            location: {},
-            locale: '',
-            page: {
-              path: '/path',
-              query: {},
-              referrer: 'http://example.com',
-              search: '',
-              title: 'Document Title',
-              url: 'http://example.com/path',
-            },
-          },
-          messageId: crypto.randomUUID(),
-          originalTimestamp: new Date().toISOString(),
-          sentAt: new Date().toISOString(),
-          timestamp: new Date().toISOString(),
-        }
+      : eventType === 'component_hover'
+        ? {
+            ...baseEvent,
+            type: 'component_hover' as const,
+            componentHoverId: crypto.randomUUID(),
+            hoverDurationMs: 1000,
+          }
+        : {
+            ...baseEvent,
+            type: 'component_click' as const,
+          }
 
   return [
     {
@@ -213,6 +199,25 @@ describe('InsightsApiClient.sendBatchEvents', () => {
 
   it('accepts and POSTs component_click events', async () => {
     const batches = generateBatchEventArray('e2-click', 'component_click')
+
+    const handler = http.post(
+      `${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`,
+      async ({ request }) => {
+        const json = (await request.json()) as unknown
+        expect(json).toEqual(batches)
+        return HttpResponse.json({ ok: true }, { status: 200 })
+      },
+    )
+
+    server.use(handler)
+
+    const client = makeClient()
+
+    await expect(client.sendBatchEvents(batches)).resolves.toBe(true)
+  })
+
+  it('accepts and POSTs component_hover events', async () => {
+    const batches = generateBatchEventArray('e2-hover', 'component_hover')
 
     const handler = http.post(
       `${INSIGHTS_BASE_URL}v1/organizations/:orgId/environments/:env/events`,

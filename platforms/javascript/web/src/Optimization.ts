@@ -90,9 +90,9 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
    * Controls automatic tracking behavior for entry interactions.
    *
    * @remarks
-   * Supports entry interactions via the `views` and `clicks` interactions.
+   * Supports entry interactions via the `views`, `clicks`, and `hovers` interactions.
    *
-   * @defaultValue `{ views: false, clicks: false }`
+   * @defaultValue `{ views: false, clicks: false, hovers: false }`
    */
   autoTrackEntryInteraction?: AutoTrackEntryInteractionOptions
 
@@ -191,6 +191,7 @@ function mergeConfig({
  * - automatic persistence of consent, profile, and personalizations,
  * - cookie-based anonymous ID handling,
  * - automatic tracked entry interactions (currently views and clicks),
+ * - automatic tracked entry interactions (currently views, clicks, and hovers),
  * - online-change based flushing of events,
  * - and visibility-change based flushing of events.
  *
