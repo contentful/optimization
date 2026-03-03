@@ -5,7 +5,7 @@ import type {
   ExperienceEvent as PersonalizationEvent,
   Profile,
   SelectedPersonalizationArray,
-} from '@contentful/optimization-api-client'
+} from '@contentful/optimization-api-client/api-schemas'
 import { batch, computed, effect, signal, type Signal, untracked } from '@preact/signals-core'
 import type { BlockedEvent } from './BlockedEvent'
 import { FlagsResolver } from './personalization/resolvers'

@@ -1,4 +1,4 @@
-import type { Profile } from '@contentful/optimization-web'
+import type { Profile } from '@contentful/optimization-web/api-schemas'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
@@ -54,7 +54,7 @@ export default function App({
       return
     }
 
-    void sdk.personalization.page({ properties: { url: location.pathname } })
+    void sdk.page({ properties: { url: location.pathname } })
   }, [isReady, location.pathname, sdk])
 
   useEffect(() => {
@@ -99,7 +99,7 @@ export default function App({
       return
     }
 
-    void sdk.personalization.identify({ userId: 'charles', traits: { identified: true } })
+    void sdk.identify({ userId: 'charles', traits: { identified: true } })
   }
 
   const handleReset = (): void => {

@@ -1,4 +1,5 @@
-import type { ResolvedData, SelectedPersonalizationArray } from '@contentful/optimization-core'
+import type { ResolvedData } from '@contentful/optimization-core'
+import type { SelectedPersonalizationArray } from '@contentful/optimization-core/api-schemas'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import React, { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
@@ -188,7 +189,7 @@ export function Personalization({
   }, [optimization, shouldLiveUpdate, lockedPersonalizations])
 
   const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
-    () => optimization.personalization.personalizeEntry(baselineEntry, lockedPersonalizations),
+    () => optimization.personalizeEntry(baselineEntry, lockedPersonalizations),
     [baselineEntry, optimization, lockedPersonalizations],
   )
 

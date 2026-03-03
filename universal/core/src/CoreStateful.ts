@@ -4,7 +4,7 @@ import type {
   ExperienceEvent as PersonalizationEvent,
   Profile,
   SelectedPersonalizationArray,
-} from '@contentful/optimization-api-client'
+} from '@contentful/optimization-api-client/api-schemas'
 import { AnalyticsStateful, type AnalyticsProductConfig, type AnalyticsStates } from './analytics'
 import type { BlockedEvent } from './BlockedEvent'
 import type { ConsentController } from './Consent'
@@ -197,9 +197,9 @@ class CoreStateful extends CoreBase implements ConsentController {
   private destroyed = false
 
   /** Stateful analytics product. */
-  readonly analytics: AnalyticsStateful
+  protected _analytics: AnalyticsStateful
   /** Stateful personalization product. */
-  readonly personalization: PersonalizationStateful
+  protected _personalization: PersonalizationStateful
 
   /**
    * Create a stateful core with optional default consent and product defaults.
@@ -244,7 +244,7 @@ class CoreStateful extends CoreBase implements ConsentController {
         consent.value = defaultConsent
       }
 
-      this.analytics = new AnalyticsStateful({
+      this._analytics = new AnalyticsStateful({
         api: this.api,
         builder: this.eventBuilder,
         config: {
@@ -259,7 +259,7 @@ class CoreStateful extends CoreBase implements ConsentController {
         interceptors: this.interceptors,
       })
 
-      this.personalization = new PersonalizationStateful({
+      this._personalization = new PersonalizationStateful({
         api: this.api,
         builder: this.eventBuilder,
         config: {
@@ -346,8 +346,8 @@ class CoreStateful extends CoreBase implements ConsentController {
    * ```
    */
   async flush(): Promise<void> {
-    await this.analytics.flush()
-    await this.personalization.flush()
+    await this._analytics.flush()
+    await this._personalization.flush()
   }
 
   /**

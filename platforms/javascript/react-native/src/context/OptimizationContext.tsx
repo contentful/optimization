@@ -28,7 +28,7 @@ const OptimizationContext = createContext<OptimizationContextValue | null>(null)
  *   const optimization = useOptimization()
  *
  *   const handlePress = async () => {
- *     await optimization.analytics.trackComponentView({
+ *     await optimization.trackComponentView({
  *       componentId: 'my-component',
  *       variantIndex: 0,
  *     })

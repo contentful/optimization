@@ -214,7 +214,7 @@ export interface LoggerMockModule {
 }
 
 /**
- * Creates a mock module for the logger package that includes both the global logger
+ * Creates a mock module for an SDK logger entry point that includes both the global logger
  * and the {@link createScopedLogger} factory. The scoped logger routes calls to the
  * mock logger with the location prepended.
  *
@@ -225,7 +225,7 @@ export interface LoggerMockModule {
  * ```typescript
  * import { mockLogger, createLoggerMock } from 'mocks'
  *
- * vi.mock('logger', () => createLoggerMock(mockLogger))
+ * vi.mock('@contentful/optimization-core/logger', () => createLoggerMock(mockLogger))
  *
  * // In tests:
  * expect(mockLogger.info).toHaveBeenCalledWith('ModuleName', 'message')
@@ -269,7 +269,7 @@ export function createLoggerMock(logger: MockLogger): LoggerMockModule {
  * // In setup.ts or test file:
  * import { loggerMock } from 'mocks'
  *
- * vi.mock('logger', () => loggerMock)
+ * vi.mock('@contentful/optimization-core/logger', () => loggerMock)
  * ```
  *
  * @public

@@ -1,4 +1,4 @@
-import { createScopedLogger } from 'logger'
+import { createScopedLogger } from '../logger'
 import type { BaseFetchMethodOptions, FetchMethod, FetchMethodCallbackOptions } from './Fetch'
 
 const logger = createScopedLogger('ApiClient:Timeout')

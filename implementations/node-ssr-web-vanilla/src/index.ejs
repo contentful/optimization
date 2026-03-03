@@ -219,7 +219,7 @@
       })
 
       // Emit page event
-      optimization.personalization.page()
+      optimization.page()
 
       /* --- Utility Functionality (for E2E) --- */
 
@@ -328,7 +328,7 @@
           const span = document.createElement('span')
 
           // This is how we can inject MergeTag data into Rich Text
-          span.innerText = optimization.personalization.getMergeTagValue(field.data.target)
+          span.innerText = optimization.getMergeTagValue(field.data.target)
 
           parent.appendChild(span)
         } else {
@@ -353,7 +353,7 @@
 
       // Render personalized entries
       async function renderPersonalizedEntry(rawEntry, element, autoObserve = true) {
-        const { entry, personalization } = optimization.personalization.personalizeEntry(rawEntry)
+        const { entry, personalization } = optimization.personalizeEntry(rawEntry)
         const renderInline =
           element.dataset.e2eEntryInline === 'true' || element.tagName === 'BUTTON'
 

@@ -18,7 +18,11 @@ export default defineConfig({
   source: {
     entry: {
       index: './src/index.ts',
+      logger: './src/logger.ts',
       constants: './src/constants.ts',
+      'core-sdk': './src/core-sdk.ts',
+      'api-client': './src/api-client.ts',
+      'api-schemas': './src/api-schemas.ts',
     },
     tsconfigPath: './tsconfig.build.json',
     decorators: { version: '2022-03' }, // stage-3 decorators

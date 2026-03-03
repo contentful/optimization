@@ -15,7 +15,6 @@
   "include": ["./src/**/*", "./src/**/*.json"],
   "exclude": ["./src/**/*.test.*", "./src/test/**/*"],
   "references": [
-    { "path": "../../lib/logger/tsconfig.build.json" },
     { "path": "../api-schemas/tsconfig.build.json" },
     { "path": "../api-client/tsconfig.build.json" }
   ]

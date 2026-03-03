@@ -1,4 +1,5 @@
-import { createScopedLogger, type SelectedPersonalization } from '@contentful/optimization-core'
+import type { SelectedPersonalization } from '@contentful/optimization-core/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-core/logger'
 import type { Entry } from 'contentful'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Dimensions, type LayoutChangeEvent } from 'react-native'
@@ -213,7 +214,7 @@ export function useViewportTracking({
 
           // Track the component view
           void (async () => {
-            await currentOptimization.analytics.trackComponentView({
+            await currentOptimization.trackComponentView({
               componentId,
               componentViewId,
               experienceId,

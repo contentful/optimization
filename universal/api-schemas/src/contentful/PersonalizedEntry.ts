@@ -1,4 +1,3 @@
-import type { Entry } from 'contentful'
 import * as z from 'zod/mini'
 import { CtflEntry, EntryFields } from './CtflEntry'
 import { PersonalizationEntryArray } from './PersonalizationEntry'
@@ -26,22 +25,3 @@ export const PersonalizedEntry = z.extend(CtflEntry, {
  * @public
  */
 export type PersonalizedEntry = z.infer<typeof PersonalizedEntry>
-
-/**
- * Type guard for {@link PersonalizedEntry}.
- *
- * @param entry - Contentful entry to test.
- * @returns `true` if the entry conforms to {@link PersonalizedEntry}, otherwise `false`.
- *
- * @example
- * ```ts
- * if (isPersonalizedEntry(entry)) {
- *   console.log(entry.fields.nt_experiences);
- * }
- * ```
- *
- * @public
- */
-export function isPersonalizedEntry(entry: Entry | undefined): entry is PersonalizedEntry {
-  return PersonalizedEntry.safeParse(entry).success
-}

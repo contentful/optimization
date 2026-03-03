@@ -100,7 +100,7 @@ and route changes, and verify expected tracking payloads.
   personalization value and ignore later updates.
 - **FR-006**: `Personalization` MUST unsubscribe from personalization state updates on unmount.
 - **FR-007**: `Personalization` MUST resolve display content via
-  `optimization.personalization.personalizeEntry(baselineEntry, lockedPersonalizations)`.
+  `optimization.personalizeEntry(baselineEntry, lockedPersonalizations)`.
 - **FR-008**: `Personalization` MUST pass resolved entry and resolved personalization metadata to
   `useViewportTracking`.
 - **FR-009**: `Personalization` MUST render `children(resolvedEntry)` inside a wrapper `View`

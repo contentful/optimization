@@ -1,6 +1,5 @@
 /* eslint-disable no-console -- using console */
-import type { LogEvent, LogLevels } from 'diary'
-import { compare } from 'diary/utils'
+import { logLevelSeverity, type LogEvent, type LogLevels } from './logging'
 import LogSink from './LogSink'
 
 const consoleMap = {
@@ -24,15 +23,13 @@ const consoleMap = {
   },
 }
 
-const COMPARISON_EQUALITY = 0
-
 /**
  * A {@link LogSink} that writes log events to the browser or Node.js console,
  * filtering by a configurable verbosity threshold.
  *
  * @example
  * ```typescript
- * import { logger, ConsoleLogSink } from 'logger'
+ * import { logger, ConsoleLogSink } from '@contentful/optimization-api-client/logger'
  *
  * logger.addSink(new ConsoleLogSink('debug'))
  * ```
@@ -68,7 +65,7 @@ export class ConsoleLogSink extends LogSink {
    * @returns Nothing.
    */
   ingest(event: LogEvent): void {
-    if (compare(this.verbosity, event.level) > COMPARISON_EQUALITY) return
+    if (logLevelSeverity[event.level] < logLevelSeverity[this.verbosity]) return
 
     consoleMap[event.level](...event.messages)
   }

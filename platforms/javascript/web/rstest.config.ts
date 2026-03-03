@@ -15,7 +15,6 @@ export default defineConfig({
         '../../../universal/api-schemas/src/',
       ),
       '@contentful/optimization-core': resolve(__dirname, '../../../universal/core/src/'),
-      logger: resolve(__dirname, '../../../lib/logger/src/'),
     },
   },
   include: ['**/*.test.?(c|m)[jt]s?(x)'],

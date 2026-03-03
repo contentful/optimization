@@ -1,4 +1,4 @@
-import { createScopedLogger } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core/logger'
 import React, { useCallback, useEffect, useState } from 'react'
 import { Alert, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'

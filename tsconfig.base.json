@@ -30,8 +30,7 @@
       "@contentful/optimization-react-native": ["./platforms/javascript/react-native/src/index.ts"],
       "@contentful/optimization-react-native/*": ["./platforms/javascript/react-native/src/*"],
       "@contentful/optimization-web": ["./platforms/javascript/web/src/index.ts"],
-      "@contentful/optimization-web/*": ["./platforms/javascript/web/src/*"],
-      "logger": ["./lib/logger/src/index.ts"]
+      "@contentful/optimization-web/*": ["./platforms/javascript/web/src/*"]
     },
     "removeComments": false,
     "skipLibCheck": true,

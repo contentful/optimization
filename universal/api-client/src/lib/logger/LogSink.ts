@@ -1,11 +1,4 @@
-import type { LogEvent } from 'diary'
-
-/**
- * A log event emitted by the diary logging library.
- *
- * @public
- */
-export type { LogEvent }
+import type { LogEvent } from './logging'
 
 /**
  * Abstract base class for log sinks that receive and process log events.

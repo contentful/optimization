@@ -10,9 +10,9 @@ import {
   type PersonalizedEntry,
   type SelectedPersonalization,
   type SelectedPersonalizationArray,
-} from '@contentful/optimization-api-client'
+} from '@contentful/optimization-api-client/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
-import { createScopedLogger } from 'logger'
 
 const logger = createScopedLogger('Personalization')
 

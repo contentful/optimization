@@ -49,16 +49,6 @@ const config = {
         }
       }
 
-      // Use browser version of diary package (no Node.js dependencies)
-      if (moduleName === 'diary') {
-        return {
-          filePath: path.resolve(
-            workspaceRoot,
-            'node_modules/.pnpm/diary@0.4.5/node_modules/diary/browser.js',
-          ),
-          type: 'sourceFile',
-        }
-      }
       // Let Metro handle everything else
       return context.resolveRequest(context, moduleName, platform)
     },

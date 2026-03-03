@@ -1,20 +1,22 @@
+import type {
+  ComponentViewBuilderArgs,
+  IdentifyBuilderArgs,
+  PageViewBuilderArgs,
+  ScreenViewBuilderArgs,
+  TrackBuilderArgs,
+} from '@contentful/optimization-api-client'
 import {
-  type ComponentViewBuilderArgs,
   ComponentViewEvent,
-  type IdentifyBuilderArgs,
   IdentifyEvent,
   type OptimizationData,
-  type PageViewBuilderArgs,
   PageViewEvent,
   parseWithFriendlyError,
   type PartialProfile,
   ExperienceEvent as PersonalizationEvent,
-  type ScreenViewBuilderArgs,
   ScreenViewEvent,
-  type TrackBuilderArgs,
   TrackEvent,
-} from '@contentful/optimization-api-client'
-import { createScopedLogger } from 'logger'
+} from '@contentful/optimization-api-client/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import PersonalizationBase from './PersonalizationBase'
 
 const logger = createScopedLogger('Personalization')

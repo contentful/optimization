@@ -1,4 +1,5 @@
-import { createScopedLogger, type CoreStateful } from '@contentful/optimization-core'
+import type { CoreStateful } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core/logger'
 import type { EntryInteractionDetector } from '../../EntryInteractionDetector'
 import type { EntryClickInteractionElementOptions } from '../../resolveAutoTrackEntryInteractionOptions'
 import { resolveComponentTrackingPayload as resolveTrackedComponentPayload } from '../../resolveComponentTrackingPayload'

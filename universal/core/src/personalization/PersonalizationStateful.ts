@@ -1,24 +1,26 @@
+import type {
+  ComponentViewBuilderArgs,
+  IdentifyBuilderArgs,
+  PageViewBuilderArgs,
+  ScreenViewBuilderArgs,
+  TrackBuilderArgs,
+} from '@contentful/optimization-api-client'
 import {
   type InsightsEvent as AnalyticsEvent,
   type ChangeArray,
-  type ComponentViewBuilderArgs,
   type Flags,
-  type IdentifyBuilderArgs,
   type Json,
   type MergeTagEntry,
   type OptimizationData,
-  type PageViewBuilderArgs,
   parseWithFriendlyError,
   ExperienceEvent as PersonalizationEvent,
   type ExperienceEventArray as PersonalizationEventArray,
   type Profile,
-  type ScreenViewBuilderArgs,
   type SelectedPersonalizationArray,
-  type TrackBuilderArgs,
-} from '@contentful/optimization-api-client'
+} from '@contentful/optimization-api-client/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import { isEqual } from 'es-toolkit/predicate'
-import { createScopedLogger } from 'logger'
 import type { BlockedEvent } from '../BlockedEvent'
 import type { ConsentGuard } from '../Consent'
 import { guardedBy } from '../lib/decorators'
@@ -322,6 +324,19 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
   }
 
   /**
+   * Get all resolved Custom Flags (derived from the signal).
+   * @param changes - Optional changes array; defaults to the current signal value.
+   * @returns The resolved Custom Flag map.
+   * @example
+   * ```ts
+   * const flags = personalization.getCustomFlags()
+   * ```
+   */
+  getCustomFlags(changes: ChangeArray | undefined = changesSignal.value): Flags {
+    return super.getCustomFlags(changes)
+  }
+
+  /**
    * Resolve a Contentful entry to a personalized variant using the current
    * or provided selections.
    *
@@ -363,7 +378,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
   getMergeTagValue(
     embeddedEntryNodeTarget: MergeTagEntry,
     profile: Profile | undefined = profileSignal.value,
-  ): unknown {
+  ): string | undefined {
     return super.getMergeTagValue(embeddedEntryNodeTarget, profile)
   }
 

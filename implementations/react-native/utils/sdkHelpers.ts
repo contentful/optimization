@@ -1,4 +1,5 @@
-import Optimization, { createScopedLogger } from '@contentful/optimization-react-native'
+import Optimization from '@contentful/optimization-react-native'
+import { createScopedLogger } from '@contentful/optimization-react-native/logger'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { createClient, type Entry } from 'contentful'
 import { ENV_CONFIG } from '../env.config'

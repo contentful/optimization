@@ -4,9 +4,9 @@ import type {
   OptimizationData,
   PersonalizationEntry,
   PersonalizationEntrySkeleton,
-  PreviewPanelSignalObject,
   SelectedPersonalizationArray,
-} from '@contentful/optimization-web'
+} from '@contentful/optimization-web/api-schemas'
+import type { PreviewPanelSignalObject } from '@contentful/optimization-web/core-sdk'
 import {
   PREVIEW_PANEL_SIGNAL_FNS_SYMBOL,
   PREVIEW_PANEL_SIGNALS_SYMBOL,

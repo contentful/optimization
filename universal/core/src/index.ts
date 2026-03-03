@@ -14,8 +14,6 @@ export {
   type Signals,
 } from './signals'
 
-export * from '@contentful/optimization-api-client'
-export * from 'logger'
 export * from './analytics'
 export type * from './BlockedEvent'
 export * from './constants'

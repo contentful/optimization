@@ -30,25 +30,6 @@ export const EntryReplacementVariant = z.object({
 export type EntryReplacementVariant = z.infer<typeof EntryReplacementVariant>
 
 /**
- * Type guard for {@link EntryReplacementVariant}.
- *
- * @param variant - Value to test.
- * @returns `true` if `variant` conforms to {@link EntryReplacementVariant}, otherwise `false`.
- *
- * @example
- * ```ts
- * if (isEntryReplacementVariant(variant)) {
- *   console.log(variant.id);
- * }
- * ```
- *
- * @public
- */
-export function isEntryReplacementVariant(variant: unknown): variant is EntryReplacementVariant {
-  return EntryReplacementVariant.safeParse(variant).success
-}
-
-/**
  * Zod schema describing an entry replacement personalization component.
  *
  * @remarks
@@ -82,27 +63,6 @@ export const EntryReplacementComponent = z.object({
  * @public
  */
 export type EntryReplacementComponent = z.infer<typeof EntryReplacementComponent>
-
-/**
- * Type guard for {@link EntryReplacementComponent}.
- *
- * @param component - Personalization component to test.
- * @returns `true` if the component is an EntryReplacement component, otherwise `false`.
- *
- * @example
- * ```ts
- * if (isEntryReplacementComponent(component)) {
- *   console.log(component.baseline.id);
- * }
- * ```
- *
- * @public
- */
-export function isEntryReplacementComponent(
-  component: PersonalizationComponent,
-): component is EntryReplacementComponent {
-  return component.type === 'EntryReplacement' || component.type === undefined
-}
 
 /**
  * Zod schema describing a variant for inline variables.
@@ -167,27 +127,6 @@ export const InlineVariableComponent = z.object({
  * @public
  */
 export type InlineVariableComponent = z.infer<typeof InlineVariableComponent>
-
-/**
- * Type guard for {@link InlineVariableComponent}.
- *
- * @param component - Personalization component to test.
- * @returns `true` if the component is an InlineVariable component, otherwise `false`.
- *
- * @example
- * ```ts
- * if (isInlineVariableComponent(component)) {
- *   console.log(component.key, component.valueType);
- * }
- * ```
- *
- * @public
- */
-export function isInlineVariableComponent(
-  component: PersonalizationComponent,
-): component is InlineVariableComponent {
-  return component.type === 'InlineVariable'
-}
 
 /**
  * Discriminated union of all supported personalization components.

@@ -17,6 +17,26 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./logger": {
+      "import": {
+        "types": "./dist/logger.d.mts",
+        "default": "./dist/logger.mjs"
+      },
+      "require": {
+        "types": "./dist/logger.d.cts",
+        "default": "./dist/logger.cjs"
+      }
+    },
+    "./api-schemas": {
+      "import": {
+        "types": "./dist/api-schemas.d.mts",
+        "default": "./dist/api-schemas.mjs"
+      },
+      "require": {
+        "types": "./dist/api-schemas.d.cts",
+        "default": "./dist/api-schemas.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -33,7 +53,6 @@
   },
   "dependencies": {
     "@contentful/optimization-api-schemas": "workspace:*",
-    "diary": "catalog:",
     "es-toolkit": "catalog:",
     "zod": "catalog:"
   },
@@ -45,7 +64,6 @@
     "@types/node": "catalog:",
     "@rstest/core": "catalog:",
     "@rstest/coverage-istanbul": "catalog:",
-    "logger": "workspace:*",
     "mocks": "workspace:*",
     "msw": "catalog:",
     "rimraf": "catalog:",

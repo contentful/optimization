@@ -2,11 +2,8 @@ import React from 'react'
 import { Text, View } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
-import {
-  Analytics,
-  isPersonalizedEntry,
-  Personalization,
-} from '@contentful/optimization-react-native'
+import { Analytics, Personalization } from '@contentful/optimization-react-native'
+import { isPersonalizedEntry } from '@contentful/optimization-react-native/api-schemas'
 import type { Entry } from 'contentful'
 
 import { getRichTextContent, RichTextRenderer } from '../components/RichTextRenderer'

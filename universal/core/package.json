@@ -17,6 +17,16 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./logger": {
+      "import": {
+        "types": "./dist/logger.d.mts",
+        "default": "./dist/logger.mjs"
+      },
+      "require": {
+        "types": "./dist/logger.d.cts",
+        "default": "./dist/logger.cjs"
+      }
+    },
     "./constants": {
       "import": {
         "types": "./dist/constants.d.mts",
@@ -37,6 +47,26 @@
         "default": "./dist/symbols.cjs"
       }
     },
+    "./api-client": {
+      "import": {
+        "types": "./dist/api-client.d.mts",
+        "default": "./dist/api-client.mjs"
+      },
+      "require": {
+        "types": "./dist/api-client.d.cts",
+        "default": "./dist/api-client.cjs"
+      }
+    },
+    "./api-schemas": {
+      "import": {
+        "types": "./dist/api-schemas.d.mts",
+        "default": "./dist/api-schemas.mjs"
+      },
+      "require": {
+        "types": "./dist/api-schemas.d.cts",
+        "default": "./dist/api-schemas.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -55,7 +85,6 @@
     "@contentful/optimization-api-client": "workspace:*",
     "@preact/signals-core": "catalog:",
     "contentful": "catalog:",
-    "diary": "catalog:",
     "es-toolkit": "catalog:",
     "zod": "catalog:"
   },
@@ -67,7 +96,6 @@
     "@rstest/core": "catalog:",
     "@rstest/coverage-istanbul": "catalog:",
     "build-tools": "workspace:*",
-    "logger": "workspace:*",
     "mocks": "workspace:*",
     "msw": "catalog:",
     "rimraf": "catalog:",

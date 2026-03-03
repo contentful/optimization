@@ -101,10 +101,10 @@ the SDK hierarchy.
 
 ## Shared Internal Libraries
 
-Libraries that are shared internally among Optimization SDKs, and are not currently published, are
-located within the `/lib` folder in the project root.
+Libraries that are shared internally among Optimization SDKs, and are not currently published.
 
-- [Logger](./lib/logger/README.md) is a simple logging abstraction utility
+- Logger functionality is provided through `@contentful/optimization-api-client/logger` and passed
+  through by each SDK at its own `./logger` entry point
 - [Mocks](./lib/mocks/README.md) supplies testing fixtures and data, as well as mock server
   implementations used in both unit and end to end tests throughout the SDK suite
 

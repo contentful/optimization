@@ -1,4 +1,4 @@
-import type { MergeTagEntry } from '@contentful/optimization-api-client'
+import type { MergeTagEntry } from '@contentful/optimization-api-client/api-schemas'
 
 export const mergeTagEntry: MergeTagEntry = {
   metadata: {

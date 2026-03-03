@@ -1,7 +1,6 @@
-import Optimization, {
-  type OptimizationData,
-  type UniversalEventBuilderArgs,
-} from '@contentful/optimization-node'
+import Optimization from '@contentful/optimization-node'
+import type { UniversalEventBuilderArgs } from '@contentful/optimization-node/api-client'
+import type { OptimizationData } from '@contentful/optimization-node/api-schemas'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import cookieParser from 'cookie-parser'
 import express, { type Express, type Request, type Response } from 'express'
@@ -103,32 +102,35 @@ async function getProfile(
   req: Request,
   userId?: string,
   anonymousId?: string,
-): Promise<OptimizationData> {
+): Promise<OptimizationData | undefined> {
   const sdk = new Optimization(config.optimization)
   const args = getUniversalEventBuilderArgs(req)
   const cookieProfile = anonymousId ? { id: anonymousId } : undefined
 
   if (!userId) {
-    return await sdk.personalization.page({ ...args, profile: cookieProfile })
+    return await sdk.page({ ...args, profile: cookieProfile })
   }
 
-  const { profile } = await sdk.personalization.identify({
-    ...args,
-    userId,
-    profile: cookieProfile,
-    traits: { identified: true },
-  })
+  const { profile } =
+    (await sdk.identify({
+      ...args,
+      userId,
+      profile: cookieProfile,
+      traits: { identified: true },
+    })) ?? {}
 
-  return await sdk.personalization.page({
+  if (!profile) return
+
+  return await sdk.page({
     ...args,
     profile: cookieProfile ?? { id: profile.id },
   })
 }
 
 app.get('/', limiter, async (req, res) => {
-  const { profile } = await getProfile(req)
+  const { profile } = (await getProfile(req)) ?? {}
 
-  respond(res, profile.id)
+  respond(res, profile?.id ?? '')
 })
 app.get('/smoke-test', limiter, (_, res) => {
   res.render('index', { config })
@@ -136,9 +138,9 @@ app.get('/smoke-test', limiter, (_, res) => {
 app.get('/user/:id', limiter, async (req, res) => {
   const anonymousId = getAnonymousIdFromCookies(req.cookies)
   const userId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
-  const { profile } = await getProfile(req, userId, anonymousId)
+  const { profile } = (await getProfile(req, userId, anonymousId)) ?? {}
 
-  respond(res, profile.id, userId)
+  respond(res, profile?.id ?? '', userId)
 })
 app.use('/dist', express.static('./public/dist'))
 

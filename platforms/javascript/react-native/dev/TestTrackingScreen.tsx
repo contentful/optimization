@@ -72,11 +72,11 @@ export function TestTrackingScreen({
     // Listen to the event stream to capture tracking events
     const subscription = sdk.states.eventStream.subscribe((event) => {
       if (event?.type === 'component') {
-        const { componentId } = event as { componentId?: string }
+        const { componentId } = event
         const timestamp = new Date().toLocaleTimeString()
         setTrackedEvents((prev) => [...prev, `${timestamp}: Tracked component "${componentId}"`])
       } else if (event?.type === 'screen') {
-        const { name } = event as { name?: string }
+        const { name } = event
         const timestamp = new Date().toLocaleTimeString()
         setTrackedEvents((prev) => [...prev, `${timestamp}: Tracked screen "${name}"`])
       }

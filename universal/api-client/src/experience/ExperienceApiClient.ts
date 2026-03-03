@@ -10,8 +10,8 @@ import {
   type ExperienceRequestOptions,
   type OptimizationData,
 } from '@contentful/optimization-api-schemas'
-import { createScopedLogger } from 'logger'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
+import { createScopedLogger } from '../logger'
 
 const logger = createScopedLogger('ApiClient:Experience')
 

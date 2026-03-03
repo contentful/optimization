@@ -209,8 +209,6 @@ class Optimization extends CoreStateful {
   }
 }
 
-export * from '@contentful/optimization-core'
-
 export { OptimizationProvider } from './components/OptimizationProvider'
 export { OptimizationRoot } from './components/OptimizationRoot'
 export type { OptimizationRootProps, PreviewPanelConfig } from './components/OptimizationRoot'

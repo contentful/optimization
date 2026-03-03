@@ -5,7 +5,7 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 
-import type { MergeTagEntry } from '@contentful/optimization-react-native'
+import type { MergeTagEntry } from '@contentful/optimization-react-native/api-schemas'
 
 import type { ThemeColors } from '../types'
 
@@ -51,11 +51,7 @@ export function MergeTagDetailCard({
     <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
       <Text style={[styles.title, { color: colors.textColor }]}>Merge Tag Details</Text>
       {mergeTagDetails.map((mergeTag, index) => {
-        const tagFields = mergeTag.fields as {
-          nt_name: string
-          nt_mergetag_id: string
-          nt_fallback?: string
-        }
+        const { fields: tagFields } = mergeTag
         return (
           <View key={index} style={styles.detailSection}>
             <DetailRow label="Name" value={tagFields.nt_name} colors={colors} />

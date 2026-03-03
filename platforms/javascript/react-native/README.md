@@ -322,7 +322,7 @@ function MyComponent() {
   const optimization = useOptimization()
 
   const trackManually = async () => {
-    await optimization.analytics.trackComponentView({
+    await optimization.trackComponentView({
       componentId: 'my-component',
       experienceId: 'exp-456',
       variantIndex: 0,

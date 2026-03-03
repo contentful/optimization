@@ -9,7 +9,7 @@ import {
   type PersonalizationEntry,
   type PersonalizedEntry,
   type SelectedPersonalizationArray,
-} from '@contentful/optimization-api-client'
+} from '@contentful/optimization-api-client/api-schemas'
 import { describe, expect, it, rs } from '@rstest/core'
 import type { Entry } from 'contentful'
 

@@ -1,4 +1,5 @@
-import { type App, type CoreStatelessConfig, CoreStateless } from '@contentful/optimization-core'
+import { type CoreStatelessConfig, CoreStateless } from '@contentful/optimization-core'
+import type { App } from '@contentful/optimization-core/api-schemas'
 import { merge } from 'es-toolkit'
 import { OPTIMIZATION_NODE_SDK_NAME, OPTIMIZATION_NODE_SDK_VERSION } from './constants'
 

@@ -3,7 +3,7 @@ import type {
   PersonalizationEntry,
   Profile,
   SelectedPersonalizationArray,
-} from '@contentful/optimization-web'
+} from '@contentful/optimization-web/api-schemas'
 import { consume } from '@lit/context'
 import { css, html, LitElement, nothing, type PropertyValues, type TemplateResult } from 'lit'
 import { property, state } from 'lit/decorators.js'

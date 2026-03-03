@@ -1,4 +1,4 @@
-import { createScopedLogger } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core/logger'
 import { CAN_ADD_LISTENERS } from '../constants'
 import { safeCall } from '../lib'
 

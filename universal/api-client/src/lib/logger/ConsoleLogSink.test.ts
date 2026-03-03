@@ -1,6 +1,6 @@
 /* eslint-disable no-console -- testing console */
 import { rs } from '@rstest/core'
-import type { LogEvent, LogLevels } from 'diary'
+import type { LogEvent, LogLevels } from '.'
 import { ConsoleLogSink } from './ConsoleLogSink'
 
 // Save the original console methods so we can restore after

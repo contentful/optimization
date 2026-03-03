@@ -1,4 +1,4 @@
-import { createScopedLogger } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core/logger'
 
 const logger = createScopedLogger('RN:Network')
 

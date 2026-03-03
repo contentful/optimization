@@ -18,8 +18,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import type Optimization from '@contentful/optimization-react-native'
-import type { MergeTagEntry, Profile } from '@contentful/optimization-react-native'
 import { OptimizationRoot } from '@contentful/optimization-react-native'
+import type { MergeTagEntry, Profile } from '@contentful/optimization-react-native/api-schemas'
 import type { Entry } from 'contentful'
 import { createClient } from 'contentful'
 import { LoadingScreen } from './components/LoadingScreen'
@@ -205,10 +205,10 @@ function App(): React.JSX.Element {
           if (includedEntry && isMergeTagEntry(includedEntry)) {
             mergeTagEntriesList.push(includedEntry)
 
-            const resolvedValue = sdk.personalization.getMergeTagValue(includedEntry, profile)
-            const { nt_mergetag_id: mergeTagId } = includedEntry.fields as {
-              nt_mergetag_id: string
-            }
+            const resolvedValue = sdk.getMergeTagValue(includedEntry, profile)
+            const {
+              fields: { nt_mergetag_id: mergeTagId },
+            } = includedEntry
             resolvedValuesList.push({
               id: mergeTagId,
               value: resolvedValue,
