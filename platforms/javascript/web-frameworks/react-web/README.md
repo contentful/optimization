@@ -92,14 +92,14 @@ Available config props:
 
 - `useOptimization()` returns the current SDK instance.
 - `useOptimization()` throws if used outside `OptimizationProvider`.
-- `useLiveUpdates()` returns the live updates context or `null` outside `LiveUpdatesProvider`.
+- `useLiveUpdates()` throws if used outside `LiveUpdatesProvider`.
 
 ### Live Updates Resolution Semantics
 
 Consumers should resolve live updates behavior with:
 
 ```ts
-const isLiveUpdatesEnabled = componentLiveUpdates ?? liveUpdatesContext?.globalLiveUpdates ?? false
+const isLiveUpdatesEnabled = componentLiveUpdates ?? liveUpdatesContext.globalLiveUpdates
 ```
 
 This gives:

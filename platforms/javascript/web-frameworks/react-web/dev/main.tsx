@@ -40,7 +40,6 @@ createRoot(rootElement).render(
       environment={environment}
       analytics={{ baseUrl: insightsBaseUrl }}
       personalization={{ baseUrl: experienceBaseUrl }}
-      logLevel="debug"
       liveUpdates={true}
     >
       <App />

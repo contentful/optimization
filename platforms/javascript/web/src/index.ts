@@ -14,6 +14,11 @@ import Optimization from './Optimization'
 export * from '@contentful/optimization-core'
 
 export * from './builders/EventBuilder'
+export type {
+  OptimizationTrackingApi,
+  OptimizationWebConfig,
+  OptimizationWebConfig as OptimizationConfig,
+} from './Optimization'
 export {
   CAN_ADD_LISTENERS,
   ENTRY_SELECTOR,
