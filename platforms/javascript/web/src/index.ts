@@ -14,11 +14,6 @@ import Optimization from './Optimization'
 export * from '@contentful/optimization-core'
 
 export * from './builders/EventBuilder'
-export type {
-  OptimizationTrackingApi,
-  OptimizationWebConfig,
-  OptimizationWebConfig as OptimizationConfig,
-} from './Optimization'
 export {
   CAN_ADD_LISTENERS,
   ENTRY_SELECTOR,
@@ -27,6 +22,11 @@ export {
   OPTIMIZATION_WEB_SDK_VERSION,
 } from './constants'
 export * from './handlers/beaconHandler'
+export type {
+  OptimizationWebConfig as OptimizationConfig,
+  OptimizationTrackingApi,
+  OptimizationWebConfig,
+} from './Optimization'
 export * from './storage/LocalStore'
 
 export default Optimization

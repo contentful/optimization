@@ -12,7 +12,7 @@ const sectionTitles = [
 
 export function App(): ReactElement {
   const { globalLiveUpdates } = useLiveUpdates()
-  useOptimization()
+  const optimization = useOptimization()
 
   return (
     <main className="dashboard">
@@ -25,6 +25,7 @@ export function App(): ReactElement {
         <article className="dashboard__card">
           <h2>SDK Wiring</h2>
           <p>OptimizationRoot: Active</p>
+          <p>{`Optimization SDK: ${optimization.constructor.name}`}</p>
           <p>{`Global liveUpdates: ${globalLiveUpdates ? 'ON' : 'OFF'}`}</p>
         </article>
       </section>

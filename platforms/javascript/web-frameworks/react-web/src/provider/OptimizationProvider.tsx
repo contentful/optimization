@@ -1,6 +1,4 @@
-import Optimization, {
-  type OptimizationConfig,
-} from '@contentful/optimization-web'
+import Optimization, { type OptimizationConfig } from '@contentful/optimization-web'
 import { useRef, type PropsWithChildren, type ReactElement } from 'react'
 
 import { OptimizationContext } from '../context/OptimizationContext'
