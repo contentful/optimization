@@ -73,7 +73,8 @@ describe('@contentful/optimization-react-web core providers', () => {
 
     function Probe(): null {
       capturedInstance = useOptimization()
-      capturedGlobalLiveUpdates = useLiveUpdates()?.globalLiveUpdates ?? null
+      const { globalLiveUpdates } = useLiveUpdates()
+      capturedGlobalLiveUpdates = globalLiveUpdates
       return null
     }
 
@@ -122,7 +123,8 @@ describe('@contentful/optimization-react-web core providers', () => {
     let capturedGlobalLiveUpdates = false
 
     function Probe(): null {
-      capturedGlobalLiveUpdates = useLiveUpdates()?.globalLiveUpdates ?? false
+      const { globalLiveUpdates } = useLiveUpdates()
+      capturedGlobalLiveUpdates = globalLiveUpdates
       return null
     }
 
@@ -140,16 +142,28 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(capturedGlobalLiveUpdates).toBe(false)
   })
 
-  it('returns null from useLiveUpdates outside provider', () => {
-    let capturedContext: ReturnType<typeof useLiveUpdates> = null
-
-    function Probe(): null {
-      capturedContext = useLiveUpdates()
+  it('throws actionable error when useLiveUpdates is called outside provider', () => {
+    function BrokenProbe(): null {
+      useLiveUpdates()
       return null
     }
 
-    renderToString(<Probe />)
-    expect(capturedContext).toBeNull()
+    let capturedError: unknown = null
+
+    try {
+      renderToString(<BrokenProbe />)
+    } catch (error: unknown) {
+      capturedError = error
+    }
+
+    expect(capturedError).toBeInstanceOf(Error)
+    if (!(capturedError instanceof Error)) {
+      throw new Error('Expected useLiveUpdates to throw an Error')
+    }
+
+    expect(capturedError.message).toContain(
+      'useLiveUpdates must be used within a LiveUpdatesProvider',
+    )
   })
 
   it('supports live updates fallback semantics for dependent components', () => {
@@ -157,7 +171,7 @@ describe('@contentful/optimization-react-web core providers', () => {
 
     function Probe({ liveUpdates }: { liveUpdates?: boolean }): null {
       const context = useLiveUpdates()
-      const isLive = liveUpdates ?? context?.globalLiveUpdates ?? false
+      const isLive = liveUpdates ?? context.globalLiveUpdates
       results.push(isLive)
       return null
     }

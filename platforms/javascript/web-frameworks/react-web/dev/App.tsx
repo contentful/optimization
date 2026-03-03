@@ -11,8 +11,8 @@ const sectionTitles = [
 ] as const
 
 export function App(): ReactElement {
+  const { globalLiveUpdates } = useLiveUpdates()
   useOptimization()
-  const liveUpdates = useLiveUpdates()?.globalLiveUpdates ?? false
 
   return (
     <main className="dashboard">
@@ -24,8 +24,8 @@ export function App(): ReactElement {
       <section className="dashboard__grid" style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
         <article className="dashboard__card">
           <h2>SDK Wiring</h2>
-          <p>Optimization SDK: READY</p>
-          <p>{`Global liveUpdates: ${liveUpdates ? 'ON' : 'OFF'}`}</p>
+          <p>OptimizationRoot: Active</p>
+          <p>{`Global liveUpdates: ${globalLiveUpdates ? 'ON' : 'OFF'}`}</p>
         </article>
       </section>
 
