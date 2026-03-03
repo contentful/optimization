@@ -1,5 +1,4 @@
 import { MergeTagEntry, Profile } from '@contentful/optimization-api-client'
-import get from 'es-toolkit/compat/get'
 import { createScopedLogger } from 'logger'
 
 const logger = createScopedLogger('Personalization')
@@ -10,6 +9,21 @@ const logger = createScopedLogger('Personalization')
  * @internal
  */
 const RESOLUTION_WARNING_BASE = 'Could not resolve Merge Tag value:'
+
+const getAtPath = (value: unknown, path: string): unknown => {
+  if (!value || typeof value !== 'object') return undefined
+  if (!path) return value
+
+  let current: unknown = value
+  const segments = path.split('.').filter(Boolean)
+
+  for (const segment of segments) {
+    if (!current || (typeof current !== 'object' && typeof current !== 'function')) return undefined
+    current = Reflect.get(current, segment)
+  }
+
+  return current
+}
 
 /**
  * Resolves merge tag values from a {@link Profile}.
@@ -78,11 +92,11 @@ const MergeTagValueResolver = {
    */
   getValueFromProfile(id: string, profile?: Profile): string | undefined {
     const selectors = MergeTagValueResolver.normalizeSelectors(id)
-    const matchingSelector = selectors.find((selector) => get(profile, selector))
+    const matchingSelector = selectors.find((selector) => getAtPath(profile, selector))
 
     if (!matchingSelector) return undefined
 
-    const value: unknown = get(profile, matchingSelector)
+    const value = getAtPath(profile, matchingSelector)
 
     if (
       !value ||

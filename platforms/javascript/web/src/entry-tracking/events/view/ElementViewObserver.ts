@@ -4,14 +4,21 @@
  * Behavior:
  * - Fires callback after dwell threshold, then continues firing periodic
  *   duration updates while the same visibility cycle remains active
+ * - Emits a final view-duration callback when visibility ends after first fire
  * - Pauses/resumes dwell timers across page visibility changes
  * - Coalesces concurrent callback attempts per element
  * - Sweeps orphan/disconnected element state to avoid leaks
  */
 
 import { createScopedLogger } from '@contentful/optimization-core'
-import { CAN_ADD_LISTENERS } from '../../constants'
-import { safeCallAsync } from '../../lib'
+import { safeCallAsync } from '../../../lib'
+import {
+  ensureSweeper,
+  finalizeDroppedState,
+  stopSweeper,
+  sweepOrphans,
+} from '../observerLifecycle'
+import { addVisibilityChangeListener } from '../observerSupport'
 import {
   DEFAULTS,
   type EffectiveObserverOptions,
@@ -30,16 +37,6 @@ import {
 
 const logger = createScopedLogger('Web:ElementViewObserver')
 const createComponentViewId = (): string => crypto.randomUUID()
-
-const addVisibilityChangeListener = (handler: () => void): (() => void) | undefined => {
-  if (!CAN_ADD_LISTENERS) return undefined
-
-  document.addEventListener('visibilitychange', handler)
-
-  return () => {
-    document.removeEventListener('visibilitychange', handler)
-  }
-}
 
 /**
  * Observe elements with `IntersectionObserver` and invoke a callback once dwell
@@ -158,6 +155,7 @@ class ElementViewObserver {
       done: false,
       inFlight: false,
       lastKnownVisible: false,
+      pendingFinal: false,
     }
   }
 
@@ -209,7 +207,7 @@ class ElementViewObserver {
       if (intersectsThreshold) {
         this.onIntersecting(state, now)
       } else {
-        ElementViewObserver.resetVisibilityCycle(state)
+        this.onVisibilityEnd(state, now)
       }
     }
 
@@ -219,7 +217,9 @@ class ElementViewObserver {
   private onIntersecting(state: ElementState, now: number): void {
     if (!state.lastKnownVisible) {
       state.lastKnownVisible = true
+      state.pendingFinal = false
       state.accumulatedMs = 0
+      state.attempts = 0
       state.componentViewId = createComponentViewId()
       state.visibleSince = isPageVisible() ? now : null
       clearFireTimer(state)
@@ -238,8 +238,33 @@ class ElementViewObserver {
     this.scheduleFireIfDue(state, now)
   }
 
+  private onVisibilityEnd(state: ElementState, now: number): void {
+    if (!state.lastKnownVisible) return
+
+    if (state.visibleSince !== null) {
+      state.accumulatedMs += now - state.visibleSince
+      state.visibleSince = null
+    }
+
+    clearFireTimer(state)
+    state.lastKnownVisible = false
+
+    if (state.componentViewId === null || state.attempts === 0) {
+      ElementViewObserver.resetVisibilityCycle(state)
+      return
+    }
+
+    if (state.inFlight) {
+      state.pendingFinal = true
+      return
+    }
+
+    void this.attemptCallback(state, state.accumulatedMs)
+  }
+
   private static resetVisibilityCycle(state: ElementState): void {
     state.lastKnownVisible = false
+    state.pendingFinal = false
     state.accumulatedMs = 0
     state.visibleSince = null
     state.attempts = 0
@@ -313,14 +338,13 @@ class ElementViewObserver {
     const { componentViewId } = state
 
     await safeCallAsync(
-      async () => {
-        await this.callback(element, {
+      (): void | Promise<void> =>
+        this.callback(element, {
           totalVisibleMs,
           componentViewId,
           attempts: state.attempts,
           data: state.data,
-        })
-      },
+        }),
       (error) => {
         logger.error('Error in element view callback:', error)
       },
@@ -332,7 +356,20 @@ class ElementViewObserver {
   private onAttemptSettled(state: ElementState): void {
     state.inFlight = false
 
-    if (state.done || !state.lastKnownVisible || !isPageVisible()) return
+    if (state.done) return
+
+    if (!state.lastKnownVisible) {
+      if (state.pendingFinal && state.componentViewId !== null) {
+        state.pendingFinal = false
+        void this.attemptCallback(state, state.accumulatedMs)
+        return
+      }
+
+      ElementViewObserver.resetVisibilityCycle(state)
+      return
+    }
+
+    if (!isPageVisible()) return
 
     const now = NOW()
     state.visibleSince ??= now
@@ -347,47 +384,22 @@ class ElementViewObserver {
   }
 
   private finalizeDroppedState(state: ElementState): void {
-    clearFireTimer(state)
-    state.done = true
-    this.activeStates.delete(state)
-
-    if (state.strongRef) {
-      this.states.delete(state.strongRef)
-      state.strongRef = null
-    }
-
+    finalizeDroppedState(state, { activeStates: this.activeStates, states: this.states })
     this.maybeStopSweeper()
   }
 
-  private safeAutoUnobserve(element: Element, state: ElementState): void {
-    try {
-      this.unobserve(element)
-    } catch {
-      this.activeStates.delete(state)
-
-      if (state.strongRef === element) {
-        this.states.delete(element)
-        state.strongRef = null
-      }
-
-      state.done = true
-      this.maybeStopSweeper()
-    }
-  }
-
   private ensureSweeper(): void {
-    if (this.sweepInterval !== null) return
-
-    this.sweepInterval = setInterval(() => {
-      this.sweepOrphans()
-    }, DEFAULTS.SWEEP_INTERVAL_MS)
+    this.sweepInterval = ensureSweeper(
+      this.sweepInterval,
+      () => {
+        this.sweepOrphans()
+      },
+      DEFAULTS.SWEEP_INTERVAL_MS,
+    )
   }
 
   private stopSweeper(): void {
-    if (this.sweepInterval === null) return
-
-    clearInterval(this.sweepInterval)
-    this.sweepInterval = null
+    this.sweepInterval = stopSweeper(this.sweepInterval)
   }
 
   private maybeStopSweeper(): void {
@@ -395,22 +407,10 @@ class ElementViewObserver {
   }
 
   private sweepOrphans(): void {
-    for (const state of this.activeStates) {
-      const element = derefElement(state)
-
-      if (!element) {
-        this.finalizeDroppedState(state)
-        continue
-      }
-
-      const isConnected =
-        typeof (element as Element & { isConnected?: boolean }).isConnected === 'boolean'
-          ? (element as Element & { isConnected?: boolean }).isConnected
-          : typeof document !== 'undefined' && document.contains(element)
-
-      if (!isConnected) this.safeAutoUnobserve(element, state)
-    }
-
+    sweepOrphans(
+      { activeStates: this.activeStates, states: this.states },
+      this.unobserve.bind(this),
+    )
     this.maybeStopSweeper()
   }
 }

@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import { AUTO_OBSERVED_ENTRY_IDS, MANUALLY_OBSERVED_ENTRY_IDS } from '../config/entries'
 import { useLiveUpdates } from '../optimization/liveUpdates/LiveUpdatesContext'
+import type { EntryClickScenario } from '../sections/ContentEntry'
 import { ContentEntry } from '../sections/ContentEntry'
 import { LiveUpdatesExampleEntry } from '../sections/LiveUpdatesExampleEntry'
 import { NestedContentEntry } from '../sections/NestedContentEntry'
@@ -21,6 +22,12 @@ interface HomePageProps {
 
 function isConsentAccepted(consent: boolean | undefined): boolean {
   return consent === true
+}
+
+const AUTO_OBSERVED_CLICK_SCENARIO_BY_ENTRY_ID: Readonly<Record<string, EntryClickScenario>> = {
+  '4ib0hsHWoSOnCVdDkizE8d': 'direct',
+  xFwgG3oNaOcjzWiGe4vXo: 'descendant',
+  '2Z2WLOx07InSewC3LUB3eX': 'ancestor',
 }
 
 export function HomePage({
@@ -150,7 +157,14 @@ export function HomePage({
               return <NestedContentEntry key={entry.sys.id} entry={entry} />
             }
 
-            return <ContentEntry key={entry.sys.id} entry={entry} observation="auto" />
+            return (
+              <ContentEntry
+                key={entry.sys.id}
+                clickScenario={AUTO_OBSERVED_CLICK_SCENARIO_BY_ENTRY_ID[entry.sys.id]}
+                entry={entry}
+                observation="auto"
+              />
+            )
           })}
         </div>
       </section>

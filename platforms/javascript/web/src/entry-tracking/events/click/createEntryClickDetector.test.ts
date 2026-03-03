@@ -1,4 +1,4 @@
-import { createEntryTrackingHarness } from '../../test/helpers'
+import { createEntryTrackingHarness } from '../../../test/helpers'
 import { createEntryClickDetector, type EntryClickTrackingCore } from './createEntryClickDetector'
 
 type TrackComponentClickMock = ReturnType<typeof rs.fn>

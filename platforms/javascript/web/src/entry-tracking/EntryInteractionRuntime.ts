@@ -1,23 +1,37 @@
+import type { EntryInteractionDetector } from './EntryInteractionDetector'
 import {
   createEntryClickDetector,
   type EntryClickTrackingCore,
-} from './click/createEntryClickDetector'
-import type { EntryInteractionDetector } from './EntryInteractionDetector'
+} from './events/click/createEntryClickDetector'
+import {
+  createEntryHoverDetector,
+  type EntryHoverTrackingCore,
+} from './events/hover/createEntryHoverDetector'
+import {
+  createEntryViewDetector,
+  type EntryViewTrackingCore,
+} from './events/view/createEntryViewDetector'
 import ElementExistenceObserver from './registry/ElementExistenceObserver'
 import { EntryElementRegistry } from './registry/EntryElementRegistry'
 import {
   type AutoTrackEntryInteractionOptions,
   type EntryClickInteractionElementOptions,
   type EntryElementInteraction,
+  type EntryHoverInteractionElementOptions,
+  type EntryHoverInteractionStartOptions,
   type EntryInteraction,
   type EntryInteractionApi,
+  type EntryInteractionStartOptions,
   type EntryViewInteractionElementOptions,
   type EntryViewInteractionStartOptions,
   resolveAutoTrackEntryInteractionOptions,
 } from './resolveAutoTrackEntryInteractionOptions'
-import { createEntryViewDetector, type EntryViewTrackingCore } from './view/createEntryViewDetector'
 
-type EntryInteractionRuntimeCore = EntryClickTrackingCore & EntryViewTrackingCore
+const ENTRY_INTERACTIONS: EntryInteraction[] = ['clicks', 'views', 'hovers']
+
+type EntryInteractionRuntimeCore = EntryClickTrackingCore &
+  EntryViewTrackingCore &
+  EntryHoverTrackingCore
 
 interface EntryInteractionElementOverride<TOptions> {
   enabled: boolean
@@ -27,6 +41,7 @@ interface EntryInteractionElementOverride<TOptions> {
 interface EntryInteractionElementOverrideMap {
   clicks: Map<Element, EntryInteractionElementOverride<EntryClickInteractionElementOptions>>
   views: Map<Element, EntryInteractionElementOverride<EntryViewInteractionElementOptions>>
+  hovers: Map<Element, EntryInteractionElementOverride<EntryHoverInteractionElementOptions>>
 }
 
 interface EntryInteractionDetectorMap {
@@ -35,10 +50,14 @@ interface EntryInteractionDetectorMap {
     EntryViewInteractionStartOptions | undefined,
     EntryViewInteractionElementOptions
   >
+  hovers: EntryInteractionDetector<
+    EntryHoverInteractionStartOptions | undefined,
+    EntryHoverInteractionElementOptions
+  >
 }
 
 /**
- * Runtime coordinator for tracked entry interactions (clicks and views).
+ * Runtime coordinator for tracked entry interactions (clicks, views, and hovers).
  *
  * @remarks
  * Owns shared registry/observer dependencies and exposes an imperative
@@ -56,6 +75,7 @@ export class EntryInteractionRuntime {
   > = {
     clicks: undefined,
     views: undefined,
+    hovers: undefined,
   }
 
   private readonly autoTrack: Record<EntryInteraction, boolean>
@@ -63,15 +83,19 @@ export class EntryInteractionRuntime {
   private readonly elementOverrides: EntryInteractionElementOverrideMap = {
     clicks: new Map(),
     views: new Map(),
+    hovers: new Map(),
   }
   private viewStartOptions: EntryViewInteractionStartOptions | undefined
+  private hoverStartOptions: EntryHoverInteractionStartOptions | undefined
   private readonly isInteractionRunning: Record<EntryInteraction, boolean> = {
     clicks: false,
     views: false,
+    hovers: false,
   }
   private readonly isAutoTrackingEnabled: Record<EntryInteraction, boolean> = {
     clicks: false,
     views: false,
+    hovers: false,
   }
   private autoTrackingAllowed = true
 
@@ -85,16 +109,13 @@ export class EntryInteractionRuntime {
     this.entryInteractionDetectors = {
       clicks: createEntryClickDetector(core),
       views: createEntryViewDetector(core),
+      hovers: createEntryHoverDetector(core),
     }
     this.autoTrack = resolveAutoTrackEntryInteractionOptions(autoTrackEntryInteraction)
 
     this.tracking = {
       enable: (interaction, options): void => {
-        this.autoTrack[interaction] = true
-        if (interaction === 'views') {
-          this.viewStartOptions = options
-        }
-        this.reconcileInteraction(interaction, true)
+        this.enableTracking(interaction, options)
       },
       disable: (interaction): void => {
         this.autoTrack[interaction] = false
@@ -133,8 +154,9 @@ export class EntryInteractionRuntime {
   }
 
   private reconcileAllInteractions(): void {
-    this.reconcileInteraction('clicks')
-    this.reconcileInteraction('views')
+    ENTRY_INTERACTIONS.forEach((interaction) => {
+      this.reconcileInteraction(interaction)
+    })
   }
 
   private reconcileInteraction(interaction: EntryInteraction, restart = false): void {
@@ -183,11 +205,10 @@ export class EntryInteractionRuntime {
     const detector = this.getDetector(interaction)
 
     detector.setAuto?.(autoTrackingEnabled)
-    if (interaction === 'views') {
+    if (interaction === 'clicks') this.entryInteractionDetectors.clicks.start()
+    else if (interaction === 'views')
       this.entryInteractionDetectors.views.start(this.viewStartOptions)
-    } else {
-      this.entryInteractionDetectors.clicks.start()
-    }
+    else this.entryInteractionDetectors.hovers.start(this.hoverStartOptions)
 
     this.cleanupRegistrySubscriptions[interaction] = this.entryElementRegistry.subscribe({
       onAdded: detector.onEntryAdded,
@@ -209,29 +230,28 @@ export class EntryInteractionRuntime {
   }
 
   private stopAllEntryInteractions(): void {
-    this.stopEntryInteraction('clicks')
-    this.stopEntryInteraction('views')
+    ENTRY_INTERACTIONS.forEach((interaction) => {
+      this.stopEntryInteraction(interaction)
+    })
   }
 
-  private setElementOverride<TInteraction extends EntryElementInteraction>(
-    interaction: TInteraction,
+  private setElementOverride(
+    interaction: EntryElementInteraction,
     element: Element,
     override: EntryInteractionElementOverride<
-      TInteraction extends 'clicks'
-        ? EntryClickInteractionElementOptions
-        : EntryViewInteractionElementOptions
+      | EntryClickInteractionElementOptions
+      | EntryViewInteractionElementOptions
+      | EntryHoverInteractionElementOptions
     >,
   ): void {
-    const overrides =
-      interaction === 'clicks' ? this.elementOverrides.clicks : this.elementOverrides.views
+    const overrides = this.getElementOverrides(interaction)
 
     overrides.set(element, override)
     this.reconcileInteraction(interaction)
   }
 
   private clearElement(interaction: EntryElementInteraction, element: Element): void {
-    const overrides =
-      interaction === 'clicks' ? this.elementOverrides.clicks : this.elementOverrides.views
+    const overrides = this.getElementOverrides(interaction)
 
     if (!overrides.delete(element)) return
 
@@ -243,13 +263,13 @@ export class EntryInteractionRuntime {
   }
 
   private clearAllElementOverrides(): void {
-    this.elementOverrides.clicks.clear()
-    this.elementOverrides.views.clear()
+    ENTRY_INTERACTIONS.forEach((interaction) => {
+      this.elementOverrides[interaction].clear()
+    })
   }
 
   private hasEnabledElementOverrides(interaction: EntryElementInteraction): boolean {
-    const overrides =
-      interaction === 'clicks' ? this.elementOverrides.clicks : this.elementOverrides.views
+    const overrides = this.getElementOverrides(interaction)
 
     for (const override of overrides.values()) {
       if (override.enabled) return true
@@ -260,8 +280,7 @@ export class EntryInteractionRuntime {
 
   private applyElementOverrides(interaction: EntryElementInteraction): void {
     const detector = this.getDetector(interaction)
-    const overrides =
-      interaction === 'clicks' ? this.elementOverrides.clicks : this.elementOverrides.views
+    const overrides = this.getElementOverrides(interaction)
 
     overrides.forEach((override, element) => {
       if (override.enabled) {
@@ -277,5 +296,26 @@ export class EntryInteractionRuntime {
     interaction: EntryInteraction,
   ): EntryInteractionDetectorMap[EntryInteraction] {
     return this.entryInteractionDetectors[interaction]
+  }
+
+  private getElementOverrides(
+    interaction: EntryElementInteraction,
+  ): EntryInteractionElementOverrideMap[EntryElementInteraction] {
+    return this.elementOverrides[interaction]
+  }
+
+  private enableTracking<TInteraction extends EntryInteraction>(
+    interaction: TInteraction,
+    options?: EntryInteractionStartOptions<TInteraction>,
+  ): void {
+    this.autoTrack[interaction] = true
+
+    if (interaction === 'views') {
+      this.viewStartOptions = options
+    } else if (interaction === 'hovers') {
+      this.hoverStartOptions = options
+    }
+
+    this.reconcileInteraction(interaction, true)
   }
 }

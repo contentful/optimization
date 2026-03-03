@@ -1,11 +1,11 @@
-import type { FakeIntersectionObserver } from '../../test/helpers'
+import type { FakeIntersectionObserver } from '../../../test/helpers'
 import {
   advance,
   deferred,
   installIOPolyfill,
   makeElement,
   setDocumentVisibility,
-} from '../../test/helpers'
+} from '../../../test/helpers'
 import * as ElementView from './element-view-observer-support'
 import ElementViewObserver from './ElementViewObserver'
 
@@ -116,6 +116,36 @@ describe('ElementViewObserver', () => {
     expect(secondMeta.componentViewId).toBe(firstMeta.componentViewId)
   })
 
+  it('emits a final duration update when visibility ends after dwell has fired', async () => {
+    const el = makeElement()
+    const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
+
+    const obs = new ElementViewObserver(cb, {
+      dwellTimeMs: 1000,
+      viewDurationUpdateIntervalMs: 10_000,
+    })
+    obs.observe(el)
+
+    const inst = mustGetIO()
+    inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 1 })
+
+    await advance(1000)
+    await advance(400)
+    inst.trigger({ target: el, isIntersecting: false, intersectionRatio: 0 })
+    await Promise.resolve()
+
+    expect(cb).toHaveBeenCalledTimes(2)
+
+    const firstMeta = cb.mock.calls[0]?.[1]
+    const secondMeta = cb.mock.calls[1]?.[1]
+    if (!isMeta(firstMeta) || !isMeta(secondMeta)) {
+      throw new Error('Unexpected callback payload')
+    }
+
+    expect(secondMeta.componentViewId).toBe(firstMeta.componentViewId)
+    expect(secondMeta.totalVisibleMs).toBe(1400)
+  })
+
   it('does not accumulate dwell across separate visibility intersections', async () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
@@ -166,21 +196,27 @@ describe('ElementViewObserver', () => {
     const inst = mustGetIO()
     inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 1 })
     await advance(100)
+    await Promise.resolve()
+    await Promise.resolve()
 
     inst.trigger({ target: el, isIntersecting: false, intersectionRatio: 0 })
+    await Promise.resolve()
+    await Promise.resolve()
 
     inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 1 })
     await advance(100)
 
-    expect(cb).toHaveBeenCalledTimes(2)
+    expect(cb).toHaveBeenCalledTimes(3)
 
     const firstMeta = cb.mock.calls[0]?.[1]
     const secondMeta = cb.mock.calls[1]?.[1]
-    if (!isMeta(firstMeta) || !isMeta(secondMeta)) {
+    const thirdMeta = cb.mock.calls[2]?.[1]
+    if (!isMeta(firstMeta) || !isMeta(secondMeta) || !isMeta(thirdMeta)) {
       throw new Error('Unexpected callback payload')
     }
 
-    expect(firstMeta.componentViewId).not.toBe(secondMeta.componentViewId)
+    expect(secondMeta.componentViewId).toBe(firstMeta.componentViewId)
+    expect(firstMeta.componentViewId).not.toBe(thirdMeta.componentViewId)
   })
 
   it('pauses dwell timers when hidden and resumes with remaining dwell time', async () => {
@@ -282,6 +318,40 @@ describe('ElementViewObserver', () => {
     await Promise.resolve()
 
     expect(cb).toHaveBeenCalledTimes(1)
+  })
+
+  it('emits a final callback after in-flight callback settles on visibility end', async () => {
+    const el = makeElement()
+    const firstAttempt = deferred()
+    let callCount = 0
+    const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockImplementation(async () => {
+      callCount += 1
+      if (callCount === 1) {
+        await firstAttempt.promise
+      }
+    })
+
+    const obs = new ElementViewObserver(cb, {
+      dwellTimeMs: 0,
+      viewDurationUpdateIntervalMs: 1000,
+    })
+    obs.observe(el)
+
+    const inst = mustGetIO()
+    inst.trigger({ target: el, isIntersecting: true, intersectionRatio: 1 })
+    await advance(0)
+    await advance(250)
+    inst.trigger({ target: el, isIntersecting: false, intersectionRatio: 0 })
+
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    firstAttempt.resolve(undefined)
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(cb).toHaveBeenCalledTimes(2)
   })
 
   it('continues scheduled updates after callback failure', async () => {

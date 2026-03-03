@@ -18,23 +18,23 @@ test.describe('consent gating', () => {
 
   test('allows page events without consent but gates component view events', async ({ page }) => {
     const pageEvents = page.locator('[data-testid^="event-page-"]')
-    const componentEvents = page.locator('li').filter({ hasText: 'Component:' })
+    const componentViewEvents = page.locator('[data-testid^="event-component-view-"]')
 
     await expect(pageEvents.first()).toBeVisible()
 
     await scrollThroughEntries(page)
-    await expect(componentEvents).toHaveCount(0)
+    await expect(componentViewEvents).toHaveCount(0)
   })
 
   test('emits component view events after consent is accepted', async ({ page }) => {
     const pageEvents = page.locator('[data-testid^="event-page-"]')
-    const componentEvents = page.locator('li').filter({ hasText: 'Component:' })
+    const componentViewEvents = page.locator('[data-testid^="event-component-view-"]')
 
     await expect(pageEvents.first()).toBeVisible()
 
     await page.getByRole('button', { name: 'Accept Consent' }).click()
     await scrollThroughEntries(page)
 
-    await expect.poll(async () => await componentEvents.count()).toBeGreaterThan(0)
+    await expect.poll(async () => await componentViewEvents.count()).toBeGreaterThan(0)
   })
 })

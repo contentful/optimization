@@ -18,11 +18,19 @@ export function PageTwoPage({ consent, entriesById, isIdentified }: PageTwoPageP
   const pageTwoManualEntry = entriesById.get(PAGE_TWO_MANUAL_ENTRY_ID)
 
   useEffect(() => {
-    void trackView({ componentId: 'page-two-hero' })
+    void trackView({
+      componentId: 'page-two-hero',
+      componentViewId: crypto.randomUUID(),
+      viewDurationMs: 0,
+    })
   }, [trackView])
 
   const handleDemoCta = (): void => {
-    void trackView({ componentId: 'page-two-demo-cta' })
+    void trackView({
+      componentId: 'page-two-demo-cta',
+      componentViewId: crypto.randomUUID(),
+      viewDurationMs: 0,
+    })
   }
 
   return (

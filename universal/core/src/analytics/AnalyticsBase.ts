@@ -1,5 +1,6 @@
 import type {
   ComponentClickBuilderArgs,
+  ComponentHoverBuilderArgs,
   ComponentViewBuilderArgs,
 } from '@contentful/optimization-api-client'
 import ProductBase from '../ProductBase'
@@ -28,6 +29,14 @@ abstract class AnalyticsBase extends ProductBase {
    * @returns A promise that resolves when processing is complete (or `void`).
    */
   abstract trackComponentClick(payload: ComponentClickBuilderArgs): Promise<void> | void
+
+  /**
+   * Track a UI component hover event.
+   *
+   * @param payload - Component hover builder arguments.
+   * @returns A promise that resolves when processing is complete (or `void`).
+   */
+  abstract trackComponentHover(payload: ComponentHoverBuilderArgs): Promise<void> | void
 
   /**
    * Track a flag (feature) view event.
