@@ -1,4 +1,5 @@
 import Optimization from '@contentful/optimization-web'
+import type { ReactElement } from 'react'
 import { renderToString } from 'react-dom/server'
 import {
   LiveUpdatesProvider,
@@ -11,14 +12,28 @@ import {
   usePersonalization,
 } from './index'
 
-const optimizationInstance = new Optimization({
+const testConfig = {
   clientId: 'test-client-id',
   environment: 'main',
   analytics: { baseUrl: 'http://localhost:8000/insights/' },
   personalization: { baseUrl: 'http://localhost:8000/experience/' },
-})
+}
+
+function cleanupGlobalInstance(): void {
+  if (typeof window !== 'undefined' && window.optimization) {
+    window.optimization.destroy()
+  }
+}
 
 describe('@contentful/optimization-react-web core providers', () => {
+  void beforeEach(() => {
+    cleanupGlobalInstance()
+  })
+
+  void afterEach(() => {
+    cleanupGlobalInstance()
+  })
+
   it('exports core API symbols', () => {
     expect(OptimizationContext).toBeDefined()
     expect(LiveUpdatesProvider).toBeTypeOf('function')
@@ -30,7 +45,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(useAnalytics).toBeTypeOf('function')
   })
 
-  it('provides optimization instance via OptimizationProvider', () => {
+  it('creates optimization instance from config props via OptimizationProvider', () => {
     let capturedInstance: Optimization | null = null
 
     function Probe(): null {
@@ -39,12 +54,43 @@ describe('@contentful/optimization-react-web core providers', () => {
     }
 
     renderToString(
-      <OptimizationProvider instance={optimizationInstance}>
+      <OptimizationProvider
+        clientId={testConfig.clientId}
+        environment={testConfig.environment}
+        analytics={testConfig.analytics}
+        personalization={testConfig.personalization}
+      >
         <Probe />
       </OptimizationProvider>,
     )
 
-    expect(capturedInstance).toBe(optimizationInstance)
+    expect(capturedInstance).toBeInstanceOf(Optimization)
+  })
+
+  it('provides optimization and live updates from OptimizationRoot', () => {
+    let capturedInstance: Optimization | null = null
+    let capturedGlobalLiveUpdates: boolean | null = null
+
+    function Probe(): null {
+      capturedInstance = useOptimization()
+      capturedGlobalLiveUpdates = useLiveUpdates()?.globalLiveUpdates ?? null
+      return null
+    }
+
+    renderToString(
+      <OptimizationRoot
+        clientId={testConfig.clientId}
+        environment={testConfig.environment}
+        analytics={testConfig.analytics}
+        personalization={testConfig.personalization}
+        liveUpdates={true}
+      >
+        <Probe />
+      </OptimizationRoot>,
+    )
+
+    expect(capturedInstance).toBeInstanceOf(Optimization)
+    expect(capturedGlobalLiveUpdates).toBe(true)
   })
 
   it('throws actionable error when useOptimization is called outside provider', () => {
@@ -53,16 +99,27 @@ describe('@contentful/optimization-react-web core providers', () => {
       return null
     }
 
-    expect(() => renderToString(<BrokenProbe />)).toThrow(
+    let capturedError: unknown = null
+
+    try {
+      renderToString(<BrokenProbe />)
+    } catch (error: unknown) {
+      capturedError = error
+    }
+
+    expect(capturedError).toBeInstanceOf(Error)
+    if (!(capturedError instanceof Error)) {
+      throw new Error('Expected useOptimization to throw an Error')
+    }
+
+    expect(capturedError.message).toContain(
       'useOptimization must be used within an OptimizationProvider',
     )
-    expect(() => renderToString(<BrokenProbe />)).toThrow(
-      '<OptimizationProvider instance={optimizationInstance}>',
-    )
+    expect(capturedError.message).toContain('<OptimizationRoot clientId="your-client-id">')
   })
 
   it('defaults liveUpdates to false in OptimizationRoot', () => {
-    let capturedGlobalLiveUpdates: boolean | null = null
+    let capturedGlobalLiveUpdates = false
 
     function Probe(): null {
       capturedGlobalLiveUpdates = useLiveUpdates()?.globalLiveUpdates ?? false
@@ -70,29 +127,17 @@ describe('@contentful/optimization-react-web core providers', () => {
     }
 
     renderToString(
-      <OptimizationRoot instance={optimizationInstance}>
+      <OptimizationRoot
+        clientId={testConfig.clientId}
+        environment={testConfig.environment}
+        analytics={testConfig.analytics}
+        personalization={testConfig.personalization}
+      >
         <Probe />
       </OptimizationRoot>,
     )
 
     expect(capturedGlobalLiveUpdates).toBe(false)
-  })
-
-  it('passes global live updates through context from OptimizationRoot', () => {
-    let capturedGlobalLiveUpdates: boolean | null = null
-
-    function Probe(): null {
-      capturedGlobalLiveUpdates = useLiveUpdates()?.globalLiveUpdates ?? null
-      return null
-    }
-
-    renderToString(
-      <OptimizationRoot instance={optimizationInstance} liveUpdates={true}>
-        <Probe />
-      </OptimizationRoot>,
-    )
-
-    expect(capturedGlobalLiveUpdates).toBe(true)
   })
 
   it('returns null from useLiveUpdates outside provider', () => {
@@ -104,28 +149,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     }
 
     renderToString(<Probe />)
-
     expect(capturedContext).toBeNull()
-  })
-
-  it('provides both optimization instance and live updates via OptimizationRoot', () => {
-    let capturedInstance: Optimization | null = null
-    let capturedGlobalLiveUpdates: boolean | null = null
-
-    function Probe(): null {
-      capturedInstance = useOptimization()
-      capturedGlobalLiveUpdates = useLiveUpdates()?.globalLiveUpdates ?? null
-      return null
-    }
-
-    renderToString(
-      <OptimizationRoot instance={optimizationInstance} liveUpdates={true}>
-        <Probe />
-      </OptimizationRoot>,
-    )
-
-    expect(capturedInstance).toBe(optimizationInstance)
-    expect(capturedGlobalLiveUpdates).toBe(true)
   })
 
   it('supports live updates fallback semantics for dependent components', () => {
@@ -138,18 +162,38 @@ describe('@contentful/optimization-react-web core providers', () => {
       return null
     }
 
-    renderToString(
-      <OptimizationRoot instance={optimizationInstance} liveUpdates={true}>
-        <Probe />
-        <Probe liveUpdates={false} />
-      </OptimizationRoot>,
-    )
+    function FirstScenario(): ReactElement {
+      return (
+        <OptimizationRoot
+          clientId={`${testConfig.clientId}-1`}
+          environment={testConfig.environment}
+          analytics={testConfig.analytics}
+          personalization={testConfig.personalization}
+          liveUpdates={true}
+        >
+          <Probe />
+          <Probe liveUpdates={false} />
+        </OptimizationRoot>
+      )
+    }
 
-    renderToString(
-      <OptimizationRoot instance={optimizationInstance} liveUpdates={false}>
-        <Probe liveUpdates={true} />
-      </OptimizationRoot>,
-    )
+    function SecondScenario(): ReactElement {
+      return (
+        <OptimizationRoot
+          clientId={`${testConfig.clientId}-2`}
+          environment={testConfig.environment}
+          analytics={testConfig.analytics}
+          personalization={testConfig.personalization}
+          liveUpdates={false}
+        >
+          <Probe liveUpdates={true} />
+        </OptimizationRoot>
+      )
+    }
+
+    renderToString(<FirstScenario />)
+    cleanupGlobalInstance()
+    renderToString(<SecondScenario />)
 
     expect(results).toEqual([true, false, true])
   })
@@ -159,7 +203,6 @@ describe('@contentful/optimization-react-web core providers', () => {
     const analytics = useAnalytics()
 
     expect(personalization.resolveEntry({ id: 'entry-1' })).toEqual({ id: 'entry-1' })
-
     await expect(analytics.identify('user-1')).resolves.toBeUndefined()
     await expect(analytics.track({ event: 'view' })).resolves.toBeUndefined()
     await expect(analytics.reset()).resolves.toBeUndefined()

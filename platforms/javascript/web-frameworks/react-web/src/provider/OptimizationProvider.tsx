@@ -1,17 +1,36 @@
-import type { PropsWithChildren, ReactElement } from 'react'
+import Optimization, {
+  type App,
+  type CoreStatefulAnalyticsConfig,
+  type CoreStatefulPersonalizationConfig,
+  type LogLevels,
+} from '@contentful/optimization-web'
+import { useRef, type PropsWithChildren, type ReactElement } from 'react'
 
 import { OptimizationContext } from '../context/OptimizationContext'
-import type { OptimizationWebSdk } from '../types'
 
+// TODO: we need to use the config type that should be export it from the web SDK
+type AutoTrackEntryInteractionOptions = Partial<Record<'views' | 'clicks', boolean>>
+
+// Config-based props (clientId required, rest optional)
 export interface OptimizationProviderProps extends PropsWithChildren {
-  readonly instance: OptimizationWebSdk
+  clientId: string
+  environment?: string
+  analytics?: CoreStatefulAnalyticsConfig
+  personalization?: CoreStatefulPersonalizationConfig
+  app?: App
+  autoTrackEntryInteraction?: AutoTrackEntryInteractionOptions
+  logLevel?: LogLevels
 }
 
-export function OptimizationProvider({
-  children,
-  instance,
-}: OptimizationProviderProps): ReactElement {
+export function OptimizationProvider(props: OptimizationProviderProps): ReactElement {
+  const { children, ...config } = props
+  const instanceRef = useRef<Optimization | null>(null)
+
+  instanceRef.current ??= new Optimization(config)
+
   return (
-    <OptimizationContext.Provider value={{ instance }}>{children}</OptimizationContext.Provider>
+    <OptimizationContext.Provider value={{ instance: instanceRef.current }}>
+      {children}
+    </OptimizationContext.Provider>
   )
 }
