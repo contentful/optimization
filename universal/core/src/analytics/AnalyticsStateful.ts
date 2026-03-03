@@ -1,15 +1,17 @@
+import type {
+  ComponentClickBuilderArgs,
+  ComponentHoverBuilderArgs,
+  ComponentViewBuilderArgs,
+} from '@contentful/optimization-api-client'
 import {
   InsightsEvent as AnalyticsEvent,
   parseWithFriendlyError,
   type BatchInsightsEventArray,
-  type ComponentClickBuilderArgs,
-  type ComponentHoverBuilderArgs,
-  type ComponentViewBuilderArgs,
   type InsightsEventArray,
   type ExperienceEvent as PersonalizationEvent,
   type Profile,
-} from '@contentful/optimization-api-client'
-import { createScopedLogger } from 'logger'
+} from '@contentful/optimization-api-client/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { BlockedEvent } from '../BlockedEvent'
 import type { ConsentGuard } from '../Consent'
 import { guardedBy } from '../lib/decorators'

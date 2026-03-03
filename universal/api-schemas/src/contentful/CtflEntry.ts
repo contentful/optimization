@@ -1,4 +1,3 @@
-import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import * as z from 'zod/mini'
 
 /**
@@ -208,33 +207,3 @@ export const CtflEntry = z.object({
  * @public
  */
 export type CtflEntry = z.infer<typeof CtflEntry>
-
-/**
- * Type guard that checks whether the given value is a Contentful {@link Entry},
- * passing through the specified skeleton, chain modifiers, and locale.
- *
- * @typeParam S - The entry skeleton type.
- * @typeParam M - The chain modifiers type. Defaults to {@link ChainModifiers}.
- * @typeParam L - The locale code type. Defaults to {@link LocaleCode}.
- *
- * @param entry - The value to test.
- * @returns `true` if the object conforms to {@link CtflEntry} and can be treated
- * as a typed {@link Entry}, otherwise `false`.
- *
- * @example
- * ```ts
- * const entry = await client.getEntry('my-entry-id');
- * if (isEntry<MySkeleton>(entry)) {
- *   console.log(entry.fields.myField);
- * }
- * ```
- *
- * @public
- */
-export function isEntry<
-  S extends EntrySkeletonType,
-  M extends ChainModifiers = ChainModifiers,
-  L extends LocaleCode = LocaleCode,
->(entry: Entry | undefined): entry is Entry<S, M, L> {
-  return CtflEntry.safeParse(entry).success
-}

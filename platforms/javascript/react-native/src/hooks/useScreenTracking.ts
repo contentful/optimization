@@ -1,8 +1,5 @@
-import {
-  createScopedLogger,
-  type OptimizationData,
-  type Properties,
-} from '@contentful/optimization-core'
+import type { OptimizationData, Properties } from '@contentful/optimization-core/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-core/logger'
 import { useCallback, useEffect, useRef } from 'react'
 import { useOptimization } from '../context/OptimizationContext'
 

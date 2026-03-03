@@ -5,7 +5,7 @@
     "baseUrl": "./",
     "paths": {},
     "skipLibCheck": true,
-    "moduleResolution": "node"
+    "moduleResolution": "bundler"
   },
   "include": ["**/*.ts", "**/*.tsx"],
   "exclude": ["node_modules", "android", "ios"]

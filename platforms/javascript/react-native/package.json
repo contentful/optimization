@@ -22,6 +22,20 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./logger": {
+      "react-native": {
+        "types": "./dist/logger.d.mts",
+        "default": "./dist/logger.mjs"
+      },
+      "import": {
+        "types": "./dist/logger.d.mts",
+        "default": "./dist/logger.mjs"
+      },
+      "require": {
+        "types": "./dist/logger.d.cts",
+        "default": "./dist/logger.cjs"
+      }
+    },
     "./constants": {
       "react-native": {
         "types": "./dist/constants.d.mts",
@@ -34,6 +48,48 @@
       "require": {
         "types": "./dist/constants.d.cts",
         "default": "./dist/constants.cjs"
+      }
+    },
+    "./core-sdk": {
+      "react-native": {
+        "types": "./dist/core-sdk.d.mts",
+        "default": "./dist/core-sdk.mjs"
+      },
+      "import": {
+        "types": "./dist/core-sdk.d.mts",
+        "default": "./dist/core-sdk.mjs"
+      },
+      "require": {
+        "types": "./dist/core-sdk.d.cts",
+        "default": "./dist/core-sdk.cjs"
+      }
+    },
+    "./api-client": {
+      "react-native": {
+        "types": "./dist/api-client.d.mts",
+        "default": "./dist/api-client.mjs"
+      },
+      "import": {
+        "types": "./dist/api-client.d.mts",
+        "default": "./dist/api-client.mjs"
+      },
+      "require": {
+        "types": "./dist/api-client.d.cts",
+        "default": "./dist/api-client.cjs"
+      }
+    },
+    "./api-schemas": {
+      "react-native": {
+        "types": "./dist/api-schemas.d.mts",
+        "default": "./dist/api-schemas.mjs"
+      },
+      "import": {
+        "types": "./dist/api-schemas.d.mts",
+        "default": "./dist/api-schemas.mjs"
+      },
+      "require": {
+        "types": "./dist/api-schemas.d.cts",
+        "default": "./dist/api-schemas.cjs"
       }
     },
     "./package.json": "./package.json"

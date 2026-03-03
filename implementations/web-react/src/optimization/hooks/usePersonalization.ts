@@ -1,25 +1,24 @@
-import type Optimization from '@contentful/optimization-web'
+import type {
+  MergeTagEntry,
+  SelectedPersonalizationArray,
+} from '@contentful/optimization-web/api-schemas'
+import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
+import type { Entry, EntrySkeletonType } from 'contentful'
 import { useMemo } from 'react'
 import { useOptimization } from './useOptimization'
 
-type PersonalizationApi = Optimization['personalization']
-type BaselineEntry = Parameters<PersonalizationApi['personalizeEntry']>[0]
-type PersonalizeResult = ReturnType<PersonalizationApi['personalizeEntry']>
-export type PersonalizationSelection = Parameters<PersonalizationApi['personalizeEntry']>[1]
-type MergeTagTarget = Parameters<PersonalizationApi['getMergeTagValue']>[0]
-
 export interface UsePersonalizationResult {
   resolveEntry: (
-    baselineEntry: BaselineEntry,
-    selectedPersonalizations?: PersonalizationSelection,
-  ) => PersonalizeResult
-  getMergeTagValue: (mergeTagEntry: MergeTagTarget) => string
+    baselineEntry: Entry,
+    selectedPersonalizations?: SelectedPersonalizationArray,
+  ) => ResolvedData<EntrySkeletonType>
+  getMergeTagValue: (mergeTagEntry: MergeTagEntry) => string
 }
 
 function fallbackResolveEntry(
-  baselineEntry: BaselineEntry,
-  _selectedPersonalizations?: PersonalizationSelection,
-): PersonalizeResult {
+  baselineEntry: Entry,
+  _selectedPersonalizations?: SelectedPersonalizationArray,
+): ResolvedData<EntrySkeletonType> {
   return { entry: baselineEntry }
 }
 
@@ -50,18 +49,19 @@ export function usePersonalization(): UsePersonalizationResult {
     if (!isReady || sdk === undefined) {
       return {
         resolveEntry: fallbackResolveEntry,
-        getMergeTagValue: (_mergeTagEntry: MergeTagTarget): string => '',
+        getMergeTagValue: (_mergeTagEntry: MergeTagEntry): string => '',
       }
     }
 
     return {
       resolveEntry: (
-        baselineEntry: BaselineEntry,
-        selectedPersonalizations?: PersonalizationSelection,
-      ): PersonalizeResult => sdk.personalizeEntry(baselineEntry, selectedPersonalizations),
+        baselineEntry: Entry,
+        selectedPersonalizations?: SelectedPersonalizationArray,
+      ): ResolvedData<EntrySkeletonType> =>
+        sdk.personalizeEntry(baselineEntry, selectedPersonalizations),
 
-      getMergeTagValue: (mergeTagEntry: MergeTagTarget): string =>
-        toStringValue(sdk.personalization.getMergeTagValue(mergeTagEntry)),
+      getMergeTagValue: (mergeTagEntry: MergeTagEntry): string =>
+        toStringValue(sdk.getMergeTagValue(mergeTagEntry)),
     }
   }, [isReady, sdk])
 }

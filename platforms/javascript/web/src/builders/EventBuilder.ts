@@ -1,4 +1,5 @@
-import { createScopedLogger, type Dictionary, type Page } from '@contentful/optimization-core'
+import type { Dictionary, Page } from '@contentful/optimization-core/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-core/logger'
 
 const logger = createScopedLogger('Web:EventBuilder')
 

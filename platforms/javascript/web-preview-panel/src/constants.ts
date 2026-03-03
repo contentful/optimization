@@ -1,4 +1,4 @@
-import type { AudienceEntry } from '@contentful/optimization-web'
+import type { AudienceEntry } from '@contentful/optimization-web/api-schemas'
 
 /**
  * Identifier for the synthetic "All Visitors" audience used as a fallback.

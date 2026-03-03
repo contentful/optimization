@@ -1,8 +1,3 @@
-import type {
-  OptimizationData,
-  PartialProfile,
-  SelectedPersonalization,
-} from '@contentful/optimization-api-schemas'
 import { documentToHtmlString } from '@contentful/rich-text-html-renderer'
 import { type Document, INLINES } from '@contentful/rich-text-types'
 import type { Entry } from 'contentful'
@@ -11,6 +6,8 @@ import express, { type Express } from 'express'
 import rateLimit from 'express-rate-limit'
 import path from 'node:path'
 import Optimization from './src'
+import type { OptimizationData, PartialProfile, SelectedPersonalization } from './src/api-schemas'
+import { isMergeTagEntry } from './src/api-schemas'
 
 const limiter = rateLimit({
   windowMs: 30_000,
@@ -130,16 +127,16 @@ app.get('/', limiter, async (req, res) => {
   let apiResponse: OptimizationData | undefined = undefined
 
   if (isNonEmptyString(userId)) {
-    await sdk.personalization.page({ profile: requestProfile })
-    apiResponse = await sdk.personalization.identify({
+    await sdk.page({ profile: requestProfile })
+    apiResponse = await sdk.identify({
       userId,
       profile: requestProfile,
     })
   } else {
-    apiResponse = await sdk.personalization.page({ profile: requestProfile })
+    apiResponse = await sdk.page({ profile: requestProfile })
   }
 
-  const { profile, personalizations, changes } = apiResponse
+  const { profile, personalizations, changes } = apiResponse ?? {}
 
   const entryIds: string[] = [
     '1MwiFl4z7gkwqGYdvCmr8c', // Rich Text field Entry with Merge Tag
@@ -169,10 +166,8 @@ app.get('/', limiter, async (req, res) => {
         entry.fields.text = documentToHtmlString(entry.fields.text, {
           renderNode: {
             [INLINES.EMBEDDED_ENTRY]: (node) => {
-              if (sdk.personalization.mergeTagValueResolver.isMergeTagEntry(node.data.target)) {
-                return (
-                  sdk.personalization.mergeTagValueResolver.resolve(node.data.target, profile) ?? ''
-                )
+              if (isMergeTagEntry(node.data.target)) {
+                return sdk.getMergeTagValue(node.data.target, profile) ?? ''
               } else {
                 return ''
               }
@@ -181,16 +176,13 @@ app.get('/', limiter, async (req, res) => {
         })
       }
 
-      const personalizedEntry = sdk.personalization.personalizedEntryResolver.resolve(
-        entry,
-        personalizations,
-      )
+      const personalizedEntry = sdk.personalizeEntry(entry, personalizations)
 
       entries.set(entryId, personalizedEntry)
     }),
   )
 
-  const flags = sdk.personalization.flagsResolver.resolve(changes)
+  const flags = sdk.getCustomFlags(changes)
 
   const pageData = {
     consent,

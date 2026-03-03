@@ -1,13 +1,15 @@
+import type {
+  ComponentClickBuilderArgs,
+  ComponentHoverBuilderArgs,
+  ComponentViewBuilderArgs,
+} from '@contentful/optimization-api-client'
 import {
   InsightsEvent as AnalyticsEvent,
   BatchInsightsEventArray,
   parseWithFriendlyError,
-  type ComponentClickBuilderArgs,
-  type ComponentHoverBuilderArgs,
-  type ComponentViewBuilderArgs,
   type PartialProfile,
-} from '@contentful/optimization-api-client'
-import { createScopedLogger } from 'logger'
+} from '@contentful/optimization-api-client/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import AnalyticsBase from './AnalyticsBase'
 
 const logger = createScopedLogger('Analytics')

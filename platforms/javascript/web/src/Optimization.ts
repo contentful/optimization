@@ -11,12 +11,12 @@
  */
 
 import {
-  type App,
   CoreStateful,
   type CoreStatefulConfig,
   effect,
   signals,
 } from '@contentful/optimization-core'
+import type { App } from '@contentful/optimization-core/api-schemas'
 import { ANONYMOUS_ID_COOKIE_LEGACY } from '@contentful/optimization-core/constants'
 import { getLocale, getPageProperties, getUserAgent } from './builders'
 import {

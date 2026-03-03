@@ -1,10 +1,9 @@
-import {
-  createScopedLogger,
-  type OptimizationData,
-  type PreviewPanelSignalObject,
-  type SelectedPersonalizationArray,
-  type Signals,
-} from '@contentful/optimization-core'
+import type { PreviewPanelSignalObject, Signals } from '@contentful/optimization-core'
+import type {
+  OptimizationData,
+  SelectedPersonalizationArray,
+} from '@contentful/optimization-core/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-core/logger'
 import { PREVIEW_PANEL_SIGNALS_SYMBOL } from '@contentful/optimization-core/symbols'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useOptimization } from '../../context/OptimizationContext'

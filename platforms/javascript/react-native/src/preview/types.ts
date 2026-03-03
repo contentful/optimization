@@ -1,4 +1,4 @@
-import type { Profile, SelectedPersonalization } from '@contentful/optimization-core'
+import type { Profile, SelectedPersonalization } from '@contentful/optimization-core/api-schemas'
 import type { StyleProp, ViewStyle } from 'react-native'
 
 // ============================================================================

@@ -18,7 +18,6 @@ export default defineConfig({
       ),
       '@contentful/optimization-core': resolve(__dirname, '../../../../universal/core/src/'),
       '@contentful/optimization-web': resolve(__dirname, '../../web/src/'),
-      logger: resolve(__dirname, '../../../../lib/logger/src/'),
     },
   },
   include: ['**/*.test.?(c|m)[jt]s?(x)'],

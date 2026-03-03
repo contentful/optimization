@@ -1,5 +1,6 @@
-import { MergeTagEntry, Profile } from '@contentful/optimization-api-client'
-import { createScopedLogger } from 'logger'
+import type { MergeTagEntry } from '@contentful/optimization-api-client/api-schemas'
+import { Profile, isMergeTagEntry } from '@contentful/optimization-api-client/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 
 const logger = createScopedLogger('Personalization')
 
@@ -36,22 +37,6 @@ const getAtPath = (value: unknown, path: string): unknown => {
  * Result values are returned as strings; numeric/boolean primitives are stringified.
  */
 const MergeTagValueResolver = {
-  /**
-   * Type guard to ensure the input is a {@link MergeTagEntry}.
-   *
-   * @param embeddedEntryNodeTarget - Unknown value to validate.
-   * @returns `true` if the input is a valid merge-tag entry.
-   * @example
-   * ```ts
-   * if (MergeTagValueResolver.isMergeTagEntry(node)) {
-   *   // safe to read fields
-   * }
-   * ```
-   */
-  isMergeTagEntry(embeddedEntryNodeTarget: unknown): embeddedEntryNodeTarget is MergeTagEntry {
-    return MergeTagEntry.safeParse(embeddedEntryNodeTarget).success
-  },
-
   /**
    * Generate a list of candidate selectors for a merge-tag ID.
    *
@@ -122,7 +107,7 @@ const MergeTagValueResolver = {
    * ```
    */
   resolve(mergeTagEntry: MergeTagEntry | undefined, profile?: Profile): string | undefined {
-    if (!MergeTagValueResolver.isMergeTagEntry(mergeTagEntry)) {
+    if (!isMergeTagEntry(mergeTagEntry)) {
       logger.warn(`${RESOLUTION_WARNING_BASE} supplied entry is not a Merge Tag entry`)
       return
     }

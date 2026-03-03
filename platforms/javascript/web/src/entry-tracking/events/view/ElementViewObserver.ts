@@ -10,7 +10,7 @@
  * - Sweeps orphan/disconnected element state to avoid leaks
  */
 
-import { createScopedLogger } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core/logger'
 import { safeCallAsync } from '../../../lib'
 import {
   ensureSweeper,

@@ -1,4 +1,6 @@
-import type { CoreConfig, TrackBuilderArgs } from '@contentful/optimization-core'
+import type { CoreConfig } from '@contentful/optimization-core'
+import type { TrackBuilderArgs } from '@contentful/optimization-core/api-client'
+import type { OptimizationData, Profile } from '@contentful/optimization-core/api-schemas'
 import Optimization from './Optimization'
 import { OPTIMIZATION_WEB_SDK_NAME } from './constants'
 
@@ -8,6 +10,36 @@ const ENVIRONMENT = 'main'
 const config: CoreConfig = {
   clientId: CLIENT_ID,
   environment: ENVIRONMENT,
+}
+
+const DEFAULT_PROFILE: Profile = {
+  id: 'profile-id',
+  stableId: 'profile-id',
+  random: 1,
+  audiences: [],
+  traits: {},
+  location: {},
+  session: {
+    id: 'session-id',
+    isReturningVisitor: false,
+    landingPage: {
+      path: '/',
+      query: {},
+      referrer: '',
+      search: '',
+      title: '',
+      url: 'https://example.test/',
+    },
+    count: 1,
+    activeSessionLength: 0,
+    averageSessionLength: 0,
+  },
+}
+
+const EMPTY_OPTIMIZATION_DATA: OptimizationData = {
+  changes: [],
+  personalizations: [],
+  profile: DEFAULT_PROFILE,
 }
 
 interface AutoTrackState {
@@ -49,16 +81,6 @@ const getAutoTrackEntryHovers = (optimization: Optimization): boolean | undefine
   const state = getAutoTrackState(optimization)
 
   return state?.hovers
-}
-
-const getAllowedEventTypes = (optimization: Optimization): string[] | undefined => {
-  const value = Reflect.get(optimization.personalization, 'allowedEventTypes')
-
-  if (!Array.isArray(value)) {
-    return
-  }
-
-  return value.filter((eventType): eventType is string => typeof eventType === 'string')
 }
 
 describe('Optimization', () => {
@@ -150,19 +172,46 @@ describe('Optimization', () => {
     expect(getAutoTrackEntryHovers(web)).toBe(false)
   })
 
-  it('defaults allowedEventTypes to identify/page for web', () => {
-    const web = new Optimization(config)
-
-    expect(getAllowedEventTypes(web)).toEqual(['identify', 'page'])
-  })
-
-  it('uses user-provided allowedEventTypes when configured', () => {
+  it('defaults allowedEventTypes to identify/page for web', async () => {
+    const onEventBlocked = rs.fn()
     const web = new Optimization({
       ...config,
-      allowedEventTypes: ['identify', 'page', 'screen'],
+      onEventBlocked,
     })
+    const upsertProfile = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
 
-    expect(getAllowedEventTypes(web)).toEqual(['identify', 'page', 'screen'])
+    await web.identify({ userId: 'user-123' })
+    await web.page({})
+    await web.track({ event: 'purchase' })
+
+    expect(upsertProfile).toHaveBeenCalledTimes(2)
+    expect(onEventBlocked).toHaveBeenCalledTimes(1)
+    expect(onEventBlocked).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reason: 'consent',
+        product: 'personalization',
+        method: 'track',
+      }),
+    )
+  })
+
+  it('uses user-provided allowedEventTypes when configured', async () => {
+    const onEventBlocked = rs.fn()
+    const web = new Optimization({
+      ...config,
+      allowedEventTypes: ['identify', 'page', 'track'],
+      onEventBlocked,
+    })
+    const upsertProfile = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+
+    await web.track({ event: 'purchase' })
+
+    expect(upsertProfile).toHaveBeenCalledTimes(1)
+    expect(onEventBlocked).not.toHaveBeenCalled()
   })
 
   it('forwards onEventBlocked callback to core stateful guards', async () => {

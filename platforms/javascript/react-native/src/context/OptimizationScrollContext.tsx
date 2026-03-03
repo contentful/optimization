@@ -1,4 +1,4 @@
-import { createScopedLogger } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core/logger'
 import React, { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 import {
   ScrollView,

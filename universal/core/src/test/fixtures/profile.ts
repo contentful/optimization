@@ -1,4 +1,4 @@
-import type { Profile } from '@contentful/optimization-api-client'
+import type { Profile } from '@contentful/optimization-api-client/api-schemas'
 
 export const profile: Profile = {
   id: '',

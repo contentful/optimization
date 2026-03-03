@@ -19,8 +19,8 @@ rs.mock('@react-native-async-storage/async-storage', () => ({
   },
 }))
 
-// Mock @contentful/optimization-core
-rs.mock('@contentful/optimization-core', () => ({
+// Mock @contentful/optimization-core/logger
+rs.mock('@contentful/optimization-core/logger', () => ({
   logger: {
     info: rs.fn(),
     debug: rs.fn(),

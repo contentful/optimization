@@ -1,4 +1,5 @@
-import { ApiClient, EventBuilder, type Profile } from '@contentful/optimization-api-client'
+import { ApiClient, EventBuilder } from '@contentful/optimization-api-client'
+import type { Profile } from '@contentful/optimization-api-client/api-schemas'
 import type { LifecycleInterceptors } from '../CoreBase'
 import { InterceptorManager } from '../lib/interceptor'
 import type {

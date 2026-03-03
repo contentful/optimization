@@ -45,7 +45,7 @@ function App(): React.JSX.Element {
       return
     }
 
-    void sdk.personalization.page({ properties: { url: 'app' } })
+    void sdk.page({ properties: { url: 'app' } })
 
     const subscription = sdk.states.profile.subscribe((profile) => {
       if (!profile) {
@@ -63,7 +63,7 @@ function App(): React.JSX.Element {
   const handleIdentify = (): void => {
     if (!sdk) return
 
-    void sdk.personalization.identify({ userId: 'charles', traits: { identified: true } })
+    void sdk.identify({ userId: 'charles', traits: { identified: true } })
     setIsIdentified(true)
   }
 
@@ -71,7 +71,7 @@ function App(): React.JSX.Element {
     if (!sdk) return
 
     sdk.reset()
-    void sdk.personalization.page({ properties: { url: 'app' } })
+    void sdk.page({ properties: { url: 'app' } })
     setIsIdentified(false)
   }
 

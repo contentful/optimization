@@ -1,4 +1,4 @@
-import type { Properties } from '@contentful/optimization-core'
+import type { Properties } from '@contentful/optimization-core/api-schemas'
 import type React from 'react'
 import { useCallback, useRef } from 'react'
 import * as z from 'zod/mini'

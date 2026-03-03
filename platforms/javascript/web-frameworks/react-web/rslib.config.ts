@@ -22,6 +22,14 @@ const common = {
 
 export default defineConfig({
   source: {
+    entry: {
+      index: './src/index.ts',
+      logger: './src/logger.ts',
+      'web-sdk': './src/web-sdk.ts',
+      'core-sdk': './src/core-sdk.ts',
+      'api-client': './src/api-client.ts',
+      'api-schemas': './src/api-schemas.ts',
+    },
     tsconfigPath: './tsconfig.build.json',
     define: {
       __OPTIMIZATION_VERSION__: JSON.stringify(process.env.RELEASE_VERSION ?? '0.0.0'),

@@ -1,4 +1,4 @@
-import type { PersonalizationEntry } from '@contentful/optimization-web'
+import type { PersonalizationEntry } from '@contentful/optimization-web/api-schemas'
 import { css, html, LitElement, nothing, type TemplateResult } from 'lit'
 import { property } from 'lit/decorators.js'
 

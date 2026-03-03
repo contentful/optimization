@@ -127,13 +127,13 @@ export function LiveUpdatesTestScreen({
   }, [])
 
   const handleIdentify = (): void => {
-    void sdk.personalization.identify({ userId: 'charles', traits: { identified: true } })
+    void sdk.identify({ userId: 'charles', traits: { identified: true } })
     setIsIdentified(true)
   }
 
   const handleReset = (): void => {
     sdk.reset()
-    void sdk.personalization.page({ properties: { url: 'live-updates-test' } })
+    void sdk.page({ properties: { url: 'live-updates-test' } })
     setIsIdentified(false)
   }
 

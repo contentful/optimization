@@ -8,7 +8,6 @@ export default defineConfig({
     alias: {
       '@contentful/optimization-api-client': resolve(__dirname, '../api-client/src/'),
       '@contentful/optimization-api-schemas': resolve(__dirname, '../api-schemas/src/'),
-      logger: resolve(__dirname, '../../lib/logger/src/'),
     },
   },
   include: ['**/*.test.?(c|m)[jt]s?(x)'],

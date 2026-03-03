@@ -1,3 +1,4 @@
+import { isMergeTagEntry } from '@contentful/optimization-api-client/api-schemas'
 import { cloneDeep } from 'es-toolkit'
 import { mergeTagEntry } from '../../test/fixtures/mergeTagEntry'
 import { profile } from '../../test/fixtures/profile'
@@ -43,11 +44,11 @@ describe('MergeTagValueResolver', () => {
 
   describe('isMergeTagEntry', () => {
     it('returns false when argument is not a merge tag entry', () => {
-      expect(MergeTagValueResolver.isMergeTagEntry({})).toBeFalsy()
+      expect(isMergeTagEntry({})).toBeFalsy()
     })
 
     it('returns true when argument is a merge tag entry', () => {
-      expect(MergeTagValueResolver.isMergeTagEntry(mergeTagEntry)).toBeTruthy()
+      expect(isMergeTagEntry(mergeTagEntry)).toBeTruthy()
     })
   })
 

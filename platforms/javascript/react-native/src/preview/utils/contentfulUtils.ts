@@ -1,4 +1,4 @@
-import { createScopedLogger } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core/logger'
 import type { ContentfulClient, ContentfulEntry } from '../types'
 
 const logger = createScopedLogger('RN:Preview')

@@ -1,4 +1,4 @@
-import type { SelectedPersonalizationArray } from '@contentful/optimization-web'
+import type { SelectedPersonalizationArray } from '@contentful/optimization-web/api-schemas'
 
 /**
  * Merges user-selected variant overrides into the given selected personalizations.

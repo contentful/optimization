@@ -1,13 +1,12 @@
-import { diary, enable, type Diary, type LogEvent } from 'diary'
-
 import type LogSink from './LogSink'
+import type { LogEvent, LogLevels } from './logging'
 
 /**
  * Central logger that routes log events through registered {@link LogSink} instances.
  *
  * @example
  * ```typescript
- * import { logger } from 'logger'
+ * import { logger } from '@contentful/optimization-api-client/logger'
  *
  * logger.info('MyModule', 'Application started')
  * ```
@@ -15,18 +14,12 @@ import type LogSink from './LogSink'
  * @public
  */
 export class Logger {
-  /** The logger's identifier, used as the diary scope name. */
+  /** The logger's identifier, used as the event scope name. */
   readonly name = '@contentful/optimization'
 
   private readonly PREFIX_PARTS = ['Ctfl', 'O10n']
   private readonly DELIMITER = ':'
-  private readonly diary: Diary
   private sinks: LogSink[] = []
-
-  constructor() {
-    this.diary = diary(this.name, this.onLogEvent.bind(this))
-    enable(this.name)
-  }
 
   private assembleLocationPrefix(logLocation: string): string {
     return `[${[...this.PREFIX_PARTS, logLocation].join(this.DELIMITER)}]`
@@ -40,7 +33,7 @@ export class Logger {
    *
    * @example
    * ```typescript
-   * import { logger, ConsoleLogSink } from 'logger'
+   * import { logger, ConsoleLogSink } from '@contentful/optimization-api-client/logger'
    *
    * logger.addSink(new ConsoleLogSink('debug'))
    * ```
@@ -83,7 +76,7 @@ export class Logger {
    *
    * @param logLocation - The module or component identifier.
    * @param message - The log message.
-   * @param args - Additional arguments forwarded to the diary logger.
+   * @param args - Additional arguments forwarded in the log event.
    * @returns Nothing.
    *
    * @example
@@ -92,7 +85,7 @@ export class Logger {
    * ```
    */
   public debug(logLocation: string, message: string, ...args: unknown[]): void {
-    this.diary.debug(`${this.assembleLocationPrefix(logLocation)} ${message}`, ...args)
+    this.emit('debug', logLocation, message, ...args)
   }
 
   /**
@@ -100,7 +93,7 @@ export class Logger {
    *
    * @param logLocation - The module or component identifier.
    * @param message - The log message.
-   * @param args - Additional arguments forwarded to the diary logger.
+   * @param args - Additional arguments forwarded in the log event.
    * @returns Nothing.
    *
    * @example
@@ -109,7 +102,7 @@ export class Logger {
    * ```
    */
   public info(logLocation: string, message: string, ...args: unknown[]): void {
-    this.diary.info(`${this.assembleLocationPrefix(logLocation)} ${message}`, ...args)
+    this.emit('info', logLocation, message, ...args)
   }
 
   /**
@@ -117,7 +110,7 @@ export class Logger {
    *
    * @param logLocation - The module or component identifier.
    * @param message - The log message.
-   * @param args - Additional arguments forwarded to the diary logger.
+   * @param args - Additional arguments forwarded in the log event.
    * @returns Nothing.
    *
    * @example
@@ -126,7 +119,7 @@ export class Logger {
    * ```
    */
   public log(logLocation: string, message: string, ...args: unknown[]): void {
-    this.diary.log(`${this.assembleLocationPrefix(logLocation)} ${message}`, ...args)
+    this.emit('log', logLocation, message, ...args)
   }
 
   /**
@@ -134,7 +127,7 @@ export class Logger {
    *
    * @param logLocation - The module or component identifier.
    * @param message - The log message.
-   * @param args - Additional arguments forwarded to the diary logger.
+   * @param args - Additional arguments forwarded in the log event.
    * @returns Nothing.
    *
    * @example
@@ -143,7 +136,7 @@ export class Logger {
    * ```
    */
   public warn(logLocation: string, message: string, ...args: unknown[]): void {
-    this.diary.warn(`${this.assembleLocationPrefix(logLocation)} ${message}`, ...args)
+    this.emit('warn', logLocation, message, ...args)
   }
 
   /**
@@ -151,7 +144,7 @@ export class Logger {
    *
    * @param logLocation - The module or component identifier.
    * @param message - The log message or Error object.
-   * @param args - Additional arguments forwarded to the diary logger.
+   * @param args - Additional arguments forwarded in the log event.
    * @returns Nothing.
    *
    * @example
@@ -160,7 +153,7 @@ export class Logger {
    * ```
    */
   public error(logLocation: string, message: string | Error, ...args: unknown[]): void {
-    this.diary.error(`${this.assembleLocationPrefix(logLocation)} ${message}`, ...args)
+    this.emit('error', logLocation, message, ...args)
   }
 
   /**
@@ -168,7 +161,7 @@ export class Logger {
    *
    * @param logLocation - The module or component identifier.
    * @param message - The log message or Error object.
-   * @param args - Additional arguments forwarded to the diary logger.
+   * @param args - Additional arguments forwarded in the log event.
    * @returns Nothing.
    *
    * @example
@@ -177,7 +170,20 @@ export class Logger {
    * ```
    */
   public fatal(logLocation: string, message: string | Error, ...args: unknown[]): void {
-    this.diary.fatal(`${this.assembleLocationPrefix(logLocation)} ${message}`, ...args)
+    this.emit('fatal', logLocation, message, ...args)
+  }
+
+  private emit(
+    level: LogLevels,
+    logLocation: string,
+    message: string | Error,
+    ...args: unknown[]
+  ): void {
+    this.onLogEvent({
+      name: this.name,
+      level,
+      messages: [`${this.assembleLocationPrefix(logLocation)} ${String(message)}`, ...args],
+    })
   }
 
   private onLogEvent(event: LogEvent): void {
@@ -222,7 +228,7 @@ export interface ScopedLogger {
  *
  * @example
  * ```typescript
- * import { createScopedLogger } from 'logger'
+ * import { createScopedLogger } from '@contentful/optimization-api-client/logger'
  *
  * const log = createScopedLogger('MyModule')
  * log.info('Initialization complete')

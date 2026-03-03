@@ -17,6 +17,16 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./logger": {
+      "import": {
+        "types": "./dist/logger.d.mts",
+        "default": "./dist/logger.mjs"
+      },
+      "require": {
+        "types": "./dist/logger.d.cts",
+        "default": "./dist/logger.cjs"
+      }
+    },
     "./constants": {
       "import": {
         "types": "./dist/constants.d.mts",

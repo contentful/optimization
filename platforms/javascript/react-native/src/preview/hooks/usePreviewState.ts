@@ -1,8 +1,5 @@
-import {
-  createScopedLogger,
-  type Profile,
-  type SelectedPersonalization,
-} from '@contentful/optimization-core'
+import type { Profile, SelectedPersonalization } from '@contentful/optimization-core/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-core/logger'
 import { useEffect, useState } from 'react'
 import { useOptimization } from '../../context/OptimizationContext'
 import type { PreviewState } from '../types'

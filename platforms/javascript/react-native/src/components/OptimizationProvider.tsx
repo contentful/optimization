@@ -1,4 +1,4 @@
-import { createScopedLogger } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core/logger'
 import React, { type ReactNode } from 'react'
 import type Optimization from '../'
 import OptimizationContext from '../context/OptimizationContext'

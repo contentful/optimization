@@ -1,4 +1,4 @@
-import type { AudienceEntry, PersonalizationEntry } from '@contentful/optimization-web'
+import type { AudienceEntry, PersonalizationEntry } from '@contentful/optimization-web/api-schemas'
 import type {
   ChainModifiers,
   ContentfulClientApi,

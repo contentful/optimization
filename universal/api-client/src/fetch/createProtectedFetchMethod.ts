@@ -1,4 +1,4 @@
-import { createScopedLogger } from 'logger'
+import { createScopedLogger } from '../logger'
 import { createRetryFetchMethod, type RetryFetchMethodOptions } from './createRetryFetchMethod'
 import {
   createTimeoutFetchMethod,
