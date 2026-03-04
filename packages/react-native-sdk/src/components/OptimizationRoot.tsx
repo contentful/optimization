@@ -1,5 +1,5 @@
+import type { CoreStatefulConfig } from '@contentful/optimization-core'
 import React, { type ReactNode } from 'react'
-import type { OptimizationConfig } from '../'
 import { LiveUpdatesProvider } from '../context/LiveUpdatesContext'
 import { PreviewPanelOverlay } from '../preview/components/PreviewPanelOverlay'
 import type { ContentfulClient } from '../preview/types'
@@ -41,11 +41,11 @@ export interface PreviewPanelConfig {
 /**
  * Props for the {@link OptimizationRoot} component.
  *
- * Accepts all {@link OptimizationConfig} properties directly. Only `clientId` is required.
+ * Accepts all {@link CoreStatefulConfig} properties directly. Only `clientId` is required.
  *
  * @public
  */
-export interface OptimizationReactNativeConfig extends OptimizationConfig {
+export interface OptimizationReactNativeConfig extends CoreStatefulConfig {
   /**
    * Optional configuration for the preview panel.
    * When provided with `enabled: true`, the preview panel will be available.

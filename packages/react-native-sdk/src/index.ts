@@ -13,7 +13,6 @@ import './images'
 import './polyfills/crypto'
 
 import type { CoreStatefulConfig } from '@contentful/optimization-core'
-import Optimization from './OptimizationReactNativeSdk'
 
 /**
  * SDK initialization config passed as props to {@link OptimizationProvider} and {@link OptimizationRoot}.
@@ -61,4 +60,4 @@ export { PreviewPanel as OptimizationPreviewPanel } from './preview/components/P
 export { PreviewPanelOverlay } from './preview/components/PreviewPanelOverlay'
 export type { ContentfulClient, PreviewPanelOverlayProps, PreviewPanelProps } from './preview/types'
 
-export default Optimization
+export { default as OptimizationReactNativeSdk } from './OptimizationReactNativeSdk'

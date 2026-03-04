@@ -1,12 +1,18 @@
 import React from 'react'
 import { Text } from 'react-native'
 
-import type Optimization from '@contentful/optimization-react-native'
-import type { MergeTagEntry } from '@contentful/optimization-react-native/api-schemas'
-import { createScopedLogger } from '@contentful/optimization-react-native/logger'
+import type { OptimizationReactNativeSdk } from '@contentful/optimization-react-native'
+import {
+  type MergeTagEntry,
+  isMergeTagEntry,
+} from '@contentful/optimization-react-native/api-schemas'
+import {
+  createScopedLogger,
+  type ScopedLogger,
+} from '@contentful/optimization-core/logger'
 import type { Entry } from 'contentful'
 
-const logger = createScopedLogger('Demo:RichText')
+const logger: ScopedLogger = createScopedLogger('Demo:RichText')
 
 interface RichTextNode {
   nodeType: string
@@ -29,14 +35,10 @@ interface EmbeddedEntryInlineNode {
 
 interface RichTextRendererProps {
   richText: RichTextField
-  sdk: Optimization
+  sdk: OptimizationReactNativeSdk
 }
 
-type RenderedRichTextNode = string | React.JSX.Element | RenderedRichTextNode[] | null
-
-function isMergeTagEntry(entry: Entry): entry is MergeTagEntry {
-  return entry.sys.contentType.sys.id === 'nt_mergetag'
-}
+type RenderedRichTextNode = string | null | React.ReactElement
 
 function isLink(target: unknown): boolean {
   if (typeof target !== 'object' || target === null) {
@@ -75,7 +77,10 @@ function convertToString(value: unknown): string {
   return String(value)
 }
 
-function resolveMergeTagValue(includedEntry: MergeTagEntry, sdk: Optimization): string {
+function resolveMergeTagValue(
+  includedEntry: MergeTagEntry,
+  sdk: OptimizationReactNativeSdk,
+): string {
   const resolvedValue = sdk.getMergeTagValue(includedEntry)
 
   if (resolvedValue === undefined) {
@@ -92,13 +97,27 @@ function resolveMergeTagValue(includedEntry: MergeTagEntry, sdk: Optimization): 
   return valueString
 }
 
-function renderEmbeddedEntry(node: EmbeddedEntryInlineNode, sdk: Optimization): string {
-  const { data } = node
-  const { target: includedEntry } = data
+function getLinkId(link: unknown): string {
+  if (typeof link !== 'object' || link === null || !('sys' in link)) {
+    return 'unknown'
+  }
+  const { sys } = link as { sys?: unknown }
+  if (typeof sys !== 'object' || sys === null || !('id' in (sys as object))) {
+    return 'unknown'
+  }
+  const { id } = sys as { id?: unknown }
+  return typeof id === 'string' ? id : 'unknown'
+}
+
+function renderEmbeddedEntry(
+  node: EmbeddedEntryInlineNode,
+  sdk: OptimizationReactNativeSdk,
+): string {
+  const { target: includedEntry } = node.data
 
   if (isLink(includedEntry)) {
     return logAndReturnFallback(
-      `Target is still a Link after Contentful SDK resolution: ${includedEntry.sys.id}. This should not happen when using getEntry() with include parameter.`,
+      `Target is still a Link after Contentful SDK resolution: ${getLinkId(includedEntry)}. This should not happen when using getEntry() with include parameter.`,
     )
   }
 
@@ -109,7 +128,7 @@ function renderEmbeddedEntry(node: EmbeddedEntryInlineNode, sdk: Optimization): 
   return logAndReturnFallback('Failed to resolve merge tag: entry is not a merge tag')
 }
 
-function extractTextContent(node: RichTextNode, sdk: Optimization): string {
+function extractTextContent(node: RichTextNode, sdk: OptimizationReactNativeSdk): string {
   const textContent = renderTextNode(node)
   if (textContent) {
     return textContent
@@ -126,11 +145,17 @@ function extractTextContent(node: RichTextNode, sdk: Optimization): string {
   return ''
 }
 
-export function getRichTextContent(richText: RichTextField, sdk: Optimization): string {
+export function getRichTextContent(
+  richText: RichTextField,
+  sdk: OptimizationReactNativeSdk,
+): string {
   return richText.content.map((node) => extractTextContent(node, sdk)).join(' ')
 }
 
-export function RichTextRenderer({ richText, sdk }: RichTextRendererProps): React.JSX.Element {
+export function RichTextRenderer({
+  richText,
+  sdk,
+}: RichTextRendererProps): React.ReactElement {
   const renderNode = (node: RichTextNode, index: number): RenderedRichTextNode => {
     const textContent = renderTextNode(node)
     if (textContent) {

@@ -75,16 +75,16 @@ For offline support (recommended), also install:
 pnpm install @react-native-community/netinfo
 ```
 
-Import the Optimization class; both CJS and ESM module systems are supported, ESM preferred:
+Import the Optimization React Native SDK; both CJS and ESM module systems are supported, ESM preferred:
 
 ```ts
-import Optimization from '@contentful/optimization-react-native'
+import { OptimizationReactNativeSdk } from '@contentful/optimization-react-native'
 ```
 
 Configure and initialize the Optimization React Native SDK:
 
 ```ts
-const optimization = await Optimization.create({
+const optimization = await OptimizationReactNativeSdk.create({
   clientId: 'your-client-id',
   environment: 'main',
 })
@@ -200,7 +200,7 @@ Configuration method signatures:
 
 > [!IMPORTANT]
 >
-> Call `Optimization.create(...)` once per app runtime and share the returned instance. In tests or
+> Call `OptimizationReactNativeSdk.create(...)` once per app runtime and share the returned instance. In tests or
 > hot-reload workflows, call `destroy()` before creating a replacement instance.
 
 ## Component Tracking
@@ -316,7 +316,7 @@ Both components support customizable visibility and time thresholds:
 You can also manually track events using the analytics API:
 
 ```typescript
-import Optimization, { useOptimization } from '@contentful/optimization-react-native'
+import { useOptimization } from '@contentful/optimization-react-native'
 
 function MyComponent() {
   const optimization = useOptimization()
@@ -339,7 +339,8 @@ function MyComponent() {
 optional preview panel functionality:
 
 ```tsx
-import Optimization, {
+import {
+  OptimizationReactNativeSdk,
   OptimizationRoot,
   OptimizationScrollProvider,
 } from '@contentful/optimization-react-native'

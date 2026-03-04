@@ -5,7 +5,6 @@ import {
   signals,
 } from '@contentful/optimization-core'
 import { merge } from 'es-toolkit'
-import Optimization from '.'
 import {
   OPTIMIZATION_REACT_NATIVE_SDK_NAME,
   OPTIMIZATION_REACT_NATIVE_SDK_VERSION,
@@ -54,7 +53,7 @@ async function mergeConfig({
   }
 }
 
-let activeOptimizationInstance: Optimization | undefined = undefined
+let activeOptimizationInstance: OptimizationReactNativeSdk | undefined = undefined
 
 /**
  * Main entry point for the Contentful Optimization React Native SDK.
@@ -75,7 +74,7 @@ let activeOptimizationInstance: Optimization | undefined = undefined
  *
  * @example Manual initialization
  * ```ts
- * import Optimization from '@contentful/optimization-react-native'
+ * import { OptimizationReactNativeSdk } from '@contentful/optimization-react-native'
  *
  * const optimization = await OptimizationReactNativeSdk.create({
  *   clientId: 'your-client-id',
@@ -156,7 +155,7 @@ class OptimizationReactNativeSdk extends CoreStateful {
    *
    * @public
    */
-  static async create(config: CoreStatefulConfig): Promise<Optimization> {
+  static async create(config: CoreStatefulConfig): Promise<OptimizationReactNativeSdk> {
     if (activeOptimizationInstance) {
       throw new Error(
         'Optimization React Native SDK is already initialized. Reuse the existing instance.',
@@ -165,7 +164,7 @@ class OptimizationReactNativeSdk extends CoreStateful {
 
     const mergedConfig = await mergeConfig(config)
 
-    const instance = new Optimization(mergedConfig)
+    const instance = new OptimizationReactNativeSdk(mergedConfig)
     activeOptimizationInstance = instance
 
     return instance

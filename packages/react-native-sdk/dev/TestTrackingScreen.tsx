@@ -9,7 +9,7 @@ import React, { useEffect, useState } from 'react'
 import { StatusBar, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import type Optimization from '@contentful/optimization-react-native'
+import type { OptimizationReactNativeSdk } from '@contentful/optimization-react-native'
 import {
   Analytics,
   OptimizationScrollProvider,
@@ -30,7 +30,7 @@ interface ThemeColors {
 interface TestTrackingScreenProps {
   colors: ThemeColors
   onBack: () => void
-  sdk: Optimization
+  sdk: OptimizationReactNativeSdk
   personalizedEntry: Entry
   productEntry: Entry
 }

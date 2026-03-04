@@ -1,4 +1,4 @@
-import type OptimizationReactNativeSdk from '@contentful/optimization-react-native'
+import type { OptimizationReactNativeSdk } from '@contentful/optimization-react-native'
 import { createClient, type Entry } from 'contentful'
 import AsyncStorageStore from '../../src/storage/AsyncStorageStore'
 import { ENV_CONFIG } from '../env.config'
@@ -10,8 +10,7 @@ export async function initializeSDK(
   setSdkLoaded: (loaded: boolean) => void,
   setSdkError: (error: string | null) => void,
 ): Promise<void> {
-  const { default: OptimizationReactNativeSdk } =
-    await import('@contentful/optimization-react-native')
+  const { OptimizationReactNativeSdk } = await import('@contentful/optimization-react-native')
 
   try {
     const {
