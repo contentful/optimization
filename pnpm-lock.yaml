@@ -181,7 +181,7 @@ importers:
     dependencies:
       '@contentful/optimization-api-schemas':
         specifier: workspace:*
-        version: link:../../universal/api-schemas
+        version: link:../../packages/universal/api-schemas
       '@mswjs/http-middleware':
         specifier: 0.10.3
         version: 0.10.3(msw@2.12.10(@types/node@24.10.13)(typescript@5.9.3))
@@ -226,11 +226,11 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.10.13)(happy-dom@20.6.1)(jiti@2.6.1)(msw@2.12.10(@types/node@24.10.13)(typescript@5.9.3))(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2)
 
-  platforms/javascript/node:
+  packages/node/node-sdk:
     dependencies:
       '@contentful/optimization-core':
         specifier: workspace:*
-        version: link:../../../universal/core
+        version: link:../../universal/core-sdk
       es-toolkit:
         specifier: 'catalog:'
         version: 1.44.0
@@ -290,11 +290,11 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
-  platforms/javascript/react-native:
+  packages/react-native-sdk:
     dependencies:
       '@contentful/optimization-core':
         specifier: workspace:*
-        version: link:../../../universal/core
+        version: link:../universal/core-sdk
       '@react-native-async-storage/async-storage':
         specifier: ^2.2.0
         version: 2.2.0(react-native@0.84.1(@babel/core@7.29.0)(@react-native-community/cli@20.1.1(typescript@5.9.3))(@react-native/metro-config@0.84.0(@babel/core@7.29.0))(@types/react@19.2.14)(react@19.2.3))
@@ -403,7 +403,7 @@ importers:
         version: 29.7.0(@babel/core@7.29.0)
       build-tools:
         specifier: workspace:*
-        version: link:../../../lib/build-tools
+        version: link:../../lib/build-tools
       contentful:
         specifier: 'catalog:'
         version: 11.10.5
@@ -424,7 +424,7 @@ importers:
         version: 2.0.1
       mocks:
         specifier: workspace:*
-        version: link:../../../lib/mocks
+        version: link:../../lib/mocks
       react-native-dotenv:
         specifier: ^3.4.11
         version: 3.4.11(@babel/runtime@7.28.6)
@@ -441,18 +441,21 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
-  platforms/javascript/web:
+  packages/universal/api-client:
     dependencies:
-      '@contentful/optimization-core':
+      '@contentful/optimization-api-schemas':
         specifier: workspace:*
-        version: link:../../../universal/core
+        version: link:../api-schemas
+      es-toolkit:
+        specifier: 'catalog:'
+        version: 1.44.0
       zod:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
-      '@rsbuild/core':
+      '@microsoft/api-extractor':
         specifier: 'catalog:'
-        version: 1.7.3
+        version: 7.57.6(@types/node@24.10.13)
       '@rsdoctor/cli':
         specifier: 'catalog:'
         version: 1.5.2(@rsbuild/core@1.7.3)(@rsdoctor/client@1.5.2)(@rspack/core@1.7.6(@swc/helpers@0.5.19))
@@ -471,27 +474,119 @@ importers:
       build-tools:
         specifier: workspace:*
         version: link:../../../lib/build-tools
-      happy-dom:
+      mocks:
+        specifier: workspace:*
+        version: link:../../../lib/mocks
+      msw:
         specifier: 'catalog:'
-        version: 20.6.1
+        version: 2.12.10(@types/node@24.10.13)(typescript@5.9.3)
       rimraf:
         specifier: 'catalog:'
         version: 6.1.3
       tslib:
         specifier: 'catalog:'
         version: 2.8.1
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
 
-  platforms/javascript/web-frameworks/react-web:
+  packages/universal/api-schemas:
+    dependencies:
+      contentful:
+        specifier: 'catalog:'
+        version: 11.10.5
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+    devDependencies:
+      '@microsoft/api-extractor':
+        specifier: 'catalog:'
+        version: 7.57.6(@types/node@24.10.13)
+      '@rsdoctor/cli':
+        specifier: 'catalog:'
+        version: 1.5.2(@rsbuild/core@1.7.3)(@rsdoctor/client@1.5.2)(@rspack/core@1.7.6(@swc/helpers@0.5.19))
+      '@rslib/core':
+        specifier: 'catalog:'
+        version: 0.19.6(@microsoft/api-extractor@7.57.6(@types/node@24.10.13))(typescript@5.9.3)
+      '@rstest/core':
+        specifier: 'catalog:'
+        version: 0.8.5(happy-dom@20.6.1)
+      '@types/node':
+        specifier: ^24.0.13
+        version: 24.10.13
+      build-tools:
+        specifier: workspace:*
+        version: link:../../../lib/build-tools
+      rimraf:
+        specifier: 'catalog:'
+        version: 6.1.3
+      tslib:
+        specifier: 'catalog:'
+        version: 2.8.1
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/universal/core-sdk:
+    dependencies:
+      '@contentful/optimization-api-client':
+        specifier: workspace:*
+        version: link:../api-client
+      '@preact/signals-core':
+        specifier: 'catalog:'
+        version: 1.13.0
+      contentful:
+        specifier: 'catalog:'
+        version: 11.10.5
+      es-toolkit:
+        specifier: 'catalog:'
+        version: 1.44.0
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+    devDependencies:
+      '@microsoft/api-extractor':
+        specifier: 'catalog:'
+        version: 7.57.6(@types/node@24.10.13)
+      '@rsdoctor/cli':
+        specifier: 'catalog:'
+        version: 1.5.2(@rsbuild/core@1.7.3)(@rsdoctor/client@1.5.2)(@rspack/core@1.7.6(@swc/helpers@0.5.19))
+      '@rslib/core':
+        specifier: 'catalog:'
+        version: 0.19.6(@microsoft/api-extractor@7.57.6(@types/node@24.10.13))(typescript@5.9.3)
+      '@rstest/core':
+        specifier: 'catalog:'
+        version: 0.8.5(happy-dom@20.6.1)
+      '@rstest/coverage-istanbul':
+        specifier: 'catalog:'
+        version: 0.2.1(@rstest/core@0.8.5(happy-dom@20.6.1))
+      '@types/node':
+        specifier: ^24.0.13
+        version: 24.10.13
+      build-tools:
+        specifier: workspace:*
+        version: link:../../../lib/build-tools
+      mocks:
+        specifier: workspace:*
+        version: link:../../../lib/mocks
+      msw:
+        specifier: 'catalog:'
+        version: 2.12.10(@types/node@24.10.13)(typescript@5.9.3)
+      rimraf:
+        specifier: 'catalog:'
+        version: 6.1.3
+      tslib:
+        specifier: 'catalog:'
+        version: 2.8.1
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/web/frameworks/react-web-sdk:
     dependencies:
       '@contentful/optimization-web':
         specifier: workspace:*
-        version: link:../../web
+        version: link:../../web-sdk
       react:
         specifier: 19.2.3
         version: 19.2.3
@@ -536,11 +631,11 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
-  platforms/javascript/web-preview-panel:
+  packages/web/preview-panel:
     dependencies:
       '@contentful/optimization-web':
         specifier: workspace:*
-        version: link:../web
+        version: link:../web-sdk
       '@lit/context':
         specifier: ^1.1.6
         version: 1.1.6
@@ -576,21 +671,18 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
-  universal/api-client:
+  packages/web/web-sdk:
     dependencies:
-      '@contentful/optimization-api-schemas':
+      '@contentful/optimization-core':
         specifier: workspace:*
-        version: link:../api-schemas
-      es-toolkit:
-        specifier: 'catalog:'
-        version: 1.44.0
+        version: link:../../universal/core-sdk
       zod:
         specifier: 'catalog:'
         version: 4.3.6
     devDependencies:
-      '@microsoft/api-extractor':
+      '@rsbuild/core':
         specifier: 'catalog:'
-        version: 7.57.6(@types/node@24.10.13)
+        version: 1.7.3
       '@rsdoctor/cli':
         specifier: 'catalog:'
         version: 1.5.2(@rsbuild/core@1.7.3)(@rsdoctor/client@1.5.2)(@rspack/core@1.7.6(@swc/helpers@0.5.19))
@@ -608,111 +700,19 @@ importers:
         version: 24.10.13
       build-tools:
         specifier: workspace:*
-        version: link:../../lib/build-tools
-      mocks:
-        specifier: workspace:*
-        version: link:../../lib/mocks
-      msw:
+        version: link:../../../lib/build-tools
+      happy-dom:
         specifier: 'catalog:'
-        version: 2.12.10(@types/node@24.10.13)(typescript@5.9.3)
+        version: 20.6.1
       rimraf:
         specifier: 'catalog:'
         version: 6.1.3
       tslib:
         specifier: 'catalog:'
         version: 2.8.1
-      typescript:
-        specifier: ^5.8.3
-        version: 5.9.3
-
-  universal/api-schemas:
-    dependencies:
-      contentful:
+      tsx:
         specifier: 'catalog:'
-        version: 11.10.5
-      zod:
-        specifier: 'catalog:'
-        version: 4.3.6
-    devDependencies:
-      '@microsoft/api-extractor':
-        specifier: 'catalog:'
-        version: 7.57.6(@types/node@24.10.13)
-      '@rsdoctor/cli':
-        specifier: 'catalog:'
-        version: 1.5.2(@rsbuild/core@1.7.3)(@rsdoctor/client@1.5.2)(@rspack/core@1.7.6(@swc/helpers@0.5.19))
-      '@rslib/core':
-        specifier: 'catalog:'
-        version: 0.19.6(@microsoft/api-extractor@7.57.6(@types/node@24.10.13))(typescript@5.9.3)
-      '@rstest/core':
-        specifier: 'catalog:'
-        version: 0.8.5(happy-dom@20.6.1)
-      '@types/node':
-        specifier: ^24.0.13
-        version: 24.10.13
-      build-tools:
-        specifier: workspace:*
-        version: link:../../lib/build-tools
-      rimraf:
-        specifier: 'catalog:'
-        version: 6.1.3
-      tslib:
-        specifier: 'catalog:'
-        version: 2.8.1
-      typescript:
-        specifier: ^5.8.3
-        version: 5.9.3
-
-  universal/core:
-    dependencies:
-      '@contentful/optimization-api-client':
-        specifier: workspace:*
-        version: link:../api-client
-      '@preact/signals-core':
-        specifier: 'catalog:'
-        version: 1.13.0
-      contentful:
-        specifier: 'catalog:'
-        version: 11.10.5
-      es-toolkit:
-        specifier: 'catalog:'
-        version: 1.44.0
-      zod:
-        specifier: 'catalog:'
-        version: 4.3.6
-    devDependencies:
-      '@microsoft/api-extractor':
-        specifier: 'catalog:'
-        version: 7.57.6(@types/node@24.10.13)
-      '@rsdoctor/cli':
-        specifier: 'catalog:'
-        version: 1.5.2(@rsbuild/core@1.7.3)(@rsdoctor/client@1.5.2)(@rspack/core@1.7.6(@swc/helpers@0.5.19))
-      '@rslib/core':
-        specifier: 'catalog:'
-        version: 0.19.6(@microsoft/api-extractor@7.57.6(@types/node@24.10.13))(typescript@5.9.3)
-      '@rstest/core':
-        specifier: 'catalog:'
-        version: 0.8.5(happy-dom@20.6.1)
-      '@rstest/coverage-istanbul':
-        specifier: 'catalog:'
-        version: 0.2.1(@rstest/core@0.8.5(happy-dom@20.6.1))
-      '@types/node':
-        specifier: ^24.0.13
-        version: 24.10.13
-      build-tools:
-        specifier: workspace:*
-        version: link:../../lib/build-tools
-      mocks:
-        specifier: workspace:*
-        version: link:../../lib/mocks
-      msw:
-        specifier: 'catalog:'
-        version: 2.12.10(@types/node@24.10.13)(typescript@5.9.3)
-      rimraf:
-        specifier: 'catalog:'
-        version: 6.1.3
-      tslib:
-        specifier: 'catalog:'
-        version: 2.8.1
+        version: 4.21.0
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
@@ -8360,7 +8360,7 @@ snapshots:
     dependencies:
       '@eslint/object-schema': 3.0.1
       debug: 4.4.3
-      minimatch: 10.2.1
+      minimatch: 10.2.4
     transitivePeerDependencies:
       - supports-color
 
@@ -10858,7 +10858,7 @@ snapshots:
 
   compressible@2.0.18:
     dependencies:
-      mime-db: 1.52.0
+      mime-db: 1.54.0
 
   compression@1.8.1:
     dependencies:

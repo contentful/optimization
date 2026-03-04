@@ -9,7 +9,8 @@ The SDK architecture MUST follow the canonical layer order
 Dependency flow MUST remain directional and acyclic from shared contracts upward:
 `api-schemas -> api-client -> core -> platform SDK -> environment SDK -> framework SDK -> meta-framework SDK -> implementations`.
 A layer may be absent for a target, but no package MAY import from any later layer. Shared logic
-MUST be centralized in `universal/*` or `lib/*` and MUST NOT be duplicated across SDK packages.
+MUST be centralized in `packages/universal/*` or `lib/*` and MUST NOT be duplicated across SDK
+packages.
 
 Rationale: The monorepo is designed as a composable SDK hierarchy; strict dependency direction keeps
 expansion safe as SDK targets and layers grow.
@@ -59,9 +60,9 @@ checks.
 
 The repository MUST preserve these workspace responsibilities:
 
-- `universal/*`: platform-agnostic contracts and core capabilities.
-- `platforms/*`: SDK packages composed by layer order
-  `platform -> environment -> framework -> meta-framework`.
+- `packages/universal/*`: platform-agnostic contracts and core capabilities.
+- `packages/node/node-sdk`, `packages/web/*`, and `packages/react-native-sdk`: SDK packages composed
+  by layer order `platform -> environment -> framework -> meta-framework`.
 - `lib/*`: shared internal tooling, mocks, and utilities.
 - `implementations/*`: sparse reference applications for integration and E2E verification.
 
@@ -77,10 +78,10 @@ A pull request that changes runtime behavior MUST pass these gates before merge:
 - Relevant E2E runs for affected implementations.
 - README and TSDoc updates for user-visible behavior changes.
 
-For governance clarity, a "significant change" means any change under `universal/*`, exported SDK
-public APIs, API schemas/contracts, consent/event semantics, or build/release configuration. For
-significant changes, "relevant E2E" means at least one implementation that exercises each affected
-environment layer and at least one cross-layer integration path.
+For governance clarity, a "significant change" means any change under `packages/universal/*`,
+exported SDK public APIs, API schemas/contracts, consent/event semantics, or build/release
+configuration. For significant changes, "relevant E2E" means at least one implementation that
+exercises each affected environment layer and at least one cross-layer integration path.
 
 A pull request that defers a required gate MUST include explicit maintainer approval and a bounded
 follow-up issue.

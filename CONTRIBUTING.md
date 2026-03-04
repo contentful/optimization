@@ -61,45 +61,45 @@ The following root `package.json` scripts may be run directly during day-to-day 
 not listed here are lifecycle hooks, CI-focused variants, packaging/compliance helpers, or internal
 wrappers used by these commands.
 
-| Command                                    | Description                                                                         |
-| ------------------------------------------ | ----------------------------------------------------------------------------------- |
-| `pnpm build:pkgs`                          | Builds packages, then creates tarballs for all `@contentful/*` packages in `pkgs/`. |
-| `pnpm build`                               | Builds the logger and all `@contentful/*` packages.                                 |
-| `pnpm clean`                               | Removes build artifacts across all workspaces.                                      |
-| `pnpm docs:generate`                       | Generates TypeDoc output from code and linked markdown docs.                        |
-| `pnpm docs:watch`                          | Watches files and rebuilds TypeDoc output during documentation work.                |
-| `pnpm format:check`                        | Checks repository formatting with Prettier.                                         |
-| `pnpm format:fix`                          | Applies Prettier formatting changes across the repository.                          |
-| `pnpm implementation:install`              | Runs implementation-specific install steps across all reference apps.               |
-| `pnpm implementation:node-ssr-only`        | Runs the implementation helper for the Node SSR Only reference app.                 |
-| `pnpm implementation:node-ssr-web-vanilla` | Runs the implementation helper for the Node SSR + Web Vanilla reference app.        |
-| `pnpm implementation:react-native`         | Runs the implementation helper for the React Native reference app.                  |
-| `pnpm implementation:web-react`            | Runs the implementation helper for the Web React reference app.                     |
-| `pnpm implementation:web-vanilla`          | Runs the implementation helper for the Web Vanilla reference app.                   |
-| `pnpm implementation:run`                  | Runs the shared implementation script runner with custom arguments.                 |
-| `pnpm implementation:lint`                 | Runs ESLint checks across `implementations/`.                                       |
-| `pnpm implementation:lint:fix`             | Runs ESLint with autofix across `implementations/`.                                 |
-| `pnpm lint`                                | Runs ESLint checks for workspace packages (`lib`, `platforms`, `universal`).        |
-| `pnpm lint:fix`                            | Runs ESLint and automatically applies fixable issues.                               |
-| `pnpm playwright:install-deps`             | Installs Playwright system dependencies across implementations.                     |
-| `pnpm playwright:install`                  | Installs Playwright browser binaries across implementations.                        |
-| `pnpm pm2:delete:all`                      | Removes all PM2-managed local processes from PM2.                                   |
-| `pnpm pm2:list`                            | Shows PM2-managed local processes used by reference implementations.                |
-| `pnpm pm2:logs`                            | Streams logs for PM2-managed local processes.                                       |
-| `pnpm pm2:stop:all`                        | Stops all PM2-managed local processes.                                              |
-| `pnpm serve:mocks`                         | Starts the shared mock services used by local testing flows.                        |
-| `pnpm setup:e2e`                           | Prepares all reference implementations and browser dependencies for E2E tests.      |
-| `pnpm setup:e2e:web-react`                 | Prepares the Web React implementation for E2E tests.                                |
-| `pnpm test:e2e:node-ssr-only`              | Runs E2E tests for the Node SSR Only reference implementation.                      |
-| `pnpm test:e2e:node-ssr-web-vanilla`       | Runs E2E tests for the Node SSR + Web Vanilla reference implementation.             |
-| `pnpm test:e2e:react-native`               | Runs E2E tests for the React Native reference implementation.                       |
-| `pnpm test:e2e:web-react`                  | Runs E2E tests for the Web React reference implementation.                          |
-| `pnpm test:e2e:web-vanilla`                | Runs E2E tests for the Web Vanilla reference implementation.                        |
-| `pnpm test:e2e`                            | Runs end-to-end tests across all reference implementations.                         |
-| `pnpm test:unit`                           | Runs unit tests for all `@contentful/*` packages.                                   |
-| `pnpm typecheck`                           | Runs TypeScript type checks across all workspaces.                                  |
-| `pnpm version:node`                        | Prints the local Node.js version.                                                   |
-| `pnpm version:pnpm`                        | Prints the local pnpm version.                                                      |
+| Command                                | Description                                                                         |
+| -------------------------------------- | ----------------------------------------------------------------------------------- |
+| `pnpm build:pkgs`                      | Builds packages, then creates tarballs for all `@contentful/*` packages in `pkgs/`. |
+| `pnpm build`                           | Builds the logger and all `@contentful/*` packages.                                 |
+| `pnpm clean`                           | Removes build artifacts across all workspaces.                                      |
+| `pnpm docs:generate`                   | Generates TypeDoc output from code and linked markdown docs.                        |
+| `pnpm docs:watch`                      | Watches files and rebuilds TypeDoc output during documentation work.                |
+| `pnpm format:check`                    | Checks repository formatting with Prettier.                                         |
+| `pnpm format:fix`                      | Applies Prettier formatting changes across the repository.                          |
+| `pnpm implementation:install`          | Runs implementation-specific install steps across all reference apps.               |
+| `pnpm implementation:node-sdk`         | Runs the implementation helper for the Node SSR Only reference app.                 |
+| `pnpm implementation:node-sdk+web-sdk` | Runs the implementation helper for the Node SSR + Web Vanilla reference app.        |
+| `pnpm implementation:react-native-sdk` | Runs the implementation helper for the React Native reference app.                  |
+| `pnpm implementation:web-sdk_react`    | Runs the implementation helper for the Web React reference app.                     |
+| `pnpm implementation:web-sdk`          | Runs the implementation helper for the Web Vanilla reference app.                   |
+| `pnpm implementation:run`              | Runs the shared implementation script runner with custom arguments.                 |
+| `pnpm implementation:lint`             | Runs ESLint checks across `implementations/`.                                       |
+| `pnpm implementation:lint:fix`         | Runs ESLint with autofix across `implementations/`.                                 |
+| `pnpm lint`                            | Runs ESLint checks for workspace packages (`lib`, `packages`).                      |
+| `pnpm lint:fix`                        | Runs ESLint and automatically applies fixable issues.                               |
+| `pnpm playwright:install-deps`         | Installs Playwright system dependencies across implementations.                     |
+| `pnpm playwright:install`              | Installs Playwright browser binaries across implementations.                        |
+| `pnpm pm2:delete:all`                  | Removes all PM2-managed local processes from PM2.                                   |
+| `pnpm pm2:list`                        | Shows PM2-managed local processes used by reference implementations.                |
+| `pnpm pm2:logs`                        | Streams logs for PM2-managed local processes.                                       |
+| `pnpm pm2:stop:all`                    | Stops all PM2-managed local processes.                                              |
+| `pnpm serve:mocks`                     | Starts the shared mock services used by local testing flows.                        |
+| `pnpm setup:e2e`                       | Prepares all reference implementations and browser dependencies for E2E tests.      |
+| `pnpm setup:e2e:web-sdk_react`         | Prepares the Web React implementation for E2E tests.                                |
+| `pnpm test:e2e:node-sdk`               | Runs E2E tests for the Node SSR Only reference implementation.                      |
+| `pnpm test:e2e:node-sdk+web-sdk`       | Runs E2E tests for the Node SSR + Web Vanilla reference implementation.             |
+| `pnpm test:e2e:react-native-sdk`       | Runs E2E tests for the React Native reference implementation.                       |
+| `pnpm test:e2e:web-sdk_react`          | Runs E2E tests for the Web React reference implementation.                          |
+| `pnpm test:e2e:web-sdk`                | Runs E2E tests for the Web Vanilla reference implementation.                        |
+| `pnpm test:e2e`                        | Runs end-to-end tests across all reference implementations.                         |
+| `pnpm test:unit`                       | Runs unit tests for all `@contentful/*` packages.                                   |
+| `pnpm typecheck`                       | Runs TypeScript type checks across all workspaces.                                  |
+| `pnpm version:node`                    | Prints the local Node.js version.                                                   |
+| `pnpm version:pnpm`                    | Prints the local pnpm version.                                                      |
 
 > [!NOTE]
 >
@@ -122,8 +122,8 @@ Run a helper action for one implementation:
 pnpm run implementation:run -- <implementation> <action> [args...]
 ```
 
-- `<implementation>` is a folder name under `implementations/` (for example: `web-vanilla`,
-  `node-ssr-only`, `node-ssr-web-vanilla`, `react-native`)
+- `<implementation>` is a folder name under `implementations/` (for example: `web-sdk`, `node-sdk`,
+  `node-sdk+web-sdk`, `react-native-sdk`)
 - `<action>` can be one of these helper actions:
 - `implementation:install`
 - `implementation:build:run`
@@ -146,10 +146,10 @@ pnpm run implementation:run -- --all implementation:install
 pnpm run implementation:run -- --all implementation:test:e2e:run
 
 # Run one implementation's local script
-pnpm run implementation:run -- web-vanilla test:e2e:ui
+pnpm run implementation:run -- web-sdk test:e2e:ui
 
 # Pass arguments through to the underlying E2E script
-pnpm run implementation:run -- node-ssr-only implementation:test:e2e:run -- --grep "homepage"
+pnpm run implementation:run -- node-sdk implementation:test:e2e:run -- --grep "homepage"
 ```
 
 ## Code Style
@@ -193,12 +193,13 @@ This is an intentional CI policy:
 
 This mapping is deliberate and authoritative:
 
-| E2E job                    | Path filter scope (plus shared SDK paths)                                 |
-| -------------------------- | ------------------------------------------------------------------------- |
-| `e2e_node_ssr_only`        | `implementations/node-ssr-only/**`                                        |
-| `e2e_node_ssr_web_vanilla` | `implementations/node-ssr-web-vanilla/**`                                 |
-| `e2e_web`                  | `implementations/web-vanilla/**`                                          |
-| `e2e_react_native_android` | `implementations/react-native/**`, `platforms/javascript/react-native/**` |
+| E2E job                    | Path filter scope (plus shared SDK paths)                             |
+| -------------------------- | --------------------------------------------------------------------- |
+| `e2e_node_ssr_only`        | `implementations/node-sdk/**`                                         |
+| `e2e_node_ssr_web_vanilla` | `implementations/node-sdk+web-sdk/**`                                 |
+| `e2e_web`                  | `implementations/web-sdk/**`                                          |
+| `e2e_web_react`            | `implementations/web-sdk_react/**`                                    |
+| `e2e_react_native_android` | `implementations/react-native-sdk/**`, `packages/react-native-sdk/**` |
 
 Skipping an implementation E2E job because its filter did not match is expected behavior, not a CI
 coverage defect.

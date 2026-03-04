@@ -7,7 +7,12 @@
     "readme": false
   },
   "entryPointStrategy": "packages",
-  "entryPoints": ["platforms/javascript/*", "universal/*"],
+  "entryPoints": [
+    "packages/web/*",
+    "packages/node/node-sdk",
+    "packages/react-native-sdk",
+    "packages/universal/*"
+  ],
   "projectDocuments": ["CONTRIBUTING.md"],
   "packageOptions": {
     "includeVersion": true,

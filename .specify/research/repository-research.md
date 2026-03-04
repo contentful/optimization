@@ -6,7 +6,8 @@
 - `status`: `complete`
 - `created_on`: `2026-02-24`
 - `repository_root`: `/Users/charles.hudson/Projects/contentful/optimization`
-- `analyzed_surface`: `universal/*`, `platforms/javascript/*`, `lib/*`, `implementations/*`,
+- `analyzed_surface`: `packages/universal/*`, `packages/node/node-sdk`, `packages/web/*`,
+  `packages/web/frameworks/*`, `packages/react-native-sdk`, `lib/*`, `implementations/*`,
   `.github/workflows/*`, `.specify/memory/constitution.md`
 - `method`: static architecture and source analysis (code, configs, CI, package metadata)
 
@@ -21,8 +22,8 @@
 
 - The repository is a layered monorepo for Contentful Personalization and Analytics SDKs with clear
   dependency direction: `api-schemas -> api-client -> core -> platform SDKs -> implementations`.
-- Architecture centers on `universal/core`, with stateful and stateless execution models, shared
-  typed contracts (`zod/mini`), and queue-based resilience for event delivery.
+- Architecture centers on `packages/universal/core-sdk`, with stateful and stateless execution
+  models, shared typed contracts (`zod/mini`), and queue-based resilience for event delivery.
 - Web and React Native SDKs are stateful adapters with persistent caches and lifecycle listeners;
   Node is a stateless adapter.
 - Preview tooling is intentionally tightly coupled to core signals/interceptors for immediate local
@@ -36,40 +37,43 @@
 
 ### Size and Test Surface
 
-- Code files (`ts/tsx/js/jsx/mjs/cjs`) across `universal`, `platforms`, `lib`, `implementations`:
-  `357`
+- Code files (`ts/tsx/js/jsx/mjs/cjs`) across `packages/universal`, `packages/server`,
+  `packages/web`, `packages/react-native-sdk`, `lib`, `implementations`: `357`
 - Code LOC across same surface: `37,084`
-- Unit test files in SDK and shared libraries (`universal`, `platforms`, `lib`): `35`
+- Unit test files in SDK and shared libraries (`packages/universal`, `packages/server`,
+  `packages/web`, `packages/react-native-sdk`, `lib`): `35`
 - Implementation test/e2e files (`implementations`): `20`
 
 ### Top-Level Responsibilities
 
-| Path                     | Role                                                                   |
-| ------------------------ | ---------------------------------------------------------------------- |
-| `universal/*`            | Platform-agnostic contracts and core runtime logic                     |
-| `platforms/javascript/*` | Platform adapters (`node`, `web`, `react-native`, `web-preview-panel`) |
-| `lib/*`                  | Internal shared tooling (`build-tools`, `logger`, `mocks`)             |
-| `implementations/*`      | Reference apps for integration and E2E verification                    |
+| Path                        | Role                                                        |
+| --------------------------- | ----------------------------------------------------------- |
+| `packages/universal/*`      | Platform-agnostic contracts and core runtime logic          |
+| `packages/node/node-sdk`    | Platform adapter (`node`)                                   |
+| `packages/web/*`            | Platform adapters (`web`, `web-preview-panel`, `react-web`) |
+| `packages/react-native-sdk` | Platform adapter (`react-native`)                           |
+| `lib/*`                     | Internal shared tooling (`build-tools`, `logger`, `mocks`)  |
+| `implementations/*`         | Reference apps for integration and E2E verification         |
 
 ### Package Matrix
 
-| Package                                      | Path                                     | Layer                    | Approx LOC | Test Files |
-| -------------------------------------------- | ---------------------------------------- | ------------------------ | ---------: | ---------: |
-| `@contentful/optimization-api-schemas`       | `universal/api-schemas`                  | Contracts                |      2,791 |          1 |
-| `@contentful/optimization-api-client`        | `universal/api-client`                   | Transport client         |      3,406 |          7 |
-| `@contentful/optimization-core`              | `universal/core`                         | Runtime core             |      7,205 |         11 |
-| `@contentful/optimization-node`              | `platforms/javascript/node`              | Platform adapter         |        505 |          1 |
-| `@contentful/optimization-web`               | `platforms/javascript/web`               | Platform adapter         |      4,346 |          5 |
-| `@contentful/optimization-web-preview-panel` | `platforms/javascript/web-preview-panel` | Preview tooling          |      1,863 |          0 |
-| `@contentful/optimization-react-native`      | `platforms/javascript/react-native`      | Platform adapter         |      9,683 |          6 |
-| `logger`                                     | `lib/logger`                             | Internal utility         |        682 |          2 |
-| `mocks`                                      | `lib/mocks`                              | Internal testing infra   |      1,190 |          0 |
-| `build-tools`                                | `lib/build-tools`                        | Internal build helpers   |        393 |          2 |
-| `@implementation/node-ssr-only`              | `implementations/node-ssr-only`          | Reference implementation |        389 |          2 |
-| `@implementation/node-ssr-web-vanilla`       | `implementations/node-ssr-web-vanilla`   | Reference implementation |        461 |          4 |
-| `@implementation/web-vanilla`                | `implementations/web-vanilla`            | Reference implementation |        282 |          3 |
-| `@implementation/web-react`                  | `implementations/web-react`              | Reference implementation |      1,264 |          4 |
-| `@implementation/react-native`               | `implementations/react-native`           | Reference implementation |      2,624 |          7 |
+| Package                                      | Path                               | Layer                    | Approx LOC | Test Files |
+| -------------------------------------------- | ---------------------------------- | ------------------------ | ---------: | ---------: |
+| `@contentful/optimization-api-schemas`       | `packages/universal/api-schemas`   | Contracts                |      2,791 |          1 |
+| `@contentful/optimization-api-client`        | `packages/universal/api-client`    | Transport client         |      3,406 |          7 |
+| `@contentful/optimization-core`              | `packages/universal/core-sdk`      | Runtime core             |      7,205 |         11 |
+| `@contentful/optimization-node`              | `packages/node/node-sdk`           | Platform adapter         |        505 |          1 |
+| `@contentful/optimization-web`               | `packages/web/web-sdk`             | Platform adapter         |      4,346 |          5 |
+| `@contentful/optimization-web-preview-panel` | `packages/web/preview-panel`       | Preview tooling          |      1,863 |          0 |
+| `@contentful/optimization-react-native`      | `packages/react-native-sdk`        | Platform adapter         |      9,683 |          6 |
+| `logger`                                     | `lib/logger`                       | Internal utility         |        682 |          2 |
+| `mocks`                                      | `lib/mocks`                        | Internal testing infra   |      1,190 |          0 |
+| `build-tools`                                | `lib/build-tools`                  | Internal build helpers   |        393 |          2 |
+| `@implementation/node-sdk`                   | `implementations/node-sdk`         | Reference implementation |        389 |          2 |
+| `@implementation/node-sdk+web-sdk`           | `implementations/node-sdk+web-sdk` | Reference implementation |        461 |          4 |
+| `@implementation/web-sdk`                    | `implementations/web-sdk`          | Reference implementation |        282 |          3 |
+| `@implementation/web-sdk_react`              | `implementations/web-sdk_react`    | Reference implementation |      1,264 |          4 |
+| `@implementation/react-native-sdk`           | `implementations/react-native-sdk` | Reference implementation |      2,624 |          7 |
 
 ### Internal Dependency Direction (Validated)
 
@@ -109,8 +113,9 @@ graph LR
 ```
 
 - Local package graph is acyclic (`cycle: no` from current manifest graph validation).
-- `pnpm-workspace.yaml` includes `lib/*`, `platforms/javascript/*`, `universal/*`; implementations
-  are intentionally outside workspace and consume packed SDK tarballs via overrides.
+- `pnpm-workspace.yaml` includes `lib/*`, `packages/react-native-sdk`, `packages/web/*`,
+  `packages/web/frameworks/*`, `packages/node/node-sdk`, `packages/universal/*`; implementations are
+  intentionally outside workspace and consume packed SDK tarballs via overrides.
 
 ## Architecture Deep Dive
 
@@ -317,8 +322,8 @@ graph LR
 - Main pipeline (`.github/workflows/main-pipeline.yaml`):
   - path-filtered change detection for build/unit/e2e workloads,
   - install/setup, license checks, format, build, typecheck, lint, package-matrix unit tests,
-  - per-implementation e2e jobs (`node-ssr-only`, `node-ssr-web-vanilla`, `web-vanilla`,
-    `web-react`) plus dedicated RN Android emulator lane.
+  - per-implementation e2e jobs (`node-sdk`, `node-sdk+web-sdk`, `web-sdk`, `web-sdk_react`) plus
+    dedicated RN Android emulator lane.
 - Publish workflow (`publish-npm.yaml`):
   - release/manual dispatch,
   - version derivation from tag,
@@ -473,9 +478,9 @@ graph LR
 
 - `severity`: `medium`
 - `evidence`:
-  - `universal/api-schemas` has a unit suite, but coverage is narrow (validation utility-centric;
-    limited direct schema-shape edge tests).
-  - `platforms/javascript/web-preview-panel` has no unit test suite (`test:unit` is TODO/no-op).
+  - `packages/universal/api-schemas` has a unit suite, but coverage is narrow (validation
+    utility-centric; limited direct schema-shape edge tests).
+  - `packages/web/preview-panel` has no unit test suite (`test:unit` is TODO/no-op).
 - `impact`: schema regressions or preview override regressions may primarily surface via downstream
   integration tests.
 - `mitigation`: add focused unit suites for schema edge cases and preview override merge/reset
@@ -494,8 +499,8 @@ graph LR
 ## Appendix B: Quality and Delivery Snapshot
 
 - Main CI lanes: `setup`, `license-check`, `format`, `build`, `type-check`, `lint`, per-package unit
-  matrix, per-implementation e2e (`node-ssr-only`, `node-ssr-web-vanilla`, `web-vanilla`,
-  `web-react`, `react-native`).
+  matrix, per-implementation e2e (`node-sdk`, `node-sdk+web-sdk`, `web-sdk`, `web-sdk_react`,
+  `react-native-sdk`).
 - RN Android e2e lane provisions emulator, mock server, Metro bundler, and runs Detox suites.
 - Publish lane bumps package versions from release tags and publishes built artifacts after
   build/pack steps.

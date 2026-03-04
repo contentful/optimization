@@ -20,10 +20,10 @@ jobs:
     outputs:
       build: ${{ steps.filter.outputs.build }}
       unit: ${{ steps.filter.outputs.unit }}
-      e2e_node_ssr_only: ${{ steps.filter.outputs.e2e_node_ssr_only }}
-      e2e_node_ssr_web_vanilla: ${{ steps.filter.outputs.e2e_node_ssr_web_vanilla }}
-      e2e_web: ${{ steps.filter.outputs.e2e_web }}
-      e2e_web_react: ${{ steps.filter.outputs.e2e_web_react }}
+      e2e_node_sdk: ${{ steps.filter.outputs.e2e_node_sdk }}
+      e2e_node_sdk_web_sdk: ${{ steps.filter.outputs.e2e_node_sdk_web_sdk }}
+      e2e_web_sdk: ${{ steps.filter.outputs.e2e_web_sdk }}
+      e2e_web_sdk_react: ${{ steps.filter.outputs.e2e_web_sdk_react }}
       e2e_react_native_android: ${{ steps.filter.outputs.e2e_react_native_android }}
     steps:
       - uses: namespacelabs/nscloud-checkout-action@v8
@@ -38,8 +38,7 @@ jobs:
           filters: |
             build:
               - 'lib/**'
-              - 'platforms/**'
-              - 'universal/**'
+              - 'packages/**'
               - 'package.json'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
@@ -47,56 +46,68 @@ jobs:
               - '.github/workflows/main-pipeline.yaml'
             unit:
               - 'lib/**'
-              - 'platforms/**'
-              - 'universal/**'
+              - 'packages/**'
               - '**/rstest.config.ts'
               - 'package.json'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
               - '.github/workflows/main-pipeline.yaml'
             # Node SSR Only implementation E2E coverage scope.
-            e2e_node_ssr_only:
-              - 'implementations/node-ssr-only/**'
+            e2e_node_sdk:
+              - 'implementations/node-sdk/**'
               - 'lib/**'
-              - 'platforms/**'
-              - 'universal/**'
+              - 'packages/node/node-sdk/**'
+              - 'packages/universal/core-sdk/**'
+              - 'packages/universal/api-client/**'
+              - 'packages/universal/api-schemas/**'
               - 'package.json'
               - 'pnpm-lock.yaml'
               - '.github/workflows/main-pipeline.yaml'
             # Node SSR + Web Vanilla implementation E2E coverage scope.
-            e2e_node_ssr_web_vanilla:
-              - 'implementations/node-ssr-web-vanilla/**'
+            e2e_node_sdk_web_sdk:
+              - 'implementations/node-sdk+web-sdk/**'
               - 'lib/**'
-              - 'platforms/**'
-              - 'universal/**'
+              - 'packages/node/node-sdk/**'
+              - 'packages/web/web-sdk/**'
+              - 'packages/web/preview-panel/**'
+              - 'packages/universal/core-sdk/**'
+              - 'packages/universal/api-client/**'
+              - 'packages/universal/api-schemas/**'
               - 'package.json'
               - 'pnpm-lock.yaml'
               - '.github/workflows/main-pipeline.yaml'
             # Web Vanilla implementation E2E coverage scope.
-            e2e_web:
-              - 'implementations/web-vanilla/**'
+            e2e_web_sdk:
+              - 'implementations/web-sdk/**'
               - 'lib/**'
-              - 'platforms/**'
-              - 'universal/**'
+              - 'packages/web/web-sdk/**'
+              - 'packages/web/preview-panel/**'
+              - 'packages/universal/core-sdk/**'
+              - 'packages/universal/api-client/**'
+              - 'packages/universal/api-schemas/**'
               - 'package.json'
               - 'pnpm-lock.yaml'
               - '.github/workflows/main-pipeline.yaml'
             # React + Web SDK implementation E2E coverage scope.
-            e2e_web_react:
-              - 'implementations/web-react/**'
+            e2e_web_sdk_react:
+              - 'implementations/web-sdk_react/**'
               - 'lib/**'
-              - 'platforms/**'
-              - 'universal/**'
+              - 'packages/web/web-sdk/**'
+              - 'packages/web/preview-panel/**'
+              - 'packages/universal/core-sdk/**'
+              - 'packages/universal/api-client/**'
+              - 'packages/universal/api-schemas/**'
               - 'package.json'
               - 'pnpm-lock.yaml'
               - '.github/workflows/main-pipeline.yaml'
             # React Native Android implementation E2E coverage scope.
             e2e_react_native_android:
-              - 'implementations/react-native/**'
-              - 'platforms/javascript/react-native/**'
+              - 'implementations/react-native-sdk/**'
               - 'lib/**'
-              - 'platforms/**'
-              - 'universal/**'
+              - 'packages/react-native-sdk/**'
+              - 'packages/universal/core-sdk/**'
+              - 'packages/universal/api-client/**'
+              - 'packages/universal/api-schemas/**'
               - 'package.json'
               - 'pnpm-lock.yaml'
               - '.github/workflows/main-pipeline.yaml'
@@ -308,17 +319,17 @@ jobs:
       - run: pnpm install --prefer-offline --frozen-lockfile
       - run: pnpm --filter ${{ matrix.package }} test:unit
 
-  e2e-node-ssr-only:
+  e2e-node-sdk:
     name: 🖥️ E2E Node SSR Only
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     needs: [setup, changes, build]
-    if: needs.changes.outputs.e2e_node_ssr_only == 'true'
+    if: needs.changes.outputs.e2e_node_sdk == 'true'
     steps:
       - uses: namespacelabs/nscloud-checkout-action@v8
 
       - name: Create .env from .env.example
-        run: cp implementations/node-ssr-only/.env.example implementations/node-ssr-only/.env
+        run: cp implementations/node-sdk/.env.example implementations/node-sdk/.env
 
       - uses: actions/setup-node@v6
         with:
@@ -341,33 +352,31 @@ jobs:
           name: sdk-package-tarballs
           path: pkgs
       - run: pnpm store prune
-      - run: pnpm run implementation:node-ssr-only -- implementation:install -- --no-frozen-lockfile
-      - run:
-          pnpm run implementation:node-ssr-only -- implementation:playwright:install -- --with-deps
-      - run: pnpm run implementation:node-ssr-only -- implementation:test:e2e:run
+      - run: pnpm run implementation:node-sdk -- implementation:install -- --no-frozen-lockfile
+      - run: pnpm run implementation:node-sdk -- implementation:playwright:install -- --with-deps
+      - run: pnpm run implementation:node-sdk -- implementation:test:e2e:run
 
       - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
         with:
-          name: ci-results-node-ssr-only
+          name: ci-results-node-sdk
           path: |
-            ./implementations/node-ssr-only/playwright-report/
-            ./implementations/node-ssr-only/test-results/
+            ./implementations/node-sdk/playwright-report/
+            ./implementations/node-sdk/test-results/
           retention-days: 1
 
-  e2e-node-ssr-web-vanilla:
+  e2e-node-sdk-web-sdk:
     name: 🖥️ E2E Node SSR + Web Vanilla
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     needs: [setup, changes, build]
-    if: needs.changes.outputs.e2e_node_ssr_web_vanilla == 'true'
+    if: needs.changes.outputs.e2e_node_sdk_web_sdk == 'true'
     steps:
       - uses: namespacelabs/nscloud-checkout-action@v8
 
       - name: Create .env from .env.example
         run: >
-          cp implementations/node-ssr-web-vanilla/.env.example
-          implementations/node-ssr-web-vanilla/.env
+          cp implementations/node-sdk+web-sdk/.env.example implementations/node-sdk+web-sdk/.env
 
       - uses: actions/setup-node@v6
         with:
@@ -391,35 +400,34 @@ jobs:
           path: pkgs
       - run: pnpm store prune
       - run:
-          pnpm run implementation:node-ssr-web-vanilla -- implementation:install --
-          --no-frozen-lockfile
+          pnpm run implementation:node-sdk+web-sdk -- implementation:install -- --no-frozen-lockfile
       - run:
-          pnpm run implementation:node-ssr-web-vanilla -- implementation:playwright:install --
+          pnpm run implementation:node-sdk+web-sdk -- implementation:playwright:install --
           --with-deps
-      - run: pnpm run implementation:node-ssr-web-vanilla -- implementation:test:e2e:run
+      - run: pnpm run implementation:node-sdk+web-sdk -- implementation:test:e2e:run
 
       - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
         with:
-          name: ci-results-node-ssr-web-vanilla
+          name: ci-results-node-sdk+web-sdk
           path: |
-            ./implementations/node-ssr-web-vanilla/playwright-report/
-            ./implementations/node-ssr-web-vanilla/test-results/
+            ./implementations/node-sdk+web-sdk/playwright-report/
+            ./implementations/node-sdk+web-sdk/test-results/
           retention-days: 1
 
-  e2e-web:
+  e2e-web-sdk:
     name: 🖥️ E2E Web Vanilla
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     needs: [setup, changes, build]
-    if: needs.changes.outputs.e2e_web == 'true'
+    if: needs.changes.outputs.e2e_web_sdk == 'true'
     steps:
       - uses: docker/setup-compose-action@v1
 
       - uses: namespacelabs/nscloud-checkout-action@v8
 
       - name: Create .env from .env.example
-        run: cp implementations/web-vanilla/.env.example implementations/web-vanilla/.env
+        run: cp implementations/web-sdk/.env.example implementations/web-sdk/.env
 
       - uses: actions/setup-node@v6
         with:
@@ -442,30 +450,30 @@ jobs:
           name: sdk-package-tarballs
           path: pkgs
       - run: pnpm store prune
-      - run: pnpm run implementation:web-vanilla -- implementation:install -- --no-frozen-lockfile
-      - run: pnpm run implementation:web-vanilla -- implementation:playwright:install -- --with-deps
-      - run: pnpm run implementation:web-vanilla -- implementation:test:e2e:run
+      - run: pnpm run implementation:web-sdk -- implementation:install -- --no-frozen-lockfile
+      - run: pnpm run implementation:web-sdk -- implementation:playwright:install -- --with-deps
+      - run: pnpm run implementation:web-sdk -- implementation:test:e2e:run
 
       - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
         with:
-          name: ci-results-web-vanilla
+          name: ci-results-web-sdk
           path: |
-            ./implementations/web-vanilla/playwright-report/
-            ./implementations/web-vanilla/test-results/
+            ./implementations/web-sdk/playwright-report/
+            ./implementations/web-sdk/test-results/
           retention-days: 1
 
-  e2e-web-react:
+  e2e-web-sdk_react:
     name: 🖥️ E2E React + Web SDK
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     needs: [setup, changes, build]
-    if: needs.changes.outputs.e2e_web_react == 'true'
+    if: needs.changes.outputs.e2e_web_sdk_react == 'true'
     steps:
       - uses: namespacelabs/nscloud-checkout-action@v8
 
       - name: Create .env from .env.example
-        run: cp implementations/web-react/.env.example implementations/web-react/.env
+        run: cp implementations/web-sdk_react/.env.example implementations/web-sdk_react/.env
 
       - uses: actions/setup-node@v6
         with:
@@ -488,15 +496,16 @@ jobs:
           name: sdk-package-tarballs
           path: pkgs
       - run: pnpm store prune
-      - run: pnpm run implementation:web-react -- implementation:install -- --no-frozen-lockfile
-      - run: pnpm run implementation:web-react -- implementation:playwright:install -- --with-deps
+      - run: pnpm run implementation:web-sdk_react -- implementation:install -- --no-frozen-lockfile
+      - run:
+          pnpm run implementation:web-sdk_react -- implementation:playwright:install -- --with-deps
 
       - name: Start Web React app and mocks
         run: |
-          pnpm run implementation:web-react -- serve:mocks > /tmp/web-react-mocks.log 2>&1
-          pnpm run implementation:web-react -- build > /tmp/web-react-build.log 2>&1
-          pnpm --dir implementations/web-react exec rsbuild preview --host localhost --port 3001 > /tmp/web-react-app.log 2>&1 &
-          echo $! > /tmp/web-react-app.pid
+          pnpm run implementation:web-sdk_react -- serve:mocks > /tmp/web-sdk_react-mocks.log 2>&1
+          pnpm run implementation:web-sdk_react -- build > /tmp/web-sdk_react-build.log 2>&1
+          pnpm --dir implementations/web-sdk_react exec rsbuild preview --host localhost --port 3001 > /tmp/web-sdk_react-app.log 2>&1 &
+          echo $! > /tmp/web-sdk_react-app.pid
 
           for i in $(seq 1 90); do
             # Use a plain HTTP probe (no --fail): we only need to know the server is listening.
@@ -509,39 +518,39 @@ jobs:
           done
 
           echo "Web React app failed to start in time"
-          echo "=== web-react build logs ==="
-          cat /tmp/web-react-build.log || true
-          echo "=== web-react app logs ==="
-          cat /tmp/web-react-app.log || true
-          echo "=== web-react mocks logs ==="
-          cat /tmp/web-react-mocks.log || true
+          echo "=== web-sdk_react build logs ==="
+          cat /tmp/web-sdk_react-build.log || true
+          echo "=== web-sdk_react app logs ==="
+          cat /tmp/web-sdk_react-app.log || true
+          echo "=== web-sdk_react mocks logs ==="
+          cat /tmp/web-sdk_react-mocks.log || true
           exit 1
-      - run: pnpm run implementation:web-react -- implementation:test:e2e:run
+      - run: pnpm run implementation:web-sdk_react -- implementation:test:e2e:run
       - name: Dump Web React logs on failure
         if: ${{ failure() }}
         run: |
-          echo "=== web-react build logs ==="
-          cat /tmp/web-react-build.log || true
-          echo "=== web-react app logs ==="
-          cat /tmp/web-react-app.log || true
-          echo "=== web-react mocks logs ==="
-          cat /tmp/web-react-mocks.log || true
+          echo "=== web-sdk_react build logs ==="
+          cat /tmp/web-sdk_react-build.log || true
+          echo "=== web-sdk_react app logs ==="
+          cat /tmp/web-sdk_react-app.log || true
+          echo "=== web-sdk_react mocks logs ==="
+          cat /tmp/web-sdk_react-mocks.log || true
           echo "=== pm2 list ==="
           pm2 list || true
 
       - name: Stop Web React app and mocks
         if: ${{ always() }}
         run: |
-          kill "$(cat /tmp/web-react-app.pid)" 2>/dev/null || true
-          pnpm run implementation:web-react -- serve:stop || true
+          kill "$(cat /tmp/web-sdk_react-app.pid)" 2>/dev/null || true
+          pnpm run implementation:web-sdk_react -- serve:stop || true
 
       - uses: actions/upload-artifact@v6
         if: ${{ !cancelled() }}
         with:
-          name: ci-results-web-react
+          name: ci-results-web-sdk_react
           path: |
-            ./implementations/web-react/playwright-report/
-            ./implementations/web-react/test-results/
+            ./implementations/web-sdk_react/playwright-report/
+            ./implementations/web-sdk_react/test-results/
           retention-days: 1
 
   e2e-react-native-android-build:
@@ -607,19 +616,19 @@ jobs:
 
       - name: Install React Native implementation dependencies
         run: >
-          pnpm run implementation:react-native -- implementation:install -- --no-frozen-lockfile
+          pnpm run implementation:react-native-sdk -- implementation:install -- --no-frozen-lockfile
 
       - name: Create .env from .env.example
-        run: cp implementations/react-native/.env.example implementations/react-native/.env
+        run: cp implementations/react-native-sdk/.env.example implementations/react-native-sdk/.env
 
       - name: Build Android app (Detox release)
-        run: pnpm run implementation:react-native -- test:e2e:android:build:release
+        run: pnpm run implementation:react-native-sdk -- test:e2e:android:build:release
 
       - name: Upload Detox APKs
         uses: actions/upload-artifact@v6
         with:
           name: detox-android-apks
-          path: implementations/react-native/android/app/build/outputs/apk/
+          path: implementations/react-native-sdk/android/app/build/outputs/apk/
           if-no-files-found: error
           retention-days: 1
 
@@ -710,16 +719,16 @@ jobs:
 
       - name: Install React Native implementation dependencies
         run: >
-          pnpm run implementation:react-native -- implementation:install -- --no-frozen-lockfile
+          pnpm run implementation:react-native-sdk -- implementation:install -- --no-frozen-lockfile
 
       - name: Create .env from .env.example
-        run: cp implementations/react-native/.env.example implementations/react-native/.env
+        run: cp implementations/react-native-sdk/.env.example implementations/react-native-sdk/.env
 
       - name: Download pre-built Detox APKs
         uses: actions/download-artifact@v6
         with:
           name: detox-android-apks
-          path: implementations/react-native/android/app/build/outputs/apk/
+          path: implementations/react-native-sdk/android/app/build/outputs/apk/
 
       - name: Start Mock Server
         run: |
@@ -760,7 +769,7 @@ jobs:
             echo "Setting up adb reverse port forwarding..."
             adb reverse tcp:8000 tcp:8000
             echo "Running E2E tests..."
-            pnpm run implementation:react-native -- test:e2e:android:run:release -- --retries 1 --shard=${{ matrix.shard }}/2
+            pnpm run implementation:react-native-sdk -- test:e2e:android:run:release -- --retries 1 --shard=${{ matrix.shard }}/2
 
       - name: Upload logs on failure
         if: failure()
@@ -778,6 +787,6 @@ jobs:
         with:
           name: ci-results-react-native-android-shard-${{ matrix.shard }}
           path: |
-            implementations/react-native/.detox/
+            implementations/react-native-sdk/.detox/
             /tmp/mock-server.log
           retention-days: 7

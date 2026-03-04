@@ -53,20 +53,20 @@ Optimization SDKs are organized in a hierarchy based on platform, environment, a
 framework. Each SDK builds on top of the common SDK for its platform, environment, and so on, to
 ensure functionality is reasonably shared and consistent.
 
-- [Optimization Core SDK](./universal/core/README.md)
+- [Optimization Core SDK](./packages/universal/core-sdk/README.md)
   - iOS
     - iOS Swift SDK (planned)
   - Android
     - Android Kotlin SDK (planned)
     - Android Java SDK (planned)
   - _JavaScript_
-    - [Node SDK](./platforms/javascript/node/README.md)
+    - [Node SDK](./packages/node/node-sdk/README.md)
       - Nest.js SDK (planned)
-    - [React Native SDK](./platforms/javascript/react-native/README.md)
-    - [Web SDK](./platforms/javascript/web/README.md) and
-      [Web Preview Panel](./platforms/javascript/web-preview-panel/README.md)
+    - [React Native SDK](./packages/react-native-sdk/README.md)
+    - [Web SDK](./packages/web/web-sdk/README.md) and
+      [Web Preview Panel](./packages/web/preview-panel/README.md)
       - Angular SDK (planned)
-      - [React Web SDK](./platforms/javascript/web-frameworks/react-web/README.md)
+      - [React Web SDK](./packages/web/frameworks/react-web-sdk/README.md)
       - Svelte SDK (planned)
       - Vue SDK (planned)
 
@@ -94,9 +94,9 @@ These libraries may be used independently of other libraries and SDKs in the Opt
 They are relied upon by all SDKs, with their exported values and functionality exposed throughout
 the SDK hierarchy.
 
-- [API Client Library](./universal/api-client/README.md) for the Experience & Insights APIs
-- [API Schemas Library](./universal/api-schemas/README.md) maintains Zod validation schemas and
-  TypeScript types for working with Experience API request/response payloads and Insights event
+- [API Client Library](./packages/universal/api-client/README.md) for the Experience & Insights APIs
+- [API Schemas Library](./packages/universal/api-schemas/README.md) maintains Zod validation schemas
+  and TypeScript types for working with Experience API request/response payloads and Insights event
   payloads
 
 ## Shared Internal Libraries
