@@ -1,7 +1,0 @@
-{
-  "extends": "../../tsconfig.base.json",
-  "compilerOptions": {
-    "types": ["@rstest/core/globals"]
-  },
-  "include": ["./src/**/*", "./src/**/*.json"]
-}

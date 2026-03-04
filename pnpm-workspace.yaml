@@ -1,8 +1,10 @@
 packages:
   - lib/*
-  - platforms/javascript/*
-  - platforms/javascript/web-frameworks/*
-  - universal/*
+  - packages/react-native-sdk
+  - packages/web/*
+  - packages/web/frameworks/*
+  - packages/node/node-sdk
+  - packages/universal/*
 
 catalog:
   '@contentful/rich-text-html-renderer': ^17.1.6

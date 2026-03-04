@@ -61,6 +61,7 @@ local.properties
 .cxx/
 *.keystore
 !debug.keystore
+!**/gradle/wrapper/gradle-wrapper.jar
 
 # node.js
 #
