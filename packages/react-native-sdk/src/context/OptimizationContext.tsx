@@ -1,11 +1,13 @@
 import { createContext, useContext } from 'react'
-import type Optimization from '../'
+import type Optimization from '../Optimization'
 
 /**
  * @internal
  */
 interface OptimizationContextValue {
-  instance: Optimization
+  instance: Optimization | null
+  isReady: boolean
+  initError: Error | null
 }
 
 /**
@@ -21,6 +23,7 @@ const OptimizationContext = createContext<OptimizationContextValue | null>(null)
  * @returns The current Optimization instance
  *
  * @throws Error if called outside of an {@link OptimizationProvider}
+ * @throws Error if the SDK is still initializing
  *
  * @example
  * ```tsx
@@ -46,7 +49,14 @@ export function useOptimization(): Optimization {
   if (!context) {
     throw new Error(
       'useOptimization must be used within an OptimizationProvider. ' +
-        'Make sure to wrap your component tree with <OptimizationProvider instance={optimizationInstance}>.',
+        'Make sure to wrap your component tree with <OptimizationProvider clientId="...">.',
+    )
+  }
+
+  if (!context.instance) {
+    throw new Error(
+      'Optimization SDK is still initializing. ' +
+        'This should not happen when using the loading gate in OptimizationProvider.',
     )
   }
 

@@ -1,5 +1,5 @@
 import React, { type ReactNode } from 'react'
-import type Optimization from '../'
+import type { OptimizationConfig } from '../'
 import { LiveUpdatesProvider } from '../context/LiveUpdatesContext'
 import { PreviewPanelOverlay } from '../preview/components/PreviewPanelOverlay'
 import type { ContentfulClient } from '../preview/types'
@@ -41,14 +41,11 @@ export interface PreviewPanelConfig {
 /**
  * Props for the {@link OptimizationRoot} component.
  *
+ * Accepts all {@link OptimizationConfig} properties directly. Only `clientId` is required.
+ *
  * @public
  */
-export interface OptimizationRootProps {
-  /**
-   * The Optimization instance to provide to child components.
-   */
-  instance: Optimization
-
+export interface OptimizationReactNativeConfig extends OptimizationConfig {
   /**
    * Optional configuration for the preview panel.
    * When provided with `enabled: true`, the preview panel will be available.
@@ -76,17 +73,14 @@ export interface OptimizationRootProps {
  * Recommended top-level wrapper that combines {@link OptimizationProvider} with optional
  * preview panel and live updates support.
  *
+ * Handles SDK initialization internally — pass config properties directly as props.
+ *
  * @param props - Component props
  * @returns The provider tree wrapping children
  *
  * @example Basic usage
  * ```tsx
- * const optimization = await Optimization.create({
- *   clientId: 'your-client-id',
- *   environment: 'main',
- * })
- *
- * <OptimizationRoot instance={optimization}>
+ * <OptimizationRoot clientId="your-client-id" environment="main">
  *   <App />
  * </OptimizationRoot>
  * ```
@@ -94,7 +88,8 @@ export interface OptimizationRootProps {
  * @example With preview panel
  * ```tsx
  * <OptimizationRoot
- *   instance={optimization}
+ *   clientId="your-client-id"
+ *   environment="main"
  *   previewPanel={{
  *     enabled: __DEV__,
  *     contentfulClient,
@@ -107,7 +102,7 @@ export interface OptimizationRootProps {
  *
  * @example With global live updates
  * ```tsx
- * <OptimizationRoot instance={optimization} liveUpdates={true}>
+ * <OptimizationRoot clientId="your-client-id" environment="main" liveUpdates={true}>
  *   <App />
  * </OptimizationRoot>
  * ```
@@ -118,11 +113,11 @@ export interface OptimizationRootProps {
  * @public
  */
 export function OptimizationRoot({
-  instance,
   previewPanel,
   liveUpdates = false,
   children,
-}: OptimizationRootProps): React.JSX.Element {
+  ...config
+}: OptimizationReactNativeConfig): React.JSX.Element {
   const content = previewPanel?.enabled ? (
     <PreviewPanelOverlay
       contentfulClient={previewPanel.contentfulClient}
@@ -137,7 +132,7 @@ export function OptimizationRoot({
   )
 
   return (
-    <OptimizationProvider instance={instance}>
+    <OptimizationProvider {...config}>
       <LiveUpdatesProvider globalLiveUpdates={liveUpdates}>{content}</LiveUpdatesProvider>
     </OptimizationProvider>
   )

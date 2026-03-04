@@ -1,6 +1,7 @@
 import { createScopedLogger } from '@contentful/optimization-core/logger'
-import React, { type ReactNode } from 'react'
-import type Optimization from '../'
+import React, { useEffect, useRef, useState, type ReactNode } from 'react'
+import Optimization from '../Optimization'
+import type { OptimizationConfig } from '../'
 import OptimizationContext from '../context/OptimizationContext'
 
 const logger = createScopedLogger('RN:Provider')
@@ -8,14 +9,11 @@ const logger = createScopedLogger('RN:Provider')
 /**
  * Props for the {@link OptimizationProvider} component.
  *
+ * Accepts all {@link OptimizationConfig} properties directly. Only `clientId` is required.
+ *
  * @public
  */
-export interface OptimizationProviderProps {
-  /**
-   * The Optimization instance to provide to child components.
-   */
-  instance: Optimization
-
+export interface OptimizationProviderProps extends OptimizationConfig {
   /**
    * Children components that will have access to the Optimization instance.
    */
@@ -25,21 +23,22 @@ export interface OptimizationProviderProps {
 /**
  * Provides the Optimization instance to all child components via React Context.
  *
- * @param props - Component props
- * @returns A context provider wrapping the children
+ * Handles SDK initialization, loading state, and cleanup internally.
+ * Children are not rendered until the SDK is ready (loading gate).
+ *
+ * @param props - Config properties and children
+ * @returns A context provider wrapping the children, or `null` while initializing
  *
  * @remarks
+ * Config is captured on first render and subsequent prop changes are ignored.
+ * To force re-initialization, change the React `key` prop.
+ *
  * Prefer using {@link OptimizationRoot} instead, which wraps this provider
  * with additional functionality such as live updates and the preview panel.
  *
  * @example
  * ```tsx
- * const optimization = await Optimization.create({
- *   clientId: 'your-client-id',
- *   environment: 'main',
- * })
- *
- * <OptimizationProvider instance={optimization}>
+ * <OptimizationProvider clientId="your-client-id" environment="main">
  *   <App />
  * </OptimizationProvider>
  * ```
@@ -49,15 +48,56 @@ export interface OptimizationProviderProps {
  * @public
  */
 export function OptimizationProvider({
-  instance,
   children,
-}: OptimizationProviderProps): React.JSX.Element {
-  React.useEffect(() => {
-    logger.info('Provider initialized')
+  ...config
+}: OptimizationProviderProps): React.JSX.Element | null {
+  const configRef = useRef<OptimizationConfig>(config)
+  const [instance, setInstance] = useState<Optimization | null>(null)
+  const [initError, setInitError] = useState<Error | null>(null)
+
+  useEffect(() => {
+    let destroyed = false
+
+    void Optimization.create(configRef.current)
+      .then((sdk) => {
+        if (destroyed) {
+          sdk.destroy()
+          return
+        }
+
+        logger.info('Provider initialized')
+        setInstance(sdk)
+      })
+      .catch((error: unknown) => {
+        if (destroyed) return
+
+        const err = error instanceof Error ? error : new Error(String(error))
+        logger.error('Failed to initialize SDK:', err.message)
+        setInitError(err)
+      })
+
+    return () => {
+      destroyed = true
+    }
   }, [])
 
+  useEffect(
+    () => () => {
+      if (instance) {
+        instance.destroy()
+      }
+    },
+    [instance],
+  )
+
+  if (!instance) {
+    return null
+  }
+
   return (
-    <OptimizationContext.Provider value={{ instance }}>{children}</OptimizationContext.Provider>
+    <OptimizationContext.Provider value={{ instance, isReady: true, initError }}>
+      {children}
+    </OptimizationContext.Provider>
   )
 }
 
