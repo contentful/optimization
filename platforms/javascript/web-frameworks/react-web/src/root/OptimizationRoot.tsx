@@ -1,12 +1,23 @@
-import type { PropsWithChildren, ReactElement } from 'react'
+import type { ReactElement } from 'react'
 
-import { OptimizationProvider } from '../provider/OptimizationProvider'
-import type { OptimizationWebSdkOrNull } from '../types'
+import { LiveUpdatesProvider } from '../provider/LiveUpdatesProvider'
+import {
+  OptimizationProvider,
+  type OptimizationProviderProps,
+} from '../provider/OptimizationProvider'
 
-export interface OptimizationRootProps extends PropsWithChildren {
-  readonly optimization?: OptimizationWebSdkOrNull
+export type OptimizationRootProps = OptimizationProviderProps & {
+  readonly liveUpdates?: boolean
 }
 
-export function OptimizationRoot({ children, optimization }: OptimizationRootProps): ReactElement {
-  return <OptimizationProvider optimization={optimization}>{children}</OptimizationProvider>
+export function OptimizationRoot({
+  children,
+  liveUpdates = false,
+  ...providerProps
+}: OptimizationRootProps): ReactElement {
+  return (
+    <OptimizationProvider {...providerProps}>
+      <LiveUpdatesProvider globalLiveUpdates={liveUpdates}>{children}</LiveUpdatesProvider>
+    </OptimizationProvider>
+  )
 }
