@@ -66,7 +66,7 @@ export function ContentEntry({ entry }: ContentEntryProps): React.JSX.Element {
   return (
     <View testID={`content-entry-${entry.sys.id}`}>
       {isPersonalizedEntry(entry) ? (
-        <Personalization baselineEntry={entry}>
+        <Personalization baselineEntry={entry} onTap>
           {(resolvedEntry) => (
             <View testID={`content-${entry.sys.id}`}>
               {renderContent(resolvedEntry, entry.sys.id)}
@@ -74,7 +74,7 @@ export function ContentEntry({ entry }: ContentEntryProps): React.JSX.Element {
           )}
         </Personalization>
       ) : (
-        <Analytics entry={entry}>
+        <Analytics entry={entry} onTap>
           <View testID={`content-${entry.sys.id}`}>{renderContent(entry, entry.sys.id)}</View>
         </Analytics>
       )}

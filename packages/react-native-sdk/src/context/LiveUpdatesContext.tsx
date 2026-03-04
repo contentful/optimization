@@ -42,8 +42,8 @@ interface LiveUpdatesProviderProps {
 /**
  * Manages live updates configuration for {@link Personalization} components.
  *
- * @param props - Provider props
- * @returns A context provider wrapping the children
+ * @param props - Provider props.
+ * @returns A context provider wrapping the children.
  *
  * @remarks
  * Typically wrapped by {@link OptimizationRoot} — not used directly. Tracks the global

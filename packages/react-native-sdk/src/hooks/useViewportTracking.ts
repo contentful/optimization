@@ -37,6 +37,15 @@ export interface UseViewportTrackingOptions {
    * @defaultValue 2000
    */
   viewTimeMs?: number
+
+  /**
+   * Whether view tracking is enabled for this component.
+   * When `false`, the hook returns a no-op `onLayout` and `isVisible: false`
+   * without setting up timers or scroll listeners.
+   *
+   * @defaultValue `true`
+   */
+  enabled?: boolean
 }
 
 /**
@@ -67,9 +76,13 @@ const createComponentViewId = (): string => {
 /**
  * Extracts tracking metadata from a resolved entry and optional personalization data.
  *
+ * @param resolvedEntry - The resolved Contentful entry (baseline or variant).
+ * @param personalization - Optional personalization selection for variant tracking.
+ * @returns An object containing `componentId`, optional `experienceId`, and `variantIndex`.
+ *
  * @internal
  */
-function extractTrackingMetadata(
+export function extractTrackingMetadata(
   resolvedEntry: Entry,
   personalization?: SelectedPersonalization,
 ): {
@@ -104,7 +117,7 @@ function extractTrackingMetadata(
  * Tracks whether a component is visible in the viewport and fires a component view
  * event when visibility and time thresholds are met.
  *
- * @param options - Tracking options including the entry, thresholds, and personalization data
+ * @param options - {@link UseViewportTrackingOptions} including the entry, thresholds, and personalization data.
  * @returns An object with `isVisible` state and an `onLayout` callback for the tracked View
  *
  * @throws Error if called outside of an {@link OptimizationProvider}
@@ -137,6 +150,7 @@ export function useViewportTracking({
   personalization,
   threshold = DEFAULT_THRESHOLD,
   viewTimeMs = DEFAULT_VIEW_TIME_MS,
+  enabled = true,
 }: UseViewportTrackingOptions): UseViewportTrackingReturn {
   const optimization = useOptimization()
   // We invoke useScrollContext here to check if the OptimizationScrollProvider is mounted and the scroll context is available.
@@ -189,6 +203,8 @@ export function useViewportTracking({
 
   const startTrackingTimer = useCallback(
     (visibilityPercent: number) => {
+      if (!enabled) return
+
       logger.info(
         `Component ${componentId} became visible (${visibilityPercent.toFixed(1)}%), starting ${viewTimeMs}ms timer`,
       )
@@ -227,7 +243,7 @@ export function useViewportTracking({
         }
       }, viewTimeMs)
     },
-    [componentId, experienceId, variantIndex, viewTimeMs],
+    [enabled, componentId, experienceId, variantIndex, viewTimeMs],
   )
 
   const canCheckVisibility = useCallback((): boolean => {
