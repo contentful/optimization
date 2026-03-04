@@ -1,35 +1,45 @@
 import {
   ApiClient,
   EventBuilder,
-  type InsightsEvent as AnalyticsEvent,
   type ApiClientConfig,
-  type ChangeArray,
   type ComponentClickBuilderArgs,
+  type ComponentHoverBuilderArgs,
   type ComponentViewBuilderArgs,
   type EventBuilderConfig,
   type ExperienceApiClientConfig,
   type GlobalApiConfigProperties,
   type IdentifyBuilderArgs,
   type InsightsApiClientConfig,
-  type Json,
-  type MergeTagEntry,
-  type OptimizationData,
   type PageViewBuilderArgs,
-  type PartialProfile,
-  type ExperienceEvent as PersonalizationEvent,
-  type Profile,
   type ScreenViewBuilderArgs,
-  type SelectedPersonalizationArray,
   type TrackBuilderArgs,
 } from '@contentful/optimization-api-client'
+import type {
+  InsightsEvent as AnalyticsEvent,
+  ChangeArray,
+  Flags,
+  Json,
+  MergeTagEntry,
+  OptimizationData,
+  PartialProfile,
+  ExperienceEvent as PersonalizationEvent,
+  Profile,
+  SelectedPersonalizationArray,
+} from '@contentful/optimization-api-client/api-schemas'
+import type { LogLevels } from '@contentful/optimization-api-client/logger'
+import { ConsoleLogSink, logger } from '@contentful/optimization-api-client/logger'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
-import type { LogLevels } from 'logger'
-import { ConsoleLogSink, logger } from 'logger'
 import type AnalyticsBase from './analytics/AnalyticsBase'
 import { OPTIMIZATION_CORE_SDK_NAME, OPTIMIZATION_CORE_SDK_VERSION } from './constants'
 import { InterceptorManager } from './lib/interceptor'
-import type { ResolvedData } from './personalization'
-import type PersonalizationBase from './personalization/PersonalizationBase'
+import type {
+  FlagsResolver,
+  MergeTagValueResolver,
+  PersonalizationBase,
+  PersonalizedEntryResolver,
+  ResolvedData,
+  ResolverMethods,
+} from './personalization'
 
 /**
  * Lifecycle container for event and state interceptors.
@@ -73,11 +83,11 @@ export interface CoreConfig extends Pick<ApiClientConfig, GlobalApiConfigPropert
  *
  * @internal
  */
-abstract class CoreBase {
+abstract class CoreBase implements ResolverMethods {
   /** Product implementation for analytics. */
-  abstract readonly analytics: AnalyticsBase
+  protected abstract _analytics: AnalyticsBase
   /** Product implementation for personalization. */
-  abstract readonly personalization: PersonalizationBase
+  protected abstract _personalization: PersonalizationBase
 
   /** Shared Optimization API client instance. */
   readonly api: ApiClient
@@ -135,6 +145,34 @@ abstract class CoreBase {
   }
 
   /**
+   * Static {@link FlagsResolver | resolver} for evaluating personalized
+   * custom flags.
+   */
+  get flagsResolver(): typeof FlagsResolver {
+    return this._personalization.flagsResolver
+  }
+
+  /**
+   * Static {@link MergeTagValueResolver | resolver} that returns values
+   * sourced from a user profile based on a Contentful Merge Tag entry.
+   */
+  get mergeTagValueResolver(): typeof MergeTagValueResolver {
+    return this._personalization.mergeTagValueResolver
+  }
+
+  /**
+   * Static {@link PersonalizedEntryResolver | resolver } for personalized
+   * Contentful entries (e.g., entry variants targeted to a profile audience).
+   *
+   * @remarks
+   * Used by higher-level personalization flows to materialize entry content
+   * prior to event emission.
+   */
+  get personalizedEntryResolver(): typeof PersonalizedEntryResolver {
+    return this._personalization.personalizedEntryResolver
+  }
+
+  /**
    * Get the value of a custom flag derived from a set of optimization changes.
    *
    * @param name - The flag key to resolve.
@@ -148,7 +186,23 @@ abstract class CoreBase {
    * ```
    */
   getCustomFlag(name: string, changes?: ChangeArray): Json {
-    return this.personalization.getCustomFlag(name, changes)
+    return this._personalization.getCustomFlag(name, changes)
+  }
+
+  /**
+   * Get all resolved custom flags derived from a set of optimization changes.
+   *
+   * @param changes - Optional change list to resolve from.
+   * @returns The resolved custom flag map.
+   * @remarks
+   * This is a convenience wrapper around personalization’s flag resolution.
+   * @example
+   * ```ts
+   * const flags = core.getCustomFlags(data.changes)
+   * ```
+   */
+  getCustomFlags(changes?: ChangeArray): Flags {
+    return this._personalization.getCustomFlags(changes)
   }
 
   /**
@@ -172,7 +226,7 @@ abstract class CoreBase {
     M extends ChainModifiers = ChainModifiers,
     L extends LocaleCode = LocaleCode,
   >(entry: Entry<S, M, L>, personalizations?: SelectedPersonalizationArray): ResolvedData<S, M, L> {
-    return this.personalization.personalizeEntry<S, M, L>(entry, personalizations)
+    return this._personalization.personalizeEntry<S, M, L>(entry, personalizations)
   }
 
   /**
@@ -186,8 +240,8 @@ abstract class CoreBase {
    * const name = core.getMergeTagValue(mergeTagNode, profile)
    * ```
    */
-  getMergeTagValue(embeddedEntryNodeTarget: MergeTagEntry, profile?: Profile): unknown {
-    return this.personalization.getMergeTagValue(embeddedEntryNodeTarget, profile)
+  getMergeTagValue(embeddedEntryNodeTarget: MergeTagEntry, profile?: Profile): string | undefined {
+    return this._personalization.getMergeTagValue(embeddedEntryNodeTarget, profile)
   }
 
   /**
@@ -203,7 +257,7 @@ abstract class CoreBase {
   async identify(
     payload: IdentifyBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData | undefined> {
-    return await this.personalization.identify(payload)
+    return await this._personalization.identify(payload)
   }
 
   /**
@@ -219,7 +273,7 @@ abstract class CoreBase {
   async page(
     payload: PageViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData | undefined> {
-    return await this.personalization.page(payload)
+    return await this._personalization.page(payload)
   }
 
   /**
@@ -235,7 +289,7 @@ abstract class CoreBase {
   async screen(
     payload: ScreenViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData | undefined> {
-    return await this.personalization.screen(payload)
+    return await this._personalization.screen(payload)
   }
 
   /**
@@ -251,7 +305,7 @@ abstract class CoreBase {
   async track(
     payload: TrackBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData | undefined> {
-    return await this.personalization.track(payload)
+    return await this._personalization.track(payload)
   }
 
   /**
@@ -273,10 +327,10 @@ abstract class CoreBase {
     payload: ComponentViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData | undefined> {
     if (payload.sticky) {
-      return await this.personalization.trackComponentView(payload)
+      return await this._personalization.trackComponentView(payload)
     }
 
-    await this.analytics.trackComponentView(payload)
+    await this._analytics.trackComponentView(payload)
   }
 
   /**
@@ -290,7 +344,21 @@ abstract class CoreBase {
    * ```
    */
   async trackComponentClick(payload: ComponentClickBuilderArgs): Promise<void> {
-    await this.analytics.trackComponentClick(payload)
+    await this._analytics.trackComponentClick(payload)
+  }
+
+  /**
+   * Track a component hover via analytics.
+   *
+   * @param payload - Component hover builder arguments.
+   * @returns A promise that resolves when processing completes.
+   * @example
+   * ```ts
+   * await core.trackComponentHover({ componentId: 'hero-banner' })
+   * ```
+   */
+  async trackComponentHover(payload: ComponentHoverBuilderArgs): Promise<void> {
+    await this._analytics.trackComponentHover(payload)
   }
 
   /**
@@ -304,7 +372,7 @@ abstract class CoreBase {
    * ```
    */
   async trackFlagView(payload: ComponentViewBuilderArgs): Promise<void> {
-    await this.analytics.trackFlagView(payload)
+    await this._analytics.trackFlagView(payload)
   }
 }
 

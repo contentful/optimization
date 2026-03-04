@@ -5,7 +5,9 @@ import { isRecord } from '../utils/typeGuards'
 interface AnalyticsEvent {
   id: string
   componentId?: string
+  componentHoverId?: string
   componentViewId?: string
+  hoverDurationMs?: number
   pageUrl?: string
   type: string
   viewDurationMs?: number
@@ -36,15 +38,21 @@ function toAnalyticsEvent(event: unknown, id: string): AnalyticsEvent | undefine
   }
 
   const componentId = typeof event.componentId === 'string' ? event.componentId : undefined
+  const componentHoverId =
+    typeof event.componentHoverId === 'string' ? event.componentHoverId : undefined
   const componentViewId =
     typeof event.componentViewId === 'string' ? event.componentViewId : undefined
+  const hoverDurationMs =
+    typeof event.hoverDurationMs === 'number' ? event.hoverDurationMs : undefined
   const pageUrl = event.type === 'page' ? toPageUrl(event) : undefined
   const viewDurationMs = typeof event.viewDurationMs === 'number' ? event.viewDurationMs : undefined
 
   return {
     id,
     componentId,
+    componentHoverId,
     componentViewId,
+    hoverDurationMs,
     pageUrl,
     type: event.type,
     viewDurationMs,
@@ -59,17 +67,37 @@ function isComponentViewHeartbeatEvent(event: AnalyticsEvent): boolean {
   )
 }
 
+function isComponentHoverHeartbeatEvent(event: AnalyticsEvent): boolean {
+  return (
+    event.type === 'component_hover' &&
+    typeof event.componentHoverId === 'string' &&
+    typeof event.hoverDurationMs === 'number'
+  )
+}
+
+function getHeartbeatKey(event: AnalyticsEvent): string | undefined {
+  if (isComponentViewHeartbeatEvent(event)) {
+    return `component:${event.componentViewId}`
+  }
+
+  if (isComponentHoverHeartbeatEvent(event)) {
+    return `component_hover:${event.componentHoverId}`
+  }
+
+  return undefined
+}
+
 function upsertAnalyticsEvent(
   previous: AnalyticsEvent[],
   nextEvent: AnalyticsEvent,
 ): AnalyticsEvent[] {
-  if (!isComponentViewHeartbeatEvent(nextEvent)) {
+  const key = getHeartbeatKey(nextEvent)
+
+  if (!key) {
     return [nextEvent, ...previous]
   }
 
-  const existingIndex = previous.findIndex(
-    (event) => event.type === 'component' && event.componentViewId === nextEvent.componentViewId,
-  )
+  const existingIndex = previous.findIndex((event) => getHeartbeatKey(event) === key)
 
   if (existingIndex === -1) {
     return [nextEvent, ...previous]
@@ -123,14 +151,18 @@ export function AnalyticsEventDisplay(): JSX.Element {
         {events.map((event) => {
           const testId = event.componentViewId
             ? `event-${event.type}-view-${event.componentViewId}`
-            : event.componentId
-              ? `event-${event.type}-${event.componentId}`
-              : `event-${event.type}-${event.id}`
+            : event.componentHoverId
+              ? `event-${event.type}-hover-${event.componentHoverId}`
+              : event.componentId
+                ? `event-${event.type}-${event.componentId}`
+                : `event-${event.type}-${event.id}`
 
           const label = event.componentId
             ? typeof event.viewDurationMs === 'number'
               ? `${event.type} - Component: ${event.componentId} - Duration: ${event.viewDurationMs}ms`
-              : `${event.type} - Component: ${event.componentId}`
+              : typeof event.hoverDurationMs === 'number'
+                ? `${event.type} - Component: ${event.componentId} - Hover Duration: ${event.hoverDurationMs}ms`
+                : `${event.type} - Component: ${event.componentId}`
             : event.pageUrl
               ? `${event.type} - URL: ${event.pageUrl}`
               : event.type

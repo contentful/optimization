@@ -40,7 +40,7 @@ describe('createAppStateChangeListener', () => {
     rs.resetModules()
 
     // Set up mocks before each test
-    rs.doMock('@contentful/optimization-core', () => createLoggerMock(mockLogger))
+    rs.doMock('@contentful/optimization-core/logger', () => createLoggerMock(mockLogger))
 
     rs.doMock('react-native', () => ({
       AppState: {

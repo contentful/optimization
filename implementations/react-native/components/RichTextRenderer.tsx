@@ -2,8 +2,8 @@ import React from 'react'
 import { Text } from 'react-native'
 
 import type Optimization from '@contentful/optimization-react-native'
-import type { MergeTagEntry } from '@contentful/optimization-react-native'
-import { createScopedLogger } from '@contentful/optimization-react-native'
+import type { MergeTagEntry } from '@contentful/optimization-react-native/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-react-native/logger'
 import type { Entry } from 'contentful'
 
 const logger = createScopedLogger('Demo:RichText')
@@ -76,9 +76,9 @@ function convertToString(value: unknown): string {
 }
 
 function resolveMergeTagValue(includedEntry: MergeTagEntry, sdk: Optimization): string {
-  const resolvedValue = sdk.personalization.getMergeTagValue(includedEntry)
+  const resolvedValue = sdk.getMergeTagValue(includedEntry)
 
-  if (resolvedValue === undefined || resolvedValue === null) {
+  if (resolvedValue === undefined) {
     logger.error(
       `Failed to resolve merge tag: getMergeTagValue returned ${String(resolvedValue)} for merge tag "${includedEntry.fields.nt_name}" (nt_mergetag_id: ${includedEntry.fields.nt_mergetag_id})`,
     )

@@ -1,4 +1,4 @@
-import type { BatchInsightsEventArray } from '@contentful/optimization-core'
+import type { BatchInsightsEventArray } from '@contentful/optimization-core/api-schemas'
 
 /**
  * Send a batch of analytics events using `navigator.sendBeacon`.

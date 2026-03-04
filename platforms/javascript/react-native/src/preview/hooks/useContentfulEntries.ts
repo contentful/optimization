@@ -1,4 +1,4 @@
-import { createScopedLogger } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core/logger'
 import { useEffect, useState } from 'react'
 import type { ContentfulClient, ContentfulEntry } from '../types'
 import { fetchAudienceAndExperienceEntries } from '../utils'

@@ -3,7 +3,7 @@ import type {
   PersonalizationEntry,
   Profile,
   SelectedPersonalizationArray,
-} from '@contentful/optimization-web'
+} from '@contentful/optimization-web/api-schemas'
 import { provide } from '@lit/context'
 import { groupBy } from 'es-toolkit'
 import { css, html, LitElement, type PropertyValues, type TemplateResult } from 'lit'

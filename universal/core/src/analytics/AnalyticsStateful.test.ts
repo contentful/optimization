@@ -1,4 +1,5 @@
-import { ApiClient, EventBuilder, type Profile } from '@contentful/optimization-api-client'
+import { ApiClient, EventBuilder } from '@contentful/optimization-api-client'
+import type { Profile } from '@contentful/optimization-api-client/api-schemas'
 import type { LifecycleInterceptors } from '../CoreBase'
 import { InterceptorManager } from '../lib/interceptor'
 import type {
@@ -156,8 +157,13 @@ describe('AnalyticsStateful.flush policy', () => {
 
     await analytics.trackFlagView(createViewPayload('promo-flag'))
     await analytics.trackComponentClick({ componentId: 'hero-cta' })
+    await analytics.trackComponentHover({
+      componentId: 'hero-hover',
+      componentHoverId: 'hero-hover-id',
+      hoverDurationMs: 500,
+    })
 
-    expect(getQueuedEventCount(analytics)).toBe(3)
+    expect(getQueuedEventCount(analytics)).toBe(4)
     expect(getQueuedBatchCount(analytics)).toBe(1)
 
     await analytics.flush()
@@ -172,7 +178,7 @@ describe('AnalyticsStateful.flush policy', () => {
         profile: sameProfileId,
       }),
     )
-    expect(batches?.[0]?.events).toHaveLength(3)
+    expect(batches?.[0]?.events).toHaveLength(4)
     expect(batches?.[0]?.events[0]).toEqual(
       expect.objectContaining({
         componentId: 'hero-banner',
@@ -189,6 +195,15 @@ describe('AnalyticsStateful.flush policy', () => {
       expect.objectContaining({
         type: 'component_click',
         componentId: 'hero-cta',
+        componentType: 'Entry',
+      }),
+    )
+    expect(batches?.[0]?.events[3]).toEqual(
+      expect.objectContaining({
+        type: 'component_hover',
+        componentId: 'hero-hover',
+        componentHoverId: 'hero-hover-id',
+        hoverDurationMs: 500,
         componentType: 'Entry',
       }),
     )

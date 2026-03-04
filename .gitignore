@@ -6,6 +6,7 @@
 *.seed
 *.tsbuildinfo
 .DS_Store
+.cache
 .contentfulrc.json
 .env
 .pnpm-store

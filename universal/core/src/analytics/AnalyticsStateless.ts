@@ -1,12 +1,15 @@
+import type {
+  ComponentClickBuilderArgs,
+  ComponentHoverBuilderArgs,
+  ComponentViewBuilderArgs,
+} from '@contentful/optimization-api-client'
 import {
   InsightsEvent as AnalyticsEvent,
   BatchInsightsEventArray,
   parseWithFriendlyError,
-  type ComponentClickBuilderArgs,
-  type ComponentViewBuilderArgs,
   type PartialProfile,
-} from '@contentful/optimization-api-client'
-import { createScopedLogger } from 'logger'
+} from '@contentful/optimization-api-client/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import AnalyticsBase from './AnalyticsBase'
 
 const logger = createScopedLogger('Analytics')
@@ -21,6 +24,7 @@ const logger = createScopedLogger('Analytics')
  */
 export type TrackComponentViewArgs = ComponentViewBuilderArgs & { profile?: PartialProfile }
 export type TrackComponentClickArgs = ComponentClickBuilderArgs & { profile?: PartialProfile }
+export type TrackComponentHoverArgs = ComponentHoverBuilderArgs & { profile?: PartialProfile }
 
 /**
  * Stateless analytics implementation that sends each event immediately in a
@@ -67,6 +71,27 @@ class AnalyticsStateless extends AnalyticsBase {
     const { profile, ...builderArgs } = args
 
     const event = this.builder.buildComponentClick(builderArgs)
+
+    await this.sendBatchEvent(event, profile)
+  }
+
+  /**
+   * Build, intercept, validate, and send a component hover event.
+   *
+   * @param args - {@link TrackComponentHoverArgs} used to build the event. Includes an
+   * optional partial profile.
+   * @returns A promise that resolves once the batch has been sent.
+   * @example
+   * ```ts
+   * await analytics.trackComponentHover({ componentId: 'hero-banner', profile: { id: 'user-1' } })
+   * ```
+   */
+  async trackComponentHover(args: TrackComponentHoverArgs): Promise<void> {
+    logger.info('Processing "component hover" event')
+
+    const { profile, ...builderArgs } = args
+
+    const event = this.builder.buildComponentHover(builderArgs)
 
     await this.sendBatchEvent(event, profile)
   }

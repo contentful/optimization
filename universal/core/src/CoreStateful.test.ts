@@ -7,66 +7,10 @@ import CoreStateful, {
   type CoreStatefulConfig,
   type PreviewPanelSignalObject,
 } from './CoreStateful'
+import type { QueueFlushFailureContext } from './lib/queue'
 import { batch, signalFns, signals } from './signals'
 import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from './symbols'
-
-const getAnalyticsQueuePolicyBaseBackoffMs = (core: CoreStateful): number | undefined => {
-  const flushRuntime = Reflect.get(core.analytics, 'flushRuntime')
-
-  if (typeof flushRuntime !== 'object' || flushRuntime === null) {
-    return
-  }
-
-  const policy = Reflect.get(flushRuntime, 'policy')
-
-  if (typeof policy !== 'object' || policy === null) {
-    return
-  }
-
-  const baseBackoffMs = Reflect.get(policy, 'baseBackoffMs')
-
-  return typeof baseBackoffMs === 'number' ? baseBackoffMs : undefined
-}
-
-const getPersonalizationQueueMaxEvents = (core: CoreStateful): number | undefined => {
-  const policy = Reflect.get(core.personalization, 'queuePolicy')
-
-  if (typeof policy !== 'object' || policy === null) {
-    return
-  }
-
-  const maxEvents = Reflect.get(policy, 'maxEvents')
-
-  return typeof maxEvents === 'number' ? maxEvents : undefined
-}
-
-const getPersonalizationFlushPolicyBaseBackoffMs = (core: CoreStateful): number | undefined => {
-  const policy = Reflect.get(core.personalization, 'queuePolicy')
-
-  if (typeof policy !== 'object' || policy === null) {
-    return
-  }
-
-  const flushPolicy = Reflect.get(policy, 'flushPolicy')
-
-  if (typeof flushPolicy !== 'object' || flushPolicy === null) {
-    return
-  }
-
-  const baseBackoffMs = Reflect.get(flushPolicy, 'baseBackoffMs')
-
-  return typeof baseBackoffMs === 'number' ? baseBackoffMs : undefined
-}
-
-const getPersonalizationAllowedEventTypes = (core: CoreStateful): string[] | undefined => {
-  const allowedEventTypes = Reflect.get(core.personalization, 'allowedEventTypes')
-
-  if (!Array.isArray(allowedEventTypes)) {
-    return
-  }
-
-  return allowedEventTypes.filter((eventType): eventType is string => typeof eventType === 'string')
-}
+import { profile as profileFixture } from './test/fixtures/profile'
 
 const config: CoreStatefulConfig = {
   clientId: 'key_123',
@@ -128,6 +72,8 @@ describe('CoreStateful blocked event handling', () => {
 
       core?.destroy()
     }
+
+    rs.restoreAllMocks()
   })
 
   it('emits consent-blocked calls through callback and blockedEventStream', async () => {
@@ -179,38 +125,125 @@ describe('CoreStateful blocked event handling', () => {
     expect(signals.blockedEvent.value).toBeUndefined()
   })
 
-  it('defaults allowedEventTypes to identify/page/screen in core', () => {
+  it('defaults allowedEventTypes to identify/page/screen in core', async () => {
     const core = createCoreStateful()
-
-    expect(getPersonalizationAllowedEventTypes(core)).toEqual(['identify', 'page', 'screen'])
-  })
-
-  it('uses analytics.queuePolicy when provided', () => {
-    const core = createCoreStateful({
-      analytics: {
-        queuePolicy: {
-          baseBackoffMs: 123,
-        },
-      },
+    const payload: TrackBuilderArgs = { event: 'purchase' }
+    const blockedEvents: Array<BlockedEvent | undefined> = []
+    const subscription = core.states.blockedEventStream.subscribe((event) => {
+      blockedEvents.push(event)
     })
 
-    expect(getAnalyticsQueuePolicyBaseBackoffMs(core)).toBe(123)
+    await core.identify({ userId: 'user-1' })
+    await core.page({})
+    await core.screen({ name: 'Home', properties: {}, screen: { name: 'Home' } })
+    await core.track(payload)
+
+    expect(blockedEvents.at(-1)).toEqual(
+      expect.objectContaining({
+        reason: 'consent',
+        product: 'personalization',
+        method: 'track',
+      }),
+    )
+
+    subscription.unsubscribe()
   })
 
-  it('uses personalization.queuePolicy when provided', () => {
-    const core = createCoreStateful({
-      personalization: {
-        queuePolicy: {
-          maxEvents: 33,
-          flushPolicy: {
-            baseBackoffMs: 321,
+  it('uses analytics.queuePolicy when provided', async () => {
+    rs.useFakeTimers()
+
+    try {
+      const onFlushFailure = rs.fn<(context: QueueFlushFailureContext) => void>()
+      const core = createCoreStatefulHarness({
+        defaults: {
+          consent: true,
+          profile: profileFixture,
+        },
+        analytics: {
+          queuePolicy: {
+            baseBackoffMs: 123,
+            jitterRatio: 0,
+            maxBackoffMs: 123,
+            onFlushFailure,
           },
         },
-      },
-    })
+      })
+      rs.spyOn(core.api.insights, 'sendBatchEvents').mockRejectedValue(new Error('insights-down'))
 
-    expect(getPersonalizationQueueMaxEvents(core)).toBe(33)
-    expect(getPersonalizationFlushPolicyBaseBackoffMs(core)).toBe(321)
+      core.setOnlineState(false)
+      await core.trackComponentClick({ componentId: 'hero-banner' })
+
+      core.setOnlineState(true)
+      await core.flush()
+
+      expect(onFlushFailure).toHaveBeenCalledTimes(1)
+      expect(onFlushFailure).toHaveBeenCalledWith(
+        expect.objectContaining({
+          consecutiveFailures: 1,
+          queuedBatches: 1,
+          queuedEvents: 1,
+          retryDelayMs: 123,
+        }),
+      )
+    } finally {
+      rs.clearAllTimers()
+      rs.useRealTimers()
+    }
+  })
+
+  it('uses personalization.queuePolicy when provided', async () => {
+    rs.useFakeTimers()
+
+    try {
+      const onDrop = rs.fn()
+      const onFlushFailure = rs.fn<(context: QueueFlushFailureContext) => void>()
+      const core = createCoreStatefulHarness({
+        defaults: { consent: true },
+        personalization: {
+          queuePolicy: {
+            maxEvents: 2,
+            onDrop,
+            flushPolicy: {
+              baseBackoffMs: 321,
+              jitterRatio: 0,
+              maxBackoffMs: 321,
+              onFlushFailure,
+            },
+          },
+        },
+      })
+      rs.spyOn(core.api.experience, 'upsertProfile').mockRejectedValue(new Error('experience-down'))
+
+      core.setOnlineState(false)
+      await core.track({ event: 'e1' })
+      await core.track({ event: 'e2' })
+      await core.track({ event: 'e3' })
+
+      expect(onDrop).toHaveBeenCalledTimes(1)
+      expect(onDrop).toHaveBeenCalledWith(
+        expect.objectContaining({
+          droppedCount: 1,
+          maxEvents: 2,
+          queuedEvents: 2,
+        }),
+      )
+
+      core.setOnlineState(true)
+      await core.flush()
+
+      expect(onFlushFailure).toHaveBeenCalledTimes(1)
+      expect(onFlushFailure).toHaveBeenCalledWith(
+        expect.objectContaining({
+          consecutiveFailures: 1,
+          queuedBatches: 1,
+          queuedEvents: 2,
+          retryDelayMs: 321,
+        }),
+      )
+    } finally {
+      rs.clearAllTimers()
+      rs.useRealTimers()
+    }
   })
 
   it('supports only one stateful instance per runtime until destroy is called', () => {

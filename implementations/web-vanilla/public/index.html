@@ -149,11 +149,13 @@
             type="button"
             data-testid="entry-click-direct-entry"
             data-e2e-click-scenario="direct"
+            data-ctfl-hover-duration-update-interval-ms="1000"
             data-ctfl-entry-id="4ib0hsHWoSOnCVdDkizE8d"
           ></button>
           <div
             data-testid="entry-click-descendant-entry"
             data-e2e-click-scenario="descendant"
+            data-ctfl-hover-duration-update-interval-ms="1000"
             data-ctfl-entry-id="xFwgG3oNaOcjzWiGe4vXo"
           ></div>
           <button type="button" data-testid="entry-click-ancestor-wrapper">
@@ -161,6 +163,7 @@
               data-testid="entry-click-ancestor-entry"
               data-e2e-click-scenario="ancestor"
               data-e2e-entry-inline="true"
+              data-ctfl-hover-duration-update-interval-ms="1000"
               data-ctfl-entry-id="2Z2WLOx07InSewC3LUB3eX"
             ></span>
           </button>
@@ -212,7 +215,7 @@
         clientId: '<!--#echo var="NGINX_NINETAILED_CLIENT_ID" -->',
         environment: '<!--#echo var="NGINX_NINETAILED_ENVIRONMENT" -->',
         logLevel: 'debug',
-        autoTrackEntryInteraction: { views: true, clicks: true },
+        autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
         app: {
           name: document.title,
           version: '0.0.0',
@@ -228,7 +231,7 @@
       })
 
       // Emit page event
-      optimization.personalization.page()
+      optimization.page()
 
       /* --- Utility Functionality (for E2E) --- */
 
@@ -262,7 +265,7 @@
       }
 
       identify.addEventListener('click', async () => {
-        await optimization.personalization.identify({
+        await optimization.identify({
           userId: 'charles',
           traits: { identified: true },
         })
@@ -270,11 +273,12 @@
       unidentify.addEventListener('click', async () => {
         optimization.reset()
         // Ensure we have a new profile after resetting the old one
-        await optimization.personalization.page()
+        await optimization.page()
       })
 
       const eventStream = document.querySelector('#event-stream')
       const componentViewEventDialogs = new Map()
+      const componentHoverEventDialogs = new Map()
 
       function isComponentViewHeartbeatEvent(event) {
         return (
@@ -285,11 +289,24 @@
         )
       }
 
+      function isComponentHoverHeartbeatEvent(event) {
+        return (
+          event?.type === 'component_hover' &&
+          typeof event?.componentHoverId === 'string' &&
+          event.componentHoverId.length > 0 &&
+          typeof event?.hoverDurationMs === 'number'
+        )
+      }
+
       function updateEventDialog(button, pre, title, details) {
         const componentViewId =
           typeof details?.componentViewId === 'string' ? details.componentViewId : undefined
+        const componentHoverId =
+          typeof details?.componentHoverId === 'string' ? details.componentHoverId : undefined
         const componentId =
           typeof details?.componentId === 'string' ? details.componentId : undefined
+        const hoverDurationMs =
+          typeof details?.hoverDurationMs === 'number' ? details.hoverDurationMs : undefined
 
         button.innerText = title
         button.dataset.testid = details.componentId ?? details?.properties?.url ?? details.messageId
@@ -297,8 +314,14 @@
         if (componentViewId) button.dataset.componentViewId = componentViewId
         else delete button.dataset.componentViewId
 
+        if (componentHoverId) button.dataset.componentHoverId = componentHoverId
+        else delete button.dataset.componentHoverId
+
         if (componentId) button.dataset.componentId = componentId
         else delete button.dataset.componentId
+
+        if (hoverDurationMs !== undefined) button.dataset.hoverDurationMs = String(hoverDurationMs)
+        else delete button.dataset.hoverDurationMs
 
         pre.innerText = JSON.stringify(details, null, 2)
       }
@@ -343,7 +366,7 @@
           const span = document.createElement('span')
 
           // This is how we can inject MergeTag data into Rich Text
-          span.innerText = optimization.personalization.getMergeTagValue(field.data.target)
+          span.innerText = optimization.getMergeTagValue(field.data.target)
 
           parent.appendChild(span)
         } else {
@@ -368,7 +391,7 @@
 
       // Render personalized entries
       async function renderPersonalizedEntry(rawEntry, element, autoObserve = true) {
-        const { entry, personalization } = optimization.personalization.personalizeEntry(rawEntry)
+        const { entry, personalization } = optimization.personalizeEntry(rawEntry)
         const renderInline =
           element.dataset.e2eEntryInline === 'true' || element.tagName === 'BUTTON'
 
@@ -519,6 +542,23 @@
 
           const newDialog = createEventDialog(event.type, event)
           componentViewEventDialogs.set(event.componentViewId, {
+            button: newDialog.button,
+            pre: newDialog.pre,
+          })
+          eventStream.appendChild(newDialog.fragment)
+          return
+        }
+
+        if (isComponentHoverHeartbeatEvent(event)) {
+          const existingDialog = componentHoverEventDialogs.get(event.componentHoverId)
+
+          if (existingDialog) {
+            updateEventDialog(existingDialog.button, existingDialog.pre, event.type, event)
+            return
+          }
+
+          const newDialog = createEventDialog(event.type, event)
+          componentHoverEventDialogs.set(event.componentHoverId, {
             button: newDialog.button,
             pre: newDialog.pre,
           })

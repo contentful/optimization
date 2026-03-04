@@ -1,4 +1,4 @@
-import { type JSX, useEffect, useMemo, useRef } from 'react'
+import { type JSX, type RefObject, useEffect, useMemo, useRef } from 'react'
 import { RichTextRenderer } from '../components/RichTextRenderer'
 import { useOptimization } from '../optimization/hooks/useOptimization'
 import { usePersonalization } from '../optimization/hooks/usePersonalization'
@@ -6,8 +6,40 @@ import type { ContentfulEntry, RichTextDocument } from '../types/contentful'
 import { isRecord } from '../utils/typeGuards'
 
 interface ContentEntryProps {
+  clickScenario?: EntryClickScenario
   entry: ContentfulEntry
   observation: 'auto' | 'manual'
+}
+
+export type EntryClickScenario = 'direct' | 'descendant' | 'ancestor'
+
+type ObservationMode = ContentEntryProps['observation']
+
+interface AutoTrackingAttributes {
+  'data-ctfl-entry-id': string
+  'data-ctfl-baseline-id': string
+  'data-ctfl-hover-duration-update-interval-ms': string
+  'data-ctfl-personalization-id': string | undefined
+  'data-ctfl-sticky': string | undefined
+  'data-ctfl-variant-index': string | undefined
+}
+
+interface ManualTrackingAttributes {
+  'data-entry-id': string
+}
+
+interface TrackingAttributes {
+  autoTrackingAttributes: AutoTrackingAttributes | undefined
+  manualTrackingAttributes: ManualTrackingAttributes | undefined
+}
+
+interface GetTrackingAttributesInput {
+  baselineEntryId: string
+  experienceId: string | undefined
+  observation: ObservationMode
+  resolvedEntryId: string
+  sticky: boolean | undefined
+  variantIndex: number | undefined
 }
 
 interface PersonalizationMeta {
@@ -71,7 +103,107 @@ function getEntryText(contentEntry: ContentfulEntry): string {
   return typeof contentEntry.fields.text === 'string' ? contentEntry.fields.text : 'No content'
 }
 
-export function ContentEntry({ entry, observation }: ContentEntryProps): JSX.Element {
+function getTrackingAttributes(input: GetTrackingAttributesInput): TrackingAttributes {
+  const { baselineEntryId, experienceId, observation, resolvedEntryId, sticky, variantIndex } =
+    input
+
+  if (observation === 'auto') {
+    return {
+      autoTrackingAttributes: {
+        'data-ctfl-entry-id': resolvedEntryId,
+        'data-ctfl-baseline-id': baselineEntryId,
+        'data-ctfl-personalization-id': experienceId,
+        'data-ctfl-sticky': sticky === undefined ? undefined : String(sticky),
+        'data-ctfl-variant-index': variantIndex === undefined ? undefined : String(variantIndex),
+        'data-ctfl-hover-duration-update-interval-ms': '1000',
+      },
+      manualTrackingAttributes: undefined,
+    }
+  }
+
+  return {
+    autoTrackingAttributes: undefined,
+    manualTrackingAttributes: {
+      'data-entry-id': baselineEntryId,
+    },
+  }
+}
+
+const DIRECT_CLICK_SCENARIO_ATTRIBUTES = {
+  'data-ctfl-clickable': 'true',
+} as const
+
+interface RenderContentContainerProps {
+  autoTrackingAttributes: AutoTrackingAttributes | undefined
+  baselineEntryId: string
+  clickScenario: EntryClickScenario | undefined
+  containerRef: RefObject<HTMLDivElement | null>
+  fullLabel: string
+  manualTrackingAttributes: ManualTrackingAttributes | undefined
+  resolvedEntry: ContentfulEntry
+  richTextField: RichTextDocument | undefined
+}
+
+function renderContentContainer({
+  autoTrackingAttributes,
+  baselineEntryId,
+  clickScenario,
+  containerRef,
+  fullLabel,
+  manualTrackingAttributes,
+  resolvedEntry,
+  richTextField,
+}: RenderContentContainerProps): JSX.Element {
+  const directClickScenarioAttributes =
+    clickScenario === 'direct' ? DIRECT_CLICK_SCENARIO_ATTRIBUTES : undefined
+
+  return (
+    <div
+      ref={containerRef}
+      {...autoTrackingAttributes}
+      {...manualTrackingAttributes}
+      {...directClickScenarioAttributes}
+      data-testid={`content-${baselineEntryId}`}
+    >
+      <div data-testid={`entry-text-${baselineEntryId}`} aria-label={fullLabel}>
+        {richTextField ? (
+          <RichTextRenderer richText={richTextField} />
+        ) : (
+          <p>{getEntryText(resolvedEntry)}</p>
+        )}
+        <p>{`[Entry: ${baselineEntryId}]`}</p>
+      </div>
+
+      {clickScenario === 'descendant' ? (
+        <button data-testid="entry-click-descendant-button" type="button">
+          Trigger entry click tracking from descendant button
+        </button>
+      ) : null}
+    </div>
+  )
+}
+
+function wrapAncestorClickScenario(
+  content: JSX.Element,
+  clickScenario: EntryClickScenario | undefined,
+  observation: ObservationMode,
+): JSX.Element {
+  if (clickScenario !== 'ancestor' || observation !== 'auto') {
+    return content
+  }
+
+  return (
+    <div data-ctfl-clickable="true" data-testid="entry-click-ancestor-wrapper">
+      {content}
+    </div>
+  )
+}
+
+export function ContentEntry({
+  clickScenario,
+  entry,
+  observation,
+}: ContentEntryProps): JSX.Element {
   const { sdk, isReady } = useOptimization()
   const { resolveEntry } = usePersonalization()
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -114,41 +246,28 @@ export function ContentEntry({ entry, observation }: ContentEntryProps): JSX.Ele
 
   const fullLabel = `Entry: ${resolvedEntry.sys.id}`
 
-  const autoTrackingAttributes =
-    observation === 'auto'
-      ? {
-          'data-ctfl-entry-id': resolvedEntry.sys.id,
-          'data-ctfl-baseline-id': entry.sys.id,
-          'data-ctfl-personalization-id': experienceId,
-          'data-ctfl-sticky': sticky === undefined ? undefined : String(sticky),
-          'data-ctfl-variant-index': variantIndex === undefined ? undefined : String(variantIndex),
-        }
-      : undefined
-
-  const manualTrackingAttributes =
-    observation === 'manual'
-      ? {
-          'data-entry-id': entry.sys.id,
-        }
-      : undefined
+  const { autoTrackingAttributes, manualTrackingAttributes } = getTrackingAttributes({
+    baselineEntryId: entry.sys.id,
+    experienceId,
+    observation,
+    resolvedEntryId: resolvedEntry.sys.id,
+    sticky,
+    variantIndex,
+  })
+  const content = renderContentContainer({
+    autoTrackingAttributes,
+    baselineEntryId: entry.sys.id,
+    clickScenario,
+    containerRef,
+    fullLabel,
+    manualTrackingAttributes,
+    resolvedEntry,
+    richTextField,
+  })
 
   return (
     <section data-testid={`content-entry-${entry.sys.id}`}>
-      <div
-        ref={containerRef}
-        {...autoTrackingAttributes}
-        {...manualTrackingAttributes}
-        data-testid={`content-${entry.sys.id}`}
-      >
-        <div data-testid={`entry-text-${entry.sys.id}`} aria-label={fullLabel}>
-          {richTextField ? (
-            <RichTextRenderer richText={richTextField} />
-          ) : (
-            <p>{getEntryText(resolvedEntry)}</p>
-          )}
-          <p>{`[Entry: ${entry.sys.id}]`}</p>
-        </div>
-      </div>
+      {wrapAncestorClickScenario(content, clickScenario, observation)}
     </section>
   )
 }

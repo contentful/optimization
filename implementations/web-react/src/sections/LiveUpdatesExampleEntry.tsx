@@ -1,9 +1,7 @@
+import type { SelectedPersonalizationArray } from '@contentful/optimization-web/api-schemas'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { useOptimization } from '../optimization/hooks/useOptimization'
-import {
-  type PersonalizationSelection,
-  usePersonalization,
-} from '../optimization/hooks/usePersonalization'
+import { usePersonalization } from '../optimization/hooks/usePersonalization'
 import { useLiveUpdates } from '../optimization/liveUpdates/LiveUpdatesContext'
 import type { ContentfulEntry } from '../types/contentful'
 
@@ -22,7 +20,7 @@ export function LiveUpdatesExampleEntry({
   const { resolveEntry } = usePersonalization()
   const liveUpdatesContext = useLiveUpdates()
   const [lockedPersonalizations, setLockedPersonalizations] = useState<
-    PersonalizationSelection | undefined
+    SelectedPersonalizationArray | undefined
   >(undefined)
 
   const shouldLiveUpdate =

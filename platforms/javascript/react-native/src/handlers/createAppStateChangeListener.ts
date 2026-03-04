@@ -1,4 +1,4 @@
-import { createScopedLogger } from '@contentful/optimization-core'
+import { createScopedLogger } from '@contentful/optimization-core/logger'
 import { AppState } from 'react-native'
 
 const logger = createScopedLogger('RN:AppState')

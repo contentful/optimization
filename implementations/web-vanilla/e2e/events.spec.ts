@@ -39,12 +39,7 @@ test.describe('events', () => {
         await page.clock.fastForward('02:00')
       }
 
-      const allComponentEvents = await page
-        .getByRole('listitem')
-        .filter({ has: page.getByRole('button', { name: 'component' }) })
-        .all()
-
-      expect(allComponentEvents.length).toEqual(0)
+      await expect(page.locator('#event-stream li button[data-component-view-id]')).toHaveCount(0)
     })
   })
 
@@ -77,18 +72,19 @@ test.describe('events', () => {
         await page.clock.fastForward('02:00')
 
         await expect(
-          page.locator(`#event-stream li button[data-component-id="${entryId}"]`).first(),
-        ).toHaveText('component')
+          page
+            .locator(
+              `#event-stream li button[data-component-id="${entryId}"][data-component-view-id]`,
+            )
+            .first(),
+        ).toBeVisible()
       }
 
-      const allComponentEvents = await page
-        .getByRole('listitem')
-        .filter({ has: page.getByRole('button', { name: 'component' }) })
-        .all()
+      const allComponentEvents = page.locator('#event-stream li button[data-component-view-id]')
 
-      expect(allComponentEvents.length).toBeGreaterThanOrEqual(10)
+      await expect.poll(async () => await allComponentEvents.count()).toBeGreaterThanOrEqual(10)
 
-      const componentViewIdButtons = page.locator('#event-stream li button[data-component-view-id]')
+      const componentViewIdButtons = allComponentEvents
       const componentViewIds: string[] = []
       const componentViewIdCount = await componentViewIdButtons.count()
 

@@ -1,6 +1,6 @@
-import { MergeTagEntry, Profile } from '@contentful/optimization-api-client'
-import get from 'es-toolkit/compat/get'
-import { createScopedLogger } from 'logger'
+import type { MergeTagEntry } from '@contentful/optimization-api-client/api-schemas'
+import { Profile, isMergeTagEntry } from '@contentful/optimization-api-client/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 
 const logger = createScopedLogger('Personalization')
 
@@ -10,6 +10,21 @@ const logger = createScopedLogger('Personalization')
  * @internal
  */
 const RESOLUTION_WARNING_BASE = 'Could not resolve Merge Tag value:'
+
+const getAtPath = (value: unknown, path: string): unknown => {
+  if (!value || typeof value !== 'object') return undefined
+  if (!path) return value
+
+  let current: unknown = value
+  const segments = path.split('.').filter(Boolean)
+
+  for (const segment of segments) {
+    if (!current || (typeof current !== 'object' && typeof current !== 'function')) return undefined
+    current = Reflect.get(current, segment)
+  }
+
+  return current
+}
 
 /**
  * Resolves merge tag values from a {@link Profile}.
@@ -22,22 +37,6 @@ const RESOLUTION_WARNING_BASE = 'Could not resolve Merge Tag value:'
  * Result values are returned as strings; numeric/boolean primitives are stringified.
  */
 const MergeTagValueResolver = {
-  /**
-   * Type guard to ensure the input is a {@link MergeTagEntry}.
-   *
-   * @param embeddedEntryNodeTarget - Unknown value to validate.
-   * @returns `true` if the input is a valid merge-tag entry.
-   * @example
-   * ```ts
-   * if (MergeTagValueResolver.isMergeTagEntry(node)) {
-   *   // safe to read fields
-   * }
-   * ```
-   */
-  isMergeTagEntry(embeddedEntryNodeTarget: unknown): embeddedEntryNodeTarget is MergeTagEntry {
-    return MergeTagEntry.safeParse(embeddedEntryNodeTarget).success
-  },
-
   /**
    * Generate a list of candidate selectors for a merge-tag ID.
    *
@@ -78,11 +77,11 @@ const MergeTagValueResolver = {
    */
   getValueFromProfile(id: string, profile?: Profile): string | undefined {
     const selectors = MergeTagValueResolver.normalizeSelectors(id)
-    const matchingSelector = selectors.find((selector) => get(profile, selector))
+    const matchingSelector = selectors.find((selector) => getAtPath(profile, selector))
 
     if (!matchingSelector) return undefined
 
-    const value: unknown = get(profile, matchingSelector)
+    const value = getAtPath(profile, matchingSelector)
 
     if (
       !value ||
@@ -108,7 +107,7 @@ const MergeTagValueResolver = {
    * ```
    */
   resolve(mergeTagEntry: MergeTagEntry | undefined, profile?: Profile): string | undefined {
-    if (!MergeTagValueResolver.isMergeTagEntry(mergeTagEntry)) {
+    if (!isMergeTagEntry(mergeTagEntry)) {
       logger.warn(`${RESOLUTION_WARNING_BASE} supplied entry is not a Merge Tag entry`)
       return
     }

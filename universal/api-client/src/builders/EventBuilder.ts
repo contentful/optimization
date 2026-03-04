@@ -3,6 +3,7 @@ import {
   Campaign,
   type Channel,
   type ComponentClickEvent,
+  type ComponentHoverEvent,
   type ComponentViewEvent,
   GeoLocation,
   type IdentifyEvent,
@@ -129,7 +130,7 @@ const ComponentInteractionBuilderArgsBase = z.extend(UniversalEventBuilderArgs, 
 })
 
 /**
- * Arguments shared by component view and click events.
+ * Arguments shared by component view, click, and hover events.
  *
  * @public
  */
@@ -158,6 +159,18 @@ const ComponentClickBuilderArgs = ComponentInteractionBuilderArgsBase
  * @public
  */
 export type ComponentClickBuilderArgs = z.infer<typeof ComponentClickBuilderArgs>
+
+const ComponentHoverBuilderArgs = z.extend(ComponentInteractionBuilderArgsBase, {
+  componentHoverId: z.string(),
+  hoverDurationMs: z.number(),
+})
+
+/**
+ * Arguments for constructing component hover events.
+ *
+ * @public
+ */
+export type ComponentHoverBuilderArgs = z.infer<typeof ComponentHoverBuilderArgs>
 
 const IdentifyBuilderArgs = z.extend(UniversalEventBuilderArgs, {
   traits: z.optional(Traits),
@@ -368,6 +381,26 @@ class EventBuilder {
     }
   }
 
+  private buildEntryComponentBase(
+    universal: UniversalEventBuilderArgs,
+    componentId: string,
+    experienceId: string | undefined,
+    variantIndex: number | undefined,
+  ): UniversalEventProperties & {
+    componentType: 'Entry'
+    componentId: string
+    experienceId?: string
+    variantIndex: number
+  } {
+    return {
+      ...this.buildUniversalEventProperties(universal),
+      componentType: 'Entry',
+      componentId,
+      experienceId,
+      variantIndex: variantIndex ?? 0,
+    }
+  }
+
   /**
    * Builds a component view event payload for a Contentful entry-based component.
    *
@@ -398,13 +431,9 @@ class EventBuilder {
     } = parseWithFriendlyError(ComponentViewBuilderArgs, args)
 
     return {
-      ...this.buildUniversalEventProperties(universal),
+      ...this.buildEntryComponentBase(universal, componentId, experienceId, variantIndex),
       type: 'component',
-      componentType: 'Entry',
-      componentId,
       componentViewId,
-      experienceId,
-      variantIndex: variantIndex ?? 0,
       viewDurationMs,
     }
   }
@@ -433,12 +462,45 @@ class EventBuilder {
     )
 
     return {
-      ...this.buildUniversalEventProperties(universal),
+      ...this.buildEntryComponentBase(universal, componentId, experienceId, variantIndex),
       type: 'component_click',
-      componentType: 'Entry',
+    }
+  }
+
+  /**
+   * Builds a component hover event payload for a Contentful entry-based component.
+   *
+   * @param args - {@link ComponentHoverBuilderArgs} arguments describing the component hover.
+   * @returns A {@link ComponentHoverEvent} describing the hover.
+   *
+   * @example
+   * ```ts
+   * const event = builder.buildComponentHover({
+   *   componentId: 'entry-123',
+   *   componentHoverId: crypto.randomUUID(),
+   *   experienceId: 'personalization-123',
+   *   hoverDurationMs: 1_000,
+   *   variantIndex: 1,
+   * })
+   * ```
+   *
+   * @public
+   */
+  buildComponentHover(args: ComponentHoverBuilderArgs): ComponentHoverEvent {
+    const {
+      componentHoverId,
       componentId,
       experienceId,
-      variantIndex: variantIndex ?? 0,
+      hoverDurationMs,
+      variantIndex,
+      ...universal
+    } = parseWithFriendlyError(ComponentHoverBuilderArgs, args)
+
+    return {
+      ...this.buildEntryComponentBase(universal, componentId, experienceId, variantIndex),
+      type: 'component_hover',
+      componentHoverId,
+      hoverDurationMs,
     }
   }
 

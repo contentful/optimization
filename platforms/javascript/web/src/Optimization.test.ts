@@ -1,4 +1,6 @@
-import type { CoreConfig, TrackBuilderArgs } from '@contentful/optimization-core'
+import type { CoreConfig } from '@contentful/optimization-core'
+import type { TrackBuilderArgs } from '@contentful/optimization-core/api-client'
+import type { OptimizationData, Profile } from '@contentful/optimization-core/api-schemas'
 import Optimization from './Optimization'
 import { OPTIMIZATION_WEB_SDK_NAME } from './constants'
 
@@ -10,8 +12,39 @@ const config: CoreConfig = {
   environment: ENVIRONMENT,
 }
 
+const DEFAULT_PROFILE: Profile = {
+  id: 'profile-id',
+  stableId: 'profile-id',
+  random: 1,
+  audiences: [],
+  traits: {},
+  location: {},
+  session: {
+    id: 'session-id',
+    isReturningVisitor: false,
+    landingPage: {
+      path: '/',
+      query: {},
+      referrer: '',
+      search: '',
+      title: '',
+      url: 'https://example.test/',
+    },
+    count: 1,
+    activeSessionLength: 0,
+    averageSessionLength: 0,
+  },
+}
+
+const EMPTY_OPTIMIZATION_DATA: OptimizationData = {
+  changes: [],
+  personalizations: [],
+  profile: DEFAULT_PROFILE,
+}
+
 interface AutoTrackState {
   clicks: boolean
+  hovers: boolean
   views: boolean
 }
 
@@ -19,9 +52,10 @@ function isAutoTrackState(value: unknown): value is AutoTrackState {
   if (!value || typeof value !== 'object') return false
 
   const clicks = Reflect.get(value, 'clicks')
+  const hovers = Reflect.get(value, 'hovers')
   const views = Reflect.get(value, 'views')
 
-  return typeof clicks === 'boolean' && typeof views === 'boolean'
+  return typeof clicks === 'boolean' && typeof hovers === 'boolean' && typeof views === 'boolean'
 }
 
 const getAutoTrackState = (optimization: Optimization): AutoTrackState | undefined => {
@@ -43,14 +77,10 @@ const getAutoTrackEntryClicks = (optimization: Optimization): boolean | undefine
   return state?.clicks
 }
 
-const getAllowedEventTypes = (optimization: Optimization): string[] | undefined => {
-  const value = Reflect.get(optimization.personalization, 'allowedEventTypes')
+const getAutoTrackEntryHovers = (optimization: Optimization): boolean | undefined => {
+  const state = getAutoTrackState(optimization)
 
-  if (!Array.isArray(value)) {
-    return
-  }
-
-  return value.filter((eventType): eventType is string => typeof eventType === 'string')
+  return state?.hovers
 }
 
 describe('Optimization', () => {
@@ -71,11 +101,12 @@ describe('Optimization', () => {
     expect(web.eventBuilder.library.name).toEqual(OPTIMIZATION_WEB_SDK_NAME)
   })
 
-  it('defaults autoTrackEntryInteraction.views/clicks to false when omitted', () => {
+  it('defaults autoTrackEntryInteraction.views/clicks/hovers to false when omitted', () => {
     const web = new Optimization(config)
 
     expect(getAutoTrackEntryViews(web)).toBe(false)
     expect(getAutoTrackEntryClicks(web)).toBe(false)
+    expect(getAutoTrackEntryHovers(web)).toBe(false)
   })
 
   it('uses autoTrackEntryInteraction.views=true when configured', () => {
@@ -83,6 +114,7 @@ describe('Optimization', () => {
 
     expect(getAutoTrackEntryViews(web)).toBe(true)
     expect(getAutoTrackEntryClicks(web)).toBe(false)
+    expect(getAutoTrackEntryHovers(web)).toBe(false)
   })
 
   it('uses autoTrackEntryInteraction.clicks=true when configured', () => {
@@ -90,6 +122,15 @@ describe('Optimization', () => {
 
     expect(getAutoTrackEntryViews(web)).toBe(false)
     expect(getAutoTrackEntryClicks(web)).toBe(true)
+    expect(getAutoTrackEntryHovers(web)).toBe(false)
+  })
+
+  it('uses autoTrackEntryInteraction.hovers=true when configured', () => {
+    const web = new Optimization({ ...config, autoTrackEntryInteraction: { hovers: true } })
+
+    expect(getAutoTrackEntryViews(web)).toBe(false)
+    expect(getAutoTrackEntryClicks(web)).toBe(false)
+    expect(getAutoTrackEntryHovers(web)).toBe(true)
   })
 
   it('supports generic interaction APIs for entry view tracking', () => {
@@ -118,19 +159,59 @@ describe('Optimization', () => {
     expect(getAutoTrackEntryClicks(web)).toBe(false)
   })
 
-  it('defaults allowedEventTypes to identify/page for web', () => {
+  it('supports generic interaction APIs for entry hover tracking', () => {
     const web = new Optimization(config)
+    const element = document.createElement('div')
 
-    expect(getAllowedEventTypes(web)).toEqual(['identify', 'page'])
+    web.tracking.enable('hovers')
+    web.tracking.enableElement('hovers', element, { data: { entryId: 'entry-123' } })
+    web.tracking.disableElement('hovers', element)
+    web.tracking.clearElement('hovers', element)
+    web.tracking.disable('hovers')
+
+    expect(getAutoTrackEntryHovers(web)).toBe(false)
   })
 
-  it('uses user-provided allowedEventTypes when configured', () => {
+  it('defaults allowedEventTypes to identify/page for web', async () => {
+    const onEventBlocked = rs.fn()
     const web = new Optimization({
       ...config,
-      allowedEventTypes: ['identify', 'page', 'screen'],
+      onEventBlocked,
     })
+    const upsertProfile = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
 
-    expect(getAllowedEventTypes(web)).toEqual(['identify', 'page', 'screen'])
+    await web.identify({ userId: 'user-123' })
+    await web.page({})
+    await web.track({ event: 'purchase' })
+
+    expect(upsertProfile).toHaveBeenCalledTimes(2)
+    expect(onEventBlocked).toHaveBeenCalledTimes(1)
+    expect(onEventBlocked).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reason: 'consent',
+        product: 'personalization',
+        method: 'track',
+      }),
+    )
+  })
+
+  it('uses user-provided allowedEventTypes when configured', async () => {
+    const onEventBlocked = rs.fn()
+    const web = new Optimization({
+      ...config,
+      allowedEventTypes: ['identify', 'page', 'track'],
+      onEventBlocked,
+    })
+    const upsertProfile = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+
+    await web.track({ event: 'purchase' })
+
+    expect(upsertProfile).toHaveBeenCalledTimes(1)
+    expect(onEventBlocked).not.toHaveBeenCalled()
   })
 
   it('forwards onEventBlocked callback to core stateful guards', async () => {

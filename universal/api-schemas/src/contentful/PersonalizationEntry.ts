@@ -138,25 +138,6 @@ export const PersonalizationEntrySkeleton = z.object({
 export type PersonalizationEntrySkeleton = z.infer<typeof PersonalizationEntrySkeleton>
 
 /**
- * Type guard for {@link PersonalizationEntry}.
- *
- * @param entry - Contentful entry or link to test.
- * @returns `true` if the value conforms to {@link PersonalizationEntry}, otherwise `false`.
- *
- * @example
- * ```ts
- * if (isPersonalizationEntry(entry)) {
- *   console.log(entry.fields.nt_name);
- * }
- * ```
- *
- * @public
- */
-export function isPersonalizationEntry(entry: CtflEntry | Link): entry is PersonalizationEntry {
-  return PersonalizationEntry.safeParse(entry).success
-}
-
-/**
  * Zod schema describing an array of personalization entries or links.
  *
  * @remarks

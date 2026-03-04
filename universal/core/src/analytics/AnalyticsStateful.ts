@@ -1,14 +1,17 @@
+import type {
+  ComponentClickBuilderArgs,
+  ComponentHoverBuilderArgs,
+  ComponentViewBuilderArgs,
+} from '@contentful/optimization-api-client'
 import {
   InsightsEvent as AnalyticsEvent,
   parseWithFriendlyError,
   type BatchInsightsEventArray,
-  type ComponentClickBuilderArgs,
-  type ComponentViewBuilderArgs,
   type InsightsEventArray,
   type ExperienceEvent as PersonalizationEvent,
   type Profile,
-} from '@contentful/optimization-api-client'
-import { createScopedLogger } from 'logger'
+} from '@contentful/optimization-api-client/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { BlockedEvent } from '../BlockedEvent'
 import type { ConsentGuard } from '../Consent'
 import { guardedBy } from '../lib/decorators'
@@ -94,6 +97,7 @@ const ANALYTICS_METHOD_EVENT_TYPE_MAP: Readonly<Record<string, string>> = {
   trackComponentView: 'component',
   trackFlagView: 'component',
   trackComponentClick: 'component_click',
+  trackComponentHover: 'component_hover',
 }
 
 interface QueuedProfileEvents {
@@ -175,8 +179,9 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    * allowed event type configuration.
    *
    * @param name - The method name; component view/flag methods are normalized
-   * to `'component'` and component click methods are normalized to `'component_click'`
-   * for allow‑list checks.
+   * to `'component'`, component click methods are normalized to `'component_click'`,
+   * and component hover methods are normalized to `'component_hover'` for
+   * allow‑list checks.
    * @returns `true` if the operation is permitted; otherwise `false`.
    * @example
    * ```ts
@@ -239,6 +244,23 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
     logger.info(`Processing "component click" event for ${payload.componentId}`)
 
     await this.enqueueEvent(this.builder.buildComponentClick(payload))
+  }
+
+  /**
+   * Queue a component hover event for the active profile.
+   *
+   * @param payload - Component hover builder arguments.
+   * @returns A promise that resolves when the event has been queued.
+   * @example
+   * ```ts
+   * await analytics.trackComponentHover({ componentId: 'hero-banner' })
+   * ```
+   */
+  @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
+  async trackComponentHover(payload: ComponentHoverBuilderArgs): Promise<void> {
+    logger.info(`Processing "component hover" event for ${payload.componentId}`)
+
+    await this.enqueueEvent(this.builder.buildComponentHover(payload))
   }
 
   /**

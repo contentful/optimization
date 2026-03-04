@@ -1,14 +1,14 @@
-import {
-  ApiClient,
-  EventBuilder,
-  type ExperienceEventArray,
-  type OptimizationData,
-  type Profile,
-} from '@contentful/optimization-api-client'
+import { ApiClient, EventBuilder } from '@contentful/optimization-api-client'
+import type {
+  ChangeArray,
+  ExperienceEventArray,
+  OptimizationData,
+  Profile,
+} from '@contentful/optimization-api-client/api-schemas'
 import type { LifecycleInterceptors } from '../CoreBase'
 import { InterceptorManager } from '../lib/interceptor'
 import type { QueueFlushFailureContext, QueueFlushRecoveredContext } from '../lib/queue'
-import { batch, consent, online, profile } from '../signals'
+import { batch, changes as changesSignal, consent, online, profile } from '../signals'
 import PersonalizationStateful, {
   type PersonalizationOfflineQueueDropContext,
   type PersonalizationQueuePolicy,
@@ -382,5 +382,71 @@ describe('PersonalizationStateful offline queue policy', () => {
     expect(getOfflineQueue(personalization).size).toBe(0)
     expect(onFlushFailure).not.toHaveBeenCalled()
     expect(upsertProfile).toHaveBeenCalledTimes(1)
+  })
+})
+
+const CHANGES: ChangeArray = [
+  {
+    key: 'dark-mode',
+    type: 'Variable',
+    value: true,
+    meta: {
+      experienceId: 'experience-id',
+      variantIndex: 0,
+    },
+  },
+  {
+    key: 'config',
+    type: 'Variable',
+    value: {
+      value: {
+        amount: 10,
+        currency: 'USD',
+      },
+    },
+    meta: {
+      experienceId: 'experience-id',
+      variantIndex: 1,
+    },
+  },
+]
+
+describe('PersonalizationStateful custom flags', () => {
+  beforeEach(() => {
+    batch(() => {
+      changesSignal.value = undefined
+    })
+  })
+
+  afterEach(() => {
+    rs.restoreAllMocks()
+  })
+
+  it('resolves all custom flags from provided changes', () => {
+    const personalization = createPersonalization()
+
+    expect(personalization.getCustomFlags(CHANGES)).toEqual({
+      'dark-mode': true,
+      config: {
+        amount: 10,
+        currency: 'USD',
+      },
+    })
+  })
+
+  it('uses signal changes by default when resolving all custom flags', () => {
+    const personalization = createPersonalization()
+
+    batch(() => {
+      changesSignal.value = CHANGES
+    })
+
+    expect(personalization.getCustomFlags()).toEqual({
+      'dark-mode': true,
+      config: {
+        amount: 10,
+        currency: 'USD',
+      },
+    })
   })
 })

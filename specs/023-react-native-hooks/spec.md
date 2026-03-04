@@ -104,7 +104,7 @@ manual tracking so I can align screen events with lifecycle/data loading constra
   timer.
 - **FR-011**: On transition from visible to below-threshold, hook MUST cancel pending dwell timer.
 - **FR-012**: When dwell timer completes and element remains visible, hook MUST call
-  `optimization.analytics.trackComponentView` with derived metadata.
+  `optimization.trackComponentView` with derived metadata.
 - **FR-013**: `useViewportTracking` MUST re-check visibility whenever scroll position or viewport
   height changes.
 - **FR-014**: `useViewportTracking` MUST clear active timers on unmount.

@@ -1,10 +1,9 @@
+import type { ApiClient, EventBuilder } from '@contentful/optimization-api-client'
 import type {
   InsightsEventType as AnalyticsEventType,
-  ApiClient,
-  EventBuilder,
   ExperienceEventType as PersonalizationEventType,
-} from '@contentful/optimization-api-client'
-import { createScopedLogger } from 'logger'
+} from '@contentful/optimization-api-client/api-schemas'
+import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { BlockedEvent, BlockedEventProduct, BlockedEventReason } from './BlockedEvent'
 import type { LifecycleInterceptors } from './CoreBase'
 import { blockedEvent } from './signals'

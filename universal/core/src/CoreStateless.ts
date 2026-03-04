@@ -34,9 +34,9 @@ export interface CoreStatelessConfig extends CoreConfig {
  */
 class CoreStateless extends CoreBase {
   /** Stateless analytics product. */
-  readonly analytics: AnalyticsStateless
+  protected _analytics: AnalyticsStateless
   /** Stateless personalization product. */
-  readonly personalization: PersonalizationStateless
+  protected _personalization: PersonalizationStateless
 
   /**
    * Create a stateless core. Product instances share the same API client and
@@ -46,21 +46,19 @@ class CoreStateless extends CoreBase {
    * @example
    * ```ts
    * const sdk = new CoreStateless({ clientId: 'app', environment: 'prod' })
-   * core.analytics.trackFlagView({ componentId: 'hero' })
-   * // or
    * core.trackFlagView({ componentId: 'hero' })
    * ```
    */
   constructor(config: CoreStatelessConfig) {
     super(config)
 
-    this.analytics = new AnalyticsStateless({
+    this._analytics = new AnalyticsStateless({
       api: this.api,
       builder: this.eventBuilder,
       interceptors: this.interceptors,
     })
 
-    this.personalization = new PersonalizationStateless({
+    this._personalization = new PersonalizationStateless({
       api: this.api,
       builder: this.eventBuilder,
       interceptors: this.interceptors,

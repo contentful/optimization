@@ -1,16 +1,19 @@
 import type {
-  ChangeArray,
   ComponentViewBuilderArgs,
   IdentifyBuilderArgs,
+  PageViewBuilderArgs,
+  ScreenViewBuilderArgs,
+  TrackBuilderArgs,
+} from '@contentful/optimization-api-client'
+import type {
+  ChangeArray,
+  Flags,
   Json,
   MergeTagEntry,
   OptimizationData,
-  PageViewBuilderArgs,
   Profile,
-  ScreenViewBuilderArgs,
   SelectedPersonalizationArray,
-  TrackBuilderArgs,
-} from '@contentful/optimization-api-client'
+} from '@contentful/optimization-api-client/api-schemas'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import ProductBase from '../ProductBase'
 import {
@@ -28,7 +31,7 @@ import {
  * This interface exists to document that the included methods should not be
  * considered static.
  */
-interface ResolverMethods {
+export interface ResolverMethods {
   /**
    * Get the specified Custom Flag's value from the supplied changes.
    * @param name - The name or key of the Custom Flag.
@@ -39,6 +42,16 @@ interface ResolverMethods {
    * personalization event.
    * */
   getCustomFlag: (name: string, changes?: ChangeArray) => Json
+
+  /**
+   * Get all resolved Custom Flags from the supplied changes.
+   * @param changes - Optional changes array.
+   * @returns The resolved Custom Flag map.
+   * @remarks
+   * The changes array can be sourced from the data returned when emitting any
+   * personalization event.
+   * */
+  getCustomFlags: (changes?: ChangeArray) => Flags
 
   /**
    * Resolve a Contentful entry to a personalized variant using the current
@@ -69,7 +82,10 @@ interface ResolverMethods {
    * Merge tags are references to profile data that can be substituted into content. The
    * profile can be sourced from the data returned when emitting any personalization event.
    */
-  getMergeTagValue: (embeddedEntryNodeTarget: MergeTagEntry, profile?: Profile) => unknown
+  getMergeTagValue: (
+    embeddedEntryNodeTarget: MergeTagEntry,
+    profile?: Profile,
+  ) => string | undefined
 }
 
 /**
@@ -114,7 +130,19 @@ abstract class PersonalizationBase extends ProductBase implements ResolverMethod
    * personalization event.
    * */
   getCustomFlag(name: string, changes?: ChangeArray): Json {
-    return FlagsResolver.resolve(changes)[name]
+    return this.getCustomFlags(changes)[name]
+  }
+
+  /**
+   * Get all resolved Custom Flags from the supplied changes.
+   * @param changes - Optional changes array.
+   * @returns The resolved Custom Flag map.
+   * @remarks
+   * The changes array can be sourced from the data returned when emitting any
+   * personalization event.
+   * */
+  getCustomFlags(changes?: ChangeArray): Flags {
+    return FlagsResolver.resolve(changes)
   }
 
   /**
@@ -149,7 +177,7 @@ abstract class PersonalizationBase extends ProductBase implements ResolverMethod
    * Merge tags are references to profile data that can be substituted into content. The
    * profile can be sourced from the data returned when emitting any personalization event.
    */
-  getMergeTagValue(embeddedEntryNodeTarget: MergeTagEntry, profile?: Profile): unknown {
+  getMergeTagValue(embeddedEntryNodeTarget: MergeTagEntry, profile?: Profile): string | undefined {
     return MergeTagValueResolver.resolve(embeddedEntryNodeTarget, profile)
   }
 

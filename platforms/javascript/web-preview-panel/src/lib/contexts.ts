@@ -1,4 +1,5 @@
-import type { Profile, SignalFns, Signals } from '@contentful/optimization-web'
+import type { Profile } from '@contentful/optimization-web/api-schemas'
+import type { SignalFns, Signals } from '@contentful/optimization-web/core-sdk'
 import { type Context, createContext } from '@lit/context'
 
 /**

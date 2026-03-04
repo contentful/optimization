@@ -1,5 +1,5 @@
-import { createScopedLogger } from 'logger'
 import Fetch, { type FetchMethod, type ProtectedFetchMethodOptions } from './fetch'
+import { createScopedLogger } from './logger'
 
 const logger = createScopedLogger('ApiClient')
 

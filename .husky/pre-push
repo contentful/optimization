@@ -19,6 +19,9 @@ fi
 # List workspaces (relative paths)
 workspaces=$(pnpm ls -r --depth -1 --json | jq -r ".[].path" | sed "s|^$REPO_ROOT/||")
 
+# List implementations (relative names under implementations/)
+implementations=$(find implementations -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
+
 # Get changed files in this push
 changed_files=$(git diff --name-only $range)
 
@@ -30,24 +33,54 @@ for workspace in $workspaces; do
   fi
 done
 
-if [ ${#changed_workspaces[@]} -eq 0 ]; then
-  echo "No changed workspaces detected for type checking."
+# Find changed implementations with tsconfig.json
+changed_implementations=()
+for implementation in $implementations; do
+  implementation_path="implementations/$implementation"
+  if echo "$changed_files" | grep -q "^$implementation_path/"; then
+    [ -f "$implementation_path/tsconfig.json" ] && changed_implementations+=("$implementation")
+  fi
+done
+
+if [ ${#changed_workspaces[@]} -eq 0 ] && [ ${#changed_implementations[@]} -eq 0 ]; then
+  echo "No changed workspaces or implementations detected for checks."
   exit 0
 fi
 
-echo "Type-checking and unit testing changed workspaces:"
-for workspace in "${changed_workspaces[@]}"; do
-  echo "  - $workspace"
-done
+if [ ${#changed_workspaces[@]} -gt 0 ]; then
+  echo "Type-checking and unit testing changed workspaces:"
+  for workspace in "${changed_workspaces[@]}"; do
+    echo "  - $workspace"
+  done
 
-for workspace in "${changed_workspaces[@]}"; do
-  pnpm --filter "./$workspace" exec tsc --noEmit
-done
+  for workspace in "${changed_workspaces[@]}"; do
+    pnpm --filter "./$workspace" exec tsc --noEmit
+  done
 
-echo "✔ Type checking complete."
+  echo "✔ Workspace type checking complete."
 
-for workspace in "${changed_workspaces[@]}"; do
-  pnpm --filter "./$workspace" test:unit
-done
+  for workspace in "${changed_workspaces[@]}"; do
+    pnpm --filter "./$workspace" test:unit
+  done
 
-echo "✔ Unit testing complete."
+  echo "✔ Workspace unit testing complete."
+fi
+
+if [ ${#changed_implementations[@]} -gt 0 ]; then
+  echo "Type-checking and unit testing changed implementations:"
+  for implementation in "${changed_implementations[@]}"; do
+    echo "  - implementations/$implementation"
+  done
+
+  for implementation in "${changed_implementations[@]}"; do
+    pnpm run implementation:run -- "$implementation" typecheck
+  done
+
+  echo "✔ Implementation type checking complete."
+
+  for implementation in "${changed_implementations[@]}"; do
+    pnpm run implementation:run -- "$implementation" test:unit
+  done
+
+  echo "✔ Implementation unit testing complete."
+fi

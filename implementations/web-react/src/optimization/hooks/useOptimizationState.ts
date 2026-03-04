@@ -1,4 +1,4 @@
-import type { CoreStates } from '@contentful/optimization-web'
+import type { CoreStates } from '@contentful/optimization-web/core-sdk'
 import { useEffect, useState } from 'react'
 
 interface Subscription {

@@ -1,9 +1,10 @@
-import * as clickDetectorModule from './click/createEntryClickDetector'
 import type { EntryInteractionDetector } from './EntryInteractionDetector'
 import { EntryInteractionRuntime } from './EntryInteractionRuntime'
+import * as clickDetectorModule from './events/click/createEntryClickDetector'
+import * as hoverDetectorModule from './events/hover/createEntryHoverDetector'
+import * as viewDetectorModule from './events/view/createEntryViewDetector'
 import ElementExistenceObserver from './registry/ElementExistenceObserver'
 import { EntryElementRegistry } from './registry/EntryElementRegistry'
-import * as viewDetectorModule from './view/createEntryViewDetector'
 
 interface DetectorMocks<
   TStartOptions = never,
@@ -35,9 +36,21 @@ const createDetectorMocks = <TStartOptions, TElementOptions>(): DetectorMocks<
   clearElement: rs.fn(),
 })
 
-function createRuntime(autoTrack?: { clicks?: boolean; views?: boolean }): {
+function createRuntime(autoTrack?: { clicks?: boolean; hovers?: boolean; views?: boolean }): {
   runtime: EntryInteractionRuntime
   clickDetector: DetectorMocks<undefined, { data?: unknown }>
+  hoverDetector: DetectorMocks<
+    | {
+        dwellTimeMs?: number
+        hoverDurationUpdateIntervalMs?: number
+      }
+    | undefined,
+    {
+      data?: unknown
+      dwellTimeMs?: number
+      hoverDurationUpdateIntervalMs?: number
+    }
+  >
   viewDetector: DetectorMocks<
     | {
         dwellTimeMs?: number
@@ -54,9 +67,18 @@ function createRuntime(autoTrack?: { clicks?: boolean; views?: boolean }): {
 } {
   const core = {
     trackComponentClick: rs.fn().mockResolvedValue(undefined),
+    trackComponentHover: rs.fn().mockResolvedValue(undefined),
     trackComponentView: rs.fn().mockResolvedValue(undefined),
   }
   const clickDetector = createDetectorMocks<undefined, { data?: unknown }>()
+  const hoverDetector = createDetectorMocks<
+    | {
+        dwellTimeMs?: number
+        hoverDurationUpdateIntervalMs?: number
+      }
+    | undefined,
+    { data?: unknown; dwellTimeMs?: number; hoverDurationUpdateIntervalMs?: number }
+  >()
   const viewDetector = createDetectorMocks<
     | {
         dwellTimeMs?: number
@@ -68,26 +90,33 @@ function createRuntime(autoTrack?: { clicks?: boolean; views?: boolean }): {
   >()
 
   rs.spyOn(clickDetectorModule, 'createEntryClickDetector').mockReturnValue(clickDetector)
+  rs.spyOn(hoverDetectorModule, 'createEntryHoverDetector').mockReturnValue(hoverDetector)
   rs.spyOn(viewDetectorModule, 'createEntryViewDetector').mockReturnValue(viewDetector)
 
   return {
     runtime: new EntryInteractionRuntime(core, autoTrack),
     clickDetector,
+    hoverDetector,
     viewDetector,
   }
 }
 
 describe('EntryInteractionRuntime', () => {
-  const isAutoTrackState = (value: unknown): value is Record<'clicks' | 'views', boolean> => {
+  const isAutoTrackState = (
+    value: unknown,
+  ): value is Record<'clicks' | 'hovers' | 'views', boolean> => {
     if (!value || typeof value !== 'object') return false
 
     const clicks = Reflect.get(value, 'clicks')
+    const hovers = Reflect.get(value, 'hovers')
     const views = Reflect.get(value, 'views')
 
-    return typeof clicks === 'boolean' && typeof views === 'boolean'
+    return typeof clicks === 'boolean' && typeof hovers === 'boolean' && typeof views === 'boolean'
   }
 
-  const getAutoTrack = (runtime: EntryInteractionRuntime): Record<'clicks' | 'views', boolean> => {
+  const getAutoTrack = (
+    runtime: EntryInteractionRuntime,
+  ): Record<'clicks' | 'hovers' | 'views', boolean> => {
     const value = Reflect.get(runtime, 'autoTrack')
 
     if (!isAutoTrackState(value)) {
@@ -102,16 +131,26 @@ describe('EntryInteractionRuntime', () => {
   })
 
   it('enables interactions through tracking API and forwards start options', () => {
-    const { clickDetector, runtime, viewDetector } = createRuntime()
+    const { clickDetector, hoverDetector, runtime, viewDetector } = createRuntime()
 
     runtime.tracking.enable('clicks')
     runtime.tracking.enable('views', { dwellTimeMs: 250, minVisibleRatio: 0.25 })
+    runtime.tracking.enable('hovers', {
+      dwellTimeMs: 100,
+      hoverDurationUpdateIntervalMs: 2000,
+    })
 
     expect(getAutoTrack(runtime).clicks).toBe(true)
+    expect(getAutoTrack(runtime).hovers).toBe(true)
     expect(getAutoTrack(runtime).views).toBe(true)
     expect(clickDetector.setAuto).toHaveBeenCalledWith(true)
+    expect(hoverDetector.setAuto).toHaveBeenCalledWith(true)
     expect(viewDetector.setAuto).toHaveBeenCalledWith(true)
     expect(clickDetector.start).toHaveBeenCalledWith()
+    expect(hoverDetector.start).toHaveBeenCalledWith({
+      dwellTimeMs: 100,
+      hoverDurationUpdateIntervalMs: 2000,
+    })
     expect(viewDetector.start).toHaveBeenCalledWith({
       dwellTimeMs: 250,
       minVisibleRatio: 0.25,
@@ -169,26 +208,38 @@ describe('EntryInteractionRuntime', () => {
   })
 
   it('syncs auto-tracked interactions with consent state', () => {
-    const { clickDetector, runtime, viewDetector } = createRuntime({ clicks: true, views: true })
+    const { clickDetector, hoverDetector, runtime, viewDetector } = createRuntime({
+      clicks: true,
+      hovers: true,
+      views: true,
+    })
 
     runtime.syncAutoTrackedEntryInteractions(true)
     expect(clickDetector.start).toHaveBeenCalledTimes(1)
+    expect(hoverDetector.start).toHaveBeenCalledTimes(1)
     expect(viewDetector.start).toHaveBeenCalledTimes(1)
 
     runtime.syncAutoTrackedEntryInteractions(false)
     expect(clickDetector.stop).toHaveBeenCalledTimes(1)
+    expect(hoverDetector.stop).toHaveBeenCalledTimes(1)
     expect(viewDetector.stop).toHaveBeenCalledTimes(1)
   })
 
   it('does not start or stop interactions when auto-tracking is disabled', () => {
-    const { clickDetector, runtime, viewDetector } = createRuntime({ clicks: false, views: false })
+    const { clickDetector, hoverDetector, runtime, viewDetector } = createRuntime({
+      clicks: false,
+      hovers: false,
+      views: false,
+    })
 
     runtime.syncAutoTrackedEntryInteractions(true)
     runtime.syncAutoTrackedEntryInteractions(false)
 
     expect(clickDetector.start).not.toHaveBeenCalled()
+    expect(hoverDetector.start).not.toHaveBeenCalled()
     expect(viewDetector.start).not.toHaveBeenCalled()
     expect(clickDetector.stop).not.toHaveBeenCalled()
+    expect(hoverDetector.stop).not.toHaveBeenCalled()
     expect(viewDetector.stop).not.toHaveBeenCalled()
   })
 
@@ -204,7 +255,7 @@ describe('EntryInteractionRuntime', () => {
   })
 
   it('reset stops all interaction trackers and clears element overrides', () => {
-    const { clickDetector, runtime, viewDetector } = createRuntime({ clicks: false })
+    const { clickDetector, hoverDetector, runtime, viewDetector } = createRuntime({ clicks: false })
     const element = document.createElement('div')
 
     runtime.tracking.enableElement('clicks', element, { data: { entryId: 'entry-reset' } })
@@ -212,12 +263,13 @@ describe('EntryInteractionRuntime', () => {
     runtime.tracking.clearElement('clicks', element)
 
     expect(clickDetector.stop).toHaveBeenCalledTimes(1)
+    expect(hoverDetector.stop).toHaveBeenCalledTimes(1)
     expect(viewDetector.stop).toHaveBeenCalledTimes(1)
     expect(clickDetector.clearElement).not.toHaveBeenCalled()
   })
 
   it('destroy stops trackers and disconnects shared registry and observer', () => {
-    const { clickDetector, runtime, viewDetector } = createRuntime()
+    const { clickDetector, hoverDetector, runtime, viewDetector } = createRuntime()
     const registryDisconnectSpy = rs
       .spyOn(EntryElementRegistry.prototype, 'disconnect')
       .mockImplementation(() => undefined)
@@ -228,6 +280,7 @@ describe('EntryInteractionRuntime', () => {
     runtime.destroy()
 
     expect(clickDetector.stop).toHaveBeenCalledTimes(1)
+    expect(hoverDetector.stop).toHaveBeenCalledTimes(1)
     expect(viewDetector.stop).toHaveBeenCalledTimes(1)
     expect(registryDisconnectSpy).toHaveBeenCalledTimes(1)
     expect(observerDisconnectSpy).toHaveBeenCalledTimes(1)

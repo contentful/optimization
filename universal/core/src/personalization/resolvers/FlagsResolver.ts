@@ -1,4 +1,4 @@
-import type { ChangeArray, Flags } from '@contentful/optimization-api-client'
+import type { ChangeArray, Flags } from '@contentful/optimization-api-client/api-schemas'
 
 /**
  * Resolves a {@link Flags} map from a list of optimization changes.

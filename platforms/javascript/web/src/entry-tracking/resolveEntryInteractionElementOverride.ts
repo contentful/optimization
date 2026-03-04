@@ -15,7 +15,12 @@ export function resolveEntryInteractionElementOverride(
 ): boolean | undefined {
   if (!isEntryElement(element)) return undefined
 
-  return parseBooleanOverride(
-    interaction === 'clicks' ? element.dataset.ctflTrackClicks : element.dataset.ctflTrackViews,
-  )
+  const datasetValue =
+    interaction === 'clicks'
+      ? element.dataset.ctflTrackClicks
+      : interaction === 'views'
+        ? element.dataset.ctflTrackViews
+        : element.dataset.ctflTrackHovers
+
+  return parseBooleanOverride(datasetValue)
 }

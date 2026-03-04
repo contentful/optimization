@@ -1,9 +1,8 @@
 import {
   ChangeArray,
-  createScopedLogger,
   Profile,
   SelectedPersonalizationArray,
-} from '@contentful/optimization-core'
+} from '@contentful/optimization-core/api-schemas'
 import {
   ANONYMOUS_ID_KEY,
   CHANGES_CACHE_KEY,
@@ -12,6 +11,7 @@ import {
   PERSONALIZATIONS_CACHE_KEY,
   PROFILE_CACHE_KEY,
 } from '@contentful/optimization-core/constants'
+import { createScopedLogger } from '@contentful/optimization-core/logger'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { z } from 'zod/mini'
 

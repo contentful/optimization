@@ -21,7 +21,7 @@ describe('createOnlineChangeListener', () => {
     rs.clearAllMocks()
     rs.resetModules()
 
-    rs.doMock('@contentful/optimization-core', () => createLoggerMock(mockLogger))
+    rs.doMock('@contentful/optimization-core/logger', () => createLoggerMock(mockLogger))
   })
 
   describe('when NetInfo is not installed', () => {

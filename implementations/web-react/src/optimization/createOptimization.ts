@@ -44,7 +44,7 @@ function createOptimizationConfig(): OptimizationConfig {
     clientId: OPTIMIZATION_CLIENT_ID,
     environment: OPTIMIZATION_ENVIRONMENT,
     logLevel: resolveLogLevel(),
-    autoTrackEntryInteraction: { views: true },
+    autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
     app: {
       name: 'Optimization SDK - React Web Reference',
       version: '0.1.0',
