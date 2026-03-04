@@ -5,6 +5,7 @@ import {
   signals,
 } from '@contentful/optimization-core'
 import { merge } from 'es-toolkit'
+import Optimization from '.'
 import {
   OPTIMIZATION_REACT_NATIVE_SDK_NAME,
   OPTIMIZATION_REACT_NATIVE_SDK_VERSION,
@@ -76,7 +77,7 @@ let activeOptimizationInstance: Optimization | undefined = undefined
  * ```ts
  * import Optimization from '@contentful/optimization-react-native'
  *
- * const optimization = await Optimization.create({
+ * const optimization = await OptimizationReactNativeSdk.create({
  *   clientId: 'your-client-id',
  *   environment: 'main',
  * })
@@ -86,7 +87,7 @@ let activeOptimizationInstance: Optimization | undefined = undefined
  *
  * @public
  */
-class Optimization extends CoreStateful {
+class OptimizationReactNativeSdk extends CoreStateful {
   private readonly cleanupOnlineListener: () => void
 
   private readonly cleanupAppStateListener: () => void
@@ -147,7 +148,7 @@ class Optimization extends CoreStateful {
    *
    * @example
    * ```ts
-   * const optimization = await Optimization.create({
+   * const optimization = await OptimizationReactNativeSdk.create({
    *   clientId: 'your-client-id',
    *   environment: 'main',
    * })
@@ -195,4 +196,4 @@ class Optimization extends CoreStateful {
   }
 }
 
-export default Optimization
+export default OptimizationReactNativeSdk

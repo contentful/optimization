@@ -13,7 +13,7 @@ import './images'
 import './polyfills/crypto'
 
 import type { CoreStatefulConfig } from '@contentful/optimization-core'
-import Optimization from './Optimization'
+import Optimization from './OptimizationReactNativeSdk'
 
 /**
  * SDK initialization config passed as props to {@link OptimizationProvider} and {@link OptimizationRoot}.
@@ -29,7 +29,7 @@ export type { OptimizationProviderProps } from './components/OptimizationProvide
 export { OptimizationRoot } from './components/OptimizationRoot'
 export type {
   OptimizationReactNativeConfig,
-  PreviewPanelConfig
+  PreviewPanelConfig,
 } from './components/OptimizationRoot'
 
 export { Personalization } from './components/Personalization'
@@ -47,7 +47,7 @@ export { useOptimization } from './context/OptimizationContext'
 export { useViewportTracking } from './hooks/useViewportTracking'
 export type {
   UseViewportTrackingOptions,
-  UseViewportTrackingReturn
+  UseViewportTrackingReturn,
 } from './hooks/useViewportTracking'
 
 // Export screen tracking hooks

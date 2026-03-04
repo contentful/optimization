@@ -1,8 +1,8 @@
 import { createScopedLogger } from '@contentful/optimization-core/logger'
 import React, { useEffect, useRef, useState, type ReactNode } from 'react'
-import Optimization from '../Optimization'
-import type { OptimizationConfig } from '../'
+import type { OptimizationConfig } from '..'
 import OptimizationContext from '../context/OptimizationContext'
+import OptimizationReactNativeSdk from '../OptimizationReactNativeSdk'
 
 const logger = createScopedLogger('RN:Provider')
 
@@ -52,13 +52,13 @@ export function OptimizationProvider({
   ...config
 }: OptimizationProviderProps): React.JSX.Element | null {
   const configRef = useRef<OptimizationConfig>(config)
-  const [instance, setInstance] = useState<Optimization | null>(null)
+  const [instance, setInstance] = useState<OptimizationReactNativeSdk | null>(null)
   const [initError, setInitError] = useState<Error | null>(null)
 
   useEffect(() => {
     let destroyed = false
 
-    void Optimization.create(configRef.current)
+    void OptimizationReactNativeSdk.create(configRef.current)
       .then((sdk) => {
         if (destroyed) {
           sdk.destroy()

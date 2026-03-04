@@ -1,11 +1,11 @@
 import { createContext, useContext } from 'react'
-import type Optimization from '../Optimization'
+import type OptimizationReactNativeSdk from '../OptimizationReactNativeSdk'
 
 /**
  * @internal
  */
 interface OptimizationContextValue {
-  instance: Optimization | null
+  instance: OptimizationReactNativeSdk | null
   isReady: boolean
   initError: Error | null
 }
@@ -43,7 +43,7 @@ const OptimizationContext = createContext<OptimizationContextValue | null>(null)
  *
  * @public
  */
-export function useOptimization(): Optimization {
+export function useOptimization(): OptimizationReactNativeSdk {
   const context = useContext(OptimizationContext)
 
   if (!context) {

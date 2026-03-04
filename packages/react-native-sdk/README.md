@@ -350,7 +350,7 @@ const contentfulClient = createClient({
   accessToken: 'your-access-token',
 })
 
-const optimization = await Optimization.create({
+const optimization = await OptimizationReactNativeSdk.create({
   clientId: 'your-client-id',
   environment: 'your-environment',
 })
