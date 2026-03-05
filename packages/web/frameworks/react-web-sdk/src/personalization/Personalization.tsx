@@ -1,8 +1,8 @@
 import type {
   SelectedPersonalization,
   SelectedPersonalizationArray,
-} from '@contentful/optimization-api-schemas'
-import type { ResolvedData } from '@contentful/optimization-core'
+} from '@contentful/optimization-web/api-schemas'
+import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { useEffect, useMemo, useState, type CSSProperties, type JSX, type ReactNode } from 'react'
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
