@@ -1,42 +1,9 @@
 import type { CoreStatefulConfig } from '@contentful/optimization-core'
 import React, { type ReactNode } from 'react'
 import { LiveUpdatesProvider } from '../context/LiveUpdatesContext'
+import type { PreviewPanelConfig } from '../preview'
 import { PreviewPanelOverlay } from '../preview/components/PreviewPanelOverlay'
-import type { ContentfulClient } from '../preview/types'
 import { OptimizationProvider } from './OptimizationProvider'
-
-/**
- * Configuration options for the preview panel feature.
- *
- * @public
- */
-export interface PreviewPanelConfig {
-  /**
-   * Whether the preview panel is enabled.
-   * When `true`, a floating action button appears that opens the preview panel.
-   */
-  enabled: boolean
-
-  /**
-   * Contentful client instance used to fetch `nt_audience` and `nt_experience` entries.
-   */
-  contentfulClient: ContentfulClient
-
-  /**
-   * Optional positioning overrides for the floating action button.
-   */
-  fabPosition?: { bottom?: number; right?: number }
-
-  /**
-   * Called when the panel visibility changes.
-   */
-  onVisibilityChange?: (isVisible: boolean) => void
-
-  /**
-   * Whether to show the header with title in the preview panel.
-   */
-  showHeader?: boolean
-}
 
 /**
  * Props for the {@link OptimizationRoot} component.

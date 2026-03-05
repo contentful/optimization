@@ -26,7 +26,7 @@ export type OptimizationConfig = CoreStatefulConfig
 export { OptimizationProvider } from './components/OptimizationProvider'
 export type { OptimizationProviderProps } from './components/OptimizationProvider'
 export { OptimizationRoot } from './components/OptimizationRoot'
-export type { OptimizationRootProps, PreviewPanelConfig } from './components/OptimizationRoot'
+export type { OptimizationRootProps } from './components/OptimizationRoot'
 
 export { Personalization } from './components/Personalization'
 export type { PersonalizationProps } from './components/Personalization'
@@ -55,6 +55,11 @@ export type { OptimizationNavigationContainerProps } from './components/Optimiza
 
 export { PreviewPanel as OptimizationPreviewPanel } from './preview/components/PreviewPanel'
 export { PreviewPanelOverlay } from './preview/components/PreviewPanelOverlay'
-export type { ContentfulClient, PreviewPanelOverlayProps, PreviewPanelProps } from './preview/types'
+export type {
+  ContentfulClient,
+  PreviewPanelConfig,
+  PreviewPanelOverlayProps,
+  PreviewPanelProps,
+} from './preview/types'
 
 export { default as OptimizationReactNativeSdk } from './OptimizationReactNativeSdk'
