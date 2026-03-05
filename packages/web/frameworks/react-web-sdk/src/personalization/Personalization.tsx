@@ -4,14 +4,7 @@ import type {
 } from '@contentful/optimization-api-schemas'
 import type { ResolvedData } from '@contentful/optimization-core'
 import type { Entry, EntrySkeletonType } from 'contentful'
-import {
-  useEffect,
-  useMemo,
-  useState,
-  type CSSProperties,
-  type JSX,
-  type ReactNode,
-} from 'react'
+import { useEffect, useMemo, useState, type CSSProperties, type JSX, type ReactNode } from 'react'
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
 import { useOptimization } from '../hooks/useOptimization'
 
@@ -84,9 +77,7 @@ function resolveDuplicationScope(
   personalization: SelectedPersonalization | undefined,
 ): string | undefined {
   const candidate =
-    personalization &&
-    typeof personalization === 'object' &&
-    'duplicationScope' in personalization
+    personalization && typeof personalization === 'object' && 'duplicationScope' in personalization
       ? personalization.duplicationScope
       : undefined
   if (typeof candidate !== 'string') return undefined
@@ -112,9 +103,12 @@ function resolveTrackingAttributes(
     'data-ctfl-duplication-scope': resolveDuplicationScope(personalization),
     'data-ctfl-entry-id': resolvedData.entry.sys.id,
     'data-ctfl-personalization-id': personalization?.experienceId,
-    'data-ctfl-sticky': personalization?.sticky === undefined ? undefined : String(personalization.sticky),
+    'data-ctfl-sticky':
+      personalization?.sticky === undefined ? undefined : String(personalization.sticky),
     'data-ctfl-variant-index':
-      personalization?.variantIndex === undefined ? undefined : String(personalization.variantIndex),
+      personalization?.variantIndex === undefined
+        ? undefined
+        : String(personalization.variantIndex),
   }
 }
 
@@ -146,17 +140,26 @@ export function Personalization({
     const subscription = optimization.states.personalizations.subscribe((p) => {
       if (p !== undefined) setHasResolvedPersonalizationState(true)
 
-      if (shouldLiveUpdate) {
-        setLockedPersonalizations(p)
-      } else if (lockedPersonalizations === undefined && p !== undefined) {
-        setLockedPersonalizations(p)
-      }
+      setLockedPersonalizations((previous) => {
+        if (shouldLiveUpdate) {
+          // Live updates enabled - always update state
+          return p
+        }
+
+        if (previous === undefined && p !== undefined) {
+          // First non-undefined value - lock it
+          return p
+        }
+
+        // Otherwise ignore updates (we're locked to the initial value)
+        return previous
+      })
     })
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [optimization, shouldLiveUpdate, lockedPersonalizations])
+  }, [optimization, shouldLiveUpdate])
 
   const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
     () => optimization.personalizeEntry(baselineEntry, lockedPersonalizations),

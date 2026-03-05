@@ -101,7 +101,6 @@ Available config props:
 
 ```tsx
 import { Personalization } from '@contentful/optimization-react-web'
-
 ;<Personalization baselineEntry={baselineEntry}>
   {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
 </Personalization>
