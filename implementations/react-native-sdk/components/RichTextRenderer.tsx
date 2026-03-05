@@ -1,12 +1,12 @@
 import React from 'react'
 import { Text } from 'react-native'
 
-import { createScopedLogger, type ScopedLogger } from '@contentful/optimization-core/logger'
 import type { OptimizationReactNativeSdk } from '@contentful/optimization-react-native'
 import {
   isMergeTagEntry,
   type MergeTagEntry,
 } from '@contentful/optimization-react-native/api-schemas'
+import { createScopedLogger, type ScopedLogger } from '@contentful/optimization-react-native/logger'
 import type { Entry } from 'contentful'
 
 const logger: ScopedLogger = createScopedLogger('Demo:RichText')
