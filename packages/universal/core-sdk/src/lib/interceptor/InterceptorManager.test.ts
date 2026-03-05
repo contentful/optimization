@@ -55,6 +55,64 @@ describe('InterceptorManager', () => {
     expect(result).toBe(baseEvent)
   })
 
+  it('passes deep-cloned input to interceptors so caller references are not mutated', async () => {
+    manager.add((evt: Readonly<Event>): Event => {
+      const mutable = evt as Event
+      mutable.payload.feature = 'mutated'
+      mutable.timestamp = '2025-09-01T00:00:00.000Z'
+      return mutable
+    })
+
+    const input: Event = {
+      type: 'track',
+      payload: { feature: 'search' },
+    }
+
+    const output = await manager.run(input)
+
+    expect(input).toEqual({
+      type: 'track',
+      payload: { feature: 'search' },
+    })
+    expect(output).toEqual({
+      type: 'track',
+      timestamp: '2025-09-01T00:00:00.000Z',
+      payload: { feature: 'mutated' },
+    })
+  })
+
+  it('passes a deep clone to each interceptor step', async () => {
+    let firstReturnReference: Event | undefined
+
+    manager.add((evt: Readonly<Event>): Event => {
+      const mutable = evt as Event
+      mutable.payload.fromFirst = true
+      firstReturnReference = mutable
+      return mutable
+    })
+
+    const second = rs.fn((evt: Readonly<Event>): Event => {
+      expect(evt).not.toBe(firstReturnReference)
+      expect(evt.payload).not.toBe(firstReturnReference?.payload)
+      return evt
+    })
+
+    manager.add(second)
+
+    const input: Event = {
+      type: 'identify',
+      payload: { feature: 'search' },
+    }
+
+    const output = await manager.run(input)
+
+    expect(second).toHaveBeenCalledTimes(1)
+    expect(output).toEqual({
+      type: 'identify',
+      payload: { feature: 'search', fromFirst: true },
+    })
+  })
+
   it('executes interceptors in insertion order (sync + async) and pipes transformed values', async () => {
     const addTimestamp = rs.fn(
       (evt: Readonly<Event>): Event => ({

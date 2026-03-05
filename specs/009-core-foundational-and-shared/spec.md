@@ -4,7 +4,7 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-02).
+2026-03-05).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -68,7 +68,8 @@ and signal behavior under both success and failure callbacks.
 **Acceptance Scenarios**:
 
 1. **Given** registered interceptors, **When** `run` is invoked, **Then** interceptors execute in
-   insertion order and return a transformed value.
+   insertion order, each interceptor receives a deep-cloned payload snapshot, and a transformed
+   value is returned.
 2. **Given** a blocked call and a throwing `onEventBlocked` callback, **When** blocked event
    reporting runs, **Then** callback errors are swallowed and blocked event signal still updates.
 3. **Given** package root imports, **When** consumers import from `@contentful/optimization-core`,
@@ -84,6 +85,8 @@ and signal behavior under both success and failure callbacks.
 - `trackComponentView` routing is sticky-aware and does not automatically dual-send on sticky calls.
 - `InterceptorManager.run` must snapshot registered interceptors so in-flight add/remove does not
   alter current execution order.
+- `InterceptorManager.run` must deep-clone values before each interceptor invocation so caller-held
+  input references and prior-step references are mutation-isolated.
 - `guardedBy` must preserve async method shape by returning `Promise<undefined>` for blocked async
   calls.
 
@@ -124,6 +127,8 @@ and signal behavior under both success and failure callbacks.
   decorators, interceptors, signals utilities, API client/schema contracts, and logger exports.
 - **FR-018**: Package build output MUST include ESM (`.mjs`), CJS (`.cjs`), and dual declaration
   artifacts (`.d.mts`/`.d.cts`).
+- **FR-019**: `InterceptorManager.run` MUST deep-clone the current accumulator value before each
+  interceptor invocation to isolate caller-owned references and interceptor-step mutations.
 
 ### Key Entities _(include if feature involves data)_
 
@@ -143,5 +148,5 @@ and signal behavior under both success and failure callbacks.
 - **SC-002**: Facade delegation tests confirm sticky component routing and analytics/personalization
   method dispatch behavior.
 - **SC-003**: Interceptor and guard tests confirm deterministic execution ordering, snapshot
-  semantics, and blocked-call return behavior.
+  semantics, deep-clone mutation isolation, and blocked-call return behavior.
 - **SC-004**: Build artifacts provide dual runtime module formats and dual declaration formats.

@@ -278,6 +278,38 @@ describe('CoreStateful blocked event handling', () => {
     expect(core.getOnlineState()).toBe(false)
   })
 
+  it('exposes a stable states object across repeated reads', () => {
+    const core = createCoreStateful()
+    const firstStates = core.states
+    const secondStates = core.states
+
+    expect(secondStates).toBe(firstStates)
+    expect(secondStates.blockedEventStream).toBe(firstStates.blockedEventStream)
+    expect(secondStates.consent).toBe(firstStates.consent)
+    expect(secondStates.eventStream).toBe(firstStates.eventStream)
+    expect(secondStates.flags).toBe(firstStates.flags)
+    expect(secondStates.canPersonalize).toBe(firstStates.canPersonalize)
+    expect(secondStates.personalizations).toBe(firstStates.personalizations)
+    expect(secondStates.previewPanelAttached).toBe(firstStates.previewPanelAttached)
+    expect(secondStates.previewPanelOpen).toBe(firstStates.previewPanelOpen)
+    expect(secondStates.profile).toBe(firstStates.profile)
+  })
+
+  it('exposes canPersonalize as a derived observable from personalizations', () => {
+    const core = createCoreStateful()
+    const values: boolean[] = []
+    const subscription = core.states.canPersonalize.subscribe((value) => {
+      values.push(value)
+    })
+
+    signals.personalizations.value = []
+    signals.personalizations.value = undefined
+
+    expect(values).toEqual([false, true, false])
+
+    subscription.unsubscribe()
+  })
+
   it('exposes preview panel states and preserves them on reset', () => {
     const core = createCoreStateful()
     const attachedValues: boolean[] = []
