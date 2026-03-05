@@ -173,20 +173,25 @@ export function Personalization({
 
   useEffect(() => {
     const subscription = optimization.states.personalizations.subscribe((p) => {
-      if (shouldLiveUpdate) {
-        // Live updates enabled - always update state
-        setLockedPersonalizations(p)
-      } else if (lockedPersonalizations === undefined && p !== undefined) {
-        // First non-undefined value - lock it
-        setLockedPersonalizations(p)
-      }
-      // Otherwise ignore updates (we're locked to the initial value)
+      setLockedPersonalizations((previous) => {
+        if (shouldLiveUpdate) {
+          // Live updates enabled - always mirror state updates.
+          return p
+        }
+
+        // First non-undefined value - lock it, then ignore subsequent updates.
+        if (previous === undefined && p !== undefined) {
+          return p
+        }
+
+        return previous
+      })
     })
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [optimization, shouldLiveUpdate, lockedPersonalizations])
+  }, [optimization, shouldLiveUpdate])
 
   const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
     () => optimization.personalizeEntry(baselineEntry, lockedPersonalizations),

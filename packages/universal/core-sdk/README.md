@@ -54,7 +54,7 @@ other SDKs descend from the Core SDK.
   - [`flush`](#flush)
   - [`destroy`](#destroy)
   - [`registerPreviewPanel` (preview tooling only)](#registerpreviewpanel-preview-tooling-only)
-- [Stateful-only Core Properties](#stateful-only-core-properties)
+- [Core States (`CoreStateful` only)](#core-states-corestateful-only)
 - [Interceptors](#interceptors)
   - [Life-cycle Interceptors](#life-cycle-interceptors)
 
@@ -552,25 +552,67 @@ const signalFns = previewBridge[PREVIEW_PANEL_SIGNAL_FNS_SYMBOL]
 > interceptors) to apply immediate local overrides without network round-trips. This coupling is
 > deliberate and necessary for preview functionality.
 
-## Stateful-only Core Properties
+## Core States (`CoreStateful` only)
 
-- `states`: Returns an object mapping of observables for all internal states
-  - `consent`: The current state of user consent
-  - `blockedEventStream`: The latest blocked event payload
-  - `eventStream`: The latest event to be queued
-  - `flags`: All current resolved Custom Flags
-  - `profile`: The current user profile
-  - `personalizations`: The current collection of selected personalizations
+`states` is available on `CoreStateful` and exposes signal-backed observables for runtime state.
 
-The `blockedEventStream` state is updated whenever a call is blocked by consent guards. Each state
-except `consent`, `eventStream`, and `blockedEventStream` is updated internally whenever a response
-from the Experience API contains a new or updated respective state.
+Available state streams:
 
-Example `states` observable usage:
+- `consent`: Current consent state (`boolean | undefined`)
+- `blockedEventStream`: Latest blocked-call metadata (`BlockedEvent | undefined`)
+- `eventStream`: Latest emitted analytics/personalization event
+  (`AnalyticsEvent | PersonalizationEvent | undefined`)
+- `flags`: Resolved Custom Flags (`Flags | undefined`)
+- `canPersonalize`: Whether personalization selections are available (`boolean`;
+  `personalizations !== undefined`)
+- `profile`: Current profile (`Profile | undefined`)
+- `personalizations`: Current selected personalizations (`SelectedPersonalizationArray | undefined`)
+- `previewPanelAttached`: Preview panel attachment state (`boolean`)
+- `previewPanelOpen`: Preview panel open state (`boolean`)
+
+Each observable provides:
+
+- `current`: Deep-cloned snapshot of the latest value
+- `subscribe(next)`: Immediately emits `current`, then emits future updates
+- `subscribeOnce(next)`: Emits the first non-nullish value, then auto-unsubscribes
+
+`current` and callback payloads are deep-cloned snapshots, so local mutations do not affect Core's
+internal signal state.
+
+Update behavior:
+
+- `blockedEventStream` updates whenever a call is blocked by consent guards.
+- `eventStream` updates when a valid event is accepted for send/queue.
+- `flags`, `profile`, and `personalizations` update from Experience API responses.
+- `canPersonalize` updates whenever `personalizations` becomes defined or `undefined`.
+- `consent` updates from defaults and `optimization.consent(...)`.
+- `previewPanelAttached` and `previewPanelOpen` are controlled by preview tooling and are preserved
+  across `reset()`.
+
+Example: read the latest snapshot synchronously:
 
 ```ts
-optimization.states.profile.subscribe((profile) => {
-  console.log(`Profile ${profile.id} updated!`)
+const profile = optimization.states.profile.current
+if (profile) console.log(`Current profile: ${profile.id}`)
+```
+
+Example: subscribe and clean up:
+
+```ts
+const sub = optimization.states.profile.subscribe((profile) => {
+  if (!profile) return
+  console.log(`Profile ${profile.id} updated`)
+})
+
+// later (component unmount / teardown)
+sub.unsubscribe()
+```
+
+Example: wait for first available profile:
+
+```ts
+optimization.states.profile.subscribeOnce((profile) => {
+  console.log(`Profile ${profile.id} loaded`)
 })
 ```
 

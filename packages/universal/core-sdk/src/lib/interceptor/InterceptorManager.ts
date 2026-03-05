@@ -1,3 +1,5 @@
+import { cloneDeep } from 'es-toolkit'
+
 /**
  * A utility type representing a value that may be synchronously available or
  * produced asynchronously.
@@ -147,9 +149,9 @@ export class InterceptorManager<T> {
     let acc: T = input
 
     for (const fn of fns) {
-      // Pass a readonly view to discourage mutation of intermediate values.
-      // Each interceptor must return a T (or Promise<T>).
-      acc = await fn(acc as Readonly<T>)
+      // Pass a deep-cloned readonly view to prevent in-place interceptor
+      // mutations from affecting references held outside the interceptor chain.
+      acc = await fn(cloneDeep(acc))
     }
 
     return acc

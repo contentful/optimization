@@ -22,6 +22,7 @@ import type { ProductConfig } from './ProductBase'
 import {
   batch,
   blockedEvent,
+  canPersonalize,
   changes,
   consent,
   event,
@@ -202,6 +203,25 @@ class CoreStateful extends CoreBase implements ConsentController {
   protected _personalization: PersonalizationStateful
 
   /**
+   * Expose merged observable state for consumers.
+   *
+   * @remarks
+   * This object is stable for the lifetime of the instance so consumers can
+   * safely subscribe once without repeated resubscription churn.
+   */
+  readonly states: CoreStates = {
+    blockedEventStream: toObservable(blockedEvent),
+    consent: toObservable(consent),
+    eventStream: toObservable(event),
+    flags: toObservable(flags),
+    canPersonalize: toObservable(canPersonalize),
+    personalizations: toObservable(personalizations),
+    previewPanelAttached: toObservable(previewPanelAttached),
+    previewPanelOpen: toObservable(previewPanelOpen),
+    profile: toObservable(profile),
+  }
+
+  /**
    * Create a stateful core with optional default consent and product defaults.
    *
    * @param config - Core and defaults configuration.
@@ -294,24 +314,6 @@ class CoreStateful extends CoreBase implements ConsentController {
 
     this.destroyed = true
     releaseStatefulRuntimeSingleton(this.singletonOwner)
-  }
-
-  /**
-   * Expose merged observable state for consumers.
-   *
-   * @returns The combined {@link CoreStates} observable object.
-   */
-  get states(): CoreStates {
-    return {
-      blockedEventStream: toObservable(blockedEvent),
-      consent: toObservable(consent),
-      eventStream: toObservable(event),
-      flags: toObservable(flags),
-      personalizations: toObservable(personalizations),
-      previewPanelAttached: toObservable(previewPanelAttached),
-      previewPanelOpen: toObservable(previewPanelOpen),
-      profile: toObservable(profile),
-    }
   }
 
   /**

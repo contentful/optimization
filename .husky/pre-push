@@ -5,25 +5,48 @@ set -e
 REPO_ROOT=$(git rev-parse --show-toplevel)
 cd "$REPO_ROOT"
 
-# Parse refs from pre-push hook input (see Husky docs or Git docs)
-# Input: <local ref> <local sha> <remote ref> <remote sha>
-read local_ref local_sha remote_ref remote_sha
+REMOTE_NAME=${1:-origin}
 
-# If pushing a new branch (remote_sha is 40 zeroes), diff from nothing
-if [[ "$remote_sha" =~ ^0+$ ]]; then
-  range="$local_sha"
-else
-  range="$remote_sha..$local_sha"
-fi
+# Collect changed files for each pushed ref from pre-push hook input
+# Input rows: <local ref> <local sha> <remote ref> <remote sha>
+changed_files=""
+while read -r local_ref local_sha remote_ref remote_sha; do
+  # Branch deletion: nothing to check
+  if [[ "$local_sha" =~ ^0+$ ]]; then
+    continue
+  fi
+
+  if [[ "$remote_sha" =~ ^0+$ ]]; then
+    # New branch/tag push: include commits not already present on the remote.
+    ref_changed_files=$(
+      git rev-list "$local_sha" --not --remotes="$REMOTE_NAME" \
+        | while read -r commit; do
+            git diff-tree --no-commit-id --name-only -r --root -m "$commit"
+          done
+    )
+  else
+    # Existing ref update: use commit-level changes so metadata-only amended
+    # commits still contribute their underlying file deltas.
+    ref_changed_files=$(
+      git rev-list "$remote_sha..$local_sha" \
+        | while read -r commit; do
+            git diff-tree --no-commit-id --name-only -r --root -m "$commit"
+          done
+    )
+  fi
+
+  if [[ -n "$ref_changed_files" ]]; then
+    changed_files+="$ref_changed_files"$'\n'
+  fi
+done
+
+changed_files=$(printf "%s" "$changed_files" | sed '/^$/d' | sort -u)
 
 # List workspaces (relative paths)
 workspaces=$(pnpm ls -r --depth -1 --json | jq -r ".[].path" | sed "s|^$REPO_ROOT/||")
 
 # List implementations (relative names under implementations/)
 implementations=$(find implementations -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
-
-# Get changed files in this push
-changed_files=$(git diff --name-only $range)
 
 # Find changed workspaces with tsconfig.json
 changed_workspaces=()

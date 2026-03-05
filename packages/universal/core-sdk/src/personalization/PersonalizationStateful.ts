@@ -35,6 +35,7 @@ import type { ProductBaseOptions, ProductConfig } from '../ProductBase'
 import {
   batch,
   blockedEvent as blockedEventSignal,
+  canPersonalize as canPersonalizeSignal,
   changes as changesSignal,
   consent as consentSignal,
   effect,
@@ -149,6 +150,8 @@ export interface PersonalizationStates {
   profile: Observable<Profile | undefined>
   /** Live view of selected personalizations (variants). */
   personalizations: Observable<SelectedPersonalizationArray | undefined>
+  /** Whether personalization data is currently available for entry resolution. */
+  canPersonalize: Observable<boolean>
 }
 
 /**
@@ -204,6 +207,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
     flags: toObservable(flagsSignal),
     profile: toObservable(profileSignal),
     personalizations: toObservable(personalizationsSignal),
+    canPersonalize: toObservable(canPersonalizeSignal),
   }
 
   /**
