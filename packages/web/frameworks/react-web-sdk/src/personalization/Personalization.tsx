@@ -134,12 +134,10 @@ export function Personalization({
   const [lockedPersonalizations, setLockedPersonalizations] = useState<
     SelectedPersonalizationArray | undefined
   >(undefined)
-  const [hasResolvedPersonalizationState, setHasResolvedPersonalizationState] = useState(false)
+  const [canPersonalize, setCanPersonalize] = useState(false)
 
   useEffect(() => {
-    const subscription = optimization.states.personalizations.subscribe((p) => {
-      if (p !== undefined) setHasResolvedPersonalizationState(true)
-
+    const personalizationsSubscription = optimization.states.personalizations.subscribe((p) => {
       setLockedPersonalizations((previous) => {
         if (shouldLiveUpdate) {
           // Live updates enabled - always update state
@@ -155,9 +153,13 @@ export function Personalization({
         return previous
       })
     })
+    const canPersonalizeSubscription = optimization.states.canPersonalize.subscribe((value) => {
+      setCanPersonalize(value)
+    })
 
     return () => {
-      subscription.unsubscribe()
+      personalizationsSubscription.unsubscribe()
+      canPersonalizeSubscription.unsubscribe()
     }
   }, [optimization, shouldLiveUpdate])
 
@@ -166,7 +168,7 @@ export function Personalization({
     [optimization, baselineEntry, lockedPersonalizations],
   )
 
-  const isLoading = !hasResolvedPersonalizationState
+  const isLoading = !canPersonalize
   const showLoadingFallback = loadingFallback !== undefined && isLoading
   const dataTestId = dataTestIdProp ?? testId ?? testID
 

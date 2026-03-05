@@ -1,5 +1,5 @@
-import type { SelectedPersonalizationArray } from '@contentful/optimization-api-schemas'
-import type { ResolvedData } from '@contentful/optimization-core'
+import type { SelectedPersonalizationArray } from '@contentful/optimization-web/api-schemas'
+import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { act, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -15,10 +15,14 @@ type PersonalizeEntry = (
   personalizations: PersonalizationState,
 ) => ResolvedData<EntrySkeletonType>
 type PersonalizationsSubscriber = (value: PersonalizationState) => void
+type CanPersonalizeSubscriber = (value: boolean) => void
 
 interface RuntimeOptimization {
   personalizeEntry: PersonalizeEntry
   states: {
+    canPersonalize: {
+      subscribe: (next: CanPersonalizeSubscriber) => { unsubscribe: () => void }
+    }
     personalizations: {
       subscribe: (next: PersonalizationsSubscriber) => { unsubscribe: () => void }
     }
@@ -50,11 +54,25 @@ function createRuntime(personalizeEntry: PersonalizeEntry): {
   optimization: RuntimeOptimization
 } {
   const subscribers = new Set<PersonalizationsSubscriber>()
+  const canPersonalizeSubscribers = new Set<CanPersonalizeSubscriber>()
   let current: PersonalizationState = undefined
+  let canPersonalize = false
 
   const optimization: RuntimeOptimization = {
     personalizeEntry,
     states: {
+      canPersonalize: {
+        subscribe(next: CanPersonalizeSubscriber) {
+          canPersonalizeSubscribers.add(next)
+          next(canPersonalize)
+
+          return {
+            unsubscribe() {
+              canPersonalizeSubscribers.delete(next)
+            },
+          }
+        },
+      },
       personalizations: {
         subscribe(next: PersonalizationsSubscriber) {
           subscribers.add(next)
@@ -72,9 +90,13 @@ function createRuntime(personalizeEntry: PersonalizeEntry): {
 
   async function emit(value: PersonalizationState): Promise<void> {
     current = value
+    canPersonalize = value !== undefined
 
     await act(async () => {
       await Promise.resolve()
+      canPersonalizeSubscribers.forEach((subscriber) => {
+        subscriber(canPersonalize)
+      })
       subscribers.forEach((subscriber) => {
         subscriber(value)
       })
