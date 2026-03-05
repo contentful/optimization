@@ -37,6 +37,7 @@ function AppContent(): React.JSX.Element {
   const [showLiveUpdatesTest, setShowLiveUpdatesTest] = useState<boolean>(false)
 
   useEffect(() => {
+    sdk.consent(true)
     void sdk.page({ properties: { url: 'app' } })
 
     const subscription = sdk.states.profile.subscribe((profile) => {
