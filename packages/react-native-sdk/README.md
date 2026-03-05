@@ -75,7 +75,8 @@ For offline support (recommended), also install:
 pnpm install @react-native-community/netinfo
 ```
 
-Import the Optimization React Native SDK; both CJS and ESM module systems are supported, ESM preferred:
+Import the Optimization React Native SDK; both CJS and ESM module systems are supported, ESM
+preferred:
 
 ```ts
 import { OptimizationReactNativeSdk } from '@contentful/optimization-react-native'
@@ -200,8 +201,9 @@ Configuration method signatures:
 
 > [!IMPORTANT]
 >
-> Call `OptimizationReactNativeSdk.create(...)` once per app runtime and share the returned instance. In tests or
-> hot-reload workflows, call `destroy()` before creating a replacement instance.
+> Call `OptimizationReactNativeSdk.create(...)` once per app runtime and share the returned
+> instance. In tests or hot-reload workflows, call `destroy()` before creating a replacement
+> instance.
 
 ## Component Tracking
 

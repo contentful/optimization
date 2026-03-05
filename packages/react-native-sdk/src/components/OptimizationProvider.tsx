@@ -1,6 +1,6 @@
+import type { CoreStatefulConfig as OptimizationConfig } from '@contentful/optimization-core'
 import { createScopedLogger } from '@contentful/optimization-core/logger'
 import React, { useEffect, useRef, useState, type ReactNode } from 'react'
-import type { CoreStatefulConfig as OptimizationConfig } from '@contentful/optimization-core'
 import OptimizationContext from '../context/OptimizationContext'
 import OptimizationReactNativeSdk from '../OptimizationReactNativeSdk'
 

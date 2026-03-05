@@ -1,7 +1,7 @@
 import React from 'react'
 import { Text, View } from 'react-native'
 
-import { Analytics, Personalization } from '@contentful/optimization-react-native'
+import { Analytics, Personalization, useOptimization } from '@contentful/optimization-react-native'
 import { isPersonalizedEntry } from '@contentful/optimization-react-native/api-schemas'
 import type { Entry } from 'contentful'
 
@@ -35,6 +35,7 @@ function isRichTextField(field: unknown): field is RichTextField {
 }
 
 export function ContentEntry({ entry }: ContentEntryProps): React.JSX.Element {
+  const sdk = useOptimization()
   const renderContent = (contentEntry: Entry, baselineId: string): React.JSX.Element => {
     const richTextField = Object.values(contentEntry.fields).find(isRichTextField)
 

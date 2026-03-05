@@ -1,15 +1,12 @@
 import React from 'react'
 import { Text } from 'react-native'
 
+import { createScopedLogger, type ScopedLogger } from '@contentful/optimization-core/logger'
 import type { OptimizationReactNativeSdk } from '@contentful/optimization-react-native'
 import {
-  type MergeTagEntry,
   isMergeTagEntry,
+  type MergeTagEntry,
 } from '@contentful/optimization-react-native/api-schemas'
-import {
-  createScopedLogger,
-  type ScopedLogger,
-} from '@contentful/optimization-core/logger'
 import type { Entry } from 'contentful'
 
 const logger: ScopedLogger = createScopedLogger('Demo:RichText')
@@ -102,7 +99,7 @@ function getLinkId(link: unknown): string {
     return 'unknown'
   }
   const { sys } = link as { sys?: unknown }
-  if (typeof sys !== 'object' || sys === null || !('id' in (sys as object))) {
+  if (typeof sys !== 'object' || sys === null || !('id' in sys)) {
     return 'unknown'
   }
   const { id } = sys as { id?: unknown }
@@ -113,7 +110,9 @@ function renderEmbeddedEntry(
   node: EmbeddedEntryInlineNode,
   sdk: OptimizationReactNativeSdk,
 ): string {
-  const { target: includedEntry } = node.data
+  const {
+    data: { target: includedEntry },
+  } = node
 
   if (isLink(includedEntry)) {
     return logAndReturnFallback(
@@ -152,10 +151,7 @@ export function getRichTextContent(
   return richText.content.map((node) => extractTextContent(node, sdk)).join(' ')
 }
 
-export function RichTextRenderer({
-  richText,
-  sdk,
-}: RichTextRendererProps): React.ReactElement {
+export function RichTextRenderer({ richText, sdk }: RichTextRendererProps): React.ReactElement {
   const renderNode = (node: RichTextNode, index: number): RenderedRichTextNode => {
     const textContent = renderTextNode(node)
     if (textContent) {
@@ -177,7 +173,7 @@ export function RichTextRenderer({
     }
 
     if (node.content) {
-      return node.content.map((child, childIndex) => renderNode(child, childIndex))
+      return <>{node.content.map((child, childIndex) => renderNode(child, childIndex))}</>
     }
 
     return null

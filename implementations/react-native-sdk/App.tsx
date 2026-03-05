@@ -37,10 +37,6 @@ function AppContent(): React.JSX.Element {
   const [showLiveUpdatesTest, setShowLiveUpdatesTest] = useState<boolean>(false)
 
   useEffect(() => {
-    if (!sdk) {
-      return
-    }
-
     void sdk.page({ properties: { url: 'app' } })
 
     const subscription = sdk.states.profile.subscribe((profile) => {
@@ -57,8 +53,6 @@ function AppContent(): React.JSX.Element {
   }, [sdk])
 
   const handleIdentify = (): void => {
-    if (!sdk) return
-
     void sdk.identify({ userId: 'charles', traits: { identified: true } })
     setIsIdentified(true)
   }
