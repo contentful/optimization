@@ -45,7 +45,7 @@ export interface PreviewPanelConfig {
  *
  * @public
  */
-export interface OptimizationReactNativeConfig extends CoreStatefulConfig {
+export interface OptimizationRootProps extends CoreStatefulConfig {
   /**
    * Optional configuration for the preview panel.
    * When provided with `enabled: true`, the preview panel will be available.
@@ -117,7 +117,7 @@ export function OptimizationRoot({
   liveUpdates = false,
   children,
   ...config
-}: OptimizationReactNativeConfig): React.JSX.Element {
+}: OptimizationRootProps): React.JSX.Element {
   const content = previewPanel?.enabled ? (
     <PreviewPanelOverlay
       contentfulClient={previewPanel.contentfulClient}

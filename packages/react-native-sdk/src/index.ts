@@ -26,10 +26,7 @@ export type OptimizationConfig = CoreStatefulConfig
 export { OptimizationProvider } from './components/OptimizationProvider'
 export type { OptimizationProviderProps } from './components/OptimizationProvider'
 export { OptimizationRoot } from './components/OptimizationRoot'
-export type {
-  OptimizationReactNativeConfig,
-  PreviewPanelConfig,
-} from './components/OptimizationRoot'
+export type { OptimizationRootProps, PreviewPanelConfig } from './components/OptimizationRoot'
 
 export { Personalization } from './components/Personalization'
 export type { PersonalizationProps } from './components/Personalization'
