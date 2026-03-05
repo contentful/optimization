@@ -1,3 +1,4 @@
+import type { Profile, SelectedPersonalizationArray } from '@contentful/optimization-api-schemas'
 import type { ReactElement } from 'react'
 import { ENTRY_IDS } from '../constants'
 import type { ResolveResult } from '../types'
@@ -7,8 +8,8 @@ interface StateSectionProps {
   globalLiveUpdates: boolean
   previewPanelVisible: boolean
   previewPanelOpen: boolean
-  personalizations: unknown
-  profile: unknown
+  personalizations: SelectedPersonalizationArray | undefined
+  profile: Profile | undefined
   entriesLoadedCount: number
   entriesLoading: boolean
   entriesError: string | null

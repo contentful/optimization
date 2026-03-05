@@ -1,3 +1,4 @@
+import type { SelectedPersonalizationArray } from '@contentful/optimization-api-schemas'
 import type { Entry } from 'contentful'
 import { useEffect, useState, type ReactElement } from 'react'
 import { Personalization } from '../../src'
@@ -11,7 +12,7 @@ interface PersonalizationSectionProps {
   baselineLocked?: Entry
   baselineNestedParent?: Entry
   baselineNestedChild?: Entry
-  personalizations: unknown
+  personalizations: SelectedPersonalizationArray | undefined
 }
 
 export function PersonalizationSection({
