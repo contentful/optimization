@@ -38,6 +38,8 @@ This SDK implements functionality specific to the Web environment, based on the
   - [Personalization Options](#personalization-options)
   - [Persistence Behavior](#persistence-behavior)
 - [Optimization Properties](#optimization-properties)
+  - [Tracking (entry-interaction API)](#tracking-entry-interaction-api)
+  - [`states` (`CoreStateful` observable state)](#states-corestateful-observable-state)
 - [Optimization Methods](#optimization-methods)
   - [Top-level Methods](#top-level-methods)
     - [`consent`](#consent)
@@ -64,7 +66,11 @@ This SDK implements functionality specific to the Web environment, based on the
 - [Entry View Tracking](#entry-view-tracking)
   - [Manual Entry View Tracking](#manual-entry-view-tracking)
   - [Automatic Entry View Tracking](#automatic-entry-view-tracking)
+    - [View Detection Performance Notes](#view-detection-performance-notes)
+  - [Entry Hover Tracking](#entry-hover-tracking)
+    - [Hover Detection Performance Notes](#hover-detection-performance-notes)
   - [Entry Click Tracking](#entry-click-tracking)
+    - [Click Detection Performance Notes](#click-detection-performance-notes)
   - [Manual Entry Element Observation](#manual-entry-element-observation)
   - [Automatic Entry Element Observation](#automatic-entry-element-observation)
 - [Interceptors](#interceptors)
@@ -121,22 +127,22 @@ Alternatively, the Web SDK can be used directly within an HTML file:
 
 ### Top-level Configuration Options
 
-| Option                      | Required? | Default                               | Description                                                                    |
-| --------------------------- | --------- | ------------------------------------- | ------------------------------------------------------------------------------ |
-| `allowedEventTypes`         | No        | `['identify', 'page']`                | Allow-listed event types permitted when consent is not set                     |
-| `analytics`                 | No        | See "Analytics Options"               | Configuration specific to the Analytics/Insights API                           |
-| `app`                       | No        | `undefined`                           | The application definition used to attribute events to a specific consumer app |
-| `autoTrackEntryInteraction` | No        | `{ views: false, clicks: false }`     | Opt-in automated tracking of entry interactions (`views`, `clicks`)            |
-| `clientId`                  | Yes       | N/A                                   | The Optimization API key                                                       |
-| `cookie`                    | No        | `{ domain: undefined, expires: 365 }` | Cookie configuration for anonymous ID persistence                              |
-| `defaults`                  | No        | `undefined`                           | Set of default state values applied on initialization                          |
-| `environment`               | No        | `'main'`                              | The environment identifier                                                     |
-| `eventBuilder`              | No        | See "Event Builder Options"           | Event builder configuration (channel/library metadata, etc.)                   |
-| `fetchOptions`              | No        | See "Fetch Options"                   | Configuration for Fetch timeout and retry functionality                        |
-| `getAnonymousId`            | No        | `undefined`                           | Function used to obtain an anonymous user identifier                           |
-| `logLevel`                  | No        | `'error'`                             | Minimum log level for the default console sink                                 |
-| `onEventBlocked`            | No        | `undefined`                           | Callback invoked when an event call is blocked by guards                       |
-| `personalization`           | No        | See "Personalization Options"         | Configuration specific to the Personalization/Experience API                   |
+| Option                      | Required? | Default                                          | Description                                                                    |
+| --------------------------- | --------- | ------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `allowedEventTypes`         | No        | `['identify', 'page']`                           | Allow-listed event types permitted when consent is not set                     |
+| `analytics`                 | No        | See "Analytics Options"                          | Configuration specific to the Analytics/Insights API                           |
+| `app`                       | No        | `undefined`                                      | The application definition used to attribute events to a specific consumer app |
+| `autoTrackEntryInteraction` | No        | `{ views: false, clicks: false, hovers: false }` | Opt-in automated tracking of entry interactions (`views`, `clicks`, `hovers`)  |
+| `clientId`                  | Yes       | N/A                                              | The Optimization API key                                                       |
+| `cookie`                    | No        | `{ domain: undefined, expires: 365 }`            | Cookie configuration for anonymous ID persistence                              |
+| `defaults`                  | No        | `undefined`                                      | Set of default state values applied on initialization                          |
+| `environment`               | No        | `'main'`                                         | The environment identifier                                                     |
+| `eventBuilder`              | No        | See "Event Builder Options"                      | Event builder configuration (channel/library metadata, etc.)                   |
+| `fetchOptions`              | No        | See "Fetch Options"                              | Configuration for Fetch timeout and retry functionality                        |
+| `getAnonymousId`            | No        | `undefined`                                      | Function used to obtain an anonymous user identifier                           |
+| `logLevel`                  | No        | `'error'`                                        | Minimum log level for the default console sink                                 |
+| `onEventBlocked`            | No        | `undefined`                                      | Callback invoked when an event call is blocked by guards                       |
+| `personalization`           | No        | See "Personalization Options"                    | Configuration specific to the Personalization/Experience API                   |
 
 Configuration method signatures:
 
@@ -343,22 +349,113 @@ future writes.
 
 ## Optimization Properties
 
-- `states`: Returns an object mapping of observables for all internal states
-- `tracking`: Namespaced entry-interaction tracking API with `enable`, `disable`, `enableElement`,
-  `disableElement`, and `clearElement`
+### Tracking (entry-interaction API)
 
-The following observables are exposed via the `states` property:
+`tracking` is a namespaced API for entry-interaction tracking controls.
 
-- `consent`: The current state of user consent
-- `blockedEventStream`: The latest blocked event payload
-- `eventStream`: The latest event to be queued
-- `flags`: All current resolved Custom Flags
-- `profile`: The current user profile
-- `personalizations`: The current collection of selected personalizations
+Available methods:
 
-The `blockedEventStream` state is updated whenever a call is blocked by consent guards. Each state
-except `consent`, `eventStream`, and `blockedEventStream` is updated internally whenever a response
-from the Experience API contains a new or updated respective state.
+- `enable(interaction, options?)`: Enable automatic tracking for an interaction
+- `disable(interaction)`: Disable automatic tracking for an interaction
+- `enableElement(interaction, element, options?)`: Force-enable tracking for one element
+- `disableElement(interaction, element)`: Force-disable tracking for one element
+- `clearElement(interaction, element)`: Remove a manual element override
+
+Supported `interaction` values:
+
+- `'views'`
+- `'clicks'`
+- `'hovers'`
+
+Precedence behavior:
+
+- `enable`/`disable` controls automatic tracking globally for the interaction.
+- `enableElement` and `disableElement` take precedence for the specific element.
+- `clearElement` removes the element-level override and restores automatic behavior.
+
+Example: global tracking controls:
+
+```ts
+optimization.tracking.enable('views', { dwellTimeMs: 1500, minVisibleRatio: 0.25 })
+optimization.tracking.disable('clicks')
+optimization.tracking.enable('hovers', { dwellTimeMs: 1000, hoverDurationUpdateIntervalMs: 5000 })
+```
+
+Example: per-element override:
+
+```ts
+optimization.tracking.enableElement('views', element, { dwellTimeMs: 2000 })
+
+// later
+optimization.tracking.clearElement('views', element)
+```
+
+See [Entry View Tracking](#entry-view-tracking), [Entry Hover Tracking](#entry-hover-tracking), and
+[Entry Click Tracking](#entry-click-tracking) for interaction-specific behavior and payload options.
+
+### `states` (`CoreStateful` observable state)
+
+`states` exposes signal-backed observables from the shared stateful Core runtime.
+
+Available state streams:
+
+- `consent`: Current consent state (`boolean | undefined`)
+- `blockedEventStream`: Latest blocked-call metadata (`BlockedEvent | undefined`)
+- `eventStream`: Latest emitted analytics/personalization event
+  (`AnalyticsEvent | PersonalizationEvent | undefined`)
+- `flags`: Resolved Custom Flags (`Flags | undefined`)
+- `canPersonalize`: Whether personalization selections are available (`boolean`;
+  `personalizations !== undefined`)
+- `profile`: Current profile (`Profile | undefined`)
+- `personalizations`: Current selected personalizations (`SelectedPersonalizationArray | undefined`)
+- `previewPanelAttached`: Preview panel attachment state (`boolean`)
+- `previewPanelOpen`: Preview panel open state (`boolean`)
+
+Each observable provides:
+
+- `current`: Deep-cloned snapshot of the latest value
+- `subscribe(next)`: Immediately emits `current`, then emits future updates
+- `subscribeOnce(next)`: Emits the first non-nullish value, then auto-unsubscribes
+
+`current` and callback payloads are deep-cloned snapshots, so local mutations do not affect SDK
+internal state.
+
+Update behavior:
+
+- `blockedEventStream` updates whenever a call is blocked by consent guards.
+- `eventStream` updates when a valid event is accepted for send/queue.
+- `flags`, `profile`, and `personalizations` update from Experience API responses.
+- `canPersonalize` updates whenever `personalizations` becomes defined or `undefined`.
+- `consent` updates from defaults and `optimization.consent(...)`.
+- `previewPanelAttached` and `previewPanelOpen` are controlled by preview tooling and are preserved
+  across `reset()`.
+
+Example: read synchronously from the latest snapshot:
+
+```ts
+const profile = optimization.states.profile.current
+if (profile) console.log(`Current profile: ${profile.id}`)
+```
+
+Example: subscribe and clean up:
+
+```ts
+const sub = optimization.states.profile.subscribe((profile) => {
+  if (!profile) return
+  console.log(`Profile ${profile.id} updated`)
+})
+
+// later (component unmount / teardown)
+sub.unsubscribe()
+```
+
+Example: wait for the first available profile:
+
+```ts
+optimization.states.profile.subscribeOnce((profile) => {
+  console.log(`Profile ${profile.id} loaded`)
+})
+```
 
 ## Optimization Methods
 
@@ -395,7 +492,7 @@ Starts automatic tracking for a specific entry interaction.
 
 Arguments:
 
-- `interaction`: The interaction type to track (for example, `'views'` or `'clicks'`)
+- `interaction`: The interaction type to track (for example, `'views'`, `'clicks'`, or `'hovers'`)
 - `options`: Interaction startup options to pass to the tracker
 
 When `interaction` is `'views'`, supported options are:
@@ -406,6 +503,12 @@ When `interaction` is `'views'`, supported options are:
 - `rootMargin`: `IntersectionObserver` `rootMargin`; default `0px`
 
 When `interaction` is `'clicks'`, no additional startup options are currently supported.
+
+When `interaction` is `'hovers'`, supported options are:
+
+- `dwellTimeMs`: Required hover time before the first hover event; default 1,000ms
+- `hoverDurationUpdateIntervalMs`: Interval for periodic hover-duration update events; default
+  5,000ms
 
 > [!WARNING]
 >
@@ -418,7 +521,8 @@ Disables automatic tracking for a specific entry interaction.
 
 Arguments:
 
-- `interaction`: The interaction type to stop tracking (for example, `'views'` or `'clicks'`)
+- `interaction`: The interaction type to stop tracking (for example, `'views'`, `'clicks'`, or
+  `'hovers'`)
 
 This method returns no value. If force-enabled element overrides exist for that interaction, those
 overrides can keep the detector active.
@@ -434,7 +538,7 @@ Manually force-enables tracking for a specific element and interaction.
 
 Arguments:
 
-- `interaction`: The interaction type to track (for example, `'views'` or `'clicks'`)
+- `interaction`: The interaction type to track (for example, `'views'`, `'clicks'`, or `'hovers'`)
 - `element`: A DOM element that directly contains the entry content to be tracked
 - `options`: Optional per-element options
   - when `interaction` is `'views'`:
@@ -442,6 +546,10 @@ Arguments:
     - `dwellTimeMs`: Per-element override of the required time before emitting the view event
   - when `interaction` is `'clicks'`:
     - `data`: Entry-specific data used for click payload extraction
+  - when `interaction` is `'hovers'`:
+    - `data`: Entry-specific data used for hover payload extraction; see "Entry Hover Tracking"
+    - `dwellTimeMs`: Per-element override of the required time before emitting the first hover event
+    - `hoverDurationUpdateIntervalMs`: Per-element override for periodic hover-duration updates
 
 `enableElement` can be used even when automatic tracking for the interaction is disabled.
 
@@ -451,7 +559,7 @@ Manually force-disables tracking for a specific element and interaction.
 
 Arguments:
 
-- `interaction`: The interaction type to disable (for example, `'views'` or `'clicks'`)
+- `interaction`: The interaction type to disable (for example, `'views'`, `'clicks'`, or `'hovers'`)
 - `element`: The target DOM element
 
 `disableElement` takes precedence over automatic tracking for that element.
@@ -462,7 +570,7 @@ Clears a manual element override for a specific interaction.
 
 Arguments:
 
-- `interaction`: The interaction type to clear (for example, `'views'` or `'clicks'`)
+- `interaction`: The interaction type to clear (for example, `'views'`, `'clicks'`, or `'hovers'`)
 - `element`: The target DOM element
 
 After `clearElement`, the element falls back to automatic behavior for that interaction.
@@ -608,8 +716,8 @@ Arguments:
 
 Tracking of entry/component views is based on the element that contains that entry's content. The
 Optimization Web SDK can automatically track observed entry elements for events such as "component
-views" and "component clicks", and it can also automatically observe elements that are marked as
-entry-related elements.
+views", "component hovers", and "component clicks", and it can also automatically observe elements
+that are marked as entry-related elements.
 
 ### Manual Entry View Tracking
 
@@ -653,6 +761,29 @@ For best runtime behavior, track only relevant elements, disable tracking for el
 longer needed, and choose stable `minVisibleRatio` and `dwellTimeMs` values that match your UI
 behavior.
 
+### Entry Hover Tracking
+
+Entry/component hovers can be tracked automatically for observed entry-related elements by setting
+`autoTrackEntryInteraction.hovers` to `true`, or by calling `tracking.enable('hovers', ...)`.
+
+A hover emits `component_hover` events after dwell-time threshold is reached, and can continue to
+emit periodic duration updates while the same hover cycle remains active.
+
+##### Hover Detection Performance Notes
+
+Hover detection is based on pointer/mouse enter and leave events with dwell-time timers.
+
+Different integration patterns can show different relative performance:
+
+- A smaller set of observed elements is typically the most efficient path.
+- Shorter `dwellTimeMs` can increase callback frequency in pointer-heavy UIs.
+- Smaller `hoverDurationUpdateIntervalMs` values can increase periodic update event volume.
+- Rapid pointer movement across dense interactive surfaces can increase hover-cycle churn.
+- Frequent tab hide/show transitions add pause/resume work across active tracked elements.
+
+For best runtime behavior, track only relevant elements and choose stable `dwellTimeMs` /
+`hoverDurationUpdateIntervalMs` values that match expected user interaction patterns.
+
 ### Entry Click Tracking
 
 Entry/component clicks can be tracked automatically for observed entry-related elements by setting
@@ -692,11 +823,13 @@ exclusively on JavaScript-assigned `onclick` properties.
 To override tracking behavior for a specific element, use:
 
 - `tracking.enableElement('views', element, options)` or
-  `tracking.enableElement('clicks', element, options)` to force-enable tracking for that element
-- `tracking.disableElement('views', element)` or `tracking.disableElement('clicks', element)` to
-  force-disable tracking for that element
-- `tracking.clearElement('views', element)` or `tracking.clearElement('clicks', element)` to remove
-  a manual override and return to automatic behavior
+  `tracking.enableElement('clicks', element, options)` or
+  `tracking.enableElement('hovers', element, options)` to force-enable tracking for that element
+- `tracking.disableElement('views', element)` or `tracking.disableElement('clicks', element)` or
+  `tracking.disableElement('hovers', element)` to force-disable tracking for that element
+- `tracking.clearElement('views', element)` or `tracking.clearElement('clicks', element)` or
+  `tracking.clearElement('hovers', element)` to remove a manual override and return to automatic
+  behavior
 
 Manual API overrides take precedence over data-attribute overrides (see below). After
 `clearElement`, the element falls back to attribute overrides first, then normal automatic behavior.
@@ -734,8 +867,14 @@ detected for observation and entry-interaction tracking:
   personalized
 - `data-ctfl-track-views`: Optional per-element override for view tracking (`true` = force-enable,
   `false` = force-disable)
+- `data-ctfl-view-duration-update-interval-ms`: Optional per-element override for periodic
+  view-duration updates (milliseconds)
 - `data-ctfl-track-clicks`: Optional per-element override for click tracking (`true` = force-enable,
   `false` = force-disable)
+- `data-ctfl-track-hovers`: Optional per-element override for hover tracking (`true` = force-enable,
+  `false` = force-disable)
+- `data-ctfl-hover-duration-update-interval-ms`: Optional per-element override for periodic
+  hover-duration updates (milliseconds)
 
 Example:
 

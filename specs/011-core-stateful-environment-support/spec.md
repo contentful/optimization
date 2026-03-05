@@ -4,14 +4,15 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-02).
+2026-03-05).
 
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Manage One Stateful Runtime with Observable State (Priority: P1)
 
 As a client-side SDK integrator, I need one runtime-scoped stateful core instance with observable
-consent/profile/event streams so personalization and analytics state stays coherent across the app.
+consent/profile/event streams, derived personalization-availability state, and preview-panel state
+so personalization and analytics state stays coherent across the app.
 
 **Why this priority**: Stateful behavior depends on globally consistent shared state.
 
@@ -23,9 +24,15 @@ defaults, and observable stream availability.
 1. **Given** one active `CoreStateful` instance, **When** a second instance is created in the same
    runtime before destroy, **Then** initialization fails with singleton-lock error.
 2. **Given** `defaults` config, **When** stateful core initializes, **Then**
-   consent/profile/changes/ personalizations defaults are applied to signals.
+   consent/profile/changes/personalizations defaults are applied to signals.
 3. **Given** `core.states`, **When** states are read, **Then** observables for consent, blocked
-   event stream, event stream, flags, profile, and personalizations are exposed.
+   event stream, event stream, flags, can-personalize, profile, personalizations,
+   preview-panel-attached, and preview-panel-open are exposed.
+4. **Given** `core.reset()` is called after preview panel attach/open states were set, **When**
+   reset completes, **Then** blocked/event/changes/profile/personalizations are cleared while
+   consent and preview panel states are preserved.
+5. **Given** a state observable, **When** `current`, `subscribe`, and `subscribeOnce` are used,
+   **Then** snapshots are deep-cloned and `subscribeOnce` emits only the first non-nullish value.
 
 ---
 
@@ -78,12 +85,15 @@ retry scheduling, circuit opening, and recovery callbacks.
 
 - `destroy()` is idempotent and must safely release singleton ownership only once.
 - `reset()` clears blocked/event/changes/profile/personalizations but intentionally preserves
-  consent.
+  consent and preview panel attachment/open state.
 - `flush({ force: true })` bypasses offline/backoff/circuit gates but not active in-flight flush.
 - Analytics queueing without a current profile drops event enqueue attempt (warn only).
 - Immediate online personalization send failures do not backfill the offline queue.
 - Queue policy callbacks (`onDrop`, `onFlushFailure`, `onCircuitOpen`, `onFlushRecovered`) are
   best-effort and callback exceptions are swallowed.
+- `subscribeOnce` emits only on the first non-nullish (`!= null`) value and auto-unsubscribes.
+- Observable `current` values and subscription payloads are deep-cloned snapshots and must not
+  mutate internal signal state when mutated by consumers.
 
 ## Requirements _(mandatory)_
 
@@ -98,10 +108,11 @@ retry scheduling, circuit opening, and recovery callbacks.
 - **FR-004**: `CoreStateful` MUST construct `AnalyticsStateful` and `PersonalizationStateful` using
   shared `api`, `builder`, `interceptors`, and stateful product config.
 - **FR-005**: `CoreStateful` MUST expose `states` as observables for `consent`,
-  `blockedEventStream`, `eventStream`, `flags`, `profile`, and `personalizations`.
+  `blockedEventStream`, `eventStream`, `flags`, `canPersonalize`, `profile`, `personalizations`,
+  `previewPanelAttached`, and `previewPanelOpen`.
 - **FR-006**: `CoreStateful.consent(accept)` MUST update consent signal state.
 - **FR-007**: `CoreStateful.reset()` MUST clear blocked/event/changes/profile/personalizations and
-  MUST NOT clear consent.
+  MUST NOT clear consent or preview panel attachment/open signals.
 - **FR-008**: `CoreStateful.flush()` MUST flush analytics queue then personalization queue.
 - **FR-009**: `CoreStateful.registerPreviewPanel()` MUST mutate the provided preview object with
   symbol-keyed mutable bridge values for `signals` and `signalFns` (no return-value contract).
@@ -134,12 +145,16 @@ retry scheduling, circuit opening, and recovery callbacks.
   `maxBackoffMs=30000`, `jitterRatio=0.2`, `maxConsecutiveFailures=8`, `circuitOpenMs=120000`.
 - **FR-024**: Queue flush runtime MUST invoke failure/circuit/recovered callbacks with queue and
   retry context payloads and MUST schedule retry attempts accordingly.
+- **FR-025**: `CoreStateful.states` observables MUST expose `current`, `subscribe`, and
+  `subscribeOnce`; `current` and emitted callback payloads MUST be deep-cloned snapshots; and
+  `subscribeOnce` MUST emit only the first non-nullish value before auto-unsubscribing.
 
 ### Key Entities _(include if feature involves data)_
 
 - **CoreStateful**: Runtime singleton coordinating stateful analytics/personalization products.
 - **CoreStates**: Observable contract for consent, blocked events, emitted events, flags, profile,
-  and selected personalizations.
+  can-personalize status, selected personalizations, preview panel attach/open state, and cloned
+  snapshot access semantics (`current`/`subscribe`/`subscribeOnce`).
 - **AnalyticsStateful Queue**: Profile-grouped in-memory event map with flush/backoff/circuit
   policy.
 - **Personalization Offline Queue**: Ordered set of Experience events retained while offline.
@@ -158,3 +173,6 @@ retry scheduling, circuit opening, and recovery callbacks.
   behavior and recover by clearing queued events after successful flush.
 - **SC-004**: Offline personalization queue enforces max-size drop policy with accurate drop-context
   callback payloads.
+- **SC-005**: State observable tests confirm full `core.states` coverage (including `canPersonalize`
+  and preview panel states), reset-preserved preview state, and cloned
+  `current`/`subscribe`/`subscribeOnce` behavior.
