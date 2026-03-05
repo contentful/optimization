@@ -1,12 +1,11 @@
-import { act, type ReactNode } from 'react'
-import { createRoot } from 'react-dom/client'
 import type { SelectedPersonalizationArray } from '@contentful/optimization-api-schemas'
 import type { ResolvedData } from '@contentful/optimization-core'
 import type { Entry, EntrySkeletonType } from 'contentful'
+import { act, type ReactNode } from 'react'
+import { createRoot } from 'react-dom/client'
 import type { LiveUpdatesContextValue } from '../context/LiveUpdatesContext'
 import { LiveUpdatesContext } from '../context/LiveUpdatesContext'
 import { OptimizationContext } from '../context/OptimizationContext'
-import type { OptimizationWebSdk } from '../types'
 import { Personalization } from './Personalization'
 
 type TestEntry = Entry
@@ -27,7 +26,7 @@ interface RuntimeOptimization {
 }
 
 function makeEntry(id: string): TestEntry {
-  return {
+  const entry: TestEntry = {
     fields: { title: id },
     metadata: { tags: [] },
     sys: {
@@ -41,10 +40,15 @@ function makeEntry(id: string): TestEntry {
       type: 'Entry',
       updatedAt: '2024-01-01T00:00:00.000Z',
     },
-  } as TestEntry
+  }
+
+  return entry
 }
 
-function createRuntime(personalizeEntry: PersonalizeEntry) {
+function createRuntime(personalizeEntry: PersonalizeEntry): {
+  emit: (value: PersonalizationState) => Promise<void>
+  optimization: RuntimeOptimization
+} {
   const subscribers = new Set<PersonalizationsSubscriber>()
   let current: PersonalizationState = undefined
 
@@ -70,7 +74,10 @@ function createRuntime(personalizeEntry: PersonalizeEntry) {
     current = value
 
     await act(async () => {
-      subscribers.forEach((subscriber) => subscriber(value))
+      await Promise.resolve()
+      subscribers.forEach((subscriber) => {
+        subscriber(value)
+      })
     })
   }
 
@@ -97,8 +104,10 @@ async function renderComponent(
   const root = createRoot(container)
 
   await act(async () => {
+    await Promise.resolve()
     root.render(
-      <OptimizationContext.Provider value={{ instance: optimization as OptimizationWebSdk }}>
+      // @ts-expect-error test double only implements the subset used by Personalization
+      <OptimizationContext.Provider value={{ instance: optimization }}>
         <LiveUpdatesContext.Provider value={liveUpdatesContext}>{node}</LiveUpdatesContext.Provider>
       </OptimizationContext.Provider>,
     )
@@ -108,6 +117,7 @@ async function renderComponent(
     container,
     async unmount() {
       await act(async () => {
+        await Promise.resolve()
         root.unmount()
       })
       container.remove()
@@ -116,7 +126,7 @@ async function renderComponent(
 }
 
 function getWrapper(container: HTMLElement): HTMLElement {
-  const wrapper = container.firstElementChild
+  const { firstElementChild: wrapper } = container
 
   if (!(wrapper instanceof HTMLElement)) {
     throw new TypeError('Expected first child to be an HTMLElement')
@@ -126,7 +136,9 @@ function getWrapper(container: HTMLElement): HTMLElement {
 }
 
 function readTitle(entry: TestEntry): string {
-  const { title } = entry.fields
+  const {
+    fields: { title },
+  } = entry
   return typeof title === 'string' ? title : ''
 }
 
@@ -162,7 +174,7 @@ describe('Personalization', () => {
     },
   ]
 
-  afterEach(() => {
+  void afterEach(() => {
     document.body.innerHTML = ''
   })
 
