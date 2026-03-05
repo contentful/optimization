@@ -105,14 +105,20 @@ export interface PersonalizationProps {
   /**
    * Per-component override for tap tracking.
    * - `undefined`: inherits from `trackEntryInteraction.taps` on {@link OptimizationRoot}
-   * - `true`: track taps using the existing entry metadata
+   * - `true`: enable tap tracking for this entry
    * - `false`: disable tap tracking (overrides the global setting)
-   * - `(resolvedEntry: Entry) => void`: track taps and invoke the callback
-   *   with the resolved entry after the tracking event is emitted
    *
    * @defaultValue `undefined`
    */
-  onTap?: boolean | ((resolvedEntry: Entry) => void)
+  trackTaps?: boolean
+
+  /**
+   * Optional callback invoked with the resolved entry after a tap tracking event is emitted.
+   * When provided, implicitly enables tap tracking unless `trackTaps` is explicitly `false`.
+   *
+   * @defaultValue `undefined`
+   */
+  onTap?: (resolvedEntry: Entry) => void
 }
 
 /**
@@ -147,7 +153,7 @@ export interface PersonalizationProps {
  * ```
  * @example With Tap Tracking
  * ```tsx
- * <Personalization baselineEntry={entry} onTap>
+ * <Personalization baselineEntry={entry} trackTaps>
  *   {(resolvedEntry) => (
  *     <Pressable onPress={() => navigate(resolvedEntry)}>
  *       <Card title={resolvedEntry.fields.title} />
@@ -170,6 +176,7 @@ export function Personalization({
   testID,
   liveUpdates,
   trackViews,
+  trackTaps,
   onTap,
 }: PersonalizationProps): React.JSX.Element {
   const optimization = useOptimization()
@@ -205,7 +212,7 @@ export function Personalization({
 
   const viewsEnabled = trackViews ?? interactionTracking.views
   const tapsEnabled =
-    onTap === false ? false : onTap !== undefined ? true : interactionTracking.taps
+    trackTaps === false ? false : (trackTaps ?? onTap) ? true : interactionTracking.taps
 
   const { onLayout } = useViewportTracking({
     entry: resolvedData.entry,

@@ -38,13 +38,11 @@ export interface UseTapTrackingOptions {
   enabled: boolean
 
   /**
-   * Optional callback invoked after the tap event is tracked.
-   * When `true`, taps are tracked without a callback.
-   * When a function, it is called with the entry after the tracking event is emitted.
+   * Optional callback invoked with the entry after the tap tracking event is emitted.
    *
    * @defaultValue `undefined`
    */
-  onTap?: boolean | ((entry: Entry) => void)
+  onTap?: (entry: Entry) => void
 }
 
 /**

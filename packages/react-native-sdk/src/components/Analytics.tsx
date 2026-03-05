@@ -66,14 +66,20 @@ export interface AnalyticsProps {
   /**
    * Per-component override for tap tracking.
    * - `undefined`: inherits from `trackEntryInteraction.taps` on {@link OptimizationRoot}
-   * - `true`: track taps using the existing entry metadata
+   * - `true`: enable tap tracking for this entry
    * - `false`: disable tap tracking (overrides the global setting)
-   * - `(entry: Entry) => void`: track taps and invoke the callback
-   *   with the entry after the tracking event is emitted
    *
    * @defaultValue `undefined`
    */
-  onTap?: boolean | ((entry: Entry) => void)
+  trackTaps?: boolean
+
+  /**
+   * Optional callback invoked with the entry after a tap tracking event is emitted.
+   * When provided, implicitly enables tap tracking unless `trackTaps` is explicitly `false`.
+   *
+   * @defaultValue `undefined`
+   */
+  onTap?: (entry: Entry) => void
 }
 
 /**
@@ -104,7 +110,7 @@ export interface AnalyticsProps {
  * ```
  * @example With Tap Tracking
  * ```tsx
- * <Analytics entry={productEntry} onTap>
+ * <Analytics entry={productEntry} trackTaps>
  *   <Pressable onPress={() => navigate(productEntry)}>
  *     <ProductCard name={productEntry.fields.name} />
  *   </Pressable>
@@ -123,13 +129,14 @@ export function Analytics({
   style,
   testID,
   trackViews,
+  trackTaps,
   onTap,
 }: AnalyticsProps): React.JSX.Element {
   const interactionTracking = useInteractionTracking()
 
   const viewsEnabled = trackViews ?? interactionTracking.views
   const tapsEnabled =
-    onTap === false ? false : onTap !== undefined ? true : interactionTracking.taps
+    trackTaps === false ? false : (trackTaps ?? onTap) ? true : interactionTracking.taps
 
   const { onLayout } = useViewportTracking({
     entry,

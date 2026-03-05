@@ -35,7 +35,7 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
    * Controls which entry interactions are tracked automatically for all
    * {@link Personalization} and {@link Analytics} components. Individual
    * components can override each interaction type with their `trackViews`
-   * and `onTap` props.
+   * and `trackTaps` props.
    *
    * @defaultValue `{ views: true, taps: false }`
    *
