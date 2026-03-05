@@ -1,0 +1,187 @@
+import type {
+  SelectedPersonalization,
+  SelectedPersonalizationArray,
+} from '@contentful/optimization-api-schemas'
+import type { ResolvedData } from '@contentful/optimization-core'
+import type { Entry, EntrySkeletonType } from 'contentful'
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type JSX,
+  type ReactNode,
+} from 'react'
+import { useLiveUpdates } from '../hooks/useLiveUpdates'
+import { useOptimization } from '../hooks/useOptimization'
+
+export interface PersonalizationLoadingFallbackArgs {
+  baselineEntry: Entry
+}
+
+export type PersonalizationLoadingFallback =
+  | ReactNode
+  | ((args: PersonalizationLoadingFallbackArgs) => ReactNode)
+
+/**
+ * Props for the {@link Personalization} component.
+ *
+ * @public
+ */
+export interface PersonalizationProps {
+  /**
+   * The baseline Contentful entry fetched with `include: 10`.
+   * Must include `nt_experiences` field with linked personalization data.
+   */
+  baselineEntry: Entry
+
+  /**
+   * Render prop that receives the resolved variant entry.
+   */
+  children: (resolvedEntry: Entry) => ReactNode
+
+  /**
+   * Whether this component should react to personalization state changes in real-time.
+   * When `undefined`, inherits from the `liveUpdates` prop on {@link OptimizationRoot}.
+   */
+  liveUpdates?: boolean
+
+  /**
+   * Optional style prop for the wrapper element.
+   */
+  style?: CSSProperties
+
+  /**
+   * Optional legacy test id prop.
+   */
+  testID?: string
+
+  /**
+   * Optional test id prop.
+   */
+  testId?: string
+
+  /**
+   * Optional data-testid prop.
+   */
+  'data-testid'?: string
+
+  /**
+   * Optional fallback rendered while personalization state is unresolved.
+   */
+  loadingFallback?: PersonalizationLoadingFallback
+}
+
+function resolveLoadingFallback(
+  loadingFallback: PersonalizationLoadingFallback | undefined,
+  args: PersonalizationLoadingFallbackArgs,
+): ReactNode {
+  if (typeof loadingFallback === 'function') return loadingFallback(args)
+  return loadingFallback
+}
+
+function resolveDuplicationScope(
+  personalization: SelectedPersonalization | undefined,
+): string | undefined {
+  const candidate =
+    personalization &&
+    typeof personalization === 'object' &&
+    'duplicationScope' in personalization
+      ? personalization.duplicationScope
+      : undefined
+  if (typeof candidate !== 'string') return undefined
+  return candidate.trim() ? candidate : undefined
+}
+
+function resolveShouldLiveUpdate(params: {
+  previewPanelVisible: boolean
+  componentLiveUpdates: boolean | undefined
+  globalLiveUpdates: boolean
+}): boolean {
+  const { previewPanelVisible, componentLiveUpdates, globalLiveUpdates } = params
+  if (previewPanelVisible) return true
+  return componentLiveUpdates ?? globalLiveUpdates
+}
+
+function resolveTrackingAttributes(
+  resolvedData: ResolvedData<EntrySkeletonType>,
+): Record<string, string | undefined> {
+  const { personalization } = resolvedData
+
+  return {
+    'data-ctfl-duplication-scope': resolveDuplicationScope(personalization),
+    'data-ctfl-entry-id': resolvedData.entry.sys.id,
+    'data-ctfl-personalization-id': personalization?.experienceId,
+    'data-ctfl-sticky': personalization?.sticky === undefined ? undefined : String(personalization.sticky),
+    'data-ctfl-variant-index':
+      personalization?.variantIndex === undefined ? undefined : String(personalization.variantIndex),
+  }
+}
+
+export function Personalization({
+  baselineEntry,
+  children,
+  liveUpdates,
+  style,
+  testID,
+  testId,
+  'data-testid': dataTestIdProp,
+  loadingFallback,
+}: PersonalizationProps): JSX.Element {
+  const optimization = useOptimization()
+  const liveUpdatesContext = useLiveUpdates()
+
+  const shouldLiveUpdate = resolveShouldLiveUpdate({
+    componentLiveUpdates: liveUpdates,
+    globalLiveUpdates: liveUpdatesContext.globalLiveUpdates,
+    previewPanelVisible: liveUpdatesContext.previewPanelVisible,
+  })
+
+  const [lockedPersonalizations, setLockedPersonalizations] = useState<
+    SelectedPersonalizationArray | undefined
+  >(undefined)
+  const [hasResolvedPersonalizationState, setHasResolvedPersonalizationState] = useState(false)
+
+  useEffect(() => {
+    const subscription = optimization.states.personalizations.subscribe((p) => {
+      if (p !== undefined) setHasResolvedPersonalizationState(true)
+
+      if (shouldLiveUpdate) {
+        setLockedPersonalizations(p)
+      } else if (lockedPersonalizations === undefined && p !== undefined) {
+        setLockedPersonalizations(p)
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [optimization, shouldLiveUpdate, lockedPersonalizations])
+
+  const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
+    () => optimization.personalizeEntry(baselineEntry, lockedPersonalizations),
+    [optimization, baselineEntry, lockedPersonalizations],
+  )
+
+  const isLoading = !hasResolvedPersonalizationState
+  const showLoadingFallback = loadingFallback !== undefined && isLoading
+  const dataTestId = dataTestIdProp ?? testId ?? testID
+
+  if (showLoadingFallback) {
+    return (
+      <div style={style} data-testid={dataTestId}>
+        {resolveLoadingFallback(loadingFallback, { baselineEntry })}
+      </div>
+    )
+  }
+
+  const trackingAttributes = resolveTrackingAttributes(resolvedData)
+
+  return (
+    <div style={style} data-testid={dataTestId} {...trackingAttributes}>
+      {children(resolvedData.entry)}
+    </div>
+  )
+}
+
+export default Personalization
