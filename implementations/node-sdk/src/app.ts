@@ -13,6 +13,11 @@ import express, { type Express, type Request } from 'express'
 import rateLimit from 'express-rate-limit'
 import path from 'node:path'
 import type { ParsedQs } from 'qs'
+import type {
+  TypeContentSkeleton,
+  TypeMergeTagContentSkeleton,
+  TypeNestedContentSkeleton,
+} from './contentful-generated'
 
 const limiter = rateLimit({
   windowMs: 30_000,
@@ -46,16 +51,13 @@ const ctflConfig: contentful.CreateClientParams = {
 
 const ctfl = contentful.createClient(ctflConfig)
 
-interface ContentEntrySkeleton {
-  contentTypeId: 'content'
-  fields: {
-    text: contentful.EntryFieldTypes.Text | contentful.EntryFieldTypes.RichText
-  }
-}
+type ContentEntrySkeleton =
+  | TypeContentSkeleton
+  | TypeMergeTagContentSkeleton
+  | TypeNestedContentSkeleton
+type ContentEntry = Entry<ContentEntrySkeleton>
 
-async function getContentfulEntry(
-  entryId: string,
-): Promise<Entry<ContentEntrySkeleton> | undefined> {
+async function getContentfulEntry(entryId: string): Promise<ContentEntry | undefined> {
   try {
     return await ctfl.getEntry<ContentEntrySkeleton>(entryId, {
       include: 10,
@@ -86,7 +88,7 @@ const entryIds: string[] = [
   '7pa5bOx8Z9NmNcr7mISvD',
 ]
 
-const entries = new Map<string, Entry<ContentEntrySkeleton>>()
+const entries = new Map<string, ContentEntry>()
 
 Promise.all(
   entryIds.map(async (entryId) => {
@@ -167,7 +169,7 @@ app.get('/', limiter, async (req, res) => {
   const personalizedEntries = new Map<
     string,
     {
-      entry: Entry<ContentEntrySkeleton>
+      entry: ContentEntry
       personalization?: SelectedPersonalization
     }
   >()
@@ -191,7 +193,7 @@ app.get('/', limiter, async (req, res) => {
       })
     }
 
-    const personalizedEntry = sdk.personalizeEntry(entry, personalizations)
+    const personalizedEntry = sdk.personalizeEntry<ContentEntrySkeleton>(entry, personalizations)
 
     personalizedEntries.set(entryId, personalizedEntry)
   })

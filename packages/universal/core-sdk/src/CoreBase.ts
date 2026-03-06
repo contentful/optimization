@@ -222,8 +222,20 @@ abstract class CoreBase implements ResolverMethods {
    * ```
    */
   personalizeEntry<
+    S extends EntrySkeletonType = EntrySkeletonType,
+    L extends LocaleCode = LocaleCode,
+  >(
+    entry: Entry<S, undefined, L>,
+    personalizations?: SelectedPersonalizationArray,
+  ): ResolvedData<S, undefined, L>
+  personalizeEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers = ChainModifiers,
+    L extends LocaleCode = LocaleCode,
+  >(entry: Entry<S, M, L>, personalizations?: SelectedPersonalizationArray): ResolvedData<S, M, L>
+  personalizeEntry<
+    S extends EntrySkeletonType,
+    M extends ChainModifiers,
     L extends LocaleCode = LocaleCode,
   >(entry: Entry<S, M, L>, personalizations?: SelectedPersonalizationArray): ResolvedData<S, M, L> {
     return this._personalization.personalizeEntry<S, M, L>(entry, personalizations)

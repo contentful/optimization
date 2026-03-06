@@ -17,6 +17,7 @@
     "fetch:ctfl": "pnpm fetch:ctfl:space && pnpm fetch:ctfl:entries",
     "fetch:ctfl:entries": "tsx ./scripts/fetchEntries.ts",
     "fetch:ctfl:space": "contentful space export --config .contentfulrc.json",
+    "generate:ctfl:types": "tsx ./scripts/generateTypeDefinition.ts && tsx ./scripts/copyGeneratedTypeDefinition.ts",
     "serve": "tsx ./src/server.ts",
     "test:unit": "echo \"No unit tests necessary\"",
     "upload:ctfl:space": "read -p 'This will overwrite your space data! Do you really want to do this? (y/N)' yn && [ \"$yn\" = 'y' ] && pnpm import:ctfl:confirmed",
