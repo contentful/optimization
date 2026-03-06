@@ -1,10 +1,12 @@
 import type { ResolvedData } from '@contentful/optimization-core'
 import type { SelectedPersonalizationArray } from '@contentful/optimization-core/api-schemas'
 import type { Entry, EntrySkeletonType } from 'contentful'
-import React, { useEffect, useMemo, useState, type ReactNode } from 'react'
+import React, { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
+import { useInteractionTracking } from '../context/InteractionTrackingContext'
 import { useLiveUpdates } from '../context/LiveUpdatesContext'
 import { useOptimization } from '../context/OptimizationContext'
+import { useTapTracking } from '../hooks/useTapTracking'
 import { useViewportTracking } from '../hooks/useViewportTracking'
 
 /**
@@ -32,6 +34,7 @@ export interface PersonalizationProps {
    * or with the selected variant entry if personalization applies.
    *
    * @param resolvedEntry - The entry to display (baseline or variant)
+   *
    * @returns ReactNode to render
    *
    * @example
@@ -52,7 +55,7 @@ export interface PersonalizationProps {
    * Minimum time (in milliseconds) the component must be visible
    * before tracking fires.
    *
-   * @defaultValue 2000
+   * @defaultValue `2000`
    */
   viewTimeMs?: number
 
@@ -60,7 +63,7 @@ export interface PersonalizationProps {
    * Minimum visibility ratio (0.0 - 1.0) required to consider
    * the component "visible".
    *
-   * @defaultValue 0.8
+   * @defaultValue `0.8`
    */
   threshold?: number
 
@@ -81,21 +84,49 @@ export interface PersonalizationProps {
    * it receives, preventing UI flashing when user actions change their qualification.
    * When `true`, the component updates immediately when personalizations change.
    *
+   * @defaultValue `undefined`
+   *
    * @remarks
    * Live updates are always enabled when the preview panel is open,
    * regardless of this setting.
-   *
-   * @defaultValue undefined
    */
   liveUpdates?: boolean
+
+  /**
+   * Per-component override for view tracking.
+   * - `undefined`: inherits from `trackEntryInteraction.views` on {@link OptimizationRoot}
+   * - `true`: enable view tracking for this entry
+   * - `false`: disable view tracking for this entry
+   *
+   * @defaultValue `undefined`
+   */
+  trackViews?: boolean
+
+  /**
+   * Per-component override for tap tracking.
+   * - `undefined`: inherits from `trackEntryInteraction.taps` on {@link OptimizationRoot}
+   * - `true`: enable tap tracking for this entry
+   * - `false`: disable tap tracking (overrides the global setting)
+   *
+   * @defaultValue `undefined`
+   */
+  trackTaps?: boolean
+
+  /**
+   * Optional callback invoked with the resolved entry after a tap tracking event is emitted.
+   * When provided, implicitly enables tap tracking unless `trackTaps` is explicitly `false`.
+   *
+   * @defaultValue `undefined`
+   */
+  onTap?: (resolvedEntry: Entry) => void
 }
 
 /**
- * Tracks views of personalized Contentful entry components and resolves variants
+ * Tracks views and taps of personalized Contentful entry components and resolves variants
  * based on the user's profile and active personalizations.
  *
- * @param props - Component props
- * @returns A wrapper View with viewport tracking attached
+ * @param props - {@link PersonalizationProps}
+ * @returns A wrapper View with interaction tracking attached
  *
  * @remarks
  * "Component tracking" refers to tracking Contentful entry components (content entries),
@@ -120,27 +151,19 @@ export interface PersonalizationProps {
  *   </Personalization>
  * </OptimizationScrollProvider>
  * ```
- *
- * @example Custom Thresholds
+ * @example With Tap Tracking
  * ```tsx
- * <Personalization
- *   baselineEntry={entry}
- *   viewTimeMs={3000}
- *   threshold={0.9}
- * >
- *   {(resolvedEntry) => <YourComponent data={resolvedEntry.fields} />}
- * </Personalization>
- * ```
- *
- * @example Live Updates
- * ```tsx
- * <Personalization baselineEntry={entry} liveUpdates={true}>
- *   {(resolvedEntry) => <DynamicComponent data={resolvedEntry.fields} />}
+ * <Personalization baselineEntry={entry} trackTaps>
+ *   {(resolvedEntry) => (
+ *     <Pressable onPress={() => navigate(resolvedEntry)}>
+ *       <Card title={resolvedEntry.fields.title} />
+ *     </Pressable>
+ *   )}
  * </Personalization>
  * ```
  *
  * @see {@link Analytics} for tracking non-personalized entries
- * @see {@link OptimizationRoot} for configuring global live updates
+ * @see {@link OptimizationRoot} for configuring global interaction tracking
  *
  * @public
  */
@@ -152,40 +175,38 @@ export function Personalization({
   style,
   testID,
   liveUpdates,
+  trackViews,
+  trackTaps,
+  onTap,
 }: PersonalizationProps): React.JSX.Element {
   const optimization = useOptimization()
   const liveUpdatesContext = useLiveUpdates()
+  const interactionTracking = useInteractionTracking()
 
-  // Determine if live updates should be enabled for this component:
-  // 1. Preview panel visible always enables live updates (highest priority)
-  // 2. Per-component liveUpdates prop overrides global setting
-  // 3. Global liveUpdates from OptimizationRoot
-  // 4. Default: lock on first non-undefined value
   const shouldLiveUpdate =
     liveUpdatesContext?.previewPanelVisible === true ||
     (liveUpdates ?? liveUpdatesContext?.globalLiveUpdates ?? false)
 
-  // Track personalization state with lock-on-first-value behavior
-  // When shouldLiveUpdate is false, we only accept the first non-undefined value
   const [lockedPersonalizations, setLockedPersonalizations] = useState<
     SelectedPersonalizationArray | undefined
   >(undefined)
 
+  const isLockedRef = useRef(false)
+
+  useEffect(() => {
+    if (shouldLiveUpdate) {
+      isLockedRef.current = false
+    }
+  }, [shouldLiveUpdate])
+
   useEffect(() => {
     const subscription = optimization.states.personalizations.subscribe((p) => {
-      setLockedPersonalizations((previous) => {
-        if (shouldLiveUpdate) {
-          // Live updates enabled - always mirror state updates.
-          return p
-        }
-
-        // First non-undefined value - lock it, then ignore subsequent updates.
-        if (previous === undefined && p !== undefined) {
-          return p
-        }
-
-        return previous
-      })
+      if (shouldLiveUpdate) {
+        setLockedPersonalizations(p)
+      } else if (!isLockedRef.current && p !== undefined) {
+        isLockedRef.current = true
+        setLockedPersonalizations(p)
+      }
     })
 
     return () => {
@@ -198,15 +219,33 @@ export function Personalization({
     [baselineEntry, optimization, lockedPersonalizations],
   )
 
+  const viewsEnabled = trackViews ?? interactionTracking.views
+  const tapsEnabled =
+    trackTaps === false ? false : (trackTaps ?? onTap) ? true : interactionTracking.taps
+
   const { onLayout } = useViewportTracking({
     entry: resolvedData.entry,
     personalization: resolvedData.personalization,
     threshold,
     viewTimeMs,
+    enabled: viewsEnabled,
+  })
+
+  const { onTouchStart, onTouchEnd } = useTapTracking({
+    entry: resolvedData.entry,
+    personalization: resolvedData.personalization,
+    enabled: tapsEnabled,
+    onTap,
   })
 
   return (
-    <View style={style} onLayout={onLayout} testID={testID}>
+    <View
+      style={style}
+      onLayout={onLayout}
+      testID={testID}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
+    >
       {children(resolvedData.entry)}
     </View>
   )

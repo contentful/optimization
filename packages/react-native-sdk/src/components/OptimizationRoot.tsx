@@ -1,5 +1,9 @@
 import type { CoreStatefulConfig } from '@contentful/optimization-core'
 import React, { type ReactNode } from 'react'
+import {
+  InteractionTrackingProvider,
+  type TrackEntryInteractionOptions,
+} from '../context/InteractionTrackingContext'
 import { LiveUpdatesProvider } from '../context/LiveUpdatesContext'
 import type { PreviewPanelConfig } from '../preview'
 import { PreviewPanelOverlay } from '../preview/components/PreviewPanelOverlay'
@@ -22,13 +26,37 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
   /**
    * Whether {@link Personalization} components should react to state changes in real-time.
    *
+   * @defaultValue `false`
+   *
    * @remarks
    * Live updates are always enabled when the preview panel is open,
    * regardless of this setting.
-   *
-   * @defaultValue false
    */
   liveUpdates?: boolean
+
+  /**
+   * Controls which entry interactions are tracked automatically for all
+   * {@link Personalization} and {@link Analytics} components. Individual
+   * components can override each interaction type with their `trackViews`
+   * and `trackTaps` props.
+   *
+   * @defaultValue `{ views: true, taps: false }`
+   *
+   * @remarks
+   * Mirrors the web SDK's `autoTrackEntryInteraction` pattern. Uses `taps`
+   * instead of `clicks` to match React Native terminology.
+   *
+   * @example
+   * ```tsx
+   * <OptimizationRoot
+   *   instance={optimization}
+   *   trackEntryInteraction={{ views: true, taps: true }}
+   * >
+   *   <App />
+   * </OptimizationRoot>
+   * ```
+   */
+  trackEntryInteraction?: TrackEntryInteractionOptions
 
   /**
    * Children components that will have access to the Optimization instance.
@@ -38,7 +66,7 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
 
 /**
  * Recommended top-level wrapper that combines {@link OptimizationProvider} with optional
- * preview panel and live updates support.
+ * preview panel, live updates, and interaction tracking support.
  *
  * Handles SDK initialization internally — pass config properties directly as props.
  *
@@ -51,7 +79,15 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
  *   <App />
  * </OptimizationRoot>
  * ```
- *
+ * @example With interaction tracking
+ * ```tsx
+ * <OptimizationRoot
+ *   instance={optimization}
+ *   trackEntryInteraction={{ views: true, taps: true }}
+ * >
+ *   <App />
+ * </OptimizationRoot>
+ * ```
  * @example With preview panel
  * ```tsx
  * <OptimizationRoot
@@ -75,13 +111,14 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
  * ```
  *
  * @see {@link OptimizationProvider}
- * @see {@link Personalization} for per-component live updates override
+ * @see {@link Personalization} for per-component interaction overrides
  *
  * @public
  */
 export function OptimizationRoot({
   previewPanel,
   liveUpdates = false,
+  trackEntryInteraction,
   children,
   ...config
 }: OptimizationRootProps): React.JSX.Element {
@@ -100,7 +137,11 @@ export function OptimizationRoot({
 
   return (
     <OptimizationProvider {...config}>
-      <LiveUpdatesProvider globalLiveUpdates={liveUpdates}>{content}</LiveUpdatesProvider>
+      <LiveUpdatesProvider globalLiveUpdates={liveUpdates}>
+        <InteractionTrackingProvider trackEntryInteraction={trackEntryInteraction}>
+          {content}
+        </InteractionTrackingProvider>
+      </LiveUpdatesProvider>
     </OptimizationProvider>
   )
 }

@@ -40,11 +40,20 @@ export type { OptimizationScrollProviderProps } from './context/OptimizationScro
 export { LiveUpdatesProvider, useLiveUpdates } from './context/LiveUpdatesContext'
 export { useOptimization } from './context/OptimizationContext'
 
+export { useInteractionTracking } from './context/InteractionTrackingContext'
+export type {
+  EntryInteraction,
+  TrackEntryInteractionOptions,
+} from './context/InteractionTrackingContext'
+
 export { useViewportTracking } from './hooks/useViewportTracking'
 export type {
   UseViewportTrackingOptions,
   UseViewportTrackingReturn,
 } from './hooks/useViewportTracking'
+
+export { useTapTracking } from './hooks/useTapTracking'
+export type { UseTapTrackingOptions, UseTapTrackingReturn } from './hooks/useTapTracking'
 
 // Export screen tracking hooks
 export { useScreenTracking, useScreenTrackingCallback } from './hooks/useScreenTracking'
