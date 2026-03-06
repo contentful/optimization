@@ -1,6 +1,9 @@
 import type { CoreStatefulConfig } from '@contentful/optimization-core'
 import React, { type ReactNode } from 'react'
-import { InteractionTrackingProvider, TrackEntryInteractionOptions } from '../context/InteractionTrackingContext'
+import {
+  InteractionTrackingProvider,
+  type TrackEntryInteractionOptions,
+} from '../context/InteractionTrackingContext'
 import { LiveUpdatesProvider } from '../context/LiveUpdatesContext'
 import type { PreviewPanelConfig } from '../preview'
 import { PreviewPanelOverlay } from '../preview/components/PreviewPanelOverlay'

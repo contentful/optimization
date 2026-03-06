@@ -1,7 +1,7 @@
 import type { ResolvedData } from '@contentful/optimization-core'
 import type { SelectedPersonalizationArray } from '@contentful/optimization-core/api-schemas'
 import type { Entry, EntrySkeletonType } from 'contentful'
-import React, { useEffect, useMemo, useState, type ReactNode } from 'react'
+import React, { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
 import { useInteractionTracking } from '../context/InteractionTrackingContext'
 import { useLiveUpdates } from '../context/LiveUpdatesContext'
@@ -191,11 +191,20 @@ export function Personalization({
     SelectedPersonalizationArray | undefined
   >(undefined)
 
+  const isLockedRef = useRef(false)
+
+  useEffect(() => {
+    if (shouldLiveUpdate) {
+      isLockedRef.current = false
+    }
+  }, [shouldLiveUpdate])
+
   useEffect(() => {
     const subscription = optimization.states.personalizations.subscribe((p) => {
       if (shouldLiveUpdate) {
         setLockedPersonalizations(p)
-      } else if (lockedPersonalizations === undefined && p !== undefined) {
+      } else if (!isLockedRef.current && p !== undefined) {
+        isLockedRef.current = true
         setLockedPersonalizations(p)
       }
     })
