@@ -355,9 +355,21 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * const { entry } = personalization.personalizeEntry(baselineEntry)
    * ```
    */
-  personalizeEntry<
+  override personalizeEntry<
+    S extends EntrySkeletonType = EntrySkeletonType,
+    L extends LocaleCode = LocaleCode,
+  >(
+    entry: Entry<S, undefined, L>,
+    personalizations?: SelectedPersonalizationArray,
+  ): ResolvedData<S, undefined, L>
+  override personalizeEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers = ChainModifiers,
+    L extends LocaleCode = LocaleCode,
+  >(entry: Entry<S, M, L>, personalizations?: SelectedPersonalizationArray): ResolvedData<S, M, L>
+  override personalizeEntry<
+    S extends EntrySkeletonType,
+    M extends ChainModifiers,
     L extends LocaleCode = LocaleCode,
   >(
     entry: Entry<S, M, L>,
