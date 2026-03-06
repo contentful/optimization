@@ -9,7 +9,6 @@ export { useOptimization } from './hooks/useOptimization'
 export { Personalization } from './personalization/Personalization'
 export type {
   PersonalizationLoadingFallback,
-  PersonalizationLoadingFallbackArgs,
   PersonalizationProps,
 } from './personalization/Personalization'
 export { usePersonalization } from './personalization/usePersonalization'

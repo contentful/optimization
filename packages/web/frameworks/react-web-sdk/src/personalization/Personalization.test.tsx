@@ -218,6 +218,7 @@ describe('Personalization', () => {
     const wrapper = getWrapper(view.container)
     expect(wrapper.dataset.ctflEntryId).toBe('baseline')
     expect(wrapper.dataset.ctflPersonalizationId).toBeUndefined()
+    expect(wrapper.dataset.ctflVariantIndex).toBe('0')
 
     await view.unmount()
   })
@@ -277,16 +278,13 @@ describe('Personalization', () => {
     })
 
     const view = await renderComponent(
-      <Personalization
-        baselineEntry={baseline}
-        loadingFallback={({ baselineEntry }) => `loading-${baselineEntry.sys.id}`}
-      >
+      <Personalization baselineEntry={baseline} loadingFallback={() => 'loading'}>
         {(resolved) => readTitle(resolved)}
       </Personalization>,
       optimization,
     )
 
-    expect(view.container.textContent).toContain('loading-baseline')
+    expect(view.container.textContent).toContain('loading')
 
     const loadingWrapper = getWrapper(view.container)
     expect(loadingWrapper.dataset.ctflEntryId).toBeUndefined()
@@ -333,11 +331,11 @@ describe('Personalization', () => {
     await view.unmount()
   })
 
-  it('supports testID/testId/data-testid props with data-testid precedence', async () => {
+  it('supports testId/data-testid props with data-testid precedence', async () => {
     const { optimization } = createRuntime((entry) => ({ entry }))
 
     const view = await renderComponent(
-      <Personalization baselineEntry={baseline} testID="legacy" testId="camel" data-testid="direct">
+      <Personalization baselineEntry={baseline} testId="camel" data-testid="direct">
         {(resolved) => readTitle(resolved)}
       </Personalization>,
       optimization,

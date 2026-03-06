@@ -40,10 +40,10 @@ export function PersonalizationSection({
           <Personalization
             baselineEntry={baselineDefault}
             data-testid="personalization-default"
-            loadingFallback={({ baselineEntry }) => (
+            loadingFallback={() => (
               <article className="dashboard__card">
                 <h2>Personalization (inherits root liveUpdates)</h2>
-                <p>{`Loading ${baselineEntry.sys.id}...`}</p>
+                <p>Loading personalized content...</p>
               </article>
             )}
           >

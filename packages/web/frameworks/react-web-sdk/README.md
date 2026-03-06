@@ -120,7 +120,7 @@ When `loadingFallback` is provided, it is rendered until personalization state i
 ```tsx
 <Personalization
   baselineEntry={baselineEntry}
-  loadingFallback={({ baselineEntry }) => <Skeleton label={`Loading ${baselineEntry.sys.id}`} />}
+  loadingFallback={() => <Skeleton label="Loading personalized content" />}
 >
   {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
 </Personalization>

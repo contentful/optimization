@@ -8,13 +8,7 @@ import { useEffect, useMemo, useState, type CSSProperties, type JSX, type ReactN
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
 import { useOptimization } from '../hooks/useOptimization'
 
-export interface PersonalizationLoadingFallbackArgs {
-  baselineEntry: Entry
-}
-
-export type PersonalizationLoadingFallback =
-  | ReactNode
-  | ((args: PersonalizationLoadingFallbackArgs) => ReactNode)
+export type PersonalizationLoadingFallback = ReactNode | (() => ReactNode)
 
 /**
  * Props for the {@link Personalization} component.
@@ -45,11 +39,6 @@ export interface PersonalizationProps {
   style?: CSSProperties
 
   /**
-   * Optional legacy test id prop.
-   */
-  testID?: string
-
-  /**
    * Optional test id prop.
    */
   testId?: string
@@ -67,9 +56,8 @@ export interface PersonalizationProps {
 
 function resolveLoadingFallback(
   loadingFallback: PersonalizationLoadingFallback | undefined,
-  args: PersonalizationLoadingFallbackArgs,
 ): ReactNode {
-  if (typeof loadingFallback === 'function') return loadingFallback(args)
+  if (typeof loadingFallback === 'function') return loadingFallback()
   return loadingFallback
 }
 
@@ -105,10 +93,7 @@ function resolveTrackingAttributes(
     'data-ctfl-personalization-id': personalization?.experienceId,
     'data-ctfl-sticky':
       personalization?.sticky === undefined ? undefined : String(personalization.sticky),
-    'data-ctfl-variant-index':
-      personalization?.variantIndex === undefined
-        ? undefined
-        : String(personalization.variantIndex),
+    'data-ctfl-variant-index': String(personalization?.variantIndex ?? 0),
   }
 }
 
@@ -117,7 +102,6 @@ export function Personalization({
   children,
   liveUpdates,
   style,
-  testID,
   testId,
   'data-testid': dataTestIdProp,
   loadingFallback,
@@ -170,12 +154,12 @@ export function Personalization({
 
   const isLoading = !canPersonalize
   const showLoadingFallback = loadingFallback !== undefined && isLoading
-  const dataTestId = dataTestIdProp ?? testId ?? testID
+  const dataTestId = dataTestIdProp ?? testId
 
   if (showLoadingFallback) {
     return (
       <div style={style} data-testid={dataTestId}>
-        {resolveLoadingFallback(loadingFallback, { baselineEntry })}
+        {resolveLoadingFallback(loadingFallback)}
       </div>
     )
   }
