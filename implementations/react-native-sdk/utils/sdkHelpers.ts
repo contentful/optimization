@@ -1,4 +1,3 @@
-import Optimization from '@contentful/optimization-react-native'
 import { createScopedLogger } from '@contentful/optimization-react-native/logger'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { createClient, type Entry } from 'contentful'
@@ -16,27 +15,6 @@ function createContentfulClient(): ReturnType<typeof createClient> {
     basePath: ENV_CONFIG.contentful.basePath,
     insecure: true,
   })
-}
-
-export async function initializeSDK(
-  setSdk: (sdk: Awaited<ReturnType<typeof Optimization.create>>) => void,
-  setSdkError: (error: string) => void,
-): Promise<void> {
-  try {
-    const sdkInstance = await Optimization.create({
-      clientId: ENV_CONFIG.optimization.clientId,
-      environment: ENV_CONFIG.optimization.environment,
-      personalization: { baseUrl: ENV_CONFIG.api.experienceBaseUrl },
-      analytics: { baseUrl: ENV_CONFIG.api.insightsBaseUrl },
-      logLevel: 'debug',
-    })
-    sdkInstance.consent(true)
-
-    setSdk(sdkInstance)
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-    setSdkError(`Failed to initialize SDK: ${errorMessage}`)
-  }
 }
 
 export async function fetchEntries(

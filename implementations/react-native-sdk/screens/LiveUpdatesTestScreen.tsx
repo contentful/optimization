@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react'
 import { Button, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import type Optimization from '@contentful/optimization-react-native'
 import {
-  OptimizationRoot,
+  LiveUpdatesProvider,
   OptimizationScrollProvider,
   Personalization,
   useLiveUpdates,
+  useOptimization,
 } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 
@@ -16,7 +16,6 @@ import { ENV_CONFIG } from '../env.config'
 import { fetchEntries } from '../utils/sdkHelpers'
 
 interface LiveUpdatesTestScreenProps {
-  sdk: Optimization
   onClose: () => void
 }
 
@@ -92,10 +91,8 @@ function ContentSections({
   )
 }
 
-export function LiveUpdatesTestScreen({
-  sdk,
-  onClose,
-}: LiveUpdatesTestScreenProps): React.JSX.Element {
+export function LiveUpdatesTestScreen({ onClose }: LiveUpdatesTestScreenProps): React.JSX.Element {
+  const sdk = useOptimization()
   const [entry, setEntry] = useState<Entry | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -163,9 +160,8 @@ export function LiveUpdatesTestScreen({
   }
 
   return (
-    <OptimizationRoot
-      instance={sdk}
-      liveUpdates={globalLiveUpdates}
+    <LiveUpdatesProvider
+      globalLiveUpdates={globalLiveUpdates}
       key={`${globalLiveUpdates}-${isPreviewPanelSimulated}`}
     >
       <SafeAreaView>
@@ -206,7 +202,7 @@ export function LiveUpdatesTestScreen({
           onSimulatePreviewPanel={handleSimulatePreviewPanel}
         />
       </SafeAreaView>
-    </OptimizationRoot>
+    </LiveUpdatesProvider>
   )
 }
 

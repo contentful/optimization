@@ -1,4 +1,4 @@
-import type Optimization from '@contentful/optimization-react-native'
+import type { OptimizationReactNativeSdk } from '@contentful/optimization-react-native'
 import { createClient, type Entry } from 'contentful'
 import AsyncStorageStore from '../../src/storage/AsyncStorageStore'
 import { ENV_CONFIG } from '../env.config'
@@ -6,11 +6,11 @@ import type { SDKInfo } from '../types'
 
 export async function initializeSDK(
   setSdkInfo: (info: SDKInfo) => void,
-  setSdk: (sdk: Optimization) => void,
+  setSdk: (sdk: OptimizationReactNativeSdk) => void,
   setSdkLoaded: (loaded: boolean) => void,
   setSdkError: (error: string | null) => void,
 ): Promise<void> {
-  const { default: Optimization } = await import('@contentful/optimization-react-native')
+  const { OptimizationReactNativeSdk } = await import('@contentful/optimization-react-native')
 
   try {
     const {
@@ -21,7 +21,7 @@ export async function initializeSDK(
     await AsyncStorageStore.initialize()
     AsyncStorageStore.consent = true
 
-    const sdkInstance = await Optimization.create({
+    const sdkInstance = await OptimizationReactNativeSdk.create({
       clientId,
       environment,
       personalization: { baseUrl: experienceBaseUrl },

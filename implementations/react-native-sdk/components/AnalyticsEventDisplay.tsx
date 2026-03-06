@@ -1,16 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { Text, View } from 'react-native'
 
-import type Optimization from '@contentful/optimization-react-native'
+import { useOptimization } from '@contentful/optimization-react-native'
 
 interface AnalyticsEvent {
   type: string
   componentId?: string
   timestamp: number
-}
-
-interface AnalyticsEventDisplayProps {
-  sdk: Optimization
 }
 
 function isValidEvent(event: unknown): event is { type: string; componentId?: unknown } {
@@ -19,7 +15,8 @@ function isValidEvent(event: unknown): event is { type: string; componentId?: un
   )
 }
 
-export function AnalyticsEventDisplay({ sdk }: AnalyticsEventDisplayProps): React.JSX.Element {
+export function AnalyticsEventDisplay(): React.JSX.Element {
+  const sdk = useOptimization()
   const [events, setEvents] = useState<AnalyticsEvent[]>([])
 
   useEffect(() => {

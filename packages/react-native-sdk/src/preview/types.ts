@@ -515,6 +515,44 @@ export interface VariantSelectorProps {
  *
  * @public
  */
+/**
+ * Configuration options for the preview panel feature.
+ *
+ * @public
+ */
+export interface PreviewPanelConfig {
+  /**
+   * Whether the preview panel is enabled.
+   * When `true`, a floating action button appears that opens the preview panel.
+   */
+  enabled: boolean
+
+  /**
+   * Contentful client instance used to fetch `nt_audience` and `nt_experience` entries.
+   */
+  contentfulClient: ContentfulClient
+
+  /**
+   * Optional positioning overrides for the floating action button.
+   */
+  fabPosition?: { bottom?: number; right?: number }
+
+  /**
+   * Called when the panel visibility changes.
+   */
+  onVisibilityChange?: (isVisible: boolean) => void
+
+  /**
+   * Whether to show the header with title in the preview panel.
+   */
+  showHeader?: boolean
+}
+
+/**
+ * Props for the {@link SearchBar} component.
+ *
+ * @public
+ */
 export interface SearchBarProps {
   /** Current search value */
   value: string

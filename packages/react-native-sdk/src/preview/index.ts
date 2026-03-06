@@ -66,6 +66,7 @@ export type {
   PersonalizationsSectionProps,
   PreviewActions,
   PreviewData,
+  PreviewPanelConfig,
   PreviewPanelOverlayProps,
   PreviewPanelProps,
   PreviewState,

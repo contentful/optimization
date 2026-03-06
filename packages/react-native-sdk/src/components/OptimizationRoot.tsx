@@ -1,54 +1,18 @@
+import type { CoreStatefulConfig } from '@contentful/optimization-core'
 import React, { type ReactNode } from 'react'
-import type Optimization from '../'
 import { LiveUpdatesProvider } from '../context/LiveUpdatesContext'
+import type { PreviewPanelConfig } from '../preview'
 import { PreviewPanelOverlay } from '../preview/components/PreviewPanelOverlay'
-import type { ContentfulClient } from '../preview/types'
 import { OptimizationProvider } from './OptimizationProvider'
-
-/**
- * Configuration options for the preview panel feature.
- *
- * @public
- */
-export interface PreviewPanelConfig {
-  /**
-   * Whether the preview panel is enabled.
-   * When `true`, a floating action button appears that opens the preview panel.
-   */
-  enabled: boolean
-
-  /**
-   * Contentful client instance used to fetch `nt_audience` and `nt_experience` entries.
-   */
-  contentfulClient: ContentfulClient
-
-  /**
-   * Optional positioning overrides for the floating action button.
-   */
-  fabPosition?: { bottom?: number; right?: number }
-
-  /**
-   * Called when the panel visibility changes.
-   */
-  onVisibilityChange?: (isVisible: boolean) => void
-
-  /**
-   * Whether to show the header with title in the preview panel.
-   */
-  showHeader?: boolean
-}
 
 /**
  * Props for the {@link OptimizationRoot} component.
  *
+ * Accepts all {@link CoreStatefulConfig} properties directly. Only `clientId` is required.
+ *
  * @public
  */
-export interface OptimizationRootProps {
-  /**
-   * The Optimization instance to provide to child components.
-   */
-  instance: Optimization
-
+export interface OptimizationRootProps extends CoreStatefulConfig {
   /**
    * Optional configuration for the preview panel.
    * When provided with `enabled: true`, the preview panel will be available.
@@ -76,17 +40,14 @@ export interface OptimizationRootProps {
  * Recommended top-level wrapper that combines {@link OptimizationProvider} with optional
  * preview panel and live updates support.
  *
+ * Handles SDK initialization internally — pass config properties directly as props.
+ *
  * @param props - Component props
  * @returns The provider tree wrapping children
  *
  * @example Basic usage
  * ```tsx
- * const optimization = await Optimization.create({
- *   clientId: 'your-client-id',
- *   environment: 'main',
- * })
- *
- * <OptimizationRoot instance={optimization}>
+ * <OptimizationRoot clientId="your-client-id" environment="main">
  *   <App />
  * </OptimizationRoot>
  * ```
@@ -94,7 +55,8 @@ export interface OptimizationRootProps {
  * @example With preview panel
  * ```tsx
  * <OptimizationRoot
- *   instance={optimization}
+ *   clientId="your-client-id"
+ *   environment="main"
  *   previewPanel={{
  *     enabled: __DEV__,
  *     contentfulClient,
@@ -107,7 +69,7 @@ export interface OptimizationRootProps {
  *
  * @example With global live updates
  * ```tsx
- * <OptimizationRoot instance={optimization} liveUpdates={true}>
+ * <OptimizationRoot clientId="your-client-id" environment="main" liveUpdates={true}>
  *   <App />
  * </OptimizationRoot>
  * ```
@@ -118,10 +80,10 @@ export interface OptimizationRootProps {
  * @public
  */
 export function OptimizationRoot({
-  instance,
   previewPanel,
   liveUpdates = false,
   children,
+  ...config
 }: OptimizationRootProps): React.JSX.Element {
   const content = previewPanel?.enabled ? (
     <PreviewPanelOverlay
@@ -137,7 +99,7 @@ export function OptimizationRoot({
   )
 
   return (
-    <OptimizationProvider instance={instance}>
+    <OptimizationProvider {...config}>
       <LiveUpdatesProvider globalLiveUpdates={liveUpdates}>{content}</LiveUpdatesProvider>
     </OptimizationProvider>
   )

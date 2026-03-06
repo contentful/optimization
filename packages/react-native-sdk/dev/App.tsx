@@ -17,7 +17,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import type Optimization from '@contentful/optimization-react-native'
+import type { OptimizationReactNativeSdk } from '@contentful/optimization-react-native'
 import { OptimizationRoot } from '@contentful/optimization-react-native'
 import type { MergeTagEntry, Profile } from '@contentful/optimization-react-native/api-schemas'
 import type { Entry } from 'contentful'
@@ -137,7 +137,7 @@ function App(): React.JSX.Element {
   const [sdkLoaded, setSdkLoaded] = useState(false)
   const [sdkError, setSdkError] = useState<string | null>(null)
   const [sdkInfo, setSdkInfo] = useState<SDKInfo | null>(null)
-  const [sdk, setSdk] = useState<Optimization | null>(null)
+  const [sdk, setSdk] = useState<OptimizationReactNativeSdk | null>(null)
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home')
   const [personalizedEntry, setPersonalizedEntry] = useState<Entry | null>(null)
   const [productEntry, setProductEntry] = useState<Entry | null>(null)
