@@ -618,6 +618,9 @@ importers:
       build-tools:
         specifier: workspace:*
         version: link:../../../../lib/build-tools
+      contentful:
+        specifier: 'catalog:'
+        version: 11.10.5
       happy-dom:
         specifier: 'catalog:'
         version: 20.6.1

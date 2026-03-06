@@ -4,11 +4,13 @@ React Web SDK package for `@contentful/optimization-react-web`.
 
 ## Status
 
-Core root/provider primitives are implemented.
+Core root/provider primitives and the `Personalization` component are implemented.
 
 - `OptimizationProvider` + `useOptimization()` context behavior
 - `LiveUpdatesProvider` + `useLiveUpdates()` global live updates context
 - `OptimizationRoot` provider composition and defaults
+- `Personalization` entry resolution, lock/live-update behavior, loading fallback, and
+  data-attribute mapping
 
 ## Purpose
 
@@ -40,6 +42,7 @@ pnpm dev
 - package metadata and dual module exports
 - `rslib`/`rsbuild`/`rstest`/TypeScript baseline aligned with Web SDK patterns
 - core provider/root/context primitives in `src/`
+- `Personalization` component with loading-state support and Web SDK data-attribute tracking
 - scaffold dev dashboard harness in `dev/` for consent, identify/reset, state, events, and entries
 
 ## Usage
@@ -94,16 +97,84 @@ Available config props:
 - `useOptimization()` throws if used outside `OptimizationProvider`.
 - `useLiveUpdates()` throws if used outside `LiveUpdatesProvider`.
 
+### Personalization Component
+
+```tsx
+import { Personalization } from '@contentful/optimization-react-web'
+;<Personalization baselineEntry={baselineEntry}>
+  {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
+</Personalization>
+```
+
+`Personalization` behavior:
+
+- Default mode locks to the first non-`undefined` personalization state.
+- `liveUpdates={true}` enables continuous updates as personalization state changes.
+- If `liveUpdates` is omitted, global root `liveUpdates` is used.
+- If both are omitted, live updates default to `false`.
+
+#### Loading Fallback
+
+When `loadingFallback` is provided, it is rendered until personalization state is first resolved.
+
+```tsx
+<Personalization
+  baselineEntry={baselineEntry}
+  loadingFallback={() => <Skeleton label="Loading personalized content" />}
+>
+  {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
+</Personalization>
+```
+
+If `loadingFallback` is not provided, rendering follows the regular baseline/resolved path.
+
+#### Nested Composition
+
+Nested personalizations are supported by explicit composition:
+
+```tsx
+<Personalization baselineEntry={parentEntry}>
+  {(resolvedParent) => (
+    <ParentSection entry={resolvedParent}>
+      <Personalization baselineEntry={childEntry}>
+        {(resolvedChild) => <ChildSection entry={resolvedChild} />}
+      </Personalization>
+    </ParentSection>
+  )}
+</Personalization>
+```
+
+#### Auto-Tracking Data Attributes
+
+When resolved content is rendered, the wrapper emits attributes used by
+`@contentful/optimization-web` automatic tracking:
+
+- `data-ctfl-entry-id` (always present on resolved content wrapper)
+- `data-ctfl-personalization-id` (when personalized)
+- `data-ctfl-sticky` (when available)
+- `data-ctfl-variant-index` (when personalized)
+- `data-ctfl-duplication-scope` (when available)
+
+To consume those attributes automatically, enable Web SDK auto-tracking with one of:
+
+- `autoTrackEntryInteraction: { views: true }` during `OptimizationRoot` initialization
+- `optimization.tracking.enable('views')` / equivalent runtime setup APIs when applicable
+
+When `loadingFallback` is shown, resolved-content tracking attributes are not emitted.
+
 ### Live Updates Resolution Semantics
 
 Consumers should resolve live updates behavior with:
 
 ```ts
-const isLiveUpdatesEnabled = componentLiveUpdates ?? liveUpdatesContext.globalLiveUpdates
+const isLiveUpdatesEnabled =
+  liveUpdatesContext.previewPanelVisible ||
+  (componentLiveUpdates ?? liveUpdatesContext.globalLiveUpdates)
 ```
 
 This gives:
 
+- preview panel open override first
 - component-level `liveUpdates` prop override first
 - then root-level `liveUpdates`
 - then default `false`
