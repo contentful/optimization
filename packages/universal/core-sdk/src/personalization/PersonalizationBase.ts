@@ -67,10 +67,21 @@ export interface ResolverMethods {
    * Selected personalizations can be sourced from the data returned when emitting any
    * personalization event.
    */
-  personalizeEntry: <S extends EntrySkeletonType, M extends ChainModifiers, L extends LocaleCode>(
-    entry: Entry<S, M, L>,
+  personalizeEntry: (<
+    S extends EntrySkeletonType = EntrySkeletonType,
+    L extends LocaleCode = LocaleCode,
+  >(
+    entry: Entry<S, undefined, L>,
     personalizations?: SelectedPersonalizationArray,
-  ) => ResolvedData<S, M, L>
+  ) => ResolvedData<S, undefined, L>) &
+    (<
+      S extends EntrySkeletonType,
+      M extends ChainModifiers = ChainModifiers,
+      L extends LocaleCode = LocaleCode,
+    >(
+      entry: Entry<S, M, L>,
+      personalizations?: SelectedPersonalizationArray,
+    ) => ResolvedData<S, M, L>)
 
   /**
    * Resolve a merge tag to a value based on the current (or provided) profile.
@@ -160,8 +171,20 @@ abstract class PersonalizationBase extends ProductBase implements ResolverMethod
    * personalization event.
    */
   personalizeEntry<
+    S extends EntrySkeletonType = EntrySkeletonType,
+    L extends LocaleCode = LocaleCode,
+  >(
+    entry: Entry<S, undefined, L>,
+    personalizations?: SelectedPersonalizationArray,
+  ): ResolvedData<S, undefined, L>
+  personalizeEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers = ChainModifiers,
+    L extends LocaleCode = LocaleCode,
+  >(entry: Entry<S, M, L>, personalizations?: SelectedPersonalizationArray): ResolvedData<S, M, L>
+  personalizeEntry<
+    S extends EntrySkeletonType,
+    M extends ChainModifiers,
     L extends LocaleCode = LocaleCode,
   >(entry: Entry<S, M, L>, personalizations?: SelectedPersonalizationArray): ResolvedData<S, M, L> {
     return PersonalizedEntryResolver.resolve<S, M, L>(entry, personalizations)

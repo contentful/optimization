@@ -26,6 +26,7 @@ export default defineConfig(
       '**/android/**',
       '**/build/**',
       '**/coverage',
+      '**/contentful-generated.d.ts',
       '**/dist',
       'docs/media/**',
       '**/ios/**',
