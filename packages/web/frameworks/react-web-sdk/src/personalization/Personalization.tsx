@@ -4,11 +4,12 @@ import type {
 } from '@contentful/optimization-web/api-schemas'
 import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
-import { useEffect, useMemo, useState, type CSSProperties, type JSX, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type JSX, type ReactNode } from 'react'
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
 import { useOptimization } from '../hooks/useOptimization'
 
 export type PersonalizationLoadingFallback = ReactNode | (() => ReactNode)
+export type PersonalizationWrapperElement = 'div' | 'span'
 
 /**
  * Props for the {@link Personalization} component.
@@ -34,9 +35,10 @@ export interface PersonalizationProps {
   liveUpdates?: boolean
 
   /**
-   * Optional style prop for the wrapper element.
+   * Wrapper element used to mount tracking attributes.
+   * Defaults to `div`.
    */
-  style?: CSSProperties
+  as?: PersonalizationWrapperElement
 
   /**
    * Optional test id prop.
@@ -60,6 +62,8 @@ function resolveLoadingFallback(
   if (typeof loadingFallback === 'function') return loadingFallback()
   return loadingFallback
 }
+
+const WRAPPER_STYLE = Object.freeze({ display: 'contents' as const })
 
 function resolveDuplicationScope(
   personalization: SelectedPersonalization | undefined,
@@ -101,7 +105,7 @@ export function Personalization({
   baselineEntry,
   children,
   liveUpdates,
-  style,
+  as = 'div',
   testId,
   'data-testid': dataTestIdProp,
   loadingFallback,
@@ -155,21 +159,22 @@ export function Personalization({
   const isLoading = !canPersonalize
   const showLoadingFallback = loadingFallback !== undefined && isLoading
   const dataTestId = dataTestIdProp ?? testId
+  const Wrapper = as
 
   if (showLoadingFallback) {
     return (
-      <div style={style} data-testid={dataTestId}>
+      <Wrapper style={WRAPPER_STYLE} data-testid={dataTestId}>
         {resolveLoadingFallback(loadingFallback)}
-      </div>
+      </Wrapper>
     )
   }
 
   const trackingAttributes = resolveTrackingAttributes(resolvedData)
 
   return (
-    <div style={style} data-testid={dataTestId} {...trackingAttributes}>
+    <Wrapper style={WRAPPER_STYLE} data-testid={dataTestId} {...trackingAttributes}>
       {children(resolvedData.entry)}
-    </div>
+    </Wrapper>
   )
 }
 
