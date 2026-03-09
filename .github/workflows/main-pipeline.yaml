@@ -26,9 +26,9 @@ jobs:
       e2e_web_sdk_react: ${{ steps.filter.outputs.e2e_web_sdk_react }}
       e2e_react_native_android: ${{ steps.filter.outputs.e2e_react_native_android }}
     steps:
-      - uses: namespacelabs/nscloud-checkout-action@v8
+      - uses: namespacelabs/nscloud-checkout-action@8d38dddb292f119b5c9afb0d930ab614dec5d46f # v8.1.0
 
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@668c092af3649c4b664c54e4b704aa46782f6f7c # master
         id: filter
         with:
           # Intentional CI policy:
@@ -117,17 +117,17 @@ jobs:
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
     timeout-minutes: 15
     steps:
-      - uses: namespacelabs/nscloud-checkout-action@v8
+      - uses: namespacelabs/nscloud-checkout-action@8d38dddb292f119b5c9afb0d930ab614dec5d46f # v8.1.0
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version-file: '.nvmrc'
           package-manager-cache: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
 
       - name: Set up pnpm cache (Namespace)
-        uses: namespacelabs/nscloud-cache-action@v1
+        uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9 # v1.4.2
         with:
           cache: pnpm
 
@@ -139,25 +139,25 @@ jobs:
     needs: setup
     timeout-minutes: 15
     steps:
-      - uses: namespacelabs/nscloud-checkout-action@v8
+      - uses: namespacelabs/nscloud-checkout-action@8d38dddb292f119b5c9afb0d930ab614dec5d46f # v8.1.0
 
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@668c092af3649c4b664c54e4b704aa46782f6f7c # master
         id: filter
         with:
           filters: |
             lock:
               - 'pnpm-lock.yaml'
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version-file: '.nvmrc'
           package-manager-cache: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
 
       - name: Set up pnpm cache (Namespace)
         if: steps.filter.outputs.lock == 'true'
-        uses: namespacelabs/nscloud-cache-action@v1
+        uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9 # v1.4.2
         with:
           cache: pnpm
 
@@ -179,16 +179,16 @@ jobs:
     needs: setup
     timeout-minutes: 15
     steps:
-      - uses: namespacelabs/nscloud-checkout-action@v8
+      - uses: namespacelabs/nscloud-checkout-action@8d38dddb292f119b5c9afb0d930ab614dec5d46f # v8.1.0
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version-file: '.nvmrc'
           package-manager-cache: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
 
-      - uses: namespacelabs/nscloud-cache-action@v1
+      - uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9 # v1.4.2
         with:
           cache: pnpm
 
@@ -201,16 +201,16 @@ jobs:
     timeout-minutes: 15
     needs: setup
     steps:
-      - uses: namespacelabs/nscloud-checkout-action@v8
+      - uses: namespacelabs/nscloud-checkout-action@8d38dddb292f119b5c9afb0d930ab614dec5d46f # v8.1.0
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version-file: '.nvmrc'
           package-manager-cache: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
 
-      - uses: namespacelabs/nscloud-cache-action@v1
+      - uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9 # v1.4.2
         with:
           cache: pnpm
 
@@ -221,7 +221,7 @@ jobs:
           rm -rf pkgs
           mkdir -p pkgs
           pnpm run pack:pkgs
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: sdk-package-tarballs
           path: pkgs/*.tgz
@@ -234,16 +234,16 @@ jobs:
     needs: setup
     timeout-minutes: 15
     steps:
-      - uses: namespacelabs/nscloud-checkout-action@v8
+      - uses: namespacelabs/nscloud-checkout-action@8d38dddb292f119b5c9afb0d930ab614dec5d46f # v8.1.0
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version-file: '.nvmrc'
           package-manager-cache: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
 
-      - uses: namespacelabs/nscloud-cache-action@v1
+      - uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9 # v1.4.2
         with:
           cache: pnpm
 
@@ -259,21 +259,21 @@ jobs:
       needs.build.result == 'skipped')
     timeout-minutes: 15
     steps:
-      - uses: namespacelabs/nscloud-checkout-action@v8
+      - uses: namespacelabs/nscloud-checkout-action@8d38dddb292f119b5c9afb0d930ab614dec5d46f # v8.1.0
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version-file: '.nvmrc'
           package-manager-cache: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
 
-      - uses: namespacelabs/nscloud-cache-action@v1
+      - uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9 # v1.4.2
         with:
           cache: pnpm
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # 6.0.0
         if: needs.build.result == 'success'
         with:
           name: sdk-package-tarballs
@@ -303,16 +303,16 @@ jobs:
           - package: '@contentful/optimization-web-preview-panel'
           - package: '@contentful/optimization-react-native'
     steps:
-      - uses: namespacelabs/nscloud-checkout-action@v8
+      - uses: namespacelabs/nscloud-checkout-action@8d38dddb292f119b5c9afb0d930ab614dec5d46f # v8.1.0
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version-file: '.nvmrc'
           package-manager-cache: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
 
-      - uses: namespacelabs/nscloud-cache-action@v1
+      - uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9 # v1.4.2
         with:
           cache: pnpm
 
@@ -326,20 +326,20 @@ jobs:
     needs: [setup, changes, build]
     if: needs.changes.outputs.e2e_node_sdk == 'true'
     steps:
-      - uses: namespacelabs/nscloud-checkout-action@v8
+      - uses: namespacelabs/nscloud-checkout-action@8d38dddb292f119b5c9afb0d930ab614dec5d46f # v8.1.0
 
       - name: Create .env from .env.example
         run: cp implementations/node-sdk/.env.example implementations/node-sdk/.env
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version-file: '.nvmrc'
           package-manager-cache: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
 
       - name: Set up caches (Namespace)
-        uses: namespacelabs/nscloud-cache-action@v1
+        uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9 # v1.4.2
         with:
           cache: |
             pnpm
@@ -347,7 +347,7 @@ jobs:
             apt
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # 6.0.0
         with:
           name: sdk-package-tarballs
           path: pkgs
@@ -356,7 +356,7 @@ jobs:
       - run: pnpm run implementation:node-sdk -- implementation:playwright:install -- --with-deps
       - run: pnpm run implementation:node-sdk -- implementation:test:e2e:run
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: ${{ !cancelled() }}
         with:
           name: ci-results-node-sdk
@@ -372,21 +372,21 @@ jobs:
     needs: [setup, changes, build]
     if: needs.changes.outputs.e2e_node_sdk_web_sdk == 'true'
     steps:
-      - uses: namespacelabs/nscloud-checkout-action@v8
+      - uses: namespacelabs/nscloud-checkout-action@8d38dddb292f119b5c9afb0d930ab614dec5d46f # v8.1.0
 
       - name: Create .env from .env.example
         run: >
           cp implementations/node-sdk+web-sdk/.env.example implementations/node-sdk+web-sdk/.env
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version-file: '.nvmrc'
           package-manager-cache: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
 
       - name: Set up caches (Namespace)
-        uses: namespacelabs/nscloud-cache-action@v1
+        uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9 # v1.4.2
         with:
           cache: |
             pnpm
@@ -394,7 +394,7 @@ jobs:
             apt
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # 6.0.0
         with:
           name: sdk-package-tarballs
           path: pkgs
@@ -406,7 +406,7 @@ jobs:
           --with-deps
       - run: pnpm run implementation:node-sdk+web-sdk -- implementation:test:e2e:run
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: ${{ !cancelled() }}
         with:
           name: ci-results-node-sdk+web-sdk
@@ -422,22 +422,22 @@ jobs:
     needs: [setup, changes, build]
     if: needs.changes.outputs.e2e_web_sdk == 'true'
     steps:
-      - uses: docker/setup-compose-action@v1
+      - uses: docker/setup-compose-action@8cccb8c14b6500aaffebff1aa49c502c34d2e5e6 # v2.1.0
 
-      - uses: namespacelabs/nscloud-checkout-action@v8
+      - uses: namespacelabs/nscloud-checkout-action@8d38dddb292f119b5c9afb0d930ab614dec5d46f # v8.1.0
 
       - name: Create .env from .env.example
         run: cp implementations/web-sdk/.env.example implementations/web-sdk/.env
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version-file: '.nvmrc'
           package-manager-cache: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
 
       - name: Set up caches (Namespace)
-        uses: namespacelabs/nscloud-cache-action@v1
+        uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9 # v1.4.2
         with:
           cache: |
             pnpm
@@ -445,7 +445,7 @@ jobs:
             apt
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # 6.0.0
         with:
           name: sdk-package-tarballs
           path: pkgs
@@ -454,7 +454,7 @@ jobs:
       - run: pnpm run implementation:web-sdk -- implementation:playwright:install -- --with-deps
       - run: pnpm run implementation:web-sdk -- implementation:test:e2e:run
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: ${{ !cancelled() }}
         with:
           name: ci-results-web-sdk
@@ -470,20 +470,20 @@ jobs:
     needs: [setup, changes, build]
     if: needs.changes.outputs.e2e_web_sdk_react == 'true'
     steps:
-      - uses: namespacelabs/nscloud-checkout-action@v8
+      - uses: namespacelabs/nscloud-checkout-action@8d38dddb292f119b5c9afb0d930ab614dec5d46f # v8.1.0
 
       - name: Create .env from .env.example
         run: cp implementations/web-sdk_react/.env.example implementations/web-sdk_react/.env
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version-file: '.nvmrc'
           package-manager-cache: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
 
       - name: Set up caches (Namespace)
-        uses: namespacelabs/nscloud-cache-action@v1
+        uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9 # v1.4.2
         with:
           cache: |
             pnpm
@@ -491,7 +491,7 @@ jobs:
             apt
 
       - run: pnpm install --prefer-offline --frozen-lockfile
-      - uses: actions/download-artifact@v6
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # 6.0.0
         with:
           name: sdk-package-tarballs
           path: pkgs
@@ -544,7 +544,7 @@ jobs:
           kill "$(cat /tmp/web-sdk_react-app.pid)" 2>/dev/null || true
           pnpm run implementation:web-sdk_react -- serve:stop || true
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: ${{ !cancelled() }}
         with:
           name: ci-results-web-sdk_react
@@ -565,14 +565,14 @@ jobs:
         -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx4g
         -Dkotlin.daemon.jvm.options=-Xmx2g
     steps:
-      - uses: namespacelabs/nscloud-checkout-action@v8
+      - uses: namespacelabs/nscloud-checkout-action@8d38dddb292f119b5c9afb0d930ab614dec5d46f # v8.1.0
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version-file: '.nvmrc'
           package-manager-cache: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
 
       - name: Set Android SDK environment variables
         run: |
@@ -584,7 +584,7 @@ jobs:
           mkdir -p "$HOME/.android/sdk" "$HOME/.android/avd" "$HOME/.android/cache"
 
       - name: Set up caches (Namespace)
-        uses: namespacelabs/nscloud-cache-action@v1
+        uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9 # v1.4.2
         with:
           cache: |
             pnpm
@@ -594,19 +594,19 @@ jobs:
             ~/.android/cache
 
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: 'temurin'
           java-version: '17'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
 
       - name: Install JS dependencies
         run: pnpm install --prefer-offline --frozen-lockfile
 
       - name: Download SDK package tarballs
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # 6.0.0
         with:
           name: sdk-package-tarballs
           path: pkgs
@@ -625,7 +625,7 @@ jobs:
         run: pnpm run implementation:react-native-sdk -- test:e2e:android:build:release
 
       - name: Upload Detox APKs
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: detox-android-apks
           path: implementations/react-native-sdk/android/app/build/outputs/apk/
@@ -646,14 +646,14 @@ jobs:
       DETOX_AVD_NAME: test
       CI: 'true'
     steps:
-      - uses: namespacelabs/nscloud-checkout-action@v8
+      - uses: namespacelabs/nscloud-checkout-action@8d38dddb292f119b5c9afb0d930ab614dec5d46f # v8.1.0
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version-file: '.nvmrc'
           package-manager-cache: false
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
 
       - name: Set Android SDK environment variables
         run: |
@@ -665,7 +665,7 @@ jobs:
           mkdir -p "$HOME/.android/sdk" "$HOME/.android/avd" "$HOME/.android/cache"
 
       - name: Set up caches (Namespace)
-        uses: namespacelabs/nscloud-cache-action@v1
+        uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9 # v1.4.2
         with:
           cache: |
             apt
@@ -697,19 +697,19 @@ jobs:
           sudo kvm-ok || true
 
       - name: Setup Java
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           distribution: 'temurin'
           java-version: '17'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
 
       - name: Install JS dependencies
         run: pnpm install --prefer-offline --frozen-lockfile
 
       - name: Download SDK package tarballs
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # 6.0.0
         with:
           name: sdk-package-tarballs
           path: pkgs
@@ -725,7 +725,7 @@ jobs:
         run: cp implementations/react-native-sdk/.env.example implementations/react-native-sdk/.env
 
       - name: Download pre-built Detox APKs
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # 6.0.0
         with:
           name: detox-android-apks
           path: implementations/react-native-sdk/android/app/build/outputs/apk/
@@ -749,7 +749,7 @@ jobs:
           fi
 
       - name: Run Android E2E Tests (emulator)
-        uses: reactivecircus/android-emulator-runner@v2
+        uses: reactivecircus/android-emulator-runner@b530d96654c385303d652368551fb075bc2f0b6b # v2.35.0
         with:
           api-level: 36
           arch: x86_64
@@ -782,7 +782,7 @@ jobs:
         run: |
           kill $(cat /tmp/mock-server.pid) 2>/dev/null || true
 
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: always()
         with:
           name: ci-results-react-native-android-shard-${{ matrix.shard }}
