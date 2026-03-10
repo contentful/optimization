@@ -32,6 +32,7 @@ export function AnalyticsEventDisplay(): React.JSX.Element {
   const sdk = useOptimization()
   const [events, setEvents] = useState<AnalyticsEvent[]>([])
   const [componentStats, setComponentStats] = useState<Record<string, ComponentStats>>({})
+  const [clickStats, setClickStats] = useState<Record<string, number>>({})
 
   useEffect(() => {
     const handleEvent = (event: unknown): void => {
@@ -55,6 +56,14 @@ export function AnalyticsEventDisplay(): React.JSX.Element {
         }
 
         setEvents((prev) => [newEvent, ...prev])
+
+        if (newEvent.componentId && type === 'component_click') {
+          const { componentId: cid } = newEvent
+          setClickStats((prev) => ({
+            ...prev,
+            [cid]: (prev[cid] ?? 0) + 1,
+          }))
+        }
 
         if (newEvent.componentId && type === 'component') {
           const { componentId: cid } = newEvent
@@ -104,6 +113,12 @@ export function AnalyticsEventDisplay(): React.JSX.Element {
           <Text testID={`event-view-id-${cid}`}>
             ViewId: {stats.latestComponentViewId ?? 'N/A'}
           </Text>
+        </View>
+      ))}
+
+      {Object.entries(clickStats).map(([cid, count]) => (
+        <View key={`click-stats-${cid}`} testID={`click-stats-${cid}`}>
+          <Text testID={`click-count-${cid}`}>Clicks: {count}</Text>
         </View>
       ))}
 
