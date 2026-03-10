@@ -14,17 +14,14 @@ describe('Analytics Events', () => {
   })
 
   it('should track component impression events for visible entries', async () => {
-    // Wait for the app to load
     const analyticsTitle = element(by.text('Analytics Events'))
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-    // Wait until the analytics stream has emitted events.
     await waitForEventsCountAtLeast(1)
 
-    // Look for component events with entry IDs
-    // The merge tag entry should trigger a component event
-    // Use waitFor().whileElement().scroll() pattern to scroll until element is visible
-    await waitFor(element(by.id('event-component-1MwiFl4z7gkwqGYdvCmr8c')))
+    // With periodic tracking, per-component stats are rendered with unique testIDs.
+    // Use the component-stats summary element to verify the merge tag entry was tracked.
+    await waitFor(element(by.id('component-stats-1MwiFl4z7gkwqGYdvCmr8c')))
       .toBeVisible()
       .whileElement(by.id('main-scroll-view'))
       .scroll(500, 'down')
