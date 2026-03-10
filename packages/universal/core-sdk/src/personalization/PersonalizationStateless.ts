@@ -1,12 +1,4 @@
-import type {
-  ComponentViewBuilderArgs,
-  IdentifyBuilderArgs,
-  PageViewBuilderArgs,
-  ScreenViewBuilderArgs,
-  TrackBuilderArgs,
-} from '@contentful/optimization-api-client'
 import {
-  ComponentViewEvent,
   IdentifyEvent,
   type OptimizationData,
   PageViewEvent,
@@ -15,8 +7,16 @@ import {
   ExperienceEvent as PersonalizationEvent,
   ScreenViewEvent,
   TrackEvent,
+  ViewEvent,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
+import type {
+  IdentifyBuilderArgs,
+  PageViewBuilderArgs,
+  ScreenViewBuilderArgs,
+  TrackBuilderArgs,
+  ViewBuilderArgs,
+} from '../events'
 import PersonalizationBase from './PersonalizationBase'
 
 const logger = createScopedLogger('Personalization')
@@ -51,7 +51,10 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = parseWithFriendlyError(IdentifyEvent, this.builder.buildIdentify(builderArgs))
+    const event = parseWithFriendlyError(
+      IdentifyEvent,
+      this.eventBuilder.buildIdentify(builderArgs),
+    )
 
     return await this.upsertProfile(event, profile)
   }
@@ -73,7 +76,10 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = parseWithFriendlyError(PageViewEvent, this.builder.buildPageView(builderArgs))
+    const event = parseWithFriendlyError(
+      PageViewEvent,
+      this.eventBuilder.buildPageView(builderArgs),
+    )
 
     return await this.upsertProfile(event, profile)
   }
@@ -95,7 +101,10 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = parseWithFriendlyError(ScreenViewEvent, this.builder.buildScreenView(builderArgs))
+    const event = parseWithFriendlyError(
+      ScreenViewEvent,
+      this.eventBuilder.buildScreenView(builderArgs),
+    )
 
     return await this.upsertProfile(event, profile)
   }
@@ -115,7 +124,7 @@ class PersonalizationStateless extends PersonalizationBase {
 
     const { profile, ...builderArgs } = payload
 
-    const event = parseWithFriendlyError(TrackEvent, this.builder.buildTrack(builderArgs))
+    const event = parseWithFriendlyError(TrackEvent, this.eventBuilder.buildTrack(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }
@@ -127,20 +136,17 @@ class PersonalizationStateless extends PersonalizationBase {
    * @returns The evaluated {@link OptimizationData} for this component view.
    * @example
    * ```ts
-   * const data = await personalization.trackComponentView({ componentId: 'hero', profile: { id: 'anon-1' } })
+   * const data = await personalization.trackView({ componentId: 'hero', profile: { id: 'anon-1' } })
    * ```
    */
-  async trackComponentView(
-    payload: ComponentViewBuilderArgs & { profile?: PartialProfile },
+  async trackView(
+    payload: ViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData> {
     logger.info('Sending "track personalization" event')
 
     const { profile, ...builderArgs } = payload
 
-    const event = parseWithFriendlyError(
-      ComponentViewEvent,
-      this.builder.buildComponentView(builderArgs),
-    )
+    const event = parseWithFriendlyError(ViewEvent, this.eventBuilder.buildView(builderArgs))
 
     return await this.upsertProfile(event, profile)
   }

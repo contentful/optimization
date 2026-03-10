@@ -188,7 +188,7 @@ export function Personalization({
   trackTaps,
   onTap,
 }: PersonalizationProps): React.JSX.Element {
-  const optimization = useOptimization()
+  const contentfulOptimization = useOptimization()
   const liveUpdatesContext = useLiveUpdates()
   const interactionTracking = useInteractionTracking()
 
@@ -209,7 +209,7 @@ export function Personalization({
   }, [shouldLiveUpdate])
 
   useEffect(() => {
-    const subscription = optimization.states.personalizations.subscribe((p) => {
+    const subscription = contentfulOptimization.states.selectedPersonalizations.subscribe((p) => {
       if (shouldLiveUpdate) {
         setLockedPersonalizations(p)
       } else if (!isLockedRef.current && p !== undefined) {
@@ -221,11 +221,11 @@ export function Personalization({
     return () => {
       subscription.unsubscribe()
     }
-  }, [optimization, shouldLiveUpdate])
+  }, [contentfulOptimization, shouldLiveUpdate])
 
   const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
-    () => optimization.personalizeEntry(baselineEntry, lockedPersonalizations),
-    [baselineEntry, optimization, lockedPersonalizations],
+    () => contentfulOptimization.personalizeEntry(baselineEntry, lockedPersonalizations),
+    [baselineEntry, contentfulOptimization, lockedPersonalizations],
   )
 
   const viewsEnabled = trackViews ?? interactionTracking.views

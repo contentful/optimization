@@ -42,8 +42,8 @@ discriminators, required fields, and defaulted values.
 
 **Acceptance Scenarios**:
 
-1. **Given** valid component args without variant index, **When** `buildComponentView` is called,
-   **Then** `variantIndex` defaults to `0` and `componentType` is `'Entry'`.
+1. **Given** valid component args without variant index, **When** `buildView` is called, **Then**
+   `variantIndex` defaults to `0` and `componentType` is `'Entry'`.
 2. **Given** valid component args, **When** `buildFlagView` is called, **Then** event type remains
    `component` and `componentType` is `'Variable'`.
 3. **Given** identify args without traits, **When** `buildIdentify` is called, **Then** `traits`
@@ -98,9 +98,9 @@ and schema parsing behavior.
   `context.gdpr.isConsentGiven=true`, `context.library`, `context.locale`, optional
   location/page/screen/userAgent, `messageId`, and ISO timestamp fields.
 - **FR-006**: `messageId` MUST be generated using `crypto.randomUUID()`.
-- **FR-007**: `buildComponentView` MUST validate args, emit `type: 'component'`,
-  `componentType: 'Entry'`, and default `variantIndex` to `0` when omitted.
-- **FR-008**: `buildFlagView` MUST reuse `buildComponentView` output and override
+- **FR-007**: `buildView` MUST validate args, emit `type: 'component'`, `componentType: 'Entry'`,
+  and default `variantIndex` to `0` when omitted.
+- **FR-008**: `buildFlagView` MUST reuse `buildView` output and override
   `componentType: 'Variable'`.
 - **FR-009**: `buildIdentify` MUST require `userId` and default missing `traits` to `{}`.
 - **FR-010**: `buildPageView` MUST accept optional args and default to `{}`.
@@ -119,7 +119,7 @@ and schema parsing behavior.
 
 - **EventBuilder**: Helper for creating typed events compatible with Experience/Insights contracts.
 - **UniversalEventBuilderArgs**: Optional shared overrides applied to all event variants.
-- **ComponentViewBuilderArgs / IdentifyBuilderArgs / PageViewBuilderArgs / ScreenViewBuilderArgs /
+- **ViewBuilderArgs / IdentifyBuilderArgs / PageViewBuilderArgs / ScreenViewBuilderArgs /
   TrackBuilderArgs**: Method-specific validated argument contracts.
 - **DEFAULT_PAGE_PROPERTIES**: Canonical fallback page context object used across builder methods.
 - **UniversalEventProperties**: Shared emitted fields attached to every built event.

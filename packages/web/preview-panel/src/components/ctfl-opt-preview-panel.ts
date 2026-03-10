@@ -119,7 +119,7 @@ export class CtflOptPreviewPanel extends LitElement {
 
   /** All personalization entries fetched from Contentful. */
   @property({ attribute: false })
-  accessor personalizations: PersonalizationEntry[] = []
+  accessor personalizationEntries: PersonalizationEntry[] = []
 
   /** Default personalization selections before any user overrides. */
   @property({ attribute: false })
@@ -236,7 +236,7 @@ export class CtflOptPreviewPanel extends LitElement {
   protected willUpdate(changed: PropertyValues<this>): void {
     if (
       changed.has('audiences') ||
-      changed.has('personalizations') ||
+      changed.has('personalizationEntries') ||
       changed.has('defaultSelectedPersonalizations')
     ) {
       // Convenience mapping of audience ID to audience
@@ -251,7 +251,7 @@ export class CtflOptPreviewPanel extends LitElement {
       // Mapping of audience ID to personalizations (fallback for those without audiences)
       const audienceIdPersonalizationMap = groupBy(
         // Sort by personalization name (reversed due to how `groupBy` works)
-        this.personalizations.sort((a, b) =>
+        this.personalizationEntries.sort((a, b) =>
           compareString(a.fields.nt_name, b.fields.nt_name) ? -1 : 1,
         ),
         (personalization) =>

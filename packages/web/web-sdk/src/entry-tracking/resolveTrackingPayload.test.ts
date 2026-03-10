@@ -1,10 +1,6 @@
-import {
-  isEntryData,
-  isEntryElement,
-  resolveComponentTrackingPayload,
-} from './resolveComponentTrackingPayload'
+import { isEntryData, isEntryElement, resolveTrackingPayload } from './resolveTrackingPayload'
 
-describe('resolveComponentTrackingPayload', () => {
+describe('resolveTrackingPayload', () => {
   it('resolves tracking payload from element dataset', () => {
     const element = document.createElement('div')
     element.dataset.ctflEntryId = 'entry-1'
@@ -12,7 +8,7 @@ describe('resolveComponentTrackingPayload', () => {
     element.dataset.ctflSticky = 'TrUe'
     element.dataset.ctflVariantIndex = '7'
 
-    expect(resolveComponentTrackingPayload(undefined, element)).toEqual({
+    expect(resolveTrackingPayload(undefined, element)).toEqual({
       componentId: 'entry-1',
       experienceId: 'exp-1',
       sticky: true,
@@ -34,7 +30,7 @@ describe('resolveComponentTrackingPayload', () => {
       variantIndex: 2,
     }
 
-    expect(resolveComponentTrackingPayload(explicit, element)).toEqual({
+    expect(resolveTrackingPayload(explicit, element)).toEqual({
       componentId: 'manual-id',
       experienceId: 'manual-exp',
       sticky: false,
@@ -46,7 +42,7 @@ describe('resolveComponentTrackingPayload', () => {
     const element = document.createElement('div')
     element.dataset.ctflEntryId = 'entry-from-dataset'
 
-    expect(resolveComponentTrackingPayload({ entryId: '  ' }, element)).toEqual({
+    expect(resolveTrackingPayload({ entryId: '  ' }, element)).toEqual({
       componentId: 'entry-from-dataset',
       experienceId: undefined,
       sticky: false,
@@ -60,7 +56,7 @@ describe('resolveComponentTrackingPayload', () => {
     element.dataset.ctflSticky = 'yes'
     element.dataset.ctflVariantIndex = '7x'
 
-    expect(resolveComponentTrackingPayload(undefined, element)).toEqual({
+    expect(resolveTrackingPayload(undefined, element)).toEqual({
       componentId: 'entry-2',
       experienceId: undefined,
       sticky: false,
@@ -73,7 +69,7 @@ describe('resolveComponentTrackingPayload', () => {
     element.dataset.ctflEntryId = 'entry-3'
     element.dataset.ctflVariantIndex = '9007199254740992'
 
-    const payload = resolveComponentTrackingPayload(undefined, element)
+    const payload = resolveTrackingPayload(undefined, element)
 
     expect(payload).toEqual({
       componentId: 'entry-3',
@@ -86,7 +82,7 @@ describe('resolveComponentTrackingPayload', () => {
   it('returns undefined when no valid entry data source is available', () => {
     const element = document.createElement('div')
 
-    expect(resolveComponentTrackingPayload(undefined, element)).toBeUndefined()
+    expect(resolveTrackingPayload(undefined, element)).toBeUndefined()
   })
 })
 

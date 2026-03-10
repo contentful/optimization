@@ -4,7 +4,7 @@ import { merge } from 'es-toolkit'
 import { OPTIMIZATION_NODE_SDK_NAME, OPTIMIZATION_NODE_SDK_VERSION } from './constants'
 
 /**
- * Configuration for the Node-specific Optimization SDK.
+ * Configuration for the Node-specific ContentfulOptimization SDK.
  *
  * @remarks
  * This configuration extends {@link CoreStatelessConfig} but allows partial
@@ -62,19 +62,19 @@ function mergeConfig(config: OptimizationNodeConfig): CoreStatelessConfig {
 }
 
 /**
- * Node-specific Optimization SDK built on {@link CoreStateless}.
+ * Node-specific ContentfulOptimization SDK built on {@link CoreStateless}.
  *
  * @remarks
- * This class adapts the stateless Optimization Core for Node runtimes by
+ * This class adapts the stateless ContentfulOptimization Core for Node runtimes by
  * applying environment-appropriate defaults (e.g., server channel, Node SDK
  * library metadata). No analytics or personalization behavior is modified—
  * only configuration defaults differ.
  *
  * @example
  * ```ts
- * import Optimization from '@contentful/optimization-node'
+ * import ContentfulOptimization from '@contentful/optimization-node'
  *
- * const sdk = new Optimization({
+ * const sdk = new ContentfulOptimization({
  *   clientId: 'abc-123',
  *   environment: 'main',
  *   logLevel: 'info',
@@ -87,7 +87,7 @@ function mergeConfig(config: OptimizationNodeConfig): CoreStatelessConfig {
  *
  * @public
  */
-class Optimization extends CoreStateless {
+class ContentfulOptimization extends CoreStateless {
   /**
    * Create an instance of the Node SDK with merged defaults.
    *
@@ -96,9 +96,9 @@ class Optimization extends CoreStateless {
    *
    * @example
    * ```ts
-   * import Optimization from '@contentful/optimization-node'
+   * import ContentfulOptimization from '@contentful/optimization-node'
    *
-   * const optimization = new Optimization({ clientId: 'my-client-id' })
+   * const optimization = new ContentfulOptimization({ clientId: 'my-client-id' })
    * ```
    */
   constructor(config: OptimizationNodeConfig) {
@@ -108,4 +108,4 @@ class Optimization extends CoreStateless {
   }
 }
 
-export default Optimization
+export default ContentfulOptimization

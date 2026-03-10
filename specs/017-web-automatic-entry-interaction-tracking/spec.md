@@ -156,10 +156,10 @@ data, dataset-only data, and invalid input combinations.
   element descendants from mutation nodes, and dispatch removals before additions.
 - **FR-021**: `ElementExistenceObserver` MUST isolate subscriber callback failures and forward them
   to optional `onError` handlers.
-- **FR-022**: `resolveComponentTrackingPayload(data, element)` MUST return `undefined` when neither
-  explicit data nor element dataset resolves valid entry metadata.
-- **FR-023**: `resolveComponentTrackingPayload(data, element)` MUST prefer valid explicit
-  `EntryData` over dataset-derived entry metadata.
+- **FR-022**: `resolveTrackingPayload(data, element)` MUST return `undefined` when neither explicit
+  data nor element dataset resolves valid entry metadata.
+- **FR-023**: `resolveTrackingPayload(data, element)` MUST prefer valid explicit `EntryData` over
+  dataset-derived entry metadata.
 - **FR-024**: Dataset-derived payload parsing MUST map `ctflEntryId -> componentId` and
   `ctflPersonalizationId -> experienceId`; `ctflSticky` parsing MUST be true only for
   case-insensitive `'true'`; `ctflVariantIndex` parsing MUST allow only digit-only non-negative safe
@@ -183,8 +183,8 @@ data, dataset-only data, and invalid input combinations.
 - **EntryElementRegistry**: Shared set of tracked entry elements discovered from initial DOM and
   mutations.
 - **ElementExistenceObserver**: MutationObserver-based add/remove dispatcher with move coalescing.
-- **ComponentTrackingPayload**: Normalized payload (`componentId`, `experienceId`, `sticky`,
-  `variantIndex`) derived from explicit entry data and/or element dataset.
+- **TrackingPayload**: Normalized payload (`componentId`, `experienceId`, `sticky`, `variantIndex`)
+  derived from explicit entry data and/or element dataset.
 
 ## Success Criteria _(mandatory)_
 

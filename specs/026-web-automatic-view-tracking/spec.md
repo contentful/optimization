@@ -1,6 +1,6 @@
 # Feature Specification: Optimization Web Automatic Component View Tracking
 
-**Feature Branch**: `[026-web-automatic-component-view-tracking]`  
+**Feature Branch**: `[026-web-automatic-view-tracking]`  
 **Created**: 2026-02-27  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
@@ -19,7 +19,7 @@ integrations.
 
 **Independent Test**: Start the view detector, trigger intersections that satisfy dwell constraints,
 keep elements visible for periodic updates, then end visibility and assert initial/periodic/final
-`trackComponentView` payload dispatch.
+`trackView` payload dispatch.
 
 **Acceptance Scenarios**:
 
@@ -34,7 +34,7 @@ keep elements visible for periodic updates, then end visibility and assert initi
 4. **Given** a visibility cycle that ends before dwell threshold is reached, **When** threshold
    visibility stops, **Then** no component view event is dispatched for that cycle.
 5. **Given** a single visibility cycle, **When** initial, periodic, and final events are emitted,
-   **Then** all events reuse the same `componentViewId`.
+   **Then** all events reuse the same `viewId`.
 
 ---
 
@@ -57,7 +57,7 @@ and verify observed-element behavior plus callback metadata.
 3. **Given** a per-element view-duration update interval override, **When** the element remains
    visible, **Then** periodic callback timing follows the per-element interval.
 4. **Given** per-element `data`, **When** callback is invoked, **Then** callback info includes that
-   `data` alongside `totalVisibleMs`, `componentViewId`, and `attempts`.
+   `data` alongside `totalVisibleMs`, `viewId`, and `attempts`.
 5. **Given** an auto-tracked element with `data-ctfl-track-views='false'`, **When** intersections
    satisfy dwell conditions, **Then** no component view event is dispatched.
 6. **Given** global view auto-tracking is disabled and an auto-discovered entry has
@@ -107,8 +107,8 @@ unobserve/disconnect calls, and orphan element cleanup sweeps.
   `data-ctfl-track-views` first, then auto-tracking state.
 - Dwell accumulation resets when an element exits threshold visibility (no cross-cycle
   accumulation), while still allowing one final view callback for cycles that already emitted.
-- `componentViewId` is generated per visibility cycle, reused for all events in that cycle, and
-  replaced on the next visibility cycle.
+- `viewId` is generated per visibility cycle, reused for all events in that cycle, and replaced on
+  the next visibility cycle.
 - `viewDurationMs` is emitted as rounded non-negative milliseconds derived from accumulated visible
   time.
 - Callback failures are logged and do not permanently disable subsequent periodic updates while an
@@ -124,7 +124,7 @@ unobserve/disconnect calls, and orphan element cleanup sweeps.
   `start/stop/setAuto/onEntryAdded/onEntryRemoved/enableElement/disableElement/clearElement`
   handlers backed by `ElementViewObserver`.
 - **FR-002**: Detector `start(options)` MUST create a new `ElementViewObserver` using provided start
-  options and a callback that bridges to `core.trackComponentView`.
+  options and a callback that bridges to `core.trackView`.
 - **FR-003**: Detector `stop()` MUST disconnect the active `ElementViewObserver` and clear detector
   auto-tracked element and override state.
 - **FR-004**: Detector `setAuto(enabled)` MUST control whether auto-discovered entry elements are
@@ -140,8 +140,8 @@ unobserve/disconnect calls, and orphan element cleanup sweeps.
 - **FR-009**: Detector `clearElement(element)` MUST remove any element override and reconcile
   observation eligibility from auto-tracking state.
 - **FR-010**: Auto-tracking callback MUST resolve payload via
-  `resolveComponentTrackingPayload(info.data, element)` and MUST call `core.trackComponentView` only
-  when payload resolution succeeds.
+  `resolveTrackingPayload(info.data, element)` and MUST call `core.trackView` only when payload
+  resolution succeeds.
 - **FR-011**: `ElementViewObserver` MUST initialize effective observer options with defaults and
   construct an `IntersectionObserver` with threshold `[0]` when `minVisibleRatio` is `0`, otherwise
   `[0, minVisibleRatio]`.
@@ -157,7 +157,7 @@ unobserve/disconnect calls, and orphan element cleanup sweeps.
   pending fire timers; visibility changes to visible MUST resume eligible cycles from remaining
   dwell time.
 - **FR-017**: Callback execution MUST be coalesced per element (`inFlight` guard), increment
-  `attempts`, and pass callback info `{ totalVisibleMs, componentViewId, attempts, data }`.
+  `attempts`, and pass callback info `{ totalVisibleMs, viewId, attempts, data }`.
 - **FR-018**: While visibility remains active after first emission, observer MUST continue
   scheduling periodic callbacks at the configured view update interval.
 - **FR-019**: Visibility end before first callback attempt MUST reset cycle state without emitting a
@@ -184,9 +184,9 @@ unobserve/disconnect calls, and orphan element cleanup sweeps.
 - **Entry View Detector**: Interaction detector that maps registry events and element overrides to
   `ElementViewObserver` operations.
 - **ElementViewObserver**: Intersection/dwell runtime maintaining per-element visibility state.
-- **ElementViewCallbackInfo**: Callback metadata (`totalVisibleMs`, `componentViewId`, `attempts`,
-  `data`) describing a view attempt.
-- **View Tracking Payload**: Normalized component payload emitted to `trackComponentView`.
+- **ElementViewCallbackInfo**: Callback metadata (`totalVisibleMs`, `viewId`, `attempts`, `data`)
+  describing a view attempt.
+- **View Tracking Payload**: Normalized component payload emitted to `trackView`.
 
 ## Success Criteria _(mandatory)_
 

@@ -76,14 +76,14 @@ export const previewPanelOpen = signal<boolean>(false)
  *
  * @public
  */
-export const personalizations = signal<SelectedPersonalizationArray | undefined>()
+export const selectedPersonalizations = signal<SelectedPersonalizationArray | undefined>()
 
 /**
  * Whether personalization data is available for entry resolution.
  *
  * @public
  */
-export const canPersonalize = computed<boolean>(() => personalizations.value !== undefined)
+export const canPersonalize = computed<boolean>(() => selectedPersonalizations.value !== undefined)
 
 /**
  * Active profile associated with current runtime state.
@@ -115,7 +115,7 @@ export interface Signals {
   /** Preview panel open-state signal. */
   previewPanelOpen: typeof previewPanelOpen
   /** Selected personalization variants signal. */
-  personalizations: typeof personalizations
+  selectedPersonalizations: typeof selectedPersonalizations
   /** Whether personalization data is currently available. */
   canPersonalize: typeof canPersonalize
   /** Active profile signal. */
@@ -152,7 +152,7 @@ export const signals: Signals = {
   online,
   previewPanelAttached,
   previewPanelOpen,
-  personalizations,
+  selectedPersonalizations,
   canPersonalize,
   profile,
 }

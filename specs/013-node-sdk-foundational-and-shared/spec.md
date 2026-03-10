@@ -119,9 +119,9 @@ default class, named exports, shared constants, and generated type/runtime artif
   (including source maps).
 - **FR-016**: Package build output MUST include dual type declaration artifacts for import and
   require consumers (`.d.mts` and `.d.cts`).
-- **FR-017**: Inherited stateless methods (`identify`, `page`, `screen`, `track`,
-  `trackComponentView`, `trackFlagView`, `getCustomFlag`, `personalizeEntry`, `getMergeTagValue`)
-  MUST preserve `CoreStateless` semantics.
+- **FR-017**: Inherited stateless methods (`identify`, `page`, `screen`, `track`, `trackView`,
+  `trackFlagView`, `getCustomFlag`, `personalizeEntry`, `getMergeTagValue`) MUST preserve
+  `CoreStateless` semantics.
 
 ### Key Entities _(include if feature involves data)_
 

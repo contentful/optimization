@@ -1,10 +1,8 @@
 # Feature Specification: Optimization Web Automatic Component Click Tracking
 
-**Feature Branch**: `[025-web-automatic-component-click-tracking]`  
-**Created**: 2026-02-27  
-**Status**: Current (Pre-release)  
-**Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-02).
+**Feature Branch**: `[025-web-automatic-click-tracking]` **Created**: 2026-02-27 **Status**: Current
+(Pre-release) **Input**: Repository behavior review for the current pre-release implementation
+(validated 2026-03-02).
 
 ## User Scenarios & Testing _(mandatory)_
 

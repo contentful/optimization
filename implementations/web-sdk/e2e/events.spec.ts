@@ -39,7 +39,7 @@ test.describe('events', () => {
         await page.clock.fastForward('02:00')
       }
 
-      await expect(page.locator('#event-stream li button[data-component-view-id]')).toHaveCount(0)
+      await expect(page.locator('#event-stream li button[data-view-id]')).toHaveCount(0)
     })
   })
 
@@ -73,31 +73,27 @@ test.describe('events', () => {
 
         await expect(
           page
-            .locator(
-              `#event-stream li button[data-component-id="${entryId}"][data-component-view-id]`,
-            )
+            .locator(`#event-stream li button[data-component-id="${entryId}"][data-view-id]`)
             .first(),
         ).toBeVisible()
       }
 
-      const allComponentEvents = page.locator('#event-stream li button[data-component-view-id]')
+      const allComponentEvents = page.locator('#event-stream li button[data-view-id]')
 
       await expect.poll(async () => await allComponentEvents.count()).toBeGreaterThanOrEqual(10)
 
-      const componentViewIdButtons = allComponentEvents
-      const componentViewIds: string[] = []
-      const componentViewIdCount = await componentViewIdButtons.count()
+      const viewIdButtons = allComponentEvents
+      const viewIds: string[] = []
+      const viewIdCount = await viewIdButtons.count()
 
-      for (let index = 0; index < componentViewIdCount; index += 1) {
-        const componentViewId = await componentViewIdButtons
-          .nth(index)
-          .getAttribute('data-component-view-id')
+      for (let index = 0; index < viewIdCount; index += 1) {
+        const viewId = await viewIdButtons.nth(index).getAttribute('data-view-id')
 
-        expect(componentViewId).not.toBeNull()
-        if (componentViewId) componentViewIds.push(componentViewId)
+        expect(viewId).not.toBeNull()
+        if (viewId) viewIds.push(viewId)
       }
 
-      expect(new Set(componentViewIds).size).toEqual(componentViewIds.length)
+      expect(new Set(viewIds).size).toEqual(viewIds.length)
     })
   })
 })

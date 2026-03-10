@@ -24,7 +24,7 @@ export interface OptimizationStateSnapshot {
   consent: boolean | undefined
   eventStream: StateValue<'eventStream'> | undefined
   flags: StateValue<'flags'> | undefined
-  personalizations: StateValue<'personalizations'> | undefined
+  selectedPersonalizations: StateValue<'selectedPersonalizations'> | undefined
   previewPanelAttached: boolean | undefined
   previewPanelOpen: boolean | undefined
   profile: StateValue<'profile'> | undefined
@@ -53,21 +53,21 @@ function useObservableState<TValue>(
 }
 
 export function useOptimizationState(
-  sdk: OptimizationStateSource | undefined,
+  state: OptimizationStateSource | undefined,
 ): OptimizationStateSnapshot {
-  const consent = useObservableState(sdk?.consent)
-  const eventStream = useObservableState(sdk?.eventStream)
-  const flags = useObservableState(sdk?.flags)
-  const personalizations = useObservableState(sdk?.personalizations)
-  const previewPanelAttached = useObservableState(sdk?.previewPanelAttached)
-  const previewPanelOpen = useObservableState(sdk?.previewPanelOpen)
-  const profile = useObservableState(sdk?.profile)
+  const consent = useObservableState(state?.consent)
+  const eventStream = useObservableState(state?.eventStream)
+  const flags = useObservableState(state?.flags)
+  const selectedPersonalizations = useObservableState(state?.selectedPersonalizations)
+  const previewPanelAttached = useObservableState(state?.previewPanelAttached)
+  const previewPanelOpen = useObservableState(state?.previewPanelOpen)
+  const profile = useObservableState(state?.profile)
 
   return {
     consent,
     eventStream,
     flags,
-    personalizations,
+    selectedPersonalizations,
     previewPanelAttached,
     previewPanelOpen,
     profile,

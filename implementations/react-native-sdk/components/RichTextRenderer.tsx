@@ -1,7 +1,7 @@
 import React from 'react'
 import { Text } from 'react-native'
 
-import type { OptimizationReactNativeSdk } from '@contentful/optimization-react-native'
+import type { ContentfulOptimization } from '@contentful/optimization-react-native'
 import {
   isMergeTagEntry,
   type MergeTagEntry,
@@ -32,7 +32,7 @@ interface EmbeddedEntryInlineNode {
 
 interface RichTextRendererProps {
   richText: RichTextField
-  sdk: OptimizationReactNativeSdk
+  sdk: ContentfulOptimization
 }
 
 type RenderedRichTextNode = string | null | React.ReactElement
@@ -74,10 +74,7 @@ function convertToString(value: unknown): string {
   return String(value)
 }
 
-function resolveMergeTagValue(
-  includedEntry: MergeTagEntry,
-  sdk: OptimizationReactNativeSdk,
-): string {
+function resolveMergeTagValue(includedEntry: MergeTagEntry, sdk: ContentfulOptimization): string {
   const resolvedValue = sdk.getMergeTagValue(includedEntry)
 
   if (resolvedValue === undefined) {
@@ -106,10 +103,7 @@ function getLinkId(link: unknown): string {
   return typeof id === 'string' ? id : 'unknown'
 }
 
-function renderEmbeddedEntry(
-  node: EmbeddedEntryInlineNode,
-  sdk: OptimizationReactNativeSdk,
-): string {
+function renderEmbeddedEntry(node: EmbeddedEntryInlineNode, sdk: ContentfulOptimization): string {
   const {
     data: { target: includedEntry },
   } = node
@@ -127,7 +121,7 @@ function renderEmbeddedEntry(
   return logAndReturnFallback('Failed to resolve merge tag: entry is not a merge tag')
 }
 
-function extractTextContent(node: RichTextNode, sdk: OptimizationReactNativeSdk): string {
+function extractTextContent(node: RichTextNode, sdk: ContentfulOptimization): string {
   const textContent = renderTextNode(node)
   if (textContent) {
     return textContent
@@ -144,10 +138,7 @@ function extractTextContent(node: RichTextNode, sdk: OptimizationReactNativeSdk)
   return ''
 }
 
-export function getRichTextContent(
-  richText: RichTextField,
-  sdk: OptimizationReactNativeSdk,
-): string {
+export function getRichTextContent(richText: RichTextField, sdk: ContentfulOptimization): string {
   return richText.content.map((node) => extractTextContent(node, sdk)).join(' ')
 }
 

@@ -1,8 +1,8 @@
 /**
- * Contentful Optimization Web SDK.
+ * Contentful ContentfulOptimization Web SDK.
  *
  * @remarks
- * Exposes Web-specific utilities such as {@link Optimization}, {@link beaconHandler},
+ * Exposes Web-specific utilities such as {@link ContentfulOptimization}, {@link beaconHandler},
  * and {@link LocalStore}. Core and transitive API exports are available from
  * dedicated entrypoints:
  * `@contentful/optimization-web/core-sdk`,
@@ -12,7 +12,7 @@
  * @packageDocumentation
  */
 
-import Optimization from './Optimization'
+import ContentfulOptimization from './ContentfulOptimization'
 
 export * from './builders/EventBuilder'
 export {
@@ -22,8 +22,8 @@ export {
   OPTIMIZATION_WEB_SDK_NAME,
   OPTIMIZATION_WEB_SDK_VERSION,
 } from './constants'
+export * from './ContentfulOptimization'
 export * from './handlers/beaconHandler'
-export * from './Optimization'
 export * from './storage/LocalStore'
 
-export default Optimization
+export default ContentfulOptimization

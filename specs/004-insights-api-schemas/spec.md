@@ -52,8 +52,8 @@ compatibility remains consistent across APIs.
 
 **Why this priority**: Reuse prevents drift between personalization and analytics data contracts.
 
-**Independent Test**: Verify `InsightsEvent` and `BatchInsightsEvent` are composed from
-`ComponentViewEvent` and `PartialProfile` contracts.
+**Independent Test**: Verify `InsightsEvent` and `BatchInsightsEvent` are composed from `ViewEvent`
+and `PartialProfile` contracts.
 
 **Acceptance Scenarios**:
 
@@ -77,13 +77,13 @@ compatibility remains consistent across APIs.
 ### Functional Requirements
 
 - **FR-001**: `InsightsEvent` MUST be a discriminated union keyed by `type`.
-- **FR-002**: The current `InsightsEvent` union MUST include `ComponentViewEvent` as the supported
-  event variant.
+- **FR-002**: The current `InsightsEvent` union MUST include `ViewEvent` as the supported event
+  variant.
 - **FR-003**: `InsightsEventArray` MUST represent an array of `InsightsEvent`.
 - **FR-004**: `BatchInsightsEvent` MUST require a `profile` object validated by `PartialProfile`.
 - **FR-005**: `BatchInsightsEvent` MUST require an `events` array validated by `InsightsEventArray`.
 - **FR-006**: `BatchInsightsEventArray` MUST represent an array of `BatchInsightsEvent`.
-- **FR-007**: Insights contracts MUST reuse Experience-domain shared schemas (`ComponentViewEvent`,
+- **FR-007**: Insights contracts MUST reuse Experience-domain shared schemas (`ViewEvent`,
   `PartialProfile`) rather than duplicate equivalent schema definitions.
 - **FR-008**: Insights domain barrels MUST export event and batch schema contracts through
   `insights/index.ts` and `insights/event/index.ts`.
@@ -100,7 +100,7 @@ compatibility remains consistent across APIs.
 
 ### Measurable Outcomes
 
-- **SC-001**: Valid component-view events parse successfully through `InsightsEvent`.
+- **SC-001**: Valid view events parse successfully through `InsightsEvent`.
 - **SC-002**: Unsupported event types are rejected by `InsightsEvent` parsing.
 - **SC-003**: Batch payloads without `profile.id` are rejected by `BatchInsightsEvent`.
 - **SC-004**: Array-level validation applies consistently for every element in

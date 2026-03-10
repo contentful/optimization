@@ -40,10 +40,10 @@ rs.mock('@contentful/optimization-core/logger', () => ({
   }),
 }))
 
-const mockTrackComponentView = rs.fn().mockResolvedValue(undefined)
+const mockTrackView = rs.fn().mockResolvedValue(undefined)
 
 const mockOptimization = {
-  trackComponentView: mockTrackComponentView,
+  trackView: mockTrackView,
 }
 
 rs.mock('../context/OptimizationContext', () => ({
@@ -115,7 +115,7 @@ function createLayoutEvent(): LayoutChangeEvent {
 }
 
 function getCallArg(callIndex: number): Record<string, unknown> {
-  const result: Record<string, unknown> = mockTrackComponentView.mock.calls[callIndex]?.[0]
+  const result: Record<string, unknown> = mockTrackView.mock.calls[callIndex]?.[0]
   return result
 }
 
@@ -132,7 +132,7 @@ describe('useViewportTracking', () => {
   })
 
   describe('initial event after dwell threshold', () => {
-    it('should fire initial trackComponentView after viewTimeMs of accumulated visible time', async () => {
+    it('should fire initial trackView after viewTimeMs of accumulated visible time', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('entry-1')
 
@@ -144,16 +144,16 @@ describe('useViewportTracking', () => {
 
       onLayout(createLayoutEvent())
 
-      expect(mockTrackComponentView).not.toHaveBeenCalled()
+      expect(mockTrackView).not.toHaveBeenCalled()
 
       rs.advanceTimersByTime(2000)
 
-      expect(mockTrackComponentView).toHaveBeenCalledTimes(1)
+      expect(mockTrackView).toHaveBeenCalledTimes(1)
       const call = getCallArg(0)
       expect(call.componentId).toBe('entry-1')
       expect(call.viewDurationMs).toBeGreaterThanOrEqual(2000)
-      expect(call.componentViewId).toBeDefined()
-      expect(typeof call.componentViewId).toBe('string')
+      expect(call.viewId).toBeDefined()
+      expect(typeof call.viewId).toBe('string')
     })
 
     it('should not fire if visibility ends before dwell threshold', async () => {
@@ -166,11 +166,11 @@ describe('useViewportTracking', () => {
         threshold: 0.8,
       })
 
-      expect(mockTrackComponentView).not.toHaveBeenCalled()
+      expect(mockTrackView).not.toHaveBeenCalled()
 
       rs.advanceTimersByTime(3000)
 
-      expect(mockTrackComponentView).not.toHaveBeenCalled()
+      expect(mockTrackView).not.toHaveBeenCalled()
     })
   })
 
@@ -189,13 +189,13 @@ describe('useViewportTracking', () => {
       onLayout(createLayoutEvent())
 
       rs.advanceTimersByTime(1000)
-      expect(mockTrackComponentView).toHaveBeenCalledTimes(1)
+      expect(mockTrackView).toHaveBeenCalledTimes(1)
 
       rs.advanceTimersByTime(2000)
-      expect(mockTrackComponentView).toHaveBeenCalledTimes(2)
+      expect(mockTrackView).toHaveBeenCalledTimes(2)
 
       rs.advanceTimersByTime(2000)
-      expect(mockTrackComponentView).toHaveBeenCalledTimes(3)
+      expect(mockTrackView).toHaveBeenCalledTimes(3)
     })
 
     it('should send increasing viewDurationMs with each periodic event', async () => {
@@ -221,8 +221,8 @@ describe('useViewportTracking', () => {
     })
   })
 
-  describe('componentViewId lifecycle', () => {
-    it('should use the same componentViewId for all events within a visibility cycle', async () => {
+  describe('viewId lifecycle', () => {
+    it('should use the same viewId for all events within a visibility cycle', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('entry-5')
 
@@ -238,8 +238,8 @@ describe('useViewportTracking', () => {
       rs.advanceTimersByTime(1000)
       rs.advanceTimersByTime(2000)
 
-      const firstViewId = getCallArg(0).componentViewId
-      const secondViewId = getCallArg(1).componentViewId
+      const firstViewId = getCallArg(0).viewId
+      const secondViewId = getCallArg(1).viewId
 
       expect(firstViewId).toBe(secondViewId)
     })
@@ -325,13 +325,13 @@ describe('useViewportTracking', () => {
       onLayout(createLayoutEvent())
 
       rs.advanceTimersByTime(1999)
-      expect(mockTrackComponentView).not.toHaveBeenCalled()
+      expect(mockTrackView).not.toHaveBeenCalled()
 
       rs.advanceTimersByTime(1)
-      expect(mockTrackComponentView).toHaveBeenCalledTimes(1)
+      expect(mockTrackView).toHaveBeenCalledTimes(1)
 
       rs.advanceTimersByTime(5000)
-      expect(mockTrackComponentView).toHaveBeenCalledTimes(2)
+      expect(mockTrackView).toHaveBeenCalledTimes(2)
     })
   })
 

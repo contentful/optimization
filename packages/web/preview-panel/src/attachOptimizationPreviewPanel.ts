@@ -1,4 +1,4 @@
-import type Optimization from '@contentful/optimization-web'
+import type ContentfulOptimization from '@contentful/optimization-web'
 import type {
   AudienceEntrySkeleton,
   OptimizationData,
@@ -58,7 +58,9 @@ function canDefineComponents(): void {
   const existing = document.querySelector(CTFL_OPT_PREVIEW_PANEL_TAG)
 
   if (existing)
-    throw new Error('[Optimization Preview Panel] The preview panel has already been attached')
+    throw new Error(
+      '[ContentfulOptimization Preview Panel] The preview panel has already been attached',
+    )
 }
 
 /**
@@ -69,20 +71,20 @@ function canDefineComponents(): void {
 interface AttachOptimizationPreviewPanelArgs {
   /** Contentful client used to fetch audience and personalization entries. */
   contentful: ContentfulClientApi<ChainModifiers>
-  /** Optimization Web SDK instance to register the preview panel with. */
-  optimization: Optimization
+  /** ContentfulOptimization Web SDK instance to register the preview panel with. */
+  optimization: ContentfulOptimization
   /** Optional CSP nonce passed to the Lit framework for style injection. */
   nonce: string | undefined
 }
 
 /**
- * Attaches the Optimization preview panel to the DOM as a Web Component.
+ * Attaches the ContentfulOptimization preview panel to the DOM as a Web Component.
  *
  * Registers all custom elements, fetches audiences and personalizations from
  * Contentful, wires up state interceptors, and appends the panel to
  * `document.body`.
  *
- * @param args - Configuration containing the Contentful client, Optimization instance, and optional CSP nonce.
+ * @param args - Configuration containing the Contentful client, ContentfulOptimization instance, and optional CSP nonce.
  * @returns Resolves once the panel has been appended to the document body.
  * @throws Error if the preview panel has already been attached.
  * @throws Error if optimization states cannot be obtained during registration.
@@ -98,7 +100,7 @@ interface AttachOptimizationPreviewPanelArgs {
  */
 export default async function attachOptimizationPreviewPanel({
   contentful,
-  optimization,
+  optimization: contentfulOptimization,
   nonce,
 }: AttachOptimizationPreviewPanelArgs): Promise<void> {
   canDefineComponents()
@@ -107,17 +109,17 @@ export default async function attachOptimizationPreviewPanel({
 
   const previewPanelSignalObject: PreviewPanelSignalObject = {}
 
-  optimization.registerPreviewPanel(previewPanelSignalObject)
+  contentfulOptimization.registerPreviewPanel(previewPanelSignalObject)
 
   const signals = Reflect.get(previewPanelSignalObject, PREVIEW_PANEL_SIGNALS_SYMBOL)
   const signalFns = Reflect.get(previewPanelSignalObject, PREVIEW_PANEL_SIGNAL_FNS_SYMBOL)
 
   if (!signals || !signalFns)
     throw new Error(
-      '[Optimization Preview Panel] The preview panel failed to find optimization states',
+      '[ContentfulOptimization Preview Panel] The preview panel failed to find optimization states',
     )
 
-  const [audiences, personalizations]: [Entry[], Entry[]] = await Promise.all([
+  const [audiences, personalizationEntries]: [Entry[], Entry[]] = await Promise.all([
     getAllEntries<AudienceEntrySkeleton>(contentful, 'nt_audience'),
     getAllEntries<PersonalizationEntrySkeleton>(contentful, 'nt_experience'),
   ])
@@ -130,12 +132,12 @@ export default async function attachOptimizationPreviewPanel({
   const panel = document.createElement(CTFL_OPT_PREVIEW_PANEL_TAG)
   if (!isCtflOptPreviewPanel(panel))
     throw new Error(
-      '[Optimization Preview Panel] The preview panel cannot be initialized; contact support',
+      '[ContentfulOptimization Preview Panel] The preview panel cannot be initialized; contact support',
     )
 
   panel.overrides = overrides
   panel.audiences = audiences.filter(isAudienceEntry)
-  panel.personalizations = personalizations.filter(
+  panel.personalizationEntries = personalizationEntries.filter(
     (personalization): personalization is PersonalizationEntry =>
       isPersonalizationEntry(personalization) &&
       !personalization.fields.nt_config?.components?.some(
@@ -143,15 +145,15 @@ export default async function attachOptimizationPreviewPanel({
       ),
   )
 
-  optimization.interceptors.state.add((states): OptimizationData => {
-    const { personalizations: selectedPersonalizations, ...otherStates } = states
+  contentfulOptimization.interceptors.state.add((states): OptimizationData => {
+    const { selectedPersonalizations, ...otherStates } = states
 
     defaults = [...selectedPersonalizations]
     panel.defaultSelectedPersonalizations = defaults
 
     return {
       ...otherStates,
-      personalizations: applyPersonalizationOverrides(selectedPersonalizations, overrides),
+      selectedPersonalizations: applyPersonalizationOverrides(selectedPersonalizations, overrides),
     }
   })
 
@@ -172,15 +174,15 @@ export default async function attachOptimizationPreviewPanel({
       detail: { key: experienceId, value: variantIndex },
     } = event
     overrides.set(experienceId, variantIndex)
-    signals.personalizations.value = applyPersonalizationOverrides(
-      signals.personalizations.value ?? [],
+    signals.selectedPersonalizations.value = applyPersonalizationOverrides(
+      signals.selectedPersonalizations.value ?? [],
       overrides,
     )
   })
 
   panel.addEventListener(CTFL_OPT_PREVIEW_PANEL_RESET, () => {
     overrides.clear()
-    signals.personalizations.value = [...defaults]
+    signals.selectedPersonalizations.value = [...defaults]
     panel.defaultSelectedPersonalizations = [...defaults]
   })
 

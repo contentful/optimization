@@ -1,4 +1,4 @@
-import Optimization from '@contentful/optimization-web'
+import ContentfulOptimization from '@contentful/optimization-web'
 import type { ReactElement } from 'react'
 import { renderToString } from 'react-dom/server'
 import {
@@ -21,8 +21,8 @@ const testConfig = {
 }
 
 function cleanupGlobalInstance(): void {
-  if (typeof window !== 'undefined' && window.optimization) {
-    window.optimization.destroy()
+  if (typeof window !== 'undefined' && window.contentfulOptimization) {
+    window.contentfulOptimization.destroy()
   }
 }
 
@@ -48,7 +48,7 @@ describe('@contentful/optimization-react-web core providers', () => {
   })
 
   it('creates optimization instance from config props via OptimizationProvider', () => {
-    let capturedInstance: Optimization | null = null
+    let capturedInstance: ContentfulOptimization | null = null
 
     function Probe(): null {
       capturedInstance = useOptimization()
@@ -66,11 +66,11 @@ describe('@contentful/optimization-react-web core providers', () => {
       </OptimizationProvider>,
     )
 
-    expect(capturedInstance).toBeInstanceOf(Optimization)
+    expect(capturedInstance).toBeInstanceOf(ContentfulOptimization)
   })
 
   it('provides optimization and live updates from OptimizationRoot', () => {
-    let capturedInstance: Optimization | null = null
+    let capturedInstance: ContentfulOptimization | null = null
     let capturedGlobalLiveUpdates: boolean | null = null
 
     function Probe(): null {
@@ -92,7 +92,7 @@ describe('@contentful/optimization-react-web core providers', () => {
       </OptimizationRoot>,
     )
 
-    expect(capturedInstance).toBeInstanceOf(Optimization)
+    expect(capturedInstance).toBeInstanceOf(ContentfulOptimization)
     expect(capturedGlobalLiveUpdates).toBe(true)
   })
 

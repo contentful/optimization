@@ -301,7 +301,7 @@ Configuration method signatures:
 
 - `buildComponentClick`: Builds a component click event payload for a Contentful entry-based
   component
-- `buildComponentView`: Builds a component view event payload for a Contentful entry-based component
+- `buildView`: Builds a component view event payload for a Contentful entry-based component
 - `buildFlagView`: Builds a component view payload event for a Custom Flag component
 - `buildIdentify`: Builds an identify event payload to associate a user ID with traits
 - `buildPageView`: Builds a page view event payload

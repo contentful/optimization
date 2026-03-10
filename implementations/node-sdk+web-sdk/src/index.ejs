@@ -206,20 +206,20 @@
       /* --- Standard Initialization Code --- */
 
       const contentfulClient = contentful.createClient(CONFIG.contentful)
-      window.optimization = new Optimization({
+      window.contentfulOptimization = new ContentfulOptimization({
         ...CONFIG.optimization,
         autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
         app: { name: document.title, version: '0.0.0' },
       })
-      const optimization = window.optimization
+      const contentfulOptimization = window.contentfulOptimization
       attachOptimizationPreviewPanel({
         contentful: contentfulClient,
-        optimization: window.optimization,
+        optimization: window.contentfulOptimization,
         nonce: 'nonce-string',
       })
 
       // Emit page event
-      optimization.page()
+      contentfulOptimization.page()
 
       /* --- Utility Functionality (for E2E) --- */
 
@@ -236,36 +236,36 @@
         }
       }
 
-      consent.addEventListener('click', () => optimization.consent(true))
-      unconsent.addEventListener('click', () => optimization.consent(false))
+      consent.addEventListener('click', () => contentfulOptimization.consent(true))
+      unconsent.addEventListener('click', () => contentfulOptimization.consent(false))
 
       const eventStream = document.querySelector('#event-stream')
-      const componentViewEventDialogs = new Map()
-      const componentHoverEventDialogs = new Map()
+      const viewEventDialogs = new Map()
+      const hoverEventDialogs = new Map()
 
-      function isComponentViewHeartbeatEvent(event) {
+      function isViewHeartbeatEvent(event) {
         return (
           event?.type === 'component' &&
-          typeof event?.componentViewId === 'string' &&
-          event.componentViewId.length > 0 &&
+          typeof event?.viewId === 'string' &&
+          event.viewId.length > 0 &&
           typeof event?.viewDurationMs === 'number'
         )
       }
 
-      function isComponentHoverHeartbeatEvent(event) {
+      function isHoverHeartbeatEvent(event) {
         return (
           event?.type === 'component_hover' &&
-          typeof event?.componentHoverId === 'string' &&
-          event.componentHoverId.length > 0 &&
+          typeof event?.hoverId === 'string' &&
+          event.hoverId.length > 0 &&
           typeof event?.hoverDurationMs === 'number'
         )
       }
 
       function updateEventDialog(button, pre, title, details) {
-        const componentViewId =
-          typeof details?.componentViewId === 'string' ? details.componentViewId : undefined
-        const componentHoverId =
-          typeof details?.componentHoverId === 'string' ? details.componentHoverId : undefined
+        const viewId =
+          typeof details?.viewId === 'string' ? details.viewId : undefined
+        const hoverId =
+          typeof details?.hoverId === 'string' ? details.hoverId : undefined
         const componentId = typeof details?.componentId === 'string' ? details.componentId : undefined
         const hoverDurationMs =
           typeof details?.hoverDurationMs === 'number' ? details.hoverDurationMs : undefined
@@ -273,11 +273,11 @@
         button.innerText = title
         button.dataset.testid = details.componentId ?? details?.properties?.url ?? details.messageId
 
-        if (componentViewId) button.dataset.componentViewId = componentViewId
-        else delete button.dataset.componentViewId
+        if (viewId) button.dataset.viewId = viewId
+        else delete button.dataset.viewId
 
-        if (componentHoverId) button.dataset.componentHoverId = componentHoverId
-        else delete button.dataset.componentHoverId
+        if (hoverId) button.dataset.hoverId = hoverId
+        else delete button.dataset.hoverId
 
         if (componentId) button.dataset.componentId = componentId
         else delete button.dataset.componentId
@@ -328,7 +328,7 @@
           const span = document.createElement('span')
 
           // This is how we can inject MergeTag data into Rich Text
-          span.innerText = optimization.getMergeTagValue(field.data.target)
+          span.innerText = contentfulOptimization.getMergeTagValue(field.data.target)
 
           parent.appendChild(span)
         } else {
@@ -353,7 +353,7 @@
 
       // Render personalized entries
       async function renderPersonalizedEntry(rawEntry, element, autoObserve = true) {
-        const { entry, personalization } = optimization.personalizeEntry(rawEntry)
+        const { entry, personalization } = contentfulOptimization.personalizeEntry(rawEntry)
         const renderInline =
           element.dataset.e2eEntryInline === 'true' || element.tagName === 'BUTTON'
 
@@ -414,10 +414,10 @@
       function manuallyObserveEntryElement(element, entry, personalization) {
         if (!entry?.sys?.id) return
 
-        optimization.tracking.clearElement('views', element)
+        contentfulOptimization.tracking.clearElement('views', element)
 
         // Manually observe the element for auto-tracking (does not use `data-ctfl-*` attributes)
-        optimization.tracking.enableElement('views', element, {
+        contentfulOptimization.tracking.enableElement('views', element, {
           data: {
             // The `entryId` property is required for auto-tracking
             entryId: entry.sys.id,
@@ -467,15 +467,15 @@
         return renderEntriesPromise
       }
 
-      optimization.states.consent.subscribe((consent) => {
+      contentfulOptimization.states.consent.subscribe((consent) => {
         toggleConsent(consent)
       })
 
-      optimization.states.eventStream.subscribe((event) => {
+      contentfulOptimization.states.eventStream.subscribe((event) => {
         if (!event) return
 
-        if (isComponentViewHeartbeatEvent(event)) {
-          const existingDialog = componentViewEventDialogs.get(event.componentViewId)
+        if (isViewHeartbeatEvent(event)) {
+          const existingDialog = viewEventDialogs.get(event.viewId)
 
           if (existingDialog) {
             updateEventDialog(existingDialog.button, existingDialog.pre, event.type, event)
@@ -483,7 +483,7 @@
           }
 
           const newDialog = createEventDialog(event.type, event)
-          componentViewEventDialogs.set(event.componentViewId, {
+          viewEventDialogs.set(event.viewId, {
             button: newDialog.button,
             pre: newDialog.pre,
           })
@@ -491,8 +491,8 @@
           return
         }
 
-        if (isComponentHoverHeartbeatEvent(event)) {
-          const existingDialog = componentHoverEventDialogs.get(event.componentHoverId)
+        if (isHoverHeartbeatEvent(event)) {
+          const existingDialog = hoverEventDialogs.get(event.hoverId)
 
           if (existingDialog) {
             updateEventDialog(existingDialog.button, existingDialog.pre, event.type, event)
@@ -500,7 +500,7 @@
           }
 
           const newDialog = createEventDialog(event.type, event)
-          componentHoverEventDialogs.set(event.componentHoverId, {
+          hoverEventDialogs.set(event.hoverId, {
             button: newDialog.button,
             pre: newDialog.pre,
           })
@@ -511,9 +511,9 @@
         eventStream.appendChild(createEventDialog(event.type, event).fragment)
       })
 
-      // Subscribe to personalizations state and render entries when selections are available
-      optimization.states.personalizations.subscribe(async (personalizations) => {
-        if (!personalizations) return
+      // Subscribe to selectedPersonalizations state and render entries when selections are available
+      contentfulOptimization.states.selectedPersonalizations.subscribe(async (selectedPersonalizations) => {
+        if (!selectedPersonalizations) return
 
         void scheduleRenderEntries()
       })

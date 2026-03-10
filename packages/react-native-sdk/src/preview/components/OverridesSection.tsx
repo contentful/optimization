@@ -21,7 +21,7 @@ export function OverridesSection({
   experienceNames = {},
 }: OverridesSectionProps): React.JSX.Element {
   const audienceOverrides = Object.values(overrides.audiences)
-  const personalizationOverrides = Object.values(overrides.personalizations)
+  const personalizationOverrides = Object.values(overrides.selectedPersonalizations)
   const totalOverrides = audienceOverrides.length + personalizationOverrides.length
 
   const getAudienceName = (audienceId: string): string => audienceNames[audienceId] ?? audienceId

@@ -8,12 +8,12 @@ import { PersonalizationStateless } from './personalization'
 class TestCore extends CoreBase {
   _analytics = new AnalyticsStateless({
     api: this.api,
-    builder: this.eventBuilder,
+    eventBuilder: this.eventBuilder,
     interceptors: this.interceptors,
   })
   _personalization = new PersonalizationStateless({
     api: this.api,
-    builder: this.eventBuilder,
+    eventBuilder: this.eventBuilder,
     interceptors: this.interceptors,
   })
 }

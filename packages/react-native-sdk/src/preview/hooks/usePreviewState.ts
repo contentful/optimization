@@ -16,7 +16,7 @@ const logger = createScopedLogger('RN:Preview')
  * @internal
  */
 export function usePreviewState(): PreviewState {
-  const optimization = useOptimization()
+  const contentfulOptimization = useOptimization()
 
   const [profile, setProfile] = useState<Profile | undefined>(undefined)
   const [personalizations, setPersonalizations] = useState<SelectedPersonalization[] | undefined>(
@@ -29,7 +29,7 @@ export function usePreviewState(): PreviewState {
   useEffect(() => {
     logger.debug('Subscribing to profile state')
 
-    const subscription = optimization.states.profile.subscribe((p) => {
+    const subscription = contentfulOptimization.states.profile.subscribe((p) => {
       logger.debug('Profile updated:', p?.id)
       setProfile(p)
       setIsLoading(false)
@@ -39,13 +39,13 @@ export function usePreviewState(): PreviewState {
       logger.debug('Unsubscribing from profile state')
       subscription.unsubscribe()
     }
-  }, [optimization])
+  }, [contentfulOptimization])
 
   // Subscribe to personalizations changes
   useEffect(() => {
     logger.debug('Subscribing to personalizations state')
 
-    const subscription = optimization.states.personalizations.subscribe((p) => {
+    const subscription = contentfulOptimization.states.selectedPersonalizations.subscribe((p) => {
       logger.debug('Personalizations updated:', p?.length ?? 0, 'items')
       setPersonalizations(p)
     })
@@ -54,13 +54,13 @@ export function usePreviewState(): PreviewState {
       logger.debug('Unsubscribing from personalizations state')
       subscription.unsubscribe()
     }
-  }, [optimization])
+  }, [contentfulOptimization])
 
   // Subscribe to consent changes
   useEffect(() => {
     logger.debug('Subscribing to consent state')
 
-    const subscription = optimization.states.consent.subscribe((c) => {
+    const subscription = contentfulOptimization.states.consent.subscribe((c) => {
       logger.debug('Consent updated:', c)
       setConsent(c)
     })
@@ -69,7 +69,7 @@ export function usePreviewState(): PreviewState {
       logger.debug('Unsubscribing from consent state')
       subscription.unsubscribe()
     }
-  }, [optimization])
+  }, [contentfulOptimization])
 
   return {
     profile,

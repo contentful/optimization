@@ -40,8 +40,8 @@ is required.
 
 **Why this priority**: Stateless behavior relies on direct request-response processing.
 
-**Independent Test**: Call `identify/page/screen/track/trackComponentView` with and without
-`profile.id` and verify one upsert call per method with schema-validated single-event payload.
+**Independent Test**: Call `identify/page/screen/track/trackView` with and without `profile.id` and
+verify one upsert call per method with schema-validated single-event payload.
 
 **Acceptance Scenarios**:
 
@@ -61,13 +61,13 @@ as one-event Insights batches so analytics delivery remains simple and determini
 
 **Why this priority**: Stateless analytics transport correctness depends on strict one-call mapping.
 
-**Independent Test**: Call `trackComponentView` and `trackFlagView`, then verify built event type,
+**Independent Test**: Call `trackView` and `trackFlagView`, then verify built event type,
 interceptor application, schema parsing, and one-batch send shape.
 
 **Acceptance Scenarios**:
 
-1. **Given** component view payload, **When** `trackComponentView` is called, **Then** one
-   `ComponentViewEvent` is validated and sent in a single-item `BatchInsightsEventArray`.
+1. **Given** component view payload, **When** `trackView` is called, **Then** one `ViewEvent` is
+   validated and sent in a single-item `BatchInsightsEventArray`.
 2. **Given** flag view payload, **When** `trackFlagView` is called, **Then** event type remains
    component and `componentType` is derived from flag builder output before sending.
 3. **Given** optional partial profile payload, **When** batch payload is built, **Then** batch
@@ -102,16 +102,16 @@ interceptor application, schema parsing, and one-batch send shape.
   `ScreenViewEvent`, and send through one `upsertProfile` call.
 - **FR-007**: `PersonalizationStateless.track` MUST build track events, validate with `TrackEvent`,
   and send through one `upsertProfile` call.
-- **FR-008**: `PersonalizationStateless.trackComponentView` MUST build component-view events,
-  validate with `ComponentViewEvent`, and send through one `upsertProfile` call.
+- **FR-008**: `PersonalizationStateless.trackView` MUST build view events, validate with
+  `ViewEvent`, and send through one `upsertProfile` call.
 - **FR-009**: `PersonalizationStateless` MUST run event interceptors before sending personalization
   events.
 - **FR-010**: `PersonalizationStateless.upsertProfile` payload MUST include `events: [intercepted]`
   and optional `profileId: profile?.id`.
-- **FR-011**: `AnalyticsStateless.trackComponentView` MUST build component-view events, run event
-  interceptors, validate with `ComponentViewEvent`, and send as one-item Insights batch.
+- **FR-011**: `AnalyticsStateless.trackView` MUST build view events, run event interceptors,
+  validate with `ViewEvent`, and send as one-item Insights batch.
 - **FR-012**: `AnalyticsStateless.trackFlagView` MUST build flag-view events, run event
-  interceptors, validate with `ComponentViewEvent`, and send as one-item Insights batch.
+  interceptors, validate with `ViewEvent`, and send as one-item Insights batch.
 - **FR-013**: `AnalyticsStateless.sendBatchEvent` MUST validate outgoing payload with
   `BatchInsightsEventArray`.
 - **FR-014**: Stateless analytics batch payload MUST use shape

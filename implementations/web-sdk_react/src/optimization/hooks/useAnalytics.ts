@@ -1,12 +1,12 @@
-import type Optimization from '@contentful/optimization-web'
+import type ContentfulOptimization from '@contentful/optimization-web'
 import { useMemo } from 'react'
 import { useOptimization } from './useOptimization'
 
-type TrackComponentViewPayload = Parameters<Optimization['trackComponentView']>[0]
-type TrackComponentViewResult = ReturnType<Optimization['trackComponentView']>
+type TrackViewPayload = Parameters<ContentfulOptimization['trackView']>[0]
+type TrackViewResult = ReturnType<ContentfulOptimization['trackView']>
 
 export interface UseAnalyticsResult {
-  trackView: (payload: TrackComponentViewPayload) => TrackComponentViewResult | undefined
+  trackView: (payload: TrackViewPayload) => TrackViewResult | undefined
 }
 
 export function useAnalytics(): UseAnalyticsResult {
@@ -15,13 +15,12 @@ export function useAnalytics(): UseAnalyticsResult {
   return useMemo<UseAnalyticsResult>(() => {
     if (!isReady || sdk === undefined) {
       return {
-        trackView: (_payload: TrackComponentViewPayload): undefined => undefined,
+        trackView: (_payload: TrackViewPayload): undefined => undefined,
       }
     }
 
     return {
-      trackView: async (payload: TrackComponentViewPayload): TrackComponentViewResult =>
-        await sdk.trackComponentView(payload),
+      trackView: async (payload: TrackViewPayload): TrackViewResult => await sdk.trackView(payload),
     }
   }, [isReady, sdk])
 }

@@ -1,9 +1,9 @@
 import { useContext } from 'react'
 
+import type ContentfulOptimization from '@contentful/optimization-web'
 import { OptimizationContext } from '../context/OptimizationContext'
-import type { OptimizationWebSdk } from '../types'
 
-export function useOptimization(): OptimizationWebSdk {
+export function useOptimization(): ContentfulOptimization {
   const context = useContext(OptimizationContext)
 
   if (!context) {

@@ -19,7 +19,7 @@ export const DEFAULTS = {
 
 export interface ElementViewCallbackInfo {
   readonly totalVisibleMs: number
-  readonly componentViewId: string
+  readonly viewId: string
   readonly attempts: number
   readonly data?: unknown
 }
@@ -63,7 +63,7 @@ export interface ElementState {
   visibleSince: number | null
   fireTimer: Timer | null
   attempts: number
-  componentViewId: string | null
+  viewId: string | null
   done: boolean
   inFlight: boolean
   lastKnownVisible: boolean

@@ -25,7 +25,7 @@ function parseHoverDurationMs(label: string): number {
   return Number.parseInt(match[1], 10)
 }
 
-function parseComponentHoverId(testId: string | null): string | undefined {
+function parseHoverId(testId: string | null): string | undefined {
   if (!testId) return undefined
 
   const prefix = 'event-component_hover-hover-'
@@ -44,10 +44,8 @@ async function readResolvedEntryId(page: Page): Promise<string> {
   return entryId ?? ''
 }
 
-async function readHoverDurationMs(page: Page, componentHoverId: string): Promise<number> {
-  const label = await page
-    .getByTestId(`event-component_hover-hover-${componentHoverId}`)
-    .innerText()
+async function readHoverDurationMs(page: Page, hoverId: string): Promise<number> {
+  const label = await page.getByTestId(`event-component_hover-hover-${hoverId}`).innerText()
   return parseHoverDurationMs(label)
 }
 
@@ -127,27 +125,27 @@ test.describe('entry hover tracking', () => {
     await expect(hoverEvent).toContainText(`Component: ${resolvedEntryId}`)
 
     const hoverEventTestId = await hoverEvent.getAttribute('data-testid')
-    const componentHoverId = parseComponentHoverId(hoverEventTestId)
-    expect(componentHoverId).toBeTruthy()
-    if (!componentHoverId) return
+    const hoverId = parseHoverId(hoverEventTestId)
+    expect(hoverId).toBeTruthy()
+    if (!hoverId) return
 
     await expect
-      .poll(async () => await readHoverDurationMs(page, componentHoverId))
+      .poll(async () => await readHoverDurationMs(page, hoverId))
       .toBeGreaterThanOrEqual(1000)
-    const firstHoverDurationMs = await readHoverDurationMs(page, componentHoverId)
+    const firstHoverDurationMs = await readHoverDurationMs(page, hoverId)
 
     await expect
-      .poll(async () => await readHoverDurationMs(page, componentHoverId))
+      .poll(async () => await readHoverDurationMs(page, hoverId))
       .toBeGreaterThan(firstHoverDurationMs)
-    const updatedHoverDurationMs = await readHoverDurationMs(page, componentHoverId)
+    const updatedHoverDurationMs = await readHoverDurationMs(page, hoverId)
 
     await page.waitForTimeout(300)
     await movePointerAwayFromEntries(page)
 
     await expect
-      .poll(async () => await readHoverDurationMs(page, componentHoverId))
+      .poll(async () => await readHoverDurationMs(page, hoverId))
       .toBeGreaterThan(updatedHoverDurationMs)
-    const finalHoverDurationMs = await readHoverDurationMs(page, componentHoverId)
+    const finalHoverDurationMs = await readHoverDurationMs(page, hoverId)
 
     expect(finalHoverDurationMs).toBeGreaterThan(firstHoverDurationMs)
   })

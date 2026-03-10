@@ -74,7 +74,7 @@ const DEFAULT_THRESHOLD = 0.8
 const DEFAULT_VIEW_TIME_MS = 2000
 const DEFAULT_VIEW_DURATION_UPDATE_INTERVAL_MS = 5000
 const HEX_RADIX = 16
-const createComponentViewId = (): string => {
+const createViewId = (): string => {
   try {
     return globalThis.crypto.randomUUID()
   } catch {
@@ -87,14 +87,14 @@ const createComponentViewId = (): string => {
  * triggering re-renders on every scroll tick.
  */
 interface ViewCycleState {
-  componentViewId: string | null
+  viewId: string | null
   visibleSince: number | null
   accumulatedMs: number
   attempts: number
 }
 
 const createInitialCycleState = (): ViewCycleState => ({
-  componentViewId: null,
+  viewId: null,
   visibleSince: null,
   accumulatedMs: 0,
   attempts: 0,
@@ -123,7 +123,7 @@ function pauseAccumulation(cycle: ViewCycleState, now: number): void {
 }
 
 function resetCycleState(cycle: ViewCycleState): void {
-  cycle.componentViewId = null
+  cycle.viewId = null
   cycle.visibleSince = null
   cycle.accumulatedMs = 0
   cycle.attempts = 0
@@ -198,7 +198,7 @@ function getRemainingMsUntilNextFire(
  *
  * @remarks
  * Uses {@link useScrollContext} if available, otherwise falls back to screen dimensions.
- * A new visibility cycle (with a fresh `componentViewId`) starts each time the component
+ * A new visibility cycle (with a fresh `viewId`) starts each time the component
  * transitions from invisible to visible. Time accumulation pauses when the app moves
  * to the background.
  *
@@ -229,7 +229,8 @@ export function useViewportTracking({
   enabled = true,
   viewDurationUpdateIntervalMs = DEFAULT_VIEW_DURATION_UPDATE_INTERVAL_MS,
 }: UseViewportTrackingOptions): UseViewportTrackingReturn {
-  const optimization = useOptimization()
+  const contentfulOptimization = useOptimization()
+
   const scrollContext = useScrollContext()
 
   const { componentId, experienceId, variantIndex } = extractTrackingMetadata(
@@ -256,8 +257,8 @@ export function useViewportTracking({
   const fireTimerRef = useRef<NodeJS.Timeout | null>(null)
   const cycleRef = useRef<ViewCycleState>(createInitialCycleState())
 
-  const optimizationRef = useRef(optimization)
-  optimizationRef.current = optimization
+  const optimizationRef = useRef(contentfulOptimization)
+  optimizationRef.current = contentfulOptimization
 
   const componentIdRef = useRef(componentId)
   componentIdRef.current = componentId
@@ -289,19 +290,19 @@ export function useViewportTracking({
     const now = Date.now()
     flushAccumulatedTime(cycle, now)
 
-    const viewId = cycle.componentViewId ?? createComponentViewId()
+    const viewId = cycle.viewId ?? createViewId()
     const durationMs = Math.max(0, Math.round(cycle.accumulatedMs))
 
     cycle.attempts += 1
 
     logger.info(
-      `Emitting view event #${cycle.attempts} for ${componentIdRef.current} (viewDurationMs=${durationMs}, componentViewId=${viewId})`,
+      `Emitting view event #${cycle.attempts} for ${componentIdRef.current} (viewDurationMs=${durationMs}, viewId=${viewId})`,
     )
 
     void (async () => {
-      await optimizationRef.current.trackComponentView({
+      await optimizationRef.current.trackView({
         componentId: componentIdRef.current,
-        componentViewId: viewId,
+        viewId,
         experienceId: experienceIdRef.current,
         variantIndex: variantIndexRef.current,
         viewDurationMs: durationMs,
@@ -313,7 +314,7 @@ export function useViewportTracking({
     clearFireTimer()
     const { current: cycle } = cycleRef
 
-    if (cycle.componentViewId === null || cycle.visibleSince === null) {
+    if (cycle.viewId === null || cycle.visibleSince === null) {
       return
     }
 
@@ -348,12 +349,10 @@ export function useViewportTracking({
     const now = Date.now()
 
     resetCycleState(cycle)
-    cycle.componentViewId = createComponentViewId()
+    cycle.viewId = createViewId()
     cycle.visibleSince = now
 
-    logger.info(
-      `Visibility cycle started for ${componentIdRef.current} (id=${cycle.componentViewId})`,
-    )
+    logger.info(`Visibility cycle started for ${componentIdRef.current} (id=${cycle.viewId})`)
 
     scheduleNextFire()
   }, [enabled, scheduleNextFire])
@@ -365,7 +364,7 @@ export function useViewportTracking({
     clearFireTimer()
     pauseAccumulation(cycle, now)
 
-    if (cycle.componentViewId !== null && cycle.attempts > 0) {
+    if (cycle.viewId !== null && cycle.attempts > 0) {
       logger.info(
         `Visibility ended for ${componentIdRef.current} after ${cycle.attempts} events, emitting final`,
       )
@@ -517,7 +516,7 @@ export function useViewportTracking({
         clearTimeout(fireTimerRef.current)
       }
       const { current: cycle } = cycleRef
-      if (cycle.componentViewId !== null && cycle.attempts > 0) {
+      if (cycle.viewId !== null && cycle.attempts > 0) {
         pauseAccumulation(cycle, Date.now())
         emitViewEvent()
       }

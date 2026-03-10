@@ -65,14 +65,14 @@ function generateBatchEventArray(
       ? {
           ...baseEvent,
           type: 'component' as const,
-          componentViewId: crypto.randomUUID(),
+          viewId: crypto.randomUUID(),
           viewDurationMs: 1000,
         }
       : eventType === 'component_hover'
         ? {
             ...baseEvent,
             type: 'component_hover' as const,
-            componentHoverId: crypto.randomUUID(),
+            hoverId: crypto.randomUUID(),
             hoverDurationMs: 1000,
           }
         : {

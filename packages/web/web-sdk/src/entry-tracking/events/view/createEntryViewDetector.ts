@@ -18,9 +18,9 @@ export {
   type CtflDataset,
   type EntryData,
   type EntryElement,
-} from '../../resolveComponentTrackingPayload'
+} from '../../resolveTrackingPayload'
 
-export type EntryViewTrackingCore = Pick<CoreStateful, 'trackComponentView'>
+export type EntryViewTrackingCore = Pick<CoreStateful, 'trackView'>
 
 export function createEntryViewDetector(
   core: EntryViewTrackingCore,
@@ -52,9 +52,9 @@ export function createEntryViewDetector(
       }
     },
     track: async (runtimeCore, payload, info: ElementViewCallbackInfo): Promise<void> => {
-      await runtimeCore.trackComponentView({
+      await runtimeCore.trackView({
         ...payload,
-        componentViewId: info.componentViewId,
+        viewId: info.viewId,
         viewDurationMs: Math.max(0, Math.round(info.totalVisibleMs)),
       })
     },

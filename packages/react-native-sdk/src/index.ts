@@ -1,8 +1,8 @@
 /**
- * Contentful Optimization React Native SDK.
+ * Contentful ContentfulOptimization React Native SDK.
  *
  * @remarks
- * Implements React Native-specific functionality on top of the Optimization Core Library.
+ * Implements React Native-specific functionality on top of the ContentfulOptimization Core Library.
  * Provides components for personalization, analytics tracking, and a preview panel for
  * debugging personalizations during development.
  *
@@ -71,4 +71,4 @@ export type {
   PreviewPanelProps,
 } from './preview/types'
 
-export { default as OptimizationReactNativeSdk } from './OptimizationReactNativeSdk'
+export { default as ContentfulOptimization } from './ContentfulOptimization'

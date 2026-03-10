@@ -162,17 +162,17 @@ const LocalStore = {
    *
    * @returns The parsed personalizations array or `undefined` when absent or invalid.
    */
-  get personalizations(): SelectedPersonalizationArray | undefined {
+  get selectedPersonalizations(): SelectedPersonalizationArray | undefined {
     return LocalStore.getCache(PERSONALIZATIONS_CACHE_KEY, SelectedPersonalizationArray)
   },
 
   /**
    * Cache new selected personalizations or clear them.
    *
-   * @param personalizations - New selections to store, or `undefined` to remove.
+   * @param selectedPersonalizations - New selections to store, or `undefined` to remove.
    */
-  set personalizations(personalizations: SelectedPersonalizationArray | undefined) {
-    LocalStore.setCache(PERSONALIZATIONS_CACHE_KEY, personalizations)
+  set selectedPersonalizations(selectedPersonalizations: SelectedPersonalizationArray | undefined) {
+    LocalStore.setCache(PERSONALIZATIONS_CACHE_KEY, selectedPersonalizations)
   },
 
   /**

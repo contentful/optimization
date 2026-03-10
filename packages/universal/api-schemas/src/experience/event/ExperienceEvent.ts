@@ -1,11 +1,11 @@
 import * as z from 'zod/mini'
 import { AliasEvent } from './AliasEvent'
-import { ComponentViewEvent } from './ComponentViewEvent'
 import { GroupEvent } from './GroupEvent'
 import { IdentifyEvent } from './IdentifyEvent'
 import { PageViewEvent } from './PageViewEvent'
 import { ScreenViewEvent } from './ScreenViewEvent'
 import { TrackEvent } from './TrackEvent'
+import { ViewEvent } from './ViewEvent'
 
 /**
  * Zod schema describing any supported experience/personalization event.
@@ -18,7 +18,7 @@ import { TrackEvent } from './TrackEvent'
  */
 export const ExperienceEvent = z.discriminatedUnion('type', [
   AliasEvent,
-  ComponentViewEvent,
+  ViewEvent,
   GroupEvent,
   IdentifyEvent,
   PageViewEvent,

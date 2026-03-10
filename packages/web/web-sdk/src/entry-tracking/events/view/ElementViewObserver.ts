@@ -36,7 +36,7 @@ import {
 } from './element-view-observer-support'
 
 const logger = createScopedLogger('Web:ElementViewObserver')
-const createComponentViewId = (): string => crypto.randomUUID()
+const createViewId = (): string => crypto.randomUUID()
 
 /**
  * Observe elements with `IntersectionObserver` and invoke a callback once dwell
@@ -151,7 +151,7 @@ class ElementViewObserver {
       visibleSince: null,
       fireTimer: null,
       attempts: 0,
-      componentViewId: null,
+      viewId: null,
       done: false,
       inFlight: false,
       lastKnownVisible: false,
@@ -220,7 +220,7 @@ class ElementViewObserver {
       state.pendingFinal = false
       state.accumulatedMs = 0
       state.attempts = 0
-      state.componentViewId = createComponentViewId()
+      state.viewId = createViewId()
       state.visibleSince = isPageVisible() ? now : null
       clearFireTimer(state)
 
@@ -249,7 +249,7 @@ class ElementViewObserver {
     clearFireTimer(state)
     state.lastKnownVisible = false
 
-    if (state.componentViewId === null || state.attempts === 0) {
+    if (state.viewId === null || state.attempts === 0) {
       ElementViewObserver.resetVisibilityCycle(state)
       return
     }
@@ -268,7 +268,7 @@ class ElementViewObserver {
     state.accumulatedMs = 0
     state.visibleSince = null
     state.attempts = 0
-    state.componentViewId = null
+    state.viewId = null
     clearFireTimer(state)
   }
 
@@ -279,7 +279,7 @@ class ElementViewObserver {
       state.fireTimer !== null ||
       !state.lastKnownVisible ||
       !isPageVisible() ||
-      state.componentViewId === null
+      state.viewId === null
     ) {
       return
     }
@@ -310,7 +310,7 @@ class ElementViewObserver {
   }
 
   private trigger(state: ElementState, now: number): void {
-    if (state.done || state.inFlight || state.componentViewId === null) return
+    if (state.done || state.inFlight || state.viewId === null) return
 
     if (state.visibleSince !== null) {
       state.accumulatedMs += now - state.visibleSince
@@ -324,7 +324,7 @@ class ElementViewObserver {
   }
 
   private async attemptCallback(state: ElementState, totalVisibleMs: number): Promise<void> {
-    if (state.done || state.inFlight || state.componentViewId === null) return
+    if (state.done || state.inFlight || state.viewId === null) return
 
     const element = derefElement(state)
 
@@ -335,13 +335,13 @@ class ElementViewObserver {
 
     state.inFlight = true
     state.attempts += 1
-    const { componentViewId } = state
+    const { viewId } = state
 
     await safeCallAsync(
       (): void | Promise<void> =>
         this.callback(element, {
           totalVisibleMs,
-          componentViewId,
+          viewId,
           attempts: state.attempts,
           data: state.data,
         }),
@@ -359,7 +359,7 @@ class ElementViewObserver {
     if (state.done) return
 
     if (!state.lastKnownVisible) {
-      if (state.pendingFinal && state.componentViewId !== null) {
+      if (state.pendingFinal && state.viewId !== null) {
         state.pendingFinal = false
         void this.attemptCallback(state, state.accumulatedMs)
         return

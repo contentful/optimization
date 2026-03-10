@@ -1,8 +1,8 @@
 /**
- * Contentful Optimization Node SDK.
+ * Contentful ContentfulOptimization Node SDK.
  *
  * @remarks
- * Adds Node-specific defaults via the {@link Optimization} class.
+ * Adds Node-specific defaults via the {@link ContentfulOptimization} class.
  * Core and transitive API exports are available from dedicated entrypoints:
  * `@contentful/optimization-node/core-sdk`,
  * `@contentful/optimization-node/api-client`,
@@ -11,9 +11,9 @@
  * @packageDocumentation
  */
 
-import Optimization from './Optimization'
+import ContentfulOptimization from './ContentfulOptimization'
 
 export { OPTIMIZATION_NODE_SDK_NAME, OPTIMIZATION_NODE_SDK_VERSION } from './constants'
-export * from './Optimization'
+export * from './ContentfulOptimization'
 
-export default Optimization
+export default ContentfulOptimization

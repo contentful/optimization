@@ -1,5 +1,5 @@
 /**
- * Sample React Native App - Contentful Optimization SDK Implementation
+ * Sample React Native App - Contentful ContentfulOptimization SDK Implementation
  * https://github.com/facebook/react-native
  *
  * @format
@@ -17,7 +17,7 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import type { OptimizationReactNativeSdk } from '@contentful/optimization-react-native'
+import type { ContentfulOptimization } from '@contentful/optimization-react-native'
 import { OptimizationRoot } from '@contentful/optimization-react-native'
 import type { MergeTagEntry, Profile } from '@contentful/optimization-react-native/api-schemas'
 import type { Entry } from 'contentful'
@@ -137,7 +137,7 @@ function App(): React.JSX.Element {
   const [sdkLoaded, setSdkLoaded] = useState(false)
   const [sdkError, setSdkError] = useState<string | null>(null)
   const [sdkInfo, setSdkInfo] = useState<SDKInfo | null>(null)
-  const [sdk, setSdk] = useState<OptimizationReactNativeSdk | null>(null)
+  const [sdk, setSdk] = useState<ContentfulOptimization | null>(null)
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home')
   const [personalizedEntry, setPersonalizedEntry] = useState<Entry | null>(null)
   const [productEntry, setProductEntry] = useState<Entry | null>(null)
@@ -302,7 +302,7 @@ function App(): React.JSX.Element {
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.header} testID="appHeader">
             <Text style={[styles.title, { color: colors.textColor }]} testID="appTitle">
-              Contentful Optimization
+              Contentful ContentfulOptimization
             </Text>
             <Text style={[styles.subtitle, { color: colors.mutedTextColor }]} testID="appSubtitle">
               React Native SDK Implementation

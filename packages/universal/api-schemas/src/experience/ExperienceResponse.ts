@@ -71,5 +71,5 @@ export type OptimizationData = Omit<ExperienceData, 'experiences'> & {
   /**
    * Selected personalizations for the profile.
    */
-  personalizations: SelectedPersonalizationArray
+  selectedPersonalizations: SelectedPersonalizationArray
 }

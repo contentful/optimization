@@ -53,9 +53,9 @@ const EMPTY_PROPERTIES: Properties = {}
  * @public
  */
 export function useScreenTrackingCallback(): (name: string, properties?: Properties) => void {
-  const optimization = useOptimization()
-  const optimizationRef = useRef(optimization)
-  optimizationRef.current = optimization
+  const contentfulOptimization = useOptimization()
+  const optimizationRef = useRef(contentfulOptimization)
+  optimizationRef.current = contentfulOptimization
 
   return useCallback((name: string, properties?: Properties) => {
     const { current: currentOptimization } = optimizationRef
@@ -115,12 +115,12 @@ export function useScreenTracking({
   properties = EMPTY_PROPERTIES,
   trackOnMount = true,
 }: UseScreenTrackingOptions): UseScreenTrackingReturn {
-  const optimization = useOptimization()
+  const contentfulOptimization = useOptimization()
   const hasTrackedRef = useRef(false)
 
-  // Store optimization in a ref to prevent unnecessary callback recreations
-  const optimizationRef = useRef(optimization)
-  optimizationRef.current = optimization
+  // Store contentfulOptimization in a ref to prevent unnecessary callback recreations
+  const optimizationRef = useRef(contentfulOptimization)
+  optimizationRef.current = contentfulOptimization
 
   // Store name and properties in refs to prevent useEffect re-runs
   const nameRef = useRef(name)

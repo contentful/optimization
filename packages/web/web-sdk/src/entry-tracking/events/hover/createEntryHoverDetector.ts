@@ -18,9 +18,9 @@ export {
   type CtflDataset,
   type EntryData,
   type EntryElement,
-} from '../../resolveComponentTrackingPayload'
+} from '../../resolveTrackingPayload'
 
-export type EntryHoverTrackingCore = Pick<CoreStateful, 'trackComponentHover'>
+export type EntryHoverTrackingCore = Pick<CoreStateful, 'trackHover'>
 
 export function createEntryHoverDetector(
   core: EntryHoverTrackingCore,
@@ -52,9 +52,9 @@ export function createEntryHoverDetector(
       }
     },
     track: async (runtimeCore, payload, info: ElementHoverCallbackInfo): Promise<void> => {
-      await runtimeCore.trackComponentHover({
+      await runtimeCore.trackHover({
         ...payload,
-        componentHoverId: info.componentHoverId,
+        hoverId: info.hoverId,
         hoverDurationMs: Math.max(0, Math.round(info.totalHoverMs)),
       })
     },

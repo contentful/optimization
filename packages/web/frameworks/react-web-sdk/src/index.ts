@@ -21,7 +21,6 @@ export { OptimizationRoot } from './root/OptimizationRoot'
 export type { OptimizationRootProps } from './root/OptimizationRoot'
 export type {
   AnalyticsEventInput,
-  OptimizationWebSdk,
-  OptimizationWebSdkOrNull,
+  ContentfulOptimizationOrNull,
   PersonalizationEntryInput,
 } from './types'
