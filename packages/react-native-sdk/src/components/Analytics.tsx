@@ -44,6 +44,14 @@ export interface AnalyticsProps {
   threshold?: number
 
   /**
+   * Interval (in milliseconds) between periodic view duration update events
+   * after the initial event has fired.
+   *
+   * @defaultValue 5000
+   */
+  viewDurationUpdateIntervalMs?: number
+
+  /**
    * Optional style prop for the wrapper View.
    */
   style?: StyleProp<ViewStyle>
@@ -126,6 +134,7 @@ export function Analytics({
   children,
   viewTimeMs,
   threshold,
+  viewDurationUpdateIntervalMs,
   style,
   testID,
   trackViews,
@@ -142,6 +151,7 @@ export function Analytics({
     entry,
     threshold,
     viewTimeMs,
+    viewDurationUpdateIntervalMs,
     enabled: viewsEnabled,
   })
 

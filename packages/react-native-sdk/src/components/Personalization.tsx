@@ -68,6 +68,14 @@ export interface PersonalizationProps {
   threshold?: number
 
   /**
+   * Interval (in milliseconds) between periodic view duration update events
+   * after the initial event has fired.
+   *
+   * @defaultValue 5000
+   */
+  viewDurationUpdateIntervalMs?: number
+
+  /**
    * Optional style prop for the wrapper View.
    */
   style?: StyleProp<ViewStyle>
@@ -172,6 +180,7 @@ export function Personalization({
   children,
   viewTimeMs,
   threshold,
+  viewDurationUpdateIntervalMs,
   style,
   testID,
   liveUpdates,
@@ -228,6 +237,7 @@ export function Personalization({
     personalization: resolvedData.personalization,
     threshold,
     viewTimeMs,
+    viewDurationUpdateIntervalMs,
     enabled: viewsEnabled,
   })
 
