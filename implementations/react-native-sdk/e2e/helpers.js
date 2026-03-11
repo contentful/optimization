@@ -117,11 +117,66 @@ async function clearProfileState(options = {}) {
   await relaunchCleanApp()
 }
 
+async function waitForComponentEventCount(
+  componentId,
+  minCount,
+  timeout = ELEMENT_VISIBILITY_TIMEOUT,
+) {
+  const testId = `event-count-${componentId}`
+
+  // Ensure the stats section is scrolled into view
+  try {
+    await element(by.id('main-scroll-view')).scrollTo('top')
+  } catch {
+    // Scroll may not be possible if view is not scrollable
+  }
+
+  try {
+    await waitFor(element(by.id(testId)))
+      .toBeVisible()
+      .whileElement(by.id('main-scroll-view'))
+      .scroll(300, 'down')
+  } catch {
+    // May already be visible
+  }
+
+  await waitForElementTextById(
+    testId,
+    (text) => {
+      const match = /Count:\s*(\d+)/.exec(text)
+      if (!match || !match[1]) {
+        return false
+      }
+      return Number(match[1]) >= minCount
+    },
+    timeout,
+  )
+}
+
+async function getComponentViewDuration(componentId) {
+  const testId = `event-duration-${componentId}`
+  const text = await getElementTextById(testId)
+  const match = /Duration:\s*(\d+)/.exec(text)
+  return match && match[1] ? Number(match[1]) : null
+}
+
+async function getComponentViewId(componentId) {
+  const testId = `event-view-id-${componentId}`
+  const text = await getElementTextById(testId)
+  const match = /ViewId:\s*(.+)/.exec(text)
+  return match && match[1] && match[1] !== 'N/A' ? match[1].trim() : null
+}
+
 module.exports = {
   clearProfileState,
   ELEMENT_VISIBILITY_TIMEOUT,
+  getComponentViewDuration,
+  getComponentViewId,
   getElementTextById,
+  isVisibleById,
+  sleep,
   tapIfVisibleById,
+  waitForComponentEventCount,
   waitForElementTextById,
   waitForEventsCountAtLeast,
   waitForTextChangeById,
