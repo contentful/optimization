@@ -379,38 +379,6 @@ export function useViewportTracking({
     resetCycleState(cycle)
   }, [clearFireTimer, emitViewEvent])
 
-  // AppState handling: pause/resume accumulation on background/foreground
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (nextState) => {
-      const { current: cycle } = cycleRef
-
-      if (nextState === 'background' || nextState === 'inactive') {
-        if (cycle.visibleSince !== null) {
-          const now = Date.now()
-          clearFireTimer()
-          pauseAccumulation(cycle, now)
-
-          if (cycle.attempts > 0) {
-            logger.info(`App backgrounded, emitting final event for ${componentIdRef.current}`)
-            emitViewEvent()
-            resetCycleState(cycle)
-            isVisibleRef.current = false
-          }
-        }
-      } else if (nextState === 'active') {
-        if (isVisibleRef.current && cycle.componentViewId !== null) {
-          cycle.visibleSince = Date.now()
-          logger.info(`App foregrounded, resuming accumulation for ${componentIdRef.current}`)
-          scheduleNextFire()
-        }
-      }
-    })
-
-    return () => {
-      subscription.remove()
-    }
-  }, [clearFireTimer, emitViewEvent, scheduleNextFire])
-
   const canCheckVisibility = useCallback((): boolean => {
     const { current: dimensions } = dimensionsRef
     if (!dimensions) {
@@ -513,12 +481,47 @@ export function useViewportTracking({
     checkVisibility()
   }, [scrollY, viewportHeight, checkVisibility])
 
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      const { current: cycle } = cycleRef
+
+      if (nextState === 'background' || nextState === 'inactive') {
+        if (cycle.visibleSince !== null) {
+          const now = Date.now()
+          clearFireTimer()
+          pauseAccumulation(cycle, now)
+
+          if (cycle.attempts > 0) {
+            logger.info(`App backgrounded, emitting final event for ${componentIdRef.current}`)
+            emitViewEvent()
+            resetCycleState(cycle)
+            isVisibleRef.current = false
+          }
+        }
+      } else if (nextState === 'active') {
+        if (dimensionsRef.current !== null) {
+          isVisibleRef.current = false
+          checkVisibility()
+        }
+      }
+    })
+
+    return () => {
+      subscription.remove()
+    }
+  }, [clearFireTimer, emitViewEvent, checkVisibility])
+
   useEffect(
     () => () => {
       if (fireTimerRef.current) {
         clearTimeout(fireTimerRef.current)
       }
-      resetCycleState(cycleRef.current)
+      const { current: cycle } = cycleRef
+      if (cycle.componentViewId !== null && cycle.attempts > 0) {
+        pauseAccumulation(cycle, Date.now())
+        emitViewEvent()
+      }
+      resetCycleState(cycle)
     },
     [],
   )
