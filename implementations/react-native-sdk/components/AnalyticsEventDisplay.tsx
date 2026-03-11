@@ -28,56 +28,85 @@ interface ComponentStats {
   latestComponentViewId: string | undefined
 }
 
+// Module-level stores that persist across unmount/remount cycles within the same
+// app session. Cleared naturally when the app process restarts (relaunchCleanApp).
+let persistedEvents: AnalyticsEvent[] = []
+let persistedComponentStats: Record<string, ComponentStats> = {}
+
+// Callback to trigger a re-render when mounted; null when unmounted.
+let rerender: (() => void) | null = null
+
+// Active subscription kept alive across unmounts to capture cleanup events.
+let activeSubscription: { unsubscribe: () => void } | null = null
+
+function buildEvent(event: {
+  type: string
+  componentId?: unknown
+  viewDurationMs?: unknown
+  componentViewId?: unknown
+}): AnalyticsEvent {
+  const { type, componentId, viewDurationMs, componentViewId } = event
+  const newEvent: AnalyticsEvent = { type, timestamp: Date.now() }
+
+  if (componentId && typeof componentId === 'string') {
+    newEvent.componentId = componentId
+  }
+  if (typeof viewDurationMs === 'number') {
+    newEvent.viewDurationMs = viewDurationMs
+  }
+  if (typeof componentViewId === 'string') {
+    newEvent.componentViewId = componentViewId
+  }
+
+  return newEvent
+}
+
+function updateComponentStats(newEvent: AnalyticsEvent): void {
+  if (!newEvent.componentId || newEvent.type !== 'component') return
+
+  const { componentId: cid } = newEvent
+  const { [cid]: existing } = persistedComponentStats
+  persistedComponentStats = {
+    ...persistedComponentStats,
+    [cid]: {
+      count: (existing?.count ?? 0) + 1,
+      latestViewDurationMs: newEvent.viewDurationMs ?? existing?.latestViewDurationMs,
+      latestComponentViewId: newEvent.componentViewId ?? existing?.latestComponentViewId,
+    },
+  }
+}
+
+function processEvent(event: unknown): void {
+  if (!isValidEvent(event)) return
+
+  const newEvent = buildEvent(event)
+  persistedEvents = [newEvent, ...persistedEvents]
+  updateComponentStats(newEvent)
+  rerender?.()
+}
+
 export function AnalyticsEventDisplay(): React.JSX.Element {
   const sdk = useOptimization()
-  const [events, setEvents] = useState<AnalyticsEvent[]>([])
-  const [componentStats, setComponentStats] = useState<Record<string, ComponentStats>>({})
+  const [, setTick] = useState(0)
+
   useEffect(() => {
-    const handleEvent = (event: unknown): void => {
-      if (isValidEvent(event)) {
-        const { type, componentId, viewDurationMs, componentViewId } = event
-        const newEvent: AnalyticsEvent = {
-          type,
-          timestamp: Date.now(),
-        }
-
-        if (componentId && typeof componentId === 'string') {
-          newEvent.componentId = componentId
-        }
-
-        if (typeof viewDurationMs === 'number') {
-          newEvent.viewDurationMs = viewDurationMs
-        }
-
-        if (typeof componentViewId === 'string') {
-          newEvent.componentViewId = componentViewId
-        }
-
-        setEvents((prev) => [newEvent, ...prev])
-
-        if (newEvent.componentId && type === 'component') {
-          const { componentId: cid } = newEvent
-          setComponentStats((prev) => {
-            const { [cid]: existing } = prev
-            return {
-              ...prev,
-              [cid]: {
-                count: (existing?.count ?? 0) + 1,
-                latestViewDurationMs: newEvent.viewDurationMs ?? existing?.latestViewDurationMs,
-                latestComponentViewId: newEvent.componentViewId ?? existing?.latestComponentViewId,
-              },
-            }
-          })
-        }
-      }
+    rerender = () => {
+      setTick((n) => n + 1)
     }
 
-    const subscription = sdk.states.eventStream.subscribe(handleEvent)
+    // (Re)subscribe when SDK instance changes (e.g. after reset).
+    activeSubscription?.unsubscribe()
+    activeSubscription = sdk.states.eventStream.subscribe(processEvent)
 
     return () => {
-      subscription.unsubscribe()
+      rerender = null
+      // Intentionally keep subscription alive to capture events emitted
+      // during sibling component cleanup (e.g. final view tracking events).
     }
   }, [sdk])
+
+  const events = persistedEvents
+  const componentStats = persistedComponentStats
 
   if (events.length === 0) {
     return (

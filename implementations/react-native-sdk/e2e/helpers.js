@@ -173,6 +173,7 @@ module.exports = {
   getComponentViewDuration,
   getComponentViewId,
   getElementTextById,
+  isVisibleById,
   sleep,
   tapIfVisibleById,
   waitForComponentEventCount,
