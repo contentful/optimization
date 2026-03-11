@@ -32,8 +32,6 @@ export function AnalyticsEventDisplay(): React.JSX.Element {
   const sdk = useOptimization()
   const [events, setEvents] = useState<AnalyticsEvent[]>([])
   const [componentStats, setComponentStats] = useState<Record<string, ComponentStats>>({})
-  const [clickStats, setClickStats] = useState<Record<string, number>>({})
-
   useEffect(() => {
     const handleEvent = (event: unknown): void => {
       if (isValidEvent(event)) {
@@ -56,14 +54,6 @@ export function AnalyticsEventDisplay(): React.JSX.Element {
         }
 
         setEvents((prev) => [newEvent, ...prev])
-
-        if (newEvent.componentId && type === 'component_click') {
-          const { componentId: cid } = newEvent
-          setClickStats((prev) => ({
-            ...prev,
-            [cid]: (prev[cid] ?? 0) + 1,
-          }))
-        }
 
         if (newEvent.componentId && type === 'component') {
           const { componentId: cid } = newEvent
@@ -104,6 +94,30 @@ export function AnalyticsEventDisplay(): React.JSX.Element {
       <Text style={{ fontWeight: 'bold', marginBottom: 5 }}>Analytics Events</Text>
       <Text testID="events-count">Events: {events.length}</Text>
 
+      {events
+        .filter((event) => event.type !== 'component')
+        .map((event, index) => {
+          const accessibilityLabel = `${event.type} - Component: ${event.componentId ?? 'none'} - Duration: ${event.viewDurationMs ?? 'none'}`
+          const testID = event.componentId
+            ? `event-${event.type}-${event.componentId}`
+            : `event-${event.type}-${index}`
+          return (
+            <View
+              key={`${event.timestamp}-${index}`}
+              testID={testID}
+              accessibilityLabel={accessibilityLabel}
+              accessible={true}
+              style={{ marginTop: 5 }}
+            >
+              <Text>
+                {event.type}
+                {event.componentId ? ` - Component: ${event.componentId}` : ''}
+                {event.viewDurationMs !== undefined ? ` - ${event.viewDurationMs}ms` : ''}
+              </Text>
+            </View>
+          )
+        })}
+
       {Object.entries(componentStats).map(([cid, stats]) => (
         <View key={`stats-${cid}`} testID={`component-stats-${cid}`}>
           <Text testID={`event-count-${cid}`}>Count: {stats.count}</Text>
@@ -115,34 +129,6 @@ export function AnalyticsEventDisplay(): React.JSX.Element {
           </Text>
         </View>
       ))}
-
-      {Object.entries(clickStats).map(([cid, count]) => (
-        <View key={`click-stats-${cid}`} testID={`click-stats-${cid}`}>
-          <Text testID={`click-count-${cid}`}>Clicks: {count}</Text>
-        </View>
-      ))}
-
-      {events.map((event, index) => {
-        const accessibilityLabel = `${event.type} - Component: ${event.componentId ?? 'none'} - Duration: ${event.viewDurationMs ?? 'none'}`
-        const testID = event.componentId
-          ? `event-${event.type}-${event.componentId}-${index}`
-          : `event-${event.type}-${index}`
-        return (
-          <View
-            key={`${event.timestamp}-${index}`}
-            testID={testID}
-            accessibilityLabel={accessibilityLabel}
-            accessible={true}
-            style={{ marginTop: 5 }}
-          >
-            <Text>
-              {event.type}
-              {event.componentId ? ` - Component: ${event.componentId}` : ''}
-              {event.viewDurationMs !== undefined ? ` - ${event.viewDurationMs}ms` : ''}
-            </Text>
-          </View>
-        )
-      })}
     </View>
   )
 }

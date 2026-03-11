@@ -21,7 +21,7 @@ describe('Tap Tracking', () => {
 
     await waitForEventsCountAtLeast(1)
 
-    await waitFor(element(by.id('click-stats-1MwiFl4z7gkwqGYdvCmr8c')))
+    await waitFor(element(by.id('event-component_click-1MwiFl4z7gkwqGYdvCmr8c')))
       .toBeVisible()
       .whileElement(by.id('main-scroll-view'))
       .scroll(500, 'down')
@@ -35,7 +35,7 @@ describe('Tap Tracking', () => {
 
     await waitForEventsCountAtLeast(1)
 
-    await waitFor(element(by.id('click-stats-2Z2WLOx07InSewC3LUB3eX')))
+    await waitFor(element(by.id('event-component_click-2Z2WLOx07InSewC3LUB3eX')))
       .toBeVisible()
       .whileElement(by.id('main-scroll-view'))
       .scroll(500, 'down')
