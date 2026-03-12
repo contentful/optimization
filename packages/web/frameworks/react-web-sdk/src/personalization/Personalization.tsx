@@ -10,6 +10,7 @@ import { useOptimization } from '../hooks/useOptimization'
 
 export type PersonalizationLoadingFallback = ReactNode | (() => ReactNode)
 export type PersonalizationWrapperElement = 'div' | 'span'
+export type PersonalizationRenderProp = (resolvedEntry: Entry) => ReactNode
 
 /**
  * Props for the {@link Personalization} component.
@@ -24,9 +25,14 @@ export interface PersonalizationProps {
   baselineEntry: Entry
 
   /**
-   * Render prop that receives the resolved variant entry.
+   * Consumer content rendered inside the wrapper.
+   *
+   * @remarks
+   * Supports either:
+   * - render-prop form: `(resolvedEntry) => ReactNode`
+   * - direct node form: `ReactNode`
    */
-  children: (resolvedEntry: Entry) => ReactNode
+  children: ReactNode | PersonalizationRenderProp
 
   /**
    * Whether this component should react to personalization state changes in real-time.
@@ -37,6 +43,9 @@ export interface PersonalizationProps {
   /**
    * Wrapper element used to mount tracking attributes.
    * Defaults to `div`.
+   *
+   * @remarks
+   * Wrapper uses `display: contents` to be as layout-neutral as possible.
    */
   as?: PersonalizationWrapperElement
 
@@ -52,6 +61,10 @@ export interface PersonalizationProps {
 
   /**
    * Optional fallback rendered while personalization state is unresolved.
+   *
+   * @remarks
+   * TODO(spec-028): Align loading lifecycle semantics for explicit SPA vs
+   * hybrid SSR+SPA contracts.
    */
   loadingFallback?: PersonalizationLoadingFallback
 }
@@ -63,7 +76,33 @@ function resolveLoadingFallback(
   return loadingFallback
 }
 
+function isPersonalizationRenderProp(
+  children: PersonalizationProps['children'],
+): children is PersonalizationRenderProp {
+  return typeof children === 'function'
+}
+
+function resolveChildren(
+  children: PersonalizationProps['children'],
+  entry: Entry,
+): ReactNode {
+  if (!isPersonalizationRenderProp(children)) return children
+
+  return children(entry)
+}
+
 const WRAPPER_STYLE = Object.freeze({ display: 'contents' as const })
+const DEFAULT_LOADING_FALLBACK = (
+  <span data-ctfl-loading="true" aria-label="Loading content">
+    Loading...
+  </span>
+)
+
+function hasPersonalizationReferences(entry: Entry): boolean {
+  const ntExperiences = entry.fields.nt_experiences
+  if (!Array.isArray(ntExperiences)) return false
+  return ntExperiences.length > 0
+}
 
 function resolveDuplicationScope(
   personalization: SelectedPersonalization | undefined,
@@ -110,6 +149,8 @@ export function Personalization({
   'data-testid': dataTestIdProp,
   loadingFallback,
 }: PersonalizationProps): JSX.Element {
+  // TODO(spec-028): Add same-baseline nesting guard. Nested wrappers with the same
+  // baseline entry ID as an ancestor should be blocked by runtime safety checks.
   const optimization = useOptimization()
   const liveUpdatesContext = useLiveUpdates()
 
@@ -156,15 +197,18 @@ export function Personalization({
     [optimization, baselineEntry, lockedPersonalizations],
   )
 
-  const isLoading = !canPersonalize
-  const showLoadingFallback = loadingFallback !== undefined && isLoading
+  // TODO(spec-028): Extend to explicit hybrid SSR+SPA lifecycle mode behavior.
+  const requiresPersonalization = hasPersonalizationReferences(baselineEntry)
+  const isLoading = requiresPersonalization && !canPersonalize
+  const showLoadingFallback = isLoading
+  const resolvedLoadingFallback = resolveLoadingFallback(loadingFallback) ?? DEFAULT_LOADING_FALLBACK
   const dataTestId = dataTestIdProp ?? testId
   const Wrapper = as
 
   if (showLoadingFallback) {
     return (
       <Wrapper style={WRAPPER_STYLE} data-testid={dataTestId}>
-        {resolveLoadingFallback(loadingFallback)}
+        {resolvedLoadingFallback}
       </Wrapper>
     )
   }
@@ -173,7 +217,7 @@ export function Personalization({
 
   return (
     <Wrapper style={WRAPPER_STYLE} data-testid={dataTestId} {...trackingAttributes}>
-      {children(resolvedData.entry)}
+      {resolveChildren(children, resolvedData.entry)}
     </Wrapper>
   )
 }
