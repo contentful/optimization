@@ -166,6 +166,16 @@ function getWrapper(container: HTMLElement): HTMLElement {
   return wrapper
 }
 
+function getRequiredElement(container: HTMLElement, selector: string): HTMLElement {
+  const target = container.querySelector(selector)
+
+  if (!(target instanceof HTMLElement)) {
+    throw new TypeError(`Expected selector "${selector}" to resolve to an HTMLElement`)
+  }
+
+  return target
+}
+
 function readTitle(entry: TestEntry): string {
   const {
     fields: { title },
@@ -307,7 +317,38 @@ describe('Personalization lifecycle and nesting guard', () => {
     await spanView.unmount()
   })
 
-  it.skip('retains loading layout-target behavior when display:contents visibility is unsupported', () => {
-    // TODO: Validate hybrid SSR+SPA loading layout constraints.
+  it('retains loading layout-target behavior when display:contents visibility is unsupported', async () => {
+    const { optimization } = createRuntime((entry, personalizations) => {
+      if (!personalizations?.length) return { entry }
+      return { entry: variantA, personalization: personalizations[0] }
+    })
+
+    const divView = await renderComponent(
+      <Personalization baselineEntry={personalizedBaseline}>
+        {(resolved) => readTitle(resolved)}
+      </Personalization>,
+      optimization,
+    )
+    const divLoadingTarget = getRequiredElement(
+      divView.container,
+      '[data-ctfl-loading-layout-target]',
+    )
+    expect(divLoadingTarget.tagName).toBe('DIV')
+    expect(divLoadingTarget.style.display).toBe('block')
+    await divView.unmount()
+
+    const spanView = await renderComponent(
+      <Personalization baselineEntry={personalizedBaseline} as="span">
+        {(resolved) => readTitle(resolved)}
+      </Personalization>,
+      optimization,
+    )
+    const spanLoadingTarget = getRequiredElement(
+      spanView.container,
+      '[data-ctfl-loading-layout-target]',
+    )
+    expect(spanLoadingTarget.tagName).toBe('SPAN')
+    expect(spanLoadingTarget.style.display).toBe('inline')
+    await spanView.unmount()
   })
 })

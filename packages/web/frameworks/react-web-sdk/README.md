@@ -131,6 +131,9 @@ When `loadingFallback` is provided, it is rendered while readiness is unresolved
 
 - If a baseline entry is personalizable and unresolved, loading UI is rendered by default.
 - If the entry is not personalizable, baseline/resolved content is rendered directly.
+- During loading, a concrete layout-target element is rendered (`data-ctfl-loading-layout-target`)
+  so loading visibility/layout behavior remains targetable even when wrapper uses
+  `display: contents`.
 
 #### Nested Composition
 

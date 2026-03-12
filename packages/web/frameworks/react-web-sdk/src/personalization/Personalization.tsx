@@ -104,6 +104,12 @@ const DEFAULT_LOADING_FALLBACK = (
     Loading...
   </span>
 )
+const LOADING_LAYOUT_TARGET_STYLE = Object.freeze({
+  display: 'block' as const,
+})
+const LOADING_LAYOUT_TARGET_STYLE_INLINE = Object.freeze({
+  display: 'inline' as const,
+})
 const PersonalizationNestingContext = createContext<ReadonlySet<string> | null>(null)
 const logger = createScopedLogger('React:Personalization')
 
@@ -159,6 +165,16 @@ function resolveTrackingAttributes(
       personalization?.sticky === undefined ? undefined : String(personalization.sticky),
     'data-ctfl-variant-index': String(personalization?.variantIndex ?? 0),
   }
+}
+
+function resolveLoadingLayoutTargetStyle(
+  wrapperElement: PersonalizationWrapperElement,
+): typeof LOADING_LAYOUT_TARGET_STYLE | typeof LOADING_LAYOUT_TARGET_STYLE_INLINE {
+  if (wrapperElement === 'span') {
+    return LOADING_LAYOUT_TARGET_STYLE_INLINE
+  }
+
+  return LOADING_LAYOUT_TARGET_STYLE
 }
 
 export function Personalization({
@@ -255,10 +271,18 @@ export function Personalization({
   const Wrapper = as
 
   if (showLoadingFallback) {
+    const LoadingLayoutTarget = Wrapper
+    const loadingLayoutTargetStyle = resolveLoadingLayoutTargetStyle(as)
+
     return (
       <PersonalizationNestingContext.Provider value={currentAndAncestorBaselineIds}>
         <Wrapper style={WRAPPER_STYLE} data-testid={dataTestId}>
-          {resolvedLoadingFallback}
+          <LoadingLayoutTarget
+            data-ctfl-loading-layout-target="true"
+            style={loadingLayoutTargetStyle}
+          >
+            {resolvedLoadingFallback}
+          </LoadingLayoutTarget>
         </Wrapper>
       </PersonalizationNestingContext.Provider>
     )
