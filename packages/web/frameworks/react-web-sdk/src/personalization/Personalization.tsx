@@ -4,9 +4,19 @@ import type {
 } from '@contentful/optimization-web/api-schemas'
 import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
-import { useEffect, useMemo, useState, type JSX, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type JSX,
+  type ReactNode,
+} from 'react'
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
 import { useOptimization } from '../hooks/useOptimization'
+import { createScopedLogger } from '../logger'
 
 export type PersonalizationLoadingFallback = ReactNode | (() => ReactNode)
 export type PersonalizationWrapperElement = 'div' | 'span'
@@ -61,10 +71,6 @@ export interface PersonalizationProps {
 
   /**
    * Optional fallback rendered while personalization state is unresolved.
-   *
-   * @remarks
-   * TODO(spec-028): Align loading lifecycle semantics for explicit SPA vs
-   * hybrid SSR+SPA contracts.
    */
   loadingFallback?: PersonalizationLoadingFallback
 }
@@ -72,7 +78,9 @@ export interface PersonalizationProps {
 function resolveLoadingFallback(
   loadingFallback: PersonalizationLoadingFallback | undefined,
 ): ReactNode {
-  if (typeof loadingFallback === 'function') return loadingFallback()
+  if (typeof loadingFallback === 'function') {
+    return loadingFallback()
+  }
   return loadingFallback
 }
 
@@ -82,11 +90,10 @@ function isPersonalizationRenderProp(
   return typeof children === 'function'
 }
 
-function resolveChildren(
-  children: PersonalizationProps['children'],
-  entry: Entry,
-): ReactNode {
-  if (!isPersonalizationRenderProp(children)) return children
+function resolveChildren(children: PersonalizationProps['children'], entry: Entry): ReactNode {
+  if (!isPersonalizationRenderProp(children)) {
+    return children
+  }
 
   return children(entry)
 }
@@ -97,10 +104,15 @@ const DEFAULT_LOADING_FALLBACK = (
     Loading...
   </span>
 )
+const PersonalizationNestingContext = createContext<ReadonlySet<string> | null>(null)
+const logger = createScopedLogger('React:Personalization')
 
 function hasPersonalizationReferences(entry: Entry): boolean {
-  const ntExperiences = entry.fields.nt_experiences
-  if (!Array.isArray(ntExperiences)) return false
+  const { fields } = entry
+  const { nt_experiences: ntExperiences } = fields
+  if (!Array.isArray(ntExperiences)) {
+    return false
+  }
   return ntExperiences.length > 0
 }
 
@@ -111,7 +123,9 @@ function resolveDuplicationScope(
     personalization && typeof personalization === 'object' && 'duplicationScope' in personalization
       ? personalization.duplicationScope
       : undefined
-  if (typeof candidate !== 'string') return undefined
+  if (typeof candidate !== 'string') {
+    return undefined
+  }
   return candidate.trim() ? candidate : undefined
 }
 
@@ -121,18 +135,25 @@ function resolveShouldLiveUpdate(params: {
   globalLiveUpdates: boolean
 }): boolean {
   const { previewPanelVisible, componentLiveUpdates, globalLiveUpdates } = params
-  if (previewPanelVisible) return true
+  if (previewPanelVisible) {
+    return true
+  }
   return componentLiveUpdates ?? globalLiveUpdates
 }
 
 function resolveTrackingAttributes(
   resolvedData: ResolvedData<EntrySkeletonType>,
 ): Record<string, string | undefined> {
-  const { personalization } = resolvedData
+  const {
+    personalization,
+    entry: {
+      sys: { id: entryId },
+    },
+  } = resolvedData
 
   return {
     'data-ctfl-duplication-scope': resolveDuplicationScope(personalization),
-    'data-ctfl-entry-id': resolvedData.entry.sys.id,
+    'data-ctfl-entry-id': entryId,
     'data-ctfl-personalization-id': personalization?.experienceId,
     'data-ctfl-sticky':
       personalization?.sticky === undefined ? undefined : String(personalization.sticky),
@@ -149,10 +170,38 @@ export function Personalization({
   'data-testid': dataTestIdProp,
   loadingFallback,
 }: PersonalizationProps): JSX.Element {
-  // TODO(spec-028): Add same-baseline nesting guard. Nested wrappers with the same
-  // baseline entry ID as an ancestor should be blocked by runtime safety checks.
   const optimization = useOptimization()
   const liveUpdatesContext = useLiveUpdates()
+  const ancestorBaselineIds = useContext(PersonalizationNestingContext)
+  const warnedDuplicateBaselineId = useRef(false)
+  const {
+    sys: { id: baselineEntryId },
+  } = baselineEntry
+  const hasDuplicateBaselineAncestor = ancestorBaselineIds?.has(baselineEntryId) ?? false
+
+  useEffect(() => {
+    if (!hasDuplicateBaselineAncestor || warnedDuplicateBaselineId.current) {
+      return
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      logger.warn(
+        `[Personalization] Nested Personalization with baseline entry ID "${baselineEntryId}" is blocked.`,
+      )
+    }
+
+    warnedDuplicateBaselineId.current = true
+  }, [baselineEntryId, hasDuplicateBaselineAncestor])
+
+  const currentAndAncestorBaselineIds = useMemo(() => {
+    const nextIds = new Set(ancestorBaselineIds ?? [])
+    nextIds.add(baselineEntryId)
+    return nextIds
+  }, [ancestorBaselineIds, baselineEntryId])
+
+  if (hasDuplicateBaselineAncestor) {
+    return <></>
+  }
 
   const shouldLiveUpdate = resolveShouldLiveUpdate({
     componentLiveUpdates: liveUpdates,
@@ -197,28 +246,32 @@ export function Personalization({
     [optimization, baselineEntry, lockedPersonalizations],
   )
 
-  // TODO(spec-028): Extend to explicit hybrid SSR+SPA lifecycle mode behavior.
   const requiresPersonalization = hasPersonalizationReferences(baselineEntry)
   const isLoading = requiresPersonalization && !canPersonalize
   const showLoadingFallback = isLoading
-  const resolvedLoadingFallback = resolveLoadingFallback(loadingFallback) ?? DEFAULT_LOADING_FALLBACK
+  const resolvedLoadingFallback =
+    resolveLoadingFallback(loadingFallback) ?? DEFAULT_LOADING_FALLBACK
   const dataTestId = dataTestIdProp ?? testId
   const Wrapper = as
 
   if (showLoadingFallback) {
     return (
-      <Wrapper style={WRAPPER_STYLE} data-testid={dataTestId}>
-        {resolvedLoadingFallback}
-      </Wrapper>
+      <PersonalizationNestingContext.Provider value={currentAndAncestorBaselineIds}>
+        <Wrapper style={WRAPPER_STYLE} data-testid={dataTestId}>
+          {resolvedLoadingFallback}
+        </Wrapper>
+      </PersonalizationNestingContext.Provider>
     )
   }
 
   const trackingAttributes = resolveTrackingAttributes(resolvedData)
 
   return (
-    <Wrapper style={WRAPPER_STYLE} data-testid={dataTestId} {...trackingAttributes}>
-      {resolveChildren(children, resolvedData.entry)}
-    </Wrapper>
+    <PersonalizationNestingContext.Provider value={currentAndAncestorBaselineIds}>
+      <Wrapper style={WRAPPER_STYLE} data-testid={dataTestId} {...trackingAttributes}>
+        {resolveChildren(children, resolvedData.entry)}
+      </Wrapper>
+    </PersonalizationNestingContext.Provider>
   )
 }
 

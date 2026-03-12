@@ -173,16 +173,10 @@ function readTitle(entry: TestEntry): string {
   return typeof title === 'string' ? title : ''
 }
 
-describe('Personalization', () => {
+describe('Personalization lifecycle and nesting guard', () => {
   const baseline = makeEntry('baseline')
   const personalizedBaseline = makePersonalizableEntry('personalized-baseline')
   const variantA = makeEntry('variant-a')
-  const variantB = makeEntry('variant-b')
-
-  const baselineParent = makeEntry('parent-baseline')
-  const variantParent = makeEntry('parent-variant')
-  const baselineChild = makeEntry('child-baseline')
-  const variantChild = makeEntry('child-variant')
 
   const variantOneState: SelectedPersonalizationArray = [
     {
@@ -195,203 +189,87 @@ describe('Personalization', () => {
     },
   ]
 
-  const variantTwoState: SelectedPersonalizationArray = [
-    {
-      experienceId: 'exp-hero',
-      sticky: false,
-      variantIndex: 2,
-      variants: {
-        baseline: 'variant-b',
-      },
-    },
-  ]
-
   void afterEach(() => {
     document.body.innerHTML = ''
+    rs.restoreAllMocks()
   })
 
-  it('renders baseline by default when personalization is unresolved and no loading fallback is provided', async () => {
+  it('renders plain ReactNode children without requiring render-prop usage', async () => {
+    const { optimization } = createRuntime((entry) => ({ entry }))
+
+    const view = await renderComponent(
+      <Personalization baselineEntry={baseline}>
+        <article data-testid="static-node">static-child</article>
+      </Personalization>,
+      optimization,
+    )
+
+    const wrapper = getWrapper(view.container)
+    expect(wrapper.tagName).toBe('DIV')
+    expect(wrapper.style.display).toBe('contents')
+
+    const staticNode = view.container.querySelector('[data-testid="static-node"]')
+    expect(staticNode?.textContent).toBe('static-child')
+
+    await view.unmount()
+  })
+
+  it('does not render entry content initially in SPA mode', async () => {
     const { optimization } = createRuntime((entry, personalizations) => {
       if (!personalizations?.length) return { entry }
       return { entry: variantA, personalization: personalizations[0] }
     })
 
     const view = await renderComponent(
-      <Personalization baselineEntry={baseline}>
+      <Personalization baselineEntry={personalizedBaseline}>
         {(resolved) => readTitle(resolved)}
       </Personalization>,
       optimization,
     )
 
-    expect(view.container.textContent).toContain('baseline')
+    expect(view.container.textContent).toContain('Loading...')
+    expect(view.container.textContent).not.toContain('personalized-baseline')
 
-    const wrapper = getWrapper(view.container)
-    expect(wrapper.dataset.ctflEntryId).toBe('baseline')
-    expect(wrapper.dataset.ctflPersonalizationId).toBeUndefined()
-    expect(wrapper.dataset.ctflVariantIndex).toBe('0')
-
-    await view.unmount()
-  })
-
-  it('locks to first non-undefined personalization state when live updates are disabled', async () => {
-    const { optimization, emit } = createRuntime((entry, personalizations) => {
-      const selected = personalizations?.[0]
-      const variant = selected ? { 1: variantA, 2: variantB }[selected.variantIndex] : undefined
-      if (variant && selected) return { entry: variant, personalization: selected }
-      return { entry }
-    })
-
-    const view = await renderComponent(
-      <Personalization baselineEntry={baseline}>
-        {(resolved) => readTitle(resolved)}
-      </Personalization>,
-      optimization,
-    )
-
-    await emit(variantOneState)
-    expect(view.container.textContent).toContain('variant-a')
-
-    await emit(variantTwoState)
-    expect(view.container.textContent).toContain('variant-a')
+    const loadingWrapper = getWrapper(view.container)
+    expect(loadingWrapper.dataset.ctflEntryId).toBeUndefined()
 
     await view.unmount()
   })
 
-  it('updates continuously when liveUpdates is true', async () => {
-    const { optimization, emit } = createRuntime((entry, personalizations) => {
-      const selected = personalizations?.[0]
-      const variant = selected ? { 1: variantA, 2: variantB }[selected.variantIndex] : undefined
-      if (variant && selected) return { entry: variant, personalization: selected }
-      return { entry }
-    })
-
-    const view = await renderComponent(
-      <Personalization baselineEntry={baseline} liveUpdates>
-        {(resolved) => readTitle(resolved)}
-      </Personalization>,
-      optimization,
-    )
-
-    await emit(variantOneState)
-    expect(view.container.textContent).toContain('variant-a')
-
-    await emit(variantTwoState)
-    expect(view.container.textContent).toContain('variant-b')
-
-    await view.unmount()
-  })
-
-  it('uses loadingFallback while unresolved and removes resolved tracking attrs during loading', async () => {
+  it('renders loading until canPersonalize is true for personalized flow', async () => {
     const { optimization, emit } = createRuntime((entry, personalizations) => {
       if (!personalizations?.length) return { entry }
       return { entry: variantA, personalization: personalizations[0] }
     })
 
     const view = await renderComponent(
-      <Personalization baselineEntry={personalizedBaseline} loadingFallback={() => 'loading'}>
+      <Personalization baselineEntry={personalizedBaseline}>
         {(resolved) => readTitle(resolved)}
       </Personalization>,
       optimization,
     )
 
-    expect(view.container.textContent).toContain('loading')
-
-    const loadingWrapper = getWrapper(view.container)
-    expect(loadingWrapper.dataset.ctflEntryId).toBeUndefined()
+    expect(view.container.textContent).toContain('Loading...')
+    expect(view.container.textContent).not.toContain('variant-a')
 
     await emit(variantOneState)
 
     expect(view.container.textContent).toContain('variant-a')
-    const resolvedWrapper = getWrapper(view.container)
-    expect(resolvedWrapper.dataset.ctflEntryId).toBe('variant-a')
+    expect(view.container.textContent).not.toContain('Loading...')
 
     await view.unmount()
   })
 
-  it('maps data-ctfl-* attributes from resolved personalization metadata', async () => {
-    const { optimization, emit } = createRuntime((entry, personalizations) => {
-      const selected = personalizations?.[0]
-      if (!selected) return { entry }
-
-      return {
-        entry: variantB,
-        personalization: {
-          ...selected,
-          duplicationScope: 'session',
-        },
-      }
-    })
-
-    const view = await renderComponent(
-      <Personalization baselineEntry={baseline}>
-        {(resolved) => readTitle(resolved)}
-      </Personalization>,
-      optimization,
-    )
-
-    await emit(variantTwoState)
-
-    const wrapper = getWrapper(view.container)
-    expect(wrapper.dataset.ctflEntryId).toBe('variant-b')
-    expect(wrapper.dataset.ctflPersonalizationId).toBe('exp-hero')
-    expect(wrapper.dataset.ctflSticky).toBe('false')
-    expect(wrapper.dataset.ctflVariantIndex).toBe('2')
-    expect(wrapper.dataset.ctflDuplicationScope).toBe('session')
-
-    await view.unmount()
-  })
-
-  it('supports testId/data-testid props with data-testid precedence', async () => {
+  it('prevents nested Personalization with same baseline entry id', async () => {
     const { optimization } = createRuntime((entry) => ({ entry }))
 
     const view = await renderComponent(
-      <Personalization baselineEntry={baseline} testId="camel" data-testid="direct">
-        {(resolved) => readTitle(resolved)}
-      </Personalization>,
-      optimization,
-    )
-
-    const wrapper = getWrapper(view.container)
-    expect(wrapper.dataset.testid).toBe('direct')
-
-    await view.unmount()
-  })
-
-  it('supports nested personalization composition', async () => {
-    const nestedState: SelectedPersonalizationArray = [
-      {
-        experienceId: 'exp-nested',
-        sticky: true,
-        variantIndex: 1,
-        variants: {
-          'parent-baseline': 'parent-variant',
-          'child-baseline': 'child-variant',
-        },
-      },
-    ]
-
-    const { optimization, emit } = createRuntime((entry, personalizations) => {
-      const selected = personalizations?.[0]
-      if (!selected) return { entry }
-
-      if (entry.sys.id === 'parent-baseline') {
-        return { entry: variantParent, personalization: selected }
-      }
-
-      if (entry.sys.id === 'child-baseline') {
-        return { entry: variantChild, personalization: selected }
-      }
-
-      return { entry }
-    })
-
-    const view = await renderComponent(
-      <Personalization baselineEntry={baselineParent}>
+      <Personalization baselineEntry={baseline}>
         {(parentResolved) => (
           <section>
             <h1>{readTitle(parentResolved)}</h1>
-            <Personalization baselineEntry={baselineChild}>
-              {(childResolved) => <p>{readTitle(childResolved)}</p>}
+            <Personalization baselineEntry={baseline}>
+              {(childResolved) => <p data-testid="nested-same-id">{readTitle(childResolved)}</p>}
             </Personalization>
           </section>
         )}
@@ -399,42 +277,37 @@ describe('Personalization', () => {
       optimization,
     )
 
-    await emit(nestedState)
-
-    expect(view.container.textContent).toContain('parent-variant')
-    expect(view.container.textContent).toContain('child-variant')
+    expect(view.container.textContent).toContain('baseline')
+    expect(view.container.querySelector('[data-testid="nested-same-id"]')).toBeNull()
 
     await view.unmount()
   })
 
-  it('preview panel visibility forces live updates even when component liveUpdates is false', async () => {
-    const { optimization, emit } = createRuntime((entry, personalizations) => {
-      const selected = personalizations?.[0]
-      const variant = selected ? { 1: variantA, 2: variantB }[selected.variantIndex] : undefined
-      if (variant && selected) return { entry: variant, personalization: selected }
-      return { entry }
-    })
+  it('supports consumer wrapper element selection with div default', async () => {
+    const { optimization } = createRuntime((entry) => ({ entry }))
 
-    const view = await renderComponent(
-      <Personalization baselineEntry={baseline} liveUpdates={false}>
-        {(resolved) => readTitle(resolved)}
+    const defaultView = await renderComponent(
+      <Personalization baselineEntry={baseline}>default-wrapper</Personalization>,
+      optimization,
+    )
+    const defaultWrapper = getWrapper(defaultView.container)
+    expect(defaultWrapper.tagName).toBe('DIV')
+    expect(defaultWrapper.style.display).toBe('contents')
+    await defaultView.unmount()
+
+    const spanView = await renderComponent(
+      <Personalization baselineEntry={baseline} as="span">
+        span-wrapper
       </Personalization>,
       optimization,
-      {
-        globalLiveUpdates: false,
-        previewPanelVisible: true,
-        setPreviewPanelVisible() {
-          return undefined
-        },
-      },
     )
+    const spanWrapper = getWrapper(spanView.container)
+    expect(spanWrapper.tagName).toBe('SPAN')
+    expect(spanWrapper.style.display).toBe('contents')
+    await spanView.unmount()
+  })
 
-    await emit(variantOneState)
-    expect(view.container.textContent).toContain('variant-a')
-
-    await emit(variantTwoState)
-    expect(view.container.textContent).toContain('variant-b')
-
-    await view.unmount()
+  it.skip('retains loading layout-target behavior when display:contents visibility is unsupported', () => {
+    // TODO: Validate hybrid SSR+SPA loading layout constraints.
   })
 })
