@@ -3,6 +3,7 @@ import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { act, type ReactNode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { renderToString } from 'react-dom/server'
 import type { LiveUpdatesContextValue } from '../context/LiveUpdatesContext'
 import { LiveUpdatesContext } from '../context/LiveUpdatesContext'
 import { OptimizationContext } from '../context/OptimizationContext'
@@ -154,6 +155,19 @@ async function renderComponent(
       container.remove()
     },
   }
+}
+
+function renderComponentToString(
+  node: ReactNode,
+  optimization: RuntimeOptimization,
+  liveUpdatesContext = defaultLiveUpdatesContext(),
+): string {
+  return renderToString(
+    // @ts-expect-error test double only implements the subset used by Personalization
+    <OptimizationContext.Provider value={{ instance: optimization }}>
+      <LiveUpdatesContext.Provider value={liveUpdatesContext}>{node}</LiveUpdatesContext.Provider>
+    </OptimizationContext.Provider>,
+  )
 }
 
 function getWrapper(container: HTMLElement): HTMLElement {
@@ -350,5 +364,37 @@ describe('Personalization lifecycle and nesting guard', () => {
     expect(spanLoadingTarget.tagName).toBe('SPAN')
     expect(spanLoadingTarget.style.display).toBe('inline')
     await spanView.unmount()
+  })
+
+  it('renders invisible loading target on initial hybrid SSR pass for non-personalized entries', () => {
+    const { optimization } = createRuntime((entry) => ({ entry }))
+
+    const markup = renderComponentToString(
+      <Personalization baselineEntry={baseline} lifecycleMode="hybrid-ssr-spa">
+        {(resolved) => readTitle(resolved)}
+      </Personalization>,
+      optimization,
+    )
+
+    expect(markup).toContain('data-ctfl-loading-layout-target="true"')
+    expect(markup).toContain('visibility:hidden')
+    expect(markup).toContain('Loading...')
+    expect(markup).not.toContain('baseline')
+  })
+
+  it('renders non-personalized content after sdk initialization in hybrid mode', async () => {
+    const { optimization } = createRuntime((entry) => ({ entry }))
+
+    const view = await renderComponent(
+      <Personalization baselineEntry={baseline} lifecycleMode="hybrid-ssr-spa">
+        {(resolved) => readTitle(resolved)}
+      </Personalization>,
+      optimization,
+    )
+
+    expect(view.container.textContent).toContain('baseline')
+    expect(view.container.textContent).not.toContain('Loading...')
+
+    await view.unmount()
   })
 })

@@ -115,6 +115,8 @@ import { Personalization } from '@contentful/optimization-react-web'
 - Consumer content supports render-prop (`(resolvedEntry) => ReactNode`) or direct `ReactNode`.
 - Wrapper element is configurable with `as: 'div' | 'span'` (defaults to `div`).
 - Wrapper style uses `display: contents` to remain layout-neutral as much as possible.
+- Lifecycle mode is configurable with `lifecycleMode: 'spa' | 'hybrid-ssr-spa'` (defaults to
+  `'spa'`).
 
 #### Loading Fallback
 
@@ -134,6 +136,8 @@ When `loadingFallback` is provided, it is rendered while readiness is unresolved
 - During loading, a concrete layout-target element is rendered (`data-ctfl-loading-layout-target`)
   so loading visibility/layout behavior remains targetable even when wrapper uses
   `display: contents`.
+- In `hybrid-ssr-spa` mode, unresolved loading is rendered invisibly (`visibility: hidden`) to
+  preserve layout space before content is ready.
 
 #### Nested Composition
 
@@ -196,6 +200,15 @@ This gives:
 - Core/Web SDK initialization is synchronous; no dedicated `sdkInitialized` state is exposed.
 - React provider initialization outcome is represented by instance creation success/failure.
 - The async runtime path is preview panel lifecycle, already represented by preview panel state.
+
+### Migration Notes
+
+- `Personalization` now accepts either render-prop children or direct `ReactNode` children.
+- Personalizable entries now render loading UI until personalization readiness is available.
+- When no `loadingFallback` is provided, a default loading UI is rendered for unresolved
+  personalizable entries.
+- Nested wrappers with the same baseline entry ID are now blocked at runtime.
+- Loading renders include `data-ctfl-loading-layout-target` for layout/visibility targeting.
 
 ## Singleton Behavior
 

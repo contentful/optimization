@@ -21,6 +21,7 @@ import { createScopedLogger } from '../logger'
 export type PersonalizationLoadingFallback = ReactNode | (() => ReactNode)
 export type PersonalizationWrapperElement = 'div' | 'span'
 export type PersonalizationRenderProp = (resolvedEntry: Entry) => ReactNode
+export type PersonalizationLifecycleMode = 'spa' | 'hybrid-ssr-spa'
 
 /**
  * Props for the {@link Personalization} component.
@@ -73,6 +74,15 @@ export interface PersonalizationProps {
    * Optional fallback rendered while personalization state is unresolved.
    */
   loadingFallback?: PersonalizationLoadingFallback
+
+  /**
+   * Controls rendering lifecycle semantics.
+   *
+   * @remarks
+   * - `spa`: Non-personalized entries render immediately once entry data is present.
+   * - `hybrid-ssr-spa`: Non-personalized entries wait for client-side SDK initialization.
+   */
+  lifecycleMode?: PersonalizationLifecycleMode
 }
 
 function resolveLoadingFallback(
@@ -110,8 +120,47 @@ const LOADING_LAYOUT_TARGET_STYLE = Object.freeze({
 const LOADING_LAYOUT_TARGET_STYLE_INLINE = Object.freeze({
   display: 'inline' as const,
 })
+const LOADING_LAYOUT_TARGET_STYLE_HIDDEN = Object.freeze({
+  display: 'block' as const,
+  visibility: 'hidden' as const,
+})
+const LOADING_LAYOUT_TARGET_STYLE_INLINE_HIDDEN = Object.freeze({
+  display: 'inline' as const,
+  visibility: 'hidden' as const,
+})
 const PersonalizationNestingContext = createContext<ReadonlySet<string> | null>(null)
 const logger = createScopedLogger('React:Personalization')
+
+function useDuplicateBaselineGuard(baselineEntryId: string): {
+  currentAndAncestorBaselineIds: ReadonlySet<string>
+  hasDuplicateBaselineAncestor: boolean
+} {
+  const ancestorBaselineIds = useContext(PersonalizationNestingContext)
+  const warnedDuplicateBaselineId = useRef(false)
+  const hasDuplicateBaselineAncestor = ancestorBaselineIds?.has(baselineEntryId) ?? false
+
+  useEffect(() => {
+    if (!hasDuplicateBaselineAncestor || warnedDuplicateBaselineId.current) {
+      return
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      logger.warn(
+        `[Personalization] Nested Personalization with baseline entry ID "${baselineEntryId}" is blocked.`,
+      )
+    }
+
+    warnedDuplicateBaselineId.current = true
+  }, [baselineEntryId, hasDuplicateBaselineAncestor])
+
+  const currentAndAncestorBaselineIds = useMemo(() => {
+    const nextIds = new Set(ancestorBaselineIds ?? [])
+    nextIds.add(baselineEntryId)
+    return nextIds
+  }, [ancestorBaselineIds, baselineEntryId])
+
+  return { currentAndAncestorBaselineIds, hasDuplicateBaselineAncestor }
+}
 
 function hasPersonalizationReferences(entry: Entry): boolean {
   const { fields } = entry
@@ -169,12 +218,44 @@ function resolveTrackingAttributes(
 
 function resolveLoadingLayoutTargetStyle(
   wrapperElement: PersonalizationWrapperElement,
-): typeof LOADING_LAYOUT_TARGET_STYLE | typeof LOADING_LAYOUT_TARGET_STYLE_INLINE {
+  isInvisible: boolean,
+):
+  | typeof LOADING_LAYOUT_TARGET_STYLE
+  | typeof LOADING_LAYOUT_TARGET_STYLE_INLINE
+  | typeof LOADING_LAYOUT_TARGET_STYLE_HIDDEN
+  | typeof LOADING_LAYOUT_TARGET_STYLE_INLINE_HIDDEN {
+  if (isInvisible) {
+    if (wrapperElement === 'span') {
+      return LOADING_LAYOUT_TARGET_STYLE_INLINE_HIDDEN
+    }
+
+    return LOADING_LAYOUT_TARGET_STYLE_HIDDEN
+  }
+
   if (wrapperElement === 'span') {
     return LOADING_LAYOUT_TARGET_STYLE_INLINE
   }
 
   return LOADING_LAYOUT_TARGET_STYLE
+}
+
+function resolveContentReadyState(params: {
+  lifecycleMode: PersonalizationLifecycleMode
+  requiresPersonalization: boolean
+  canPersonalize: boolean
+  sdkInitialized: boolean
+}): boolean {
+  const { lifecycleMode, requiresPersonalization, canPersonalize, sdkInitialized } = params
+
+  if (requiresPersonalization) {
+    return canPersonalize
+  }
+
+  if (lifecycleMode === 'hybrid-ssr-spa') {
+    return sdkInitialized
+  }
+
+  return true
 }
 
 export function Personalization({
@@ -185,35 +266,15 @@ export function Personalization({
   testId,
   'data-testid': dataTestIdProp,
   loadingFallback,
+  lifecycleMode = 'spa',
 }: PersonalizationProps): JSX.Element {
   const optimization = useOptimization()
   const liveUpdatesContext = useLiveUpdates()
-  const ancestorBaselineIds = useContext(PersonalizationNestingContext)
-  const warnedDuplicateBaselineId = useRef(false)
   const {
     sys: { id: baselineEntryId },
   } = baselineEntry
-  const hasDuplicateBaselineAncestor = ancestorBaselineIds?.has(baselineEntryId) ?? false
-
-  useEffect(() => {
-    if (!hasDuplicateBaselineAncestor || warnedDuplicateBaselineId.current) {
-      return
-    }
-
-    if (process.env.NODE_ENV !== 'production') {
-      logger.warn(
-        `[Personalization] Nested Personalization with baseline entry ID "${baselineEntryId}" is blocked.`,
-      )
-    }
-
-    warnedDuplicateBaselineId.current = true
-  }, [baselineEntryId, hasDuplicateBaselineAncestor])
-
-  const currentAndAncestorBaselineIds = useMemo(() => {
-    const nextIds = new Set(ancestorBaselineIds ?? [])
-    nextIds.add(baselineEntryId)
-    return nextIds
-  }, [ancestorBaselineIds, baselineEntryId])
+  const { currentAndAncestorBaselineIds, hasDuplicateBaselineAncestor } =
+    useDuplicateBaselineGuard(baselineEntryId)
 
   if (hasDuplicateBaselineAncestor) {
     return <></>
@@ -229,6 +290,7 @@ export function Personalization({
     SelectedPersonalizationArray | undefined
   >(undefined)
   const [canPersonalize, setCanPersonalize] = useState(false)
+  const [sdkInitialized, setSdkInitialized] = useState(false)
 
   useEffect(() => {
     const personalizationsSubscription = optimization.states.personalizations.subscribe((p) => {
@@ -257,22 +319,33 @@ export function Personalization({
     }
   }, [optimization, shouldLiveUpdate])
 
+  useEffect(() => {
+    setSdkInitialized(true)
+  }, [])
+
   const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
     () => optimization.personalizeEntry(baselineEntry, lockedPersonalizations),
     [optimization, baselineEntry, lockedPersonalizations],
   )
 
   const requiresPersonalization = hasPersonalizationReferences(baselineEntry)
-  const isLoading = requiresPersonalization && !canPersonalize
+  const isContentReady = resolveContentReadyState({
+    canPersonalize,
+    lifecycleMode,
+    requiresPersonalization,
+    sdkInitialized,
+  })
+  const isLoading = !isContentReady
   const showLoadingFallback = isLoading
   const resolvedLoadingFallback =
     resolveLoadingFallback(loadingFallback) ?? DEFAULT_LOADING_FALLBACK
+  const isInvisibleLoading = lifecycleMode === 'hybrid-ssr-spa' && isLoading
   const dataTestId = dataTestIdProp ?? testId
   const Wrapper = as
 
   if (showLoadingFallback) {
     const LoadingLayoutTarget = Wrapper
-    const loadingLayoutTargetStyle = resolveLoadingLayoutTargetStyle(as)
+    const loadingLayoutTargetStyle = resolveLoadingLayoutTargetStyle(as, isInvisibleLoading)
 
     return (
       <PersonalizationNestingContext.Provider value={currentAndAncestorBaselineIds}>

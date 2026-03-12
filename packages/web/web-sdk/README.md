@@ -719,6 +719,11 @@ Optimization Web SDK can automatically track observed entry elements for events 
 views", "component hovers", and "component clicks", and it can also automatically observe elements
 that are marked as entry-related elements.
 
+Interaction observers are passive with respect to host event flow:
+
+- They do not call `event.preventDefault()`.
+- They do not call `event.stopPropagation()`.
+
 ### Manual Entry View Tracking
 
 To manually track entry views using custom tracking code, simply call `trackComponentView` with the
