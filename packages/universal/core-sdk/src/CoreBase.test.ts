@@ -3,7 +3,7 @@ import type { ChangeArray } from '@contentful/optimization-api-client/api-schema
 import { AnalyticsStateless } from './analytics'
 import { OPTIMIZATION_CORE_SDK_NAME } from './constants'
 import CoreBase, { type CoreConfig } from './CoreBase'
-import { PersonalizationStateless } from './personalization'
+import { FlagsResolver, PersonalizationStateless } from './personalization'
 
 class TestCore extends CoreBase {
   _analytics = new AnalyticsStateless({
@@ -91,15 +91,21 @@ describe('CoreBase', () => {
     expect(core.api.config.fetchOptions).toEqual(fetchOptions)
   })
 
-  it('resolves all custom flags from changes', () => {
+  it('exposes flagsResolver for advanced custom-flag resolution use cases', () => {
     const core = new TestCore(config)
 
-    expect(core.getCustomFlags(CHANGES)).toEqual({
-      'dark-mode': true,
-      price: {
-        amount: 10,
-        currency: 'USD',
-      },
+    expect(core.flagsResolver).toBe(FlagsResolver)
+  })
+
+  it('resolves custom flags by key without auto-tracking in non-stateful environments', () => {
+    const core = new TestCore(config)
+    const trackFlagView = rs.spyOn(core, 'trackFlagView').mockResolvedValue(undefined)
+
+    expect(core.getFlag('dark-mode', CHANGES)).toBe(true)
+    expect(core.getFlag('price', CHANGES)).toEqual({
+      amount: 10,
+      currency: 'USD',
     })
+    expect(trackFlagView).not.toHaveBeenCalled()
   })
 })

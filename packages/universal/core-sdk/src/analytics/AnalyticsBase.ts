@@ -1,4 +1,9 @@
-import type { ClickBuilderArgs, HoverBuilderArgs, ViewBuilderArgs } from '../events'
+import type {
+  ClickBuilderArgs,
+  FlagViewBuilderArgs,
+  HoverBuilderArgs,
+  ViewBuilderArgs,
+} from '../events'
 import ProductBase from '../ProductBase'
 
 /**
@@ -40,7 +45,7 @@ abstract class AnalyticsBase extends ProductBase {
    * @param payload - Flag view builder arguments.
    * @returns A promise that resolves when processing is complete (or `void`).
    */
-  abstract trackFlagView(payload: ViewBuilderArgs): Promise<void> | void
+  abstract trackFlagView(payload: FlagViewBuilderArgs): Promise<void> | void
 }
 
 export default AnalyticsBase

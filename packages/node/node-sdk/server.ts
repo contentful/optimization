@@ -136,7 +136,7 @@ app.get('/', limiter, async (req, res) => {
     apiResponse = await sdk.page({ profile: requestProfile })
   }
 
-  const { profile, selectedPersonalizations, changes } = apiResponse ?? {}
+  const { profile, selectedPersonalizations } = apiResponse ?? {}
 
   const entryIds: string[] = [
     '1MwiFl4z7gkwqGYdvCmr8c', // Rich Text field Entry with Merge Tag
@@ -182,14 +182,11 @@ app.get('/', limiter, async (req, res) => {
     }),
   )
 
-  const flags = sdk.getCustomFlags(changes)
-
   const pageData = {
     consent,
     profile,
     selectedPersonalizations,
     entries,
-    flags,
   }
 
   res.render('index', { ...pageData })

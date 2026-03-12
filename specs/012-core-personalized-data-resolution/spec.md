@@ -10,13 +10,14 @@
 
 ### User Story 1 - Resolve Custom Flags from Changes (Priority: P1)
 
-As a personalization consumer, I need change payloads resolved into both full flag maps and
-single-flag lookups so I can read variable values deterministically.
+As a personalization consumer, I need change payloads resolved into deterministic single-flag
+lookups with optional advanced full-map resolution via `FlagsResolver` so I can read variable values
+predictably.
 
 **Why this priority**: Flag lookup is a core personalization consumption path.
 
 **Independent Test**: Resolve flags from undefined and populated change arrays (including wrapped
-values) and validate both `getCustomFlags` and `getCustomFlag` behavior.
+values) and validate both `FlagsResolver.resolve(...)` and `getFlag(...)` behavior.
 
 **Acceptance Scenarios**:
 
@@ -26,8 +27,8 @@ values) and validate both `getCustomFlags` and `getCustomFlag` behavior.
    `change.key` resolves directly to its primitive value.
 3. **Given** change entries shaped as object wrappers (`{ value: { ... } }`), **When** flag
    resolution runs, **Then** wrapped object payloads are unwrapped to inner object values.
-4. **Given** `PersonalizationStateful` with omitted `changes` argument, **When** `getCustomFlag` or
-   `getCustomFlags` is called, **Then** current `changes` signal state is used by default.
+4. **Given** `PersonalizationStateful` with omitted `changes` argument, **When** `getFlag` is
+   called, **Then** current `changes` signal state is used by default.
 
 ---
 
@@ -91,15 +92,15 @@ and dot selector variants.
 
 ### Functional Requirements
 
-- **FR-001**: `PersonalizationBase` MUST expose resolver-backed methods `getCustomFlag`,
-  `getCustomFlags`, `personalizeEntry`, and `getMergeTagValue`.
+- **FR-001**: `PersonalizationBase` MUST expose resolver-backed methods `getFlag`,
+  `personalizeEntry`, and `getMergeTagValue`.
 - **FR-002**: `FlagsResolver.resolve` MUST return `{}` when `changes` is `undefined`.
 - **FR-003**: `FlagsResolver.resolve` MUST flatten change entries into a key-value map keyed by
   `change.key`.
 - **FR-004**: `FlagsResolver.resolve` MUST unwrap wrapped object values only when the change value
   is an object containing an object-valued `value` property.
-- **FR-005**: `PersonalizationBase.getCustomFlag(name, changes)` MUST return
-  `PersonalizationBase.getCustomFlags(changes)[name]`.
+- **FR-005**: `PersonalizationBase.getFlag(name, changes)` MUST return
+  `PersonalizationBase.flagsResolver.resolve(changes)[name]`.
 - **FR-006**: `PersonalizedEntryResolver.getPersonalizationEntry` MUST match selected `experienceId`
   values to personalization entries by `nt_experience_id`.
 - **FR-007**: `PersonalizedEntryResolver.getSelectedPersonalization` MUST return the selected
@@ -132,9 +133,9 @@ and dot selector variants.
   fails or no value is resolved from profile selectors.
 - **FR-020**: `PersonalizationStateful` overrides for resolver methods MUST default omitted resolver
   inputs from current signals (`changes`, `selectedPersonalizations`, `profile`).
-- **FR-021**: Core-level resolver wrappers (`CoreBase.getCustomFlag`, `.getCustomFlags`,
-  `.personalizeEntry`, `.getMergeTagValue`) MUST delegate to personalization resolver methods
-  without altering payload shape.
+- **FR-021**: Core-level resolver wrappers (`CoreBase.getFlag`, `.personalizeEntry`,
+  `.getMergeTagValue`) MUST delegate to personalization resolver methods without altering payload
+  shape.
 
 ### Key Entities _(include if feature involves data)_
 

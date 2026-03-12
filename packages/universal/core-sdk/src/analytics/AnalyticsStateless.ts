@@ -5,7 +5,12 @@ import {
   type PartialProfile,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
-import type { ClickBuilderArgs, HoverBuilderArgs, ViewBuilderArgs } from '../events'
+import type {
+  ClickBuilderArgs,
+  FlagViewBuilderArgs,
+  HoverBuilderArgs,
+  ViewBuilderArgs,
+} from '../events'
 import AnalyticsBase from './AnalyticsBase'
 
 const logger = createScopedLogger('Analytics')
@@ -19,6 +24,7 @@ const logger = createScopedLogger('Analytics')
  * other means.
  */
 export type TrackViewArgs = ViewBuilderArgs & { profile?: PartialProfile }
+export type TrackFlagViewArgs = FlagViewBuilderArgs & { profile?: PartialProfile }
 export type TrackClickArgs = ClickBuilderArgs & { profile?: PartialProfile }
 export type TrackHoverArgs = HoverBuilderArgs & { profile?: PartialProfile }
 
@@ -103,7 +109,7 @@ class AnalyticsStateless extends AnalyticsBase {
    * await analytics.trackFlagView({ componentId: 'feature-flag-123' })
    * ```
    */
-  async trackFlagView(args: TrackViewArgs): Promise<void> {
+  async trackFlagView(args: TrackFlagViewArgs): Promise<void> {
     logger.debug('Processing "flag view" event')
 
     const { profile, ...builderArgs } = args

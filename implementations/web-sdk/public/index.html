@@ -576,9 +576,12 @@
         },
       )
 
-      // Subscribe to profile state, find entries in the markup, and render them
       contentfulOptimization.states.profile.subscribe((profile) => {
         if (!profile) return
+
+        // Emit and log flag access
+        const booleanFlag = contentfulOptimization.getFlag('boolean')
+        console.log('Flag "boolean" value:', booleanFlag)
 
         toggleIdentity(profile.traits && Object.keys(profile.traits).length)
       })

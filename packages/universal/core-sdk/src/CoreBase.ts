@@ -8,7 +8,6 @@ import {
 import type {
   InsightsEvent as AnalyticsEvent,
   ChangeArray,
-  Flags,
   Json,
   MergeTagEntry,
   OptimizationData,
@@ -26,6 +25,7 @@ import {
   type ClickBuilderArgs,
   EventBuilder,
   type EventBuilderConfig,
+  type FlagViewBuilderArgs,
   type HoverBuilderArgs,
   type IdentifyBuilderArgs,
   type PageViewBuilderArgs,
@@ -184,27 +184,11 @@ abstract class CoreBase implements ResolverMethods {
    * This is a convenience wrapper around personalization’s flag resolution.
    * @example
    * ```ts
-   * const darkMode = core.getCustomFlag('dark-mode', data.changes)
+   * const darkMode = core.getFlag('dark-mode', data.changes)
    * ```
    */
-  getCustomFlag(name: string, changes?: ChangeArray): Json {
-    return this._personalization.getCustomFlag(name, changes)
-  }
-
-  /**
-   * Get all resolved custom flags derived from a set of optimization changes.
-   *
-   * @param changes - Optional change list to resolve from.
-   * @returns The resolved custom flag map.
-   * @remarks
-   * This is a convenience wrapper around personalization’s flag resolution.
-   * @example
-   * ```ts
-   * const flags = core.getCustomFlags(data.changes)
-   * ```
-   */
-  getCustomFlags(changes?: ChangeArray): Flags {
-    return this._personalization.getCustomFlags(changes)
+  getFlag(name: string, changes?: ChangeArray): Json {
+    return this._personalization.getFlag(name, changes)
   }
 
   /**
@@ -395,7 +379,7 @@ abstract class CoreBase implements ResolverMethods {
    * await core.trackFlagView({ componentId: 'feature-flag-123' })
    * ```
    */
-  async trackFlagView(payload: ViewBuilderArgs): Promise<void> {
+  async trackFlagView(payload: FlagViewBuilderArgs): Promise<void> {
     await this._analytics.trackFlagView(payload)
   }
 }

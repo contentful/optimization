@@ -1,14 +1,12 @@
 import type {
   InsightsEvent as AnalyticsEvent,
   ChangeArray,
-  Flags,
   ExperienceEvent as PersonalizationEvent,
   Profile,
   SelectedPersonalizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { batch, computed, effect, signal, type Signal, untracked } from '@preact/signals-core'
 import type { BlockedEvent } from '../BlockedEvent'
-import { FlagsResolver } from '../personalization/resolvers'
 
 /**
  * Latest optimization changes returned by the Experience API.
@@ -39,13 +37,6 @@ export const consent = signal<boolean | undefined>()
 export const event: Signal<AnalyticsEvent | PersonalizationEvent | undefined> = signal<
   AnalyticsEvent | PersonalizationEvent | undefined
 >()
-
-/**
- * Resolved custom flags derived from {@link changes}.
- *
- * @public
- */
-export const flags = computed<Flags | undefined>(() => FlagsResolver.resolve(changes.value ?? []))
 
 /**
  * Runtime online/offline signal used by queue flush logic.
@@ -106,8 +97,6 @@ export interface Signals {
   consent: typeof consent
   /** Most recent emitted event signal. */
   event: typeof event
-  /** Computed resolved flags signal. */
-  flags: typeof flags
   /** Runtime connectivity signal. */
   online: typeof online
   /** Preview panel attachment signal. */
@@ -148,7 +137,6 @@ export const signals: Signals = {
   changes,
   consent,
   event,
-  flags,
   online,
   previewPanelAttached,
   previewPanelOpen,

@@ -16,7 +16,7 @@ const variantEntryTexts: Record<string, string> = {
     'This is a baseline content entry for all identified or unidentified users.',
 }
 
-test.describe('events', () => {
+test.describe('entry view tracking', () => {
   test.describe('without consent', () => {
     test.beforeEach(async ({ page }) => {
       await page.clock.install({ time: new Date() })
@@ -78,7 +78,9 @@ test.describe('events', () => {
         ).toBeVisible()
       }
 
-      const allComponentEvents = page.locator('#event-stream li button[data-view-id]')
+      const allComponentEvents = page.locator(
+        '#event-stream li button[data-view-id]:not([data-component-id="boolean"])',
+      )
 
       await expect.poll(async () => await allComponentEvents.count()).toBeGreaterThanOrEqual(10)
 

@@ -1,6 +1,5 @@
 import type {
   ChangeArray,
-  Flags,
   Json,
   MergeTagEntry,
   OptimizationData,
@@ -41,17 +40,7 @@ export interface ResolverMethods {
    * The changes array can be sourced from the data returned when emitting any
    * personalization event.
    * */
-  getCustomFlag: (name: string, changes?: ChangeArray) => Json
-
-  /**
-   * Get all resolved Custom Flags from the supplied changes.
-   * @param changes - Optional changes array.
-   * @returns The resolved Custom Flag map.
-   * @remarks
-   * The changes array can be sourced from the data returned when emitting any
-   * personalization event.
-   * */
-  getCustomFlags: (changes?: ChangeArray) => Flags
+  getFlag: (name: string, changes?: ChangeArray) => Json
 
   /**
    * Resolve a Contentful entry to a personalized variant using the current
@@ -140,20 +129,8 @@ abstract class PersonalizationBase extends ProductBase implements ResolverMethod
    * The changes array can be sourced from the data returned when emitting any
    * personalization event.
    * */
-  getCustomFlag(name: string, changes?: ChangeArray): Json {
-    return this.getCustomFlags(changes)[name]
-  }
-
-  /**
-   * Get all resolved Custom Flags from the supplied changes.
-   * @param changes - Optional changes array.
-   * @returns The resolved Custom Flag map.
-   * @remarks
-   * The changes array can be sourced from the data returned when emitting any
-   * personalization event.
-   * */
-  getCustomFlags(changes?: ChangeArray): Flags {
-    return FlagsResolver.resolve(changes)
+  getFlag(name: string, changes?: ChangeArray): Json {
+    return this.flagsResolver.resolve(changes)[name]
   }
 
   /**

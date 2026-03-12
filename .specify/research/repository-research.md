@@ -129,11 +129,13 @@ graph LR
   - lifecycle interceptor managers (`event`, `state`)
 - `CoreBase` exposes high-level methods:
   - personalization path: `identify`, `page`, `screen`, `track`
+  - personalization resolution path: `getFlag`, `personalizeEntry`, `getMergeTagValue`
   - mixed path: `trackView` (sticky routes through personalization; non-sticky routes through
     analytics)
   - analytics path: `trackClick`, `trackHover`, `trackFlagView`
 - Resolver utilities are centralized and surfaced through core methods:
-  - flags resolution
+  - key-scoped flag resolution (`getFlag`)
+  - advanced full-map flag resolution through `flagsResolver.resolve(...)`
   - personalized entry resolution
   - merge-tag value resolution
 
@@ -142,11 +144,14 @@ graph LR
 - `CoreStateless`:
   - no state signal model
   - composes `AnalyticsStateless` + `PersonalizationStateless`
+  - `getFlag(...)` does not auto-emit `trackFlagView`
   - intended for server/SSR usage
 - `CoreStateful`:
   - module-global signal model (`@preact/signals-core`) for `consent`, `profile`, `changes`,
     `selectedPersonalizations`, `event`, `blockedEvent`, `online`, `previewPanelAttached`,
     `previewPanelOpen`
+  - key-scoped reactive flag access via `states.flag(name)`
+  - `getFlag(...)` and `states.flag(name)` auto-emit flag-view analytics
   - singleton lock enforced via `StatefulRuntimeSingleton` keyed in `globalThis`
   - explicit lifecycle controls: `destroy()`, `flush()`, `reset()`
   - preview bridge method `registerPreviewPanel(...)` exposes mutable `signals` and `signalFns`

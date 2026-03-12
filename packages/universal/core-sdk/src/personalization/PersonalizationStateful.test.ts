@@ -388,31 +388,32 @@ describe('PersonalizationStateful offline queue policy', () => {
   })
 })
 
-const CHANGES: ChangeArray = [
-  {
-    key: 'dark-mode',
-    type: 'Variable',
-    value: true,
-    meta: {
-      experienceId: 'experience-id',
-      variantIndex: 0,
-    },
+const DARK_MODE_CHANGE: ChangeArray[number] = {
+  key: 'dark-mode',
+  type: 'Variable',
+  value: true,
+  meta: {
+    experienceId: 'experience-id',
+    variantIndex: 0,
   },
-  {
-    key: 'config',
-    type: 'Variable',
+}
+
+const CONFIG_CHANGE: ChangeArray[number] = {
+  key: 'config',
+  type: 'Variable',
+  value: {
     value: {
-      value: {
-        amount: 10,
-        currency: 'USD',
-      },
-    },
-    meta: {
-      experienceId: 'experience-id',
-      variantIndex: 1,
+      amount: 10,
+      currency: 'USD',
     },
   },
-]
+  meta: {
+    experienceId: 'experience-id',
+    variantIndex: 1,
+  },
+}
+
+const CHANGES: ChangeArray = [DARK_MODE_CHANGE, CONFIG_CHANGE]
 
 describe('PersonalizationStateful custom flags', () => {
   beforeEach(() => {
@@ -425,31 +426,68 @@ describe('PersonalizationStateful custom flags', () => {
     rs.restoreAllMocks()
   })
 
-  it('resolves all custom flags from provided changes', () => {
+  it('resolves custom flag values from provided changes', () => {
     const personalization = createPersonalization()
 
-    expect(personalization.getCustomFlags(CHANGES)).toEqual({
-      'dark-mode': true,
-      config: {
-        amount: 10,
-        currency: 'USD',
-      },
+    expect(personalization.getFlag('dark-mode', CHANGES)).toBe(true)
+    expect(personalization.getFlag('config', CHANGES)).toEqual({
+      amount: 10,
+      currency: 'USD',
     })
   })
 
-  it('uses signal changes by default when resolving all custom flags', () => {
+  it('uses signal changes by default when resolving custom flag values', () => {
     const personalization = createPersonalization()
 
     batch(() => {
       changesSignal.value = CHANGES
     })
 
-    expect(personalization.getCustomFlags()).toEqual({
-      'dark-mode': true,
-      config: {
-        amount: 10,
-        currency: 'USD',
-      },
+    expect(personalization.getFlag('dark-mode')).toBe(true)
+    expect(personalization.getFlag('config')).toEqual({
+      amount: 10,
+      currency: 'USD',
     })
+  })
+
+  it('exposes flag observables scoped to a key', () => {
+    const personalization = createPersonalization()
+    const values: Array<boolean | undefined> = []
+    const subscription = personalization.states.flag('dark-mode').subscribe((value) => {
+      values.push(value === undefined ? undefined : Boolean(value))
+    })
+
+    batch(() => {
+      changesSignal.value = CHANGES
+    })
+
+    batch(() => {
+      changesSignal.value = [
+        ...CHANGES,
+        {
+          key: 'other-flag',
+          type: 'Variable',
+          value: 'unchanged',
+          meta: {
+            experienceId: 'another-experience',
+            variantIndex: 0,
+          },
+        },
+      ]
+    })
+
+    batch(() => {
+      changesSignal.value = [
+        {
+          ...DARK_MODE_CHANGE,
+          value: false,
+        },
+        CONFIG_CHANGE,
+      ]
+    })
+
+    expect(values).toEqual([undefined, true, false])
+
+    subscription.unsubscribe()
   })
 })

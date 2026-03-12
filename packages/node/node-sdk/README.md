@@ -37,8 +37,7 @@ The Optimization Node SDK implements functionality specific to Node environments
   - [Personalization Options](#personalization-options)
 - [Optimization Methods](#optimization-methods)
   - [Personalization Data Resolution Methods](#personalization-data-resolution-methods)
-    - [`getCustomFlag`](#getcustomflag)
-    - [`getCustomFlags`](#getcustomflags)
+    - [`getFlag`](#getflag)
     - [`personalizeEntry`](#personalizeentry)
     - [`getMergeTagValue`](#getmergetagvalue)
   - [Personalization and Analytics Event Methods](#personalization-and-analytics-event-methods)
@@ -156,7 +155,7 @@ Arguments marked with an asterisk (\*) are always required.
 
 ### Personalization Data Resolution Methods
 
-#### `getCustomFlag`
+#### `getFlag`
 
 Get the specified Custom Flag's value from the provided changes array.
 
@@ -169,21 +168,15 @@ Returns:
 
 - The resolved value for the specified Custom Flag, or `undefined` if it cannot be found.
 
+Behavior notes:
+
+- Node SDK is stateless; `getFlag(...)` does not auto-emit `trackFlagView`.
+- If full map resolution is needed for advanced use cases, use
+  `optimization.flagsResolver.resolve(changes)`.
+
 > [!NOTE]
 >
 > If the `changes` argument is omitted, the method will return `undefined`.
-
-#### `getCustomFlags`
-
-Get all resolved Custom Flag values from the provided changes array.
-
-Arguments:
-
-- `changes`: Changes array
-
-Returns:
-
-- A map of resolved Custom Flag values.
 
 #### `personalizeEntry`
 

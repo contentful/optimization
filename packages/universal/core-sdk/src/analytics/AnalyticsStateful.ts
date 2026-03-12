@@ -9,7 +9,12 @@ import {
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { BlockedEvent } from '../BlockedEvent'
 import type { ConsentGuard } from '../Consent'
-import type { ClickBuilderArgs, HoverBuilderArgs, ViewBuilderArgs } from '../events'
+import type {
+  ClickBuilderArgs,
+  FlagViewBuilderArgs,
+  HoverBuilderArgs,
+  ViewBuilderArgs,
+} from '../events'
 import { guardedBy } from '../lib/decorators'
 import { QueueFlushRuntime, resolveQueueFlushPolicy, type QueueFlushPolicy } from '../lib/queue'
 import type { ProductBaseOptions, ProductConfig } from '../ProductBase'
@@ -270,7 +275,7 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    * ```
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async trackFlagView(payload: ViewBuilderArgs): Promise<void> {
+  async trackFlagView(payload: FlagViewBuilderArgs): Promise<void> {
     logger.debug(`Processing "flag view" event for ${payload.componentId}`)
 
     await this.enqueueEvent(this.eventBuilder.buildFlagView(payload))

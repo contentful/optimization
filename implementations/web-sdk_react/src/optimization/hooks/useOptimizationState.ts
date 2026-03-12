@@ -16,14 +16,12 @@ interface PreviewPanelStates {
 
 type OptimizationStateSource = CoreStates & PreviewPanelStates
 
-type StateValue<TKey extends keyof CoreStates> = Parameters<
-  Parameters<CoreStates[TKey]['subscribe']>[0]
->[0]
+type StateValue<TKey extends keyof CoreStates> =
+  CoreStates[TKey] extends Observable<infer TValue> ? TValue : never
 
 export interface OptimizationStateSnapshot {
   consent: boolean | undefined
   eventStream: StateValue<'eventStream'> | undefined
-  flags: StateValue<'flags'> | undefined
   selectedPersonalizations: StateValue<'selectedPersonalizations'> | undefined
   previewPanelAttached: boolean | undefined
   previewPanelOpen: boolean | undefined
@@ -57,7 +55,6 @@ export function useOptimizationState(
 ): OptimizationStateSnapshot {
   const consent = useObservableState(state?.consent)
   const eventStream = useObservableState(state?.eventStream)
-  const flags = useObservableState(state?.flags)
   const selectedPersonalizations = useObservableState(state?.selectedPersonalizations)
   const previewPanelAttached = useObservableState(state?.previewPanelAttached)
   const previewPanelOpen = useObservableState(state?.previewPanelOpen)
@@ -66,7 +63,6 @@ export function useOptimizationState(
   return {
     consent,
     eventStream,
-    flags,
     selectedPersonalizations,
     previewPanelAttached,
     previewPanelOpen,

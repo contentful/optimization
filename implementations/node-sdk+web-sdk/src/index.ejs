@@ -517,6 +517,14 @@
 
         void scheduleRenderEntries()
       })
+
+      contentfulOptimization.states.profile.subscribe((profile) => {
+        if (!profile) return
+
+        // Emit and log flag access
+        const booleanFlag = contentfulOptimization.getFlag('boolean')
+        console.log('Flag "boolean" value:', booleanFlag)
+      })
     </script>
   </body>
 </html>

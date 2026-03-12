@@ -1,4 +1,9 @@
-export * from './resolvers'
+export {
+  FlagsResolver,
+  MergeTagValueResolver,
+  PersonalizedEntryResolver,
+  type ResolvedData,
+} from './resolvers'
 
 export * from './PersonalizationBase'
 export { default as PersonalizationBase } from './PersonalizationBase'
