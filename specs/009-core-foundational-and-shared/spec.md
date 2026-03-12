@@ -53,7 +53,7 @@ and return behavior.
 2. **Given** identify/page/screen/track payloads, **When** `identify`, `page`, `screen`, and `track`
    are called, **Then** each delegates to personalization and returns its async result.
 3. **Given** `trackView` payload with `sticky: true`, **When** the method is called, **Then** it
-   delegates only to personalization and returns the personalization result.
+   delegates to personalization and analytics, and returns the personalization result.
 4. **Given** `trackView` payload with `sticky` omitted or `false`, **When** the method is called,
    **Then** it delegates to analytics and resolves with `undefined`.
 5. **Given** analytics interaction payloads, **When** `trackClick`, `trackHover`, or `trackFlagView`
@@ -93,7 +93,8 @@ and subpath exports.
 
 - Analytics and personalization API base URLs remain isolated when only one scoped override is set.
 - Top-level `fetchOptions` are forwarded to shared API client config.
-- `CoreBase.trackView` does not dual-send when `sticky` is truthy.
+- `CoreBase.trackView` always sends analytics view events; when `sticky` is truthy, it also sends
+  personalization view events.
 - `InterceptorManager.run` returns the original input reference when no interceptors are registered.
 - `guardedBy` throws `TypeError` at call time when the configured predicate key is not callable.
 - Core root export surface has no package default export and does not expose logger/API client/API
@@ -119,8 +120,9 @@ and subpath exports.
   `getMergeTagValue`) MUST delegate to personalization methods without reshaping outputs.
 - **FR-008**: `CoreBase.identify`, `page`, `screen`, and `track` MUST delegate to personalization
   and return delegated async results.
-- **FR-009**: `CoreBase.trackView` MUST delegate to personalization only when `payload.sticky` is
-  truthy; otherwise it MUST delegate to analytics.
+- **FR-009**: `CoreBase.trackView` MUST delegate to analytics for all payloads and MUST additionally
+  delegate to personalization when `payload.sticky` is truthy; it MUST return personalization data
+  for sticky payloads and `undefined` otherwise.
 - **FR-010**: `CoreBase.trackClick`, `trackHover`, and `trackFlagView` MUST delegate to analytics.
 - **FR-011**: `ProductBase` MUST default `allowedEventTypes` to `['identify', 'page', 'screen']`
   when unspecified.

@@ -33,6 +33,13 @@ verify initial, periodic, and final event behavior.
    same `viewId`.
 6. **Given** visibility transitions into a new cycle, **When** a new cycle starts, **Then** a fresh
    `viewId` is generated.
+7. **Given** sticky personalization metadata, **When** `trackView` returns personalization data for
+   a rendered hook instance, **Then** later emissions for that same instance omit `sticky`.
+8. **Given** sticky personalization metadata, **When** a `trackView` attempt resolves `undefined` or
+   throws, **Then** later emissions for that same instance continue sending `sticky` until a
+   successful personalization response is returned.
+9. **Given** two rendered hook instances with the same tracking metadata, **When** each instance
+   emits its first sticky view event, **Then** each event includes `sticky` independently.
 
 ---
 
@@ -95,6 +102,10 @@ manual, and callback-based) so I can instrument interactions with minimal boiler
 - `isVisible` is ref-backed and returned as a non-reactive snapshot (`useViewportTracking` does not
   trigger rerenders on visibility changes).
 - `viewDurationMs` is emitted as rounded, non-negative, accumulated visible time.
+- Sticky view emission is guarded per hook instance so only one sticky `trackView` request is
+  in-flight at a time.
+- Sticky dedupe state is keyed by tracking identity (`componentId`, `experienceId`, `variantIndex`,
+  `sticky`) and resets when that identity changes.
 - `enabled=false` prevents cycle start/event emission but does not remove hook setup.
 - `useTapTracking` classifies taps by movement distance `< 10` points.
 - `useTapTracking` clears touch-start state on touch end regardless of outcome.
@@ -112,9 +123,9 @@ manual, and callback-based) so I can instrument interactions with minimal boiler
 - **FR-003**: `useViewportTracking` MUST derive metadata via `extractTrackingMetadata`.
 - **FR-004**: With personalization, metadata extraction MUST resolve `componentId` from
   `personalization.variants` mapping to resolved entry ID, falling back to `entry.sys.id`; and MUST
-  include `experienceId`/`variantIndex` from personalization.
+  include `experienceId`/`variantIndex`/`sticky` from personalization.
 - **FR-005**: Without personalization, metadata extraction MUST resolve
-  `{ componentId: entry.sys.id, experienceId: undefined, variantIndex: 0 }`.
+  `{ componentId: entry.sys.id, experienceId: undefined, variantIndex: 0, sticky: undefined }`.
 - **FR-006**: `useViewportTracking` MUST subscribe to dimension changes and maintain fallback screen
   height.
 - **FR-007**: When scroll context exists, visibility checks MUST use context `scrollY` and
@@ -128,8 +139,9 @@ manual, and callback-based) so I can instrument interactions with minimal boiler
 - **FR-011**: Next-fire scheduling MUST use
   `requiredMs = viewTimeMs + attempts * viewDurationUpdateIntervalMs`.
 - **FR-012**: Event emission MUST flush elapsed visible time, increment attempts, and call
-  `optimization.trackView` with `componentId`, `viewId`, `experienceId`, `variantIndex`, and rounded
-  non-negative `viewDurationMs`.
+  `optimization.trackView` with `componentId`, `viewId`, `experienceId`, `variantIndex`, rounded
+  non-negative `viewDurationMs`, and `sticky` when sticky metadata is present and no successful
+  sticky response has been observed for the current tracking identity.
 - **FR-013**: On visible-to-invisible transition, hook MUST clear timer, pause accumulation, emit a
   final event only when attempts > 0, and reset cycle state.
 - **FR-014**: Hook MUST re-check visibility whenever `scrollY` or `viewportHeight` dependencies
@@ -168,10 +180,15 @@ manual, and callback-based) so I can instrument interactions with minimal boiler
 - **FR-035**: `useScreenTrackingCallback` MUST call
   `optimization.screen({ name, properties: properties ?? {}, screen: { name } })` without returning
   SDK result to caller.
+- **FR-036**: For sticky metadata, `useViewportTracking` MUST treat a sticky attempt as successful
+  only when `optimization.trackView` resolves with a defined value; `undefined` or failed attempts
+  MUST remain eligible for sticky retry.
+- **FR-037**: Sticky dedupe state MUST be scoped per rendered hook instance and MUST reset when the
+  tracking identity (`componentId`, `experienceId`, `variantIndex`, `sticky`) changes.
 
 ### Key Entities _(include if feature involves data)_
 
-- **Viewport Tracking Metadata**: `{ componentId, experienceId?, variantIndex }` used for
+- **Viewport Tracking Metadata**: `{ componentId, experienceId?, variantIndex, sticky? }` used for
   `trackView` and `trackClick` payloads.
 - **View Cycle State**: Mutable cycle state (`viewId`, `visibleSince`, `accumulatedMs`, `attempts`)
   used for dwell and duration tracking.
@@ -192,3 +209,5 @@ manual, and callback-based) so I can instrument interactions with minimal boiler
 - **SC-005**: Screen-hook tests confirm auto/manual tracking behavior and error-path return
   semantics.
 - **SC-006**: Callback-hook tests confirm dynamic screen tracking callback payload format.
+- **SC-007**: Sticky-view tests confirm per-instance sticky dedupe on successful personalization,
+  sticky retry for undefined/failed responses, and identity-based dedupe reset.

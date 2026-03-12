@@ -35,6 +35,15 @@ keep elements visible for periodic updates, then end visibility and assert initi
    visibility stops, **Then** no component view event is dispatched for that cycle.
 5. **Given** a single visibility cycle, **When** initial, periodic, and final events are emitted,
    **Then** all events reuse the same `viewId`.
+6. **Given** a tracked entry payload with `sticky: true`, **When** the first successful
+   `core.trackView` call for an element returns personalization data, **Then** later emissions for
+   that element omit `sticky`.
+7. **Given** a tracked entry payload with `sticky: true`, **When** `core.trackView` returns
+   `undefined` or rejects for an element, **Then** later emissions for that element continue sending
+   `sticky` until a successful personalization response is returned.
+8. **Given** two tracked elements with the same component metadata and `sticky: true`, **When** each
+   element emits its first sticky view event, **Then** both emissions include `sticky`
+   independently.
 
 ---
 
@@ -113,6 +122,8 @@ unobserve/disconnect calls, and orphan element cleanup sweeps.
   the next visibility cycle.
 - `viewDurationMs` is emitted as rounded non-negative milliseconds derived from accumulated visible
   time.
+- Sticky dedupe is scoped per observed element and is marked successful only when
+  `core.trackView(...)` resolves with personalization data.
 - Callback failures are logged and do not permanently disable subsequent periodic updates while an
   element remains visible.
 - `disconnect()` removes timers, active state, and page visibility listeners.
@@ -143,7 +154,7 @@ unobserve/disconnect calls, and orphan element cleanup sweeps.
   observation eligibility from attribute and auto-tracking state.
 - **FR-010**: Auto-tracking callback MUST resolve payload via
   `resolveTrackingPayload(info.data, element)` and MUST call `core.trackView` only when payload
-  resolution succeeds.
+  resolution succeeds, while preserving element context for sticky dedupe behavior.
 - **FR-011**: `ElementViewObserver` MUST initialize effective observer options with defaults and
   construct an `IntersectionObserver` with threshold `[0]` when `minVisibleRatio` is `0`, otherwise
   `[0, minVisibleRatio]`.
@@ -182,6 +193,13 @@ unobserve/disconnect calls, and orphan element cleanup sweeps.
 - **FR-026**: `clearElement(element)` MUST clear only manual override state and MUST continue to
   honor attribute override state (including `ctflTrackViews` and parsed
   `ctflViewDurationUpdateIntervalMs`) for auto-discovered elements.
+- **FR-027**: When resolved tracking payload includes `sticky: true`, detector callbacks MUST send
+  `sticky: true` until the first `core.trackView` call for that element resolves with a defined
+  personalization result.
+- **FR-028**: After sticky success is recorded for an element, subsequent callbacks for that element
+  MUST omit `sticky` while continuing to emit analytics view events.
+- **FR-029**: Sticky dedupe MUST be keyed by element identity, so separately rendered elements with
+  identical component metadata are treated as distinct sticky targets.
 
 ### Key Entities _(include if feature involves data)_
 
@@ -207,3 +225,6 @@ unobserve/disconnect calls, and orphan element cleanup sweeps.
   release state on unobserve/disconnect/orphan sweep.
 - **SC-005**: View override tests confirm `data-ctfl-track-views='false'` suppresses observation and
   `data-ctfl-track-views='true'` can force-enable observation when global auto mode is off.
+- **SC-006**: Sticky-view tests confirm sticky is emitted until first successful personalization
+  response per element, retried after undefined/failed responses, and deduped independently across
+  separately rendered elements.

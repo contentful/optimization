@@ -37,6 +37,7 @@ interface CreateTimedEntryDetectorOptions<
     core: TCore,
     payload: NonNullable<ReturnType<typeof resolveTrackingPayload>>,
     info: TInfo,
+    element: Element,
   ) => Promise<void>
 }
 
@@ -82,7 +83,7 @@ export function createTimedEntryDetector<
       const payload = resolveTrackingPayload(info.data, element)
       if (!payload) return
 
-      await track(runtimeCore, payload, info)
+      await track(runtimeCore, payload, info, element)
     }
 
   let observer: TObserver | undefined = undefined

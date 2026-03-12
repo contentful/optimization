@@ -78,7 +78,7 @@ builder output, interceptor application, schema parsing, and one-batch send payl
 3. **Given** optional partial profile payload, **When** analytics batch payload is built, **Then**
    outgoing shape is `[{ profile?: PartialProfile, events: [event] }]`.
 4. **Given** core facade usage, **When** `CoreBase.trackView` is called, **Then** sticky payloads
-   route to personalization and non-sticky payloads route to analytics.
+   route to both personalization and analytics while non-sticky payloads route to analytics only.
 
 ---
 
@@ -125,8 +125,8 @@ builder output, interceptor application, schema parsing, and one-batch send payl
 - **FR-015**: `AnalyticsStateless` outgoing batch payload MUST validate against
   `BatchInsightsEventArray` and use shape `[{ profile?: PartialProfile, events: [event] }]`.
 - **FR-016**: Core stateless facade methods MUST route as follows: `identify/page/screen/track` to
-  personalization; `trackView` to personalization only when `sticky` is truthy, otherwise to
-  analytics; `trackClick/trackHover/trackFlagView` to analytics.
+  personalization; `trackView` to analytics for all payloads and additionally to personalization
+  when `sticky` is truthy; `trackClick/trackHover/trackFlagView` to analytics.
 - **FR-017**: `CoreStateless` MUST expose resolver helpers (`getCustomFlag`, `getCustomFlags`,
   `personalizeEntry`, `getMergeTagValue`) without requiring mutable runtime state.
 - **FR-018**: `CoreStateless` MUST remain stateless-only and MUST NOT introduce stateful singleton,

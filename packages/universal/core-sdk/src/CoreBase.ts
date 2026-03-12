@@ -346,11 +346,15 @@ abstract class CoreBase implements ResolverMethods {
   async trackView(
     payload: ViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData | undefined> {
+    let result = undefined
+
     if (payload.sticky) {
-      return await this._personalization.trackView(payload)
+      result = await this._personalization.trackView(payload)
     }
 
     await this._analytics.trackView(payload)
+
+    return result
   }
 
   /**

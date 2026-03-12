@@ -145,6 +145,7 @@ export function extractTrackingMetadata(
   componentId: string
   experienceId?: string
   variantIndex: number
+  sticky?: boolean
 } {
   if (personalization) {
     const componentId = Object.keys(personalization.variants).find(
@@ -155,6 +156,7 @@ export function extractTrackingMetadata(
       componentId: componentId ?? resolvedEntry.sys.id,
       experienceId: personalization.experienceId,
       variantIndex: personalization.variantIndex,
+      sticky: personalization.sticky,
     }
   }
 
@@ -162,6 +164,7 @@ export function extractTrackingMetadata(
     componentId: resolvedEntry.sys.id,
     experienceId: undefined,
     variantIndex: 0,
+    sticky: undefined,
   }
 }
 
@@ -233,7 +236,7 @@ export function useViewportTracking({
 
   const scrollContext = useScrollContext()
 
-  const { componentId, experienceId, variantIndex } = extractTrackingMetadata(
+  const { componentId, experienceId, variantIndex, sticky } = extractTrackingMetadata(
     entry,
     personalization,
   )
@@ -266,6 +269,21 @@ export function useViewportTracking({
   experienceIdRef.current = experienceId
   const variantIndexRef = useRef(variantIndex)
   variantIndexRef.current = variantIndex
+  const stickyRef = useRef(sticky)
+  stickyRef.current = sticky
+  const stickySuccessRef = useRef(false)
+  const stickyInFlightRef = useRef(false)
+  const stickyIdentityRef = useRef<string | null>(null)
+
+  const stickyIdentity = `${componentId}::${experienceId ?? ''}::${variantIndex}::${sticky === true ? '1' : '0'}`
+
+  useEffect(() => {
+    if (stickyIdentityRef.current === stickyIdentity) return
+
+    stickyIdentityRef.current = stickyIdentity
+    stickySuccessRef.current = false
+    stickyInFlightRef.current = false
+  }, [stickyIdentity])
 
   logger.debug(
     `Hook initialized for ${componentId} (experienceId: ${experienceId}, variantIndex: ${variantIndex})`,
@@ -299,14 +317,37 @@ export function useViewportTracking({
       `Emitting view event #${cycle.attempts} for ${componentIdRef.current} (viewDurationMs=${durationMs}, viewId=${viewId})`,
     )
 
+    const shouldSendSticky =
+      stickyRef.current === true && !stickySuccessRef.current && !stickyInFlightRef.current
+
+    if (shouldSendSticky) {
+      stickyInFlightRef.current = true
+    }
+
     void (async () => {
-      await optimizationRef.current.trackView({
-        componentId: componentIdRef.current,
-        viewId,
-        experienceId: experienceIdRef.current,
-        variantIndex: variantIndexRef.current,
-        viewDurationMs: durationMs,
-      })
+      try {
+        const data = await optimizationRef.current.trackView({
+          componentId: componentIdRef.current,
+          viewId,
+          experienceId: experienceIdRef.current,
+          variantIndex: variantIndexRef.current,
+          viewDurationMs: durationMs,
+          sticky: shouldSendSticky ? true : undefined,
+        })
+
+        if (shouldSendSticky && data !== undefined) {
+          stickySuccessRef.current = true
+        }
+      } catch (error) {
+        logger.error(
+          `Failed to emit view event for ${componentIdRef.current} (viewId=${viewId})`,
+          error,
+        )
+      } finally {
+        if (shouldSendSticky) {
+          stickyInFlightRef.current = false
+        }
+      }
     })()
   }, [])
 
