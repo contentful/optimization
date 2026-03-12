@@ -1,10 +1,10 @@
-# Feature Specification: Optimization Web Automatic Component Hover Tracking
+# Feature Specification: Contentful Optimization Web Automatic Component Hover Tracking
 
 **Feature Branch**: `[027-web-automatic-hover-tracking]`  
 **Created**: 2026-03-03  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-03).
+2026-03-12).
 
 ## User Scenarios & Testing _(mandatory)_
 

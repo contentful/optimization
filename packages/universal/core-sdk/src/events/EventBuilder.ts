@@ -2,7 +2,7 @@ import {
   type App,
   Campaign,
   type Channel,
-  type ComponentClickEvent,
+  type ClickEvent,
   GeoLocation,
   type HoverEvent,
   type IdentifyEvent,
@@ -151,14 +151,14 @@ const ViewBuilderArgs = z.extend(ComponentInteractionBuilderArgsBase, {
  */
 export type ViewBuilderArgs = z.infer<typeof ViewBuilderArgs>
 
-const ComponentClickBuilderArgs = ComponentInteractionBuilderArgsBase
+const ClickBuilderArgs = ComponentInteractionBuilderArgsBase
 
 /**
  * Arguments for constructing component click events.
  *
  * @public
  */
-export type ComponentClickBuilderArgs = z.infer<typeof ComponentClickBuilderArgs>
+export type ClickBuilderArgs = z.infer<typeof ClickBuilderArgs>
 
 const HoverBuilderArgs = z.extend(ComponentInteractionBuilderArgsBase, {
   hoverId: z.string(),
@@ -435,12 +435,12 @@ class EventBuilder {
   /**
    * Builds a component click event payload for a Contentful entry-based component.
    *
-   * @param args - {@link ComponentClickBuilderArgs} arguments describing the component click.
-   * @returns A {@link ComponentClickEvent} describing the click.
+   * @param args - {@link ClickBuilderArgs} arguments describing the component click.
+   * @returns A {@link ClickEvent} describing the click.
    *
    * @example
    * ```ts
-   * const event = builder.buildComponentClick({
+   * const event = builder.buildClick({
    *   componentId: 'entry-123',
    *   experienceId: 'personalization-123',
    *   variantIndex: 1,
@@ -449,9 +449,9 @@ class EventBuilder {
    *
    * @public
    */
-  buildComponentClick(args: ComponentClickBuilderArgs): ComponentClickEvent {
+  buildClick(args: ClickBuilderArgs): ClickEvent {
     const { componentId, experienceId, variantIndex, ...universal } = parseWithFriendlyError(
-      ComponentClickBuilderArgs,
+      ClickBuilderArgs,
       args,
     )
 

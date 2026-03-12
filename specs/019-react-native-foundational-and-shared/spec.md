@@ -4,148 +4,168 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-02).
+2026-03-12).
 
 ## User Scenarios & Testing _(mandatory)_
 
-### User Story 1 - Bootstrap a Single Mobile Runtime Instance (Priority: P1)
+### User Story 1 - Initialize and Reuse a Single React Native SDK Instance (Priority: P1)
 
-As a React Native integrator, I need one canonical SDK instance per JS runtime so configuration,
-signals, and listeners are initialized once and reused safely.
+As a React Native integrator, I need SDK initialization to enforce one active runtime instance so
+stateful signals, queues, and listeners are not duplicated.
 
-**Why this priority**: SDK bootstrap is the entry point for all personalization and analytics
-behavior.
+**Why this priority**: Runtime initialization is the entry point for all personalization and
+analytics behavior.
 
-**Independent Test**: Call `Optimization.create(...)` twice in one runtime and verify first creation
-succeeds while second creation fails until the first instance is destroyed.
-
-**Acceptance Scenarios**:
-
-1. **Given** no active SDK instance, **When** `Optimization.create(config)` is called, **Then** a
-   new initialized `Optimization` instance is returned.
-2. **Given** an active SDK instance, **When** `Optimization.create(config)` is called again,
-   **Then** creation fails with an "already initialized" error.
-3. **Given** a destroyed active instance, **When** `Optimization.create(config)` is called, **Then**
-   a replacement instance can be created.
-
----
-
-### User Story 2 - Wire Mobile Lifecycle and Connectivity Signals (Priority: P1)
-
-As a maintainer, I need app-state and network listeners wired to SDK lifecycle APIs so queueing and
-flushing behavior remain resilient as connectivity and app focus change.
-
-**Why this priority**: Event reliability depends on online/offline transitions and background
-flushes.
-
-**Independent Test**: Simulate AppState and NetInfo transitions and verify updates to `online` via
-setter assignment, `flush()`, callback error handling, and cleanup behavior.
+**Independent Test**: Call `ContentfulOptimization.create(...)` repeatedly in one JS runtime and
+verify singleton enforcement before and after `destroy()`.
 
 **Acceptance Scenarios**:
 
-1. **Given** the app transitions to `background` or `inactive`, **When** the AppState listener
-   fires, **Then** SDK `flush()` is invoked.
-2. **Given** NetInfo emits connectivity state changes, **When** the listener receives updates,
-   **Then** SDK `online` is set with `online = isOnline` using internet reachability fallback logic.
-3. **Given** listener callbacks throw or reject, **When** listeners run, **Then** errors are logged
-   and runtime execution continues.
+1. **Given** no active React Native SDK instance, **When** `ContentfulOptimization.create(config)`
+   is called, **Then** it resolves a new initialized `ContentfulOptimization` instance.
+2. **Given** an active instance, **When** `ContentfulOptimization.create(config)` is called again,
+   **Then** creation fails with the SDK already-initialized error.
+3. **Given** an active instance is destroyed, **When** `ContentfulOptimization.create(config)` is
+   called again, **Then** a replacement instance can be created.
 
 ---
 
-### User Story 3 - Consume a Stable Package Surface and Runtime Setup (Priority: P2)
+### User Story 2 - Bridge App Lifecycle and Network State into Core Runtime Signals (Priority: P1)
 
-As a package consumer, I need a stable export surface, build artifacts, constants, and runtime
-polyfills so the SDK can be imported consistently across React Native toolchains.
+As an SDK maintainer, I need React Native AppState and connectivity changes wired into core runtime
+APIs so flush and online/offline behavior remains consistent.
 
-**Why this priority**: Compatibility and developer adoption depend on predictable packaging.
+**Why this priority**: Event delivery and queueing correctness depends on lifecycle and connectivity
+signal wiring.
 
-**Independent Test**: Import package root in ESM/CJS and verify exported APIs, fallback constants,
-and runtime polyfill side effects.
+**Independent Test**: Simulate AppState and NetInfo transitions and verify `flush()` calls, `online`
+updates, callback error handling, and listener cleanup behavior.
+
+**Acceptance Scenarios**:
+
+1. **Given** AppState changes to `background` or `inactive`, **When** the app-state listener runs,
+   **Then** SDK `flush()` is invoked.
+2. **Given** AppState changes to `active`, **When** the app-state listener runs, **Then** the flush
+   callback is not invoked.
+3. **Given** NetInfo emits state changes, **When** the online listener runs, **Then** SDK `online`
+   is set from `isInternetReachable ?? isConnected ?? true`.
+4. **Given** NetInfo is missing or has an invalid module shape, **When** online listener setup runs,
+   **Then** a warning is logged and cleanup remains safe to call.
+5. **Given** app-state or online callback logic throws/rejects, **When** listener callbacks run,
+   **Then** errors are logged and execution continues.
+
+---
+
+### User Story 3 - Import a Stable Package Surface with Runtime Polyfills (Priority: P2)
+
+As a package consumer, I need a predictable export surface and runtime setup behavior so the SDK can
+be imported consistently across React Native toolchains.
+
+**Why this priority**: Consumer integration and compatibility depend on stable package contracts.
+
+**Independent Test**: Import root and subpath exports in ESM/CJS contexts and verify named exports,
+constants fallbacks, and runtime polyfill side effects.
 
 **Acceptance Scenarios**:
 
 1. **Given** package root imports, **When** consumers import
-   `@contentful/optimization-react-native`, **Then** core exports plus React Native-specific
-   classes/components/hooks are available.
-2. **Given** build-time constant replacement is unavailable, **When** SDK name/version constants are
-   read, **Then** fallback values are returned.
-3. **Given** environments without `crypto.randomUUID`, **When** package entry executes, **Then** the
-   polyfill provides a `randomUUID` implementation.
+   `@contentful/optimization-react-native`, **Then** the documented named React Native APIs are
+   available (including `ContentfulOptimization`).
+2. **Given** package root imports, **When** consumers attempt a root default import, **Then** no
+   default root export contract is provided.
+3. **Given** subpath imports (`./core-sdk`, `./logger`, `./constants`, `./api-client`,
+   `./api-schemas`), **When** imported, **Then** each subpath resolves the documented module
+   surface.
+4. **Given** environments without `crypto.randomUUID`, **When** package entry executes, **Then** the
+   React Native crypto polyfill provides `global.crypto.randomUUID`.
+5. **Given** missing build-time metadata define replacement, **When** SDK metadata constants are
+   read, **Then** fallback package name/version values are returned.
 
 ---
 
 ### Edge Cases
 
-- NetInfo module loading can fail (missing dependency or invalid shape); listener setup must degrade
-  to warning + no-op cleanup.
-- Cleanup can be called before asynchronous NetInfo import resolves; late subscription must be
-  prevented.
-- AppState and NetInfo callback exceptions must never crash the runtime.
-- `destroy()` must clear singleton ownership only when called on the active instance.
-- Global `crypto` polyfill setup must be idempotent across repeated imports.
+- `createOnlineChangeListener` cleanup may run before asynchronous NetInfo import resolves; late
+  listener registration must be prevented.
+- NetInfo callback/app-state callback failures must never crash the runtime.
+- `destroy()` must only clear module-level active-instance tracking when called on the active
+  instance.
+- Runtime polyfill setup must remain safe for repeated imports (idempotent `randomUUID` assignment).
+- `CoreStateful.destroy()` still runs on React Native instance teardown.
 
 ## Requirements _(mandatory)_
 
 ### Functional Requirements
 
-- **FR-001**: `Optimization.create(config)` MUST enforce a single active SDK instance per JS
-  runtime.
-- **FR-002**: `Optimization.create(config)` MUST throw when an active instance already exists.
-- **FR-003**: `Optimization.create(config)` MUST asynchronously resolve merged configuration before
-  constructing the runtime.
-- **FR-004**: `Optimization` MUST extend `CoreStateful`.
-- **FR-005**: Construction MUST register an online/offline listener that maps connectivity state to
-  `online = isOnline`.
-- **FR-006**: Construction MUST register an AppState listener that invokes `flush()` on `background`
-  and `inactive` transitions.
+- **FR-001**: `ContentfulOptimization.create(config)` MUST enforce one active React Native SDK
+  instance per JS runtime.
+- **FR-002**: `ContentfulOptimization.create(config)` MUST throw when called while an active React
+  Native instance exists.
+- **FR-003**: `ContentfulOptimization.create(config)` MUST await async config merge resolution
+  before constructing the runtime.
+- **FR-004**: `ContentfulOptimization` MUST extend `CoreStateful`.
+- **FR-005**: Construction MUST register online/offline handling via
+  `createOnlineChangeListener((isOnline) => { this.online = isOnline })`.
+- **FR-006**: Construction MUST register AppState handling via
+  `createAppStateChangeListener(async () => { await this.flush() })`.
 - **FR-007**: `createOnlineChangeListener` MUST dynamically import `@react-native-community/netinfo`
-  and validate module shape before subscription.
-- **FR-008**: `createOnlineChangeListener` MUST determine connectivity using
-  `isInternetReachable ?? isConnected ?? true`.
-- **FR-009**: If NetInfo cannot be loaded or validated, `createOnlineChangeListener` MUST log a
-  warning and return a safe cleanup function.
-- **FR-010**: Online listener callback failures (sync or async) MUST be logged and swallowed.
-- **FR-011**: AppState listener callback failures (sync or async) MUST be logged and swallowed.
-- **FR-012**: `Optimization.destroy()` MUST invoke cleanup handlers for both online and AppState
-  listeners.
-- **FR-013**: `Optimization.destroy()` MUST clear singleton tracking only when
-  `activeOptimizationInstance === this`.
-- **FR-014**: `Optimization.destroy()` MUST delegate to `CoreStateful.destroy()`.
-- **FR-015**: Package root exports MUST include all `@contentful/optimization-core` exports plus
-  React Native APIs (`OptimizationProvider`, `OptimizationRoot`, `Personalization`, `Analytics`,
-  `OptimizationScrollProvider`, context hooks, tracking hooks, navigation container, and preview
-  exports).
-- **FR-016**: Package default export MUST be the `Optimization` class.
-- **FR-017**: `OPTIMIZATION_REACT_NATIVE_SDK_NAME` MUST resolve from build-time replacement when
-  available, otherwise `'@contentful/optimization-react-native'`.
-- **FR-018**: `OPTIMIZATION_REACT_NATIVE_SDK_VERSION` MUST resolve from build-time replacement when
+  and validate that `default.addEventListener` exists.
+- **FR-008**: Online-state resolution MUST use `isInternetReachable ?? isConnected ?? true`.
+- **FR-009**: If NetInfo loading/validation fails, online-listener setup MUST log a warning and
+  return a safe cleanup function.
+- **FR-010**: Online-listener cleanup MUST prevent late subscription if called before async module
+  loading completes.
+- **FR-011**: AppState and online callback failures (sync or async) MUST be logged and swallowed.
+- **FR-012**: `ContentfulOptimization.destroy()` MUST invoke online-listener and app-state listener
+  cleanup handlers.
+- **FR-013**: `ContentfulOptimization.destroy()` MUST clear module-level active instance tracking
+  only when `activeOptimizationInstance === this`.
+- **FR-014**: `ContentfulOptimization.destroy()` MUST call `CoreStateful.destroy()`.
+- **FR-015**: Package root exports MUST provide named exports for current React Native APIs,
+  including `OptimizationProvider`, `OptimizationRoot`, `Personalization`, `Analytics`,
+  `OptimizationScrollProvider`, `useScrollContext`, `LiveUpdatesProvider`, `useLiveUpdates`,
+  `useOptimization`, `useInteractionTracking`, `useViewportTracking`, `useTapTracking`,
+  `useScreenTracking`, `useScreenTrackingCallback`, `OptimizationNavigationContainer`,
+  `OptimizationPreviewPanel`, `PreviewPanelOverlay`, and `ContentfulOptimization`.
+- **FR-016**: Package root MUST expose `OptimizationConfig` as an alias of `CoreStatefulConfig`.
+- **FR-017**: Package root MUST export `ContentfulOptimization` as a named export (no root default
+  export contract).
+- **FR-018**: Package subpath exports MUST resolve `./core-sdk`, `./logger`, `./constants`,
+  `./api-client`, and `./api-schemas`.
+- **FR-019**: `./core-sdk` MUST re-export `@contentful/optimization-core`.
+- **FR-020**: `OPTIMIZATION_REACT_NATIVE_SDK_NAME` MUST use build-time replacement when available,
+  otherwise `'@contentful/optimization-react-native'`.
+- **FR-021**: `OPTIMIZATION_REACT_NATIVE_SDK_VERSION` MUST use build-time replacement when
   available, otherwise `'0.0.0'`.
-- **FR-019**: Package entry MUST load runtime setup modules for image typing declarations and crypto
-  polyfills.
-- **FR-020**: Crypto polyfill MUST ensure `global.crypto` exists and provide `crypto.randomUUID`
-  when missing.
-- **FR-021**: Package build outputs MUST expose ESM (`index.mjs`), CJS (`index.cjs`), and dual
-  declaration artifacts (`index.d.mts`, `index.d.cts`).
-- **FR-022**: Build configuration MUST treat React/React Native runtime dependencies as externals.
+- **FR-022**: Package entry MUST import React Native runtime setup modules (`./images` and
+  `./polyfills/crypto`).
+- **FR-023**: React Native crypto polyfill setup MUST load iterator helpers and ensure
+  `global.crypto` exists.
+- **FR-024**: React Native crypto polyfill setup MUST assign `global.crypto.randomUUID` when missing
+  and mirror `crypto` onto `globalThis.crypto` when absent.
+- **FR-025**: Build artifacts MUST provide ESM (`*.mjs`), CJS (`*.cjs`), and dual declaration
+  outputs (`*.d.mts`, `*.d.cts`) for the package entrypoints.
+- **FR-026**: Build configuration MUST auto-externalize dependency/peer/optional packages.
 
 ### Key Entities _(include if feature involves data)_
 
-- **Optimization (React Native)**: Stateful SDK runtime with mobile lifecycle wiring.
-- **Lifecycle Listener Contracts**: Online and AppState handlers that bridge device state to SDK
-  behavior.
-- **Package Surface**: Public exports, constants, and bundle artifacts consumed by integrators.
-- **Runtime Polyfills**: Import-time compatibility setup for iterator helpers and
+- **ContentfulOptimization (React Native Runtime)**: Stateful SDK runtime with mobile lifecycle and
+  connectivity wiring.
+- **Listener Integration Contracts**: AppState and NetInfo adapters that bridge React Native signals
+  to `CoreStateful` runtime behavior.
+- **Package Export Surface**: Root and subpath module contracts consumed by app code.
+- **Runtime Polyfill Contract**: React Native import-time setup for iterator helpers and
   `crypto.randomUUID`.
 
 ## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
-- **SC-001**: Runtime initialization tests confirm singleton enforcement and re-creation after
-  destruction.
-- **SC-002**: Listener tests confirm online/AppState transitions invoke SDK handlers and cleanup
-  prevents later callbacks.
-- **SC-003**: Fault-injection tests confirm NetInfo absence and callback failures do not crash SDK
-  execution.
-- **SC-004**: Import/build checks confirm root exports, default export, constants fallback behavior,
-  and runtime/type artifacts are present.
+- **SC-001**: Singleton lifecycle tests confirm one active instance, duplicate-create failure, and
+  successful recreation after `destroy()`.
+- **SC-002**: AppState and NetInfo tests confirm `flush()` and `online` updates, callback
+  fault-tolerance, and safe cleanup behavior.
+- **SC-003**: Import-surface tests confirm current root named exports, subpath exports, and no root
+  default-export dependency.
+- **SC-004**: Constant/polyfill tests confirm metadata fallback values and runtime `randomUUID`
+  availability.

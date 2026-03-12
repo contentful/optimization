@@ -157,7 +157,7 @@ describe('AnalyticsStateful.flush policy', () => {
     profile.value = sameProfileId
 
     await analytics.trackFlagView(createViewPayload('promo-flag'))
-    await analytics.trackComponentClick({ componentId: 'hero-cta' })
+    await analytics.trackClick({ componentId: 'hero-cta' })
     await analytics.trackHover({
       componentId: 'hero-hover',
       hoverId: 'hero-hover-id',

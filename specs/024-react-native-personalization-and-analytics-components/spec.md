@@ -4,147 +4,173 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-02).
+2026-03-12).
 
 ## User Scenarios & Testing _(mandatory)_
 
-### User Story 1 - Render Personalized Entries and Track Their Views (Priority: P1)
+### User Story 1 - Resolve Personalized Content and Attach Interaction Tracking (Priority: P1)
 
-As an app developer, I need a component that resolves personalized entry variants and tracks
-component views so personalized content rendering and analytics are coupled by default.
+As an app developer, I need `Personalization` to resolve baseline/variant content and attach view
+and tap tracking handlers so rendering and analytics stay synchronized.
 
-**Why this priority**: Personalization rendering is a primary value path of the package.
+**Why this priority**: Personalized rendering and interaction tracking are the primary SDK value
+path.
 
-**Independent Test**: Render `Personalization` with a baseline entry, drive personalization state
-updates, and verify resolved entry rendering plus viewport tracking integration.
+**Independent Test**: Render `Personalization`, simulate personalization-state emissions, and verify
+resolved entry output plus tracking-hook inputs.
 
 **Acceptance Scenarios**:
 
-1. **Given** a baseline entry with matching personalization data, **When** component resolves,
-   **Then** render prop receives resolved variant entry.
-2. **Given** no applicable personalization, **When** component resolves, **Then** render prop
-   receives baseline entry.
-3. **Given** resolved entry is visible per tracking thresholds, **When** dwell criteria are met,
-   **Then** component view tracking is dispatched through viewport hook integration.
+1. **Given** a baseline entry and selected personalizations, **When** render resolves, **Then**
+   `children` receives `contentfulOptimization.personalizeEntry(...).entry`.
+2. **Given** no applicable personalization, **When** render resolves, **Then** baseline entry is
+   rendered.
+3. **Given** resolved entry/personalization metadata, **When** hooks are wired, **Then**
+   `useViewportTracking` and `useTapTracking` receive resolved entry plus resolved personalization
+   metadata.
+4. **Given** wrapper props (`style`, `testID`), **When** component renders, **Then** wrapper `View`
+   includes those props and tracking handlers (`onLayout`, touch handlers).
 
 ---
 
-### User Story 2 - Control Live-Update vs Locking Behavior for Personalization (Priority: P1)
+### User Story 2 - Control Personalization Live Updates with Preview and Override Precedence (Priority: P1)
 
-As a product owner, I need predictable control over whether personalized components update live or
-lock to first resolved value so UI stability can be tuned per screen and preview workflows.
+As a product owner, I need deterministic live-update precedence so UI can either update live or lock
+predictably based on preview visibility, global settings, and per-component overrides.
 
-**Why this priority**: Live-update policy directly affects runtime UX and preview workflows.
+**Why this priority**: Predictable update/lock behavior is required for both production and preview
+workflows.
 
-**Independent Test**: Exercise combinations of preview-panel visibility, global liveUpdates, and
-per-component `liveUpdates` prop; verify update vs lock behavior.
+**Independent Test**: Exercise combinations of `previewPanelVisible`, component `liveUpdates`,
+global `liveUpdates`, and personalization-state emissions.
 
 **Acceptance Scenarios**:
 
-1. **Given** preview panel is visible, **When** personalization state updates, **Then** component
-   uses live updates regardless of other settings.
-2. **Given** preview panel is hidden and component `liveUpdates` is defined, **When** state updates,
-   **Then** component-level setting overrides global setting.
-3. **Given** live updates are disabled, **When** first non-undefined personalizations value is
-   received, **Then** component locks to that value and ignores subsequent updates.
+1. **Given** preview panel is visible, **When** personalization state emits updates, **Then**
+   component uses live-update behavior regardless of other settings.
+2. **Given** preview panel hidden and component `liveUpdates` provided, **When** updates emit,
+   **Then** component-level value overrides global live-updates context.
+3. **Given** live updates are disabled, **When** first non-`undefined` personalizations value
+   arrives, **Then** component locks to that value and ignores later updates.
+4. **Given** live updates are enabled, **When** personalizations stream emits, **Then** component
+   state is replaced on every emission.
+5. **Given** component unmount, **When** teardown runs, **Then** personalization subscription is
+   unsubscribed.
 
 ---
 
-### User Story 3 - Track Non-Personalized Components and Navigation Screens (Priority: P2)
+### User Story 3 - Track Non-Personalized Content and Navigation Screens (Priority: P2)
 
-As an analytics integrator, I need dedicated helpers for non-personalized entry tracking and
-navigation-driven screen tracking so I can instrument both component and screen events with minimal
-boilerplate.
+As an analytics integrator, I need `Analytics` and `OptimizationNavigationContainer` to provide
+low-boilerplate component and screen tracking.
 
-**Why this priority**: Analytics parity requires both component-level and navigation-level coverage.
+**Why this priority**: Integrations need consistent component-level and navigation-level analytics
+coverage.
 
-**Independent Test**: Render `Analytics` and `OptimizationNavigationContainer`, simulate visibility
-and route changes, and verify expected tracking payloads.
+**Independent Test**: Render `Analytics` and `OptimizationNavigationContainer`, simulate interaction
+and route transitions, and verify payload behavior.
 
 **Acceptance Scenarios**:
 
-1. **Given** an `Analytics` component with entry data, **When** visibility thresholds are met,
-   **Then** component view tracking fires with baseline metadata.
-2. **Given** navigation container becomes ready with current route, **When** ready callback runs,
-   **Then** initial screen event is tracked.
-3. **Given** route changes to a different name, **When** state change callback runs, **Then** a new
-   screen event is tracked and user callback is invoked afterwards.
+1. **Given** `Analytics` receives an entry, **When** tracking hooks are wired, **Then** view/tap
+   tracking uses the baseline entry (no personalization metadata).
+2. **Given** navigation container becomes ready with a current route, **When** `onReady` runs,
+   **Then** one screen event is tracked before user `onReady` callback executes.
+3. **Given** navigation state changes route name, **When** `onStateChange` runs, **Then** a new
+   screen event is tracked and user `onStateChange` callback runs afterwards.
+4. **Given** route name does not change, **When** `onStateChange` runs, **Then** no duplicate screen
+   event is tracked.
+5. **Given** `includeParams=true` and route params exist, **When** screen event properties are
+   built, **Then** params are JSON-coerced and validated before inclusion.
 
 ---
 
 ### Edge Cases
 
-- `Personalization` subscribes to personalization state updates and must unsubscribe on unmount.
-- When live updates are disabled, components must ignore updates until first non-undefined
-  personalizations value is captured, then remain locked.
-- `Analytics` and `Personalization` rely on `useViewportTracking`; usage outside provider boundaries
-  inherits provider-related hook constraints.
-- `OptimizationNavigationContainer` includes route params only when `includeParams=true` and params
-  are provided.
-- Route params are JSON-coerced through `JSON.parse(JSON.stringify(...))` + schema parsing and may
-  throw for non-serializable payloads.
+- `trackViews` and `trackTaps` per-component props override `InteractionTrackingContext` defaults.
+- `onTap` implicitly enables tap tracking unless `trackTaps` is explicitly `false`.
+- `Personalization` locks only after first non-`undefined` personalizations value when live updates
+  are off.
+- Navigation param serialization uses `JSON.parse(JSON.stringify(params))` plus `z.json().parse` and
+  can throw for invalid/non-serializable params.
+- `OptimizationNavigationContainer` always includes `properties.name` in tracked screen properties.
 
 ## Requirements _(mandatory)_
 
 ### Functional Requirements
 
 - **FR-001**: `Personalization` MUST accept `baselineEntry`, render-prop `children`, and optional
-  tracking/live-update props.
-- **FR-002**: `Personalization` MUST compute `shouldLiveUpdate` using this priority order:
-  preview-panel visibility, component `liveUpdates` prop, global live updates context, default
-  `false`.
-- **FR-003**: `Personalization` MUST subscribe to `optimization.states.personalizations`.
-- **FR-004**: When `shouldLiveUpdate` is true, subscription updates MUST always replace local
-  personalization state.
-- **FR-005**: When `shouldLiveUpdate` is false, component MUST lock on first non-undefined
-  personalization value and ignore later updates.
-- **FR-006**: `Personalization` MUST unsubscribe from personalization state updates on unmount.
-- **FR-007**: `Personalization` MUST resolve display content via
-  `optimization.personalizeEntry(baselineEntry, lockedPersonalizations)`.
-- **FR-008**: `Personalization` MUST pass resolved entry and resolved personalization metadata to
-  `useViewportTracking`.
-- **FR-009**: `Personalization` MUST render `children(resolvedEntry)` inside a wrapper `View`
-  carrying `onLayout`, optional `style`, and optional `testID`.
-- **FR-010**: `Analytics` MUST accept a non-personalized `entry`, `children`, and optional tracking
-  props.
-- **FR-011**: `Analytics` MUST invoke `useViewportTracking` with `{ entry, threshold, viewTimeMs }`
-  (without personalization metadata).
-- **FR-012**: `Analytics` MUST render `children` inside a wrapper `View` carrying `onLayout`,
-  optional `style`, and optional `testID`.
-- **FR-013**: `OptimizationNavigationContainer` MUST use a render-prop child API that provides
-  `ref`, `onReady`, and `onStateChange` handlers.
-- **FR-014**: On `onReady`, container MUST track the current route if available and then invoke user
-  `onReady` callback.
-- **FR-015**: On `onStateChange`, container MUST track only when current route name differs from
-  previously tracked route name.
-- **FR-016**: On each state change, container MUST update stored current route name.
-- **FR-017**: `OptimizationNavigationContainer` MUST invoke user `onStateChange` callback after
-  internal tracking logic.
-- **FR-018**: `OptimizationNavigationContainer` MUST default `includeParams` to `false`.
-- **FR-019**: When `includeParams=true` and route params exist, screen tracking MUST include
-  `properties.params` as JSON-safe data.
-- **FR-020**: Screen tracking payload from navigation container MUST call `optimization.screen` with
-  `{ name, properties, screen: { name } }`.
+  tracking/live-update/styling props.
+- **FR-002**: `Personalization` MUST compute `shouldLiveUpdate` as:
+  `previewPanelVisible === true || (liveUpdates ?? globalLiveUpdates ?? false)`.
+- **FR-003**: `Personalization` MUST subscribe to
+  `contentfulOptimization.states.selectedPersonalizations`.
+- **FR-004**: `Personalization` MUST unsubscribe from selected-personalizations subscription on
+  unmount.
+- **FR-005**: When `shouldLiveUpdate` is true, `Personalization` MUST replace local personalization
+  state on each emission.
+- **FR-006**: When `shouldLiveUpdate` is false, `Personalization` MUST lock on first non-undefined
+  emission and ignore later emissions while locked.
+- **FR-007**: When `shouldLiveUpdate` flips to true, `Personalization` MUST clear lock flag for
+  subsequent live updates.
+- **FR-008**: `Personalization` MUST resolve content with
+  `contentfulOptimization.personalizeEntry(baselineEntry, lockedPersonalizations)`.
+- **FR-009**: `Personalization` MUST resolve view tracking enablement as
+  `trackViews ?? interactionTracking.views`.
+- **FR-010**: `Personalization` MUST resolve tap tracking enablement as
+  `trackTaps === false ? false : (trackTaps ?? onTap) ? true : interactionTracking.taps`.
+- **FR-011**: `Personalization` MUST pass resolved entry/personalization plus tracking options to
+  `useViewportTracking` and `useTapTracking`.
+- **FR-012**: `Personalization` MUST render `children(resolvedEntry)` inside a wrapper `View` with
+  `onLayout`, optional `style`, optional `testID`, and tap handlers.
+- **FR-013**: `Analytics` MUST accept `entry`, `children`, and optional tracking/styling props.
+- **FR-014**: `Analytics` MUST resolve view tracking enablement as
+  `trackViews ?? interactionTracking.views`.
+- **FR-015**: `Analytics` MUST resolve tap tracking enablement as
+  `trackTaps === false ? false : (trackTaps ?? onTap) ? true : interactionTracking.taps`.
+- **FR-016**: `Analytics` MUST call `useViewportTracking` with
+  `{ entry, threshold, viewTimeMs, viewDurationUpdateIntervalMs, enabled }`.
+- **FR-017**: `Analytics` MUST call `useTapTracking` with `{ entry, enabled, onTap }`.
+- **FR-018**: `Analytics` MUST render children inside a wrapper `View` with `onLayout`, optional
+  `style`, optional `testID`, and tap handlers.
+- **FR-019**: `OptimizationNavigationContainer` MUST use render-prop children that receive
+  `{ ref, onReady, onStateChange }` handlers.
+- **FR-020**: `OptimizationNavigationContainer` MUST default `includeParams` to `false`.
+- **FR-021**: On `onReady`, if a current route exists, container MUST set `routeNameRef`, track the
+  current route, and then invoke user `onReady` callback.
+- **FR-022**: On `onStateChange`, container MUST compare previous/current route names and track only
+  when names differ.
+- **FR-023**: On `onStateChange`, container MUST update `routeNameRef` to current route name when a
+  current route exists.
+- **FR-024**: User `onStateChange` callback MUST run after container tracking logic.
+- **FR-025**: Navigation screen-tracking properties MUST always include `{ name: screenName }`.
+- **FR-026**: When `includeParams=true` and params exist, navigation tracking MUST include
+  `properties.params` from JSON-safe coercion/validation (`paramsToJson`).
+- **FR-027**: `paramsToJson` serialization/validation errors MUST propagate (not swallowed) by
+  navigation handlers.
 
 ### Key Entities _(include if feature involves data)_
 
-- **Personalization Component State**: Local locked/live personalization snapshot used for entry
-  resolution.
-- **Resolved Personalization Output**: `{ entry, personalization }` tuple from
-  `personalizeEntry(...)` consumed by rendering and tracking.
-- **Analytics Component Contract**: Non-personalized entry wrapper for viewport-triggered component
-  view analytics.
-- **Navigation Tracking State**: Previous/current route name refs used to suppress duplicate screen
-  events.
+- **Personalization Local State**: `lockedPersonalizations` plus lock-flag state controlling live vs
+  locked behavior.
+- **Resolved Personalization Output**: `ResolvedData` (`entry`, `personalization`) produced by
+  `personalizeEntry(...)`.
+- **Analytics Wrapper Contract**: Baseline-entry wrapper with view/tap tracking hook wiring.
+- **Navigation Tracking State**: `routeNameRef` plus route properties used to suppress duplicate
+  screen events.
 
 ## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
-- **SC-001**: Personalization tests confirm resolved entry rendering and subscription cleanup.
-- **SC-002**: Live-updates tests confirm precedence behavior (preview > component prop > global >
-  default lock).
-- **SC-003**: Analytics component tests confirm viewport-based tracking wiring for non-personalized
-  entries.
-- **SC-004**: Navigation tests confirm initial screen tracking, route-change tracking order, and
-  duplicate suppression by route name comparison.
+- **SC-001**: Personalization tests confirm variant resolution, render-prop output, and subscription
+  lifecycle behavior.
+- **SC-002**: Live-update precedence tests confirm
+  `preview visible > component prop > global context > default false` behavior.
+- **SC-003**: Interaction enablement tests confirm `trackViews`/`trackTaps`/`onTap` precedence over
+  context defaults.
+- **SC-004**: Analytics tests confirm baseline-entry view/tap tracking wiring and wrapper behavior.
+- **SC-005**: Navigation tests confirm on-ready tracking order, route-change tracking suppression,
+  and callback ordering.
+- **SC-006**: Param-inclusion tests confirm `includeParams` default/override behavior and JSON-safe
+  param serialization requirements.

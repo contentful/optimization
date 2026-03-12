@@ -12,7 +12,7 @@ const logger = createScopedLogger('Web:EntryClickTracking')
  *
  * @public
  */
-export type EntryClickTrackingCore = Pick<CoreStateful, 'trackComponentClick'>
+export type EntryClickTrackingCore = Pick<CoreStateful, 'trackClick'>
 
 const CLICKABLE_SELECTOR = [
   'a[href]',
@@ -158,7 +158,7 @@ export function createEntryClickDetector(
       return
     }
 
-    void core.trackComponentClick(payload)
+    void core.trackClick(payload)
   }
 
   return {

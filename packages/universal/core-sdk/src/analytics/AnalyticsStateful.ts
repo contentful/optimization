@@ -9,7 +9,7 @@ import {
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { BlockedEvent } from '../BlockedEvent'
 import type { ConsentGuard } from '../Consent'
-import type { ComponentClickBuilderArgs, HoverBuilderArgs, ViewBuilderArgs } from '../events'
+import type { ClickBuilderArgs, HoverBuilderArgs, ViewBuilderArgs } from '../events'
 import { guardedBy } from '../lib/decorators'
 import { QueueFlushRuntime, resolveQueueFlushPolicy, type QueueFlushPolicy } from '../lib/queue'
 import type { ProductBaseOptions, ProductConfig } from '../ProductBase'
@@ -92,7 +92,7 @@ const MAX_QUEUED_EVENTS = 25
 const ANALYTICS_METHOD_EVENT_TYPE_MAP: Readonly<Record<string, string>> = {
   trackView: 'component',
   trackFlagView: 'component',
-  trackComponentClick: 'component_click',
+  trackClick: 'component_click',
   trackHover: 'component_hover',
 }
 
@@ -232,14 +232,14 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    * @returns A promise that resolves when the event has been queued.
    * @example
    * ```ts
-   * await analytics.trackComponentClick({ componentId: 'hero-banner' })
+   * await analytics.trackClick({ componentId: 'hero-banner' })
    * ```
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async trackComponentClick(payload: ComponentClickBuilderArgs): Promise<void> {
+  async trackClick(payload: ClickBuilderArgs): Promise<void> {
     logger.info(`Processing "component click" event for ${payload.componentId}`)
 
-    await this.enqueueEvent(this.eventBuilder.buildComponentClick(payload))
+    await this.enqueueEvent(this.eventBuilder.buildClick(payload))
   }
 
   /**

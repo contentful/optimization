@@ -132,7 +132,7 @@ export function useTapTracking({
 
       logger.info(`Tap detected on ${componentId}, emitting component_click`)
 
-      void optimizationRef.current.trackComponentClick({
+      void optimizationRef.current.trackClick({
         componentId,
         experienceId,
         variantIndex,
