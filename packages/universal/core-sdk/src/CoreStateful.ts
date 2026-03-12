@@ -28,10 +28,10 @@ import {
   event,
   flags,
   online,
-  personalizations,
   previewPanelAttached,
   previewPanelOpen,
   profile,
+  selectedPersonalizations,
   signalFns,
   signals,
   toObservable,
@@ -215,7 +215,7 @@ class CoreStateful extends CoreBase implements ConsentController {
     eventStream: toObservable(event),
     flags: toObservable(flags),
     canPersonalize: toObservable(canPersonalize),
-    personalizations: toObservable(personalizations),
+    selectedPersonalizations: toObservable(selectedPersonalizations),
     previewPanelAttached: toObservable(previewPanelAttached),
     previewPanelOpen: toObservable(previewPanelOpen),
     profile: toObservable(profile),
@@ -266,7 +266,7 @@ class CoreStateful extends CoreBase implements ConsentController {
 
       this._analytics = new AnalyticsStateful({
         api: this.api,
-        builder: this.eventBuilder,
+        eventBuilder: this.eventBuilder,
         config: {
           allowedEventTypes,
           queuePolicy: analyticsRuntimeQueuePolicy,
@@ -281,7 +281,7 @@ class CoreStateful extends CoreBase implements ConsentController {
 
       this._personalization = new PersonalizationStateful({
         api: this.api,
-        builder: this.eventBuilder,
+        eventBuilder: this.eventBuilder,
         config: {
           allowedEventTypes,
           getAnonymousId,
@@ -291,7 +291,7 @@ class CoreStateful extends CoreBase implements ConsentController {
             consent: defaults?.consent,
             changes: defaults?.changes,
             profile: defaults?.profile,
-            personalizations: defaults?.personalizations,
+            selectedPersonalizations: defaults?.personalizations,
           },
         },
         interceptors: this.interceptors,
@@ -333,7 +333,7 @@ class CoreStateful extends CoreBase implements ConsentController {
       event.value = undefined
       changes.value = undefined
       profile.value = undefined
-      personalizations.value = undefined
+      selectedPersonalizations.value = undefined
     })
   }
 

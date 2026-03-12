@@ -3,15 +3,15 @@ import { createEntryViewDetector, type EntryViewTrackingCore } from './createEnt
 
 function createCore(): {
   core: EntryViewTrackingCore
-  trackComponentView: ReturnType<typeof rs.fn>
+  trackView: ReturnType<typeof rs.fn>
 } {
-  const trackComponentView = rs.fn().mockResolvedValue(undefined)
+  const trackView = rs.fn().mockResolvedValue(undefined)
 
   const core: EntryViewTrackingCore = {
-    trackComponentView,
+    trackView,
   }
 
-  return { core, trackComponentView }
+  return { core, trackView }
 }
 
 describe('EntryViewTracker', () => {
@@ -37,7 +37,7 @@ describe('EntryViewTracker', () => {
     entry.dataset.ctflEntryId = 'entry-auto-view'
     document.body.append(entry)
 
-    const { core, trackComponentView } = createCore()
+    const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
     tracker.start({ dwellTimeMs: 0 })
@@ -52,11 +52,11 @@ describe('EntryViewTracker', () => {
 
     await advance(0)
 
-    expect(trackComponentView).toHaveBeenCalledTimes(1)
-    expect(trackComponentView).toHaveBeenCalledWith(
+    expect(trackView).toHaveBeenCalledTimes(1)
+    expect(trackView).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'entry-auto-view',
-        componentViewId: expect.any(String),
+        viewId: expect.any(String),
         viewDurationMs: 0,
       }),
     )
@@ -68,7 +68,7 @@ describe('EntryViewTracker', () => {
     const element = document.createElement('section')
     document.body.append(element)
 
-    const { core, trackComponentView } = createCore()
+    const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
     tracker.start({ dwellTimeMs: 0 })
@@ -84,11 +84,11 @@ describe('EntryViewTracker', () => {
 
     await advance(0)
 
-    expect(trackComponentView).toHaveBeenCalledTimes(1)
-    expect(trackComponentView).toHaveBeenCalledWith(
+    expect(trackView).toHaveBeenCalledTimes(1)
+    expect(trackView).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'manual-view-entry',
-        componentViewId: expect.any(String),
+        viewId: expect.any(String),
         viewDurationMs: 0,
       }),
     )
@@ -100,7 +100,7 @@ describe('EntryViewTracker', () => {
     const element = document.createElement('article')
     document.body.append(element)
 
-    const { core, trackComponentView } = createCore()
+    const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
     tracker.start({ dwellTimeMs: 0 })
@@ -117,7 +117,7 @@ describe('EntryViewTracker', () => {
 
     await advance(0)
 
-    expect(trackComponentView).not.toHaveBeenCalled()
+    expect(trackView).not.toHaveBeenCalled()
 
     cleanup()
   })
@@ -127,7 +127,7 @@ describe('EntryViewTracker', () => {
     entry.dataset.ctflEntryId = 'entry-auto-view-disabled'
     document.body.append(entry)
 
-    const { core, trackComponentView } = createCore()
+    const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
     tracker.start({ dwellTimeMs: 0 })
@@ -143,7 +143,7 @@ describe('EntryViewTracker', () => {
 
     await advance(0)
 
-    expect(trackComponentView).not.toHaveBeenCalled()
+    expect(trackView).not.toHaveBeenCalled()
 
     cleanup()
   })
@@ -154,7 +154,7 @@ describe('EntryViewTracker', () => {
     entry.dataset.ctflTrackViews = 'false'
     document.body.append(entry)
 
-    const { core, trackComponentView } = createCore()
+    const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
     tracker.start({ dwellTimeMs: 0 })
@@ -169,7 +169,7 @@ describe('EntryViewTracker', () => {
 
     await advance(0)
 
-    expect(trackComponentView).not.toHaveBeenCalled()
+    expect(trackView).not.toHaveBeenCalled()
 
     cleanup()
   })
@@ -180,7 +180,7 @@ describe('EntryViewTracker', () => {
     entry.dataset.ctflTrackViews = 'true'
     document.body.append(entry)
 
-    const { core, trackComponentView } = createCore()
+    const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
     tracker.setAuto(false)
@@ -196,11 +196,11 @@ describe('EntryViewTracker', () => {
 
     await advance(0)
 
-    expect(trackComponentView).toHaveBeenCalledTimes(1)
-    expect(trackComponentView).toHaveBeenCalledWith(
+    expect(trackView).toHaveBeenCalledTimes(1)
+    expect(trackView).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'entry-auto-view-enabled-by-data',
-        componentViewId: expect.any(String),
+        viewId: expect.any(String),
         viewDurationMs: 0,
       }),
     )
@@ -213,7 +213,7 @@ describe('EntryViewTracker', () => {
     entry.dataset.ctflEntryId = 'entry-periodic-view'
     document.body.append(entry)
 
-    const { core, trackComponentView } = createCore()
+    const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
     tracker.start({ dwellTimeMs: 0, viewDurationUpdateIntervalMs: 1000 })
@@ -229,22 +229,22 @@ describe('EntryViewTracker', () => {
     await advance(0)
     await advance(1000)
 
-    expect(trackComponentView).toHaveBeenCalledTimes(2)
+    expect(trackView).toHaveBeenCalledTimes(2)
 
-    const firstPayload = trackComponentView.mock.calls[0]?.[0]
-    const secondPayload = trackComponentView.mock.calls[1]?.[0]
+    const firstPayload = trackView.mock.calls[0]?.[0]
+    const secondPayload = trackView.mock.calls[1]?.[0]
 
     expect(firstPayload).toEqual(
       expect.objectContaining({
         componentId: 'entry-periodic-view',
-        componentViewId: expect.any(String),
+        viewId: expect.any(String),
         viewDurationMs: 0,
       }),
     )
     expect(secondPayload).toEqual(
       expect.objectContaining({
         componentId: 'entry-periodic-view',
-        componentViewId: firstPayload?.componentViewId,
+        viewId: firstPayload?.viewId,
         viewDurationMs: 1000,
       }),
     )
@@ -257,7 +257,7 @@ describe('EntryViewTracker', () => {
     entry.dataset.ctflEntryId = 'entry-view-final'
     document.body.append(entry)
 
-    const { core, trackComponentView } = createCore()
+    const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
     tracker.start({ dwellTimeMs: 0, viewDurationUpdateIntervalMs: 10_000 })
@@ -274,15 +274,15 @@ describe('EntryViewTracker', () => {
     instance.trigger({ target: entry, isIntersecting: false, intersectionRatio: 0 })
     await Promise.resolve()
 
-    expect(trackComponentView).toHaveBeenCalledTimes(2)
+    expect(trackView).toHaveBeenCalledTimes(2)
 
-    const firstPayload = trackComponentView.mock.calls[0]?.[0]
-    const secondPayload = trackComponentView.mock.calls[1]?.[0]
+    const firstPayload = trackView.mock.calls[0]?.[0]
+    const secondPayload = trackView.mock.calls[1]?.[0]
 
     expect(secondPayload).toEqual(
       expect.objectContaining({
         componentId: 'entry-view-final',
-        componentViewId: firstPayload?.componentViewId,
+        viewId: firstPayload?.viewId,
         viewDurationMs: 500,
       }),
     )
@@ -296,7 +296,7 @@ describe('EntryViewTracker', () => {
     entry.dataset.ctflViewDurationUpdateIntervalMs = '250'
     document.body.append(entry)
 
-    const { core, trackComponentView } = createCore()
+    const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
     tracker.start({ dwellTimeMs: 0, viewDurationUpdateIntervalMs: 10_000 })
@@ -312,7 +312,7 @@ describe('EntryViewTracker', () => {
     await advance(0)
     await advance(250)
 
-    expect(trackComponentView).toHaveBeenCalledTimes(2)
+    expect(trackView).toHaveBeenCalledTimes(2)
 
     cleanup()
   })
@@ -321,7 +321,7 @@ describe('EntryViewTracker', () => {
     const element = document.createElement('section')
     document.body.append(element)
 
-    const { core, trackComponentView } = createCore()
+    const { core, trackView } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
 
     tracker.start({ dwellTimeMs: 0, viewDurationUpdateIntervalMs: 10_000 })
@@ -342,7 +342,7 @@ describe('EntryViewTracker', () => {
     await advance(0)
     await advance(200)
 
-    expect(trackComponentView).toHaveBeenCalledTimes(2)
+    expect(trackView).toHaveBeenCalledTimes(2)
 
     cleanup()
   })

@@ -153,14 +153,14 @@ async function waitForComponentEventCount(
   )
 }
 
-async function getComponentViewDuration(componentId) {
+async function getViewDuration(componentId) {
   const testId = `event-duration-${componentId}`
   const text = await getElementTextById(testId)
   const match = /Duration:\s*(\d+)/.exec(text)
   return match && match[1] ? Number(match[1]) : null
 }
 
-async function getComponentViewId(componentId) {
+async function getViewId(componentId) {
   const testId = `event-view-id-${componentId}`
   const text = await getElementTextById(testId)
   const match = /ViewId:\s*(.+)/.exec(text)
@@ -170,8 +170,8 @@ async function getComponentViewId(componentId) {
 module.exports = {
   clearProfileState,
   ELEMENT_VISIBILITY_TIMEOUT,
-  getComponentViewDuration,
-  getComponentViewId,
+  getViewDuration,
+  getViewId,
   getElementTextById,
   isVisibleById,
   sleep,

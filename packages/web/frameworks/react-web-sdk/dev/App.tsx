@@ -9,11 +9,11 @@ import { StateSection } from './sections/StateSection'
 import type { ResolveResult } from './types'
 
 export function App(): ReactElement {
-  const optimization = useOptimization()
+  const contentfulOptimization = useOptimization()
   const { globalLiveUpdates, previewPanelVisible } = useLiveUpdates()
   const { entriesById, loading: entriesLoading, error: entriesError } = useDevEntries()
   const { consent, profile, personalizations, previewPanelOpen, eventLog } =
-    useOptimizationState(optimization)
+    useOptimizationState(contentfulOptimization)
   const [resolveResults, setResolveResults] = useState<ResolveResult[]>([])
 
   const baselineDefault = entriesById.get(BASELINE_IDS.default)
@@ -23,13 +23,13 @@ export function App(): ReactElement {
   const baselineNestedChild = entriesById.get(BASELINE_IDS.nestedChild)
 
   const { size: resolvedEntryCount } = entriesById
-  const sdkName = useMemo(() => optimization.constructor.name, [optimization])
+  const sdkName = useMemo(() => contentfulOptimization.constructor.name, [contentfulOptimization])
 
   const handleResolveEntries = (): void => {
     const nextResults: ResolveResult[] = []
 
     entriesById.forEach((entry) => {
-      const resolved = optimization.personalizeEntry(entry, personalizations)
+      const resolved = contentfulOptimization.personalizeEntry(entry, personalizations)
       nextResults.push({
         baselineId: entry.sys.id,
         resolvedId: resolved.entry.sys.id,
@@ -57,7 +57,7 @@ export function App(): ReactElement {
         <article className="dashboard__card">
           <h2>SDK Wiring</h2>
           <p>OptimizationRoot: Active</p>
-          <p>{`Optimization SDK: ${sdkName}`}</p>
+          <p>{`ContentfulOptimization SDK: ${sdkName}`}</p>
           <p>{`Global liveUpdates: ${globalLiveUpdates ? 'ON' : 'OFF'}`}</p>
           <p>{`Preview panel visible: ${previewPanelVisible ? 'Open' : 'Closed'}`}</p>
         </article>
@@ -67,32 +67,32 @@ export function App(): ReactElement {
         consent={consent}
         eventLog={eventLog}
         onGrantConsent={() => {
-          optimization.consent(true)
+          contentfulOptimization.consent(true)
         }}
         onRevokeConsent={() => {
-          optimization.consent(false)
+          contentfulOptimization.consent(false)
         }}
         onIdentify={() => {
           fireAndReport(
-            optimization.identify({
+            contentfulOptimization.identify({
               userId: 'demo-user-123',
               traits: { plan: 'pro', region: 'eu', source: 'react-web-sdk-dev' },
             }),
           )
         }}
         onReset={() => {
-          optimization.reset()
+          contentfulOptimization.reset()
         }}
         onSendPage={() => {
           fireAndReport(
-            optimization.page({
+            contentfulOptimization.page({
               properties: { title: 'React Web SDK Dev Harness', path: '/dev' },
             }),
           )
         }}
         onSendTrack={() => {
           fireAndReport(
-            optimization.track({
+            contentfulOptimization.track({
               event: 'dev_app_custom_event',
               properties: { source: 'react-web-sdk/dev/App.tsx' },
             }),

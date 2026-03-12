@@ -44,7 +44,7 @@ export default function App({
 }: AppProps): JSX.Element {
   const location = useLocation()
   const { sdk, isReady, error } = useOptimization()
-  const { consent, profile, personalizations } = useOptimizationState(sdk?.states)
+  const { consent, profile, selectedPersonalizations } = useOptimizationState(sdk?.states)
 
   const [entries, setEntries] = useState<ContentfulEntry[]>([])
   const [entriesError, setEntriesError] = useState<string | null>(null)
@@ -87,8 +87,8 @@ export default function App({
   const isIdentified = useMemo(() => isIdentifiedProfile(profile), [profile])
   const entriesById = useMemo(() => toEntryMap(entries), [entries])
   const personalizationCount = useMemo(
-    () => (Array.isArray(personalizations) ? personalizations.length : 0),
-    [personalizations],
+    () => (Array.isArray(selectedPersonalizations) ? selectedPersonalizations.length : 0),
+    [selectedPersonalizations],
   )
   const liveUpdatesBaselineEntry = entriesById.get(LIVE_UPDATES_ENTRY_ID)
   const hasPageTwoEntries =

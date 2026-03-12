@@ -5,7 +5,7 @@ import * as contentful from 'contentful'
 import express, { type Express } from 'express'
 import rateLimit from 'express-rate-limit'
 import path from 'node:path'
-import Optimization from './src'
+import ContentfulOptimization from './src'
 import type { OptimizationData, PartialProfile, SelectedPersonalization } from './src/api-schemas'
 import { isMergeTagEntry } from './src/api-schemas'
 
@@ -17,10 +17,10 @@ const limiter = rateLimit({
 const app: Express = express()
 app.use(limiter)
 
-app.set('view engine', 'pug') // configure Pug as the view engine
+app.set('view engine', 'ejs') // configure EJS as the view engine
 app.set('views', path.join(__dirname, '.')) // define the directory for view templates
 
-const sdk = new Optimization({
+const sdk = new ContentfulOptimization({
   clientId: process.env.PUBLIC_NINETAILED_CLIENT_ID ?? '',
   environment: process.env.PUBLIC_NINETAILED_ENVIRONMENT ?? '',
   logLevel: 'debug',
@@ -136,7 +136,7 @@ app.get('/', limiter, async (req, res) => {
     apiResponse = await sdk.page({ profile: requestProfile })
   }
 
-  const { profile, personalizations, changes } = apiResponse ?? {}
+  const { profile, selectedPersonalizations, changes } = apiResponse ?? {}
 
   const entryIds: string[] = [
     '1MwiFl4z7gkwqGYdvCmr8c', // Rich Text field Entry with Merge Tag
@@ -176,7 +176,7 @@ app.get('/', limiter, async (req, res) => {
         })
       }
 
-      const personalizedEntry = sdk.personalizeEntry(entry, personalizations)
+      const personalizedEntry = sdk.personalizeEntry(entry, selectedPersonalizations)
 
       entries.set(entryId, personalizedEntry)
     }),
@@ -187,7 +187,7 @@ app.get('/', limiter, async (req, res) => {
   const pageData = {
     consent,
     profile,
-    personalizations,
+    selectedPersonalizations,
     entries,
     flags,
   }

@@ -95,8 +95,8 @@ requests conform to current API specifications.
 Experience/personalization event schemas:
 
 - `AliasEvent`: Zod schema describing an `alias` event
-- `ComponentViewEvent`: Zod schema describing a `component` view event (may be a Contentful entry or
-  a Custom Flag)
+- `ViewEvent`: Zod schema describing a `component` view event (may be a Contentful entry or a Custom
+  Flag)
 - `GroupEvent`: Zod schema describing a `group` event
 - `IdentifyEvent`: Zod schema describing an `identify` event
 - `PageViewEvent`: Zod schema describing a `page` view event
@@ -129,5 +129,5 @@ Insights API endpoints currently do not return response data.
 Insights/analytics event schemas:
 
 - `ComponentClickEvent`: Zod schema describing a `component_click` event
-- `ComponentViewEvent`: Zod schema describing a `component` view event (may be a Contentful entry or
-  a Custom Flag)
+- `ViewEvent`: Zod schema describing a `component` view event (may be a Contentful entry or a Custom
+  Flag)

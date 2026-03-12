@@ -45,10 +45,10 @@ and return behavior.
 
 1. **Given** a core instance, **When** `identify/page/screen/track` are called, **Then** each method
    delegates to personalization and returns the delegated result.
-2. **Given** `trackComponentView` payload with `sticky: true`, **When** the method is called,
-   **Then** the call delegates to personalization component tracking.
-3. **Given** `trackComponentView` payload with `sticky` omitted/false, **When** the method is
-   called, **Then** the call delegates to analytics component tracking.
+2. **Given** `trackView` payload with `sticky: true`, **When** the method is called, **Then** the
+   call delegates to personalization component tracking.
+3. **Given** `trackView` payload with `sticky` omitted/false, **When** the method is called,
+   **Then** the call delegates to analytics component tracking.
 4. **Given** `trackFlagView` payload, **When** the method is called, **Then** it delegates to
    analytics flag tracking.
 
@@ -82,7 +82,7 @@ and signal behavior under both success and failure callbacks.
 
 - Analytics and personalization API base URLs must remain isolated when only one side is overridden.
 - Shared fetch options must flow to API client config without being dropped.
-- `trackComponentView` routing is sticky-aware and does not automatically dual-send on sticky calls.
+- `trackView` routing is sticky-aware and does not automatically dual-send on sticky calls.
 - `InterceptorManager.run` must snapshot registered interceptors so in-flight add/remove does not
   alter current execution order.
 - `InterceptorManager.run` must deep-clone values before each interceptor invocation so caller-held
@@ -108,8 +108,8 @@ and signal behavior under both success and failure callbacks.
 - **FR-007**: `CoreBase.getMergeTagValue` MUST delegate to personalization merge-tag resolution.
 - **FR-008**: `CoreBase.identify`, `page`, `screen`, and `track` MUST delegate to personalization
   methods and return delegated results.
-- **FR-009**: `CoreBase.trackComponentView` MUST delegate to personalization when `payload.sticky`
-  is truthy; otherwise it MUST delegate to analytics.
+- **FR-009**: `CoreBase.trackView` MUST delegate to personalization when `payload.sticky` is truthy;
+  otherwise it MUST delegate to analytics.
 - **FR-010**: `CoreBase.trackFlagView` MUST delegate to analytics flag tracking.
 - **FR-011**: `ProductBase` MUST default `allowedEventTypes` to `['identify', 'page', 'screen']`
   when unspecified.

@@ -120,7 +120,7 @@ retry scheduling, circuit opening, and recovery callbacks.
   and `onBlockedByConsent`.
 - **FR-011**: Consent checks MUST allow events when consent is true or when event type appears in
   allowed-event list (default `['identify', 'page', 'screen']` in core).
-- **FR-012**: Consent checks for `trackComponentView` and `trackFlagView` MUST map method names to
+- **FR-012**: Consent checks for `trackView` and `trackFlagView` MUST map method names to
   `'component'` for allow-list matching.
 - **FR-013**: Analytics stateful queue MUST be grouped by `profile.id` and preserve latest profile
   snapshot per profile ID.

@@ -95,7 +95,7 @@ required fields.
 - **FR-009**: `ScreenViewEvent` MUST require screen name and screen context; properties remain
   optional.
 - **FR-010**: `TrackEvent` MUST require event name plus generic properties map.
-- **FR-011**: `ComponentViewEvent` MUST require component type/id and variant index, with optional
+- **FR-011**: `ViewEvent` MUST require component type/id and variant index, with optional
   `experienceId`.
 - **FR-012**: `ExperienceResponse` MUST extend a shared response envelope and include `profile`,
   `experiences`, and `changes` in `data`.

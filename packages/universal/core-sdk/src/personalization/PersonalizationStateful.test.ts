@@ -1,4 +1,4 @@
-import { ApiClient, EventBuilder } from '@contentful/optimization-api-client'
+import { ApiClient } from '@contentful/optimization-api-client'
 import type {
   ChangeArray,
   ExperienceEventArray,
@@ -6,6 +6,7 @@ import type {
   Profile,
 } from '@contentful/optimization-api-client/api-schemas'
 import type { LifecycleInterceptors } from '../CoreBase'
+import { EventBuilder } from '../events'
 import { InterceptorManager } from '../lib/interceptor'
 import type { QueueFlushFailureContext, QueueFlushRecoveredContext } from '../lib/queue'
 import { batch, changes as changesSignal, consent, online, profile } from '../signals'
@@ -45,7 +46,7 @@ const DEFAULT_PROFILE: Profile = {
 
 const EMPTY_OPTIMIZATION_DATA: OptimizationData = {
   changes: [],
-  personalizations: [],
+  selectedPersonalizations: [],
   profile: DEFAULT_PROFILE,
 }
 
@@ -77,7 +78,7 @@ const createPersonalization = (
 
   return new PersonalizationStateful({
     api,
-    builder,
+    eventBuilder: builder,
     interceptors,
     config: {
       defaults: {
@@ -121,7 +122,7 @@ const enqueueOfflineTrackEvent = (
   event: string,
 ): void => {
   const enqueueOfflineEventValue: unknown = Reflect.get(personalization, 'enqueueOfflineEvent')
-  const builderValue: unknown = Reflect.get(personalization, 'builder')
+  const builderValue: unknown = Reflect.get(personalization, 'eventBuilder')
 
   if (typeof enqueueOfflineEventValue !== 'function') {
     throw new TypeError(
@@ -130,7 +131,9 @@ const enqueueOfflineTrackEvent = (
   }
 
   if (!(builderValue instanceof EventBuilder)) {
-    throw new TypeError('Expected PersonalizationStateful.builder to be an EventBuilder instance')
+    throw new TypeError(
+      'Expected PersonalizationStateful.eventBuilder to be an EventBuilder instance',
+    )
   }
 
   const trackEvent = builderValue.buildTrack({ event })

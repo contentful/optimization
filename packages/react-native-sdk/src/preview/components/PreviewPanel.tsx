@@ -169,7 +169,8 @@ export function PreviewPanel({
       personalizationsCount: personalizations?.length ?? 0,
       consent,
       overridesCount:
-        Object.keys(overrides.audiences).length + Object.keys(overrides.personalizations).length,
+        Object.keys(overrides.audiences).length +
+        Object.keys(overrides.selectedPersonalizations).length,
     })
   }, [profile, personalizations, consent, overrides])
 
@@ -211,7 +212,7 @@ export function PreviewPanel({
           onAudienceToggle={handleAudienceToggle}
           onSetVariant={actions.setVariantOverride}
           onResetExperience={actions.resetPersonalizationOverride}
-          experienceOverrides={overrides.personalizations}
+          experienceOverrides={overrides.selectedPersonalizations}
           sdkVariantIndices={sdkVariantIndices}
           searchQuery={searchQuery}
           isAudienceExpanded={isCollapsibleOpen}

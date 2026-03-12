@@ -1,12 +1,9 @@
-import type {
-  ComponentViewBuilderArgs,
-  TrackBuilderArgs,
-} from '@contentful/optimization-api-client'
 import type { BlockedEvent } from './BlockedEvent'
 import CoreStateful, {
   type CoreStatefulConfig,
   type PreviewPanelSignalObject,
 } from './CoreStateful'
+import type { TrackBuilderArgs, ViewBuilderArgs } from './events'
 import type { QueueFlushFailureContext } from './lib/queue'
 import { batch, signalFns, signals } from './signals'
 import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from './symbols'
@@ -59,7 +56,7 @@ describe('CoreStateful blocked event handling', () => {
       signals.consent.value = undefined
       signals.event.value = undefined
       signals.online.value = true
-      signals.personalizations.value = undefined
+      signals.selectedPersonalizations.value = undefined
       signals.previewPanelAttached.value = false
       signals.previewPanelOpen.value = false
       signals.profile.value = undefined
@@ -112,14 +109,14 @@ describe('CoreStateful blocked event handling', () => {
       defaults: { consent: true },
       onEventBlocked,
     })
-    const payload: ComponentViewBuilderArgs = {
+    const payload: ViewBuilderArgs = {
       componentId: 'hero-banner',
-      componentViewId: 'hero-banner-view-id',
+      viewId: 'hero-banner-view-id',
       viewDurationMs: 1000,
     }
 
-    await core.trackComponentView(payload)
-    await core.trackComponentView(payload)
+    await core.trackView(payload)
+    await core.trackView(payload)
 
     expect(onEventBlocked).not.toHaveBeenCalled()
     expect(signals.blockedEvent.value).toBeUndefined()
@@ -289,7 +286,7 @@ describe('CoreStateful blocked event handling', () => {
     expect(secondStates.eventStream).toBe(firstStates.eventStream)
     expect(secondStates.flags).toBe(firstStates.flags)
     expect(secondStates.canPersonalize).toBe(firstStates.canPersonalize)
-    expect(secondStates.personalizations).toBe(firstStates.personalizations)
+    expect(secondStates.selectedPersonalizations).toBe(firstStates.selectedPersonalizations)
     expect(secondStates.previewPanelAttached).toBe(firstStates.previewPanelAttached)
     expect(secondStates.previewPanelOpen).toBe(firstStates.previewPanelOpen)
     expect(secondStates.profile).toBe(firstStates.profile)
@@ -302,8 +299,8 @@ describe('CoreStateful blocked event handling', () => {
       values.push(value)
     })
 
-    signals.personalizations.value = []
-    signals.personalizations.value = undefined
+    signals.selectedPersonalizations.value = []
+    signals.selectedPersonalizations.value = undefined
 
     expect(values).toEqual([false, true, false])
 

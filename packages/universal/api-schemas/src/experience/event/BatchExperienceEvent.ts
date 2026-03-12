@@ -1,11 +1,11 @@
 import * as z from 'zod/mini'
 import { AliasEvent } from './AliasEvent'
-import { ComponentViewEvent } from './ComponentViewEvent'
 import { GroupEvent } from './GroupEvent'
 import { IdentifyEvent } from './IdentifyEvent'
 import { PageViewEvent } from './PageViewEvent'
 import { ScreenViewEvent } from './ScreenViewEvent'
 import { TrackEvent } from './TrackEvent'
+import { ViewEvent } from './ViewEvent'
 
 /**
  * Partial schema capturing an anonymous identifier.
@@ -29,7 +29,7 @@ const Anon = { anonymousId: z.string() }
  */
 export const BatchExperienceEvent = z.discriminatedUnion('type', [
   z.extend(AliasEvent, Anon),
-  z.extend(ComponentViewEvent, Anon),
+  z.extend(ViewEvent, Anon),
   z.extend(GroupEvent, Anon),
   z.extend(IdentifyEvent, Anon),
   z.extend(PageViewEvent, Anon),

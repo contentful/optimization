@@ -1,5 +1,5 @@
 import type { CoreConfig } from '@contentful/optimization-core'
-import Optimization from './Optimization'
+import ContentfulOptimization from './ContentfulOptimization'
 import { OPTIMIZATION_NODE_SDK_NAME } from './constants'
 
 const CLIENT_ID = 'key_123'
@@ -10,9 +10,9 @@ const config: CoreConfig = {
   environment: ENVIRONMENT,
 }
 
-describe('Optimization', () => {
+describe('ContentfulOptimization', () => {
   it('gives itself a name', () => {
-    const node = new Optimization(config)
+    const node = new ContentfulOptimization(config)
 
     expect(node.config.clientId).toEqual(CLIENT_ID)
     expect(node.eventBuilder.library.name).toEqual(OPTIMIZATION_NODE_SDK_NAME)

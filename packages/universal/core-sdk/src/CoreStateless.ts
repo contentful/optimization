@@ -1,6 +1,6 @@
-import type { EventBuilderConfig } from '@contentful/optimization-api-client'
 import { AnalyticsStateless } from './analytics'
 import CoreBase, { type CoreConfig } from './CoreBase'
+import type { EventBuilderConfig } from './events'
 import { PersonalizationStateless } from './personalization'
 
 /**
@@ -54,13 +54,13 @@ class CoreStateless extends CoreBase {
 
     this._analytics = new AnalyticsStateless({
       api: this.api,
-      builder: this.eventBuilder,
+      eventBuilder: this.eventBuilder,
       interceptors: this.interceptors,
     })
 
     this._personalization = new PersonalizationStateless({
       api: this.api,
-      builder: this.eventBuilder,
+      eventBuilder: this.eventBuilder,
       interceptors: this.interceptors,
     })
   }

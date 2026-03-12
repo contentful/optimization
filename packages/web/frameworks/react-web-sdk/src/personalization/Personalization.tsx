@@ -110,7 +110,7 @@ export function Personalization({
   'data-testid': dataTestIdProp,
   loadingFallback,
 }: PersonalizationProps): JSX.Element {
-  const optimization = useOptimization()
+  const contentfulOptimization = useOptimization()
   const liveUpdatesContext = useLiveUpdates()
 
   const shouldLiveUpdate = resolveShouldLiveUpdate({
@@ -119,41 +119,44 @@ export function Personalization({
     previewPanelVisible: liveUpdatesContext.previewPanelVisible,
   })
 
-  const [lockedPersonalizations, setLockedPersonalizations] = useState<
+  const [lockedSelectedPersonalizations, setLockedSelectedPersonalizations] = useState<
     SelectedPersonalizationArray | undefined
   >(undefined)
   const [canPersonalize, setCanPersonalize] = useState(false)
 
   useEffect(() => {
-    const personalizationsSubscription = optimization.states.personalizations.subscribe((p) => {
-      setLockedPersonalizations((previous) => {
-        if (shouldLiveUpdate) {
-          // Live updates enabled - always update state
-          return p
-        }
+    const selectedPersonalizationsSubscription =
+      contentfulOptimization.states.selectedPersonalizations.subscribe((p) => {
+        setLockedSelectedPersonalizations((previous) => {
+          if (shouldLiveUpdate) {
+            // Live updates enabled - always update state
+            return p
+          }
 
-        if (previous === undefined && p !== undefined) {
-          // First non-undefined value - lock it
-          return p
-        }
+          if (previous === undefined && p !== undefined) {
+            // First non-undefined value - lock it
+            return p
+          }
 
-        // Otherwise ignore updates (we're locked to the initial value)
-        return previous
+          // Otherwise ignore updates (we're locked to the initial value)
+          return previous
+        })
       })
-    })
-    const canPersonalizeSubscription = optimization.states.canPersonalize.subscribe((value) => {
-      setCanPersonalize(value)
-    })
+    const canPersonalizeSubscription = contentfulOptimization.states.canPersonalize.subscribe(
+      (value) => {
+        setCanPersonalize(value)
+      },
+    )
 
     return () => {
-      personalizationsSubscription.unsubscribe()
+      selectedPersonalizationsSubscription.unsubscribe()
       canPersonalizeSubscription.unsubscribe()
     }
-  }, [optimization, shouldLiveUpdate])
+  }, [contentfulOptimization, shouldLiveUpdate])
 
   const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
-    () => optimization.personalizeEntry(baselineEntry, lockedPersonalizations),
-    [optimization, baselineEntry, lockedPersonalizations],
+    () => contentfulOptimization.personalizeEntry(baselineEntry, lockedSelectedPersonalizations),
+    [contentfulOptimization, baselineEntry, lockedSelectedPersonalizations],
   )
 
   const isLoading = !canPersonalize

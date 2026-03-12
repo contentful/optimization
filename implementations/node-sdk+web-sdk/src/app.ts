@@ -1,5 +1,4 @@
-import Optimization from '@contentful/optimization-node'
-import type { UniversalEventBuilderArgs } from '@contentful/optimization-node/api-client'
+import ContentfulOptimization from '@contentful/optimization-node'
 import type { OptimizationData } from '@contentful/optimization-node/api-schemas'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import cookieParser from 'cookie-parser'
@@ -8,6 +7,11 @@ import rateLimit from 'express-rate-limit'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { ParsedQs } from 'qs'
+
+type UniversalEventBuilderArgs = Pick<
+  Parameters<ContentfulOptimization['page']>[0],
+  'locale' | 'page' | 'userAgent'
+>
 
 const limiter = rateLimit({
   windowMs: 30_000,
@@ -103,7 +107,7 @@ async function getProfile(
   userId?: string,
   anonymousId?: string,
 ): Promise<OptimizationData | undefined> {
-  const sdk = new Optimization(config.optimization)
+  const sdk = new ContentfulOptimization(config.optimization)
   const args = getUniversalEventBuilderArgs(req)
   const cookieProfile = anonymousId ? { id: anonymousId } : undefined
 

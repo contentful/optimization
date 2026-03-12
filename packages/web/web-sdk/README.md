@@ -60,7 +60,7 @@ This SDK implements functionality specific to the Web environment, based on the
     - [`page`](#page)
     - [`screen`](#screen)
     - [`track`](#track)
-    - [`trackComponentView`](#trackcomponentview)
+    - [`trackView`](#trackcomponentview)
     - [`trackComponentClick`](#trackcomponentclick)
     - [`trackFlagView`](#trackflagview)
 - [Entry View Tracking](#entry-view-tracking)
@@ -631,7 +631,7 @@ Only the following methods may return an `OptimizationData` object:
 - `page`
 - `screen`
 - `track`
-- `trackComponentView` (when `payload.sticky` is `true`)
+- `trackView` (when `payload.sticky` is `true`)
 
 `trackComponentClick` and `trackFlagView` return no data. When returned, `OptimizationData`
 contains:
@@ -676,7 +676,7 @@ Arguments:
 - `payload`\*: Track event builder arguments object, including an optional `profile` property with a
   `PartialProfile` value that requires only an `id`
 
-#### `trackComponentView`
+#### `trackView`
 
 Record an analytics component view event. When the payload marks the component as "sticky", an
 additional personalization component view is recorded. This method only returns `OptimizationData`
@@ -721,13 +721,13 @@ that are marked as entry-related elements.
 
 ### Manual Entry View Tracking
 
-To manually track entry views using custom tracking code, simply call `trackComponentView` with the
-necessary arguments when appropriate.
+To manually track entry views using custom tracking code, simply call `trackView` with the necessary
+arguments when appropriate.
 
 Example:
 
 ```ts
-optimization.trackComponentView({ componentId: 'abc-123', ... })
+optimization.trackView({ componentId: 'abc-123', ... })
 ```
 
 ### Automatic Entry View Tracking
@@ -754,8 +754,8 @@ Different integration patterns can show different relative performance:
   bursts.
 - Frequent tab hide/show transitions add pause/resume work across active tracked elements.
 
-In practice, callback and transport work (for example, `trackComponentView` processing and event
-delivery) often dominates overall cost once a view is detected.
+In practice, callback and transport work (for example, `trackView` processing and event delivery)
+often dominates overall cost once a view is detected.
 
 For best runtime behavior, track only relevant elements, disable tracking for elements that are no
 longer needed, and choose stable `minVisibleRatio` and `dwellTimeMs` values that match your UI

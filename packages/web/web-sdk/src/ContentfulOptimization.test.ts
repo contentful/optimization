@@ -1,7 +1,6 @@
 import type { CoreConfig } from '@contentful/optimization-core'
-import type { TrackBuilderArgs } from '@contentful/optimization-core/api-client'
 import type { OptimizationData, Profile } from '@contentful/optimization-core/api-schemas'
-import Optimization from './Optimization'
+import ContentfulOptimization from './ContentfulOptimization'
 import { OPTIMIZATION_WEB_SDK_NAME } from './constants'
 
 const CLIENT_ID = 'key_123'
@@ -38,7 +37,7 @@ const DEFAULT_PROFILE: Profile = {
 
 const EMPTY_OPTIMIZATION_DATA: OptimizationData = {
   changes: [],
-  personalizations: [],
+  selectedPersonalizations: [],
   profile: DEFAULT_PROFILE,
 }
 
@@ -58,51 +57,59 @@ function isAutoTrackState(value: unknown): value is AutoTrackState {
   return typeof clicks === 'boolean' && typeof hovers === 'boolean' && typeof views === 'boolean'
 }
 
-const getAutoTrackState = (optimization: Optimization): AutoTrackState | undefined => {
-  const runtime = Reflect.get(optimization, 'entryInteractionRuntime')
+const getAutoTrackState = (
+  contentfulOptimization: ContentfulOptimization,
+): AutoTrackState | undefined => {
+  const runtime = Reflect.get(contentfulOptimization, 'entryInteractionRuntime')
   const value = Reflect.get(runtime, 'autoTrack')
 
   return isAutoTrackState(value) ? value : undefined
 }
 
-const getAutoTrackEntryViews = (optimization: Optimization): boolean | undefined => {
-  const state = getAutoTrackState(optimization)
+const getAutoTrackEntryViews = (
+  contentfulOptimization: ContentfulOptimization,
+): boolean | undefined => {
+  const state = getAutoTrackState(contentfulOptimization)
 
   return state?.views
 }
 
-const getAutoTrackEntryClicks = (optimization: Optimization): boolean | undefined => {
-  const state = getAutoTrackState(optimization)
+const getAutoTrackEntryClicks = (
+  contentfulOptimization: ContentfulOptimization,
+): boolean | undefined => {
+  const state = getAutoTrackState(contentfulOptimization)
 
   return state?.clicks
 }
 
-const getAutoTrackEntryHovers = (optimization: Optimization): boolean | undefined => {
-  const state = getAutoTrackState(optimization)
+const getAutoTrackEntryHovers = (
+  contentfulOptimization: ContentfulOptimization,
+): boolean | undefined => {
+  const state = getAutoTrackState(contentfulOptimization)
 
   return state?.hovers
 }
 
-describe('Optimization', () => {
+describe('ContentfulOptimization', () => {
   beforeEach(() => {
-    delete window.optimization
+    delete window.contentfulOptimization
     localStorage.clear()
   })
 
   afterEach(() => {
-    window.optimization?.destroy()
-    delete window.optimization
+    window.contentfulOptimization?.destroy()
+    delete window.contentfulOptimization
   })
 
   it('sets configured options', () => {
-    const web = new Optimization(config)
+    const web = new ContentfulOptimization(config)
 
     expect(web.config.clientId).toEqual(CLIENT_ID)
     expect(web.eventBuilder.library.name).toEqual(OPTIMIZATION_WEB_SDK_NAME)
   })
 
   it('defaults autoTrackEntryInteraction.views/clicks/hovers to false when omitted', () => {
-    const web = new Optimization(config)
+    const web = new ContentfulOptimization(config)
 
     expect(getAutoTrackEntryViews(web)).toBe(false)
     expect(getAutoTrackEntryClicks(web)).toBe(false)
@@ -110,7 +117,10 @@ describe('Optimization', () => {
   })
 
   it('uses autoTrackEntryInteraction.views=true when configured', () => {
-    const web = new Optimization({ ...config, autoTrackEntryInteraction: { views: true } })
+    const web = new ContentfulOptimization({
+      ...config,
+      autoTrackEntryInteraction: { views: true },
+    })
 
     expect(getAutoTrackEntryViews(web)).toBe(true)
     expect(getAutoTrackEntryClicks(web)).toBe(false)
@@ -118,7 +128,10 @@ describe('Optimization', () => {
   })
 
   it('uses autoTrackEntryInteraction.clicks=true when configured', () => {
-    const web = new Optimization({ ...config, autoTrackEntryInteraction: { clicks: true } })
+    const web = new ContentfulOptimization({
+      ...config,
+      autoTrackEntryInteraction: { clicks: true },
+    })
 
     expect(getAutoTrackEntryViews(web)).toBe(false)
     expect(getAutoTrackEntryClicks(web)).toBe(true)
@@ -126,7 +139,10 @@ describe('Optimization', () => {
   })
 
   it('uses autoTrackEntryInteraction.hovers=true when configured', () => {
-    const web = new Optimization({ ...config, autoTrackEntryInteraction: { hovers: true } })
+    const web = new ContentfulOptimization({
+      ...config,
+      autoTrackEntryInteraction: { hovers: true },
+    })
 
     expect(getAutoTrackEntryViews(web)).toBe(false)
     expect(getAutoTrackEntryClicks(web)).toBe(false)
@@ -134,7 +150,7 @@ describe('Optimization', () => {
   })
 
   it('supports generic interaction APIs for entry view tracking', () => {
-    const web = new Optimization(config)
+    const web = new ContentfulOptimization(config)
     const element = document.createElement('div')
 
     web.tracking.enable('views')
@@ -147,7 +163,7 @@ describe('Optimization', () => {
   })
 
   it('supports generic interaction APIs for entry click tracking', () => {
-    const web = new Optimization(config)
+    const web = new ContentfulOptimization(config)
     const element = document.createElement('div')
 
     web.tracking.enable('clicks')
@@ -160,7 +176,7 @@ describe('Optimization', () => {
   })
 
   it('supports generic interaction APIs for entry hover tracking', () => {
-    const web = new Optimization(config)
+    const web = new ContentfulOptimization(config)
     const element = document.createElement('div')
 
     web.tracking.enable('hovers')
@@ -174,7 +190,7 @@ describe('Optimization', () => {
 
   it('defaults allowedEventTypes to identify/page for web', async () => {
     const onEventBlocked = rs.fn()
-    const web = new Optimization({
+    const web = new ContentfulOptimization({
       ...config,
       onEventBlocked,
     })
@@ -199,7 +215,7 @@ describe('Optimization', () => {
 
   it('uses user-provided allowedEventTypes when configured', async () => {
     const onEventBlocked = rs.fn()
-    const web = new Optimization({
+    const web = new ContentfulOptimization({
       ...config,
       allowedEventTypes: ['identify', 'page', 'track'],
       onEventBlocked,
@@ -216,8 +232,8 @@ describe('Optimization', () => {
 
   it('forwards onEventBlocked callback to core stateful guards', async () => {
     const onEventBlocked = rs.fn()
-    const web = new Optimization({ ...config, onEventBlocked })
-    const payload: TrackBuilderArgs = { event: 'checkout' }
+    const web = new ContentfulOptimization({ ...config, onEventBlocked })
+    const payload = { event: 'checkout' }
 
     await web.track(payload)
 
@@ -232,8 +248,9 @@ describe('Optimization', () => {
   })
 
   it('allows creating a new instance after destroy', () => {
-    const first = new Optimization(config)
-    const createSecondOptimization = (): Optimization => new Optimization(config)
+    const first = new ContentfulOptimization(config)
+    const createSecondOptimization = (): ContentfulOptimization =>
+      new ContentfulOptimization(config)
 
     first.destroy()
 

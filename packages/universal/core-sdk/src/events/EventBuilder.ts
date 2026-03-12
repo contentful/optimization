@@ -3,9 +3,8 @@ import {
   Campaign,
   type Channel,
   type ComponentClickEvent,
-  type ComponentHoverEvent,
-  type ComponentViewEvent,
   GeoLocation,
+  type HoverEvent,
   type IdentifyEvent,
   type Library,
   Page,
@@ -19,7 +18,8 @@ import {
   type TrackEvent,
   Traits,
   type UniversalEventProperties,
-} from '@contentful/optimization-api-schemas'
+  type ViewEvent,
+} from '@contentful/optimization-api-client/api-schemas'
 import { merge } from 'es-toolkit/object'
 import * as z from 'zod/mini'
 
@@ -138,9 +138,9 @@ export type ComponentInteractionBuilderArgsBase = z.infer<
   typeof ComponentInteractionBuilderArgsBase
 >
 
-const ComponentViewBuilderArgs = z.extend(ComponentInteractionBuilderArgsBase, {
+const ViewBuilderArgs = z.extend(ComponentInteractionBuilderArgsBase, {
   sticky: z.optional(z.boolean()),
-  componentViewId: z.string(),
+  viewId: z.string(),
   viewDurationMs: z.number(),
 })
 
@@ -149,7 +149,7 @@ const ComponentViewBuilderArgs = z.extend(ComponentInteractionBuilderArgsBase, {
  *
  * @public
  */
-export type ComponentViewBuilderArgs = z.infer<typeof ComponentViewBuilderArgs>
+export type ViewBuilderArgs = z.infer<typeof ViewBuilderArgs>
 
 const ComponentClickBuilderArgs = ComponentInteractionBuilderArgsBase
 
@@ -160,8 +160,8 @@ const ComponentClickBuilderArgs = ComponentInteractionBuilderArgsBase
  */
 export type ComponentClickBuilderArgs = z.infer<typeof ComponentClickBuilderArgs>
 
-const ComponentHoverBuilderArgs = z.extend(ComponentInteractionBuilderArgsBase, {
-  componentHoverId: z.string(),
+const HoverBuilderArgs = z.extend(ComponentInteractionBuilderArgsBase, {
+  hoverId: z.string(),
   hoverDurationMs: z.number(),
 })
 
@@ -170,7 +170,7 @@ const ComponentHoverBuilderArgs = z.extend(ComponentInteractionBuilderArgsBase, 
  *
  * @public
  */
-export type ComponentHoverBuilderArgs = z.infer<typeof ComponentHoverBuilderArgs>
+export type HoverBuilderArgs = z.infer<typeof HoverBuilderArgs>
 
 const IdentifyBuilderArgs = z.extend(UniversalEventBuilderArgs, {
   traits: z.optional(Traits),
@@ -404,14 +404,14 @@ class EventBuilder {
   /**
    * Builds a component view event payload for a Contentful entry-based component.
    *
-   * @param args - {@link ComponentViewBuilderArgs} arguments describing the component view.
-   * @returns A {@link ComponentViewEvent} describing the view.
+   * @param args - {@link ViewBuilderArgs} arguments describing the component view.
+   * @returns A {@link ViewEvent} describing the view.
    *
    * @example
    * ```ts
-   * const event = builder.buildComponentView({
+   * const event = builder.buildView({
    *   componentId: 'entry-123',
-   *   componentViewId: crypto.randomUUID(),
+   *   viewId: crypto.randomUUID(),
    *   experienceId: 'personalization-123',
    *   variantIndex: 1,
    *   viewDurationMs: 1_000,
@@ -420,20 +420,14 @@ class EventBuilder {
    *
    * @public
    */
-  buildComponentView(args: ComponentViewBuilderArgs): ComponentViewEvent {
-    const {
-      componentId,
-      componentViewId,
-      experienceId,
-      variantIndex,
-      viewDurationMs,
-      ...universal
-    } = parseWithFriendlyError(ComponentViewBuilderArgs, args)
+  buildView(args: ViewBuilderArgs): ViewEvent {
+    const { componentId, viewId, experienceId, variantIndex, viewDurationMs, ...universal } =
+      parseWithFriendlyError(ViewBuilderArgs, args)
 
     return {
       ...this.buildEntryComponentBase(universal, componentId, experienceId, variantIndex),
       type: 'component',
-      componentViewId,
+      viewId,
       viewDurationMs,
     }
   }
@@ -470,14 +464,14 @@ class EventBuilder {
   /**
    * Builds a component hover event payload for a Contentful entry-based component.
    *
-   * @param args - {@link ComponentHoverBuilderArgs} arguments describing the component hover.
-   * @returns A {@link ComponentHoverEvent} describing the hover.
+   * @param args - {@link HoverBuilderArgs} arguments describing the component hover.
+   * @returns A {@link HoverEvent} describing the hover.
    *
    * @example
    * ```ts
-   * const event = builder.buildComponentHover({
+   * const event = builder.buildHover({
    *   componentId: 'entry-123',
-   *   componentHoverId: crypto.randomUUID(),
+   *   hoverId: crypto.randomUUID(),
    *   experienceId: 'personalization-123',
    *   hoverDurationMs: 1_000,
    *   variantIndex: 1,
@@ -486,20 +480,14 @@ class EventBuilder {
    *
    * @public
    */
-  buildComponentHover(args: ComponentHoverBuilderArgs): ComponentHoverEvent {
-    const {
-      componentHoverId,
-      componentId,
-      experienceId,
-      hoverDurationMs,
-      variantIndex,
-      ...universal
-    } = parseWithFriendlyError(ComponentHoverBuilderArgs, args)
+  buildHover(args: HoverBuilderArgs): HoverEvent {
+    const { hoverId, componentId, experienceId, hoverDurationMs, variantIndex, ...universal } =
+      parseWithFriendlyError(HoverBuilderArgs, args)
 
     return {
       ...this.buildEntryComponentBase(universal, componentId, experienceId, variantIndex),
       type: 'component_hover',
-      componentHoverId,
+      hoverId,
       hoverDurationMs,
     }
   }
@@ -507,18 +495,18 @@ class EventBuilder {
   /**
    * Builds a component view event payload for a Custom Flag component.
    *
-   * @param args - {@link ComponentViewBuilderArgs} arguments describing the Custom Flag view.
-   * @returns A {@link ComponentViewEvent} describing the view.
+   * @param args - {@link ViewBuilderArgs} arguments describing the Custom Flag view.
+   * @returns A {@link ViewEvent} describing the view.
    *
    * @remarks
-   * This is a specialized variant of {@link EventBuilder.buildComponentView}
+   * This is a specialized variant of {@link EventBuilder.buildView}
    * that sets `componentType` to `'Variable'`.
    *
    * @example
    * ```ts
    * const event = builder.buildFlagView({
    *   componentId: 'feature-flag-key',
-   *   componentViewId: crypto.randomUUID(),
+   *   viewId: crypto.randomUUID(),
    *   experienceId: 'personalization-123',
    *   viewDurationMs: 1_000,
    * })
@@ -526,9 +514,9 @@ class EventBuilder {
    *
    * @public
    */
-  buildFlagView(args: ComponentViewBuilderArgs): ComponentViewEvent {
+  buildFlagView(args: ViewBuilderArgs): ViewEvent {
     return {
-      ...this.buildComponentView(args),
+      ...this.buildView(args),
       componentType: 'Variable',
     }
   }

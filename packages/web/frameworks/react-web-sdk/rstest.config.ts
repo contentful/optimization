@@ -23,6 +23,7 @@ export default defineConfig({
   include: ['**/*.test.?(c|m)[jt]s?(x)'],
   globals: true,
   testEnvironment: 'happy-dom',
+  setupFiles: ['src/test/setup.ts'],
   coverage: {
     include: ['src/**/*.ts', 'src/**/*.tsx'],
     reporters: coverageReporters,

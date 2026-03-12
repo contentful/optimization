@@ -11,7 +11,7 @@ import ElementViewObserver from './ElementViewObserver'
 
 interface Meta {
   totalVisibleMs: number
-  componentViewId: string
+  viewId: string
   attempts: number
   data?: unknown
 }
@@ -24,7 +24,7 @@ function isMeta(x: unknown): x is Meta {
   return (
     isRecord(x) &&
     typeof x.totalVisibleMs === 'number' &&
-    typeof x.componentViewId === 'string' &&
+    typeof x.viewId === 'string' &&
     typeof x.attempts === 'number'
   )
 }
@@ -77,7 +77,7 @@ describe('ElementViewObserver', () => {
       expect.objectContaining({
         attempts: 1,
         totalVisibleMs: 1000,
-        componentViewId: expect.any(String),
+        viewId: expect.any(String),
       }),
     )
 
@@ -113,7 +113,7 @@ describe('ElementViewObserver', () => {
     }
 
     expect(secondMeta.totalVisibleMs).toBe(6000)
-    expect(secondMeta.componentViewId).toBe(firstMeta.componentViewId)
+    expect(secondMeta.viewId).toBe(firstMeta.viewId)
   })
 
   it('emits a final duration update when visibility ends after dwell has fired', async () => {
@@ -142,7 +142,7 @@ describe('ElementViewObserver', () => {
       throw new Error('Unexpected callback payload')
     }
 
-    expect(secondMeta.componentViewId).toBe(firstMeta.componentViewId)
+    expect(secondMeta.viewId).toBe(firstMeta.viewId)
     expect(secondMeta.totalVisibleMs).toBe(1400)
   })
 
@@ -179,14 +179,14 @@ describe('ElementViewObserver', () => {
 
       if (isMeta(metaCandidate)) {
         expect(metaCandidate.totalVisibleMs).toBe(1000)
-        expect(metaCandidate.componentViewId).toEqual(expect.any(String))
+        expect(metaCandidate.viewId).toEqual(expect.any(String))
       } else {
         throw new Error('Unexpected meta payload for first callback')
       }
     }
   })
 
-  it('assigns a new componentViewId for each new visibility cycle', async () => {
+  it('assigns a new viewId for each new visibility cycle', async () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
@@ -215,8 +215,8 @@ describe('ElementViewObserver', () => {
       throw new Error('Unexpected callback payload')
     }
 
-    expect(secondMeta.componentViewId).toBe(firstMeta.componentViewId)
-    expect(firstMeta.componentViewId).not.toBe(thirdMeta.componentViewId)
+    expect(secondMeta.viewId).toBe(firstMeta.viewId)
+    expect(firstMeta.viewId).not.toBe(thirdMeta.viewId)
   })
 
   it('pauses dwell timers when hidden and resumes with remaining dwell time', async () => {
@@ -255,7 +255,7 @@ describe('ElementViewObserver', () => {
 
       if (isMeta(metaCandidate)) {
         expect(metaCandidate.totalVisibleMs).toBe(500)
-        expect(metaCandidate.componentViewId).toEqual(expect.any(String))
+        expect(metaCandidate.viewId).toEqual(expect.any(String))
       } else {
         throw new Error('Unexpected meta payload for first callback')
       }
@@ -287,7 +287,7 @@ describe('ElementViewObserver', () => {
       expect.objectContaining<Partial<Meta>>({
         attempts: 1,
         totalVisibleMs: 50,
-        componentViewId: expect.any(String),
+        viewId: expect.any(String),
         data: { id: 'xyz' },
       }),
     )

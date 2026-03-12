@@ -37,7 +37,7 @@ import {
 } from './element-hover-observer-support'
 
 const logger = createScopedLogger('Web:ElementHoverObserver')
-const createComponentHoverId = (): string => crypto.randomUUID()
+const createHoverId = (): string => crypto.randomUUID()
 
 const canUsePointerEvents = (): boolean =>
   CAN_ADD_LISTENERS &&
@@ -161,7 +161,7 @@ class ElementHoverObserver {
       hoverSince: null,
       fireTimer: null,
       attempts: 0,
-      componentHoverId: null,
+      hoverId: null,
       done: false,
       inFlight: false,
       isHovered: false,
@@ -212,7 +212,7 @@ class ElementHoverObserver {
     state.pendingFinal = false
     state.accumulatedMs = 0
     state.attempts = 0
-    state.componentHoverId = createComponentHoverId()
+    state.hoverId = createHoverId()
     state.hoverSince = isPageVisible() ? now : null
     clearFireTimer(state)
 
@@ -233,7 +233,7 @@ class ElementHoverObserver {
     clearFireTimer(state)
     state.isHovered = false
 
-    if (state.componentHoverId === null || state.attempts === 0) {
+    if (state.hoverId === null || state.attempts === 0) {
       ElementHoverObserver.resetHoverCycle(state)
       return
     }
@@ -287,7 +287,7 @@ class ElementHoverObserver {
     state.accumulatedMs = 0
     state.hoverSince = null
     state.attempts = 0
-    state.componentHoverId = null
+    state.hoverId = null
     clearFireTimer(state)
   }
 
@@ -298,7 +298,7 @@ class ElementHoverObserver {
       state.fireTimer !== null ||
       !state.isHovered ||
       !isPageVisible() ||
-      state.componentHoverId === null
+      state.hoverId === null
     ) {
       return
     }
@@ -328,7 +328,7 @@ class ElementHoverObserver {
   }
 
   private trigger(state: ElementState, now: number): void {
-    if (state.done || state.inFlight || state.componentHoverId === null) return
+    if (state.done || state.inFlight || state.hoverId === null) return
 
     if (state.hoverSince !== null) {
       state.accumulatedMs += now - state.hoverSince
@@ -342,7 +342,7 @@ class ElementHoverObserver {
   }
 
   private async attemptCallback(state: ElementState, totalHoverMs: number): Promise<void> {
-    if (state.done || state.inFlight || state.componentHoverId === null) return
+    if (state.done || state.inFlight || state.hoverId === null) return
 
     const element = derefElement(state)
     if (!element) {
@@ -352,13 +352,13 @@ class ElementHoverObserver {
 
     state.inFlight = true
     state.attempts += 1
-    const { componentHoverId } = state
+    const { hoverId } = state
 
     await safeCallAsync(
       (): void | Promise<void> =>
         this.callback(element, {
           totalHoverMs,
-          componentHoverId,
+          hoverId,
           attempts: state.attempts,
           data: state.data,
         }),
@@ -376,7 +376,7 @@ class ElementHoverObserver {
     if (state.done) return
 
     if (!state.isHovered) {
-      if (state.pendingFinal && state.componentHoverId !== null) {
+      if (state.pendingFinal && state.hoverId !== null) {
         state.pendingFinal = false
         void this.attemptCallback(state, state.accumulatedMs)
         return

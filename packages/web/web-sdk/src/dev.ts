@@ -1,3 +1,3 @@
-import Optimization from './Optimization'
+import ContentfulOptimization from './ContentfulOptimization'
 
-if (typeof window !== 'undefined') window.Optimization ??= Optimization
+if (typeof window !== 'undefined') window.ContentfulOptimization ??= ContentfulOptimization

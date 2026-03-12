@@ -98,9 +98,9 @@ export function useTapTracking({
   enabled,
   onTap,
 }: UseTapTrackingOptions): UseTapTrackingReturn {
-  const optimization = useOptimization()
-  const optimizationRef = useRef(optimization)
-  optimizationRef.current = optimization
+  const contentfulOptimization = useOptimization()
+  const optimizationRef = useRef(contentfulOptimization)
+  optimizationRef.current = contentfulOptimization
 
   const touchStartRef = useRef<{ pageX: number; pageY: number } | null>(null)
 

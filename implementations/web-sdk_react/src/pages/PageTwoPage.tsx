@@ -20,7 +20,7 @@ export function PageTwoPage({ consent, entriesById, isIdentified }: PageTwoPageP
   useEffect(() => {
     void trackView({
       componentId: 'page-two-hero',
-      componentViewId: crypto.randomUUID(),
+      viewId: crypto.randomUUID(),
       viewDurationMs: 0,
     })
   }, [trackView])
@@ -28,7 +28,7 @@ export function PageTwoPage({ consent, entriesById, isIdentified }: PageTwoPageP
   const handleDemoCta = (): void => {
     void trackView({
       componentId: 'page-two-demo-cta',
-      componentViewId: crypto.randomUUID(),
+      viewId: crypto.randomUUID(),
       viewDurationMs: 0,
     })
   }

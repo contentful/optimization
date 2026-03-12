@@ -12,7 +12,7 @@ import { InteractionEventProperties } from './InteractionEventProperties'
  *
  * @public
  */
-export const ComponentViewEvent = z.extend(InteractionEventProperties, {
+export const ViewEvent = z.extend(InteractionEventProperties, {
   /**
    * Discriminator indicating that this event is a component view.
    */
@@ -30,12 +30,12 @@ export const ComponentViewEvent = z.extend(InteractionEventProperties, {
    * @remarks
    * Multiple events emitted for the same active view share this identifier.
    */
-  componentViewId: z.string(),
+  viewId: z.string(),
 })
 
 /**
- * TypeScript type inferred from {@link ComponentViewEvent}.
+ * TypeScript type inferred from {@link ViewEvent}.
  *
  * @public
  */
-export type ComponentViewEvent = z.infer<typeof ComponentViewEvent>
+export type ViewEvent = z.infer<typeof ViewEvent>

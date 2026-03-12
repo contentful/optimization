@@ -27,7 +27,7 @@ function NavigationContainerTracking(props: OptimizationNavigationContainerProps
 
 export function NavigationTestScreen({ onClose }: NavigationTestScreenProps): React.JSX.Element {
   const navigationRef = useRef<NavigationContainerRef<NavigationTestStackParamList>>(null)
-  const optimization = useOptimization()
+  const contentfulOptimization = useOptimization()
   const [screenEventLog, setScreenEventLog] = useState<string[]>([])
   const lastScreenEventName = screenEventLog.at(-1)
 
@@ -53,7 +53,7 @@ export function NavigationTestScreen({ onClose }: NavigationTestScreenProps): Re
   )
 
   useEffect(() => {
-    const subscription = optimization.states.eventStream.subscribe((event: unknown) => {
+    const subscription = contentfulOptimization.states.eventStream.subscribe((event: unknown) => {
       if (isScreenViewEvent(event)) {
         setScreenEventLog((prev) => [...prev, event.name])
       }
@@ -62,7 +62,7 @@ export function NavigationTestScreen({ onClose }: NavigationTestScreenProps): Re
     return () => {
       subscription.unsubscribe()
     }
-  }, [optimization])
+  }, [contentfulOptimization])
 
   return (
     <View style={{ flex: 1 }}>

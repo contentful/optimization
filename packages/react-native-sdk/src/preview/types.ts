@@ -179,7 +179,7 @@ export interface OverrideState {
   /** Map of audience ID to override */
   audiences: Record<string, AudienceOverride>
   /** Map of experience ID to override */
-  personalizations: Record<string, PersonalizationOverride>
+  selectedPersonalizations: Record<string, PersonalizationOverride>
 }
 
 /**

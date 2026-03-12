@@ -19,7 +19,7 @@ export function LiveUpdatesExampleEntry({
   const { sdk, isReady } = useOptimization()
   const { resolveEntry } = usePersonalization()
   const liveUpdatesContext = useLiveUpdates()
-  const [lockedPersonalizations, setLockedPersonalizations] = useState<
+  const [lockedSelectedPersonalizations, setLockedSelectedPersonalizations] = useState<
     SelectedPersonalizationArray | undefined
   >(undefined)
 
@@ -29,24 +29,26 @@ export function LiveUpdatesExampleEntry({
 
   useEffect(() => {
     if (!isReady || sdk === undefined) {
-      setLockedPersonalizations(undefined)
+      setLockedSelectedPersonalizations(undefined)
       return
     }
 
-    const subscription = sdk.states.personalizations.subscribe((nextPersonalizations) => {
-      if (shouldLiveUpdate) {
-        setLockedPersonalizations(nextPersonalizations)
-        return
-      }
-
-      setLockedPersonalizations((currentPersonalizations) => {
-        if (currentPersonalizations === undefined && nextPersonalizations !== undefined) {
-          return nextPersonalizations
+    const subscription = sdk.states.selectedPersonalizations.subscribe(
+      (nextSelectedPersonalizations) => {
+        if (shouldLiveUpdate) {
+          setLockedSelectedPersonalizations(nextSelectedPersonalizations)
+          return
         }
 
-        return currentPersonalizations
-      })
-    })
+        setLockedSelectedPersonalizations((currentPersonalizations) => {
+          if (currentPersonalizations === undefined && nextSelectedPersonalizations !== undefined) {
+            return nextSelectedPersonalizations
+          }
+
+          return currentPersonalizations
+        })
+      },
+    )
 
     return () => {
       subscription.unsubscribe()
@@ -54,8 +56,8 @@ export function LiveUpdatesExampleEntry({
   }, [isReady, sdk, shouldLiveUpdate])
 
   const { entry: resolvedEntry } = useMemo(
-    () => resolveEntry(baselineEntry, lockedPersonalizations),
-    [baselineEntry, lockedPersonalizations, resolveEntry],
+    () => resolveEntry(baselineEntry, lockedSelectedPersonalizations),
+    [baselineEntry, lockedSelectedPersonalizations, resolveEntry],
   )
 
   const text =

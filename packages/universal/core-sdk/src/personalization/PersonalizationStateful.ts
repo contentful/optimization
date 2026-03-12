@@ -1,10 +1,3 @@
-import type {
-  ComponentViewBuilderArgs,
-  IdentifyBuilderArgs,
-  PageViewBuilderArgs,
-  ScreenViewBuilderArgs,
-  TrackBuilderArgs,
-} from '@contentful/optimization-api-client'
 import {
   type InsightsEvent as AnalyticsEvent,
   type ChangeArray,
@@ -23,6 +16,13 @@ import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'conte
 import { isEqual } from 'es-toolkit/predicate'
 import type { BlockedEvent } from '../BlockedEvent'
 import type { ConsentGuard } from '../Consent'
+import type {
+  IdentifyBuilderArgs,
+  PageViewBuilderArgs,
+  ScreenViewBuilderArgs,
+  TrackBuilderArgs,
+  ViewBuilderArgs,
+} from '../events'
 import { guardedBy } from '../lib/decorators'
 import { toPositiveInt } from '../lib/number'
 import {
@@ -43,8 +43,8 @@ import {
   flags as flagsSignal,
   type Observable,
   online as onlineSignal,
-  personalizations as personalizationsSignal,
   profile as profileSignal,
+  selectedPersonalizations as selectedPersonalizationsSignal,
   toObservable,
 } from '../signals'
 import PersonalizationBase from './PersonalizationBase'
@@ -65,7 +65,7 @@ export interface PersonalizationProductConfigDefaults {
   /** Default active profile used for personalization. */
   profile?: Profile
   /** Preselected personalization variants (e.g., winning treatments). */
-  personalizations?: SelectedPersonalizationArray
+  selectedPersonalizations?: SelectedPersonalizationArray
 }
 
 /**
@@ -149,7 +149,7 @@ export interface PersonalizationStates {
   /** Live view of the current profile. */
   profile: Observable<Profile | undefined>
   /** Live view of selected personalizations (variants). */
-  personalizations: Observable<SelectedPersonalizationArray | undefined>
+  selectedPersonalizations: Observable<SelectedPersonalizationArray | undefined>
   /** Whether personalization data is currently available for entry resolution. */
   canPersonalize: Observable<boolean>
 }
@@ -206,7 +206,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
     eventStream: toObservable(eventSignal),
     flags: toObservable(flagsSignal),
     profile: toObservable(profileSignal),
-    personalizations: toObservable(personalizationsSignal),
+    selectedPersonalizations: toObservable(selectedPersonalizationsSignal),
     canPersonalize: toObservable(canPersonalizeSignal),
   }
 
@@ -227,9 +227,9 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * ```
    */
   constructor(options: PersonalizationStatefulOptions) {
-    const { api, builder, config, interceptors } = options
+    const { api, eventBuilder, config, interceptors } = options
 
-    super({ api, builder, config, interceptors })
+    super({ api, eventBuilder, config, interceptors })
 
     const { defaults, getAnonymousId, queuePolicy } = config ?? {}
 
@@ -247,13 +247,13 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
     if (defaults) {
       const {
         changes: defaultChanges,
-        personalizations: defaultPersonalizations,
+        selectedPersonalizations: defaultPersonalizations,
         profile: defaultProfile,
       } = defaults
 
       batch(() => {
         changesSignal.value = defaultChanges
-        personalizationsSignal.value = defaultPersonalizations
+        selectedPersonalizationsSignal.value = defaultPersonalizations
         profileSignal.value = defaultProfile
       })
     }
@@ -274,7 +274,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
 
     effect(() => {
       logger.debug(
-        `Variants have been ${personalizationsSignal.value?.length ? 'populated' : 'cleared'}`,
+        `Variants have been ${selectedPersonalizationsSignal.value?.length ? 'populated' : 'cleared'}`,
       )
     })
 
@@ -310,7 +310,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
       blockedEventSignal.value = undefined
       eventSignal.value = undefined
       profileSignal.value = undefined
-      personalizationsSignal.value = undefined
+      selectedPersonalizationsSignal.value = undefined
     })
   }
 
@@ -348,7 +348,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * @typeParam M - Chain modifiers.
    * @typeParam L - Locale code.
    * @param entry - The entry to personalize.
-   * @param personalizations - Optional selections; defaults to the current signal value.
+   * @param selectedPersonalizations - Optional selections; defaults to the current signal value.
    * @returns The resolved entry data.
    * @example
    * ```ts
@@ -360,22 +360,27 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
     L extends LocaleCode = LocaleCode,
   >(
     entry: Entry<S, undefined, L>,
-    personalizations?: SelectedPersonalizationArray,
+    selectedPersonalizations?: SelectedPersonalizationArray,
   ): ResolvedData<S, undefined, L>
   override personalizeEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers = ChainModifiers,
     L extends LocaleCode = LocaleCode,
-  >(entry: Entry<S, M, L>, personalizations?: SelectedPersonalizationArray): ResolvedData<S, M, L>
+  >(
+    entry: Entry<S, M, L>,
+    selectedPersonalizations?: SelectedPersonalizationArray,
+  ): ResolvedData<S, M, L>
   override personalizeEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers,
     L extends LocaleCode = LocaleCode,
   >(
     entry: Entry<S, M, L>,
-    personalizations: SelectedPersonalizationArray | undefined = personalizationsSignal.value,
+    selectedPersonalizations:
+      | SelectedPersonalizationArray
+      | undefined = selectedPersonalizationsSignal.value,
   ): ResolvedData<S, M, L> {
-    return super.personalizeEntry<S, M, L>(entry, personalizations)
+    return super.personalizeEntry<S, M, L>(entry, selectedPersonalizations)
   }
 
   /**
@@ -402,7 +407,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * Determine whether the named operation is permitted based on consent and
    * allowed event type configuration.
    *
-   * @param name - Method name; `trackComponentView` is normalized to
+   * @param name - Method name; `trackView` is normalized to
    * `'component'` for allow‑list checks.
    * @returns `true` if the operation is permitted; otherwise `false`.
    * @example
@@ -414,7 +419,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
     return (
       !!consentSignal.value ||
       (this.allowedEventTypes ?? []).includes(
-        name === 'trackComponentView' || name === 'trackFlagView' ? 'component' : name,
+        name === 'trackView' || name === 'trackFlagView' ? 'component' : name,
       )
     )
   }
@@ -451,7 +456,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
   async identify(payload: IdentifyBuilderArgs): Promise<OptimizationData | undefined> {
     logger.info('Sending "identify" event')
 
-    const event = this.builder.buildIdentify(payload)
+    const event = this.eventBuilder.buildIdentify(payload)
 
     return await this.sendOrEnqueueEvent(event)
   }
@@ -470,7 +475,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
   async page(payload: PageViewBuilderArgs): Promise<OptimizationData | undefined> {
     logger.info('Sending "page" event')
 
-    const event = this.builder.buildPageView(payload)
+    const event = this.eventBuilder.buildPageView(payload)
 
     return await this.sendOrEnqueueEvent(event)
   }
@@ -489,7 +494,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
   async screen(payload: ScreenViewBuilderArgs): Promise<OptimizationData | undefined> {
     logger.info(`Sending "screen" event for "${payload.name}"`)
 
-    const event = this.builder.buildScreenView(payload)
+    const event = this.eventBuilder.buildScreenView(payload)
 
     return await this.sendOrEnqueueEvent(event)
   }
@@ -508,7 +513,7 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
   async track(payload: TrackBuilderArgs): Promise<OptimizationData | undefined> {
     logger.info(`Sending "track" event "${payload.event}"`)
 
-    const event = this.builder.buildTrack(payload)
+    const event = this.eventBuilder.buildTrack(payload)
 
     return await this.sendOrEnqueueEvent(event)
   }
@@ -520,16 +525,14 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * @returns The evaluated {@link OptimizationData} for this component view.
    * @example
    * ```ts
-   * const data = await personalization.trackComponentView({ componentId: 'hero-banner' })
+   * const data = await personalization.trackView({ componentId: 'hero-banner' })
    * ```
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async trackComponentView(
-    payload: ComponentViewBuilderArgs,
-  ): Promise<OptimizationData | undefined> {
+  async trackView(payload: ViewBuilderArgs): Promise<OptimizationData | undefined> {
     logger.info(`Sending "track personalization" event for ${payload.componentId}`)
 
-    const event = this.builder.buildComponentView(payload)
+    const event = this.eventBuilder.buildView(payload)
 
     return await this.sendOrEnqueueEvent(event)
   }
@@ -727,13 +730,13 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
   private async updateOutputSignals(data: OptimizationData): Promise<void> {
     const intercepted = await this.interceptors.state.run(data)
 
-    const { changes, personalizations, profile } = intercepted
+    const { changes, selectedPersonalizations, profile } = intercepted
 
     batch(() => {
       if (!isEqual(changesSignal.value, changes)) changesSignal.value = changes
       if (!isEqual(profileSignal.value, profile)) profileSignal.value = profile
-      if (!isEqual(personalizationsSignal.value, personalizations))
-        personalizationsSignal.value = personalizations
+      if (!isEqual(selectedPersonalizationsSignal.value, selectedPersonalizations))
+        selectedPersonalizationsSignal.value = selectedPersonalizations
     })
   }
 }

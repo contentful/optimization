@@ -28,9 +28,7 @@ export const hostSignalFnsContext = createContext<HostSignalFns | undefined, str
  *
  * @public
  */
-export type HostSignals = Omit<Signals, 'personalizations'> & {
-  selectedPersonalizations: Signals['personalizations']
-}
+export type HostSignals = Signals
 
 /**
  * Lit context for sharing {@link HostSignals} with child components.

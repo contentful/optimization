@@ -1,5 +1,5 @@
 import type { EntryInteraction } from './resolveAutoTrackEntryInteractionOptions'
-import { isEntryElement } from './resolveComponentTrackingPayload'
+import { isEntryElement } from './resolveTrackingPayload'
 
 function parseBooleanOverride(value: string | undefined): boolean | undefined {
   const normalized = value?.trim().toLowerCase()

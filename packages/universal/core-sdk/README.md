@@ -45,7 +45,7 @@ other SDKs descend from the Core SDK.
     - [`page`](#page)
     - [`screen`](#screen)
     - [`track`](#track)
-    - [`trackComponentView`](#trackcomponentview)
+    - [`trackView`](#trackcomponentview)
     - [`trackComponentClick`](#trackcomponentclick)
     - [`trackFlagView`](#trackflagview)
 - [Stateful-only Core Methods](#stateful-only-core-methods)
@@ -406,7 +406,7 @@ Only the following methods may return an `OptimizationData` object:
 - `page`
 - `screen`
 - `track`
-- `trackComponentView` (when `payload.sticky` is `true`)
+- `trackView` (when `payload.sticky` is `true`)
 
 `trackComponentClick` and `trackFlagView` return no data. When returned, `OptimizationData`
 contains:
@@ -451,7 +451,7 @@ Arguments:
 - `payload`\*: Track event builder arguments object, including an optional `profile` property with a
   `PartialProfile` value that requires only an `id`
 
-#### `trackComponentView`
+#### `trackView`
 
 Record an analytics component view event. When the payload marks the component as "sticky", an
 additional personalization component view is recorded. This method only returns `OptimizationData`

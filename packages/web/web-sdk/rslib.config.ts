@@ -115,10 +115,10 @@ export default defineConfig({
       ...common,
       format: 'umd',
       autoExternal: false,
-      umdName: 'Optimization',
+      umdName: 'ContentfulOptimization',
       source: {
         entry: {
-          'contentful-optimization-web.umd': './src/Optimization.ts',
+          'contentful-optimization-web.umd': './src/ContentfulOptimization.ts',
         },
       },
       output: {

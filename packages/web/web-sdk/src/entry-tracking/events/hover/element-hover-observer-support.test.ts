@@ -22,7 +22,7 @@ const makeState = (overrides: Partial<ElementState> = {}): ElementState => ({
   hoverSince: null,
   fireTimer: null,
   attempts: 0,
-  componentHoverId: null,
+  hoverId: null,
   done: false,
   inFlight: false,
   isHovered: false,

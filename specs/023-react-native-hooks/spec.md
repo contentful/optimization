@@ -17,13 +17,13 @@ duration tracking.
 **Why this priority**: Automatic visibility-based component tracking is core package behavior.
 
 **Independent Test**: Attach `useViewportTracking` to a view, simulate layout + viewport updates,
-and verify `trackComponentView` dispatch when threshold and dwell requirements are met, including
-periodic updates while visible and a final event on visibility end.
+and verify `trackView` dispatch when threshold and dwell requirements are met, including periodic
+updates while visible and a final event on visibility end.
 
 **Acceptance Scenarios**:
 
 1. **Given** an entry becomes visible above threshold, **When** it remains visible for `viewTimeMs`,
-   **Then** an initial `trackComponentView` event is dispatched with accumulated `viewDurationMs`.
+   **Then** an initial `trackView` event is dispatched with accumulated `viewDurationMs`.
 2. **Given** an entry remains visible after the initial event, **When** each
    `viewDurationUpdateIntervalMs` elapses, **Then** one additional component view event is
    dispatched with an increased `viewDurationMs`.
@@ -32,7 +32,7 @@ periodic updates while visible and a final event on visibility end.
 4. **Given** a visibility cycle that ends before dwell threshold is reached, **When** threshold
    visibility stops, **Then** no component view event is dispatched for that cycle.
 5. **Given** a single visibility cycle, **When** initial, periodic, and final events are emitted,
-   **Then** all events reuse the same `componentViewId`.
+   **Then** all events reuse the same `viewId`.
 6. **Given** an entry becomes invisible before dwell timeout completes, **When** visibility drops,
    **Then** pending timer is cancelled and cycle state is reset.
 7. **Given** component unmount during an active visibility cycle with at least one emitted event,
@@ -112,9 +112,9 @@ manual tracking so I can align screen events with lifecycle/data loading constra
 - `useViewportTracking` emits multiple view events within a single visibility cycle: one initial
   event after the dwell threshold, periodic updates at `viewDurationUpdateIntervalMs`, and one final
   event when visibility ends.
-- Across repeated visible/invisible cycles, each cycle generates a fresh `componentViewId`.
-- `componentViewId` is generated per visibility cycle, reused for all events in that cycle, and
-  replaced on the next visibility cycle.
+- Across repeated visible/invisible cycles, each cycle generates a fresh `viewId`.
+- `viewId` is generated per visibility cycle, reused for all events in that cycle, and replaced on
+  the next visibility cycle.
 - `viewDurationMs` is emitted as rounded non-negative milliseconds derived from accumulated visible
   time, not the configured dwell threshold.
 - Dwell accumulation resets when a visibility cycle ends (no cross-cycle accumulation).
@@ -147,13 +147,12 @@ manual tracking so I can align screen events with lifecycle/data loading constra
 - **FR-009**: Visibility evaluation MUST compute intersection ratio between element bounds and
   viewport bounds.
 - **FR-010**: On transition from invisible to visible-above-threshold, hook MUST start a new
-  visibility cycle with a fresh `componentViewId` and begin accumulating visible time.
+  visibility cycle with a fresh `viewId` and begin accumulating visible time.
 - **FR-011**: On transition from visible to below-threshold, hook MUST cancel pending fire timer and
   emit a final event if at least one event was already emitted in the cycle. If no events were
   emitted, the cycle MUST be reset silently.
 - **FR-012**: When accumulated visible time reaches the dwell threshold (`viewTimeMs`), hook MUST
-  call `optimization.trackComponentView` with derived metadata including real accumulated
-  `viewDurationMs`.
+  call `optimization.trackView` with derived metadata including real accumulated `viewDurationMs`.
 - **FR-012a**: After the initial event, hook MUST continue scheduling periodic events at
   `viewDurationUpdateIntervalMs` intervals while the component remains visible.
 - **FR-012b**: The next-fire schedule MUST follow:
@@ -178,25 +177,24 @@ manual tracking so I can align screen events with lifecycle/data loading constra
 
 ### Key Entities _(include if feature involves data)_
 
-- **Viewport Tracking Metadata**: `{ componentId, experienceId?, variantIndex }` payload for
-  component-view analytics.
+- **Viewport Tracking Metadata**: `{ componentId, experienceId?, variantIndex }` payload for view
+  analytics.
 - **Viewport Geometry State**: Element layout + viewport bounds used to compute visibility ratio.
-- **View Cycle State**: Per-cycle mutable state including `componentViewId`, `visibleSince`
-  timestamp, `accumulatedMs` total visible duration, and `attempts` event emission count.
+- **View Cycle State**: Per-cycle mutable state including `viewId`, `visibleSince` timestamp,
+  `accumulatedMs` total visible duration, and `attempts` event emission count.
 - **Screen Tracking Contract**: Hook return API and behavior for automatic/manual screen events.
 
 ## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
-- **SC-001**: Visibility tests confirm initial `trackComponentView` fires only after threshold and
+- **SC-001**: Visibility tests confirm initial `trackView` fires only after threshold and
   accumulated dwell criteria are met with real `viewDurationMs`.
 - **SC-001a**: Periodic event tests confirm additional events fire at `viewDurationUpdateIntervalMs`
   intervals while visible, with increasing `viewDurationMs`.
 - **SC-001b**: Final event tests confirm one final event fires when visibility ends after at least
   one event was emitted, and no event fires when visibility ends before dwell threshold.
-- **SC-001c**: `componentViewId` tests confirm stability within a cycle and uniqueness across
-  cycles.
+- **SC-001c**: `viewId` tests confirm stability within a cycle and uniqueness across cycles.
 - **SC-002**: Scroll/non-scroll tests confirm viewport calculations remain correct in both layout
   modes.
 - **SC-003**: Cleanup tests confirm timers and dimension listeners are removed on unmount and a

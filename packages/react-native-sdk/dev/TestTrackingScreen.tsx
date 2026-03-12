@@ -9,7 +9,7 @@ import React, { useEffect, useState } from 'react'
 import { StatusBar, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import type { OptimizationReactNativeSdk } from '@contentful/optimization-react-native'
+import type { ContentfulOptimization } from '@contentful/optimization-react-native'
 import {
   Analytics,
   OptimizationScrollProvider,
@@ -30,7 +30,7 @@ interface ThemeColors {
 interface TestTrackingScreenProps {
   colors: ThemeColors
   onBack: () => void
-  sdk: OptimizationReactNativeSdk
+  sdk: ContentfulOptimization
   personalizedEntry: Entry
   productEntry: Entry
 }
@@ -64,7 +64,7 @@ export function TestTrackingScreen({
   // Demonstrate automatic screen tracking with the useScreenTracking hook
   // This will track a "screen" event when the component mounts
   useScreenTracking({
-    name: 'ComponentTrackingTest',
+    name: 'TrackingTest',
     properties: { source: 'dev-app' },
   })
 

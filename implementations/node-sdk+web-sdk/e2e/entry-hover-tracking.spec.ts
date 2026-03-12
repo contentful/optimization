@@ -35,9 +35,9 @@ async function readHoverDurationMs(button: Locator): Promise<number> {
   return Number.parseInt(hoverDurationMs, 10)
 }
 
-function getComponentHoverButtons(page: Page): Locator {
+function getHoverButtons(page: Page): Locator {
   return page
-    .locator('#event-stream li button[data-component-hover-id]')
+    .locator('#event-stream li button[data-hover-id]')
     .filter({ hasText: 'component_hover' })
 }
 
@@ -78,7 +78,7 @@ test.describe('entry hover tracking', () => {
     test('emits component_hover events for direct, descendant, and inline targets', async ({
       page,
     }) => {
-      const hoverButtons = getComponentHoverButtons(page)
+      const hoverButtons = getHoverButtons(page)
 
       for (const scenario of hoverScenarios) {
         const entryLocator = page.getByTestId(scenario.entryTestId)
@@ -96,7 +96,7 @@ test.describe('entry hover tracking', () => {
           })
           .toBeGreaterThan(baselineHoverEventCount)
 
-        await expect(hoverButtons.last()).toHaveAttribute('data-component-hover-id', /.+/)
+        await expect(hoverButtons.last()).toHaveAttribute('data-hover-id', /.+/)
 
         await movePointerAwayFromEntries(page)
       }
@@ -111,7 +111,7 @@ test.describe('entry hover tracking', () => {
       if (!scenario) return
 
       const target = page.getByTestId(scenario.hoverTargetTestId)
-      const hoverButtons = getComponentHoverButtons(page)
+      const hoverButtons = getHoverButtons(page)
       const baselineHoverEventCount = await hoverButtons.count()
       await target.scrollIntoViewIfNeeded()
       await target.hover()
@@ -126,8 +126,8 @@ test.describe('entry hover tracking', () => {
 
       await expect(hoverSessionButton).toBeVisible()
 
-      const componentHoverId = await hoverSessionButton.getAttribute('data-component-hover-id')
-      expect(componentHoverId).toBeTruthy()
+      const hoverId = await hoverSessionButton.getAttribute('data-hover-id')
+      expect(hoverId).toBeTruthy()
 
       await expect
         .poll(async () => await readHoverDurationMs(hoverSessionButton))
@@ -139,9 +139,8 @@ test.describe('entry hover tracking', () => {
         .toBeGreaterThan(firstHoverDurationMs)
       const updatedHoverDurationMs = await readHoverDurationMs(hoverSessionButton)
 
-      const updatedComponentHoverId =
-        await hoverSessionButton.getAttribute('data-component-hover-id')
-      expect(updatedComponentHoverId).toEqual(componentHoverId)
+      const updatedHoverId = await hoverSessionButton.getAttribute('data-hover-id')
+      expect(updatedHoverId).toEqual(hoverId)
 
       await page.waitForTimeout(300)
       await movePointerAwayFromEntries(page)
@@ -151,8 +150,8 @@ test.describe('entry hover tracking', () => {
         .toBeGreaterThan(updatedHoverDurationMs)
       const finalHoverDurationMs = await readHoverDurationMs(hoverSessionButton)
 
-      const finalComponentHoverId = await hoverSessionButton.getAttribute('data-component-hover-id')
-      expect(finalComponentHoverId).toEqual(componentHoverId)
+      const finalHoverId = await hoverSessionButton.getAttribute('data-hover-id')
+      expect(finalHoverId).toEqual(hoverId)
       expect(finalHoverDurationMs).toBeGreaterThan(firstHoverDurationMs)
     })
   })
