@@ -38,6 +38,7 @@ other SDKs descend from the Core SDK.
 - [Core Methods](#core-methods)
   - [Personalization Data Resolution Methods](#personalization-data-resolution-methods)
     - [`getCustomFlag`](#getcustomflag)
+    - [`getCustomFlags`](#getcustomflags)
     - [`personalizeEntry`](#personalizeentry)
     - [`getMergeTagValue`](#getmergetagvalue)
   - [Personalization and Analytics Event Methods](#personalization-and-analytics-event-methods)
@@ -45,8 +46,9 @@ other SDKs descend from the Core SDK.
     - [`page`](#page)
     - [`screen`](#screen)
     - [`track`](#track)
-    - [`trackView`](#trackcomponentview)
-    - [`trackComponentClick`](#trackcomponentclick)
+    - [`trackView`](#trackview)
+    - [`trackClick`](#trackclick)
+    - [`trackHover`](#trackhover)
     - [`trackFlagView`](#trackflagview)
 - [Stateful-only Core Methods](#stateful-only-core-methods)
   - [`consent`](#consent)
@@ -356,6 +358,19 @@ Returns:
 > If the `changes` argument is omitted in stateless implementations, the method will return
 > `undefined`.
 
+#### `getCustomFlags`
+
+Get all resolved Custom Flag values from the provided changes array, or from the current internal
+state in stateful implementations.
+
+Arguments:
+
+- `changes`: Changes array
+
+Returns:
+
+- A map of resolved Custom Flag values.
+
 #### `personalizeEntry`
 
 Resolve a baseline Contentful entry to a personalized variant using the provided selected
@@ -370,7 +385,7 @@ Type arguments:
 Arguments:
 
 - `entry`\*: The entry to personalize
-- `personalizations`: Selected personalizations
+- `selectedPersonalizations`: Selected personalizations
 
 Returns:
 
@@ -379,8 +394,8 @@ Returns:
 
 > [!NOTE]
 >
-> If the `personalizations` argument is omitted in stateless implementations, the method will return
-> the baseline entry.
+> If the `selectedPersonalizations` argument is omitted in stateless implementations, the method
+> will return the baseline entry.
 
 #### `getMergeTagValue`
 
@@ -408,11 +423,11 @@ Only the following methods may return an `OptimizationData` object:
 - `track`
 - `trackView` (when `payload.sticky` is `true`)
 
-`trackComponentClick` and `trackFlagView` return no data. When returned, `OptimizationData`
+`trackClick`, `trackHover`, and `trackFlagView` return no data. When returned, `OptimizationData`
 contains:
 
 - `changes`: Currently used for Custom Flags
-- `personalizations`: Selected personalizations for the profile
+- `selectedPersonalizations`: Selected personalizations for the profile
 - `profile`: Profile associated with the evaluated events
 
 #### `identify`
@@ -462,7 +477,7 @@ Arguments:
 - `payload`\*: Component view event builder arguments object, including an optional `profile`
   property with a `PartialProfile` value that requires only an `id`
 
-#### `trackComponentClick`
+#### `trackClick`
 
 Record an analytics component click event.
 
@@ -473,6 +488,18 @@ Returns:
 Arguments:
 
 - `payload`\*: Component click event builder arguments object
+
+#### `trackHover`
+
+Record an analytics component hover event.
+
+Returns:
+
+- `void`
+
+Arguments:
+
+- `payload`\*: Component hover event builder arguments object
 
 #### `trackFlagView`
 
@@ -564,9 +591,10 @@ Available state streams:
   (`AnalyticsEvent | PersonalizationEvent | undefined`)
 - `flags`: Resolved Custom Flags (`Flags | undefined`)
 - `canPersonalize`: Whether personalization selections are available (`boolean`;
-  `personalizations !== undefined`)
+  `selectedPersonalizations !== undefined`)
 - `profile`: Current profile (`Profile | undefined`)
-- `personalizations`: Current selected personalizations (`SelectedPersonalizationArray | undefined`)
+- `selectedPersonalizations`: Current selected personalizations
+  (`SelectedPersonalizationArray | undefined`)
 - `previewPanelAttached`: Preview panel attachment state (`boolean`)
 - `previewPanelOpen`: Preview panel open state (`boolean`)
 
@@ -583,8 +611,8 @@ Update behavior:
 
 - `blockedEventStream` updates whenever a call is blocked by consent guards.
 - `eventStream` updates when a valid event is accepted for send/queue.
-- `flags`, `profile`, and `personalizations` update from Experience API responses.
-- `canPersonalize` updates whenever `personalizations` becomes defined or `undefined`.
+- `flags`, `profile`, and `selectedPersonalizations` update from Experience API responses.
+- `canPersonalize` updates whenever `selectedPersonalizations` becomes defined or `undefined`.
 - `consent` updates from defaults and `optimization.consent(...)`.
 - `previewPanelAttached` and `previewPanelOpen` are controlled by preview tooling and are preserved
   across `reset()`.

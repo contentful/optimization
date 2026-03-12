@@ -4,133 +4,117 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-02).
+2026-03-12).
 
 ## User Scenarios & Testing _(mandatory)_
 
-### User Story 1 - Apply Mobile Event Metadata Defaults (Priority: P1)
+### User Story 1 - Apply React Native Event Metadata Defaults (Priority: P1)
 
-As an SDK integrator, I need default mobile event metadata set automatically so emitted events carry
-stable source attribution without extra configuration.
+As an SDK integrator, I need React Native channel/library metadata set automatically so outgoing
+events are attributed to the mobile SDK without extra setup.
 
 **Why this priority**: Event metadata consistency is required for downstream attribution and
 analysis.
 
-**Independent Test**: Initialize `Optimization` with minimal config and assert merged
-`eventBuilder.channel` and `eventBuilder.library` defaults.
+**Independent Test**: Initialize `ContentfulOptimization` with minimal config and inspect merged
+`eventBuilder` defaults.
 
 **Acceptance Scenarios**:
 
-1. **Given** SDK initialization with no event-builder overrides, **When** merged config is resolved,
-   **Then** `eventBuilder.channel` is `'mobile'`.
-2. **Given** SDK initialization with no event-builder library override, **When** merged config is
-   resolved, **Then** `eventBuilder.library.name` and `eventBuilder.library.version` are populated
-   from SDK metadata constants.
-3. **Given** build-time metadata replacement is unavailable, **When** defaults are resolved,
-   **Then** fallback package name/version values are used.
+1. **Given** no caller `eventBuilder.channel`, **When** React Native merge runs, **Then**
+   `eventBuilder.channel` defaults to `'mobile'`.
+2. **Given** no caller `eventBuilder.library` override, **When** merge runs, **Then**
+   `eventBuilder.library.name` and `eventBuilder.library.version` resolve from SDK constants.
+3. **Given** build-time define replacement is unavailable, **When** constants are resolved, **Then**
+   fallback package name/version values are used.
 
 ---
 
-### User Story 2 - Preserve Consumer Event Builder Overrides (Priority: P1)
+### User Story 2 - Preserve Caller Event-Builder Overrides via Deep Merge (Priority: P1)
 
-As an SDK consumer, I need to override event-builder fields while retaining unspecified React Native
-defaults so enrichment behavior can be customized incrementally.
+As an SDK consumer, I need caller-supplied event-builder fields to override defaults without losing
+unspecified nested defaults.
 
-**Why this priority**: Real integrations frequently customize only part of event-builder behavior.
+**Why this priority**: Integrations often customize only selected event-builder fields.
 
-**Independent Test**: Provide partial and full `eventBuilder` overrides and verify deep-merge
-behavior preserves non-overridden defaults.
+**Independent Test**: Provide partial/full `eventBuilder` overrides and verify merged output.
 
 **Acceptance Scenarios**:
 
-1. **Given** a custom `eventBuilder.channel`, **When** config is merged, **Then** the custom channel
-   overrides the default.
-2. **Given** a partial `eventBuilder.library` override (for example, name only), **When** config is
-   merged, **Then** unspecified library fields retain default values.
-3. **Given** additional event-builder fields supplied by the consumer, **When** config is merged,
-   **Then** those fields are preserved in the final event-builder configuration.
+1. **Given** caller `eventBuilder.channel`, **When** merge runs, **Then** caller channel overrides
+   `'mobile'`.
+2. **Given** caller provides partial `eventBuilder.library` (for example only `name`), **When**
+   merge runs, **Then** unspecified library fields retain React Native defaults.
+3. **Given** caller supplies additional `eventBuilder` fields (including functions), **When** merge
+   runs, **Then** those fields are preserved.
 
 ---
 
-### User Story 3 - Align RN Enrichment Scope with Core Support Boundaries (Priority: P2)
+### User Story 3 - Keep React Native Enrichment Scope Limited to Metadata Defaults (Priority: P2)
 
-As a maintainer, I need React Native enrichment defaults scoped to metadata only because currently
-Core's built-in function enrichers are intended for server-side and Web environments, not mobile.
+As a maintainer, I need React Native merge behavior to inject only mobile metadata defaults and not
+inject additional function-based enrichers.
 
-**Why this priority**: This avoids implying first-class React Native support for enrichment
-functions that are outside current Core support boundaries.
+**Why this priority**: Keeps React Native enrichment scope explicit and predictable.
 
-**Independent Test**: Initialize SDK without function-based event-builder overrides and verify the
-React Native merge layer contributes only channel/library defaults; then provide explicit function
-overrides and verify they pass through unchanged.
+**Independent Test**: Compare merged config with and without caller function-based event-builder
+fields.
 
 **Acceptance Scenarios**:
 
-1. **Given** no consumer-supplied function-based event-builder overrides, **When** merge runs,
-   **Then** the React Native merge layer only contributes channel/library defaults.
-2. **Given** consumer-supplied function-based event-builder values, **When** merge runs, **Then**
-   those values are preserved unchanged.
-3. **Given** React Native SDK usage where `page(...)` is technically callable via inherited Core
-   APIs, **When** defining React Native enrichment scope, **Then** `page` enrichment is treated as a
-   non-explicit feature with no RN-specific enrichment helper defaults.
+1. **Given** no caller function-based event-builder fields, **When** merge runs, **Then** React
+   Native contributes only channel/library defaults.
+2. **Given** caller function-based event-builder fields, **When** merge runs, **Then** those values
+   pass through unchanged.
 
 ---
 
 ### Edge Cases
 
-- Partial nested overrides (for example, only `eventBuilder.library.name`) must keep missing nested
-  defaults (for example, default `library.version`).
-- Explicit consumer channel overrides must replace `'mobile'`.
-- Fallback metadata constants must remain valid when build-time define replacement is absent.
-- React Native event enrichment scope intentionally omits built-in function enrichers because
-  current Core built-in enrichers are server/web-oriented.
-- `page` event emission remains technically possible through inherited Core APIs but is outside
-  explicitly supported React Native enrichment behavior.
+- Nested override behavior must preserve unspecified nested defaults.
+- Explicit caller channel override must replace `'mobile'`.
+- Metadata constants must remain valid when build-time define replacement is absent.
+- React Native merge must not add extra event-builder helper functions by default.
 
 ## Requirements _(mandatory)_
 
 ### Functional Requirements
 
-- **FR-001**: React Native config merging MUST set default `eventBuilder.channel` to `'mobile'`.
-- **FR-002**: React Native config merging MUST set default `eventBuilder.library.name` to
+- **FR-001**: React Native merge logic MUST default `eventBuilder.channel` to `'mobile'`.
+- **FR-002**: React Native merge logic MUST default `eventBuilder.library.name` to
   `OPTIMIZATION_REACT_NATIVE_SDK_NAME`.
-- **FR-003**: React Native config merging MUST set default `eventBuilder.library.version` to
+- **FR-003**: React Native merge logic MUST default `eventBuilder.library.version` to
   `OPTIMIZATION_REACT_NATIVE_SDK_VERSION`.
-- **FR-004**: React Native config merging MUST deep-merge caller config with defaults.
-- **FR-005**: Caller-provided `eventBuilder.channel` MUST override the default channel value.
-- **FR-006**: Caller-provided partial `eventBuilder.library` values MUST override only specified
-  fields while preserving unspecified default library fields.
+- **FR-004**: React Native merge logic MUST deep-merge caller config with React Native defaults.
+- **FR-005**: Caller-provided `eventBuilder.channel` MUST override React Native channel default.
+- **FR-006**: Caller-provided partial `eventBuilder.library` values MUST override only provided
+  fields while preserving unspecified defaults.
 - **FR-007**: Caller-provided additional `eventBuilder` fields MUST be preserved in merged config.
-- **FR-008**: React Native config merging MUST omit built-in function-based event-builder enrichers
-  by default because current Core built-in function enrichers target server-side and Web contexts.
-- **FR-009**: Consumer-supplied function-based `eventBuilder` values MUST be preserved unchanged by
-  merge behavior.
-- **FR-010**: `OPTIMIZATION_REACT_NATIVE_SDK_NAME` MUST resolve to build-time replacement when
+- **FR-008**: React Native merge layer MUST only inject channel/library metadata defaults and MUST
+  NOT inject additional function-based event-builder defaults.
+- **FR-009**: Caller-supplied function-based event-builder fields MUST be preserved unchanged.
+- **FR-010**: `OPTIMIZATION_REACT_NATIVE_SDK_NAME` MUST resolve from build-time replacement when
   available, otherwise `'@contentful/optimization-react-native'`.
-- **FR-011**: `OPTIMIZATION_REACT_NATIVE_SDK_VERSION` MUST resolve to build-time replacement when
+- **FR-011**: `OPTIMIZATION_REACT_NATIVE_SDK_VERSION` MUST resolve from build-time replacement when
   available, otherwise `'0.0.0'`.
-- **FR-012**: Event-builder library defaults MUST always remain non-empty and valid through
-  build-time and fallback constant resolution.
-- **FR-013**: `page(...)` event emission MAY still occur through inherited Core APIs, but React
-  Native event enrichment contracts MUST NOT define dedicated RN helper defaults for `page`
-  enrichment.
+- **FR-012**: Event-builder library defaults MUST remain defined and usable through both build-time
+  and fallback constant resolution.
 
 ### Key Entities _(include if feature involves data)_
 
-- **Event Builder Defaults**: React Native-provided channel/library baseline metadata.
-- **Event Builder Overrides**: Caller-supplied event-builder fields merged into runtime config.
-- **SDK Metadata Constants**: Build-time or fallback package identity values used for library
-  metadata.
+- **React Native Event Metadata Defaults**: Channel/library defaults injected at merge time.
+- **Caller Event-Builder Overrides**: User-supplied fields merged into runtime event-builder config.
+- **SDK Metadata Constants**: Package name/version values used for event library attribution.
 
 ## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
-- **SC-001**: Initialization tests confirm merged defaults include `channel='mobile'` and library
-  name/version metadata.
+- **SC-001**: Merge tests confirm `channel='mobile'` and library name/version defaults are applied
+  when omitted.
 - **SC-002**: Override tests confirm deep-merge behavior for channel/library and preservation of
   additional event-builder fields.
-- **SC-003**: Regression tests confirm React Native merge logic applies metadata defaults only and
-  does not inject built-in function enrichers.
-- **SC-004**: Constant-resolution tests confirm build-time replacements and fallback values both
-  produce valid library metadata.
+- **SC-003**: Scope tests confirm React Native merge contributes metadata defaults only and does not
+  inject extra function enrichers.
+- **SC-004**: Constant-resolution tests confirm build-time replacement and fallback values both
+  produce valid metadata.

@@ -5,7 +5,7 @@ import {
   type PartialProfile,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
-import type { ComponentClickBuilderArgs, HoverBuilderArgs, ViewBuilderArgs } from '../events'
+import type { ClickBuilderArgs, HoverBuilderArgs, ViewBuilderArgs } from '../events'
 import AnalyticsBase from './AnalyticsBase'
 
 const logger = createScopedLogger('Analytics')
@@ -19,7 +19,7 @@ const logger = createScopedLogger('Analytics')
  * other means.
  */
 export type TrackViewArgs = ViewBuilderArgs & { profile?: PartialProfile }
-export type TrackComponentClickArgs = ComponentClickBuilderArgs & { profile?: PartialProfile }
+export type TrackClickArgs = ClickBuilderArgs & { profile?: PartialProfile }
 export type TrackHoverArgs = HoverBuilderArgs & { profile?: PartialProfile }
 
 /**
@@ -53,20 +53,20 @@ class AnalyticsStateless extends AnalyticsBase {
   /**
    * Build, intercept, validate, and send a component click event.
    *
-   * @param args - {@link TrackComponentClickArgs} used to build the event. Includes an
+   * @param args - {@link TrackClickArgs} used to build the event. Includes an
    * optional partial profile.
    * @returns A promise that resolves once the batch has been sent.
    * @example
    * ```ts
-   * await analytics.trackComponentClick({ componentId: 'hero-banner', profile: { id: 'user-1' } })
+   * await analytics.trackClick({ componentId: 'hero-banner', profile: { id: 'user-1' } })
    * ```
    */
-  async trackComponentClick(args: TrackComponentClickArgs): Promise<void> {
+  async trackClick(args: TrackClickArgs): Promise<void> {
     logger.info('Processing "component click" event')
 
     const { profile, ...builderArgs } = args
 
-    const event = this.eventBuilder.buildComponentClick(builderArgs)
+    const event = this.eventBuilder.buildClick(builderArgs)
 
     await this.sendBatchEvent(event, profile)
   }

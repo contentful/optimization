@@ -23,8 +23,8 @@ import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'conte
 import type AnalyticsBase from './analytics/AnalyticsBase'
 import { OPTIMIZATION_CORE_SDK_NAME, OPTIMIZATION_CORE_SDK_VERSION } from './constants'
 import {
+  type ClickBuilderArgs,
   EventBuilder,
-  type ComponentClickBuilderArgs,
   type EventBuilderConfig,
   type HoverBuilderArgs,
   type IdentifyBuilderArgs,
@@ -360,11 +360,11 @@ abstract class CoreBase implements ResolverMethods {
    * @returns A promise that resolves when processing completes.
    * @example
    * ```ts
-   * await core.trackComponentClick({ componentId: 'hero-banner' })
+   * await core.trackClick({ componentId: 'hero-banner' })
    * ```
    */
-  async trackComponentClick(payload: ComponentClickBuilderArgs): Promise<void> {
-    await this._analytics.trackComponentClick(payload)
+  async trackClick(payload: ClickBuilderArgs): Promise<void> {
+    await this._analytics.trackClick(payload)
   }
 
   /**

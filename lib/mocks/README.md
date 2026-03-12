@@ -14,8 +14,7 @@ The testing support library offers the following features:
 > [!INFO]
 >
 > In order to manage test data in a Contentful space, a `.contentfulrc.json` file must be
-> appropriately configured in `library/mocks` based upon the supplied `.contentfulrc.example.json`
-> file.
+> appropriately configured in `lib/mocks` based upon the supplied `.contentfulrc.example.json` file.
 
 ## Using Mocks in Unit Tests
 

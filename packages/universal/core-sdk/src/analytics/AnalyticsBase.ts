@@ -1,4 +1,4 @@
-import type { ComponentClickBuilderArgs, HoverBuilderArgs, ViewBuilderArgs } from '../events'
+import type { ClickBuilderArgs, HoverBuilderArgs, ViewBuilderArgs } from '../events'
 import ProductBase from '../ProductBase'
 
 /**
@@ -24,7 +24,7 @@ abstract class AnalyticsBase extends ProductBase {
    * @param payload - Component click builder arguments.
    * @returns A promise that resolves when processing is complete (or `void`).
    */
-  abstract trackComponentClick(payload: ComponentClickBuilderArgs): Promise<void> | void
+  abstract trackClick(payload: ClickBuilderArgs): Promise<void> | void
 
   /**
    * Track a UI component hover event.

@@ -168,7 +168,7 @@ describe('CoreStateful blocked event handling', () => {
       rs.spyOn(core.api.insights, 'sendBatchEvents').mockRejectedValue(new Error('insights-down'))
 
       core.setOnlineState(false)
-      await core.trackComponentClick({ componentId: 'hero-banner' })
+      await core.trackClick({ componentId: 'hero-banner' })
 
       core.setOnlineState(true)
       await core.flush()

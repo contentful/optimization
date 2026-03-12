@@ -1,8 +1,10 @@
-# Feature Specification: Optimization Web Automatic Component Click Tracking
+# Feature Specification: Contentful Optimization Web Automatic Component Click Tracking
 
-**Feature Branch**: `[025-web-automatic-click-tracking]` **Created**: 2026-02-27 **Status**: Current
-(Pre-release) **Input**: Repository behavior review for the current pre-release implementation
-(validated 2026-03-02).
+**Feature Branch**: `[025-web-automatic-click-tracking]`  
+**Created**: 2026-02-27  
+**Status**: Current (Pre-release)  
+**Input**: Repository behavior review for the current pre-release implementation (validated
+2026-03-12).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -16,7 +18,7 @@ patterns.
 SDK.
 
 **Independent Test**: Register tracked entries, trigger click events across supported clickable
-paths, and assert `trackComponentClick` payload dispatch.
+paths, and assert `trackClick` payload dispatch.
 
 **Acceptance Scenarios**:
 
@@ -130,8 +132,8 @@ start/stop teardown behavior.
   path are present.
 - **FR-013**: Payload resolution MUST use override metadata only when the element override is
   explicitly enabled; otherwise it MUST resolve from entry dataset attributes.
-- **FR-014**: When payload resolution succeeds, the detector MUST call `core.trackComponentClick`
-  with the normalized payload.
+- **FR-014**: When payload resolution succeeds, the detector MUST call `core.trackClick` with the
+  normalized payload.
 - **FR-015**: When payload resolution fails, the detector MUST skip dispatch and log a warning.
 - **FR-016**: Clickable path detection MUST include semantic controls (`a[href]`, `button`,
   `input:not([type="hidden"])`, `select`, `textarea`, `summary`), role-hinted clickables
@@ -153,7 +155,7 @@ start/stop teardown behavior.
   `attributeOverrideEnabled`, `overrideData`).
 - **Click Context**: Resolved combination of nearest tracked entry element and clickable-path
   presence for a click event.
-- **Click Tracking Payload**: Normalized component payload emitted to `trackComponentClick`.
+- **Click Tracking Payload**: Normalized component payload emitted to `trackClick`.
 
 ## Success Criteria _(mandatory)_
 

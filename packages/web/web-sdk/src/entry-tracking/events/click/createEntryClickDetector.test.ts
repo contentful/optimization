@@ -1,19 +1,19 @@
 import { createEntryTrackingHarness } from '../../../test/helpers'
 import { createEntryClickDetector, type EntryClickTrackingCore } from './createEntryClickDetector'
 
-type TrackComponentClickMock = ReturnType<typeof rs.fn>
+type TrackClickMock = ReturnType<typeof rs.fn>
 
 function createCore(): {
   core: EntryClickTrackingCore
-  trackComponentClick: TrackComponentClickMock
+  trackClick: TrackClickMock
 } {
-  const trackComponentClick = rs.fn().mockResolvedValue(undefined)
+  const trackClick = rs.fn().mockResolvedValue(undefined)
 
   const core: EntryClickTrackingCore = {
-    trackComponentClick,
+    trackClick,
   }
 
-  return { core, trackComponentClick }
+  return { core, trackClick }
 }
 
 describe('EntryClickTracker', () => {
@@ -31,14 +31,14 @@ describe('EntryClickTracker', () => {
     button.dataset.ctflEntryId = 'entry-self-clickable'
     document.body.append(button)
 
-    const { core, trackComponentClick } = createCore()
+    const { core, trackClick } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.start()
     button.click()
 
-    expect(trackComponentClick).toHaveBeenCalledTimes(1)
-    expect(trackComponentClick).toHaveBeenCalledWith(
+    expect(trackClick).toHaveBeenCalledTimes(1)
+    expect(trackClick).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'entry-self-clickable',
       }),
@@ -57,14 +57,14 @@ describe('EntryClickTracker', () => {
     anchor.append(entry)
     document.body.append(anchor)
 
-    const { core, trackComponentClick } = createCore()
+    const { core, trackClick } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.start()
     entry.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
-    expect(trackComponentClick).toHaveBeenCalledTimes(1)
-    expect(trackComponentClick).toHaveBeenCalledWith(
+    expect(trackClick).toHaveBeenCalledTimes(1)
+    expect(trackClick).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'entry-clickable-ancestor',
       }),
@@ -81,14 +81,14 @@ describe('EntryClickTracker', () => {
     entry.append(clickableDescendant)
     document.body.append(entry)
 
-    const { core, trackComponentClick } = createCore()
+    const { core, trackClick } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.start()
     clickableDescendant.click()
 
-    expect(trackComponentClick).toHaveBeenCalledTimes(1)
-    expect(trackComponentClick).toHaveBeenCalledWith(
+    expect(trackClick).toHaveBeenCalledTimes(1)
+    expect(trackClick).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'entry-clickable-descendant',
       }),
@@ -105,13 +105,13 @@ describe('EntryClickTracker', () => {
     entry.append(plainDescendant)
     document.body.append(entry)
 
-    const { core, trackComponentClick } = createCore()
+    const { core, trackClick } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.start()
     plainDescendant.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
-    expect(trackComponentClick).not.toHaveBeenCalled()
+    expect(trackClick).not.toHaveBeenCalled()
 
     cleanup()
   })
@@ -121,7 +121,7 @@ describe('EntryClickTracker', () => {
     entry.dataset.ctflEntryId = 'dataset-entry'
     document.body.append(entry)
 
-    const { core, trackComponentClick } = createCore()
+    const { core, trackClick } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.start()
@@ -129,8 +129,8 @@ describe('EntryClickTracker', () => {
 
     entry.click()
 
-    expect(trackComponentClick).toHaveBeenCalledTimes(1)
-    expect(trackComponentClick).toHaveBeenCalledWith(
+    expect(trackClick).toHaveBeenCalledTimes(1)
+    expect(trackClick).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'manual-entry',
       }),
@@ -144,7 +144,7 @@ describe('EntryClickTracker', () => {
     entry.dataset.ctflEntryId = 'dataset-entry'
     document.body.append(entry)
 
-    const { core, trackComponentClick } = createCore()
+    const { core, trackClick } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.start()
@@ -153,8 +153,8 @@ describe('EntryClickTracker', () => {
 
     entry.click()
 
-    expect(trackComponentClick).toHaveBeenCalledTimes(1)
-    expect(trackComponentClick).toHaveBeenCalledWith(
+    expect(trackClick).toHaveBeenCalledTimes(1)
+    expect(trackClick).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'dataset-entry',
       }),
@@ -169,14 +169,14 @@ describe('EntryClickTracker', () => {
     entry.setAttribute('onclick', 'void 0')
     document.body.append(entry)
 
-    const { core, trackComponentClick } = createCore()
+    const { core, trackClick } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.start()
     entry.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
-    expect(trackComponentClick).toHaveBeenCalledTimes(1)
-    expect(trackComponentClick).toHaveBeenCalledWith(
+    expect(trackClick).toHaveBeenCalledTimes(1)
+    expect(trackClick).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'entry-onclick-attr',
       }),
@@ -195,14 +195,14 @@ describe('EntryClickTracker', () => {
     wrapper.append(entry)
     document.body.append(wrapper)
 
-    const { core, trackComponentClick } = createCore()
+    const { core, trackClick } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.start()
     entry.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
-    expect(trackComponentClick).toHaveBeenCalledTimes(1)
-    expect(trackComponentClick).toHaveBeenCalledWith(
+    expect(trackClick).toHaveBeenCalledTimes(1)
+    expect(trackClick).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'entry-onclick-prop',
       }),
@@ -218,14 +218,14 @@ describe('EntryClickTracker', () => {
     entry.append(label)
     document.body.append(entry)
 
-    const { core, trackComponentClick } = createCore()
+    const { core, trackClick } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.start()
     label.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
-    expect(trackComponentClick).toHaveBeenCalledTimes(1)
-    expect(trackComponentClick).toHaveBeenCalledWith(
+    expect(trackClick).toHaveBeenCalledTimes(1)
+    expect(trackClick).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'entry-text-target',
       }),
@@ -239,7 +239,7 @@ describe('EntryClickTracker', () => {
     entry.dataset.ctflEntryId = 'dataset-entry'
     document.body.append(entry)
 
-    const { core, trackComponentClick } = createCore()
+    const { core, trackClick } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.start()
@@ -247,7 +247,7 @@ describe('EntryClickTracker', () => {
 
     entry.click()
 
-    expect(trackComponentClick).not.toHaveBeenCalled()
+    expect(trackClick).not.toHaveBeenCalled()
 
     cleanup()
   })
@@ -258,13 +258,13 @@ describe('EntryClickTracker', () => {
     entry.dataset.ctflTrackClicks = 'false'
     document.body.append(entry)
 
-    const { core, trackComponentClick } = createCore()
+    const { core, trackClick } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.start()
     entry.click()
 
-    expect(trackComponentClick).not.toHaveBeenCalled()
+    expect(trackClick).not.toHaveBeenCalled()
 
     cleanup()
   })
@@ -275,15 +275,15 @@ describe('EntryClickTracker', () => {
     entry.dataset.ctflTrackClicks = 'true'
     document.body.append(entry)
 
-    const { core, trackComponentClick } = createCore()
+    const { core, trackClick } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.setAuto(false)
     tracker.start()
     entry.click()
 
-    expect(trackComponentClick).toHaveBeenCalledTimes(1)
-    expect(trackComponentClick).toHaveBeenCalledWith(
+    expect(trackClick).toHaveBeenCalledTimes(1)
+    expect(trackClick).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'dataset-entry',
       }),
@@ -298,7 +298,7 @@ describe('EntryClickTracker', () => {
     entry.dataset.ctflTrackClicks = 'false'
     document.body.append(entry)
 
-    const { core, trackComponentClick } = createCore()
+    const { core, trackClick } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.start()
@@ -307,8 +307,8 @@ describe('EntryClickTracker', () => {
     tracker.clearElement(entry)
     entry.click()
 
-    expect(trackComponentClick).toHaveBeenCalledTimes(1)
-    expect(trackComponentClick).toHaveBeenCalledWith(
+    expect(trackClick).toHaveBeenCalledTimes(1)
+    expect(trackClick).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'manual-entry',
       }),
@@ -322,15 +322,15 @@ describe('EntryClickTracker', () => {
     entry.dataset.ctflEntryId = 'dataset-before-start'
     document.body.append(entry)
 
-    const { core, trackComponentClick } = createCore()
+    const { core, trackClick } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.enableElement(entry, { data: { entryId: 'manual-before-start' } })
     tracker.start()
     entry.click()
 
-    expect(trackComponentClick).toHaveBeenCalledTimes(1)
-    expect(trackComponentClick).toHaveBeenCalledWith(
+    expect(trackClick).toHaveBeenCalledTimes(1)
+    expect(trackClick).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'manual-before-start',
       }),
@@ -344,7 +344,7 @@ describe('EntryClickTracker', () => {
     entry.dataset.ctflEntryId = 'entry-removed'
     document.body.append(entry)
 
-    const { core, trackComponentClick } = createCore()
+    const { core, trackClick } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.start()
@@ -356,7 +356,7 @@ describe('EntryClickTracker', () => {
 
     entry.click()
 
-    expect(trackComponentClick).toHaveBeenCalledTimes(1)
+    expect(trackClick).toHaveBeenCalledTimes(1)
 
     cleanup()
   })

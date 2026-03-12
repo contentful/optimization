@@ -128,6 +128,7 @@ Insights API endpoints currently do not return response data.
 
 Insights/analytics event schemas:
 
-- `ComponentClickEvent`: Zod schema describing a `component_click` event
+- `ClickEvent`: Zod schema describing a `component_click` event
+- `HoverEvent`: Zod schema describing a `component_hover` event
 - `ViewEvent`: Zod schema describing a `component` view event (may be a Contentful entry or a Custom
   Flag)

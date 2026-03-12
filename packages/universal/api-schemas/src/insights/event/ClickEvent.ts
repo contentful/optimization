@@ -12,7 +12,7 @@ import { InteractionEventProperties } from '../../experience/event'
  *
  * @public
  */
-export const ComponentClickEvent = z.extend(InteractionEventProperties, {
+export const ClickEvent = z.extend(InteractionEventProperties, {
   /**
    * Discriminator indicating that this event is a component click.
    */
@@ -20,8 +20,8 @@ export const ComponentClickEvent = z.extend(InteractionEventProperties, {
 })
 
 /**
- * TypeScript type inferred from {@link ComponentClickEvent}.
+ * TypeScript type inferred from {@link ClickEvent}.
  *
  * @public
  */
-export type ComponentClickEvent = z.infer<typeof ComponentClickEvent>
+export type ClickEvent = z.infer<typeof ClickEvent>

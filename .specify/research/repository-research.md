@@ -4,11 +4,11 @@
 
 - `document_type`: `research`
 - `status`: `complete`
-- `created_on`: `2026-02-24`
+- `created_on`: `2026-03-12`
 - `repository_root`: `/Users/charles.hudson/Projects/contentful/optimization`
 - `analyzed_surface`: `packages/universal/*`, `packages/node/node-sdk`, `packages/web/*`,
-  `packages/web/frameworks/*`, `packages/react-native-sdk`, `lib/*`, `implementations/*`,
-  `.github/workflows/*`, `.specify/memory/constitution.md`
+  `packages/web/frameworks/react-web-sdk`, `packages/react-native-sdk`, `lib/*`,
+  `implementations/*`, `.github/workflows/*`, `.specify/memory/constitution.md`
 - `method`: static architecture and source analysis (code, configs, CI, package metadata)
 
 ## Research Scope
@@ -20,60 +20,62 @@
 
 ## Executive Summary
 
-- The repository is a layered monorepo for Contentful Personalization and Analytics SDKs with clear
-  dependency direction: `api-schemas -> api-client -> core -> platform SDKs -> implementations`.
-- Architecture centers on `packages/universal/core-sdk`, with stateful and stateless execution
-  models, shared typed contracts (`zod/mini`), and queue-based resilience for event delivery.
-- Web and React Native SDKs are stateful adapters with persistent caches and lifecycle listeners;
-  Node is a stateless adapter.
-- Preview tooling is intentionally tightly coupled to core signals/interceptors for immediate local
-  overrides.
-- Build/release tooling is mature (multi-format bundles, tarball-based implementation integration,
-  path-filtered CI, publish workflows).
-- Primary open risks are process/test gaps; accepted constraints/decisions are explicitly separated
-  and excluded from risk classification.
+- The repository is a layered monorepo for Contentful Personalization and Analytics SDKs with
+  validated dependency direction:
+  `api-schemas -> api-client -> core -> platform SDKs -> framework SDKs -> implementations`.
+- Runtime architecture centers on `@contentful/optimization-core` with separate stateless and
+  stateful execution models.
+- Stateful adapters (`web`, `react-native`) add persistence and lifecycle wiring on top of the
+  shared core; `node` stays stateless.
+- External interface boundaries are explicit through package entrypoints and subpath exports (for
+  example `./core-sdk`, `./api-client`, `./api-schemas`).
+- Preview tooling is intentionally tightly coupled to core signal internals through
+  `registerPreviewPanel(...)` and interceptors for no-roundtrip local overrides.
+- Build/release workflows support multi-format JS outputs, implementation-level integration
+  validation, and path-filtered CI execution.
 
 ## Repository Inventory and Topology
 
 ### Size and Test Surface
 
-- Code files (`ts/tsx/js/jsx/mjs/cjs`) across `packages/universal`, `packages/server`,
-  `packages/web`, `packages/react-native-sdk`, `lib`, `implementations`: `357`
-- Code LOC across same surface: `37,084`
-- Unit test files in SDK and shared libraries (`packages/universal`, `packages/server`,
-  `packages/web`, `packages/react-native-sdk`, `lib`): `35`
-- Implementation test/e2e files (`implementations`): `20`
+- Code files (`ts/tsx/js/jsx/mjs/cjs/ejs`) across `packages`, `lib`, `implementations`: `483`
+- Code LOC across same surface: `50,105`
+- Unit test files in SDK/shared libraries (`packages`, `lib`): `54`
+- Implementation E2E test files (`implementations/**/e2e`): `30`
 
 ### Top-Level Responsibilities
 
-| Path                        | Role                                                        |
-| --------------------------- | ----------------------------------------------------------- |
-| `packages/universal/*`      | Platform-agnostic contracts and core runtime logic          |
-| `packages/node/node-sdk`    | Platform adapter (`node`)                                   |
-| `packages/web/*`            | Platform adapters (`web`, `web-preview-panel`, `react-web`) |
-| `packages/react-native-sdk` | Platform adapter (`react-native`)                           |
-| `lib/*`                     | Internal shared tooling (`build-tools`, `logger`, `mocks`)  |
-| `implementations/*`         | Reference apps for integration and E2E verification         |
+| Path                                    | Role                                                |
+| --------------------------------------- | --------------------------------------------------- |
+| `packages/universal/*`                  | Platform-agnostic contracts and core runtime logic  |
+| `packages/node/node-sdk`                | Node adapter SDK                                    |
+| `packages/web/web-sdk`                  | Browser adapter SDK                                 |
+| `packages/web/preview-panel`            | Browser preview panel package                       |
+| `packages/web/frameworks/react-web-sdk` | React framework SDK on top of web SDK               |
+| `packages/react-native-sdk`             | React Native adapter SDK                            |
+| `lib/build-tools`                       | Internal build/publish helper utilities             |
+| `lib/mocks`                             | Internal fixtures and mock servers for tests        |
+| `implementations/*`                     | Reference apps for integration and E2E verification |
 
 ### Package Matrix
 
-| Package                                      | Path                               | Layer                    | Approx LOC | Test Files |
-| -------------------------------------------- | ---------------------------------- | ------------------------ | ---------: | ---------: |
-| `@contentful/optimization-api-schemas`       | `packages/universal/api-schemas`   | Contracts                |      2,791 |          1 |
-| `@contentful/optimization-api-client`        | `packages/universal/api-client`    | Transport client         |      3,406 |          7 |
-| `@contentful/optimization-core`              | `packages/universal/core-sdk`      | Runtime core             |      7,205 |         11 |
-| `@contentful/optimization-node`              | `packages/node/node-sdk`           | Platform adapter         |        505 |          1 |
-| `@contentful/optimization-web`               | `packages/web/web-sdk`             | Platform adapter         |      4,346 |          5 |
-| `@contentful/optimization-web-preview-panel` | `packages/web/preview-panel`       | Preview tooling          |      1,863 |          0 |
-| `@contentful/optimization-react-native`      | `packages/react-native-sdk`        | Platform adapter         |      9,683 |          6 |
-| `logger`                                     | `lib/logger`                       | Internal utility         |        682 |          2 |
-| `mocks`                                      | `lib/mocks`                        | Internal testing infra   |      1,190 |          0 |
-| `build-tools`                                | `lib/build-tools`                  | Internal build helpers   |        393 |          2 |
-| `@implementation/node-sdk`                   | `implementations/node-sdk`         | Reference implementation |        389 |          2 |
-| `@implementation/node-sdk+web-sdk`           | `implementations/node-sdk+web-sdk` | Reference implementation |        461 |          4 |
-| `@implementation/web-sdk`                    | `implementations/web-sdk`          | Reference implementation |        282 |          3 |
-| `@implementation/web-sdk_react`              | `implementations/web-sdk_react`    | Reference implementation |      1,264 |          4 |
-| `@implementation/react-native-sdk`           | `implementations/react-native-sdk` | Reference implementation |      2,624 |          7 |
+| Package                                      | Path                                    | Layer                    | Approx LOC | Test Files |
+| -------------------------------------------- | --------------------------------------- | ------------------------ | ---------: | ---------: |
+| `@contentful/optimization-api-schemas`       | `packages/universal/api-schemas`        | Contracts                |      2,972 |          1 |
+| `@contentful/optimization-api-client`        | `packages/universal/api-client`         | Transport client         |      3,615 |          9 |
+| `@contentful/optimization-core`              | `packages/universal/core-sdk`           | Runtime core             |      8,992 |         12 |
+| `@contentful/optimization-node`              | `packages/node/node-sdk`                | Platform adapter         |        759 |          1 |
+| `@contentful/optimization-web`               | `packages/web/web-sdk`                  | Platform adapter         |      8,249 |         19 |
+| `@contentful/optimization-web-preview-panel` | `packages/web/preview-panel`            | Preview tooling          |      2,010 |          0 |
+| `@contentful/optimization-react-web`         | `packages/web/frameworks/react-web-sdk` | Framework adapter        |      1,939 |          2 |
+| `@contentful/optimization-react-native`      | `packages/react-native-sdk`             | Platform adapter         |     10,721 |          7 |
+| `build-tools`                                | `lib/build-tools`                       | Internal build utility   |        469 |          3 |
+| `mocks`                                      | `lib/mocks`                             | Internal testing infra   |      1,544 |          0 |
+| `@implementation/node-sdk`                   | `implementations/node-sdk`              | Reference implementation |        726 |          2 |
+| `@implementation/node-sdk+web-sdk`           | `implementations/node-sdk+web-sdk`      | Reference implementation |      1,453 |          7 |
+| `@implementation/web-sdk`                    | `implementations/web-sdk`               | Reference implementation |        751 |          6 |
+| `@implementation/web-sdk_react`              | `implementations/web-sdk_react`         | Reference implementation |      2,779 |          8 |
+| `@implementation/react-native-sdk`           | `implementations/react-native-sdk`      | Reference implementation |      3,126 |          9 |
 
 ### Internal Dependency Direction (Validated)
 
@@ -86,98 +88,101 @@ graph LR
   E[@contentful/optimization-web]
   F[@contentful/optimization-web-preview-panel]
   G[@contentful/optimization-react-native]
-  H[build-tools]
-  I[logger]
+  H[@contentful/optimization-react-web]
+  I[build-tools]
   J[mocks]
 
-  H --> A
+  I --> A
   A --> B
-  H --> B
   I --> B
   J --> B
   B --> C
-  H --> C
   I --> C
   J --> C
   C --> D
-  H --> D
+  I --> D
   C --> E
-  H --> E
+  I --> E
   E --> F
-  H --> F
+  I --> F
   C --> G
-  H --> G
+  I --> G
   J --> G
-  H --> I
+  E --> H
+  I --> H
   A --> J
 ```
 
-- Local package graph is acyclic (`cycle: no` from current manifest graph validation).
-- `pnpm-workspace.yaml` includes `lib/*`, `packages/react-native-sdk`, `packages/web/*`,
-  `packages/web/frameworks/*`, `packages/node/node-sdk`, `packages/universal/*`; implementations are
-  intentionally outside workspace and consume packed SDK tarballs via overrides.
+- Local package dependency graph is acyclic.
+- `pnpm-workspace.yaml` includes `lib/*`, `packages/universal/*`, `packages/node/node-sdk`,
+  `packages/web/*`, `packages/web/frameworks/*`, and `packages/react-native-sdk`.
+- Implementations are intentionally outside workspace package definitions and consume packed
+  tarballs.
 
 ## Architecture Deep Dive
 
 ### 1) Core Runtime Composition
 
-- `CoreBase` composes shared `ApiClient`, `EventBuilder`, and interceptor managers:
-  - `event` interceptors for outbound events.
-  - `state` interceptors for inbound optimization state (`OptimizationData`).
-- `CoreBase` provides high-level product delegation methods:
-  - personalization path: `identify`, `page`, `screen`, `track`, sticky `trackComponentView`.
-  - analytics path: `trackFlagView`, non-sticky `trackComponentView`.
+- `CoreBase` composes:
+  - shared `ApiClient`
+  - shared `EventBuilder`
+  - lifecycle interceptor managers (`event`, `state`)
+- `CoreBase` exposes high-level methods:
+  - personalization path: `identify`, `page`, `screen`, `track`
+  - mixed path: `trackView` (sticky routes through personalization; non-sticky routes through
+    analytics)
+  - analytics path: `trackClick`, `trackHover`, `trackFlagView`
+- Resolver utilities are centralized and surfaced through core methods:
+  - flags resolution
+  - personalized entry resolution
+  - merge-tag value resolution
 
 ### 2) Stateful vs Stateless Runtime Models
 
 - `CoreStateless`:
-  - no internal mutable runtime state model.
-  - composes `AnalyticsStateless` + `PersonalizationStateless`.
-  - intended for server/SSR.
+  - no state signal model
+  - composes `AnalyticsStateless` + `PersonalizationStateless`
+  - intended for server/SSR usage
 - `CoreStateful`:
   - module-global signal model (`@preact/signals-core`) for `consent`, `profile`, `changes`,
-    `personalizations`, `event`, `blockedEvent`, `online`.
-  - singleton lock enforced through `StatefulRuntimeSingleton` on `globalThis`.
-  - explicit lifecycle methods: `destroy()`, `flush()`, `reset()` (reset intentionally preserves
-    consent).
-  - preview bridge method `registerPreviewPanel()` returns mutable `signals` and `signalFns`.
+    `selectedPersonalizations`, `event`, `blockedEvent`, `online`, `previewPanelAttached`,
+    `previewPanelOpen`
+  - singleton lock enforced via `StatefulRuntimeSingleton` keyed in `globalThis`
+  - explicit lifecycle controls: `destroy()`, `flush()`, `reset()`
+  - preview bridge method `registerPreviewPanel(...)` exposes mutable `signals` and `signalFns`
 
 ### 3) Consent and Blocking Semantics
 
-- `ProductBase` defaults pre-consent allow-list to `['page', 'identify']`.
-- Stateful products normalize `trackComponentView`/`trackFlagView` to `component` for allow-list
-  evaluation.
-- Guarding is method-level via stage-3 decorator `@guardedBy`:
-  - synchronous predicate gating.
-  - optional `onBlocked` hook.
-  - blocked async methods return `Promise<undefined>` to preserve call shape.
-- Blocked event payload is structured and emitted to signal/callback:
-  - `{ reason: 'consent', product, method, args }`.
+- Core-level default allow-list in `ProductBase`: `['identify', 'page', 'screen']`.
+- Platform adapters narrow pre-consent allow-list by default where needed:
+  - Web: `['identify', 'page']`
+  - React Native: `['identify', 'screen']`
+- Guarding uses the decorator-based `@guardedBy` pattern:
+  - synchronous predicate checks
+  - optional `onBlocked` callback
+  - blocked async methods preserve async shape with `Promise<undefined>` semantics
+- Blocked-event payload shape is structured:
+  - `{ reason: 'consent', product, method, args }`
 
 ### 4) Stateful Queue and Flush Behavior
 
 #### Analytics (`AnalyticsStateful`)
 
 - In-memory queue keyed by profile ID (`Map<profileId, events>`).
-- Max queued event threshold: `25` before auto-flush.
-- Flush grouped by profile into `BatchInsightsEventArray`.
-- Shared `QueueFlushRuntime` manages:
-  - in-flight gating,
-  - online gating,
-  - backoff windows,
-  - circuit-open windows,
-  - scheduled retries.
+- Flushes grouped batches (`BatchInsightsEventArray`) to Insights API.
+- Uses shared `QueueFlushRuntime` for:
+  - in-flight suppression
+  - online gating
+  - exponential backoff + jitter
+  - circuit-open windows
+  - scheduled retries
 
 #### Personalization (`PersonalizationStateful`)
 
-- Offline queue uses insertion-ordered `Set` of events.
-- Default queue bound: `100` events (`maxEvents` configurable).
-- On overflow:
-  - drops oldest events first,
-  - invokes optional `onDrop` callback with detailed context.
-- On online state:
-  - attempts force flush of queued events,
-  - retries/circuit handled via same runtime mechanism.
+- Offline queue is insertion-ordered (`Set<ExperienceEvent>`).
+- Default offline queue bound: `100` events (`maxEvents` configurable).
+- Overflow policy drops oldest entries first and emits optional `onDrop` telemetry.
+- Online transitions trigger force-flush attempts and reset pending retry timers.
 
 #### Shared Queue Flush Policy Defaults
 
@@ -186,162 +191,167 @@ graph LR
 - `jitterRatio`: `0.2`
 - `maxConsecutiveFailures`: `8`
 - `circuitOpenMs`: `120000`
-- Hooks: `onFlushFailure`, `onCircuitOpen`, `onFlushRecovered`.
+- callbacks: `onFlushFailure`, `onCircuitOpen`, `onFlushRecovered`
 
 ### 5) Personalization Resolution Subsystem
 
 - `FlagsResolver`:
-  - flattens `ChangeArray` into key/value `Flags`.
-  - unwraps nested `{ value: {...} }` structures when present.
+  - flattens `ChangeArray` into a key/value map
+  - unwraps nested `{ value }` structures where present
 - `PersonalizedEntryResolver`:
-  - resolves baseline vs variant entry using selected experiences.
-  - interprets `variantIndex` as 1-based; `0` is baseline.
-  - fallback strategy returns baseline on invalid/missing replacement structures.
+  - resolves baseline vs variant entries from selected personalizations
+  - treats `variantIndex` as 1-based for variants; `0` means baseline
+  - returns baseline on invalid/missing replacement data
 - `MergeTagValueResolver`:
-  - normalizes merge-tag selectors from `_` segmented IDs.
-  - resolves primitive values from profile via selector probing.
-  - falls back to configured merge-tag fallback value.
+  - normalizes merge-tag selectors from Contentful entry IDs
+  - resolves profile values through selector probing
+  - falls back to merge-tag fallback value when lookup fails
 
 ### 6) API Contracts and Transport
 
 #### Contract Boundary
 
-- All primary payload boundaries are schema-validated in `@contentful/optimization-api-schemas`
-  (`zod/mini`).
-- `ExperienceEvent` is a discriminated union of:
-  - `alias`, `component`, `group`, `identify`, `page`, `screen`, `track`.
-- `InsightsEvent` currently accepts only component-view event shape (forward-extensible union).
+- API payload boundaries are validated by `@contentful/optimization-api-schemas` (`zod/mini`).
+- `ExperienceEvent` discriminated union includes:
+  - `alias`, `component`, `group`, `identify`, `page`, `screen`, `track`
+- `InsightsEvent` discriminated union includes:
+  - `component`, `component_click`, `component_hover`
 
 #### API Client Composition
 
 - `ApiClient` aggregates:
-  - `experience` client for profile mutations/queries,
-  - `insights` client for batched analytics ingestion.
-- Experience client capabilities:
-  - `getProfile`, `createProfile`, `updateProfile`, `upsertProfile`, `upsertManyProfiles`.
-  - request options for features, locale, forced IP, preflight, plain text.
-- Insights client capabilities:
-  - `sendBatchEvents` with optional beacon-first strategy and fetch fallback.
+  - `experience` client (profile reads/mutations)
+  - `insights` client (batch event ingestion)
+- Experience client methods:
+  - `getProfile`, `createProfile`, `updateProfile`, `upsertProfile`, `upsertManyProfiles`
+- Insights client method:
+  - `sendBatchEvents` with beacon-first strategy and fetch fallback
 
 #### Protected Fetch Stack
 
-- fetch pipeline composition:
-  - timeout wrapper (`requestTimeout` default `3000ms`),
-  - retry wrapper (`p-retry`).
-- retry behavior:
-  - retries explicitly for HTTP `503` responses.
-  - non-OK non-503 statuses abort retry loop and fail the request path.
+- fetch pipeline combines:
+  - timeout wrapper (`requestTimeout` default `3000ms`)
+  - retry wrapper (`p-retry`-style behavior implemented in package)
+- retry policy:
+  - automatic retries only for HTTP `503`
+  - non-OK non-503 responses abort retry path and fail immediately
 
-### 7) Platform Adapter Behavior
+### 7) Platform and Framework Adapter Behavior
 
 #### Node SDK (`@contentful/optimization-node`)
 
 - Adapter over `CoreStateless`.
-- Default channel/library metadata for server runtime (`channel: 'server'`).
-- No platform-specific state persistence.
+- Defaults event metadata to `channel: 'server'` with Node SDK library name/version.
+- Root package exports Node-specific class/constants; transitive core/API surfaces are provided via
+  dedicated subpath entrypoints (`./core-sdk`, `./api-client`, `./api-schemas`).
 
 #### Web SDK (`@contentful/optimization-web`)
 
 - Adapter over `CoreStateful`.
-- Persistence and identity handling:
-  - `LocalStore` for consent/profile/changes/personalizations/debug.
-  - anonymous ID cookie and localStorage key management with legacy migration.
+- Persistence and identity:
+  - `LocalStore` for consent/profile/changes/personalizations/debug
+  - anonymous ID persistence via cookie + local storage with legacy cookie migration
 - Runtime listeners:
-  - online/offline listener drives `online` state updates.
-  - visibility/pagehide listener triggers flush.
-- Auto entry view tracking:
-  - `ElementViewObserver` (`IntersectionObserver` dwell-time and retry model, visibility
-    pause/resume, orphan sweep).
-  - `ElementExistenceObserver` (`MutationObserver` coalesced add/remove, move suppression,
-    idle/chunked delivery).
+  - online/offline listener updates `online`
+  - visibility/pagehide listener triggers `flush()`
+- Global behavior:
+  - enforces singleton instance at `window.contentfulOptimization`
+  - UMD/dev path attaches class constructor to `window.ContentfulOptimization`
+- Entry interaction tracking runtime supports auto + per-element controls for views/clicks/hovers.
+
+#### React Web SDK (`@contentful/optimization-react-web`)
+
+- Framework layer on top of `@contentful/optimization-web`.
+- Exposes provider/root/context/hooks/components:
+  - `OptimizationProvider`, `OptimizationRoot`, `LiveUpdatesProvider`
+  - `useOptimization`, `useLiveUpdates`, `useAnalytics`, `usePersonalization`
+  - `Personalization` component with live-update and loading-fallback behavior
+- Inherits singleton constraints from underlying web runtime.
 
 #### React Native SDK (`@contentful/optimization-react-native`)
 
-- Async creation model: `Optimization.create(config)` to initialize storage before runtime
-  construction.
-- Explicit single active instance guard (`activeOptimizationInstance`) plus core singleton
-  semantics.
+- Adapter over `CoreStateful` with async creation (`ContentfulOptimization.create(config)`).
+- Explicit active-instance guard (`activeOptimizationInstance`) on top of core singleton semantics.
 - Persistence:
-  - `AsyncStorageStore` with schema validation and invalid cache eviction.
+  - `AsyncStorageStore` with schema-safe initialization/reads and invalid-value eviction
 - Runtime listeners:
-  - NetInfo-based online/offline listener (optional peer dependency; warning-only fallback if
-    absent).
-  - AppState background/inactive listener for flush on lifecycle transitions.
-- Exposes React integration primitives:
-  - providers, hooks (`useOptimization`, `useViewportTracking`, screen tracking), tracking
-    components.
+  - NetInfo connectivity listener (warning-only fallback when dependency absent)
+  - AppState listener for background/inactive flush behavior
+- Exposes framework primitives:
+  - providers, hooks, analytics/personalization tracking components
+  - preview panel UI components and overlay integration
 
 #### Preview Panel Coupling
 
-- Web preview panel (`@contentful/optimization-web-preview-panel`) and RN preview hooks
-  intentionally depend on:
-  - `registerPreviewPanel()` mutable signal bridge.
-  - state interceptors to preserve manual overrides while API responses continue.
-- This enables immediate no-roundtrip local override behavior for debugging/preview workflows.
+- Web preview panel (`@contentful/optimization-web-preview-panel`) intentionally depends on:
+  - `registerPreviewPanel(...)` signal bridge
+  - state interceptors to apply/retain local personalization overrides
+- `attachOptimizationPreviewPanel` accepts `{ contentful, optimization, nonce }` and writes to
+  `previewPanelAttached`/`previewPanelOpen` signals.
 
 ### 8) Persistence and State Durability Model
 
 - Web:
-  - durable cache in `localStorage` (best effort; storage failures logged, runtime continues).
-  - anonymous ID persisted in cookie and localStorage key.
+  - durable cache in `localStorage` (best-effort, fault-tolerant)
+  - anonymous ID persisted in cookie + storage
 - React Native:
-  - durable cache in AsyncStorage with parser-based validation on initialize/access.
-  - malformed or schema-invalid values are proactively invalidated.
+  - durable cache in AsyncStorage with parser validation and proactive invalidation
 - In-memory runtime:
-  - state signals are immediate source of truth during active process lifetime.
+  - state signals are source of truth during active process lifetime
 
 ### 9) Build, Packaging, and Delivery Architecture
 
 #### Build Toolchain
 
 - `rslib` used for publishable package builds.
-- Common output for SDK packages:
+- Shared JS SDK packaging pattern:
   - ESM (`.mjs`)
   - CJS (`.cjs`)
-  - dual declaration output via `build-tools emit-dual-dts`.
-- Web and web-preview-panel also ship UMD bundles with enforced default export shape.
-- React Native build:
-  - runtime externals preserved for RN ecosystem packages,
-  - browser alias shims for `diary` and `util` compatibility.
+  - dual declaration outputs (`.d.mts` + `.d.cts`) via `build-tools emit-dual-dts`
+- UMD bundles are shipped by:
+  - `@contentful/optimization-web`
+  - `@contentful/optimization-web-preview-panel`
+- React Native build preserves runtime externals and compatibility aliases.
 
 #### Version and Runtime Controls
 
-- Root `engines.node`: `>=20.19.0`.
-- Workspace/node pinning:
+- Root `engines.node`: `>=20.19.0`
+- Workspace pinning:
   - `.nvmrc`: `24.13.0`
-  - `pnpm-workspace.yaml`: `nodeVersion/useNodeVersion: 24.13.0`.
+  - `pnpm-workspace.yaml`: `nodeVersion`/`useNodeVersion` set to `24.13.0`
 
 #### Reference Implementation Integration
 
-- Implementations consume local package tarballs from `pkgs/*.tgz` via `pnpm` overrides.
-- Root orchestration script (`scripts/run-implementation-script.ts`) standardizes
-  install/build/test/e2e commands per implementation.
+- Implementations consume local `pkgs/*.tgz` tarballs via overrides.
+- Root orchestration script (`scripts/run-implementation-script.ts`) normalizes implementation
+  install/build/typecheck/test/e2e operations.
 
 ### 10) CI/CD and Governance Integration
 
 - Main pipeline (`.github/workflows/main-pipeline.yaml`):
-  - path-filtered change detection for build/unit/e2e workloads,
-  - install/setup, license checks, format, build, typecheck, lint, package-matrix unit tests,
-  - per-implementation e2e jobs (`node-sdk`, `node-sdk+web-sdk`, `web-sdk`, `web-sdk_react`) plus
-    dedicated RN Android emulator lane.
+  - path-filtered workload selection
+  - setup/install, format, build, typecheck, lint, unit tests
+  - per-implementation E2E lanes (`node-sdk`, `node-sdk+web-sdk`, `web-sdk`, `web-sdk_react`)
+  - dedicated React Native Android E2E lane
 - Publish workflow (`publish-npm.yaml`):
-  - release/manual dispatch,
-  - version derivation from tag,
-  - package version bump, build, pack, and publish.
-- Docs deployment workflow (`publish-docs.yml`):
-  - generates TypeDoc output and deploys to GitHub Pages.
+  - release/manual trigger
+  - version from tag
+  - build, pack, and publish
+- Docs workflow (`publish-docs.yml`):
+  - TypeDoc generation
+  - GitHub Pages deploy
 
 ## Verification Strategy in Practice
 
-- Unit tests focus on shared and platform SDK behavior (`api-client`, `core`, `web`, `react-native`,
-  etc.).
-- E2E behavior is verified in sparse reference implementations:
-  - Node SSR only,
-  - Node SSR + Web vanilla,
-  - Web vanilla,
-  - Web React + Web SDK,
-  - React Native (Detox Android lane in CI).
-- Constitution explicitly positions reference implementations as required verification gates for
+- Unit tests cover shared libraries and platform packages (`api-client`, `core`, `web`,
+  `react-native`, etc.).
+- Integration behavior is validated in sparse reference implementations:
+  - Node SSR only
+  - Node SSR + Web vanilla
+  - Web vanilla
+  - Web React + Web SDK
+  - React Native (Detox Android lane)
+- Repository constitution treats reference implementations as required integration gates for
   user-visible behavior changes.
 
 ## Accepted Design Decisions (Do Not Treat as Risks)
@@ -349,159 +359,148 @@ graph LR
 ### DEC-001: Enforce layered, acyclic dependency direction
 
 - `status`: `accepted`
-- `decision`: Keep dependencies directional from contracts upward and prohibit reverse-layer
-  imports.
-- `rationale`: Enables safe expansion across platforms/environments while minimizing cross-layer
-  coupling.
+- `decision`: Keep dependencies directional from contracts upward and avoid reverse-layer imports.
+- `rationale`: Supports safe multi-platform expansion with lower coupling.
 - `alternatives_considered`: flat package graph; peer-coupled cross imports.
-- `consequences`: clearer ownership boundaries; requires disciplined package boundaries.
+- `consequences`: clearer ownership boundaries with stronger package-discipline requirements.
 
 ### DEC-002: Contract-first API boundary with schema validation
 
 - `status`: `accepted`
-- `decision`: Validate serialized request/response payloads via
-  `@contentful/optimization-api-schemas`.
-- `rationale`: Prevents runtime contract drift across SDK targets and environments.
-- `alternatives_considered`: compile-time types only; ad hoc runtime checks per package.
-- `consequences`: strict schema maintenance burden on contract changes.
+- `decision`: Validate runtime payload boundaries through `@contentful/optimization-api-schemas`.
+- `rationale`: Reduces contract drift across SDKs/environments.
+- `alternatives_considered`: compile-time typing only; package-local ad hoc checks.
+- `consequences`: schema maintenance must stay synchronized with API evolution.
 
 ### DEC-003: Stateful runtime uses module-global signals with singleton lock
 
 - `status`: `accepted`
-- `decision`: Maintain shared state via module-global signals and permit one stateful instance per
+- `decision`: Keep shared state in module-global signals and enforce one stateful instance per
   runtime.
-- `rationale`: Guarantees consistent state propagation and avoids conflicting stateful instances.
+- `rationale`: Ensures coherent shared state and predictable subscription behavior.
 - `alternatives_considered`: fully instance-local state graphs; multi-instance shared buses.
-- `consequences`: stateful SDKs must be treated as runtime singletons.
+- `consequences`: stateful SDKs must be consumed as runtime singletons.
 
-### DEC-004: Consent gating defaults to allow-list for `identify` and `page`
+### DEC-004: Consent gating defaults to allow-list model
 
 - `status`: `accepted`
-- `decision`: Block non-allowlisted events pre-consent; emit structured blocked-event diagnostics.
-- `rationale`: Aligns analytics/personalization behavior with consent-by-default privacy stance.
-- `alternatives_considered`: block-all pre-consent; configurable permissive defaults.
-- `consequences`: integration teams must explicitly collect consent before broader tracking.
+- `decision`: Block non-allowlisted events pre-consent and emit structured blocked-event
+  diagnostics.
+- `rationale`: Aligns with privacy-first behavior while preserving minimal pre-consent
+  functionality.
+- `alternatives_considered`: block-all pre-consent; permissive defaults.
+- `consequences`: integrators must explicitly collect consent before broad tracking.
 
 ### DEC-005: Guard behavior is decorator-based and synchronous
 
 - `status`: `accepted`
-- `decision`: Use stage-3 `@guardedBy` wrappers for consent guard composition.
-- `rationale`: Consistent guard semantics without repeated inline guard logic.
-- `alternatives_considered`: inline method-level checks; middleware chains per product.
-- `consequences`: decorator support required in build pipeline.
+- `decision`: Use stage-3 `@guardedBy` wrappers for guard composition.
+- `rationale`: Centralized, consistent guard enforcement.
+- `alternatives_considered`: inline checks; middleware chains.
+- `consequences`: decorator support is a build/runtime assumption.
 
 ### DEC-006: Stateful analytics queues by profile and flushes in batches
 
 - `status`: `accepted`
-- `decision`: Profile-scoped in-memory queue with auto flush threshold and retry runtime.
-- `rationale`: Maintains profile-event affinity and improves delivery efficiency.
-- `alternatives_considered`: per-event immediate send; single global ungrouped queue.
-- `consequences`: brief memory overhead and flush orchestration complexity.
+- `decision`: Keep profile-scoped event queues with batch flush and retry runtime.
+- `rationale`: Preserves profile-event association and network efficiency.
+- `alternatives_considered`: immediate send; global ungrouped queue.
+- `consequences`: added queue orchestration complexity.
 
 ### DEC-007: Stateful personalization uses bounded offline queue with drop policy
 
 - `status`: `accepted`
-- `decision`: Buffer offline personalization events in bounded queue, drop oldest when full.
+- `decision`: Buffer offline personalization events with bounded queue and oldest-first drop on
+  overflow.
 - `rationale`: Prevents unbounded memory growth in prolonged offline scenarios.
-- `alternatives_considered`: unbounded queue; reject-new-event policy on overflow.
-- `consequences`: oldest offline events may be lost under sustained offline pressure.
+- `alternatives_considered`: unbounded queue; reject-new policy.
+- `consequences`: oldest offline events can be dropped under sustained pressure.
 
 ### DEC-008: Use shared queue flush runtime with backoff, jitter, and circuit opening
 
 - `status`: `accepted`
-- `decision`: Centralize retry/circuit behavior through `QueueFlushRuntime`.
-- `rationale`: Consistent resilience behavior across analytics and personalization queues.
-- `alternatives_considered`: product-specific retry implementations.
-- `consequences`: shared policy tuning affects both queue domains.
+- `decision`: Centralize queue resilience behavior in `QueueFlushRuntime`.
+- `rationale`: Consistent retry/circuit behavior across analytics and personalization.
+- `alternatives_considered`: per-product retry stacks.
+- `consequences`: policy tuning affects both domains.
 
-### DEC-009: Preview tooling is tightly coupled to core signal internals
+### DEC-009: Preview tooling is intentionally coupled to core signal internals
 
 - `status`: `accepted`
-- `decision`: Expose mutable signal refs through `registerPreviewPanel()` plus interceptors for
-  overrides.
-- `rationale`: Enables immediate preview overrides without network roundtrips.
-- `alternatives_considered`: API-only preview mutations; separate shadow state stores.
-- `consequences`: preview subsystems are intentionally coupled to core internals.
+- `decision`: Expose signal bridges through `registerPreviewPanel(...)` and apply overrides via
+  interceptors.
+- `rationale`: Enables immediate local preview overrides without network roundtrips.
+- `alternatives_considered`: API-only preview mutations; isolated shadow state stores.
+- `consequences`: preview packages are intentionally coupled to core internals.
 
 ### DEC-010: Publish JavaScript SDKs as ESM, CJS, and dual declarations
 
 - `status`: `accepted`
-- `decision`: Ship multi-format artifacts for platform interoperability; include UMD for web
-  packages.
-- `rationale`: Supports mixed consumer ecosystems and script-tag usage.
+- `decision`: Ship multi-format artifacts for broad consumer compatibility.
+- `rationale`: Supports mixed ESM/CJS ecosystems.
 - `alternatives_considered`: ESM-only strategy.
-- `consequences`: more complex build and release matrix.
+- `consequences`: broader build/release surface area.
 
-### DEC-011: Use reference implementations as integration verification gates
+### DEC-011: Include UMD outputs for browser-oriented packages
 
 - `status`: `accepted`
-- `decision`: Validate user-visible changes through implementation-level e2e coverage.
-- `rationale`: Catches cross-layer integration regressions not visible in isolated unit tests.
-- `alternatives_considered`: unit-test-only verification strategy.
-- `consequences`: higher CI complexity and runtime cost.
+- `decision`: Ship UMD builds for web runtime and preview panel packages.
+- `rationale`: Enables direct script-tag and legacy browser integration paths.
+- `alternatives_considered`: module-only web distribution.
+- `consequences`: extra bundling and global-surface compatibility work.
 
 ### DEC-012: Retry logic is intentionally limited to HTTP 503
 
 - `status`: `accepted`
-- `decision`: Apply automatic retry only for `503 Service Unavailable` responses in protected fetch.
-- `rationale`: Treats `503` as the explicit transient backend-unavailable signal and avoids retrying
-  non-transient/non-idempotent failure classes by default.
-- `alternatives_considered`: broad retry for additional 5xx/network classes; fully configurable
-  retry predicate at base client layer.
-- `consequences`: transient failures outside `503` are surfaced immediately without retry.
+- `decision`: Apply automatic retries only to `503 Service Unavailable` responses.
+- `rationale`: Treats `503` as explicit transient availability signal and avoids broad retry side
+  effects.
+- `alternatives_considered`: broader 5xx retry, custom predicate-based retry at base layer.
+- `consequences`: non-503 transient failures surface immediately to callers.
 
 ## Accepted Constraints (Do Not Treat as Risks)
 
 - `CON-001`: Exactly one stateful SDK instance is supported per JS runtime.
-- `CON-002`: `CoreStateful.reset()` preserves consent by design.
-- `CON-003`: Implementations are intentionally outside PNPM workspace package set and consume packed
-  tarballs.
-- `CON-004`: CI e2e execution is intentionally path-filtered for cost/runtime control.
-- `CON-005`: React Native offline detection depends on optional `@react-native-community/netinfo`;
-  absence degrades to warning + no offline detection, not failure.
-- `CON-006`: Contract-critical runtime behavior is anchored to constitution principles in
-  `.specify/memory/constitution.md`.
+- `CON-002`: `CoreStateful.reset()` intentionally preserves consent and preview panel signals.
+- `CON-003`: Implementations intentionally sit outside workspace package definitions and consume
+  packed tarballs.
+- `CON-004`: Main pipeline E2E execution is intentionally path-filtered for runtime/cost control.
+- `CON-005`: React Native connectivity handling depends on optional
+  `@react-native-community/netinfo`; absence degrades to warning + no connectivity listener.
+- `CON-006`: Constitution principles in `.specify/memory/constitution.md` are normative for
+  architecture and verification behavior.
 
 ## Open Risk Register (Unresolved / Undocumented Only)
 
-### RSK-001: SpecKit template bootstrap is incomplete
+### RSK-001: SpecKit command-template bootstrap remains incomplete
 
 - `severity`: `low`
-- `evidence`: `.specify/templates/commands/` artifacts referenced by constitution sync guidance are
-  still absent.
-- `impact`: plan/spec/task workflows cannot be fully constitution-enforced through local template
-  command checks.
-- `mitigation`: add the missing command template set under `.specify/templates/commands/` and wire
-  compliance checks into contributor workflow.
+- `evidence`: expected `.specify/templates/commands/` artifacts are absent.
+- `impact`: local command-template-level guardrails for constitution/spec workflows are incomplete.
+- `mitigation`: add command templates and integrate checks in contributor workflow.
 
-### RSK-002: Contract and preview packages have thin direct unit-test coverage
+### RSK-002: Preview panel package lacks direct unit-test coverage
 
 - `severity`: `medium`
-- `evidence`:
-  - `packages/universal/api-schemas` has a unit suite, but coverage is narrow (validation
-    utility-centric; limited direct schema-shape edge tests).
-  - `packages/web/preview-panel` has no unit test suite (`test:unit` is TODO/no-op).
-- `impact`: schema regressions or preview override regressions may primarily surface via downstream
-  integration tests.
-- `mitigation`: add focused unit suites for schema edge cases and preview override merge/reset
-  behavior.
+- `evidence`: `packages/web/preview-panel` has no direct unit-test suite.
+- `impact`: preview override regressions are primarily detected at integration/E2E stages.
+- `mitigation`: add focused unit tests for override apply/reset behavior and signal bridge
+  interactions.
 
 ## Appendix A: Runtime Behavior Notes
 
-- Stateful runtime writes profile/changes/personalizations via reactive effects and persistence
-  adapters.
-- Blocked events are surfaced through both callback (`onEventBlocked`) and state stream
+- Stateful adapters persist state through reactive effects tied to core signals.
+- Blocked events are surfaced through both callback (`onEventBlocked`) and signal stream
   (`blockedEventStream`).
-- Online transitions actively trigger queue flush attempts for both analytics and personalization in
-  stateful adapters.
-- Preview overrides are preserved against incoming API responses using state interceptors.
+- Online transitions trigger flush behavior in stateful products/adapters.
+- Preview overrides are applied at state-interceptor boundaries rather than by mutating server
+  responses.
 
 ## Appendix B: Quality and Delivery Snapshot
 
-- Main CI lanes: `setup`, `license-check`, `format`, `build`, `type-check`, `lint`, per-package unit
-  matrix, per-implementation e2e (`node-sdk`, `node-sdk+web-sdk`, `web-sdk`, `web-sdk_react`,
-  `react-native-sdk`).
-- RN Android e2e lane provisions emulator, mock server, Metro bundler, and runs Detox suites.
-- Publish lane bumps package versions from release tags and publishes built artifacts after
-  build/pack steps.
-- Docs lane regenerates TypeDoc and deploys GitHub Pages from `docs/`.
+- Main CI lanes: setup, format, build, typecheck, lint, unit tests, and path-filtered implementation
+  E2E lanes.
+- RN Android E2E lane provisions emulator + mock server + Metro + Detox run.
+- Publish lane derives release version from tag, bumps package versions, builds, packs, and
+  publishes.
+- Docs lane regenerates TypeDoc and deploys to GitHub Pages.

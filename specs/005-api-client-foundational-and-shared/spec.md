@@ -4,134 +4,132 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-02).
+2026-03-12).
 
 ## User Scenarios & Testing _(mandatory)_
 
-### User Story 1 - Configure a Single Aggregated Client (Priority: P1)
+### User Story 1 - Initialize One Aggregated Client with Shared Config (Priority: P1)
 
-As an SDK integrator, I need one top-level client that wires both Experience and Insights APIs with
-shared configuration so I can initialize once and call both APIs consistently.
+As an SDK integrator, I need one top-level client that wires Experience and Insights with shared
+config plus per-client overrides.
 
-**Why this priority**: Aggregation and config inheritance are the primary entry point for runtime
-adoption.
+**Why this priority**: `ApiClient` is the main package entrypoint.
 
-**Independent Test**: Instantiate `ApiClient` with shared config and verify `experience` and
-`insights` clients receive shared fields plus per-client overrides.
+**Independent Test**: Instantiate `ApiClient` and verify `.experience`/`.insights` creation and base
+URL isolation.
 
 **Acceptance Scenarios**:
 
-1. **Given** a valid `ApiClient` config with `clientId`, **When** the client is created, **Then**
-   `.experience` and `.insights` are initialized and available.
-2. **Given** per-client `baseUrl` overrides, **When** the client is created, **Then** each
+1. **Given** `ApiClientConfig` with `clientId`, **When** `ApiClient` is created, **Then** both
+   `ExperienceApiClient` and `InsightsApiClient` instances are created.
+2. **Given** per-client base URL overrides, **When** `ApiClient` is created, **Then** each
    sub-client uses only its own override.
-3. **Given** an unsupported top-level `baseUrl` at runtime, **When** the client is created, **Then**
-   sub-clients ignore it.
+3. **Given** a runtime-only top-level `baseUrl`, **When** `ApiClient` is created, **Then** it is
+   ignored by sub-clients.
 
 ---
 
-### User Story 2 - Apply Shared Transport Protection (Priority: P1)
+### User Story 2 - Apply Shared Timeout/Retry Transport Protection (Priority: P1)
 
-As an API client maintainer, I need shared timeout, retry, and error logging behavior so transport
-failures are handled consistently across all API clients.
+As a client maintainer, I need shared fetch wrappers so timeout, retry, and error behavior stays
+consistent across APIs.
 
-**Why this priority**: Cross-client transport consistency prevents divergent reliability and logging
-behavior.
+**Why this priority**: Experience and Insights clients both rely on `Fetch.create(...)`.
 
-**Independent Test**: Verify `Fetch.create` composition, timeout callbacks, retry-on-503 behavior,
-and log behavior for abort vs non-abort errors.
+**Independent Test**: Verify timeout callback/log behavior, retry-on-503 policy, and wrapper
+composition order.
 
 **Acceptance Scenarios**:
 
-1. **Given** protected fetch configuration, **When** `Fetch.create` is called, **Then** timeout
-   protection is composed before retry protection.
-2. **Given** a request timeout, **When** no custom timeout callback is provided, **Then** the
-   timeout wrapper logs an error and aborts the request.
-3. **Given** a `503` response, **When** retry config allows attempts, **Then** the request is
-   retried.
-4. **Given** a non-`503` non-OK response, **When** retry logic executes, **Then** retries stop and
-   the request fails with a non-retriable error.
+1. **Given** protected fetch options, **When** `createProtectedFetchMethod` runs, **Then** timeout
+   wrapping is composed before retry wrapping.
+2. **Given** a timeout and no `onRequestTimeout`, **When** the timeout elapses, **Then** a timeout
+   error is logged and the request is aborted.
+3. **Given** a `503` response and retries available, **When** retry wrapper executes, **Then**
+   failed attempts are retried.
+4. **Given** a non-`503` non-OK response, **When** retry wrapper executes, **Then** it stops
+   retrying and throws a non-retriable error message.
 
 ---
 
-### User Story 3 - Preserve a Stable Shared Package Surface (Priority: P2)
+### User Story 3 - Keep a Correct Package Export Surface (Priority: P2)
 
-As a downstream package developer, I need a stable root export surface so I can import client types,
-builders, and schema contracts from one package.
+As a downstream developer, I need accurate import boundaries so I can use root exports and subpath
+exports correctly.
 
-**Why this priority**: Multiple workspace packages depend on a predictable shared import surface.
+**Why this priority**: Root and subpath exports are intentionally different.
 
-**Independent Test**: Build/typecheck dependent packages importing from the root package and verify
-dual module output artifacts.
+**Independent Test**: Validate package exports map and root entrypoint contents.
 
 **Acceptance Scenarios**:
 
-1. **Given** root imports from `@contentful/optimization-api-client`, **When** consumers import
-   client/builders/experience/insights/schema exports, **Then** type resolution succeeds.
-2. **Given** a production build, **When** artifacts are emitted, **Then** both ESM/CJS bundles and
-   dual declarations are generated.
+1. **Given** root import `@contentful/optimization-api-client`, **When** consumed, **Then** it
+   exports `ApiClient`, `ApiClientBase`, and Experience/Insights modules.
+2. **Given** schema or logger imports, **When** consumed, **Then** they are accessed via
+   `@contentful/optimization-api-client/api-schemas` and
+   `@contentful/optimization-api-client/logger`.
 
 ---
 
 ### Edge Cases
 
-- Missing `environment` must default to `'main'`.
-- `ApiClientBase.logRequestError` must not log for thrown values that are not `Error` instances.
-- Timeout aborts may be transformed into a generic non-retriable request error by retry handling.
-- Retry logic must treat only `503` as retryable under current transport policy.
-- `createProtectedFetchMethod` must rethrow original errors after logging (for `Error` instances).
+- `ApiClientBase` must default `environment` to `'main'`.
+- `logRequestError` must ignore thrown values that are not `Error` instances.
+- Retry policy must treat only HTTP `503` as retriable.
+- Non-503 non-OK responses must terminate retry flow and throw a generic non-retriable message.
+- `createProtectedFetchMethod` logs only synchronous setup failures; runtime request failures are
+  handled by wrapped methods and callers.
 
 ## Requirements _(mandatory)_
 
 ### Functional Requirements
 
-- **FR-001**: `ApiClient` MUST accept shared config fields `clientId`, optional `environment`, and
-  optional `fetchOptions`.
-- **FR-002**: `ApiClient` MUST construct both `ExperienceApiClient` and `InsightsApiClient` from
-  shared config merged with per-client overrides.
-- **FR-003**: Shared config MUST NOT define a top-level supported `baseUrl` field; base URLs are
-  per-client configuration.
+- **FR-001**: `ApiClientConfig` MUST include `clientId`, optional `environment`, optional
+  `fetchOptions`, and optional `personalization`/`analytics` per-client overrides.
+- **FR-002**: `ApiClient` MUST construct `ExperienceApiClient` and `InsightsApiClient` using shared
+  config merged with respective per-client overrides.
+- **FR-003**: Top-level `ApiClientConfig` MUST NOT type a shared `baseUrl`; base URLs are
+  per-client.
 - **FR-004**: `ApiClientBase` MUST default `environment` to `'main'` when omitted.
-- **FR-005**: `ApiClientBase` MUST create its fetch method via
-  `Fetch.create({ ...fetchOptions, apiName })`.
-- **FR-006**: `ApiClientBase.logRequestError` MUST log abort errors at warning level with request
-  context.
-- **FR-007**: `ApiClientBase.logRequestError` MUST log non-abort `Error` instances at error level.
-- **FR-008**: `ApiClientBase.logRequestError` MUST ignore non-`Error` thrown values.
-- **FR-009**: `createTimeoutFetchMethod` MUST default `requestTimeout` to `3000ms`.
-- **FR-010**: `createTimeoutFetchMethod` MUST invoke `onRequestTimeout({ apiName })` when provided
-  before aborting.
-- **FR-011**: `createTimeoutFetchMethod` MUST log timeout failure when no timeout callback is
-  provided.
-- **FR-012**: `createRetryFetchMethod` MUST default to `retries: 1` and `intervalTimeout: 0`.
-- **FR-013**: `createRetryFetchMethod` MUST retry only when response status is `503`.
-- **FR-014**: `createRetryFetchMethod` MUST abort and fail non-`503` failures as non-retriable
-  request errors.
-- **FR-015**: `createRetryFetchMethod` MUST pass `apiName` to `onFailedAttempt` callback metadata.
-- **FR-016**: `createProtectedFetchMethod` MUST compose timeout wrapper first, then retry wrapper.
-- **FR-017**: `createProtectedFetchMethod` MUST log and rethrow `Error` failures (abort vs non-abort
-  severity differs).
-- **FR-018**: Package root exports MUST include API client classes, builders, experience/insights
-  modules, and re-exported schema contracts.
-- **FR-019**: Package build output MUST include ESM (`.mjs`), CJS (`.cjs`), and dual declaration
-  types (`.d.mts`/`.d.cts`).
+- **FR-005**: `ApiClientBase` MUST create fetch via
+  `Fetch.create({ ...(fetchOptions ?? {}), apiName: name })`.
+- **FR-006**: `ApiClientBase.logRequestError` MUST log `AbortError` at warning level.
+- **FR-007**: `ApiClientBase.logRequestError` MUST log non-abort `Error` values at error level.
+- **FR-008**: `ApiClientBase.logRequestError` MUST no-op for non-`Error` values.
+- **FR-009**: `createTimeoutFetchMethod` MUST default `requestTimeout` to `3000`.
+- **FR-010**: `createTimeoutFetchMethod` MUST call `onRequestTimeout({ apiName })` when provided,
+  otherwise log a timeout error, then abort.
+- **FR-011**: `createRetryFetchMethod` MUST default to `retries: 1` and `intervalTimeout: 0`.
+- **FR-012**: `createRetryFetchMethod` MUST retry only on HTTP `503`.
+- **FR-013**: `createRetryFetchMethod` MUST call `onFailedAttempt` with `apiName`, `attemptNumber`,
+  `retriesLeft`, and the retry error for retriable failures.
+- **FR-014**: `createRetryFetchMethod` MUST throw
+  `${apiName} API request to "<url>" may not be retried.` when no successful response is returned.
+- **FR-015**: `createProtectedFetchMethod` MUST compose timeout first, then retry with
+  `fetchMethod: timeoutFetchMethod`.
+- **FR-016**: `createProtectedFetchMethod` MUST log and rethrow synchronous setup errors for `Error`
+  instances (warn for `AbortError`, error otherwise).
+- **FR-017**: Root package exports MUST include API client and domain modules; logger and schema
+  re-exports MUST be provided through `./logger` and `./api-schemas` subpath exports.
+- **FR-018**: Build output MUST include ESM (`.mjs`), CJS (`.cjs`), and dual declarations
+  (`.d.mts`/`.d.cts`) for each configured entrypoint.
 
 ### Key Entities _(include if feature involves data)_
 
-- **ApiClient**: Aggregated top-level client exposing `.experience` and `.insights`.
-- **ApiClientBase**: Shared base class for config, protected fetch creation, and request error
-  logging.
-- **Protected Fetch Method**: Timeout + retry composed fetch wrapper used by all API clients.
-- **Fetch Callback Options**: Metadata passed to timeout/retry callbacks (`apiName`, attempt data,
-  optional error).
-- **Package Export Surface**: Root and submodule contract exposed to downstream packages.
+- **ApiClient**: Aggregated client exposing `.experience` and `.insights`.
+- **ApiClientBase**: Shared base class for config defaults, fetch creation, and request error logs.
+- **Fetch Wrapper Stack**: Timeout wrapper composed under retry wrapper.
+- **Fetch Callback Metadata**: Callback payload fields (`apiName`, `error`, `attemptNumber`,
+  `retriesLeft`).
+- **Export Surface**: Root module plus explicit `./logger` and `./api-schemas` subpath interfaces.
 
 ## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
-- **SC-001**: `ApiClient` initialization tests confirm both sub-clients are always constructed.
-- **SC-002**: Runtime tests confirm per-client `baseUrl` overrides remain isolated.
-- **SC-003**: Transport wrapper tests confirm timeout, retry, and callback behavior under success
-  and failure paths.
-- **SC-004**: Build artifacts include dual runtime module formats and dual declaration formats.
+- **SC-001**: `ApiClient` tests verify both sub-clients are created and per-client base URLs stay
+  isolated.
+- **SC-002**: Timeout/retry tests verify timeout callbacks/logging, 503-only retries, and
+  non-retriable failures.
+- **SC-003**: `ApiClientBase` tests verify abort/error/no-op logging behavior for request failures.
+- **SC-004**: Build emits dual runtime and dual declaration outputs for configured entrypoints.

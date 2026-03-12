@@ -4,104 +4,105 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-02).
+2026-03-12).
 
 ## User Scenarios & Testing _(mandatory)_
 
-### User Story 1 - Validate Insights Events Prior to Send (Priority: P1)
+### User Story 1 - Validate Insights Event Variants Before Send (Priority: P1)
 
-As an analytics pipeline developer, I need a schema for Insights events so only valid event types
-are accepted before sending to the Insights API.
+As an analytics developer, I need strict event schema validation so only supported Insights event
+types are accepted before transport.
 
-**Why this priority**: Analytics ingestion should reject invalid events before transport attempts.
+**Why this priority**: Invalid event types should fail before any network call.
 
-**Independent Test**: Parse valid and invalid insight event payloads through `InsightsEvent`.
+**Independent Test**: Parse view, click, and hover payloads through `InsightsEvent`.
 
 **Acceptance Scenarios**:
 
-1. **Given** a valid component view event payload, **When** parsed with `InsightsEvent`, **Then**
+1. **Given** valid `component`, `component_click`, and `component_hover` payloads, **When** parsed
+   with `InsightsEvent`, **Then** parsing succeeds.
+2. **Given** an unsupported `type`, **When** parsed with `InsightsEvent`, **Then** parsing fails.
+
+---
+
+### User Story 2 - Validate Profile-Scoped Batch Payloads (Priority: P2)
+
+As an SDK client implementer, I need batch schemas that pair a profile with an events array so
+request bodies match ingestion contracts.
+
+**Why this priority**: `BatchInsightsEvent` is the direct wire payload used by Insights API client
+calls.
+
+**Independent Test**: Parse batch payloads with valid and invalid profile/event shapes.
+
+**Acceptance Scenarios**:
+
+1. **Given** `profile.id` and valid events, **When** parsed with `BatchInsightsEvent`, **Then**
    parsing succeeds.
-2. **Given** a non-supported event type payload, **When** parsed with `InsightsEvent`, **Then**
-   parsing fails.
+2. **Given** a missing `profile.id`, **When** parsed with `BatchInsightsEvent`, **Then** parsing
+   fails.
 
 ---
 
-### User Story 2 - Validate Batched Insights Request Bodies (Priority: P2)
+### User Story 3 - Reuse Experience-Domain Primitives (Priority: P3)
 
-As an SDK client implementer, I need a batched schema contract that pairs profile identity with
-events so request bodies match ingestion API expectations.
+As a maintainer, I need Insights schemas to reuse shared Experience contracts so common
+event/profile rules stay aligned.
 
-**Why this priority**: Batch structure is the direct transport payload for Insights ingestion.
+**Why this priority**: Reuse prevents duplicated schema logic and contract drift.
 
-**Independent Test**: Parse batch payloads that vary profile completeness and event list
-composition.
-
-**Acceptance Scenarios**:
-
-1. **Given** a batch payload with `profile.id` and valid events, **When** parsed with
-   `BatchInsightsEvent`, **Then** parsing succeeds.
-2. **Given** a batch payload missing `profile.id`, **When** parsed with `BatchInsightsEvent`,
-   **Then** parsing fails.
-
----
-
-### User Story 3 - Preserve Cross-Domain Contract Reuse (Priority: P3)
-
-As a maintainer, I need Insights schemas to reuse Experience-domain primitives so event/profile
-compatibility remains consistent across APIs.
-
-**Why this priority**: Reuse prevents drift between personalization and analytics data contracts.
-
-**Independent Test**: Verify `InsightsEvent` and `BatchInsightsEvent` are composed from `ViewEvent`
-and `PartialProfile` contracts.
+**Independent Test**: Confirm composition from `ViewEvent`, `InteractionEventProperties`, and
+`PartialProfile`.
 
 **Acceptance Scenarios**:
 
-1. **Given** updates to shared component event or profile schemas, **When** Insights schemas are
-   parsed, **Then** behavior remains aligned with shared primitives.
-2. **Given** batch arrays of profile+events objects, **When** parsed with `BatchInsightsEventArray`,
-   **Then** each element enforces identical schema rules.
+1. **Given** shared event/profile schema updates, **When** Insights schemas are parsed, **Then**
+   they follow the updated shared behavior.
+2. **Given** multiple batch entries, **When** parsed with `BatchInsightsEventArray`, **Then** each
+   item applies identical validation.
 
 ---
 
 ### Edge Cases
 
-- Batch payloads with empty `events` arrays are currently valid and must remain parseable unless the
-  contract is intentionally tightened.
-- Unsupported insight event discriminators must be rejected.
-- Profile payloads may include additional JSON fields, but must always include `id`.
-- Component events missing required identifiers (`componentId`) must fail parsing.
+- `BatchInsightsEvent.events` currently allows empty arrays (no minimum length check).
+- `HoverEvent` requires both `hoverId` and `hoverDurationMs`.
+- `ClickEvent` and `HoverEvent` must still satisfy shared interaction fields (`componentType`,
+  `componentId`, `variantIndex`, etc.).
+- `PartialProfile` allows additional JSON attributes but always requires `id`.
 
 ## Requirements _(mandatory)_
 
 ### Functional Requirements
 
 - **FR-001**: `InsightsEvent` MUST be a discriminated union keyed by `type`.
-- **FR-002**: The current `InsightsEvent` union MUST include `ViewEvent` as the supported event
-  variant.
-- **FR-003**: `InsightsEventArray` MUST represent an array of `InsightsEvent`.
-- **FR-004**: `BatchInsightsEvent` MUST require a `profile` object validated by `PartialProfile`.
-- **FR-005**: `BatchInsightsEvent` MUST require an `events` array validated by `InsightsEventArray`.
-- **FR-006**: `BatchInsightsEventArray` MUST represent an array of `BatchInsightsEvent`.
-- **FR-007**: Insights contracts MUST reuse Experience-domain shared schemas (`ViewEvent`,
-  `PartialProfile`) rather than duplicate equivalent schema definitions.
-- **FR-008**: Insights domain barrels MUST export event and batch schema contracts through
-  `insights/index.ts` and `insights/event/index.ts`.
+- **FR-002**: `InsightsEvent` MUST include `ViewEvent` (`type: 'component'`), `ClickEvent`
+  (`type: 'component_click'`), and `HoverEvent` (`type: 'component_hover'`).
+- **FR-003**: `InsightsEventArray` MUST be `InsightsEvent[]`.
+- **FR-004**: `BatchInsightsEvent` MUST require `profile: PartialProfile`.
+- **FR-005**: `BatchInsightsEvent` MUST require `events: InsightsEventArray`.
+- **FR-006**: `BatchInsightsEventArray` MUST be `BatchInsightsEvent[]`.
+- **FR-007**: `ClickEvent` MUST extend `InteractionEventProperties` with literal
+  `type: 'component_click'`.
+- **FR-008**: `HoverEvent` MUST extend `InteractionEventProperties` with literal
+  `type: 'component_hover'`, plus `hoverId` and `hoverDurationMs`.
+- **FR-009**: Insights domain exports MUST expose `BatchInsightsEvent`, `ClickEvent`, `HoverEvent`,
+  and `InsightsEvent` from `insights/event/index.ts`, re-exported by `insights/index.ts`.
 
 ### Key Entities _(include if feature involves data)_
 
-- **InsightsEvent**: Valid analytics event contract for Insights ingestion.
-- **InsightsEventArray**: Collection of analytics events for a profile context.
-- **BatchInsightsEvent**: One profile-scoped batch payload containing events.
-- **BatchInsightsEventArray**: Multi-batch request payload structure.
-- **PartialProfile**: Shared profile contract requiring `id` plus optional JSON attributes.
+- **InsightsEvent**: Union of supported Insights analytics event variants.
+- **ClickEvent / HoverEvent**: Interaction event variants specific to click and hover tracking.
+- **InsightsEventArray**: Event collection for one profile scope.
+- **BatchInsightsEvent**: Profile plus events payload entry.
+- **BatchInsightsEventArray**: Multi-profile batch payload.
+- **PartialProfile**: Shared profile schema with required `id` and JSON catchall.
 
 ## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
-- **SC-001**: Valid view events parse successfully through `InsightsEvent`.
-- **SC-002**: Unsupported event types are rejected by `InsightsEvent` parsing.
-- **SC-003**: Batch payloads without `profile.id` are rejected by `BatchInsightsEvent`.
-- **SC-004**: Array-level validation applies consistently for every element in
-  `BatchInsightsEventArray`.
+- **SC-001**: Valid `component`, `component_click`, and `component_hover` events parse successfully.
+- **SC-002**: Unsupported event types fail `InsightsEvent` parsing.
+- **SC-003**: Batch payloads without `profile.id` fail validation.
+- **SC-004**: Array validation applies per element for `BatchInsightsEventArray`.
