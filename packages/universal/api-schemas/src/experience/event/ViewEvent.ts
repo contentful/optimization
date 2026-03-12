@@ -23,14 +23,14 @@ export const ViewEvent = z.extend(InteractionEventProperties, {
    * @remarks
    * This value is updated and re-emitted while the same view remains active.
    */
-  viewDurationMs: z.number(),
+  viewDurationMs: z.optional(z.number()),
   /**
    * UUID identifying a single active component view session.
    *
    * @remarks
    * Multiple events emitted for the same active view share this identifier.
    */
-  viewId: z.string(),
+  viewId: z.optional(z.string()),
 })
 
 /**

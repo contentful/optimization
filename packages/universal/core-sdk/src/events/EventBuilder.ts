@@ -151,6 +151,18 @@ const ViewBuilderArgs = z.extend(ComponentInteractionBuilderArgsBase, {
  */
 export type ViewBuilderArgs = z.infer<typeof ViewBuilderArgs>
 
+const FlagViewBuilderArgs = z.extend(ComponentInteractionBuilderArgsBase, {
+  viewId: z.optional(z.string()),
+  viewDurationMs: z.optional(z.number()),
+})
+
+/**
+ * Arguments for constructing Custom Flag view events.
+ *
+ * @public
+ */
+export type FlagViewBuilderArgs = z.infer<typeof FlagViewBuilderArgs>
+
 const ClickBuilderArgs = ComponentInteractionBuilderArgsBase
 
 /**
@@ -495,7 +507,7 @@ class EventBuilder {
   /**
    * Builds a component view event payload for a Custom Flag component.
    *
-   * @param args - {@link ViewBuilderArgs} arguments describing the Custom Flag view.
+   * @param args - {@link FlagViewBuilderArgs} arguments describing the Custom Flag view.
    * @returns A {@link ViewEvent} describing the view.
    *
    * @remarks
@@ -514,9 +526,15 @@ class EventBuilder {
    *
    * @public
    */
-  buildFlagView(args: ViewBuilderArgs): ViewEvent {
+  buildFlagView(args: FlagViewBuilderArgs): ViewEvent {
+    const { componentId, experienceId, variantIndex, viewId, viewDurationMs, ...universal } =
+      parseWithFriendlyError(FlagViewBuilderArgs, args)
+
     return {
-      ...this.buildView(args),
+      ...this.buildEntryComponentBase(universal, componentId, experienceId, variantIndex),
+      ...(viewDurationMs === undefined ? {} : { viewDurationMs }),
+      ...(viewId === undefined ? {} : { viewId }),
+      type: 'component',
       componentType: 'Variable',
     }
   }

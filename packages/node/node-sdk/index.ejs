@@ -102,14 +102,6 @@
           <a href="/?profileId=<%= profile.id %>&userId=charles">Identify</a>
         <% } %>
         |
-        <button>Custom Flags</button>
-        <dialog>
-          <pre><%= JSON.stringify(flags, undefined, 2) %></pre>
-          <form method="dialog">
-            <button type="submit">Close</button>
-          </form>
-        </dialog>
-        |
         <button>Profile</button>
         <dialog>
           <pre><%= JSON.stringify(profile, undefined, 2) %></pre>

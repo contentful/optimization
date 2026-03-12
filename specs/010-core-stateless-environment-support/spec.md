@@ -88,8 +88,10 @@ builder output, interceptor application, schema parsing, and one-batch send payl
 - Stateless personalization does not use anonymous-ID fallback; outgoing `profileId` is derived only
   from `profile?.id`.
 - `CoreBase.trackFlagView`, `trackClick`, and `trackHover` always dispatch through analytics.
-- Stateless resolver helpers (`getCustomFlag`, `getCustomFlags`, `personalizeEntry`,
-  `getMergeTagValue`) require explicit input values; no stateful signal defaults are applied.
+- Stateless resolver helpers (`getFlag`, `personalizeEntry`, `getMergeTagValue`) require explicit
+  input values; no stateful signal defaults are applied.
+- Stateless `getFlag` does not auto-emit `trackFlagView`; flag-view emission is explicit in
+  stateless environments.
 
 ## Requirements _(mandatory)_
 
@@ -127,8 +129,8 @@ builder output, interceptor application, schema parsing, and one-batch send payl
 - **FR-016**: Core stateless facade methods MUST route as follows: `identify/page/screen/track` to
   personalization; `trackView` to analytics for all payloads and additionally to personalization
   when `sticky` is truthy; `trackClick/trackHover/trackFlagView` to analytics.
-- **FR-017**: `CoreStateless` MUST expose resolver helpers (`getCustomFlag`, `getCustomFlags`,
-  `personalizeEntry`, `getMergeTagValue`) without requiring mutable runtime state.
+- **FR-017**: `CoreStateless` MUST expose resolver helpers (`getFlag`, `personalizeEntry`,
+  `getMergeTagValue`) without requiring mutable runtime state.
 - **FR-018**: `CoreStateless` MUST remain stateless-only and MUST NOT introduce stateful singleton,
   consent-state controller, preview bridge, or queue-policy control surfaces.
 

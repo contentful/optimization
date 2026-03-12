@@ -52,8 +52,7 @@ This SDK implements functionality specific to the Web environment, based on the
     - [`tracking.disableElement`](#trackingdisableelement)
     - [`tracking.clearElement`](#trackingclearelement)
   - [Personalization Data Resolution Methods](#personalization-data-resolution-methods)
-    - [`getCustomFlag`](#getcustomflag)
-    - [`getCustomFlags`](#getcustomflags)
+    - [`getFlag`](#getflag)
     - [`personalizeEntry`](#personalizeentry)
     - [`getMergeTagValue`](#getmergetagvalue)
   - [Personalization and Analytics Event Methods](#personalization-and-analytics-event-methods)
@@ -405,7 +404,7 @@ Available state streams:
 - `blockedEventStream`: Latest blocked-call metadata (`BlockedEvent | undefined`)
 - `eventStream`: Latest emitted analytics/personalization event
   (`AnalyticsEvent | PersonalizationEvent | undefined`)
-- `flags`: Resolved Custom Flags (`Flags | undefined`)
+- `flag(name)`: Key-scoped flag observable (`Observable<Json>`)
 - `canPersonalize`: Whether personalization selections are available (`boolean`;
   `selectedPersonalizations !== undefined`)
 - `profile`: Current profile (`Profile | undefined`)
@@ -427,7 +426,7 @@ Update behavior:
 
 - `blockedEventStream` updates whenever a call is blocked by consent guards.
 - `eventStream` updates when a valid event is accepted for send/queue.
-- `flags`, `profile`, and `selectedPersonalizations` update from Experience API responses.
+- `flag(name)` updates when the resolved value for that key changes.
 - `canPersonalize` updates whenever `selectedPersonalizations` becomes defined or `undefined`.
 - `consent` updates from defaults and `optimization.consent(...)`.
 - `previewPanelAttached` and `previewPanelOpen` are controlled by preview tooling and are preserved
@@ -581,7 +580,7 @@ After `clearElement`, the element falls back to automatic behavior for that inte
 
 ### Personalization Data Resolution Methods
 
-#### `getCustomFlag`
+#### `getFlag`
 
 Get the specified Custom Flag's value from the provided changes array, or from the current internal
 state.
@@ -595,18 +594,13 @@ Returns:
 
 - The resolved value for the specified Custom Flag, or `undefined` if it cannot be found.
 
-#### `getCustomFlags`
+Behavior notes:
 
-Get all resolved Custom Flag values from the provided changes array, or from the current internal
-state.
-
-Arguments:
-
-- `changes`: Changes array
-
-Returns:
-
-- A map of resolved Custom Flag values.
+- Web SDK is stateful; calling `getFlag(...)` automatically emits a flag view event via
+  `trackFlagView`.
+- `states.flag(name)` also emits flag view events when read/subscribed.
+- If full map resolution is needed for advanced use cases, use
+  `optimization.flagsResolver.resolve(changes)`.
 
 #### `personalizeEntry`
 

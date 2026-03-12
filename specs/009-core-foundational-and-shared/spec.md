@@ -47,9 +47,9 @@ and return behavior.
 
 **Acceptance Scenarios**:
 
-1. **Given** resolver input data, **When** `getCustomFlag`, `getCustomFlags`, `personalizeEntry`,
-   and `getMergeTagValue` are called, **Then** each method delegates to personalization resolvers
-   without changing result shape.
+1. **Given** resolver input data, **When** `getFlag`, `personalizeEntry`, and `getMergeTagValue` are
+   called, **Then** each method delegates to personalization resolvers without changing result
+   shape.
 2. **Given** identify/page/screen/track payloads, **When** `identify`, `page`, `screen`, and `track`
    are called, **Then** each delegates to personalization and returns its async result.
 3. **Given** `trackView` payload with `sticky: true`, **When** the method is called, **Then** it
@@ -116,8 +116,8 @@ and subpath exports.
   `state`.
 - **FR-006**: `CoreBase` MUST expose resolver accessors (`flagsResolver`, `mergeTagValueResolver`,
   `personalizedEntryResolver`) delegated from personalization.
-- **FR-007**: `CoreBase` resolver helpers (`getCustomFlag`, `getCustomFlags`, `personalizeEntry`,
-  `getMergeTagValue`) MUST delegate to personalization methods without reshaping outputs.
+- **FR-007**: `CoreBase` resolver helpers (`getFlag`, `personalizeEntry`, `getMergeTagValue`) MUST
+  delegate to personalization methods without reshaping outputs.
 - **FR-008**: `CoreBase.identify`, `page`, `screen`, and `track` MUST delegate to personalization
   and return delegated async results.
 - **FR-009**: `CoreBase.trackView` MUST delegate to analytics for all payloads and MUST additionally

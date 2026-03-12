@@ -168,7 +168,7 @@ app.get('/', limiter, async (req, res) => {
     })
   }
 
-  const { profile, selectedPersonalizations, changes } = optimizationResponse ?? {}
+  const { profile, selectedPersonalizations } = optimizationResponse ?? {}
 
   const personalizedEntries = new Map<
     string,
@@ -205,13 +205,10 @@ app.get('/', limiter, async (req, res) => {
     personalizedEntries.set(entryId, personalizedEntry)
   })
 
-  const flags = sdk.getCustomFlags(changes)
-
   const pageData = {
     profile,
     selectedPersonalizations,
     entries: personalizedEntries,
-    flags,
   }
 
   res.render('index', { ...pageData })

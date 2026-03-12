@@ -37,8 +37,7 @@ other SDKs descend from the Core SDK.
   - [Personalization Options](#personalization-options)
 - [Core Methods](#core-methods)
   - [Personalization Data Resolution Methods](#personalization-data-resolution-methods)
-    - [`getCustomFlag`](#getcustomflag)
-    - [`getCustomFlags`](#getcustomflags)
+    - [`getFlag`](#getflag)
     - [`personalizeEntry`](#personalizeentry)
     - [`getMergeTagValue`](#getmergetagvalue)
   - [Personalization and Analytics Event Methods](#personalization-and-analytics-event-methods)
@@ -339,7 +338,7 @@ Arguments marked with an asterisk (\*) are always required.
 
 ### Personalization Data Resolution Methods
 
-#### `getCustomFlag`
+#### `getFlag`
 
 Get the specified Custom Flag's value from the provided changes array, or from the current internal
 state in stateful implementations.
@@ -353,23 +352,18 @@ Returns:
 
 - The resolved value for the specified Custom Flag, or `undefined` if it cannot be found.
 
+Behavior notes:
+
+- In `CoreStateful`, calling `getFlag(...)` automatically emits a flag view event via
+  `trackFlagView`.
+- In `CoreStateless`, `getFlag(...)` does not auto-emit a flag view event.
+- If full map resolution is needed for advanced use cases, use
+  `optimization.flagsResolver.resolve(changes)`.
+
 > [!NOTE]
 >
 > If the `changes` argument is omitted in stateless implementations, the method will return
 > `undefined`.
-
-#### `getCustomFlags`
-
-Get all resolved Custom Flag values from the provided changes array, or from the current internal
-state in stateful implementations.
-
-Arguments:
-
-- `changes`: Changes array
-
-Returns:
-
-- A map of resolved Custom Flag values.
 
 #### `personalizeEntry`
 
@@ -589,7 +583,7 @@ Available state streams:
 - `blockedEventStream`: Latest blocked-call metadata (`BlockedEvent | undefined`)
 - `eventStream`: Latest emitted analytics/personalization event
   (`AnalyticsEvent | PersonalizationEvent | undefined`)
-- `flags`: Resolved Custom Flags (`Flags | undefined`)
+- `flag(name)`: Key-scoped flag observable (`Observable<Json>`)
 - `canPersonalize`: Whether personalization selections are available (`boolean`;
   `selectedPersonalizations !== undefined`)
 - `profile`: Current profile (`Profile | undefined`)
@@ -611,7 +605,7 @@ Update behavior:
 
 - `blockedEventStream` updates whenever a call is blocked by consent guards.
 - `eventStream` updates when a valid event is accepted for send/queue.
-- `flags`, `profile`, and `selectedPersonalizations` update from Experience API responses.
+- `flag(name)` updates when the resolved value for that key changes.
 - `canPersonalize` updates whenever `selectedPersonalizations` becomes defined or `undefined`.
 - `consent` updates from defaults and `optimization.consent(...)`.
 - `previewPanelAttached` and `previewPanelOpen` are controlled by preview tooling and are preserved

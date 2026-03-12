@@ -1,7 +1,6 @@
 import {
   type InsightsEvent as AnalyticsEvent,
   type ChangeArray,
-  type Flags,
   type Json,
   type MergeTagEntry,
   type OptimizationData,
@@ -40,11 +39,12 @@ import {
   consent as consentSignal,
   effect,
   event as eventSignal,
-  flags as flagsSignal,
   type Observable,
   online as onlineSignal,
   profile as profileSignal,
   selectedPersonalizations as selectedPersonalizationsSignal,
+  signalFns,
+  toDistinctObservable,
   toObservable,
 } from '../signals'
 import PersonalizationBase from './PersonalizationBase'
@@ -144,8 +144,8 @@ export interface PersonalizationStates {
   blockedEventStream: Observable<BlockedEvent | undefined>
   /** Observable stream of the latest {@link AnalyticsEvent} or {@link PersonalizationEvent} (or `undefined`). */
   eventStream: Observable<AnalyticsEvent | PersonalizationEvent | undefined>
-  /** Live view of effective flags for the current profile (if available). */
-  flags: Observable<Flags | undefined>
+  /** Key-scoped observable for a single Custom Flag value. */
+  flag: (name: string) => Observable<Json>
   /** Live view of the current profile. */
   profile: Observable<Profile | undefined>
   /** Live view of selected personalizations (variants). */
@@ -195,6 +195,8 @@ const resolvePersonalizationQueuePolicy = (
 class PersonalizationStateful extends PersonalizationBase implements ConsentGuard {
   /** In-memory ordered queue for offline personalization events. */
   private readonly offlineQueue = new Set<PersonalizationEvent>()
+  /** Cached key-scoped flag observables. */
+  private readonly flagObservables = new Map<string, Observable<Json>>()
   /** Resolved offline queue policy values. */
   private readonly queuePolicy: ResolvedQueuePolicy
   /** Shared queue flush retry runtime state machine. */
@@ -203,8 +205,8 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
   /** Exposed observable state references. */
   readonly states: PersonalizationStates = {
     blockedEventStream: toObservable(blockedEventSignal),
+    flag: (name: string): Observable<Json> => this.getFlagObservable(name),
     eventStream: toObservable(eventSignal),
-    flags: toObservable(flagsSignal),
     profile: toObservable(profileSignal),
     selectedPersonalizations: toObservable(selectedPersonalizationsSignal),
     canPersonalize: toObservable(canPersonalizeSignal),
@@ -292,6 +294,17 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
     })
   }
 
+  private getFlagObservable(name: string): Observable<Json> {
+    const existingObservable = this.flagObservables.get(name)
+    if (existingObservable) return existingObservable
+
+    const valueSignal = signalFns.computed<Json>(() => super.getFlag(name, changesSignal.value))
+    const observable = toDistinctObservable(valueSignal, isEqual)
+    this.flagObservables.set(name, observable)
+
+    return observable
+  }
+
   /**
    * Reset stateful signals managed by this product.
    *
@@ -320,24 +333,11 @@ class PersonalizationStateful extends PersonalizationBase implements ConsentGuar
    * @returns The current value of the Custom Flag if found.
    * @example
    * ```ts
-   * const flagValue = personalization.getCustomFlag('dark-mode')
+   * const flagValue = personalization.getFlag('dark-mode')
    * ```
    * */
-  getCustomFlag(name: string, changes: ChangeArray | undefined = changesSignal.value): Json {
-    return super.getCustomFlag(name, changes)
-  }
-
-  /**
-   * Get all resolved Custom Flags (derived from the signal).
-   * @param changes - Optional changes array; defaults to the current signal value.
-   * @returns The resolved Custom Flag map.
-   * @example
-   * ```ts
-   * const flags = personalization.getCustomFlags()
-   * ```
-   */
-  getCustomFlags(changes: ChangeArray | undefined = changesSignal.value): Flags {
-    return super.getCustomFlags(changes)
+  getFlag(name: string, changes: ChangeArray | undefined = changesSignal.value): Json {
+    return super.getFlag(name, changes)
   }
 
   /**

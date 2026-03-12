@@ -126,3 +126,48 @@ export function toObservable<T>(s: { value: T }): Observable<T> {
     },
   }
 }
+
+/**
+ * Wrap a signal-like object with an {@link Observable} that suppresses
+ * duplicate emissions according to a comparator.
+ *
+ * @typeParam T - Signal value type.
+ * @param s - Signal-like source exposing a `value` property.
+ * @param isEqual - Comparator that returns `true` when values are equivalent.
+ * @returns Observable adapter that only emits distinct values.
+ *
+ * @remarks
+ * The first emission is always delivered. Subsequent emissions are skipped
+ * when `isEqual(previous, current)` returns `true`.
+ *
+ * @public
+ */
+export function toDistinctObservable<T>(
+  s: { value: T },
+  isEqual: (previous: T, current: T) => boolean,
+): Observable<T> {
+  const observable = toObservable(s)
+
+  return {
+    get current() {
+      return observable.current
+    },
+
+    subscribe(next) {
+      let hasPrevious = false
+      let previous = cloneDeep(observable.current)
+
+      return observable.subscribe((value) => {
+        if (hasPrevious && isEqual(previous, value)) return
+
+        hasPrevious = true
+        previous = cloneDeep(value)
+        next(value)
+      })
+    },
+
+    subscribeOnce(next) {
+      return observable.subscribeOnce(next)
+    },
+  }
+}

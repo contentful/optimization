@@ -138,14 +138,6 @@
           <button id="unidentify">Reset Profile</button>
         </span>
         |
-        <button commandfor="custom-flags-dialog" command="show-modal">View Custom Flags</button>
-        <dialog id="custom-flags-dialog">
-          <pre id="custom-flags"></pre>
-          <form method="dialog">
-            <button type="submit">Close</button>
-          </form>
-        </dialog>
-        |
         <button commandfor="profile-dialog" command="show-modal">View Profile</button>
         <dialog id="profile-dialog">
           <pre id="profile"></pre>
@@ -672,14 +664,13 @@
       contentfulOptimization.states.profile.subscribe((profile) => {
         if (!profile) return
 
+        // Emit and log flag access
+        const booleanFlag = contentfulOptimization.getFlag('boolean')
+        console.log('Flag "boolean" value:', booleanFlag)
+
         document.querySelector('#profile').innerText = JSON.stringify(profile, null, 2)
 
         toggleIdentity(profile.traits && Object.keys(profile.traits).length)
-      })
-
-      // Subscribe to flags state
-      contentfulOptimization.states.flags.subscribe((flags) => {
-        document.querySelector('#custom-flags').innerText = JSON.stringify(flags, null, 2)
       })
     </script>
   </body>
