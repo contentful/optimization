@@ -297,4 +297,27 @@ describe('EntryHoverTracker', () => {
 
     cleanup()
   })
+
+  it('does not call preventDefault or stopPropagation while observing hover events', async () => {
+    const entry = document.createElement('div')
+    entry.dataset.ctflEntryId = 'entry-hover-non-interference'
+    document.body.append(entry)
+
+    const preventDefaultSpy = rs.spyOn(Event.prototype, 'preventDefault')
+    const stopPropagationSpy = rs.spyOn(Event.prototype, 'stopPropagation')
+
+    const { core, trackComponentHover } = createCore()
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryHoverDetector(core))
+
+    tracker.start({ dwellTimeMs: 0 })
+
+    dispatchHoverEnter(entry)
+    await advance(0)
+
+    expect(trackComponentHover).toHaveBeenCalledTimes(1)
+    expect(preventDefaultSpy).not.toHaveBeenCalled()
+    expect(stopPropagationSpy).not.toHaveBeenCalled()
+
+    cleanup()
+  })
 })
