@@ -315,6 +315,112 @@ describe('useViewportTracking', () => {
     })
   })
 
+  describe('sticky dedupe by success', () => {
+    it('should emit sticky once after successful trackView for one rendered component', async () => {
+      const { useViewportTracking } = await import('./useViewportTracking')
+      const entry = createMockEntry('sticky-success-entry')
+
+      const personalization: SelectedPersonalization = {
+        experienceId: 'exp-sticky-success',
+        variantIndex: 1,
+        variants: { 'sticky-success-component': 'sticky-success-entry' },
+        sticky: true,
+      }
+
+      mockTrackView.mockResolvedValue({})
+
+      const { onLayout } = useViewportTracking({
+        entry,
+        personalization,
+        viewTimeMs: 100,
+        viewDurationUpdateIntervalMs: 200,
+        threshold: 0.5,
+      })
+
+      onLayout(createLayoutEvent())
+
+      rs.advanceTimersByTime(100)
+      await Promise.resolve()
+      rs.advanceTimersByTime(200)
+
+      expect(mockTrackView).toHaveBeenCalledTimes(2)
+      expect(getCallArg(0).sticky).toBe(true)
+      expect(getCallArg(1).sticky).toBeUndefined()
+    })
+
+    it('should retry sticky until trackView resolves with a value', async () => {
+      const { useViewportTracking } = await import('./useViewportTracking')
+      const entry = createMockEntry('sticky-retry-entry')
+
+      const personalization: SelectedPersonalization = {
+        experienceId: 'exp-sticky-retry',
+        variantIndex: 1,
+        variants: { 'sticky-retry-component': 'sticky-retry-entry' },
+        sticky: true,
+      }
+
+      mockTrackView.mockResolvedValueOnce(undefined).mockResolvedValueOnce({}).mockResolvedValue({})
+
+      const { onLayout } = useViewportTracking({
+        entry,
+        personalization,
+        viewTimeMs: 100,
+        viewDurationUpdateIntervalMs: 200,
+        threshold: 0.5,
+      })
+
+      onLayout(createLayoutEvent())
+
+      rs.advanceTimersByTime(100)
+      await Promise.resolve()
+      rs.advanceTimersByTime(200)
+      await Promise.resolve()
+      rs.advanceTimersByTime(200)
+
+      expect(mockTrackView).toHaveBeenCalledTimes(3)
+      expect(getCallArg(0).sticky).toBe(true)
+      expect(getCallArg(1).sticky).toBe(true)
+      expect(getCallArg(2).sticky).toBeUndefined()
+    })
+
+    it('should dedupe sticky independently per rendered component instance', async () => {
+      const { useViewportTracking } = await import('./useViewportTracking')
+      const entry = createMockEntry('sticky-shared-entry')
+
+      const personalization: SelectedPersonalization = {
+        experienceId: 'exp-sticky-shared',
+        variantIndex: 1,
+        variants: { 'sticky-shared-component': 'sticky-shared-entry' },
+        sticky: true,
+      }
+
+      mockTrackView.mockResolvedValue({})
+
+      const first = useViewportTracking({
+        entry,
+        personalization,
+        viewTimeMs: 100,
+        threshold: 0.5,
+      })
+
+      const second = useViewportTracking({
+        entry,
+        personalization,
+        viewTimeMs: 100,
+        threshold: 0.5,
+      })
+
+      first.onLayout(createLayoutEvent())
+      second.onLayout(createLayoutEvent())
+
+      rs.advanceTimersByTime(100)
+
+      expect(mockTrackView).toHaveBeenCalledTimes(2)
+      expect(getCallArg(0).sticky).toBe(true)
+      expect(getCallArg(1).sticky).toBe(true)
+    })
+  })
+
   describe('default options', () => {
     it('should default threshold to 0.8, viewTimeMs to 2000, viewDurationUpdateIntervalMs to 5000', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')

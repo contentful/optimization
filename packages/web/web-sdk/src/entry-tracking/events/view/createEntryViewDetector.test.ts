@@ -252,6 +252,152 @@ describe('EntryViewTracker', () => {
     cleanup()
   })
 
+  it('emits sticky only once per element across visibility cycles after success', async () => {
+    const entry = document.createElement('div')
+    entry.dataset.ctflEntryId = 'entry-sticky-once'
+    entry.dataset.ctflSticky = 'true'
+    document.body.append(entry)
+
+    const stickySuccess = {}
+    const trackView = rs.fn().mockResolvedValue(stickySuccess)
+    const core: EntryViewTrackingCore = { trackView }
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
+
+    tracker.start({ dwellTimeMs: 0, viewDurationUpdateIntervalMs: 10_000 })
+
+    const instance = io.getLast()
+
+    if (!instance) {
+      throw new Error('IntersectionObserver polyfill instance not found')
+    }
+
+    instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
+    await advance(0)
+    instance.trigger({ target: entry, isIntersecting: false, intersectionRatio: 0 })
+    await Promise.resolve()
+    instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
+    await advance(0)
+
+    expect(trackView).toHaveBeenCalledTimes(2)
+    expect(trackView.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        componentId: 'entry-sticky-once',
+        sticky: true,
+      }),
+    )
+    expect(trackView.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        componentId: 'entry-sticky-once',
+        sticky: undefined,
+      }),
+    )
+
+    cleanup()
+  })
+
+  it('retries sticky for the same element until a successful personalization response', async () => {
+    const entry = document.createElement('div')
+    entry.dataset.ctflEntryId = 'entry-sticky-retry'
+    entry.dataset.ctflSticky = 'true'
+    document.body.append(entry)
+
+    const stickySuccess = {}
+    const trackView = rs
+      .fn()
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(stickySuccess)
+      .mockResolvedValue(stickySuccess)
+    const core: EntryViewTrackingCore = { trackView }
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
+
+    tracker.start({ dwellTimeMs: 0, viewDurationUpdateIntervalMs: 10_000 })
+
+    const instance = io.getLast()
+
+    if (!instance) {
+      throw new Error('IntersectionObserver polyfill instance not found')
+    }
+
+    instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
+    await advance(0)
+    instance.trigger({ target: entry, isIntersecting: false, intersectionRatio: 0 })
+    await Promise.resolve()
+    instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
+    await advance(0)
+    instance.trigger({ target: entry, isIntersecting: false, intersectionRatio: 0 })
+    await Promise.resolve()
+    instance.trigger({ target: entry, isIntersecting: true, intersectionRatio: 1 })
+    await advance(0)
+
+    expect(trackView).toHaveBeenCalledTimes(3)
+    expect(trackView.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        componentId: 'entry-sticky-retry',
+        sticky: true,
+      }),
+    )
+    expect(trackView.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        componentId: 'entry-sticky-retry',
+        sticky: true,
+      }),
+    )
+    expect(trackView.mock.calls[2]?.[0]).toEqual(
+      expect.objectContaining({
+        componentId: 'entry-sticky-retry',
+        sticky: undefined,
+      }),
+    )
+
+    cleanup()
+  })
+
+  it('treats separately rendered elements as distinct sticky dedupe targets', async () => {
+    const first = document.createElement('div')
+    first.dataset.ctflEntryId = 'entry-shared-component-id'
+    first.dataset.ctflSticky = 'true'
+    document.body.append(first)
+
+    const second = document.createElement('div')
+    second.dataset.ctflEntryId = 'entry-shared-component-id'
+    second.dataset.ctflSticky = 'true'
+    document.body.append(second)
+
+    const stickySuccess = {}
+    const trackView = rs.fn().mockResolvedValue(stickySuccess)
+    const core: EntryViewTrackingCore = { trackView }
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
+
+    tracker.start({ dwellTimeMs: 0, viewDurationUpdateIntervalMs: 10_000 })
+
+    const instance = io.getLast()
+
+    if (!instance) {
+      throw new Error('IntersectionObserver polyfill instance not found')
+    }
+
+    instance.trigger({ target: first, isIntersecting: true, intersectionRatio: 1 })
+    await advance(0)
+    instance.trigger({ target: second, isIntersecting: true, intersectionRatio: 1 })
+    await advance(0)
+
+    expect(trackView).toHaveBeenCalledTimes(2)
+    expect(trackView.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        componentId: 'entry-shared-component-id',
+        sticky: true,
+      }),
+    )
+    expect(trackView.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        componentId: 'entry-shared-component-id',
+        sticky: true,
+      }),
+    )
+
+    cleanup()
+  })
+
   it('emits a final duration update when an observed entry leaves view', async () => {
     const entry = document.createElement('div')
     entry.dataset.ctflEntryId = 'entry-view-final'

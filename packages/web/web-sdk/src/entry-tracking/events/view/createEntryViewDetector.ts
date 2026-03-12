@@ -28,6 +28,8 @@ export function createEntryViewDetector(
   EntryViewInteractionStartOptions | undefined,
   EntryViewInteractionElementOptions
 > {
+  const stickySuccessElements = new WeakSet<Element>()
+
   return createTimedEntryDetector<
     EntryViewTrackingCore,
     EntryViewInteractionStartOptions,
@@ -51,12 +53,21 @@ export function createEntryViewDetector(
         viewDurationUpdateIntervalMs,
       }
     },
-    track: async (runtimeCore, payload, info: ElementViewCallbackInfo): Promise<void> => {
-      await runtimeCore.trackView({
+    track: async (runtimeCore, payload, info: ElementViewCallbackInfo, element): Promise<void> => {
+      const stickyAlreadySucceeded = stickySuccessElements.has(element)
+      const shouldSendSticky = payload.sticky === true && !stickyAlreadySucceeded
+      const sticky = shouldSendSticky ? true : undefined
+
+      const data = await runtimeCore.trackView({
         ...payload,
+        sticky,
         viewId: info.viewId,
         viewDurationMs: Math.max(0, Math.round(info.totalVisibleMs)),
       })
+
+      if (shouldSendSticky && data !== undefined) {
+        stickySuccessElements.add(element)
+      }
     },
   })
 }
