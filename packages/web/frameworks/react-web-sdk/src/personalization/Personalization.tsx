@@ -1,6 +1,3 @@
-// ✅ CHANGES: render baseline content invisibly during SSR/first hydration frame,
-// and don't gate non-personalized entries behind sdkInitialized.
-
 import type {
   SelectedPersonalization,
   SelectedPersonalizationArray,
@@ -197,7 +194,7 @@ export function Personalization({
   'data-testid': dataTestIdProp,
   loadingFallback,
 }: PersonalizationProps): JSX.Element {
-  const optimization = useOptimization()
+  const contentfulOptimization = useOptimization()
   const liveUpdatesContext = useLiveUpdates()
   const {
     sys: { id: baselineEntryId },
@@ -215,7 +212,7 @@ export function Personalization({
     previewPanelVisible: liveUpdatesContext.previewPanelVisible,
   })
 
-  const [lockedPersonalizations, setLockedPersonalizations] = useState<
+  const [lockedSelectedPersonalizations, setLockedSelectedPersonalizations] = useState<
     SelectedPersonalizationArray | undefined
   >(undefined)
   const [canPersonalize, setCanPersonalize] = useState(false)
@@ -223,29 +220,32 @@ export function Personalization({
   const [sdkInitialized, setSdkInitialized] = useState(false)
 
   useEffect(() => {
-    const personalizationsSubscription = optimization.states.personalizations.subscribe((p) => {
-      setLockedPersonalizations((previous) => {
-        if (shouldLiveUpdate) {
-          return p
-        }
+    const selectedPersonalizationsSubscription =
+      contentfulOptimization.states.personalizations.subscribe((p) => {
+        setLockedSelectedPersonalizations((previous) => {
+          if (shouldLiveUpdate) {
+            return p
+          }
 
-        if (previous === undefined && p !== undefined) {
-          return p
-        }
+          if (previous === undefined && p !== undefined) {
+            return p
+          }
 
-        return previous
+          return previous
+        })
       })
-    })
 
-    const canPersonalizeSubscription = optimization.states.canPersonalize.subscribe((value) => {
-      setCanPersonalize(value)
-    })
+    const canPersonalizeSubscription = contentfulOptimization.states.canPersonalize.subscribe(
+      (value) => {
+        setCanPersonalize(value)
+      },
+    )
 
     return () => {
-      personalizationsSubscription.unsubscribe()
+      selectedPersonalizationsSubscription.unsubscribe()
       canPersonalizeSubscription.unsubscribe()
     }
-  }, [optimization, shouldLiveUpdate])
+  }, [contentfulOptimization, shouldLiveUpdate])
 
   useEffect(() => {
     setSdkInitialized(true)
@@ -257,8 +257,8 @@ export function Personalization({
   )
 
   const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
-    () => optimization.personalizeEntry(baselineEntry, lockedPersonalizations),
-    [optimization, baselineEntry, lockedPersonalizations],
+    () => contentfulOptimization.personalizeEntry(baselineEntry, lockedSelectedPersonalizations),
+    [contentfulOptimization, baselineEntry, lockedSelectedPersonalizations],
   )
 
   const requiresPersonalization = hasPersonalizationReferences(baselineEntry)

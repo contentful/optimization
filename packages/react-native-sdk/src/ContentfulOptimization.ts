@@ -53,10 +53,10 @@ async function mergeConfig({
   }
 }
 
-let activeOptimizationInstance: OptimizationReactNativeSdk | undefined = undefined
+let activeOptimizationInstance: ContentfulOptimization | undefined = undefined
 
 /**
- * Main entry point for the Contentful Optimization React Native SDK.
+ * Main entry point for the Contentful ContentfulOptimization React Native SDK.
  *
  * Extends {@link CoreStateful} with React Native-specific behavior including
  * AsyncStorage persistence, network connectivity detection via
@@ -74,9 +74,9 @@ let activeOptimizationInstance: OptimizationReactNativeSdk | undefined = undefin
  *
  * @example Manual initialization
  * ```ts
- * import { OptimizationReactNativeSdk } from '@contentful/optimization-react-native'
+ * import { ContentfulOptimization } from '@contentful/optimization-react-native'
  *
- * const optimization = await OptimizationReactNativeSdk.create({
+ * const optimization = await ContentfulOptimization.create({
  *   clientId: 'your-client-id',
  *   environment: 'main',
  * })
@@ -86,7 +86,7 @@ let activeOptimizationInstance: OptimizationReactNativeSdk | undefined = undefin
  *
  * @public
  */
-class OptimizationReactNativeSdk extends CoreStateful {
+class ContentfulOptimization extends CoreStateful {
   private readonly cleanupOnlineListener: () => void
 
   private readonly cleanupAppStateListener: () => void
@@ -132,7 +132,7 @@ class OptimizationReactNativeSdk extends CoreStateful {
 
     effect(() => {
       const {
-        personalizations: { value },
+        selectedPersonalizations: { value },
       } = signals
 
       AsyncStorageStore.personalizations = value
@@ -140,14 +140,14 @@ class OptimizationReactNativeSdk extends CoreStateful {
   }
 
   /**
-   * Creates and initializes a new Optimization instance with React Native defaults.
+   * Creates and initializes a new ContentfulOptimization instance with React Native defaults.
    *
    * @param config - SDK configuration options
-   * @returns A fully initialized Optimization instance
+   * @returns A fully initialized ContentfulOptimization instance
    *
    * @example
    * ```ts
-   * const optimization = await OptimizationReactNativeSdk.create({
+   * const optimization = await ContentfulOptimization.create({
    *   clientId: 'your-client-id',
    *   environment: 'main',
    * })
@@ -155,16 +155,16 @@ class OptimizationReactNativeSdk extends CoreStateful {
    *
    * @public
    */
-  static async create(config: CoreStatefulConfig): Promise<OptimizationReactNativeSdk> {
+  static async create(config: CoreStatefulConfig): Promise<ContentfulOptimization> {
     if (activeOptimizationInstance) {
       throw new Error(
-        'Optimization React Native SDK is already initialized. Reuse the existing instance.',
+        'ContentfulOptimization React Native SDK is already initialized. Reuse the existing instance.',
       )
     }
 
     const mergedConfig = await mergeConfig(config)
 
-    const instance = new OptimizationReactNativeSdk(mergedConfig)
+    const instance = new ContentfulOptimization(mergedConfig)
     activeOptimizationInstance = instance
 
     return instance
@@ -195,4 +195,4 @@ class OptimizationReactNativeSdk extends CoreStateful {
   }
 }
 
-export default OptimizationReactNativeSdk
+export default ContentfulOptimization

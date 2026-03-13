@@ -7,7 +7,7 @@ interface AnalyticsEvent {
   type: string
   componentId?: string
   viewDurationMs?: number
-  componentViewId?: string
+  viewId?: string
   timestamp: number
 }
 
@@ -15,7 +15,7 @@ function isValidEvent(event: unknown): event is {
   type: string
   componentId?: unknown
   viewDurationMs?: unknown
-  componentViewId?: unknown
+  viewId?: unknown
 } {
   return (
     event !== null && typeof event === 'object' && 'type' in event && typeof event.type === 'string'
@@ -25,7 +25,7 @@ function isValidEvent(event: unknown): event is {
 interface ComponentStats {
   count: number
   latestViewDurationMs: number | undefined
-  latestComponentViewId: string | undefined
+  latestViewId: string | undefined
 }
 
 // Module-level stores that persist across unmount/remount cycles within the same
@@ -43,9 +43,9 @@ function buildEvent(event: {
   type: string
   componentId?: unknown
   viewDurationMs?: unknown
-  componentViewId?: unknown
+  viewId?: unknown
 }): AnalyticsEvent {
-  const { type, componentId, viewDurationMs, componentViewId } = event
+  const { type, componentId, viewDurationMs, viewId } = event
   const newEvent: AnalyticsEvent = { type, timestamp: Date.now() }
 
   if (componentId && typeof componentId === 'string') {
@@ -54,8 +54,8 @@ function buildEvent(event: {
   if (typeof viewDurationMs === 'number') {
     newEvent.viewDurationMs = viewDurationMs
   }
-  if (typeof componentViewId === 'string') {
-    newEvent.componentViewId = componentViewId
+  if (typeof viewId === 'string') {
+    newEvent.viewId = viewId
   }
 
   return newEvent
@@ -71,7 +71,7 @@ function updateComponentStats(newEvent: AnalyticsEvent): void {
     [cid]: {
       count: (existing?.count ?? 0) + 1,
       latestViewDurationMs: newEvent.viewDurationMs ?? existing?.latestViewDurationMs,
-      latestComponentViewId: newEvent.componentViewId ?? existing?.latestComponentViewId,
+      latestViewId: newEvent.viewId ?? existing?.latestViewId,
     },
   }
 }
@@ -153,9 +153,7 @@ export function AnalyticsEventDisplay(): React.JSX.Element {
           <Text testID={`event-duration-${cid}`}>
             Duration: {stats.latestViewDurationMs ?? 'N/A'}
           </Text>
-          <Text testID={`event-view-id-${cid}`}>
-            ViewId: {stats.latestComponentViewId ?? 'N/A'}
-          </Text>
+          <Text testID={`event-view-id-${cid}`}>ViewId: {stats.latestViewId ?? 'N/A'}</Text>
         </View>
       ))}
     </View>

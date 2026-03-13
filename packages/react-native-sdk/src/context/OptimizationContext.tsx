@@ -1,26 +1,26 @@
 import { createContext, useContext } from 'react'
-import type OptimizationReactNativeSdk from '../OptimizationReactNativeSdk'
+import type ContentfulOptimization from '../ContentfulOptimization'
 
 /**
  * @internal
  */
 interface OptimizationContextValue {
-  instance: OptimizationReactNativeSdk | null
+  instance: ContentfulOptimization | null
   isReady: boolean
   initError: Error | null
 }
 
 /**
- * React Context that holds the Optimization instance.
+ * React Context that holds the ContentfulOptimization instance.
  *
  * @internal
  */
 const OptimizationContext = createContext<OptimizationContextValue | null>(null)
 
 /**
- * Returns the Optimization instance from the nearest {@link OptimizationProvider}.
+ * Returns the ContentfulOptimization instance from the nearest {@link OptimizationProvider}.
  *
- * @returns The current Optimization instance
+ * @returns The current ContentfulOptimization instance
  *
  * @throws Error if called outside of an {@link OptimizationProvider}
  * @throws Error if the SDK is still initializing
@@ -31,7 +31,7 @@ const OptimizationContext = createContext<OptimizationContextValue | null>(null)
  *   const optimization = useOptimization()
  *
  *   const handlePress = async () => {
- *     await optimization.trackComponentView({
+ *     await optimization.trackView({
  *       componentId: 'my-component',
  *       variantIndex: 0,
  *     })
@@ -43,7 +43,7 @@ const OptimizationContext = createContext<OptimizationContextValue | null>(null)
  *
  * @public
  */
-export function useOptimization(): OptimizationReactNativeSdk {
+export function useOptimization(): ContentfulOptimization {
   const context = useContext(OptimizationContext)
 
   if (!context) {
@@ -55,7 +55,7 @@ export function useOptimization(): OptimizationReactNativeSdk {
 
   if (!context.instance) {
     throw new Error(
-      'Optimization SDK is still initializing. ' +
+      'ContentfulOptimization SDK is still initializing. ' +
         'This should not happen when using the loading gate in OptimizationProvider.',
     )
   }

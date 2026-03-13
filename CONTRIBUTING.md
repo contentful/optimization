@@ -174,6 +174,13 @@ automatically with each new version.
 - `pnpm docs:watch` watches for file updates and rebuilds documentation output; useful while writing
   and updating documentation
 
+When changing public SDK behavior in this pre-release alpha period, update the same pull request to
+keep these artifacts aligned:
+
+- TSDoc/JSDoc comments near changed API surfaces
+- package READMEs that document those surfaces
+- SpecKit artifacts under `specs/**` and `.specify/research/**`
+
 ## Troubleshooting CI Issues
 
 ### E2E Coverage and Environment

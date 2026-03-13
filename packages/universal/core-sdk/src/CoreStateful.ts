@@ -1,14 +1,18 @@
 import type {
   InsightsEvent as AnalyticsEvent,
   ChangeArray,
+  Json,
   ExperienceEvent as PersonalizationEvent,
   Profile,
   SelectedPersonalizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
+import { logger } from '@contentful/optimization-api-client/logger'
+import { isEqual } from 'es-toolkit/predicate'
 import { AnalyticsStateful, type AnalyticsProductConfig, type AnalyticsStates } from './analytics'
 import type { BlockedEvent } from './BlockedEvent'
 import type { ConsentController } from './Consent'
 import CoreBase, { type CoreConfig } from './CoreBase'
+import type { FlagViewBuilderArgs } from './events'
 import {
   acquireStatefulRuntimeSingleton,
   releaseStatefulRuntimeSingleton,
@@ -21,19 +25,19 @@ import {
 import type { ProductConfig } from './ProductBase'
 import {
   batch,
-  blockedEvent,
-  canPersonalize,
-  changes,
-  consent,
-  event,
-  flags,
-  online,
-  personalizations,
-  previewPanelAttached,
-  previewPanelOpen,
-  profile,
+  blockedEvent as blockedEventSignal,
+  canPersonalize as canPersonalizeSignal,
+  changes as changesSignal,
+  consent as consentSignal,
+  event as eventSignal,
+  online as onlineSignal,
+  previewPanelAttached as previewPanelAttachedSignal,
+  previewPanelOpen as previewPanelOpenSignal,
+  profile as profileSignal,
+  selectedPersonalizations as selectedPersonalizationsSignal,
   signalFns,
   signals,
+  toDistinctObservable,
   toObservable,
   type Observable,
   type SignalFns,
@@ -196,6 +200,7 @@ let statefulInstanceCounter = 0
 class CoreStateful extends CoreBase implements ConsentController {
   private readonly singletonOwner: string
   private destroyed = false
+  private readonly flagObservables = new Map<string, Observable<Json>>()
 
   /** Stateful analytics product. */
   protected _analytics: AnalyticsStateful
@@ -210,15 +215,15 @@ class CoreStateful extends CoreBase implements ConsentController {
    * safely subscribe once without repeated resubscription churn.
    */
   readonly states: CoreStates = {
-    blockedEventStream: toObservable(blockedEvent),
-    consent: toObservable(consent),
-    eventStream: toObservable(event),
-    flags: toObservable(flags),
-    canPersonalize: toObservable(canPersonalize),
-    personalizations: toObservable(personalizations),
-    previewPanelAttached: toObservable(previewPanelAttached),
-    previewPanelOpen: toObservable(previewPanelOpen),
-    profile: toObservable(profile),
+    blockedEventStream: toObservable(blockedEventSignal),
+    flag: (name: string): Observable<Json> => this.getFlagObservable(name),
+    consent: toObservable(consentSignal),
+    eventStream: toObservable(eventSignal),
+    canPersonalize: toObservable(canPersonalizeSignal),
+    selectedPersonalizations: toObservable(selectedPersonalizationsSignal),
+    previewPanelAttached: toObservable(previewPanelAttachedSignal),
+    previewPanelOpen: toObservable(previewPanelOpenSignal),
+    profile: toObservable(profileSignal),
   }
 
   /**
@@ -261,12 +266,12 @@ class CoreStateful extends CoreBase implements ConsentController {
 
       if (defaults?.consent !== undefined) {
         const { consent: defaultConsent } = defaults
-        consent.value = defaultConsent
+        consentSignal.value = defaultConsent
       }
 
       this._analytics = new AnalyticsStateful({
         api: this.api,
-        builder: this.eventBuilder,
+        eventBuilder: this.eventBuilder,
         config: {
           allowedEventTypes,
           queuePolicy: analyticsRuntimeQueuePolicy,
@@ -281,7 +286,7 @@ class CoreStateful extends CoreBase implements ConsentController {
 
       this._personalization = new PersonalizationStateful({
         api: this.api,
-        builder: this.eventBuilder,
+        eventBuilder: this.eventBuilder,
         config: {
           allowedEventTypes,
           getAnonymousId,
@@ -291,7 +296,7 @@ class CoreStateful extends CoreBase implements ConsentController {
             consent: defaults?.consent,
             changes: defaults?.changes,
             profile: defaults?.profile,
-            personalizations: defaults?.personalizations,
+            selectedPersonalizations: defaults?.personalizations,
           },
         },
         interceptors: this.interceptors,
@@ -300,6 +305,82 @@ class CoreStateful extends CoreBase implements ConsentController {
       releaseStatefulRuntimeSingleton(this.singletonOwner)
       throw error
     }
+  }
+
+  override getFlag(name: string, changes: ChangeArray | undefined = changesSignal.value): Json {
+    const value = super.getFlag(name, changes)
+    const payload = this.buildFlagViewBuilderArgs(name, changes)
+
+    void this.trackFlagView(payload).catch((error: unknown) => {
+      logger.warn(`Failed to emit "flag view" event for "${name}"`, String(error))
+    })
+
+    return value
+  }
+
+  private buildFlagViewBuilderArgs(
+    name: string,
+    changes: ChangeArray | undefined = changesSignal.value,
+  ): FlagViewBuilderArgs {
+    const change = changes?.find((candidate) => candidate.key === name)
+
+    return {
+      componentId: name,
+      experienceId: change?.meta.experienceId,
+      variantIndex: change?.meta.variantIndex,
+    }
+  }
+
+  private getFlagObservable(name: string): Observable<Json> {
+    const existingObservable = this.flagObservables.get(name)
+    if (existingObservable) return existingObservable
+
+    const trackFlagView = this.trackFlagView.bind(this)
+    const buildFlagViewBuilderArgs = this.buildFlagViewBuilderArgs.bind(this)
+    const { _personalization } = this
+
+    const valueSignal = signalFns.computed<Json>(() =>
+      _personalization.getFlag(name, changesSignal.value),
+    )
+
+    const distinctObservable = toDistinctObservable(valueSignal, isEqual)
+
+    const trackedObservable: Observable<Json> = {
+      get current() {
+        const { current: value } = distinctObservable
+        const payload = buildFlagViewBuilderArgs(name, changesSignal.value)
+
+        void trackFlagView(payload).catch((error: unknown) => {
+          logger.warn(`Failed to emit "flag view" event for "${name}"`, String(error))
+        })
+
+        return value
+      },
+
+      subscribe: (next) =>
+        distinctObservable.subscribe((value) => {
+          const payload = buildFlagViewBuilderArgs(name, changesSignal.value)
+
+          void trackFlagView(payload).catch((error: unknown) => {
+            logger.warn(`Failed to emit "flag view" event for "${name}"`, String(error))
+          })
+          next(value)
+        }),
+
+      subscribeOnce: (next) =>
+        distinctObservable.subscribeOnce((value) => {
+          const payload = buildFlagViewBuilderArgs(name, changesSignal.value)
+
+          void trackFlagView(payload).catch((error: unknown) => {
+            logger.warn(`Failed to emit "flag view" event for "${name}"`, String(error))
+          })
+          next(value)
+        }),
+    }
+
+    this.flagObservables.set(name, trackedObservable)
+
+    return trackedObservable
   }
 
   /**
@@ -329,11 +410,11 @@ class CoreStateful extends CoreBase implements ConsentController {
    */
   reset(): void {
     batch(() => {
-      blockedEvent.value = undefined
-      event.value = undefined
-      changes.value = undefined
-      profile.value = undefined
-      personalizations.value = undefined
+      blockedEventSignal.value = undefined
+      eventSignal.value = undefined
+      changesSignal.value = undefined
+      profileSignal.value = undefined
+      selectedPersonalizationsSignal.value = undefined
     })
   }
 
@@ -362,7 +443,7 @@ class CoreStateful extends CoreBase implements ConsentController {
    * ```
    */
   consent(accept: boolean): void {
-    consent.value = accept
+    consentSignal.value = accept
   }
 
   /**
@@ -376,7 +457,7 @@ class CoreStateful extends CoreBase implements ConsentController {
    * ```
    */
   protected get online(): boolean {
-    return online.value ?? false
+    return onlineSignal.value ?? false
   }
 
   /**
@@ -389,7 +470,7 @@ class CoreStateful extends CoreBase implements ConsentController {
    * ```
    */
   protected set online(isOnline: boolean) {
-    online.value = isOnline
+    onlineSignal.value = isOnline
   }
 
   /**

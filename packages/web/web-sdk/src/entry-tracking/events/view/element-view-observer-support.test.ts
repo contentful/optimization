@@ -22,7 +22,7 @@ const makeState = (overrides: Partial<ElementState> = {}): ElementState => ({
   visibleSince: null,
   fireTimer: null,
   attempts: 0,
-  componentViewId: null,
+  viewId: null,
   done: false,
   inFlight: false,
   lastKnownVisible: false,

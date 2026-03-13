@@ -18,7 +18,7 @@ export const DEFAULTS = {
 
 export interface ElementHoverCallbackInfo {
   readonly totalHoverMs: number
-  readonly componentHoverId: string
+  readonly hoverId: string
   readonly attempts: number
   readonly data?: unknown
 }
@@ -56,7 +56,7 @@ export interface ElementState {
   hoverSince: number | null
   fireTimer: Timer | null
   attempts: number
-  componentHoverId: string | null
+  hoverId: string | null
   done: boolean
   inFlight: boolean
   isHovered: boolean

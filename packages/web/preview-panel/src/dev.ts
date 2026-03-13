@@ -1,13 +1,13 @@
-import Optimization from '@contentful/optimization-web'
+import ContentfulOptimization from '@contentful/optimization-web'
 import attachOptimizationPreviewPanel from './attachOptimizationPreviewPanel'
 
 declare global {
   interface Window {
-    Optimization?: typeof Optimization
+    ContentfulOptimization?: typeof ContentfulOptimization
   }
 }
 
 if (typeof window !== 'undefined') {
-  window.Optimization ??= Optimization
+  window.ContentfulOptimization ??= ContentfulOptimization
   window.attachOptimizationPreviewPanel ??= attachOptimizationPreviewPanel
 }

@@ -1,7 +1,7 @@
 import type { EntryInteractionDetector } from '../EntryInteractionDetector'
 import type { EntryInteraction } from '../resolveAutoTrackEntryInteractionOptions'
-import { resolveComponentTrackingPayload } from '../resolveComponentTrackingPayload'
 import { resolveEntryInteractionElementOverride } from '../resolveEntryInteractionElementOverride'
+import { resolveTrackingPayload } from '../resolveTrackingPayload'
 
 interface TimedObserver<TElementOptions> {
   observe: (element: Element, options?: TElementOptions) => void
@@ -35,8 +35,9 @@ interface CreateTimedEntryDetectorOptions<
   resolveAttributeOptions: (element: Element) => TElementOptions | undefined
   track: (
     core: TCore,
-    payload: NonNullable<ReturnType<typeof resolveComponentTrackingPayload>>,
+    payload: NonNullable<ReturnType<typeof resolveTrackingPayload>>,
     info: TInfo,
+    element: Element,
   ) => Promise<void>
 }
 
@@ -79,10 +80,10 @@ export function createTimedEntryDetector<
   const createCallback =
     (runtimeCore: TCore) =>
     async (element: Element, info: TInfo): Promise<void> => {
-      const payload = resolveComponentTrackingPayload(info.data, element)
+      const payload = resolveTrackingPayload(info.data, element)
       if (!payload) return
 
-      await track(runtimeCore, payload, info)
+      await track(runtimeCore, payload, info, element)
     }
 
   let observer: TObserver | undefined = undefined

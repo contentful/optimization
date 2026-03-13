@@ -9,12 +9,12 @@ import { OptimizationContext } from '../context/OptimizationContext'
 import { Personalization } from './Personalization'
 
 type TestEntry = Entry
-type PersonalizationState = SelectedPersonalizationArray | undefined
+type SelectedPersonalizationState = SelectedPersonalizationArray | undefined
 type PersonalizeEntry = (
   entry: TestEntry,
-  personalizations: PersonalizationState,
+  selectedPersonalizations: SelectedPersonalizationState,
 ) => ResolvedData<EntrySkeletonType>
-type PersonalizationsSubscriber = (value: PersonalizationState) => void
+type SelectedPersonalizationsSubscriber = (value: SelectedPersonalizationState) => void
 type CanPersonalizeSubscriber = (value: boolean) => void
 
 interface RuntimeOptimization {
@@ -23,8 +23,8 @@ interface RuntimeOptimization {
     canPersonalize: {
       subscribe: (next: CanPersonalizeSubscriber) => { unsubscribe: () => void }
     }
-    personalizations: {
-      subscribe: (next: PersonalizationsSubscriber) => { unsubscribe: () => void }
+    selectedPersonalizations: {
+      subscribe: (next: SelectedPersonalizationsSubscriber) => { unsubscribe: () => void }
     }
   }
 }
@@ -59,15 +59,15 @@ function makePersonalizableEntry(id: string): TestEntry {
 }
 
 function createRuntime(personalizeEntry: PersonalizeEntry): {
-  emit: (value: PersonalizationState) => Promise<void>
-  optimization: RuntimeOptimization
+  emit: (value: SelectedPersonalizationState) => Promise<void>
+  contentfulOptimization: RuntimeOptimization
 } {
-  const subscribers = new Set<PersonalizationsSubscriber>()
+  const subscribers = new Set<SelectedPersonalizationsSubscriber>()
   const canPersonalizeSubscribers = new Set<CanPersonalizeSubscriber>()
-  let current: PersonalizationState = undefined
+  let current: SelectedPersonalizationState = undefined
   let canPersonalize = false
 
-  const optimization: RuntimeOptimization = {
+  const contentfulOptimization: RuntimeOptimization = {
     personalizeEntry,
     states: {
       canPersonalize: {
@@ -82,8 +82,8 @@ function createRuntime(personalizeEntry: PersonalizeEntry): {
           }
         },
       },
-      personalizations: {
-        subscribe(next: PersonalizationsSubscriber) {
+      selectedPersonalizations: {
+        subscribe(next: SelectedPersonalizationsSubscriber) {
           subscribers.add(next)
           next(current)
 
@@ -97,7 +97,7 @@ function createRuntime(personalizeEntry: PersonalizeEntry): {
     },
   }
 
-  async function emit(value: PersonalizationState): Promise<void> {
+  async function emit(value: SelectedPersonalizationState): Promise<void> {
     current = value
     canPersonalize = value !== undefined
 
@@ -112,7 +112,7 @@ function createRuntime(personalizeEntry: PersonalizeEntry): {
     })
   }
 
-  return { emit, optimization }
+  return { emit, contentfulOptimization }
 }
 
 function defaultLiveUpdatesContext(): LiveUpdatesContextValue {
@@ -127,7 +127,7 @@ function defaultLiveUpdatesContext(): LiveUpdatesContextValue {
 
 async function renderComponent(
   node: ReactNode,
-  optimization: RuntimeOptimization,
+  contentfulOptimization: RuntimeOptimization,
   liveUpdatesContext = defaultLiveUpdatesContext(),
 ): Promise<{ container: HTMLDivElement; unmount: () => Promise<void> }> {
   const container = document.createElement('div')
@@ -138,7 +138,7 @@ async function renderComponent(
     await Promise.resolve()
     root.render(
       // @ts-expect-error test double only implements the subset used by Personalization
-      <OptimizationContext.Provider value={{ instance: optimization }}>
+      <OptimizationContext.Provider value={{ instance: contentfulOptimization }}>
         <LiveUpdatesContext.Provider value={liveUpdatesContext}>{node}</LiveUpdatesContext.Provider>
       </OptimizationContext.Provider>,
     )
@@ -211,7 +211,7 @@ describe('Personalization', () => {
   })
 
   it('renders baseline by default when personalization is unresolved and no loading fallback is provided', async () => {
-    const { optimization } = createRuntime((entry, personalizations) => {
+    const { contentfulOptimization } = createRuntime((entry, personalizations) => {
       if (!personalizations?.length) return { entry }
       return { entry: variantA, personalization: personalizations[0] }
     })
@@ -220,7 +220,7 @@ describe('Personalization', () => {
       <Personalization baselineEntry={baseline}>
         {(resolved) => readTitle(resolved)}
       </Personalization>,
-      optimization,
+      contentfulOptimization,
     )
 
     expect(view.container.textContent).toContain('baseline')
@@ -234,8 +234,8 @@ describe('Personalization', () => {
   })
 
   it('locks to first non-undefined personalization state when live updates are disabled', async () => {
-    const { optimization, emit } = createRuntime((entry, personalizations) => {
-      const selected = personalizations?.[0]
+    const { contentfulOptimization, emit } = createRuntime((entry, selectedPersonalizations) => {
+      const selected = selectedPersonalizations?.[0]
       const variant = selected ? { 1: variantA, 2: variantB }[selected.variantIndex] : undefined
       if (variant && selected) return { entry: variant, personalization: selected }
       return { entry }
@@ -245,7 +245,7 @@ describe('Personalization', () => {
       <Personalization baselineEntry={baseline}>
         {(resolved) => readTitle(resolved)}
       </Personalization>,
-      optimization,
+      contentfulOptimization,
     )
 
     await emit(variantOneState)
@@ -258,8 +258,8 @@ describe('Personalization', () => {
   })
 
   it('updates continuously when liveUpdates is true', async () => {
-    const { optimization, emit } = createRuntime((entry, personalizations) => {
-      const selected = personalizations?.[0]
+    const { contentfulOptimization, emit } = createRuntime((entry, selectedPersonalizations) => {
+      const selected = selectedPersonalizations?.[0]
       const variant = selected ? { 1: variantA, 2: variantB }[selected.variantIndex] : undefined
       if (variant && selected) return { entry: variant, personalization: selected }
       return { entry }
@@ -269,7 +269,7 @@ describe('Personalization', () => {
       <Personalization baselineEntry={baseline} liveUpdates>
         {(resolved) => readTitle(resolved)}
       </Personalization>,
-      optimization,
+      contentfulOptimization,
     )
 
     await emit(variantOneState)
@@ -282,16 +282,16 @@ describe('Personalization', () => {
   })
 
   it('uses loadingFallback while unresolved and removes resolved tracking attrs during loading', async () => {
-    const { optimization, emit } = createRuntime((entry, personalizations) => {
-      if (!personalizations?.length) return { entry }
-      return { entry: variantA, personalization: personalizations[0] }
+    const { contentfulOptimization, emit } = createRuntime((entry, selectedPersonalizations) => {
+      if (!selectedPersonalizations?.length) return { entry }
+      return { entry: variantA, personalization: selectedPersonalizations[0] }
     })
 
     const view = await renderComponent(
       <Personalization baselineEntry={personalizedBaseline} loadingFallback={() => 'loading'}>
         {(resolved) => readTitle(resolved)}
       </Personalization>,
-      optimization,
+      contentfulOptimization,
     )
 
     expect(view.container.textContent).toContain('loading')
@@ -309,8 +309,8 @@ describe('Personalization', () => {
   })
 
   it('maps data-ctfl-* attributes from resolved personalization metadata', async () => {
-    const { optimization, emit } = createRuntime((entry, personalizations) => {
-      const selected = personalizations?.[0]
+    const { contentfulOptimization, emit } = createRuntime((entry, selectedPersonalizations) => {
+      const selected = selectedPersonalizations?.[0]
       if (!selected) return { entry }
 
       return {
@@ -326,7 +326,7 @@ describe('Personalization', () => {
       <Personalization baselineEntry={baseline}>
         {(resolved) => readTitle(resolved)}
       </Personalization>,
-      optimization,
+      contentfulOptimization,
     )
 
     await emit(variantTwoState)
@@ -342,13 +342,13 @@ describe('Personalization', () => {
   })
 
   it('supports testId/data-testid props with data-testid precedence', async () => {
-    const { optimization } = createRuntime((entry) => ({ entry }))
+    const { contentfulOptimization } = createRuntime((entry) => ({ entry }))
 
     const view = await renderComponent(
       <Personalization baselineEntry={baseline} testId="camel" data-testid="direct">
         {(resolved) => readTitle(resolved)}
       </Personalization>,
-      optimization,
+      contentfulOptimization,
     )
 
     const wrapper = getWrapper(view.container)
@@ -370,8 +370,8 @@ describe('Personalization', () => {
       },
     ]
 
-    const { optimization, emit } = createRuntime((entry, personalizations) => {
-      const selected = personalizations?.[0]
+    const { contentfulOptimization, emit } = createRuntime((entry, selectedPersonalizations) => {
+      const selected = selectedPersonalizations?.[0]
       if (!selected) return { entry }
 
       if (entry.sys.id === 'parent-baseline') {
@@ -396,7 +396,7 @@ describe('Personalization', () => {
           </section>
         )}
       </Personalization>,
-      optimization,
+      contentfulOptimization,
     )
 
     await emit(nestedState)
@@ -408,8 +408,8 @@ describe('Personalization', () => {
   })
 
   it('preview panel visibility forces live updates even when component liveUpdates is false', async () => {
-    const { optimization, emit } = createRuntime((entry, personalizations) => {
-      const selected = personalizations?.[0]
+    const { contentfulOptimization, emit } = createRuntime((entry, selectedPersonalizations) => {
+      const selected = selectedPersonalizations?.[0]
       const variant = selected ? { 1: variantA, 2: variantB }[selected.variantIndex] : undefined
       if (variant && selected) return { entry: variant, personalization: selected }
       return { entry }
@@ -419,7 +419,7 @@ describe('Personalization', () => {
       <Personalization baselineEntry={baseline} liveUpdates={false}>
         {(resolved) => readTitle(resolved)}
       </Personalization>,
-      optimization,
+      contentfulOptimization,
       {
         globalLiveUpdates: false,
         previewPanelVisible: true,

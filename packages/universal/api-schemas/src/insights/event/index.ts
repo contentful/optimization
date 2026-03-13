@@ -1,4 +1,4 @@
 export * from './BatchInsightsEvent'
-export * from './ComponentClickEvent'
-export * from './ComponentHoverEvent'
+export * from './ClickEvent'
+export * from './HoverEvent'
 export * from './InsightsEvent'

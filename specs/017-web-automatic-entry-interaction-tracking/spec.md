@@ -1,10 +1,10 @@
-# Feature Specification: Optimization Web Automatic Entry Interaction Tracking
+# Feature Specification: Contentful Optimization Web Automatic Entry Interaction Tracking
 
 **Feature Branch**: `[017-web-automatic-entry-interaction-tracking]`  
 **Created**: 2026-02-27  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-02).
+2026-03-12).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -13,8 +13,8 @@
 As a Web SDK consumer, I need one tracking API that supports both automatic interaction control and
 per-element overrides so I can combine default behavior with targeted element-level decisions.
 
-**Why this priority**: Interaction control is the primary integration surface for automatic click
-and view tracking.
+**Why this priority**: Interaction control is the primary integration surface for automatic click,
+view, and hover tracking.
 
 **Independent Test**: Create `EntryInteractionRuntime`, exercise
 `tracking.enable/disable/enableElement/disableElement/clearElement`, and verify runtime state,
@@ -24,7 +24,7 @@ detector lifecycle, and override behavior.
 
 1. **Given** a runtime and a known interaction key, **When** `tracking.enable(interaction, options)`
    is called, **Then** auto-tracking for that interaction is set to `true` and the interaction is
-   reconciled with the provided options.
+   reconciled with the latest start options.
 2. **Given** a running auto-tracked interaction, **When** `tracking.disable(interaction)` is called,
    **Then** auto-tracking for that interaction is set to `false` and the interaction stops when no
    force-enabled element overrides remain.
@@ -34,17 +34,17 @@ detector lifecycle, and override behavior.
 4. **Given** an element override exists, **When** `tracking.disableElement(interaction, element)` or
    `tracking.clearElement(interaction, element)` is called, **Then** tracking reflects the override
    (`disable`) or returns to automatic behavior (`clear`).
-5. **Given** an auto-discovered entry element with `data-ctfl-track-clicks` or
-   `data-ctfl-track-views`, **When** interaction reconciliation runs, **Then** the attribute value
-   force-enables (`'true'`) or force-disables (`'false'`) that specific interaction for that
-   element.
+5. **Given** an auto-discovered entry element with `data-ctfl-track-clicks`,
+   `data-ctfl-track-views`, or `data-ctfl-track-hovers`, **When** interaction reconciliation runs,
+   **Then** attribute values force-enable (`'true'`) or force-disable (`'false'`) that specific
+   interaction for that element.
 
 ---
 
 ### User Story 2 - Share Entry Element Lifecycle Across Interaction Detectors (Priority: P1)
 
-As an SDK maintainer, I need click and view detectors to share one entry registry and mutation
-pipeline so DOM discovery and lifecycle handling are consistent.
+As an SDK maintainer, I need click, view, and hover detectors to share one entry registry and
+mutation pipeline so DOM discovery and lifecycle handling are consistent.
 
 **Why this priority**: Shared lifecycle behavior prevents drift between interaction implementations.
 
@@ -66,7 +66,7 @@ mutation add/remove propagation, and observer teardown.
 ### User Story 3 - Resolve Component Payloads from Explicit and Dataset Metadata (Priority: P2)
 
 As an interaction implementation author, I need one payload resolver that normalizes explicit entry
-metadata and dataset metadata so click and view tracking emit consistent payloads.
+metadata and dataset metadata so click/view/hover tracking emit consistent payloads.
 
 **Why this priority**: Payload consistency is required for downstream analytics correctness.
 
@@ -86,22 +86,23 @@ data, dataset-only data, and invalid input combinations.
 
 ### Edge Cases
 
-- Auto-track interaction options default to `false` for known interaction keys when omitted.
+- Auto-track interaction options default to `false` for `clicks`, `views`, and `hovers` when
+  omitted.
 - Element overrides are independent from auto-tracking flags: `enableElement` can run an interaction
-  while auto-tracking is disabled.
-- `disableElement` for a tracked entry must suppress tracking for that element, even when
-  auto-tracking is enabled.
+  while global auto-tracking is disabled.
+- `disableElement` suppresses tracking for that element even when auto-tracking is enabled.
 - `clearElement` on a non-overridden element is a safe no-op.
-- For auto-discovered entries, `data-ctfl-track-clicks` and `data-ctfl-track-views` act as
-  per-interaction overrides where only case-insensitive `'true'` and `'false'` are recognized.
+- For auto-discovered entries, `data-ctfl-track-clicks`, `data-ctfl-track-views`, and
+  `data-ctfl-track-hovers` act as per-interaction overrides where only case-insensitive `'true'` and
+  `'false'` are recognized.
 - Manual API overrides (`enableElement`/`disableElement`) take precedence over attribute overrides;
   after `clearElement`, behavior falls back to attribute overrides first, then normal auto-tracking.
-- View start options passed through `tracking.enable('views', options)` are retained and reused when
-  view tracking restarts.
+- View and hover start options passed through `tracking.enable('views'|'hovers', options)` are
+  retained and reused on restart.
 - Registry subscription starts lazily on first subscriber and stops when the last subscriber
   unsubscribes.
 - Registry seeding emits currently present entry elements to each new subscriber.
-- Existence observer callbacks must isolate subscriber failures and forward errors through optional
+- Existence observer callbacks isolate subscriber failures and forward errors through optional
   `onError` handlers.
 - Existence observer delivery includes descendants of added/removed containers.
 - Non-DOM environments degrade to safe no-op behavior for entry discovery and mutation observation.
@@ -117,11 +118,12 @@ data, dataset-only data, and invalid input combinations.
   `autoTrackEntryInteraction?: Partial<Record<EntryInteraction, boolean>>`.
 - **FR-002**: Auto-track interaction options MUST resolve to a complete per-interaction boolean map
   with default `false` for omitted interaction keys.
-- **FR-003**: `EntryInteractionRuntime` MUST initialize detectors for registered interactions and
-  expose a unified `tracking` API (`enable`, `disable`, `enableElement`, `disableElement`,
-  `clearElement`).
+- **FR-003**: `EntryInteractionRuntime` MUST initialize detectors for `clicks`, `views`, and
+  `hovers`, and expose a unified `tracking` API (`enable`, `disable`, `enableElement`,
+  `disableElement`, `clearElement`).
 - **FR-004**: `tracking.enable(interaction, options)` MUST set auto-tracking for that interaction to
-  `true`; for `views` it MUST retain the latest start options and reconcile interaction state.
+  `true`; for `views` and `hovers` it MUST retain the latest start options and reconcile interaction
+  state.
 - **FR-005**: `tracking.disable(interaction)` MUST set auto-tracking for that interaction to `false`
   and reconcile interaction state.
 - **FR-006**: `tracking.enableElement(interaction, element, options)` MUST store an enabled override
@@ -138,8 +140,9 @@ data, dataset-only data, and invalid input combinations.
   disconnect the shared entry registry, and disconnect the shared existence observer.
 - **FR-012**: `syncAutoTrackedEntryInteractions(hasConsent)` MUST gate auto-tracked interactions by
   consent while preserving force-enabled element override behavior.
-- **FR-013**: Starting an interaction MUST call detector `start(options)` and subscribe to shared
-  registry callbacks (`onAdded`, `onRemoved`, `onError`) with stored cleanup.
+- **FR-013**: Starting an interaction MUST apply detector auto mode, call detector `start(options)`,
+  and subscribe to shared registry callbacks (`onAdded`, `onRemoved`, `onError`) with stored
+  cleanup.
 - **FR-014**: Stopping an interaction MUST invoke stored registry cleanup once and MUST call
   detector `stop()`.
 - **FR-015**: Runtime MUST propagate auto-tracking state changes to running detectors through
@@ -156,10 +159,10 @@ data, dataset-only data, and invalid input combinations.
   element descendants from mutation nodes, and dispatch removals before additions.
 - **FR-021**: `ElementExistenceObserver` MUST isolate subscriber callback failures and forward them
   to optional `onError` handlers.
-- **FR-022**: `resolveComponentTrackingPayload(data, element)` MUST return `undefined` when neither
-  explicit data nor element dataset resolves valid entry metadata.
-- **FR-023**: `resolveComponentTrackingPayload(data, element)` MUST prefer valid explicit
-  `EntryData` over dataset-derived entry metadata.
+- **FR-022**: `resolveTrackingPayload(data, element)` MUST return `undefined` when neither explicit
+  data nor element dataset resolves valid entry metadata.
+- **FR-023**: `resolveTrackingPayload(data, element)` MUST prefer valid explicit `EntryData` over
+  dataset-derived entry metadata.
 - **FR-024**: Dataset-derived payload parsing MUST map `ctflEntryId -> componentId` and
   `ctflPersonalizationId -> experienceId`; `ctflSticky` parsing MUST be true only for
   case-insensitive `'true'`; `ctflVariantIndex` parsing MUST allow only digit-only non-negative safe
@@ -168,23 +171,23 @@ data, dataset-only data, and invalid input combinations.
   non-empty `dataset.ctflEntryId`; `isEntryData` MUST return true only for objects with non-empty
   `entryId` strings.
 - **FR-026**: Auto-discovered entry elements MAY declare per-interaction tracking overrides via
-  `dataset.ctflTrackClicks` and `dataset.ctflTrackViews`; only case-insensitive `'true'` and
-  `'false'` values MUST be interpreted as overrides.
+  `dataset.ctflTrackClicks`, `dataset.ctflTrackViews`, and `dataset.ctflTrackHovers`; only
+  case-insensitive `'true'` and `'false'` values MUST be interpreted as overrides.
 - **FR-027**: For a given element+interaction, detector reconciliation MUST apply precedence in this
   order: manual API override (`enableElement`/`disableElement`), dataset override
-  (`ctflTrackClicks`/`ctflTrackViews`), then global auto-tracking state.
+  (`ctflTrackClicks`/`ctflTrackViews`/`ctflTrackHovers`), then global auto-tracking state.
 
 ### Key Entities _(include if feature involves data)_
 
 - **EntryInteractionRuntime**: Orchestrator for detector lifecycle, consent gating, and element
   overrides.
 - **EntryInteractionDetector**: Detector contract (`start`, `stop`, optional `setAuto` and
-  element-level override handlers) implemented by click/view tracking strategies.
+  element-level override handlers) implemented by click/view/hover tracking strategies.
 - **EntryElementRegistry**: Shared set of tracked entry elements discovered from initial DOM and
   mutations.
 - **ElementExistenceObserver**: MutationObserver-based add/remove dispatcher with move coalescing.
-- **ComponentTrackingPayload**: Normalized payload (`componentId`, `experienceId`, `sticky`,
-  `variantIndex`) derived from explicit entry data and/or element dataset.
+- **TrackingPayload**: Normalized payload (`componentId`, `experienceId`, `sticky`, `variantIndex`)
+  derived from explicit entry data and/or element dataset.
 
 ## Success Criteria _(mandatory)_
 
@@ -198,5 +201,6 @@ data, dataset-only data, and invalid input combinations.
   descendant filtering, ordered delivery (removed then added), and teardown behavior.
 - **SC-004**: Payload resolver tests confirm explicit-data precedence, dataset fallback, and strict
   parsing/validation behavior for sticky and variant index fields.
-- **SC-005**: Detector tests confirm `data-ctfl-track-clicks`/`data-ctfl-track-views` force-enable
-  and force-disable behavior, plus precedence against manual API overrides.
+- **SC-005**: Detector tests confirm `data-ctfl-track-clicks`/`data-ctfl-track-views`/
+  `data-ctfl-track-hovers` force-enable and force-disable behavior, plus precedence against manual
+  API overrides.

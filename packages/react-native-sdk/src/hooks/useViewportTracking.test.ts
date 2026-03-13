@@ -40,10 +40,10 @@ rs.mock('@contentful/optimization-core/logger', () => ({
   }),
 }))
 
-const mockTrackComponentView = rs.fn().mockResolvedValue(undefined)
+const mockTrackView = rs.fn().mockResolvedValue(undefined)
 
 const mockOptimization = {
-  trackComponentView: mockTrackComponentView,
+  trackView: mockTrackView,
 }
 
 rs.mock('../context/OptimizationContext', () => ({
@@ -115,7 +115,7 @@ function createLayoutEvent(): LayoutChangeEvent {
 }
 
 function getCallArg(callIndex: number): Record<string, unknown> {
-  const result: Record<string, unknown> = mockTrackComponentView.mock.calls[callIndex]?.[0]
+  const result: Record<string, unknown> = mockTrackView.mock.calls[callIndex]?.[0]
   return result
 }
 
@@ -132,7 +132,7 @@ describe('useViewportTracking', () => {
   })
 
   describe('initial event after dwell threshold', () => {
-    it('should fire initial trackComponentView after viewTimeMs of accumulated visible time', async () => {
+    it('should fire initial trackView after viewTimeMs of accumulated visible time', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('entry-1')
 
@@ -144,16 +144,16 @@ describe('useViewportTracking', () => {
 
       onLayout(createLayoutEvent())
 
-      expect(mockTrackComponentView).not.toHaveBeenCalled()
+      expect(mockTrackView).not.toHaveBeenCalled()
 
       rs.advanceTimersByTime(2000)
 
-      expect(mockTrackComponentView).toHaveBeenCalledTimes(1)
+      expect(mockTrackView).toHaveBeenCalledTimes(1)
       const call = getCallArg(0)
       expect(call.componentId).toBe('entry-1')
       expect(call.viewDurationMs).toBeGreaterThanOrEqual(2000)
-      expect(call.componentViewId).toBeDefined()
-      expect(typeof call.componentViewId).toBe('string')
+      expect(call.viewId).toBeDefined()
+      expect(typeof call.viewId).toBe('string')
     })
 
     it('should not fire if visibility ends before dwell threshold', async () => {
@@ -166,11 +166,11 @@ describe('useViewportTracking', () => {
         threshold: 0.8,
       })
 
-      expect(mockTrackComponentView).not.toHaveBeenCalled()
+      expect(mockTrackView).not.toHaveBeenCalled()
 
       rs.advanceTimersByTime(3000)
 
-      expect(mockTrackComponentView).not.toHaveBeenCalled()
+      expect(mockTrackView).not.toHaveBeenCalled()
     })
   })
 
@@ -189,13 +189,13 @@ describe('useViewportTracking', () => {
       onLayout(createLayoutEvent())
 
       rs.advanceTimersByTime(1000)
-      expect(mockTrackComponentView).toHaveBeenCalledTimes(1)
+      expect(mockTrackView).toHaveBeenCalledTimes(1)
 
       rs.advanceTimersByTime(2000)
-      expect(mockTrackComponentView).toHaveBeenCalledTimes(2)
+      expect(mockTrackView).toHaveBeenCalledTimes(2)
 
       rs.advanceTimersByTime(2000)
-      expect(mockTrackComponentView).toHaveBeenCalledTimes(3)
+      expect(mockTrackView).toHaveBeenCalledTimes(3)
     })
 
     it('should send increasing viewDurationMs with each periodic event', async () => {
@@ -221,8 +221,8 @@ describe('useViewportTracking', () => {
     })
   })
 
-  describe('componentViewId lifecycle', () => {
-    it('should use the same componentViewId for all events within a visibility cycle', async () => {
+  describe('viewId lifecycle', () => {
+    it('should use the same viewId for all events within a visibility cycle', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('entry-5')
 
@@ -238,8 +238,8 @@ describe('useViewportTracking', () => {
       rs.advanceTimersByTime(1000)
       rs.advanceTimersByTime(2000)
 
-      const firstViewId = getCallArg(0).componentViewId
-      const secondViewId = getCallArg(1).componentViewId
+      const firstViewId = getCallArg(0).viewId
+      const secondViewId = getCallArg(1).viewId
 
       expect(firstViewId).toBe(secondViewId)
     })
@@ -315,6 +315,112 @@ describe('useViewportTracking', () => {
     })
   })
 
+  describe('sticky dedupe by success', () => {
+    it('should emit sticky once after successful trackView for one rendered component', async () => {
+      const { useViewportTracking } = await import('./useViewportTracking')
+      const entry = createMockEntry('sticky-success-entry')
+
+      const personalization: SelectedPersonalization = {
+        experienceId: 'exp-sticky-success',
+        variantIndex: 1,
+        variants: { 'sticky-success-component': 'sticky-success-entry' },
+        sticky: true,
+      }
+
+      mockTrackView.mockResolvedValue({})
+
+      const { onLayout } = useViewportTracking({
+        entry,
+        personalization,
+        viewTimeMs: 100,
+        viewDurationUpdateIntervalMs: 200,
+        threshold: 0.5,
+      })
+
+      onLayout(createLayoutEvent())
+
+      rs.advanceTimersByTime(100)
+      await Promise.resolve()
+      rs.advanceTimersByTime(200)
+
+      expect(mockTrackView).toHaveBeenCalledTimes(2)
+      expect(getCallArg(0).sticky).toBe(true)
+      expect(getCallArg(1).sticky).toBeUndefined()
+    })
+
+    it('should retry sticky until trackView resolves with a value', async () => {
+      const { useViewportTracking } = await import('./useViewportTracking')
+      const entry = createMockEntry('sticky-retry-entry')
+
+      const personalization: SelectedPersonalization = {
+        experienceId: 'exp-sticky-retry',
+        variantIndex: 1,
+        variants: { 'sticky-retry-component': 'sticky-retry-entry' },
+        sticky: true,
+      }
+
+      mockTrackView.mockResolvedValueOnce(undefined).mockResolvedValueOnce({}).mockResolvedValue({})
+
+      const { onLayout } = useViewportTracking({
+        entry,
+        personalization,
+        viewTimeMs: 100,
+        viewDurationUpdateIntervalMs: 200,
+        threshold: 0.5,
+      })
+
+      onLayout(createLayoutEvent())
+
+      rs.advanceTimersByTime(100)
+      await Promise.resolve()
+      rs.advanceTimersByTime(200)
+      await Promise.resolve()
+      rs.advanceTimersByTime(200)
+
+      expect(mockTrackView).toHaveBeenCalledTimes(3)
+      expect(getCallArg(0).sticky).toBe(true)
+      expect(getCallArg(1).sticky).toBe(true)
+      expect(getCallArg(2).sticky).toBeUndefined()
+    })
+
+    it('should dedupe sticky independently per rendered component instance', async () => {
+      const { useViewportTracking } = await import('./useViewportTracking')
+      const entry = createMockEntry('sticky-shared-entry')
+
+      const personalization: SelectedPersonalization = {
+        experienceId: 'exp-sticky-shared',
+        variantIndex: 1,
+        variants: { 'sticky-shared-component': 'sticky-shared-entry' },
+        sticky: true,
+      }
+
+      mockTrackView.mockResolvedValue({})
+
+      const first = useViewportTracking({
+        entry,
+        personalization,
+        viewTimeMs: 100,
+        threshold: 0.5,
+      })
+
+      const second = useViewportTracking({
+        entry,
+        personalization,
+        viewTimeMs: 100,
+        threshold: 0.5,
+      })
+
+      first.onLayout(createLayoutEvent())
+      second.onLayout(createLayoutEvent())
+
+      rs.advanceTimersByTime(100)
+
+      expect(mockTrackView).toHaveBeenCalledTimes(2)
+      expect(getCallArg(0).sticky).toBe(true)
+      expect(getCallArg(1).sticky).toBe(true)
+    })
+  })
+
   describe('default options', () => {
     it('should default threshold to 0.8, viewTimeMs to 2000, viewDurationUpdateIntervalMs to 5000', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
@@ -325,13 +431,13 @@ describe('useViewportTracking', () => {
       onLayout(createLayoutEvent())
 
       rs.advanceTimersByTime(1999)
-      expect(mockTrackComponentView).not.toHaveBeenCalled()
+      expect(mockTrackView).not.toHaveBeenCalled()
 
       rs.advanceTimersByTime(1)
-      expect(mockTrackComponentView).toHaveBeenCalledTimes(1)
+      expect(mockTrackView).toHaveBeenCalledTimes(1)
 
       rs.advanceTimersByTime(5000)
-      expect(mockTrackComponentView).toHaveBeenCalledTimes(2)
+      expect(mockTrackView).toHaveBeenCalledTimes(2)
     })
   })
 

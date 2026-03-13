@@ -4,114 +4,111 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-02).
+2026-03-12).
 
 ## User Scenarios & Testing _(mandatory)_
 
-### User Story 1 - Send Validated Batch Events to Insights (Priority: P1)
+### User Story 1 - Send Validated Insights Batches (Priority: P1)
 
-As an analytics integrator, I need batched events to be validated and posted to the Insights ingest
-endpoint so invalid payloads fail early and valid payloads are sent consistently.
+As an analytics integrator, I need batch payloads validated and sent to the Insights ingest endpoint
+so malformed data fails before transport.
 
-**Why this priority**: Batched event ingestion is the primary Insights client capability.
+**Why this priority**: `sendBatchEvents` is the core Insights client API.
 
-**Independent Test**: Send valid/invalid `BatchInsightsEventArray` payloads and verify schema
-validation, endpoint URL, headers, and boolean result behavior.
+**Independent Test**: Call `sendBatchEvents` with valid/invalid `BatchInsightsEventArray` payloads.
 
 **Acceptance Scenarios**:
 
-1. **Given** valid event batches, **When** `sendBatchEvents` is called without beacon support,
-   **Then** the client posts JSON to `/events` and returns `true`.
-2. **Given** invalid batch shape, **When** `sendBatchEvents` is called, **Then** payload validation
-   fails before request execution.
+1. **Given** valid batches and no effective beacon success, **When** `sendBatchEvents` runs,
+   **Then** it sends JSON to `/events` and returns `true`.
+2. **Given** invalid batch input, **When** `sendBatchEvents` runs, **Then** schema parsing fails
+   before fetch.
 
 ---
 
-### User Story 2 - Prefer Beacon Queuing When Available (Priority: P1)
+### User Story 2 - Prefer Beacon Queueing When Available (Priority: P1)
 
-As a web runtime developer, I need optional beacon-based queuing so event delivery can use
-non-blocking browser transport when available.
+As a web runtime developer, I need optional beacon dispatch so events can be queued without blocking
+normal page lifecycle flow.
 
-**Why this priority**: Beacon transport improves unload-time reliability and runtime performance.
+**Why this priority**: Beacon queueing is the low-latency fast path for client analytics delivery.
 
-**Independent Test**: Provide beacon handlers at client and per-call scope; verify call precedence
-and fallback-to-fetch behavior.
+**Independent Test**: Use client-level and per-call beacon handlers and verify precedence/fallback.
 
 **Acceptance Scenarios**:
 
-1. **Given** a beacon handler that returns `true`, **When** `sendBatchEvents` is called, **Then** no
-   fetch request is made and the method resolves `true`.
-2. **Given** a beacon handler that returns `false`, **When** `sendBatchEvents` is called, **Then**
-   the client logs a warning and falls back to immediate fetch.
-3. **Given** both client-level and method-level handlers, **When** `sendBatchEvents` is called with
-   method options, **Then** the method-level handler takes precedence.
+1. **Given** a beacon handler that returns `true`, **When** `sendBatchEvents` runs, **Then** it
+   returns `true` without fetch fallback.
+2. **Given** a beacon handler that returns `false`, **When** `sendBatchEvents` runs, **Then** it
+   logs a warning and sends via fetch.
+3. **Given** both client-level and per-call handlers, **When** per-call options are provided,
+   **Then** the per-call handler is used.
 
 ---
 
-### User Story 3 - Signal Delivery Outcomes Predictably (Priority: P2)
+### User Story 3 - Return Deterministic Delivery Status (Priority: P2)
 
-As a caller implementing retry/circuit policy above the client, I need deterministic boolean success
-signals so I can decide whether to retain or drop queued analytics batches.
+As a caller managing queue retention policy, I need stable boolean success semantics from
+`sendBatchEvents`.
 
-**Why this priority**: Upstream queue policy depends on stable success/failure semantics.
+**Why this priority**: Higher-level retry/drop behavior depends on this return value.
 
-**Independent Test**: Simulate network failures and confirm method returns `false` after logging,
-without throwing transport errors.
+**Independent Test**: Simulate fetch success and fetch network failure.
 
 **Acceptance Scenarios**:
 
-1. **Given** a network error during fetch path, **When** `sendBatchEvents` is called, **Then**
-   request failure is logged and the method resolves `false`.
-2. **Given** successful fetch or successful beacon queue, **When** `sendBatchEvents` completes,
-   **Then** the method resolves `true`.
+1. **Given** fetch transport failure, **When** `sendBatchEvents` runs, **Then** it logs via
+   `logRequestError` and returns `false`.
+2. **Given** successful beacon queue or successful fetch fallback, **When** `sendBatchEvents`
+   completes, **Then** it returns `true`.
 
 ---
 
 ### Edge Cases
 
-- `baseUrl` defaults to `https://ingest.insights.ninetailed.co/` when omitted or falsey.
-- Beacon handler receives a `URL` object and validated payload, not raw caller input.
-- `sendBatchEvents` can succeed without performing fetch when beacon queuing succeeds.
-- Fetch failures return `false` instead of rethrowing.
+- `baseUrl` defaults to `https://ingest.insights.ninetailed.co/` for falsey overrides.
+- Beacon handlers receive `(url: URL, data: BatchInsightsEventArray)` where `data` is already
+  schema-validated.
+- Fetch-path failures return `false`; they are not rethrown from the fetch `try/catch`.
+- Exceptions thrown during validation or inside `beaconHandler` are not caught by fetch error
+  handling and can propagate.
 
 ## Requirements _(mandatory)_
 
 ### Functional Requirements
 
 - **FR-001**: `InsightsApiClient` MUST default `baseUrl` to `https://ingest.insights.ninetailed.co/`
-  when no truthy override is provided.
-- **FR-002**: `sendBatchEvents` MUST construct request URL
+  when `config.baseUrl` is falsey.
+- **FR-002**: `sendBatchEvents` MUST build URL
   `/v1/organizations/{clientId}/environments/{environment}/events` against effective `baseUrl`.
-- **FR-003**: `sendBatchEvents` MUST validate `batches` using `BatchInsightsEventArray` prior to
-  transmission.
-- **FR-004**: `sendBatchEvents` MUST resolve effective `beaconHandler` by preferring per-request
-  handler over client-level handler.
-- **FR-005**: When effective `beaconHandler` exists, `sendBatchEvents` MUST call it with
-  `(url, validatedBody)`.
-- **FR-006**: When `beaconHandler` returns `true`, `sendBatchEvents` MUST return `true` without
+- **FR-003**: `sendBatchEvents` MUST validate `batches` with
+  `parseWithFriendlyError(BatchInsightsEventArray, batches)`.
+- **FR-004**: `sendBatchEvents` MUST resolve effective `beaconHandler` using
+  `options.beaconHandler ?? this.beaconHandler`.
+- **FR-005**: When a handler exists, `sendBatchEvents` MUST call it with `(url, validatedBody)`.
+- **FR-006**: If handler returns `true`, `sendBatchEvents` MUST return `true` and skip fetch
+  fallback.
+- **FR-007**: If handler returns `false`, `sendBatchEvents` MUST log a warning and continue to
   fetch.
-- **FR-007**: When `beaconHandler` returns `false`, `sendBatchEvents` MUST log a warning and
-  continue via fetch transport.
-- **FR-008**: Fetch fallback MUST `POST` JSON with `Content-Type: application/json`,
-  `keepalive: true`, and `body: JSON.stringify(validatedBody)`.
+- **FR-008**: Fetch fallback MUST `POST` with `Content-Type: application/json`, `keepalive: true`,
+  and `body: JSON.stringify(validatedBody)`.
 - **FR-009**: Successful fetch fallback MUST return `true`.
-- **FR-010**: Fetch failure MUST invoke shared request error logging and return `false`.
-- **FR-011**: `sendBatchEvents` MUST NOT throw transport errors from fetch path; failures are
-  represented by `false`.
+- **FR-010**: Fetch fallback failure MUST call
+  `logRequestError(error, { requestName: 'Event Batches' })`.
+- **FR-011**: After fetch fallback failure, `sendBatchEvents` MUST return `false`.
 
 ### Key Entities _(include if feature involves data)_
 
-- **InsightsApiClient**: API client responsible for Insights batch ingestion.
-- **BatchInsightsEventArray**: Validated request payload contract for batched profile-scoped events.
-- **Beacon Handler**: Optional transport strategy for queued/non-blocking event delivery.
-- **Delivery Result**: Boolean contract indicating enqueue/send success (`true`) or failure
-  (`false`).
+- **InsightsApiClient**: Transport client for Insights event ingestion.
+- **BatchInsightsEventArray**: Validated request payload for profile-scoped event batches.
+- **Beacon Handler**: Optional synchronous function returning queue success/failure.
+- **Delivery Result**: Boolean method result (`true` success, `false` fetch-path failure).
 
 ## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
-- **SC-001**: Valid batched events are accepted and sent to the correct ingest path.
-- **SC-002**: Beacon success path bypasses fetch while still returning `true`.
-- **SC-003**: Beacon failure path logs warning and falls back to fetch successfully.
-- **SC-004**: Network failure path logs request failure and returns `false` without throwing.
+- **SC-001**: Valid batches are posted to the correct ingest endpoint and return `true`.
+- **SC-002**: Beacon success path bypasses fetch and returns `true`.
+- **SC-003**: Beacon failure path logs warning, falls back to fetch, and can still return `true`.
+- **SC-004**: Network failure on fetch path logs request error and returns `false`.

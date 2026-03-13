@@ -79,13 +79,13 @@ Import the Optimization React Native SDK; both CJS and ESM module systems are su
 preferred:
 
 ```ts
-import { OptimizationReactNativeSdk } from '@contentful/optimization-react-native'
+import { ContentfulOptimization } from '@contentful/optimization-react-native'
 ```
 
 Configure and initialize the Optimization React Native SDK:
 
 ```ts
-const optimization = await OptimizationReactNativeSdk.create({
+const optimization = await ContentfulOptimization.create({
   clientId: 'your-client-id',
   environment: 'main',
 })
@@ -100,19 +100,19 @@ const optimization = await OptimizationReactNativeSdk.create({
 
 ### Top-level Configuration Options
 
-| Option                     | Required? | Default                       | Description                                                       |
-| -------------------------- | --------- | ----------------------------- | ----------------------------------------------------------------- |
-| `allowedEventTypes`        | No        | `['identify', 'screen']`      | Allow-listed event types permitted when consent is not set        |
-| `analytics`                | No        | See "Analytics Options"       | Configuration specific to the Analytics/Insights API              |
-| `clientId`                 | Yes       | N/A                           | The Optimization API key                                          |
-| `defaults`                 | No        | `undefined`                   | Set of default state values applied on initialization             |
-| `environment`              | No        | `'main'`                      | The environment identifier                                        |
-| `eventBuilder`             | No        | See "Event Builder Options"   | Event builder configuration (channel/library metadata, etc.)      |
-| `fetchOptions`             | No        | See "Fetch Options"           | Configuration for Fetch timeout and retry functionality           |
-| `getAnonymousId`           | No        | `undefined`                   | Function used to obtain an anonymous user identifier              |
-| `logLevel`                 | No        | `'error'`                     | Minimum log level for the default console sink                    |
-| `personalization`          | No        | See "Personalization Options" | Configuration specific to the Personalization/Experience API      |
-| `preventedComponentEvents` | No        | `undefined`                   | Initial duplication prevention configuration for component events |
+| Option              | Required? | Default                       | Description                                                  |
+| ------------------- | --------- | ----------------------------- | ------------------------------------------------------------ |
+| `allowedEventTypes` | No        | `['identify', 'screen']`      | Allow-listed event types permitted when consent is not set   |
+| `analytics`         | No        | See "Analytics Options"       | Configuration specific to the Analytics/Insights API         |
+| `clientId`          | Yes       | N/A                           | The Optimization API key                                     |
+| `defaults`          | No        | `undefined`                   | Set of default state values applied on initialization        |
+| `environment`       | No        | `'main'`                      | The environment identifier                                   |
+| `eventBuilder`      | No        | See "Event Builder Options"   | Event builder configuration (channel/library metadata, etc.) |
+| `fetchOptions`      | No        | See "Fetch Options"           | Configuration for Fetch timeout and retry functionality      |
+| `getAnonymousId`    | No        | `undefined`                   | Function used to obtain an anonymous user identifier         |
+| `logLevel`          | No        | `'error'`                     | Minimum log level for the default console sink               |
+| `onEventBlocked`    | No        | `undefined`                   | Callback invoked when an event call is blocked by guards     |
+| `personalization`   | No        | See "Personalization Options" | Configuration specific to the Personalization/Experience API |
 
 Configuration method signatures:
 
@@ -138,7 +138,7 @@ Native SDK or any of its descendent SDKs.
 | ------------------- | --------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `app`               | No        | `undefined`                                                           | The application definition used to attribute events to a specific consumer app     |
 | `channel`           | No        | `'mobile'`                                                            | The channel that identifies where events originate from (e.g. `'web'`, `'mobile'`) |
-| `library`           | No        | `{ name: 'Optimization React Native SDK', version: '<pkg version>' }` | The client library metadata that is attached to all events                         |
+| `library`           | No        | `{ name: '@contentful/optimization-react-native', version: '0.0.0' }` | The client library metadata that is attached to all events                         |
 | `getLocale`         | No        | Built-in locale resolution                                            | Function used to resolve the locale for outgoing events                            |
 | `getPageProperties` | No        | Built-in page properties resolution                                   | Function that returns the current page properties                                  |
 | `getUserAgent`      | No        | Built-in user agent resolution                                        | Function used to obtain the current user agent string when applicable              |
@@ -201,9 +201,8 @@ Configuration method signatures:
 
 > [!IMPORTANT]
 >
-> Call `OptimizationReactNativeSdk.create(...)` once per app runtime and share the returned
-> instance. In tests or hot-reload workflows, call `destroy()` before creating a replacement
-> instance.
+> Call `ContentfulOptimization.create(...)` once per app runtime and share the returned instance. In
+> tests or hot-reload workflows, call `destroy()` before creating a replacement instance.
 
 ## Component Tracking
 
@@ -324,7 +323,7 @@ function MyComponent() {
   const optimization = useOptimization()
 
   const trackManually = async () => {
-    await optimization.trackComponentView({
+    await optimization.trackView({
       componentId: 'my-component',
       experienceId: 'exp-456',
       variantIndex: 0,
@@ -341,11 +340,7 @@ function MyComponent() {
 optional preview panel functionality:
 
 ```tsx
-import {
-  OptimizationReactNativeSdk,
-  OptimizationRoot,
-  OptimizationScrollProvider,
-} from '@contentful/optimization-react-native'
+import { OptimizationRoot, OptimizationScrollProvider } from '@contentful/optimization-react-native'
 import { createClient } from 'contentful'
 
 const contentfulClient = createClient({
@@ -353,15 +348,11 @@ const contentfulClient = createClient({
   accessToken: 'your-access-token',
 })
 
-const optimization = await OptimizationReactNativeSdk.create({
-  clientId: 'your-client-id',
-  environment: 'your-environment',
-})
-
 function App() {
   return (
     <OptimizationRoot
-      instance={optimization}
+      clientId="your-client-id"
+      environment="your-environment"
       previewPanel={{
         enabled: __DEV__, // Only show in development
         contentfulClient: contentfulClient,
@@ -392,7 +383,8 @@ panel. The panel allows developers to:
 
 ```tsx
 <OptimizationRoot
-  instance={optimization}
+  clientId="your-client-id"
+  environment="your-environment"
   previewPanel={{
     enabled: true,
     contentfulClient: contentfulClient,
@@ -438,7 +430,11 @@ When the preview panel is open, **all** `<Personalization />` components automat
 updates. This allows developers to test different variants without refreshing the screen:
 
 ```tsx
-<OptimizationRoot instance={optimization} previewPanel={{ enabled: true, contentfulClient }}>
+<OptimizationRoot
+  clientId="your-client-id"
+  environment="your-environment"
+  previewPanel={{ enabled: true, contentfulClient }}
+>
   {/* All Personalization components will live-update when panel is open */}
 </OptimizationRoot>
 ```
@@ -448,7 +444,7 @@ updates. This allows developers to test different variants without refreshing th
 Enable live updates for all `<Personalization />` components in your app:
 
 ```tsx
-<OptimizationRoot instance={optimization} liveUpdates={true}>
+<OptimizationRoot clientId="your-client-id" environment="your-environment" liveUpdates={true}>
   {/* ... */}
 </OptimizationRoot>
 ```
@@ -492,8 +488,8 @@ The live updates setting is determined for a particular `<Personalization/>` com
 The SDK automatically configures:
 
 - **Channel**: `'mobile'`
-- **Library**: `'Optimization React Native SDK'`
-- **Storage**: AsyncStorage for persisting changes, consent, profile, and personalizations
+- **Library**: `'@contentful/optimization-react-native'`
+- **Storage**: AsyncStorage for persisting changes, consent, profile, and selected personalizations
 - **Event Builders**: Mobile-optimized locale, page properties, and user agent detection
 
 ### Persistence Behavior
@@ -501,9 +497,9 @@ The SDK automatically configures:
 AsyncStorage persistence is best-effort. If AsyncStorage write/remove calls fail, the SDK keeps
 running with in-memory state and retries persistence on future writes.
 
-Structured cached values (`changes`, `profile`, `personalizations`) are schema-validated on load and
-access. Malformed JSON or schema-invalid values are automatically removed from in-memory cache and
-AsyncStorage.
+Structured cached values (`changes`, `profile`, `selectedPersonalizations`) are schema-validated on
+load and access. Malformed JSON or schema-invalid values are automatically removed from in-memory
+cache and AsyncStorage.
 
 ## Offline Support
 

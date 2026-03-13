@@ -1,5 +1,4 @@
-import Optimization, { type OptimizationNodeConfig } from '@contentful/optimization-node'
-import type { UniversalEventBuilderArgs } from '@contentful/optimization-node/api-client'
+import ContentfulOptimization, { type OptimizationNodeConfig } from '@contentful/optimization-node'
 import {
   isMergeTagEntry,
   type OptimizationData,
@@ -18,6 +17,11 @@ import type {
   TypeMergeTagContentSkeleton,
   TypeNestedContentSkeleton,
 } from './contentful-generated'
+
+type UniversalEventBuilderArgs = Pick<
+  Parameters<ContentfulOptimization['page']>[0],
+  'locale' | 'page' | 'userAgent'
+>
 
 const limiter = rateLimit({
   windowMs: 30_000,
@@ -38,7 +42,7 @@ const optimizationConfig: OptimizationNodeConfig = {
   personalization: { baseUrl: process.env.PUBLIC_EXPERIENCE_API_BASE_URL },
 }
 
-const sdk = new Optimization(optimizationConfig)
+const sdk = new ContentfulOptimization(optimizationConfig)
 
 const ctflConfig: contentful.CreateClientParams = {
   accessToken: process.env.PUBLIC_CONTENTFUL_TOKEN ?? '',
@@ -164,7 +168,7 @@ app.get('/', limiter, async (req, res) => {
     })
   }
 
-  const { profile, personalizations, changes } = optimizationResponse ?? {}
+  const { profile, selectedPersonalizations } = optimizationResponse ?? {}
 
   const personalizedEntries = new Map<
     string,
@@ -193,18 +197,18 @@ app.get('/', limiter, async (req, res) => {
       })
     }
 
-    const personalizedEntry = sdk.personalizeEntry<ContentEntrySkeleton>(entry, personalizations)
+    const personalizedEntry = sdk.personalizeEntry<ContentEntrySkeleton>(
+      entry,
+      selectedPersonalizations,
+    )
 
     personalizedEntries.set(entryId, personalizedEntry)
   })
 
-  const flags = sdk.getCustomFlags(changes)
-
   const pageData = {
     profile,
-    personalizations,
+    selectedPersonalizations,
     entries: personalizedEntries,
-    flags,
   }
 
   res.render('index', { ...pageData })

@@ -18,9 +18,9 @@ export {
   type CtflDataset,
   type EntryData,
   type EntryElement,
-} from '../../resolveComponentTrackingPayload'
+} from '../../resolveTrackingPayload'
 
-export type EntryViewTrackingCore = Pick<CoreStateful, 'trackComponentView'>
+export type EntryViewTrackingCore = Pick<CoreStateful, 'trackView'>
 
 export function createEntryViewDetector(
   core: EntryViewTrackingCore,
@@ -28,6 +28,8 @@ export function createEntryViewDetector(
   EntryViewInteractionStartOptions | undefined,
   EntryViewInteractionElementOptions
 > {
+  const stickySuccessElements = new WeakSet<Element>()
+
   return createTimedEntryDetector<
     EntryViewTrackingCore,
     EntryViewInteractionStartOptions,
@@ -51,12 +53,21 @@ export function createEntryViewDetector(
         viewDurationUpdateIntervalMs,
       }
     },
-    track: async (runtimeCore, payload, info: ElementViewCallbackInfo): Promise<void> => {
-      await runtimeCore.trackComponentView({
+    track: async (runtimeCore, payload, info: ElementViewCallbackInfo, element): Promise<void> => {
+      const stickyAlreadySucceeded = stickySuccessElements.has(element)
+      const shouldSendSticky = payload.sticky === true && !stickyAlreadySucceeded
+      const sticky = shouldSendSticky ? true : undefined
+
+      const data = await runtimeCore.trackView({
         ...payload,
-        componentViewId: info.componentViewId,
+        sticky,
+        viewId: info.viewId,
         viewDurationMs: Math.max(0, Math.round(info.totalVisibleMs)),
       })
+
+      if (shouldSendSticky && data !== undefined) {
+        stickySuccessElements.add(element)
+      }
     },
   })
 }

@@ -1,10 +1,10 @@
-# Feature Specification: Optimization Web Automatic Component Hover Tracking
+# Feature Specification: Contentful Optimization Web Automatic Component Hover Tracking
 
-**Feature Branch**: `[027-web-automatic-component-hover-tracking]`  
+**Feature Branch**: `[027-web-automatic-hover-tracking]`  
 **Created**: 2026-03-03  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-03).
+2026-03-12).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -18,7 +18,7 @@ event wiring.
 component view and click tracking.
 
 **Independent Test**: Start hover tracking, trigger natural hover enter/leave on tracked entries,
-and assert `trackComponentHover` dispatch timing plus duration updates.
+and assert `trackHover` dispatch timing plus duration updates.
 
 **Acceptance Scenarios**:
 
@@ -32,7 +32,7 @@ and assert `trackComponentHover` dispatch timing plus duration updates.
 4. **Given** a hover cycle that ends before dwell threshold is reached, **When** hover stops,
    **Then** no `component_hover` event is dispatched.
 5. **Given** a single hover cycle, **When** initial, periodic, and final events are emitted,
-   **Then** all events reuse the same `componentHoverId`.
+   **Then** all events reuse the same `hoverId`.
 
 ---
 
@@ -111,8 +111,8 @@ events, `unobserve`/`disconnect`, and orphaned states.
   ignored.
 - Pointer event listeners (`pointerenter`/`pointerleave`/`pointercancel`) are preferred when
   supported; otherwise mouse listeners (`mouseenter`/`mouseleave`) are used.
-- `componentHoverId` must be generated per hover cycle, reused for all events in that cycle, and
-  replaced on the next hover cycle.
+- `hoverId` must be generated per hover cycle, reused for all events in that cycle, and replaced on
+  the next hover cycle.
 - `hoverDurationMs` must be emitted as rounded non-negative milliseconds derived from accumulated
   hover time.
 - If payload resolution fails (no valid entry metadata), hover dispatch must be skipped.
@@ -130,7 +130,7 @@ events, `unobserve`/`disconnect`, and orphaned states.
   `start/stop/setAuto/onEntryAdded/onEntryRemoved/enableElement/disableElement/clearElement`
   handlers backed by `ElementHoverObserver`.
 - **FR-002**: Detector `start(options)` MUST create a new `ElementHoverObserver` using provided
-  start options and a callback that bridges to `core.trackComponentHover`.
+  start options and a callback that bridges to `core.trackHover`.
 - **FR-003**: Detector `stop()` MUST disconnect the active `ElementHoverObserver` and clear
   auto-tracked, attribute-override, and manual-override element state.
 - **FR-004**: Detector `setAuto(enabled)` MUST control whether auto-discovered entries are observed
@@ -150,10 +150,10 @@ events, `unobserve`/`disconnect`, and orphaned states.
 - **FR-010**: Hover observation eligibility precedence MUST be manual enable/disable override first,
   then `ctflTrackHovers` dataset override, then `setAuto(enabled)` + auto-tracked membership.
 - **FR-011**: Auto-tracking callback MUST resolve payload via
-  `resolveComponentTrackingPayload(info.data, element)` and MUST call `core.trackComponentHover`
-  only when payload resolution succeeds.
-- **FR-012**: Hover dispatch payload MUST include `componentHoverId` from callback info and
-  `hoverDurationMs` as `Math.max(0, Math.round(totalHoverMs))`.
+  `resolveTrackingPayload(info.data, element)` and MUST call `core.trackHover` only when payload
+  resolution succeeds.
+- **FR-012**: Hover dispatch payload MUST include `hoverId` from callback info and `hoverDurationMs`
+  as `Math.max(0, Math.round(totalHoverMs))`.
 - **FR-013**: `ElementHoverObserver` MUST initialize effective observer options with defaults for
   `dwellTimeMs` and `hoverDurationUpdateIntervalMs`, sanitizing to non-negative values.
 - **FR-014**: `observe(element, options)` MUST create per-element state once, attach hover
@@ -164,12 +164,12 @@ events, `unobserve`/`disconnect`, and orphaned states.
 - **FR-016**: Hover cycle start MUST be ignored for non-natural pointer events
   (`pointerType='touch'`).
 - **FR-017**: Hover start for a new cycle MUST reset accumulated timing state, clear pending final
-  state, assign a new UUID `componentHoverId`, and schedule dwell when page visibility is active.
+  state, assign a new UUID `hoverId`, and schedule dwell when page visibility is active.
 - **FR-018**: Fire scheduling MUST compute remaining time from
   `dwellTimeMs + attempts * hoverDurationUpdateIntervalMs`, trigger immediately when remaining time
   is `<= 0`, and otherwise schedule a timeout for the remaining duration.
 - **FR-019**: Callback execution MUST be coalesced per element (`inFlight` guard), increment
-  `attempts`, and invoke callback info `{ totalHoverMs, componentHoverId, attempts, data }`.
+  `attempts`, and invoke callback info `{ totalHoverMs, hoverId, attempts, data }`.
 - **FR-020**: While hover remains active and visible after first emission, observer MUST continue
   scheduling periodic callbacks at the configured hover update interval.
 - **FR-021**: Hover end before first callback attempt MUST reset cycle state without dispatching a
@@ -199,10 +199,10 @@ events, `unobserve`/`disconnect`, and orphaned states.
   overrides, and attribute overrides into `ElementHoverObserver` observe/unobserve operations.
 - **ElementHoverObserver**: Hover dwell runtime that handles enter/leave lifecycle, periodic update
   scheduling, visibility pause/resume, and orphan cleanup.
-- **ElementHoverCallbackInfo**: Callback metadata (`totalHoverMs`, `componentHoverId`, `attempts`,
-  `data`) describing a hover attempt.
-- **Hover Tracking Payload**: Normalized component payload emitted to `trackComponentHover` with
-  `componentHoverId` and `hoverDurationMs`.
+- **ElementHoverCallbackInfo**: Callback metadata (`totalHoverMs`, `hoverId`, `attempts`, `data`)
+  describing a hover attempt.
+- **Hover Tracking Payload**: Normalized component payload emitted to `trackHover` with `hoverId`
+  and `hoverDurationMs`.
 
 ## Success Criteria _(mandatory)_
 
@@ -210,8 +210,8 @@ events, `unobserve`/`disconnect`, and orphaned states.
 
 - **SC-001**: Hover tracking tests confirm qualifying hover cycles emit one initial event after
   dwell, periodic duration updates at configured intervals, and one final update on hover end.
-- **SC-002**: Identifier tests confirm each hover cycle uses a stable `componentHoverId` across
-  emitted updates and assigns a new ID for the next cycle.
+- **SC-002**: Identifier tests confirm each hover cycle uses a stable `hoverId` across emitted
+  updates and assigns a new ID for the next cycle.
 - **SC-003**: Override tests confirm `setAuto`, `enableElement`, `disableElement`, and
   `clearElement` reconcile as expected with `data-ctfl-track-hovers` and manual options.
 - **SC-004**: Option tests confirm observer-level and per-element hover update intervals control

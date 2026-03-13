@@ -37,7 +37,7 @@ The Optimization Node SDK implements functionality specific to Node environments
   - [Personalization Options](#personalization-options)
 - [Optimization Methods](#optimization-methods)
   - [Personalization Data Resolution Methods](#personalization-data-resolution-methods)
-    - [`getCustomFlag`](#getcustomflag)
+    - [`getFlag`](#getflag)
     - [`personalizeEntry`](#personalizeentry)
     - [`getMergeTagValue`](#getmergetagvalue)
   - [Personalization and Analytics Event Methods](#personalization-and-analytics-event-methods)
@@ -45,8 +45,9 @@ The Optimization Node SDK implements functionality specific to Node environments
     - [`page`](#page)
     - [`screen`](#screen)
     - [`track`](#track)
-    - [`trackComponentView`](#trackcomponentview)
-    - [`trackComponentClick`](#trackcomponentclick)
+    - [`trackView`](#trackview)
+    - [`trackClick`](#trackclick)
+    - [`trackHover`](#trackhover)
     - [`trackFlagView`](#trackflagview)
 - [Interceptors](#interceptors)
   - [Life-cycle Interceptors](#life-cycle-interceptors)
@@ -65,13 +66,13 @@ pnpm install @contentful/optimization-node
 Import the Optimization class; both CJS and ESM module systems are supported, ESM preferred:
 
 ```ts
-import Optimization from '@contentful/optimization-node'
+import ContentfulOptimization from '@contentful/optimization-node'
 ```
 
 Configure and initialize the Optimization Node SDK:
 
 ```ts
-const optimization = new Optimization({ clientId: 'abc123' })
+const optimization = new ContentfulOptimization({ clientId: 'abc123' })
 ```
 
 ## Reference Implementations
@@ -111,10 +112,10 @@ select less-common scenarios, with the most basic example solution possible.
 Event builder options should only be supplied when building an SDK on top of the Optimization Node
 SDK or any of its descendent SDKs.
 
-| Option    | Required? | Default                                               | Description                                                                        |
-| --------- | --------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `channel` | No        | `'server'`                                            | The channel that identifies where events originate from (e.g. `'web'`, `'mobile'`) |
-| `library` | No        | `{ name: 'Optimization Node API', version: '0.0.0' }` | The client library metadata that is attached to all events                         |
+| Option    | Required? | Default                                                       | Description                                                                        |
+| --------- | --------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `channel` | No        | `'server'`                                                    | The channel that identifies where events originate from (e.g. `'web'`, `'mobile'`) |
+| `library` | No        | `{ name: '@contentful/optimization-node', version: '0.0.0' }` | The client library metadata that is attached to all events                         |
 
 ### Fetch Options
 
@@ -154,7 +155,7 @@ Arguments marked with an asterisk (\*) are always required.
 
 ### Personalization Data Resolution Methods
 
-#### `getCustomFlag`
+#### `getFlag`
 
 Get the specified Custom Flag's value from the provided changes array.
 
@@ -166,6 +167,12 @@ Arguments:
 Returns:
 
 - The resolved value for the specified Custom Flag, or `undefined` if it cannot be found.
+
+Behavior notes:
+
+- Node SDK is stateless; `getFlag(...)` does not auto-emit `trackFlagView`.
+- If full map resolution is needed for advanced use cases, use
+  `optimization.flagsResolver.resolve(changes)`.
 
 > [!NOTE]
 >
@@ -185,7 +192,7 @@ Type arguments:
 Arguments:
 
 - `entry`\*: The entry to personalize
-- `personalizations`: Selected personalizations
+- `selectedPersonalizations`: Selected personalizations
 
 Returns:
 
@@ -194,7 +201,7 @@ Returns:
 
 > [!NOTE]
 >
-> If the `personalizations` argument is omitted, the method will return the baseline entry.
+> If the `selectedPersonalizations` argument is omitted, the method will return the baseline entry.
 
 #### `getMergeTagValue`
 
@@ -219,13 +226,13 @@ Only the following methods may return an `OptimizationData` object:
 - `page`
 - `screen`
 - `track`
-- `trackComponentView` (when `payload.sticky` is `true`)
+- `trackView` (when `payload.sticky` is `true`)
 
-`trackComponentClick` and `trackFlagView` return no data. When returned, `OptimizationData`
+`trackClick`, `trackHover`, and `trackFlagView` return no data. When returned, `OptimizationData`
 contains:
 
 - `changes`: Currently used for Custom Flags
-- `personalizations`: Selected personalizations for the profile
+- `selectedPersonalizations`: Selected personalizations for the profile
 - `profile`: Profile associated with the evaluated events
 
 #### `identify`
@@ -264,7 +271,7 @@ Arguments:
 - `payload`\*: Track event builder arguments object, including an optional `profile` property with a
   `PartialProfile` value that requires only an `id`
 
-#### `trackComponentView`
+#### `trackView`
 
 Record an analytics component view event. When the payload marks the component as "sticky", an
 additional personalization component view is recorded. This method only returns `OptimizationData`
@@ -275,7 +282,7 @@ Arguments:
 - `payload`\*: Component view event builder arguments object, including an optional `profile`
   property with a `PartialProfile` value that requires only an `id`
 
-#### `trackComponentClick`
+#### `trackClick`
 
 Record an analytics component click event.
 
@@ -286,6 +293,18 @@ Returns:
 Arguments:
 
 - `payload`\*: Component click event builder arguments object
+
+#### `trackHover`
+
+Record an analytics component hover event.
+
+Returns:
+
+- `void`
+
+Arguments:
+
+- `payload`\*: Component hover event builder arguments object
 
 #### `trackFlagView`
 

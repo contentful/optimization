@@ -1,8 +1,6 @@
-import type Optimization from '@contentful/optimization-web'
+import type ContentfulOptimization from '@contentful/optimization-web'
 
-export type OptimizationWebSdk = Optimization
-
-export type OptimizationWebSdkOrNull = OptimizationWebSdk | null
+export type ContentfulOptimizationOrNull = ContentfulOptimization | null
 
 export interface PersonalizationEntryInput {
   id?: string

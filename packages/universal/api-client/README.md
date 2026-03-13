@@ -45,9 +45,7 @@ Experience and Insights APIs, which serve its Personalization and Analytics prod
     - [Upsert Many Profiles](#upsert-many-profiles)
   - [Insights API](#insights-api)
     - [Send Batch Events](#send-batch-events)
-- [Event Builder](#event-builder)
-  - [Event Builder Configuration](#event-builder-configuration)
-    - [Event Builder Configured Methods](#event-builder-configured-methods)
+- [Event Construction](#event-construction)
 
 <!-- mtoc-end -->
 </details>
@@ -152,14 +150,14 @@ methods return a `Promise` that resolves with the following data:
   "profile": {
     /* User profile data */
   },
-  "personalizations": [
+  "selectedPersonalizations": [
     {
       /* Personalization/experience configuration for the associated profile */
     }
   ],
   "changes": [
     {
-      /* Similar to `personalizations` but currently used for Custom Flags */
+      /* Custom Flag changes associated with the evaluated profile */
     }
   ]
 }
@@ -251,63 +249,8 @@ await client.insights.sendBatchEvents([
 ])
 ```
 
-## Event Builder
+## Event Construction
 
-The Event Builder is a helper class that assists in constructing valid events for submission to the
-Experience and Insights APIs.
-
-### Event Builder Configuration
-
-Event Builder configuration options assist in adding contextual data to each event created by a
-builder instance.
-
-| Option              | Required? | Default                         | Description                                                                        |
-| ------------------- | --------- | ------------------------------- | ---------------------------------------------------------------------------------- |
-| `app`               | No        | `undefined`                     | The application definition used to attribute events to a specific consumer app     |
-| `channel`           | Yes       | N/A                             | The channel that identifies where events originate from (e.g. `'web'`, `'mobile'`) |
-| `library`           | Yes       | N/A                             | The client library metadata that is attached to all events                         |
-| `getLocale`         | No        | `() => 'en-US'`                 | Function used to resolve the locale for outgoing events                            |
-| `getPageProperties` | No        | `() => DEFAULT_PAGE_PROPERTIES` | Function that returns the current page properties                                  |
-| `getUserAgent`      | No        | `() => undefined`               | Function used to obtain the current user agent string when applicable              |
-
-The `get*` functions are most useful in stateful environments. Stateless environments should set the
-related data directly via Event Builder method arguments.
-
-The `channel` option may contain one of the following values:
-
-- `web`
-- `mobile`
-- `server`
-
-Configuration method signatures:
-
-- `getLocale`: `() => string | undefined`
-- `getPageProperties`:
-
-  ```ts
-  () => {
-    path: string,
-    query: Record<string, string>,
-    referrer: string,
-    search: string,
-    title?: string,
-    url: string
-  }
-  ```
-
-- `getUserAgent`: `() => string | undefined`
-
-#### Event Builder Configured Methods
-
-- `buildComponentClick`: Builds a component click event payload for a Contentful entry-based
-  component
-- `buildComponentView`: Builds a component view event payload for a Contentful entry-based component
-- `buildFlagView`: Builds a component view payload event for a Custom Flag component
-- `buildIdentify`: Builds an identify event payload to associate a user ID with traits
-- `buildPageView`: Builds a page view event payload
-- `buildScreenView`: Builds a screen view event payload
-- `buildTrack`: Builds a track event payload for arbitrary user actions
-
-See the
-[Event Builder documentation](https://contentful.github.io/optimization/classes/_contentful_optimization-api-client.EventBuilder.html)
-for more information regarding arguments and return values.
+Event-construction helpers (`EventBuilder`) are part of
+[`@contentful/optimization-core`](../core-sdk/README.md) and environment SDKs that build on top of
+it. This package focuses on API transport and request/response validation.

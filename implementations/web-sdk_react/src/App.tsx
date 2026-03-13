@@ -43,22 +43,34 @@ export default function App({
   onToggleGlobalLiveUpdates,
 }: AppProps): JSX.Element {
   const location = useLocation()
-  const { sdk, isReady, error } = useOptimization()
-  const { consent, profile, personalizations } = useOptimizationState(sdk?.states)
+  const { sdk, error } = useOptimization()
+  const { consent, profile, selectedPersonalizations } = useOptimizationState(sdk?.states)
 
   const [entries, setEntries] = useState<ContentfulEntry[]>([])
   const [entriesError, setEntriesError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!isReady || sdk === undefined) {
+    if (sdk === undefined) {
       return
     }
 
     void sdk.page({ properties: { url: location.pathname } })
-  }, [isReady, location.pathname, sdk])
+  }, [location.pathname, sdk])
 
   useEffect(() => {
-    if (!isReady || sdk === undefined) {
+    if (sdk === undefined || consent !== true || profile === undefined) {
+      return
+    }
+
+    const subscription = sdk.states.flag('boolean').subscribe(() => undefined)
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [consent, profile?.id, sdk])
+
+  useEffect(() => {
+    if (sdk === undefined) {
       return
     }
 
@@ -82,47 +94,23 @@ export default function App({
           fetchError instanceof Error ? fetchError.message : 'Unknown entry load error'
         setEntriesError(message)
       })
-  }, [isReady, sdk])
+  }, [sdk])
 
   const isIdentified = useMemo(() => isIdentifiedProfile(profile), [profile])
   const entriesById = useMemo(() => toEntryMap(entries), [entries])
   const personalizationCount = useMemo(
-    () => (Array.isArray(personalizations) ? personalizations.length : 0),
-    [personalizations],
+    () => (Array.isArray(selectedPersonalizations) ? selectedPersonalizations.length : 0),
+    [selectedPersonalizations],
   )
   const liveUpdatesBaselineEntry = entriesById.get(LIVE_UPDATES_ENTRY_ID)
   const hasPageTwoEntries =
     entriesById.has(PAGE_TWO_AUTO_ENTRY_ID) && entriesById.has(PAGE_TWO_MANUAL_ENTRY_ID)
 
-  const handleIdentify = (): void => {
-    if (!isReady || sdk === undefined) {
-      return
-    }
-
-    void sdk.identify({ userId: 'charles', traits: { identified: true } })
-  }
-
-  const handleReset = (): void => {
-    if (!isReady || sdk === undefined) {
-      return
-    }
-
-    sdk.reset()
-  }
-
-  const handleConsent = (accepted: boolean): void => {
-    if (!isReady || sdk === undefined) {
-      return
-    }
-
-    sdk.consent(accepted)
-  }
-
   if (error) {
     return <p>{error.message}</p>
   }
 
-  if (!isReady || sdk === undefined) {
+  if (sdk === undefined) {
     return <p>Loading SDK...</p>
   }
 
@@ -140,6 +128,18 @@ export default function App({
 
   if (!hasPageTwoEntries) {
     return <p>Page Two demo entries are missing from fetched entries.</p>
+  }
+
+  const handleIdentify = (): void => {
+    void sdk.identify({ userId: 'charles', traits: { identified: true } })
+  }
+
+  const handleReset = (): void => {
+    sdk.reset()
+  }
+
+  const handleConsent = (accepted: boolean): void => {
+    sdk.consent(accepted)
   }
 
   return (

@@ -2,8 +2,8 @@ import type { CoreStateful } from '@contentful/optimization-core'
 import { createScopedLogger } from '@contentful/optimization-core/logger'
 import type { EntryInteractionDetector } from '../../EntryInteractionDetector'
 import type { EntryClickInteractionElementOptions } from '../../resolveAutoTrackEntryInteractionOptions'
-import { resolveComponentTrackingPayload as resolveTrackedComponentPayload } from '../../resolveComponentTrackingPayload'
 import { resolveEntryInteractionElementOverride } from '../../resolveEntryInteractionElementOverride'
+import { resolveTrackingPayload as resolveTrackedComponentPayload } from '../../resolveTrackingPayload'
 
 const logger = createScopedLogger('Web:EntryClickTracking')
 
@@ -12,7 +12,7 @@ const logger = createScopedLogger('Web:EntryClickTracking')
  *
  * @public
  */
-export type EntryClickTrackingCore = Pick<CoreStateful, 'trackComponentClick'>
+export type EntryClickTrackingCore = Pick<CoreStateful, 'trackClick'>
 
 const CLICKABLE_SELECTOR = [
   'a[href]',
@@ -158,7 +158,7 @@ export function createEntryClickDetector(
       return
     }
 
-    void core.trackComponentClick(payload)
+    void core.trackClick(payload)
   }
 
   return {

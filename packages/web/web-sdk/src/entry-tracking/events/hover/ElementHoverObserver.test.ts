@@ -4,7 +4,7 @@ import ElementHoverObserver from './ElementHoverObserver'
 
 interface Meta {
   totalHoverMs: number
-  componentHoverId: string
+  hoverId: string
   attempts: number
   data?: unknown
 }
@@ -17,7 +17,7 @@ function isMeta(x: unknown): x is Meta {
   return (
     isRecord(x) &&
     typeof x.totalHoverMs === 'number' &&
-    typeof x.componentHoverId === 'string' &&
+    typeof x.hoverId === 'string' &&
     typeof x.attempts === 'number'
   )
 }
@@ -81,7 +81,7 @@ describe('ElementHoverObserver', () => {
       expect.objectContaining({
         attempts: 1,
         totalHoverMs: 1000,
-        componentHoverId: expect.any(String),
+        hoverId: expect.any(String),
       }),
     )
   })
@@ -111,7 +111,7 @@ describe('ElementHoverObserver', () => {
     }
 
     expect(secondMeta.totalHoverMs).toBe(6000)
-    expect(secondMeta.componentHoverId).toBe(firstMeta.componentHoverId)
+    expect(secondMeta.hoverId).toBe(firstMeta.hoverId)
   })
 
   it('emits a final duration update when hover ends after dwell has fired', async () => {
@@ -138,7 +138,7 @@ describe('ElementHoverObserver', () => {
       throw new Error('Unexpected callback payload')
     }
 
-    expect(secondMeta.componentHoverId).toBe(firstMeta.componentHoverId)
+    expect(secondMeta.hoverId).toBe(firstMeta.hoverId)
     expect(secondMeta.totalHoverMs).toBe(1400)
   })
 
@@ -157,7 +157,7 @@ describe('ElementHoverObserver', () => {
     expect(cb).not.toHaveBeenCalled()
   })
 
-  it('assigns a new componentHoverId for each new hover cycle', async () => {
+  it('assigns a new hoverId for each new hover cycle', async () => {
     const el = makeElement()
     const cb = rs.fn<(e: Element, m: Meta) => Promise<void>>().mockResolvedValue(undefined)
 
@@ -182,7 +182,7 @@ describe('ElementHoverObserver', () => {
       throw new Error('Unexpected callback payload')
     }
 
-    expect(firstMeta.componentHoverId).not.toBe(thirdMeta.componentHoverId)
+    expect(firstMeta.hoverId).not.toBe(thirdMeta.hoverId)
   })
 
   it('pauses dwell timers when hidden and resumes with remaining dwell time', async () => {
@@ -230,7 +230,7 @@ describe('ElementHoverObserver', () => {
       expect.objectContaining<Partial<Meta>>({
         attempts: 1,
         totalHoverMs: 50,
-        componentHoverId: expect.any(String),
+        hoverId: expect.any(String),
         data: { id: 'xyz' },
       }),
     )

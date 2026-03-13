@@ -37,7 +37,7 @@ other SDKs descend from the Core SDK.
   - [Personalization Options](#personalization-options)
 - [Core Methods](#core-methods)
   - [Personalization Data Resolution Methods](#personalization-data-resolution-methods)
-    - [`getCustomFlag`](#getcustomflag)
+    - [`getFlag`](#getflag)
     - [`personalizeEntry`](#personalizeentry)
     - [`getMergeTagValue`](#getmergetagvalue)
   - [Personalization and Analytics Event Methods](#personalization-and-analytics-event-methods)
@@ -45,8 +45,9 @@ other SDKs descend from the Core SDK.
     - [`page`](#page)
     - [`screen`](#screen)
     - [`track`](#track)
-    - [`trackComponentView`](#trackcomponentview)
-    - [`trackComponentClick`](#trackcomponentclick)
+    - [`trackView`](#trackview)
+    - [`trackClick`](#trackclick)
+    - [`trackHover`](#trackhover)
     - [`trackFlagView`](#trackflagview)
 - [Stateful-only Core Methods](#stateful-only-core-methods)
   - [`consent`](#consent)
@@ -337,7 +338,7 @@ Arguments marked with an asterisk (\*) are always required.
 
 ### Personalization Data Resolution Methods
 
-#### `getCustomFlag`
+#### `getFlag`
 
 Get the specified Custom Flag's value from the provided changes array, or from the current internal
 state in stateful implementations.
@@ -350,6 +351,14 @@ Arguments:
 Returns:
 
 - The resolved value for the specified Custom Flag, or `undefined` if it cannot be found.
+
+Behavior notes:
+
+- In `CoreStateful`, calling `getFlag(...)` automatically emits a flag view event via
+  `trackFlagView`.
+- In `CoreStateless`, `getFlag(...)` does not auto-emit a flag view event.
+- If full map resolution is needed for advanced use cases, use
+  `optimization.flagsResolver.resolve(changes)`.
 
 > [!NOTE]
 >
@@ -370,7 +379,7 @@ Type arguments:
 Arguments:
 
 - `entry`\*: The entry to personalize
-- `personalizations`: Selected personalizations
+- `selectedPersonalizations`: Selected personalizations
 
 Returns:
 
@@ -379,8 +388,8 @@ Returns:
 
 > [!NOTE]
 >
-> If the `personalizations` argument is omitted in stateless implementations, the method will return
-> the baseline entry.
+> If the `selectedPersonalizations` argument is omitted in stateless implementations, the method
+> will return the baseline entry.
 
 #### `getMergeTagValue`
 
@@ -406,13 +415,13 @@ Only the following methods may return an `OptimizationData` object:
 - `page`
 - `screen`
 - `track`
-- `trackComponentView` (when `payload.sticky` is `true`)
+- `trackView` (when `payload.sticky` is `true`)
 
-`trackComponentClick` and `trackFlagView` return no data. When returned, `OptimizationData`
+`trackClick`, `trackHover`, and `trackFlagView` return no data. When returned, `OptimizationData`
 contains:
 
 - `changes`: Currently used for Custom Flags
-- `personalizations`: Selected personalizations for the profile
+- `selectedPersonalizations`: Selected personalizations for the profile
 - `profile`: Profile associated with the evaluated events
 
 #### `identify`
@@ -451,7 +460,7 @@ Arguments:
 - `payload`\*: Track event builder arguments object, including an optional `profile` property with a
   `PartialProfile` value that requires only an `id`
 
-#### `trackComponentView`
+#### `trackView`
 
 Record an analytics component view event. When the payload marks the component as "sticky", an
 additional personalization component view is recorded. This method only returns `OptimizationData`
@@ -462,7 +471,7 @@ Arguments:
 - `payload`\*: Component view event builder arguments object, including an optional `profile`
   property with a `PartialProfile` value that requires only an `id`
 
-#### `trackComponentClick`
+#### `trackClick`
 
 Record an analytics component click event.
 
@@ -473,6 +482,18 @@ Returns:
 Arguments:
 
 - `payload`\*: Component click event builder arguments object
+
+#### `trackHover`
+
+Record an analytics component hover event.
+
+Returns:
+
+- `void`
+
+Arguments:
+
+- `payload`\*: Component hover event builder arguments object
 
 #### `trackFlagView`
 
@@ -562,11 +583,12 @@ Available state streams:
 - `blockedEventStream`: Latest blocked-call metadata (`BlockedEvent | undefined`)
 - `eventStream`: Latest emitted analytics/personalization event
   (`AnalyticsEvent | PersonalizationEvent | undefined`)
-- `flags`: Resolved Custom Flags (`Flags | undefined`)
+- `flag(name)`: Key-scoped flag observable (`Observable<Json>`)
 - `canPersonalize`: Whether personalization selections are available (`boolean`;
-  `personalizations !== undefined`)
+  `selectedPersonalizations !== undefined`)
 - `profile`: Current profile (`Profile | undefined`)
-- `personalizations`: Current selected personalizations (`SelectedPersonalizationArray | undefined`)
+- `selectedPersonalizations`: Current selected personalizations
+  (`SelectedPersonalizationArray | undefined`)
 - `previewPanelAttached`: Preview panel attachment state (`boolean`)
 - `previewPanelOpen`: Preview panel open state (`boolean`)
 
@@ -583,8 +605,8 @@ Update behavior:
 
 - `blockedEventStream` updates whenever a call is blocked by consent guards.
 - `eventStream` updates when a valid event is accepted for send/queue.
-- `flags`, `profile`, and `personalizations` update from Experience API responses.
-- `canPersonalize` updates whenever `personalizations` becomes defined or `undefined`.
+- `flag(name)` updates when the resolved value for that key changes.
+- `canPersonalize` updates whenever `selectedPersonalizations` becomes defined or `undefined`.
 - `consent` updates from defaults and `optimization.consent(...)`.
 - `previewPanelAttached` and `previewPanelOpen` are controlled by preview tooling and are preserved
   across `reset()`.

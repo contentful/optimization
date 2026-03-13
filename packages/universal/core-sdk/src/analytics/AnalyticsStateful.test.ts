@@ -1,6 +1,7 @@
-import { ApiClient, EventBuilder } from '@contentful/optimization-api-client'
+import { ApiClient } from '@contentful/optimization-api-client'
 import type { Profile } from '@contentful/optimization-api-client/api-schemas'
 import type { LifecycleInterceptors } from '../CoreBase'
+import { EventBuilder } from '../events'
 import { InterceptorManager } from '../lib/interceptor'
 import type {
   QueueFlushFailureContext,
@@ -65,7 +66,7 @@ const createAnalytics = (options: CreateAnalyticsOptions = {}): AnalyticsStatefu
 
   return new AnalyticsStateful({
     api,
-    builder,
+    eventBuilder: builder,
     interceptors,
     config: {
       defaults: {
@@ -115,11 +116,11 @@ const createViewPayload = (
   componentId: string,
 ): {
   componentId: string
-  componentViewId: string
+  viewId: string
   viewDurationMs: number
 } => ({
   componentId,
-  componentViewId: `${componentId}-view-id`,
+  viewId: `${componentId}-view-id`,
   viewDurationMs: 1000,
 })
 
@@ -144,7 +145,7 @@ describe('AnalyticsStateful.flush policy', () => {
       .mockResolvedValue(true)
     const analytics = createAnalytics({ sendBatchEvents })
 
-    await analytics.trackComponentView(createViewPayload('hero-banner'))
+    await analytics.trackView(createViewPayload('hero-banner'))
 
     const sameProfileId: Profile = {
       ...DEFAULT_PROFILE,
@@ -156,10 +157,10 @@ describe('AnalyticsStateful.flush policy', () => {
     profile.value = sameProfileId
 
     await analytics.trackFlagView(createViewPayload('promo-flag'))
-    await analytics.trackComponentClick({ componentId: 'hero-cta' })
-    await analytics.trackComponentHover({
+    await analytics.trackClick({ componentId: 'hero-cta' })
+    await analytics.trackHover({
       componentId: 'hero-hover',
-      componentHoverId: 'hero-hover-id',
+      hoverId: 'hero-hover-id',
       hoverDurationMs: 500,
     })
 
@@ -202,7 +203,7 @@ describe('AnalyticsStateful.flush policy', () => {
       expect.objectContaining({
         type: 'component_hover',
         componentId: 'hero-hover',
-        componentHoverId: 'hero-hover-id',
+        hoverId: 'hero-hover-id',
         hoverDurationMs: 500,
         componentType: 'Entry',
       }),
@@ -234,7 +235,7 @@ describe('AnalyticsStateful.flush policy', () => {
       },
     })
 
-    await analytics.trackComponentView(createViewPayload('hero-banner'))
+    await analytics.trackView(createViewPayload('hero-banner'))
     await analytics.flush()
 
     expect(sendBatchEvents).toHaveBeenCalledTimes(1)
@@ -283,7 +284,7 @@ describe('AnalyticsStateful.flush policy', () => {
       },
     })
 
-    await analytics.trackComponentView(createViewPayload('hero-banner'))
+    await analytics.trackView(createViewPayload('hero-banner'))
     await analytics.flush()
 
     expect(sendBatchEvents).toHaveBeenCalledTimes(1)
@@ -327,7 +328,7 @@ describe('AnalyticsStateful.flush policy', () => {
       },
     })
 
-    await analytics.trackComponentView(createViewPayload('hero-banner'))
+    await analytics.trackView(createViewPayload('hero-banner'))
     await analytics.flush()
 
     expect(sendBatchEvents).toHaveBeenCalledTimes(1)
@@ -363,7 +364,7 @@ describe('AnalyticsStateful.flush policy', () => {
       },
     })
 
-    await analytics.trackComponentView(createViewPayload('hero-banner'))
+    await analytics.trackView(createViewPayload('hero-banner'))
     await analytics.flush()
 
     expect(sendBatchEvents).toHaveBeenCalledTimes(1)

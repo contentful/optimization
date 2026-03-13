@@ -1,8 +1,3 @@
-import type {
-  ComponentClickBuilderArgs,
-  ComponentHoverBuilderArgs,
-  ComponentViewBuilderArgs,
-} from '@contentful/optimization-api-client'
 import {
   InsightsEvent as AnalyticsEvent,
   parseWithFriendlyError,
@@ -14,6 +9,12 @@ import {
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { BlockedEvent } from '../BlockedEvent'
 import type { ConsentGuard } from '../Consent'
+import type {
+  ClickBuilderArgs,
+  FlagViewBuilderArgs,
+  HoverBuilderArgs,
+  ViewBuilderArgs,
+} from '../events'
 import { guardedBy } from '../lib/decorators'
 import { QueueFlushRuntime, resolveQueueFlushPolicy, type QueueFlushPolicy } from '../lib/queue'
 import type { ProductBaseOptions, ProductConfig } from '../ProductBase'
@@ -94,10 +95,10 @@ export type AnalyticsStatefulOptions = ProductBaseOptions & {
  */
 const MAX_QUEUED_EVENTS = 25
 const ANALYTICS_METHOD_EVENT_TYPE_MAP: Readonly<Record<string, string>> = {
-  trackComponentView: 'component',
+  trackView: 'component',
   trackFlagView: 'component',
-  trackComponentClick: 'component_click',
-  trackComponentHover: 'component_hover',
+  trackClick: 'component_click',
+  trackHover: 'component_hover',
 }
 
 interface QueuedProfileEvents {
@@ -138,9 +139,9 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    * ```
    */
   constructor(options: AnalyticsStatefulOptions) {
-    const { api, builder, config, interceptors } = options
+    const { api, eventBuilder, config, interceptors } = options
 
-    super({ api, builder, config, interceptors })
+    super({ api, eventBuilder, config, interceptors })
 
     this.applyDefaults(config?.defaults)
 
@@ -219,14 +220,14 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    * @returns A promise that resolves when the event has been queued.
    * @example
    * ```ts
-   * await analytics.trackComponentView({ componentId: 'hero-banner' })
+   * await analytics.trackView({ componentId: 'hero-banner' })
    * ```
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async trackComponentView(payload: ComponentViewBuilderArgs): Promise<void> {
+  async trackView(payload: ViewBuilderArgs): Promise<void> {
     logger.info(`Processing "component view" event for ${payload.componentId}`)
 
-    await this.enqueueEvent(this.builder.buildComponentView(payload))
+    await this.enqueueEvent(this.eventBuilder.buildView(payload))
   }
 
   /**
@@ -236,14 +237,14 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    * @returns A promise that resolves when the event has been queued.
    * @example
    * ```ts
-   * await analytics.trackComponentClick({ componentId: 'hero-banner' })
+   * await analytics.trackClick({ componentId: 'hero-banner' })
    * ```
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async trackComponentClick(payload: ComponentClickBuilderArgs): Promise<void> {
+  async trackClick(payload: ClickBuilderArgs): Promise<void> {
     logger.info(`Processing "component click" event for ${payload.componentId}`)
 
-    await this.enqueueEvent(this.builder.buildComponentClick(payload))
+    await this.enqueueEvent(this.eventBuilder.buildClick(payload))
   }
 
   /**
@@ -253,14 +254,14 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    * @returns A promise that resolves when the event has been queued.
    * @example
    * ```ts
-   * await analytics.trackComponentHover({ componentId: 'hero-banner' })
+   * await analytics.trackHover({ componentId: 'hero-banner' })
    * ```
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async trackComponentHover(payload: ComponentHoverBuilderArgs): Promise<void> {
+  async trackHover(payload: HoverBuilderArgs): Promise<void> {
     logger.info(`Processing "component hover" event for ${payload.componentId}`)
 
-    await this.enqueueEvent(this.builder.buildComponentHover(payload))
+    await this.enqueueEvent(this.eventBuilder.buildHover(payload))
   }
 
   /**
@@ -274,10 +275,10 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    * ```
    */
   @guardedBy('hasConsent', { onBlocked: 'onBlockedByConsent' })
-  async trackFlagView(payload: ComponentViewBuilderArgs): Promise<void> {
+  async trackFlagView(payload: FlagViewBuilderArgs): Promise<void> {
     logger.debug(`Processing "flag view" event for ${payload.componentId}`)
 
-    await this.enqueueEvent(this.builder.buildFlagView(payload))
+    await this.enqueueEvent(this.eventBuilder.buildFlagView(payload))
   }
 
   /**

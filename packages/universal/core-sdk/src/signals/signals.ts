@@ -1,14 +1,12 @@
 import type {
   InsightsEvent as AnalyticsEvent,
   ChangeArray,
-  Flags,
   ExperienceEvent as PersonalizationEvent,
   Profile,
   SelectedPersonalizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { batch, computed, effect, signal, type Signal, untracked } from '@preact/signals-core'
 import type { BlockedEvent } from '../BlockedEvent'
-import { FlagsResolver } from '../personalization/resolvers'
 
 /**
  * Latest optimization changes returned by the Experience API.
@@ -41,13 +39,6 @@ export const event: Signal<AnalyticsEvent | PersonalizationEvent | undefined> = 
 >()
 
 /**
- * Resolved custom flags derived from {@link changes}.
- *
- * @public
- */
-export const flags = computed<Flags | undefined>(() => FlagsResolver.resolve(changes.value ?? []))
-
-/**
  * Runtime online/offline signal used by queue flush logic.
  *
  * @defaultValue `true`
@@ -76,14 +67,14 @@ export const previewPanelOpen = signal<boolean>(false)
  *
  * @public
  */
-export const personalizations = signal<SelectedPersonalizationArray | undefined>()
+export const selectedPersonalizations = signal<SelectedPersonalizationArray | undefined>()
 
 /**
  * Whether personalization data is available for entry resolution.
  *
  * @public
  */
-export const canPersonalize = computed<boolean>(() => personalizations.value !== undefined)
+export const canPersonalize = computed<boolean>(() => selectedPersonalizations.value !== undefined)
 
 /**
  * Active profile associated with current runtime state.
@@ -106,8 +97,6 @@ export interface Signals {
   consent: typeof consent
   /** Most recent emitted event signal. */
   event: typeof event
-  /** Computed resolved flags signal. */
-  flags: typeof flags
   /** Runtime connectivity signal. */
   online: typeof online
   /** Preview panel attachment signal. */
@@ -115,7 +104,7 @@ export interface Signals {
   /** Preview panel open-state signal. */
   previewPanelOpen: typeof previewPanelOpen
   /** Selected personalization variants signal. */
-  personalizations: typeof personalizations
+  selectedPersonalizations: typeof selectedPersonalizations
   /** Whether personalization data is currently available. */
   canPersonalize: typeof canPersonalize
   /** Active profile signal. */
@@ -148,11 +137,10 @@ export const signals: Signals = {
   changes,
   consent,
   event,
-  flags,
   online,
   previewPanelAttached,
   previewPanelOpen,
-  personalizations,
+  selectedPersonalizations,
   canPersonalize,
   profile,
 }

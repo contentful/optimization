@@ -1,10 +1,10 @@
 /**
- * Web SDK entrypoint for Contentful Optimization.
+ * Web SDK entrypoint for Contentful ContentfulOptimization.
  *
  * @remarks
- * Exposes a browser-wired {@link Optimization} class built on top of {@link CoreStateful}.
+ * Exposes a browser-wired {@link ContentfulOptimization} class built on top of {@link CoreStateful}.
  * When executed in a browser environment, the constructor attaches a singleton instance
- * to `window.optimization` and the class constructor to `window.Optimization` for
+ * to `window.contentfulOptimization` and the class constructor to `window.ContentfulOptimization` for
  * script-tag / global usage.
  *
  * @internal
@@ -36,10 +36,10 @@ import { LocalStore } from './storage'
 
 declare global {
   interface Window {
-    /** Global Optimization class constructor attached by the Web SDK. */
-    Optimization?: typeof Optimization
+    /** Global ContentfulOptimization class constructor attached by the Web SDK. */
+    ContentfulOptimization?: typeof ContentfulOptimization
     /** Singleton instance created by the Web SDK initializer. */
-    optimization?: Optimization
+    contentfulOptimization?: ContentfulOptimization
   }
 }
 
@@ -73,7 +73,7 @@ interface CookieAttributes {
 const EXPIRATION_DAYS_DEFAULT = 365
 
 /**
- * Configuration options for the Optimization Web SDK.
+ * Configuration options for the ContentfulOptimization Web SDK.
  *
  * @public
  * @remarks
@@ -106,7 +106,7 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
 }
 
 /**
- * Public tracking API exposed by {@link Optimization#tracking}.
+ * Public tracking API exposed by {@link ContentfulOptimization#tracking}.
  *
  * @public
  */
@@ -119,7 +119,7 @@ function resolveDefaultState(
     consent = LocalStore.consent,
     profile = LocalStore.profile,
     changes = LocalStore.changes,
-    personalizations = LocalStore.personalizations,
+    personalizations = LocalStore.selectedPersonalizations,
   } = defaults ?? {}
 
   return { consent, changes, profile, personalizations }
@@ -195,10 +195,10 @@ function mergeConfig({
  * - online-change based flushing of events,
  * - and visibility-change based flushing of events.
  *
- * A singleton instance is attached to `window.optimization` when constructed
+ * A singleton instance is attached to `window.contentfulOptimization` when constructed
  * in a browser environment.
  */
-class Optimization extends CoreStateful {
+class ContentfulOptimization extends CoreStateful {
   /**
    * Tracked entry interaction runtime state and trackers.
    *
@@ -234,18 +234,18 @@ class Optimization extends CoreStateful {
   private readonly cleanupVisibilityListener: () => void
 
   /**
-   * Create a new Optimization Web SDK instance.
+   * Create a new ContentfulOptimization Web SDK instance.
    *
    * @param config - Web SDK configuration.
    *
-   * @throws If an `Optimization` instance has already been initialized on
-   * `window.optimization`.
+   * @throws If an `ContentfulOptimization` instance has already been initialized on
+   * `window.contentfulOptimization`.
    *
    * @example
    * ```ts
-   * import Optimization from '@contentful/optimization-web'
+   * import ContentfulOptimization from '@contentful/optimization-web'
    *
-   * const optimization = new Optimization({
+   * const optimization = new ContentfulOptimization({
    *   clientId: 'abc-123',
    *   environment: 'main',
    *   autoTrackEntryInteraction: { views: true },
@@ -253,8 +253,8 @@ class Optimization extends CoreStateful {
    * ```
    */
   constructor(config: OptimizationWebConfig) {
-    if (typeof window !== 'undefined' && window.optimization)
-      throw new Error('Optimization is already initialized')
+    if (typeof window !== 'undefined' && window.contentfulOptimization)
+      throw new Error('ContentfulOptimization is already initialized')
 
     const { autoTrackEntryInteraction, ...restConfig } = config
 
@@ -311,15 +311,15 @@ class Optimization extends CoreStateful {
 
     effect(() => {
       const {
-        personalizations: { value },
+        selectedPersonalizations: { value },
       } = signals
 
-      LocalStore.personalizations = value
+      LocalStore.selectedPersonalizations = value
     })
 
     this.initializeFromCookieValues(cookieValue, legacyCookieValue)
 
-    if (typeof window !== 'undefined') window.optimization ??= this
+    if (typeof window !== 'undefined') window.contentfulOptimization ??= this
   }
 
   /**
@@ -398,12 +398,12 @@ class Optimization extends CoreStateful {
     this.cleanupOnlineListener()
     this.cleanupVisibilityListener()
 
-    if (typeof window !== 'undefined' && window.optimization === this) {
-      delete window.optimization
+    if (typeof window !== 'undefined' && window.contentfulOptimization === this) {
+      delete window.contentfulOptimization
     }
 
     super.destroy()
   }
 }
 
-export default Optimization
+export default ContentfulOptimization

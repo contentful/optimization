@@ -52,7 +52,7 @@ This SDK implements functionality specific to the Web environment, based on the
     - [`tracking.disableElement`](#trackingdisableelement)
     - [`tracking.clearElement`](#trackingclearelement)
   - [Personalization Data Resolution Methods](#personalization-data-resolution-methods)
-    - [`getCustomFlag`](#getcustomflag)
+    - [`getFlag`](#getflag)
     - [`personalizeEntry`](#personalizeentry)
     - [`getMergeTagValue`](#getmergetagvalue)
   - [Personalization and Analytics Event Methods](#personalization-and-analytics-event-methods)
@@ -60,8 +60,9 @@ This SDK implements functionality specific to the Web environment, based on the
     - [`page`](#page)
     - [`screen`](#screen)
     - [`track`](#track)
-    - [`trackComponentView`](#trackcomponentview)
-    - [`trackComponentClick`](#trackcomponentclick)
+    - [`trackView`](#trackview)
+    - [`trackClick`](#trackclick)
+    - [`trackHover`](#trackhover)
     - [`trackFlagView`](#trackflagview)
 - [Entry View Tracking](#entry-view-tracking)
   - [Manual Entry View Tracking](#manual-entry-view-tracking)
@@ -90,19 +91,19 @@ pnpm install @contentful/optimization-web
 Import the Optimization class; both CJS and ESM module systems are supported, ESM preferred:
 
 ```ts
-import Optimization from '@contentful/optimization-web'
+import ContentfulOptimization from '@contentful/optimization-web'
 ```
 
 Configure and initialize the Optimization Web SDK:
 
 ```ts
-const optimization = new Optimization({ clientId: 'abc123' })
+const optimization = new ContentfulOptimization({ clientId: 'abc123' })
 ```
 
 > [!IMPORTANT]
 >
-> Initialize the Web SDK once per page runtime. Reuse `window.optimization` (or your own singleton
-> container binding) instead of creating additional instances.
+> Initialize the Web SDK once per page runtime. Reuse `window.contentfulOptimization` (or your own
+> singleton container binding) instead of creating additional instances.
 
 ### Usage in Vanilla JS Web Pages
 
@@ -111,9 +112,9 @@ Alternatively, the Web SDK can be used directly within an HTML file:
 ```html
 <script src="https://cdn.jsdelivr.net/npm/@contentful/optimization-web@latest/dist/contentful-optimization-web.umd.js"></script>
 <script>
-  new Optimization({ clientId: 'abc123' })
+  new ContentfulOptimization({ clientId: 'abc123' })
   // is equal to:
-  // window.optimization = new Optimization({ clientId: 'abc123' })
+  // window.contentfulOptimization = new ContentfulOptimization({ clientId: 'abc123' })
 </script>
 ```
 
@@ -215,14 +216,14 @@ Configuration method signatures:
 Event builder options should only be supplied when building an SDK on top of Core or any of its
 descendent SDKs.
 
-| Option              | Required? | Default                                              | Description                                                                        |
-| ------------------- | --------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `app`               | No        | `undefined`                                          | The application definition used to attribute events to a specific consumer app     |
-| `channel`           | No        | `'web'`                                              | The channel that identifies where events originate from (e.g. `'web'`, `'mobile'`) |
-| `library`           | No        | `{ name: 'Optimization Web SDK', version: '0.0.0' }` | The client library metadata that is attached to all events                         |
-| `getLocale`         | No        | Built-in locale resolution                           | Function used to resolve the locale for outgoing events                            |
-| `getPageProperties` | No        | Built-in page properties resolution                  | Function that returns the current page properties                                  |
-| `getUserAgent`      | No        | Built-in user agent resolution                       | Function used to obtain the current user agent string when applicable              |
+| Option              | Required? | Default                                                      | Description                                                                        |
+| ------------------- | --------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `app`               | No        | `undefined`                                                  | The application definition used to attribute events to a specific consumer app     |
+| `channel`           | No        | `'web'`                                                      | The channel that identifies where events originate from (e.g. `'web'`, `'mobile'`) |
+| `library`           | No        | `{ name: '@contentful/optimization-web', version: '0.0.0' }` | The client library metadata that is attached to all events                         |
+| `getLocale`         | No        | Built-in locale resolution                                   | Function used to resolve the locale for outgoing events                            |
+| `getPageProperties` | No        | Built-in page properties resolution                          | Function that returns the current page properties                                  |
+| `getUserAgent`      | No        | Built-in user agent resolution                               | Function used to obtain the current user agent string when applicable              |
 
 The `channel` option may contain one of the following values:
 
@@ -403,11 +404,12 @@ Available state streams:
 - `blockedEventStream`: Latest blocked-call metadata (`BlockedEvent | undefined`)
 - `eventStream`: Latest emitted analytics/personalization event
   (`AnalyticsEvent | PersonalizationEvent | undefined`)
-- `flags`: Resolved Custom Flags (`Flags | undefined`)
+- `flag(name)`: Key-scoped flag observable (`Observable<Json>`)
 - `canPersonalize`: Whether personalization selections are available (`boolean`;
-  `personalizations !== undefined`)
+  `selectedPersonalizations !== undefined`)
 - `profile`: Current profile (`Profile | undefined`)
-- `personalizations`: Current selected personalizations (`SelectedPersonalizationArray | undefined`)
+- `selectedPersonalizations`: Current selected personalizations
+  (`SelectedPersonalizationArray | undefined`)
 - `previewPanelAttached`: Preview panel attachment state (`boolean`)
 - `previewPanelOpen`: Preview panel open state (`boolean`)
 
@@ -424,8 +426,8 @@ Update behavior:
 
 - `blockedEventStream` updates whenever a call is blocked by consent guards.
 - `eventStream` updates when a valid event is accepted for send/queue.
-- `flags`, `profile`, and `personalizations` update from Experience API responses.
-- `canPersonalize` updates whenever `personalizations` becomes defined or `undefined`.
+- `flag(name)` updates when the resolved value for that key changes.
+- `canPersonalize` updates whenever `selectedPersonalizations` becomes defined or `undefined`.
 - `consent` updates from defaults and `optimization.consent(...)`.
 - `previewPanelAttached` and `previewPanelOpen` are controlled by preview tooling and are preserved
   across `reset()`.
@@ -498,6 +500,7 @@ Arguments:
 When `interaction` is `'views'`, supported options are:
 
 - `dwellTimeMs`: Required time before emitting the view event; default 1,000ms
+- `viewDurationUpdateIntervalMs`: Interval for periodic view-duration update events; default 5,000ms
 - `minVisibleRatio`: Minimum intersection ratio considered "visible"; default `0.1` (10%)
 - `root`: `IntersectionObserver` `root`; default `null` (viewport)
 - `rootMargin`: `IntersectionObserver` `rootMargin`; default `0px`
@@ -577,7 +580,7 @@ After `clearElement`, the element falls back to automatic behavior for that inte
 
 ### Personalization Data Resolution Methods
 
-#### `getCustomFlag`
+#### `getFlag`
 
 Get the specified Custom Flag's value from the provided changes array, or from the current internal
 state.
@@ -590,6 +593,14 @@ Arguments:
 Returns:
 
 - The resolved value for the specified Custom Flag, or `undefined` if it cannot be found.
+
+Behavior notes:
+
+- Web SDK is stateful; calling `getFlag(...)` automatically emits a flag view event via
+  `trackFlagView`.
+- `states.flag(name)` also emits flag view events when read/subscribed.
+- If full map resolution is needed for advanced use cases, use
+  `optimization.flagsResolver.resolve(changes)`.
 
 #### `personalizeEntry`
 
@@ -605,7 +616,7 @@ Type arguments:
 Arguments:
 
 - `entry`\*: The entry to personalize
-- `personalizations`: Selected personalizations
+- `selectedPersonalizations`: Selected personalizations
 
 Returns:
 
@@ -631,13 +642,13 @@ Only the following methods may return an `OptimizationData` object:
 - `page`
 - `screen`
 - `track`
-- `trackComponentView` (when `payload.sticky` is `true`)
+- `trackView` (when `payload.sticky` is `true`)
 
-`trackComponentClick` and `trackFlagView` return no data. When returned, `OptimizationData`
+`trackClick`, `trackHover`, and `trackFlagView` return no data. When returned, `OptimizationData`
 contains:
 
 - `changes`: Currently used for Custom Flags
-- `personalizations`: Selected personalizations for the profile
+- `selectedPersonalizations`: Selected personalizations for the profile
 - `profile`: Profile associated with the evaluated events
 
 #### `identify`
@@ -676,7 +687,7 @@ Arguments:
 - `payload`\*: Track event builder arguments object, including an optional `profile` property with a
   `PartialProfile` value that requires only an `id`
 
-#### `trackComponentView`
+#### `trackView`
 
 Record an analytics component view event. When the payload marks the component as "sticky", an
 additional personalization component view is recorded. This method only returns `OptimizationData`
@@ -687,7 +698,7 @@ Arguments:
 - `payload`\*: Component view event builder arguments object, including an optional `profile`
   property with a `PartialProfile` value that requires only an `id`
 
-#### `trackComponentClick`
+#### `trackClick`
 
 Record an analytics component click event.
 
@@ -698,6 +709,18 @@ Returns:
 Arguments:
 
 - `payload`\*: Component click event builder arguments object
+
+#### `trackHover`
+
+Record an analytics component hover event.
+
+Returns:
+
+- `void`
+
+Arguments:
+
+- `payload`\*: Component hover event builder arguments object
 
 #### `trackFlagView`
 
@@ -726,13 +749,13 @@ Interaction observers are passive with respect to host event flow:
 
 ### Manual Entry View Tracking
 
-To manually track entry views using custom tracking code, simply call `trackComponentView` with the
-necessary arguments when appropriate.
+To manually track entry views using custom tracking code, simply call `trackView` with the necessary
+arguments when appropriate.
 
 Example:
 
 ```ts
-optimization.trackComponentView({ componentId: 'abc-123', ... })
+optimization.trackView({ componentId: 'abc-123', ... })
 ```
 
 ### Automatic Entry View Tracking
@@ -759,8 +782,8 @@ Different integration patterns can show different relative performance:
   bursts.
 - Frequent tab hide/show transitions add pause/resume work across active tracked elements.
 
-In practice, callback and transport work (for example, `trackComponentView` processing and event
-delivery) often dominates overall cost once a view is detected.
+In practice, callback and transport work (for example, `trackView` processing and event delivery)
+often dominates overall cost once a view is detected.
 
 For best runtime behavior, track only relevant elements, disable tracking for elements that are no
 longer needed, and choose stable `minVisibleRatio` and `dwellTimeMs` values that match your UI

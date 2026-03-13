@@ -12,7 +12,7 @@ import { InteractionEventProperties } from '../../experience/event'
  *
  * @public
  */
-export const ComponentHoverEvent = z.extend(InteractionEventProperties, {
+export const HoverEvent = z.extend(InteractionEventProperties, {
   /**
    * Discriminator indicating that this event is a component hover.
    */
@@ -30,12 +30,12 @@ export const ComponentHoverEvent = z.extend(InteractionEventProperties, {
    * @remarks
    * Multiple events emitted for the same active hover share this identifier.
    */
-  componentHoverId: z.string(),
+  hoverId: z.string(),
 })
 
 /**
- * TypeScript type inferred from {@link ComponentHoverEvent}.
+ * TypeScript type inferred from {@link HoverEvent}.
  *
  * @public
  */
-export type ComponentHoverEvent = z.infer<typeof ComponentHoverEvent>
+export type HoverEvent = z.infer<typeof HoverEvent>

@@ -1,8 +1,8 @@
 import type { CoreStatefulConfig as OptimizationConfig } from '@contentful/optimization-core'
 import { createScopedLogger } from '@contentful/optimization-core/logger'
 import React, { useEffect, useRef, useState, type ReactNode } from 'react'
+import ContentfulOptimization from '../ContentfulOptimization'
 import OptimizationContext from '../context/OptimizationContext'
-import OptimizationReactNativeSdk from '../OptimizationReactNativeSdk'
 
 const logger = createScopedLogger('RN:Provider')
 
@@ -15,13 +15,13 @@ const logger = createScopedLogger('RN:Provider')
  */
 export interface OptimizationProviderProps extends OptimizationConfig {
   /**
-   * Children components that will have access to the Optimization instance.
+   * Children components that will have access to the ContentfulOptimization instance.
    */
   children?: ReactNode
 }
 
 /**
- * Provides the Optimization instance to all child components via React Context.
+ * Provides the ContentfulOptimization instance to all child components via React Context.
  *
  * Handles SDK initialization, loading state, and cleanup internally.
  * Children are not rendered until the SDK is ready (loading gate).
@@ -52,13 +52,13 @@ export function OptimizationProvider({
   ...config
 }: OptimizationProviderProps): React.JSX.Element | null {
   const configRef = useRef<OptimizationConfig>(config)
-  const [instance, setInstance] = useState<OptimizationReactNativeSdk | null>(null)
+  const [instance, setInstance] = useState<ContentfulOptimization | null>(null)
   const [initError, setInitError] = useState<Error | null>(null)
 
   useEffect(() => {
     let destroyed = false
 
-    void OptimizationReactNativeSdk.create(configRef.current)
+    void ContentfulOptimization.create(configRef.current)
       .then((sdk) => {
         if (destroyed) {
           sdk.destroy()

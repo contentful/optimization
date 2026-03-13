@@ -1,6 +1,6 @@
 import type { Profile, SelectedPersonalizationArray } from '@contentful/optimization-api-schemas'
+import type ContentfulOptimization from '@contentful/optimization-web'
 import { useEffect, useState } from 'react'
-import type { OptimizationWebSdk } from '../../src'
 
 const MAX_EVENT_LOG_ITEMS = 20
 
@@ -12,7 +12,9 @@ export interface UseOptimizationStateResult {
   eventLog: string[]
 }
 
-export function useOptimizationState(optimization: OptimizationWebSdk): UseOptimizationStateResult {
+export function useOptimizationState(
+  optimization: ContentfulOptimization,
+): UseOptimizationStateResult {
   const [consent, setConsent] = useState<boolean | undefined>(undefined)
   const [profile, setProfile] = useState<Profile | undefined>(undefined)
   const [personalizations, setPersonalizations] = useState<
@@ -28,7 +30,7 @@ export function useOptimizationState(optimization: OptimizationWebSdk): UseOptim
     const profileSub = optimization.states.profile.subscribe((nextProfile) => {
       setProfile(nextProfile)
     })
-    const personalizationsSub = optimization.states.personalizations.subscribe(
+    const personalizationsSub = optimization.states.selectedPersonalizations.subscribe(
       (nextPersonalizations) => {
         setPersonalizations(nextPersonalizations)
       },

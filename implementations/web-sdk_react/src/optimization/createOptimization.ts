@@ -1,7 +1,7 @@
-import Optimization from '@contentful/optimization-web'
+import ContentfulOptimization from '@contentful/optimization-web'
 
-export type OptimizationInstance = Optimization
-export type OptimizationConfig = ConstructorParameters<typeof Optimization>[0]
+export type OptimizationInstance = ContentfulOptimization
+export type OptimizationConfig = ConstructorParameters<typeof ContentfulOptimization>[0]
 
 const OPTIMIZATION_CLIENT_ID =
   import.meta.env.PUBLIC_NINETAILED_CLIENT_ID?.trim() ?? 'mock-client-id'
@@ -46,7 +46,7 @@ function createOptimizationConfig(): OptimizationConfig {
     logLevel: resolveLogLevel(),
     autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
     app: {
-      name: 'Optimization SDK - React Web Reference',
+      name: 'ContentfulOptimization SDK - React Web Reference',
       version: '0.1.0',
     },
     analytics: {
@@ -61,11 +61,12 @@ function createOptimizationConfig(): OptimizationConfig {
 export function createOptimization(): OptimizationInstance {
   try {
     const config = createOptimizationConfig()
-    return new Optimization(config)
+    return new ContentfulOptimization(config)
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown Optimization init error'
+    const message =
+      error instanceof Error ? error.message : 'Unknown ContentfulOptimization init error'
     throw new OptimizationInitializationError(
-      `Failed to initialize Optimization SDK: ${message}`,
+      `Failed to initialize ContentfulOptimization SDK: ${message}`,
       error,
     )
   }

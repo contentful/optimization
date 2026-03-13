@@ -4,11 +4,13 @@ React Web SDK package for `@contentful/optimization-react-web`.
 
 ## Status
 
-Core root/provider primitives and the `Personalization` component are implemented.
+Core root/provider primitives and React-facing APIs are implemented.
 
 - `OptimizationProvider` + `useOptimization()` context behavior
 - `LiveUpdatesProvider` + `useLiveUpdates()` global live updates context
 - `OptimizationRoot` provider composition and defaults
+- `useAnalytics()` helper hook for common analytics event emission
+- `usePersonalization()` helper hook for entry resolution flows
 - `Personalization` entry resolution, lock/live-update behavior, loading fallback, and
   data-attribute mapping
 
@@ -60,8 +62,8 @@ function App() {
     <OptimizationRoot
       clientId="your-client-id"
       environment="main"
-      analytics={{ baseUrl: 'https://insights.contentful.com/' }}
-      personalization={{ baseUrl: 'https://experience.contentful.com/' }}
+      analytics={{ baseUrl: 'https://ingest.insights.ninetailed.co/' }}
+      personalization={{ baseUrl: 'https://experience.ninetailed.co/' }}
       liveUpdates={true}
     >
       <YourApp />
@@ -214,8 +216,8 @@ This gives:
 ## Singleton Behavior
 
 The underlying `@contentful/optimization-web` SDK enforces a singleton pattern. Only one
-`Optimization` runtime can exist at a time (attached to `window.optimization`). Attempting to
-initialize a second runtime will throw an error.
+`ContentfulOptimization` runtime can exist at a time (attached to `window.contentfulOptimization`).
+Attempting to initialize a second runtime will throw an error.
 
 When using the config-as-props pattern, the provider uses a `useRef` to ensure the instance is only
 created once, even across React re-renders or StrictMode double-rendering.

@@ -74,7 +74,7 @@ const DEFAULT_THRESHOLD = 0.8
 const DEFAULT_VIEW_TIME_MS = 2000
 const DEFAULT_VIEW_DURATION_UPDATE_INTERVAL_MS = 5000
 const HEX_RADIX = 16
-const createComponentViewId = (): string => {
+const createViewId = (): string => {
   try {
     return globalThis.crypto.randomUUID()
   } catch {
@@ -87,14 +87,14 @@ const createComponentViewId = (): string => {
  * triggering re-renders on every scroll tick.
  */
 interface ViewCycleState {
-  componentViewId: string | null
+  viewId: string | null
   visibleSince: number | null
   accumulatedMs: number
   attempts: number
 }
 
 const createInitialCycleState = (): ViewCycleState => ({
-  componentViewId: null,
+  viewId: null,
   visibleSince: null,
   accumulatedMs: 0,
   attempts: 0,
@@ -123,7 +123,7 @@ function pauseAccumulation(cycle: ViewCycleState, now: number): void {
 }
 
 function resetCycleState(cycle: ViewCycleState): void {
-  cycle.componentViewId = null
+  cycle.viewId = null
   cycle.visibleSince = null
   cycle.accumulatedMs = 0
   cycle.attempts = 0
@@ -145,6 +145,7 @@ export function extractTrackingMetadata(
   componentId: string
   experienceId?: string
   variantIndex: number
+  sticky?: boolean
 } {
   if (personalization) {
     const componentId = Object.keys(personalization.variants).find(
@@ -155,6 +156,7 @@ export function extractTrackingMetadata(
       componentId: componentId ?? resolvedEntry.sys.id,
       experienceId: personalization.experienceId,
       variantIndex: personalization.variantIndex,
+      sticky: personalization.sticky,
     }
   }
 
@@ -162,6 +164,7 @@ export function extractTrackingMetadata(
     componentId: resolvedEntry.sys.id,
     experienceId: undefined,
     variantIndex: 0,
+    sticky: undefined,
   }
 }
 
@@ -198,7 +201,7 @@ function getRemainingMsUntilNextFire(
  *
  * @remarks
  * Uses {@link useScrollContext} if available, otherwise falls back to screen dimensions.
- * A new visibility cycle (with a fresh `componentViewId`) starts each time the component
+ * A new visibility cycle (with a fresh `viewId`) starts each time the component
  * transitions from invisible to visible. Time accumulation pauses when the app moves
  * to the background.
  *
@@ -229,10 +232,11 @@ export function useViewportTracking({
   enabled = true,
   viewDurationUpdateIntervalMs = DEFAULT_VIEW_DURATION_UPDATE_INTERVAL_MS,
 }: UseViewportTrackingOptions): UseViewportTrackingReturn {
-  const optimization = useOptimization()
+  const contentfulOptimization = useOptimization()
+
   const scrollContext = useScrollContext()
 
-  const { componentId, experienceId, variantIndex } = extractTrackingMetadata(
+  const { componentId, experienceId, variantIndex, sticky } = extractTrackingMetadata(
     entry,
     personalization,
   )
@@ -256,8 +260,8 @@ export function useViewportTracking({
   const fireTimerRef = useRef<NodeJS.Timeout | null>(null)
   const cycleRef = useRef<ViewCycleState>(createInitialCycleState())
 
-  const optimizationRef = useRef(optimization)
-  optimizationRef.current = optimization
+  const optimizationRef = useRef(contentfulOptimization)
+  optimizationRef.current = contentfulOptimization
 
   const componentIdRef = useRef(componentId)
   componentIdRef.current = componentId
@@ -265,6 +269,21 @@ export function useViewportTracking({
   experienceIdRef.current = experienceId
   const variantIndexRef = useRef(variantIndex)
   variantIndexRef.current = variantIndex
+  const stickyRef = useRef(sticky)
+  stickyRef.current = sticky
+  const stickySuccessRef = useRef(false)
+  const stickyInFlightRef = useRef(false)
+  const stickyIdentityRef = useRef<string | null>(null)
+
+  const stickyIdentity = `${componentId}::${experienceId ?? ''}::${variantIndex}::${sticky === true ? '1' : '0'}`
+
+  useEffect(() => {
+    if (stickyIdentityRef.current === stickyIdentity) return
+
+    stickyIdentityRef.current = stickyIdentity
+    stickySuccessRef.current = false
+    stickyInFlightRef.current = false
+  }, [stickyIdentity])
 
   logger.debug(
     `Hook initialized for ${componentId} (experienceId: ${experienceId}, variantIndex: ${variantIndex})`,
@@ -289,23 +308,46 @@ export function useViewportTracking({
     const now = Date.now()
     flushAccumulatedTime(cycle, now)
 
-    const viewId = cycle.componentViewId ?? createComponentViewId()
+    const viewId = cycle.viewId ?? createViewId()
     const durationMs = Math.max(0, Math.round(cycle.accumulatedMs))
 
     cycle.attempts += 1
 
     logger.info(
-      `Emitting view event #${cycle.attempts} for ${componentIdRef.current} (viewDurationMs=${durationMs}, componentViewId=${viewId})`,
+      `Emitting view event #${cycle.attempts} for ${componentIdRef.current} (viewDurationMs=${durationMs}, viewId=${viewId})`,
     )
 
+    const shouldSendSticky =
+      stickyRef.current === true && !stickySuccessRef.current && !stickyInFlightRef.current
+
+    if (shouldSendSticky) {
+      stickyInFlightRef.current = true
+    }
+
     void (async () => {
-      await optimizationRef.current.trackComponentView({
-        componentId: componentIdRef.current,
-        componentViewId: viewId,
-        experienceId: experienceIdRef.current,
-        variantIndex: variantIndexRef.current,
-        viewDurationMs: durationMs,
-      })
+      try {
+        const data = await optimizationRef.current.trackView({
+          componentId: componentIdRef.current,
+          viewId,
+          experienceId: experienceIdRef.current,
+          variantIndex: variantIndexRef.current,
+          viewDurationMs: durationMs,
+          sticky: shouldSendSticky ? true : undefined,
+        })
+
+        if (shouldSendSticky && data !== undefined) {
+          stickySuccessRef.current = true
+        }
+      } catch (error) {
+        logger.error(
+          `Failed to emit view event for ${componentIdRef.current} (viewId=${viewId})`,
+          error,
+        )
+      } finally {
+        if (shouldSendSticky) {
+          stickyInFlightRef.current = false
+        }
+      }
     })()
   }, [])
 
@@ -313,7 +355,7 @@ export function useViewportTracking({
     clearFireTimer()
     const { current: cycle } = cycleRef
 
-    if (cycle.componentViewId === null || cycle.visibleSince === null) {
+    if (cycle.viewId === null || cycle.visibleSince === null) {
       return
     }
 
@@ -348,12 +390,10 @@ export function useViewportTracking({
     const now = Date.now()
 
     resetCycleState(cycle)
-    cycle.componentViewId = createComponentViewId()
+    cycle.viewId = createViewId()
     cycle.visibleSince = now
 
-    logger.info(
-      `Visibility cycle started for ${componentIdRef.current} (id=${cycle.componentViewId})`,
-    )
+    logger.info(`Visibility cycle started for ${componentIdRef.current} (id=${cycle.viewId})`)
 
     scheduleNextFire()
   }, [enabled, scheduleNextFire])
@@ -365,7 +405,7 @@ export function useViewportTracking({
     clearFireTimer()
     pauseAccumulation(cycle, now)
 
-    if (cycle.componentViewId !== null && cycle.attempts > 0) {
+    if (cycle.viewId !== null && cycle.attempts > 0) {
       logger.info(
         `Visibility ended for ${componentIdRef.current} after ${cycle.attempts} events, emitting final`,
       )
@@ -517,7 +557,7 @@ export function useViewportTracking({
         clearTimeout(fireTimerRef.current)
       }
       const { current: cycle } = cycleRef
-      if (cycle.componentViewId !== null && cycle.attempts > 0) {
+      if (cycle.viewId !== null && cycle.attempts > 0) {
         pauseAccumulation(cycle, Date.now())
         emitViewEvent()
       }

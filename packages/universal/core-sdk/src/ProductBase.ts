@@ -1,4 +1,4 @@
-import type { ApiClient, EventBuilder } from '@contentful/optimization-api-client'
+import type { ApiClient } from '@contentful/optimization-api-client'
 import type {
   InsightsEventType as AnalyticsEventType,
   ExperienceEventType as PersonalizationEventType,
@@ -6,6 +6,7 @@ import type {
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { BlockedEvent, BlockedEventProduct, BlockedEventReason } from './BlockedEvent'
 import type { LifecycleInterceptors } from './CoreBase'
+import type { EventBuilder } from './events'
 import { blockedEvent } from './signals'
 
 const logger = createScopedLogger('ProductBase')
@@ -60,7 +61,7 @@ export interface ProductBaseOptions {
   /** Optimization API client. */
   api: ApiClient
   /** Event builder for constructing events. */
-  builder: EventBuilder
+  eventBuilder: EventBuilder
   /** Optional configuration for allow‑lists and guard callbacks. */
   config?: ProductConfig
   /** Lifecycle container for event and state interceptors. */
@@ -83,7 +84,7 @@ abstract class ProductBase {
   protected readonly allowedEventTypes?: string[]
 
   /** Event builder used to construct strongly‑typed events. */
-  protected readonly builder: EventBuilder
+  protected readonly eventBuilder: EventBuilder
 
   /** Optimization API client used to send events to the Experience and Insights APIs. */
   protected readonly api: ApiClient
@@ -100,10 +101,10 @@ abstract class ProductBase {
    * @param options - Options for configuring the functionality common among products.
    */
   constructor(options: ProductBaseOptions) {
-    const { api, builder, config, interceptors } = options
+    const { api, eventBuilder, config, interceptors } = options
     this.allowedEventTypes = config?.allowedEventTypes ?? defaultAllowedEvents
     this.api = api
-    this.builder = builder
+    this.eventBuilder = eventBuilder
     this.interceptors = interceptors
     this.onEventBlocked = config?.onEventBlocked
   }

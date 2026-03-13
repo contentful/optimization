@@ -1,4 +1,4 @@
-import type { EntryElement } from './resolveComponentTrackingPayload'
+import type { EntryElement } from './resolveTrackingPayload'
 
 /**
  * Detector contract implemented by concrete entry interaction strategies.

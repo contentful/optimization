@@ -1,8 +1,9 @@
 import type {
-  ComponentClickBuilderArgs,
-  ComponentHoverBuilderArgs,
-  ComponentViewBuilderArgs,
-} from '@contentful/optimization-api-client'
+  ClickBuilderArgs,
+  FlagViewBuilderArgs,
+  HoverBuilderArgs,
+  ViewBuilderArgs,
+} from '../events'
 import ProductBase from '../ProductBase'
 
 /**
@@ -20,7 +21,7 @@ abstract class AnalyticsBase extends ProductBase {
    * @param payload - Component view builder arguments.
    * @returns A promise that resolves when processing is complete (or `void`).
    */
-  abstract trackComponentView(payload: ComponentViewBuilderArgs): Promise<void> | void
+  abstract trackView(payload: ViewBuilderArgs): Promise<void> | void
 
   /**
    * Track a UI component click event.
@@ -28,7 +29,7 @@ abstract class AnalyticsBase extends ProductBase {
    * @param payload - Component click builder arguments.
    * @returns A promise that resolves when processing is complete (or `void`).
    */
-  abstract trackComponentClick(payload: ComponentClickBuilderArgs): Promise<void> | void
+  abstract trackClick(payload: ClickBuilderArgs): Promise<void> | void
 
   /**
    * Track a UI component hover event.
@@ -36,7 +37,7 @@ abstract class AnalyticsBase extends ProductBase {
    * @param payload - Component hover builder arguments.
    * @returns A promise that resolves when processing is complete (or `void`).
    */
-  abstract trackComponentHover(payload: ComponentHoverBuilderArgs): Promise<void> | void
+  abstract trackHover(payload: HoverBuilderArgs): Promise<void> | void
 
   /**
    * Track a flag (feature) view event.
@@ -44,7 +45,7 @@ abstract class AnalyticsBase extends ProductBase {
    * @param payload - Flag view builder arguments.
    * @returns A promise that resolves when processing is complete (or `void`).
    */
-  abstract trackFlagView(payload: ComponentViewBuilderArgs): Promise<void> | void
+  abstract trackFlagView(payload: FlagViewBuilderArgs): Promise<void> | void
 }
 
 export default AnalyticsBase

@@ -66,9 +66,9 @@ function createRuntime(autoTrack?: { clicks?: boolean; hovers?: boolean; views?:
   >
 } {
   const core = {
-    trackComponentClick: rs.fn().mockResolvedValue(undefined),
-    trackComponentHover: rs.fn().mockResolvedValue(undefined),
-    trackComponentView: rs.fn().mockResolvedValue(undefined),
+    trackClick: rs.fn().mockResolvedValue(undefined),
+    trackHover: rs.fn().mockResolvedValue(undefined),
+    trackView: rs.fn().mockResolvedValue(undefined),
   }
   const clickDetector = createDetectorMocks<undefined, { data?: unknown }>()
   const hoverDetector = createDetectorMocks<

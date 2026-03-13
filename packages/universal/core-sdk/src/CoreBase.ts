@@ -1,23 +1,13 @@
 import {
   ApiClient,
-  EventBuilder,
   type ApiClientConfig,
-  type ComponentClickBuilderArgs,
-  type ComponentHoverBuilderArgs,
-  type ComponentViewBuilderArgs,
-  type EventBuilderConfig,
   type ExperienceApiClientConfig,
   type GlobalApiConfigProperties,
-  type IdentifyBuilderArgs,
   type InsightsApiClientConfig,
-  type PageViewBuilderArgs,
-  type ScreenViewBuilderArgs,
-  type TrackBuilderArgs,
 } from '@contentful/optimization-api-client'
 import type {
   InsightsEvent as AnalyticsEvent,
   ChangeArray,
-  Flags,
   Json,
   MergeTagEntry,
   OptimizationData,
@@ -31,6 +21,18 @@ import { ConsoleLogSink, logger } from '@contentful/optimization-api-client/logg
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import type AnalyticsBase from './analytics/AnalyticsBase'
 import { OPTIMIZATION_CORE_SDK_NAME, OPTIMIZATION_CORE_SDK_VERSION } from './constants'
+import {
+  type ClickBuilderArgs,
+  EventBuilder,
+  type EventBuilderConfig,
+  type FlagViewBuilderArgs,
+  type HoverBuilderArgs,
+  type IdentifyBuilderArgs,
+  type PageViewBuilderArgs,
+  type ScreenViewBuilderArgs,
+  type TrackBuilderArgs,
+  type ViewBuilderArgs,
+} from './events'
 import { InterceptorManager } from './lib/interceptor'
 import type {
   FlagsResolver,
@@ -182,27 +184,11 @@ abstract class CoreBase implements ResolverMethods {
    * This is a convenience wrapper around personalization’s flag resolution.
    * @example
    * ```ts
-   * const darkMode = core.getCustomFlag('dark-mode', data.changes)
+   * const darkMode = core.getFlag('dark-mode', data.changes)
    * ```
    */
-  getCustomFlag(name: string, changes?: ChangeArray): Json {
-    return this._personalization.getCustomFlag(name, changes)
-  }
-
-  /**
-   * Get all resolved custom flags derived from a set of optimization changes.
-   *
-   * @param changes - Optional change list to resolve from.
-   * @returns The resolved custom flag map.
-   * @remarks
-   * This is a convenience wrapper around personalization’s flag resolution.
-   * @example
-   * ```ts
-   * const flags = core.getCustomFlags(data.changes)
-   * ```
-   */
-  getCustomFlags(changes?: ChangeArray): Flags {
-    return this._personalization.getCustomFlags(changes)
+  getFlag(name: string, changes?: ChangeArray): Json {
+    return this._personalization.getFlag(name, changes)
   }
 
   /**
@@ -213,7 +199,7 @@ abstract class CoreBase implements ResolverMethods {
    * @typeParam M - Chain modifiers.
    * @typeParam L - Locale code.
    * @param entry - The baseline entry to resolve.
-   * @param personalizations - Optional selection array for the current profile.
+   * @param selectedPersonalizations - Optional selected personalization array for the current profile.
    * @returns {@link ResolvedData} containing the resolved entry and
    *   personalization metadata (if any).
    * @example
@@ -226,19 +212,25 @@ abstract class CoreBase implements ResolverMethods {
     L extends LocaleCode = LocaleCode,
   >(
     entry: Entry<S, undefined, L>,
-    personalizations?: SelectedPersonalizationArray,
+    selectedPersonalizations?: SelectedPersonalizationArray,
   ): ResolvedData<S, undefined, L>
   personalizeEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers = ChainModifiers,
     L extends LocaleCode = LocaleCode,
-  >(entry: Entry<S, M, L>, personalizations?: SelectedPersonalizationArray): ResolvedData<S, M, L>
+  >(
+    entry: Entry<S, M, L>,
+    selectedPersonalizations?: SelectedPersonalizationArray,
+  ): ResolvedData<S, M, L>
   personalizeEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers,
     L extends LocaleCode = LocaleCode,
-  >(entry: Entry<S, M, L>, personalizations?: SelectedPersonalizationArray): ResolvedData<S, M, L> {
-    return this._personalization.personalizeEntry<S, M, L>(entry, personalizations)
+  >(
+    entry: Entry<S, M, L>,
+    selectedPersonalizations?: SelectedPersonalizationArray,
+  ): ResolvedData<S, M, L> {
+    return this._personalization.personalizeEntry<S, M, L>(entry, selectedPersonalizations)
   }
 
   /**
@@ -332,17 +324,21 @@ abstract class CoreBase implements ResolverMethods {
    * invoked regardless of `sticky`.
    * @example
    * ```ts
-   * await core.trackComponentView({ componentId: 'hero-banner', sticky: true })
+   * await core.trackView({ componentId: 'hero-banner', sticky: true })
    * ```
    */
-  async trackComponentView(
-    payload: ComponentViewBuilderArgs & { profile?: PartialProfile },
+  async trackView(
+    payload: ViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData | undefined> {
+    let result = undefined
+
     if (payload.sticky) {
-      return await this._personalization.trackComponentView(payload)
+      result = await this._personalization.trackView(payload)
     }
 
-    await this._analytics.trackComponentView(payload)
+    await this._analytics.trackView(payload)
+
+    return result
   }
 
   /**
@@ -352,11 +348,11 @@ abstract class CoreBase implements ResolverMethods {
    * @returns A promise that resolves when processing completes.
    * @example
    * ```ts
-   * await core.trackComponentClick({ componentId: 'hero-banner' })
+   * await core.trackClick({ componentId: 'hero-banner' })
    * ```
    */
-  async trackComponentClick(payload: ComponentClickBuilderArgs): Promise<void> {
-    await this._analytics.trackComponentClick(payload)
+  async trackClick(payload: ClickBuilderArgs): Promise<void> {
+    await this._analytics.trackClick(payload)
   }
 
   /**
@@ -366,11 +362,11 @@ abstract class CoreBase implements ResolverMethods {
    * @returns A promise that resolves when processing completes.
    * @example
    * ```ts
-   * await core.trackComponentHover({ componentId: 'hero-banner' })
+   * await core.trackHover({ componentId: 'hero-banner' })
    * ```
    */
-  async trackComponentHover(payload: ComponentHoverBuilderArgs): Promise<void> {
-    await this._analytics.trackComponentHover(payload)
+  async trackHover(payload: HoverBuilderArgs): Promise<void> {
+    await this._analytics.trackHover(payload)
   }
 
   /**
@@ -383,7 +379,7 @@ abstract class CoreBase implements ResolverMethods {
    * await core.trackFlagView({ componentId: 'feature-flag-123' })
    * ```
    */
-  async trackFlagView(payload: ComponentViewBuilderArgs): Promise<void> {
+  async trackFlagView(payload: FlagViewBuilderArgs): Promise<void> {
     await this._analytics.trackFlagView(payload)
   }
 }

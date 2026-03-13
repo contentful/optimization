@@ -6,40 +6,11 @@ const packageName = getPackageName(__dirname, '@contentful/optimization-react-na
 const workspaceRoot = path.resolve(__dirname, '../../..')
 const browserUtilEntry = path.resolve(workspaceRoot, 'node_modules/.pnpm/node_modules/util/util.js')
 
-const runtimeExternals = [
-  /^react$/,
-  /^react\/jsx-runtime$/,
-  /^react\/jsx-dev-runtime$/,
-  /^react-native$/,
-  /^@react-native-async-storage\/async-storage$/,
-  /^@react-native-community\/netinfo$/,
-  /^@react-native-clipboard\/clipboard$/,
-] as const
-
-function isUnknownArray(value: unknown): value is unknown[] {
-  return Array.isArray(value)
-}
-
-function keepReactNativeRuntimeExternals(config: { externals?: unknown }): void {
-  const existingExternals = isUnknownArray(config.externals)
-    ? config.externals
-    : config.externals
-      ? [config.externals]
-      : []
-
-  config.externals = [...existingExternals, ...runtimeExternals]
-}
-
-function configureRspack(config: { externals?: unknown; plugins?: unknown }): void {
-  keepReactNativeRuntimeExternals(config)
-  maybeEnableRsDoctor(config)
-}
-
 const common = {
   bundle: true,
   autoExtension: false,
   autoExternal: {
-    dependencies: false,
+    dependencies: true,
     peerDependencies: true,
     optionalDependencies: true,
     devDependencies: false,
@@ -93,7 +64,7 @@ export default defineConfig({
         dts: { path: false },
       },
       tools: {
-        rspack: configureRspack,
+        rspack: maybeEnableRsDoctor,
       },
     },
 
@@ -108,7 +79,7 @@ export default defineConfig({
         cleanDistPath: false,
       },
       tools: {
-        rspack: configureRspack,
+        rspack: maybeEnableRsDoctor,
       },
     },
   ],

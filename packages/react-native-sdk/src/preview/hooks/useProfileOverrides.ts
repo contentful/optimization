@@ -19,28 +19,28 @@ const logger = createScopedLogger('RN:Preview')
 
 const initialOverrideState: OverrideState = {
   audiences: {},
-  personalizations: {},
+  selectedPersonalizations: {},
 }
 
 /**
  * @internal
  */
 function applyPersonalizationOverrides(
-  apiPersonalizations: SelectedPersonalizationArray,
+  apiSelectedPersonalizations: SelectedPersonalizationArray,
   overrides: Record<string, PersonalizationOverride>,
 ): SelectedPersonalizationArray {
   const overrideEntries = Object.values(overrides)
-  if (overrideEntries.length === 0) return apiPersonalizations
+  if (overrideEntries.length === 0) return apiSelectedPersonalizations
 
-  return apiPersonalizations.map((personalization) => {
-    const { [personalization.experienceId]: override } = overrides
+  return apiSelectedPersonalizations.map((selectedPersonalization) => {
+    const { [selectedPersonalization.experienceId]: override } = overrides
     if (override) {
       return {
-        ...personalization,
+        ...selectedPersonalization,
         variantIndex: override.variantIndex,
       }
     }
-    return personalization
+    return selectedPersonalization
   })
 }
 
@@ -60,7 +60,7 @@ export function useProfileOverrides(): {
   overrides: OverrideState
   actions: PreviewActions
 } {
-  const optimization = useOptimization()
+  const contentfulOptimization = useOptimization()
   const [overrides, setOverrides] = useState<OverrideState>(initialOverrideState)
 
   // Store signals reference obtained from SDK registration
@@ -86,7 +86,7 @@ export function useProfileOverrides(): {
     const previewPanelObject: PreviewPanelSignalObject = {}
 
     // Register with the SDK to get signal access
-    optimization.registerPreviewPanel(previewPanelObject)
+    contentfulOptimization.registerPreviewPanel(previewPanelObject)
     const registeredSignals = Reflect.get(previewPanelObject, PREVIEW_PANEL_SIGNALS_SYMBOL)
     signalsRef.current = registeredSignals
 
@@ -97,13 +97,13 @@ export function useProfileOverrides(): {
     if (signalsRef.current && !lastActualDataRef.current) {
       const { current } = signalsRef
       const {
-        personalizations: { value: personalizations },
+        selectedPersonalizations: { value: selectedPersonalizations },
         profile: { value: profile },
         changes: { value: changes },
       } = current
-      if (personalizations && profile && changes) {
+      if (selectedPersonalizations && profile && changes) {
         const actualData: OptimizationData = {
-          personalizations,
+          selectedPersonalizations,
           profile,
           changes,
         }
@@ -113,7 +113,7 @@ export function useProfileOverrides(): {
     }
 
     // Register state interceptor to preserve overrides when API responses arrive
-    interceptorIdRef.current = optimization.interceptors.state.add(
+    interceptorIdRef.current = contentfulOptimization.interceptors.state.add(
       (data: OptimizationData): OptimizationData => {
         // Cache the un-overridden data
         lastActualDataRef.current = data
@@ -121,7 +121,7 @@ export function useProfileOverrides(): {
         const { current: currentOverrides } = overridesRef
 
         // If no personalization overrides, pass through unchanged
-        if (Object.keys(currentOverrides.personalizations).length === 0) {
+        if (Object.keys(currentOverrides.selectedPersonalizations).length === 0) {
           return data
         }
 
@@ -130,9 +130,9 @@ export function useProfileOverrides(): {
         // Merge API response with our overrides
         return {
           ...data,
-          personalizations: applyPersonalizationOverrides(
-            data.personalizations,
-            currentOverrides.personalizations,
+          selectedPersonalizations: applyPersonalizationOverrides(
+            data.selectedPersonalizations,
+            currentOverrides.selectedPersonalizations,
           ),
         }
       },
@@ -143,31 +143,31 @@ export function useProfileOverrides(): {
     // Cleanup on unmount
     return () => {
       if (interceptorIdRef.current !== null) {
-        optimization.interceptors.state.remove(interceptorIdRef.current)
+        contentfulOptimization.interceptors.state.remove(interceptorIdRef.current)
         logger.info('State interceptor removed')
       }
       signalsRef.current = null
     }
-  }, [optimization])
+  }, [contentfulOptimization])
 
   // Helper to update signals directly for immediate UI feedback
-  const updatePersonalizationsSignal = useCallback(
+  const updateSelectedPersonalizationsSignal = useCallback(
     (newOverrides: Record<string, PersonalizationOverride>) => {
       const { current: signals } = signalsRef
       if (!signals) return
 
       const {
-        personalizations: { value: currentPersonalizations },
+        selectedPersonalizations: { value: currentSelectedPersonalizations },
       } = signals
-      if (!currentPersonalizations) return
+      if (!currentSelectedPersonalizations) return
 
-      const updatedPersonalizations = applyPersonalizationOverrides(
-        currentPersonalizations,
+      const updatedSelectedPersonalizations = applyPersonalizationOverrides(
+        currentSelectedPersonalizations,
         newOverrides,
       )
 
-      signals.personalizations.value = updatedPersonalizations
-      logger.debug('Updated personalizations signal directly')
+      signals.selectedPersonalizations.value = updatedSelectedPersonalizations
+      logger.debug('Updated selected personalizations signal directly')
     },
     [],
   )
@@ -184,13 +184,13 @@ export function useProfileOverrides(): {
       const experienceIds = experiences.map((exp) => exp.id)
 
       setOverrides((prev) => {
-        const newPersonalizations = { ...prev.personalizations }
+        const newSelectedPersonalizations = { ...prev.selectedPersonalizations }
         experiences.forEach((exp) => {
-          newPersonalizations[exp.id] = { experienceId: exp.id, variantIndex }
+          newSelectedPersonalizations[exp.id] = { experienceId: exp.id, variantIndex }
         })
 
         if (experiences.length > 0) {
-          updatePersonalizationsSignal(newPersonalizations)
+          updateSelectedPersonalizationsSignal(newSelectedPersonalizations)
         }
 
         return {
@@ -199,11 +199,11 @@ export function useProfileOverrides(): {
             ...prev.audiences,
             [audienceId]: { audienceId, isActive, source: 'manual', experienceIds },
           },
-          personalizations: newPersonalizations,
+          selectedPersonalizations: newSelectedPersonalizations,
         }
       })
     },
-    [updatePersonalizationsSignal],
+    [updateSelectedPersonalizationsSignal],
   )
 
   const activateAudience = useCallback(
@@ -229,12 +229,14 @@ export function useProfileOverrides(): {
         const storedExperienceIds = prev.audiences[audienceId]?.experienceIds ?? []
         const experienceIdSet = new Set(storedExperienceIds)
 
-        const newPersonalizations = Object.fromEntries(
-          Object.entries(prev.personalizations).filter(([key]) => !experienceIdSet.has(key)),
+        const newSelectedPersonalizations = Object.fromEntries(
+          Object.entries(prev.selectedPersonalizations).filter(
+            ([key]) => !experienceIdSet.has(key),
+          ),
         ) as Record<string, PersonalizationOverride>
 
         if (storedExperienceIds.length > 0) {
-          updatePersonalizationsSignal(newPersonalizations)
+          updateSelectedPersonalizationsSignal(newSelectedPersonalizations)
         }
 
         return {
@@ -242,11 +244,11 @@ export function useProfileOverrides(): {
           audiences: Object.fromEntries(
             Object.entries(prev.audiences).filter(([key]) => key !== audienceId),
           ) as Record<string, AudienceOverride>,
-          personalizations: newPersonalizations,
+          selectedPersonalizations: newSelectedPersonalizations,
         }
       })
     },
-    [updatePersonalizationsSignal],
+    [updateSelectedPersonalizationsSignal],
   )
 
   const setVariantOverride = useCallback(
@@ -261,21 +263,21 @@ export function useProfileOverrides(): {
           experienceId,
           variantIndex,
         }
-        const newPersonalizations = {
-          ...prev.personalizations,
+        const newSelectedPersonalizations = {
+          ...prev.selectedPersonalizations,
           [experienceId]: newOverride,
         }
 
         // Update signals directly for immediate feedback
-        updatePersonalizationsSignal(newPersonalizations)
+        updateSelectedPersonalizationsSignal(newSelectedPersonalizations)
 
         return {
           ...prev,
-          personalizations: newPersonalizations,
+          selectedPersonalizations: newSelectedPersonalizations,
         }
       })
     },
-    [updatePersonalizationsSignal],
+    [updateSelectedPersonalizationsSignal],
   )
 
   const resetPersonalizationOverride = useCallback(
@@ -283,36 +285,36 @@ export function useProfileOverrides(): {
       logger.info('Resetting personalization override:', experienceId)
 
       setOverrides((prev) => {
-        const newPersonalizations = Object.fromEntries(
-          Object.entries(prev.personalizations).filter(([key]) => key !== experienceId),
+        const newSelectedPersonalizations = Object.fromEntries(
+          Object.entries(prev.selectedPersonalizations).filter(([key]) => key !== experienceId),
         ) as Record<string, PersonalizationOverride>
 
         // Update signals directly for immediate feedback
-        updatePersonalizationsSignal(newPersonalizations)
+        updateSelectedPersonalizationsSignal(newSelectedPersonalizations)
 
         return {
           ...prev,
-          personalizations: newPersonalizations,
+          selectedPersonalizations: newSelectedPersonalizations,
         }
       })
     },
-    [updatePersonalizationsSignal],
+    [updateSelectedPersonalizationsSignal],
   )
 
   const resetSdkState = useCallback(() => {
     logger.info('Resetting SDK state to actual')
-    // Instead of completely clearing the SDK state with optimization.reset(),
+    // Instead of completely clearing the SDK state with contentfulOptimization.reset(),
     // we just clear our overrides and restore the last known actual state from the API.
     setOverrides(initialOverrideState)
 
     // Restore signals to actual data if we have it
     if (lastActualDataRef.current && signalsRef.current) {
       const {
-        current: { personalizations, profile, changes },
+        current: { selectedPersonalizations, profile, changes },
       } = lastActualDataRef
       const { current: signals } = signalsRef
 
-      signals.personalizations.value = personalizations
+      signals.selectedPersonalizations.value = selectedPersonalizations
       signals.profile.value = profile
       signals.changes.value = changes
       logger.debug('Restored signals to actual data')

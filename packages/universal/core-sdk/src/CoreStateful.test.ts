@@ -1,12 +1,10 @@
-import type {
-  ComponentViewBuilderArgs,
-  TrackBuilderArgs,
-} from '@contentful/optimization-api-client'
 import type { BlockedEvent } from './BlockedEvent'
 import CoreStateful, {
   type CoreStatefulConfig,
   type PreviewPanelSignalObject,
 } from './CoreStateful'
+import type { ChangeArray } from './api-schemas'
+import type { TrackBuilderArgs, ViewBuilderArgs } from './events'
 import type { QueueFlushFailureContext } from './lib/queue'
 import { batch, signalFns, signals } from './signals'
 import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from './symbols'
@@ -16,6 +14,28 @@ const config: CoreStatefulConfig = {
   clientId: 'key_123',
   environment: 'main',
 }
+
+const DARK_MODE_CHANGE: ChangeArray[number] = {
+  key: 'dark-mode',
+  type: 'Variable',
+  value: true,
+  meta: {
+    experienceId: 'experience-id',
+    variantIndex: 0,
+  },
+}
+
+const OTHER_FLAG_CHANGE: ChangeArray[number] = {
+  key: 'other-flag',
+  type: 'Variable',
+  value: 'A',
+  meta: {
+    experienceId: 'experience-id',
+    variantIndex: 1,
+  },
+}
+
+const FLAG_CHANGES: ChangeArray = [DARK_MODE_CHANGE, OTHER_FLAG_CHANGE]
 
 class CoreStatefulTestHarness extends CoreStateful {
   getOnlineState(): boolean {
@@ -59,7 +79,7 @@ describe('CoreStateful blocked event handling', () => {
       signals.consent.value = undefined
       signals.event.value = undefined
       signals.online.value = true
-      signals.personalizations.value = undefined
+      signals.selectedPersonalizations.value = undefined
       signals.previewPanelAttached.value = false
       signals.previewPanelOpen.value = false
       signals.profile.value = undefined
@@ -112,14 +132,14 @@ describe('CoreStateful blocked event handling', () => {
       defaults: { consent: true },
       onEventBlocked,
     })
-    const payload: ComponentViewBuilderArgs = {
+    const payload: ViewBuilderArgs = {
       componentId: 'hero-banner',
-      componentViewId: 'hero-banner-view-id',
+      viewId: 'hero-banner-view-id',
       viewDurationMs: 1000,
     }
 
-    await core.trackComponentView(payload)
-    await core.trackComponentView(payload)
+    await core.trackView(payload)
+    await core.trackView(payload)
 
     expect(onEventBlocked).not.toHaveBeenCalled()
     expect(signals.blockedEvent.value).toBeUndefined()
@@ -171,7 +191,7 @@ describe('CoreStateful blocked event handling', () => {
       rs.spyOn(core.api.insights, 'sendBatchEvents').mockRejectedValue(new Error('insights-down'))
 
       core.setOnlineState(false)
-      await core.trackComponentClick({ componentId: 'hero-banner' })
+      await core.trackClick({ componentId: 'hero-banner' })
 
       core.setOnlineState(true)
       await core.flush()
@@ -285,11 +305,11 @@ describe('CoreStateful blocked event handling', () => {
 
     expect(secondStates).toBe(firstStates)
     expect(secondStates.blockedEventStream).toBe(firstStates.blockedEventStream)
+    expect(secondStates.flag).toBe(firstStates.flag)
     expect(secondStates.consent).toBe(firstStates.consent)
     expect(secondStates.eventStream).toBe(firstStates.eventStream)
-    expect(secondStates.flags).toBe(firstStates.flags)
     expect(secondStates.canPersonalize).toBe(firstStates.canPersonalize)
-    expect(secondStates.personalizations).toBe(firstStates.personalizations)
+    expect(secondStates.selectedPersonalizations).toBe(firstStates.selectedPersonalizations)
     expect(secondStates.previewPanelAttached).toBe(firstStates.previewPanelAttached)
     expect(secondStates.previewPanelOpen).toBe(firstStates.previewPanelOpen)
     expect(secondStates.profile).toBe(firstStates.profile)
@@ -302,10 +322,92 @@ describe('CoreStateful blocked event handling', () => {
       values.push(value)
     })
 
-    signals.personalizations.value = []
-    signals.personalizations.value = undefined
+    signals.selectedPersonalizations.value = []
+    signals.selectedPersonalizations.value = undefined
 
     expect(values).toEqual([false, true, false])
+
+    subscription.unsubscribe()
+  })
+
+  it('auto-tracks getFlag retrievals in stateful environments', () => {
+    const core = createCoreStateful({
+      defaults: {
+        consent: true,
+        profile: profileFixture,
+      },
+    })
+    const trackFlagView = rs.spyOn(core, 'trackFlagView').mockResolvedValue(undefined)
+
+    batch(() => {
+      signals.changes.value = FLAG_CHANGES
+    })
+
+    expect(core.getFlag('dark-mode')).toBe(true)
+    expect(trackFlagView).toHaveBeenCalledTimes(1)
+    expect(trackFlagView).toHaveBeenCalledWith({
+      componentId: 'dark-mode',
+      experienceId: 'experience-id',
+      variantIndex: 0,
+    })
+  })
+
+  it('exposes key-scoped flag observables and tracks distinct value retrievals', () => {
+    const core = createCoreStateful({
+      defaults: {
+        consent: true,
+        profile: profileFixture,
+      },
+    })
+    const trackFlagView = rs.spyOn(core, 'trackFlagView').mockResolvedValue(undefined)
+    const values: Array<boolean | undefined> = []
+    const flag = core.states.flag('dark-mode')
+    const subscription = flag.subscribe((value) => {
+      values.push(value === undefined ? undefined : Boolean(value))
+    })
+
+    batch(() => {
+      signals.changes.value = FLAG_CHANGES
+    })
+
+    batch(() => {
+      signals.changes.value = [
+        ...FLAG_CHANGES,
+        {
+          key: 'new-flag',
+          type: 'Variable',
+          value: 'x',
+          meta: {
+            experienceId: 'experience-id',
+            variantIndex: 2,
+          },
+        },
+      ]
+    })
+
+    batch(() => {
+      signals.changes.value = [
+        {
+          ...DARK_MODE_CHANGE,
+          value: false,
+        },
+        OTHER_FLAG_CHANGE,
+      ]
+    })
+
+    expect(values).toEqual([undefined, true, false])
+    expect(trackFlagView).toHaveBeenCalledTimes(3)
+    expect(trackFlagView).toHaveBeenNthCalledWith(1, { componentId: 'dark-mode' })
+    expect(trackFlagView).toHaveBeenNthCalledWith(2, {
+      componentId: 'dark-mode',
+      experienceId: 'experience-id',
+      variantIndex: 0,
+    })
+    expect(trackFlagView).toHaveBeenNthCalledWith(3, {
+      componentId: 'dark-mode',
+      experienceId: 'experience-id',
+      variantIndex: 0,
+    })
 
     subscription.unsubscribe()
   })

@@ -1,13 +1,5 @@
 import type {
-  ComponentViewBuilderArgs,
-  IdentifyBuilderArgs,
-  PageViewBuilderArgs,
-  ScreenViewBuilderArgs,
-  TrackBuilderArgs,
-} from '@contentful/optimization-api-client'
-import type {
   ChangeArray,
-  Flags,
   Json,
   MergeTagEntry,
   OptimizationData,
@@ -15,6 +7,13 @@ import type {
   SelectedPersonalizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
+import type {
+  IdentifyBuilderArgs,
+  PageViewBuilderArgs,
+  ScreenViewBuilderArgs,
+  TrackBuilderArgs,
+  ViewBuilderArgs,
+} from '../events'
 import ProductBase from '../ProductBase'
 import {
   FlagsResolver,
@@ -41,17 +40,7 @@ export interface ResolverMethods {
    * The changes array can be sourced from the data returned when emitting any
    * personalization event.
    * */
-  getCustomFlag: (name: string, changes?: ChangeArray) => Json
-
-  /**
-   * Get all resolved Custom Flags from the supplied changes.
-   * @param changes - Optional changes array.
-   * @returns The resolved Custom Flag map.
-   * @remarks
-   * The changes array can be sourced from the data returned when emitting any
-   * personalization event.
-   * */
-  getCustomFlags: (changes?: ChangeArray) => Flags
+  getFlag: (name: string, changes?: ChangeArray) => Json
 
   /**
    * Resolve a Contentful entry to a personalized variant using the current
@@ -140,20 +129,8 @@ abstract class PersonalizationBase extends ProductBase implements ResolverMethod
    * The changes array can be sourced from the data returned when emitting any
    * personalization event.
    * */
-  getCustomFlag(name: string, changes?: ChangeArray): Json {
-    return this.getCustomFlags(changes)[name]
-  }
-
-  /**
-   * Get all resolved Custom Flags from the supplied changes.
-   * @param changes - Optional changes array.
-   * @returns The resolved Custom Flag map.
-   * @remarks
-   * The changes array can be sourced from the data returned when emitting any
-   * personalization event.
-   * */
-  getCustomFlags(changes?: ChangeArray): Flags {
-    return FlagsResolver.resolve(changes)
+  getFlag(name: string, changes?: ChangeArray): Json {
+    return this.flagsResolver.resolve(changes)[name]
   }
 
   /**
@@ -164,7 +141,7 @@ abstract class PersonalizationBase extends ProductBase implements ResolverMethod
    * @typeParam M - Chain modifiers.
    * @typeParam L - Locale code.
    * @param entry - The entry to personalize.
-   * @param personalizations - Optional selected personalizations.
+   * @param selectedPersonalizations - Optional selected personalizations.
    * @returns The resolved entry data.
    * @remarks
    * Selected personalizations can be sourced from the data returned when emitting any
@@ -175,19 +152,25 @@ abstract class PersonalizationBase extends ProductBase implements ResolverMethod
     L extends LocaleCode = LocaleCode,
   >(
     entry: Entry<S, undefined, L>,
-    personalizations?: SelectedPersonalizationArray,
+    selectedPersonalizations?: SelectedPersonalizationArray,
   ): ResolvedData<S, undefined, L>
   personalizeEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers = ChainModifiers,
     L extends LocaleCode = LocaleCode,
-  >(entry: Entry<S, M, L>, personalizations?: SelectedPersonalizationArray): ResolvedData<S, M, L>
+  >(
+    entry: Entry<S, M, L>,
+    selectedPersonalizations?: SelectedPersonalizationArray,
+  ): ResolvedData<S, M, L>
   personalizeEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers,
     L extends LocaleCode = LocaleCode,
-  >(entry: Entry<S, M, L>, personalizations?: SelectedPersonalizationArray): ResolvedData<S, M, L> {
-    return PersonalizedEntryResolver.resolve<S, M, L>(entry, personalizations)
+  >(
+    entry: Entry<S, M, L>,
+    selectedPersonalizations?: SelectedPersonalizationArray,
+  ): ResolvedData<S, M, L> {
+    return PersonalizedEntryResolver.resolve<S, M, L>(entry, selectedPersonalizations)
   }
 
   /**
@@ -245,9 +228,7 @@ abstract class PersonalizationBase extends ProductBase implements ResolverMethod
    * This method is intended to be called only when a component is considered
    * "sticky".
    */
-  abstract trackComponentView(
-    payload: ComponentViewBuilderArgs,
-  ): Promise<OptimizationData | undefined>
+  abstract trackView(payload: ViewBuilderArgs): Promise<OptimizationData | undefined>
 }
 
 export default PersonalizationBase

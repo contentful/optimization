@@ -135,7 +135,7 @@ const resolveEntryData = (data: unknown, element: Element): EntryData | undefine
  *
  * @public
  */
-export function resolveComponentTrackingPayload(
+export function resolveTrackingPayload(
   data: unknown,
   element: Element,
 ):
