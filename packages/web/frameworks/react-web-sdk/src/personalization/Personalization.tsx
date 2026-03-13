@@ -1,3 +1,6 @@
+// ✅ CHANGES: render baseline content invisibly during SSR/first hydration frame,
+// and don't gate non-personalized entries behind sdkInitialized.
+
 import type {
   SelectedPersonalization,
   SelectedPersonalizationArray,
@@ -21,68 +24,15 @@ import { createScopedLogger } from '../logger'
 export type PersonalizationLoadingFallback = ReactNode | (() => ReactNode)
 export type PersonalizationWrapperElement = 'div' | 'span'
 export type PersonalizationRenderProp = (resolvedEntry: Entry) => ReactNode
-export type PersonalizationLifecycleMode = 'spa' | 'hybrid-ssr-spa'
 
-/**
- * Props for the {@link Personalization} component.
- *
- * @public
- */
 export interface PersonalizationProps {
-  /**
-   * The baseline Contentful entry fetched with `include: 10`.
-   * Must include `nt_experiences` field with linked personalization data.
-   */
   baselineEntry: Entry
-
-  /**
-   * Consumer content rendered inside the wrapper.
-   *
-   * @remarks
-   * Supports either:
-   * - render-prop form: `(resolvedEntry) => ReactNode`
-   * - direct node form: `ReactNode`
-   */
   children: ReactNode | PersonalizationRenderProp
-
-  /**
-   * Whether this component should react to personalization state changes in real-time.
-   * When `undefined`, inherits from the `liveUpdates` prop on {@link OptimizationRoot}.
-   */
   liveUpdates?: boolean
-
-  /**
-   * Wrapper element used to mount tracking attributes.
-   * Defaults to `div`.
-   *
-   * @remarks
-   * Wrapper uses `display: contents` to be as layout-neutral as possible.
-   */
   as?: PersonalizationWrapperElement
-
-  /**
-   * Optional test id prop.
-   */
   testId?: string
-
-  /**
-   * Optional data-testid prop.
-   */
   'data-testid'?: string
-
-  /**
-   * Optional fallback rendered while personalization state is unresolved.
-   */
   loadingFallback?: PersonalizationLoadingFallback
-
-  /**
-   * Controls rendering lifecycle semantics.
-   *
-   * @remarks
-   * - `spa`: Non-personalized entries render immediately once entry data is present.
-   * - `hybrid-ssr-spa`: Non-personalized entries wait for client-side SDK initialization.
-   */
-  lifecycleMode?: PersonalizationLifecycleMode
 }
 
 function resolveLoadingFallback(
@@ -104,7 +54,6 @@ function resolveChildren(children: PersonalizationProps['children'], entry: Entr
   if (!isPersonalizationRenderProp(children)) {
     return children
   }
-
   return children(entry)
 }
 
@@ -239,25 +188,6 @@ function resolveLoadingLayoutTargetStyle(
   return LOADING_LAYOUT_TARGET_STYLE
 }
 
-function resolveContentReadyState(params: {
-  lifecycleMode: PersonalizationLifecycleMode
-  requiresPersonalization: boolean
-  canPersonalize: boolean
-  sdkInitialized: boolean
-}): boolean {
-  const { lifecycleMode, requiresPersonalization, canPersonalize, sdkInitialized } = params
-
-  if (requiresPersonalization) {
-    return canPersonalize
-  }
-
-  if (lifecycleMode === 'hybrid-ssr-spa') {
-    return sdkInitialized
-  }
-
-  return true
-}
-
 export function Personalization({
   baselineEntry,
   children,
@@ -266,7 +196,6 @@ export function Personalization({
   testId,
   'data-testid': dataTestIdProp,
   loadingFallback,
-  lifecycleMode = 'spa',
 }: PersonalizationProps): JSX.Element {
   const optimization = useOptimization()
   const liveUpdatesContext = useLiveUpdates()
@@ -290,25 +219,24 @@ export function Personalization({
     SelectedPersonalizationArray | undefined
   >(undefined)
   const [canPersonalize, setCanPersonalize] = useState(false)
+
   const [sdkInitialized, setSdkInitialized] = useState(false)
 
   useEffect(() => {
     const personalizationsSubscription = optimization.states.personalizations.subscribe((p) => {
       setLockedPersonalizations((previous) => {
         if (shouldLiveUpdate) {
-          // Live updates enabled - always update state
           return p
         }
 
         if (previous === undefined && p !== undefined) {
-          // First non-undefined value - lock it
           return p
         }
 
-        // Otherwise ignore updates (we're locked to the initial value)
         return previous
       })
     })
+
     const canPersonalizeSubscription = optimization.states.canPersonalize.subscribe((value) => {
       setCanPersonalize(value)
     })
@@ -323,23 +251,30 @@ export function Personalization({
     setSdkInitialized(true)
   }, [])
 
+  const baselineChildren = useMemo(
+    () => resolveChildren(children, baselineEntry),
+    [children, baselineEntry],
+  )
+
   const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
     () => optimization.personalizeEntry(baselineEntry, lockedPersonalizations),
     [optimization, baselineEntry, lockedPersonalizations],
   )
 
   const requiresPersonalization = hasPersonalizationReferences(baselineEntry)
-  const isContentReady = resolveContentReadyState({
-    canPersonalize,
-    lifecycleMode,
-    requiresPersonalization,
-    sdkInitialized,
-  })
+
+  const isContentReady = requiresPersonalization ? canPersonalize : true
+
   const isLoading = !isContentReady
   const showLoadingFallback = isLoading
+
   const resolvedLoadingFallback =
     resolveLoadingFallback(loadingFallback) ?? DEFAULT_LOADING_FALLBACK
-  const isInvisibleLoading = lifecycleMode === 'hybrid-ssr-spa' && isLoading
+
+  const isInvisibleLoading = isLoading && !sdkInitialized
+
+  const loadingContent = !sdkInitialized ? baselineChildren : resolvedLoadingFallback
+
   const dataTestId = dataTestIdProp ?? testId
   const Wrapper = as
 
@@ -354,7 +289,7 @@ export function Personalization({
             data-ctfl-loading-layout-target="true"
             style={loadingLayoutTargetStyle}
           >
-            {resolvedLoadingFallback}
+            {loadingContent}
           </LoadingLayoutTarget>
         </Wrapper>
       </PersonalizationNestingContext.Provider>

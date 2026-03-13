@@ -115,8 +115,9 @@ import { Personalization } from '@contentful/optimization-react-web'
 - Consumer content supports render-prop (`(resolvedEntry) => ReactNode`) or direct `ReactNode`.
 - Wrapper element is configurable with `as: 'div' | 'span'` (defaults to `div`).
 - Wrapper style uses `display: contents` to remain layout-neutral as much as possible.
-- Lifecycle mode is configurable with `lifecycleMode: 'spa' | 'hybrid-ssr-spa'` (defaults to
-  `'spa'`).
+- Readiness is inferred automatically:
+  - personalized entries render when `canPersonalize === true`
+  - non-personalized entries render when the SDK instance is initialized
 
 #### Loading Fallback
 
@@ -136,7 +137,7 @@ When `loadingFallback` is provided, it is rendered while readiness is unresolved
 - During loading, a concrete layout-target element is rendered (`data-ctfl-loading-layout-target`)
   so loading visibility/layout behavior remains targetable even when wrapper uses
   `display: contents`.
-- In `hybrid-ssr-spa` mode, unresolved loading is rendered invisibly (`visibility: hidden`) to
+- During server rendering, unresolved loading is rendered invisibly (`visibility: hidden`) to
   preserve layout space before content is ready.
 
 #### Nested Composition

@@ -170,6 +170,26 @@ function renderComponentToString(
   )
 }
 
+function renderToStringWithoutWindow(render: () => string): string {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'window')
+
+  if (!descriptor?.configurable) {
+    throw new TypeError('Expected global window descriptor to be configurable in test runtime')
+  }
+
+  Object.defineProperty(globalThis, 'window', {
+    configurable: true,
+    writable: true,
+    value: undefined,
+  })
+
+  try {
+    return render()
+  } finally {
+    Object.defineProperty(globalThis, 'window', descriptor)
+  }
+}
+
 function getWrapper(container: HTMLElement): HTMLElement {
   const { firstElementChild: wrapper } = container
 
@@ -366,14 +386,16 @@ describe('Personalization lifecycle and nesting guard', () => {
     await spanView.unmount()
   })
 
-  it('renders invisible loading target on initial hybrid SSR pass for non-personalized entries', () => {
+  it('renders invisible loading target during SSR for non-personalized entries', () => {
     const { optimization } = createRuntime((entry) => ({ entry }))
 
-    const markup = renderComponentToString(
-      <Personalization baselineEntry={baseline} lifecycleMode="hybrid-ssr-spa">
-        {(resolved) => readTitle(resolved)}
-      </Personalization>,
-      optimization,
+    const markup = renderToStringWithoutWindow(() =>
+      renderComponentToString(
+        <Personalization baselineEntry={baseline}>
+          {(resolved) => readTitle(resolved)}
+        </Personalization>,
+        optimization,
+      ),
     )
 
     expect(markup).toContain('data-ctfl-loading-layout-target="true"')
@@ -382,11 +404,11 @@ describe('Personalization lifecycle and nesting guard', () => {
     expect(markup).not.toContain('baseline')
   })
 
-  it('renders non-personalized content after sdk initialization in hybrid mode', async () => {
+  it('renders non-personalized content after sdk initialization', async () => {
     const { optimization } = createRuntime((entry) => ({ entry }))
 
     const view = await renderComponent(
-      <Personalization baselineEntry={baseline} lifecycleMode="hybrid-ssr-spa">
+      <Personalization baselineEntry={baseline}>
         {(resolved) => readTitle(resolved)}
       </Personalization>,
       optimization,
