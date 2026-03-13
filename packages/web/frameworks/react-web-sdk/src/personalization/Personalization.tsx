@@ -17,6 +17,7 @@ import {
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
 import { useOptimization } from '../hooks/useOptimization'
 import { createScopedLogger } from '../logger'
+import { DefaultLoadingFallback } from './DefaultLoadingFallback'
 
 export type PersonalizationLoadingFallback = ReactNode | (() => ReactNode)
 export type PersonalizationWrapperElement = 'div' | 'span'
@@ -55,11 +56,6 @@ function resolveChildren(children: PersonalizationProps['children'], entry: Entr
 }
 
 const WRAPPER_STYLE = Object.freeze({ display: 'contents' as const })
-const DEFAULT_LOADING_FALLBACK = (
-  <span data-ctfl-loading="true" aria-label="Loading content">
-    Loading...
-  </span>
-)
 const LOADING_LAYOUT_TARGET_STYLE = Object.freeze({
   display: 'block' as const,
 })
@@ -221,19 +217,23 @@ export function Personalization({
 
   useEffect(() => {
     const selectedPersonalizationsSubscription =
-      contentfulOptimization.states.personalizations.subscribe((p) => {
-        setLockedSelectedPersonalizations((previous) => {
-          if (shouldLiveUpdate) {
-            return p
-          }
+      contentfulOptimization.states.selectedPersonalizations.subscribe(
+        (selectedPersonalizations: SelectedPersonalizationArray | undefined) => {
+          setLockedSelectedPersonalizations(
+            (previous: SelectedPersonalizationArray | undefined) => {
+              if (shouldLiveUpdate) {
+                return selectedPersonalizations
+              }
 
-          if (previous === undefined && p !== undefined) {
-            return p
-          }
+              if (previous === undefined && selectedPersonalizations !== undefined) {
+                return selectedPersonalizations
+              }
 
-          return previous
-        })
-      })
+              return previous
+            },
+          )
+        },
+      )
 
     const canPersonalizeSubscription = contentfulOptimization.states.canPersonalize.subscribe(
       (value) => {
@@ -268,8 +268,9 @@ export function Personalization({
   const isLoading = !isContentReady
   const showLoadingFallback = isLoading
 
-  const resolvedLoadingFallback =
-    resolveLoadingFallback(loadingFallback) ?? DEFAULT_LOADING_FALLBACK
+  const resolvedLoadingFallback = resolveLoadingFallback(loadingFallback) ?? (
+    <DefaultLoadingFallback />
+  )
 
   const isInvisibleLoading = isLoading && !sdkInitialized
 

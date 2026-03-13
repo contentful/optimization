@@ -15,7 +15,7 @@ type PersonalizeEntry = (
   entry: TestEntry,
   personalizations: PersonalizationState,
 ) => ResolvedData<EntrySkeletonType>
-type PersonalizationsSubscriber = (value: PersonalizationState) => void
+type SelectedPersonalizationsSubscriber = (value: PersonalizationState) => void
 type CanPersonalizeSubscriber = (value: boolean) => void
 
 interface RuntimeOptimization {
@@ -24,8 +24,8 @@ interface RuntimeOptimization {
     canPersonalize: {
       subscribe: (next: CanPersonalizeSubscriber) => { unsubscribe: () => void }
     }
-    personalizations: {
-      subscribe: (next: PersonalizationsSubscriber) => { unsubscribe: () => void }
+    selectedPersonalizations: {
+      subscribe: (next: SelectedPersonalizationsSubscriber) => { unsubscribe: () => void }
     }
   }
 }
@@ -63,7 +63,7 @@ function createRuntime(personalizeEntry: PersonalizeEntry): {
   emit: (value: PersonalizationState) => Promise<void>
   optimization: RuntimeOptimization
 } {
-  const subscribers = new Set<PersonalizationsSubscriber>()
+  const subscribers = new Set<SelectedPersonalizationsSubscriber>()
   const canPersonalizeSubscribers = new Set<CanPersonalizeSubscriber>()
   let current: PersonalizationState = undefined
   let canPersonalize = false
@@ -83,8 +83,8 @@ function createRuntime(personalizeEntry: PersonalizeEntry): {
           }
         },
       },
-      personalizations: {
-        subscribe(next: PersonalizationsSubscriber) {
+      selectedPersonalizations: {
+        subscribe(next: SelectedPersonalizationsSubscriber) {
           subscribers.add(next)
           next(current)
 

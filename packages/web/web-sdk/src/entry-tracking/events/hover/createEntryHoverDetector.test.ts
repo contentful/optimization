@@ -306,7 +306,7 @@ describe('EntryHoverTracker', () => {
     const preventDefaultSpy = rs.spyOn(Event.prototype, 'preventDefault')
     const stopPropagationSpy = rs.spyOn(Event.prototype, 'stopPropagation')
 
-    const { core, trackComponentHover } = createCore()
+    const { core, trackHover } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryHoverDetector(core))
 
     tracker.start({ dwellTimeMs: 0 })
@@ -314,7 +314,7 @@ describe('EntryHoverTracker', () => {
     dispatchHoverEnter(entry)
     await advance(0)
 
-    expect(trackComponentHover).toHaveBeenCalledTimes(1)
+    expect(trackHover).toHaveBeenCalledTimes(1)
     expect(preventDefaultSpy).not.toHaveBeenCalled()
     expect(stopPropagationSpy).not.toHaveBeenCalled()
 

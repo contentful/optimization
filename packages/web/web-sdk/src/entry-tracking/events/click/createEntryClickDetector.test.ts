@@ -369,13 +369,13 @@ describe('EntryClickTracker', () => {
     const preventDefaultSpy = rs.spyOn(Event.prototype, 'preventDefault')
     const stopPropagationSpy = rs.spyOn(Event.prototype, 'stopPropagation')
 
-    const { core, trackComponentClick } = createCore()
+    const { core, trackClick } = createCore()
     const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
 
     tracker.start()
     entry.click()
 
-    expect(trackComponentClick).toHaveBeenCalledTimes(1)
+    expect(trackClick).toHaveBeenCalledTimes(1)
     expect(preventDefaultSpy).not.toHaveBeenCalled()
     expect(stopPropagationSpy).not.toHaveBeenCalled()
 

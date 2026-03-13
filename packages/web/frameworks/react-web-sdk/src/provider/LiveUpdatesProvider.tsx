@@ -15,7 +15,7 @@ export function LiveUpdatesProvider({
   const [previewPanelVisible, setPreviewPanelVisible] = useState(false)
 
   useEffect(() => {
-    const sub = contentfulOptimization.states.previewPanelOpen.subscribe((isOpen) => {
+    const sub = contentfulOptimization.states.previewPanelOpen.subscribe((isOpen: boolean) => {
       setPreviewPanelVisible(isOpen)
     })
     return () => {
