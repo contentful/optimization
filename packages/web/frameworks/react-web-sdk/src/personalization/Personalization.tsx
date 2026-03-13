@@ -252,7 +252,7 @@ export function Personalization({
   }, [])
 
   const baselineChildren = useMemo(
-    () => resolveChildren(children, baselineEntry),
+    async () => await resolveChildren(children, baselineEntry),
     [children, baselineEntry],
   )
 
