@@ -47,7 +47,7 @@
     "test:e2e:react-native-sdk": "pnpm run setup:e2e:react-native-sdk && pnpm run implementation:run -- react-native-sdk implementation:test:e2e:run",
     "test:e2e:web-sdk_react": "pnpm run setup:e2e:web-sdk_react && pnpm run implementation:run -- web-sdk_react implementation:test:e2e:run",
     "test:e2e:web-sdk": "pnpm run setup:e2e:web-sdk && pnpm run implementation:run -- web-sdk implementation:test:e2e:run",
-    "test:unit": "pnpm --filter @contentful/* test:unit",
+    "test:unit": "pnpm --filter \"./lib/*\" --filter @contentful/* test:unit",
     "test:unit:ci": "CI=true pnpm run test:unit",
     "typecheck": "pnpm -r typecheck",
     "version:node": "node -v",
@@ -58,6 +58,7 @@
   },
   "packageManager": "pnpm@10.32.1+sha512.a706938f0e89ac1456b6563eab4edf1d1faf3368d1191fc5c59790e96dc918e4456ab2e67d613de1043d2e8c81f87303e6b40d4ffeca9df15ef1ad567348f2be",
   "devDependencies": {
+    "@rstest/core": "catalog:",
     "@eslint/js": "^10.0.1",
     "commitizen": "^4.3.1",
     "cz-vinyl": "^2.5.4",
@@ -75,7 +76,6 @@
     "tsx": "catalog:",
     "typedoc": "^0.28.17",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.56.0",
-    "vitest": "^3.2.4"
+    "typescript-eslint": "^8.56.0"
   }
 }

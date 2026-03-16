@@ -17,9 +17,8 @@ export const EntryReplacementVariant = z.object({
   /**
    * Indicates whether this variant is hidden from allocation/traffic.
    *
-   * @defaultValue false
    */
-  hidden: z.prefault(z.boolean(), false),
+  hidden: z.optional(z.boolean()),
 })
 
 /**
@@ -171,39 +170,26 @@ export const PersonalizationConfig = z.object({
   /**
    * Variant distribution used for traffic allocation.
    *
-   * @defaultValue [0.5, 0.5]
    */
-  distribution: z.optional(z.prefault(z.array(z.number()), [0.5, 0.5])),
+  distribution: z.optional(z.array(z.number())),
 
   /**
    * Percentage of total traffic that should enter the personalization.
    *
-   * @defaultValue 0
    */
-  traffic: z.optional(z.prefault(z.number(), 0)),
+  traffic: z.optional(z.number()),
 
   /**
    * Personalization components that define how content is varied.
    *
-   * @defaultValue
-   * A single {@link EntryReplacementComponent} with an empty `baseline` and `variants` ID.
    */
-  components: z.optional(
-    z.prefault(PersonalizationComponentArray, [
-      {
-        type: 'EntryReplacement',
-        baseline: { id: '' },
-        variants: [{ id: '' }],
-      },
-    ]),
-  ),
+  components: z.optional(PersonalizationComponentArray),
 
   /**
    * Controls whether the assignment should be sticky for a given user.
    *
-   * @defaultValue false
    */
-  sticky: z.optional(z.prefault(z.boolean(), false)),
+  sticky: z.optional(z.boolean()),
 })
 
 /**
@@ -212,3 +198,39 @@ export const PersonalizationConfig = z.object({
  * @public
  */
 export type PersonalizationConfig = z.infer<typeof PersonalizationConfig>
+
+/**
+ * Runtime-safe view of a personalization config.
+ *
+ * @remarks
+ * This helper deliberately uses empty/falsey defaults that are safe for SDK
+ * consumers. Authoring-time placeholder defaults belong outside runtime
+ * validation.
+ *
+ * @public
+ */
+export interface NormalizedPersonalizationConfig {
+  distribution: number[]
+  traffic: number
+  components: PersonalizationComponent[]
+  sticky: boolean
+}
+
+/**
+ * Normalizes a personalization config for runtime consumers.
+ *
+ * @param config - Raw personalization config value from Contentful.
+ * @returns Config with concrete runtime-safe defaults for omitted fields.
+ *
+ * @public
+ */
+export function normalizePersonalizationConfig(
+  config: PersonalizationConfig | null | undefined,
+): NormalizedPersonalizationConfig {
+  return {
+    distribution: config?.distribution === undefined ? [] : [...config.distribution],
+    traffic: config?.traffic ?? 0,
+    components: config?.components === undefined ? [] : [...config.components],
+    sticky: config?.sticky ?? false,
+  }
+}

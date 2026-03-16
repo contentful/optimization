@@ -1,4 +1,3 @@
-import type { Entry } from 'contentful'
 import * as z from 'zod/mini'
 import { AudienceEntry } from './AudienceEntry'
 import { CtflEntry, EntryFields, Link } from './CtflEntry'
@@ -55,23 +54,8 @@ export const PersonalizationEntryFields = z.extend(EntryFields, {
 
   /**
    * The configuration of a {@link PersonalizationEntry } (JSON).
-   *
-   * @remarks
-   * Accepts `null` or an explicit {@link PersonalizationConfig} and converts
-   * falsy/undefined values into a default configuration.
    */
-  nt_config: z.pipe(
-    z.optional(z.prefault(z.nullable(PersonalizationConfig), null)),
-    z.transform<PersonalizationConfig | null>(
-      (v) =>
-        v ?? {
-          traffic: 0,
-          distribution: [0.5, 0.5],
-          components: [],
-          sticky: false,
-        },
-    ),
-  ),
+  nt_config: z.optional(z.nullable(PersonalizationConfig)),
 
   /**
    * The audience of the personalization (Audience).
@@ -86,10 +70,9 @@ export const PersonalizationEntryFields = z.extend(EntryFields, {
    * All used variants of the personalization (Contentful references to other Content Types).
    *
    * @remarks
-   * Modeled as an array of untyped Contentful entries and defaults to an empty
-   * array when omitted.
+   * Modeled as an array of Contentful links or resolved entries.
    */
-  nt_variants: z.optional(z.prefault(z.array(z.custom<Entry>()), [])),
+  nt_variants: z.optional(z.array(z.union([Link, CtflEntry]))),
 
   /**
    * The personalization/experience ID related to this personalization entry.
