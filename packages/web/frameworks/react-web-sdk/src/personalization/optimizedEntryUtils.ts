@@ -9,7 +9,7 @@ export type RenderProp = (resolvedEntry: Entry) => ReactNode
 export type OptimizedEntryChildren = ReactNode | RenderProp
 
 export interface LoadingRenderState {
-  isInvisibleLoading: boolean
+  hideLoadingLayoutTarget: boolean
   isServerRender: boolean
   loadingContent: ReactNode
   showLoadingFallback: boolean
@@ -136,22 +136,30 @@ export function resolveLoadingLayoutTargetStyle(
 export function resolveLoadingRenderState(params: {
   baselineChildren: OptimizedEntryChildren
   baselineEntry: Entry
+  hasCustomLoadingFallback: boolean
   isLoading: boolean
   resolvedLoadingFallback: ReactNode
   sdkInitialized: boolean
 }): LoadingRenderState {
-  const { baselineChildren, baselineEntry, isLoading, resolvedLoadingFallback, sdkInitialized } =
-    params
+  const {
+    baselineChildren,
+    baselineEntry,
+    hasCustomLoadingFallback,
+    isLoading,
+    resolvedLoadingFallback,
+    sdkInitialized,
+  } = params
   const isServerRender = typeof window === 'undefined'
-  const isInvisibleLoading = isLoading && !sdkInitialized
   const showLoadingFallback = isLoading || (isServerRender && !sdkInitialized)
-  const loadingContent =
-    !sdkInitialized && !isServerRender
+  const loadingContent = hasCustomLoadingFallback
+    ? !sdkInitialized && !isServerRender
       ? resolveChildren(baselineChildren, baselineEntry)
       : resolvedLoadingFallback
+    : resolveChildren(baselineChildren, baselineEntry)
+  const hideLoadingLayoutTarget = !hasCustomLoadingFallback || isServerRender || !sdkInitialized
 
   return {
-    isInvisibleLoading,
+    hideLoadingLayoutTarget,
     isServerRender,
     loadingContent,
     showLoadingFallback,

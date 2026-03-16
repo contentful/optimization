@@ -1,11 +1,11 @@
-import type { JSX } from 'react'
+import type { JSX, ReactNode } from 'react'
 
-export function DefaultLoadingFallback(): JSX.Element {
-  return (
-    <span data-ctfl-loading="true" aria-label="Loading content">
-      Loading...
-    </span>
-  )
+export interface DefaultLoadingFallbackProps {
+  children: ReactNode
+}
+
+export function DefaultLoadingFallback({ children }: DefaultLoadingFallbackProps): JSX.Element {
+  return <span data-ctfl-loading="true">{children}</span>
 }
 
 export default DefaultLoadingFallback

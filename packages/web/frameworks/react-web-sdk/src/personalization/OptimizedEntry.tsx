@@ -117,13 +117,18 @@ export function OptimizedEntry({
     return <></>
   }
 
-  const resolvedLoadingFallback = resolveLoadingFallback(loadingFallback) ?? (
-    <DefaultLoadingFallback />
+  const hasCustomLoadingFallback = loadingFallback !== undefined
+  const baselineContent = resolveChildren(baselineChildren, baselineEntry)
+  const resolvedLoadingFallback = hasCustomLoadingFallback ? (
+    resolveLoadingFallback(loadingFallback)
+  ) : (
+    <DefaultLoadingFallback>{baselineContent}</DefaultLoadingFallback>
   )
-  const { isInvisibleLoading, isServerRender, loadingContent, showLoadingFallback } =
+  const { hideLoadingLayoutTarget, loadingContent, showLoadingFallback } =
     resolveLoadingRenderState({
       baselineChildren,
       baselineEntry,
+      hasCustomLoadingFallback,
       isLoading,
       resolvedLoadingFallback,
       sdkInitialized,
@@ -133,10 +138,7 @@ export function OptimizedEntry({
 
   if (showLoadingFallback) {
     const LoadingLayoutTarget = Wrapper
-    const loadingLayoutTargetStyle = resolveLoadingLayoutTargetStyle(
-      as,
-      isInvisibleLoading || isServerRender,
-    )
+    const loadingLayoutTargetStyle = resolveLoadingLayoutTargetStyle(as, hideLoadingLayoutTarget)
 
     return (
       <OptimizedEntryNestingContext.Provider value={currentAndAncestorBaselineIds}>

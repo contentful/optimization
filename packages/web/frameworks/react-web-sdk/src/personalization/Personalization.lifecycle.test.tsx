@@ -271,11 +271,12 @@ describe('OptimizedEntry lifecycle and nesting guard', () => {
       optimization,
     )
 
-    expect(view.container.textContent).toContain('Loading...')
-    expect(view.container.textContent).not.toContain('personalized-baseline')
+    expect(view.container.textContent).toContain('personalized-baseline')
 
     const loadingWrapper = getWrapper(view.container)
     expect(loadingWrapper.dataset.ctflEntryId).toBeUndefined()
+    const loadingTarget = getRequiredElement(view.container, '[data-ctfl-loading-layout-target]')
+    expect(loadingTarget.style.visibility).toBe('hidden')
 
     await view.unmount()
   })
@@ -293,13 +294,13 @@ describe('OptimizedEntry lifecycle and nesting guard', () => {
       optimization,
     )
 
-    expect(view.container.textContent).toContain('Loading...')
+    expect(view.container.textContent).toContain('personalized-baseline')
     expect(view.container.textContent).not.toContain('variant-a')
 
     await emit(variantOneState)
 
     expect(view.container.textContent).toContain('variant-a')
-    expect(view.container.textContent).not.toContain('Loading...')
+    expect(view.container.textContent).not.toContain('personalized-baseline')
 
     await view.unmount()
   })
@@ -400,8 +401,7 @@ describe('OptimizedEntry lifecycle and nesting guard', () => {
 
     expect(markup).toContain('data-ctfl-loading-layout-target="true"')
     expect(markup).toContain('visibility:hidden')
-    expect(markup).toContain('Loading...')
-    expect(markup).not.toContain('baseline')
+    expect(markup).toContain('baseline')
   })
 
   it('renders non-personalized content after sdk initialization', async () => {
@@ -413,7 +413,6 @@ describe('OptimizedEntry lifecycle and nesting guard', () => {
     )
 
     expect(view.container.textContent).toContain('baseline')
-    expect(view.container.textContent).not.toContain('Loading...')
 
     await view.unmount()
   })
