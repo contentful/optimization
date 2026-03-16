@@ -7,7 +7,7 @@ import { renderToString } from 'react-dom/server'
 import type { LiveUpdatesContextValue } from '../context/LiveUpdatesContext'
 import { LiveUpdatesContext } from '../context/LiveUpdatesContext'
 import { OptimizationContext } from '../context/OptimizationContext'
-import { Personalization } from './Personalization'
+import { OptimizedEntry } from './OptimizedEntry'
 
 type TestEntry = Entry
 type PersonalizationState = SelectedPersonalizationArray | undefined
@@ -138,7 +138,7 @@ async function renderComponent(
   await act(async () => {
     await Promise.resolve()
     root.render(
-      // @ts-expect-error test double only implements the subset used by Personalization
+      // @ts-expect-error test double only implements the subset used by OptimizedEntry
       <OptimizationContext.Provider value={{ instance: optimization }}>
         <LiveUpdatesContext.Provider value={liveUpdatesContext}>{node}</LiveUpdatesContext.Provider>
       </OptimizationContext.Provider>,
@@ -163,7 +163,7 @@ function renderComponentToString(
   liveUpdatesContext = defaultLiveUpdatesContext(),
 ): string {
   return renderToString(
-    // @ts-expect-error test double only implements the subset used by Personalization
+    // @ts-expect-error test double only implements the subset used by OptimizedEntry
     <OptimizationContext.Provider value={{ instance: optimization }}>
       <LiveUpdatesContext.Provider value={liveUpdatesContext}>{node}</LiveUpdatesContext.Provider>
     </OptimizationContext.Provider>,
@@ -217,7 +217,7 @@ function readTitle(entry: TestEntry): string {
   return typeof title === 'string' ? title : ''
 }
 
-describe('Personalization lifecycle and nesting guard', () => {
+describe('OptimizedEntry lifecycle and nesting guard', () => {
   const baseline = makeEntry('baseline')
   const personalizedBaseline = makePersonalizableEntry('personalized-baseline')
   const variantA = makeEntry('variant-a')
@@ -242,9 +242,9 @@ describe('Personalization lifecycle and nesting guard', () => {
     const { optimization } = createRuntime((entry) => ({ entry }))
 
     const view = await renderComponent(
-      <Personalization baselineEntry={baseline}>
+      <OptimizedEntry baselineEntry={baseline}>
         <article data-testid="static-node">static-child</article>
-      </Personalization>,
+      </OptimizedEntry>,
       optimization,
     )
 
@@ -265,9 +265,9 @@ describe('Personalization lifecycle and nesting guard', () => {
     })
 
     const view = await renderComponent(
-      <Personalization baselineEntry={personalizedBaseline}>
+      <OptimizedEntry baselineEntry={personalizedBaseline}>
         {(resolved) => readTitle(resolved)}
-      </Personalization>,
+      </OptimizedEntry>,
       optimization,
     )
 
@@ -287,9 +287,9 @@ describe('Personalization lifecycle and nesting guard', () => {
     })
 
     const view = await renderComponent(
-      <Personalization baselineEntry={personalizedBaseline}>
+      <OptimizedEntry baselineEntry={personalizedBaseline}>
         {(resolved) => readTitle(resolved)}
-      </Personalization>,
+      </OptimizedEntry>,
       optimization,
     )
 
@@ -304,20 +304,20 @@ describe('Personalization lifecycle and nesting guard', () => {
     await view.unmount()
   })
 
-  it('prevents nested Personalization with same baseline entry id', async () => {
+  it('prevents nested OptimizedEntry with same baseline entry id', async () => {
     const { optimization } = createRuntime((entry) => ({ entry }))
 
     const view = await renderComponent(
-      <Personalization baselineEntry={baseline}>
+      <OptimizedEntry baselineEntry={baseline}>
         {(parentResolved) => (
           <section>
             <h1>{readTitle(parentResolved)}</h1>
-            <Personalization baselineEntry={baseline}>
+            <OptimizedEntry baselineEntry={baseline}>
               {(childResolved) => <p data-testid="nested-same-id">{readTitle(childResolved)}</p>}
-            </Personalization>
+            </OptimizedEntry>
           </section>
         )}
-      </Personalization>,
+      </OptimizedEntry>,
       optimization,
     )
 
@@ -331,7 +331,7 @@ describe('Personalization lifecycle and nesting guard', () => {
     const { optimization } = createRuntime((entry) => ({ entry }))
 
     const defaultView = await renderComponent(
-      <Personalization baselineEntry={baseline}>default-wrapper</Personalization>,
+      <OptimizedEntry baselineEntry={baseline}>default-wrapper</OptimizedEntry>,
       optimization,
     )
     const defaultWrapper = getWrapper(defaultView.container)
@@ -340,9 +340,9 @@ describe('Personalization lifecycle and nesting guard', () => {
     await defaultView.unmount()
 
     const spanView = await renderComponent(
-      <Personalization baselineEntry={baseline} as="span">
+      <OptimizedEntry baselineEntry={baseline} as="span">
         span-wrapper
-      </Personalization>,
+      </OptimizedEntry>,
       optimization,
     )
     const spanWrapper = getWrapper(spanView.container)
@@ -358,9 +358,9 @@ describe('Personalization lifecycle and nesting guard', () => {
     })
 
     const divView = await renderComponent(
-      <Personalization baselineEntry={personalizedBaseline}>
+      <OptimizedEntry baselineEntry={personalizedBaseline}>
         {(resolved) => readTitle(resolved)}
-      </Personalization>,
+      </OptimizedEntry>,
       optimization,
     )
     const divLoadingTarget = getRequiredElement(
@@ -372,9 +372,9 @@ describe('Personalization lifecycle and nesting guard', () => {
     await divView.unmount()
 
     const spanView = await renderComponent(
-      <Personalization baselineEntry={personalizedBaseline} as="span">
+      <OptimizedEntry baselineEntry={personalizedBaseline} as="span">
         {(resolved) => readTitle(resolved)}
-      </Personalization>,
+      </OptimizedEntry>,
       optimization,
     )
     const spanLoadingTarget = getRequiredElement(
@@ -391,9 +391,9 @@ describe('Personalization lifecycle and nesting guard', () => {
 
     const markup = renderToStringWithoutWindow(() =>
       renderComponentToString(
-        <Personalization baselineEntry={baseline}>
+        <OptimizedEntry baselineEntry={baseline}>
           {(resolved) => readTitle(resolved)}
-        </Personalization>,
+        </OptimizedEntry>,
         optimization,
       ),
     )
@@ -408,9 +408,7 @@ describe('Personalization lifecycle and nesting guard', () => {
     const { optimization } = createRuntime((entry) => ({ entry }))
 
     const view = await renderComponent(
-      <Personalization baselineEntry={baseline}>
-        {(resolved) => readTitle(resolved)}
-      </Personalization>,
+      <OptimizedEntry baselineEntry={baseline}>{(resolved) => readTitle(resolved)}</OptimizedEntry>,
       optimization,
     )
 
