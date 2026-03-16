@@ -1,7 +1,7 @@
 import type { SelectedPersonalizationArray } from '@contentful/optimization-api-schemas'
 import type { Entry } from 'contentful'
 import { useEffect, useState, type ReactElement } from 'react'
-import { Personalization } from '../../src'
+import { OptimizedEntry } from '../../src'
 import { EntryPanel } from '../components/EntryPanel'
 import type { DatasetSnapshot } from '../types'
 import { readTrackingDataset, toJsonPreview } from '../utils'
@@ -37,7 +37,7 @@ export function PersonalizationSection({
     <>
       <section className="dashboard__grid">
         {baselineDefault ? (
-          <Personalization
+          <OptimizedEntry
             baselineEntry={baselineDefault}
             data-testid="personalization-default"
             loadingFallback={() => (
@@ -47,43 +47,43 @@ export function PersonalizationSection({
               </article>
             )}
           >
-            {(resolvedEntry) => (
+            {(resolvedEntry: Entry) => (
               <EntryPanel
                 title="Personalization (inherits root liveUpdates)"
                 resolvedEntry={resolvedEntry}
               />
             )}
-          </Personalization>
+          </OptimizedEntry>
         ) : null}
 
         {baselineLive ? (
-          <Personalization
+          <OptimizedEntry
             baselineEntry={baselineLive}
             liveUpdates={true}
             data-testid="personalization-live"
           >
-            {(resolvedEntry) => (
+            {(resolvedEntry: Entry) => (
               <EntryPanel
                 title="Personalization (liveUpdates=true)"
                 resolvedEntry={resolvedEntry}
               />
             )}
-          </Personalization>
+          </OptimizedEntry>
         ) : null}
 
         {baselineLocked ? (
-          <Personalization
+          <OptimizedEntry
             baselineEntry={baselineLocked}
             liveUpdates={false}
             data-testid="personalization-locked"
           >
-            {(resolvedEntry) => (
+            {(resolvedEntry: Entry) => (
               <EntryPanel
                 title="Personalization (liveUpdates=false)"
                 resolvedEntry={resolvedEntry}
               />
             )}
-          </Personalization>
+          </OptimizedEntry>
         ) : null}
       </section>
 
@@ -91,16 +91,18 @@ export function PersonalizationSection({
         {baselineNestedParent && baselineNestedChild ? (
           <article className="dashboard__card">
             <h2>Nested Personalization</h2>
-            <Personalization baselineEntry={baselineNestedParent} data-testid="nested-parent">
-              {(parentResolved) => (
+            <OptimizedEntry baselineEntry={baselineNestedParent} data-testid="nested-parent">
+              {(parentResolved: Entry) => (
                 <>
                   <p>{`Parent resolved ID: ${parentResolved.sys.id}`}</p>
-                  <Personalization baselineEntry={baselineNestedChild} data-testid="nested-child">
-                    {(childResolved) => <p>{`Child resolved ID: ${childResolved.sys.id}`}</p>}
-                  </Personalization>
+                  <OptimizedEntry baselineEntry={baselineNestedChild} data-testid="nested-child">
+                    {(childResolved: Entry) => (
+                      <p>{`Child resolved ID: ${childResolved.sys.id}`}</p>
+                    )}
+                  </OptimizedEntry>
                 </>
               )}
-            </Personalization>
+            </OptimizedEntry>
           </article>
         ) : null}
 
