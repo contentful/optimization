@@ -1,10 +1,11 @@
 import type ContentfulOptimization from '@contentful/optimization-web'
-import type {
-  AudienceEntrySkeleton,
-  OptimizationData,
-  PersonalizationEntry,
-  PersonalizationEntrySkeleton,
-  SelectedPersonalizationArray,
+import {
+  normalizePersonalizationConfig,
+  type AudienceEntrySkeleton,
+  type OptimizationData,
+  type PersonalizationEntry,
+  type PersonalizationEntrySkeleton,
+  type SelectedPersonalizationArray,
 } from '@contentful/optimization-web/api-schemas'
 import type { PreviewPanelSignalObject } from '@contentful/optimization-web/core-sdk'
 import {
@@ -140,7 +141,7 @@ export default async function attachOptimizationPreviewPanel({
   panel.personalizationEntries = personalizationEntries.filter(
     (personalization): personalization is PersonalizationEntry =>
       isPersonalizationEntry(personalization) &&
-      !personalization.fields.nt_config?.components?.some(
+      !normalizePersonalizationConfig(personalization.fields.nt_config).components.some(
         (component) => component.type === 'InlineVariable',
       ),
   )

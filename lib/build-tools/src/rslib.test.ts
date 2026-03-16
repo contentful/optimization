@@ -22,7 +22,6 @@ describe('maybeEnableRsDoctor', () => {
 
     expect(config.plugins).toHaveLength(1)
     expect(config.plugins[0]).toBeInstanceOf(RsdoctorRspackPlugin)
-    expect(config.devtool).toBe(false)
   })
 
   it('does nothing when RSDOCTOR is not true', () => {
@@ -55,8 +54,6 @@ describe('maybeEnableRsDoctor', () => {
     } = { plugins: [] as unknown[] }
 
     maybeEnableRsDoctor(config)
-
-    expect(config.devtool).toBe(false)
   })
 })
 

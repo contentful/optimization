@@ -38,7 +38,7 @@ export const maybeEnableRsDoctor = (config: {
       disableClientServer: true,
       // Keep output deterministic and local to the package.
       output: {
-        reportDir: 'coverage',
+        reportDir: './',
       },
     }),
   )

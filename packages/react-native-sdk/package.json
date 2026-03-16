@@ -102,7 +102,7 @@
     "build:ci": "pnpm build:dist",
     "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
     "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist",
-    "clean": "rimraf ./.rslib ./dist ./coverage .tsbuildinfo",
+    "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo",
     "test:unit": "rstest run --coverage",
     "typecheck": "tsc --noEmit",
     "dev:android": "cd dev && react-native run-android",

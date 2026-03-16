@@ -1,5 +1,5 @@
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
-import { CtflEntry, type Link } from './CtflEntry'
+import { CtflEntry } from './CtflEntry'
 import { MergeTagEntry } from './MergeTagEntry'
 import {
   type EntryReplacementComponent,
@@ -36,7 +36,7 @@ export function isEntry<
   S extends EntrySkeletonType,
   M extends ChainModifiers = ChainModifiers,
   L extends LocaleCode = LocaleCode,
->(entry: Entry | undefined): entry is Entry<S, M, L> {
+>(entry: unknown): entry is Entry<S, M, L> {
   return CtflEntry.safeParse(entry).success
 }
 
@@ -116,7 +116,7 @@ export function isInlineVariableComponent(
  *
  * @public
  */
-export function isPersonalizationEntry(entry: CtflEntry | Link): entry is PersonalizationEntry {
+export function isPersonalizationEntry(entry: unknown): entry is PersonalizationEntry {
   return PersonalizationEntry.safeParse(entry).success
 }
 
@@ -135,7 +135,7 @@ export function isPersonalizationEntry(entry: CtflEntry | Link): entry is Person
  *
  * @public
  */
-export function isPersonalizedEntry(entry: Entry | undefined): entry is PersonalizedEntry {
+export function isPersonalizedEntry(entry: unknown): entry is PersonalizedEntry {
   return PersonalizedEntry.safeParse(entry).success
 }
 

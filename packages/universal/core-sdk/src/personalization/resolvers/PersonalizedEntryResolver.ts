@@ -6,6 +6,7 @@ import {
   isEntryReplacementVariant,
   isPersonalizationEntry,
   isPersonalizedEntry,
+  normalizePersonalizationConfig,
   type PersonalizationEntry,
   type PersonalizedEntry,
   type SelectedPersonalization,
@@ -301,8 +302,8 @@ const PersonalizedEntryResolver = {
     )
       return
 
-    const relevantVariants = personalizationEntry.fields.nt_config?.components
-      ?.filter(
+    const relevantVariants = normalizePersonalizationConfig(personalizationEntry.fields.nt_config)
+      .components.filter(
         (component): component is EntryReplacementComponent =>
           isEntryReplacementComponent(component) && !component.baseline.hidden,
       )

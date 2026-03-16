@@ -13,14 +13,16 @@
     "dist/**/*"
   ],
   "scripts": {
+    "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo ./.cache",
     "config:ctfl:list": "contentful config list",
     "fetch:ctfl": "pnpm fetch:ctfl:space && pnpm fetch:ctfl:entries",
     "fetch:ctfl:entries": "tsx ./scripts/fetchEntries.ts",
     "fetch:ctfl:space": "contentful space export --config .contentfulrc.json",
     "generate:ctfl:types": "tsx ./scripts/generateTypeDefinition.ts && tsx ./scripts/copyGeneratedTypeDefinition.ts",
     "serve": "tsx ./src/server.ts",
-    "test:unit": "echo \"No unit tests necessary\"",
-    "upload:ctfl:space": "read -p 'This will overwrite your space data! Do you really want to do this? (y/N)' yn && [ \"$yn\" = 'y' ] && pnpm import:ctfl:confirmed",
+    "test:unit": "rstest run --coverage --passWithNoTests",
+    "typecheck": "tsc --noEmit",
+    "upload:ctfl:space": "read -p 'This will overwrite your space data! Do you really want to do this? (y/N)' yn && [ \"$yn\" = 'y' ] && pnpm upload:ctfl:space:confirmed",
     "upload:ctfl:space:confirmed": "contentful space import --config .contentfulrc.json"
   },
   "dependencies": {
@@ -30,6 +32,8 @@
     "tslib": "catalog:"
   },
   "devDependencies": {
+    "@rstest/core": "catalog:",
+    "@types/express": "catalog:",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "catalog:",
     "contentful": "catalog:",
@@ -38,8 +42,8 @@
     "es-toolkit": "catalog:",
     "fs-extra": "^11.3.3",
     "p-retry": "catalog:",
+    "rimraf": "catalog:",
     "tsx": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:"
+    "typescript": "catalog:"
   }
 }

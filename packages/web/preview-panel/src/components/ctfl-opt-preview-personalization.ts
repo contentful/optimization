@@ -1,4 +1,7 @@
-import type { PersonalizationEntry } from '@contentful/optimization-web/api-schemas'
+import {
+  normalizePersonalizationConfig,
+  type PersonalizationEntry,
+} from '@contentful/optimization-web/api-schemas'
 import { css, html, LitElement, nothing, type TemplateResult } from 'lit'
 import { property } from 'lit/decorators.js'
 
@@ -136,14 +139,14 @@ export class CtflOptPreviewPersonalization extends LitElement {
    * @public
    */
   variantsTemplate(): TemplateResult | string {
-    if (!this.personalization?.fields.nt_config?.distribution?.length) return 'None'
+    if (!this.personalization) return 'None'
+
+    const { distribution } = normalizePersonalizationConfig(this.personalization.fields.nt_config)
+
+    if (!distribution.length) return 'None'
 
     return html`
-      <div>
-        ${this.personalization.fields.nt_config.distribution.map((dist, index) =>
-          this.variantTemplate(dist, index),
-        )}
-      </div>
+      <div>${distribution.map((dist, index) => this.variantTemplate(dist, index))}</div>
     `
   }
 

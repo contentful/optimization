@@ -8,7 +8,7 @@
   "scripts": {
     "build": "pnpm clean && pnpm build:sdk",
     "build:sdk": "mkdir -p ./public/dist && cp -r ./node_modules/@contentful/optimization-web/dist/. ./public/dist && cp ./node_modules/@contentful/optimization-web-preview-panel/dist/contentful-optimization-web-preview-panel.umd.js* ./public/dist",
-    "clean": "rimraf ./dist ./public/dist ./coverage ./playwright-report ./test-results .tsbuildinfo",
+    "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./public/dist ./coverage ./playwright-report ./test-results .tsbuildinfo",
     "serve": "pnpm serve:mocks && pnpm serve:app",
     "serve:app": "pnpm build && pm2 start --name esr-app \"tsx --env-file=.env ./src/app.ts\"",
     "serve:app:stop": "pm2 stop esr-app && pm2 delete esr-app",
