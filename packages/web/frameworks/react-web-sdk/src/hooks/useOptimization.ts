@@ -1,9 +1,8 @@
 import { useContext } from 'react'
 
-import type ContentfulOptimization from '@contentful/optimization-web'
-import { OptimizationContext } from '../context/OptimizationContext'
+import { OptimizationContext, type OptimizationContextValue } from '../context/OptimizationContext'
 
-export function useOptimization(): ContentfulOptimization {
+export function useOptimization(): OptimizationContextValue {
   const context = useContext(OptimizationContext)
 
   if (!context) {
@@ -13,5 +12,5 @@ export function useOptimization(): ContentfulOptimization {
     )
   }
 
-  return context.instance
+  return context
 }

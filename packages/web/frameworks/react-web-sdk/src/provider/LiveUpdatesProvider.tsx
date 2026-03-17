@@ -11,17 +11,19 @@ export function LiveUpdatesProvider({
   children,
   globalLiveUpdates = false,
 }: LiveUpdatesProviderProps): ReactElement {
-  const contentfulOptimization = useOptimization()
+  const { sdk } = useOptimization()
   const [previewPanelVisible, setPreviewPanelVisible] = useState(false)
 
   useEffect(() => {
-    const sub = contentfulOptimization.states.previewPanelOpen.subscribe((isOpen: boolean) => {
+    if (sdk === undefined) return
+
+    const sub = sdk.states.previewPanelOpen.subscribe((isOpen: boolean) => {
       setPreviewPanelVisible(isOpen)
     })
     return () => {
       sub.unsubscribe()
     }
-  }, [contentfulOptimization])
+  }, [sdk])
 
   return (
     <LiveUpdatesContext.Provider

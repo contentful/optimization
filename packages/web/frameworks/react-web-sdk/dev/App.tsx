@@ -9,12 +9,16 @@ import { StateSection } from './sections/StateSection'
 import type { ResolveResult } from './types'
 
 export function App(): ReactElement {
-  const contentfulOptimization = useOptimization()
+  const { sdk: contentfulOptimization, isReady, error } = useOptimization()
   const { globalLiveUpdates, previewPanelVisible } = useLiveUpdates()
   const { entriesById, loading: entriesLoading, error: entriesError } = useDevEntries()
   const { consent, profile, personalizations, previewPanelOpen, eventLog } =
     useOptimizationState(contentfulOptimization)
   const [resolveResults, setResolveResults] = useState<ResolveResult[]>([])
+
+  if (!isReady || contentfulOptimization === undefined) {
+    return <main className="dashboard">{error?.message ?? 'Optimization SDK unavailable.'}</main>
+  }
 
   const baselineDefault = entriesById.get(BASELINE_IDS.default)
   const baselineLive = entriesById.get(BASELINE_IDS.live)

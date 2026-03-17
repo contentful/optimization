@@ -29,7 +29,7 @@ export function useOptimizedEntryState({
   children,
   liveUpdates,
 }: UseOptimizedEntryStateParams): UseOptimizedEntryStateResult {
-  const contentfulOptimization = useOptimization()
+  const { sdk, isReady } = useOptimization()
   const liveUpdatesContext = useLiveUpdates()
   const [lockedSelectedPersonalizations, setLockedSelectedPersonalizations] = useState<
     SelectedPersonalizationArray | undefined
@@ -44,44 +44,45 @@ export function useOptimizedEntryState({
   })
 
   useEffect(() => {
-    const selectedPersonalizationsSubscription =
-      contentfulOptimization.states.selectedPersonalizations.subscribe(
-        (selectedPersonalizations: SelectedPersonalizationArray | undefined) => {
-          setLockedSelectedPersonalizations(
-            (previous: SelectedPersonalizationArray | undefined) => {
-              if (shouldLiveUpdate) {
-                return selectedPersonalizations
-              }
+    if (sdk === undefined) return
 
-              if (previous === undefined && selectedPersonalizations !== undefined) {
-                return selectedPersonalizations
-              }
+    const selectedPersonalizationsSubscription = sdk.states.selectedPersonalizations.subscribe(
+      (selectedPersonalizations: SelectedPersonalizationArray | undefined) => {
+        setLockedSelectedPersonalizations((previous: SelectedPersonalizationArray | undefined) => {
+          if (shouldLiveUpdate) {
+            return selectedPersonalizations
+          }
 
-              return previous
-            },
-          )
-        },
-      )
+          if (previous === undefined && selectedPersonalizations !== undefined) {
+            return selectedPersonalizations
+          }
 
-    const canPersonalizeSubscription = contentfulOptimization.states.canPersonalize.subscribe(
-      (value) => {
-        setCanPersonalize(value)
+          return previous
+        })
       },
     )
+
+    const canPersonalizeSubscription = sdk.states.canPersonalize.subscribe((value) => {
+      setCanPersonalize(value)
+    })
 
     return () => {
       selectedPersonalizationsSubscription.unsubscribe()
       canPersonalizeSubscription.unsubscribe()
     }
-  }, [contentfulOptimization, shouldLiveUpdate])
+  }, [sdk, shouldLiveUpdate])
 
   useEffect(() => {
-    setSdkInitialized(true)
-  }, [])
+    setSdkInitialized(isReady)
+  }, [isReady])
 
   const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
-    () => contentfulOptimization.personalizeEntry(baselineEntry, lockedSelectedPersonalizations),
-    [contentfulOptimization, baselineEntry, lockedSelectedPersonalizations],
+    () =>
+      sdk?.personalizeEntry(baselineEntry, lockedSelectedPersonalizations) ?? {
+        entry: baselineEntry,
+        personalization: undefined,
+      },
+    [sdk, baselineEntry, lockedSelectedPersonalizations],
   )
 
   const requiresPersonalization = hasPersonalizationReferences(baselineEntry)

@@ -95,7 +95,8 @@ Available config props:
 
 ### Hooks
 
-- `useOptimization()` returns the current SDK instance.
+- `useOptimization()` returns `{ sdk, isReady, error }`.
+- `useAnalytics()` returns a safe `trackView()` helper.
 - `useOptimization()` throws if used outside `OptimizationProvider`.
 - `useLiveUpdates()` throws if used outside `LiveUpdatesProvider`.
 

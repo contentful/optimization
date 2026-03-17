@@ -1,22 +1,25 @@
-import type { AnalyticsEventInput } from '../types'
+import type ContentfulOptimization from '@contentful/optimization-web'
+import { useMemo } from 'react'
+import { useOptimization } from '../hooks/useOptimization'
 
 export interface UseAnalyticsResult {
-  readonly track: (input: AnalyticsEventInput) => Promise<void>
-  readonly identify: (id: string) => Promise<void>
-  readonly reset: () => Promise<void>
+  readonly trackView: (
+    payload: Parameters<ContentfulOptimization['trackView']>[0],
+  ) => ReturnType<ContentfulOptimization['trackView']> | undefined
 }
 
 export function useAnalytics(): UseAnalyticsResult {
-  // Scaffold placeholder: analytics calls will proxy to the web SDK in follow-up work.
-  return {
-    track: async (_input: AnalyticsEventInput): Promise<void> => {
-      await Promise.resolve()
-    },
-    identify: async (_id: string): Promise<void> => {
-      await Promise.resolve()
-    },
-    reset: async (): Promise<void> => {
-      await Promise.resolve()
-    },
-  }
+  const { sdk, isReady } = useOptimization()
+
+  return useMemo<UseAnalyticsResult>(() => {
+    if (!isReady || sdk === undefined) {
+      return {
+        trackView: () => undefined,
+      }
+    }
+
+    return {
+      trackView: async (payload) => await sdk.trackView(payload),
+    }
+  }, [isReady, sdk])
 }

@@ -7,6 +7,7 @@ import { renderToString } from 'react-dom/server'
 import type { LiveUpdatesContextValue } from '../context/LiveUpdatesContext'
 import { LiveUpdatesContext } from '../context/LiveUpdatesContext'
 import { OptimizationContext } from '../context/OptimizationContext'
+import type { OptimizationSdk } from '../types'
 import { OptimizedEntry } from './OptimizedEntry'
 
 type TestEntry = Entry
@@ -18,13 +19,26 @@ type PersonalizeEntry = (
 type SelectedPersonalizationsSubscriber = (value: PersonalizationState) => void
 type CanPersonalizeSubscriber = (value: boolean) => void
 
-interface RuntimeOptimization {
+function createObservable<T>(current: T): {
+  current: T
+  subscribe: (next: (value: T) => void) => { unsubscribe: () => void }
+  subscribeOnce: (next: (value: NonNullable<T>) => void) => { unsubscribe: () => void }
+} {
+  return {
+    current,
+    subscribe: () => ({ unsubscribe: () => undefined }),
+    subscribeOnce: () => ({ unsubscribe: () => undefined }),
+  }
+}
+
+interface RuntimeOptimization extends OptimizationSdk {
   personalizeEntry: PersonalizeEntry
-  states: {
+  states: OptimizationSdk['states'] & {
     canPersonalize: {
       subscribe: (next: CanPersonalizeSubscriber) => { unsubscribe: () => void }
     }
     selectedPersonalizations: {
+      current: PersonalizationState
       subscribe: (next: SelectedPersonalizationsSubscriber) => { unsubscribe: () => void }
     }
   }
@@ -69,9 +83,23 @@ function createRuntime(personalizeEntry: PersonalizeEntry): {
   let canPersonalize = false
 
   const optimization: RuntimeOptimization = {
+    consent: () => undefined,
+    identify: async () => {
+      await Promise.resolve()
+      return undefined
+    },
+    page: async () => {
+      await Promise.resolve()
+      return undefined
+    },
     personalizeEntry,
+    reset: () => undefined,
     states: {
+      blockedEventStream: createObservable(undefined),
       canPersonalize: {
+        get current() {
+          return canPersonalize
+        },
         subscribe(next: CanPersonalizeSubscriber) {
           canPersonalizeSubscribers.add(next)
           next(canPersonalize)
@@ -82,8 +110,21 @@ function createRuntime(personalizeEntry: PersonalizeEntry): {
             },
           }
         },
+        subscribeOnce(next: CanPersonalizeSubscriber) {
+          next(canPersonalize)
+          return { unsubscribe: () => undefined }
+        },
       },
+      consent: createObservable(undefined),
+      eventStream: createObservable(undefined),
+      flag: () => createObservable(undefined),
+      previewPanelAttached: createObservable(false),
+      previewPanelOpen: createObservable(false),
+      profile: createObservable(undefined),
       selectedPersonalizations: {
+        get current() {
+          return current
+        },
         subscribe(next: SelectedPersonalizationsSubscriber) {
           subscribers.add(next)
           next(current)
@@ -94,7 +135,21 @@ function createRuntime(personalizeEntry: PersonalizeEntry): {
             },
           }
         },
+        subscribeOnce(next: (value: NonNullable<PersonalizationState>) => void) {
+          if (current !== undefined) {
+            next(current)
+          }
+          return { unsubscribe: () => undefined }
+        },
       },
+    },
+    track: async () => {
+      await Promise.resolve()
+      return undefined
+    },
+    trackView: async () => {
+      await Promise.resolve()
+      return undefined
     },
   }
 
@@ -138,8 +193,7 @@ async function renderComponent(
   await act(async () => {
     await Promise.resolve()
     root.render(
-      // @ts-expect-error test double only implements the subset used by OptimizedEntry
-      <OptimizationContext.Provider value={{ instance: optimization }}>
+      <OptimizationContext.Provider value={{ sdk: optimization, isReady: true, error: undefined }}>
         <LiveUpdatesContext.Provider value={liveUpdatesContext}>{node}</LiveUpdatesContext.Provider>
       </OptimizationContext.Provider>,
     )
@@ -163,8 +217,7 @@ function renderComponentToString(
   liveUpdatesContext = defaultLiveUpdatesContext(),
 ): string {
   return renderToString(
-    // @ts-expect-error test double only implements the subset used by OptimizedEntry
-    <OptimizationContext.Provider value={{ instance: optimization }}>
+    <OptimizationContext.Provider value={{ sdk: optimization, isReady: true, error: undefined }}>
       <LiveUpdatesContext.Provider value={liveUpdatesContext}>{node}</LiveUpdatesContext.Provider>
     </OptimizationContext.Provider>,
   )

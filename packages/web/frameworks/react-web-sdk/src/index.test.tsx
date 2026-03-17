@@ -1,17 +1,30 @@
 import ContentfulOptimization from '@contentful/optimization-web'
+import type { Entry } from 'contentful'
 import type { ReactElement } from 'react'
+import { act } from 'react'
+import { createRoot } from 'react-dom/client'
 import { renderToString } from 'react-dom/server'
 import {
   LiveUpdatesProvider,
   OptimizationContext,
+  type OptimizationContextValue,
   OptimizationProvider,
   OptimizationRoot,
   OptimizedEntry,
+  type UseAnalyticsResult,
+  type UsePersonalizationResult,
   useAnalytics,
   useLiveUpdates,
   useOptimization,
   usePersonalization,
 } from './index'
+import {
+  createObservable,
+  createTestEntry,
+  requireAnalyticsResult,
+  requirePersonalizationResult,
+} from './test/optimizationTestUtils'
+import type { OptimizationSdk } from './types'
 
 const testConfig = {
   clientId: 'test-client-id',
@@ -48,10 +61,10 @@ describe('@contentful/optimization-react-web core providers', () => {
   })
 
   it('creates optimization instance from config props via OptimizationProvider', () => {
-    let capturedInstance: ContentfulOptimization | null = null
+    let capturedInstance: OptimizationSdk | null = null
 
     function Probe(): null {
-      capturedInstance = useOptimization()
+      capturedInstance = useOptimization().sdk ?? null
       return null
     }
 
@@ -70,11 +83,11 @@ describe('@contentful/optimization-react-web core providers', () => {
   })
 
   it('provides optimization and live updates from OptimizationRoot', () => {
-    let capturedInstance: ContentfulOptimization | null = null
+    let capturedInstance: OptimizationSdk | null = null
     let capturedGlobalLiveUpdates: boolean | null = null
 
     function Probe(): null {
-      capturedInstance = useOptimization()
+      capturedInstance = useOptimization().sdk ?? null
       const { globalLiveUpdates } = useLiveUpdates()
       capturedGlobalLiveUpdates = globalLiveUpdates
       return null
@@ -214,13 +227,270 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(results).toEqual([true, false, true])
   })
 
-  it('keeps non-core hooks inert placeholders for now', async () => {
-    const personalization = usePersonalization()
-    const analytics = useAnalytics()
+  it('delegates analytics hook methods to the optimization instance', async () => {
+    const trackViewCalls: unknown[] = []
+    const trackView = async (input: unknown): Promise<undefined> => {
+      trackViewCalls.push(input)
+      await Promise.resolve()
+      return undefined
+    }
+    let analytics: UseAnalyticsResult | undefined = undefined
 
-    expect(personalization.resolveEntry({ id: 'entry-1' })).toEqual({ id: 'entry-1' })
-    await expect(analytics.identify('user-1')).resolves.toBeUndefined()
-    await expect(analytics.track({ event: 'view' })).resolves.toBeUndefined()
-    await expect(analytics.reset()).resolves.toBeUndefined()
+    function Probe(): null {
+      analytics = useAnalytics()
+      return null
+    }
+
+    const sdk: OptimizationSdk = {
+      consent: () => undefined,
+      identify: async () => {
+        await Promise.resolve()
+        return undefined
+      },
+      page: async () => {
+        await Promise.resolve()
+        return undefined
+      },
+      personalizeEntry: (entry: Entry) => ({ entry }),
+      reset: () => undefined,
+      states: {
+        blockedEventStream: createObservable(undefined),
+        canPersonalize: createObservable(false),
+        consent: createObservable(undefined),
+        eventStream: createObservable(undefined),
+        flag: () => createObservable(undefined),
+        previewPanelAttached: createObservable(false),
+        previewPanelOpen: createObservable(false),
+        profile: createObservable(undefined),
+        selectedPersonalizations: createObservable(undefined),
+      },
+      track: async () => {
+        await Promise.resolve()
+        return undefined
+      },
+      trackView,
+    }
+    const contextValue: OptimizationContextValue = {
+      sdk,
+      isReady: true,
+      error: undefined,
+    }
+
+    renderToString(
+      <OptimizationContext.Provider value={contextValue}>
+        <Probe />
+      </OptimizationContext.Provider>,
+    )
+
+    const analyticsResult = requireAnalyticsResult(analytics)
+    const viewPayload = {
+      componentId: 'hero',
+      variantIndex: 0,
+      viewId: 'view-1',
+      viewDurationMs: 1,
+    }
+
+    await expect(analyticsResult.trackView(viewPayload)).resolves.toBeUndefined()
+
+    expect(trackViewCalls).toEqual([viewPayload])
+  })
+
+  it('keeps analytics hook inert while the sdk is unavailable', () => {
+    let analytics: UseAnalyticsResult | undefined = undefined
+
+    function Probe(): null {
+      analytics = useAnalytics()
+      return null
+    }
+
+    renderToString(
+      <OptimizationContext.Provider value={{ sdk: undefined, isReady: false, error: undefined }}>
+        <Probe />
+      </OptimizationContext.Provider>,
+    )
+
+    const analyticsResult = requireAnalyticsResult(analytics)
+
+    expect(
+      analyticsResult.trackView({
+        componentId: 'hero',
+        variantIndex: 0,
+        viewId: 'view-1',
+        viewDurationMs: 1,
+      }),
+    ).toBeUndefined()
+  })
+
+  it('delegates personalization hook entry resolution to the optimization instance', () => {
+    const personalizeEntryCalls: unknown[] = []
+    const personalizeEntry = (
+      entry: Entry,
+      _selectedPersonalizations: unknown,
+    ): { entry: Entry; personalization: undefined } => ({
+      entry: {
+        ...entry,
+        sys: {
+          ...entry.sys,
+          id: 'entry-1-variant',
+        },
+      },
+      personalization: undefined,
+    })
+    let personalization: UsePersonalizationResult | undefined = undefined
+
+    function Probe(): null {
+      personalization = usePersonalization()
+      return null
+    }
+
+    const sdk: OptimizationSdk = {
+      consent: () => undefined,
+      identify: async () => {
+        await Promise.resolve()
+        return undefined
+      },
+      page: async () => {
+        await Promise.resolve()
+        return undefined
+      },
+      personalizeEntry: (
+        entry: Entry,
+        selectedPersonalizations: unknown,
+      ): { entry: Entry; personalization: undefined } => {
+        personalizeEntryCalls.push([entry, selectedPersonalizations])
+        return personalizeEntry(entry, selectedPersonalizations)
+      },
+      reset: () => undefined,
+      states: {
+        blockedEventStream: createObservable(undefined),
+        canPersonalize: createObservable(false),
+        consent: createObservable(undefined),
+        eventStream: createObservable(undefined),
+        flag: () => createObservable(undefined),
+        previewPanelAttached: createObservable(false),
+        previewPanelOpen: createObservable(false),
+        profile: createObservable(undefined),
+        selectedPersonalizations: createObservable([
+          {
+            experienceId: 'exp-a',
+            variantIndex: 0,
+            variants: { baseline: 'entry-1-variant' },
+          },
+        ]),
+      },
+      track: async () => {
+        await Promise.resolve()
+        return undefined
+      },
+      trackView: async () => {
+        await Promise.resolve()
+        return undefined
+      },
+    }
+    const contextValue: OptimizationContextValue = {
+      sdk,
+      isReady: true,
+      error: undefined,
+    }
+
+    renderToString(
+      <OptimizationContext.Provider value={contextValue}>
+        <Probe />
+      </OptimizationContext.Provider>,
+    )
+
+    const personalizationResult = requirePersonalizationResult(personalization)
+
+    const baselineEntry = createTestEntry('entry-1')
+
+    expect(personalizationResult.resolveEntry(baselineEntry)).toEqual({
+      ...baselineEntry,
+      sys: {
+        ...baselineEntry.sys,
+        id: 'entry-1-variant',
+      },
+    })
+    expect(personalizeEntryCalls).toEqual([
+      [
+        baselineEntry,
+        [
+          {
+            experienceId: 'exp-a',
+            variantIndex: 0,
+            variants: { baseline: 'entry-1-variant' },
+          },
+        ],
+      ],
+    ])
+  })
+
+  it('keeps personalization hook inert while the sdk is unavailable', () => {
+    let personalization: UsePersonalizationResult | undefined = undefined
+
+    function Probe(): null {
+      personalization = usePersonalization()
+      return null
+    }
+
+    renderToString(
+      <OptimizationContext.Provider value={{ sdk: undefined, isReady: false, error: undefined }}>
+        <Probe />
+      </OptimizationContext.Provider>,
+    )
+
+    const personalizationResult = requirePersonalizationResult(personalization)
+
+    const baselineEntry = createTestEntry('entry-1')
+    expect(personalizationResult.resolveEntry(baselineEntry)).toEqual(baselineEntry)
+  })
+
+  it('destroys the optimization singleton on provider unmount', () => {
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
+
+    act(() => {
+      root.render(
+        <OptimizationProvider
+          clientId={testConfig.clientId}
+          environment={testConfig.environment}
+          analytics={testConfig.analytics}
+          personalization={testConfig.personalization}
+        >
+          <div />
+        </OptimizationProvider>,
+      )
+    })
+
+    expect(window.contentfulOptimization).toBeInstanceOf(ContentfulOptimization)
+
+    act(() => {
+      root.unmount()
+    })
+
+    expect(window.contentfulOptimization).toBeUndefined()
+
+    const remountRoot = createRoot(container)
+
+    act(() => {
+      remountRoot.render(
+        <OptimizationProvider
+          clientId={testConfig.clientId}
+          environment={testConfig.environment}
+          analytics={testConfig.analytics}
+          personalization={testConfig.personalization}
+        >
+          <div />
+        </OptimizationProvider>,
+      )
+    })
+
+    expect(window.contentfulOptimization).toBeInstanceOf(ContentfulOptimization)
+
+    act(() => {
+      remountRoot.unmount()
+    })
+
+    container.remove()
   })
 })
