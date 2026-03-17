@@ -9,8 +9,7 @@ Core root/provider primitives and React-facing APIs are implemented.
 - `OptimizationProvider` + `useOptimization()` context behavior
 - `LiveUpdatesProvider` + `useLiveUpdates()` global live updates context
 - `OptimizationRoot` provider composition and defaults
-- `useAnalytics()` helper hook for common analytics event emission
-- `usePersonalization()` helper hook for entry resolution flows
+- `useOptimization()` helper methods for tracking and entry resolution flows
 - `Personalization` entry resolution, lock/live-update behavior, loading fallback, and
   data-attribute mapping
 
@@ -95,8 +94,9 @@ Available config props:
 
 ### Hooks
 
-- `useOptimization()` returns `{ sdk, isReady, error }`.
-- `useAnalytics()` returns a safe `trackView()` helper.
+- `useOptimization()` returns the React SDK context value plus safe helpers:
+  `{ sdk, isReady, error, trackView, resolveEntry }`.
+- `useOptimization().sdk` exposes the root `ContentfulOptimization` SDK instance when ready.
 - `useOptimization()` throws if used outside `OptimizationProvider`.
 - `useLiveUpdates()` throws if used outside `LiveUpdatesProvider`.
 

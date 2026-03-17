@@ -9,16 +9,12 @@ import { StateSection } from './sections/StateSection'
 import type { ResolveResult } from './types'
 
 export function App(): ReactElement {
-  const { sdk: contentfulOptimization, isReady, error } = useOptimization()
+  const { sdk } = useOptimization()
   const { globalLiveUpdates, previewPanelVisible } = useLiveUpdates()
   const { entriesById, loading: entriesLoading, error: entriesError } = useDevEntries()
   const { consent, profile, personalizations, previewPanelOpen, eventLog } =
-    useOptimizationState(contentfulOptimization)
+    useOptimizationState(sdk)
   const [resolveResults, setResolveResults] = useState<ResolveResult[]>([])
-
-  if (!isReady || contentfulOptimization === undefined) {
-    return <main className="dashboard">{error?.message ?? 'Optimization SDK unavailable.'}</main>
-  }
 
   const baselineDefault = entriesById.get(BASELINE_IDS.default)
   const baselineLive = entriesById.get(BASELINE_IDS.live)
@@ -27,13 +23,17 @@ export function App(): ReactElement {
   const baselineNestedChild = entriesById.get(BASELINE_IDS.nestedChild)
 
   const { size: resolvedEntryCount } = entriesById
-  const sdkName = useMemo(() => contentfulOptimization.constructor.name, [contentfulOptimization])
+  const sdkName = useMemo(() => sdk.constructor.name, [sdk])
 
   const handleResolveEntries = (): void => {
+    if (!sdk) {
+      return
+    }
+
     const nextResults: ResolveResult[] = []
 
     entriesById.forEach((entry) => {
-      const resolved = contentfulOptimization.personalizeEntry(entry, personalizations)
+      const resolved = sdk.personalizeEntry(entry, personalizations)
       nextResults.push({
         baselineId: entry.sys.id,
         resolvedId: resolved.entry.sys.id,
@@ -71,32 +71,41 @@ export function App(): ReactElement {
         consent={consent}
         eventLog={eventLog}
         onGrantConsent={() => {
-          contentfulOptimization.consent(true)
+          if (!sdk) return
+          sdk.consent(true)
         }}
         onRevokeConsent={() => {
-          contentfulOptimization.consent(false)
+          if (!sdk) return
+          sdk.consent(false)
         }}
         onIdentify={() => {
+          if (!sdk) return
+
           fireAndReport(
-            contentfulOptimization.identify({
+            sdk.identify({
               userId: 'demo-user-123',
               traits: { plan: 'pro', region: 'eu', source: 'react-web-sdk-dev' },
             }),
           )
         }}
         onReset={() => {
-          contentfulOptimization.reset()
+          if (!sdk) return
+          sdk.reset()
         }}
         onSendPage={() => {
+          if (!sdk) return
+
           fireAndReport(
-            contentfulOptimization.page({
+            sdk.page({
               properties: { title: 'React Web SDK Dev Harness', path: '/dev' },
             }),
           )
         }}
         onSendTrack={() => {
+          if (!sdk) return
+
           fireAndReport(
-            contentfulOptimization.track({
+            sdk.track({
               event: 'dev_app_custom_event',
               properties: { source: 'react-web-sdk/dev/App.tsx' },
             }),

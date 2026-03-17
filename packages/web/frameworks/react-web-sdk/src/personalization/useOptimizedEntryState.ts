@@ -44,7 +44,10 @@ export function useOptimizedEntryState({
   })
 
   useEffect(() => {
-    if (sdk === undefined) return
+    if (!sdk || !isReady) {
+      setCanPersonalize(false)
+      return
+    }
 
     const selectedPersonalizationsSubscription = sdk.states.selectedPersonalizations.subscribe(
       (selectedPersonalizations: SelectedPersonalizationArray | undefined) => {
@@ -70,7 +73,7 @@ export function useOptimizedEntryState({
       selectedPersonalizationsSubscription.unsubscribe()
       canPersonalizeSubscription.unsubscribe()
     }
-  }, [sdk, shouldLiveUpdate])
+  }, [isReady, sdk, shouldLiveUpdate])
 
   useEffect(() => {
     setSdkInitialized(isReady)
@@ -78,11 +81,10 @@ export function useOptimizedEntryState({
 
   const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
     () =>
-      sdk?.personalizeEntry(baselineEntry, lockedSelectedPersonalizations) ?? {
-        entry: baselineEntry,
-        personalization: undefined,
-      },
-    [sdk, baselineEntry, lockedSelectedPersonalizations],
+      sdk && isReady
+        ? sdk.personalizeEntry(baselineEntry, lockedSelectedPersonalizations)
+        : { entry: baselineEntry, personalization: undefined },
+    [baselineEntry, isReady, lockedSelectedPersonalizations, sdk],
   )
 
   const requiresPersonalization = hasPersonalizationReferences(baselineEntry)

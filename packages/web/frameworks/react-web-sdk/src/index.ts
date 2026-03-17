@@ -1,18 +1,15 @@
-export { useAnalytics } from './analytics/useAnalytics'
-export type { UseAnalyticsResult } from './analytics/useAnalytics'
 export { LiveUpdatesContext } from './context/LiveUpdatesContext'
 export type { LiveUpdatesContextValue } from './context/LiveUpdatesContext'
 export { OptimizationContext } from './context/OptimizationContext'
 export type { OptimizationContextValue } from './context/OptimizationContext'
 export { useLiveUpdates } from './hooks/useLiveUpdates'
 export { useOptimization } from './hooks/useOptimization'
+export type { UseOptimizationResult } from './hooks/useOptimization'
 export { OptimizedEntry } from './personalization/OptimizedEntry'
 export type {
   OptimizedEntryLoadingFallback,
   OptimizedEntryProps,
 } from './personalization/OptimizedEntry'
-export { usePersonalization } from './personalization/usePersonalization'
-export type { UsePersonalizationResult } from './personalization/usePersonalization'
 export { LiveUpdatesProvider } from './provider/LiveUpdatesProvider'
 export type { LiveUpdatesProviderProps } from './provider/LiveUpdatesProvider'
 export { OptimizationProvider } from './provider/OptimizationProvider'
