@@ -6,7 +6,7 @@ import {
   OptimizationContext,
   OptimizationProvider,
   OptimizationRoot,
-  Personalization,
+  OptimizedEntry,
   useAnalytics,
   useLiveUpdates,
   useOptimization,
@@ -43,7 +43,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(useOptimization).toBeTypeOf('function')
     expect(useLiveUpdates).toBeTypeOf('function')
     expect(usePersonalization).toBeTypeOf('function')
-    expect(Personalization).toBeTypeOf('function')
+    expect(OptimizedEntry).toBeTypeOf('function')
     expect(useAnalytics).toBeTypeOf('function')
   })
 

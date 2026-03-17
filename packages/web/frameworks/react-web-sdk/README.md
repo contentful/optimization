@@ -114,10 +114,16 @@ import { Personalization } from '@contentful/optimization-react-web'
 - `liveUpdates={true}` enables continuous updates as personalization state changes.
 - If `liveUpdates` is omitted, global root `liveUpdates` is used.
 - If both are omitted, live updates default to `false`.
+- Consumer content supports render-prop (`(resolvedEntry) => ReactNode`) or direct `ReactNode`.
+- Wrapper element is configurable with `as: 'div' | 'span'` (defaults to `div`).
+- Wrapper style uses `display: contents` to remain layout-neutral as much as possible.
+- Readiness is inferred automatically:
+  - personalized entries render when `canPersonalize === true`
+  - non-personalized entries render when the SDK instance is initialized
 
 #### Loading Fallback
 
-When `loadingFallback` is provided, it is rendered until personalization state is first resolved.
+When `loadingFallback` is provided, it is rendered while readiness is unresolved.
 
 ```tsx
 <Personalization
@@ -128,7 +134,13 @@ When `loadingFallback` is provided, it is rendered until personalization state i
 </Personalization>
 ```
 
-If `loadingFallback` is not provided, rendering follows the regular baseline/resolved path.
+- If a baseline entry is personalizable and unresolved, loading UI is rendered by default.
+- If the entry is not personalizable, baseline/resolved content is rendered directly.
+- During loading, a concrete layout-target element is rendered (`data-ctfl-loading-layout-target`)
+  so loading visibility/layout behavior remains targetable even when wrapper uses
+  `display: contents`.
+- During server rendering, unresolved loading is rendered invisibly (`visibility: hidden`) to
+  preserve layout space before content is ready.
 
 #### Nested Composition
 
@@ -145,6 +157,11 @@ Nested personalizations are supported by explicit composition:
   )}
 </Personalization>
 ```
+
+Nesting guard behavior:
+
+- Nested wrappers with the same baseline entry ID as an ancestor are invalid and are blocked.
+- Nested wrappers with different baseline entry IDs remain supported.
 
 #### Auto-Tracking Data Attributes
 
@@ -180,6 +197,21 @@ This gives:
 - component-level `liveUpdates` prop override first
 - then root-level `liveUpdates`
 - then default `false`
+
+### SDK Initialization Contract
+
+- Core/Web SDK initialization is synchronous; no dedicated `sdkInitialized` state is exposed.
+- React provider initialization outcome is represented by instance creation success/failure.
+- The async runtime path is preview panel lifecycle, already represented by preview panel state.
+
+### Migration Notes
+
+- `Personalization` now accepts either render-prop children or direct `ReactNode` children.
+- Personalizable entries now render loading UI until personalization readiness is available.
+- When no `loadingFallback` is provided, a default loading UI is rendered for unresolved
+  personalizable entries.
+- Nested wrappers with the same baseline entry ID are now blocked at runtime.
+- Loading renders include `data-ctfl-loading-layout-target` for layout/visibility targeting.
 
 ## Singleton Behavior
 

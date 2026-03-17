@@ -360,4 +360,25 @@ describe('EntryClickTracker', () => {
 
     cleanup()
   })
+
+  it('does not call preventDefault or stopPropagation while observing clicks', () => {
+    const entry = document.createElement('button')
+    entry.dataset.ctflEntryId = 'entry-non-interference'
+    document.body.append(entry)
+
+    const preventDefaultSpy = rs.spyOn(Event.prototype, 'preventDefault')
+    const stopPropagationSpy = rs.spyOn(Event.prototype, 'stopPropagation')
+
+    const { core, trackClick } = createCore()
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryClickDetector(core))
+
+    tracker.start()
+    entry.click()
+
+    expect(trackClick).toHaveBeenCalledTimes(1)
+    expect(preventDefaultSpy).not.toHaveBeenCalled()
+    expect(stopPropagationSpy).not.toHaveBeenCalled()
+
+    cleanup()
+  })
 })

@@ -6,11 +6,11 @@ export { OptimizationContext } from './context/OptimizationContext'
 export type { OptimizationContextValue } from './context/OptimizationContext'
 export { useLiveUpdates } from './hooks/useLiveUpdates'
 export { useOptimization } from './hooks/useOptimization'
-export { Personalization } from './personalization/Personalization'
+export { OptimizedEntry } from './personalization/OptimizedEntry'
 export type {
-  PersonalizationLoadingFallback,
-  PersonalizationProps,
-} from './personalization/Personalization'
+  OptimizedEntryLoadingFallback,
+  OptimizedEntryProps,
+} from './personalization/OptimizedEntry'
 export { usePersonalization } from './personalization/usePersonalization'
 export type { UsePersonalizationResult } from './personalization/usePersonalization'
 export { LiveUpdatesProvider } from './provider/LiveUpdatesProvider'

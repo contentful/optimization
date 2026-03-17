@@ -6,7 +6,7 @@ import { createRoot } from 'react-dom/client'
 import type { LiveUpdatesContextValue } from '../context/LiveUpdatesContext'
 import { LiveUpdatesContext } from '../context/LiveUpdatesContext'
 import { OptimizationContext } from '../context/OptimizationContext'
-import { Personalization } from './Personalization'
+import { OptimizedEntry } from './OptimizedEntry'
 
 type TestEntry = Entry
 type SelectedPersonalizationState = SelectedPersonalizationArray | undefined
@@ -46,6 +46,15 @@ function makeEntry(id: string): TestEntry {
     },
   }
 
+  return entry
+}
+
+function makePersonalizableEntry(id: string): TestEntry {
+  const entry = makeEntry(id)
+  entry.fields = {
+    ...entry.fields,
+    nt_experiences: [{ sys: { id: 'exp-1' } }],
+  }
   return entry
 }
 
@@ -128,7 +137,7 @@ async function renderComponent(
   await act(async () => {
     await Promise.resolve()
     root.render(
-      // @ts-expect-error test double only implements the subset used by Personalization
+      // @ts-expect-error test double only implements the subset used by OptimizedEntry
       <OptimizationContext.Provider value={{ instance: contentfulOptimization }}>
         <LiveUpdatesContext.Provider value={liveUpdatesContext}>{node}</LiveUpdatesContext.Provider>
       </OptimizationContext.Provider>,
@@ -164,8 +173,9 @@ function readTitle(entry: TestEntry): string {
   return typeof title === 'string' ? title : ''
 }
 
-describe('Personalization', () => {
+describe('OptimizedEntry', () => {
   const baseline = makeEntry('baseline')
+  const personalizedBaseline = makePersonalizableEntry('personalized-baseline')
   const variantA = makeEntry('variant-a')
   const variantB = makeEntry('variant-b')
 
@@ -207,9 +217,7 @@ describe('Personalization', () => {
     })
 
     const view = await renderComponent(
-      <Personalization baselineEntry={baseline}>
-        {(resolved) => readTitle(resolved)}
-      </Personalization>,
+      <OptimizedEntry baselineEntry={baseline}>{(resolved) => readTitle(resolved)}</OptimizedEntry>,
       contentfulOptimization,
     )
 
@@ -232,9 +240,7 @@ describe('Personalization', () => {
     })
 
     const view = await renderComponent(
-      <Personalization baselineEntry={baseline}>
-        {(resolved) => readTitle(resolved)}
-      </Personalization>,
+      <OptimizedEntry baselineEntry={baseline}>{(resolved) => readTitle(resolved)}</OptimizedEntry>,
       contentfulOptimization,
     )
 
@@ -256,9 +262,9 @@ describe('Personalization', () => {
     })
 
     const view = await renderComponent(
-      <Personalization baselineEntry={baseline} liveUpdates>
+      <OptimizedEntry baselineEntry={baseline} liveUpdates>
         {(resolved) => readTitle(resolved)}
-      </Personalization>,
+      </OptimizedEntry>,
       contentfulOptimization,
     )
 
@@ -278,9 +284,9 @@ describe('Personalization', () => {
     })
 
     const view = await renderComponent(
-      <Personalization baselineEntry={baseline} loadingFallback={() => 'loading'}>
+      <OptimizedEntry baselineEntry={personalizedBaseline} loadingFallback={() => 'loading'}>
         {(resolved) => readTitle(resolved)}
-      </Personalization>,
+      </OptimizedEntry>,
       contentfulOptimization,
     )
 
@@ -313,9 +319,7 @@ describe('Personalization', () => {
     })
 
     const view = await renderComponent(
-      <Personalization baselineEntry={baseline}>
-        {(resolved) => readTitle(resolved)}
-      </Personalization>,
+      <OptimizedEntry baselineEntry={baseline}>{(resolved) => readTitle(resolved)}</OptimizedEntry>,
       contentfulOptimization,
     )
 
@@ -335,9 +339,9 @@ describe('Personalization', () => {
     const { contentfulOptimization } = createRuntime((entry) => ({ entry }))
 
     const view = await renderComponent(
-      <Personalization baselineEntry={baseline} testId="camel" data-testid="direct">
+      <OptimizedEntry baselineEntry={baseline} testId="camel" data-testid="direct">
         {(resolved) => readTitle(resolved)}
-      </Personalization>,
+      </OptimizedEntry>,
       contentfulOptimization,
     )
 
@@ -376,16 +380,16 @@ describe('Personalization', () => {
     })
 
     const view = await renderComponent(
-      <Personalization baselineEntry={baselineParent}>
+      <OptimizedEntry baselineEntry={baselineParent}>
         {(parentResolved) => (
           <section>
             <h1>{readTitle(parentResolved)}</h1>
-            <Personalization baselineEntry={baselineChild}>
+            <OptimizedEntry baselineEntry={baselineChild}>
               {(childResolved) => <p>{readTitle(childResolved)}</p>}
-            </Personalization>
+            </OptimizedEntry>
           </section>
         )}
-      </Personalization>,
+      </OptimizedEntry>,
       contentfulOptimization,
     )
 
@@ -406,9 +410,9 @@ describe('Personalization', () => {
     })
 
     const view = await renderComponent(
-      <Personalization baselineEntry={baseline} liveUpdates={false}>
+      <OptimizedEntry baselineEntry={baseline} liveUpdates={false}>
         {(resolved) => readTitle(resolved)}
-      </Personalization>,
+      </OptimizedEntry>,
       contentfulOptimization,
       {
         globalLiveUpdates: false,
