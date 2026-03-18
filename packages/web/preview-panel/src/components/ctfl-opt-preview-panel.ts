@@ -295,7 +295,7 @@ export class CtflOptPreviewPanel extends LitElement {
             audience,
             this.defaultSelectedPersonalizations.filter((defaultSelected) =>
               personalizations
-                ?.map((personalization) => personalization.sys.id)
+                ?.map((personalization) => personalization.fields.nt_experience_id)
                 .includes(defaultSelected.experienceId),
             ),
           )
@@ -412,10 +412,10 @@ export class CtflOptPreviewPanel extends LitElement {
       color: #222;
       background: #fff;
       box-shadow:
-        rgba(0, 0, 0, 0) 0px 0px 0px 0px,
-        rgba(0, 0, 0, 0) 0px 0px 0px 0px,
-        rgba(0, 0, 0, 0.1) 0px 4px 6px -1px,
-        rgba(0, 0, 0, 0.1) 0px 2px 4px -2px;
+        #00000000 0px 0px 0px 0px,
+        #00000000 0px 0px 0px 0px,
+        #0000001a 0px 4px 6px -1px,
+        #0000001a 0px 2px 4px -2px;
       transform: translate(24rem, 0px);
       transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
       transition-duration: 700ms;
@@ -435,7 +435,7 @@ export class CtflOptPreviewPanel extends LitElement {
     }
 
     button:focus-visible {
-      outline: 2px solid rgb(112, 37, 187);
+      outline: 2px solid #7025bb;
       outline-offset: 2px;
     }
 
@@ -461,7 +461,7 @@ export class CtflOptPreviewPanel extends LitElement {
       border-radius: 0.25rem;
       font-size: 0.875rem;
       line-height: 1.25rem;
-      color: rgb(140, 46, 234);
+      color: #8c2eea;
       -webkit-appearance: none;
       appearance: none;
     }
@@ -480,7 +480,7 @@ export class CtflOptPreviewPanel extends LitElement {
       height: 14rem;
       width: 3rem;
       padding: 3rem 0.5rem;
-      background: rgb(140, 46, 234);
+      background: #8c2eea;
       overflow: hidden;
       border-radius: 0.5rem 0 0 0.5rem;
     }
@@ -506,7 +506,7 @@ export class CtflOptPreviewPanel extends LitElement {
     .subheading {
       font-size: 0.875rem;
       line-height: 1.25rem;
-      color: rgb(107, 114, 128);
+      color: #6b7280;
     }
 
     .container {
@@ -531,7 +531,7 @@ export class CtflOptPreviewPanel extends LitElement {
     .footer button {
       width: 100%;
       padding: 0.625rem 1rem;
-      border: 1px solid rgb(209, 213, 219);
+      border: 1px solid #d1d5db;
       border-radius: 0.375rem;
       background: transparent;
       font-family: inherit;
@@ -541,23 +541,23 @@ export class CtflOptPreviewPanel extends LitElement {
     }
 
     .footer button:hover {
-      background-color: rgb(249, 250, 251);
+      background-color: #f9fafb;
     }
 
     .footer button:active,
     .footer button:focus-visible {
-      outline: 2px solid rgb(112, 37, 187);
+      outline: 2px solid #7025bb;
       outline-offset: 2px;
     }
 
     .footer button.primary {
       border: 0;
-      background: rgb(140, 46, 234);
+      background: #8c2eea;
       color: #fff;
     }
 
     .footer button.primary:hover {
-      background: rgb(126, 41, 211);
+      background: #7e29d3;
     }
   `
 }

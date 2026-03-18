@@ -224,7 +224,7 @@ export class CtflOptPreviewPersonalization extends LitElement {
       flex-direction: column;
       gap: 1rem;
       padding: 1rem;
-      border: 1px solid rgb(229, 231, 235);
+      border: 1px solid #e5e7eb;
       border-radius: 0.5rem;
       background: #fff;
     }
@@ -258,9 +258,9 @@ export class CtflOptPreviewPersonalization extends LitElement {
       column-gap: 0.5rem;
       width: 100%;
       padding: 0.5rem 0.75rem;
-      border: 1px solid rgb(229, 231, 235);
+      border: 1px solid #e5e7eb;
       border-radius: 0.375rem;
-      color: rgb(55, 65, 81);
+      color: #374151;
       cursor: pointer;
     }
 
@@ -272,14 +272,14 @@ export class CtflOptPreviewPersonalization extends LitElement {
       justify-self: end;
       width: calc(1rem - 2px);
       height: calc(1rem - 2px);
-      border: 1px solid rgb(209, 213, 219);
+      border: 1px solid #d1d5db;
       border-radius: 50%;
     }
 
     label:focus,
     label:focus-visible,
     label:focus-within {
-      outline: 2px solid rgb(112, 37, 187);
+      outline: 2px solid #7025bb;
       outline-offset: 2px;
     }
 
@@ -301,31 +301,31 @@ export class CtflOptPreviewPersonalization extends LitElement {
     }
 
     label:has(input:checked) {
-      border-color: rgb(112, 37, 187);
+      border-color: #7025bb;
     }
 
     label:has(input:checked)::after {
       width: calc(1rem - 10px);
       height: calc(1rem - 10px);
-      border: 5px solid rgb(112, 37, 187);
+      border: 5px solid #7025bb;
     }
 
     label:has(input:checked):has(input:disabled) {
-      border-color: rgb(156, 163, 175);
+      border-color: #9ca3af;
     }
 
     label:has(input:checked):has(input:disabled)::after {
-      border-color: rgb(209, 213, 219);
+      border-color: #d1d5db;
     }
 
     label:has(input:disabled) {
-      color: rgb(107, 114, 128);
+      color: #6b7280;
     }
 
     .personalization-type {
       font-size: 0.875rem;
       line-height: 1.25rem;
-      color: rgb(107, 114, 128);
+      color: #6b7280;
     }
 
     .variant-heading {
@@ -341,7 +341,7 @@ export class CtflOptPreviewPersonalization extends LitElement {
 
     .variant-dist {
       font-size: 0.75rem;
-      color: rgb(156, 163, 175);
+      color: #9ca3af;
     }
   `
 }
