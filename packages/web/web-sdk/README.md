@@ -64,10 +64,11 @@ This SDK implements functionality specific to the Web environment, based on the
     - [`trackClick`](#trackclick)
     - [`trackHover`](#trackhover)
     - [`trackFlagView`](#trackflagview)
-- [Entry View Tracking](#entry-view-tracking)
-  - [Manual Entry View Tracking](#manual-entry-view-tracking)
-  - [Automatic Entry View Tracking](#automatic-entry-view-tracking)
-    - [View Detection Performance Notes](#view-detection-performance-notes)
+- [Entry Interaction Tracking](#entry-interaction-tracking)
+  - [Entry View Tracking](#entry-view-tracking)
+    - [Manual Entry View Tracking](#manual-entry-view-tracking)
+    - [Automatic Entry View Tracking](#automatic-entry-view-tracking)
+      - [View Detection Performance Notes](#view-detection-performance-notes)
   - [Entry Hover Tracking](#entry-hover-tracking)
     - [Hover Detection Performance Notes](#hover-detection-performance-notes)
   - [Entry Click Tracking](#entry-click-tracking)
@@ -735,7 +736,9 @@ Arguments:
 
 - `payload`\*: Component view event builder arguments object
 
-## Entry View Tracking
+## Entry Interaction Tracking
+
+### Entry View Tracking
 
 Tracking of entry/component views is based on the element that contains that entry's content. The
 Optimization Web SDK can automatically track observed entry elements for events such as "component
@@ -747,7 +750,7 @@ Interaction observers are passive with respect to host event flow:
 - They do not call `event.preventDefault()`.
 - They do not call `event.stopPropagation()`.
 
-### Manual Entry View Tracking
+#### Manual Entry View Tracking
 
 To manually track entry views using custom tracking code, simply call `trackView` with the necessary
 arguments when appropriate.
@@ -758,7 +761,7 @@ Example:
 optimization.trackView({ componentId: 'abc-123', ... })
 ```
 
-### Automatic Entry View Tracking
+#### Automatic Entry View Tracking
 
 Entry/component views can be tracked automatically for observed entry-related elements by simply
 setting `autoTrackEntryInteraction.views` to `true`, or by calling the
