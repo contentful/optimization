@@ -13,7 +13,7 @@ import {
   type RenderProp,
   type WrapperElement,
 } from './optimizedEntryUtils'
-import { useOptimizedEntryState } from './useOptimizedEntryState'
+import { useOptimizedEntry } from './useOptimizedEntry'
 
 export type OptimizedEntryLoadingFallback = LoadingFallback
 export type OptimizedEntryWrapperElement = WrapperElement
@@ -107,9 +107,8 @@ export function OptimizedEntry({
   } = baselineEntry
   const { currentAndAncestorBaselineIds, hasDuplicateBaselineAncestor } =
     useDuplicateBaselineGuard(baselineEntryId)
-  const { baselineChildren, isLoading, resolvedData, sdkInitialized } = useOptimizedEntryState({
+  const { entry, isLoading, isReady, resolvedData } = useOptimizedEntry({
     baselineEntry,
-    children,
     liveUpdates,
   })
 
@@ -118,7 +117,7 @@ export function OptimizedEntry({
   }
 
   const hasCustomLoadingFallback = loadingFallback !== undefined
-  const baselineContent = resolveChildren(baselineChildren, baselineEntry)
+  const baselineContent = resolveChildren(children, baselineEntry)
   const resolvedLoadingFallback = hasCustomLoadingFallback ? (
     resolveLoadingFallback(loadingFallback)
   ) : (
@@ -126,12 +125,12 @@ export function OptimizedEntry({
   )
   const { hideLoadingLayoutTarget, loadingContent, showLoadingFallback } =
     resolveLoadingRenderState({
-      baselineChildren,
+      baselineChildren: children,
       baselineEntry,
       hasCustomLoadingFallback,
       isLoading,
       resolvedLoadingFallback,
-      sdkInitialized,
+      sdkInitialized: isReady,
     })
   const dataTestId = dataTestIdProp ?? testId
   const Wrapper = as
@@ -159,7 +158,7 @@ export function OptimizedEntry({
   return (
     <OptimizedEntryNestingContext.Provider value={currentAndAncestorBaselineIds}>
       <Wrapper style={WRAPPER_STYLE} data-testid={dataTestId} {...trackingAttributes}>
-        {resolveChildren(children, resolvedData.entry)}
+        {resolveChildren(children, entry)}
       </Wrapper>
     </OptimizedEntryNestingContext.Provider>
   )

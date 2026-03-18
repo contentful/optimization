@@ -3,33 +3,29 @@ import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { useEffect, useMemo, useState } from 'react'
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
-import { useOptimization } from '../hooks/useOptimization'
-import {
-  hasPersonalizationReferences,
-  resolveShouldLiveUpdate,
-  type OptimizedEntryChildren,
-} from './optimizedEntryUtils'
+import { useOptimizationContext } from '../hooks/useOptimization'
+import { hasPersonalizationReferences, resolveShouldLiveUpdate } from './optimizedEntryUtils'
 
-interface UseOptimizedEntryStateParams {
+export interface UseOptimizedEntryParams {
   baselineEntry: Entry
-  children: OptimizedEntryChildren
-  liveUpdates: boolean | undefined
+  liveUpdates?: boolean
 }
 
-export interface UseOptimizedEntryStateResult {
-  baselineChildren: OptimizedEntryChildren
+export interface UseOptimizedEntryResult {
+  canPersonalize: boolean
+  entry: Entry
   isLoading: boolean
-  lockedSelectedPersonalizations: SelectedPersonalizationArray | undefined
+  isReady: boolean
+  personalization: ResolvedData<EntrySkeletonType>['personalization']
   resolvedData: ResolvedData<EntrySkeletonType>
-  sdkInitialized: boolean
+  selectedPersonalizations: SelectedPersonalizationArray | undefined
 }
 
-export function useOptimizedEntryState({
+export function useOptimizedEntry({
   baselineEntry,
-  children,
   liveUpdates,
-}: UseOptimizedEntryStateParams): UseOptimizedEntryStateResult {
-  const { sdk, isReady } = useOptimization()
+}: UseOptimizedEntryParams): UseOptimizedEntryResult {
+  const { sdk, isReady } = useOptimizationContext()
   const liveUpdatesContext = useLiveUpdates()
   const [lockedSelectedPersonalizations, setLockedSelectedPersonalizations] = useState<
     SelectedPersonalizationArray | undefined
@@ -91,10 +87,12 @@ export function useOptimizedEntryState({
   const isContentReady = requiresPersonalization ? canPersonalize : true
 
   return {
-    baselineChildren: children,
+    canPersonalize,
+    entry: resolvedData.entry,
     isLoading: !isContentReady,
-    lockedSelectedPersonalizations,
+    isReady: sdkInitialized,
+    personalization: resolvedData.personalization,
     resolvedData,
-    sdkInitialized,
+    selectedPersonalizations: lockedSelectedPersonalizations,
   }
 }

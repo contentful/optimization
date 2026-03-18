@@ -38,6 +38,9 @@ export function createObservable<T>(current: T): {
 export function createOptimizationSdk(overrides: Partial<OptimizationSdk> = {}): OptimizationSdk {
   return {
     consent: () => undefined,
+    destroy: () => undefined,
+    getFlag: () => undefined,
+    getMergeTagValue: () => undefined,
     identify: async () => {
       await Promise.resolve()
       return undefined
@@ -63,9 +66,20 @@ export function createOptimizationSdk(overrides: Partial<OptimizationSdk> = {}):
       await Promise.resolve()
       return undefined
     },
+    trackClick: async () => {
+      await Promise.resolve()
+      return undefined
+    },
     trackView: async () => {
       await Promise.resolve()
       return undefined
+    },
+    tracking: {
+      clearElement: () => undefined,
+      disable: () => undefined,
+      disableElement: () => undefined,
+      enable: () => undefined,
+      enableElement: () => undefined,
     },
     ...overrides,
   }
@@ -94,7 +108,7 @@ export function requireOptimizationResult(
   value: UseOptimizationResult | undefined,
 ): UseOptimizationResult {
   if (value === undefined) {
-    throw new Error('Expected optimization hook result to be captured')
+    throw new Error('Expected optimization instance to be captured')
   }
 
   return value

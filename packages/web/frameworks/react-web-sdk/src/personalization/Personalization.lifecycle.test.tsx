@@ -84,6 +84,9 @@ function createRuntime(personalizeEntry: PersonalizeEntry): {
 
   const optimization: RuntimeOptimization = {
     consent: () => undefined,
+    destroy: () => undefined,
+    getFlag: () => undefined,
+    getMergeTagValue: () => undefined,
     identify: async () => {
       await Promise.resolve()
       return undefined
@@ -147,9 +150,20 @@ function createRuntime(personalizeEntry: PersonalizeEntry): {
       await Promise.resolve()
       return undefined
     },
+    trackClick: async () => {
+      await Promise.resolve()
+      return undefined
+    },
     trackView: async () => {
       await Promise.resolve()
       return undefined
+    },
+    tracking: {
+      clearElement: () => undefined,
+      disable: () => undefined,
+      disableElement: () => undefined,
+      enable: () => undefined,
+      enableElement: () => undefined,
     },
   }
 
