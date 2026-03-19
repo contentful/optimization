@@ -1,14 +1,17 @@
 import type ContentfulOptimization from '@contentful/optimization-web'
-import {
-  normalizePersonalizationConfig,
-  SelectedPersonalizationArray as SelectedPersonalizationArraySchema,
-  type AudienceEntrySkeleton,
-  type OptimizationData,
-  type PersonalizationEntry,
-  type PersonalizationEntrySkeleton,
-  type SelectedPersonalizationArray,
+import type {
+  AudienceEntrySkeleton,
+  ChangeArray,
+  OptimizationData,
+  PersonalizationEntry,
+  PersonalizationEntrySkeleton,
+  SelectedPersonalizationArray,
 } from '@contentful/optimization-web/api-schemas'
-import type { PreviewPanelSignalObject } from '@contentful/optimization-web/core-sdk'
+import type {
+  PreviewPanelSignalObject,
+  SignalFns,
+  Signals,
+} from '@contentful/optimization-web/core-sdk'
 import {
   PREVIEW_PANEL_SIGNAL_FNS_SYMBOL,
   PREVIEW_PANEL_SIGNALS_SYMBOL,
@@ -36,7 +39,8 @@ import {
   isRecordRadioGroupChangeEvent,
 } from './components/ctfl-opt-preview-personalization'
 import { getAllEntries, isAudienceEntry, isPersonalizationEntry } from './lib/entries'
-import { applyPersonalizationOverrides } from './lib/overrides'
+import { applyChangeOverrides, applyPersonalizationOverrides } from './lib/overrides'
+import { isChange, isSelectedPersonalization } from './lib/schemaGuards'
 import { createScopedLogger } from './logger'
 
 declare global {
@@ -49,7 +53,10 @@ declare global {
 }
 
 /** @internal */
-let defaults: SelectedPersonalizationArray = []
+let defaults: {
+  selectedPersonalizations?: SelectedPersonalizationArray
+  changes?: ChangeArray
+} = {}
 
 /** @internal */
 const overrides = new Map<string, number>()
@@ -83,20 +90,29 @@ function loadOverrides(): void {
 
 /** @internal */
 function loadDefaults(): void {
-  defaults = []
+  defaults = {}
 
   try {
     const stored = localStorage.getItem(DEFAULTS_STORAGE_KEY)
     if (!stored) return
 
-    const { data, success } = SelectedPersonalizationArraySchema.safeParse(JSON.parse(stored))
-    if (success) defaults = data
+    const parsed = JSON.parse(stored) as unknown
+    if (!isRecord(parsed)) return
+    const { selectedPersonalizations: storedSelectedPersonalizations, changes: storedChanges } =
+      parsed
+
+    defaults.selectedPersonalizations =
+      Array.isArray(storedSelectedPersonalizations) &&
+      storedSelectedPersonalizations.every(isSelectedPersonalization)
+        ? storedSelectedPersonalizations
+        : undefined
+    defaults.changes =
+      Array.isArray(storedChanges) && storedChanges.every(isChange) ? storedChanges : undefined
   } catch (error) {
     storageLogger.warn(`Failed to read localStorage key "${DEFAULTS_STORAGE_KEY}"`, error)
   }
 }
 
-/** @internal */
 function persistOverrideState(): void {
   try {
     if (overrides.size === 0) {
@@ -106,7 +122,9 @@ function persistOverrideState(): void {
     }
 
     localStorage.setItem(OVERRIDES_STORAGE_KEY, JSON.stringify(Object.fromEntries(overrides)))
-    localStorage.setItem(DEFAULTS_STORAGE_KEY, JSON.stringify(defaults))
+    if ((defaults.selectedPersonalizations ?? defaults.changes) !== undefined) {
+      localStorage.setItem(DEFAULTS_STORAGE_KEY, JSON.stringify(defaults))
+    }
   } catch (error) {
     storageLogger.warn('Failed to persist preview panel override state', error)
   }
@@ -115,18 +133,34 @@ function persistOverrideState(): void {
 /** @internal */
 function syncOverrides(
   panel: {
+    personalizationEntries: PersonalizationEntry[]
     defaultSelectedPersonalizations: SelectedPersonalizationArray
     overrides: Map<string, number> | undefined
   },
-  selectedPersonalizationsSignal: { value: SelectedPersonalizationArray | undefined },
+  signals: Pick<Signals, 'changes' | 'selectedPersonalizations'>,
+  signalFns: Pick<SignalFns, 'batch'>,
 ): void {
-  if (defaults.length === 0 && selectedPersonalizationsSignal.value) {
-    defaults = [...selectedPersonalizationsSignal.value]
-    panel.defaultSelectedPersonalizations = [...defaults]
+  if (defaults.selectedPersonalizations === undefined && signals.selectedPersonalizations.value) {
+    defaults.selectedPersonalizations = [...signals.selectedPersonalizations.value]
+    panel.defaultSelectedPersonalizations = [...defaults.selectedPersonalizations]
+  }
+
+  if (defaults.changes === undefined && signals.changes.value) {
+    defaults.changes = [...signals.changes.value]
   }
 
   panel.overrides = new Map(overrides)
-  selectedPersonalizationsSignal.value = applyPersonalizationOverrides(defaults, overrides)
+  signalFns.batch(() => {
+    signals.selectedPersonalizations.value = applyPersonalizationOverrides(
+      defaults.selectedPersonalizations ?? [],
+      overrides,
+    )
+    signals.changes.value = applyChangeOverrides(
+      defaults.changes ?? [],
+      panel.personalizationEntries,
+      overrides,
+    )
+  })
   persistOverrideState()
 }
 
@@ -211,6 +245,11 @@ export default async function attachOptimizationPreviewPanel({
   defineCtflOptPreviewAudience()
   defineCtflOptPreviewPanel()
 
+  const [audiences, personalizationEntries]: [Entry[], Entry[]] = await Promise.all([
+    getAllEntries<AudienceEntrySkeleton>(contentful, 'nt_audience'),
+    getAllEntries<PersonalizationEntrySkeleton>(contentful, 'nt_experience'),
+  ])
+
   const panel = document.createElement(CTFL_OPT_PREVIEW_PANEL_TAG)
   if (!isCtflOptPreviewPanel(panel))
     throw new Error(
@@ -218,17 +257,26 @@ export default async function attachOptimizationPreviewPanel({
     )
 
   panel.overrides = new Map(overrides)
-  panel.defaultSelectedPersonalizations = [...defaults]
+  panel.defaultSelectedPersonalizations = [...(defaults.selectedPersonalizations ?? [])]
+  panel.audiences = audiences.filter(isAudienceEntry)
+  panel.personalizationEntries = personalizationEntries.filter(
+    (personalization): personalization is PersonalizationEntry =>
+      isPersonalizationEntry(personalization),
+  )
 
   contentfulOptimization.interceptors.state.add((states): OptimizationData => {
-    const { selectedPersonalizations, ...otherStates } = states
+    const { changes, selectedPersonalizations, ...otherStates } = states
 
-    defaults = [...selectedPersonalizations]
-    panel.defaultSelectedPersonalizations = defaults
+    defaults = {
+      selectedPersonalizations: [...selectedPersonalizations],
+      changes: [...changes],
+    }
+    panel.defaultSelectedPersonalizations = [...selectedPersonalizations]
     if (overrides.size > 0) persistOverrideState()
 
     return {
       ...otherStates,
+      changes: applyChangeOverrides(changes, panel.personalizationEntries, overrides),
       selectedPersonalizations: applyPersonalizationOverrides(selectedPersonalizations, overrides),
     }
   })
@@ -250,7 +298,7 @@ export default async function attachOptimizationPreviewPanel({
       detail: { key: experienceId, value: variantIndex },
     } = event
     overrides.set(experienceId, variantIndex)
-    syncOverrides(panel, signals.selectedPersonalizations)
+    syncOverrides(panel, signals, signalFns)
   })
 
   panel.addEventListener(CTFL_OPT_PREVIEW_AUDIENCE_SWITCH_CHANGE, (event: Event) => {
@@ -268,13 +316,13 @@ export default async function attachOptimizationPreviewPanel({
       overrides.set(experienceId, variantIndex)
     }
 
-    syncOverrides(panel, signals.selectedPersonalizations)
+    syncOverrides(panel, signals, signalFns)
   })
 
   panel.addEventListener(CTFL_OPT_PREVIEW_PANEL_RESET, () => {
     overrides.clear()
-    syncOverrides(panel, signals.selectedPersonalizations)
-    panel.defaultSelectedPersonalizations = [...defaults]
+    syncOverrides(panel, signals, signalFns)
+    panel.defaultSelectedPersonalizations = [...(defaults.selectedPersonalizations ?? [])]
   })
 
   signalFns.effect(() => {
@@ -284,19 +332,9 @@ export default async function attachOptimizationPreviewPanel({
     if (profile) panel.profile = profile
   })
 
-  const [audiences, personalizationEntries]: [Entry[], Entry[]] = await Promise.all([
-    getAllEntries<AudienceEntrySkeleton>(contentful, 'nt_audience'),
-    getAllEntries<PersonalizationEntrySkeleton>(contentful, 'nt_experience'),
-  ])
-
-  panel.audiences = audiences.filter(isAudienceEntry)
-  panel.personalizationEntries = personalizationEntries.filter(
-    (personalization): personalization is PersonalizationEntry =>
-      isPersonalizationEntry(personalization) &&
-      !normalizePersonalizationConfig(personalization.fields.nt_config).components.some(
-        (component) => component.type === 'InlineVariable',
-      ),
-  )
+  if (overrides.size > 0) {
+    syncOverrides(panel, signals, signalFns)
+  }
 
   document.body.appendChild(panel)
 

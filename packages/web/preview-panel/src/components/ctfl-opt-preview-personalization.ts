@@ -1,9 +1,12 @@
-import {
-  normalizePersonalizationConfig,
-  type PersonalizationEntry,
-} from '@contentful/optimization-web/api-schemas'
+import type { PersonalizationEntry } from '@contentful/optimization-web/api-schemas'
 import { css, html, LitElement, nothing, type TemplateResult } from 'lit'
 import { property } from 'lit/decorators.js'
+
+/** @internal */
+function getDisplayedVariantPercentages(personalization: PersonalizationEntry): number[] {
+  const { distribution = [] } = personalization.fields.nt_config ?? {}
+  return Array.isArray(distribution) ? distribution : []
+}
 
 /**
  * Payload emitted by {@link CtflOptPreviewPersonalization} when a variant radio
@@ -141,19 +144,21 @@ export class CtflOptPreviewPersonalization extends LitElement {
   variantsTemplate(): TemplateResult | string {
     if (!this.personalization) return 'None'
 
-    const { distribution } = normalizePersonalizationConfig(this.personalization.fields.nt_config)
+    const variantPercentages = getDisplayedVariantPercentages(this.personalization)
 
-    if (!distribution.length) return 'None'
+    if (!variantPercentages.length) return 'None'
 
     return html`
-      <div>${distribution.map((dist, index) => this.variantTemplate(dist, index))}</div>
+      <div>
+        ${variantPercentages.map((percentage, index) => this.variantTemplate(percentage, index))}
+      </div>
     `
   }
 
   /**
    * Renders a single variant as a labelled radio input.
    *
-   * @param dist - Distribution weight of this variant (0–1).
+   * @param percentage - Displayed distribution percentage for this variant (0–1).
    * @param index - Zero-based index of the variant.
    * @returns Template for one variant radio button, or `undefined` when the personalization is unset.
    *
@@ -164,7 +169,7 @@ export class CtflOptPreviewPersonalization extends LitElement {
    *
    * @public
    */
-  variantTemplate(dist: number, index: number): TemplateResult | undefined {
+  variantTemplate(percentage: number, index: number): TemplateResult | undefined {
     if (!this.personalization) return
 
     const radioId = `radiogroup-${this.personalization.sys.id}`
@@ -179,7 +184,7 @@ export class CtflOptPreviewPersonalization extends LitElement {
               ></ctfl-opt-preview-indicator>`
             : nothing}
         </span>
-        <span class="variant-dist">${percentageFormatter.format(dist)}</span>
+        <span class="variant-dist">${percentageFormatter.format(percentage)}</span>
         <input
           type="radio"
           name="${radioId}"

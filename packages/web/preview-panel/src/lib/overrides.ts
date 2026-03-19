@@ -1,4 +1,17 @@
-import type { SelectedPersonalizationArray } from '@contentful/optimization-web/api-schemas'
+import type {
+  ChangeArray,
+  InlineVariableComponent,
+  PersonalizationEntry,
+  SelectedPersonalizationArray,
+} from '@contentful/optimization-web/api-schemas'
+import { isInlineVariableComponent } from './schemaGuards'
+
+function getInlineVariableComponents(
+  personalization: PersonalizationEntry,
+): InlineVariableComponent[] {
+  const { components } = personalization.fields.nt_config ?? {}
+  return Array.isArray(components) ? components.filter(isInlineVariableComponent) : []
+}
 
 /**
  * Merges user-selected variant overrides into the given selected personalizations.
@@ -32,10 +45,67 @@ export function applyPersonalizationOverrides(
 
   // Add new overrides not present in selectedPersonalizations
   for (const [experienceId, variantIndex] of overrides) {
-    if (!overridden.some((sel) => sel.experienceId === experienceId)) {
+    if (!overridden.some((selected) => selected.experienceId === experienceId)) {
       overridden.push({ experienceId, variantIndex, variants: {} })
     }
   }
 
   return overridden
+}
+
+/**
+ * Merges user-selected variant overrides into the given custom-flag changes.
+ *
+ * For every overridden experience, any `InlineVariable` components are converted
+ * into `Variable` changes so the runtime flag APIs resolve the selected preview
+ * value from `changes`.
+ *
+ * @param changes - Current array of custom-flag changes.
+ * @param personalizationEntries - Available personalization entries indexed for preview.
+ * @param overrides - Map of experience ID to the desired variant index.
+ * @returns A new array with inline-variable change overrides applied, or the original array when no overrides exist.
+ *
+ * @public
+ */
+export function applyChangeOverrides(
+  changes: ChangeArray,
+  personalizationEntries: PersonalizationEntry[],
+  overrides: Map<string, number>,
+): ChangeArray {
+  if (overrides.size === 0) return changes
+
+  const overrideChanges = personalizationEntries.flatMap((personalization): ChangeArray => {
+    const {
+      fields: { nt_experience_id: experienceId },
+    } = personalization
+    const variantIndex = overrides.get(experienceId)
+
+    if (variantIndex === undefined) return []
+
+    return getInlineVariableComponents(personalization).map((component): ChangeArray[number] => ({
+      key: component.key,
+      type: 'Variable',
+      value:
+        variantIndex === 0
+          ? component.baseline.value
+          : (component.variants[variantIndex - 1]?.value ?? component.baseline.value),
+      meta: {
+        experienceId,
+        variantIndex,
+      },
+    }))
+  })
+
+  if (overrideChanges.length === 0) return changes
+
+  return [
+    ...changes.filter(
+      (change) =>
+        !overrideChanges.some(
+          ({ key, meta: { experienceId } }) =>
+            change.key === key && change.meta.experienceId === experienceId,
+        ),
+    ),
+    ...overrideChanges,
+  ]
 }
