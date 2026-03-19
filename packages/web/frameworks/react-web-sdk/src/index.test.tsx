@@ -1,5 +1,7 @@
 import ContentfulOptimization from '@contentful/optimization-web'
+import type { SelectedPersonalizationArray } from '@contentful/optimization-web/api-schemas'
 import { rs } from '@rstest/core'
+import type { Entry } from 'contentful'
 import type { ReactElement } from 'react'
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -17,10 +19,10 @@ import {
   type OptimizationContextValue,
   type UseOptimizationResult,
 } from './index'
+import { createTestEntry } from './test/entryTestUtils'
 import {
   captureRenderError,
   createOptimizationSdk,
-  createTestEntry,
   requireOptimizationResult,
 } from './test/optimizationTestUtils'
 
@@ -80,7 +82,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     const optimization = requireOptimizationResult(capturedOptimization)
 
     expect(optimization.sdk).toBeInstanceOf(ContentfulOptimization)
-    expect(optimization.trackView).toBeTypeOf('function')
+    expect(optimization.interactionTracking).toBeDefined()
     expect(optimization.resolveEntry).toBeTypeOf('function')
   })
 
@@ -198,8 +200,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     )
   })
 
-  it('exposes tracking and resolved-entry helpers from useOptimization', async () => {
-    const trackViewCalls: unknown[] = []
+  it('exposes interaction tracking and resolved-entry helpers from useOptimization', () => {
     const personalizeEntryCalls: unknown[] = []
     let capturedOptimization: UseOptimizationResult | undefined = undefined
 
@@ -209,7 +210,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     }
 
     const sdk = createOptimizationSdk({
-      personalizeEntry: (entry, selectedPersonalizations) => {
+      personalizeEntry: (entry: Entry, selectedPersonalizations?: SelectedPersonalizationArray) => {
         personalizeEntryCalls.push([entry, selectedPersonalizations])
         return {
           entry: {
@@ -275,11 +276,6 @@ describe('@contentful/optimization-react-web core providers', () => {
           subscribeOnce: () => ({ unsubscribe: () => undefined }),
         },
       },
-      trackView: async (payload) => {
-        trackViewCalls.push(payload)
-        await Promise.resolve()
-        return undefined
-      },
     })
 
     renderToString(
@@ -290,16 +286,8 @@ describe('@contentful/optimization-react-web core providers', () => {
 
     const optimization = requireOptimizationResult(capturedOptimization)
     const baselineEntry = createTestEntry('entry-1')
-    const viewPayload = {
-      componentId: 'hero',
-      variantIndex: 1,
-      viewId: 'view-1',
-      viewDurationMs: 100,
-    }
 
-    await optimization.trackView(viewPayload)
-
-    expect(trackViewCalls).toEqual([viewPayload])
+    expect(optimization.interactionTracking).toBe(sdk.tracking)
     expect(optimization.resolveEntry(baselineEntry).sys.id).toBe('entry-variant')
     expect(optimization.resolveEntryData(baselineEntry)).toEqual({
       entry: {

@@ -5,8 +5,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { LiveUpdatesContextValue } from '../context/LiveUpdatesContext'
 import { LiveUpdatesContext } from '../context/LiveUpdatesContext'
-import { OptimizationContext } from '../context/OptimizationContext'
-import type { OptimizationSdk } from '../types'
+import { OptimizationContext, type OptimizationSdk } from '../context/OptimizationContext'
 import { useOptimizedEntry, type UseOptimizedEntryResult } from './useOptimizedEntry'
 
 type TestEntry = Entry

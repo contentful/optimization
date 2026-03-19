@@ -1,8 +1,7 @@
 import ContentfulOptimization, { type OptimizationWebConfig } from '@contentful/optimization-web'
 import { useEffect, useRef, type PropsWithChildren, type ReactElement } from 'react'
 
-import { OptimizationContext } from '../context/OptimizationContext'
-import type { OptimizationSdk } from '../types'
+import { OptimizationContext, type OptimizationSdk } from '../context/OptimizationContext'
 
 export type OptimizationProviderConfigProps = PropsWithChildren<
   OptimizationWebConfig & {

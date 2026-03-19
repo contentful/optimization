@@ -26,10 +26,6 @@ export function App(): ReactElement {
   const sdkName = useMemo(() => sdk.constructor.name, [sdk])
 
   const handleResolveEntries = (): void => {
-    if (!sdk) {
-      return
-    }
-
     const nextResults: ResolveResult[] = []
 
     entriesById.forEach((entry) => {
@@ -71,16 +67,12 @@ export function App(): ReactElement {
         consent={consent}
         eventLog={eventLog}
         onGrantConsent={() => {
-          if (!sdk) return
           sdk.consent(true)
         }}
         onRevokeConsent={() => {
-          if (!sdk) return
           sdk.consent(false)
         }}
         onIdentify={() => {
-          if (!sdk) return
-
           fireAndReport(
             sdk.identify({
               userId: 'demo-user-123',
@@ -89,12 +81,9 @@ export function App(): ReactElement {
           )
         }}
         onReset={() => {
-          if (!sdk) return
           sdk.reset()
         }}
         onSendPage={() => {
-          if (!sdk) return
-
           fireAndReport(
             sdk.page({
               properties: { title: 'React Web SDK Dev Harness', path: '/dev' },
@@ -102,8 +91,6 @@ export function App(): ReactElement {
           )
         }}
         onSendTrack={() => {
-          if (!sdk) return
-
           fireAndReport(
             sdk.track({
               event: 'dev_app_custom_event',

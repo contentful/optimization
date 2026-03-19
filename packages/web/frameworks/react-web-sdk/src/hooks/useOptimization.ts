@@ -3,8 +3,11 @@ import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { useContext, useMemo } from 'react'
 
-import { OptimizationContext, type OptimizationContextValue } from '../context/OptimizationContext'
-import type { OptimizationSdk } from '../types'
+import {
+  OptimizationContext,
+  type OptimizationContextValue,
+  type OptimizationSdk,
+} from '../context/OptimizationContext'
 
 function getMissingProviderError(): Error {
   return new Error(
@@ -23,7 +26,14 @@ export function useOptimizationContext(): OptimizationContextValue {
   return context
 }
 
-export interface UseOptimizationResult extends OptimizationSdk {
+export interface UseOptimizationResult {
+  readonly consent: OptimizationSdk['consent']
+  readonly getFlag: OptimizationSdk['getFlag']
+  readonly getMergeTagValue: OptimizationSdk['getMergeTagValue']
+  readonly identify: OptimizationSdk['identify']
+  readonly interactionTracking: OptimizationSdk['tracking']
+  readonly page: OptimizationSdk['page']
+  readonly personalizeEntry: OptimizationSdk['personalizeEntry']
   readonly resolveEntry: (
     entry: Entry,
     selectedPersonalizations?: SelectedPersonalizationArray,
@@ -33,6 +43,7 @@ export interface UseOptimizationResult extends OptimizationSdk {
     selectedPersonalizations?: SelectedPersonalizationArray,
   ) => ResolvedData<EntrySkeletonType>
   readonly sdk: OptimizationSdk
+  readonly track: OptimizationSdk['track']
 }
 
 function resolveEntryData(
@@ -65,30 +76,19 @@ export function useOptimization(): UseOptimizationResult {
       consent: (value) => {
         sdk.consent(value)
       },
-      destroy: () => {
-        sdk.destroy()
-      },
       getFlag: (name, changes) => sdk.getFlag(name, changes),
       getMergeTagValue: (embeddedEntryNodeTarget, profile) =>
         sdk.getMergeTagValue(embeddedEntryNodeTarget, profile),
       identify: async (payload) => await sdk.identify(payload),
+      interactionTracking: sdk.tracking,
       page: async (payload) => await sdk.page(payload),
-      personalizeEntry: (entry, selectedPersonalizations) =>
+      personalizeEntry: (entry: Entry, selectedPersonalizations?: SelectedPersonalizationArray) =>
         sdk.personalizeEntry(entry, selectedPersonalizations),
-      reset: () => {
-        sdk.reset()
-      },
       resolveEntry: (entry, selectedPersonalizations) =>
         resolveEntryData(sdk, entry, selectedPersonalizations).entry,
       resolveEntryData: (entry, selectedPersonalizations) =>
         resolveEntryData(sdk, entry, selectedPersonalizations),
-      states: sdk.states,
-      tracking: sdk.tracking,
       track: async (payload) => await sdk.track(payload),
-      trackClick: async (payload) => {
-        await sdk.trackClick(payload)
-      },
-      trackView: async (payload) => await sdk.trackView(payload),
     }),
     [sdk],
   )

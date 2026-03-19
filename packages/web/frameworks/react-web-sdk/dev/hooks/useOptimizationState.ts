@@ -1,6 +1,6 @@
 import type { Profile, SelectedPersonalizationArray } from '@contentful/optimization-api-schemas'
 import { useEffect, useState } from 'react'
-import type { OptimizationSdk } from '../../src/types'
+import type { OptimizationSdk } from '../../src/context/OptimizationContext'
 
 const MAX_EVENT_LOG_ITEMS = 20
 
