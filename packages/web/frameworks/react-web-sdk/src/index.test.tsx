@@ -19,12 +19,13 @@ import {
   type OptimizationContextValue,
   type UseOptimizationResult,
 } from './index'
-import { createTestEntry } from './test/entryTestUtils'
 import {
   captureRenderError,
+  createObservable,
   createOptimizationSdk,
+  createTestEntry,
   requireOptimizationResult,
-} from './test/optimizationTestUtils'
+} from './test/sdkTestUtils'
 
 const testConfig = {
   clientId: 'test-client-id',
@@ -33,21 +34,7 @@ const testConfig = {
   personalization: { baseUrl: 'http://localhost:8000/experience/' },
 }
 
-function cleanupGlobalInstance(): void {
-  if (typeof window !== 'undefined' && window.contentfulOptimization) {
-    window.contentfulOptimization.destroy()
-  }
-}
-
 describe('@contentful/optimization-react-web core providers', () => {
-  void beforeEach(() => {
-    cleanupGlobalInstance()
-  })
-
-  void afterEach(() => {
-    cleanupGlobalInstance()
-  })
-
   it('exports core API symbols', () => {
     expect(OptimizationContext).toBeDefined()
     expect(LiveUpdatesProvider).toBeTypeOf('function')
@@ -224,57 +211,13 @@ describe('@contentful/optimization-react-web core providers', () => {
         }
       },
       states: {
-        blockedEventStream: {
-          current: undefined,
-          subscribe: () => ({ unsubscribe: () => undefined }),
-          subscribeOnce: () => ({ unsubscribe: () => undefined }),
-        },
-        canPersonalize: {
-          current: false,
-          subscribe: () => ({ unsubscribe: () => undefined }),
-          subscribeOnce: () => ({ unsubscribe: () => undefined }),
-        },
-        consent: {
-          current: undefined,
-          subscribe: () => ({ unsubscribe: () => undefined }),
-          subscribeOnce: () => ({ unsubscribe: () => undefined }),
-        },
-        eventStream: {
-          current: undefined,
-          subscribe: () => ({ unsubscribe: () => undefined }),
-          subscribeOnce: () => ({ unsubscribe: () => undefined }),
-        },
-        flag: () => ({
-          current: undefined,
-          subscribe: () => ({ unsubscribe: () => undefined }),
-          subscribeOnce: () => ({ unsubscribe: () => undefined }),
-        }),
-        previewPanelAttached: {
-          current: false,
-          subscribe: () => ({ unsubscribe: () => undefined }),
-          subscribeOnce: () => ({ unsubscribe: () => undefined }),
-        },
-        previewPanelOpen: {
-          current: false,
-          subscribe: () => ({ unsubscribe: () => undefined }),
-          subscribeOnce: () => ({ unsubscribe: () => undefined }),
-        },
-        profile: {
-          current: undefined,
-          subscribe: () => ({ unsubscribe: () => undefined }),
-          subscribeOnce: () => ({ unsubscribe: () => undefined }),
-        },
-        selectedPersonalizations: {
-          current: [
-            {
-              experienceId: 'exp-a',
-              variantIndex: 1,
-              variants: { baseline: 'entry-variant' },
-            },
-          ],
-          subscribe: () => ({ unsubscribe: () => undefined }),
-          subscribeOnce: () => ({ unsubscribe: () => undefined }),
-        },
+        selectedPersonalizations: createObservable([
+          {
+            experienceId: 'exp-a',
+            variantIndex: 1,
+            variants: { baseline: 'entry-variant' },
+          },
+        ]),
       },
     })
 
@@ -404,7 +347,6 @@ describe('@contentful/optimization-react-web core providers', () => {
     }
 
     renderToString(<FirstScenario />)
-    cleanupGlobalInstance()
     renderToString(<SecondScenario />)
 
     expect(results).toEqual([true, false, true])
