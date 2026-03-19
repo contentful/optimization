@@ -1,5 +1,10 @@
 import ContentfulOptimization from '@contentful/optimization-web'
+import type { SelectedPersonalizationArray } from '@contentful/optimization-web/api-schemas'
+import { rs } from '@rstest/core'
+import type { Entry } from 'contentful'
 import type { ReactElement } from 'react'
+import { act } from 'react'
+import { createRoot } from 'react-dom/client'
 import { renderToString } from 'react-dom/server'
 import {
   LiveUpdatesProvider,
@@ -7,11 +12,19 @@ import {
   OptimizationProvider,
   OptimizationRoot,
   OptimizedEntry,
-  useAnalytics,
   useLiveUpdates,
   useOptimization,
-  usePersonalization,
+  useOptimizationContext,
+  useOptimizedEntry,
+  type OptimizationContextValue,
+  type UseOptimizationResult,
 } from './index'
+import { createTestEntry } from './test/entryTestUtils'
+import {
+  captureRenderError,
+  createOptimizationSdk,
+  requireOptimizationResult,
+} from './test/optimizationTestUtils'
 
 const testConfig = {
   clientId: 'test-client-id',
@@ -41,17 +54,17 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(OptimizationProvider).toBeTypeOf('function')
     expect(OptimizationRoot).toBeTypeOf('function')
     expect(useOptimization).toBeTypeOf('function')
+    expect(useOptimizationContext).toBeTypeOf('function')
+    expect(useOptimizedEntry).toBeTypeOf('function')
     expect(useLiveUpdates).toBeTypeOf('function')
-    expect(usePersonalization).toBeTypeOf('function')
     expect(OptimizedEntry).toBeTypeOf('function')
-    expect(useAnalytics).toBeTypeOf('function')
   })
 
   it('creates optimization instance from config props via OptimizationProvider', () => {
-    let capturedInstance: ContentfulOptimization | null = null
+    let capturedOptimization: UseOptimizationResult | undefined = undefined
 
     function Probe(): null {
-      capturedInstance = useOptimization()
+      capturedOptimization = useOptimization()
       return null
     }
 
@@ -66,15 +79,19 @@ describe('@contentful/optimization-react-web core providers', () => {
       </OptimizationProvider>,
     )
 
-    expect(capturedInstance).toBeInstanceOf(ContentfulOptimization)
+    const optimization = requireOptimizationResult(capturedOptimization)
+
+    expect(optimization.sdk).toBeInstanceOf(ContentfulOptimization)
+    expect(optimization.interactionTracking).toBeDefined()
+    expect(optimization.resolveEntry).toBeTypeOf('function')
   })
 
   it('provides optimization and live updates from OptimizationRoot', () => {
-    let capturedInstance: ContentfulOptimization | null = null
+    let capturedOptimization: UseOptimizationResult | undefined = undefined
     let capturedGlobalLiveUpdates: boolean | null = null
 
     function Probe(): null {
-      capturedInstance = useOptimization()
+      capturedOptimization = useOptimization()
       const { globalLiveUpdates } = useLiveUpdates()
       capturedGlobalLiveUpdates = globalLiveUpdates
       return null
@@ -92,7 +109,9 @@ describe('@contentful/optimization-react-web core providers', () => {
       </OptimizationRoot>,
     )
 
-    expect(capturedInstance).toBeInstanceOf(ContentfulOptimization)
+    const optimization = requireOptimizationResult(capturedOptimization)
+
+    expect(optimization.sdk).toBeInstanceOf(ContentfulOptimization)
     expect(capturedGlobalLiveUpdates).toBe(true)
   })
 
@@ -102,13 +121,7 @@ describe('@contentful/optimization-react-web core providers', () => {
       return null
     }
 
-    let capturedError: unknown = null
-
-    try {
-      renderToString(<BrokenProbe />)
-    } catch (error: unknown) {
-      capturedError = error
-    }
+    const capturedError = captureRenderError(<BrokenProbe />)
 
     expect(capturedError).toBeInstanceOf(Error)
     if (!(capturedError instanceof Error)) {
@@ -119,6 +132,195 @@ describe('@contentful/optimization-react-web core providers', () => {
       'useOptimization must be used within an OptimizationProvider',
     )
     expect(capturedError.message).toContain('<OptimizationRoot clientId="your-client-id">')
+  })
+
+  it('returns provider initialization state from useOptimizationContext when the sdk is unavailable', () => {
+    const initializationError = new Error('SDK initialization failed.')
+    let capturedContext: OptimizationContextValue | null = null
+
+    function Probe(): null {
+      capturedContext = useOptimizationContext()
+      return null
+    }
+
+    renderToString(
+      <OptimizationContext.Provider
+        value={{ sdk: undefined, isReady: false, error: initializationError }}
+      >
+        <Probe />
+      </OptimizationContext.Provider>,
+    )
+
+    expect(capturedContext).toEqual(
+      expect.objectContaining({
+        sdk: undefined,
+        isReady: false,
+        error: initializationError,
+      }),
+    )
+  })
+
+  it('throws when useOptimization is called before readiness', () => {
+    function BrokenProbe(): null {
+      useOptimization()
+      return null
+    }
+
+    const capturedError = captureRenderError(
+      <OptimizationContext.Provider
+        value={{ sdk: undefined, isReady: false, error: new Error('SDK unavailable.') }}
+      >
+        <BrokenProbe />
+      </OptimizationContext.Provider>,
+    )
+
+    expect(capturedError).toBeInstanceOf(Error)
+    if (!(capturedError instanceof Error)) {
+      throw new Error('Expected useOptimization to throw an Error')
+    }
+
+    expect(capturedError.message).toContain('ContentfulOptimization SDK failed to initialize')
+  })
+
+  it('throws actionable error when useOptimizationContext is called outside provider', () => {
+    function BrokenProbe(): null {
+      useOptimizationContext()
+      return null
+    }
+
+    const capturedError = captureRenderError(<BrokenProbe />)
+
+    expect(capturedError).toBeInstanceOf(Error)
+    if (!(capturedError instanceof Error)) {
+      throw new Error('Expected useOptimizationContext to throw an Error')
+    }
+
+    expect(capturedError.message).toContain(
+      'useOptimization must be used within an OptimizationProvider',
+    )
+  })
+
+  it('exposes interaction tracking and resolved-entry helpers from useOptimization', () => {
+    const personalizeEntryCalls: unknown[] = []
+    let capturedOptimization: UseOptimizationResult | undefined = undefined
+
+    function Probe(): null {
+      capturedOptimization = useOptimization()
+      return null
+    }
+
+    const sdk = createOptimizationSdk({
+      personalizeEntry: (entry: Entry, selectedPersonalizations?: SelectedPersonalizationArray) => {
+        personalizeEntryCalls.push([entry, selectedPersonalizations])
+        return {
+          entry: {
+            ...entry,
+            sys: {
+              ...entry.sys,
+              id: 'entry-variant',
+            },
+          },
+          personalization: undefined,
+        }
+      },
+      states: {
+        blockedEventStream: {
+          current: undefined,
+          subscribe: () => ({ unsubscribe: () => undefined }),
+          subscribeOnce: () => ({ unsubscribe: () => undefined }),
+        },
+        canPersonalize: {
+          current: false,
+          subscribe: () => ({ unsubscribe: () => undefined }),
+          subscribeOnce: () => ({ unsubscribe: () => undefined }),
+        },
+        consent: {
+          current: undefined,
+          subscribe: () => ({ unsubscribe: () => undefined }),
+          subscribeOnce: () => ({ unsubscribe: () => undefined }),
+        },
+        eventStream: {
+          current: undefined,
+          subscribe: () => ({ unsubscribe: () => undefined }),
+          subscribeOnce: () => ({ unsubscribe: () => undefined }),
+        },
+        flag: () => ({
+          current: undefined,
+          subscribe: () => ({ unsubscribe: () => undefined }),
+          subscribeOnce: () => ({ unsubscribe: () => undefined }),
+        }),
+        previewPanelAttached: {
+          current: false,
+          subscribe: () => ({ unsubscribe: () => undefined }),
+          subscribeOnce: () => ({ unsubscribe: () => undefined }),
+        },
+        previewPanelOpen: {
+          current: false,
+          subscribe: () => ({ unsubscribe: () => undefined }),
+          subscribeOnce: () => ({ unsubscribe: () => undefined }),
+        },
+        profile: {
+          current: undefined,
+          subscribe: () => ({ unsubscribe: () => undefined }),
+          subscribeOnce: () => ({ unsubscribe: () => undefined }),
+        },
+        selectedPersonalizations: {
+          current: [
+            {
+              experienceId: 'exp-a',
+              variantIndex: 1,
+              variants: { baseline: 'entry-variant' },
+            },
+          ],
+          subscribe: () => ({ unsubscribe: () => undefined }),
+          subscribeOnce: () => ({ unsubscribe: () => undefined }),
+        },
+      },
+    })
+
+    renderToString(
+      <OptimizationContext.Provider value={{ sdk, isReady: true, error: undefined }}>
+        <Probe />
+      </OptimizationContext.Provider>,
+    )
+
+    const optimization = requireOptimizationResult(capturedOptimization)
+    const baselineEntry = createTestEntry('entry-1')
+
+    expect(optimization.interactionTracking).toBe(sdk.tracking)
+    expect(optimization.resolveEntry(baselineEntry).sys.id).toBe('entry-variant')
+    expect(optimization.resolveEntryData(baselineEntry)).toEqual({
+      entry: {
+        ...baselineEntry,
+        sys: {
+          ...baselineEntry.sys,
+          id: 'entry-variant',
+        },
+      },
+      personalization: undefined,
+    })
+    expect(personalizeEntryCalls).toEqual([
+      [
+        baselineEntry,
+        [
+          {
+            experienceId: 'exp-a',
+            variantIndex: 1,
+            variants: { baseline: 'entry-variant' },
+          },
+        ],
+      ],
+      [
+        baselineEntry,
+        [
+          {
+            experienceId: 'exp-a',
+            variantIndex: 1,
+            variants: { baseline: 'entry-variant' },
+          },
+        ],
+      ],
+    ])
   })
 
   it('defaults liveUpdates to false in OptimizationRoot', () => {
@@ -150,13 +352,7 @@ describe('@contentful/optimization-react-web core providers', () => {
       return null
     }
 
-    let capturedError: unknown = null
-
-    try {
-      renderToString(<BrokenProbe />)
-    } catch (error: unknown) {
-      capturedError = error
-    }
+    const capturedError = captureRenderError(<BrokenProbe />)
 
     expect(capturedError).toBeInstanceOf(Error)
     if (!(capturedError instanceof Error)) {
@@ -214,13 +410,86 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(results).toEqual([true, false, true])
   })
 
-  it('keeps non-core hooks inert placeholders for now', async () => {
-    const personalization = usePersonalization()
-    const analytics = useAnalytics()
+  it('destroys the optimization singleton on provider unmount', () => {
+    const container = document.createElement('div')
+    document.body.append(container)
+    const root = createRoot(container)
 
-    expect(personalization.resolveEntry({ id: 'entry-1' })).toEqual({ id: 'entry-1' })
-    await expect(analytics.identify('user-1')).resolves.toBeUndefined()
-    await expect(analytics.track({ event: 'view' })).resolves.toBeUndefined()
-    await expect(analytics.reset()).resolves.toBeUndefined()
+    act(() => {
+      root.render(
+        <OptimizationProvider
+          clientId={testConfig.clientId}
+          environment={testConfig.environment}
+          analytics={testConfig.analytics}
+          personalization={testConfig.personalization}
+        >
+          <div />
+        </OptimizationProvider>,
+      )
+    })
+
+    expect(window.contentfulOptimization).toBeInstanceOf(ContentfulOptimization)
+
+    act(() => {
+      root.unmount()
+    })
+
+    expect(window.contentfulOptimization).toBeUndefined()
+
+    const remountRoot = createRoot(container)
+
+    act(() => {
+      remountRoot.render(
+        <OptimizationProvider
+          clientId={testConfig.clientId}
+          environment={testConfig.environment}
+          analytics={testConfig.analytics}
+          personalization={testConfig.personalization}
+        >
+          <div />
+        </OptimizationProvider>,
+      )
+    })
+
+    expect(window.contentfulOptimization).toBeInstanceOf(ContentfulOptimization)
+
+    act(() => {
+      remountRoot.unmount()
+    })
+
+    container.remove()
+  })
+
+  it('uses an injected sdk instance without taking ownership of teardown', () => {
+    const sdk = createOptimizationSdk()
+    const destroySpy = rs.spyOn(sdk, 'destroy')
+    let capturedOptimization: UseOptimizationResult | undefined = undefined
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+
+    function Probe(): null {
+      capturedOptimization = useOptimization()
+      return null
+    }
+
+    act(() => {
+      root.render(
+        <OptimizationProvider sdk={sdk}>
+          <Probe />
+        </OptimizationProvider>,
+      )
+    })
+
+    const optimization = requireOptimizationResult(capturedOptimization)
+
+    expect(optimization.sdk).toBe(sdk)
+
+    act(() => {
+      root.unmount()
+    })
+
+    expect(destroySpy).not.toHaveBeenCalled()
+    container.remove()
   })
 })

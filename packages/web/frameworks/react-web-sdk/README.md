@@ -7,12 +7,12 @@ React Web SDK package for `@contentful/optimization-react-web`.
 Core root/provider primitives and React-facing APIs are implemented.
 
 - `OptimizationProvider` + `useOptimization()` context behavior
+- `useOptimizationContext()` readiness/error access
 - `LiveUpdatesProvider` + `useLiveUpdates()` global live updates context
 - `OptimizationRoot` provider composition and defaults
-- `useAnalytics()` helper hook for common analytics event emission
-- `usePersonalization()` helper hook for entry resolution flows
-- `Personalization` entry resolution, lock/live-update behavior, loading fallback, and
-  data-attribute mapping
+- `useOptimizedEntry()` imperative personalization resolution
+- `OptimizedEntry` entry resolution, lock/live-update behavior, loading fallback, and data-attribute
+  mapping
 
 ## Purpose
 
@@ -52,7 +52,8 @@ pnpm dev
 ### Initialization
 
 Pass configuration props directly to `OptimizationRoot` (recommended) or `OptimizationProvider`. The
-SDK is initialized internally by the provider.
+SDK is initialized internally by the provider. `OptimizationProvider` can also receive a prebuilt
+`sdk` instance when ownership needs to stay outside React.
 
 ```tsx
 import { OptimizationRoot } from '@contentful/optimization-react-web'
@@ -95,20 +96,24 @@ Available config props:
 
 ### Hooks
 
-- `useOptimization()` returns the current SDK instance.
+- `useOptimization()` returns the initialized `ContentfulOptimization` instance.
+- `useOptimizationContext()` returns `{ sdk, isReady, error }` without requiring readiness.
+- `useOptimizedEntry({ baselineEntry, liveUpdates })` returns resolved entry data and
+  personalization state for imperative consumers.
 - `useOptimization()` throws if used outside `OptimizationProvider`.
+- `useOptimization()` also throws if the provider exists but the SDK is not ready.
 - `useLiveUpdates()` throws if used outside `LiveUpdatesProvider`.
 
 ### Personalization Component
 
 ```tsx
-import { Personalization } from '@contentful/optimization-react-web'
-;<Personalization baselineEntry={baselineEntry}>
+import { OptimizedEntry } from '@contentful/optimization-react-web'
+;<OptimizedEntry baselineEntry={baselineEntry}>
   {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
-</Personalization>
+</OptimizedEntry>
 ```
 
-`Personalization` behavior:
+`OptimizedEntry` behavior:
 
 - Default mode locks to the first non-`undefined` personalization state.
 - `liveUpdates={true}` enables continuous updates as personalization state changes.
@@ -126,12 +131,12 @@ import { Personalization } from '@contentful/optimization-react-web'
 When `loadingFallback` is provided, it is rendered while readiness is unresolved.
 
 ```tsx
-<Personalization
+<OptimizedEntry
   baselineEntry={baselineEntry}
   loadingFallback={() => <Skeleton label="Loading personalized content" />}
 >
   {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
-</Personalization>
+</OptimizedEntry>
 ```
 
 - If a baseline entry is personalizable and unresolved, loading UI is rendered by default.
@@ -147,15 +152,15 @@ When `loadingFallback` is provided, it is rendered while readiness is unresolved
 Nested personalizations are supported by explicit composition:
 
 ```tsx
-<Personalization baselineEntry={parentEntry}>
+<OptimizedEntry baselineEntry={parentEntry}>
   {(resolvedParent) => (
     <ParentSection entry={resolvedParent}>
-      <Personalization baselineEntry={childEntry}>
+      <OptimizedEntry baselineEntry={childEntry}>
         {(resolvedChild) => <ChildSection entry={resolvedChild} />}
-      </Personalization>
+      </OptimizedEntry>
     </ParentSection>
   )}
-</Personalization>
+</OptimizedEntry>
 ```
 
 Nesting guard behavior:

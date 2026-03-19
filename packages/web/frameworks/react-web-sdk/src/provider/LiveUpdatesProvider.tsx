@@ -1,7 +1,7 @@
 import type { PropsWithChildren, ReactElement } from 'react'
 import { useEffect, useState } from 'react'
 import { LiveUpdatesContext } from '../context/LiveUpdatesContext'
-import { useOptimization } from '../hooks/useOptimization'
+import { useOptimizationContext } from '../hooks/useOptimization'
 
 export interface LiveUpdatesProviderProps extends PropsWithChildren {
   readonly globalLiveUpdates?: boolean
@@ -11,17 +11,22 @@ export function LiveUpdatesProvider({
   children,
   globalLiveUpdates = false,
 }: LiveUpdatesProviderProps): ReactElement {
-  const contentfulOptimization = useOptimization()
+  const { sdk, isReady } = useOptimizationContext()
   const [previewPanelVisible, setPreviewPanelVisible] = useState(false)
 
   useEffect(() => {
-    const sub = contentfulOptimization.states.previewPanelOpen.subscribe((isOpen: boolean) => {
+    if (!sdk || !isReady) {
+      return
+    }
+
+    const sub = sdk.states.previewPanelOpen.subscribe((isOpen: boolean) => {
       setPreviewPanelVisible(isOpen)
     })
+
     return () => {
       sub.unsubscribe()
     }
-  }, [contentfulOptimization])
+  }, [isReady, sdk])
 
   return (
     <LiveUpdatesContext.Provider

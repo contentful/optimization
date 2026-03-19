@@ -3,10 +3,10 @@ import type { ReactElement } from 'react'
 import { LiveUpdatesProvider } from '../provider/LiveUpdatesProvider'
 import {
   OptimizationProvider,
-  type OptimizationProviderProps,
+  type OptimizationProviderConfigProps,
 } from '../provider/OptimizationProvider'
 
-export type OptimizationRootProps = OptimizationProviderProps & {
+export type OptimizationRootProps = OptimizationProviderConfigProps & {
   readonly liveUpdates?: boolean
 }
 

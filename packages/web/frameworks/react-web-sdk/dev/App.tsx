@@ -9,11 +9,11 @@ import { StateSection } from './sections/StateSection'
 import type { ResolveResult } from './types'
 
 export function App(): ReactElement {
-  const contentfulOptimization = useOptimization()
+  const { sdk } = useOptimization()
   const { globalLiveUpdates, previewPanelVisible } = useLiveUpdates()
   const { entriesById, loading: entriesLoading, error: entriesError } = useDevEntries()
   const { consent, profile, personalizations, previewPanelOpen, eventLog } =
-    useOptimizationState(contentfulOptimization)
+    useOptimizationState(sdk)
   const [resolveResults, setResolveResults] = useState<ResolveResult[]>([])
 
   const baselineDefault = entriesById.get(BASELINE_IDS.default)
@@ -23,13 +23,13 @@ export function App(): ReactElement {
   const baselineNestedChild = entriesById.get(BASELINE_IDS.nestedChild)
 
   const { size: resolvedEntryCount } = entriesById
-  const sdkName = useMemo(() => contentfulOptimization.constructor.name, [contentfulOptimization])
+  const sdkName = useMemo(() => sdk.constructor.name, [sdk])
 
   const handleResolveEntries = (): void => {
     const nextResults: ResolveResult[] = []
 
     entriesById.forEach((entry) => {
-      const resolved = contentfulOptimization.personalizeEntry(entry, personalizations)
+      const resolved = sdk.personalizeEntry(entry, personalizations)
       nextResults.push({
         baselineId: entry.sys.id,
         resolvedId: resolved.entry.sys.id,
@@ -67,32 +67,32 @@ export function App(): ReactElement {
         consent={consent}
         eventLog={eventLog}
         onGrantConsent={() => {
-          contentfulOptimization.consent(true)
+          sdk.consent(true)
         }}
         onRevokeConsent={() => {
-          contentfulOptimization.consent(false)
+          sdk.consent(false)
         }}
         onIdentify={() => {
           fireAndReport(
-            contentfulOptimization.identify({
+            sdk.identify({
               userId: 'demo-user-123',
               traits: { plan: 'pro', region: 'eu', source: 'react-web-sdk-dev' },
             }),
           )
         }}
         onReset={() => {
-          contentfulOptimization.reset()
+          sdk.reset()
         }}
         onSendPage={() => {
           fireAndReport(
-            contentfulOptimization.page({
+            sdk.page({
               properties: { title: 'React Web SDK Dev Harness', path: '/dev' },
             }),
           )
         }}
         onSendTrack={() => {
           fireAndReport(
-            contentfulOptimization.track({
+            sdk.track({
               event: 'dev_app_custom_event',
               properties: { source: 'react-web-sdk/dev/App.tsx' },
             }),
