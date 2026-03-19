@@ -3,6 +3,7 @@ packages:
   - packages/react-native-sdk
   - packages/web/*
   - packages/web/frameworks/*
+  - packages/ios/*
   - packages/node/node-sdk
   - packages/universal/*
 
