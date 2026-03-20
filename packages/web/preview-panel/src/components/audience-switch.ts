@@ -3,44 +3,42 @@ import { property, state } from 'lit/decorators.js'
 import { ifDefined } from 'lit/directives/if-defined.js'
 
 /**
- * Custom element tag name for {@link CtflOptPreviewAudienceSwitch}.
+ * Custom element tag name for {@link AudienceSwitch}.
  *
  * @public
  */
-export const CTFL_OPT_PREVIEW_AUDIENCE_SWITCH_TAG = 'ctfl-opt-preview-audience-switch' as const
+export const AUDIENCE_SWITCH_TAG = 'ctfl-opt-preview-audience-switch' as const
 
 /**
- * Type guard that checks whether an element is a {@link CtflOptPreviewAudienceSwitch}.
+ * Type guard that checks whether an element is a {@link AudienceSwitch}.
  *
  * @param element - The element to check.
- * @returns `true` if the element's tag matches {@link CTFL_OPT_PREVIEW_AUDIENCE_SWITCH_TAG}.
+ * @returns `true` if the element's tag matches {@link AUDIENCE_SWITCH_TAG}.
  *
  * @example
  * ```ts
- * if (isCtflOptPreviewAudienceSwitch(el)) {
+ * if (isAudienceSwitch(el)) {
  *   el.value = true
  * }
  * ```
  *
  * @public
  */
-export function isCtflOptPreviewAudienceSwitch(
-  element?: Element,
-): element is CtflOptPreviewAudienceSwitch {
-  return element?.tagName === CTFL_OPT_PREVIEW_AUDIENCE_SWITCH_TAG.toUpperCase()
+export function isAudienceSwitch(element?: Element): element is AudienceSwitch {
+  return element?.tagName === AUDIENCE_SWITCH_TAG.toUpperCase()
 }
 
 /**
  * Three-state audience toggle rendered as a radio group.
  *
- * Updates {@link CtflOptPreviewAudienceSwitch.value} to `false`, `undefined`,
+ * Updates {@link AudienceSwitch.value} to `false`, `undefined`,
  * or `true` and re-emits a host-level `change` event when the selection changes.
  *
  * @see {@link LitElement}
  *
  * @public
  */
-export class CtflOptPreviewAudienceSwitch extends LitElement {
+export class AudienceSwitch extends LitElement {
   /** @internal */
   private readonly _fieldName = `audience-state-${Math.random().toString(36).slice(2)}`
 
@@ -201,17 +199,17 @@ export class CtflOptPreviewAudienceSwitch extends LitElement {
 }
 
 /**
- * Registers the {@link CtflOptPreviewAudienceSwitch} custom element if not already defined.
+ * Registers the {@link AudienceSwitch} custom element if not already defined.
  *
  * @example
  * ```ts
- * defineCtflOptPreviewAudienceSwitch()
+ * defineAudienceSwitch()
  * ```
  *
  * @public
  */
-export function defineCtflOptPreviewAudienceSwitch(): void {
-  if (!customElements.get(CTFL_OPT_PREVIEW_AUDIENCE_SWITCH_TAG)) {
-    customElements.define(CTFL_OPT_PREVIEW_AUDIENCE_SWITCH_TAG, CtflOptPreviewAudienceSwitch)
+export function defineAudienceSwitch(): void {
+  if (!customElements.get(AUDIENCE_SWITCH_TAG)) {
+    customElements.define(AUDIENCE_SWITCH_TAG, AudienceSwitch)
   }
 }

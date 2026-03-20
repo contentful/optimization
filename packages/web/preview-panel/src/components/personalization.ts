@@ -9,7 +9,7 @@ function getDisplayedVariantPercentages(personalization: PersonalizationEntry): 
 }
 
 /**
- * Payload emitted by {@link CtflOptPreviewPersonalization} when a variant radio
+ * Payload emitted by {@link Personalization} when a variant radio
  * selection changes.
  *
  * @public
@@ -51,31 +51,29 @@ export function isRecordRadioGroupChangeEvent(event: Event): event is RecordRadi
 }
 
 /**
- * Custom element tag name for {@link CtflOptPreviewPersonalization}.
+ * Custom element tag name for {@link Personalization}.
  *
  * @public
  */
-export const CTFL_OPT_PREVIEW_PERSONALIZATION_TAG = 'ctfl-opt-preview-personalization' as const
+export const PERSONALIZATION_TAG = 'ctfl-opt-preview-personalization' as const
 
 /**
- * Type guard that checks whether an element is a {@link CtflOptPreviewPersonalization}.
+ * Type guard that checks whether an element is a {@link Personalization}.
  *
  * @param element - The element to check.
- * @returns `true` if the element's tag matches {@link CTFL_OPT_PREVIEW_PERSONALIZATION_TAG}.
+ * @returns `true` if the element's tag matches {@link PERSONALIZATION_TAG}.
  *
  * @example
  * ```ts
- * if (isCtflOptPreviewPersonalization(el)) {
+ * if (isPersonalization(el)) {
  *   el.personalization = entry
  * }
  * ```
  *
  * @public
  */
-export function isCtflOptPreviewPersonalization(
-  element?: Element,
-): element is CtflOptPreviewPersonalization {
-  return element?.tagName === CTFL_OPT_PREVIEW_PERSONALIZATION_TAG.toUpperCase()
+export function isPersonalization(element?: Element): element is Personalization {
+  return element?.tagName === PERSONALIZATION_TAG.toUpperCase()
 }
 
 /** @internal */
@@ -93,7 +91,7 @@ const percentageFormatter = new Intl.NumberFormat(undefined, {
  *
  * @public
  */
-export class CtflOptPreviewPersonalization extends LitElement {
+export class Personalization extends LitElement {
   /** The personalization entry whose variants are rendered. */
   @property({ attribute: false })
   accessor personalization: PersonalizationEntry | undefined = undefined
@@ -203,9 +201,11 @@ export class CtflOptPreviewPersonalization extends LitElement {
     return html`
       <fieldset>
         <legend>
-          <span title="${this.personalization?.fields.nt_experience_id}"
-            >${this.personalization?.fields.nt_name}</span
-          >
+          <span class="personalization-name"
+            ><ctfl-opt-preview-matched-text
+              .text=${this.personalization?.fields.nt_name ?? ''}
+            ></ctfl-opt-preview-matched-text
+          ></span>
 
           <span class="personalization-type">
             ${this.personalization?.fields.nt_type === 'nt_experiment'
@@ -327,6 +327,10 @@ export class CtflOptPreviewPersonalization extends LitElement {
       color: #6b7280;
     }
 
+    .personalization-name {
+      font-weight: 500;
+    }
+
     .personalization-type {
       font-size: 0.875rem;
       line-height: 1.25rem;
@@ -352,17 +356,17 @@ export class CtflOptPreviewPersonalization extends LitElement {
 }
 
 /**
- * Registers the {@link CtflOptPreviewPersonalization} custom element if not already defined.
+ * Registers the {@link Personalization} custom element if not already defined.
  *
  * @example
  * ```ts
- * defineCtflOptPreviewPersonalization()
+ * definePersonalization()
  * ```
  *
  * @public
  */
-export function defineCtflOptPreviewPersonalization(): void {
-  if (!customElements.get(CTFL_OPT_PREVIEW_PERSONALIZATION_TAG)) {
-    customElements.define(CTFL_OPT_PREVIEW_PERSONALIZATION_TAG, CtflOptPreviewPersonalization)
+export function definePersonalization(): void {
+  if (!customElements.get(PERSONALIZATION_TAG)) {
+    customElements.define(PERSONALIZATION_TAG, Personalization)
   }
 }

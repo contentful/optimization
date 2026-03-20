@@ -648,6 +648,9 @@ importers:
       '@contentful/optimization-web':
         specifier: workspace:*
         version: link:../web-sdk
+      '@leeoniya/ufuzzy':
+        specifier: ^1.0.19
+        version: 1.0.19
       '@lit/context':
         specifier: ^1.1.6
         version: 1.1.6
@@ -1729,6 +1732,9 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@leeoniya/ufuzzy@1.0.19':
+    resolution: {integrity: sha512-0pikDeYt0IHEUPza5RTCDXc/17S1pTrYnReEMp8Aa6k1ovzw5QdZLwicW8TjljwEZRb6oYag0xmALohrcq/yOQ==}
 
   '@lingui/core@5.9.2':
     resolution: {integrity: sha512-2K2lIEiUJ9VNTZU0igiRUubIUvcHu8TEuS4uRrrA5f2DGgCtHD5o7rw6OO9cM1RxZFCC5rpRwIMDeXHrc44W3g==}
@@ -8437,6 +8443,8 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
+
+  '@leeoniya/ufuzzy@1.0.19': {}
 
   '@lingui/core@5.9.2':
     dependencies:

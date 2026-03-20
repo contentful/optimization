@@ -13,31 +13,31 @@ import type {
   Signals,
 } from '@contentful/optimization-web/core-sdk'
 import {
-  PREVIEW_PANEL_SIGNAL_FNS_SYMBOL,
   PREVIEW_PANEL_SIGNALS_SYMBOL,
+  PREVIEW_PANEL_SIGNAL_FNS_SYMBOL,
 } from '@contentful/optimization-web/symbols'
 import type { ChainModifiers, ContentfulClientApi, Entry } from 'contentful'
 import {
-  CTFL_OPT_PREVIEW_AUDIENCE_SWITCH_CHANGE,
-  CTFL_OPT_PREVIEW_PERSONALIZATION_CHANGE,
-  defineCtflOptPreviewAudience,
+  AUDIENCE_SWITCH_CHANGE,
+  PERSONALIZATION_CHANGE,
+  defineAudience,
+  isAudience,
   isAudienceSwitchChangeEvent,
-  isCtflOptPreviewAudience,
-} from './components/ctfl-opt-preview-audience'
-import { defineCtflOptPreviewAudienceSwitch } from './components/ctfl-opt-preview-audience-switch'
-import { defineCtflOptPreviewIndicator } from './components/ctfl-opt-preview-indicator'
+} from './components/audience'
+import { defineAudienceSwitch } from './components/audience-switch'
+import { defineAudiences } from './components/audiences'
+import { defineIndicator } from './components/indicator'
+import { defineMatchedText } from './components/matched-text'
 import {
-  CTFL_OPT_PREVIEW_PANEL_DRAWER_TOGGLE,
-  CTFL_OPT_PREVIEW_PANEL_RESET,
-  CTFL_OPT_PREVIEW_PANEL_TAG,
-  defineCtflOptPreviewPanel,
-  isCtflOptPreviewPanel,
+  PANEL_DRAWER_TOGGLE,
+  PANEL_RESET,
+  PANEL_TAG,
+  definePanel,
   isDrawerToggleEvent,
-} from './components/ctfl-opt-preview-panel'
-import {
-  defineCtflOptPreviewPersonalization,
-  isRecordRadioGroupChangeEvent,
-} from './components/ctfl-opt-preview-personalization'
+  isPanel,
+} from './components/panel'
+import { definePersonalization, isRecordRadioGroupChangeEvent } from './components/personalization'
+import { defineSearch } from './components/search'
 import { getAllEntries, isAudienceEntry, isPersonalizationEntry } from './lib/entries'
 import { applyChangeOverrides, applyPersonalizationOverrides } from './lib/overrides'
 import { isChange, isSelectedPersonalization } from './lib/schemaGuards'
@@ -172,7 +172,7 @@ function syncOverrides(
  * @internal
  */
 function canDefineComponents(): void {
-  const existing = document.querySelector(CTFL_OPT_PREVIEW_PANEL_TAG)
+  const existing = document.querySelector(PANEL_TAG)
 
   if (existing)
     throw new Error(
@@ -239,19 +239,22 @@ export default async function attachOptimizationPreviewPanel({
   loadOverrides()
   loadDefaults()
 
-  defineCtflOptPreviewIndicator()
-  defineCtflOptPreviewPersonalization()
-  defineCtflOptPreviewAudienceSwitch()
-  defineCtflOptPreviewAudience()
-  defineCtflOptPreviewPanel()
+  defineIndicator()
+  defineMatchedText()
+  definePersonalization()
+  defineSearch()
+  defineAudienceSwitch()
+  defineAudience()
+  defineAudiences()
+  definePanel()
 
   const [audiences, personalizationEntries]: [Entry[], Entry[]] = await Promise.all([
     getAllEntries<AudienceEntrySkeleton>(contentful, 'nt_audience'),
     getAllEntries<PersonalizationEntrySkeleton>(contentful, 'nt_experience'),
   ])
 
-  const panel = document.createElement(CTFL_OPT_PREVIEW_PANEL_TAG)
-  if (!isCtflOptPreviewPanel(panel))
+  const panel = document.createElement(PANEL_TAG)
+  if (!isPanel(panel))
     throw new Error(
       '[ContentfulOptimization Preview Panel] The preview panel cannot be initialized; contact support',
     )
@@ -281,7 +284,7 @@ export default async function attachOptimizationPreviewPanel({
     }
   })
 
-  panel.addEventListener(CTFL_OPT_PREVIEW_PANEL_DRAWER_TOGGLE, (event: Event) => {
+  panel.addEventListener(PANEL_DRAWER_TOGGLE, (event: Event) => {
     if (!isDrawerToggleEvent(event)) return
 
     const {
@@ -291,7 +294,7 @@ export default async function attachOptimizationPreviewPanel({
     signals.previewPanelOpen.value = open
   })
 
-  panel.addEventListener(CTFL_OPT_PREVIEW_PERSONALIZATION_CHANGE, (event: Event) => {
+  panel.addEventListener(PERSONALIZATION_CHANGE, (event: Event) => {
     if (!isRecordRadioGroupChangeEvent(event)) return
 
     const {
@@ -301,10 +304,10 @@ export default async function attachOptimizationPreviewPanel({
     syncOverrides(panel, signals, signalFns)
   })
 
-  panel.addEventListener(CTFL_OPT_PREVIEW_AUDIENCE_SWITCH_CHANGE, (event: Event) => {
+  panel.addEventListener(AUDIENCE_SWITCH_CHANGE, (event: Event) => {
     if (!isAudienceSwitchChangeEvent(event)) return
     const [target] = event.composedPath()
-    if (!(target instanceof Element) || !isCtflOptPreviewAudience(target)) return
+    if (!(target instanceof Element) || !isAudience(target)) return
 
     for (const {
       fields: { nt_experience_id: experienceId },
@@ -319,7 +322,7 @@ export default async function attachOptimizationPreviewPanel({
     syncOverrides(panel, signals, signalFns)
   })
 
-  panel.addEventListener(CTFL_OPT_PREVIEW_PANEL_RESET, () => {
+  panel.addEventListener(PANEL_RESET, () => {
     overrides.clear()
     syncOverrides(panel, signals, signalFns)
     panel.defaultSelectedPersonalizations = [...(defaults.selectedPersonalizations ?? [])]
