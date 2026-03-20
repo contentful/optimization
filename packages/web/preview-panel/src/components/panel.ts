@@ -5,33 +5,31 @@ import type {
   SelectedPersonalizationArray,
 } from '@contentful/optimization-web/api-schemas'
 import { provide } from '@lit/context'
-import { groupBy } from 'es-toolkit'
-import { css, html, LitElement, type PropertyValues, type TemplateResult } from 'lit'
+import { css, html, LitElement, type TemplateResult } from 'lit'
 import { property, state } from 'lit/decorators.js'
-import { ALL_VISITORS_FALLBACK_AUDIENCE, ALL_VISITORS_FALLBACK_AUDIENCE_ID } from '../constants'
-import { overridesContext, profileContext } from '../lib/contexts'
-import type { AudienceContentToggleEvent } from './ctfl-opt-preview-audience'
+import { overridesContext, profileContext, searchContext } from '../lib/contexts'
+import { isSearchChangeEvent } from './search'
 
 /**
- * Custom element tag name for {@link CtflOptPreviewPanel}.
+ * Custom element tag name for {@link Panel}.
  *
  * @public
  */
-export const CTFL_OPT_PREVIEW_PANEL_TAG = 'ctfl-opt-preview-panel'
+export const PANEL_TAG = 'ctfl-opt-preview-panel'
 
 /**
  * Event name dispatched when the user resets the preview panel overrides.
  *
  * @public
  */
-export const CTFL_OPT_PREVIEW_PANEL_RESET = 'ctfl-opt-preview-panel-reset'
+export const PANEL_RESET = 'ctfl-opt-preview-panel-reset'
 
 /**
  * Event name dispatched when the user opens or closes the preview panel drawer.
  *
  * @public
  */
-export const CTFL_OPT_PREVIEW_PANEL_DRAWER_TOGGLE = 'ctfl-opt-preview-panel-drawer-toggle'
+export const PANEL_DRAWER_TOGGLE = 'ctfl-opt-preview-panel-drawer-toggle'
 
 /**
  * Payload emitted when the preview panel drawer is opened or closed.
@@ -73,46 +71,35 @@ export function isDrawerToggleEvent(event: Event): event is DrawerToggleEvent {
 }
 
 /**
- * Type guard that checks whether an element is a {@link CtflOptPreviewPanel}.
+ * Type guard that checks whether an element is a {@link Panel}.
  *
  * @param element - The element to check.
- * @returns `true` if the element's tag matches {@link CTFL_OPT_PREVIEW_PANEL_TAG}.
+ * @returns `true` if the element's tag matches {@link PANEL_TAG}.
  *
  * @example
  * ```ts
- * if (isCtflOptPreviewPanel(el)) {
+ * if (isPanel(el)) {
  *   el.audiences = audiences
  * }
  * ```
  *
  * @public
  */
-export function isCtflOptPreviewPanel(element?: Element): element is CtflOptPreviewPanel {
-  return element?.tagName === CTFL_OPT_PREVIEW_PANEL_TAG.toUpperCase()
-}
-
-/** @internal */
-function compareCount(a?: unknown[], b?: unknown[]): boolean {
-  return (a?.length ?? 0) < (b?.length ?? 0)
-}
-
-/** @internal */
-function compareString(a?: string, b?: string): boolean {
-  return (a ?? 'a') < (b ?? 'a')
+export function isPanel(element?: Element): element is Panel {
+  return element?.tagName === PANEL_TAG.toUpperCase()
 }
 
 /**
- * Root preview panel web component that provides the slide-out drawer UI.
+ * Root preview panel web component that provides the slide-out drawer shell.
  *
- * Groups personalizations by audience and allows the user to override which
- * variant is previewed. Provides {@link profileContext} and
- * {@link overridesContext} to child components.
+ * Provides the drawer chrome, search state, and shared contexts for the
+ * preview panel child components.
  *
  * @see {@link LitElement}
  *
  * @public
  */
-export class CtflOptPreviewPanel extends LitElement {
+export class Panel extends LitElement {
   /** All audience entries fetched from Contentful. */
   @property({ attribute: false })
   accessor audiences: AudienceEntry[] = []
@@ -135,6 +122,11 @@ export class CtflOptPreviewPanel extends LitElement {
   @property({ attribute: false })
   accessor overrides: Map<string, number> | undefined = undefined
 
+  /** Search state provided to the child search component via Lit context. */
+  @provide({ context: searchContext })
+  @property({ attribute: false })
+  accessor search = ''
+
   /** @internal */
   @state()
   private accessor _drawerOpened = false
@@ -144,49 +136,9 @@ export class CtflOptPreviewPanel extends LitElement {
   private accessor _drawerBodyMounted = false
 
   /** @internal */
-  @state()
-  private accessor _audienceContentOpenByKey: Record<string, boolean> = {}
-
-  /** @internal */
-  @state()
-  private accessor _audiencePersonalizations = new Map<AudienceEntry, PersonalizationEntry[]>()
-
-  /** @internal */
-  @state()
-  private accessor _audienceDefaultSelectedPersonalizations = new Map<
-    AudienceEntry,
-    SelectedPersonalizationArray
-  >()
-
-  /** @internal */
-  private get _anyAudienceContentClosed(): boolean {
-    return Object.values(this._audienceContentOpenByKey).some((v) => !v)
-  }
-
-  /** @internal */
-  private _onAudienceContentToggle(event: AudienceContentToggleEvent): void {
-    const {
-      detail: { key, open },
-    } = event
-    this._audienceContentOpenByKey = { ...this._audienceContentOpenByKey, [key]: open }
-  }
-
-  /** @internal */
-  private _toggleAllAudienceContent(): void {
-    const { _anyAudienceContentClosed: open } = this
-    this._audienceContentOpenByKey = Object.keys(this._audienceContentOpenByKey).reduce(
-      (acc: Record<string, boolean>, id) => {
-        acc[id] = open
-        return acc
-      },
-      {},
-    )
-  }
-
-  /** @internal */
   private _reset(): void {
     this.dispatchEvent(
-      new CustomEvent(CTFL_OPT_PREVIEW_PANEL_RESET, {
+      new CustomEvent(PANEL_RESET, {
         bubbles: true,
         composed: true,
       }),
@@ -200,7 +152,7 @@ export class CtflOptPreviewPanel extends LitElement {
     this.toggleAttribute('data-open', open)
 
     this.dispatchEvent(
-      new CustomEvent<DrawerToggleDetail>(CTFL_OPT_PREVIEW_PANEL_DRAWER_TOGGLE, {
+      new CustomEvent<DrawerToggleDetail>(PANEL_DRAWER_TOGGLE, {
         detail: { value: open },
         bubbles: true,
         composed: true,
@@ -211,6 +163,13 @@ export class CtflOptPreviewPanel extends LitElement {
   /** @internal */
   private _toggleDrawer(): void {
     this._setDrawerOpened(!this._drawerOpened)
+  }
+
+  /** @internal */
+  private _onSearchChange(event: Event): void {
+    if (!isSearchChangeEvent(event)) return
+    const { detail } = event
+    this.search = detail
   }
 
   /** @internal */
@@ -230,78 +189,6 @@ export class CtflOptPreviewPanel extends LitElement {
   disconnectedCallback(): void {
     this.removeEventListener('transitionend', this._onTransitionEnd)
     super.disconnectedCallback()
-  }
-
-  /** @internal */
-  protected willUpdate(changed: PropertyValues<this>): void {
-    if (
-      changed.has('audiences') ||
-      changed.has('personalizationEntries') ||
-      changed.has('defaultSelectedPersonalizations')
-    ) {
-      // Convenience mapping of audience ID to audience
-      const audienceIdMap = this.audiences.reduce(
-        (audienceMap: Record<string, AudienceEntry>, audience) => {
-          audienceMap[audience.sys.id] = audience
-          return audienceMap
-        },
-        {},
-      )
-
-      // Mapping of audience ID to personalizations (fallback for those without audiences)
-      const audienceIdPersonalizationMap = groupBy(
-        // Sort by personalization name (reversed due to how `groupBy` works)
-        this.personalizationEntries.sort((a, b) =>
-          compareString(a.fields.nt_name, b.fields.nt_name) ? -1 : 1,
-        ),
-        (personalization) =>
-          personalization.fields.nt_audience?.sys.id ?? ALL_VISITORS_FALLBACK_AUDIENCE_ID,
-      )
-
-      // Add a fallback audience if necessary (useful for experiments, etc.)
-      if (audienceIdPersonalizationMap[ALL_VISITORS_FALLBACK_AUDIENCE_ID]) {
-        audienceIdMap[ALL_VISITORS_FALLBACK_AUDIENCE_ID] = ALL_VISITORS_FALLBACK_AUDIENCE
-      }
-
-      // Get a list of audience IDs sorted by audience name and personalization count
-      const audienceIds = Object.keys(audienceIdMap)
-        .sort((a, b) =>
-          compareString(audienceIdMap[a]?.fields.nt_name, audienceIdMap[b]?.fields.nt_name)
-            ? 1
-            : -1,
-        )
-        .sort((a, b) =>
-          compareCount(audienceIdPersonalizationMap[a], audienceIdPersonalizationMap[b]) ? 1 : -1,
-        )
-
-      this._audienceContentOpenByKey = audienceIds.reduce((acc: Record<string, boolean>, id) => {
-        acc[id] = true
-        return acc
-      }, {})
-
-      // Assemble the mapping of audiences to personalizations
-      this._audiencePersonalizations = audienceIds.reduce((acc, audienceId) => {
-        const audience = audienceIdMap[audienceId] ?? ALL_VISITORS_FALLBACK_AUDIENCE
-        acc.set(audience, audienceIdPersonalizationMap[audienceId] ?? [])
-        return acc
-      }, new Map<AudienceEntry, PersonalizationEntry[]>())
-
-      // Assemble the mapping of audiences to default selected personalizations
-      this._audienceDefaultSelectedPersonalizations = this._audiencePersonalizations
-        .keys()
-        .reduce((acc, audience) => {
-          const personalizations = this._audiencePersonalizations.get(audience)
-          acc.set(
-            audience,
-            this.defaultSelectedPersonalizations.filter((defaultSelected) =>
-              personalizations
-                ?.map((personalization) => personalization.fields.nt_experience_id)
-                .includes(defaultSelected.experienceId),
-            ),
-          )
-          return acc
-        }, new Map<AudienceEntry, SelectedPersonalizationArray>())
-    }
   }
 
   /** @internal */
@@ -336,34 +223,17 @@ export class CtflOptPreviewPanel extends LitElement {
           <p class="subheading">Select an audience to segment preview content.</p>
         </div>
 
-        <p>
-          <button
-            class="toggle"
-            @click=${() => {
-              this._toggleAllAudienceContent()
-            }}
-          >
-            ${this._anyAudienceContentClosed ? 'Expand all' : 'Collapse all'}
-          </button>
-        </p>
+        <ctfl-opt-preview-search
+          @ctfl-opt-preview-search-change=${(event: Event) => {
+            this._onSearchChange(event)
+          }}
+        ></ctfl-opt-preview-search>
 
-        <div class="container">
-          ${Array.from(this._audiencePersonalizations.entries()).map(
-            ([audience, personalizations]) => html`
-              <ctfl-opt-preview-audience
-                .open=${this._audienceContentOpenByKey[audience.sys.id] ?? true}
-                .audience=${audience}
-                .personalizations=${personalizations}
-                .defaultSelectedPersonalizations=${this._audienceDefaultSelectedPersonalizations.get(
-                  audience,
-                )}
-                @ctfl_opt_preview_audience_content_toggle=${(event: AudienceContentToggleEvent) => {
-                  this._onAudienceContentToggle(event)
-                }}
-              ></ctfl-opt-preview-audience>
-            `,
-          )}
-        </div>
+        <ctfl-opt-preview-audiences
+          .audiences=${this.audiences}
+          .personalizationEntries=${this.personalizationEntries}
+          .defaultSelectedPersonalizations=${this.defaultSelectedPersonalizations}
+        ></ctfl-opt-preview-audiences>
 
         <div class="footer">
           <button
@@ -444,10 +314,9 @@ export class CtflOptPreviewPanel extends LitElement {
       flex-direction: column;
       gap: 1.5rem;
       min-height: 0;
-      padding: 1.5rem 1rem;
+      padding: 1.5rem 1rem 1.25rem;
     }
 
-    .toggle,
     .toggle-drawer {
       all: unset;
       box-sizing: border-box;
@@ -455,29 +324,12 @@ export class CtflOptPreviewPanel extends LitElement {
       font: inherit;
     }
 
-    .toggle {
-      display: flex;
-      gap: 0.25rem;
-      border-radius: 0.25rem;
-      font-size: 0.875rem;
-      line-height: 1.25rem;
-      color: #8c2eea;
-      -webkit-appearance: none;
-      appearance: none;
-    }
-
-    .toggle:active,
-    .toggle:focus,
-    .toggle:hover {
-      text-decoration: underline;
-    }
-
     .toggle-drawer {
       position: absolute;
-      bottom: 10dvh;
+      bottom: 9.75dvh;
       right: 100%;
       display: grid;
-      height: 14rem;
+      height: 12rem;
       width: 3rem;
       padding: 3rem 0.5rem;
       background: #8c2eea;
@@ -486,9 +338,9 @@ export class CtflOptPreviewPanel extends LitElement {
     }
 
     .toggle-drawer svg {
-      width: 128px;
+      width: 116px;
       transform: rotate(270deg);
-      transform-origin: 64px 64px;
+      transform-origin: 54px 52px;
     }
 
     .header {
@@ -509,23 +361,11 @@ export class CtflOptPreviewPanel extends LitElement {
       color: #6b7280;
     }
 
-    .container {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      overflow-y: auto;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-    }
-
-    .container::-webkit-scrollbar {
-      display: none;
-    }
-
     .footer {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 0.5rem;
+      padding: 0 0.5rem;
     }
 
     .footer button {
@@ -563,17 +403,17 @@ export class CtflOptPreviewPanel extends LitElement {
 }
 
 /**
- * Registers the {@link CtflOptPreviewPanel} custom element if not already defined.
+ * Registers the {@link Panel} custom element if not already defined.
  *
  * @example
  * ```ts
- * defineCtflOptPreviewPanel()
+ * definePanel()
  * ```
  *
  * @public
  */
-export function defineCtflOptPreviewPanel(): void {
-  if (!customElements.get(CTFL_OPT_PREVIEW_PANEL_TAG)) {
-    customElements.define(CTFL_OPT_PREVIEW_PANEL_TAG, CtflOptPreviewPanel)
+export function definePanel(): void {
+  if (!customElements.get(PANEL_TAG)) {
+    customElements.define(PANEL_TAG, Panel)
   }
 }
