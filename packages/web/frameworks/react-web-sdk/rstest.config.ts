@@ -18,6 +18,7 @@ export default defineConfig({
       ),
       '@contentful/optimization-core': resolve(__dirname, '../../../universal/core-sdk/src/'),
       '@contentful/optimization-web': resolve(__dirname, '../../web-sdk/src/'),
+      'next/router': resolve(__dirname, './src/test/nextRouterStub.ts'),
     },
   },
   include: ['**/*.test.?(c|m)[jt]s?(x)'],

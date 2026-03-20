@@ -29,6 +29,7 @@ export default defineConfig({
       'core-sdk': './src/core-sdk.ts',
       'api-client': './src/api-client.ts',
       'api-schemas': './src/api-schemas.ts',
+      'router/next-pages': './src/router/next-pages.tsx',
     },
     tsconfigPath: './tsconfig.build.json',
     define: {
