@@ -165,9 +165,9 @@ Automatic page events can be enriched with static and dynamic payloads before ca
 - This feature is implemented through page payload composition only; no interceptor setup is
   required or documented for it.
 
-The current package `dev/` harness remains an rsbuild React app and does not execute the Next.js
-Pages Router adapter. Phase 1 coverage for this adapter is provided through unit tests and the
-integration examples above.
+The package `dev/` harness remains an rsbuild React app and now mounts the React Router adapter for
+interactive local verification. Other router adapters are still covered primarily through unit tests
+and the integration examples above.
 
 The Next.js App Router adapter:
 

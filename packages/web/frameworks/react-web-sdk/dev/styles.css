@@ -37,6 +37,36 @@ body {
   color: #334155;
 }
 
+.dashboard__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.dashboard__nav-link {
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  color: #0f172a;
+  padding: 0.5rem 0.9rem;
+  text-decoration: none;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.dashboard__nav-link:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.dashboard__nav-link--active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
 .dashboard__grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
