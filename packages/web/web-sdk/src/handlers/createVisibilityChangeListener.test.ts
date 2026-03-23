@@ -58,6 +58,22 @@ describe('createVisibilityChangeListener', () => {
     cleanup()
   })
 
+  it('invokes callback on beforeunload and only once per hide cycle', () => {
+    const cb = rs.fn()
+    const cleanup = createVisibilityChangeListener(cb)
+
+    window.dispatchEvent(new Event('beforeunload'))
+    window.dispatchEvent(new Event('pagehide'))
+
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    window.dispatchEvent(new Event('pageshow'))
+    window.dispatchEvent(new Event('beforeunload'))
+
+    expect(cb).toHaveBeenCalledTimes(2)
+    cleanup()
+  })
+
   it('removes listeners on cleanup', () => {
     const cb = rs.fn()
     const cleanup = createVisibilityChangeListener(cb)
@@ -66,6 +82,7 @@ describe('createVisibilityChangeListener', () => {
     setVisibilityState('hidden')
     document.dispatchEvent(new Event('visibilitychange'))
     window.dispatchEvent(new Event('pagehide'))
+    window.dispatchEvent(new Event('beforeunload'))
 
     expect(cb).not.toHaveBeenCalled()
   })

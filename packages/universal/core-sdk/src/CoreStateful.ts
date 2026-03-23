@@ -394,6 +394,13 @@ class CoreStateful extends CoreBase implements ConsentController {
     if (this.destroyed) return
 
     this.destroyed = true
+    void this._analytics.flush({ force: true }).catch((error: unknown) => {
+      logger.warn('Failed to flush analytics queue during destroy()', String(error))
+    })
+    void this._personalization.flush({ force: true }).catch((error: unknown) => {
+      logger.warn('Failed to flush personalization queue during destroy()', String(error))
+    })
+
     releaseStatefulRuntimeSingleton(this.singletonOwner)
   }
 
