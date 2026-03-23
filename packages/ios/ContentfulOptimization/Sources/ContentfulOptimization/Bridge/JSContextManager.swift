@@ -1,0 +1,164 @@
+import Foundation
+import JavaScriptCore
+import os
+
+/// Manages the JSContext lifecycle: polyfill injection, UMD bundle loading, and bridge calls.
+///
+/// This is an internal implementation detail. Public API is exposed via `OptimizationClient`.
+final class JSContextManager {
+    private(set) var context: JSContext?
+    let callbackManager = BridgeCallbackManager()
+
+    private static let signpostLog = OSLog(
+        subsystem: "com.contentful.optimization",
+        category: "Performance"
+    )
+
+    var onLog: ((String, String) -> Void)?
+    var onStateChange: (([String: Any]) -> Void)?
+
+    /// Creates the JSContext, loads polyfills and the UMD bundle, and calls `__bridge.initialize()`.
+    func initialize(config: OptimizationConfig) throws {
+        let log = Self.signpostLog
+        let coldStartID = OSSignpostID(log: log)
+        os_signpost(.begin, log: log, name: "Cold Start", signpostID: coldStartID)
+
+        // Create context
+        guard let ctx = JSContext() else {
+            os_signpost(.end, log: log, name: "Cold Start", signpostID: coldStartID)
+            throw OptimizationError.bridgeError("Failed to create JSContext")
+        }
+
+        ctx.exceptionHandler = { [weak self] _, exception in
+            let msg = exception?.toString() ?? "Unknown JS error"
+            self?.onLog?("exception", msg)
+        }
+
+        if #available(iOS 16.4, macOS 13.3, *) {
+            ctx.isInspectable = true
+        }
+
+        // Register native polyfill functions
+        NativePolyfills.register(in: ctx) { [weak self] level, msg in
+            self?.onLog?(level, msg)
+        }
+
+        // Evaluate JS polyfill scripts
+        let polyfillScripts = try PolyfillScriptLoader.loadAll()
+        for script in polyfillScripts {
+            ctx.evaluateScript(script)
+        }
+
+        // Load UMD bundle
+        let bundleSource = try loadBundleSource()
+        ctx.evaluateScript(bundleSource)
+
+        // Verify __bridge exists
+        let bridgeCheck = ctx.evaluateScript("typeof __bridge")
+        guard bridgeCheck?.toString() == "object" else {
+            os_signpost(.end, log: log, name: "Cold Start", signpostID: coldStartID)
+            throw OptimizationError.bridgeError(
+                "__bridge not found after bundle evaluation (got: \(bridgeCheck?.toString() ?? "nil"))"
+            )
+        }
+
+        // Register state change callback
+        let onStateChange: @convention(block) (String) -> Void = { [weak self] json in
+            self?.handleStateChange(json)
+        }
+        ctx.setObject(onStateChange, forKeyedSubscript: "__nativeOnStateChange" as NSString)
+
+        // Initialize the bridge
+        let configJSON: String
+        do {
+            configJSON = try config.toJSON()
+        } catch {
+            os_signpost(.end, log: log, name: "Cold Start", signpostID: coldStartID)
+            throw OptimizationError.configError("Failed to serialize config: \(error)")
+        }
+
+        ctx.evaluateScript("__bridge.initialize(\(configJSON))")
+
+        self.context = ctx
+        os_signpost(.end, log: log, name: "Cold Start", signpostID: coldStartID)
+    }
+
+    // MARK: - Bridge calls
+
+    /// Calls an async bridge method with success/error callbacks.
+    func callAsync(
+        method: String,
+        payload: String,
+        completion: @escaping (Result<String, Error>) -> Void
+    ) {
+        guard let ctx = context else {
+            completion(.failure(OptimizationError.notInitialized))
+            return
+        }
+
+        let names = callbackManager.registerCallback(
+            in: ctx,
+            prefix: method,
+            onSuccess: { json in
+                DispatchQueue.main.async {
+                    completion(.success(json))
+                }
+            },
+            onError: { errorMsg in
+                DispatchQueue.main.async {
+                    completion(.failure(OptimizationError.bridgeError(errorMsg)))
+                }
+            }
+        )
+
+        ctx.evaluateScript("__bridge.\(method)(\(payload), \(names.success), \(names.error))")
+    }
+
+    /// Calls a synchronous bridge method and returns the result.
+    func callSync(method: String, args: String = "") -> JSValue? {
+        guard let ctx = context else { return nil }
+        let script = args.isEmpty ? "__bridge.\(method)()" : "__bridge.\(method)(\(args))"
+        return ctx.evaluateScript(script)
+    }
+
+    /// Evaluates arbitrary JS in the context. Use sparingly.
+    func evaluate(_ script: String) -> JSValue? {
+        context?.evaluateScript(script)
+    }
+
+    /// Tears down the bridge and releases the JSContext.
+    func destroy() {
+        context?.evaluateScript("__bridge.destroy()")
+        context = nil
+    }
+
+    // MARK: - Private
+
+    private func loadBundleSource() throws -> String {
+        guard let url = Bundle.module.url(
+            forResource: "optimization-ios-bridge.umd",
+            withExtension: "js"
+        ) else {
+            throw OptimizationError.resourceLoadError(
+                "optimization-ios-bridge.umd.js not found in package resources"
+            )
+        }
+        do {
+            return try String(contentsOf: url, encoding: .utf8)
+        } catch {
+            throw OptimizationError.resourceLoadError(
+                "Failed to read UMD bundle: \(error.localizedDescription)"
+            )
+        }
+    }
+
+    private func handleStateChange(_ json: String) {
+        guard let data = json.data(using: .utf8),
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return }
+
+        DispatchQueue.main.async { [weak self] in
+            self?.onStateChange?(dict)
+        }
+    }
+}
