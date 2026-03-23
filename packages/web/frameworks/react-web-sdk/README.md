@@ -169,6 +169,151 @@ The current package `dev/` harness remains an rsbuild React app and does not exe
 Pages Router adapter. Phase 1 coverage for this adapter is provided through unit tests and the
 integration examples above.
 
+The Next.js App Router adapter:
+
+```tsx
+'use client'
+
+import { OptimizationRoot } from '@contentful/optimization-react-web'
+import { NextAppAutoPageTracker } from '@contentful/optimization-react-web/router/next-app'
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <OptimizationRoot
+      clientId="your-client-id"
+      environment="main"
+      analytics={{ baseUrl: 'https://ingest.insights.ninetailed.co/' }}
+      personalization={{ baseUrl: 'https://experience.ninetailed.co/' }}
+    >
+      <NextAppAutoPageTracker />
+      {children}
+    </OptimizationRoot>
+  )
+}
+```
+
+Mount `NextAppAutoPageTracker` once in a client component inside your App Router provider tree,
+typically via a `providers.tsx` wrapper used by `app/layout.tsx`. The adapter emits on the first
+eligible render and on `pathname + search` changes.
+
+```tsx
+<NextAppAutoPageTracker
+  pagePayload={{
+    properties: {
+      appSection: 'storefront',
+    },
+  }}
+  getPagePayload={({ context, isInitialEmission }) => ({
+    locale: isInitialEmission ? 'en-US' : undefined,
+    properties: {
+      path: context.url,
+      pathname: context.pathname,
+      search: context.search,
+    },
+  })}
+/>
+```
+
+App Router payload enrichment follows the same payload-composition behavior as the Pages Router
+adapter and does not use interceptors.
+
+The React Router adapter:
+
+```tsx
+import { Outlet } from 'react-router-dom'
+import { OptimizationRoot } from '@contentful/optimization-react-web'
+import { ReactRouterAutoPageTracker } from '@contentful/optimization-react-web/router/react-router'
+
+export function AppLayout() {
+  return (
+    <OptimizationRoot
+      clientId="your-client-id"
+      environment="main"
+      analytics={{ baseUrl: 'https://ingest.insights.ninetailed.co/' }}
+      personalization={{ baseUrl: 'https://experience.ninetailed.co/' }}
+    >
+      <ReactRouterAutoPageTracker />
+      <Outlet />
+    </OptimizationRoot>
+  )
+}
+```
+
+Mount `ReactRouterAutoPageTracker` once inside the `react-router-dom` router tree and inside the
+optimization provider tree, typically in your root layout route. The adapter emits on the first
+render and on `pathname + search + hash` changes.
+
+```tsx
+<ReactRouterAutoPageTracker
+  pagePayload={{
+    properties: {
+      appSection: 'storefront',
+    },
+  }}
+  getPagePayload={({ context, isInitialEmission }) => ({
+    locale: isInitialEmission ? 'en-US' : undefined,
+    properties: {
+      hash: context.hash,
+      matchCount: context.matches.length,
+      path: context.url,
+      pathname: context.pathname,
+    },
+  })}
+/>
+```
+
+React Router payload enrichment uses the same page-payload composition behavior and does not use
+interceptors.
+
+The TanStack Router adapter:
+
+```tsx
+import { Outlet } from '@tanstack/react-router'
+import { OptimizationRoot } from '@contentful/optimization-react-web'
+import { TanStackRouterAutoPageTracker } from '@contentful/optimization-react-web/router/tanstack-router'
+
+export function RootLayout() {
+  return (
+    <OptimizationRoot
+      clientId="your-client-id"
+      environment="main"
+      analytics={{ baseUrl: 'https://ingest.insights.ninetailed.co/' }}
+      personalization={{ baseUrl: 'https://experience.ninetailed.co/' }}
+    >
+      <TanStackRouterAutoPageTracker />
+      <Outlet />
+    </OptimizationRoot>
+  )
+}
+```
+
+Mount `TanStackRouterAutoPageTracker` once inside the TanStack router tree and inside the
+optimization provider tree, typically in your root route component. The adapter emits on the first
+render and on TanStack Router `location.href` changes.
+
+```tsx
+<TanStackRouterAutoPageTracker
+  pagePayload={{
+    properties: {
+      appSection: 'storefront',
+    },
+  }}
+  getPagePayload={({ context, isInitialEmission }) => ({
+    locale: isInitialEmission ? 'en-US' : undefined,
+    properties: {
+      hash: context.hash,
+      matchCount: context.matches.length,
+      path: context.url,
+      pathname: context.pathname,
+      search: context.search,
+    },
+  })}
+/>
+```
+
+TanStack Router payload enrichment also uses page-payload composition only and does not require
+interceptors.
+
 ### Personalization Component
 
 ```tsx

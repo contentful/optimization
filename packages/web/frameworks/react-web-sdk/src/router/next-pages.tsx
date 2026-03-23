@@ -1,17 +1,14 @@
-import type { NextRouter } from 'next/router'
+import { useRouter, type NextRouter } from 'next/router'
 import type { ReactElement } from 'react'
 import { useMemo } from 'react'
 import type { AutoPagePayloadOptions } from '../auto-page/types'
 import { useAutoPageEmitter } from '../auto-page/useAutoPageEmitter'
-import { useNextPagesRouter } from './next-pages-runtime'
-
-type NextPagesQuery = Record<string, string | string[] | undefined>
 
 export interface NextPagesAutoPageContext {
   readonly routeKey: string
   readonly pathname: string
   readonly asPath: string
-  readonly query: NextPagesQuery
+  readonly query: NextRouter['query']
   readonly router: NextRouter
 }
 
@@ -21,7 +18,7 @@ export function NextPagesAutoPageTracker({
   pagePayload,
   getPagePayload,
 }: NextPagesAutoPageTrackerProps): ReactElement | null {
-  const router = useNextPagesRouter()
+  const router = useRouter()
 
   const route = useMemo(
     () => ({

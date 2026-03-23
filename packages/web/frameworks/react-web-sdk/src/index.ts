@@ -2,6 +2,7 @@ import type ContentfulOptimization from '@contentful/optimization-web'
 
 export type {
   AutoPageEmissionContext,
+  AutoPagePayload,
   AutoPagePayloadOptions,
   AutoPageRouteState,
 } from './auto-page/types'

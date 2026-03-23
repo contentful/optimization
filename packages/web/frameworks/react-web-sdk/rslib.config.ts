@@ -29,7 +29,10 @@ export default defineConfig({
       'core-sdk': './src/core-sdk.ts',
       'api-client': './src/api-client.ts',
       'api-schemas': './src/api-schemas.ts',
+      'router/next-app': './src/router/next-app.tsx',
       'router/next-pages': './src/router/next-pages.tsx',
+      'router/react-router': './src/router/react-router.tsx',
+      'router/tanstack-router': './src/router/tanstack-router.tsx',
     },
     tsconfigPath: './tsconfig.build.json',
     define: {

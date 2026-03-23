@@ -6,21 +6,18 @@ import { LiveUpdatesContext } from '../context/LiveUpdatesContext'
 import { OptimizationContext } from '../context/OptimizationContext'
 import { createOptimizationSdk, defaultLiveUpdatesContext } from '../test/sdkTestUtils'
 import { NextPagesAutoPageTracker, type NextPagesAutoPageContext } from './next-pages'
-import * as nextPagesRuntime from './next-pages-runtime'
 
-interface TestRouter {
-  asPath: string
-  isReady: boolean
-  pathname: string
-  query: Record<string, string | string[] | undefined>
-}
-
-const routerState: TestRouter = {
+const routerState = {
   asPath: '/',
   isReady: true,
   pathname: '/',
   query: {},
 }
+let currentRouterState = routerState
+
+rs.mock('next/router', () => ({
+  useRouter: () => currentRouterState,
+}))
 
 async function renderTracker(
   node: ReactNode,
@@ -71,10 +68,7 @@ describe('NextPagesAutoPageTracker', () => {
     routerState.isReady = true
     routerState.pathname = '/'
     routerState.query = {}
-
-    rs.spyOn(nextPagesRuntime, 'useNextPagesRouter').mockImplementation(
-      () => routerState as ReturnType<typeof nextPagesRuntime.useNextPagesRouter>,
-    )
+    currentRouterState = routerState
   })
 
   it('is exported from the router subpath module', () => {

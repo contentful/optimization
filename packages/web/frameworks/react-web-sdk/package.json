@@ -77,6 +77,36 @@
         "default": "./dist/router/next-pages.cjs"
       }
     },
+    "./router/next-app": {
+      "import": {
+        "types": "./dist/router/next-app.d.mts",
+        "default": "./dist/router/next-app.mjs"
+      },
+      "require": {
+        "types": "./dist/router/next-app.d.cts",
+        "default": "./dist/router/next-app.cjs"
+      }
+    },
+    "./router/react-router": {
+      "import": {
+        "types": "./dist/router/react-router.d.mts",
+        "default": "./dist/router/react-router.mjs"
+      },
+      "require": {
+        "types": "./dist/router/react-router.d.cts",
+        "default": "./dist/router/react-router.cjs"
+      }
+    },
+    "./router/tanstack-router": {
+      "import": {
+        "types": "./dist/router/tanstack-router.d.mts",
+        "default": "./dist/router/tanstack-router.mjs"
+      },
+      "require": {
+        "types": "./dist/router/tanstack-router.d.cts",
+        "default": "./dist/router/tanstack-router.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -105,20 +135,31 @@
     "@rstest/coverage-istanbul": "catalog:",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@tanstack/react-router": "^1.132.33",
     "build-tools": "workspace:*",
     "contentful": "catalog:",
     "happy-dom": "catalog:",
+    "next": "^16.2.1",
+    "react-router-dom": "^7.9.5",
     "rimraf": "catalog:",
     "tslib": "catalog:",
     "typescript": "catalog:"
   },
   "peerDependencies": {
+    "@tanstack/react-router": ">=1.0.0",
     "next": ">=13.0.0",
     "react": ">=18.3.1",
-    "react-dom": ">=18.3.1"
+    "react-dom": ">=18.3.1",
+    "react-router-dom": ">=6.4.0"
   },
   "peerDependenciesMeta": {
+    "@tanstack/react-router": {
+      "optional": true
+    },
     "next": {
+      "optional": true
+    },
+    "react-router-dom": {
       "optional": true
     }
   }
