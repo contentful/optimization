@@ -32,6 +32,10 @@ tmp
 **/pnpm-lock.yaml
 !/pnpm-lock.yaml
 
+# iOS Performance Test Results
+implementations/ios-poc/results/
+*.xcresult
+
 # Xcode
 #
 *.pbxuser

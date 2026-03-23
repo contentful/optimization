@@ -1,11 +1,14 @@
 import Foundation
 import JavaScriptCore
+import os
 
 /// Registers native Swift functions into a JSContext to back the JS polyfill scripts.
 enum Polyfills {
 
     /// Active timer work items keyed by timer ID.
     private static var timers: [Int: DispatchWorkItem] = [:]
+
+    static let signpostLog = OSLog(subsystem: "com.contentful.optimization.poc", category: "Performance")
 
     /// Register all native polyfill functions into the given JSContext.
     static func register(in context: JSContext, logger: @escaping (String, String) -> Void) {
@@ -53,11 +56,16 @@ enum Polyfills {
         let nativeFetch: @convention(block) (String, String, String, JSValue, Int) -> Void = {
             urlString, method, headersJSON, bodyValue, callbackId in
 
+            let log = Polyfills.signpostLog
+            let fetchSignpostID = OSSignpostID(log: log)
+            os_signpost(.begin, log: log, name: "Fetch Bridge Crossing", signpostID: fetchSignpostID, "%{public}s %{public}s", method, urlString)
+
             guard let url = Foundation.URL(string: urlString) else {
                 DispatchQueue.main.async { [weak context] in
                     context?.evaluateScript(
                         "__fetchComplete(\(callbackId), 0, \"{}\", \"\", \"Invalid URL: \(urlString.replacingOccurrences(of: "\"", with: "\\\""))\")"
                     )
+                    os_signpost(.end, log: log, name: "Fetch Bridge Crossing", signpostID: fetchSignpostID, "error: invalid URL")
                 }
                 return
             }
@@ -80,7 +88,10 @@ enum Polyfills {
 
             URLSession.shared.dataTask(with: request) { [weak context] data, response, error in
                 DispatchQueue.main.async {
-                    guard let ctx = context else { return }
+                    guard let ctx = context else {
+                        os_signpost(.end, log: log, name: "Fetch Bridge Crossing", signpostID: fetchSignpostID, "context deallocated")
+                        return
+                    }
 
                     if let error = error {
                         let escaped = error.localizedDescription
@@ -90,6 +101,7 @@ enum Polyfills {
                         ctx.evaluateScript(
                             "__fetchComplete(\(callbackId), 0, \"{}\", \"\", \"\(escaped)\")"
                         )
+                        os_signpost(.end, log: log, name: "Fetch Bridge Crossing", signpostID: fetchSignpostID, "error: %{public}s", escaped)
                         return
                     }
 
@@ -122,6 +134,7 @@ enum Polyfills {
                     ctx.evaluateScript(
                         "__fetchComplete(\(callbackId), \(statusCode), \"\(escapedHeaders)\", \"\(escapedBody)\", \"\")"
                     )
+                    os_signpost(.end, log: log, name: "Fetch Bridge Crossing", signpostID: fetchSignpostID, "status: %d", statusCode)
                 }
             }.resume()
         }
