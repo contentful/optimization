@@ -121,6 +121,10 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
   private readonly queue = new Map<Profile['id'], QueuedProfileEvents>()
   /** Shared queue flush retry runtime state machine. */
   private readonly flushRuntime: QueueFlushRuntime
+  /** Periodic queue flush interval in milliseconds. */
+  private readonly flushIntervalMs: number
+  /** Timer handle used for periodic flush attempts while the queue is non-empty. */
+  private periodicFlushTimer: ReturnType<typeof setInterval> | undefined
 
   /** Exposed observable state references. */
   readonly states: AnalyticsStates = {
@@ -144,9 +148,12 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
     super({ api, eventBuilder, config, interceptors })
 
     this.applyDefaults(config?.defaults)
+    const resolvedQueuePolicy = resolveQueueFlushPolicy(config?.queuePolicy)
+    const { flushIntervalMs } = resolvedQueuePolicy
+    this.flushIntervalMs = flushIntervalMs
 
     this.flushRuntime = new QueueFlushRuntime({
-      policy: resolveQueueFlushPolicy(config?.queuePolicy),
+      policy: resolvedQueuePolicy,
       onRetry: () => {
         void this.flush()
       },
@@ -167,6 +174,7 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
    */
   reset(): void {
     this.flushRuntime.reset()
+    this.clearPeriodicFlushTimer()
 
     batch(() => {
       blockedEventSignal.value = undefined
@@ -315,7 +323,9 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
       this.queue.set(profileId, { profile, events: [validEvent] })
     }
 
+    this.ensurePeriodicFlushTimer()
     await this.flushMaxEvents()
+    this.reconcilePeriodicFlushTimer()
   }
 
   /**
@@ -349,6 +359,7 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
 
     if (!batches.length) {
       this.flushRuntime.clearScheduledRetry()
+      this.reconcilePeriodicFlushTimer()
       return
     }
 
@@ -368,6 +379,7 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
       }
     } finally {
       this.flushRuntime.markFlushFinished()
+      this.reconcilePeriodicFlushTimer()
     }
   }
 
@@ -448,6 +460,40 @@ class AnalyticsStateful extends AnalyticsBase implements ConsentGuard {
     })
 
     return queuedCount
+  }
+
+  /**
+   * Start periodic flush attempts when the queue contains events.
+   */
+  private ensurePeriodicFlushTimer(): void {
+    if (this.periodicFlushTimer !== undefined) return
+    if (this.getQueuedEventCount() === 0) return
+
+    this.periodicFlushTimer = setInterval(() => {
+      void this.flush()
+    }, this.flushIntervalMs)
+  }
+
+  /**
+   * Clear periodic queue flush timer when no longer needed.
+   */
+  private clearPeriodicFlushTimer(): void {
+    if (this.periodicFlushTimer === undefined) return
+
+    clearInterval(this.periodicFlushTimer)
+    this.periodicFlushTimer = undefined
+  }
+
+  /**
+   * Keep periodic flush scheduling in sync with queue occupancy.
+   */
+  private reconcilePeriodicFlushTimer(): void {
+    if (this.getQueuedEventCount() > 0) {
+      this.ensurePeriodicFlushTimer()
+      return
+    }
+
+    this.clearPeriodicFlushTimer()
   }
 }
 

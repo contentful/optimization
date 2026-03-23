@@ -380,4 +380,31 @@ describe('AnalyticsStateful.flush policy', () => {
 
     analytics.reset()
   })
+
+  it('periodically flushes queued events based on queuePolicy.flushIntervalMs', async () => {
+    const sendBatchEvents = rs
+      .fn<ApiClient['insights']['sendBatchEvents']>()
+      .mockResolvedValue(true)
+    const analytics = createAnalytics({
+      sendBatchEvents,
+      queuePolicy: {
+        flushIntervalMs: 30,
+      },
+    })
+
+    await analytics.trackView(createViewPayload('hero-banner'))
+
+    expect(sendBatchEvents).not.toHaveBeenCalled()
+
+    await rs.advanceTimersByTimeAsync(30)
+
+    expect(sendBatchEvents).toHaveBeenCalledTimes(1)
+    expect(getQueuedEventCount(analytics)).toBe(0)
+
+    await rs.advanceTimersByTimeAsync(90)
+
+    expect(sendBatchEvents).toHaveBeenCalledTimes(1)
+
+    analytics.reset()
+  })
 })

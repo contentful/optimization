@@ -9,7 +9,7 @@ const logger = createScopedLogger('Web:Visibility')
  *
  * @internal
  */
-type HideEvent = Event | PageTransitionEvent
+type HideEvent = Event | PageTransitionEvent | BeforeUnloadEvent
 
 /**
  * Callback type invoked when the page is being hidden.
@@ -23,7 +23,7 @@ type Callback = (event: HideEvent) => Promise<void> | void
  * is hidden, and returns a cleanup function to remove all listeners.
  *
  * @param callback - Function invoked once when the page is being hidden, or
- * when a pagehide event occurs. May return a promise.
+ * when a pagehide/beforeunload event occurs. May return a promise.
  * @returns A function that removes all registered event listeners when called.
  *
  * @remarks
@@ -83,18 +83,24 @@ export function createVisibilityChangeListener(callback: Callback): () => void {
     handleHide(event)
   }
 
+  const onBeforeUnload = (event: BeforeUnloadEvent): void => {
+    handleHide(event)
+  }
+
   const onPageShow = (): void => {
     resetHandled()
   }
 
   document.addEventListener('visibilitychange', onVisibilityChange)
   window.addEventListener('pagehide', onPageHide)
+  window.addEventListener('beforeunload', onBeforeUnload)
   window.addEventListener('pageshow', onPageShow)
 
   // Cleanup function
   return () => {
     document.removeEventListener('visibilitychange', onVisibilityChange)
     window.removeEventListener('pagehide', onPageHide)
+    window.removeEventListener('beforeunload', onBeforeUnload)
     window.removeEventListener('pageshow', onPageShow)
   }
 }
