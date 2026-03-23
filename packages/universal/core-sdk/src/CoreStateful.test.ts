@@ -279,6 +279,44 @@ describe('CoreStateful blocked event handling', () => {
     }).not.toThrow()
   })
 
+  it('flushes analytics and personalization queues with force on destroy', () => {
+    const core = createCoreStateful()
+    const analytics: unknown = Reflect.get(core, '_analytics')
+    const personalization: unknown = Reflect.get(core, '_personalization')
+
+    if (
+      !(
+        typeof analytics === 'object' &&
+        analytics !== null &&
+        'flush' in analytics &&
+        typeof analytics.flush === 'function'
+      )
+    ) {
+      throw new Error('CoreStateful analytics product is unavailable')
+    }
+
+    if (
+      !(
+        typeof personalization === 'object' &&
+        personalization !== null &&
+        'flush' in personalization &&
+        typeof personalization.flush === 'function'
+      )
+    ) {
+      throw new Error('CoreStateful internal products are unavailable')
+    }
+
+    const analyticsFlushSpy = rs.spyOn(analytics, 'flush').mockResolvedValue(undefined)
+    const personalizationFlushSpy = rs.spyOn(personalization, 'flush').mockResolvedValue(undefined)
+
+    core.destroy()
+
+    expect(analyticsFlushSpy).toHaveBeenCalledTimes(1)
+    expect(analyticsFlushSpy).toHaveBeenCalledWith({ force: true })
+    expect(personalizationFlushSpy).toHaveBeenCalledTimes(1)
+    expect(personalizationFlushSpy).toHaveBeenCalledWith({ force: true })
+  })
+
   it('exposes online state through protected accessor pair', () => {
     const core = createCoreStatefulHarness()
 

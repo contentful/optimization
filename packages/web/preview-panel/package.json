@@ -53,6 +53,7 @@
   },
   "dependencies": {
     "@contentful/optimization-web": "workspace:*",
+    "@leeoniya/ufuzzy": "^1.0.19",
     "@lit/context": "^1.1.6",
     "contentful": "catalog:",
     "es-toolkit": "catalog:",

@@ -8,11 +8,8 @@ import { consume } from '@lit/context'
 import { css, html, LitElement, nothing, type PropertyValues, type TemplateResult } from 'lit'
 import { property, state } from 'lit/decorators.js'
 import { overridesContext, profileContext } from '../lib/contexts'
-import { isCtflOptPreviewAudienceSwitch } from './ctfl-opt-preview-audience-switch'
-import type {
-  RecordRadioGroupChangeDetail,
-  RecordRadioGroupChangeEvent,
-} from './ctfl-opt-preview-personalization'
+import { isAudienceSwitch } from './audience-switch'
+import type { RecordRadioGroupChangeDetail, RecordRadioGroupChangeEvent } from './personalization'
 
 function isRecordRadioGroupChangeDetailValue(
   value: unknown,
@@ -24,19 +21,18 @@ function isRecordRadioGroupChangeDetailValue(
 }
 
 /**
- * Custom element tag name for {@link CtflOptPreviewAudience}.
+ * Custom element tag name for {@link Audience}.
  *
  * @public
  */
-export const CTFL_OPT_PREVIEW_AUDIENCE_TAG = 'ctfl-opt-preview-audience' as const
+export const AUDIENCE_TAG = 'ctfl-opt-preview-audience' as const
 
 /**
  * Event name dispatched when an audience section is toggled open or closed.
  *
  * @public
  */
-export const CTFL_OPT_PREVIEW_AUDIENCE_CONTENT_TOGGLE =
-  'ctfl_opt_preview_audience_content_toggle' as const
+export const AUDIENCE_CONTENT_TOGGLE = 'ctfl_opt_preview_audience_content_toggle' as const
 
 /**
  * Payload emitted when an audience section is expanded or collapsed.
@@ -63,16 +59,14 @@ export type AudienceContentToggleEvent = CustomEvent<AudienceContentToggleDetail
  *
  * @public
  */
-export const CTFL_OPT_PREVIEW_PERSONALIZATION_CHANGE =
-  'ctfl-opt-preview-personalization-change' as const
+export const PERSONALIZATION_CHANGE = 'ctfl-opt-preview-personalization-change' as const
 
 /**
  * Event name dispatched when an audience-wide switch changes.
  *
  * @public
  */
-export const CTFL_OPT_PREVIEW_AUDIENCE_SWITCH_CHANGE =
-  'ctfl-opt-preview-audience-switch-change' as const
+export const AUDIENCE_SWITCH_CHANGE = 'ctfl-opt-preview-audience-switch-change' as const
 
 /**
  * Payload emitted when the audience-wide switch updates all personalizations.
@@ -104,26 +98,26 @@ export function isAudienceSwitchChangeEvent(event: Event): event is AudienceSwit
 }
 
 /**
- * Type guard that checks whether an element is a {@link CtflOptPreviewAudience}.
+ * Type guard that checks whether an element is a {@link Audience}.
  *
  * @param element - The element to check.
- * @returns `true` if the element's tag matches {@link CTFL_OPT_PREVIEW_AUDIENCE_TAG}.
+ * @returns `true` if the element's tag matches {@link AUDIENCE_TAG}.
  *
  * @example
  * ```ts
- * if (isCtflOptPreviewAudience(el)) {
+ * if (isAudience(el)) {
  *   el.audience = audienceEntry
  * }
  * ```
  *
  * @public
  */
-export function isCtflOptPreviewAudience(element?: Element): element is CtflOptPreviewAudience {
-  return element?.tagName === CTFL_OPT_PREVIEW_AUDIENCE_TAG.toUpperCase()
+export function isAudience(element?: Element): element is Audience {
+  return element?.tagName === AUDIENCE_TAG.toUpperCase()
 }
 
 /**
- * Collapsible audience section that groups {@link CtflOptPreviewPersonalization}
+ * Collapsible audience section that groups {@link Personalization}
  * components under a single audience heading.
  *
  * Consumes the {@link profileContext} and {@link overridesContext} from the
@@ -133,7 +127,7 @@ export function isCtflOptPreviewAudience(element?: Element): element is CtflOptP
  *
  * @public
  */
-export class CtflOptPreviewAudience extends LitElement {
+export class Audience extends LitElement {
   /** Whether the audience section is expanded. */
   @property({ type: Boolean, reflect: true })
   accessor open = true
@@ -199,7 +193,7 @@ export class CtflOptPreviewAudience extends LitElement {
     if (!this._audienceId) return
 
     this.dispatchEvent(
-      new CustomEvent<AudienceContentToggleDetail>(CTFL_OPT_PREVIEW_AUDIENCE_CONTENT_TOGGLE, {
+      new CustomEvent<AudienceContentToggleDetail>(AUDIENCE_CONTENT_TOGGLE, {
         detail: { key: this._audienceId, open: this.open },
         bubbles: true,
         composed: true,
@@ -215,7 +209,7 @@ export class CtflOptPreviewAudience extends LitElement {
     this.valuesByKey = { ...this.valuesByKey, [key]: event.detail.value }
 
     this.dispatchEvent(
-      new CustomEvent<RecordRadioGroupChangeDetail>(CTFL_OPT_PREVIEW_PERSONALIZATION_CHANGE, {
+      new CustomEvent<RecordRadioGroupChangeDetail>(PERSONALIZATION_CHANGE, {
         detail: { key, value },
         bubbles: true,
         composed: true,
@@ -226,8 +220,7 @@ export class CtflOptPreviewAudience extends LitElement {
   /** @internal */
   private readonly _onAudienceSwitchChange = (event: Event): void => {
     const { currentTarget } = event
-    if (!(currentTarget instanceof Element) || !isCtflOptPreviewAudienceSwitch(currentTarget))
-      return
+    if (!(currentTarget instanceof Element) || !isAudienceSwitch(currentTarget)) return
 
     const detail =
       currentTarget.value === undefined
@@ -251,7 +244,7 @@ export class CtflOptPreviewAudience extends LitElement {
     )
 
     this.dispatchEvent(
-      new CustomEvent<AudienceSwitchChangeDetail>(CTFL_OPT_PREVIEW_AUDIENCE_SWITCH_CHANGE, {
+      new CustomEvent<AudienceSwitchChangeDetail>(AUDIENCE_SWITCH_CHANGE, {
         detail,
         bubbles: true,
         composed: true,
@@ -324,7 +317,11 @@ export class CtflOptPreviewAudience extends LitElement {
               </svg>
             </span>
 
-            <span class="audience-name" id=${labelId}>${this.audience?.fields.nt_name}</span>
+            <span class="audience-name" id=${labelId}>
+              <ctfl-opt-preview-matched-text
+                .text=${this.audience?.fields.nt_name ?? ''}
+              ></ctfl-opt-preview-matched-text>
+            </span>
 
             ${this.natural
               ? html`<ctfl-opt-preview-indicator
@@ -390,6 +387,7 @@ export class CtflOptPreviewAudience extends LitElement {
     .summary {
       display: flex;
       justify-content: space-between;
+      padding-bottom: 0.75rem;
     }
 
     .summary button {
@@ -421,6 +419,7 @@ export class CtflOptPreviewAudience extends LitElement {
       -webkit-line-clamp: 3;
       line-clamp: 3;
       overflow: hidden;
+      font-weight: 500;
     }
 
     .details:not(:has(.content[hidden])) .summary button svg {
@@ -437,7 +436,6 @@ export class CtflOptPreviewAudience extends LitElement {
       display: flex;
       flex-direction: column;
       gap: 1rem;
-      padding-top: 0.25rem;
     }
 
     .content[hidden] {
@@ -480,17 +478,17 @@ export class CtflOptPreviewAudience extends LitElement {
 }
 
 /**
- * Registers the {@link CtflOptPreviewAudience} custom element if not already defined.
+ * Registers the {@link Audience} custom element if not already defined.
  *
  * @example
  * ```ts
- * defineCtflOptPreviewAudience()
+ * defineAudience()
  * ```
  *
  * @public
  */
-export function defineCtflOptPreviewAudience(): void {
-  if (!customElements.get(CTFL_OPT_PREVIEW_AUDIENCE_TAG)) {
-    customElements.define(CTFL_OPT_PREVIEW_AUDIENCE_TAG, CtflOptPreviewAudience)
+export function defineAudience(): void {
+  if (!customElements.get(AUDIENCE_TAG)) {
+    customElements.define(AUDIENCE_TAG, Audience)
   }
 }

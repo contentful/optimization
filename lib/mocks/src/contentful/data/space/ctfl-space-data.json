@@ -12,7 +12,7 @@
         "id": "nt_audience",
         "type": "ContentType",
         "createdAt": "2025-10-06T12:55:28.972Z",
-        "updatedAt": "2026-01-08T13:50:45.577Z",
+        "updatedAt": "2026-02-06T13:43:15.743Z",
         "environment": {
           "sys": {
             "id": "master",
@@ -20,8 +20,8 @@
             "linkType": "Environment"
           }
         },
-        "publishedVersion": 5,
-        "publishedAt": "2026-01-08T13:50:45.577Z",
+        "publishedVersion": 7,
+        "publishedAt": "2026-02-06T13:43:15.743Z",
         "firstPublishedAt": "2025-10-06T12:55:29.231Z",
         "createdBy": {
           "sys": {
@@ -33,17 +33,17 @@
         "updatedBy": {
           "sys": {
             "type": "Link",
-            "linkType": "User",
-            "id": "2ThAHYPA8kj7F1sHxUzXVt"
+            "linkType": "AppDefinition",
+            "id": "4QYnIIKna8TpXegJp3oSBi"
           }
         },
-        "publishedCounter": 3,
-        "version": 6,
+        "publishedCounter": 4,
+        "version": 8,
         "publishedBy": {
           "sys": {
             "type": "Link",
-            "linkType": "User",
-            "id": "2ThAHYPA8kj7F1sHxUzXVt"
+            "linkType": "AppDefinition",
+            "id": "4QYnIIKna8TpXegJp3oSBi"
           }
         },
         "urn": "crn:contentful:::content:spaces/uelxcuo7v97l/environments/master/content_types/nt_audience"
@@ -120,7 +120,7 @@
         "id": "nt_mergetag",
         "type": "ContentType",
         "createdAt": "2025-10-06T12:55:29.978Z",
-        "updatedAt": "2026-01-08T13:50:46.164Z",
+        "updatedAt": "2026-02-06T13:43:17.106Z",
         "environment": {
           "sys": {
             "id": "master",
@@ -128,8 +128,8 @@
             "linkType": "Environment"
           }
         },
-        "publishedVersion": 5,
-        "publishedAt": "2026-01-08T13:50:46.164Z",
+        "publishedVersion": 7,
+        "publishedAt": "2026-02-06T13:43:17.106Z",
         "firstPublishedAt": "2025-10-06T12:55:30.221Z",
         "createdBy": {
           "sys": {
@@ -141,17 +141,17 @@
         "updatedBy": {
           "sys": {
             "type": "Link",
-            "linkType": "User",
-            "id": "2ThAHYPA8kj7F1sHxUzXVt"
+            "linkType": "AppDefinition",
+            "id": "4QYnIIKna8TpXegJp3oSBi"
           }
         },
-        "publishedCounter": 3,
-        "version": 6,
+        "publishedCounter": 4,
+        "version": 8,
         "publishedBy": {
           "sys": {
             "type": "Link",
-            "linkType": "User",
-            "id": "2ThAHYPA8kj7F1sHxUzXVt"
+            "linkType": "AppDefinition",
+            "id": "4QYnIIKna8TpXegJp3oSBi"
           }
         },
         "urn": "crn:contentful:::content:spaces/uelxcuo7v97l/environments/master/content_types/nt_mergetag"
@@ -208,7 +208,7 @@
         "id": "nt_experience",
         "type": "ContentType",
         "createdAt": "2025-10-06T12:55:30.900Z",
-        "updatedAt": "2026-01-08T13:50:46.749Z",
+        "updatedAt": "2026-02-06T13:43:14.363Z",
         "environment": {
           "sys": {
             "id": "master",
@@ -216,8 +216,8 @@
             "linkType": "Environment"
           }
         },
-        "publishedVersion": 5,
-        "publishedAt": "2026-01-08T13:50:46.749Z",
+        "publishedVersion": 7,
+        "publishedAt": "2026-02-06T13:43:14.363Z",
         "firstPublishedAt": "2025-10-06T12:55:31.163Z",
         "createdBy": {
           "sys": {
@@ -229,17 +229,17 @@
         "updatedBy": {
           "sys": {
             "type": "Link",
-            "linkType": "User",
-            "id": "2ThAHYPA8kj7F1sHxUzXVt"
+            "linkType": "AppDefinition",
+            "id": "4QYnIIKna8TpXegJp3oSBi"
           }
         },
-        "publishedCounter": 3,
-        "version": 6,
+        "publishedCounter": 4,
+        "version": 8,
         "publishedBy": {
           "sys": {
             "type": "Link",
-            "linkType": "User",
-            "id": "2ThAHYPA8kj7F1sHxUzXVt"
+            "linkType": "AppDefinition",
+            "id": "4QYnIIKna8TpXegJp3oSBi"
           }
         },
         "urn": "crn:contentful:::content:spaces/uelxcuo7v97l/environments/master/content_types/nt_experience"
@@ -697,7 +697,7 @@
             "linkType": "Space"
           }
         },
-        "version": 6,
+        "version": 8,
         "createdAt": "2025-10-06T12:55:29.411Z",
         "createdBy": {
           "sys": {
@@ -706,12 +706,12 @@
             "linkType": "AppDefinition"
           }
         },
-        "updatedAt": "2026-01-08T13:50:57.583Z",
+        "updatedAt": "2026-02-06T13:43:16.350Z",
         "updatedBy": {
           "sys": {
-            "id": "2ThAHYPA8kj7F1sHxUzXVt",
+            "id": "4QYnIIKna8TpXegJp3oSBi",
             "type": "Link",
-            "linkType": "User"
+            "linkType": "AppDefinition"
           }
         },
         "contentType": {
@@ -729,14 +729,31 @@
           }
         }
       },
+      "editors": [
+        {
+          "settings": {},
+          "widgetId": "default-editor",
+          "widgetNamespace": "editor-builtin"
+        },
+        {
+          "settings": {},
+          "widgetId": "reference-tree",
+          "widgetNamespace": "editor-builtin"
+        },
+        {
+          "settings": {},
+          "widgetId": "tags-editor",
+          "widgetNamespace": "editor-builtin"
+        },
+        {
+          "settings": {},
+          "widgetId": "4QYnIIKna8TpXegJp3oSBi",
+          "widgetNamespace": "app"
+        }
+      ],
       "controls": [
         {
           "fieldId": "nt_metadata"
-        },
-        {
-          "fieldId": "nt_rules",
-          "widgetId": "4QYnIIKna8TpXegJp3oSBi",
-          "widgetNamespace": "app"
         },
         {
           "fieldId": "nt_audience_id",
@@ -745,6 +762,11 @@
         },
         {
           "fieldId": "nt_description",
+          "widgetId": "4QYnIIKna8TpXegJp3oSBi",
+          "widgetNamespace": "app"
+        },
+        {
+          "fieldId": "nt_rules",
           "widgetId": "4QYnIIKna8TpXegJp3oSBi",
           "widgetNamespace": "app"
         },
@@ -766,7 +788,7 @@
             "linkType": "Space"
           }
         },
-        "version": 5,
+        "version": 6,
         "createdAt": "2025-10-06T12:55:30.344Z",
         "createdBy": {
           "sys": {
@@ -775,12 +797,12 @@
             "linkType": "AppDefinition"
           }
         },
-        "updatedAt": "2026-01-08T13:50:58.406Z",
+        "updatedAt": "2026-02-06T13:43:17.236Z",
         "updatedBy": {
           "sys": {
-            "id": "2ThAHYPA8kj7F1sHxUzXVt",
+            "id": "4QYnIIKna8TpXegJp3oSBi",
             "type": "Link",
-            "linkType": "User"
+            "linkType": "AppDefinition"
           }
         },
         "contentType": {
@@ -827,7 +849,7 @@
             "linkType": "Space"
           }
         },
-        "version": 6,
+        "version": 8,
         "createdAt": "2025-10-06T12:55:31.336Z",
         "createdBy": {
           "sys": {
@@ -836,12 +858,12 @@
             "linkType": "AppDefinition"
           }
         },
-        "updatedAt": "2026-01-08T13:50:57.424Z",
+        "updatedAt": "2026-02-06T13:43:14.994Z",
         "updatedBy": {
           "sys": {
-            "id": "2ThAHYPA8kj7F1sHxUzXVt",
+            "id": "4QYnIIKna8TpXegJp3oSBi",
             "type": "Link",
-            "linkType": "User"
+            "linkType": "AppDefinition"
           }
         },
         "contentType": {

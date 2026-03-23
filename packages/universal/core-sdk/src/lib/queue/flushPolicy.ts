@@ -33,6 +33,13 @@ export interface QueueFlushRecoveredContext {
  */
 export interface QueueFlushPolicy {
   /**
+   * Periodic flush interval in milliseconds while events remain queued.
+   *
+   * @defaultValue `30000`
+   */
+  flushIntervalMs?: number
+
+  /**
    * Base retry backoff delay in milliseconds.
    *
    * @defaultValue `500`
@@ -87,6 +94,7 @@ export interface QueueFlushPolicy {
 }
 
 interface QueueFlushDefaults {
+  flushIntervalMs: number
   baseBackoffMs: number
   maxBackoffMs: number
   jitterRatio: number
@@ -100,6 +108,7 @@ interface QueueFlushDefaults {
  * @internal
  */
 export const DEFAULT_QUEUE_FLUSH_POLICY: QueueFlushDefaults = {
+  flushIntervalMs: 30_000,
   baseBackoffMs: 500,
   maxBackoffMs: 30_000,
   jitterRatio: 0.2,
@@ -113,6 +122,7 @@ export const DEFAULT_QUEUE_FLUSH_POLICY: QueueFlushDefaults = {
  * @internal
  */
 export interface ResolvedQueueFlushPolicy {
+  flushIntervalMs: number
   baseBackoffMs: number
   maxBackoffMs: number
   jitterRatio: number
@@ -136,24 +146,26 @@ export const resolveQueueFlushPolicy = (
   policy: QueueFlushPolicy | undefined,
   defaults: QueueFlushDefaults = DEFAULT_QUEUE_FLUSH_POLICY,
 ): ResolvedQueueFlushPolicy => {
-  const baseBackoffMs = toPositiveInt(policy?.baseBackoffMs, defaults.baseBackoffMs)
+  const configuredPolicy: QueueFlushPolicy = policy ?? {}
+  const baseBackoffMs = toPositiveInt(configuredPolicy.baseBackoffMs, defaults.baseBackoffMs)
   const maxBackoffMs = Math.max(
     baseBackoffMs,
-    toPositiveInt(policy?.maxBackoffMs, defaults.maxBackoffMs),
+    toPositiveInt(configuredPolicy.maxBackoffMs, defaults.maxBackoffMs),
   )
 
   return {
+    flushIntervalMs: toPositiveInt(configuredPolicy.flushIntervalMs, defaults.flushIntervalMs),
     baseBackoffMs,
     maxBackoffMs,
-    jitterRatio: toRatio(policy?.jitterRatio, defaults.jitterRatio),
+    jitterRatio: toRatio(configuredPolicy.jitterRatio, defaults.jitterRatio),
     maxConsecutiveFailures: toPositiveInt(
-      policy?.maxConsecutiveFailures,
+      configuredPolicy.maxConsecutiveFailures,
       defaults.maxConsecutiveFailures,
     ),
-    circuitOpenMs: toPositiveInt(policy?.circuitOpenMs, defaults.circuitOpenMs),
-    onCircuitOpen: policy?.onCircuitOpen,
-    onFlushFailure: policy?.onFlushFailure,
-    onFlushRecovered: policy?.onFlushRecovered,
+    circuitOpenMs: toPositiveInt(configuredPolicy.circuitOpenMs, defaults.circuitOpenMs),
+    onCircuitOpen: configuredPolicy.onCircuitOpen,
+    onFlushFailure: configuredPolicy.onFlushFailure,
+    onFlushRecovered: configuredPolicy.onFlushRecovered,
   }
 }
 

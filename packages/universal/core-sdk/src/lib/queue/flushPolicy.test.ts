@@ -18,6 +18,7 @@ describe('queue flush policy utils', () => {
 
       expect(resolved).toEqual(
         expect.objectContaining({
+          flushIntervalMs: DEFAULT_QUEUE_FLUSH_POLICY.flushIntervalMs,
           baseBackoffMs: DEFAULT_QUEUE_FLUSH_POLICY.baseBackoffMs,
           maxBackoffMs: DEFAULT_QUEUE_FLUSH_POLICY.maxBackoffMs,
           jitterRatio: 1,

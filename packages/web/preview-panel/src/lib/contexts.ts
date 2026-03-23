@@ -53,3 +53,10 @@ export const profileContext: Context<string, Profile | undefined> = createContex
  * @public
  */
 export const overridesContext = createContext<Map<string, number> | undefined, string>('overrides')
+
+/**
+ * Lit context for sharing search state with preview panel child components.
+ *
+ * @public
+ */
+export const searchContext = createContext<string | undefined, string>('search')
