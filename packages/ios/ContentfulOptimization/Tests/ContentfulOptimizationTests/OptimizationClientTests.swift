@@ -1,3 +1,4 @@
+import Combine
 import JavaScriptCore
 import XCTest
 @testable import ContentfulOptimization
@@ -249,6 +250,7 @@ final class OptimizationClientTests: XCTestCase {
         {
             XCTAssertTrue(dict.keys.contains("consent"))
             XCTAssertTrue(dict.keys.contains("canPersonalize"))
+            XCTAssertTrue(dict.keys.contains("selectedPersonalizations"))
         } else {
             XCTFail("getState should return valid JSON")
         }
@@ -261,6 +263,7 @@ final class OptimizationClientTests: XCTestCase {
         let client = OptimizationClient()
         XCTAssertFalse(client.isInitialized)
         XCTAssertEqual(client.state, OptimizationState.empty)
+        XCTAssertNil(client.selectedPersonalizations)
     }
 
     @MainActor
@@ -293,6 +296,7 @@ final class OptimizationClientTests: XCTestCase {
         client.destroy()
         XCTAssertFalse(client.isInitialized)
         XCTAssertEqual(client.state, OptimizationState.empty)
+        XCTAssertNil(client.selectedPersonalizations)
     }
 
     @MainActor
@@ -344,5 +348,314 @@ final class OptimizationClientTests: XCTestCase {
         } catch {
             XCTFail("Unexpected error type: \(error)")
         }
+    }
+
+    // MARK: - Phase 2: Sync Method Tests
+
+    @MainActor
+    func testClientConsentCallsThrough() throws {
+        let client = OptimizationClient()
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            environment: "master",
+            experienceBaseUrl: "http://localhost:8000/experience/",
+            insightsBaseUrl: "http://localhost:8000/insights/"
+        )
+
+        try client.initialize(config: config)
+
+        // Should not throw
+        client.consent(true)
+        client.consent(false)
+    }
+
+    @MainActor
+    func testClientResetCallsThrough() throws {
+        let client = OptimizationClient()
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            environment: "master",
+            experienceBaseUrl: "http://localhost:8000/experience/",
+            insightsBaseUrl: "http://localhost:8000/insights/"
+        )
+
+        try client.initialize(config: config)
+
+        // Should not throw
+        client.reset()
+    }
+
+    @MainActor
+    func testClientSetOnlineCallsThrough() throws {
+        let client = OptimizationClient()
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            environment: "master",
+            experienceBaseUrl: "http://localhost:8000/experience/",
+            insightsBaseUrl: "http://localhost:8000/insights/"
+        )
+
+        try client.initialize(config: config)
+
+        // Should not throw
+        client.setOnline(true)
+        client.setOnline(false)
+    }
+
+    @MainActor
+    func testClientSyncMethodsNoOpWhenNotInitialized() {
+        let client = OptimizationClient()
+
+        // These should silently no-op when not initialized
+        client.consent(true)
+        client.reset()
+        client.setOnline(false)
+    }
+
+    // MARK: - Phase 2: personalizeEntry Tests
+
+    @MainActor
+    func testPersonalizeEntryReturnsBaselineWhenNotInitialized() {
+        let client = OptimizationClient()
+        let baseline: [String: Any] = ["sys": ["id": "entry1"], "fields": ["title": "Hello"]]
+
+        let result = client.personalizeEntry(baseline: baseline)
+        XCTAssertEqual(result.entry["fields"] as? [String: String], ["title": "Hello"])
+        XCTAssertNil(result.personalization)
+    }
+
+    @MainActor
+    func testPersonalizeEntryReturnsBaselineWhenInitialized() throws {
+        let client = OptimizationClient()
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            environment: "master",
+            experienceBaseUrl: "http://localhost:8000/experience/",
+            insightsBaseUrl: "http://localhost:8000/insights/"
+        )
+
+        try client.initialize(config: config)
+
+        let baseline: [String: Any] = [
+            "sys": ["id": "entry1", "contentType": ["sys": ["id": "page"]]],
+            "fields": ["title": "Hello"],
+        ]
+
+        // Without personalizations set, should return baseline
+        let result = client.personalizeEntry(baseline: baseline)
+        XCTAssertNotNil(result.entry)
+    }
+
+    // MARK: - Phase 2: Payload Serialization Tests
+
+    func testTrackViewPayloadToJSON() throws {
+        let payload = TrackViewPayload(
+            componentId: "comp-1",
+            viewId: "view-1",
+            experienceId: "exp-1",
+            variantIndex: 2,
+            viewDurationMs: 1500,
+            sticky: true
+        )
+
+        let json = try payload.toJSON()
+        let data = json.data(using: .utf8)!
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        XCTAssertEqual(dict["componentId"] as? String, "comp-1")
+        XCTAssertEqual(dict["viewId"] as? String, "view-1")
+        XCTAssertEqual(dict["experienceId"] as? String, "exp-1")
+        XCTAssertEqual(dict["variantIndex"] as? Int, 2)
+        XCTAssertEqual(dict["viewDurationMs"] as? Int, 1500)
+        XCTAssertEqual(dict["sticky"] as? Bool, true)
+    }
+
+    func testTrackViewPayloadOmitsOptionalFields() throws {
+        let payload = TrackViewPayload(
+            componentId: "comp-1",
+            viewId: "view-1",
+            variantIndex: 0,
+            viewDurationMs: 500
+        )
+
+        let json = try payload.toJSON()
+        let data = json.data(using: .utf8)!
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        XCTAssertEqual(dict.count, 4)
+        XCTAssertNil(dict["experienceId"])
+        XCTAssertNil(dict["sticky"])
+    }
+
+    func testTrackClickPayloadToJSON() throws {
+        let payload = TrackClickPayload(
+            componentId: "comp-1",
+            experienceId: "exp-1",
+            variantIndex: 1
+        )
+
+        let json = try payload.toJSON()
+        let data = json.data(using: .utf8)!
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        XCTAssertEqual(dict["componentId"] as? String, "comp-1")
+        XCTAssertEqual(dict["experienceId"] as? String, "exp-1")
+        XCTAssertEqual(dict["variantIndex"] as? Int, 1)
+    }
+
+    func testTrackClickPayloadOmitsOptionalFields() throws {
+        let payload = TrackClickPayload(
+            componentId: "comp-1",
+            variantIndex: 0
+        )
+
+        let json = try payload.toJSON()
+        let data = json.data(using: .utf8)!
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        XCTAssertEqual(dict.count, 2)
+        XCTAssertNil(dict["experienceId"])
+    }
+
+    // MARK: - Phase 2: Async Method Not-Initialized Tests
+
+    @MainActor
+    func testClientScreenThrowsWhenNotInitialized() async {
+        let client = OptimizationClient()
+
+        do {
+            _ = try await client.screen(name: "Home")
+            XCTFail("Should have thrown notInitialized error")
+        } catch let error as OptimizationError {
+            if case .notInitialized = error {
+                // Expected
+            } else {
+                XCTFail("Expected notInitialized, got \(error)")
+            }
+        } catch {
+            XCTFail("Unexpected error type: \(error)")
+        }
+    }
+
+    @MainActor
+    func testClientFlushThrowsWhenNotInitialized() async {
+        let client = OptimizationClient()
+
+        do {
+            try await client.flush()
+            XCTFail("Should have thrown notInitialized error")
+        } catch let error as OptimizationError {
+            if case .notInitialized = error {
+                // Expected
+            } else {
+                XCTFail("Expected notInitialized, got \(error)")
+            }
+        } catch {
+            XCTFail("Unexpected error type: \(error)")
+        }
+    }
+
+    @MainActor
+    func testClientTrackViewThrowsWhenNotInitialized() async {
+        let client = OptimizationClient()
+        let payload = TrackViewPayload(
+            componentId: "c1", viewId: "v1", variantIndex: 0, viewDurationMs: 100
+        )
+
+        do {
+            _ = try await client.trackView(payload)
+            XCTFail("Should have thrown notInitialized error")
+        } catch let error as OptimizationError {
+            if case .notInitialized = error {
+                // Expected
+            } else {
+                XCTFail("Expected notInitialized, got \(error)")
+            }
+        } catch {
+            XCTFail("Unexpected error type: \(error)")
+        }
+    }
+
+    @MainActor
+    func testClientTrackClickThrowsWhenNotInitialized() async {
+        let client = OptimizationClient()
+        let payload = TrackClickPayload(componentId: "c1", variantIndex: 0)
+
+        do {
+            _ = try await client.trackClick(payload)
+            XCTFail("Should have thrown notInitialized error")
+        } catch let error as OptimizationError {
+            if case .notInitialized = error {
+                // Expected
+            } else {
+                XCTFail("Expected notInitialized, got \(error)")
+            }
+        } catch {
+            XCTFail("Unexpected error type: \(error)")
+        }
+    }
+
+    // MARK: - Phase 2: Event Publisher Tests
+
+    @MainActor
+    func testEventPublisherReceivesEvents() throws {
+        let manager = JSContextManager()
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            environment: "master",
+            experienceBaseUrl: "http://localhost:8000/experience/",
+            insightsBaseUrl: "http://localhost:8000/insights/"
+        )
+
+        var receivedEvents: [[String: Any]] = []
+        manager.onEvent = { dict in
+            receivedEvents.append(dict)
+        }
+
+        try manager.initialize(config: config)
+
+        // Simulate an event being pushed from JS
+        manager.context?.evaluateScript("""
+            if (typeof __nativeOnEventEmitted === 'function') {
+                __nativeOnEventEmitted(JSON.stringify({ type: 'test', data: 'hello' }))
+            }
+        """)
+
+        // Give the async dispatch a moment to fire
+        let expectation = XCTestExpectation(description: "Event received")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            if !receivedEvents.isEmpty {
+                expectation.fulfill()
+            }
+        }
+
+        wait(for: [expectation], timeout: 1.0)
+
+        XCTAssertEqual(receivedEvents.count, 1)
+        XCTAssertEqual(receivedEvents[0]["type"] as? String, "test")
+        XCTAssertEqual(receivedEvents[0]["data"] as? String, "hello")
+    }
+
+    // MARK: - Phase 2: selectedPersonalizations State Tests
+
+    @MainActor
+    func testSelectedPersonalizationsUpdatedFromState() throws {
+        let manager = JSContextManager()
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            environment: "master",
+            experienceBaseUrl: "http://localhost:8000/experience/",
+            insightsBaseUrl: "http://localhost:8000/insights/"
+        )
+
+        try manager.initialize(config: config)
+
+        // getState should include selectedPersonalizations field
+        let result = manager.callSync(method: "getState")
+        let stateStr = result?.toString() ?? ""
+        let data = stateStr.data(using: .utf8)!
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        XCTAssertTrue(dict.keys.contains("selectedPersonalizations"))
     }
 }

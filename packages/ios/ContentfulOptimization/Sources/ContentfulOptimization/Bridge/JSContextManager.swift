@@ -16,6 +16,7 @@ final class JSContextManager {
 
     var onLog: ((String, String) -> Void)?
     var onStateChange: (([String: Any]) -> Void)?
+    var onEvent: (([String: Any]) -> Void)?
 
     /// Creates the JSContext, loads polyfills and the UMD bundle, and calls `__bridge.initialize()`.
     func initialize(config: OptimizationConfig) throws {
@@ -68,6 +69,12 @@ final class JSContextManager {
         }
         ctx.setObject(onStateChange, forKeyedSubscript: "__nativeOnStateChange" as NSString)
 
+        // Register event callback
+        let onEventEmitted: @convention(block) (String) -> Void = { [weak self] json in
+            self?.handleEvent(json)
+        }
+        ctx.setObject(onEventEmitted, forKeyedSubscript: "__nativeOnEventEmitted" as NSString)
+
         // Initialize the bridge
         let configJSON: String
         do {
@@ -111,10 +118,14 @@ final class JSContextManager {
             }
         )
 
-        ctx.evaluateScript("__bridge.\(method)(\(payload), \(names.success), \(names.error))")
+        let args = payload.isEmpty
+            ? "\(names.success), \(names.error)"
+            : "\(payload), \(names.success), \(names.error)"
+        ctx.evaluateScript("__bridge.\(method)(\(args))")
     }
 
     /// Calls a synchronous bridge method and returns the result.
+    @discardableResult
     func callSync(method: String, args: String = "") -> JSValue? {
         guard let ctx = context else { return nil }
         let script = args.isEmpty ? "__bridge.\(method)()" : "__bridge.\(method)(\(args))"
@@ -159,6 +170,16 @@ final class JSContextManager {
 
         DispatchQueue.main.async { [weak self] in
             self?.onStateChange?(dict)
+        }
+    }
+
+    private func handleEvent(_ json: String) {
+        guard let data = json.data(using: .utf8),
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return }
+
+        DispatchQueue.main.async { [weak self] in
+            self?.onEvent?(dict)
         }
     }
 }
