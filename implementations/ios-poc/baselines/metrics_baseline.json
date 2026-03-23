@@ -1,0 +1,89 @@
+{
+  "xctest_metrics": {},
+  "perf_results": [
+    {
+      "test": "coldStartPhaseBreakdown",
+      "iteration": 0,
+      "timings": {
+        "contextCreation": 0.0005629062652587891,
+        "nativePolyfillRegistration": 4.208087921142578e-5,
+        "jsPolyfillEvaluation": 0.0009539127349853516,
+        "umdBundleEvaluation": 0.007049083709716797,
+        "sdkInitialize": 0.001298069953918457,
+        "total": 0.00993800163269043
+      }
+    },
+    {
+      "test": "coldStartPhaseBreakdown",
+      "iteration": 1,
+      "timings": {
+        "contextCreation": 0.0005190372467041016,
+        "nativePolyfillRegistration": 4.303455352783203e-5,
+        "jsPolyfillEvaluation": 0.0007799863815307617,
+        "umdBundleEvaluation": 0.007049918174743652,
+        "sdkInitialize": 0.001302957534790039,
+        "total": 0.009729981422424316
+      }
+    },
+    {
+      "test": "coldStartPhaseBreakdown",
+      "iteration": 2,
+      "timings": {
+        "contextCreation": 0.0004858970642089844,
+        "nativePolyfillRegistration": 3.707408905029297e-5,
+        "jsPolyfillEvaluation": 0.000762939453125,
+        "umdBundleEvaluation": 0.006555080413818359,
+        "sdkInitialize": 0.0013170242309570312,
+        "total": 0.009182929992675781
+      }
+    },
+    {
+      "test": "coldStartPhaseBreakdown",
+      "iteration": 3,
+      "timings": {
+        "contextCreation": 0.0006320476531982422,
+        "nativePolyfillRegistration": 4.100799560546875e-5,
+        "jsPolyfillEvaluation": 0.0007269382476806641,
+        "umdBundleEvaluation": 0.006757020950317383,
+        "sdkInitialize": 0.0011960268020629883,
+        "total": 0.009383082389831543
+      }
+    },
+    {
+      "test": "coldStartPhaseBreakdown",
+      "iteration": 4,
+      "timings": {
+        "contextCreation": 0.0004909038543701172,
+        "nativePolyfillRegistration": 3.707408905029297e-5,
+        "jsPolyfillEvaluation": 0.0009239912033081055,
+        "umdBundleEvaluation": 0.007318019866943359,
+        "sdkInitialize": 0.0012699365615844727,
+        "total": 0.01007091999053955
+      }
+    },
+    {
+      "test": "coldStartPhaseBreakdown",
+      "iteration": 5,
+      "timings": {
+        "contextCreation": 0.0004900693893432617,
+        "nativePolyfillRegistration": 3.3974647521972656e-5,
+        "jsPolyfillEvaluation": 0.000744938850402832,
+        "umdBundleEvaluation": 0.006924986839294434,
+        "sdkInitialize": 0.0013049840927124023,
+        "total": 0.009538054466247559
+      }
+    },
+    { "test": "memoryGrowthUnderLoad", "baselineMemoryMB": 498.34537506103516 },
+    {
+      "test": "memoryGrowthUnderLoad",
+      "finalMemoryMB": 508.81414794921875,
+      "growthMB": 10.468772888183594
+    }
+  ],
+  "metadata": {
+    "timestamp": "2026-03-23T10:21:33Z",
+    "xcresult_path": "/Users/alexander.freas/github/optimization/implementations/ios-poc/results/perf-20260323-102127.xcresult",
+    "xcode_version": "Xcode 26.3",
+    "device": "macOS 26.3.1"
+  }
+}

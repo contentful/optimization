@@ -1,5 +1,6 @@
 import Foundation
 import JavaScriptCore
+import os
 
 /// Decoded state snapshot pushed from JS signals via `effect()`.
 struct BridgeState: Equatable {
@@ -21,6 +22,8 @@ class JSContextManager: ObservableObject {
 
     private var context: JSContext?
 
+    static let signpostLog = OSLog(subsystem: "com.contentful.optimization.poc", category: "Performance")
+
     // MARK: - Configuration
 
     private let config: [String: String] = [
@@ -34,7 +37,14 @@ class JSContextManager: ObservableObject {
 
     /// Create the JSContext, load polyfills and the UMD bundle, and call `__bridge.initialize()`.
     func initialize() {
+        let log = JSContextManager.signpostLog
+        let coldStartID = OSSignpostID(log: log)
+        os_signpost(.begin, log: log, name: "Cold Start", signpostID: coldStartID)
+
         appendLog("[Swift] Creating JSContext...")
+
+        let contextCreateID = OSSignpostID(log: log)
+        os_signpost(.begin, log: log, name: "JSContext Creation", signpostID: contextCreateID)
 
         let ctx = JSContext()!
 
@@ -51,23 +61,40 @@ class JSContextManager: ObservableObject {
             ctx.isInspectable = true
         }
 
+        os_signpost(.end, log: log, name: "JSContext Creation", signpostID: contextCreateID)
+
         // Register native polyfill functions
+        let nativePolyfillID = OSSignpostID(log: log)
+        os_signpost(.begin, log: log, name: "Native Polyfill Registration", signpostID: nativePolyfillID)
+
         Polyfills.register(in: ctx) { [weak self] level, msg in
             DispatchQueue.main.async {
                 self?.appendLog("[JS \(level)] \(msg)")
             }
         }
 
+        os_signpost(.end, log: log, name: "Native Polyfill Registration", signpostID: nativePolyfillID)
+
         // Evaluate JS polyfill scripts
+        let jsPolyfillID = OSSignpostID(log: log)
+        os_signpost(.begin, log: log, name: "JS Polyfill Evaluation", signpostID: jsPolyfillID)
+
         for script in PolyfillScripts.all {
             ctx.evaluateScript(script)
         }
 
+        os_signpost(.end, log: log, name: "JS Polyfill Evaluation", signpostID: jsPolyfillID)
+
         // Load the UMD bundle
+        let umdBundleID = OSSignpostID(log: log)
+        os_signpost(.begin, log: log, name: "UMD Bundle Evaluation", signpostID: umdBundleID)
+
         guard let bundlePath = Bundle.main.path(
             forResource: "optimization-ios-bridge.umd",
             ofType: "js"
         ) else {
+            os_signpost(.end, log: log, name: "UMD Bundle Evaluation", signpostID: umdBundleID)
+            os_signpost(.end, log: log, name: "Cold Start", signpostID: coldStartID)
             appendLog("[Swift] ERROR: Bundle file not found in app resources")
             return
         }
@@ -77,13 +104,18 @@ class JSContextManager: ObservableObject {
             appendLog("[Swift] Evaluating bundle (\(bundleSource.count) chars)...")
             ctx.evaluateScript(bundleSource)
         } catch {
+            os_signpost(.end, log: log, name: "UMD Bundle Evaluation", signpostID: umdBundleID)
+            os_signpost(.end, log: log, name: "Cold Start", signpostID: coldStartID)
             appendLog("[Swift] ERROR loading bundle: \(error.localizedDescription)")
             return
         }
 
+        os_signpost(.end, log: log, name: "UMD Bundle Evaluation", signpostID: umdBundleID)
+
         // Verify __bridge exists
         let bridgeCheck = ctx.evaluateScript("typeof __bridge")
         guard bridgeCheck?.toString() == "object" else {
+            os_signpost(.end, log: log, name: "Cold Start", signpostID: coldStartID)
             appendLog("[Swift] ERROR: __bridge not found after bundle evaluation (got: \(bridgeCheck?.toString() ?? "nil"))")
             return
         }
@@ -97,20 +129,29 @@ class JSContextManager: ObservableObject {
         ctx.setObject(onStateChange, forKeyedSubscript: "__nativeOnStateChange" as NSString)
 
         // Call __bridge.initialize(config)
+        let sdkInitID = OSSignpostID(log: log)
+        os_signpost(.begin, log: log, name: "SDK Initialize", signpostID: sdkInitID)
+
         let configJSON: String
         do {
             let data = try JSONSerialization.data(withJSONObject: config)
             configJSON = String(data: data, encoding: .utf8) ?? "{}"
         } catch {
+            os_signpost(.end, log: log, name: "SDK Initialize", signpostID: sdkInitID)
+            os_signpost(.end, log: log, name: "Cold Start", signpostID: coldStartID)
             appendLog("[Swift] ERROR serializing config: \(error)")
             return
         }
 
         ctx.evaluateScript("__bridge.initialize(\(configJSON))")
 
+        os_signpost(.end, log: log, name: "SDK Initialize", signpostID: sdkInitID)
+
         self.context = ctx
         self.isInitialized = true
         appendLog("[Swift] SDK initialized successfully")
+
+        os_signpost(.end, log: log, name: "Cold Start", signpostID: coldStartID)
     }
 
     /// Call `__bridge.identify(payload)` with a one-shot callback pair.

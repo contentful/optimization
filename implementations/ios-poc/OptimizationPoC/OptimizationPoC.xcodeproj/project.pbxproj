@@ -15,7 +15,24 @@
 		A10000010000000000000006 /* optimization-ios-bridge.umd.js in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000006 /* optimization-ios-bridge.umd.js */; };
 		A10000010000000000000007 /* JavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000010000000000000007 /* JavaScriptCore.framework */; };
 		A10000010000000000000020 /* polyfills in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000020 /* polyfills */; };
+		B10000010000000000000001 /* ColdStartPerfTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000001 /* ColdStartPerfTests.swift */; };
+		B10000010000000000000002 /* MemoryPerfTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000002 /* MemoryPerfTests.swift */; };
+		B10000010000000000000003 /* BridgeCrossingPerfTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000003 /* BridgeCrossingPerfTests.swift */; };
+		B10000010000000000000004 /* PerfTestJSContextManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000004 /* PerfTestJSContextManager.swift */; };
+		B10000010000000000000005 /* MemoryReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000005 /* MemoryReporter.swift */; };
+		B10000010000000000000006 /* StubURLProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B20000010000000000000006 /* StubURLProtocol.swift */; };
+		B10000010000000000000007 /* JavaScriptCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A20000010000000000000007 /* JavaScriptCore.framework */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		B80000010000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A80000010000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A50000010000000000000001;
+			remoteInfo = OptimizationPoC;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		A20000010000000000000001 /* OptimizationPoCApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptimizationPoCApp.swift; sourceTree = "<group>"; };
@@ -28,6 +45,13 @@
 		A20000010000000000000008 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A20000010000000000000010 /* OptimizationPoC.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = OptimizationPoC.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A20000010000000000000020 /* polyfills */ = {isa = PBXFileReference; lastKnownFileType = folder; path = polyfills; sourceTree = "<group>"; };
+		B20000010000000000000001 /* ColdStartPerfTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColdStartPerfTests.swift; sourceTree = "<group>"; };
+		B20000010000000000000002 /* MemoryPerfTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryPerfTests.swift; sourceTree = "<group>"; };
+		B20000010000000000000003 /* BridgeCrossingPerfTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeCrossingPerfTests.swift; sourceTree = "<group>"; };
+		B20000010000000000000004 /* PerfTestJSContextManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerfTestJSContextManager.swift; sourceTree = "<group>"; };
+		B20000010000000000000005 /* MemoryReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryReporter.swift; sourceTree = "<group>"; };
+		B20000010000000000000006 /* StubURLProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubURLProtocol.swift; sourceTree = "<group>"; };
+		B20000010000000000000010 /* OptimizationPoCPerfTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OptimizationPoCPerfTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -39,6 +63,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B30000010000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000010000000000000007 /* JavaScriptCore.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -46,6 +78,7 @@
 			isa = PBXGroup;
 			children = (
 				A40000010000000000000002 /* OptimizationPoC */,
+				B40000010000000000000001 /* OptimizationPoCPerfTests */,
 				A40000010000000000000005 /* Frameworks */,
 				A40000010000000000000006 /* Products */,
 			);
@@ -94,8 +127,30 @@
 			isa = PBXGroup;
 			children = (
 				A20000010000000000000010 /* OptimizationPoC.app */,
+				B20000010000000000000010 /* OptimizationPoCPerfTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		B40000010000000000000001 /* OptimizationPoCPerfTests */ = {
+			isa = PBXGroup;
+			children = (
+				B20000010000000000000001 /* ColdStartPerfTests.swift */,
+				B20000010000000000000002 /* MemoryPerfTests.swift */,
+				B20000010000000000000003 /* BridgeCrossingPerfTests.swift */,
+				B40000010000000000000002 /* Helpers */,
+			);
+			path = OptimizationPoCPerfTests;
+			sourceTree = "<group>";
+		};
+		B40000010000000000000002 /* Helpers */ = {
+			isa = PBXGroup;
+			children = (
+				B20000010000000000000004 /* PerfTestJSContextManager.swift */,
+				B20000010000000000000005 /* MemoryReporter.swift */,
+				B20000010000000000000006 /* StubURLProtocol.swift */,
+			);
+			path = Helpers;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -118,6 +173,23 @@
 			productReference = A20000010000000000000010 /* OptimizationPoC.app */;
 			productType = "com.apple.product-type.application";
 		};
+		B50000010000000000000001 /* OptimizationPoCPerfTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B70000010000000000000001 /* Build configuration list for PBXNativeTarget "OptimizationPoCPerfTests" */;
+			buildPhases = (
+				B60000010000000000000001 /* Sources */,
+				B30000010000000000000001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B80000010000000000000002 /* PBXTargetDependency */,
+			);
+			name = OptimizationPoCPerfTests;
+			productName = OptimizationPoCPerfTests;
+			productReference = B20000010000000000000010 /* OptimizationPoCPerfTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -130,6 +202,10 @@
 				TargetAttributes = {
 					A50000010000000000000001 = {
 						CreatedOnToolsVersion = 15.4;
+					};
+					B50000010000000000000001 = {
+						CreatedOnToolsVersion = 15.4;
+						TestTargetID = A50000010000000000000001;
 					};
 				};
 			};
@@ -147,6 +223,7 @@
 			projectRoot = "";
 			targets = (
 				A50000010000000000000001 /* OptimizationPoC */,
+				B50000010000000000000001 /* OptimizationPoCPerfTests */,
 			);
 		};
 /* End PBXProject section */
@@ -176,7 +253,28 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		B60000010000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000010000000000000001 /* ColdStartPerfTests.swift in Sources */,
+				B10000010000000000000002 /* MemoryPerfTests.swift in Sources */,
+				B10000010000000000000003 /* BridgeCrossingPerfTests.swift in Sources */,
+				B10000010000000000000004 /* PerfTestJSContextManager.swift in Sources */,
+				B10000010000000000000005 /* MemoryReporter.swift in Sources */,
+				B10000010000000000000006 /* StubURLProtocol.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B80000010000000000000002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A50000010000000000000001 /* OptimizationPoC */;
+			targetProxy = B80000010000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A90000010000000000000001 /* Debug */ = {
@@ -332,6 +430,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_TESTABILITY = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = OptimizationPoC/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -352,6 +451,42 @@
 			};
 			name = Release;
 		};
+		B90000010000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.contentful.optimization.poc.perftests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OptimizationPoC.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OptimizationPoC";
+			};
+			name = Debug;
+		};
+		B90000010000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.contentful.optimization.poc.perftests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/OptimizationPoC.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/OptimizationPoC";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -369,6 +504,15 @@
 			buildConfigurations = (
 				A90000010000000000000001 /* Debug */,
 				A90000010000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B70000010000000000000001 /* Build configuration list for PBXNativeTarget "OptimizationPoCPerfTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B90000010000000000000001 /* Debug */,
+				B90000010000000000000002 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
