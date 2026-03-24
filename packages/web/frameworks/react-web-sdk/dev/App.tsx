@@ -1,4 +1,5 @@
 import { type ReactElement, useMemo, useState } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useLiveUpdates, useOptimization } from '../src'
 import { BASELINE_IDS } from './constants'
 import { useDevEntries } from './hooks/useDevEntries'
@@ -8,7 +9,18 @@ import { PersonalizationSection } from './sections/PersonalizationSection'
 import { StateSection } from './sections/StateSection'
 import type { ResolveResult } from './types'
 
+const DEV_ROUTES = [
+  { to: '/', label: 'Overview', description: 'Root route for initial auto page events.' },
+  { to: '/events', label: 'Events', description: 'Route changes exercise page-event emission.' },
+  {
+    to: '/personalization',
+    label: 'Personalization',
+    description: 'Route changes keep personalization state visible.',
+  },
+] as const
+
 export function App(): ReactElement {
+  const location = useLocation()
   const { sdk } = useOptimization()
   const { globalLiveUpdates, previewPanelVisible } = useLiveUpdates()
   const { entriesById, loading: entriesLoading, error: entriesError } = useDevEntries()
@@ -24,6 +36,9 @@ export function App(): ReactElement {
 
   const { size: resolvedEntryCount } = entriesById
   const sdkName = useMemo(() => sdk.constructor.name, [sdk])
+  const activeRoute =
+    DEV_ROUTES.find(({ to }) => to === location.pathname)?.description ??
+    'Custom route used to validate auto page tracking.'
 
   const handleResolveEntries = (): void => {
     const nextResults: ResolveResult[] = []
@@ -50,13 +65,29 @@ export function App(): ReactElement {
     <main className="dashboard">
       <header className="dashboard__header">
         <h1>@contentful/optimization-react-web</h1>
-        <p>Dev app split into modules for easier review and iteration.</p>
+        <p>Dev app wired to the React Router auto-page adapter.</p>
+        <nav className="dashboard__nav" aria-label="Dev routes">
+          {DEV_ROUTES.map(({ to, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                isActive ? 'dashboard__nav-link dashboard__nav-link--active' : 'dashboard__nav-link'
+              }
+            >
+              {label}
+            </NavLink>
+          ))}
+        </nav>
       </header>
 
       <section className="dashboard__grid" style={{ marginTop: '1rem', marginBottom: '0.5rem' }}>
         <article className="dashboard__card">
           <h2>SDK Wiring</h2>
           <p>OptimizationRoot: Active</p>
+          <p>Auto page adapter: React Router</p>
+          <p>{`Current route: ${location.pathname}${location.search}${location.hash}`}</p>
+          <p>{activeRoute}</p>
           <p>{`ContentfulOptimization SDK: ${sdkName}`}</p>
           <p>{`Global liveUpdates: ${globalLiveUpdates ? 'ON' : 'OFF'}`}</p>
           <p>{`Preview panel visible: ${previewPanelVisible ? 'Open' : 'Closed'}`}</p>
@@ -86,7 +117,10 @@ export function App(): ReactElement {
         onSendPage={() => {
           fireAndReport(
             sdk.page({
-              properties: { title: 'React Web SDK Dev Harness', path: '/dev' },
+              properties: {
+                title: 'React Web SDK Dev Harness',
+                path: location.pathname,
+              },
             }),
           )
         }}

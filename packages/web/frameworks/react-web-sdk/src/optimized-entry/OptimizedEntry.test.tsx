@@ -45,10 +45,6 @@ describe('OptimizedEntry', () => {
     },
   ]
 
-  void afterEach(() => {
-    document.body.innerHTML = ''
-  })
-
   it('renders baseline by default when personalization is unresolved and no loading fallback is provided', async () => {
     const { optimization } = createRuntime((entry, personalizations) => {
       if (!personalizations?.length) return { entry }

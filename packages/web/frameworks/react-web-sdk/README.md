@@ -104,6 +104,216 @@ Available config props:
 - `useOptimization()` also throws if the provider exists but the SDK is not ready.
 - `useLiveUpdates()` throws if used outside `LiveUpdatesProvider`.
 
+### Automatic Page Events
+
+Router adapters are published as isolated subpath exports so applications can import only the router
+they use.
+
+The Next.js Pages Router adapter:
+
+```tsx
+import type { AppProps } from 'next/app'
+import { OptimizationRoot } from '@contentful/optimization-react-web'
+import { NextPagesAutoPageTracker } from '@contentful/optimization-react-web/router/next-pages'
+
+export default function App({ Component, pageProps }: AppProps) {
+  return (
+    <OptimizationRoot
+      clientId="your-client-id"
+      environment="main"
+      analytics={{ baseUrl: 'https://ingest.insights.ninetailed.co/' }}
+      personalization={{ baseUrl: 'https://experience.ninetailed.co/' }}
+    >
+      <NextPagesAutoPageTracker />
+      <Component {...pageProps} />
+    </OptimizationRoot>
+  )
+}
+```
+
+Mount `NextPagesAutoPageTracker` once inside your provider tree, typically in `pages/_app.tsx`. The
+adapter waits for `router.isReady`, emits on the first eligible render, emits on route changes, and
+suppresses duplicate consecutive `router.asPath` values.
+
+#### Page Payload Enrichment
+
+Automatic page events can be enriched with static and dynamic payloads before calling
+`optimization.page(...)`.
+
+```tsx
+<NextPagesAutoPageTracker
+  pagePayload={{
+    properties: {
+      appSection: 'storefront',
+    },
+  }}
+  getPagePayload={({ context, isInitialEmission }) => ({
+    locale: isInitialEmission ? 'en-US' : undefined,
+    properties: {
+      path: context.asPath,
+      routePattern: context.pathname,
+      slug: Array.isArray(context.query.slug) ? context.query.slug.join('/') : context.query.slug,
+    },
+  })}
+/>
+```
+
+- `pagePayload` is included in every auto-emitted page event.
+- `getPagePayload` runs once per emitted page event with route-aware context.
+- Static and dynamic payloads are merged before `optimization.page(...)` is called.
+- When the same field exists in both payloads, the dynamic payload wins.
+- This feature is implemented through page payload composition only; no interceptor setup is
+  required or documented for it.
+
+The package `dev/` harness remains an rsbuild React app and now mounts the React Router adapter for
+interactive local verification. Other router adapters are still covered primarily through unit tests
+and the integration examples above.
+
+The Next.js App Router adapter:
+
+```tsx
+'use client'
+
+import { OptimizationRoot } from '@contentful/optimization-react-web'
+import { NextAppAutoPageTracker } from '@contentful/optimization-react-web/router/next-app'
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  return (
+    <OptimizationRoot
+      clientId="your-client-id"
+      environment="main"
+      analytics={{ baseUrl: 'https://ingest.insights.ninetailed.co/' }}
+      personalization={{ baseUrl: 'https://experience.ninetailed.co/' }}
+    >
+      <NextAppAutoPageTracker />
+      {children}
+    </OptimizationRoot>
+  )
+}
+```
+
+Mount `NextAppAutoPageTracker` once in a client component inside your App Router provider tree,
+typically via a `providers.tsx` wrapper used by `app/layout.tsx`. The adapter emits on the first
+eligible render and on `pathname + search` changes.
+
+```tsx
+<NextAppAutoPageTracker
+  pagePayload={{
+    properties: {
+      appSection: 'storefront',
+    },
+  }}
+  getPagePayload={({ context, isInitialEmission }) => ({
+    locale: isInitialEmission ? 'en-US' : undefined,
+    properties: {
+      path: context.url,
+      pathname: context.pathname,
+      search: context.search,
+    },
+  })}
+/>
+```
+
+App Router payload enrichment follows the same payload-composition behavior as the Pages Router
+adapter and does not use interceptors.
+
+The React Router adapter:
+
+```tsx
+import { Outlet } from 'react-router-dom'
+import { OptimizationRoot } from '@contentful/optimization-react-web'
+import { ReactRouterAutoPageTracker } from '@contentful/optimization-react-web/router/react-router'
+
+export function AppLayout() {
+  return (
+    <OptimizationRoot
+      clientId="your-client-id"
+      environment="main"
+      analytics={{ baseUrl: 'https://ingest.insights.ninetailed.co/' }}
+      personalization={{ baseUrl: 'https://experience.ninetailed.co/' }}
+    >
+      <ReactRouterAutoPageTracker />
+      <Outlet />
+    </OptimizationRoot>
+  )
+}
+```
+
+Mount `ReactRouterAutoPageTracker` once inside the `react-router-dom` router tree and inside the
+optimization provider tree, typically in your root layout route. The adapter emits on the first
+render and on `pathname + search + hash` changes.
+
+```tsx
+<ReactRouterAutoPageTracker
+  pagePayload={{
+    properties: {
+      appSection: 'storefront',
+    },
+  }}
+  getPagePayload={({ context, isInitialEmission }) => ({
+    locale: isInitialEmission ? 'en-US' : undefined,
+    properties: {
+      hash: context.hash,
+      matchCount: context.matches.length,
+      path: context.url,
+      pathname: context.pathname,
+    },
+  })}
+/>
+```
+
+React Router payload enrichment uses the same page-payload composition behavior and does not use
+interceptors.
+
+The TanStack Router adapter:
+
+```tsx
+import { Outlet } from '@tanstack/react-router'
+import { OptimizationRoot } from '@contentful/optimization-react-web'
+import { TanStackRouterAutoPageTracker } from '@contentful/optimization-react-web/router/tanstack-router'
+
+export function RootLayout() {
+  return (
+    <OptimizationRoot
+      clientId="your-client-id"
+      environment="main"
+      analytics={{ baseUrl: 'https://ingest.insights.ninetailed.co/' }}
+      personalization={{ baseUrl: 'https://experience.ninetailed.co/' }}
+    >
+      <TanStackRouterAutoPageTracker />
+      <Outlet />
+    </OptimizationRoot>
+  )
+}
+```
+
+Mount `TanStackRouterAutoPageTracker` once inside the TanStack router tree and inside the
+optimization provider tree, typically in your root route component. The adapter emits on the first
+render and on TanStack Router `location.href` changes.
+
+```tsx
+<TanStackRouterAutoPageTracker
+  pagePayload={{
+    properties: {
+      appSection: 'storefront',
+    },
+  }}
+  getPagePayload={({ context, isInitialEmission }) => ({
+    locale: isInitialEmission ? 'en-US' : undefined,
+    properties: {
+      hash: context.hash,
+      matchCount: context.matches.length,
+      path: context.url,
+      pathname: context.pathname,
+      search: context.search,
+    },
+  })}
+/>
+```
+
+TanStack Router payload enrichment also uses page-payload composition only and does not require
+interceptors.
+
 ### Personalization Component
 
 ```tsx

@@ -1,6 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
 import { OptimizationRoot } from '../src'
+import { ReactRouterAutoPageTracker } from '../src/router/react-router'
 
 import { App } from './App'
 import './styles.css'
@@ -35,14 +37,31 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <OptimizationRoot
-      clientId={clientId}
-      environment={environment}
-      analytics={{ baseUrl: insightsBaseUrl }}
-      personalization={{ baseUrl: experienceBaseUrl }}
-      liveUpdates={true}
-    >
-      <App />
-    </OptimizationRoot>
+    <BrowserRouter>
+      <OptimizationRoot
+        clientId={clientId}
+        environment={environment}
+        analytics={{ baseUrl: insightsBaseUrl }}
+        personalization={{ baseUrl: experienceBaseUrl }}
+        liveUpdates={true}
+      >
+        <ReactRouterAutoPageTracker
+          pagePayload={{
+            properties: {
+              app: 'react-web-sdk-dev',
+              source: 'dev-harness',
+            },
+          }}
+          getPagePayload={({ context }) => ({
+            properties: {
+              hash: context.hash,
+              path: context.url,
+              pathname: context.pathname,
+            },
+          })}
+        />
+        <App />
+      </OptimizationRoot>
+    </BrowserRouter>
   </StrictMode>,
 )

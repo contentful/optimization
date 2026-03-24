@@ -1,5 +1,11 @@
 import type ContentfulOptimization from '@contentful/optimization-web'
 
+export type {
+  AutoPageEmissionContext,
+  AutoPagePayload,
+  AutoPagePayloadOptions,
+  AutoPageRouteState,
+} from './auto-page/types'
 export { LiveUpdatesContext } from './context/LiveUpdatesContext'
 export type { LiveUpdatesContextValue } from './context/LiveUpdatesContext'
 export { OptimizationContext } from './context/OptimizationContext'
