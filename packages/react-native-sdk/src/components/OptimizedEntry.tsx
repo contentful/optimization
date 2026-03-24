@@ -81,7 +81,7 @@ export interface OptimizedEntryProps {
    * Interval (in milliseconds) between periodic view duration update events
    * after the initial event has fired.
    *
-   * @defaultValue 5000
+   * @defaultValue `5000`
    */
   viewDurationUpdateIntervalMs?: number
 
@@ -161,10 +161,10 @@ function resolveTapsEnabled(
  * @returns A wrapper View with interaction tracking attached
  *
  * @remarks
- * "Component tracking" refers to tracking Contentful entry components (content entries),
+ * "Tracking" refers to tracking Contentful content entries,
  * not React Native UI components. Must be used within an {@link OptimizationProvider}.
- * Works with or without a {@link OptimizationScrollProvider} — when outside a OptimizationScrollProvider,
- * screen dimensions are used instead.
+ * Works with or without an {@link OptimizationScrollProvider} — when outside an
+ * {@link OptimizationScrollProvider}, screen dimensions are used instead.
  *
  * By default the component locks to the first variant it receives to prevent UI
  * flashing. Set `liveUpdates` to `true` or open the preview panel to enable

@@ -56,7 +56,7 @@ async function mergeConfig({
 let activeOptimizationInstance: ContentfulOptimization | undefined = undefined
 
 /**
- * Main entry point for the Contentful ContentfulOptimization React Native SDK.
+ * Main entry point for the Contentful Optimization React Native SDK.
  *
  * Extends {@link CoreStateful} with React Native-specific behavior including
  * AsyncStorage persistence, network connectivity detection via

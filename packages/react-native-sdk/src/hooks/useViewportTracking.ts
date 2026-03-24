@@ -27,14 +27,14 @@ export interface UseViewportTrackingOptions {
   /**
    * Minimum visibility ratio (0.0 - 1.0) required to consider the component "visible".
    *
-   * @defaultValue 0.8
+   * @defaultValue `0.8`
    */
   threshold?: number
 
   /**
    * Minimum accumulated visible time (in milliseconds) before the first tracking event fires.
    *
-   * @defaultValue 2000
+   * @defaultValue `2000`
    */
   viewTimeMs?: number
 
@@ -51,7 +51,7 @@ export interface UseViewportTrackingOptions {
    * Interval (in milliseconds) between periodic view duration update events
    * after the initial event has fired.
    *
-   * @defaultValue 5000
+   * @defaultValue `5000`
    */
   viewDurationUpdateIntervalMs?: number
 }
@@ -186,7 +186,7 @@ function getRemainingMsUntilNextFire(
 }
 
 /**
- * Tracks whether a component is visible in the viewport and fires component view
+ * Tracks whether a component is visible in the viewport and fires entry view
  * events with accumulated duration tracking.
  *
  * The hook implements a three-phase event lifecycle per visibility cycle:

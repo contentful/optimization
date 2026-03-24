@@ -53,7 +53,7 @@ const loadNetInfoModule = async (): Promise<NetInfoModule> => {
  *   May return a promise.
  * @returns A function that removes the registered event listener when called.
  *
- * @public
+ * @internal
  * @remarks
  * - Requires `@react-native-community/netinfo` to be installed as a peer dependency.
  * - If NetInfo is not installed, a warning is logged and a no-op cleanup function is returned.

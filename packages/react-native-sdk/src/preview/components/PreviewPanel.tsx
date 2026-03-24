@@ -63,7 +63,7 @@ function PreviewPanelHeader({ consent }: { consent: boolean | undefined }): Reac
  *
  * function App() {
  *   return (
- *     <OptimizationProvider instance={sdk}>
+ *     <OptimizationProvider clientId="your-client-id" environment="main">
  *       <YourAppContent />
  *       <OptimizationPreviewPanel contentfulClient={contentfulClient} />
  *     </OptimizationProvider>

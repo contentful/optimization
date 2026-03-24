@@ -59,8 +59,8 @@ export interface UseTapTrackingReturn {
 }
 
 /**
- * Detects taps on a View via raw touch events and emits `component_click`
- * analytics events through the existing Insights pipeline.
+ * Detects taps on a View and emits analytics events (internally named `component_click`
+ * for cross-platform consistency with the web SDK).
  *
  * @param options - Tracking options including the entry, personalization data, and enabled state.
  * @returns {@link UseTapTrackingReturn} with touch handlers to spread onto a View,

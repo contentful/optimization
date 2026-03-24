@@ -60,7 +60,7 @@ export interface OptimizationNavigationContainerProps {
   /**
    * Whether to include route params in the screen event properties.
    *
-   * @defaultValue false
+   * @defaultValue `false`
    */
   includeParams?: boolean
 }
@@ -87,7 +87,7 @@ export interface OptimizationNavigationContainerProps {
  *
  * function App() {
  *   return (
- *     <OptimizationProvider instance={optimization}>
+ *     <OptimizationProvider clientId="your-client-id" environment="main">
  *       <OptimizationNavigationContainer>
  *         {(navigationProps) => (
  *           <NavigationContainer {...navigationProps}>

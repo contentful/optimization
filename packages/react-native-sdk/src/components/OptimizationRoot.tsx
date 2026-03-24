@@ -49,7 +49,7 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
    * @example
    * ```tsx
    * <OptimizationRoot
-   *   instance={optimization}
+   *   clientId="your-client-id"
    *   trackEntryInteraction={{ views: true, taps: true }}
    * >
    *   <App />
@@ -59,7 +59,7 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
   trackEntryInteraction?: TrackEntryInteractionOptions
 
   /**
-   * Children components that will have access to the Optimization instance.
+   * Children components that will have access to the {@link ContentfulOptimization} instance.
    */
   children: ReactNode
 }
@@ -82,7 +82,7 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
  * @example With interaction tracking
  * ```tsx
  * <OptimizationRoot
- *   instance={optimization}
+ *   clientId="your-client-id"
  *   trackEntryInteraction={{ views: true, taps: true }}
  * >
  *   <App />

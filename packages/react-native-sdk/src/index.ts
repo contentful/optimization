@@ -1,5 +1,5 @@
 /**
- * Contentful ContentfulOptimization React Native SDK.
+ * Contentful Optimization React Native SDK.
  *
  * @remarks
  * Implements React Native-specific functionality on top of the ContentfulOptimization Core Library.
@@ -15,9 +15,10 @@ import './polyfills/crypto'
 import type { CoreStatefulConfig } from '@contentful/optimization-core'
 
 /**
- * SDK initialization config passed as props to {@link OptimizationProvider} and {@link OptimizationRoot}.
+ * Configuration options for initializing the Optimization React Native SDK.
  *
- * Alias of {@link CoreStatefulConfig}. Only `clientId` is required.
+ * Passed as props to {@link OptimizationProvider} and {@link OptimizationRoot}.
+ * Only `clientId` is required. See the README for full configuration reference.
  *
  * @public
  */

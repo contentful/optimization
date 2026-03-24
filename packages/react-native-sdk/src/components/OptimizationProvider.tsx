@@ -15,13 +15,13 @@ const logger = createScopedLogger('RN:Provider')
  */
 export interface OptimizationProviderProps extends OptimizationConfig {
   /**
-   * Children components that will have access to the ContentfulOptimization instance.
+   * Children components that will have access to the {@link ContentfulOptimization} instance.
    */
   children?: ReactNode
 }
 
 /**
- * Provides the ContentfulOptimization instance to all child components via React Context.
+ * Provides the {@link ContentfulOptimization} instance to all child components via React Context.
  *
  * Handles SDK initialization, loading state, and cleanup internally.
  * Children are not rendered until the SDK is ready (loading gate).
