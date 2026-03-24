@@ -658,4 +658,278 @@ final class OptimizationClientTests: XCTestCase {
 
         XCTAssertTrue(dict.keys.contains("selectedPersonalizations"))
     }
+
+    // MARK: - Phase 3: TrackingMetadata Tests
+
+    func testTrackingMetadataExtraction() {
+        let entry: [String: Any] = ["sys": ["id": "entry-123"]]
+        let personalization: [String: Any] = [
+            "experienceId": "exp-456",
+            "variantIndex": 2,
+            "sticky": true,
+        ]
+        let metadata = TrackingMetadata(entry: entry, personalization: personalization)
+        XCTAssertEqual(metadata.componentId, "entry-123")
+        XCTAssertEqual(metadata.experienceId, "exp-456")
+        XCTAssertEqual(metadata.variantIndex, 2)
+        XCTAssertEqual(metadata.sticky, true)
+    }
+
+    func testTrackingMetadataDefaults() {
+        let entry: [String: Any] = ["fields": ["title": "Hello"]]
+        let metadata = TrackingMetadata(entry: entry, personalization: nil)
+        XCTAssertEqual(metadata.componentId, "")
+        XCTAssertNil(metadata.experienceId)
+        XCTAssertEqual(metadata.variantIndex, 0)
+        XCTAssertNil(metadata.sticky)
+    }
+
+    // MARK: - Phase 3: TrackingConfig Tests
+
+    func testTrackingConfigDefaults() {
+        let config = TrackingConfig()
+        XCTAssertTrue(config.trackViews)
+        XCTAssertFalse(config.trackTaps)
+        XCTAssertFalse(config.liveUpdates)
+    }
+
+    func testTrackingConfigCustomValues() {
+        let config = TrackingConfig(trackViews: false, trackTaps: true, liveUpdates: true)
+        XCTAssertFalse(config.trackViews)
+        XCTAssertTrue(config.trackTaps)
+        XCTAssertTrue(config.liveUpdates)
+    }
+
+    // MARK: - Phase 3: ScrollContext Tests
+
+    func testScrollContextDefaults() {
+        let context = ScrollContext()
+        XCTAssertEqual(context.scrollY, 0)
+        XCTAssertEqual(context.viewportHeight, 0)
+    }
+
+    func testScrollContextEquality() {
+        let a = ScrollContext(scrollY: 100, viewportHeight: 800)
+        let b = ScrollContext(scrollY: 100, viewportHeight: 800)
+        XCTAssertEqual(a, b)
+    }
+
+    func testScrollContextInequality() {
+        let a = ScrollContext(scrollY: 100, viewportHeight: 800)
+        let b = ScrollContext(scrollY: 200, viewportHeight: 800)
+        XCTAssertNotEqual(a, b)
+    }
+
+    func testScrollContextCoordinateSpaceName() {
+        XCTAssertEqual(ScrollContext.coordinateSpaceName, "optimization-scroll")
+    }
+
+    // MARK: - Phase 3: ViewTrackingController Tests
+
+    @MainActor
+    func testViewTrackingControllerInitiallyInvisible() {
+        let client = OptimizationClient()
+        let controller = ViewTrackingController(
+            client: client,
+            entry: ["sys": ["id": "test"]],
+            personalization: nil,
+            threshold: 0.8,
+            viewTimeMs: 2000,
+            viewDurationUpdateIntervalMs: 5000
+        )
+        XCTAssertFalse(controller.isVisible)
+    }
+
+    @MainActor
+    func testViewTrackingControllerBecomesVisibleAboveThreshold() {
+        let client = OptimizationClient()
+        let controller = ViewTrackingController(
+            client: client,
+            entry: ["sys": ["id": "test"]],
+            personalization: nil,
+            threshold: 0.8,
+            viewTimeMs: 2000,
+            viewDurationUpdateIntervalMs: 5000
+        )
+
+        // Element fully visible (100% ratio >= 0.8 threshold)
+        controller.updateVisibility(
+            elementY: 0, elementHeight: 100, scrollY: 0, viewportHeight: 500
+        )
+        XCTAssertTrue(controller.isVisible)
+    }
+
+    @MainActor
+    func testViewTrackingControllerStaysInvisibleBelowThreshold() {
+        let client = OptimizationClient()
+        let controller = ViewTrackingController(
+            client: client,
+            entry: ["sys": ["id": "test"]],
+            personalization: nil,
+            threshold: 0.8,
+            viewTimeMs: 2000,
+            viewDurationUpdateIntervalMs: 5000
+        )
+
+        // Only 10px of 100px element visible (10% < 80% threshold)
+        controller.updateVisibility(
+            elementY: 0, elementHeight: 100, scrollY: 0, viewportHeight: 10
+        )
+        XCTAssertFalse(controller.isVisible)
+    }
+
+    @MainActor
+    func testViewTrackingControllerBecomesInvisibleOnDisappear() {
+        let client = OptimizationClient()
+        let controller = ViewTrackingController(
+            client: client,
+            entry: ["sys": ["id": "test"]],
+            personalization: nil,
+            threshold: 0.8,
+            viewTimeMs: 2000,
+            viewDurationUpdateIntervalMs: 5000
+        )
+
+        controller.updateVisibility(
+            elementY: 0, elementHeight: 100, scrollY: 0, viewportHeight: 500
+        )
+        XCTAssertTrue(controller.isVisible)
+
+        controller.onDisappear()
+        XCTAssertFalse(controller.isVisible)
+    }
+
+    @MainActor
+    func testViewTrackingControllerResetsOnNewCycle() {
+        let client = OptimizationClient()
+        let controller = ViewTrackingController(
+            client: client,
+            entry: ["sys": ["id": "test"]],
+            personalization: nil,
+            threshold: 0.8,
+            viewTimeMs: 2000,
+            viewDurationUpdateIntervalMs: 5000
+        )
+
+        // First cycle: become visible then disappear
+        controller.updateVisibility(
+            elementY: 0, elementHeight: 100, scrollY: 0, viewportHeight: 500
+        )
+        XCTAssertTrue(controller.isVisible)
+        controller.onDisappear()
+        XCTAssertFalse(controller.isVisible)
+
+        // Second cycle: become visible again
+        controller.updateVisibility(
+            elementY: 0, elementHeight: 100, scrollY: 0, viewportHeight: 500
+        )
+        XCTAssertTrue(controller.isVisible)
+    }
+
+    @MainActor
+    func testViewTrackingControllerPauseAndResume() {
+        let client = OptimizationClient()
+        let controller = ViewTrackingController(
+            client: client,
+            entry: ["sys": ["id": "test"]],
+            personalization: nil,
+            threshold: 0.8,
+            viewTimeMs: 2000,
+            viewDurationUpdateIntervalMs: 5000
+        )
+
+        controller.updateVisibility(
+            elementY: 0, elementHeight: 100, scrollY: 0, viewportHeight: 500
+        )
+        XCTAssertTrue(controller.isVisible)
+
+        controller.pause()
+        XCTAssertFalse(controller.isVisible)
+
+        // resume() resets visibility flag so it can be re-evaluated
+        controller.resume()
+        XCTAssertFalse(controller.isVisible)
+    }
+
+    @MainActor
+    func testViewTrackingControllerVisibilityWithPartialOverlap() {
+        let client = OptimizationClient()
+        let controller = ViewTrackingController(
+            client: client,
+            entry: ["sys": ["id": "test"]],
+            personalization: nil,
+            threshold: 0.5,
+            viewTimeMs: 2000,
+            viewDurationUpdateIntervalMs: 5000
+        )
+
+        // Element at Y=400, height=100, viewport 0-500
+        // Visible portion: 400-500 = 100px of 100px = 100% >= 50%
+        controller.updateVisibility(
+            elementY: 400, elementHeight: 100, scrollY: 0, viewportHeight: 500
+        )
+        XCTAssertTrue(controller.isVisible)
+
+        // Scroll so element is mostly off-screen: element at Y=400, viewport 0-430
+        // Visible portion: 400-430 = 30px of 100px = 30% < 50%
+        controller.updateVisibility(
+            elementY: 400, elementHeight: 100, scrollY: 0, viewportHeight: 430
+        )
+        XCTAssertFalse(controller.isVisible)
+    }
+
+    @MainActor
+    func testViewTrackingControllerZeroHeightIgnored() {
+        let client = OptimizationClient()
+        let controller = ViewTrackingController(
+            client: client,
+            entry: ["sys": ["id": "test"]],
+            personalization: nil,
+            threshold: 0.8,
+            viewTimeMs: 2000,
+            viewDurationUpdateIntervalMs: 5000
+        )
+
+        // Zero-height element should not trigger visibility
+        controller.updateVisibility(
+            elementY: 0, elementHeight: 0, scrollY: 0, viewportHeight: 500
+        )
+        XCTAssertFalse(controller.isVisible)
+    }
+
+    @MainActor
+    func testViewTrackingControllerScrolledPastElement() {
+        let client = OptimizationClient()
+        let controller = ViewTrackingController(
+            client: client,
+            entry: ["sys": ["id": "test"]],
+            personalization: nil,
+            threshold: 0.8,
+            viewTimeMs: 2000,
+            viewDurationUpdateIntervalMs: 5000
+        )
+
+        // Element at Y=0, height=100, but scrolled past (scrollY=200, viewport=500)
+        // Visible portion: max(0, min(100, 700) - max(0, 200)) = max(0, 100-200) = 0
+        controller.updateVisibility(
+            elementY: 0, elementHeight: 100, scrollY: 200, viewportHeight: 500
+        )
+        XCTAssertFalse(controller.isVisible)
+    }
+
+    // MARK: - Phase 3: PersonalizedResult Baseline Resolution Test
+
+    @MainActor
+    func testPersonalizationResolvesBaselineWithNoPersonalizations() {
+        let client = OptimizationClient()
+        let baseline: [String: Any] = [
+            "sys": ["id": "entry-1"],
+            "fields": ["title": "Default Title"],
+        ]
+
+        // Without initialization, personalizeEntry returns baseline
+        let result = client.personalizeEntry(baseline: baseline)
+        XCTAssertEqual(result.entry["sys"] as? [String: String], ["id": "entry-1"])
+        XCTAssertNil(result.personalization)
+    }
 }
