@@ -14,7 +14,6 @@ export {
   type Signals,
 } from './signals'
 
-export * from './analytics'
 export type * from './BlockedEvent'
 export * from './constants'
 export * from './CoreBase'
@@ -22,7 +21,7 @@ export * from './CoreStateful'
 export * from './CoreStateless'
 export * from './lib/decorators'
 export * from './lib/interceptor'
-export * from './personalization'
+export * from './resolvers'
 export * from './symbols'
 
 export { default as CoreStateful } from './CoreStateful'

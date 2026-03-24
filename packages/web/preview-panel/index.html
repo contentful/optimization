@@ -256,8 +256,10 @@
           name: document.title,
           version: '0.0.0',
         },
-        analytics: { baseUrl: '<%= PUBLIC_INSIGHTS_API_BASE_URL %>' },
-        personalization: { baseUrl: '<%= PUBLIC_EXPERIENCE_API_BASE_URL %>' },
+        api: {
+          insightsBaseUrl: '<%= PUBLIC_INSIGHTS_API_BASE_URL %>',
+          experienceBaseUrl: '<%= PUBLIC_EXPERIENCE_API_BASE_URL %>',
+        },
       })
 
       await attachOptimizationPreviewPanel({

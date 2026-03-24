@@ -24,8 +24,10 @@ export async function initializeSDK(
     const sdkInstance = await ContentfulOptimization.create({
       clientId,
       environment,
-      personalization: { baseUrl: experienceBaseUrl },
-      analytics: { baseUrl: insightsBaseUrl },
+      api: {
+        experienceBaseUrl,
+        insightsBaseUrl,
+      },
       logLevel: 'debug',
     })
 

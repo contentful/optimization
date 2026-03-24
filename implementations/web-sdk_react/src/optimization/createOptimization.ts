@@ -49,11 +49,9 @@ function createOptimizationConfig(): OptimizationConfig {
       name: 'ContentfulOptimization SDK - React Web Reference',
       version: '0.1.0',
     },
-    analytics: {
-      baseUrl: INSIGHTS_API_BASE_URL,
-    },
-    personalization: {
-      baseUrl: EXPERIENCE_API_BASE_URL,
+    api: {
+      insightsBaseUrl: INSIGHTS_API_BASE_URL,
+      experienceBaseUrl: EXPERIENCE_API_BASE_URL,
     },
   }
 }

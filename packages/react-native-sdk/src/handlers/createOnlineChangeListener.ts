@@ -64,7 +64,7 @@ const loadNetInfoModule = async (): Promise<NetInfoModule> => {
  * @example
  * ```ts
  * const cleanup = createOnlineChangeListener(async (isOnline) => {
- *   if (isOnline) await sdk.analytics.flush()
+ *   if (isOnline) await sdk.flush()
  * })
  *
  * // Later:

@@ -154,13 +154,7 @@ function AppContent(): React.JSX.Element {
 
 function App(): React.JSX.Element {
   return (
-    <OptimizationProvider
-      clientId={ENV_CONFIG.optimization.clientId}
-      environment={ENV_CONFIG.optimization.environment}
-      personalization={{ baseUrl: ENV_CONFIG.api.experienceBaseUrl }}
-      analytics={{ baseUrl: ENV_CONFIG.api.insightsBaseUrl }}
-      logLevel="debug"
-    >
+    <OptimizationProvider {...ENV_CONFIG.optimization} logLevel="debug">
       <AppContent />
     </OptimizationProvider>
   )

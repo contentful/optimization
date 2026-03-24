@@ -28,7 +28,7 @@ type Callback = (isOnline: boolean) => Promise<void> | void
  * @example
  * ```ts
  * const cleanup = createOnlineChangeListener(async (isOnline) => {
- *   if (isOnline) await sdk.analytics.flush()
+ *   if (isOnline) await sdk.flush()
  * })
  *
  * // Later:

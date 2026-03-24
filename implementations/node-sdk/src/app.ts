@@ -38,8 +38,10 @@ const optimizationConfig: OptimizationNodeConfig = {
   clientId: process.env.PUBLIC_NINETAILED_CLIENT_ID ?? '',
   environment: process.env.PUBLIC_NINETAILED_ENVIRONMENT ?? '',
   logLevel: 'debug',
-  analytics: { baseUrl: process.env.PUBLIC_INSIGHTS_API_BASE_URL },
-  personalization: { baseUrl: process.env.PUBLIC_EXPERIENCE_API_BASE_URL },
+  api: {
+    insightsBaseUrl: process.env.PUBLIC_INSIGHTS_API_BASE_URL,
+    experienceBaseUrl: process.env.PUBLIC_EXPERIENCE_API_BASE_URL,
+  },
 }
 
 const sdk = new ContentfulOptimization(optimizationConfig)

@@ -14,8 +14,8 @@ import { describe, expect, it, rs } from '@rstest/core'
 import type { Entry } from 'contentful'
 
 import { mockLogger } from 'mocks'
-import { personalizedEntry as personalizedEntryFixture } from '../../test/fixtures/personalizedEntry'
-import { selectedPersonalizations as selectedPersonalizationsFixture } from '../../test/fixtures/selectedPersonalizations'
+import { personalizedEntry as personalizedEntryFixture } from '../test/fixtures/personalizedEntry'
+import { selectedPersonalizations as selectedPersonalizationsFixture } from '../test/fixtures/selectedPersonalizations'
 import PersonalizedEntryResolver from './PersonalizedEntryResolver'
 
 const mockedLogger = rs.mocked(mockLogger)

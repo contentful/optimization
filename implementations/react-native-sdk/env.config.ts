@@ -22,10 +22,10 @@ interface EnvConfig {
   optimization: {
     clientId: string
     environment: string
-  }
-  api: {
-    experienceBaseUrl: string
-    insightsBaseUrl: string
+    api: {
+      experienceBaseUrl: string
+      insightsBaseUrl: string
+    }
   }
   entries: {
     personalized: string
@@ -56,11 +56,10 @@ export const ENV_CONFIG = {
   optimization: {
     clientId: PUBLIC_NINETAILED_CLIENT_ID,
     environment: PUBLIC_NINETAILED_ENVIRONMENT,
-  },
-
-  api: {
-    experienceBaseUrl: getAndroidCompatibleUrl(PUBLIC_EXPERIENCE_API_BASE_URL),
-    insightsBaseUrl: getAndroidCompatibleUrl(PUBLIC_INSIGHTS_API_BASE_URL),
+    api: {
+      experienceBaseUrl: getAndroidCompatibleUrl(PUBLIC_EXPERIENCE_API_BASE_URL),
+      insightsBaseUrl: getAndroidCompatibleUrl(PUBLIC_INSIGHTS_API_BASE_URL),
+    },
   },
 
   entries: {

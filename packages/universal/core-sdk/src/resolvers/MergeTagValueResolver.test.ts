@@ -1,7 +1,7 @@
 import { isMergeTagEntry } from '@contentful/optimization-api-client/api-schemas'
 import { cloneDeep } from 'es-toolkit'
-import { mergeTagEntry } from '../../test/fixtures/mergeTagEntry'
-import { profile } from '../../test/fixtures/profile'
+import { mergeTagEntry } from '../test/fixtures/mergeTagEntry'
+import { profile } from '../test/fixtures/profile'
 import MergeTagValueResolver from './MergeTagValueResolver'
 
 describe('MergeTagValueResolver', () => {

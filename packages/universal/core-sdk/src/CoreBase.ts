@@ -6,20 +6,21 @@ import {
   type InsightsApiClientConfig,
 } from '@contentful/optimization-api-client'
 import type {
-  InsightsEvent as AnalyticsEvent,
   ChangeArray,
+  ExperienceEvent as ExperienceEventPayload,
+  ExperienceEventType,
+  InsightsEvent as InsightsEventPayload,
+  InsightsEventType,
   Json,
   MergeTagEntry,
   OptimizationData,
   PartialProfile,
-  ExperienceEvent as PersonalizationEvent,
   Profile,
   SelectedPersonalizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import type { LogLevels } from '@contentful/optimization-api-client/logger'
 import { ConsoleLogSink, logger } from '@contentful/optimization-api-client/logger'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
-import type AnalyticsBase from './analytics/AnalyticsBase'
 import { OPTIMIZATION_CORE_SDK_NAME, OPTIMIZATION_CORE_SDK_VERSION } from './constants'
 import {
   type ClickBuilderArgs,
@@ -34,14 +35,39 @@ import {
   type ViewBuilderArgs,
 } from './events'
 import { InterceptorManager } from './lib/interceptor'
-import type {
-  FlagsResolver,
-  MergeTagValueResolver,
-  PersonalizationBase,
-  PersonalizedEntryResolver,
-  ResolvedData,
-  ResolverMethods,
-} from './personalization'
+import type { ResolvedData } from './resolvers'
+import { FlagsResolver, MergeTagValueResolver, PersonalizedEntryResolver } from './resolvers'
+
+/**
+ * Unified API configuration for Core.
+ *
+ * @public
+ */
+export interface CoreApiConfig {
+  /** Base URL override for Experience API requests. */
+  experienceBaseUrl?: ExperienceApiClientConfig['baseUrl']
+  /** Base URL override for Insights API requests. */
+  insightsBaseUrl?: InsightsApiClientConfig['baseUrl']
+  /** Beacon-like handler used by Insights event delivery when available. */
+  beaconHandler?: InsightsApiClientConfig['beaconHandler']
+  /** Experience API features enabled for outgoing requests. */
+  enabledFeatures?: ExperienceApiClientConfig['enabledFeatures']
+  /** Experience API IP override. */
+  ip?: ExperienceApiClientConfig['ip']
+  /** Experience API locale override. */
+  locale?: ExperienceApiClientConfig['locale']
+  /** Experience API plain-text request toggle. */
+  plainText?: ExperienceApiClientConfig['plainText']
+  /** Experience API preflight request toggle. */
+  preflight?: ExperienceApiClientConfig['preflight']
+}
+
+/**
+ * Union of all event type keys that Core may emit.
+ *
+ * @public
+ */
+export type EventType = InsightsEventType | ExperienceEventType
 
 /**
  * Lifecycle container for event and state interceptors.
@@ -50,7 +76,7 @@ import type {
  */
 export interface LifecycleInterceptors {
   /** Interceptors invoked for individual events prior to validation/sending. */
-  event: InterceptorManager<AnalyticsEvent | PersonalizationEvent>
+  event: InterceptorManager<InsightsEventPayload | ExperienceEventPayload>
   /** Interceptors invoked before optimization state updates. */
   state: InterceptorManager<OptimizationData>
 }
@@ -62,14 +88,9 @@ export interface LifecycleInterceptors {
  */
 export interface CoreConfig extends Pick<ApiClientConfig, GlobalApiConfigProperties> {
   /**
-   * Configuration for the personalization (Experience) API client.
+   * Unified API configuration used by Experience and Insights clients.
    */
-  personalization?: Omit<ExperienceApiClientConfig, GlobalApiConfigProperties>
-
-  /**
-   * Configuration for the analytics (Insights) API client.
-   */
-  analytics?: Omit<InsightsApiClientConfig, GlobalApiConfigProperties>
+  api?: CoreApiConfig
 
   /**
    * Event builder configuration (channel/library metadata, etc.).
@@ -85,22 +106,23 @@ export interface CoreConfig extends Pick<ApiClientConfig, GlobalApiConfigPropert
  *
  * @internal
  */
-abstract class CoreBase implements ResolverMethods {
-  /** Product implementation for analytics. */
-  protected abstract _analytics: AnalyticsBase
-  /** Product implementation for personalization. */
-  protected abstract _personalization: PersonalizationBase
-
+abstract class CoreBase {
   /** Shared Optimization API client instance. */
   readonly api: ApiClient
   /** Shared event builder instance. */
   readonly eventBuilder: EventBuilder
-  /** Resolved core configuration (minus any name metadata). */
-  readonly config: Omit<CoreConfig, 'name'>
+  /** Resolved core configuration. */
+  readonly config: CoreConfig
+  /** Static resolver for evaluating personalized custom flags. */
+  readonly flagsResolver = FlagsResolver
+  /** Static resolver for merge-tag lookups against profile data. */
+  readonly mergeTagValueResolver = MergeTagValueResolver
+  /** Static resolver for personalized Contentful entries. */
+  readonly personalizedEntryResolver = PersonalizedEntryResolver
 
   /** Lifecycle interceptors for events and state updates. */
   readonly interceptors: LifecycleInterceptors = {
-    event: new InterceptorManager<AnalyticsEvent | PersonalizationEvent>(),
+    event: new InterceptorManager<InsightsEventPayload | ExperienceEventPayload>(),
     state: new InterceptorManager<OptimizationData>(),
   }
 
@@ -116,15 +138,7 @@ abstract class CoreBase implements ResolverMethods {
   constructor(config: CoreConfig) {
     this.config = config
 
-    const {
-      analytics,
-      personalization,
-      eventBuilder,
-      logLevel,
-      environment,
-      clientId,
-      fetchOptions,
-    } = config
+    const { api, eventBuilder, logLevel, environment, clientId, fetchOptions } = config
 
     logger.addSink(new ConsoleLogSink(logLevel))
 
@@ -132,8 +146,8 @@ abstract class CoreBase implements ResolverMethods {
       clientId,
       environment,
       fetchOptions,
-      analytics,
-      personalization,
+      analytics: CoreBase.createInsightsApiConfig(api),
+      personalization: CoreBase.createExperienceApiConfig(api),
     }
 
     this.api = new ApiClient(apiConfig)
@@ -146,32 +160,46 @@ abstract class CoreBase implements ResolverMethods {
     )
   }
 
-  /**
-   * Static {@link FlagsResolver | resolver} for evaluating personalized
-   * custom flags.
-   */
-  get flagsResolver(): typeof FlagsResolver {
-    return this._personalization.flagsResolver
+  private static createExperienceApiConfig(
+    api: CoreApiConfig | undefined,
+  ): ApiClientConfig['personalization'] {
+    if (api === undefined) return undefined
+
+    const { enabledFeatures, experienceBaseUrl: baseUrl, ip, locale, plainText, preflight } = api
+
+    if (
+      baseUrl === undefined &&
+      enabledFeatures === undefined &&
+      ip === undefined &&
+      locale === undefined &&
+      plainText === undefined &&
+      preflight === undefined
+    ) {
+      return undefined
+    }
+
+    return {
+      baseUrl,
+      enabledFeatures,
+      ip,
+      locale,
+      plainText,
+      preflight,
+    }
   }
 
-  /**
-   * Static {@link MergeTagValueResolver | resolver} that returns values
-   * sourced from a user profile based on a Contentful Merge Tag entry.
-   */
-  get mergeTagValueResolver(): typeof MergeTagValueResolver {
-    return this._personalization.mergeTagValueResolver
-  }
+  private static createInsightsApiConfig(
+    api: CoreApiConfig | undefined,
+  ): ApiClientConfig['analytics'] {
+    if (api === undefined) return undefined
 
-  /**
-   * Static {@link PersonalizedEntryResolver | resolver } for personalized
-   * Contentful entries (e.g., entry variants targeted to a profile audience).
-   *
-   * @remarks
-   * Used by higher-level personalization flows to materialize entry content
-   * prior to event emission.
-   */
-  get personalizedEntryResolver(): typeof PersonalizedEntryResolver {
-    return this._personalization.personalizedEntryResolver
+    const { beaconHandler, insightsBaseUrl: baseUrl } = api
+
+    if (baseUrl === undefined && beaconHandler === undefined) {
+      return undefined
+    }
+
+    return { baseUrl, beaconHandler }
   }
 
   /**
@@ -181,14 +209,14 @@ abstract class CoreBase implements ResolverMethods {
    * @param changes - Optional change list to resolve from.
    * @returns The resolved JSON value for the flag if available.
    * @remarks
-   * This is a convenience wrapper around personalization’s flag resolution.
+   * This is a convenience wrapper around Core's shared flag resolution.
    * @example
    * ```ts
    * const darkMode = core.getFlag('dark-mode', data.changes)
    * ```
    */
   getFlag(name: string, changes?: ChangeArray): Json {
-    return this._personalization.getFlag(name, changes)
+    return this.flagsResolver.resolve(changes)[name]
   }
 
   /**
@@ -230,7 +258,7 @@ abstract class CoreBase implements ResolverMethods {
     entry: Entry<S, M, L>,
     selectedPersonalizations?: SelectedPersonalizationArray,
   ): ResolvedData<S, M, L> {
-    return this._personalization.personalizeEntry<S, M, L>(entry, selectedPersonalizations)
+    return this.personalizedEntryResolver.resolve<S, M, L>(entry, selectedPersonalizations)
   }
 
   /**
@@ -245,11 +273,25 @@ abstract class CoreBase implements ResolverMethods {
    * ```
    */
   getMergeTagValue(embeddedEntryNodeTarget: MergeTagEntry, profile?: Profile): string | undefined {
-    return this._personalization.getMergeTagValue(embeddedEntryNodeTarget, profile)
+    return this.mergeTagValueResolver.resolve(embeddedEntryNodeTarget, profile)
   }
 
+  protected abstract sendExperienceEvent(
+    method: string,
+    args: readonly unknown[],
+    event: ExperienceEventPayload,
+    profile?: PartialProfile,
+  ): Promise<OptimizationData | undefined>
+
+  protected abstract sendInsightsEvent(
+    method: string,
+    args: readonly unknown[],
+    event: InsightsEventPayload,
+    profile?: PartialProfile,
+  ): Promise<void>
+
   /**
-   * Convenience wrapper for sending an `identify` event via personalization.
+   * Convenience wrapper for sending an `identify` event through the Experience path.
    *
    * @param payload - Identify builder arguments.
    * @returns The resulting {@link OptimizationData} for the identified user.
@@ -261,11 +303,18 @@ abstract class CoreBase implements ResolverMethods {
   async identify(
     payload: IdentifyBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData | undefined> {
-    return await this._personalization.identify(payload)
+    const { profile, ...builderArgs } = payload
+
+    return await this.sendExperienceEvent(
+      'identify',
+      [payload],
+      this.eventBuilder.buildIdentify(builderArgs),
+      profile,
+    )
   }
 
   /**
-   * Convenience wrapper for sending a `page` event via personalization.
+   * Convenience wrapper for sending a `page` event through the Experience path.
    *
    * @param payload - Page view builder arguments.
    * @returns The evaluated {@link OptimizationData} for this page view.
@@ -275,13 +324,20 @@ abstract class CoreBase implements ResolverMethods {
    * ```
    */
   async page(
-    payload: PageViewBuilderArgs & { profile?: PartialProfile },
+    payload: PageViewBuilderArgs & { profile?: PartialProfile } = {},
   ): Promise<OptimizationData | undefined> {
-    return await this._personalization.page(payload)
+    const { profile, ...builderArgs } = payload
+
+    return await this.sendExperienceEvent(
+      'page',
+      [payload],
+      this.eventBuilder.buildPageView(builderArgs),
+      profile,
+    )
   }
 
   /**
-   * Convenience wrapper for sending a `screen` event via personalization.
+   * Convenience wrapper for sending a `screen` event through the Experience path.
    *
    * @param payload - Screen view builder arguments.
    * @returns The evaluated {@link OptimizationData} for this screen view.
@@ -293,11 +349,18 @@ abstract class CoreBase implements ResolverMethods {
   async screen(
     payload: ScreenViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData | undefined> {
-    return await this._personalization.screen(payload)
+    const { profile, ...builderArgs } = payload
+
+    return await this.sendExperienceEvent(
+      'screen',
+      [payload],
+      this.eventBuilder.buildScreenView(builderArgs),
+      profile,
+    )
   }
 
   /**
-   * Convenience wrapper for sending a custom `track` event via personalization.
+   * Convenience wrapper for sending a custom `track` event through the Experience path.
    *
    * @param payload - Track builder arguments.
    * @returns The evaluated {@link OptimizationData} for this event.
@@ -309,19 +372,26 @@ abstract class CoreBase implements ResolverMethods {
   async track(
     payload: TrackBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData | undefined> {
-    return await this._personalization.track(payload)
+    const { profile, ...builderArgs } = payload
+
+    return await this.sendExperienceEvent(
+      'track',
+      [payload],
+      this.eventBuilder.buildTrack(builderArgs),
+      profile,
+    )
   }
 
   /**
-   * Track a component view in both personalization and analytics.
+   * Track a component view in both Experience and Insights.
    *
    * @param payload - Component view builder arguments. When `payload.sticky` is
-   *   `true`, the event will also be sent via personalization as a sticky
+   *   `true`, the event will also be sent through Experience as a sticky
    *   component view.
    * @returns A promise that resolves when all delegated calls complete.
    * @remarks
-   * The sticky behavior is delegated to personalization; analytics is always
-   * invoked regardless of `sticky`.
+   * Experience receives sticky views only; Insights is always invoked regardless
+   * of `sticky`.
    * @example
    * ```ts
    * await core.trackView({ componentId: 'hero-banner', sticky: true })
@@ -330,19 +400,30 @@ abstract class CoreBase implements ResolverMethods {
   async trackView(
     payload: ViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData | undefined> {
+    const { profile, ...builderArgs } = payload
     let result = undefined
 
     if (payload.sticky) {
-      result = await this._personalization.trackView(payload)
+      result = await this.sendExperienceEvent(
+        'trackView',
+        [payload],
+        this.eventBuilder.buildView(builderArgs),
+        profile,
+      )
     }
 
-    await this._analytics.trackView(payload)
+    await this.sendInsightsEvent(
+      'trackView',
+      [payload],
+      this.eventBuilder.buildView(builderArgs),
+      profile,
+    )
 
     return result
   }
 
   /**
-   * Track a component click via analytics.
+   * Track a component click through Insights.
    *
    * @param payload - Component click builder arguments.
    * @returns A promise that resolves when processing completes.
@@ -352,11 +433,11 @@ abstract class CoreBase implements ResolverMethods {
    * ```
    */
   async trackClick(payload: ClickBuilderArgs): Promise<void> {
-    await this._analytics.trackClick(payload)
+    await this.sendInsightsEvent('trackClick', [payload], this.eventBuilder.buildClick(payload))
   }
 
   /**
-   * Track a component hover via analytics.
+   * Track a component hover through Insights.
    *
    * @param payload - Component hover builder arguments.
    * @returns A promise that resolves when processing completes.
@@ -366,11 +447,11 @@ abstract class CoreBase implements ResolverMethods {
    * ```
    */
   async trackHover(payload: HoverBuilderArgs): Promise<void> {
-    await this._analytics.trackHover(payload)
+    await this.sendInsightsEvent('trackHover', [payload], this.eventBuilder.buildHover(payload))
   }
 
   /**
-   * Track a feature flag view via analytics.
+   * Track a feature flag view through Insights.
    *
    * @param payload - Component view builder arguments used to build the flag view event.
    * @returns A promise that resolves when processing completes.
@@ -380,7 +461,11 @@ abstract class CoreBase implements ResolverMethods {
    * ```
    */
   async trackFlagView(payload: FlagViewBuilderArgs): Promise<void> {
-    await this._analytics.trackFlagView(payload)
+    await this.sendInsightsEvent(
+      'trackFlagView',
+      [payload],
+      this.eventBuilder.buildFlagView(payload),
+    )
   }
 }
 

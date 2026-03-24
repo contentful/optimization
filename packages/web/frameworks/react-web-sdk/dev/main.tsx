@@ -41,8 +41,10 @@ createRoot(rootElement).render(
       <OptimizationRoot
         clientId={clientId}
         environment={environment}
-        analytics={{ baseUrl: insightsBaseUrl }}
-        personalization={{ baseUrl: experienceBaseUrl }}
+        api={{
+          insightsBaseUrl,
+          experienceBaseUrl,
+        }}
         liveUpdates={true}
       >
         <ReactRouterAutoPageTracker
