@@ -203,6 +203,7 @@ function resolveTapsEnabled(
  * ```
  *
  * @see {@link OptimizationRoot} for configuring global interaction tracking
+ * @see {@link useLiveUpdates} for reading live update state programmatically
  *
  * @public
  */

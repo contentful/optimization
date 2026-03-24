@@ -13,7 +13,7 @@ const BATCH_SIZE = 100
  * @param include - Depth of linked entries to resolve
  * @returns Promise resolving to an array of all entries
  *
- * @defaultValue include is `10`
+ * @defaultValue `10`
  *
  * @public
  */
