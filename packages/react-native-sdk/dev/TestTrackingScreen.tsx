@@ -1,7 +1,7 @@
 /**
  * Test Tracking Screen - Demonstrates viewport tracking functionality
  *
- * This screen demonstrates both the new Personalization and Analytics components
+ * This screen demonstrates the OptimizedEntry component
  * with real Contentful entry data from the mock server.
  */
 
@@ -11,9 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import type { ContentfulOptimization } from '@contentful/optimization-react-native'
 import {
-  Analytics,
   OptimizationScrollProvider,
-  Personalization,
+  OptimizedEntry,
   useScreenTracking,
 } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
@@ -106,15 +105,15 @@ export function TestTrackingScreen({
             Component Tracking Demo
           </Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor }]}>
-            Scroll down to see the {'<Personalization />'} and {'<Analytics />'} components using
-            real entries from the mock server. Each tracks when visible for a specified duration.
+            Scroll down to see {'<OptimizedEntry />'} components using real entries from the mock
+            server. Each tracks when visible for a specified duration.
           </Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor, marginTop: 12 }]}>
-            📝 Note: "Component tracking" refers to tracking Contentful entry components (CMS
-            content), not React Native UI components.
+            Note: "Component tracking" refers to tracking Contentful entry components (CMS content),
+            not React Native UI components.
           </Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor, marginTop: 12 }]}>
-            🔗 Using mock server data - Entry IDs: {personalizedEntry.sys.id}, {productEntry.sys.id}
+            Using mock server data - Entry IDs: {personalizedEntry.sys.id}, {productEntry.sys.id}
           </Text>
         </View>
 
@@ -128,9 +127,9 @@ export function TestTrackingScreen({
           </Text>
         </View>
 
-        {/* Personalization component example */}
-        <Personalization
-          baselineEntry={personalizedEntry}
+        {/* Personalized entry example */}
+        <OptimizedEntry
+          entry={personalizedEntry}
           viewTimeMs={2000} // 2 seconds
           threshold={0.8} // 80% visible
           style={StyleSheet.flatten([styles.trackedView, { backgroundColor: '#6366f1' }])}
@@ -138,7 +137,7 @@ export function TestTrackingScreen({
         >
           {(resolvedEntry) => (
             <View>
-              <Text style={styles.componentLabel}>{'<Personalization />'}</Text>
+              <Text style={styles.componentLabel}>{'<OptimizedEntry /> (personalized)'}</Text>
               <Text style={styles.trackedViewTitle}>
                 {getFieldText(resolvedEntry.fields.internalTitle) || 'Personalized Content'}
               </Text>
@@ -154,7 +153,7 @@ export function TestTrackingScreen({
               </Text>
             </View>
           )}
-        </Personalization>
+        </OptimizedEntry>
 
         <View
           style={[styles.fillerSection, { backgroundColor: colors.cardBackground }]}
@@ -162,11 +161,11 @@ export function TestTrackingScreen({
         >
           <Text style={[styles.sectionTitle, { color: colors.textColor }]}>More Content</Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor }]}>
-            Keep scrolling to see the Analytics component next...
+            Keep scrolling to see the next tracked component...
           </Text>
         </View>
 
-        <Analytics
+        <OptimizedEntry
           entry={productEntry}
           viewTimeMs={1500}
           threshold={0.9}
@@ -174,7 +173,7 @@ export function TestTrackingScreen({
           testID="analyticsComponent"
         >
           <View>
-            <Text style={styles.componentLabel}>{'<Analytics />'}</Text>
+            <Text style={styles.componentLabel}>{'<OptimizedEntry /> (non-personalized)'}</Text>
             <Text style={styles.trackedViewTitle}>
               {getFieldText(productEntry.fields.internalTitle) || 'Analytics Entry'}
             </Text>
@@ -189,7 +188,7 @@ export function TestTrackingScreen({
               Tracking: 90% visible for 1500ms (custom)
             </Text>
           </View>
-        </Analytics>
+        </OptimizedEntry>
 
         {/* Event log */}
         <View
@@ -208,7 +207,7 @@ export function TestTrackingScreen({
                 style={[styles.eventText, { color: colors.successColor }]}
                 testID={`trackedEvent${index}`}
               >
-                ✓ {event}
+                {event}
               </Text>
             ))
           )}

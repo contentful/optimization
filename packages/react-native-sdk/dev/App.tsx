@@ -323,7 +323,7 @@ function App(): React.JSX.Element {
           <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
             <Text style={[styles.cardTitle, { color: colors.textColor }]}>Component Tracking</Text>
             <Text style={[styles.description, { color: colors.mutedTextColor }]}>
-              Test viewport tracking with the Personalization and Analytics components.
+              Test viewport tracking with the OptimizedEntry component.
             </Text>
             <TouchableOpacity
               style={[styles.button, { backgroundColor: colors.accentColor }]}

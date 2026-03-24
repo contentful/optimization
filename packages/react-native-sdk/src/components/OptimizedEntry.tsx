@@ -1,5 +1,6 @@
 import type { ResolvedData } from '@contentful/optimization-core'
 import type { SelectedPersonalizationArray } from '@contentful/optimization-core/api-schemas'
+import { isPersonalizedEntry } from '@contentful/optimization-core/api-schemas'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import React, { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
@@ -10,46 +11,55 @@ import { useTapTracking } from '../hooks/useTapTracking'
 import { useViewportTracking } from '../hooks/useViewportTracking'
 
 /**
- * Props for the {@link Personalization} component.
+ * Props for the {@link OptimizedEntry} component.
  *
  * @public
  */
-export interface PersonalizationProps {
+export interface OptimizedEntryProps {
   /**
-   * The baseline Contentful entry fetched with `include: 10`.
-   * Must include `nt_experiences` field with linked personalization data.
+   * The Contentful entry to optimize and track.
+   * For personalized entries (those with `nt_experiences`), the component
+   * automatically resolves variants. For non-personalized entries, the
+   * entry is passed through unchanged.
    *
    * @example
    * ```typescript
-   * const baselineEntry = await contentful.getEntry('hero-baseline-id', {
+   * const entry = await contentful.getEntry('entry-id', {
    *   include: 10,
    * })
    * ```
    */
-  baselineEntry: Entry
+  entry: Entry
 
   /**
-   * Render prop that receives the resolved variant entry.
-   * Called with the baseline entry if no personalization matches,
-   * or with the selected variant entry if personalization applies.
+   * Content to render. Accepts either a render prop or static children.
    *
-   * @param resolvedEntry - The entry to display (baseline or variant)
+   * - **Render prop** `(resolvedEntry: Entry) => ReactNode`: receives the
+   *   resolved entry (variant or baseline) and returns content to render.
+   *   Use this when you need the resolved entry data.
+   * - **Static children** `ReactNode`: rendered as-is without entry data.
+   *   Use this when you only need tracking, not variant resolution.
    *
-   * @returns ReactNode to render
-   *
-   * @example
+   * @example Render prop (personalized content)
    * ```tsx
-   * <Personalization baselineEntry={entry}>
+   * <OptimizedEntry entry={entry}>
    *   {(resolvedEntry) => (
    *     <HeroComponent
    *       title={resolvedEntry.fields.title}
    *       image={resolvedEntry.fields.image}
    *     />
    *   )}
-   * </Personalization>
+   * </OptimizedEntry>
+   * ```
+   *
+   * @example Static children (tracking only)
+   * ```tsx
+   * <OptimizedEntry entry={productEntry}>
+   *   <ProductCard name={productEntry.fields.name} />
+   * </OptimizedEntry>
    * ```
    */
-  children: (resolvedEntry: Entry) => ReactNode
+  children: ReactNode | ((resolvedEntry: Entry) => ReactNode)
 
   /**
    * Minimum time (in milliseconds) the component must be visible
@@ -87,6 +97,7 @@ export interface PersonalizationProps {
 
   /**
    * Whether this component should react to personalization state changes in real-time.
+   * Only applies to personalized entries; ignored for non-personalized entries.
    * When `undefined`, inherits from the `liveUpdates` prop on {@link OptimizationRoot}.
    * When `false` (or inherited as `false`), the component locks to the first variant
    * it receives, preventing UI flashing when user actions change their qualification.
@@ -129,11 +140,24 @@ export interface PersonalizationProps {
   onTap?: (resolvedEntry: Entry) => void
 }
 
+function resolveTapsEnabled(
+  trackTaps: boolean | undefined,
+  onTap: ((resolvedEntry: Entry) => void) | undefined,
+  globalTaps: boolean,
+): boolean {
+  if (trackTaps !== undefined) return trackTaps
+  if (onTap) return true
+  return globalTaps
+}
+
 /**
- * Tracks views and taps of personalized Contentful entry components and resolves variants
- * based on the user's profile and active personalizations.
+ * Unified component for tracking and personalizing Contentful entries.
  *
- * @param props - {@link PersonalizationProps}
+ * Handles both personalized entries (with `nt_experiences`) and non-personalized
+ * entries. For personalized entries, it resolves the correct variant based on the
+ * user's profile. For all entries, it tracks views and taps.
+ *
+ * @param props - {@link OptimizedEntryProps}
  * @returns A wrapper View with interaction tracking attached
  *
  * @remarks
@@ -146,37 +170,44 @@ export interface PersonalizationProps {
  * flashing. Set `liveUpdates` to `true` or open the preview panel to enable
  * real-time variant switching.
  *
- * @example Basic Usage
+ * @example Basic Usage with Render Prop
  * ```tsx
  * <OptimizationScrollProvider>
- *   <Personalization baselineEntry={baselineEntry}>
+ *   <OptimizedEntry entry={entry}>
  *     {(resolvedEntry) => (
  *       <HeroComponent
  *         title={resolvedEntry.fields.title}
  *         image={resolvedEntry.fields.image}
  *       />
  *     )}
- *   </Personalization>
+ *   </OptimizedEntry>
  * </OptimizationScrollProvider>
  * ```
+ *
+ * @example Static Children (Tracking Only)
+ * ```tsx
+ * <OptimizedEntry entry={productEntry}>
+ *   <ProductCard name={productEntry.fields.name} />
+ * </OptimizedEntry>
+ * ```
+ *
  * @example With Tap Tracking
  * ```tsx
- * <Personalization baselineEntry={entry} trackTaps>
+ * <OptimizedEntry entry={entry} trackTaps>
  *   {(resolvedEntry) => (
  *     <Pressable onPress={() => navigate(resolvedEntry)}>
  *       <Card title={resolvedEntry.fields.title} />
  *     </Pressable>
  *   )}
- * </Personalization>
+ * </OptimizedEntry>
  * ```
  *
- * @see {@link Analytics} for tracking non-personalized entries
  * @see {@link OptimizationRoot} for configuring global interaction tracking
  *
  * @public
  */
-export function Personalization({
-  baselineEntry,
+export function OptimizedEntry({
+  entry,
   children,
   viewTimeMs,
   threshold,
@@ -187,10 +218,12 @@ export function Personalization({
   trackViews,
   trackTaps,
   onTap,
-}: PersonalizationProps): React.JSX.Element {
+}: OptimizedEntryProps): React.JSX.Element {
   const contentfulOptimization = useOptimization()
   const liveUpdatesContext = useLiveUpdates()
   const interactionTracking = useInteractionTracking()
+
+  const isPersonalized = isPersonalizedEntry(entry)
 
   const shouldLiveUpdate =
     liveUpdatesContext?.previewPanelVisible === true ||
@@ -209,6 +242,8 @@ export function Personalization({
   }, [shouldLiveUpdate])
 
   useEffect(() => {
+    if (!isPersonalized) return
+
     const subscription = contentfulOptimization.states.selectedPersonalizations.subscribe((p) => {
       if (shouldLiveUpdate) {
         setLockedPersonalizations(p)
@@ -221,16 +256,18 @@ export function Personalization({
     return () => {
       subscription.unsubscribe()
     }
-  }, [contentfulOptimization, shouldLiveUpdate])
+  }, [contentfulOptimization, shouldLiveUpdate, isPersonalized])
 
   const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
-    () => contentfulOptimization.personalizeEntry(baselineEntry, lockedPersonalizations),
-    [baselineEntry, contentfulOptimization, lockedPersonalizations],
+    () =>
+      isPersonalized
+        ? contentfulOptimization.personalizeEntry(entry, lockedPersonalizations)
+        : { entry },
+    [entry, contentfulOptimization, lockedPersonalizations, isPersonalized],
   )
 
   const viewsEnabled = trackViews ?? interactionTracking.views
-  const tapsEnabled =
-    trackTaps === false ? false : (trackTaps ?? onTap) ? true : interactionTracking.taps
+  const tapsEnabled = resolveTapsEnabled(trackTaps, onTap, interactionTracking.taps)
 
   const { onLayout } = useViewportTracking({
     entry: resolvedData.entry,
@@ -256,9 +293,9 @@ export function Personalization({
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {children(resolvedData.entry)}
+      {typeof children === 'function' ? children(resolvedData.entry) : children}
     </View>
   )
 }
 
-export default Personalization
+export default OptimizedEntry

@@ -28,11 +28,8 @@ export type { OptimizationProviderProps } from './components/OptimizationProvide
 export { OptimizationRoot } from './components/OptimizationRoot'
 export type { OptimizationRootProps } from './components/OptimizationRoot'
 
-export { Personalization } from './components/Personalization'
-export type { PersonalizationProps } from './components/Personalization'
-
-export { Analytics } from './components/Analytics'
-export type { AnalyticsProps } from './components/Analytics'
+export { OptimizedEntry } from './components/OptimizedEntry'
+export type { OptimizedEntryProps } from './components/OptimizedEntry'
 
 export { OptimizationScrollProvider, useScrollContext } from './context/OptimizationScrollContext'
 export type { OptimizationScrollProviderProps } from './context/OptimizationScrollContext'

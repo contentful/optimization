@@ -1,7 +1,7 @@
 import React from 'react'
 import { Text, View } from 'react-native'
 
-import { Personalization } from '@contentful/optimization-react-native'
+import { OptimizedEntry } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 
 interface NestedContentItemProps {
@@ -33,9 +33,9 @@ function renderNestedContentItem(resolvedEntry: Entry): React.JSX.Element {
         <Text>{`[Entry: ${resolvedEntry.sys.id}]`}</Text>
       </View>
       {nestedEntries.filter(isEntry).map((nestedEntry) => (
-        <Personalization key={nestedEntry.sys.id} baselineEntry={nestedEntry}>
+        <OptimizedEntry key={nestedEntry.sys.id} entry={nestedEntry}>
           {renderNestedContentItem}
-        </Personalization>
+        </OptimizedEntry>
       ))}
     </View>
   )
@@ -43,8 +43,8 @@ function renderNestedContentItem(resolvedEntry: Entry): React.JSX.Element {
 
 export function NestedContentItem({ entry }: NestedContentItemProps): React.JSX.Element {
   return (
-    <Personalization baselineEntry={entry} testID={`nested-personalization-${entry.sys.id}`}>
+    <OptimizedEntry entry={entry} testID={`nested-personalization-${entry.sys.id}`}>
       {renderNestedContentItem}
-    </Personalization>
+    </OptimizedEntry>
   )
 }

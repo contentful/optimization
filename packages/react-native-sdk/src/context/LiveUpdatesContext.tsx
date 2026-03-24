@@ -40,7 +40,7 @@ interface LiveUpdatesProviderProps {
 }
 
 /**
- * Manages live updates configuration for {@link Personalization} components.
+ * Manages live updates configuration for {@link OptimizedEntry} components.
  *
  * @param props - Provider props.
  * @returns A context provider wrapping the children.
