@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import {
   LiveUpdatesProvider,
   OptimizationScrollProvider,
-  Personalization,
+  OptimizedEntry,
   useLiveUpdates,
   useOptimization,
 } from '@contentful/optimization-react-native'
@@ -56,35 +56,31 @@ function ContentSections({
         <View>
           <Text>Default Behavior (inherits global setting)</Text>
           <Text>No liveUpdates prop - inherits from OptimizationRoot (false)</Text>
-          <Personalization baselineEntry={entry} testID="default-personalization">
+          <OptimizedEntry entry={entry} testID="default-personalization">
             {(resolvedEntry) => (
               <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="default" />
             )}
-          </Personalization>
+          </OptimizedEntry>
         </View>
 
         <View>
           <Text>Live Updates Enabled (liveUpdates=true)</Text>
           <Text>Always updates when personalization state changes</Text>
-          <Personalization baselineEntry={entry} liveUpdates={true} testID="live-personalization">
+          <OptimizedEntry entry={entry} liveUpdates={true} testID="live-personalization">
             {(resolvedEntry) => (
               <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="live" />
             )}
-          </Personalization>
+          </OptimizedEntry>
         </View>
 
         <View>
           <Text>Locked (liveUpdates=false)</Text>
           <Text>Never updates - locks to first variant received</Text>
-          <Personalization
-            baselineEntry={entry}
-            liveUpdates={false}
-            testID="locked-personalization"
-          >
+          <OptimizedEntry entry={entry} liveUpdates={false} testID="locked-personalization">
             {(resolvedEntry) => (
               <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="locked" />
             )}
-          </Personalization>
+          </OptimizedEntry>
         </View>
       </OptimizationScrollProvider>
     </>

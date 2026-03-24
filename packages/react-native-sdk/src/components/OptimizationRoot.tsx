@@ -24,7 +24,7 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
   previewPanel?: PreviewPanelConfig
 
   /**
-   * Whether {@link Personalization} components should react to state changes in real-time.
+   * Whether {@link OptimizedEntry} components should react to state changes in real-time.
    *
    * @defaultValue `false`
    *
@@ -36,7 +36,7 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
 
   /**
    * Controls which entry interactions are tracked automatically for all
-   * {@link Personalization} and {@link Analytics} components. Individual
+   * {@link OptimizedEntry} components. Individual
    * components can override each interaction type with their `trackViews`
    * and `trackTaps` props.
    *
@@ -111,7 +111,7 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
  * ```
  *
  * @see {@link OptimizationProvider}
- * @see {@link Personalization} for per-component interaction overrides
+ * @see {@link OptimizedEntry} for per-component interaction overrides
  *
  * @public
  */

@@ -59,16 +59,16 @@ export interface OptimizationScrollProviderProps extends ScrollViewProps {
  * @returns A `ScrollView` wrapped in a scroll context provider
  *
  * @remarks
- * When {@link Personalization} or {@link Analytics} components are placed inside a
+ * When {@link OptimizedEntry} components are placed inside a
  * `OptimizationScrollProvider`, they use the actual scroll position for visibility calculations.
  * Without a `OptimizationScrollProvider`, they fall back to screen dimensions.
  *
  * @example
  * ```tsx
  * <OptimizationScrollProvider>
- *   <Personalization baselineEntry={entry}>
+ *   <OptimizedEntry entry={entry}>
  *     {(resolved) => <HeroComponent data={resolved} />}
- *   </Personalization>
+ *   </OptimizedEntry>
  * </OptimizationScrollProvider>
  * ```
  *

@@ -1,8 +1,7 @@
 import React from 'react'
 import { Text, View } from 'react-native'
 
-import { Analytics, Personalization, useOptimization } from '@contentful/optimization-react-native'
-import { isPersonalizedEntry } from '@contentful/optimization-react-native/api-schemas'
+import { OptimizedEntry, useOptimization } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 
 import { getRichTextContent, RichTextRenderer } from '../components/RichTextRenderer'
@@ -65,19 +64,13 @@ export function ContentEntry({ entry }: ContentEntryProps): React.JSX.Element {
 
   return (
     <View testID={`content-entry-${entry.sys.id}`}>
-      {isPersonalizedEntry(entry) ? (
-        <Personalization baselineEntry={entry} trackTaps>
-          {(resolvedEntry) => (
-            <View testID={`content-${entry.sys.id}`}>
-              {renderContent(resolvedEntry, entry.sys.id)}
-            </View>
-          )}
-        </Personalization>
-      ) : (
-        <Analytics entry={entry} trackTaps>
-          <View testID={`content-${entry.sys.id}`}>{renderContent(entry, entry.sys.id)}</View>
-        </Analytics>
-      )}
+      <OptimizedEntry entry={entry} trackTaps>
+        {(resolvedEntry) => (
+          <View testID={`content-${entry.sys.id}`}>
+            {renderContent(resolvedEntry, entry.sys.id)}
+          </View>
+        )}
+      </OptimizedEntry>
     </View>
   )
 }

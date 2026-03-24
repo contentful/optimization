@@ -36,8 +36,7 @@ based on the [Optimization Core Library](../universal/core-sdk/README.md). This 
   - [Fetch Options](#fetch-options)
   - [Personalization Options](#personalization-options)
 - [Component Tracking](#component-tracking)
-  - [`<Personalization />` - For Personalized Entries](#personalization----for-personalized-entries)
-  - [`<Analytics />` - For Non-Personalized Entries](#analytics----for-non-personalized-entries)
+  - [`<OptimizedEntry />`](#optimizedentry-)
   - [ScrollView vs Non-ScrollView Usage](#scrollview-vs-non-scrollview-usage)
     - [Inside ScrollView (Recommended for Scrollable Content)](#inside-scrollview-recommended-for-scrollable-content)
     - [Outside ScrollView (For Non-Scrollable Content)](#outside-scrollview-for-non-scrollable-content)
@@ -210,33 +209,44 @@ Configuration method signatures:
 entry components** (content entries in your CMS), NOT React Native UI components. The term
 "component" comes from Contentful's terminology for personalized content entries.
 
-The SDK provides two semantic components for tracking different types of Contentful entries:
+### `<OptimizedEntry />`
 
-### `<Personalization />` - For Personalized Entries
+A unified component that handles both personalized and non-personalized Contentful entries. It
+automatically:
 
-Use this component to track Contentful entries that can be personalized (have `nt_experiences`
-field). It automatically:
-
-- Resolves the correct variant based on user profile and active personalizations
-- Provides the resolved entry via render prop
+- Detects whether the entry is personalized (has `nt_experiences` field)
+- Resolves the correct variant for personalized entries based on user profile
+- Passes non-personalized entries through unchanged
 - Tracks component views when visibility and time thresholds are met
+- Tracks taps when enabled
 
-### `<Analytics />` - For Non-Personalized Entries
+`children` accepts either a **render prop** `(resolvedEntry) => ReactNode` for accessing the
+resolved entry, or **static children** `ReactNode` for tracking-only use cases:
 
-Use this component to track standard Contentful entries you want analytics on (articles, etc.). It:
+```tsx
+{
+  /* Render prop — receives the resolved entry (variant or baseline) */
+}
+;<OptimizedEntry entry={personalizedEntry}>
+  {(resolvedEntry) => <HeroComponent data={resolvedEntry.fields} />}
+</OptimizedEntry>
 
-- Tracks any Contentful entry without personalization
-- Uses a simple children pattern (no render prop needed)
-- Same visibility and time tracking as `<Personalization />`
+{
+  /* Static children — tracking only, no variant resolution needed */
+}
+;<OptimizedEntry entry={productEntry}>
+  <ProductCard data={productEntry.fields} />
+</OptimizedEntry>
+```
 
-Both components track when an entry:
+The component tracks when an entry:
 
 - Is at least **80% visible** in the viewport (configurable via `threshold` prop)
 - Has been viewed for **2000ms** (2 seconds, configurable via `viewTimeMs` prop)
 
 ### ScrollView vs Non-ScrollView Usage
 
-The tracking components work in two modes:
+The tracking component works in two modes:
 
 #### Inside ScrollView (Recommended for Scrollable Content)
 
@@ -245,12 +255,12 @@ viewport dimensions:
 
 ```tsx
 <OptimizationScrollProvider>
-  <Personalization baselineEntry={entry}>
+  <OptimizedEntry entry={personalizedEntry}>
     {(resolvedEntry) => <HeroComponent data={resolvedEntry} />}
-  </Personalization>
-  <Analytics entry={productEntry}>
+  </OptimizedEntry>
+  <OptimizedEntry entry={productEntry}>
     <ProductCard data={productEntry.fields} />
-  </Analytics>
+  </OptimizedEntry>
 </OptimizationScrollProvider>
 ```
 
@@ -265,13 +275,13 @@ viewport dimensions:
 When used without `<OptimizationScrollProvider>`, tracking uses screen dimensions instead:
 
 ```tsx
-<Personalization baselineEntry={entry}>
+<OptimizedEntry entry={entry}>
   {(resolvedEntry) => <FullScreenHero data={resolvedEntry} />}
-</Personalization>
+</OptimizedEntry>
 
-<Analytics entry={bannerEntry}>
+<OptimizedEntry entry={bannerEntry}>
   <Banner data={bannerEntry.fields} />
-</Analytics>
+</OptimizedEntry>
 ```
 
 **Note:** In this mode, `scrollY` is always `0` and viewport height equals the screen height. This
@@ -283,24 +293,26 @@ is ideal for:
 
 ### Custom Tracking Thresholds
 
-Both components support customizable visibility and time thresholds:
+`<OptimizedEntry />` supports customizable visibility and time thresholds:
 
 ```typescript
-<Personalization
-  baselineEntry={entry}
+{/* Personalized entry with custom thresholds */}
+<OptimizedEntry
+  entry={entry}
   viewTimeMs={3000}      // Track after 3 seconds of visibility
   threshold={0.9}        // Require 90% visibility
 >
   {(resolvedEntry) => <YourComponent data={resolvedEntry.fields} />}
-</Personalization>
+</OptimizedEntry>
 
-<Analytics
+{/* Non-personalized entry with custom thresholds */}
+<OptimizedEntry
   entry={entry}
   viewTimeMs={1500}      // Track after 1.5 seconds
   threshold={0.5}        // Require 50% visibility
 >
   <YourComponent />
-</Analytics>
+</OptimizedEntry>
 ```
 
 **Key Features:**
@@ -309,8 +321,7 @@ Both components support customizable visibility and time thresholds:
 - Works with or without `OptimizationScrollProvider` (automatically adapts)
 - Default: 80% visible for 2000ms (both configurable)
 - Tracking fires even if user never scrolls (checks on initial layout)
-- `<Personalization />` uses render prop pattern to provide resolved entry
-- `<Analytics />` uses standard children pattern
+- Render prop pattern provides the resolved entry; static children work for tracking only
 
 ### Manual Analytics Tracking
 
@@ -401,7 +412,7 @@ panel. The panel allows developers to:
 
 ## Live Updates Behavior
 
-By default, `<Personalization />` components **lock to the first variant they receive**. This
+By default, `<OptimizedEntry />` components **lock to the first variant they receive**. This
 prevents UI "flashing" when user actions (like identifying or taking actions that change audience
 membership) cause them to qualify for different personalizations mid-session.
 
@@ -409,9 +420,9 @@ membership) cause them to qualify for different personalizations mid-session.
 
 ```tsx
 // User sees Variant A on initial load
-<Personalization baselineEntry={heroEntry}>
+<OptimizedEntry entry={heroEntry}>
   {(resolvedEntry) => <Hero data={resolvedEntry.fields} />}
-</Personalization>
+</OptimizedEntry>
 
 // Even if the user later qualifies for Variant B (e.g., after identify()),
 // they continue to see Variant A until the component unmounts
@@ -426,7 +437,7 @@ There are three ways to enable live updates (immediate reactions to personalizat
 
 #### 1. Preview Panel (Automatic)
 
-When the preview panel is open, **all** `<Personalization />` components automatically enable live
+When the preview panel is open, **all** `<OptimizedEntry />` components automatically enable live
 updates. This allows developers to test different variants without refreshing the screen:
 
 ```tsx
@@ -435,13 +446,13 @@ updates. This allows developers to test different variants without refreshing th
   environment="your-environment"
   previewPanel={{ enabled: true, contentfulClient }}
 >
-  {/* All Personalization components will live-update when panel is open */}
+  {/* All OptimizedEntry components will live-update when panel is open */}
 </OptimizationRoot>
 ```
 
 #### 2. Global Setting via OptimizationRoot
 
-Enable live updates for all `<Personalization />` components in your app:
+Enable live updates for all `<OptimizedEntry />` components in your app:
 
 ```tsx
 <OptimizationRoot clientId="your-client-id" environment="your-environment" liveUpdates={true}>
@@ -455,19 +466,19 @@ Enable or disable live updates for specific components:
 
 ```tsx
 // This component will always react to changes immediately
-<Personalization baselineEntry={dashboardEntry} liveUpdates={true}>
+<OptimizedEntry entry={dashboardEntry} liveUpdates={true}>
   {(resolvedEntry) => <Dashboard data={resolvedEntry.fields} />}
-</Personalization>
+</OptimizedEntry>
 
 // This component locks to first variant, even if global liveUpdates is true
-<Personalization baselineEntry={heroEntry} liveUpdates={false}>
+<OptimizedEntry entry={heroEntry} liveUpdates={false}>
   {(resolvedEntry) => <Hero data={resolvedEntry.fields} />}
-</Personalization>
+</OptimizedEntry>
 ```
 
 ### Priority Order
 
-The live updates setting is determined for a particular `<Personalization/>` component in this order
+The live updates setting is determined for a particular `<OptimizedEntry/>` component in this order
 (highest to lowest priority):
 
 1. **Preview panel open** - Always enables live updates (cannot be overridden)

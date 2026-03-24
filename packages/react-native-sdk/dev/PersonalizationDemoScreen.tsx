@@ -9,7 +9,7 @@ import React from 'react'
 import { StatusBar, StyleSheet, Text, TouchableOpacity, useColorScheme, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-import { OptimizationScrollProvider, Personalization } from '@contentful/optimization-react-native'
+import { OptimizationScrollProvider, OptimizedEntry } from '@contentful/optimization-react-native'
 import type { Entry } from 'contentful'
 import type { DemoEntries } from './utils/sdkHelpers'
 
@@ -98,8 +98,8 @@ export function PersonalizationDemoScreen({
           </Text>
         </View>
 
-        <Personalization
-          baselineEntry={demoEntries.deviceType}
+        <OptimizedEntry
+          entry={demoEntries.deviceType}
           style={styles.personalizationWrapper}
           testID="deviceTypeCard"
         >
@@ -110,10 +110,10 @@ export function PersonalizationDemoScreen({
               color="#6366f1"
             />
           )}
-        </Personalization>
+        </OptimizedEntry>
 
-        <Personalization
-          baselineEntry={demoEntries.visitorType}
+        <OptimizedEntry
+          entry={demoEntries.visitorType}
           style={styles.personalizationWrapper}
           testID="visitorTypeCard"
         >
@@ -124,20 +124,20 @@ export function PersonalizationDemoScreen({
               color="#8b5cf6"
             />
           )}
-        </Personalization>
+        </OptimizedEntry>
 
-        <Personalization
-          baselineEntry={demoEntries.location}
+        <OptimizedEntry
+          entry={demoEntries.location}
           style={styles.personalizationWrapper}
           testID="locationCard"
         >
           {(resolvedEntry) => (
             <ContentCard entry={resolvedEntry} label="Location Personalization" color="#10b981" />
           )}
-        </Personalization>
+        </OptimizedEntry>
 
-        <Personalization
-          baselineEntry={demoEntries.customEvent}
+        <OptimizedEntry
+          entry={demoEntries.customEvent}
           style={styles.personalizationWrapper}
           testID="customEventCard"
         >
@@ -148,7 +148,7 @@ export function PersonalizationDemoScreen({
               color="#f59e0b"
             />
           )}
-        </Personalization>
+        </OptimizedEntry>
 
         <View style={styles.bottomSpacer} />
       </OptimizationScrollProvider>

@@ -73,7 +73,7 @@ interface InteractionTrackingProviderProps {
 
 /**
  * Resolves entry interaction tracking configuration and provides it to
- * {@link Personalization} and {@link Analytics} components.
+ * {@link OptimizedEntry} components.
  *
  * @param props - Provider props.
  * @returns A context provider wrapping the children.
