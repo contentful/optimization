@@ -352,7 +352,8 @@
 
       // Render optimized entries
       async function renderOptimizedEntry(rawEntry, element, autoObserve = true) {
-        const { entry, personalization } = contentfulOptimization.resolveOptimizedEntry(rawEntry)
+        const { entry, selectedOptimization } =
+          contentfulOptimization.resolveOptimizedEntry(rawEntry)
         const renderInline =
           element.dataset.e2eEntryInline === 'true' || element.tagName === 'BUTTON'
 
@@ -388,14 +389,14 @@
           if (rawEntry.fields.nt_experiences) element.dataset.ctflBaselineId = rawEntry.sys?.id
 
           // Other standard auto-observing attributes are optional
-          if (personalization) {
-            element.dataset.ctflPersonalizationId = personalization?.experienceId
-            element.dataset.ctflSticky = personalization?.sticky
-            element.dataset.ctflVariantIndex = personalization?.variantIndex
+          if (selectedOptimization) {
+            element.dataset.ctflOptimizationId = selectedOptimization?.experienceId
+            element.dataset.ctflSticky = selectedOptimization?.sticky
+            element.dataset.ctflVariantIndex = selectedOptimization?.variantIndex
           }
         }
 
-        return [entry, personalization]
+        return [entry, selectedOptimization]
       }
 
       // Get the optimized entry to render
@@ -410,7 +411,7 @@
       }
 
       // Manually observe view elements for auto-tracking
-      function manuallyObserveEntryElement(element, entry, personalization) {
+      function manuallyObserveEntryElement(element, entry, selectedOptimization) {
         if (!entry?.sys?.id) return
 
         contentfulOptimization.tracking.clearElement('views', element)
@@ -420,9 +421,9 @@
           data: {
             // The `entryId` property is required for auto-tracking
             entryId: entry.sys.id,
-            personalizationId: personalization?.experienceId,
-            sticky: personalization?.sticky,
-            variantIndex: personalization?.variantIndex,
+            optimizationId: selectedOptimization?.experienceId,
+            sticky: selectedOptimization?.sticky,
+            variantIndex: selectedOptimization?.variantIndex,
           },
         })
       }
@@ -445,7 +446,7 @@
 
         await Promise.all(
           manuallyObservedElements.map(async (element) => {
-            const [entry, personalization] = await addOptimizedEntry(
+            const [entry, selectedOptimization] = await addOptimizedEntry(
               element.dataset.entryId,
               element,
               false,
@@ -453,7 +454,7 @@
 
             if (!entry) return
 
-            manuallyObserveEntryElement(element, entry, personalization)
+            manuallyObserveEntryElement(element, entry, selectedOptimization)
           }),
         )
       }
@@ -510,10 +511,10 @@
         eventStream.appendChild(createEventDialog(event.type, event).fragment)
       })
 
-      // Subscribe to selectedPersonalizations state and render entries when selections are available
-      contentfulOptimization.states.selectedPersonalizations.subscribe(
-        async (selectedPersonalizations) => {
-          if (!selectedPersonalizations) return
+      // Subscribe to selectedOptimizations state and render entries when selections are available
+      contentfulOptimization.states.selectedOptimizations.subscribe(
+        async (selectedOptimizations) => {
+          if (!selectedOptimizations) return
 
           void scheduleRenderEntries()
         },

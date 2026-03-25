@@ -81,7 +81,7 @@ export function PreviewPanel({
   contentfulClient,
 }: PreviewPanelProps): React.JSX.Element {
   const previewState = usePreviewState()
-  const { profile, personalizations, consent, isLoading } = previewState
+  const { profile, selectedOptimizations, consent, isLoading } = previewState
 
   // Get overrides from context (provided by PreviewOverrideProvider via PreviewPanelOverlay)
   // Throws an error if used outside of PreviewPanelOverlay
@@ -166,13 +166,13 @@ export function PreviewPanel({
   useEffect(() => {
     logger.debug('State updated:', {
       profileId: profile?.id,
-      personalizationsCount: personalizations?.length ?? 0,
+      selectedOptimizationsCount: selectedOptimizations?.length ?? 0,
       consent,
       overridesCount:
         Object.keys(overrides.audiences).length +
-        Object.keys(overrides.selectedPersonalizations).length,
+        Object.keys(overrides.selectedOptimizations).length,
     })
-  }, [profile, personalizations, consent, overrides])
+  }, [profile, selectedOptimizations, consent, overrides])
 
   const handleResetSdk = (): void => {
     Alert.alert(
@@ -211,8 +211,8 @@ export function PreviewPanel({
           audiencesWithExperiences={audiencesWithExperiences}
           onAudienceToggle={handleAudienceToggle}
           onSetVariant={actions.setVariantOverride}
-          onResetExperience={actions.resetPersonalizationOverride}
-          experienceOverrides={overrides.selectedPersonalizations}
+          onResetExperience={actions.resetOptimizationOverride}
+          experienceOverrides={overrides.selectedOptimizations}
           sdkVariantIndices={sdkVariantIndices}
           searchQuery={searchQuery}
           isAudienceExpanded={isCollapsibleOpen}
@@ -227,7 +227,7 @@ export function PreviewPanel({
         <OverridesSection
           overrides={overrides}
           onResetAudience={actions.resetAudienceOverride}
-          onResetPersonalization={actions.resetPersonalizationOverride}
+          onResetOptimization={actions.resetOptimizationOverride}
           audienceNames={audienceNames}
           experienceNames={experienceNames}
         />

@@ -1,14 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Animated, StyleSheet, Text, View } from 'react-native'
 import { borderRadius, colors, spacing, typography } from '../styles/theme'
-import type { AudienceItemProps, ExperienceDefinition, PersonalizationOverride } from '../types'
+import type { AudienceItemProps, ExperienceDefinition, OptimizationOverride } from '../types'
 import { copyToClipboard } from '../utils'
 import { AudienceItemHeader } from './AudienceItemHeader'
 import { ExperienceCard } from './ExperienceCard'
 
 interface RenderExperienceCardParams {
   experience: ExperienceDefinition
-  experienceOverrides: Record<string, PersonalizationOverride>
+  experienceOverrides: Record<string, OptimizationOverride>
   sdkVariantIndices: Record<string, number>
   isActive: boolean
   handlers: {

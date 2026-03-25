@@ -6,7 +6,7 @@ import { InteractionEventProperties } from '../../experience/event'
  *
  * @remarks
  * Component hover events track hover interactions for individual components
- * such as entries or variables within a personalized experience.
+ * such as entries or variables within a optimized experience.
  *
  * Extends {@link InteractionEventProperties}.
  *

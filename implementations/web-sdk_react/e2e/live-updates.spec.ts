@@ -31,8 +31,8 @@ test.describe('live updates behavior', () => {
     await expect(page.getByTestId('live-updates-examples')).toBeVisible()
     await expect
       .poll(async () => {
-        const text = await page.getByTestId('personalizations-count').innerText()
-        const value = Number.parseInt(text.replace('Personalizations: ', ''), 10)
+        const text = await page.getByTestId('selected-optimizations-count').innerText()
+        const value = Number.parseInt(text.replace('Selected Optimizations: ', ''), 10)
         return Number.isNaN(value) ? 0 : value
       })
       .toBeGreaterThan(0)

@@ -1,10 +1,8 @@
-# Feature Specification: Optimization Core Personalized Data Resolution
+# Feature Specification: Optimization Core Optimized Data Resolution
 
-**Feature Branch**: `[012-core-personalized-data-resolution]`  
-**Created**: 2026-02-26  
-**Status**: Current (Pre-release)  
-**Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+**Feature Branch**: `[012-core-optimized-data-resolution]` **Created**: 2026-02-26 **Status**:
+Current (Pre-release) **Input**: Repository behavior review for the current pre-release
+implementation (validated 2026-03-12).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -32,25 +30,25 @@ values) and validate both `FlagsResolver.resolve(...)` and `getFlag(...)` behavi
 
 ---
 
-### User Story 2 - Resolve Personalized Entries to Selected Variants (Priority: P1)
+### User Story 2 - Resolve Optimized Entries to Selected Variants (Priority: P1)
 
-As a Contentful SDK consumer, I need baseline entries resolved to selected personalized variants so
+As a Contentful SDK consumer, I need baseline entries resolved to selected optimized variants so
 rendered content matches selected treatment state.
 
-**Why this priority**: Entry variant resolution is the primary personalized-content behavior.
+**Why this priority**: Entry variant resolution is the primary optimized-content behavior.
 
 **Independent Test**: Run resolver with matching and non-matching selections; validate baseline
 fallback, variant selection, hidden-baseline filtering, and metadata output.
 
 **Acceptance Scenarios**:
 
-1. **Given** selected personalizations with non-zero `variantIndex` and a matching replacement
-   variant, **When** resolution runs, **Then** resolver returns variant entry plus selected
-   personalization metadata.
+1. **Given** selected optimizations with non-zero `variantIndex` and a matching replacement variant,
+   **When** resolution runs, **Then** resolver returns variant entry plus selected personalization
+   metadata.
 2. **Given** selected variant index `0`, **When** resolution runs, **Then** baseline entry is
    returned and `personalization` metadata is omitted.
-3. **Given** missing selected personalizations or non-personalized entry input, **When** resolution
-   runs, **Then** baseline entry is returned.
+3. **Given** missing selected optimizations or non-optimized entry input, **When** resolution runs,
+   **Then** baseline entry is returned.
 4. **Given** missing/invalid variant config or missing linked variant entry, **When** resolution
    runs, **Then** baseline entry is returned.
 
@@ -58,7 +56,7 @@ fallback, variant selection, hidden-baseline filtering, and metadata output.
 
 ### User Story 3 - Resolve Merge Tag Values with Profile Fallbacks (Priority: P2)
 
-As a runtime rendering personalized content, I need merge-tag values resolved from profile data with
+As a runtime rendering optimized content, I need merge-tag values resolved from profile data with
 fallback behavior so output remains renderable when profile values are unavailable.
 
 **Why this priority**: Merge tags are user-visible and require predictable fallback semantics.
@@ -79,7 +77,7 @@ and dot selector variants.
 
 ### Edge Cases
 
-- `SelectedPersonalization.variantIndex` is treated as 1-based; `0` is explicit baseline.
+- `SelectedOptimization.variantIndex` is treated as 1-based; `0` is explicit baseline.
 - Hidden baseline components are excluded from replacement-variant selection.
 - If selected variant config exists but linked variant entry is missing, resolver returns baseline.
 - Merge-tag selector normalization supports mixed underscore and dot patterns.
@@ -103,7 +101,7 @@ and dot selector variants.
   `PersonalizationBase.flagsResolver.resolve(changes)[name]`.
 - **FR-006**: `OptimizedEntryResolver.getOptimizationEntry` MUST match selected `experienceId`
   values to personalization entries by `nt_experience_id`.
-- **FR-007**: `OptimizedEntryResolver.getSelectedPersonalization` MUST return the selected
+- **FR-007**: `OptimizedEntryResolver.getSelectedOptimization` MUST return the selected
   personalization matching the personalization entry `nt_experience_id`.
 - **FR-008**: `OptimizedEntryResolver.getSelectedVariant` MUST locate non-hidden replacement
   components whose baseline entry ID matches the target entry and return variant at
@@ -111,15 +109,14 @@ and dot selector variants.
 - **FR-009**: `OptimizedEntryResolver.getSelectedVariantEntry` MUST resolve variant entry by
   selected variant ID from `nt_variants` and validate the resolved object as a Contentful `Entry`.
 - **FR-010**: `OptimizedEntryResolver.resolve` MUST return baseline entry when selected
-  personalizations are missing/empty.
+  optimizations are missing/empty.
 - **FR-011**: `OptimizedEntryResolver.resolve` MUST return baseline entry when input entry is not an
   optimized entry shape.
 - **FR-012**: `OptimizedEntryResolver.resolve` MUST treat selected variant index `0` as baseline.
 - **FR-013**: `OptimizedEntryResolver.resolve` MUST return baseline entry when personalization
   entry, variant config, or linked variant entry cannot be resolved.
 - **FR-014**: `OptimizedEntryResolver.resolve` MUST return
-  `{ entry: variantEntry, personalization: selectedPersonalization }` when variant resolution
-  succeeds.
+  `{ entry: variantEntry, personalization: selectedOptimization }` when variant resolution succeeds.
 - **FR-015**: `MergeTagValueResolver.resolve` MUST return `undefined` when supplied entry is not a
   valid merge-tag entry.
 - **FR-016**: `MergeTagValueResolver.normalizeSelectors` MUST generate progressive selector
@@ -132,7 +129,7 @@ and dot selector variants.
 - **FR-019**: `MergeTagValueResolver.resolve` MUST return merge-tag fallback when profile validation
   fails or no value is resolved from profile selectors.
 - **FR-020**: `PersonalizationStateful` overrides for resolver methods MUST default omitted resolver
-  inputs from current signals (`changes`, `selectedPersonalizations`, `profile`).
+  inputs from current signals (`changes`, `selectedOptimizations`, `profile`).
 - **FR-021**: Core-level resolver wrappers (`CoreBase.getFlag`, `.resolveOptimizedEntry`,
   `.getMergeTagValue`) MUST delegate to personalization resolver methods without altering payload
   shape.
@@ -146,7 +143,7 @@ and dot selector variants.
   semantics.
 - **ResolvedData**: Resolver output containing resolved entry and optional selected personalization
   metadata.
-- **SelectedPersonalization**: Selection metadata with `experienceId` and 1-based `variantIndex`.
+- **SelectedOptimization**: Selection metadata with `experienceId` and 1-based `variantIndex`.
 
 ## Success Criteria _(mandatory)_
 
@@ -154,7 +151,7 @@ and dot selector variants.
 
 - **SC-001**: Flag resolution consistently returns deterministic maps/lookups for undefined changes,
   primitive values, and wrapped object values.
-- **SC-002**: Personalized entry resolution returns baseline for all invalid/missing paths and
+- **SC-002**: Optimized entry resolution returns baseline for all invalid/missing paths and
   variant+metadata for valid paths.
 - **SC-003**: Merge-tag resolution supports underscore/dot selector normalization and fallback
   behavior for invalid profile paths.

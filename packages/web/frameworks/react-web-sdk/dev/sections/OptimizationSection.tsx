@@ -1,4 +1,4 @@
-import type { SelectedPersonalizationArray } from '@contentful/optimization-api-schemas'
+import type { SelectedOptimizationArray } from '@contentful/optimization-api-schemas'
 import type { Entry } from 'contentful'
 import { useEffect, useState, type ReactElement } from 'react'
 import { OptimizedEntry } from '../../src'
@@ -12,7 +12,7 @@ interface OptimizationSectionProps {
   baselineLocked?: Entry
   baselineNestedParent?: Entry
   baselineNestedChild?: Entry
-  personalizations: SelectedPersonalizationArray | undefined
+  selectedOptimizations: SelectedOptimizationArray | undefined
 }
 
 export function OptimizationSection({
@@ -21,7 +21,7 @@ export function OptimizationSection({
   baselineLocked,
   baselineNestedParent,
   baselineNestedChild,
-  personalizations,
+  selectedOptimizations,
 }: OptimizationSectionProps): ReactElement {
   const [datasetDefault, setDatasetDefault] = useState<DatasetSnapshot | null>(null)
   const [datasetLive, setDatasetLive] = useState<DatasetSnapshot | null>(null)
@@ -31,7 +31,7 @@ export function OptimizationSection({
     setDatasetDefault(readTrackingDataset('optimized-entry-default'))
     setDatasetLive(readTrackingDataset('optimized-entry-live'))
     setDatasetLocked(readTrackingDataset('optimized-entry-locked'))
-  }, [personalizations, baselineDefault, baselineLive, baselineLocked])
+  }, [selectedOptimizations, baselineDefault, baselineLive, baselineLocked])
 
   return (
     <>

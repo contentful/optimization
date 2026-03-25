@@ -2,7 +2,7 @@ import type {
   AudienceEntry,
   OptimizationEntry,
   Profile,
-  SelectedPersonalizationArray,
+  SelectedOptimizationArray,
 } from '@contentful/optimization-web/api-schemas'
 import { provide } from '@lit/context'
 import { css, html, LitElement, type TemplateResult } from 'lit'
@@ -108,9 +108,9 @@ export class Panel extends LitElement {
   @property({ attribute: false })
   accessor optimizationEntries: OptimizationEntry[] = []
 
-  /** Default personalization selections before any user overrides. */
+  /** Default optimization selections before any user overrides. */
   @property({ attribute: false })
-  accessor defaultSelectedPersonalizations: SelectedPersonalizationArray = []
+  accessor defaultSelectedOptimizations: SelectedOptimizationArray = []
 
   /** Visitor profile provided to child components via Lit context. */
   @provide({ context: profileContext })
@@ -232,7 +232,7 @@ export class Panel extends LitElement {
         <ctfl-opt-preview-audiences
           .audiences=${this.audiences}
           .optimizationEntries=${this.optimizationEntries}
-          .defaultSelectedPersonalizations=${this.defaultSelectedPersonalizations}
+          .defaultSelectedOptimizations=${this.defaultSelectedOptimizations}
         ></ctfl-opt-preview-audiences>
 
         <div class="footer">

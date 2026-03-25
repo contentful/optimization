@@ -1,4 +1,4 @@
-import type { SelectedPersonalization } from '@contentful/optimization-core/api-schemas'
+import type { SelectedOptimization } from '@contentful/optimization-core/api-schemas'
 import { afterEach, beforeEach, describe, expect, it, rs } from '@rstest/core'
 import type { Entry } from 'contentful'
 import type { LayoutChangeEvent } from 'react-native'
@@ -288,18 +288,18 @@ describe('useViewportTracking', () => {
       expect(call.variantIndex).toBe(0)
     })
 
-    it('should use personalization metadata when provided', async () => {
+    it('should use optimization metadata when provided', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('variant-456')
 
-      const personalization: SelectedPersonalization = {
+      const selectedOptimization: SelectedOptimization = {
         experienceId: 'exp-1',
         variantIndex: 2,
         variants: { 'comp-base': 'variant-456' },
       }
       const { onLayout } = useViewportTracking({
         entry,
-        personalization,
+        selectedOptimization,
         viewTimeMs: 100,
         threshold: 0.5,
       })
@@ -320,7 +320,7 @@ describe('useViewportTracking', () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('sticky-success-entry')
 
-      const personalization: SelectedPersonalization = {
+      const selectedOptimization: SelectedOptimization = {
         experienceId: 'exp-sticky-success',
         variantIndex: 1,
         variants: { 'sticky-success-component': 'sticky-success-entry' },
@@ -331,7 +331,7 @@ describe('useViewportTracking', () => {
 
       const { onLayout } = useViewportTracking({
         entry,
-        personalization,
+        selectedOptimization,
         viewTimeMs: 100,
         viewDurationUpdateIntervalMs: 200,
         threshold: 0.5,
@@ -352,7 +352,7 @@ describe('useViewportTracking', () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('sticky-retry-entry')
 
-      const personalization: SelectedPersonalization = {
+      const selectedOptimization: SelectedOptimization = {
         experienceId: 'exp-sticky-retry',
         variantIndex: 1,
         variants: { 'sticky-retry-component': 'sticky-retry-entry' },
@@ -363,7 +363,7 @@ describe('useViewportTracking', () => {
 
       const { onLayout } = useViewportTracking({
         entry,
-        personalization,
+        selectedOptimization,
         viewTimeMs: 100,
         viewDurationUpdateIntervalMs: 200,
         threshold: 0.5,
@@ -387,7 +387,7 @@ describe('useViewportTracking', () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('sticky-shared-entry')
 
-      const personalization: SelectedPersonalization = {
+      const selectedOptimization: SelectedOptimization = {
         experienceId: 'exp-sticky-shared',
         variantIndex: 1,
         variants: { 'sticky-shared-component': 'sticky-shared-entry' },
@@ -398,14 +398,14 @@ describe('useViewportTracking', () => {
 
       const first = useViewportTracking({
         entry,
-        personalization,
+        selectedOptimization,
         viewTimeMs: 100,
         threshold: 0.5,
       })
 
       const second = useViewportTracking({
         entry,
-        personalization,
+        selectedOptimization,
         viewTimeMs: 100,
         threshold: 0.5,
       })

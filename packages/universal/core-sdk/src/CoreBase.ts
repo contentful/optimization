@@ -16,7 +16,7 @@ import type {
   OptimizationData,
   PartialProfile,
   Profile,
-  SelectedPersonalizationArray,
+  SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import type { LogLevels } from '@contentful/optimization-api-client/logger'
 import { ConsoleLogSink, logger } from '@contentful/optimization-api-client/logger'
@@ -146,8 +146,8 @@ abstract class CoreBase {
       clientId,
       environment,
       fetchOptions,
-      analytics: CoreBase.createInsightsApiConfig(api),
-      personalization: CoreBase.createExperienceApiConfig(api),
+      insights: CoreBase.createInsightsApiConfig(api),
+      experience: CoreBase.createExperienceApiConfig(api),
     }
 
     this.api = new ApiClient(apiConfig)
@@ -162,7 +162,7 @@ abstract class CoreBase {
 
   private static createExperienceApiConfig(
     api: CoreApiConfig | undefined,
-  ): ApiClientConfig['personalization'] {
+  ): ApiClientConfig['experience'] {
     if (api === undefined) return undefined
 
     const { enabledFeatures, experienceBaseUrl: baseUrl, ip, locale, plainText, preflight } = api
@@ -190,7 +190,7 @@ abstract class CoreBase {
 
   private static createInsightsApiConfig(
     api: CoreApiConfig | undefined,
-  ): ApiClientConfig['analytics'] {
+  ): ApiClientConfig['insights'] {
     if (api === undefined) return undefined
 
     const { beaconHandler, insightsBaseUrl: baseUrl } = api
@@ -227,14 +227,14 @@ abstract class CoreBase {
    * @typeParam M - Chain modifiers.
    * @typeParam L - Locale code.
    * @param entry - The baseline entry to resolve.
-   * @param selectedPersonalizations - Optional selected personalization array for the current profile.
+   * @param selectedOptimizations - Optional selected optimization array for the current profile.
    * @returns {@link ResolvedData} containing the resolved entry and
-   *   personalization metadata (if any).
+   *   selected optimization metadata (if any).
    * @example
    * ```ts
-   * const { entry, personalization } = core.resolveOptimizedEntry(
+   * const { entry, selectedOptimization } = core.resolveOptimizedEntry(
    *   baselineEntry,
-   *   data.personalizations,
+   *   data.selectedOptimizations,
    * )
    * ```
    */
@@ -243,25 +243,22 @@ abstract class CoreBase {
     L extends LocaleCode = LocaleCode,
   >(
     entry: Entry<S, undefined, L>,
-    selectedPersonalizations?: SelectedPersonalizationArray,
+    selectedOptimizations?: SelectedOptimizationArray,
   ): ResolvedData<S, undefined, L>
   resolveOptimizedEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers = ChainModifiers,
     L extends LocaleCode = LocaleCode,
-  >(
-    entry: Entry<S, M, L>,
-    selectedPersonalizations?: SelectedPersonalizationArray,
-  ): ResolvedData<S, M, L>
+  >(entry: Entry<S, M, L>, selectedOptimizations?: SelectedOptimizationArray): ResolvedData<S, M, L>
   resolveOptimizedEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers,
     L extends LocaleCode = LocaleCode,
   >(
     entry: Entry<S, M, L>,
-    selectedPersonalizations?: SelectedPersonalizationArray,
+    selectedOptimizations?: SelectedOptimizationArray,
   ): ResolvedData<S, M, L> {
-    return this.optimizedEntryResolver.resolve<S, M, L>(entry, selectedPersonalizations)
+    return this.optimizedEntryResolver.resolve<S, M, L>(entry, selectedOptimizations)
   }
 
   /**

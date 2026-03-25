@@ -1,6 +1,6 @@
 export interface DatasetSnapshot {
   ctflEntryId?: string
-  ctflPersonalizationId?: string
+  ctflOptimizationId?: string
   ctflVariantIndex?: string
   ctflSticky?: string
   ctflDuplicationScope?: string
@@ -9,7 +9,7 @@ export interface DatasetSnapshot {
 export interface ResolveResult {
   baselineId: string
   resolvedId: string
-  personalizationId?: string
+  optimizationId?: string
   variantIndex?: number
   sticky?: boolean
 }

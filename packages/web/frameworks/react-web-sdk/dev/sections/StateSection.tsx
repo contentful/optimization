@@ -1,4 +1,4 @@
-import type { Profile, SelectedPersonalizationArray } from '@contentful/optimization-api-schemas'
+import type { Profile, SelectedOptimizationArray } from '@contentful/optimization-api-schemas'
 import type { ReactElement } from 'react'
 import { ENTRY_IDS } from '../constants'
 import type { ResolveResult } from '../types'
@@ -8,7 +8,7 @@ interface StateSectionProps {
   globalLiveUpdates: boolean
   previewPanelVisible: boolean
   previewPanelOpen: boolean
-  personalizations: SelectedPersonalizationArray | undefined
+  selectedOptimizations: SelectedOptimizationArray | undefined
   profile: Profile | undefined
   entriesLoadedCount: number
   entriesLoading: boolean
@@ -21,7 +21,7 @@ export function StateSection({
   globalLiveUpdates,
   previewPanelVisible,
   previewPanelOpen,
-  personalizations,
+  selectedOptimizations,
   profile,
   entriesLoadedCount,
   entriesLoading,
@@ -29,7 +29,9 @@ export function StateSection({
   resolveResults,
   onResolveEntries,
 }: StateSectionProps): ReactElement {
-  const personalizationCount = Array.isArray(personalizations) ? personalizations.length : 0
+  const selectedOptimizationCount = Array.isArray(selectedOptimizations)
+    ? selectedOptimizations.length
+    : 0
 
   return (
     <section className="dashboard__grid">
@@ -38,7 +40,7 @@ export function StateSection({
         <p>{`Global liveUpdates: ${globalLiveUpdates ? 'ON' : 'OFF'}`}</p>
         <p>{`Preview panel (context): ${previewPanelVisible ? 'Open' : 'Closed'}`}</p>
         <p>{`Preview panel (state): ${previewPanelOpen ? 'Open' : 'Closed'}`}</p>
-        <p>{`Personalizations selected: ${personalizationCount}`}</p>
+        <p>{`Selected optimizations: ${selectedOptimizationCount}`}</p>
         <pre className="dashboard__pre">{toJsonPreview(profile)}</pre>
       </article>
 

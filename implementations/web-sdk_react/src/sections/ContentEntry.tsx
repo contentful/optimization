@@ -1,7 +1,7 @@
 import { type JSX, type RefObject, useEffect, useMemo, useRef } from 'react'
 import { RichTextRenderer } from '../components/RichTextRenderer'
 import { useOptimization } from '../optimization/hooks/useOptimization'
-import { usePersonalization } from '../optimization/hooks/usePersonalization'
+import { useOptimizationResolver } from '../optimization/hooks/useOptimizationResolver'
 import type { ContentfulEntry, RichTextDocument } from '../types/contentful'
 import { isRecord } from '../utils/typeGuards'
 
@@ -19,7 +19,7 @@ interface AutoTrackingAttributes {
   'data-ctfl-entry-id': string
   'data-ctfl-baseline-id': string
   'data-ctfl-hover-duration-update-interval-ms': string
-  'data-ctfl-personalization-id': string | undefined
+  'data-ctfl-optimization-id': string | undefined
   'data-ctfl-sticky': string | undefined
   'data-ctfl-variant-index': string | undefined
 }
@@ -42,7 +42,7 @@ interface GetTrackingAttributesInput {
   variantIndex: number | undefined
 }
 
-interface PersonalizationMeta {
+interface SelectedOptimizationMeta {
   experienceId?: string
   sticky?: boolean
   variantIndex?: number
@@ -52,7 +52,7 @@ interface EntryViewElementOptions {
   readonly dwellTimeMs?: number
   readonly data?: {
     readonly entryId: string
-    readonly personalizationId?: string
+    readonly optimizationId?: string
     readonly sticky?: boolean
     readonly variantIndex?: number
   }
@@ -87,7 +87,7 @@ function isRichTextField(field: unknown): field is RichTextDocument {
   )
 }
 
-function getPersonalizationMeta(value: unknown): PersonalizationMeta {
+function getSelectedOptimizationMeta(value: unknown): SelectedOptimizationMeta {
   if (!isRecord(value)) {
     return {}
   }
@@ -112,7 +112,7 @@ function getTrackingAttributes(input: GetTrackingAttributesInput): TrackingAttri
       autoTrackingAttributes: {
         'data-ctfl-entry-id': resolvedEntryId,
         'data-ctfl-baseline-id': baselineEntryId,
-        'data-ctfl-personalization-id': experienceId,
+        'data-ctfl-optimization-id': experienceId,
         'data-ctfl-sticky': sticky === undefined ? undefined : String(sticky),
         'data-ctfl-variant-index': variantIndex === undefined ? undefined : String(variantIndex),
         'data-ctfl-hover-duration-update-interval-ms': '1000',
@@ -205,15 +205,15 @@ export function ContentEntry({
   observation,
 }: ContentEntryProps): JSX.Element {
   const { sdk, isReady } = useOptimization()
-  const { resolveEntry } = usePersonalization()
+  const { resolveEntry } = useOptimizationResolver()
   const containerRef = useRef<HTMLDivElement | null>(null)
 
   const resolved = useMemo(() => resolveEntry(entry), [entry, resolveEntry])
-  const { entry: resolvedEntry, personalization } = resolved
+  const { entry: resolvedEntry, selectedOptimization } = resolved
 
   const { experienceId, sticky, variantIndex } = useMemo(
-    () => getPersonalizationMeta(personalization),
-    [personalization],
+    () => getSelectedOptimizationMeta(selectedOptimization),
+    [selectedOptimization],
   )
 
   useEffect(() => {
@@ -229,7 +229,7 @@ export function ContentEntry({
     const options: EntryViewElementOptions = {
       data: {
         entryId: resolvedEntry.sys.id,
-        personalizationId: experienceId,
+        optimizationId: experienceId,
         sticky,
         variantIndex,
       },

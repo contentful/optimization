@@ -24,7 +24,7 @@ export function App(): ReactElement {
   const { sdk } = useOptimization()
   const { globalLiveUpdates, previewPanelVisible } = useLiveUpdates()
   const { entriesById, loading: entriesLoading, error: entriesError } = useDevEntries()
-  const { consent, profile, personalizations, previewPanelOpen, eventLog } =
+  const { consent, profile, selectedOptimizations, previewPanelOpen, eventLog } =
     useOptimizationState(sdk)
   const [resolveResults, setResolveResults] = useState<ResolveResult[]>([])
 
@@ -44,13 +44,13 @@ export function App(): ReactElement {
     const nextResults: ResolveResult[] = []
 
     entriesById.forEach((entry) => {
-      const resolved = sdk.resolveOptimizedEntry(entry, personalizations)
+      const resolved = sdk.resolveOptimizedEntry(entry, selectedOptimizations)
       nextResults.push({
         baselineId: entry.sys.id,
         resolvedId: resolved.entry.sys.id,
-        personalizationId: resolved.personalization?.experienceId,
-        variantIndex: resolved.personalization?.variantIndex,
-        sticky: resolved.personalization?.sticky,
+        optimizationId: resolved.selectedOptimization?.experienceId,
+        variantIndex: resolved.selectedOptimization?.variantIndex,
+        sticky: resolved.selectedOptimization?.sticky,
       })
     })
 
@@ -138,7 +138,7 @@ export function App(): ReactElement {
         globalLiveUpdates={globalLiveUpdates}
         previewPanelVisible={previewPanelVisible}
         previewPanelOpen={previewPanelOpen}
-        personalizations={personalizations}
+        selectedOptimizations={selectedOptimizations}
         profile={profile}
         entriesLoadedCount={resolvedEntryCount}
         entriesLoading={entriesLoading}
@@ -153,7 +153,7 @@ export function App(): ReactElement {
         baselineLocked={baselineLocked}
         baselineNestedParent={baselineNestedParent}
         baselineNestedChild={baselineNestedChild}
-        personalizations={personalizations}
+        selectedOptimizations={selectedOptimizations}
       />
     </main>
   )

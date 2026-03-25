@@ -10,7 +10,7 @@
 
 ### User Story 1 - Validate Contentful Entry and Link Shapes (Priority: P1)
 
-As a runtime developer, I need base schemas for Contentful links and entries so personalized content
+As a runtime developer, I need base schemas for Contentful links and entries so optimized content
 processing starts from validated CDA data.
 
 **Why this priority**: Entry validation is the first safety boundary before personalization logic.

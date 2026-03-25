@@ -1,16 +1,14 @@
 import type {
   ChangeArray,
   InlineVariableComponent,
-  SelectedPersonalizationArray,
+  SelectedOptimizationArray,
 } from '@contentful/optimization-web/api-schemas'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object' && !Array.isArray(value)
 }
 
-export function isSelectedPersonalization(
-  value: unknown,
-): value is SelectedPersonalizationArray[number] {
+export function isSelectedOptimization(value: unknown): value is SelectedOptimizationArray[number] {
   return (
     isRecord(value) &&
     typeof value.experienceId === 'string' &&

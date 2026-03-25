@@ -6,13 +6,13 @@
 export type CtflDataset = DOMStringMap & {
   /** Entry ID associated with the element. */
   ctflEntryId: string
-  /** Optional baseline ID associated with the personalized entry. */
+  /** Optional baseline ID associated with the optimized entry. */
   ctflBaselineId?: string
-  /** Optional personalization/experience ID associated with the entry. */
-  ctflPersonalizationId?: string
+  /** Optional optimization/experience ID associated with the entry. */
+  ctflOptimizationId?: string
   /** Whether this component interaction should be treated as sticky. */
   ctflSticky?: 'true' | 'false'
-  /** Optional variant index for personalized variants (non-negative integer). */
+  /** Optional variant index for optimized variants (non-negative integer). */
   ctflVariantIndex?: string
   /** Optional per-element override for automatic click tracking (`'true'`/`'false'`). */
   ctflTrackClicks?: 'true' | 'false'
@@ -44,8 +44,8 @@ export type EntryElement = (HTMLElement | SVGElement) & { dataset: CtflDataset }
 export interface EntryData {
   /** ID of the Contentful entry. */
   entryId: string
-  /** Optional personalization/experience ID. */
-  personalizationId?: string
+  /** Optional optimization/experience ID. */
+  optimizationId?: string
   /** Whether the view is sticky. */
   sticky?: boolean
   /** Optional variant index (non-negative integer). */
@@ -105,7 +105,7 @@ const resolveEntryDataFromElement = (element: Element): EntryData | undefined =>
   const {
     dataset: {
       ctflEntryId: entryId,
-      ctflPersonalizationId: personalizationId,
+      ctflOptimizationId: optimizationId,
       ctflSticky,
       ctflVariantIndex,
     },
@@ -113,7 +113,7 @@ const resolveEntryDataFromElement = (element: Element): EntryData | undefined =>
 
   return {
     entryId,
-    personalizationId,
+    optimizationId,
     sticky: parseSticky(ctflSticky),
     variantIndex: parseVariantIndex(ctflVariantIndex),
   }
@@ -152,7 +152,7 @@ export function resolveTrackingPayload(
 
   return {
     componentId: entryData.entryId,
-    experienceId: entryData.personalizationId,
+    experienceId: entryData.optimizationId,
     sticky: entryData.sticky,
     variantIndex: entryData.variantIndex,
   }

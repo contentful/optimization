@@ -7,7 +7,7 @@ import type {
   OptimizationData,
   PartialProfile,
   Profile,
-  SelectedPersonalizationArray,
+  SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger, logger } from '@contentful/optimization-api-client/logger'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
@@ -28,7 +28,7 @@ import type { ResolvedData } from './resolvers'
 import {
   batch,
   blockedEvent as blockedEventSignal,
-  canPersonalize as canPersonalizeSignal,
+  canOptimize as canOptimizeSignal,
   changes as changesSignal,
   consent as consentSignal,
   effect,
@@ -38,7 +38,7 @@ import {
   previewPanelAttached as previewPanelAttachedSignal,
   previewPanelOpen as previewPanelOpenSignal,
   profile as profileSignal,
-  selectedPersonalizations as selectedPersonalizationsSignal,
+  selectedOptimizations as selectedOptimizationsSignal,
   signalFns,
   type SignalFns,
   signals,
@@ -118,10 +118,10 @@ export interface CoreStates {
   flag: (name: string) => Observable<Json>
   /** Live view of the current profile. */
   profile: Observable<Profile | undefined>
-  /** Live view of selected personalizations (variants). */
-  selectedPersonalizations: Observable<SelectedPersonalizationArray | undefined>
-  /** Whether personalization data is currently available. */
-  canPersonalize: Observable<boolean>
+  /** Live view of selected optimizations (variants). */
+  selectedOptimizations: Observable<SelectedOptimizationArray | undefined>
+  /** Whether optimization data is currently available. */
+  canOptimize: Observable<boolean>
 }
 
 /**
@@ -132,12 +132,12 @@ export interface CoreStates {
 export interface CoreConfigDefaults {
   /** Global consent default applied at construction time. */
   consent?: boolean
-  /** Default active profile used for personalization and insights. */
+  /** Default active profile used for optimization and insights. */
   profile?: Profile
   /** Initial diff of changes produced by the service. */
   changes?: ChangeArray
-  /** Preselected personalization variants (e.g., winning treatments). */
-  personalizations?: SelectedPersonalizationArray
+  /** Preselected optimization variants (e.g., winning treatments). */
+  selectedOptimizations?: SelectedOptimizationArray
 }
 
 /**
@@ -190,8 +190,8 @@ class CoreStateful extends CoreBase implements ConsentController, ConsentGuard {
     flag: (name: string): Observable<Json> => this.getFlagObservable(name),
     consent: toObservable(consentSignal),
     eventStream: toObservable(eventSignal),
-    canPersonalize: toObservable(canPersonalizeSignal),
-    selectedPersonalizations: toObservable(selectedPersonalizationsSignal),
+    canOptimize: toObservable(canOptimizeSignal),
+    selectedOptimizations: toObservable(selectedOptimizationsSignal),
     previewPanelAttached: toObservable(previewPanelAttachedSignal),
     previewPanelOpen: toObservable(previewPanelOpenSignal),
     profile: toObservable(profileSignal),
@@ -208,7 +208,7 @@ class CoreStateful extends CoreBase implements ConsentController, ConsentGuard {
       const {
         changes: defaultChanges,
         consent: defaultConsent,
-        personalizations: defaultPersonalizations,
+        selectedOptimizations: defaultSelectedOptimizations,
         profile: defaultProfile,
       } = defaults ?? {}
       const resolvedQueuePolicy = resolveQueuePolicy(queuePolicy)
@@ -234,8 +234,8 @@ class CoreStateful extends CoreBase implements ConsentController, ConsentGuard {
 
       batch(() => {
         if (defaultChanges !== undefined) changesSignal.value = defaultChanges
-        if (defaultPersonalizations !== undefined) {
-          selectedPersonalizationsSignal.value = defaultPersonalizations
+        if (defaultSelectedOptimizations !== undefined) {
+          selectedOptimizationsSignal.value = defaultSelectedOptimizations
         }
         if (defaultProfile !== undefined) profileSignal.value = defaultProfile
       })
@@ -263,27 +263,24 @@ class CoreStateful extends CoreBase implements ConsentController, ConsentGuard {
     L extends LocaleCode = LocaleCode,
   >(
     entry: Entry<S, undefined, L>,
-    selectedPersonalizations?: SelectedPersonalizationArray,
+    selectedOptimizations?: SelectedOptimizationArray,
   ): ResolvedData<S, undefined, L>
   override resolveOptimizedEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers = ChainModifiers,
     L extends LocaleCode = LocaleCode,
-  >(
-    entry: Entry<S, M, L>,
-    selectedPersonalizations?: SelectedPersonalizationArray,
-  ): ResolvedData<S, M, L>
+  >(entry: Entry<S, M, L>, selectedOptimizations?: SelectedOptimizationArray): ResolvedData<S, M, L>
   override resolveOptimizedEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers,
     L extends LocaleCode = LocaleCode,
   >(
     entry: Entry<S, M, L>,
-    selectedPersonalizations:
-      | SelectedPersonalizationArray
-      | undefined = selectedPersonalizationsSignal.value,
+    selectedOptimizations:
+      | SelectedOptimizationArray
+      | undefined = selectedOptimizationsSignal.value,
   ): ResolvedData<S, M, L> {
-    return super.resolveOptimizedEntry(entry, selectedPersonalizations)
+    return super.resolveOptimizedEntry(entry, selectedOptimizations)
   }
 
   override getMergeTagValue(
@@ -423,7 +420,7 @@ class CoreStateful extends CoreBase implements ConsentController, ConsentGuard {
 
     effect(() => {
       coreLogger.debug(
-        `Variants have been ${selectedPersonalizationsSignal.value?.length ? 'populated' : 'cleared'}`,
+        `Variants have been ${selectedOptimizationsSignal.value?.length ? 'populated' : 'cleared'}`,
       )
     })
 
@@ -468,7 +465,7 @@ class CoreStateful extends CoreBase implements ConsentController, ConsentGuard {
       eventSignal.value = undefined
       changesSignal.value = undefined
       profileSignal.value = undefined
-      selectedPersonalizationsSignal.value = undefined
+      selectedOptimizationsSignal.value = undefined
     })
   }
 

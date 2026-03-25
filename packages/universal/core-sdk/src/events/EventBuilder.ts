@@ -424,7 +424,7 @@ class EventBuilder {
    * const event = builder.buildView({
    *   componentId: 'entry-123',
    *   viewId: crypto.randomUUID(),
-   *   experienceId: 'personalization-123',
+   *   experienceId: 'experience-123',
    *   variantIndex: 1,
    *   viewDurationMs: 1_000,
    * })
@@ -454,7 +454,7 @@ class EventBuilder {
    * ```ts
    * const event = builder.buildClick({
    *   componentId: 'entry-123',
-   *   experienceId: 'personalization-123',
+   *   experienceId: 'experience-123',
    *   variantIndex: 1,
    * })
    * ```
@@ -484,7 +484,7 @@ class EventBuilder {
    * const event = builder.buildHover({
    *   componentId: 'entry-123',
    *   hoverId: crypto.randomUUID(),
-   *   experienceId: 'personalization-123',
+   *   experienceId: 'experience-123',
    *   hoverDurationMs: 1_000,
    *   variantIndex: 1,
    * })
@@ -519,7 +519,7 @@ class EventBuilder {
    * const event = builder.buildFlagView({
    *   componentId: 'feature-flag-key',
    *   viewId: crypto.randomUUID(),
-   *   experienceId: 'personalization-123',
+   *   experienceId: 'experience-123',
    *   viewDurationMs: 1_000,
    * })
    * ```

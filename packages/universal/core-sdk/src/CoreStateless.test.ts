@@ -3,7 +3,7 @@ import CoreStateless from './CoreStateless'
 
 const EMPTY_OPTIMIZATION_DATA: OptimizationData = {
   changes: [],
-  selectedPersonalizations: [],
+  selectedOptimizations: [],
   profile: {
     id: 'profile-id',
     stableId: 'profile-id',

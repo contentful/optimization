@@ -1,10 +1,10 @@
 <p align="center">
-  <a href="https://www.contentful.com/developers/docs/personalization/">
+  <a href="https://www.contentful.com/developers/docs/optimization/">
     <img alt="Contentful Logo" title="Contentful" src="../../../contentful-icon.png" width="150">
   </a>
 </p>
 
-<h1 align="center">Contentful Personalization & Analytics</h1>
+<h1 align="center">Contentful Optimization & Analytics</h1>
 
 <h3 align="center">Optimization Node SDK</h3>
 
@@ -34,13 +34,13 @@ The Optimization Node SDK implements functionality specific to Node environments
   - [Analytics Options](#analytics-options)
   - [Event Builder Options](#event-builder-options)
   - [Fetch Options](#fetch-options)
-  - [Personalization Options](#personalization-options)
+  - [Optimization Options](#optimization-options)
 - [Optimization Methods](#optimization-methods)
-  - [Personalization Data Resolution Methods](#personalization-data-resolution-methods)
+  - [Optimization Data Resolution Methods](#optimization-data-resolution-methods)
     - [`getFlag`](#getflag)
     - [`resolveOptimizedEntry`](#resolveoptimizedentry)
     - [`getMergeTagValue`](#getmergetagvalue)
-  - [Personalization and Analytics Event Methods](#personalization-and-analytics-event-methods)
+  - [Optimization and Analytics Event Methods](#optimization-and-analytics-event-methods)
     - [`identify`](#identify)
     - [`page`](#page)
     - [`screen`](#screen)
@@ -81,7 +81,7 @@ Reference implementations illustrate how the SDK may be used under common scenar
 select less-common scenarios, with the most basic example solution possible.
 
 - [Node SSR Only](../../../implementations/node-sdk/README.md): Example application that uses the
-  Node SDK to render a personalized Web page
+  Node SDK to render a optimized Web page
 - [Node SSR + Web Vanilla](../../../implementations/node-sdk+web-sdk/README.md): Example application
   demonstrating simple profile synchronization between the Node and
   [Web](../../web/web-sdk/README.md) SDKs via cookie
@@ -90,16 +90,16 @@ select less-common scenarios, with the most basic example solution possible.
 
 ### Top-level Configuration Options
 
-| Option            | Required? | Default                       | Description                                                                    |
-| ----------------- | --------- | ----------------------------- | ------------------------------------------------------------------------------ |
-| `analytics`       | No        | See "Analytics Options"       | Configuration specific to the Analytics/Insights API                           |
-| `app`             | No        | `undefined`                   | The application definition used to attribute events to a specific consumer app |
-| `clientId`        | Yes       | N/A                           | The Optimization API key                                                       |
-| `environment`     | No        | `'main'`                      | The environment identifier                                                     |
-| `eventBuilder`    | No        | See "Event Builder Options"   | Event builder configuration (channel/library metadata, etc.)                   |
-| `fetchOptions`    | No        | See "Fetch Options"           | Configuration for Fetch timeout and retry functionality                        |
-| `logLevel`        | No        | `'error'`                     | Minimum log level for the default console sink                                 |
-| `personalization` | No        | See "Personalization Options" | Configuration specific to the Personalization/Experience API                   |
+| Option         | Required? | Default                     | Description                                                                    |
+| -------------- | --------- | --------------------------- | ------------------------------------------------------------------------------ |
+| `analytics`    | No        | See "Analytics Options"     | Configuration specific to the Analytics/Insights API                           |
+| `app`          | No        | `undefined`                 | The application definition used to attribute events to a specific consumer app |
+| `clientId`     | Yes       | N/A                         | The Optimization API key                                                       |
+| `environment`  | No        | `'main'`                    | The environment identifier                                                     |
+| `eventBuilder` | No        | See "Event Builder Options" | Event builder configuration (channel/library metadata, etc.)                   |
+| `fetchOptions` | No        | See "Fetch Options"         | Configuration for Fetch timeout and retry functionality                        |
+| `logLevel`     | No        | `'error'`                   | Minimum log level for the default console sink                                 |
+| `optimization` | No        | See "Optimization Options"  | Configuration specific to the Optimization/Experience API                      |
 
 ### Analytics Options
 
@@ -138,7 +138,7 @@ Configuration method signatures:
 - `fetchMethod`: `(url: string | URL, init: RequestInit) => Promise<Response>`
 - `onFailedAttempt` and `onRequestTimeout`: `(options: FetchMethodCallbackOptions) => void`
 
-### Personalization Options
+### Optimization Options
 
 | Option            | Required? | Default                               | Description                                                         |
 | ----------------- | --------- | ------------------------------------- | ------------------------------------------------------------------- |
@@ -153,7 +153,7 @@ Configuration method signatures:
 
 Arguments marked with an asterisk (\*) are always required.
 
-### Personalization Data Resolution Methods
+### Optimization Data Resolution Methods
 
 #### `getFlag`
 
@@ -180,8 +180,8 @@ Behavior notes:
 
 #### `resolveOptimizedEntry`
 
-Resolve a baseline Contentful entry to a personalized variant using the provided selected
-personalizations.
+Resolve a baseline Contentful entry to a optimized variant using the provided selected
+optimizations.
 
 Type arguments:
 
@@ -192,16 +192,16 @@ Type arguments:
 Arguments:
 
 - `entry`\*: The entry to personalize
-- `selectedPersonalizations`: Selected personalizations
+- `selectedOptimizations`: Selected optimizations
 
 Returns:
 
-- The resolved personalized entry variant, or the supplied baseline entry if baseline is the
-  selected variant or a variant cannot be found.
+- The resolved optimized entry variant, or the supplied baseline entry if baseline is the selected
+  variant or a variant cannot be found.
 
 > [!NOTE]
 >
-> If the `selectedPersonalizations` argument is omitted, the method will return the baseline entry.
+> If the `selectedOptimizations` argument is omitted, the method will return the baseline entry.
 
 #### `getMergeTagValue`
 
@@ -218,7 +218,7 @@ Arguments:
 >
 > If the `profile` argument is omitted, the method will return the merge tag's fallback value.
 
-### Personalization and Analytics Event Methods
+### Optimization and Analytics Event Methods
 
 Only the following methods may return an `OptimizationData` object:
 
@@ -232,7 +232,7 @@ Only the following methods may return an `OptimizationData` object:
 contains:
 
 - `changes`: Currently used for Custom Flags
-- `selectedPersonalizations`: Selected personalizations for the profile
+- `selectedOptimizations`: Selected optimizations for the profile
 - `profile`: Profile associated with the evaluated events
 
 #### `identify`
@@ -246,7 +246,7 @@ Arguments:
 
 #### `page`
 
-Record a personalization page view.
+Record a optimization page view.
 
 Arguments:
 
@@ -255,7 +255,7 @@ Arguments:
 
 #### `screen`
 
-Record a personalization screen view.
+Record a optimization screen view.
 
 Arguments:
 
@@ -264,7 +264,7 @@ Arguments:
 
 #### `track`
 
-Record a personalization custom track event.
+Record a optimization custom track event.
 
 Arguments:
 
@@ -274,8 +274,8 @@ Arguments:
 #### `trackView`
 
 Record an analytics component view event. When the payload marks the component as "sticky", an
-additional personalization component view is recorded. This method only returns `OptimizationData`
-when the component is marked as "sticky".
+additional optimization component view is recorded. This method only returns `OptimizationData` when
+the component is marked as "sticky".
 
 Arguments:
 

@@ -9,8 +9,8 @@ import {
   normalizeOptimizationConfig,
   type OptimizationEntry,
   type OptimizedEntry,
-  type SelectedPersonalization,
-  type SelectedPersonalizationArray,
+  type SelectedOptimization,
+  type SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
@@ -32,8 +32,8 @@ export interface ResolvedData<
 > {
   /** The baseline or resolved variant entry. */
   entry: Entry<S, M, L>
-  /** The selected personalization metadata, if a non‑baseline variant was chosen. */
-  personalization?: SelectedPersonalization
+  /** The selected optimization metadata, if a non-baseline variant was chosen. */
+  selectedOptimization?: SelectedOptimization
 }
 
 /**
@@ -45,22 +45,24 @@ const RESOLUTION_WARNING_BASE = 'Could not resolve optimized entry variant:'
 
 /**
  * Resolve the selected entry (baseline or variant) for an optimized entry
- * and optional selected personalizations, returning both the entry and the
- * personalization metadata.
+ * and optional selected optimizations, returning both the entry and the
+ * optimization metadata.
  *
  * @typeParam S - Entry skeleton type.
  * @typeParam L - Locale code.
  * @typeParam M - Chain modifiers for advanced/non-default Contentful clients.
  * @param entry - The baseline optimized entry.
- * @param selectedPersonalizations - Optional selections for the current profile.
+ * @param selectedOptimizations - Optional selections for the current profile.
  * @returns An object containing the resolved entry and (if chosen) the selection.
  * @example
  * ```ts
- * const { entry: optimizedEntry, personalization } = OptimizedEntryResolver.resolve(
+ * const { entry: optimizedEntry, selectedOptimization } = OptimizedEntryResolver.resolve(
  *   entry,
  *   selections,
  * )
- * if (personalization) console.log('Variant index', personalization.variantIndex)
+ * if (selectedOptimization) {
+ *   console.log('Variant index', selectedOptimization.variantIndex)
+ * }
  * ```
  */
 function resolve<
@@ -68,30 +70,22 @@ function resolve<
   L extends LocaleCode = LocaleCode,
 >(
   entry: Entry<S, undefined, L>,
-  selectedPersonalizations?: SelectedPersonalizationArray,
+  selectedOptimizations?: SelectedOptimizationArray,
 ): ResolvedData<S, undefined, L>
 function resolve<
   S extends EntrySkeletonType,
   M extends ChainModifiers = ChainModifiers,
   L extends LocaleCode = LocaleCode,
->(
-  entry: Entry<S, M, L>,
-  selectedPersonalizations?: SelectedPersonalizationArray,
-): ResolvedData<S, M, L>
+>(entry: Entry<S, M, L>, selectedOptimizations?: SelectedOptimizationArray): ResolvedData<S, M, L>
 function resolve<
   S extends EntrySkeletonType,
   M extends ChainModifiers,
   L extends LocaleCode = LocaleCode,
->(
-  entry: Entry<S, M, L>,
-  selectedPersonalizations?: SelectedPersonalizationArray,
-): ResolvedData<S, M, L> {
+>(entry: Entry<S, M, L>, selectedOptimizations?: SelectedOptimizationArray): ResolvedData<S, M, L> {
   logger.debug(`Resolving optimized entry for baseline entry ${entry.sys.id}`)
 
-  if (!selectedPersonalizations?.length) {
-    logger.warn(
-      `${RESOLUTION_WARNING_BASE} no selectedPersonalizations exist for the current profile`,
-    )
+  if (!selectedOptimizations?.length) {
+    logger.warn(`${RESOLUTION_WARNING_BASE} no selectedOptimizations exist for the current profile`)
     return { entry }
   }
 
@@ -103,7 +97,7 @@ function resolve<
   const optimizationEntry = OptimizedEntryResolver.getOptimizationEntry(
     {
       optimizedEntry: entry,
-      selectedPersonalizations,
+      selectedOptimizations,
     },
     true,
   )
@@ -115,15 +109,15 @@ function resolve<
     return { entry }
   }
 
-  const selectedPersonalization = OptimizedEntryResolver.getSelectedPersonalization(
+  const selectedOptimization = OptimizedEntryResolver.getSelectedOptimization(
     {
       optimizationEntry,
-      selectedPersonalizations,
+      selectedOptimizations,
     },
     true,
   )
 
-  const selectedVariantIndex = selectedPersonalization?.variantIndex ?? 0
+  const selectedVariantIndex = selectedOptimization?.variantIndex ?? 0
 
   if (selectedVariantIndex === 0) {
     logger.debug(`Resolved optimization entry for entry ${entry.sys.id} is baseline`)
@@ -166,7 +160,7 @@ function resolve<
     )
   }
 
-  return { entry: selectedVariantEntry, personalization: selectedPersonalization }
+  return { entry: selectedVariantEntry, selectedOptimization }
 }
 
 /**
@@ -175,11 +169,11 @@ function resolve<
  *
  * @public
  * @remarks
- * Given a baseline {@link OptimizedEntry} and a set of selected personalizations
+ * Given a baseline {@link OptimizedEntry} and a set of selected optimizations
  * (variants per experience), this resolver finds the matching replacement variant
  * for the component configured against the baseline entry.
  *
- * **Variant indexing**: `variantIndex` in {@link SelectedPersonalization} is treated as
+ * **Variant indexing**: `variantIndex` in {@link SelectedOptimization} is treated as
  * 1‑based (index 1 = first variant). A value of `0` indicates baseline.
  */
 const OptimizedEntryResolver = {
@@ -192,32 +186,32 @@ const OptimizedEntryResolver = {
    * @remarks
    * An optimization entry is an optimization configuration object supplied in an
    * `OptimizedEntry.nt_experiences` array. An optimized entry may relate to
-   * multiple personalizations.
+   * multiple optimizations.
    * @example
    * ```ts
    * const optimizationEntry = OptimizedEntryResolver.getOptimizationEntry({
    *   optimizedEntry: entry,
-   *   selectedPersonalizations
+   *   selectedOptimizations
    * })
    * ```
    */
   getOptimizationEntry(
     {
       optimizedEntry,
-      selectedPersonalizations,
+      selectedOptimizations,
     }: {
       optimizedEntry: OptimizedEntry
-      selectedPersonalizations: SelectedPersonalizationArray
+      selectedOptimizations: SelectedOptimizationArray
     },
     skipValidation = false,
   ): OptimizationEntry | undefined {
-    if (!skipValidation && (!selectedPersonalizations.length || !isOptimizedEntry(optimizedEntry)))
+    if (!skipValidation && (!selectedOptimizations.length || !isOptimizedEntry(optimizedEntry)))
       return
 
     const optimizationEntry = optimizedEntry.fields.nt_experiences
       .filter((maybeOptimization) => isOptimizationEntry(maybeOptimization))
       .find((optimizationEntry) =>
-        selectedPersonalizations.some(
+        selectedOptimizations.some(
           ({ experienceId }) => experienceId === optimizationEntry.fields.nt_experience_id,
         ),
       )
@@ -230,39 +224,39 @@ const OptimizedEntryResolver = {
    *
    * @param params - Object with the target optimization entry and selections.
    * @param skipValidation - When `true`, skip type checks.
-   * @returns The matching {@link SelectedPersonalization}, if present.
+   * @returns The matching {@link SelectedOptimization}, if present.
    * @remarks
-   * Selected personalizations are supplied by the Experience API in the
+   * Selected optimizations are supplied by the Experience API in the
    * `experiences` response data property.
    * @example
    * ```ts
-   * const selectedPersonalization = OptimizedEntryResolver.getSelectedPersonalization({
+   * const selectedOptimization = OptimizedEntryResolver.getSelectedOptimization({
    *   optimizationEntry,
-   *   selectedPersonalizations
+   *   selectedOptimizations
    * })
    * ```
    */
-  getSelectedPersonalization(
+  getSelectedOptimization(
     {
       optimizationEntry,
-      selectedPersonalizations,
+      selectedOptimizations,
     }: {
       optimizationEntry: OptimizationEntry
-      selectedPersonalizations: SelectedPersonalizationArray
+      selectedOptimizations: SelectedOptimizationArray
     },
     skipValidation = false,
-  ): SelectedPersonalization | undefined {
+  ): SelectedOptimization | undefined {
     if (
       !skipValidation &&
-      (!selectedPersonalizations.length || !isOptimizationEntry(optimizationEntry))
+      (!selectedOptimizations.length || !isOptimizationEntry(optimizationEntry))
     )
       return
 
-    const selectedPersonalization = selectedPersonalizations.find(
+    const selectedOptimization = selectedOptimizations.find(
       ({ experienceId }) => experienceId === optimizationEntry.fields.nt_experience_id,
     )
 
-    return selectedPersonalization
+    return selectedOptimization
   },
 
   /**

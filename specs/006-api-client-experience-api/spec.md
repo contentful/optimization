@@ -21,7 +21,7 @@ invalid inputs.
 **Acceptance Scenarios**:
 
 1. **Given** a valid profile ID, **When** `getProfile(id)` is called, **Then** it requests
-   `/profiles/{id}` and returns `{ profile, selectedPersonalizations, changes }`.
+   `/profiles/{id}` and returns `{ profile, selectedOptimizations, changes }`.
 2. **Given** an empty ID, **When** `getProfile` or `updateProfile` is called, **Then** it throws
    `Error('Valid profile ID required.')` before request execution.
 3. **Given** valid events, **When** `createProfile` or `updateProfile` is called, **Then** the body
@@ -112,7 +112,7 @@ processed in a single call.
 - **FR-017**: `upsertManyProfiles` MUST call profile mutation with
   `options: { plainText: false, ...options }`.
 - **FR-018**: `getProfile`, `createProfile`, and `updateProfile` MUST parse with
-  `ExperienceResponse` and return `{ profile, selectedPersonalizations: experiences, changes }`.
+  `ExperienceResponse` and return `{ profile, selectedOptimizations: experiences, changes }`.
 - **FR-019**: `upsertManyProfiles` MUST parse with `BatchExperienceResponse` and return
   `data.profiles`.
 - **FR-020**: On caught request failures, `getProfile`, `createProfile`, `updateProfile`, and
@@ -125,7 +125,7 @@ processed in a single call.
   `preflight`).
 - **ExperienceRequestData**: Validated singular mutation payload.
 - **BatchExperienceRequestData**: Validated batch mutation payload.
-- **OptimizationData**: Returned shape `{ profile, selectedPersonalizations, changes }`.
+- **OptimizationData**: Returned shape `{ profile, selectedOptimizations, changes }`.
 
 ## Success Criteria _(mandatory)_
 

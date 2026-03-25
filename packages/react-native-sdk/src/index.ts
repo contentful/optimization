@@ -3,8 +3,8 @@
  *
  * @remarks
  * Implements React Native-specific functionality on top of the ContentfulOptimization Core Library.
- * Provides components for personalization, analytics tracking, and a preview panel for
- * debugging personalizations during development.
+ * Provides components for optimization, analytics tracking, and a preview panel for
+ * debugging selected optimizations during development.
  *
  * @packageDocumentation
  */

@@ -6,7 +6,7 @@ import { InteractionEventProperties } from './InteractionEventProperties'
  *
  * @remarks
  * Component view events track exposure of individual components such as
- * entries or variables within a personalized experience.
+ * entries or variables within a optimized experience.
  *
  * Extends {@link InteractionEventProperties}.
  *

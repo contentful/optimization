@@ -1,23 +1,23 @@
 import type {
   MergeTagEntry,
-  SelectedPersonalizationArray,
+  SelectedOptimizationArray,
 } from '@contentful/optimization-web/api-schemas'
 import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { useMemo } from 'react'
 import { useOptimization } from './useOptimization'
 
-export interface UsePersonalizationResult {
+export interface UseOptimizationResolverResult {
   resolveEntry: (
     baselineEntry: Entry,
-    selectedPersonalizations?: SelectedPersonalizationArray,
+    selectedOptimizations?: SelectedOptimizationArray,
   ) => ResolvedData<EntrySkeletonType>
   getMergeTagValue: (mergeTagEntry: MergeTagEntry) => string
 }
 
 function fallbackResolveEntry(
   baselineEntry: Entry,
-  _selectedPersonalizations?: SelectedPersonalizationArray,
+  _selectedOptimizations?: SelectedOptimizationArray,
 ): ResolvedData<EntrySkeletonType> {
   return { entry: baselineEntry }
 }
@@ -42,10 +42,10 @@ function toStringValue(value: unknown): string {
   return JSON.stringify(value)
 }
 
-export function usePersonalization(): UsePersonalizationResult {
+export function useOptimizationResolver(): UseOptimizationResolverResult {
   const { sdk, isReady } = useOptimization()
 
-  return useMemo<UsePersonalizationResult>(() => {
+  return useMemo<UseOptimizationResolverResult>(() => {
     if (!isReady || sdk === undefined) {
       return {
         resolveEntry: fallbackResolveEntry,
@@ -56,9 +56,9 @@ export function usePersonalization(): UsePersonalizationResult {
     return {
       resolveEntry: (
         baselineEntry: Entry,
-        selectedPersonalizations?: SelectedPersonalizationArray,
+        selectedOptimizations?: SelectedOptimizationArray,
       ): ResolvedData<EntrySkeletonType> =>
-        sdk.resolveOptimizedEntry(baselineEntry, selectedPersonalizations),
+        sdk.resolveOptimizedEntry(baselineEntry, selectedOptimizations),
 
       getMergeTagValue: (mergeTagEntry: MergeTagEntry): string =>
         toStringValue(sdk.getMergeTagValue(mergeTagEntry)),

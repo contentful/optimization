@@ -50,10 +50,10 @@ toggles, and variant selection events; verify grouping, ordering, and signal upd
    audience.
 2. **Given** optimizations containing `InlineVariable` components, **When** entries are prepared for
    rendering, **Then** those optimizations remain available in the panel and selecting a variant
-   updates preview `changes` as well as `selectedPersonalizations`.
+   updates preview `changes` as well as `selectedOptimizations`.
 3. **Given** a valid `ctfl-opt-preview-optimization-change` event, **When** it is handled, **Then**
    the override map is updated and override-applied values are written to both
-   `signals.selectedPersonalizations.value` and `signals.changes.value`.
+   `signals.selectedOptimizations.value` and `signals.changes.value`.
 4. **Given** a valid `ctfl-opt-preview-panel-drawer-toggle` event, **When** it is handled, **Then**
    `signals.previewPanelOpen.value` is synchronized to event detail.
 
@@ -72,10 +72,10 @@ capture, override application, and restoration semantics.
 **Acceptance Scenarios**:
 
 1. **Given** optimization state interception is installed, **When** states update, **Then** default
-   `selectedPersonalizations` and `changes` are captured and returned state values are transformed
-   by preview override helpers.
+   `selectedOptimizations` and `changes` are captured and returned state values are transformed by
+   preview override helpers.
 2. **Given** active overrides, **When** the panel reset action is triggered, **Then** overrides are
-   cleared and selected personalizations revert to captured defaults.
+   cleared and selected optimizations revert to captured defaults.
 3. **Given** preview optimization change events that fail event-guard checks, **When** handlers run,
    **Then** no override mutation is applied.
 4. **Given** `signals.profile` updates to a truthy profile, **When** effects run, **Then**
@@ -112,17 +112,17 @@ capture, override application, and restoration semantics.
 - **FR-006**: Panel data preparation MUST include valid audience/optimization entries, including
   optimizations containing `InlineVariable` components.
 - **FR-007**: The panel instance MUST receive `overrides`, `audiences`, `optimizationEntries`, and
-  initial `defaultSelectedPersonalizations`.
-- **FR-008**: An Optimization state interceptor MUST capture default `selectedPersonalizations` and
-  `changes`, and MUST return states with both `selectedPersonalizations` and `changes` transformed
-  by preview override helpers.
+  initial `defaultSelectedOptimizations`.
+- **FR-008**: An Optimization state interceptor MUST capture default `selectedOptimizations` and
+  `changes`, and MUST return states with both `selectedOptimizations` and `changes` transformed by
+  preview override helpers.
 - **FR-009**: Handling `ctfl-opt-preview-panel-drawer-toggle` MUST update
   `signals.previewPanelOpen.value` when event guard checks pass.
 - **FR-010**: Handling `ctfl-opt-preview-optimization-change` MUST update the override map and both
-  `signals.selectedPersonalizations.value` and `signals.changes.value` with override-applied preview
+  `signals.selectedOptimizations.value` and `signals.changes.value` with override-applied preview
   state.
 - **FR-011**: Handling `ctfl-opt-preview-panel-reset` MUST clear overrides, restore captured default
-  selected personalizations and changes to signals, and refresh panel defaults.
+  selected optimizations and changes to signals, and refresh panel defaults.
 - **FR-012**: `signalFns.effect(...)` wiring MUST update `panel.profile` from
   `signals.profile.value` when a profile value is available.
 - **FR-013**: After append, attachment MUST set `signals.previewPanelAttached.value = true`.
@@ -160,11 +160,11 @@ capture, override application, and restoration semantics.
 
 - **SC-001**: Attachment checks confirm exactly one preview panel can exist, duplicate attachment
   throws, and bridge validation enforces required symbol-keyed values.
-- **SC-002**: Data-loading checks confirm all paginated audiences/personalizations are retrieved and
-  inline-variable personalizations remain selectable in panel rendering.
+- **SC-002**: Data-loading checks confirm all paginated audiences/optimizations are retrieved and
+  inline-variable optimizations remain selectable in panel rendering.
 - **SC-003**: Interaction checks confirm valid drawer/variant events synchronize preview-related
   signals and override state.
 - **SC-004**: Interceptor and reset checks confirm defaults are captured, overrides are applied in
   returned state, and reset restores captured defaults.
 - **SC-005**: UI-state checks confirm deterministic grouping/ordering and explicit empty-state
-  rendering for audiences without personalizations.
+  rendering for audiences without optimizations.

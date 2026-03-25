@@ -18,8 +18,8 @@ describe('ApiClient', () => {
   it('isolates per-client baseUrl overrides', () => {
     const client = new ApiClient({
       clientId: 'testId',
-      analytics: { baseUrl: 'https://ingest.example.test/' },
-      personalization: { baseUrl: 'https://experience.example.test/' },
+      insights: { baseUrl: 'https://ingest.example.test/' },
+      experience: { baseUrl: 'https://experience.example.test/' },
     })
 
     expect(Reflect.get(client.insights, 'baseUrl')).toBe('https://ingest.example.test/')
@@ -29,7 +29,7 @@ describe('ApiClient', () => {
   it('ignores unsupported top-level baseUrl if present at runtime', () => {
     const runtimeConfig: ApiClientConfig & { baseUrl: string } = {
       clientId: 'testId',
-      analytics: { baseUrl: 'https://ingest.example.test/' },
+      insights: { baseUrl: 'https://ingest.example.test/' },
       baseUrl: 'https://invalid-top-level.example.test/',
     }
     const client = new ApiClient(runtimeConfig)

@@ -1,10 +1,10 @@
 <p align="center">
-  <a href="https://www.contentful.com/developers/docs/personalization/">
+  <a href="https://www.contentful.com/developers/docs/optimization/">
     <img alt="Contentful Logo" title="Contentful" src="../../contentful-icon.png" width="150">
   </a>
 </p>
 
-<h1 align="center">Contentful Personalization & Analytics</h1>
+<h1 align="center">Contentful Optimization & Analytics</h1>
 
 <h3 align="center">API Client</h3>
 
@@ -20,7 +20,7 @@
 > The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
 
 The Contentful Optimization API Client Library provides methods for interfacing with Contentful's
-Experience and Insights APIs, which serve its Personalization and Analytics products.
+Experience and Insights APIs, which serve its Optimization and Analytics products.
 
 > [!NOTE]
 >
@@ -34,8 +34,8 @@ Experience and Insights APIs, which serve its Personalization and Analytics prod
 - [Configuration](#configuration)
   - [Top-level Configuration Options](#top-level-configuration-options)
   - [Fetch Options](#fetch-options)
-  - [Analytics Options](#analytics-options)
-  - [Personalization Options](#personalization-options)
+  - [Insights Options](#insights-options)
+  - [Experience Options](#experience-options)
 - [Working With the APIs](#working-with-the-apis)
   - [Experience API](#experience-api)
     - [Get Profile data](#get-profile-data)
@@ -74,13 +74,13 @@ const client = new ApiClient({ clientId: 'abc123' })
 
 ### Top-level Configuration Options
 
-| Option            | Required? | Default                       | Description                                                  |
-| ----------------- | --------- | ----------------------------- | ------------------------------------------------------------ |
-| `analytics`       | No        | See "Analytics Options"       | Configuration specific to the Analytics/Insights API         |
-| `clientId`        | Yes       | N/A                           | The Optimization API key                                     |
-| `environment`     | No        | `'main'`                      | The environment identifier                                   |
-| `fetchOptions`    | No        | See "Fetch Options"           | Configuration for Fetch timeout and retry functionality      |
-| `personalization` | No        | See "Personalization Options" | Configuration specific to the Personalization/Experience API |
+| Option         | Required? | Default                  | Description                                             |
+| -------------- | --------- | ------------------------ | ------------------------------------------------------- |
+| `experience`   | No        | See "Experience Options" | Configuration specific to the Experience API            |
+| `clientId`     | Yes       | N/A                      | The Optimization API key                                |
+| `environment`  | No        | `'main'`                 | The environment identifier                              |
+| `fetchOptions` | No        | See "Fetch Options"      | Configuration for Fetch timeout and retry functionality |
+| `insights`     | No        | See "Insights Options"   | Configuration specific to the Insights API              |
 
 ### Fetch Options
 
@@ -112,7 +112,7 @@ Configuration method signatures:
 > behavior, not a transport gap; broaden retry status handling only with an explicit API contract
 > change.
 
-### Analytics Options
+### Insights Options
 
 | Option          | Required? | Default                                    | Description                                                              |
 | --------------- | --------- | ------------------------------------------ | ------------------------------------------------------------------------ |
@@ -123,7 +123,7 @@ Configuration method signatures:
 
 - `beaconHandler`: `(url: string | URL, data: BatchInsightsEventArray) => boolean`
 
-### Personalization Options
+### Experience Options
 
 | Option            | Required? | Default                               | Description                                                         |
 | ----------------- | --------- | ------------------------------------- | ------------------------------------------------------------------- |
@@ -150,9 +150,9 @@ methods return a `Promise` that resolves with the following data:
   "profile": {
     /* User profile data */
   },
-  "selectedPersonalizations": [
+  "selectedOptimizations": [
     {
-      /* Personalization/experience configuration for the associated profile */
+      /* Optimization/experience configuration for the associated profile */
     }
   ],
   "changes": [

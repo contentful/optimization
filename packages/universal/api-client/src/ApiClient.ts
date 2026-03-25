@@ -9,22 +9,22 @@ import InsightsApiClient, { type InsightsApiClientConfig } from './insights'
  */
 export interface ApiClientConfig extends Pick<ApiConfig, GlobalApiConfigProperties> {
   /**
-   * Configuration for the personalization (Experience) API client.
+   * Configuration for the Experience API client.
    *
    * @remarks
    * Shared fields (`clientId`, `environment`, `fetchOptions`) are inherited
    * from top-level config; this object is for Experience-specific options.
    */
-  personalization?: Omit<ExperienceApiClientConfig, GlobalApiConfigProperties>
+  experience?: Omit<ExperienceApiClientConfig, GlobalApiConfigProperties>
 
   /**
-   * Configuration for the analytics (Insights) API client.
+   * Configuration for the Insights API client.
    *
    * @remarks
    * Shared fields (`clientId`, `environment`, `fetchOptions`) are inherited
    * from top-level config; this object is for Insights-specific options.
    */
-  analytics?: Omit<InsightsApiClientConfig, GlobalApiConfigProperties>
+  insights?: Omit<InsightsApiClientConfig, GlobalApiConfigProperties>
 }
 
 /**
@@ -32,17 +32,17 @@ export interface ApiClientConfig extends Pick<ApiConfig, GlobalApiConfigProperti
  *
  * @remarks
  * This client encapsulates shared configuration and exposes dedicated
- * sub-clients for personalization and analytics use cases.
+ * sub-clients for experience and insights use cases.
  *
  * @example
  * ```ts
  * const client = new ApiClient({
  *   clientId: 'org-id',
  *   environment: 'main',
- *   personalization: {
+ *   experience: {
  *     // experience-specific overrides
  *   },
- *   analytics: {
+ *   insights: {
  *     // insights-specific overrides
  *   },
  * })
@@ -65,14 +65,14 @@ export default class ApiClient {
   readonly config: ApiConfig
 
   /**
-   * Client for personalization and experience-related operations.
+   * Client for experience-related operations.
    *
    * @see {@link ExperienceApiClient}
    */
   readonly experience: ExperienceApiClient
 
   /**
-   * Client for analytics and insights-related operations.
+   * Client for insights-related operations.
    *
    * @see {@link InsightsApiClient}
    */
@@ -84,7 +84,7 @@ export default class ApiClient {
    * @param config - Global API client configuration with optional per-client overrides.
    */
   constructor(config: ApiClientConfig) {
-    const { personalization, analytics, clientId, environment, fetchOptions } = config
+    const { experience, insights, clientId, environment, fetchOptions } = config
     const apiConfig: ApiConfig = {
       clientId,
       environment,
@@ -95,12 +95,12 @@ export default class ApiClient {
 
     this.experience = new ExperienceApiClient({
       ...apiConfig,
-      ...personalization,
+      ...experience,
     })
 
     this.insights = new InsightsApiClient({
       ...apiConfig,
-      ...analytics,
+      ...insights,
     })
   }
 }

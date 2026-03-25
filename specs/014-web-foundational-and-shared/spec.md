@@ -108,8 +108,8 @@ plus constant fallbacks when build-time defines are absent.
 - **FR-004**: Web config merging MUST provide default event-builder values: `channel: 'web'`,
   `library.name`, `library.version`, `getLocale`, `getPageProperties`, and `getUserAgent`.
 - **FR-005**: Web config merging MUST provide default state values from `LocalStore` for `consent`,
-  `changes`, `profile`, and `selectedPersonalizations` (mapped via `defaults.personalizations`) when
-  not explicitly supplied.
+  `changes`, `profile`, and `selectedOptimizations` (mapped via `defaults.selectedOptimizations`)
+  when not explicitly supplied.
 - **FR-006**: Web config merging MUST provide default `getAnonymousId` that reads from
   `LocalStore.anonymousId`.
 - **FR-007**: Web config merging MUST set runtime log level to `'debug'` when `LocalStore.debug` is

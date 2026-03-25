@@ -8,14 +8,14 @@ import {
   type EntryReplacementVariant,
   type OptimizationEntry,
   type OptimizedEntry,
-  type SelectedPersonalizationArray,
+  type SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { describe, expect, it, rs } from '@rstest/core'
 import type { Entry } from 'contentful'
 
 import { mockLogger } from 'mocks'
 import { optimizedEntry as optimizedEntryFixture } from '../test/fixtures/optimizedEntry'
-import { selectedPersonalizations as selectedPersonalizationsFixture } from '../test/fixtures/selectedPersonalizations'
+import { selectedOptimizations as selectedOptimizationsFixture } from '../test/fixtures/selectedOptimizations'
 import OptimizedEntryResolver from './OptimizedEntryResolver'
 
 const mockedLogger = rs.mocked(mockLogger)
@@ -30,8 +30,7 @@ const getOptimizedEntry = (): OptimizedEntry => {
   return optimizedEntryFixture
 }
 
-const getSelectedPersonalizations = (): SelectedPersonalizationArray =>
-  selectedPersonalizationsFixture
+const getSelectedOptimizations = (): SelectedOptimizationArray => selectedOptimizationsFixture
 
 const getEuropeOptimizationEntry = (): OptimizationEntry => {
   const optimizedEntry = getOptimizedEntry()
@@ -71,12 +70,12 @@ describe('OptimizedEntryResolver', () => {
   describe('getOptimizationEntry', () => {
     it('returns the matching optimization entry for a selected experience', () => {
       const optimizedEntry = getOptimizedEntry()
-      const selectedPersonalizations = getSelectedPersonalizations()
+      const selectedOptimizations = getSelectedOptimizations()
 
       const result = OptimizedEntryResolver.getOptimizationEntry(
         {
           optimizedEntry,
-          selectedPersonalizations,
+          selectedOptimizations,
         },
         false,
       )
@@ -85,13 +84,13 @@ describe('OptimizedEntryResolver', () => {
       expect(result?.fields.nt_experience_id).toBe('2qVK4T5lnScbswoyBuGipd')
     })
 
-    it('returns undefined when there are no selected personalizations', () => {
+    it('returns undefined when there are no selected optimizations', () => {
       const optimizedEntry = getOptimizedEntry()
 
       const result = OptimizedEntryResolver.getOptimizationEntry(
         {
           optimizedEntry,
-          selectedPersonalizations: [],
+          selectedOptimizations: [],
         },
         false,
       )
@@ -99,21 +98,20 @@ describe('OptimizedEntryResolver', () => {
       expect(result).toBeUndefined()
     })
 
-    it('returns undefined when no experiences match the selected personalizations', () => {
+    it('returns undefined when no experiences match the selected optimizations', () => {
       const optimizedEntry = getOptimizedEntry()
 
       // Drop selections that match the fixture’s experiences
-      const selectedPersonalizations: SelectedPersonalizationArray =
-        getSelectedPersonalizations().filter(
-          (selection) =>
-            selection.experienceId !== '2qVK4T5lnScbswoyBuGipd' &&
-            selection.experienceId !== '6KfLDCdA75BGwr5HfSeXac',
-        )
+      const selectedOptimizations: SelectedOptimizationArray = getSelectedOptimizations().filter(
+        (selection) =>
+          selection.experienceId !== '2qVK4T5lnScbswoyBuGipd' &&
+          selection.experienceId !== '6KfLDCdA75BGwr5HfSeXac',
+      )
 
       const result = OptimizedEntryResolver.getOptimizationEntry(
         {
           optimizedEntry,
-          selectedPersonalizations,
+          selectedOptimizations,
         },
         true,
       )
@@ -122,15 +120,15 @@ describe('OptimizedEntryResolver', () => {
     })
   })
 
-  describe('getSelectedPersonalization', () => {
-    it('returns the selected personalization for a matching optimization entry', () => {
+  describe('getSelectedOptimization', () => {
+    it('returns the selected optimization for a matching optimization entry', () => {
       const optimizationEntry = getEuropeOptimizationEntry()
-      const selectedPersonalizations = getSelectedPersonalizations()
+      const selectedOptimizations = getSelectedOptimizations()
 
-      const result = OptimizedEntryResolver.getSelectedPersonalization(
+      const result = OptimizedEntryResolver.getSelectedOptimization(
         {
           optimizationEntry,
-          selectedPersonalizations,
+          selectedOptimizations,
         },
         false,
       )
@@ -140,13 +138,13 @@ describe('OptimizedEntryResolver', () => {
       expect(result?.variantIndex).toBe(1)
     })
 
-    it('returns undefined when no selected personalizations are provided', () => {
+    it('returns undefined when no selected optimizations are provided', () => {
       const optimizationEntry = getEuropeOptimizationEntry()
 
-      const result = OptimizedEntryResolver.getSelectedPersonalization(
+      const result = OptimizedEntryResolver.getSelectedOptimization(
         {
           optimizationEntry,
-          selectedPersonalizations: [],
+          selectedOptimizations: [],
         },
         false,
       )
@@ -157,15 +155,14 @@ describe('OptimizedEntryResolver', () => {
     it('returns undefined when there is no selection for the given optimization entry', () => {
       const optimizationEntry = getEuropeOptimizationEntry()
 
-      const selectedPersonalizations: SelectedPersonalizationArray =
-        getSelectedPersonalizations().filter(
-          (selection) => selection.experienceId !== optimizationEntry.fields.nt_experience_id,
-        )
+      const selectedOptimizations: SelectedOptimizationArray = getSelectedOptimizations().filter(
+        (selection) => selection.experienceId !== optimizationEntry.fields.nt_experience_id,
+      )
 
-      const result = OptimizedEntryResolver.getSelectedPersonalization(
+      const result = OptimizedEntryResolver.getSelectedOptimization(
         {
           optimizationEntry,
-          selectedPersonalizations,
+          selectedOptimizations,
         },
         true,
       )
@@ -273,11 +270,11 @@ describe('OptimizedEntryResolver', () => {
   })
 
   describe('resolve', () => {
-    it('returns the baseline entry and warns when no selected personalizations are provided', () => {
+    it('returns the baseline entry and warns when no selected optimizations are provided', () => {
       const result = OptimizedEntryResolver.resolve(optimizedEntryFixture)
 
       expect(result.entry).toBe(optimizedEntryFixture)
-      expect(result.personalization).toBeUndefined()
+      expect(result.selectedOptimization).toBeUndefined()
 
       expect(mockedLogger.debug).toHaveBeenCalledWith(
         'Optimization',
@@ -285,7 +282,7 @@ describe('OptimizedEntryResolver', () => {
       )
       expect(mockedLogger.warn).toHaveBeenCalledWith(
         'Optimization',
-        `${RESOLUTION_WARNING_BASE} no selectedPersonalizations exist for the current profile`,
+        `${RESOLUTION_WARNING_BASE} no selectedOptimizations exist for the current profile`,
       )
     })
 
@@ -298,13 +295,10 @@ describe('OptimizedEntryResolver', () => {
         },
       }
 
-      const result = OptimizedEntryResolver.resolve(
-        nonOptimizedEntry,
-        getSelectedPersonalizations(),
-      )
+      const result = OptimizedEntryResolver.resolve(nonOptimizedEntry, getSelectedOptimizations())
 
       expect(result.entry).toBe(nonOptimizedEntry)
-      expect(result.personalization).toBeUndefined()
+      expect(result.selectedOptimization).toBeUndefined()
 
       expect(mockedLogger.warn).toHaveBeenCalledWith(
         'Optimization',
@@ -313,17 +307,16 @@ describe('OptimizedEntryResolver', () => {
     })
 
     it('returns the baseline entry and warns when no optimization entry is found', () => {
-      const selectedPersonalizations: SelectedPersonalizationArray =
-        getSelectedPersonalizations().filter(
-          (selection) =>
-            selection.experienceId !== '2qVK4T5lnScbswoyBuGipd' &&
-            selection.experienceId !== '6KfLDCdA75BGwr5HfSeXac',
-        )
+      const selectedOptimizations: SelectedOptimizationArray = getSelectedOptimizations().filter(
+        (selection) =>
+          selection.experienceId !== '2qVK4T5lnScbswoyBuGipd' &&
+          selection.experienceId !== '6KfLDCdA75BGwr5HfSeXac',
+      )
 
-      const result = OptimizedEntryResolver.resolve(optimizedEntryFixture, selectedPersonalizations)
+      const result = OptimizedEntryResolver.resolve(optimizedEntryFixture, selectedOptimizations)
 
       expect(result.entry).toBe(optimizedEntryFixture)
-      expect(result.personalization).toBeUndefined()
+      expect(result.selectedOptimization).toBeUndefined()
 
       expect(mockedLogger.warn).toHaveBeenCalledWith(
         'Optimization',
@@ -332,7 +325,7 @@ describe('OptimizedEntryResolver', () => {
     })
 
     it('returns the baseline entry and logs when the selected variant index is 0 (baseline)', () => {
-      const selections: SelectedPersonalizationArray = [
+      const selections: SelectedOptimizationArray = [
         {
           experienceId: '2qVK4T5lnScbswoyBuGipd',
           variantIndex: 0,
@@ -346,7 +339,7 @@ describe('OptimizedEntryResolver', () => {
       const result = OptimizedEntryResolver.resolve(optimizedEntryFixture, selections)
 
       expect(result.entry).toBe(optimizedEntryFixture)
-      expect(result.personalization).toBeUndefined()
+      expect(result.selectedOptimization).toBeUndefined()
 
       expect(mockedLogger.debug).toHaveBeenCalledWith(
         'Optimization',
@@ -355,7 +348,7 @@ describe('OptimizedEntryResolver', () => {
     })
 
     it('returns the baseline entry and warns when no valid replacement variant config exists (index out of range)', () => {
-      const selections: SelectedPersonalizationArray = [
+      const selections: SelectedOptimizationArray = [
         {
           experienceId: '2qVK4T5lnScbswoyBuGipd',
           variantIndex: 2, // only one variant exists; out of range
@@ -369,7 +362,7 @@ describe('OptimizedEntryResolver', () => {
       const result = OptimizedEntryResolver.resolve(optimizedEntryFixture, selections)
 
       expect(result.entry).toBe(optimizedEntryFixture)
-      expect(result.personalization).toBeUndefined()
+      expect(result.selectedOptimization).toBeUndefined()
 
       expect(mockedLogger.warn).toHaveBeenCalledWith(
         'Optimization',
@@ -386,10 +379,10 @@ describe('OptimizedEntryResolver', () => {
       optimizationEntry.fields.nt_variants = []
 
       try {
-        const result = OptimizedEntryResolver.resolve(optimizedEntry, getSelectedPersonalizations())
+        const result = OptimizedEntryResolver.resolve(optimizedEntry, getSelectedOptimizations())
 
         expect(result.entry).toBe(optimizedEntry)
-        expect(result.personalization).toBeUndefined()
+        expect(result.selectedOptimization).toBeUndefined()
 
         expect(mockedLogger.warn).toHaveBeenCalledWith(
           'Optimization',
@@ -401,14 +394,14 @@ describe('OptimizedEntryResolver', () => {
       }
     })
 
-    it('resolves to the variant entry and returns the selected personalization on success', () => {
+    it('resolves to the variant entry and returns the selected optimization on success', () => {
       const result = OptimizedEntryResolver.resolve(
         optimizedEntryFixture,
-        getSelectedPersonalizations(),
+        getSelectedOptimizations(),
       )
 
       expect(result.entry.sys.id).toBe('4k6ZyFQnR2POY5IJLLlJRb')
-      expect(result.personalization).toEqual(
+      expect(result.selectedOptimization).toEqual(
         expect.objectContaining({
           experienceId: '2qVK4T5lnScbswoyBuGipd',
           variantIndex: 1,

@@ -1,10 +1,10 @@
 <p align="center">
-  <a href="https://www.contentful.com/developers/docs/personalization/">
+  <a href="https://www.contentful.com/developers/docs/optimization/">
     <img alt="Contentful Logo" title="Contentful" src="../../../contentful-icon.png" width="150">
   </a>
 </p>
 
-<h1 align="center">Contentful Personalization & Analytics</h1>
+<h1 align="center">Contentful Optimization & Analytics</h1>
 
 <h3 align="center">Optimization Web SDK</h3>
 
@@ -35,7 +35,7 @@ This SDK implements functionality specific to the Web environment, based on the
   - [Analytics Options](#analytics-options)
   - [Event Builder Options](#event-builder-options)
   - [Fetch Options](#fetch-options)
-  - [Personalization Options](#personalization-options)
+  - [Optimization Options](#optimization-options)
   - [Persistence Behavior](#persistence-behavior)
 - [Optimization Properties](#optimization-properties)
   - [Tracking (entry-interaction API)](#tracking-entry-interaction-api)
@@ -51,11 +51,11 @@ This SDK implements functionality specific to the Web environment, based on the
     - [`tracking.enableElement`](#trackingenableelement)
     - [`tracking.disableElement`](#trackingdisableelement)
     - [`tracking.clearElement`](#trackingclearelement)
-  - [Personalization Data Resolution Methods](#personalization-data-resolution-methods)
+  - [Optimization Data Resolution Methods](#optimization-data-resolution-methods)
     - [`getFlag`](#getflag)
     - [`resolveOptimizedEntry`](#resolveoptimizedentry)
     - [`getMergeTagValue`](#getmergetagvalue)
-  - [Personalization and Analytics Event Methods](#personalization-and-analytics-event-methods)
+  - [Optimization and Analytics Event Methods](#optimization-and-analytics-event-methods)
     - [`identify`](#identify)
     - [`page`](#page)
     - [`screen`](#screen)
@@ -122,8 +122,7 @@ Alternatively, the Web SDK can be used directly within an HTML file:
 ## Reference Implementations
 
 - [Web Vanilla](../../../implementations/web-sdk/README.md): Example static Web page that renders
-  and emits analytics events for personalized content using a vanilla JS drop-in build of the Web
-  SDK
+  and emits analytics events for optimized content using a vanilla JS drop-in build of the Web SDK
 
 ## Configuration
 
@@ -144,7 +143,7 @@ Alternatively, the Web SDK can be used directly within an HTML file:
 | `getAnonymousId`            | No        | `undefined`                                      | Function used to obtain an anonymous user identifier                           |
 | `logLevel`                  | No        | `'error'`                                        | Minimum log level for the default console sink                                 |
 | `onEventBlocked`            | No        | `undefined`                                      | Callback invoked when an event call is blocked by guards                       |
-| `personalization`           | No        | See "Personalization Options"                    | Configuration specific to the Personalization/Experience API                   |
+| `optimization`              | No        | See "Optimization Options"                       | Configuration specific to the Optimization/Experience API                      |
 
 Configuration method signatures:
 
@@ -277,7 +276,7 @@ Configuration method signatures:
 > apply only to HTTP `503` responses (`Service Unavailable`). This is deliberate and aligned with
 > current Experience and Insights API expectations.
 
-### Personalization Options
+### Optimization Options
 
 | Option            | Required? | Default                               | Description                                                         |
 | ----------------- | --------- | ------------------------------------- | ------------------------------------------------------------------- |
@@ -290,9 +289,9 @@ Configuration method signatures:
 
 The following configuration options apply only in stateful environments:
 
-| Option        | Required? | Default               | Description                                                                 |
-| ------------- | --------- | --------------------- | --------------------------------------------------------------------------- |
-| `queuePolicy` | No        | See method signatures | Queue and flush-retry policy for stateful personalization offline buffering |
+| Option        | Required? | Default               | Description                                                              |
+| ------------- | --------- | --------------------- | ------------------------------------------------------------------------ |
+| `queuePolicy` | No        | See method signatures | Queue and flush-retry policy for stateful optimization offline buffering |
 
 Configuration method signatures:
 
@@ -403,14 +402,13 @@ Available state streams:
 
 - `consent`: Current consent state (`boolean | undefined`)
 - `blockedEventStream`: Latest blocked-call metadata (`BlockedEvent | undefined`)
-- `eventStream`: Latest emitted analytics/personalization event
+- `eventStream`: Latest emitted analytics/optimization event
   (`AnalyticsEvent | PersonalizationEvent | undefined`)
 - `flag(name)`: Key-scoped flag observable (`Observable<Json>`)
-- `canPersonalize`: Whether personalization selections are available (`boolean`;
-  `selectedPersonalizations !== undefined`)
+- `canOptimize`: Whether optimization selections are available (`boolean`;
+  `selectedOptimizations !== undefined`)
 - `profile`: Current profile (`Profile | undefined`)
-- `selectedPersonalizations`: Current selected personalizations
-  (`SelectedPersonalizationArray | undefined`)
+- `selectedOptimizations`: Current selected optimizations (`SelectedOptimizationArray | undefined`)
 - `previewPanelAttached`: Preview panel attachment state (`boolean`)
 - `previewPanelOpen`: Preview panel open state (`boolean`)
 
@@ -428,7 +426,7 @@ Update behavior:
 - `blockedEventStream` updates whenever a call is blocked by consent guards.
 - `eventStream` updates when a valid event is accepted for send/queue.
 - `flag(name)` updates when the resolved value for that key changes.
-- `canPersonalize` updates whenever `selectedPersonalizations` becomes defined or `undefined`.
+- `canOptimize` updates whenever `selectedOptimizations` becomes defined or `undefined`.
 - `consent` updates from defaults and `optimization.consent(...)`.
 - `previewPanelAttached` and `previewPanelOpen` are controlled by preview tooling and are preserved
   across `reset()`.
@@ -480,7 +478,7 @@ Resets all internal state _except_ consent. This method expects no arguments and
 
 #### `flush`
 
-Flushes queued analytics and personalization events. This method expects no arguments and returns a
+Flushes queued analytics and optimization events. This method expects no arguments and returns a
 `Promise<void>`.
 
 #### `destroy`
@@ -579,7 +577,7 @@ Arguments:
 
 After `clearElement`, the element falls back to automatic behavior for that interaction.
 
-### Personalization Data Resolution Methods
+### Optimization Data Resolution Methods
 
 #### `getFlag`
 
@@ -605,8 +603,8 @@ Behavior notes:
 
 #### `resolveOptimizedEntry`
 
-Resolve a baseline Contentful entry to a personalized variant using the provided selected
-personalizations, or from the current internal state.
+Resolve a baseline Contentful entry to a optimized variant using the provided selected
+optimizations, or from the current internal state.
 
 Type arguments:
 
@@ -617,12 +615,12 @@ Type arguments:
 Arguments:
 
 - `entry`\*: The entry to personalize
-- `selectedPersonalizations`: Selected personalizations
+- `selectedOptimizations`: Selected optimizations
 
 Returns:
 
-- The resolved personalized entry variant, or the supplied baseline entry if baseline is the
-  selected variant or a variant cannot be found.
+- The resolved optimized entry variant, or the supplied baseline entry if baseline is the selected
+  variant or a variant cannot be found.
 
 #### `getMergeTagValue`
 
@@ -635,7 +633,7 @@ Arguments:
 - `embeddedNodeEntryTarget`\*: The merge tag entry node to resolve
 - `profile`: The user profile
 
-### Personalization and Analytics Event Methods
+### Optimization and Analytics Event Methods
 
 Only the following methods may return an `OptimizationData` object:
 
@@ -649,7 +647,7 @@ Only the following methods may return an `OptimizationData` object:
 contains:
 
 - `changes`: Currently used for Custom Flags
-- `selectedPersonalizations`: Selected personalizations for the profile
+- `selectedOptimizations`: Selected optimizations for the profile
 - `profile`: Profile associated with the evaluated events
 
 #### `identify`
@@ -663,7 +661,7 @@ Arguments:
 
 #### `page`
 
-Record a personalization page view.
+Record a optimization page view.
 
 Arguments:
 
@@ -672,7 +670,7 @@ Arguments:
 
 #### `screen`
 
-Record a personalization screen view.
+Record a optimization screen view.
 
 Arguments:
 
@@ -681,7 +679,7 @@ Arguments:
 
 #### `track`
 
-Record a personalization custom track event.
+Record a optimization custom track event.
 
 Arguments:
 
@@ -691,8 +689,8 @@ Arguments:
 #### `trackView`
 
 Record an analytics component view event. When the payload marks the component as "sticky", an
-additional personalization component view is recorded. This method only returns `OptimizationData`
-when the component is marked as "sticky".
+additional optimization component view is recorded. This method only returns `OptimizationData` when
+the component is marked as "sticky".
 
 Arguments:
 
@@ -868,12 +866,12 @@ Manual API overrides take precedence over data-attribute overrides (see below). 
 The optional `data` option supports the following members:
 
 - `entryId`\*: The ID of the content entry to be tracked; should be the selected variant if the
-  entry is personalized
-- `personalizationId`: The ID of the personalization/experience entry associated with the content
-  entry; only required if the entry is personalized
+  entry is optimized
+- `optimizationId`: The ID of the optimization/experience entry associated with the content entry;
+  only required if the entry is optimized
 - `sticky`: A boolean value that marks that the current user should _always_ see this variant;
   ignored if the entry is not optimized
-- `variantIndex`: The index of the selected variant; only required if the entry is personalized
+- `variantIndex`: The index of the selected variant; only required if the entry is optimized
 
 Example:
 
@@ -889,13 +887,13 @@ Elements that are associated to entries using the following data attributes will
 detected for observation and entry-interaction tracking:
 
 - `data-ctfl-entry-id`\*: The ID of the content entry to be tracked; should be the selected variant
-  if the entry is personalized
-- `data-ctfl-personalization-id`: The ID of the personalization/experience entry associated with the
-  content entry; only required if the entry is personalized
+  if the entry is optimized
+- `data-ctfl-optimization-id`: The ID of the optimization/experience entry associated with the
+  content entry; only required if the entry is optimized
 - `data-ctfl-sticky`: A boolean value that marks that the current user should _always_ see this
   variant; ignored if the entry is not optimized
 - `data-ctfl-variant-index`: The index of the selected variant; only required if the entry is
-  personalized
+  optimized
 - `data-ctfl-track-views`: Optional per-element override for view tracking (`true` = force-enable,
   `false` = force-disable)
 - `data-ctfl-view-duration-update-interval-ms`: Optional per-element override for periodic

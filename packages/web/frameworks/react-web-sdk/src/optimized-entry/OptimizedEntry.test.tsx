@@ -1,11 +1,11 @@
-import type { SelectedPersonalizationArray } from '@contentful/optimization-web/api-schemas'
+import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import { OptimizedEntry } from './OptimizedEntry'
 import {
   createRuntime,
   getRequiredElement,
   getWrapper,
   makeEntry,
-  makePersonalizableEntry,
+  makeOptimizableEntry,
   readTitle,
   renderComponent,
   renderComponentToString,
@@ -14,7 +14,7 @@ import {
 
 describe('OptimizedEntry', () => {
   const baseline = makeEntry('baseline')
-  const personalizedBaseline = makePersonalizableEntry('personalized-baseline')
+  const optimizedBaseline = makeOptimizableEntry('optimized-baseline')
   const variantA = makeEntry('variant-a')
   const variantB = makeEntry('variant-b')
 
@@ -23,7 +23,7 @@ describe('OptimizedEntry', () => {
   const baselineChild = makeEntry('child-baseline')
   const variantChild = makeEntry('child-variant')
 
-  const variantOneState: SelectedPersonalizationArray = [
+  const variantOneState: SelectedOptimizationArray = [
     {
       experienceId: 'exp-hero',
       sticky: true,
@@ -34,7 +34,7 @@ describe('OptimizedEntry', () => {
     },
   ]
 
-  const variantTwoState: SelectedPersonalizationArray = [
+  const variantTwoState: SelectedOptimizationArray = [
     {
       experienceId: 'exp-hero',
       sticky: false,
@@ -45,10 +45,10 @@ describe('OptimizedEntry', () => {
     },
   ]
 
-  it('renders baseline by default when personalization is unresolved and no loading fallback is provided', async () => {
-    const { optimization } = createRuntime((entry, personalizations) => {
-      if (!personalizations?.length) return { entry }
-      return { entry: variantA, personalization: personalizations[0] }
+  it('renders baseline by default when optimization is unresolved and no loading fallback is provided', async () => {
+    const { optimization } = createRuntime((entry, selectedOptimizations) => {
+      if (!selectedOptimizations?.length) return { entry }
+      return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
     })
 
     const view = await renderComponent(
@@ -60,17 +60,17 @@ describe('OptimizedEntry', () => {
 
     const wrapper = getWrapper(view.container)
     expect(wrapper.dataset.ctflEntryId).toBe('baseline')
-    expect(wrapper.dataset.ctflPersonalizationId).toBeUndefined()
+    expect(wrapper.dataset.ctflOptimizationId).toBeUndefined()
     expect(wrapper.dataset.ctflVariantIndex).toBe('0')
 
     await view.unmount()
   })
 
-  it('locks to first non-undefined personalization state when live updates are disabled', async () => {
-    const { optimization, emit } = createRuntime((entry, selectedPersonalizations) => {
-      const selected = selectedPersonalizations?.[0]
+  it('locks to first non-undefined optimization state when live updates are disabled', async () => {
+    const { optimization, emit } = createRuntime((entry, selectedOptimizations) => {
+      const selected = selectedOptimizations?.[0]
       const variant = selected ? { 1: variantA, 2: variantB }[selected.variantIndex] : undefined
-      if (variant && selected) return { entry: variant, personalization: selected }
+      if (variant && selected) return { entry: variant, selectedOptimization: selected }
       return { entry }
     })
 
@@ -89,10 +89,10 @@ describe('OptimizedEntry', () => {
   })
 
   it('updates continuously when liveUpdates is true', async () => {
-    const { optimization, emit } = createRuntime((entry, selectedPersonalizations) => {
-      const selected = selectedPersonalizations?.[0]
+    const { optimization, emit } = createRuntime((entry, selectedOptimizations) => {
+      const selected = selectedOptimizations?.[0]
       const variant = selected ? { 1: variantA, 2: variantB }[selected.variantIndex] : undefined
-      if (variant && selected) return { entry: variant, personalization: selected }
+      if (variant && selected) return { entry: variant, selectedOptimization: selected }
       return { entry }
     })
 
@@ -113,13 +113,13 @@ describe('OptimizedEntry', () => {
   })
 
   it('uses loadingFallback while unresolved and removes resolved tracking attrs during loading', async () => {
-    const { optimization, emit } = createRuntime((entry, selectedPersonalizations) => {
-      if (!selectedPersonalizations?.length) return { entry }
-      return { entry: variantA, personalization: selectedPersonalizations[0] }
+    const { optimization, emit } = createRuntime((entry, selectedOptimizations) => {
+      if (!selectedOptimizations?.length) return { entry }
+      return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
     })
 
     const view = await renderComponent(
-      <OptimizedEntry baselineEntry={personalizedBaseline} loadingFallback={() => 'loading'}>
+      <OptimizedEntry baselineEntry={optimizedBaseline} loadingFallback={() => 'loading'}>
         {(resolved) => readTitle(resolved)}
       </OptimizedEntry>,
       optimization,
@@ -139,14 +139,14 @@ describe('OptimizedEntry', () => {
     await view.unmount()
   })
 
-  it('maps data-ctfl-* attributes from resolved personalization metadata', async () => {
-    const { optimization, emit } = createRuntime((entry, selectedPersonalizations) => {
-      const selected = selectedPersonalizations?.[0]
+  it('maps data-ctfl-* attributes from resolved optimization metadata', async () => {
+    const { optimization, emit } = createRuntime((entry, selectedOptimizations) => {
+      const selected = selectedOptimizations?.[0]
       if (!selected) return { entry }
 
       return {
         entry: variantB,
-        personalization: {
+        selectedOptimization: {
           ...selected,
           duplicationScope: 'session',
         },
@@ -162,7 +162,7 @@ describe('OptimizedEntry', () => {
 
     const wrapper = getWrapper(view.container)
     expect(wrapper.dataset.ctflEntryId).toBe('variant-b')
-    expect(wrapper.dataset.ctflPersonalizationId).toBe('exp-hero')
+    expect(wrapper.dataset.ctflOptimizationId).toBe('exp-hero')
     expect(wrapper.dataset.ctflSticky).toBe('false')
     expect(wrapper.dataset.ctflVariantIndex).toBe('2')
     expect(wrapper.dataset.ctflDuplicationScope).toBe('session')
@@ -186,8 +186,8 @@ describe('OptimizedEntry', () => {
     await view.unmount()
   })
 
-  it('supports nested personalization composition', async () => {
-    const nestedState: SelectedPersonalizationArray = [
+  it('supports nested optimization composition', async () => {
+    const nestedState: SelectedOptimizationArray = [
       {
         experienceId: 'exp-nested',
         sticky: true,
@@ -199,16 +199,16 @@ describe('OptimizedEntry', () => {
       },
     ]
 
-    const { optimization, emit } = createRuntime((entry, selectedPersonalizations) => {
-      const selected = selectedPersonalizations?.[0]
+    const { optimization, emit } = createRuntime((entry, selectedOptimizations) => {
+      const selected = selectedOptimizations?.[0]
       if (!selected) return { entry }
 
       if (entry.sys.id === 'parent-baseline') {
-        return { entry: variantParent, personalization: selected }
+        return { entry: variantParent, selectedOptimization: selected }
       }
 
       if (entry.sys.id === 'child-baseline') {
-        return { entry: variantChild, personalization: selected }
+        return { entry: variantChild, selectedOptimization: selected }
       }
 
       return { entry }
@@ -237,10 +237,10 @@ describe('OptimizedEntry', () => {
   })
 
   it('preview panel visibility forces live updates even when component liveUpdates is false', async () => {
-    const { optimization, emit } = createRuntime((entry, selectedPersonalizations) => {
-      const selected = selectedPersonalizations?.[0]
+    const { optimization, emit } = createRuntime((entry, selectedOptimizations) => {
+      const selected = selectedOptimizations?.[0]
       const variant = selected ? { 1: variantA, 2: variantB }[selected.variantIndex] : undefined
-      if (variant && selected) return { entry: variant, personalization: selected }
+      if (variant && selected) return { entry: variant, selectedOptimization: selected }
       return { entry }
     })
 
@@ -288,19 +288,19 @@ describe('OptimizedEntry', () => {
   })
 
   it('does not render entry content initially in SPA mode', async () => {
-    const { optimization } = createRuntime((entry, personalizations) => {
-      if (!personalizations?.length) return { entry }
-      return { entry: variantA, personalization: personalizations[0] }
+    const { optimization } = createRuntime((entry, selectedOptimizations) => {
+      if (!selectedOptimizations?.length) return { entry }
+      return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
     })
 
     const view = await renderComponent(
-      <OptimizedEntry baselineEntry={personalizedBaseline}>
+      <OptimizedEntry baselineEntry={optimizedBaseline}>
         {(resolved) => readTitle(resolved)}
       </OptimizedEntry>,
       optimization,
     )
 
-    expect(view.container.textContent).toContain('personalized-baseline')
+    expect(view.container.textContent).toContain('optimized-baseline')
 
     const loadingWrapper = getWrapper(view.container)
     expect(loadingWrapper.dataset.ctflEntryId).toBeUndefined()
@@ -310,26 +310,26 @@ describe('OptimizedEntry', () => {
     await view.unmount()
   })
 
-  it('renders loading until canPersonalize is true for personalized flow', async () => {
-    const { optimization, emit } = createRuntime((entry, personalizations) => {
-      if (!personalizations?.length) return { entry }
-      return { entry: variantA, personalization: personalizations[0] }
+  it('renders loading until canOptimize is true for optimized flow', async () => {
+    const { optimization, emit } = createRuntime((entry, selectedOptimizations) => {
+      if (!selectedOptimizations?.length) return { entry }
+      return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
     })
 
     const view = await renderComponent(
-      <OptimizedEntry baselineEntry={personalizedBaseline}>
+      <OptimizedEntry baselineEntry={optimizedBaseline}>
         {(resolved) => readTitle(resolved)}
       </OptimizedEntry>,
       optimization,
     )
 
-    expect(view.container.textContent).toContain('personalized-baseline')
+    expect(view.container.textContent).toContain('optimized-baseline')
     expect(view.container.textContent).not.toContain('variant-a')
 
     await emit(variantOneState)
 
     expect(view.container.textContent).toContain('variant-a')
-    expect(view.container.textContent).not.toContain('personalized-baseline')
+    expect(view.container.textContent).not.toContain('optimized-baseline')
 
     await view.unmount()
   })
@@ -382,13 +382,13 @@ describe('OptimizedEntry', () => {
   })
 
   it('retains loading layout-target behavior when display:contents visibility is unsupported', async () => {
-    const { optimization } = createRuntime((entry, personalizations) => {
-      if (!personalizations?.length) return { entry }
-      return { entry: variantA, personalization: personalizations[0] }
+    const { optimization } = createRuntime((entry, selectedOptimizations) => {
+      if (!selectedOptimizations?.length) return { entry }
+      return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
     })
 
     const divView = await renderComponent(
-      <OptimizedEntry baselineEntry={personalizedBaseline}>
+      <OptimizedEntry baselineEntry={optimizedBaseline}>
         {(resolved) => readTitle(resolved)}
       </OptimizedEntry>,
       optimization,
@@ -402,7 +402,7 @@ describe('OptimizedEntry', () => {
     await divView.unmount()
 
     const spanView = await renderComponent(
-      <OptimizedEntry baselineEntry={personalizedBaseline} as="span">
+      <OptimizedEntry baselineEntry={optimizedBaseline} as="span">
         {(resolved) => readTitle(resolved)}
       </OptimizedEntry>,
       optimization,
@@ -416,7 +416,7 @@ describe('OptimizedEntry', () => {
     await spanView.unmount()
   })
 
-  it('renders invisible loading target during SSR for non-personalized entries', () => {
+  it('renders invisible loading target during SSR for non-optimized entries', () => {
     const { optimization } = createRuntime((entry) => ({ entry }))
 
     const markup = renderToStringWithoutWindow(() =>
@@ -433,7 +433,7 @@ describe('OptimizedEntry', () => {
     expect(markup).toContain('baseline')
   })
 
-  it('renders non-personalized content after sdk initialization', async () => {
+  it('renders non-optimized content after sdk initialization', async () => {
     const { optimization } = createRuntime((entry) => ({ entry }))
 
     const view = await renderComponent(

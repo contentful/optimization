@@ -40,7 +40,7 @@ rs.mock('@contentful/optimization-core/logger', () => ({
 // Mock useOptimization hook
 rs.mock('../context/OptimizationContext', () => ({
   useOptimization: () => ({
-    screen: rs.fn().mockResolvedValue({ profile: {}, changes: [], personalizations: [] }),
+    screen: rs.fn().mockResolvedValue({ profile: {}, changes: [], selectedOptimizations: [] }),
   }),
 }))
 

@@ -146,11 +146,11 @@ function App() {
 ### Using Hooks
 
 ```tsx
-import { usePersonalization, useOptimization } from './optimization'
+import { useOptimizationResolver, useOptimization } from './optimization'
 
 function MyComponent() {
   const { sdk, isReady } = useOptimization()
-  const { resolveEntry } = usePersonalization()
+  const { resolveEntry } = useOptimizationResolver()
   const resolved = resolveEntry(baseEntry)
 
   // ...

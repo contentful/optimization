@@ -15,7 +15,7 @@ import {
   event as eventSignal,
   online as onlineSignal,
   profile as profileSignal,
-  selectedPersonalizations as selectedPersonalizationsSignal,
+  selectedOptimizations as selectedOptimizationsSignal,
 } from '../signals'
 
 const coreLogger = createScopedLogger('CoreStateful')
@@ -220,13 +220,13 @@ export class ExperienceQueue {
 
   private async updateOutputSignals(data: OptimizationData): Promise<void> {
     const intercepted = await this.stateInterceptors.run(data)
-    const { changes, profile, selectedPersonalizations } = intercepted
+    const { changes, profile, selectedOptimizations } = intercepted
 
     batch(() => {
       if (!isEqual(changesSignal.value, changes)) changesSignal.value = changes
       if (!isEqual(profileSignal.value, profile)) profileSignal.value = profile
-      if (!isEqual(selectedPersonalizationsSignal.value, selectedPersonalizations)) {
-        selectedPersonalizationsSignal.value = selectedPersonalizations
+      if (!isEqual(selectedOptimizationsSignal.value, selectedOptimizations)) {
+        selectedOptimizationsSignal.value = selectedOptimizations
       }
     })
   }

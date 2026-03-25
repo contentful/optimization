@@ -177,9 +177,9 @@ export function createExperienceDefinitions(entries: ContentfulEntry[]): Experie
 }
 
 /**
- * Creates a lookup map of experience/personalization IDs to their human-readable names.
+ * Creates a lookup map of experience IDs to their human-readable names.
  *
- * @param entries - Contentful entries of type `nt_personalization`
+ * @param entries - Contentful entries of type `nt_experience`
  * @returns Record mapping experience IDs to display names
  *
  * @public

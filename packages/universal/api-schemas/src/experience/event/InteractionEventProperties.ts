@@ -32,7 +32,7 @@ export const InteractionEventProperties = z.extend(UniversalEventProperties, {
    * Index of the variant associated with this interaction.
    *
    * @remarks
-   * Typically corresponds to the index of the selected personalization entry.
+   * Typically corresponds to the index of the selected optimization entry.
    */
   variantIndex: z.number(),
 })

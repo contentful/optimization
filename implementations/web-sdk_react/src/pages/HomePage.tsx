@@ -13,7 +13,7 @@ interface HomePageProps {
   globalLiveUpdates: boolean
   isIdentified: boolean
   liveUpdatesBaselineEntry: ContentfulEntry
-  personalizationCount: number
+  selectedOptimizationCount: number
   onConsentChange: (accepted: boolean) => void
   onIdentify: () => void
   onReset: () => void
@@ -36,7 +36,7 @@ export function HomePage({
   globalLiveUpdates,
   isIdentified,
   liveUpdatesBaselineEntry,
-  personalizationCount,
+  selectedOptimizationCount,
   onConsentChange,
   onIdentify,
   onReset,
@@ -103,7 +103,9 @@ export function HomePage({
         </div>
 
         <p data-testid="consent-status">Consent: {String(consent)}</p>
-        <p data-testid="personalizations-count">Personalizations: {personalizationCount}</p>
+        <p data-testid="selected-optimizations-count">
+          Selected Optimizations: {selectedOptimizationCount}
+        </p>
         <p data-testid="identified-status">{isIdentified ? 'Yes' : 'No'}</p>
         <p data-testid="global-live-updates-status">{globalLiveUpdates ? 'ON' : 'OFF'}</p>
         <p data-testid="preview-panel-status">{isPreviewPanelOpen ? 'Open' : 'Closed'}</p>

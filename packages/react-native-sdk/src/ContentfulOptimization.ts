@@ -24,7 +24,7 @@ async function mergeConfig({
     consent = AsyncStorageStore.consent,
     profile = AsyncStorageStore.profile,
     changes = AsyncStorageStore.changes,
-    personalizations = AsyncStorageStore.personalizations,
+    selectedOptimizations = AsyncStorageStore.selectedOptimizations,
   } = defaults ?? {}
 
   const mergedConfig = merge(
@@ -33,7 +33,7 @@ async function mergeConfig({
         consent,
         profile,
         changes,
-        personalizations,
+        selectedOptimizations,
       },
       eventBuilder: {
         channel: 'mobile',
@@ -132,10 +132,10 @@ class ContentfulOptimization extends CoreStateful {
 
     effect(() => {
       const {
-        selectedPersonalizations: { value },
+        selectedOptimizations: { value },
       } = signals
 
-      AsyncStorageStore.personalizations = value
+      AsyncStorageStore.selectedOptimizations = value
     })
   }
 

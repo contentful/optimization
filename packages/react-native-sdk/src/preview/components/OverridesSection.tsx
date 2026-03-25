@@ -6,7 +6,7 @@ import type { OverridesSectionProps } from '../types'
 import { ListItem, Section } from './shared'
 
 /**
- * Displays all active audience and personalization overrides with reset controls.
+ * Displays all active audience and optimization overrides with reset controls.
  *
  * @param props - Component props
  * @returns The rendered overrides section
@@ -16,13 +16,13 @@ import { ListItem, Section } from './shared'
 export function OverridesSection({
   overrides,
   onResetAudience,
-  onResetPersonalization,
+  onResetOptimization,
   audienceNames = {},
   experienceNames = {},
 }: OverridesSectionProps): React.JSX.Element {
   const audienceOverrides = Object.values(overrides.audiences)
-  const personalizationOverrides = Object.values(overrides.selectedPersonalizations)
-  const totalOverrides = audienceOverrides.length + personalizationOverrides.length
+  const optimizationOverrides = Object.values(overrides.selectedOptimizations)
+  const totalOverrides = audienceOverrides.length + optimizationOverrides.length
 
   const getAudienceName = (audienceId: string): string => audienceNames[audienceId] ?? audienceId
   const getExperienceName = (experienceId: string): string =>
@@ -48,7 +48,7 @@ export function OverridesSection({
       {
         text: 'Reset',
         onPress: () => {
-          onResetPersonalization(experienceId)
+          onResetOptimization(experienceId)
         },
       },
     ])
@@ -67,8 +67,8 @@ export function OverridesSection({
       {/* Summary */}
       <View style={styles.summary}>
         <Text style={commonStyles.secondaryText}>
-          {audienceOverrides.length} audience override(s), {personalizationOverrides.length}{' '}
-          personalization override(s)
+          {audienceOverrides.length} audience override(s), {optimizationOverrides.length}{' '}
+          optimization override(s)
         </Text>
       </View>
 
@@ -93,11 +93,11 @@ export function OverridesSection({
         </View>
       )}
 
-      {/* Personalization Overrides */}
-      {personalizationOverrides.length > 0 && (
+      {/* Optimization Overrides */}
+      {optimizationOverrides.length > 0 && (
         <View style={styles.subsection}>
-          <Text style={commonStyles.subsectionTitle}>Personalization Overrides</Text>
-          {personalizationOverrides.map((override) => (
+          <Text style={commonStyles.subsectionTitle}>Optimization Overrides</Text>
+          {optimizationOverrides.map((override) => (
             <ListItem
               key={override.experienceId}
               label={getExperienceName(override.experienceId)}

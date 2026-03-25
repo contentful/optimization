@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://www.contentful.com/developers/docs/personalization/">
+  <a href="https://www.contentful.com/developers/docs/optimization/">
     <img alt="Contentful Logo" title="Contentful" src="../../contentful-icon.png" width="150">
   </a>
 </p>
@@ -36,7 +36,7 @@ other SDKs descend from the Core SDK.
   - [Fetch Options](#fetch-options)
   - [Queue Policy Options](#queue-policy-options)
 - [Core Methods](#core-methods)
-  - [Personalization Data Resolution Methods](#personalization-data-resolution-methods)
+  - [Optimization Data Resolution Methods](#optimization-data-resolution-methods)
     - [`getFlag`](#getflag)
     - [`resolveOptimizedEntry`](#resolveoptimizedentry)
     - [`getMergeTagValue`](#getmergetagvalue)
@@ -295,7 +295,7 @@ implementations.
 
 Arguments marked with an asterisk (\*) are always required.
 
-### Personalization Data Resolution Methods
+### Optimization Data Resolution Methods
 
 #### `getFlag`
 
@@ -326,8 +326,8 @@ Behavior notes:
 
 #### `resolveOptimizedEntry`
 
-Resolve a baseline Contentful entry to a personalized variant using the provided selected
-personalizations, or from the current internal state in stateful implementations.
+Resolve a baseline Contentful entry to a optimized variant using the provided selected
+optimizations, or from the current internal state in stateful implementations.
 
 Type arguments:
 
@@ -338,17 +338,17 @@ Type arguments:
 Arguments:
 
 - `entry`\*: The entry to personalize
-- `selectedPersonalizations`: Selected personalizations
+- `selectedOptimizations`: Selected optimizations
 
 Returns:
 
-- The resolved personalized entry variant, or the supplied baseline entry if baseline is the
-  selected variant or a variant cannot be found.
+- The resolved optimized entry variant, or the supplied baseline entry if baseline is the selected
+  variant or a variant cannot be found.
 
 > [!NOTE]
 >
-> If the `selectedPersonalizations` argument is omitted in stateless implementations, the method
-> will return the baseline entry.
+> If the `selectedOptimizations` argument is omitted in stateless implementations, the method will
+> return the baseline entry.
 
 #### `getMergeTagValue`
 
@@ -380,7 +380,7 @@ Only the following methods may return an `OptimizationData` object:
 contains:
 
 - `changes`: Currently used for Custom Flags
-- `selectedPersonalizations`: Selected personalizations for the profile
+- `selectedOptimizations`: Selected optimizations for the profile
 - `profile`: Profile associated with the evaluated events
 
 #### `identify`
@@ -394,7 +394,7 @@ Arguments:
 
 #### `page`
 
-Record a personalization page view.
+Record a optimization page view.
 
 Arguments:
 
@@ -403,7 +403,7 @@ Arguments:
 
 #### `screen`
 
-Record a personalization screen view.
+Record a optimization screen view.
 
 Arguments:
 
@@ -412,7 +412,7 @@ Arguments:
 
 #### `track`
 
-Record a personalization custom track event.
+Record a optimization custom track event.
 
 Arguments:
 
@@ -422,8 +422,8 @@ Arguments:
 #### `trackView`
 
 Record an analytics component view event. When the payload marks the component as "sticky", an
-additional personalization component view is recorded. This method only returns `OptimizationData`
-when the component is marked as "sticky".
+additional optimization component view is recorded. This method only returns `OptimizationData` when
+the component is marked as "sticky".
 
 Arguments:
 
@@ -543,11 +543,10 @@ Available state streams:
 - `eventStream`: Latest emitted Insights or Experience event
   (`AnalyticsEvent | PersonalizationEvent | undefined`)
 - `flag(name)`: Key-scoped flag observable (`Observable<Json>`)
-- `canPersonalize`: Whether personalization selections are available (`boolean`;
-  `selectedPersonalizations !== undefined`)
+- `canOptimize`: Whether optimization selections are available (`boolean`;
+  `selectedOptimizations !== undefined`)
 - `profile`: Current profile (`Profile | undefined`)
-- `selectedPersonalizations`: Current selected personalizations
-  (`SelectedPersonalizationArray | undefined`)
+- `selectedOptimizations`: Current selected optimizations (`SelectedOptimizationArray | undefined`)
 - `previewPanelAttached`: Preview panel attachment state (`boolean`)
 - `previewPanelOpen`: Preview panel open state (`boolean`)
 
@@ -565,7 +564,7 @@ Update behavior:
 - `blockedEventStream` updates whenever a call is blocked by consent guards.
 - `eventStream` updates when a valid event is accepted for send/queue.
 - `flag(name)` updates when the resolved value for that key changes.
-- `canPersonalize` updates whenever `selectedPersonalizations` becomes defined or `undefined`.
+- `canOptimize` updates whenever `selectedOptimizations` becomes defined or `undefined`.
 - `consent` updates from defaults and `optimization.consent(...)`.
 - `previewPanelAttached` and `previewPanelOpen` are controlled by preview tooling and are preserved
   across `reset()`.

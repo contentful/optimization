@@ -114,7 +114,7 @@ Experience/personalization event schemas:
   `BatchExperienceResponse`
 - `Change`: Union of supported change types, which currently only includes `VariableChange`; this
   change type is used for Custom Flags
-- `SelectedPersonalization`: Zod schema describing a selected personalization outcome for a user
+- `SelectedOptimization`: Zod schema describing a selected optimization outcome for a user
 - `Profile`: Zod schema describing a full user profile as received from the Experience API
 
 ## Insights API Schemas

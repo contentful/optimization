@@ -99,8 +99,8 @@ Available config props:
 
 - `useOptimization()` returns the initialized `ContentfulOptimization` instance.
 - `useOptimizationContext()` returns `{ sdk, isReady, error }` without requiring readiness.
-- `useOptimizedEntry({ baselineEntry, liveUpdates })` returns resolved entry data and
-  personalization state for imperative consumers.
+- `useOptimizedEntry({ baselineEntry, liveUpdates })` returns resolved entry data and optimization
+  state for imperative consumers.
 - `useOptimization()` throws if used outside `OptimizationProvider`.
 - `useOptimization()` also throws if the provider exists but the SDK is not ready.
 - `useLiveUpdates()` throws if used outside `LiveUpdatesProvider`.
@@ -342,7 +342,7 @@ import { OptimizedEntry } from '@contentful/optimization-react-web'
 - Wrapper element is configurable with `as: 'div' | 'span'` (defaults to `div`).
 - Wrapper style uses `display: contents` to remain layout-neutral as much as possible.
 - Readiness is inferred automatically:
-  - optimized entries render when `canPersonalize === true`
+  - optimized entries render when `canOptimize === true`
   - baseline entries render when the SDK instance is initialized
 
 #### Loading Fallback
@@ -393,9 +393,9 @@ When resolved content is rendered, the wrapper emits attributes used by
 `@contentful/optimization-web` automatic tracking:
 
 - `data-ctfl-entry-id` (always present on resolved content wrapper)
-- `data-ctfl-personalization-id` (when personalized)
+- `data-ctfl-optimization-id` (when optimized)
 - `data-ctfl-sticky` (when available)
-- `data-ctfl-variant-index` (when personalized)
+- `data-ctfl-variant-index` (when optimized)
 - `data-ctfl-duplication-scope` (when available)
 
 To consume those attributes automatically, enable Web SDK auto-tracking with one of:

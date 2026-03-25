@@ -2,9 +2,9 @@ import { documentToReactComponents, type Options } from '@contentful/rich-text-r
 import { INLINES } from '@contentful/rich-text-types'
 import type { JSX } from 'react'
 import {
-  usePersonalization,
-  type UsePersonalizationResult,
-} from '../optimization/hooks/usePersonalization'
+  useOptimizationResolver,
+  type UseOptimizationResolverResult,
+} from '../optimization/hooks/useOptimizationResolver'
 import type { RichTextDocument } from '../types/contentful'
 import { isRecord } from '../utils/typeGuards'
 
@@ -19,7 +19,7 @@ interface RichTextRendererProps {
   richText: RichTextDocument
 }
 
-type MergeTagValueResolver = UsePersonalizationResult['getMergeTagValue']
+type MergeTagValueResolver = UseOptimizationResolverResult['getMergeTagValue']
 type MergeTagEntry = Parameters<MergeTagValueResolver>[0]
 const EMBEDDED_ENTRY_NODE_TYPE = 'embedded-entry-inline'
 
@@ -84,7 +84,7 @@ export function getRichTextContent(
 }
 
 export function RichTextRenderer({ richText }: RichTextRendererProps): JSX.Element {
-  const { getMergeTagValue } = usePersonalization()
+  const { getMergeTagValue } = useOptimizationResolver()
   const renderOptions: Options = {
     renderNode: {
       [INLINES.EMBEDDED_ENTRY]: (node): string => {

@@ -26,7 +26,7 @@ export function readTrackingDataset(testId: string): DatasetSnapshot | null {
 
   return {
     ctflEntryId: element.dataset.ctflEntryId,
-    ctflPersonalizationId: element.dataset.ctflPersonalizationId,
+    ctflOptimizationId: element.dataset.ctflOptimizationId,
     ctflVariantIndex: element.dataset.ctflVariantIndex,
     ctflSticky: element.dataset.ctflSticky,
     ctflDuplicationScope: element.dataset.ctflDuplicationScope,

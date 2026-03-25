@@ -4,7 +4,7 @@ import {
   CHANGES_CACHE_KEY,
   CONSENT_KEY,
   DEBUG_FLAG_KEY,
-  PERSONALIZATIONS_CACHE_KEY,
+  OPTIMIZATIONS_CACHE_KEY,
   PROFILE_CACHE_KEY,
 } from '@contentful/optimization-core/constants'
 import LocalStore from './LocalStore'
@@ -111,7 +111,7 @@ describe('LocalStore', () => {
     localStorage.setItem(ANONYMOUS_ID_KEY, 'anon')
     localStorage.setItem(CHANGES_CACHE_KEY, '{"foo":1}')
     localStorage.setItem(PROFILE_CACHE_KEY, '{"foo":2}')
-    localStorage.setItem(PERSONALIZATIONS_CACHE_KEY, '{"foo":3}')
+    localStorage.setItem(OPTIMIZATIONS_CACHE_KEY, '{"foo":3}')
 
     LocalStore.reset()
 
@@ -120,7 +120,7 @@ describe('LocalStore', () => {
     expect(localStorage.getItem(ANONYMOUS_ID_KEY)).toBeNull()
     expect(localStorage.getItem(CHANGES_CACHE_KEY)).toBeNull()
     expect(localStorage.getItem(PROFILE_CACHE_KEY)).toBeNull()
-    expect(localStorage.getItem(PERSONALIZATIONS_CACHE_KEY)).toBeNull()
+    expect(localStorage.getItem(OPTIMIZATIONS_CACHE_KEY)).toBeNull()
   })
 
   it('can reset consent/debug when requested', () => {

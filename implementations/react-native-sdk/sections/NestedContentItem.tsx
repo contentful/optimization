@@ -43,7 +43,7 @@ function renderNestedContentItem(resolvedEntry: Entry): React.JSX.Element {
 
 export function NestedContentItem({ entry }: NestedContentItemProps): React.JSX.Element {
   return (
-    <OptimizedEntry entry={entry} testID={`nested-personalization-${entry.sys.id}`}>
+    <OptimizedEntry entry={entry} testID={`nested-optimization-${entry.sys.id}`}>
       {renderNestedContentItem}
     </OptimizedEntry>
   )

@@ -100,7 +100,7 @@ reuse one consistent source.
 - **FR-015**: `Profile` MUST require `id`, `stableId`, `random`, `audiences`, `traits`, `location`,
   and `session`.
 - **FR-016**: `PartialProfile` MUST require `id` and allow additional JSON values via catchall.
-- **FR-017**: `SelectedPersonalization.sticky` MUST default to `false` when omitted.
+- **FR-017**: `SelectedOptimization.sticky` MUST default to `false` when omitted.
 - **FR-018**: `Change` MUST be a discriminated union containing `VariableChange`; `UnknownChange`
   MUST remain available as a separate schema.
 
@@ -113,7 +113,7 @@ reuse one consistent source.
 - **ExperienceResponse / BatchExperienceResponse**: Typed response contracts.
 - **Profile / PartialProfile**: Full profile and partial profile payload schemas.
 - **Change / VariableChange / UnknownChange**: Change contracts for flag/personalization effects.
-- **SelectedPersonalization**: Experience variant selection result schema.
+- **SelectedOptimization**: Experience variant selection result schema.
 
 ## Success Criteria _(mandatory)_
 

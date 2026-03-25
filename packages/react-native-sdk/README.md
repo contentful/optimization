@@ -98,7 +98,7 @@ const optimization = await ContentfulOptimization.create({
 ## Reference Implementation
 
 - [React Native](../../implementations/react-native-sdk/README.md): Example application that
-  displays personalized content, with builds targeted for both Android and iOS
+  displays optimized content, with builds targeted for both Android and iOS
 
 ## Configuration
 
@@ -218,12 +218,12 @@ purposes — views, taps, and variant resolution — not React Native UI compone
 
 ### `<OptimizedEntry />`
 
-A unified component that handles both personalized and non-personalized Contentful entries. It
+A unified component that handles both optimized and non-optimized Contentful entries. It
 automatically:
 
-- Detects whether the entry is personalized (has `nt_experiences` field)
-- Resolves the correct variant for personalized entries based on user profile
-- Passes non-personalized entries through unchanged
+- Detects whether the entry is optimized (has `nt_experiences` field)
+- Resolves the correct variant for optimized entries based on user profile
+- Passes non-optimized entries through unchanged
 - Tracks entry views when visibility and time thresholds are met
 - Tracks taps when enabled
 
@@ -303,7 +303,7 @@ is ideal for:
 `<OptimizedEntry />` supports customizable visibility and time thresholds:
 
 ```typescript
-{/* Personalized entry with custom thresholds */}
+{/* Optimized entry with custom thresholds */}
 <OptimizedEntry
   entry={entry}
   viewTimeMs={3000}      // Track after 3 seconds of visibility
@@ -312,7 +312,7 @@ is ideal for:
   {(resolvedEntry) => <YourComponent data={resolvedEntry.fields} />}
 </OptimizedEntry>
 
-{/* Non-personalized entry with custom thresholds */}
+{/* Non-optimized entry with custom thresholds */}
 <OptimizedEntry
   entry={entry}
   viewTimeMs={1500}      // Track after 1.5 seconds
@@ -545,7 +545,7 @@ panel. The panel allows developers to:
 - Browse and override audience membership
 - Select specific variants for experiences
 - View current profile information
-- Test personalizations without modifying actual user data
+- Test optimizations without modifying actual user data
 
 > [!IMPORTANT]
 >
@@ -576,7 +576,7 @@ panel. The panel allows developers to:
 
 By default, `<OptimizedEntry />` components **lock to the first variant they receive**. This
 prevents UI "flashing" when user actions (like identifying or taking actions that change audience
-membership) cause them to qualify for different personalizations mid-session.
+membership) cause them to qualify for different optimizations mid-session.
 
 ### Default Behavior (Recommended)
 
@@ -678,7 +678,7 @@ The SDK automatically configures:
 
 - **Channel**: `'mobile'`
 - **Library**: `'@contentful/optimization-react-native'`
-- **Storage**: AsyncStorage for persisting changes, consent, profile, and selected personalizations
+- **Storage**: AsyncStorage for persisting changes, consent, profile, and selected optimizations
 - **Event Builders**: Mobile-optimized locale, page properties, and user agent detection
 
 ### Persistence Behavior
@@ -686,7 +686,7 @@ The SDK automatically configures:
 AsyncStorage persistence is best-effort. If AsyncStorage write/remove calls fail, the SDK keeps
 running with in-memory state and retries persistence on future writes.
 
-Structured cached values (`changes`, `profile`, `selectedPersonalizations`) are schema-validated on
+Structured cached values (`changes`, `profile`, `selectedOptimizations`) are schema-validated on
 load and access. Malformed JSON or schema-invalid values are automatically removed from in-memory
 cache and AsyncStorage.
 

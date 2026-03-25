@@ -22,7 +22,7 @@ type StateValue<TKey extends keyof CoreStates> =
 export interface OptimizationStateSnapshot {
   consent: boolean | undefined
   eventStream: StateValue<'eventStream'> | undefined
-  selectedPersonalizations: StateValue<'selectedPersonalizations'> | undefined
+  selectedOptimizations: StateValue<'selectedOptimizations'> | undefined
   previewPanelAttached: boolean | undefined
   previewPanelOpen: boolean | undefined
   profile: StateValue<'profile'> | undefined
@@ -55,7 +55,7 @@ export function useOptimizationState(
 ): OptimizationStateSnapshot {
   const consent = useObservableState(state?.consent)
   const eventStream = useObservableState(state?.eventStream)
-  const selectedPersonalizations = useObservableState(state?.selectedPersonalizations)
+  const selectedOptimizations = useObservableState(state?.selectedOptimizations)
   const previewPanelAttached = useObservableState(state?.previewPanelAttached)
   const previewPanelOpen = useObservableState(state?.previewPanelOpen)
   const profile = useObservableState(state?.profile)
@@ -63,7 +63,7 @@ export function useOptimizationState(
   return {
     consent,
     eventStream,
-    selectedPersonalizations,
+    selectedOptimizations,
     previewPanelAttached,
     previewPanelOpen,
     profile,

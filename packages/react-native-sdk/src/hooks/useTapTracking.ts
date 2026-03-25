@@ -1,4 +1,4 @@
-import type { SelectedPersonalization } from '@contentful/optimization-core/api-schemas'
+import type { SelectedOptimization } from '@contentful/optimization-core/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-core/logger'
 import type { Entry } from 'contentful'
 import { useCallback, useRef } from 'react'
@@ -28,9 +28,9 @@ export interface UseTapTrackingOptions {
   entry: Entry
 
   /**
-   * Personalization data for variant tracking. Omit for baseline/non-personalized entries.
+   * Selected optimization data for variant tracking. Omit for baseline/non-optimized entries.
    */
-  personalization?: SelectedPersonalization
+  selectedOptimization?: SelectedOptimization
 
   /**
    * Whether tap tracking is enabled for this component.
@@ -62,7 +62,7 @@ export interface UseTapTrackingReturn {
  * Detects taps on a View and emits analytics events (internally named `component_click`
  * for cross-platform consistency with the web SDK).
  *
- * @param options - Tracking options including the entry, personalization data, and enabled state.
+ * @param options - Tracking options including the entry, selected optimization data, and enabled state.
  * @returns {@link UseTapTrackingReturn} with touch handlers to spread onto a View,
  *   or `undefined` handlers when tracking is disabled.
  *
@@ -94,7 +94,7 @@ export interface UseTapTrackingReturn {
  */
 export function useTapTracking({
   entry,
-  personalization,
+  selectedOptimization,
   enabled,
   onTap,
 }: UseTapTrackingOptions): UseTapTrackingReturn {
@@ -106,7 +106,7 @@ export function useTapTracking({
 
   const { componentId, experienceId, variantIndex } = extractTrackingMetadata(
     entry,
-    personalization,
+    selectedOptimization,
   )
 
   const handleTouchStart = useCallback((e: GestureResponderEvent) => {

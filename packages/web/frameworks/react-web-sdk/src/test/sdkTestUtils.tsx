@@ -1,4 +1,4 @@
-import type { SelectedPersonalizationArray } from '@contentful/optimization-web/api-schemas'
+import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import type { ReactElement, ReactNode } from 'react'
@@ -12,10 +12,10 @@ import { OptimizationContext } from '../context/OptimizationContext'
 import type { UseOptimizationResult } from '../hooks/useOptimization'
 
 export type TestEntry = Entry
-export type PersonalizationState = SelectedPersonalizationArray | undefined
+export type SelectedOptimizationState = SelectedOptimizationArray | undefined
 export type ResolveOptimizedEntry = (
   entry: TestEntry,
-  selectedPersonalizations: PersonalizationState,
+  selectedOptimizations: SelectedOptimizationState,
 ) => ResolvedData<EntrySkeletonType>
 
 interface Subscription {
@@ -32,8 +32,8 @@ type RuntimeSubscriber<T> = (value: T) => void
 export interface RuntimeOptimization extends OptimizationSdk {
   resolveOptimizedEntry: ResolveOptimizedEntry
   states: OptimizationSdk['states'] & {
-    canPersonalize: ObservableLike<boolean>
-    selectedPersonalizations: ObservableLike<PersonalizationState>
+    canOptimize: ObservableLike<boolean>
+    selectedOptimizations: ObservableLike<SelectedOptimizationState>
   }
 }
 
@@ -68,7 +68,7 @@ export function createTestEntry(id: string): TestEntry {
   }
 }
 
-export function createPersonalizableTestEntry(id: string): TestEntry {
+export function createOptimizableTestEntry(id: string): TestEntry {
   const entry = createTestEntry(id)
   entry.fields = {
     ...entry.fields,
@@ -97,14 +97,14 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
     reset: () => undefined,
     states: {
       blockedEventStream: createObservable(undefined),
-      canPersonalize: createObservable(false),
+      canOptimize: createObservable(false),
       consent: createObservable(undefined),
       eventStream: createObservable(undefined),
       flag: () => createObservable(undefined),
       previewPanelAttached: createObservable(false),
       previewPanelOpen: createObservable(false),
       profile: createObservable(undefined),
-      selectedPersonalizations: createObservable(undefined),
+      selectedOptimizations: createObservable(undefined),
       ...stateOverrides,
     },
     track: async () => {
@@ -132,51 +132,51 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
 }
 
 export function createRuntime(resolveOptimizedEntry: ResolveOptimizedEntry): {
-  emit: (value: PersonalizationState) => Promise<void>
+  emit: (value: SelectedOptimizationState) => Promise<void>
   optimization: RuntimeOptimization
 } {
-  const selectedPersonalizationSubscribers = new Set<RuntimeSubscriber<PersonalizationState>>()
-  const canPersonalizeSubscribers = new Set<RuntimeSubscriber<boolean>>()
-  let current: PersonalizationState = undefined
-  let canPersonalize = false
+  const selectedOptimizationSubscribers = new Set<RuntimeSubscriber<SelectedOptimizationState>>()
+  const canOptimizeSubscribers = new Set<RuntimeSubscriber<boolean>>()
+  let current: SelectedOptimizationState = undefined
+  let canOptimize = false
 
   const optimization = createOptimizationSdk({
     resolveOptimizedEntry,
     states: {
-      canPersonalize: {
+      canOptimize: {
         get current() {
-          return canPersonalize
+          return canOptimize
         },
         subscribe(next: RuntimeSubscriber<boolean>) {
-          canPersonalizeSubscribers.add(next)
-          next(canPersonalize)
+          canOptimizeSubscribers.add(next)
+          next(canOptimize)
 
           return {
             unsubscribe() {
-              canPersonalizeSubscribers.delete(next)
+              canOptimizeSubscribers.delete(next)
             },
           }
         },
         subscribeOnce(next: RuntimeSubscriber<boolean>) {
-          next(canPersonalize)
+          next(canOptimize)
           return { unsubscribe: () => undefined }
         },
       },
-      selectedPersonalizations: {
+      selectedOptimizations: {
         get current() {
           return current
         },
-        subscribe(next: RuntimeSubscriber<PersonalizationState>) {
-          selectedPersonalizationSubscribers.add(next)
+        subscribe(next: RuntimeSubscriber<SelectedOptimizationState>) {
+          selectedOptimizationSubscribers.add(next)
           next(current)
 
           return {
             unsubscribe() {
-              selectedPersonalizationSubscribers.delete(next)
+              selectedOptimizationSubscribers.delete(next)
             },
           }
         },
-        subscribeOnce(next: (value: NonNullable<PersonalizationState>) => void) {
+        subscribeOnce(next: (value: NonNullable<SelectedOptimizationState>) => void) {
           if (current !== undefined) {
             next(current)
           }
@@ -186,16 +186,16 @@ export function createRuntime(resolveOptimizedEntry: ResolveOptimizedEntry): {
     },
   }) as RuntimeOptimization
 
-  async function emit(value: PersonalizationState): Promise<void> {
+  async function emit(value: SelectedOptimizationState): Promise<void> {
     current = value
-    canPersonalize = value !== undefined
+    canOptimize = value !== undefined
 
     await act(async () => {
       await Promise.resolve()
-      canPersonalizeSubscribers.forEach((subscriber) => {
-        subscriber(canPersonalize)
+      canOptimizeSubscribers.forEach((subscriber) => {
+        subscriber(canOptimize)
       })
-      selectedPersonalizationSubscribers.forEach((subscriber) => {
+      selectedOptimizationSubscribers.forEach((subscriber) => {
         subscriber(value)
       })
     })

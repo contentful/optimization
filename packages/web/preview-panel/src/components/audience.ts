@@ -2,7 +2,7 @@ import type {
   AudienceEntry,
   OptimizationEntry,
   Profile,
-  SelectedPersonalizationArray,
+  SelectedOptimizationArray,
 } from '@contentful/optimization-web/api-schemas'
 import { consume } from '@lit/context'
 import { css, html, LitElement, nothing, type PropertyValues, type TemplateResult } from 'lit'
@@ -140,9 +140,9 @@ export class Audience extends LitElement {
   @property({ attribute: false })
   accessor optimizations: OptimizationEntry[] = []
 
-  /** Default selected personalizations before any overrides are applied. */
+  /** Default selected optimizations before any overrides are applied. */
   @property({ attribute: false })
-  accessor defaultSelectedPersonalizations: SelectedPersonalizationArray = []
+  accessor defaultSelectedOptimizations: SelectedOptimizationArray = []
 
   /** Visitor profile consumed from the parent panel context. */
   @consume({ context: profileContext, subscribe: true })
@@ -260,13 +260,13 @@ export class Audience extends LitElement {
     const nextDefaults: Record<string, number> = Object.fromEntries(
       this.optimizations
         .map((optimization): [string, number] => {
-          const defaultSelectedPersonalization = this.defaultSelectedPersonalizations.find(
+          const defaultSelectedOptimization = this.defaultSelectedOptimizations.find(
             (selected) => selected.experienceId === optimization.fields.nt_experience_id,
           )
-          if (!defaultSelectedPersonalization) return ['', 0]
+          if (!defaultSelectedOptimization) return ['', 0]
           return [
-            defaultSelectedPersonalization.experienceId,
-            defaultSelectedPersonalization.variantIndex,
+            defaultSelectedOptimization.experienceId,
+            defaultSelectedOptimization.variantIndex,
           ]
         })
         .filter(([key]) => key.length > 0),
@@ -290,7 +290,7 @@ export class Audience extends LitElement {
 
     if (
       changed.has('optimizations') ||
-      changed.has('defaultSelectedPersonalizations') ||
+      changed.has('defaultSelectedOptimizations') ||
       changed.has('overrides')
     )
       this._syncValuesByKey()

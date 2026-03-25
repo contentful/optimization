@@ -10,7 +10,7 @@
 
 ### User Story 1 - Initialize Runtime State from Persisted Storage (Priority: P1)
 
-As a Web SDK integrator, I need consent, profile, changes, selected personalizations, and anonymous
+As a Web SDK integrator, I need consent, profile, changes, selected optimizations, and anonymous
 identity restored from browser persistence so user context survives page reloads.
 
 **Why this priority**: Persisted state continuity is required for stable personalization behavior.
@@ -20,7 +20,7 @@ verify merged defaults plus anonymous ID cookie initialization behavior.
 
 **Acceptance Scenarios**:
 
-1. **Given** persisted localStorage values for consent/profile/changes/selected personalizations,
+1. **Given** persisted localStorage values for consent/profile/changes/selected optimizations,
    **When** `ContentfulOptimization` is created, **Then** merged defaults use those values.
 2. **Given** a legacy anonymous ID cookie, **When** initialization runs, **Then** the legacy cookie
    is removed.
@@ -37,9 +37,8 @@ API responses and consent actions are persisted automatically.
 
 **Why this priority**: Without synchronization effects, persisted state diverges from runtime state.
 
-**Independent Test**: Update core signals (`consent`, `profile`, `changes`,
-`selectedPersonalizations`) and assert corresponding LocalStore/cookie writes and consent-gated
-interaction runtime behavior.
+**Independent Test**: Update core signals (`consent`, `profile`, `changes`, `selectedOptimizations`)
+and assert corresponding LocalStore/cookie writes and consent-gated interaction runtime behavior.
 
 **Acceptance Scenarios**:
 
@@ -47,8 +46,8 @@ interaction runtime behavior.
    latest value.
 2. **Given** `signals.profile` updates with `profile.id`, **When** effects run, **Then** anonymous
    ID cookie and `LocalStore.anonymousId` are updated.
-3. **Given** `signals.selectedPersonalizations` updates, **When** effects run, **Then**
-   `LocalStore.selectedPersonalizations` reflects latest value.
+3. **Given** `signals.selectedOptimizations` updates, **When** effects run, **Then**
+   `LocalStore.selectedOptimizations` reflects latest value.
 4. **Given** `signals.consent` updates and auto-tracked entry interactions are configured, **When**
    consent changes, **Then** configured interactions are synchronized through
    `syncAutoTrackedEntryInteractions(!!consent)`.
@@ -95,8 +94,8 @@ throws and expected cleanup behavior.
 ### Functional Requirements
 
 - **FR-001**: Web config merging MUST default `defaults.consent`, `.changes`, `.profile`, and
-  `.personalizations` from LocalStore (`consent`, `changes`, `profile`, `selectedPersonalizations`)
-  when these defaults are omitted by the caller.
+  `.selectedOptimizations` from LocalStore (`consent`, `changes`, `profile`,
+  `selectedOptimizations`) when these defaults are omitted by the caller.
 - **FR-002**: `ContentfulOptimization` MUST read current and legacy anonymous ID cookies during
   construction.
 - **FR-003**: Initialization MUST remove legacy anonymous ID cookie when present.
@@ -111,8 +110,8 @@ throws and expected cleanup behavior.
 - **FR-009**: Effects MUST synchronize `signals.consent.value` to `LocalStore.consent`.
 - **FR-010**: Effects MUST synchronize `signals.profile.value` to `LocalStore.profile`.
 - **FR-011**: Profile synchronization MUST call anonymous ID persistence with `profile?.id`.
-- **FR-012**: Effects MUST synchronize `signals.selectedPersonalizations.value` to
-  `LocalStore.selectedPersonalizations`.
+- **FR-012**: Effects MUST synchronize `signals.selectedOptimizations.value` to
+  `LocalStore.selectedOptimizations`.
 - **FR-013**: Consent synchronization MUST gate automatic tracked entry interactions via
   `syncAutoTrackedEntryInteractions(!!consent)`.
 - **FR-014**: `ContentfulOptimization.reset()` MUST reset entry interaction runtime state, clear
@@ -127,7 +126,7 @@ throws and expected cleanup behavior.
   persist strings verbatim and non-strings as JSON.
 - **FR-020**: `LocalStore.setCache()` MUST swallow storage persistence exceptions and log warnings.
 - **FR-021**: `LocalStore.reset()` MUST clear anonymous ID, changes, profile, and selected
-  personalizations, and MUST clear consent/debug only when reset options request it.
+  optimizations, and MUST clear consent/debug only when reset options request it.
 - **FR-022**: `LocalStore.consent` translation MUST persist booleans as `'accepted'|'denied'` and
   read unknown stored values as `undefined`.
 
@@ -145,7 +144,7 @@ throws and expected cleanup behavior.
 
 - **SC-001**: State initialization checks confirm persisted LocalStore defaults are restored and
   anonymous ID cookie initialization behavior is applied.
-- **SC-002**: Signal synchronization tests confirm consent/profile/changes/selectedPersonalizations
+- **SC-002**: Signal synchronization tests confirm consent/profile/changes/selectedOptimizations
   writes are persisted automatically and consent gates configured auto-tracked interactions.
 - **SC-003**: Reset tests confirm anonymous ID cleanup, LocalStore cleanup, entry interaction
   runtime reset, and core reset delegation.

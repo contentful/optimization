@@ -1,4 +1,4 @@
-import type { SelectedPersonalization } from '@contentful/optimization-web/api-schemas'
+import type { SelectedOptimization } from '@contentful/optimization-web/api-schemas'
 import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import type { ReactNode } from 'react'
@@ -50,7 +50,7 @@ export function resolveChildren(children: OptimizedEntryChildren, entry: Entry):
   return children(entry)
 }
 
-export function hasPersonalizationReferences(entry: Entry): boolean {
+export function hasOptimizationReferences(entry: Entry): boolean {
   const { fields } = entry
   const { nt_experiences: ntExperiences } = fields
 
@@ -62,11 +62,13 @@ export function hasPersonalizationReferences(entry: Entry): boolean {
 }
 
 function resolveDuplicationScope(
-  personalization: SelectedPersonalization | undefined,
+  selectedOptimization: SelectedOptimization | undefined,
 ): string | undefined {
   const candidate =
-    personalization && typeof personalization === 'object' && 'duplicationScope' in personalization
-      ? personalization.duplicationScope
+    selectedOptimization &&
+    typeof selectedOptimization === 'object' &&
+    'duplicationScope' in selectedOptimization
+      ? selectedOptimization.duplicationScope
       : undefined
 
   if (typeof candidate !== 'string') {
@@ -94,19 +96,19 @@ export function resolveTrackingAttributes(
   resolvedData: ResolvedData<EntrySkeletonType>,
 ): Record<string, string | undefined> {
   const {
-    personalization,
+    selectedOptimization,
     entry: {
       sys: { id: entryId },
     },
   } = resolvedData
 
   return {
-    'data-ctfl-duplication-scope': resolveDuplicationScope(personalization),
+    'data-ctfl-duplication-scope': resolveDuplicationScope(selectedOptimization),
     'data-ctfl-entry-id': entryId,
-    'data-ctfl-personalization-id': personalization?.experienceId,
+    'data-ctfl-optimization-id': selectedOptimization?.experienceId,
     'data-ctfl-sticky':
-      personalization?.sticky === undefined ? undefined : String(personalization.sticky),
-    'data-ctfl-variant-index': String(personalization?.variantIndex ?? 0),
+      selectedOptimization?.sticky === undefined ? undefined : String(selectedOptimization.sticky),
+    'data-ctfl-variant-index': String(selectedOptimization?.variantIndex ?? 0),
   }
 }
 

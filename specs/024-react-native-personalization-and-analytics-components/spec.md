@@ -8,20 +8,19 @@
 
 ## User Scenarios & Testing _(mandatory)_
 
-### User Story 1 - Resolve Personalized Content and Attach Interaction Tracking (Priority: P1)
+### User Story 1 - Resolve Optimized Content and Attach Interaction Tracking (Priority: P1)
 
 As an app developer, I need `Personalization` to resolve baseline/variant content and attach view
 and tap tracking handlers so rendering and analytics stay synchronized.
 
-**Why this priority**: Personalized rendering and interaction tracking are the primary SDK value
-path.
+**Why this priority**: Optimized rendering and interaction tracking are the primary SDK value path.
 
 **Independent Test**: Render `Personalization`, simulate personalization-state emissions, and verify
 resolved entry output plus tracking-hook inputs.
 
 **Acceptance Scenarios**:
 
-1. **Given** a baseline entry and selected personalizations, **When** render resolves, **Then**
+1. **Given** a baseline entry and selected optimizations, **When** render resolves, **Then**
    `children` receives `contentfulOptimization.resolveOptimizedEntry(...).entry`.
 2. **Given** no applicable personalization, **When** render resolves, **Then** baseline entry is
    rendered.
@@ -50,16 +49,16 @@ global `liveUpdates`, and personalization-state emissions.
    component uses live-update behavior regardless of other settings.
 2. **Given** preview panel hidden and component `liveUpdates` provided, **When** updates emit,
    **Then** component-level value overrides global live-updates context.
-3. **Given** live updates are disabled, **When** first non-`undefined` personalizations value
-   arrives, **Then** component locks to that value and ignores later updates.
-4. **Given** live updates are enabled, **When** personalizations stream emits, **Then** component
-   state is replaced on every emission.
+3. **Given** live updates are disabled, **When** first non-`undefined` optimizations value arrives,
+   **Then** component locks to that value and ignores later updates.
+4. **Given** live updates are enabled, **When** optimizations stream emits, **Then** component state
+   is replaced on every emission.
 5. **Given** component unmount, **When** teardown runs, **Then** personalization subscription is
    unsubscribed.
 
 ---
 
-### User Story 3 - Track Non-Personalized Content and Navigation Screens (Priority: P2)
+### User Story 3 - Track Non-Optimized Content and Navigation Screens (Priority: P2)
 
 As an analytics integrator, I need `Analytics` and `OptimizationNavigationContainer` to provide
 low-boilerplate component and screen tracking.
@@ -89,8 +88,8 @@ and route transitions, and verify payload behavior.
 
 - `trackViews` and `trackTaps` per-component props override `InteractionTrackingContext` defaults.
 - `onTap` implicitly enables tap tracking unless `trackTaps` is explicitly `false`.
-- `Personalization` locks only after first non-`undefined` personalizations value when live updates
-  are off.
+- `Personalization` locks only after first non-`undefined` optimizations value when live updates are
+  off.
 - Navigation param serialization uses `JSON.parse(JSON.stringify(params))` plus `z.json().parse` and
   can throw for invalid/non-serializable params.
 - `OptimizationNavigationContainer` always includes `properties.name` in tracked screen properties.
@@ -104,8 +103,8 @@ and route transitions, and verify payload behavior.
 - **FR-002**: `Personalization` MUST compute `shouldLiveUpdate` as:
   `previewPanelVisible === true || (liveUpdates ?? globalLiveUpdates ?? false)`.
 - **FR-003**: `Personalization` MUST subscribe to
-  `contentfulOptimization.states.selectedPersonalizations`.
-- **FR-004**: `Personalization` MUST unsubscribe from selected-personalizations subscription on
+  `contentfulOptimization.states.selectedOptimizations`.
+- **FR-004**: `Personalization` MUST unsubscribe from selected-optimizations subscription on
   unmount.
 - **FR-005**: When `shouldLiveUpdate` is true, `Personalization` MUST replace local personalization
   state on each emission.

@@ -1,6 +1,6 @@
 import * as z from 'zod/mini'
 import { ChangeArray } from './change'
-import { SelectedPersonalizationArray } from './personalization'
+import { SelectedOptimizationArray } from './optimization'
 import { Profile } from './profile'
 import { ResponseEnvelope } from './ResponseEnvelope'
 
@@ -8,7 +8,7 @@ import { ResponseEnvelope } from './ResponseEnvelope'
  * Zod schema describing the `data` payload of a standard Experience API response.
  *
  * @remarks
- * Contains the evaluated profile, selected personalizations, and computed
+ * Contains the evaluated profile, selected optimizations, and computed
  * changes that should be applied on the client.
  *
  * @public
@@ -22,9 +22,9 @@ export const ExperienceData = z.object({
   /**
    * Selected experiences and variants for the profile.
    *
-   * @see {@link SelectedPersonalizationArray}
+   * @see {@link SelectedOptimizationArray}
    */
-  experiences: SelectedPersonalizationArray,
+  experiences: SelectedOptimizationArray,
 
   /**
    * Currently used for Custom Flags.
@@ -63,13 +63,13 @@ export type ExperienceResponse = z.infer<typeof ExperienceResponse>
  *
  * @remarks
  * This type mirrors {@link ExperienceData} but replaces the `experiences`
- * field with `personalizations` while preserving the rest of the structure.
+ * field with `selectedOptimizations` while preserving the rest of the structure.
  *
  * @public
  */
 export type OptimizationData = Omit<ExperienceData, 'experiences'> & {
   /**
-   * Selected personalizations for the profile.
+   * Selected optimizations for the profile.
    */
-  selectedPersonalizations: SelectedPersonalizationArray
+  selectedOptimizations: SelectedOptimizationArray
 }

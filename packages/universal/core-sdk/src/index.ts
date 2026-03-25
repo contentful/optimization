@@ -1,5 +1,5 @@
 /**
- * Optimization Core SDK — platform-agnostic personalization and analytics.
+ * Optimization Core SDK — platform-agnostic optimization and analytics.
  *
  * @packageDocumentation
  */

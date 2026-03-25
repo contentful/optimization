@@ -1,7 +1,7 @@
-import type { SelectedPersonalizationArray } from '@contentful/optimization-web/api-schemas'
+import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { useOptimization } from '../optimization/hooks/useOptimization'
-import { usePersonalization } from '../optimization/hooks/usePersonalization'
+import { useOptimizationResolver } from '../optimization/hooks/useOptimizationResolver'
 import { useLiveUpdates } from '../optimization/liveUpdates/LiveUpdatesContext'
 import type { ContentfulEntry } from '../types/contentful'
 
@@ -17,10 +17,10 @@ export function LiveUpdatesExampleEntry({
   testIdPrefix,
 }: LiveUpdatesExampleEntryProps): JSX.Element {
   const { sdk, isReady } = useOptimization()
-  const { resolveEntry } = usePersonalization()
+  const { resolveEntry } = useOptimizationResolver()
   const liveUpdatesContext = useLiveUpdates()
-  const [lockedSelectedPersonalizations, setLockedSelectedPersonalizations] = useState<
-    SelectedPersonalizationArray | undefined
+  const [lockedSelectedOptimizations, setLockedSelectedOptimizations] = useState<
+    SelectedOptimizationArray | undefined
   >(undefined)
 
   const shouldLiveUpdate =
@@ -29,26 +29,24 @@ export function LiveUpdatesExampleEntry({
 
   useEffect(() => {
     if (!isReady || sdk === undefined) {
-      setLockedSelectedPersonalizations(undefined)
+      setLockedSelectedOptimizations(undefined)
       return
     }
 
-    const subscription = sdk.states.selectedPersonalizations.subscribe(
-      (nextSelectedPersonalizations) => {
-        if (shouldLiveUpdate) {
-          setLockedSelectedPersonalizations(nextSelectedPersonalizations)
-          return
+    const subscription = sdk.states.selectedOptimizations.subscribe((nextSelectedOptimizations) => {
+      if (shouldLiveUpdate) {
+        setLockedSelectedOptimizations(nextSelectedOptimizations)
+        return
+      }
+
+      setLockedSelectedOptimizations((currentSelectedOptimizations) => {
+        if (currentSelectedOptimizations === undefined && nextSelectedOptimizations !== undefined) {
+          return nextSelectedOptimizations
         }
 
-        setLockedSelectedPersonalizations((currentPersonalizations) => {
-          if (currentPersonalizations === undefined && nextSelectedPersonalizations !== undefined) {
-            return nextSelectedPersonalizations
-          }
-
-          return currentPersonalizations
-        })
-      },
-    )
+        return currentSelectedOptimizations
+      })
+    })
 
     return () => {
       subscription.unsubscribe()
@@ -56,8 +54,8 @@ export function LiveUpdatesExampleEntry({
   }, [isReady, sdk, shouldLiveUpdate])
 
   const { entry: resolvedEntry } = useMemo(
-    () => resolveEntry(baselineEntry, lockedSelectedPersonalizations),
-    [baselineEntry, lockedSelectedPersonalizations, resolveEntry],
+    () => resolveEntry(baselineEntry, lockedSelectedOptimizations),
+    [baselineEntry, lockedSelectedOptimizations, resolveEntry],
   )
 
   const text =

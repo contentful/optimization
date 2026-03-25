@@ -27,7 +27,7 @@ export type OptimizedEntryRenderProp = RenderProp
 export interface OptimizedEntryProps {
   /**
    * The baseline Contentful entry fetched with `include: 10`.
-   * Must include `nt_experiences` field with linked personalization data.
+   * Must include `nt_experiences` field with linked optimization data.
    */
   baselineEntry: Entry
   /**
@@ -35,7 +35,7 @@ export interface OptimizedEntryProps {
    */
   children: OptimizedEntryChildren
   /**
-   * Whether this component should react to personalization state changes in real-time.
+   * Whether this component should react to optimization state changes in real-time.
    * When `undefined`, inherits from the `liveUpdates` prop on {@link OptimizationRoot}.
    */
   liveUpdates?: boolean
@@ -53,7 +53,7 @@ export interface OptimizedEntryProps {
    */
   'data-testid'?: string
   /**
-   * Optional fallback rendered while personalization state is unresolved.
+   * Optional fallback rendered while optimization state is unresolved.
    */
   loadingFallback?: OptimizedEntryLoadingFallback
 }

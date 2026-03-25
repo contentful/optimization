@@ -24,15 +24,15 @@ default-value application, reset behavior, and observable contracts.
 1. **Given** one active `CoreStateful` instance, **When** a second instance is created before
    `destroy()`, **Then** creation fails with singleton-lock error.
 2. **Given** `defaults` in config, **When** `CoreStateful` initializes, **Then**
-   `consent`/`profile`/`changes`/`selectedPersonalizations` defaults are applied to shared signals.
+   `consent`/`profile`/`changes`/`selectedOptimizations` defaults are applied to shared signals.
 3. **Given** `core.states`, **When** state observables are read, **Then** the surface includes
-   `consent`, `blockedEventStream`, `eventStream`, `flags`, `canPersonalize`, `profile`,
-   `selectedPersonalizations`, `previewPanelAttached`, and `previewPanelOpen`.
+   `consent`, `blockedEventStream`, `eventStream`, `flags`, `canOptimize`, `profile`,
+   `selectedOptimizations`, `previewPanelAttached`, and `previewPanelOpen`.
 4. **Given** repeated access to `core.states`, **When** the property is read multiple times,
    **Then** the same stable states object reference is returned.
 5. **Given** `core.reset()` after preview panel signals were set, **When** reset completes, **Then**
-   `blockedEvent`/`event`/`changes`/`profile`/`selectedPersonalizations` are cleared while
-   `consent`, `previewPanelAttached`, and `previewPanelOpen` remain unchanged.
+   `blockedEvent`/`event`/`changes`/`profile`/`selectedOptimizations` are cleared while `consent`,
+   `previewPanelAttached`, and `previewPanelOpen` remain unchanged.
 6. **Given** a state observable, **When** `current`, `subscribe`, and `subscribeOnce` are used,
    **Then** values are deep-cloned snapshots and `subscribeOnce` emits only the first non-nullish
    value.
@@ -98,8 +98,8 @@ retry scheduling, circuit windows, and recovery callbacks.
 - `destroy()` is idempotent and releases singleton ownership only for the owning instance.
 - `registerPreviewPanel()` sets symbol-keyed bridge values (`signals`, `signalFns`) but does not
   toggle `previewPanelAttached`/`previewPanelOpen`.
-- `canPersonalize` is derived from `selectedPersonalizations !== undefined`; an empty array still
-  yields `true`.
+- `canOptimize` is derived from `selectedOptimizations !== undefined`; an empty array still yields
+  `true`.
 - `CoreStateful.reset()` clears selected signal values only; it does not directly clear internal
   Insights queue maps or Experience offline queue sets.
 - `CoreStateful.flush()` has no force option and always awaits Insights flush before Experience
@@ -124,13 +124,13 @@ retry scheduling, circuit windows, and recovery callbacks.
   using shared `api`, `eventBuilder`, `interceptors`, and forwarded stateful config
   (`allowedEventTypes`, `onEventBlocked`, defaults, queue policy, and optional `getAnonymousId`).
 - **FR-006**: `CoreStateful.states` MUST expose observables for `consent`, `blockedEventStream`,
-  `eventStream`, `flags`, `canPersonalize`, `profile`, `selectedPersonalizations`,
-  `previewPanelAttached`, and `previewPanelOpen`.
+  `eventStream`, `flags`, `canOptimize`, `profile`, `selectedOptimizations`, `previewPanelAttached`,
+  and `previewPanelOpen`.
 - **FR-007**: `CoreStateful.states` MUST remain a stable object reference for the instance lifetime.
 - **FR-008**: `CoreStateful.consent(accept)` MUST set the shared consent signal to the provided
   boolean value.
 - **FR-009**: `CoreStateful.reset()` MUST clear `blockedEvent`, `event`, `changes`, `profile`, and
-  `selectedPersonalizations` signals.
+  `selectedOptimizations` signals.
 - **FR-010**: `CoreStateful.reset()` MUST NOT clear `consent`, `previewPanelAttached`, or
   `previewPanelOpen`.
 - **FR-011**: `CoreStateful.flush()` MUST sequentially await Insights flush then Experience flush.
@@ -166,7 +166,7 @@ retry scheduling, circuit windows, and recovery callbacks.
   truthy value, otherwise fallback to `profile.id` from shared signal state.
 - **FR-027**: Experience state updates from responses MUST run through `interceptors.state` before
   updating signals.
-- **FR-028**: Signal updates for `changes`, `profile`, and `selectedPersonalizations` MUST be
+- **FR-028**: Signal updates for `changes`, `profile`, and `selectedOptimizations` MUST be
   deep-equality aware and skip redundant assignments.
 - **FR-029**: `QueueFlushRuntime.shouldSkip()` MUST always block in-flight flushes and, unless
   forced, MUST gate flushes for offline state, active backoff windows, and open circuits.
@@ -180,7 +180,7 @@ retry scheduling, circuit windows, and recovery callbacks.
 
 - **CoreStateful**: Runtime singleton coordinating stateful Insights and Experience delivery.
 - **CoreStates**: Observable contract for consent, blocked/event streams, flags, profile,
-  selected-personalization state, derived `canPersonalize`, and preview panel signals.
+  selected-personalization state, derived `canOptimize`, and preview panel signals.
 - **Insights Queue**: Profile-grouped in-memory queue with auto-flush and retry/circuit controls.
 - **Experience Offline Queue**: Ordered set of Experience events retained while offline.
 - **QueueFlushRuntime**: Shared retry/backoff/circuit state machine used by stateful products.

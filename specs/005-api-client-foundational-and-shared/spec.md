@@ -85,7 +85,7 @@ exports correctly.
 ### Functional Requirements
 
 - **FR-001**: `ApiClientConfig` MUST include `clientId`, optional `environment`, optional
-  `fetchOptions`, and optional `personalization`/`analytics` per-client overrides.
+  `fetchOptions`, and optional `experience`/`insights` per-client overrides.
 - **FR-002**: `ApiClient` MUST construct `ExperienceApiClient` and `InsightsApiClient` using shared
   config merged with respective per-client overrides.
 - **FR-003**: Top-level `ApiClientConfig` MUST NOT type a shared `baseUrl`; base URLs are
