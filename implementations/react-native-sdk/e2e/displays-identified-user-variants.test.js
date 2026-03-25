@@ -131,7 +131,7 @@ describe('identified user', () => {
     })
   })
 
-  describe('nested personalization variants', () => {
+  describe('nested optimization variants', () => {
     it('should display level 0 nested variant for return visitors', async () => {
       await waitFor(element(by.id('entry-text-2KIWllNZJT205BwOSkMINg')))
         .toBeVisible()

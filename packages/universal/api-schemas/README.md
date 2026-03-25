@@ -54,9 +54,9 @@ Consult [Zod's documentation](https://zod.dev/basics) for more information on wo
 ## Contentful CDA Schemas
 
 These schemas assist in determining whether Contentful content entries provided by the CDA and its
-SDK are valid for personalization. These schemas do not encapsulate all features and functionality
+SDK are valid for optimization. These schemas do not encapsulate all features and functionality
 specified in the CDA SDK's exported TypeScript type system, but strive to remain compatible enough
-for the purposes of personalization.
+for the purposes of optimization.
 
 ### Essential Schemas
 
@@ -85,19 +85,18 @@ requests conform to current API specifications.
 
 ### Essential Experience API Request Schemas
 
-- `ExperienceRequestData`: Zod schema describing the data payload for an experience request
-- `BatchExperienceRequestData`: Zod schema describing the data payload for a batch experience
+- `ExperienceRequestData`: Zod schema describing the data payload for an Experience API request
+- `BatchExperienceRequestData`: Zod schema describing the data payload for a batch Experience API
   request; requires at least one batch event
-- `ExperienceEvent`: Zod schema union of supported experience/personalization events
-- `BatchExperienceEvent`: Zod schema describing each valid experience/personalization event within a
-  batch; Similar to `ExperienceEvent`, but with an additional `anonymousId` member on each event
-  schema
+- `ExperienceEvent`: Zod schema union of supported Experience API events
+- `BatchExperienceEvent`: Zod schema describing each valid Experience API event within a batch;
+  Similar to `ExperienceEvent`, but with an additional `anonymousId` member on each event schema
 
-Experience/personalization event schemas:
+Experience API event schemas:
 
 - `AliasEvent`: Zod schema describing an `alias` event
-- `ViewEvent`: Zod schema describing a `component` view event (may be a Contentful entry or a Custom
-  Flag)
+- `ViewEvent`: Zod schema describing a `component` view event used for entry and Custom Flag
+  exposure tracking
 - `GroupEvent`: Zod schema describing a `group` event
 - `IdentifyEvent`: Zod schema describing an `identify` event
 - `PageViewEvent`: Zod schema describing a `page` view event
@@ -108,8 +107,8 @@ Experience/personalization event schemas:
 
 - `ExperienceResponse`: Zod schema describing a full Experience API response; includes a `data`
   object with `changes`, `experiences`, and `profile` properties
-- `BatchExperienceResponse`: Zod schema describing a batch experience response from the Experience
-  API; includes a `data` payload described by `BatchExperienceResponseData`
+- `BatchExperienceResponse`: Zod schema describing a batch Experience API response; includes a
+  `data` payload described by `BatchExperienceResponseData`
 - `BatchExperienceResponseData`: Zod schema describing the `data` payload for
   `BatchExperienceResponse`
 - `Change`: Union of supported change types, which currently only includes `VariableChange`; this
@@ -123,13 +122,13 @@ Insights API endpoints currently do not return response data.
 
 ### Essential Insights API Response Schemas
 
-- `InsightsEvent`: Zod schema union of supported insights/analytics events
-- `BatchInsightsEvent`: Zod schema describing a batched Insights event payload; expects a `profile`
-  property alongside a collection of `events`
+- `InsightsEvent`: Zod schema union of supported Insights API events
+- `BatchInsightsEvent`: Zod schema describing a batched Insights API event payload; expects a
+  `profile` property alongside a collection of `events`
 
-Insights/analytics event schemas:
+Insights API event schemas:
 
-- `ClickEvent`: Zod schema describing a `component_click` event
-- `HoverEvent`: Zod schema describing a `component_hover` event
-- `ViewEvent`: Zod schema describing a `component` view event (may be a Contentful entry or a Custom
-  Flag)
+- `ClickEvent`: Zod schema describing a `component_click` event used for entry click tracking
+- `HoverEvent`: Zod schema describing a `component_hover` event used for entry hover tracking
+- `ViewEvent`: Zod schema describing a `component` view event used for entry and Custom Flag
+  exposure tracking

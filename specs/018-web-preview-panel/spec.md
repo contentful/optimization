@@ -4,7 +4,7 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -151,8 +151,7 @@ capture, override application, and restoration semantics.
 - **AudienceEntry**: Contentful `nt_audience` entry rendered as an expandable audience group.
 - **OptimizationEntry**: Contentful `nt_experience` entry with variant configuration shown as radio
   options.
-- **PersonalizationOverrideMap**: `Map<personalizationId, variantIndex>` used to persist manual
-  overrides.
+- **OptimizationOverrideMap**: `Map<experienceId, variantIndex>` used to persist manual overrides.
 
 ## Success Criteria _(mandatory)_
 

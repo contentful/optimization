@@ -16,7 +16,7 @@ test.describe('consent gating', () => {
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
   })
 
-  test('allows page events without consent but gates component view events', async ({ page }) => {
+  test('allows page events without consent but gates entry view events', async ({ page }) => {
     const pageEvents = page.locator('[data-testid^="event-page-"]')
     const viewEvents = page.locator('[data-testid^="event-view-"]')
 
@@ -26,7 +26,7 @@ test.describe('consent gating', () => {
     await expect(viewEvents).toHaveCount(0)
   })
 
-  test('emits component view events after consent is accepted', async ({ page }) => {
+  test('emits entry view events after consent is accepted', async ({ page }) => {
     const pageEvents = page.locator('[data-testid^="event-page-"]')
     const viewEvents = page.locator('[data-testid^="event-view-"]')
 

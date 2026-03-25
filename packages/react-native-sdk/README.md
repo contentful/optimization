@@ -29,10 +29,10 @@ based on the [Optimization Core Library](../universal/core-sdk/README.md). This 
 - [Reference Implementation](#reference-implementation)
 - [Configuration](#configuration)
   - [Top-level Configuration Options](#top-level-configuration-options)
-  - [Analytics Options](#analytics-options)
+  - [API Options](#api-options)
   - [Event Builder Options](#event-builder-options)
   - [Fetch Options](#fetch-options)
-  - [Personalization Options](#personalization-options)
+  - [Queue Policy Options](#queue-policy-options)
 - [Entry Tracking](#entry-tracking)
   - [`<OptimizedEntry />`](#optimizedentry-)
   - [With vs Without OptimizationScrollProvider](#with-vs-without-optimizationscrollprovider)
@@ -102,35 +102,41 @@ const optimization = await ContentfulOptimization.create({
 
 ## Configuration
 
-The SDK communicates with two APIs: the **Experience API** (for personalization and variant
-resolution) and the **Insights API** (for analytics event ingestion).
+The SDK communicates with two APIs: the **Experience API** (for optimization selection and variant
+resolution) and the **Insights API** (for event ingestion).
 
 ### Top-level Configuration Options
 
-| Option              | Required? | Default                       | Description                                                  |
-| ------------------- | --------- | ----------------------------- | ------------------------------------------------------------ |
-| `allowedEventTypes` | No        | `['identify', 'screen']`      | Allow-listed event types permitted when consent is not set   |
-| `analytics`         | No        | See "Analytics Options"       | Configuration specific to the Analytics/Insights API         |
-| `clientId`          | Yes       | N/A                           | The Optimization client identifier                           |
-| `defaults`          | No        | `undefined`                   | Set of default state values applied on initialization        |
-| `environment`       | No        | `'main'`                      | The environment identifier                                   |
-| `eventBuilder`      | No        | See "Event Builder Options"   | Event builder configuration (channel/library metadata, etc.) |
-| `fetchOptions`      | No        | See "Fetch Options"           | Configuration for Fetch timeout and retry functionality      |
-| `getAnonymousId`    | No        | `undefined`                   | Function used to obtain an anonymous user identifier         |
-| `logLevel`          | No        | `'error'`                     | Minimum log level for the default console sink               |
-| `onEventBlocked`    | No        | `undefined`                   | Callback invoked when an event call is blocked by guards     |
-| `personalization`   | No        | See "Personalization Options" | Configuration specific to the Personalization/Experience API |
+| Option              | Required? | Default                     | Description                                                             |
+| ------------------- | --------- | --------------------------- | ----------------------------------------------------------------------- |
+| `allowedEventTypes` | No        | `['identify', 'screen']`    | Allow-listed event types permitted when consent is not set              |
+| `api`               | No        | See "API Options"           | Unified configuration for the Experience API and Insights API endpoints |
+| `clientId`          | Yes       | N/A                         | The Optimization client identifier                                      |
+| `defaults`          | No        | `undefined`                 | Set of default state values applied on initialization                   |
+| `environment`       | No        | `'main'`                    | The environment identifier                                              |
+| `eventBuilder`      | No        | See "Event Builder Options" | Event builder configuration (channel/library metadata, etc.)            |
+| `fetchOptions`      | No        | See "Fetch Options"         | Configuration for Fetch timeout and retry functionality                 |
+| `getAnonymousId`    | No        | `undefined`                 | Function used to obtain an anonymous user identifier                    |
+| `logLevel`          | No        | `'error'`                   | Minimum log level for the default console sink                          |
+| `onEventBlocked`    | No        | `undefined`                 | Callback invoked when an event call is blocked by guards                |
+| `queuePolicy`       | No        | See "Queue Policy Options"  | Shared queue and retry configuration for stateful delivery              |
 
 Configuration method signatures:
 
 - `getAnonymousId`: `() => string | undefined`
 
-### Analytics Options
+### API Options
 
-| Option          | Required? | Default                                    | Description                                                              |
-| --------------- | --------- | ------------------------------------------ | ------------------------------------------------------------------------ |
-| `baseUrl`       | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                            |
-| `beaconHandler` | No        | `undefined`                                | Handler used to enqueue events via the Beacon API or a similar mechanism |
+| Option              | Required? | Default                                    | Description                                                                    |
+| ------------------- | --------- | ------------------------------------------ | ------------------------------------------------------------------------------ |
+| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                                                |
+| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                                  |
+| `beaconHandler`     | No        | `undefined`                                | Custom handler used to enqueue Insights API event batches                      |
+| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Enabled features the Experience API may use for each request                   |
+| `ip`                | No        | `undefined`                                | IP address override used by the Experience API for location analysis           |
+| `locale`            | No        | `'en-US'` (in API)                         | Locale used to translate `location.city` and `location.country`                |
+| `plainText`         | No        | `false`                                    | Sends performance-critical Experience API endpoints in plain text              |
+| `preflight`         | No        | `false`                                    | Instructs the Experience API to aggregate a new profile state but not store it |
 
 Configuration method signatures:
 
@@ -177,7 +183,7 @@ Configuration method signatures:
 ### Fetch Options
 
 Fetch options allow for configuration of a Fetch API-compatible fetch method and the retry/timeout
-logic integrated into the Optimization API Client. Specify the `fetchMethod` when the host
+logic integrated into the SDK's bundled API clients. Specify the `fetchMethod` when the host
 application environment does not offer a `fetch` method that is compatible with the standard Fetch
 API in its global scope.
 
@@ -195,16 +201,60 @@ Configuration method signatures:
 - `fetchMethod`: `(url: string | URL, init: RequestInit) => Promise<Response>`
 - `onFailedAttempt` and `onRequestTimeout`: `(options: FetchMethodCallbackOptions) => void`
 
-### Personalization Options
+### Queue Policy Options
 
-| Option            | Required? | Default                               | Description                                                         |
-| ----------------- | --------- | ------------------------------------- | ------------------------------------------------------------------- |
-| `baseUrl`         | No        | `'https://experience.ninetailed.co/'` | Base URL for the Experience API                                     |
-| `enabledFeatures` | No        | `['ip-enrichment', 'location']`       | Enabled features which the API may use for each request             |
-| `ip`              | No        | `undefined`                           | IP address to override the API behavior for IP analysis             |
-| `locale`          | No        | `'en-US'` (in API)                    | Locale used to translate `location.city` and `location.country`     |
-| `plainText`       | No        | `false`                               | Sends performance-critical endpoints in plain text                  |
-| `preflight`       | No        | `false`                               | Instructs the API to aggregate a new profile state but not store it |
+`queuePolicy` is available in the stateful React Native SDK runtime and combines shared flush retry
+settings with Experience API offline buffering controls.
+
+Configuration shape:
+
+```ts
+{
+  flush?: {
+    baseBackoffMs?: number,
+    maxBackoffMs?: number,
+    jitterRatio?: number,
+    maxConsecutiveFailures?: number,
+    circuitOpenMs?: number,
+    onFlushFailure?: (context: QueueFlushFailureContext) => void,
+    onCircuitOpen?: (context: QueueFlushFailureContext) => void,
+    onFlushRecovered?: (context: QueueFlushRecoveredContext) => void
+  },
+  offlineMaxEvents?: number,
+  onOfflineDrop?: (context: ExperienceQueueDropContext) => void
+}
+```
+
+Supporting callback payloads:
+
+```ts
+type ExperienceQueueDropContext = {
+  droppedCount: number
+  droppedEvents: ExperienceEventArray
+  maxEvents: number
+  queuedEvents: number
+}
+
+type QueueFlushFailureContext = {
+  consecutiveFailures: number
+  queuedBatches: number
+  queuedEvents: number
+  retryDelayMs: number
+}
+
+type QueueFlushRecoveredContext = {
+  consecutiveFailures: number
+}
+```
+
+Notes:
+
+- `flush` applies the same retry/backoff/circuit policy to both Insights API flushing and Experience
+  API offline replay.
+- Invalid numeric values fall back to defaults.
+- `jitterRatio` is clamped to `[0, 1]`.
+- `maxBackoffMs` is normalized to be at least `baseBackoffMs`.
+- Failed flush attempts include both `false` responses and thrown send errors.
 
 > [!IMPORTANT]
 >
@@ -275,7 +325,7 @@ viewport dimensions:
 
 - Accurate viewport tracking as user scrolls
 - Works for content that appears below the fold
-- Triggers when component scrolls into view
+- Triggers when an entry scrolls into view
 
 #### Without OptimizationScrollProvider (For Non-Scrollable Content)
 
@@ -334,7 +384,8 @@ is ideal for:
 ### Manual Analytics Tracking
 
 For cases outside the `<OptimizedEntry />` component pattern — such as custom screens or
-non-Contentful content — you can manually track events using the analytics API:
+non-Contentful content — you can manually track events using the Insights API methods exposed by the
+SDK:
 
 ```typescript
 import { useOptimization } from '@contentful/optimization-react-native'
@@ -344,7 +395,7 @@ function MyComponent() {
 
   const trackManually = async () => {
     await optimization.trackView({
-      componentId: 'my-component',
+      componentId: 'entry-123',
       experienceId: 'exp-456',
       variantIndex: 0,
     })
@@ -375,9 +426,9 @@ function DebugOverlay() {
 
 ### `useTapTracking`
 
-Low-level hook that detects taps on a View via raw touch events and emits `component_click`
-analytics events. `<OptimizedEntry />` uses this internally, but you can use it directly for custom
-tracking layouts:
+Low-level hook that detects taps on a View via raw touch events and emits entry tap events (wire
+type `component_click`). `<OptimizedEntry />` uses this internally, but you can use it directly for
+custom tracking layouts:
 
 ```tsx
 import { useTapTracking } from '@contentful/optimization-react-native'
@@ -595,7 +646,7 @@ viewing it.
 
 ### Enabling Live Updates
 
-There are three ways to enable live updates (immediate reactions to personalization changes):
+There are three ways to enable live updates (immediate reactions to optimization changes):
 
 #### 1. Preview Panel (Automatic)
 

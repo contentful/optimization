@@ -13,7 +13,7 @@ describe('Flag View Tracking', () => {
     await clearProfileState({ requireFreshAppInstance: true })
   })
 
-  it('should emit component events for the subscribed boolean flag', async () => {
+  it('should emit flag view events for the subscribed boolean flag', async () => {
     const analyticsTitle = element(by.text('Analytics Events'))
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 

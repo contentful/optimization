@@ -10,7 +10,7 @@ export type CtflDataset = DOMStringMap & {
   ctflBaselineId?: string
   /** Optional optimization/experience ID associated with the entry. */
   ctflOptimizationId?: string
-  /** Whether this component interaction should be treated as sticky. */
+  /** Whether this entry interaction should be treated as sticky. */
   ctflSticky?: 'true' | 'false'
   /** Optional variant index for optimized variants (non-negative integer). */
   ctflVariantIndex?: string
@@ -125,7 +125,7 @@ const resolveEntryData = (data: unknown, element: Element): EntryData | undefine
 }
 
 /**
- * Resolve the component-tracking payload used by tracked entry interactions.
+ * Resolve the wire-format payload used by tracked entry interactions.
  *
  * @param data - Optional explicit entry data supplied by manual tracking calls.
  * @param element - Candidate DOM element for deriving entry data when explicit

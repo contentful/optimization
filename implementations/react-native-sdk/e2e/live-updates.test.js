@@ -225,8 +225,8 @@ describe('live updates behavior', () => {
     })
   })
 
-  describe('three Personalization sections display', () => {
-    it('should display all three Personalization components', async () => {
+  describe('three Optimization sections display', () => {
+    it('should display all three Optimization components', async () => {
       await waitFor(element(by.id('default-optimization')))
         .toBeVisible()
         .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)

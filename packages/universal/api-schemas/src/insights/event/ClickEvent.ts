@@ -2,11 +2,11 @@ import * as z from 'zod/mini'
 import { InteractionEventProperties } from '../../experience/event'
 
 /**
- * Zod schema describing a `component_click` event.
+ * Zod schema describing a `component_click` event used for entry click tracking.
  *
  * @remarks
- * Component click events track click interactions for individual components
- * such as entries or variables within a optimized experience.
+ * These events track click interactions for entries within an optimized
+ * experience.
  *
  * Extends {@link InteractionEventProperties}.
  *
@@ -14,7 +14,7 @@ import { InteractionEventProperties } from '../../experience/event'
  */
 export const ClickEvent = z.extend(InteractionEventProperties, {
   /**
-   * Discriminator indicating that this event is a component click.
+   * Discriminator indicating that this is an entry click event.
    */
   type: z.literal('component_click'),
 })

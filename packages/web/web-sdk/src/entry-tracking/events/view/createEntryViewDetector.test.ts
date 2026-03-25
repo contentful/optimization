@@ -295,7 +295,7 @@ describe('EntryViewTracker', () => {
     cleanup()
   })
 
-  it('retries sticky for the same element until a successful personalization response', async () => {
+  it('retries sticky for the same element until a successful optimization response', async () => {
     const entry = document.createElement('div')
     entry.dataset.ctflEntryId = 'entry-sticky-retry'
     entry.dataset.ctflSticky = 'true'

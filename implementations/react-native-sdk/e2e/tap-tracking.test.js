@@ -13,7 +13,7 @@ describe('Tap Tracking', () => {
     await clearProfileState()
   })
 
-  it('should emit component_click when tapping a content entry', async () => {
+  it('should emit `component_click` for a tapped content entry', async () => {
     const analyticsTitle = element(by.text('Analytics Events'))
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
@@ -27,7 +27,7 @@ describe('Tap Tracking', () => {
       .scroll(500, 'down')
   })
 
-  it('should emit component_click for a different entry', async () => {
+  it('should emit `component_click` for a different tapped entry', async () => {
     const analyticsTitle = element(by.text('Analytics Events'))
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 

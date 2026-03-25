@@ -7,7 +7,7 @@ test.describe('flag view tracking', () => {
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
   })
 
-  test('does not emit flag component events without consent', async ({ page }) => {
+  test('does not emit flag view events without consent', async ({ page }) => {
     const flagEvents = page.locator('[data-testid="event-component-boolean"]')
 
     await expect(flagEvents).toHaveCount(0)
@@ -18,7 +18,7 @@ test.describe('flag view tracking', () => {
     await expect(flagEvents).toHaveCount(0)
   })
 
-  test('emits flag component events after consent and profile updates', async ({ page }) => {
+  test('emits flag view events after consent and profile updates', async ({ page }) => {
     const flagEvents = page.locator('[data-testid="event-component-boolean"]')
     const baselineFlagEventCount = await flagEvents.count()
 
@@ -26,7 +26,7 @@ test.describe('flag view tracking', () => {
 
     await expect
       .poll(async () => await flagEvents.count(), {
-        message: 'consented flag subscription should emit a component event',
+        message: 'consented flag subscription should emit a flag view event',
       })
       .toBeGreaterThan(baselineFlagEventCount)
 
@@ -37,7 +37,7 @@ test.describe('flag view tracking', () => {
 
     await expect
       .poll(async () => await flagEvents.count(), {
-        message: 'profile updates should emit additional flag component events',
+        message: 'profile updates should emit additional flag view events',
       })
       .toBeGreaterThan(afterConsentFlagEventCount)
   })

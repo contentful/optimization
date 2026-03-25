@@ -4,7 +4,7 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -13,8 +13,8 @@
 As a mobile SDK integrator, I need persisted state loaded before runtime construction so consent,
 profile, changes, and optimizations survive app restarts.
 
-**Why this priority**: Startup state continuity is required for predictable personalization and
-event guard behavior.
+**Why this priority**: Startup state continuity is required for predictable optimization and event
+guard behavior.
 
 **Independent Test**: Seed AsyncStorage keys, call `ContentfulOptimization.create(...)`, and verify
 merged defaults/log-level/allow-list behavior.
@@ -39,7 +39,7 @@ merged defaults/log-level/allow-list behavior.
 As a maintainer, I need runtime signal updates mirrored into AsyncStorage-backed state so storage
 and in-memory state remain aligned.
 
-**Why this priority**: Signal/storage drift breaks profile continuity and personalization behavior
+**Why this priority**: Signal/storage drift breaks profile continuity and optimization behavior
 across sessions.
 
 **Independent Test**: Mutate relevant core signals and verify corresponding `AsyncStorageStore`

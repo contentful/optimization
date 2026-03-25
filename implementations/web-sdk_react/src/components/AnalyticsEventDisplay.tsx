@@ -157,10 +157,10 @@ export function AnalyticsEventDisplay(): JSX.Element {
 
           const label = event.componentId
             ? typeof event.viewDurationMs === 'number'
-              ? `${event.type} - Component: ${event.componentId} - Duration: ${event.viewDurationMs}ms`
+              ? `${event.type} - Entry/Flag: ${event.componentId} - Duration: ${event.viewDurationMs}ms`
               : typeof event.hoverDurationMs === 'number'
-                ? `${event.type} - Component: ${event.componentId} - Hover Duration: ${event.hoverDurationMs}ms`
-                : `${event.type} - Component: ${event.componentId}`
+                ? `${event.type} - Entry/Flag: ${event.componentId} - Hover Duration: ${event.hoverDurationMs}ms`
+                : `${event.type} - Entry/Flag: ${event.componentId}`
             : event.pageUrl
               ? `${event.type} - URL: ${event.pageUrl}`
               : event.type

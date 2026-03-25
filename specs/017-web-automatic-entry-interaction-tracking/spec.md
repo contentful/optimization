@@ -1,10 +1,8 @@
 # Feature Specification: Contentful Optimization Web Automatic Entry Interaction Tracking
 
-**Feature Branch**: `[017-web-automatic-entry-interaction-tracking]`  
-**Created**: 2026-02-27  
-**Status**: Current (Pre-release)  
-**Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+**Feature Branch**: `[017-web-automatic-entry-interaction-tracking]` **Created**: 2026-02-27
+**Status**: Current (Pre-release) **Input**: Repository behavior review for the current pre-release
+implementation (validated 2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -63,12 +61,12 @@ mutation add/remove propagation, and observer teardown.
 
 ---
 
-### User Story 3 - Resolve Component Payloads from Explicit and Dataset Metadata (Priority: P2)
+### User Story 3 - Resolve Tracking Payloads from Explicit and Dataset Metadata (Priority: P2)
 
 As an interaction implementation author, I need one payload resolver that normalizes explicit entry
 metadata and dataset metadata so click/view/hover tracking emit consistent payloads.
 
-**Why this priority**: Payload consistency is required for downstream analytics correctness.
+**Why this priority**: Payload consistency is required for downstream event correctness.
 
 **Independent Test**: Validate payload resolution precedence and parsing behavior using explicit
 data, dataset-only data, and invalid input combinations.
@@ -164,9 +162,8 @@ data, dataset-only data, and invalid input combinations.
 - **FR-023**: `resolveTrackingPayload(data, element)` MUST prefer valid explicit `EntryData` over
   dataset-derived entry metadata.
 - **FR-024**: Dataset-derived payload parsing MUST map `ctflEntryId -> componentId` and
-  `ctflPersonalizationId -> experienceId`; `ctflSticky` parsing MUST be true only for
-  case-insensitive `'true'`; `ctflVariantIndex` parsing MUST allow only digit-only non-negative safe
-  integers.
+  `ctflOptimizationId -> experienceId`; `ctflSticky` parsing MUST be true only for case-insensitive
+  `'true'`; `ctflVariantIndex` parsing MUST allow only digit-only non-negative safe integers.
 - **FR-025**: `isEntryElement` MUST return true only for `HTMLElement|SVGElement` values with
   non-empty `dataset.ctflEntryId`; `isEntryData` MUST return true only for objects with non-empty
   `entryId` strings.

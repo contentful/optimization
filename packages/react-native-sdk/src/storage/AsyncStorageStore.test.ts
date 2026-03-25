@@ -1,7 +1,7 @@
 import {
   CHANGES_CACHE_KEY,
-  OPTIMIZATIONS_CACHE_KEY,
   PROFILE_CACHE_KEY,
+  SELECTED_OPTIMIZATIONS_CACHE_KEY,
 } from '@contentful/optimization-core/constants'
 import { beforeEach, describe, expect, it, rs } from '@rstest/core'
 
@@ -90,11 +90,11 @@ describe('AsyncStorageStore', () => {
     const store = await getStore()
     const cache = getCache(store)
 
-    cache.set(OPTIMIZATIONS_CACHE_KEY, { foo: 'bar' })
+    cache.set(SELECTED_OPTIMIZATIONS_CACHE_KEY, { foo: 'bar' })
 
     expect(store.selectedOptimizations).toBeUndefined()
-    expect(cache.has(OPTIMIZATIONS_CACHE_KEY)).toBe(false)
-    expect(asyncStorageMock.removeItem).toHaveBeenCalledWith(OPTIMIZATIONS_CACHE_KEY)
+    expect(cache.has(SELECTED_OPTIMIZATIONS_CACHE_KEY)).toBe(false)
+    expect(asyncStorageMock.removeItem).toHaveBeenCalledWith(SELECTED_OPTIMIZATIONS_CACHE_KEY)
   })
 
   it('swallows AsyncStorage.removeItem failures when invalidating bad cache', async () => {
@@ -103,13 +103,13 @@ describe('AsyncStorageStore', () => {
     const store = await getStore()
     const cache = getCache(store)
 
-    cache.set(OPTIMIZATIONS_CACHE_KEY, { foo: 'bar' })
+    cache.set(SELECTED_OPTIMIZATIONS_CACHE_KEY, { foo: 'bar' })
 
     expect(() => {
       void store.selectedOptimizations
     }).not.toThrow()
     await Promise.resolve()
-    expect(cache.has(OPTIMIZATIONS_CACHE_KEY)).toBe(false)
-    expect(asyncStorageMock.removeItem).toHaveBeenCalledWith(OPTIMIZATIONS_CACHE_KEY)
+    expect(cache.has(SELECTED_OPTIMIZATIONS_CACHE_KEY)).toBe(false)
+    expect(asyncStorageMock.removeItem).toHaveBeenCalledWith(SELECTED_OPTIMIZATIONS_CACHE_KEY)
   })
 })

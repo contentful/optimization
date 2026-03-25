@@ -126,7 +126,7 @@ export function AnalyticsEventDisplay(): React.JSX.Element {
       {events
         .filter((event) => event.type !== 'component')
         .map((event, index) => {
-          const accessibilityLabel = `${event.type} - Component: ${event.componentId ?? 'none'} - Duration: ${event.viewDurationMs ?? 'none'}`
+          const accessibilityLabel = `${event.type} - Entry/Flag: ${event.componentId ?? 'none'} - Duration: ${event.viewDurationMs ?? 'none'}`
           const testID = event.componentId
             ? `event-${event.type}-${event.componentId}`
             : `event-${event.type}-${index}`
@@ -140,7 +140,7 @@ export function AnalyticsEventDisplay(): React.JSX.Element {
             >
               <Text>
                 {event.type}
-                {event.componentId ? ` - Component: ${event.componentId}` : ''}
+                {event.componentId ? ` - Entry/Flag: ${event.componentId}` : ''}
                 {event.viewDurationMs !== undefined ? ` - ${event.viewDurationMs}ms` : ''}
               </Text>
             </View>

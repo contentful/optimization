@@ -14,14 +14,14 @@ test.describe('flag view tracking', () => {
     await expect(page.getByRole('button', { name: 'Reject Consent' })).toBeVisible()
   })
 
-  test('flag access emits a component event', async ({ page }) => {
+  test('flag access emits a flag view event', async ({ page }) => {
     await page.goto('/user/flag-access-e2e')
     await page.waitForLoadState('domcontentloaded')
 
     const flagAccessEvents = getFlagAccessComponentEvents(page)
     await expect
       .poll(async () => await flagAccessEvents.count(), {
-        message: 'flag access should append a component event in the event stream',
+        message: 'flag access should append a flag view event in the event stream',
       })
       .toBeGreaterThan(0)
 

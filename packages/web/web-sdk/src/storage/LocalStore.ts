@@ -9,8 +9,8 @@ import {
   CHANGES_CACHE_KEY,
   CONSENT_KEY,
   DEBUG_FLAG_KEY,
-  OPTIMIZATIONS_CACHE_KEY,
   PROFILE_CACHE_KEY,
+  SELECTED_OPTIMIZATIONS_CACHE_KEY,
 } from '@contentful/optimization-core/constants'
 import { createScopedLogger } from '@contentful/optimization-core/logger'
 import type { z } from 'zod/mini'
@@ -46,7 +46,7 @@ const LocalStore = {
     LocalStore.setCache(ANONYMOUS_ID_KEY, undefined)
     LocalStore.setCache(CHANGES_CACHE_KEY, undefined)
     LocalStore.setCache(PROFILE_CACHE_KEY, undefined)
-    LocalStore.setCache(OPTIMIZATIONS_CACHE_KEY, undefined)
+    LocalStore.setCache(SELECTED_OPTIMIZATIONS_CACHE_KEY, undefined)
   },
 
   /**
@@ -163,7 +163,7 @@ const LocalStore = {
    * @returns The parsed selected optimizations array or `undefined` when absent or invalid.
    */
   get selectedOptimizations(): SelectedOptimizationArray | undefined {
-    return LocalStore.getCache(OPTIMIZATIONS_CACHE_KEY, SelectedOptimizationArray)
+    return LocalStore.getCache(SELECTED_OPTIMIZATIONS_CACHE_KEY, SelectedOptimizationArray)
   },
 
   /**
@@ -172,7 +172,7 @@ const LocalStore = {
    * @param selectedOptimizations - New selections to store, or `undefined` to remove.
    */
   set selectedOptimizations(selectedOptimizations: SelectedOptimizationArray | undefined) {
-    LocalStore.setCache(OPTIMIZATIONS_CACHE_KEY, selectedOptimizations)
+    LocalStore.setCache(SELECTED_OPTIMIZATIONS_CACHE_KEY, selectedOptimizations)
   },
 
   /**

@@ -69,7 +69,7 @@ describe('CoreStateless', () => {
     )
   })
 
-  it('sends sticky component views through both Experience and Insights', async () => {
+  it('sends sticky entry views through both the Experience API and Insights API', async () => {
     const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
     const upsertProfile = rs
       .spyOn(core.api.experience, 'upsertProfile')

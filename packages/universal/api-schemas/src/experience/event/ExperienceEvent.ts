@@ -8,7 +8,7 @@ import { TrackEvent } from './TrackEvent'
 import { ViewEvent } from './ViewEvent'
 
 /**
- * Zod schema describing any supported experience/personalization event.
+ * Zod schema describing any supported Experience API event.
  *
  * @remarks
  * This discriminated union aggregates all event types used by the

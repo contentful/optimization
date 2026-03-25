@@ -1,10 +1,10 @@
 <p align="center">
-  <a href="https://www.contentful.com/developers/docs/optimization/">
+  <a href="https://www.contentful.com/developers/docs/personalization/">
     <img alt="Contentful Logo" title="Contentful" src="../../contentful-icon.png" width="150">
   </a>
 </p>
 
-<h1 align="center">Contentful Optimization & Analytics</h1>
+<h1 align="center">Contentful Personalization & Analytics</h1>
 
 <h3 align="center">API Client</h3>
 
@@ -20,11 +20,12 @@
 > The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
 
 The Contentful Optimization API Client Library provides methods for interfacing with Contentful's
-Experience and Insights APIs, which serve its Optimization and Analytics products.
+Experience API and Insights API, which serve its Personalization and Analytics products.
 
 > [!NOTE]
 >
-> In the future, the Experience and Insights APIs may be combined behind an Optimization API
+> The Experience API and Insights API are separate today, and this client provides a unified SDK
+> surface for both APIs.
 
 <details>
   <summary>Table of Contents</summary>
@@ -34,8 +35,8 @@ Experience and Insights APIs, which serve its Optimization and Analytics product
 - [Configuration](#configuration)
   - [Top-level Configuration Options](#top-level-configuration-options)
   - [Fetch Options](#fetch-options)
-  - [Insights Options](#insights-options)
-  - [Experience Options](#experience-options)
+  - [Insights API Options](#insights-api-options)
+  - [Experience API Options](#experience-api-options)
 - [Working With the APIs](#working-with-the-apis)
   - [Experience API](#experience-api)
     - [Get Profile data](#get-profile-data)
@@ -74,20 +75,20 @@ const client = new ApiClient({ clientId: 'abc123' })
 
 ### Top-level Configuration Options
 
-| Option         | Required? | Default                  | Description                                             |
-| -------------- | --------- | ------------------------ | ------------------------------------------------------- |
-| `experience`   | No        | See "Experience Options" | Configuration specific to the Experience API            |
-| `clientId`     | Yes       | N/A                      | The Optimization API key                                |
-| `environment`  | No        | `'main'`                 | The environment identifier                              |
-| `fetchOptions` | No        | See "Fetch Options"      | Configuration for Fetch timeout and retry functionality |
-| `insights`     | No        | See "Insights Options"   | Configuration specific to the Insights API              |
+| Option         | Required? | Default                      | Description                                                 |
+| -------------- | --------- | ---------------------------- | ----------------------------------------------------------- |
+| `experience`   | No        | See "Experience API Options" | Configuration specific to the Experience API                |
+| `clientId`     | Yes       | N/A                          | Shared API key for Experience API and Insights API requests |
+| `environment`  | No        | `'main'`                     | The environment identifier                                  |
+| `fetchOptions` | No        | See "Fetch Options"          | Configuration for Fetch timeout and retry functionality     |
+| `insights`     | No        | See "Insights API Options"   | Configuration specific to the Insights API                  |
 
 ### Fetch Options
 
 Fetch options allow for configuration of both a Fetch API-compatible fetch method and the
-retry/timeout logic integrated into the Optimization API Client. Specify the `fetchMethod` when the
-host application environment does not offer a `fetch` method that is compatible with the standard
-Fetch API in its global scope.
+retry/timeout logic integrated into this API client. Specify the `fetchMethod` when the host
+application environment does not offer a `fetch` method that is compatible with the standard Fetch
+API in its global scope.
 
 | Option             | Required? | Default     | Description                                                           |
 | ------------------ | --------- | ----------- | --------------------------------------------------------------------- |
@@ -106,13 +107,13 @@ Configuration method signatures:
 > [!NOTE]
 >
 > Retry behavior is intentionally fixed to HTTP `503` responses (`Service Unavailable`) for the
-> default SDK transport policy. This matches current Experience and Insights API expectations: `503`
-> is treated as the transient availability signal, while other response classes are handled by
+> default SDK transport policy. This matches current Experience API and Insights API expectations:
+> `503` is treated as the transient availability signal, while other response classes are handled by
 > caller logic and are intentionally not retried by default. Treat this as deliberate contract
 > behavior, not a transport gap; broaden retry status handling only with an explicit API contract
 > change.
 
-### Insights Options
+### Insights API Options
 
 | Option          | Required? | Default                                    | Description                                                              |
 | --------------- | --------- | ------------------------------------------ | ------------------------------------------------------------------------ |
@@ -123,7 +124,7 @@ Configuration method signatures:
 
 - `beaconHandler`: `(url: string | URL, data: BatchInsightsEventArray) => boolean`
 
-### Experience Options
+### Experience API Options
 
 | Option            | Required? | Default                               | Description                                                         |
 | ----------------- | --------- | ------------------------------------- | ------------------------------------------------------------------- |
@@ -142,7 +143,7 @@ Configuration method signatures:
 
 ### Experience API
 
-Experience API methods are scoped to the client's `experience` member. All singular experience
+Experience API methods are scoped to the client's `experience` member. All singular Experience API
 methods return a `Promise` that resolves with the following data:
 
 ```json
@@ -152,7 +153,7 @@ methods return a `Promise` that resolves with the following data:
   },
   "selectedOptimizations": [
     {
-      /* Optimization/experience configuration for the associated profile */
+      /* Optimization/Experience API configuration for the associated profile */
     }
   ],
   "changes": [
@@ -216,7 +217,7 @@ const profiles = await client.experience.upsertManyProfiles(
     events: [
       {
         anonymousId: 'anon-123',
-        // valid Experience event payload fields
+        // valid Experience API event payload fields
       },
     ],
   },

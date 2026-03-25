@@ -127,7 +127,7 @@ describe('CoreStateful blocked event handling', () => {
     subscription.unsubscribe()
   })
 
-  it('does not emit blocked events for repeated component view calls', async () => {
+  it('does not emit blocked events for repeated entry view calls', async () => {
     const onEventBlocked = rs.fn()
     const core = createCoreStateful({
       defaults: { consent: true },
@@ -277,7 +277,7 @@ describe('CoreStateful blocked event handling', () => {
     }).not.toThrow()
   })
 
-  it('flushes insights and Experience queues with force on destroy', async () => {
+  it('flushes Insights API and Experience API queues with force on destroy', async () => {
     const core = createCoreStatefulHarness({
       defaults: {
         consent: true,

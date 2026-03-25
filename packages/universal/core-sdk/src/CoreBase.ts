@@ -383,18 +383,18 @@ abstract class CoreBase {
   }
 
   /**
-   * Track a component view in both Experience and Insights.
+   * Track an entry view through Insights and, when sticky, Experience.
    *
-   * @param payload - Component view builder arguments. When `payload.sticky` is
+   * @param payload - Entry view builder arguments. When `payload.sticky` is
    *   `true`, the event will also be sent through Experience as a sticky
-   *   component view.
+   *   entry view.
    * @returns A promise that resolves when all delegated calls complete.
    * @remarks
-   * Experience receives sticky views only; Insights is always invoked regardless
-   * of `sticky`.
+   * Experience receives sticky entry views only; Insights is always invoked
+   * regardless of `sticky`.
    * @example
    * ```ts
-   * await core.trackView({ componentId: 'hero-banner', sticky: true })
+   * await core.trackView({ componentId: 'entry-123', sticky: true })
    * ```
    */
   async trackView(
@@ -423,13 +423,13 @@ abstract class CoreBase {
   }
 
   /**
-   * Track a component click through Insights.
+   * Track an entry click through Insights.
    *
-   * @param payload - Component click builder arguments.
+   * @param payload - Entry click builder arguments.
    * @returns A promise that resolves when processing completes.
    * @example
    * ```ts
-   * await core.trackClick({ componentId: 'hero-banner' })
+   * await core.trackClick({ componentId: 'entry-123' })
    * ```
    */
   async trackClick(payload: ClickBuilderArgs): Promise<void> {
@@ -437,13 +437,13 @@ abstract class CoreBase {
   }
 
   /**
-   * Track a component hover through Insights.
+   * Track an entry hover through Insights.
    *
-   * @param payload - Component hover builder arguments.
+   * @param payload - Entry hover builder arguments.
    * @returns A promise that resolves when processing completes.
    * @example
    * ```ts
-   * await core.trackHover({ componentId: 'hero-banner' })
+   * await core.trackHover({ componentId: 'entry-123' })
    * ```
    */
   async trackHover(payload: HoverBuilderArgs): Promise<void> {
@@ -453,7 +453,7 @@ abstract class CoreBase {
   /**
    * Track a feature flag view through Insights.
    *
-   * @param payload - Component view builder arguments used to build the flag view event.
+   * @param payload - Flag view builder arguments used to build the flag view event.
    * @returns A promise that resolves when processing completes.
    * @example
    * ```ts

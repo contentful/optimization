@@ -128,7 +128,7 @@ export const InlineVariableComponent = z.object({
 export type InlineVariableComponent = z.infer<typeof InlineVariableComponent>
 
 /**
- * Discriminated union of all supported personalization components.
+ * Discriminated union of all supported optimization components.
  *
  * @public
  */
@@ -174,7 +174,7 @@ export const OptimizationConfig = z.object({
   distribution: z.optional(z.array(z.number())),
 
   /**
-   * Percentage of total traffic that should enter the personalization.
+   * Percentage of total traffic that should enter the optimization.
    *
    */
   traffic: z.optional(z.number()),

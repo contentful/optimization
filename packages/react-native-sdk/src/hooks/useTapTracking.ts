@@ -33,7 +33,7 @@ export interface UseTapTrackingOptions {
   selectedOptimization?: SelectedOptimization
 
   /**
-   * Whether tap tracking is enabled for this component.
+   * Whether tap tracking is enabled for this entry.
    */
   enabled: boolean
 
@@ -59,8 +59,8 @@ export interface UseTapTrackingReturn {
 }
 
 /**
- * Detects taps on a View and emits analytics events (internally named `component_click`
- * for cross-platform consistency with the web SDK).
+ * Detects taps on a View and emits entry interaction events (wire type
+ * `component_click` for cross-platform consistency with the web SDK).
  *
  * @param options - Tracking options including the entry, selected optimization data, and enabled state.
  * @returns {@link UseTapTrackingReturn} with touch handlers to spread onto a View,
@@ -130,7 +130,7 @@ export function useTapTracking({
 
       if (distance >= TAP_DISTANCE_THRESHOLD) return
 
-      logger.info(`Tap detected on ${componentId}, emitting component_click`)
+      logger.info(`Tap detected on ${componentId}, emitting entry tap event`)
 
       void optimizationRef.current.trackClick({
         componentId,

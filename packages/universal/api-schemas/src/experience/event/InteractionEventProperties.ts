@@ -8,23 +8,23 @@ import { UniversalEventProperties } from './UniversalEventProperties'
  */
 export const InteractionEventProperties = z.extend(UniversalEventProperties, {
   /**
-   * Type of component for the interaction event.
+   * Type of tracked optimization target for the interaction event.
    *
-   * - `'Entry'` — A content entry component.
-   * - `'Variable'` — A variable or inline value component.
+   * - `'Entry'` — A content entry.
+   * - `'Variable'` — A Custom Flag or other variable-backed optimization target.
    */
   componentType: z.union([z.literal('Entry'), z.literal('Variable')]),
 
   /**
-   * Contentful entry ID corresponding to the interacted component.
+   * Contentful entry ID or flag key corresponding to the interaction.
    */
   componentId: z.string(),
 
   /**
-   * Identifier of the experience that rendered this component.
+   * Identifier of the experience that rendered this entry or flag.
    *
    * @remarks
-   * Optional; interactions may occur outside of a specific experience/personalization.
+   * Optional; interactions may occur outside of a specific experiment/personalization.
    */
   experienceId: z.optional(z.string()),
 

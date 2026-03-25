@@ -77,15 +77,15 @@ function App() {
 
 Available config props:
 
-| Prop                        | Type                               | Required | Description                                       |
-| --------------------------- | ---------------------------------- | -------- | ------------------------------------------------- |
-| `clientId`                  | `string`                           | Yes      | Your Contentful Optimization client identifier    |
-| `environment`               | `string`                           | No       | Contentful environment (defaults to `'main'`)     |
-| `api`                       | `CoreApiConfig`                    | No       | Unified Insights and Experience API configuration |
-| `app`                       | `App`                              | No       | Application metadata for events                   |
-| `autoTrackEntryInteraction` | `AutoTrackEntryInteractionOptions` | No       | Automatic entry interaction tracking options      |
-| `logLevel`                  | `LogLevels`                        | No       | Minimum log level for console output              |
-| `liveUpdates`               | `boolean`                          | No       | Enable global live updates (defaults to `false`)  |
+| Prop                        | Type                               | Required | Description                                           |
+| --------------------------- | ---------------------------------- | -------- | ----------------------------------------------------- |
+| `clientId`                  | `string`                           | Yes      | Your Contentful Optimization client identifier        |
+| `environment`               | `string`                           | No       | Contentful environment (defaults to `'main'`)         |
+| `api`                       | `CoreApiConfig`                    | No       | Unified Experience API and Insights API configuration |
+| `app`                       | `App`                              | No       | Application metadata for events                       |
+| `autoTrackEntryInteraction` | `AutoTrackEntryInteractionOptions` | No       | Automatic entry interaction tracking options          |
+| `logLevel`                  | `LogLevels`                        | No       | Minimum log level for console output                  |
+| `liveUpdates`               | `boolean`                          | No       | Enable global live updates (defaults to `false`)      |
 
 ### Provider Composition
 
@@ -334,8 +334,8 @@ import { OptimizedEntry } from '@contentful/optimization-react-web'
 
 `OptimizedEntry` behavior:
 
-- Default mode locks to the first non-`undefined` personalization state.
-- `liveUpdates={true}` enables continuous updates as personalization state changes.
+- Default mode locks to the first non-`undefined` optimization state.
+- `liveUpdates={true}` enables continuous updates as optimization state changes.
 - If `liveUpdates` is omitted, global root `liveUpdates` is used.
 - If both are omitted, live updates default to `false`.
 - Consumer content supports render-prop (`(resolvedEntry) => ReactNode`) or direct `ReactNode`.
@@ -358,8 +358,9 @@ When `loadingFallback` is provided, it is rendered while readiness is unresolved
 </OptimizedEntry>
 ```
 
-- If a baseline entry is personalizable and unresolved, loading UI is rendered by default.
-- If the entry is not personalizable, baseline/resolved content is rendered directly.
+- If a baseline entry has optimization references and is unresolved, loading UI is rendered by
+  default.
+- If the entry has no optimization references, baseline/resolved content is rendered directly.
 - During loading, a concrete layout-target element is rendered (`data-ctfl-loading-layout-target`)
   so loading visibility/layout behavior remains targetable even when wrapper uses
   `display: contents`.
@@ -431,10 +432,10 @@ This gives:
 ### Migration Notes
 
 - `OptimizedEntry` now accepts either render-prop children or direct `ReactNode` children.
-- Entries with optimization references now render loading UI until personalization readiness is
+- Entries with optimization references now render loading UI until optimization readiness is
   available.
-- When no `loadingFallback` is provided, a default loading UI is rendered for unresolved
-  personalizable entries.
+- When no `loadingFallback` is provided, a default loading UI is rendered for unresolved optimized
+  entries.
 - Nested wrappers with the same baseline entry ID are now blocked at runtime.
 - Loading renders include `data-ctfl-loading-layout-target` for layout/visibility targeting.
 

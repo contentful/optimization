@@ -4,14 +4,14 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Initialize One Aggregated Client with Shared Config (Priority: P1)
 
-As an SDK integrator, I need one top-level client that wires Experience and Insights with shared
-config plus per-client overrides.
+As an SDK integrator, I need one top-level client that wires the Experience API and Insights API
+with shared config plus per-client overrides.
 
 **Why this priority**: `ApiClient` is the main package entrypoint.
 
@@ -34,7 +34,7 @@ URL isolation.
 As a client maintainer, I need shared fetch wrappers so timeout, retry, and error behavior stays
 consistent across APIs.
 
-**Why this priority**: Experience and Insights clients both rely on `Fetch.create(...)`.
+**Why this priority**: The Experience API and Insights API clients both rely on `Fetch.create(...)`.
 
 **Independent Test**: Verify timeout callback/log behavior, retry-on-503 policy, and wrapper
 composition order.
@@ -64,7 +64,7 @@ exports correctly.
 **Acceptance Scenarios**:
 
 1. **Given** root import `@contentful/optimization-api-client`, **When** consumed, **Then** it
-   exports `ApiClient`, `ApiClientBase`, and Experience/Insights modules.
+   exports `ApiClient`, `ApiClientBase`, and Experience API/Insights API modules.
 2. **Given** schema or logger imports, **When** consumed, **Then** they are accessed via
    `@contentful/optimization-api-client/api-schemas` and
    `@contentful/optimization-api-client/logger`.

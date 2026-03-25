@@ -77,7 +77,7 @@ test.describe('preview panel', () => {
     await expect.poll(async () => await getBooleanFlagValue(page)).toBe(true)
   })
 
-  test('filters audiences by audience and personalization names', async ({ page }) => {
+  test('filters audiences by audience and optimization names', async ({ page }) => {
     const previewPanel = page.locator('ctfl-opt-preview-panel')
     const drawerToggle = previewPanel.locator('button.toggle-drawer')
     const search = previewPanel.getByRole('searchbox', {

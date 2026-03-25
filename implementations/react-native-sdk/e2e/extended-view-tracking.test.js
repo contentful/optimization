@@ -89,7 +89,7 @@ describe('Extended View Tracking', () => {
     // Scroll back to the top so the stats elements become visible again
     await element(by.id('main-scroll-view')).scrollTo('top')
 
-    // Scroll to the analytics display to read updated stats
+    // Scroll to the events display to read updated stats
     await waitFor(element(by.id(`event-count-${VISIBLE_ENTRY_ID}`)))
       .toBeVisible()
       .whileElement(by.id('main-scroll-view'))
@@ -146,7 +146,7 @@ describe('Extended View Tracking', () => {
     // Wait long enough that an event WOULD have fired if tracking hadn't been cancelled
     await sleep(3000)
 
-    // The component-stats element only renders when a 'component' event has fired.
+    // The `component-stats` element only renders when an entry view event has fired.
     // It should not exist for the below-fold entry since it wasn't visible long enough.
     const statsVisible = await isVisibleById(`component-stats-${BELOW_FOLD_ENTRY_ID}`, 2000)
     jestExpect(statsVisible).toBe(false)
@@ -191,7 +191,7 @@ describe('Extended View Tracking', () => {
       // May not be scrollable
     }
 
-    // Navigate away — this unmounts all Analytics components, triggering cleanup
+    // Navigate away: this unmounts all tracked entries, triggering cleanup
     await element(by.id('navigation-test-button')).tap()
     await waitFor(element(by.id('close-navigation-test-button')))
       .toBeVisible()
@@ -203,7 +203,7 @@ describe('Extended View Tracking', () => {
     // Navigate back to main screen
     await element(by.id('close-navigation-test-button')).tap()
 
-    // Wait for the analytics display to reappear (component remounts with persisted state)
+    // Wait for the events display to reappear (screen remounts with persisted state)
     await waitFor(element(by.text('Analytics Events')))
       .toBeVisible()
       .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)

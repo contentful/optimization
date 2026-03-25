@@ -4,16 +4,16 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Read and Mutate Profiles via Experience API (Priority: P1)
 
-As a personalization runtime developer, I need typed profile read/write methods so profile state can
-be fetched or updated with predictable request/response handling.
+As an Experience API integrator, I need typed profile read/write methods so profile state can be
+fetched or updated with predictable request/response handling.
 
-**Why this priority**: Profile fetch and mutation are the core Experience client functions.
+**Why this priority**: Profile fetch and mutation are the core Experience API client functions.
 
 **Independent Test**: Exercise `getProfile`, `createProfile`, and `updateProfile` with valid and
 invalid inputs.
@@ -120,7 +120,7 @@ processed in a single call.
 
 ### Key Entities _(include if feature involves data)_
 
-- **ExperienceApiClient**: Experience transport client for profile operations.
+- **ExperienceApiClient**: Experience API transport client for profile operations.
 - **RequestOptions**: Per-request option set (`enabledFeatures`, `ip`, `locale`, `plainText`,
   `preflight`).
 - **ExperienceRequestData**: Validated singular mutation payload.

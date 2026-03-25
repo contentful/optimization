@@ -1,5 +1,5 @@
 /**
- * Lean hover dwell tracker for entry component hovers.
+ * Lean hover dwell tracker for entry hovers.
  *
  * Behavior:
  * - Fires callback after dwell threshold, then continues firing periodic

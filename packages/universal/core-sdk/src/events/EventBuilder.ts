@@ -130,7 +130,7 @@ const ComponentInteractionBuilderArgsBase = z.extend(UniversalEventBuilderArgs, 
 })
 
 /**
- * Arguments shared by component view, click, and hover events.
+ * Arguments shared by entry view, click, and hover events.
  *
  * @public
  */
@@ -145,7 +145,7 @@ const ViewBuilderArgs = z.extend(ComponentInteractionBuilderArgsBase, {
 })
 
 /**
- * Arguments for constructing component view events.
+ * Arguments for constructing entry view events.
  *
  * @public
  */
@@ -166,7 +166,7 @@ export type FlagViewBuilderArgs = z.infer<typeof FlagViewBuilderArgs>
 const ClickBuilderArgs = ComponentInteractionBuilderArgsBase
 
 /**
- * Arguments for constructing component click events.
+ * Arguments for constructing entry click events.
  *
  * @public
  */
@@ -178,7 +178,7 @@ const HoverBuilderArgs = z.extend(ComponentInteractionBuilderArgsBase, {
 })
 
 /**
- * Arguments for constructing component hover events.
+ * Arguments for constructing entry hover events.
  *
  * @public
  */
@@ -414,9 +414,9 @@ class EventBuilder {
   }
 
   /**
-   * Builds a component view event payload for a Contentful entry-based component.
+   * Builds a `component` view event payload for entry exposure tracking.
    *
-   * @param args - {@link ViewBuilderArgs} arguments describing the component view.
+   * @param args - {@link ViewBuilderArgs} arguments describing the entry view.
    * @returns A {@link ViewEvent} describing the view.
    *
    * @example
@@ -445,9 +445,9 @@ class EventBuilder {
   }
 
   /**
-   * Builds a component click event payload for a Contentful entry-based component.
+   * Builds a `component_click` payload for entry click tracking.
    *
-   * @param args - {@link ClickBuilderArgs} arguments describing the component click.
+   * @param args - {@link ClickBuilderArgs} arguments describing the entry click.
    * @returns A {@link ClickEvent} describing the click.
    *
    * @example
@@ -474,9 +474,9 @@ class EventBuilder {
   }
 
   /**
-   * Builds a component hover event payload for a Contentful entry-based component.
+   * Builds a `component_hover` payload for entry hover tracking.
    *
-   * @param args - {@link HoverBuilderArgs} arguments describing the component hover.
+   * @param args - {@link HoverBuilderArgs} arguments describing the entry hover.
    * @returns A {@link HoverEvent} describing the hover.
    *
    * @example
@@ -505,7 +505,7 @@ class EventBuilder {
   }
 
   /**
-   * Builds a component view event payload for a Custom Flag component.
+   * Builds a `component` view event payload for Custom Flag exposure tracking.
    *
    * @param args - {@link FlagViewBuilderArgs} arguments describing the Custom Flag view.
    * @returns A {@link ViewEvent} describing the view.

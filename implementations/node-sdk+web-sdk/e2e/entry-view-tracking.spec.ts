@@ -30,7 +30,7 @@ test.describe('entry view tracking', () => {
       ).toBeVisible()
     })
 
-    test('component view events have not been emitted', async ({ page }) => {
+    test('entry view events have not been emitted', async ({ page }) => {
       for (const entryText of Object.values(variantEntryTexts)) {
         const element = page.getByText(entryText)
 
@@ -59,7 +59,7 @@ test.describe('entry view tracking', () => {
       ).toBeVisible()
     })
 
-    test('component view events have been emitted', async ({ page }) => {
+    test('entry view events have been emitted', async ({ page }) => {
       for (const entryId of Object.keys(variantEntryTexts)) {
         const entryText = variantEntryTexts[entryId]
 

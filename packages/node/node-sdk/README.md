@@ -1,10 +1,10 @@
 <p align="center">
-  <a href="https://www.contentful.com/developers/docs/optimization/">
+  <a href="https://www.contentful.com/developers/docs/personalization/">
     <img alt="Contentful Logo" title="Contentful" src="../../../contentful-icon.png" width="150">
   </a>
 </p>
 
-<h1 align="center">Contentful Optimization & Analytics</h1>
+<h1 align="center">Contentful Personalization & Analytics</h1>
 
 <h3 align="center">Optimization Node SDK</h3>
 
@@ -31,16 +31,15 @@ The Optimization Node SDK implements functionality specific to Node environments
 - [Reference Implementations](#reference-implementations)
 - [Configuration](#configuration)
   - [Top-level Configuration Options](#top-level-configuration-options)
-  - [Analytics Options](#analytics-options)
+  - [API Options](#api-options)
   - [Event Builder Options](#event-builder-options)
   - [Fetch Options](#fetch-options)
-  - [Optimization Options](#optimization-options)
 - [Optimization Methods](#optimization-methods)
   - [Optimization Data Resolution Methods](#optimization-data-resolution-methods)
     - [`getFlag`](#getflag)
     - [`resolveOptimizedEntry`](#resolveoptimizedentry)
     - [`getMergeTagValue`](#getmergetagvalue)
-  - [Optimization and Analytics Event Methods](#optimization-and-analytics-event-methods)
+  - [Experience API and Insights API Event Methods](#experience-api-and-insights-api-event-methods)
     - [`identify`](#identify)
     - [`page`](#page)
     - [`screen`](#screen)
@@ -81,7 +80,7 @@ Reference implementations illustrate how the SDK may be used under common scenar
 select less-common scenarios, with the most basic example solution possible.
 
 - [Node SSR Only](../../../implementations/node-sdk/README.md): Example application that uses the
-  Node SDK to render a optimized Web page
+  Node SDK to render an optimized Web page
 - [Node SSR + Web Vanilla](../../../implementations/node-sdk+web-sdk/README.md): Example application
   demonstrating simple profile synchronization between the Node and
   [Web](../../web/web-sdk/README.md) SDKs via cookie
@@ -92,20 +91,30 @@ select less-common scenarios, with the most basic example solution possible.
 
 | Option         | Required? | Default                     | Description                                                                    |
 | -------------- | --------- | --------------------------- | ------------------------------------------------------------------------------ |
-| `analytics`    | No        | See "Analytics Options"     | Configuration specific to the Analytics/Insights API                           |
+| `api`          | No        | See "API Options"           | Unified configuration for the Experience API and Insights API endpoints        |
 | `app`          | No        | `undefined`                 | The application definition used to attribute events to a specific consumer app |
-| `clientId`     | Yes       | N/A                         | The Optimization API key                                                       |
+| `clientId`     | Yes       | N/A                         | Shared API key for Experience API and Insights API requests                    |
 | `environment`  | No        | `'main'`                    | The environment identifier                                                     |
 | `eventBuilder` | No        | See "Event Builder Options" | Event builder configuration (channel/library metadata, etc.)                   |
 | `fetchOptions` | No        | See "Fetch Options"         | Configuration for Fetch timeout and retry functionality                        |
 | `logLevel`     | No        | `'error'`                   | Minimum log level for the default console sink                                 |
-| `optimization` | No        | See "Optimization Options"  | Configuration specific to the Optimization/Experience API                      |
 
-### Analytics Options
+### API Options
 
-| Option    | Required? | Default                                    | Description                   |
-| --------- | --------- | ------------------------------------------ | ----------------------------- |
-| `baseUrl` | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API |
+| Option              | Required? | Default                                    | Description                                                                    |
+| ------------------- | --------- | ------------------------------------------ | ------------------------------------------------------------------------------ |
+| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                                                |
+| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                                  |
+| `beaconHandler`     | No        | `undefined`                                | Custom handler used to enqueue Insights API event batches                      |
+| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Enabled features the Experience API may use for each request                   |
+| `ip`                | No        | `undefined`                                | IP address override used by the Experience API for location analysis           |
+| `locale`            | No        | `'en-US'` (in API)                         | Locale used to translate `location.city` and `location.country`                |
+| `plainText`         | No        | `false`                                    | Sends performance-critical Experience API endpoints in plain text              |
+| `preflight`         | No        | `false`                                    | Instructs the Experience API to aggregate a new profile state but not store it |
+
+Configuration method signatures:
+
+- `beaconHandler`: `(url: string | URL, data: BatchInsightsEventArray) => boolean`
 
 ### Event Builder Options
 
@@ -120,7 +129,7 @@ SDK or any of its descendent SDKs.
 ### Fetch Options
 
 Fetch options allow for configuration of a Fetch API-compatible fetch method and the retry/timeout
-logic integrated into the Optimization API Client. Specify the `fetchMethod` when the host
+logic integrated into the SDK's bundled API clients. Specify the `fetchMethod` when the host
 application environment does not offer a `fetch` method that is compatible with the standard Fetch
 API in its global scope.
 
@@ -137,17 +146,6 @@ Configuration method signatures:
 
 - `fetchMethod`: `(url: string | URL, init: RequestInit) => Promise<Response>`
 - `onFailedAttempt` and `onRequestTimeout`: `(options: FetchMethodCallbackOptions) => void`
-
-### Optimization Options
-
-| Option            | Required? | Default                               | Description                                                         |
-| ----------------- | --------- | ------------------------------------- | ------------------------------------------------------------------- |
-| `baseUrl`         | No        | `'https://experience.ninetailed.co/'` | Base URL for the Experience API                                     |
-| `enabledFeatures` | No        | `['ip-enrichment', 'location']`       | Enabled features which the API may use for each request             |
-| `ip`              | No        | `undefined`                           | IP address to override the API behavior for IP analysis             |
-| `locale`          | No        | `'en-US'` (in API)                    | Locale used to translate `location.city` and `location.country`     |
-| `plainText`       | No        | `false`                               | Sends performance-critical endpoints in plain text                  |
-| `preflight`       | No        | `false`                               | Instructs the API to aggregate a new profile state but not store it |
 
 ## Optimization Methods
 
@@ -180,7 +178,7 @@ Behavior notes:
 
 #### `resolveOptimizedEntry`
 
-Resolve a baseline Contentful entry to a optimized variant using the provided selected
+Resolve a baseline Contentful entry to an optimized variant using the provided selected
 optimizations.
 
 Type arguments:
@@ -191,7 +189,7 @@ Type arguments:
 
 Arguments:
 
-- `entry`\*: The entry to personalize
+- `entry`\*: The baseline entry to resolve
 - `selectedOptimizations`: Selected optimizations
 
 Returns:
@@ -218,7 +216,7 @@ Arguments:
 >
 > If the `profile` argument is omitted, the method will return the merge tag's fallback value.
 
-### Optimization and Analytics Event Methods
+### Experience API and Insights API Event Methods
 
 Only the following methods may return an `OptimizationData` object:
 
@@ -246,7 +244,7 @@ Arguments:
 
 #### `page`
 
-Record a optimization page view.
+Record an Experience API page view.
 
 Arguments:
 
@@ -255,7 +253,7 @@ Arguments:
 
 #### `screen`
 
-Record a optimization screen view.
+Record an Experience API screen view.
 
 Arguments:
 
@@ -264,7 +262,7 @@ Arguments:
 
 #### `track`
 
-Record a optimization custom track event.
+Record an Experience API custom track event.
 
 Arguments:
 
@@ -273,18 +271,18 @@ Arguments:
 
 #### `trackView`
 
-Record an analytics component view event. When the payload marks the component as "sticky", an
-additional optimization component view is recorded. This method only returns `OptimizationData` when
-the component is marked as "sticky".
+Record an Insights API entry view event. When the payload marks the entry as "sticky", an additional
+Experience API entry view is recorded. This method only returns `OptimizationData` when the entry is
+marked as "sticky".
 
 Arguments:
 
-- `payload`\*: Component view event builder arguments object, including an optional `profile`
-  property with a `PartialProfile` value that requires only an `id`
+- `payload`\*: Entry view event builder arguments object, including an optional `profile` property
+  with a `PartialProfile` value that requires only an `id`
 
 #### `trackClick`
 
-Record an analytics component click event.
+Record an Insights API entry click event.
 
 Returns:
 
@@ -292,11 +290,11 @@ Returns:
 
 Arguments:
 
-- `payload`\*: Component click event builder arguments object
+- `payload`\*: Entry click event builder arguments object
 
 #### `trackHover`
 
-Record an analytics component hover event.
+Record an Insights API entry hover event.
 
 Returns:
 
@@ -304,11 +302,11 @@ Returns:
 
 Arguments:
 
-- `payload`\*: Component hover event builder arguments object
+- `payload`\*: Entry hover event builder arguments object
 
 #### `trackFlagView`
 
-Track a feature flag view via analytics. This is functionally the same as a non-sticky component
+Track a feature flag view via the Insights API. This is functionally the same as a non-sticky flag
 view event.
 
 Returns:
@@ -317,7 +315,7 @@ Returns:
 
 Arguments:
 
-- `payload`\*: Component view event builder arguments object
+- `payload`\*: Flag view event builder arguments object
 
 ## Interceptors
 

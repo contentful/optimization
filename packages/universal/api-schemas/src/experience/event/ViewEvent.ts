@@ -2,11 +2,11 @@ import * as z from 'zod/mini'
 import { InteractionEventProperties } from './InteractionEventProperties'
 
 /**
- * Zod schema describing a `component` view event.
+ * Zod schema describing a `component` view event used for entry and flag exposure tracking.
  *
  * @remarks
- * Component view events track exposure of individual components such as
- * entries or variables within a optimized experience.
+ * These events track exposure of entries and variable-backed optimization
+ * targets within an optimized experience.
  *
  * Extends {@link InteractionEventProperties}.
  *
@@ -14,18 +14,18 @@ import { InteractionEventProperties } from './InteractionEventProperties'
  */
 export const ViewEvent = z.extend(InteractionEventProperties, {
   /**
-   * Discriminator indicating that this event is a component view.
+   * Discriminator indicating that this is an entry or flag view event.
    */
   type: z.literal('component'),
   /**
-   * Monotonically increasing visible duration for the active component view.
+   * Monotonically increasing visible duration for the active view.
    *
    * @remarks
    * This value is updated and re-emitted while the same view remains active.
    */
   viewDurationMs: z.optional(z.number()),
   /**
-   * UUID identifying a single active component view session.
+   * UUID identifying a single active view session.
    *
    * @remarks
    * Multiple events emitted for the same active view share this identifier.

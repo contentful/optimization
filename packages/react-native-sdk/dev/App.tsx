@@ -321,7 +321,7 @@ function App(): React.JSX.Element {
           )}
 
           <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
-            <Text style={[styles.cardTitle, { color: colors.textColor }]}>Component Tracking</Text>
+            <Text style={[styles.cardTitle, { color: colors.textColor }]}>Entry Tracking</Text>
             <Text style={[styles.description, { color: colors.mutedTextColor }]}>
               Test viewport tracking with the OptimizedEntry component.
             </Text>
@@ -330,7 +330,7 @@ function App(): React.JSX.Element {
               onPress={handleTestTracking}
               testID="testTrackingButton"
             >
-              <Text style={styles.buttonText}>Test Component Tracking</Text>
+              <Text style={styles.buttonText}>Test Entry Tracking</Text>
             </TouchableOpacity>
           </View>
 

@@ -4,14 +4,14 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Validate Insights Event Variants Before Send (Priority: P1)
 
-As an analytics developer, I need strict event schema validation so only supported Insights event
-types are accepted before transport.
+As an Insights API integrator, I need strict event schema validation so only supported Insights
+event types are accepted before transport.
 
 **Why this priority**: Invalid event types should fail before any network call.
 
@@ -19,8 +19,9 @@ types are accepted before transport.
 
 **Acceptance Scenarios**:
 
-1. **Given** valid `component`, `component_click`, and `component_hover` payloads, **When** parsed
-   with `InsightsEvent`, **Then** parsing succeeds.
+1. **Given** valid entry/flag view, entry click, and entry hover payloads using the `component`,
+   `component_click`, and `component_hover` types, **When** parsed with `InsightsEvent`, **Then**
+   parsing succeeds.
 2. **Given** an unsupported `type`, **When** parsed with `InsightsEvent`, **Then** parsing fails.
 
 ---
@@ -46,8 +47,8 @@ calls.
 
 ### User Story 3 - Reuse Experience-Domain Primitives (Priority: P3)
 
-As a maintainer, I need Insights schemas to reuse shared Experience contracts so common
-event/profile rules stay aligned.
+As a maintainer, I need Insights API schemas to reuse shared Experience API contracts so common
+event and profile rules stay aligned.
 
 **Why this priority**: Reuse prevents duplicated schema logic and contract drift.
 
@@ -91,8 +92,9 @@ event/profile rules stay aligned.
 
 ### Key Entities _(include if feature involves data)_
 
-- **InsightsEvent**: Union of supported Insights analytics event variants.
-- **ClickEvent / HoverEvent**: Interaction event variants specific to click and hover tracking.
+- **InsightsEvent**: Union of supported Insights event variants.
+- **ClickEvent / HoverEvent**: Interaction event variants specific to entry click and hover
+  tracking.
 - **InsightsEventArray**: Event collection for one profile scope.
 - **BatchInsightsEvent**: Profile plus events payload entry.
 - **BatchInsightsEventArray**: Multi-profile batch payload.
@@ -102,7 +104,8 @@ event/profile rules stay aligned.
 
 ### Measurable Outcomes
 
-- **SC-001**: Valid `component`, `component_click`, and `component_hover` events parse successfully.
+- **SC-001**: Valid entry/flag view, entry click, and entry hover events using the `component`,
+  `component_click`, and `component_hover` types parse successfully.
 - **SC-002**: Unsupported event types fail `InsightsEvent` parsing.
 - **SC-003**: Batch payloads without `profile.id` fail validation.
 - **SC-004**: Array validation applies per element for `BatchInsightsEventArray`.

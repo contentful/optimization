@@ -4,7 +4,7 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -13,8 +13,8 @@
 As a React Native integrator, I need SDK initialization to enforce one active runtime instance so
 stateful signals, queues, and listeners are not duplicated.
 
-**Why this priority**: Runtime initialization is the entry point for all personalization and
-analytics behavior.
+**Why this priority**: Runtime initialization is the entry point for optimization and event-tracking
+behavior.
 
 **Independent Test**: Call `ContentfulOptimization.create(...)` repeatedly in one JS runtime and
 verify singleton enforcement before and after `destroy()`.
@@ -122,11 +122,12 @@ constants fallbacks, and runtime polyfill side effects.
   only when `activeOptimizationInstance === this`.
 - **FR-014**: `ContentfulOptimization.destroy()` MUST call `CoreStateful.destroy()`.
 - **FR-015**: Package root exports MUST provide named exports for current React Native APIs,
-  including `OptimizationProvider`, `OptimizationRoot`, `Personalization`, `Analytics`,
+  including `OptimizationProvider`, `OptimizationRoot`, `OptimizedEntry`,
   `OptimizationScrollProvider`, `useScrollContext`, `LiveUpdatesProvider`, `useLiveUpdates`,
   `useOptimization`, `useInteractionTracking`, `useViewportTracking`, `useTapTracking`,
   `useScreenTracking`, `useScreenTrackingCallback`, `OptimizationNavigationContainer`,
-  `OptimizationPreviewPanel`, `PreviewPanelOverlay`, and `ContentfulOptimization`.
+  `OptimizationPreviewPanel`, `PreviewPanelOverlay`, `ContentfulOptimization`, and
+  `OptimizationConfig`.
 - **FR-016**: Package root MUST expose `OptimizationConfig` as an alias of `CoreStatefulConfig`.
 - **FR-017**: Package root MUST export `ContentfulOptimization` as a named export (no root default
   export contract).

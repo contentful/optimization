@@ -111,7 +111,7 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
  * ```
  *
  * @see {@link OptimizationProvider}
- * @see {@link OptimizedEntry} for per-component interaction overrides
+ * @see {@link OptimizedEntry} for per-entry interaction overrides
  *
  * @public
  */

@@ -56,7 +56,7 @@ test.describe('entry hover tracking', () => {
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
   })
 
-  test('does not emit component_hover events without consent', async ({ page }) => {
+  test('does not emit entry hover events without consent', async ({ page }) => {
     for (const scenario of hoverScenarios) {
       const target = page.getByTestId(scenario.hoverTargetTestId)
       await expect(target, `${scenario.name}: hover target should render`).toBeVisible()
@@ -70,7 +70,7 @@ test.describe('entry hover tracking', () => {
     await expect(page.locator('[data-testid^="event-component_hover-hover-"]')).toHaveCount(0)
   })
 
-  test('emits component_hover events for entry container and descendant hovers after consent', async ({
+  test('emits entry hover events for entry container and descendant hovers after consent', async ({
     page,
   }) => {
     await page.getByTestId('consent-button').click()
@@ -97,7 +97,7 @@ test.describe('entry hover tracking', () => {
         })
         .toBeGreaterThan(baselineCount)
 
-      await expect(hoverEvents.first()).toContainText(`Component: ${resolvedEntryId}`)
+      await expect(hoverEvents.first()).toContainText(`Entry/Flag: ${resolvedEntryId}`)
       await movePointerAwayFromEntries(page)
     }
 
@@ -122,7 +122,7 @@ test.describe('entry hover tracking', () => {
 
     const hoverEvent = page.locator('[data-testid^="event-component_hover-hover-"]').first()
     await expect(hoverEvent).toBeVisible()
-    await expect(hoverEvent).toContainText(`Component: ${resolvedEntryId}`)
+    await expect(hoverEvent).toContainText(`Entry/Flag: ${resolvedEntryId}`)
 
     const hoverEventTestId = await hoverEvent.getAttribute('data-testid')
     const hoverId = parseHoverId(hoverEventTestId)

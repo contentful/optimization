@@ -77,7 +77,7 @@ export const PROFILE_CACHE_KEY = '__ctfl_opt_profile__'
  *
  * @internal
  */
-export const OPTIMIZATIONS_CACHE_KEY = '__ctfl_opt_personalizations__'
+export const SELECTED_OPTIMIZATIONS_CACHE_KEY = '__ctfl_opt_selected-optimizations__'
 
 /**
  * Legacy anoynmous ID cookie key for migration from experience.js

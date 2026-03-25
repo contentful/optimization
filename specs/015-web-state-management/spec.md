@@ -4,7 +4,7 @@
 **Created**: 2026-02-27  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -13,7 +13,7 @@
 As a Web SDK integrator, I need consent, profile, changes, selected optimizations, and anonymous
 identity restored from browser persistence so user context survives page reloads.
 
-**Why this priority**: Persisted state continuity is required for stable personalization behavior.
+**Why this priority**: Persisted state continuity is required for stable optimization behavior.
 
 **Independent Test**: Pre-populate localStorage/cookies, initialize `ContentfulOptimization`, and
 verify merged defaults plus anonymous ID cookie initialization behavior.

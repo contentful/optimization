@@ -1,10 +1,10 @@
-# Feature Specification: Contentful CDA Personalization Contract Schemas
+# Feature Specification: Contentful CDA Optimization Contract Schemas
 
 **Feature Branch**: `[002-contentful-cda-schemas]`  
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -13,7 +13,7 @@
 As a runtime developer, I need base schemas for Contentful links and entries so optimized content
 processing starts from validated CDA data.
 
-**Why this priority**: Entry validation is the first safety boundary before personalization logic.
+**Why this priority**: Entry validation is the first safety boundary before optimization logic.
 
 **Independent Test**: Parse valid and invalid payloads through `CtflEntry`, `EntrySys`, and link
 schemas.
@@ -29,7 +29,7 @@ schemas.
 
 ### User Story 2 - Normalize Optimization Entry Configuration (Priority: P2)
 
-As a personalization developer, I need deterministic defaults for optimization config fields so
+As an optimization developer, I need deterministic defaults for optimization config fields so
 variant logic receives predictable values.
 
 **Why this priority**: `nt_config` is optional/nullable in CDA payloads and must be normalized.
@@ -51,7 +51,7 @@ variant logic receives predictable values.
 As an SDK maintainer, I need type guards for entries and components so runtime branching does not
 depend on manual casts.
 
-**Why this priority**: Guards are used by downstream personalization resolution paths.
+**Why this priority**: Guards are used by downstream optimization resolution paths.
 
 **Independent Test**: Run exported guards across valid and invalid objects.
 

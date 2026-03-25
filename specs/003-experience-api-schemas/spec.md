@@ -4,7 +4,7 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -31,7 +31,7 @@ before transport.
 As a runtime integrator, I need response envelope validation so inbound Experience API payloads are
 trusted before use.
 
-**Why this priority**: Response contracts protect downstream personalization logic.
+**Why this priority**: Response contracts protect downstream optimization logic.
 
 **Independent Test**: Parse valid and invalid `ExperienceResponse` and `BatchExperienceResponse`
 objects.
@@ -46,8 +46,8 @@ objects.
 
 ### User Story 3 - Maintain One Typed Event/Profile Taxonomy (Priority: P3)
 
-As a schema maintainer, I need complete event/profile/change contracts so Experience and Insights
-reuse one consistent source.
+As a schema maintainer, I need complete event/profile/change contracts so the Experience API and
+Insights API reuse one consistent source.
 
 **Why this priority**: Shared contracts prevent drift between SDK layers.
 
@@ -55,8 +55,9 @@ reuse one consistent source.
 
 **Acceptance Scenarios**:
 
-1. **Given** events of type `alias`, `component`, `group`, `identify`, `page`, `screen`, and
-   `track`, **When** parsed by `ExperienceEvent`, **Then** valid variants are accepted.
+1. **Given** events of type `alias`, `component` (entry/flag view), `group`, `identify`, `page`,
+   `screen`, and `track`, **When** parsed by `ExperienceEvent`, **Then** valid variants are
+   accepted.
 2. **Given** batch events missing `anonymousId`, **When** parsed by `BatchExperienceEvent`, **Then**
    parsing fails.
 
@@ -112,8 +113,8 @@ reuse one consistent source.
 - **ResponseEnvelope**: Shared API envelope (`data`, `message`, `error`).
 - **ExperienceResponse / BatchExperienceResponse**: Typed response contracts.
 - **Profile / PartialProfile**: Full profile and partial profile payload schemas.
-- **Change / VariableChange / UnknownChange**: Change contracts for flag/personalization effects.
-- **SelectedOptimization**: Experience variant selection result schema.
+- **Change / VariableChange / UnknownChange**: Change contracts for flag and optimization effects.
+- **SelectedOptimization**: Experience API variant selection result schema.
 
 ## Success Criteria _(mandatory)_
 

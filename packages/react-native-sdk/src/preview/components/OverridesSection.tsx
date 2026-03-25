@@ -41,7 +41,7 @@ export function OverridesSection({
     ])
   }
 
-  const handleResetPersonalization = (experienceId: string): void => {
+  const handleResetOptimization = (experienceId: string): void => {
     const name = getExperienceName(experienceId)
     Alert.alert('Reset Override', `Remove override for experience "${name}"?`, [
       { text: 'Cancel', style: 'cancel' },
@@ -106,7 +106,7 @@ export function OverridesSection({
                 label: 'Reset',
                 variant: 'reset',
                 onPress: () => {
-                  handleResetPersonalization(override.experienceId)
+                  handleResetOptimization(override.experienceId)
                 },
               }}
             />

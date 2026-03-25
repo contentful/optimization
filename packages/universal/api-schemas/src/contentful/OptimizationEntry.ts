@@ -8,7 +8,7 @@ import { OptimizationConfig } from './OptimizationConfig'
  *
  * @remarks
  * `nt_experiment` represents experiments (A/B tests), and `nt_personalization`
- * represents always-on optimized experiences.
+ * represents personalizations.
  *
  * @public
  */

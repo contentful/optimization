@@ -4,7 +4,7 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -56,7 +56,7 @@ externally built events can be validated and sent through this client package.
 **Acceptance Scenarios**:
 
 1. **Given** consumers importing `@contentful/optimization-api-client/api-schemas`, **When** used,
-   **Then** Experience/Insights event schemas are available.
+   **Then** Experience API/Insights API event schemas are available.
 2. **Given** `ExperienceApiClient` and `InsightsApiClient` methods, **When** called, **Then** they
    accept schema-typed event payloads without requiring local builder APIs.
 
@@ -77,13 +77,13 @@ externally built events can be validated and sent through this client package.
 - **FR-002**: Package `exports` MUST include `.`, `./logger`, and `./api-schemas` (plus
   `./package.json`) and MUST NOT include an event-builder subpath.
 - **FR-003**: Source root entrypoint (`src/index.ts`) MUST export API client classes/base and
-  Experience/Insights modules only.
+  Experience API/Insights API modules only.
 - **FR-004**: Schema re-exports MUST remain available via `src/api-schemas.ts` and package subpath
   `./api-schemas`.
 - **FR-005**: Documentation in this package MUST state that event-construction helpers are provided
   by `@contentful/optimization-core` and related environment SDKs.
-- **FR-006**: Experience/Insights client contracts MUST continue to accept typed event payloads from
-  external builders or manual construction.
+- **FR-006**: Experience API/Insights API client contracts MUST continue to accept typed event
+  payloads from external builders or manual construction.
 
 ### Key Entities _(include if feature involves data)_
 

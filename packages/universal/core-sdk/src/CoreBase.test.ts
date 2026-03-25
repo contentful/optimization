@@ -87,7 +87,7 @@ describe('CoreBase', () => {
     expect(core.eventBuilder.library.name).toEqual(OPTIMIZATION_CORE_SDK_NAME)
   })
 
-  it('keeps insights and Experience client config isolated', () => {
+  it('keeps Insights API and Experience API client config isolated', () => {
     const core = new TestCore({
       clientId: CLIENT_ID,
       api: {
@@ -138,7 +138,7 @@ describe('CoreBase', () => {
     expect(trackFlagView).not.toHaveBeenCalled()
   })
 
-  it('routes sticky component views through both Experience and Insights paths', async () => {
+  it('routes sticky entry views through both the Experience API and Insights API', async () => {
     const core = new TestCore(config)
     const profile = { id: 'profile-1' }
 
@@ -166,7 +166,7 @@ describe('CoreBase', () => {
     )
   })
 
-  it('routes non-sticky component views only through Insights', async () => {
+  it('routes non-sticky entry views only through Insights', async () => {
     const core = new TestCore(config)
 
     await core.trackView({

@@ -1,3 +1,8 @@
+import {
+  CHANGES_CACHE_KEY,
+  PROFILE_CACHE_KEY,
+  SELECTED_OPTIMIZATIONS_CACHE_KEY,
+} from '@contentful/optimization-react-native/core-sdk'
 import { createScopedLogger } from '@contentful/optimization-react-native/logger'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { createClient, type Entry } from 'contentful'
@@ -49,7 +54,7 @@ export async function fetchEntries(
 
 export async function clearProfileState(): Promise<void> {
   try {
-    const keys = ['__ctfl_opt_profile__', '__ctfl_opt_personalizations__', '__ctfl_opt_changes__']
+    const keys = [PROFILE_CACHE_KEY, SELECTED_OPTIMIZATIONS_CACHE_KEY, CHANGES_CACHE_KEY]
     await AsyncStorage.multiRemove(keys)
     logger.info('Profile state cleared successfully')
   } catch (error: unknown) {

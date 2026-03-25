@@ -25,7 +25,7 @@ export interface UseViewportTrackingOptions {
   selectedOptimization?: SelectedOptimization
 
   /**
-   * Minimum visibility ratio (0.0 - 1.0) required to consider the component "visible".
+   * Minimum visibility ratio (0.0 - 1.0) required to consider the entry visible.
    *
    * @defaultValue `0.8`
    */
@@ -39,7 +39,7 @@ export interface UseViewportTrackingOptions {
   viewTimeMs?: number
 
   /**
-   * Whether view tracking is enabled for this component.
+   * Whether view tracking is enabled for this entry.
    * When `false`, the hook returns a no-op `onLayout` and `isVisible: false`
    * without setting up timers or scroll listeners.
    *
@@ -134,7 +134,8 @@ function resetCycleState(cycle: ViewCycleState): void {
  *
  * @param resolvedEntry - The resolved Contentful entry (baseline or variant).
  * @param selectedOptimization - Optional selected optimization for variant tracking.
- * @returns An object containing `componentId`, optional `experienceId`, and `variantIndex`.
+ * @returns Wire-format tracking metadata containing `componentId`, optional
+ *   `experienceId`, and `variantIndex`.
  *
  * @internal
  */
@@ -186,7 +187,7 @@ function getRemainingMsUntilNextFire(
 }
 
 /**
- * Tracks whether a component is visible in the viewport and fires entry view
+ * Tracks whether an entry is visible in the viewport and fires entry view
  * events with accumulated duration tracking.
  *
  * The hook implements a three-phase event lifecycle per visibility cycle:
@@ -201,9 +202,9 @@ function getRemainingMsUntilNextFire(
  *
  * @remarks
  * Uses {@link useScrollContext} if available, otherwise falls back to screen dimensions.
- * A new visibility cycle (with a fresh `viewId`) starts each time the component
- * transitions from invisible to visible. Time accumulation pauses when the app moves
- * to the background.
+ * A new visibility cycle (with a fresh `viewId`) starts each time the tracked
+ * entry transitions from invisible to visible. Time accumulation pauses when
+ * the app moves to the background.
  *
  * @example
  * ```tsx

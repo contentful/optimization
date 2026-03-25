@@ -4,7 +4,7 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -47,8 +47,8 @@ including nested `library` fields.
    merged, **Then** supplied fields override Node defaults.
 2. **Given** partial nested `library` overrides, **When** config is merged, **Then** unspecified
    nested default fields remain intact.
-3. **Given** non-event-builder options (`analytics`, `personalization`, `fetchOptions`, etc.),
-   **When** config is merged, **Then** those options are forwarded to `CoreStateless` unchanged.
+3. **Given** non-event-builder options (`api`, `fetchOptions`, `environment`, etc.), **When** config
+   is merged, **Then** those options are forwarded to `CoreStateless` unchanged.
 
 ---
 
