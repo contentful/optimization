@@ -4,7 +4,7 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-24).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -41,8 +41,8 @@ default-value application, reset behavior, and observable contracts.
 
 ### User Story 2 - Enforce Consent Gating with Blocked Event Telemetry (Priority: P1)
 
-As a privacy-focused integrator, I need stateful analytics and personalization methods to be guarded
-by consent and to emit blocked diagnostics so blocked behavior is auditable.
+As a privacy-focused integrator, I need stateful Core event methods to be guarded by consent and to
+emit blocked diagnostics so blocked behavior is auditable.
 
 **Why this priority**: Consent gating is required for compliant event behavior.
 
@@ -56,7 +56,7 @@ callback and blocked-event stream behavior.
 2. **Given** default allowed event types (`identify`, `page`, `screen`), **When** consent is
    missing, **Then** those event types are still allowed.
 3. **Given** consent mapping for component methods, **When** `trackView`/`trackFlagView` are gated,
-   **Then** allow-list checks use `'component'`; analytics also maps `trackClick` to
+   **Then** allow-list checks use `'component'`; the shared mapping also maps `trackClick` to
    `'component_click'` and `trackHover` to `'component_hover'`.
 4. **Given** throwing `onEventBlocked` callbacks, **When** blocked-event reporting runs, **Then**
    callback failures are swallowed and blocked-event signal publication continues.
@@ -65,7 +65,7 @@ callback and blocked-event stream behavior.
 
 ### User Story 3 - Queue and Flush Reliably with Retry/Backoff/Circuit Controls (Priority: P2)
 
-As a runtime maintainer, I need stateful analytics and personalization queues with retry/backoff and
+As a runtime maintainer, I need stateful Insights and Experience queues with retry/backoff and
 offline handling so temporary failures do not immediately lose events.
 
 **Why this priority**: Stateful reliability depends on bounded retry and deterministic queue
@@ -76,19 +76,20 @@ retry scheduling, circuit windows, and recovery callbacks.
 
 **Acceptance Scenarios**:
 
-1. **Given** analytics events and a current profile, **When** events are enqueued, **Then** queue
+1. **Given** Insights events and a current profile, **When** events are enqueued, **Then** queue
    storage is grouped by `profile.id` and the latest profile snapshot is retained per key.
-2. **Given** analytics queue growth to threshold, **When** queued event count reaches `25`, **Then**
+2. **Given** Insights queue growth to threshold, **When** queued event count reaches `25`, **Then**
    flush is automatically triggered.
-3. **Given** personalization events while offline, **When** queue exceeds `maxEvents` (default
-   `100`), **Then** oldest events are dropped first and optional `onDrop` receives drop context.
+3. **Given** Experience events while offline, **When** queue exceeds `offlineMaxEvents` (default
+   `100`), **Then** oldest events are dropped first and optional `onOfflineDrop` receives drop
+   context.
 4. **Given** flush failures (false response or thrown error), **When** retries run, **Then**
    backoff/circuit policy and callbacks (`onFlushFailure`, `onCircuitOpen`, `onFlushRecovered`)
    execute via `QueueFlushRuntime`.
 5. **Given** online status changes to true, **When** reactive online effects run, **Then** pending
-   retries are cleared and force-flush is attempted at product level.
-6. **Given** immediate online personalization sends fail, **When** the send throws, **Then** the
-   error propagates and the event is not backfilled into the offline queue.
+   retries are cleared and force-flush is attempted for both delivery paths.
+6. **Given** immediate online Experience sends fail, **When** the send throws, **Then** the error
+   propagates and the event is not backfilled into the offline queue.
 
 ---
 
@@ -99,14 +100,13 @@ retry scheduling, circuit windows, and recovery callbacks.
   toggle `previewPanelAttached`/`previewPanelOpen`.
 - `canPersonalize` is derived from `selectedPersonalizations !== undefined`; an empty array still
   yields `true`.
-- `CoreStateful.reset()` clears selected signal values only; it does not directly clear analytics
-  queue maps or personalization offline queue sets.
-- `CoreStateful.flush()` has no force option and always awaits analytics flush before
-  personalization flush.
-- Product-level `flush({ force: true })` bypasses offline/backoff/circuit gates, but not an already
-  in-flight flush.
+- `CoreStateful.reset()` clears selected signal values only; it does not directly clear internal
+  Insights queue maps or Experience offline queue sets.
+- `CoreStateful.flush()` has no force option and always awaits Insights flush before Experience
+  flush.
+- Internal force flushes bypass offline/backoff/circuit gates, but not an already in-flight flush.
 - Queue policy callbacks are best-effort; callback exceptions are swallowed and reported through
-  product logging/runtime callback handlers.
+  runtime callback handlers.
 
 ## Requirements _(mandatory)_
 
@@ -118,10 +118,10 @@ retry scheduling, circuit windows, and recovery callbacks.
   release the singleton lock before rethrowing.
 - **FR-003**: `CoreStateful.destroy()` MUST be idempotent and MUST release singleton ownership for
   its owner token.
-- **FR-004**: `CoreStateful` MUST split scoped `queuePolicy` fields from analytics/personalization
-  API config before constructing `CoreBase`.
-- **FR-005**: `CoreStateful` MUST construct `AnalyticsStateful` and `PersonalizationStateful` with
-  shared `api`, `eventBuilder`, `interceptors`, and forwarded stateful product config
+- **FR-004**: `CoreStateful` MUST accept a shared `queuePolicy` separate from unified `api`
+  configuration and apply it to the appropriate internal delivery runtimes.
+- **FR-005**: `CoreStateful` MUST initialize Core-owned stateful Insights and Experience delivery
+  using shared `api`, `eventBuilder`, `interceptors`, and forwarded stateful config
   (`allowedEventTypes`, `onEventBlocked`, defaults, queue policy, and optional `getAnonymousId`).
 - **FR-006**: `CoreStateful.states` MUST expose observables for `consent`, `blockedEventStream`,
   `eventStream`, `flags`, `canPersonalize`, `profile`, `selectedPersonalizations`,
@@ -133,44 +133,43 @@ retry scheduling, circuit windows, and recovery callbacks.
   `selectedPersonalizations` signals.
 - **FR-010**: `CoreStateful.reset()` MUST NOT clear `consent`, `previewPanelAttached`, or
   `previewPanelOpen`.
-- **FR-011**: `CoreStateful.flush()` MUST sequentially await analytics flush then personalization
-  flush.
+- **FR-011**: `CoreStateful.flush()` MUST sequentially await Insights flush then Experience flush.
 - **FR-012**: `CoreStateful.registerPreviewPanel()` MUST set
   `PREVIEW_PANEL_SIGNALS_SYMBOL -> signals` and `PREVIEW_PANEL_SIGNAL_FNS_SYMBOL -> signalFns` on
   the provided object.
 - **FR-013**: `CoreStateful.registerPreviewPanel()` MUST NOT set or infer preview attached/open
   boolean signal state.
-- **FR-014**: Stateful analytics and personalization methods MUST be guarded through `guardedBy`
-  using `hasConsent` and `onBlockedByConsent`.
+- **FR-014**: Stateful Core event methods MUST be guarded through `guardedBy` using `hasConsent` and
+  `onBlockedByConsent`.
 - **FR-015**: Consent checks MUST allow events when consent is true or mapped event type is in
   `allowedEventTypes`; default allowed types MUST remain `['identify', 'page', 'screen']` when
   unspecified.
-- **FR-016**: Analytics consent mapping MUST normalize `trackView` and `trackFlagView` to
-  `'component'`, `trackClick` to `'component_click'`, and `trackHover` to `'component_hover'`.
-- **FR-017**: Personalization consent mapping MUST normalize `trackView` and `trackFlagView` to
-  `'component'`.
-- **FR-018**: Analytics stateful queue MUST be keyed by `profile.id`, preserve latest profile
+- **FR-016**: Consent mapping MUST normalize `trackView` and `trackFlagView` to `'component'`,
+  `trackClick` to `'component_click'`, and `trackHover` to `'component_hover'`.
+- **FR-017**: Blocked event diagnostics MUST emit `reason`, `method`, and `args` and MUST NOT
+  include a product taxonomy field.
+- **FR-018**: Insights stateful queue MUST be keyed by `profile.id`, preserve latest profile
   snapshot per key, and skip enqueue when no current profile is available.
-- **FR-019**: Analytics stateful queue MUST auto-flush when total queued events reaches `25`.
-- **FR-020**: Analytics flush MUST treat both `false` API responses and thrown send errors as flush
+- **FR-019**: Insights stateful queue MUST auto-flush when total queued events reaches `25`.
+- **FR-020**: Insights flush MUST treat both `false` API responses and thrown send errors as flush
   failures for retry runtime handling.
-- **FR-021**: Personalization stateful offline queue MUST default to `maxEvents: 100`, drop oldest
-  events first when bounds are exceeded, and provide drop context to optional `onDrop`.
-- **FR-022**: Personalization offline `onDrop` callback failures MUST be swallowed.
-- **FR-023**: Personalization stateful online path MUST send events immediately and return
-  `OptimizationData`; offline path MUST queue events and return `undefined`.
-- **FR-024**: Personalization online send failures MUST propagate and MUST NOT automatically enqueue
-  failed online events in the offline queue.
-- **FR-025**: Personalization upsert profile resolution MUST prefer `getAnonymousId()` when it
-  returns a truthy value, otherwise fallback to `profile.id` from shared signal state.
-- **FR-026**: Personalization state updates from Experience responses MUST run through
-  `interceptors.state` before updating signals.
-- **FR-027**: Signal updates for `changes`, `profile`, and `selectedPersonalizations` MUST be
-  deep-equality aware and skip redundant assignments.
-- **FR-028**: `QueueFlushRuntime.shouldSkip()` MUST always block in-flight flushes and, unless
-  forced, MUST gate flushes for offline state, active backoff windows, and open circuits.
-- **FR-029**: Queue flush runtime defaults MUST normalize to `baseBackoffMs=500`,
+- **FR-021**: Shared `queuePolicy.flush` defaults MUST normalize to `baseBackoffMs=500`,
   `maxBackoffMs=30000`, `jitterRatio=0.2`, `maxConsecutiveFailures=8`, and `circuitOpenMs=120000`.
+- **FR-022**: Experience stateful offline queue MUST default to `offlineMaxEvents: 100`, drop oldest
+  events first when bounds are exceeded, and provide drop context to optional `onOfflineDrop`.
+- **FR-023**: Experience offline `onOfflineDrop` callback failures MUST be swallowed.
+- **FR-024**: Experience stateful online path MUST send events immediately and return
+  `OptimizationData`; offline path MUST queue events and return `undefined`.
+- **FR-025**: Experience online send failures MUST propagate and MUST NOT automatically enqueue
+  failed online events in the offline queue.
+- **FR-026**: Experience upsert profile resolution MUST prefer `getAnonymousId()` when it returns a
+  truthy value, otherwise fallback to `profile.id` from shared signal state.
+- **FR-027**: Experience state updates from responses MUST run through `interceptors.state` before
+  updating signals.
+- **FR-028**: Signal updates for `changes`, `profile`, and `selectedPersonalizations` MUST be
+  deep-equality aware and skip redundant assignments.
+- **FR-029**: `QueueFlushRuntime.shouldSkip()` MUST always block in-flight flushes and, unless
+  forced, MUST gate flushes for offline state, active backoff windows, and open circuits.
 - **FR-030**: Queue flush runtime MUST invoke failure/circuit/recovered callbacks with queue and
   retry context payloads, schedule retries, and fault-tolerantly report callback exceptions through
   `onCallbackError` when configured.
@@ -179,12 +178,11 @@ retry scheduling, circuit windows, and recovery callbacks.
 
 ### Key Entities _(include if feature involves data)_
 
-- **CoreStateful**: Runtime singleton coordinating stateful analytics and personalization products.
+- **CoreStateful**: Runtime singleton coordinating stateful Insights and Experience delivery.
 - **CoreStates**: Observable contract for consent, blocked/event streams, flags, profile,
   selected-personalization state, derived `canPersonalize`, and preview panel signals.
-- **AnalyticsStateful Queue**: Profile-grouped in-memory queue with auto-flush and retry/circuit
-  controls.
-- **Personalization Offline Queue**: Ordered set of Experience events retained while offline.
+- **Insights Queue**: Profile-grouped in-memory queue with auto-flush and retry/circuit controls.
+- **Experience Offline Queue**: Ordered set of Experience events retained while offline.
 - **QueueFlushRuntime**: Shared retry/backoff/circuit state machine used by stateful products.
 - **Preview Panel Bridge**: Symbol-keyed attachment contract for sharing `signals` and `signalFns`
   with preview tooling.
@@ -197,9 +195,9 @@ retry scheduling, circuit windows, and recovery callbacks.
   `destroy()` is called.
 - **SC-002**: Consent-blocked calls are emitted through both `onEventBlocked` callback and
   `blockedEventStream` observable.
-- **SC-003**: Analytics and personalization queues demonstrate configured retry/backoff/circuit
-  behavior and recover by clearing queued events after successful flush.
-- **SC-004**: Offline personalization queue enforces max-size drop policy with accurate drop-context
+- **SC-003**: Insights and Experience queues demonstrate configured retry/backoff/circuit behavior
+  and recover by clearing queued events after successful flush.
+- **SC-004**: Offline Experience queue enforces max-size drop policy with accurate drop-context
   callback payloads.
 - **SC-005**: Core state observable tests confirm full state coverage, reset preservation semantics,
   and deep-cloned `current`/`subscribe`/`subscribeOnce` behavior.

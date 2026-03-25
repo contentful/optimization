@@ -8,7 +8,10 @@ import type { TrackBuilderArgs, ViewBuilderArgs } from './events'
 import type { QueueFlushFailureContext } from './lib/queue'
 import { batch, signalFns, signals } from './signals'
 import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from './symbols'
+import { mergeTagEntry } from './test/fixtures/mergeTagEntry'
+import { personalizedEntry } from './test/fixtures/personalizedEntry'
 import { profile as profileFixture } from './test/fixtures/profile'
+import { selectedPersonalizations as selectedPersonalizationsFixture } from './test/fixtures/selectedPersonalizations'
 
 const config: CoreStatefulConfig = {
   clientId: 'key_123',
@@ -111,14 +114,12 @@ describe('CoreStateful blocked event handling', () => {
     expect(onEventBlocked).toHaveBeenCalledWith(
       expect.objectContaining({
         reason: 'consent',
-        product: 'personalization',
         method: 'track',
       }),
     )
     expect(blockedEvents.at(-1)).toEqual(
       expect.objectContaining({
         reason: 'consent',
-        product: 'personalization',
         method: 'track',
       }),
     )
@@ -161,7 +162,6 @@ describe('CoreStateful blocked event handling', () => {
     expect(blockedEvents.at(-1)).toEqual(
       expect.objectContaining({
         reason: 'consent',
-        product: 'personalization',
         method: 'track',
       }),
     )
@@ -169,7 +169,7 @@ describe('CoreStateful blocked event handling', () => {
     subscription.unsubscribe()
   })
 
-  it('uses analytics.queuePolicy when provided', async () => {
+  it('uses shared queuePolicy.flush for insights retries when provided', async () => {
     rs.useFakeTimers()
 
     try {
@@ -179,8 +179,8 @@ describe('CoreStateful blocked event handling', () => {
           consent: true,
           profile: profileFixture,
         },
-        analytics: {
-          queuePolicy: {
+        queuePolicy: {
+          flush: {
             baseBackoffMs: 123,
             jitterRatio: 0,
             maxBackoffMs: 123,
@@ -211,7 +211,7 @@ describe('CoreStateful blocked event handling', () => {
     }
   })
 
-  it('uses personalization.queuePolicy when provided', async () => {
+  it('uses queuePolicy.offlineMaxEvents and onOfflineDrop for Experience buffering', async () => {
     rs.useFakeTimers()
 
     try {
@@ -219,16 +219,14 @@ describe('CoreStateful blocked event handling', () => {
       const onFlushFailure = rs.fn<(context: QueueFlushFailureContext) => void>()
       const core = createCoreStatefulHarness({
         defaults: { consent: true },
-        personalization: {
-          queuePolicy: {
-            maxEvents: 2,
-            onDrop,
-            flushPolicy: {
-              baseBackoffMs: 321,
-              jitterRatio: 0,
-              maxBackoffMs: 321,
-              onFlushFailure,
-            },
+        queuePolicy: {
+          offlineMaxEvents: 2,
+          onOfflineDrop: onDrop,
+          flush: {
+            baseBackoffMs: 321,
+            jitterRatio: 0,
+            maxBackoffMs: 321,
+            onFlushFailure,
           },
         },
       })
@@ -279,42 +277,30 @@ describe('CoreStateful blocked event handling', () => {
     }).not.toThrow()
   })
 
-  it('flushes analytics and personalization queues with force on destroy', () => {
-    const core = createCoreStateful()
-    const analytics: unknown = Reflect.get(core, '_analytics')
-    const personalization: unknown = Reflect.get(core, '_personalization')
+  it('flushes insights and Experience queues with force on destroy', async () => {
+    const core = createCoreStatefulHarness({
+      defaults: {
+        consent: true,
+        profile: profileFixture,
+      },
+    })
+    const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const upsertProfile = rs.spyOn(core.api.experience, 'upsertProfile').mockResolvedValue({
+      changes: [],
+      selectedPersonalizations: [],
+      profile: profileFixture,
+    })
 
-    if (
-      !(
-        typeof analytics === 'object' &&
-        analytics !== null &&
-        'flush' in analytics &&
-        typeof analytics.flush === 'function'
-      )
-    ) {
-      throw new Error('CoreStateful analytics product is unavailable')
-    }
-
-    if (
-      !(
-        typeof personalization === 'object' &&
-        personalization !== null &&
-        'flush' in personalization &&
-        typeof personalization.flush === 'function'
-      )
-    ) {
-      throw new Error('CoreStateful internal products are unavailable')
-    }
-
-    const analyticsFlushSpy = rs.spyOn(analytics, 'flush').mockResolvedValue(undefined)
-    const personalizationFlushSpy = rs.spyOn(personalization, 'flush').mockResolvedValue(undefined)
+    core.setOnlineState(false)
+    await core.trackClick({ componentId: 'hero-banner' })
+    await core.track({ event: 'queued-experience-event' })
 
     core.destroy()
+    await Promise.resolve()
+    await Promise.resolve()
 
-    expect(analyticsFlushSpy).toHaveBeenCalledTimes(1)
-    expect(analyticsFlushSpy).toHaveBeenCalledWith({ force: true })
-    expect(personalizationFlushSpy).toHaveBeenCalledTimes(1)
-    expect(personalizationFlushSpy).toHaveBeenCalledWith({ force: true })
+    expect(sendBatchEvents).toHaveBeenCalledTimes(1)
+    expect(upsertProfile).toHaveBeenCalledTimes(1)
   })
 
   it('exposes online state through protected accessor pair', () => {
@@ -366,6 +352,30 @@ describe('CoreStateful blocked event handling', () => {
     expect(values).toEqual([false, true, false])
 
     subscription.unsubscribe()
+  })
+
+  it('defaults personalizeEntry to the selectedPersonalizations signal', () => {
+    const core = createCoreStateful()
+
+    signals.selectedPersonalizations.value = selectedPersonalizationsFixture
+
+    const result = core.personalizeEntry(personalizedEntry)
+
+    expect(result.entry.sys.id).toBe('4k6ZyFQnR2POY5IJLLlJRb')
+    expect(result.personalization).toEqual(
+      expect.objectContaining({
+        experienceId: '2qVK4T5lnScbswoyBuGipd',
+        variantIndex: 1,
+      }),
+    )
+  })
+
+  it('defaults getMergeTagValue to the profile signal', () => {
+    const core = createCoreStateful()
+
+    signals.profile.value = profileFixture
+
+    expect(core.getMergeTagValue(mergeTagEntry)).toBe('EU')
   })
 
   it('auto-tracks getFlag retrievals in stateful environments', () => {

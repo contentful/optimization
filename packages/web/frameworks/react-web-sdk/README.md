@@ -63,8 +63,10 @@ function App() {
     <OptimizationRoot
       clientId="your-client-id"
       environment="main"
-      analytics={{ baseUrl: 'https://ingest.insights.ninetailed.co/' }}
-      personalization={{ baseUrl: 'https://experience.ninetailed.co/' }}
+      api={{
+        insightsBaseUrl: 'https://ingest.insights.ninetailed.co/',
+        experienceBaseUrl: 'https://experience.ninetailed.co/',
+      }}
       liveUpdates={true}
     >
       <YourApp />
@@ -75,16 +77,15 @@ function App() {
 
 Available config props:
 
-| Prop                        | Type                                | Required | Description                                      |
-| --------------------------- | ----------------------------------- | -------- | ------------------------------------------------ |
-| `clientId`                  | `string`                            | Yes      | Your Contentful Optimization client identifier   |
-| `environment`               | `string`                            | No       | Contentful environment (defaults to `'main'`)    |
-| `analytics`                 | `CoreStatefulAnalyticsConfig`       | No       | Analytics/Insights API configuration             |
-| `personalization`           | `CoreStatefulPersonalizationConfig` | No       | Personalization/Experience API configuration     |
-| `app`                       | `App`                               | No       | Application metadata for events                  |
-| `autoTrackEntryInteraction` | `AutoTrackEntryInteractionOptions`  | No       | Automatic entry interaction tracking options     |
-| `logLevel`                  | `LogLevels`                         | No       | Minimum log level for console output             |
-| `liveUpdates`               | `boolean`                           | No       | Enable global live updates (defaults to `false`) |
+| Prop                        | Type                               | Required | Description                                       |
+| --------------------------- | ---------------------------------- | -------- | ------------------------------------------------- |
+| `clientId`                  | `string`                           | Yes      | Your Contentful Optimization client identifier    |
+| `environment`               | `string`                           | No       | Contentful environment (defaults to `'main'`)     |
+| `api`                       | `CoreApiConfig`                    | No       | Unified Insights and Experience API configuration |
+| `app`                       | `App`                              | No       | Application metadata for events                   |
+| `autoTrackEntryInteraction` | `AutoTrackEntryInteractionOptions` | No       | Automatic entry interaction tracking options      |
+| `logLevel`                  | `LogLevels`                        | No       | Minimum log level for console output              |
+| `liveUpdates`               | `boolean`                          | No       | Enable global live updates (defaults to `false`)  |
 
 ### Provider Composition
 
@@ -121,8 +122,10 @@ export default function App({ Component, pageProps }: AppProps) {
     <OptimizationRoot
       clientId="your-client-id"
       environment="main"
-      analytics={{ baseUrl: 'https://ingest.insights.ninetailed.co/' }}
-      personalization={{ baseUrl: 'https://experience.ninetailed.co/' }}
+      api={{
+        insightsBaseUrl: 'https://ingest.insights.ninetailed.co/',
+        experienceBaseUrl: 'https://experience.ninetailed.co/',
+      }}
     >
       <NextPagesAutoPageTracker />
       <Component {...pageProps} />
@@ -182,8 +185,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <OptimizationRoot
       clientId="your-client-id"
       environment="main"
-      analytics={{ baseUrl: 'https://ingest.insights.ninetailed.co/' }}
-      personalization={{ baseUrl: 'https://experience.ninetailed.co/' }}
+      api={{
+        insightsBaseUrl: 'https://ingest.insights.ninetailed.co/',
+        experienceBaseUrl: 'https://experience.ninetailed.co/',
+      }}
     >
       <NextAppAutoPageTracker />
       {children}
@@ -229,8 +234,10 @@ export function AppLayout() {
     <OptimizationRoot
       clientId="your-client-id"
       environment="main"
-      analytics={{ baseUrl: 'https://ingest.insights.ninetailed.co/' }}
-      personalization={{ baseUrl: 'https://experience.ninetailed.co/' }}
+      api={{
+        insightsBaseUrl: 'https://ingest.insights.ninetailed.co/',
+        experienceBaseUrl: 'https://experience.ninetailed.co/',
+      }}
     >
       <ReactRouterAutoPageTracker />
       <Outlet />
@@ -277,8 +284,10 @@ export function RootLayout() {
     <OptimizationRoot
       clientId="your-client-id"
       environment="main"
-      analytics={{ baseUrl: 'https://ingest.insights.ninetailed.co/' }}
-      personalization={{ baseUrl: 'https://experience.ninetailed.co/' }}
+      api={{
+        insightsBaseUrl: 'https://ingest.insights.ninetailed.co/',
+        experienceBaseUrl: 'https://experience.ninetailed.co/',
+      }}
     >
       <TanStackRouterAutoPageTracker />
       <Outlet />
@@ -449,8 +458,10 @@ render(
   <OptimizationRoot
     clientId="test-client-id"
     environment="main"
-    analytics={{ baseUrl: 'http://localhost:8000/insights/' }}
-    personalization={{ baseUrl: 'http://localhost:8000/experience/' }}
+    api={{
+      insightsBaseUrl: 'http://localhost:8000/insights/',
+      experienceBaseUrl: 'http://localhost:8000/experience/',
+    }}
   >
     <ComponentUnderTest />
   </OptimizationRoot>,

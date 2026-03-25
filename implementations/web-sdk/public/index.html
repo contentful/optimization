@@ -220,8 +220,10 @@
           name: document.title,
           version: '0.0.0',
         },
-        analytics: { baseUrl: '<!--#echo var="NGINX_INSIGHTS_API_BASE_URL" -->' },
-        personalization: { baseUrl: '<!--#echo var="NGINX_EXPERIENCE_API_BASE_URL" -->' },
+        api: {
+          insightsBaseUrl: '<!--#echo var="NGINX_INSIGHTS_API_BASE_URL" -->',
+          experienceBaseUrl: '<!--#echo var="NGINX_EXPERIENCE_API_BASE_URL" -->',
+        },
       })
 
       attachOptimizationPreviewPanel({

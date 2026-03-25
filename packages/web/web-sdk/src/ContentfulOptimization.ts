@@ -136,7 +136,7 @@ function resolveDefaultState(
  * This helper wires together:
  * - consent/profile/personalizations from LocalStore,
  * - Web-specific eventBuilder functions (locale, page, user agent),
- * - beacon-based analytics flushing,
+ * - beacon-based Insights delivery,
  * - and anonymous ID retrieval.
  *
  * @internal
@@ -152,9 +152,9 @@ function mergeConfig({
   const { eventBuilder: configuredEventBuilder } = config
   const mergedConfig: CoreStatefulConfig = {
     ...config,
-    analytics: {
+    api: {
       beaconHandler,
-      ...config.analytics,
+      ...config.api,
     },
     defaults: {
       ...baseDefaults,

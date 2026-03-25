@@ -30,7 +30,7 @@ export const blockedEvent: Signal<BlockedEvent | undefined> = signal<BlockedEven
 export const consent = signal<boolean | undefined>()
 
 /**
- * Most recent emitted analytics or personalization event.
+ * Most recent emitted optimization event.
  *
  * @public
  */

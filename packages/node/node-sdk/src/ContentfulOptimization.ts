@@ -67,8 +67,8 @@ function mergeConfig(config: OptimizationNodeConfig): CoreStatelessConfig {
  * @remarks
  * This class adapts the stateless ContentfulOptimization Core for Node runtimes by
  * applying environment-appropriate defaults (e.g., server channel, Node SDK
- * library metadata). No analytics or personalization behavior is modified—
- * only configuration defaults differ.
+ * library metadata). No core runtime behavior is modified; only configuration
+ * defaults differ.
  *
  * @example
  * ```ts

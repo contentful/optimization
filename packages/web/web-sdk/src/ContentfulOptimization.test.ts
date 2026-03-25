@@ -207,7 +207,6 @@ describe('ContentfulOptimization', () => {
     expect(onEventBlocked).toHaveBeenCalledWith(
       expect.objectContaining({
         reason: 'consent',
-        product: 'personalization',
         method: 'track',
       }),
     )
@@ -230,6 +229,16 @@ describe('ContentfulOptimization', () => {
     expect(onEventBlocked).not.toHaveBeenCalled()
   })
 
+  it('supports page() without an explicit payload', async () => {
+    const web = new ContentfulOptimization(config)
+    const upsertProfile = rs
+      .spyOn(web.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+
+    await expect(web.page()).resolves.toEqual(EMPTY_OPTIMIZATION_DATA)
+    expect(upsertProfile).toHaveBeenCalledTimes(1)
+  })
+
   it('forwards onEventBlocked callback to core stateful guards', async () => {
     const onEventBlocked = rs.fn()
     const web = new ContentfulOptimization({ ...config, onEventBlocked })
@@ -241,7 +250,6 @@ describe('ContentfulOptimization', () => {
     expect(onEventBlocked).toHaveBeenCalledWith(
       expect.objectContaining({
         reason: 'consent',
-        product: 'personalization',
         method: 'track',
       }),
     )

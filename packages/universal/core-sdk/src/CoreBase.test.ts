@@ -1,21 +1,48 @@
 import { EXPERIENCE_BASE_URL } from '@contentful/optimization-api-client'
-import type { ChangeArray } from '@contentful/optimization-api-client/api-schemas'
-import { AnalyticsStateless } from './analytics'
+import type { ChangeArray, ExperienceEvent, InsightsEvent, PartialProfile } from './api-schemas'
 import { OPTIMIZATION_CORE_SDK_NAME } from './constants'
 import CoreBase, { type CoreConfig } from './CoreBase'
-import { FlagsResolver, PersonalizationStateless } from './personalization'
+import { FlagsResolver } from './resolvers'
 
 class TestCore extends CoreBase {
-  _analytics = new AnalyticsStateless({
-    api: this.api,
-    eventBuilder: this.eventBuilder,
-    interceptors: this.interceptors,
-  })
-  _personalization = new PersonalizationStateless({
-    api: this.api,
-    eventBuilder: this.eventBuilder,
-    interceptors: this.interceptors,
-  })
+  lastExperienceCall:
+    | {
+        method: string
+        args: readonly unknown[]
+        event: ExperienceEvent
+        profile?: PartialProfile
+      }
+    | undefined
+
+  lastInsightsCall:
+    | {
+        method: string
+        args: readonly unknown[]
+        event: InsightsEvent
+        profile?: PartialProfile
+      }
+    | undefined
+
+  protected override async sendExperienceEvent(
+    method: string,
+    args: readonly unknown[],
+    event: ExperienceEvent,
+    profile?: PartialProfile,
+  ): Promise<undefined> {
+    await Promise.resolve()
+    this.lastExperienceCall = { method, args, event, profile }
+    return undefined
+  }
+
+  protected override async sendInsightsEvent(
+    method: string,
+    args: readonly unknown[],
+    event: InsightsEvent,
+    profile?: PartialProfile,
+  ): Promise<void> {
+    await Promise.resolve()
+    this.lastInsightsCall = { method, args, event, profile }
+  }
 }
 
 const CLIENT_ID = 'key_123'
@@ -60,11 +87,13 @@ describe('CoreBase', () => {
     expect(core.eventBuilder.library.name).toEqual(OPTIMIZATION_CORE_SDK_NAME)
   })
 
-  it('keeps analytics and personalization client config isolated', () => {
+  it('keeps insights and Experience client config isolated', () => {
     const core = new TestCore({
       clientId: CLIENT_ID,
-      analytics: { baseUrl: 'https://ingest.example.test/' },
-      personalization: { baseUrl: 'https://experience.example.test/' },
+      api: {
+        insightsBaseUrl: 'https://ingest.example.test/',
+        experienceBaseUrl: 'https://experience.example.test/',
+      },
     })
 
     expect(Reflect.get(core.api.insights, 'baseUrl')).toBe('https://ingest.example.test/')
@@ -74,7 +103,7 @@ describe('CoreBase', () => {
   it('falls back to default base URLs when only one side is configured', () => {
     const core = new TestCore({
       clientId: CLIENT_ID,
-      analytics: { baseUrl: 'https://ingest.example.test/' },
+      api: { insightsBaseUrl: 'https://ingest.example.test/' },
     })
 
     expect(Reflect.get(core.api.insights, 'baseUrl')).toBe('https://ingest.example.test/')
@@ -107,5 +136,51 @@ describe('CoreBase', () => {
       currency: 'USD',
     })
     expect(trackFlagView).not.toHaveBeenCalled()
+  })
+
+  it('routes sticky component views through both Experience and Insights paths', async () => {
+    const core = new TestCore(config)
+    const profile = { id: 'profile-1' }
+
+    await core.trackView({
+      componentId: 'hero',
+      sticky: true,
+      viewId: 'hero-view',
+      viewDurationMs: 1000,
+      profile,
+    })
+
+    expect(core.lastExperienceCall).toEqual(
+      expect.objectContaining({
+        method: 'trackView',
+        profile,
+        event: expect.objectContaining({ type: 'component' }),
+      }),
+    )
+    expect(core.lastInsightsCall).toEqual(
+      expect.objectContaining({
+        method: 'trackView',
+        profile,
+        event: expect.objectContaining({ type: 'component' }),
+      }),
+    )
+  })
+
+  it('routes non-sticky component views only through Insights', async () => {
+    const core = new TestCore(config)
+
+    await core.trackView({
+      componentId: 'hero',
+      viewId: 'hero-view',
+      viewDurationMs: 1000,
+    })
+
+    expect(core.lastExperienceCall).toBeUndefined()
+    expect(core.lastInsightsCall).toEqual(
+      expect.objectContaining({
+        method: 'trackView',
+        event: expect.objectContaining({ type: 'component' }),
+      }),
+    )
   })
 })

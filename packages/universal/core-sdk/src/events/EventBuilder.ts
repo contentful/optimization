@@ -272,7 +272,7 @@ export const DEFAULT_PAGE_PROPERTIES = {
 }
 
 /**
- * Helper class for building analytics and personalization events.
+ * Helper class for building optimization events.
  *
  * @remarks
  * This class coordinates configuration and argument validation to produce

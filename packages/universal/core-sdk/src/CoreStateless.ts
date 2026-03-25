@@ -1,7 +1,14 @@
-import { AnalyticsStateless } from './analytics'
-import CoreBase, { type CoreConfig } from './CoreBase'
+import {
+  BatchInsightsEventArray,
+  ExperienceEvent as ExperienceEventSchema,
+  InsightsEvent as InsightsEventSchema,
+  parseWithFriendlyError,
+  type ExperienceEvent as ExperienceEventPayload,
+  type InsightsEvent as InsightsEventPayload,
+} from '@contentful/optimization-api-client/api-schemas'
+import type { OptimizationData, PartialProfile } from './api-schemas'
+import CoreBase, { type CoreApiConfig, type CoreConfig } from './CoreBase'
 import type { EventBuilderConfig } from './events'
-import { PersonalizationStateless } from './personalization'
 
 /**
  * Configuration for the Node-specific Optimization SDK.
@@ -12,12 +19,12 @@ import { PersonalizationStateless } from './personalization'
  * of the event-builder configuration. SDKs commonly inject their own library
  * metadata or channel definitions.
  */
-export interface CoreStatelessConfig extends CoreConfig {
+export interface CoreStatelessConfig extends Omit<CoreConfig, 'api'> {
   /**
-   * Override configuration for the analytics (Insights) API client. Omits
-   * `beaconHandler`.
+   * Unified API configuration for stateless environments. Omits stateful-only
+   * delivery hooks such as `beaconHandler`.
    */
-  analytics?: Omit<CoreConfig['analytics'], 'beaconHandler'>
+  api?: Omit<CoreApiConfig, 'beaconHandler'>
 
   /**
    * Overrides for the event builder configuration. Omits methods that are only
@@ -27,42 +34,51 @@ export interface CoreStatelessConfig extends CoreConfig {
 }
 
 /**
- * Core runtime that constructs product instances for stateless environments.
+ * Core runtime for stateless environments.
  *
  * @public
  * @see {@link CoreBase}
  */
 class CoreStateless extends CoreBase {
-  /** Stateless analytics product. */
-  protected _analytics: AnalyticsStateless
-  /** Stateless personalization product. */
-  protected _personalization: PersonalizationStateless
-
-  /**
-   * Create a stateless core. Product instances share the same API client and
-   * event builder configured in {@link CoreBase}.
-   *
-   * @param config - Stateless Core configuration.
-   * @example
-   * ```ts
-   * const sdk = new CoreStateless({ clientId: 'app', environment: 'prod' })
-   * core.trackFlagView({ componentId: 'hero' })
-   * ```
-   */
   constructor(config: CoreStatelessConfig) {
-    super(config)
-
-    this._analytics = new AnalyticsStateless({
-      api: this.api,
-      eventBuilder: this.eventBuilder,
-      interceptors: this.interceptors,
+    super({
+      ...config,
+      api: config.api ? { ...config.api, beaconHandler: undefined } : undefined,
     })
+  }
 
-    this._personalization = new PersonalizationStateless({
-      api: this.api,
-      eventBuilder: this.eventBuilder,
-      interceptors: this.interceptors,
+  protected override async sendExperienceEvent(
+    _method: string,
+    _args: readonly unknown[],
+    event: ExperienceEventPayload,
+    profile?: PartialProfile,
+  ): Promise<OptimizationData> {
+    const intercepted = await this.interceptors.event.run(event)
+    const validEvent = parseWithFriendlyError(ExperienceEventSchema, intercepted)
+
+    return await this.api.experience.upsertProfile({
+      profileId: profile?.id,
+      events: [validEvent],
     })
+  }
+
+  protected override async sendInsightsEvent(
+    _method: string,
+    _args: readonly unknown[],
+    event: InsightsEventPayload,
+    profile?: PartialProfile,
+  ): Promise<void> {
+    const intercepted = await this.interceptors.event.run(event)
+    const validEvent = parseWithFriendlyError(InsightsEventSchema, intercepted)
+
+    const batchEvent: BatchInsightsEventArray = parseWithFriendlyError(BatchInsightsEventArray, [
+      {
+        profile,
+        events: [validEvent],
+      },
+    ])
+
+    await this.api.insights.sendBatchEvents(batchEvent)
   }
 }
 

@@ -30,8 +30,10 @@ import {
 const testConfig = {
   clientId: 'test-client-id',
   environment: 'main',
-  analytics: { baseUrl: 'http://localhost:8000/insights/' },
-  personalization: { baseUrl: 'http://localhost:8000/experience/' },
+  api: {
+    insightsBaseUrl: 'http://localhost:8000/insights/',
+    experienceBaseUrl: 'http://localhost:8000/experience/',
+  },
 }
 
 describe('@contentful/optimization-react-web core providers', () => {
@@ -59,8 +61,7 @@ describe('@contentful/optimization-react-web core providers', () => {
       <OptimizationProvider
         clientId={testConfig.clientId}
         environment={testConfig.environment}
-        analytics={testConfig.analytics}
-        personalization={testConfig.personalization}
+        api={testConfig.api}
       >
         <Probe />
       </OptimizationProvider>,
@@ -88,8 +89,7 @@ describe('@contentful/optimization-react-web core providers', () => {
       <OptimizationRoot
         clientId={testConfig.clientId}
         environment={testConfig.environment}
-        analytics={testConfig.analytics}
-        personalization={testConfig.personalization}
+        api={testConfig.api}
         liveUpdates={true}
       >
         <Probe />
@@ -279,8 +279,7 @@ describe('@contentful/optimization-react-web core providers', () => {
       <OptimizationRoot
         clientId={testConfig.clientId}
         environment={testConfig.environment}
-        analytics={testConfig.analytics}
-        personalization={testConfig.personalization}
+        api={testConfig.api}
       >
         <Probe />
       </OptimizationRoot>,
@@ -322,8 +321,7 @@ describe('@contentful/optimization-react-web core providers', () => {
         <OptimizationRoot
           clientId={`${testConfig.clientId}-1`}
           environment={testConfig.environment}
-          analytics={testConfig.analytics}
-          personalization={testConfig.personalization}
+          api={testConfig.api}
           liveUpdates={true}
         >
           <Probe />
@@ -337,8 +335,7 @@ describe('@contentful/optimization-react-web core providers', () => {
         <OptimizationRoot
           clientId={`${testConfig.clientId}-2`}
           environment={testConfig.environment}
-          analytics={testConfig.analytics}
-          personalization={testConfig.personalization}
+          api={testConfig.api}
           liveUpdates={false}
         >
           <Probe liveUpdates={true} />
@@ -362,8 +359,7 @@ describe('@contentful/optimization-react-web core providers', () => {
         <OptimizationProvider
           clientId={testConfig.clientId}
           environment={testConfig.environment}
-          analytics={testConfig.analytics}
-          personalization={testConfig.personalization}
+          api={testConfig.api}
         >
           <div />
         </OptimizationProvider>,
@@ -385,8 +381,7 @@ describe('@contentful/optimization-react-web core providers', () => {
         <OptimizationProvider
           clientId={testConfig.clientId}
           environment={testConfig.environment}
-          analytics={testConfig.analytics}
-          personalization={testConfig.personalization}
+          api={testConfig.api}
         >
           <div />
         </OptimizationProvider>,

@@ -4,7 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Contentful Personalization & Analytics</h1>
+<h1 align="center">Contentful Optimization Core SDK</h1>
 
 <h3 align="center">Optimization Core SDK</h3>
 
@@ -31,16 +31,16 @@ other SDKs descend from the Core SDK.
 - [Working with Stateful Core](#working-with-stateful-core)
 - [Configuration](#configuration)
   - [Top-level Configuration Options](#top-level-configuration-options)
-  - [Analytics Options](#analytics-options)
+  - [API Options](#api-options)
   - [Event Builder Options](#event-builder-options)
   - [Fetch Options](#fetch-options)
-  - [Personalization Options](#personalization-options)
+  - [Queue Policy Options](#queue-policy-options)
 - [Core Methods](#core-methods)
   - [Personalization Data Resolution Methods](#personalization-data-resolution-methods)
     - [`getFlag`](#getflag)
     - [`personalizeEntry`](#personalizeentry)
     - [`getMergeTagValue`](#getmergetagvalue)
-  - [Personalization and Analytics Event Methods](#personalization-and-analytics-event-methods)
+  - [Event Methods](#event-methods)
     - [`identify`](#identify)
     - [`page`](#page)
     - [`screen`](#screen)
@@ -115,15 +115,14 @@ exposed externally as read-only observables.
 
 ### Top-level Configuration Options
 
-| Option            | Required? | Default                       | Description                                                  |
-| ----------------- | --------- | ----------------------------- | ------------------------------------------------------------ |
-| `analytics`       | No        | See "Analytics Options"       | Configuration specific to the Analytics/Insights API         |
-| `clientId`        | Yes       | N/A                           | The Optimization API key                                     |
-| `environment`     | No        | `'main'`                      | The environment identifier                                   |
-| `eventBuilder`    | No        | See "Event Builder Options"   | Event builder configuration (channel/library metadata, etc.) |
-| `fetchOptions`    | No        | See "Fetch Options"           | Configuration for Fetch timeout and retry functionality      |
-| `logLevel`        | No        | `'error'`                     | Minimum log level for the default console sink               |
-| `personalization` | No        | See "Personalization Options" | Configuration specific to the Personalization/Experience API |
+| Option         | Required? | Default                     | Description                                                  |
+| -------------- | --------- | --------------------------- | ------------------------------------------------------------ |
+| `api`          | No        | See "API Options"           | Unified configuration for Insights and Experience endpoints  |
+| `clientId`     | Yes       | N/A                         | The Optimization API key                                     |
+| `environment`  | No        | `'main'`                    | The environment identifier                                   |
+| `eventBuilder` | No        | See "Event Builder Options" | Event builder configuration (channel/library metadata, etc.) |
+| `fetchOptions` | No        | See "Fetch Options"         | Configuration for Fetch timeout and retry functionality      |
+| `logLevel`     | No        | `'error'`                   | Minimum log level for the default console sink               |
 
 The following configuration options apply only in stateful environments:
 
@@ -133,32 +132,45 @@ The following configuration options apply only in stateful environments:
 | `defaults`          | No        | `undefined`                      | Set of default state values applied on initialization      |
 | `getAnonymousId`    | No        | `undefined`                      | Function used to obtain an anonymous user identifier       |
 | `onEventBlocked`    | No        | `undefined`                      | Callback invoked when an event call is blocked by guards   |
+| `queuePolicy`       | No        | See "Queue Policy Options"       | Shared queue and retry configuration for stateful delivery |
 
 Configuration method signatures:
 
 - `getAnonymousId`: `() => string | undefined`
 - `onEventBlocked`: `(event: BlockedEvent) => void`
 
-### Analytics Options
+### API Options
 
-| Option    | Required? | Default                                    | Description                   |
-| --------- | --------- | ------------------------------------------ | ----------------------------- |
-| `baseUrl` | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API |
+| Option              | Required? | Default                                    | Description                                                            |
+| ------------------- | --------- | ------------------------------------------ | ---------------------------------------------------------------------- |
+| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                                        |
+| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                          |
+| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Enabled features the Experience API may use for each request           |
+| `ip`                | No        | `undefined`                                | IP address override used by Experience for location analysis           |
+| `locale`            | No        | `'en-US'` (in API)                         | Locale used to translate `location.city` and `location.country`        |
+| `plainText`         | No        | `false`                                    | Sends performance-critical Experience endpoints in plain text          |
+| `preflight`         | No        | `false`                                    | Instructs Experience to aggregate a new profile state but not store it |
 
-The following configuration options apply only in stateful environments:
+The following configuration option applies only in stateful environments:
 
-| Option          | Required? | Default               | Description                                                              |
-| --------------- | --------- | --------------------- | ------------------------------------------------------------------------ |
-| `beaconHandler` | No        | `undefined`           | Handler used to enqueue events via the Beacon API or a similar mechanism |
-| `queuePolicy`   | No        | See method signatures | Queue flush retry/backoff/circuit policy for stateful analytics          |
+| Option          | Required? | Default     | Description                                                              |
+| --------------- | --------- | ----------- | ------------------------------------------------------------------------ |
+| `beaconHandler` | No        | `undefined` | Handler used to enqueue Insights events via the Beacon API or equivalent |
 
 Configuration method signatures:
 
 - `beaconHandler`: `(url: string | URL, data: BatchInsightsEventArray) => boolean`
-- `queuePolicy`:
 
-  ```ts
-  {
+### Queue Policy Options
+
+`queuePolicy` is available only in `CoreStateful` and combines shared flush retry settings with
+Experience offline buffering controls.
+
+Configuration shape:
+
+```ts
+{
+  flush?: {
     baseBackoffMs?: number,
     maxBackoffMs?: number,
     jitterRatio?: number,
@@ -167,29 +179,42 @@ Configuration method signatures:
     onFlushFailure?: (context: QueueFlushFailureContext) => void,
     onCircuitOpen?: (context: QueueFlushFailureContext) => void,
     onFlushRecovered?: (context: QueueFlushRecoveredContext) => void
-  }
-  ```
+  },
+  offlineMaxEvents?: number,
+  onOfflineDrop?: (context: ExperienceQueueDropContext) => void
+}
+```
 
-  Supporting callback payloads:
+Supporting callback payloads:
 
-  ```ts
-  type QueueFlushFailureContext = {
-    consecutiveFailures: number
-    queuedBatches: number
-    queuedEvents: number
-    retryDelayMs: number
-  }
+```ts
+type ExperienceQueueDropContext = {
+  droppedCount: number
+  droppedEvents: ExperienceEventArray
+  maxEvents: number
+  queuedEvents: number
+}
 
-  type QueueFlushRecoveredContext = {
-    consecutiveFailures: number
-  }
-  ```
+type QueueFlushFailureContext = {
+  consecutiveFailures: number
+  queuedBatches: number
+  queuedEvents: number
+  retryDelayMs: number
+}
 
-  Notes:
-  - Invalid numeric values fall back to defaults.
-  - `jitterRatio` is clamped to `[0, 1]`.
-  - `maxBackoffMs` is normalized to be at least `baseBackoffMs`.
-  - Failed flush attempts include both `false` responses and thrown send errors.
+type QueueFlushRecoveredContext = {
+  consecutiveFailures: number
+}
+```
+
+Notes:
+
+- `flush` applies the same retry/backoff/circuit policy to both Insights flushing and Experience
+  offline replay.
+- Invalid numeric values fall back to defaults.
+- `jitterRatio` is clamped to `[0, 1]`.
+- `maxBackoffMs` is normalized to be at least `baseBackoffMs`.
+- Failed flush attempts include both `false` responses and thrown send errors.
 
 ### Event Builder Options
 
@@ -261,72 +286,6 @@ Configuration method signatures:
 > `503` responses (`Service Unavailable`). This is deliberate and aligned with current Experience
 > and Insights API expectations; do not broaden retry status handling without an explicit API
 > contract change.
-
-### Personalization Options
-
-| Option            | Required? | Default                               | Description                                                         |
-| ----------------- | --------- | ------------------------------------- | ------------------------------------------------------------------- |
-| `baseUrl`         | No        | `'https://experience.ninetailed.co/'` | Base URL for the Experience API                                     |
-| `enabledFeatures` | No        | `['ip-enrichment', 'location']`       | Enabled features which the API may use for each request             |
-| `ip`              | No        | `undefined`                           | IP address to override the API behavior for IP analysis             |
-| `locale`          | No        | `'en-US'` (in API)                    | Locale used to translate `location.city` and `location.country`     |
-| `plainText`       | No        | `false`                               | Sends performance-critical endpoints in plain text                  |
-| `preflight`       | No        | `false`                               | Instructs the API to aggregate a new profile state but not store it |
-
-The following configuration options apply only in stateful environments:
-
-| Option        | Required? | Default               | Description                                                                 |
-| ------------- | --------- | --------------------- | --------------------------------------------------------------------------- |
-| `queuePolicy` | No        | See method signatures | Queue and flush-retry policy for stateful personalization offline buffering |
-
-Configuration method signatures:
-
-- `queuePolicy`:
-
-  ```ts
-  {
-    maxEvents?: number,
-    onDrop?: (context: PersonalizationOfflineQueueDropContext) => void,
-    flushPolicy?: {
-      baseBackoffMs?: number,
-      maxBackoffMs?: number,
-      jitterRatio?: number,
-      maxConsecutiveFailures?: number,
-      circuitOpenMs?: number,
-      onFlushFailure?: (context: QueueFlushFailureContext) => void,
-      onCircuitOpen?: (context: QueueFlushFailureContext) => void,
-      onFlushRecovered?: (context: QueueFlushRecoveredContext) => void
-    }
-  }
-  ```
-
-  Supporting callback payloads:
-
-  ```ts
-  type PersonalizationOfflineQueueDropContext = {
-    droppedCount: number
-    droppedEvents: ExperienceEventArray
-    maxEvents: number
-    queuedEvents: number
-  }
-
-  type QueueFlushFailureContext = {
-    consecutiveFailures: number
-    queuedBatches: number
-    queuedEvents: number
-    retryDelayMs: number
-  }
-
-  type QueueFlushRecoveredContext = {
-    consecutiveFailures: number
-  }
-  ```
-
-  Notes:
-  - Default `maxEvents` is `100`.
-  - If the queue is full while offline, oldest events are dropped first.
-  - `onDrop` is best-effort; callback errors are swallowed.
-  - `flushPolicy` uses the same normalization semantics as `analytics.queuePolicy`.
 
 ## Core Methods
 
@@ -407,7 +366,7 @@ Arguments:
 > If the `profile` argument is omitted in stateless implementations, the method will return the
 > merge tag's fallback value.
 
-### Personalization and Analytics Event Methods
+### Event Methods
 
 Only the following methods may return an `OptimizationData` object:
 
@@ -524,7 +483,7 @@ Resets all internal state _except_ consent. This method expects no arguments and
 
 ### `flush`
 
-Flushes queued analytics and personalization events. This method expects no arguments and returns a
+Flushes queued Insights and Experience events. This method expects no arguments and returns a
 `Promise<void>`.
 
 ### `destroy`
@@ -581,7 +540,7 @@ Available state streams:
 
 - `consent`: Current consent state (`boolean | undefined`)
 - `blockedEventStream`: Latest blocked-call metadata (`BlockedEvent | undefined`)
-- `eventStream`: Latest emitted analytics/personalization event
+- `eventStream`: Latest emitted Insights or Experience event
   (`AnalyticsEvent | PersonalizationEvent | undefined`)
 - `flag(name)`: Key-scoped flag observable (`Observable<Json>`)
 - `canPersonalize`: Whether personalization selections are available (`boolean`;
