@@ -46,7 +46,8 @@ Install using an NPM-compatible package manager, pnpm for example:
 pnpm install @contentful/optimization-web-preview-panel
 ```
 
-Import the Optimization class; both CJS and ESM module systems are supported, ESM preferred:
+Import the preview-panel attach function; both CJS and ESM module systems are supported, ESM
+preferred:
 
 ```ts
 import attachOptimizationPreviewPanel from '@contentful/optimization-web-preview-panel'
@@ -56,7 +57,7 @@ Initialize the preview panel with existing instances of the Contentful SDK and t
 SDK:
 
 ```ts
-attachOptimizationPreviewPanel(contentfulClient, optimization)
+attachOptimizationPreviewPanel({ contentful: contentfulClient, optimization, nonce: undefined })
 ```
 
 The `attachOptimizationPreviewPanel` function automatically attaches itself to the DOM and adds the
@@ -75,7 +76,7 @@ In order to comply with strict CSP policies, a nonce can be supplied to the
 `attachOptimizationPreviewPanel` function as its third argument.
 
 ```ts
-attachOptimizationPreviewPanel(contentfulClient, optimization, nonce)
+attachOptimizationPreviewPanel({ contentful: contentfulClient, optimization, nonce })
 ```
 
 Alternatively, the nonce can be added to the `window` _before_ attaching the preview panel to the
@@ -83,5 +84,5 @@ DOM.
 
 ```ts
 window.litNonce = nonce
-attachOptimizationPreviewPanel(contentfulClient, optimization)
+attachOptimizationPreviewPanel({ contentful: contentfulClient, optimization, nonce: undefined })
 ```

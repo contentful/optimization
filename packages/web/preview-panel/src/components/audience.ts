@@ -1,15 +1,15 @@
 import type {
   AudienceEntry,
-  PersonalizationEntry,
+  OptimizationEntry,
   Profile,
-  SelectedPersonalizationArray,
+  SelectedOptimizationArray,
 } from '@contentful/optimization-web/api-schemas'
 import { consume } from '@lit/context'
 import { css, html, LitElement, nothing, type PropertyValues, type TemplateResult } from 'lit'
 import { property, state } from 'lit/decorators.js'
 import { overridesContext, profileContext } from '../lib/contexts'
 import { isAudienceSwitch } from './audience-switch'
-import type { RecordRadioGroupChangeDetail, RecordRadioGroupChangeEvent } from './personalization'
+import type { RecordRadioGroupChangeDetail, RecordRadioGroupChangeEvent } from './optimization'
 
 function isRecordRadioGroupChangeDetailValue(
   value: unknown,
@@ -54,12 +54,12 @@ export interface AudienceContentToggleDetail {
 export type AudienceContentToggleEvent = CustomEvent<AudienceContentToggleDetail>
 
 /**
- * Event name dispatched when a personalization variant selection changes
+ * Event name dispatched when an optimization variant selection changes
  * within an audience group.
  *
  * @public
  */
-export const PERSONALIZATION_CHANGE = 'ctfl-opt-preview-personalization-change' as const
+export const OPTIMIZATION_CHANGE = 'ctfl-opt-preview-optimization-change' as const
 
 /**
  * Event name dispatched when an audience-wide switch changes.
@@ -69,7 +69,7 @@ export const PERSONALIZATION_CHANGE = 'ctfl-opt-preview-personalization-change' 
 export const AUDIENCE_SWITCH_CHANGE = 'ctfl-opt-preview-audience-switch-change' as const
 
 /**
- * Payload emitted when the audience-wide switch updates all personalizations.
+ * Payload emitted when the audience-wide switch updates all optimizations.
  *
  * @public
  */
@@ -117,7 +117,7 @@ export function isAudience(element?: Element): element is Audience {
 }
 
 /**
- * Collapsible audience section that groups {@link Personalization}
+ * Collapsible audience section that groups {@link Optimization}
  * components under a single audience heading.
  *
  * Consumes the {@link profileContext} and {@link overridesContext} from the
@@ -136,13 +136,13 @@ export class Audience extends LitElement {
   @property({ attribute: false })
   accessor audience: AudienceEntry | undefined = undefined
 
-  /** Personalizations that target this audience. */
+  /** Optimizations that target this audience. */
   @property({ attribute: false })
-  accessor personalizations: PersonalizationEntry[] = []
+  accessor optimizations: OptimizationEntry[] = []
 
-  /** Default selected personalizations before any overrides are applied. */
+  /** Default selected optimizations before any overrides are applied. */
   @property({ attribute: false })
-  accessor defaultSelectedPersonalizations: SelectedPersonalizationArray = []
+  accessor defaultSelectedOptimizations: SelectedOptimizationArray = []
 
   /** Visitor profile consumed from the parent panel context. */
   @consume({ context: profileContext, subscribe: true })
@@ -172,7 +172,7 @@ export class Audience extends LitElement {
 
   /** @internal */
   private get _audienceSwitchValue(): boolean | undefined {
-    const experienceIds = this.personalizations.map(
+    const experienceIds = this.optimizations.map(
       ({ fields: { nt_experience_id: experienceId } }) => experienceId,
     )
 
@@ -202,14 +202,14 @@ export class Audience extends LitElement {
   }
 
   /** @internal */
-  private _onPersonalizationChange(event: RecordRadioGroupChangeEvent): void {
+  private _onOptimizationChange(event: RecordRadioGroupChangeEvent): void {
     const {
       detail: { key, value },
     } = event
     this.valuesByKey = { ...this.valuesByKey, [key]: event.detail.value }
 
     this.dispatchEvent(
-      new CustomEvent<RecordRadioGroupChangeDetail>(PERSONALIZATION_CHANGE, {
+      new CustomEvent<RecordRadioGroupChangeDetail>(OPTIMIZATION_CHANGE, {
         detail: { key, value },
         bubbles: true,
         composed: true,
@@ -225,7 +225,7 @@ export class Audience extends LitElement {
     const detail =
       currentTarget.value === undefined
         ? []
-        : this.personalizations.map(
+        : this.optimizations.map(
             ({ fields: { nt_experience_id: key } }): RecordRadioGroupChangeDetail => ({
               key,
               value: currentTarget.value ? 1 : 0,
@@ -233,14 +233,12 @@ export class Audience extends LitElement {
           )
 
     this.valuesByKey = Object.fromEntries(
-      this.personalizations.map(
-        ({ fields: { nt_experience_id: experienceId } }): [string, number] => [
-          experienceId,
-          detail.find(({ key }) => key === experienceId)?.value ??
-            this.defaultsByKey[experienceId] ??
-            0,
-        ],
-      ),
+      this.optimizations.map(({ fields: { nt_experience_id: experienceId } }): [string, number] => [
+        experienceId,
+        detail.find(({ key }) => key === experienceId)?.value ??
+          this.defaultsByKey[experienceId] ??
+          0,
+      ]),
     )
 
     this.dispatchEvent(
@@ -260,15 +258,15 @@ export class Audience extends LitElement {
   /** @internal */
   private _syncValuesByKey(): void {
     const nextDefaults: Record<string, number> = Object.fromEntries(
-      this.personalizations
-        .map((personalization): [string, number] => {
-          const defaultSelectedPersonalization = this.defaultSelectedPersonalizations.find(
-            (selected) => selected.experienceId === personalization.fields.nt_experience_id,
+      this.optimizations
+        .map((optimization): [string, number] => {
+          const defaultSelectedOptimization = this.defaultSelectedOptimizations.find(
+            (selected) => selected.experienceId === optimization.fields.nt_experience_id,
           )
-          if (!defaultSelectedPersonalization) return ['', 0]
+          if (!defaultSelectedOptimization) return ['', 0]
           return [
-            defaultSelectedPersonalization.experienceId,
-            defaultSelectedPersonalization.variantIndex,
+            defaultSelectedOptimization.experienceId,
+            defaultSelectedOptimization.variantIndex,
           ]
         })
         .filter(([key]) => key.length > 0),
@@ -277,7 +275,7 @@ export class Audience extends LitElement {
     const nextValues: Record<string, number> = {}
     for (const {
       fields: { nt_experience_id: experienceId },
-    } of this.personalizations) {
+    } of this.optimizations) {
       nextValues[experienceId] =
         this.overrides?.get(experienceId) ?? nextDefaults[experienceId] ?? 0
     }
@@ -291,8 +289,8 @@ export class Audience extends LitElement {
     if (changed.has('profile')) this._syncNatural()
 
     if (
-      changed.has('personalizations') ||
-      changed.has('defaultSelectedPersonalizations') ||
+      changed.has('optimizations') ||
+      changed.has('defaultSelectedOptimizations') ||
       changed.has('overrides')
     )
       this._syncValuesByKey()
@@ -338,24 +336,24 @@ export class Audience extends LitElement {
         </div>
 
         <div class="content" ?hidden=${!this.open}>
-          ${this.personalizations.length
-            ? this.personalizations.map((personalization) => {
+          ${this.optimizations.length
+            ? this.optimizations.map((optimization) => {
                 const {
                   fields: { nt_experience_id: experienceId },
-                } = personalization
+                } = optimization
 
                 const value =
                   this.valuesByKey[experienceId] ?? this.defaultsByKey[experienceId] ?? 0
 
                 return html`
-                  <ctfl-opt-preview-personalization
+                  <ctfl-opt-preview-optimization
                     .naturalValue=${this.natural ? this.defaultsByKey[experienceId] : undefined}
-                    .personalization=${personalization}
+                    .optimization=${optimization}
                     .value=${value}
                     @change=${(event: RecordRadioGroupChangeEvent) => {
-                      this._onPersonalizationChange(event)
+                      this._onOptimizationChange(event)
                     }}
-                  ></ctfl-opt-preview-personalization>
+                  ></ctfl-opt-preview-optimization>
                 `
               })
             : html`
@@ -369,8 +367,8 @@ export class Audience extends LitElement {
                   </svg>
 
                   <div class="no-content-text">
-                    <p>No Personalizations</p>
-                    <p>Get started by creating a new Personalization.</p>
+                    <p>No Optimizations</p>
+                    <p>Get started by creating a new Optimization.</p>
                   </div>
                 </div>
               `}

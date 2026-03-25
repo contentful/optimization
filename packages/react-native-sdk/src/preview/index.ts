@@ -9,8 +9,8 @@ export { PreviewOverrideProvider, usePreviewOverrides } from './context/PreviewO
 export { AudienceItem } from './components/AudienceItem'
 export { AudienceSection } from './components/AudienceSection'
 export { ExperienceCard } from './components/ExperienceCard'
+export { OptimizationsSection } from './components/OptimizationsSection'
 export { OverridesSection } from './components/OverridesSection'
-export { PersonalizationsSection } from './components/PersonalizationsSection'
 export { ProfileSection } from './components/ProfileSection'
 export { VariantSelector } from './components/VariantSelector'
 
@@ -60,10 +60,10 @@ export type {
   ExperienceDefinition,
   JsonViewerProps,
   ListItemProps,
+  OptimizationOverride,
+  OptimizationsSectionProps,
   OverrideState,
   OverridesSectionProps,
-  PersonalizationOverride,
-  PersonalizationsSectionProps,
   PreviewActions,
   PreviewData,
   PreviewPanelConfig,

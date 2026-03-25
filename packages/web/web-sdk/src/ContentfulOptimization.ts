@@ -119,10 +119,10 @@ function resolveDefaultState(
     consent = LocalStore.consent,
     profile = LocalStore.profile,
     changes = LocalStore.changes,
-    personalizations = LocalStore.selectedPersonalizations,
+    selectedOptimizations = LocalStore.selectedOptimizations,
   } = defaults ?? {}
 
-  return { consent, changes, profile, personalizations }
+  return { consent, changes, profile, selectedOptimizations }
 }
 
 /**
@@ -134,7 +134,7 @@ function resolveDefaultState(
  *
  * @remarks
  * This helper wires together:
- * - consent/profile/personalizations from LocalStore,
+ * - consent/profile/selectedOptimizations from LocalStore,
  * - Web-specific eventBuilder functions (locale, page, user agent),
  * - beacon-based Insights delivery,
  * - and anonymous ID retrieval.
@@ -188,7 +188,7 @@ function mergeConfig({
  * @public
  * @remarks
  * Provides browser-specific wiring:
- * - automatic persistence of consent, profile, and personalizations,
+ * - automatic persistence of consent, profile, and selectedOptimizations,
  * - cookie-based anonymous ID handling,
  * - automatic tracked entry interactions (currently views and clicks),
  * - automatic tracked entry interactions (currently views, clicks, and hovers),
@@ -311,10 +311,10 @@ class ContentfulOptimization extends CoreStateful {
 
     effect(() => {
       const {
-        selectedPersonalizations: { value },
+        selectedOptimizations: { value },
       } = signals
 
-      LocalStore.selectedPersonalizations = value
+      LocalStore.selectedOptimizations = value
     })
 
     this.initializeFromCookieValues(cookieValue, legacyCookieValue)

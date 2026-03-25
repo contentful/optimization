@@ -36,9 +36,9 @@ other SDKs descend from the Core SDK.
   - [Fetch Options](#fetch-options)
   - [Queue Policy Options](#queue-policy-options)
 - [Core Methods](#core-methods)
-  - [Personalization Data Resolution Methods](#personalization-data-resolution-methods)
+  - [Optimization Data Resolution Methods](#optimization-data-resolution-methods)
     - [`getFlag`](#getflag)
-    - [`personalizeEntry`](#personalizeentry)
+    - [`resolveOptimizedEntry`](#resolveoptimizedentry)
     - [`getMergeTagValue`](#getmergetagvalue)
   - [Event Methods](#event-methods)
     - [`identify`](#identify)
@@ -115,14 +115,14 @@ exposed externally as read-only observables.
 
 ### Top-level Configuration Options
 
-| Option         | Required? | Default                     | Description                                                  |
-| -------------- | --------- | --------------------------- | ------------------------------------------------------------ |
-| `api`          | No        | See "API Options"           | Unified configuration for Insights and Experience endpoints  |
-| `clientId`     | Yes       | N/A                         | The Optimization API key                                     |
-| `environment`  | No        | `'main'`                    | The environment identifier                                   |
-| `eventBuilder` | No        | See "Event Builder Options" | Event builder configuration (channel/library metadata, etc.) |
-| `fetchOptions` | No        | See "Fetch Options"         | Configuration for Fetch timeout and retry functionality      |
-| `logLevel`     | No        | `'error'`                   | Minimum log level for the default console sink               |
+| Option         | Required? | Default                     | Description                                                             |
+| -------------- | --------- | --------------------------- | ----------------------------------------------------------------------- |
+| `api`          | No        | See "API Options"           | Unified configuration for the Experience API and Insights API endpoints |
+| `clientId`     | Yes       | N/A                         | Shared API key for Experience API and Insights API requests             |
+| `environment`  | No        | `'main'`                    | The environment identifier                                              |
+| `eventBuilder` | No        | See "Event Builder Options" | Event builder configuration (channel/library metadata, etc.)            |
+| `fetchOptions` | No        | See "Fetch Options"         | Configuration for Fetch timeout and retry functionality                 |
+| `logLevel`     | No        | `'error'`                   | Minimum log level for the default console sink                          |
 
 The following configuration options apply only in stateful environments:
 
@@ -141,21 +141,21 @@ Configuration method signatures:
 
 ### API Options
 
-| Option              | Required? | Default                                    | Description                                                            |
-| ------------------- | --------- | ------------------------------------------ | ---------------------------------------------------------------------- |
-| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                                        |
-| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                          |
-| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Enabled features the Experience API may use for each request           |
-| `ip`                | No        | `undefined`                                | IP address override used by Experience for location analysis           |
-| `locale`            | No        | `'en-US'` (in API)                         | Locale used to translate `location.city` and `location.country`        |
-| `plainText`         | No        | `false`                                    | Sends performance-critical Experience endpoints in plain text          |
-| `preflight`         | No        | `false`                                    | Instructs Experience to aggregate a new profile state but not store it |
+| Option              | Required? | Default                                    | Description                                                                    |
+| ------------------- | --------- | ------------------------------------------ | ------------------------------------------------------------------------------ |
+| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                                                |
+| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                                  |
+| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Enabled features the Experience API may use for each request                   |
+| `ip`                | No        | `undefined`                                | IP address override used by the Experience API for location analysis           |
+| `locale`            | No        | `'en-US'` (in API)                         | Locale used to translate `location.city` and `location.country`                |
+| `plainText`         | No        | `false`                                    | Sends performance-critical Experience API endpoints in plain text              |
+| `preflight`         | No        | `false`                                    | Instructs the Experience API to aggregate a new profile state but not store it |
 
 The following configuration option applies only in stateful environments:
 
-| Option          | Required? | Default     | Description                                                              |
-| --------------- | --------- | ----------- | ------------------------------------------------------------------------ |
-| `beaconHandler` | No        | `undefined` | Handler used to enqueue Insights events via the Beacon API or equivalent |
+| Option          | Required? | Default     | Description                                                                  |
+| --------------- | --------- | ----------- | ---------------------------------------------------------------------------- |
+| `beaconHandler` | No        | `undefined` | Handler used to enqueue Insights API events via the Beacon API or equivalent |
 
 Configuration method signatures:
 
@@ -164,7 +164,7 @@ Configuration method signatures:
 ### Queue Policy Options
 
 `queuePolicy` is available only in `CoreStateful` and combines shared flush retry settings with
-Experience offline buffering controls.
+Experience API offline buffering controls.
 
 Configuration shape:
 
@@ -209,8 +209,8 @@ type QueueFlushRecoveredContext = {
 
 Notes:
 
-- `flush` applies the same retry/backoff/circuit policy to both Insights flushing and Experience
-  offline replay.
+- `flush` applies the same retry/backoff/circuit policy to both Insights API flushing and Experience
+  API offline replay.
 - Invalid numeric values fall back to defaults.
 - `jitterRatio` is clamped to `[0, 1]`.
 - `maxBackoffMs` is normalized to be at least `baseBackoffMs`.
@@ -262,7 +262,7 @@ Configuration method signatures:
 ### Fetch Options
 
 Fetch options allow for configuration of a Fetch API-compatible fetch method and the retry/timeout
-logic integrated into the Optimization API Client. Specify the `fetchMethod` when the host
+logic integrated into the SDK's bundled API clients. Specify the `fetchMethod` when the host
 application environment does not offer a `fetch` method that is compatible with the standard Fetch
 API in its global scope.
 
@@ -284,7 +284,7 @@ Configuration method signatures:
 >
 > Core inherits the API Client retry contract: default retries intentionally apply only to HTTP
 > `503` responses (`Service Unavailable`). This is deliberate and aligned with current Experience
-> and Insights API expectations; do not broaden retry status handling without an explicit API
+> API and Insights API expectations; do not broaden retry status handling without an explicit API
 > contract change.
 
 ## Core Methods
@@ -295,7 +295,7 @@ implementations.
 
 Arguments marked with an asterisk (\*) are always required.
 
-### Personalization Data Resolution Methods
+### Optimization Data Resolution Methods
 
 #### `getFlag`
 
@@ -324,10 +324,10 @@ Behavior notes:
 > If the `changes` argument is omitted in stateless implementations, the method will return
 > `undefined`.
 
-#### `personalizeEntry`
+#### `resolveOptimizedEntry`
 
-Resolve a baseline Contentful entry to a personalized variant using the provided selected
-personalizations, or from the current internal state in stateful implementations.
+Resolve a baseline Contentful entry to an optimized variant using the provided selected
+optimizations, or from the current internal state in stateful implementations.
 
 Type arguments:
 
@@ -337,18 +337,18 @@ Type arguments:
 
 Arguments:
 
-- `entry`\*: The entry to personalize
-- `selectedPersonalizations`: Selected personalizations
+- `entry`\*: The baseline entry to resolve
+- `selectedOptimizations`: Selected optimizations
 
 Returns:
 
-- The resolved personalized entry variant, or the supplied baseline entry if baseline is the
-  selected variant or a variant cannot be found.
+- The resolved optimized entry variant, or the supplied baseline entry if baseline is the selected
+  variant or a variant cannot be found.
 
 > [!NOTE]
 >
-> If the `selectedPersonalizations` argument is omitted in stateless implementations, the method
-> will return the baseline entry.
+> If the `selectedOptimizations` argument is omitted in stateless implementations, the method will
+> return the baseline entry.
 
 #### `getMergeTagValue`
 
@@ -380,7 +380,7 @@ Only the following methods may return an `OptimizationData` object:
 contains:
 
 - `changes`: Currently used for Custom Flags
-- `selectedPersonalizations`: Selected personalizations for the profile
+- `selectedOptimizations`: Selected optimizations for the profile
 - `profile`: Profile associated with the evaluated events
 
 #### `identify`
@@ -394,7 +394,7 @@ Arguments:
 
 #### `page`
 
-Record a personalization page view.
+Record an Experience API page view.
 
 Arguments:
 
@@ -403,7 +403,7 @@ Arguments:
 
 #### `screen`
 
-Record a personalization screen view.
+Record an Experience API screen view.
 
 Arguments:
 
@@ -412,7 +412,7 @@ Arguments:
 
 #### `track`
 
-Record a personalization custom track event.
+Record an Experience API custom track event.
 
 Arguments:
 
@@ -421,18 +421,18 @@ Arguments:
 
 #### `trackView`
 
-Record an analytics component view event. When the payload marks the component as "sticky", an
-additional personalization component view is recorded. This method only returns `OptimizationData`
-when the component is marked as "sticky".
+Record an Insights API entry view event. When the payload marks the entry as "sticky", an additional
+Experience API entry view is recorded. This method only returns `OptimizationData` when the entry is
+marked as "sticky".
 
 Arguments:
 
-- `payload`\*: Component view event builder arguments object, including an optional `profile`
-  property with a `PartialProfile` value that requires only an `id`
+- `payload`\*: Entry view event builder arguments object, including an optional `profile` property
+  with a `PartialProfile` value that requires only an `id`
 
 #### `trackClick`
 
-Record an analytics component click event.
+Record an Insights API entry click event.
 
 Returns:
 
@@ -440,11 +440,11 @@ Returns:
 
 Arguments:
 
-- `payload`\*: Component click event builder arguments object
+- `payload`\*: Entry click event builder arguments object
 
 #### `trackHover`
 
-Record an analytics component hover event.
+Record an Insights API entry hover event.
 
 Returns:
 
@@ -452,11 +452,11 @@ Returns:
 
 Arguments:
 
-- `payload`\*: Component hover event builder arguments object
+- `payload`\*: Entry hover event builder arguments object
 
 #### `trackFlagView`
 
-Track a feature flag view via analytics. This is functionally the same as a non-sticky component
+Track a feature flag view via the Insights API. This is functionally the same as a non-sticky flag
 view event.
 
 Returns:
@@ -465,7 +465,7 @@ Returns:
 
 Arguments:
 
-- `payload`\*: Component view event builder arguments object
+- `payload`\*: Flag view event builder arguments object
 
 ## Stateful-only Core Methods
 
@@ -483,8 +483,8 @@ Resets all internal state _except_ consent. This method expects no arguments and
 
 ### `flush`
 
-Flushes queued Insights and Experience events. This method expects no arguments and returns a
-`Promise<void>`.
+Flushes queued Insights API and Experience API events. This method expects no arguments and returns
+a `Promise<void>`.
 
 ### `destroy`
 
@@ -540,14 +540,13 @@ Available state streams:
 
 - `consent`: Current consent state (`boolean | undefined`)
 - `blockedEventStream`: Latest blocked-call metadata (`BlockedEvent | undefined`)
-- `eventStream`: Latest emitted Insights or Experience event
-  (`AnalyticsEvent | PersonalizationEvent | undefined`)
+- `eventStream`: Latest emitted Insights API or Experience API event
+  (`InsightsEvent | ExperienceEvent | undefined`)
 - `flag(name)`: Key-scoped flag observable (`Observable<Json>`)
-- `canPersonalize`: Whether personalization selections are available (`boolean`;
-  `selectedPersonalizations !== undefined`)
+- `canOptimize`: Whether optimization selections are available (`boolean`;
+  `selectedOptimizations !== undefined`)
 - `profile`: Current profile (`Profile | undefined`)
-- `selectedPersonalizations`: Current selected personalizations
-  (`SelectedPersonalizationArray | undefined`)
+- `selectedOptimizations`: Current selected optimizations (`SelectedOptimizationArray | undefined`)
 - `previewPanelAttached`: Preview panel attachment state (`boolean`)
 - `previewPanelOpen`: Preview panel open state (`boolean`)
 
@@ -565,7 +564,7 @@ Update behavior:
 - `blockedEventStream` updates whenever a call is blocked by consent guards.
 - `eventStream` updates when a valid event is accepted for send/queue.
 - `flag(name)` updates when the resolved value for that key changes.
-- `canPersonalize` updates whenever `selectedPersonalizations` becomes defined or `undefined`.
+- `canOptimize` updates whenever `selectedOptimizations` becomes defined or `undefined`.
 - `consent` updates from defaults and `optimization.consent(...)`.
 - `previewPanelAttached` and `previewPanelOpen` are controlled by preview tooling and are preserved
   across `reset()`.

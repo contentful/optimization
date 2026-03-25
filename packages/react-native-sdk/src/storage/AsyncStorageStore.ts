@@ -1,15 +1,15 @@
 import {
   ChangeArray,
   Profile,
-  SelectedPersonalizationArray,
+  SelectedOptimizationArray,
 } from '@contentful/optimization-core/api-schemas'
 import {
   ANONYMOUS_ID_KEY,
   CHANGES_CACHE_KEY,
   CONSENT_KEY,
   DEBUG_FLAG_KEY,
-  PERSONALIZATIONS_CACHE_KEY,
   PROFILE_CACHE_KEY,
+  SELECTED_OPTIMIZATIONS_CACHE_KEY,
 } from '@contentful/optimization-core/constants'
 import { createScopedLogger } from '@contentful/optimization-core/logger'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -19,7 +19,7 @@ const logger = createScopedLogger('RN:Storage')
 const STRUCTURED_CACHE_PARSERS: Record<string, z.ZodMiniType> = {
   [CHANGES_CACHE_KEY]: ChangeArray,
   [PROFILE_CACHE_KEY]: Profile,
-  [PERSONALIZATIONS_CACHE_KEY]: SelectedPersonalizationArray,
+  [SELECTED_OPTIMIZATIONS_CACHE_KEY]: SelectedOptimizationArray,
 }
 const STRING_CACHE_KEYS = new Set([ANONYMOUS_ID_KEY, CONSENT_KEY, DEBUG_FLAG_KEY])
 
@@ -27,7 +27,7 @@ const STRING_CACHE_KEYS = new Set([ANONYMOUS_ID_KEY, CONSENT_KEY, DEBUG_FLAG_KEY
  * Persistent storage adapter backed by `@react-native-async-storage/async-storage`.
  *
  * Provides in-memory caching with write-through to AsyncStorage for SDK state
- * such as profile, changes, consent, and personalizations.
+ * such as profile, changes, consent, and selected optimizations.
  *
  * @internal
  */
@@ -52,7 +52,7 @@ class AsyncStorageStore {
         CHANGES_CACHE_KEY,
         DEBUG_FLAG_KEY,
         PROFILE_CACHE_KEY,
-        PERSONALIZATIONS_CACHE_KEY,
+        SELECTED_OPTIMIZATIONS_CACHE_KEY,
       ]
       const values = await AsyncStorage.multiGet(keys)
 
@@ -159,14 +159,14 @@ class AsyncStorageStore {
   }
 
   /**
-   * @returns The cached personalization selections, or `undefined` if not present
+   * @returns The cached selected optimizations, or `undefined` if not present
    */
-  get personalizations(): SelectedPersonalizationArray | undefined {
-    return this.getCache(PERSONALIZATIONS_CACHE_KEY, SelectedPersonalizationArray)
+  get selectedOptimizations(): SelectedOptimizationArray | undefined {
+    return this.getCache(SELECTED_OPTIMIZATIONS_CACHE_KEY, SelectedOptimizationArray)
   }
 
-  set personalizations(personalizations: SelectedPersonalizationArray | undefined) {
-    this.setCache(PERSONALIZATIONS_CACHE_KEY, personalizations)
+  set selectedOptimizations(selectedOptimizations: SelectedOptimizationArray | undefined) {
+    this.setCache(SELECTED_OPTIMIZATIONS_CACHE_KEY, selectedOptimizations)
   }
 
   getCache<T extends z.ZodMiniType>(key: string, parser: T): z.output<T> | undefined {

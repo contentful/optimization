@@ -38,7 +38,9 @@ rs.mock('@contentful/optimization-core/logger', () => ({
 }))
 
 // Create mock optimization instance
-const mockScreen = rs.fn().mockResolvedValue({ profile: {}, changes: [], personalizations: [] })
+const mockScreen = rs
+  .fn()
+  .mockResolvedValue({ profile: {}, changes: [], selectedOptimizations: [] })
 
 const mockOptimization = {
   screen: mockScreen,
@@ -69,7 +71,7 @@ rs.mock('react', () => ({
 describe('useScreenTracking', () => {
   beforeEach(() => {
     rs.clearAllMocks()
-    mockScreen.mockResolvedValue({ profile: {}, changes: [], personalizations: [] })
+    mockScreen.mockResolvedValue({ profile: {}, changes: [], selectedOptimizations: [] })
   })
 
   it('should track screen on mount when trackOnMount is true (default)', async () => {
@@ -143,7 +145,7 @@ describe('useScreenTracking', () => {
     const expectedData = {
       profile: { id: 'test-profile' },
       changes: [],
-      personalizations: [],
+      selectedOptimizations: [],
     }
     mockScreen.mockResolvedValueOnce(expectedData)
 

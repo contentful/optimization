@@ -1,11 +1,11 @@
-import type { SelectedPersonalizationArray } from '@contentful/optimization-web/api-schemas'
+import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { LiveUpdatesContextValue } from '../context/LiveUpdatesContext'
 import type { OptimizationSdk } from '../context/OptimizationContext'
 import {
   createRuntime,
   defaultLiveUpdatesContext,
   createTestEntry as makeEntry,
-  createPersonalizableTestEntry as makePersonalizableEntry,
+  createOptimizableTestEntry as makeOptimizableEntry,
   renderWithOptimizationProviders,
 } from '../test/sdkTestUtils'
 import { useOptimizedEntry, type UseOptimizedEntryResult } from './useOptimizedEntry'
@@ -46,27 +46,27 @@ async function renderHook(params: {
 }
 
 describe('useOptimizedEntry', () => {
-  it('returns baseline state before personalization is available', async () => {
-    const baselineEntry = makePersonalizableEntry('baseline')
+  it('returns baseline state before optimization is available', async () => {
+    const baselineEntry = makeOptimizableEntry('baseline')
     const { optimization } = createRuntime((entry) => ({ entry }))
     const rendered = await renderHook({ baselineEntry, optimization })
 
     expect(rendered.getResult()).toMatchObject({
       entry: baselineEntry,
-      personalization: undefined,
+      selectedOptimization: undefined,
       isLoading: true,
       isReady: true,
-      canPersonalize: false,
-      selectedPersonalizations: undefined,
+      canOptimize: false,
+      selectedOptimizations: undefined,
     })
 
     await rendered.unmount()
   })
 
-  it('returns resolved variant data once personalizations are available', async () => {
-    const baselineEntry = makePersonalizableEntry('baseline')
+  it('returns resolved variant data once selectedOptimizations are available', async () => {
+    const baselineEntry = makeOptimizableEntry('baseline')
     const variantEntry = makeEntry('variant-a')
-    const variantState: SelectedPersonalizationArray = [
+    const variantState: SelectedOptimizationArray = [
       {
         experienceId: 'exp-hero',
         sticky: true,
@@ -74,9 +74,9 @@ describe('useOptimizedEntry', () => {
         variants: { baseline: 'variant-a' },
       },
     ]
-    const { emit, optimization } = createRuntime((entry, personalizations) => ({
-      entry: personalizations ? variantEntry : entry,
-      personalization: personalizations?.[0],
+    const { emit, optimization } = createRuntime((entry, selectedOptimizations) => ({
+      entry: selectedOptimizations ? variantEntry : entry,
+      selectedOptimization: selectedOptimizations?.[0],
     }))
     const rendered = await renderHook({ baselineEntry, optimization })
 
@@ -84,20 +84,20 @@ describe('useOptimizedEntry', () => {
 
     expect(rendered.getResult()).toMatchObject({
       entry: variantEntry,
-      personalization: variantState[0],
+      selectedOptimization: variantState[0],
       isLoading: false,
-      canPersonalize: true,
-      selectedPersonalizations: variantState,
+      canOptimize: true,
+      selectedOptimizations: variantState,
     })
 
     await rendered.unmount()
   })
 
-  it('locks on the first personalization when live updates are disabled', async () => {
-    const baselineEntry = makePersonalizableEntry('baseline')
+  it('locks on the first optimization when live updates are disabled', async () => {
+    const baselineEntry = makeOptimizableEntry('baseline')
     const variantOne = makeEntry('variant-a')
     const variantTwo = makeEntry('variant-b')
-    const variantOneState: SelectedPersonalizationArray = [
+    const variantOneState: SelectedOptimizationArray = [
       {
         experienceId: 'exp-hero',
         sticky: true,
@@ -105,7 +105,7 @@ describe('useOptimizedEntry', () => {
         variants: { baseline: 'variant-a' },
       },
     ]
-    const variantTwoState: SelectedPersonalizationArray = [
+    const variantTwoState: SelectedOptimizationArray = [
       {
         experienceId: 'exp-hero',
         sticky: false,
@@ -113,14 +113,14 @@ describe('useOptimizedEntry', () => {
         variants: { baseline: 'variant-b' },
       },
     ]
-    const { emit, optimization } = createRuntime((entry, personalizations) => ({
+    const { emit, optimization } = createRuntime((entry, selectedOptimizations) => ({
       entry:
-        personalizations?.[0]?.variantIndex === 1
+        selectedOptimizations?.[0]?.variantIndex === 1
           ? variantOne
-          : personalizations?.[0]?.variantIndex === 2
+          : selectedOptimizations?.[0]?.variantIndex === 2
             ? variantTwo
             : entry,
-      personalization: personalizations?.[0],
+      selectedOptimization: selectedOptimizations?.[0],
     }))
     const rendered = await renderHook({ baselineEntry, optimization })
 
@@ -129,16 +129,16 @@ describe('useOptimizedEntry', () => {
 
     await emit(variantTwoState)
     expect(rendered.getResult().entry).toEqual(variantOne)
-    expect(rendered.getResult().selectedPersonalizations).toEqual(variantOneState)
+    expect(rendered.getResult().selectedOptimizations).toEqual(variantOneState)
 
     await rendered.unmount()
   })
 
-  it('follows personalization changes when live updates are enabled', async () => {
-    const baselineEntry = makePersonalizableEntry('baseline')
+  it('follows optimization changes when live updates are enabled', async () => {
+    const baselineEntry = makeOptimizableEntry('baseline')
     const variantOne = makeEntry('variant-a')
     const variantTwo = makeEntry('variant-b')
-    const variantOneState: SelectedPersonalizationArray = [
+    const variantOneState: SelectedOptimizationArray = [
       {
         experienceId: 'exp-hero',
         sticky: true,
@@ -146,7 +146,7 @@ describe('useOptimizedEntry', () => {
         variants: { baseline: 'variant-a' },
       },
     ]
-    const variantTwoState: SelectedPersonalizationArray = [
+    const variantTwoState: SelectedOptimizationArray = [
       {
         experienceId: 'exp-hero',
         sticky: false,
@@ -154,14 +154,14 @@ describe('useOptimizedEntry', () => {
         variants: { baseline: 'variant-b' },
       },
     ]
-    const { emit, optimization } = createRuntime((entry, personalizations) => ({
+    const { emit, optimization } = createRuntime((entry, selectedOptimizations) => ({
       entry:
-        personalizations?.[0]?.variantIndex === 1
+        selectedOptimizations?.[0]?.variantIndex === 1
           ? variantOne
-          : personalizations?.[0]?.variantIndex === 2
+          : selectedOptimizations?.[0]?.variantIndex === 2
             ? variantTwo
             : entry,
-      personalization: personalizations?.[0],
+      selectedOptimization: selectedOptimizations?.[0],
     }))
     const rendered = await renderHook({ baselineEntry, optimization, liveUpdates: true })
 
@@ -170,12 +170,12 @@ describe('useOptimizedEntry', () => {
 
     await emit(variantTwoState)
     expect(rendered.getResult().entry).toEqual(variantTwo)
-    expect(rendered.getResult().selectedPersonalizations).toEqual(variantTwoState)
+    expect(rendered.getResult().selectedOptimizations).toEqual(variantTwoState)
 
     await rendered.unmount()
   })
 
-  it('treats non-personalized entries as ready immediately', async () => {
+  it('treats non-optimized entries as ready immediately', async () => {
     const baselineEntry = makeEntry('baseline')
     const { optimization } = createRuntime((entry) => ({ entry }))
     const rendered = await renderHook({ baselineEntry, optimization })
@@ -184,9 +184,9 @@ describe('useOptimizedEntry', () => {
       entry: baselineEntry,
       isLoading: false,
       isReady: true,
-      canPersonalize: false,
-      personalization: undefined,
-      selectedPersonalizations: undefined,
+      canOptimize: false,
+      selectedOptimization: undefined,
+      selectedOptimizations: undefined,
     })
 
     await rendered.unmount()

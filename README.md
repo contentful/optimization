@@ -94,10 +94,11 @@ These libraries may be used independently of other libraries and SDKs in the Opt
 They are relied upon by all SDKs, with their exported values and functionality exposed throughout
 the SDK hierarchy.
 
-- [API Client Library](./packages/universal/api-client/README.md) for the Experience & Insights APIs
+- [API Client Library](./packages/universal/api-client/README.md) for the Experience API and
+  Insights API
 - [API Schemas Library](./packages/universal/api-schemas/README.md) maintains Zod validation schemas
-  and TypeScript types for working with Experience API request/response payloads and Insights event
-  payloads
+  and TypeScript types for working with Experience API request/response payloads and Insights API
+  event payloads
 
 ## Shared Internal Libraries
 

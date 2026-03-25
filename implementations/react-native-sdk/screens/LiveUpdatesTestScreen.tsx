@@ -56,7 +56,7 @@ function ContentSections({
         <View>
           <Text>Default Behavior (inherits global setting)</Text>
           <Text>No liveUpdates prop - inherits from OptimizationRoot (false)</Text>
-          <OptimizedEntry entry={entry} testID="default-personalization">
+          <OptimizedEntry entry={entry} testID="default-optimization">
             {(resolvedEntry) => (
               <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="default" />
             )}
@@ -65,8 +65,8 @@ function ContentSections({
 
         <View>
           <Text>Live Updates Enabled (liveUpdates=true)</Text>
-          <Text>Always updates when personalization state changes</Text>
-          <OptimizedEntry entry={entry} liveUpdates={true} testID="live-personalization">
+          <Text>Always updates when optimization state changes</Text>
+          <OptimizedEntry entry={entry} liveUpdates={true} testID="live-optimization">
             {(resolvedEntry) => (
               <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="live" />
             )}
@@ -76,7 +76,7 @@ function ContentSections({
         <View>
           <Text>Locked (liveUpdates=false)</Text>
           <Text>Never updates - locks to first variant received</Text>
-          <OptimizedEntry entry={entry} liveUpdates={false} testID="locked-personalization">
+          <OptimizedEntry entry={entry} liveUpdates={false} testID="locked-optimization">
             {(resolvedEntry) => (
               <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="locked" />
             )}
@@ -100,7 +100,7 @@ export function LiveUpdatesTestScreen({ onClose }: LiveUpdatesTestScreenProps): 
     const loadEntry = async (): Promise<void> => {
       setIsLoading(true)
       await fetchEntries(
-        [ENV_CONFIG.entries.personalized],
+        [ENV_CONFIG.entries.optimized],
         (entries) => {
           if (entries.length > 0 && entries[0] !== undefined) {
             setEntry(entries[0])

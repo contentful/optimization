@@ -1,9 +1,9 @@
 import type {
   InsightsEvent as AnalyticsEvent,
   ChangeArray,
-  ExperienceEvent as PersonalizationEvent,
+  ExperienceEvent as OptimizationEvent,
   Profile,
-  SelectedPersonalizationArray,
+  SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { batch, computed, effect, signal, type Signal, untracked } from '@preact/signals-core'
 import type { BlockedEvent } from '../BlockedEvent'
@@ -23,7 +23,7 @@ export const changes: Signal<ChangeArray | undefined> = signal<ChangeArray | und
 export const blockedEvent: Signal<BlockedEvent | undefined> = signal<BlockedEvent | undefined>()
 
 /**
- * Current personalization/analytics consent state.
+ * Current optimization/analytics consent state.
  *
  * @public
  */
@@ -34,8 +34,8 @@ export const consent = signal<boolean | undefined>()
  *
  * @public
  */
-export const event: Signal<AnalyticsEvent | PersonalizationEvent | undefined> = signal<
-  AnalyticsEvent | PersonalizationEvent | undefined
+export const event: Signal<AnalyticsEvent | OptimizationEvent | undefined> = signal<
+  AnalyticsEvent | OptimizationEvent | undefined
 >()
 
 /**
@@ -63,18 +63,18 @@ export const previewPanelAttached = signal<boolean>(false)
 export const previewPanelOpen = signal<boolean>(false)
 
 /**
- * Latest selected personalization variants.
+ * Latest selected optimization variants.
  *
  * @public
  */
-export const selectedPersonalizations = signal<SelectedPersonalizationArray | undefined>()
+export const selectedOptimizations = signal<SelectedOptimizationArray | undefined>()
 
 /**
- * Whether personalization data is available for entry resolution.
+ * Whether optimization selection data is available for entry resolution.
  *
  * @public
  */
-export const canPersonalize = computed<boolean>(() => selectedPersonalizations.value !== undefined)
+export const canOptimize = computed<boolean>(() => selectedOptimizations.value !== undefined)
 
 /**
  * Active profile associated with current runtime state.
@@ -103,10 +103,10 @@ export interface Signals {
   previewPanelAttached: typeof previewPanelAttached
   /** Preview panel open-state signal. */
   previewPanelOpen: typeof previewPanelOpen
-  /** Selected personalization variants signal. */
-  selectedPersonalizations: typeof selectedPersonalizations
-  /** Whether personalization data is currently available. */
-  canPersonalize: typeof canPersonalize
+  /** Selected optimization variants signal. */
+  selectedOptimizations: typeof selectedOptimizations
+  /** Whether optimization selection data is currently available. */
+  canOptimize: typeof canOptimize
   /** Active profile signal. */
   profile: typeof profile
 }
@@ -140,8 +140,8 @@ export const signals: Signals = {
   online,
   previewPanelAttached,
   previewPanelOpen,
-  selectedPersonalizations,
-  canPersonalize,
+  selectedOptimizations,
+  canOptimize,
   profile,
 }
 

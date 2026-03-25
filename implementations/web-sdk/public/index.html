@@ -389,9 +389,10 @@
 
       let renderEntriesPromise = Promise.resolve()
 
-      // Render personalized entries
-      async function renderPersonalizedEntry(rawEntry, element, autoObserve = true) {
-        const { entry, personalization } = contentfulOptimization.personalizeEntry(rawEntry)
+      // Render optimized entries
+      async function renderOptimizedEntry(rawEntry, element, autoObserve = true) {
+        const { entry, selectedOptimization } =
+          contentfulOptimization.resolveOptimizedEntry(rawEntry)
         const renderInline =
           element.dataset.e2eEntryInline === 'true' || element.tagName === 'BUTTON'
 
@@ -410,7 +411,7 @@
           div.className = 'nested'
 
           for (const nestedEntry of entry.fields.nested) {
-            await renderPersonalizedEntry(nestedEntry, div, autoObserve)
+            await renderOptimizedEntry(nestedEntry, div, autoObserve)
           }
 
           element.appendChild(div)
@@ -423,22 +424,22 @@
           // The `data-ctfl-entry-id` data attribute is required for auto-observing
           element.dataset.ctflEntryId = entry.sys?.id
 
-          // Store the original personalized baseline ID so later rerenders do not personalize a variant entry
+          // Store the original optimized baseline ID so later rerenders do not resolve a variant entry
           if (rawEntry.fields.nt_experiences) element.dataset.ctflBaselineId = rawEntry.sys?.id
 
           // Other standard auto-observing attributes are optional
-          if (personalization) {
-            element.dataset.ctflPersonalizationId = personalization?.experienceId
-            element.dataset.ctflSticky = personalization?.sticky
-            element.dataset.ctflVariantIndex = personalization?.variantIndex
+          if (selectedOptimization) {
+            element.dataset.ctflOptimizationId = selectedOptimization?.experienceId
+            element.dataset.ctflSticky = selectedOptimization?.sticky
+            element.dataset.ctflVariantIndex = selectedOptimization?.variantIndex
           }
         }
 
-        return [entry, personalization]
+        return [entry, selectedOptimization]
       }
 
-      // Get the personalized entry to render
-      async function addPersonalizedEntry(entryId, element, autoObserve = true) {
+      // Get the optimized entry to render
+      async function addOptimizedEntry(entryId, element, autoObserve = true) {
         let rawEntry
 
         try {
@@ -448,13 +449,13 @@
           return []
         }
 
-        return renderPersonalizedEntry(rawEntry, element, autoObserve)
+        return renderOptimizedEntry(rawEntry, element, autoObserve)
       }
 
       const manuallyObservedEntryElements = new Map()
 
       // Manually observe view elements for auto-tracking
-      function manuallyObserveEntryElement(element, entry, personalization) {
+      function manuallyObserveEntryElement(element, entry, selectedOptimization) {
         if (!entry?.sys?.id) return
 
         contentfulOptimization.tracking.clearElement('views', element)
@@ -464,13 +465,13 @@
           data: {
             // The `entryId` property is required for auto-tracking
             entryId: entry.sys.id,
-            personalizationId: personalization?.experienceId,
-            sticky: personalization?.sticky,
-            variantIndex: personalization?.variantIndex,
+            optimizationId: selectedOptimization?.experienceId,
+            sticky: selectedOptimization?.sticky,
+            variantIndex: selectedOptimization?.variantIndex,
           },
         })
 
-        manuallyObservedEntryElements.set(element.dataset.entryId, [entry, personalization])
+        manuallyObservedEntryElements.set(element.dataset.entryId, [entry, selectedOptimization])
       }
 
       // Render all the entries
@@ -479,7 +480,7 @@
 
         await Promise.all(
           autoObservedElements.map(async (element) => {
-            await addPersonalizedEntry(
+            await addOptimizedEntry(
               element.dataset.ctflBaselineId ?? element.dataset.ctflEntryId,
               element,
               true,
@@ -491,7 +492,7 @@
 
         await Promise.all(
           manuallyObservedElements.map(async (element) => {
-            const [entry, personalization] = await addPersonalizedEntry(
+            const [entry, selectedOptimization] = await addOptimizedEntry(
               element.dataset.entryId,
               element,
               false,
@@ -499,7 +500,7 @@
 
             if (!entry) return
 
-            manuallyObserveEntryElement(element, entry, personalization)
+            manuallyObserveEntryElement(element, entry, selectedOptimization)
           }),
         )
       }
@@ -522,9 +523,9 @@
 
             if (!settings) return
 
-            const [entry, personalization] = settings
+            const [entry, selectedOptimization] = settings
 
-            manuallyObserveEntryElement(element, entry, personalization)
+            manuallyObserveEntryElement(element, entry, selectedOptimization)
           })
       })
 
@@ -569,10 +570,10 @@
         eventStream.appendChild(createEventDialog(event.type, event).fragment)
       })
 
-      // Subscribe to selectedPersonalizations state
-      contentfulOptimization.states.selectedPersonalizations.subscribe(
-        async (selectedPersonalizations) => {
-          if (!selectedPersonalizations) return
+      // Subscribe to selectedOptimizations state
+      contentfulOptimization.states.selectedOptimizations.subscribe(
+        async (selectedOptimizations) => {
+          if (!selectedOptimizations) return
 
           void scheduleRenderEntries()
         },

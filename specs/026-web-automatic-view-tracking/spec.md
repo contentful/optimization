@@ -1,18 +1,17 @@
-# Feature Specification: Contentful Optimization Web Automatic Component View Tracking
+# Feature Specification: Contentful Optimization Web Automatic Entry View Tracking
 
 **Feature Branch**: `[026-web-automatic-view-tracking]`  
 **Created**: 2026-02-27  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
-### User Story 1 - Track Entry Component Views After Visibility Dwell (Priority: P1)
+### User Story 1 - Track Entry Views After Visibility Dwell (Priority: P1)
 
-As a Web SDK consumer, I need component view events emitted automatically after tracked entry
-elements remain visible long enough so component view analytics are collected without manual event
-calls.
+As a Web SDK consumer, I need entry view events emitted automatically after tracked entry elements
+remain visible long enough so entry view tracking is collected without manual event calls.
 
 **Why this priority**: Automatic view tracking is a primary built-in interaction type for Web SDK
 integrations.
@@ -24,25 +23,25 @@ keep elements visible for periodic updates, then end visibility and assert initi
 **Acceptance Scenarios**:
 
 1. **Given** an auto-tracked entry element meeting intersection and dwell thresholds, **When** dwell
-   completes, **Then** exactly one initial component view event is dispatched.
+   completes, **Then** exactly one initial entry view event is dispatched.
 2. **Given** a visible entry element after the first event, **When** each update interval elapses
-   and visibility remains above threshold, **Then** one additional component view event is
-   dispatched with an increased `viewDurationMs`.
+   and visibility remains above threshold, **Then** one additional entry view event is dispatched
+   with an increased `viewDurationMs`.
 3. **Given** a visible entry element that already emitted at least one view event, **When** it
-   leaves threshold visibility, **Then** one final component view event is dispatched for that
+   leaves threshold visibility, **Then** one final entry view event is dispatched for that
    visibility cycle.
 4. **Given** a visibility cycle that ends before dwell threshold is reached, **When** threshold
-   visibility stops, **Then** no component view event is dispatched for that cycle.
+   visibility stops, **Then** no entry view event is dispatched for that cycle.
 5. **Given** a single visibility cycle, **When** initial, periodic, and final events are emitted,
    **Then** all events reuse the same `viewId`.
 6. **Given** a tracked entry payload with `sticky: true`, **When** the first successful
-   `core.trackView` call for an element returns personalization data, **Then** later emissions for
-   that element omit `sticky`.
+   `core.trackView` call for an element returns optimization data, **Then** later emissions for that
+   element omit `sticky`.
 7. **Given** a tracked entry payload with `sticky: true`, **When** `core.trackView` returns
    `undefined` or rejects for an element, **Then** later emissions for that element continue sending
-   `sticky` until a successful personalization response is returned.
-8. **Given** two tracked elements with the same component metadata and `sticky: true`, **When** each
-   element emits its first sticky view event, **Then** both emissions include `sticky`
+   `sticky` until a successful optimization response is returned.
+8. **Given** two tracked elements with the same tracked-entry metadata and `sticky: true`, **When**
+   each element emits its first sticky view event, **Then** both emissions include `sticky`
    independently.
 
 ---
@@ -68,10 +67,10 @@ and verify observed-element behavior plus callback metadata.
 4. **Given** per-element `data`, **When** callback is invoked, **Then** callback info includes that
    `data` alongside `totalVisibleMs`, `viewId`, and `attempts`.
 5. **Given** an auto-tracked element with `data-ctfl-track-views='false'`, **When** intersections
-   satisfy dwell conditions, **Then** no component view event is dispatched.
+   satisfy dwell conditions, **Then** no entry view event is dispatched.
 6. **Given** global view auto-tracking is disabled and an auto-discovered entry has
-   `data-ctfl-track-views='true'`, **When** dwell conditions are met, **Then** one component view
-   event is dispatched.
+   `data-ctfl-track-views='true'`, **When** dwell conditions are met, **Then** one entry view event
+   is dispatched.
 
 ---
 
@@ -123,7 +122,7 @@ unobserve/disconnect calls, and orphan element cleanup sweeps.
 - `viewDurationMs` is emitted as rounded non-negative milliseconds derived from accumulated visible
   time.
 - Sticky dedupe is scoped per observed element and is marked successful only when
-  `core.trackView(...)` resolves with personalization data.
+  `core.trackView(...)` resolves with optimization data.
 - Callback failures are logged and do not permanently disable subsequent periodic updates while an
   element remains visible.
 - `disconnect()` removes timers, active state, and page visibility listeners.
@@ -195,11 +194,11 @@ unobserve/disconnect calls, and orphan element cleanup sweeps.
   `ctflViewDurationUpdateIntervalMs`) for auto-discovered elements.
 - **FR-027**: When resolved tracking payload includes `sticky: true`, detector callbacks MUST send
   `sticky: true` until the first `core.trackView` call for that element resolves with a defined
-  personalization result.
+  optimization result.
 - **FR-028**: After sticky success is recorded for an element, subsequent callbacks for that element
-  MUST omit `sticky` while continuing to emit analytics view events.
+  MUST omit `sticky` while continuing to emit entry view events.
 - **FR-029**: Sticky dedupe MUST be keyed by element identity, so separately rendered elements with
-  identical component metadata are treated as distinct sticky targets.
+  identical tracked-entry metadata are treated as distinct sticky targets.
 
 ### Key Entities _(include if feature involves data)_
 
@@ -208,7 +207,7 @@ unobserve/disconnect calls, and orphan element cleanup sweeps.
 - **ElementViewObserver**: Intersection/dwell runtime maintaining per-element visibility state.
 - **ElementViewCallbackInfo**: Callback metadata (`totalVisibleMs`, `viewId`, `attempts`, `data`)
   describing a view attempt.
-- **View Tracking Payload**: Normalized component payload emitted to `trackView`.
+- **View Tracking Payload**: Normalized entry-tracking payload emitted to `trackView`.
 
 ## Success Criteria _(mandatory)_
 
@@ -225,6 +224,6 @@ unobserve/disconnect calls, and orphan element cleanup sweeps.
   release state on unobserve/disconnect/orphan sweep.
 - **SC-005**: View override tests confirm `data-ctfl-track-views='false'` suppresses observation and
   `data-ctfl-track-views='true'` can force-enable observation when global auto mode is off.
-- **SC-006**: Sticky-view tests confirm sticky is emitted until first successful personalization
-  response per element, retried after undefined/failed responses, and deduped independently across
-  separately rendered elements.
+- **SC-006**: Sticky-view tests confirm sticky is emitted until first successful optimization
+  response per element, retried after undefined or failed responses, and deduped independently
+  across separately rendered elements.

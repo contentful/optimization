@@ -37,7 +37,7 @@ test.describe('offline queue and recovery', () => {
     await setOffline(context, false)
   })
 
-  test('continues tracking analytics events while offline', async ({ context, page }) => {
+  test('continues tracking Insights API events while offline', async ({ context, page }) => {
     const baselineCount = await getRawEventsCount(page)
 
     await setOffline(context, true)
@@ -73,7 +73,7 @@ test.describe('offline queue and recovery', () => {
     await expectRawEventsToIncrease(page, baselineCount)
   })
 
-  test('queues identify event offline and flushes personalization state when online', async ({
+  test('queues identify event offline and updates identified state when online', async ({
     context,
     page,
   }) => {

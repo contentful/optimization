@@ -1,6 +1,6 @@
 import type { Entry } from 'contentful'
 
-export const personalizedEntry: Entry = {
+export const optimizedEntry: Entry = {
   metadata: {
     tags: [],
     concepts: [],

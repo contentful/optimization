@@ -1,18 +1,17 @@
-# Feature Specification: Contentful Optimization Web Automatic Component Click Tracking
+# Feature Specification: Contentful Optimization Web Automatic Entry Click Tracking
 
 **Feature Branch**: `[025-web-automatic-click-tracking]`  
 **Created**: 2026-02-27  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Track Clicks for Tracked Entry Elements via DOM Click Signals (Priority: P1)
 
 As a Web SDK consumer, I need click interactions for tracked entry elements emitted automatically
-from document click events so I do not manually wire component click tracking for common HTML
-patterns.
+from document click events so I do not manually wire entry click tracking for common HTML patterns.
 
 **Why this priority**: Click interaction tracking is a core automatic interaction type in the Web
 SDK.
@@ -23,11 +22,11 @@ paths, and assert `trackClick` payload dispatch.
 **Acceptance Scenarios**:
 
 1. **Given** a tracked entry element that is itself clickable, **When** it is clicked, **Then** one
-   component click event is dispatched.
+   entry click event is dispatched.
 2. **Given** a tracked entry element inside a clickable ancestor, **When** the entry is clicked,
-   **Then** one component click event is dispatched for that entry.
+   **Then** one entry click event is dispatched for that entry.
 3. **Given** a tracked entry element containing a clickable descendant, **When** the descendant is
-   clicked, **Then** one component click event is dispatched for that entry.
+   clicked, **Then** one entry click event is dispatched for that entry.
 
 ---
 
@@ -53,8 +52,8 @@ non-auto states and verify payload precedence and tracking eligibility behavior.
 4. **Given** an auto-tracked entry with `data-ctfl-track-clicks='false'`, **When** it is clicked,
    **Then** no click event is dispatched.
 5. **Given** global click auto-tracking is disabled and an auto-discovered entry has
-   `data-ctfl-track-clicks='true'`, **When** it is clicked on a clickable path, **Then** one
-   component click event is dispatched.
+   `data-ctfl-track-clicks='true'`, **When** it is clicked on a clickable path, **Then** one entry
+   click event is dispatched.
 
 ---
 
@@ -155,14 +154,14 @@ start/stop teardown behavior.
   `attributeOverrideEnabled`, `overrideData`).
 - **Click Context**: Resolved combination of nearest tracked entry element and clickable-path
   presence for a click event.
-- **Click Tracking Payload**: Normalized component payload emitted to `trackClick`.
+- **Click Tracking Payload**: Normalized entry-tracking payload emitted to `trackClick`.
 
 ## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
 - **SC-001**: Click tests confirm direct-entry, clickable-ancestor, and clickable-descendant flows
-  each emit exactly one component click event.
+  each emit exactly one entry click event.
 - **SC-002**: Override tests confirm enabled overrides take metadata precedence, disabled overrides
   suppress tracking, and clear restores fallback behavior.
 - **SC-003**: Robustness tests confirm text-node targets resolve correctly, non-clickable paths do

@@ -26,7 +26,7 @@ export const OPTIMIZATION_CORE_SDK_NAME =
  * @public
  * @remarks
  * This constant represents the cookie key used by the Optimization Framework
- * to persist an anonymous identifier for tracking personalization and analytics
+ * to persist an anonymous identifier for tracking optimization and insights
  * events when no explicit profile is known.
  *
  * @example
@@ -73,11 +73,11 @@ export const DEBUG_FLAG_KEY = '__ctfl_opt_debug__'
 export const PROFILE_CACHE_KEY = '__ctfl_opt_profile__'
 
 /**
- * Storage key for cached selected personalizations.
+ * Storage key for cached selected optimizations.
  *
  * @internal
  */
-export const PERSONALIZATIONS_CACHE_KEY = '__ctfl_opt_personalizations__'
+export const SELECTED_OPTIMIZATIONS_CACHE_KEY = '__ctfl_opt_selected-optimizations__'
 
 /**
  * Legacy anoynmous ID cookie key for migration from experience.js

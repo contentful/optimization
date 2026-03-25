@@ -1,10 +1,10 @@
-import type { SelectedPersonalizationArray } from '@contentful/optimization-web/api-schemas'
+import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { useEffect, useMemo, useState } from 'react'
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
 import { useOptimizationContext } from '../hooks/useOptimization'
-import { hasPersonalizationReferences, resolveShouldLiveUpdate } from './optimizedEntryUtils'
+import { hasOptimizationReferences, resolveShouldLiveUpdate } from './optimizedEntryUtils'
 
 export interface UseOptimizedEntryParams {
   baselineEntry: Entry
@@ -12,13 +12,13 @@ export interface UseOptimizedEntryParams {
 }
 
 export interface UseOptimizedEntryResult {
-  canPersonalize: boolean
+  canOptimize: boolean
   entry: Entry
   isLoading: boolean
   isReady: boolean
-  personalization: ResolvedData<EntrySkeletonType>['personalization']
+  selectedOptimization: ResolvedData<EntrySkeletonType>['selectedOptimization']
   resolvedData: ResolvedData<EntrySkeletonType>
-  selectedPersonalizations: SelectedPersonalizationArray | undefined
+  selectedOptimizations: SelectedOptimizationArray | undefined
 }
 
 export function useOptimizedEntry({
@@ -27,10 +27,10 @@ export function useOptimizedEntry({
 }: UseOptimizedEntryParams): UseOptimizedEntryResult {
   const { sdk, isReady } = useOptimizationContext()
   const liveUpdatesContext = useLiveUpdates()
-  const [lockedSelectedPersonalizations, setLockedSelectedPersonalizations] = useState<
-    SelectedPersonalizationArray | undefined
+  const [lockedSelectedOptimizations, setLockedSelectedOptimizations] = useState<
+    SelectedOptimizationArray | undefined
   >(undefined)
-  const [canPersonalize, setCanPersonalize] = useState(false)
+  const [canOptimize, setCanOptimize] = useState(false)
   const [sdkInitialized, setSdkInitialized] = useState(false)
 
   const shouldLiveUpdate = resolveShouldLiveUpdate({
@@ -41,19 +41,19 @@ export function useOptimizedEntry({
 
   useEffect(() => {
     if (!sdk || !isReady) {
-      setCanPersonalize(false)
+      setCanOptimize(false)
       return
     }
 
-    const selectedPersonalizationsSubscription = sdk.states.selectedPersonalizations.subscribe(
-      (selectedPersonalizations: SelectedPersonalizationArray | undefined) => {
-        setLockedSelectedPersonalizations((previous: SelectedPersonalizationArray | undefined) => {
+    const selectedOptimizationsSubscription = sdk.states.selectedOptimizations.subscribe(
+      (selectedOptimizations: SelectedOptimizationArray | undefined) => {
+        setLockedSelectedOptimizations((previous: SelectedOptimizationArray | undefined) => {
           if (shouldLiveUpdate) {
-            return selectedPersonalizations
+            return selectedOptimizations
           }
 
-          if (previous === undefined && selectedPersonalizations !== undefined) {
-            return selectedPersonalizations
+          if (previous === undefined && selectedOptimizations !== undefined) {
+            return selectedOptimizations
           }
 
           return previous
@@ -61,13 +61,13 @@ export function useOptimizedEntry({
       },
     )
 
-    const canPersonalizeSubscription = sdk.states.canPersonalize.subscribe((value) => {
-      setCanPersonalize(value)
+    const canOptimizeSubscription = sdk.states.canOptimize.subscribe((value) => {
+      setCanOptimize(value)
     })
 
     return () => {
-      selectedPersonalizationsSubscription.unsubscribe()
-      canPersonalizeSubscription.unsubscribe()
+      selectedOptimizationsSubscription.unsubscribe()
+      canOptimizeSubscription.unsubscribe()
     }
   }, [isReady, sdk, shouldLiveUpdate])
 
@@ -78,21 +78,21 @@ export function useOptimizedEntry({
   const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
     () =>
       sdk && isReady
-        ? sdk.personalizeEntry(baselineEntry, lockedSelectedPersonalizations)
-        : { entry: baselineEntry, personalization: undefined },
-    [baselineEntry, isReady, lockedSelectedPersonalizations, sdk],
+        ? sdk.resolveOptimizedEntry(baselineEntry, lockedSelectedOptimizations)
+        : { entry: baselineEntry, selectedOptimization: undefined },
+    [baselineEntry, isReady, lockedSelectedOptimizations, sdk],
   )
 
-  const requiresPersonalization = hasPersonalizationReferences(baselineEntry)
-  const isContentReady = requiresPersonalization ? canPersonalize : true
+  const requiresOptimization = hasOptimizationReferences(baselineEntry)
+  const isContentReady = requiresOptimization ? canOptimize : true
 
   return {
-    canPersonalize,
+    canOptimize,
     entry: resolvedData.entry,
     isLoading: !isContentReady,
     isReady: sdkInitialized,
-    personalization: resolvedData.personalization,
+    selectedOptimization: resolvedData.selectedOptimization,
     resolvedData,
-    selectedPersonalizations: lockedSelectedPersonalizations,
+    selectedOptimizations: lockedSelectedOptimizations,
   }
 }

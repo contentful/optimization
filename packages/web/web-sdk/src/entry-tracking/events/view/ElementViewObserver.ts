@@ -1,5 +1,5 @@
 /**
- * Lean IntersectionObserver-based dwell tracker for entry component views.
+ * Lean IntersectionObserver-based dwell tracker for entry views.
  *
  * Behavior:
  * - Fires callback after dwell threshold, then continues firing periodic

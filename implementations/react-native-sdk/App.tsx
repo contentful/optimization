@@ -21,7 +21,7 @@ const ENTRY_IDS = [
   ENV_CONFIG.entries.mergeTag,
   '4ib0hsHWoSOnCVdDkizE8d',
   'xFwgG3oNaOcjzWiGe4vXo',
-  ENV_CONFIG.entries.personalized,
+  ENV_CONFIG.entries.optimized,
   '5XHssysWUDECHzKLzoIsg1',
   '6zqoWXyiSrf0ja7I2WGtYj',
   '7pa5bOx8Z9NmNcr7mISvD',

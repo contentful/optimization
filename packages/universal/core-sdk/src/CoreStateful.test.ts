@@ -9,9 +9,9 @@ import type { QueueFlushFailureContext } from './lib/queue'
 import { batch, signalFns, signals } from './signals'
 import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from './symbols'
 import { mergeTagEntry } from './test/fixtures/mergeTagEntry'
-import { personalizedEntry } from './test/fixtures/personalizedEntry'
+import { optimizedEntry } from './test/fixtures/optimizedEntry'
 import { profile as profileFixture } from './test/fixtures/profile'
-import { selectedPersonalizations as selectedPersonalizationsFixture } from './test/fixtures/selectedPersonalizations'
+import { selectedOptimizations as selectedOptimizationsFixture } from './test/fixtures/selectedOptimizations'
 
 const config: CoreStatefulConfig = {
   clientId: 'key_123',
@@ -82,7 +82,7 @@ describe('CoreStateful blocked event handling', () => {
       signals.consent.value = undefined
       signals.event.value = undefined
       signals.online.value = true
-      signals.selectedPersonalizations.value = undefined
+      signals.selectedOptimizations.value = undefined
       signals.previewPanelAttached.value = false
       signals.previewPanelOpen.value = false
       signals.profile.value = undefined
@@ -127,7 +127,7 @@ describe('CoreStateful blocked event handling', () => {
     subscription.unsubscribe()
   })
 
-  it('does not emit blocked events for repeated component view calls', async () => {
+  it('does not emit blocked events for repeated entry view calls', async () => {
     const onEventBlocked = rs.fn()
     const core = createCoreStateful({
       defaults: { consent: true },
@@ -277,7 +277,7 @@ describe('CoreStateful blocked event handling', () => {
     }).not.toThrow()
   })
 
-  it('flushes insights and Experience queues with force on destroy', async () => {
+  it('flushes Insights API and Experience API queues with force on destroy', async () => {
     const core = createCoreStatefulHarness({
       defaults: {
         consent: true,
@@ -287,7 +287,7 @@ describe('CoreStateful blocked event handling', () => {
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
     const upsertProfile = rs.spyOn(core.api.experience, 'upsertProfile').mockResolvedValue({
       changes: [],
-      selectedPersonalizations: [],
+      selectedOptimizations: [],
       profile: profileFixture,
     })
 
@@ -332,37 +332,37 @@ describe('CoreStateful blocked event handling', () => {
     expect(secondStates.flag).toBe(firstStates.flag)
     expect(secondStates.consent).toBe(firstStates.consent)
     expect(secondStates.eventStream).toBe(firstStates.eventStream)
-    expect(secondStates.canPersonalize).toBe(firstStates.canPersonalize)
-    expect(secondStates.selectedPersonalizations).toBe(firstStates.selectedPersonalizations)
+    expect(secondStates.canOptimize).toBe(firstStates.canOptimize)
+    expect(secondStates.selectedOptimizations).toBe(firstStates.selectedOptimizations)
     expect(secondStates.previewPanelAttached).toBe(firstStates.previewPanelAttached)
     expect(secondStates.previewPanelOpen).toBe(firstStates.previewPanelOpen)
     expect(secondStates.profile).toBe(firstStates.profile)
   })
 
-  it('exposes canPersonalize as a derived observable from personalizations', () => {
+  it('exposes canOptimize as a derived observable from selected optimizations', () => {
     const core = createCoreStateful()
     const values: boolean[] = []
-    const subscription = core.states.canPersonalize.subscribe((value) => {
+    const subscription = core.states.canOptimize.subscribe((value) => {
       values.push(value)
     })
 
-    signals.selectedPersonalizations.value = []
-    signals.selectedPersonalizations.value = undefined
+    signals.selectedOptimizations.value = []
+    signals.selectedOptimizations.value = undefined
 
     expect(values).toEqual([false, true, false])
 
     subscription.unsubscribe()
   })
 
-  it('defaults personalizeEntry to the selectedPersonalizations signal', () => {
+  it('defaults resolveOptimizedEntry to the selectedOptimizations signal', () => {
     const core = createCoreStateful()
 
-    signals.selectedPersonalizations.value = selectedPersonalizationsFixture
+    signals.selectedOptimizations.value = selectedOptimizationsFixture
 
-    const result = core.personalizeEntry(personalizedEntry)
+    const result = core.resolveOptimizedEntry(optimizedEntry)
 
     expect(result.entry.sys.id).toBe('4k6ZyFQnR2POY5IJLLlJRb')
-    expect(result.personalization).toEqual(
+    expect(result.selectedOptimization).toEqual(
       expect.objectContaining({
         experienceId: '2qVK4T5lnScbswoyBuGipd',
         variantIndex: 1,

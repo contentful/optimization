@@ -1,5 +1,5 @@
 /**
- * Optimization Core SDK — platform-agnostic personalization and analytics.
+ * Optimization Core SDK — platform-agnostic optimization and analytics.
  *
  * @packageDocumentation
  */
@@ -19,6 +19,7 @@ export * from './constants'
 export * from './CoreBase'
 export * from './CoreStateful'
 export * from './CoreStateless'
+export * from './events'
 export * from './lib/decorators'
 export * from './lib/interceptor'
 export * from './resolvers'

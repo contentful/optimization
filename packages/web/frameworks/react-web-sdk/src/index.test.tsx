@@ -1,5 +1,5 @@
 import ContentfulOptimization from '@contentful/optimization-web'
-import type { SelectedPersonalizationArray } from '@contentful/optimization-web/api-schemas'
+import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import { rs } from '@rstest/core'
 import type { Entry } from 'contentful'
 import type { ReactElement } from 'react'
@@ -188,7 +188,7 @@ describe('@contentful/optimization-react-web core providers', () => {
   })
 
   it('exposes interaction tracking and resolved-entry helpers from useOptimization', () => {
-    const personalizeEntryCalls: unknown[] = []
+    const resolveOptimizedEntryCalls: unknown[] = []
     let capturedOptimization: UseOptimizationResult | undefined = undefined
 
     function Probe(): null {
@@ -197,8 +197,8 @@ describe('@contentful/optimization-react-web core providers', () => {
     }
 
     const sdk = createOptimizationSdk({
-      personalizeEntry: (entry: Entry, selectedPersonalizations?: SelectedPersonalizationArray) => {
-        personalizeEntryCalls.push([entry, selectedPersonalizations])
+      resolveOptimizedEntry: (entry: Entry, selectedOptimizations?: SelectedOptimizationArray) => {
+        resolveOptimizedEntryCalls.push([entry, selectedOptimizations])
         return {
           entry: {
             ...entry,
@@ -207,11 +207,11 @@ describe('@contentful/optimization-react-web core providers', () => {
               id: 'entry-variant',
             },
           },
-          personalization: undefined,
+          selectedOptimization: undefined,
         }
       },
       states: {
-        selectedPersonalizations: createObservable([
+        selectedOptimizations: createObservable([
           {
             experienceId: 'exp-a',
             variantIndex: 1,
@@ -240,9 +240,9 @@ describe('@contentful/optimization-react-web core providers', () => {
           id: 'entry-variant',
         },
       },
-      personalization: undefined,
+      selectedOptimization: undefined,
     })
-    expect(personalizeEntryCalls).toEqual([
+    expect(resolveOptimizedEntryCalls).toEqual([
       [
         baselineEntry,
         [

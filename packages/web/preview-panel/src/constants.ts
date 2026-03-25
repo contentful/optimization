@@ -16,7 +16,7 @@ export const ALL_VISITORS_FALLBACK_AUDIENCE_NAME = 'All Visitors (automatically 
 
 /**
  * Synthetic {@link AudienceEntry} representing the "All Visitors" audience,
- * used to group personalizations that do not target a specific audience.
+ * used to group optimizations that do not target a specific audience.
  *
  * @public
  */

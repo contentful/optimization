@@ -31,7 +31,7 @@ export const OPTIMIZATION_NODE_SDK_NAME =
  * @remarks
  * This constant is surfaced here to provide a stable import path for Node SDK
  * consumers. It represents the cookie key used by the Optimization Framework
- * to persist an anonymous identifier for tracking personalization and analytics
+ * to persist an anonymous identifier for tracking optimization and insights
  * events when no explicit profile is known.
  *
  * @example

@@ -117,7 +117,7 @@ describe('unidentified user', () => {
     })
   })
 
-  describe('nested personalization baselines', () => {
+  describe('nested optimization baselines', () => {
     it('should display level 0 nested baseline for new visitors', async () => {
       await waitFor(element(by.id('entry-text-1JAU028vQ7v6nB2swl3NBo')))
         .toBeVisible()

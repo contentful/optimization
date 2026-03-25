@@ -1,5 +1,5 @@
 import { useMemo, type JSX } from 'react'
-import { usePersonalization } from '../optimization/hooks/usePersonalization'
+import { useOptimizationResolver } from '../optimization/hooks/useOptimizationResolver'
 import type { ContentfulEntry } from '../types/contentful'
 import { isRecord } from '../utils/typeGuards'
 
@@ -7,7 +7,7 @@ interface NestedContentItemProps {
   entry: ContentfulEntry
 }
 
-interface PersonalizationMeta {
+interface SelectedOptimizationMeta {
   experienceId?: string
   sticky?: boolean
   variantIndex?: number
@@ -22,7 +22,7 @@ function isEntry(value: unknown): value is ContentfulEntry {
   )
 }
 
-function getPersonalizationMeta(value: unknown): PersonalizationMeta {
+function getSelectedOptimizationMeta(value: unknown): SelectedOptimizationMeta {
   if (!isRecord(value)) {
     return {}
   }
@@ -39,13 +39,13 @@ function renderText(contentEntry: ContentfulEntry): string {
 }
 
 export function NestedContentItem({ entry }: NestedContentItemProps): JSX.Element {
-  const { resolveEntry } = usePersonalization()
+  const { resolveEntry } = useOptimizationResolver()
   const resolved = useMemo(() => resolveEntry(entry), [entry, resolveEntry])
-  const { entry: resolvedEntry, personalization } = resolved
+  const { entry: resolvedEntry, selectedOptimization } = resolved
 
   const { experienceId, sticky, variantIndex } = useMemo(
-    () => getPersonalizationMeta(personalization),
-    [personalization],
+    () => getSelectedOptimizationMeta(selectedOptimization),
+    [selectedOptimization],
   )
 
   const nestedEntries = Array.isArray(resolvedEntry.fields.nested)
@@ -59,7 +59,7 @@ export function NestedContentItem({ entry }: NestedContentItemProps): JSX.Elemen
     <div
       data-ctfl-entry-id={resolvedEntry.sys.id}
       data-ctfl-baseline-id={entry.sys.id}
-      data-ctfl-personalization-id={experienceId}
+      data-ctfl-optimization-id={experienceId}
       data-ctfl-sticky={sticky === undefined ? undefined : String(sticky)}
       data-ctfl-variant-index={variantIndex === undefined ? undefined : String(variantIndex)}
     >

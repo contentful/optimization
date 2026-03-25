@@ -4,7 +4,7 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -38,7 +38,7 @@ As a component author, I need `OptimizationProvider` to initialize the SDK and e
 As a component maintainer, I need shared context providers for viewport signals, live-update state,
 and interaction-tracking defaults so tracking behavior is consistent across components.
 
-**Why this priority**: Personalization and analytics components consume these contexts directly.
+**Why this priority**: `OptimizedEntry` and the tracking hooks consume these contexts directly.
 
 **Independent Test**: Render providers with and without overrides, simulate scroll/layout events,
 and verify resolved context values.
@@ -145,7 +145,7 @@ order, preview overlay behavior, and preview visibility synchronization.
 
 - **OptimizationContext**: Provider-backed contract for SDK instance access.
 - **ScrollContext**: Shared viewport metrics for visibility-based tracking.
-- **LiveUpdatesContext**: Global and preview-modal visibility state for personalization update mode.
+- **LiveUpdatesContext**: Global and preview-modal visibility state for optimization live updates.
 - **InteractionTrackingContext**: Global defaults for auto view/tap tracking behavior.
 - **OptimizationRoot Composition**: Canonical provider tree with optional preview overlay.
 

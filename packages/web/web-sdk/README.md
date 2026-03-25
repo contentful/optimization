@@ -32,10 +32,10 @@ This SDK implements functionality specific to the Web environment, based on the
 - [Reference Implementations](#reference-implementations)
 - [Configuration](#configuration)
   - [Top-level Configuration Options](#top-level-configuration-options)
-  - [Analytics Options](#analytics-options)
+  - [API Options](#api-options)
   - [Event Builder Options](#event-builder-options)
   - [Fetch Options](#fetch-options)
-  - [Personalization Options](#personalization-options)
+  - [Queue Policy Options](#queue-policy-options)
   - [Persistence Behavior](#persistence-behavior)
 - [Optimization Properties](#optimization-properties)
   - [Tracking (entry-interaction API)](#tracking-entry-interaction-api)
@@ -51,11 +51,11 @@ This SDK implements functionality specific to the Web environment, based on the
     - [`tracking.enableElement`](#trackingenableelement)
     - [`tracking.disableElement`](#trackingdisableelement)
     - [`tracking.clearElement`](#trackingclearelement)
-  - [Personalization Data Resolution Methods](#personalization-data-resolution-methods)
+  - [Optimization Data Resolution Methods](#optimization-data-resolution-methods)
     - [`getFlag`](#getflag)
-    - [`personalizeEntry`](#personalizeentry)
+    - [`resolveOptimizedEntry`](#resolveoptimizedentry)
     - [`getMergeTagValue`](#getmergetagvalue)
-  - [Personalization and Analytics Event Methods](#personalization-and-analytics-event-methods)
+  - [Experience API and Insights API Event Methods](#experience-api-and-insights-api-event-methods)
     - [`identify`](#identify)
     - [`page`](#page)
     - [`screen`](#screen)
@@ -122,7 +122,7 @@ Alternatively, the Web SDK can be used directly within an HTML file:
 ## Reference Implementations
 
 - [Web Vanilla](../../../implementations/web-sdk/README.md): Example static Web page that renders
-  and emits analytics events for personalized content using a vanilla JS drop-in build of the Web
+  and emits Insights API events for optimized content using a vanilla JS drop-in build of the Web
   SDK
 
 ## Configuration
@@ -132,10 +132,10 @@ Alternatively, the Web SDK can be used directly within an HTML file:
 | Option                      | Required? | Default                                          | Description                                                                    |
 | --------------------------- | --------- | ------------------------------------------------ | ------------------------------------------------------------------------------ |
 | `allowedEventTypes`         | No        | `['identify', 'page']`                           | Allow-listed event types permitted when consent is not set                     |
-| `analytics`                 | No        | See "Analytics Options"                          | Configuration specific to the Analytics/Insights API                           |
+| `api`                       | No        | See "API Options"                                | Unified configuration for the Experience API and Insights API endpoints        |
 | `app`                       | No        | `undefined`                                      | The application definition used to attribute events to a specific consumer app |
 | `autoTrackEntryInteraction` | No        | `{ views: false, clicks: false, hovers: false }` | Opt-in automated tracking of entry interactions (`views`, `clicks`, `hovers`)  |
-| `clientId`                  | Yes       | N/A                                              | The Optimization API key                                                       |
+| `clientId`                  | Yes       | N/A                                              | Shared API key for Experience API and Insights API requests                    |
 | `cookie`                    | No        | `{ domain: undefined, expires: 365 }`            | Cookie configuration for anonymous ID persistence                              |
 | `defaults`                  | No        | `undefined`                                      | Set of default state values applied on initialization                          |
 | `environment`               | No        | `'main'`                                         | The environment identifier                                                     |
@@ -144,7 +144,7 @@ Alternatively, the Web SDK can be used directly within an HTML file:
 | `getAnonymousId`            | No        | `undefined`                                      | Function used to obtain an anonymous user identifier                           |
 | `logLevel`                  | No        | `'error'`                                        | Minimum log level for the default console sink                                 |
 | `onEventBlocked`            | No        | `undefined`                                      | Callback invoked when an event call is blocked by guards                       |
-| `personalization`           | No        | See "Personalization Options"                    | Configuration specific to the Personalization/Experience API                   |
+| `queuePolicy`               | No        | See "Queue Policy Options"                       | Shared queue and retry configuration for stateful delivery                     |
 
 Configuration method signatures:
 
@@ -160,57 +160,22 @@ Configuration method signatures:
 - `getAnonymousId`: `() => string | undefined`
 - `onEventBlocked`: `(event: BlockedEvent) => void`
 
-### Analytics Options
+### API Options
 
-| Option          | Required? | Default                                    | Description                                                              |
-| --------------- | --------- | ------------------------------------------ | ------------------------------------------------------------------------ |
-| `baseUrl`       | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                            |
-| `beaconHandler` | No        | Built-in beacon API integration            | Handler used to enqueue events via the Beacon API or a similar mechanism |
-
-The following configuration options apply only in stateful environments:
-
-| Option        | Required? | Default               | Description                                                     |
-| ------------- | --------- | --------------------- | --------------------------------------------------------------- |
-| `queuePolicy` | No        | See method signatures | Queue flush retry/backoff/circuit policy for stateful analytics |
+| Option              | Required? | Default                                    | Description                                                                    |
+| ------------------- | --------- | ------------------------------------------ | ------------------------------------------------------------------------------ |
+| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                                                |
+| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                                  |
+| `beaconHandler`     | No        | Built-in beacon API integration            | Handler used to enqueue Insights API events via the Beacon API or similar      |
+| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Enabled features the Experience API may use for each request                   |
+| `ip`                | No        | `undefined`                                | IP address override used by the Experience API for location analysis           |
+| `locale`            | No        | `'en-US'` (in API)                         | Locale used to translate `location.city` and `location.country`                |
+| `plainText`         | No        | `false`                                    | Sends performance-critical Experience API endpoints in plain text              |
+| `preflight`         | No        | `false`                                    | Instructs the Experience API to aggregate a new profile state but not store it |
 
 Configuration method signatures:
 
 - `beaconHandler`: `(url: string | URL, data: BatchInsightsEventArray) => boolean`
-- `queuePolicy`:
-
-  ```ts
-  {
-    baseBackoffMs?: number,
-    maxBackoffMs?: number,
-    jitterRatio?: number,
-    maxConsecutiveFailures?: number,
-    circuitOpenMs?: number,
-    onFlushFailure?: (context: QueueFlushFailureContext) => void,
-    onCircuitOpen?: (context: QueueFlushFailureContext) => void,
-    onFlushRecovered?: (context: QueueFlushRecoveredContext) => void
-  }
-  ```
-
-  Supporting callback payloads:
-
-  ```ts
-  type QueueFlushFailureContext = {
-    consecutiveFailures: number
-    queuedBatches: number
-    queuedEvents: number
-    retryDelayMs: number
-  }
-
-  type QueueFlushRecoveredContext = {
-    consecutiveFailures: number
-  }
-  ```
-
-  Notes:
-  - Invalid numeric values fall back to defaults.
-  - `jitterRatio` is clamped to `[0, 1]`.
-  - `maxBackoffMs` is normalized to be at least `baseBackoffMs`.
-  - Failed flush attempts include both `false` responses and thrown send errors.
 
 ### Event Builder Options
 
@@ -253,7 +218,7 @@ Configuration method signatures:
 ### Fetch Options
 
 Fetch options allow for configuration of a Fetch API-compatible fetch method and the retry/timeout
-logic integrated into the Optimization API Client. Specify the `fetchMethod` when the host
+logic integrated into the SDK's bundled API clients. Specify the `fetchMethod` when the host
 application environment does not offer a `fetch` method that is compatible with the standard Fetch
 API in its global scope.
 
@@ -275,73 +240,62 @@ Configuration method signatures:
 >
 > Web SDK fetch retry behavior intentionally matches the shared API Client contract: default retries
 > apply only to HTTP `503` responses (`Service Unavailable`). This is deliberate and aligned with
-> current Experience and Insights API expectations.
+> current Experience API and Insights API expectations.
 
-### Personalization Options
+### Queue Policy Options
 
-| Option            | Required? | Default                               | Description                                                         |
-| ----------------- | --------- | ------------------------------------- | ------------------------------------------------------------------- |
-| `baseUrl`         | No        | `'https://experience.ninetailed.co/'` | Base URL for the Experience API                                     |
-| `enabledFeatures` | No        | `['ip-enrichment', 'location']`       | Enabled features which the API may use for each request             |
-| `ip`              | No        | `undefined`                           | IP address to override the API behavior for IP analysis             |
-| `locale`          | No        | `'en-US'` (in API)                    | Locale used to translate `location.city` and `location.country`     |
-| `plainText`       | No        | `false`                               | Sends performance-critical endpoints in plain text                  |
-| `preflight`       | No        | `false`                               | Instructs the API to aggregate a new profile state but not store it |
+`queuePolicy` is available in the stateful Web SDK runtime and combines shared flush retry settings
+with Experience API offline buffering controls.
 
-The following configuration options apply only in stateful environments:
+Configuration shape:
 
-| Option        | Required? | Default               | Description                                                                 |
-| ------------- | --------- | --------------------- | --------------------------------------------------------------------------- |
-| `queuePolicy` | No        | See method signatures | Queue and flush-retry policy for stateful personalization offline buffering |
+```ts
+{
+  flush?: {
+    baseBackoffMs?: number,
+    maxBackoffMs?: number,
+    jitterRatio?: number,
+    maxConsecutiveFailures?: number,
+    circuitOpenMs?: number,
+    onFlushFailure?: (context: QueueFlushFailureContext) => void,
+    onCircuitOpen?: (context: QueueFlushFailureContext) => void,
+    onFlushRecovered?: (context: QueueFlushRecoveredContext) => void
+  },
+  offlineMaxEvents?: number,
+  onOfflineDrop?: (context: ExperienceQueueDropContext) => void
+}
+```
 
-Configuration method signatures:
+Supporting callback payloads:
 
-- `queuePolicy`:
+```ts
+type ExperienceQueueDropContext = {
+  droppedCount: number
+  droppedEvents: ExperienceEventArray
+  maxEvents: number
+  queuedEvents: number
+}
 
-  ```ts
-  {
-    maxEvents?: number,
-    onDrop?: (context: PersonalizationOfflineQueueDropContext) => void,
-    flushPolicy?: {
-      baseBackoffMs?: number,
-      maxBackoffMs?: number,
-      jitterRatio?: number,
-      maxConsecutiveFailures?: number,
-      circuitOpenMs?: number,
-      onFlushFailure?: (context: QueueFlushFailureContext) => void,
-      onCircuitOpen?: (context: QueueFlushFailureContext) => void,
-      onFlushRecovered?: (context: QueueFlushRecoveredContext) => void
-    }
-  }
-  ```
+type QueueFlushFailureContext = {
+  consecutiveFailures: number
+  queuedBatches: number
+  queuedEvents: number
+  retryDelayMs: number
+}
 
-  Supporting callback payloads:
+type QueueFlushRecoveredContext = {
+  consecutiveFailures: number
+}
+```
 
-  ```ts
-  type PersonalizationOfflineQueueDropContext = {
-    droppedCount: number
-    droppedEvents: ExperienceEventArray
-    maxEvents: number
-    queuedEvents: number
-  }
+Notes:
 
-  type QueueFlushFailureContext = {
-    consecutiveFailures: number
-    queuedBatches: number
-    queuedEvents: number
-    retryDelayMs: number
-  }
-
-  type QueueFlushRecoveredContext = {
-    consecutiveFailures: number
-  }
-  ```
-
-  Notes:
-  - Default `maxEvents` is `100`.
-  - If the queue is full while offline, oldest events are dropped first.
-  - `onDrop` is best-effort; callback errors are swallowed.
-  - `flushPolicy` uses the same normalization semantics as `analytics.queuePolicy`.
+- `flush` applies the same retry/backoff/circuit policy to both Insights API flushing and Experience
+  API offline replay.
+- Invalid numeric values fall back to defaults.
+- `jitterRatio` is clamped to `[0, 1]`.
+- `maxBackoffMs` is normalized to be at least `baseBackoffMs`.
+- Failed flush attempts include both `false` responses and thrown send errors.
 
 ### Persistence Behavior
 
@@ -403,14 +357,13 @@ Available state streams:
 
 - `consent`: Current consent state (`boolean | undefined`)
 - `blockedEventStream`: Latest blocked-call metadata (`BlockedEvent | undefined`)
-- `eventStream`: Latest emitted analytics/personalization event
-  (`AnalyticsEvent | PersonalizationEvent | undefined`)
+- `eventStream`: Latest emitted Insights API or Experience API event
+  (`InsightsEvent | ExperienceEvent | undefined`)
 - `flag(name)`: Key-scoped flag observable (`Observable<Json>`)
-- `canPersonalize`: Whether personalization selections are available (`boolean`;
-  `selectedPersonalizations !== undefined`)
+- `canOptimize`: Whether optimization selections are available (`boolean`;
+  `selectedOptimizations !== undefined`)
 - `profile`: Current profile (`Profile | undefined`)
-- `selectedPersonalizations`: Current selected personalizations
-  (`SelectedPersonalizationArray | undefined`)
+- `selectedOptimizations`: Current selected optimizations (`SelectedOptimizationArray | undefined`)
 - `previewPanelAttached`: Preview panel attachment state (`boolean`)
 - `previewPanelOpen`: Preview panel open state (`boolean`)
 
@@ -428,7 +381,7 @@ Update behavior:
 - `blockedEventStream` updates whenever a call is blocked by consent guards.
 - `eventStream` updates when a valid event is accepted for send/queue.
 - `flag(name)` updates when the resolved value for that key changes.
-- `canPersonalize` updates whenever `selectedPersonalizations` becomes defined or `undefined`.
+- `canOptimize` updates whenever `selectedOptimizations` becomes defined or `undefined`.
 - `consent` updates from defaults and `optimization.consent(...)`.
 - `previewPanelAttached` and `previewPanelOpen` are controlled by preview tooling and are preserved
   across `reset()`.
@@ -480,8 +433,8 @@ Resets all internal state _except_ consent. This method expects no arguments and
 
 #### `flush`
 
-Flushes queued analytics and personalization events. This method expects no arguments and returns a
-`Promise<void>`.
+Flushes queued Insights API and Experience API events. This method expects no arguments and returns
+a `Promise<void>`.
 
 #### `destroy`
 
@@ -579,7 +532,7 @@ Arguments:
 
 After `clearElement`, the element falls back to automatic behavior for that interaction.
 
-### Personalization Data Resolution Methods
+### Optimization Data Resolution Methods
 
 #### `getFlag`
 
@@ -603,10 +556,10 @@ Behavior notes:
 - If full map resolution is needed for advanced use cases, use
   `optimization.flagsResolver.resolve(changes)`.
 
-#### `personalizeEntry`
+#### `resolveOptimizedEntry`
 
-Resolve a baseline Contentful entry to a personalized variant using the provided selected
-personalizations, or from the current internal state.
+Resolve a baseline Contentful entry to an optimized variant using the provided selected
+optimizations, or from the current internal state.
 
 Type arguments:
 
@@ -616,13 +569,13 @@ Type arguments:
 
 Arguments:
 
-- `entry`\*: The entry to personalize
-- `selectedPersonalizations`: Selected personalizations
+- `entry`\*: The baseline entry to resolve
+- `selectedOptimizations`: Selected optimizations
 
 Returns:
 
-- The resolved personalized entry variant, or the supplied baseline entry if baseline is the
-  selected variant or a variant cannot be found.
+- The resolved optimized entry variant, or the supplied baseline entry if baseline is the selected
+  variant or a variant cannot be found.
 
 #### `getMergeTagValue`
 
@@ -635,7 +588,7 @@ Arguments:
 - `embeddedNodeEntryTarget`\*: The merge tag entry node to resolve
 - `profile`: The user profile
 
-### Personalization and Analytics Event Methods
+### Experience API and Insights API Event Methods
 
 Only the following methods may return an `OptimizationData` object:
 
@@ -649,7 +602,7 @@ Only the following methods may return an `OptimizationData` object:
 contains:
 
 - `changes`: Currently used for Custom Flags
-- `selectedPersonalizations`: Selected personalizations for the profile
+- `selectedOptimizations`: Selected optimizations for the profile
 - `profile`: Profile associated with the evaluated events
 
 #### `identify`
@@ -663,7 +616,7 @@ Arguments:
 
 #### `page`
 
-Record a personalization page view.
+Record an Experience API page view.
 
 Arguments:
 
@@ -672,7 +625,7 @@ Arguments:
 
 #### `screen`
 
-Record a personalization screen view.
+Record an Experience API screen view.
 
 Arguments:
 
@@ -681,7 +634,7 @@ Arguments:
 
 #### `track`
 
-Record a personalization custom track event.
+Record an Experience API custom track event.
 
 Arguments:
 
@@ -690,18 +643,18 @@ Arguments:
 
 #### `trackView`
 
-Record an analytics component view event. When the payload marks the component as "sticky", an
-additional personalization component view is recorded. This method only returns `OptimizationData`
-when the component is marked as "sticky".
+Record an Insights API entry view event. When the payload marks the entry as "sticky", an additional
+Experience API entry view is recorded. This method only returns `OptimizationData` when the entry is
+marked as "sticky".
 
 Arguments:
 
-- `payload`\*: Component view event builder arguments object, including an optional `profile`
-  property with a `PartialProfile` value that requires only an `id`
+- `payload`\*: Entry view event builder arguments object, including an optional `profile` property
+  with a `PartialProfile` value that requires only an `id`
 
 #### `trackClick`
 
-Record an analytics component click event.
+Record an Insights API entry click event.
 
 Returns:
 
@@ -709,11 +662,11 @@ Returns:
 
 Arguments:
 
-- `payload`\*: Component click event builder arguments object
+- `payload`\*: Entry click event builder arguments object
 
 #### `trackHover`
 
-Record an analytics component hover event.
+Record an Insights API entry hover event.
 
 Returns:
 
@@ -721,11 +674,11 @@ Returns:
 
 Arguments:
 
-- `payload`\*: Component hover event builder arguments object
+- `payload`\*: Entry hover event builder arguments object
 
 #### `trackFlagView`
 
-Track a feature flag view via analytics. This is functionally the same as a non-sticky component
+Track a feature flag view via the Insights API. This is functionally the same as a non-sticky flag
 view event.
 
 Returns:
@@ -734,16 +687,15 @@ Returns:
 
 Arguments:
 
-- `payload`\*: Component view event builder arguments object
+- `payload`\*: Flag view event builder arguments object
 
 ## Entry Interaction Tracking
 
 ### Entry View Tracking
 
-Tracking of entry/component views is based on the element that contains that entry's content. The
-Optimization Web SDK can automatically track observed entry elements for events such as "component
-views", "component hovers", and "component clicks", and it can also automatically observe elements
-that are marked as entry-related elements.
+Tracking of entry views is based on the element that contains that entry's content. The Optimization
+Web SDK can automatically track observed entry elements for entry view, hover, and click events, and
+it can also automatically observe elements that are marked as entry-related elements.
 
 Interaction observers are passive with respect to host event flow:
 
@@ -758,15 +710,14 @@ arguments when appropriate.
 Example:
 
 ```ts
-optimization.trackView({ componentId: 'abc-123', ... })
+optimization.trackView({ componentId: 'entry-123', ... })
 ```
 
 #### Automatic Entry View Tracking
 
-Entry/component views can be tracked automatically for observed entry-related elements by simply
-setting `autoTrackEntryInteraction.views` to `true`, or by calling the
-`tracking.enable('views', ...)` method if further setup is required depending on the consumer's SDK
-integration solution.
+Entry views can be tracked automatically for observed entry-related elements by simply setting
+`autoTrackEntryInteraction.views` to `true`, or by calling the `tracking.enable('views', ...)`
+method if further setup is required depending on the consumer's SDK integration solution.
 
 ##### View Detection Performance Notes
 
@@ -794,11 +745,11 @@ behavior.
 
 ### Entry Hover Tracking
 
-Entry/component hovers can be tracked automatically for observed entry-related elements by setting
+Entry hovers can be tracked automatically for observed entry-related elements by setting
 `autoTrackEntryInteraction.hovers` to `true`, or by calling `tracking.enable('hovers', ...)`.
 
-A hover emits `component_hover` events after dwell-time threshold is reached, and can continue to
-emit periodic duration updates while the same hover cycle remains active.
+A hover emits `component_hover` events for the tracked entry after dwell-time threshold is reached,
+and can continue to emit periodic duration updates while the same hover cycle remains active.
 
 ##### Hover Detection Performance Notes
 
@@ -817,10 +768,11 @@ For best runtime behavior, track only relevant elements and choose stable `dwell
 
 ### Entry Click Tracking
 
-Entry/component clicks can be tracked automatically for observed entry-related elements by setting
+Entry clicks can be tracked automatically for observed entry-related elements by setting
 `autoTrackEntryInteraction.clicks` to `true`, or by calling `tracking.enable('clicks')`.
 
-A click emits a `component_click` event only when one of the following is true:
+A click emits a `component_click` event for the tracked entry only when one of the following is
+true:
 
 - The entry element itself is clickable
 - The entry has a clickable ancestor
@@ -868,12 +820,12 @@ Manual API overrides take precedence over data-attribute overrides (see below). 
 The optional `data` option supports the following members:
 
 - `entryId`\*: The ID of the content entry to be tracked; should be the selected variant if the
-  entry is personalized
-- `personalizationId`: The ID of the personalization/experience entry associated with the content
-  entry; only required if the entry is personalized
+  entry is optimized
+- `optimizationId`: The ID of the optimization/experience entry associated with the content entry;
+  only required if the entry is optimized
 - `sticky`: A boolean value that marks that the current user should _always_ see this variant;
-  ignored if the entry is not personalized
-- `variantIndex`: The index of the selected variant; only required if the entry is personalized
+  ignored if the entry is not optimized
+- `variantIndex`: The index of the selected variant; only required if the entry is optimized
 
 Example:
 
@@ -889,13 +841,13 @@ Elements that are associated to entries using the following data attributes will
 detected for observation and entry-interaction tracking:
 
 - `data-ctfl-entry-id`\*: The ID of the content entry to be tracked; should be the selected variant
-  if the entry is personalized
-- `data-ctfl-personalization-id`: The ID of the personalization/experience entry associated with the
-  content entry; only required if the entry is personalized
+  if the entry is optimized
+- `data-ctfl-optimization-id`: The ID of the optimization/experience entry associated with the
+  content entry; only required if the entry is optimized
 - `data-ctfl-sticky`: A boolean value that marks that the current user should _always_ see this
-  variant; ignored if the entry is not personalized
+  variant; ignored if the entry is not optimized
 - `data-ctfl-variant-index`: The index of the selected variant; only required if the entry is
-  personalized
+  optimized
 - `data-ctfl-track-views`: Optional per-element override for view tracking (`true` = force-enable,
   `false` = force-disable)
 - `data-ctfl-view-duration-update-interval-ms`: Optional per-element override for periodic

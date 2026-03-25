@@ -1,21 +1,21 @@
-# Feature Specification: Contentful Optimization Web Automatic Component Hover Tracking
+# Feature Specification: Contentful Optimization Web Automatic Entry Hover Tracking
 
 **Feature Branch**: `[027-web-automatic-hover-tracking]`  
 **Created**: 2026-03-03  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
-### User Story 1 - Track Entry Component Hovers with Dwell and Periodic Duration Updates (Priority: P1)
+### User Story 1 - Track Entry Hovers with Dwell and Periodic Duration Updates (Priority: P1)
 
-As a Web SDK consumer, I need component hover events emitted automatically after a dwell threshold,
-then updated periodically while hover continues, so hover analytics are collected without manual
+As a Web SDK consumer, I need entry hover events emitted automatically after a dwell threshold, then
+updated periodically while hover continues, so entry hover tracking is collected without manual
 event wiring.
 
 **Why this priority**: Hover interaction tracking is a core automatic interaction type alongside
-component view and click tracking.
+entry view and click tracking.
 
 **Independent Test**: Start hover tracking, trigger natural hover enter/leave on tracked entries,
 and assert `trackHover` dispatch timing plus duration updates.
@@ -23,14 +23,15 @@ and assert `trackHover` dispatch timing plus duration updates.
 **Acceptance Scenarios**:
 
 1. **Given** an observed entry element, **When** hover remains active through dwell threshold,
-   **Then** exactly one initial `component_hover` event is dispatched.
+   **Then** exactly one initial entry hover event (`component_hover`) is dispatched.
 2. **Given** a hovered entry element after the first event, **When** each update interval elapses
-   and hover is still active, **Then** one additional `component_hover` event is dispatched with an
-   increased `hoverDurationMs`.
+   and hover is still active, **Then** one additional entry hover event (`component_hover`) is
+   dispatched with an increased `hoverDurationMs`.
 3. **Given** a hovered entry element that already emitted at least one hover event, **When** hover
-   ends, **Then** one final `component_hover` event is dispatched for that hover cycle.
+   ends, **Then** one final entry hover event (`component_hover`) is dispatched for that hover
+   cycle.
 4. **Given** a hover cycle that ends before dwell threshold is reached, **When** hover stops,
-   **Then** no `component_hover` event is dispatched.
+   **Then** no entry hover event (`component_hover`) is dispatched.
 5. **Given** a single hover cycle, **When** initial, periodic, and final events are emitted,
    **Then** all events reuse the same `hoverId`.
 
@@ -201,8 +202,8 @@ events, `unobserve`/`disconnect`, and orphaned states.
   scheduling, visibility pause/resume, and orphan cleanup.
 - **ElementHoverCallbackInfo**: Callback metadata (`totalHoverMs`, `hoverId`, `attempts`, `data`)
   describing a hover attempt.
-- **Hover Tracking Payload**: Normalized component payload emitted to `trackHover` with `hoverId`
-  and `hoverDurationMs`.
+- **Hover Tracking Payload**: Normalized entry-tracking payload emitted to `trackHover` with
+  `hoverId` and `hoverDurationMs`.
 
 ## Success Criteria _(mandatory)_
 

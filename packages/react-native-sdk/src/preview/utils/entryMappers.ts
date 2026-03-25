@@ -29,7 +29,7 @@ interface ExperienceEntryFields {
 }
 
 /** @internal */
-interface PersonalizationEntryFields {
+interface OptimizationEntryFields {
   nt_personalization_id?: string
   nt_experience_id?: string
   nt_name?: string
@@ -58,7 +58,7 @@ function hasVariantFields(fields: unknown): fields is VariantEntryFields {
 }
 
 /** @internal */
-function hasPersonalizationFields(fields: unknown): fields is PersonalizationEntryFields {
+function hasOptimizationFields(fields: unknown): fields is OptimizationEntryFields {
   return typeof fields === 'object' && fields !== null
 }
 
@@ -177,9 +177,9 @@ export function createExperienceDefinitions(entries: ContentfulEntry[]): Experie
 }
 
 /**
- * Creates a lookup map of experience/personalization IDs to their human-readable names.
+ * Creates a lookup map of experience IDs to their human-readable names.
  *
- * @param entries - Contentful entries of type `nt_personalization`
+ * @param entries - Contentful entries of type `nt_experience`
  * @returns Record mapping experience IDs to display names
  *
  * @public
@@ -189,7 +189,7 @@ export function createExperienceNameMap(entries: ContentfulEntry[]): Record<stri
 
   entries.forEach((entry) => {
     const fields: unknown = entry.fields
-    if (hasPersonalizationFields(fields)) {
+    if (hasOptimizationFields(fields)) {
       const id = fields.nt_personalization_id ?? fields.nt_experience_id ?? entry.sys.id
 
       const { nt_name: name } = fields

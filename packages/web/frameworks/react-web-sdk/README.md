@@ -10,7 +10,7 @@ Core root/provider primitives and React-facing APIs are implemented.
 - `useOptimizationContext()` readiness/error access
 - `LiveUpdatesProvider` + `useLiveUpdates()` global live updates context
 - `OptimizationRoot` provider composition and defaults
-- `useOptimizedEntry()` imperative personalization resolution
+- `useOptimizedEntry()` imperative optimization resolution
 - `OptimizedEntry` entry resolution, lock/live-update behavior, loading fallback, and data-attribute
   mapping
 
@@ -44,7 +44,7 @@ pnpm dev
 - package metadata and dual module exports
 - `rslib`/`rsbuild`/`rstest`/TypeScript baseline aligned with Web SDK patterns
 - core provider/root/context primitives in `src/`
-- `Personalization` component with loading-state support and Web SDK data-attribute tracking
+- `OptimizedEntry` component with loading-state support and Web SDK data-attribute tracking
 - scaffold dev dashboard harness in `dev/` for consent, identify/reset, state, events, and entries
 
 ## Usage
@@ -77,15 +77,15 @@ function App() {
 
 Available config props:
 
-| Prop                        | Type                               | Required | Description                                       |
-| --------------------------- | ---------------------------------- | -------- | ------------------------------------------------- |
-| `clientId`                  | `string`                           | Yes      | Your Contentful Optimization client identifier    |
-| `environment`               | `string`                           | No       | Contentful environment (defaults to `'main'`)     |
-| `api`                       | `CoreApiConfig`                    | No       | Unified Insights and Experience API configuration |
-| `app`                       | `App`                              | No       | Application metadata for events                   |
-| `autoTrackEntryInteraction` | `AutoTrackEntryInteractionOptions` | No       | Automatic entry interaction tracking options      |
-| `logLevel`                  | `LogLevels`                        | No       | Minimum log level for console output              |
-| `liveUpdates`               | `boolean`                          | No       | Enable global live updates (defaults to `false`)  |
+| Prop                        | Type                               | Required | Description                                           |
+| --------------------------- | ---------------------------------- | -------- | ----------------------------------------------------- |
+| `clientId`                  | `string`                           | Yes      | Your Contentful Optimization client identifier        |
+| `environment`               | `string`                           | No       | Contentful environment (defaults to `'main'`)         |
+| `api`                       | `CoreApiConfig`                    | No       | Unified Experience API and Insights API configuration |
+| `app`                       | `App`                              | No       | Application metadata for events                       |
+| `autoTrackEntryInteraction` | `AutoTrackEntryInteractionOptions` | No       | Automatic entry interaction tracking options          |
+| `logLevel`                  | `LogLevels`                        | No       | Minimum log level for console output                  |
+| `liveUpdates`               | `boolean`                          | No       | Enable global live updates (defaults to `false`)      |
 
 ### Provider Composition
 
@@ -99,8 +99,8 @@ Available config props:
 
 - `useOptimization()` returns the initialized `ContentfulOptimization` instance.
 - `useOptimizationContext()` returns `{ sdk, isReady, error }` without requiring readiness.
-- `useOptimizedEntry({ baselineEntry, liveUpdates })` returns resolved entry data and
-  personalization state for imperative consumers.
+- `useOptimizedEntry({ baselineEntry, liveUpdates })` returns resolved entry data and optimization
+  state for imperative consumers.
 - `useOptimization()` throws if used outside `OptimizationProvider`.
 - `useOptimization()` also throws if the provider exists but the SDK is not ready.
 - `useLiveUpdates()` throws if used outside `LiveUpdatesProvider`.
@@ -323,7 +323,7 @@ render and on TanStack Router `location.href` changes.
 TanStack Router payload enrichment also uses page-payload composition only and does not require
 interceptors.
 
-### Personalization Component
+### OptimizedEntry Component
 
 ```tsx
 import { OptimizedEntry } from '@contentful/optimization-react-web'
@@ -334,16 +334,16 @@ import { OptimizedEntry } from '@contentful/optimization-react-web'
 
 `OptimizedEntry` behavior:
 
-- Default mode locks to the first non-`undefined` personalization state.
-- `liveUpdates={true}` enables continuous updates as personalization state changes.
+- Default mode locks to the first non-`undefined` optimization state.
+- `liveUpdates={true}` enables continuous updates as optimization state changes.
 - If `liveUpdates` is omitted, global root `liveUpdates` is used.
 - If both are omitted, live updates default to `false`.
 - Consumer content supports render-prop (`(resolvedEntry) => ReactNode`) or direct `ReactNode`.
 - Wrapper element is configurable with `as: 'div' | 'span'` (defaults to `div`).
 - Wrapper style uses `display: contents` to remain layout-neutral as much as possible.
 - Readiness is inferred automatically:
-  - personalized entries render when `canPersonalize === true`
-  - non-personalized entries render when the SDK instance is initialized
+  - optimized entries render when `canOptimize === true`
+  - baseline entries render when the SDK instance is initialized
 
 #### Loading Fallback
 
@@ -352,14 +352,15 @@ When `loadingFallback` is provided, it is rendered while readiness is unresolved
 ```tsx
 <OptimizedEntry
   baselineEntry={baselineEntry}
-  loadingFallback={() => <Skeleton label="Loading personalized content" />}
+  loadingFallback={() => <Skeleton label="Loading optimized content" />}
 >
   {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
 </OptimizedEntry>
 ```
 
-- If a baseline entry is personalizable and unresolved, loading UI is rendered by default.
-- If the entry is not personalizable, baseline/resolved content is rendered directly.
+- If a baseline entry has optimization references and is unresolved, loading UI is rendered by
+  default.
+- If the entry has no optimization references, baseline/resolved content is rendered directly.
 - During loading, a concrete layout-target element is rendered (`data-ctfl-loading-layout-target`)
   so loading visibility/layout behavior remains targetable even when wrapper uses
   `display: contents`.
@@ -368,7 +369,7 @@ When `loadingFallback` is provided, it is rendered while readiness is unresolved
 
 #### Nested Composition
 
-Nested personalizations are supported by explicit composition:
+Nested optimized entries are supported by explicit composition:
 
 ```tsx
 <OptimizedEntry baselineEntry={parentEntry}>
@@ -393,9 +394,9 @@ When resolved content is rendered, the wrapper emits attributes used by
 `@contentful/optimization-web` automatic tracking:
 
 - `data-ctfl-entry-id` (always present on resolved content wrapper)
-- `data-ctfl-personalization-id` (when personalized)
+- `data-ctfl-optimization-id` (when optimized)
 - `data-ctfl-sticky` (when available)
-- `data-ctfl-variant-index` (when personalized)
+- `data-ctfl-variant-index` (when optimized)
 - `data-ctfl-duplication-scope` (when available)
 
 To consume those attributes automatically, enable Web SDK auto-tracking with one of:
@@ -430,10 +431,11 @@ This gives:
 
 ### Migration Notes
 
-- `Personalization` now accepts either render-prop children or direct `ReactNode` children.
-- Personalizable entries now render loading UI until personalization readiness is available.
-- When no `loadingFallback` is provided, a default loading UI is rendered for unresolved
-  personalizable entries.
+- `OptimizedEntry` now accepts either render-prop children or direct `ReactNode` children.
+- Entries with optimization references now render loading UI until optimization readiness is
+  available.
+- When no `loadingFallback` is provided, a default loading UI is rendered for unresolved optimized
+  entries.
 - Nested wrappers with the same baseline entry ID are now blocked at runtime.
 - Loading renders include `data-ctfl-loading-layout-target` for layout/visibility targeting.
 

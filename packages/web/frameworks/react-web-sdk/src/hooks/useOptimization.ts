@@ -1,4 +1,4 @@
-import type { SelectedPersonalizationArray } from '@contentful/optimization-web/api-schemas'
+import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { useContext, useMemo } from 'react'
@@ -33,14 +33,11 @@ export interface UseOptimizationResult {
   readonly identify: OptimizationSdk['identify']
   readonly interactionTracking: OptimizationSdk['tracking']
   readonly page: OptimizationSdk['page']
-  readonly personalizeEntry: OptimizationSdk['personalizeEntry']
-  readonly resolveEntry: (
-    entry: Entry,
-    selectedPersonalizations?: SelectedPersonalizationArray,
-  ) => Entry
+  readonly resolveOptimizedEntry: OptimizationSdk['resolveOptimizedEntry']
+  readonly resolveEntry: (entry: Entry, selectedOptimizations?: SelectedOptimizationArray) => Entry
   readonly resolveEntryData: (
     entry: Entry,
-    selectedPersonalizations?: SelectedPersonalizationArray,
+    selectedOptimizations?: SelectedOptimizationArray,
   ) => ResolvedData<EntrySkeletonType>
   readonly sdk: OptimizationSdk
   readonly track: OptimizationSdk['track']
@@ -49,9 +46,9 @@ export interface UseOptimizationResult {
 function resolveEntryData(
   sdk: OptimizationSdk,
   entry: Entry,
-  selectedPersonalizations = sdk.states.selectedPersonalizations.current,
+  selectedOptimizations = sdk.states.selectedOptimizations.current,
 ): ResolvedData<EntrySkeletonType> {
-  return sdk.personalizeEntry(entry, selectedPersonalizations)
+  return sdk.resolveOptimizedEntry(entry, selectedOptimizations)
 }
 
 export function useOptimization(): UseOptimizationResult {
@@ -82,12 +79,12 @@ export function useOptimization(): UseOptimizationResult {
       identify: async (payload) => await sdk.identify(payload),
       interactionTracking: sdk.tracking,
       page: async (payload) => await sdk.page(payload),
-      personalizeEntry: (entry: Entry, selectedPersonalizations?: SelectedPersonalizationArray) =>
-        sdk.personalizeEntry(entry, selectedPersonalizations),
-      resolveEntry: (entry, selectedPersonalizations) =>
-        resolveEntryData(sdk, entry, selectedPersonalizations).entry,
-      resolveEntryData: (entry, selectedPersonalizations) =>
-        resolveEntryData(sdk, entry, selectedPersonalizations),
+      resolveOptimizedEntry: (entry: Entry, selectedOptimizations?: SelectedOptimizationArray) =>
+        sdk.resolveOptimizedEntry(entry, selectedOptimizations),
+      resolveEntry: (entry, selectedOptimizations) =>
+        resolveEntryData(sdk, entry, selectedOptimizations).entry,
+      resolveEntryData: (entry, selectedOptimizations) =>
+        resolveEntryData(sdk, entry, selectedOptimizations),
       track: async (payload) => await sdk.track(payload),
     }),
     [sdk],

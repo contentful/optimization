@@ -2,7 +2,7 @@ import type { MergeTagEntry } from '@contentful/optimization-api-client/api-sche
 import { Profile, isMergeTagEntry } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 
-const logger = createScopedLogger('Personalization')
+const logger = createScopedLogger('Optimization')
 
 /**
  * Base string for log messages when merge-tag resolution fails.

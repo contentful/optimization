@@ -4,26 +4,26 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Hydrate Runtime Defaults from AsyncStorage at Initialization (Priority: P1)
 
 As a mobile SDK integrator, I need persisted state loaded before runtime construction so consent,
-profile, changes, and personalizations survive app restarts.
+profile, changes, and optimizations survive app restarts.
 
-**Why this priority**: Startup state continuity is required for predictable personalization and
-event guard behavior.
+**Why this priority**: Startup state continuity is required for predictable optimization and event
+guard behavior.
 
 **Independent Test**: Seed AsyncStorage keys, call `ContentfulOptimization.create(...)`, and verify
 merged defaults/log-level/allow-list behavior.
 
 **Acceptance Scenarios**:
 
-1. **Given** persisted consent/profile/changes/personalizations, **When** create-time merge runs,
+1. **Given** persisted consent/profile/changes/optimizations, **When** create-time merge runs,
    **Then** those values are used when caller defaults are omitted.
-2. **Given** caller-provided defaults for consent/profile/changes/personalizations, **When**
+2. **Given** caller-provided defaults for consent/profile/changes/optimizations, **When**
    create-time merge runs, **Then** caller defaults override persisted values.
 3. **Given** persisted debug flag resolves true, **When** config merge runs, **Then** resolved
    `logLevel` is forced to `'debug'`.
@@ -39,7 +39,7 @@ merged defaults/log-level/allow-list behavior.
 As a maintainer, I need runtime signal updates mirrored into AsyncStorage-backed state so storage
 and in-memory state remain aligned.
 
-**Why this priority**: Signal/storage drift breaks profile continuity and personalization behavior
+**Why this priority**: Signal/storage drift breaks profile continuity and optimization behavior
 across sessions.
 
 **Independent Test**: Mutate relevant core signals and verify corresponding `AsyncStorageStore`
@@ -54,8 +54,8 @@ getters/setters and persistence calls.
 3. **Given** `signals.profile.value` updates, **When** effects run, **Then**
    `AsyncStorageStore.profile` is updated and anonymous ID is synchronized using
    `profile?.id ?? storedAnonymousId`.
-4. **Given** `signals.selectedPersonalizations.value` updates, **When** effects run, **Then**
-   `AsyncStorageStore.personalizations` is updated.
+4. **Given** `signals.selectedOptimizations.value` updates, **When** effects run, **Then**
+   `AsyncStorageStore.optimizations` is updated.
 
 ---
 
@@ -99,11 +99,11 @@ operations and verify invalidation/logging/no-throw behavior.
 - **FR-001**: React Native merge logic MUST await `AsyncStorageStore.initialize()` before building
   merged runtime config.
 - **FR-002**: `AsyncStorageStore.initialize()` MUST load known keys for anonymous ID, consent,
-  changes, debug flag, profile, and personalizations via `multiGet`.
+  changes, debug flag, profile, and optimizations via `multiGet`.
 - **FR-003**: Initialization MUST treat `anonymousId`, `consent`, and `debug` keys as raw string
   values.
-- **FR-004**: Initialization MUST parse structured keys (`changes`, `profile`, `personalizations`)
-  as JSON and validate against schema parsers.
+- **FR-004**: Initialization MUST parse structured keys (`changes`, `profile`, `optimizations`) as
+  JSON and validate against schema parsers.
 - **FR-005**: Malformed JSON in structured keys MUST invalidate cache and remove the key from
   AsyncStorage.
 - **FR-006**: Schema-invalid structured values MUST invalidate cache and remove the key from
@@ -115,9 +115,9 @@ operations and verify invalidation/logging/no-throw behavior.
   omitted.
 - **FR-010**: Merged config MUST default `defaults.changes` from AsyncStorage when caller value is
   omitted.
-- **FR-011**: Merged config MUST default `defaults.personalizations` from AsyncStorage when caller
-  value is omitted.
-- **FR-012**: Caller-provided defaults for consent/profile/changes/personalizations MUST override
+- **FR-011**: Merged config MUST default `defaults.selectedOptimizations` from AsyncStorage when
+  caller value is omitted.
+- **FR-012**: Caller-provided defaults for consent/profile/changes/optimizations MUST override
   storage-derived defaults.
 - **FR-013**: Merged config MUST set `logLevel` to `'debug'` when persisted debug resolves true;
   otherwise merged config MUST keep caller-provided `logLevel` value.
@@ -132,8 +132,8 @@ operations and verify invalidation/logging/no-throw behavior.
   `AsyncStorageStore.profile`.
 - **FR-019**: Profile persistence effect MUST sync anonymous ID as
   `AsyncStorageStore.anonymousId = profile?.id ?? storedAnonymousId`.
-- **FR-020**: Runtime effect wiring MUST persist `signals.selectedPersonalizations.value` to
-  `AsyncStorageStore.personalizations`.
+- **FR-020**: Runtime effect wiring MUST persist `signals.selectedOptimizations.value` to
+  `AsyncStorageStore.optimizations`.
 - **FR-021**: Consent setter MUST map `true -> 'accepted'`, `false -> 'denied'`, and
   `undefined -> remove key`.
 - **FR-022**: `getCache` MUST re-validate structured in-memory values and invalidate/remove keys
@@ -160,8 +160,8 @@ operations and verify invalidation/logging/no-throw behavior.
 - **SC-001**: Startup tests confirm persisted defaults are applied only when caller defaults are
   omitted.
 - **SC-002**: Merge tests confirm debug flag and `allowedEventTypes` default/override behavior.
-- **SC-003**: Signal-effect tests confirm changes/consent/profile/personalizations synchronization
-  to AsyncStorage-backed state.
+- **SC-003**: Signal-effect tests confirm changes/consent/profile/optimizations synchronization to
+  AsyncStorage-backed state.
 - **SC-004**: Corruption tests confirm malformed/schema-invalid structured cache values are removed
   and resolved as undefined.
 - **SC-005**: Fault tests confirm AsyncStorage initialize/write/remove failures are logged without

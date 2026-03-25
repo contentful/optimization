@@ -146,11 +146,11 @@
           </form>
         </dialog>
         |
-        <button commandfor="selected-personalizations-dialog" command="show-modal">
-          View Selected Personalizations
+        <button commandfor="selected-optimizations-dialog" command="show-modal">
+          View Selected Optimizations
         </button>
-        <dialog id="selected-personalizations-dialog">
-          <pre id="selected-personalizations"></pre>
+        <dialog id="selected-optimizations-dialog">
+          <pre id="selected-optimizations"></pre>
           <form method="dialog">
             <button type="submit">Close</button>
           </form>
@@ -376,7 +376,7 @@
         return { fragment: clone, button, pre }
       }
 
-      function createEntryDialog(title, rawEntry, entry, personalization) {
+      function createEntryDialog(title, rawEntry, entry, selectedOptimization) {
         const template = document.querySelector('#entry-details-dialog')
         const clone = template.content.cloneNode(true)
         const dialog = clone.querySelector('dialog')
@@ -400,13 +400,13 @@
 
         if (rawEntry.fields.nt_experiences) div.dataset.ctflBaselineId = rawEntry.sys?.id
 
-        if (personalization) {
-          div.dataset.ctflPersonalizationId = personalization?.experienceId
-          div.dataset.ctflSticky = personalization?.sticky
-          div.dataset.ctflVariantIndex = personalization?.variantIndex
+        if (selectedOptimization) {
+          div.dataset.ctflOptimizationId = selectedOptimization?.experienceId
+          div.dataset.ctflSticky = selectedOptimization?.sticky
+          div.dataset.ctflVariantIndex = selectedOptimization?.variantIndex
         }
 
-        pre.innerText = JSON.stringify([entry, personalization], null, 2)
+        pre.innerText = JSON.stringify([entry, selectedOptimization], null, 2)
 
         return clone
       }
@@ -422,7 +422,7 @@
         const data = new FormData(form)
         const entryId = data.get('entryId')
 
-        await addPersonalizedEntry(entryId)
+        await addOptimizedEntry(entryId)
 
         localStorage.setItem(LAST_ENTRY_ID_KEY, entryId)
       })
@@ -465,9 +465,10 @@
 
       let renderEntriesPromise = Promise.resolve()
 
-      // Render personalized entries
-      async function renderPersonalizedEntry(rawEntry, element, autoObserve = true) {
-        const { entry, personalization } = contentfulOptimization.personalizeEntry(rawEntry)
+      // Render optimized entries
+      async function renderOptimizedEntry(rawEntry, element, autoObserve = true) {
+        const { entry, selectedOptimization } =
+          contentfulOptimization.resolveOptimizedEntry(rawEntry)
 
         if (isRichText(entry.fields?.text)) {
           const div = document.createElement('div')
@@ -484,7 +485,7 @@
           div.className = 'nested'
 
           for (const nestedEntry of entry.fields.nested) {
-            await renderPersonalizedEntry(nestedEntry, div, autoObserve)
+            await renderOptimizedEntry(nestedEntry, div, autoObserve)
           }
 
           element.appendChild(div)
@@ -493,7 +494,7 @@
         document
           .getElementById('entries')
           .appendChild(
-            createEntryDialog(entry.fields.internalTitle, rawEntry, entry, personalization),
+            createEntryDialog(entry.fields.internalTitle, rawEntry, entry, selectedOptimization),
           )
 
         // NOTE: Elements that are not auto-observed may still be auto-tracked (see below)
@@ -501,22 +502,22 @@
           // The `data-ctfl-entry-id` data attribute is required for auto-observing
           element.dataset.ctflEntryId = entry.sys?.id
 
-          // Store the original personalized baseline ID so later rerenders do not personalize a variant entry
+          // Store the original optimized baseline ID so later rerenders do not resolve a variant entry
           if (rawEntry.fields.nt_experiences) element.dataset.ctflBaselineId = rawEntry.sys?.id
 
           // Other standard auto-observing attributes are optional
-          if (personalization) {
-            element.dataset.ctflPersonalizationId = personalization?.experienceId
-            element.dataset.ctflSticky = personalization?.sticky
-            element.dataset.ctflVariantIndex = personalization?.variantIndex
+          if (selectedOptimization) {
+            element.dataset.ctflOptimizationId = selectedOptimization?.experienceId
+            element.dataset.ctflSticky = selectedOptimization?.sticky
+            element.dataset.ctflVariantIndex = selectedOptimization?.variantIndex
           }
         }
 
-        return [entry, personalization]
+        return [entry, selectedOptimization]
       }
 
-      // Get the personalized entry to render
-      async function addPersonalizedEntry(entryId, element, autoObserve = true) {
+      // Get the optimized entry to render
+      async function addOptimizedEntry(entryId, element, autoObserve = true) {
         let rawEntry
 
         try {
@@ -526,13 +527,13 @@
           return []
         }
 
-        return renderPersonalizedEntry(rawEntry, element, autoObserve)
+        return renderOptimizedEntry(rawEntry, element, autoObserve)
       }
 
       const manuallyObservedEntryElements = new Map()
 
       // Manually observe view elements for auto-tracking
-      function manuallyObserveEntryElement(element, entry, personalization) {
+      function manuallyObserveEntryElement(element, entry, selectedOptimization) {
         if (!entry?.sys?.id) return
 
         contentfulOptimization.tracking.clearElement('views', element)
@@ -542,13 +543,13 @@
           data: {
             // The `entryId` property is required for auto-tracking
             entryId: entry.sys.id,
-            personalizationId: personalization?.experienceId,
-            sticky: personalization?.sticky,
-            variantIndex: personalization?.variantIndex,
+            optimizationId: selectedOptimization?.experienceId,
+            sticky: selectedOptimization?.sticky,
+            variantIndex: selectedOptimization?.variantIndex,
           },
         })
 
-        manuallyObservedEntryElements.set(element.dataset.entryId, [entry, personalization])
+        manuallyObservedEntryElements.set(element.dataset.entryId, [entry, selectedOptimization])
       }
 
       // Render all the entries
@@ -559,7 +560,7 @@
 
         await Promise.all(
           autoObservedElements.map(async (element) => {
-            await addPersonalizedEntry(
+            await addOptimizedEntry(
               element.dataset.ctflBaselineId ?? element.dataset.ctflEntryId,
               element,
               true,
@@ -571,7 +572,7 @@
 
         await Promise.all(
           manuallyObservedElements.map(async (element) => {
-            const [entry, personalization] = await addPersonalizedEntry(
+            const [entry, selectedOptimization] = await addOptimizedEntry(
               element.dataset.entryId,
               element,
               false,
@@ -579,7 +580,7 @@
 
             if (!entry) return
 
-            manuallyObserveEntryElement(element, entry, personalization)
+            manuallyObserveEntryElement(element, entry, selectedOptimization)
           }),
         )
       }
@@ -602,9 +603,9 @@
 
             if (!settings) return
 
-            const [entry, personalization] = settings
+            const [entry, selectedOptimization] = settings
 
-            manuallyObserveEntryElement(element, entry, personalization)
+            manuallyObserveEntryElement(element, entry, selectedOptimization)
           })
       })
 
@@ -649,13 +650,13 @@
         eventStream.appendChild(createEventDialog(event.type, event).fragment)
       })
 
-      // Subscribe to selectedPersonalizations state
-      contentfulOptimization.states.selectedPersonalizations.subscribe(
-        async (selectedPersonalizations) => {
-          if (!selectedPersonalizations) return
+      // Subscribe to selectedOptimizations state
+      contentfulOptimization.states.selectedOptimizations.subscribe(
+        async (selectedOptimizations) => {
+          if (!selectedOptimizations) return
 
-          document.querySelector('#selected-personalizations').innerText = JSON.stringify(
-            selectedPersonalizations,
+          document.querySelector('#selected-optimizations').innerText = JSON.stringify(
+            selectedOptimizations,
             null,
             2,
           )

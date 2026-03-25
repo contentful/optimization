@@ -1,21 +1,21 @@
-import type { PersonalizationEntry } from '@contentful/optimization-web/api-schemas'
+import type { OptimizationEntry } from '@contentful/optimization-web/api-schemas'
 import { css, html, LitElement, nothing, type TemplateResult } from 'lit'
 import { property } from 'lit/decorators.js'
 
 /** @internal */
-function getDisplayedVariantPercentages(personalization: PersonalizationEntry): number[] {
-  const { distribution = [] } = personalization.fields.nt_config ?? {}
+function getDisplayedVariantPercentages(optimization: OptimizationEntry): number[] {
+  const { distribution = [] } = optimization.fields.nt_config ?? {}
   return Array.isArray(distribution) ? distribution : []
 }
 
 /**
- * Payload emitted by {@link Personalization} when a variant radio
+ * Payload emitted by {@link Optimization} when a variant radio
  * selection changes.
  *
  * @public
  */
 export interface RecordRadioGroupChangeDetail {
-  /** Experience ID identifying the personalization that changed. */
+  /** Experience ID identifying the optimization that changed. */
   key: string
   /** Zero-based index of the newly selected variant. */
   value: number
@@ -51,29 +51,29 @@ export function isRecordRadioGroupChangeEvent(event: Event): event is RecordRadi
 }
 
 /**
- * Custom element tag name for {@link Personalization}.
+ * Custom element tag name for {@link Optimization}.
  *
  * @public
  */
-export const PERSONALIZATION_TAG = 'ctfl-opt-preview-personalization' as const
+export const OPTIMIZATION_TAG = 'ctfl-opt-preview-optimization' as const
 
 /**
- * Type guard that checks whether an element is a {@link Personalization}.
+ * Type guard that checks whether an element is an {@link Optimization}.
  *
  * @param element - The element to check.
- * @returns `true` if the element's tag matches {@link PERSONALIZATION_TAG}.
+ * @returns `true` if the element's tag matches {@link OPTIMIZATION_TAG}.
  *
  * @example
  * ```ts
- * if (isPersonalization(el)) {
- *   el.personalization = entry
+ * if (isOptimization(el)) {
+ *   el.optimization = entry
  * }
  * ```
  *
  * @public
  */
-export function isPersonalization(element?: Element): element is Personalization {
-  return element?.tagName === PERSONALIZATION_TAG.toUpperCase()
+export function isOptimization(element?: Element): element is Optimization {
+  return element?.tagName === OPTIMIZATION_TAG.toUpperCase()
 }
 
 /** @internal */
@@ -82,7 +82,7 @@ const percentageFormatter = new Intl.NumberFormat(undefined, {
 })
 
 /**
- * Renders a single personalization as a radio-group fieldset, allowing the
+ * Renders a single optimization as a radio-group fieldset, allowing the
  * user to select which variant to preview.
  *
  * Emits a `change` {@link RecordRadioGroupChangeEvent} when a variant is selected.
@@ -91,10 +91,10 @@ const percentageFormatter = new Intl.NumberFormat(undefined, {
  *
  * @public
  */
-export class Personalization extends LitElement {
-  /** The personalization entry whose variants are rendered. */
+export class Optimization extends LitElement {
+  /** The optimization entry whose variants are rendered. */
   @property({ attribute: false })
-  accessor personalization: PersonalizationEntry | undefined = undefined
+  accessor optimization: OptimizationEntry | undefined = undefined
 
   /** Index of the variant the visitor naturally qualifies for, if any. */
   @property({ attribute: false })
@@ -106,7 +106,7 @@ export class Personalization extends LitElement {
 
   /** @internal */
   private get _experienceId(): string | undefined {
-    return this.personalization?.fields.nt_experience_id
+    return this.optimization?.fields.nt_experience_id
   }
 
   /** @internal */
@@ -140,9 +140,9 @@ export class Personalization extends LitElement {
    * @public
    */
   variantsTemplate(): TemplateResult | string {
-    if (!this.personalization) return 'None'
+    if (!this.optimization) return 'None'
 
-    const variantPercentages = getDisplayedVariantPercentages(this.personalization)
+    const variantPercentages = getDisplayedVariantPercentages(this.optimization)
 
     if (!variantPercentages.length) return 'None'
 
@@ -158,7 +158,7 @@ export class Personalization extends LitElement {
    *
    * @param percentage - Displayed distribution percentage for this variant (0–1).
    * @param index - Zero-based index of the variant.
-   * @returns Template for one variant radio button, or `undefined` when the personalization is unset.
+   * @returns Template for one variant radio button, or `undefined` when the optimization is unset.
    *
    * @example
    * ```ts
@@ -168,9 +168,9 @@ export class Personalization extends LitElement {
    * @public
    */
   variantTemplate(percentage: number, index: number): TemplateResult | undefined {
-    if (!this.personalization) return
+    if (!this.optimization) return
 
-    const radioId = `radiogroup-${this.personalization.sys.id}`
+    const radioId = `radiogroup-${this.optimization.sys.id}`
 
     return html`
       <label>
@@ -201,14 +201,14 @@ export class Personalization extends LitElement {
     return html`
       <fieldset>
         <legend>
-          <span class="personalization-name"
+          <span class="optimization-name"
             ><ctfl-opt-preview-matched-text
-              .text=${this.personalization?.fields.nt_name ?? ''}
+              .text=${this.optimization?.fields.nt_name ?? ''}
             ></ctfl-opt-preview-matched-text
           ></span>
 
-          <span class="personalization-type">
-            ${this.personalization?.fields.nt_type === 'nt_experiment'
+          <span class="optimization-type">
+            ${this.optimization?.fields.nt_type === 'nt_experiment'
               ? 'Experiment'
               : 'Personalization'}
           </span>
@@ -327,11 +327,11 @@ export class Personalization extends LitElement {
       color: #6b7280;
     }
 
-    .personalization-name {
+    .optimization-name {
       font-weight: 500;
     }
 
-    .personalization-type {
+    .optimization-type {
       font-size: 0.875rem;
       line-height: 1.25rem;
       color: #6b7280;
@@ -356,17 +356,17 @@ export class Personalization extends LitElement {
 }
 
 /**
- * Registers the {@link Personalization} custom element if not already defined.
+ * Registers the {@link Optimization} custom element if not already defined.
  *
  * @example
  * ```ts
- * definePersonalization()
+ * defineOptimization()
  * ```
  *
  * @public
  */
-export function definePersonalization(): void {
-  if (!customElements.get(PERSONALIZATION_TAG)) {
-    customElements.define(PERSONALIZATION_TAG, Personalization)
+export function defineOptimization(): void {
+  if (!customElements.get(OPTIMIZATION_TAG)) {
+    customElements.define(OPTIMIZATION_TAG, Optimization)
   }
 }

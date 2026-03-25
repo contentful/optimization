@@ -1,7 +1,7 @@
 import * as z from 'zod/mini'
 
 /**
- * Zod schema describing a selected personalization outcome for a user.
+ * Zod schema describing a selected optimization outcome for a user.
  *
  * @remarks
  * Represents the result of choosing a specific variant for a given
@@ -10,7 +10,7 @@ import * as z from 'zod/mini'
  *
  * @public
  */
-export const SelectedPersonalization = z.object({
+export const SelectedOptimization = z.object({
   /**
    * Identifier of the personalization or experiment experience.
    */
@@ -20,7 +20,7 @@ export const SelectedPersonalization = z.object({
    * Index of the selected variant within the experience configuration.
    *
    * @remarks
-   * Typically corresponds to the index of the selected {@link PersonalizationConfig } entry.
+   * Typically corresponds to the index of the selected {@link OptimizationConfig } entry.
    */
   variantIndex: z.number(),
 
@@ -34,7 +34,7 @@ export const SelectedPersonalization = z.object({
   variants: z.record(z.string(), z.string()),
 
   /**
-   * Indicates whether this personalization selection is sticky for the user.
+   * Indicates whether this optimization selection is sticky for the user.
    *
    * @defaultValue false
    *
@@ -46,25 +46,25 @@ export const SelectedPersonalization = z.object({
 })
 
 /**
- * TypeScript type inferred from {@link SelectedPersonalization}.
+ * TypeScript type inferred from {@link SelectedOptimization}.
  *
  * @public
  */
-export type SelectedPersonalization = z.infer<typeof SelectedPersonalization>
+export type SelectedOptimization = z.infer<typeof SelectedOptimization>
 
 /**
- * Zod schema describing an array of {@link SelectedPersonalization} items.
+ * Zod schema describing an array of {@link SelectedOptimization} items.
  *
  * @remarks
  * Useful when multiple experiences are evaluated at once.
  *
  * @public
  */
-export const SelectedPersonalizationArray = z.array(SelectedPersonalization)
+export const SelectedOptimizationArray = z.array(SelectedOptimization)
 
 /**
- * TypeScript type inferred from {@link SelectedPersonalizationArray}.
+ * TypeScript type inferred from {@link SelectedOptimizationArray}.
  *
  * @public
  */
-export type SelectedPersonalizationArray = z.infer<typeof SelectedPersonalizationArray>
+export type SelectedOptimizationArray = z.infer<typeof SelectedOptimizationArray>

@@ -3,11 +3,11 @@ export {
   createRuntime,
   defaultLiveUpdatesContext,
   createTestEntry as makeEntry,
-  createPersonalizableTestEntry as makePersonalizableEntry,
+  createOptimizableTestEntry as makeOptimizableEntry,
   renderWithOptimizationProviders as renderComponent,
   renderWithOptimizationProvidersToString as renderComponentToString,
   type RuntimeOptimization,
-  type PersonalizationState as SelectedPersonalizationState,
+  type SelectedOptimizationState,
   type TestEntry,
 } from '../test/sdkTestUtils'
 

@@ -30,7 +30,7 @@ interface TestTrackingScreenProps {
   colors: ThemeColors
   onBack: () => void
   sdk: ContentfulOptimization
-  personalizedEntry: Entry
+  optimizedEntry: Entry
   productEntry: Entry
 }
 
@@ -55,7 +55,7 @@ export function TestTrackingScreen({
   colors,
   onBack,
   sdk,
-  personalizedEntry,
+  optimizedEntry,
   productEntry,
 }: TestTrackingScreenProps): React.JSX.Element {
   const [trackedEvents, setTrackedEvents] = useState<string[]>([])
@@ -73,7 +73,7 @@ export function TestTrackingScreen({
       if (event?.type === 'component') {
         const { componentId } = event
         const timestamp = new Date().toLocaleTimeString()
-        setTrackedEvents((prev) => [...prev, `${timestamp}: Tracked component "${componentId}"`])
+        setTrackedEvents((prev) => [...prev, `${timestamp}: Tracked entry "${componentId}"`])
       } else if (event?.type === 'screen') {
         const { name } = event
         const timestamp = new Date().toLocaleTimeString()
@@ -95,25 +95,25 @@ export function TestTrackingScreen({
         <TouchableOpacity onPress={onBack} style={styles.backButton} testID="backButton">
           <Text style={[styles.backButtonText, { color: colors.successColor }]}>← Back</Text>
         </TouchableOpacity>
-        <Text style={[styles.testTitle, { color: colors.textColor }]}>Component Tracking Test</Text>
+        <Text style={[styles.testTitle, { color: colors.textColor }]}>Entry Tracking Test</Text>
       </View>
 
       <OptimizationScrollProvider testID="scrollView">
         {/* Info section */}
         <View style={[styles.fillerSection, { backgroundColor: colors.cardBackground }]}>
           <Text style={[styles.sectionTitle, { color: colors.textColor }]}>
-            Component Tracking Demo
+            Entry Tracking Demo
           </Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor }]}>
-            Scroll down to see {'<OptimizedEntry />'} components using real entries from the mock
-            server. Each tracks when visible for a specified duration.
+            Scroll down to see {'<OptimizedEntry />'} entries using real Contentful data from the
+            mock server. Each tracks when visible for a specified duration.
           </Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor, marginTop: 12 }]}>
-            Note: "Component tracking" refers to tracking Contentful entry components (CMS content),
-            not React Native UI components.
+            Note: entry tracking refers to tracking Contentful entries (CMS content), not React
+            Native UI components.
           </Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor, marginTop: 12 }]}>
-            Using mock server data - Entry IDs: {personalizedEntry.sys.id}, {productEntry.sys.id}
+            Using mock server data - Entry IDs: {optimizedEntry.sys.id}, {productEntry.sys.id}
           </Text>
         </View>
 
@@ -123,23 +123,23 @@ export function TestTrackingScreen({
         >
           <Text style={[styles.sectionTitle, { color: colors.textColor }]}>Spacer Content</Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor }]}>
-            This creates scrollable content. Keep scrolling to reach the tracked components below...
+            This creates scrollable content. Keep scrolling to reach the tracked entries below...
           </Text>
         </View>
 
-        {/* Personalized entry example */}
+        {/* Optimized entry example */}
         <OptimizedEntry
-          entry={personalizedEntry}
+          entry={optimizedEntry}
           viewTimeMs={2000} // 2 seconds
           threshold={0.8} // 80% visible
           style={StyleSheet.flatten([styles.trackedView, { backgroundColor: '#6366f1' }])}
-          testID="personalizationComponent"
+          testID="optimizationComponent"
         >
           {(resolvedEntry) => (
             <View>
-              <Text style={styles.componentLabel}>{'<OptimizedEntry /> (personalized)'}</Text>
+              <Text style={styles.componentLabel}>{'<OptimizedEntry /> (optimized)'}</Text>
               <Text style={styles.trackedViewTitle}>
-                {getFieldText(resolvedEntry.fields.internalTitle) || 'Personalized Content'}
+                {getFieldText(resolvedEntry.fields.internalTitle) || 'Optimized Content'}
               </Text>
               <Text style={styles.trackedViewText}>
                 {getFieldText(resolvedEntry.fields.text) || 'Content loaded from mock server'}
@@ -161,7 +161,7 @@ export function TestTrackingScreen({
         >
           <Text style={[styles.sectionTitle, { color: colors.textColor }]}>More Content</Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor }]}>
-            Keep scrolling to see the next tracked component...
+            Keep scrolling to see the next tracked entry...
           </Text>
         </View>
 
@@ -173,7 +173,7 @@ export function TestTrackingScreen({
           testID="analyticsComponent"
         >
           <View>
-            <Text style={styles.componentLabel}>{'<OptimizedEntry /> (non-personalized)'}</Text>
+            <Text style={styles.componentLabel}>{'<OptimizedEntry /> (baseline)'}</Text>
             <Text style={styles.trackedViewTitle}>
               {getFieldText(productEntry.fields.internalTitle) || 'Analytics Entry'}
             </Text>
@@ -198,7 +198,7 @@ export function TestTrackingScreen({
           <Text style={[styles.sectionTitle, { color: colors.textColor }]}>Event Log</Text>
           {trackedEvents.length === 0 ? (
             <Text style={[styles.sectionText, { color: colors.mutedTextColor }]}>
-              No events tracked yet. Scroll up to bring the tracked component into view.
+              No events tracked yet. Scroll up to bring the tracked entry into view.
             </Text>
           ) : (
             trackedEvents.map((event, index) => (

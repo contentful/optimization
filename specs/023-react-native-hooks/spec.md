@@ -4,16 +4,16 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Emit View Events from Viewport Visibility Cycles (Priority: P1)
 
-As an SDK consumer, I need `useViewportTracking` to emit component view events when a Contentful
-entry is visible long enough and to continue updating duration while visible.
+As an SDK consumer, I need `useViewportTracking` to emit entry view events when a Contentful entry
+is visible long enough and to continue updating duration while visible.
 
-**Why this priority**: Visibility-driven component analytics is a core behavior path.
+**Why this priority**: Visibility-driven entry tracking is a core behavior path.
 
 **Independent Test**: Attach `useViewportTracking` to a view, simulate layout/viewport updates, and
 verify initial, periodic, and final event behavior.
@@ -33,11 +33,11 @@ verify initial, periodic, and final event behavior.
    same `viewId`.
 6. **Given** visibility transitions into a new cycle, **When** a new cycle starts, **Then** a fresh
    `viewId` is generated.
-7. **Given** sticky personalization metadata, **When** `trackView` returns personalization data for
-   a rendered hook instance, **Then** later emissions for that same instance omit `sticky`.
-8. **Given** sticky personalization metadata, **When** a `trackView` attempt resolves `undefined` or
-   throws, **Then** later emissions for that same instance continue sending `sticky` until a
-   successful personalization response is returned.
+7. **Given** sticky selected-optimization metadata, **When** `trackView` returns optimization data
+   for a rendered hook instance, **Then** later emissions for that same instance omit `sticky`.
+8. **Given** sticky selected-optimization metadata, **When** a `trackView` attempt resolves
+   `undefined` or throws, **Then** later emissions for that same instance continue sending `sticky`
+   until a successful optimization response is returned.
 9. **Given** two rendered hook instances with the same tracking metadata, **When** each instance
    emits its first sticky view event, **Then** each event includes `sticky` independently.
 
@@ -71,10 +71,10 @@ AppState transitions, and verify visibility-cycle behavior.
 
 ### User Story 3 - Track Taps and Screens with Hook-Based APIs (Priority: P2)
 
-As an analytics integrator, I need hooks for component tap tracking and screen tracking (auto,
-manual, and callback-based) so I can instrument interactions with minimal boilerplate.
+As a tracking integrator, I need hooks for entry tap tracking and screen tracking (auto, manual, and
+callback-based) so I can instrument interactions with minimal boilerplate.
 
-**Why this priority**: Hook-level analytics primitives are required by higher-level components.
+**Why this priority**: Hook-level tracking primitives are required by higher-level components.
 
 **Independent Test**: Exercise `useTapTracking`, `useScreenTracking`, and
 `useScreenTrackingCallback` with success/error and enable/disable paths.
@@ -116,15 +116,15 @@ manual, and callback-based) so I can instrument interactions with minimal boiler
 
 ### Functional Requirements
 
-- **FR-001**: `useViewportTracking` MUST require `entry` and MAY accept `personalization`,
+- **FR-001**: `useViewportTracking` MUST require `entry` and MAY accept `selectedOptimization`,
   `threshold`, `viewTimeMs`, `enabled`, and `viewDurationUpdateIntervalMs`.
 - **FR-002**: `useViewportTracking` MUST default `threshold=0.8`, `viewTimeMs=2000`, `enabled=true`,
   and `viewDurationUpdateIntervalMs=5000`.
 - **FR-003**: `useViewportTracking` MUST derive metadata via `extractTrackingMetadata`.
-- **FR-004**: With personalization, metadata extraction MUST resolve `componentId` from
-  `personalization.variants` mapping to resolved entry ID, falling back to `entry.sys.id`; and MUST
-  include `experienceId`/`variantIndex`/`sticky` from personalization.
-- **FR-005**: Without personalization, metadata extraction MUST resolve
+- **FR-004**: With selected optimization metadata, metadata extraction MUST resolve `componentId`
+  from `selectedOptimization.variants` mapping to resolved entry ID, falling back to `entry.sys.id`;
+  and MUST include `experienceId`/`variantIndex`/`sticky` from `selectedOptimization`.
+- **FR-005**: Without selected optimization metadata, metadata extraction MUST resolve
   `{ componentId: entry.sys.id, experienceId: undefined, variantIndex: 0, sticky: undefined }`.
 - **FR-006**: `useViewportTracking` MUST subscribe to dimension changes and maintain fallback screen
   height.
@@ -157,14 +157,15 @@ manual, and callback-based) so I can instrument interactions with minimal boiler
   current ref-backed snapshot.
 - **FR-020**: When a visibility cycle would start while `enabled=false`, `useViewportTracking` MUST
   skip cycle start and MUST NOT schedule `trackView` events for that transition.
-- **FR-021**: `useTapTracking` MUST accept `entry`, optional `personalization`, `enabled`, and
+- **FR-021**: `useTapTracking` MUST accept `entry`, optional `selectedOptimization`, `enabled`, and
   optional `onTap`.
 - **FR-022**: `useTapTracking` MUST return undefined handlers when disabled.
 - **FR-023**: `useTapTracking` MUST store `pageX/pageY` on touch start.
 - **FR-024**: On touch end with a stored start point, `useTapTracking` MUST compute movement
   distance, clear stored start state, and treat distance `< 10` as a tap.
 - **FR-025**: On detected tap, `useTapTracking` MUST call `optimization.trackClick` with
-  `{ componentId, experienceId, variantIndex }` derived from entry/personalization metadata.
+  `{ componentId, experienceId, variantIndex }` derived from entry and selected-optimization
+  metadata.
 - **FR-026**: On detected tap and provided callback, `useTapTracking` MUST invoke `onTap(entry)`.
 - **FR-027**: `useScreenTracking` MUST accept `{ name, properties?, trackOnMount? }`.
 - **FR-028**: `useScreenTracking` MUST default `properties` to `{}` and `trackOnMount` to `true`.
@@ -209,5 +210,5 @@ manual, and callback-based) so I can instrument interactions with minimal boiler
 - **SC-005**: Screen-hook tests confirm auto/manual tracking behavior and error-path return
   semantics.
 - **SC-006**: Callback-hook tests confirm dynamic screen tracking callback payload format.
-- **SC-007**: Sticky-view tests confirm per-instance sticky dedupe on successful personalization,
-  sticky retry for undefined/failed responses, and identity-based dedupe reset.
+- **SC-007**: Sticky-view tests confirm per-instance sticky dedupe on successful optimization
+  responses, sticky retry for undefined or failed responses, and identity-based dedupe reset.

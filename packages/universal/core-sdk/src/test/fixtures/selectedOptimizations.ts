@@ -1,6 +1,6 @@
-import type { SelectedPersonalizationArray } from '@contentful/optimization-api-schemas'
+import type { SelectedOptimizationArray } from '@contentful/optimization-api-schemas'
 
-export const selectedPersonalizations: SelectedPersonalizationArray = [
+export const selectedOptimizations: SelectedOptimizationArray = [
   {
     experienceId: '1FHhEY0xkcCC9R5WCmnjRr',
     variantIndex: 1,

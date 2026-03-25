@@ -20,7 +20,7 @@ describe('live updates behavior', () => {
 
     await element(by.id('live-updates-test-button')).tap()
 
-    await waitFor(element(by.id('default-personalization')))
+    await waitFor(element(by.id('default-optimization')))
       .toBeVisible()
       .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
   })
@@ -225,17 +225,17 @@ describe('live updates behavior', () => {
     })
   })
 
-  describe('three Personalization sections display', () => {
-    it('should display all three Personalization components', async () => {
-      await waitFor(element(by.id('default-personalization')))
+  describe('three Optimization sections display', () => {
+    it('should display all three Optimization components', async () => {
+      await waitFor(element(by.id('default-optimization')))
         .toBeVisible()
         .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-      await waitFor(element(by.id('live-personalization')))
+      await waitFor(element(by.id('live-optimization')))
         .toBeVisible()
         .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-      await waitFor(element(by.id('locked-personalization')))
+      await waitFor(element(by.id('locked-optimization')))
         .toBeVisible()
         .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
     })

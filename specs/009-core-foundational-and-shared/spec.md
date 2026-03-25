@@ -4,7 +4,7 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-24).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -23,8 +23,8 @@ EventBuilder defaults, and interceptor availability.
 
 1. **Given** `CoreConfig` with `clientId` and optional global/unified API options, **When** a core
    runtime is created, **Then** one `ApiClient` is constructed with forwarded global
-   (`clientId`/`environment`/`fetchOptions`) config plus derived Insights and Experience endpoint
-   config from `api`.
+   (`clientId`/`environment`/`fetchOptions`) config plus derived Insights API and Experience API
+   endpoint config from `api`.
 2. **Given** omitted `eventBuilder` config, **When** core initializes, **Then** `EventBuilder`
    defaults to `channel: 'server'` and library metadata from
    `OPTIMIZATION_CORE_SDK_NAME`/`OPTIMIZATION_CORE_SDK_VERSION`.
@@ -47,18 +47,19 @@ return behavior.
 
 **Acceptance Scenarios**:
 
-1. **Given** resolver input data, **When** `getFlag`, `personalizeEntry`, and `getMergeTagValue` are
-   called, **Then** each method uses the shared Core resolver utilities without changing result
-   shape.
+1. **Given** resolver input data, **When** `getFlag`, `resolveOptimizedEntry`, and
+   `getMergeTagValue` are called, **Then** each method uses the shared Core resolver utilities
+   without changing result shape.
 2. **Given** identify/page/screen/track payloads, **When** `identify`, `page`, `screen`, and `track`
-   are called, **Then** each routes through the Experience delivery path and returns its async
+   are called, **Then** each routes through the Experience API delivery path and returns its async
    result.
 3. **Given** `trackView` payload with `sticky: true`, **When** the method is called, **Then** it
-   routes through both Experience and Insights, and returns the Experience result.
+   routes through both the Experience API and the Insights API, and returns the Experience API
+   result.
 4. **Given** `trackView` payload with `sticky` omitted or `false`, **When** the method is called,
-   **Then** it routes through Insights only and resolves with `undefined`.
-5. **Given** component/flag interaction payloads, **When** `trackClick`, `trackHover`, or
-   `trackFlagView` is called, **Then** each method routes through Insights.
+   **Then** it routes through the Insights API only and resolves with `undefined`.
+5. **Given** entry and flag interaction payloads, **When** `trackClick`, `trackHover`, or
+   `trackFlagView` is called, **Then** each method routes through the Insights API.
 
 ---
 
@@ -88,10 +89,11 @@ can extend behavior safely and expose the correct import surfaces.
 
 ### Edge Cases
 
-- Insights and Experience API base URLs remain isolated when only one unified `api` override is set.
+- Insights API and Experience API base URLs remain isolated when only one unified `api` override is
+  set.
 - Top-level `fetchOptions` are forwarded to shared API client config.
-- `CoreBase.trackView` always sends Insights view events; when `sticky` is truthy, it also sends
-  Experience view events.
+- `CoreBase.trackView` always sends Insights API view events; when `sticky` is truthy, it also sends
+  Experience API view events.
 - `InterceptorManager.run` returns the original input reference when no interceptors are registered.
 - `guardedBy` throws `TypeError` at call time when the configured predicate key is not callable.
 - Core root export surface has no package default export and does not expose logger/API client/API
@@ -105,22 +107,23 @@ can extend behavior safely and expose the correct import surfaces.
   `fetchOptions`), an optional unified `api` config object, optional `eventBuilder`, and optional
   `logLevel`.
 - **FR-002**: `CoreBase` MUST create one shared `ApiClient` with global API properties and derived
-  Insights/Experience config objects built from `api`.
+  Insights API and Experience API config objects built from `api`.
 - **FR-003**: `CoreBase` MUST register a `ConsoleLogSink` using the configured `logLevel`.
 - **FR-004**: `CoreBase` MUST initialize `EventBuilder` from provided config or default to
   `channel: 'server'` and core package library metadata constants.
 - **FR-005**: `CoreBase` MUST expose lifecycle interceptors with separate managers for `event` and
   `state`.
 - **FR-006**: `CoreBase` MUST expose resolver accessors (`flagsResolver`, `mergeTagValueResolver`,
-  `personalizedEntryResolver`) from shared Core resolver utilities.
-- **FR-007**: `CoreBase` resolver helpers (`getFlag`, `personalizeEntry`, `getMergeTagValue`) MUST
-  use resolver utilities without reshaping outputs.
+  `optimizedEntryResolver`) from shared Core resolver utilities.
+- **FR-007**: `CoreBase` resolver helpers (`getFlag`, `resolveOptimizedEntry`, `getMergeTagValue`)
+  MUST use resolver utilities without reshaping outputs.
 - **FR-008**: `CoreBase.identify`, `page`, `screen`, and `track` MUST route through the Experience
-  delivery path and return delegated async results.
-- **FR-009**: `CoreBase.trackView` MUST route through Insights for all payloads and MUST
-  additionally route through Experience when `payload.sticky` is truthy; it MUST return
+  API delivery path and return delegated async results.
+- **FR-009**: `CoreBase.trackView` MUST route through the Insights API for all payloads and MUST
+  additionally route through the Experience API when `payload.sticky` is truthy; it MUST return
   `OptimizationData` for sticky payloads and `undefined` otherwise.
-- **FR-010**: `CoreBase.trackClick`, `trackHover`, and `trackFlagView` MUST route through Insights.
+- **FR-010**: `CoreBase.trackClick`, `trackHover`, and `trackFlagView` MUST route through the
+  Insights API.
 - **FR-011**: `BlockedEvent` MUST contain `reason`, `method`, and `args`.
 - **FR-012**: `InterceptorManager` MUST support add/remove/clear/count and sequential sync+async
   execution through `run`.

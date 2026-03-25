@@ -1,4 +1,4 @@
-import type { Profile, SelectedPersonalizationArray } from '@contentful/optimization-api-schemas'
+import type { Profile, SelectedOptimizationArray } from '@contentful/optimization-api-schemas'
 import { useEffect, useState } from 'react'
 import type { OptimizationSdk } from '../../src/context/OptimizationContext'
 
@@ -7,7 +7,7 @@ const MAX_EVENT_LOG_ITEMS = 20
 export interface UseOptimizationStateResult {
   consent: boolean | undefined
   profile: Profile | undefined
-  personalizations: SelectedPersonalizationArray | undefined
+  selectedOptimizations: SelectedOptimizationArray | undefined
   previewPanelOpen: boolean
   eventLog: string[]
 }
@@ -17,8 +17,8 @@ export function useOptimizationState(
 ): UseOptimizationStateResult {
   const [consent, setConsent] = useState<boolean | undefined>(undefined)
   const [profile, setProfile] = useState<Profile | undefined>(undefined)
-  const [personalizations, setPersonalizations] = useState<
-    SelectedPersonalizationArray | undefined
+  const [selectedOptimizations, setSelectedOptimizations] = useState<
+    SelectedOptimizationArray | undefined
   >(undefined)
   const [previewPanelOpen, setPreviewPanelOpen] = useState(false)
   const [eventLog, setEventLog] = useState<string[]>([])
@@ -32,9 +32,9 @@ export function useOptimizationState(
     const profileSub = optimization.states.profile.subscribe((nextProfile) => {
       setProfile(nextProfile)
     })
-    const personalizationsSub = optimization.states.selectedPersonalizations.subscribe(
-      (nextPersonalizations) => {
-        setPersonalizations(nextPersonalizations)
+    const selectedOptimizationsSub = optimization.states.selectedOptimizations.subscribe(
+      (nextSelectedOptimizations) => {
+        setSelectedOptimizations(nextSelectedOptimizations)
       },
     )
     const previewPanelSub = optimization.states.previewPanelOpen.subscribe((isOpen) => {
@@ -65,11 +65,11 @@ export function useOptimizationState(
     return () => {
       consentSub.unsubscribe()
       profileSub.unsubscribe()
-      personalizationsSub.unsubscribe()
+      selectedOptimizationsSub.unsubscribe()
       previewPanelSub.unsubscribe()
       eventSub.unsubscribe()
     }
   }, [optimization])
 
-  return { consent, profile, personalizations, previewPanelOpen, eventLog }
+  return { consent, profile, selectedOptimizations, previewPanelOpen, eventLog }
 }

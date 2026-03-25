@@ -1,7 +1,7 @@
 import {
   ChangeArray,
   Profile,
-  SelectedPersonalizationArray,
+  SelectedOptimizationArray,
 } from '@contentful/optimization-core/api-schemas'
 import {
   ANONYMOUS_ID_KEY,
@@ -9,8 +9,8 @@ import {
   CHANGES_CACHE_KEY,
   CONSENT_KEY,
   DEBUG_FLAG_KEY,
-  PERSONALIZATIONS_CACHE_KEY,
   PROFILE_CACHE_KEY,
+  SELECTED_OPTIMIZATIONS_CACHE_KEY,
 } from '@contentful/optimization-core/constants'
 import { createScopedLogger } from '@contentful/optimization-core/logger'
 import type { z } from 'zod/mini'
@@ -46,7 +46,7 @@ const LocalStore = {
     LocalStore.setCache(ANONYMOUS_ID_KEY, undefined)
     LocalStore.setCache(CHANGES_CACHE_KEY, undefined)
     LocalStore.setCache(PROFILE_CACHE_KEY, undefined)
-    LocalStore.setCache(PERSONALIZATIONS_CACHE_KEY, undefined)
+    LocalStore.setCache(SELECTED_OPTIMIZATIONS_CACHE_KEY, undefined)
   },
 
   /**
@@ -140,7 +140,7 @@ const LocalStore = {
   },
 
   /**
-   * Cached profile from the personalization service, if present.
+   * Cached profile from the optimization service, if present.
    *
    * @returns The parsed profile or `undefined` when absent or invalid.
    */
@@ -158,21 +158,21 @@ const LocalStore = {
   },
 
   /**
-   * Cached selected personalizations, if present.
+   * Cached selected optimizations, if present.
    *
-   * @returns The parsed personalizations array or `undefined` when absent or invalid.
+   * @returns The parsed selected optimizations array or `undefined` when absent or invalid.
    */
-  get selectedPersonalizations(): SelectedPersonalizationArray | undefined {
-    return LocalStore.getCache(PERSONALIZATIONS_CACHE_KEY, SelectedPersonalizationArray)
+  get selectedOptimizations(): SelectedOptimizationArray | undefined {
+    return LocalStore.getCache(SELECTED_OPTIMIZATIONS_CACHE_KEY, SelectedOptimizationArray)
   },
 
   /**
-   * Cache new selected personalizations or clear them.
+   * Cache new selected optimizations or clear them.
    *
-   * @param selectedPersonalizations - New selections to store, or `undefined` to remove.
+   * @param selectedOptimizations - New selections to store, or `undefined` to remove.
    */
-  set selectedPersonalizations(selectedPersonalizations: SelectedPersonalizationArray | undefined) {
-    LocalStore.setCache(PERSONALIZATIONS_CACHE_KEY, selectedPersonalizations)
+  set selectedOptimizations(selectedOptimizations: SelectedOptimizationArray | undefined) {
+    LocalStore.setCache(SELECTED_OPTIMIZATIONS_CACHE_KEY, selectedOptimizations)
   },
 
   /**

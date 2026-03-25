@@ -4,7 +4,7 @@ describe('resolveTrackingPayload', () => {
   it('resolves tracking payload from element dataset', () => {
     const element = document.createElement('div')
     element.dataset.ctflEntryId = 'entry-1'
-    element.dataset.ctflPersonalizationId = 'exp-1'
+    element.dataset.ctflOptimizationId = 'exp-1'
     element.dataset.ctflSticky = 'TrUe'
     element.dataset.ctflVariantIndex = '7'
 
@@ -19,13 +19,13 @@ describe('resolveTrackingPayload', () => {
   it('prefers explicit entry data over dataset values', () => {
     const element = document.createElement('div')
     element.dataset.ctflEntryId = 'dataset-id'
-    element.dataset.ctflPersonalizationId = 'dataset-exp'
+    element.dataset.ctflOptimizationId = 'dataset-exp'
     element.dataset.ctflSticky = 'true'
     element.dataset.ctflVariantIndex = '4'
 
     const explicit = {
       entryId: 'manual-id',
-      personalizationId: 'manual-exp',
+      optimizationId: 'manual-exp',
       sticky: false,
       variantIndex: 2,
     }

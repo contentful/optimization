@@ -5,7 +5,7 @@ import { BASELINE_IDS } from './constants'
 import { useDevEntries } from './hooks/useDevEntries'
 import { useOptimizationState } from './hooks/useOptimizationState'
 import { ControlsSection } from './sections/ControlsSection'
-import { PersonalizationSection } from './sections/PersonalizationSection'
+import { OptimizationSection } from './sections/OptimizationSection'
 import { StateSection } from './sections/StateSection'
 import type { ResolveResult } from './types'
 
@@ -13,9 +13,9 @@ const DEV_ROUTES = [
   { to: '/', label: 'Overview', description: 'Root route for initial auto page events.' },
   { to: '/events', label: 'Events', description: 'Route changes exercise page-event emission.' },
   {
-    to: '/personalization',
-    label: 'Personalization',
-    description: 'Route changes keep personalization state visible.',
+    to: '/optimization',
+    label: 'Optimization',
+    description: 'Route changes keep optimization state visible.',
   },
 ] as const
 
@@ -24,7 +24,7 @@ export function App(): ReactElement {
   const { sdk } = useOptimization()
   const { globalLiveUpdates, previewPanelVisible } = useLiveUpdates()
   const { entriesById, loading: entriesLoading, error: entriesError } = useDevEntries()
-  const { consent, profile, personalizations, previewPanelOpen, eventLog } =
+  const { consent, profile, selectedOptimizations, previewPanelOpen, eventLog } =
     useOptimizationState(sdk)
   const [resolveResults, setResolveResults] = useState<ResolveResult[]>([])
 
@@ -44,13 +44,13 @@ export function App(): ReactElement {
     const nextResults: ResolveResult[] = []
 
     entriesById.forEach((entry) => {
-      const resolved = sdk.personalizeEntry(entry, personalizations)
+      const resolved = sdk.resolveOptimizedEntry(entry, selectedOptimizations)
       nextResults.push({
         baselineId: entry.sys.id,
         resolvedId: resolved.entry.sys.id,
-        personalizationId: resolved.personalization?.experienceId,
-        variantIndex: resolved.personalization?.variantIndex,
-        sticky: resolved.personalization?.sticky,
+        optimizationId: resolved.selectedOptimization?.experienceId,
+        variantIndex: resolved.selectedOptimization?.variantIndex,
+        sticky: resolved.selectedOptimization?.sticky,
       })
     })
 
@@ -138,7 +138,7 @@ export function App(): ReactElement {
         globalLiveUpdates={globalLiveUpdates}
         previewPanelVisible={previewPanelVisible}
         previewPanelOpen={previewPanelOpen}
-        personalizations={personalizations}
+        selectedOptimizations={selectedOptimizations}
         profile={profile}
         entriesLoadedCount={resolvedEntryCount}
         entriesLoading={entriesLoading}
@@ -147,13 +147,13 @@ export function App(): ReactElement {
         onResolveEntries={handleResolveEntries}
       />
 
-      <PersonalizationSection
+      <OptimizationSection
         baselineDefault={baselineDefault}
         baselineLive={baselineLive}
         baselineLocked={baselineLocked}
         baselineNestedParent={baselineNestedParent}
         baselineNestedChild={baselineNestedChild}
-        personalizations={personalizations}
+        selectedOptimizations={selectedOptimizations}
       />
     </main>
   )

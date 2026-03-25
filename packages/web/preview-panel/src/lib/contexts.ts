@@ -21,8 +21,8 @@ export const hostSignalFnsContext = createContext<HostSignalFns | undefined, str
 )
 
 /**
- * Signals provided by the host Optimization instance, with personalizations
- * renamed to `selectedPersonalizations` for clarity within the preview panel.
+ * Signals provided by the host Optimization instance, with optimizations
+ * renamed to `selectedOptimizations` for clarity within the preview panel.
  *
  * @see {@link Signals}
  *
@@ -48,7 +48,7 @@ export const profileContext: Context<string, Profile | undefined> = createContex
 >('profile')
 
 /**
- * Lit context for sharing the active personalization override map with child components.
+ * Lit context for sharing the active optimization override map with child components.
  *
  * @public
  */

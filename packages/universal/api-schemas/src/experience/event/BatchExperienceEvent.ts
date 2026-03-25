@@ -19,7 +19,7 @@ import { ViewEvent } from './ViewEvent'
 const Anon = { anonymousId: z.string() }
 
 /**
- * Zod schema describing each valid experience/personalization event within a batch.
+ * Zod schema describing each valid Experience API event within a batch.
  *
  * @remarks
  * This is a discriminated union on the `type` field that supports all event

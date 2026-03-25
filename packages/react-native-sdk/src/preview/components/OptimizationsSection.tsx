@@ -2,29 +2,29 @@ import React from 'react'
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { commonStyles } from '../styles/common'
 import { borderRadius, colors, spacing, typography } from '../styles/theme'
-import type { PersonalizationsSectionProps } from '../types'
+import type { OptimizationsSectionProps } from '../types'
 import { copyToClipboard } from '../utils'
 import { ActionButton, Section } from './shared'
 
 /**
- * Displays active personalizations with variant controls and override management.
+ * Displays active selected optimizations with variant controls and override management.
  *
  * @param props - Component props
- * @returns The rendered personalizations section
+ * @returns The rendered optimizations section
  *
  * @public
  */
-export function PersonalizationsSection({
-  personalizations,
+export function OptimizationsSection({
+  selectedOptimizations,
   overrides,
   onSetVariant,
   onResetOverride,
   experienceNames = {},
-}: PersonalizationsSectionProps): React.JSX.Element {
-  if (!personalizations || personalizations.length === 0) {
+}: OptimizationsSectionProps): React.JSX.Element {
+  if (!selectedOptimizations || selectedOptimizations.length === 0) {
     return (
-      <Section title="Personalizations">
-        <Text style={commonStyles.emptyText}>No active personalizations</Text>
+      <Section title="Selected Optimizations">
+        <Text style={commonStyles.emptyText}>No active selected optimizations</Text>
       </Section>
     )
   }
@@ -58,9 +58,9 @@ export function PersonalizationsSection({
   }
 
   return (
-    <Section title="Personalizations">
-      {personalizations.map((personalization) => {
-        const { experienceId, variantIndex, variants } = personalization
+    <Section title="Selected Optimizations">
+      {selectedOptimizations.map((selectedOptimization) => {
+        const { experienceId, variantIndex, variants } = selectedOptimization
         const variantCount = Object.keys(variants).length + 1
         const { [experienceId]: override } = overrides
         const currentVariant = override?.variantIndex ?? variantIndex
@@ -180,4 +180,4 @@ const styles = StyleSheet.create({
   },
 })
 
-export default PersonalizationsSection
+export default OptimizationsSection

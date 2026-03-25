@@ -37,7 +37,7 @@ const DEFAULT_PROFILE: Profile = {
 
 const EMPTY_OPTIMIZATION_DATA: OptimizationData = {
   changes: [],
-  selectedPersonalizations: [],
+  selectedOptimizations: [],
   profile: DEFAULT_PROFILE,
 }
 

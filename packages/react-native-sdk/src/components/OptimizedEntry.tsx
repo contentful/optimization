@@ -1,6 +1,6 @@
 import type { ResolvedData } from '@contentful/optimization-core'
-import type { SelectedPersonalizationArray } from '@contentful/optimization-core/api-schemas'
-import { isPersonalizedEntry } from '@contentful/optimization-core/api-schemas'
+import type { SelectedOptimizationArray } from '@contentful/optimization-core/api-schemas'
+import { isOptimizedEntry } from '@contentful/optimization-core/api-schemas'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import React, { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
@@ -18,8 +18,8 @@ import { useViewportTracking } from '../hooks/useViewportTracking'
 export interface OptimizedEntryProps {
   /**
    * The Contentful entry to optimize and track.
-   * For personalized entries (those with `nt_experiences`), the component
-   * automatically resolves variants. For non-personalized entries, the
+   * For optimized entries (those with `nt_experiences`), the component
+   * automatically resolves variants. For non-optimized entries, the
    * entry is passed through unchanged.
    *
    * @example
@@ -40,7 +40,7 @@ export interface OptimizedEntryProps {
    * - **Static children** `ReactNode`: rendered as-is without entry data.
    *   Use this when you only need tracking, not variant resolution.
    *
-   * @example Render prop (personalized content)
+   * @example Render prop (optimized content)
    * ```tsx
    * <OptimizedEntry entry={entry}>
    *   {(resolvedEntry) => (
@@ -96,12 +96,12 @@ export interface OptimizedEntryProps {
   testID?: string
 
   /**
-   * Whether this component should react to personalization state changes in real-time.
-   * Only applies to personalized entries; ignored for non-personalized entries.
+   * Whether this component should react to optimization state changes in real-time.
+   * Only applies to optimized entries; ignored for non-optimized entries.
    * When `undefined`, inherits from the `liveUpdates` prop on {@link OptimizationRoot}.
    * When `false` (or inherited as `false`), the component locks to the first variant
    * it receives, preventing UI flashing when user actions change their qualification.
-   * When `true`, the component updates immediately when personalizations change.
+   * When `true`, the component updates immediately when selected optimizations change.
    *
    * @defaultValue `undefined`
    *
@@ -153,8 +153,8 @@ function resolveTapsEnabled(
 /**
  * Unified component for tracking and personalizing Contentful entries.
  *
- * Handles both personalized entries (with `nt_experiences`) and non-personalized
- * entries. For personalized entries, it resolves the correct variant based on the
+ * Handles both optimized entries (with `nt_experiences`) and non-optimized
+ * entries. For optimized entries, it resolves the correct variant based on the
  * user's profile. For all entries, it tracks views and taps.
  *
  * @param props - {@link OptimizedEntryProps}
@@ -224,14 +224,14 @@ export function OptimizedEntry({
   const liveUpdatesContext = useLiveUpdates()
   const interactionTracking = useInteractionTracking()
 
-  const isPersonalized = isPersonalizedEntry(entry)
+  const isOptimized = isOptimizedEntry(entry)
 
   const shouldLiveUpdate =
     liveUpdatesContext?.previewPanelVisible === true ||
     (liveUpdates ?? liveUpdatesContext?.globalLiveUpdates ?? false)
 
-  const [lockedPersonalizations, setLockedPersonalizations] = useState<
-    SelectedPersonalizationArray | undefined
+  const [lockedSelectedOptimizations, setLockedSelectedOptimizations] = useState<
+    SelectedOptimizationArray | undefined
   >(undefined)
 
   const isLockedRef = useRef(false)
@@ -243,28 +243,30 @@ export function OptimizedEntry({
   }, [shouldLiveUpdate])
 
   useEffect(() => {
-    if (!isPersonalized) return
+    if (!isOptimized) return
 
-    const subscription = contentfulOptimization.states.selectedPersonalizations.subscribe((p) => {
-      if (shouldLiveUpdate) {
-        setLockedPersonalizations(p)
-      } else if (!isLockedRef.current && p !== undefined) {
-        isLockedRef.current = true
-        setLockedPersonalizations(p)
-      }
-    })
+    const subscription = contentfulOptimization.states.selectedOptimizations.subscribe(
+      (nextSelectedOptimizations) => {
+        if (shouldLiveUpdate) {
+          setLockedSelectedOptimizations(nextSelectedOptimizations)
+        } else if (!isLockedRef.current && nextSelectedOptimizations !== undefined) {
+          isLockedRef.current = true
+          setLockedSelectedOptimizations(nextSelectedOptimizations)
+        }
+      },
+    )
 
     return () => {
       subscription.unsubscribe()
     }
-  }, [contentfulOptimization, shouldLiveUpdate, isPersonalized])
+  }, [contentfulOptimization, shouldLiveUpdate, isOptimized])
 
   const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
     () =>
-      isPersonalized
-        ? contentfulOptimization.personalizeEntry(entry, lockedPersonalizations)
+      isOptimized
+        ? contentfulOptimization.resolveOptimizedEntry(entry, lockedSelectedOptimizations)
         : { entry },
-    [entry, contentfulOptimization, lockedPersonalizations, isPersonalized],
+    [entry, contentfulOptimization, lockedSelectedOptimizations, isOptimized],
   )
 
   const viewsEnabled = trackViews ?? interactionTracking.views
@@ -272,7 +274,7 @@ export function OptimizedEntry({
 
   const { onLayout } = useViewportTracking({
     entry: resolvedData.entry,
-    personalization: resolvedData.personalization,
+    selectedOptimization: resolvedData.selectedOptimization,
     threshold,
     viewTimeMs,
     viewDurationUpdateIntervalMs,
@@ -281,7 +283,7 @@ export function OptimizedEntry({
 
   const { onTouchStart, onTouchEnd } = useTapTracking({
     entry: resolvedData.entry,
-    personalization: resolvedData.personalization,
+    selectedOptimization: resolvedData.selectedOptimization,
     enabled: tapsEnabled,
     onTap,
   })

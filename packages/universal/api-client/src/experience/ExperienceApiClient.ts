@@ -239,7 +239,7 @@ export default class ExperienceApiClient extends ApiClientBase {
         data: { changes, experiences, profile },
       } = parseWithFriendlyError(ExperienceResponse, await response.json())
 
-      const data = { changes, selectedPersonalizations: experiences, profile }
+      const data = { changes, selectedOptimizations: experiences, profile }
 
       logger.debug(`"${requestName}" request successfully completed`)
 
@@ -312,7 +312,7 @@ export default class ExperienceApiClient extends ApiClientBase {
         data: { changes, experiences, profile },
       } = parseWithFriendlyError(ExperienceResponse, await response.json())
 
-      const data = { changes, selectedPersonalizations: experiences, profile }
+      const data = { changes, selectedOptimizations: experiences, profile }
 
       logger.debug(`"${requestName}" request successfully completed`)
 
@@ -367,7 +367,7 @@ export default class ExperienceApiClient extends ApiClientBase {
         data: { changes, experiences, profile },
       } = parseWithFriendlyError(ExperienceResponse, await response.json())
 
-      const data = { changes, selectedPersonalizations: experiences, profile }
+      const data = { changes, selectedOptimizations: experiences, profile }
 
       logger.debug(`"${requestName}" request successfully completed`)
 

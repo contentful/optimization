@@ -1,6 +1,6 @@
-import { normalizePersonalizationConfig, PersonalizationEntry, type PersonalizationConfig } from '.'
+import { normalizeOptimizationConfig, OptimizationEntry, type OptimizationConfig } from '.'
 
-const personalizationEntryBase = {
+const optimizationEntryBase = {
   metadata: {
     tags: [],
     concepts: [],
@@ -43,16 +43,16 @@ const personalizationEntryBase = {
   },
 }
 
-describe('normalizePersonalizationConfig', () => {
+describe('normalizeOptimizationConfig', () => {
   it('returns runtime-safe defaults for nullish configs', () => {
-    expect(normalizePersonalizationConfig(undefined)).toEqual({
+    expect(normalizeOptimizationConfig(undefined)).toEqual({
       distribution: [],
       traffic: 0,
       components: [],
       sticky: false,
     })
 
-    expect(normalizePersonalizationConfig(null)).toEqual({
+    expect(normalizeOptimizationConfig(null)).toEqual({
       distribution: [],
       traffic: 0,
       components: [],
@@ -61,12 +61,12 @@ describe('normalizePersonalizationConfig', () => {
   })
 
   it('preserves explicit values and fills only omitted fields', () => {
-    const config: PersonalizationConfig = {
+    const config: OptimizationConfig = {
       distribution: [0.25, 0.75],
       components: [],
     }
 
-    expect(normalizePersonalizationConfig(config)).toEqual({
+    expect(normalizeOptimizationConfig(config)).toEqual({
       distribution: [0.25, 0.75],
       traffic: 0,
       components: [],
@@ -75,13 +75,13 @@ describe('normalizePersonalizationConfig', () => {
   })
 })
 
-describe('PersonalizationEntry', () => {
+describe('OptimizationEntry', () => {
   it('does not fabricate nt_config during parsing', () => {
-    const result = PersonalizationEntry.safeParse(personalizationEntryBase)
+    const result = OptimizationEntry.safeParse(optimizationEntryBase)
 
     expect(result.success).toBe(true)
 
-    if (!result.success) throw new Error('Expected PersonalizationEntry to parse')
+    if (!result.success) throw new Error('Expected OptimizationEntry to parse')
 
     expect(result.data.fields.nt_config).toBeUndefined()
   })

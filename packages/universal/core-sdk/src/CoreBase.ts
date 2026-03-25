@@ -16,7 +16,7 @@ import type {
   OptimizationData,
   PartialProfile,
   Profile,
-  SelectedPersonalizationArray,
+  SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import type { LogLevels } from '@contentful/optimization-api-client/logger'
 import { ConsoleLogSink, logger } from '@contentful/optimization-api-client/logger'
@@ -36,7 +36,7 @@ import {
 } from './events'
 import { InterceptorManager } from './lib/interceptor'
 import type { ResolvedData } from './resolvers'
-import { FlagsResolver, MergeTagValueResolver, PersonalizedEntryResolver } from './resolvers'
+import { FlagsResolver, MergeTagValueResolver, OptimizedEntryResolver } from './resolvers'
 
 /**
  * Unified API configuration for Core.
@@ -113,12 +113,12 @@ abstract class CoreBase {
   readonly eventBuilder: EventBuilder
   /** Resolved core configuration. */
   readonly config: CoreConfig
-  /** Static resolver for evaluating personalized custom flags. */
+  /** Static resolver for evaluating optimized custom flags. */
   readonly flagsResolver = FlagsResolver
   /** Static resolver for merge-tag lookups against profile data. */
   readonly mergeTagValueResolver = MergeTagValueResolver
-  /** Static resolver for personalized Contentful entries. */
-  readonly personalizedEntryResolver = PersonalizedEntryResolver
+  /** Static resolver for optimized Contentful entries. */
+  readonly optimizedEntryResolver = OptimizedEntryResolver
 
   /** Lifecycle interceptors for events and state updates. */
   readonly interceptors: LifecycleInterceptors = {
@@ -146,8 +146,8 @@ abstract class CoreBase {
       clientId,
       environment,
       fetchOptions,
-      analytics: CoreBase.createInsightsApiConfig(api),
-      personalization: CoreBase.createExperienceApiConfig(api),
+      insights: CoreBase.createInsightsApiConfig(api),
+      experience: CoreBase.createExperienceApiConfig(api),
     }
 
     this.api = new ApiClient(apiConfig)
@@ -162,7 +162,7 @@ abstract class CoreBase {
 
   private static createExperienceApiConfig(
     api: CoreApiConfig | undefined,
-  ): ApiClientConfig['personalization'] {
+  ): ApiClientConfig['experience'] {
     if (api === undefined) return undefined
 
     const { enabledFeatures, experienceBaseUrl: baseUrl, ip, locale, plainText, preflight } = api
@@ -190,7 +190,7 @@ abstract class CoreBase {
 
   private static createInsightsApiConfig(
     api: CoreApiConfig | undefined,
-  ): ApiClientConfig['analytics'] {
+  ): ApiClientConfig['insights'] {
     if (api === undefined) return undefined
 
     const { beaconHandler, insightsBaseUrl: baseUrl } = api
@@ -220,45 +220,45 @@ abstract class CoreBase {
   }
 
   /**
-   * Resolve a Contentful entry to the appropriate personalized variant (or
+   * Resolve a Contentful entry to the appropriate optimized variant (or
    * return the baseline entry if no matching variant is selected).
    *
    * @typeParam S - Entry skeleton type.
    * @typeParam M - Chain modifiers.
    * @typeParam L - Locale code.
    * @param entry - The baseline entry to resolve.
-   * @param selectedPersonalizations - Optional selected personalization array for the current profile.
+   * @param selectedOptimizations - Optional selected optimization array for the current profile.
    * @returns {@link ResolvedData} containing the resolved entry and
-   *   personalization metadata (if any).
+   *   selected optimization metadata (if any).
    * @example
    * ```ts
-   * const { entry, personalization } = core.personalizeEntry(baselineEntry, data.personalizations)
+   * const { entry, selectedOptimization } = core.resolveOptimizedEntry(
+   *   baselineEntry,
+   *   data.selectedOptimizations,
+   * )
    * ```
    */
-  personalizeEntry<
+  resolveOptimizedEntry<
     S extends EntrySkeletonType = EntrySkeletonType,
     L extends LocaleCode = LocaleCode,
   >(
     entry: Entry<S, undefined, L>,
-    selectedPersonalizations?: SelectedPersonalizationArray,
+    selectedOptimizations?: SelectedOptimizationArray,
   ): ResolvedData<S, undefined, L>
-  personalizeEntry<
+  resolveOptimizedEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers = ChainModifiers,
     L extends LocaleCode = LocaleCode,
-  >(
-    entry: Entry<S, M, L>,
-    selectedPersonalizations?: SelectedPersonalizationArray,
-  ): ResolvedData<S, M, L>
-  personalizeEntry<
+  >(entry: Entry<S, M, L>, selectedOptimizations?: SelectedOptimizationArray): ResolvedData<S, M, L>
+  resolveOptimizedEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers,
     L extends LocaleCode = LocaleCode,
   >(
     entry: Entry<S, M, L>,
-    selectedPersonalizations?: SelectedPersonalizationArray,
+    selectedOptimizations?: SelectedOptimizationArray,
   ): ResolvedData<S, M, L> {
-    return this.personalizedEntryResolver.resolve<S, M, L>(entry, selectedPersonalizations)
+    return this.optimizedEntryResolver.resolve<S, M, L>(entry, selectedOptimizations)
   }
 
   /**
@@ -383,18 +383,18 @@ abstract class CoreBase {
   }
 
   /**
-   * Track a component view in both Experience and Insights.
+   * Track an entry view through Insights and, when sticky, Experience.
    *
-   * @param payload - Component view builder arguments. When `payload.sticky` is
+   * @param payload - Entry view builder arguments. When `payload.sticky` is
    *   `true`, the event will also be sent through Experience as a sticky
-   *   component view.
+   *   entry view.
    * @returns A promise that resolves when all delegated calls complete.
    * @remarks
-   * Experience receives sticky views only; Insights is always invoked regardless
-   * of `sticky`.
+   * Experience receives sticky entry views only; Insights is always invoked
+   * regardless of `sticky`.
    * @example
    * ```ts
-   * await core.trackView({ componentId: 'hero-banner', sticky: true })
+   * await core.trackView({ componentId: 'entry-123', sticky: true })
    * ```
    */
   async trackView(
@@ -423,13 +423,13 @@ abstract class CoreBase {
   }
 
   /**
-   * Track a component click through Insights.
+   * Track an entry click through Insights.
    *
-   * @param payload - Component click builder arguments.
+   * @param payload - Entry click builder arguments.
    * @returns A promise that resolves when processing completes.
    * @example
    * ```ts
-   * await core.trackClick({ componentId: 'hero-banner' })
+   * await core.trackClick({ componentId: 'entry-123' })
    * ```
    */
   async trackClick(payload: ClickBuilderArgs): Promise<void> {
@@ -437,13 +437,13 @@ abstract class CoreBase {
   }
 
   /**
-   * Track a component hover through Insights.
+   * Track an entry hover through Insights.
    *
-   * @param payload - Component hover builder arguments.
+   * @param payload - Entry hover builder arguments.
    * @returns A promise that resolves when processing completes.
    * @example
    * ```ts
-   * await core.trackHover({ componentId: 'hero-banner' })
+   * await core.trackHover({ componentId: 'entry-123' })
    * ```
    */
   async trackHover(payload: HoverBuilderArgs): Promise<void> {
@@ -453,7 +453,7 @@ abstract class CoreBase {
   /**
    * Track a feature flag view through Insights.
    *
-   * @param payload - Component view builder arguments used to build the flag view event.
+   * @param payload - Flag view builder arguments used to build the flag view event.
    * @returns A promise that resolves when processing completes.
    * @example
    * ```ts

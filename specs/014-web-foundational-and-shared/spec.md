@@ -4,14 +4,14 @@
 **Created**: 2026-02-27  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Bootstrap a Browser-Wired ContentfulOptimization Runtime with Web Defaults (Priority: P1)
 
 As a Web SDK integrator, I need one browser-oriented `ContentfulOptimization` runtime that merges
-Web defaults with stateful core behavior so analytics and personalization are ready with minimal
+Web defaults with stateful core behavior so optimization and event tracking are ready with minimal
 setup.
 
 **Why this priority**: Runtime bootstrap is the entry path for all Web SDK capabilities.
@@ -22,7 +22,7 @@ defaults, stateful core construction, singleton guard behavior, and default allo
 **Acceptance Scenarios**:
 
 1. **Given** a config with `clientId`, **When** `ContentfulOptimization` is constructed, **Then**
-   core receives merged Web defaults for analytics beacon handling, event-builder channel/library
+   core receives merged Web defaults for Insights API beacon handling, event-builder channel/library
    metadata, event-builder browser helpers, and anonymous ID lookup.
 2. **Given** a browser runtime where `window.contentfulOptimization` already exists, **When** a new
    instance is created, **Then** construction fails with an "already initialized" error.
@@ -80,7 +80,7 @@ plus constant fallbacks when build-time defines are absent.
 3. **Given** missing build-time replacements, **When** constants are resolved, **Then** package name
    and version fall back to hardcoded defaults.
 4. **Given** published artifacts, **When** consumers resolve package entry points, **Then** ESM/CJS
-   runtime outputs, UMD bundles, and dual declaration outputs are available.
+   runtime outputs, UMD bundles for browser globals, and dual declaration outputs are available.
 
 ---
 
@@ -104,12 +104,12 @@ plus constant fallbacks when build-time defines are absent.
   `autoTrackEntryInteraction`, and optional cookie attributes (`domain`, `expires`).
 - **FR-002**: `ContentfulOptimization` construction MUST reject initialization when
   `window.contentfulOptimization` already exists in browser environments.
-- **FR-003**: Web config merging MUST provide default analytics `beaconHandler`.
+- **FR-003**: Web config merging MUST provide default Insights API `beaconHandler`.
 - **FR-004**: Web config merging MUST provide default event-builder values: `channel: 'web'`,
   `library.name`, `library.version`, `getLocale`, `getPageProperties`, and `getUserAgent`.
 - **FR-005**: Web config merging MUST provide default state values from `LocalStore` for `consent`,
-  `changes`, `profile`, and `selectedPersonalizations` (mapped via `defaults.personalizations`) when
-  not explicitly supplied.
+  `changes`, `profile`, and `selectedOptimizations` (mapped via `defaults.selectedOptimizations`)
+  when not explicitly supplied.
 - **FR-006**: Web config merging MUST provide default `getAnonymousId` that reads from
   `LocalStore.anonymousId`.
 - **FR-007**: Web config merging MUST set runtime log level to `'debug'` when `LocalStore.debug` is

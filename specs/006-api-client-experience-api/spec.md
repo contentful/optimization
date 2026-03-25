@@ -4,16 +4,16 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Read and Mutate Profiles via Experience API (Priority: P1)
 
-As a personalization runtime developer, I need typed profile read/write methods so profile state can
-be fetched or updated with predictable request/response handling.
+As an Experience API integrator, I need typed profile read/write methods so profile state can be
+fetched or updated with predictable request/response handling.
 
-**Why this priority**: Profile fetch and mutation are the core Experience client functions.
+**Why this priority**: Profile fetch and mutation are the core Experience API client functions.
 
 **Independent Test**: Exercise `getProfile`, `createProfile`, and `updateProfile` with valid and
 invalid inputs.
@@ -21,7 +21,7 @@ invalid inputs.
 **Acceptance Scenarios**:
 
 1. **Given** a valid profile ID, **When** `getProfile(id)` is called, **Then** it requests
-   `/profiles/{id}` and returns `{ profile, selectedPersonalizations, changes }`.
+   `/profiles/{id}` and returns `{ profile, selectedOptimizations, changes }`.
 2. **Given** an empty ID, **When** `getProfile` or `updateProfile` is called, **Then** it throws
    `Error('Valid profile ID required.')` before request execution.
 3. **Given** valid events, **When** `createProfile` or `updateProfile` is called, **Then** the body
@@ -112,7 +112,7 @@ processed in a single call.
 - **FR-017**: `upsertManyProfiles` MUST call profile mutation with
   `options: { plainText: false, ...options }`.
 - **FR-018**: `getProfile`, `createProfile`, and `updateProfile` MUST parse with
-  `ExperienceResponse` and return `{ profile, selectedPersonalizations: experiences, changes }`.
+  `ExperienceResponse` and return `{ profile, selectedOptimizations: experiences, changes }`.
 - **FR-019**: `upsertManyProfiles` MUST parse with `BatchExperienceResponse` and return
   `data.profiles`.
 - **FR-020**: On caught request failures, `getProfile`, `createProfile`, `updateProfile`, and
@@ -120,12 +120,12 @@ processed in a single call.
 
 ### Key Entities _(include if feature involves data)_
 
-- **ExperienceApiClient**: Experience transport client for profile operations.
+- **ExperienceApiClient**: Experience API transport client for profile operations.
 - **RequestOptions**: Per-request option set (`enabledFeatures`, `ip`, `locale`, `plainText`,
   `preflight`).
 - **ExperienceRequestData**: Validated singular mutation payload.
 - **BatchExperienceRequestData**: Validated batch mutation payload.
-- **OptimizationData**: Returned shape `{ profile, selectedPersonalizations, changes }`.
+- **OptimizationData**: Returned shape `{ profile, selectedOptimizations, changes }`.
 
 ## Success Criteria _(mandatory)_
 

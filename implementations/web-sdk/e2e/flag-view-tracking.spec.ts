@@ -13,7 +13,7 @@ test.describe('flag view tracking', () => {
     await page.getByRole('button', { name: 'Accept Consent' }).click()
   })
 
-  test('flag access emits a component event', async ({ page }) => {
+  test('flag access emits a flag view event', async ({ page }) => {
     const flagAccessEvents = getFlagAccessComponentEvents(page)
     const baselineFlagEventCount = await flagAccessEvents.count()
 
@@ -22,7 +22,7 @@ test.describe('flag view tracking', () => {
 
     await expect
       .poll(async () => await flagAccessEvents.count(), {
-        message: 'flag access should append a component event in the event stream',
+        message: 'flag access should append a flag view event in the event stream',
       })
       .toBeGreaterThan(baselineFlagEventCount)
 

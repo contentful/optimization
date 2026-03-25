@@ -6,7 +6,7 @@ import express, { type Express } from 'express'
 import rateLimit from 'express-rate-limit'
 import path from 'node:path'
 import ContentfulOptimization from './src'
-import type { OptimizationData, PartialProfile, SelectedPersonalization } from './src/api-schemas'
+import type { OptimizationData, PartialProfile, SelectedOptimization } from './src/api-schemas'
 import { isMergeTagEntry } from './src/api-schemas'
 
 const limiter = rateLimit({
@@ -138,7 +138,7 @@ app.get('/', limiter, async (req, res) => {
     apiResponse = await sdk.page({ profile: requestProfile })
   }
 
-  const { profile, selectedPersonalizations } = apiResponse ?? {}
+  const { profile, selectedOptimizations } = apiResponse ?? {}
 
   const entryIds: string[] = [
     '1MwiFl4z7gkwqGYdvCmr8c', // Rich Text field Entry with Merge Tag
@@ -154,7 +154,7 @@ app.get('/', limiter, async (req, res) => {
     string,
     {
       entry: Entry<ContentEntrySkeleton>
-      personalization?: SelectedPersonalization
+      selectedOptimization?: SelectedOptimization
     }
   >()
 
@@ -178,16 +178,16 @@ app.get('/', limiter, async (req, res) => {
         })
       }
 
-      const personalizedEntry = sdk.personalizeEntry(entry, selectedPersonalizations)
+      const optimizedEntry = sdk.resolveOptimizedEntry(entry, selectedOptimizations)
 
-      entries.set(entryId, personalizedEntry)
+      entries.set(entryId, optimizedEntry)
     }),
   )
 
   const pageData = {
     consent,
     profile,
-    selectedPersonalizations,
+    selectedOptimizations,
     entries,
   }
 

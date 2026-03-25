@@ -1,4 +1,4 @@
-import type { Profile, SelectedPersonalization } from '@contentful/optimization-core/api-schemas'
+import type { Profile, SelectedOptimization } from '@contentful/optimization-core/api-schemas'
 import type { StyleProp, ViewStyle } from 'react-native'
 
 // ============================================================================
@@ -163,7 +163,7 @@ export interface AudienceOverride {
  *
  * @internal
  */
-export interface PersonalizationOverride {
+export interface OptimizationOverride {
   /** Experience ID being overridden */
   experienceId: string
   /** The variant index to force (0 = baseline) */
@@ -179,7 +179,7 @@ export interface OverrideState {
   /** Map of audience ID to override */
   audiences: Record<string, AudienceOverride>
   /** Map of experience ID to override */
-  selectedPersonalizations: Record<string, PersonalizationOverride>
+  selectedOptimizations: Record<string, OptimizationOverride>
 }
 
 /**
@@ -190,8 +190,8 @@ export interface OverrideState {
 export interface PreviewState {
   /** Current profile from SDK */
   profile: Profile | undefined
-  /** Current personalizations from SDK */
-  personalizations: SelectedPersonalization[] | undefined
+  /** Current selected optimizations from SDK */
+  selectedOptimizations: SelectedOptimization[] | undefined
   /** Current consent state */
   consent: boolean | undefined
   /** Whether SDK data is loading */
@@ -199,7 +199,7 @@ export interface PreviewState {
 }
 
 /**
- * Actions available in the preview panel for overriding audiences and personalizations.
+ * Actions available in the preview panel for overriding audiences and optimizations.
  *
  * @internal
  */
@@ -210,10 +210,10 @@ export interface PreviewActions {
   deactivateAudience: (audienceId: string, experiences: ExperienceDefinition[]) => void
   /** Reset a specific audience override and its associated experience overrides */
   resetAudienceOverride: (audienceId: string) => void
-  /** Set a personalization variant override */
+  /** Set an optimization variant override */
   setVariantOverride: (experienceId: string, variantIndex: number) => void
-  /** Reset a specific personalization override */
-  resetPersonalizationOverride: (experienceId: string) => void
+  /** Reset a specific optimization override */
+  resetOptimizationOverride: (experienceId: string) => void
   /** Reset SDK state to actual by clearing all overrides */
   resetSdkState: () => void
 }
@@ -360,15 +360,15 @@ export interface ProfileSectionProps {
 }
 
 /**
- * Props for the {@link PersonalizationsSection} component.
+ * Props for the {@link OptimizationsSection} component.
  *
  * @internal
  */
-export interface PersonalizationsSectionProps {
-  /** Active personalizations */
-  personalizations: SelectedPersonalization[] | undefined
+export interface OptimizationsSectionProps {
+  /** Active selected optimizations */
+  selectedOptimizations: SelectedOptimization[] | undefined
   /** Current overrides */
-  overrides: Record<string, PersonalizationOverride>
+  overrides: Record<string, OptimizationOverride>
   /** Set variant override handler */
   onSetVariant: (experienceId: string, variantIndex: number) => void
   /** Reset override handler */
@@ -387,8 +387,8 @@ export interface OverridesSectionProps {
   overrides: OverrideState
   /** Reset specific audience override */
   onResetAudience: (audienceId: string) => void
-  /** Reset specific personalization override */
-  onResetPersonalization: (experienceId: string) => void
+  /** Reset specific optimization override */
+  onResetOptimization: (experienceId: string) => void
   /** Optional map of audienceId to human-readable name */
   audienceNames?: Record<string, string>
   /** Optional map of experienceId to human-readable name */
@@ -414,8 +414,8 @@ export interface AudienceSectionProps {
   /** Handler for resetting an experience override */
   onResetExperience: (experienceId: string) => void
   /** Current experience variant overrides */
-  experienceOverrides: Record<string, PersonalizationOverride>
-  /** Map of experienceId to variantIndex from SDK personalizations */
+  experienceOverrides: Record<string, OptimizationOverride>
+  /** Map of experienceId to variantIndex from SDK selected optimizations */
   sdkVariantIndices: Record<string, number>
   /** Search query for filtering */
   searchQuery?: string
@@ -446,8 +446,8 @@ export interface AudienceItemProps {
   /** Handler for resetting an experience override */
   onResetExperience: (experienceId: string) => void
   /** Current experience variant overrides */
-  experienceOverrides: Record<string, PersonalizationOverride>
-  /** Map of experienceId to variantIndex from SDK personalizations */
+  experienceOverrides: Record<string, OptimizationOverride>
+  /** Map of experienceId to variantIndex from SDK selected optimizations */
   sdkVariantIndices: Record<string, number>
   /** Whether the item is expanded (controlled mode) */
   isExpanded?: boolean

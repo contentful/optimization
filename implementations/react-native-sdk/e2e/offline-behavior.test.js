@@ -47,7 +47,7 @@ describe('Offline Behavior', () => {
 
     const eventsBeforeIdentify = await getEventsCount()
 
-    // Trigger an action that generates an analytics event (identify)
+    // Trigger an action that generates an Experience API event (identify)
     await element(by.id('identify-button')).tap()
 
     // Verify the event counter increased while offline.
@@ -115,7 +115,7 @@ describe('Offline Behavior', () => {
 
     const eventsBeforeIdentify = await getEventsCount()
 
-    // Trigger identify which creates analytics events
+    // Trigger identify, which creates an Experience API event
     await element(by.id('identify-button')).tap()
 
     // Verify event counter increased while still offline.

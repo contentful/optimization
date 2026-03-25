@@ -1,5 +1,5 @@
 import type ContentfulOptimization from '@contentful/optimization-web'
-import type { SelectedPersonalizationArray } from '@contentful/optimization-web/api-schemas'
+import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { createContext } from 'react'
@@ -19,9 +19,9 @@ export type OptimizationSdk = Pick<
   | 'trackView'
   | 'tracking'
 > & {
-  personalizeEntry: (
+  resolveOptimizedEntry: (
     entry: Entry,
-    selectedPersonalizations?: SelectedPersonalizationArray,
+    selectedOptimizations?: SelectedOptimizationArray,
   ) => ResolvedData<EntrySkeletonType>
 }
 

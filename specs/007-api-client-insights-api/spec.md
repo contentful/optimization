@@ -4,16 +4,16 @@
 **Created**: 2026-02-26  
 **Status**: Current (Pre-release)  
 **Input**: Repository behavior review for the current pre-release implementation (validated
-2026-03-12).
+2026-03-25).
 
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Send Validated Insights Batches (Priority: P1)
 
-As an analytics integrator, I need batch payloads validated and sent to the Insights ingest endpoint
-so malformed data fails before transport.
+As an Insights API integrator, I need batch payloads validated and sent to the Insights ingest
+endpoint so malformed data fails before transport.
 
-**Why this priority**: `sendBatchEvents` is the core Insights client API.
+**Why this priority**: `sendBatchEvents` is the core Insights API client surface.
 
 **Independent Test**: Call `sendBatchEvents` with valid/invalid `BatchInsightsEventArray` payloads.
 
@@ -31,7 +31,8 @@ so malformed data fails before transport.
 As a web runtime developer, I need optional beacon dispatch so events can be queued without blocking
 normal page lifecycle flow.
 
-**Why this priority**: Beacon queueing is the low-latency fast path for client analytics delivery.
+**Why this priority**: Beacon queueing is the low-latency fast path for client-side Insights API
+delivery.
 
 **Independent Test**: Use client-level and per-call beacon handlers and verify precedence/fallback.
 
@@ -99,7 +100,7 @@ As a caller managing queue retention policy, I need stable boolean success seman
 
 ### Key Entities _(include if feature involves data)_
 
-- **InsightsApiClient**: Transport client for Insights event ingestion.
+- **InsightsApiClient**: Transport client for Insights API event ingestion.
 - **BatchInsightsEventArray**: Validated request payload for profile-scoped event batches.
 - **Beacon Handler**: Optional synchronous function returning queue success/failure.
 - **Delivery Result**: Boolean method result (`true` success, `false` fetch-path failure).

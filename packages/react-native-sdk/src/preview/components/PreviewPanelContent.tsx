@@ -1,11 +1,7 @@
 import React from 'react'
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
 import { colors, spacing, typography } from '../styles/theme'
-import type {
-  AudienceOverrideState,
-  AudienceWithExperiences,
-  PersonalizationOverride,
-} from '../types'
+import type { AudienceOverrideState, AudienceWithExperiences, OptimizationOverride } from '../types'
 import { AudienceSection } from './AudienceSection'
 
 interface PreviewPanelContentProps {
@@ -16,7 +12,7 @@ interface PreviewPanelContentProps {
   onAudienceToggle: (audienceId: string, state: AudienceOverrideState) => void
   onSetVariant: (experienceId: string, variantIndex: number) => void
   onResetExperience: (experienceId: string) => void
-  experienceOverrides: Record<string, PersonalizationOverride>
+  experienceOverrides: Record<string, OptimizationOverride>
   sdkVariantIndices: Record<string, number>
   searchQuery: string
   isAudienceExpanded: (audienceId: string) => boolean

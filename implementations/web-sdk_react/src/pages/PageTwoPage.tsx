@@ -46,8 +46,8 @@ export function PageTwoPage({ consent, entriesById, isIdentified }: PageTwoPageP
         <p>{`Consent: ${String(consent)}`}</p>
       </section>
 
-      <section data-testid="page-two-personalization" style={{ display: 'grid', gap: 12 }}>
-        <h3>Page Two Personalized Content</h3>
+      <section data-testid="page-two-optimization" style={{ display: 'grid', gap: 12 }}>
+        <h3>Page Two Optimized Content</h3>
         {pageTwoAutoEntry ? (
           <div>
             <p>Auto tracked example</p>

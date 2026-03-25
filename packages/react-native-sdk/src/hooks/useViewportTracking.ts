@@ -1,4 +1,4 @@
-import type { SelectedPersonalization } from '@contentful/optimization-core/api-schemas'
+import type { SelectedOptimization } from '@contentful/optimization-core/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-core/logger'
 import type { Entry } from 'contentful'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -20,12 +20,12 @@ export interface UseViewportTrackingOptions {
   entry: Entry
 
   /**
-   * Personalization data for variant tracking. Omit for baseline/non-personalized entries.
+   * Selected optimization data for variant tracking. Omit for baseline/non-optimized entries.
    */
-  personalization?: SelectedPersonalization
+  selectedOptimization?: SelectedOptimization
 
   /**
-   * Minimum visibility ratio (0.0 - 1.0) required to consider the component "visible".
+   * Minimum visibility ratio (0.0 - 1.0) required to consider the entry visible.
    *
    * @defaultValue `0.8`
    */
@@ -39,7 +39,7 @@ export interface UseViewportTrackingOptions {
   viewTimeMs?: number
 
   /**
-   * Whether view tracking is enabled for this component.
+   * Whether view tracking is enabled for this entry.
    * When `false`, the hook returns a no-op `onLayout` and `isVisible: false`
    * without setting up timers or scroll listeners.
    *
@@ -130,33 +130,34 @@ function resetCycleState(cycle: ViewCycleState): void {
 }
 
 /**
- * Extracts tracking metadata from a resolved entry and optional personalization data.
+ * Extracts tracking metadata from a resolved entry and optional selected optimization data.
  *
  * @param resolvedEntry - The resolved Contentful entry (baseline or variant).
- * @param personalization - Optional personalization selection for variant tracking.
- * @returns An object containing `componentId`, optional `experienceId`, and `variantIndex`.
+ * @param selectedOptimization - Optional selected optimization for variant tracking.
+ * @returns Wire-format tracking metadata containing `componentId`, optional
+ *   `experienceId`, and `variantIndex`.
  *
  * @internal
  */
 export function extractTrackingMetadata(
   resolvedEntry: Entry,
-  personalization?: SelectedPersonalization,
+  selectedOptimization?: SelectedOptimization,
 ): {
   componentId: string
   experienceId?: string
   variantIndex: number
   sticky?: boolean
 } {
-  if (personalization) {
-    const componentId = Object.keys(personalization.variants).find(
-      (baselineId) => personalization.variants[baselineId] === resolvedEntry.sys.id,
+  if (selectedOptimization) {
+    const componentId = Object.keys(selectedOptimization.variants).find(
+      (baselineId) => selectedOptimization.variants[baselineId] === resolvedEntry.sys.id,
     )
 
     return {
       componentId: componentId ?? resolvedEntry.sys.id,
-      experienceId: personalization.experienceId,
-      variantIndex: personalization.variantIndex,
-      sticky: personalization.sticky,
+      experienceId: selectedOptimization.experienceId,
+      variantIndex: selectedOptimization.variantIndex,
+      sticky: selectedOptimization.sticky,
     }
   }
 
@@ -186,7 +187,7 @@ function getRemainingMsUntilNextFire(
 }
 
 /**
- * Tracks whether a component is visible in the viewport and fires entry view
+ * Tracks whether an entry is visible in the viewport and fires entry view
  * events with accumulated duration tracking.
  *
  * The hook implements a three-phase event lifecycle per visibility cycle:
@@ -194,16 +195,16 @@ function getRemainingMsUntilNextFire(
  * 2. **Periodic updates** every `viewDurationUpdateIntervalMs` while visible.
  * 3. **Final event** when visibility ends (only if at least one event was already emitted).
  *
- * @param options - {@link UseViewportTrackingOptions} including the entry, thresholds, and personalization data.
+ * @param options - {@link UseViewportTrackingOptions} including the entry, thresholds, and selected optimization data.
  * @returns An object with `isVisible` state and an `onLayout` callback for the tracked View
  *
  * @throws Error if called outside of an {@link OptimizationProvider}
  *
  * @remarks
  * Uses {@link useScrollContext} if available, otherwise falls back to screen dimensions.
- * A new visibility cycle (with a fresh `viewId`) starts each time the component
- * transitions from invisible to visible. Time accumulation pauses when the app moves
- * to the background.
+ * A new visibility cycle (with a fresh `viewId`) starts each time the tracked
+ * entry transitions from invisible to visible. Time accumulation pauses when
+ * the app moves to the background.
  *
  * @example
  * ```tsx
@@ -226,7 +227,7 @@ function getRemainingMsUntilNextFire(
  */
 export function useViewportTracking({
   entry,
-  personalization,
+  selectedOptimization,
   threshold = DEFAULT_THRESHOLD,
   viewTimeMs = DEFAULT_VIEW_TIME_MS,
   enabled = true,
@@ -238,7 +239,7 @@ export function useViewportTracking({
 
   const { componentId, experienceId, variantIndex, sticky } = extractTrackingMetadata(
     entry,
-    personalization,
+    selectedOptimization,
   )
 
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height)

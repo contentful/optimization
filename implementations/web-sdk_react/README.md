@@ -15,7 +15,7 @@ demonstrating:
 
 - `OptimizationProvider` context for SDK state management
 - React hooks for SDK state subscriptions
-- Personalization resolution and variant rendering
+- Optimization resolution and variant rendering
 - Rich Text rendering via `@contentful/rich-text-react-renderer`
 - Analytics event tracking
 - Live updates behavior
@@ -146,11 +146,11 @@ function App() {
 ### Using Hooks
 
 ```tsx
-import { usePersonalization, useOptimization } from './optimization'
+import { useOptimizationResolver, useOptimization } from './optimization'
 
 function MyComponent() {
   const { sdk, isReady } = useOptimization()
-  const { resolveEntry } = usePersonalization()
+  const { resolveEntry } = useOptimizationResolver()
   const resolved = resolveEntry(baseEntry)
 
   // ...
