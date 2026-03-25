@@ -36,7 +36,7 @@ import {
 } from './events'
 import { InterceptorManager } from './lib/interceptor'
 import type { ResolvedData } from './resolvers'
-import { FlagsResolver, MergeTagValueResolver, PersonalizedEntryResolver } from './resolvers'
+import { FlagsResolver, MergeTagValueResolver, OptimizedEntryResolver } from './resolvers'
 
 /**
  * Unified API configuration for Core.
@@ -113,12 +113,12 @@ abstract class CoreBase {
   readonly eventBuilder: EventBuilder
   /** Resolved core configuration. */
   readonly config: CoreConfig
-  /** Static resolver for evaluating personalized custom flags. */
+  /** Static resolver for evaluating optimized custom flags. */
   readonly flagsResolver = FlagsResolver
   /** Static resolver for merge-tag lookups against profile data. */
   readonly mergeTagValueResolver = MergeTagValueResolver
-  /** Static resolver for personalized Contentful entries. */
-  readonly personalizedEntryResolver = PersonalizedEntryResolver
+  /** Static resolver for optimized Contentful entries. */
+  readonly optimizedEntryResolver = OptimizedEntryResolver
 
   /** Lifecycle interceptors for events and state updates. */
   readonly interceptors: LifecycleInterceptors = {
@@ -220,7 +220,7 @@ abstract class CoreBase {
   }
 
   /**
-   * Resolve a Contentful entry to the appropriate personalized variant (or
+   * Resolve a Contentful entry to the appropriate optimized variant (or
    * return the baseline entry if no matching variant is selected).
    *
    * @typeParam S - Entry skeleton type.
@@ -232,17 +232,20 @@ abstract class CoreBase {
    *   personalization metadata (if any).
    * @example
    * ```ts
-   * const { entry, personalization } = core.personalizeEntry(baselineEntry, data.personalizations)
+   * const { entry, personalization } = core.resolveOptimizedEntry(
+   *   baselineEntry,
+   *   data.personalizations,
+   * )
    * ```
    */
-  personalizeEntry<
+  resolveOptimizedEntry<
     S extends EntrySkeletonType = EntrySkeletonType,
     L extends LocaleCode = LocaleCode,
   >(
     entry: Entry<S, undefined, L>,
     selectedPersonalizations?: SelectedPersonalizationArray,
   ): ResolvedData<S, undefined, L>
-  personalizeEntry<
+  resolveOptimizedEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers = ChainModifiers,
     L extends LocaleCode = LocaleCode,
@@ -250,7 +253,7 @@ abstract class CoreBase {
     entry: Entry<S, M, L>,
     selectedPersonalizations?: SelectedPersonalizationArray,
   ): ResolvedData<S, M, L>
-  personalizeEntry<
+  resolveOptimizedEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers,
     L extends LocaleCode = LocaleCode,
@@ -258,7 +261,7 @@ abstract class CoreBase {
     entry: Entry<S, M, L>,
     selectedPersonalizations?: SelectedPersonalizationArray,
   ): ResolvedData<S, M, L> {
-    return this.personalizedEntryResolver.resolve<S, M, L>(entry, selectedPersonalizations)
+    return this.optimizedEntryResolver.resolve<S, M, L>(entry, selectedPersonalizations)
   }
 
   /**

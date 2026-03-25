@@ -9,7 +9,7 @@ import type { QueueFlushFailureContext } from './lib/queue'
 import { batch, signalFns, signals } from './signals'
 import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from './symbols'
 import { mergeTagEntry } from './test/fixtures/mergeTagEntry'
-import { personalizedEntry } from './test/fixtures/personalizedEntry'
+import { optimizedEntry } from './test/fixtures/optimizedEntry'
 import { profile as profileFixture } from './test/fixtures/profile'
 import { selectedPersonalizations as selectedPersonalizationsFixture } from './test/fixtures/selectedPersonalizations'
 
@@ -354,12 +354,12 @@ describe('CoreStateful blocked event handling', () => {
     subscription.unsubscribe()
   })
 
-  it('defaults personalizeEntry to the selectedPersonalizations signal', () => {
+  it('defaults resolveOptimizedEntry to the selectedPersonalizations signal', () => {
     const core = createCoreStateful()
 
     signals.selectedPersonalizations.value = selectedPersonalizationsFixture
 
-    const result = core.personalizeEntry(personalizedEntry)
+    const result = core.resolveOptimizedEntry(optimizedEntry)
 
     expect(result.entry.sys.id).toBe('4k6ZyFQnR2POY5IJLLlJRb')
     expect(result.personalization).toEqual(

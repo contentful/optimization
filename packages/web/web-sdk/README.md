@@ -53,7 +53,7 @@ This SDK implements functionality specific to the Web environment, based on the
     - [`tracking.clearElement`](#trackingclearelement)
   - [Personalization Data Resolution Methods](#personalization-data-resolution-methods)
     - [`getFlag`](#getflag)
-    - [`personalizeEntry`](#personalizeentry)
+    - [`resolveOptimizedEntry`](#resolveoptimizedentry)
     - [`getMergeTagValue`](#getmergetagvalue)
   - [Personalization and Analytics Event Methods](#personalization-and-analytics-event-methods)
     - [`identify`](#identify)
@@ -603,7 +603,7 @@ Behavior notes:
 - If full map resolution is needed for advanced use cases, use
   `optimization.flagsResolver.resolve(changes)`.
 
-#### `personalizeEntry`
+#### `resolveOptimizedEntry`
 
 Resolve a baseline Contentful entry to a personalized variant using the provided selected
 personalizations, or from the current internal state.
@@ -872,7 +872,7 @@ The optional `data` option supports the following members:
 - `personalizationId`: The ID of the personalization/experience entry associated with the content
   entry; only required if the entry is personalized
 - `sticky`: A boolean value that marks that the current user should _always_ see this variant;
-  ignored if the entry is not personalized
+  ignored if the entry is not optimized
 - `variantIndex`: The index of the selected variant; only required if the entry is personalized
 
 Example:
@@ -893,7 +893,7 @@ detected for observation and entry-interaction tracking:
 - `data-ctfl-personalization-id`: The ID of the personalization/experience entry associated with the
   content entry; only required if the entry is personalized
 - `data-ctfl-sticky`: A boolean value that marks that the current user should _always_ see this
-  variant; ignored if the entry is not personalized
+  variant; ignored if the entry is not optimized
 - `data-ctfl-variant-index`: The index of the selected variant; only required if the entry is
   personalized
 - `data-ctfl-track-views`: Optional per-element override for view tracking (`true` = force-enable,

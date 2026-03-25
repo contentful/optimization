@@ -22,7 +22,7 @@ resolved entry output plus tracking-hook inputs.
 **Acceptance Scenarios**:
 
 1. **Given** a baseline entry and selected personalizations, **When** render resolves, **Then**
-   `children` receives `contentfulOptimization.personalizeEntry(...).entry`.
+   `children` receives `contentfulOptimization.resolveOptimizedEntry(...).entry`.
 2. **Given** no applicable personalization, **When** render resolves, **Then** baseline entry is
    rendered.
 3. **Given** resolved entry/personalization metadata, **When** hooks are wired, **Then**
@@ -114,7 +114,7 @@ and route transitions, and verify payload behavior.
 - **FR-007**: When `shouldLiveUpdate` flips to true, `Personalization` MUST clear lock flag for
   subsequent live updates.
 - **FR-008**: `Personalization` MUST resolve content with
-  `contentfulOptimization.personalizeEntry(baselineEntry, lockedPersonalizations)`.
+  `contentfulOptimization.resolveOptimizedEntry(baselineEntry, lockedPersonalizations)`.
 - **FR-009**: `Personalization` MUST resolve view tracking enablement as
   `trackViews ?? interactionTracking.views`.
 - **FR-010**: `Personalization` MUST resolve tap tracking enablement as
@@ -154,7 +154,7 @@ and route transitions, and verify payload behavior.
 - **Personalization Local State**: `lockedPersonalizations` plus lock-flag state controlling live vs
   locked behavior.
 - **Resolved Personalization Output**: `ResolvedData` (`entry`, `personalization`) produced by
-  `personalizeEntry(...)`.
+  `resolveOptimizedEntry(...)`.
 - **Analytics Wrapper Contract**: Baseline-entry wrapper with view/tap tracking hook wiring.
 - **Navigation Tracking State**: `routeNameRef` plus route properties used to suppress duplicate
   screen events.

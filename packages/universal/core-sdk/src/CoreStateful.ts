@@ -258,14 +258,14 @@ class CoreStateful extends CoreBase implements ConsentController, ConsentGuard {
     return value
   }
 
-  override personalizeEntry<
+  override resolveOptimizedEntry<
     S extends EntrySkeletonType = EntrySkeletonType,
     L extends LocaleCode = LocaleCode,
   >(
     entry: Entry<S, undefined, L>,
     selectedPersonalizations?: SelectedPersonalizationArray,
   ): ResolvedData<S, undefined, L>
-  override personalizeEntry<
+  override resolveOptimizedEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers = ChainModifiers,
     L extends LocaleCode = LocaleCode,
@@ -273,7 +273,7 @@ class CoreStateful extends CoreBase implements ConsentController, ConsentGuard {
     entry: Entry<S, M, L>,
     selectedPersonalizations?: SelectedPersonalizationArray,
   ): ResolvedData<S, M, L>
-  override personalizeEntry<
+  override resolveOptimizedEntry<
     S extends EntrySkeletonType,
     M extends ChainModifiers,
     L extends LocaleCode = LocaleCode,
@@ -283,7 +283,7 @@ class CoreStateful extends CoreBase implements ConsentController, ConsentGuard {
       | SelectedPersonalizationArray
       | undefined = selectedPersonalizationsSignal.value,
   ): ResolvedData<S, M, L> {
-    return super.personalizeEntry(entry, selectedPersonalizations)
+    return super.resolveOptimizedEntry(entry, selectedPersonalizations)
   }
 
   override getMergeTagValue(

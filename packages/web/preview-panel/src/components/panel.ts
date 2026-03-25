@@ -1,6 +1,6 @@
 import type {
   AudienceEntry,
-  PersonalizationEntry,
+  OptimizationEntry,
   Profile,
   SelectedPersonalizationArray,
 } from '@contentful/optimization-web/api-schemas'
@@ -104,9 +104,9 @@ export class Panel extends LitElement {
   @property({ attribute: false })
   accessor audiences: AudienceEntry[] = []
 
-  /** All personalization entries fetched from Contentful. */
+  /** All optimization entries fetched from Contentful. */
   @property({ attribute: false })
-  accessor personalizationEntries: PersonalizationEntry[] = []
+  accessor optimizationEntries: OptimizationEntry[] = []
 
   /** Default personalization selections before any user overrides. */
   @property({ attribute: false })
@@ -219,7 +219,7 @@ export class Panel extends LitElement {
         aria-hidden=${this._drawerOpened ? 'false' : 'true'}
       >
         <div class="header">
-          <p class="heading">Personalization Preview</p>
+          <p class="heading">Optimization Preview</p>
           <p class="subheading">Select an audience to segment preview content.</p>
         </div>
 
@@ -231,7 +231,7 @@ export class Panel extends LitElement {
 
         <ctfl-opt-preview-audiences
           .audiences=${this.audiences}
-          .personalizationEntries=${this.personalizationEntries}
+          .optimizationEntries=${this.optimizationEntries}
           .defaultSelectedPersonalizations=${this.defaultSelectedPersonalizations}
         ></ctfl-opt-preview-audiences>
 

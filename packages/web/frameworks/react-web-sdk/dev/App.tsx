@@ -5,7 +5,7 @@ import { BASELINE_IDS } from './constants'
 import { useDevEntries } from './hooks/useDevEntries'
 import { useOptimizationState } from './hooks/useOptimizationState'
 import { ControlsSection } from './sections/ControlsSection'
-import { PersonalizationSection } from './sections/PersonalizationSection'
+import { OptimizationSection } from './sections/OptimizationSection'
 import { StateSection } from './sections/StateSection'
 import type { ResolveResult } from './types'
 
@@ -13,9 +13,9 @@ const DEV_ROUTES = [
   { to: '/', label: 'Overview', description: 'Root route for initial auto page events.' },
   { to: '/events', label: 'Events', description: 'Route changes exercise page-event emission.' },
   {
-    to: '/personalization',
-    label: 'Personalization',
-    description: 'Route changes keep personalization state visible.',
+    to: '/optimization',
+    label: 'Optimization',
+    description: 'Route changes keep optimization state visible.',
   },
 ] as const
 
@@ -44,7 +44,7 @@ export function App(): ReactElement {
     const nextResults: ResolveResult[] = []
 
     entriesById.forEach((entry) => {
-      const resolved = sdk.personalizeEntry(entry, personalizations)
+      const resolved = sdk.resolveOptimizedEntry(entry, personalizations)
       nextResults.push({
         baselineId: entry.sys.id,
         resolvedId: resolved.entry.sys.id,
@@ -147,7 +147,7 @@ export function App(): ReactElement {
         onResolveEntries={handleResolveEntries}
       />
 
-      <PersonalizationSection
+      <OptimizationSection
         baselineDefault={baselineDefault}
         baselineLive={baselineLive}
         baselineLocked={baselineLocked}

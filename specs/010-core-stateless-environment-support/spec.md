@@ -88,8 +88,8 @@ builder output, interceptor application, schema parsing, and one-batch send payl
 - Stateless Experience upserts do not use anonymous-ID fallback; outgoing `profileId` is derived
   only from `profile?.id`.
 - `CoreBase.trackFlagView`, `trackClick`, and `trackHover` always dispatch through Insights.
-- Stateless resolver helpers (`getFlag`, `personalizeEntry`, `getMergeTagValue`) require explicit
-  input values; no stateful signal defaults are applied.
+- Stateless resolver helpers (`getFlag`, `resolveOptimizedEntry`, `getMergeTagValue`) require
+  explicit input values; no stateful signal defaults are applied.
 - Stateless `getFlag` does not auto-emit `trackFlagView`; flag-view emission is explicit in
   stateless environments.
 
@@ -129,7 +129,7 @@ builder output, interceptor application, schema parsing, and one-batch send payl
 - **FR-016**: Core stateless facade methods MUST route as follows: `identify/page/screen/track` to
   Experience; `trackView` to Insights for all payloads and additionally to Experience when `sticky`
   is truthy; `trackClick/trackHover/trackFlagView` to Insights.
-- **FR-017**: `CoreStateless` MUST expose resolver helpers (`getFlag`, `personalizeEntry`,
+- **FR-017**: `CoreStateless` MUST expose resolver helpers (`getFlag`, `resolveOptimizedEntry`,
   `getMergeTagValue`) without requiring mutable runtime state.
 - **FR-018**: `CoreStateless` MUST remain stateless-only and MUST NOT introduce stateful singleton,
   consent-state controller, preview bridge, or queue-policy control surfaces.

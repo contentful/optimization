@@ -11,13 +11,13 @@
 ### User Story 1 - Attach the Preview Panel and Load Preview Data (Priority: P1)
 
 As a Web SDK consumer, I need to attach a single preview panel instance and load all relevant
-audience and personalization entries so editors can inspect personalization state in-page.
+audience and optimization entries so editors can inspect optimization state in-page.
 
 **Why this priority**: The feature is unusable unless the panel attaches reliably and receives data.
 
 **Independent Test**: Call `attachOptimizationPreviewPanel(...)` in a browser-like environment and
 verify one panel is appended, required elements are defined, preview bridge values resolve, and
-audiences/personalizations are loaded.
+audiences/optimizations are loaded.
 
 **Acceptance Scenarios**:
 
@@ -36,7 +36,7 @@ audiences/personalizations are loaded.
 ### User Story 2 - Explore Audiences and Override Variants (Priority: P1)
 
 As an editor, I need to browse audiences and choose variants from the panel so I can preview
-personalization behavior for specific experiences.
+optimization behavior for specific experiences.
 
 **Why this priority**: Manual variant overrides are the core editor interaction for previewing.
 
@@ -45,14 +45,14 @@ toggles, and variant selection events; verify grouping, ordering, and signal upd
 
 **Acceptance Scenarios**:
 
-1. **Given** fetched audiences and personalizations, **When** the panel renders, **Then**
-   personalizations are grouped by audience and entries without audience are grouped under the
-   synthetic All Visitors audience.
-2. **Given** personalizations containing `InlineVariable` components, **When** entries are prepared
-   for rendering, **Then** those personalizations remain available in the panel and selecting a
-   variant updates preview `changes` as well as `selectedPersonalizations`.
-3. **Given** a valid `ctfl-opt-preview-personalization-change` event, **When** it is handled,
-   **Then** the override map is updated and override-applied values are written to both
+1. **Given** fetched audiences and optimizations, **When** the panel renders, **Then** optimizations
+   are grouped by audience and entries without audience are grouped under the synthetic All Visitors
+   audience.
+2. **Given** optimizations containing `InlineVariable` components, **When** entries are prepared for
+   rendering, **Then** those optimizations remain available in the panel and selecting a variant
+   updates preview `changes` as well as `selectedPersonalizations`.
+3. **Given** a valid `ctfl-opt-preview-optimization-change` event, **When** it is handled, **Then**
+   the override map is updated and override-applied values are written to both
    `signals.selectedPersonalizations.value` and `signals.changes.value`.
 4. **Given** a valid `ctfl-opt-preview-panel-drawer-toggle` event, **When** it is handled, **Then**
    `signals.previewPanelOpen.value` is synchronized to event detail.
@@ -76,8 +76,8 @@ capture, override application, and restoration semantics.
    by preview override helpers.
 2. **Given** active overrides, **When** the panel reset action is triggered, **Then** overrides are
    cleared and selected personalizations revert to captured defaults.
-3. **Given** preview personalization change events that fail event-guard checks, **When** handlers
-   run, **Then** no override mutation is applied.
+3. **Given** preview optimization change events that fail event-guard checks, **When** handlers run,
+   **Then** no override mutation is applied.
 4. **Given** `signals.profile` updates to a truthy profile, **When** effects run, **Then**
    `panel.profile` is synchronized.
 
@@ -86,9 +86,9 @@ capture, override application, and restoration semantics.
 ### Edge Cases
 
 - Contentful entry fetching follows cursor pagination until `pages.next` is `undefined`.
-- A personalization with no `nt_audience` reference still appears under the synthetic All Visitors
+- An optimization with no `nt_audience` reference still appears under the synthetic All Visitors
   audience.
-- Audiences with no qualifying personalizations render deterministic empty-state messaging.
+- Audiences with no qualifying optimizations render deterministic empty-state messaging.
 - Attachment fails fast if preview signals/signalFns are unavailable from the Optimization instance.
 - Duplicate panel attachment attempts fail fast to prevent conflicting listeners/state.
 - Variant-change payload guards validate only `CustomEvent` shape with `detail.key` and
@@ -107,40 +107,40 @@ capture, override application, and restoration semantics.
   and MUST throw when either value is missing.
 - **FR-004**: Entry loading MUST fetch all `nt_audience` and `nt_experience` entries using
   cursor-aware pagination.
-- **FR-005**: Initialization MUST define custom elements for indicator, personalization, audience,
-  and panel before appending the panel instance.
-- **FR-006**: Panel data preparation MUST include valid audience/personalization entries, including
-  personalizations containing `InlineVariable` components.
-- **FR-007**: The panel instance MUST receive `overrides`, `audiences`, `personalizationEntries`,
-  and initial `defaultSelectedPersonalizations`.
+- **FR-005**: Initialization MUST define custom elements for indicator, optimization, audience, and
+  panel before appending the panel instance.
+- **FR-006**: Panel data preparation MUST include valid audience/optimization entries, including
+  optimizations containing `InlineVariable` components.
+- **FR-007**: The panel instance MUST receive `overrides`, `audiences`, `optimizationEntries`, and
+  initial `defaultSelectedPersonalizations`.
 - **FR-008**: An Optimization state interceptor MUST capture default `selectedPersonalizations` and
   `changes`, and MUST return states with both `selectedPersonalizations` and `changes` transformed
   by preview override helpers.
 - **FR-009**: Handling `ctfl-opt-preview-panel-drawer-toggle` MUST update
   `signals.previewPanelOpen.value` when event guard checks pass.
-- **FR-010**: Handling `ctfl-opt-preview-personalization-change` MUST update the override map and
-  both `signals.selectedPersonalizations.value` and `signals.changes.value` with override-applied
-  preview state.
+- **FR-010**: Handling `ctfl-opt-preview-optimization-change` MUST update the override map and both
+  `signals.selectedPersonalizations.value` and `signals.changes.value` with override-applied preview
+  state.
 - **FR-011**: Handling `ctfl-opt-preview-panel-reset` MUST clear overrides, restore captured default
   selected personalizations and changes to signals, and refresh panel defaults.
 - **FR-012**: `signalFns.effect(...)` wiring MUST update `panel.profile` from
   `signals.profile.value` when a profile value is available.
 - **FR-013**: After append, attachment MUST set `signals.previewPanelAttached.value = true`.
-- **FR-014**: The panel MUST group personalizations by audience and MUST use the synthetic All
-  Visitors audience for personalizations without an audience reference.
-- **FR-015**: The panel MUST maintain deterministic audience ordering using personalization counts
-  and audience names, with deterministic personalization ordering within each audience.
+- **FR-014**: The panel MUST group optimizations by audience and MUST use the synthetic All Visitors
+  audience for optimizations without an audience reference.
+- **FR-015**: The panel MUST maintain deterministic audience ordering using optimization counts and
+  audience names, with deterministic optimization ordering within each audience.
 - **FR-016**: Audience sections MUST maintain local expanded/collapsed state and update it from
   `ctfl_opt_preview_audience_content_toggle` events.
-- **FR-017**: Audience sections MUST expose personalization variant choices through radio groups and
-  MUST emit `ctfl-opt-preview-personalization-change` with personalization id and variant index.
-- **FR-018**: Personalization change handlers MUST ignore events that fail
+- **FR-017**: Audience sections MUST expose optimization variant choices through radio groups and
+  MUST emit `ctfl-opt-preview-optimization-change` with optimization id and variant index.
+- **FR-018**: Optimization change handlers MUST ignore events that fail
   `isRecordRadioGroupChangeEvent`.
 - **FR-019**: Panel reset UI interaction MUST emit `ctfl-opt-preview-panel-reset`.
-- **FR-020**: Audience and personalization rows MUST render qualification/selection indicators based
-  on profile and override/default state.
-- **FR-021**: Empty personalization collections MUST render explicit empty-state messaging in
-  audience content.
+- **FR-020**: Audience and optimization rows MUST render qualification/selection indicators based on
+  profile and override/default state.
+- **FR-021**: Empty optimization collections MUST render explicit empty-state messaging in audience
+  content.
 
 ### Key Entities _(include if feature involves data)_
 
@@ -149,8 +149,8 @@ capture, override application, and restoration semantics.
 - **Preview Bridge**: Symbol-keyed object populated by `registerPreviewPanel(...)` with `signals`
   and `signalFns`.
 - **AudienceEntry**: Contentful `nt_audience` entry rendered as an expandable audience group.
-- **PersonalizationEntry**: Contentful `nt_experience` entry with variant configuration shown as
-  radio options.
+- **OptimizationEntry**: Contentful `nt_experience` entry with variant configuration shown as radio
+  options.
 - **PersonalizationOverrideMap**: `Map<personalizationId, variantIndex>` used to persist manual
   overrides.
 

@@ -4,6 +4,7 @@ import {
   type OptimizationData,
   type SelectedPersonalization,
 } from '@contentful/optimization-node/api-schemas'
+import type { UniversalEventBuilderArgs } from '@contentful/optimization-node/core-sdk'
 import { documentToHtmlString } from '@contentful/rich-text-html-renderer'
 import { INLINES, type Document } from '@contentful/rich-text-types'
 import type { Entry } from 'contentful'
@@ -17,11 +18,6 @@ import type {
   TypeMergeTagContentSkeleton,
   TypeNestedContentSkeleton,
 } from './contentful-generated'
-
-type UniversalEventBuilderArgs = Pick<
-  Parameters<ContentfulOptimization['page']>[0],
-  'locale' | 'page' | 'userAgent'
->
 
 const limiter = rateLimit({
   windowMs: 30_000,
@@ -172,7 +168,7 @@ app.get('/', limiter, async (req, res) => {
 
   const { profile, selectedPersonalizations } = optimizationResponse ?? {}
 
-  const personalizedEntries = new Map<
+  const optimizedEntries = new Map<
     string,
     {
       entry: ContentEntry
@@ -199,18 +195,18 @@ app.get('/', limiter, async (req, res) => {
       })
     }
 
-    const personalizedEntry = sdk.personalizeEntry<ContentEntrySkeleton>(
+    const optimizedEntry = sdk.resolveOptimizedEntry<ContentEntrySkeleton>(
       entry,
       selectedPersonalizations,
     )
 
-    personalizedEntries.set(entryId, personalizedEntry)
+    optimizedEntries.set(entryId, optimizedEntry)
   })
 
   const pageData = {
     profile,
     selectedPersonalizations,
-    entries: personalizedEntries,
+    entries: optimizedEntries,
   }
 
   res.render('index', { ...pageData })

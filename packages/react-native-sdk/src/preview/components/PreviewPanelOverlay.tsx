@@ -51,7 +51,7 @@ export function PreviewPanelOverlay({
   const liveUpdatesContext = useLiveUpdates()
 
   // Sync preview panel visibility with LiveUpdatesContext
-  // This enables live updates in Personalization components when the panel is open
+  // This enables live updates in OptimizedEntry components when the panel is open
   useEffect(() => {
     liveUpdatesContext?.setPreviewPanelVisible(isVisible)
   }, [isVisible, liveUpdatesContext])

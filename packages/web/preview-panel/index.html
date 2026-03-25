@@ -422,7 +422,7 @@
         const data = new FormData(form)
         const entryId = data.get('entryId')
 
-        await addPersonalizedEntry(entryId)
+        await addOptimizedEntry(entryId)
 
         localStorage.setItem(LAST_ENTRY_ID_KEY, entryId)
       })
@@ -465,9 +465,9 @@
 
       let renderEntriesPromise = Promise.resolve()
 
-      // Render personalized entries
-      async function renderPersonalizedEntry(rawEntry, element, autoObserve = true) {
-        const { entry, personalization } = contentfulOptimization.personalizeEntry(rawEntry)
+      // Render optimized entries
+      async function renderOptimizedEntry(rawEntry, element, autoObserve = true) {
+        const { entry, personalization } = contentfulOptimization.resolveOptimizedEntry(rawEntry)
 
         if (isRichText(entry.fields?.text)) {
           const div = document.createElement('div')
@@ -484,7 +484,7 @@
           div.className = 'nested'
 
           for (const nestedEntry of entry.fields.nested) {
-            await renderPersonalizedEntry(nestedEntry, div, autoObserve)
+            await renderOptimizedEntry(nestedEntry, div, autoObserve)
           }
 
           element.appendChild(div)
@@ -501,7 +501,7 @@
           // The `data-ctfl-entry-id` data attribute is required for auto-observing
           element.dataset.ctflEntryId = entry.sys?.id
 
-          // Store the original personalized baseline ID so later rerenders do not personalize a variant entry
+          // Store the original optimized baseline ID so later rerenders do not resolve a variant entry
           if (rawEntry.fields.nt_experiences) element.dataset.ctflBaselineId = rawEntry.sys?.id
 
           // Other standard auto-observing attributes are optional
@@ -515,8 +515,8 @@
         return [entry, personalization]
       }
 
-      // Get the personalized entry to render
-      async function addPersonalizedEntry(entryId, element, autoObserve = true) {
+      // Get the optimized entry to render
+      async function addOptimizedEntry(entryId, element, autoObserve = true) {
         let rawEntry
 
         try {
@@ -526,7 +526,7 @@
           return []
         }
 
-        return renderPersonalizedEntry(rawEntry, element, autoObserve)
+        return renderOptimizedEntry(rawEntry, element, autoObserve)
       }
 
       const manuallyObservedEntryElements = new Map()
@@ -559,7 +559,7 @@
 
         await Promise.all(
           autoObservedElements.map(async (element) => {
-            await addPersonalizedEntry(
+            await addOptimizedEntry(
               element.dataset.ctflBaselineId ?? element.dataset.ctflEntryId,
               element,
               true,
@@ -571,7 +571,7 @@
 
         await Promise.all(
           manuallyObservedElements.map(async (element) => {
-            const [entry, personalization] = await addPersonalizedEntry(
+            const [entry, personalization] = await addOptimizedEntry(
               element.dataset.entryId,
               element,
               false,

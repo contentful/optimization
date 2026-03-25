@@ -1,6 +1,6 @@
 import type {
   AudienceEntry,
-  PersonalizationEntry,
+  OptimizationEntry,
   SelectedPersonalizationArray,
 } from '@contentful/optimization-web/api-schemas'
 import UFuzzy from '@leeoniya/ufuzzy'
@@ -22,7 +22,7 @@ const fuzzySearch = new UFuzzy({
 
 interface AudienceState {
   audienceContentOpenByKey: Record<string, boolean>
-  audiencePersonalizations: Map<AudienceEntry, PersonalizationEntry[]>
+  audienceOptimizations: Map<AudienceEntry, OptimizationEntry[]>
   audienceDefaultSelectedPersonalizations: Map<AudienceEntry, SelectedPersonalizationArray>
 }
 
@@ -71,11 +71,11 @@ function matchesSearchQuery(value: string | undefined, searchQuery: string): boo
 /** @internal */
 function buildAudienceState({
   audiences,
-  personalizationEntries,
+  optimizationEntries,
   defaultSelectedPersonalizations,
 }: {
   audiences: AudienceEntry[]
-  personalizationEntries: PersonalizationEntry[]
+  optimizationEntries: OptimizationEntry[]
   defaultSelectedPersonalizations: SelectedPersonalizationArray
 }): AudienceState {
   const audienceIdMap = audiences.reduce((audienceMap: Record<string, AudienceEntry>, audience) => {
@@ -83,15 +83,14 @@ function buildAudienceState({
     return audienceMap
   }, {})
 
-  const audienceIdPersonalizationMap = groupBy(
-    [...personalizationEntries].sort((a, b) =>
+  const audienceIdOptimizationMap = groupBy(
+    [...optimizationEntries].sort((a, b) =>
       compareString(a.fields.nt_name, b.fields.nt_name) ? -1 : 1,
     ),
-    (personalization) =>
-      personalization.fields.nt_audience?.sys.id ?? ALL_VISITORS_FALLBACK_AUDIENCE_ID,
+    (optimization) => optimization.fields.nt_audience?.sys.id ?? ALL_VISITORS_FALLBACK_AUDIENCE_ID,
   )
 
-  if (audienceIdPersonalizationMap[ALL_VISITORS_FALLBACK_AUDIENCE_ID]) {
+  if (audienceIdOptimizationMap[ALL_VISITORS_FALLBACK_AUDIENCE_ID]) {
     audienceIdMap[ALL_VISITORS_FALLBACK_AUDIENCE_ID] = ALL_VISITORS_FALLBACK_AUDIENCE
   }
 
@@ -100,7 +99,7 @@ function buildAudienceState({
       compareString(audienceIdMap[a]?.fields.nt_name, audienceIdMap[b]?.fields.nt_name) ? 1 : -1,
     )
     .sort((a, b) =>
-      compareCount(audienceIdPersonalizationMap[a], audienceIdPersonalizationMap[b]) ? 1 : -1,
+      compareCount(audienceIdOptimizationMap[a], audienceIdOptimizationMap[b]) ? 1 : -1,
     )
 
   const audienceContentOpenByKey = audienceIds.reduce((acc: Record<string, boolean>, id) => {
@@ -108,30 +107,31 @@ function buildAudienceState({
     return acc
   }, {})
 
-  const audiencePersonalizations = audienceIds.reduce((acc, audienceId) => {
+  const audienceOptimizations = audienceIds.reduce((acc, audienceId) => {
     const audience = audienceIdMap[audienceId] ?? ALL_VISITORS_FALLBACK_AUDIENCE
-    acc.set(audience, audienceIdPersonalizationMap[audienceId] ?? [])
+    acc.set(audience, audienceIdOptimizationMap[audienceId] ?? [])
     return acc
-  }, new Map<AudienceEntry, PersonalizationEntry[]>())
+  }, new Map<AudienceEntry, OptimizationEntry[]>())
 
-  const audienceDefaultSelectedPersonalizations = Array.from(
-    audiencePersonalizations.keys(),
-  ).reduce((acc, audience) => {
-    const personalizations = audiencePersonalizations.get(audience)
-    acc.set(
-      audience,
-      defaultSelectedPersonalizations.filter((defaultSelected) =>
-        personalizations
-          ?.map((personalization) => personalization.fields.nt_experience_id)
-          .includes(defaultSelected.experienceId),
-      ),
-    )
-    return acc
-  }, new Map<AudienceEntry, SelectedPersonalizationArray>())
+  const audienceDefaultSelectedPersonalizations = Array.from(audienceOptimizations.keys()).reduce(
+    (acc, audience) => {
+      const optimizations = audienceOptimizations.get(audience)
+      acc.set(
+        audience,
+        defaultSelectedPersonalizations.filter((defaultSelected) =>
+          optimizations
+            ?.map((optimization) => optimization.fields.nt_experience_id)
+            .includes(defaultSelected.experienceId),
+        ),
+      )
+      return acc
+    },
+    new Map<AudienceEntry, SelectedPersonalizationArray>(),
+  )
 
   return {
     audienceContentOpenByKey,
-    audiencePersonalizations,
+    audienceOptimizations,
     audienceDefaultSelectedPersonalizations,
   }
 }
@@ -152,9 +152,9 @@ export class Audiences extends LitElement {
   @property({ attribute: false })
   accessor audiences: AudienceEntry[] = []
 
-  /** All personalization entries fetched from Contentful. */
+  /** All optimization entries fetched from Contentful. */
   @property({ attribute: false })
-  accessor personalizationEntries: PersonalizationEntry[] = []
+  accessor optimizationEntries: OptimizationEntry[] = []
 
   /** Default personalization selections before any user overrides. */
   @property({ attribute: false })
@@ -171,7 +171,7 @@ export class Audiences extends LitElement {
 
   /** @internal */
   @state()
-  private accessor _audiencePersonalizations = new Map<AudienceEntry, PersonalizationEntry[]>()
+  private accessor _audienceOptimizations = new Map<AudienceEntry, OptimizationEntry[]>()
 
   /** @internal */
   @state()
@@ -191,18 +191,18 @@ export class Audiences extends LitElement {
   }
 
   /** @internal */
-  private get _filteredAudienceEntries(): Array<[AudienceEntry, PersonalizationEntry[]]> {
-    const { _audiencePersonalizations: audiencePersonalizations } = this
+  private get _filteredAudienceEntries(): Array<[AudienceEntry, OptimizationEntry[]]> {
+    const { _audienceOptimizations: audienceOptimizations } = this
     const searchQuery = this.search ?? ''
-    const audienceEntries = Array.from(audiencePersonalizations.entries())
+    const audienceEntries = Array.from(audienceOptimizations.entries())
 
     if (!searchQuery) return audienceEntries
 
     return audienceEntries.filter(
-      ([audience, personalizations]) =>
+      ([audience, optimizations]) =>
         matchesSearchQuery(audience.fields.nt_name, searchQuery) ||
-        personalizations.some((personalization) =>
-          matchesSearchQuery(personalization.fields.nt_name, searchQuery),
+        optimizations.some((optimization) =>
+          matchesSearchQuery(optimization.fields.nt_name, searchQuery),
         ),
     )
   }
@@ -242,22 +242,22 @@ export class Audiences extends LitElement {
   protected willUpdate(changed: PropertyValues<this>): void {
     if (
       changed.has('audiences') ||
-      changed.has('personalizationEntries') ||
+      changed.has('optimizationEntries') ||
       changed.has('defaultSelectedPersonalizations')
     ) {
       const audienceState = buildAudienceState({
         audiences: this.audiences,
-        personalizationEntries: this.personalizationEntries,
+        optimizationEntries: this.optimizationEntries,
         defaultSelectedPersonalizations: this.defaultSelectedPersonalizations,
       })
       const {
         audienceContentOpenByKey,
-        audiencePersonalizations,
+        audienceOptimizations,
         audienceDefaultSelectedPersonalizations,
       } = audienceState
 
       this._audienceContentOpenByKey = audienceContentOpenByKey
-      this._audiencePersonalizations = audiencePersonalizations
+      this._audienceOptimizations = audienceOptimizations
       this._audienceDefaultSelectedPersonalizations = audienceDefaultSelectedPersonalizations
     }
   }
@@ -293,7 +293,7 @@ export class Audiences extends LitElement {
                 <ctfl-opt-preview-audience
                   .open=${audienceContentOpenByKey[audience.sys.id] ?? true}
                   .audience=${audience}
-                  .personalizations=${personalizations}
+                  .optimizations=${personalizations}
                   .defaultSelectedPersonalizations=${audienceDefaultSelectedPersonalizations.get(
                     audience,
                   )}

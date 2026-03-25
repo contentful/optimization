@@ -38,7 +38,7 @@ other SDKs descend from the Core SDK.
 - [Core Methods](#core-methods)
   - [Personalization Data Resolution Methods](#personalization-data-resolution-methods)
     - [`getFlag`](#getflag)
-    - [`personalizeEntry`](#personalizeentry)
+    - [`resolveOptimizedEntry`](#resolveoptimizedentry)
     - [`getMergeTagValue`](#getmergetagvalue)
   - [Event Methods](#event-methods)
     - [`identify`](#identify)
@@ -324,7 +324,7 @@ Behavior notes:
 > If the `changes` argument is omitted in stateless implementations, the method will return
 > `undefined`.
 
-#### `personalizeEntry`
+#### `resolveOptimizedEntry`
 
 Resolve a baseline Contentful entry to a personalized variant using the provided selected
 personalizations, or from the current internal state in stateful implementations.

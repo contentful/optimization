@@ -10,7 +10,7 @@ Core root/provider primitives and React-facing APIs are implemented.
 - `useOptimizationContext()` readiness/error access
 - `LiveUpdatesProvider` + `useLiveUpdates()` global live updates context
 - `OptimizationRoot` provider composition and defaults
-- `useOptimizedEntry()` imperative personalization resolution
+- `useOptimizedEntry()` imperative optimization resolution
 - `OptimizedEntry` entry resolution, lock/live-update behavior, loading fallback, and data-attribute
   mapping
 
@@ -44,7 +44,7 @@ pnpm dev
 - package metadata and dual module exports
 - `rslib`/`rsbuild`/`rstest`/TypeScript baseline aligned with Web SDK patterns
 - core provider/root/context primitives in `src/`
-- `Personalization` component with loading-state support and Web SDK data-attribute tracking
+- `OptimizedEntry` component with loading-state support and Web SDK data-attribute tracking
 - scaffold dev dashboard harness in `dev/` for consent, identify/reset, state, events, and entries
 
 ## Usage
@@ -323,7 +323,7 @@ render and on TanStack Router `location.href` changes.
 TanStack Router payload enrichment also uses page-payload composition only and does not require
 interceptors.
 
-### Personalization Component
+### OptimizedEntry Component
 
 ```tsx
 import { OptimizedEntry } from '@contentful/optimization-react-web'
@@ -342,8 +342,8 @@ import { OptimizedEntry } from '@contentful/optimization-react-web'
 - Wrapper element is configurable with `as: 'div' | 'span'` (defaults to `div`).
 - Wrapper style uses `display: contents` to remain layout-neutral as much as possible.
 - Readiness is inferred automatically:
-  - personalized entries render when `canPersonalize === true`
-  - non-personalized entries render when the SDK instance is initialized
+  - optimized entries render when `canPersonalize === true`
+  - baseline entries render when the SDK instance is initialized
 
 #### Loading Fallback
 
@@ -352,7 +352,7 @@ When `loadingFallback` is provided, it is rendered while readiness is unresolved
 ```tsx
 <OptimizedEntry
   baselineEntry={baselineEntry}
-  loadingFallback={() => <Skeleton label="Loading personalized content" />}
+  loadingFallback={() => <Skeleton label="Loading optimized content" />}
 >
   {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
 </OptimizedEntry>
@@ -368,7 +368,7 @@ When `loadingFallback` is provided, it is rendered while readiness is unresolved
 
 #### Nested Composition
 
-Nested personalizations are supported by explicit composition:
+Nested optimized entries are supported by explicit composition:
 
 ```tsx
 <OptimizedEntry baselineEntry={parentEntry}>
@@ -430,8 +430,9 @@ This gives:
 
 ### Migration Notes
 
-- `Personalization` now accepts either render-prop children or direct `ReactNode` children.
-- Personalizable entries now render loading UI until personalization readiness is available.
+- `OptimizedEntry` now accepts either render-prop children or direct `ReactNode` children.
+- Entries with optimization references now render loading UI until personalization readiness is
+  available.
 - When no `loadingFallback` is provided, a default loading UI is rendered for unresolved
   personalizable entries.
 - Nested wrappers with the same baseline entry ID are now blocked at runtime.

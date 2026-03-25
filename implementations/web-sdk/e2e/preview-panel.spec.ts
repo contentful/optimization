@@ -9,10 +9,10 @@ async function getBooleanFlagValue(page: Page): Promise<unknown> {
 }
 
 async function selectPreviewVariant(
-  personalization: Locator,
+  optimization: Locator,
   variantLabel: 'Baseline' | 'Variant 1',
 ): Promise<void> {
-  await personalization.getByLabel(variantLabel).evaluate((input: { click: () => void }) => {
+  await optimization.getByLabel(variantLabel).evaluate((input: { click: () => void }) => {
     input.click()
   })
 }
@@ -60,17 +60,17 @@ test.describe('preview panel', () => {
       await drawerToggle.click()
     }
 
-    const flagPersonalization = previewPanel
-      .locator('ctfl-opt-preview-personalization')
+    const flagOptimization = previewPanel
+      .locator('ctfl-opt-preview-optimization')
       .filter({ hasText: '[Custom Flag] Boolean Flag' })
 
-    await expect(flagPersonalization).toHaveCount(1)
-    await flagPersonalization.scrollIntoViewIfNeeded()
+    await expect(flagOptimization).toHaveCount(1)
+    await flagOptimization.scrollIntoViewIfNeeded()
 
-    await selectPreviewVariant(flagPersonalization, 'Baseline')
+    await selectPreviewVariant(flagOptimization, 'Baseline')
     await expect.poll(async () => await getBooleanFlagValue(page)).toBe(false)
 
-    await selectPreviewVariant(flagPersonalization, 'Variant 1')
+    await selectPreviewVariant(flagOptimization, 'Variant 1')
     await expect.poll(async () => await getBooleanFlagValue(page)).toBe(true)
 
     await previewPanel.getByRole('button', { name: 'Reset Profile' }).click()
@@ -81,7 +81,7 @@ test.describe('preview panel', () => {
     const previewPanel = page.locator('ctfl-opt-preview-panel')
     const drawerToggle = previewPanel.locator('button.toggle-drawer')
     const search = previewPanel.getByRole('searchbox', {
-      name: 'Search audiences and personalizations',
+      name: 'Search audiences and optimizations',
     })
     const audiences = previewPanel.locator('ctfl-opt-preview-audience')
 
@@ -110,12 +110,12 @@ test.describe('preview panel', () => {
     await expect(audiences).toHaveCount(1)
     await expect(audiences.first()).toContainText('All Visitors')
     await expect(audiences.first()).toContainText('[Custom Flag] Boolean Flag')
-    const flagPersonalization = audiences
+    const flagOptimization = audiences
       .first()
-      .locator('ctfl-opt-preview-personalization')
+      .locator('ctfl-opt-preview-optimization')
       .filter({ hasText: '[Custom Flag] Boolean Flag' })
     await expect(
-      flagPersonalization.locator('legend ctfl-opt-preview-matched-text .match'),
+      flagOptimization.locator('legend ctfl-opt-preview-matched-text .match'),
     ).toHaveText(['Flag'])
 
     await search.fill('does not exist')

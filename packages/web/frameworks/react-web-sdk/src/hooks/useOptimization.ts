@@ -33,7 +33,7 @@ export interface UseOptimizationResult {
   readonly identify: OptimizationSdk['identify']
   readonly interactionTracking: OptimizationSdk['tracking']
   readonly page: OptimizationSdk['page']
-  readonly personalizeEntry: OptimizationSdk['personalizeEntry']
+  readonly resolveOptimizedEntry: OptimizationSdk['resolveOptimizedEntry']
   readonly resolveEntry: (
     entry: Entry,
     selectedPersonalizations?: SelectedPersonalizationArray,
@@ -51,7 +51,7 @@ function resolveEntryData(
   entry: Entry,
   selectedPersonalizations = sdk.states.selectedPersonalizations.current,
 ): ResolvedData<EntrySkeletonType> {
-  return sdk.personalizeEntry(entry, selectedPersonalizations)
+  return sdk.resolveOptimizedEntry(entry, selectedPersonalizations)
 }
 
 export function useOptimization(): UseOptimizationResult {
@@ -82,8 +82,10 @@ export function useOptimization(): UseOptimizationResult {
       identify: async (payload) => await sdk.identify(payload),
       interactionTracking: sdk.tracking,
       page: async (payload) => await sdk.page(payload),
-      personalizeEntry: (entry: Entry, selectedPersonalizations?: SelectedPersonalizationArray) =>
-        sdk.personalizeEntry(entry, selectedPersonalizations),
+      resolveOptimizedEntry: (
+        entry: Entry,
+        selectedPersonalizations?: SelectedPersonalizationArray,
+      ) => sdk.resolveOptimizedEntry(entry, selectedPersonalizations),
       resolveEntry: (entry, selectedPersonalizations) =>
         resolveEntryData(sdk, entry, selectedPersonalizations).entry,
       resolveEntryData: (entry, selectedPersonalizations) =>

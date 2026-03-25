@@ -1,6 +1,6 @@
 import type { ResolvedData } from '@contentful/optimization-core'
 import type { SelectedPersonalizationArray } from '@contentful/optimization-core/api-schemas'
-import { isPersonalizedEntry } from '@contentful/optimization-core/api-schemas'
+import { isOptimizedEntry } from '@contentful/optimization-core/api-schemas'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import React, { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
@@ -224,7 +224,7 @@ export function OptimizedEntry({
   const liveUpdatesContext = useLiveUpdates()
   const interactionTracking = useInteractionTracking()
 
-  const isPersonalized = isPersonalizedEntry(entry)
+  const isOptimized = isOptimizedEntry(entry)
 
   const shouldLiveUpdate =
     liveUpdatesContext?.previewPanelVisible === true ||
@@ -243,7 +243,7 @@ export function OptimizedEntry({
   }, [shouldLiveUpdate])
 
   useEffect(() => {
-    if (!isPersonalized) return
+    if (!isOptimized) return
 
     const subscription = contentfulOptimization.states.selectedPersonalizations.subscribe((p) => {
       if (shouldLiveUpdate) {
@@ -257,14 +257,14 @@ export function OptimizedEntry({
     return () => {
       subscription.unsubscribe()
     }
-  }, [contentfulOptimization, shouldLiveUpdate, isPersonalized])
+  }, [contentfulOptimization, shouldLiveUpdate, isOptimized])
 
   const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
     () =>
-      isPersonalized
-        ? contentfulOptimization.personalizeEntry(entry, lockedPersonalizations)
+      isOptimized
+        ? contentfulOptimization.resolveOptimizedEntry(entry, lockedPersonalizations)
         : { entry },
-    [entry, contentfulOptimization, lockedPersonalizations, isPersonalized],
+    [entry, contentfulOptimization, lockedPersonalizations, isOptimized],
   )
 
   const viewsEnabled = trackViews ?? interactionTracking.views

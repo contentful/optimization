@@ -1,15 +1,13 @@
 import type {
   ChangeArray,
   InlineVariableComponent,
-  PersonalizationEntry,
+  OptimizationEntry,
   SelectedPersonalizationArray,
 } from '@contentful/optimization-web/api-schemas'
 import { isInlineVariableComponent } from './schemaGuards'
 
-function getInlineVariableComponents(
-  personalization: PersonalizationEntry,
-): InlineVariableComponent[] {
-  const { components } = personalization.fields.nt_config ?? {}
+function getInlineVariableComponents(optimization: OptimizationEntry): InlineVariableComponent[] {
+  const { components } = optimization.fields.nt_config ?? {}
   return Array.isArray(components) ? components.filter(isInlineVariableComponent) : []
 }
 
@@ -61,7 +59,7 @@ export function applyPersonalizationOverrides(
  * value from `changes`.
  *
  * @param changes - Current array of custom-flag changes.
- * @param personalizationEntries - Available personalization entries indexed for preview.
+ * @param optimizationEntries - Available optimization entries indexed for preview.
  * @param overrides - Map of experience ID to the desired variant index.
  * @returns A new array with inline-variable change overrides applied, or the original array when no overrides exist.
  *
@@ -69,20 +67,20 @@ export function applyPersonalizationOverrides(
  */
 export function applyChangeOverrides(
   changes: ChangeArray,
-  personalizationEntries: PersonalizationEntry[],
+  optimizationEntries: OptimizationEntry[],
   overrides: Map<string, number>,
 ): ChangeArray {
   if (overrides.size === 0) return changes
 
-  const overrideChanges = personalizationEntries.flatMap((personalization): ChangeArray => {
+  const overrideChanges = optimizationEntries.flatMap((optimization): ChangeArray => {
     const {
       fields: { nt_experience_id: experienceId },
-    } = personalization
+    } = optimization
     const variantIndex = overrides.get(experienceId)
 
     if (variantIndex === undefined) return []
 
-    return getInlineVariableComponents(personalization).map((component): ChangeArray[number] => ({
+    return getInlineVariableComponents(optimization).map((component): ChangeArray[number] => ({
       key: component.key,
       type: 'Variable',
       value:

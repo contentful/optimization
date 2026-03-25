@@ -1,81 +1,81 @@
-// PersonalizedEntryResolver.test.ts
+// OptimizedEntryResolver.test.ts
 import {
   isEntryReplacementComponent,
   isEntryReplacementVariant,
-  isPersonalizationEntry,
-  isPersonalizedEntry,
+  isOptimizationEntry,
+  isOptimizedEntry,
   type EntryReplacementComponent,
   type EntryReplacementVariant,
-  type PersonalizationEntry,
-  type PersonalizedEntry,
+  type OptimizationEntry,
+  type OptimizedEntry,
   type SelectedPersonalizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { describe, expect, it, rs } from '@rstest/core'
 import type { Entry } from 'contentful'
 
 import { mockLogger } from 'mocks'
-import { personalizedEntry as personalizedEntryFixture } from '../test/fixtures/personalizedEntry'
+import { optimizedEntry as optimizedEntryFixture } from '../test/fixtures/optimizedEntry'
 import { selectedPersonalizations as selectedPersonalizationsFixture } from '../test/fixtures/selectedPersonalizations'
-import PersonalizedEntryResolver from './PersonalizedEntryResolver'
+import OptimizedEntryResolver from './OptimizedEntryResolver'
 
 const mockedLogger = rs.mocked(mockLogger)
 
-const RESOLUTION_WARNING_BASE = 'Could not resolve personalized entry variant:'
+const RESOLUTION_WARNING_BASE = 'Could not resolve optimized entry variant:'
 
-const getPersonalizedEntry = (): PersonalizedEntry => {
-  if (!isPersonalizedEntry(personalizedEntryFixture)) {
-    throw new Error('Fixture personalizedEntry is not a PersonalizedEntry')
+const getOptimizedEntry = (): OptimizedEntry => {
+  if (!isOptimizedEntry(optimizedEntryFixture)) {
+    throw new Error('Fixture optimizedEntry is not an OptimizedEntry')
   }
 
-  return personalizedEntryFixture
+  return optimizedEntryFixture
 }
 
 const getSelectedPersonalizations = (): SelectedPersonalizationArray =>
   selectedPersonalizationsFixture
 
-const getEuropePersonalizationEntry = (): PersonalizationEntry => {
-  const personalizedEntry = getPersonalizedEntry()
-  const experience = personalizedEntry.fields.nt_experiences.find(
-    (maybeExperience): maybeExperience is PersonalizationEntry =>
-      isPersonalizationEntry(maybeExperience) &&
+const getEuropeOptimizationEntry = (): OptimizationEntry => {
+  const optimizedEntry = getOptimizedEntry()
+  const experience = optimizedEntry.fields.nt_experiences.find(
+    (maybeExperience): maybeExperience is OptimizationEntry =>
+      isOptimizationEntry(maybeExperience) &&
       maybeExperience.fields.nt_experience_id === '2qVK4T5lnScbswoyBuGipd',
   )
 
   if (!experience) {
-    throw new Error('Could not find Europe PersonalizationEntry in fixture')
+    throw new Error('Could not find Europe OptimizationEntry in fixture')
   }
 
   return experience
 }
 
 const getEuropeVariantConfig = (): EntryReplacementVariant => {
-  const personalizationEntry = getEuropePersonalizationEntry()
-  const components = personalizationEntry.fields.nt_config?.components ?? []
+  const optimizationEntry = getEuropeOptimizationEntry()
+  const components = optimizationEntry.fields.nt_config?.components ?? []
 
   const component = components.find(
     (candidate): candidate is EntryReplacementComponent =>
       isEntryReplacementComponent(candidate) &&
-      candidate.baseline.id === personalizedEntryFixture.sys.id,
+      candidate.baseline.id === optimizedEntryFixture.sys.id,
   )
 
   const maybeVariant = component?.variants[0]
 
   if (!maybeVariant || !isEntryReplacementVariant(maybeVariant)) {
-    throw new Error('Could not find EntryReplacementVariant for Europe personalization')
+    throw new Error('Could not find EntryReplacementVariant for Europe optimization')
   }
 
   return maybeVariant
 }
 
-describe('PersonalizedEntryResolver', () => {
-  describe('getPersonalizationEntry', () => {
-    it('returns the matching personalization entry for a selected experience', () => {
-      const personalizedEntry = getPersonalizedEntry()
+describe('OptimizedEntryResolver', () => {
+  describe('getOptimizationEntry', () => {
+    it('returns the matching optimization entry for a selected experience', () => {
+      const optimizedEntry = getOptimizedEntry()
       const selectedPersonalizations = getSelectedPersonalizations()
 
-      const result = PersonalizedEntryResolver.getPersonalizationEntry(
+      const result = OptimizedEntryResolver.getOptimizationEntry(
         {
-          personalizedEntry,
+          optimizedEntry,
           selectedPersonalizations,
         },
         false,
@@ -86,11 +86,11 @@ describe('PersonalizedEntryResolver', () => {
     })
 
     it('returns undefined when there are no selected personalizations', () => {
-      const personalizedEntry = getPersonalizedEntry()
+      const optimizedEntry = getOptimizedEntry()
 
-      const result = PersonalizedEntryResolver.getPersonalizationEntry(
+      const result = OptimizedEntryResolver.getOptimizationEntry(
         {
-          personalizedEntry,
+          optimizedEntry,
           selectedPersonalizations: [],
         },
         false,
@@ -100,7 +100,7 @@ describe('PersonalizedEntryResolver', () => {
     })
 
     it('returns undefined when no experiences match the selected personalizations', () => {
-      const personalizedEntry = getPersonalizedEntry()
+      const optimizedEntry = getOptimizedEntry()
 
       // Drop selections that match the fixture’s experiences
       const selectedPersonalizations: SelectedPersonalizationArray =
@@ -110,9 +110,9 @@ describe('PersonalizedEntryResolver', () => {
             selection.experienceId !== '6KfLDCdA75BGwr5HfSeXac',
         )
 
-      const result = PersonalizedEntryResolver.getPersonalizationEntry(
+      const result = OptimizedEntryResolver.getOptimizationEntry(
         {
-          personalizedEntry,
+          optimizedEntry,
           selectedPersonalizations,
         },
         true,
@@ -123,29 +123,29 @@ describe('PersonalizedEntryResolver', () => {
   })
 
   describe('getSelectedPersonalization', () => {
-    it('returns the selected personalization for a matching personalization entry', () => {
-      const personalizationEntry = getEuropePersonalizationEntry()
+    it('returns the selected personalization for a matching optimization entry', () => {
+      const optimizationEntry = getEuropeOptimizationEntry()
       const selectedPersonalizations = getSelectedPersonalizations()
 
-      const result = PersonalizedEntryResolver.getSelectedPersonalization(
+      const result = OptimizedEntryResolver.getSelectedPersonalization(
         {
-          personalizationEntry,
+          optimizationEntry,
           selectedPersonalizations,
         },
         false,
       )
 
       expect(result).toBeDefined()
-      expect(result?.experienceId).toBe(personalizationEntry.fields.nt_experience_id)
+      expect(result?.experienceId).toBe(optimizationEntry.fields.nt_experience_id)
       expect(result?.variantIndex).toBe(1)
     })
 
     it('returns undefined when no selected personalizations are provided', () => {
-      const personalizationEntry = getEuropePersonalizationEntry()
+      const optimizationEntry = getEuropeOptimizationEntry()
 
-      const result = PersonalizedEntryResolver.getSelectedPersonalization(
+      const result = OptimizedEntryResolver.getSelectedPersonalization(
         {
-          personalizationEntry,
+          optimizationEntry,
           selectedPersonalizations: [],
         },
         false,
@@ -154,17 +154,17 @@ describe('PersonalizedEntryResolver', () => {
       expect(result).toBeUndefined()
     })
 
-    it('returns undefined when there is no selection for the given personalization entry', () => {
-      const personalizationEntry = getEuropePersonalizationEntry()
+    it('returns undefined when there is no selection for the given optimization entry', () => {
+      const optimizationEntry = getEuropeOptimizationEntry()
 
       const selectedPersonalizations: SelectedPersonalizationArray =
         getSelectedPersonalizations().filter(
-          (selection) => selection.experienceId !== personalizationEntry.fields.nt_experience_id,
+          (selection) => selection.experienceId !== optimizationEntry.fields.nt_experience_id,
         )
 
-      const result = PersonalizedEntryResolver.getSelectedPersonalization(
+      const result = OptimizedEntryResolver.getSelectedPersonalization(
         {
-          personalizationEntry,
+          optimizationEntry,
           selectedPersonalizations,
         },
         true,
@@ -176,13 +176,13 @@ describe('PersonalizedEntryResolver', () => {
 
   describe('getSelectedVariant', () => {
     it('returns the configured replacement variant for the given variant index', () => {
-      const personalizedEntry = getPersonalizedEntry()
-      const personalizationEntry = getEuropePersonalizationEntry()
+      const optimizedEntry = getOptimizedEntry()
+      const optimizationEntry = getEuropeOptimizationEntry()
 
-      const result = PersonalizedEntryResolver.getSelectedVariant(
+      const result = OptimizedEntryResolver.getSelectedVariant(
         {
-          personalizedEntry,
-          personalizationEntry,
+          optimizedEntry,
+          optimizationEntry,
           selectedVariantIndex: 1,
         },
         false,
@@ -193,12 +193,12 @@ describe('PersonalizedEntryResolver', () => {
     })
 
     it('returns undefined when there are no relevant variants for the entry (no components)', () => {
-      const personalizedEntry = getPersonalizedEntry()
-      const personalizationEntry = getEuropePersonalizationEntry()
-      const originalConfig = personalizationEntry.fields.nt_config
+      const optimizedEntry = getOptimizedEntry()
+      const optimizationEntry = getEuropeOptimizationEntry()
+      const originalConfig = optimizationEntry.fields.nt_config
 
       if (!originalConfig) {
-        throw new Error('Expected nt_config on personalizationEntry fixture')
+        throw new Error('Expected nt_config on optimizationEntry fixture')
       }
 
       const originalComponents = originalConfig.components
@@ -207,10 +207,10 @@ describe('PersonalizedEntryResolver', () => {
       originalConfig.components = []
 
       try {
-        const result = PersonalizedEntryResolver.getSelectedVariant(
+        const result = OptimizedEntryResolver.getSelectedVariant(
           {
-            personalizedEntry,
-            personalizationEntry,
+            optimizedEntry,
+            optimizationEntry,
             selectedVariantIndex: 1,
           },
           true,
@@ -224,13 +224,13 @@ describe('PersonalizedEntryResolver', () => {
     })
 
     it('returns undefined when the selected variant index is out of range', () => {
-      const personalizedEntry = getPersonalizedEntry()
-      const personalizationEntry = getEuropePersonalizationEntry()
+      const optimizedEntry = getOptimizedEntry()
+      const optimizationEntry = getEuropeOptimizationEntry()
 
-      const result = PersonalizedEntryResolver.getSelectedVariant(
+      const result = OptimizedEntryResolver.getSelectedVariant(
         {
-          personalizedEntry,
-          personalizationEntry,
+          optimizedEntry,
+          optimizationEntry,
           selectedVariantIndex: 999,
         },
         true,
@@ -242,11 +242,11 @@ describe('PersonalizedEntryResolver', () => {
 
   describe('getSelectedVariantEntry', () => {
     it('returns the variant entry corresponding to the selected replacement variant', () => {
-      const personalizationEntry = getEuropePersonalizationEntry()
+      const optimizationEntry = getEuropeOptimizationEntry()
       const selectedVariant = getEuropeVariantConfig()
 
-      const result = PersonalizedEntryResolver.getSelectedVariantEntry({
-        personalizationEntry,
+      const result = OptimizedEntryResolver.getSelectedVariantEntry({
+        optimizationEntry,
         selectedVariant,
       })
 
@@ -255,7 +255,7 @@ describe('PersonalizedEntryResolver', () => {
     })
 
     it('returns undefined when the variant entry cannot be found by id', () => {
-      const personalizationEntry = getEuropePersonalizationEntry()
+      const optimizationEntry = getEuropeOptimizationEntry()
       const selectedVariant = getEuropeVariantConfig()
 
       const nonMatchingVariant: EntryReplacementVariant = {
@@ -263,8 +263,8 @@ describe('PersonalizedEntryResolver', () => {
         id: 'non-existing-variant-id',
       }
 
-      const result = PersonalizedEntryResolver.getSelectedVariantEntry({
-        personalizationEntry,
+      const result = OptimizedEntryResolver.getSelectedVariantEntry({
+        optimizationEntry,
         selectedVariant: nonMatchingVariant,
       })
 
@@ -274,45 +274,45 @@ describe('PersonalizedEntryResolver', () => {
 
   describe('resolve', () => {
     it('returns the baseline entry and warns when no selected personalizations are provided', () => {
-      const result = PersonalizedEntryResolver.resolve(personalizedEntryFixture)
+      const result = OptimizedEntryResolver.resolve(optimizedEntryFixture)
 
-      expect(result.entry).toBe(personalizedEntryFixture)
+      expect(result.entry).toBe(optimizedEntryFixture)
       expect(result.personalization).toBeUndefined()
 
       expect(mockedLogger.debug).toHaveBeenCalledWith(
-        'Personalization',
-        `Resolving personalized entry for baseline entry ${personalizedEntryFixture.sys.id}`,
+        'Optimization',
+        `Resolving optimized entry for baseline entry ${optimizedEntryFixture.sys.id}`,
       )
       expect(mockedLogger.warn).toHaveBeenCalledWith(
-        'Personalization',
+        'Optimization',
         `${RESOLUTION_WARNING_BASE} no selectedPersonalizations exist for the current profile`,
       )
     })
 
-    it('returns the baseline entry and warns when the entry is not personalized', () => {
-      const nonPersonalizedEntry: Entry = {
-        ...personalizedEntryFixture,
+    it('returns the baseline entry and warns when the entry is not optimized', () => {
+      const nonOptimizedEntry: Entry = {
+        ...optimizedEntryFixture,
         fields: {
-          internalTitle: 'Non-personalized entry',
+          internalTitle: 'Non-optimized entry',
           text: 'No nt_experiences field on this entry',
         },
       }
 
-      const result = PersonalizedEntryResolver.resolve(
-        nonPersonalizedEntry,
+      const result = OptimizedEntryResolver.resolve(
+        nonOptimizedEntry,
         getSelectedPersonalizations(),
       )
 
-      expect(result.entry).toBe(nonPersonalizedEntry)
+      expect(result.entry).toBe(nonOptimizedEntry)
       expect(result.personalization).toBeUndefined()
 
       expect(mockedLogger.warn).toHaveBeenCalledWith(
-        'Personalization',
-        `${RESOLUTION_WARNING_BASE} entry ${nonPersonalizedEntry.sys.id} is not personalized`,
+        'Optimization',
+        `${RESOLUTION_WARNING_BASE} entry ${nonOptimizedEntry.sys.id} is not optimized`,
       )
     })
 
-    it('returns the baseline entry and warns when no personalization entry is found', () => {
+    it('returns the baseline entry and warns when no optimization entry is found', () => {
       const selectedPersonalizations: SelectedPersonalizationArray =
         getSelectedPersonalizations().filter(
           (selection) =>
@@ -320,17 +320,14 @@ describe('PersonalizedEntryResolver', () => {
             selection.experienceId !== '6KfLDCdA75BGwr5HfSeXac',
         )
 
-      const result = PersonalizedEntryResolver.resolve(
-        personalizedEntryFixture,
-        selectedPersonalizations,
-      )
+      const result = OptimizedEntryResolver.resolve(optimizedEntryFixture, selectedPersonalizations)
 
-      expect(result.entry).toBe(personalizedEntryFixture)
+      expect(result.entry).toBe(optimizedEntryFixture)
       expect(result.personalization).toBeUndefined()
 
       expect(mockedLogger.warn).toHaveBeenCalledWith(
-        'Personalization',
-        `${RESOLUTION_WARNING_BASE} could not find a personalization entry for ${personalizedEntryFixture.sys.id}`,
+        'Optimization',
+        `${RESOLUTION_WARNING_BASE} could not find an optimization entry for ${optimizedEntryFixture.sys.id}`,
       )
     })
 
@@ -340,20 +337,20 @@ describe('PersonalizedEntryResolver', () => {
           experienceId: '2qVK4T5lnScbswoyBuGipd',
           variantIndex: 0,
           variants: {
-            [personalizedEntryFixture.sys.id]: personalizedEntryFixture.sys.id,
+            [optimizedEntryFixture.sys.id]: optimizedEntryFixture.sys.id,
           },
           sticky: false,
         },
       ]
 
-      const result = PersonalizedEntryResolver.resolve(personalizedEntryFixture, selections)
+      const result = OptimizedEntryResolver.resolve(optimizedEntryFixture, selections)
 
-      expect(result.entry).toBe(personalizedEntryFixture)
+      expect(result.entry).toBe(optimizedEntryFixture)
       expect(result.personalization).toBeUndefined()
 
       expect(mockedLogger.debug).toHaveBeenCalledWith(
-        'Personalization',
-        `Resolved personalization entry for entry ${personalizedEntryFixture.sys.id} is baseline`,
+        'Optimization',
+        `Resolved optimization entry for entry ${optimizedEntryFixture.sys.id} is baseline`,
       )
     })
 
@@ -363,53 +360,50 @@ describe('PersonalizedEntryResolver', () => {
           experienceId: '2qVK4T5lnScbswoyBuGipd',
           variantIndex: 2, // only one variant exists; out of range
           variants: {
-            [personalizedEntryFixture.sys.id]: 'non-existing',
+            [optimizedEntryFixture.sys.id]: 'non-existing',
           },
           sticky: false,
         },
       ]
 
-      const result = PersonalizedEntryResolver.resolve(personalizedEntryFixture, selections)
+      const result = OptimizedEntryResolver.resolve(optimizedEntryFixture, selections)
 
-      expect(result.entry).toBe(personalizedEntryFixture)
+      expect(result.entry).toBe(optimizedEntryFixture)
       expect(result.personalization).toBeUndefined()
 
       expect(mockedLogger.warn).toHaveBeenCalledWith(
-        'Personalization',
-        `${RESOLUTION_WARNING_BASE} could not find a valid replacement variant entry for ${personalizedEntryFixture.sys.id}`,
+        'Optimization',
+        `${RESOLUTION_WARNING_BASE} could not find a valid replacement variant entry for ${optimizedEntryFixture.sys.id}`,
       )
     })
 
     it('returns the baseline entry and warns when the variant entry cannot be resolved', () => {
-      const personalizedEntry = getPersonalizedEntry()
-      const personalizationEntry = getEuropePersonalizationEntry()
-      const originalVariants = personalizationEntry.fields.nt_variants
+      const optimizedEntry = getOptimizedEntry()
+      const optimizationEntry = getEuropeOptimizationEntry()
+      const originalVariants = optimizationEntry.fields.nt_variants
 
       // Remove the linked variant entries so getSelectedVariantEntry cannot resolve
-      personalizationEntry.fields.nt_variants = []
+      optimizationEntry.fields.nt_variants = []
 
       try {
-        const result = PersonalizedEntryResolver.resolve(
-          personalizedEntry,
-          getSelectedPersonalizations(),
-        )
+        const result = OptimizedEntryResolver.resolve(optimizedEntry, getSelectedPersonalizations())
 
-        expect(result.entry).toBe(personalizedEntry)
+        expect(result.entry).toBe(optimizedEntry)
         expect(result.personalization).toBeUndefined()
 
         expect(mockedLogger.warn).toHaveBeenCalledWith(
-          'Personalization',
-          `${RESOLUTION_WARNING_BASE} could not find a valid replacement variant entry for ${personalizedEntry.sys.id}`,
+          'Optimization',
+          `${RESOLUTION_WARNING_BASE} could not find a valid replacement variant entry for ${optimizedEntry.sys.id}`,
         )
       } finally {
         // Restore variants for other tests
-        personalizationEntry.fields.nt_variants = originalVariants
+        optimizationEntry.fields.nt_variants = originalVariants
       }
     })
 
     it('resolves to the variant entry and returns the selected personalization on success', () => {
-      const result = PersonalizedEntryResolver.resolve(
-        personalizedEntryFixture,
+      const result = OptimizedEntryResolver.resolve(
+        optimizedEntryFixture,
         getSelectedPersonalizations(),
       )
 
@@ -422,12 +416,12 @@ describe('PersonalizedEntryResolver', () => {
       )
 
       expect(mockedLogger.debug).toHaveBeenCalledWith(
-        'Personalization',
-        `Resolving personalized entry for baseline entry ${personalizedEntryFixture.sys.id}`,
+        'Optimization',
+        `Resolving optimized entry for baseline entry ${optimizedEntryFixture.sys.id}`,
       )
       expect(mockedLogger.debug).toHaveBeenCalledWith(
-        'Personalization',
-        `Entry ${personalizedEntryFixture.sys.id} has been resolved to variant entry 4k6ZyFQnR2POY5IJLLlJRb`,
+        'Optimization',
+        `Entry ${optimizedEntryFixture.sys.id} has been resolved to variant entry 4k6ZyFQnR2POY5IJLLlJRb`,
       )
     })
   })

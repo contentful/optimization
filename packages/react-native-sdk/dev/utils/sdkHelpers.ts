@@ -45,12 +45,12 @@ export async function initializeSDK(
 }
 
 export async function fetchEntriesFromMockServer(
-  setPersonalizedEntry: (entry: Entry) => void,
+  setOptimizedEntry: (entry: Entry) => void,
   setProductEntry: (entry: Entry) => void,
 ): Promise<void> {
   const {
     contentful: { spaceId, environment, accessToken, host, basePath },
-    entries: { personalized, product },
+    entries: { optimized, product },
   } = ENV_CONFIG
 
   const contentful = createClient({
@@ -62,12 +62,12 @@ export async function fetchEntriesFromMockServer(
     insecure: true,
   })
 
-  const [personalizedEntryData, productEntryData] = await Promise.all([
-    contentful.getEntry(personalized, { include: 10 }),
+  const [optimizedEntryData, productEntryData] = await Promise.all([
+    contentful.getEntry(optimized, { include: 10 }),
     contentful.getEntry(product, { include: 10 }),
   ])
 
-  setPersonalizedEntry(personalizedEntryData)
+  setOptimizedEntry(optimizedEntryData)
   setProductEntry(productEntryData)
 }
 

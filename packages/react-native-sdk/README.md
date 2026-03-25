@@ -234,7 +234,7 @@ resolved entry, or **static children** `ReactNode` for tracking-only use cases:
 {
   /* Render prop — receives the resolved entry (variant or baseline) */
 }
-;<OptimizedEntry entry={personalizedEntry}>
+;<OptimizedEntry entry={optimizedEntry}>
   {(resolvedEntry) => <HeroComponent data={resolvedEntry.fields} />}
 </OptimizedEntry>
 
@@ -262,7 +262,7 @@ viewport dimensions:
 
 ```tsx
 <OptimizationScrollProvider>
-  <OptimizedEntry entry={personalizedEntry}>
+  <OptimizedEntry entry={optimizedEntry}>
     {(resolvedEntry) => <HeroComponent data={resolvedEntry} />}
   </OptimizedEntry>
   <OptimizedEntry entry={productEntry}>

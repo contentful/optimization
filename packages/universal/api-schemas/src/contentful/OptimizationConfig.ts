@@ -29,7 +29,7 @@ export const EntryReplacementVariant = z.object({
 export type EntryReplacementVariant = z.infer<typeof EntryReplacementVariant>
 
 /**
- * Zod schema describing an entry replacement personalization component.
+ * Zod schema describing an entry replacement optimization component.
  *
  * @remarks
  * This component replaces a baseline entry with one of several variants.
@@ -132,41 +132,41 @@ export type InlineVariableComponent = z.infer<typeof InlineVariableComponent>
  *
  * @public
  */
-export const PersonalizationComponent = z.discriminatedUnion('type', [
+export const OptimizationComponent = z.discriminatedUnion('type', [
   EntryReplacementComponent,
   InlineVariableComponent,
 ])
 
 /**
- * TypeScript type inferred from {@link PersonalizationComponent}.
+ * TypeScript type inferred from {@link OptimizationComponent}.
  *
  * @public
  */
-export type PersonalizationComponent = z.infer<typeof PersonalizationComponent>
+export type OptimizationComponent = z.infer<typeof OptimizationComponent>
 
 /**
- * Zod schema representing an array of {@link PersonalizationComponent} items.
+ * Zod schema representing an array of {@link OptimizationComponent} items.
  *
  * @public
  */
-export const PersonalizationComponentArray = z.array(PersonalizationComponent)
+export const OptimizationComponentArray = z.array(OptimizationComponent)
 
 /**
- * TypeScript type inferred from {@link PersonalizationComponentArray}.
+ * TypeScript type inferred from {@link OptimizationComponentArray}.
  *
  * @public
  */
-export type PersonalizationComponentArray = z.infer<typeof PersonalizationComponentArray>
+export type OptimizationComponentArray = z.infer<typeof OptimizationComponentArray>
 
 /**
- * Zod schema describing the full configuration for a personalization.
+ * Zod schema describing the full configuration for an optimization.
  *
  * @remarks
  * Provides distribution, traffic allocation, component definitions, and sticky behavior.
  *
  * @public
  */
-export const PersonalizationConfig = z.object({
+export const OptimizationConfig = z.object({
   /**
    * Variant distribution used for traffic allocation.
    *
@@ -180,10 +180,10 @@ export const PersonalizationConfig = z.object({
   traffic: z.optional(z.number()),
 
   /**
-   * Personalization components that define how content is varied.
+   * Optimization components that define how content is varied.
    *
    */
-  components: z.optional(PersonalizationComponentArray),
+  components: z.optional(OptimizationComponentArray),
 
   /**
    * Controls whether the assignment should be sticky for a given user.
@@ -193,14 +193,14 @@ export const PersonalizationConfig = z.object({
 })
 
 /**
- * TypeScript type inferred from {@link PersonalizationConfig}.
+ * TypeScript type inferred from {@link OptimizationConfig}.
  *
  * @public
  */
-export type PersonalizationConfig = z.infer<typeof PersonalizationConfig>
+export type OptimizationConfig = z.infer<typeof OptimizationConfig>
 
 /**
- * Runtime-safe view of a personalization config.
+ * Runtime-safe view of an optimization config.
  *
  * @remarks
  * This helper deliberately uses empty/falsey defaults that are safe for SDK
@@ -209,24 +209,24 @@ export type PersonalizationConfig = z.infer<typeof PersonalizationConfig>
  *
  * @public
  */
-export interface NormalizedPersonalizationConfig {
+export interface NormalizedOptimizationConfig {
   distribution: number[]
   traffic: number
-  components: PersonalizationComponent[]
+  components: OptimizationComponent[]
   sticky: boolean
 }
 
 /**
- * Normalizes a personalization config for runtime consumers.
+ * Normalizes an optimization config for runtime consumers.
  *
- * @param config - Raw personalization config value from Contentful.
+ * @param config - Raw optimization config value from Contentful.
  * @returns Config with concrete runtime-safe defaults for omitted fields.
  *
  * @public
  */
-export function normalizePersonalizationConfig(
-  config: PersonalizationConfig | null | undefined,
-): NormalizedPersonalizationConfig {
+export function normalizeOptimizationConfig(
+  config: OptimizationConfig | null | undefined,
+): NormalizedOptimizationConfig {
   return {
     distribution: config?.distribution === undefined ? [] : [...config.distribution],
     traffic: config?.traffic ?? 0,

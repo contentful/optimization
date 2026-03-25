@@ -20,7 +20,7 @@ export const SelectedPersonalization = z.object({
    * Index of the selected variant within the experience configuration.
    *
    * @remarks
-   * Typically corresponds to the index of the selected {@link PersonalizationConfig } entry.
+   * Typically corresponds to the index of the selected {@link OptimizationConfig } entry.
    */
   variantIndex: z.number(),
 

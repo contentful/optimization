@@ -30,7 +30,7 @@ interface TestTrackingScreenProps {
   colors: ThemeColors
   onBack: () => void
   sdk: ContentfulOptimization
-  personalizedEntry: Entry
+  optimizedEntry: Entry
   productEntry: Entry
 }
 
@@ -55,7 +55,7 @@ export function TestTrackingScreen({
   colors,
   onBack,
   sdk,
-  personalizedEntry,
+  optimizedEntry,
   productEntry,
 }: TestTrackingScreenProps): React.JSX.Element {
   const [trackedEvents, setTrackedEvents] = useState<string[]>([])
@@ -113,7 +113,7 @@ export function TestTrackingScreen({
             not React Native UI components.
           </Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor, marginTop: 12 }]}>
-            Using mock server data - Entry IDs: {personalizedEntry.sys.id}, {productEntry.sys.id}
+            Using mock server data - Entry IDs: {optimizedEntry.sys.id}, {productEntry.sys.id}
           </Text>
         </View>
 
@@ -127,19 +127,19 @@ export function TestTrackingScreen({
           </Text>
         </View>
 
-        {/* Personalized entry example */}
+        {/* Optimized entry example */}
         <OptimizedEntry
-          entry={personalizedEntry}
+          entry={optimizedEntry}
           viewTimeMs={2000} // 2 seconds
           threshold={0.8} // 80% visible
           style={StyleSheet.flatten([styles.trackedView, { backgroundColor: '#6366f1' }])}
-          testID="personalizationComponent"
+          testID="optimizationComponent"
         >
           {(resolvedEntry) => (
             <View>
-              <Text style={styles.componentLabel}>{'<OptimizedEntry /> (personalized)'}</Text>
+              <Text style={styles.componentLabel}>{'<OptimizedEntry /> (optimized)'}</Text>
               <Text style={styles.trackedViewTitle}>
-                {getFieldText(resolvedEntry.fields.internalTitle) || 'Personalized Content'}
+                {getFieldText(resolvedEntry.fields.internalTitle) || 'Optimized Content'}
               </Text>
               <Text style={styles.trackedViewText}>
                 {getFieldText(resolvedEntry.fields.text) || 'Content loaded from mock server'}
@@ -173,7 +173,7 @@ export function TestTrackingScreen({
           testID="analyticsComponent"
         >
           <View>
-            <Text style={styles.componentLabel}>{'<OptimizedEntry /> (non-personalized)'}</Text>
+            <Text style={styles.componentLabel}>{'<OptimizedEntry /> (baseline)'}</Text>
             <Text style={styles.trackedViewTitle}>
               {getFieldText(productEntry.fields.internalTitle) || 'Analytics Entry'}
             </Text>

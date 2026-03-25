@@ -188,7 +188,7 @@ describe('@contentful/optimization-react-web core providers', () => {
   })
 
   it('exposes interaction tracking and resolved-entry helpers from useOptimization', () => {
-    const personalizeEntryCalls: unknown[] = []
+    const resolveOptimizedEntryCalls: unknown[] = []
     let capturedOptimization: UseOptimizationResult | undefined = undefined
 
     function Probe(): null {
@@ -197,8 +197,11 @@ describe('@contentful/optimization-react-web core providers', () => {
     }
 
     const sdk = createOptimizationSdk({
-      personalizeEntry: (entry: Entry, selectedPersonalizations?: SelectedPersonalizationArray) => {
-        personalizeEntryCalls.push([entry, selectedPersonalizations])
+      resolveOptimizedEntry: (
+        entry: Entry,
+        selectedPersonalizations?: SelectedPersonalizationArray,
+      ) => {
+        resolveOptimizedEntryCalls.push([entry, selectedPersonalizations])
         return {
           entry: {
             ...entry,
@@ -242,7 +245,7 @@ describe('@contentful/optimization-react-web core providers', () => {
       },
       personalization: undefined,
     })
-    expect(personalizeEntryCalls).toEqual([
+    expect(resolveOptimizedEntryCalls).toEqual([
       [
         baselineEntry,
         [

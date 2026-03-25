@@ -6,7 +6,7 @@ import { EntryPanel } from '../components/EntryPanel'
 import type { DatasetSnapshot } from '../types'
 import { readTrackingDataset, toJsonPreview } from '../utils'
 
-interface PersonalizationSectionProps {
+interface OptimizationSectionProps {
   baselineDefault?: Entry
   baselineLive?: Entry
   baselineLocked?: Entry
@@ -15,22 +15,22 @@ interface PersonalizationSectionProps {
   personalizations: SelectedPersonalizationArray | undefined
 }
 
-export function PersonalizationSection({
+export function OptimizationSection({
   baselineDefault,
   baselineLive,
   baselineLocked,
   baselineNestedParent,
   baselineNestedChild,
   personalizations,
-}: PersonalizationSectionProps): ReactElement {
+}: OptimizationSectionProps): ReactElement {
   const [datasetDefault, setDatasetDefault] = useState<DatasetSnapshot | null>(null)
   const [datasetLive, setDatasetLive] = useState<DatasetSnapshot | null>(null)
   const [datasetLocked, setDatasetLocked] = useState<DatasetSnapshot | null>(null)
 
   useEffect(() => {
-    setDatasetDefault(readTrackingDataset('personalization-default'))
-    setDatasetLive(readTrackingDataset('personalization-live'))
-    setDatasetLocked(readTrackingDataset('personalization-locked'))
+    setDatasetDefault(readTrackingDataset('optimized-entry-default'))
+    setDatasetLive(readTrackingDataset('optimized-entry-live'))
+    setDatasetLocked(readTrackingDataset('optimized-entry-locked'))
   }, [personalizations, baselineDefault, baselineLive, baselineLocked])
 
   return (
@@ -39,17 +39,17 @@ export function PersonalizationSection({
         {baselineDefault ? (
           <OptimizedEntry
             baselineEntry={baselineDefault}
-            data-testid="personalization-default"
+            data-testid="optimized-entry-default"
             loadingFallback={() => (
               <article className="dashboard__card">
-                <h2>Personalization (inherits root liveUpdates)</h2>
-                <p>Loading personalized content...</p>
+                <h2>OptimizedEntry (inherits root liveUpdates)</h2>
+                <p>Loading optimized content...</p>
               </article>
             )}
           >
             {(resolvedEntry: Entry) => (
               <EntryPanel
-                title="Personalization (inherits root liveUpdates)"
+                title="OptimizedEntry (inherits root liveUpdates)"
                 resolvedEntry={resolvedEntry}
               />
             )}
@@ -60,13 +60,10 @@ export function PersonalizationSection({
           <OptimizedEntry
             baselineEntry={baselineLive}
             liveUpdates={true}
-            data-testid="personalization-live"
+            data-testid="optimized-entry-live"
           >
             {(resolvedEntry: Entry) => (
-              <EntryPanel
-                title="Personalization (liveUpdates=true)"
-                resolvedEntry={resolvedEntry}
-              />
+              <EntryPanel title="OptimizedEntry (liveUpdates=true)" resolvedEntry={resolvedEntry} />
             )}
           </OptimizedEntry>
         ) : null}
@@ -75,11 +72,11 @@ export function PersonalizationSection({
           <OptimizedEntry
             baselineEntry={baselineLocked}
             liveUpdates={false}
-            data-testid="personalization-locked"
+            data-testid="optimized-entry-locked"
           >
             {(resolvedEntry: Entry) => (
               <EntryPanel
-                title="Personalization (liveUpdates=false)"
+                title="OptimizedEntry (liveUpdates=false)"
                 resolvedEntry={resolvedEntry}
               />
             )}
@@ -90,7 +87,7 @@ export function PersonalizationSection({
       <section className="dashboard__grid">
         {baselineNestedParent && baselineNestedChild ? (
           <article className="dashboard__card">
-            <h2>Nested Personalization</h2>
+            <h2>Nested OptimizedEntry</h2>
             <OptimizedEntry baselineEntry={baselineNestedParent} data-testid="nested-parent">
               {(parentResolved: Entry) => (
                 <>

@@ -1,4 +1,4 @@
-import type { AudienceEntry, PersonalizationEntry } from '@contentful/optimization-web/api-schemas'
+import type { AudienceEntry, OptimizationEntry } from '@contentful/optimization-web/api-schemas'
 import type {
   ChainModifiers,
   ContentfulClientApi,
@@ -36,22 +36,20 @@ export function isAudienceEntry(audience: Entry): audience is AudienceEntry {
 }
 
 /**
- * Type guard that checks whether a Contentful entry is a {@link PersonalizationEntry}.
+ * Type guard that checks whether a Contentful entry is an {@link OptimizationEntry}.
  *
- * @param personalization - The entry to check.
+ * @param optimization - The entry to check.
  * @returns `true` if the entry's content type is `nt_experience`.
  *
  * @example
  * ```ts
- * const filtered = entries.filter(isPersonalizationEntry)
+ * const filtered = entries.filter(isOptimizationEntry)
  * ```
  *
  * @public
  */
-export function isPersonalizationEntry(
-  personalization: Entry,
-): personalization is PersonalizationEntry {
-  return personalization.sys.contentType.sys.id === 'nt_experience'
+export function isOptimizationEntry(optimization: Entry): optimization is OptimizationEntry {
+  return optimization.sys.contentType.sys.id === 'nt_experience'
 }
 
 /**

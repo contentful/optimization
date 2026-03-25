@@ -78,7 +78,7 @@ export function useOptimizedEntry({
   const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
     () =>
       sdk && isReady
-        ? sdk.personalizeEntry(baselineEntry, lockedSelectedPersonalizations)
+        ? sdk.resolveOptimizedEntry(baselineEntry, lockedSelectedPersonalizations)
         : { entry: baselineEntry, personalization: undefined },
     [baselineEntry, isReady, lockedSelectedPersonalizations, sdk],
   )

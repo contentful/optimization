@@ -19,7 +19,7 @@ export type OptimizationSdk = Pick<
   | 'trackView'
   | 'tracking'
 > & {
-  personalizeEntry: (
+  resolveOptimizedEntry: (
     entry: Entry,
     selectedPersonalizations?: SelectedPersonalizationArray,
   ) => ResolvedData<EntrySkeletonType>

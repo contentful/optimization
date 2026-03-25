@@ -38,7 +38,7 @@ The Optimization Node SDK implements functionality specific to Node environments
 - [Optimization Methods](#optimization-methods)
   - [Personalization Data Resolution Methods](#personalization-data-resolution-methods)
     - [`getFlag`](#getflag)
-    - [`personalizeEntry`](#personalizeentry)
+    - [`resolveOptimizedEntry`](#resolveoptimizedentry)
     - [`getMergeTagValue`](#getmergetagvalue)
   - [Personalization and Analytics Event Methods](#personalization-and-analytics-event-methods)
     - [`identify`](#identify)
@@ -178,7 +178,7 @@ Behavior notes:
 >
 > If the `changes` argument is omitted, the method will return `undefined`.
 
-#### `personalizeEntry`
+#### `resolveOptimizedEntry`
 
 Resolve a baseline Contentful entry to a personalized variant using the provided selected
 personalizations.

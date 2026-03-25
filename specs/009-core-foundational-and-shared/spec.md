@@ -47,9 +47,9 @@ return behavior.
 
 **Acceptance Scenarios**:
 
-1. **Given** resolver input data, **When** `getFlag`, `personalizeEntry`, and `getMergeTagValue` are
-   called, **Then** each method uses the shared Core resolver utilities without changing result
-   shape.
+1. **Given** resolver input data, **When** `getFlag`, `resolveOptimizedEntry`, and
+   `getMergeTagValue` are called, **Then** each method uses the shared Core resolver utilities
+   without changing result shape.
 2. **Given** identify/page/screen/track payloads, **When** `identify`, `page`, `screen`, and `track`
    are called, **Then** each routes through the Experience delivery path and returns its async
    result.
@@ -112,9 +112,9 @@ can extend behavior safely and expose the correct import surfaces.
 - **FR-005**: `CoreBase` MUST expose lifecycle interceptors with separate managers for `event` and
   `state`.
 - **FR-006**: `CoreBase` MUST expose resolver accessors (`flagsResolver`, `mergeTagValueResolver`,
-  `personalizedEntryResolver`) from shared Core resolver utilities.
-- **FR-007**: `CoreBase` resolver helpers (`getFlag`, `personalizeEntry`, `getMergeTagValue`) MUST
-  use resolver utilities without reshaping outputs.
+  `optimizedEntryResolver`) from shared Core resolver utilities.
+- **FR-007**: `CoreBase` resolver helpers (`getFlag`, `resolveOptimizedEntry`, `getMergeTagValue`)
+  MUST use resolver utilities without reshaping outputs.
 - **FR-008**: `CoreBase.identify`, `page`, `screen`, and `track` MUST route through the Experience
   delivery path and return delegated async results.
 - **FR-009**: `CoreBase.trackView` MUST route through Insights for all payloads and MUST

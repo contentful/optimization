@@ -62,20 +62,21 @@ for the purposes of personalization.
 
 - `CtflEntry`: Zod schema describing a generic Contentful entry; the `fields` member is loosely
   typed as any valid JSON
-- `PersonalizedEntry`: Zod schema describing a `CtflEntry` that has associated personalization
-  entries
-- `PersonalizationEntry`: Zod schema describing a personalization entry, which is associated with a
-  `PersonalizedEntry` via its `fields.nt_experiences` property
-- `PersonalizationConfig`: Zod schema describing the configuration of a `PersonalizationEntry` via
-  its `fields.nt_config` property
+- `OptimizedEntry`: Zod schema describing a `CtflEntry` that has associated optimization entries
+- `OptimizationEntry`: Zod schema describing an optimization entry, which is associated with an
+  `OptimizedEntry` via its `fields.nt_experiences` property
+- `OptimizationConfig`: Zod schema describing the configuration of an `OptimizationEntry` via its
+  `fields.nt_config` property
 
 ### Essential Functions
 
 - `isEntry<S extends SkeletonType, M extends ChainModifiers, L extends string>`: Type guard that
   checks whether the given value is a Contentful Entry, passing through the specified skeleton,
   chain modifiers, and locale
-- `isPersonalizedEntry`: Type guard for `PersonalizedEntry`
-- `isPersonalizationEntry`: Type guard for `PersonalizationEntry`
+- `isOptimizedEntry`: Type guard for `OptimizedEntry`
+- `isOptimizationEntry`: Type guard for `OptimizationEntry`
+- `normalizeOptimizationConfig`: Runtime helper that fills omitted `OptimizationConfig` fields with
+  SDK-safe defaults
 
 ## Experience API Schemas
 

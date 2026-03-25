@@ -44,7 +44,7 @@ export function StateSection({
 
       <article className="dashboard__card">
         <h2>Entry Resolver</h2>
-        <p>Runs `optimization.personalizeEntry` for all baseline entries loaded below.</p>
+        <p>Runs `optimization.resolveOptimizedEntry` for all baseline entries loaded below.</p>
         <button onClick={onResolveEntries} type="button">
           Resolve Entries
         </button>

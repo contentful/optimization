@@ -1,17 +1,13 @@
 import ContentfulOptimization from '@contentful/optimization-node'
 import type { OptimizationData } from '@contentful/optimization-node/api-schemas'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
+import type { UniversalEventBuilderArgs } from '@contentful/optimization-node/core-sdk'
 import cookieParser from 'cookie-parser'
 import express, { type Express, type Request, type Response } from 'express'
 import rateLimit from 'express-rate-limit'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { ParsedQs } from 'qs'
-
-type UniversalEventBuilderArgs = Pick<
-  Parameters<ContentfulOptimization['page']>[0],
-  'locale' | 'page' | 'userAgent'
->
 
 const limiter = rateLimit({
   windowMs: 30_000,

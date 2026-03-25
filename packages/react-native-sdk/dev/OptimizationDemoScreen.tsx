@@ -1,7 +1,7 @@
 /**
- * Personalization Demo Screen - Demonstrates PreviewPanel capabilities
+ * Optimization Demo Screen - Demonstrates PreviewPanel capabilities
  *
- * This screen displays personalized content cards that update in real-time
+ * This screen displays optimized content cards that update in real-time
  * when variant selections are changed in the PreviewPanel.
  */
 
@@ -22,7 +22,7 @@ interface ThemeColors {
   errorColor: string
 }
 
-interface PersonalizationDemoScreenProps {
+interface OptimizationDemoScreenProps {
   colors: ThemeColors
   onBack: () => void
   demoEntries: DemoEntries
@@ -69,11 +69,11 @@ function ContentCard({ entry, label, color }: ContentCardProps): React.JSX.Eleme
   )
 }
 
-export function PersonalizationDemoScreen({
+export function OptimizationDemoScreen({
   colors,
   onBack,
   demoEntries,
-}: PersonalizationDemoScreenProps): React.JSX.Element {
+}: OptimizationDemoScreenProps): React.JSX.Element {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.backgroundColor }]}>
       <StatusBar barStyle={useColorScheme() === 'dark' ? 'light-content' : 'dark-content'} />
@@ -82,7 +82,7 @@ export function PersonalizationDemoScreen({
         <TouchableOpacity onPress={onBack} style={styles.backButton} testID="backButton">
           <Text style={[styles.backButtonText, { color: colors.successColor }]}>← Back</Text>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.textColor }]}>Personalization Demo</Text>
+        <Text style={[styles.headerTitle, { color: colors.textColor }]}>Optimization Demo</Text>
       </View>
 
       <OptimizationScrollProvider testID="demoScrollView">
@@ -90,63 +90,51 @@ export function PersonalizationDemoScreen({
           <Text style={[styles.sectionTitle, { color: colors.textColor }]}>PreviewPanel Demo</Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor }]}>
             Open the PreviewPanel to toggle audience overrides or select specific variants. The
-            cards below will update in real-time to show the resolved personalized content.
+            cards below will update in real-time to show the resolved optimized content.
           </Text>
           <Text style={[styles.sectionText, { color: colors.mutedTextColor, marginTop: 8 }]}>
-            Each card represents a different personalization type: Device Type, Visitor Type,
-            Location, and Custom Event triggers.
+            Each card represents a different optimization type: Device Type, Visitor Type, Location,
+            and Custom Event triggers.
           </Text>
         </View>
 
         <OptimizedEntry
           entry={demoEntries.deviceType}
-          style={styles.personalizationWrapper}
+          style={styles.optimizedEntryWrapper}
           testID="deviceTypeCard"
         >
           {(resolvedEntry) => (
-            <ContentCard
-              entry={resolvedEntry}
-              label="Device Type Personalization"
-              color="#6366f1"
-            />
+            <ContentCard entry={resolvedEntry} label="Device Type Optimization" color="#6366f1" />
           )}
         </OptimizedEntry>
 
         <OptimizedEntry
           entry={demoEntries.visitorType}
-          style={styles.personalizationWrapper}
+          style={styles.optimizedEntryWrapper}
           testID="visitorTypeCard"
         >
           {(resolvedEntry) => (
-            <ContentCard
-              entry={resolvedEntry}
-              label="Visitor Type Personalization"
-              color="#8b5cf6"
-            />
+            <ContentCard entry={resolvedEntry} label="Visitor Type Optimization" color="#8b5cf6" />
           )}
         </OptimizedEntry>
 
         <OptimizedEntry
           entry={demoEntries.location}
-          style={styles.personalizationWrapper}
+          style={styles.optimizedEntryWrapper}
           testID="locationCard"
         >
           {(resolvedEntry) => (
-            <ContentCard entry={resolvedEntry} label="Location Personalization" color="#10b981" />
+            <ContentCard entry={resolvedEntry} label="Location Optimization" color="#10b981" />
           )}
         </OptimizedEntry>
 
         <OptimizedEntry
           entry={demoEntries.customEvent}
-          style={styles.personalizationWrapper}
+          style={styles.optimizedEntryWrapper}
           testID="customEventCard"
         >
           {(resolvedEntry) => (
-            <ContentCard
-              entry={resolvedEntry}
-              label="Custom Event Personalization"
-              color="#f59e0b"
-            />
+            <ContentCard entry={resolvedEntry} label="Custom Event Optimization" color="#f59e0b" />
           )}
         </OptimizedEntry>
 
@@ -193,7 +181,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 22,
   },
-  personalizationWrapper: {
+  optimizedEntryWrapper: {
     marginHorizontal: 16,
     marginVertical: 8,
   },

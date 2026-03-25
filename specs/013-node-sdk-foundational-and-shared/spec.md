@@ -129,8 +129,8 @@ constants, and transitive re-exports.
 - **FR-017**: Package build output MUST include bundled ESM/CJS runtime artifacts (with source maps)
   plus dual declaration artifacts (`.d.mts` and `.d.cts`) for configured entrypoints.
 - **FR-018**: Inherited stateless methods (`identify`, `page`, `screen`, `track`, `trackView`,
-  `trackClick`, `trackHover`, `trackFlagView`, `getFlag`, `personalizeEntry`, `getMergeTagValue`)
-  MUST preserve `CoreStateless` semantics.
+  `trackClick`, `trackHover`, `trackFlagView`, `getFlag`, `resolveOptimizedEntry`,
+  `getMergeTagValue`) MUST preserve `CoreStateless` semantics.
 
 ### Key Entities _(include if feature involves data)_
 

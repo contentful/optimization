@@ -27,7 +27,7 @@ import { MergeTagDetailCard } from './components/MergeTagDetailCard'
 import { SDKConfigCard } from './components/SDKConfigCard'
 import { SDKStatusCard } from './components/SDKStatusCard'
 import { ENV_CONFIG } from './env.config'
-import { PersonalizationDemoScreen } from './PersonalizationDemoScreen'
+import { OptimizationDemoScreen } from './OptimizationDemoScreen'
 import { TestTrackingScreen } from './TestTrackingScreen'
 import type { SDKInfo, ThemeColors } from './types'
 import {
@@ -38,7 +38,7 @@ import {
   initializeSDK,
 } from './utils/sdkHelpers'
 
-type ScreenType = 'home' | 'tracking' | 'personalization'
+type ScreenType = 'home' | 'tracking' | 'optimization'
 
 function getThemeColors(isDarkMode: boolean): ThemeColors {
   return {
@@ -139,7 +139,7 @@ function App(): React.JSX.Element {
   const [sdkInfo, setSdkInfo] = useState<SDKInfo | null>(null)
   const [sdk, setSdk] = useState<ContentfulOptimization | null>(null)
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home')
-  const [personalizedEntry, setPersonalizedEntry] = useState<Entry | null>(null)
+  const [optimizedEntry, setOptimizedEntry] = useState<Entry | null>(null)
   const [productEntry, setProductEntry] = useState<Entry | null>(null)
   const [mergeTagEntry, setMergeTagEntry] = useState<Entry | null>(null)
   const [profile, setProfile] = useState<Profile | undefined>(undefined)
@@ -225,7 +225,7 @@ function App(): React.JSX.Element {
   const fetchEntries = async (): Promise<void> => {
     setEntriesLoading(true)
     try {
-      await fetchEntriesFromMockServer(setPersonalizedEntry, setProductEntry)
+      await fetchEntriesFromMockServer(setOptimizedEntry, setProductEntry)
     } catch (error) {
       setSdkError(
         `Failed to fetch entries: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -240,8 +240,8 @@ function App(): React.JSX.Element {
     void fetchEntries()
   }
 
-  const handleDemoPersonalization = (): void => {
-    setCurrentScreen('personalization')
+  const handleOptimizationDemo = (): void => {
+    setCurrentScreen('optimization')
     setDemoEntriesLoading(true)
     fetchDemoEntries()
       .then((entries) => {
@@ -261,26 +261,26 @@ function App(): React.JSX.Element {
     setCurrentScreen('home')
   }
 
-  if (currentScreen === 'personalization' && sdk && demoEntries) {
+  if (currentScreen === 'optimization' && sdk && demoEntries) {
     return (
       <OptimizationRoot instance={sdk} previewPanel={{ enabled: true, contentfulClient }}>
-        <PersonalizationDemoScreen colors={colors} onBack={handleBack} demoEntries={demoEntries} />
+        <OptimizationDemoScreen colors={colors} onBack={handleBack} demoEntries={demoEntries} />
       </OptimizationRoot>
     )
   }
 
-  if (currentScreen === 'personalization' && demoEntriesLoading) {
+  if (currentScreen === 'optimization' && demoEntriesLoading) {
     return <LoadingScreen colors={colors} isDarkMode={isDarkMode} />
   }
 
-  if (currentScreen === 'tracking' && sdk && personalizedEntry && productEntry) {
+  if (currentScreen === 'tracking' && sdk && optimizedEntry && productEntry) {
     return (
       <OptimizationRoot instance={sdk} previewPanel={{ enabled: true, contentfulClient }}>
         <TestTrackingScreen
           colors={colors}
           onBack={handleBack}
           sdk={sdk}
-          personalizedEntry={personalizedEntry}
+          optimizedEntry={optimizedEntry}
           productEntry={productEntry}
         />
       </OptimizationRoot>
@@ -335,19 +335,17 @@ function App(): React.JSX.Element {
           </View>
 
           <View style={[styles.card, { backgroundColor: colors.cardBackground }]}>
-            <Text style={[styles.cardTitle, { color: colors.textColor }]}>
-              Personalization Demo
-            </Text>
+            <Text style={[styles.cardTitle, { color: colors.textColor }]}>Optimization Demo</Text>
             <Text style={[styles.description, { color: colors.mutedTextColor }]}>
-              View personalized content cards that update in real-time when you change variant
+              View optimized content cards that update in real-time when you change variant
               selections in the PreviewPanel.
             </Text>
             <TouchableOpacity
               style={[styles.button, { backgroundColor: '#10b981' }]}
-              onPress={handleDemoPersonalization}
-              testID="demoPersonalizationButton"
+              onPress={handleOptimizationDemo}
+              testID="demoOptimizationButton"
             >
-              <Text style={styles.buttonText}>Demo Personalization</Text>
+              <Text style={styles.buttonText}>Demo Optimization</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

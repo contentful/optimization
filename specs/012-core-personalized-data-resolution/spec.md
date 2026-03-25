@@ -93,7 +93,7 @@ and dot selector variants.
 ### Functional Requirements
 
 - **FR-001**: `PersonalizationBase` MUST expose resolver-backed methods `getFlag`,
-  `personalizeEntry`, and `getMergeTagValue`.
+  `resolveOptimizedEntry`, and `getMergeTagValue`.
 - **FR-002**: `FlagsResolver.resolve` MUST return `{}` when `changes` is `undefined`.
 - **FR-003**: `FlagsResolver.resolve` MUST flatten change entries into a key-value map keyed by
   `change.key`.
@@ -101,23 +101,23 @@ and dot selector variants.
   is an object containing an object-valued `value` property.
 - **FR-005**: `PersonalizationBase.getFlag(name, changes)` MUST return
   `PersonalizationBase.flagsResolver.resolve(changes)[name]`.
-- **FR-006**: `PersonalizedEntryResolver.getPersonalizationEntry` MUST match selected `experienceId`
+- **FR-006**: `OptimizedEntryResolver.getOptimizationEntry` MUST match selected `experienceId`
   values to personalization entries by `nt_experience_id`.
-- **FR-007**: `PersonalizedEntryResolver.getSelectedPersonalization` MUST return the selected
+- **FR-007**: `OptimizedEntryResolver.getSelectedPersonalization` MUST return the selected
   personalization matching the personalization entry `nt_experience_id`.
-- **FR-008**: `PersonalizedEntryResolver.getSelectedVariant` MUST locate non-hidden replacement
+- **FR-008**: `OptimizedEntryResolver.getSelectedVariant` MUST locate non-hidden replacement
   components whose baseline entry ID matches the target entry and return variant at
   `selectedVariantIndex - 1`.
-- **FR-009**: `PersonalizedEntryResolver.getSelectedVariantEntry` MUST resolve variant entry by
+- **FR-009**: `OptimizedEntryResolver.getSelectedVariantEntry` MUST resolve variant entry by
   selected variant ID from `nt_variants` and validate the resolved object as a Contentful `Entry`.
-- **FR-010**: `PersonalizedEntryResolver.resolve` MUST return baseline entry when selected
+- **FR-010**: `OptimizedEntryResolver.resolve` MUST return baseline entry when selected
   personalizations are missing/empty.
-- **FR-011**: `PersonalizedEntryResolver.resolve` MUST return baseline entry when input entry is not
-  a personalized entry shape.
-- **FR-012**: `PersonalizedEntryResolver.resolve` MUST treat selected variant index `0` as baseline.
-- **FR-013**: `PersonalizedEntryResolver.resolve` MUST return baseline entry when personalization
+- **FR-011**: `OptimizedEntryResolver.resolve` MUST return baseline entry when input entry is not an
+  optimized entry shape.
+- **FR-012**: `OptimizedEntryResolver.resolve` MUST treat selected variant index `0` as baseline.
+- **FR-013**: `OptimizedEntryResolver.resolve` MUST return baseline entry when personalization
   entry, variant config, or linked variant entry cannot be resolved.
-- **FR-014**: `PersonalizedEntryResolver.resolve` MUST return
+- **FR-014**: `OptimizedEntryResolver.resolve` MUST return
   `{ entry: variantEntry, personalization: selectedPersonalization }` when variant resolution
   succeeds.
 - **FR-015**: `MergeTagValueResolver.resolve` MUST return `undefined` when supplied entry is not a
@@ -133,14 +133,14 @@ and dot selector variants.
   fails or no value is resolved from profile selectors.
 - **FR-020**: `PersonalizationStateful` overrides for resolver methods MUST default omitted resolver
   inputs from current signals (`changes`, `selectedPersonalizations`, `profile`).
-- **FR-021**: Core-level resolver wrappers (`CoreBase.getFlag`, `.personalizeEntry`,
+- **FR-021**: Core-level resolver wrappers (`CoreBase.getFlag`, `.resolveOptimizedEntry`,
   `.getMergeTagValue`) MUST delegate to personalization resolver methods without altering payload
   shape.
 
 ### Key Entities _(include if feature involves data)_
 
 - **FlagsResolver**: Utility mapping `ChangeArray` inputs to flattened flag lookup maps.
-- **PersonalizedEntryResolver**: Multi-step resolver selecting baseline versus variant Contentful
+- **OptimizedEntryResolver**: Multi-step resolver selecting baseline versus variant Contentful
   entries.
 - **MergeTagValueResolver**: Utility resolving merge-tag IDs against profile data with fallback
   semantics.

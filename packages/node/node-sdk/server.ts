@@ -178,9 +178,9 @@ app.get('/', limiter, async (req, res) => {
         })
       }
 
-      const personalizedEntry = sdk.personalizeEntry(entry, selectedPersonalizations)
+      const optimizedEntry = sdk.resolveOptimizedEntry(entry, selectedPersonalizations)
 
-      entries.set(entryId, personalizedEntry)
+      entries.set(entryId, optimizedEntry)
     }),
   )
 

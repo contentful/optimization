@@ -13,7 +13,7 @@ import type { UseOptimizationResult } from '../hooks/useOptimization'
 
 export type TestEntry = Entry
 export type PersonalizationState = SelectedPersonalizationArray | undefined
-export type PersonalizeEntry = (
+export type ResolveOptimizedEntry = (
   entry: TestEntry,
   selectedPersonalizations: PersonalizationState,
 ) => ResolvedData<EntrySkeletonType>
@@ -30,7 +30,7 @@ interface ObservableLike<T> {
 type RuntimeSubscriber<T> = (value: T) => void
 
 export interface RuntimeOptimization extends OptimizationSdk {
-  personalizeEntry: PersonalizeEntry
+  resolveOptimizedEntry: ResolveOptimizedEntry
   states: OptimizationSdk['states'] & {
     canPersonalize: ObservableLike<boolean>
     selectedPersonalizations: ObservableLike<PersonalizationState>
@@ -93,7 +93,7 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
       await Promise.resolve()
       return undefined
     },
-    personalizeEntry: (entry: Entry) => ({ entry }),
+    resolveOptimizedEntry: (entry: Entry) => ({ entry }),
     reset: () => undefined,
     states: {
       blockedEventStream: createObservable(undefined),
@@ -131,7 +131,7 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
   }
 }
 
-export function createRuntime(personalizeEntry: PersonalizeEntry): {
+export function createRuntime(resolveOptimizedEntry: ResolveOptimizedEntry): {
   emit: (value: PersonalizationState) => Promise<void>
   optimization: RuntimeOptimization
 } {
@@ -141,7 +141,7 @@ export function createRuntime(personalizeEntry: PersonalizeEntry): {
   let canPersonalize = false
 
   const optimization = createOptimizationSdk({
-    personalizeEntry,
+    resolveOptimizedEntry,
     states: {
       canPersonalize: {
         get current() {

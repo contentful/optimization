@@ -59,7 +59,7 @@ export function isSearch(element?: Element): element is Search {
 }
 
 /**
- * Search input used to filter preview audiences and personalizations.
+ * Search input used to filter preview audiences and optimizations.
  *
  * Emits {@link SEARCH_CHANGE} with the normalized query whenever the user
  * types or clears the current search query.
@@ -75,11 +75,11 @@ export class Search extends LitElement {
 
   /** Accessible label for the search input. */
   @property({ type: String })
-  accessor label = 'Search Audiences and Personalizations'
+  accessor label = 'Search Audiences and Optimizations'
 
   /** Placeholder shown when the search input is empty. */
   @property({ type: String })
-  accessor placeholder = 'Search Audiences and Personalizations'
+  accessor placeholder = 'Search Audiences and Optimizations'
 
   /** @internal */
   private _setValue(value: string): void {

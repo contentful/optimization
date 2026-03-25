@@ -5,10 +5,10 @@ import {
   type EntryReplacementComponent,
   EntryReplacementVariant,
   type InlineVariableComponent,
-  type PersonalizationComponent,
-} from './PersonalizationConfig'
-import { PersonalizationEntry } from './PersonalizationEntry'
-import { PersonalizedEntry } from './PersonalizedEntry'
+  type OptimizationComponent,
+} from './OptimizationConfig'
+import { OptimizationEntry } from './OptimizationEntry'
+import { OptimizedEntry } from './OptimizedEntry'
 
 /**
  * Type guard that checks whether the given value is a Contentful {@link Entry},
@@ -75,7 +75,7 @@ export function isEntryReplacementVariant(variant: unknown): variant is EntryRep
  * @public
  */
 export function isEntryReplacementComponent(
-  component: PersonalizationComponent,
+  component: OptimizationComponent,
 ): component is EntryReplacementComponent {
   return component.type === 'EntryReplacement' || component.type === undefined
 }
@@ -96,47 +96,47 @@ export function isEntryReplacementComponent(
  * @public
  */
 export function isInlineVariableComponent(
-  component: PersonalizationComponent,
+  component: OptimizationComponent,
 ): component is InlineVariableComponent {
   return component.type === 'InlineVariable'
 }
 
 /**
- * Type guard for {@link PersonalizationEntry}.
+ * Type guard for {@link OptimizationEntry}.
  *
  * @param entry - Contentful entry or link to test.
- * @returns `true` if the value conforms to {@link PersonalizationEntry}, otherwise `false`.
+ * @returns `true` if the value conforms to {@link OptimizationEntry}, otherwise `false`.
  *
  * @example
  * ```ts
- * if (isPersonalizationEntry(entry)) {
+ * if (isOptimizationEntry(entry)) {
  *   console.log(entry.fields.nt_name);
  * }
  * ```
  *
  * @public
  */
-export function isPersonalizationEntry(entry: unknown): entry is PersonalizationEntry {
-  return PersonalizationEntry.safeParse(entry).success
+export function isOptimizationEntry(entry: unknown): entry is OptimizationEntry {
+  return OptimizationEntry.safeParse(entry).success
 }
 
 /**
- * Type guard for {@link PersonalizedEntry}.
+ * Type guard for {@link OptimizedEntry}.
  *
  * @param entry - Contentful entry to test.
- * @returns `true` if the entry conforms to {@link PersonalizedEntry}, otherwise `false`.
+ * @returns `true` if the entry conforms to {@link OptimizedEntry}, otherwise `false`.
  *
  * @example
  * ```ts
- * if (isPersonalizedEntry(entry)) {
+ * if (isOptimizedEntry(entry)) {
  *   console.log(entry.fields.nt_experiences);
  * }
  * ```
  *
  * @public
  */
-export function isPersonalizedEntry(entry: unknown): entry is PersonalizedEntry {
-  return PersonalizedEntry.safeParse(entry).success
+export function isOptimizedEntry(entry: unknown): entry is OptimizedEntry {
+  return OptimizedEntry.safeParse(entry).success
 }
 
 /**

@@ -3,8 +3,8 @@ import type {
   AudienceEntrySkeleton,
   ChangeArray,
   OptimizationData,
-  PersonalizationEntry,
-  PersonalizationEntrySkeleton,
+  OptimizationEntry,
+  OptimizationEntrySkeleton,
   SelectedPersonalizationArray,
 } from '@contentful/optimization-web/api-schemas'
 import type {
@@ -19,7 +19,7 @@ import {
 import type { ChainModifiers, ContentfulClientApi, Entry } from 'contentful'
 import {
   AUDIENCE_SWITCH_CHANGE,
-  PERSONALIZATION_CHANGE,
+  OPTIMIZATION_CHANGE,
   defineAudience,
   isAudience,
   isAudienceSwitchChangeEvent,
@@ -28,6 +28,7 @@ import { defineAudienceSwitch } from './components/audience-switch'
 import { defineAudiences } from './components/audiences'
 import { defineIndicator } from './components/indicator'
 import { defineMatchedText } from './components/matched-text'
+import { defineOptimization, isRecordRadioGroupChangeEvent } from './components/optimization'
 import {
   PANEL_DRAWER_TOGGLE,
   PANEL_RESET,
@@ -36,9 +37,8 @@ import {
   isDrawerToggleEvent,
   isPanel,
 } from './components/panel'
-import { definePersonalization, isRecordRadioGroupChangeEvent } from './components/personalization'
 import { defineSearch } from './components/search'
-import { getAllEntries, isAudienceEntry, isPersonalizationEntry } from './lib/entries'
+import { getAllEntries, isAudienceEntry, isOptimizationEntry } from './lib/entries'
 import { applyChangeOverrides, applyPersonalizationOverrides } from './lib/overrides'
 import { isChange, isSelectedPersonalization } from './lib/schemaGuards'
 import { createScopedLogger } from './logger'
@@ -133,7 +133,7 @@ function persistOverrideState(): void {
 /** @internal */
 function syncOverrides(
   panel: {
-    personalizationEntries: PersonalizationEntry[]
+    optimizationEntries: OptimizationEntry[]
     defaultSelectedPersonalizations: SelectedPersonalizationArray
     overrides: Map<string, number> | undefined
   },
@@ -157,7 +157,7 @@ function syncOverrides(
     )
     signals.changes.value = applyChangeOverrides(
       defaults.changes ?? [],
-      panel.personalizationEntries,
+      panel.optimizationEntries,
       overrides,
     )
   })
@@ -186,7 +186,7 @@ function canDefineComponents(): void {
  * @internal
  */
 interface AttachOptimizationPreviewPanelArgs {
-  /** Contentful client used to fetch audience and personalization entries. */
+  /** Contentful client used to fetch audience and optimization entries. */
   contentful: ContentfulClientApi<ChainModifiers>
   /** ContentfulOptimization Web SDK instance to register the preview panel with. */
   optimization: ContentfulOptimization
@@ -197,7 +197,7 @@ interface AttachOptimizationPreviewPanelArgs {
 /**
  * Attaches the ContentfulOptimization preview panel to the DOM as a Web Component.
  *
- * Registers all custom elements, fetches audiences and personalizations from
+ * Registers all custom elements, fetches audiences and optimization entries from
  * Contentful, wires up state interceptors, and appends the panel to
  * `document.body`.
  *
@@ -241,16 +241,16 @@ export default async function attachOptimizationPreviewPanel({
 
   defineIndicator()
   defineMatchedText()
-  definePersonalization()
+  defineOptimization()
   defineSearch()
   defineAudienceSwitch()
   defineAudience()
   defineAudiences()
   definePanel()
 
-  const [audiences, personalizationEntries]: [Entry[], Entry[]] = await Promise.all([
+  const [audiences, optimizationEntries]: [Entry[], Entry[]] = await Promise.all([
     getAllEntries<AudienceEntrySkeleton>(contentful, 'nt_audience'),
-    getAllEntries<PersonalizationEntrySkeleton>(contentful, 'nt_experience'),
+    getAllEntries<OptimizationEntrySkeleton>(contentful, 'nt_experience'),
   ])
 
   const panel = document.createElement(PANEL_TAG)
@@ -262,9 +262,8 @@ export default async function attachOptimizationPreviewPanel({
   panel.overrides = new Map(overrides)
   panel.defaultSelectedPersonalizations = [...(defaults.selectedPersonalizations ?? [])]
   panel.audiences = audiences.filter(isAudienceEntry)
-  panel.personalizationEntries = personalizationEntries.filter(
-    (personalization): personalization is PersonalizationEntry =>
-      isPersonalizationEntry(personalization),
+  panel.optimizationEntries = optimizationEntries.filter(
+    (optimization): optimization is OptimizationEntry => isOptimizationEntry(optimization),
   )
 
   contentfulOptimization.interceptors.state.add((states): OptimizationData => {
@@ -279,7 +278,7 @@ export default async function attachOptimizationPreviewPanel({
 
     return {
       ...otherStates,
-      changes: applyChangeOverrides(changes, panel.personalizationEntries, overrides),
+      changes: applyChangeOverrides(changes, panel.optimizationEntries, overrides),
       selectedPersonalizations: applyPersonalizationOverrides(selectedPersonalizations, overrides),
     }
   })
@@ -294,7 +293,7 @@ export default async function attachOptimizationPreviewPanel({
     signals.previewPanelOpen.value = open
   })
 
-  panel.addEventListener(PERSONALIZATION_CHANGE, (event: Event) => {
+  panel.addEventListener(OPTIMIZATION_CHANGE, (event: Event) => {
     if (!isRecordRadioGroupChangeEvent(event)) return
 
     const {
@@ -311,7 +310,7 @@ export default async function attachOptimizationPreviewPanel({
 
     for (const {
       fields: { nt_experience_id: experienceId },
-    } of target.personalizations) {
+    } of target.optimizations) {
       overrides.delete(experienceId)
     }
 
