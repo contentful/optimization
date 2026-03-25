@@ -90,8 +90,10 @@ const bridge: Bridge = {
     const coreConfig: CoreStatefulConfig = {
       clientId: config.clientId,
       environment: config.environment,
-      personalization: config.experienceBaseUrl ? { baseUrl: config.experienceBaseUrl } : undefined,
-      analytics: config.insightsBaseUrl ? { baseUrl: config.insightsBaseUrl } : undefined,
+      api: {
+        experienceBaseUrl: config.experienceBaseUrl,
+        insightsBaseUrl: config.insightsBaseUrl,
+      },
     }
 
     instance = new CoreStateful(coreConfig)
@@ -160,7 +162,10 @@ const bridge: Bridge = {
     }
 
     instance
-      .screen(payload)
+      .screen({
+        name: payload.name,
+        properties: (payload.properties ?? {}) as Record<string, never>,
+      })
       .then((data) => {
         onSuccess(JSON.stringify(data ?? null))
       })
