@@ -11,16 +11,16 @@ interface OptimizationContextValue {
 }
 
 /**
- * React Context that holds the ContentfulOptimization instance.
+ * React Context that holds the {@link ContentfulOptimization} instance.
  *
  * @internal
  */
 const OptimizationContext = createContext<OptimizationContextValue | null>(null)
 
 /**
- * Returns the ContentfulOptimization instance from the nearest {@link OptimizationProvider}.
+ * Returns the {@link ContentfulOptimization} instance from the nearest {@link OptimizationProvider}.
  *
- * @returns The current ContentfulOptimization instance
+ * @returns The current {@link ContentfulOptimization} instance
  *
  * @throws Error if called outside of an {@link OptimizationProvider}
  * @throws Error if the SDK is still initializing
@@ -48,8 +48,8 @@ export function useOptimization(): ContentfulOptimization {
 
   if (!context) {
     throw new Error(
-      'useOptimization must be used within an OptimizationProvider. ' +
-        'Make sure to wrap your component tree with <OptimizationProvider clientId="...">.',
+      'useOptimization must be used within an OptimizationProvider or OptimizationRoot. ' +
+        'Make sure to wrap your component tree with <OptimizationRoot> or <OptimizationProvider>.',
     )
   }
 

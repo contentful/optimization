@@ -207,10 +207,10 @@ The app connects to the mock server by default. Configuration is in `env.config.
 
 ## What This App Tests
 
-1. **SDK Initialization** - Verifies the Optimization SDK initializes correctly
+1. **SDK Initialization** - Verifies the Optimization React Native SDK initializes correctly
 2. **Profile Management** - Tests profile creation and updates
 3. **Merge Tag Resolution** - Demonstrates merge tag value resolution
-4. **Component Tracking** - Tests viewport-based analytics tracking
+4. **Entry Tracking** - Tests viewport-based analytics tracking
 5. **Personalization** - Shows personalized content rendering
 
 ## Available Scripts

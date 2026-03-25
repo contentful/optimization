@@ -4,9 +4,7 @@
   </a>
 </p>
 
-<h1 align="center">Contentful Personalization & Analytics</h1>
-
-<h3 align="center">Optimization React Native SDK</h3>
+<h1 align="center">Contentful Optimization React Native SDK</h1>
 
 <div align="center">
 
@@ -35,13 +33,19 @@ based on the [Optimization Core Library](../universal/core-sdk/README.md). This 
   - [Event Builder Options](#event-builder-options)
   - [Fetch Options](#fetch-options)
   - [Personalization Options](#personalization-options)
-- [Component Tracking](#component-tracking)
+- [Entry Tracking](#entry-tracking)
   - [`<OptimizedEntry />`](#optimizedentry-)
-  - [ScrollView vs Non-ScrollView Usage](#scrollview-vs-non-scrollview-usage)
-    - [Inside ScrollView (Recommended for Scrollable Content)](#inside-scrollview-recommended-for-scrollable-content)
-    - [Outside ScrollView (For Non-Scrollable Content)](#outside-scrollview-for-non-scrollable-content)
+  - [With vs Without OptimizationScrollProvider](#with-vs-without-optimizationscrollprovider)
+    - [With OptimizationScrollProvider (Recommended for Scrollable Content)](#with-optimizationscrollprovider-recommended-for-scrollable-content)
+    - [Without OptimizationScrollProvider (For Non-Scrollable Content)](#without-optimizationscrollprovider-for-non-scrollable-content)
   - [Custom Tracking Thresholds](#custom-tracking-thresholds)
   - [Manual Analytics Tracking](#manual-analytics-tracking)
+  - [`useInteractionTracking`](#useinteractiontracking)
+  - [`useTapTracking`](#usetaptracking)
+- [Screen Tracking](#screen-tracking)
+  - [`useScreenTracking`](#usescreentracking)
+  - [`useScreenTrackingCallback`](#usescreentrackingcallback)
+  - [`OptimizationNavigationContainer`](#optimizationnavigationcontainer)
 - [OptimizationRoot](#optimizationroot)
   - [Preview Panel](#preview-panel)
 - [Live Updates Behavior](#live-updates-behavior)
@@ -51,6 +55,7 @@ based on the [Optimization Core Library](../universal/core-sdk/README.md). This 
     - [2. Global Setting via OptimizationRoot](#2-global-setting-via-optimizationroot)
     - [3. Per-Component Override](#3-per-component-override)
   - [Priority Order](#priority-order)
+  - [`useLiveUpdates`](#useliveupdates)
 - [React Native-Specific Defaults](#react-native-specific-defaults)
   - [Persistence Behavior](#persistence-behavior)
 - [Offline Support](#offline-support)
@@ -97,13 +102,16 @@ const optimization = await ContentfulOptimization.create({
 
 ## Configuration
 
+The SDK communicates with two APIs: the **Experience API** (for personalization and variant
+resolution) and the **Insights API** (for analytics event ingestion).
+
 ### Top-level Configuration Options
 
 | Option              | Required? | Default                       | Description                                                  |
 | ------------------- | --------- | ----------------------------- | ------------------------------------------------------------ |
 | `allowedEventTypes` | No        | `['identify', 'screen']`      | Allow-listed event types permitted when consent is not set   |
 | `analytics`         | No        | See "Analytics Options"       | Configuration specific to the Analytics/Insights API         |
-| `clientId`          | Yes       | N/A                           | The Optimization API key                                     |
+| `clientId`          | Yes       | N/A                           | The Optimization client identifier                           |
 | `defaults`          | No        | `undefined`                   | Set of default state values applied on initialization        |
 | `environment`       | No        | `'main'`                      | The environment identifier                                   |
 | `eventBuilder`      | No        | See "Event Builder Options"   | Event builder configuration (channel/library metadata, etc.) |
@@ -131,7 +139,7 @@ Configuration method signatures:
 ### Event Builder Options
 
 Event builder options should only be supplied when building an SDK on top of the Optimization React
-Native SDK or any of its descendent SDKs.
+Native SDK or any of its descendant SDKs.
 
 | Option              | Required? | Default                                                               | Description                                                                        |
 | ------------------- | --------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
@@ -203,11 +211,10 @@ Configuration method signatures:
 > Call `ContentfulOptimization.create(...)` once per app runtime and share the returned instance. In
 > tests or hot-reload workflows, call `destroy()` before creating a replacement instance.
 
-## Component Tracking
+## Entry Tracking
 
-**Important:** When we refer to "component tracking," we're talking about tracking **Contentful
-entry components** (content entries in your CMS), NOT React Native UI components. The term
-"component" comes from Contentful's terminology for personalized content entries.
+Entry tracking refers to tracking **Contentful entries** (content entries in your CMS) for analytics
+purposes — views, taps, and variant resolution — not React Native UI components.
 
 ### `<OptimizedEntry />`
 
@@ -217,7 +224,7 @@ automatically:
 - Detects whether the entry is personalized (has `nt_experiences` field)
 - Resolves the correct variant for personalized entries based on user profile
 - Passes non-personalized entries through unchanged
-- Tracks component views when visibility and time thresholds are met
+- Tracks entry views when visibility and time thresholds are met
 - Tracks taps when enabled
 
 `children` accepts either a **render prop** `(resolvedEntry) => ReactNode` for accessing the
@@ -244,11 +251,11 @@ The component tracks when an entry:
 - Is at least **80% visible** in the viewport (configurable via `threshold` prop)
 - Has been viewed for **2000ms** (2 seconds, configurable via `viewTimeMs` prop)
 
-### ScrollView vs Non-ScrollView Usage
+### With vs Without OptimizationScrollProvider
 
 The tracking component works in two modes:
 
-#### Inside ScrollView (Recommended for Scrollable Content)
+#### With OptimizationScrollProvider (Recommended for Scrollable Content)
 
 When used inside a `<OptimizationScrollProvider>`, tracking uses the actual scroll position and
 viewport dimensions:
@@ -270,7 +277,7 @@ viewport dimensions:
 - Works for content that appears below the fold
 - Triggers when component scrolls into view
 
-#### Outside ScrollView (For Non-Scrollable Content)
+#### Without OptimizationScrollProvider (For Non-Scrollable Content)
 
 When used without `<OptimizationScrollProvider>`, tracking uses screen dimensions instead:
 
@@ -317,7 +324,8 @@ is ideal for:
 
 **Key Features:**
 
-- Tracks only once per component instance
+- The initial view event fires once per component mount; periodic duration updates continue while
+  visible
 - Works with or without `OptimizationScrollProvider` (automatically adapts)
 - Default: 80% visible for 2000ms (both configurable)
 - Tracking fires even if user never scrolls (checks on initial layout)
@@ -325,7 +333,8 @@ is ideal for:
 
 ### Manual Analytics Tracking
 
-You can also manually track events using the analytics API:
+For cases outside the `<OptimizedEntry />` component pattern — such as custom screens or
+non-Contentful content — you can manually track events using the analytics API:
 
 ```typescript
 import { useOptimization } from '@contentful/optimization-react-native'
@@ -344,6 +353,142 @@ function MyComponent() {
   return <Button onPress={trackManually} title="Track" />
 }
 ```
+
+### `useInteractionTracking`
+
+Returns the resolved interaction tracking configuration from the nearest
+`InteractionTrackingProvider` (set up by `OptimizationRoot`). Use this to check whether view or tap
+tracking is globally enabled:
+
+```tsx
+import { useInteractionTracking } from '@contentful/optimization-react-native'
+
+function DebugOverlay() {
+  const { views, taps } = useInteractionTracking()
+  return (
+    <Text>
+      Views: {String(views)}, Taps: {String(taps)}
+    </Text>
+  )
+}
+```
+
+### `useTapTracking`
+
+Low-level hook that detects taps on a View via raw touch events and emits `component_click`
+analytics events. `<OptimizedEntry />` uses this internally, but you can use it directly for custom
+tracking layouts:
+
+```tsx
+import { useTapTracking } from '@contentful/optimization-react-native'
+
+function TrackedEntry({ entry }: { entry: Entry }) {
+  const { onTouchStart, onTouchEnd } = useTapTracking({
+    entry,
+    enabled: true,
+  })
+
+  return (
+    <View onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <Text>{entry.fields.title}</Text>
+    </View>
+  )
+}
+```
+
+## Screen Tracking
+
+### `useScreenTracking`
+
+Hook for tracking screen views. By default, tracks the screen automatically when the component
+mounts. Set `trackOnMount: false` to disable automatic tracking and use the returned `trackScreen`
+function for manual control.
+
+```tsx
+import { useScreenTracking } from '@contentful/optimization-react-native'
+
+// Automatic tracking on mount (default)
+function HomeScreen() {
+  useScreenTracking({ name: 'Home' })
+  return <View>...</View>
+}
+
+// Manual tracking
+function DetailsScreen() {
+  const { trackScreen } = useScreenTracking({
+    name: 'Details',
+    trackOnMount: false,
+  })
+
+  useEffect(() => {
+    if (dataLoaded) {
+      trackScreen()
+    }
+  }, [dataLoaded])
+
+  return <View>...</View>
+}
+```
+
+### `useScreenTrackingCallback`
+
+Returns a stable callback to track screen views with dynamic names. Use this when screen names are
+not known at render time (e.g., from navigation state):
+
+```tsx
+import { useScreenTrackingCallback } from '@contentful/optimization-react-native'
+
+function DynamicScreen({ screenName }: { screenName: string }) {
+  const trackScreenView = useScreenTrackingCallback()
+
+  useEffect(() => {
+    trackScreenView(screenName, { source: 'deep-link' })
+  }, [screenName])
+
+  return <View>...</View>
+}
+```
+
+### `OptimizationNavigationContainer`
+
+Wraps React Navigation's `NavigationContainer` to automatically track screen views when the active
+route changes. Uses a render prop pattern so navigation props are spread onto the
+`NavigationContainer` without requiring a direct dependency on `@react-navigation/native`:
+
+```tsx
+import { NavigationContainer } from '@react-navigation/native'
+import { createNativeStackNavigator } from '@react-navigation/native-stack'
+import {
+  OptimizationNavigationContainer,
+  OptimizationProvider,
+} from '@contentful/optimization-react-native'
+
+const Stack = createNativeStackNavigator()
+
+function App() {
+  return (
+    <OptimizationProvider instance={optimization}>
+      <OptimizationNavigationContainer>
+        {(navigationProps) => (
+          <NavigationContainer {...navigationProps}>
+            <Stack.Navigator>
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="Details" component={DetailsScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        )}
+      </OptimizationNavigationContainer>
+    </OptimizationProvider>
+  )
+}
+```
+
+| Prop            | Required? | Default | Description                                                       |
+| --------------- | --------- | ------- | ----------------------------------------------------------------- |
+| `children`      | Yes       | N/A     | Render prop receiving `ref`, `onReady`, and `onStateChange`       |
+| `onStateChange` | No        | N/A     | Called when navigation state changes, after screen tracking fires |
+| `onReady`       | No        | N/A     | Called when navigation container is ready, after initial tracking |
+| `includeParams` | No        | `false` | Whether to include route params in screen event properties        |
 
 ## OptimizationRoot
 
@@ -374,6 +519,23 @@ function App() {
   )
 }
 ```
+
+`OptimizationRoot` also accepts a `trackEntryInteraction` prop to control global view and tap
+tracking for all `<OptimizedEntry />` components. By default, view tracking is enabled and tap
+tracking is disabled:
+
+```tsx
+<OptimizationRoot
+  clientId="your-client-id"
+  environment="your-environment"
+  trackEntryInteraction={{ views: true, taps: true }}
+>
+  {/* All OptimizedEntry components will track both views and taps */}
+</OptimizationRoot>
+```
+
+Individual `<OptimizedEntry />` components can override the global setting via their `trackViews`
+and `trackTaps` props.
 
 ### Preview Panel
 
@@ -493,6 +655,22 @@ The live updates setting is determined for a particular `<OptimizedEntry/>` comp
 | Closed        | `false`        | `true`         | Live updates ON  |
 | Closed        | `true`         | `false`        | Live updates OFF |
 | Closed        | `false`        | `undefined`    | Live updates OFF |
+
+### `useLiveUpdates`
+
+The `useLiveUpdates` hook provides read access to the live updates state from the nearest
+`LiveUpdatesProvider`. Use it to check the current global live updates setting or preview panel
+visibility:
+
+```tsx
+import { useLiveUpdates } from '@contentful/optimization-react-native'
+
+function MyComponent() {
+  const liveUpdates = useLiveUpdates()
+  const isLive = liveUpdates?.globalLiveUpdates ?? false
+  return <Text>{isLive ? 'Live' : 'Locked'}</Text>
+}
+```
 
 ## React Native-Specific Defaults
 

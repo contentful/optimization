@@ -25,7 +25,10 @@ const SCROLL_LOG_THRESHOLD = 50
 /**
  * Returns the current scroll position and viewport height from the nearest {@link OptimizationScrollProvider}.
  *
- * @returns The scroll context value, or `null` if not within a {@link OptimizationScrollProvider}
+ * @returns The scroll context value, or `null` if not within an {@link OptimizationScrollProvider}
+ *
+ * @remarks
+ * Useful for building custom scroll-position-dependent behaviors alongside Optimization tracking.
  *
  * @example
  * ```tsx
@@ -59,9 +62,9 @@ export interface OptimizationScrollProviderProps extends ScrollViewProps {
  * @returns A `ScrollView` wrapped in a scroll context provider
  *
  * @remarks
- * When {@link OptimizedEntry} components are placed inside a
- * `OptimizationScrollProvider`, they use the actual scroll position for visibility calculations.
- * Without a `OptimizationScrollProvider`, they fall back to screen dimensions.
+ * When {@link OptimizedEntry} components are placed inside an
+ * {@link OptimizationScrollProvider}, they use the actual scroll position for visibility calculations.
+ * Without an {@link OptimizationScrollProvider}, they fall back to screen dimensions.
  *
  * @example
  * ```tsx

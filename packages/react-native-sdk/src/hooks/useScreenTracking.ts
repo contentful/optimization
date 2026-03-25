@@ -24,7 +24,7 @@ export interface UseScreenTrackingOptions {
   /**
    * Whether to automatically track the screen on mount.
    *
-   * @defaultValue true
+   * @defaultValue `true`
    */
   trackOnMount?: boolean
 }

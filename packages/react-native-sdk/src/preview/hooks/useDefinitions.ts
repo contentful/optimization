@@ -13,8 +13,8 @@ interface UseDefinitionsResult {
  * Creates memoized audience/experience definitions and name lookup maps
  * from raw Contentful entries.
  *
- * @param audienceEntries - Raw Contentful `nt_audience` entries
- * @param experienceEntries - Raw Contentful `nt_experience` entries
+ * @param audienceEntries - Raw Contentful `nt_audience` entries (Contentful content type IDs created by the Optimization platform)
+ * @param experienceEntries - Raw Contentful `nt_experience` entries (Contentful content type IDs created by the Optimization platform)
  * @returns Definitions arrays and name maps
  *
  * @internal

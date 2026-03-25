@@ -18,7 +18,7 @@ type Callback = () => Promise<void> | void
  *   May return a promise.
  * @returns A function that removes the registered event listener when called.
  *
- * @public
+ * @internal
  * @remarks
  * - On iOS, `inactive` state occurs during transitions (e.g., opening control center).
  * - On Android, `inactive` state is not commonly used.

@@ -8,7 +8,7 @@ import type { StyleProp, ViewStyle } from 'react-native'
 /**
  * Audience definition from the optimization platform.
  *
- * @public
+ * @internal
  */
 export interface AudienceDefinition {
   /** Unique audience identifier */
@@ -22,7 +22,7 @@ export interface AudienceDefinition {
 /**
  * Variant distribution configuration for an experience.
  *
- * @public
+ * @internal
  */
 export interface VariantDistribution {
   /** Variant index (0 = baseline) */
@@ -42,7 +42,7 @@ export interface VariantDistribution {
 /**
  * Simplified Contentful entry structure for mapping entries to preview panel definitions.
  *
- * @public
+ * @internal
  */
 export interface ContentfulEntry {
   sys: {
@@ -59,7 +59,7 @@ export interface ContentfulEntry {
 /**
  * Entry collection response from the Contentful client, including pagination metadata.
  *
- * @public
+ * @internal
  */
 export interface ContentfulEntryCollection {
   items: ContentfulEntry[]
@@ -85,7 +85,7 @@ export interface ContentfulClient {
 /**
  * Experience definition representing a personalization or experiment configuration.
  *
- * @public
+ * @internal
  */
 export interface ExperienceDefinition {
   /** Unique experience identifier */
@@ -104,14 +104,14 @@ export interface ExperienceDefinition {
  * Three-state override value for audiences: `'on'` forces active, `'off'` forces
  * inactive, `'default'` defers to the SDK evaluation.
  *
- * @public
+ * @internal
  */
 export type AudienceOverrideState = 'on' | 'off' | 'default'
 
 /**
  * Combined audience data with associated experiences, used for audience-grouped display.
  *
- * @public
+ * @internal
  */
 export interface AudienceWithExperiences {
   /** Audience definition */
@@ -129,7 +129,7 @@ export interface AudienceWithExperiences {
 /**
  * Preview data containing all audience and experience definitions.
  *
- * @public
+ * @internal
  */
 export interface PreviewData {
   /** All available audience definitions */
@@ -145,7 +145,7 @@ export interface PreviewData {
 /**
  * Tracks a manual audience activation or deactivation override.
  *
- * @public
+ * @internal
  */
 export interface AudienceOverride {
   /** Audience ID being overridden */
@@ -161,7 +161,7 @@ export interface AudienceOverride {
 /**
  * Tracks a manual variant selection override.
  *
- * @public
+ * @internal
  */
 export interface PersonalizationOverride {
   /** Experience ID being overridden */
@@ -173,7 +173,7 @@ export interface PersonalizationOverride {
 /**
  * Combined override state managed by the preview panel.
  *
- * @public
+ * @internal
  */
 export interface OverrideState {
   /** Map of audience ID to override */
@@ -185,7 +185,7 @@ export interface OverrideState {
 /**
  * Preview state derived from SDK signals.
  *
- * @public
+ * @internal
  */
 export interface PreviewState {
   /** Current profile from SDK */
@@ -201,7 +201,7 @@ export interface PreviewState {
 /**
  * Actions available in the preview panel for overriding audiences and personalizations.
  *
- * @public
+ * @internal
  */
 export interface PreviewActions {
   /** Activate an audience override and set variant index to 1 for associated experiences */
@@ -232,7 +232,8 @@ export interface PreviewPanelProps {
   onVisibilityChange?: (isVisible: boolean) => void
   /**
    * Contentful client instance used to fetch audience and experience entries.
-   * The panel will automatically fetch nt_audience and nt_experience content types.
+   * The panel will automatically fetch `nt_audience` and `nt_experience` content types
+   * (Contentful content type IDs created by the Optimization platform).
    */
   contentfulClient: ContentfulClient
 }
@@ -252,7 +253,7 @@ export interface PreviewPanelOverlayProps extends Omit<PreviewPanelProps, 'style
 /**
  * Props for the {@link Section} component.
  *
- * @public
+ * @internal
  */
 export interface SectionProps {
   /** Section title */
@@ -270,7 +271,7 @@ export interface SectionProps {
 /**
  * Props for the {@link ListItem} component.
  *
- * @public
+ * @internal
  */
 export interface ListItemProps {
   /** Primary label text */
@@ -297,7 +298,7 @@ export interface ListItemProps {
 /**
  * Props for the {@link ActionButton} component.
  *
- * @public
+ * @internal
  */
 export interface ActionButtonProps {
   /** Button label */
@@ -315,7 +316,7 @@ export interface ActionButtonProps {
 /**
  * Props for the {@link Badge} component.
  *
- * @public
+ * @internal
  */
 export interface BadgeProps {
   /** Badge label */
@@ -335,7 +336,7 @@ export interface BadgeProps {
 /**
  * Props for the {@link JsonViewer} component.
  *
- * @public
+ * @internal
  */
 export interface JsonViewerProps {
   /** Data to display as JSON */
@@ -349,7 +350,7 @@ export interface JsonViewerProps {
 /**
  * Props for the {@link ProfileSection} component.
  *
- * @public
+ * @internal
  */
 export interface ProfileSectionProps {
   /** Profile data to display */
@@ -361,7 +362,7 @@ export interface ProfileSectionProps {
 /**
  * Props for the {@link PersonalizationsSection} component.
  *
- * @public
+ * @internal
  */
 export interface PersonalizationsSectionProps {
   /** Active personalizations */
@@ -379,7 +380,7 @@ export interface PersonalizationsSectionProps {
 /**
  * Props for the {@link OverridesSection} component.
  *
- * @public
+ * @internal
  */
 export interface OverridesSectionProps {
   /** Current override state */
@@ -401,7 +402,7 @@ export interface OverridesSectionProps {
 /**
  * Props for the {@link AudienceSection} component.
  *
- * @public
+ * @internal
  */
 export interface AudienceSectionProps {
   /** List of audiences with their experiences */
@@ -433,7 +434,7 @@ export interface AudienceSectionProps {
 /**
  * Props for the {@link AudienceItem} component.
  *
- * @public
+ * @internal
  */
 export interface AudienceItemProps {
   /** Audience with experiences data */
@@ -457,7 +458,7 @@ export interface AudienceItemProps {
 /**
  * Props for the {@link AudienceToggle} component.
  *
- * @public
+ * @internal
  */
 export interface AudienceToggleProps {
   /** Current toggle state */
@@ -473,7 +474,7 @@ export interface AudienceToggleProps {
 /**
  * Props for the {@link ExperienceCard} component.
  *
- * @public
+ * @internal
  */
 export interface ExperienceCardProps {
   /** Experience definition */
@@ -495,7 +496,7 @@ export interface ExperienceCardProps {
 /**
  * Props for the {@link VariantSelector} component.
  *
- * @public
+ * @internal
  */
 export interface VariantSelectorProps {
   /** Experience definition with distribution */
@@ -511,11 +512,6 @@ export interface VariantSelectorProps {
 }
 
 /**
- * Props for the {@link SearchBar} component.
- *
- * @public
- */
-/**
  * Configuration options for the preview panel feature.
  *
  * @public
@@ -528,7 +524,8 @@ export interface PreviewPanelConfig {
   enabled: boolean
 
   /**
-   * Contentful client instance used to fetch `nt_audience` and `nt_experience` entries.
+   * Contentful client instance used to fetch `nt_audience` and `nt_experience` entries
+   * (Contentful content type IDs created by the Optimization platform).
    */
   contentfulClient: ContentfulClient
 
@@ -551,7 +548,7 @@ export interface PreviewPanelConfig {
 /**
  * Props for the {@link SearchBar} component.
  *
- * @public
+ * @internal
  */
 export interface SearchBarProps {
   /** Current search value */
@@ -567,7 +564,7 @@ export interface SearchBarProps {
 /**
  * Props for the {@link QualificationIndicator} component.
  *
- * @public
+ * @internal
  */
 export interface QualificationIndicatorProps {
   /** Tooltip content */
