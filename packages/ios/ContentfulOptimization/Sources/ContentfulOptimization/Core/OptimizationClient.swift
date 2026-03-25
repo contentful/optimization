@@ -32,6 +32,11 @@ public final class OptimizationClient: ObservableObject {
     private let bridge = JSContextManager()
     private var cancellables = Set<AnyCancellable>()
 
+    #if canImport(UIKit)
+    private var appStateHandler: AppStateHandler?
+    #endif
+    private var networkMonitor: NetworkMonitor?
+
     private let eventSubject = PassthroughSubject<[String: Any], Never>()
 
     /// A publisher that emits analytics/personalization events from the JS bridge.
@@ -54,6 +59,12 @@ public final class OptimizationClient: ObservableObject {
     public func initialize(config: OptimizationConfig) throws {
         try bridge.initialize(config: config)
         isInitialized = true
+
+        // Start platform handlers
+        #if canImport(UIKit)
+        appStateHandler = AppStateHandler(client: self)
+        #endif
+        networkMonitor = NetworkMonitor(client: self)
     }
 
     /// Identify a user. Returns the server response as a dictionary.
@@ -241,6 +252,13 @@ public final class OptimizationClient: ObservableObject {
 
     /// Destroy the SDK instance and release all resources.
     public func destroy() {
+        #if canImport(UIKit)
+        appStateHandler?.stop()
+        appStateHandler = nil
+        #endif
+        networkMonitor?.stop()
+        networkMonitor = nil
+
         bridge.destroy()
         isInitialized = false
         state = .empty
