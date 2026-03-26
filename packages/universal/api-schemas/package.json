@@ -22,12 +22,22 @@
   "files": [
     "dist/**/*"
   ],
+  "buildTools": {
+    "bundleSize": {
+      "gzipBudgets": {
+        "index.cjs": 5500,
+        "index.mjs": 3400
+      }
+    }
+  },
   "scripts": {
     "build": "pnpm clean; pnpm build:dist",
     "build:ci": "pnpm build:dist",
     "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
     "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist",
     "clean": "rimraf ./.rsdoctor ./.rslib ./dist .tsbuildinfo",
+    "size:check": "pnpm build:dist && build-tools bundle-size",
+    "size:report": "build-tools bundle-size --report-only",
     "test:unit": "rstest run",
     "typecheck": "tsc --noEmit"
   },

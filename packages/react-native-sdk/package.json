@@ -97,12 +97,22 @@
   "files": [
     "dist/**/*"
   ],
+  "buildTools": {
+    "bundleSize": {
+      "gzipBudgets": {
+        "index.cjs": 27000,
+        "index.mjs": 25500
+      }
+    }
+  },
   "scripts": {
     "build": "pnpm clean; pnpm build:dist",
     "build:ci": "pnpm build:dist",
     "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
     "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist",
     "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo",
+    "size:check": "pnpm build:dist && build-tools bundle-size",
+    "size:report": "build-tools bundle-size --report-only",
     "test:unit": "rstest run --coverage",
     "typecheck": "tsc --noEmit",
     "dev:android": "cd dev && react-native run-android",

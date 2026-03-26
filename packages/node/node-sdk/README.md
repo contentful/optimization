@@ -74,6 +74,19 @@ Configure and initialize the Optimization Node SDK:
 const optimization = new ContentfulOptimization({ clientId: 'abc123' })
 ```
 
+## Development Harness
+
+The package-local dev harness runs from `packages/node/node-sdk/dev/` and reads `.env` from this
+package directory.
+
+1. Start from `.env.example` and create or update `packages/node/node-sdk/.env`.
+2. Prefer the repo-standard `PUBLIC_...` variable names shown in `.env.example`.
+3. Start the harness from the repo root:
+
+   ```sh
+   pnpm --filter @contentful/optimization-node dev
+   ```
+
 ## Reference Implementations
 
 Reference implementations illustrate how the SDK may be used under common scenarios, as well as
