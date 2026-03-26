@@ -4,5 +4,5 @@
     "types": ["@rstest/core/globals"]
   },
   "extends": "../../../tsconfig.base.json",
-  "include": ["./src/**/*", "./src/**/*.json"]
+  "include": ["./src/**/*", "./src/**/*.json", "./dev/**/*"]
 }

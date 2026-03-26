@@ -45,7 +45,8 @@ pnpm dev
 - `rslib`/`rsbuild`/`rstest`/TypeScript baseline aligned with Web SDK patterns
 - core provider/root/context primitives in `src/`
 - `OptimizedEntry` component with loading-state support and Web SDK data-attribute tracking
-- scaffold dev dashboard harness in `dev/` for consent, identify/reset, state, events, and entries
+- scaffold dev dashboard harness with the host shell in `dev/` and the React app in `dev/app/` for
+  consent, identify/reset, state, events, and entries
 
 ## Usage
 
@@ -168,9 +169,10 @@ Automatic page events can be enriched with static and dynamic payloads before ca
 - This feature is implemented through page payload composition only; no interceptor setup is
   required or documented for it.
 
-The package `dev/` harness remains an rsbuild React app and now mounts the React Router adapter for
-interactive local verification. Other router adapters are still covered primarily through unit tests
-and the integration examples above.
+The package `dev/` harness keeps the host HTML shell and rsbuild config at the top level, with the
+React app itself under `dev/app/`. It mounts the React Router adapter for interactive local
+verification. Other router adapters are still covered primarily through unit tests and the
+integration examples above.
 
 The Next.js App Router adapter:
 
@@ -225,7 +227,7 @@ adapter and does not use interceptors.
 The React Router adapter:
 
 ```tsx
-import { Outlet } from 'react-router-dom'
+import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
 import { OptimizationRoot } from '@contentful/optimization-react-web'
 import { ReactRouterAutoPageTracker } from '@contentful/optimization-react-web/router/react-router'
 
@@ -244,11 +246,30 @@ export function AppLayout() {
     </OptimizationRoot>
   )
 }
+
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: <AppLayout />,
+    children: [
+      {
+        index: true,
+        element: <HomePage />,
+      },
+    ],
+  },
+])
+
+export function AppRouter() {
+  return <RouterProvider router={router} />
+}
 ```
 
 Mount `ReactRouterAutoPageTracker` once inside the `react-router-dom` router tree and inside the
-optimization provider tree, typically in your root layout route. The adapter emits on the first
-render and on `pathname + search + hash` changes.
+optimization provider tree, typically in your root layout route. The adapter currently depends on
+`useMatches()`, so it must run under a React Router data router such as `createBrowserRouter` with
+`RouterProvider`, not a plain `BrowserRouter`. It emits on the first render and on
+`pathname + search + hash` changes.
 
 ```tsx
 <ReactRouterAutoPageTracker

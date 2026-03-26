@@ -41,13 +41,24 @@
   "files": [
     "dist/**/*"
   ],
+  "buildTools": {
+    "bundleSize": {
+      "gzipBudgets": {
+        "contentful-optimization-web-preview-panel.umd.js": 38500,
+        "index.cjs": 27500,
+        "index.mjs": 26500
+      }
+    }
+  },
   "scripts": {
     "build": "pnpm clean && pnpm build:dist",
     "build:ci": "pnpm build:dist",
     "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
     "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist",
     "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo",
-    "dev": "rsbuild dev --host 0.0.0.0 -c rsbuild.config.ts",
+    "dev": "rsbuild dev --host 0.0.0.0 -c dev/rsbuild.config.ts",
+    "size:check": "pnpm build:dist && build-tools bundle-size",
+    "size:report": "build-tools bundle-size --report-only",
     "test:unit": "echo \"TODO: Unit tests\"",
     "typecheck": "tsc --noEmit"
   },

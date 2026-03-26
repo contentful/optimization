@@ -3,5 +3,5 @@
     "lib": ["ESNext", "DOM", "DOM.Iterable"]
   },
   "extends": "../../../tsconfig.base.json",
-  "include": ["./src/**/*", "./src/**/*.json"]
+  "include": ["./src/**/*", "./src/**/*.json", "./dev/**/*"]
 }
