@@ -123,8 +123,8 @@
   "scripts": {
     "build": "pnpm clean && pnpm build:dist",
     "build:ci": "pnpm build:dist",
-    "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
-    "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist",
+    "build:dist": "rslib build && build-tools emit-dual-dts ./dist && build-tools emit-dual-dts ./dist/router",
+    "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist && build-tools emit-dual-dts ./dist/router",
     "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo",
     "dev": "rsbuild dev --host 0.0.0.0 -c dev/rsbuild.config.ts",
     "size:check": "pnpm build:dist && build-tools bundle-size",
