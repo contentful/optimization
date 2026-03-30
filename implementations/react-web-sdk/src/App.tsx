@@ -1,7 +1,7 @@
 import { useOptimizationContext } from '@contentful/optimization-react-web'
 import type { Profile } from '@contentful/optimization-react-web/api-schemas'
 import { type JSX, useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Link, Navigate, Route, Routes, useOutletContext } from 'react-router-dom'
 import {
   ENTRY_IDS,
   LIVE_UPDATES_ENTRY_ID,
@@ -9,16 +9,22 @@ import {
   PAGE_TWO_MANUAL_ENTRY_ID,
 } from './config/entries'
 import { HOME_PATH, PAGE_TWO_PATH } from './config/routes'
+import { HomePage } from './pages/HomePage'
+import { PageTwoPage } from './pages/PageTwoPage'
 import { fetchEntries, getContentfulConfigError } from './services/contentfulClient'
 import type { ContentfulEntry } from './types/contentful'
+
+interface OutletContext {
+  globalLiveUpdates: boolean
+  onToggleGlobalLiveUpdates: () => void
+}
 
 function isIdentifiedProfile(profile: Profile | undefined): boolean {
   if (profile === undefined) {
     return false
   }
 
-  const { traits } = profile
-  return Boolean(traits.identified)
+  return Boolean(profile.traits.identified)
 }
 
 function hasEntries(entries: ContentfulEntry[]): boolean {
@@ -31,10 +37,11 @@ function toEntryMap(entries: ContentfulEntry[]): Map<string, ContentfulEntry> {
 
 export default function App(): JSX.Element {
   const { sdk, isReady, error } = useOptimizationContext()
-  const location = useLocation()
+  const { onToggleGlobalLiveUpdates } = useOutletContext<OutletContext>()
 
   const [consent, setConsent] = useState<boolean | undefined>(undefined)
   const [profile, setProfile] = useState<Profile | undefined>(undefined)
+  const [selectedOptimizationCount, setSelectedOptimizationCount] = useState(0)
   const [entries, setEntries] = useState<ContentfulEntry[]>([])
   const [entriesError, setEntriesError] = useState<string | null>(null)
 
@@ -51,9 +58,14 @@ export default function App(): JSX.Element {
       setProfile(value)
     })
 
+    const selectedOptSub = sdk.states.selectedOptimizations.subscribe((value) => {
+      setSelectedOptimizationCount(Array.isArray(value) ? value.length : 0)
+    })
+
     return () => {
       consentSub.unsubscribe()
       profileSub.unsubscribe()
+      selectedOptSub.unsubscribe()
     }
   }, [isReady, sdk])
 
@@ -153,58 +165,27 @@ export default function App(): JSX.Element {
         <Route
           path={HOME_PATH}
           element={
-            <p data-testid="home-placeholder">
-              {`Home page — entries: ${entries.length}, identified: ${String(isIdentified)}, current path: ${location.pathname}`}
-            </p>
+            <HomePage
+              consent={consent}
+              entriesById={entriesById}
+              isIdentified={isIdentified}
+              liveUpdatesBaselineEntry={liveUpdatesBaselineEntry}
+              selectedOptimizationCount={selectedOptimizationCount}
+              onConsentChange={handleConsent}
+              onIdentify={handleIdentify}
+              onReset={handleReset}
+              onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates}
+            />
           }
         />
         <Route
           path={PAGE_TWO_PATH}
           element={
-            <p data-testid="page-two-placeholder">
-              {`Page Two — identified: ${String(isIdentified)}, consent: ${String(consent)}`}
-            </p>
+            <PageTwoPage consent={consent} entriesById={entriesById} isIdentified={isIdentified} />
           }
         />
         <Route path="*" element={<Navigate replace to={HOME_PATH} />} />
       </Routes>
-
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {consent === true ? (
-          <button
-            data-testid="unconsent-button"
-            onClick={() => {
-              handleConsent(false)
-            }}
-            type="button"
-          >
-            Reject Consent
-          </button>
-        ) : (
-          <button
-            data-testid="consent-button"
-            onClick={() => {
-              handleConsent(true)
-            }}
-            type="button"
-          >
-            Accept Consent
-          </button>
-        )}
-
-        {!isIdentified ? (
-          <button data-testid="live-updates-identify-button" onClick={handleIdentify} type="button">
-            Identify
-          </button>
-        ) : (
-          <button data-testid="live-updates-reset-button" onClick={handleReset} type="button">
-            Reset Profile
-          </button>
-        )}
-      </div>
-
-      <p data-testid="consent-status">Consent: {String(consent)}</p>
-      <p data-testid="identified-status">{isIdentified ? 'Yes' : 'No'}</p>
     </main>
   )
 }

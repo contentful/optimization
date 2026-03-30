@@ -1,10 +1,10 @@
 import { OptimizationRoot } from '@contentful/optimization-react-web'
 import { ReactRouterAutoPageTracker } from '@contentful/optimization-react-web/router/react-router'
-import { StrictMode } from 'react'
+import { StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
 import App from './App'
-import { HOME_PATH, PAGE_TWO_PATH } from './config/routes'
+import { HOME_PATH } from './config/routes'
 
 const CLIENT_ID = import.meta.env.PUBLIC_NINETAILED_CLIENT_ID?.trim() ?? 'mock-client-id'
 const ENVIRONMENT = import.meta.env.PUBLIC_NINETAILED_ENVIRONMENT?.trim() ?? 'main'
@@ -26,6 +26,12 @@ function resolveLogLevel(): LogLevel {
 }
 
 function RootLayout(): React.ReactElement {
+  const [globalLiveUpdates, setGlobalLiveUpdates] = useState(false)
+
+  const handleToggleGlobalLiveUpdates = (): void => {
+    setGlobalLiveUpdates((prev) => !prev)
+  }
+
   return (
     <OptimizationRoot
       clientId={CLIENT_ID}
@@ -40,9 +46,12 @@ function RootLayout(): React.ReactElement {
         name: 'ContentfulOptimization SDK - React Web SDK Reference',
         version: '0.1.0',
       }}
+      liveUpdates={globalLiveUpdates}
     >
       <ReactRouterAutoPageTracker />
-      <Outlet />
+      <Outlet
+        context={{ globalLiveUpdates, onToggleGlobalLiveUpdates: handleToggleGlobalLiveUpdates }}
+      />
     </OptimizationRoot>
   )
 }
@@ -53,7 +62,7 @@ const router = createBrowserRouter([
     element: <RootLayout />,
     children: [
       { index: true, element: <App /> },
-      { path: PAGE_TWO_PATH, element: <App /> },
+      { path: 'page-two', element: <App /> },
     ],
   },
 ])
