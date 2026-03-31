@@ -1,21 +1,26 @@
 import { useOptimizationContext } from '@contentful/optimization-react-web'
 import type { Profile } from '@contentful/optimization-react-web/api-schemas'
 import { type JSX, useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, Route, Routes, useOutletContext } from 'react-router-dom'
-import {
-  ENTRY_IDS,
-  LIVE_UPDATES_ENTRY_ID,
-  PAGE_TWO_AUTO_ENTRY_ID,
-  PAGE_TWO_MANUAL_ENTRY_ID,
-} from './config/entries'
+import { Link, Outlet, useOutletContext } from 'react-router-dom'
+import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
+import { ENTRY_IDS, LIVE_UPDATES_ENTRY_ID } from './config/entries'
 import { HOME_PATH, PAGE_TWO_PATH } from './config/routes'
-import { HomePage } from './pages/HomePage'
-import { PageTwoPage } from './pages/PageTwoPage'
 import { fetchEntries, getContentfulConfigError } from './services/contentfulClient'
 import type { ContentfulEntry } from './types/contentful'
 
 interface OutletContext {
-  globalLiveUpdates: boolean
+  onToggleGlobalLiveUpdates: () => void
+}
+
+export interface AppOutletContext {
+  consent: boolean | undefined
+  entriesById: Map<string, ContentfulEntry>
+  isIdentified: boolean
+  liveUpdatesBaselineEntry: ContentfulEntry | undefined
+  selectedOptimizationCount: number
+  onConsentChange: (accepted: boolean) => void
+  onIdentify: () => void
+  onReset: () => void
   onToggleGlobalLiveUpdates: () => void
 }
 
@@ -25,10 +30,6 @@ function isIdentifiedProfile(profile: Profile | undefined): boolean {
   }
 
   return Boolean(profile.traits.identified)
-}
-
-function hasEntries(entries: ContentfulEntry[]): boolean {
-  return entries.length > 0
 }
 
 function toEntryMap(entries: ContentfulEntry[]): Map<string, ContentfulEntry> {
@@ -43,7 +44,6 @@ export default function App(): JSX.Element {
   const [profile, setProfile] = useState<Profile | undefined>(undefined)
   const [selectedOptimizationCount, setSelectedOptimizationCount] = useState(0)
   const [entries, setEntries] = useState<ContentfulEntry[]>([])
-  const [entriesError, setEntriesError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!sdk || !isReady) {
@@ -88,54 +88,24 @@ export default function App(): JSX.Element {
 
     const configError = getContentfulConfigError()
     if (configError) {
-      setEntriesError(configError)
       return
     }
 
-    void fetchEntries(ENTRY_IDS)
-      .then((nextEntries) => {
-        setEntries(nextEntries)
-        setEntriesError(
-          nextEntries.length === 0
-            ? 'No entries were loaded. Verify mock server and Contentful env configuration.'
-            : null,
-        )
-      })
-      .catch((fetchError: unknown) => {
-        const message =
-          fetchError instanceof Error ? fetchError.message : 'Unknown entry load error'
-        setEntriesError(message)
-      })
+    void fetchEntries(ENTRY_IDS).then((nextEntries) => {
+      setEntries(nextEntries)
+    })
   }, [isReady, sdk])
 
   const isIdentified = useMemo(() => isIdentifiedProfile(profile), [profile])
   const entriesById = useMemo(() => toEntryMap(entries), [entries])
   const liveUpdatesBaselineEntry = entriesById.get(LIVE_UPDATES_ENTRY_ID)
-  const hasPageTwoEntries =
-    entriesById.has(PAGE_TWO_AUTO_ENTRY_ID) && entriesById.has(PAGE_TWO_MANUAL_ENTRY_ID)
 
   if (error) {
-    return <p>{error.message}</p>
+    return <p data-testid="sdk-error">{error.message}</p>
   }
 
   if (!sdk || !isReady) {
-    return <p>Loading SDK...</p>
-  }
-
-  if (entriesError) {
-    return <p>{entriesError}</p>
-  }
-
-  if (!hasEntries(entries)) {
-    return <p>Loading entries...</p>
-  }
-
-  if (!liveUpdatesBaselineEntry) {
-    return <p>Live updates baseline entry is missing from fetched entries.</p>
-  }
-
-  if (!hasPageTwoEntries) {
-    return <p>Page Two demo entries are missing from fetched entries.</p>
+    return <p data-testid="sdk-loading">Loading SDK...</p>
   }
 
   const handleIdentify = (): void => {
@@ -150,6 +120,18 @@ export default function App(): JSX.Element {
     sdk.consent(accepted)
   }
 
+  const appOutletContext: AppOutletContext = {
+    consent,
+    entriesById,
+    isIdentified,
+    liveUpdatesBaselineEntry,
+    selectedOptimizationCount,
+    onConsentChange: handleConsent,
+    onIdentify: handleIdentify,
+    onReset: handleReset,
+    onToggleGlobalLiveUpdates,
+  }
+
   return (
     <main style={{ display: 'grid', gap: 24 }}>
       <nav style={{ display: 'flex', gap: 12 }}>
@@ -161,31 +143,8 @@ export default function App(): JSX.Element {
         </Link>
       </nav>
 
-      <Routes>
-        <Route
-          path={HOME_PATH}
-          element={
-            <HomePage
-              consent={consent}
-              entriesById={entriesById}
-              isIdentified={isIdentified}
-              liveUpdatesBaselineEntry={liveUpdatesBaselineEntry}
-              selectedOptimizationCount={selectedOptimizationCount}
-              onConsentChange={handleConsent}
-              onIdentify={handleIdentify}
-              onReset={handleReset}
-              onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates}
-            />
-          }
-        />
-        <Route
-          path={PAGE_TWO_PATH}
-          element={
-            <PageTwoPage consent={consent} entriesById={entriesById} isIdentified={isIdentified} />
-          }
-        />
-        <Route path="*" element={<Navigate replace to={HOME_PATH} />} />
-      </Routes>
+      <Outlet context={appOutletContext} />
+      <AnalyticsEventDisplay />
     </main>
   )
 }

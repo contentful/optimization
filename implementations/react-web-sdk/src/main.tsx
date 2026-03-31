@@ -1,10 +1,12 @@
 import { OptimizationRoot } from '@contentful/optimization-react-web'
 import { ReactRouterAutoPageTracker } from '@contentful/optimization-react-web/router/react-router'
-import { StrictMode, useState } from 'react'
+import { type ReactElement, StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, Navigate, Outlet, RouterProvider } from 'react-router-dom'
 import App from './App'
 import { HOME_PATH } from './config/routes'
+import { HomePage } from './pages/HomePage'
+import { PageTwoPage } from './pages/PageTwoPage'
 
 const CLIENT_ID = import.meta.env.PUBLIC_NINETAILED_CLIENT_ID?.trim() ?? 'mock-client-id'
 const ENVIRONMENT = import.meta.env.PUBLIC_NINETAILED_ENVIRONMENT?.trim() ?? 'main'
@@ -25,7 +27,7 @@ function resolveLogLevel(): LogLevel {
   return import.meta.env.DEV ? 'debug' : 'warn'
 }
 
-function RootLayout(): React.ReactElement {
+function RootLayout(): ReactElement {
   const [globalLiveUpdates, setGlobalLiveUpdates] = useState(false)
 
   const handleToggleGlobalLiveUpdates = (): void => {
@@ -49,9 +51,7 @@ function RootLayout(): React.ReactElement {
       liveUpdates={globalLiveUpdates}
     >
       <ReactRouterAutoPageTracker />
-      <Outlet
-        context={{ globalLiveUpdates, onToggleGlobalLiveUpdates: handleToggleGlobalLiveUpdates }}
-      />
+      <Outlet context={{ onToggleGlobalLiveUpdates: handleToggleGlobalLiveUpdates }} />
     </OptimizationRoot>
   )
 }
@@ -61,8 +61,14 @@ const router = createBrowserRouter([
     path: HOME_PATH,
     element: <RootLayout />,
     children: [
-      { index: true, element: <App /> },
-      { path: 'page-two', element: <App /> },
+      {
+        element: <App />,
+        children: [
+          { index: true, element: <HomePage /> },
+          { path: 'page-two', element: <PageTwoPage /> },
+          { path: '*', element: <Navigate replace to={HOME_PATH} /> },
+        ],
+      },
     ],
   },
 ])

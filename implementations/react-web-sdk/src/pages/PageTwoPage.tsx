@@ -1,19 +1,14 @@
 import { useOptimization } from '@contentful/optimization-react-web'
-import { type JSX, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { AnalyticsEventDisplay } from '../components/AnalyticsEventDisplay'
+import type { JSX } from 'react'
+import { useEffect } from 'react'
+import { Link, useOutletContext } from 'react-router-dom'
+import type { AppOutletContext } from '../App'
 import { PAGE_TWO_AUTO_ENTRY_ID, PAGE_TWO_MANUAL_ENTRY_ID } from '../config/entries'
 import { HOME_PATH } from '../config/routes'
 import { ContentEntry } from '../sections/ContentEntry'
-import type { ContentfulEntry } from '../types/contentful'
 
-interface PageTwoPageProps {
-  consent: boolean | undefined
-  entriesById: Map<string, ContentfulEntry>
-  isIdentified: boolean
-}
-
-export function PageTwoPage({ consent, entriesById, isIdentified }: PageTwoPageProps): JSX.Element {
+export function PageTwoPage(): JSX.Element {
+  const { consent, entriesById, isIdentified } = useOutletContext<AppOutletContext>()
   const { sdk } = useOptimization()
   const pageTwoAutoEntry = entriesById.get(PAGE_TWO_AUTO_ENTRY_ID)
   const pageTwoManualEntry = entriesById.get(PAGE_TWO_MANUAL_ENTRY_ID)
@@ -74,8 +69,6 @@ export function PageTwoPage({ consent, entriesById, isIdentified }: PageTwoPageP
           Trigger Page Two CTA Event
         </button>
       </section>
-
-      <AnalyticsEventDisplay />
 
       <Link data-testid="link-back-home" to={HOME_PATH}>
         Back to Home
