@@ -117,7 +117,7 @@ async function clearProfileState(options = {}) {
   await relaunchCleanApp()
 }
 
-async function waitForComponentEventCount(
+async function waitForTrackedItemEventCount(
   componentId,
   minCount,
   timeout = ELEMENT_VISIBILITY_TIMEOUT,
@@ -176,7 +176,7 @@ module.exports = {
   isVisibleById,
   sleep,
   tapIfVisibleById,
-  waitForComponentEventCount,
+  waitForTrackedItemEventCount,
   waitForElementTextById,
   waitForEventsCountAtLeast,
   waitForTextChangeById,
