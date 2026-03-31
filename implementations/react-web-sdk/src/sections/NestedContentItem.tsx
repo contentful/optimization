@@ -1,5 +1,5 @@
 import { OptimizedEntry } from '@contentful/optimization-react-web'
-import { type JSX } from 'react'
+import type { JSX } from 'react'
 import type { ContentfulEntry } from '../types/contentful'
 import { isRecord } from '../utils/typeGuards'
 

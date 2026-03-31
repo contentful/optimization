@@ -1,4 +1,4 @@
-import { type JSX } from 'react'
+import type { JSX } from 'react'
 import type { ContentfulEntry } from '../types/contentful'
 import { NestedContentItem } from './NestedContentItem'
 

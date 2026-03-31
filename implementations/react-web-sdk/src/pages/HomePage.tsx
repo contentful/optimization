@@ -1,5 +1,5 @@
 import { useLiveUpdates } from '@contentful/optimization-react-web'
-import { type JSX } from 'react'
+import type { JSX } from 'react'
 import { AnalyticsEventDisplay } from '../components/AnalyticsEventDisplay'
 import { AUTO_OBSERVED_ENTRY_IDS, MANUALLY_OBSERVED_ENTRY_IDS } from '../config/entries'
 import { type EntryClickScenario, ContentEntry } from '../sections/ContentEntry'

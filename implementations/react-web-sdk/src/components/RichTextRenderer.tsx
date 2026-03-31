@@ -52,7 +52,7 @@ function getMergeTagText(target: unknown, getMergeTagValue: GetMergeTagValue): s
     return '[Merge Tag]'
   }
 
-  return String(getMergeTagValue(target) ?? '')
+  return getMergeTagValue(target) ?? ''
 }
 
 function extractTextContent(node: RichTextNode, getMergeTagValue: GetMergeTagValue): string {

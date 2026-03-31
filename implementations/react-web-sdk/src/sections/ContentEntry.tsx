@@ -1,5 +1,6 @@
 import { OptimizedEntry, useOptimization } from '@contentful/optimization-react-web'
-import { type JSX, type RefObject, useEffect, useRef } from 'react'
+import type { JSX, RefObject } from 'react'
+import { useEffect, useRef } from 'react'
 import { RichTextRenderer } from '../components/RichTextRenderer'
 import type { ContentfulEntry, RichTextDocument } from '../types/contentful'
 
@@ -39,20 +40,19 @@ function ManuallyTrackedContent({
   const resolvedEntry = resolveEntry(baselineEntry)
   const richTextField = Object.values(resolvedEntry.fields).find(isRichTextField)
   const fullLabel = `Entry: ${resolvedEntry.sys.id}`
-  const resolvedId = resolvedEntry.sys.id
 
   useEffect(() => {
-    const element = containerRef.current
+    const { current: element } = containerRef
     if (!element) {
       return
     }
 
-    interactionTracking.enableElement('views', element, { data: { entryId: resolvedId } })
+    interactionTracking.enableElement('views', element, { data: { entryId: resolvedEntry.sys.id } })
 
     return () => {
       interactionTracking.clearElement('views', element)
     }
-  }, [containerRef, interactionTracking, resolvedId])
+  }, [containerRef, interactionTracking, resolvedEntry.sys.id])
 
   return (
     <div
@@ -99,7 +99,7 @@ function AutoTrackedContent({
           >
             <div data-testid={`entry-text-${baselineEntry.sys.id}`} aria-label={fullLabel}>
               {richTextField ? (
-                <RichTextRenderer richText={richTextField as RichTextDocument} />
+                <RichTextRenderer richText={richTextField} />
               ) : (
                 <p>{getEntryText(asCf)}</p>
               )}
