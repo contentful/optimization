@@ -78,13 +78,13 @@ test.describe('entry view tracking', () => {
         ).toBeVisible()
       }
 
-      const allComponentEvents = page.locator(
+      const allEntryEvents = page.locator(
         '#event-stream li button[data-view-id]:not([data-component-id="boolean"])',
       )
 
-      await expect.poll(async () => await allComponentEvents.count()).toBeGreaterThanOrEqual(10)
+      await expect.poll(async () => await allEntryEvents.count()).toBeGreaterThanOrEqual(10)
 
-      const viewIdButtons = allComponentEvents
+      const viewIdButtons = allEntryEvents
       const viewIds: string[] = []
       const viewIdCount = await viewIdButtons.count()
 

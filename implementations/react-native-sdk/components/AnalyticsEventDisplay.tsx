@@ -22,7 +22,7 @@ function isValidEvent(event: unknown): event is {
   )
 }
 
-interface ComponentStats {
+interface EntryStats {
   count: number
   latestViewDurationMs: number | undefined
   latestViewId: string | undefined
@@ -31,7 +31,7 @@ interface ComponentStats {
 // Module-level stores that persist across unmount/remount cycles within the same
 // app session. Cleared naturally when the app process restarts (relaunchCleanApp).
 let persistedEvents: AnalyticsEvent[] = []
-let persistedComponentStats: Record<string, ComponentStats> = {}
+let persistedEntryStats: Record<string, EntryStats> = {}
 
 // Callback to trigger a re-render when mounted; null when unmounted.
 let rerender: (() => void) | null = null
@@ -61,13 +61,13 @@ function buildEvent(event: {
   return newEvent
 }
 
-function updateComponentStats(newEvent: AnalyticsEvent): void {
+function updateEntryStats(newEvent: AnalyticsEvent): void {
   if (!newEvent.componentId || newEvent.type !== 'component') return
 
   const { componentId: cid } = newEvent
-  const { [cid]: existing } = persistedComponentStats
-  persistedComponentStats = {
-    ...persistedComponentStats,
+  const { [cid]: existing } = persistedEntryStats
+  persistedEntryStats = {
+    ...persistedEntryStats,
     [cid]: {
       count: (existing?.count ?? 0) + 1,
       latestViewDurationMs: newEvent.viewDurationMs ?? existing?.latestViewDurationMs,
@@ -81,7 +81,7 @@ function processEvent(event: unknown): void {
 
   const newEvent = buildEvent(event)
   persistedEvents = [newEvent, ...persistedEvents]
-  updateComponentStats(newEvent)
+  updateEntryStats(newEvent)
   rerender?.()
 }
 
@@ -106,7 +106,7 @@ export function AnalyticsEventDisplay(): React.JSX.Element {
   }, [sdk])
 
   const events = persistedEvents
-  const componentStats = persistedComponentStats
+  const entryStats = persistedEntryStats
 
   if (events.length === 0) {
     return (
@@ -147,8 +147,8 @@ export function AnalyticsEventDisplay(): React.JSX.Element {
           )
         })}
 
-      {Object.entries(componentStats).map(([cid, stats]) => (
-        <View key={`stats-${cid}`} testID={`component-stats-${cid}`}>
+      {Object.entries(entryStats).map(([cid, stats]) => (
+        <View key={`stats-${cid}`} testID={`entry-stats-${cid}`}>
           <Text testID={`event-count-${cid}`}>Count: {stats.count}</Text>
           <Text testID={`event-duration-${cid}`}>
             Duration: {stats.latestViewDurationMs ?? 'N/A'}
