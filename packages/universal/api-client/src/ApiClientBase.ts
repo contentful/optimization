@@ -11,7 +11,7 @@ const logger = createScopedLogger('ApiClient')
 const DEFAULT_ENVIRONMENT = 'main'
 
 /**
- * Configuration options for API clients extending {@link ApiClientBase}.
+ * Configuration options for API clients extending `ApiClientBase`.
  *
  * @public
  */

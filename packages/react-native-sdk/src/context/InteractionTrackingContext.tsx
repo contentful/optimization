@@ -28,7 +28,7 @@ export type TrackEntryInteractionOptions = Partial<Record<EntryInteraction, bool
  *
  * @internal
  */
-interface InteractionTrackingContextValue {
+export interface InteractionTrackingContextValue {
   /** Whether view tracking is enabled globally. */
   views: boolean
   /** Whether tap tracking is enabled globally. */
@@ -45,7 +45,7 @@ const InteractionTrackingContext = createContext<InteractionTrackingContextValue
 
 /**
  * Returns the resolved interaction tracking configuration from the nearest
- * {@link InteractionTrackingProvider}.
+ * `InteractionTrackingProvider`.
  *
  * @returns The resolved interaction tracking state with `views` and `taps` booleans.
  *

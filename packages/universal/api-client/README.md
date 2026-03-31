@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://www.contentful.com/developers/docs/personalization/">
-    <img alt="Contentful Logo" title="Contentful" src="../../contentful-icon.png" width="150">
+    <img alt="Contentful Logo" title="Contentful" src="../../../contentful-icon.png" width="150">
   </a>
 </p>
 
@@ -10,8 +10,8 @@
 
 <div align="center">
 
-[Readme](./README.md) · [Reference](https://contentful.github.io/optimization) ·
-[Contributing](../../CONTRIBUTING.md)
+[Guides](https://contentful.github.io/optimization/documents/Guides.html) ·
+[Reference](https://contentful.github.io/optimization) · [Contributing](../../../CONTRIBUTING.md)
 
 </div>
 

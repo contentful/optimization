@@ -72,7 +72,7 @@ export interface UseTapTrackingReturn {
  * Uses `onTouchStart`/`onTouchEnd` rather than wrapping children in a
  * `Pressable`, so taps are captured even when a child `Pressable` handles
  * the gesture. A touch is classified as a tap only when the finger moves
- * less than {@link TAP_DISTANCE_THRESHOLD} points between start and end.
+ * less than `TAP_DISTANCE_THRESHOLD` points between start and end.
  *
  * @example
  * ```tsx

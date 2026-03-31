@@ -184,7 +184,7 @@ function canDefineComponents(): void {
  *
  * @internal
  */
-interface AttachOptimizationPreviewPanelArgs {
+export interface AttachOptimizationPreviewPanelArgs {
   /** Contentful client used to fetch audience and optimization entries. */
   contentful: ContentfulClientApi<ChainModifiers>
   /** ContentfulOptimization Web SDK instance to register the preview panel with. */

@@ -7,7 +7,7 @@
  *
  * @public
  */
-type BlockHandler = (methodName: string, args: readonly unknown[]) => void
+export type BlockHandler = (methodName: string, args: readonly unknown[]) => void
 
 /**
  * The original method implementation.
@@ -23,7 +23,7 @@ type BlockHandler = (methodName: string, args: readonly unknown[]) => void
  *
  * @internal
  */
-type GuardedByFunction<T extends object> = <A extends readonly unknown[], R>(
+export type GuardedByFunction<T extends object> = <A extends readonly unknown[], R>(
   value: (...args: A) => R,
   context: ClassMethodDecoratorContext<T, (...args: A) => R>,
 ) => void
@@ -126,7 +126,7 @@ const isAsyncFunction = (fn: (...args: readonly unknown[]) => unknown): boolean 
  *
  * @param predicateName - The name (string or symbol) of a **synchronous** instance method on `this`
  * that acts as the predicate. It is called as `this[predicateName](methodName, argsArray)`.
- * @param opts - Optional {@link GuardedByOptions | options} to configure inversion and `onBlocked`.
+ * @param opts - Optional `GuardedByOptions` to configure inversion and `onBlocked`.
  *
  * @returns A methods-only class decorator compatible with Stage-3 decorators that wraps the method.
  *

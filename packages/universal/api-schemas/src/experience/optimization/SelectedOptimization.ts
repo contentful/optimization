@@ -20,7 +20,7 @@ export const SelectedOptimization = z.object({
    * Index of the selected variant within the experience configuration.
    *
    * @remarks
-   * Typically corresponds to the index of the selected {@link OptimizationConfig } entry.
+   * Typically corresponds to the index of the selected `OptimizationConfig` entry.
    */
   variantIndex: z.number(),
 

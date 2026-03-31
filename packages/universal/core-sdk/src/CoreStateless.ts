@@ -37,7 +37,7 @@ export interface CoreStatelessConfig extends Omit<CoreConfig, 'api'> {
  * Core runtime for stateless environments.
  *
  * @public
- * @see {@link CoreBase}
+ * Built on top of `CoreBase`.
  */
 class CoreStateless extends CoreBase {
   constructor(config: CoreStatelessConfig) {

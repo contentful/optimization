@@ -3,7 +3,7 @@ import { createScopedLogger } from '@contentful/optimization-core/logger'
 import type { EntryInteractionDetector } from '../../EntryInteractionDetector'
 import type { EntryClickInteractionElementOptions } from '../../resolveAutoTrackEntryInteractionOptions'
 import { resolveEntryInteractionElementOverride } from '../../resolveEntryInteractionElementOverride'
-import { resolveTrackingPayload as resolveTrackedComponentPayload } from '../../resolveTrackingPayload'
+import { resolveTrackingPayload as resolveTrackedEntryPayload } from '../../resolveTrackingPayload'
 
 const logger = createScopedLogger('Web:EntryClickTracking')
 
@@ -128,11 +128,11 @@ export function createEntryClickDetector(
 
   const resolveTrackingPayload = (
     element: Element,
-  ): ReturnType<typeof resolveTrackedComponentPayload> => {
+  ): ReturnType<typeof resolveTrackedEntryPayload> => {
     const state = trackedEntries.get(element)
     const data = state?.overrideEnabled ? state.overrideData : undefined
 
-    return resolveTrackedComponentPayload(data, element)
+    return resolveTrackedEntryPayload(data, element)
   }
 
   const createDefaultTrackedEntryState = (): TrackedEntryState => ({

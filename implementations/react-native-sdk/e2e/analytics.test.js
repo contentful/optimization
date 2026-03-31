@@ -20,8 +20,8 @@ describe('Insights API Events', () => {
     await waitForEventsCountAtLeast(1)
 
     // With periodic tracking, per-entry stats are rendered with unique test IDs.
-    // Use the `component-stats` summary element to verify the merge tag entry was tracked.
-    await waitFor(element(by.id('component-stats-1MwiFl4z7gkwqGYdvCmr8c')))
+    // Use the `entry-stats` summary element to verify the merge tag entry was tracked.
+    await waitFor(element(by.id('entry-stats-1MwiFl4z7gkwqGYdvCmr8c')))
       .toBeVisible()
       .whileElement(by.id('main-scroll-view'))
       .scroll(500, 'down')

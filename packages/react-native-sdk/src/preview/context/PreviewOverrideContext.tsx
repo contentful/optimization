@@ -10,11 +10,11 @@ interface PreviewOverrideContextValue {
 const PreviewOverrideContext = createContext<PreviewOverrideContextValue | null>(null)
 
 /**
- * Returns the preview override state and actions from the nearest {@link PreviewOverrideProvider}.
+ * Returns the preview override state and actions from the nearest `PreviewOverrideProvider`.
  *
  * @returns The current override state and action handlers
  *
- * @throws Error if called outside of a {@link PreviewOverrideProvider}
+ * @throws Error if called outside of a `PreviewOverrideProvider`
  *
  * @internal
  */
@@ -37,7 +37,7 @@ interface PreviewOverrideProviderProps {
 
 /**
  * Hosts preview override state and SDK registration logic, allowing the
- * {@link PreviewPanel} to be unmounted/remounted without losing state.
+ * `PreviewPanel` to be unmounted/remounted without losing state.
  *
  * @param props - Provider props
  * @returns A context provider wrapping the children

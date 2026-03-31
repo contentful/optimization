@@ -1,4 +1,23 @@
-# React Web SDK
+<p align="center">
+  <a href="https://www.contentful.com/developers/docs/personalization/">
+    <img alt="Contentful Logo" title="Contentful" src="../../../../contentful-icon.png" width="150">
+  </a>
+</p>
+
+<h1 align="center">Contentful Personalization & Analytics</h1>
+
+<h3 align="center">Optimization React Web SDK</h3>
+
+<div align="center">
+
+[Guides](https://contentful.github.io/optimization/documents/Guides.html) ·
+[Reference](https://contentful.github.io/optimization) · [Contributing](../../../../CONTRIBUTING.md)
+
+</div>
+
+> [!WARNING]
+>
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
 
 React Web SDK package for `@contentful/optimization-react-web`.
 

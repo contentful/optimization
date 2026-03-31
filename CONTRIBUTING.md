@@ -306,8 +306,9 @@ Practical implications:
 Code is documented using TSDoc, and reference documentation is generated using TypeDoc and published
 automatically with each new version.
 
-- `pnpm docs:generate` generates documentation from TSDoc code comments, as well as README and other
-  linked markdown files
+- authored supporting docs belong in `documentation/`, while `docs/` remains generated output
+- `pnpm docs:generate` generates documentation from TSDoc code comments, package README files, and
+  markdown files under `documentation/`
 - `pnpm docs:watch` watches for file updates and rebuilds documentation output; useful while writing
   and updating documentation
 
@@ -321,7 +322,8 @@ keep these artifacts aligned:
 - any replacement design, architecture, or specification artifacts that the repository adds for the
   changed area
 
-`docs/` is generated output. Do not hand-edit generated TypeDoc output.
+`documentation/` contains source markdown that TypeDoc publishes. `docs/` is generated output. Do
+not hand-edit generated TypeDoc output.
 
 ## Local Troubleshooting
 

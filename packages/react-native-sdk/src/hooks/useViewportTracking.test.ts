@@ -316,14 +316,14 @@ describe('useViewportTracking', () => {
   })
 
   describe('sticky dedupe by success', () => {
-    it('should emit sticky once after successful trackView for one rendered component', async () => {
+    it('should emit sticky once after successful trackView for one rendered entry', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('sticky-success-entry')
 
       const selectedOptimization: SelectedOptimization = {
         experienceId: 'exp-sticky-success',
         variantIndex: 1,
-        variants: { 'sticky-success-component': 'sticky-success-entry' },
+        variants: { 'sticky-success-baseline-entry': 'sticky-success-entry' },
         sticky: true,
       }
 
@@ -355,7 +355,7 @@ describe('useViewportTracking', () => {
       const selectedOptimization: SelectedOptimization = {
         experienceId: 'exp-sticky-retry',
         variantIndex: 1,
-        variants: { 'sticky-retry-component': 'sticky-retry-entry' },
+        variants: { 'sticky-retry-baseline-entry': 'sticky-retry-entry' },
         sticky: true,
       }
 
@@ -383,14 +383,14 @@ describe('useViewportTracking', () => {
       expect(getCallArg(2).sticky).toBeUndefined()
     })
 
-    it('should dedupe sticky independently per rendered component instance', async () => {
+    it('should dedupe sticky independently per rendered entry instance', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('sticky-shared-entry')
 
       const selectedOptimization: SelectedOptimization = {
         experienceId: 'exp-sticky-shared',
         variantIndex: 1,
-        variants: { 'sticky-shared-component': 'sticky-shared-entry' },
+        variants: { 'sticky-shared-baseline-entry': 'sticky-shared-entry' },
         sticky: true,
       }
 

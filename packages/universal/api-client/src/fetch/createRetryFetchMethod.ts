@@ -195,7 +195,7 @@ async function delayRetry(intervalTimeout: number): Promise<void> {
  * @param options - Configuration options that control retry behavior.
  * @returns A {@link FetchMethod} that automatically retries qualifying failures.
  *
- * @throws {@link Error}
+ * @throws Error
  * Thrown when the request cannot be retried and no successful response is obtained.
  *
  * @remarks

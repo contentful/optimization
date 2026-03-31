@@ -219,7 +219,7 @@ export interface PreviewActions {
 }
 
 /**
- * Props for the {@link PreviewPanel} component.
+ * Props for the `PreviewPanel` component.
  *
  * @public
  */

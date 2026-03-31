@@ -107,7 +107,7 @@ export type SpaceLink = z.infer<typeof SpaceLink>
  *
  * @internal
  */
-const TaxonomyConceptLink = z.object({
+export const TaxonomyConceptLink = z.object({
   sys: z.object({
     type: z.literal('Link'),
     linkType: z.literal('TaxonomyConcept'),
