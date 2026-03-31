@@ -104,17 +104,24 @@ final class JSContextManager {
             return
         }
 
+        var didComplete = false
+        let completeOnce: (Result<String, Error>) -> Void = { result in
+            guard !didComplete else { return }
+            didComplete = true
+            completion(result)
+        }
+
         let names = callbackManager.registerCallback(
             in: ctx,
             prefix: method,
             onSuccess: { json in
                 DispatchQueue.main.async {
-                    completion(.success(json))
+                    completeOnce(.success(json))
                 }
             },
             onError: { errorMsg in
                 DispatchQueue.main.async {
-                    completion(.failure(OptimizationError.bridgeError(errorMsg)))
+                    completeOnce(.failure(OptimizationError.bridgeError(errorMsg)))
                 }
             }
         )
@@ -123,6 +130,16 @@ final class JSContextManager {
             ? "\(names.success), \(names.error)"
             : "\(payload), \(names.success), \(names.error)"
         ctx.evaluateScript("__bridge.\(method)(\(args))")
+        ctx.exceptionHandler = previousHandler
+
+        if let exception = jsException {
+            ctx.setObject(nil, forKeyedSubscript: names.success as NSString)
+            ctx.setObject(nil, forKeyedSubscript: names.error as NSString)
+            let msg = exception.toString() ?? "Unknown JS error"
+            DispatchQueue.main.async {
+                completeOnce(.failure(OptimizationError.bridgeError(msg)))
+            }
+        }
     }
 
     /// Calls a synchronous bridge method and returns the result.

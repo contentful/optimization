@@ -151,8 +151,8 @@ struct LiveUpdatesTestScreen: View {
     private func handleIdentify() {
         Task {
             _ = try? await client.identify(userId: "charles", traits: ["identified": true])
+            isIdentified = true
         }
-        isIdentified = true
     }
 
     private func handleReset() {
