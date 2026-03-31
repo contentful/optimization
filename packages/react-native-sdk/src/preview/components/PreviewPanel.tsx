@@ -48,7 +48,7 @@ function PreviewPanelHeader({ consent }: { consent: boolean | undefined }): Reac
  * @returns The rendered preview panel
  *
  * @remarks
- * Must be used within a {@link PreviewOverrideProvider} (typically provided by
+ * Must be used within a `PreviewOverrideProvider` (typically provided by
  * {@link PreviewPanelOverlay} or {@link OptimizationRoot}).
  *
  * @example

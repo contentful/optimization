@@ -3,7 +3,7 @@
  *
  * @remarks
  * Exposes Web-specific utilities such as {@link ContentfulOptimization}, {@link beaconHandler},
- * and {@link LocalStore}. Core and transitive API exports are available from
+ * and `LocalStore`. Core and transitive API exports are available from
  * dedicated entrypoints:
  * `@contentful/optimization-web/core-sdk`,
  * `@contentful/optimization-web/api-client`,
@@ -23,6 +23,23 @@ export {
   OPTIMIZATION_WEB_SDK_VERSION,
 } from './constants'
 export * from './ContentfulOptimization'
+export type {
+  AutoTrackEntryInteractionOptions,
+  EntryClickInteractionElementOptions,
+  EntryElementInteraction,
+  EntryHoverInteractionElementOptions,
+  EntryHoverInteractionStartOptions,
+  EntryInteraction,
+  EntryInteractionApi,
+  EntryInteractionElementOptions,
+  EntryInteractionElementOptionsMap,
+  EntryInteractionStartOptions,
+  EntryInteractionStartOptionsMap,
+  EntryInteractionTracker,
+  EntryInteractionTrackers,
+  EntryViewInteractionElementOptions,
+  EntryViewInteractionStartOptions,
+} from './entry-tracking'
 export * from './handlers/beaconHandler'
 export * from './storage/LocalStore'
 

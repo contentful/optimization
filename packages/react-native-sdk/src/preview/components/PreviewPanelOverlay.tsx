@@ -25,8 +25,8 @@ const ANIMATION_DURATION_MS = 200
 const DRAG_HANDLE_HEIGHT = 4
 
 /**
- * Renders app content with a floating action button that opens the {@link PreviewPanel}
- * in a bottom-sheet modal. Wraps children in a {@link PreviewOverrideProvider} to
+ * Renders app content with a floating action button that opens the `PreviewPanel`
+ * in a bottom-sheet modal. Wraps children in a `PreviewOverrideProvider` to
  * persist override state across modal open/close cycles.
  *
  * @param props - Component props

@@ -1,5 +1,2 @@
-import ExperienceApiClient from './ExperienceApiClient'
-
 export * from './ExperienceApiClient'
-
-export default ExperienceApiClient
+export { default as ExperienceApiClient, default } from './ExperienceApiClient'

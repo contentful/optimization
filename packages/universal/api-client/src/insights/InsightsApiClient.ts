@@ -17,9 +17,9 @@ export const INSIGHTS_BASE_URL = 'https://ingest.insights.ninetailed.co/'
 /**
  * Options that control how Insights events are sent.
  *
- * @internal
+ * @public
  */
-interface RequestOptions {
+export interface InsightsApiClientRequestOptions {
   /**
    * Handler used to enqueue events via the Beacon API or a similar mechanism.
    *
@@ -40,7 +40,7 @@ interface RequestOptions {
  *
  * @public
  */
-export interface InsightsApiClientConfig extends ApiConfig, RequestOptions {}
+export interface InsightsApiClientConfig extends ApiConfig, InsightsApiClientRequestOptions {}
 
 /**
  * Client for sending analytics and insights events to the Ninetailed Insights API.
@@ -70,7 +70,7 @@ export interface InsightsApiClientConfig extends ApiConfig, RequestOptions {}
  * ])
  * ```
  *
- * @see {@link ApiClientBase}
+ * Extends `ApiClientBase`.
  *
  * @public
  */
@@ -83,7 +83,7 @@ export default class InsightsApiClient extends ApiClientBase {
   /**
    * Optional handler used to enqueue events via the Beacon API or a similar mechanism.
    */
-  private readonly beaconHandler: RequestOptions['beaconHandler']
+  private readonly beaconHandler: InsightsApiClientRequestOptions['beaconHandler']
 
   /**
    * Creates a new {@link InsightsApiClient} instance.
@@ -145,7 +145,7 @@ export default class InsightsApiClient extends ApiClientBase {
    */
   public async sendBatchEvents(
     batches: BatchInsightsEventArray,
-    options: RequestOptions = {},
+    options: InsightsApiClientRequestOptions = {},
   ): Promise<boolean> {
     const { beaconHandler = this.beaconHandler } = options
 

@@ -1,5 +1,2 @@
-import InsightsApiClient from './InsightsApiClient'
-
 export * from './InsightsApiClient'
-
-export default InsightsApiClient
+export { default as InsightsApiClient, default } from './InsightsApiClient'

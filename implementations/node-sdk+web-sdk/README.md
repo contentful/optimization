@@ -6,12 +6,12 @@
 
 <h1 align="center">Contentful Personalization & Analytics</h1>
 
-<h3 align="center">Node SSR + Web Vanilla Reference Implementation</h3>
+<h3 align="center">Node SDK SSR + Web SDK Vanilla JS Reference Implementation</h3>
 
 <div align="center">
 
-[Readme](./README.md) · [Reference](https://contentful.github.io/optimization) ·
-[Contributing](../../CONTRIBUTING.md)
+[Readme](./README.md) · [Guides](https://contentful.github.io/optimization/documents/Guides.html) ·
+[Reference](https://contentful.github.io/optimization) · [Contributing](../../CONTRIBUTING.md)
 
 </div>
 

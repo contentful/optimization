@@ -48,9 +48,9 @@ declare global {
  *
  * @public
  * @remarks
- * These options are passed to {@link Cookies.set} when persisting the anonymous ID.
+ * These options are used when persisting the anonymous ID cookie.
  */
-interface CookieAttributes {
+export interface CookieAttributes {
   /**
    * Cookie domain attribute.
    *
@@ -346,7 +346,7 @@ class ContentfulOptimization extends CoreStateful {
   }
 
   /**
-   * Persist (or clear) the anonymous ID in both cookies and {@link LocalStore}.
+   * Persist (or clear) the anonymous ID in both cookies and `LocalStore`.
    *
    * @param value - Anonymous identifier to persist. If omitted, clears persisted state.
    * @returns Nothing.

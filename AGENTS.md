@@ -44,6 +44,7 @@ Prefer editing source files and configuration:
 - `e2e/**`
 - `__tests__/**`
 - `scripts/**`
+- `documentation/**`
 - `README.md`
 - `package.json`
 - `tsconfig*.json`
@@ -96,6 +97,9 @@ Do not hand-edit generated or local-only artifacts unless the task is explicitly
 ## Validation Policy
 
 - Run the smallest meaningful validation that matches the change.
+- When linting or formatting is likely needed, prefer the smallest fix-enabled command that matches
+  the edited area first, then confirm with a check-only command if needed. Avoid the pattern of
+  running a pure check, then rerunning the same tool again only to apply obvious auto-fixes.
 - For TypeScript or TSX edits, run the relevant lint command early enough to influence the shape of
   the implementation, not only at the end.
 - For `lib/` or `packages/` edits, prefer `pnpm lint` after the first meaningful patch and again
@@ -137,6 +141,8 @@ High-signal repo-wide commands:
   - unknown
 - Prefer a small probe before a full rerun. Check the nearest `AGENTS.md`, the target
   `package.json`, and any relevant `README.md` or `CONTRIBUTING.md` section before guessing.
+- If a lint or format command fails with findings that the tool can auto-fix, prefer a targeted
+  fix-enabled rerun over repeated check-only runs, then revalidate once.
 - If the shell reports a command as missing:
   - first prefer `pnpm <script>` or `pnpm exec <tool>` over assuming a global binary
   - check whether the command is defined in the relevant `package.json`
@@ -184,6 +190,7 @@ Common repo-specific failure modes:
 
 - When public SDK behavior changes, update the relevant TSDoc or JSDoc and the affected package
   `README.md` in the same change.
+- Authored supporting docs live in `documentation/`; generated TypeDoc output lives in `docs/`.
 - If a package includes a package-local dev harness or other meaningful local dev surface, keep that
   surface relevant to the current SDK behavior and update it in the same change when the package's
   developer-facing flows, configuration, or core capabilities change.

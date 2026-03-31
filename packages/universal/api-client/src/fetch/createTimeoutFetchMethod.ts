@@ -44,7 +44,7 @@ export interface TimeoutFetchMethodOptions extends BaseFetchMethodOptions {
  *
  * @remarks
  * When a timeout occurs, the request is aborted using an {@link AbortController}.
- * If `onRequestTimeout` is not provided, an error is logged by the {@link logger}.
+ * If `onRequestTimeout` is not provided, an error is logged by the package logger.
  *
  * @example
  * ```ts
