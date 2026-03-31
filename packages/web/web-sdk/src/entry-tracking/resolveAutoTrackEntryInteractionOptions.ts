@@ -62,13 +62,13 @@ export interface EntryHoverInteractionElementOptions {
   readonly data?: unknown
 }
 
-interface EntryInteractionStartOptionsMap {
+export interface EntryInteractionStartOptionsMap {
   clicks: undefined
   views: EntryViewInteractionStartOptions | undefined
   hovers: EntryHoverInteractionStartOptions | undefined
 }
 
-interface EntryInteractionElementOptionsMap {
+export interface EntryInteractionElementOptionsMap {
   clicks: EntryClickInteractionElementOptions
   views: EntryViewInteractionElementOptions
   hovers: EntryHoverInteractionElementOptions

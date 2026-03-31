@@ -69,6 +69,11 @@ jobs:
         env:
           RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
 
+      - name: Prepare package READMEs for publish
+        run: pnpm -r --filter "@contentful/optimization-*" exec build-tools rewrite-readme prepare
+        env:
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+
       - name: Create packages for troubleshooting
         run: pnpm pack --filter "@contentful/optimization-*" --pack-destination pkgs
 
@@ -92,3 +97,7 @@ jobs:
         run: pnpm -r --filter "@contentful/optimization-*" publish --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ steps.vault.outputs.GITHUB_PACKAGES_WRITE_TOKEN }}
+
+      - name: Restore package READMEs after publish
+        if: always()
+        run: pnpm -r --filter "@contentful/optimization-*" exec build-tools rewrite-readme restore

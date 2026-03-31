@@ -33,14 +33,22 @@ export { OptimizedEntry } from './components/OptimizedEntry'
 export type { OptimizedEntryProps } from './components/OptimizedEntry'
 
 export { OptimizationScrollProvider, useScrollContext } from './context/OptimizationScrollContext'
-export type { OptimizationScrollProviderProps } from './context/OptimizationScrollContext'
+export type {
+  OptimizationScrollProviderProps,
+  ScrollContextValue,
+} from './context/OptimizationScrollContext'
 
 export { LiveUpdatesProvider, useLiveUpdates } from './context/LiveUpdatesContext'
+export type {
+  LiveUpdatesContextValue,
+  LiveUpdatesProviderProps,
+} from './context/LiveUpdatesContext'
 export { useOptimization } from './context/OptimizationContext'
 
 export { useInteractionTracking } from './context/InteractionTrackingContext'
 export type {
   EntryInteraction,
+  InteractionTrackingContextValue,
   TrackEntryInteractionOptions,
 } from './context/InteractionTrackingContext'
 
@@ -58,12 +66,18 @@ export { useScreenTracking, useScreenTrackingCallback } from './hooks/useScreenT
 export type { UseScreenTrackingOptions, UseScreenTrackingReturn } from './hooks/useScreenTracking'
 
 export { OptimizationNavigationContainer } from './components/OptimizationNavigationContainer'
-export type { OptimizationNavigationContainerProps } from './components/OptimizationNavigationContainer'
+export type {
+  NavigationContainerRef,
+  NavigationState,
+  OptimizationNavigationContainerProps,
+} from './components/OptimizationNavigationContainer'
 
 export { PreviewPanel as OptimizationPreviewPanel } from './preview/components/PreviewPanel'
 export { PreviewPanelOverlay } from './preview/components/PreviewPanelOverlay'
 export type {
   ContentfulClient,
+  ContentfulEntry,
+  ContentfulEntryCollection,
   PreviewPanelConfig,
   PreviewPanelOverlayProps,
   PreviewPanelProps,

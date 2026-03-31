@@ -82,7 +82,7 @@ export interface LifecycleInterceptors {
 }
 
 /**
- * Options for configuring the {@link CoreBase} runtime and underlying clients.
+ * Options for configuring the `CoreBase` runtime and underlying clients.
  *
  * @public
  */

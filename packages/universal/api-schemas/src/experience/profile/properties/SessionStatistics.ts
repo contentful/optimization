@@ -38,7 +38,7 @@ export const SessionStatistics = z.object({
    * Number of sessions associated with this profile or identifier.
    *
    * @remarks
-   * Often used in combination with {@link SessionStatistics.averageSessionLength}.
+   * Often used in combination with `SessionStatistics.averageSessionLength`.
    */
   count: z.number(),
 
@@ -51,7 +51,7 @@ export const SessionStatistics = z.object({
    * Average session duration across all sessions represented by this record.
    *
    * @remarks
-   * The unit should match {@link SessionStatistics.activeSessionLength}.
+   * The unit should match `SessionStatistics.activeSessionLength`.
    */
   averageSessionLength: z.number(),
 })

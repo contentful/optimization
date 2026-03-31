@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, type ReactNode } from 'reac
 /**
  * @internal
  */
-interface LiveUpdatesContextValue {
+export interface LiveUpdatesContextValue {
   globalLiveUpdates: boolean
   previewPanelVisible: boolean
   setPreviewPanelVisible: (visible: boolean) => void
@@ -34,7 +34,7 @@ export function useLiveUpdates(): LiveUpdatesContextValue | null {
 /**
  * @internal
  */
-interface LiveUpdatesProviderProps {
+export interface LiveUpdatesProviderProps {
   globalLiveUpdates?: boolean
   children: ReactNode
 }

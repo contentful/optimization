@@ -25,7 +25,7 @@ export interface ProtectedFetchMethodOptions
  * @param options - Configuration options for both timeout and retry behavior.
  * @returns A {@link FetchMethod} that applies timeout and retry logic to requests.
  *
- * @throws {@link Error}
+ * @throws Error
  * Rethrows the original error after logging, including abort errors.
  *
  * @remarks

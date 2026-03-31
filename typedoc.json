@@ -13,7 +13,21 @@
     "packages/react-native-sdk",
     "packages/universal/*"
   ],
-  "projectDocuments": ["CONTRIBUTING.md"],
+  "projectDocuments": ["documentation/README.md", "CONTRIBUTING.md"],
+  "externalSymbolLinkMappings": {
+    "@types/node": {
+      "__global.AbortController": "#",
+      "__global.Response": "#"
+    },
+    "contentful": {
+      "ChainModifiers": "#",
+      "Entry": "#",
+      "LocaleCode": "#"
+    },
+    "zod": {
+      "json": "#"
+    }
+  },
   "packageOptions": {
     "includeVersion": true,
     "entryPoints": ["src/index.ts"]

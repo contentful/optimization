@@ -107,7 +107,7 @@ export interface EventBuilderConfig {
   getUserAgent?: () => string | undefined
 }
 
-const UniversalEventBuilderArgs = z.object({
+export const UniversalEventBuilderArgs = z.object({
   campaign: z.optional(Campaign),
   locale: z.optional(z.string()),
   location: z.optional(GeoLocation),
@@ -123,7 +123,7 @@ const UniversalEventBuilderArgs = z.object({
  */
 export type UniversalEventBuilderArgs = z.infer<typeof UniversalEventBuilderArgs>
 
-const EntryInteractionBuilderArgsBase = z.extend(UniversalEventBuilderArgs, {
+export const EntryInteractionBuilderArgsBase = z.extend(UniversalEventBuilderArgs, {
   componentId: z.string(),
   experienceId: z.optional(z.string()),
   variantIndex: z.optional(z.number()),
@@ -136,7 +136,7 @@ const EntryInteractionBuilderArgsBase = z.extend(UniversalEventBuilderArgs, {
  */
 export type EntryInteractionBuilderArgsBase = z.infer<typeof EntryInteractionBuilderArgsBase>
 
-const ViewBuilderArgs = z.extend(EntryInteractionBuilderArgsBase, {
+export const ViewBuilderArgs = z.extend(EntryInteractionBuilderArgsBase, {
   sticky: z.optional(z.boolean()),
   viewId: z.string(),
   viewDurationMs: z.number(),
@@ -149,7 +149,7 @@ const ViewBuilderArgs = z.extend(EntryInteractionBuilderArgsBase, {
  */
 export type ViewBuilderArgs = z.infer<typeof ViewBuilderArgs>
 
-const FlagViewBuilderArgs = z.extend(EntryInteractionBuilderArgsBase, {
+export const FlagViewBuilderArgs = z.extend(EntryInteractionBuilderArgsBase, {
   viewId: z.optional(z.string()),
   viewDurationMs: z.optional(z.number()),
 })
@@ -161,7 +161,7 @@ const FlagViewBuilderArgs = z.extend(EntryInteractionBuilderArgsBase, {
  */
 export type FlagViewBuilderArgs = z.infer<typeof FlagViewBuilderArgs>
 
-const ClickBuilderArgs = EntryInteractionBuilderArgsBase
+export const ClickBuilderArgs = EntryInteractionBuilderArgsBase
 
 /**
  * Arguments for constructing entry click events.
@@ -170,7 +170,7 @@ const ClickBuilderArgs = EntryInteractionBuilderArgsBase
  */
 export type ClickBuilderArgs = z.infer<typeof ClickBuilderArgs>
 
-const HoverBuilderArgs = z.extend(EntryInteractionBuilderArgsBase, {
+export const HoverBuilderArgs = z.extend(EntryInteractionBuilderArgsBase, {
   hoverId: z.string(),
   hoverDurationMs: z.number(),
 })
@@ -182,7 +182,7 @@ const HoverBuilderArgs = z.extend(EntryInteractionBuilderArgsBase, {
  */
 export type HoverBuilderArgs = z.infer<typeof HoverBuilderArgs>
 
-const IdentifyBuilderArgs = z.extend(UniversalEventBuilderArgs, {
+export const IdentifyBuilderArgs = z.extend(UniversalEventBuilderArgs, {
   traits: z.optional(Traits),
   userId: z.string(),
 })
@@ -197,7 +197,7 @@ const IdentifyBuilderArgs = z.extend(UniversalEventBuilderArgs, {
  */
 export type IdentifyBuilderArgs = z.infer<typeof IdentifyBuilderArgs>
 
-const PageViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
+export const PageViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
   properties: z.optional(z.partial(Page)),
 })
 
@@ -212,7 +212,7 @@ const PageViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
  */
 export type PageViewBuilderArgs = z.infer<typeof PageViewBuilderArgs>
 
-const ScreenViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
+export const ScreenViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
   name: z.string(),
   properties: Properties,
 })
@@ -221,14 +221,14 @@ const ScreenViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
  * Arguments for constructing screen view events.
  *
  * @remarks
- * Any properties passed here are merged with the base screen properties from
- * {@link EventBuilderConfig.getScreenProperties}.
+ * Any properties passed here are merged with the base screen properties supplied
+ * by the runtime.
  *
  * @public
  */
 export type ScreenViewBuilderArgs = z.infer<typeof ScreenViewBuilderArgs>
 
-const TrackBuilderArgs = z.extend(UniversalEventBuilderArgs, {
+export const TrackBuilderArgs = z.extend(UniversalEventBuilderArgs, {
   event: z.string(),
   properties: z.optional(z.prefault(Properties, {})),
 })

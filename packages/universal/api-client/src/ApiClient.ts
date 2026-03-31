@@ -1,6 +1,6 @@
 import type { ApiConfig, GlobalApiConfigProperties } from './ApiClientBase'
-import ExperienceApiClient, { type ExperienceApiClientConfig } from './experience'
-import InsightsApiClient, { type InsightsApiClientConfig } from './insights'
+import { ExperienceApiClient, type ExperienceApiClientConfig } from './experience'
+import { InsightsApiClient, type InsightsApiClientConfig } from './insights'
 
 /**
  * Configuration for the high-level {@link ApiClient}.
