@@ -24,6 +24,7 @@ jobs:
       e2e_node_sdk_web_sdk: ${{ steps.filter.outputs.e2e_node_sdk_web_sdk }}
       e2e_web_sdk: ${{ steps.filter.outputs.e2e_web_sdk }}
       e2e_web_sdk_react: ${{ steps.filter.outputs.e2e_web_sdk_react }}
+      e2e_react_web_sdk: ${{ steps.filter.outputs.e2e_react_web_sdk }}
       e2e_react_native_android: ${{ steps.filter.outputs.e2e_react_native_android }}
     steps:
       - uses: namespacelabs/nscloud-checkout-action@8d38dddb292f119b5c9afb0d930ab614dec5d46f # v8.1.0
@@ -92,6 +93,19 @@ jobs:
             e2e_web_sdk_react:
               - 'implementations/web-sdk_react/**'
               - 'lib/**'
+              - 'packages/web/web-sdk/**'
+              - 'packages/web/preview-panel/**'
+              - 'packages/universal/core-sdk/**'
+              - 'packages/universal/api-client/**'
+              - 'packages/universal/api-schemas/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - '.github/workflows/main-pipeline.yaml'
+            # React Web SDK (optimization-react-web) implementation E2E coverage scope.
+            e2e_react_web_sdk:
+              - 'implementations/react-web-sdk/**'
+              - 'lib/**'
+              - 'packages/web/frameworks/react-web-sdk/**'
               - 'packages/web/web-sdk/**'
               - 'packages/web/preview-panel/**'
               - 'packages/universal/core-sdk/**'
@@ -551,6 +565,97 @@ jobs:
           path: |
             ./implementations/web-sdk_react/playwright-report/
             ./implementations/web-sdk_react/test-results/
+          retention-days: 1
+
+  e2e-react-web-sdk:
+    name: ⚛️ E2E React Web SDK
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
+    timeout-minutes: 15
+    needs: [setup, changes, build]
+    if: needs.changes.outputs.e2e_react_web_sdk == 'true'
+    steps:
+      - uses: namespacelabs/nscloud-checkout-action@8d38dddb292f119b5c9afb0d930ab614dec5d46f # v8.1.0
+
+      - name: Create .env from .env.example
+        run: cp implementations/react-web-sdk/.env.example implementations/react-web-sdk/.env
+
+      - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
+
+      - name: Set up caches (Namespace)
+        uses: namespacelabs/nscloud-cache-action@a90bb5d4b27522ce881c6e98eebd7d7e6d1653f9 # v1.4.2
+        with:
+          cache: |
+            pnpm
+            playwright
+            apt
+
+      - run: pnpm install --prefer-offline --frozen-lockfile
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # 6.0.0
+        with:
+          name: sdk-package-tarballs
+          path: pkgs
+      - run: pnpm store prune
+      - run: pnpm run implementation:react-web-sdk -- implementation:install -- --no-frozen-lockfile
+      - run:
+          pnpm run implementation:react-web-sdk -- implementation:playwright:install -- --with-deps
+
+      - name: Start React Web SDK app and mocks
+        run: |
+          pnpm run implementation:react-web-sdk -- serve:mocks > /tmp/react-web-sdk-mocks.log 2>&1
+          pnpm run implementation:react-web-sdk -- build > /tmp/react-web-sdk-build.log 2>&1
+          pnpm --dir implementations/react-web-sdk exec rsbuild preview --host localhost --port 3001 > /tmp/react-web-sdk-app.log 2>&1 &
+          echo $! > /tmp/react-web-sdk-app.pid
+
+          for i in $(seq 1 90); do
+            if curl -sS http://localhost:3001 >/dev/null; then
+              echo "React Web SDK app is ready"
+              exit 0
+            fi
+            echo "Waiting for React Web SDK app... ($i/90)"
+            sleep 1
+          done
+
+          echo "React Web SDK app failed to start in time"
+          echo "=== react-web-sdk build logs ==="
+          cat /tmp/react-web-sdk-build.log || true
+          echo "=== react-web-sdk app logs ==="
+          cat /tmp/react-web-sdk-app.log || true
+          echo "=== react-web-sdk mocks logs ==="
+          cat /tmp/react-web-sdk-mocks.log || true
+          exit 1
+      - run: pnpm run implementation:react-web-sdk -- implementation:test:e2e:run
+        env:
+          PLAYWRIGHT_TEST_BASE_URL: http://localhost:3001
+      - name: Dump React Web SDK logs on failure
+        if: ${{ failure() }}
+        run: |
+          echo "=== react-web-sdk build logs ==="
+          cat /tmp/react-web-sdk-build.log || true
+          echo "=== react-web-sdk app logs ==="
+          cat /tmp/react-web-sdk-app.log || true
+          echo "=== react-web-sdk mocks logs ==="
+          cat /tmp/react-web-sdk-mocks.log || true
+          echo "=== pm2 list ==="
+          pm2 list || true
+
+      - name: Stop React Web SDK app and mocks
+        if: ${{ always() }}
+        run: |
+          kill "$(cat /tmp/react-web-sdk-app.pid)" 2>/dev/null || true
+          pnpm run implementation:react-web-sdk -- serve:stop || true
+
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        if: ${{ !cancelled() }}
+        with:
+          name: ci-results-react-web-sdk
+          path: |
+            ./implementations/react-web-sdk/playwright-report/
+            ./implementations/react-web-sdk/test-results/
           retention-days: 1
 
   e2e-react-native-android-build:
