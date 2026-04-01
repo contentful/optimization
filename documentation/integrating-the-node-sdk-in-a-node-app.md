@@ -503,7 +503,53 @@ if (selectedOptimization?.sticky) {
 }
 ```
 
-## 9. Know When The Web SDK Should Join The Architecture
+## Caching And Cache Safety
+
+The Node SDK sits on one side of an important cache boundary:
+
+- your app fetches content from Contentful
+- the Node SDK evaluates the current request and returns profile and optimization data
+- your app resolves the selected variant and renders the response
+
+In server-rendered applications, only the raw Contentful delivery payload is broadly cache-safe.
+Personalized output is not.
+
+Safe patterns:
+
+- cache baseline Contentful entries or query results returned by `contentful.js`
+- treat cached Contentful `Entry` objects as immutable
+- clone a cached entry before applying request-specific transforms such as merge-tag rendering
+- resolve the selected variant from the current request's `selectedOptimizations`
+- render merge tags against the current request's `profile`
+
+Unsafe patterns:
+
+- caching full HTML responses for personalized routes without varying on all personalization inputs
+- mutating a cached `Entry` object during request rendering
+- caching the result of `page()`, `identify()`, `screen()`, `track()`, or `trackView()` as if those
+  methods were pure reads
+- sharing merge-tag-rendered Rich Text across users or requests
+
+The request-scoped SDK methods are not cacheable reads. They emit Experience or Insights events and
+may return updated profile state for the current visitor. Call them per request when personalization
+is needed.
+
+If you want to cache variant resolution itself, key that cache by both:
+
+- the version or identity of the baseline Contentful entry
+- a fingerprint of the current `selectedOptimizations`
+
+Do not key personalized caches only by URL or entry ID.
+
+| Artifact                                                                   | Shared-cache safe? | Notes                                                                                       |
+| -------------------------------------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------- |
+| Raw `contentful.js` entry or query response                                | Yes                | Key by entry or query, locale, include depth, environment, host, and delivery mode          |
+| `resolveOptimizedEntry(entry, selectedOptimizations)` result               | Conditionally      | Safe only if keyed by the baseline entry version plus a `selectedOptimizations` fingerprint |
+| Merge-tag-rendered Rich Text                                               | No                 | Depends on the current request `profile`                                                    |
+| SSR HTML with personalized content                                         | Usually no         | Safe only when the cache varies on all personalization inputs                               |
+| `page()`, `identify()`, `screen()`, `track()`, and `trackView()` responses | No                 | These methods perform side effects and should not be memoized                               |
+
+## Know When The Web SDK Should Join The Architecture
 
 Use the Node SDK by itself when the server is responsible for choosing the variant and rendering the
 response.

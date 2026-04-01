@@ -31,6 +31,12 @@ The goal of this reference implementation is to illustrate the usage of cookie-b
 in both the Node and Web SDKs, which is an important component of many server-side/client-side
 hybrid SSR and ESR solutions.
 
+> [!NOTE]
+>
+> This hybrid architecture allows more cache flexibility when personalization is deferred to browser
+> code. If the server embeds personalized output or profile-derived values, treat that response as
+> personalized and avoid shared caching unless you vary on all relevant inputs.
+
 ## Setup
 
 All steps should be run from the monorepo root.

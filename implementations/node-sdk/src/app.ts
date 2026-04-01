@@ -67,6 +67,10 @@ async function getContentfulEntry(entryId: string): Promise<ContentEntry | undef
   } catch (_error) {}
 }
 
+function cloneContentEntry(entry: ContentEntry): ContentEntry {
+  return structuredClone(entry)
+}
+
 function isNonEmptyString(s?: unknown): s is string {
   return s !== undefined && typeof s === 'string' && s.trim().length > 0
 }
@@ -90,13 +94,13 @@ const entryIds: string[] = [
   '7pa5bOx8Z9NmNcr7mISvD',
 ]
 
-const entries = new Map<string, ContentEntry>()
+const cachedEntries = new Map<string, ContentEntry>()
 
 Promise.all(
   entryIds.map(async (entryId) => {
     const entry = await getContentfulEntry(entryId)
     if (!entry) return
-    entries.set(entryId, entry)
+    cachedEntries.set(entryId, entry)
   }),
 ).catch((error: unknown) => {
   // eslint-disable-next-line no-console -- debug
@@ -178,12 +182,17 @@ app.get('/', limiter, async (req, res) => {
   >()
 
   entryIds.forEach((entryId) => {
-    const entry = entries.get(entryId)
+    const cachedEntry = cachedEntries.get(entryId)
 
-    if (!entry) return
+    if (!cachedEntry) return
 
-    if (isRichText(entry.fields.text)) {
-      entry.fields.text = documentToHtmlString(entry.fields.text, {
+    const optimizedEntry = sdk.resolveOptimizedEntry<ContentEntrySkeleton>(
+      cloneContentEntry(cachedEntry),
+      selectedOptimizations,
+    )
+
+    if (isRichText(optimizedEntry.entry.fields.text)) {
+      optimizedEntry.entry.fields.text = documentToHtmlString(optimizedEntry.entry.fields.text, {
         renderNode: {
           [INLINES.EMBEDDED_ENTRY]: (node) => {
             if (isMergeTagEntry(node.data.target)) {
@@ -195,11 +204,6 @@ app.get('/', limiter, async (req, res) => {
         },
       })
     }
-
-    const optimizedEntry = sdk.resolveOptimizedEntry<ContentEntrySkeleton>(
-      entry,
-      selectedOptimizations,
-    )
 
     optimizedEntries.set(entryId, optimizedEntry)
   })

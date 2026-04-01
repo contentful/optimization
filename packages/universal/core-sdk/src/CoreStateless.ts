@@ -71,6 +71,10 @@ const createStatelessInsightsApiConfig = (
  * @public
  * Built on top of `CoreBase`. Request-emitting methods are exposed through
  * {@link CoreStateless.forRequest}.
+ * @remarks
+ * The runtime itself is stateless, but request-scoped methods still perform
+ * outbound Experience and Insights API calls. Cache Contentful delivery data
+ * in the host application, not the results of those calls.
  */
 class CoreStateless extends CoreBase<CoreStatelessConfig> {
   constructor(config: CoreStatelessConfig) {
