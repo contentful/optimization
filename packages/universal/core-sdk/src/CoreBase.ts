@@ -1,20 +1,15 @@
 import {
   ApiClient,
   type ApiClientConfig,
-  type ExperienceApiClientConfig,
   type GlobalApiConfigProperties,
-  type InsightsApiClientConfig,
 } from '@contentful/optimization-api-client'
 import type {
   ChangeArray,
   ExperienceEvent as ExperienceEventPayload,
-  ExperienceEventType,
   InsightsEvent as InsightsEventPayload,
-  InsightsEventType,
   Json,
   MergeTagEntry,
   OptimizationData,
-  PartialProfile,
   Profile,
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
@@ -22,52 +17,10 @@ import type { LogLevels } from '@contentful/optimization-api-client/logger'
 import { ConsoleLogSink, logger } from '@contentful/optimization-api-client/logger'
 import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
 import { OPTIMIZATION_CORE_SDK_NAME, OPTIMIZATION_CORE_SDK_VERSION } from './constants'
-import {
-  type ClickBuilderArgs,
-  EventBuilder,
-  type EventBuilderConfig,
-  type FlagViewBuilderArgs,
-  type HoverBuilderArgs,
-  type IdentifyBuilderArgs,
-  type PageViewBuilderArgs,
-  type ScreenViewBuilderArgs,
-  type TrackBuilderArgs,
-  type ViewBuilderArgs,
-} from './events'
+import { EventBuilder, type EventBuilderConfig } from './events'
 import { InterceptorManager } from './lib/interceptor'
 import type { ResolvedData } from './resolvers'
 import { FlagsResolver, MergeTagValueResolver, OptimizedEntryResolver } from './resolvers'
-
-/**
- * Unified API configuration for Core.
- *
- * @public
- */
-export interface CoreApiConfig {
-  /** Base URL override for Experience API requests. */
-  experienceBaseUrl?: ExperienceApiClientConfig['baseUrl']
-  /** Base URL override for Insights API requests. */
-  insightsBaseUrl?: InsightsApiClientConfig['baseUrl']
-  /** Beacon-like handler used by Insights event delivery when available. */
-  beaconHandler?: InsightsApiClientConfig['beaconHandler']
-  /** Experience API features enabled for outgoing requests. */
-  enabledFeatures?: ExperienceApiClientConfig['enabledFeatures']
-  /** Experience API IP override. */
-  ip?: ExperienceApiClientConfig['ip']
-  /** Experience API locale override. */
-  locale?: ExperienceApiClientConfig['locale']
-  /** Experience API plain-text request toggle. */
-  plainText?: ExperienceApiClientConfig['plainText']
-  /** Experience API preflight request toggle. */
-  preflight?: ExperienceApiClientConfig['preflight']
-}
-
-/**
- * Union of all event type keys that Core may emit.
- *
- * @public
- */
-export type EventType = InsightsEventType | ExperienceEventType
 
 /**
  * Lifecycle container for event and state interceptors.
@@ -88,11 +41,6 @@ export interface LifecycleInterceptors {
  */
 export interface CoreConfig extends Pick<ApiClientConfig, GlobalApiConfigProperties> {
   /**
-   * Unified API configuration used by Experience and Insights clients.
-   */
-  api?: CoreApiConfig
-
-  /**
    * Event builder configuration (channel/library metadata, etc.).
    */
   eventBuilder?: EventBuilderConfig
@@ -101,18 +49,23 @@ export interface CoreConfig extends Pick<ApiClientConfig, GlobalApiConfigPropert
   logLevel?: LogLevels
 }
 
+interface CoreBaseApiClientConfig {
+  experience?: ApiClientConfig['experience']
+  insights?: ApiClientConfig['insights']
+}
+
 /**
  * Internal base that wires the API client, event builder, and logging.
  *
  * @internal
  */
-abstract class CoreBase {
+abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
   /** Shared Optimization API client instance. */
   readonly api: ApiClient
   /** Shared event builder instance. */
   readonly eventBuilder: EventBuilder
   /** Resolved core configuration. */
-  readonly config: CoreConfig
+  readonly config: TConfig
   /** Static resolver for evaluating optimized custom flags. */
   readonly flagsResolver = FlagsResolver
   /** Static resolver for merge-tag lookups against profile data. */
@@ -135,10 +88,10 @@ abstract class CoreBase {
    * const sdk = new CoreStateless({ clientId: 'abc123', environment: 'prod' })
    * ```
    */
-  constructor(config: CoreConfig) {
+  constructor(config: TConfig, api: CoreBaseApiClientConfig = {}) {
     this.config = config
 
-    const { api, eventBuilder, logLevel, environment, clientId, fetchOptions } = config
+    const { eventBuilder, logLevel, environment, clientId, fetchOptions } = config
 
     logger.addSink(new ConsoleLogSink(logLevel))
 
@@ -146,8 +99,8 @@ abstract class CoreBase {
       clientId,
       environment,
       fetchOptions,
-      insights: CoreBase.createInsightsApiConfig(api),
-      experience: CoreBase.createExperienceApiConfig(api),
+      experience: api.experience,
+      insights: api.insights,
     }
 
     this.api = new ApiClient(apiConfig)
@@ -158,48 +111,6 @@ abstract class CoreBase {
         library: { name: OPTIMIZATION_CORE_SDK_NAME, version: OPTIMIZATION_CORE_SDK_VERSION },
       },
     )
-  }
-
-  private static createExperienceApiConfig(
-    api: CoreApiConfig | undefined,
-  ): ApiClientConfig['experience'] {
-    if (api === undefined) return undefined
-
-    const { enabledFeatures, experienceBaseUrl: baseUrl, ip, locale, plainText, preflight } = api
-
-    if (
-      baseUrl === undefined &&
-      enabledFeatures === undefined &&
-      ip === undefined &&
-      locale === undefined &&
-      plainText === undefined &&
-      preflight === undefined
-    ) {
-      return undefined
-    }
-
-    return {
-      baseUrl,
-      enabledFeatures,
-      ip,
-      locale,
-      plainText,
-      preflight,
-    }
-  }
-
-  private static createInsightsApiConfig(
-    api: CoreApiConfig | undefined,
-  ): ApiClientConfig['insights'] {
-    if (api === undefined) return undefined
-
-    const { beaconHandler, insightsBaseUrl: baseUrl } = api
-
-    if (baseUrl === undefined && beaconHandler === undefined) {
-      return undefined
-    }
-
-    return { baseUrl, beaconHandler }
   }
 
   /**
@@ -274,198 +185,6 @@ abstract class CoreBase {
    */
   getMergeTagValue(embeddedEntryNodeTarget: MergeTagEntry, profile?: Profile): string | undefined {
     return this.mergeTagValueResolver.resolve(embeddedEntryNodeTarget, profile)
-  }
-
-  protected abstract sendExperienceEvent(
-    method: string,
-    args: readonly unknown[],
-    event: ExperienceEventPayload,
-    profile?: PartialProfile,
-  ): Promise<OptimizationData | undefined>
-
-  protected abstract sendInsightsEvent(
-    method: string,
-    args: readonly unknown[],
-    event: InsightsEventPayload,
-    profile?: PartialProfile,
-  ): Promise<void>
-
-  /**
-   * Convenience wrapper for sending an `identify` event through the Experience path.
-   *
-   * @param payload - Identify builder arguments.
-   * @returns The resulting {@link OptimizationData} for the identified user.
-   * @example
-   * ```ts
-   * const data = await core.identify({ userId: 'user-123', traits: { plan: 'pro' } })
-   * ```
-   */
-  async identify(
-    payload: IdentifyBuilderArgs & { profile?: PartialProfile },
-  ): Promise<OptimizationData | undefined> {
-    const { profile, ...builderArgs } = payload
-
-    return await this.sendExperienceEvent(
-      'identify',
-      [payload],
-      this.eventBuilder.buildIdentify(builderArgs),
-      profile,
-    )
-  }
-
-  /**
-   * Convenience wrapper for sending a `page` event through the Experience path.
-   *
-   * @param payload - Page view builder arguments.
-   * @returns The evaluated {@link OptimizationData} for this page view.
-   * @example
-   * ```ts
-   * const data = await core.page({ properties: { title: 'Home' } })
-   * ```
-   */
-  async page(
-    payload: PageViewBuilderArgs & { profile?: PartialProfile } = {},
-  ): Promise<OptimizationData | undefined> {
-    const { profile, ...builderArgs } = payload
-
-    return await this.sendExperienceEvent(
-      'page',
-      [payload],
-      this.eventBuilder.buildPageView(builderArgs),
-      profile,
-    )
-  }
-
-  /**
-   * Convenience wrapper for sending a `screen` event through the Experience path.
-   *
-   * @param payload - Screen view builder arguments.
-   * @returns The evaluated {@link OptimizationData} for this screen view.
-   * @example
-   * ```ts
-   * const data = await core.screen({ name: 'HomeScreen' })
-   * ```
-   */
-  async screen(
-    payload: ScreenViewBuilderArgs & { profile?: PartialProfile },
-  ): Promise<OptimizationData | undefined> {
-    const { profile, ...builderArgs } = payload
-
-    return await this.sendExperienceEvent(
-      'screen',
-      [payload],
-      this.eventBuilder.buildScreenView(builderArgs),
-      profile,
-    )
-  }
-
-  /**
-   * Convenience wrapper for sending a custom `track` event through the Experience path.
-   *
-   * @param payload - Track builder arguments.
-   * @returns The evaluated {@link OptimizationData} for this event.
-   * @example
-   * ```ts
-   * const data = await core.track({ event: 'button_click', properties: { label: 'Buy' } })
-   * ```
-   */
-  async track(
-    payload: TrackBuilderArgs & { profile?: PartialProfile },
-  ): Promise<OptimizationData | undefined> {
-    const { profile, ...builderArgs } = payload
-
-    return await this.sendExperienceEvent(
-      'track',
-      [payload],
-      this.eventBuilder.buildTrack(builderArgs),
-      profile,
-    )
-  }
-
-  /**
-   * Track an entry view through Insights and, when sticky, Experience.
-   *
-   * @param payload - Entry view builder arguments. When `payload.sticky` is
-   *   `true`, the event will also be sent through Experience as a sticky
-   *   entry view.
-   * @returns A promise that resolves when all delegated calls complete.
-   * @remarks
-   * Experience receives sticky entry views only; Insights is always invoked
-   * regardless of `sticky`.
-   * @example
-   * ```ts
-   * await core.trackView({ componentId: 'entry-123', sticky: true })
-   * ```
-   */
-  async trackView(
-    payload: ViewBuilderArgs & { profile?: PartialProfile },
-  ): Promise<OptimizationData | undefined> {
-    const { profile, ...builderArgs } = payload
-    let result = undefined
-
-    if (payload.sticky) {
-      result = await this.sendExperienceEvent(
-        'trackView',
-        [payload],
-        this.eventBuilder.buildView(builderArgs),
-        profile,
-      )
-    }
-
-    await this.sendInsightsEvent(
-      'trackView',
-      [payload],
-      this.eventBuilder.buildView(builderArgs),
-      profile,
-    )
-
-    return result
-  }
-
-  /**
-   * Track an entry click through Insights.
-   *
-   * @param payload - Entry click builder arguments.
-   * @returns A promise that resolves when processing completes.
-   * @example
-   * ```ts
-   * await core.trackClick({ componentId: 'entry-123' })
-   * ```
-   */
-  async trackClick(payload: ClickBuilderArgs): Promise<void> {
-    await this.sendInsightsEvent('trackClick', [payload], this.eventBuilder.buildClick(payload))
-  }
-
-  /**
-   * Track an entry hover through Insights.
-   *
-   * @param payload - Entry hover builder arguments.
-   * @returns A promise that resolves when processing completes.
-   * @example
-   * ```ts
-   * await core.trackHover({ componentId: 'entry-123' })
-   * ```
-   */
-  async trackHover(payload: HoverBuilderArgs): Promise<void> {
-    await this.sendInsightsEvent('trackHover', [payload], this.eventBuilder.buildHover(payload))
-  }
-
-  /**
-   * Track a feature flag view through Insights.
-   *
-   * @param payload - Flag view builder arguments used to build the flag view event.
-   * @returns A promise that resolves when processing completes.
-   * @example
-   * ```ts
-   * await core.trackFlagView({ componentId: 'feature-flag-123' })
-   * ```
-   */
-  async trackFlagView(payload: FlagViewBuilderArgs): Promise<void> {
-    await this.sendInsightsEvent(
-      'trackFlagView',
-      [payload],
-      this.eventBuilder.buildFlagView(payload),
-    )
   }
 }
 

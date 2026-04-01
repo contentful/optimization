@@ -23,6 +23,9 @@ This is a reference implementation for the
 [Optimization Node SDK](../../packages/node/node-sdk/README.md) and is part of the
 [Contentful Optimization SDK Suite](../../README.md).
 
+The server creates one stateless Node SDK instance at module load and binds request-specific options
+through `forRequest(...)` inside each incoming request handler.
+
 ## Setup
 
 All steps should be run from the monorepo root.

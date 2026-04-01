@@ -1,17 +1,24 @@
-import {
-  BatchInsightsEventArray,
-  ExperienceEvent as ExperienceEventSchema,
-  InsightsEvent as InsightsEventSchema,
-  parseWithFriendlyError,
-  type ExperienceEvent as ExperienceEventPayload,
-  type InsightsEvent as InsightsEventPayload,
-} from '@contentful/optimization-api-client/api-schemas'
-import type { OptimizationData, PartialProfile } from './api-schemas'
-import CoreBase, { type CoreApiConfig, type CoreConfig } from './CoreBase'
+import type {
+  ApiClientConfig,
+  ExperienceApiClientRequestOptions,
+} from '@contentful/optimization-api-client'
+import type { CoreStatelessApiConfig } from './CoreApiConfig'
+import CoreBase, { type CoreConfig } from './CoreBase'
+import { CoreStatelessRequestScope } from './CoreStatelessRequestScope'
 import type { EventBuilderConfig } from './events'
 
 /**
- * Configuration for the Node-specific Optimization SDK.
+ * Request-bound Experience API options for stateless runtimes.
+ *
+ * @public
+ */
+export interface CoreStatelessRequestOptions extends Pick<
+  ExperienceApiClientRequestOptions,
+  'ip' | 'locale' | 'plainText' | 'preflight'
+> {}
+
+/**
+ * Configuration for stateless Optimization Core runtimes.
  *
  * @public
  * @remarks
@@ -19,12 +26,11 @@ import type { EventBuilderConfig } from './events'
  * of the event-builder configuration. SDKs commonly inject their own library
  * metadata or channel definitions.
  */
-export interface CoreStatelessConfig extends Omit<CoreConfig, 'api'> {
+export interface CoreStatelessConfig extends CoreConfig {
   /**
-   * Unified API configuration for stateless environments. Omits stateful-only
-   * delivery hooks such as `beaconHandler`.
+   * Unified API configuration for stateless environments.
    */
-  api?: Omit<CoreApiConfig, 'beaconHandler'>
+  api?: CoreStatelessApiConfig
 
   /**
    * Overrides for the event builder configuration. Omits methods that are only
@@ -33,53 +39,58 @@ export interface CoreStatelessConfig extends Omit<CoreConfig, 'api'> {
   eventBuilder?: Omit<EventBuilderConfig, 'getLocale' | 'getPageProperties' | 'getUserAgent'>
 }
 
+const hasDefinedValues = (record: Record<string, unknown>): boolean =>
+  Object.values(record).some((value) => value !== undefined)
+
+const createStatelessExperienceApiConfig = (
+  api: CoreStatelessConfig['api'] | undefined,
+): ApiClientConfig['experience'] => {
+  if (api === undefined) return undefined
+
+  const experienceConfig = {
+    baseUrl: api.experienceBaseUrl,
+    enabledFeatures: api.enabledFeatures,
+  }
+
+  return hasDefinedValues(experienceConfig) ? experienceConfig : undefined
+}
+
+const createStatelessInsightsApiConfig = (
+  api: CoreStatelessConfig['api'] | undefined,
+): ApiClientConfig['insights'] => {
+  if (api?.insightsBaseUrl === undefined) return undefined
+
+  return {
+    baseUrl: api.insightsBaseUrl,
+  }
+}
+
 /**
  * Core runtime for stateless environments.
  *
  * @public
- * Built on top of `CoreBase`.
+ * Built on top of `CoreBase`. Request-emitting methods are exposed through
+ * {@link CoreStateless.forRequest}.
  */
-class CoreStateless extends CoreBase {
+class CoreStateless extends CoreBase<CoreStatelessConfig> {
   constructor(config: CoreStatelessConfig) {
-    super({
-      ...config,
-      api: config.api ? { ...config.api, beaconHandler: undefined } : undefined,
+    super(config, {
+      experience: createStatelessExperienceApiConfig(config.api),
+      insights: createStatelessInsightsApiConfig(config.api),
     })
   }
 
-  protected override async sendExperienceEvent(
-    _method: string,
-    _args: readonly unknown[],
-    event: ExperienceEventPayload,
-    profile?: PartialProfile,
-  ): Promise<OptimizationData> {
-    const intercepted = await this.interceptors.event.run(event)
-    const validEvent = parseWithFriendlyError(ExperienceEventSchema, intercepted)
-
-    return await this.api.experience.upsertProfile({
-      profileId: profile?.id,
-      events: [validEvent],
-    })
-  }
-
-  protected override async sendInsightsEvent(
-    _method: string,
-    _args: readonly unknown[],
-    event: InsightsEventPayload,
-    profile?: PartialProfile,
-  ): Promise<void> {
-    const intercepted = await this.interceptors.event.run(event)
-    const validEvent = parseWithFriendlyError(InsightsEventSchema, intercepted)
-
-    const batchEvent: BatchInsightsEventArray = parseWithFriendlyError(BatchInsightsEventArray, [
-      {
-        profile,
-        events: [validEvent],
-      },
-    ])
-
-    await this.api.insights.sendBatchEvents(batchEvent)
+  /**
+   * Bind request-scoped Experience API options for a single stateless request.
+   *
+   * @param options - Request-scoped Experience API options.
+   * @returns A lightweight request scope for stateless event emission.
+   */
+  forRequest(options: CoreStatelessRequestOptions = {}): CoreStatelessRequestScope {
+    return new CoreStatelessRequestScope(this, options)
   }
 }
+
+export { CoreStatelessRequestScope }
 
 export default CoreStateless
