@@ -360,13 +360,14 @@ This is an intentional CI policy:
 The path filters do not watch only implementation directories. Shared package and root changes can
 also trigger implementation E2E. At a high level:
 
-| E2E job                    | Also watches shared surfaces                                                                                         |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `e2e_node_ssr_only`        | `lib/**`, `packages/node/node-sdk/**`, universal packages, root package/workflow files                               |
-| `e2e_node_ssr_web_vanilla` | `lib/**`, `packages/node/node-sdk/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, shared root files |
-| `e2e_web`                  | `lib/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, universal packages, shared root files          |
-| `e2e_web_react`            | `lib/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, universal packages, shared root files          |
-| `e2e_react_native_android` | `lib/**`, `packages/react-native-sdk/**`, universal packages, shared root files                                      |
+| E2E job                    | Also watches shared surfaces                                                                                                                            |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `e2e_node_ssr_only`        | `lib/**`, `packages/node/node-sdk/**`, universal packages, root package/workflow files                                                                  |
+| `e2e_node_ssr_web_vanilla` | `lib/**`, `packages/node/node-sdk/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, shared root files                                    |
+| `e2e_web`                  | `lib/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, universal packages, shared root files                                             |
+| `e2e_web_react`            | `lib/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, universal packages, shared root files                                             |
+| `e2e_react_web_sdk`        | `lib/**`, `packages/web/frameworks/react-web-sdk/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, universal packages, shared root files |
+| `e2e_react_native_android` | `lib/**`, `packages/react-native-sdk/**`, universal packages, shared root files                                                                         |
 
 See [`.github/workflows/main-pipeline.yaml`](./.github/workflows/main-pipeline.yaml) for the exact
 authoritative filter list.

@@ -1,3 +1,4 @@
+import { pluginReact } from '@rsbuild/plugin-react'
 import { defineConfig } from '@rslib/core'
 import { getPackageName, maybeEnableRsDoctor } from 'build-tools'
 import path from 'node:path'
@@ -21,6 +22,7 @@ const common = {
 } as const
 
 export default defineConfig({
+  plugins: [pluginReact()],
   source: {
     entry: {
       index: './src/index.ts',
