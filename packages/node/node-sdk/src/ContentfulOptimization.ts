@@ -80,7 +80,9 @@ function mergeConfig(config: OptimizationNodeConfig): CoreStatelessConfig {
  *   logLevel: 'info',
  * })
  *
- * await sdk.track({ event: 'server_event', properties: { id: 1 } })
+ * const request = sdk.forRequest({ locale: 'en-US' })
+ *
+ * await request.track({ event: 'server_event', properties: { id: 1 } })
  * ```
  *
  * @see {@link CoreStateless}

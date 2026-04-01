@@ -24,6 +24,9 @@ This is a reference implementation using both the
 [Optimization Web SDK](../../packages/web/web-sdk/README.md), and is part of the
 [Contentful Optimization SDK Suite](../../README.md).
 
+On the server side, the stateless Node SDK is created once at module load and each request binds its
+own request-scoped options through `forRequest(...)`.
+
 The goal of this reference implementation is to illustrate the usage of cookie-based communication
 in both the Node and Web SDKs, which is an important component of many server-side/client-side
 hybrid SSR and ESR solutions.

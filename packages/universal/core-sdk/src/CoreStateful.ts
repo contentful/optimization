@@ -1,21 +1,20 @@
+import type { ApiClientConfig } from '@contentful/optimization-api-client'
 import type {
   ChangeArray,
   ExperienceEvent as ExperienceEventPayload,
+  ExperienceEventType,
   InsightsEvent as InsightsEventPayload,
+  InsightsEventType,
   Json,
-  MergeTagEntry,
-  OptimizationData,
-  PartialProfile,
   Profile,
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger, logger } from '@contentful/optimization-api-client/logger'
-import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'contentful'
-import { isEqual } from 'es-toolkit/predicate'
 import type { BlockedEvent } from './BlockedEvent'
 import type { ConsentController, ConsentGuard } from './Consent'
-import CoreBase, { type CoreConfig, type EventType } from './CoreBase'
-import type { FlagViewBuilderArgs } from './events'
+import type { CoreStatefulApiConfig } from './CoreApiConfig'
+import type { CoreConfig } from './CoreBase'
+import CoreStatefulEventEmitter from './CoreStatefulEventEmitter'
 import { toPositiveInt } from './lib/number'
 import { type QueueFlushPolicy, resolveQueueFlushPolicy } from './lib/queue'
 import {
@@ -24,7 +23,6 @@ import {
 } from './lib/singleton/StatefulRuntimeSingleton'
 import { ExperienceQueue, type ExperienceQueueDropContext } from './queues/ExperienceQueue'
 import { InsightsQueue } from './queues/InsightsQueue'
-import type { ResolvedData } from './resolvers'
 import {
   batch,
   blockedEvent as blockedEventSignal,
@@ -41,24 +39,57 @@ import {
   selectedOptimizations as selectedOptimizationsSignal,
   signalFns,
   type SignalFns,
-  signals,
   type Signals,
-  toDistinctObservable,
+  signals,
   toObservable,
 } from './signals'
 import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from './symbols'
 
 const coreLogger = createScopedLogger('CoreStateful')
 
+/**
+ * Union of all event type keys that stateful Core may emit.
+ *
+ * @public
+ */
+export type EventType = InsightsEventType | ExperienceEventType
+
 const DEFAULT_ALLOWED_EVENT_TYPES: EventType[] = ['identify', 'page', 'screen']
 const OFFLINE_QUEUE_MAX_EVENTS = 100
-const CONSENT_EVENT_TYPE_MAP: Readonly<Partial<Record<string, EventType>>> = {
-  trackView: 'component',
-  trackFlagView: 'component',
-  trackClick: 'component_click',
-  trackHover: 'component_hover',
-}
 export type { ExperienceQueueDropContext } from './queues/ExperienceQueue'
+
+const hasDefinedValues = (record: Record<string, unknown>): boolean =>
+  Object.values(record).some((value) => value !== undefined)
+
+const createStatefulExperienceApiConfig = (
+  api: CoreStatefulApiConfig | undefined,
+): ApiClientConfig['experience'] => {
+  if (api === undefined) return undefined
+
+  const experienceConfig = {
+    baseUrl: api.experienceBaseUrl,
+    enabledFeatures: api.enabledFeatures,
+    ip: api.ip,
+    locale: api.locale,
+    plainText: api.plainText,
+    preflight: api.preflight,
+  }
+
+  return hasDefinedValues(experienceConfig) ? experienceConfig : undefined
+}
+
+const createStatefulInsightsApiConfig = (
+  api: CoreStatefulApiConfig | undefined,
+): ApiClientConfig['insights'] => {
+  if (api === undefined) return undefined
+
+  const insightsConfig = {
+    baseUrl: api.insightsBaseUrl,
+    beaconHandler: api.beaconHandler,
+  }
+
+  return hasDefinedValues(insightsConfig) ? insightsConfig : undefined
+}
 
 /**
  * Unified queue policy for stateful Core.
@@ -147,6 +178,11 @@ export interface CoreConfigDefaults {
  */
 export interface CoreStatefulConfig extends CoreConfig {
   /**
+   * Unified API configuration for stateful environments.
+   */
+  api?: CoreStatefulApiConfig
+
+  /**
    * Allow-listed event type strings permitted when consent is not set.
    */
   allowedEventTypes?: EventType[]
@@ -173,14 +209,13 @@ let statefulInstanceCounter = 0
  *
  * @public
  */
-class CoreStateful extends CoreBase implements ConsentController, ConsentGuard {
+class CoreStateful extends CoreStatefulEventEmitter implements ConsentController, ConsentGuard {
   private readonly singletonOwner: string
   private destroyed = false
-  private readonly flagObservables = new Map<string, Observable<Json>>()
-  private readonly allowedEventTypes: EventType[]
-  private readonly experienceQueue: ExperienceQueue
-  private readonly insightsQueue: InsightsQueue
-  private readonly onEventBlocked?: CoreStatefulConfig['onEventBlocked']
+  protected readonly allowedEventTypes: EventType[]
+  protected readonly experienceQueue: ExperienceQueue
+  protected readonly insightsQueue: InsightsQueue
+  protected readonly onEventBlocked?: CoreStatefulConfig['onEventBlocked']
 
   /**
    * Expose merged observable state for consumers.
@@ -198,7 +233,10 @@ class CoreStateful extends CoreBase implements ConsentController, ConsentGuard {
   }
 
   constructor(config: CoreStatefulConfig) {
-    super(config)
+    super(config, {
+      experience: createStatefulExperienceApiConfig(config.api),
+      insights: createStatefulInsightsApiConfig(config.api),
+    })
 
     this.singletonOwner = `CoreStateful#${++statefulInstanceCounter}`
     acquireStatefulRuntimeSingleton(this.singletonOwner)
@@ -245,170 +283,6 @@ class CoreStateful extends CoreBase implements ConsentController, ConsentGuard {
       releaseStatefulRuntimeSingleton(this.singletonOwner)
       throw error
     }
-  }
-
-  override getFlag(name: string, changes: ChangeArray | undefined = changesSignal.value): Json {
-    const value = super.getFlag(name, changes)
-    const payload = this.buildFlagViewBuilderArgs(name, changes)
-
-    void this.trackFlagView(payload).catch((error: unknown) => {
-      logger.warn(`Failed to emit "flag view" event for "${name}"`, String(error))
-    })
-
-    return value
-  }
-
-  override resolveOptimizedEntry<
-    S extends EntrySkeletonType = EntrySkeletonType,
-    L extends LocaleCode = LocaleCode,
-  >(
-    entry: Entry<S, undefined, L>,
-    selectedOptimizations?: SelectedOptimizationArray,
-  ): ResolvedData<S, undefined, L>
-  override resolveOptimizedEntry<
-    S extends EntrySkeletonType,
-    M extends ChainModifiers = ChainModifiers,
-    L extends LocaleCode = LocaleCode,
-  >(entry: Entry<S, M, L>, selectedOptimizations?: SelectedOptimizationArray): ResolvedData<S, M, L>
-  override resolveOptimizedEntry<
-    S extends EntrySkeletonType,
-    M extends ChainModifiers,
-    L extends LocaleCode = LocaleCode,
-  >(
-    entry: Entry<S, M, L>,
-    selectedOptimizations:
-      | SelectedOptimizationArray
-      | undefined = selectedOptimizationsSignal.value,
-  ): ResolvedData<S, M, L> {
-    return super.resolveOptimizedEntry(entry, selectedOptimizations)
-  }
-
-  override getMergeTagValue(
-    embeddedEntryNodeTarget: MergeTagEntry,
-    profile: Profile | undefined = profileSignal.value,
-  ): string | undefined {
-    return super.getMergeTagValue(embeddedEntryNodeTarget, profile)
-  }
-
-  private buildFlagViewBuilderArgs(
-    name: string,
-    changes: ChangeArray | undefined = changesSignal.value,
-  ): FlagViewBuilderArgs {
-    const change = changes?.find((candidate) => candidate.key === name)
-
-    return {
-      componentId: name,
-      experienceId: change?.meta.experienceId,
-      variantIndex: change?.meta.variantIndex,
-    }
-  }
-
-  private getFlagObservable(name: string): Observable<Json> {
-    const existingObservable = this.flagObservables.get(name)
-    if (existingObservable) return existingObservable
-
-    const trackFlagView = this.trackFlagView.bind(this)
-    const buildFlagViewBuilderArgs = this.buildFlagViewBuilderArgs.bind(this)
-    const valueSignal = signalFns.computed<Json>(() => super.getFlag(name, changesSignal.value))
-    const distinctObservable = toDistinctObservable(valueSignal, isEqual)
-
-    const trackedObservable: Observable<Json> = {
-      get current() {
-        const { current: value } = distinctObservable
-        const payload = buildFlagViewBuilderArgs(name, changesSignal.value)
-
-        void trackFlagView(payload).catch((error: unknown) => {
-          logger.warn(`Failed to emit "flag view" event for "${name}"`, String(error))
-        })
-
-        return value
-      },
-
-      subscribe: (next) =>
-        distinctObservable.subscribe((value) => {
-          const payload = buildFlagViewBuilderArgs(name, changesSignal.value)
-
-          void trackFlagView(payload).catch((error: unknown) => {
-            logger.warn(`Failed to emit "flag view" event for "${name}"`, String(error))
-          })
-          next(value)
-        }),
-
-      subscribeOnce: (next) =>
-        distinctObservable.subscribeOnce((value) => {
-          const payload = buildFlagViewBuilderArgs(name, changesSignal.value)
-
-          void trackFlagView(payload).catch((error: unknown) => {
-            logger.warn(`Failed to emit "flag view" event for "${name}"`, String(error))
-          })
-          next(value)
-        }),
-    }
-
-    this.flagObservables.set(name, trackedObservable)
-
-    return trackedObservable
-  }
-
-  hasConsent(name: string): boolean {
-    const { [name]: mappedEventType } = CONSENT_EVENT_TYPE_MAP
-    const isAllowed =
-      mappedEventType !== undefined
-        ? this.allowedEventTypes.includes(mappedEventType)
-        : this.allowedEventTypes.some((eventType) => eventType === name)
-
-    return !!consentSignal.value || isAllowed
-  }
-
-  onBlockedByConsent(name: string, args: readonly unknown[]): void {
-    coreLogger.warn(
-      `Event "${name}" was blocked due to lack of consent; payload: ${JSON.stringify(args)}`,
-    )
-    this.reportBlockedEvent('consent', name, args)
-  }
-
-  private reportBlockedEvent(
-    reason: BlockedEvent['reason'],
-    method: string,
-    args: readonly unknown[],
-  ): void {
-    const event: BlockedEvent = { reason, method, args }
-
-    try {
-      this.onEventBlocked?.(event)
-    } catch (error) {
-      coreLogger.warn(`onEventBlocked callback failed for method "${method}"`, error)
-    }
-
-    blockedEventSignal.value = event
-  }
-
-  protected override async sendExperienceEvent(
-    method: string,
-    args: readonly unknown[],
-    event: ExperienceEventPayload,
-    _profile?: PartialProfile,
-  ): Promise<OptimizationData | undefined> {
-    if (!this.hasConsent(method)) {
-      this.onBlockedByConsent(method, args)
-      return undefined
-    }
-
-    return await this.experienceQueue.send(event)
-  }
-
-  protected override async sendInsightsEvent(
-    method: string,
-    args: readonly unknown[],
-    event: InsightsEventPayload,
-    _profile?: PartialProfile,
-  ): Promise<void> {
-    if (!this.hasConsent(method)) {
-      this.onBlockedByConsent(method, args)
-      return
-    }
-
-    await this.insightsQueue.send(event)
   }
 
   private initializeEffects(): void {

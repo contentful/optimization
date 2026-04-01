@@ -72,7 +72,15 @@ Configure and initialize the Optimization Node SDK:
 
 ```ts
 const optimization = new ContentfulOptimization({ clientId: 'abc123' })
+const requestOptimization = optimization.forRequest()
 ```
+
+Create `optimization` once per module or process, then call `optimization.forRequest(...)` once per
+incoming request.
+
+For a step-by-step Express-style walkthrough that covers request context, profile persistence,
+Contentful entry resolution, and hybrid Node + browser setups, see
+[Integrating the Optimization Node SDK in a Node App](../../../documentation/integrating-the-node-sdk-in-a-node-app.md).
 
 ## Development Harness
 
@@ -114,20 +122,21 @@ select less-common scenarios, with the most basic example solution possible.
 
 ### API Options
 
-| Option              | Required? | Default                                    | Description                                                                    |
-| ------------------- | --------- | ------------------------------------------ | ------------------------------------------------------------------------------ |
-| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                                                |
-| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                                  |
-| `beaconHandler`     | No        | `undefined`                                | Custom handler used to enqueue Insights API event batches                      |
-| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Enabled features the Experience API may use for each request                   |
-| `ip`                | No        | `undefined`                                | IP address override used by the Experience API for location analysis           |
-| `locale`            | No        | `'en-US'` (in API)                         | Locale used to translate `location.city` and `location.country`                |
-| `plainText`         | No        | `false`                                    | Sends performance-critical Experience API endpoints in plain text              |
-| `preflight`         | No        | `false`                                    | Instructs the Experience API to aggregate a new profile state but not store it |
+| Option              | Required? | Default                                    | Description                                                  |
+| ------------------- | --------- | ------------------------------------------ | ------------------------------------------------------------ |
+| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                              |
+| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                |
+| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Enabled features the Experience API may use for each request |
 
-Configuration method signatures:
+Request-scoped Experience API options are bound with `optimization.forRequest(...)` instead of the
+SDK constructor:
 
-- `beaconHandler`: `(url: string | URL, data: BatchInsightsEventArray) => boolean`
+| Option      | Required? | Default     | Description                                                                    |
+| ----------- | --------- | ----------- | ------------------------------------------------------------------------------ |
+| `ip`        | No        | `undefined` | IP address override used by the Experience API for location analysis           |
+| `locale`    | No        | `undefined` | Locale used to translate `location.city` and `location.country`                |
+| `plainText` | No        | `undefined` | Sends performance-critical Experience API endpoints in plain text              |
+| `preflight` | No        | `undefined` | Instructs the Experience API to aggregate a new profile state but not store it |
 
 ### Event Builder Options
 
@@ -231,6 +240,14 @@ Arguments:
 
 ### Experience API and Insights API Event Methods
 
+Create a request scope once per incoming request, then call event methods on that scope:
+
+```ts
+const requestOptimization = optimization.forRequest({
+  locale: req.acceptsLanguages()[0] ?? 'en-US',
+})
+```
+
 Only the following methods may return an `OptimizationData` object:
 
 - `identify`
@@ -245,6 +262,11 @@ contains:
 - `changes`: Currently used for Custom Flags
 - `selectedOptimizations`: Selected optimizations for the profile
 - `profile`: Profile associated with the evaluated events
+
+In stateless runtimes, Insights-backed methods require a profile for delivery. Non-sticky
+`trackView`, `trackClick`, `trackHover`, and `trackFlagView` require `payload.profile.id`. Sticky
+`trackView` may omit `profile`, because the returned Experience profile is reused for the paired
+Insights event.
 
 #### `identify`
 
@@ -290,8 +312,9 @@ marked as "sticky".
 
 Arguments:
 
-- `payload`\*: Entry view event builder arguments object, including an optional `profile` property
-  with a `PartialProfile` value that requires only an `id`
+- `payload`\*: Entry view event builder arguments object. When `payload.sticky` is `true`, `profile`
+  is optional and the returned Experience profile is reused for Insights delivery. Otherwise,
+  `profile` is required and must contain at least an `id`
 
 #### `trackClick`
 
@@ -303,7 +326,8 @@ Returns:
 
 Arguments:
 
-- `payload`\*: Entry click event builder arguments object
+- `payload`\*: Entry click event builder arguments object, including a required `profile` property
+  with a `PartialProfile` value that requires only an `id`
 
 #### `trackHover`
 
@@ -315,7 +339,8 @@ Returns:
 
 Arguments:
 
-- `payload`\*: Entry hover event builder arguments object
+- `payload`\*: Entry hover event builder arguments object, including a required `profile` property
+  with a `PartialProfile` value that requires only an `id`
 
 #### `trackFlagView`
 
@@ -328,7 +353,8 @@ Returns:
 
 Arguments:
 
-- `payload`\*: Flag view event builder arguments object
+- `payload`\*: Flag view event builder arguments object, including a required `profile` property
+  with a `PartialProfile` value that requires only an `id`
 
 ## Interceptors
 

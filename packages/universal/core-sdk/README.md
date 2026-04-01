@@ -82,9 +82,9 @@ import { CoreStateless } from '@contentful/optimization-core'
 Configure and initialize the Core SDK:
 
 ```ts
-const optimization = new CoreStateful({ clientId: 'abc123' })
-// or
-const optimization = new CoreStateless({ clientId: 'abc123' })
+const statefulOptimization = new CoreStateful({ clientId: 'abc123' })
+const statelessOptimization = new CoreStateless({ clientId: 'abc123' })
+const requestOptimization = statelessOptimization.forRequest()
 ```
 
 ## Working with Stateless Core
@@ -96,6 +96,9 @@ Next.js.
 In stateless environments, Core will not maintain any internal state, which includes user consent.
 These concerns should be handled by consumers to fit their specific architectural and design
 specifications.
+
+Request-emitting methods in `CoreStateless` are bound per request via
+`optimization.forRequest(...)`.
 
 ## Working with Stateful Core
 
@@ -141,25 +144,28 @@ Configuration method signatures:
 
 ### API Options
 
-| Option              | Required? | Default                                    | Description                                                                    |
-| ------------------- | --------- | ------------------------------------------ | ------------------------------------------------------------------------------ |
-| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                                                |
-| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                                  |
-| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Enabled features the Experience API may use for each request                   |
-| `ip`                | No        | `undefined`                                | IP address override used by the Experience API for location analysis           |
-| `locale`            | No        | `'en-US'` (in API)                         | Locale used to translate `location.city` and `location.country`                |
-| `plainText`         | No        | `false`                                    | Sends performance-critical Experience API endpoints in plain text              |
-| `preflight`         | No        | `false`                                    | Instructs the Experience API to aggregate a new profile state but not store it |
+| Option              | Required? | Default                                    | Description                                                  |
+| ------------------- | --------- | ------------------------------------------ | ------------------------------------------------------------ |
+| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                              |
+| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                |
+| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Enabled features the Experience API may use for each request |
 
 The following configuration option applies only in stateful environments:
 
-| Option          | Required? | Default     | Description                                                                  |
-| --------------- | --------- | ----------- | ---------------------------------------------------------------------------- |
-| `beaconHandler` | No        | `undefined` | Handler used to enqueue Insights API events via the Beacon API or equivalent |
+| Option          | Required? | Default     | Description                                                                    |
+| --------------- | --------- | ----------- | ------------------------------------------------------------------------------ |
+| `beaconHandler` | No        | `undefined` | Handler used to enqueue Insights API events via the Beacon API or equivalent   |
+| `ip`            | No        | `undefined` | IP address override used by the Experience API for location analysis           |
+| `locale`        | No        | `'en-US'`   | Locale used to translate `location.city` and `location.country`                |
+| `plainText`     | No        | `false`     | Sends performance-critical Experience API endpoints in plain text              |
+| `preflight`     | No        | `false`     | Instructs the Experience API to aggregate a new profile state but not store it |
 
 Configuration method signatures:
 
 - `beaconHandler`: `(url: string | URL, data: BatchInsightsEventArray) => boolean`
+
+In stateless environments, bind `ip`, `locale`, `plainText`, and `preflight` per request with
+`optimization.forRequest(...)` instead of constructor config.
 
 ### Queue Policy Options
 
@@ -368,6 +374,15 @@ Arguments:
 
 ### Event Methods
 
+In `CoreStateful`, call these methods on the root instance. In `CoreStateless`, call them on the
+request scope returned by `optimization.forRequest(...)`:
+
+```ts
+const requestOptimization = optimization.forRequest({
+  locale: 'de-DE',
+})
+```
+
 Only the following methods may return an `OptimizationData` object:
 
 - `identify`
@@ -382,6 +397,11 @@ contains:
 - `changes`: Currently used for Custom Flags
 - `selectedOptimizations`: Selected optimizations for the profile
 - `profile`: Profile associated with the evaluated events
+
+In stateless runtimes, Insights-backed methods require a profile for delivery. Non-sticky
+`trackView`, `trackClick`, `trackHover`, and `trackFlagView` require `payload.profile.id`. Sticky
+`trackView` may omit `profile`, because the returned Experience profile is reused for the paired
+Insights event.
 
 #### `identify`
 
@@ -427,8 +447,9 @@ marked as "sticky".
 
 Arguments:
 
-- `payload`\*: Entry view event builder arguments object, including an optional `profile` property
-  with a `PartialProfile` value that requires only an `id`
+- `payload`\*: Entry view event builder arguments object. When `payload.sticky` is `true`, `profile`
+  is optional and the returned Experience profile is reused for Insights delivery. Otherwise,
+  `profile` is required and must contain at least an `id`
 
 #### `trackClick`
 
@@ -440,7 +461,8 @@ Returns:
 
 Arguments:
 
-- `payload`\*: Entry click event builder arguments object
+- `payload`\*: Entry click event builder arguments object, including a required `profile` property
+  with a `PartialProfile` value that requires only an `id`
 
 #### `trackHover`
 
@@ -452,7 +474,8 @@ Returns:
 
 Arguments:
 
-- `payload`\*: Entry hover event builder arguments object
+- `payload`\*: Entry hover event builder arguments object, including a required `profile` property
+  with a `PartialProfile` value that requires only an `id`
 
 #### `trackFlagView`
 
@@ -465,7 +488,8 @@ Returns:
 
 Arguments:
 
-- `payload`\*: Flag view event builder arguments object
+- `payload`\*: Flag view event builder arguments object, including a required `profile` property
+  with a `PartialProfile` value that requires only an `id`
 
 ## Stateful-only Core Methods
 
