@@ -26,6 +26,11 @@ This is a reference implementation for the
 The server creates one stateless Node SDK instance at module load and binds request-specific options
 through `forRequest(...)` inside each incoming request handler.
 
+> [!WARNING]
+>
+> Cache only raw Contentful entries in SSR flows. Do not mutate shared cached entries during request
+> rendering, and do not share merge-tag-rendered output across users.
+
 ## Setup
 
 All steps should be run from the monorepo root.

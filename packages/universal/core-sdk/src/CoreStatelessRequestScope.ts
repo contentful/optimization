@@ -55,6 +55,10 @@ const requireInsightsProfile = (
  * Stateless request scope created by {@link CoreStateless.forRequest}.
  *
  * @public
+ * @remarks
+ * Methods on this scope send outbound Experience or Insights API requests.
+ * Treat them as side-effecting per-request operations rather than cacheable
+ * reads.
  */
 export class CoreStatelessRequestScope {
   private readonly core: CoreStateless

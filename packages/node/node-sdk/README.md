@@ -78,6 +78,17 @@ const requestOptimization = optimization.forRequest()
 Create `optimization` once per module or process, then call `optimization.forRequest(...)` once per
 incoming request.
 
+## Caching Guidance
+
+The Node SDK is stateless, but that does not mean all request work is cacheable.
+
+- Cache raw Contentful delivery payloads in your application layer.
+- Treat cached Contentful entries as immutable.
+- Use `resolveOptimizedEntry()` and `getMergeTagValue()` as request-local helpers when rendering.
+- Do not memoize `page()`, `identify()`, `screen()`, `track()`, `trackView()`, `trackClick()`,
+  `trackHover()`, or `trackFlagView()`. Those methods emit outbound events and/or return profile
+  state for the current request.
+
 For a step-by-step Express-style walkthrough that covers request context, profile persistence,
 Contentful entry resolution, and hybrid Node + browser setups, see
 [Integrating the Optimization Node SDK in a Node App](../../../documentation/integrating-the-node-sdk-in-a-node-app.md).

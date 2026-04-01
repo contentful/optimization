@@ -141,6 +141,10 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
    * @param selectedOptimizations - Optional selected optimization array for the current profile.
    * @returns {@link ResolvedData} containing the resolved entry and
    *   selected optimization metadata (if any).
+   * @remarks
+   * This helper is intended for request-local resolution. When the supplied
+   * entry comes from a shared application cache, avoid mutating the returned
+   * entry in place unless you first clone it.
    * @example
    * ```ts
    * const { entry, selectedOptimization } = core.resolveOptimizedEntry(
@@ -178,6 +182,9 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
    * @param embeddedEntryNodeTarget - The merge-tag entry node to resolve.
    * @param profile - Optional profile used for value lookup.
    * @returns The resolved value (typically a string) or `undefined` if not found.
+   * @remarks
+   * Use this during request rendering with the current profile. The resolved
+   * value is profile-dependent and is not safe for shared-output caching.
    * @example
    * ```ts
    * const name = core.getMergeTagValue(mergeTagNode, profile)
