@@ -1,9 +1,9 @@
 import type { JSX } from 'react'
-import type { ContentfulEntry } from '../types/contentful'
+import type { ContentEntry } from '../types/contentful'
 import { NestedContentItem } from './NestedContentItem'
 
 interface NestedContentEntryProps {
-  entry: ContentfulEntry
+  entry: ContentEntry
 }
 
 export function NestedContentEntry({ entry }: NestedContentEntryProps): JSX.Element {

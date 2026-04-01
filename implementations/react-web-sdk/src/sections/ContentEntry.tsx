@@ -2,13 +2,13 @@ import { useOptimization } from '@contentful/optimization-react-web'
 import type { JSX, RefObject } from 'react'
 import { useEffect, useRef } from 'react'
 import { RichTextRenderer } from '../components/RichTextRenderer'
-import type { ContentfulEntry, RichTextDocument } from '../types/contentful'
+import type { ContentEntry as ContentEntryType, RichTextDocument } from '../types/contentful'
 
 export type EntryClickScenario = 'direct' | 'descendant' | 'ancestor'
 
 interface ContentEntryProps {
   clickScenario?: EntryClickScenario
-  entry: ContentfulEntry
+  entry: ContentEntryType
   observation: 'auto' | 'manual'
 }
 
@@ -29,7 +29,7 @@ function isRichTextField(field: unknown): field is RichTextDocument {
   )
 }
 
-function getEntryText(entry: ContentfulEntry): string {
+function getEntryText(entry: ContentEntryType): string {
   return typeof entry.fields.text === 'string' ? entry.fields.text : 'No content'
 }
 
@@ -52,12 +52,12 @@ function resolveOptimizationMeta(selectedOptimization: unknown): ResolvedOptimiz
 }
 
 interface ContentDivProps {
-  baselineEntry: ContentfulEntry
+  baselineEntry: ContentEntryType
   clickScenario: EntryClickScenario | undefined
   containerRef: RefObject<HTMLDivElement | null>
   meta: ResolvedOptimizationMeta
   observation: 'auto' | 'manual'
-  resolvedEntry: ContentfulEntry
+  resolvedEntry: ContentEntryType
 }
 
 function ContentDiv({
@@ -113,7 +113,7 @@ function ContentDiv({
 }
 
 interface TrackedContentProps {
-  baselineEntry: ContentfulEntry
+  baselineEntry: ContentEntryType
   clickScenario: EntryClickScenario | undefined
   containerRef: RefObject<HTMLDivElement | null>
   observation: 'auto' | 'manual'
@@ -126,7 +126,7 @@ function TrackedContent({
   observation,
 }: TrackedContentProps): JSX.Element {
   const { interactionTracking, resolveEntry, resolveEntryData } = useOptimization()
-  const resolvedEntry = resolveEntry(baselineEntry) as ContentfulEntry
+  const resolvedEntry = resolveEntry(baselineEntry) as ContentEntryType
   const { selectedOptimization } = resolveEntryData(baselineEntry)
   const meta = resolveOptimizationMeta(selectedOptimization)
 

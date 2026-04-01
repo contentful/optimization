@@ -1,5 +1,5 @@
 import { createClient } from 'contentful'
-import type { ContentEntrySkeleton, ContentfulEntry } from '../types/contentful'
+import type { ContentEntry, ContentEntrySkeleton } from '../types/contentful'
 
 const INCLUDE_DEPTH = 10
 const CONTENTFUL_ACCESS_TOKEN = import.meta.env.PUBLIC_CONTENTFUL_TOKEN?.trim() ?? ''
@@ -42,7 +42,7 @@ export function getContentfulConfigError(): string | null {
   return `Missing required Contentful env vars: ${MISSING_ENV_ERROR}. See implementations/react-web-sdk/.env.example.`
 }
 
-export async function fetchEntry(entryId: string): Promise<ContentfulEntry | undefined> {
+export async function fetchEntry(entryId: string): Promise<ContentEntry | undefined> {
   if (getContentfulConfigError()) {
     return undefined
   }
@@ -56,8 +56,8 @@ export async function fetchEntry(entryId: string): Promise<ContentfulEntry | und
   }
 }
 
-export async function fetchEntries(entryIds: readonly string[]): Promise<ContentfulEntry[]> {
+export async function fetchEntries(entryIds: readonly string[]): Promise<ContentEntry[]> {
   const fetchedEntries = await Promise.all(entryIds.map(fetchEntry))
 
-  return fetchedEntries.filter((entry): entry is ContentfulEntry => entry !== undefined)
+  return fetchedEntries.filter((entry): entry is ContentEntry => entry !== undefined)
 }

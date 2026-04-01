@@ -1,4 +1,5 @@
 import { useOptimization } from '@contentful/optimization-react-web'
+import { isMergeTagEntry } from '@contentful/optimization-react-web/api-schemas'
 import { documentToReactComponents, type Options } from '@contentful/rich-text-react-renderer'
 import { INLINES } from '@contentful/rich-text-types'
 import type { JSX } from 'react'
@@ -17,7 +18,6 @@ interface RichTextRendererProps {
 }
 
 type GetMergeTagValue = ReturnType<typeof useOptimization>['getMergeTagValue']
-type MergeTagEntry = Parameters<GetMergeTagValue>[0]
 
 const EMBEDDED_ENTRY_NODE_TYPE = 'embedded-entry-inline'
 
@@ -27,24 +27,6 @@ function isLink(target: unknown): target is { sys: { type: 'Link' } } {
   }
 
   return target.sys.type === 'Link'
-}
-
-function isMergeTagEntry(entry: unknown): entry is MergeTagEntry {
-  if (!isRecord(entry)) {
-    return false
-  }
-
-  const { sys } = entry
-  if (!isRecord(sys) || !isRecord(sys.contentType)) {
-    return false
-  }
-
-  const { contentType } = sys
-  if (!isRecord(contentType) || !isRecord(contentType.sys)) {
-    return false
-  }
-
-  return contentType.sys.id === 'nt_mergetag'
 }
 
 function getMergeTagText(target: unknown, getMergeTagValue: GetMergeTagValue): string {

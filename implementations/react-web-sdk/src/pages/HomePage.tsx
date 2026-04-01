@@ -6,7 +6,7 @@ import { AUTO_OBSERVED_ENTRY_IDS, MANUALLY_OBSERVED_ENTRY_IDS } from '../config/
 import { type EntryClickScenario, ContentEntry } from '../sections/ContentEntry'
 import { LiveUpdatesExampleEntry } from '../sections/LiveUpdatesExampleEntry'
 import { NestedContentEntry } from '../sections/NestedContentEntry'
-import type { ContentfulEntry } from '../types/contentful'
+import type { ContentEntry as ContentEntryType } from '../types/contentful'
 
 const AUTO_OBSERVED_CLICK_SCENARIO_BY_ENTRY_ID: Readonly<Record<string, EntryClickScenario>> = {
   '4ib0hsHWoSOnCVdDkizE8d': 'direct',
@@ -70,7 +70,7 @@ function IdentifyButton({ isIdentified, onIdentify, onReset }: IdentifyButtonPro
 }
 
 interface AutoObservedEntriesProps {
-  entriesById: Map<string, ContentfulEntry>
+  entriesById: Map<string, ContentEntryType>
 }
 
 function AutoObservedEntries({ entriesById }: AutoObservedEntriesProps): JSX.Element {
@@ -100,7 +100,7 @@ function AutoObservedEntries({ entriesById }: AutoObservedEntriesProps): JSX.Ele
 }
 
 interface ManuallyObservedEntriesProps {
-  entriesById: Map<string, ContentfulEntry>
+  entriesById: Map<string, ContentEntryType>
 }
 
 function ManuallyObservedEntries({ entriesById }: ManuallyObservedEntriesProps): JSX.Element {

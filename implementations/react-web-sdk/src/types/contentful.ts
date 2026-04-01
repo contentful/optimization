@@ -7,5 +7,5 @@ export interface ContentEntryFields {
 }
 
 export type ContentEntrySkeleton = EntrySkeletonType<ContentEntryFields>
-export type ContentfulEntry = Entry<ContentEntrySkeleton>
+export type ContentEntry = Entry<ContentEntrySkeleton>
 export type RichTextDocument = Document

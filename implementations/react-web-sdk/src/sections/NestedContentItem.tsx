@@ -1,13 +1,13 @@
 import { OptimizedEntry } from '@contentful/optimization-react-web'
 import type { JSX } from 'react'
-import type { ContentfulEntry } from '../types/contentful'
+import type { ContentEntry } from '../types/contentful'
 import { isRecord } from '../utils/typeGuards'
 
 interface NestedContentItemProps {
-  entry: ContentfulEntry
+  entry: ContentEntry
 }
 
-function isEntry(value: unknown): value is ContentfulEntry {
+function isEntry(value: unknown): value is ContentEntry {
   return (
     isRecord(value) &&
     isRecord(value.sys) &&
@@ -16,7 +16,7 @@ function isEntry(value: unknown): value is ContentfulEntry {
   )
 }
 
-function renderText(entry: ContentfulEntry): string {
+function renderText(entry: ContentEntry): string {
   return typeof entry.fields.text === 'string' ? entry.fields.text : ''
 }
 
@@ -24,7 +24,7 @@ export function NestedContentItem({ entry }: NestedContentItemProps): JSX.Elemen
   return (
     <OptimizedEntry baselineEntry={entry}>
       {(resolvedEntry) => {
-        const asCf = resolvedEntry as ContentfulEntry
+        const asCf = resolvedEntry as ContentEntry
         const nestedEntries = Array.isArray(asCf.fields.nested) ? asCf.fields.nested : []
         const text = renderText(asCf)
         const fullLabel = `${text} [Entry: ${resolvedEntry.sys.id}]`

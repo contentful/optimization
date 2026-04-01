@@ -6,7 +6,7 @@ import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
 import { ENTRY_IDS, LIVE_UPDATES_ENTRY_ID } from './config/entries'
 import { HOME_PATH, PAGE_TWO_PATH } from './config/routes'
 import { fetchEntries, getContentfulConfigError } from './services/contentfulClient'
-import type { ContentfulEntry } from './types/contentful'
+import type { ContentEntry } from './types/contentful'
 
 interface OutletContext {
   onToggleGlobalLiveUpdates: () => void
@@ -14,9 +14,9 @@ interface OutletContext {
 
 export interface AppOutletContext {
   consent: boolean | undefined
-  entriesById: Map<string, ContentfulEntry>
+  entriesById: Map<string, ContentEntry>
   isIdentified: boolean
-  liveUpdatesBaselineEntry: ContentfulEntry | undefined
+  liveUpdatesBaselineEntry: ContentEntry | undefined
   selectedOptimizationCount: number
   onConsentChange: (accepted: boolean) => void
   onIdentify: () => void
@@ -32,7 +32,7 @@ function isIdentifiedProfile(profile: Profile | undefined): boolean {
   return Boolean(profile.traits.identified)
 }
 
-function toEntryMap(entries: ContentfulEntry[]): Map<string, ContentfulEntry> {
+function toEntryMap(entries: ContentEntry[]): Map<string, ContentEntry> {
   return new Map(entries.map((entry) => [entry.sys.id, entry]))
 }
 
@@ -43,7 +43,7 @@ export default function App(): JSX.Element {
   const [consent, setConsent] = useState<boolean | undefined>(undefined)
   const [profile, setProfile] = useState<Profile | undefined>(undefined)
   const [selectedOptimizationCount, setSelectedOptimizationCount] = useState(0)
-  const [entries, setEntries] = useState<ContentfulEntry[]>([])
+  const [entries, setEntries] = useState<ContentEntry[]>([])
 
   useEffect(() => {
     if (!sdk || !isReady) {
