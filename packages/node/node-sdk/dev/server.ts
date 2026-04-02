@@ -170,11 +170,10 @@ app.get('/', limiter, async (req, res) => {
   const requestProfile: PartialProfile | undefined =
     typeof profileId === 'string' ? { id: profileId } : undefined
 
-  const requestOptimization = sdk.forRequest()
-  let apiResponse: OptimizationData = await requestOptimization.page({ profile: requestProfile })
+  let apiResponse: OptimizationData = await sdk.page({ profile: requestProfile })
 
   if (isNonEmptyString(userId)) {
-    apiResponse = await requestOptimization.identify({
+    apiResponse = await sdk.identify({
       userId,
       profile: requestProfile,
     })

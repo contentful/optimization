@@ -23,8 +23,8 @@ This is a reference implementation for the
 [Optimization Node SDK](../../packages/node/node-sdk/README.md) and is part of the
 [Contentful Optimization SDK Suite](../../README.md).
 
-The server creates one stateless Node SDK instance at module load and binds request-specific options
-through `forRequest(...)` inside each incoming request handler.
+The server creates one stateless Node SDK instance at module load and passes request-specific
+options directly to stateless event methods inside each incoming request handler.
 
 > [!WARNING]
 >
@@ -41,26 +41,32 @@ All steps should be run from the monorepo root.
    pnpm install
    ```
 
-2. Ensure the required packages can be built:
+2. Build the local package tarballs consumed by implementations:
 
    ```sh
-   pnpm --stream build
+   pnpm build:pkgs
    ```
 
-3. Configure the environment in a `.env` file in `implementations/node-sdk` based on the
+3. Install this implementation so its local `@contentful/*` dependencies resolve from `pkgs/`:
+
+   ```sh
+   pnpm implementation:run -- node-sdk implementation:install
+   ```
+
+4. Configure the environment in a `.env` file in `implementations/node-sdk` based on the
    `.env.example` included file. The file is pre-populated with values that are valid only against
    the mock server implementation. To test the implementation against a live server environment, see
    the [mocks package](../../lib/mocks/README.md) for information on how to set up Contentful space
    with test data.
-4. Start the mock API and application servers:
+5. Start the mock API and application servers:
 
    ```sh
    pnpm --dir implementations/node-sdk --ignore-workspace serve
    ```
 
-5. The application can be accessed via Web browser at `http://localhost:3000`
+6. The application can be accessed via Web browser at `http://localhost:3000`
 
-6. Stop the mock API and application servers:
+7. Stop the mock API and application servers:
 
    ```sh
    pnpm --dir implementations/node-sdk --ignore-workspace serve:stop

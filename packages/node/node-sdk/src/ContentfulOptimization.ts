@@ -1,7 +1,9 @@
-import { type CoreStatelessConfig, CoreStateless } from '@contentful/optimization-core'
+import { CoreStateless } from '@contentful/optimization-core'
 import type { App } from '@contentful/optimization-core/api-schemas'
 import { merge } from 'es-toolkit'
 import { OPTIMIZATION_NODE_SDK_NAME, OPTIMIZATION_NODE_SDK_VERSION } from './constants'
+
+type CoreStatelessConfig = ConstructorParameters<typeof CoreStateless>[0]
 
 /**
  * Configuration for the Node-specific ContentfulOptimization SDK.
@@ -80,9 +82,9 @@ function mergeConfig(config: OptimizationNodeConfig): CoreStatelessConfig {
  *   logLevel: 'info',
  * })
  *
- * const request = sdk.forRequest({ locale: 'en-US' })
+ * const requestOptions = { locale: 'en-US' }
  *
- * await request.track({ event: 'server_event', properties: { id: 1 } })
+ * await sdk.track({ event: 'server_event', properties: { id: 1 } }, requestOptions)
  * ```
  *
  * @see {@link CoreStateless}

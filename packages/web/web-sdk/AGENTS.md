@@ -41,5 +41,5 @@ interaction tracking.
 - Run `size:check` for runtime, dependency, or bundle-shape changes.
 - Validate the package-local `dev` flow itself when changing package flows it is meant to
   demonstrate.
-- Validate `implementations/web-sdk`, `implementations/node-sdk+web-sdk`, or
-  `implementations/web-sdk_react` when browser behavior changed.
+- Validate `implementations/web-sdk`, `implementations/node-sdk+web-sdk`,
+  `implementations/web-sdk_react`, or `implementations/react-web-sdk` when browser behavior changed.

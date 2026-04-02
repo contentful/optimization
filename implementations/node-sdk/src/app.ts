@@ -149,27 +149,26 @@ function getUniversalEventBuilderArgs(req: Request): UniversalEventBuilderArgs {
 
 app.get('/', limiter, async (req, res) => {
   const universalEventBuilderArgs = getUniversalEventBuilderArgs(req)
-  const requestOptimization = sdk.forRequest({
+  const requestOptions = {
     locale: universalEventBuilderArgs.locale,
-  })
+  }
 
   const userId = isNonEmptyString(req.query.userId) ? req.query.userId.trim() : undefined
 
   const optimizationResponse: OptimizationData = isNonEmptyString(userId)
     ? await (async (): Promise<OptimizationData> => {
-        const pageResponse = await requestOptimization.page({
-          ...universalEventBuilderArgs,
-        })
-        return await requestOptimization.identify({
-          ...universalEventBuilderArgs,
-          userId,
-          traits: { identified: true },
-          profile: pageResponse.profile,
-        })
+        const pageResponse = await sdk.page({ ...universalEventBuilderArgs }, requestOptions)
+        return await sdk.identify(
+          {
+            ...universalEventBuilderArgs,
+            userId,
+            traits: { identified: true },
+            profile: pageResponse.profile,
+          },
+          requestOptions,
+        )
       })()
-    : await requestOptimization.page({
-        ...universalEventBuilderArgs,
-      })
+    : await sdk.page({ ...universalEventBuilderArgs }, requestOptions)
 
   const { profile, selectedOptimizations } = optimizationResponse
 
