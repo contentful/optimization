@@ -72,11 +72,13 @@ Configure and initialize the Optimization Node SDK:
 
 ```ts
 const optimization = new ContentfulOptimization({ clientId: 'abc123' })
-const requestOptimization = optimization.forRequest()
+const requestOptions = { locale: 'en-US' }
+
+await optimization.page({}, requestOptions)
 ```
 
-Create `optimization` once per module or process, then call `optimization.forRequest(...)` once per
-incoming request.
+Create `optimization` once per module or process, then pass request-scoped Experience options as the
+final argument to stateless event methods inside each incoming request.
 
 ## Caching Guidance
 
@@ -139,8 +141,8 @@ select less-common scenarios, with the most basic example solution possible.
 | `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                |
 | `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Enabled features the Experience API may use for each request |
 
-Request-scoped Experience API options are bound with `optimization.forRequest(...)` instead of the
-SDK constructor:
+Request-scoped Experience API options are passed to stateless event methods as their final argument
+instead of the SDK constructor:
 
 | Option      | Required? | Default     | Description                                                                    |
 | ----------- | --------- | ----------- | ------------------------------------------------------------------------------ |
@@ -251,13 +253,19 @@ Arguments:
 
 ### Experience API and Insights API Event Methods
 
-Create a request scope once per incoming request, then call event methods on that scope:
+Pass request-scoped Experience options as the final argument to stateless event methods:
 
 ```ts
-const requestOptimization = optimization.forRequest({
+const requestOptions = {
   locale: req.acceptsLanguages()[0] ?? 'en-US',
-})
+}
+
+await optimization.page({ ...requestContext, profile }, requestOptions)
 ```
+
+Request-scoped Experience options stay separate from the event payload. Event context such as page
+data, locale metadata on the event, and user agent belong in `payload`, while `ip`, `locale`,
+`plainText`, and `preflight` belong in `requestOptions`.
 
 Only the following methods may return an `OptimizationData` object:
 
@@ -287,6 +295,7 @@ Arguments:
 
 - `payload`\*: Identify event builder arguments object, including an optional `profile` property
   with a `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options passed as the final argument
 
 #### `page`
 
@@ -296,6 +305,7 @@ Arguments:
 
 - `payload`\*: Page view event builder arguments object, including an optional `profile` property
   with a `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options passed as the final argument
 
 #### `screen`
 
@@ -305,6 +315,7 @@ Arguments:
 
 - `payload`\*: Screen view event builder arguments object, including an optional `profile` property
   with a `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options passed as the final argument
 
 #### `track`
 
@@ -314,6 +325,7 @@ Arguments:
 
 - `payload`\*: Track event builder arguments object, including an optional `profile` property with a
   `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options passed as the final argument
 
 #### `trackView`
 
@@ -326,6 +338,8 @@ Arguments:
 - `payload`\*: Entry view event builder arguments object. When `payload.sticky` is `true`, `profile`
   is optional and the returned Experience profile is reused for Insights delivery. Otherwise,
   `profile` is required and must contain at least an `id`
+- `requestOptions`: Optional request-scoped Experience API options passed as the final argument.
+  Only used when `payload.sticky` is `true`
 
 #### `trackClick`
 
@@ -339,6 +353,8 @@ Arguments:
 
 - `payload`\*: Entry click event builder arguments object, including a required `profile` property
   with a `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options accepted for signature
+  consistency; currently unused
 
 #### `trackHover`
 
@@ -352,6 +368,8 @@ Arguments:
 
 - `payload`\*: Entry hover event builder arguments object, including a required `profile` property
   with a `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options accepted for signature
+  consistency; currently unused
 
 #### `trackFlagView`
 
@@ -366,6 +384,8 @@ Arguments:
 
 - `payload`\*: Flag view event builder arguments object, including a required `profile` property
   with a `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options accepted for signature
+  consistency; currently unused
 
 ## Interceptors
 

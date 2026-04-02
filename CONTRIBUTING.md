@@ -58,7 +58,7 @@ gotchas.
 The following software is required or strongly recommended for day-to-day development:
 
 - [Node.js](https://nodejs.org/) (use [`.nvmrc`](./.nvmrc) when possible; the minimum supported
-  version is `20.19.0`)
+  version is specified in [`package.json`](./package.json))
 - [pnpm](https://pnpm.io/installation) (the pinned version is recorded in the root
   [`package.json`](./package.json))
 - [`jq`](https://jqlang.org/) for the local `pre-push` hook
@@ -68,8 +68,8 @@ The following software is required or strongly recommended for day-to-day develo
 
 > [!NOTE]
 >
-> Browser and implementation-specific E2E flows also require Playwright browser binaries. The
-> targeted `pnpm setup:e2e:<implementation>` wrappers install them for you.
+> Browser-based E2E flows also require Playwright browser binaries. The targeted
+> `pnpm setup:e2e:<implementation>` wrappers install them for browser implementations.
 
 After cloning the repository:
 
@@ -220,7 +220,7 @@ pnpm implementation:run -- <implementation> <action> [args...]
 ```
 
 - `<implementation>` is a folder name under `implementations/` (for example: `web-sdk`,
-  `web-sdk_react`, `node-sdk`, `node-sdk+web-sdk`, `react-native-sdk`)
+  `web-sdk_react`, `react-web-sdk`, `node-sdk`, `node-sdk+web-sdk`, `react-native-sdk`)
 - `<action>` can be one of these helper actions:
 - `implementation:install`
 - `implementation:build:run`
@@ -360,14 +360,14 @@ This is an intentional CI policy:
 The path filters do not watch only implementation directories. Shared package and root changes can
 also trigger implementation E2E. At a high level:
 
-| E2E job                    | Also watches shared surfaces                                                                                                                            |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `e2e_node_ssr_only`        | `lib/**`, `packages/node/node-sdk/**`, universal packages, root package/workflow files                                                                  |
-| `e2e_node_ssr_web_vanilla` | `lib/**`, `packages/node/node-sdk/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, shared root files                                    |
-| `e2e_web`                  | `lib/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, universal packages, shared root files                                             |
-| `e2e_web_react`            | `lib/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, universal packages, shared root files                                             |
-| `e2e_react_web_sdk`        | `lib/**`, `packages/web/frameworks/react-web-sdk/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, universal packages, shared root files |
-| `e2e_react_native_android` | `lib/**`, `packages/react-native-sdk/**`, universal packages, shared root files                                                                         |
+| Workflow filter -> job(s)                                                                  | Also watches shared surfaces                                                                                                                            |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `e2e_node_sdk` -> `e2e-node-sdk`                                                           | `lib/**`, `packages/node/node-sdk/**`, universal packages, root package/workflow files                                                                  |
+| `e2e_node_sdk_web_sdk` -> `e2e-node-sdk-web-sdk`                                           | `lib/**`, `packages/node/node-sdk/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, shared root files                                    |
+| `e2e_web_sdk` -> `e2e-web-sdk`                                                             | `lib/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, universal packages, shared root files                                             |
+| `e2e_web_sdk_react` -> `e2e-web-sdk_react`                                                 | `lib/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, universal packages, shared root files                                             |
+| `e2e_react_web_sdk` -> `e2e-react-web-sdk`                                                 | `lib/**`, `packages/web/frameworks/react-web-sdk/**`, `packages/web/web-sdk/**`, `packages/web/preview-panel/**`, universal packages, shared root files |
+| `e2e_react_native_android` -> `e2e-react-native-android-build`, `e2e-react-native-android` | `lib/**`, `packages/react-native-sdk/**`, universal packages, shared root files                                                                         |
 
 See [`.github/workflows/main-pipeline.yaml`](./.github/workflows/main-pipeline.yaml) for the exact
 authoritative filter list.

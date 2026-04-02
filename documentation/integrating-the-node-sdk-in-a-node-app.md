@@ -82,8 +82,8 @@ export const optimization = new ContentfulOptimization({
 ```
 
 Treat that SDK as a module-level singleton for the current Node process. Do not create a new
-`ContentfulOptimization` instance per incoming request. Create a fresh
-`optimization.forRequest(...)` scope for each request instead.
+`ContentfulOptimization` instance per incoming request. Instead, compute request-scoped Experience
+options per request and pass them as the final argument to stateless event methods.
 
 Notes:
 
@@ -177,6 +177,9 @@ One common conservative pattern is:
 - when consent is revoked, clear the stored anonymous ID and stop sending further optimization
   traffic until consent is granted again
 
+If your app stores consent in cookies, register cookie parsing middleware before reading
+`req.cookies`. The next section shows the same Express setup for profile persistence.
+
 ```ts
 import type { Request, Response } from 'express'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
@@ -266,22 +269,28 @@ app.get('/', async (req, res) => {
   }
 
   const requestContext = getRequestContext(req)
-  const requestOptimization = optimization.forRequest(getExperienceRequestOptions(req))
+  const requestOptions = getExperienceRequestOptions(req)
   const existingProfile = getProfileFromRequest(req)
-  const pageResponse: OptimizationData | undefined = await requestOptimization.page({
-    ...requestContext,
-    profile: existingProfile,
-  })
+  const pageResponse: OptimizationData | undefined = await optimization.page(
+    {
+      ...requestContext,
+      profile: existingProfile,
+    },
+    requestOptions,
+  )
 
   const userId = getAuthenticatedUserId(req)
 
   const identifyResponse = userId
-    ? await requestOptimization.identify({
-        ...requestContext,
-        profile: pageResponse?.profile ?? existingProfile,
-        userId,
-        traits: { authenticated: true },
-      })
+    ? await optimization.identify(
+        {
+          ...requestContext,
+          profile: pageResponse?.profile ?? existingProfile,
+          userId,
+          traits: { authenticated: true },
+        },
+        requestOptions,
+      )
     : undefined
 
   if (consented) {
@@ -358,12 +367,15 @@ async function getArticle(entryId: string): Promise<ArticleEntry> {
 
 app.get('/article/:entryId', async (req, res) => {
   const consented = hasOptimizationConsent(req)
-  const requestOptimization = optimization.forRequest(getExperienceRequestOptions(req))
+  const requestOptions = getExperienceRequestOptions(req)
   const pageResponse = consented
-    ? await requestOptimization.page({
-        ...getRequestContext(req),
-        profile: getProfileFromRequest(req),
-      })
+    ? await optimization.page(
+        {
+          ...getRequestContext(req),
+          profile: getProfileFromRequest(req),
+        },
+        requestOptions,
+      )
     : undefined
 
   const article = await getArticle(req.params.entryId)
@@ -434,7 +446,7 @@ captured as an Insights event, call `trackFlagView()` explicitly:
 
 ```ts
 if (pageResponse?.profile) {
-  await requestOptimization.trackFlagView({
+  await optimization.trackFlagView({
     ...getRequestContext(req),
     componentId: 'new-navigation',
     profile: pageResponse.profile,
@@ -462,17 +474,20 @@ profile.
 Example custom event:
 
 ```ts
-const requestOptimization = optimization.forRequest(getExperienceRequestOptions(req))
+const requestOptions = getExperienceRequestOptions(req)
 
-await requestOptimization.track({
-  ...getRequestContext(req),
-  profile: pageResponse?.profile,
-  event: 'quote_requested',
-  properties: {
-    plan: 'enterprise',
-    source: 'pricing-page',
+await optimization.track(
+  {
+    ...getRequestContext(req),
+    profile: pageResponse?.profile,
+    event: 'quote_requested',
+    properties: {
+      plan: 'enterprise',
+      source: 'pricing-page',
+    },
   },
-})
+  requestOptions,
+)
 ```
 
 Example rendered-entry view event:
@@ -480,7 +495,7 @@ Example rendered-entry view event:
 ```ts
 import { randomUUID } from 'node:crypto'
 
-const requestOptimization = optimization.forRequest(getExperienceRequestOptions(req))
+const requestOptions = getExperienceRequestOptions(req)
 const viewPayload = {
   ...getRequestContext(req),
   componentId: optimizedArticle.sys.id,
@@ -491,15 +506,9 @@ const viewPayload = {
 }
 
 if (selectedOptimization?.sticky) {
-  await requestOptimization.trackView({
-    ...viewPayload,
-    sticky: true,
-  })
+  await optimization.trackView({ ...viewPayload, sticky: true }, requestOptions)
 } else if (pageResponse?.profile) {
-  await requestOptimization.trackView({
-    ...viewPayload,
-    profile: pageResponse.profile,
-  })
+  await optimization.trackView({ ...viewPayload, profile: pageResponse.profile }, requestOptions)
 }
 ```
 

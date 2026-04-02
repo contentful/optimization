@@ -84,7 +84,9 @@ Configure and initialize the Core SDK:
 ```ts
 const statefulOptimization = new CoreStateful({ clientId: 'abc123' })
 const statelessOptimization = new CoreStateless({ clientId: 'abc123' })
-const requestOptimization = statelessOptimization.forRequest()
+const requestOptions = { locale: 'de-DE' }
+
+await statelessOptimization.page({}, requestOptions)
 ```
 
 ## Working with Stateless Core
@@ -97,8 +99,8 @@ In stateless environments, Core will not maintain any internal state, which incl
 These concerns should be handled by consumers to fit their specific architectural and design
 specifications.
 
-Request-emitting methods in `CoreStateless` are bound per request via
-`optimization.forRequest(...)`.
+Request-scoped Experience options in `CoreStateless` are passed as the final argument to each
+stateless event method.
 
 ## Working with Stateful Core
 
@@ -164,8 +166,8 @@ Configuration method signatures:
 
 - `beaconHandler`: `(url: string | URL, data: BatchInsightsEventArray) => boolean`
 
-In stateless environments, bind `ip`, `locale`, `plainText`, and `preflight` per request with
-`optimization.forRequest(...)` instead of constructor config.
+In stateless environments, pass `ip`, `locale`, `plainText`, and `preflight` as the final argument
+to stateless event methods instead of constructor config.
 
 ### Queue Policy Options
 
@@ -375,13 +377,18 @@ Arguments:
 ### Event Methods
 
 In `CoreStateful`, call these methods on the root instance. In `CoreStateless`, call them on the
-request scope returned by `optimization.forRequest(...)`:
+root instance and pass request-scoped Experience options as the final argument when needed:
 
 ```ts
-const requestOptimization = optimization.forRequest({
+const requestOptions = {
   locale: 'de-DE',
-})
+}
+
+await optimization.page({ ...requestContext, profile }, requestOptions)
 ```
+
+Request-scoped Experience options stay separate from the event payload. Event context data belongs
+in `payload`, while `ip`, `locale`, `plainText`, and `preflight` belong in `requestOptions`.
 
 Only the following methods may return an `OptimizationData` object:
 
@@ -411,6 +418,7 @@ Arguments:
 
 - `payload`\*: Identify event builder arguments object, including an optional `profile` property
   with a `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options passed as the final argument
 
 #### `page`
 
@@ -420,6 +428,7 @@ Arguments:
 
 - `payload`\*: Page view event builder arguments object, including an optional `profile` property
   with a `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options passed as the final argument
 
 #### `screen`
 
@@ -429,6 +438,7 @@ Arguments:
 
 - `payload`\*: Screen view event builder arguments object, including an optional `profile` property
   with a `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options passed as the final argument
 
 #### `track`
 
@@ -438,6 +448,7 @@ Arguments:
 
 - `payload`\*: Track event builder arguments object, including an optional `profile` property with a
   `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options passed as the final argument
 
 #### `trackView`
 
@@ -450,6 +461,8 @@ Arguments:
 - `payload`\*: Entry view event builder arguments object. When `payload.sticky` is `true`, `profile`
   is optional and the returned Experience profile is reused for Insights delivery. Otherwise,
   `profile` is required and must contain at least an `id`
+- `requestOptions`: Optional request-scoped Experience API options passed as the final argument.
+  Only used when `payload.sticky` is `true`
 
 #### `trackClick`
 
@@ -463,6 +476,8 @@ Arguments:
 
 - `payload`\*: Entry click event builder arguments object, including a required `profile` property
   with a `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options accepted for signature
+  consistency; currently unused
 
 #### `trackHover`
 
@@ -476,6 +491,8 @@ Arguments:
 
 - `payload`\*: Entry hover event builder arguments object, including a required `profile` property
   with a `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options accepted for signature
+  consistency; currently unused
 
 #### `trackFlagView`
 
@@ -490,6 +507,8 @@ Arguments:
 
 - `payload`\*: Flag view event builder arguments object, including a required `profile` property
   with a `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options accepted for signature
+  consistency; currently unused
 
 ## Stateful-only Core Methods
 

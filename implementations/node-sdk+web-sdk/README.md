@@ -24,8 +24,8 @@ This is a reference implementation using both the
 [Optimization Web SDK](../../packages/web/web-sdk/README.md), and is part of the
 [Contentful Optimization SDK Suite](../../README.md).
 
-On the server side, the stateless Node SDK is created once at module load and each request binds its
-own request-scoped options through `forRequest(...)`.
+On the server side, the stateless Node SDK is created once at module load and each request passes
+its request-scoped options directly to stateless event methods.
 
 The goal of this reference implementation is to illustrate the usage of cookie-based communication
 in both the Node and Web SDKs, which is an important component of many server-side/client-side
@@ -47,26 +47,32 @@ All steps should be run from the monorepo root.
    pnpm install
    ```
 
-2. Ensure the required packages can be built:
+2. Build the local package tarballs consumed by implementations:
 
    ```sh
-   pnpm --stream build
+   pnpm build:pkgs
    ```
 
-3. Configure the environment in a `.env` file in `implementations/node-sdk+web-sdk` based on the
+3. Install this implementation so its local `@contentful/*` dependencies resolve from `pkgs/`:
+
+   ```sh
+   pnpm implementation:run -- node-sdk+web-sdk implementation:install
+   ```
+
+4. Configure the environment in a `.env` file in `implementations/node-sdk+web-sdk` based on the
    `.env.example` included file. The file is pre-populated with values that are valid only against
    the mock server implementation. To test the implementation against a live server environment, see
    the [mocks package](../../lib/mocks/README.md) for information on how to set up Contentful space
    with test data.
-4. Start the mock API and application servers:
+5. Start the mock API and application servers:
 
    ```sh
    pnpm --dir implementations/node-sdk+web-sdk --ignore-workspace serve
    ```
 
-5. The application can be accessed via Web browser at `http://localhost:3000`
+6. The application can be accessed via Web browser at `http://localhost:3000`
 
-6. Stop the mock API and application servers:
+7. Stop the mock API and application servers:
 
    ```sh
    pnpm --dir implementations/node-sdk+web-sdk --ignore-workspace serve:stop

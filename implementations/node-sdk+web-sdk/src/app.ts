@@ -108,26 +108,32 @@ async function getProfile(
   anonymousId?: string,
 ): Promise<OptimizationData | undefined> {
   const args = getUniversalEventBuilderArgs(req)
-  const requestOptimization = sdk.forRequest({
+  const requestOptions = {
     locale: args.locale,
-  })
+  }
   const cookieProfile = anonymousId ? { id: anonymousId } : undefined
 
   if (!userId) {
-    return await requestOptimization.page({ ...args, profile: cookieProfile })
+    return await sdk.page({ ...args, profile: cookieProfile }, requestOptions)
   }
 
-  const identifyResponse = await requestOptimization.identify({
-    ...args,
-    userId,
-    profile: cookieProfile,
-    traits: { identified: true },
-  })
+  const identifyResponse = await sdk.identify(
+    {
+      ...args,
+      userId,
+      profile: cookieProfile,
+      traits: { identified: true },
+    },
+    requestOptions,
+  )
 
-  return await requestOptimization.page({
-    ...args,
-    profile: cookieProfile ?? { id: identifyResponse.profile.id },
-  })
+  return await sdk.page(
+    {
+      ...args,
+      profile: cookieProfile ?? { id: identifyResponse.profile.id },
+    },
+    requestOptions,
+  )
 }
 
 app.get('/', limiter, async (req, res) => {

@@ -18,9 +18,8 @@ describe('ContentfulOptimization', () => {
     expect(node.eventBuilder.library.name).toEqual(OPTIMIZATION_NODE_SDK_NAME)
   })
 
-  it('binds request-scoped event emitters through forRequest()', async () => {
+  it('forwards request options through direct stateless event methods', async () => {
     const node = new ContentfulOptimization(config)
-    const request = node.forRequest({ locale: 'de-DE', preflight: true })
     const upsertProfile = rs.spyOn(node.api.experience, 'upsertProfile').mockResolvedValue({
       changes: [],
       selectedOptimizations: [],
@@ -49,7 +48,7 @@ describe('ContentfulOptimization', () => {
       },
     })
 
-    await request.page({ profile: { id: 'profile-id' } })
+    await node.page({ profile: { id: 'profile-id' } }, { locale: 'de-DE', preflight: true })
 
     expect(upsertProfile).toHaveBeenCalledWith(
       expect.objectContaining({
