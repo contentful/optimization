@@ -1,0 +1,49 @@
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: '08:00'
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: npm
+    directories:
+      - /
+      - /implementations/node-sdk
+      - /implementations/node-sdk+web-sdk
+      - /implementations/web-sdk
+      - /implementations/web-sdk_react
+      - /implementations/react-web-sdk
+      - /implementations/react-native-sdk
+    schedule:
+      interval: weekly
+      day: tuesday
+      time: '08:00'
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: gradle
+    directories:
+      - /implementations/react-native-sdk/android
+      - /packages/react-native-sdk/dev/android
+    schedule:
+      interval: monthly
+      day: monday
+      time: '09:00'
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 2
+
+  - package-ecosystem: bundler
+    directories:
+      - /implementations/react-native-sdk
+      - /packages/react-native-sdk/dev
+    schedule:
+      interval: monthly
+      day: monday
+      time: '10:00'
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 2
