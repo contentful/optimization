@@ -417,8 +417,8 @@ importers:
         specifier: 'catalog:'
         version: 11.10.5
       core-js:
-        specifier: ^3.48.0
-        version: 3.48.0
+        specifier: ^3.49.0
+        version: 3.49.0
       dotenv:
         specifier: 'catalog:'
         version: 17.3.1
@@ -3630,8 +3630,8 @@ packages:
   core-js@3.47.0:
     resolution: {integrity: sha512-c3Q2VVkGAUyupsjRnaNX6u8Dq2vAdzm9iuPj5FW0fRxzlxgq9Q39MDq10IvmQSpLgHQNyQzQmOo6bgGHmH3NNg==}
 
-  core-js@3.48.0:
-    resolution: {integrity: sha512-zpEHTy1fjTMZCKLHUZoVeylt9XrzaIN2rbPXEt0k+q7JE5CkCZdo6bNq55bn24a69CH7ErAVLKijxJja4fw+UQ==}
+  core-js@3.49.0:
+    resolution: {integrity: sha512-es1U2+YTtzpwkxVLwAFdSpaIMyQaq0PBgm3YD1W3Qpsn1NAmO3KSgZfu+oGSWVu6NvLHoHCV/aYcsE5wiB7ALg==}
 
   core-util-is@1.0.3:
     resolution: {integrity: sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==}
@@ -11108,7 +11108,7 @@ snapshots:
 
   core-js@3.47.0: {}
 
-  core-js@3.48.0: {}
+  core-js@3.49.0: {}
 
   core-util-is@1.0.3: {}
 
