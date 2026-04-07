@@ -140,7 +140,7 @@
   "dependencies": {
     "@contentful/optimization-web": "workspace:*",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@rsbuild/core": "catalog:",
