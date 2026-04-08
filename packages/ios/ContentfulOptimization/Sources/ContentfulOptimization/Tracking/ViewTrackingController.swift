@@ -157,18 +157,10 @@ final class ViewTrackingController {
         resetCycle()
     }
 
-    /// Resume tracking after a pause. Re-evaluates visibility with last known parameters.
+    /// Resume tracking after a pause. Resets visibility so it can be re-evaluated
+    /// by the next geometry callback.
     func resume() {
         isVisible = false
-        // Re-evaluate visibility with last known geometry
-        if lastElementHeight > 0 {
-            updateVisibility(
-                elementY: lastElementY,
-                elementHeight: lastElementHeight,
-                scrollY: lastScrollY,
-                viewportHeight: lastViewportHeight
-            )
-        }
     }
 
     // MARK: - Private
@@ -177,6 +169,8 @@ final class ViewTrackingController {
         isVisible = true
         viewId = UUID().uuidString
         visibleSince = Date()
+        accumulatedMs = 0
+        attempts = 0
         scheduleNextFire()
     }
 
