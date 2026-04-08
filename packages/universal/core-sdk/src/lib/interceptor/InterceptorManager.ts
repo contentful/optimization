@@ -7,7 +7,7 @@ import { cloneDeep } from 'es-toolkit'
  * @typeParam T - The resolved value type.
  * @public
  */
-type MaybePromise<T> = T | Promise<T>
+export type MaybePromise<T> = T | Promise<T>
 
 /**
  * A function that receives a value of type `T` and returns a (possibly async)

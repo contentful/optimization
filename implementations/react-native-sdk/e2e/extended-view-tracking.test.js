@@ -7,7 +7,7 @@ const {
   getElementTextById,
   isVisibleById,
   sleep,
-  waitForComponentEventCount,
+  waitForTrackedItemEventCount,
   waitForEventsCountAtLeast,
 } = require('./helpers')
 
@@ -37,10 +37,10 @@ describe('Extended View Tracking', () => {
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     // Wait for the initial event (after dwell threshold ~2s)
-    await waitForComponentEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
 
     // Wait for at least one periodic update (dwell 2s + update interval 5s = ~7s total)
-    await waitForComponentEventCount(VISIBLE_ENTRY_ID, 2, EXTENDED_TIMEOUT)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, EXTENDED_TIMEOUT)
   })
 
   it('should report increasing viewDurationMs across periodic events', async () => {
@@ -48,7 +48,7 @@ describe('Extended View Tracking', () => {
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     // Wait for at least 2 events so we can check duration is increasing
-    await waitForComponentEventCount(VISIBLE_ENTRY_ID, 2, EXTENDED_TIMEOUT)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, EXTENDED_TIMEOUT)
 
     const duration = await getViewDuration(VISIBLE_ENTRY_ID)
 
@@ -61,7 +61,7 @@ describe('Extended View Tracking', () => {
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     // Wait for at least 2 events
-    await waitForComponentEventCount(VISIBLE_ENTRY_ID, 2, EXTENDED_TIMEOUT)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, EXTENDED_TIMEOUT)
 
     const viewId = await getViewId(VISIBLE_ENTRY_ID)
 
@@ -76,7 +76,7 @@ describe('Extended View Tracking', () => {
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     // Wait for at least 1 event from the visible entry
-    await waitForComponentEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
 
     const preScrollViewId = await getViewId(VISIBLE_ENTRY_ID)
 
@@ -96,7 +96,7 @@ describe('Extended View Tracking', () => {
       .scroll(300, 'down')
 
     // The event count should have incremented by the final event
-    await waitForComponentEventCount(VISIBLE_ENTRY_ID, 2, ELEMENT_VISIBILITY_TIMEOUT)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, ELEMENT_VISIBILITY_TIMEOUT)
 
     // The viewId should still match the original cycle
     const postScrollViewId = await getViewId(VISIBLE_ENTRY_ID)
@@ -108,7 +108,7 @@ describe('Extended View Tracking', () => {
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     // Wait for at least 1 event in the first visibility cycle
-    await waitForComponentEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
 
     const firstCycleViewId = await getViewId(VISIBLE_ENTRY_ID)
 
@@ -121,7 +121,7 @@ describe('Extended View Tracking', () => {
     await sleep(500)
 
     // Wait for new events from the second visibility cycle (at least 1 more beyond what we had)
-    await waitForComponentEventCount(VISIBLE_ENTRY_ID, 3, EXTENDED_TIMEOUT)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 3, EXTENDED_TIMEOUT)
 
     const secondCycleViewId = await getViewId(VISIBLE_ENTRY_ID)
 
@@ -146,9 +146,9 @@ describe('Extended View Tracking', () => {
     // Wait long enough that an event WOULD have fired if tracking hadn't been cancelled
     await sleep(3000)
 
-    // The `component-stats` element only renders when an entry view event has fired.
+    // The `entry-stats` element only renders when an entry view event has fired.
     // It should not exist for the below-fold entry since it wasn't visible long enough.
-    const statsVisible = await isVisibleById(`component-stats-${BELOW_FOLD_ENTRY_ID}`, 2000)
+    const statsVisible = await isVisibleById(`entry-stats-${BELOW_FOLD_ENTRY_ID}`, 2000)
     jestExpect(statsVisible).toBe(false)
   })
 
@@ -158,8 +158,8 @@ describe('Extended View Tracking', () => {
       .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     // Wait for at least 1 event from each visible entry
-    await waitForComponentEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
-    await waitForComponentEventCount(SECOND_ENTRY_ID, 1, EXTENDED_TIMEOUT)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
+    await waitForTrackedItemEventCount(SECOND_ENTRY_ID, 1, EXTENDED_TIMEOUT)
 
     // Get viewIds for both entries
     const viewId1 = await getViewId(VISIBLE_ENTRY_ID)
@@ -177,7 +177,7 @@ describe('Extended View Tracking', () => {
       .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     // Wait for at least 1 tracking event (active cycle with emitted event)
-    await waitForComponentEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
 
     // Record the current event count
     const preNavText = await getElementTextById(`event-count-${VISIBLE_ENTRY_ID}`)
@@ -227,7 +227,7 @@ describe('Extended View Tracking', () => {
       .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     // Wait for at least 1 tracking event
-    await waitForComponentEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
 
     const preBackgroundViewId = await getViewId(VISIBLE_ENTRY_ID)
 
@@ -246,7 +246,7 @@ describe('Extended View Tracking', () => {
 
     // Backgrounding ends the cycle (final event) and foregrounding starts a new one.
     // Wait for events from the new cycle.
-    await waitForComponentEventCount(VISIBLE_ENTRY_ID, 3, EXTENDED_TIMEOUT)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 3, EXTENDED_TIMEOUT)
 
     // The viewId should differ — new cycle after background/foreground
     const postForegroundViewId = await getViewId(VISIBLE_ENTRY_ID)
@@ -259,7 +259,7 @@ describe('Extended View Tracking', () => {
       .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
     // Wait for at least 2 events so duration accumulates beyond the dwell threshold
-    await waitForComponentEventCount(VISIBLE_ENTRY_ID, 2, EXTENDED_TIMEOUT)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, EXTENDED_TIMEOUT)
     const firstCycleDuration = await getViewDuration(VISIBLE_ENTRY_ID)
 
     // Duration after 2 events should be well above the dwell threshold
@@ -276,7 +276,7 @@ describe('Extended View Tracking', () => {
     // Wait for the new cycle's initial event
     // Cycle 1: initial(1) + periodic(2) + final(3) = 3 events
     // New cycle initial = event 4
-    await waitForComponentEventCount(VISIBLE_ENTRY_ID, 4, EXTENDED_TIMEOUT)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 4, EXTENDED_TIMEOUT)
 
     // The new cycle's duration should be around the dwell threshold (~2000ms),
     // not carrying over the 4000+ms from cycle 1

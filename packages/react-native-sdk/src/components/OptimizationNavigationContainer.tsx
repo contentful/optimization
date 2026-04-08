@@ -14,7 +14,7 @@ function paramsToJson(params: Record<string, unknown>): z.core.util.JSONType {
 /**
  * @internal
  */
-interface NavigationState {
+export interface NavigationState {
   index: number
   routes: Array<{
     name: string
@@ -26,7 +26,7 @@ interface NavigationState {
 /**
  * @internal
  */
-interface NavigationContainerRef {
+export interface NavigationContainerRef {
   getCurrentRoute: () => { name: string; params?: Record<string, unknown> } | undefined
 }
 

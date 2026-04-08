@@ -100,6 +100,10 @@ const MergeTagValueResolver = {
    * @param profile - Optional profile used for lookup.
    * @returns The resolved string, or `undefined` if the entry is invalid and no
    * fallback is available.
+   * @remarks
+   * The resolved value depends on the current request profile, so callers
+   * should not reuse rendered output across users or requests unless the
+   * cache varies on the same profile inputs.
    * @example
    * ```ts
    * const text = MergeTagValueResolver.resolve(entry, profile)

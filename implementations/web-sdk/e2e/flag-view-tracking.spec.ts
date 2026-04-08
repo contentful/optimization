@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 
-function getFlagAccessComponentEvents(page: Page): Locator {
+function getFlagAccessEvents(page: Page): Locator {
   return page
     .locator('#event-stream li button[data-component-id="boolean"]')
     .filter({ hasText: /^component$/ })
@@ -14,7 +14,7 @@ test.describe('flag view tracking', () => {
   })
 
   test('flag access emits a flag view event', async ({ page }) => {
-    const flagAccessEvents = getFlagAccessComponentEvents(page)
+    const flagAccessEvents = getFlagAccessEvents(page)
     const baselineFlagEventCount = await flagAccessEvents.count()
 
     await page.getByRole('button', { name: 'Identify' }).click()

@@ -31,9 +31,9 @@ catalog:
   es-toolkit: ^1.44.0
   express: ^5.2.1
   express-rate-limit: ^8.2.2
-  happy-dom: ^20.6.1
+  happy-dom: ^20.8.9
   msw: ^2.12.10
-  p-retry: ^7.1.1
+  p-retry: ^8.0.0
   pm2: ^6.0.14
   qs: ^6.14.0
   rimraf: ^6.1.3

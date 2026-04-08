@@ -10,8 +10,8 @@
 
 <div align="center">
 
-[Readme](./README.md) · [Reference](https://contentful.github.io/optimization) ·
-[Contributing](../../../CONTRIBUTING.md)
+[Guides](https://contentful.github.io/optimization/documents/Guides.html) ·
+[Reference](https://contentful.github.io/optimization) · [Contributing](../../../CONTRIBUTING.md)
 
 </div>
 
@@ -72,7 +72,28 @@ Configure and initialize the Optimization Node SDK:
 
 ```ts
 const optimization = new ContentfulOptimization({ clientId: 'abc123' })
+const requestOptions = { locale: 'en-US' }
+
+await optimization.page({}, requestOptions)
 ```
+
+Create `optimization` once per module or process, then pass request-scoped Experience options as the
+final argument to stateless event methods inside each incoming request.
+
+## Caching Guidance
+
+The Node SDK is stateless, but that does not mean all request work is cacheable.
+
+- Cache raw Contentful delivery payloads in your application layer.
+- Treat cached Contentful entries as immutable.
+- Use `resolveOptimizedEntry()` and `getMergeTagValue()` as request-local helpers when rendering.
+- Do not memoize `page()`, `identify()`, `screen()`, `track()`, `trackView()`, `trackClick()`,
+  `trackHover()`, or `trackFlagView()`. Those methods emit outbound events and/or return profile
+  state for the current request.
+
+For a step-by-step Express-style walkthrough that covers request context, profile persistence,
+Contentful entry resolution, and hybrid Node + browser setups, see
+[Integrating the Optimization Node SDK in a Node App](../../../documentation/integrating-the-node-sdk-in-a-node-app.md).
 
 ## Development Harness
 
@@ -114,20 +135,21 @@ select less-common scenarios, with the most basic example solution possible.
 
 ### API Options
 
-| Option              | Required? | Default                                    | Description                                                                    |
-| ------------------- | --------- | ------------------------------------------ | ------------------------------------------------------------------------------ |
-| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                                                |
-| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                                  |
-| `beaconHandler`     | No        | `undefined`                                | Custom handler used to enqueue Insights API event batches                      |
-| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Enabled features the Experience API may use for each request                   |
-| `ip`                | No        | `undefined`                                | IP address override used by the Experience API for location analysis           |
-| `locale`            | No        | `'en-US'` (in API)                         | Locale used to translate `location.city` and `location.country`                |
-| `plainText`         | No        | `false`                                    | Sends performance-critical Experience API endpoints in plain text              |
-| `preflight`         | No        | `false`                                    | Instructs the Experience API to aggregate a new profile state but not store it |
+| Option              | Required? | Default                                    | Description                                                  |
+| ------------------- | --------- | ------------------------------------------ | ------------------------------------------------------------ |
+| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                              |
+| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                |
+| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Enabled features the Experience API may use for each request |
 
-Configuration method signatures:
+Request-scoped Experience API options are passed to stateless event methods as their final argument
+instead of the SDK constructor:
 
-- `beaconHandler`: `(url: string | URL, data: BatchInsightsEventArray) => boolean`
+| Option      | Required? | Default     | Description                                                                    |
+| ----------- | --------- | ----------- | ------------------------------------------------------------------------------ |
+| `ip`        | No        | `undefined` | IP address override used by the Experience API for location analysis           |
+| `locale`    | No        | `undefined` | Locale used to translate `location.city` and `location.country`                |
+| `plainText` | No        | `undefined` | Sends performance-critical Experience API endpoints in plain text              |
+| `preflight` | No        | `undefined` | Instructs the Experience API to aggregate a new profile state but not store it |
 
 ### Event Builder Options
 
@@ -231,6 +253,20 @@ Arguments:
 
 ### Experience API and Insights API Event Methods
 
+Pass request-scoped Experience options as the final argument to stateless event methods:
+
+```ts
+const requestOptions = {
+  locale: req.acceptsLanguages()[0] ?? 'en-US',
+}
+
+await optimization.page({ ...requestContext, profile }, requestOptions)
+```
+
+Request-scoped Experience options stay separate from the event payload. Event context such as page
+data, locale metadata on the event, and user agent belong in `payload`, while `ip`, `locale`,
+`plainText`, and `preflight` belong in `requestOptions`.
+
 Only the following methods may return an `OptimizationData` object:
 
 - `identify`
@@ -246,6 +282,11 @@ contains:
 - `selectedOptimizations`: Selected optimizations for the profile
 - `profile`: Profile associated with the evaluated events
 
+In stateless runtimes, Insights-backed methods require a profile for delivery. Non-sticky
+`trackView`, `trackClick`, `trackHover`, and `trackFlagView` require `payload.profile.id`. Sticky
+`trackView` may omit `profile`, because the returned Experience profile is reused for the paired
+Insights event.
+
 #### `identify`
 
 Identify the current profile/visitor to associate traits with a profile.
@@ -254,6 +295,7 @@ Arguments:
 
 - `payload`\*: Identify event builder arguments object, including an optional `profile` property
   with a `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options passed as the final argument
 
 #### `page`
 
@@ -263,6 +305,7 @@ Arguments:
 
 - `payload`\*: Page view event builder arguments object, including an optional `profile` property
   with a `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options passed as the final argument
 
 #### `screen`
 
@@ -272,6 +315,7 @@ Arguments:
 
 - `payload`\*: Screen view event builder arguments object, including an optional `profile` property
   with a `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options passed as the final argument
 
 #### `track`
 
@@ -281,6 +325,7 @@ Arguments:
 
 - `payload`\*: Track event builder arguments object, including an optional `profile` property with a
   `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options passed as the final argument
 
 #### `trackView`
 
@@ -290,8 +335,11 @@ marked as "sticky".
 
 Arguments:
 
-- `payload`\*: Entry view event builder arguments object, including an optional `profile` property
-  with a `PartialProfile` value that requires only an `id`
+- `payload`\*: Entry view event builder arguments object. When `payload.sticky` is `true`, `profile`
+  is optional and the returned Experience profile is reused for Insights delivery. Otherwise,
+  `profile` is required and must contain at least an `id`
+- `requestOptions`: Optional request-scoped Experience API options passed as the final argument.
+  Only used when `payload.sticky` is `true`
 
 #### `trackClick`
 
@@ -303,7 +351,10 @@ Returns:
 
 Arguments:
 
-- `payload`\*: Entry click event builder arguments object
+- `payload`\*: Entry click event builder arguments object, including a required `profile` property
+  with a `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options accepted for signature
+  consistency; currently unused
 
 #### `trackHover`
 
@@ -315,7 +366,10 @@ Returns:
 
 Arguments:
 
-- `payload`\*: Entry hover event builder arguments object
+- `payload`\*: Entry hover event builder arguments object, including a required `profile` property
+  with a `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options accepted for signature
+  consistency; currently unused
 
 #### `trackFlagView`
 
@@ -328,7 +382,10 @@ Returns:
 
 Arguments:
 
-- `payload`\*: Flag view event builder arguments object
+- `payload`\*: Flag view event builder arguments object, including a required `profile` property
+  with a `PartialProfile` value that requires only an `id`
+- `requestOptions`: Optional request-scoped Experience API options accepted for signature
+  consistency; currently unused
 
 ## Interceptors
 

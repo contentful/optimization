@@ -50,7 +50,7 @@ test.describe('live updates behavior', () => {
     )
   })
 
-  test('global live updates ON updates default component while locked component stays fixed', async ({
+  test('global live updates ON updates the default entry while the locked entry stays fixed', async ({
     page,
   }) => {
     await page.getByTestId('toggle-global-live-updates-button').click()
@@ -81,7 +81,7 @@ test.describe('live updates behavior', () => {
       .not.toBe(initialLiveEntryId)
   })
 
-  test('preview-panel override enables updates for locked components', async ({ page }) => {
+  test('preview-panel override enables updates for locked entries', async ({ page }) => {
     test.skip(!isPreviewPanelEnabled, 'Preview panel is disabled for this build.')
     const initialLockedEntryId = await getEntryId(page.getByTestId('entry-id-live-locked'))
 

@@ -13,7 +13,7 @@ const logger = createScopedLogger('RN:Scroll')
 /**
  * @internal
  */
-interface ScrollContextValue {
+export interface ScrollContextValue {
   scrollY: number
   viewportHeight: number
 }

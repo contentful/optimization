@@ -52,7 +52,7 @@ describe('live updates behavior', () => {
   })
 
   describe('global liveUpdates enabled', () => {
-    it('should update default components when user identifies', async () => {
+    it('should update default entries when user identifies', async () => {
       await element(by.id('toggle-global-live-updates-button')).tap()
 
       await waitFor(element(by.id('global-live-updates-status')))
@@ -72,7 +72,7 @@ describe('live updates behavior', () => {
       await expect(element(by.id('default-entry-id'))).toBeVisible()
     })
 
-    it('should NOT update locked components even when global liveUpdates=true', async () => {
+    it('should NOT update locked entries even when global liveUpdates=true', async () => {
       await element(by.id('toggle-global-live-updates-button')).tap()
 
       await waitFor(element(by.id('global-live-updates-status')))
@@ -140,7 +140,7 @@ describe('live updates behavior', () => {
   })
 
   describe('preview panel simulation', () => {
-    it('should enable live updates for all components when panel is open', async () => {
+    it('should enable live updates for all entries when panel is open', async () => {
       await waitFor(element(by.id('preview-panel-status')))
         .toHaveText('Closed')
         .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
@@ -226,7 +226,7 @@ describe('live updates behavior', () => {
   })
 
   describe('three Optimization sections display', () => {
-    it('should display all three Optimization components', async () => {
+    it('should display all three Optimization entry sections', async () => {
       await waitFor(element(by.id('default-optimization')))
         .toBeVisible()
         .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)

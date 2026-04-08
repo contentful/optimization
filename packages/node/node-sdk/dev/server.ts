@@ -103,6 +103,10 @@ async function getContentfulEntry(
   } catch (_error) {}
 }
 
+function cloneContentEntry(entry: Entry<ContentEntrySkeleton>): Entry<ContentEntrySkeleton> {
+  return structuredClone(entry)
+}
+
 function isNonEmptyString(s?: unknown): s is string {
   return s !== undefined && typeof s === 'string' && s.trim().length > 0
 }
@@ -166,19 +170,16 @@ app.get('/', limiter, async (req, res) => {
   const requestProfile: PartialProfile | undefined =
     typeof profileId === 'string' ? { id: profileId } : undefined
 
-  let apiResponse: OptimizationData | undefined = undefined
+  let apiResponse: OptimizationData = await sdk.page({ profile: requestProfile })
 
   if (isNonEmptyString(userId)) {
-    await sdk.page({ profile: requestProfile })
     apiResponse = await sdk.identify({
       userId,
       profile: requestProfile,
     })
-  } else {
-    apiResponse = await sdk.page({ profile: requestProfile })
   }
 
-  const { profile, selectedOptimizations } = apiResponse ?? {}
+  const { profile, selectedOptimizations } = apiResponse
 
   const entryIds: string[] = [
     '1MwiFl4z7gkwqGYdvCmr8c', // Rich Text field Entry with Merge Tag
@@ -204,8 +205,13 @@ app.get('/', limiter, async (req, res) => {
 
       if (!entry) return
 
-      if (isRichText(entry.fields.text)) {
-        entry.fields.text = documentToHtmlString(entry.fields.text, {
+      const optimizedEntry = sdk.resolveOptimizedEntry(
+        cloneContentEntry(entry),
+        selectedOptimizations,
+      )
+
+      if (isRichText(optimizedEntry.entry.fields.text)) {
+        optimizedEntry.entry.fields.text = documentToHtmlString(optimizedEntry.entry.fields.text, {
           renderNode: {
             [INLINES.EMBEDDED_ENTRY]: (node) => {
               if (isMergeTagEntry(node.data.target)) {
@@ -217,8 +223,6 @@ app.get('/', limiter, async (req, res) => {
           },
         })
       }
-
-      const optimizedEntry = sdk.resolveOptimizedEntry(entry, selectedOptimizations)
 
       entries.set(entryId, optimizedEntry)
     }),

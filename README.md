@@ -10,8 +10,8 @@
 
 <div align="center">
 
-[Readme](./README.md) · [Reference](https://contentful.github.io/optimization) ·
-[Contributing](./CONTRIBUTING.md)
+[Readme](./README.md) · [Guides](https://contentful.github.io/optimization/documents/Guides.html) ·
+[Reference](https://contentful.github.io/optimization) · [Contributing](./CONTRIBUTING.md)
 
 </div>
 
@@ -21,8 +21,9 @@
 
 ## Introduction
 
-A [pnpm](https://pnpm.io/) monorepo hosting a Suite of SDKs that implement functionality for
-Contentful's [Personalization](https://www.contentful.com/developers/docs/personalization/) and
+A [pnpm](https://pnpm.io/) monorepo hosting a suite of SDKs, supporting libraries, and reference
+implementations for Contentful
+[Personalization](https://www.contentful.com/developers/docs/personalization/) and
 [Analytics](https://www.contentful.com/developers/docs/analytics/overview/) products.
 
 **What is Contentful?**
@@ -36,10 +37,11 @@ enables developers and content creators to ship their products faster.
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Optimization SDKs](#optimization-sdks)
+- [Choosing a Package](#choosing-a-package)
+- [Published Packages](#published-packages)
+- [Planned SDKs](#planned-sdks)
 - [Reference Implementations](#reference-implementations)
-- [Universal Libraries](#universal-libraries)
-- [Shared Internal Libraries](#shared-internal-libraries)
+- [Repository Layout](#repository-layout)
 - [Get Involved](#get-involved)
 - [License](#license)
 - [Code of Conduct](#code-of-conduct)
@@ -47,67 +49,73 @@ enables developers and content creators to ship their products faster.
 <!-- mtoc-end -->
 </details>
 
-## Optimization SDKs
+## Choosing a Package
 
-Optimization SDKs are organized in a hierarchy based on platform, environment, and optionally,
-framework. Each SDK builds on top of the common SDK for its platform, environment, and so on, to
-ensure functionality is reasonably shared and consistent.
+If you are deciding which SDK or library belongs in your application, start with
+[Choosing the Right SDK](./documentation/choosing-the-right-sdk.md).
 
-- [Optimization Core SDK](./packages/universal/core-sdk/README.md)
-  - iOS
-    - iOS Swift SDK (planned)
-  - Android
-    - Android Kotlin SDK (planned)
-    - Android Java SDK (planned)
-  - _JavaScript_
-    - [Node SDK](./packages/node/node-sdk/README.md)
-      - Nest.js SDK (planned)
-    - [React Native SDK](./packages/react-native-sdk/README.md)
-    - [Web SDK](./packages/web/web-sdk/README.md) and
-      [Web Preview Panel](./packages/web/preview-panel/README.md)
-      - Angular SDK (planned)
-      - [React Web SDK](./packages/web/frameworks/react-web-sdk/README.md)
-      - Svelte SDK (planned)
-      - Vue SDK (planned)
+For additional narrative documentation, see the [Guides](./documentation/README.md) section.
 
-> [!NOTE]
->
-> The JavaScript platform includes React Native, which could be considered a JavaScript development
-> environment for native platforms.
+Package README files listed below are package-level overviews. Generated
+[reference documentation](https://contentful.github.io/optimization) remains the source of truth for
+exported API signatures.
+
+## Published Packages
+
+The published package surface is intentionally layered. The table below is a package inventory and
+high-level role summary.
+
+| Package                                      | Kind                  | Runtime          | Role                                                               | Package README                                                     |
+| -------------------------------------------- | --------------------- | ---------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `@contentful/optimization-web`               | Environment SDK       | Browser          | Stateful browser SDK for optimization, tracking, and consent       | [Web SDK](./packages/web/web-sdk/README.md)                        |
+| `@contentful/optimization-react-web`         | Framework SDK         | React on the web | React integration layer on top of the Web SDK                      | [React Web SDK](./packages/web/frameworks/react-web-sdk/README.md) |
+| `@contentful/optimization-node`              | Environment SDK       | Node.js          | Stateless Node SDK for server-side and SSR integrations            | [Node SDK](./packages/node/node-sdk/README.md)                     |
+| `@contentful/optimization-react-native`      | Environment SDK       | React Native     | React Native SDK for mobile applications                           | [React Native SDK](./packages/react-native-sdk/README.md)          |
+| `@contentful/optimization-web-preview-panel` | Tooling package       | Browser          | Preview tooling package for existing Web SDK instances             | [Web Preview Panel](./packages/web/preview-panel/README.md)        |
+| `@contentful/optimization-core`              | Shared SDK foundation | Runtime-agnostic | Shared optimization foundation for runtime adapters and SDK layers | [Core SDK](./packages/universal/core-sdk/README.md)                |
+| `@contentful/optimization-api-client`        | Universal library     | Runtime-agnostic | Direct Experience API and Insights API client library              | [API Client](./packages/universal/api-client/README.md)            |
+| `@contentful/optimization-api-schemas`       | Universal library     | Runtime-agnostic | Validation schemas and inferred API/content types library          | [API Schemas](./packages/universal/api-schemas/README.md)          |
+
+General selection rules:
+
+- Most application code should start with an environment SDK or framework SDK.
+- `@contentful/optimization-core` is the shared foundation for runtime adapters and SDK layering.
+- `@contentful/optimization-api-client` and `@contentful/optimization-api-schemas` are lower-level
+  building blocks.
+
+## Planned SDKs
+
+These packages or layers are planned, but are not currently published from this repository:
+
+- iOS Swift SDK
+- Android Kotlin SDK
+- Android Java SDK
+- Nest.js SDK
+- Angular SDK
+- Svelte SDK
+- Vue SDK
 
 ## Reference Implementations
 
-The SDK Suite's reference implementations are intended to serve the following purposes:
+Reference implementations exist to exercise critical flows end to end and to document common usage
+patterns with intentionally minimal application code.
 
-- E2E testing of critical SDK functionality
-- Clear and simple documentation of common SDK use cases with absolutely no extraneous content or
-  functionality
+- [Web Vanilla](./implementations/web-sdk/README.md): static browser integration for the Web SDK
+- [React Web](./implementations/web-sdk_react/README.md): React-based browser integration
+- [Node SSR Only](./implementations/node-sdk/README.md): server-rendered integration using the Node
+  SDK
+- [Node SSR + Web Vanilla](./implementations/node-sdk+web-sdk/README.md): split server/browser flow
+  using Node and Web SDKs together
+- [React Native](./implementations/react-native-sdk/README.md): mobile application integration for
+  Android and iOS targets
 
-> [!WARNING]
->
-> Reference implementations may share some similarities with projects commonly labeled examples,
-> demos, or playgrounds, but are more sparse and strictly maintained
+## Repository Layout
 
-## Universal Libraries
-
-These libraries may be used independently of other libraries and SDKs in the Optimization SDK Suite.
-They are relied upon by all SDKs, with their exported values and functionality exposed throughout
-the SDK hierarchy.
-
-- [API Client Library](./packages/universal/api-client/README.md) for the Experience API and
-  Insights API
-- [API Schemas Library](./packages/universal/api-schemas/README.md) maintains Zod validation schemas
-  and TypeScript types for working with Experience API request/response payloads and Insights API
-  event payloads
-
-## Shared Internal Libraries
-
-Libraries that are shared internally among Optimization SDKs, and are not currently published.
-
-- Logger functionality is provided through `@contentful/optimization-api-client/logger` and passed
-  through by each SDK at its own `./logger` entry point
-- [Mocks](./lib/mocks/README.md) supplies testing fixtures and data, as well as mock server
-  implementations used in both unit and end to end tests throughout the SDK suite
+- `packages/`: published SDKs and supporting libraries
+- `implementations/`: reference applications used for examples and E2E coverage
+- `lib/`: shared internal workspace packages such as mocks and build tooling
+- `documentation/`: authored supporting documentation published alongside TypeDoc
+- `docs/`: generated TypeDoc output; not source of truth
 
 ## Get Involved
 

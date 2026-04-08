@@ -7,4 +7,9 @@ export { checkBundleSize } from './bundleSize'
 export type { BundleSizeFailure, BundleSizeResult, CheckBundleSizeOptions } from './bundleSize'
 export { emitDualDts } from './emitDualDts'
 export { getPackageName, hasPackageName } from './package'
+export {
+  preparePublishReadme,
+  restorePublishReadme,
+  rewriteReadmeForPublish,
+} from './publishReadme'
 export { ensureUmdDefaultExport, maybeEnableRsDoctor } from './rslib'

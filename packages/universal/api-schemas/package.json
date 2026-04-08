@@ -2,6 +2,11 @@
   "name": "@contentful/optimization-api-schemas",
   "version": "0.0.0",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/contentful/optimization.git",
+    "directory": "packages/universal/api-schemas"
+  },
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",

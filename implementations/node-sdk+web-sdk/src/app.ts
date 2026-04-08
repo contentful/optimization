@@ -46,6 +46,8 @@ const config = {
   },
 } as const
 
+const sdk = new ContentfulOptimization(config.optimization)
+
 type QsPrimitive = string | ParsedQs
 type QsArray = QsPrimitive[] // Note: mixed arrays are allowed by ParsedQs
 type QsValue = QsPrimitive | QsArray | undefined
@@ -105,28 +107,33 @@ async function getProfile(
   userId?: string,
   anonymousId?: string,
 ): Promise<OptimizationData | undefined> {
-  const sdk = new ContentfulOptimization(config.optimization)
   const args = getUniversalEventBuilderArgs(req)
+  const requestOptions = {
+    locale: args.locale,
+  }
   const cookieProfile = anonymousId ? { id: anonymousId } : undefined
 
   if (!userId) {
-    return await sdk.page({ ...args, profile: cookieProfile })
+    return await sdk.page({ ...args, profile: cookieProfile }, requestOptions)
   }
 
-  const { profile } =
-    (await sdk.identify({
+  const identifyResponse = await sdk.identify(
+    {
       ...args,
       userId,
       profile: cookieProfile,
       traits: { identified: true },
-    })) ?? {}
+    },
+    requestOptions,
+  )
 
-  if (!profile) return
-
-  return await sdk.page({
-    ...args,
-    profile: cookieProfile ?? { id: profile.id },
-  })
+  return await sdk.page(
+    {
+      ...args,
+      profile: cookieProfile ?? { id: identifyResponse.profile.id },
+    },
+    requestOptions,
+  )
 }
 
 app.get('/', limiter, async (req, res) => {

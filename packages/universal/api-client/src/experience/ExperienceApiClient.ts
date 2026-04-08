@@ -7,7 +7,7 @@ import {
   parseWithFriendlyError,
   type BatchExperienceEventArray,
   type BatchExperienceResponseData,
-  type ExperienceRequestOptions,
+  type ExperienceRequestOptions as ExperienceRequestBodyOptions,
   type OptimizationData,
 } from '@contentful/optimization-api-schemas'
 import ApiClientBase, { type ApiConfig } from '../ApiClientBase'
@@ -27,14 +27,14 @@ export const EXPERIENCE_BASE_URL = 'https://experience.ninetailed.co/'
  *
  * @internal
  */
-type Feature = 'ip-enrichment' | 'location'
+export type Feature = 'ip-enrichment' | 'location'
 
 /**
  * Options that control how requests to the Experience API are handled.
  *
- * @internal
+ * @public
  */
-interface RequestOptions {
+export interface ExperienceApiClientRequestOptions {
   /**
    * Enabled features (for example, `"ip-enrichment"`) which the API should use for this request.
    *
@@ -87,15 +87,15 @@ interface RequestOptions {
 interface ProfileMutationRequestOptions {
   url: string
   body: unknown
-  options: RequestOptions
+  options: ExperienceApiClientRequestOptions
 }
 
 /**
  * Parameters used when creating a profile.
  *
- * @internal
+ * @public
  */
-interface CreateProfileParams {
+export interface CreateProfileParams {
   /**
    * Events used to aggregate the profile state.
    */
@@ -105,9 +105,9 @@ interface CreateProfileParams {
 /**
  * Parameters used when updating an existing profile.
  *
- * @internal
+ * @public
  */
-interface UpdateProfileParams extends CreateProfileParams {
+export interface UpdateProfileParams extends CreateProfileParams {
   /**
    * ID of the profile to update.
    */
@@ -117,9 +117,9 @@ interface UpdateProfileParams extends CreateProfileParams {
 /**
  * Parameters used when creating or updating a profile.
  *
- * @internal
+ * @public
  */
-interface UpsertProfileParams extends CreateProfileParams {
+export interface UpsertProfileParams extends CreateProfileParams {
   /**
    * Optional ID of the profile; when omitted, a new profile is created.
    */
@@ -129,9 +129,9 @@ interface UpsertProfileParams extends CreateProfileParams {
 /**
  * Parameters used when performing a batch profile update.
  *
- * @internal
+ * @public
  */
-interface BatchUpdateProfileParams {
+export interface BatchUpdateProfileParams {
   /**
    * Batch of events to process.
    */
@@ -143,7 +143,7 @@ interface BatchUpdateProfileParams {
  *
  * @public
  */
-export interface ExperienceApiClientConfig extends ApiConfig, RequestOptions {}
+export interface ExperienceApiClientConfig extends ApiConfig, ExperienceApiClientRequestOptions {}
 
 /**
  * Client for interacting with the Experience API.
@@ -162,7 +162,7 @@ export interface ExperienceApiClientConfig extends ApiConfig, RequestOptions {}
  * const profile = await client.getProfile('profile-id')
  * ```
  *
- * @see {@link ApiClientBase}
+ * Extends `ApiClientBase`.
  *
  * @public
  */
@@ -172,11 +172,11 @@ export default class ExperienceApiClient extends ApiClientBase {
    */
   protected readonly baseUrl: string
 
-  private readonly enabledFeatures?: RequestOptions['enabledFeatures']
-  private readonly ip?: RequestOptions['ip']
-  private readonly locale?: RequestOptions['locale']
-  private readonly plainText?: RequestOptions['plainText']
-  private readonly preflight?: RequestOptions['preflight']
+  private readonly enabledFeatures?: ExperienceApiClientRequestOptions['enabledFeatures']
+  private readonly ip?: ExperienceApiClientRequestOptions['ip']
+  private readonly locale?: ExperienceApiClientRequestOptions['locale']
+  private readonly plainText?: ExperienceApiClientRequestOptions['plainText']
+  private readonly preflight?: ExperienceApiClientRequestOptions['preflight']
 
   /**
    * Creates a new {@link ExperienceApiClient} instance.
@@ -204,7 +204,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    * @param options - Optional request options. `preflight` and `plainText` are not allowed here.
    * @returns The current optimization data for the profile.
    *
-   * @throws {@link Error}
+   * @throws Error
    * Thrown if `id` is missing or the underlying request fails.
    *
    * @example
@@ -216,7 +216,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    */
   public async getProfile(
     id: string,
-    options: Omit<RequestOptions, 'preflight' | 'plainText'> = {},
+    options: Omit<ExperienceApiClientRequestOptions, 'preflight' | 'plainText'> = {},
   ): Promise<OptimizationData> {
     if (!id) throw new Error('Valid profile ID required.')
 
@@ -291,7 +291,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    */
   public async createProfile(
     { events }: CreateProfileParams,
-    options: RequestOptions = {},
+    options: ExperienceApiClientRequestOptions = {},
   ): Promise<OptimizationData> {
     const requestName = 'Create Profile'
 
@@ -331,7 +331,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    * @param options - Optional request options.
    * @returns The updated optimization data for the profile.
    *
-   * @throws {@link Error}
+   * @throws Error
    * Thrown if `profileId` is missing or the underlying request fails.
    *
    * @example
@@ -344,7 +344,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    */
   public async updateProfile(
     { profileId, events }: UpdateProfileParams,
-    options: RequestOptions = {},
+    options: ExperienceApiClientRequestOptions = {},
   ): Promise<OptimizationData> {
     if (!profileId) throw new Error('Valid profile ID required.')
 
@@ -397,7 +397,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    */
   public async upsertProfile(
     { profileId, events }: UpsertProfileParams,
-    options?: RequestOptions,
+    options?: ExperienceApiClientRequestOptions,
   ): Promise<OptimizationData> {
     if (!profileId) {
       return await this.createProfile({ events }, options)
@@ -432,7 +432,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    */
   public async upsertManyProfiles(
     { events }: BatchUpdateProfileParams,
-    options: RequestOptions = {},
+    options: ExperienceApiClientRequestOptions = {},
   ): Promise<BatchExperienceResponseData['profiles']> {
     const requestName = 'Upsert Many Profiles'
 
@@ -475,7 +475,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    *
    * @internal
    */
-  private constructUrl(path: string, options: RequestOptions): string {
+  private constructUrl(path: string, options: ExperienceApiClientRequestOptions): string {
     const url = new URL(path, this.baseUrl)
     const locale = options.locale ?? this.locale
     const preflight = options.preflight ?? this.preflight
@@ -502,7 +502,7 @@ export default class ExperienceApiClient extends ApiClientBase {
   private constructHeaders({
     ip = this.ip,
     plainText = this.plainText,
-  }: RequestOptions): Record<string, string> {
+  }: ExperienceApiClientRequestOptions): Record<string, string> {
     const headers = new Map<string, string>()
 
     if (ip) {
@@ -528,8 +528,8 @@ export default class ExperienceApiClient extends ApiClientBase {
    */
   private readonly constructBodyOptions = ({
     enabledFeatures = this.enabledFeatures,
-  }: RequestOptions): ExperienceRequestOptions => {
-    const bodyOptions: ExperienceRequestOptions = {}
+  }: ExperienceApiClientRequestOptions): ExperienceRequestBodyOptions => {
+    const bodyOptions: ExperienceRequestBodyOptions = {}
 
     if (enabledFeatures && Array.isArray(enabledFeatures) && enabledFeatures.length > 0) {
       bodyOptions.features = enabledFeatures
@@ -551,7 +551,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    */
   private constructExperienceRequestBody(
     events: ExperienceEventArray,
-    options: RequestOptions,
+    options: ExperienceApiClientRequestOptions,
   ): ExperienceRequestData {
     return ExperienceRequestData.parse({
       events: parseWithFriendlyError(ExperienceEventArray, events),

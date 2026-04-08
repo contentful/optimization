@@ -1,7 +1,7 @@
 const {
   clearProfileState,
   ELEMENT_VISIBILITY_TIMEOUT,
-  waitForComponentEventCount,
+  waitForTrackedItemEventCount,
 } = require('./helpers')
 
 describe('Flag View Tracking', () => {
@@ -17,6 +17,6 @@ describe('Flag View Tracking', () => {
     const analyticsTitle = element(by.text('Analytics Events'))
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-    await waitForComponentEventCount('boolean', 1, ELEMENT_VISIBILITY_TIMEOUT)
+    await waitForTrackedItemEventCount('boolean', 1, ELEMENT_VISIBILITY_TIMEOUT)
   })
 })

@@ -9,7 +9,7 @@ const logger = createScopedLogger('RN:Provider')
 /**
  * Props for the {@link OptimizationProvider} component.
  *
- * Accepts all {@link OptimizationConfig} properties directly. Only `clientId` is required.
+ * Accepts all `OptimizationConfig` properties directly. Only `clientId` is required.
  *
  * @public
  */

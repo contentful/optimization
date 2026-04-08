@@ -5,7 +5,7 @@ import * as z from 'zod/mini'
  *
  * @remarks
  * Currently only the `'Variable'` change type is supported, but the union
- * in {@link ChangeBase} allows for additional types to be introduced.
+ * in `ChangeBase` allows for additional types to be introduced.
  *
  * @public
  */
@@ -19,7 +19,7 @@ export const ChangeType = ['Variable'] as const
  *
  * @internal
  */
-const ChangeBase = z.object({
+export const ChangeBase = z.object({
   /**
    * Key identifying the subject of the change.
    */
@@ -111,7 +111,7 @@ export const VariableChange = z.extend(ChangeBase, {
   type: z.literal('Variable'),
 
   /**
-   * New value for the variable identified by {@link ChangeBase.key}.
+   * New value for the variable identified by `ChangeBase.key`.
    */
   value: VariableChangeValue,
 })
