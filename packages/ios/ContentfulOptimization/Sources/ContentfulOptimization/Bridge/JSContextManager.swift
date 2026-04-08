@@ -129,6 +129,13 @@ final class JSContextManager {
         let args = payload.isEmpty
             ? "\(names.success), \(names.error)"
             : "\(payload), \(names.success), \(names.error)"
+
+        var jsException: JSValue?
+        let previousHandler = ctx.exceptionHandler
+        ctx.exceptionHandler = { _, exception in
+            jsException = exception
+        }
+
         ctx.evaluateScript("__bridge.\(method)(\(args))")
         ctx.exceptionHandler = previousHandler
 
