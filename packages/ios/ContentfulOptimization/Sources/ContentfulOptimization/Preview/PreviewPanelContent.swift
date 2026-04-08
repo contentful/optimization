@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 /// The content displayed in the preview panel sheet.
@@ -17,11 +18,13 @@ public struct PreviewPanelContent: View {
                 personalizationsSection
                 debugSection
             }
+            .accessibilityIdentifier("preview-panel-list")
             .navigationTitle("Preview Panel")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .onAppear { refreshState() }
+            .onReceive(client.$state) { _ in refreshState() }
         }
     }
 
@@ -38,9 +41,13 @@ public struct PreviewPanelContent: View {
                             .font(.caption)
                             .lineLimit(2)
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("profile-item-\(key)")
                 }
             } else {
-                Text("No profile data").foregroundColor(.secondary)
+                Text("No profile data")
+                    .foregroundColor(.secondary)
+                    .accessibilityIdentifier("no-profile-data")
             }
         }
     }
@@ -102,13 +109,18 @@ public struct PreviewPanelContent: View {
                 Text(previewState?["canPersonalize"] as? Bool == true ? "Yes" : "No")
                     .foregroundColor(.secondary)
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("debug-can-personalize")
             HStack {
                 Text("Consent")
                 Spacer()
                 Text(previewState?["consent"] as? Bool == true ? "Accepted" : "Pending")
                     .foregroundColor(.secondary)
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("debug-consent")
             Button("Refresh") { refreshState() }
+                .accessibilityIdentifier("preview-refresh-button")
         }
     }
 

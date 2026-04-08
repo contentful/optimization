@@ -15,7 +15,9 @@ struct OptimizationDemoApp: App {
                 trackViews: true,
                 trackTaps: true
             ) {
-                MainScreen()
+                PreviewPanelOverlay {
+                    MainScreen()
+                }
             }
         }
     }

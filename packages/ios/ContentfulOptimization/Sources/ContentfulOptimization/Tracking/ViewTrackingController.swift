@@ -6,13 +6,13 @@ import AppKit
 import Foundation
 
 /// Extracts tracking metadata from an entry and its resolved personalization.
-struct TrackingMetadata {
-    let componentId: String
-    let experienceId: String?
-    let variantIndex: Int
-    let sticky: Bool?
+public struct TrackingMetadata {
+    public let componentId: String
+    public let experienceId: String?
+    public let variantIndex: Int
+    public let sticky: Bool?
 
-    init(entry: [String: Any], personalization: [String: Any]?) {
+    public init(entry: [String: Any], personalization: [String: Any]?) {
         let sys = entry["sys"] as? [String: Any]
         self.componentId = sys?["id"] as? String ?? ""
         self.experienceId = personalization?["experienceId"] as? String
@@ -34,8 +34,8 @@ struct TrackingMetadata {
 ///                            (ratio < threshold) → INVISIBLE (emit final if attempts > 0)
 /// ```
 @MainActor
-final class ViewTrackingController {
-    private(set) var isVisible: Bool = false
+public final class ViewTrackingController {
+    public private(set) var isVisible: Bool = false
 
     private weak var client: OptimizationClient?
     private let metadata: TrackingMetadata
@@ -62,7 +62,7 @@ final class ViewTrackingController {
     #endif
 
     /// The fallback viewport height when no scroll context is available.
-    static var fallbackViewportHeight: CGFloat {
+    public static var fallbackViewportHeight: CGFloat {
         #if canImport(UIKit)
         UIScreen.main.bounds.height
         #elseif canImport(AppKit)
@@ -72,13 +72,13 @@ final class ViewTrackingController {
         #endif
     }
 
-    init(
+    public init(
         client: OptimizationClient,
         entry: [String: Any],
         personalization: [String: Any]?,
-        threshold: Double,
-        viewTimeMs: Int,
-        viewDurationUpdateIntervalMs: Int
+        threshold: Double = 0.8,
+        viewTimeMs: Int = 2000,
+        viewDurationUpdateIntervalMs: Int = 5000
     ) {
         self.client = client
         self.metadata = TrackingMetadata(entry: entry, personalization: personalization)
@@ -110,7 +110,7 @@ final class ViewTrackingController {
     }
 
     /// Update the element's visibility based on its position relative to the viewport.
-    func updateVisibility(
+    public func updateVisibility(
         elementY: CGFloat,
         elementHeight: CGFloat,
         scrollY: CGFloat,
@@ -139,14 +139,14 @@ final class ViewTrackingController {
     }
 
     /// Called when the view disappears from the hierarchy. Emits a final event if active.
-    func onDisappear() {
+    public func onDisappear() {
         if isVisible {
             onBecameInvisible()
         }
     }
 
     /// Pause tracking (e.g., when the app enters the background).
-    func pause() {
+    public func pause() {
         pauseAccumulation()
         timer?.invalidate()
         timer = nil
@@ -159,7 +159,7 @@ final class ViewTrackingController {
 
     /// Resume tracking after a pause. Resets visibility so it can be re-evaluated
     /// by the next geometry callback.
-    func resume() {
+    public func resume() {
         isVisible = false
     }
 

@@ -28,6 +28,7 @@
 		D10000000000000000000009 /* OfflineBehaviorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20000000000000000000009 /* OfflineBehaviorTests.swift */; };
 		D1000000000000000000000A /* IdentifiedVariantsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000000000000000000000A /* IdentifiedVariantsTests.swift */; };
 		D1000000000000000000000B /* UnidentifiedVariantsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000000000000000000000B /* UnidentifiedVariantsTests.swift */; };
+		D1000000000000000000000C /* PreviewPanelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2000000000000000000000D /* PreviewPanelTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,6 +65,7 @@
 		D2000000000000000000000A /* IdentifiedVariantsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentifiedVariantsTests.swift; sourceTree = "<group>"; };
 		D2000000000000000000000B /* UnidentifiedVariantsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnidentifiedVariantsTests.swift; sourceTree = "<group>"; };
 		D2000000000000000000000C /* OptimizationAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OptimizationAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D2000000000000000000000D /* PreviewPanelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewPanelTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -174,6 +176,7 @@
 				D20000000000000000000009 /* OfflineBehaviorTests.swift */,
 				D2000000000000000000000A /* IdentifiedVariantsTests.swift */,
 				D2000000000000000000000B /* UnidentifiedVariantsTests.swift */,
+				D2000000000000000000000D /* PreviewPanelTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -301,6 +304,7 @@
 				D10000000000000000000009 /* OfflineBehaviorTests.swift in Sources */,
 				D1000000000000000000000A /* IdentifiedVariantsTests.swift in Sources */,
 				D1000000000000000000000B /* UnidentifiedVariantsTests.swift in Sources */,
+				D1000000000000000000000C /* PreviewPanelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
