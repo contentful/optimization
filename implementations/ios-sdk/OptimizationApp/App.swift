@@ -10,7 +10,8 @@ struct OptimizationDemoApp: App {
                     clientId: AppConfig.clientId,
                     environment: AppConfig.environment,
                     experienceBaseUrl: AppConfig.experienceBaseUrl,
-                    insightsBaseUrl: AppConfig.insightsBaseUrl
+                    insightsBaseUrl: AppConfig.insightsBaseUrl,
+                    debug: true
                 ),
                 trackViews: true,
                 trackTaps: true
