@@ -79,19 +79,54 @@ interface Bridge {
   // Synchronous
   consent(accept: boolean): void
   reset(): void
-  personalizeEntry(baselineJSON: string, personalizationsJSON?: string): string
+  personalizeEntry(
+    baseline: Record<string, unknown>,
+    personalizations?: Array<Record<string, unknown>>,
+  ): string
   setOnline(isOnline: boolean): void
 
   // Preview panel
   setPreviewPanelOpen(open: boolean): void
   overrideAudience(audienceId: string, qualified: boolean): void
   overrideVariant(experienceId: string, variantIndex: number): void
+  resetAudienceOverride(audienceId: string): void
+  resetVariantOverride(experienceId: string): void
+  resetAllOverrides(): void
   getPreviewState(): string
 }
 
 let instance: CoreStateful | null = null
 let disposeEffect: (() => void) | null = null
 let disposeEventEffect: (() => void) | null = null
+
+// Override tracking: stores the natural (pre-override) values and active override maps
+const defaultAudienceQualifications = new Map<string, boolean>()
+const defaultVariantIndices = new Map<string, number>()
+const audienceOverrides = new Map<string, boolean>()
+const variantOverrides = new Map<string, number>()
+
+function snapshotAudienceDefault(audienceId: string) {
+  if (defaultAudienceQualifications.has(audienceId)) return
+  const changes = (signals.changes.value ?? []) as Array<Record<string, unknown>>
+  const change = changes.find((c) => c.audienceId === audienceId)
+  defaultAudienceQualifications.set(audienceId, (change?.qualified as boolean) ?? false)
+}
+
+function snapshotVariantDefault(experienceId: string) {
+  if (defaultVariantIndices.has(experienceId)) return
+  const optimizations = (signals.selectedOptimizations.value ?? []) as Array<
+    Record<string, unknown>
+  >
+  const opt = optimizations.find((p) => p.experienceId === experienceId)
+  defaultVariantIndices.set(experienceId, (opt?.variantIndex as number) ?? 0)
+}
+
+function clearOverrideTracking() {
+  defaultAudienceQualifications.clear()
+  defaultVariantIndices.clear()
+  audienceOverrides.clear()
+  variantOverrides.clear()
+}
 
 const bridge: Bridge = {
   initialize(config: BridgeConfig) {
@@ -258,6 +293,7 @@ const bridge: Bridge = {
 
   reset() {
     if (!instance) return
+    clearOverrideTracking()
     instance.reset()
   },
 
@@ -265,10 +301,11 @@ const bridge: Bridge = {
     signals.online.value = isOnline
   },
 
-  personalizeEntry(baselineJSON: string, personalizationsJSON?: string): string {
-    if (!instance) return JSON.stringify({ entry: JSON.parse(baselineJSON) })
-    const baseline = JSON.parse(baselineJSON)
-    const personalizations = personalizationsJSON ? JSON.parse(personalizationsJSON) : undefined
+  personalizeEntry(
+    baseline: Record<string, unknown>,
+    personalizations?: Array<Record<string, unknown>>,
+  ): string {
+    if (!instance) return JSON.stringify({ entry: baseline })
     const result = instance.resolveOptimizedEntry(baseline, personalizations)
     return JSON.stringify(result)
   },
@@ -280,7 +317,9 @@ const bridge: Bridge = {
 
   overrideAudience(audienceId: string, qualified: boolean) {
     if (!instance) return
-    // Override audience qualification via changes signal
+    snapshotAudienceDefault(audienceId)
+    audienceOverrides.set(audienceId, qualified)
+
     const currentChanges = (signals.changes.value ?? []) as Array<Record<string, unknown>>
     const updatedChanges = currentChanges.map((change) => {
       if (change.audienceId === audienceId) {
@@ -293,6 +332,9 @@ const bridge: Bridge = {
 
   overrideVariant(experienceId: string, variantIndex: number) {
     if (!instance) return
+    snapshotVariantDefault(experienceId)
+    variantOverrides.set(experienceId, variantIndex)
+
     const currentPersonalizations = (signals.selectedOptimizations.value ?? []) as Array<
       Record<string, unknown>
     >
@@ -306,7 +348,93 @@ const bridge: Bridge = {
       updatedPersonalizations as typeof signals.selectedOptimizations.value
   },
 
+  resetAudienceOverride(audienceId: string) {
+    if (!instance) return
+    const defaultQualified = defaultAudienceQualifications.get(audienceId)
+    if (defaultQualified === undefined) return
+
+    audienceOverrides.delete(audienceId)
+
+    const currentChanges = (signals.changes.value ?? []) as Array<Record<string, unknown>>
+    const updatedChanges = currentChanges.map((change) => {
+      if (change.audienceId === audienceId) {
+        return { ...change, qualified: defaultQualified }
+      }
+      return change
+    })
+    signals.changes.value = updatedChanges as typeof signals.changes.value
+  },
+
+  resetVariantOverride(experienceId: string) {
+    if (!instance) return
+    const defaultVariant = defaultVariantIndices.get(experienceId)
+    if (defaultVariant === undefined) return
+
+    variantOverrides.delete(experienceId)
+
+    const currentPersonalizations = (signals.selectedOptimizations.value ?? []) as Array<
+      Record<string, unknown>
+    >
+    const updatedPersonalizations = currentPersonalizations.map((p) => {
+      if (p.experienceId === experienceId) {
+        return { ...p, variantIndex: defaultVariant }
+      }
+      return p
+    })
+    signals.selectedOptimizations.value =
+      updatedPersonalizations as typeof signals.selectedOptimizations.value
+  },
+
+  resetAllOverrides() {
+    if (!instance) return
+
+    // Restore all audience defaults
+    const currentChanges = (signals.changes.value ?? []) as Array<Record<string, unknown>>
+    const restoredChanges = currentChanges.map((change) => {
+      const audienceId = change.audienceId as string | undefined
+      if (audienceId && defaultAudienceQualifications.has(audienceId)) {
+        return { ...change, qualified: defaultAudienceQualifications.get(audienceId) }
+      }
+      return change
+    })
+    signals.changes.value = restoredChanges as typeof signals.changes.value
+
+    // Restore all variant defaults
+    const currentPersonalizations = (signals.selectedOptimizations.value ?? []) as Array<
+      Record<string, unknown>
+    >
+    const restoredPersonalizations = currentPersonalizations.map((p) => {
+      const experienceId = p.experienceId as string | undefined
+      if (experienceId && defaultVariantIndices.has(experienceId)) {
+        return { ...p, variantIndex: defaultVariantIndices.get(experienceId) }
+      }
+      return p
+    })
+    signals.selectedOptimizations.value =
+      restoredPersonalizations as typeof signals.selectedOptimizations.value
+
+    clearOverrideTracking()
+  },
+
   getPreviewState(): string {
+    // Convert override maps to plain objects for JSON serialization
+    const audOverrides: Record<string, boolean> = {}
+    audienceOverrides.forEach((v, k) => {
+      audOverrides[k] = v
+    })
+    const varOverrides: Record<string, number> = {}
+    variantOverrides.forEach((v, k) => {
+      varOverrides[k] = v
+    })
+    const audDefaults: Record<string, boolean> = {}
+    defaultAudienceQualifications.forEach((v, k) => {
+      audDefaults[k] = v
+    })
+    const varDefaults: Record<string, number> = {}
+    defaultVariantIndices.forEach((v, k) => {
+      varDefaults[k] = v
+    })
+
     return JSON.stringify({
       profile: signals.profile.value ?? null,
       consent: signals.consent.value,
@@ -314,6 +442,10 @@ const bridge: Bridge = {
       changes: signals.changes.value ?? null,
       selectedPersonalizations: signals.selectedOptimizations.value ?? null,
       previewPanelOpen: signals.previewPanelOpen.value,
+      audienceOverrides: audOverrides,
+      variantOverrides: varOverrides,
+      defaultAudienceQualifications: audDefaults,
+      defaultVariantIndices: varDefaults,
     })
   },
 
@@ -334,6 +466,7 @@ const bridge: Bridge = {
   },
 
   destroy() {
+    clearOverrideTracking()
     if (disposeEventEffect) {
       disposeEventEffect()
       disposeEventEffect = null
