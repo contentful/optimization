@@ -462,6 +462,64 @@ final class OptimizationClientTests: XCTestCase {
         XCTAssertNotNil(result.entry)
     }
 
+    @MainActor
+    func testPersonalizeEntryDoesNotProduceJSExceptions() throws {
+        let client = OptimizationClient()
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            environment: "master",
+            experienceBaseUrl: "http://localhost:8000/experience/",
+            insightsBaseUrl: "http://localhost:8000/insights/"
+        )
+
+        try client.initialize(config: config)
+
+        // Capture any JS exceptions
+        var jsExceptions: [String] = []
+        client.testOnlySetLogHandler { level, msg in
+            if level == "exception" {
+                jsExceptions.append(msg)
+            }
+        }
+
+        let baseline: [String: Any] = [
+            "sys": ["id": "entry1", "contentType": ["sys": ["id": "page"]]],
+            "fields": ["title": "Hello"],
+        ]
+
+        let result = client.personalizeEntry(baseline: baseline)
+        XCTAssertNotNil(result.entry)
+        XCTAssertTrue(
+            jsExceptions.isEmpty,
+            "personalizeEntry should not produce JS exceptions, got: \(jsExceptions)"
+        )
+    }
+
+    @MainActor
+    func testPersonalizeEntryPreservesFieldsWhenInitialized() throws {
+        let client = OptimizationClient()
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            environment: "master",
+            experienceBaseUrl: "http://localhost:8000/experience/",
+            insightsBaseUrl: "http://localhost:8000/insights/"
+        )
+
+        try client.initialize(config: config)
+
+        let baseline: [String: Any] = [
+            "sys": ["id": "entry1", "contentType": ["sys": ["id": "page"]]],
+            "fields": ["title": "Hello", "slug": "hello-world"],
+        ]
+
+        // personalizeEntry should round-trip the entry through JS and back
+        // without losing fields (i.e. the JS bridge should actually process it)
+        let result = client.personalizeEntry(baseline: baseline)
+        let fields = result.entry["fields"] as? [String: Any]
+        XCTAssertEqual(fields?["title"] as? String, "Hello")
+        XCTAssertEqual(fields?["slug"] as? String, "hello-world")
+    }
+
     // MARK: - Phase 2: Payload Serialization Tests
 
     func testTrackViewPayloadToJSON() throws {
@@ -650,6 +708,37 @@ final class OptimizationClientTests: XCTestCase {
         XCTAssertEqual(receivedEvents.count, 1)
         XCTAssertEqual(receivedEvents[0]["type"] as? String, "test")
         XCTAssertEqual(receivedEvents[0]["data"] as? String, "hello")
+    }
+
+    // MARK: - callSync Exception Logging Tests
+
+    @MainActor
+    func testCallSyncExceptionIncludesMethodName() throws {
+        let manager = JSContextManager()
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            environment: "master",
+            experienceBaseUrl: "http://localhost:8000/experience/",
+            insightsBaseUrl: "http://localhost:8000/insights/"
+        )
+
+        var loggedExceptions: [String] = []
+        manager.onLog = { level, msg in
+            if level == "exception" {
+                loggedExceptions.append(msg)
+            }
+        }
+
+        try manager.initialize(config: config)
+
+        // Call a method that will throw a JS error
+        let result = manager.callSync(method: "personalizeEntry", args: "undefined")
+        XCTAssertNil(result, "callSync should return nil on JS exception")
+        XCTAssertEqual(loggedExceptions.count, 1)
+        XCTAssertTrue(
+            loggedExceptions[0].hasPrefix("[personalizeEntry]"),
+            "Exception log should include method name, got: \(loggedExceptions[0])"
+        )
     }
 
     // MARK: - Phase 2: selectedPersonalizations State Tests
