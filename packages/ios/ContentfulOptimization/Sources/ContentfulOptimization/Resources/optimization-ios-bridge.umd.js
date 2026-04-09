@@ -18,7 +18,7 @@
     }),
       (l.o = (e, t) => Object.prototype.hasOwnProperty.call(e, t)))
     var u = {}
-    l.d(u, { default: () => rl })
+    l.d(u, { default: () => rf })
     var c = Symbol.for('preact-signals')
     function d() {
       if (g > 1) g--
@@ -182,12 +182,12 @@
       var n = i.d.bind(i)
       return ((n[Symbol.dispose] = n), n)
     }
-    function A(e) {
+    function F(e) {
       return Object.getOwnPropertySymbols(e).filter((t) =>
         Object.prototype.propertyIsEnumerable.call(e, t),
       )
     }
-    function F(e) {
+    function A(e) {
       return null == e
         ? void 0 === e
           ? '[object Undefined]'
@@ -450,7 +450,7 @@
       if (
         'object' == typeof e &&
         (function (e) {
-          switch (F(e)) {
+          switch (A(e)) {
             case q:
             case Z:
             case L:
@@ -485,7 +485,7 @@
       return e
     }
     function er(e, t, i = e, n, r) {
-      let s = [...Object.keys(t), ...A(t)]
+      let s = [...Object.keys(t), ...F(t)]
       for (let o = 0; o < s.length; o++) {
         let a = s[o],
           l = Object.getOwnPropertyDescriptor(e, a)
@@ -649,7 +649,7 @@
     function eT(e) {
       return 'object' == typeof e && null !== e && !Array.isArray(e)
     }
-    function eA(e) {
+    function eF(e) {
       if (!1 === eT(e)) return !1
       let t = e.constructor
       if (void 0 === t || 'function' != typeof t) return !0
@@ -664,7 +664,7 @@
         return !1
       }
     })
-    let eF = new Set(['string', 'number', 'symbol'])
+    let eA = new Set(['string', 'number', 'symbol'])
     function eR(e) {
       return e.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     }
@@ -1265,7 +1265,7 @@
         ;(e7.init(e, t),
           (e._zod.parse = (i, n) => {
             let r = i.value
-            if (!eA(r))
+            if (!eF(r))
               return (
                 i.issues.push({ expected: 'record', code: 'invalid_type', input: r, inst: e }),
                 i
@@ -1345,7 +1345,7 @@
         ;((e._zod.values = s),
           (e._zod.pattern = RegExp(
             `^(${r
-              .filter((e) => eF.has(typeof e))
+              .filter((e) => eA.has(typeof e))
               .map((e) => ('string' == typeof e ? eR(e) : e.toString()))
               .join('|')})$`,
           )),
@@ -1523,14 +1523,14 @@
     let tT = eb('ZodMiniNull', (e, t) => {
       ;(ts.init(e, t), tE.init(e, t))
     })
-    function tA(e) {
+    function tF(e) {
       return new tT({ type: 'null', ...eM(e) })
     }
-    let tF = eb('ZodMiniAny', (e, t) => {
+    let tA = eb('ZodMiniAny', (e, t) => {
       ;(to.init(e, t), tE.init(e, t))
     })
     function tR() {
-      return new tF({ type: 'any' })
+      return new tA({ type: 'any' })
     }
     let tC = eb('ZodMiniUnknown', (e, t) => {
         ;(ta.init(e, t), tE.init(e, t))
@@ -1548,7 +1548,7 @@
       return new tq({ type: 'object', shape: e ?? {}, ...eM(t) })
     }
     function tN(e, t) {
-      if (!eA(t)) throw Error('Invalid input to extend: expected a plain object')
+      if (!eF(t)) throw Error('Invalid input to extend: expected a plain object')
       let i = e._zod.def.checks
       if (i && i.length > 0) {
         let i = e._zod.def.shape
@@ -1623,7 +1623,7 @@
         type: 'prefault',
         innerType: e,
         get defaultValue() {
-          return 'function' == typeof t ? t() : eA(t) ? { ...t } : Array.isArray(t) ? [...t] : t
+          return 'function' == typeof t ? t() : eF(t) ? { ...t } : Array.isArray(t) ? [...t] : t
         },
       })
     }
@@ -1633,7 +1633,7 @@
     function t8() {
       let e = new t4({
         type: 'lazy',
-        getter: () => tZ([tk(), tP(), tj(), tA(), tB(e), tH(tk(), e)]),
+        getter: () => tZ([tk(), tP(), tj(), tF(), tB(e), tH(tk(), e)]),
       })
       return e
     }
@@ -1684,7 +1684,7 @@
       }),
       ih = tU({ id: tk(), hidden: t0(tj()) }),
       ip = tU({ type: t0(tX('EntryReplacement')), baseline: ih, variants: tB(ih) }),
-      iv = tU({ value: tZ([tk(), tj(), tA(), tP(), tH(tk(), t8())]) }),
+      iv = tU({ value: tZ([tk(), tj(), tF(), tP(), tH(tk(), t8())]) }),
       iy = tW(['Boolean', 'Number', 'Object', 'String']),
       ig = tQ('type', [
         ip,
@@ -1745,11 +1745,11 @@
         timezone: t0(tk()),
       }),
       iT = tU({ name: tk(), version: tk() }),
-      iA = tD(
+      iF = tD(
         tU({ path: tk(), query: iP, referrer: tk(), search: tk(), title: t0(tk()), url: tk() }),
         t8(),
       ),
-      iF = tH(tk(), t8()),
+      iA = tH(tk(), t8()),
       iR = tD(tU({ name: tk() }), t8()),
       iC = tH(tk(), t8()),
       iM = tU({
@@ -1763,7 +1763,7 @@
       }),
       iB = tU({
         channel: i$,
-        context: tN(iM, { page: t0(iA), screen: t0(iR) }),
+        context: tN(iM, { page: t0(iF), screen: t0(iR) }),
         messageId: tk(),
         originalTimestamp: t9(),
         sentAt: t9(),
@@ -1773,11 +1773,11 @@
       iq = tN(iB, { type: tX('alias') }),
       iU = tN(iB, { type: tX('group') }),
       iN = tN(iB, { type: tX('identify'), traits: iC }),
-      iD = tN(iM, { page: iA }),
-      iV = tN(iB, { type: tX('page'), name: t0(tk()), properties: iA, context: iD }),
+      iD = tN(iM, { page: iF }),
+      iV = tN(iB, { type: tX('page'), name: t0(tk()), properties: iF, context: iD }),
       iZ = tN(iM, { screen: iR }),
-      iL = tN(iB, { type: tX('screen'), name: tk(), properties: t0(iF), context: iZ }),
-      iQ = tN(iB, { type: tX('track'), event: tk(), properties: iF }),
+      iL = tN(iB, { type: tX('screen'), name: tk(), properties: t0(iA), context: iZ }),
+      iQ = tN(iB, { type: tX('track'), event: tk(), properties: iA }),
       iJ = tN(iB, {
         componentType: tZ([tX('Entry'), tX('Variable')]),
         componentId: tk(),
@@ -1805,7 +1805,7 @@
       i2 = tU({
         id: tk(),
         isReturningVisitor: tj(),
-        landingPage: iA,
+        landingPage: iF,
         count: tP(),
         activeSessionLength: tP(),
         averageSessionLength: tP(),
@@ -1827,7 +1827,7 @@
         type: tZ([tW(['Variable']), tk()]),
         meta: tU({ experienceId: tk(), variantIndex: tP() }),
       }),
-      i9 = tZ([tk(), tj(), tA(), tP(), tH(tk(), t8())])
+      i9 = tZ([tk(), tj(), tF(), tP(), tH(tk(), t8())])
     tN(i5, { type: tk(), value: new tC({ type: 'unknown' }) })
     let i7 = tB(tQ('type', [tN(i5, { type: tX('Variable'), value: i9 })])),
       ne = tB(
@@ -2200,198 +2200,197 @@
               : nm.error(`[${this.name}] "${t}" request failed:`, e))
         }
       },
-      nw = na('ApiClient:Experience'),
-      n_ = class extends nb {
-        baseUrl
-        enabledFeatures
-        ip
-        locale
-        plainText
-        preflight
-        constructor(e) {
-          super('Experience', e)
-          const { baseUrl: t, enabledFeatures: i, ip: n, locale: r, plainText: s, preflight: o } = e
-          ;((this.baseUrl = t || 'https://experience.ninetailed.co/'),
-            (this.enabledFeatures = i),
-            (this.ip = n),
-            (this.locale = r),
-            (this.plainText = s),
-            (this.preflight = o))
-        }
-        async getProfile(e, t = {}) {
-          if (!e) throw Error('Valid profile ID required.')
-          let i = 'Get Profile'
-          nw.info(`Sending "${i}" request`)
-          try {
-            let n = await this.fetch(
-                this.constructUrl(
-                  `v2/organizations/${this.clientId}/environments/${this.environment}/profiles/${e}`,
-                  t,
-                ),
-                { method: 'GET' },
+      nw = na('ApiClient:Experience')
+    class n_ extends nb {
+      baseUrl
+      enabledFeatures
+      ip
+      locale
+      plainText
+      preflight
+      constructor(e) {
+        super('Experience', e)
+        const { baseUrl: t, enabledFeatures: i, ip: n, locale: r, plainText: s, preflight: o } = e
+        ;((this.baseUrl = t || 'https://experience.ninetailed.co/'),
+          (this.enabledFeatures = i),
+          (this.ip = n),
+          (this.locale = r),
+          (this.plainText = s),
+          (this.preflight = o))
+      }
+      async getProfile(e, t = {}) {
+        if (!e) throw Error('Valid profile ID required.')
+        let i = 'Get Profile'
+        nw.info(`Sending "${i}" request`)
+        try {
+          let n = await this.fetch(
+              this.constructUrl(
+                `v2/organizations/${this.clientId}/environments/${this.environment}/profiles/${e}`,
+                t,
               ),
-              {
-                data: { changes: r, experiences: s, profile: o },
-              } = ns(nt, await n.json())
-            return (
-              nw.debug(`"${i}" request successfully completed`),
-              { changes: r, selectedOptimizations: s, profile: o }
-            )
-          } catch (e) {
-            throw (this.logRequestError(e, { requestName: i }), e)
-          }
-        }
-        async makeProfileMutationRequest({ url: e, body: t, options: i }) {
-          return await this.fetch(this.constructUrl(e, i), {
-            method: 'POST',
-            headers: this.constructHeaders(i),
-            body: JSON.stringify(t),
-            keepalive: !0,
-          })
-        }
-        async createProfile({ events: e }, t = {}) {
-          let i = 'Create Profile'
-          nw.info(`Sending "${i}" request`)
-          let n = this.constructExperienceRequestBody(e, t)
-          nw.debug(`"${i}" request body:`, n)
-          try {
-            let e = await this.makeProfileMutationRequest({
-                url: `v2/organizations/${this.clientId}/environments/${this.environment}/profiles`,
-                body: n,
-                options: t,
-              }),
-              {
-                data: { changes: r, experiences: s, profile: o },
-              } = ns(nt, await e.json())
-            return (
-              nw.debug(`"${i}" request successfully completed`),
-              { changes: r, selectedOptimizations: s, profile: o }
-            )
-          } catch (e) {
-            throw (this.logRequestError(e, { requestName: i }), e)
-          }
-        }
-        async updateProfile({ profileId: e, events: t }, i = {}) {
-          if (!e) throw Error('Valid profile ID required.')
-          let n = 'Update Profile'
-          nw.info(`Sending "${n}" request`)
-          let r = this.constructExperienceRequestBody(t, i)
-          nw.debug(`"${n}" request body:`, r)
-          try {
-            let t = await this.makeProfileMutationRequest({
-                url: `v2/organizations/${this.clientId}/environments/${this.environment}/profiles/${e}`,
-                body: r,
-                options: i,
-              }),
-              {
-                data: { changes: s, experiences: o, profile: a },
-              } = ns(nt, await t.json())
-            return (
-              nw.debug(`"${n}" request successfully completed`),
-              { changes: s, selectedOptimizations: o, profile: a }
-            )
-          } catch (e) {
-            throw (this.logRequestError(e, { requestName: n }), e)
-          }
-        }
-        async upsertProfile({ profileId: e, events: t }, i) {
-          return e
-            ? await this.updateProfile({ profileId: e, events: t }, i)
-            : await this.createProfile({ events: t }, i)
-        }
-        async upsertManyProfiles({ events: e }, t = {}) {
-          let i = 'Upsert Many Profiles'
-          nw.info(`Sending "${i}" request`)
-          let n = ns(i1, { events: e, options: this.constructBodyOptions(t) })
-          nw.debug(`"${i}" request body:`, n)
-          try {
-            let e = await this.makeProfileMutationRequest({
-                url: `v2/organizations/${this.clientId}/environments/${this.environment}/events`,
-                body: n,
-                options: { plainText: !1, ...t },
-              }),
-              {
-                data: { profiles: r },
-              } = ns(i8, await e.json())
-            return (nw.debug(`"${i}" request successfully completed`), r)
-          } catch (e) {
-            throw (this.logRequestError(e, { requestName: i }), e)
-          }
-        }
-        constructUrl(e, t) {
-          let i = new URL(e, this.baseUrl),
-            n = t.locale ?? this.locale,
-            r = t.preflight ?? this.preflight
-          return (
-            n && i.searchParams.set('locale', n),
-            r && i.searchParams.set('type', 'preflight'),
-            i.toString()
-          )
-        }
-        constructHeaders({ ip: e = this.ip, plainText: t = this.plainText }) {
-          let i = new Map()
-          return (
-            e && i.set('X-Force-IP', e),
-            (t ?? this.plainText ?? !0)
-              ? i.set('Content-Type', 'text/plain')
-              : i.set('Content-Type', 'application/json'),
-            Object.fromEntries(i)
-          )
-        }
-        constructBodyOptions = ({ enabledFeatures: e = this.enabledFeatures }) => {
-          let t = {}
-          return (
-            e && Array.isArray(e) && e.length > 0
-              ? (t.features = e)
-              : (t.features = ['ip-enrichment', 'location']),
-            t
-          )
-        }
-        constructExperienceRequestBody(e, t) {
-          return i0.parse({ events: ns(iX, e), options: this.constructBodyOptions(t) })
-        }
-      },
-      nz = na('ApiClient:Insights'),
-      nO = class extends nb {
-        baseUrl
-        beaconHandler
-        constructor(e) {
-          super('Insights', e)
-          const { baseUrl: t, beaconHandler: i } = e
-          ;((this.baseUrl = t || 'https://ingest.insights.ninetailed.co/'),
-            (this.beaconHandler = i))
-        }
-        async sendBatchEvents(e, t = {}) {
-          let { beaconHandler: i = this.beaconHandler } = t,
-            n = new URL(
-              `v1/organizations/${this.clientId}/environments/${this.environment}/events`,
-              this.baseUrl,
+              { method: 'GET' },
             ),
-            r = ns(nr, e)
-          if ('function' == typeof i) {
-            if ((nz.debug('Queueing events via beaconHandler'), i(n, r))) return !0
-            nz.warn(
-              'beaconHandler failed to queue events; events will be emitted immediately via fetch',
-            )
-          }
-          let s = 'Event Batches'
-          ;(nz.info(`Sending "${s}" request`), nz.debug(`"${s}" request body:`, r))
-          try {
-            return (
-              await this.fetch(n, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(r),
-                keepalive: !0,
-              }),
-              nz.debug(`"${s}" request successfully completed`),
-              !0
-            )
-          } catch (e) {
-            return (this.logRequestError(e, { requestName: s }), !1)
-          }
+            {
+              data: { changes: r, experiences: s, profile: o },
+            } = ns(nt, await n.json())
+          return (
+            nw.debug(`"${i}" request successfully completed`),
+            { changes: r, selectedOptimizations: s, profile: o }
+          )
+        } catch (e) {
+          throw (this.logRequestError(e, { requestName: i }), e)
         }
       }
+      async makeProfileMutationRequest({ url: e, body: t, options: i }) {
+        return await this.fetch(this.constructUrl(e, i), {
+          method: 'POST',
+          headers: this.constructHeaders(i),
+          body: JSON.stringify(t),
+          keepalive: !0,
+        })
+      }
+      async createProfile({ events: e }, t = {}) {
+        let i = 'Create Profile'
+        nw.info(`Sending "${i}" request`)
+        let n = this.constructExperienceRequestBody(e, t)
+        nw.debug(`"${i}" request body:`, n)
+        try {
+          let e = await this.makeProfileMutationRequest({
+              url: `v2/organizations/${this.clientId}/environments/${this.environment}/profiles`,
+              body: n,
+              options: t,
+            }),
+            {
+              data: { changes: r, experiences: s, profile: o },
+            } = ns(nt, await e.json())
+          return (
+            nw.debug(`"${i}" request successfully completed`),
+            { changes: r, selectedOptimizations: s, profile: o }
+          )
+        } catch (e) {
+          throw (this.logRequestError(e, { requestName: i }), e)
+        }
+      }
+      async updateProfile({ profileId: e, events: t }, i = {}) {
+        if (!e) throw Error('Valid profile ID required.')
+        let n = 'Update Profile'
+        nw.info(`Sending "${n}" request`)
+        let r = this.constructExperienceRequestBody(t, i)
+        nw.debug(`"${n}" request body:`, r)
+        try {
+          let t = await this.makeProfileMutationRequest({
+              url: `v2/organizations/${this.clientId}/environments/${this.environment}/profiles/${e}`,
+              body: r,
+              options: i,
+            }),
+            {
+              data: { changes: s, experiences: o, profile: a },
+            } = ns(nt, await t.json())
+          return (
+            nw.debug(`"${n}" request successfully completed`),
+            { changes: s, selectedOptimizations: o, profile: a }
+          )
+        } catch (e) {
+          throw (this.logRequestError(e, { requestName: n }), e)
+        }
+      }
+      async upsertProfile({ profileId: e, events: t }, i) {
+        return e
+          ? await this.updateProfile({ profileId: e, events: t }, i)
+          : await this.createProfile({ events: t }, i)
+      }
+      async upsertManyProfiles({ events: e }, t = {}) {
+        let i = 'Upsert Many Profiles'
+        nw.info(`Sending "${i}" request`)
+        let n = ns(i1, { events: e, options: this.constructBodyOptions(t) })
+        nw.debug(`"${i}" request body:`, n)
+        try {
+          let e = await this.makeProfileMutationRequest({
+              url: `v2/organizations/${this.clientId}/environments/${this.environment}/events`,
+              body: n,
+              options: { plainText: !1, ...t },
+            }),
+            {
+              data: { profiles: r },
+            } = ns(i8, await e.json())
+          return (nw.debug(`"${i}" request successfully completed`), r)
+        } catch (e) {
+          throw (this.logRequestError(e, { requestName: i }), e)
+        }
+      }
+      constructUrl(e, t) {
+        let i = new URL(e, this.baseUrl),
+          n = t.locale ?? this.locale,
+          r = t.preflight ?? this.preflight
+        return (
+          n && i.searchParams.set('locale', n),
+          r && i.searchParams.set('type', 'preflight'),
+          i.toString()
+        )
+      }
+      constructHeaders({ ip: e = this.ip, plainText: t = this.plainText }) {
+        let i = new Map()
+        return (
+          e && i.set('X-Force-IP', e),
+          (t ?? this.plainText ?? !0)
+            ? i.set('Content-Type', 'text/plain')
+            : i.set('Content-Type', 'application/json'),
+          Object.fromEntries(i)
+        )
+      }
+      constructBodyOptions = ({ enabledFeatures: e = this.enabledFeatures }) => {
+        let t = {}
+        return (
+          e && Array.isArray(e) && e.length > 0
+            ? (t.features = e)
+            : (t.features = ['ip-enrichment', 'location']),
+          t
+        )
+      }
+      constructExperienceRequestBody(e, t) {
+        return i0.parse({ events: ns(iX, e), options: this.constructBodyOptions(t) })
+      }
+    }
+    let nz = na('ApiClient:Insights')
+    class nO extends nb {
+      baseUrl
+      beaconHandler
+      constructor(e) {
+        super('Insights', e)
+        const { baseUrl: t, beaconHandler: i } = e
+        ;((this.baseUrl = t || 'https://ingest.insights.ninetailed.co/'), (this.beaconHandler = i))
+      }
+      async sendBatchEvents(e, t = {}) {
+        let { beaconHandler: i = this.beaconHandler } = t,
+          n = new URL(
+            `v1/organizations/${this.clientId}/environments/${this.environment}/events`,
+            this.baseUrl,
+          ),
+          r = ns(nr, e)
+        if ('function' == typeof i) {
+          if ((nz.debug('Queueing events via beaconHandler'), i(n, r))) return !0
+          nz.warn(
+            'beaconHandler failed to queue events; events will be emitted immediately via fetch',
+          )
+        }
+        let s = 'Event Batches'
+        ;(nz.info(`Sending "${s}" request`), nz.debug(`"${s}" request body:`, r))
+        try {
+          return (
+            await this.fetch(n, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(r),
+              keepalive: !0,
+            }),
+            nz.debug(`"${s}" request successfully completed`),
+            !0
+          )
+        } catch (e) {
+          return (this.logRequestError(e, { requestName: s }), !1)
+        }
+      }
+    }
     class nE {
       config
       experience
@@ -2419,7 +2418,7 @@
         campaign: t0(ix),
         locale: t0(tk()),
         location: t0(ij),
-        page: t0(iA),
+        page: t0(iF),
         screen: t0(iR),
         userAgent: t0(tk()),
       }),
@@ -2428,7 +2427,7 @@
       nI = tN(n$, { viewId: t0(tk()), viewDurationMs: t0(tP()) }),
       nj = tN(n$, { hoverId: tk(), hoverDurationMs: tP() }),
       nT = tN(nx, { traits: t0(iC), userId: tk() }),
-      nA = tN(nx, {
+      nF = tN(nx, {
         properties: t0(
           (function (e, t) {
             var i = void 0
@@ -2451,11 +2450,11 @@
               checks: [],
             })
             return eC(e, r)
-          })(iA),
+          })(iF),
         ),
       }),
-      nF = tN(nx, { name: tk(), properties: iF }),
-      nR = tN(nx, { event: tk(), properties: t0(t3(iF, {})) }),
+      nA = tN(nx, { name: tk(), properties: iA }),
+      nR = tN(nx, { event: tk(), properties: t0(t3(iA, {})) }),
       nC = { path: '', query: {}, referrer: '', search: '', title: '', url: '' },
       nM = class {
         app
@@ -2508,7 +2507,7 @@
             timestamp: o,
           }
         }
-        buildEntryComponentBase(e, t, i, n) {
+        buildEntryInteractionBase(e, t, i, n) {
           return {
             ...this.buildUniversalEventProperties(e),
             componentType: 'Entry',
@@ -2527,7 +2526,7 @@
             ...o
           } = ns(nP, e)
           return {
-            ...this.buildEntryComponentBase(o, t, n, r),
+            ...this.buildEntryInteractionBase(o, t, n, r),
             type: 'component',
             viewId: i,
             viewDurationMs: s,
@@ -2535,7 +2534,7 @@
         }
         buildClick(e) {
           let { componentId: t, experienceId: i, variantIndex: n, ...r } = ns(n$, e)
-          return { ...this.buildEntryComponentBase(r, t, i, n), type: 'component_click' }
+          return { ...this.buildEntryInteractionBase(r, t, i, n), type: 'component_click' }
         }
         buildHover(e) {
           let {
@@ -2547,7 +2546,7 @@
             ...o
           } = ns(nj, e)
           return {
-            ...this.buildEntryComponentBase(o, i, n, s),
+            ...this.buildEntryInteractionBase(o, i, n, s),
             type: 'component_hover',
             hoverId: t,
             hoverDurationMs: r,
@@ -2563,7 +2562,7 @@
             ...o
           } = ns(nI, e)
           return {
-            ...this.buildEntryComponentBase(o, t, i, n),
+            ...this.buildEntryInteractionBase(o, t, i, n),
             ...(void 0 === s ? {} : { viewDurationMs: s }),
             ...(void 0 === r ? {} : { viewId: r }),
             type: 'component',
@@ -2580,7 +2579,7 @@
           }
         }
         buildPageView(e = {}) {
-          let { properties: t = {}, ...i } = ns(nA, e),
+          let { properties: t = {}, ...i } = ns(nF, e),
             n = this.getPageProperties(),
             r = (function e(t, i) {
               let n = Object.keys(i)
@@ -2607,13 +2606,13 @@
           return { ...a, context: l, type: 'page', properties: r }
         }
         buildScreenView(e) {
-          let { name: t, properties: i, ...n } = ns(nF, e),
+          let { name: t, properties: i, ...n } = ns(nA, e),
             {
               context: { page: r, ...s },
               ...o
             } = this.buildUniversalEventProperties(n),
-            a = ns(iZ, s)
-          return { ...o, context: a, type: 'screen', name: t, properties: i }
+            a = ns(iZ, { ...s, screen: s.screen ?? { name: t } })
+          return { ...o, context: a, type: 'screen', name: t, properties: { name: t, ...i } }
         }
         buildTrack(e) {
           let { event: t, properties: i = {}, ...n } = ns(nR, e)
@@ -2782,23 +2781,16 @@
       mergeTagValueResolver = nV
       optimizedEntryResolver = nQ
       interceptors = { event: new nB(), state: new nB() }
-      constructor(e) {
+      constructor(e, t = {}) {
         this.config = e
-        const {
-          api: t,
-          eventBuilder: i,
-          logLevel: n,
-          environment: r,
-          clientId: s,
-          fetchOptions: o,
-        } = e
+        const { eventBuilder: i, logLevel: n, environment: r, clientId: s, fetchOptions: o } = e
         no.addSink(new nd(n))
         const a = {
           clientId: s,
           environment: r,
           fetchOptions: o,
-          insights: nJ.createInsightsApiConfig(t),
-          experience: nJ.createExperienceApiConfig(t),
+          experience: t.experience,
+          insights: t.insights,
         }
         ;((this.api = new nE(a)),
           (this.eventBuilder = new nM(
@@ -2808,31 +2800,6 @@
             },
           )))
       }
-      static createExperienceApiConfig(e) {
-        if (void 0 === e) return
-        let {
-          enabledFeatures: t,
-          experienceBaseUrl: i,
-          ip: n,
-          locale: r,
-          plainText: s,
-          preflight: o,
-        } = e
-        if (
-          void 0 !== i ||
-          void 0 !== t ||
-          void 0 !== n ||
-          void 0 !== r ||
-          void 0 !== s ||
-          void 0 !== o
-        )
-          return { baseUrl: i, enabledFeatures: t, ip: n, locale: r, plainText: s, preflight: o }
-      }
-      static createInsightsApiConfig(e) {
-        if (void 0 === e) return
-        let { beaconHandler: t, insightsBaseUrl: i } = e
-        if (void 0 !== i || void 0 !== t) return { baseUrl: i, beaconHandler: t }
-      }
       getFlag(e, t) {
         return this.flagsResolver.resolve(t)[e]
       }
@@ -2841,56 +2808,6 @@
       }
       getMergeTagValue(e, t) {
         return this.mergeTagValueResolver.resolve(e, t)
-      }
-      async identify(e) {
-        let { profile: t, ...i } = e
-        return await this.sendExperienceEvent(
-          'identify',
-          [e],
-          this.eventBuilder.buildIdentify(i),
-          t,
-        )
-      }
-      async page(e = {}) {
-        let { profile: t, ...i } = e
-        return await this.sendExperienceEvent('page', [e], this.eventBuilder.buildPageView(i), t)
-      }
-      async screen(e) {
-        let { profile: t, ...i } = e
-        return await this.sendExperienceEvent(
-          'screen',
-          [e],
-          this.eventBuilder.buildScreenView(i),
-          t,
-        )
-      }
-      async track(e) {
-        let { profile: t, ...i } = e
-        return await this.sendExperienceEvent('track', [e], this.eventBuilder.buildTrack(i), t)
-      }
-      async trackView(e) {
-        let t,
-          { profile: i, ...n } = e
-        return (
-          e.sticky &&
-            (t = await this.sendExperienceEvent(
-              'trackView',
-              [e],
-              this.eventBuilder.buildView(n),
-              i,
-            )),
-          await this.sendInsightsEvent('trackView', [e], this.eventBuilder.buildView(n), i),
-          t
-        )
-      }
-      async trackClick(e) {
-        await this.sendInsightsEvent('trackClick', [e], this.eventBuilder.buildClick(e))
-      }
-      async trackHover(e) {
-        await this.sendInsightsEvent('trackHover', [e], this.eventBuilder.buildHover(e))
-      }
-      async trackFlagView(e) {
-        await this.sendInsightsEvent('trackFlagView', [e], this.eventBuilder.buildFlagView(e))
       }
     }
     let nH = nJ
@@ -2913,8 +2830,8 @@
           }
         return (function t(i, n, r, s) {
           if (Object.is(i, n)) return !0
-          let o = F(i),
-            a = F(n)
+          let o = A(i),
+            a = A(n)
           if ((o === q && (o = Q), a === q && (a = Q), o !== a)) return !1
           switch (o) {
             case C:
@@ -2985,8 +2902,8 @@
                 return i.name === n.name && i.message === n.message
               case Q: {
                 if (!(t(i.constructor, n.constructor, r, s) || (nS(i) && nS(n)))) return !1
-                let o = [...Object.keys(i), ...A(i)],
-                  a = [...Object.keys(n), ...A(n)]
+                let o = [...Object.keys(i), ...F(i)],
+                  a = [...Object.keys(n), ...F(n)]
                 if (o.length !== a.length) return !1
                 for (let t = 0; t < o.length; t++) {
                   let a = o[t],
@@ -3006,8 +2923,172 @@
         })(t, i, o, a)
       })(e, t, void 0, void 0, void 0, void 0, nK)
     }
-    let nG = (e, t) => (!Number.isFinite(e) || void 0 === e || e < 1 ? t : Math.floor(e)),
+    let nG = na('CoreStateful'),
       nX = {
+        trackView: 'component',
+        trackFlagView: 'component',
+        trackClick: 'component_click',
+        trackHover: 'component_hover',
+      }
+    class nY extends nH {
+      flagObservables = new Map()
+      getFlag(e, t = ea.value) {
+        let i = super.getFlag(e, t),
+          n = this.buildFlagViewBuilderArgs(e, t)
+        return (
+          this.trackFlagView(n).catch((t) => {
+            no.warn(`Failed to emit "flag view" event for "${e}"`, String(t))
+          }),
+          i
+        )
+      }
+      resolveOptimizedEntry(e, t = ep.value) {
+        return super.resolveOptimizedEntry(e, t)
+      }
+      getMergeTagValue(e, t = ey.value) {
+        return super.getMergeTagValue(e, t)
+      }
+      async identify(e) {
+        let { profile: t, ...i } = e
+        return await this.sendExperienceEvent(
+          'identify',
+          [e],
+          this.eventBuilder.buildIdentify(i),
+          t,
+        )
+      }
+      async page(e = {}) {
+        let { profile: t, ...i } = e
+        return await this.sendExperienceEvent('page', [e], this.eventBuilder.buildPageView(i), t)
+      }
+      async screen(e) {
+        let { profile: t, ...i } = e
+        return await this.sendExperienceEvent(
+          'screen',
+          [e],
+          this.eventBuilder.buildScreenView(i),
+          t,
+        )
+      }
+      async track(e) {
+        let { profile: t, ...i } = e
+        return await this.sendExperienceEvent('track', [e], this.eventBuilder.buildTrack(i), t)
+      }
+      async trackView(e) {
+        let t,
+          { profile: i, ...n } = e
+        return (
+          e.sticky &&
+            (t = await this.sendExperienceEvent(
+              'trackView',
+              [e],
+              this.eventBuilder.buildView(n),
+              i,
+            )),
+          await this.sendInsightsEvent('trackView', [e], this.eventBuilder.buildView(n), i),
+          t
+        )
+      }
+      async trackClick(e) {
+        await this.sendInsightsEvent('trackClick', [e], this.eventBuilder.buildClick(e))
+      }
+      async trackHover(e) {
+        await this.sendInsightsEvent('trackHover', [e], this.eventBuilder.buildHover(e))
+      }
+      async trackFlagView(e) {
+        await this.sendInsightsEvent('trackFlagView', [e], this.eventBuilder.buildFlagView(e))
+      }
+      hasConsent(e) {
+        let { [e]: t } = nX,
+          i =
+            void 0 !== t
+              ? this.allowedEventTypes.includes(t)
+              : this.allowedEventTypes.some((t) => t === e)
+        return !!eu.value || i
+      }
+      onBlockedByConsent(e, t) {
+        ;(nG.warn(`Event "${e}" was blocked due to lack of consent; payload: ${JSON.stringify(t)}`),
+          this.reportBlockedEvent('consent', e, t))
+      }
+      async sendExperienceEvent(e, t, i, n) {
+        return this.hasConsent(e)
+          ? await this.experienceQueue.send(i)
+          : void this.onBlockedByConsent(e, t)
+      }
+      async sendInsightsEvent(e, t, i, n) {
+        this.hasConsent(e) ? await this.insightsQueue.send(i) : this.onBlockedByConsent(e, t)
+      }
+      buildFlagViewBuilderArgs(e, t = ea.value) {
+        let i = t?.find((t) => t.key === e)
+        return {
+          componentId: e,
+          experienceId: i?.meta.experienceId,
+          variantIndex: i?.meta.variantIndex,
+        }
+      }
+      getFlagObservable(e) {
+        var t
+        let i,
+          n = this.flagObservables.get(e)
+        if (n) return n
+        let r = this.trackFlagView.bind(this),
+          s = this.buildFlagViewBuilderArgs.bind(this),
+          o =
+            ((t = em.computed(() => super.getFlag(e, ea.value))),
+            (i = eo(t)),
+            {
+              get current() {
+                return i.current
+              },
+              subscribe(e) {
+                let t = !1,
+                  n = es(i.current)
+                return i.subscribe((i) => {
+                  ;(t && nW(n, i)) || ((t = !0), (n = es(i)), e(i))
+                })
+              },
+              subscribeOnce: (e) => i.subscribeOnce(e),
+            }),
+          a = {
+            get current() {
+              let { current: t } = o
+              return (
+                r(s(e, ea.value)).catch((t) => {
+                  no.warn(`Failed to emit "flag view" event for "${e}"`, String(t))
+                }),
+                t
+              )
+            },
+            subscribe: (t) =>
+              o.subscribe((i) => {
+                ;(r(s(e, ea.value)).catch((t) => {
+                  no.warn(`Failed to emit "flag view" event for "${e}"`, String(t))
+                }),
+                  t(i))
+              }),
+            subscribeOnce: (t) =>
+              o.subscribeOnce((i) => {
+                ;(r(s(e, ea.value)).catch((t) => {
+                  no.warn(`Failed to emit "flag view" event for "${e}"`, String(t))
+                }),
+                  t(i))
+              }),
+          }
+        return (this.flagObservables.set(e, a), a)
+      }
+      reportBlockedEvent(e, t, i) {
+        let n = { reason: e, method: t, args: i }
+        try {
+          this.onEventBlocked?.(n)
+        } catch (e) {
+          nG.warn(`onEventBlocked callback failed for method "${t}"`, e)
+        }
+        el.value = n
+      }
+    }
+    let n0 = nY,
+      n1 = (e, t) => (!Number.isFinite(e) || void 0 === e || e < 1 ? t : Math.floor(e)),
+      n2 = {
         flushIntervalMs: 3e4,
         baseBackoffMs: 500,
         maxBackoffMs: 3e4,
@@ -3015,16 +3096,16 @@
         maxConsecutiveFailures: 8,
         circuitOpenMs: 12e4,
       },
-      nY = '__ctfl_optimization_stateful_runtime_lock__',
-      n0 = () => {
+      n6 = '__ctfl_optimization_stateful_runtime_lock__',
+      n3 = () => {
         let e = globalThis
-        return ((e[nY] ??= { owner: void 0 }), e[nY])
+        return ((e[n6] ??= { owner: void 0 }), e[n6])
       },
-      n1 = (e) => {
-        let t = n0()
+      n4 = (e) => {
+        let t = n3()
         t.owner === e && (t.owner = void 0)
       }
-    class n2 {
+    class n8 {
       circuitOpenUntil = 0
       flushFailureCount = 0
       flushInFlight = !1
@@ -3139,8 +3220,8 @@
         }
       }
     }
-    let n6 = na('CoreStateful')
-    class n3 {
+    let n5 = na('CoreStateful')
+    class n9 {
       experienceApi
       eventInterceptors
       flushRuntime
@@ -3165,13 +3246,13 @@
           (this.offlineMaxEvents = s),
           (this.onOfflineDrop = o),
           (this.stateInterceptors = a),
-          (this.flushRuntime = new n2({
+          (this.flushRuntime = new n8({
             policy: n,
             onRetry: () => {
               this.flush()
             },
             onCallbackError: (e, t) => {
-              n6.warn(`Experience flush policy callback "${e}" failed`, t)
+              n5.warn(`Experience flush policy callback "${e}" failed`, t)
             },
           })))
       }
@@ -3181,14 +3262,14 @@
       async send(e) {
         let t = ns(iG, await this.eventInterceptors.run(e))
         if (((ec.value = t), ed.value)) return await this.upsertProfile([t])
-        ;(n6.debug(`Queueing ${t.type} event`, t), this.enqueueEvent(t))
+        ;(n5.debug(`Queueing ${t.type} event`, t), this.enqueueEvent(t))
       }
       async flush(e = {}) {
         let { force: t = !1 } = e
         if (this.flushRuntime.shouldSkip({ force: t, isOnline: !!ed.value })) return
         if (0 === this.queuedExperienceEvents.size)
           return void this.flushRuntime.clearScheduledRetry()
-        n6.debug('Flushing offline Experience event queue')
+        n5.debug('Flushing offline Experience event queue')
         let i = Array.from(this.queuedExperienceEvents)
         this.flushRuntime.markFlushStarted()
         try {
@@ -3210,7 +3291,7 @@
         if (this.queuedExperienceEvents.size >= this.offlineMaxEvents) {
           let e = this.queuedExperienceEvents.size - this.offlineMaxEvents + 1
           ;(t = this.dropOldestEvents(e)).length > 0 &&
-            n6.warn(
+            n5.warn(
               `Dropped ${t.length} oldest offline event(s) due to queue limit (${this.offlineMaxEvents})`,
             )
         }
@@ -3236,19 +3317,19 @@
         try {
           this.onOfflineDrop?.(e)
         } catch (e) {
-          n6.warn('Offline queue drop callback failed', e)
+          n5.warn('Offline queue drop callback failed', e)
         }
       }
       async tryUpsertQueuedEvents(e) {
         try {
           return (await this.upsertProfile(e), !0)
         } catch (e) {
-          return (n6.warn('Experience queue flush request threw an error', e), !1)
+          return (n5.warn('Experience queue flush request threw an error', e), !1)
         }
       }
       async upsertProfile(e) {
         let t = this.getAnonymousId()
-        t && n6.debug(`Anonymous ID found: ${t}`)
+        t && n5.debug(`Anonymous ID found: ${t}`)
         let i = await this.experienceApi.upsertProfile({ profileId: t ?? ey.value?.id, events: e })
         return (await this.updateOutputSignals(i), i)
       }
@@ -3265,8 +3346,8 @@
         })
       }
     }
-    let n4 = na('CoreStateful')
-    class n8 {
+    let n7 = na('CoreStateful')
+    class re {
       eventInterceptors
       flushIntervalMs
       flushRuntime
@@ -3279,13 +3360,13 @@
         ;((this.eventInterceptors = t),
           (this.flushIntervalMs = r),
           (this.insightsApi = n),
-          (this.flushRuntime = new n2({
+          (this.flushRuntime = new n8({
             policy: i,
             onRetry: () => {
               this.flush()
             },
             onCallbackError: (e, t) => {
-              n4.warn(`Insights flush policy callback "${e}" failed`, t)
+              n7.warn(`Insights flush policy callback "${e}" failed`, t)
             },
           })))
       }
@@ -3299,9 +3380,9 @@
       }
       async send(e) {
         let { value: t } = ey
-        if (!t) return void n4.warn('Attempting to emit an event without an Optimization profile')
+        if (!t) return void n7.warn('Attempting to emit an event without an Optimization profile')
         let i = ns(ni, await this.eventInterceptors.run(e))
-        n4.debug(`Queueing ${i.type} event for profile ${t.id}`, i)
+        n7.debug(`Queueing ${i.type} event for profile ${t.id}`, i)
         let n = this.queuedInsightsByProfile.get(t.id)
         ;((ec.value = i),
           n
@@ -3314,7 +3395,7 @@
       async flush(e = {}) {
         let { force: t = !1 } = e
         if (this.flushRuntime.shouldSkip({ force: t, isOnline: !!ed.value })) return
-        n4.debug('Flushing insights event queue')
+        n7.debug('Flushing insights event queue')
         let i = this.createBatches()
         if (!i.length) {
           ;(this.flushRuntime.clearScheduledRetry(), this.reconcilePeriodicFlushTimer())
@@ -3345,7 +3426,7 @@
         try {
           return await this.insightsApi.sendBatchEvents(e)
         } catch (e) {
-          return (n4.warn('Insights queue flush request threw an error', e), !1)
+          return (n7.warn('Insights queue flush request threw an error', e), !1)
         }
       }
       getQueuedEventCount() {
@@ -3370,21 +3451,15 @@
           : this.clearPeriodicFlushTimer()
       }
     }
-    let n5 = Symbol.for('ctfl.optimization.preview.signals'),
-      n9 = Symbol.for('ctfl.optimization.preview.signalFns'),
-      n7 = na('CoreStateful'),
-      re = ['identify', 'page', 'screen'],
-      rt = {
-        trackView: 'component',
-        trackFlagView: 'component',
-        trackClick: 'component_click',
-        trackHover: 'component_hover',
-      },
-      ri = 0
-    class rn extends nH {
+    let rt = Symbol.for('ctfl.optimization.preview.signals'),
+      ri = Symbol.for('ctfl.optimization.preview.signalFns'),
+      rn = na('CoreStateful'),
+      rr = ['identify', 'page', 'screen'],
+      rs = (e) => Object.values(e).some((e) => void 0 !== e),
+      ro = 0
+    class ra extends n0 {
       singletonOwner
       destroyed = !1
-      flagObservables = new Map()
       allowedEventTypes
       experienceQueue
       insightsQueue
@@ -3401,10 +3476,28 @@
         profile: eo(ey),
       }
       constructor(e) {
-        ;(super(e),
-          (this.singletonOwner = `CoreStateful#${++ri}`),
+        ;(super(e, {
+          experience: ((e) => {
+            if (void 0 === e) return
+            let t = {
+              baseUrl: e.experienceBaseUrl,
+              enabledFeatures: e.enabledFeatures,
+              ip: e.ip,
+              locale: e.locale,
+              plainText: e.plainText,
+              preflight: e.preflight,
+            }
+            return rs(t) ? t : void 0
+          })(e.api),
+          insights: ((e) => {
+            if (void 0 === e) return
+            let t = { baseUrl: e.insightsBaseUrl, beaconHandler: e.beaconHandler }
+            return rs(t) ? t : void 0
+          })(e.api),
+        }),
+          (this.singletonOwner = `CoreStateful#${++ro}`),
           ((e) => {
-            let t = n0()
+            let t = n3()
             if (t.owner)
               throw Error(
                 `Stateful Optimization SDK already initialized (${t.owner}). Only one stateful instance is supported per runtime.`,
@@ -3421,37 +3514,37 @@
             } = e,
             { changes: o, consent: a, selectedOptimizations: l, profile: u } = i ?? {},
             c = ((e) => ({
-              flush: ((e, t = nX) => {
+              flush: ((e, t = n2) => {
                 var i, n
                 let r = e ?? {},
-                  s = nG(r.baseBackoffMs, t.baseBackoffMs),
-                  o = Math.max(s, nG(r.maxBackoffMs, t.maxBackoffMs))
+                  s = n1(r.baseBackoffMs, t.baseBackoffMs),
+                  o = Math.max(s, n1(r.maxBackoffMs, t.maxBackoffMs))
                 return {
-                  flushIntervalMs: nG(r.flushIntervalMs, t.flushIntervalMs),
+                  flushIntervalMs: n1(r.flushIntervalMs, t.flushIntervalMs),
                   baseBackoffMs: s,
                   maxBackoffMs: o,
                   jitterRatio:
                     ((i = r.jitterRatio),
                     (n = t.jitterRatio),
                     Number.isFinite(i) && void 0 !== i ? Math.min(1, Math.max(0, i)) : n),
-                  maxConsecutiveFailures: nG(r.maxConsecutiveFailures, t.maxConsecutiveFailures),
-                  circuitOpenMs: nG(r.circuitOpenMs, t.circuitOpenMs),
+                  maxConsecutiveFailures: n1(r.maxConsecutiveFailures, t.maxConsecutiveFailures),
+                  circuitOpenMs: n1(r.circuitOpenMs, t.circuitOpenMs),
                   onCircuitOpen: r.onCircuitOpen,
                   onFlushFailure: r.onFlushFailure,
                   onFlushRecovered: r.onFlushRecovered,
                 }
               })(e?.flush),
-              offlineMaxEvents: nG(e?.offlineMaxEvents, 100),
+              offlineMaxEvents: n1(e?.offlineMaxEvents, 100),
               onOfflineDrop: e?.onOfflineDrop,
             }))(s)
-          ;((this.allowedEventTypes = t ?? re),
+          ;((this.allowedEventTypes = t ?? rr),
             (this.onEventBlocked = r),
-            (this.insightsQueue = new n8({
+            (this.insightsQueue = new re({
               eventInterceptors: this.interceptors.event,
               flushPolicy: c.flush,
               insightsApi: this.api.insights,
             })),
-            (this.experienceQueue = new n3({
+            (this.experienceQueue = new n9({
               experienceApi: this.api.experience,
               eventInterceptors: this.interceptors.event,
               flushPolicy: c.flush,
@@ -3468,123 +3561,20 @@
             }),
             this.initializeEffects())
         } catch (e) {
-          throw (n1(this.singletonOwner), e)
+          throw (n4(this.singletonOwner), e)
         }
-      }
-      getFlag(e, t = ea.value) {
-        let i = super.getFlag(e, t),
-          n = this.buildFlagViewBuilderArgs(e, t)
-        return (
-          this.trackFlagView(n).catch((t) => {
-            no.warn(`Failed to emit "flag view" event for "${e}"`, String(t))
-          }),
-          i
-        )
-      }
-      resolveOptimizedEntry(e, t = ep.value) {
-        return super.resolveOptimizedEntry(e, t)
-      }
-      getMergeTagValue(e, t = ey.value) {
-        return super.getMergeTagValue(e, t)
-      }
-      buildFlagViewBuilderArgs(e, t = ea.value) {
-        let i = t?.find((t) => t.key === e)
-        return {
-          componentId: e,
-          experienceId: i?.meta.experienceId,
-          variantIndex: i?.meta.variantIndex,
-        }
-      }
-      getFlagObservable(e) {
-        var t
-        let i,
-          n = this.flagObservables.get(e)
-        if (n) return n
-        let r = this.trackFlagView.bind(this),
-          s = this.buildFlagViewBuilderArgs.bind(this),
-          o =
-            ((t = em.computed(() => super.getFlag(e, ea.value))),
-            (i = eo(t)),
-            {
-              get current() {
-                return i.current
-              },
-              subscribe(e) {
-                let t = !1,
-                  n = es(i.current)
-                return i.subscribe((i) => {
-                  ;(t && nW(n, i)) || ((t = !0), (n = es(i)), e(i))
-                })
-              },
-              subscribeOnce: (e) => i.subscribeOnce(e),
-            }),
-          a = {
-            get current() {
-              let { current: t } = o
-              return (
-                r(s(e, ea.value)).catch((t) => {
-                  no.warn(`Failed to emit "flag view" event for "${e}"`, String(t))
-                }),
-                t
-              )
-            },
-            subscribe: (t) =>
-              o.subscribe((i) => {
-                ;(r(s(e, ea.value)).catch((t) => {
-                  no.warn(`Failed to emit "flag view" event for "${e}"`, String(t))
-                }),
-                  t(i))
-              }),
-            subscribeOnce: (t) =>
-              o.subscribeOnce((i) => {
-                ;(r(s(e, ea.value)).catch((t) => {
-                  no.warn(`Failed to emit "flag view" event for "${e}"`, String(t))
-                }),
-                  t(i))
-              }),
-          }
-        return (this.flagObservables.set(e, a), a)
-      }
-      hasConsent(e) {
-        let { [e]: t } = rt,
-          i =
-            void 0 !== t
-              ? this.allowedEventTypes.includes(t)
-              : this.allowedEventTypes.some((t) => t === e)
-        return !!eu.value || i
-      }
-      onBlockedByConsent(e, t) {
-        ;(n7.warn(`Event "${e}" was blocked due to lack of consent; payload: ${JSON.stringify(t)}`),
-          this.reportBlockedEvent('consent', e, t))
-      }
-      reportBlockedEvent(e, t, i) {
-        let n = { reason: e, method: t, args: i }
-        try {
-          this.onEventBlocked?.(n)
-        } catch (e) {
-          n7.warn(`onEventBlocked callback failed for method "${t}"`, e)
-        }
-        el.value = n
-      }
-      async sendExperienceEvent(e, t, i, n) {
-        return this.hasConsent(e)
-          ? await this.experienceQueue.send(i)
-          : void this.onBlockedByConsent(e, t)
-      }
-      async sendInsightsEvent(e, t, i, n) {
-        this.hasConsent(e) ? await this.insightsQueue.send(i) : this.onBlockedByConsent(e, t)
       }
       initializeEffects() {
         ;(T(() => {
-          n7.debug(
+          rn.debug(
             `Profile ${ey.value && `with ID ${ey.value.id}`} has been ${ey.value ? 'set' : 'cleared'}`,
           )
         }),
           T(() => {
-            n7.debug(`Variants have been ${ep.value?.length ? 'populated' : 'cleared'}`)
+            rn.debug(`Variants have been ${ep.value?.length ? 'populated' : 'cleared'}`)
           }),
           T(() => {
-            n7.info(
+            rn.info(
               `Core ${eu.value ? 'will' : 'will not'} emit gated events due to consent (${eu.value})`,
             )
           }),
@@ -3608,7 +3598,7 @@
             no.warn('Failed to flush Experience queue during destroy()', String(e))
           }),
           this.insightsQueue.clearPeriodicFlushTimer(),
-          n1(this.singletonOwner))
+          n4(this.singletonOwner))
       }
       reset() {
         f(() => {
@@ -3632,29 +3622,29 @@
         ed.value = e
       }
       registerPreviewPanel(e) {
-        ;(Reflect.set(e, n5, eg), Reflect.set(e, n9, em))
+        ;(Reflect.set(e, rt, eg), Reflect.set(e, ri, em))
       }
     }
-    let rr = null,
-      rs = null,
-      ro = null,
-      ra = {
+    let rl = null,
+      ru = null,
+      rc = null,
+      rd = {
         initialize(e) {
-          ;(rr && ra.destroy(),
-            (rr = new rn({
+          ;(rl && rd.destroy(),
+            (rl = new ra({
               clientId: e.clientId,
               environment: e.environment,
               api: { experienceBaseUrl: e.experienceBaseUrl, insightsBaseUrl: e.insightsBaseUrl },
             })),
             e.defaults &&
-              (void 0 !== e.defaults.consent && rr.consent(e.defaults.consent),
+              (void 0 !== e.defaults.consent && rl.consent(e.defaults.consent),
               void 0 !== e.defaults.profile && (eg.profile.value = e.defaults.profile),
               void 0 !== e.defaults.changes && (eg.changes.value = e.defaults.changes),
               void 0 !== e.defaults.optimizations &&
                 (eg.selectedOptimizations.value = e.defaults.optimizations)),
-            rr.consent(!0))
+            rl.consent(!0))
           let t = globalThis
-          ;((rs = T(() => {
+          ;((ru = T(() => {
             let e = {
               profile: eg.profile.value ?? null,
               consent: eg.consent.value,
@@ -3665,7 +3655,7 @@
             'function' == typeof t.__nativeOnStateChange &&
               t.__nativeOnStateChange(JSON.stringify(e))
           })),
-            (ro = T(() => {
+            (rc = T(() => {
               let e = eg.event.value
               e &&
                 'function' == typeof t.__nativeOnEventEmitted &&
@@ -3673,8 +3663,8 @@
             })))
         },
         identify(e, t, i) {
-          rr
-            ? rr
+          rl
+            ? rl
                 .identify(e)
                 .then((e) => {
                   t(JSON.stringify(e ?? null))
@@ -3685,8 +3675,8 @@
             : i('SDK not initialized. Call initialize() first.')
         },
         page(e, t, i) {
-          rr
-            ? rr
+          rl
+            ? rl
                 .page(e)
                 .then((e) => {
                   t(JSON.stringify(e ?? null))
@@ -3697,8 +3687,8 @@
             : i('SDK not initialized. Call initialize() first.')
         },
         screen(e, t, i) {
-          rr
-            ? rr
+          rl
+            ? rl
                 .screen({ name: e.name, properties: e.properties ?? {} })
                 .then((e) => {
                   t(JSON.stringify(e ?? null))
@@ -3709,8 +3699,8 @@
             : i('SDK not initialized. Call initialize() first.')
         },
         flush(e, t) {
-          rr
-            ? rr
+          rl
+            ? rl
                 .flush()
                 .then(() => {
                   e(JSON.stringify(null))
@@ -3721,8 +3711,8 @@
             : t('SDK not initialized. Call initialize() first.')
         },
         trackView(e, t, i) {
-          rr
-            ? rr
+          rl
+            ? rl
                 .trackView(e)
                 .then((e) => {
                   t(JSON.stringify(e ?? null))
@@ -3733,8 +3723,8 @@
             : i('SDK not initialized. Call initialize() first.')
         },
         trackClick(e, t, i) {
-          rr
-            ? rr
+          rl
+            ? rl
                 .trackClick(e)
                 .then(() => {
                   t(JSON.stringify(null))
@@ -3745,32 +3735,32 @@
             : i('SDK not initialized. Call initialize() first.')
         },
         consent(e) {
-          rr && rr.consent(e)
+          rl && rl.consent(e)
         },
         reset() {
-          rr && rr.reset()
+          rl && rl.reset()
         },
         setOnline(e) {
           eg.online.value = e
         },
         personalizeEntry(e, t) {
-          if (!rr) return JSON.stringify({ entry: JSON.parse(e) })
+          if (!rl) return JSON.stringify({ entry: JSON.parse(e) })
           let i = JSON.parse(e),
             n = t ? JSON.parse(t) : void 0
-          return JSON.stringify(rr.resolveOptimizedEntry(i, n))
+          return JSON.stringify(rl.resolveOptimizedEntry(i, n))
         },
         setPreviewPanelOpen(e) {
-          rr && (eg.previewPanelOpen.value = e)
+          rl && (eg.previewPanelOpen.value = e)
         },
         overrideAudience(e, t) {
-          if (!rr) return
+          if (!rl) return
           let i = (eg.changes.value ?? []).map((i) =>
             i.audienceId === e ? { ...i, qualified: t } : i,
           )
           eg.changes.value = i
         },
         overrideVariant(e, t) {
-          if (!rr) return
+          if (!rl) return
           let i = (eg.selectedOptimizations.value ?? []).map((i) =>
             i.experienceId === e ? { ...i, variantIndex: t } : i,
           )
@@ -3798,11 +3788,11 @@
             selectedPersonalizations: eg.selectedOptimizations.value ?? null,
           }),
         destroy() {
-          ;(ro && (ro(), (ro = null)), rs && (rs(), (rs = null)), rr && (rr.destroy(), (rr = null)))
+          ;(rc && (rc(), (rc = null)), ru && (ru(), (ru = null)), rl && (rl.destroy(), (rl = null)))
         },
       }
-    globalThis.__bridge = ra
-    let rl = ra
+    globalThis.__bridge = rd
+    let rf = rd
     return u.default
   })(),
 )
