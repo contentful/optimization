@@ -200,6 +200,8 @@ public final class OptimizationClient: ObservableObject {
                   let data = str.data(using: .utf8),
                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
             else {
+                let entryId = (baseline["sys"] as? [String: Any])?["id"] as? String ?? "unknown"
+                log.warning("[personalize] Failed to parse bridge result for entry \(entryId)")
                 return PersonalizedResult(entry: baseline, personalization: nil)
             }
 
@@ -207,6 +209,8 @@ public final class OptimizationClient: ObservableObject {
             let personalization = dict["personalization"] as? [String: Any]
             return PersonalizedResult(entry: entry, personalization: personalization)
         } catch {
+            let entryId = (baseline["sys"] as? [String: Any])?["id"] as? String ?? "unknown"
+            log.error("[personalize] Serialization error for entry \(entryId): \(error.localizedDescription)")
             return PersonalizedResult(entry: baseline, personalization: nil)
         }
     }
@@ -248,19 +252,42 @@ public final class OptimizationClient: ObservableObject {
         bridgeCallSyncWhenInitialized(method: "overrideVariant", args: "'\(escapedId)', \(variantIndex)")
     }
 
-    /// Get the current preview state as a dictionary.
-    public func getPreviewState() -> [String: Any]? {
+    /// Reset a single audience override back to its natural state.
+    public func resetAudienceOverride(id: String) {
+        let escapedId = NativePolyfills.escapeForJS(id)
+        bridgeCallSyncWhenInitialized(method: "resetAudienceOverride", args: "'\(escapedId)'")
+    }
+
+    /// Reset a single variant override back to its natural state.
+    public func resetVariantOverride(experienceId: String) {
+        let escapedId = NativePolyfills.escapeForJS(experienceId)
+        bridgeCallSyncWhenInitialized(method: "resetVariantOverride", args: "'\(escapedId)'")
+    }
+
+    /// Reset all audience and variant overrides back to their natural state.
+    public func resetAllOverrides() {
+        bridgeCallSyncWhenInitialized(method: "resetAllOverrides")
+    }
+
+    /// Get the current preview state as a typed snapshot.
+    public func getPreviewState() -> PreviewState? {
         guard let result = bridge.callSync(method: "getPreviewState"),
               !result.isNull && !result.isUndefined,
-              let str = result.toString()
+              let str = result.toString(),
+              let data = str.data(using: .utf8)
         else {
             log.warning("[preview] getPreviewState returned nil")
             return nil
         }
-        let parsed = Self.parseJSONDict(str)
-        let hasProfile = (parsed?["profile"] as? [String: Any]) != nil
-        log.debug("[preview] getPreviewState: profile=\(hasProfile ? "present" : "nil"), canPersonalize=\(parsed?["canPersonalize"] as? Bool ?? false)")
-        return parsed
+        do {
+            let state = try JSONDecoder().decode(PreviewState.self, from: data)
+            let hasProfile = state.profile?.objectValue != nil
+            log.debug("[preview] getPreviewState: profile=\(hasProfile ? "present" : "nil"), canPersonalize=\(state.canPersonalize)")
+            return state
+        } catch {
+            log.warning("[preview] Failed to decode preview state: \(error.localizedDescription)")
+            return nil
+        }
     }
 
     /// Destroy the SDK instance and release all resources.
@@ -277,6 +304,24 @@ public final class OptimizationClient: ObservableObject {
         state = .empty
         selectedPersonalizations = nil
         store.clear()
+    }
+
+    // MARK: - Testing
+
+    /// Test-only hook to observe bridge log messages (including JS exceptions).
+    /// Not part of the public API contract.
+    public func testOnlySetLogHandler(_ handler: @escaping (String, String) -> Void) {
+        bridge.onLog = { [weak self] level, msg in
+            self?.log.debug("[js:\(level)] \(msg)")
+            handler(level, msg)
+        }
+    }
+
+    /// Test-only: evaluate a JS script in the bridge context. Returns the string result.
+    /// Not part of the public API contract.
+    @discardableResult
+    public func testOnlyEvaluateScript(_ script: String) -> String? {
+        bridge.context?.evaluateScript(script)?.toString()
     }
 
     // MARK: - Private
@@ -375,10 +420,18 @@ public final class OptimizationClient: ObservableObject {
 
     private static func parseJSONDict(_ json: String) -> [String: Any]? {
         guard json != "null",
-              let data = json.data(using: .utf8),
-              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+              let data = json.data(using: .utf8)
         else { return nil }
-        return dict
+        do {
+            guard let dict = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                DiagnosticLogger.shared.warning("[parse] JSON is not a dictionary: \(json.prefix(200))")
+                return nil
+            }
+            return dict
+        } catch {
+            DiagnosticLogger.shared.warning("[parse] JSON parse failed: \(error.localizedDescription) — input: \(json.prefix(200))")
+            return nil
+        }
     }
 
     private func serializeJSON(_ value: Any) throws -> String {
