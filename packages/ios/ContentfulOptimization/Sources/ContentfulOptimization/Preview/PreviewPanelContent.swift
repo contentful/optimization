@@ -24,12 +24,10 @@ final class PreviewViewModel: ObservableObject {
     private var experienceNameMap: [String: String] = [:]
     private var hasLoadedDefinitions = false
 
-    // Override tracking
-    private var audienceOverrides: [String: AudienceOverrideState] = [:]
-    private var variantOverrides: [String: Int] = [:]
-    private var initialAudienceStates: [String: Bool] = [:]
-    private var initialVariantStates: [String: Int] = [:]
-    private var hasInitialSnapshot = false
+    // Override state read from the JS bridge (single source of truth)
+    private var bridgeAudienceOverrides: [String: Bool] = [:]
+    private var bridgeVariantOverrides: [String: Int] = [:]
+    private var bridgeDefaultVariantIndices: [String: Int] = [:]
 
     init(client: OptimizationClient, contentfulClient: PreviewContentfulClient? = nil) {
         self.client = client
@@ -70,41 +68,23 @@ final class PreviewViewModel: ObservableObject {
     func refreshState() {
         guard let state = client.getPreviewState() else { return }
 
-        profile = state["profile"] as? [String: Any]
-        consent = state["consent"] as? Bool
-        canPersonalize = state["canPersonalize"] as? Bool ?? false
+        profile = state.profile?.toFoundation() as? [String: Any]
+        consent = state.consent
+        canPersonalize = state.canPersonalize
 
-        let selectedPersonalizations = state["selectedPersonalizations"] as? [[String: Any]] ?? []
-        let changes = state["changes"] as? [[String: Any]] ?? []
-        let qualifiedAudienceIds = Set((profile?["audiences"] as? [String]) ?? [])
+        // Read override tracking from the bridge (single source of truth)
+        bridgeAudienceOverrides = state.audienceOverrides ?? [:]
+        bridgeVariantOverrides = state.variantOverrides ?? [:]
+        bridgeDefaultVariantIndices = state.defaultVariantIndices ?? [:]
+
+        let selectedPersonalizations = state.selectedPersonalizations ?? []
+        let changes = state.changes ?? []
+        let qualifiedAudienceIds = Set(state.profile?["audiences"]?.toStringArray() ?? [])
 
         // Build experience variant lookup from selectedPersonalizations
         var sdkVariantIndices: [String: Int] = [:]
         for p in selectedPersonalizations {
-            if let expId = p["experienceId"] as? String,
-               let variant = p["variantIndex"] as? Int {
-                sdkVariantIndices[expId] = variant
-            }
-        }
-
-        // Snapshot initial state on first load
-        if !hasInitialSnapshot {
-            for change in changes {
-                if let audienceId = change["audienceId"] as? String {
-                    initialAudienceStates[audienceId] = change["qualified"] as? Bool ?? false
-                }
-                if let meta = change["meta"] as? [String: Any],
-                   let expId = meta["experienceId"] as? String {
-                    if initialVariantStates[expId] == nil {
-                        let variant = sdkVariantIndices[expId] ?? (meta["variantIndex"] as? Int ?? 0)
-                        initialVariantStates[expId] = variant
-                    }
-                }
-            }
-            for (expId, variant) in sdkVariantIndices where initialVariantStates[expId] == nil {
-                initialVariantStates[expId] = variant
-            }
-            hasInitialSnapshot = true
+            sdkVariantIndices[p.experienceId] = p.variantIndex
         }
 
         if hasLoadedDefinitions {
@@ -122,10 +102,18 @@ final class PreviewViewModel: ObservableObject {
         }
     }
 
+    /// Derive the AudienceOverrideState for a given audience from the bridge's override map.
+    private func audienceOverrideState(for audienceId: String) -> AudienceOverrideState {
+        guard let qualified = bridgeAudienceOverrides[audienceId] else {
+            return .default
+        }
+        return qualified ? .on : .off
+    }
+
     // MARK: - Build Audiences from Contentful Definitions (rich data)
 
     private func buildAudiencesFromDefinitions(
-        changes: [[String: Any]],
+        changes: [PreviewChange],
         sdkVariantIndices: [String: Int],
         qualifiedAudienceIds: Set<String>
     ) {
@@ -140,8 +128,8 @@ final class PreviewViewModel: ObservableObject {
         // Build change qualification lookup
         var changeQualification: [String: Bool] = [:]
         for change in changes {
-            if let audienceId = change["audienceId"] as? String,
-               let qualified = change["qualified"] as? Bool {
+            if let audienceId = change.audienceId,
+               let qualified = change.qualified {
                 changeQualification[audienceId] = qualified
             }
         }
@@ -153,7 +141,7 @@ final class PreviewViewModel: ObservableObject {
             guard !experiences.isEmpty else { continue }
 
             let isQualified = qualifiedAudienceIds.contains(audienceDef.id)
-            let overrideState = audienceOverrides[audienceDef.id] ?? AudienceOverrideState.default
+            let overrideState = audienceOverrideState(for: audienceDef.id)
             let isActive: Bool
             switch overrideState {
             case .on: isActive = true
@@ -163,8 +151,8 @@ final class PreviewViewModel: ObservableObject {
 
             let previewExperiences = experiences.map { exp -> PreviewExperience in
                 let currentVariant = sdkVariantIndices[exp.id] ?? 0
-                let isOverridden = variantOverrides[exp.id] != nil
-                let naturalVariant = initialVariantStates[exp.id]
+                let isOverridden = bridgeVariantOverrides[exp.id] != nil
+                let naturalVariant = bridgeDefaultVariantIndices[exp.id]
 
                 return PreviewExperience(
                     id: exp.id,
@@ -190,7 +178,7 @@ final class PreviewViewModel: ObservableObject {
 
         // Add "All Visitors" for unassociated experiences
         if !unassociatedExperiences.isEmpty {
-            let allVisitorsOverride = audienceOverrides[allVisitorsAudienceId] ?? AudienceOverrideState.default
+            let allVisitorsOverride = audienceOverrideState(for: allVisitorsAudienceId)
             let previewExperiences = unassociatedExperiences.map { exp -> PreviewExperience in
                 let currentVariant = sdkVariantIndices[exp.id] ?? 0
                 return PreviewExperience(
@@ -199,8 +187,8 @@ final class PreviewViewModel: ObservableObject {
                     type: exp.type,
                     distribution: exp.distribution,
                     currentVariantIndex: currentVariant,
-                    isOverridden: variantOverrides[exp.id] != nil,
-                    naturalVariantIndex: initialVariantStates[exp.id]
+                    isOverridden: bridgeVariantOverrides[exp.id] != nil,
+                    naturalVariantIndex: bridgeDefaultVariantIndices[exp.id]
                 )
             }
 
@@ -229,23 +217,22 @@ final class PreviewViewModel: ObservableObject {
     // MARK: - Build Audiences from Changes (fallback without Contentful)
 
     private func buildAudiencesFromChanges(
-        changes: [[String: Any]],
+        changes: [PreviewChange],
         sdkVariantIndices: [String: Int],
-        selectedPersonalizations: [[String: Any]]
+        selectedPersonalizations: [SelectedPersonalization]
     ) {
         var audienceMap: [String: (name: String, qualified: Bool, experiences: [String: Int])] = [:]
         for change in changes {
-            guard let audienceId = change["audienceId"] as? String else { continue }
-            let name = change["name"] as? String ?? audienceId
-            let qualified = change["qualified"] as? Bool ?? false
+            guard let audienceId = change.audienceId else { continue }
+            let name = change.name ?? audienceId
+            let qualified = change.qualified ?? false
 
             var entry = audienceMap[audienceId] ?? (name: name, qualified: qualified, experiences: [:])
             entry.qualified = qualified
             entry.name = name
 
-            if let meta = change["meta"] as? [String: Any],
-               let expId = meta["experienceId"] as? String {
-                let variant = sdkVariantIndices[expId] ?? (meta["variantIndex"] as? Int ?? 0)
+            if let expId = change.meta?.experienceId {
+                let variant = sdkVariantIndices[expId] ?? (change.meta?.variantIndex ?? 0)
                 entry.experiences[expId] = variant
             }
             audienceMap[audienceId] = entry
@@ -253,22 +240,19 @@ final class PreviewViewModel: ObservableObject {
 
         // Add experiences from selectedPersonalizations not in any audience
         for p in selectedPersonalizations {
-            if let expId = p["experienceId"] as? String {
-                let variant = p["variantIndex"] as? Int ?? 0
-                let found = audienceMap.values.contains { $0.experiences.keys.contains(expId) }
-                if !found {
-                    var entry = audienceMap[allVisitorsAudienceId] ?? (name: allVisitorsAudienceName, qualified: true, experiences: [:])
-                    entry.experiences[expId] = variant
-                    audienceMap[allVisitorsAudienceId] = entry
-                }
+            let found = audienceMap.values.contains { $0.experiences.keys.contains(p.experienceId) }
+            if !found {
+                var entry = audienceMap[allVisitorsAudienceId] ?? (name: allVisitorsAudienceName, qualified: true, experiences: [:])
+                entry.experiences[p.experienceId] = p.variantIndex
+                audienceMap[allVisitorsAudienceId] = entry
             }
         }
 
         audiences = audienceMap.map { audienceId, data in
-            let overrideState = audienceOverrides[audienceId] ?? AudienceOverrideState.default
+            let overrideState = audienceOverrideState(for: audienceId)
             let experiences = data.experiences.map { expId, variant in
-                let isOverridden = variantOverrides[expId] != nil
-                let naturalVariant = initialVariantStates[expId]
+                let isOverridden = bridgeVariantOverrides[expId] != nil
+                let naturalVariant = bridgeDefaultVariantIndices[expId]
                 let distribution: [VariantDistribution]
                 let maxCount = max(variant + 1, naturalVariant.map { $0 + 1 } ?? 0, 2)
                 distribution = (0..<maxCount).map { VariantDistribution(index: $0, variantRef: "", percentage: nil, name: nil) }
@@ -344,40 +328,28 @@ final class PreviewViewModel: ObservableObject {
     // MARK: - Override Actions
 
     func setAudienceOverride(audienceId: String, state: AudienceOverrideState) {
-        audienceOverrides[audienceId] = state
-
         switch state {
         case .on:
             client.overrideAudience(id: audienceId, qualified: true)
-            // Set variant to 1 for all experiences in this audience (like RN activateAudience)
             if let audience = audiences.first(where: { $0.id == audienceId }) {
                 for experience in audience.experiences {
-                    if variantOverrides[experience.id] == nil {
+                    if bridgeVariantOverrides[experience.id] == nil {
                         client.overrideVariant(experienceId: experience.id, variantIndex: 1)
-                        variantOverrides[experience.id] = 1
                     }
                 }
             }
         case .off:
             client.overrideAudience(id: audienceId, qualified: false)
-            // Set variant to 0 for all experiences (like RN deactivateAudience)
             if let audience = audiences.first(where: { $0.id == audienceId }) {
                 for experience in audience.experiences {
                     client.overrideVariant(experienceId: experience.id, variantIndex: 0)
-                    variantOverrides[experience.id] = 0
                 }
             }
         case .default:
-            // Restore original state (like RN resetAudienceOverride)
-            let original = initialAudienceStates[audienceId] ?? false
-            client.overrideAudience(id: audienceId, qualified: original)
-            audienceOverrides.removeValue(forKey: audienceId)
+            client.resetAudienceOverride(id: audienceId)
             if let audience = audiences.first(where: { $0.id == audienceId }) {
                 for experience in audience.experiences {
-                    if let originalVariant = initialVariantStates[experience.id] {
-                        client.overrideVariant(experienceId: experience.id, variantIndex: originalVariant)
-                    }
-                    variantOverrides.removeValue(forKey: experience.id)
+                    client.resetVariantOverride(experienceId: experience.id)
                 }
             }
         }
@@ -387,7 +359,6 @@ final class PreviewViewModel: ObservableObject {
 
     func setVariantOverride(experienceId: String, variantIndex: Int) {
         client.overrideVariant(experienceId: experienceId, variantIndex: variantIndex)
-        variantOverrides[experienceId] = variantIndex
         refreshState()
     }
 
@@ -396,33 +367,23 @@ final class PreviewViewModel: ObservableObject {
     }
 
     func resetVariantOverride(experienceId: String) {
-        if let original = initialVariantStates[experienceId] {
-            client.overrideVariant(experienceId: experienceId, variantIndex: original)
-        }
-        variantOverrides.removeValue(forKey: experienceId)
+        client.resetVariantOverride(experienceId: experienceId)
         refreshState()
     }
 
     func resetAllOverrides() {
-        for (audienceId, originalQualified) in initialAudienceStates {
-            client.overrideAudience(id: audienceId, qualified: originalQualified)
-        }
-        for (expId, originalVariant) in initialVariantStates {
-            client.overrideVariant(experienceId: expId, variantIndex: originalVariant)
-        }
-        audienceOverrides.removeAll()
-        variantOverrides.removeAll()
+        client.resetAllOverrides()
         refreshState()
     }
 
     // MARK: - Override Summary
 
     var audienceOverrideCount: Int {
-        audienceOverrides.filter { $0.value != .default }.count
+        bridgeAudienceOverrides.count
     }
 
     var variantOverrideCount: Int {
-        variantOverrides.count
+        bridgeVariantOverrides.count
     }
 
     var hasOverrides: Bool {
@@ -430,17 +391,17 @@ final class PreviewViewModel: ObservableObject {
     }
 
     var activeAudienceOverrides: [(id: String, name: String, state: AudienceOverrideState)] {
-        audienceOverrides.compactMap { audienceId, state in
-            guard state != .default else { return nil }
+        bridgeAudienceOverrides.map { audienceId, qualified in
             let name = audienceNameMap[audienceId]
                 ?? audiences.first(where: { $0.id == audienceId })?.name
                 ?? audienceId
+            let state: AudienceOverrideState = qualified ? .on : .off
             return (id: audienceId, name: name, state: state)
         }.sorted { $0.name < $1.name }
     }
 
     var activeVariantOverrides: [(experienceId: String, name: String, variantIndex: Int)] {
-        variantOverrides.map { expId, variant in
+        bridgeVariantOverrides.map { expId, variant in
             let name = experienceNameMap[expId] ?? expId
             return (experienceId: expId, name: name, variantIndex: variant)
         }.sorted { $0.name < $1.name }
