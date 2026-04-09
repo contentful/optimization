@@ -18,7 +18,7 @@
     }),
       (l.o = (e, t) => Object.prototype.hasOwnProperty.call(e, t)))
     var u = {}
-    l.d(u, { default: () => rf })
+    l.d(u, { default: () => rg })
     var c = Symbol.for('preact-signals')
     function d() {
       if (g > 1) g--
@@ -115,7 +115,7 @@
         }
       }
     }
-    function S(e) {
+    function k(e) {
       for (var t = e.s, i = void 0; void 0 !== t; ) {
         var n = t.p
         ;(-1 === t.i
@@ -127,7 +127,7 @@
       }
       e.s = i
     }
-    function k(e, t) {
+    function S(e, t) {
       ;(_.call(this, void 0),
         (this.x = e),
         (this.s = void 0),
@@ -138,7 +138,7 @@
         (this.name = null == t ? void 0 : t.name))
     }
     function x(e, t) {
-      return new k(e, t)
+      return new S(e, t)
     }
     function $(e) {
       var t = e.u
@@ -149,19 +149,19 @@
         try {
           t()
         } catch (t) {
-          throw ((e.f &= -2), (e.f |= 8), P(e), t)
+          throw ((e.f &= -2), (e.f |= 8), I(e), t)
         } finally {
           ;((h = i), d())
         }
       }
     }
-    function P(e) {
+    function I(e) {
       for (var t = e.s; void 0 !== t; t = t.n) t.S.U(t)
       ;((e.x = void 0), (e.s = void 0), $(e))
     }
-    function I(e) {
+    function P(e) {
       if (h !== this) throw Error('Out-of-order effect')
-      ;(S(this), (h = e), (this.f &= -2), 8 & this.f && P(this), d())
+      ;(k(this), (h = e), (this.f &= -2), 8 & this.f && I(this), d())
     }
     function j(e, t) {
       ;((this.x = e),
@@ -279,8 +279,8 @@
           }
         },
       }),
-      (k.prototype = new _()),
-      (k.prototype.h = function () {
+      (S.prototype = new _()),
+      (S.prototype.h = function () {
         if (((this.f &= -3), 1 & this.f)) return !1
         if (32 == (36 & this.f) || ((this.f &= -5), this.g === b)) return !0
         if (((this.g = b), (this.f |= 1), this.i > 0 && !O(this))) return ((this.f &= -2), !0)
@@ -293,28 +293,28 @@
         } catch (e) {
           ;((this.v = e), (this.f |= 16), this.i++)
         }
-        return ((h = e), S(this), (this.f &= -2), !0)
+        return ((h = e), k(this), (this.f &= -2), !0)
       }),
-      (k.prototype.S = function (e) {
+      (S.prototype.S = function (e) {
         if (void 0 === this.t) {
           this.f |= 36
           for (var t = this.s; void 0 !== t; t = t.n) t.S.S(t)
         }
         _.prototype.S.call(this, e)
       }),
-      (k.prototype.U = function (e) {
+      (S.prototype.U = function (e) {
         if (void 0 !== this.t && (_.prototype.U.call(this, e), void 0 === this.t)) {
           this.f &= -33
           for (var t = this.s; void 0 !== t; t = t.n) t.S.U(t)
         }
       }),
-      (k.prototype.N = function () {
+      (S.prototype.N = function () {
         if (!(2 & this.f)) {
           this.f |= 6
           for (var e = this.t; void 0 !== e; e = e.x) e.t.N()
         }
       }),
-      Object.defineProperty(k.prototype, 'value', {
+      Object.defineProperty(S.prototype, 'value', {
         get: function () {
           if (1 & this.f) throw Error('Cycle detected')
           var e = w(this)
@@ -336,26 +336,26 @@
         if (1 & this.f) throw Error('Cycle detected')
         ;((this.f |= 1), (this.f &= -9), $(this), E(this), g++)
         var e = h
-        return ((h = this), I.bind(this, e))
+        return ((h = this), P.bind(this, e))
       }),
       (j.prototype.N = function () {
         2 & this.f || ((this.f |= 2), (this.o = y), (y = this))
       }),
       (j.prototype.d = function () {
-        ;((this.f |= 8), 1 & this.f || P(this))
+        ;((this.f |= 8), 1 & this.f || I(this))
       }),
       (j.prototype.dispose = function () {
         this.d()
       }))
     let R = '[object RegExp]',
-      C = '[object String]',
-      M = '[object Number]',
+      M = '[object String]',
+      C = '[object Number]',
       B = '[object Boolean]',
       q = '[object Arguments]',
       U = '[object Symbol]',
       N = '[object Date]',
-      D = '[object Map]',
-      V = '[object Set]',
+      V = '[object Map]',
+      D = '[object Set]',
       Z = '[object Array]',
       L = '[object ArrayBuffer]',
       Q = '[object Object]',
@@ -462,12 +462,12 @@
             case X:
             case Y:
             case ee:
-            case D:
-            case M:
-            case Q:
-            case R:
             case V:
             case C:
+            case Q:
+            case R:
+            case D:
+            case M:
             case U:
             case H:
             case K:
@@ -609,7 +609,7 @@
     function eE(e, t) {
       return 'bigint' == typeof t ? t.toString() : t
     }
-    function eS(e) {
+    function ek(e) {
       return {
         get value() {
           {
@@ -619,7 +619,7 @@
         },
       }
     }
-    function ek(e) {
+    function eS(e) {
       let t = +!!e.startsWith('^'),
         i = e.endsWith('$') ? e.length - 1 : e.length
       return e.slice(t, i)
@@ -637,10 +637,10 @@
         configurable: !0,
       })
     }
-    function eP(e, t, i) {
+    function eI(e, t, i) {
       Object.defineProperty(e, t, { value: i, writable: !0, enumerable: !0, configurable: !0 })
     }
-    function eI(...e) {
+    function eP(...e) {
       let t = {}
       for (let i of e) Object.assign(t, Object.getOwnPropertyDescriptors(i))
       return Object.defineProperties({}, t)
@@ -656,7 +656,7 @@
       let i = t.prototype
       return !1 !== eT(i) && !1 !== Object.prototype.hasOwnProperty.call(i, 'isPrototypeOf')
     }
-    eS(() => {
+    ek(() => {
       if ('u' > typeof navigator && navigator?.userAgent?.includes('Cloudflare')) return !1
       try {
         return (Function(''), !0)
@@ -668,11 +668,11 @@
     function eR(e) {
       return e.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     }
-    function eC(e, t, i) {
+    function eM(e, t, i) {
       let n = new e._zod.constr(t ?? e._zod.def)
       return ((!t || i?.parent) && (n._zod.parent = e), n)
     }
-    function eM(e) {
+    function eC(e) {
       if (!e) return {}
       if ('string' == typeof e) return { error: () => e }
       if (e?.message !== void 0) {
@@ -695,7 +695,7 @@
     function eN(e) {
       return 'string' == typeof e ? e : e?.message
     }
-    function eD(e, t, i) {
+    function eV(e, t, i) {
       let n = { ...e, path: e.path ?? [] }
       return (
         e.message ||
@@ -711,7 +711,7 @@
         n
       )
     }
-    function eV(e) {
+    function eD(e) {
       return Array.isArray(e) ? 'array' : 'string' == typeof e ? 'string' : 'unknown'
     }
     let eZ = (e, t) => {
@@ -730,7 +730,7 @@
             o = t._zod.run({ value: i, issues: [] }, s)
           if (o instanceof Promise) throw new ew()
           if (o.issues.length) {
-            let t = new (r?.Err ?? e)(o.issues.map((e) => eD(e, s, ez())))
+            let t = new (r?.Err ?? e)(o.issues.map((e) => eV(e, s, ez())))
             throw (ej(t, r?.callee), t)
           }
           return o.value
@@ -741,7 +741,7 @@
           let s = n ? Object.assign(n, { async: !0 }) : { async: !0 },
             o = e._zod.run({ value: i, issues: [] }, s)
           if ((o instanceof Promise && (o = await o), o.issues.length)) {
-            let e = new (r?.Err ?? t)(o.issues.map((e) => eD(e, s, ez())))
+            let e = new (r?.Err ?? t)(o.issues.map((e) => eV(e, s, ez())))
             throw (ej(e, r?.callee), e)
           }
           return o.value
@@ -753,7 +753,7 @@
             s = e._zod.run({ value: t, issues: [] }, r)
           if (s instanceof Promise) throw new ew()
           return s.issues.length
-            ? { success: !1, error: new (i ?? eL)(s.issues.map((e) => eD(e, r, ez()))) }
+            ? { success: !1, error: new (i ?? eL)(s.issues.map((e) => eV(e, r, ez()))) }
             : { success: !0, data: s.value }
         }),
       eW =
@@ -764,7 +764,7 @@
           return (
             s instanceof Promise && (s = await s),
             s.issues.length
-              ? { success: !1, error: new n(s.issues.map((e) => eD(e, r, ez()))) }
+              ? { success: !1, error: new n(s.issues.map((e) => eV(e, r, ez()))) }
               : { success: !0, data: s.value }
           )
         }),
@@ -805,7 +805,7 @@
           (e._zod.check = (i) => {
             let n = i.value
             if (n.length >= t.minimum) return
-            let r = eV(n)
+            let r = eD(n)
             i.issues.push({
               origin: r,
               code: 'too_small',
@@ -833,7 +833,7 @@
             let n = i.value,
               r = n.length
             if (r === t.length) return
-            let s = eV(n),
+            let s = eD(n),
               o = r > t.length
             i.issues.push({
               origin: s,
@@ -1097,7 +1097,7 @@
           },
         })
       }
-      let r = eS(() =>
+      let r = ek(() =>
         (function (e) {
           var t
           let i = Object.keys(e.shape)
@@ -1170,7 +1170,7 @@
             code: 'invalid_union',
             input: t.value,
             inst: i,
-            errors: e.map((e) => e.issues.map((e) => eD(e, n, ez()))),
+            errors: e.map((e) => e.issues.map((e) => eV(e, n, ez()))),
           }),
           t)
     }
@@ -1189,7 +1189,7 @@
           e$(e._zod, 'pattern', () => {
             if (t.options.every((e) => e._zod.pattern)) {
               let e = t.options.map((e) => e._zod.pattern)
-              return RegExp(`^(${e.map((e) => ek(e.source)).join('|')})$`)
+              return RegExp(`^(${e.map((e) => eS(e.source)).join('|')})$`)
             }
           }))
         let i = 1 === t.options.length,
@@ -1223,7 +1223,7 @@
           }
           return e
         })
-        let n = eS(() => {
+        let n = ek(() => {
           let e = t.options,
             i = new Map()
           for (let n of e) {
@@ -1311,7 +1311,7 @@
                     : i.issues.push({
                         code: 'invalid_key',
                         origin: 'record',
-                        issues: a.issues.map((e) => eD(e, n, ez())),
+                        issues: a.issues.map((e) => eV(e, n, ez())),
                         input: o,
                         path: [o],
                         inst: e,
@@ -1386,7 +1386,7 @@
           ),
           e$(e._zod, 'pattern', () => {
             let e = t.innerType._zod.pattern
-            return e ? RegExp(`^(${ek(e.source)})?$`) : void 0
+            return e ? RegExp(`^(${eS(e.source)})?$`) : void 0
           }),
           (e._zod.parse = (e, i) => {
             if ('optional' === t.innerType._zod.optin) {
@@ -1402,7 +1402,7 @@
           e$(e._zod, 'optout', () => t.innerType._zod.optout),
           e$(e._zod, 'pattern', () => {
             let e = t.innerType._zod.pattern
-            return e ? RegExp(`^(${ek(e.source)}|null)$`) : void 0
+            return e ? RegExp(`^(${eS(e.source)}|null)$`) : void 0
           }),
           e$(e._zod, 'values', () =>
             t.innerType._zod.values ? new Set([...t.innerType._zod.values, null]) : void 0,
@@ -1429,7 +1429,7 @@
       })
     ;(Symbol('ZodOutput'), Symbol('ZodInput'))
     function tO(e, t) {
-      return new e4({ check: 'min_length', ...eM(t), minimum: e })
+      return new e4({ check: 'min_length', ...eC(t), minimum: e })
     }
     ;(a = globalThis).__zod_globalRegistry ??
       (a.__zod_globalRegistry = new (class e {
@@ -1494,37 +1494,37 @@
               { parent: !0 },
             )),
           (e.with = e.check),
-          (e.clone = (t, i) => eC(e, t, i)),
+          (e.clone = (t, i) => eM(e, t, i)),
           (e.brand = () => e),
           (e.register = (t, i) => (t.add(e, i), e)),
           (e.apply = (t) => t(e)))
       }),
-      tS = eb('ZodMiniString', (e, t) => {
+      tk = eb('ZodMiniString', (e, t) => {
         ;(te.init(e, t), tE.init(e, t))
       })
-    function tk(e) {
-      return new tS({ type: 'string', ...eM(e) })
+    function tS(e) {
+      return new tk({ type: 'string', ...eC(e) })
     }
     let tx = eb('ZodMiniStringFormat', (e, t) => {
-        ;(tt.init(e, t), tS.init(e, t))
+        ;(tt.init(e, t), tk.init(e, t))
       }),
       t$ = eb('ZodMiniNumber', (e, t) => {
         ;(tn.init(e, t), tE.init(e, t))
       })
-    function tP(e) {
-      return new t$({ type: 'number', checks: [], ...eM(e) })
+    function tI(e) {
+      return new t$({ type: 'number', checks: [], ...eC(e) })
     }
-    let tI = eb('ZodMiniBoolean', (e, t) => {
+    let tP = eb('ZodMiniBoolean', (e, t) => {
       ;(tr.init(e, t), tE.init(e, t))
     })
     function tj(e) {
-      return new tI({ type: 'boolean', ...eM(e) })
+      return new tP({ type: 'boolean', ...eC(e) })
     }
     let tT = eb('ZodMiniNull', (e, t) => {
       ;(ts.init(e, t), tE.init(e, t))
     })
     function tF(e) {
-      return new tT({ type: 'null', ...eM(e) })
+      return new tT({ type: 'null', ...eC(e) })
     }
     let tA = eb('ZodMiniAny', (e, t) => {
       ;(to.init(e, t), tE.init(e, t))
@@ -1532,20 +1532,20 @@
     function tR() {
       return new tA({ type: 'any' })
     }
-    let tC = eb('ZodMiniUnknown', (e, t) => {
+    let tM = eb('ZodMiniUnknown', (e, t) => {
         ;(ta.init(e, t), tE.init(e, t))
       }),
-      tM = eb('ZodMiniArray', (e, t) => {
+      tC = eb('ZodMiniArray', (e, t) => {
         ;(tu.init(e, t), tE.init(e, t))
       })
     function tB(e, t) {
-      return new tM({ type: 'array', element: e, ...eM(t) })
+      return new tC({ type: 'array', element: e, ...eC(t) })
     }
     let tq = eb('ZodMiniObject', (e, t) => {
       ;(td.init(e, t), tE.init(e, t), e$(e, 'shape', () => t.shape))
     })
     function tU(e, t) {
-      return new tq({ type: 'object', shape: e ?? {}, ...eM(t) })
+      return new tq({ type: 'object', shape: e ?? {}, ...eC(t) })
     }
     function tN(e, t) {
       if (!eF(t)) throw Error('Invalid input to extend: expected a plain object')
@@ -1558,34 +1558,34 @@
               'Cannot overwrite keys on object schemas containing refinements. Use `.safeExtend()` instead.',
             )
       }
-      let n = eI(e._zod.def, {
+      let n = eP(e._zod.def, {
         get shape() {
           let i = { ...e._zod.def.shape, ...t }
-          return (eP(this, 'shape', i), i)
+          return (eI(this, 'shape', i), i)
         },
       })
-      return eC(e, n)
+      return eM(e, n)
     }
-    function tD(e, t) {
+    function tV(e, t) {
       return e.clone({ ...e._zod.def, catchall: t })
     }
-    let tV = eb('ZodMiniUnion', (e, t) => {
+    let tD = eb('ZodMiniUnion', (e, t) => {
       ;(th.init(e, t), tE.init(e, t))
     })
     function tZ(e, t) {
-      return new tV({ type: 'union', options: e, ...eM(t) })
+      return new tD({ type: 'union', options: e, ...eC(t) })
     }
     let tL = eb('ZodMiniDiscriminatedUnion', (e, t) => {
       ;(tp.init(e, t), tE.init(e, t))
     })
     function tQ(e, t, i) {
-      return new tL({ type: 'union', options: t, discriminator: e, ...eM(i) })
+      return new tL({ type: 'union', options: t, discriminator: e, ...eC(i) })
     }
     let tJ = eb('ZodMiniRecord', (e, t) => {
       ;(tv.init(e, t), tE.init(e, t))
     })
     function tH(e, t, i) {
-      return new tJ({ type: 'record', keyType: e, valueType: t, ...eM(i) })
+      return new tJ({ type: 'record', keyType: e, valueType: t, ...eC(i) })
     }
     let tK = eb('ZodMiniEnum', (e, t) => {
       ;(ty.init(e, t), tE.init(e, t), (e.options = Object.values(t.entries)))
@@ -1594,14 +1594,14 @@
       return new tK({
         type: 'enum',
         entries: Array.isArray(e) ? Object.fromEntries(e.map((e) => [e, e])) : e,
-        ...eM(t),
+        ...eC(t),
       })
     }
     let tG = eb('ZodMiniLiteral', (e, t) => {
       ;(tg.init(e, t), tE.init(e, t))
     })
     function tX(e, t) {
-      return new tG({ type: 'literal', values: Array.isArray(e) ? e : [e], ...eM(t) })
+      return new tG({ type: 'literal', values: Array.isArray(e) ? e : [e], ...eC(t) })
     }
     let tY = eb('ZodMiniOptional', (e, t) => {
       ;(tb.init(e, t), tE.init(e, t))
@@ -1633,7 +1633,7 @@
     function t8() {
       let e = new t4({
         type: 'lazy',
-        getter: () => tZ([tk(), tP(), tj(), tF(), tB(e), tH(tk(), e)]),
+        getter: () => tZ([tS(), tI(), tj(), tF(), tB(e), tH(tS(), e)]),
       })
       return e
     }
@@ -1648,49 +1648,49 @@
         offset: !1,
         local: !1,
         precision: null,
-        ...eM(e),
+        ...eC(e),
       })
     }
-    let t7 = tD(tU({}), t8()),
-      ie = tU({ sys: tU({ type: tX('Link'), linkType: tk(), id: tk() }) }),
-      it = tU({ sys: tU({ type: tX('Link'), linkType: tX('ContentType'), id: tk() }) }),
-      ii = tU({ sys: tU({ type: tX('Link'), linkType: tX('Environment'), id: tk() }) }),
-      ir = tU({ sys: tU({ type: tX('Link'), linkType: tX('Space'), id: tk() }) }),
-      is = tU({ sys: tU({ type: tX('Link'), linkType: tX('TaxonomyConcept'), id: tk() }) }),
-      io = tU({ sys: tU({ type: tX('Link'), linkType: tX('Tag'), id: tk() }) }),
+    let t7 = tV(tU({}), t8()),
+      ie = tU({ sys: tU({ type: tX('Link'), linkType: tS(), id: tS() }) }),
+      it = tU({ sys: tU({ type: tX('Link'), linkType: tX('ContentType'), id: tS() }) }),
+      ii = tU({ sys: tU({ type: tX('Link'), linkType: tX('Environment'), id: tS() }) }),
+      ir = tU({ sys: tU({ type: tX('Link'), linkType: tX('Space'), id: tS() }) }),
+      is = tU({ sys: tU({ type: tX('Link'), linkType: tX('TaxonomyConcept'), id: tS() }) }),
+      io = tU({ sys: tU({ type: tX('Link'), linkType: tX('Tag'), id: tS() }) }),
       ia = tU({
         type: tX('Entry'),
         contentType: it,
-        publishedVersion: tP(),
-        id: tk(),
+        publishedVersion: tI(),
+        id: tS(),
         createdAt: tR(),
         updatedAt: tR(),
-        locale: t0(tk()),
-        revision: tP(),
+        locale: t0(tS()),
+        revision: tI(),
         space: ir,
         environment: ii,
       }),
       il = tU({ fields: t7, metadata: tU({ tags: tB(io), concepts: t0(tB(is)) }), sys: ia }),
-      iu = tN(t7, { nt_audience_id: tk(), nt_name: t0(tk()), nt_description: t0(tk()) }),
+      iu = tN(t7, { nt_audience_id: tS(), nt_name: t0(tS()), nt_description: t0(tS()) }),
       ic = tN(il, { fields: iu })
     tU({ contentTypeId: tX('nt_audience'), fields: iu })
     let id = tN(il, {
-        fields: tU({ nt_name: tk(), nt_fallback: t0(tk()), nt_mergetag_id: tk() }),
+        fields: tU({ nt_name: tS(), nt_fallback: t0(tS()), nt_mergetag_id: tS() }),
         sys: tN(ia, {
           contentType: tU({
             sys: tU({ type: tX('Link'), linkType: tX('ContentType'), id: tX('nt_mergetag') }),
           }),
         }),
       }),
-      ih = tU({ id: tk(), hidden: t0(tj()) }),
+      ih = tU({ id: tS(), hidden: t0(tj()) }),
       ip = tU({ type: t0(tX('EntryReplacement')), baseline: ih, variants: tB(ih) }),
-      iv = tU({ value: tZ([tk(), tj(), tF(), tP(), tH(tk(), t8())]) }),
+      iv = tU({ value: tZ([tS(), tj(), tF(), tI(), tH(tS(), t8())]) }),
       iy = tW(['Boolean', 'Number', 'Object', 'String']),
       ig = tQ('type', [
         ip,
         tU({
           type: tX('InlineVariable'),
-          key: tk(),
+          key: tS(),
           valueType: iy,
           baseline: iv,
           variants: tB(iv),
@@ -1698,20 +1698,20 @@
       ]),
       im = tB(ig),
       ib = tU({
-        distribution: t0(tB(tP())),
-        traffic: t0(tP()),
+        distribution: t0(tB(tI())),
+        traffic: t0(tI()),
         components: t0(im),
         sticky: t0(tj()),
       }),
       iw = tZ([tX('nt_experiment'), tX('nt_personalization')]),
       i_ = tN(t7, {
-        nt_name: tk(),
-        nt_description: t0(t2(tk())),
+        nt_name: tS(),
+        nt_description: t0(t2(tS())),
         nt_type: iw,
         nt_config: t0(t2(ib)),
         nt_audience: t0(t2(ic)),
         nt_variants: t0(tB(tZ([ie, il]))),
-        nt_experience_id: tk(),
+        nt_experience_id: tS(),
       }),
       iz = tN(il, { fields: i_ })
     tU({ contentTypeId: tX('nt_experience'), fields: i_ })
@@ -1719,122 +1719,122 @@
     function iE(e) {
       return iz.safeParse(e).success
     }
-    function iS(e) {
+    function ik(e) {
       return iO.safeParse(e).success
     }
-    let ik = t0(tU({ name: tk(), version: tk() })),
+    let iS = t0(tU({ name: tS(), version: tS() })),
       ix = tU({
-        name: t0(tk()),
-        source: t0(tk()),
-        medium: t0(tk()),
-        term: t0(tk()),
-        content: t0(tk()),
+        name: t0(tS()),
+        source: t0(tS()),
+        medium: t0(tS()),
+        term: t0(tS()),
+        content: t0(tS()),
       }),
       i$ = tZ([tX('mobile'), tX('server'), tX('web')]),
-      iP = tH(tk(), tk()),
-      iI = tU({ latitude: tP(), longitude: tP() }),
+      iI = tH(tS(), tS()),
+      iP = tU({ latitude: tI(), longitude: tI() }),
       ij = tU({
-        coordinates: t0(iI),
-        city: t0(tk()),
-        postalCode: t0(tk()),
-        region: t0(tk()),
-        regionCode: t0(tk()),
-        country: t0(tk()),
-        countryCode: t0(tk().check(new e8({ check: 'length_equals', ...eM(void 0), length: 2 }))),
-        continent: t0(tk()),
-        timezone: t0(tk()),
+        coordinates: t0(iP),
+        city: t0(tS()),
+        postalCode: t0(tS()),
+        region: t0(tS()),
+        regionCode: t0(tS()),
+        country: t0(tS()),
+        countryCode: t0(tS().check(new e8({ check: 'length_equals', ...eC(void 0), length: 2 }))),
+        continent: t0(tS()),
+        timezone: t0(tS()),
       }),
-      iT = tU({ name: tk(), version: tk() }),
-      iF = tD(
-        tU({ path: tk(), query: iP, referrer: tk(), search: tk(), title: t0(tk()), url: tk() }),
+      iT = tU({ name: tS(), version: tS() }),
+      iF = tV(
+        tU({ path: tS(), query: iI, referrer: tS(), search: tS(), title: t0(tS()), url: tS() }),
         t8(),
       ),
-      iA = tH(tk(), t8()),
-      iR = tD(tU({ name: tk() }), t8()),
-      iC = tH(tk(), t8()),
-      iM = tU({
-        app: ik,
+      iA = tH(tS(), t8()),
+      iR = tV(tU({ name: tS() }), t8()),
+      iM = tH(tS(), t8()),
+      iC = tU({
+        app: iS,
         campaign: ix,
         gdpr: tU({ isConsentGiven: tj() }),
         library: iT,
-        locale: tk(),
+        locale: tS(),
         location: t0(ij),
-        userAgent: t0(tk()),
+        userAgent: t0(tS()),
       }),
       iB = tU({
         channel: i$,
-        context: tN(iM, { page: t0(iF), screen: t0(iR) }),
-        messageId: tk(),
+        context: tN(iC, { page: t0(iF), screen: t0(iR) }),
+        messageId: tS(),
         originalTimestamp: t9(),
         sentAt: t9(),
         timestamp: t9(),
-        userId: t0(tk()),
+        userId: t0(tS()),
       }),
       iq = tN(iB, { type: tX('alias') }),
       iU = tN(iB, { type: tX('group') }),
-      iN = tN(iB, { type: tX('identify'), traits: iC }),
-      iD = tN(iM, { page: iF }),
-      iV = tN(iB, { type: tX('page'), name: t0(tk()), properties: iF, context: iD }),
-      iZ = tN(iM, { screen: iR }),
-      iL = tN(iB, { type: tX('screen'), name: tk(), properties: t0(iA), context: iZ }),
-      iQ = tN(iB, { type: tX('track'), event: tk(), properties: iA }),
+      iN = tN(iB, { type: tX('identify'), traits: iM }),
+      iV = tN(iC, { page: iF }),
+      iD = tN(iB, { type: tX('page'), name: t0(tS()), properties: iF, context: iV }),
+      iZ = tN(iC, { screen: iR }),
+      iL = tN(iB, { type: tX('screen'), name: tS(), properties: t0(iA), context: iZ }),
+      iQ = tN(iB, { type: tX('track'), event: tS(), properties: iA }),
       iJ = tN(iB, {
         componentType: tZ([tX('Entry'), tX('Variable')]),
-        componentId: tk(),
-        experienceId: t0(tk()),
-        variantIndex: tP(),
+        componentId: tS(),
+        experienceId: t0(tS()),
+        variantIndex: tI(),
       }),
-      iH = tN(iJ, { type: tX('component'), viewDurationMs: t0(tP()), viewId: t0(tk()) }),
-      iK = { anonymousId: tk() },
+      iH = tN(iJ, { type: tX('component'), viewDurationMs: t0(tI()), viewId: t0(tS()) }),
+      iK = { anonymousId: tS() },
       iW = tB(
         tQ('type', [
           tN(iq, iK),
           tN(iH, iK),
           tN(iU, iK),
           tN(iN, iK),
-          tN(iV, iK),
+          tN(iD, iK),
           tN(iL, iK),
           tN(iQ, iK),
         ]),
       ),
-      iG = tQ('type', [iq, iH, iU, iN, iV, iL, iQ]),
+      iG = tQ('type', [iq, iH, iU, iN, iD, iL, iQ]),
       iX = tB(iG),
-      iY = tU({ features: t0(tB(tk())) }),
+      iY = tU({ features: t0(tB(tS())) }),
       i0 = tU({ events: iX.check(tO(1)), options: t0(iY) }),
       i1 = tU({ events: iW.check(tO(1)), options: t0(iY) }),
       i2 = tU({
-        id: tk(),
+        id: tS(),
         isReturningVisitor: tj(),
         landingPage: iF,
-        count: tP(),
-        activeSessionLength: tP(),
-        averageSessionLength: tP(),
+        count: tI(),
+        activeSessionLength: tI(),
+        averageSessionLength: tI(),
       }),
       i6 = tU({
-        id: tk(),
-        stableId: tk(),
-        random: tP(),
-        audiences: tB(tk()),
-        traits: iC,
+        id: tS(),
+        stableId: tS(),
+        random: tI(),
+        audiences: tB(tS()),
+        traits: iM,
         location: ij,
         session: i2,
       }),
-      i3 = tD(tU({ id: tk() }), t8()),
-      i4 = tU({ data: tU(), message: tk(), error: t2(tj()) }),
+      i3 = tV(tU({ id: tS() }), t8()),
+      i4 = tU({ data: tU(), message: tS(), error: t2(tj()) }),
       i8 = tN(i4, { data: tU({ profiles: t0(tB(i6)) }) }),
       i5 = tU({
-        key: tk(),
-        type: tZ([tW(['Variable']), tk()]),
-        meta: tU({ experienceId: tk(), variantIndex: tP() }),
+        key: tS(),
+        type: tZ([tW(['Variable']), tS()]),
+        meta: tU({ experienceId: tS(), variantIndex: tI() }),
       }),
-      i9 = tZ([tk(), tj(), tF(), tP(), tH(tk(), t8())])
-    tN(i5, { type: tk(), value: new tC({ type: 'unknown' }) })
+      i9 = tZ([tS(), tj(), tF(), tI(), tH(tS(), t8())])
+    tN(i5, { type: tS(), value: new tM({ type: 'unknown' }) })
     let i7 = tB(tQ('type', [tN(i5, { type: tX('Variable'), value: i9 })])),
       ne = tB(
         tU({
-          experienceId: tk(),
-          variantIndex: tP(),
-          variants: tH(tk(), tk()),
+          experienceId: tS(),
+          variantIndex: tI(),
+          variants: tH(tS(), tS()),
           sticky: t0(t3(tj(), !1)),
         }),
       ),
@@ -1842,7 +1842,7 @@
       ni = tQ('type', [
         iH,
         tN(iJ, { type: tX('component_click') }),
-        tN(iJ, { type: tX('component_hover'), hoverDurationMs: tP(), hoverId: tk() }),
+        tN(iJ, { type: tX('component_hover'), hoverDurationMs: tI(), hoverId: tS() }),
       ]),
       nn = tU({ profile: i3, events: tB(ni) }),
       nr = tB(nn)
@@ -2403,7 +2403,7 @@
           (this.insights = new nO({ ...o, ...i })))
       }
     }
-    function nS(e) {
+    function nk(e) {
       if (!e || 'object' != typeof e) return !1
       let t = Object.getPrototypeOf(e)
       return (
@@ -2411,22 +2411,22 @@
         '[object Object]' === Object.prototype.toString.call(e)
       )
     }
-    function nk(e) {
-      return nS(e) || Array.isArray(e)
+    function nS(e) {
+      return nk(e) || Array.isArray(e)
     }
     let nx = tU({
         campaign: t0(ix),
-        locale: t0(tk()),
+        locale: t0(tS()),
         location: t0(ij),
         page: t0(iF),
         screen: t0(iR),
-        userAgent: t0(tk()),
+        userAgent: t0(tS()),
       }),
-      n$ = tN(nx, { componentId: tk(), experienceId: t0(tk()), variantIndex: t0(tP()) }),
-      nP = tN(n$, { sticky: t0(tj()), viewId: tk(), viewDurationMs: tP() }),
-      nI = tN(n$, { viewId: t0(tk()), viewDurationMs: t0(tP()) }),
-      nj = tN(n$, { hoverId: tk(), hoverDurationMs: tP() }),
-      nT = tN(nx, { traits: t0(iC), userId: tk() }),
+      n$ = tN(nx, { componentId: tS(), experienceId: t0(tS()), variantIndex: t0(tI()) }),
+      nI = tN(n$, { sticky: t0(tj()), viewId: tS(), viewDurationMs: tI() }),
+      nP = tN(n$, { viewId: t0(tS()), viewDurationMs: t0(tI()) }),
+      nj = tN(n$, { hoverId: tS(), hoverDurationMs: tI() }),
+      nT = tN(nx, { traits: t0(iM), userId: tS() }),
       nF = tN(nx, {
         properties: t0(
           (function (e, t) {
@@ -2434,7 +2434,7 @@
             let n = e._zod.def.checks
             if (n && n.length > 0)
               throw Error('.partial() cannot be used on object schemas containing refinements')
-            let r = eI(e._zod.def, {
+            let r = eP(e._zod.def, {
               get shape() {
                 let t = e._zod.def.shape,
                   n = { ...t }
@@ -2445,18 +2445,18 @@
                   }
                 else
                   for (let e in t) n[e] = tY ? new tY({ type: 'optional', innerType: t[e] }) : t[e]
-                return (eP(this, 'shape', n), n)
+                return (eI(this, 'shape', n), n)
               },
               checks: [],
             })
-            return eC(e, r)
+            return eM(e, r)
           })(iF),
         ),
       }),
-      nA = tN(nx, { name: tk(), properties: iA }),
-      nR = tN(nx, { event: tk(), properties: t0(t3(iA, {})) }),
-      nC = { path: '', query: {}, referrer: '', search: '', title: '', url: '' },
-      nM = class {
+      nA = tN(nx, { name: tS(), properties: iA }),
+      nR = tN(nx, { event: tS(), properties: t0(t3(iA, {})) }),
+      nM = { path: '', query: {}, referrer: '', search: '', title: '', url: '' },
+      nC = class {
         app
         channel
         library
@@ -2476,7 +2476,7 @@
             (this.channel = i),
             (this.library = n),
             (this.getLocale = r ?? (() => 'en-US')),
-            (this.getPageProperties = s ?? (() => nC)),
+            (this.getPageProperties = s ?? (() => nM)),
             (this.getUserAgent = o ?? (() => void 0)))
         }
         buildUniversalEventProperties({
@@ -2524,7 +2524,7 @@
             variantIndex: r,
             viewDurationMs: s,
             ...o
-          } = ns(nP, e)
+          } = ns(nI, e)
           return {
             ...this.buildEntryInteractionBase(o, t, n, r),
             type: 'component',
@@ -2560,7 +2560,7 @@
             viewId: r,
             viewDurationMs: s,
             ...o
-          } = ns(nI, e)
+          } = ns(nP, e)
           return {
             ...this.buildEntryInteractionBase(o, t, i, n),
             ...(void 0 === s ? {} : { viewDurationMs: s }),
@@ -2588,21 +2588,21 @@
                 if ('__proto__' === s) continue
                 let o = i[s],
                   a = t[s]
-                nk(o) && nk(a)
+                nS(o) && nS(a)
                   ? (t[s] = e(a, o))
                   : Array.isArray(o)
                     ? (t[s] = e([], o))
-                    : nS(o)
+                    : nk(o)
                       ? (t[s] = e({}, o))
                       : (void 0 === a || void 0 !== o) && (t[s] = o)
               }
               return t
-            })({ ...n, title: n.title ?? nC.title }, t),
+            })({ ...n, title: n.title ?? nM.title }, t),
             {
               context: { screen: s, ...o },
               ...a
             } = this.buildUniversalEventProperties(i),
-            l = ns(iD, o)
+            l = ns(iV, o)
           return { ...a, context: l, type: 'page', properties: r }
         }
         buildScreenView(e) {
@@ -2661,7 +2661,7 @@
       },
       nU = na('Optimization'),
       nN = 'Could not resolve Merge Tag value:',
-      nD = (e, t) => {
+      nV = (e, t) => {
         if (!e || 'object' != typeof e) return
         if (!t) return e
         let i = e
@@ -2671,7 +2671,7 @@
         }
         return i
       },
-      nV = {
+      nD = {
         normalizeSelectors: (e) =>
           e
             .split('_')
@@ -2679,9 +2679,9 @@
               [i.slice(0, t).join('.'), i.slice(t).join('_')].filter((e) => '' !== e).join('.'),
             ),
         getValueFromProfile(e, t) {
-          let i = nV.normalizeSelectors(e).find((e) => nD(t, e))
+          let i = nD.normalizeSelectors(e).find((e) => nV(t, e))
           if (!i) return
-          let n = nD(t, i)
+          let n = nV(t, i)
           if (n && ('string' == typeof n || 'number' == typeof n || 'boolean' == typeof n))
             return `${n}`
         },
@@ -2692,7 +2692,7 @@
             fields: { nt_fallback: i },
           } = e
           return i6.safeParse(t).success
-            ? (nV.getValueFromProfile(e.fields.nt_mergetag_id, t) ?? i)
+            ? (nD.getValueFromProfile(e.fields.nt_mergetag_id, t) ?? i)
             : (nU.warn(`${nN} no valid profile`), i)
         },
       },
@@ -2700,7 +2700,7 @@
       nL = 'Could not resolve optimized entry variant:',
       nQ = {
         getOptimizationEntry({ optimizedEntry: e, selectedOptimizations: t }, i = !1) {
-          if (i || (t.length && iS(e)))
+          if (i || (t.length && ik(e)))
             return e.fields.nt_experiences
               .filter((e) => iE(e))
               .find((e) => t.some(({ experienceId: t }) => t === e.fields.nt_experience_id))
@@ -2714,7 +2714,7 @@
           n = !1,
         ) {
           var r
-          if (!n && (!iS(e) || !iE(t))) return
+          if (!n && (!ik(e) || !iE(t))) return
           let s = ((r = t.fields.nt_config),
           {
             distribution: r?.distribution === void 0 ? [] : [...r.distribution],
@@ -2739,7 +2739,7 @@
               nZ.warn(`${nL} no selectedOptimizations exist for the current profile`),
               { entry: e }
             )
-          if (!iS(e)) return (nZ.warn(`${nL} entry ${e.sys.id} is not optimized`), { entry: e })
+          if (!ik(e)) return (nZ.warn(`${nL} entry ${e.sys.id} is not optimized`), { entry: e })
           let i = nQ.getOptimizationEntry({ optimizedEntry: e, selectedOptimizations: t }, !0)
           if (!i)
             return (
@@ -2778,7 +2778,7 @@
       eventBuilder
       config
       flagsResolver = nq
-      mergeTagValueResolver = nV
+      mergeTagValueResolver = nD
       optimizedEntryResolver = nQ
       interceptors = { event: new nB(), state: new nB() }
       constructor(e, t = {}) {
@@ -2793,7 +2793,7 @@
           insights: t.insights,
         }
         ;((this.api = new nE(a)),
-          (this.eventBuilder = new nM(
+          (this.eventBuilder = new nC(
             i ?? {
               channel: 'server',
               library: { name: '@contentful/optimization-ios-bridge', version: '0.0.0' },
@@ -2834,9 +2834,9 @@
             a = A(n)
           if ((o === q && (o = Q), a === q && (a = Q), o !== a)) return !1
           switch (o) {
-            case C:
+            case M:
               return i.toString() === n.toString()
-            case M: {
+            case C: {
               let e = i.valueOf(),
                 t = n.valueOf()
               return e === t || (Number.isNaN(e) && Number.isNaN(t))
@@ -2856,12 +2856,12 @@
           ;(r.set(i, n), r.set(n, i))
           try {
             switch (o) {
-              case D:
+              case V:
                 if (i.size !== n.size) return !1
                 for (let [t, o] of i.entries())
                   if (!n.has(t) || !e(o, n.get(t), t, i, n, r, s)) return !1
                 return !0
-              case V: {
+              case D: {
                 if (i.size !== n.size) return !1
                 let t = Array.from(i.values()),
                   o = Array.from(n.values())
@@ -2901,7 +2901,7 @@
               case '[object Error]':
                 return i.name === n.name && i.message === n.message
               case Q: {
-                if (!(t(i.constructor, n.constructor, r, s) || (nS(i) && nS(n)))) return !1
+                if (!(t(i.constructor, n.constructor, r, s) || (nk(i) && nk(n)))) return !1
                 let o = [...Object.keys(i), ...F(i)],
                   a = [...Object.keys(n), ...F(n)]
                 if (o.length !== a.length) return !1
@@ -3628,145 +3628,209 @@
     let rl = null,
       ru = null,
       rc = null,
-      rd = {
-        initialize(e) {
-          ;(rl && rd.destroy(),
-            (rl = new ra({
-              clientId: e.clientId,
-              environment: e.environment,
-              api: { experienceBaseUrl: e.experienceBaseUrl, insightsBaseUrl: e.insightsBaseUrl },
-            })),
-            e.defaults &&
-              (void 0 !== e.defaults.consent && rl.consent(e.defaults.consent),
-              void 0 !== e.defaults.profile && (eg.profile.value = e.defaults.profile),
-              void 0 !== e.defaults.changes && (eg.changes.value = e.defaults.changes),
-              void 0 !== e.defaults.optimizations &&
-                (eg.selectedOptimizations.value = e.defaults.optimizations)),
-            rl.consent(!0))
-          let t = globalThis
-          ;((ru = T(() => {
-            let e = {
-              profile: eg.profile.value ?? null,
-              consent: eg.consent.value,
-              canPersonalize: eg.canOptimize.value,
-              changes: eg.changes.value ?? null,
-              selectedPersonalizations: eg.selectedOptimizations.value ?? null,
-            }
-            'function' == typeof t.__nativeOnStateChange &&
-              t.__nativeOnStateChange(JSON.stringify(e))
+      rd = new Map(),
+      rf = new Map(),
+      rh = new Map(),
+      rp = new Map()
+    function rv() {
+      ;(rd.clear(), rf.clear(), rh.clear(), rp.clear())
+    }
+    let ry = {
+      initialize(e) {
+        ;(rl && ry.destroy(),
+          (rl = new ra({
+            clientId: e.clientId,
+            environment: e.environment,
+            api: { experienceBaseUrl: e.experienceBaseUrl, insightsBaseUrl: e.insightsBaseUrl },
           })),
-            (rc = T(() => {
-              let e = eg.event.value
-              e &&
-                'function' == typeof t.__nativeOnEventEmitted &&
-                t.__nativeOnEventEmitted(JSON.stringify(e))
-            })))
-        },
-        identify(e, t, i) {
-          rl
-            ? rl
-                .identify(e)
-                .then((e) => {
-                  t(JSON.stringify(e ?? null))
-                })
-                .catch((e) => {
-                  i(e instanceof Error ? e.message : String(e))
-                })
-            : i('SDK not initialized. Call initialize() first.')
-        },
-        page(e, t, i) {
-          rl
-            ? rl
-                .page(e)
-                .then((e) => {
-                  t(JSON.stringify(e ?? null))
-                })
-                .catch((e) => {
-                  i(e instanceof Error ? e.message : String(e))
-                })
-            : i('SDK not initialized. Call initialize() first.')
-        },
-        screen(e, t, i) {
-          rl
-            ? rl
-                .screen({ name: e.name, properties: e.properties ?? {} })
-                .then((e) => {
-                  t(JSON.stringify(e ?? null))
-                })
-                .catch((e) => {
-                  i(e instanceof Error ? e.message : String(e))
-                })
-            : i('SDK not initialized. Call initialize() first.')
-        },
-        flush(e, t) {
-          rl
-            ? rl
-                .flush()
-                .then(() => {
-                  e(JSON.stringify(null))
-                })
-                .catch((e) => {
-                  t(e instanceof Error ? e.message : String(e))
-                })
-            : t('SDK not initialized. Call initialize() first.')
-        },
-        trackView(e, t, i) {
-          rl
-            ? rl
-                .trackView(e)
-                .then((e) => {
-                  t(JSON.stringify(e ?? null))
-                })
-                .catch((e) => {
-                  i(e instanceof Error ? e.message : String(e))
-                })
-            : i('SDK not initialized. Call initialize() first.')
-        },
-        trackClick(e, t, i) {
-          rl
-            ? rl
-                .trackClick(e)
-                .then(() => {
-                  t(JSON.stringify(null))
-                })
-                .catch((e) => {
-                  i(e instanceof Error ? e.message : String(e))
-                })
-            : i('SDK not initialized. Call initialize() first.')
-        },
-        consent(e) {
-          rl && rl.consent(e)
-        },
-        reset() {
-          rl && rl.reset()
-        },
-        setOnline(e) {
-          eg.online.value = e
-        },
-        personalizeEntry(e, t) {
-          if (!rl) return JSON.stringify({ entry: JSON.parse(e) })
-          let i = JSON.parse(e),
-            n = t ? JSON.parse(t) : void 0
-          return JSON.stringify(rl.resolveOptimizedEntry(i, n))
-        },
-        setPreviewPanelOpen(e) {
-          rl && (eg.previewPanelOpen.value = e)
-        },
-        overrideAudience(e, t) {
-          if (!rl) return
-          let i = (eg.changes.value ?? []).map((i) =>
-            i.audienceId === e ? { ...i, qualified: t } : i,
-          )
-          eg.changes.value = i
-        },
-        overrideVariant(e, t) {
-          if (!rl) return
-          let i = (eg.selectedOptimizations.value ?? []).map((i) =>
-            i.experienceId === e ? { ...i, variantIndex: t } : i,
-          )
-          eg.selectedOptimizations.value = i
-        },
-        getPreviewState: () =>
+          e.defaults &&
+            (void 0 !== e.defaults.consent && rl.consent(e.defaults.consent),
+            void 0 !== e.defaults.profile && (eg.profile.value = e.defaults.profile),
+            void 0 !== e.defaults.changes && (eg.changes.value = e.defaults.changes),
+            void 0 !== e.defaults.optimizations &&
+              (eg.selectedOptimizations.value = e.defaults.optimizations)),
+          rl.consent(!0))
+        let t = globalThis
+        ;((ru = T(() => {
+          let e = {
+            profile: eg.profile.value ?? null,
+            consent: eg.consent.value,
+            canPersonalize: eg.canOptimize.value,
+            changes: eg.changes.value ?? null,
+            selectedPersonalizations: eg.selectedOptimizations.value ?? null,
+          }
+          'function' == typeof t.__nativeOnStateChange && t.__nativeOnStateChange(JSON.stringify(e))
+        })),
+          (rc = T(() => {
+            let e = eg.event.value
+            e &&
+              'function' == typeof t.__nativeOnEventEmitted &&
+              t.__nativeOnEventEmitted(JSON.stringify(e))
+          })))
+      },
+      identify(e, t, i) {
+        rl
+          ? rl
+              .identify(e)
+              .then((e) => {
+                t(JSON.stringify(e ?? null))
+              })
+              .catch((e) => {
+                i(e instanceof Error ? e.message : String(e))
+              })
+          : i('SDK not initialized. Call initialize() first.')
+      },
+      page(e, t, i) {
+        rl
+          ? rl
+              .page(e)
+              .then((e) => {
+                t(JSON.stringify(e ?? null))
+              })
+              .catch((e) => {
+                i(e instanceof Error ? e.message : String(e))
+              })
+          : i('SDK not initialized. Call initialize() first.')
+      },
+      screen(e, t, i) {
+        rl
+          ? rl
+              .screen({ name: e.name, properties: e.properties ?? {} })
+              .then((e) => {
+                t(JSON.stringify(e ?? null))
+              })
+              .catch((e) => {
+                i(e instanceof Error ? e.message : String(e))
+              })
+          : i('SDK not initialized. Call initialize() first.')
+      },
+      flush(e, t) {
+        rl
+          ? rl
+              .flush()
+              .then(() => {
+                e(JSON.stringify(null))
+              })
+              .catch((e) => {
+                t(e instanceof Error ? e.message : String(e))
+              })
+          : t('SDK not initialized. Call initialize() first.')
+      },
+      trackView(e, t, i) {
+        rl
+          ? rl
+              .trackView(e)
+              .then((e) => {
+                t(JSON.stringify(e ?? null))
+              })
+              .catch((e) => {
+                i(e instanceof Error ? e.message : String(e))
+              })
+          : i('SDK not initialized. Call initialize() first.')
+      },
+      trackClick(e, t, i) {
+        rl
+          ? rl
+              .trackClick(e)
+              .then(() => {
+                t(JSON.stringify(null))
+              })
+              .catch((e) => {
+                i(e instanceof Error ? e.message : String(e))
+              })
+          : i('SDK not initialized. Call initialize() first.')
+      },
+      consent(e) {
+        rl && rl.consent(e)
+      },
+      reset() {
+        rl && (rv(), rl.reset())
+      },
+      setOnline(e) {
+        eg.online.value = e
+      },
+      personalizeEntry: (e, t) =>
+        rl ? JSON.stringify(rl.resolveOptimizedEntry(e, t)) : JSON.stringify({ entry: e }),
+      setPreviewPanelOpen(e) {
+        rl && (eg.previewPanelOpen.value = e)
+      },
+      overrideAudience(e, t) {
+        if (!rl) return
+        ;(!(function (e) {
+          if (rd.has(e)) return
+          let t = (eg.changes.value ?? []).find((t) => t.audienceId === e)
+          rd.set(e, t?.qualified ?? !1)
+        })(e),
+          rh.set(e, t))
+        let i = (eg.changes.value ?? []).map((i) =>
+          i.audienceId === e ? { ...i, qualified: t } : i,
+        )
+        eg.changes.value = i
+      },
+      overrideVariant(e, t) {
+        if (!rl) return
+        ;(!(function (e) {
+          if (rf.has(e)) return
+          let t = (eg.selectedOptimizations.value ?? []).find((t) => t.experienceId === e)
+          rf.set(e, t?.variantIndex ?? 0)
+        })(e),
+          rp.set(e, t))
+        let i = (eg.selectedOptimizations.value ?? []).map((i) =>
+          i.experienceId === e ? { ...i, variantIndex: t } : i,
+        )
+        eg.selectedOptimizations.value = i
+      },
+      resetAudienceOverride(e) {
+        if (!rl) return
+        let t = rd.get(e)
+        if (void 0 === t) return
+        rh.delete(e)
+        let i = (eg.changes.value ?? []).map((i) =>
+          i.audienceId === e ? { ...i, qualified: t } : i,
+        )
+        eg.changes.value = i
+      },
+      resetVariantOverride(e) {
+        if (!rl) return
+        let t = rf.get(e)
+        if (void 0 === t) return
+        rp.delete(e)
+        let i = (eg.selectedOptimizations.value ?? []).map((i) =>
+          i.experienceId === e ? { ...i, variantIndex: t } : i,
+        )
+        eg.selectedOptimizations.value = i
+      },
+      resetAllOverrides() {
+        if (!rl) return
+        let e = (eg.changes.value ?? []).map((e) => {
+          let t = e.audienceId
+          return t && rd.has(t) ? { ...e, qualified: rd.get(t) } : e
+        })
+        eg.changes.value = e
+        let t = (eg.selectedOptimizations.value ?? []).map((e) => {
+          let t = e.experienceId
+          return t && rf.has(t) ? { ...e, variantIndex: rf.get(t) } : e
+        })
+        ;((eg.selectedOptimizations.value = t), rv())
+      },
+      getPreviewState() {
+        let e = {}
+        rh.forEach((t, i) => {
+          e[i] = t
+        })
+        let t = {}
+        rp.forEach((e, i) => {
+          t[i] = e
+        })
+        let i = {}
+        rd.forEach((e, t) => {
+          i[t] = e
+        })
+        let n = {}
+        return (
+          rf.forEach((e, t) => {
+            n[t] = e
+          }),
           JSON.stringify({
             profile: eg.profile.value ?? null,
             consent: eg.consent.value,
@@ -3774,25 +3838,34 @@
             changes: eg.changes.value ?? null,
             selectedPersonalizations: eg.selectedOptimizations.value ?? null,
             previewPanelOpen: eg.previewPanelOpen.value,
-          }),
-        getProfile() {
-          let e = eg.profile.value
-          return e ? JSON.stringify(e) : null
-        },
-        getState: () =>
-          JSON.stringify({
-            profile: eg.profile.value ?? null,
-            consent: eg.consent.value,
-            canPersonalize: eg.canOptimize.value,
-            changes: eg.changes.value ?? null,
-            selectedPersonalizations: eg.selectedOptimizations.value ?? null,
-          }),
-        destroy() {
-          ;(rc && (rc(), (rc = null)), ru && (ru(), (ru = null)), rl && (rl.destroy(), (rl = null)))
-        },
-      }
-    globalThis.__bridge = rd
-    let rf = rd
+            audienceOverrides: e,
+            variantOverrides: t,
+            defaultAudienceQualifications: i,
+            defaultVariantIndices: n,
+          })
+        )
+      },
+      getProfile() {
+        let e = eg.profile.value
+        return e ? JSON.stringify(e) : null
+      },
+      getState: () =>
+        JSON.stringify({
+          profile: eg.profile.value ?? null,
+          consent: eg.consent.value,
+          canPersonalize: eg.canOptimize.value,
+          changes: eg.changes.value ?? null,
+          selectedPersonalizations: eg.selectedOptimizations.value ?? null,
+        }),
+      destroy() {
+        ;(rv(),
+          rc && (rc(), (rc = null)),
+          ru && (ru(), (ru = null)),
+          rl && (rl.destroy(), (rl = null)))
+      },
+    }
+    globalThis.__bridge = ry
+    let rg = ry
     return u.default
   })(),
 )
