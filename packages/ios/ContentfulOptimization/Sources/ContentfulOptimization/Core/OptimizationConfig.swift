@@ -28,18 +28,25 @@ public struct OptimizationConfig {
     public let insightsBaseUrl: String?
     public var defaults: StorageDefaults?
 
+    /// When `true`, the SDK emits detailed diagnostic logs via `os.Logger`
+    /// under the subsystem `com.contentful.optimization`.
+    /// Logs are visible in Xcode console and Console.app.
+    public var debug: Bool
+
     public init(
         clientId: String,
         environment: String = "master",
         experienceBaseUrl: String? = nil,
         insightsBaseUrl: String? = nil,
-        defaults: StorageDefaults? = nil
+        defaults: StorageDefaults? = nil,
+        debug: Bool = false
     ) {
         self.clientId = clientId
         self.environment = environment
         self.experienceBaseUrl = experienceBaseUrl
         self.insightsBaseUrl = insightsBaseUrl
         self.defaults = defaults
+        self.debug = debug
     }
 
     /// Serializes config to a JSON string for passing to the JS bridge.
