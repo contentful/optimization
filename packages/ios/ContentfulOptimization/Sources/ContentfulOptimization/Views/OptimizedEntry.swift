@@ -64,7 +64,8 @@ public struct OptimizedEntry<Content: View>: View {
     }
 
     private var shouldLiveUpdate: Bool {
-        liveUpdates ?? trackingConfig.liveUpdates
+        if let explicit = liveUpdates { return explicit }
+        return trackingConfig.liveUpdates || client.isPreviewPanelOpen
     }
 
     private var effectivePersonalizations: [[String: Any]]? {
@@ -115,6 +116,12 @@ public struct OptimizedEntry<Content: View>: View {
                 guard isPersonalized, !shouldLiveUpdate, !isLocked, newValue != nil else { return }
                 lockedPersonalizations = newValue
                 isLocked = true
+            }
+            // When preview panel closes, snapshot the current personalizations
+            // so the locked state reflects any overrides applied during the session.
+            .onReceive(client.$isPreviewPanelOpen) { panelOpen in
+                guard isPersonalized, !panelOpen, isLocked else { return }
+                lockedPersonalizations = client.selectedPersonalizations
             }
     }
 }

@@ -29,6 +29,11 @@ public final class OptimizationClient: ObservableObject {
     /// The currently selected personalizations, updated reactively from JS signals.
     @Published public private(set) var selectedPersonalizations: [[String: Any]]?
 
+    /// Whether the preview panel is currently open.
+    /// When `true`, ``OptimizedEntry`` components switch to live update mode
+    /// so that override changes are reflected immediately.
+    @Published public private(set) var isPreviewPanelOpen = false
+
     private let bridge = JSContextManager()
     private var cancellables = Set<AnyCancellable>()
     private let store = UserDefaultsStore()
@@ -45,6 +50,8 @@ public final class OptimizationClient: ObservableObject {
         eventSubject.eraseToAnyPublisher()
     }
 
+    private let log = DiagnosticLogger.shared
+
     public init() {
         bridge.onStateChange = { [weak self] dict in
             self?.handleStateUpdate(dict)
@@ -58,6 +65,14 @@ public final class OptimizationClient: ObservableObject {
 
     /// Initialize the SDK with the given configuration.
     public func initialize(config: OptimizationConfig) throws {
+        log.setEnabled(config.debug)
+        log.info("[init] Starting SDK initialization (clientId=\(config.clientId), env=\(config.environment))")
+        if let url = config.experienceBaseUrl {
+            log.debug("[init] experienceBaseUrl=\(url)")
+        } else {
+            log.debug("[init] experienceBaseUrl=<default>")
+        }
+
         // Load persisted state and merge into config defaults
         store.load()
         var mergedConfig = config
@@ -77,8 +92,14 @@ public final class OptimizationClient: ObservableObject {
             mergedConfig.defaults?.personalizations = storedP
         }
 
+        // Wire up JS bridge logging
+        bridge.onLog = { [weak self] level, msg in
+            self?.log.debug("[js:\(level)] \(msg)")
+        }
+
         try bridge.initialize(config: mergedConfig)
         isInitialized = true
+        log.info("[init] SDK initialized successfully")
 
         // Start platform handlers
         #if canImport(UIKit)
@@ -207,7 +228,11 @@ public final class OptimizationClient: ObservableObject {
     // MARK: - Preview Panel
 
     /// Set the preview panel open state.
+    ///
+    /// When `open` is `true`, ``OptimizedEntry`` components switch to live update mode
+    /// so that audience and variant overrides are reflected immediately.
     public func setPreviewPanelOpen(_ open: Bool) {
+        isPreviewPanelOpen = open
         bridgeCallSyncWhenInitialized(method: "setPreviewPanelOpen", args: open ? "true" : "false")
     }
 
@@ -228,8 +253,14 @@ public final class OptimizationClient: ObservableObject {
         guard let result = bridge.callSync(method: "getPreviewState"),
               !result.isNull && !result.isUndefined,
               let str = result.toString()
-        else { return nil }
-        return Self.parseJSONDict(str)
+        else {
+            log.warning("[preview] getPreviewState returned nil")
+            return nil
+        }
+        let parsed = Self.parseJSONDict(str)
+        let hasProfile = (parsed?["profile"] as? [String: Any]) != nil
+        log.debug("[preview] getPreviewState: profile=\(hasProfile ? "present" : "nil"), canPersonalize=\(parsed?["canPersonalize"] as? Bool ?? false)")
+        return parsed
     }
 
     /// Destroy the SDK instance and release all resources.
@@ -266,12 +297,15 @@ public final class OptimizationClient: ObservableObject {
     ) async throws -> [String: Any]? {
         try requireInitialized()
         let payload = try buildPayload()
+        log.debug("[bridge] Calling \(method) async")
         return try await withCheckedThrowingContinuation { continuation in
-            bridge.callAsync(method: method, payload: payload) { result in
+            bridge.callAsync(method: method, payload: payload) { [weak self] result in
                 switch result {
                 case .success(let json):
+                    self?.log.debug("[bridge] \(method) succeeded (\(json.prefix(200)))")
                     continuation.resume(returning: Self.parseJSONDict(json))
                 case .failure(let error):
+                    self?.log.error("[bridge] \(method) failed: \(error.localizedDescription)")
                     continuation.resume(throwing: error)
                 }
             }
@@ -297,6 +331,12 @@ public final class OptimizationClient: ObservableObject {
         let changes = Self.extractJSONValue(dict["changes"])
         let consent = dict["consent"] as? Bool
 
+        if let profile = profile {
+            log.info("[state] Profile updated with \(profile.keys.sorted().joined(separator: ", "))")
+        } else {
+            log.debug("[state] State update received (profile=nil, consent=\(consent.map(String.init) ?? "nil"), canPersonalize=\(dict["canPersonalize"] as? Bool ?? false))")
+        }
+
         state = OptimizationState(
             profile: profile,
             consent: consent,
@@ -306,6 +346,13 @@ public final class OptimizationClient: ObservableObject {
 
         let personalizations = Self.extractJSONArray(dict["selectedPersonalizations"])
         self.selectedPersonalizations = personalizations
+
+        if let changes = changes {
+            log.debug("[state] Changes: \(changes.keys.count) entries")
+        }
+        if let personalizations = personalizations {
+            log.debug("[state] Personalizations: \(personalizations.count) entries")
+        }
 
         // Persist state to storage
         store.profile = profile
