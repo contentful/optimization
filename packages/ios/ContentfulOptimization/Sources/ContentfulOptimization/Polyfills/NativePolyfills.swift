@@ -101,6 +101,9 @@ enum NativePolyfills {
         let nativeFetch: @convention(block) (String, String, String, JSValue, Int) -> Void = {
             urlString, method, headersJSON, bodyValue, callbackId in
 
+            let diagLog = DiagnosticLogger.shared
+            diagLog.debug("[fetch] \(method) \(urlString)")
+
             let log = NativePolyfills.signpostLog
             let fetchSignpostID = OSSignpostID(log: log)
             os_signpost(
@@ -109,6 +112,7 @@ enum NativePolyfills {
             )
 
             guard let url = Foundation.URL(string: urlString) else {
+                diagLog.error("[fetch] Invalid URL: \(urlString)")
                 DispatchQueue.main.async {
                     let escaped = NativePolyfills.escapeForJS(urlString)
                     weakContext?.evaluateScript(
@@ -140,6 +144,7 @@ enum NativePolyfills {
             URLSession.shared.dataTask(with: request) { data, response, error in
                 DispatchQueue.main.async {
                     guard let ctx = weakContext else {
+                        diagLog.warning("[fetch] Context deallocated before response for \(urlString)")
                         os_signpost(
                             .end, log: log, name: "Fetch Bridge Crossing",
                             signpostID: fetchSignpostID, "context deallocated"
@@ -148,6 +153,7 @@ enum NativePolyfills {
                     }
 
                     if let error = error {
+                        diagLog.error("[fetch] Network error for \(urlString): \(error.localizedDescription)")
                         let escaped = NativePolyfills.escapeForJS(
                             error.localizedDescription
                         )
@@ -163,6 +169,11 @@ enum NativePolyfills {
 
                     let httpResponse = response as? HTTPURLResponse
                     let statusCode = httpResponse?.statusCode ?? 0
+                    let bodySize = data?.count ?? 0
+                    diagLog.debug("[fetch] Response \(statusCode) from \(urlString) (\(bodySize) bytes)")
+                    if statusCode >= 400, let data = data, let body = String(data: data, encoding: .utf8) {
+                        diagLog.error("[fetch] Error body: \(body)")
+                    }
 
                     var responseHeaders: [String: String] = [:]
                     if let allHeaders = httpResponse?.allHeaderFields as? [String: String] {
