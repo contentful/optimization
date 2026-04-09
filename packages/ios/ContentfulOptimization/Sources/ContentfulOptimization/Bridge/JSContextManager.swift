@@ -154,7 +154,23 @@ final class JSContextManager {
     func callSync(method: String, args: String = "") -> JSValue? {
         guard let ctx = context else { return nil }
         let script = args.isEmpty ? "__bridge.\(method)()" : "__bridge.\(method)(\(args))"
-        return ctx.evaluateScript(script)
+
+        var jsException: JSValue?
+        let previousHandler = ctx.exceptionHandler
+        ctx.exceptionHandler = { _, exception in
+            jsException = exception
+        }
+
+        let result = ctx.evaluateScript(script)
+        ctx.exceptionHandler = previousHandler
+
+        if let exception = jsException {
+            let msg = exception.toString() ?? "Unknown JS error"
+            onLog?("exception", "[\(method)] \(msg)")
+            return nil
+        }
+
+        return result
     }
 
     /// Evaluates arbitrary JS in the context. Use sparingly.
