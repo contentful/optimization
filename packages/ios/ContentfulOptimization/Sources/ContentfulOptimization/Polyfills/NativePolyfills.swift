@@ -57,17 +57,26 @@ enum NativePolyfills {
         logger: @escaping (String, String) -> Void
     ) -> TimerStore {
         let timerStore = TimerStore()
-        weak var weakContext = context
+        registerNativeLog(in: context, logger: logger)
+        registerNativeSetTimeout(in: context, timerStore: timerStore)
+        registerNativeClearTimeout(in: context, timerStore: timerStore)
+        registerNativeRandomUUID(in: context)
+        registerNativeFetch(in: context)
+        return timerStore
+    }
 
-        // MARK: - __nativeLog(level, msg)
-
+    private static func registerNativeLog(
+        in context: JSContext,
+        logger: @escaping (String, String) -> Void
+    ) {
         let nativeLog: @convention(block) (String, String) -> Void = { level, msg in
             logger(level, msg)
         }
         context.setObject(nativeLog, forKeyedSubscript: "__nativeLog" as NSString)
+    }
 
-        // MARK: - __nativeSetTimeout(id, delayMs)
-
+    private static func registerNativeSetTimeout(in context: JSContext, timerStore: TimerStore) {
+        weak let weakContext = context
         let nativeSetTimeout: @convention(block) (Int, Int) -> Void = { timerId, delayMs in
             let workItem = DispatchWorkItem {
                 guard let ctx = weakContext else { return }
@@ -81,30 +90,31 @@ enum NativePolyfills {
             )
         }
         context.setObject(nativeSetTimeout, forKeyedSubscript: "__nativeSetTimeout" as NSString)
+    }
 
-        // MARK: - __nativeClearTimeout(id)
-
+    private static func registerNativeClearTimeout(in context: JSContext, timerStore: TimerStore) {
         let nativeClearTimeout: @convention(block) (Int) -> Void = { timerId in
             timerStore.cancel(timerId)
         }
         context.setObject(nativeClearTimeout, forKeyedSubscript: "__nativeClearTimeout" as NSString)
+    }
 
-        // MARK: - __nativeRandomUUID()
-
+    private static func registerNativeRandomUUID(in context: JSContext) {
         let nativeRandomUUID: @convention(block) () -> String = {
             UUID().uuidString.lowercased()
         }
         context.setObject(nativeRandomUUID, forKeyedSubscript: "__nativeRandomUUID" as NSString)
+    }
 
-        // MARK: - __nativeFetch(url, method, headersJSON, body, callbackId)
-
+    private static func registerNativeFetch(in context: JSContext) {
+        weak let weakContext = context
         let nativeFetch: @convention(block) (String, String, String, JSValue, Int) -> Void = {
             urlString, method, headersJSON, bodyValue, callbackId in
 
             let diagLog = DiagnosticLogger.shared
             diagLog.debug("[fetch] \(method) \(urlString)")
 
-            let log = NativePolyfills.signpostLog
+            let log = signpostLog
             let fetchSignpostID = OSSignpostID(log: log)
             os_signpost(
                 .begin, log: log, name: "Fetch Bridge Crossing",
@@ -114,7 +124,7 @@ enum NativePolyfills {
             guard let url = Foundation.URL(string: urlString) else {
                 diagLog.error("[fetch] Invalid URL: \(urlString)")
                 DispatchQueue.main.async {
-                    let escaped = NativePolyfills.escapeForJS(urlString)
+                    let escaped = escapeForJS(urlString)
                     weakContext?.evaluateScript(
                         "__fetchComplete(\(callbackId), 0, \"{}\", \"\", \"Invalid URL: \(escaped)\")"
                     )
@@ -143,63 +153,84 @@ enum NativePolyfills {
 
             URLSession.shared.dataTask(with: request) { data, response, error in
                 DispatchQueue.main.async {
-                    guard let ctx = weakContext else {
-                        diagLog.warning("[fetch] Context deallocated before response for \(urlString)")
-                        os_signpost(
-                            .end, log: log, name: "Fetch Bridge Crossing",
-                            signpostID: fetchSignpostID, "context deallocated"
-                        )
-                        return
-                    }
-
-                    if let error = error {
-                        diagLog.error("[fetch] Network error for \(urlString): \(error.localizedDescription)")
-                        let escaped = NativePolyfills.escapeForJS(
-                            error.localizedDescription
-                        )
-                        ctx.evaluateScript(
-                            "__fetchComplete(\(callbackId), 0, \"{}\", \"\", \"\(escaped)\")"
-                        )
-                        os_signpost(
-                            .end, log: log, name: "Fetch Bridge Crossing",
-                            signpostID: fetchSignpostID, "error: %{public}s", escaped
-                        )
-                        return
-                    }
-
-                    let httpResponse = response as? HTTPURLResponse
-                    let statusCode = httpResponse?.statusCode ?? 0
-                    let bodySize = data?.count ?? 0
-                    diagLog.debug("[fetch] Response \(statusCode) from \(urlString) (\(bodySize) bytes)")
-                    if statusCode >= 400, let data = data, let body = String(data: data, encoding: .utf8) {
-                        diagLog.error("[fetch] Error body: \(body)")
-                    }
-
-                    var responseHeaders: [String: String] = [:]
-                    if let allHeaders = httpResponse?.allHeaderFields as? [String: String] {
-                        responseHeaders = allHeaders
-                    }
-                    let headersJSONStr = (try? JSONSerialization.data(
-                        withJSONObject: responseHeaders
-                    )).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
-
-                    let bodyText = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
-
-                    let escapedBody = NativePolyfills.escapeForJS(bodyText)
-                    let escapedHeaders = NativePolyfills.escapeForJS(headersJSONStr)
-
-                    ctx.evaluateScript(
-                        "__fetchComplete(\(callbackId), \(statusCode), \"\(escapedHeaders)\", \"\(escapedBody)\", \"\")"
-                    )
-                    os_signpost(
-                        .end, log: log, name: "Fetch Bridge Crossing",
-                        signpostID: fetchSignpostID, "status: %d", statusCode
+                    deliverFetchResult(
+                        weakContext: weakContext,
+                        callbackId: callbackId,
+                        urlString: urlString,
+                        data: data,
+                        response: response,
+                        error: error,
+                        fetchSignpostID: fetchSignpostID,
+                        diagLog: diagLog
                     )
                 }
             }.resume()
         }
         context.setObject(nativeFetch, forKeyedSubscript: "__nativeFetch" as NSString)
+    }
 
-        return timerStore
+    private static func deliverFetchResult(
+        weakContext: JSContext?,
+        callbackId: Int,
+        urlString: String,
+        data: Data?,
+        response: URLResponse?,
+        error: Error?,
+        fetchSignpostID: OSSignpostID,
+        diagLog: DiagnosticLogger
+    ) {
+        let log = signpostLog
+        guard let ctx = weakContext else {
+            diagLog.warning("[fetch] Context deallocated before response for \(urlString)")
+            os_signpost(
+                .end, log: log, name: "Fetch Bridge Crossing",
+                signpostID: fetchSignpostID, "context deallocated"
+            )
+            return
+        }
+
+        if let error = error {
+            diagLog.error("[fetch] Network error for \(urlString): \(error.localizedDescription)")
+            let escaped = escapeForJS(
+                error.localizedDescription
+            )
+            ctx.evaluateScript(
+                "__fetchComplete(\(callbackId), 0, \"{}\", \"\", \"\(escaped)\")"
+            )
+            os_signpost(
+                .end, log: log, name: "Fetch Bridge Crossing",
+                signpostID: fetchSignpostID, "error: %{public}s", escaped
+            )
+            return
+        }
+
+        let httpResponse = response as? HTTPURLResponse
+        let statusCode = httpResponse?.statusCode ?? 0
+        let bodySize = data?.count ?? 0
+        diagLog.debug("[fetch] Response \(statusCode) from \(urlString) (\(bodySize) bytes)")
+        if statusCode >= 400, let data = data, let body = String(data: data, encoding: .utf8) {
+            diagLog.error("[fetch] Error body: \(body)")
+        }
+
+        var responseHeaders: [String: String] = [:]
+        if let allHeaders = httpResponse?.allHeaderFields as? [String: String] {
+            responseHeaders = allHeaders
+        }
+        let headersJSONStr = (try? JSONSerialization.data(
+            withJSONObject: responseHeaders
+        )).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+
+        let bodyText = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
+
+        let escapedBody = escapeForJS(bodyText)
+        let escapedHeaders = escapeForJS(headersJSONStr)
+
+        ctx.evaluateScript(
+            "__fetchComplete(\(callbackId), \(statusCode), \"\(escapedHeaders)\", \"\(escapedBody)\", \"\")"
+        )
+        os_signpost(
+            .end, log: log, name: "Fetch Bridge Crossing",
+            signpostID: fetchSignpostID, "status: %d", statusCode
+        )
     }
 }
