@@ -6,6 +6,8 @@ import {
   signals,
 } from '@contentful/optimization-core'
 
+type ResolveOptimizedEntryParams = Parameters<CoreStateful['resolveOptimizedEntry']>
+
 interface BridgeConfig {
   clientId: string
   environment: string
@@ -306,7 +308,10 @@ const bridge: Bridge = {
     personalizations?: Array<Record<string, unknown>>,
   ): string {
     if (!instance) return JSON.stringify({ entry: baseline })
-    const result = instance.resolveOptimizedEntry(baseline, personalizations)
+    const result = instance.resolveOptimizedEntry(
+      baseline as unknown as ResolveOptimizedEntryParams[0],
+      personalizations as unknown as ResolveOptimizedEntryParams[1],
+    )
     return JSON.stringify(result)
   },
 
