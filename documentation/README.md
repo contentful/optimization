@@ -5,6 +5,7 @@ children:
   - ./integrating-the-node-sdk-in-a-node-app.md
   - ./integrating-the-web-sdk-in-a-web-app.md
   - ./integrating-the-react-web-sdk-in-a-react-app.md
+  - ./integrating-the-react-native-sdk-in-a-react-native-app.md
 ---
 
 # Guides
@@ -25,3 +26,7 @@ are intended to be used.
 - [Integrating the Optimization React Web SDK in a React App](./integrating-the-react-web-sdk-in-a-react-app.md):
   step-by-step client-side integration guidance covering providers, consent, entry personalization,
   interaction tracking, live updates, router adapters, and preview panel setup
+- [Integrating the Optimization React Native SDK in a React Native App](./integrating-the-react-native-sdk-in-a-react-native-app.md):
+  step-by-step React Native / Expo integration guidance covering OptimizationRoot setup, consent,
+  OptimizedEntry personalization and interaction tracking, live updates, screen tracking, and the
+  in-app preview panel — referenced against the Colorful-Team-Org demo
