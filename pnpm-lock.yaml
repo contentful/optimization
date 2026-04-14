@@ -49,8 +49,8 @@ catalogs:
       specifier: ^3.1.10
       version: 3.1.10
     es-toolkit:
-      specifier: ^1.44.0
-      version: 1.44.0
+      specifier: ^1.45.1
+      version: 1.45.1
     express:
       specifier: ^5.2.1
       version: 5.2.1
@@ -218,7 +218,7 @@ importers:
         version: 17.3.1
       es-toolkit:
         specifier: 'catalog:'
-        version: 1.44.0
+        version: 1.45.1
       fs-extra:
         specifier: ^11.3.3
         version: 11.3.3
@@ -242,7 +242,7 @@ importers:
         version: link:../../universal/core-sdk
       es-toolkit:
         specifier: 'catalog:'
-        version: 1.44.0
+        version: 1.45.1
     devDependencies:
       '@contentful/rich-text-html-renderer':
         specifier: 'catalog:'
@@ -318,7 +318,7 @@ importers:
         version: 1.2.2
       es-toolkit:
         specifier: 'catalog:'
-        version: 1.44.0
+        version: 1.45.1
       react:
         specifier: 19.2.3
         version: 19.2.3
@@ -457,7 +457,7 @@ importers:
         version: link:../api-schemas
       es-toolkit:
         specifier: 'catalog:'
-        version: 1.44.0
+        version: 1.45.1
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -549,7 +549,7 @@ importers:
         version: 11.10.5
       es-toolkit:
         specifier: 'catalog:'
-        version: 1.44.0
+        version: 1.45.1
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -668,7 +668,7 @@ importers:
         version: 11.10.5
       es-toolkit:
         specifier: 'catalog:'
-        version: 1.44.0
+        version: 1.45.1
       lit:
         specifier: ^3.3.2
         version: 3.3.2
@@ -4040,6 +4040,9 @@ packages:
 
   es-toolkit@1.44.0:
     resolution: {integrity: sha512-6penXeZalaV88MM3cGkFZZfOoLGWshWWfdy0tWw/RlVVyhvMaWSBTOvXNeiW3e5FwdS5ePW0LGEu17zT139ktg==}
+
+  es-toolkit@1.45.1:
+    resolution: {integrity: sha512-/jhoOj/Fx+A+IIyDNOvO3TItGmlMKhtX8ISAHKE90c4b/k1tqaqEZ+uUqfpU8DMnW5cgNJv606zS55jGvza0Xw==}
 
   esbuild@0.27.3:
     resolution: {integrity: sha512-8VwMnyGCONIs6cWue2IdpHxHnAjzxnw2Zr7MkVxB2vjmQ2ivqGFb4LEG3SMnv0Gb2F/G/2yA8zUaiL1gywDCCg==}
@@ -11576,6 +11579,8 @@ snapshots:
       is-symbol: 1.1.1
 
   es-toolkit@1.44.0: {}
+
+  es-toolkit@1.45.1: {}
 
   esbuild@0.27.3:
     optionalDependencies:
