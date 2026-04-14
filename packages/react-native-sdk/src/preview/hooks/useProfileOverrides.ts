@@ -32,7 +32,7 @@ function applyOptimizationOverrides(
   const overrideEntries = Object.values(overrides)
   if (overrideEntries.length === 0) return apiSelectedOptimizations
 
-  return apiSelectedOptimizations.map((selectedOptimization) => {
+  const overridden = apiSelectedOptimizations.map((selectedOptimization) => {
     const { [selectedOptimization.experienceId]: override } = overrides
     if (override) {
       return {
@@ -42,6 +42,18 @@ function applyOptimizationOverrides(
     }
     return selectedOptimization
   })
+
+  for (const override of overrideEntries) {
+    if (!overridden.some((selected) => selected.experienceId === override.experienceId)) {
+      overridden.push({
+        experienceId: override.experienceId,
+        variantIndex: override.variantIndex,
+        variants: {},
+      })
+    }
+  }
+
+  return overridden
 }
 
 /**
