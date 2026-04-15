@@ -5,6 +5,9 @@ children:
   - ./integrating-the-node-sdk-in-a-node-app.md
   - ./integrating-the-web-sdk-in-a-web-app.md
   - ./integrating-the-react-web-sdk-in-a-react-app.md
+  - ./integrating-the-ios-sdk-fundamentals.md
+  - ./integrating-the-ios-sdk-in-a-swiftui-app.md
+  - ./integrating-the-ios-sdk-in-a-uikit-app.md
   - ./integrating-the-react-native-sdk-in-a-react-native-app.md
 ---
 
@@ -30,3 +33,12 @@ are intended to be used.
   step-by-step React Native / Expo integration guidance covering OptimizationRoot setup, consent,
   OptimizedEntry personalization and interaction tracking, live updates, screen tracking, and the
   in-app preview panel — referenced against the Colorful-Team-Org demo
+- [iOS SDK Fundamentals](./integrating-the-ios-sdk-fundamentals.md): shared reference for the iOS
+  SDK covering installation, configuration, consent, reactive state, the tracking model, live
+  updates, and the preview panel — read this before the UI-framework-specific guides
+- [Integrating the Optimization iOS SDK in a SwiftUI App](./integrating-the-ios-sdk-in-a-swiftui-app.md):
+  step-by-step SwiftUI integration using `OptimizationRoot`, `OptimizedEntry`,
+  `OptimizationScrollView`, `.trackScreen(name:)`, and `PreviewPanelOverlay`
+- [Integrating the Optimization iOS SDK in a UIKit App](./integrating-the-ios-sdk-in-a-uikit-app.md):
+  step-by-step UIKit integration using `OptimizationClient` directly in `SceneDelegate`, manual
+  `personalizeEntry` / `trackView` / `trackClick` calls, and `PreviewPanelViewController`
