@@ -26,8 +26,7 @@ See [`packages/ios/CODE_MAP.md`](../packages/ios/CODE_MAP.md) for the full archi
 ## Reference App
 
 A working demo of both integration styles lives at
-[Colorful-Team-Org/OptimizationiOSSDKDemo](https://github.com/Colorful-Team-Org/OptimizationiOSSDKDemo)
-(local checkout at [`../../optimization-ios-demo`](../../optimization-ios-demo)):
+[Colorful-Team-Org/OptimizationiOSSDKDemo](https://github.com/Colorful-Team-Org/OptimizationiOSSDKDemo):
 
 - **`SwiftUIDemo/`** — idiomatic SwiftUI integration using `OptimizationRoot`, `OptimizedEntry`, and
   the `.trackScreen(name:)` modifier.
