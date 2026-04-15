@@ -26,9 +26,7 @@ The SwiftUI integration uses the SDK's SwiftUI-native API surface:
 ## Reference App
 
 See the SwiftUI demo at
-[Colorful-Team-Org/OptimizationiOSSDKDemo — SwiftUIDemo](https://github.com/Colorful-Team-Org/OptimizationiOSSDKDemo)
-(local checkout at
-[`../../optimization-ios-demo/SwiftUIDemo`](../../optimization-ios-demo/SwiftUIDemo)). It exercises
+[Colorful-Team-Org/OptimizationiOSSDKDemo — SwiftUIDemo](https://github.com/Colorful-Team-Org/OptimizationiOSSDKDemo). It exercises
 every pattern in this guide end-to-end against real Contentful content and is worth reading
 alongside this document.
 
