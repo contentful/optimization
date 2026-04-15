@@ -162,24 +162,19 @@ export function useProfileOverrides(): {
     }
   }, [contentfulOptimization])
 
-  // Helper to update signals directly for immediate UI feedback
-  const updateSelectedOptimizationsSignal = useCallback(
-    (newOverrides: Record<string, OptimizationOverride>) => {
+  // Helper to recompute the signal from the clean API baseline + current overrides.
+  // Mirrors the web preview's `syncOverrides` pattern: always derive from the
+  // un-overridden API state rather than layering onto the (possibly stale) signal.
+  const syncOverridesToSignal = useCallback(
+    (currentOverrides: Record<string, OptimizationOverride>) => {
       const { current: signals } = signalsRef
       if (!signals) return
 
-      const {
-        selectedOptimizations: { value: currentSelectedOptimizations },
-      } = signals
-      if (!currentSelectedOptimizations) return
-
-      const updatedSelectedOptimizations = applyOptimizationOverrides(
-        currentSelectedOptimizations,
-        newOverrides,
+      signals.selectedOptimizations.value = applyOptimizationOverrides(
+        lastActualDataRef.current?.selectedOptimizations ?? [],
+        currentOverrides,
       )
-
-      signals.selectedOptimizations.value = updatedSelectedOptimizations
-      logger.debug('Updated selected optimizations signal directly')
+      logger.debug('Synced overrides to signal')
     },
     [],
   )
@@ -202,7 +197,7 @@ export function useProfileOverrides(): {
         })
 
         if (experiences.length > 0) {
-          updateSelectedOptimizationsSignal(newSelectedOptimizations)
+          syncOverridesToSignal(newSelectedOptimizations)
         }
 
         return {
@@ -215,7 +210,7 @@ export function useProfileOverrides(): {
         }
       })
     },
-    [updateSelectedOptimizationsSignal],
+    [syncOverridesToSignal],
   )
 
   const activateAudience = useCallback(
@@ -246,7 +241,7 @@ export function useProfileOverrides(): {
         ) as Record<string, OptimizationOverride>
 
         if (storedExperienceIds.length > 0) {
-          updateSelectedOptimizationsSignal(newSelectedOptimizations)
+          syncOverridesToSignal(newSelectedOptimizations)
         }
 
         return {
@@ -258,7 +253,7 @@ export function useProfileOverrides(): {
         }
       })
     },
-    [updateSelectedOptimizationsSignal],
+    [syncOverridesToSignal],
   )
 
   const setVariantOverride = useCallback(
@@ -279,7 +274,7 @@ export function useProfileOverrides(): {
         }
 
         // Update signals directly for immediate feedback
-        updateSelectedOptimizationsSignal(newSelectedOptimizations)
+        syncOverridesToSignal(newSelectedOptimizations)
 
         return {
           ...prev,
@@ -287,7 +282,7 @@ export function useProfileOverrides(): {
         }
       })
     },
-    [updateSelectedOptimizationsSignal],
+    [syncOverridesToSignal],
   )
 
   const resetOptimizationOverride = useCallback(
@@ -300,7 +295,7 @@ export function useProfileOverrides(): {
         ) as Record<string, OptimizationOverride>
 
         // Update signals directly for immediate feedback
-        updateSelectedOptimizationsSignal(newSelectedOptimizations)
+        syncOverridesToSignal(newSelectedOptimizations)
 
         return {
           ...prev,
@@ -308,7 +303,7 @@ export function useProfileOverrides(): {
         }
       })
     },
-    [updateSelectedOptimizationsSignal],
+    [syncOverridesToSignal],
   )
 
   const resetSdkState = useCallback(() => {
