@@ -9,25 +9,28 @@
 })(globalThis, () =>
   (() => {
     'use strict'
-    let e, t, i, n, r, s, o
-    var a,
-      l = {}
-    ;((l.d = (e, t) => {
+    let e, t, i, n, r, s, o, a, l, u, c
+    var d,
+      p,
+      f,
+      h,
+      v = {}
+    ;((v.d = (e, t) => {
       for (var i in t)
-        l.o(t, i) && !l.o(e, i) && Object.defineProperty(e, i, { enumerable: !0, get: t[i] })
+        v.o(t, i) && !v.o(e, i) && Object.defineProperty(e, i, { enumerable: !0, get: t[i] })
     }),
-      (l.o = (e, t) => Object.prototype.hasOwnProperty.call(e, t)))
-    var u = {}
-    l.d(u, { default: () => rg })
-    var c = Symbol.for('preact-signals')
-    function d() {
-      if (g > 1) g--
+      (v.o = (e, t) => Object.prototype.hasOwnProperty.call(e, t)))
+    var y = {}
+    v.d(y, { default: () => ss })
+    var g = Symbol.for('preact-signals')
+    function m() {
+      if (S > 1) S--
       else {
-        for (var e, t = !1; void 0 !== y; ) {
-          var i = y
-          for (y = void 0, m++; void 0 !== i; ) {
+        for (var e, t = !1; void 0 !== O; ) {
+          var i = O
+          for (O = void 0, E++; void 0 !== i; ) {
             var n = i.o
-            if (((i.o = void 0), (i.f &= -3), !(8 & i.f) && O(i)))
+            if (((i.o = void 0), (i.f &= -3), !(8 & i.f) && j(i)))
               try {
                 i.c()
               } catch (i) {
@@ -36,43 +39,43 @@
             i = n
           }
         }
-        if (((m = 0), g--, t)) throw e
+        if (((E = 0), S--, t)) throw e
       }
     }
-    function f(e) {
-      if (g > 0) return e()
-      g++
+    function b(e) {
+      if (S > 0) return e()
+      S++
       try {
         return e()
       } finally {
-        d()
+        m()
       }
     }
-    var h = void 0
-    function p(e) {
-      var t = h
-      h = void 0
+    var w = void 0
+    function _(e) {
+      var t = w
+      w = void 0
       try {
         return e()
       } finally {
-        h = t
+        w = t
       }
     }
-    var v,
-      y = void 0,
-      g = 0,
-      m = 0,
-      b = 0
-    function w(e) {
-      if (void 0 !== h) {
+    var z,
+      O = void 0,
+      S = 0,
+      E = 0,
+      k = 0
+    function x(e) {
+      if (void 0 !== w) {
         var t = e.n
-        if (void 0 === t || t.t !== h)
+        if (void 0 === t || t.t !== w)
           return (
-            (t = { i: 0, S: e, p: h.s, n: void 0, t: h, e: void 0, x: void 0, r: t }),
-            void 0 !== h.s && (h.s.n = t),
-            (h.s = t),
+            (t = { i: 0, S: e, p: w.s, n: void 0, t: w, e: void 0, x: void 0, r: t }),
+            void 0 !== w.s && (w.s.n = t),
+            (w.s = t),
             (e.n = t),
-            32 & h.f && e.S(t),
+            32 & w.f && e.S(t),
             t
           )
         if (-1 === t.i)
@@ -81,15 +84,15 @@
             void 0 !== t.n &&
               ((t.n.p = t.p),
               void 0 !== t.p && (t.p.n = t.n),
-              (t.p = h.s),
+              (t.p = w.s),
               (t.n = void 0),
-              (h.s.n = t),
-              (h.s = t)),
+              (w.s.n = t),
+              (w.s = t)),
             t
           )
       }
     }
-    function _(e, t) {
+    function P(e, t) {
       ;((this.v = e),
         (this.i = 0),
         (this.n = void 0),
@@ -98,15 +101,15 @@
         (this.Z = null == t ? void 0 : t.unwatched),
         (this.name = null == t ? void 0 : t.name))
     }
-    function z(e, t) {
-      return new _(e, t)
+    function $(e, t) {
+      return new P(e, t)
     }
-    function O(e) {
+    function j(e) {
       for (var t = e.s; void 0 !== t; t = t.n)
         if (t.S.i !== t.i || !t.S.h() || t.S.i !== t.i) return !0
       return !1
     }
-    function E(e) {
+    function I(e) {
       for (var t = e.s; void 0 !== t; t = t.n) {
         var i = t.S.n
         if ((void 0 !== i && (t.r = i), (t.S.n = t), (t.i = -1), void 0 === t.n)) {
@@ -115,7 +118,7 @@
         }
       }
     }
-    function k(e) {
+    function T(e) {
       for (var t = e.s, i = void 0; void 0 !== t; ) {
         var n = t.p
         ;(-1 === t.i
@@ -127,53 +130,53 @@
       }
       e.s = i
     }
-    function S(e, t) {
-      ;(_.call(this, void 0),
+    function A(e, t) {
+      ;(P.call(this, void 0),
         (this.x = e),
         (this.s = void 0),
-        (this.g = b - 1),
+        (this.g = k - 1),
         (this.f = 4),
         (this.W = null == t ? void 0 : t.watched),
         (this.Z = null == t ? void 0 : t.unwatched),
         (this.name = null == t ? void 0 : t.name))
     }
-    function x(e, t) {
-      return new S(e, t)
+    function F(e, t) {
+      return new A(e, t)
     }
-    function $(e) {
+    function R(e) {
       var t = e.u
       if (((e.u = void 0), 'function' == typeof t)) {
-        g++
-        var i = h
-        h = void 0
+        S++
+        var i = w
+        w = void 0
         try {
           t()
         } catch (t) {
-          throw ((e.f &= -2), (e.f |= 8), I(e), t)
+          throw ((e.f &= -2), (e.f |= 8), C(e), t)
         } finally {
-          ;((h = i), d())
+          ;((w = i), m())
         }
       }
     }
-    function I(e) {
+    function C(e) {
       for (var t = e.s; void 0 !== t; t = t.n) t.S.U(t)
-      ;((e.x = void 0), (e.s = void 0), $(e))
+      ;((e.x = void 0), (e.s = void 0), R(e))
     }
-    function P(e) {
-      if (h !== this) throw Error('Out-of-order effect')
-      ;(k(this), (h = e), (this.f &= -2), 8 & this.f && I(this), d())
+    function M(e) {
+      if (w !== this) throw Error('Out-of-order effect')
+      ;(T(this), (w = e), (this.f &= -2), 8 & this.f && C(this), m())
     }
-    function j(e, t) {
+    function B(e, t) {
       ;((this.x = e),
         (this.u = void 0),
         (this.s = void 0),
         (this.o = void 0),
         (this.f = 32),
         (this.name = null == t ? void 0 : t.name),
-        v && v.push(this))
+        z && z.push(this))
     }
-    function T(e, t) {
-      var i = new j(e, t)
+    function q(e, t) {
+      var i = new B(e, t)
       try {
         i.c()
       } catch (e) {
@@ -182,23 +185,23 @@
       var n = i.d.bind(i)
       return ((n[Symbol.dispose] = n), n)
     }
-    function F(e) {
+    function U(e) {
       return Object.getOwnPropertySymbols(e).filter((t) =>
         Object.prototype.propertyIsEnumerable.call(e, t),
       )
     }
-    function A(e) {
+    function Z(e) {
       return null == e
         ? void 0 === e
           ? '[object Undefined]'
           : '[object Null]'
         : Object.prototype.toString.call(e)
     }
-    ;((_.prototype.brand = c),
-      (_.prototype.h = function () {
+    ;((P.prototype.brand = g),
+      (P.prototype.h = function () {
         return !0
       }),
-      (_.prototype.S = function (e) {
+      (P.prototype.S = function (e) {
         var t = this,
           i = this.t
         i !== e &&
@@ -207,12 +210,12 @@
           (this.t = e),
           void 0 !== i
             ? (i.e = e)
-            : p(function () {
+            : _(function () {
                 var e
                 null == (e = t.W) || e.call(t)
               }))
       }),
-      (_.prototype.U = function (e) {
+      (P.prototype.U = function (e) {
         var t = this
         if (void 0 !== this.t) {
           var i = e.e,
@@ -222,107 +225,107 @@
             e === this.t &&
               ((this.t = n),
               void 0 === n &&
-                p(function () {
+                _(function () {
                   var e
                   null == (e = t.Z) || e.call(t)
                 })))
         }
       }),
-      (_.prototype.subscribe = function (e) {
+      (P.prototype.subscribe = function (e) {
         var t = this
-        return T(
+        return q(
           function () {
             var i = t.value,
-              n = h
-            h = void 0
+              n = w
+            w = void 0
             try {
               e(i)
             } finally {
-              h = n
+              w = n
             }
           },
           { name: 'sub' },
         )
       }),
-      (_.prototype.valueOf = function () {
+      (P.prototype.valueOf = function () {
         return this.value
       }),
-      (_.prototype.toString = function () {
+      (P.prototype.toString = function () {
         return this.value + ''
       }),
-      (_.prototype.toJSON = function () {
+      (P.prototype.toJSON = function () {
         return this.value
       }),
-      (_.prototype.peek = function () {
-        var e = h
-        h = void 0
+      (P.prototype.peek = function () {
+        var e = w
+        w = void 0
         try {
           return this.value
         } finally {
-          h = e
+          w = e
         }
       }),
-      Object.defineProperty(_.prototype, 'value', {
+      Object.defineProperty(P.prototype, 'value', {
         get: function () {
-          var e = w(this)
+          var e = x(this)
           return (void 0 !== e && (e.i = this.i), this.v)
         },
         set: function (e) {
           if (e !== this.v) {
-            if (m > 100) throw Error('Cycle detected')
-            ;((this.v = e), this.i++, b++, g++)
+            if (E > 100) throw Error('Cycle detected')
+            ;((this.v = e), this.i++, k++, S++)
             try {
               for (var t = this.t; void 0 !== t; t = t.x) t.t.N()
             } finally {
-              d()
+              m()
             }
           }
         },
       }),
-      (S.prototype = new _()),
-      (S.prototype.h = function () {
+      (A.prototype = new P()),
+      (A.prototype.h = function () {
         if (((this.f &= -3), 1 & this.f)) return !1
-        if (32 == (36 & this.f) || ((this.f &= -5), this.g === b)) return !0
-        if (((this.g = b), (this.f |= 1), this.i > 0 && !O(this))) return ((this.f &= -2), !0)
-        var e = h
+        if (32 == (36 & this.f) || ((this.f &= -5), this.g === k)) return !0
+        if (((this.g = k), (this.f |= 1), this.i > 0 && !j(this))) return ((this.f &= -2), !0)
+        var e = w
         try {
-          ;(E(this), (h = this))
+          ;(I(this), (w = this))
           var t = this.x()
           ;(16 & this.f || this.v !== t || 0 === this.i) &&
             ((this.v = t), (this.f &= -17), this.i++)
         } catch (e) {
           ;((this.v = e), (this.f |= 16), this.i++)
         }
-        return ((h = e), k(this), (this.f &= -2), !0)
+        return ((w = e), T(this), (this.f &= -2), !0)
       }),
-      (S.prototype.S = function (e) {
+      (A.prototype.S = function (e) {
         if (void 0 === this.t) {
           this.f |= 36
           for (var t = this.s; void 0 !== t; t = t.n) t.S.S(t)
         }
-        _.prototype.S.call(this, e)
+        P.prototype.S.call(this, e)
       }),
-      (S.prototype.U = function (e) {
-        if (void 0 !== this.t && (_.prototype.U.call(this, e), void 0 === this.t)) {
+      (A.prototype.U = function (e) {
+        if (void 0 !== this.t && (P.prototype.U.call(this, e), void 0 === this.t)) {
           this.f &= -33
           for (var t = this.s; void 0 !== t; t = t.n) t.S.U(t)
         }
       }),
-      (S.prototype.N = function () {
+      (A.prototype.N = function () {
         if (!(2 & this.f)) {
           this.f |= 6
           for (var e = this.t; void 0 !== e; e = e.x) e.t.N()
         }
       }),
-      Object.defineProperty(S.prototype, 'value', {
+      Object.defineProperty(A.prototype, 'value', {
         get: function () {
           if (1 & this.f) throw Error('Cycle detected')
-          var e = w(this)
+          var e = x(this)
           if ((this.h(), void 0 !== e && (e.i = this.i), 16 & this.f)) throw this.v
           return this.v
         },
       }),
-      (j.prototype.c = function () {
+      (B.prototype.c = function () {
         var e = this.S()
         try {
           if (8 & this.f || void 0 === this.x) return
@@ -332,44 +335,44 @@
           e()
         }
       }),
-      (j.prototype.S = function () {
+      (B.prototype.S = function () {
         if (1 & this.f) throw Error('Cycle detected')
-        ;((this.f |= 1), (this.f &= -9), $(this), E(this), g++)
-        var e = h
-        return ((h = this), P.bind(this, e))
+        ;((this.f |= 1), (this.f &= -9), R(this), I(this), S++)
+        var e = w
+        return ((w = this), M.bind(this, e))
       }),
-      (j.prototype.N = function () {
-        2 & this.f || ((this.f |= 2), (this.o = y), (y = this))
+      (B.prototype.N = function () {
+        2 & this.f || ((this.f |= 2), (this.o = O), (O = this))
       }),
-      (j.prototype.d = function () {
-        ;((this.f |= 8), 1 & this.f || I(this))
+      (B.prototype.d = function () {
+        ;((this.f |= 8), 1 & this.f || C(this))
       }),
-      (j.prototype.dispose = function () {
+      (B.prototype.dispose = function () {
         this.d()
       }))
-    let R = '[object RegExp]',
-      M = '[object String]',
-      C = '[object Number]',
-      B = '[object Boolean]',
-      q = '[object Arguments]',
-      U = '[object Symbol]',
-      N = '[object Date]',
-      V = '[object Map]',
-      D = '[object Set]',
-      Z = '[object Array]',
-      L = '[object ArrayBuffer]',
-      Q = '[object Object]',
-      J = '[object DataView]',
-      H = '[object Uint8Array]',
-      K = '[object Uint8ClampedArray]',
-      W = '[object Uint16Array]',
-      G = '[object Uint32Array]',
-      X = '[object Int8Array]',
-      Y = '[object Int16Array]',
-      ee = '[object Int32Array]',
-      et = '[object Float32Array]',
-      ei = '[object Float64Array]'
-    function en(e, t, i, n = new Map(), r) {
+    let N = '[object RegExp]',
+      V = '[object String]',
+      D = '[object Number]',
+      L = '[object Boolean]',
+      Q = '[object Arguments]',
+      J = '[object Symbol]',
+      H = '[object Date]',
+      K = '[object Map]',
+      W = '[object Set]',
+      G = '[object Array]',
+      X = '[object ArrayBuffer]',
+      Y = '[object Object]',
+      ee = '[object DataView]',
+      et = '[object Uint8Array]',
+      ei = '[object Uint8ClampedArray]',
+      en = '[object Uint16Array]',
+      er = '[object Uint32Array]',
+      es = '[object Int8Array]',
+      eo = '[object Int16Array]',
+      ea = '[object Int32Array]',
+      el = '[object Float32Array]',
+      eu = '[object Float64Array]'
+    function ec(e, t, i, n = new Map(), r) {
       let s = r?.(e, t, i, n)
       if (void 0 !== s) return s
       if (null == e || ('object' != typeof e && 'function' != typeof e)) return e
@@ -377,7 +380,7 @@
       if (Array.isArray(e)) {
         let t = Array(e.length)
         n.set(e, t)
-        for (let s = 0; s < e.length; s++) t[s] = en(e[s], s, i, n, r)
+        for (let s = 0; s < e.length; s++) t[s] = ec(e[s], s, i, n, r)
         return (
           Object.hasOwn(e, 'index') && (t.index = e.index),
           Object.hasOwn(e, 'input') && (t.input = e.input),
@@ -391,19 +394,19 @@
       }
       if (e instanceof Map) {
         let t = new Map()
-        for (let [s, o] of (n.set(e, t), e)) t.set(s, en(o, s, i, n, r))
+        for (let [s, o] of (n.set(e, t), e)) t.set(s, ec(o, s, i, n, r))
         return t
       }
       if (e instanceof Set) {
         let t = new Set()
-        for (let s of (n.set(e, t), e)) t.add(en(s, void 0, i, n, r))
+        for (let s of (n.set(e, t), e)) t.add(ec(s, void 0, i, n, r))
         return t
       }
       if ('u' > typeof Buffer && Buffer.isBuffer(e)) return e.subarray()
       if (ArrayBuffer.isView(e) && !(e instanceof DataView)) {
         let t = new (Object.getPrototypeOf(e).constructor)(e.length)
         n.set(e, t)
-        for (let s = 0; s < e.length; s++) t[s] = en(e[s], s, i, n, r)
+        for (let s = 0; s < e.length; s++) t[s] = ec(e[s], s, i, n, r)
         return t
       }
       if (
@@ -413,66 +416,67 @@
         return e.slice(0)
       if (e instanceof DataView) {
         let t = new DataView(e.buffer.slice(0), e.byteOffset, e.byteLength)
-        return (n.set(e, t), er(t, e, i, n, r), t)
+        return (n.set(e, t), ed(t, e, i, n, r), t)
       }
       if ('u' > typeof File && e instanceof File) {
         let t = new File([e], e.name, { type: e.type })
-        return (n.set(e, t), er(t, e, i, n, r), t)
+        return (n.set(e, t), ed(t, e, i, n, r), t)
       }
       if ('u' > typeof Blob && e instanceof Blob) {
         let t = new Blob([e], { type: e.type })
-        return (n.set(e, t), er(t, e, i, n, r), t)
+        return (n.set(e, t), ed(t, e, i, n, r), t)
       }
       if (e instanceof Error) {
-        let t = new e.constructor()
+        let t = structuredClone(e)
         return (
           n.set(e, t),
           (t.message = e.message),
           (t.name = e.name),
           (t.stack = e.stack),
           (t.cause = e.cause),
-          er(t, e, i, n, r),
+          (t.constructor = e.constructor),
+          ed(t, e, i, n, r),
           t
         )
       }
       if (e instanceof Boolean) {
         let t = new Boolean(e.valueOf())
-        return (n.set(e, t), er(t, e, i, n, r), t)
+        return (n.set(e, t), ed(t, e, i, n, r), t)
       }
       if (e instanceof Number) {
         let t = new Number(e.valueOf())
-        return (n.set(e, t), er(t, e, i, n, r), t)
+        return (n.set(e, t), ed(t, e, i, n, r), t)
       }
       if (e instanceof String) {
         let t = new String(e.valueOf())
-        return (n.set(e, t), er(t, e, i, n, r), t)
+        return (n.set(e, t), ed(t, e, i, n, r), t)
       }
       if (
         'object' == typeof e &&
         (function (e) {
-          switch (A(e)) {
-            case q:
-            case Z:
+          switch (Z(e)) {
+            case Q:
+            case G:
+            case X:
+            case ee:
             case L:
-            case J:
-            case B:
+            case H:
+            case el:
+            case eu:
+            case es:
+            case eo:
+            case ea:
+            case K:
+            case D:
+            case Y:
             case N:
+            case W:
+            case V:
+            case J:
             case et:
             case ei:
-            case X:
-            case Y:
-            case ee:
-            case V:
-            case C:
-            case Q:
-            case R:
-            case D:
-            case M:
-            case U:
-            case H:
-            case K:
-            case W:
-            case G:
+            case en:
+            case er:
               return !0
             default:
               return !1
@@ -480,29 +484,29 @@
         })(e)
       ) {
         let t = Object.create(Object.getPrototypeOf(e))
-        return (n.set(e, t), er(t, e, i, n, r), t)
+        return (n.set(e, t), ed(t, e, i, n, r), t)
       }
       return e
     }
-    function er(e, t, i = e, n, r) {
-      let s = [...Object.keys(t), ...F(t)]
+    function ed(e, t, i = e, n, r) {
+      let s = [...Object.keys(t), ...U(t)]
       for (let o = 0; o < s.length; o++) {
         let a = s[o],
           l = Object.getOwnPropertyDescriptor(e, a)
-        ;(null == l || l.writable) && (e[a] = en(t[a], a, i, n, r))
+        ;(null == l || l.writable) && (e[a] = ec(t[a], a, i, n, r))
       }
     }
-    function es(e) {
-      return en(e, void 0, e, new Map(), void 0)
+    function ep(e) {
+      return ec(e, void 0, e, new Map(), void 0)
     }
-    function eo(e) {
+    function ef(e) {
       return {
         get current() {
-          return es(e.value)
+          return ep(e.value)
         },
         subscribe: (t) => ({
-          unsubscribe: T(() => {
-            t(es(e.value))
+          unsubscribe: q(() => {
+            t(ep(e.value))
           }),
         }),
         subscribeOnce(t) {
@@ -510,14 +514,14 @@
             n = !1,
             r = () => void 0
           return (
-            (r = T(() => {
+            (r = q(() => {
               if (i) return
               let { value: s } = e
               if (null == s) return
               i = !0
               let o = null
               try {
-                t(es(s))
+                t(ep(s))
               } catch (e) {
                 o = e instanceof Error ? e : Error(`Subscriber threw non-Error value: ${String(e)}`)
               }
@@ -533,30 +537,30 @@
         },
       }
     }
-    let ea = z(),
-      el = z(),
-      eu = z(),
-      ec = z(),
-      ed = z(!0),
-      ef = z(!1),
-      eh = z(!1),
-      ep = z(),
-      ev = x(() => void 0 !== ep.value),
-      ey = z(),
-      eg = {
-        blockedEvent: el,
-        changes: ea,
-        consent: eu,
-        event: ec,
-        online: ed,
-        previewPanelAttached: ef,
-        previewPanelOpen: eh,
-        selectedOptimizations: ep,
-        canOptimize: ev,
-        profile: ey,
+    let eh = $(),
+      ev = $(),
+      ey = $(),
+      eg = $(),
+      em = $(!0),
+      eb = $(!1),
+      ew = $(!1),
+      e_ = $(),
+      ez = F(() => void 0 !== e_.value),
+      eO = $(),
+      eS = {
+        blockedEvent: ev,
+        changes: eh,
+        consent: ey,
+        event: eg,
+        online: em,
+        previewPanelAttached: eb,
+        previewPanelOpen: ew,
+        selectedOptimizations: e_,
+        canOptimize: ez,
+        profile: eO,
       },
-      em = { batch: f, computed: x, effect: T, untracked: p }
-    function eb(e, t, i) {
+      eE = { batch: b, computed: F, effect: q, untracked: _ }
+    function ek(e, t, i) {
       function n(i, n) {
         if (
           (i._zod ||
@@ -594,22 +598,22 @@
       )
     }
     ;(Object.freeze({ status: 'aborted' }), Symbol('zod_brand'))
-    class ew extends Error {
+    class ex extends Error {
       constructor() {
         super('Encountered Promise during synchronous parse. Use .parseAsync() instead.')
       }
     }
-    let e_ = {}
-    function ez(e) {
-      return (e && Object.assign(e_, e), e_)
+    let eP = {}
+    function e$(e) {
+      return (e && Object.assign(eP, e), eP)
     }
-    function eO(e, t = '|') {
-      return e.map((e) => eB(e)).join(t)
+    function ej(e, t = '|') {
+      return e.map((e) => eV(e)).join(t)
     }
-    function eE(e, t) {
+    function eI(e, t) {
       return 'bigint' == typeof t ? t.toString() : t
     }
-    function ek(e) {
+    function eT(e) {
       return {
         get value() {
           {
@@ -619,17 +623,17 @@
         },
       }
     }
-    function eS(e) {
+    function eA(e) {
       let t = +!!e.startsWith('^'),
         i = e.endsWith('$') ? e.length - 1 : e.length
       return e.slice(t, i)
     }
-    let ex = Symbol('evaluating')
-    function e$(e, t, i) {
+    let eF = Symbol('evaluating')
+    function eR(e, t, i) {
       let n
       Object.defineProperty(e, t, {
         get() {
-          if (n !== ex) return (void 0 === n && ((n = ex), (n = i())), n)
+          if (n !== eF) return (void 0 === n && ((n = eF), (n = i())), n)
         },
         set(i) {
           Object.defineProperty(e, t, { value: i })
@@ -637,26 +641,18 @@
         configurable: !0,
       })
     }
-    function eI(e, t, i) {
-      Object.defineProperty(e, t, { value: i, writable: !0, enumerable: !0, configurable: !0 })
-    }
-    function eP(...e) {
-      let t = {}
-      for (let i of e) Object.assign(t, Object.getOwnPropertyDescriptors(i))
-      return Object.defineProperties({}, t)
-    }
-    let ej = 'captureStackTrace' in Error ? Error.captureStackTrace : (...e) => {}
-    function eT(e) {
+    let eC = 'captureStackTrace' in Error ? Error.captureStackTrace : (...e) => {}
+    function eM(e) {
       return 'object' == typeof e && null !== e && !Array.isArray(e)
     }
-    function eF(e) {
-      if (!1 === eT(e)) return !1
+    function eB(e) {
+      if (!1 === eM(e)) return !1
       let t = e.constructor
       if (void 0 === t || 'function' != typeof t) return !0
       let i = t.prototype
-      return !1 !== eT(i) && !1 !== Object.prototype.hasOwnProperty.call(i, 'isPrototypeOf')
+      return !1 !== eM(i) && !1 !== Object.prototype.hasOwnProperty.call(i, 'isPrototypeOf')
     }
-    ek(() => {
+    eT(() => {
       if ('u' > typeof navigator && navigator?.userAgent?.includes('Cloudflare')) return !1
       try {
         return (Function(''), !0)
@@ -664,15 +660,15 @@
         return !1
       }
     })
-    let eA = new Set(['string', 'number', 'symbol'])
-    function eR(e) {
+    let eq = new Set(['string', 'number', 'symbol'])
+    function eU(e) {
       return e.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     }
-    function eM(e, t, i) {
+    function eZ(e, t, i) {
       let n = new e._zod.constr(t ?? e._zod.def)
       return ((!t || i?.parent) && (n._zod.parent = e), n)
     }
-    function eC(e) {
+    function eN(e) {
       if (!e) return {}
       if ('string' == typeof e) return { error: () => e }
       if (e?.message !== void 0) {
@@ -681,29 +677,29 @@
       }
       return (delete e.message, 'string' == typeof e.error) ? { ...e, error: () => e.error } : e
     }
-    function eB(e) {
+    function eV(e) {
       return 'bigint' == typeof e ? e.toString() + 'n' : 'string' == typeof e ? `"${e}"` : `${e}`
     }
-    function eq(e, t = 0) {
+    function eD(e, t = 0) {
       if (!0 === e.aborted) return !0
       for (let i = t; i < e.issues.length; i++) if (e.issues[i]?.continue !== !0) return !0
       return !1
     }
-    function eU(e, t) {
+    function eL(e, t) {
       return t.map((t) => (t.path ?? (t.path = []), t.path.unshift(e), t))
     }
-    function eN(e) {
+    function eQ(e) {
       return 'string' == typeof e ? e : e?.message
     }
-    function eV(e, t, i) {
+    function eJ(e, t, i) {
       let n = { ...e, path: e.path ?? [] }
       return (
         e.message ||
           (n.message =
-            eN(e.inst?._zod.def?.error?.(e)) ??
-            eN(t?.error?.(e)) ??
-            eN(i.customError?.(e)) ??
-            eN(i.localeError?.(e)) ??
+            eQ(e.inst?._zod.def?.error?.(e)) ??
+            eQ(t?.error?.(e)) ??
+            eQ(i.customError?.(e)) ??
+            eQ(i.localeError?.(e)) ??
             'Invalid input'),
         delete n.inst,
         delete n.continue,
@@ -711,69 +707,69 @@
         n
       )
     }
-    function eD(e) {
+    function eH(e) {
       return Array.isArray(e) ? 'array' : 'string' == typeof e ? 'string' : 'unknown'
     }
-    let eZ = (e, t) => {
+    let eK = (e, t) => {
         ;((e.name = '$ZodError'),
           Object.defineProperty(e, '_zod', { value: e._zod, enumerable: !1 }),
           Object.defineProperty(e, 'issues', { value: t, enumerable: !1 }),
-          (e.message = JSON.stringify(t, eE, 2)),
+          (e.message = JSON.stringify(t, eI, 2)),
           Object.defineProperty(e, 'toString', { value: () => e.message, enumerable: !1 }))
       },
-      eL = eb('$ZodError', eZ),
-      eQ = eb('$ZodError', eZ, { Parent: Error }),
-      eJ =
-        ((e = eQ),
+      eW = ek('$ZodError', eK),
+      eG = ek('$ZodError', eK, { Parent: Error }),
+      eX =
+        ((e = eG),
         (t, i, n, r) => {
           let s = n ? Object.assign(n, { async: !1 }) : { async: !1 },
             o = t._zod.run({ value: i, issues: [] }, s)
-          if (o instanceof Promise) throw new ew()
+          if (o instanceof Promise) throw new ex()
           if (o.issues.length) {
-            let t = new (r?.Err ?? e)(o.issues.map((e) => eV(e, s, ez())))
-            throw (ej(t, r?.callee), t)
+            let t = new (r?.Err ?? e)(o.issues.map((e) => eJ(e, s, e$())))
+            throw (eC(t, r?.callee), t)
           }
           return o.value
         }),
-      eH =
-        ((t = eQ),
+      eY =
+        ((t = eG),
         async (e, i, n, r) => {
           let s = n ? Object.assign(n, { async: !0 }) : { async: !0 },
             o = e._zod.run({ value: i, issues: [] }, s)
           if ((o instanceof Promise && (o = await o), o.issues.length)) {
-            let e = new (r?.Err ?? t)(o.issues.map((e) => eV(e, s, ez())))
-            throw (ej(e, r?.callee), e)
+            let e = new (r?.Err ?? t)(o.issues.map((e) => eJ(e, s, e$())))
+            throw (eC(e, r?.callee), e)
           }
           return o.value
         }),
-      eK =
-        ((i = eQ),
+      e0 =
+        ((i = eG),
         (e, t, n) => {
           let r = n ? { ...n, async: !1 } : { async: !1 },
             s = e._zod.run({ value: t, issues: [] }, r)
-          if (s instanceof Promise) throw new ew()
+          if (s instanceof Promise) throw new ex()
           return s.issues.length
-            ? { success: !1, error: new (i ?? eL)(s.issues.map((e) => eV(e, r, ez()))) }
+            ? { success: !1, error: new (i ?? eW)(s.issues.map((e) => eJ(e, r, e$()))) }
             : { success: !0, data: s.value }
         }),
-      eW =
-        ((n = eQ),
+      e1 =
+        ((n = eG),
         async (e, t, i) => {
           let r = i ? Object.assign(i, { async: !0 }) : { async: !0 },
             s = e._zod.run({ value: t, issues: [] }, r)
           return (
             s instanceof Promise && (s = await s),
             s.issues.length
-              ? { success: !1, error: new n(s.issues.map((e) => eV(e, r, ez()))) }
+              ? { success: !1, error: new n(s.issues.map((e) => eJ(e, r, e$()))) }
               : { success: !0, data: s.value }
           )
         }),
-      eG =
+      e2 =
         /^P(?:(\d+W)|(?!.*W)(?=\d|T\d)(\d+Y)?(\d+M)?(\d+D)?(T(?=\d)(\d+H)?(\d+M)?(\d+([.,]\d+)?S)?)?)$/,
-      eX =
+      e6 =
         '(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))',
-      eY = RegExp(`^${eX}$`)
-    function e0(e) {
+      e3 = RegExp(`^${e6}$`)
+    function e4(e) {
       let t = '(?:[01]\\d|2[0-3]):[0-5]\\d'
       return 'number' == typeof e.precision
         ? -1 === e.precision
@@ -783,16 +779,16 @@
             : `${t}:[0-5]\\d\\.\\d{${e.precision}}`
         : `${t}(?::[0-5]\\d(?:\\.\\d+)?)?`
     }
-    let e1 = /^-?\d+(?:\.\d+)?$/,
-      e2 = /^(?:true|false)$/i,
-      e6 = /^null$/i,
-      e3 = eb('$ZodCheck', (e, t) => {
+    let e8 = /^-?\d+(?:\.\d+)?$/,
+      e5 = /^(?:true|false)$/i,
+      e9 = /^null$/i,
+      e7 = ek('$ZodCheck', (e, t) => {
         var i
         ;(e._zod ?? (e._zod = {}), (e._zod.def = t), (i = e._zod).onattach ?? (i.onattach = []))
       }),
-      e4 = eb('$ZodCheckMinLength', (e, t) => {
+      te = ek('$ZodCheckMinLength', (e, t) => {
         var i
-        ;(e3.init(e, t),
+        ;(e7.init(e, t),
           (i = e._zod.def).when ??
             (i.when = (e) => {
               let t = e.value
@@ -805,7 +801,7 @@
           (e._zod.check = (i) => {
             let n = i.value
             if (n.length >= t.minimum) return
-            let r = eD(n)
+            let r = eH(n)
             i.issues.push({
               origin: r,
               code: 'too_small',
@@ -817,9 +813,9 @@
             })
           }))
       }),
-      e8 = eb('$ZodCheckLengthEquals', (e, t) => {
+      tt = ek('$ZodCheckLengthEquals', (e, t) => {
         var i
-        ;(e3.init(e, t),
+        ;(e7.init(e, t),
           (i = e._zod.def).when ??
             (i.when = (e) => {
               let t = e.value
@@ -833,7 +829,7 @@
             let n = i.value,
               r = n.length
             if (r === t.length) return
-            let s = eD(n),
+            let s = eH(n),
               o = r > t.length
             i.issues.push({
               origin: s,
@@ -848,9 +844,9 @@
             })
           }))
       }),
-      e5 = eb('$ZodCheckStringFormat', (e, t) => {
+      ti = ek('$ZodCheckStringFormat', (e, t) => {
         var i, n
-        ;(e3.init(e, t),
+        ;(e7.init(e, t),
           e._zod.onattach.push((e) => {
             let i = e._zod.bag
             ;((i.format = t.format),
@@ -873,10 +869,10 @@
               }))
             : ((n = e._zod).check ?? (n.check = () => {})))
       }),
-      e9 = { major: 4, minor: 3, patch: 6 },
-      e7 = eb('$ZodType', (e, t) => {
+      tn = { major: 4, minor: 3, patch: 6 },
+      tr = ek('$ZodType', (e, t) => {
         var i
-        ;(e ?? (e = {}), (e._zod.def = t), (e._zod.bag = e._zod.bag || {}), (e._zod.version = e9))
+        ;(e ?? (e = {}), (e._zod.def = t), (e._zod.bag = e._zod.bag || {}), (e._zod.version = tn))
         let n = [...(e._zod.def.checks ?? [])]
         for (let t of (e._zod.traits.has('$ZodCheck') && n.unshift(e), n))
           for (let i of t._zod.onattach) i(e)
@@ -888,30 +884,30 @@
         else {
           let t = (e, t, i) => {
               let n,
-                r = eq(e)
+                r = eD(e)
               for (let s of t) {
                 if (s._zod.def.when) {
                   if (!s._zod.def.when(e)) continue
                 } else if (r) continue
                 let t = e.issues.length,
                   o = s._zod.check(e)
-                if (o instanceof Promise && i?.async === !1) throw new ew()
+                if (o instanceof Promise && i?.async === !1) throw new ex()
                 if (n || o instanceof Promise)
                   n = (n ?? Promise.resolve()).then(async () => {
-                    ;(await o, e.issues.length !== t && (r || (r = eq(e, t))))
+                    ;(await o, e.issues.length !== t && (r || (r = eD(e, t))))
                   })
                 else {
                   if (e.issues.length === t) continue
-                  r || (r = eq(e, t))
+                  r || (r = eD(e, t))
                 }
               }
               return n ? n.then(() => e) : e
             },
             i = (i, r, s) => {
-              if (eq(i)) return ((i.aborted = !0), i)
+              if (eD(i)) return ((i.aborted = !0), i)
               let o = t(r, n, s)
               if (o instanceof Promise) {
-                if (!1 === s.async) throw new ew()
+                if (!1 === s.async) throw new ex()
                 return o.then((t) => e._zod.parse(t, s))
               }
               return e._zod.parse(o, s)
@@ -924,19 +920,19 @@
             }
             let o = e._zod.parse(r, s)
             if (o instanceof Promise) {
-              if (!1 === s.async) throw new ew()
+              if (!1 === s.async) throw new ex()
               return o.then((e) => t(e, n, s))
             }
             return t(o, n, s)
           }
         }
-        e$(e, '~standard', () => ({
+        eR(e, '~standard', () => ({
           validate: (t) => {
             try {
-              let i = eK(e, t)
+              let i = e0(e, t)
               return i.success ? { value: i.data } : { issues: i.error?.issues }
             } catch (i) {
-              return eW(e, t).then((e) =>
+              return e1(e, t).then((e) =>
                 e.success ? { value: e.data } : { issues: e.error?.issues },
               )
             }
@@ -945,10 +941,10 @@
           version: 1,
         }))
       }),
-      te = eb('$ZodString', (e, t) => {
+      ts = ek('$ZodString', (e, t) => {
         var i
         let n
-        ;(e7.init(e, t),
+        ;(tr.init(e, t),
           (e._zod.pattern =
             [...(e?._zod.bag?.patterns ?? [])].pop() ??
             ((n = (i = e._zod.bag)
@@ -972,27 +968,27 @@
             )
           }))
       }),
-      tt = eb('$ZodStringFormat', (e, t) => {
-        ;(e5.init(e, t), te.init(e, t))
+      to = ek('$ZodStringFormat', (e, t) => {
+        ;(ti.init(e, t), ts.init(e, t))
       }),
-      ti = eb('$ZodISODateTime', (e, t) => {
+      ta = ek('$ZodISODateTime', (e, t) => {
         let i, n, r
         ;(t.pattern ??
-          ((i = e0({ precision: t.precision })),
+          ((i = e4({ precision: t.precision })),
           (n = ['Z']),
           t.local && n.push(''),
           t.offset && n.push('([+-](?:[01]\\d|2[0-3]):[0-5]\\d)'),
           (r = `${i}(?:${n.join('|')})`),
-          (t.pattern = RegExp(`^${eX}T(?:${r})$`))),
-          tt.init(e, t))
+          (t.pattern = RegExp(`^${e6}T(?:${r})$`))),
+          to.init(e, t))
       }),
-      tn =
+      tl =
         ((e, t) => {
-          ;(t.pattern ?? (t.pattern = eY), tt.init(e, t))
+          ;(t.pattern ?? (t.pattern = e3), to.init(e, t))
         },
-        eb('$ZodNumber', (e, t) => {
-          ;(e7.init(e, t),
-            (e._zod.pattern = e._zod.bag.pattern ?? e1),
+        ek('$ZodNumber', (e, t) => {
+          ;(tr.init(e, t),
+            (e._zod.pattern = e._zod.bag.pattern ?? e8),
             (e._zod.parse = (i, n) => {
               if (t.coerce)
                 try {
@@ -1020,9 +1016,9 @@
               )
             }))
         })),
-      tr = eb('$ZodBoolean', (e, t) => {
-        ;(e7.init(e, t),
-          (e._zod.pattern = e2),
+      tu = ek('$ZodBoolean', (e, t) => {
+        ;(tr.init(e, t),
+          (e._zod.pattern = e5),
           (e._zod.parse = (i, n) => {
             if (t.coerce)
               try {
@@ -1036,9 +1032,9 @@
             )
           }))
       }),
-      ts = eb('$ZodNull', (e, t) => {
-        ;(e7.init(e, t),
-          (e._zod.pattern = e6),
+      tc = ek('$ZodNull', (e, t) => {
+        ;(tr.init(e, t),
+          (e._zod.pattern = e9),
           (e._zod.values = new Set([null])),
           (e._zod.parse = (t, i) => {
             let n = t.value
@@ -1049,17 +1045,17 @@
             )
           }))
       }),
-      to = eb('$ZodAny', (e, t) => {
-        ;(e7.init(e, t), (e._zod.parse = (e) => e))
+      td = ek('$ZodAny', (e, t) => {
+        ;(tr.init(e, t), (e._zod.parse = (e) => e))
       }),
-      ta = eb('$ZodUnknown', (e, t) => {
-        ;(e7.init(e, t), (e._zod.parse = (e) => e))
+      tp = ek('$ZodUnknown', (e, t) => {
+        ;(tr.init(e, t), (e._zod.parse = (e) => e))
       })
-    function tl(e, t, i) {
-      ;(e.issues.length && t.issues.push(...eU(i, e.issues)), (t.value[i] = e.value))
+    function tf(e, t, i) {
+      ;(e.issues.length && t.issues.push(...eL(i, e.issues)), (t.value[i] = e.value))
     }
-    let tu = eb('$ZodArray', (e, t) => {
-      ;(e7.init(e, t),
+    let th = ek('$ZodArray', (e, t) => {
+      ;(tr.init(e, t),
         (e._zod.parse = (i, n) => {
           let r = i.value
           if (!Array.isArray(r))
@@ -1072,21 +1068,21 @@
           for (let e = 0; e < r.length; e++) {
             let o = r[e],
               a = t.element._zod.run({ value: o, issues: [] }, n)
-            a instanceof Promise ? s.push(a.then((t) => tl(t, i, e))) : tl(a, i, e)
+            a instanceof Promise ? s.push(a.then((t) => tf(t, i, e))) : tf(a, i, e)
           }
           return s.length ? Promise.all(s).then(() => i) : i
         }))
     })
-    function tc(e, t, i, n, r) {
+    function tv(e, t, i, n, r) {
       if (e.issues.length) {
         if (r && !(i in n)) return
-        t.issues.push(...eU(i, e.issues))
+        t.issues.push(...eL(i, e.issues))
       }
       void 0 === e.value ? i in n && (t.value[i] = void 0) : (t.value[i] = e.value)
     }
-    let td = eb('$ZodObject', (e, t) => {
+    let ty = ek('$ZodObject', (e, t) => {
       let i
-      e7.init(e, t)
+      tr.init(e, t)
       let n = Object.getOwnPropertyDescriptor(t, 'shape')
       if (!n?.get) {
         let e = t.shape
@@ -1097,7 +1093,7 @@
           },
         })
       }
-      let r = ek(() =>
+      let r = eT(() =>
         (function (e) {
           var t
           let i = Object.keys(e.shape)
@@ -1110,7 +1106,7 @@
           return { ...e, keys: i, keySet: new Set(i), numKeys: i.length, optionalKeys: new Set(n) }
         })(t),
       )
-      e$(e._zod, 'propValues', () => {
+      eR(e._zod, 'propValues', () => {
         let e = t.shape,
           i = {}
         for (let t in e) {
@@ -1123,7 +1119,7 @@
       e._zod.parse = (t, n) => {
         i ?? (i = r.value)
         let o = t.value
-        if (!eT(o))
+        if (!eM(o))
           return (t.issues.push({ expected: 'object', code: 'invalid_type', input: o, inst: e }), t)
         t.value = {}
         let a = [],
@@ -1132,7 +1128,7 @@
           let i = l[e],
             r = 'optional' === i._zod.optout,
             s = i._zod.run({ value: o[e], issues: [] }, n)
-          s instanceof Promise ? a.push(s.then((i) => tc(i, t, e, o, r))) : tc(s, t, e, o, r)
+          s instanceof Promise ? a.push(s.then((i) => tv(i, t, e, o, r))) : tv(s, t, e, o, r)
         }
         return s
           ? (function (e, t, i, n, r, s) {
@@ -1148,7 +1144,7 @@
                   continue
                 }
                 let s = l.run({ value: t[r], issues: [] }, n)
-                s instanceof Promise ? e.push(s.then((e) => tc(e, i, r, t, c))) : tc(s, i, r, t, c)
+                s instanceof Promise ? e.push(s.then((e) => tv(e, i, r, t, c))) : tv(s, i, r, t, c)
               }
               return (o.length &&
                 i.issues.push({ code: 'unrecognized_keys', keys: o, input: t, inst: s }),
@@ -1161,35 +1157,35 @@
             : t
       }
     })
-    function tf(e, t, i, n) {
+    function tg(e, t, i, n) {
       for (let i of e) if (0 === i.issues.length) return ((t.value = i.value), t)
-      let r = e.filter((e) => !eq(e))
+      let r = e.filter((e) => !eD(e))
       return 1 === r.length
         ? ((t.value = r[0].value), r[0])
         : (t.issues.push({
             code: 'invalid_union',
             input: t.value,
             inst: i,
-            errors: e.map((e) => e.issues.map((e) => eV(e, n, ez()))),
+            errors: e.map((e) => e.issues.map((e) => eJ(e, n, e$()))),
           }),
           t)
     }
-    let th = eb('$ZodUnion', (e, t) => {
-        ;(e7.init(e, t),
-          e$(e._zod, 'optin', () =>
+    let tm = ek('$ZodUnion', (e, t) => {
+        ;(tr.init(e, t),
+          eR(e._zod, 'optin', () =>
             t.options.some((e) => 'optional' === e._zod.optin) ? 'optional' : void 0,
           ),
-          e$(e._zod, 'optout', () =>
+          eR(e._zod, 'optout', () =>
             t.options.some((e) => 'optional' === e._zod.optout) ? 'optional' : void 0,
           ),
-          e$(e._zod, 'values', () => {
+          eR(e._zod, 'values', () => {
             if (t.options.every((e) => e._zod.values))
               return new Set(t.options.flatMap((e) => Array.from(e._zod.values)))
           }),
-          e$(e._zod, 'pattern', () => {
+          eR(e._zod, 'pattern', () => {
             if (t.options.every((e) => e._zod.pattern)) {
               let e = t.options.map((e) => e._zod.pattern)
-              return RegExp(`^(${e.map((e) => eS(e.source)).join('|')})$`)
+              return RegExp(`^(${e.map((e) => eA(e.source)).join('|')})$`)
             }
           }))
         let i = 1 === t.options.length,
@@ -1206,13 +1202,13 @@
               a.push(t)
             }
           }
-          return o ? Promise.all(a).then((t) => tf(t, r, e, s)) : tf(a, r, e, s)
+          return o ? Promise.all(a).then((t) => tg(t, r, e, s)) : tg(a, r, e, s)
         }
       }),
-      tp = eb('$ZodDiscriminatedUnion', (e, t) => {
-        ;((t.inclusive = !1), th.init(e, t))
+      tb = ek('$ZodDiscriminatedUnion', (e, t) => {
+        ;((t.inclusive = !1), tm.init(e, t))
         let i = e._zod.parse
-        e$(e._zod, 'propValues', () => {
+        eR(e._zod, 'propValues', () => {
           let e = {}
           for (let i of t.options) {
             let n = i._zod.propValues
@@ -1223,7 +1219,7 @@
           }
           return e
         })
-        let n = ek(() => {
+        let n = eT(() => {
           let e = t.options,
             i = new Map()
           for (let n of e) {
@@ -1239,7 +1235,7 @@
         })
         e._zod.parse = (r, s) => {
           let o = r.value
-          if (!eT(o))
+          if (!eM(o))
             return (
               r.issues.push({ code: 'invalid_type', expected: 'object', input: o, inst: e }),
               r
@@ -1261,11 +1257,11 @@
                 r)
         }
       }),
-      tv = eb('$ZodRecord', (e, t) => {
-        ;(e7.init(e, t),
+      tw = ek('$ZodRecord', (e, t) => {
+        ;(tr.init(e, t),
           (e._zod.parse = (i, n) => {
             let r = i.value
-            if (!eF(r))
+            if (!eB(r))
               return (
                 i.issues.push({ expected: 'record', code: 'invalid_type', input: r, inst: e }),
                 i
@@ -1283,11 +1279,11 @@
                   o instanceof Promise
                     ? s.push(
                         o.then((t) => {
-                          ;(t.issues.length && i.issues.push(...eU(e, t.issues)),
+                          ;(t.issues.length && i.issues.push(...eL(e, t.issues)),
                             (i.value[e] = t.value))
                         }),
                       )
-                    : (o.issues.length && i.issues.push(...eU(e, o.issues)), (i.value[e] = o.value))
+                    : (o.issues.length && i.issues.push(...eL(e, o.issues)), (i.value[e] = o.value))
                 }
               for (let e in r) l.has(e) || (a = a ?? []).push(e)
               a &&
@@ -1299,7 +1295,7 @@
                 let a = t.keyType._zod.run({ value: o, issues: [] }, n)
                 if (a instanceof Promise)
                   throw Error('Async schemas not supported in object keys currently')
-                if ('string' == typeof o && e1.test(o) && a.issues.length) {
+                if ('string' == typeof o && e8.test(o) && a.issues.length) {
                   let e = t.keyType._zod.run({ value: Number(o), issues: [] }, n)
                   if (e instanceof Promise)
                     throw Error('Async schemas not supported in object keys currently')
@@ -1311,7 +1307,7 @@
                     : i.issues.push({
                         code: 'invalid_key',
                         origin: 'record',
-                        issues: a.issues.map((e) => eV(e, n, ez())),
+                        issues: a.issues.map((e) => eJ(e, n, e$())),
                         input: o,
                         path: [o],
                         inst: e,
@@ -1322,20 +1318,20 @@
                 l instanceof Promise
                   ? s.push(
                       l.then((e) => {
-                        ;(e.issues.length && i.issues.push(...eU(o, e.issues)),
+                        ;(e.issues.length && i.issues.push(...eL(o, e.issues)),
                           (i.value[a.value] = e.value))
                       }),
                     )
-                  : (l.issues.length && i.issues.push(...eU(o, l.issues)),
+                  : (l.issues.length && i.issues.push(...eL(o, l.issues)),
                     (i.value[a.value] = l.value))
               }
             return s.length ? Promise.all(s).then(() => i) : i
           }))
       }),
-      ty = eb('$ZodEnum', (e, t) => {
+      t_ = ek('$ZodEnum', (e, t) => {
         var i
         let n
-        e7.init(e, t)
+        tr.init(e, t)
         let r =
             ((n = Object.values((i = t.entries)).filter((e) => 'number' == typeof e)),
             Object.entries(i)
@@ -1345,8 +1341,8 @@
         ;((e._zod.values = s),
           (e._zod.pattern = RegExp(
             `^(${r
-              .filter((e) => eA.has(typeof e))
-              .map((e) => ('string' == typeof e ? eR(e) : e.toString()))
+              .filter((e) => eq.has(typeof e))
+              .map((e) => ('string' == typeof e ? eU(e) : e.toString()))
               .join('|')})$`,
           )),
           (e._zod.parse = (t, i) => {
@@ -1357,13 +1353,13 @@
             )
           }))
       }),
-      tg = eb('$ZodLiteral', (e, t) => {
-        if ((e7.init(e, t), 0 === t.values.length))
+      tz = ek('$ZodLiteral', (e, t) => {
+        if ((tr.init(e, t), 0 === t.values.length))
           throw Error('Cannot create literal schema with no valid values')
         let i = new Set(t.values)
         ;((e._zod.values = i),
           (e._zod.pattern = RegExp(
-            `^(${t.values.map((e) => ('string' == typeof e ? eR(e) : e ? eR(e.toString()) : String(e))).join('|')})$`,
+            `^(${t.values.map((e) => ('string' == typeof e ? eU(e) : e ? eU(e.toString()) : String(e))).join('|')})$`,
           )),
           (e._zod.parse = (n, r) => {
             let s = n.value
@@ -1374,65 +1370,65 @@
             )
           }))
       })
-    function tm(e, t) {
+    function tO(e, t) {
       return e.issues.length && void 0 === t ? { issues: [], value: void 0 } : e
     }
-    let tb = eb('$ZodOptional', (e, t) => {
-        ;(e7.init(e, t),
+    let tS = ek('$ZodOptional', (e, t) => {
+        ;(tr.init(e, t),
           (e._zod.optin = 'optional'),
           (e._zod.optout = 'optional'),
-          e$(e._zod, 'values', () =>
+          eR(e._zod, 'values', () =>
             t.innerType._zod.values ? new Set([...t.innerType._zod.values, void 0]) : void 0,
           ),
-          e$(e._zod, 'pattern', () => {
+          eR(e._zod, 'pattern', () => {
             let e = t.innerType._zod.pattern
-            return e ? RegExp(`^(${eS(e.source)})?$`) : void 0
+            return e ? RegExp(`^(${eA(e.source)})?$`) : void 0
           }),
           (e._zod.parse = (e, i) => {
             if ('optional' === t.innerType._zod.optin) {
               let n = t.innerType._zod.run(e, i)
-              return n instanceof Promise ? n.then((t) => tm(t, e.value)) : tm(n, e.value)
+              return n instanceof Promise ? n.then((t) => tO(t, e.value)) : tO(n, e.value)
             }
             return void 0 === e.value ? e : t.innerType._zod.run(e, i)
           }))
       }),
-      tw = eb('$ZodNullable', (e, t) => {
-        ;(e7.init(e, t),
-          e$(e._zod, 'optin', () => t.innerType._zod.optin),
-          e$(e._zod, 'optout', () => t.innerType._zod.optout),
-          e$(e._zod, 'pattern', () => {
+      tE = ek('$ZodNullable', (e, t) => {
+        ;(tr.init(e, t),
+          eR(e._zod, 'optin', () => t.innerType._zod.optin),
+          eR(e._zod, 'optout', () => t.innerType._zod.optout),
+          eR(e._zod, 'pattern', () => {
             let e = t.innerType._zod.pattern
-            return e ? RegExp(`^(${eS(e.source)}|null)$`) : void 0
+            return e ? RegExp(`^(${eA(e.source)}|null)$`) : void 0
           }),
-          e$(e._zod, 'values', () =>
+          eR(e._zod, 'values', () =>
             t.innerType._zod.values ? new Set([...t.innerType._zod.values, null]) : void 0,
           ),
           (e._zod.parse = (e, i) => (null === e.value ? e : t.innerType._zod.run(e, i))))
       }),
-      t_ = eb('$ZodPrefault', (e, t) => {
-        ;(e7.init(e, t),
+      tk = ek('$ZodPrefault', (e, t) => {
+        ;(tr.init(e, t),
           (e._zod.optin = 'optional'),
-          e$(e._zod, 'values', () => t.innerType._zod.values),
+          eR(e._zod, 'values', () => t.innerType._zod.values),
           (e._zod.parse = (e, i) => (
             'backward' === i.direction || (void 0 === e.value && (e.value = t.defaultValue)),
             t.innerType._zod.run(e, i)
           )))
       }),
-      tz = eb('$ZodLazy', (e, t) => {
-        ;(e7.init(e, t),
-          e$(e._zod, 'innerType', () => t.getter()),
-          e$(e._zod, 'pattern', () => e._zod.innerType?._zod?.pattern),
-          e$(e._zod, 'propValues', () => e._zod.innerType?._zod?.propValues),
-          e$(e._zod, 'optin', () => e._zod.innerType?._zod?.optin ?? void 0),
-          e$(e._zod, 'optout', () => e._zod.innerType?._zod?.optout ?? void 0),
+      tx = ek('$ZodLazy', (e, t) => {
+        ;(tr.init(e, t),
+          eR(e._zod, 'innerType', () => t.getter()),
+          eR(e._zod, 'pattern', () => e._zod.innerType?._zod?.pattern),
+          eR(e._zod, 'propValues', () => e._zod.innerType?._zod?.propValues),
+          eR(e._zod, 'optin', () => e._zod.innerType?._zod?.optin ?? void 0),
+          eR(e._zod, 'optout', () => e._zod.innerType?._zod?.optout ?? void 0),
           (e._zod.parse = (t, i) => e._zod.innerType._zod.run(t, i)))
       })
     ;(Symbol('ZodOutput'), Symbol('ZodInput'))
-    function tO(e, t) {
-      return new e4({ check: 'min_length', ...eC(t), minimum: e })
+    function tP(e, t) {
+      return new te({ check: 'min_length', ...eN(t), minimum: e })
     }
-    ;(a = globalThis).__zod_globalRegistry ??
-      (a.__zod_globalRegistry = new (class e {
+    ;(f = globalThis).__zod_globalRegistry ??
+      (f.__zod_globalRegistry = new (class e {
         constructor() {
           ;((this._map = new WeakMap()), (this._idmap = new Map()))
         }
@@ -1469,15 +1465,15 @@
           return this._map.has(e)
         }
       })())
-    let tE = eb('ZodMiniType', (e, t) => {
+    let t$ = ek('ZodMiniType', (e, t) => {
         if (!e._zod) throw Error('Uninitialized schema in ZodMiniType.')
-        ;(e7.init(e, t),
+        ;(tr.init(e, t),
           (e.def = t),
           (e.type = t.type),
-          (e.parse = (t, i) => eJ(e, t, i, { callee: e.parse })),
-          (e.safeParse = (t, i) => eK(e, t, i)),
-          (e.parseAsync = async (t, i) => eH(e, t, i, { callee: e.parseAsync })),
-          (e.safeParseAsync = async (t, i) => eW(e, t, i)),
+          (e.parse = (t, i) => eX(e, t, i, { callee: e.parse })),
+          (e.safeParse = (t, i) => e0(e, t, i)),
+          (e.parseAsync = async (t, i) => eY(e, t, i, { callee: e.parseAsync })),
+          (e.safeParseAsync = async (t, i) => e1(e, t, i)),
           (e.check = (...i) =>
             e.clone(
               {
@@ -1494,61 +1490,61 @@
               { parent: !0 },
             )),
           (e.with = e.check),
-          (e.clone = (t, i) => eM(e, t, i)),
+          (e.clone = (t, i) => eZ(e, t, i)),
           (e.brand = () => e),
           (e.register = (t, i) => (t.add(e, i), e)),
           (e.apply = (t) => t(e)))
       }),
-      tk = eb('ZodMiniString', (e, t) => {
-        ;(te.init(e, t), tE.init(e, t))
-      })
-    function tS(e) {
-      return new tk({ type: 'string', ...eC(e) })
-    }
-    let tx = eb('ZodMiniStringFormat', (e, t) => {
-        ;(tt.init(e, t), tk.init(e, t))
-      }),
-      t$ = eb('ZodMiniNumber', (e, t) => {
-        ;(tn.init(e, t), tE.init(e, t))
+      tj = ek('ZodMiniString', (e, t) => {
+        ;(ts.init(e, t), t$.init(e, t))
       })
     function tI(e) {
-      return new t$({ type: 'number', checks: [], ...eC(e) })
+      return new tj({ type: 'string', ...eN(e) })
     }
-    let tP = eb('ZodMiniBoolean', (e, t) => {
-      ;(tr.init(e, t), tE.init(e, t))
-    })
-    function tj(e) {
-      return new tP({ type: 'boolean', ...eC(e) })
-    }
-    let tT = eb('ZodMiniNull', (e, t) => {
-      ;(ts.init(e, t), tE.init(e, t))
-    })
-    function tF(e) {
-      return new tT({ type: 'null', ...eC(e) })
-    }
-    let tA = eb('ZodMiniAny', (e, t) => {
-      ;(to.init(e, t), tE.init(e, t))
-    })
-    function tR() {
-      return new tA({ type: 'any' })
-    }
-    let tM = eb('ZodMiniUnknown', (e, t) => {
-        ;(ta.init(e, t), tE.init(e, t))
+    let tT = ek('ZodMiniStringFormat', (e, t) => {
+        ;(to.init(e, t), tj.init(e, t))
       }),
-      tC = eb('ZodMiniArray', (e, t) => {
-        ;(tu.init(e, t), tE.init(e, t))
+      tA = ek('ZodMiniNumber', (e, t) => {
+        ;(tl.init(e, t), t$.init(e, t))
       })
-    function tB(e, t) {
-      return new tC({ type: 'array', element: e, ...eC(t) })
+    function tF(e) {
+      return new tA({ type: 'number', checks: [], ...eN(e) })
     }
-    let tq = eb('ZodMiniObject', (e, t) => {
-      ;(td.init(e, t), tE.init(e, t), e$(e, 'shape', () => t.shape))
+    let tR = ek('ZodMiniBoolean', (e, t) => {
+      ;(tu.init(e, t), t$.init(e, t))
     })
-    function tU(e, t) {
-      return new tq({ type: 'object', shape: e ?? {}, ...eC(t) })
+    function tC(e) {
+      return new tR({ type: 'boolean', ...eN(e) })
     }
-    function tN(e, t) {
-      if (!eF(t)) throw Error('Invalid input to extend: expected a plain object')
+    let tM = ek('ZodMiniNull', (e, t) => {
+      ;(tc.init(e, t), t$.init(e, t))
+    })
+    function tB(e) {
+      return new tM({ type: 'null', ...eN(e) })
+    }
+    let tq = ek('ZodMiniAny', (e, t) => {
+      ;(td.init(e, t), t$.init(e, t))
+    })
+    function tU() {
+      return new tq({ type: 'any' })
+    }
+    let tZ = ek('ZodMiniUnknown', (e, t) => {
+        ;(tp.init(e, t), t$.init(e, t))
+      }),
+      tN = ek('ZodMiniArray', (e, t) => {
+        ;(th.init(e, t), t$.init(e, t))
+      })
+    function tV(e, t) {
+      return new tN({ type: 'array', element: e, ...eN(t) })
+    }
+    let tD = ek('ZodMiniObject', (e, t) => {
+      ;(ty.init(e, t), t$.init(e, t), eR(e, 'shape', () => t.shape))
+    })
+    function tL(e, t) {
+      return new tD({ type: 'object', shape: e ?? {}, ...eN(t) })
+    }
+    function tQ(e, t) {
+      if (!eB(t)) throw Error('Invalid input to extend: expected a plain object')
       let i = e._zod.def.checks
       if (i && i.length > 0) {
         let i = e._zod.def.shape
@@ -1558,295 +1554,311 @@
               'Cannot overwrite keys on object schemas containing refinements. Use `.safeExtend()` instead.',
             )
       }
-      let n = eP(e._zod.def, {
+      let n = (function (...e) {
+        let t = {}
+        for (let i of e) Object.assign(t, Object.getOwnPropertyDescriptors(i))
+        return Object.defineProperties({}, t)
+      })(e._zod.def, {
         get shape() {
           let i = { ...e._zod.def.shape, ...t }
-          return (eI(this, 'shape', i), i)
+          return (
+            Object.defineProperty(this, 'shape', {
+              value: i,
+              writable: !0,
+              enumerable: !0,
+              configurable: !0,
+            }),
+            i
+          )
         },
       })
-      return eM(e, n)
+      return eZ(e, n)
     }
-    function tV(e, t) {
+    function tJ(e, t) {
       return e.clone({ ...e._zod.def, catchall: t })
     }
-    let tD = eb('ZodMiniUnion', (e, t) => {
-      ;(th.init(e, t), tE.init(e, t))
+    let tH = ek('ZodMiniUnion', (e, t) => {
+      ;(tm.init(e, t), t$.init(e, t))
     })
-    function tZ(e, t) {
-      return new tD({ type: 'union', options: e, ...eC(t) })
+    function tK(e, t) {
+      return new tH({ type: 'union', options: e, ...eN(t) })
     }
-    let tL = eb('ZodMiniDiscriminatedUnion', (e, t) => {
-      ;(tp.init(e, t), tE.init(e, t))
+    let tW = ek('ZodMiniDiscriminatedUnion', (e, t) => {
+      ;(tb.init(e, t), t$.init(e, t))
     })
-    function tQ(e, t, i) {
-      return new tL({ type: 'union', options: t, discriminator: e, ...eC(i) })
+    function tG(e, t, i) {
+      return new tW({ type: 'union', options: t, discriminator: e, ...eN(i) })
     }
-    let tJ = eb('ZodMiniRecord', (e, t) => {
-      ;(tv.init(e, t), tE.init(e, t))
+    let tX = ek('ZodMiniRecord', (e, t) => {
+      ;(tw.init(e, t), t$.init(e, t))
     })
-    function tH(e, t, i) {
-      return new tJ({ type: 'record', keyType: e, valueType: t, ...eC(i) })
+    function tY(e, t, i) {
+      return new tX({ type: 'record', keyType: e, valueType: t, ...eN(i) })
     }
-    let tK = eb('ZodMiniEnum', (e, t) => {
-      ;(ty.init(e, t), tE.init(e, t), (e.options = Object.values(t.entries)))
+    let t0 = ek('ZodMiniEnum', (e, t) => {
+      ;(t_.init(e, t), t$.init(e, t), (e.options = Object.values(t.entries)))
     })
-    function tW(e, t) {
-      return new tK({
+    function t1(e, t) {
+      return new t0({
         type: 'enum',
         entries: Array.isArray(e) ? Object.fromEntries(e.map((e) => [e, e])) : e,
-        ...eC(t),
+        ...eN(t),
       })
     }
-    let tG = eb('ZodMiniLiteral', (e, t) => {
-      ;(tg.init(e, t), tE.init(e, t))
+    let t2 = ek('ZodMiniLiteral', (e, t) => {
+      ;(tz.init(e, t), t$.init(e, t))
     })
-    function tX(e, t) {
-      return new tG({ type: 'literal', values: Array.isArray(e) ? e : [e], ...eC(t) })
+    function t6(e, t) {
+      return new t2({ type: 'literal', values: Array.isArray(e) ? e : [e], ...eN(t) })
     }
-    let tY = eb('ZodMiniOptional', (e, t) => {
-      ;(tb.init(e, t), tE.init(e, t))
+    let t3 = ek('ZodMiniOptional', (e, t) => {
+      ;(tS.init(e, t), t$.init(e, t))
     })
-    function t0(e) {
-      return new tY({ type: 'optional', innerType: e })
+    function t4(e) {
+      return new t3({ type: 'optional', innerType: e })
     }
-    let t1 = eb('ZodMiniNullable', (e, t) => {
-      ;(tw.init(e, t), tE.init(e, t))
+    let t8 = ek('ZodMiniNullable', (e, t) => {
+      ;(tE.init(e, t), t$.init(e, t))
     })
-    function t2(e) {
-      return new t1({ type: 'nullable', innerType: e })
+    function t5(e) {
+      return new t8({ type: 'nullable', innerType: e })
     }
-    let t6 = eb('ZodMiniPrefault', (e, t) => {
-      ;(t_.init(e, t), tE.init(e, t))
-    })
-    function t3(e, t) {
-      return new t6({
-        type: 'prefault',
-        innerType: e,
-        get defaultValue() {
-          return 'function' == typeof t ? t() : eF(t) ? { ...t } : Array.isArray(t) ? [...t] : t
-        },
+    let t9 = ek('ZodMiniPrefault', (e, t) => {
+        ;(tk.init(e, t), t$.init(e, t))
+      }),
+      t7 = ek('ZodMiniLazy', (e, t) => {
+        ;(tx.init(e, t), t$.init(e, t))
       })
-    }
-    let t4 = eb('ZodMiniLazy', (e, t) => {
-      ;(tz.init(e, t), tE.init(e, t))
-    })
-    function t8() {
-      let e = new t4({
+    function ie() {
+      let e = new t7({
         type: 'lazy',
-        getter: () => tZ([tS(), tI(), tj(), tF(), tB(e), tH(tS(), e)]),
+        getter: () => tK([tI(), tF(), tC(), tB(), tV(e), tY(tI(), e)]),
       })
       return e
     }
-    let t5 = eb('ZodMiniISODateTime', (e, t) => {
-      ;(ti.init(e, t), tx.init(e, t))
+    let it = ek('ZodMiniISODateTime', (e, t) => {
+      ;(ta.init(e, t), tT.init(e, t))
     })
-    function t9(e) {
-      return new t5({
+    function ii(e) {
+      return new it({
         type: 'string',
         format: 'datetime',
         check: 'string_format',
         offset: !1,
         local: !1,
         precision: null,
-        ...eC(e),
+        ...eN(e),
       })
     }
-    let t7 = tV(tU({}), t8()),
-      ie = tU({ sys: tU({ type: tX('Link'), linkType: tS(), id: tS() }) }),
-      it = tU({ sys: tU({ type: tX('Link'), linkType: tX('ContentType'), id: tS() }) }),
-      ii = tU({ sys: tU({ type: tX('Link'), linkType: tX('Environment'), id: tS() }) }),
-      ir = tU({ sys: tU({ type: tX('Link'), linkType: tX('Space'), id: tS() }) }),
-      is = tU({ sys: tU({ type: tX('Link'), linkType: tX('TaxonomyConcept'), id: tS() }) }),
-      io = tU({ sys: tU({ type: tX('Link'), linkType: tX('Tag'), id: tS() }) }),
-      ia = tU({
-        type: tX('Entry'),
-        contentType: it,
-        publishedVersion: tI(),
-        id: tS(),
-        createdAt: tR(),
-        updatedAt: tR(),
-        locale: t0(tS()),
-        revision: tI(),
-        space: ir,
-        environment: ii,
+    let ir = tJ(tL({}), ie()),
+      is = tL({ sys: tL({ type: t6('Link'), linkType: tI(), id: tI() }) }),
+      io = tL({ sys: tL({ type: t6('Link'), linkType: t6('ContentType'), id: tI() }) }),
+      ia = tL({ sys: tL({ type: t6('Link'), linkType: t6('Environment'), id: tI() }) }),
+      il = tL({ sys: tL({ type: t6('Link'), linkType: t6('Space'), id: tI() }) }),
+      iu = tL({ sys: tL({ type: t6('Link'), linkType: t6('TaxonomyConcept'), id: tI() }) }),
+      ic = tL({ sys: tL({ type: t6('Link'), linkType: t6('Tag'), id: tI() }) }),
+      id = tL({
+        type: t6('Entry'),
+        contentType: io,
+        publishedVersion: tF(),
+        id: tI(),
+        createdAt: tU(),
+        updatedAt: tU(),
+        locale: t4(tI()),
+        revision: tF(),
+        space: il,
+        environment: ia,
       }),
-      il = tU({ fields: t7, metadata: tU({ tags: tB(io), concepts: t0(tB(is)) }), sys: ia }),
-      iu = tN(t7, { nt_audience_id: tS(), nt_name: t0(tS()), nt_description: t0(tS()) }),
-      ic = tN(il, { fields: iu })
-    tU({ contentTypeId: tX('nt_audience'), fields: iu })
-    let id = tN(il, {
-        fields: tU({ nt_name: tS(), nt_fallback: t0(tS()), nt_mergetag_id: tS() }),
-        sys: tN(ia, {
-          contentType: tU({
-            sys: tU({ type: tX('Link'), linkType: tX('ContentType'), id: tX('nt_mergetag') }),
+      ip = tL({ fields: ir, metadata: tL({ tags: tV(ic), concepts: t4(tV(iu)) }), sys: id }),
+      ih = tQ(ir, { nt_audience_id: tI(), nt_name: t4(tI()), nt_description: t4(tI()) }),
+      iv = tQ(ip, { fields: ih })
+    tL({ contentTypeId: t6('nt_audience'), fields: ih })
+    let iy = tQ(ip, {
+        fields: tL({ nt_name: tI(), nt_fallback: t4(tI()), nt_mergetag_id: tI() }),
+        sys: tQ(id, {
+          contentType: tL({
+            sys: tL({ type: t6('Link'), linkType: t6('ContentType'), id: t6('nt_mergetag') }),
           }),
         }),
       }),
-      ih = tU({ id: tS(), hidden: t0(tj()) }),
-      ip = tU({ type: t0(tX('EntryReplacement')), baseline: ih, variants: tB(ih) }),
-      iv = tU({ value: tZ([tS(), tj(), tF(), tI(), tH(tS(), t8())]) }),
-      iy = tW(['Boolean', 'Number', 'Object', 'String']),
-      ig = tQ('type', [
-        ip,
-        tU({
-          type: tX('InlineVariable'),
-          key: tS(),
-          valueType: iy,
-          baseline: iv,
-          variants: tB(iv),
+      ig = tL({ id: tI(), hidden: t4(tC()) }),
+      im = tL({ type: t4(t6('EntryReplacement')), baseline: ig, variants: tV(ig) }),
+      ib = tL({ value: tK([tI(), tC(), tB(), tF(), tY(tI(), ie())]) }),
+      iw = t1(['Boolean', 'Number', 'Object', 'String']),
+      i_ = tG('type', [
+        im,
+        tL({
+          type: t6('InlineVariable'),
+          key: tI(),
+          valueType: iw,
+          baseline: ib,
+          variants: tV(ib),
         }),
       ]),
-      im = tB(ig),
-      ib = tU({
-        distribution: t0(tB(tI())),
-        traffic: t0(tI()),
-        components: t0(im),
-        sticky: t0(tj()),
+      iz = tV(i_),
+      iO = tL({
+        distribution: t4(tV(tF())),
+        traffic: t4(tF()),
+        components: t4(iz),
+        sticky: t4(tC()),
       }),
-      iw = tZ([tX('nt_experiment'), tX('nt_personalization')]),
-      i_ = tN(t7, {
-        nt_name: tS(),
-        nt_description: t0(t2(tS())),
-        nt_type: iw,
-        nt_config: t0(t2(ib)),
-        nt_audience: t0(t2(ic)),
-        nt_variants: t0(tB(tZ([ie, il]))),
-        nt_experience_id: tS(),
+      iS = tK([t6('nt_experiment'), t6('nt_personalization')]),
+      iE = tQ(ir, {
+        nt_name: tI(),
+        nt_description: t4(t5(tI())),
+        nt_type: iS,
+        nt_config: t4(t5(iO)),
+        nt_audience: t4(t5(iv)),
+        nt_variants: t4(tV(tK([is, ip]))),
+        nt_experience_id: tI(),
       }),
-      iz = tN(il, { fields: i_ })
-    tU({ contentTypeId: tX('nt_experience'), fields: i_ })
-    let iO = tN(il, { fields: tN(t7, { nt_experiences: tB(tZ([ie, iz])) }) })
-    function iE(e) {
-      return iz.safeParse(e).success
+      ik = tQ(ip, { fields: iE })
+    tL({ contentTypeId: t6('nt_experience'), fields: iE })
+    let ix = tQ(ip, { fields: tQ(ir, { nt_experiences: tV(tK([is, ik])) }) })
+    function iP(e) {
+      return ik.safeParse(e).success
     }
-    function ik(e) {
-      return iO.safeParse(e).success
+    function i$(e) {
+      return ix.safeParse(e).success
     }
-    let iS = t0(tU({ name: tS(), version: tS() })),
-      ix = tU({
-        name: t0(tS()),
-        source: t0(tS()),
-        medium: t0(tS()),
-        term: t0(tS()),
-        content: t0(tS()),
+    let ij = t4(tL({ name: tI(), version: tI() })),
+      iI = tL({
+        name: t4(tI()),
+        source: t4(tI()),
+        medium: t4(tI()),
+        term: t4(tI()),
+        content: t4(tI()),
       }),
-      i$ = tZ([tX('mobile'), tX('server'), tX('web')]),
-      iI = tH(tS(), tS()),
-      iP = tU({ latitude: tI(), longitude: tI() }),
-      ij = tU({
-        coordinates: t0(iP),
-        city: t0(tS()),
-        postalCode: t0(tS()),
-        region: t0(tS()),
-        regionCode: t0(tS()),
-        country: t0(tS()),
-        countryCode: t0(tS().check(new e8({ check: 'length_equals', ...eC(void 0), length: 2 }))),
-        continent: t0(tS()),
-        timezone: t0(tS()),
+      iT = tK([t6('mobile'), t6('server'), t6('web')]),
+      iA = tY(tI(), tI()),
+      iF = tL({ latitude: tF(), longitude: tF() }),
+      iR = tL({
+        coordinates: t4(iF),
+        city: t4(tI()),
+        postalCode: t4(tI()),
+        region: t4(tI()),
+        regionCode: t4(tI()),
+        country: t4(tI()),
+        countryCode: t4(tI().check(new tt({ check: 'length_equals', ...eN(void 0), length: 2 }))),
+        continent: t4(tI()),
+        timezone: t4(tI()),
       }),
-      iT = tU({ name: tS(), version: tS() }),
-      iF = tV(
-        tU({ path: tS(), query: iI, referrer: tS(), search: tS(), title: t0(tS()), url: tS() }),
-        t8(),
+      iC = tL({ name: tI(), version: tI() }),
+      iM = tJ(
+        tL({ path: tI(), query: iA, referrer: tI(), search: tI(), title: t4(tI()), url: tI() }),
+        ie(),
       ),
-      iA = tH(tS(), t8()),
-      iR = tV(tU({ name: tS() }), t8()),
-      iM = tH(tS(), t8()),
-      iC = tU({
-        app: iS,
-        campaign: ix,
-        gdpr: tU({ isConsentGiven: tj() }),
-        library: iT,
-        locale: tS(),
-        location: t0(ij),
-        userAgent: t0(tS()),
+      iB = tY(tI(), ie()),
+      iq = tJ(tL({ name: tI() }), ie()),
+      iU = tY(tI(), ie()),
+      iZ = tL({
+        app: ij,
+        campaign: iI,
+        gdpr: tL({ isConsentGiven: tC() }),
+        library: iC,
+        locale: tI(),
+        location: t4(iR),
+        userAgent: t4(tI()),
       }),
-      iB = tU({
-        channel: i$,
-        context: tN(iC, { page: t0(iF), screen: t0(iR) }),
-        messageId: tS(),
-        originalTimestamp: t9(),
-        sentAt: t9(),
-        timestamp: t9(),
-        userId: t0(tS()),
+      iN = tL({
+        channel: iT,
+        context: tQ(iZ, { page: t4(iM), screen: t4(iq) }),
+        messageId: tI(),
+        originalTimestamp: ii(),
+        sentAt: ii(),
+        timestamp: ii(),
+        userId: t4(tI()),
       }),
-      iq = tN(iB, { type: tX('alias') }),
-      iU = tN(iB, { type: tX('group') }),
-      iN = tN(iB, { type: tX('identify'), traits: iM }),
-      iV = tN(iC, { page: iF }),
-      iD = tN(iB, { type: tX('page'), name: t0(tS()), properties: iF, context: iV }),
-      iZ = tN(iC, { screen: iR }),
-      iL = tN(iB, { type: tX('screen'), name: tS(), properties: t0(iA), context: iZ }),
-      iQ = tN(iB, { type: tX('track'), event: tS(), properties: iA }),
-      iJ = tN(iB, {
-        componentType: tZ([tX('Entry'), tX('Variable')]),
-        componentId: tS(),
-        experienceId: t0(tS()),
-        variantIndex: tI(),
+      iV = tQ(iN, { type: t6('alias') }),
+      iD = tQ(iN, { type: t6('group') }),
+      iL = tQ(iN, { type: t6('identify'), traits: iU }),
+      iQ = tQ(iZ, { page: iM }),
+      iJ = tQ(iN, { type: t6('page'), name: t4(tI()), properties: iM, context: iQ }),
+      iH = tQ(iZ, { screen: iq }),
+      iK = tQ(iN, { type: t6('screen'), name: tI(), properties: t4(iB), context: iH }),
+      iW = tQ(iN, { type: t6('track'), event: tI(), properties: iB }),
+      iG = tQ(iN, {
+        componentType: tK([t6('Entry'), t6('Variable')]),
+        componentId: tI(),
+        experienceId: t4(tI()),
+        variantIndex: tF(),
       }),
-      iH = tN(iJ, { type: tX('component'), viewDurationMs: t0(tI()), viewId: t0(tS()) }),
-      iK = { anonymousId: tS() },
-      iW = tB(
-        tQ('type', [
-          tN(iq, iK),
-          tN(iH, iK),
-          tN(iU, iK),
-          tN(iN, iK),
-          tN(iD, iK),
-          tN(iL, iK),
-          tN(iQ, iK),
+      iX = tQ(iG, { type: t6('component'), viewDurationMs: t4(tF()), viewId: t4(tI()) }),
+      iY = { anonymousId: tI() },
+      i0 = tV(
+        tG('type', [
+          tQ(iV, iY),
+          tQ(iX, iY),
+          tQ(iD, iY),
+          tQ(iL, iY),
+          tQ(iJ, iY),
+          tQ(iK, iY),
+          tQ(iW, iY),
         ]),
       ),
-      iG = tQ('type', [iq, iH, iU, iN, iD, iL, iQ]),
-      iX = tB(iG),
-      iY = tU({ features: t0(tB(tS())) }),
-      i0 = tU({ events: iX.check(tO(1)), options: t0(iY) }),
-      i1 = tU({ events: iW.check(tO(1)), options: t0(iY) }),
-      i2 = tU({
-        id: tS(),
-        isReturningVisitor: tj(),
-        landingPage: iF,
-        count: tI(),
-        activeSessionLength: tI(),
-        averageSessionLength: tI(),
+      i1 = tG('type', [iV, iX, iD, iL, iJ, iK, iW]),
+      i2 = tV(i1),
+      i6 = tL({ features: t4(tV(tI())) }),
+      i3 = tL({ events: i2.check(tP(1)), options: t4(i6) }),
+      i4 = tL({ events: i0.check(tP(1)), options: t4(i6) }),
+      i8 = tL({
+        id: tI(),
+        isReturningVisitor: tC(),
+        landingPage: iM,
+        count: tF(),
+        activeSessionLength: tF(),
+        averageSessionLength: tF(),
       }),
-      i6 = tU({
-        id: tS(),
-        stableId: tS(),
-        random: tI(),
-        audiences: tB(tS()),
-        traits: iM,
-        location: ij,
-        session: i2,
+      i5 = tL({
+        id: tI(),
+        stableId: tI(),
+        random: tF(),
+        audiences: tV(tI()),
+        traits: iU,
+        location: iR,
+        session: i8,
       }),
-      i3 = tV(tU({ id: tS() }), t8()),
-      i4 = tU({ data: tU(), message: tS(), error: t2(tj()) }),
-      i8 = tN(i4, { data: tU({ profiles: t0(tB(i6)) }) }),
-      i5 = tU({
-        key: tS(),
-        type: tZ([tW(['Variable']), tS()]),
-        meta: tU({ experienceId: tS(), variantIndex: tI() }),
+      i9 = tJ(tL({ id: tI() }), ie()),
+      i7 = tL({ data: tL(), message: tI(), error: t5(tC()) }),
+      ne = tQ(i7, { data: tL({ profiles: t4(tV(i5)) }) }),
+      nt = tL({
+        key: tI(),
+        type: tK([t1(['Variable']), tI()]),
+        meta: tL({ experienceId: tI(), variantIndex: tF() }),
       }),
-      i9 = tZ([tS(), tj(), tF(), tI(), tH(tS(), t8())])
-    tN(i5, { type: tS(), value: new tM({ type: 'unknown' }) })
-    let i7 = tB(tQ('type', [tN(i5, { type: tX('Variable'), value: i9 })])),
-      ne = tB(
-        tU({
-          experienceId: tS(),
-          variantIndex: tI(),
-          variants: tH(tS(), tS()),
-          sticky: t0(t3(tj(), !1)),
+      ni = tK([tI(), tC(), tB(), tF(), tY(tI(), ie())])
+    tQ(nt, { type: tI(), value: new tZ({ type: 'unknown' }) })
+    let nn = tV(tG('type', [tQ(nt, { type: t6('Variable'), value: ni })])),
+      nr = tV(
+        tL({
+          experienceId: tI(),
+          variantIndex: tF(),
+          variants: tY(tI(), tI()),
+          sticky: t4(
+            ((d = tC()),
+            new t9({
+              type: 'prefault',
+              innerType: d,
+              get defaultValue() {
+                return 'function' == typeof !1
+                  ? (!1)()
+                  : eB(!1)
+                    ? { ...!1 }
+                    : !!Array.isArray(!1) && [...!1]
+              },
+            })),
+          ),
         }),
       ),
-      nt = tN(i4, { data: tU({ profile: i6, experiences: ne, changes: i7 }) }),
-      ni = tQ('type', [
-        iH,
-        tN(iJ, { type: tX('component_click') }),
-        tN(iJ, { type: tX('component_hover'), hoverDurationMs: tI(), hoverId: tS() }),
+      ns = tQ(i7, { data: tL({ profile: i5, experiences: nr, changes: nn }) }),
+      no = tG('type', [
+        iX,
+        tQ(iG, { type: t6('component_click') }),
+        tQ(iG, { type: t6('component_hover'), hoverDurationMs: tF(), hoverId: tI() }),
       ]),
-      nn = tU({ profile: i3, events: tB(ni) }),
-      nr = tB(nn)
-    function ns(e, t) {
+      na = tL({ profile: i9, events: tV(no) }),
+      nl = tV(na)
+    function nu(e, t) {
       let i = e.safeParse(t)
       if (i.success) return i.data
       throw Error(
@@ -1873,7 +1885,7 @@
         })(i.error),
       )
     }
-    ez({
+    e$({
       localeError:
         ((r = {
           string: { unit: 'characters', verb: 'to have' },
@@ -1940,8 +1952,8 @@
               return `Invalid input: expected ${t}, received ${n}`
             }
             case 'invalid_value':
-              if (1 === e.values.length) return `Invalid input: expected ${eB(e.values[0])}`
-              return `Invalid option: expected one of ${eO(e.values, '|')}`
+              if (1 === e.values.length) return `Invalid input: expected ${eV(e.values[0])}`
+              return `Invalid option: expected one of ${ej(e.values, '|')}`
             case 'too_big': {
               let t = e.inclusive ? '<=' : '<',
                 i = r[e.origin] ?? null
@@ -1965,7 +1977,7 @@
             case 'not_multiple_of':
               return `Invalid number: must be a multiple of ${e.divisor}`
             case 'unrecognized_keys':
-              return `Unrecognized key${e.keys.length > 1 ? 's' : ''}: ${eO(e.keys, ', ')}`
+              return `Unrecognized key${e.keys.length > 1 ? 's' : ''}: ${ej(e.keys, ', ')}`
             case 'invalid_key':
               return `Invalid key in ${e.origin}`
             case 'invalid_union':
@@ -1976,7 +1988,7 @@
           }
         }),
     })
-    let no = new (class {
+    let nc = new (class {
       name = '@contentful/optimization'
       PREFIX_PARTS = ['Ctfl', 'O10n']
       DELIMITER = ':'
@@ -2024,31 +2036,31 @@
         })
       }
     })()
-    function na(e) {
+    function nd(e) {
       return {
         debug: (t, ...i) => {
-          no.debug(e, t, ...i)
+          nc.debug(e, t, ...i)
         },
         info: (t, ...i) => {
-          no.info(e, t, ...i)
+          nc.info(e, t, ...i)
         },
         log: (t, ...i) => {
-          no.log(e, t, ...i)
+          nc.log(e, t, ...i)
         },
         warn: (t, ...i) => {
-          no.warn(e, t, ...i)
+          nc.warn(e, t, ...i)
         },
         error: (t, ...i) => {
-          no.error(e, t, ...i)
+          nc.error(e, t, ...i)
         },
         fatal: (t, ...i) => {
-          no.fatal(e, t, ...i)
+          nc.fatal(e, t, ...i)
         },
       }
     }
-    let nl = { fatal: 60, error: 50, warn: 40, info: 30, debug: 20, log: 10 },
-      nu = class {},
-      nc = {
+    let np = { fatal: 60, error: 50, warn: 40, info: 30, debug: 20, log: 10 },
+      nf = class {},
+      nh = {
         debug: (...e) => {
           console.debug(...e)
         },
@@ -2068,24 +2080,24 @@
           console.error(...e)
         },
       }
-    class nd extends nu {
+    class nv extends nf {
       name = 'ConsoleLogSink'
       verbosity
       constructor(e) {
         ;(super(), (this.verbosity = e ?? 'error'))
       }
       ingest(e) {
-        nl[e.level] < nl[this.verbosity] || nc[e.level](...e.messages)
+        np[e.level] < np[this.verbosity] || nh[e.level](...e.messages)
       }
     }
-    let nf = na('ApiClient:Retry')
-    class nh extends Error {
+    let ny = nd('ApiClient:Retry')
+    class ng extends Error {
       status
       constructor(e, t = 500) {
-        ;(super(e), Object.setPrototypeOf(this, nh.prototype), (this.status = t))
+        ;(super(e), Object.setPrototypeOf(this, ng.prototype), (this.status = t))
       }
     }
-    async function np(e) {
+    async function nm(e) {
       if (e <= 0) return
       let { promise: t, resolve: i } = Promise.withResolvers()
       ;(setTimeout(() => {
@@ -2093,9 +2105,9 @@
       }, e),
         await t)
     }
-    let nv = na('ApiClient:Timeout'),
-      ny = na('ApiClient:Fetch'),
-      ng = function (e) {
+    let nb = nd('ApiClient:Timeout'),
+      nw = nd('ApiClient:Fetch'),
+      n_ = function (e) {
         try {
           let t = (function ({
             apiName: e = 'Optimization',
@@ -2108,7 +2120,7 @@
                 a = setTimeout(() => {
                   ;('function' == typeof i
                     ? i({ apiName: e })
-                    : nv.error(`Request to "${r.toString()}" timed out`, Error('Request timeout')),
+                    : nb.error(`Request to "${r.toString()}" timed out`, Error('Request timeout')),
                     o.abort())
                 }, n),
                 l = await t(r, { ...s, signal: o.signal })
@@ -2136,7 +2148,7 @@
                     try {
                       let s = await i(r, n)
                       if (503 === s.status)
-                        throw new nh(
+                        throw new ng(
                           `${e} API request to "${r.toString()}" failed with status: "[${s.status}] ${s.statusText}".`,
                           503,
                         )
@@ -2144,13 +2156,13 @@
                         let e = Error(
                           `Request to "${r.toString()}" failed with status: [${s.status}] ${s.statusText} - traceparent: ${s.headers.get('traceparent')}`,
                         )
-                        ;(nf.error('Request failed with non-OK status:', e), t.abort())
+                        ;(ny.error('Request failed with non-OK status:', e), t.abort())
                         return
                       }
-                      return (nf.debug(`Response from "${r.toString()}":`, s), s)
+                      return (ny.debug(`Response from "${r.toString()}":`, s), s)
                     } catch (e) {
-                      if (e instanceof nh && 503 === e.status) throw e
-                      ;(nf.error(`Request to "${r.toString()}" failed:`, e), t.abort())
+                      if (e instanceof ng && 503 === e.status) throw e
+                      ;(ny.error(`Request to "${r.toString()}" failed:`, e), t.abort())
                     }
                   }
                 })({ apiName: e, controller: a, fetchMethod: t, init: o, url: s })
@@ -2160,11 +2172,11 @@
                   if (e) return e
                   break
                 } catch (s) {
-                  if (!(s instanceof nh) || 503 !== s.status) throw s
+                  if (!(s instanceof ng) || 503 !== s.status) throw s
                   let r = l - t
                   if ((n?.({ apiName: e, error: s, attemptNumber: t, retriesLeft: r }), 0 === r))
                     throw s
-                  await np(i)
+                  await nm(i)
                 }
               throw Error(`${e} API request to "${s.toString()}" may not be retried.`)
             }
@@ -2173,14 +2185,14 @@
           throw (
             e instanceof Error &&
               ('AbortError' === e.name
-                ? ny.warn('Request aborted due to network issues. This request may not be retried.')
-                : ny.error('Request failed:', e)),
+                ? nw.warn('Request aborted due to network issues. This request may not be retried.')
+                : nw.error('Request failed:', e)),
             e
           )
         }
       },
-      nm = na('ApiClient'),
-      nb = class {
+      nz = nd('ApiClient'),
+      nO = class {
         name
         clientId
         environment
@@ -2189,19 +2201,19 @@
           ;((this.clientId = i),
             (this.environment = n ?? 'main'),
             (this.name = e),
-            (this.fetch = ng({ ...(t ?? {}), apiName: e })))
+            (this.fetch = n_({ ...(t ?? {}), apiName: e })))
         }
         logRequestError(e, { requestName: t }) {
           e instanceof Error &&
             ('AbortError' === e.name
-              ? nm.warn(
+              ? nz.warn(
                   `[${this.name}] "${t}" request aborted due to network issues. This request may not be retried.`,
                 )
-              : nm.error(`[${this.name}] "${t}" request failed:`, e))
+              : nz.error(`[${this.name}] "${t}" request failed:`, e))
         }
       },
-      nw = na('ApiClient:Experience')
-    class n_ extends nb {
+      nS = nd('ApiClient:Experience')
+    class nE extends nO {
       baseUrl
       enabledFeatures
       ip
@@ -2221,7 +2233,7 @@
       async getProfile(e, t = {}) {
         if (!e) throw Error('Valid profile ID required.')
         let i = 'Get Profile'
-        nw.info(`Sending "${i}" request`)
+        nS.info(`Sending "${i}" request`)
         try {
           let n = await this.fetch(
               this.constructUrl(
@@ -2232,9 +2244,9 @@
             ),
             {
               data: { changes: r, experiences: s, profile: o },
-            } = ns(nt, await n.json())
+            } = nu(ns, await n.json())
           return (
-            nw.debug(`"${i}" request successfully completed`),
+            nS.debug(`"${i}" request successfully completed`),
             { changes: r, selectedOptimizations: s, profile: o }
           )
         } catch (e) {
@@ -2251,9 +2263,9 @@
       }
       async createProfile({ events: e }, t = {}) {
         let i = 'Create Profile'
-        nw.info(`Sending "${i}" request`)
+        nS.info(`Sending "${i}" request`)
         let n = this.constructExperienceRequestBody(e, t)
-        nw.debug(`"${i}" request body:`, n)
+        nS.debug(`"${i}" request body:`, n)
         try {
           let e = await this.makeProfileMutationRequest({
               url: `v2/organizations/${this.clientId}/environments/${this.environment}/profiles`,
@@ -2262,9 +2274,9 @@
             }),
             {
               data: { changes: r, experiences: s, profile: o },
-            } = ns(nt, await e.json())
+            } = nu(ns, await e.json())
           return (
-            nw.debug(`"${i}" request successfully completed`),
+            nS.debug(`"${i}" request successfully completed`),
             { changes: r, selectedOptimizations: s, profile: o }
           )
         } catch (e) {
@@ -2274,9 +2286,9 @@
       async updateProfile({ profileId: e, events: t }, i = {}) {
         if (!e) throw Error('Valid profile ID required.')
         let n = 'Update Profile'
-        nw.info(`Sending "${n}" request`)
+        nS.info(`Sending "${n}" request`)
         let r = this.constructExperienceRequestBody(t, i)
-        nw.debug(`"${n}" request body:`, r)
+        nS.debug(`"${n}" request body:`, r)
         try {
           let t = await this.makeProfileMutationRequest({
               url: `v2/organizations/${this.clientId}/environments/${this.environment}/profiles/${e}`,
@@ -2285,9 +2297,9 @@
             }),
             {
               data: { changes: s, experiences: o, profile: a },
-            } = ns(nt, await t.json())
+            } = nu(ns, await t.json())
           return (
-            nw.debug(`"${n}" request successfully completed`),
+            nS.debug(`"${n}" request successfully completed`),
             { changes: s, selectedOptimizations: o, profile: a }
           )
         } catch (e) {
@@ -2301,9 +2313,9 @@
       }
       async upsertManyProfiles({ events: e }, t = {}) {
         let i = 'Upsert Many Profiles'
-        nw.info(`Sending "${i}" request`)
-        let n = ns(i1, { events: e, options: this.constructBodyOptions(t) })
-        nw.debug(`"${i}" request body:`, n)
+        nS.info(`Sending "${i}" request`)
+        let n = nu(i4, { events: e, options: this.constructBodyOptions(t) })
+        nS.debug(`"${i}" request body:`, n)
         try {
           let e = await this.makeProfileMutationRequest({
               url: `v2/organizations/${this.clientId}/environments/${this.environment}/events`,
@@ -2312,8 +2324,8 @@
             }),
             {
               data: { profiles: r },
-            } = ns(i8, await e.json())
-          return (nw.debug(`"${i}" request successfully completed`), r)
+            } = nu(ne, await e.json())
+          return (nS.debug(`"${i}" request successfully completed`), r)
         } catch (e) {
           throw (this.logRequestError(e, { requestName: i }), e)
         }
@@ -2348,11 +2360,11 @@
         )
       }
       constructExperienceRequestBody(e, t) {
-        return i0.parse({ events: ns(iX, e), options: this.constructBodyOptions(t) })
+        return i3.parse({ events: nu(i2, e), options: this.constructBodyOptions(t) })
       }
     }
-    let nz = na('ApiClient:Insights')
-    class nO extends nb {
+    let nk = nd('ApiClient:Insights')
+    class nx extends nO {
       baseUrl
       beaconHandler
       constructor(e) {
@@ -2366,15 +2378,15 @@
             `v1/organizations/${this.clientId}/environments/${this.environment}/events`,
             this.baseUrl,
           ),
-          r = ns(nr, e)
+          r = nu(nl, e)
         if ('function' == typeof i) {
-          if ((nz.debug('Queueing events via beaconHandler'), i(n, r))) return !0
-          nz.warn(
+          if ((nk.debug('Queueing events via beaconHandler'), i(n, r))) return !0
+          nk.warn(
             'beaconHandler failed to queue events; events will be emitted immediately via fetch',
           )
         }
         let s = 'Event Batches'
-        ;(nz.info(`Sending "${s}" request`), nz.debug(`"${s}" request body:`, r))
+        ;(nk.info(`Sending "${s}" request`), nk.debug(`"${s}" request body:`, r))
         try {
           return (
             await this.fetch(n, {
@@ -2383,7 +2395,7 @@
               body: JSON.stringify(r),
               keepalive: !0,
             }),
-            nz.debug(`"${s}" request successfully completed`),
+            nk.debug(`"${s}" request successfully completed`),
             !0
           )
         } catch (e) {
@@ -2391,7 +2403,7 @@
         }
       }
     }
-    class nE {
+    class nP {
       config
       experience
       insights
@@ -2399,11 +2411,11 @@
         const { experience: t, insights: i, clientId: n, environment: r, fetchOptions: s } = e,
           o = { clientId: n, environment: r, fetchOptions: s }
         ;((this.config = o),
-          (this.experience = new n_({ ...o, ...t })),
-          (this.insights = new nO({ ...o, ...i })))
+          (this.experience = new nE({ ...o, ...t })),
+          (this.insights = new nx({ ...o, ...i })))
       }
     }
-    function nk(e) {
+    function n$(e) {
       if (!e || 'object' != typeof e) return !1
       let t = Object.getPrototypeOf(e)
       return (
@@ -2411,52 +2423,648 @@
         '[object Object]' === Object.prototype.toString.call(e)
       )
     }
-    function nS(e) {
-      return nk(e) || Array.isArray(e)
+    function nj(e) {
+      return n$(e) || Array.isArray(e)
     }
-    let nx = tU({
-        campaign: t0(ix),
-        locale: t0(tS()),
-        location: t0(ij),
-        page: t0(iF),
-        screen: t0(iR),
-        userAgent: t0(tS()),
+    function nI(e, t, i) {
+      function n(i, n) {
+        if (
+          (i._zod ||
+            Object.defineProperty(i, '_zod', {
+              value: { def: n, constr: o, traits: new Set() },
+              enumerable: !1,
+            }),
+          i._zod.traits.has(e))
+        )
+          return
+        ;(i._zod.traits.add(e), t(i, n))
+        let r = o.prototype,
+          s = Object.keys(r)
+        for (let e = 0; e < s.length; e++) {
+          let t = s[e]
+          t in i || (i[t] = r[t].bind(i))
+        }
+      }
+      let r = i?.Parent ?? Object
+      class s extends r {}
+      function o(e) {
+        var t
+        let r = i?.Parent ? new s() : this
+        for (let i of (n(r, e), (t = r._zod).deferred ?? (t.deferred = []), r._zod.deferred)) i()
+        return r
+      }
+      return (
+        Object.defineProperty(s, 'name', { value: e }),
+        Object.defineProperty(o, 'init', { value: n }),
+        Object.defineProperty(o, Symbol.hasInstance, {
+          value: (t) => (!!i?.Parent && t instanceof i.Parent) || t?._zod?.traits?.has(e),
+        }),
+        Object.defineProperty(o, 'name', { value: e }),
+        o
+      )
+    }
+    ;(Object.freeze({ status: 'aborted' }), Symbol('zod_brand'))
+    class nT extends Error {
+      constructor() {
+        super('Encountered Promise during synchronous parse. Use .parseAsync() instead.')
+      }
+    }
+    let nA = {}
+    function nF(e) {
+      return (e && Object.assign(nA, e), nA)
+    }
+    function nR(e, t) {
+      return 'bigint' == typeof t ? t.toString() : t
+    }
+    function nC(e) {
+      return {
+        get value() {
+          {
+            let t = e()
+            return (Object.defineProperty(this, 'value', { value: t }), t)
+          }
+        },
+      }
+    }
+    let nM = Symbol('evaluating')
+    function nB(e, t, i) {
+      let n
+      Object.defineProperty(e, t, {
+        get() {
+          if (n !== nM) return (void 0 === n && ((n = nM), (n = i())), n)
+        },
+        set(i) {
+          Object.defineProperty(e, t, { value: i })
+        },
+        configurable: !0,
+      })
+    }
+    function nq(e, t, i) {
+      Object.defineProperty(e, t, { value: i, writable: !0, enumerable: !0, configurable: !0 })
+    }
+    function nU(...e) {
+      let t = {}
+      for (let i of e) Object.assign(t, Object.getOwnPropertyDescriptors(i))
+      return Object.defineProperties({}, t)
+    }
+    let nZ = 'captureStackTrace' in Error ? Error.captureStackTrace : (...e) => {}
+    function nN(e) {
+      return 'object' == typeof e && null !== e && !Array.isArray(e)
+    }
+    function nV(e) {
+      if (!1 === nN(e)) return !1
+      let t = e.constructor
+      if (void 0 === t || 'function' != typeof t) return !0
+      let i = t.prototype
+      return !1 !== nN(i) && !1 !== Object.prototype.hasOwnProperty.call(i, 'isPrototypeOf')
+    }
+    function nD(e, t, i) {
+      let n = new e._zod.constr(t ?? e._zod.def)
+      return ((!t || i?.parent) && (n._zod.parent = e), n)
+    }
+    function nL(e) {
+      if (!e) return {}
+      if ('string' == typeof e) return { error: () => e }
+      if (e?.message !== void 0) {
+        if (e?.error !== void 0) throw Error('Cannot specify both `message` and `error` params')
+        e.error = e.message
+      }
+      return (delete e.message, 'string' == typeof e.error) ? { ...e, error: () => e.error } : e
+    }
+    function nQ(e, t = 0) {
+      if (!0 === e.aborted) return !0
+      for (let i = t; i < e.issues.length; i++) if (e.issues[i]?.continue !== !0) return !0
+      return !1
+    }
+    function nJ(e) {
+      return 'string' == typeof e ? e : e?.message
+    }
+    function nH(e, t, i) {
+      let n = { ...e, path: e.path ?? [] }
+      return (
+        e.message ||
+          (n.message =
+            nJ(e.inst?._zod.def?.error?.(e)) ??
+            nJ(t?.error?.(e)) ??
+            nJ(i.customError?.(e)) ??
+            nJ(i.localeError?.(e)) ??
+            'Invalid input'),
+        delete n.inst,
+        delete n.continue,
+        t?.reportInput || delete n.input,
+        n
+      )
+    }
+    nC(() => {
+      if ('u' > typeof navigator && navigator?.userAgent?.includes('Cloudflare')) return !1
+      try {
+        return (Function(''), !0)
+      } catch (e) {
+        return !1
+      }
+    })
+    let nK = (e, t) => {
+        ;((e.name = '$ZodError'),
+          Object.defineProperty(e, '_zod', { value: e._zod, enumerable: !1 }),
+          Object.defineProperty(e, 'issues', { value: t, enumerable: !1 }),
+          (e.message = JSON.stringify(t, nR, 2)),
+          Object.defineProperty(e, 'toString', { value: () => e.message, enumerable: !1 }))
+      },
+      nW = nI('$ZodError', nK),
+      nG = nI('$ZodError', nK, { Parent: Error }),
+      nX =
+        ((a = nG),
+        (e, t, i, n) => {
+          let r = i ? Object.assign(i, { async: !1 }) : { async: !1 },
+            s = e._zod.run({ value: t, issues: [] }, r)
+          if (s instanceof Promise) throw new nT()
+          if (s.issues.length) {
+            let e = new (n?.Err ?? a)(s.issues.map((e) => nH(e, r, nF())))
+            throw (nZ(e, n?.callee), e)
+          }
+          return s.value
+        }),
+      nY =
+        ((l = nG),
+        async (e, t, i, n) => {
+          let r = i ? Object.assign(i, { async: !0 }) : { async: !0 },
+            s = e._zod.run({ value: t, issues: [] }, r)
+          if ((s instanceof Promise && (s = await s), s.issues.length)) {
+            let e = new (n?.Err ?? l)(s.issues.map((e) => nH(e, r, nF())))
+            throw (nZ(e, n?.callee), e)
+          }
+          return s.value
+        }),
+      n0 =
+        ((u = nG),
+        (e, t, i) => {
+          let n = i ? { ...i, async: !1 } : { async: !1 },
+            r = e._zod.run({ value: t, issues: [] }, n)
+          if (r instanceof Promise) throw new nT()
+          return r.issues.length
+            ? { success: !1, error: new (u ?? nW)(r.issues.map((e) => nH(e, n, nF()))) }
+            : { success: !0, data: r.value }
+        }),
+      n1 =
+        ((c = nG),
+        async (e, t, i) => {
+          let n = i ? Object.assign(i, { async: !0 }) : { async: !0 },
+            r = e._zod.run({ value: t, issues: [] }, n)
+          return (
+            r instanceof Promise && (r = await r),
+            r.issues.length
+              ? { success: !1, error: new c(r.issues.map((e) => nH(e, n, nF()))) }
+              : { success: !0, data: r.value }
+          )
+        }),
+      n2 = /^-?\d+(?:\.\d+)?$/,
+      n6 = /^(?:true|false)$/i,
+      n3 = { major: 4, minor: 3, patch: 6 },
+      n4 = nI('$ZodType', (e, t) => {
+        var i
+        ;(e ?? (e = {}), (e._zod.def = t), (e._zod.bag = e._zod.bag || {}), (e._zod.version = n3))
+        let n = [...(e._zod.def.checks ?? [])]
+        for (let t of (e._zod.traits.has('$ZodCheck') && n.unshift(e), n))
+          for (let i of t._zod.onattach) i(e)
+        if (0 === n.length)
+          ((i = e._zod).deferred ?? (i.deferred = []),
+            e._zod.deferred?.push(() => {
+              e._zod.run = e._zod.parse
+            }))
+        else {
+          let t = (e, t, i) => {
+              let n,
+                r = nQ(e)
+              for (let s of t) {
+                if (s._zod.def.when) {
+                  if (!s._zod.def.when(e)) continue
+                } else if (r) continue
+                let t = e.issues.length,
+                  o = s._zod.check(e)
+                if (o instanceof Promise && i?.async === !1) throw new nT()
+                if (n || o instanceof Promise)
+                  n = (n ?? Promise.resolve()).then(async () => {
+                    ;(await o, e.issues.length !== t && (r || (r = nQ(e, t))))
+                  })
+                else {
+                  if (e.issues.length === t) continue
+                  r || (r = nQ(e, t))
+                }
+              }
+              return n ? n.then(() => e) : e
+            },
+            i = (i, r, s) => {
+              if (nQ(i)) return ((i.aborted = !0), i)
+              let o = t(r, n, s)
+              if (o instanceof Promise) {
+                if (!1 === s.async) throw new nT()
+                return o.then((t) => e._zod.parse(t, s))
+              }
+              return e._zod.parse(o, s)
+            }
+          e._zod.run = (r, s) => {
+            if (s.skipChecks) return e._zod.parse(r, s)
+            if ('backward' === s.direction) {
+              let t = e._zod.parse({ value: r.value, issues: [] }, { ...s, skipChecks: !0 })
+              return t instanceof Promise ? t.then((e) => i(e, r, s)) : i(t, r, s)
+            }
+            let o = e._zod.parse(r, s)
+            if (o instanceof Promise) {
+              if (!1 === s.async) throw new nT()
+              return o.then((e) => t(e, n, s))
+            }
+            return t(o, n, s)
+          }
+        }
+        nB(e, '~standard', () => ({
+          validate: (t) => {
+            try {
+              let i = n0(e, t)
+              return i.success ? { value: i.data } : { issues: i.error?.issues }
+            } catch (i) {
+              return n1(e, t).then((e) =>
+                e.success ? { value: e.data } : { issues: e.error?.issues },
+              )
+            }
+          },
+          vendor: 'zod',
+          version: 1,
+        }))
       }),
-      n$ = tN(nx, { componentId: tS(), experienceId: t0(tS()), variantIndex: t0(tI()) }),
-      nI = tN(n$, { sticky: t0(tj()), viewId: tS(), viewDurationMs: tI() }),
-      nP = tN(n$, { viewId: t0(tS()), viewDurationMs: t0(tI()) }),
-      nj = tN(n$, { hoverId: tS(), hoverDurationMs: tI() }),
-      nT = tN(nx, { traits: t0(iM), userId: tS() }),
-      nF = tN(nx, {
-        properties: t0(
-          (function (e, t) {
-            var i = void 0
-            let n = e._zod.def.checks
-            if (n && n.length > 0)
+      n8 = nI('$ZodString', (e, t) => {
+        var i
+        let n
+        ;(n4.init(e, t),
+          (e._zod.pattern =
+            [...(e?._zod.bag?.patterns ?? [])].pop() ??
+            ((n = (i = e._zod.bag)
+              ? `[\\s\\S]{${i?.minimum ?? 0},${i?.maximum ?? ''}}`
+              : '[\\s\\S]*'),
+            RegExp(`^${n}$`))),
+          (e._zod.parse = (i, n) => {
+            if (t.coerce)
+              try {
+                i.value = String(i.value)
+              } catch (e) {}
+            return (
+              'string' == typeof i.value ||
+                i.issues.push({
+                  expected: 'string',
+                  code: 'invalid_type',
+                  input: i.value,
+                  inst: e,
+                }),
+              i
+            )
+          }))
+      }),
+      n5 = nI('$ZodNumber', (e, t) => {
+        ;(n4.init(e, t),
+          (e._zod.pattern = e._zod.bag.pattern ?? n2),
+          (e._zod.parse = (i, n) => {
+            if (t.coerce)
+              try {
+                i.value = Number(i.value)
+              } catch (e) {}
+            let r = i.value
+            if ('number' == typeof r && !Number.isNaN(r) && Number.isFinite(r)) return i
+            let s =
+              'number' == typeof r
+                ? Number.isNaN(r)
+                  ? 'NaN'
+                  : Number.isFinite(r)
+                    ? void 0
+                    : 'Infinity'
+                : void 0
+            return (
+              i.issues.push({
+                expected: 'number',
+                code: 'invalid_type',
+                input: r,
+                inst: e,
+                ...(s ? { received: s } : {}),
+              }),
+              i
+            )
+          }))
+      }),
+      n9 = nI('$ZodBoolean', (e, t) => {
+        ;(n4.init(e, t),
+          (e._zod.pattern = n6),
+          (e._zod.parse = (i, n) => {
+            if (t.coerce)
+              try {
+                i.value = !!i.value
+              } catch (e) {}
+            let r = i.value
+            return (
+              'boolean' == typeof r ||
+                i.issues.push({ expected: 'boolean', code: 'invalid_type', input: r, inst: e }),
+              i
+            )
+          }))
+      })
+    function n7(e, t, i, n, r) {
+      if (e.issues.length) {
+        if (r && !(i in n)) return
+        t.issues.push(...e.issues.map((e) => (e.path ?? (e.path = []), e.path.unshift(i), e)))
+      }
+      void 0 === e.value ? i in n && (t.value[i] = void 0) : (t.value[i] = e.value)
+    }
+    let re = nI('$ZodObject', (e, t) => {
+      let i
+      n4.init(e, t)
+      let n = Object.getOwnPropertyDescriptor(t, 'shape')
+      if (!n?.get) {
+        let e = t.shape
+        Object.defineProperty(t, 'shape', {
+          get: () => {
+            let i = { ...e }
+            return (Object.defineProperty(t, 'shape', { value: i }), i)
+          },
+        })
+      }
+      let r = nC(() =>
+        (function (e) {
+          var t
+          let i = Object.keys(e.shape)
+          for (let t of i)
+            if (!e.shape?.[t]?._zod?.traits?.has('$ZodType'))
+              throw Error(`Invalid element at key "${t}": expected a Zod schema`)
+          let n = Object.keys((t = e.shape)).filter(
+            (e) => 'optional' === t[e]._zod.optin && 'optional' === t[e]._zod.optout,
+          )
+          return { ...e, keys: i, keySet: new Set(i), numKeys: i.length, optionalKeys: new Set(n) }
+        })(t),
+      )
+      nB(e._zod, 'propValues', () => {
+        let e = t.shape,
+          i = {}
+        for (let t in e) {
+          let n = e[t]._zod
+          if (n.values) for (let e of (i[t] ?? (i[t] = new Set()), n.values)) i[t].add(e)
+        }
+        return i
+      })
+      let s = t.catchall
+      e._zod.parse = (t, n) => {
+        i ?? (i = r.value)
+        let o = t.value
+        if (!nN(o))
+          return (t.issues.push({ expected: 'object', code: 'invalid_type', input: o, inst: e }), t)
+        t.value = {}
+        let a = [],
+          l = i.shape
+        for (let e of i.keys) {
+          let i = l[e],
+            r = 'optional' === i._zod.optout,
+            s = i._zod.run({ value: o[e], issues: [] }, n)
+          s instanceof Promise ? a.push(s.then((i) => n7(i, t, e, o, r))) : n7(s, t, e, o, r)
+        }
+        return s
+          ? (function (e, t, i, n, r, s) {
+              let o = [],
+                a = r.keySet,
+                l = r.catchall._zod,
+                u = l.def.type,
+                c = 'optional' === l.optout
+              for (let r in t) {
+                if (a.has(r)) continue
+                if ('never' === u) {
+                  o.push(r)
+                  continue
+                }
+                let s = l.run({ value: t[r], issues: [] }, n)
+                s instanceof Promise ? e.push(s.then((e) => n7(e, i, r, t, c))) : n7(s, i, r, t, c)
+              }
+              return (o.length &&
+                i.issues.push({ code: 'unrecognized_keys', keys: o, input: t, inst: s }),
+              e.length)
+                ? Promise.all(e).then(() => i)
+                : i
+            })(a, o, t, n, r.value, e)
+          : a.length
+            ? Promise.all(a).then(() => t)
+            : t
+      }
+    })
+    function rt(e, t) {
+      return e.issues.length && void 0 === t ? { issues: [], value: void 0 } : e
+    }
+    let ri = nI('$ZodOptional', (e, t) => {
+        ;(n4.init(e, t),
+          (e._zod.optin = 'optional'),
+          (e._zod.optout = 'optional'),
+          nB(e._zod, 'values', () =>
+            t.innerType._zod.values ? new Set([...t.innerType._zod.values, void 0]) : void 0,
+          ),
+          nB(e._zod, 'pattern', () => {
+            var e
+            let i,
+              n,
+              r = t.innerType._zod.pattern
+            return r
+              ? RegExp(
+                  `^(${((i = +!!(e = r.source).startsWith('^')), (n = e.endsWith('$') ? e.length - 1 : e.length), e.slice(i, n))})?$`,
+                )
+              : void 0
+          }),
+          (e._zod.parse = (e, i) => {
+            if ('optional' === t.innerType._zod.optin) {
+              let n = t.innerType._zod.run(e, i)
+              return n instanceof Promise ? n.then((t) => rt(t, e.value)) : rt(n, e.value)
+            }
+            return void 0 === e.value ? e : t.innerType._zod.run(e, i)
+          }))
+      }),
+      rn = nI('$ZodPrefault', (e, t) => {
+        ;(n4.init(e, t),
+          (e._zod.optin = 'optional'),
+          nB(e._zod, 'values', () => t.innerType._zod.values),
+          (e._zod.parse = (e, i) => (
+            'backward' === i.direction || (void 0 === e.value && (e.value = t.defaultValue)),
+            t.innerType._zod.run(e, i)
+          )))
+      })
+    ;(Symbol('ZodOutput'), Symbol('ZodInput'))
+    ;(h = globalThis).__zod_globalRegistry ??
+      (h.__zod_globalRegistry = new (class e {
+        constructor() {
+          ;((this._map = new WeakMap()), (this._idmap = new Map()))
+        }
+        add(e, ...t) {
+          let i = t[0]
+          return (
+            this._map.set(e, i),
+            i && 'object' == typeof i && 'id' in i && this._idmap.set(i.id, e),
+            this
+          )
+        }
+        clear() {
+          return ((this._map = new WeakMap()), (this._idmap = new Map()), this)
+        }
+        remove(e) {
+          let t = this._map.get(e)
+          return (
+            t && 'object' == typeof t && 'id' in t && this._idmap.delete(t.id),
+            this._map.delete(e),
+            this
+          )
+        }
+        get(e) {
+          let t = e._zod.parent
+          if (t) {
+            let i = { ...(this.get(t) ?? {}) }
+            delete i.id
+            let n = { ...i, ...this._map.get(e) }
+            return Object.keys(n).length ? n : void 0
+          }
+          return this._map.get(e)
+        }
+        has(e) {
+          return this._map.has(e)
+        }
+      })())
+    let rr = nI('ZodMiniType', (e, t) => {
+        if (!e._zod) throw Error('Uninitialized schema in ZodMiniType.')
+        ;(n4.init(e, t),
+          (e.def = t),
+          (e.type = t.type),
+          (e.parse = (t, i) => nX(e, t, i, { callee: e.parse })),
+          (e.safeParse = (t, i) => n0(e, t, i)),
+          (e.parseAsync = async (t, i) => nY(e, t, i, { callee: e.parseAsync })),
+          (e.safeParseAsync = async (t, i) => n1(e, t, i)),
+          (e.check = (...i) =>
+            e.clone(
+              {
+                ...t,
+                checks: [
+                  ...(t.checks ?? []),
+                  ...i.map((e) =>
+                    'function' == typeof e
+                      ? { _zod: { check: e, def: { check: 'custom' }, onattach: [] } }
+                      : e,
+                  ),
+                ],
+              },
+              { parent: !0 },
+            )),
+          (e.with = e.check),
+          (e.clone = (t, i) => nD(e, t, i)),
+          (e.brand = () => e),
+          (e.register = (t, i) => (t.add(e, i), e)),
+          (e.apply = (t) => t(e)))
+      }),
+      rs = nI('ZodMiniString', (e, t) => {
+        ;(n8.init(e, t), rr.init(e, t))
+      })
+    function ro(e) {
+      return new rs({ type: 'string', ...nL(e) })
+    }
+    let ra = nI('ZodMiniNumber', (e, t) => {
+      ;(n5.init(e, t), rr.init(e, t))
+    })
+    function rl(e) {
+      return new ra({ type: 'number', checks: [], ...nL(e) })
+    }
+    let ru = nI('ZodMiniBoolean', (e, t) => {
+        ;(n9.init(e, t), rr.init(e, t))
+      }),
+      rc = nI('ZodMiniObject', (e, t) => {
+        ;(re.init(e, t), rr.init(e, t), nB(e, 'shape', () => t.shape))
+      })
+    function rd(e, t) {
+      if (!nV(t)) throw Error('Invalid input to extend: expected a plain object')
+      let i = e._zod.def.checks
+      if (i && i.length > 0) {
+        let i = e._zod.def.shape
+        for (let e in t)
+          if (void 0 !== Object.getOwnPropertyDescriptor(i, e))
+            throw Error(
+              'Cannot overwrite keys on object schemas containing refinements. Use `.safeExtend()` instead.',
+            )
+      }
+      let n = nU(e._zod.def, {
+        get shape() {
+          let i = { ...e._zod.def.shape, ...t }
+          return (nq(this, 'shape', i), i)
+        },
+      })
+      return nD(e, n)
+    }
+    let rp = nI('ZodMiniOptional', (e, t) => {
+      ;(ri.init(e, t), rr.init(e, t))
+    })
+    function rf(e) {
+      return new rp({ type: 'optional', innerType: e })
+    }
+    let rh = nI('ZodMiniPrefault', (e, t) => {
+        ;(rn.init(e, t), rr.init(e, t))
+      }),
+      rv = new rc({
+        type: 'object',
+        shape:
+          {
+            campaign: rf(iI),
+            locale: rf(ro()),
+            location: rf(iR),
+            page: rf(iM),
+            screen: rf(iq),
+            userAgent: rf(ro()),
+          } ?? {},
+        ...nL(void 0),
+      }),
+      ry = rd(rv, { componentId: ro(), experienceId: rf(ro()), variantIndex: rf(rl()) }),
+      rg = rd(ry, {
+        sticky: rf(new ru({ type: 'boolean', ...nL(void 0) })),
+        viewId: ro(),
+        viewDurationMs: rl(),
+      }),
+      rm = rd(ry, { viewId: rf(ro()), viewDurationMs: rf(rl()) }),
+      rb = rd(ry, { hoverId: ro(), hoverDurationMs: rl() }),
+      rw = rd(rv, { traits: rf(iU), userId: ro() }),
+      r_ = rd(rv, {
+        properties: rf(
+          (function (e) {
+            var t = void 0
+            let i = e._zod.def.checks
+            if (i && i.length > 0)
               throw Error('.partial() cannot be used on object schemas containing refinements')
-            let r = eP(e._zod.def, {
+            let n = nU(e._zod.def, {
               get shape() {
-                let t = e._zod.def.shape,
-                  n = { ...t }
-                if (i)
-                  for (let e in i) {
-                    if (!(e in t)) throw Error(`Unrecognized key: "${e}"`)
-                    i[e] && (n[e] = tY ? new tY({ type: 'optional', innerType: t[e] }) : t[e])
+                let i = e._zod.def.shape,
+                  n = { ...i }
+                if (t)
+                  for (let e in t) {
+                    if (!(e in i)) throw Error(`Unrecognized key: "${e}"`)
+                    t[e] && (n[e] = rp ? new rp({ type: 'optional', innerType: i[e] }) : i[e])
                   }
                 else
-                  for (let e in t) n[e] = tY ? new tY({ type: 'optional', innerType: t[e] }) : t[e]
-                return (eI(this, 'shape', n), n)
+                  for (let e in i) n[e] = rp ? new rp({ type: 'optional', innerType: i[e] }) : i[e]
+                return (nq(this, 'shape', n), n)
               },
               checks: [],
             })
-            return eM(e, r)
-          })(iF),
+            return nD(e, n)
+          })(iM),
         ),
       }),
-      nA = tN(nx, { name: tS(), properties: iA }),
-      nR = tN(nx, { event: tS(), properties: t0(t3(iA, {})) }),
-      nM = { path: '', query: {}, referrer: '', search: '', title: '', url: '' },
-      nC = class {
+      rz = rd(rv, { name: ro(), properties: iB }),
+      rO = rd(rv, {
+        event: ro(),
+        properties: rf(
+          ((p = {}),
+          new rh({
+            type: 'prefault',
+            innerType: iB,
+            get defaultValue() {
+              return 'function' == typeof p ? p() : nV(p) ? { ...p } : Array.isArray(p) ? [...p] : p
+            },
+          })),
+        ),
+      }),
+      rS = { path: '', query: {}, referrer: '', search: '', title: '', url: '' },
+      rE = class {
         app
         channel
         library
@@ -2476,7 +3084,7 @@
             (this.channel = i),
             (this.library = n),
             (this.getLocale = r ?? (() => 'en-US')),
-            (this.getPageProperties = s ?? (() => nM)),
+            (this.getPageProperties = s ?? (() => rS)),
             (this.getUserAgent = o ?? (() => void 0)))
         }
         buildUniversalEventProperties({
@@ -2524,7 +3132,7 @@
             variantIndex: r,
             viewDurationMs: s,
             ...o
-          } = ns(nI, e)
+          } = nu(rg, e)
           return {
             ...this.buildEntryInteractionBase(o, t, n, r),
             type: 'component',
@@ -2533,7 +3141,7 @@
           }
         }
         buildClick(e) {
-          let { componentId: t, experienceId: i, variantIndex: n, ...r } = ns(n$, e)
+          let { componentId: t, experienceId: i, variantIndex: n, ...r } = nu(ry, e)
           return { ...this.buildEntryInteractionBase(r, t, i, n), type: 'component_click' }
         }
         buildHover(e) {
@@ -2544,7 +3152,7 @@
             hoverDurationMs: r,
             variantIndex: s,
             ...o
-          } = ns(nj, e)
+          } = nu(rb, e)
           return {
             ...this.buildEntryInteractionBase(o, i, n, s),
             type: 'component_hover',
@@ -2560,7 +3168,7 @@
             viewId: r,
             viewDurationMs: s,
             ...o
-          } = ns(nP, e)
+          } = nu(rm, e)
           return {
             ...this.buildEntryInteractionBase(o, t, i, n),
             ...(void 0 === s ? {} : { viewDurationMs: s }),
@@ -2570,7 +3178,7 @@
           }
         }
         buildIdentify(e) {
-          let { traits: t = {}, userId: i, ...n } = ns(nT, e)
+          let { traits: t = {}, userId: i, ...n } = nu(rw, e)
           return {
             ...this.buildUniversalEventProperties(n),
             type: 'identify',
@@ -2579,7 +3187,7 @@
           }
         }
         buildPageView(e = {}) {
-          let { properties: t = {}, ...i } = ns(nF, e),
+          let { properties: t = {}, ...i } = nu(r_, e),
             n = this.getPageProperties(),
             r = (function e(t, i) {
               let n = Object.keys(i)
@@ -2588,34 +3196,34 @@
                 if ('__proto__' === s) continue
                 let o = i[s],
                   a = t[s]
-                nS(o) && nS(a)
+                nj(o) && nj(a)
                   ? (t[s] = e(a, o))
                   : Array.isArray(o)
                     ? (t[s] = e([], o))
-                    : nk(o)
+                    : n$(o)
                       ? (t[s] = e({}, o))
                       : (void 0 === a || void 0 !== o) && (t[s] = o)
               }
               return t
-            })({ ...n, title: n.title ?? nM.title }, t),
+            })({ ...n, title: n.title ?? rS.title }, t),
             {
               context: { screen: s, ...o },
               ...a
             } = this.buildUniversalEventProperties(i),
-            l = ns(iV, o)
+            l = nu(iQ, o)
           return { ...a, context: l, type: 'page', properties: r }
         }
         buildScreenView(e) {
-          let { name: t, properties: i, ...n } = ns(nA, e),
+          let { name: t, properties: i, ...n } = nu(rz, e),
             {
               context: { page: r, ...s },
               ...o
             } = this.buildUniversalEventProperties(n),
-            a = ns(iZ, { ...s, screen: s.screen ?? { name: t } })
+            a = nu(iH, { ...s, screen: s.screen ?? { name: t } })
           return { ...o, context: a, type: 'screen', name: t, properties: { name: t, ...i } }
         }
         buildTrack(e) {
-          let { event: t, properties: i = {}, ...n } = ns(nR, e)
+          let { event: t, properties: i = {}, ...n } = nu(rO, e)
           return {
             ...this.buildUniversalEventProperties(n),
             type: 'track',
@@ -2624,7 +3232,7 @@
           }
         }
       }
-    class nB {
+    class rk {
       interceptors = new Map()
       nextId = 0
       add(e) {
@@ -2643,11 +3251,11 @@
       async run(e) {
         let t = Array.from(this.interceptors.values()),
           i = e
-        for (let e of t) i = await e(es(i))
+        for (let e of t) i = await e(ep(i))
         return i
       }
     }
-    let nq = {
+    let rx = {
         resolve: (e) =>
           e
             ? e.reduce((e, { key: t, value: i }) => {
@@ -2659,9 +3267,9 @@
               }, {})
             : {},
       },
-      nU = na('Optimization'),
-      nN = 'Could not resolve Merge Tag value:',
-      nV = (e, t) => {
+      rP = nd('Optimization'),
+      r$ = 'Could not resolve Merge Tag value:',
+      rj = (e, t) => {
         if (!e || 'object' != typeof e) return
         if (!t) return e
         let i = e
@@ -2671,7 +3279,7 @@
         }
         return i
       },
-      nD = {
+      rI = {
         normalizeSelectors: (e) =>
           e
             .split('_')
@@ -2679,34 +3287,34 @@
               [i.slice(0, t).join('.'), i.slice(t).join('_')].filter((e) => '' !== e).join('.'),
             ),
         getValueFromProfile(e, t) {
-          let i = nD.normalizeSelectors(e).find((e) => nV(t, e))
+          let i = rI.normalizeSelectors(e).find((e) => rj(t, e))
           if (!i) return
-          let n = nV(t, i)
+          let n = rj(t, i)
           if (n && ('string' == typeof n || 'number' == typeof n || 'boolean' == typeof n))
             return `${n}`
         },
         resolve(e, t) {
-          if (!id.safeParse(e).success)
-            return void nU.warn(`${nN} supplied entry is not a Merge Tag entry`)
+          if (!iy.safeParse(e).success)
+            return void rP.warn(`${r$} supplied entry is not a Merge Tag entry`)
           let {
             fields: { nt_fallback: i },
           } = e
-          return i6.safeParse(t).success
-            ? (nD.getValueFromProfile(e.fields.nt_mergetag_id, t) ?? i)
-            : (nU.warn(`${nN} no valid profile`), i)
+          return i5.safeParse(t).success
+            ? (rI.getValueFromProfile(e.fields.nt_mergetag_id, t) ?? i)
+            : (rP.warn(`${r$} no valid profile`), i)
         },
       },
-      nZ = na('Optimization'),
-      nL = 'Could not resolve optimized entry variant:',
-      nQ = {
+      rT = nd('Optimization'),
+      rA = 'Could not resolve optimized entry variant:',
+      rF = {
         getOptimizationEntry({ optimizedEntry: e, selectedOptimizations: t }, i = !1) {
-          if (i || (t.length && ik(e)))
+          if (i || (t.length && i$(e)))
             return e.fields.nt_experiences
-              .filter((e) => iE(e))
+              .filter((e) => iP(e))
               .find((e) => t.some(({ experienceId: t }) => t === e.fields.nt_experience_id))
         },
         getSelectedOptimization({ optimizationEntry: e, selectedOptimizations: t }, i = !1) {
-          if (i || (t.length && iE(e)))
+          if (i || (t.length && iP(e)))
             return t.find(({ experienceId: t }) => t === e.fields.nt_experience_id)
         },
         getSelectedVariant(
@@ -2714,7 +3322,7 @@
           n = !1,
         ) {
           var r
-          if (!n && (!ik(e) || !iE(t))) return
+          if (!n && (!i$(e) || !iP(t))) return
           let s = ((r = t.fields.nt_config),
           {
             distribution: r?.distribution === void 0 ? [] : [...r.distribution],
@@ -2729,62 +3337,62 @@
           if (s?.length) return s.at(i - 1)
         },
         getSelectedVariantEntry({ optimizationEntry: e, selectedVariant: t }, i = !1) {
-          if (!i && (!iE(e) || !ih.safeParse(t).success)) return
+          if (!i && (!iP(e) || !ig.safeParse(t).success)) return
           let n = e.fields.nt_variants?.find((e) => e.sys.id === t.id)
-          return il.safeParse(n).success ? n : void 0
+          return ip.safeParse(n).success ? n : void 0
         },
         resolve: function (e, t) {
-          if ((nZ.debug(`Resolving optimized entry for baseline entry ${e.sys.id}`), !t?.length))
+          if ((rT.debug(`Resolving optimized entry for baseline entry ${e.sys.id}`), !t?.length))
             return (
-              nZ.warn(`${nL} no selectedOptimizations exist for the current profile`),
+              rT.warn(`${rA} no selectedOptimizations exist for the current profile`),
               { entry: e }
             )
-          if (!ik(e)) return (nZ.warn(`${nL} entry ${e.sys.id} is not optimized`), { entry: e })
-          let i = nQ.getOptimizationEntry({ optimizedEntry: e, selectedOptimizations: t }, !0)
+          if (!i$(e)) return (rT.warn(`${rA} entry ${e.sys.id} is not optimized`), { entry: e })
+          let i = rF.getOptimizationEntry({ optimizedEntry: e, selectedOptimizations: t }, !0)
           if (!i)
             return (
-              nZ.warn(`${nL} could not find an optimization entry for ${e.sys.id}`),
+              rT.warn(`${rA} could not find an optimization entry for ${e.sys.id}`),
               { entry: e }
             )
-          let n = nQ.getSelectedOptimization(
+          let n = rF.getSelectedOptimization(
               { optimizationEntry: i, selectedOptimizations: t },
               !0,
             ),
             r = n?.variantIndex ?? 0
           if (0 === r)
             return (
-              nZ.debug(`Resolved optimization entry for entry ${e.sys.id} is baseline`),
+              rT.debug(`Resolved optimization entry for entry ${e.sys.id} is baseline`),
               { entry: e }
             )
-          let s = nQ.getSelectedVariant(
+          let s = rF.getSelectedVariant(
             { optimizedEntry: e, optimizationEntry: i, selectedVariantIndex: r },
             !0,
           )
           if (!s)
             return (
-              nZ.warn(`${nL} could not find a valid replacement variant entry for ${e.sys.id}`),
+              rT.warn(`${rA} could not find a valid replacement variant entry for ${e.sys.id}`),
               { entry: e }
             )
-          let o = nQ.getSelectedVariantEntry({ optimizationEntry: i, selectedVariant: s }, !0)
+          let o = rF.getSelectedVariantEntry({ optimizationEntry: i, selectedVariant: s }, !0)
           return o
-            ? (nZ.debug(`Entry ${e.sys.id} has been resolved to variant entry ${o.sys.id}`),
+            ? (rT.debug(`Entry ${e.sys.id} has been resolved to variant entry ${o.sys.id}`),
               { entry: o, selectedOptimization: n })
-            : (nZ.warn(`${nL} could not find a valid replacement variant entry for ${e.sys.id}`),
+            : (rT.warn(`${rA} could not find a valid replacement variant entry for ${e.sys.id}`),
               { entry: e })
         },
       }
-    class nJ {
+    class rR {
       api
       eventBuilder
       config
-      flagsResolver = nq
-      mergeTagValueResolver = nD
-      optimizedEntryResolver = nQ
-      interceptors = { event: new nB(), state: new nB() }
+      flagsResolver = rx
+      mergeTagValueResolver = rI
+      optimizedEntryResolver = rF
+      interceptors = { event: new rk(), state: new rk() }
       constructor(e, t = {}) {
         this.config = e
         const { eventBuilder: i, logLevel: n, environment: r, clientId: s, fetchOptions: o } = e
-        no.addSink(new nd(n))
+        nc.addSink(new nv(n))
         const a = {
           clientId: s,
           environment: r,
@@ -2792,8 +3400,8 @@
           experience: t.experience,
           insights: t.insights,
         }
-        ;((this.api = new nE(a)),
-          (this.eventBuilder = new nC(
+        ;((this.api = new nP(a)),
+          (this.eventBuilder = new rE(
             i ?? {
               channel: 'server',
               library: { name: '@contentful/optimization-ios-bridge', version: '0.0.0' },
@@ -2810,9 +3418,9 @@
         return this.mergeTagValueResolver.resolve(e, t)
       }
     }
-    let nH = nJ
-    function nK() {}
-    function nW(e, t) {
+    let rC = rR
+    function rM() {}
+    function rB(e, t) {
       return (function e(t, i, n, r, s, o, a) {
         let l = a(t, i, n, r, s, o)
         if (void 0 !== l) return l
@@ -2830,22 +3438,22 @@
           }
         return (function t(i, n, r, s) {
           if (Object.is(i, n)) return !0
-          let o = A(i),
-            a = A(n)
-          if ((o === q && (o = Q), a === q && (a = Q), o !== a)) return !1
+          let o = Z(i),
+            a = Z(n)
+          if ((o === Q && (o = Y), a === Q && (a = Y), o !== a)) return !1
           switch (o) {
-            case M:
+            case V:
               return i.toString() === n.toString()
-            case C: {
+            case D: {
               let e = i.valueOf(),
                 t = n.valueOf()
               return e === t || (Number.isNaN(e) && Number.isNaN(t))
             }
-            case B:
-            case N:
-            case U:
+            case L:
+            case H:
+            case J:
               return Object.is(i.valueOf(), n.valueOf())
-            case R:
+            case N:
               return i.source === n.source && i.flags === n.flags
             case '[object Function]':
               return i === n
@@ -2856,12 +3464,12 @@
           ;(r.set(i, n), r.set(n, i))
           try {
             switch (o) {
-              case V:
+              case K:
                 if (i.size !== n.size) return !1
                 for (let [t, o] of i.entries())
                   if (!n.has(t) || !e(o, n.get(t), t, i, n, r, s)) return !1
                 return !0
-              case D: {
+              case W: {
                 if (i.size !== n.size) return !1
                 let t = Array.from(i.values()),
                   o = Array.from(n.values())
@@ -2873,18 +3481,18 @@
                 }
                 return !0
               }
-              case Z:
-              case H:
-              case K:
-              case W:
               case G:
-              case '[object BigUint64Array]':
-              case X:
-              case Y:
-              case ee:
-              case '[object BigInt64Array]':
               case et:
               case ei:
+              case en:
+              case er:
+              case '[object BigUint64Array]':
+              case es:
+              case eo:
+              case ea:
+              case '[object BigInt64Array]':
+              case el:
+              case eu:
                 if (
                   ('u' > typeof Buffer && Buffer.isBuffer(i) !== Buffer.isBuffer(n)) ||
                   i.length !== n.length
@@ -2892,18 +3500,18 @@
                   return !1
                 for (let t = 0; t < i.length; t++) if (!e(i[t], n[t], t, i, n, r, s)) return !1
                 return !0
-              case L:
+              case X:
                 if (i.byteLength !== n.byteLength) return !1
                 return t(new Uint8Array(i), new Uint8Array(n), r, s)
-              case J:
+              case ee:
                 if (i.byteLength !== n.byteLength || i.byteOffset !== n.byteOffset) return !1
                 return t(new Uint8Array(i), new Uint8Array(n), r, s)
               case '[object Error]':
                 return i.name === n.name && i.message === n.message
-              case Q: {
-                if (!(t(i.constructor, n.constructor, r, s) || (nk(i) && nk(n)))) return !1
-                let o = [...Object.keys(i), ...F(i)],
-                  a = [...Object.keys(n), ...F(n)]
+              case Y: {
+                if (!(t(i.constructor, n.constructor, r, s) || (n$(i) && n$(n)))) return !1
+                let o = [...Object.keys(i), ...U(i)],
+                  a = [...Object.keys(n), ...U(n)]
                 if (o.length !== a.length) return !1
                 for (let t = 0; t < o.length; t++) {
                   let a = o[t],
@@ -2921,31 +3529,31 @@
             ;(r.delete(i), r.delete(n))
           }
         })(t, i, o, a)
-      })(e, t, void 0, void 0, void 0, void 0, nK)
+      })(e, t, void 0, void 0, void 0, void 0, rM)
     }
-    let nG = na('CoreStateful'),
-      nX = {
+    let rq = nd('CoreStateful'),
+      rU = {
         trackView: 'component',
         trackFlagView: 'component',
         trackClick: 'component_click',
         trackHover: 'component_hover',
       }
-    class nY extends nH {
+    class rZ extends rC {
       flagObservables = new Map()
-      getFlag(e, t = ea.value) {
+      getFlag(e, t = eh.value) {
         let i = super.getFlag(e, t),
           n = this.buildFlagViewBuilderArgs(e, t)
         return (
           this.trackFlagView(n).catch((t) => {
-            no.warn(`Failed to emit "flag view" event for "${e}"`, String(t))
+            nc.warn(`Failed to emit "flag view" event for "${e}"`, String(t))
           }),
           i
         )
       }
-      resolveOptimizedEntry(e, t = ep.value) {
+      resolveOptimizedEntry(e, t = e_.value) {
         return super.resolveOptimizedEntry(e, t)
       }
-      getMergeTagValue(e, t = ey.value) {
+      getMergeTagValue(e, t = eO.value) {
         return super.getMergeTagValue(e, t)
       }
       async identify(e) {
@@ -2999,15 +3607,15 @@
         await this.sendInsightsEvent('trackFlagView', [e], this.eventBuilder.buildFlagView(e))
       }
       hasConsent(e) {
-        let { [e]: t } = nX,
+        let { [e]: t } = rU,
           i =
             void 0 !== t
               ? this.allowedEventTypes.includes(t)
               : this.allowedEventTypes.some((t) => t === e)
-        return !!eu.value || i
+        return !!ey.value || i
       }
       onBlockedByConsent(e, t) {
-        ;(nG.warn(`Event "${e}" was blocked due to lack of consent; payload: ${JSON.stringify(t)}`),
+        ;(rq.warn(`Event "${e}" was blocked due to lack of consent; payload: ${JSON.stringify(t)}`),
           this.reportBlockedEvent('consent', e, t))
       }
       async sendExperienceEvent(e, t, i, n) {
@@ -3018,7 +3626,7 @@
       async sendInsightsEvent(e, t, i, n) {
         this.hasConsent(e) ? await this.insightsQueue.send(i) : this.onBlockedByConsent(e, t)
       }
-      buildFlagViewBuilderArgs(e, t = ea.value) {
+      buildFlagViewBuilderArgs(e, t = eh.value) {
         let i = t?.find((t) => t.key === e)
         return {
           componentId: e,
@@ -3034,17 +3642,17 @@
         let r = this.trackFlagView.bind(this),
           s = this.buildFlagViewBuilderArgs.bind(this),
           o =
-            ((t = em.computed(() => super.getFlag(e, ea.value))),
-            (i = eo(t)),
+            ((t = eE.computed(() => super.getFlag(e, eh.value))),
+            (i = ef(t)),
             {
               get current() {
                 return i.current
               },
               subscribe(e) {
                 let t = !1,
-                  n = es(i.current)
+                  n = ep(i.current)
                 return i.subscribe((i) => {
-                  ;(t && nW(n, i)) || ((t = !0), (n = es(i)), e(i))
+                  ;(t && rB(n, i)) || ((t = !0), (n = ep(i)), e(i))
                 })
               },
               subscribeOnce: (e) => i.subscribeOnce(e),
@@ -3053,23 +3661,23 @@
             get current() {
               let { current: t } = o
               return (
-                r(s(e, ea.value)).catch((t) => {
-                  no.warn(`Failed to emit "flag view" event for "${e}"`, String(t))
+                r(s(e, eh.value)).catch((t) => {
+                  nc.warn(`Failed to emit "flag view" event for "${e}"`, String(t))
                 }),
                 t
               )
             },
             subscribe: (t) =>
               o.subscribe((i) => {
-                ;(r(s(e, ea.value)).catch((t) => {
-                  no.warn(`Failed to emit "flag view" event for "${e}"`, String(t))
+                ;(r(s(e, eh.value)).catch((t) => {
+                  nc.warn(`Failed to emit "flag view" event for "${e}"`, String(t))
                 }),
                   t(i))
               }),
             subscribeOnce: (t) =>
               o.subscribeOnce((i) => {
-                ;(r(s(e, ea.value)).catch((t) => {
-                  no.warn(`Failed to emit "flag view" event for "${e}"`, String(t))
+                ;(r(s(e, eh.value)).catch((t) => {
+                  nc.warn(`Failed to emit "flag view" event for "${e}"`, String(t))
                 }),
                   t(i))
               }),
@@ -3081,14 +3689,14 @@
         try {
           this.onEventBlocked?.(n)
         } catch (e) {
-          nG.warn(`onEventBlocked callback failed for method "${t}"`, e)
+          rq.warn(`onEventBlocked callback failed for method "${t}"`, e)
         }
-        el.value = n
+        ev.value = n
       }
     }
-    let n0 = nY,
-      n1 = (e, t) => (!Number.isFinite(e) || void 0 === e || e < 1 ? t : Math.floor(e)),
-      n2 = {
+    let rN = rZ,
+      rV = (e, t) => (!Number.isFinite(e) || void 0 === e || e < 1 ? t : Math.floor(e)),
+      rD = {
         flushIntervalMs: 3e4,
         baseBackoffMs: 500,
         maxBackoffMs: 3e4,
@@ -3096,16 +3704,16 @@
         maxConsecutiveFailures: 8,
         circuitOpenMs: 12e4,
       },
-      n6 = '__ctfl_optimization_stateful_runtime_lock__',
-      n3 = () => {
+      rL = '__ctfl_optimization_stateful_runtime_lock__',
+      rQ = () => {
         let e = globalThis
-        return ((e[n6] ??= { owner: void 0 }), e[n6])
+        return ((e[rL] ??= { owner: void 0 }), e[rL])
       },
-      n4 = (e) => {
-        let t = n3()
+      rJ = (e) => {
+        let t = rQ()
         t.owner === e && (t.owner = void 0)
       }
-    class n8 {
+    class rH {
       circuitOpenUntil = 0
       flushFailureCount = 0
       flushInFlight = !1
@@ -3220,8 +3828,8 @@
         }
       }
     }
-    let n5 = na('CoreStateful')
-    class n9 {
+    let rK = nd('CoreStateful')
+    class rW {
       experienceApi
       eventInterceptors
       flushRuntime
@@ -3246,13 +3854,13 @@
           (this.offlineMaxEvents = s),
           (this.onOfflineDrop = o),
           (this.stateInterceptors = a),
-          (this.flushRuntime = new n8({
+          (this.flushRuntime = new rH({
             policy: n,
             onRetry: () => {
               this.flush()
             },
             onCallbackError: (e, t) => {
-              n5.warn(`Experience flush policy callback "${e}" failed`, t)
+              rK.warn(`Experience flush policy callback "${e}" failed`, t)
             },
           })))
       }
@@ -3260,16 +3868,16 @@
         this.flushRuntime.clearScheduledRetry()
       }
       async send(e) {
-        let t = ns(iG, await this.eventInterceptors.run(e))
-        if (((ec.value = t), ed.value)) return await this.upsertProfile([t])
-        ;(n5.debug(`Queueing ${t.type} event`, t), this.enqueueEvent(t))
+        let t = nu(i1, await this.eventInterceptors.run(e))
+        if (((eg.value = t), em.value)) return await this.upsertProfile([t])
+        ;(rK.debug(`Queueing ${t.type} event`, t), this.enqueueEvent(t))
       }
       async flush(e = {}) {
         let { force: t = !1 } = e
-        if (this.flushRuntime.shouldSkip({ force: t, isOnline: !!ed.value })) return
+        if (this.flushRuntime.shouldSkip({ force: t, isOnline: !!em.value })) return
         if (0 === this.queuedExperienceEvents.size)
           return void this.flushRuntime.clearScheduledRetry()
-        n5.debug('Flushing offline Experience event queue')
+        rK.debug('Flushing offline Experience event queue')
         let i = Array.from(this.queuedExperienceEvents)
         this.flushRuntime.markFlushStarted()
         try {
@@ -3291,7 +3899,7 @@
         if (this.queuedExperienceEvents.size >= this.offlineMaxEvents) {
           let e = this.queuedExperienceEvents.size - this.offlineMaxEvents + 1
           ;(t = this.dropOldestEvents(e)).length > 0 &&
-            n5.warn(
+            rK.warn(
               `Dropped ${t.length} oldest offline event(s) due to queue limit (${this.offlineMaxEvents})`,
             )
         }
@@ -3317,20 +3925,20 @@
         try {
           this.onOfflineDrop?.(e)
         } catch (e) {
-          n5.warn('Offline queue drop callback failed', e)
+          rK.warn('Offline queue drop callback failed', e)
         }
       }
       async tryUpsertQueuedEvents(e) {
         try {
           return (await this.upsertProfile(e), !0)
         } catch (e) {
-          return (n5.warn('Experience queue flush request threw an error', e), !1)
+          return (rK.warn('Experience queue flush request threw an error', e), !1)
         }
       }
       async upsertProfile(e) {
         let t = this.getAnonymousId()
-        t && n5.debug(`Anonymous ID found: ${t}`)
-        let i = await this.experienceApi.upsertProfile({ profileId: t ?? ey.value?.id, events: e })
+        t && rK.debug(`Anonymous ID found: ${t}`)
+        let i = await this.experienceApi.upsertProfile({ profileId: t ?? eO.value?.id, events: e })
         return (await this.updateOutputSignals(i), i)
       }
       async updateOutputSignals(e) {
@@ -3339,15 +3947,15 @@
           profile: i,
           selectedOptimizations: n,
         } = await this.stateInterceptors.run(e)
-        f(() => {
-          ;(nW(ea.value, t) || (ea.value = t),
-            nW(ey.value, i) || (ey.value = i),
-            nW(ep.value, n) || (ep.value = n))
+        b(() => {
+          ;(rB(eh.value, t) || (eh.value = t),
+            rB(eO.value, i) || (eO.value = i),
+            rB(e_.value, n) || (e_.value = n))
         })
       }
     }
-    let n7 = na('CoreStateful')
-    class re {
+    let rG = nd('CoreStateful')
+    class rX {
       eventInterceptors
       flushIntervalMs
       flushRuntime
@@ -3360,13 +3968,13 @@
         ;((this.eventInterceptors = t),
           (this.flushIntervalMs = r),
           (this.insightsApi = n),
-          (this.flushRuntime = new n8({
+          (this.flushRuntime = new rH({
             policy: i,
             onRetry: () => {
               this.flush()
             },
             onCallbackError: (e, t) => {
-              n7.warn(`Insights flush policy callback "${e}" failed`, t)
+              rG.warn(`Insights flush policy callback "${e}" failed`, t)
             },
           })))
       }
@@ -3379,12 +3987,12 @@
           (this.insightsPeriodicFlushTimer = void 0))
       }
       async send(e) {
-        let { value: t } = ey
-        if (!t) return void n7.warn('Attempting to emit an event without an Optimization profile')
-        let i = ns(ni, await this.eventInterceptors.run(e))
-        n7.debug(`Queueing ${i.type} event for profile ${t.id}`, i)
+        let { value: t } = eO
+        if (!t) return void rG.warn('Attempting to emit an event without an Optimization profile')
+        let i = nu(no, await this.eventInterceptors.run(e))
+        rG.debug(`Queueing ${i.type} event for profile ${t.id}`, i)
         let n = this.queuedInsightsByProfile.get(t.id)
-        ;((ec.value = i),
+        ;((eg.value = i),
           n
             ? ((n.profile = t), n.events.push(i))
             : this.queuedInsightsByProfile.set(t.id, { profile: t, events: [i] }),
@@ -3394,8 +4002,8 @@
       }
       async flush(e = {}) {
         let { force: t = !1 } = e
-        if (this.flushRuntime.shouldSkip({ force: t, isOnline: !!ed.value })) return
-        n7.debug('Flushing insights event queue')
+        if (this.flushRuntime.shouldSkip({ force: t, isOnline: !!em.value })) return
+        rG.debug('Flushing insights event queue')
         let i = this.createBatches()
         if (!i.length) {
           ;(this.flushRuntime.clearScheduledRetry(), this.reconcilePeriodicFlushTimer())
@@ -3426,7 +4034,7 @@
         try {
           return await this.insightsApi.sendBatchEvents(e)
         } catch (e) {
-          return (n7.warn('Insights queue flush request threw an error', e), !1)
+          return (rG.warn('Insights queue flush request threw an error', e), !1)
         }
       }
       getQueuedEventCount() {
@@ -3451,13 +4059,13 @@
           : this.clearPeriodicFlushTimer()
       }
     }
-    let rt = Symbol.for('ctfl.optimization.preview.signals'),
-      ri = Symbol.for('ctfl.optimization.preview.signalFns'),
-      rn = na('CoreStateful'),
-      rr = ['identify', 'page', 'screen'],
-      rs = (e) => Object.values(e).some((e) => void 0 !== e),
-      ro = 0
-    class ra extends n0 {
+    let rY = Symbol.for('ctfl.optimization.preview.signals'),
+      r0 = Symbol.for('ctfl.optimization.preview.signalFns'),
+      r1 = nd('CoreStateful'),
+      r2 = ['identify', 'page', 'screen'],
+      r6 = (e) => Object.values(e).some((e) => void 0 !== e),
+      r3 = 0
+    class r4 extends rN {
       singletonOwner
       destroyed = !1
       allowedEventTypes
@@ -3465,15 +4073,15 @@
       insightsQueue
       onEventBlocked
       states = {
-        blockedEventStream: eo(el),
+        blockedEventStream: ef(ev),
         flag: (e) => this.getFlagObservable(e),
-        consent: eo(eu),
-        eventStream: eo(ec),
-        canOptimize: eo(ev),
-        selectedOptimizations: eo(ep),
-        previewPanelAttached: eo(ef),
-        previewPanelOpen: eo(eh),
-        profile: eo(ey),
+        consent: ef(ey),
+        eventStream: ef(eg),
+        canOptimize: ef(ez),
+        selectedOptimizations: ef(e_),
+        previewPanelAttached: ef(eb),
+        previewPanelOpen: ef(ew),
+        profile: ef(eO),
       }
       constructor(e) {
         ;(super(e, {
@@ -3487,17 +4095,17 @@
               plainText: e.plainText,
               preflight: e.preflight,
             }
-            return rs(t) ? t : void 0
+            return r6(t) ? t : void 0
           })(e.api),
           insights: ((e) => {
             if (void 0 === e) return
             let t = { baseUrl: e.insightsBaseUrl, beaconHandler: e.beaconHandler }
-            return rs(t) ? t : void 0
+            return r6(t) ? t : void 0
           })(e.api),
         }),
-          (this.singletonOwner = `CoreStateful#${++ro}`),
+          (this.singletonOwner = `CoreStateful#${++r3}`),
           ((e) => {
-            let t = n3()
+            let t = rQ()
             if (t.owner)
               throw Error(
                 `Stateful Optimization SDK already initialized (${t.owner}). Only one stateful instance is supported per runtime.`,
@@ -3514,37 +4122,37 @@
             } = e,
             { changes: o, consent: a, selectedOptimizations: l, profile: u } = i ?? {},
             c = ((e) => ({
-              flush: ((e, t = n2) => {
+              flush: ((e, t = rD) => {
                 var i, n
                 let r = e ?? {},
-                  s = n1(r.baseBackoffMs, t.baseBackoffMs),
-                  o = Math.max(s, n1(r.maxBackoffMs, t.maxBackoffMs))
+                  s = rV(r.baseBackoffMs, t.baseBackoffMs),
+                  o = Math.max(s, rV(r.maxBackoffMs, t.maxBackoffMs))
                 return {
-                  flushIntervalMs: n1(r.flushIntervalMs, t.flushIntervalMs),
+                  flushIntervalMs: rV(r.flushIntervalMs, t.flushIntervalMs),
                   baseBackoffMs: s,
                   maxBackoffMs: o,
                   jitterRatio:
                     ((i = r.jitterRatio),
                     (n = t.jitterRatio),
                     Number.isFinite(i) && void 0 !== i ? Math.min(1, Math.max(0, i)) : n),
-                  maxConsecutiveFailures: n1(r.maxConsecutiveFailures, t.maxConsecutiveFailures),
-                  circuitOpenMs: n1(r.circuitOpenMs, t.circuitOpenMs),
+                  maxConsecutiveFailures: rV(r.maxConsecutiveFailures, t.maxConsecutiveFailures),
+                  circuitOpenMs: rV(r.circuitOpenMs, t.circuitOpenMs),
                   onCircuitOpen: r.onCircuitOpen,
                   onFlushFailure: r.onFlushFailure,
                   onFlushRecovered: r.onFlushRecovered,
                 }
               })(e?.flush),
-              offlineMaxEvents: n1(e?.offlineMaxEvents, 100),
+              offlineMaxEvents: rV(e?.offlineMaxEvents, 100),
               onOfflineDrop: e?.onOfflineDrop,
             }))(s)
-          ;((this.allowedEventTypes = t ?? rr),
+          ;((this.allowedEventTypes = t ?? r2),
             (this.onEventBlocked = r),
-            (this.insightsQueue = new re({
+            (this.insightsQueue = new rX({
               eventInterceptors: this.interceptors.event,
               flushPolicy: c.flush,
               insightsApi: this.api.insights,
             })),
-            (this.experienceQueue = new n9({
+            (this.experienceQueue = new rW({
               experienceApi: this.api.experience,
               eventInterceptors: this.interceptors.event,
               flushPolicy: c.flush,
@@ -3553,33 +4161,33 @@
               onOfflineDrop: c.onOfflineDrop,
               stateInterceptors: this.interceptors.state,
             })),
-            void 0 !== a && (eu.value = a),
-            f(() => {
-              ;(void 0 !== o && (ea.value = o),
-                void 0 !== l && (ep.value = l),
-                void 0 !== u && (ey.value = u))
+            void 0 !== a && (ey.value = a),
+            b(() => {
+              ;(void 0 !== o && (eh.value = o),
+                void 0 !== l && (e_.value = l),
+                void 0 !== u && (eO.value = u))
             }),
             this.initializeEffects())
         } catch (e) {
-          throw (n4(this.singletonOwner), e)
+          throw (rJ(this.singletonOwner), e)
         }
       }
       initializeEffects() {
-        ;(T(() => {
-          rn.debug(
-            `Profile ${ey.value && `with ID ${ey.value.id}`} has been ${ey.value ? 'set' : 'cleared'}`,
+        ;(q(() => {
+          r1.debug(
+            `Profile ${eO.value && `with ID ${eO.value.id}`} has been ${eO.value ? 'set' : 'cleared'}`,
           )
         }),
-          T(() => {
-            rn.debug(`Variants have been ${ep.value?.length ? 'populated' : 'cleared'}`)
+          q(() => {
+            r1.debug(`Variants have been ${e_.value?.length ? 'populated' : 'cleared'}`)
           }),
-          T(() => {
-            rn.info(
-              `Core ${eu.value ? 'will' : 'will not'} emit gated events due to consent (${eu.value})`,
+          q(() => {
+            r1.info(
+              `Core ${ey.value ? 'will' : 'will not'} emit gated events due to consent (${ey.value})`,
             )
           }),
-          T(() => {
-            ed.value &&
+          q(() => {
+            em.value &&
               (this.insightsQueue.clearScheduledRetry(),
               this.experienceQueue.clearScheduledRetry(),
               this.flushQueues({ force: !0 }))
@@ -3592,281 +4200,360 @@
         this.destroyed ||
           ((this.destroyed = !0),
           this.insightsQueue.flush({ force: !0 }).catch((e) => {
-            no.warn('Failed to flush insights queue during destroy()', String(e))
+            nc.warn('Failed to flush insights queue during destroy()', String(e))
           }),
           this.experienceQueue.flush({ force: !0 }).catch((e) => {
-            no.warn('Failed to flush Experience queue during destroy()', String(e))
+            nc.warn('Failed to flush Experience queue during destroy()', String(e))
           }),
           this.insightsQueue.clearPeriodicFlushTimer(),
-          n4(this.singletonOwner))
+          rJ(this.singletonOwner))
       }
       reset() {
-        f(() => {
-          ;((el.value = void 0),
-            (ec.value = void 0),
-            (ea.value = void 0),
-            (ey.value = void 0),
-            (ep.value = void 0))
+        b(() => {
+          ;((ev.value = void 0),
+            (eg.value = void 0),
+            (eh.value = void 0),
+            (eO.value = void 0),
+            (e_.value = void 0))
         })
       }
       async flush() {
         await this.flushQueues()
       }
       consent(e) {
-        eu.value = e
+        ey.value = e
       }
       get online() {
-        return ed.value ?? !1
+        return em.value ?? !1
       }
       set online(e) {
-        ed.value = e
+        em.value = e
       }
       registerPreviewPanel(e) {
-        ;(Reflect.set(e, rt, eg), Reflect.set(e, ri, em))
+        ;(Reflect.set(e, rY, eS), Reflect.set(e, r0, eE))
       }
     }
-    let rl = null,
-      ru = null,
-      rc = null,
-      rd = new Map(),
-      rf = new Map(),
-      rh = new Map(),
-      rp = new Map()
-    function rv() {
-      ;(rd.clear(), rf.clear(), rh.clear(), rp.clear())
+    function r8(e, t) {
+      let i = Object.values(t)
+      if (0 === i.length) return e
+      let n = e.map((e) => {
+        let { [e.experienceId]: i } = t
+        return i ? { ...e, variantIndex: i.variantIndex } : e
+      })
+      for (let e of i)
+        n.some((t) => t.experienceId === e.experienceId) ||
+          n.push({ experienceId: e.experienceId, variantIndex: e.variantIndex, variants: {} })
+      return n
     }
-    let ry = {
-      initialize(e) {
-        ;(rl && ry.destroy(),
-          (rl = new ra({
-            clientId: e.clientId,
-            environment: e.environment,
-            api: { experienceBaseUrl: e.experienceBaseUrl, insightsBaseUrl: e.insightsBaseUrl },
-          })),
-          e.defaults &&
-            (void 0 !== e.defaults.consent && rl.consent(e.defaults.consent),
-            void 0 !== e.defaults.profile && (eg.profile.value = e.defaults.profile),
-            void 0 !== e.defaults.changes && (eg.changes.value = e.defaults.changes),
-            void 0 !== e.defaults.optimizations &&
-              (eg.selectedOptimizations.value = e.defaults.optimizations)),
-          rl.consent(!0))
-        let t = globalThis
-        ;((ru = T(() => {
-          let e = {
-            profile: eg.profile.value ?? null,
-            consent: eg.consent.value,
-            canPersonalize: eg.canOptimize.value,
-            changes: eg.changes.value ?? null,
-            selectedPersonalizations: eg.selectedOptimizations.value ?? null,
-          }
-          'function' == typeof t.__nativeOnStateChange && t.__nativeOnStateChange(JSON.stringify(e))
-        })),
-          (rc = T(() => {
-            let e = eg.event.value
-            e &&
-              'function' == typeof t.__nativeOnEventEmitted &&
-              t.__nativeOnEventEmitted(JSON.stringify(e))
-          })))
-      },
-      identify(e, t, i) {
-        rl
-          ? rl
-              .identify(e)
-              .then((e) => {
-                t(JSON.stringify(e ?? null))
-              })
-              .catch((e) => {
-                i(e instanceof Error ? e.message : String(e))
-              })
-          : i('SDK not initialized. Call initialize() first.')
-      },
-      page(e, t, i) {
-        rl
-          ? rl
-              .page(e)
-              .then((e) => {
-                t(JSON.stringify(e ?? null))
-              })
-              .catch((e) => {
-                i(e instanceof Error ? e.message : String(e))
-              })
-          : i('SDK not initialized. Call initialize() first.')
-      },
-      screen(e, t, i) {
-        rl
-          ? rl
-              .screen({ name: e.name, properties: e.properties ?? {} })
-              .then((e) => {
-                t(JSON.stringify(e ?? null))
-              })
-              .catch((e) => {
-                i(e instanceof Error ? e.message : String(e))
-              })
-          : i('SDK not initialized. Call initialize() first.')
-      },
-      flush(e, t) {
-        rl
-          ? rl
-              .flush()
-              .then(() => {
-                e(JSON.stringify(null))
-              })
-              .catch((e) => {
-                t(e instanceof Error ? e.message : String(e))
-              })
-          : t('SDK not initialized. Call initialize() first.')
-      },
-      trackView(e, t, i) {
-        rl
-          ? rl
-              .trackView(e)
-              .then((e) => {
-                t(JSON.stringify(e ?? null))
-              })
-              .catch((e) => {
-                i(e instanceof Error ? e.message : String(e))
-              })
-          : i('SDK not initialized. Call initialize() first.')
-      },
-      trackClick(e, t, i) {
-        rl
-          ? rl
-              .trackClick(e)
-              .then(() => {
-                t(JSON.stringify(null))
-              })
-              .catch((e) => {
-                i(e instanceof Error ? e.message : String(e))
-              })
-          : i('SDK not initialized. Call initialize() first.')
-      },
-      consent(e) {
-        rl && rl.consent(e)
-      },
-      reset() {
-        rl && (rv(), rl.reset())
-      },
-      setOnline(e) {
-        eg.online.value = e
-      },
-      personalizeEntry: (e, t) =>
-        rl ? JSON.stringify(rl.resolveOptimizedEntry(e, t)) : JSON.stringify({ entry: e }),
-      setPreviewPanelOpen(e) {
-        rl && (eg.previewPanelOpen.value = e)
-      },
-      overrideAudience(e, t) {
-        if (!rl) return
-        ;(!(function (e) {
-          if (rd.has(e)) return
-          let t = (eg.changes.value ?? []).find((t) => t.audienceId === e)
-          rd.set(e, t?.qualified ?? !1)
-        })(e),
-          rh.set(e, t))
-        let i = (eg.changes.value ?? []).map((i) =>
-          i.audienceId === e ? { ...i, qualified: t } : i,
-        )
-        eg.changes.value = i
-      },
-      overrideVariant(e, t) {
-        if (!rl) return
-        ;(!(function (e) {
-          if (rf.has(e)) return
-          let t = (eg.selectedOptimizations.value ?? []).find((t) => t.experienceId === e)
-          rf.set(e, t?.variantIndex ?? 0)
-        })(e),
-          rp.set(e, t))
-        let i = (eg.selectedOptimizations.value ?? []).map((i) =>
-          i.experienceId === e ? { ...i, variantIndex: t } : i,
-        )
-        eg.selectedOptimizations.value = i
-      },
+    let r5 = nd('PreviewOverrides'),
+      r9 = { audiences: {}, selectedOptimizations: {} }
+    class r7 {
+      baselineSelectedOptimizations = null
+      overrides = { ...r9, audiences: {}, selectedOptimizations: {} }
+      interceptorId = null
+      selectedOptimizations
+      stateInterceptors
+      onOverridesChanged
+      constructor(e) {
+        const { selectedOptimizations: t, stateInterceptors: i, onOverridesChanged: n } = e
+        ;((this.selectedOptimizations = t),
+          (this.stateInterceptors = i),
+          (this.onOverridesChanged = n))
+        const { value: r } = t
+        ;(r &&
+          ((this.baselineSelectedOptimizations = r),
+          r5.debug('Captured initial signal state as baseline')),
+          (this.interceptorId = e.stateInterceptors.add((e) =>
+            ((this.baselineSelectedOptimizations = e.selectedOptimizations),
+            0 === Object.keys(this.overrides.selectedOptimizations).length)
+              ? { ...e }
+              : (r5.debug('Intercepting state update to preserve overrides'),
+                {
+                  ...e,
+                  selectedOptimizations: r8(
+                    e.selectedOptimizations,
+                    this.overrides.selectedOptimizations,
+                  ),
+                }),
+          )),
+          r5.info('State interceptor registered'))
+      }
+      activateAudience(e, t) {
+        ;(r5.info('Activating audience override:', e), this.setAudienceOverride(e, !0, 1, t))
+      }
+      deactivateAudience(e, t) {
+        ;(r5.info('Deactivating audience override:', e), this.setAudienceOverride(e, !1, 0, t))
+      }
       resetAudienceOverride(e) {
-        if (!rl) return
-        let t = rd.get(e)
-        if (void 0 === t) return
-        rh.delete(e)
-        let i = (eg.changes.value ?? []).map((i) =>
-          i.audienceId === e ? { ...i, qualified: t } : i,
-        )
-        eg.changes.value = i
-      },
-      resetVariantOverride(e) {
-        if (!rl) return
-        let t = rf.get(e)
-        if (void 0 === t) return
-        rp.delete(e)
-        let i = (eg.selectedOptimizations.value ?? []).map((i) =>
-          i.experienceId === e ? { ...i, variantIndex: t } : i,
-        )
-        eg.selectedOptimizations.value = i
-      },
-      resetAllOverrides() {
-        if (!rl) return
-        let e = (eg.changes.value ?? []).map((e) => {
-          let t = e.audienceId
-          return t && rd.has(t) ? { ...e, qualified: rd.get(t) } : e
-        })
-        eg.changes.value = e
-        let t = (eg.selectedOptimizations.value ?? []).map((e) => {
-          let t = e.experienceId
-          return t && rf.has(t) ? { ...e, variantIndex: rf.get(t) } : e
-        })
-        ;((eg.selectedOptimizations.value = t), rv())
-      },
-      getPreviewState() {
-        let e = {}
-        rh.forEach((t, i) => {
-          e[i] = t
-        })
-        let t = {}
-        rp.forEach((e, i) => {
-          t[i] = e
-        })
-        let i = {}
-        rd.forEach((e, t) => {
-          i[t] = e
-        })
-        let n = {}
-        return (
-          rf.forEach((e, t) => {
-            n[t] = e
+        r5.info('Resetting audience override:', e)
+        let { overrides: t } = this,
+          { audiences: i, selectedOptimizations: n } = t,
+          r = i[e]?.experienceIds ?? [],
+          s = new Set(r),
+          o = Object.fromEntries(Object.entries(n).filter(([e]) => !s.has(e))),
+          a = Object.fromEntries(Object.entries(i).filter(([t]) => t !== e))
+        ;((this.overrides = { audiences: a, selectedOptimizations: o }),
+          r.length > 0 && this.syncOverridesToSignal(),
+          this.notifyChanged())
+      }
+      setVariantOverride(e, t) {
+        ;(r5.info('Setting variant override:', { experienceId: e, variantIndex: t }),
+          (this.overrides = {
+            ...this.overrides,
+            selectedOptimizations: {
+              ...this.overrides.selectedOptimizations,
+              [e]: { experienceId: e, variantIndex: t },
+            },
           }),
-          JSON.stringify({
-            profile: eg.profile.value ?? null,
-            consent: eg.consent.value,
-            canPersonalize: eg.canOptimize.value,
-            changes: eg.changes.value ?? null,
-            selectedPersonalizations: eg.selectedOptimizations.value ?? null,
-            previewPanelOpen: eg.previewPanelOpen.value,
-            audienceOverrides: e,
-            variantOverrides: t,
-            defaultAudienceQualifications: i,
-            defaultVariantIndices: n,
-          })
-        )
-      },
-      getProfile() {
-        let e = eg.profile.value
-        return e ? JSON.stringify(e) : null
-      },
-      getState: () =>
-        JSON.stringify({
-          profile: eg.profile.value ?? null,
-          consent: eg.consent.value,
-          canPersonalize: eg.canOptimize.value,
-          changes: eg.changes.value ?? null,
-          selectedPersonalizations: eg.selectedOptimizations.value ?? null,
-        }),
+          this.syncOverridesToSignal(),
+          this.notifyChanged())
+      }
+      resetOptimizationOverride(e) {
+        r5.info('Resetting optimization override:', e)
+        let { selectedOptimizations: t } = { ...this.overrides },
+          i = Object.fromEntries(Object.entries(t).filter(([t]) => t !== e))
+        ;((this.overrides = { ...this.overrides, selectedOptimizations: i }),
+          this.syncOverridesToSignal(),
+          this.notifyChanged())
+      }
+      resetAll() {
+        ;(r5.info('Resetting all overrides to baseline'),
+          (this.overrides = { audiences: {}, selectedOptimizations: {} }),
+          this.baselineSelectedOptimizations &&
+            ((this.selectedOptimizations.value = this.baselineSelectedOptimizations),
+            r5.debug('Restored signal to baseline')),
+          this.notifyChanged())
+      }
+      getOverrides() {
+        return this.overrides
+      }
+      getBaselineSelectedOptimizations() {
+        return this.baselineSelectedOptimizations
+      }
       destroy() {
-        ;(rv(),
-          rc && (rc(), (rc = null)),
-          ru && (ru(), (ru = null)),
-          rl && (rl.destroy(), (rl = null)))
-      },
+        ;(null !== this.interceptorId &&
+          (this.stateInterceptors.remove(this.interceptorId),
+          r5.info('State interceptor removed'),
+          (this.interceptorId = null)),
+          (this.overrides = { audiences: {}, selectedOptimizations: {} }),
+          (this.baselineSelectedOptimizations = null))
+      }
+      syncOverridesToSignal() {
+        ;((this.selectedOptimizations.value = r8(
+          this.baselineSelectedOptimizations ?? [],
+          this.overrides.selectedOptimizations,
+        )),
+          r5.debug('Synced overrides to signal'))
+      }
+      setAudienceOverride(e, t, i, n) {
+        let r = { ...this.overrides.selectedOptimizations }
+        for (let e of n) r[e] = { experienceId: e, variantIndex: i }
+        ;((this.overrides = {
+          audiences: {
+            ...this.overrides.audiences,
+            [e]: { audienceId: e, isActive: t, source: 'manual', experienceIds: n },
+          },
+          selectedOptimizations: r,
+        }),
+          n.length > 0 && this.syncOverridesToSignal(),
+          this.notifyChanged())
+      }
+      notifyChanged() {
+        this.onOverridesChanged?.(this.overrides)
+      }
     }
-    globalThis.__bridge = ry
-    let rg = ry
-    return u.default
+    let se = null,
+      st = null,
+      si = null,
+      sn = null,
+      sr = {
+        initialize(e) {
+          ;(se && sr.destroy(),
+            (se = new r4({
+              clientId: e.clientId,
+              environment: e.environment,
+              api: { experienceBaseUrl: e.experienceBaseUrl, insightsBaseUrl: e.insightsBaseUrl },
+            })),
+            e.defaults &&
+              (void 0 !== e.defaults.consent && se.consent(e.defaults.consent),
+              void 0 !== e.defaults.profile && (eS.profile.value = e.defaults.profile),
+              void 0 !== e.defaults.changes && (eS.changes.value = e.defaults.changes),
+              void 0 !== e.defaults.optimizations &&
+                (eS.selectedOptimizations.value = e.defaults.optimizations)),
+            se.consent(!0),
+            (sn = new r7({
+              selectedOptimizations: eS.selectedOptimizations,
+              stateInterceptors: se.interceptors.state,
+            })))
+          let t = globalThis
+          ;((st = q(() => {
+            let e = {
+              profile: eS.profile.value ?? null,
+              consent: eS.consent.value,
+              canPersonalize: eS.canOptimize.value,
+              changes: eS.changes.value ?? null,
+              selectedPersonalizations: eS.selectedOptimizations.value ?? null,
+            }
+            'function' == typeof t.__nativeOnStateChange &&
+              t.__nativeOnStateChange(JSON.stringify(e))
+          })),
+            (si = q(() => {
+              let e = eS.event.value
+              e &&
+                'function' == typeof t.__nativeOnEventEmitted &&
+                t.__nativeOnEventEmitted(JSON.stringify(e))
+            })))
+        },
+        identify(e, t, i) {
+          se
+            ? se
+                .identify(e)
+                .then((e) => {
+                  t(JSON.stringify(e ?? null))
+                })
+                .catch((e) => {
+                  i(e instanceof Error ? e.message : String(e))
+                })
+            : i('SDK not initialized. Call initialize() first.')
+        },
+        page(e, t, i) {
+          se
+            ? se
+                .page(e)
+                .then((e) => {
+                  t(JSON.stringify(e ?? null))
+                })
+                .catch((e) => {
+                  i(e instanceof Error ? e.message : String(e))
+                })
+            : i('SDK not initialized. Call initialize() first.')
+        },
+        screen(e, t, i) {
+          se
+            ? se
+                .screen({ name: e.name, properties: e.properties ?? {} })
+                .then((e) => {
+                  t(JSON.stringify(e ?? null))
+                })
+                .catch((e) => {
+                  i(e instanceof Error ? e.message : String(e))
+                })
+            : i('SDK not initialized. Call initialize() first.')
+        },
+        flush(e, t) {
+          se
+            ? se
+                .flush()
+                .then(() => {
+                  e(JSON.stringify(null))
+                })
+                .catch((e) => {
+                  t(e instanceof Error ? e.message : String(e))
+                })
+            : t('SDK not initialized. Call initialize() first.')
+        },
+        trackView(e, t, i) {
+          se
+            ? se
+                .trackView(e)
+                .then((e) => {
+                  t(JSON.stringify(e ?? null))
+                })
+                .catch((e) => {
+                  i(e instanceof Error ? e.message : String(e))
+                })
+            : i('SDK not initialized. Call initialize() first.')
+        },
+        trackClick(e, t, i) {
+          se
+            ? se
+                .trackClick(e)
+                .then(() => {
+                  t(JSON.stringify(null))
+                })
+                .catch((e) => {
+                  i(e instanceof Error ? e.message : String(e))
+                })
+            : i('SDK not initialized. Call initialize() first.')
+        },
+        consent(e) {
+          se && se.consent(e)
+        },
+        reset() {
+          se && (sn?.resetAll(), se.reset())
+        },
+        setOnline(e) {
+          eS.online.value = e
+        },
+        personalizeEntry: (e, t) =>
+          se ? JSON.stringify(se.resolveOptimizedEntry(e, t)) : JSON.stringify({ entry: e }),
+        setPreviewPanelOpen(e) {
+          se && (eS.previewPanelOpen.value = e)
+        },
+        overrideAudience(e, t) {
+          if (!sn) return
+          let i = sn.getOverrides().audiences[e],
+            n = i?.experienceIds ?? []
+          t ? sn.activateAudience(e, n) : sn.deactivateAudience(e, n)
+        },
+        overrideVariant(e, t) {
+          sn?.setVariantOverride(e, t)
+        },
+        resetAudienceOverride(e) {
+          sn?.resetAudienceOverride(e)
+        },
+        resetVariantOverride(e) {
+          sn?.resetOptimizationOverride(e)
+        },
+        resetAllOverrides() {
+          sn?.resetAll()
+        },
+        getPreviewState() {
+          let e = sn?.getOverrides() ?? { audiences: {}, selectedOptimizations: {} },
+            t = sn?.getBaselineSelectedOptimizations(),
+            i = {}
+          for (let [t, n] of Object.entries(e.audiences)) i[t] = n.isActive
+          let n = {}
+          for (let [t, i] of Object.entries(e.selectedOptimizations)) n[t] = i.variantIndex
+          let r = {}
+          if (t)
+            for (let e of t) void 0 !== n[e.experienceId] && (r[e.experienceId] = e.variantIndex)
+          return JSON.stringify({
+            profile: eS.profile.value ?? null,
+            consent: eS.consent.value,
+            canPersonalize: eS.canOptimize.value,
+            changes: eS.changes.value ?? null,
+            selectedPersonalizations: eS.selectedOptimizations.value ?? null,
+            previewPanelOpen: eS.previewPanelOpen.value,
+            audienceOverrides: i,
+            variantOverrides: n,
+            defaultAudienceQualifications: {},
+            defaultVariantIndices: r,
+          })
+        },
+        getProfile() {
+          let e = eS.profile.value
+          return e ? JSON.stringify(e) : null
+        },
+        getState: () =>
+          JSON.stringify({
+            profile: eS.profile.value ?? null,
+            consent: eS.consent.value,
+            canPersonalize: eS.canOptimize.value,
+            changes: eS.changes.value ?? null,
+            selectedPersonalizations: eS.selectedOptimizations.value ?? null,
+          }),
+        destroy() {
+          ;(sn?.destroy(),
+            (sn = null),
+            si && (si(), (si = null)),
+            st && (st(), (st = null)),
+            se && (se.destroy(), (se = null)))
+        },
+      }
+    globalThis.__bridge = sr
+    let ss = sr
+    return y.default
   })(),
 )
 //# sourceMappingURL=optimization-ios-bridge.umd.js.map
