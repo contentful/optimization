@@ -23,6 +23,7 @@ export default defineConfig({
       symbols: './src/symbols.ts',
       'api-client': './src/api-client.ts',
       'api-schemas': './src/api-schemas.ts',
+      preview: './src/preview.ts',
     },
     tsconfigPath: './tsconfig.build.json',
     decorators: { version: '2022-03' }, // stage-3 decorators

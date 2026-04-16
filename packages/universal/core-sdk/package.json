@@ -72,6 +72,16 @@
         "default": "./dist/api-schemas.cjs"
       }
     },
+    "./preview": {
+      "import": {
+        "types": "./dist/preview.d.mts",
+        "default": "./dist/preview.mjs"
+      },
+      "require": {
+        "types": "./dist/preview.d.cts",
+        "default": "./dist/preview.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [
