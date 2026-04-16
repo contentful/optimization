@@ -150,7 +150,12 @@ final class PreviewViewModel: ObservableObject {
             }
 
             let previewExperiences = experiences.map { exp -> PreviewExperience in
-                let currentVariant = sdkVariantIndices[exp.id] ?? 0
+                // Prefer the bridge's override tracking over the signal-derived value.
+                // When a user is added to an audience they were never in, the bridge's
+                // overrideVariant only maps over existing signal entries (not appending
+                // new ones), so sdkVariantIndices won't reflect the override. The bridge
+                // does correctly track the override in its variantOverrides map.
+                let currentVariant = bridgeVariantOverrides[exp.id] ?? sdkVariantIndices[exp.id] ?? 0
                 let isOverridden = bridgeVariantOverrides[exp.id] != nil
                 let naturalVariant = bridgeDefaultVariantIndices[exp.id]
 
@@ -180,7 +185,7 @@ final class PreviewViewModel: ObservableObject {
         if !unassociatedExperiences.isEmpty {
             let allVisitorsOverride = audienceOverrideState(for: allVisitorsAudienceId)
             let previewExperiences = unassociatedExperiences.map { exp -> PreviewExperience in
-                let currentVariant = sdkVariantIndices[exp.id] ?? 0
+                let currentVariant = bridgeVariantOverrides[exp.id] ?? sdkVariantIndices[exp.id] ?? 0
                 return PreviewExperience(
                     id: exp.id,
                     name: exp.name,
@@ -232,7 +237,7 @@ final class PreviewViewModel: ObservableObject {
             entry.name = name
 
             if let expId = change.meta?.experienceId {
-                let variant = sdkVariantIndices[expId] ?? (change.meta?.variantIndex ?? 0)
+                let variant = bridgeVariantOverrides[expId] ?? sdkVariantIndices[expId] ?? (change.meta?.variantIndex ?? 0)
                 entry.experiences[expId] = variant
             }
             audienceMap[audienceId] = entry
