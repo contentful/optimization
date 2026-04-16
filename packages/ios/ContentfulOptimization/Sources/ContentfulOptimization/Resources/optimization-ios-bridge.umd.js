@@ -4263,8 +4263,9 @@
         ;(r &&
           ((this.baselineSelectedOptimizations = r),
           r5.debug('Captured initial signal state as baseline')),
-          (this.interceptorId = e.stateInterceptors.add((e) =>
-            ((this.baselineSelectedOptimizations = e.selectedOptimizations),
+          (this.interceptorId = e.stateInterceptors.add((e) => {
+            let { selectedOptimizations: t } = e
+            return ((this.baselineSelectedOptimizations = t),
             0 === Object.keys(this.overrides.selectedOptimizations).length)
               ? { ...e }
               : (r5.debug('Intercepting state update to preserve overrides'),
@@ -4274,8 +4275,8 @@
                     e.selectedOptimizations,
                     this.overrides.selectedOptimizations,
                   ),
-                }),
-          )),
+                })
+          })),
           r5.info('State interceptor registered'))
       }
       activateAudience(e, t) {
@@ -4318,10 +4319,9 @@
       }
       resetAll() {
         ;(r5.info('Resetting all overrides to baseline'),
-          (this.overrides = { audiences: {}, selectedOptimizations: {} }),
-          this.baselineSelectedOptimizations &&
-            ((this.selectedOptimizations.value = this.baselineSelectedOptimizations),
-            r5.debug('Restored signal to baseline')),
+          (this.overrides = { audiences: {}, selectedOptimizations: {} }))
+        let { baselineSelectedOptimizations: e } = this
+        ;(e && ((this.selectedOptimizations.value = e), r5.debug('Restored signal to baseline')),
           this.notifyChanged())
       }
       getOverrides() {
@@ -4490,11 +4490,8 @@
         setPreviewPanelOpen(e) {
           se && (eS.previewPanelOpen.value = e)
         },
-        overrideAudience(e, t) {
-          if (!sn) return
-          let i = sn.getOverrides().audiences[e],
-            n = i?.experienceIds ?? []
-          t ? sn.activateAudience(e, n) : sn.deactivateAudience(e, n)
+        overrideAudience(e, t, i) {
+          sn && (t ? sn.activateAudience(e, i) : sn.deactivateAudience(e, i))
         },
         overrideVariant(e, t) {
           sn?.setVariantOverride(e, t)

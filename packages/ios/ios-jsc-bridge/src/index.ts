@@ -90,7 +90,7 @@ interface Bridge {
 
   // Preview panel
   setPreviewPanelOpen(open: boolean): void
-  overrideAudience(audienceId: string, qualified: boolean): void
+  overrideAudience(audienceId: string, qualified: boolean, experienceIds: string[]): void
   overrideVariant(experienceId: string, variantIndex: number): void
   resetAudienceOverride(audienceId: string): void
   resetVariantOverride(experienceId: string): void
@@ -301,15 +301,8 @@ const bridge: Bridge = {
     signals.previewPanelOpen.value = open
   },
 
-  overrideAudience(audienceId: string, qualified: boolean) {
+  overrideAudience(audienceId: string, qualified: boolean, experienceIds: string[]) {
     if (!overrideManager) return
-    // The Swift side calls overrideAudience for the audience toggle, then
-    // separately calls overrideVariant for each experience. So here we just
-    // record the audience metadata; the variant overrides arrive individually.
-    const currentOverrides = overrideManager.getOverrides()
-    const existingAudience = currentOverrides.audiences[audienceId]
-    const experienceIds = existingAudience?.experienceIds ?? []
-
     if (qualified) {
       overrideManager.activateAudience(audienceId, experienceIds)
     } else {

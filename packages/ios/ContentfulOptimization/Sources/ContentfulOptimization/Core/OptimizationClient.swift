@@ -240,10 +240,11 @@ public final class OptimizationClient: ObservableObject {
         bridgeCallSyncWhenInitialized(method: "setPreviewPanelOpen", args: open ? "true" : "false")
     }
 
-    /// Override an audience's qualification state.
-    public func overrideAudience(id: String, qualified: Bool) {
+    /// Override an audience's qualification state and set variant overrides for associated experiences.
+    public func overrideAudience(id: String, qualified: Bool, experienceIds: [String]) {
         let escapedId = NativePolyfills.escapeForJS(id)
-        bridgeCallSyncWhenInitialized(method: "overrideAudience", args: "'\(escapedId)', \(qualified)")
+        let escapedIds = experienceIds.map { "'\(NativePolyfills.escapeForJS($0))'" }.joined(separator: ",")
+        bridgeCallSyncWhenInitialized(method: "overrideAudience", args: "'\(escapedId)', \(qualified), [\(escapedIds)]")
     }
 
     /// Override a variant for a specific experience.

@@ -328,30 +328,15 @@ final class PreviewViewModel: ObservableObject {
     // MARK: - Override Actions
 
     func setAudienceOverride(audienceId: String, state: AudienceOverrideState) {
+        let experienceIds = audiences.first(where: { $0.id == audienceId })?.experiences.map(\.id) ?? []
+
         switch state {
         case .on:
-            client.overrideAudience(id: audienceId, qualified: true)
-            if let audience = audiences.first(where: { $0.id == audienceId }) {
-                for experience in audience.experiences {
-                    if bridgeVariantOverrides[experience.id] == nil {
-                        client.overrideVariant(experienceId: experience.id, variantIndex: 1)
-                    }
-                }
-            }
+            client.overrideAudience(id: audienceId, qualified: true, experienceIds: experienceIds)
         case .off:
-            client.overrideAudience(id: audienceId, qualified: false)
-            if let audience = audiences.first(where: { $0.id == audienceId }) {
-                for experience in audience.experiences {
-                    client.overrideVariant(experienceId: experience.id, variantIndex: 0)
-                }
-            }
+            client.overrideAudience(id: audienceId, qualified: false, experienceIds: experienceIds)
         case .default:
             client.resetAudienceOverride(id: audienceId)
-            if let audience = audiences.first(where: { $0.id == audienceId }) {
-                for experience in audience.experiences {
-                    client.resetVariantOverride(experienceId: experience.id)
-                }
-            }
         }
 
         refreshState()
