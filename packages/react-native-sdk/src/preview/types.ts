@@ -2,6 +2,16 @@ import type { Profile, SelectedOptimization } from '@contentful/optimization-cor
 import type { StyleProp, ViewStyle } from 'react-native'
 
 // ============================================================================
+// Override State Types (re-exported from core)
+// ============================================================================
+
+import type {
+  AudienceOverride as _AudienceOverride,
+  OptimizationOverride as _OptimizationOverride,
+  OverrideState as _OverrideState,
+} from '@contentful/optimization-core/preview'
+
+// ============================================================================
 // Audience & Experience Definitions
 // ============================================================================
 
@@ -138,49 +148,9 @@ export interface PreviewData {
   experienceDefinitions: ExperienceDefinition[]
 }
 
-// ============================================================================
-// Override State Types
-// ============================================================================
-
-/**
- * Tracks a manual audience activation or deactivation override.
- *
- * @internal
- */
-export interface AudienceOverride {
-  /** Audience ID being overridden */
-  audienceId: string
-  /** Whether the audience is activated (true) or deactivated (false) */
-  isActive: boolean
-  /** Source of the override - 'manual' for user-initiated */
-  source: 'manual'
-  /** Experience IDs that were set with this audience override */
-  experienceIds: string[]
-}
-
-/**
- * Tracks a manual variant selection override.
- *
- * @internal
- */
-export interface OptimizationOverride {
-  /** Experience ID being overridden */
-  experienceId: string
-  /** The variant index to force (0 = baseline) */
-  variantIndex: number
-}
-
-/**
- * Combined override state managed by the preview panel.
- *
- * @internal
- */
-export interface OverrideState {
-  /** Map of audience ID to override */
-  audiences: Record<string, AudienceOverride>
-  /** Map of experience ID to override */
-  selectedOptimizations: Record<string, OptimizationOverride>
-}
+export type AudienceOverride = _AudienceOverride
+export type OptimizationOverride = _OptimizationOverride
+export type OverrideState = _OverrideState
 
 /**
  * Preview state derived from SDK signals.
