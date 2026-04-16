@@ -87,9 +87,8 @@ options per request and pass them as the final argument to stateless event metho
 
 Notes:
 
-- The reference implementations in this repo use `PUBLIC_...` environment variable names because
-  they double as local dev harnesses. A consumer app can use any environment variable names that fit
-  its deployment setup.
+- The reference implementations in this repo use `PUBLIC_...` environment variable names. A consumer
+  app can use any environment variable names that fit its deployment setup.
 - On modern Node runtimes, the built-in `fetch` implementation is usually enough. If your runtime
   does not expose a standard Fetch API, provide `fetchOptions.fetchMethod`.
 

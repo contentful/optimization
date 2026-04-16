@@ -3,49 +3,94 @@
 Use this guide when you want to add personalization and analytics to a React web application using
 `@contentful/optimization-react-web`.
 
-The React Web SDK wraps `@contentful/optimization-web` with React-native providers, hooks, and
-components so React applications can integrate optimization without managing SDK lifecycle manually.
+The React Web SDK wraps `@contentful/optimization-web` with React-specific providers, hooks,
+components, and router adapters so React applications can integrate optimization without managing
+SDK lifecycle and DOM wiring manually.
+
+Use the lower-level Web SDK guide instead when your application is not React-based or when you want
+to own the browser SDK integration without React abstractions.
+
+## Scope And Capabilities
+
+The React Web SDK is the React-specific package in the Optimization SDK Suite. It lets consumers:
+
+- initialize and own a browser SDK instance through `OptimizationRoot` or explicit providers
+- personalize Contentful entries with `OptimizedEntry` and `useOptimizedEntry`
+- read consent, profile, flags, and selected optimizations from React-friendly hooks and state
+- enable automatic entry interaction tracking without hand-authoring all `data-ctfl-*` attributes
+- emit page events automatically through supported router adapters
+- opt into live updates and attach the preview panel for authoring workflows
+- fall back to the underlying Web SDK instance when lower-level control is needed
+
+The React Web SDK is still browser-side and stateful because it sits on top of
+`@contentful/optimization-web`. Your application still fetches Contentful entries, decides how
+consent works, decides when a user becomes known, and controls where personalized content renders.
+
+## The Integration Flow
+
+In practice, most React integrations follow this high-level sequence:
+
+1. Wrap the app with `OptimizationRoot` or `OptimizationProvider` + `LiveUpdatesProvider`.
+2. Read the SDK through hooks such as `useOptimization()` or `useOptimizationContext()`.
+3. Handle consent in application UI before enabling broader event collection.
+4. Render personalized entries with `OptimizedEntry` or `useOptimizedEntry`.
+5. Enable automatic or manual entry interaction tracking where needed.
+6. Add a router adapter so `page()` events follow client-side navigation.
+
+Optional additions include live updates when entries should continuously react to optimization state
+changes, and the preview panel when the application needs authoring or preview overrides.
+
+The React-focused reference implementations in this repository show those patterns in working
+applications:
+
+- [React Web SDK Reference](../implementations/react-web-sdk/README.md)
+- [Custom React Adapter Over Web SDK](../implementations/web-sdk_react/README.md)
 
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Getting Started With Minimal Configuration](#getting-started-with-minimal-configuration)
-- [Handle Consent](#handle-consent)
+- [Scope And Capabilities](#scope-and-capabilities)
+- [The Integration Flow](#the-integration-flow)
+- [1. Install And Initialize With OptimizationRoot](#1-install-and-initialize-with-optimizationroot)
+  - [Access The SDK Instance With Hooks](#access-the-sdk-instance-with-hooks)
+  - [Provide A Pre-Built SDK Instance When Needed](#provide-a-pre-built-sdk-instance-when-needed)
+- [2. Handle Consent In React](#2-handle-consent-in-react)
   - [Reading Consent State](#reading-consent-state)
   - [Updating Consent](#updating-consent)
   - [Revoking Consent](#revoking-consent)
   - [Consent-Gated Rendering](#consent-gated-rendering)
-- [Personalize Entries With the OptimizedEntry Component](#personalize-entries-with-the-optimizedentry-component)
+- [3. Personalize Entries With OptimizedEntry](#3-personalize-entries-with-optimizedentry)
   - [Basic Usage](#basic-usage)
   - [Loading Fallback](#loading-fallback)
   - [Direct ReactNode Children](#direct-reactnode-children)
   - [Wrapper Element](#wrapper-element)
   - [Nested Composition](#nested-composition)
   - [Imperative Hook Alternative](#imperative-hook-alternative)
-- [Interaction Tracking With the OptimizedEntry Component](#interaction-tracking-with-the-optimizedentry-component)
-  - [Automatic Tracking via Data Attributes](#automatic-tracking-via-data-attributes)
-  - [Manual Tracking via the Tracking API](#manual-tracking-via-the-tracking-api)
-- [Enabling and Disabling Live Updates](#enabling-and-disabling-live-updates)
-  - [Global Live Updates](#global-live-updates)
-  - [Per-Component Live Updates](#per-component-live-updates)
-  - [Preview Panel Override](#preview-panel-override)
-  - [Resolution Priority](#resolution-priority)
-- [Page Tracking With the Supported Router Adapters](#page-tracking-with-the-supported-router-adapters)
+- [4. Track Entry Interactions From React](#4-track-entry-interactions-from-react)
+  - [Automatic Tracking Via OptimizedEntry](#automatic-tracking-via-optimizedentry)
+  - [Manual Tracking Via The Tracking API](#manual-tracking-via-the-tracking-api)
+- [5. Emit Page Events With Supported Router Adapters](#5-emit-page-events-with-supported-router-adapters)
   - [React Router](#react-router)
   - [Next.js Pages Router](#nextjs-pages-router)
   - [Next.js App Router](#nextjs-app-router)
   - [TanStack Router](#tanstack-router)
   - [Page Payload Enrichment](#page-payload-enrichment)
+- [Live Updates](#live-updates)
+  - [Global Live Updates](#global-live-updates)
+  - [Per-Component Live Updates](#per-component-live-updates)
+  - [Preview Panel Override](#preview-panel-override)
+  - [Resolution Priority](#resolution-priority)
 - [Preview Panel](#preview-panel)
   - [Attaching the Preview Panel](#attaching-the-preview-panel)
   - [Content Security Policy Support](#content-security-policy-support)
   - [Preview Panel and Live Updates](#preview-panel-and-live-updates)
+- [Reference Implementations To Compare Against](#reference-implementations-to-compare-against)
 
 <!-- mtoc-end -->
 </details>
 
-## Getting Started With Minimal Configuration
+## 1. Install And Initialize With OptimizationRoot
 
 Install the React Web SDK:
 
@@ -105,7 +150,7 @@ A more complete initialization with explicit API endpoints and interaction track
 </OptimizationRoot>
 ```
 
-### Accessing the SDK Instance
+### Access The SDK Instance With Hooks
 
 Inside the provider tree, use hooks to interact with the SDK:
 
@@ -132,7 +177,7 @@ function ConditionalComponent() {
 }
 ```
 
-### Providing a Pre-Built SDK Instance
+### Provide A Pre-Built SDK Instance When Needed
 
 If you need to manage the SDK instance outside of React, pass it directly via the `sdk` prop on
 `OptimizationProvider` instead of using config props:
@@ -157,7 +202,7 @@ function App() {
 When using the `sdk` prop, the provider does not own the instance lifecycle, so it will not call
 `destroy()` on unmount.
 
-## Handle Consent
+## 2. Handle Consent In React
 
 The SDK gates certain event types behind a consent state. By default, only `identify` and `page`
 events are allowed before consent is explicitly set. All other event types are blocked until the
@@ -260,7 +305,7 @@ function PersonalizedSection({ entry }) {
 }
 ```
 
-## Personalize Entries With the OptimizedEntry Component
+## 3. Personalize Entries With OptimizedEntry
 
 `OptimizedEntry` resolves a baseline Contentful entry to an optimized variant using the current
 optimization state and renders the result.
@@ -395,12 +440,12 @@ function CustomEntry({ baselineEntry }) {
 | `resolvedData`          | `ResolvedData<EntrySkeletonType>`        | Full resolution result including entry and optimization |
 | `selectedOptimizations` | `SelectedOptimizationArray \| undefined` | The locked (or live) selected optimizations snapshot    |
 
-## Interaction Tracking With the OptimizedEntry Component
+## 4. Track Entry Interactions From React
 
 `OptimizedEntry` emits data attributes on its wrapper element that the Web SDK uses for automatic
 entry interaction tracking (views, clicks, and hovers).
 
-### Automatic Tracking via Data Attributes
+### Automatic Tracking Via OptimizedEntry
 
 When resolved content renders, the wrapper element receives:
 
@@ -428,7 +473,7 @@ and tracked for entry views, clicks, and hovers without additional code.
 When `loadingFallback` is shown, resolved-content tracking attributes are not emitted, so loading
 states are not tracked.
 
-### Manual Tracking via the Tracking API
+### Manual Tracking Via The Tracking API
 
 For entries that are not rendered through `OptimizedEntry`, use the `interactionTracking` API from
 `useOptimization()`:
@@ -479,80 +524,7 @@ Available interaction tracking methods:
 
 Supported `interaction` values: `'views'`, `'clicks'`, `'hovers'`.
 
-## Enabling and Disabling Live Updates
-
-Live updates control whether `OptimizedEntry` (and `useOptimizedEntry`) continuously reacts to
-optimization state changes or locks to the first resolved state.
-
-### Global Live Updates
-
-Set `liveUpdates` on `OptimizationRoot` to enable live updates for all `OptimizedEntry` components
-that do not specify their own `liveUpdates` prop:
-
-```tsx
-function App() {
-  const [globalLiveUpdates, setGlobalLiveUpdates] = useState(false)
-
-  return (
-    <OptimizationRoot clientId="your-client-id" liveUpdates={globalLiveUpdates}>
-      <button onClick={() => setGlobalLiveUpdates((prev) => !prev)}>
-        Toggle Live Updates: {globalLiveUpdates ? 'ON' : 'OFF'}
-      </button>
-      <YourApp />
-    </OptimizationRoot>
-  )
-}
-```
-
-### Per-Component Live Updates
-
-Override the global setting on individual `OptimizedEntry` components:
-
-```tsx
-<OptimizedEntry baselineEntry={entry} liveUpdates={true}>
-  {(resolved) => <AlwaysLiveContent entry={resolved} />}
-</OptimizedEntry>
-
-<OptimizedEntry baselineEntry={entry} liveUpdates={false}>
-  {(resolved) => <LockedContent entry={resolved} />}
-</OptimizedEntry>
-
-<OptimizedEntry baselineEntry={entry}>
-  {(resolved) => <InheritsGlobalSetting entry={resolved} />}
-</OptimizedEntry>
-```
-
-### Preview Panel Override
-
-When the preview panel is open, live updates are forced on for all `OptimizedEntry` components
-regardless of their `liveUpdates` prop or the global setting. This allows the preview panel to apply
-variant overrides in real time.
-
-### Resolution Priority
-
-The effective live updates state is resolved in this order:
-
-1. If the preview panel is open → live updates are **on**
-2. If the component has an explicit `liveUpdates` prop → that value is used
-3. If neither → the global `liveUpdates` from `OptimizationRoot` is used
-4. If nothing is set → live updates default to **off** (locked to first resolved state)
-
-```tsx
-import { useLiveUpdates } from '@contentful/optimization-react-web'
-
-function LiveUpdatesStatus() {
-  const { globalLiveUpdates, previewPanelVisible } = useLiveUpdates()
-
-  return (
-    <div>
-      <p>Global live updates: {globalLiveUpdates ? 'ON' : 'OFF'}</p>
-      <p>Preview panel visible: {previewPanelVisible ? 'Yes' : 'No'}</p>
-    </div>
-  )
-}
-```
-
-## Page Tracking With the Supported Router Adapters
+## 5. Emit Page Events With Supported Router Adapters
 
 The React Web SDK ships router-specific auto page trackers as isolated subpath exports. Each adapter
 automatically emits `page()` events when the route changes, so you do not need to call `page()`
@@ -694,6 +666,79 @@ The `context` shape varies by adapter:
 | Next.js App     | `pathname`, `routeKey`, `router`, `search`, `searchParams`, `url`                |
 | TanStack Router | `hash`, `location`, `matches`, `pathname`, `routeKey`, `router`, `search`, `url` |
 
+## Live Updates
+
+Live updates control whether `OptimizedEntry` (and `useOptimizedEntry`) continuously reacts to
+optimization state changes or locks to the first resolved state.
+
+### Global Live Updates
+
+Set `liveUpdates` on `OptimizationRoot` to enable live updates for all `OptimizedEntry` components
+that do not specify their own `liveUpdates` prop:
+
+```tsx
+function App() {
+  const [globalLiveUpdates, setGlobalLiveUpdates] = useState(false)
+
+  return (
+    <OptimizationRoot clientId="your-client-id" liveUpdates={globalLiveUpdates}>
+      <button onClick={() => setGlobalLiveUpdates((prev) => !prev)}>
+        Toggle Live Updates: {globalLiveUpdates ? 'ON' : 'OFF'}
+      </button>
+      <YourApp />
+    </OptimizationRoot>
+  )
+}
+```
+
+### Per-Component Live Updates
+
+Override the global setting on individual `OptimizedEntry` components:
+
+```tsx
+<OptimizedEntry baselineEntry={entry} liveUpdates={true}>
+  {(resolved) => <AlwaysLiveContent entry={resolved} />}
+</OptimizedEntry>
+
+<OptimizedEntry baselineEntry={entry} liveUpdates={false}>
+  {(resolved) => <LockedContent entry={resolved} />}
+</OptimizedEntry>
+
+<OptimizedEntry baselineEntry={entry}>
+  {(resolved) => <InheritsGlobalSetting entry={resolved} />}
+</OptimizedEntry>
+```
+
+### Preview Panel Override
+
+When the preview panel is open, live updates are forced on for all `OptimizedEntry` components
+regardless of their `liveUpdates` prop or the global setting. This allows the preview panel to apply
+variant overrides in real time.
+
+### Resolution Priority
+
+The effective live updates state is resolved in this order:
+
+1. If the preview panel is open → live updates are **on**
+2. If the component has an explicit `liveUpdates` prop → that value is used
+3. If neither → the global `liveUpdates` from `OptimizationRoot` is used
+4. If nothing is set → live updates default to **off** (locked to first resolved state)
+
+```tsx
+import { useLiveUpdates } from '@contentful/optimization-react-web'
+
+function LiveUpdatesStatus() {
+  const { globalLiveUpdates, previewPanelVisible } = useLiveUpdates()
+
+  return (
+    <div>
+      <p>Global live updates: {globalLiveUpdates ? 'ON' : 'OFF'}</p>
+      <p>Preview panel visible: {previewPanelVisible ? 'Yes' : 'No'}</p>
+    </div>
+  )
+}
+```
+
 ## Preview Panel
 
 The preview panel is a Web Component-based micro-frontend that lets content authors override
@@ -790,7 +835,7 @@ function DebugPanel() {
 }
 ```
 
-## Reference Implementations
+## Reference Implementations To Compare Against
 
 Two reference implementations demonstrate these patterns in working applications:
 

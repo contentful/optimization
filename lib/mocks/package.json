@@ -37,7 +37,7 @@
     "@types/fs-extra": "^11.0.4",
     "@types/node": "catalog:",
     "contentful": "catalog:",
-    "contentful-cli": "^3.10.2",
+    "contentful-cli": "^3.10.4",
     "dotenv": "catalog:",
     "es-toolkit": "catalog:",
     "fs-extra": "^11.3.3",

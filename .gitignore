@@ -32,6 +32,14 @@ tmp
 **/pnpm-lock.yaml
 !/pnpm-lock.yaml
 
+# Swift Package Manager
+.build/
+.swiftpm/
+
+# iOS Performance Test Results
+implementations/ios-poc/results/
+*.xcresult
+
 # Xcode
 #
 *.pbxuser
