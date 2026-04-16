@@ -3,6 +3,7 @@ packages:
   - packages/react-native-sdk
   - packages/web/*
   - packages/web/frameworks/*
+  - packages/ios/*
   - packages/node/node-sdk
   - packages/universal/*
 
@@ -29,7 +30,7 @@ catalog:
   ejs: ^3.1.10
   es-toolkit: ^1.45.1
   express: ^5.2.1
-  express-rate-limit: ^8.2.2
+  express-rate-limit: ^8.3.2
   happy-dom: ^20.8.9
   msw: ^2.12.10
   p-retry: ^8.0.0

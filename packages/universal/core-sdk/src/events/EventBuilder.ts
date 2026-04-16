@@ -647,14 +647,17 @@ class EventBuilder {
       ...universalProperties
     } = this.buildUniversalEventProperties(universal)
 
-    const context = parseWithFriendlyError(ScreenEventContext, universalContext)
+    const context = parseWithFriendlyError(ScreenEventContext, {
+      ...universalContext,
+      screen: universalContext.screen ?? { name },
+    })
 
     return {
       ...universalProperties,
       context,
       type: 'screen',
       name,
-      properties,
+      properties: { name, ...properties },
     }
   }
 
