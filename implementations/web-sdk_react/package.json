@@ -33,7 +33,7 @@
     "@contentful/optimization-web-preview-panel": "0.0.0",
     "contentful": "11.10.5",
     "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "react-dom": "19.2.5",
     "react-router-dom": "7.13.1"
   },
   "devDependencies": {
