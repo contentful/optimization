@@ -40,10 +40,10 @@ export interface PreviewOverrideManagerConfig {
 
   /**
    * Callback invoked whenever override state changes.
-   * RN uses this to trigger setState; the iOS bridge can use it
-   * to notify the native side.
+   * RN uses this to trigger setState; the iOS bridge uses it to
+   * notify the native side via a global callback.
    */
-  onOverridesChanged?: (state: Readonly<OverrideState>) => void
+  onOverridesChanged: (state: Readonly<OverrideState>) => void
 }
 
 /**
@@ -68,7 +68,7 @@ export class PreviewOverrideManager {
 
   private readonly selectedOptimizations: Signal<SelectedOptimizationArray | undefined>
   private readonly stateInterceptors: StateInterceptorRegistry<OptimizationData>
-  private readonly onOverridesChanged?: PreviewOverrideManagerConfig['onOverridesChanged']
+  private readonly onOverridesChanged: ((state: Readonly<OverrideState>) => void) | undefined
 
   constructor(config: PreviewOverrideManagerConfig) {
     const { selectedOptimizations, stateInterceptors, onOverridesChanged } = config

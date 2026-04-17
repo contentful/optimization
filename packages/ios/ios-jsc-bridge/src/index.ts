@@ -141,12 +141,17 @@ const bridge: Bridge = {
     // Create the override manager — registers a state interceptor that
     // preserves overrides across API refreshes and correctly appends
     // new experience entries when overriding audiences the user was never in.
+    const g = globalThis as Record<string, unknown>
+
     overrideManager = new PreviewOverrideManager({
       selectedOptimizations: signals.selectedOptimizations,
       stateInterceptors: instance.interceptors.state,
+      onOverridesChanged: () => {
+        if (typeof g.__nativeOnOverridesChanged === 'function') {
+          ;(g.__nativeOnOverridesChanged as (json: string) => void)(bridge.getPreviewState())
+        }
+      },
     })
-
-    const g = globalThis as Record<string, unknown>
 
     disposeEffect = effect(() => {
       const state: BridgeState = {
