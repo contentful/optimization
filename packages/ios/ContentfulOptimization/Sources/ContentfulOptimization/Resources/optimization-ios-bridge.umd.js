@@ -143,7 +143,7 @@
     function F(e, t) {
       return new A(e, t)
     }
-    function R(e) {
+    function C(e) {
       var t = e.u
       if (((e.u = void 0), 'function' == typeof t)) {
         S++
@@ -152,19 +152,19 @@
         try {
           t()
         } catch (t) {
-          throw ((e.f &= -2), (e.f |= 8), C(e), t)
+          throw ((e.f &= -2), (e.f |= 8), R(e), t)
         } finally {
           ;((w = i), m())
         }
       }
     }
-    function C(e) {
+    function R(e) {
       for (var t = e.s; void 0 !== t; t = t.n) t.S.U(t)
-      ;((e.x = void 0), (e.s = void 0), R(e))
+      ;((e.x = void 0), (e.s = void 0), C(e))
     }
     function M(e) {
       if (w !== this) throw Error('Out-of-order effect')
-      ;(T(this), (w = e), (this.f &= -2), 8 & this.f && C(this), m())
+      ;(T(this), (w = e), (this.f &= -2), 8 & this.f && R(this), m())
     }
     function B(e, t) {
       ;((this.x = e),
@@ -337,7 +337,7 @@
       }),
       (B.prototype.S = function () {
         if (1 & this.f) throw Error('Cycle detected')
-        ;((this.f |= 1), (this.f &= -9), R(this), I(this), S++)
+        ;((this.f |= 1), (this.f &= -9), C(this), I(this), S++)
         var e = w
         return ((w = this), M.bind(this, e))
       }),
@@ -345,7 +345,7 @@
         2 & this.f || ((this.f |= 2), (this.o = O), (O = this))
       }),
       (B.prototype.d = function () {
-        ;((this.f |= 8), 1 & this.f || C(this))
+        ;((this.f |= 8), 1 & this.f || R(this))
       }),
       (B.prototype.dispose = function () {
         this.d()
@@ -629,7 +629,7 @@
       return e.slice(t, i)
     }
     let eF = Symbol('evaluating')
-    function eR(e, t, i) {
+    function eC(e, t, i) {
       let n
       Object.defineProperty(e, t, {
         get() {
@@ -641,7 +641,7 @@
         configurable: !0,
       })
     }
-    let eC = 'captureStackTrace' in Error ? Error.captureStackTrace : (...e) => {}
+    let eR = 'captureStackTrace' in Error ? Error.captureStackTrace : (...e) => {}
     function eM(e) {
       return 'object' == typeof e && null !== e && !Array.isArray(e)
     }
@@ -727,7 +727,7 @@
           if (o instanceof Promise) throw new ex()
           if (o.issues.length) {
             let t = new (r?.Err ?? e)(o.issues.map((e) => eJ(e, s, e$())))
-            throw (eC(t, r?.callee), t)
+            throw (eR(t, r?.callee), t)
           }
           return o.value
         }),
@@ -738,7 +738,7 @@
             o = e._zod.run({ value: i, issues: [] }, s)
           if ((o instanceof Promise && (o = await o), o.issues.length)) {
             let e = new (r?.Err ?? t)(o.issues.map((e) => eJ(e, s, e$())))
-            throw (eC(e, r?.callee), e)
+            throw (eR(e, r?.callee), e)
           }
           return o.value
         }),
@@ -926,7 +926,7 @@
             return t(o, n, s)
           }
         }
-        eR(e, '~standard', () => ({
+        eC(e, '~standard', () => ({
           validate: (t) => {
             try {
               let i = e0(e, t)
@@ -1106,7 +1106,7 @@
           return { ...e, keys: i, keySet: new Set(i), numKeys: i.length, optionalKeys: new Set(n) }
         })(t),
       )
-      eR(e._zod, 'propValues', () => {
+      eC(e._zod, 'propValues', () => {
         let e = t.shape,
           i = {}
         for (let t in e) {
@@ -1172,17 +1172,17 @@
     }
     let tm = ek('$ZodUnion', (e, t) => {
         ;(tr.init(e, t),
-          eR(e._zod, 'optin', () =>
+          eC(e._zod, 'optin', () =>
             t.options.some((e) => 'optional' === e._zod.optin) ? 'optional' : void 0,
           ),
-          eR(e._zod, 'optout', () =>
+          eC(e._zod, 'optout', () =>
             t.options.some((e) => 'optional' === e._zod.optout) ? 'optional' : void 0,
           ),
-          eR(e._zod, 'values', () => {
+          eC(e._zod, 'values', () => {
             if (t.options.every((e) => e._zod.values))
               return new Set(t.options.flatMap((e) => Array.from(e._zod.values)))
           }),
-          eR(e._zod, 'pattern', () => {
+          eC(e._zod, 'pattern', () => {
             if (t.options.every((e) => e._zod.pattern)) {
               let e = t.options.map((e) => e._zod.pattern)
               return RegExp(`^(${e.map((e) => eA(e.source)).join('|')})$`)
@@ -1208,7 +1208,7 @@
       tb = ek('$ZodDiscriminatedUnion', (e, t) => {
         ;((t.inclusive = !1), tm.init(e, t))
         let i = e._zod.parse
-        eR(e._zod, 'propValues', () => {
+        eC(e._zod, 'propValues', () => {
           let e = {}
           for (let i of t.options) {
             let n = i._zod.propValues
@@ -1377,10 +1377,10 @@
         ;(tr.init(e, t),
           (e._zod.optin = 'optional'),
           (e._zod.optout = 'optional'),
-          eR(e._zod, 'values', () =>
+          eC(e._zod, 'values', () =>
             t.innerType._zod.values ? new Set([...t.innerType._zod.values, void 0]) : void 0,
           ),
-          eR(e._zod, 'pattern', () => {
+          eC(e._zod, 'pattern', () => {
             let e = t.innerType._zod.pattern
             return e ? RegExp(`^(${eA(e.source)})?$`) : void 0
           }),
@@ -1394,13 +1394,13 @@
       }),
       tE = ek('$ZodNullable', (e, t) => {
         ;(tr.init(e, t),
-          eR(e._zod, 'optin', () => t.innerType._zod.optin),
-          eR(e._zod, 'optout', () => t.innerType._zod.optout),
-          eR(e._zod, 'pattern', () => {
+          eC(e._zod, 'optin', () => t.innerType._zod.optin),
+          eC(e._zod, 'optout', () => t.innerType._zod.optout),
+          eC(e._zod, 'pattern', () => {
             let e = t.innerType._zod.pattern
             return e ? RegExp(`^(${eA(e.source)}|null)$`) : void 0
           }),
-          eR(e._zod, 'values', () =>
+          eC(e._zod, 'values', () =>
             t.innerType._zod.values ? new Set([...t.innerType._zod.values, null]) : void 0,
           ),
           (e._zod.parse = (e, i) => (null === e.value ? e : t.innerType._zod.run(e, i))))
@@ -1408,7 +1408,7 @@
       tk = ek('$ZodPrefault', (e, t) => {
         ;(tr.init(e, t),
           (e._zod.optin = 'optional'),
-          eR(e._zod, 'values', () => t.innerType._zod.values),
+          eC(e._zod, 'values', () => t.innerType._zod.values),
           (e._zod.parse = (e, i) => (
             'backward' === i.direction || (void 0 === e.value && (e.value = t.defaultValue)),
             t.innerType._zod.run(e, i)
@@ -1416,11 +1416,11 @@
       }),
       tx = ek('$ZodLazy', (e, t) => {
         ;(tr.init(e, t),
-          eR(e._zod, 'innerType', () => t.getter()),
-          eR(e._zod, 'pattern', () => e._zod.innerType?._zod?.pattern),
-          eR(e._zod, 'propValues', () => e._zod.innerType?._zod?.propValues),
-          eR(e._zod, 'optin', () => e._zod.innerType?._zod?.optin ?? void 0),
-          eR(e._zod, 'optout', () => e._zod.innerType?._zod?.optout ?? void 0),
+          eC(e._zod, 'innerType', () => t.getter()),
+          eC(e._zod, 'pattern', () => e._zod.innerType?._zod?.pattern),
+          eC(e._zod, 'propValues', () => e._zod.innerType?._zod?.propValues),
+          eC(e._zod, 'optin', () => e._zod.innerType?._zod?.optin ?? void 0),
+          eC(e._zod, 'optout', () => e._zod.innerType?._zod?.optout ?? void 0),
           (e._zod.parse = (t, i) => e._zod.innerType._zod.run(t, i)))
       })
     ;(Symbol('ZodOutput'), Symbol('ZodInput'))
@@ -1510,11 +1510,11 @@
     function tF(e) {
       return new tA({ type: 'number', checks: [], ...eN(e) })
     }
-    let tR = ek('ZodMiniBoolean', (e, t) => {
+    let tC = ek('ZodMiniBoolean', (e, t) => {
       ;(tu.init(e, t), t$.init(e, t))
     })
-    function tC(e) {
-      return new tR({ type: 'boolean', ...eN(e) })
+    function tR(e) {
+      return new tC({ type: 'boolean', ...eN(e) })
     }
     let tM = ek('ZodMiniNull', (e, t) => {
       ;(tc.init(e, t), t$.init(e, t))
@@ -1538,7 +1538,7 @@
       return new tN({ type: 'array', element: e, ...eN(t) })
     }
     let tD = ek('ZodMiniObject', (e, t) => {
-      ;(ty.init(e, t), t$.init(e, t), eR(e, 'shape', () => t.shape))
+      ;(ty.init(e, t), t$.init(e, t), eC(e, 'shape', () => t.shape))
     })
     function tL(e, t) {
       return new tD({ type: 'object', shape: e ?? {}, ...eN(t) })
@@ -1632,7 +1632,7 @@
     function ie() {
       let e = new t7({
         type: 'lazy',
-        getter: () => tK([tI(), tF(), tC(), tB(), tV(e), tY(tI(), e)]),
+        getter: () => tK([tI(), tF(), tR(), tB(), tV(e), tY(tI(), e)]),
       })
       return e
     }
@@ -1681,9 +1681,9 @@
           }),
         }),
       }),
-      ig = tL({ id: tI(), hidden: t4(tC()) }),
+      ig = tL({ id: tI(), hidden: t4(tR()) }),
       im = tL({ type: t4(t6('EntryReplacement')), baseline: ig, variants: tV(ig) }),
-      ib = tL({ value: tK([tI(), tC(), tB(), tF(), tY(tI(), ie())]) }),
+      ib = tL({ value: tK([tI(), tR(), tB(), tF(), tY(tI(), ie())]) }),
       iw = t1(['Boolean', 'Number', 'Object', 'String']),
       i_ = tG('type', [
         im,
@@ -1700,7 +1700,7 @@
         distribution: t4(tV(tF())),
         traffic: t4(tF()),
         components: t4(iz),
-        sticky: t4(tC()),
+        sticky: t4(tR()),
       }),
       iS = tK([t6('nt_experiment'), t6('nt_personalization')]),
       iE = tQ(ir, {
@@ -1732,7 +1732,7 @@
       iT = tK([t6('mobile'), t6('server'), t6('web')]),
       iA = tY(tI(), tI()),
       iF = tL({ latitude: tF(), longitude: tF() }),
-      iR = tL({
+      iC = tL({
         coordinates: t4(iF),
         city: t4(tI()),
         postalCode: t4(tI()),
@@ -1743,7 +1743,7 @@
         continent: t4(tI()),
         timezone: t4(tI()),
       }),
-      iC = tL({ name: tI(), version: tI() }),
+      iR = tL({ name: tI(), version: tI() }),
       iM = tJ(
         tL({ path: tI(), query: iA, referrer: tI(), search: tI(), title: t4(tI()), url: tI() }),
         ie(),
@@ -1754,10 +1754,10 @@
       iZ = tL({
         app: ij,
         campaign: iI,
-        gdpr: tL({ isConsentGiven: tC() }),
-        library: iC,
+        gdpr: tL({ isConsentGiven: tR() }),
+        library: iR,
         locale: tI(),
-        location: t4(iR),
+        location: t4(iC),
         userAgent: t4(tI()),
       }),
       iN = tL({
@@ -1803,7 +1803,7 @@
       i4 = tL({ events: i0.check(tP(1)), options: t4(i6) }),
       i8 = tL({
         id: tI(),
-        isReturningVisitor: tC(),
+        isReturningVisitor: tR(),
         landingPage: iM,
         count: tF(),
         activeSessionLength: tF(),
@@ -1815,18 +1815,18 @@
         random: tF(),
         audiences: tV(tI()),
         traits: iU,
-        location: iR,
+        location: iC,
         session: i8,
       }),
       i9 = tJ(tL({ id: tI() }), ie()),
-      i7 = tL({ data: tL(), message: tI(), error: t5(tC()) }),
+      i7 = tL({ data: tL(), message: tI(), error: t5(tR()) }),
       ne = tQ(i7, { data: tL({ profiles: t4(tV(i5)) }) }),
       nt = tL({
         key: tI(),
         type: tK([t1(['Variable']), tI()]),
         meta: tL({ experienceId: tI(), variantIndex: tF() }),
       }),
-      ni = tK([tI(), tC(), tB(), tF(), tY(tI(), ie())])
+      ni = tK([tI(), tR(), tB(), tF(), tY(tI(), ie())])
     tQ(nt, { type: tI(), value: new tZ({ type: 'unknown' }) })
     let nn = tV(tG('type', [tQ(nt, { type: t6('Variable'), value: ni })])),
       nr = tV(
@@ -1835,7 +1835,7 @@
           variantIndex: tF(),
           variants: tY(tI(), tI()),
           sticky: t4(
-            ((d = tC()),
+            ((d = tR()),
             new t9({
               type: 'prefault',
               innerType: d,
@@ -2473,10 +2473,10 @@
     function nF(e) {
       return (e && Object.assign(nA, e), nA)
     }
-    function nR(e, t) {
+    function nC(e, t) {
       return 'bigint' == typeof t ? t.toString() : t
     }
-    function nC(e) {
+    function nR(e) {
       return {
         get value() {
           {
@@ -2555,7 +2555,7 @@
         n
       )
     }
-    nC(() => {
+    nR(() => {
       if ('u' > typeof navigator && navigator?.userAgent?.includes('Cloudflare')) return !1
       try {
         return (Function(''), !0)
@@ -2567,7 +2567,7 @@
         ;((e.name = '$ZodError'),
           Object.defineProperty(e, '_zod', { value: e._zod, enumerable: !1 }),
           Object.defineProperty(e, 'issues', { value: t, enumerable: !1 }),
-          (e.message = JSON.stringify(t, nR, 2)),
+          (e.message = JSON.stringify(t, nC, 2)),
           Object.defineProperty(e, 'toString', { value: () => e.message, enumerable: !1 }))
       },
       nW = nI('$ZodError', nK),
@@ -2784,7 +2784,7 @@
           },
         })
       }
-      let r = nC(() =>
+      let r = nR(() =>
         (function (e) {
           var t
           let i = Object.keys(e.shape)
@@ -3007,7 +3007,7 @@
           {
             campaign: rf(iI),
             locale: rf(ro()),
-            location: rf(iR),
+            location: rf(iC),
             page: rf(iM),
             screen: rf(iq),
             userAgent: rf(ro()),
@@ -3381,7 +3381,7 @@
               { entry: e })
         },
       }
-    class rR {
+    class rC {
       api
       eventBuilder
       config
@@ -3418,7 +3418,7 @@
         return this.mergeTagValueResolver.resolve(e, t)
       }
     }
-    let rC = rR
+    let rR = rC
     function rM() {}
     function rB(e, t) {
       return (function e(t, i, n, r, s, o, a) {
@@ -3538,7 +3538,7 @@
         trackClick: 'component_click',
         trackHover: 'component_hover',
       }
-    class rZ extends rC {
+    class rZ extends rR {
       flagObservables = new Map()
       getFlag(e, t = eh.value) {
         let i = super.getFlag(e, t),
@@ -4380,23 +4380,27 @@
               void 0 !== e.defaults.changes && (eS.changes.value = e.defaults.changes),
               void 0 !== e.defaults.optimizations &&
                 (eS.selectedOptimizations.value = e.defaults.optimizations)),
-            se.consent(!0),
-            (sn = new r7({
-              selectedOptimizations: eS.selectedOptimizations,
-              stateInterceptors: se.interceptors.state,
-            })))
+            se.consent(!0))
           let t = globalThis
-          ;((st = q(() => {
-            let e = {
-              profile: eS.profile.value ?? null,
-              consent: eS.consent.value,
-              canPersonalize: eS.canOptimize.value,
-              changes: eS.changes.value ?? null,
-              selectedPersonalizations: eS.selectedOptimizations.value ?? null,
-            }
-            'function' == typeof t.__nativeOnStateChange &&
-              t.__nativeOnStateChange(JSON.stringify(e))
+          ;((sn = new r7({
+            selectedOptimizations: eS.selectedOptimizations,
+            stateInterceptors: se.interceptors.state,
+            onOverridesChanged: () => {
+              'function' == typeof t.__nativeOnOverridesChanged &&
+                t.__nativeOnOverridesChanged(sr.getPreviewState())
+            },
           })),
+            (st = q(() => {
+              let e = {
+                profile: eS.profile.value ?? null,
+                consent: eS.consent.value,
+                canPersonalize: eS.canOptimize.value,
+                changes: eS.changes.value ?? null,
+                selectedPersonalizations: eS.selectedOptimizations.value ?? null,
+              }
+              'function' == typeof t.__nativeOnStateChange &&
+                t.__nativeOnStateChange(JSON.stringify(e))
+            })),
             (si = q(() => {
               let e = eS.event.value
               e &&
