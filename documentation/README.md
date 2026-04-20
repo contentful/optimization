@@ -9,6 +9,7 @@ children:
   - ./integrating-the-ios-sdk-in-a-swiftui-app.md
   - ./integrating-the-ios-sdk-in-a-uikit-app.md
   - ./integrating-the-react-native-sdk-in-a-react-native-app.md
+  - ./react-native-sdk-interaction-tracking-mechanics.md
 ---
 
 # Guides
@@ -33,6 +34,10 @@ are intended to be used.
   step-by-step React Native / Expo integration guidance covering OptimizationRoot setup, consent,
   OptimizedEntry personalization and interaction tracking, live updates, screen tracking, and the
   in-app preview panel — referenced against the Colorful-Team-Org demo
+- [React Native SDK Interaction Tracking Mechanics](./react-native-sdk-interaction-tracking-mechanics.md):
+  deep-dive reference on how the React Native SDK observes, gates, and emits tracking events —
+  covering event types, the viewport state machine, default thresholds, consent gating, scroll
+  context, screen tracking paths, and the configuration resolution order
 - [iOS SDK Fundamentals](./integrating-the-ios-sdk-fundamentals.md): shared reference for the iOS
   SDK covering installation, configuration, consent, reactive state, the tracking model, live
   updates, and the preview panel — read this before the UI-framework-specific guides
