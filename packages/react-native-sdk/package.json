@@ -171,7 +171,7 @@
     "contentful": "catalog:",
     "core-js": "^3.49.0",
     "dotenv": "catalog:",
-    "jest": "^29.7.0",
+    "jest": "^30.3.0",
     "jest-circus": "^30.2.0",
     "kill-port": "^2.0.1",
     "mocks": "workspace:*",
