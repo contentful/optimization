@@ -155,7 +155,7 @@
     "contentful": "catalog:",
     "happy-dom": "catalog:",
     "next": "^16.2.3",
-    "react-router-dom": "^7.9.5",
+    "react-router-dom": "^7.14.2",
     "rimraf": "catalog:",
     "tslib": "catalog:",
     "typescript": "catalog:"
