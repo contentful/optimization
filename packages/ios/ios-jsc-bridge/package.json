@@ -1,0 +1,30 @@
+{
+  "name": "@contentful/optimization-ios-bridge",
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/optimization-ios-bridge.umd.js",
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "build": "pnpm clean && pnpm build:dist",
+    "build:ci": "pnpm build:dist",
+    "build:dist": "rslib build",
+    "postbuild": "cp dist/optimization-ios-bridge.umd.js ../ContentfulOptimization/Sources/ContentfulOptimization/Resources/",
+    "clean": "rimraf ./.rslib ./dist ./coverage .tsbuildinfo",
+    "test:unit": "echo 'No tests yet'",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@contentful/optimization-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@rslib/core": "catalog:",
+    "@types/node": "catalog:",
+    "build-tools": "workspace:*",
+    "rimraf": "catalog:",
+    "tslib": "catalog:",
+    "typescript": "catalog:"
+  }
+}
