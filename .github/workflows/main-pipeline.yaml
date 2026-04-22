@@ -260,7 +260,7 @@ jobs:
           rm -rf pkgs
           mkdir -p pkgs
           pnpm run pack:pkgs
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sdk-package-tarballs
           path: pkgs/*.tgz
@@ -415,7 +415,7 @@ jobs:
       - run: pnpm run implementation:node-sdk -- implementation:playwright:install -- --with-deps
       - run: pnpm run implementation:node-sdk -- implementation:test:e2e:run
 
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ !cancelled() }}
         with:
           name: ci-results-node-sdk
@@ -470,7 +470,7 @@ jobs:
           --with-deps
       - run: pnpm run implementation:node-sdk+web-sdk -- implementation:test:e2e:run
 
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ !cancelled() }}
         with:
           name: ci-results-node-sdk+web-sdk
@@ -523,7 +523,7 @@ jobs:
       - run: pnpm run implementation:web-sdk -- implementation:playwright:install -- --with-deps
       - run: pnpm run implementation:web-sdk -- implementation:test:e2e:run
 
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ !cancelled() }}
         with:
           name: ci-results-web-sdk
@@ -575,7 +575,7 @@ jobs:
           pnpm run implementation:web-sdk_react -- implementation:playwright:install -- --with-deps
       - run: pnpm run implementation:web-sdk_react -- implementation:test:e2e:run
 
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ !cancelled() }}
         with:
           name: ci-results-web-sdk_react
@@ -627,7 +627,7 @@ jobs:
           pnpm run implementation:react-web-sdk -- implementation:playwright:install -- --with-deps
       - run: pnpm run implementation:react-web-sdk -- implementation:test:e2e:run
 
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ !cancelled() }}
         with:
           name: ci-results-react-web-sdk
@@ -713,7 +713,7 @@ jobs:
         run: pnpm run implementation:react-native-sdk -- test:e2e:android:build:release
 
       - name: Upload Detox APKs
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: detox-android-apks
           path: implementations/react-native-sdk/android/app/build/outputs/apk/
@@ -875,7 +875,7 @@ jobs:
         run: |
           kill $(cat /tmp/mock-server.pid) 2>/dev/null || true
 
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: ci-results-react-native-android-shard-${{ matrix.shard }}
