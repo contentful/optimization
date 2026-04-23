@@ -34,7 +34,31 @@ Reference implementation demonstrating `@contentful/optimization-react-web` usag
 - Node.js >= 20.19.0 (24.13.0 recommended to match `.nvmrc`)
 - pnpm 10.x
 
-## Setup
+## Quick Start
+
+Run the one-shot launcher to configure everything and start the app:
+
+```bash
+./implementations/react-web-sdk/scripts/launch-reference-app.sh
+```
+
+Or from the **implementation directory**:
+
+```bash
+pnpm launch
+```
+
+This single command will install dependencies, build SDK packages, set up `.env`, start the mock API
+server, and launch the dev server. Once complete, the app is available at `http://localhost:3000`.
+
+Use flags to skip steps on subsequent runs:
+
+```bash
+./scripts/launch-reference-app.sh --skip-build      # packages already built
+./scripts/launch-reference-app.sh --skip-install     # dependencies already installed
+```
+
+## Manual Setup
 
 From the **repository root**:
 

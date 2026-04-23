@@ -85,6 +85,42 @@ export function OptimizationSection({
       </section>
 
       <section className="dashboard__grid">
+        {baselineDefault ? (
+          <OptimizedEntry
+            baselineEntry={baselineDefault}
+            as="span"
+            data-testid="optimized-entry-span"
+          >
+            {(resolvedEntry: Entry) => (
+              <article className="dashboard__card">
+                <h2>OptimizedEntry (as=&quot;span&quot;)</h2>
+                <p>Wrapper element is a span instead of a div.</p>
+                <p>{`Entry ID: ${resolvedEntry.sys.id}`}</p>
+              </article>
+            )}
+          </OptimizedEntry>
+        ) : null}
+
+        {baselineDefault ? (
+          <OptimizedEntry
+            baselineEntry={baselineDefault}
+            data-testid="optimized-entry-static"
+            loadingFallback={
+              <article className="dashboard__card">
+                <h2>OptimizedEntry (static children)</h2>
+                <p>Loading...</p>
+              </article>
+            }
+          >
+            <article className="dashboard__card">
+              <h2>OptimizedEntry (static children)</h2>
+              <p>Children are static nodes, not a render prop.</p>
+            </article>
+          </OptimizedEntry>
+        ) : null}
+      </section>
+
+      <section className="dashboard__grid">
         {baselineNestedParent && baselineNestedChild ? (
           <article className="dashboard__card">
             <h2>Nested OptimizedEntry</h2>

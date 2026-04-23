@@ -13,6 +13,7 @@ official React SDK surface directly — no local `src/optimization/` adapter dir
 
 - `src/`
 - `e2e/`
+- `scripts/`
 - `.env.example`
 
 ## Local Rules
@@ -41,6 +42,7 @@ official React SDK surface directly — no local `src/optimization/` adapter dir
 
 ## Commands
 
+- `pnpm launch` or `./scripts/launch-reference-app.sh` — one-shot setup + dev server
 - `pnpm implementation:run -- react-web-sdk implementation:install`
 - `pnpm implementation:run -- react-web-sdk typecheck`
 - `pnpm implementation:run -- react-web-sdk build`

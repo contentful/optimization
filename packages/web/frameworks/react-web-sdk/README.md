@@ -40,6 +40,26 @@ Core root/provider primitives and React-facing APIs are implemented.
 
 ## Development
 
+### Quick Start
+
+Run the one-shot launcher to start the mock server and dev harness in a single command:
+
+```sh
+./scripts/launch-dev-harness.sh
+```
+
+Or via pnpm:
+
+```sh
+pnpm --filter @contentful/optimization-react-web dev:launch
+```
+
+This installs dependencies (if needed), creates `.env` from `dev/.env.example`, starts the mock API
+server on port 8000, and launches the Rsbuild dev server with hot reload across the full SDK stack
+(React SDK, Web SDK, Core SDK, API Client, API Schemas). No build step is needed.
+
+### Manual
+
 From repository root:
 
 ```sh

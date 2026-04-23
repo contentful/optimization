@@ -1,4 +1,5 @@
 import type { Profile, SelectedOptimizationArray } from '@contentful/optimization-api-schemas'
+import type { Entry } from 'contentful'
 import type { ReactElement } from 'react'
 import { ENTRY_IDS } from '../constants'
 import type { ResolveResult } from '../types'
@@ -15,6 +16,10 @@ interface StateSectionProps {
   entriesError: string | null
   resolveResults: ResolveResult[]
   onResolveEntries: () => void
+  resolveEntryResult: Entry | undefined
+  resolveEntryDataResult: unknown
+  onResolveEntry: () => void
+  onResolveEntryData: () => void
 }
 
 export function StateSection({
@@ -28,6 +33,10 @@ export function StateSection({
   entriesError,
   resolveResults,
   onResolveEntries,
+  resolveEntryResult,
+  resolveEntryDataResult,
+  onResolveEntry,
+  onResolveEntryData,
 }: StateSectionProps): ReactElement {
   const selectedOptimizationCount = Array.isArray(selectedOptimizations)
     ? selectedOptimizations.length
@@ -58,6 +67,26 @@ export function StateSection({
         <p>{`Loaded: ${entriesLoadedCount}/${ENTRY_IDS.length}`}</p>
         <p>{entriesLoading ? 'Loading...' : 'Ready'}</p>
         <p>{entriesError ? `Error: ${entriesError}` : 'No errors'}</p>
+      </article>
+
+      <article className="dashboard__card">
+        <h2>resolveEntry()</h2>
+        <p>Convenience method returning the resolved Entry directly.</p>
+        <button onClick={onResolveEntry} type="button">
+          resolveEntry()
+        </button>
+        <pre className="dashboard__pre">
+          {resolveEntryResult ? resolveEntryResult.sys.id : 'Not resolved yet.'}
+        </pre>
+      </article>
+
+      <article className="dashboard__card">
+        <h2>resolveEntryData()</h2>
+        <p>Convenience method returning the full ResolvedData object.</p>
+        <button onClick={onResolveEntryData} type="button">
+          resolveEntryData()
+        </button>
+        <pre className="dashboard__pre">{toJsonPreview(resolveEntryDataResult ?? null)}</pre>
       </article>
     </section>
   )

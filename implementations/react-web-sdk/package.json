@@ -6,6 +6,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "launch": "./scripts/launch-reference-app.sh",
     "dev": "rsbuild dev",
     "build": "rsbuild build",
     "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage ./playwright-report ./test-results .tsbuildinfo",

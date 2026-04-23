@@ -1,13 +1,28 @@
+import type { Json, MergeTagEntry } from '@contentful/optimization-api-schemas'
+import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
+import type { Entry, EntrySkeletonType } from 'contentful'
 import { type ReactElement, useMemo, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useLiveUpdates, useOptimization } from '../../src'
-import { BASELINE_IDS } from './constants'
+import {
+  BASELINE_IDS,
+  CLIENT_ID,
+  ENVIRONMENT,
+  EXPERIENCE_BASE_URL,
+  INSIGHTS_BASE_URL,
+} from './constants'
 import { useDevEntries } from './hooks/useDevEntries'
 import { useOptimizationState } from './hooks/useOptimizationState'
 import { ControlsSection } from './sections/ControlsSection'
+import { FlagsSection } from './sections/FlagsSection'
+import { HookEntrySection } from './sections/HookEntrySection'
+import { LifecycleSection } from './sections/LifecycleSection'
 import { OptimizationSection } from './sections/OptimizationSection'
+import { ProvidersSection } from './sections/ProvidersSection'
 import { StateSection } from './sections/StateSection'
+import { TrackingSection } from './sections/TrackingSection'
 import type { ResolveResult } from './types'
+import { extractMergeTagEntry } from './utils'
 
 const DEV_ROUTES = [
   { to: '/', label: 'Overview', description: 'Root route for initial auto page events.' },
@@ -19,20 +34,34 @@ const DEV_ROUTES = [
   },
 ] as const
 
+type FlagValue = Json
+
 export function App(): ReactElement {
   const location = useLocation()
-  const { sdk } = useOptimization()
+  const { sdk, getFlag, getMergeTagValue, resolveEntry, resolveEntryData } = useOptimization()
   const { globalLiveUpdates, previewPanelVisible } = useLiveUpdates()
   const { entriesById, loading: entriesLoading, error: entriesError } = useDevEntries()
   const { consent, profile, selectedOptimizations, previewPanelOpen, eventLog } =
     useOptimizationState(sdk)
   const [resolveResults, setResolveResults] = useState<ResolveResult[]>([])
+  const [flags, setFlags] = useState<Record<string, FlagValue> | undefined>(undefined)
+  const [mergeTagValue, setMergeTagValue] = useState<string | undefined>(undefined)
+  const [resolveEntryResult, setResolveEntryResult] = useState<Entry | undefined>(undefined)
+  const [resolveEntryDataResult, setResolveEntryDataResult] = useState<
+    ResolvedData<EntrySkeletonType> | undefined
+  >(undefined)
 
   const baselineDefault = entriesById.get(BASELINE_IDS.default)
   const baselineLive = entriesById.get(BASELINE_IDS.live)
   const baselineLocked = entriesById.get(BASELINE_IDS.locked)
   const baselineNestedParent = entriesById.get(BASELINE_IDS.nestedParent)
   const baselineNestedChild = entriesById.get(BASELINE_IDS.nestedChild)
+  const mergeTagContentEntry = entriesById.get(BASELINE_IDS.mergeTagContent)
+
+  const mergeTagEntry: MergeTagEntry | undefined = useMemo(
+    () => (mergeTagContentEntry ? extractMergeTagEntry(mergeTagContentEntry) : undefined),
+    [mergeTagContentEntry],
+  )
 
   const { size: resolvedEntryCount } = entriesById
   const sdkName = useMemo(() => sdk.constructor.name, [sdk])
@@ -55,6 +84,30 @@ export function App(): ReactElement {
     })
 
     setResolveResults(nextResults)
+  }
+
+  const handleGetFlags = (): void => {
+    setFlags({
+      boolean: getFlag('boolean'),
+      'plain-text': getFlag('plain-text'),
+      number: getFlag('number'),
+      json: getFlag('json'),
+    })
+  }
+
+  const handleGetMergeTagValue = (): void => {
+    if (!mergeTagEntry) return
+    setMergeTagValue(getMergeTagValue(mergeTagEntry, profile) ?? 'undefined')
+  }
+
+  const handleResolveEntry = (): void => {
+    if (!baselineDefault) return
+    setResolveEntryResult(resolveEntry(baselineDefault, selectedOptimizations))
+  }
+
+  const handleResolveEntryData = (): void => {
+    if (!baselineDefault) return
+    setResolveEntryDataResult(resolveEntryData(baselineDefault, selectedOptimizations))
   }
 
   const fireAndReport = (promise: Promise<unknown>): void => {
@@ -134,6 +187,16 @@ export function App(): ReactElement {
         }}
       />
 
+      <FlagsSection
+        flags={flags}
+        mergeTagValue={mergeTagValue}
+        mergeTagEntry={mergeTagEntry}
+        onGetFlags={handleGetFlags}
+        onGetMergeTagValue={handleGetMergeTagValue}
+      />
+
+      <TrackingSection sdk={sdk} />
+
       <StateSection
         globalLiveUpdates={globalLiveUpdates}
         previewPanelVisible={previewPanelVisible}
@@ -145,7 +208,13 @@ export function App(): ReactElement {
         entriesError={entriesError}
         resolveResults={resolveResults}
         onResolveEntries={handleResolveEntries}
+        resolveEntryResult={resolveEntryResult}
+        resolveEntryDataResult={resolveEntryDataResult}
+        onResolveEntry={handleResolveEntry}
+        onResolveEntryData={handleResolveEntryData}
       />
+
+      <HookEntrySection baselineEntry={baselineDefault} />
 
       <OptimizationSection
         baselineDefault={baselineDefault}
@@ -154,6 +223,16 @@ export function App(): ReactElement {
         baselineNestedParent={baselineNestedParent}
         baselineNestedChild={baselineNestedChild}
         selectedOptimizations={selectedOptimizations}
+      />
+
+      <LifecycleSection sdk={sdk} />
+
+      <ProvidersSection
+        clientId={CLIENT_ID}
+        environment={ENVIRONMENT}
+        insightsBaseUrl={INSIGHTS_BASE_URL}
+        experienceBaseUrl={EXPERIENCE_BASE_URL}
+        sdk={sdk}
       />
     </main>
   )

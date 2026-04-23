@@ -12,6 +12,7 @@ providers, hooks, and React-facing entry resolution primitives.
 - `src/`
 - `dev/`
 - `dev/app/`
+- `scripts/`
 - `README.md`
 
 ## Local Rules
@@ -29,6 +30,7 @@ providers, hooks, and React-facing entry resolution primitives.
 
 ## Commands
 
+- `pnpm --filter @contentful/optimization-react-web dev:launch` — one-shot mock server + dev harness
 - `pnpm --filter @contentful/optimization-react-web typecheck`
 - `pnpm --filter @contentful/optimization-react-web test:unit`
 - `pnpm --filter @contentful/optimization-react-web build`
