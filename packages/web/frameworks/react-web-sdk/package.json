@@ -132,6 +132,7 @@
     "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist && build-tools emit-dual-dts ./dist/router",
     "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo",
     "dev": "rsbuild dev --host 0.0.0.0 -c dev/rsbuild.config.ts",
+    "dev:launch": "./scripts/launch-dev-harness.sh",
     "size:check": "pnpm build:dist && build-tools bundle-size",
     "size:report": "build-tools bundle-size --report-only",
     "test:unit": "rstest run --coverage",
