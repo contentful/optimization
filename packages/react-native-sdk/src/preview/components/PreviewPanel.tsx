@@ -243,6 +243,7 @@ export function PreviewPanel({
           variant="destructive"
           onPress={handleResetSdk}
           style={styles.resetButton}
+          testID="reset-all-overrides"
         />
       </View>
     </SafeAreaView>

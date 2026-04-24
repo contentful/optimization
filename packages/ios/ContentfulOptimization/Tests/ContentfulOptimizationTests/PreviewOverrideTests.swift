@@ -1,3 +1,4 @@
+import Combine
 import XCTest
 @testable import ContentfulOptimization
 
@@ -25,19 +26,43 @@ final class PreviewOverrideTests: XCTestCase {
         return client
     }
 
-    /// Seed the JS bridge signals with audience changes and selected optimizations.
+    /// Seed the JS bridge signals with the qualifying audiences and selected
+    /// optimizations the tests need. Audience qualification is carried in
+    /// `profile.audiences` — the canonical location per the Experience API
+    /// schema — not in the `changes` signal (which is reserved for Custom Flag
+    /// `VariableChange` entries).
     @MainActor
     private func seedSignals(
         client: OptimizationClient,
         audiences: [(id: String, qualified: Bool)],
         experiences: [(id: String, variantIndex: Int)]
     ) {
-        let changesJSON = audiences.map { audience in
-            """
-            {"audienceId":"\(audience.id)","qualified":\(audience.qualified),"name":"Audience \(audience.id)"}
-            """
-        }.joined(separator: ",")
-        let changesScript = "[\(changesJSON)]"
+        let qualifiedAudienceIds = audiences.filter(\.qualified).map(\.id)
+        let audiencesJSON = qualifiedAudienceIds.map { "\"\($0)\"" }.joined(separator: ",")
+        let profileScript = """
+            {
+                "id": "test-profile",
+                "stableId": "test-profile",
+                "random": 0,
+                "audiences": [\(audiencesJSON)],
+                "traits": {},
+                "location": {},
+                "session": {
+                    "id": "test-session",
+                    "isReturningVisitor": false,
+                    "count": 1,
+                    "activeSessionLength": 0,
+                    "averageSessionLength": 0,
+                    "landingPage": {
+                        "url": "",
+                        "referrer": "",
+                        "query": {},
+                        "search": "",
+                        "path": ""
+                    }
+                }
+            }
+        """
 
         let experiencesJSON = experiences.map { exp in
             """
@@ -54,7 +79,7 @@ final class PreviewOverrideTests: XCTestCase {
                 experienceBaseUrl: "http://localhost:8000/experience/",
                 insightsBaseUrl: "http://localhost:8000/insights/",
                 defaults: {
-                    changes: \(changesScript),
+                    profile: \(profileScript),
                     optimizations: [\(experiencesJSON)]
                 }
             });
@@ -87,7 +112,7 @@ final class PreviewOverrideTests: XCTestCase {
         )
 
         // Override aud-1 to qualified
-        client.overrideAudience(id: "aud-1", qualified: true)
+        client.overrideAudience(id: "aud-1", qualified: true, experienceIds: [])
 
         let state = client.getPreviewState()
         XCTAssertNotNil(state)
@@ -106,7 +131,7 @@ final class PreviewOverrideTests: XCTestCase {
             experiences: []
         )
 
-        client.overrideAudience(id: "aud-1", qualified: false)
+        client.overrideAudience(id: "aud-1", qualified: false, experienceIds: [])
 
         let state = client.getPreviewState()
         XCTAssertEqual(state?.audienceOverrides?["aud-1"], false)
@@ -123,8 +148,8 @@ final class PreviewOverrideTests: XCTestCase {
             experiences: []
         )
 
-        client.overrideAudience(id: "aud-1", qualified: true)
-        client.overrideAudience(id: "aud-2", qualified: false)
+        client.overrideAudience(id: "aud-1", qualified: true, experienceIds: [])
+        client.overrideAudience(id: "aud-2", qualified: false, experienceIds: [])
 
         let state = client.getPreviewState()
         XCTAssertEqual(state?.audienceOverrides?.count, 2)
@@ -184,7 +209,7 @@ final class PreviewOverrideTests: XCTestCase {
             experiences: [("exp-1", 0)]
         )
 
-        client.overrideAudience(id: "aud-1", qualified: true)
+        client.overrideAudience(id: "aud-1", qualified: true, experienceIds: [])
         client.overrideVariant(experienceId: "exp-1", variantIndex: 2)
 
         // First read (panel open)
@@ -215,8 +240,8 @@ final class PreviewOverrideTests: XCTestCase {
             experiences: []
         )
 
-        client.overrideAudience(id: "aud-1", qualified: true)
-        client.overrideAudience(id: "aud-2", qualified: false)
+        client.overrideAudience(id: "aud-1", qualified: true, experienceIds: [])
+        client.overrideAudience(id: "aud-2", qualified: false, experienceIds: [])
 
         // Reset only aud-1
         client.resetAudienceOverride(id: "aud-1")
@@ -226,12 +251,10 @@ final class PreviewOverrideTests: XCTestCase {
                      "Reset audience should be removed from overrides")
         XCTAssertEqual(state?.audienceOverrides?["aud-2"], false,
                        "Other overrides should remain")
-
-        // Verify the signal was restored to the default value
-        let changes = state?.changes ?? []
-        let aud1Change = changes.first(where: { $0.audienceId == "aud-1" })
-        XCTAssertEqual(aud1Change?.qualified, false,
-                       "Signal should be restored to original qualified=false")
+        XCTAssertNil(state?.defaultAudienceQualifications?["aud-1"],
+                     "Default snapshot for reset audience should be cleared")
+        XCTAssertEqual(state?.defaultAudienceQualifications?["aud-2"], true,
+                       "Default snapshot for remaining override should persist")
     }
 
     // MARK: - Reset single variant override
@@ -275,8 +298,8 @@ final class PreviewOverrideTests: XCTestCase {
             experiences: [("exp-1", 0), ("exp-2", 1)]
         )
 
-        client.overrideAudience(id: "aud-1", qualified: true)
-        client.overrideAudience(id: "aud-2", qualified: false)
+        client.overrideAudience(id: "aud-1", qualified: true, experienceIds: [])
+        client.overrideAudience(id: "aud-2", qualified: false, experienceIds: [])
         client.overrideVariant(experienceId: "exp-1", variantIndex: 2)
         client.overrideVariant(experienceId: "exp-2", variantIndex: 0)
 
@@ -298,13 +321,9 @@ final class PreviewOverrideTests: XCTestCase {
         XCTAssertEqual(after?.defaultVariantIndices ?? [:], [:],
                        "Default snapshots should be cleared")
 
-        // Verify signals were restored to defaults
-        let changes = after?.changes ?? []
-        let aud1 = changes.first(where: { $0.audienceId == "aud-1" })
-        let aud2 = changes.first(where: { $0.audienceId == "aud-2" })
-        XCTAssertEqual(aud1?.qualified, false, "aud-1 should be restored to original false")
-        XCTAssertEqual(aud2?.qualified, true, "aud-2 should be restored to original true")
-
+        // Verify the variant signal was restored to defaults. (The audience
+        // qualification signal — `profile.audiences` — is not rewritten by
+        // overrides today; see the plan notes.)
         let personalizations = after?.selectedPersonalizations ?? []
         let exp1 = personalizations.first(where: { $0.experienceId == "exp-1" })
         let exp2 = personalizations.first(where: { $0.experienceId == "exp-2" })
@@ -324,12 +343,12 @@ final class PreviewOverrideTests: XCTestCase {
         )
 
         // First override captures default=false
-        client.overrideAudience(id: "aud-1", qualified: true)
+        client.overrideAudience(id: "aud-1", qualified: true, experienceIds: [])
         let state1 = client.getPreviewState()
         XCTAssertEqual(state1?.defaultAudienceQualifications?["aud-1"], false)
 
         // Second override should NOT update the default
-        client.overrideAudience(id: "aud-1", qualified: false)
+        client.overrideAudience(id: "aud-1", qualified: false, experienceIds: [])
         let state2 = client.getPreviewState()
         XCTAssertEqual(state2?.defaultAudienceQualifications?["aud-1"], false,
                        "Default should still be the original value, not the first override")
@@ -372,7 +391,7 @@ final class PreviewOverrideTests: XCTestCase {
 
         // Simulate: panel opens, user sets overrides
         client.setPreviewPanelOpen(true)
-        client.overrideAudience(id: "aud-1", qualified: true)
+        client.overrideAudience(id: "aud-1", qualified: true, experienceIds: [])
         client.overrideVariant(experienceId: "exp-1", variantIndex: 1)
 
         // Simulate: panel closes
@@ -403,7 +422,7 @@ final class PreviewOverrideTests: XCTestCase {
             experiences: [("exp-1", 0)]
         )
 
-        client.overrideAudience(id: "aud-1", qualified: true)
+        client.overrideAudience(id: "aud-1", qualified: true, experienceIds: [])
         client.overrideVariant(experienceId: "exp-1", variantIndex: 2)
 
         // Destroy and reinitialize
@@ -434,7 +453,7 @@ final class PreviewOverrideTests: XCTestCase {
             experiences: [("exp-1", 0)]
         )
 
-        client.overrideAudience(id: "aud-1", qualified: true)
+        client.overrideAudience(id: "aud-1", qualified: true, experienceIds: [])
         client.overrideVariant(experienceId: "exp-1", variantIndex: 2)
 
         // SDK reset
@@ -448,23 +467,6 @@ final class PreviewOverrideTests: XCTestCase {
     }
 
     // MARK: - Override changes are reflected in the signals
-
-    @MainActor
-    func testAudienceOverrideModifiesChangesSignal() throws {
-        let client = try makeInitializedClient()
-        seedSignals(
-            client: client,
-            audiences: [("aud-1", false)],
-            experiences: []
-        )
-
-        client.overrideAudience(id: "aud-1", qualified: true)
-
-        let state = client.getPreviewState()
-        let change = state?.changes?.first(where: { $0.audienceId == "aud-1" })
-        XCTAssertEqual(change?.qualified, true,
-                       "The changes signal should reflect the override")
-    }
 
     @MainActor
     func testVariantOverrideModifiesPersonalizationsSignal() throws {
@@ -499,9 +501,8 @@ final class PreviewOverrideTests: XCTestCase {
 
         let state = client.getPreviewState()
         XCTAssertEqual(state?.audienceOverrides ?? [:], [:])
-        // Changes should remain unchanged
-        let change = state?.changes?.first(where: { $0.audienceId == "aud-1" })
-        XCTAssertEqual(change?.qualified, false)
+        XCTAssertEqual(state?.defaultAudienceQualifications ?? [:], [:],
+                       "No-op reset should not produce a baseline snapshot")
     }
 
     @MainActor
@@ -532,14 +533,14 @@ final class PreviewOverrideTests: XCTestCase {
         )
 
         // Override
-        client.overrideAudience(id: "aud-1", qualified: true)
+        client.overrideAudience(id: "aud-1", qualified: true, experienceIds: [])
         client.overrideVariant(experienceId: "exp-1", variantIndex: 2)
 
         // Reset all
         client.resetAllOverrides()
 
         // Override again with different values
-        client.overrideAudience(id: "aud-1", qualified: true)
+        client.overrideAudience(id: "aud-1", qualified: true, experienceIds: [])
         client.overrideVariant(experienceId: "exp-1", variantIndex: 3)
 
         let state = client.getPreviewState()
@@ -550,5 +551,68 @@ final class PreviewOverrideTests: XCTestCase {
                        "Default should be the natural value after reset")
         XCTAssertEqual(state?.defaultVariantIndices?["exp-1"], 0,
                        "Default should be the natural value after reset")
+    }
+
+    // MARK: - onOverridesChanged push callback
+
+    @MainActor
+    func testOverrideActionPushesPreviewStateViaPublisher() async throws {
+        let client = try makeInitializedClient()
+        defer { client.destroy() }
+
+        seedSignals(
+            client: client,
+            audiences: [("aud-1", false)],
+            experiences: [("exp-1", 0)]
+        )
+
+        var emissions: [PreviewState] = []
+        let emissionReceived = expectation(description: "previewState publisher emits after override")
+        emissionReceived.expectedFulfillmentCount = 1
+        emissionReceived.assertForOverFulfill = false
+
+        let cancellable = client.$previewState
+            .compactMap { $0 }
+            .sink { state in
+                emissions.append(state)
+                emissionReceived.fulfill()
+            }
+
+        client.overrideAudience(id: "aud-1", qualified: true, experienceIds: ["exp-1"])
+
+        await fulfillment(of: [emissionReceived], timeout: 2)
+        cancellable.cancel()
+
+        XCTAssertFalse(emissions.isEmpty,
+                       "Publisher must emit after overrideAudience; push path, not polling")
+        XCTAssertEqual(emissions.last?.audienceOverrides?["aud-1"], true,
+                       "Pushed PreviewState must reflect the applied override")
+    }
+
+    @MainActor
+    func testMultipleOverrideActionsEachPushPreviewState() async throws {
+        let client = try makeInitializedClient()
+        defer { client.destroy() }
+
+        seedSignals(
+            client: client,
+            audiences: [("aud-1", false)],
+            experiences: [("exp-1", 0)]
+        )
+
+        let emissionReceived = expectation(description: "publisher emits per override action")
+        emissionReceived.expectedFulfillmentCount = 3
+        emissionReceived.assertForOverFulfill = false
+
+        let cancellable = client.$previewState
+            .compactMap { $0 }
+            .sink { _ in emissionReceived.fulfill() }
+
+        client.overrideAudience(id: "aud-1", qualified: true, experienceIds: ["exp-1"])
+        client.overrideVariant(experienceId: "exp-1", variantIndex: 2)
+        client.resetAllOverrides()
+
+        await fulfillment(of: [emissionReceived], timeout: 2)
+        cancellable.cancel()
     }
 }

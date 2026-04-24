@@ -18,6 +18,7 @@ final class JSContextManager {
     var onLog: ((String, String) -> Void)?
     var onStateChange: (([String: Any]) -> Void)?
     var onEvent: (([String: Any]) -> Void)?
+    var onOverridesChanged: ((PreviewState) -> Void)?
 
     /// Creates the JSContext, loads polyfills and the UMD bundle, and calls `__bridge.initialize()`.
     func initialize(config: OptimizationConfig) throws {
@@ -75,6 +76,15 @@ final class JSContextManager {
             self?.handleEvent(json)
         }
         ctx.setObject(onEventEmitted, forKeyedSubscript: "__nativeOnEventEmitted" as NSString)
+
+        // Register overrides-changed callback. The JS bridge calls
+        // __nativeOnOverridesChanged(JSON.stringify(previewState)) after every
+        // PreviewOverrideManager mutation — the "push model" that keeps iOS UI
+        // in sync without polling getPreviewState() after each action.
+        let onOverridesChangedBlock: @convention(block) (String) -> Void = { [weak self] json in
+            self?.handleOverridesChanged(json)
+        }
+        ctx.setObject(onOverridesChangedBlock, forKeyedSubscript: "__nativeOnOverridesChanged" as NSString)
 
         // Initialize the bridge
         let configJSON: String
@@ -223,6 +233,16 @@ final class JSContextManager {
 
         DispatchQueue.main.async { [weak self] in
             self?.onEvent?(dict)
+        }
+    }
+
+    private func handleOverridesChanged(_ json: String) {
+        guard let data = json.data(using: .utf8),
+              let state = try? JSONDecoder().decode(PreviewState.self, from: data)
+        else { return }
+
+        DispatchQueue.main.async { [weak self] in
+            self?.onOverridesChanged?(state)
         }
     }
 }

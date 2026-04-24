@@ -29,6 +29,10 @@ export default defineConfig({
         '../../universal/api-schemas/src/',
       ),
       '@contentful/optimization-core': path.resolve(__dirname, '../../universal/core-sdk/src/'),
+      '@contentful/optimization-preview': path.resolve(
+        __dirname,
+        '../../universal/preview-sdk/src/',
+      ),
     },
   },
 

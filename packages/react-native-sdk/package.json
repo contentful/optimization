@@ -131,6 +131,7 @@
   },
   "dependencies": {
     "@contentful/optimization-core": "workspace:*",
+    "@contentful/optimization-preview": "workspace:*",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-clipboard/clipboard": "^1.16.3",
     "es-iterator-helpers": "^1.2.2",

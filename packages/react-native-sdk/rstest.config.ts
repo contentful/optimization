@@ -10,6 +10,10 @@ export default defineConfig({
       '@contentful/optimization-api-client': resolve(__dirname, '../universal/api-client/src/'),
       '@contentful/optimization-api-schemas': resolve(__dirname, '../universal/api-schemas/src/'),
       '@contentful/optimization-core': resolve(__dirname, '../universal/core-sdk/src/index.ts'),
+      '@contentful/optimization-preview': resolve(
+        __dirname,
+        '../universal/preview-sdk/src/index.ts',
+      ),
       '@react-native-community/netinfo': resolve(
         __dirname,
         './__mocks__/@react-native-community/netinfo.ts',

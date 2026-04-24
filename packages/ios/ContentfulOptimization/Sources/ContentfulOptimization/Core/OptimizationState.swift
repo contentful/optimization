@@ -5,7 +5,7 @@ public struct OptimizationState: Equatable {
     public var profile: [String: Any]?
     public var consent: Bool?
     public var canPersonalize: Bool
-    public var changes: [String: Any]?
+    public var changes: [[String: Any]]?
 
     public static let empty = OptimizationState(
         profile: nil,

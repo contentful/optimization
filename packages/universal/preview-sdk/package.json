@@ -1,0 +1,66 @@
+{
+  "name": "@contentful/optimization-preview",
+  "version": "0.0.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/contentful/optimization.git",
+    "directory": "packages/universal/preview-sdk"
+  },
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "buildTools": {
+    "bundleSize": {
+      "gzipBudgets": {
+        "index.cjs": 6500,
+        "index.mjs": 5500
+      }
+    }
+  },
+  "scripts": {
+    "build": "pnpm clean; pnpm build:dist",
+    "build:ci": "pnpm build:dist",
+    "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
+    "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist",
+    "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage .tsbuildinfo",
+    "size:check": "pnpm build:dist && build-tools bundle-size",
+    "size:report": "build-tools bundle-size --report-only",
+    "test:unit": "rstest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@contentful/optimization-api-client": "workspace:*",
+    "@preact/signals-core": "catalog:"
+  },
+  "devDependencies": {
+    "@microsoft/api-extractor": "catalog:",
+    "@rsdoctor/cli": "catalog:",
+    "@rslib/core": "catalog:",
+    "@types/node": "catalog:",
+    "@rstest/core": "catalog:",
+    "@rstest/coverage-istanbul": "catalog:",
+    "build-tools": "workspace:*",
+    "mocks": "workspace:*",
+    "rimraf": "catalog:",
+    "tslib": "catalog:",
+    "typescript": "catalog:"
+  }
+}

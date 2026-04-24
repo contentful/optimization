@@ -3,6 +3,16 @@ import SwiftUI
 
 @main
 struct OptimizationDemoApp: App {
+    init() {
+        // UI tests launch with `--reset` to guarantee an unidentified-visitor
+        // starting state. The SDK persists `anonymousId`/profile in its own
+        // UserDefaults suite, and those outlive `terminate()` + `launch()` on
+        // the simulator — so an explicit wipe is the only reliable reset.
+        if ProcessInfo.processInfo.arguments.contains("--reset") {
+            UserDefaults.standard.removePersistentDomain(forName: "com.contentful.optimization")
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             OptimizationRoot(

@@ -1,202 +1,40 @@
 import type { Profile, SelectedOptimization } from '@contentful/optimization-core/api-schemas'
+import type {
+  AudienceOverrideState,
+  AudienceWithExperiences,
+  ContentfulClient,
+  ExperienceDefinition,
+  OptimizationOverride,
+  OverrideState,
+  PreviewSdkSignals,
+} from '@contentful/optimization-preview'
 import type { StyleProp, ViewStyle } from 'react-native'
 
 // ============================================================================
-// Audience & Experience Definitions
+// Re-exports from core
 // ============================================================================
 
-/**
- * Audience definition from the optimization platform.
- *
- * @internal
- */
-export interface AudienceDefinition {
-  /** Unique audience identifier */
-  id: string
-  /** Human-readable audience name */
-  name: string
-  /** Optional description of audience targeting criteria */
-  description?: string
-}
-
-/**
- * Variant distribution configuration for an experience.
- *
- * @internal
- */
-export interface VariantDistribution {
-  /** Variant index (0 = baseline) */
-  index: number
-  /** Reference to the variant content */
-  variantRef: string
-  /** Optional traffic percentage (0-100) */
-  percentage?: number
-  /** Optional human-readable name from Contentful entry */
-  name?: string
-}
-
-// ============================================================================
-// Contentful Entry Types (for enrichment)
-// ============================================================================
-
-/**
- * Simplified Contentful entry structure for mapping entries to preview panel definitions.
- *
- * @internal
- */
-export interface ContentfulEntry {
-  sys: {
-    id: string
-    contentType?: {
-      sys: {
-        id: string
-      }
-    }
-  }
-  fields: Record<string, unknown>
-}
-
-/**
- * Entry collection response from the Contentful client, including pagination metadata.
- *
- * @internal
- */
-export interface ContentfulEntryCollection {
-  items: ContentfulEntry[]
-  total: number
-  skip: number
-  limit: number
-}
-
-/**
- * Minimal Contentful client interface required by the preview panel.
- *
- * @public
- */
-export interface ContentfulClient {
-  getEntries: (query: {
-    content_type: string
-    include?: number
-    skip?: number
-    limit?: number
-  }) => Promise<ContentfulEntryCollection>
-}
-
-/**
- * Experience definition representing a personalization or experiment configuration.
- *
- * @internal
- */
-export interface ExperienceDefinition {
-  /** Unique experience identifier */
-  id: string
-  /** Human-readable experience name */
-  name: string
-  /** Type of experience */
-  type: 'nt_personalization' | 'nt_experiment'
-  /** Variant distribution configuration */
-  distribution: VariantDistribution[]
-  /** Associated audience (if audience-targeted) */
-  audience?: { id: string }
-}
-
-/**
- * Three-state override value for audiences: `'on'` forces active, `'off'` forces
- * inactive, `'default'` defers to the SDK evaluation.
- *
- * @internal
- */
-export type AudienceOverrideState = 'on' | 'off' | 'default'
-
-/**
- * Combined audience data with associated experiences, used for audience-grouped display.
- *
- * @internal
- */
-export interface AudienceWithExperiences {
-  /** Audience definition */
-  audience: AudienceDefinition
-  /** Experiences targeting this audience */
-  experiences: ExperienceDefinition[]
-  /** Whether user naturally qualifies for this audience (from API) */
-  isQualified: boolean
-  /** Whether audience is currently active (considering overrides) */
-  isActive: boolean
-  /** Current override state */
-  overrideState: AudienceOverrideState
-}
-
-/**
- * Preview data containing all audience and experience definitions.
- *
- * @internal
- */
-export interface PreviewData {
-  /** All available audience definitions */
-  audienceDefinitions: AudienceDefinition[]
-  /** All available experience definitions */
-  experienceDefinitions: ExperienceDefinition[]
-}
-
-// ============================================================================
-// Override State Types
-// ============================================================================
-
-/**
- * Tracks a manual audience activation or deactivation override.
- *
- * @internal
- */
-export interface AudienceOverride {
-  /** Audience ID being overridden */
-  audienceId: string
-  /** Whether the audience is activated (true) or deactivated (false) */
-  isActive: boolean
-  /** Source of the override - 'manual' for user-initiated */
-  source: 'manual'
-  /** Experience IDs that were set with this audience override */
-  experienceIds: string[]
-}
-
-/**
- * Tracks a manual variant selection override.
- *
- * @internal
- */
-export interface OptimizationOverride {
-  /** Experience ID being overridden */
-  experienceId: string
-  /** The variant index to force (0 = baseline) */
-  variantIndex: number
-}
-
-/**
- * Combined override state managed by the preview panel.
- *
- * @internal
- */
-export interface OverrideState {
-  /** Map of audience ID to override */
-  audiences: Record<string, AudienceOverride>
-  /** Map of experience ID to override */
-  selectedOptimizations: Record<string, OptimizationOverride>
-}
+export type {
+  AudienceDefinition,
+  AudienceOverride,
+  AudienceOverrideState,
+  AudienceWithExperiences,
+  ContentfulClient,
+  ContentfulEntry,
+  ContentfulEntryCollection,
+  ExperienceDefinition,
+  OptimizationOverride,
+  OverrideState,
+  PreviewData,
+  VariantDistribution,
+} from '@contentful/optimization-preview'
 
 /**
  * Preview state derived from SDK signals.
  *
  * @internal
  */
-export interface PreviewState {
-  /** Current profile from SDK */
-  profile: Profile | undefined
-  /** Current selected optimizations from SDK */
-  selectedOptimizations: SelectedOptimization[] | undefined
-  /** Current consent state */
-  consent: boolean | undefined
-  /** Whether SDK data is loading */
-  isLoading: boolean
-}
+export type PreviewState = PreviewSdkSignals
 
 /**
  * Actions available in the preview panel for overriding audiences and optimizations.
@@ -285,6 +123,7 @@ export interface ListItemProps {
     label: string
     variant: 'activate' | 'deactivate' | 'reset'
     onPress: () => void
+    testID?: string
   }
   /** Badge to display */
   badge?: {
@@ -311,6 +150,8 @@ export interface ActionButtonProps {
   disabled?: boolean
   /** Custom style */
   style?: StyleProp<ViewStyle>
+  /** Test ID for automated UI testing */
+  testID?: string
 }
 
 /**

@@ -75,8 +75,8 @@ final class UserDefaultsStore: PersistentStore {
         }
     }
 
-    var changes: [String: Any]? {
-        get { cache["changes"] as? [String: Any] }
+    var changes: [[String: Any]]? {
+        get { cache["changes"] as? [[String: Any]] }
         set {
             cache["changes"] = newValue
             writeJSON(newValue, forKey: "changes")

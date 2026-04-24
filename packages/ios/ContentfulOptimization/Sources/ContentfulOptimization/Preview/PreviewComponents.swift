@@ -72,6 +72,7 @@ struct PreviewActionButton: View {
     let variant: ActionButtonVariant
     let action: () -> Void
     var disabled: Bool = false
+    var accessibilityID: String? = nil
 
     var body: some View {
         Button(action: action) {
@@ -95,6 +96,7 @@ struct PreviewActionButton: View {
         }
         .disabled(disabled)
         .opacity(disabled ? PreviewTheme.Opacity.disabled : 1)
+        .accessibilityIdentifier(accessibilityID ?? "")
     }
 }
 
@@ -108,6 +110,7 @@ struct AudienceToggle: View {
     let value: AudienceOverrideState
     let onValueChange: (AudienceOverrideState) -> Void
     var disabled: Bool = false
+    var audienceId: String? = nil
 
     private let states: [(AudienceOverrideState, String)] = [
         (.on, "On"),
@@ -131,6 +134,7 @@ struct AudienceToggle: View {
                         )
                 }
                 .disabled(disabled)
+                .accessibilityIdentifier(audienceId.map { "audience-toggle-\($0)-\(state.rawValue)" } ?? "")
             }
         }
         .padding(2)
@@ -346,6 +350,7 @@ struct ListItemRow: View {
     var subtitle: String?
     var badge: (label: String, variant: BadgeVariant)?
     var action: (label: String, variant: ActionButtonVariant, handler: () -> Void)?
+    var actionAccessibilityID: String? = nil
     var onLongPress: (() -> Void)?
 
     var body: some View {
@@ -375,7 +380,12 @@ struct ListItemRow: View {
             Spacer()
 
             if let action = action {
-                PreviewActionButton(label: action.label, variant: action.variant, action: action.handler)
+                PreviewActionButton(
+                    label: action.label,
+                    variant: action.variant,
+                    action: action.handler,
+                    accessibilityID: actionAccessibilityID
+                )
             }
         }
         .padding(.vertical, PreviewTheme.Spacing.sm)
@@ -404,9 +414,11 @@ struct CollapseToggleButton: View {
 // MARK: - Variant Selector
 
 struct VariantSelector: View {
-    let experience: PreviewExperience
+    let experience: ExperienceDefinitionDTO
     let isAudienceActive: Bool
     let onSelectVariant: (Int) -> Void
+
+    private var isExperiment: Bool { experience.type == "nt_experiment" }
 
     var body: some View {
         VStack(spacing: PreviewTheme.Spacing.sm) {
@@ -420,7 +432,7 @@ struct VariantSelector: View {
                         }
 
                         // Percentage for experiments
-                        if experience.type == .experiment, let percentage = variant.percentage {
+                        if isExperiment, let percentage = variant.percentage {
                             Text("\(percentage)%")
                                 .font(.system(size: PreviewTheme.FontSize.sm))
                                 .foregroundColor(PreviewTheme.Colors.TextColor.muted)
@@ -464,21 +476,22 @@ struct VariantSelector: View {
                 }
                 .buttonStyle(.plain)
                 .opacity(isAudienceActive ? 1.0 : PreviewTheme.Opacity.muted)
+                .accessibilityIdentifier("variant-picker-\(experience.id)-\(variant.index)")
             }
         }
     }
 
     /// Use distribution data if available, otherwise generate from current variant index.
-    private var variants: [VariantDistribution] {
+    private var variants: [VariantDistributionDTO] {
         if !experience.distribution.isEmpty {
             return experience.distribution
         }
         // Fallback: generate basic variant list
         let count = max(experience.currentVariantIndex + 1, 2)
-        return (0..<count).map { VariantDistribution(index: $0, variantRef: "", percentage: nil, name: nil) }
+        return (0..<count).map { VariantDistributionDTO(index: $0, variantRef: "", percentage: nil, name: nil) }
     }
 
-    private func variantLabel(for variant: VariantDistribution) -> String {
+    private func variantLabel(for variant: VariantDistributionDTO) -> String {
         if let name = variant.name, !name.isEmpty {
             return name
         }
@@ -489,17 +502,19 @@ struct VariantSelector: View {
 // MARK: - Experience Card
 
 struct ExperienceCard: View {
-    let experience: PreviewExperience
+    let experience: ExperienceDefinitionDTO
     let isAudienceActive: Bool
     let onSelectVariant: (Int) -> Void
+
+    private var isExperiment: Bool { experience.type == "nt_experiment" }
 
     var body: some View {
         VStack(alignment: .leading, spacing: PreviewTheme.Spacing.sm) {
             // Header with type badge and override badge
             HStack(spacing: PreviewTheme.Spacing.sm) {
                 PreviewBadge(
-                    label: experience.type == .experiment ? "Experiment" : "Personalization",
-                    variant: experience.type == .experiment ? .experiment : .personalization
+                    label: isExperiment ? "Experiment" : "Personalization",
+                    variant: isExperiment ? .experiment : .personalization
                 )
                 if experience.isOverridden {
                     PreviewBadge(label: "Override", variant: .override_)
@@ -535,11 +550,15 @@ struct ExperienceCard: View {
 // MARK: - Audience Item Header
 
 struct AudienceItemHeader: View {
-    let audience: PreviewAudience
+    let audience: AudienceWithExperiencesDTO
     let isExpanded: Bool
     let onToggleExpand: () -> Void
     let onToggleOverride: (AudienceOverrideState) -> Void
     let onCopyId: () -> Void
+
+    private var overrideState: AudienceOverrideState {
+        AudienceOverrideState(rawValue: audience.overrideState) ?? .default
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: PreviewTheme.Spacing.sm) {
@@ -550,7 +569,7 @@ struct AudienceItemHeader: View {
                         .font(.system(size: PreviewTheme.FontSize.xl))
                         .foregroundColor(PreviewTheme.Colors.CP.hover)
 
-                    Text(audience.name)
+                    Text(audience.audience.name)
                         .font(.system(size: PreviewTheme.FontSize.sm, weight: .medium))
                         .foregroundColor(PreviewTheme.Colors.TextColor.primary)
                         .lineLimit(1)
@@ -571,7 +590,7 @@ struct AudienceItemHeader: View {
             .onLongPressGesture(minimumDuration: 0.5, perform: onCopyId)
 
             // Description
-            if let description = audience.description, !description.isEmpty {
+            if let description = audience.audience.description, !description.isEmpty {
                 Text(description)
                     .font(.system(size: PreviewTheme.FontSize.xs))
                     .foregroundColor(PreviewTheme.Colors.TextColor.secondary)
@@ -579,8 +598,9 @@ struct AudienceItemHeader: View {
 
             // Toggle row
             AudienceToggle(
-                value: audience.overrideState,
-                onValueChange: onToggleOverride
+                value: overrideState,
+                onValueChange: onToggleOverride,
+                audienceId: audience.audience.id
             )
         }
         .padding(.horizontal, PreviewTheme.Spacing.md)
@@ -591,7 +611,7 @@ struct AudienceItemHeader: View {
 // MARK: - Audience Item
 
 struct AudienceItem: View {
-    let audience: PreviewAudience
+    let audience: AudienceWithExperiencesDTO
     let isExpanded: Bool
     let onToggleExpand: () -> Void
     let onToggleOverride: (AudienceOverrideState) -> Void
@@ -610,7 +630,7 @@ struct AudienceItem: View {
 
             if isExpanded {
                 VStack(spacing: PreviewTheme.Spacing.sm) {
-                    ForEach(audience.experiences) { experience in
+                    ForEach(audience.experiences, id: \.id) { experience in
                         ExperienceCard(
                             experience: experience,
                             isAudienceActive: audience.isQualified,

@@ -18,6 +18,7 @@
   "references": [
     { "path": "../universal/api-schemas/tsconfig.build.json" },
     { "path": "../universal/api-client/tsconfig.build.json" },
-    { "path": "../universal/core-sdk/tsconfig.build.json" }
+    { "path": "../universal/core-sdk/tsconfig.build.json" },
+    { "path": "../universal/preview-sdk/tsconfig.build.json" }
   ]
 }

@@ -5,8 +5,15 @@ final class UnidentifiedVariantsTests: XCTestCase {
 
     override func setUp() {
         continueAfterFailure = false
-        app.launch()
-        clearProfileState(app: app)
+        // These tests assert the new-visitor mock fixture is served, which the
+        // mock server routes by the persisted `anonymousId`. An in-app reset
+        // via the button only clears state when the user is currently
+        // identified — if the simulator already booted into an unidentified
+        // surface, `clearProfileState` returns immediately and any stale
+        // `anonymousId` stays around, so the mock keeps serving the
+        // identified-visitor fixture. `requireFreshAppInstance: true` triggers
+        // `--reset`, which wipes the SDK's UserDefaults suite on launch.
+        clearProfileState(app: app, requireFreshAppInstance: true)
     }
 
     func testDisplaysMergeTagEntry() {

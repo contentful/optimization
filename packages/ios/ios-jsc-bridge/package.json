@@ -17,7 +17,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@contentful/optimization-core": "workspace:*"
+    "@contentful/optimization-core": "workspace:*",
+    "@contentful/optimization-preview": "workspace:*"
   },
   "devDependencies": {
     "@rslib/core": "catalog:",

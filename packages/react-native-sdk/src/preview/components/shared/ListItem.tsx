@@ -45,7 +45,12 @@ export function ListItem({
 
       {action && (
         <View style={styles.actionContainer}>
-          <ActionButton label={action.label} variant={action.variant} onPress={action.onPress} />
+          <ActionButton
+            label={action.label}
+            variant={action.variant}
+            onPress={action.onPress}
+            testID={action.testID}
+          />
         </View>
       )}
     </View>

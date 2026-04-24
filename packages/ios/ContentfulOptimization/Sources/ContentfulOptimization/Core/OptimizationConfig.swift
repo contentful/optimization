@@ -4,13 +4,13 @@ import Foundation
 public struct StorageDefaults {
     public var consent: Bool?
     public var profile: [String: Any]?
-    public var changes: [String: Any]?
+    public var changes: [[String: Any]]?
     public var personalizations: [[String: Any]]?
 
     public init(
         consent: Bool? = nil,
         profile: [String: Any]? = nil,
-        changes: [String: Any]? = nil,
+        changes: [[String: Any]]? = nil,
         personalizations: [[String: Any]]? = nil
     ) {
         self.consent = consent
@@ -74,7 +74,7 @@ public struct OptimizationConfig {
                 defaultsDict["changes"] = changes
             }
             if let personalizations = defaults.personalizations {
-                defaultsDict["personalizations"] = personalizations
+                defaultsDict["optimizations"] = personalizations
             }
             if !defaultsDict.isEmpty {
                 dict["defaults"] = defaultsDict

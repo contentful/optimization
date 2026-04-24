@@ -49,6 +49,7 @@ export function ActionButton({
   onPress,
   disabled = false,
   style,
+  testID,
 }: ActionButtonProps): React.JSX.Element {
   const { [variant]: variantStyle } = variantStyles
   const isSecondary = variant === 'secondary'
@@ -65,6 +66,7 @@ export function ActionButton({
       onPress={onPress}
       disabled={disabled}
       activeOpacity={0.7}
+      testID={testID}
     >
       <Text style={[styles.buttonText, { color: variantStyle.textColor }]}>{label}</Text>
     </TouchableOpacity>
