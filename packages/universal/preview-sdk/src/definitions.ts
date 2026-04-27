@@ -1,3 +1,5 @@
+import type { OptimizationType } from '@contentful/optimization-api-client/api-schemas'
+
 /**
  * Audience definition from the optimization platform.
  *
@@ -39,7 +41,7 @@ export interface ExperienceDefinition {
   /** Human-readable experience name */
   name: string
   /** Type of experience */
-  type: 'nt_personalization' | 'nt_experiment'
+  type: OptimizationType
   /** Variant distribution configuration */
   distribution: VariantDistribution[]
   /** Associated audience (if audience-targeted) */

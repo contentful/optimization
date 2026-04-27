@@ -1,38 +1,49 @@
 import type {
+  AudienceEntryFields,
+  OptimizationConfig,
+  OptimizationEntryFields,
+} from '@contentful/optimization-api-client/api-schemas'
+import type {
   AudienceDefinition,
   ContentfulEntry,
   ExperienceDefinition,
   VariantDistribution,
 } from './definitions'
 
-/** @internal */
-interface AudienceEntryFields {
-  nt_audience_id?: string
-  nt_name?: string
-  nt_description?: string
-}
+/**
+ * Locally-loose audience-fields shape used during defensive narrowing of
+ * untrusted Contentful payloads. All fields are optional because the runtime
+ * type guard only verifies that the value is an object.
+ *
+ * @internal
+ */
+type LooseAudienceEntryFields = Partial<AudienceEntryFields>
 
-/** @internal */
-interface ExperienceEntryFields {
-  nt_experience_id?: string
-  nt_name?: string
-  nt_type?: 'nt_personalization' | 'nt_experiment'
-  nt_config?: {
-    distribution?: number[]
-    components?: Array<{
-      baseline?: { id: string }
-      variants?: Array<{ id: string; hidden?: boolean }>
-    }>
-  } | null
+/**
+ * Locally-loose experience-fields shape. The schema-aligned scalars come from
+ * `OptimizationEntryFields`; `nt_audience` and `nt_variants` are kept as
+ * link-only because the SDK only reads `sys.id` and accepts unresolved links.
+ *
+ * @internal
+ */
+type LooseExperienceEntryFields = Partial<
+  Pick<OptimizationEntryFields, 'nt_experience_id' | 'nt_name' | 'nt_type' | 'nt_config'>
+> & {
   nt_audience?: { sys: { id: string } } | null
   nt_variants?: Array<{ sys: { id: string } }>
 }
 
-/** @internal */
-interface OptimizationEntryFields {
+/**
+ * Locally-loose name-lookup shape for `createExperienceNameMap`. Extends the
+ * schema fields with the legacy `nt_personalization_id` alias that older
+ * content models still use.
+ *
+ * @internal
+ */
+type ExperienceNameFields = Partial<
+  Pick<OptimizationEntryFields, 'nt_experience_id' | 'nt_name'>
+> & {
   nt_personalization_id?: string
-  nt_experience_id?: string
-  nt_name?: string
 }
 
 /** @internal */
@@ -43,12 +54,12 @@ interface VariantEntryFields {
 }
 
 /** @internal */
-function hasAudienceFields(fields: unknown): fields is AudienceEntryFields {
+function hasAudienceFields(fields: unknown): fields is LooseAudienceEntryFields {
   return typeof fields === 'object' && fields !== null
 }
 
 /** @internal */
-function hasExperienceFields(fields: unknown): fields is ExperienceEntryFields {
+function hasExperienceFields(fields: unknown): fields is LooseExperienceEntryFields {
   return typeof fields === 'object' && fields !== null
 }
 
@@ -58,7 +69,7 @@ function hasVariantFields(fields: unknown): fields is VariantEntryFields {
 }
 
 /** @internal */
-function hasOptimizationFields(fields: unknown): fields is OptimizationEntryFields {
+function hasOptimizationFields(fields: unknown): fields is ExperienceNameFields {
   return typeof fields === 'object' && fields !== null
 }
 
@@ -71,16 +82,20 @@ function getVariantName(entry: ContentfulEntry): string | undefined {
   return undefined
 }
 
-/** @internal */
-function getVariantRefForIndex(
-  index: number,
-  config: NonNullable<ExperienceEntryFields['nt_config']>,
-): string {
+/**
+ * Resolves the variant reference id for a given distribution index from the
+ * first optimization component. The preview panel only renders entry-replacement
+ * components today; inline-variable components have no variant ref and resolve
+ * to an empty string.
+ *
+ * @internal
+ */
+function getVariantRefForIndex(index: number, config: OptimizationConfig): string {
   const firstComponent = config.components?.[0]
-  if (index === 0) {
-    return firstComponent?.baseline?.id ?? ''
-  }
-  return firstComponent?.variants?.[index - 1]?.id ?? ''
+  if (firstComponent === undefined) return ''
+  if (firstComponent.type !== undefined && firstComponent.type !== 'EntryReplacement') return ''
+  if (index === 0) return firstComponent.baseline.id
+  return firstComponent.variants[index - 1]?.id ?? ''
 }
 
 /** @internal */
