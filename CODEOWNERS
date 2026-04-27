@@ -1,4 +1,31 @@
+# Default owners for files without a more specific rule.
 * @akfreas @phobetron @Lotfi-Arif
 
-# github actions
+# GitHub repository automation and policy.
 .github/**/* @phobetron @Lp-Francois @Lotfi-Arif
+
+# Code ownership policy.
+/CODEOWNERS @phobetron @Lp-Francois
+
+# Dependency management and update automation.
+/package.json @phobetron @Lp-Francois
+/pnpm-lock.yaml @phobetron @Lp-Francois
+/pnpm-workspace.yaml @phobetron @Lp-Francois
+/renovate.json @phobetron @Lp-Francois
+
+# Node and package-manager runtime configuration.
+/.nvmrc @phobetron @Lp-Francois
+/.pnpmfile.cjs @phobetron @Lp-Francois
+
+# Commit workflow and repository hygiene.
+/.czrc @phobetron @Lp-Francois
+/.czvinylrc.yaml @phobetron @Lp-Francois
+/.gitignore @phobetron @Lp-Francois
+/.lintstagedrc.yaml @phobetron @Lp-Francois
+/.husky/** @phobetron @Lp-Francois
+
+# Documentation generation.
+/typedoc.json @phobetron @Lp-Francois
+
+# Contentful operational configuration.
+/.contentful/** @phobetron @Lp-Francois
