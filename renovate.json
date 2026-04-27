@@ -1,4 +1,42 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["local>contentful/renovate-config"]
+  "extends": ["local>contentful/renovate-config"],
+  "enabledManagers": ["github-actions", "npm", "gradle", "bundler"],
+  "includePaths": [
+    ".github/workflows/**",
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "implementations/node-sdk/**",
+    "implementations/node-sdk+web-sdk/**",
+    "implementations/web-sdk/**",
+    "implementations/web-sdk_react/**",
+    "implementations/react-web-sdk/**",
+    "implementations/react-native-sdk/**",
+    "packages/react-native-sdk/dev/**"
+  ],
+  "prConcurrentLimit": 5,
+  "timezone": "Europe/Berlin",
+  "packageRules": [
+    {
+      "description": "Run GitHub Actions dependency updates during the Monday morning maintenance window.",
+      "matchManagers": ["github-actions"],
+      "schedule": ["* 8-11 * * 1"]
+    },
+    {
+      "description": "Run npm and pnpm dependency updates during the Tuesday morning maintenance window.",
+      "matchManagers": ["npm"],
+      "schedule": ["* 8-11 * * 2"]
+    },
+    {
+      "description": "Run Gradle dependency updates during the first-Monday morning maintenance window.",
+      "matchManagers": ["gradle"],
+      "schedule": ["* 9-12 1-7 * 1"]
+    },
+    {
+      "description": "Run Bundler dependency updates during the first-Monday late-morning maintenance window.",
+      "matchManagers": ["bundler"],
+      "schedule": ["* 10-13 1-7 * 1"]
+    }
+  ]
 }
