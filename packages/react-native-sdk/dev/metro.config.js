@@ -31,9 +31,9 @@ const config = {
           workspaceRoot,
           'packages/universal/core-sdk/src/index.ts',
         ),
-        '@contentful/optimization-preview': path.resolve(
+        '@contentful/optimization-core/preview-support': path.resolve(
           workspaceRoot,
-          'packages/universal/preview-sdk/src/index.ts',
+          'packages/universal/core-sdk/src/preview-support/index.ts',
         ),
         '@contentful/optimization-api-client': path.resolve(
           workspaceRoot,

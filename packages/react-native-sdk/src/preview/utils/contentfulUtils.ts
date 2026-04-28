@@ -1,4 +1,4 @@
 export {
   fetchAllEntriesByContentType,
   fetchAudienceAndExperienceEntries,
-} from '@contentful/optimization-preview'
+} from '@contentful/optimization-core/preview-support'

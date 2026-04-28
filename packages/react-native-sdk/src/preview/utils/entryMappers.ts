@@ -2,4 +2,4 @@ export {
   createAudienceDefinitions,
   createExperienceDefinitions,
   createExperienceNameMap,
-} from '@contentful/optimization-preview'
+} from '@contentful/optimization-core/preview-support'

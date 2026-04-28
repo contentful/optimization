@@ -5,22 +5,22 @@ import type {
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type { Signal } from '@preact/signals-core'
+import type { InterceptorManager } from '../lib/interceptor'
 import { applyOptimizationOverrides } from './applyOptimizationOverrides'
 import type { OptimizationOverride, OverrideState } from './types'
 
-/**
- * Minimal interface for registering and removing state interceptors.
- * Uses a structural type rather than the `InterceptorManager` class to avoid
- * nominal incompatibility when the class is resolved from different paths.
- *
- * @public
- */
-export interface StateInterceptorRegistry<T> {
-  add: (interceptor: (value: Readonly<T>) => T | Promise<T>) => number
-  remove: (id: number) => boolean
-}
-
 const logger = createScopedLogger('PreviewOverrides')
+
+/**
+ * Subset of {@link InterceptorManager} consumed by the preview override
+ * manager. Picking only the public methods (`add` / `remove`) avoids the
+ * nominal-typing mismatch that would otherwise arise when a consumer passes
+ * an `InterceptorManager` resolved from one bundle (e.g. the package root)
+ * into a `PreviewOverrideManager` typed via a different bundle (e.g. the
+ * `./preview-support` entry point), since `InterceptorManager`'s `private`
+ * fields are emitted into each bundled `.d.ts` separately.
+ */
+type StateInterceptorAccess<T> = Pick<InterceptorManager<T>, 'add' | 'remove'>
 
 const INITIAL_STATE: OverrideState = {
   audiences: {},
@@ -46,7 +46,7 @@ export interface PreviewOverrideManagerConfig {
   profile?: Signal<Profile | undefined>
 
   /** The state interceptor registry to register with. */
-  stateInterceptors: StateInterceptorRegistry<OptimizationData>
+  stateInterceptors: StateInterceptorAccess<OptimizationData>
 
   /**
    * Callback invoked whenever override state changes.
@@ -79,7 +79,7 @@ export class PreviewOverrideManager {
 
   private readonly selectedOptimizations: Signal<SelectedOptimizationArray | undefined>
   private readonly profile: Signal<Profile | undefined> | undefined
-  private readonly stateInterceptors: StateInterceptorRegistry<OptimizationData>
+  private readonly stateInterceptors: StateInterceptorAccess<OptimizationData>
   private readonly onOverridesChanged: ((state: Readonly<OverrideState>) => void) | undefined
 
   constructor(config: PreviewOverrideManagerConfig) {

@@ -1,7 +1,7 @@
 import type { PreviewPanelSignalObject } from '@contentful/optimization-core'
 import { createScopedLogger } from '@contentful/optimization-core/logger'
+import { PreviewOverrideManager } from '@contentful/optimization-core/preview-support'
 import { PREVIEW_PANEL_SIGNALS_SYMBOL } from '@contentful/optimization-core/symbols'
-import { PreviewOverrideManager } from '@contentful/optimization-preview'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOptimization } from '../../context/OptimizationContext'
 import type { ExperienceDefinition, OverrideState, PreviewActions } from '../types'

@@ -3,7 +3,8 @@ import type {
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { signal } from '@preact/signals-core'
-import { PreviewOverrideManager, type StateInterceptorRegistry } from './PreviewOverrideManager'
+import { InterceptorManager } from '../lib/interceptor'
+import { PreviewOverrideManager } from './PreviewOverrideManager'
 import {
   BASELINE,
   makeOptimizationData,
@@ -11,21 +12,24 @@ import {
 } from './PreviewOverrideManager.test-utils'
 
 let selectedOptimizations: ReturnType<typeof signal<SelectedOptimizationArray | undefined>>
-let stateInterceptors: StateInterceptorRegistry<OptimizationData>
+let stateInterceptors: InterceptorManager<OptimizationData>
+let addSpy: ReturnType<typeof rs.spyOn>
+let removeSpy: ReturnType<typeof rs.spyOn>
 let onOverridesChanged: ReturnType<typeof rs.fn>
 let capturedInterceptor: InterceptorFn | undefined
 let manager: PreviewOverrideManager | undefined
 
+const REGISTERED_ID = 42
+
 function createManager(): PreviewOverrideManager {
   selectedOptimizations = signal<SelectedOptimizationArray | undefined>(BASELINE)
+  stateInterceptors = new InterceptorManager<OptimizationData>()
   capturedInterceptor = undefined
-  stateInterceptors = {
-    add: rs.fn((fn: InterceptorFn) => {
-      capturedInterceptor = fn
-      return 42
-    }),
-    remove: rs.fn(() => true),
-  }
+  addSpy = rs.spyOn(stateInterceptors, 'add').mockImplementation((fn: InterceptorFn) => {
+    capturedInterceptor = fn
+    return REGISTERED_ID
+  })
+  removeSpy = rs.spyOn(stateInterceptors, 'remove').mockImplementation(() => true)
   onOverridesChanged = rs.fn()
   manager = new PreviewOverrideManager({
     selectedOptimizations,
@@ -60,10 +64,7 @@ describe('PreviewOverrideManager', () => {
 
     it('leaves baseline null when initial signal is undefined', () => {
       const sig = signal<SelectedOptimizationArray | undefined>(undefined)
-      const interceptors: StateInterceptorRegistry<OptimizationData> = {
-        add: rs.fn(() => 99),
-        remove: rs.fn(() => true),
-      }
+      const interceptors = new InterceptorManager<OptimizationData>()
       const mgr = new PreviewOverrideManager({
         selectedOptimizations: sig,
         stateInterceptors: interceptors,
@@ -75,7 +76,7 @@ describe('PreviewOverrideManager', () => {
 
     it('registers a state interceptor and starts with empty overrides', () => {
       const mgr = createManager()
-      expect(stateInterceptors.add).toHaveBeenCalledTimes(1)
+      expect(addSpy).toHaveBeenCalledTimes(1)
       expect(mgr.getOverrides()).toEqual({ audiences: {}, selectedOptimizations: {} })
       expect(onOverridesChanged).not.toHaveBeenCalled()
     })
@@ -298,10 +299,7 @@ describe('PreviewOverrideManager', () => {
 
     it('handles resetAll when baseline is null (signal initially undefined)', () => {
       const sig = signal<SelectedOptimizationArray | undefined>(undefined)
-      const interceptors: StateInterceptorRegistry<OptimizationData> = {
-        add: rs.fn(() => 99),
-        remove: rs.fn(() => true),
-      }
+      const interceptors = new InterceptorManager<OptimizationData>()
       const mgr = new PreviewOverrideManager({
         selectedOptimizations: sig,
         stateInterceptors: interceptors,
@@ -322,8 +320,8 @@ describe('PreviewOverrideManager', () => {
       mgr.activateAudience('aud-1', ['exp-1'])
       onOverridesChanged.mockClear()
       mgr.destroy()
-      expect(stateInterceptors.remove).toHaveBeenCalledTimes(1)
-      expect(stateInterceptors.remove).toHaveBeenCalledWith(42)
+      expect(removeSpy).toHaveBeenCalledTimes(1)
+      expect(removeSpy).toHaveBeenCalledWith(REGISTERED_ID)
       expect(mgr.getOverrides()).toEqual({ audiences: {}, selectedOptimizations: {} })
       expect(mgr.getBaselineSelectedOptimizations()).toBeNull()
       expect(onOverridesChanged).not.toHaveBeenCalled()
@@ -333,7 +331,7 @@ describe('PreviewOverrideManager', () => {
       const mgr = createManager()
       mgr.destroy()
       mgr.destroy()
-      expect(stateInterceptors.remove).toHaveBeenCalledTimes(1)
+      expect(removeSpy).toHaveBeenCalledTimes(1)
     })
   })
 

@@ -38,10 +38,6 @@ export {
   createExperienceDefinitions,
   createExperienceNameMap,
 } from './entryMappers'
-export {
-  PreviewOverrideManager,
-  type PreviewOverrideManagerConfig,
-  type StateInterceptorRegistry,
-} from './PreviewOverrideManager'
+export { PreviewOverrideManager, type PreviewOverrideManagerConfig } from './PreviewOverrideManager'
 export type { PreviewSdkSignals } from './signals'
 export type { AudienceOverride, OptimizationOverride, OverrideState } from './types'

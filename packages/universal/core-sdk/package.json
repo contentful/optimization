@@ -72,6 +72,16 @@
         "default": "./dist/api-schemas.cjs"
       }
     },
+    "./preview-support": {
+      "import": {
+        "types": "./dist/preview-support.d.mts",
+        "default": "./dist/preview-support.mjs"
+      },
+      "require": {
+        "types": "./dist/preview-support.d.cts",
+        "default": "./dist/preview-support.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -81,7 +91,9 @@
     "bundleSize": {
       "gzipBudgets": {
         "index.cjs": 13500,
-        "index.mjs": 12250
+        "index.mjs": 12250,
+        "preview-support.cjs": 6500,
+        "preview-support.mjs": 5500
       }
     }
   },

@@ -7,7 +7,7 @@ import type {
   OptimizationOverride,
   OverrideState,
   PreviewSdkSignals,
-} from '@contentful/optimization-preview'
+} from '@contentful/optimization-core/preview-support'
 import type { StyleProp, ViewStyle } from 'react-native'
 
 // ============================================================================
@@ -27,7 +27,7 @@ export type {
   OverrideState,
   PreviewData,
   VariantDistribution,
-} from '@contentful/optimization-preview'
+} from '@contentful/optimization-core/preview-support'
 
 /**
  * Preview state derived from SDK signals.

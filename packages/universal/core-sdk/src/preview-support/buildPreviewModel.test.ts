@@ -1,9 +1,9 @@
 import type { Profile } from '@contentful/optimization-api-client/api-schemas'
+import { profile as profileFixture } from '../test/fixtures/profile'
 import { buildPreviewModel } from './buildPreviewModel'
 import { ALL_VISITORS_AUDIENCE_ID } from './constants'
 import type { AudienceDefinition, ExperienceDefinition } from './definitions'
 import type { PreviewSdkSignals } from './signals'
-import { profile as profileFixture } from './test/fixtures/profile'
 import type { OverrideState } from './types'
 
 const EMPTY_SIGNALS: PreviewSdkSignals = {

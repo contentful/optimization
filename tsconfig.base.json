@@ -27,8 +27,6 @@
       "@contentful/optimization-core/*": ["./packages/universal/core-sdk/src/*"],
       "@contentful/optimization-node": ["./packages/node/node-sdk/src/index.ts"],
       "@contentful/optimization-node/*": ["./packages/node/node-sdk/src/*"],
-      "@contentful/optimization-preview": ["./packages/universal/preview-sdk/src/index.ts"],
-      "@contentful/optimization-preview/*": ["./packages/universal/preview-sdk/src/*"],
       "@contentful/optimization-react-native": ["./packages/react-native-sdk/src/index.ts"],
       "@contentful/optimization-react-native/*": ["./packages/react-native-sdk/src/*"],
       "@contentful/optimization-web": ["./packages/web/web-sdk/src/index.ts"],

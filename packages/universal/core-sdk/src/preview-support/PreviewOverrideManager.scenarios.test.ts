@@ -3,7 +3,8 @@ import type {
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { signal } from '@preact/signals-core'
-import { PreviewOverrideManager, type StateInterceptorRegistry } from './PreviewOverrideManager'
+import { InterceptorManager } from '../lib/interceptor'
+import { PreviewOverrideManager } from './PreviewOverrideManager'
 import {
   BASELINE,
   makeOptimizationData,
@@ -11,21 +12,20 @@ import {
 } from './PreviewOverrideManager.test-utils'
 
 let selectedOptimizations: ReturnType<typeof signal<SelectedOptimizationArray | undefined>>
-let stateInterceptors: StateInterceptorRegistry<OptimizationData>
+let stateInterceptors: InterceptorManager<OptimizationData>
 let onOverridesChanged: ReturnType<typeof rs.fn>
 let capturedInterceptor: InterceptorFn | undefined
 let manager: PreviewOverrideManager | undefined
 
 function createManager(): PreviewOverrideManager {
   selectedOptimizations = signal<SelectedOptimizationArray | undefined>(BASELINE)
+  stateInterceptors = new InterceptorManager<OptimizationData>()
   capturedInterceptor = undefined
-  stateInterceptors = {
-    add: rs.fn((fn: InterceptorFn) => {
-      capturedInterceptor = fn
-      return 42
-    }),
-    remove: rs.fn(() => true),
-  }
+  rs.spyOn(stateInterceptors, 'add').mockImplementation((fn: InterceptorFn) => {
+    capturedInterceptor = fn
+    return 0
+  })
+  rs.spyOn(stateInterceptors, 'remove').mockImplementation(() => true)
   onOverridesChanged = rs.fn()
   manager = new PreviewOverrideManager({
     selectedOptimizations,
@@ -144,10 +144,7 @@ describe('PreviewOverrideManager — scenarios & edge cases', () => {
 
     it('undefined baseline -- syncOverridesToSignal uses empty array fallback', () => {
       const sig = signal<SelectedOptimizationArray | undefined>(undefined)
-      const interceptors: StateInterceptorRegistry<OptimizationData> = {
-        add: rs.fn(() => 99),
-        remove: rs.fn(() => true),
-      }
+      const interceptors = new InterceptorManager<OptimizationData>()
       const mgr = new PreviewOverrideManager({
         selectedOptimizations: sig,
         stateInterceptors: interceptors,

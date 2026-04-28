@@ -1,4 +1,4 @@
-import { buildPreviewModel, type PreviewModel } from '@contentful/optimization-preview'
+import { buildPreviewModel, type PreviewModel } from '@contentful/optimization-core/preview-support'
 import { useMemo } from 'react'
 import type {
   AudienceDefinition,
@@ -22,7 +22,7 @@ interface UsePreviewDataParams {
  * Combines audience and experience definitions with SDK state to produce
  * a unified view of all optimization data, grouped by audience.
  *
- * Thin React wrapper around `buildPreviewModel` from `@contentful/optimization-preview`.
+ * Thin React wrapper around `buildPreviewModel` from `@contentful/optimization-core/preview-support`.
  *
  * @internal
  */

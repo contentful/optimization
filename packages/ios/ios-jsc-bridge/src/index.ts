@@ -14,7 +14,7 @@ import {
   createAudienceDefinitions,
   createExperienceDefinitions,
   createExperienceNameMap,
-} from '@contentful/optimization-preview'
+} from '@contentful/optimization-core/preview-support'
 
 type ResolveOptimizedEntryParams = Parameters<CoreStateful['resolveOptimizedEntry']>
 
