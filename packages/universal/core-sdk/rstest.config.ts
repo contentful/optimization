@@ -15,7 +15,7 @@ export default defineConfig({
   testEnvironment: 'node',
   setupFiles: ['src/test/setup.ts'],
   coverage: {
-    exclude: ['**/test/*'],
+    exclude: ['**/test/*', '**/*.md'],
     include: ['src/**/*'],
     reporters: coverageReporters,
   },
