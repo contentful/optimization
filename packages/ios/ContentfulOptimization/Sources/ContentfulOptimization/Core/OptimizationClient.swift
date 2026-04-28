@@ -34,6 +34,12 @@ public final class OptimizationClient: ObservableObject {
     /// so that override changes are reflected immediately.
     @Published public private(set) var isPreviewPanelOpen = false
 
+    /// The latest preview state pushed from the JS bridge whenever
+    /// `PreviewOverrideManager` mutates overrides. Mirrors the React Native
+    /// `useProfileOverrides` push model: consumers observe this publisher
+    /// rather than polling ``getPreviewState()`` after each action.
+    @Published public private(set) var previewState: PreviewState?
+
     private let bridge = JSContextManager()
     private var cancellables = Set<AnyCancellable>()
     private let store = UserDefaultsStore()
@@ -58,6 +64,9 @@ public final class OptimizationClient: ObservableObject {
         }
         bridge.onEvent = { [weak self] dict in
             self?.eventSubject.send(dict)
+        }
+        bridge.onOverridesChanged = { [weak self] state in
+            self?.previewState = state
         }
     }
 
@@ -131,8 +140,7 @@ public final class OptimizationClient: ObservableObject {
 
     /// Track a screen view. Returns the server response as a dictionary.
     public func screen(name: String, properties: [String: Any]? = nil) async throws -> [String: Any]? {
-        eventSubject.send(["type": "screen", "name": name])
-        return try await bridgeCallAsyncJSON(method: "screen") {
+        try await bridgeCallAsyncJSON(method: "screen") {
             var payloadDict: [String: Any] = ["name": name]
             if let properties = properties {
                 payloadDict["properties"] = properties
@@ -240,10 +248,11 @@ public final class OptimizationClient: ObservableObject {
         bridgeCallSyncWhenInitialized(method: "setPreviewPanelOpen", args: open ? "true" : "false")
     }
 
-    /// Override an audience's qualification state.
-    public func overrideAudience(id: String, qualified: Bool) {
+    /// Override an audience's qualification state and set variant overrides for associated experiences.
+    public func overrideAudience(id: String, qualified: Bool, experienceIds: [String]) {
         let escapedId = NativePolyfills.escapeForJS(id)
-        bridgeCallSyncWhenInitialized(method: "overrideAudience", args: "'\(escapedId)', \(qualified)")
+        let escapedIds = experienceIds.map { "'\(NativePolyfills.escapeForJS($0))'" }.joined(separator: ",")
+        bridgeCallSyncWhenInitialized(method: "overrideAudience", args: "'\(escapedId)', \(qualified), [\(escapedIds)]")
     }
 
     /// Override a variant for a specific experience.
@@ -267,6 +276,36 @@ public final class OptimizationClient: ObservableObject {
     /// Reset all audience and variant overrides back to their natural state.
     public func resetAllOverrides() {
         bridgeCallSyncWhenInitialized(method: "resetAllOverrides")
+    }
+
+    /// Hand Contentful audience and experience entries to the JS core SDK so it
+    /// can run the shared entry mappers and serve a pre-baked preview model via
+    /// ``getPreviewState()``. Call this once on panel open after fetching entries
+    /// from Contentful via ``PreviewContentfulClient``.
+    public func loadDefinitions(
+        audiences: [[String: Any]],
+        experiences: [[String: Any]]
+    ) throws {
+        let audienceData = try JSONSerialization.data(withJSONObject: audiences, options: [])
+        let experienceData = try JSONSerialization.data(withJSONObject: experiences, options: [])
+        guard
+            let audienceJSON = String(data: audienceData, encoding: .utf8),
+            let experienceJSON = String(data: experienceData, encoding: .utf8)
+        else {
+            throw OptimizationError.configError("loadDefinitions: failed to encode entries as UTF-8 JSON")
+        }
+        bridgeCallSyncWhenInitialized(
+            method: "loadDefinitions",
+            args: "\(audienceJSON), \(experienceJSON)"
+        )
+    }
+
+    /// Pull the current preview state from the JS bridge and republish it via
+    /// ``previewState``. Use this when a view needs to guarantee the publisher
+    /// reflects the latest bridge-side snapshot — typically on preview-panel
+    /// open, before any API refresh or override mutation has fired a push.
+    public func refreshPreviewState() {
+        previewState = getPreviewState()
     }
 
     /// Get the current preview state as a typed snapshot.
@@ -373,7 +412,7 @@ public final class OptimizationClient: ObservableObject {
 
     private func handleStateUpdate(_ dict: [String: Any]) {
         let profile = Self.extractJSONValue(dict["profile"])
-        let changes = Self.extractJSONValue(dict["changes"])
+        let changes = Self.extractJSONArray(dict["changes"])
         let consent = dict["consent"] as? Bool
 
         if let profile = profile {
@@ -393,7 +432,7 @@ public final class OptimizationClient: ObservableObject {
         self.selectedPersonalizations = personalizations
 
         if let changes = changes {
-            log.debug("[state] Changes: \(changes.keys.count) entries")
+            log.debug("[state] Changes: \(changes.count) entries")
         }
         if let personalizations = personalizations {
             log.debug("[state] Personalizations: \(personalizations.count) entries")
@@ -404,6 +443,7 @@ public final class OptimizationClient: ObservableObject {
         store.consent = consent
         store.changes = changes
         store.personalizations = personalizations
+        store.anonymousId = (profile?["id"] as? String) ?? store.anonymousId
     }
 
     /// Extracts a JSON-compatible dictionary from a value that may be NSNull, nil, or a dict.

@@ -9,6 +9,7 @@ type StyleArray = Array<StyleProp<ViewStyle>>
 
 interface VariantButtonProps {
   variant: VariantDistribution
+  experienceId: string
   isSelected: boolean
   isQualified: boolean
   isExperiment: boolean
@@ -45,6 +46,7 @@ function RadioButton({ isSelected }: { isSelected: boolean }): React.JSX.Element
 /** Single variant card within the selector */
 function VariantButton({
   variant,
+  experienceId,
   isSelected,
   isQualified,
   isExperiment,
@@ -62,6 +64,7 @@ function VariantButton({
       accessibilityRole="radio"
       accessibilityState={{ checked: isSelected }}
       accessibilityLabel={`${variantLabel}${percentageLabel ? `, ${percentageLabel}` : ''}`}
+      testID={`variant-picker-${experienceId}-${variant.index}`}
     >
       <View style={styles.variantContent}>
         <View style={styles.labelContainer}>
@@ -112,6 +115,7 @@ export function VariantSelector({
         <VariantButton
           key={variant.index}
           variant={variant}
+          experienceId={experience.id}
           isSelected={selectedIndex === variant.index}
           isQualified={qualifiedIndex === variant.index}
           isExperiment={isExperiment}

@@ -43,6 +43,31 @@ final class OptimizationClientTests: XCTestCase {
         XCTAssertEqual(dict["environment"], "master")
     }
 
+    func testConfigSerializesDefaultsAsOptimizationsKey() throws {
+        let seeded: [[String: Any]] = [
+            ["experienceId": "exp-1", "variantIndex": 2]
+        ]
+        let config = OptimizationConfig(
+            clientId: "test",
+            defaults: StorageDefaults(personalizations: seeded)
+        )
+
+        let json = try config.toJSON()
+        let data = json.data(using: .utf8)!
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        let defaults = dict["defaults"] as? [String: Any]
+
+        XCTAssertNotNil(defaults?["optimizations"],
+                        "Bridge reads defaults.optimizations; Swift must serialize under that key")
+        XCTAssertNil(defaults?["personalizations"],
+                     "Old key name must not be emitted")
+
+        let optimizations = defaults?["optimizations"] as? [[String: Any]]
+        XCTAssertEqual(optimizations?.count, 1)
+        XCTAssertEqual(optimizations?.first?["experienceId"] as? String, "exp-1")
+        XCTAssertEqual(optimizations?.first?["variantIndex"] as? Int, 2)
+    }
+
     // MARK: - State Tests
 
     func testOptimizationStateEmpty() {
@@ -74,15 +99,15 @@ final class OptimizationClientTests: XCTestCase {
             profile: ["userId": "u1", "email": "a@b.com", "plan": "pro"] as [String: Any],
             consent: true,
             canPersonalize: true,
-            changes: ["fieldA": "x", "fieldB": 42, "fieldC": true] as [String: Any]
+            changes: [["key": "hero", "value": "A"] as [String: Any]]
         )
         let b = OptimizationState(
             profile: ["plan": "pro", "email": "a@b.com", "userId": "u1"] as [String: Any],
             consent: true,
             canPersonalize: true,
-            changes: ["fieldC": true, "fieldA": "x", "fieldB": 42] as [String: Any]
+            changes: [["key": "hero", "value": "A"] as [String: Any]]
         )
-        XCTAssertEqual(a, b, "States with identical dictionary contents in different insertion order must be equal")
+        XCTAssertEqual(a, b, "States with identical profile contents in different key order must be equal")
     }
 
     func testOptimizationStateInequality() {
@@ -1115,5 +1140,108 @@ final class OptimizationClientTests: XCTestCase {
 
         manager.destroy()
         XCTAssertNil(manager.context)
+    }
+
+    // MARK: - anonymousId persistence
+
+    private func readStoredAnonymousId() -> String? {
+        let suite = UserDefaults(suiteName: "com.contentful.optimization") ?? .standard
+        guard let data = suite.data(forKey: "com.contentful.optimization.anonymousId") else {
+            return nil
+        }
+        return String(data: data, encoding: .utf8)
+    }
+
+    @MainActor
+    func testAnonymousIdPersistedOnProfileUpdate() async throws {
+        let client = OptimizationClient()
+        defer { client.destroy() }
+
+        try client.initialize(config: OptimizationConfig(
+            clientId: "test-client",
+            environment: "master",
+            experienceBaseUrl: "http://localhost:8000/experience/",
+            insightsBaseUrl: "http://localhost:8000/insights/",
+            defaults: StorageDefaults(profile: [
+                "id": "abc-123", "stableId": "sid", "random": "r"
+            ])
+        ))
+
+        try await Task.sleep(nanoseconds: 200_000_000)
+
+        XCTAssertEqual(readStoredAnonymousId(), "abc-123",
+                       "Profile.id must be written through to stored anonymousId")
+    }
+
+    @MainActor
+    func testAnonymousIdPreservedWhenNewProfileHasNoId() async throws {
+        let client = OptimizationClient()
+        defer { client.destroy() }
+
+        try client.initialize(config: OptimizationConfig(
+            clientId: "test-client",
+            environment: "master",
+            experienceBaseUrl: "http://localhost:8000/experience/",
+            insightsBaseUrl: "http://localhost:8000/insights/",
+            defaults: StorageDefaults(profile: [
+                "id": "first-id", "stableId": "sid", "random": "r"
+            ])
+        ))
+        try await Task.sleep(nanoseconds: 200_000_000)
+        XCTAssertEqual(readStoredAnonymousId(), "first-id")
+
+        client.testOnlyEvaluateScript("""
+            __bridge.destroy();
+            __bridge.initialize({
+                clientId: "test-client",
+                environment: "master",
+                experienceBaseUrl: "http://localhost:8000/experience/",
+                insightsBaseUrl: "http://localhost:8000/insights/",
+                defaults: {
+                    profile: { stableId: "sid", random: "r" }
+                }
+            });
+        """)
+        try await Task.sleep(nanoseconds: 200_000_000)
+
+        XCTAssertEqual(readStoredAnonymousId(), "first-id",
+                       "Previously-stored anonymousId must be preserved when new profile omits id")
+    }
+
+    // MARK: - changes array
+
+    @MainActor
+    func testChangesPopulatesAsArrayFromBridge() async throws {
+        let client = OptimizationClient()
+        defer { client.destroy() }
+
+        try client.initialize(config: OptimizationConfig(
+            clientId: "test-client",
+            environment: "master",
+            experienceBaseUrl: "http://localhost:8000/experience/",
+            insightsBaseUrl: "http://localhost:8000/insights/"
+        ))
+
+        client.testOnlyEvaluateScript("""
+            __bridge.destroy();
+            __bridge.initialize({
+                clientId: "test-client",
+                environment: "master",
+                experienceBaseUrl: "http://localhost:8000/experience/",
+                insightsBaseUrl: "http://localhost:8000/insights/",
+                defaults: {
+                    changes: [
+                        { key: "hero.title", type: "Variable", meta: { experienceId: "exp-1", variantIndex: 1 }, value: "Hello" }
+                    ]
+                }
+            });
+        """)
+
+        try await Task.sleep(nanoseconds: 200_000_000)
+
+        XCTAssertNotNil(client.state.changes,
+                        "state.changes must populate when bridge emits a ChangeArray")
+        XCTAssertEqual(client.state.changes?.count, 1)
+        XCTAssertEqual(client.state.changes?.first?["key"] as? String, "hero.title")
     }
 }

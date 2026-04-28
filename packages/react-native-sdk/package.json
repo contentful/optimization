@@ -97,6 +97,20 @@
         "default": "./dist/api-schemas.cjs"
       }
     },
+    "./preview-support": {
+      "react-native": {
+        "types": "./dist/preview-support.d.mts",
+        "default": "./dist/preview-support.mjs"
+      },
+      "import": {
+        "types": "./dist/preview-support.d.mts",
+        "default": "./dist/preview-support.mjs"
+      },
+      "require": {
+        "types": "./dist/preview-support.d.cts",
+        "default": "./dist/preview-support.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -106,7 +120,9 @@
     "bundleSize": {
       "gzipBudgets": {
         "index.cjs": 27000,
-        "index.mjs": 25500
+        "index.mjs": 25500,
+        "preview-support.cjs": 6500,
+        "preview-support.mjs": 5500
       }
     }
   },

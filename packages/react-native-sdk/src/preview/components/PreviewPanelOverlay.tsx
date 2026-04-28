@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Animated,
   Image,
@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { useLiveUpdates } from '../../context/LiveUpdatesContext'
+import { LiveUpdatesProvider, useLiveUpdates } from '../../context/LiveUpdatesContext'
 import fabIcon from '../assets/fab-icon.png'
 import fabRipple from '../assets/fab-ripple.png'
 import { PreviewOverrideProvider } from '../context/PreviewOverrideContext'
@@ -23,6 +23,16 @@ const DRAG_DISMISS_THRESHOLD = 100
 const DRAG_DISMISS_DISTANCE = 300
 const ANIMATION_DURATION_MS = 200
 const DRAG_HANDLE_HEIGHT = 4
+
+// Ensure an ambient LiveUpdatesProvider exists so panel visibility can flip
+// OptimizedEntry into live-update mode even when the overlay is used outside
+// OptimizationRoot. If a provider is already present (e.g. via OptimizationRoot)
+// pass through so its globalLiveUpdates setting isn't shadowed.
+function WithLiveUpdatesProvider({ children }: { children: ReactNode }): React.JSX.Element {
+  const existing = useLiveUpdates()
+  if (existing) return <>{children}</>
+  return <LiveUpdatesProvider>{children}</LiveUpdatesProvider>
+}
 
 /**
  * Renders app content with a floating action button that opens the `PreviewPanel`
@@ -41,7 +51,15 @@ const DRAG_HANDLE_HEIGHT = 4
  *
  * @public
  */
-export function PreviewPanelOverlay({
+export function PreviewPanelOverlay(props: PreviewPanelOverlayProps): React.JSX.Element {
+  return (
+    <WithLiveUpdatesProvider>
+      <PreviewPanelOverlayInner {...props} />
+    </WithLiveUpdatesProvider>
+  )
+}
+
+function PreviewPanelOverlayInner({
   children,
   fabPosition,
   ...previewPanelProps
@@ -136,6 +154,7 @@ export function PreviewPanelOverlay({
             android_ripple={null}
             onPress={handleOpen}
             style={() => styles.fabButton}
+            testID="preview-panel-fab"
           >
             {({ pressed }: { pressed: boolean }) => (
               <>
@@ -165,6 +184,7 @@ export function PreviewPanelOverlay({
                     handleClose(false)
                   }}
                   style={styles.closeButton}
+                  testID="preview-panel-close"
                 >
                   <Text style={styles.closeButtonText}>×</Text>
                 </Pressable>

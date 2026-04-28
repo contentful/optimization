@@ -23,10 +23,21 @@ final class PreviewPanelTests: XCTestCase {
     }
 
     /// Scrolls the preview panel list until the target element is visible.
+    /// SwiftUI List renders as collectionView; plain ScrollView as scrollView.
+    /// Prefer an identifier match; fall back to the first match of either type.
     private func scrollToPreviewElement(_ testId: String, maxSwipes: Int = 10) {
-        // SwiftUI List renders as collectionView on modern iOS
-        let list = app.collectionViews["preview-panel-list"]
-        let scrollContainer = list.exists ? list : app.collectionViews.firstMatch
+        let listById = app.collectionViews["preview-panel-list"]
+        let scrollById = app.scrollViews["preview-panel-list"]
+        let scrollContainer: XCUIElement
+        if listById.exists {
+            scrollContainer = listById
+        } else if scrollById.exists {
+            scrollContainer = scrollById
+        } else if app.collectionViews.firstMatch.exists {
+            scrollContainer = app.collectionViews.firstMatch
+        } else {
+            scrollContainer = app.scrollViews.firstMatch
+        }
         for _ in 0..<maxSwipes {
             let target = findElement(testId, app: app)
             if target.exists && target.isHittable { return }

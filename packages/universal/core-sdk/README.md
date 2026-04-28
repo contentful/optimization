@@ -54,10 +54,10 @@ other SDKs descend from the Core SDK.
   - [`reset`](#reset)
   - [`flush`](#flush)
   - [`destroy`](#destroy)
-  - [`registerPreviewPanel` (preview tooling only)](#registerpreviewpanel-preview-tooling-only)
 - [Core States (`CoreStateful` only)](#core-states-corestateful-only)
 - [Interceptors](#interceptors)
   - [Life-cycle Interceptors](#life-cycle-interceptors)
+- [Preview support (internal)](#preview-support-internal)
 
 <!-- mtoc-end -->
 </details>
@@ -534,47 +534,6 @@ a `Promise<void>`.
 Releases singleton ownership for stateful runtime usage. This is intended for explicit teardown
 paths, such as tests or hot-reload workflows. This method expects no arguments and returns no value.
 
-### `registerPreviewPanel` (preview tooling only)
-
-Registers a preview consumer object and exposes internal signal references used by first-party
-preview tooling.
-
-Arguments:
-
-- `previewPanel`: Required object that receives symbol-keyed signal bridge values
-
-Returns:
-
-- `void`
-
-Bridge symbols:
-
-- `PREVIEW_PANEL_SIGNALS_SYMBOL`: key used to expose internal `signals`
-- `PREVIEW_PANEL_SIGNAL_FNS_SYMBOL`: key used to expose internal `signalFns`
-
-Example:
-
-```ts
-import {
-  PREVIEW_PANEL_SIGNAL_FNS_SYMBOL,
-  PREVIEW_PANEL_SIGNALS_SYMBOL,
-  type PreviewPanelSignalObject,
-} from '@contentful/optimization-core'
-
-const previewBridge: PreviewPanelSignalObject = {}
-optimization.registerPreviewPanel(previewBridge)
-
-const signals = previewBridge[PREVIEW_PANEL_SIGNALS_SYMBOL]
-const signalFns = previewBridge[PREVIEW_PANEL_SIGNAL_FNS_SYMBOL]
-```
-
-> [!IMPORTANT]
->
-> This method intentionally exposes mutable internal signals for preview tooling. The Web and React
-> Native preview panels are tightly coupled by design and rely on this bridge (plus state
-> interceptors) to apply immediate local overrides without network round-trips. This coupling is
-> deliberate and necessary for preview functionality.
-
 ## Core States (`CoreStateful` only)
 
 `states` is available on `CoreStateful` and exposes signal-backed observables for runtime state.
@@ -661,3 +620,16 @@ optimization.interceptors.event((event) => {
 >
 > Interceptors are intended to enable low-level interoperability; to simply read and react to
 > Optimization SDK events, use the `states` observables.
+
+## Preview support (internal)
+
+The `@contentful/optimization-core/preview-support` entry point and the `registerPreviewPanel`
+method on `CoreStateful` exist solely to back the first-party Contentful preview panel across
+platforms. They are **not** part of the public Core SDK surface and are not intended for direct use
+by applications or third-party SDKs. They live in this package because the override state machine is
+core to that cross-platform preview functionality and must sit alongside the SDK's internal signals
+and interceptors.
+
+If you are building on the Optimization SDKs, use your platform SDK's preview panel component rather
+than these primitives. For internal documentation of the toolkit, including `registerPreviewPanel`,
+see [`src/preview-support/README.md`](./src/preview-support/README.md).

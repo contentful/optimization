@@ -28,6 +28,7 @@ export function AudienceToggle({
       style={[styles.container, disabled && styles.disabled]}
       accessibilityRole="radiogroup"
       accessibilityLabel={`Audience toggle for ${audienceId}`}
+      testID={`audience-toggle-${audienceId}`}
     >
       {toggleStates.map((state) => {
         const isSelected = value === state.value
@@ -47,6 +48,7 @@ export function AudienceToggle({
             accessibilityRole="radio"
             accessibilityState={{ checked: isSelected, disabled }}
             accessibilityLabel={`Set audience to ${state.label}`}
+            testID={`audience-toggle-${audienceId}-${state.value}`}
             activeOpacity={0.7}
           >
             <Text style={[styles.buttonText, isSelected && styles.buttonTextSelected]}>

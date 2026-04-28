@@ -87,6 +87,7 @@ export function OverridesSection({
                 onPress: () => {
                   handleResetAudience(override.audienceId)
                 },
+                testID: `reset-audience-${override.audienceId}`,
               }}
             />
           ))}
@@ -108,6 +109,7 @@ export function OverridesSection({
                 onPress: () => {
                   handleResetOptimization(override.experienceId)
                 },
+                testID: `reset-variant-${override.experienceId}`,
               }}
             />
           ))}

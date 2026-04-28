@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Button, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
 import {
   OptimizationProvider,
   OptimizationScrollProvider,
+  PreviewPanelOverlay,
   useOptimization,
 } from '@contentful/optimization-react-native'
-import type { Entry } from 'contentful'
+import { createClient, type Entry } from 'contentful'
 
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
 import { ENV_CONFIG } from './env.config'
@@ -30,6 +31,18 @@ const ENTRY_IDS = [
 
 function AppContent(): React.JSX.Element {
   const sdk = useOptimization()
+  const contentfulClient = useMemo(
+    () =>
+      createClient({
+        space: ENV_CONFIG.contentful.spaceId,
+        environment: ENV_CONFIG.contentful.environment,
+        accessToken: ENV_CONFIG.contentful.accessToken,
+        host: ENV_CONFIG.contentful.host,
+        basePath: ENV_CONFIG.contentful.basePath,
+        insecure: true,
+      }),
+    [],
+  )
   const [entries, setEntries] = useState<Entry[]>([])
   const [sdkError, setSdkError] = useState<string | null>(null)
   const [hasConsent, setHasConsent] = useState<boolean>(false)
@@ -116,39 +129,41 @@ function AppContent(): React.JSX.Element {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <View style={{ padding: 10, gap: 10, flexDirection: 'row', flexWrap: 'wrap' }}>
-        {!isIdentified ? (
-          <Button testID="identify-button" title="Identify" onPress={handleIdentify} />
-        ) : (
-          <Button testID="reset-button" title="Reset" onPress={handleReset} />
-        )}
-        <Button
-          testID="navigation-test-button"
-          title="Navigation Test"
-          onPress={() => {
-            setShowNavigationTest(true)
-          }}
-        />
-        <Button
-          testID="live-updates-test-button"
-          title="Live Updates Test"
-          onPress={() => {
-            setShowLiveUpdatesTest(true)
-          }}
-        />
-      </View>
-      <OptimizationScrollProvider testID="main-scroll-view">
-        {entries.map((entry) =>
-          entry.sys.contentType.sys.id === 'nestedContent' ? (
-            <NestedContentEntry key={entry.sys.id} entry={entry} />
+    <PreviewPanelOverlay contentfulClient={contentfulClient}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <View style={{ padding: 10, gap: 10, flexDirection: 'row', flexWrap: 'wrap' }}>
+          {!isIdentified ? (
+            <Button testID="identify-button" title="Identify" onPress={handleIdentify} />
           ) : (
-            <ContentEntry key={entry.sys.id} entry={entry} />
-          ),
-        )}
-        <AnalyticsEventDisplay />
-      </OptimizationScrollProvider>
-    </SafeAreaView>
+            <Button testID="reset-button" title="Reset" onPress={handleReset} />
+          )}
+          <Button
+            testID="navigation-test-button"
+            title="Navigation Test"
+            onPress={() => {
+              setShowNavigationTest(true)
+            }}
+          />
+          <Button
+            testID="live-updates-test-button"
+            title="Live Updates Test"
+            onPress={() => {
+              setShowLiveUpdatesTest(true)
+            }}
+          />
+        </View>
+        <OptimizationScrollProvider testID="main-scroll-view">
+          {entries.map((entry) =>
+            entry.sys.contentType.sys.id === 'nestedContent' ? (
+              <NestedContentEntry key={entry.sys.id} entry={entry} />
+            ) : (
+              <ContentEntry key={entry.sys.id} entry={entry} />
+            ),
+          )}
+          <AnalyticsEventDisplay />
+        </OptimizationScrollProvider>
+      </SafeAreaView>
+    </PreviewPanelOverlay>
   )
 }
 
