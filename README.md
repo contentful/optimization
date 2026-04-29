@@ -10,7 +10,8 @@
 
 <div align="center">
 
-[Readme](./README.md) · [Guides](https://contentful.github.io/optimization/documents/Guides.html) ·
+[Readme](./README.md) ·
+[Guides](https://contentful.github.io/optimization/documents/Documentation.Guides.html) ·
 [Reference](https://contentful.github.io/optimization) · [Contributing](./CONTRIBUTING.md)
 
 </div>
@@ -52,7 +53,7 @@ enables developers and content creators to ship their products faster.
 ## Choosing a Package
 
 If you are deciding which SDK or library belongs in your application, start with
-[Choosing the Right SDK](./documentation/choosing-the-right-sdk.md).
+[Choosing the Right SDK](./documentation/guides/choosing-the-right-sdk.md).
 
 For additional narrative documentation, see the [Guides](./documentation/README.md) section.
 

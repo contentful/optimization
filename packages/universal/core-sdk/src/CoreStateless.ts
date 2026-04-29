@@ -57,13 +57,40 @@ export interface CoreStatelessConfig extends CoreConfig {
   eventBuilder?: Omit<EventBuilderConfig, 'getLocale' | 'getPageProperties' | 'getUserAgent'>
 }
 
-type StatelessExperiencePayload<TPayload> = TPayload & { profile?: PartialProfile }
-type StatelessInsightsPayload<TPayload> = TPayload & { profile: PartialProfile }
-type StatelessStickyTrackViewPayload = ViewBuilderArgs & {
+/**
+ * Payload accepted by stateless Experience methods.
+ *
+ * @typeParam TPayload - Event-builder arguments for the specific method.
+ *
+ * @public
+ */
+export type StatelessExperiencePayload<TPayload> = TPayload & { profile?: PartialProfile }
+
+/**
+ * Payload accepted by stateless Insights methods.
+ *
+ * @typeParam TPayload - Event-builder arguments for the specific method.
+ *
+ * @public
+ */
+export type StatelessInsightsPayload<TPayload> = TPayload & { profile: PartialProfile }
+
+/**
+ * Sticky stateless view-tracking payload.
+ *
+ * @public
+ */
+export type StatelessStickyTrackViewPayload = ViewBuilderArgs & {
   profile?: PartialProfile
   sticky: true
 }
-type StatelessNonStickyTrackViewPayload = Omit<ViewBuilderArgs, 'sticky'> & {
+
+/**
+ * Non-sticky stateless view-tracking payload.
+ *
+ * @public
+ */
+export type StatelessNonStickyTrackViewPayload = Omit<ViewBuilderArgs, 'sticky'> & {
   profile: PartialProfile
   sticky?: false | undefined
 }
@@ -126,7 +153,7 @@ const createStatelessInsightsApiConfig = (
  * Experience and Insights API calls. Cache Contentful delivery data in the
  * host application, not the results of those calls.
  */
-class CoreStateless extends CoreBase<CoreStatelessConfig> {
+class CoreStateless extends CoreBase {
   constructor(config: CoreStatelessConfig) {
     super(config, {
       experience: createStatelessExperienceApiConfig(config.api),

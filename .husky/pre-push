@@ -7,6 +7,10 @@ cd "$REPO_ROOT"
 
 REMOTE_NAME=${1:-origin}
 
+package_tarballs_exist() {
+  find pkgs -maxdepth 1 -name "contentful-*.tgz" -print -quit 2>/dev/null | grep -q .
+}
+
 # Collect changed files for each pushed ref from pre-push hook input
 # Input rows: <local ref> <local sha> <remote ref> <remote sha>
 changed_files=""
@@ -68,6 +72,39 @@ done
 if [ ${#changed_workspaces[@]} -eq 0 ] && [ ${#changed_implementations[@]} -eq 0 ]; then
   echo "No changed workspaces or implementations detected for checks."
   exit 0
+fi
+
+if [ ${#changed_implementations[@]} -gt 0 ]; then
+  package_tarballs_need_refresh=false
+
+  if ! package_tarballs_exist; then
+    package_tarballs_need_refresh=true
+  else
+    for workspace in "${changed_workspaces[@]}"; do
+      case "$workspace" in
+        packages/* | lib/build-tools)
+          package_tarballs_need_refresh=true
+          break
+          ;;
+      esac
+    done
+  fi
+
+  if [ "$package_tarballs_need_refresh" = true ]; then
+    echo "Building local package tarballs before installing changed implementations..."
+    pnpm run build:pkgs
+  fi
+
+  echo "Installing changed implementations before checks:"
+  for implementation in "${changed_implementations[@]}"; do
+    echo "  - implementations/$implementation"
+  done
+
+  for implementation in "${changed_implementations[@]}"; do
+    pnpm run implementation:run -- "$implementation" implementation:install
+  done
+
+  echo "✔ Implementation install complete."
 fi
 
 if [ ${#changed_workspaces[@]} -gt 0 ]; then
