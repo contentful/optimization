@@ -1,0 +1,33 @@
+---
+title: Guides
+children:
+  - ./choosing-the-right-sdk.md
+  - ./integrating-the-node-sdk-in-a-node-app.md
+  - ./integrating-the-web-sdk-in-a-web-app.md
+  - ./integrating-the-react-web-sdk-in-a-react-app.md
+  - ./integrating-the-react-native-sdk-in-a-react-native-app.md
+---
+
+# Guides
+
+Start here when you need package selection guidance or step-by-step SDK implementation instructions.
+
+## Start Here
+
+- [Choosing the Right SDK](./choosing-the-right-sdk.md): pick the narrowest published package layer
+  for a browser, React, Node, or React Native application
+
+## Integration Guides
+
+- [Integrating the Optimization Node SDK in a Node App](./integrating-the-node-sdk-in-a-node-app.md):
+  step-by-step server-side integration guidance using Express-style examples and the Node reference
+  implementations
+- [Integrating the Optimization Web SDK in a Web App](./integrating-the-web-sdk-in-a-web-app.md):
+  step-by-step browser-side integration guidance covering singleton SDK setup, consent, page events,
+  entry resolution, merge tags, flags, tracking, and hybrid SSR cookie continuity
+- [Integrating the Optimization React Web SDK in a React App](./integrating-the-react-web-sdk-in-a-react-app.md):
+  step-by-step client-side integration guidance covering providers, consent, entry personalization,
+  interaction tracking, live updates, router adapters, and preview panel setup
+- [Integrating the Optimization React Native SDK in a React Native App](./integrating-the-react-native-sdk-in-a-react-native-app.md):
+  step-by-step React Native / Expo integration guidance covering setup, consent, personalization and
+  interaction tracking, screen tracking, live updates, and the in-app preview panel

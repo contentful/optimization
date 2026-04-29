@@ -3,36 +3,64 @@
 Use this guide when you want to add personalization, analytics, screen tracking, and a preview panel
 to a React Native (or Expo) application using `@contentful/optimization-react-native`.
 
+<details>
+  <summary>Table of Contents</summary>
+<!-- mtoc-start -->
+
+- [Scope and Capabilities](#scope-and-capabilities)
+- [The Integration Flow](#the-integration-flow)
+- [1. Install and Initialize with Minimal Configuration](#1-install-and-initialize-with-minimal-configuration)
+  - [Install Peer Dependencies](#install-peer-dependencies)
+  - [The Minimum Setup](#the-minimum-setup)
+  - [Access the SDK Instance with Hooks](#access-the-sdk-instance-with-hooks)
+- [2. Handle Consent](#2-handle-consent)
+  - [Defaulting Consent to `true`](#defaulting-consent-to-true)
+  - [Gating Consent on a Banner](#gating-consent-on-a-banner)
+  - [Reading and Reacting to Consent State](#reading-and-reacting-to-consent-state)
+  - [Revoking Consent](#revoking-consent)
+- [3. Personalize Entries with OptimizedEntry](#3-personalize-entries-with-optimizedentry)
+  - [Fetch the Entry with `include: 10`](#fetch-the-entry-with-include-10)
+  - [Render the Variant with a Render Prop](#render-the-variant-with-a-render-prop)
+  - [Pass-Through for Non-Optimized Entries](#pass-through-for-non-optimized-entries)
+- [4. Interaction Tracking with OptimizedEntry](#4-interaction-tracking-with-optimizedentry)
+  - [Global Defaults via OptimizationRoot](#global-defaults-via-optimizationroot)
+  - [Per-Component Overrides](#per-component-overrides)
+  - [Custom Visibility and Time Thresholds](#custom-visibility-and-time-thresholds)
+  - [Use OptimizationScrollProvider for Scrollable Screens](#use-optimizationscrollprovider-for-scrollable-screens)
+- [5. Screen Tracking](#5-screen-tracking)
+  - [Automatic Tracking with OptimizationNavigationContainer](#automatic-tracking-with-optimizationnavigationcontainer)
+  - [Per-Screen Tracking with `useScreenTracking`](#per-screen-tracking-with-usescreentracking)
+  - [Dynamic Names with `useScreenTrackingCallback`](#dynamic-names-with-usescreentrackingcallback)
+- [Live Updates](#live-updates)
+  - [Default Behavior](#default-behavior)
+  - [Global Live Updates](#global-live-updates)
+  - [Per-Component Live Updates](#per-component-live-updates)
+  - [Resolution Priority](#resolution-priority)
+- [Preview Panel](#preview-panel)
+  - [Enabling the Preview Panel](#enabling-the-preview-panel)
+  - [Customizing the Floating Action Button](#customizing-the-floating-action-button)
+  - [Preview Panel and Live Updates](#preview-panel-and-live-updates)
+- [Reference Implementations to Compare Against](#reference-implementations-to-compare-against)
+
+<!-- mtoc-end -->
+</details>
+
+## Scope and Capabilities
+
 The React Native SDK builds on the Optimization Core Library and adds React Native-specific
-providers, hooks, and components — including AsyncStorage persistence, viewport-based view tracking,
-tap tracking, screen tracking, navigation integration, and an in-app preview panel.
+providers, hooks, and components. It lets consumers:
 
-## A Reference App You Can Compare Against
+- initialize and own a mobile SDK instance through `OptimizationRoot` or explicit providers
+- persist consent, profile state, selected optimizations, and anonymous identity with AsyncStorage
+- personalize Contentful entries with `OptimizedEntry`
+- emit entry view and tap tracking from React Native components
+- emit screen events through React Navigation adapters or screen-level hooks
+- opt into live updates and attach the in-app preview panel for authoring workflows
+- queue events while offline when NetInfo is available
 
-The
-`[Colorful-Team-Org/ReactNativeOptimizationDemo](https://github.com/Colorful-Team-Org/ReactNativeOptimizationDemo)`
-repository contains two side-by-side Expo apps that implement the exact same UI from the same
-Contentful space:
-
-| App                       | What it shows                                                                                                                                               |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ContentfulDemoBase`      | Plain Contentful Delivery API integration. Every user sees the same content.                                                                                |
-| `ContentfulDemoOptimized` | The same UI, converted to use `@contentful/optimization-react-native`. Adds personalization, view/tap tracking, screen tracking, and the preview panel FAB. |
-
-Diffing the two apps is the fastest way to see what an Optimization integration actually changes.
-Throughout this guide, "demo" refers to `ContentfulDemoOptimized`, and file paths point to that
-project (e.g. `ContentfulDemoOptimized/App.tsx`).
-
-The demo focuses on these conversion points:
-
-- `App.tsx` — wrapping the navigation tree in `OptimizationRoot` and
-  `OptimizationNavigationContainer`.
-- `src/screens/HomeScreen.tsx` — wrapping a CTA entry in `<OptimizedEntry>` for personalization and
-  wrapping each blog post card for tap/view tracking.
-- `src/screens/BlogPostDetailScreen.tsx` — wrapping a scrollable screen in
-  `<OptimizationScrollProvider>` so viewport-based view tracking reflects scroll position.
-- `src/contentfulClient.ts` — a normal Contentful Delivery API client; the Optimization SDK does not
-  replace it, it sits alongside it.
+The React Native SDK does not replace your Contentful delivery client. Your application still
+fetches Contentful entries, decides how consent works, decides when a user becomes known, and
+controls where personalized content renders.
 
 ## The Integration Flow
 
@@ -44,48 +72,18 @@ Most React Native integrations follow this sequence:
 4. Wrap each personalizable Contentful entry in `<OptimizedEntry>`.
 5. Enable view and/or tap tracking for the entries you care about.
 6. Wrap scrollable screens in `<OptimizationScrollProvider>` so viewport tracking is accurate.
-7. Add screen tracking (either automatically via `OptimizationNavigationContainer` or per-screen
-   with `useScreenTracking`).
-8. Optionally enable the preview panel for development builds.
+7. Add screen tracking either automatically with `OptimizationNavigationContainer` or per screen
+   with `useScreenTracking`.
 
-Table of Contents
+Optional additions include live updates when entries should continuously react to optimization state
+changes, and the preview panel when the application needs authoring or preview overrides.
 
-- [A Reference App You Can Compare Against](#a-reference-app-you-can-compare-against)
-- [The Integration Flow](#the-integration-flow)
-- [1. Install And Initialize With Minimal Configuration](#1-install-and-initialize-with-minimal-configuration)
-  - [Install Peer Dependencies](#install-peer-dependencies)
-  - [The Minimum Setup](#the-minimum-setup)
-  - [Access The SDK Instance With Hooks](#access-the-sdk-instance-with-hooks)
-- [2. Handle Consent](#2-handle-consent)
-  - [Defaulting Consent To `true](#defaulting-consent-to-true)`
-  - [Gating Consent On A Banner](#gating-consent-on-a-banner)
-  - [Reading And Reacting To Consent State](#reading-and-reacting-to-consent-state)
-  - [Revoking Consent](#revoking-consent)
-- [3. Personalize Entries With OptimizedEntry](#3-personalize-entries-with-optimizedentry)
-  - [Fetch The Entry With `include: 10](#fetch-the-entry-with-include-10)`
-  - [Render The Variant With A Render Prop](#render-the-variant-with-a-render-prop)
-  - [Pass-Through For Non-Optimized Entries](#pass-through-for-non-optimized-entries)
-- [4. Interaction Tracking With OptimizedEntry](#4-interaction-tracking-with-optimizedentry)
-  - [Global Defaults Via OptimizationRoot](#global-defaults-via-optimizationroot)
-  - [Per-Component Overrides](#per-component-overrides)
-  - [Custom Visibility And Time Thresholds](#custom-visibility-and-time-thresholds)
-  - [Use OptimizationScrollProvider For Scrollable Screens](#use-optimizationscrollprovider-for-scrollable-screens)
-- [5. Enabling And Disabling Live Updates](#5-enabling-and-disabling-live-updates)
-  - [Default Behavior](#default-behavior)
-  - [Global Live Updates](#global-live-updates)
-  - [Per-Component Live Updates](#per-component-live-updates)
-  - [Resolution Priority](#resolution-priority)
-- [6. Screen Tracking](#6-screen-tracking)
-  - [Automatic Tracking With OptimizationNavigationContainer](#automatic-tracking-with-optimizationnavigationcontainer)
-  - [Per-Screen Tracking With `useScreenTracking](#per-screen-tracking-with-usescreentracking)`
-  - [Dynamic Names With `useScreenTrackingCallback](#dynamic-names-with-usescreentrackingcallback)`
-- [7. Preview Panel](#7-preview-panel)
-  - [Enabling The Preview Panel](#enabling-the-preview-panel)
-  - [Customizing The Floating Action Button](#customizing-the-floating-action-button)
-  - [Preview Panel And Live Updates](#preview-panel-and-live-updates)
-- [Reference Implementations To Compare Against](#reference-implementations-to-compare-against)
+The React Native reference implementation in this repository shows those patterns in a working
+application:
 
-## 1. Install And Initialize With Minimal Configuration
+- [`implementations/react-native-sdk`](../../implementations/react-native-sdk/README.md)
+
+## 1. Install and Initialize with Minimal Configuration
 
 ### Install Peer Dependencies
 
@@ -103,11 +101,13 @@ The SDK uses AsyncStorage to persist consent, profile, and selected optimization
 launches. `netinfo` is optional but lets the SDK queue events while the device is offline and flush
 them automatically when connectivity returns.
 
-> [!NOTE] The Optimization SDK depends on native modules (e.g. `@react-native-clipboard/clipboard`
-> for the preview panel). Expo apps using Optimization need a custom dev build (`expo run:ios` /
-> `expo run:android`) — Expo Go is not enough. The demo's `[ContentfulDemoOptimized` README
-> section](https://github.com/Colorful-Team-Org/ReactNativeOptimizationDemo#setup) walks through
-> `expo prebuild` and the resulting native build.
+> [!NOTE]
+>
+> The Optimization SDK depends on native modules (e.g. `@react-native-clipboard/clipboard` for the
+> preview panel). Expo apps using Optimization need a custom dev build (`expo run:ios` /
+> `expo run:android`) — Expo Go is not enough. The in-tree React Native reference implementation
+> [README](../../implementations/react-native-sdk/README.md) documents the monorepo setup and E2E
+> commands.
 
 ### The Minimum Setup
 
@@ -130,10 +130,8 @@ export default function App() {
 That is the minimum viable setup. `clientId` is the only required prop; everything else falls back
 to safe defaults (environment defaults to `'main'`, channel to `'mobile'`, etc.).
 
-The demo's
-`[ContentfulDemoOptimized/App.tsx](https://github.com/Colorful-Team-Org/ReactNativeOptimizationDemo/blob/main/ContentfulDemoOptimized/App.tsx)`
-shows a more typical setup that adds the navigation container, a defaults block, and the preview
-panel:
+A fuller application usually adds environment-specific config, a defaults block, optional preview
+panel settings, and navigation integration:
 
 ```tsx
 <OptimizationRoot
@@ -158,21 +156,21 @@ panel:
 
 Common props on `OptimizationRoot`:
 
-| Prop                    | Type                         | Required | Default                        | Description                                                             |
-| ----------------------- | ---------------------------- | -------- | ------------------------------ | ----------------------------------------------------------------------- |
-| `clientId`              | `string`                     | Yes      | N/A                            | Your Contentful Optimization client identifier                          |
-| `environment`           | `string`                     | No       | `'main'`                       | Optimization environment to read from                                   |
-| `defaults`              | `{ consent?: boolean, ... }` | No       | `undefined`                    | Initial values applied at startup (e.g. `consent: true`)                |
-| `logLevel`              | `LogLevels`                  | No       | `'error'`                      | Minimum console log level                                               |
-| `previewPanel`          | `PreviewPanelConfig`         | No       | `undefined`                    | Enables the in-app preview panel; see [Preview Panel](#7-preview-panel) |
-| `liveUpdates`           | `boolean`                    | No       | `false`                        | Global live-updates default for `<OptimizedEntry />`                    |
-| `trackEntryInteraction` | `{ views?, taps? }`          | No       | `{ views: true, taps: false }` | Default interaction tracking for `<OptimizedEntry />`                   |
+| Prop                    | Type                         | Required | Default                        | Description                                                           |
+| ----------------------- | ---------------------------- | -------- | ------------------------------ | --------------------------------------------------------------------- |
+| `clientId`              | `string`                     | Yes      | N/A                            | Your Contentful Optimization client identifier                        |
+| `environment`           | `string`                     | No       | `'main'`                       | Optimization environment to read from                                 |
+| `defaults`              | `{ consent?: boolean, ... }` | No       | `undefined`                    | Initial values applied at startup (e.g. `consent: true`)              |
+| `logLevel`              | `LogLevels`                  | No       | `'error'`                      | Minimum console log level                                             |
+| `previewPanel`          | `PreviewPanelConfig`         | No       | `undefined`                    | Enables the in-app preview panel; see [Preview Panel](#preview-panel) |
+| `liveUpdates`           | `boolean`                    | No       | `false`                        | Global live-updates default for `<OptimizedEntry />`                  |
+| `trackEntryInteraction` | `{ views?, taps? }`          | No       | `{ views: true, taps: false }` | Default interaction tracking for `<OptimizedEntry />`                 |
 
 The full configuration reference (API endpoints, fetch retries, queue policy, event-builder
 overrides) is documented in the
-[React Native SDK README](../packages/react-native-sdk/README.md#configuration).
+[React Native SDK README](../../packages/react-native-sdk/README.md#configuration).
 
-### Access The SDK Instance With Hooks
+### Access the SDK Instance with Hooks
 
 Inside the provider tree, use `useOptimization()` to interact with the SDK directly:
 
@@ -203,7 +201,7 @@ view/tap tracking) are blocked until the user accepts or rejects consent.
 You can change which event types are permitted before consent via the `allowedEventTypes` config
 option.
 
-### Defaulting Consent To `true`
+### Defaulting Consent to `true`
 
 If your app already collects consent at install time (e.g. through a prior onboarding flow) or if
 you don't need a runtime consent prompt, set `defaults.consent: true` so events flow immediately:
@@ -214,11 +212,12 @@ you don't need a runtime consent prompt, set `defaults.consent: true` so events 
 </OptimizationRoot>
 ```
 
-This is what the demo does — see
-`[ContentfulDemoOptimized/App.tsx](https://github.com/Colorful-Team-Org/ReactNativeOptimizationDemo/blob/main/ContentfulDemoOptimized/App.tsx#L29)`.
-The default is applied once at startup; user input later takes precedence.
+The default is applied once at startup; user input later takes precedence. The in-tree reference
+implementation shows an equivalent trusted-context shortcut in
+[`App.tsx`](../../implementations/react-native-sdk/App.tsx) by calling `sdk.consent(true)` after the
+provider initializes.
 
-### Gating Consent On A Banner
+### Gating Consent on a Banner
 
 For apps that need an explicit prompt, leave `defaults.consent` unset and call `consent()` from your
 banner UI:
@@ -244,7 +243,7 @@ When consent is accepted (`true`), all event types are permitted. When consent i
 (`false`), non-allowed event types are blocked and `<OptimizedEntry />` view/tap tracking will be
 silently dropped at the SDK boundary. Consent state persists across app launches via AsyncStorage.
 
-### Reading And Reacting To Consent State
+### Reading and Reacting to Consent State
 
 Subscribe to the SDK's consent observable when you need to render UI conditionally:
 
@@ -277,7 +276,7 @@ To revoke consent after it was previously accepted, just call `consent(false)`:
 optimization.consent(false)
 ```
 
-## 3. Personalize Entries With OptimizedEntry
+## 3. Personalize Entries with OptimizedEntry
 
 `<OptimizedEntry />` is the unified component for resolving optimized variants and tracking
 interactions on Contentful entries. It:
@@ -289,7 +288,7 @@ interactions on Contentful entries. It:
 - Emits view tracking when the entry crosses the visibility/time threshold.
 - Emits tap tracking when enabled.
 
-### Fetch The Entry With `include: 10`
+### Fetch the Entry with `include: 10`
 
 For variant data to resolve, the entry must be fetched with linked optimization references included.
 Use `include: 10` on Contentful's Delivery API call:
@@ -298,11 +297,10 @@ Use `include: 10` on Contentful's Delivery API call:
 const cta = await contentfulClient.getEntry(CTA_ENTRY_ID, { include: 10 })
 ```
 
-The demo's
-`[HomeScreen.tsx](https://github.com/Colorful-Team-Org/ReactNativeOptimizationDemo/blob/main/ContentfulDemoOptimized/src/screens/HomeScreen.tsx)`
-fetches the CTA exactly this way, in parallel with the unoptimized blog-post list.
+The in-tree reference implementation centralizes this pattern in
+[`utils/sdkHelpers.ts`](../../implementations/react-native-sdk/utils/sdkHelpers.ts).
 
-### Render The Variant With A Render Prop
+### Render the Variant with a Render Prop
 
 Pass the baseline entry to `<OptimizedEntry>` and render with a render prop that receives the
 resolved entry:
@@ -324,7 +322,7 @@ profile) or the baseline entry (when no variant qualifies). Either way, `resolve
 the same shape as the baseline — so the renderer downstream doesn't need to know whether it's seeing
 a variant or not.
 
-### Pass-Through For Non-Optimized Entries
+### Pass-Through for Non-Optimized Entries
 
 When you only want to track an entry (no variant resolution), pass static children instead of a
 render prop:
@@ -335,17 +333,21 @@ render prop:
 </OptimizedEntry>
 ```
 
-This is exactly the pattern the demo uses for its blog-post list — every card is wrapped so the SDK
-can track views/taps, but the content itself doesn't change per user. See
-`[HomeScreen.tsx](https://github.com/Colorful-Team-Org/ReactNativeOptimizationDemo/blob/main/ContentfulDemoOptimized/src/screens/HomeScreen.tsx)`.
+This is the same tracking pattern used by
+[`sections/ContentEntry.tsx`](../../implementations/react-native-sdk/sections/ContentEntry.tsx):
+entries are wrapped so the SDK can track views/taps, while non-optimized content passes through
+unchanged.
 
-## 4. Interaction Tracking With OptimizedEntry
+## 4. Interaction Tracking with OptimizedEntry
 
 `<OptimizedEntry />` tracks two interactions: **views** (the entry was at least N% visible for at
 least M ms) and **taps** (the user tapped the entry). View tracking is enabled by default; tap
 tracking is opt-in.
 
-### Global Defaults Via OptimizationRoot
+For the deeper event timing, threshold, consent-gating, and viewport-state details, see
+[React Native SDK Interaction Tracking Mechanics](../concepts/react-native-sdk-interaction-tracking-mechanics.md).
+
+### Global Defaults via OptimizationRoot
 
 Set a global default for all `<OptimizedEntry />` components via `trackEntryInteraction` on the
 root:
@@ -390,7 +392,7 @@ implicitly enables tap tracking unless `trackTaps={false}` is explicit:
 </OptimizedEntry>
 ```
 
-### Custom Visibility And Time Thresholds
+### Custom Visibility and Time Thresholds
 
 By default, view tracking fires when the entry is **80% visible for 2000 ms**. Customize per-entry:
 
@@ -407,7 +409,7 @@ By default, view tracking fires when the entry is **80% visible for 2000 ms**. C
 After the initial view event, the SDK emits periodic view-duration update events every 5000 ms by
 default; configure with `viewDurationUpdateIntervalMs`.
 
-### Use OptimizationScrollProvider For Scrollable Screens
+### Use OptimizationScrollProvider for Scrollable Screens
 
 Inside a scrolling container, viewport-based view tracking needs to know the actual scroll position.
 Wrap the scrollable screen in `<OptimizationScrollProvider>`:
@@ -426,15 +428,119 @@ function BlogPostDetailScreen({ post }) {
 }
 ```
 
-The demo's
-`[BlogPostDetailScreen.tsx](https://github.com/Colorful-Team-Org/ReactNativeOptimizationDemo/blob/main/ContentfulDemoOptimized/src/screens/BlogPostDetailScreen.tsx)`
-shows this exactly.
+The in-tree reference implementation wraps its entry list in `OptimizationScrollProvider` in
+[`App.tsx`](../../implementations/react-native-sdk/App.tsx) before rendering optimized entries.
 
 Without `OptimizationScrollProvider`, the SDK assumes scroll position is always `0` and the viewport
 equals the screen. That's fine for a single full-screen component, but for content that appears
 below the fold, wrap the screen so tracking fires when the user scrolls the entry into view.
 
-## 5. Enabling And Disabling Live Updates
+## 5. Screen Tracking
+
+Screen tracking emits a `screen` event each time the user navigates to a new screen. The SDK uses
+these events to update profile attribution and route-aware properties.
+
+### Automatic Tracking with OptimizationNavigationContainer
+
+If you use React Navigation, the easiest setup is `<OptimizationNavigationContainer />`, which wraps
+`<NavigationContainer />` and emits a `screen` event on every active route change:
+
+```tsx
+import { NavigationContainer } from '@react-navigation/native'
+import { createNativeStackNavigator } from '@react-navigation/native-stack'
+import {
+  OptimizationRoot,
+  OptimizationNavigationContainer,
+} from '@contentful/optimization-react-native'
+
+const Stack = createNativeStackNavigator()
+
+export default function App() {
+  return (
+    <OptimizationRoot clientId="your-client-id">
+      <OptimizationNavigationContainer>
+        {(navigationProps) => (
+          <NavigationContainer {...navigationProps}>
+            <Stack.Navigator>
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="BlogPostDetail" component={BlogPostDetailScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        )}
+      </OptimizationNavigationContainer>
+    </OptimizationRoot>
+  )
+}
+```
+
+The in-tree reference implementation exercises this adapter in
+[`screens/NavigationTestScreen.tsx`](../../implementations/react-native-sdk/screens/NavigationTestScreen.tsx).
+The render-prop pattern means the wrapper does not depend on `@react-navigation/native` directly —
+navigation props are passed through to your real `NavigationContainer`.
+
+Available props:
+
+| Prop            | Required | Default | Description                                                    |
+| --------------- | -------- | ------- | -------------------------------------------------------------- |
+| `children`      | Yes      | N/A     | Render prop receiving `ref`, `onReady`, and `onStateChange`    |
+| `onStateChange` | No       | —       | Called after screen tracking fires on navigation state changes |
+| `onReady`       | No       | —       | Called after the initial screen tracking on container ready    |
+| `includeParams` | No       | `false` | Whether to include route params in the screen event properties |
+
+### Per-Screen Tracking with `useScreenTracking`
+
+If you don't use React Navigation, or if you want fine-grained control, call `useScreenTracking`
+inside each screen component:
+
+```tsx
+import { useScreenTracking } from '@contentful/optimization-react-native'
+
+function HomeScreen() {
+  useScreenTracking({ name: 'Home' })
+  return <View>...</View>
+}
+```
+
+By default this fires once on mount. To delay tracking until data is loaded, pass
+`trackOnMount: false` and call `trackScreen()` manually:
+
+```tsx
+function DetailsScreen() {
+  const { trackScreen } = useScreenTracking({
+    name: 'Details',
+    trackOnMount: false,
+  })
+
+  useEffect(() => {
+    if (dataLoaded) {
+      void trackScreen()
+    }
+  }, [dataLoaded, trackScreen])
+
+  return <View>...</View>
+}
+```
+
+### Dynamic Names with `useScreenTrackingCallback`
+
+When the screen name isn't known at render time (e.g. derived from navigation state or a deep-link),
+use `useScreenTrackingCallback` to get a stable callback you can fire on demand:
+
+```tsx
+import { useScreenTrackingCallback } from '@contentful/optimization-react-native'
+
+function DynamicScreen({ screenName }: { screenName: string }) {
+  const trackScreenView = useScreenTrackingCallback()
+
+  useEffect(() => {
+    trackScreenView(screenName, { source: 'deep-link' })
+  }, [screenName, trackScreenView])
+
+  return <View>...</View>
+}
+```
+
+## Live Updates
 
 ### Default Behavior
 
@@ -486,7 +592,7 @@ to lowest priority):
 
 1. **Preview panel open** — always forces live updates on (cannot be overridden).
 2. **Component `liveUpdates` prop** — explicit per-component override.
-3. `**OptimizationRoot` `liveUpdates` prop\*\* — global setting.
+3. **`OptimizationRoot` `liveUpdates` prop** — global setting.
 4. **Default** — locked to first variant (`false`).
 
 | Preview Panel | Global Setting | Component Prop | Result           |
@@ -509,118 +615,13 @@ function StatusBadge() {
 }
 ```
 
-## 6. Screen Tracking
-
-Screen tracking emits a `screen` event each time the user navigates to a new screen. The SDK uses
-these events to update profile attribution and route-aware properties.
-
-### Automatic Tracking With OptimizationNavigationContainer
-
-If you use React Navigation, the easiest setup is `<OptimizationNavigationContainer />`, which wraps
-`<NavigationContainer />` and emits a `screen` event on every active route change:
-
-```tsx
-import { NavigationContainer } from '@react-navigation/native'
-import { createNativeStackNavigator } from '@react-navigation/native-stack'
-import {
-  OptimizationRoot,
-  OptimizationNavigationContainer,
-} from '@contentful/optimization-react-native'
-
-const Stack = createNativeStackNavigator()
-
-export default function App() {
-  return (
-    <OptimizationRoot clientId="your-client-id">
-      <OptimizationNavigationContainer>
-        {(navigationProps) => (
-          <NavigationContainer {...navigationProps}>
-            <Stack.Navigator>
-              <Stack.Screen name="Home" component={HomeScreen} />
-              <Stack.Screen name="BlogPostDetail" component={BlogPostDetailScreen} />
-            </Stack.Navigator>
-          </NavigationContainer>
-        )}
-      </OptimizationNavigationContainer>
-    </OptimizationRoot>
-  )
-}
-```
-
-This is the pattern in the demo's
-`[App.tsx](https://github.com/Colorful-Team-Org/ReactNativeOptimizationDemo/blob/main/ContentfulDemoOptimized/App.tsx)`.
-The render-prop pattern means the wrapper does not depend on `@react-navigation/native` directly —
-navigation props are passed through to your real `NavigationContainer`.
-
-Available props:
-
-| Prop            | Required | Default | Description                                                    |
-| --------------- | -------- | ------- | -------------------------------------------------------------- |
-| `children`      | Yes      | N/A     | Render prop receiving `ref`, `onReady`, and `onStateChange`    |
-| `onStateChange` | No       | —       | Called after screen tracking fires on navigation state changes |
-| `onReady`       | No       | —       | Called after the initial screen tracking on container ready    |
-| `includeParams` | No       | `false` | Whether to include route params in the screen event properties |
-
-### Per-Screen Tracking With `useScreenTracking`
-
-If you don't use React Navigation, or if you want fine-grained control, call `useScreenTracking`
-inside each screen component:
-
-```tsx
-import { useScreenTracking } from '@contentful/optimization-react-native'
-
-function HomeScreen() {
-  useScreenTracking({ name: 'Home' })
-  return <View>...</View>
-}
-```
-
-By default this fires once on mount. To delay tracking until data is loaded, pass
-`trackOnMount: false` and call `trackScreen()` manually:
-
-```tsx
-function DetailsScreen() {
-  const { trackScreen } = useScreenTracking({
-    name: 'Details',
-    trackOnMount: false,
-  })
-
-  useEffect(() => {
-    if (dataLoaded) {
-      void trackScreen()
-    }
-  }, [dataLoaded, trackScreen])
-
-  return <View>...</View>
-}
-```
-
-### Dynamic Names With `useScreenTrackingCallback`
-
-When the screen name isn't known at render time (e.g. derived from navigation state or a deep-link),
-use `useScreenTrackingCallback` to get a stable callback you can fire on demand:
-
-```tsx
-import { useScreenTrackingCallback } from '@contentful/optimization-react-native'
-
-function DynamicScreen({ screenName }: { screenName: string }) {
-  const trackScreenView = useScreenTrackingCallback()
-
-  useEffect(() => {
-    trackScreenView(screenName, { source: 'deep-link' })
-  }, [screenName, trackScreenView])
-
-  return <View>...</View>
-}
-```
-
-## 7. Preview Panel
+## Preview Panel
 
 The preview panel is an in-app developer surface that lets you browse audiences, override variant
 selection, and inspect the current profile — all without modifying real user data. It's the React
 Native counterpart to the Web preview panel.
 
-### Enabling The Preview Panel
+### Enabling the Preview Panel
 
 Pass a `previewPanel` config to `OptimizationRoot`. You must also pass an initialized Contentful
 client so the panel can fetch audience and experience entries:
@@ -653,10 +654,9 @@ export default function App() {
 With `enabled: true`, a floating action button appears on top of your app. Tap it to open the panel
 drawer.
 
-The demo enables the panel unconditionally (toggled by a const in `App.tsx`). For real apps, gate on
-`__DEV__` (or another build flag) so the FAB doesn't appear in production.
+For real apps, gate on `__DEV__` (or another build flag) so the FAB doesn't appear in production.
 
-### Customizing The Floating Action Button
+### Customizing the Floating Action Button
 
 Use `fabPosition` and `showHeader` to fine-tune placement and chrome:
 
@@ -675,7 +675,7 @@ Use `fabPosition` and `showHeader` to fine-tune placement and chrome:
 </OptimizationRoot>
 ```
 
-### Preview Panel And Live Updates
+### Preview Panel and Live Updates
 
 When the preview panel is open, **all** `<OptimizedEntry />` components automatically enable live
 updates, regardless of their `liveUpdates` prop or the global setting. This is what makes "override
@@ -692,12 +692,16 @@ function DebugBadge() {
 }
 ```
 
-## Reference Implementations To Compare Against
+## Reference Implementations to Compare Against
 
-- `[Colorful-Team-Org/ReactNativeOptimizationDemo](https://github.com/Colorful-Team-Org/ReactNativeOptimizationDemo)`
-  — two side-by-side Expo apps (`ContentfulDemoBase` and `ContentfulDemoOptimized`) that demonstrate
-  converting a plain Contentful app into an Optimization-powered one. Diffing the two apps is the
-  fastest way to see the actual integration delta.
-- `[implementations/react-native-sdk](../implementations/react-native-sdk/README.md)` — the in-tree
-  reference implementation that is built and tested alongside the SDK itself. Useful when you want
-  to see the SDK exercised against the latest API surface.
+- [`implementations/react-native-sdk`](../../implementations/react-native-sdk/README.md): the
+  in-tree React Native reference implementation that is built and tested alongside the SDK itself
+- [`implementations/react-native-sdk/App.tsx`](../../implementations/react-native-sdk/App.tsx):
+  provider setup, consent bootstrap, page emission, entry rendering, scroll provider usage, and
+  navigation/live-updates test entry points
+- [`implementations/react-native-sdk/sections/ContentEntry.tsx`](../../implementations/react-native-sdk/sections/ContentEntry.tsx):
+  `OptimizedEntry` rendering plus tap tracking
+- [`implementations/react-native-sdk/screens/NavigationTestScreen.tsx`](../../implementations/react-native-sdk/screens/NavigationTestScreen.tsx):
+  `OptimizationNavigationContainer` usage and screen-event assertions
+- [`implementations/react-native-sdk/screens/LiveUpdatesTestScreen.tsx`](../../implementations/react-native-sdk/screens/LiveUpdatesTestScreen.tsx):
+  live-updates behavior and preview-panel visibility simulation

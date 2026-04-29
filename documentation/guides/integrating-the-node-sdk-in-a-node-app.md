@@ -5,6 +5,30 @@ Express, a custom SSR server, or a server-side function.
 
 The examples below use Express, but the same flow applies to any Node request handler.
 
+<details>
+  <summary>Table of Contents</summary>
+<!-- mtoc-start -->
+
+- [Scope and Capabilities](#scope-and-capabilities)
+- [The Integration Flow](#the-integration-flow)
+- [1. Install and Initialize the SDK](#1-install-and-initialize-the-sdk)
+- [2. Turn the Express Request into SDK Event Context](#2-turn-the-express-request-into-sdk-event-context)
+- [3. Handle Consent in Your Application Layer](#3-handle-consent-in-your-application-layer)
+- [4. Decide How You Will Persist the Profile ID](#4-decide-how-you-will-persist-the-profile-id)
+- [5. Call `page()` and `identify()` at the Right Time](#5-call-page-and-identify-at-the-right-time)
+  - [Which Order Should `page()` and `identify()` Use?](#which-order-should-page-and-identify-use)
+- [6. Resolve Contentful Entries with `selectedOptimizations`](#6-resolve-contentful-entries-with-selectedoptimizations)
+- [7. Resolve Merge Tags and Custom Flags](#7-resolve-merge-tags-and-custom-flags)
+  - [Merge Tags](#merge-tags)
+  - [Custom Flags](#custom-flags)
+- [8. Emit Follow-Up Server Events When They Matter](#8-emit-follow-up-server-events-when-they-matter)
+- [Caching and Cache Safety](#caching-and-cache-safety)
+- [Know When the Web SDK Should Join the Architecture](#know-when-the-web-sdk-should-join-the-architecture)
+- [Reference Implementations to Compare Against](#reference-implementations-to-compare-against)
+
+<!-- mtoc-end -->
+</details>
+
 ## Scope and Capabilities
 
 The Node SDK is the server-side package for Node-based applications in the Optimization SDK Suite.
@@ -40,10 +64,10 @@ In practice, most Node integrations follow this high-level sequence:
 
 The two Node reference implementations in this repository show that pattern in working applications:
 
-- [Node SSR Only](../implementations/node-sdk/README.md)
-- [Node SSR + Web SDK Vanilla](../implementations/node-sdk+web-sdk/README.md)
+- [Node SSR Only](../../implementations/node-sdk/README.md)
+- [Node SSR + Web SDK Vanilla](../../implementations/node-sdk+web-sdk/README.md)
 
-## 1. Install And Initialize The SDK
+## 1. Install and Initialize the SDK
 
 Install the package in your Node app:
 
@@ -92,7 +116,7 @@ Notes:
 - On modern Node runtimes, the built-in `fetch` implementation is usually enough. If your runtime
   does not expose a standard Fetch API, provide `fetchOptions.fetchMethod`.
 
-## 2. Turn The Express Request Into SDK Event Context
+## 2. Turn the Express Request into SDK Event Context
 
 The SDK can accept request-scoped event context such as locale, user agent, and page information.
 That context should be built fresh for every incoming request.
@@ -156,7 +180,7 @@ stable, request-specific description of the current page or route.
 locale values are intentionally separate, even if your app derives them from the same request
 header.
 
-## 3. Handle Consent In Your Application Layer
+## 3. Handle Consent in Your Application Layer
 
 The Node SDK does not expose a server-side `consent()` state the way stateful SDKs do. In a Node
 app, consent belongs in your application layer.
@@ -197,7 +221,7 @@ function clearOptimizationIdentity(res: Response): void {
 The exact consent policy belongs to the application, not the SDK. The important part is that the
 server makes that decision before it persists identifiers or emits events on the user's behalf.
 
-## 4. Decide How You Will Persist The Profile ID
+## 4. Decide How You Will Persist the Profile ID
 
 Because the Node SDK is stateless, it will not remember a visitor between requests on its own. Your
 app needs to persist the returned `profile.id` somewhere and pass it back into later SDK calls when
@@ -240,7 +264,7 @@ If your app will also run `@contentful/optimization-web` in the browser, avoid m
 as `HttpOnly`, because browser-side code needs to read it. If your app is server-only, a session
 store is equally valid. If consent is revoked, clear the same cookie or session value.
 
-## 5. Call `page()` And `identify()` At The Right Time
+## 5. Call `page()` and `identify()` at the Right Time
 
 The Node SDK returns optimization data from `page()`, `identify()`, `screen()`, `track()`, and
 sticky `trackView()` calls. In a typical SSR route, `page()` is the most important entry point.
@@ -325,7 +349,7 @@ The returned `OptimizationData` usually gives you the three values you care abou
 - `changes`: Custom Flag inputs
 - `selectedOptimizations`: the variant choices to use when resolving Contentful entries
 
-### Which Order Should `page()` And `identify()` Use?
+### Which Order Should `page()` and `identify()` Use?
 
 Both patterns appear in the reference implementations because they answer slightly different
 questions:
@@ -338,7 +362,7 @@ questions:
 The important rule is simpler than the ordering nuance: always render from the most relevant
 response object for the user state you want on that response.
 
-## 6. Resolve Contentful Entries With `selectedOptimizations`
+## 6. Resolve Contentful Entries with `selectedOptimizations`
 
 Once you have optimization data, fetch the baseline Contentful entry the same way you normally
 would, then hand it to `resolveOptimizedEntry()`.
@@ -405,7 +429,7 @@ This is the main server-side personalization loop:
 If your optimized entries contain linked entries or merge tags, fetch with an `include` depth that
 matches your content model. The SSR reference implementation uses `include: 10` for that reason.
 
-## 7. Resolve Merge Tags And Custom Flags
+## 7. Resolve Merge Tags and Custom Flags
 
 The Node SDK also exposes helpers for profile-aware merge tags and Custom Flags.
 
@@ -511,7 +535,7 @@ if (selectedOptimization?.sticky) {
 }
 ```
 
-## Caching And Cache Safety
+## Caching and Cache Safety
 
 The Node SDK sits on one side of an important cache boundary:
 
@@ -557,7 +581,7 @@ Do not key personalized caches only by URL or entry ID.
 | SSR HTML with personalized content                                         | Usually no         | Safe only when the cache varies on all personalization inputs                               |
 | `page()`, `identify()`, `screen()`, `track()`, and `trackView()` responses | No                 | These methods perform side effects and should not be memoized                               |
 
-## Know When The Web SDK Should Join The Architecture
+## Know When the Web SDK Should Join the Architecture
 
 Use the Node SDK by itself when the server is responsible for choosing the variant and rendering the
 response.
@@ -572,18 +596,18 @@ is usually the right move when you need:
 
 The hybrid reference implementation shows exactly that setup:
 
-- [Server integration](../implementations/node-sdk+web-sdk/src/app.ts)
-- [Browser integration](../implementations/node-sdk+web-sdk/src/index.ejs)
+- [Server integration](../../implementations/node-sdk+web-sdk/src/app.ts)
+- [Browser integration](../../implementations/node-sdk+web-sdk/src/index.ejs)
 
-## Reference Implementations To Compare Against
+## Reference Implementations to Compare Against
 
 Use these files when you want working repository examples instead of guide snippets:
 
-- [`implementations/node-sdk/src/app.ts`](../implementations/node-sdk/src/app.ts): server-only SSR
-  flow with `page()`, `identify()`, `resolveOptimizedEntry()`, and `getMergeTagValue()`
-- [`implementations/node-sdk/src/index.ejs`](../implementations/node-sdk/src/index.ejs): rendered
+- [`implementations/node-sdk/src/app.ts`](../../implementations/node-sdk/src/app.ts): server-only
+  SSR flow with `page()`, `identify()`, `resolveOptimizedEntry()`, and `getMergeTagValue()`
+- [`implementations/node-sdk/src/index.ejs`](../../implementations/node-sdk/src/index.ejs): rendered
   output that consumes resolved entries
-- [`implementations/node-sdk+web-sdk/src/app.ts`](../implementations/node-sdk+web-sdk/src/app.ts):
+- [`implementations/node-sdk+web-sdk/src/app.ts`](../../implementations/node-sdk+web-sdk/src/app.ts):
   cookie sharing with `ANONYMOUS_ID_COOKIE` for Node and Web SDK continuity
-- [`implementations/node-sdk+web-sdk/src/index.ejs`](../implementations/node-sdk+web-sdk/src/index.ejs):
+- [`implementations/node-sdk+web-sdk/src/index.ejs`](../../implementations/node-sdk+web-sdk/src/index.ejs):
   browser-side follow-up tracking and entry resolution

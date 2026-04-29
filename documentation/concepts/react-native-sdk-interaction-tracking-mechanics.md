@@ -1,12 +1,12 @@
 # React Native SDK Interaction Tracking Mechanics
 
-Use this guide to understand exactly _what_ the `@contentful/optimization-react-native` SDK is
-tracking, _when_ each event fires, and _how_ it leaves the device. Every number, state transition,
-and gate is grounded in SDK source so you can reason about tracking behavior without running a live
-experiment.
+Use this concept document to understand exactly _what_ the `@contentful/optimization-react-native`
+SDK is tracking, _when_ each event fires, and _how_ it leaves the device. Every number, state
+transition, and gate is grounded in SDK source so you can reason about tracking behavior without
+running a live experiment.
 
 The companion
-[Integrating the Optimization React Native SDK in a React Native App](./integrating-the-react-native-sdk-in-a-react-native-app.md)
+[Integrating the Optimization React Native SDK in a React Native App](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md)
 walks through setup, consent, and screen wiring at a tutorial level. Read that first for "how do I
 plug the SDK in?" — come back here for "why isn't my entry view firing?"
 
@@ -166,7 +166,7 @@ The React Native SDK layers RN-specific behavior on top:
 
 The offline queue has a cap (`queuePolicy.offlineMaxEvents`) and a drop callback
 (`queuePolicy.onOfflineDrop`). See the
-[README](../packages/react-native-sdk/README.md#queue-policy-options) for the full shape.
+[README](../../packages/react-native-sdk/README.md#queue-policy-options) for the full shape.
 
 ### Persistence Via AsyncStorage
 
@@ -357,9 +357,9 @@ no matter how far the user scrolls.
 </OptimizationScrollProvider>
 ```
 
-_Source: `packages/react-native-sdk/src/context/OptimizationScrollContext.tsx:80-154`._ The demo's
-[`BlogPostDetailScreen.tsx`](https://github.com/Colorful-Team-Org/ReactNativeOptimizationDemo/blob/main/ContentfulDemoOptimized/src/screens/BlogPostDetailScreen.tsx)
-shows this.
+_Source: `packages/react-native-sdk/src/context/OptimizationScrollContext.tsx:80-154`._ The in-tree
+reference implementation wraps its entry list in
+[`OptimizationScrollProvider`](../../implementations/react-native-sdk/App.tsx).
 
 ### Outside OptimizationScrollProvider
 
@@ -511,7 +511,7 @@ Beyond the layer above, the full `CoreStatefulConfig` is accepted as `Optimizati
 | `logLevel`                     | `'error'`                                | Set to `'debug'` to see every gate decision.                                                    |
 
 The full configuration reference lives in the
-[React Native SDK README](../packages/react-native-sdk/README.md#configuration).
+[React Native SDK README](../../packages/react-native-sdk/README.md#configuration).
 
 ### Resolution Order
 
@@ -644,7 +644,7 @@ What fires:
 - **Offline** — events buffer; they replay on reconnect.
 
 For the broader integration walkthrough, read the
-[React Native SDK integration guide](./integrating-the-react-native-sdk-in-a-react-native-app.md).
+[React Native SDK integration guide](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md).
 
 ## Reference
 
@@ -654,9 +654,8 @@ For the broader integration walkthrough, read the
 - **Context providers:** `context/InteractionTrackingContext.tsx`,
   `context/OptimizationScrollContext.tsx`, `context/LiveUpdatesContext.tsx`
 - **Event emission pipeline:** `packages/universal/core-sdk/src/CoreStatefulEventEmitter.ts`
-- **Demo app (canonical RN reference):**
-  [Colorful-Team-Org/ReactNativeOptimizationDemo](https://github.com/Colorful-Team-Org/ReactNativeOptimizationDemo)
-  — compare `ContentfulDemoBase` (no Optimization) with `ContentfulDemoOptimized` (integrated) to
-  see the exact integration delta.
+- **Reference implementation:**
+  [`implementations/react-native-sdk`](../../implementations/react-native-sdk/README.md) exercises
+  the latest React Native SDK API surface in this monorepo.
 - **Integration guide:**
-  [Integrating the Optimization React Native SDK in a React Native App](./integrating-the-react-native-sdk-in-a-react-native-app.md).
+  [Integrating the Optimization React Native SDK in a React Native App](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md).

@@ -10,7 +10,51 @@ SDK lifecycle and DOM wiring manually.
 Use the lower-level Web SDK guide instead when your application is not React-based or when you want
 to own the browser SDK integration without React abstractions.
 
-## Scope And Capabilities
+<details>
+  <summary>Table of Contents</summary>
+<!-- mtoc-start -->
+
+- [Scope and Capabilities](#scope-and-capabilities)
+- [The Integration Flow](#the-integration-flow)
+- [1. Install and Initialize with OptimizationRoot](#1-install-and-initialize-with-optimizationroot)
+  - [Access the SDK Instance with Hooks](#access-the-sdk-instance-with-hooks)
+  - [Provide a Pre-Built SDK Instance When Needed](#provide-a-pre-built-sdk-instance-when-needed)
+- [2. Handle Consent in React](#2-handle-consent-in-react)
+  - [Reading Consent State](#reading-consent-state)
+  - [Updating Consent](#updating-consent)
+  - [Revoking Consent](#revoking-consent)
+  - [Consent-Gated Rendering](#consent-gated-rendering)
+- [3. Personalize Entries with OptimizedEntry](#3-personalize-entries-with-optimizedentry)
+  - [Basic Usage](#basic-usage)
+  - [Loading Fallback](#loading-fallback)
+  - [Direct ReactNode Children](#direct-reactnode-children)
+  - [Wrapper Element](#wrapper-element)
+  - [Nested Composition](#nested-composition)
+  - [Imperative Hook Alternative](#imperative-hook-alternative)
+- [4. Track Entry Interactions from React](#4-track-entry-interactions-from-react)
+  - [Automatic Tracking via OptimizedEntry](#automatic-tracking-via-optimizedentry)
+  - [Manual Tracking via the Tracking API](#manual-tracking-via-the-tracking-api)
+- [5. Emit Page Events with Supported Router Adapters](#5-emit-page-events-with-supported-router-adapters)
+  - [React Router](#react-router)
+  - [Next.js Pages Router](#nextjs-pages-router)
+  - [Next.js App Router](#nextjs-app-router)
+  - [TanStack Router](#tanstack-router)
+  - [Page Payload Enrichment](#page-payload-enrichment)
+- [Live Updates](#live-updates)
+  - [Global Live Updates](#global-live-updates)
+  - [Per-Component Live Updates](#per-component-live-updates)
+  - [Preview Panel Override](#preview-panel-override)
+  - [Resolution Priority](#resolution-priority)
+- [Preview Panel](#preview-panel)
+  - [Attaching the Preview Panel](#attaching-the-preview-panel)
+  - [Content Security Policy Support](#content-security-policy-support)
+  - [Preview Panel and Live Updates](#preview-panel-and-live-updates)
+- [Reference Implementations to Compare Against](#reference-implementations-to-compare-against)
+
+<!-- mtoc-end -->
+</details>
+
+## Scope and Capabilities
 
 The React Web SDK is the React-specific package in the Optimization SDK Suite. It lets consumers:
 
@@ -43,54 +87,10 @@ changes, and the preview panel when the application needs authoring or preview o
 The React-focused reference implementations in this repository show those patterns in working
 applications:
 
-- [React Web SDK Reference](../implementations/react-web-sdk/README.md)
-- [Custom React Adapter Over Web SDK](../implementations/web-sdk_react/README.md)
+- [React Web SDK Reference](../../implementations/react-web-sdk/README.md)
+- [Custom React Adapter Over Web SDK](../../implementations/web-sdk_react/README.md)
 
-<details>
-  <summary>Table of Contents</summary>
-<!-- mtoc-start -->
-
-- [Scope And Capabilities](#scope-and-capabilities)
-- [The Integration Flow](#the-integration-flow)
-- [1. Install And Initialize With OptimizationRoot](#1-install-and-initialize-with-optimizationroot)
-  - [Access The SDK Instance With Hooks](#access-the-sdk-instance-with-hooks)
-  - [Provide A Pre-Built SDK Instance When Needed](#provide-a-pre-built-sdk-instance-when-needed)
-- [2. Handle Consent In React](#2-handle-consent-in-react)
-  - [Reading Consent State](#reading-consent-state)
-  - [Updating Consent](#updating-consent)
-  - [Revoking Consent](#revoking-consent)
-  - [Consent-Gated Rendering](#consent-gated-rendering)
-- [3. Personalize Entries With OptimizedEntry](#3-personalize-entries-with-optimizedentry)
-  - [Basic Usage](#basic-usage)
-  - [Loading Fallback](#loading-fallback)
-  - [Direct ReactNode Children](#direct-reactnode-children)
-  - [Wrapper Element](#wrapper-element)
-  - [Nested Composition](#nested-composition)
-  - [Imperative Hook Alternative](#imperative-hook-alternative)
-- [4. Track Entry Interactions From React](#4-track-entry-interactions-from-react)
-  - [Automatic Tracking Via OptimizedEntry](#automatic-tracking-via-optimizedentry)
-  - [Manual Tracking Via The Tracking API](#manual-tracking-via-the-tracking-api)
-- [5. Emit Page Events With Supported Router Adapters](#5-emit-page-events-with-supported-router-adapters)
-  - [React Router](#react-router)
-  - [Next.js Pages Router](#nextjs-pages-router)
-  - [Next.js App Router](#nextjs-app-router)
-  - [TanStack Router](#tanstack-router)
-  - [Page Payload Enrichment](#page-payload-enrichment)
-- [Live Updates](#live-updates)
-  - [Global Live Updates](#global-live-updates)
-  - [Per-Component Live Updates](#per-component-live-updates)
-  - [Preview Panel Override](#preview-panel-override)
-  - [Resolution Priority](#resolution-priority)
-- [Preview Panel](#preview-panel)
-  - [Attaching the Preview Panel](#attaching-the-preview-panel)
-  - [Content Security Policy Support](#content-security-policy-support)
-  - [Preview Panel and Live Updates](#preview-panel-and-live-updates)
-- [Reference Implementations To Compare Against](#reference-implementations-to-compare-against)
-
-<!-- mtoc-end -->
-</details>
-
-## 1. Install And Initialize With OptimizationRoot
+## 1. Install and Initialize with OptimizationRoot
 
 Install the React Web SDK:
 
@@ -150,7 +150,7 @@ A more complete initialization with explicit API endpoints and interaction track
 </OptimizationRoot>
 ```
 
-### Access The SDK Instance With Hooks
+### Access the SDK Instance with Hooks
 
 Inside the provider tree, use hooks to interact with the SDK:
 
@@ -177,7 +177,7 @@ function ConditionalComponent() {
 }
 ```
 
-### Provide A Pre-Built SDK Instance When Needed
+### Provide a Pre-Built SDK Instance When Needed
 
 If you need to manage the SDK instance outside of React, pass it directly via the `sdk` prop on
 `OptimizationProvider` instead of using config props:
@@ -202,7 +202,7 @@ function App() {
 When using the `sdk` prop, the provider does not own the instance lifecycle, so it will not call
 `destroy()` on unmount.
 
-## 2. Handle Consent In React
+## 2. Handle Consent in React
 
 The SDK gates certain event types behind a consent state. By default, only `identify` and `page`
 events are allowed before consent is explicitly set. All other event types are blocked until the
@@ -305,7 +305,7 @@ function PersonalizedSection({ entry }) {
 }
 ```
 
-## 3. Personalize Entries With OptimizedEntry
+## 3. Personalize Entries with OptimizedEntry
 
 `OptimizedEntry` resolves a baseline Contentful entry to an optimized variant using the current
 optimization state and renders the result.
@@ -440,12 +440,12 @@ function CustomEntry({ baselineEntry }) {
 | `resolvedData`          | `ResolvedData<EntrySkeletonType>`        | Full resolution result including entry and optimization |
 | `selectedOptimizations` | `SelectedOptimizationArray \| undefined` | The locked (or live) selected optimizations snapshot    |
 
-## 4. Track Entry Interactions From React
+## 4. Track Entry Interactions from React
 
 `OptimizedEntry` emits data attributes on its wrapper element that the Web SDK uses for automatic
 entry interaction tracking (views, clicks, and hovers).
 
-### Automatic Tracking Via OptimizedEntry
+### Automatic Tracking via OptimizedEntry
 
 When resolved content renders, the wrapper element receives:
 
@@ -473,7 +473,7 @@ and tracked for entry views, clicks, and hovers without additional code.
 When `loadingFallback` is shown, resolved-content tracking attributes are not emitted, so loading
 states are not tracked.
 
-### Manual Tracking Via The Tracking API
+### Manual Tracking via the Tracking API
 
 For entries that are not rendered through `OptimizedEntry`, use the `interactionTracking` API from
 `useOptimization()`:
@@ -524,7 +524,7 @@ Available interaction tracking methods:
 
 Supported `interaction` values: `'views'`, `'clicks'`, `'hovers'`.
 
-## 5. Emit Page Events With Supported Router Adapters
+## 5. Emit Page Events with Supported Router Adapters
 
 The React Web SDK ships router-specific auto page trackers as isolated subpath exports. Each adapter
 automatically emits `page()` events when the route changes, so you do not need to call `page()`
@@ -835,13 +835,13 @@ function DebugPanel() {
 }
 ```
 
-## Reference Implementations To Compare Against
+## Reference Implementations to Compare Against
 
 Two reference implementations demonstrate these patterns in working applications:
 
-- [`implementations/react-web-sdk`](../implementations/react-web-sdk/README.md): uses
+- [`implementations/react-web-sdk`](../../implementations/react-web-sdk/README.md): uses
   `@contentful/optimization-react-web` directly with `OptimizationRoot`, `OptimizedEntry`, and
   `ReactRouterAutoPageTracker`
-- [`implementations/web-sdk_react`](../implementations/web-sdk_react/README.md): builds a custom
+- [`implementations/web-sdk_react`](../../implementations/web-sdk_react/README.md): builds a custom
   React adapter layer on top of `@contentful/optimization-web` for applications that need full
   control over the integration
