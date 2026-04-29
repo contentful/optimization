@@ -10,7 +10,7 @@
 
 <div align="center">
 
-[Guides](https://contentful.github.io/optimization/documents/Guides.html) ·
+[Guides](https://contentful.github.io/optimization/documents/Documentation.Guides.html) ·
 [Reference](https://contentful.github.io/optimization) · [Contributing](../../../../CONTRIBUTING.md)
 
 </div>

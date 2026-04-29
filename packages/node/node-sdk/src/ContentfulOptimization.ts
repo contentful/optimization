@@ -1,9 +1,7 @@
-import { CoreStateless } from '@contentful/optimization-core'
+import { CoreStateless, type CoreStatelessConfig } from '@contentful/optimization-core'
 import type { App } from '@contentful/optimization-core/api-schemas'
 import { merge } from 'es-toolkit'
 import { OPTIMIZATION_NODE_SDK_NAME, OPTIMIZATION_NODE_SDK_VERSION } from './constants'
-
-type CoreStatelessConfig = ConstructorParameters<typeof CoreStateless>[0]
 
 /**
  * Configuration for the Node-specific ContentfulOptimization SDK.

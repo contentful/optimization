@@ -10,7 +10,8 @@
 
 <div align="center">
 
-[Readme](./README.md) · [Guides](https://contentful.github.io/optimization/documents/Guides.html) ·
+[Readme](./README.md) ·
+[Guides](https://contentful.github.io/optimization/documents/Documentation.Guides.html) ·
 [Reference](https://contentful.github.io/optimization) · [Contributing](../../CONTRIBUTING.md)
 
 </div>

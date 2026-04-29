@@ -10,7 +10,8 @@
 
 <div align="center">
 
-[Readme](./README.md) · [Guides](https://contentful.github.io/optimization/documents/Guides.html) ·
+[Readme](./README.md) ·
+[Guides](https://contentful.github.io/optimization/documents/Documentation.Guides.html) ·
 [Reference](https://contentful.github.io/optimization) · [Contributing](../../CONTRIBUTING.md)
 
 </div>
@@ -194,6 +195,8 @@ function TrackedComponent() {
 
 ## Related
 
-- [React Native Implementation](../react-native-sdk/) - Reference implementation for React Native
-- [Web Vanilla Implementation](../web-sdk/) - Reference implementation for vanilla JavaScript
+- [React Native Implementation](../react-native-sdk/README.md) - Reference implementation for React
+  Native
+- [Web Vanilla Implementation](../web-sdk/README.md) - Reference implementation for vanilla
+  JavaScript
 - [@contentful/optimization-web](../../packages/web/web-sdk/README.md) - Web SDK package

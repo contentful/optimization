@@ -10,7 +10,7 @@
 
 <div align="center">
 
-[Guides](https://contentful.github.io/optimization/documents/Guides.html) ·
+[Guides](https://contentful.github.io/optimization/documents/Documentation.Guides.html) ·
 [Reference](https://contentful.github.io/optimization) · [Contributing](../../../CONTRIBUTING.md)
 
 </div>
@@ -93,7 +93,7 @@ The Node SDK is stateless, but that does not mean all request work is cacheable.
 
 For a step-by-step Express-style walkthrough that covers request context, profile persistence,
 Contentful entry resolution, and hybrid Node + browser setups, see
-[Integrating the Optimization Node SDK in a Node App](../../../documentation/integrating-the-node-sdk-in-a-node-app.md).
+[Integrating the Optimization Node SDK in a Node App](../../../documentation/guides/integrating-the-node-sdk-in-a-node-app.md).
 
 ## Development Harness
 
