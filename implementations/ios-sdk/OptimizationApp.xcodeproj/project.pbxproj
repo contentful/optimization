@@ -49,6 +49,7 @@
 		C04EF55982CA837E62CC0669 /* ContentfulFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = F383552F49942336F9725020 /* ContentfulFetcher.swift */; };
 		C23B6242DA30D283D76C1B3E /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5DDE184BA14D36BAC6A5936 /* Config.swift */; };
 		CE4104C9F52CE1A874B6D802 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = F082E0D07BC7C35FCC9901C4 /* App.swift */; };
+		D28A6D01EBA9877DD9174BCB /* LiveUpdatesTestViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B60B2B8362A57886F415EE4 /* LiveUpdatesTestViewController.swift */; };
 		D93DA9530B2B7E95815DB931 /* NestedContentEntryUIView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51C832ADCDDFECC716F4B04C /* NestedContentEntryUIView.swift */; };
 		E2245ABC4EB91EF3E86E2794 /* LiveUpdatesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B85C1A5AF835283004FFE76D /* LiveUpdatesTests.swift */; };
 		E3C31DA281B4A6D1DF55CE29 /* TapTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8DE746138D269D770FA86FA /* TapTrackingTests.swift */; };
@@ -90,6 +91,7 @@
 		569F34F81667A8807581B59F /* MainScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainScreen.swift; sourceTree = "<group>"; };
 		5F03F8B039B4ED4A7E7A32D5 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		682E3BF881B8093C2D5EF2CE /* OfflineBehaviorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineBehaviorTests.swift; sourceTree = "<group>"; };
+		6B60B2B8362A57886F415EE4 /* LiveUpdatesTestViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveUpdatesTestViewController.swift; sourceTree = "<group>"; };
 		72BC55BDAE08B0B386CCFA65 /* ContentfulOptimization */ = {isa = PBXFileReference; lastKnownFileType = folder; name = ContentfulOptimization; path = ../../packages/ios/ContentfulOptimization; sourceTree = SOURCE_ROOT; };
 		7A41CEBEA796C5A3179D691E /* LiveUpdatesTestScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveUpdatesTestScreen.swift; sourceTree = "<group>"; };
 		7FDD088B0ACEC1271B3C5509 /* OptimizedEntryUIView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptimizedEntryUIView.swift; sourceTree = "<group>"; };
@@ -220,6 +222,7 @@
 		759DD78824352770CB466F65 /* Screens */ = {
 			isa = PBXGroup;
 			children = (
+				6B60B2B8362A57886F415EE4 /* LiveUpdatesTestViewController.swift */,
 				29032ACE1D4AEB3E5D1BB51A /* MainViewController.swift */,
 				8C4808FBBA0BFA7C40F52FC7 /* NavigationTestViewController.swift */,
 			);
@@ -459,6 +462,7 @@
 				244AA9A414B83F37FAE72F42 /* ContentEntryUIView.swift in Sources */,
 				C04EF55982CA837E62CC0669 /* ContentfulFetcher.swift in Sources */,
 				73A7EECB26977730B7241077 /* EventStore.swift in Sources */,
+				D28A6D01EBA9877DD9174BCB /* LiveUpdatesTestViewController.swift in Sources */,
 				91A5DFA622284D666F20D46E /* MainViewController.swift in Sources */,
 				7CE0E6C067281C01D8F0A85F /* NavigationTestViewController.swift in Sources */,
 				D93DA9530B2B7E95815DB931 /* NestedContentEntryUIView.swift in Sources */,

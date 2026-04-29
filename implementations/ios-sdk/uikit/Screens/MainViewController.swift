@@ -13,6 +13,7 @@ final class MainViewController: UIViewController {
     private let identifyButton = UIButton(type: .system)
     private let resetButton = UIButton(type: .system)
     private let navigationTestButton = UIButton(type: .system)
+    private let liveUpdatesTestButton = UIButton(type: .system)
     private let scrollView = UIScrollView()
     private let contentStack = UIStackView()
     private let analyticsView = AnalyticsEventDisplayView()
@@ -81,6 +82,10 @@ final class MainViewController: UIViewController {
         navigationTestButton.accessibilityIdentifier = "navigation-test-button"
         navigationTestButton.addAction(UIAction { [weak self] _ in self?.openNavigationTest() }, for: .touchUpInside)
 
+        liveUpdatesTestButton.setTitle("Live Updates Test", for: .normal)
+        liveUpdatesTestButton.accessibilityIdentifier = "live-updates-test-button"
+        liveUpdatesTestButton.addAction(UIAction { [weak self] _ in self?.openLiveUpdatesTest() }, for: .touchUpInside)
+
         loadingLabel.text = "Loading..."
         loadingLabel.textAlignment = .center
     }
@@ -94,7 +99,7 @@ final class MainViewController: UIViewController {
     }
 
     private func layout() {
-        let buttonRow = UIStackView(arrangedSubviews: [identifyButton, resetButton, navigationTestButton])
+        let buttonRow = UIStackView(arrangedSubviews: [identifyButton, resetButton, navigationTestButton, liveUpdatesTestButton])
         buttonRow.axis = .horizontal
         buttonRow.distribution = .fillEqually
         buttonRow.spacing = 8
@@ -173,6 +178,12 @@ final class MainViewController: UIViewController {
         let nav = NavigationTestViewController(client: client)
         nav.modalPresentationStyle = .fullScreen
         present(nav, animated: false)
+    }
+
+    private func openLiveUpdatesTest() {
+        let live = LiveUpdatesTestViewController(client: client)
+        live.modalPresentationStyle = .fullScreen
+        present(live, animated: false)
     }
 
     // MARK: - Helpers
