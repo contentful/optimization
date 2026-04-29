@@ -1,0 +1,70 @@
+name: OptimizationApp
+options:
+  bundleIdPrefix: com.contentful.optimization.app
+  deploymentTarget:
+    iOS: '16.0'
+  groupSortPosition: top
+
+packages:
+  ContentfulOptimization:
+    path: ../../packages/ios/ContentfulOptimization
+
+settings:
+  base:
+    SWIFT_VERSION: '5.0'
+    TARGETED_DEVICE_FAMILY: '1,2'
+    GENERATE_INFOPLIST_FILE: NO
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+
+targets:
+  OptimizationAppSwiftUI:
+    type: application
+    platform: iOS
+    sources:
+      - path: shared
+        excludes: ['Info.plist']
+      - path: swiftui
+        excludes: ['Info.plist']
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.contentful.optimization.app.swiftui
+      INFOPLIST_FILE: swiftui/Info.plist
+    dependencies:
+      - package: ContentfulOptimization
+    scheme:
+      testTargets: [OptimizationAppUITestsSwiftUI]
+
+  OptimizationAppUIKit:
+    type: application
+    platform: iOS
+    sources:
+      - path: shared
+        excludes: ['Info.plist']
+      - path: uikit
+        excludes: ['Info.plist']
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.contentful.optimization.app.uikit
+      INFOPLIST_FILE: uikit/Info.plist
+    dependencies:
+      - package: ContentfulOptimization
+    scheme:
+      testTargets: [OptimizationAppUITestsUIKit]
+
+  OptimizationAppUITestsSwiftUI:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [uitests]
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.contentful.optimization.app.swiftui.uitests
+      GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: OptimizationAppSwiftUI
+
+  OptimizationAppUITestsUIKit:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [uitests]
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.contentful.optimization.app.uikit.uitests
+      GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: OptimizationAppUIKit
