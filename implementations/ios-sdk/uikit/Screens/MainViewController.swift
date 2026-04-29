@@ -12,6 +12,7 @@ final class MainViewController: UIViewController {
 
     private let identifyButton = UIButton(type: .system)
     private let resetButton = UIButton(type: .system)
+    private let navigationTestButton = UIButton(type: .system)
     private let scrollView = UIScrollView()
     private let contentStack = UIStackView()
     private let analyticsView = AnalyticsEventDisplayView()
@@ -76,6 +77,10 @@ final class MainViewController: UIViewController {
         resetButton.addAction(UIAction { [weak self] _ in self?.handleReset() }, for: .touchUpInside)
         resetButton.isHidden = true
 
+        navigationTestButton.setTitle("Navigation Test", for: .normal)
+        navigationTestButton.accessibilityIdentifier = "navigation-test-button"
+        navigationTestButton.addAction(UIAction { [weak self] _ in self?.openNavigationTest() }, for: .touchUpInside)
+
         loadingLabel.text = "Loading..."
         loadingLabel.textAlignment = .center
     }
@@ -89,7 +94,7 @@ final class MainViewController: UIViewController {
     }
 
     private func layout() {
-        let buttonRow = UIStackView(arrangedSubviews: [identifyButton, resetButton])
+        let buttonRow = UIStackView(arrangedSubviews: [identifyButton, resetButton, navigationTestButton])
         buttonRow.axis = .horizontal
         buttonRow.distribution = .fillEqually
         buttonRow.spacing = 8
@@ -162,6 +167,12 @@ final class MainViewController: UIViewController {
         isIdentified = false
         identifyButton.isHidden = false
         resetButton.isHidden = true
+    }
+
+    private func openNavigationTest() {
+        let nav = NavigationTestViewController(client: client)
+        nav.modalPresentationStyle = .fullScreen
+        present(nav, animated: false)
     }
 
     // MARK: - Helpers
