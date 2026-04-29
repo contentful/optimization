@@ -8,7 +8,32 @@ The examples below use vanilla browser APIs, but the same flow applies in any fr
 you manage the Web SDK instance yourself. If you are building a React application and want
 providers, hooks, and router adapters, use the React Web guide instead.
 
-## Scope And Capabilities
+<details>
+  <summary>Table of Contents</summary>
+<!-- mtoc-start -->
+
+- [Scope and Capabilities](#scope-and-capabilities)
+- [The Integration Flow](#the-integration-flow)
+- [1. Install and Initialize the SDK](#1-install-and-initialize-the-sdk)
+- [2. Handle Consent in the UI Layer](#2-handle-consent-in-the-ui-layer)
+- [3. Emit `page()` on First Load and Route Changes](#3-emit-page-on-first-load-and-route-changes)
+- [4. Resolve Contentful Entries with `selectedOptimizations`](#4-resolve-contentful-entries-with-selectedoptimizations)
+- [5. Resolve Merge Tags and Custom Flags](#5-resolve-merge-tags-and-custom-flags)
+  - [Merge Tags](#merge-tags)
+  - [Custom Flags](#custom-flags)
+- [6. Identify Known Users and Reset When Identity Changes](#6-identify-known-users-and-reset-when-identity-changes)
+- [7. Track Entry Interactions and Follow-Up Events](#7-track-entry-interactions-and-follow-up-events)
+  - [Automatic Entry Tracking](#automatic-entry-tracking)
+  - [Manual Element Observation](#manual-element-observation)
+  - [Custom Browser Events](#custom-browser-events)
+- [8. Subscribe to `states` for Rerenders and UI Feedback](#8-subscribe-to-states-for-rerenders-and-ui-feedback)
+- [Share the Anonymous ID Cookie in Hybrid SSR + Browser Apps](#share-the-anonymous-id-cookie-in-hybrid-ssr-browser-apps)
+- [Reference Implementations to Compare Against](#reference-implementations-to-compare-against)
+
+<!-- mtoc-end -->
+</details>
+
+## Scope and Capabilities
 
 The Web SDK is the browser-side package in the Optimization SDK Suite. It lets consumers:
 
@@ -47,11 +72,11 @@ In practice, most Web SDK integrations follow this high-level sequence:
 The Web-focused reference implementations in this repository show that pattern in working
 applications:
 
-- [Web Vanilla](../implementations/web-sdk/README.md)
-- [Node SSR + Web SDK Vanilla](../implementations/node-sdk+web-sdk/README.md)
-- [Web SDK React](../implementations/web-sdk_react/README.md)
+- [Web Vanilla](../../implementations/web-sdk/README.md)
+- [Node SSR + Web SDK Vanilla](../../implementations/node-sdk+web-sdk/README.md)
+- [Web SDK React](../../implementations/web-sdk_react/README.md)
 
-## 1. Install And Initialize The SDK
+## 1. Install and Initialize the SDK
 
 Install the package in your web application:
 
@@ -110,7 +135,7 @@ Notes:
 - If you are not bundling JavaScript at all, the package README also shows direct UMD usage in a
   plain HTML page.
 
-## 2. Handle Consent In The UI Layer
+## 2. Handle Consent in the UI Layer
 
 The Web SDK exposes a browser-side `consent()` method, but your application still owns the consent
 policy and user experience.
@@ -148,7 +173,7 @@ Important behavior:
 If your policy requires a stricter pre-consent posture, configure `allowedEventTypes: []` during
 initialization instead of relying on the default `['identify', 'page']`.
 
-## 3. Emit `page()` On First Load And Route Changes
+## 3. Emit `page()` on First Load and Route Changes
 
 In a traditional multi-page site, calling `page()` after initialization is usually enough because
 the Web SDK can derive browser page properties such as URL, referrer, title, query parameters, and
@@ -197,7 +222,7 @@ Replace `router.onRouteChange(...)` with whatever hook your framework exposes. T
 that the browser should emit a new `page()` event whenever the user lands on a different route-like
 experience.
 
-## 4. Resolve Contentful Entries With `selectedOptimizations`
+## 4. Resolve Contentful Entries with `selectedOptimizations`
 
 Once the page has been evaluated, fetch baseline Contentful entries the same way you normally would,
 then resolve each entry with `resolveOptimizedEntry()`.
@@ -285,7 +310,7 @@ optimization.states.selectedOptimizations.subscribe((selectedOptimizations) => {
 > view-model state. Otherwise, a rerender can accidentally try to resolve a previously selected
 > variant as though it were the baseline entry.
 
-## 5. Resolve Merge Tags And Custom Flags
+## 5. Resolve Merge Tags and Custom Flags
 
 The Web SDK also exposes helpers for profile-aware merge tags and Custom Flags.
 
@@ -332,7 +357,7 @@ optimization.states.flag('new-navigation').subscribe((value) => {
 Unlike the stateless Node SDK, the stateful Web SDK automatically emits flag-view tracking when you
 read a flag via `getFlag()` or `states.flag(name)`.
 
-## 6. Identify Known Users And Reset When Identity Changes
+## 6. Identify Known Users and Reset When Identity Changes
 
 Call `identify()` when the browser session becomes associated with a known user, such as after a
 sign-in, account lookup, or persisted auth refresh:
@@ -367,7 +392,7 @@ That is the same shape used in the vanilla reference implementation. `reset()` c
 ID cookie, cached profile data, cached flag changes, selected optimizations, and entry-tracking
 runtime state. It does not clear consent.
 
-## 7. Track Entry Interactions And Follow-Up Events
+## 7. Track Entry Interactions and Follow-Up Events
 
 The Web SDK can emit more than page and identify events. Common browser-side cases are:
 
@@ -431,7 +456,7 @@ await optimization.track({
 })
 ```
 
-## 8. Subscribe To `states` For Rerenders And UI Feedback
+## 8. Subscribe to `states` for Rerenders and UI Feedback
 
 The Web SDK is stateful, so most browser integrations should react to SDK state changes instead of
 passing `OptimizationData` objects through every UI layer.
@@ -474,7 +499,7 @@ Each observable immediately emits its current snapshot and then emits future upd
 synchronous read instead of a subscription, use `.current`, for example
 `optimization.states.profile.current`.
 
-## 9. Share The Anonymous ID Cookie In Hybrid SSR + Browser Apps
+## Share the Anonymous ID Cookie in Hybrid SSR + Browser Apps
 
 If your architecture uses both `@contentful/optimization-node` on the server and
 `@contentful/optimization-web` in the browser, let both runtimes continue the same anonymous journey
@@ -493,18 +518,18 @@ entries after hydration. If the server already embeds personalized HTML or profi
 treat that response as personalized and avoid shared caching unless you vary on all relevant
 personalization inputs.
 
-## Reference Implementations To Compare Against
+## Reference Implementations to Compare Against
 
 Use these files when you want working repository examples instead of guide snippets:
 
-- [`implementations/web-sdk/public/index.html`](../implementations/web-sdk/public/index.html):
+- [`implementations/web-sdk/public/index.html`](../../implementations/web-sdk/public/index.html):
   vanilla browser initialization, consent handling, `page()`, entry resolution, merge tags, and
   automatic or manual interaction tracking
-- [`implementations/node-sdk+web-sdk/src/index.ejs`](../implementations/node-sdk+web-sdk/src/index.ejs):
+- [`implementations/node-sdk+web-sdk/src/index.ejs`](../../implementations/node-sdk+web-sdk/src/index.ejs):
   browser-side continuation of an SSR flow with the Web SDK
-- [`implementations/node-sdk+web-sdk/src/app.ts`](../implementations/node-sdk+web-sdk/src/app.ts):
+- [`implementations/node-sdk+web-sdk/src/app.ts`](../../implementations/node-sdk+web-sdk/src/app.ts):
   shared anonymous cookie persistence for Node and Web SDK continuity
-- [`implementations/web-sdk_react/src/App.tsx`](../implementations/web-sdk_react/src/App.tsx):
+- [`implementations/web-sdk_react/src/App.tsx`](../../implementations/web-sdk_react/src/App.tsx):
   SPA-style `page()` emission, consent updates, `identify()`, and `reset()` patterns
-- [`implementations/web-sdk_react/src/sections/ContentEntry.tsx`](../implementations/web-sdk_react/src/sections/ContentEntry.tsx):
+- [`implementations/web-sdk_react/src/sections/ContentEntry.tsx`](../../implementations/web-sdk_react/src/sections/ContentEntry.tsx):
   resolved-entry rendering plus automatic and manual tracking metadata

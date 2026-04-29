@@ -2,6 +2,24 @@
 
 Use this guide to choose the narrowest package layer that matches the runtime you are building for.
 
+<details>
+  <summary>Table of Contents</summary>
+<!-- mtoc-start -->
+
+- [Runtime-First Selection](#runtime-first-selection)
+  - [Browser Applications](#browser-applications)
+  - [React Applications on the Web](#react-applications-on-the-web)
+  - [Node Servers and Server-Side Rendering](#node-servers-and-server-side-rendering)
+  - [React Native Applications](#react-native-applications)
+- [Lower-Level Building Blocks](#lower-level-building-blocks)
+  - [`@contentful/optimization-core`](#contentfuloptimization-core)
+  - [`@contentful/optimization-api-client`](#contentfuloptimization-api-client)
+  - [`@contentful/optimization-api-schemas`](#contentfuloptimization-api-schemas)
+- [Common Package Combinations](#common-package-combinations)
+
+<!-- mtoc-end -->
+</details>
+
 ## Runtime-First Selection
 
 ### Browser Applications

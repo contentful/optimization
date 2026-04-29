@@ -12,7 +12,7 @@ Read this first, then move on to the UI-framework-specific guide:
 ## What The SDK Is
 
 The iOS SDK (`ContentfulOptimization`, distributed via Swift Package Manager from
-[`packages/ios`](../packages/ios)) is a native Swift layer that lets iOS apps render personalized
+[`packages/ios`](../../packages/ios)) is a native Swift layer that lets iOS apps render personalized
 Contentful content and report analytics back to the Optimization platform.
 
 Under the hood it runs the same JavaScript optimization core used by the Node, Web, and React Native
@@ -21,13 +21,13 @@ concerns — persistence via `UserDefaults`, networking, app lifecycle, SwiftUI/
 while the JS engine handles personalization logic, profile management, and analytics batching. You
 never interact with the JS layer directly; every public API is Swift.
 
-See [`packages/ios/CODE_MAP.md`](../packages/ios/CODE_MAP.md) for the full architecture diagram.
+See [`packages/ios/CODE_MAP.md`](../../packages/ios/CODE_MAP.md) for the full architecture diagram.
 
 ## Reference App
 
 A working demo of both integration styles lives at
 [Colorful-Team-Org/OptimizationiOSSDKDemo](https://github.com/Colorful-Team-Org/OptimizationiOSSDKDemo)
-(local checkout at [`../../optimization-ios-demo`](../../optimization-ios-demo)):
+(local checkout at [`../../../optimization-ios-demo`](../../../optimization-ios-demo)):
 
 - **`SwiftUIDemo/`** — idiomatic SwiftUI integration using `OptimizationRoot`, `OptimizedEntry`, and
   the `.trackScreen(name:)` modifier.
@@ -44,8 +44,8 @@ good primer for wiring an app end-to-end.
 ## Installation
 
 Add the SDK to your Xcode project as a Swift Package dependency pointing at
-[`packages/ios/ContentfulOptimization`](../packages/ios/ContentfulOptimization). The demo repo uses
-a local path via `xcodegen`; production apps typically point at a Git ref of this monorepo.
+[`packages/ios/ContentfulOptimization`](../../packages/ios/ContentfulOptimization). The demo repo
+uses a local path via `xcodegen`; production apps typically point at a Git ref of this monorepo.
 
 Minimum platforms: iOS 15 / macOS 12.
 

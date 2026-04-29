@@ -38,7 +38,7 @@ The preview panel's UI is itself SwiftUI, but `PreviewPanelViewController` wraps
 See the UIKit demo at
 [Colorful-Team-Org/OptimizationiOSSDKDemo — UIKitDemo](https://github.com/Colorful-Team-Org/OptimizationiOSSDKDemo)
 (local checkout at
-[`../../optimization-ios-demo/UIKitDemo`](../../optimization-ios-demo/UIKitDemo)). It is
+[`../../../optimization-ios-demo/UIKitDemo`](../../../optimization-ios-demo/UIKitDemo)). It is
 functionally identical to the SwiftUI demo so you can compare side-by-side.
 
 <details>
