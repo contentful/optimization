@@ -253,7 +253,7 @@ final class LiveUpdatesTestViewController: UIViewController {
             entry: entry,
             scrollView: scrollView,
             liveUpdates: effectiveLiveUpdates(for: liveUpdates),
-            globalLiveUpdates: globalLiveUpdates || isPreviewPanelSimulated,
+            globalLiveUpdates: globalLiveUpdates,
             trackTaps: false,
             trackViews: true,
             accessibilityIdentifier: sectionIdentifier
@@ -269,11 +269,8 @@ final class LiveUpdatesTestViewController: UIViewController {
         return stack
     }
 
-    /// `liveUpdates=nil` (default section) inherits the global toggle and the simulated preview
-    /// flag — so collapse those into an explicit `true`/`false` for the OptimizedEntryUIView.
     private func effectiveLiveUpdates(for liveUpdates: Bool?) -> Bool? {
-        if let explicit = liveUpdates { return explicit }
-        return (globalLiveUpdates || isPreviewPanelSimulated) ? true : nil
+        liveUpdates
     }
 
     // MARK: - Actions

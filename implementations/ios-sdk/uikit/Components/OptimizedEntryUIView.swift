@@ -76,7 +76,7 @@ final class OptimizedEntryUIView: UIView {
     deinit {
         contentOffsetObservation?.invalidate()
         boundsObservation?.invalidate()
-        Task { @MainActor [weak trackingController] in
+        Task { @MainActor [trackingController] in
             trackingController?.onDisappear()
         }
     }
@@ -162,6 +162,7 @@ final class OptimizedEntryUIView: UIView {
 
     private func rebuildTrackingMetadata() {
         guard trackViews else { return }
+        trackingController?.onDisappear()
         trackingController = ViewTrackingController(
             client: client,
             entry: entry,

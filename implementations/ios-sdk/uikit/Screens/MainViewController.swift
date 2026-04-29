@@ -40,7 +40,12 @@ final class MainViewController: UIViewController {
 
         client.$state
             .map { $0.profile }
-            .removeDuplicates(by: profilesEqual)
+            .removeDuplicates { lhs, rhs in
+                let opts: JSONSerialization.WritingOptions = [.sortedKeys]
+                let l = lhs.flatMap { try? JSONSerialization.data(withJSONObject: $0, options: opts) }
+                let r = rhs.flatMap { try? JSONSerialization.data(withJSONObject: $0, options: opts) }
+                return l == r
+            }
             .sink { [weak self] profile in
                 guard let self, profile != nil else { return }
                 Task { @MainActor in
@@ -197,10 +202,4 @@ final class MainViewController: UIViewController {
         return id == "nestedContent"
     }
 
-    private func profilesEqual(_ lhs: [String: Any]?, _ rhs: [String: Any]?) -> Bool {
-        let opts: JSONSerialization.WritingOptions = [.sortedKeys]
-        let l = lhs.flatMap { try? JSONSerialization.data(withJSONObject: $0, options: opts) }
-        let r = rhs.flatMap { try? JSONSerialization.data(withJSONObject: $0, options: opts) }
-        return l == r
-    }
 }
