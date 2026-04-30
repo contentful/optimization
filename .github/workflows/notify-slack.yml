@@ -112,13 +112,14 @@ jobs:
               | awk '{ print "• `" $0 "`" }'
           )"
 
+          # Slack user ID U02ETCZAATG belongs to @Alex.
           if [ "$has_docs" = "true" ] && [ "$has_packages" = "true" ]; then
             if [ "$has_guides" = "true" ] && [ "$has_concepts" = "true" ]; then
               message_title="📚📦 Docs and packages just landed"
-              message_body="Guide, concept, and package updates all landed together. @Alex, there is fresh guide goodness in the mix for your reading list!"
+              message_body="Guide, concept, and package updates all landed together. <@U02ETCZAATG>, there is fresh guide goodness in the mix for your reading list!"
             elif [ "$has_guides" = "true" ]; then
               message_title="🧭📦 Guides and packages just landed"
-              message_body="Fresh guide updates and package changes are live. @Alex, something new and useful just landed in your favorite corner of the docs!"
+              message_body="Fresh guide updates and package changes are live. <@U02ETCZAATG>, something new and useful just landed in your favorite corner of the docs!"
             elif [ "$has_concepts" = "true" ]; then
               message_title="💡📦 Concepts and packages just landed"
               message_body="Concept docs and package updates moved forward together. A tidy little upgrade for readers and builders!"
@@ -131,10 +132,10 @@ jobs:
             message_body="Package updates were merged. Fresh bits are ready for the next build!"
           elif [ "$has_guides" = "true" ] && [ "$has_concepts" = "true" ]; then
             message_title="📚 Guides and concepts just landed"
-            message_body="Guide and concept documentation both got updates. @Alex, fresh guide goodness just landed for your reading list!"
+            message_body="Guide and concept documentation both got updates. <@U02ETCZAATG>, fresh guide goodness just landed for your reading list!"
           elif [ "$has_guides" = "true" ]; then
             message_title="🧭 Guide documentation just landed"
-            message_body="Fresh guide updates are live. @Alex, something new and useful just landed in your favorite corner of the docs!"
+            message_body="Fresh guide updates are live. <@U02ETCZAATG>, something new and useful just landed in your favorite corner of the docs!"
           elif [ "$has_concepts" = "true" ]; then
             message_title="💡 Concept documentation just landed"
             message_body="Concept docs got a little clearer today. Nice boost for the next reader!"
