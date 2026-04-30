@@ -112,14 +112,13 @@ jobs:
               | awk '{ print "• `" $0 "`" }'
           )"
 
-          # Slack user ID U02ETCZAATG belongs to @Alex.
           if [ "$has_docs" = "true" ] && [ "$has_packages" = "true" ]; then
             if [ "$has_guides" = "true" ] && [ "$has_concepts" = "true" ]; then
               message_title="📚📦 Docs and packages just landed"
-              message_body="Guide, concept, and package updates all landed together. <@U02ETCZAATG>, there is fresh guide goodness in the mix for your reading list!"
+              message_body="Guide, concept, and package updates all landed together. @TECH_WRITER@, there is fresh guide goodness in the mix for your reading list!"
             elif [ "$has_guides" = "true" ]; then
               message_title="🧭📦 Guides and packages just landed"
-              message_body="Fresh guide updates and package changes are live. <@U02ETCZAATG>, something new and useful just landed in your favorite corner of the docs!"
+              message_body="Fresh guide updates and package changes are live. @TECH_WRITER@, something new and useful just landed in your favorite corner of the docs!"
             elif [ "$has_concepts" = "true" ]; then
               message_title="💡📦 Concepts and packages just landed"
               message_body="Concept docs and package updates moved forward together. A tidy little upgrade for readers and builders!"
@@ -132,10 +131,10 @@ jobs:
             message_body="Package updates were merged. Fresh bits are ready for the next build!"
           elif [ "$has_guides" = "true" ] && [ "$has_concepts" = "true" ]; then
             message_title="📚 Guides and concepts just landed"
-            message_body="Guide and concept documentation both got updates. <@U02ETCZAATG>, fresh guide goodness just landed for your reading list!"
+            message_body="Guide and concept documentation both got updates. @TECH_WRITER@, fresh guide goodness just landed for your reading list!"
           elif [ "$has_guides" = "true" ]; then
             message_title="🧭 Guide documentation just landed"
-            message_body="Fresh guide updates are live. <@U02ETCZAATG>, something new and useful just landed in your favorite corner of the docs!"
+            message_body="Fresh guide updates are live. @TECH_WRITER@, something new and useful just landed in your favorite corner of the docs!"
           elif [ "$has_concepts" = "true" ]; then
             message_title="💡 Concept documentation just landed"
             message_body="Concept docs got a little clearer today. Nice boost for the next reader!"
@@ -163,14 +162,27 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_URL: ${{ github.event.pull_request.html_url }}
+          SLACK_TECH_WRITER_ID: ${{ secrets.SLACK_TECH_WRITER_ID }}
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           set -euo pipefail
 
+          message_body="$MESSAGE_BODY"
+
+          if [[ "$message_body" == *"@TECH_WRITER@"* ]]; then
+            if [ -z "$SLACK_TECH_WRITER_ID" ]; then
+              echo "SLACK_TECH_WRITER_ID is required for guide notifications." >&2
+              exit 1
+            fi
+
+            tech_writer_mention="<@${SLACK_TECH_WRITER_ID}>"
+            message_body="${message_body//@TECH_WRITER@/$tech_writer_mention}"
+          fi
+
           payload="$(
             jq -n \
               --arg message_title "$MESSAGE_TITLE" \
-              --arg message_body "$MESSAGE_BODY" \
+              --arg message_body "$message_body" \
               --arg changed_packages "$CHANGED_PACKAGES" \
               --arg merged_by "$MERGED_BY" \
               --arg pr_number "#${PR_NUMBER}" \
