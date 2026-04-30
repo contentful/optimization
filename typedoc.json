@@ -13,7 +13,21 @@
     "packages/react-native-sdk",
     "packages/universal/*"
   ],
-  "projectDocuments": ["documentation/README.md", "CONTRIBUTING.md"],
+  "projectDocuments": [
+    "documentation/README.md",
+    "CONTRIBUTING.md",
+    "packages/node/node-sdk/README.md",
+    "packages/react-native-sdk/README.md",
+    "packages/universal/api-client/README.md",
+    "packages/universal/api-schemas/README.md",
+    "packages/universal/core-sdk/README.md",
+    "packages/universal/core-sdk/src/preview-support/README.md",
+    "packages/web/frameworks/react-web-sdk/README.md",
+    "packages/web/preview-panel/README.md",
+    "packages/web/web-sdk/README.md",
+    "implementations/*/README.md",
+    "lib/mocks/README.md"
+  ],
   "externalSymbolLinkMappings": {
     "@types/node": {
       "__global.AbortController": "#",

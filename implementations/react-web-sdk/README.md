@@ -315,7 +315,9 @@ receive state via `useOutletContext`.
 
 ## Related
 
-- [web-sdk_react](../web-sdk_react/) — adapter-based reference using `@contentful/optimization-web`
-- [web-sdk](../web-sdk/) — vanilla JavaScript reference
-- [@contentful/optimization-react-web](../../packages/web/frameworks/react-web-sdk/) — React Web SDK
-- [@contentful/optimization-web](../../packages/web/web-sdk/) — Web SDK
+- [web-sdk_react](../web-sdk_react/README.md) — adapter-based reference using
+  `@contentful/optimization-web`
+- [web-sdk](../web-sdk/README.md) — vanilla JavaScript reference
+- [@contentful/optimization-react-web](../../packages/web/frameworks/react-web-sdk/README.md) —
+  React Web SDK
+- [@contentful/optimization-web](../../packages/web/web-sdk/README.md) — Web SDK
