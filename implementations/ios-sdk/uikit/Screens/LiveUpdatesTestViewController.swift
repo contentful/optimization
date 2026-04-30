@@ -252,7 +252,7 @@ final class LiveUpdatesTestViewController: UIViewController {
             client: client,
             entry: entry,
             scrollView: scrollView,
-            liveUpdates: effectiveLiveUpdates(for: liveUpdates),
+            liveUpdates: liveUpdates,
             globalLiveUpdates: globalLiveUpdates,
             trackTaps: false,
             trackViews: true,
@@ -267,10 +267,6 @@ final class LiveUpdatesTestViewController: UIViewController {
         stack.alignment = .fill
         stack.spacing = 6
         return stack
-    }
-
-    private func effectiveLiveUpdates(for liveUpdates: Bool?) -> Bool? {
-        liveUpdates
     }
 
     // MARK: - Actions
