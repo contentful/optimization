@@ -40,7 +40,7 @@ enables developers and content creators to ship their products faster.
 
 - [Choosing a Package](#choosing-a-package)
 - [Published Packages](#published-packages)
-- [Planned SDKs](#planned-sdks)
+- [Native and Planned SDKs](#native-and-planned-sdks)
 - [Reference Implementations](#reference-implementations)
 - [Repository Layout](#repository-layout)
 - [Get Involved](#get-involved)
@@ -55,9 +55,11 @@ enables developers and content creators to ship their products faster.
 If you are deciding which SDK or library belongs in your application, start with
 [Choosing the Right SDK](./documentation/guides/choosing-the-right-sdk.md).
 
-For additional narrative documentation, see the [Guides](./documentation/README.md) section.
+For step-by-step implementation docs, start with the [Guides](./documentation/guides/README.md)
+index. For behavior explanations, start with the [Concepts](./documentation/concepts/README.md)
+index.
 
-Package README files listed below are package-level overviews. Generated
+Package README files listed below are package-level guides and API surface summaries. Generated
 [reference documentation](https://contentful.github.io/optimization) remains the source of truth for
 exported API signatures.
 
@@ -84,11 +86,20 @@ General selection rules:
 - `@contentful/optimization-api-client` and `@contentful/optimization-api-schemas` are lower-level
   building blocks.
 
-## Planned SDKs
+## Native and Planned SDKs
 
-These packages or layers are planned, but are not currently published from this repository:
+React Native support is available today through
+[`@contentful/optimization-react-native`](./packages/react-native-sdk/README.md).
 
-- iOS Swift SDK
+Native iOS work is also present in this repository as a pre-release Swift Package under
+[`packages/ios`](./packages/ios/README.md), backed by the
+[`@contentful/optimization-ios-bridge`](./packages/ios/ios-jsc-bridge/README.md) JavaScriptCore
+adapter and the [iOS reference app](./implementations/ios-sdk/README.md). Treat this surface as
+alpha implementation work rather than a stable public native SDK.
+
+The following native and framework SDKs are still planned and are not currently published from this
+repository:
+
 - Android Kotlin SDK
 - Android Java SDK
 - Nest.js SDK
@@ -101,14 +112,19 @@ These packages or layers are planned, but are not currently published from this 
 Reference implementations exist to exercise critical flows end to end and to document common usage
 patterns with intentionally minimal application code.
 
-- [Web Vanilla](./implementations/web-sdk/README.md): static browser integration for the Web SDK
-- [React Web](./implementations/web-sdk_react/README.md): React-based browser integration
-- [Node SSR Only](./implementations/node-sdk/README.md): server-rendered integration using the Node
+- [Web Vanilla](./implementations/web-sdk/README.md) - static browser integration for the Web SDK
+- [React Web](./implementations/react-web-sdk/README.md) - primary React browser integration using
+  the official React Web SDK package
+- [Web SDK React Adapter](./implementations/web-sdk_react/README.md) - adapter-based React example
+  built directly on top of the Web SDK
+- [Node SSR Only](./implementations/node-sdk/README.md) - server-rendered integration using the Node
   SDK
-- [Node SSR + Web Vanilla](./implementations/node-sdk+web-sdk/README.md): split server/browser flow
+- [Node SSR + Web Vanilla](./implementations/node-sdk+web-sdk/README.md) - split server/browser flow
   using Node and Web SDKs together
-- [React Native](./implementations/react-native-sdk/README.md): mobile application integration for
+- [React Native](./implementations/react-native-sdk/README.md) - mobile application integration for
   Android and iOS targets
+- [iOS Reference App](./implementations/ios-sdk/README.md) - native app and XCUITest surface for
+  current iOS bridge and preview-panel scenarios; this is not a published iOS SDK package
 
 ## Repository Layout
 

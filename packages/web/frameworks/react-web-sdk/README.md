@@ -19,513 +19,203 @@
 >
 > The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
 
-React Web SDK package for `@contentful/optimization-react-web`.
+The Optimization React Web SDK provides React providers, hooks, router adapters, and entry-rendering
+primitives on top of the [Optimization Web SDK](../../web-sdk/README.md). Use it when a React
+browser application should not manage the lower-level Web SDK instance, state subscriptions, entry
+resolution, and route tracking by hand.
 
-## Status
+If you are integrating a React application, start with [Getting Started](#getting-started), then use
+[Integrating the Optimization React Web SDK in a React App](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-react-web-sdk-in-a-react-app.html)
+for the step-by-step flow. This README keeps the package orientation and common setup options close
+at hand; generated [reference documentation](https://contentful.github.io/optimization) remains the
+source of truth for exported API signatures.
 
-Core root/provider primitives and React-facing APIs are implemented.
+<details>
+  <summary>Table of Contents</summary>
+<!-- mtoc-start -->
 
-- `OptimizationProvider` + `useOptimization()` context behavior
-- `useOptimizationContext()` readiness/error access
-- `LiveUpdatesProvider` + `useLiveUpdates()` global live updates context
-- `OptimizationRoot` provider composition and defaults
-- `useOptimizedEntry()` imperative optimization resolution
-- `OptimizedEntry` entry resolution, lock/live-update behavior, loading fallback, and data-attribute
-  mapping
+- [Getting Started](#getting-started)
+- [When to Use This Package](#when-to-use-this-package)
+- [Common Configuration](#common-configuration)
+- [Core Workflows](#core-workflows)
+  - [Provider and Hook Access](#provider-and-hook-access)
+  - [OptimizedEntry](#optimizedentry)
+  - [Entry Interaction Tracking](#entry-interaction-tracking)
+  - [Router Page Events](#router-page-events)
+  - [Live Updates and Preview](#live-updates-and-preview)
+- [Development Harness](#development-harness)
+- [Related](#related)
 
-## Purpose
+<!-- mtoc-end -->
+</details>
 
-`@contentful/optimization-react-web` is intended to become the React framework layer on top of
-`@contentful/optimization-web`.
+## Getting Started
 
-## Development
-
-### Quick Start
-
-Run the one-shot launcher to start the mock server and dev harness in a single command:
-
-```sh
-./scripts/launch-dev-harness.sh
-```
-
-Or via pnpm:
-
-```sh
-pnpm --filter @contentful/optimization-react-web dev:launch
-```
-
-This installs dependencies (if needed), creates `.env` from `dev/.env.example`, starts the mock API
-server on port 8000, and launches the Rsbuild dev server with hot reload across the full SDK stack
-(React SDK, Web SDK, Core SDK, API Client, API Schemas). No build step is needed.
-
-### Manual
-
-From repository root:
+Install using an NPM-compatible package manager, pnpm for example:
 
 ```sh
-pnpm --filter @contentful/optimization-react-web build
-pnpm --filter @contentful/optimization-react-web typecheck
-pnpm --filter @contentful/optimization-react-web test:unit
-pnpm --filter @contentful/optimization-react-web dev
+pnpm install @contentful/optimization-react-web
 ```
 
-From this package directory:
-
-```sh
-pnpm build
-pnpm typecheck
-pnpm test:unit
-pnpm dev
-```
-
-## Current Contents
-
-- package metadata and dual module exports
-- `rslib`/`rsbuild`/`rstest`/TypeScript baseline aligned with Web SDK patterns
-- core provider/root/context primitives in `src/`
-- `OptimizedEntry` component with loading-state support and Web SDK data-attribute tracking
-- scaffold dev dashboard harness with the host shell in `dev/` and the React app in `dev/app/` for
-  consent, identify/reset, state, events, and entries
-
-## Usage
-
-### Initialization
-
-Pass configuration props directly to `OptimizationRoot` (recommended) or `OptimizationProvider`. The
-SDK is initialized internally by the provider. `OptimizationProvider` can also receive a prebuilt
-`sdk` instance when ownership needs to stay outside React.
+Mount `OptimizationRoot` once near the root of your React application:
 
 ```tsx
 import { OptimizationRoot } from '@contentful/optimization-react-web'
 
 function App() {
   return (
-    <OptimizationRoot
-      clientId="your-client-id"
-      environment="main"
-      api={{
-        insightsBaseUrl: 'https://ingest.insights.ninetailed.co/',
-        experienceBaseUrl: 'https://experience.ninetailed.co/',
-      }}
-      liveUpdates={true}
-    >
+    <OptimizationRoot clientId="your-client-id" environment="main">
       <YourApp />
     </OptimizationRoot>
   )
 }
 ```
 
-Available config props:
+## When to Use This Package
 
-| Prop                        | Type                               | Required | Description                                           |
-| --------------------------- | ---------------------------------- | -------- | ----------------------------------------------------- |
-| `clientId`                  | `string`                           | Yes      | Your Contentful Optimization client identifier        |
-| `environment`               | `string`                           | No       | Contentful environment (defaults to `'main'`)         |
-| `api`                       | `CoreApiConfig`                    | No       | Unified Experience API and Insights API configuration |
-| `app`                       | `App`                              | No       | Application metadata for events                       |
-| `autoTrackEntryInteraction` | `AutoTrackEntryInteractionOptions` | No       | Automatic entry interaction tracking options          |
-| `logLevel`                  | `LogLevels`                        | No       | Minimum log level for console output                  |
-| `liveUpdates`               | `boolean`                          | No       | Enable global live updates (defaults to `false`)      |
+Use `@contentful/optimization-react-web` for React browser applications that need provider-based SDK
+initialization, hooks, router page tracking, optimized entry rendering, automatic interaction
+tracking, and live update semantics. Use the lower-level Web SDK directly for non-React integrations
+or custom framework adapters.
 
-### Provider Composition
+## Common Configuration
 
-`OptimizationRoot` composition order:
+`OptimizationRoot` accepts the Web SDK configuration props directly and adds a React-specific
+`liveUpdates` prop.
 
-1. `OptimizationProvider` (outermost)
-2. `LiveUpdatesProvider`
-3. application children
+| Prop                        | Required? | Default                                          | Description                                                         |
+| --------------------------- | --------- | ------------------------------------------------ | ------------------------------------------------------------------- |
+| `clientId`                  | Yes       | N/A                                              | Shared API key for Experience API and Insights API requests         |
+| `environment`               | No        | `'main'`                                         | Contentful environment identifier                                   |
+| `api`                       | No        | Web SDK defaults                                 | Experience API and Insights API endpoint and request options        |
+| `app`                       | No        | `undefined`                                      | Application metadata attached to outgoing event context             |
+| `defaults`                  | No        | `undefined`                                      | Initial state, commonly including consent or profile values         |
+| `allowedEventTypes`         | No        | `['identify', 'page']`                           | Event types allowed before consent is explicitly set                |
+| `autoTrackEntryInteraction` | No        | `{ views: false, clicks: false, hovers: false }` | Automatic entry interaction tracking inherited from the Web SDK     |
+| `cookie`                    | No        | `{ domain: undefined, expires: 365 }`            | Anonymous ID cookie settings inherited from the Web SDK             |
+| `liveUpdates`               | No        | `false`                                          | Whether `OptimizedEntry` components react continuously to SDK state |
+| `queuePolicy`               | No        | SDK defaults                                     | Flush retry behavior and offline queue bounds                       |
+| `logLevel`                  | No        | `'error'`                                        | Minimum log level for the default console sink                      |
+| `onEventBlocked`            | No        | `undefined`                                      | Callback invoked when consent or guard logic blocks an event        |
 
-### Hooks
-
-- `useOptimization()` returns the initialized `ContentfulOptimization` instance.
-- `useOptimizationContext()` returns `{ sdk, isReady, error }` without requiring readiness.
-- `useOptimizedEntry({ baselineEntry, liveUpdates })` returns resolved entry data and optimization
-  state for imperative consumers.
-- `useOptimization()` throws if used outside `OptimizationProvider`.
-- `useOptimization()` also throws if the provider exists but the SDK is not ready.
-- `useLiveUpdates()` throws if used outside `LiveUpdatesProvider`.
-
-### Automatic Page Events
-
-Router adapters are published as isolated subpath exports so applications can import only the router
-they use.
-
-The Next.js Pages Router adapter:
+Use `OptimizationProvider` directly only when an application or framework adapter must own a
+pre-built SDK instance:
 
 ```tsx
-import type { AppProps } from 'next/app'
-import { OptimizationRoot } from '@contentful/optimization-react-web'
-import { NextPagesAutoPageTracker } from '@contentful/optimization-react-web/router/next-pages'
+<OptimizationProvider sdk={optimization}>
+  <YourApp />
+</OptimizationProvider>
+```
 
-export default function App({ Component, pageProps }: AppProps) {
-  return (
-    <OptimizationRoot
-      clientId="your-client-id"
-      environment="main"
-      api={{
-        insightsBaseUrl: 'https://ingest.insights.ninetailed.co/',
-        experienceBaseUrl: 'https://experience.ninetailed.co/',
-      }}
-    >
-      <NextPagesAutoPageTracker />
-      <Component {...pageProps} />
-    </OptimizationRoot>
-  )
+For every Web SDK option that passes through this package, use the
+[Web SDK README](../../web-sdk/README.md#common-configuration) and generated
+[reference documentation](https://contentful.github.io/optimization).
+
+## Core Workflows
+
+### Provider and Hook Access
+
+`OptimizationRoot` creates and tears down the Web SDK instance. Use `useOptimization()` when a
+component needs direct access to the instance:
+
+```tsx
+import { useOptimization } from '@contentful/optimization-react-web'
+
+function ConsentButton() {
+  const { sdk } = useOptimization()
+  return <button onClick={() => sdk?.consent(true)}>Accept</button>
 }
 ```
 
-Mount `NextPagesAutoPageTracker` once inside your provider tree, typically in `pages/_app.tsx`. The
-adapter waits for `router.isReady`, emits on the first eligible render, emits on route changes, and
-suppresses duplicate consecutive `router.asPath` values.
+### OptimizedEntry
 
-#### Page Payload Enrichment
-
-Automatic page events can be enriched with static and dynamic payloads before calling
-`optimization.page(...)`.
-
-```tsx
-<NextPagesAutoPageTracker
-  pagePayload={{
-    properties: {
-      appSection: 'storefront',
-    },
-  }}
-  getPagePayload={({ context, isInitialEmission }) => ({
-    locale: isInitialEmission ? 'en-US' : undefined,
-    properties: {
-      path: context.asPath,
-      routePattern: context.pathname,
-      slug: Array.isArray(context.query.slug) ? context.query.slug.join('/') : context.query.slug,
-    },
-  })}
-/>
-```
-
-- `pagePayload` is included in every auto-emitted page event.
-- `getPagePayload` runs once per emitted page event with route-aware context.
-- Static and dynamic payloads are merged before `optimization.page(...)` is called.
-- When the same field exists in both payloads, the dynamic payload wins.
-- This feature is implemented through page payload composition only; no interceptor setup is
-  required or documented for it.
-
-The package `dev/` harness keeps the host HTML shell and rsbuild config at the top level, with the
-React app itself under `dev/app/`. It mounts the React Router adapter for interactive local
-verification. Other router adapters are still covered primarily through unit tests and the
-integration examples above.
-
-The Next.js App Router adapter:
-
-```tsx
-'use client'
-
-import { OptimizationRoot } from '@contentful/optimization-react-web'
-import { NextAppAutoPageTracker } from '@contentful/optimization-react-web/router/next-app'
-
-export function Providers({ children }: { children: React.ReactNode }) {
-  return (
-    <OptimizationRoot
-      clientId="your-client-id"
-      environment="main"
-      api={{
-        insightsBaseUrl: 'https://ingest.insights.ninetailed.co/',
-        experienceBaseUrl: 'https://experience.ninetailed.co/',
-      }}
-    >
-      <NextAppAutoPageTracker />
-      {children}
-    </OptimizationRoot>
-  )
-}
-```
-
-Mount `NextAppAutoPageTracker` once in a client component inside your App Router provider tree,
-typically via a `providers.tsx` wrapper used by `app/layout.tsx`. The adapter emits on the first
-eligible render and on `pathname + search` changes.
-
-```tsx
-<NextAppAutoPageTracker
-  pagePayload={{
-    properties: {
-      appSection: 'storefront',
-    },
-  }}
-  getPagePayload={({ context, isInitialEmission }) => ({
-    locale: isInitialEmission ? 'en-US' : undefined,
-    properties: {
-      path: context.url,
-      pathname: context.pathname,
-      search: context.search,
-    },
-  })}
-/>
-```
-
-App Router payload enrichment follows the same payload-composition behavior as the Pages Router
-adapter and does not use interceptors.
-
-The React Router adapter:
-
-```tsx
-import { createBrowserRouter, Outlet, RouterProvider } from 'react-router-dom'
-import { OptimizationRoot } from '@contentful/optimization-react-web'
-import { ReactRouterAutoPageTracker } from '@contentful/optimization-react-web/router/react-router'
-
-export function AppLayout() {
-  return (
-    <OptimizationRoot
-      clientId="your-client-id"
-      environment="main"
-      api={{
-        insightsBaseUrl: 'https://ingest.insights.ninetailed.co/',
-        experienceBaseUrl: 'https://experience.ninetailed.co/',
-      }}
-    >
-      <ReactRouterAutoPageTracker />
-      <Outlet />
-    </OptimizationRoot>
-  )
-}
-
-const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <AppLayout />,
-    children: [
-      {
-        index: true,
-        element: <HomePage />,
-      },
-    ],
-  },
-])
-
-export function AppRouter() {
-  return <RouterProvider router={router} />
-}
-```
-
-Mount `ReactRouterAutoPageTracker` once inside the `react-router-dom` router tree and inside the
-optimization provider tree, typically in your root layout route. The adapter currently depends on
-`useMatches()`, so it must run under a React Router data router such as `createBrowserRouter` with
-`RouterProvider`, not a plain `BrowserRouter`. It emits on the first render and on
-`pathname + search + hash` changes.
-
-```tsx
-<ReactRouterAutoPageTracker
-  pagePayload={{
-    properties: {
-      appSection: 'storefront',
-    },
-  }}
-  getPagePayload={({ context, isInitialEmission }) => ({
-    locale: isInitialEmission ? 'en-US' : undefined,
-    properties: {
-      hash: context.hash,
-      matchCount: context.matches.length,
-      path: context.url,
-      pathname: context.pathname,
-    },
-  })}
-/>
-```
-
-React Router payload enrichment uses the same page-payload composition behavior and does not use
-interceptors.
-
-The TanStack Router adapter:
-
-```tsx
-import { Outlet } from '@tanstack/react-router'
-import { OptimizationRoot } from '@contentful/optimization-react-web'
-import { TanStackRouterAutoPageTracker } from '@contentful/optimization-react-web/router/tanstack-router'
-
-export function RootLayout() {
-  return (
-    <OptimizationRoot
-      clientId="your-client-id"
-      environment="main"
-      api={{
-        insightsBaseUrl: 'https://ingest.insights.ninetailed.co/',
-        experienceBaseUrl: 'https://experience.ninetailed.co/',
-      }}
-    >
-      <TanStackRouterAutoPageTracker />
-      <Outlet />
-    </OptimizationRoot>
-  )
-}
-```
-
-Mount `TanStackRouterAutoPageTracker` once inside the TanStack router tree and inside the
-optimization provider tree, typically in your root route component. The adapter emits on the first
-render and on TanStack Router `location.href` changes.
-
-```tsx
-<TanStackRouterAutoPageTracker
-  pagePayload={{
-    properties: {
-      appSection: 'storefront',
-    },
-  }}
-  getPagePayload={({ context, isInitialEmission }) => ({
-    locale: isInitialEmission ? 'en-US' : undefined,
-    properties: {
-      hash: context.hash,
-      matchCount: context.matches.length,
-      path: context.url,
-      pathname: context.pathname,
-      search: context.search,
-    },
-  })}
-/>
-```
-
-TanStack Router payload enrichment also uses page-payload composition only and does not require
-interceptors.
-
-### OptimizedEntry Component
+`OptimizedEntry` resolves a baseline Contentful entry and renders either the selected variant or the
+baseline entry:
 
 ```tsx
 import { OptimizedEntry } from '@contentful/optimization-react-web'
-;<OptimizedEntry baselineEntry={baselineEntry}>
-  {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
-</OptimizedEntry>
+
+function HeroEntry({ baselineEntry }) {
+  return (
+    <OptimizedEntry baselineEntry={baselineEntry}>
+      {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
+    </OptimizedEntry>
+  )
+}
 ```
 
-`OptimizedEntry` behavior:
+Use `loadingFallback`, direct children, wrapper props, and nested composition patterns when needed.
+The React Web guide covers those variants in context.
 
-- Default mode locks to the first non-`undefined` optimization state.
-- `liveUpdates={true}` enables continuous updates as optimization state changes.
-- If `liveUpdates` is omitted, global root `liveUpdates` is used.
-- If both are omitted, live updates default to `false`.
-- Consumer content supports render-prop (`(resolvedEntry) => ReactNode`) or direct `ReactNode`.
-- Wrapper element is configurable with `as: 'div' | 'span'` (defaults to `div`).
-- Wrapper style uses `display: contents` to remain layout-neutral as much as possible.
-- Readiness is inferred automatically:
-  - optimized entries render when `canOptimize === true`
-  - baseline entries render when the SDK instance is initialized
+### Entry Interaction Tracking
 
-#### Loading Fallback
-
-When `loadingFallback` is provided, it is rendered while readiness is unresolved.
+`OptimizedEntry` emits the Web SDK's `data-ctfl-*` tracking attributes for resolved entries. Enable
+automatic tracking in the root config when views, clicks, or hovers should be detected by the Web
+SDK:
 
 ```tsx
-<OptimizedEntry
-  baselineEntry={baselineEntry}
-  loadingFallback={() => <Skeleton label="Loading optimized content" />}
+<OptimizationRoot
+  clientId="your-client-id"
+  autoTrackEntryInteraction={{ views: true, clicks: true, hovers: false }}
 >
-  {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
-</OptimizedEntry>
+  <YourApp />
+</OptimizationRoot>
 ```
 
-- If a baseline entry has optimization references and is unresolved, loading UI is rendered by
-  default.
-- If the entry has no optimization references, baseline/resolved content is rendered directly.
-- During loading, a concrete layout-target element is rendered (`data-ctfl-loading-layout-target`)
-  so loading visibility/layout behavior remains targetable even when wrapper uses
-  `display: contents`.
-- During server rendering, unresolved loading is rendered invisibly (`visibility: hidden`) to
-  preserve layout space before content is ready.
+Use `sdk.tracking.enableElement(...)` from `useOptimization()` for manual element overrides.
 
-#### Nested Composition
+### Router Page Events
 
-Nested optimized entries are supported by explicit composition:
+Router adapters emit `page()` events for supported client-side routers:
+
+| Router             | Import path                                                 | Mounting rule                                                        |
+| ------------------ | ----------------------------------------------------------- | -------------------------------------------------------------------- |
+| React Router       | `@contentful/optimization-react-web/router/react-router`    | Mount under a React Router data router and inside `OptimizationRoot` |
+| Next.js Pages      | `@contentful/optimization-react-web/router/next-pages`      | Mount once in `pages/_app.tsx` inside `OptimizationRoot`             |
+| Next.js App Router | `@contentful/optimization-react-web/router/next-app`        | Mount in a client provider used by `app/layout.tsx`                  |
+| TanStack Router    | `@contentful/optimization-react-web/router/tanstack-router` | Mount under the TanStack router tree and inside `OptimizationRoot`   |
+
+All adapters support static and dynamic page payload enrichment. See the
+[React Web integration guide](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-react-web-sdk-in-a-react-app.html#5-emit-page-events-with-supported-router-adapters)
+for router-specific examples.
+
+### Live Updates and Preview
+
+`liveUpdates` defaults to `false`, so optimized entries lock to the first resolved value. Set
+`liveUpdates` globally or per `OptimizedEntry` when entries should react to profile, flag, or
+preview changes:
 
 ```tsx
-<OptimizedEntry baselineEntry={parentEntry}>
-  {(resolvedParent) => (
-    <ParentSection entry={resolvedParent}>
-      <OptimizedEntry baselineEntry={childEntry}>
-        {(resolvedChild) => <ChildSection entry={resolvedChild} />}
-      </OptimizedEntry>
-    </ParentSection>
-  )}
-</OptimizedEntry>
+<OptimizationRoot clientId="your-client-id" liveUpdates={true}>
+  <OptimizedEntry baselineEntry={entry} liveUpdates={false}>
+    {(resolvedEntry) => <Card entry={resolvedEntry} />}
+  </OptimizedEntry>
+</OptimizationRoot>
 ```
 
-Nesting guard behavior:
+The browser preview panel is provided by
+[`@contentful/optimization-web-preview-panel`](../../preview-panel/README.md). When the panel is
+open, live updates are forced on for all `OptimizedEntry` components so authors can inspect variant
+changes immediately.
 
-- Nested wrappers with the same baseline entry ID as an ancestor are invalid and are blocked.
-- Nested wrappers with different baseline entry IDs remain supported.
+## Development Harness
 
-#### Auto-Tracking Data Attributes
+The package-local development harness runs from `packages/web/frameworks/react-web-sdk/dev/`. Launch
+it from the repo root:
 
-When resolved content is rendered, the wrapper emits attributes used by
-`@contentful/optimization-web` automatic tracking:
-
-- `data-ctfl-entry-id` (always present on resolved content wrapper)
-- `data-ctfl-optimization-id` (when optimized)
-- `data-ctfl-sticky` (when available)
-- `data-ctfl-variant-index` (when optimized)
-- `data-ctfl-duplication-scope` (when available)
-
-To consume those attributes automatically, enable Web SDK auto-tracking with one of:
-
-- `autoTrackEntryInteraction: { views: true }` during `OptimizationRoot` initialization
-- `optimization.tracking.enable('views')` / equivalent runtime setup APIs when applicable
-
-When `loadingFallback` is shown, resolved-content tracking attributes are not emitted.
-
-### Live Updates Resolution Semantics
-
-Consumers should resolve live updates behavior with:
-
-```ts
-const isLiveUpdatesEnabled =
-  liveUpdatesContext.previewPanelVisible ||
-  (componentLiveUpdates ?? liveUpdatesContext.globalLiveUpdates)
+```sh
+pnpm --filter @contentful/optimization-react-web dev:launch
 ```
 
-This gives:
+Use the harness for package development. Use the reference implementation for end-to-end integration
+behavior.
 
-- preview panel open override first
-- component-level `liveUpdates` prop override first
-- then root-level `liveUpdates`
-- then default `false`
+## Related
 
-### SDK Initialization Contract
-
-- Core/Web SDK initialization is synchronous; no dedicated `sdkInitialized` state is exposed.
-- React provider initialization outcome is represented by instance creation success/failure.
-- The async runtime path is preview panel lifecycle, already represented by preview panel state.
-
-### Migration Notes
-
-- `OptimizedEntry` now accepts either render-prop children or direct `ReactNode` children.
-- Entries with optimization references now render loading UI until optimization readiness is
-  available.
-- When no `loadingFallback` is provided, a default loading UI is rendered for unresolved optimized
-  entries.
-- Nested wrappers with the same baseline entry ID are now blocked at runtime.
-- Loading renders include `data-ctfl-loading-layout-target` for layout/visibility targeting.
-
-## Singleton Behavior
-
-The underlying `@contentful/optimization-web` SDK enforces a singleton pattern. Only one
-`ContentfulOptimization` runtime can exist at a time (attached to `window.contentfulOptimization`).
-Attempting to initialize a second runtime will throw an error.
-
-When using the config-as-props pattern, the provider uses a `useRef` to ensure the instance is only
-created once, even across React re-renders or StrictMode double-rendering.
-
-## Testing
-
-When testing components that use the Optimization providers, pass test config props:
-
-```tsx
-import { render } from '@testing-library/react'
-import { OptimizationRoot } from '@contentful/optimization-react-web'
-
-render(
-  <OptimizationRoot
-    clientId="test-client-id"
-    environment="main"
-    api={{
-      insightsBaseUrl: 'http://localhost:8000/insights/',
-      experienceBaseUrl: 'http://localhost:8000/experience/',
-    }}
-  >
-    <ComponentUnderTest />
-  </OptimizationRoot>,
-)
-```
+- [Integrating the Optimization React Web SDK in a React App](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-react-web-sdk-in-a-react-app.html) -
+  step-by-step React integration guide
+- [Optimization Web SDK](../../web-sdk/README.md) - lower-level browser SDK wrapped by this package
+- [Optimization Web Preview Panel](../../preview-panel/README.md) - preview panel package for
+  browser authoring workflows
+- [React Web reference implementation](../../../../implementations/react-web-sdk/README.md) -
+  application using providers, router tracking, optimized entries, live updates, and entry tracking

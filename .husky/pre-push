@@ -11,6 +11,19 @@ package_tarballs_exist() {
   find pkgs -maxdepth 1 -name "contentful-*.tgz" -print -quit 2>/dev/null | grep -q .
 }
 
+is_documentation_file() {
+  local file=$1
+
+  case "$file" in
+    *.md | *.mdx | *.markdown | documentation/* | docs/* | */documentation/* | */docs/*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 # Collect changed files for each pushed ref from pre-push hook input
 # Input rows: <local ref> <local sha> <remote ref> <remote sha>
 changed_files=""
@@ -46,6 +59,25 @@ done
 
 changed_files=$(printf "%s" "$changed_files" | sed '/^$/d' | sort -u)
 
+if [ -z "$changed_files" ]; then
+  echo "No changed files detected for checks."
+  exit 0
+fi
+
+substantive_changed_files=""
+while IFS= read -r changed_file; do
+  if ! is_documentation_file "$changed_file"; then
+    substantive_changed_files+="$changed_file"$'\n'
+  fi
+done <<<"$changed_files"
+
+substantive_changed_files=$(printf "%s" "$substantive_changed_files" | sed '/^$/d' | sort -u)
+
+if [ -z "$substantive_changed_files" ]; then
+  echo "Only documentation-related changes detected; skipping build and check hook."
+  exit 0
+fi
+
 # List workspaces (relative paths)
 workspaces=$(pnpm ls -r --depth -1 --json | jq -r ".[].path" | sed "s|^$REPO_ROOT/||")
 
@@ -55,7 +87,7 @@ implementations=$(find implementations -mindepth 1 -maxdepth 1 -type d -exec bas
 # Find changed workspaces with tsconfig.json
 changed_workspaces=()
 for workspace in $workspaces; do
-  if echo "$changed_files" | grep -q "^$workspace/"; then
+  if echo "$substantive_changed_files" | grep -q "^$workspace/"; then
     [ -f "$workspace/tsconfig.json" ] && changed_workspaces+=("$workspace")
   fi
 done
@@ -64,7 +96,7 @@ done
 changed_implementations=()
 for implementation in $implementations; do
   implementation_path="implementations/$implementation"
-  if echo "$changed_files" | grep -q "^$implementation_path/"; then
+  if echo "$substantive_changed_files" | grep -q "^$implementation_path/"; then
     [ -f "$implementation_path/tsconfig.json" ] && changed_implementations+=("$implementation")
   fi
 done

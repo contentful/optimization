@@ -1,6 +1,7 @@
 # AGENTS.md
 
-Read the repository root `AGENTS.md` first.
+Read the repository root `AGENTS.md`, `packages/AGENTS.md`, and `packages/web/AGENTS.md` before this
+file.
 
 ## Scope
 
@@ -17,9 +18,6 @@ providers, hooks, and React-facing entry resolution primitives.
 
 ## Local Rules
 
-- Keep reusable React abstractions here rather than inside `implementations/react-web-sdk` or
-  `implementations/web-sdk_react`.
-- Do not reimplement Web SDK core behavior here when it belongs in `packages/web/web-sdk`.
 - `dev/` is the package-local harness host shell. `dev/app/` contains the React harness app.
 - Keep both harness layers relevant to the current provider, hook, routing, and entry-rendering
   behavior.
@@ -40,7 +38,6 @@ providers, hooks, and React-facing entry resolution primitives.
 ## Usually Validate
 
 - Run `typecheck`, `test:unit`, and `build`.
-- Run `size:check` for runtime, export, dependency, or bundle-shape changes.
 - Validate the `dev/` harness itself when changing package flows it is meant to demonstrate.
 - Validate `implementations/react-web-sdk` Playwright flows when changing runtime behavior,
   readiness state, live updates, or entry rendering.

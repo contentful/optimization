@@ -166,7 +166,8 @@ The React Native SDK layers RN-specific behavior on top:
 
 The offline queue has a cap (`queuePolicy.offlineMaxEvents`) and a drop callback
 (`queuePolicy.onOfflineDrop`). See the
-[README](../../packages/react-native-sdk/README.md#queue-policy-options) for the full shape.
+[README](../../packages/react-native-sdk/README.md#common-configuration) for the common queue
+configuration entry point.
 
 ### Persistence Via AsyncStorage
 
@@ -511,7 +512,7 @@ Beyond the layer above, the full `CoreStatefulConfig` is accepted as `Optimizati
 | `logLevel`                     | `'error'`                                | Set to `'debug'` to see every gate decision.                                                    |
 
 The full configuration reference lives in the
-[React Native SDK README](../../packages/react-native-sdk/README.md#configuration).
+[React Native SDK README](../../packages/react-native-sdk/README.md#common-configuration).
 
 ### Resolution Order
 

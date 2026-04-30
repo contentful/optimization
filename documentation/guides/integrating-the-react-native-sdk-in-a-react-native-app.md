@@ -168,7 +168,7 @@ Common props on `OptimizationRoot`:
 
 The full configuration reference (API endpoints, fetch retries, queue policy, event-builder
 overrides) is documented in the
-[React Native SDK README](../../packages/react-native-sdk/README.md#configuration).
+[React Native SDK README](../../packages/react-native-sdk/README.md#common-configuration).
 
 ### Access the SDK Instance with Hooks
 

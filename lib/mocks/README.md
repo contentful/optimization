@@ -11,10 +11,15 @@ The testing support library offers the following features:
 - MSW handlers for the Experience API and Insights API
 - Mock server based on the MSW handlers
 
-> [!INFO]
+> [!NOTE]
 >
 > In order to manage test data in a Contentful space, a `.contentfulrc.json` file must be
 > appropriately configured in `lib/mocks` based upon the supplied `.contentfulrc.example.json` file.
+
+## When to Use This Package
+
+Use this package for local test data, unit-test MSW handlers, and the mock API server consumed by
+reference implementations. It is an internal monorepo support package, not a public SDK dependency.
 
 ## Using Mocks in Unit Tests
 
@@ -65,12 +70,17 @@ with warnings.
 Use this simple command to run a mock server instance:
 
 ```sh
-pnpm --filter mocks serve
+pnpm serve:mocks
 ```
 
-The server runs in a process attached to the current terminal. It is recommended to use a process
-manager such as [PM2](https://pm2.keymetrics.io/docs/usage/process-management/) to manage the mock
-server as a detached daemon.
+From inside package-focused workflows, the equivalent package command is
+`pnpm --filter mocks serve`.
+
+The server runs in a process attached to the current terminal. When a detached process is needed,
+prefer implementation `serve` and `serve:stop` scripts because they use scoped PM2 process names.
+For example, `pnpm implementation:run -- web-sdk serve` starts both the Web implementation and a
+named mock-server process, and `pnpm implementation:run -- web-sdk serve:stop` stops only that
+implementation's processes.
 
 ## Updating Local Mocks & Fixtures
 
