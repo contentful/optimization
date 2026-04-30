@@ -19,37 +19,29 @@
 >
 > The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
 
-The Optimization Node SDK implements functionality specific to Node environments, based on the
-[Optimization Core Library](../../universal/core-sdk/README.md). This SDK is part of the
-[Contentful Optimization SDK Suite](../../../README.md).
+The Optimization Node SDK implements stateless server-side optimization behavior on top of the
+[Optimization Core SDK](../../universal/core-sdk/README.md). Use it for server rendering, server
+functions, and Node services that need request-scoped profile evaluation or event emission.
+
+If you are integrating a Node application, start with [Getting Started](#getting-started), then use
+[Integrating the Optimization Node SDK in a Node App](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-node-sdk-in-a-node-app.html)
+for the step-by-step flow. This README keeps the package orientation and common setup options close
+at hand; generated [reference documentation](https://contentful.github.io/optimization) remains the
+source of truth for exported API signatures.
 
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
 - [Getting Started](#getting-started)
-- [Reference Implementations](#reference-implementations)
-- [Configuration](#configuration)
-  - [Top-level Configuration Options](#top-level-configuration-options)
-  - [API Options](#api-options)
-  - [Event Builder Options](#event-builder-options)
-  - [Fetch Options](#fetch-options)
-- [Optimization Methods](#optimization-methods)
-  - [Optimization Data Resolution Methods](#optimization-data-resolution-methods)
-    - [`getFlag`](#getflag)
-    - [`resolveOptimizedEntry`](#resolveoptimizedentry)
-    - [`getMergeTagValue`](#getmergetagvalue)
-  - [Experience API and Insights API Event Methods](#experience-api-and-insights-api-event-methods)
-    - [`identify`](#identify)
-    - [`page`](#page)
-    - [`screen`](#screen)
-    - [`track`](#track)
-    - [`trackView`](#trackview)
-    - [`trackClick`](#trackclick)
-    - [`trackHover`](#trackhover)
-    - [`trackFlagView`](#trackflagview)
-- [Interceptors](#interceptors)
-  - [Life-cycle Interceptors](#life-cycle-interceptors)
+- [When to Use This Package](#when-to-use-this-package)
+- [Common Configuration](#common-configuration)
+- [Core Workflows](#core-workflows)
+  - [Request-Scoped Events](#request-scoped-events)
+  - [Content Resolution](#content-resolution)
+  - [Caching Guidance](#caching-guidance)
+- [Development Harness](#development-harness)
+- [Related](#related)
 
 <!-- mtoc-end -->
 </details>
@@ -68,32 +60,120 @@ Import the Optimization class; both CJS and ESM module systems are supported, ES
 import ContentfulOptimization from '@contentful/optimization-node'
 ```
 
-Configure and initialize the Optimization Node SDK:
+Create the SDK once per module or process, then pass request-scoped Experience options to event
+methods inside each incoming request:
 
 ```ts
-const optimization = new ContentfulOptimization({ clientId: 'abc123' })
-const requestOptions = { locale: 'en-US' }
+const optimization = new ContentfulOptimization({
+  clientId: 'your-client-id',
+  environment: 'main',
+})
 
-await optimization.page({}, requestOptions)
+const requestOptions = { locale: 'en-US' }
+const optimizationData = await optimization.page({ profile }, requestOptions)
 ```
 
-Create `optimization` once per module or process, then pass request-scoped Experience options as the
-final argument to stateless event methods inside each incoming request.
+## When to Use This Package
 
-## Caching Guidance
+Use `@contentful/optimization-node` for server-side rendering, server functions, and Node services
+that need stateless profile evaluation or event emission. Use the Web or React Web SDK alongside it
+when browser-side consent, anonymous ID persistence, automatic interaction tracking, or live updates
+are part of the same application.
 
-The Node SDK is stateless, but that does not mean all request work is cacheable.
+## Common Configuration
 
-- Cache raw Contentful delivery payloads in your application layer.
-- Treat cached Contentful entries as immutable.
-- Use `resolveOptimizedEntry()` and `getMergeTagValue()` as request-local helpers when rendering.
-- Do not memoize `page()`, `identify()`, `screen()`, `track()`, `trackView()`, `trackClick()`,
-  `trackHover()`, or `trackFlagView()`. Those methods emit outbound events and/or return profile
-  state for the current request.
+The Node SDK is stateless. It does not maintain consent, profile, or browser persistence state
+between requests.
 
-For a step-by-step Express-style walkthrough that covers request context, profile persistence,
-Contentful entry resolution, and hybrid Node + browser setups, see
-[Integrating the Optimization Node SDK in a Node App](../../../documentation/guides/integrating-the-node-sdk-in-a-node-app.md).
+| Option         | Required? | Default               | Description                                                 |
+| -------------- | --------- | --------------------- | ----------------------------------------------------------- |
+| `clientId`     | Yes       | N/A                   | Shared API key for Experience API and Insights API requests |
+| `environment`  | No        | `'main'`              | Contentful environment identifier                           |
+| `api`          | No        | See API options below | Experience API and Insights API endpoint options            |
+| `app`          | No        | `undefined`           | Application metadata attached to outgoing event context     |
+| `fetchOptions` | No        | SDK defaults          | Fetch timeout and retry behavior                            |
+| `eventBuilder` | No        | Node SDK defaults     | Event metadata overrides for SDK-layer authors              |
+| `logLevel`     | No        | `'error'`             | Minimum log level for the default console sink              |
+
+Common `api` options:
+
+| Option              | Required? | Default                                    | Description                                      |
+| ------------------- | --------- | ------------------------------------------ | ------------------------------------------------ |
+| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                  |
+| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                    |
+| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Experience API features to apply to each request |
+
+Request-scoped Experience options belong in the final argument to stateless event methods:
+
+| Option      | Description                                                 |
+| ----------- | ----------------------------------------------------------- |
+| `ip`        | IP address override used by the Experience API              |
+| `locale`    | Locale used for Experience API location labels              |
+| `plainText` | Sends performance-critical Experience API endpoints as text |
+| `preflight` | Aggregates a new profile state without storing it           |
+
+Common `fetchOptions` are `fetchMethod`, `requestTimeout`, `retries`, `intervalTimeout`,
+`onFailedAttempt`, and `onRequestTimeout`. Default retries intentionally apply only to HTTP `503`
+responses.
+
+For every option, callback payload, and exported type, use the generated
+[Node SDK reference](https://contentful.github.io/optimization/modules/_contentful_optimization-node.html).
+
+## Core Workflows
+
+### Request-Scoped Events
+
+Build event context from the incoming request, then call `page()`, `identify()`, `screen()`,
+`track()`, or sticky `trackView()` when optimization data is needed:
+
+```ts
+app.get('/products/:slug', async (req, res) => {
+  const optimizationData = await optimization.page(
+    {
+      profile: { id: req.cookies.profileId },
+      properties: { path: req.path },
+    },
+    { locale: req.acceptsLanguages()[0] ?? 'en-US' },
+  )
+
+  res.render('product', { optimizationData })
+})
+```
+
+In stateless runtimes, Insights-backed methods require a profile for delivery. Non-sticky
+`trackView`, `trackClick`, `trackHover`, and `trackFlagView` require `payload.profile.id`.
+
+### Content Resolution
+
+Fetch Contentful entries in your application layer, then resolve variants with returned optimization
+data:
+
+```ts
+const resolvedEntry = optimization.resolveOptimizedEntry(
+  baselineEntry,
+  optimizationData?.selectedOptimizations,
+)
+```
+
+Use `getMergeTagValue()` for Contentful Rich Text merge tags and `getFlag()` for Custom Flags. The
+Node SDK is stateless, so `getFlag()` does not automatically emit flag-view tracking.
+
+### Caching Guidance
+
+Cache raw Contentful delivery payloads in your application layer, not profile-evaluated SDK event
+results.
+
+| Data or call                                                                | Cache across requests? | Reason                                                               |
+| --------------------------------------------------------------------------- | ---------------------- | -------------------------------------------------------------------- |
+| Raw Contentful entries fetched from CDA                                     | Yes                    | They are content snapshots and can be resolved per request           |
+| `resolveOptimizedEntry()` and `getMergeTagValue()` results                  | Request-local only     | Results depend on the current profile and optimization data          |
+| `page()`, `identify()`, `screen()`, `track()`, and sticky `trackView()`     | No                     | These calls perform side effects and return request-specific profile |
+| Non-sticky `trackView()`, `trackClick()`, `trackHover()`, `trackFlagView()` | No                     | These calls emit Insights API events                                 |
+
+The
+[Node SDK integration guide](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-node-sdk-in-a-node-app.html)
+covers request context, profile persistence, Contentful entry resolution, and hybrid Node + browser
+setups in detail.
 
 ## Development Harness
 
@@ -108,303 +188,15 @@ package directory.
    pnpm --filter @contentful/optimization-node dev
    ```
 
-## Reference Implementations
-
-Reference implementations illustrate how the SDK may be used under common scenarios, as well as
-select less-common scenarios, with the most basic example solution possible.
-
-- [Node SSR Only](../../../implementations/node-sdk/README.md): Example application that uses the
-  Node SDK to render an optimized Web page
-- [Node SSR + Web Vanilla](../../../implementations/node-sdk+web-sdk/README.md): Example application
-  demonstrating simple profile synchronization between the Node and
-  [Web](../../web/web-sdk/README.md) SDKs via cookie
-
-## Configuration
-
-### Top-level Configuration Options
-
-| Option         | Required? | Default                     | Description                                                                    |
-| -------------- | --------- | --------------------------- | ------------------------------------------------------------------------------ |
-| `api`          | No        | See "API Options"           | Unified configuration for the Experience API and Insights API endpoints        |
-| `app`          | No        | `undefined`                 | The application definition used to attribute events to a specific consumer app |
-| `clientId`     | Yes       | N/A                         | Shared API key for Experience API and Insights API requests                    |
-| `environment`  | No        | `'main'`                    | The environment identifier                                                     |
-| `eventBuilder` | No        | See "Event Builder Options" | Event builder configuration (channel/library metadata, etc.)                   |
-| `fetchOptions` | No        | See "Fetch Options"         | Configuration for Fetch timeout and retry functionality                        |
-| `logLevel`     | No        | `'error'`                   | Minimum log level for the default console sink                                 |
-
-### API Options
-
-| Option              | Required? | Default                                    | Description                                                  |
-| ------------------- | --------- | ------------------------------------------ | ------------------------------------------------------------ |
-| `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                              |
-| `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                |
-| `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Enabled features the Experience API may use for each request |
-
-Request-scoped Experience API options are passed to stateless event methods as their final argument
-instead of the SDK constructor:
-
-| Option      | Required? | Default     | Description                                                                    |
-| ----------- | --------- | ----------- | ------------------------------------------------------------------------------ |
-| `ip`        | No        | `undefined` | IP address override used by the Experience API for location analysis           |
-| `locale`    | No        | `undefined` | Locale used to translate `location.city` and `location.country`                |
-| `plainText` | No        | `undefined` | Sends performance-critical Experience API endpoints in plain text              |
-| `preflight` | No        | `undefined` | Instructs the Experience API to aggregate a new profile state but not store it |
-
-### Event Builder Options
-
-Event builder options should only be supplied when building an SDK on top of the Optimization Node
-SDK or any of its descendent SDKs.
-
-| Option    | Required? | Default                                                       | Description                                                                        |
-| --------- | --------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `channel` | No        | `'server'`                                                    | The channel that identifies where events originate from (e.g. `'web'`, `'mobile'`) |
-| `library` | No        | `{ name: '@contentful/optimization-node', version: '0.0.0' }` | The client library metadata that is attached to all events                         |
-
-### Fetch Options
-
-Fetch options allow for configuration of a Fetch API-compatible fetch method and the retry/timeout
-logic integrated into the SDK's bundled API clients. Specify the `fetchMethod` when the host
-application environment does not offer a `fetch` method that is compatible with the standard Fetch
-API in its global scope.
-
-| Option             | Required? | Default     | Description                                                           |
-| ------------------ | --------- | ----------- | --------------------------------------------------------------------- |
-| `fetchMethod`      | No        | `undefined` | Signature of a fetch method used by the API clients                   |
-| `intervalTimeout`  | No        | `0`         | Delay (in milliseconds) between retry attempts                        |
-| `onFailedAttempt`  | No        | `undefined` | Callback invoked whenever a retry attempt fails                       |
-| `onRequestTimeout` | No        | `undefined` | Callback invoked when a request exceeds the configured timeout        |
-| `requestTimeout`   | No        | `3000`      | Maximum time (in milliseconds) to wait for a response before aborting |
-| `retries`          | No        | `1`         | Maximum number of retry attempts                                      |
-
-Configuration method signatures:
-
-- `fetchMethod`: `(url: string | URL, init: RequestInit) => Promise<Response>`
-- `onFailedAttempt` and `onRequestTimeout`: `(options: FetchMethodCallbackOptions) => void`
-
-## Optimization Methods
-
-Arguments marked with an asterisk (\*) are always required.
-
-### Optimization Data Resolution Methods
-
-#### `getFlag`
-
-Get the specified Custom Flag's value from the provided changes array.
-
-Arguments:
-
-- `name`\*: The name/key of the Custom Flag
-- `changes`: Changes array
-
-Returns:
-
-- The resolved value for the specified Custom Flag, or `undefined` if it cannot be found.
-
-Behavior notes:
-
-- Node SDK is stateless; `getFlag(...)` does not auto-emit `trackFlagView`.
-- If full map resolution is needed for advanced use cases, use
-  `optimization.flagsResolver.resolve(changes)`.
-
-> [!NOTE]
->
-> If the `changes` argument is omitted, the method will return `undefined`.
-
-#### `resolveOptimizedEntry`
-
-Resolve a baseline Contentful entry to an optimized variant using the provided selected
-optimizations.
-
-Type arguments:
-
-- `S`: Entry skeleton type
-- `M`: Chain modifiers
-- `L`: Locale code
-
-Arguments:
-
-- `entry`\*: The baseline entry to resolve
-- `selectedOptimizations`: Selected optimizations
-
-Returns:
-
-- The resolved optimized entry variant, or the supplied baseline entry if baseline is the selected
-  variant or a variant cannot be found.
-
-> [!NOTE]
->
-> If the `selectedOptimizations` argument is omitted, the method will return the baseline entry.
-
-#### `getMergeTagValue`
-
-Resolve a "Merge Tag" to a value based on the provided profile. A "Merge Tag" is a special Rich Text
-fragment supported by Contentful that specifies a profile data member to be injected into the Rich
-Text when rendered.
-
-Arguments:
-
-- `embeddedNodeEntryTarget`\*: The merge tag entry node to resolve
-- `profile`: The user profile
-
-> [!NOTE]
->
-> If the `profile` argument is omitted, the method will return the merge tag's fallback value.
-
-### Experience API and Insights API Event Methods
-
-Pass request-scoped Experience options as the final argument to stateless event methods:
-
-```ts
-const requestOptions = {
-  locale: req.acceptsLanguages()[0] ?? 'en-US',
-}
-
-await optimization.page({ ...requestContext, profile }, requestOptions)
-```
-
-Request-scoped Experience options stay separate from the event payload. Event context such as page
-data, locale metadata on the event, and user agent belong in `payload`, while `ip`, `locale`,
-`plainText`, and `preflight` belong in `requestOptions`.
-
-Only the following methods may return an `OptimizationData` object:
-
-- `identify`
-- `page`
-- `screen`
-- `track`
-- `trackView` (when `payload.sticky` is `true`)
-
-`trackClick`, `trackHover`, and `trackFlagView` return no data. When returned, `OptimizationData`
-contains:
-
-- `changes`: Currently used for Custom Flags
-- `selectedOptimizations`: Selected optimizations for the profile
-- `profile`: Profile associated with the evaluated events
-
-In stateless runtimes, Insights-backed methods require a profile for delivery. Non-sticky
-`trackView`, `trackClick`, `trackHover`, and `trackFlagView` require `payload.profile.id`. Sticky
-`trackView` may omit `profile`, because the returned Experience profile is reused for the paired
-Insights event.
-
-#### `identify`
-
-Identify the current profile/visitor to associate traits with a profile.
-
-Arguments:
-
-- `payload`\*: Identify event builder arguments object, including an optional `profile` property
-  with a `PartialProfile` value that requires only an `id`
-- `requestOptions`: Optional request-scoped Experience API options passed as the final argument
-
-#### `page`
-
-Record an Experience API page view.
-
-Arguments:
-
-- `payload`\*: Page view event builder arguments object, including an optional `profile` property
-  with a `PartialProfile` value that requires only an `id`
-- `requestOptions`: Optional request-scoped Experience API options passed as the final argument
-
-#### `screen`
-
-Record an Experience API screen view.
-
-Arguments:
-
-- `payload`\*: Screen view event builder arguments object, including an optional `profile` property
-  with a `PartialProfile` value that requires only an `id`
-- `requestOptions`: Optional request-scoped Experience API options passed as the final argument
-
-#### `track`
-
-Record an Experience API custom track event.
-
-Arguments:
-
-- `payload`\*: Track event builder arguments object, including an optional `profile` property with a
-  `PartialProfile` value that requires only an `id`
-- `requestOptions`: Optional request-scoped Experience API options passed as the final argument
-
-#### `trackView`
-
-Record an Insights API entry view event. When the payload marks the entry as "sticky", an additional
-Experience API entry view is recorded. This method only returns `OptimizationData` when the entry is
-marked as "sticky".
-
-Arguments:
-
-- `payload`\*: Entry view event builder arguments object. When `payload.sticky` is `true`, `profile`
-  is optional and the returned Experience profile is reused for Insights delivery. Otherwise,
-  `profile` is required and must contain at least an `id`
-- `requestOptions`: Optional request-scoped Experience API options passed as the final argument.
-  Only used when `payload.sticky` is `true`
-
-#### `trackClick`
-
-Record an Insights API entry click event.
-
-Returns:
-
-- `void`
-
-Arguments:
-
-- `payload`\*: Entry click event builder arguments object, including a required `profile` property
-  with a `PartialProfile` value that requires only an `id`
-- `requestOptions`: Optional request-scoped Experience API options accepted for signature
-  consistency; currently unused
-
-#### `trackHover`
-
-Record an Insights API entry hover event.
-
-Returns:
-
-- `void`
-
-Arguments:
-
-- `payload`\*: Entry hover event builder arguments object, including a required `profile` property
-  with a `PartialProfile` value that requires only an `id`
-- `requestOptions`: Optional request-scoped Experience API options accepted for signature
-  consistency; currently unused
-
-#### `trackFlagView`
-
-Track a feature flag view via the Insights API. This is functionally the same as a non-sticky flag
-view event.
-
-Returns:
-
-- `void`
-
-Arguments:
-
-- `payload`\*: Flag view event builder arguments object, including a required `profile` property
-  with a `PartialProfile` value that requires only an `id`
-- `requestOptions`: Optional request-scoped Experience API options accepted for signature
-  consistency; currently unused
-
-## Interceptors
-
-Interceptors may be used to read and/or modify data flowing through the Core SDK.
-
-### Life-cycle Interceptors
-
-- `event`: Intercepts an event's data _before_ it is queued and/or emitted
-- `state`: Intercepts state data retrieved from an Experience API call _before_ updating the SDK's
-  internal state
-
-Example interceptor usage:
-
-```ts
-optimization.interceptors.event((event) => {
-  event.properties.timestamp = new Date().toISOString()
-})
-```
-
-> [!WARNING]
->
-> Interceptors are intended to enable low-level interoperability and should be used with care.
+## Related
+
+- [Integrating the Optimization Node SDK in a Node App](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-node-sdk-in-a-node-app.html) -
+  step-by-step server-side integration guide
+- [Node SDK generated reference](https://contentful.github.io/optimization/modules/_contentful_optimization-node.html) -
+  exported API reference
+- [Node reference implementation](../../../implementations/node-sdk/README.md) - server-rendered
+  implementation using request-scoped SDK calls
+- [Node + Web reference implementation](../../../implementations/node-sdk+web-sdk/README.md) -
+  hybrid SSR and browser implementation
+- [Optimization Web SDK](../../web/web-sdk/README.md) - browser SDK used when the same application
+  also needs client-side consent, persistence, tracking, or live updates

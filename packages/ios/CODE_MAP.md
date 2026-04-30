@@ -2,9 +2,9 @@
 
 ## High-Level Overview
 
-This diff introduces a complete **Contentful Optimization iOS SDK** — a Swift Package (iOS 15+/macOS
-12+) that enables content personalization and analytics tracking for native iOS apps. The SDK runs
-the existing JavaScript optimization core inside a **JavaScriptCore** context, bridged by a
+This directory contains the pre-release **Contentful Optimization iOS SDK** — a Swift Package (iOS
+15+/macOS 12+) that enables content personalization and analytics tracking for native iOS apps. The
+SDK runs the existing JavaScript optimization core inside a **JavaScriptCore** context, bridged by a
 TypeScript adapter layer. Swift code handles native concerns (persistence, networking, app
 lifecycle, SwiftUI integration) while the JS engine handles personalization logic, profile
 management, and analytics batching.

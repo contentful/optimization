@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Read the repository root `AGENTS.md` first.
+Read the repository root `AGENTS.md`, then `packages/AGENTS.md`, before this file.
 
 ## Scope
 

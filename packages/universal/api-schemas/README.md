@@ -19,23 +19,21 @@
 >
 > The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
 
-The Contentful Optimization API Schema Library is a collection of Zod Mini schemas and their
-inferred TypeScript types. These schemas help provide run-time validation when working with requests
-and responses for the APIs referenced within Optimization SDKs.
+The Contentful Optimization API Schema Library provides Zod Mini schemas, inferred TypeScript types,
+and small runtime helpers for Contentful CDA, Experience API, and Insights API payloads. SDK layers
+use this package to validate API contracts and normalize optimization data.
 
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
 - [Getting Started](#getting-started)
-- [Contentful CDA Schemas](#contentful-cda-schemas)
-  - [Essential Schemas](#essential-schemas)
-  - [Essential Functions](#essential-functions)
-- [Experience API Schemas](#experience-api-schemas)
-  - [Essential Experience API Request Schemas](#essential-experience-api-request-schemas)
-  - [Essential Experience API Response Schemas](#essential-experience-api-response-schemas)
-- [Insights API Schemas](#insights-api-schemas)
-  - [Essential Insights API Response Schemas](#essential-insights-api-response-schemas)
+- [When to Use This Package](#when-to-use-this-package)
+- [Package Surface](#package-surface)
+  - [Contentful CDA Helpers](#contentful-cda-helpers)
+  - [Experience API Schemas](#experience-api-schemas)
+  - [Insights API Schemas](#insights-api-schemas)
+- [Related](#related)
 
 <!-- mtoc-end -->
 </details>
@@ -48,87 +46,75 @@ Install using an NPM-compatible package manager, pnpm for example:
 pnpm install @contentful/optimization-api-schemas
 ```
 
+Import schemas or helpers from the package:
+
+```ts
+import { isOptimizedEntry, normalizeOptimizationConfig } from '@contentful/optimization-api-schemas'
+```
+
 Consult [Zod's documentation](https://zod.dev/basics) for more information on working with
 [Zod Mini](https://zod.dev/packages/mini) schemas.
 
-## Contentful CDA Schemas
+## When to Use This Package
 
-These schemas assist in determining whether Contentful content entries provided by the CDA and its
-SDK are valid for optimization. These schemas do not encapsulate all features and functionality
-specified in the CDA SDK's exported TypeScript type system, but strive to remain compatible enough
-for the purposes of optimization.
+Use `@contentful/optimization-api-schemas` when you need shared runtime validation schemas or
+inferred TypeScript types for Contentful CDA, Experience API, and Insights API payloads. Most
+application integrations should use an environment SDK instead of importing schemas directly.
 
-### Essential Schemas
+## Package Surface
 
-- `CtflEntry`: Zod schema describing a generic Contentful entry; the `fields` member is loosely
-  typed as any valid JSON
-- `OptimizedEntry`: Zod schema describing a `CtflEntry` that has associated optimization entries
-- `OptimizationEntry`: Zod schema describing an optimization entry, which is associated with an
-  `OptimizedEntry` via its `fields.nt_experiences` property
-- `OptimizationConfig`: Zod schema describing the configuration of an `OptimizationEntry` via its
-  `fields.nt_config` property
+### Contentful CDA Helpers
 
-### Essential Functions
+These helpers identify and normalize Contentful entries for optimization:
 
-- `isEntry<S extends SkeletonType, M extends ChainModifiers, L extends string>`: Type guard that
-  checks whether the given value is a Contentful Entry, passing through the specified skeleton,
-  chain modifiers, and locale
-- `isOptimizedEntry`: Type guard for `OptimizedEntry`
-- `isOptimizationEntry`: Type guard for `OptimizationEntry`
-- `normalizeOptimizationConfig`: Runtime helper that fills omitted `OptimizationConfig` fields with
-  SDK-safe defaults
+| Export                        | Purpose                                                         |
+| ----------------------------- | --------------------------------------------------------------- |
+| `CtflEntry`                   | Generic Contentful entry schema                                 |
+| `OptimizedEntry`              | Entry schema with associated optimization entries               |
+| `OptimizationEntry`           | Optimization entry schema referenced by `fields.nt_experiences` |
+| `OptimizationConfig`          | Optimization configuration schema from `fields.nt_config`       |
+| `isEntry`                     | Type guard for Contentful Entry values                          |
+| `isOptimizedEntry`            | Type guard for optimized entries                                |
+| `isOptimizationEntry`         | Type guard for optimization entries                             |
+| `normalizeOptimizationConfig` | Fills omitted optimization config fields with SDK-safe defaults |
 
-## Experience API Schemas
+### Experience API Schemas
 
-These schemas help validate at run-time that both the request and response data for Experience API
-requests conform to current API specifications.
+Experience API schemas validate profile evaluation request and response payloads:
 
-### Essential Experience API Request Schemas
+| Export                       | Purpose                                                      |
+| ---------------------------- | ------------------------------------------------------------ |
+| `ExperienceRequestData`      | Request payload for a single Experience API call             |
+| `BatchExperienceRequestData` | Request payload for batch Experience API calls               |
+| `ExperienceEvent`            | Union of supported Experience API event schemas              |
+| `BatchExperienceEvent`       | Batch event schema with required `anonymousId` per event     |
+| `ExperienceResponse`         | Full Experience API response envelope                        |
+| `BatchExperienceResponse`    | Batch Experience API response envelope                       |
+| `Change`                     | Supported change union, currently including Custom Flag data |
+| `SelectedOptimization`       | Selected optimization outcome for a profile                  |
+| `Profile`                    | User profile returned by the Experience API                  |
 
-- `ExperienceRequestData`: Zod schema describing the data payload for an Experience API request
-- `BatchExperienceRequestData`: Zod schema describing the data payload for a batch Experience API
-  request; requires at least one batch event
-- `ExperienceEvent`: Zod schema union of supported Experience API events
-- `BatchExperienceEvent`: Zod schema describing each valid Experience API event within a batch;
-  Similar to `ExperienceEvent`, but with an additional `anonymousId` member on each event schema
+### Insights API Schemas
 
-Experience API event schemas:
+Insights API schemas validate event ingestion payloads:
 
-- `AliasEvent`: Zod schema describing an `alias` event
-- `ViewEvent`: Zod schema describing a `component` view event used for entry and Custom Flag
-  exposure tracking
-- `GroupEvent`: Zod schema describing a `group` event
-- `IdentifyEvent`: Zod schema describing an `identify` event
-- `PageViewEvent`: Zod schema describing a `page` view event
-- `ScreenViewEvent`: Zod schema describing a `screen` view event
-- `TrackEvent`: Zod schema describing a custom `track` event
+| Export               | Purpose                                                     |
+| -------------------- | ----------------------------------------------------------- |
+| `InsightsEvent`      | Union of supported Insights API event schemas               |
+| `BatchInsightsEvent` | Batched Insights API payload with profile and event entries |
+| `ClickEvent`         | `component_click` event schema                              |
+| `HoverEvent`         | `component_hover` event schema                              |
+| `ViewEvent`          | `component` view event schema                               |
 
-### Essential Experience API Response Schemas
+For every schema, inferred type, and helper signature, use the generated
+[API Schemas reference](https://contentful.github.io/optimization/modules/_contentful_optimization-api-schemas.html).
 
-- `ExperienceResponse`: Zod schema describing a full Experience API response; includes a `data`
-  object with `changes`, `experiences`, and `profile` properties
-- `BatchExperienceResponse`: Zod schema describing a batch Experience API response; includes a
-  `data` payload described by `BatchExperienceResponseData`
-- `BatchExperienceResponseData`: Zod schema describing the `data` payload for
-  `BatchExperienceResponse`
-- `Change`: Union of supported change types, which currently only includes `VariableChange`; this
-  change type is used for Custom Flags
-- `SelectedOptimization`: Zod schema describing a selected optimization outcome for a user
-- `Profile`: Zod schema describing a full user profile as received from the Experience API
+## Related
 
-## Insights API Schemas
-
-Insights API endpoints currently do not return response data.
-
-### Essential Insights API Response Schemas
-
-- `InsightsEvent`: Zod schema union of supported Insights API events
-- `BatchInsightsEvent`: Zod schema describing a batched Insights API event payload; expects a
-  `profile` property alongside a collection of `events`
-
-Insights API event schemas:
-
-- `ClickEvent`: Zod schema describing a `component_click` event used for entry click tracking
-- `HoverEvent`: Zod schema describing a `component_hover` event used for entry hover tracking
-- `ViewEvent`: Zod schema describing a `component` view event used for entry and Custom Flag
-  exposure tracking
+- [API Schemas generated reference](https://contentful.github.io/optimization/modules/_contentful_optimization-api-schemas.html) -
+  exported schema and type reference
+- [API Client](../api-client/README.md) - low-level Experience API and Insights API transport
+- [Optimization Core SDK](../core-sdk/README.md) - platform-agnostic SDK layer that consumes these
+  schemas
+- [Choosing the Right SDK](https://contentful.github.io/optimization/documents/Documentation.Guides.choosing-the-right-sdk.html) -
+  package selection guidance for application integrations

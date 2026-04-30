@@ -20,6 +20,11 @@ space utilities used by unit tests and reference implementations.
   endpoint behavior or fixture shape changes.
 - Do not commit secrets or local credentials from `.contentfulrc.json`.
 - Do not run `upload:ctfl:space` unless the user explicitly asked for Contentful space mutation.
+- Keep `README.md` framed as internal testing support, not as a public SDK package. Preserve the
+  sections that explain when to use mocks in unit tests, local dev and E2E flows, fixture updates,
+  and Contentful test-space setup.
+- README commands should prefer repo-root wrappers such as `pnpm serve:mocks` for common flows and
+  package-filter commands only for package-specific fixture or Contentful space utilities.
 
 ## Commands
 

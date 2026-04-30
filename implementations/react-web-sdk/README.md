@@ -1,12 +1,36 @@
-# React Web SDK Reference Implementation
+<p align="center">
+  <a href="https://www.contentful.com/developers/docs/personalization/">
+    <img alt="Contentful Logo" title="Contentful" src="../../contentful-icon.png" width="150">
+  </a>
+</p>
+
+<h1 align="center">Contentful Personalization & Analytics</h1>
+
+<h3 align="center">React Web SDK Reference Implementation</h3>
+
+<div align="center">
+
+[Readme](./README.md) ·
+[Guides](https://contentful.github.io/optimization/documents/Documentation.Guides.html) ·
+[Reference](https://contentful.github.io/optimization) · [Contributing](../../CONTRIBUTING.md)
+
+</div>
+
+> [!WARNING]
+>
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
 
 Reference implementation demonstrating `@contentful/optimization-react-web` usage in a React SPA.
+This is the primary React Web reference implementation for customer-style usage of the official
+React framework package.
 
+> [!NOTE]
+>
 > This implementation is the React Web SDK counterpart to
 > [`web-sdk_react`](../web-sdk_react/README.md). Where `web-sdk_react` builds its own React adapter
-> layer over `@contentful/optimization-web`, this implementation uses
-> `@contentful/optimization-react-web` directly — the official React framework package — as a
-> customer would. There is no `src/optimization/` adapter directory.
+> layer over `@contentful/optimization-web`, this implementation uses the official
+> `@contentful/optimization-react-web` framework package directly, as a customer would. There is no
+> `src/optimization/` adapter directory.
 
 ## What This Demonstrates
 
@@ -38,13 +62,13 @@ Reference implementation demonstrating `@contentful/optimization-react-web` usag
 
 Run the one-shot launcher to configure everything and start the app:
 
-```bash
+```sh
 ./implementations/react-web-sdk/scripts/launch-reference-app.sh
 ```
 
 Or from the **implementation directory**:
 
-```bash
+```sh
 pnpm launch
 ```
 
@@ -53,56 +77,82 @@ server, and launch the dev server. Once complete, the app is available at `http:
 
 Use flags to skip steps on subsequent runs:
 
-```bash
-./scripts/launch-reference-app.sh --skip-build      # packages already built
-./scripts/launch-reference-app.sh --skip-install     # dependencies already installed
+```sh
+./scripts/launch-reference-app.sh --skip-build
+./scripts/launch-reference-app.sh --skip-install
 ```
 
 ## Manual Setup
 
 From the **repository root**:
 
-```bash
+```sh
 pnpm build:pkgs
-pnpm run implementation:run -- react-web-sdk implementation:install
+pnpm implementation:run -- react-web-sdk implementation:install
 ```
 
-## Development
+## Running Locally
 
 From the **repository root**:
 
-```bash
-pnpm run implementation:run -- react-web-sdk dev        # dev server
-pnpm run implementation:run -- react-web-sdk build      # production build
-pnpm run implementation:run -- react-web-sdk typecheck  # type check
+1. Start the development server:
+
+```sh
+pnpm implementation:run -- react-web-sdk dev
 ```
 
-Or from the **implementation directory** (`implementations/react-web-sdk`):
+2. Build for production:
 
-```bash
+```sh
+pnpm implementation:run -- react-web-sdk build
+```
+
+3. Run type checking:
+
+```sh
+pnpm implementation:run -- react-web-sdk typecheck
+```
+
+The equivalent implementation-directory commands are:
+
+```sh
 pnpm dev
 pnpm build
 pnpm typecheck
 ```
 
-## Testing
+## Running E2E Tests
 
-```bash
-# Full E2E setup + run from root
+1. Run the full E2E setup and test suite from the repository root:
+
+```sh
 pnpm setup:e2e:react-web-sdk
 pnpm test:e2e:react-web-sdk
+```
 
-# Or step by step
-pnpm run implementation:run -- react-web-sdk serve
-pnpm run implementation:run -- react-web-sdk implementation:test:e2e:run
-pnpm run implementation:run -- react-web-sdk serve:stop
+2. Or run the Playwright flow step by step:
+
+```sh
+pnpm implementation:run -- react-web-sdk serve
+```
+
+In another terminal:
+
+```sh
+pnpm --dir implementations/react-web-sdk --ignore-workspace exec playwright test
+```
+
+When finished:
+
+```sh
+pnpm implementation:run -- react-web-sdk serve:stop
 ```
 
 ## Environment Variables
 
 Copy `.env.example` to `.env`:
 
-```bash
+```sh
 cp .env.example .env
 ```
 
@@ -292,7 +342,7 @@ visible content element inside the render prop:
 > tracking for any DOM element that has `data-ctfl-entry-id`. The SDK's MutationObserver registers
 > elements as they appear in the DOM after consent is given.
 
-## Migration From web-sdk_react
+## Migration from web-sdk_react
 
 | `web-sdk_react` Local Code                            | `react-web-sdk` Equivalent                                            |
 | ----------------------------------------------------- | --------------------------------------------------------------------- |
@@ -315,9 +365,9 @@ receive state via `useOutletContext`.
 
 ## Related
 
-- [web-sdk_react](../web-sdk_react/README.md) — adapter-based reference using
+- [web-sdk_react](../web-sdk_react/README.md) - adapter-based reference using
   `@contentful/optimization-web`
-- [web-sdk](../web-sdk/README.md) — vanilla JavaScript reference
-- [@contentful/optimization-react-web](../../packages/web/frameworks/react-web-sdk/README.md) —
+- [web-sdk](../web-sdk/README.md) - vanilla JavaScript reference
+- [@contentful/optimization-react-web](../../packages/web/frameworks/react-web-sdk/README.md) -
   React Web SDK
-- [@contentful/optimization-web](../../packages/web/web-sdk/README.md) — Web SDK
+- [@contentful/optimization-web](../../packages/web/web-sdk/README.md) - Web SDK

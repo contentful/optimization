@@ -9,3 +9,8 @@ repository.
 - No Android platform package is published from this monorepo yet.
 - Current mobile support is available through the JavaScript React Native SDK:
   [@contentful/optimization-react-native](../react-native-sdk/README.md).
+
+## When to Use This Directory
+
+Use this README as a status marker only. Do not expect install commands, package exports, or public
+SDK setup instructions here until a native Android SDK package is implemented.
