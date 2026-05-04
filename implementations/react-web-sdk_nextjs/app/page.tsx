@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export default function Home() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center p-8">
@@ -7,18 +9,18 @@ export default function Home() {
         SDKs in a Next.js App Router application.
       </p>
       <nav className="mt-8 flex gap-4">
-        <a
+        <Link
           href="/client-resolved"
           className="rounded-lg border border-zinc-200 px-4 py-2 hover:bg-zinc-50 transition-colors"
         >
           Client-Resolved
-        </a>
-        <a
+        </Link>
+        <Link
           href="/server-resolved"
           className="rounded-lg border border-zinc-200 px-4 py-2 hover:bg-zinc-50 transition-colors"
         >
           Server-Resolved
-        </a>
+        </Link>
       </nav>
     </main>
   )
