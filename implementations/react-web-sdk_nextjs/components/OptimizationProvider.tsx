@@ -16,8 +16,13 @@ export function OptimizationProvider({ children }: OptimizationProviderProps): R
     setMounted(true)
   }, [])
 
+  // The Web SDK requires browser APIs (localStorage, document.cookie) and cannot
+  // be instantiated during SSR. We must return `null` rather than rendering
+  // children without <OptimizationRoot>, because child components that call
+  // useOptimization() / useOptimizationContext() will throw if rendered outside
+  // the provider. This causes a brief flash of empty content before the SDK
+  // mounts on the client.
   if (!mounted) {
-    // 
     return null
   }
 
