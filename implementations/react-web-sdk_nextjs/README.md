@@ -1,36 +1,55 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Next.js React Web SDK Reference Implementation
 
-## Getting Started
+Next.js App Router reference implementation demonstrating `@contentful/optimization-react-web`
+(client-side) and `@contentful/optimization-node` (server-side SSR) working together.
 
-First, run the development server:
+## Architecture
+
+This implementation shows two integration patterns:
+
+- **Client-Resolved** (`/client-resolved`): Entries are resolved entirely in the browser via the
+  React SDK. The server renders an HTML shell; the Web SDK resolves optimizations client-side.
+- **Server-Resolved** (`/server-resolved`): Entries are pre-resolved on the server via the Node SDK
+  and passed as props to client components for hydration with full interactivity.
+
+Both patterns share a cookie-based profile (`ctfl-opt-aid`) managed by Next.js middleware, ensuring
+the same anonymous profile is used across server and client.
+
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# From the repository root:
+pnpm build:pkgs
+pnpm implementation:run -- react-web-sdk_nextjs implementation:install
+
+# Copy env:
+cp implementations/react-web-sdk_nextjs/.env.example implementations/react-web-sdk_nextjs/.env
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Development
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Start mock server + dev server:
+pnpm implementation:run -- react-web-sdk_nextjs dev
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Or with PM2-managed processes:
+pnpm implementation:run -- react-web-sdk_nextjs serve
+pnpm implementation:run -- react-web-sdk_nextjs serve:stop
+```
 
-## Learn More
+## Key Files
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+app/
+  layout.tsx              # Root layout (Server Component) wraps children in client provider
+  page.tsx                # Home page with navigation to both patterns
+  client-resolved/        # Client-side optimization resolution demo
+  server-resolved/        # Server-side pre-resolution + client hydration demo
+lib/
+  config.ts               # Shared SDK configuration from env vars
+  contentful-client.ts    # Contentful CDA client
+  optimization-server.ts  # Node SDK singleton for server-side use
+components/
+  OptimizationProvider.tsx # "use client" wrapper for <OptimizationRoot>
+middleware.ts             # Cookie-based profile management
+```
