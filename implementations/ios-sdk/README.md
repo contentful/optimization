@@ -1,4 +1,8 @@
-# Optimization iOS Reference App
+<p align="center">
+  <a href="https://www.contentful.com/developers/docs/personalization/">
+    <img alt="Contentful Logo" title="Contentful" src="../../contentful-icon.png" width="150">
+  </a>
+</p>
 
 Reference app for the iOS Optimization SDK. Two app shells that exercise the SDK against the mock
 server in `lib/mocks/`:
@@ -20,12 +24,12 @@ brew install xcodegen   # one-time
 xcodegen generate
 ```
 
-## UI Tests
+<h3 align="center">iOS Reference App</h3>
 
 Tests live under `uitests/Tests/` and assume the mock server is running at `http://localhost:8000`:
 
 ```sh
-pnpm --filter @contentful/optimization-mocks serve
+pnpm serve:mocks
 ```
 
 Run the full suite against both shells:
@@ -52,14 +56,21 @@ xcodebuild test \
   -only-testing:OptimizationAppUITestsSwiftUI/PreviewPanelOverridesTests
 ```
 
-### Adding new test files
+### Adding New Test Files
 
 Drop the `.swift` into `uitests/Tests/` and run `xcodegen generate`. Both UI test bundles pick it up
 automatically — no Target Membership clicking in Xcode.
 
-## Preview panel tests
+## Preview Panel Tests
 
 The preview-panel override suite mirrors the React Native Detox suite in
 `implementations/react-native-sdk/e2e/preview-panel-overrides.test.js`. Both reference the shared
 contract document at `implementations/PREVIEW_PANEL_SCENARIOS.md`. Keep scenario names and fixture
 IDs identical across platforms so cross-platform regressions are visible in CI diffs.
+
+## Related
+
+- [iOS SDK package status](../../packages/ios/README.md) - Planned native iOS SDK status marker
+- [Mocks package](../../lib/mocks/README.md) - Shared mock API server and fixtures
+- [Preview panel scenario contract](../PREVIEW_PANEL_SCENARIOS.md) - Cross-platform preview-panel
+  scenario source of truth

@@ -38,6 +38,17 @@ hybrid SSR and ESR solutions.
 > code. If the server embeds personalized output or profile-derived values, treat that response as
 > personalized and avoid shared caching unless you vary on all relevant inputs.
 
+## What This Demonstrates
+
+Use this implementation when you need a hybrid SSR/browser example. It demonstrates a stateless Node
+SDK server flow, a stateful Web SDK browser flow, cookie-based profile continuity between them, and
+local mock API usage for end-to-end validation.
+
+## Prerequisites
+
+- Node.js >= 20.19.0 (24.13.0 recommended to match `.nvmrc`)
+- pnpm 10.x
+
 ## Setup
 
 All steps should be run from the monorepo root.
@@ -65,63 +76,57 @@ All steps should be run from the monorepo root.
    the mock server implementation. To test the implementation against a live server environment, see
    the [mocks package](../../lib/mocks/README.md) for information on how to set up Contentful space
    with test data.
-5. Start the mock API and application servers:
 
-   ```sh
-   pnpm --dir implementations/node-sdk+web-sdk --ignore-workspace serve
-   ```
+## Running Locally
 
-6. The application can be accessed via Web browser at `http://localhost:3000`
-
-7. Stop the mock API and application servers:
-
-   ```sh
-   pnpm --dir implementations/node-sdk+web-sdk --ignore-workspace serve:stop
-   ```
-
-See `implementations/node-sdk+web-sdk/package.json` for more commands.
-
-## Running From Root Scripts
-
-You can run this implementation from the monorepo root via the root `package.json` implementation
-scripts.
+Run these commands from the monorepo root.
 
 1. Start servers:
 
    ```sh
-   pnpm run implementation:node-sdk+web-sdk -- serve
+   pnpm implementation:run -- node-sdk+web-sdk serve
    ```
 
 2. Stop servers:
 
    ```sh
-   pnpm run implementation:node-sdk+web-sdk -- serve:stop
+   pnpm implementation:run -- node-sdk+web-sdk serve:stop
    ```
 
 3. Run E2E:
 
    ```sh
-   pnpm run implementation:node-sdk+web-sdk -- test:e2e
+   pnpm test:e2e:node-sdk+web-sdk
    ```
+
+The application can be accessed via Web browser at `http://localhost:3000`. See
+`implementations/node-sdk+web-sdk/package.json` for lower-level local commands.
 
 ## Running E2E Tests
 
 E2E tests are run using Playwright.
 
-1. Install Playwright dependencies:
+1. Install implementation dependencies, browser binaries, and system dependencies:
 
    ```sh
-   pnpm --dir implementations/node-sdk+web-sdk --ignore-workspace exec playwright install --with-deps
+   pnpm setup:e2e:node-sdk+web-sdk
    ```
 
 2. Run the E2E test suite:
 
    ```sh
-   pnpm --dir implementations/node-sdk+web-sdk --ignore-workspace test:e2e
+   pnpm test:e2e:node-sdk+web-sdk
    ```
 
    The tests can alternatively be run using Playwright's GUI:
 
    ```sh
-   pnpm --dir implementations/node-sdk+web-sdk --ignore-workspace test:e2e:ui
+   pnpm implementation:run -- node-sdk+web-sdk test:e2e:ui
    ```
+
+## Related
+
+- [@contentful/optimization-node](../../packages/node/node-sdk/README.md) - Node SDK package
+- [@contentful/optimization-web](../../packages/web/web-sdk/README.md) - Web SDK package
+- [Node SSR Only](../node-sdk/README.md) - Server-only reference implementation
+- [Web Vanilla](../web-sdk/README.md) - Browser-only reference implementation

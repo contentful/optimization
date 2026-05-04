@@ -1,0 +1,236 @@
+name: Notify Slack
+
+permissions:
+  contents: read
+  pull-requests: read
+
+on:
+  pull_request_target:
+    types: [closed]
+    branches: [main]
+    paths:
+      - 'documentation/**'
+      - '!documentation/drafts/**'
+      - 'packages/**'
+
+jobs:
+  notify:
+    name: Notify Slack
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Classify changes
+        id: changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          changed_files="$(
+            gh api --paginate "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" \
+              --jq '.[].filename'
+          )"
+
+          has_docs=false
+          has_guides=false
+          has_concepts=false
+          has_packages=false
+          changed_packages=""
+
+          add_package() {
+            package="$1"
+
+            if ! grep --fixed-strings --line-regexp --quiet "$package" <<< "$changed_packages"; then
+              changed_packages="${changed_packages}${package}"$'\n'
+            fi
+          }
+
+          while IFS= read -r file; do
+            case "$file" in
+              documentation/drafts/*)
+                ;;
+              documentation/guides/*)
+                has_docs=true
+                has_guides=true
+                ;;
+              documentation/concepts/*)
+                has_docs=true
+                has_concepts=true
+                ;;
+              documentation/*)
+                has_docs=true
+                ;;
+              packages/ios/ios-jsc-bridge/*)
+                has_packages=true
+                add_package "@contentful/optimization-ios-bridge"
+                ;;
+              packages/node/node-sdk/*)
+                has_packages=true
+                add_package "@contentful/optimization-node"
+                ;;
+              packages/react-native-sdk/*)
+                has_packages=true
+                add_package "@contentful/optimization-react-native"
+                ;;
+              packages/universal/api-client/*)
+                has_packages=true
+                add_package "@contentful/optimization-api-client"
+                ;;
+              packages/universal/api-schemas/*)
+                has_packages=true
+                add_package "@contentful/optimization-api-schemas"
+                ;;
+              packages/universal/core-sdk/*)
+                has_packages=true
+                add_package "@contentful/optimization-core"
+                ;;
+              packages/web/frameworks/react-web-sdk/*)
+                has_packages=true
+                add_package "@contentful/optimization-react-web"
+                ;;
+              packages/web/preview-panel/*)
+                has_packages=true
+                add_package "@contentful/optimization-web-preview-panel"
+                ;;
+              packages/web/web-sdk/*)
+                has_packages=true
+                add_package "@contentful/optimization-web"
+                ;;
+            esac
+          done <<< "$changed_files"
+
+          if [ "$has_docs" != "true" ] && [ "$has_packages" != "true" ]; then
+            echo "notify=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          package_list="$(
+            printf '%s' "$changed_packages" \
+              | sed '/^$/d' \
+              | awk '{ print "• `" $0 "`" }'
+          )"
+
+          if [ "$has_docs" = "true" ] && [ "$has_packages" = "true" ]; then
+            if [ "$has_guides" = "true" ] && [ "$has_concepts" = "true" ]; then
+              message_title="📚📦 Docs and packages just landed"
+              message_body="Guide, concept, and package updates all landed together. @TECH_WRITER@, there is fresh guide goodness in the mix for your reading list!"
+            elif [ "$has_guides" = "true" ]; then
+              message_title="🧭📦 Guides and packages just landed"
+              message_body="Fresh guide updates and package changes are live. @TECH_WRITER@, something new and useful just landed in your favorite corner of the docs!"
+            elif [ "$has_concepts" = "true" ]; then
+              message_title="💡📦 Concepts and packages just landed"
+              message_body="Concept docs and package updates moved forward together. A tidy little upgrade for readers and builders!"
+            else
+              message_title="📝📦 Docs and packages just landed"
+              message_body="Documentation and package updates were merged together. Better docs, fresher packages!"
+            fi
+          elif [ "$has_packages" = "true" ]; then
+            message_title="📦 Package changes just landed"
+            message_body="Package updates were merged. Fresh bits are ready for the next build!"
+          elif [ "$has_guides" = "true" ] && [ "$has_concepts" = "true" ]; then
+            message_title="📚 Guides and concepts just landed"
+            message_body="Guide and concept documentation both got updates. @TECH_WRITER@, fresh guide goodness just landed for your reading list!"
+          elif [ "$has_guides" = "true" ]; then
+            message_title="🧭 Guide documentation just landed"
+            message_body="Fresh guide updates are live. @TECH_WRITER@, something new and useful just landed in your favorite corner of the docs!"
+          elif [ "$has_concepts" = "true" ]; then
+            message_title="💡 Concept documentation just landed"
+            message_body="Concept docs got a little clearer today. Nice boost for the next reader!"
+          else
+            message_title="📝 Documentation just landed"
+            message_body="A documentation update was merged. Small polish, better docs!"
+          fi
+
+          {
+            echo "notify=true"
+            echo "message_title=$message_title"
+            echo "message_body=$message_body"
+            echo "package_list<<EOF"
+            echo "$package_list"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Notify Slack
+        if: steps.changes.outputs.notify == 'true'
+        env:
+          CHANGED_PACKAGES: ${{ steps.changes.outputs.package_list }}
+          MERGED_BY: ${{ github.event.pull_request.merged_by.login || github.actor }}
+          MESSAGE_BODY: ${{ steps.changes.outputs.message_body }}
+          MESSAGE_TITLE: ${{ steps.changes.outputs.message_title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          SLACK_TECH_WRITER_ID: ${{ secrets.SLACK_TECH_WRITER_ID }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          set -euo pipefail
+
+          message_body="$MESSAGE_BODY"
+
+          if [[ "$message_body" == *"@TECH_WRITER@"* ]]; then
+            if [ -z "$SLACK_TECH_WRITER_ID" ]; then
+              echo "SLACK_TECH_WRITER_ID is required for guide notifications." >&2
+              exit 1
+            fi
+
+            tech_writer_mention="<@${SLACK_TECH_WRITER_ID}>"
+            message_body="${message_body//@TECH_WRITER@/$tech_writer_mention}"
+          fi
+
+          payload="$(
+            jq -n \
+              --arg message_title "$MESSAGE_TITLE" \
+              --arg message_body "$message_body" \
+              --arg changed_packages "$CHANGED_PACKAGES" \
+              --arg merged_by "$MERGED_BY" \
+              --arg pr_number "#${PR_NUMBER}" \
+              --arg pr_title "$PR_TITLE" \
+              --arg pr_url "$PR_URL" \
+              '{
+                text: "\($message_title): \($pr_title)",
+                blocks: ([
+                    {
+                      type: "section",
+                      text: {
+                        type: "mrkdwn",
+                        text: "*\($message_title)*\n\($message_body)"
+                      }
+                    },
+                    {
+                      type: "section",
+                      fields: [
+                        {
+                          type: "mrkdwn",
+                          text: "*Pull request:*\n<\($pr_url)|\($pr_number)> \($pr_title)"
+                        },
+                        {
+                          type: "mrkdwn",
+                          text: "*Merged by:*\n\($merged_by)"
+                        }
+                      ]
+                    }
+                  ] + (
+                  if $changed_packages == "" then
+                    []
+                  else
+                    [
+                      {
+                        type: "section",
+                        text: {
+                          type: "mrkdwn",
+                          text: "*Changed packages:*\n\($changed_packages)"
+                        }
+                      }
+                    ]
+                  end
+                ))
+              }'
+          )"
+
+          curl --fail-with-body --silent --show-error \
+            --request POST \
+            --header 'Content-type: application/json' \
+            --data "$payload" \
+            "$SLACK_WEBHOOK_URL"

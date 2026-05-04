@@ -1,6 +1,7 @@
 # AGENTS.md
 
-Read the repository root `AGENTS.md` first.
+Read the repository root `AGENTS.md`, `packages/AGENTS.md`, and `packages/universal/AGENTS.md`
+before this file.
 
 ## Scope
 
@@ -11,13 +12,6 @@ Experience API, and Insights API payloads.
 
 - `src/`
 - `README.md`
-
-## Local Rules
-
-- Treat schema edits as contract changes. Prefer additive, backward-compatible changes unless the
-  task explicitly changes the API contract.
-- Keep runtime schemas, inferred types, and exported helper functions aligned.
-- If you change public exports or validation behavior, update the package README and relevant TSDoc.
 
 ## Commands
 
@@ -30,6 +24,3 @@ Experience API, and Insights API payloads.
 
 - Run `typecheck` and `test:unit` for local changes.
 - Run `build` for export or packaging changes.
-- Run `size:check` for runtime, export, dependency, or bundle-shape changes.
-- If public schemas or helper behavior changed, also validate at least `api-client` and `core-sdk`
-  downstream.

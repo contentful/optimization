@@ -19,21 +19,20 @@
 >
 > The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
 
-This library implements a "preview panel" compatible with the
-[Contentful Optimization Web SDK](../web-sdk/README.md). The preview panel is loaded into the DOM as
-a Web Component-based micro-frontend.
-
-> [!INFO]
->
-> The Contentful Optimization Web Preview Panel is built using the Lit framework for Web Component
-> micro-frontends
+This package implements the first-party browser preview panel for the
+[Optimization Web SDK](../web-sdk/README.md). It loads into the DOM as a Lit-based Web Component
+micro-frontend and talks to the Web SDK through the preview bridge exposed by
+`optimization.registerPreviewPanel(...)`.
 
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
 - [Getting Started](#getting-started)
+- [When to Use This Package](#when-to-use-this-package)
+- [Common Configuration](#common-configuration)
 - [Content Security Policy Support](#content-security-policy-support)
+- [Related](#related)
 
 <!-- mtoc-end -->
 </details>
@@ -46,43 +45,67 @@ Install using an NPM-compatible package manager, pnpm for example:
 pnpm install @contentful/optimization-web-preview-panel
 ```
 
-Import the preview-panel attach function; both CJS and ESM module systems are supported, ESM
-preferred:
+Import the attach function; both CJS and ESM module systems are supported, ESM preferred:
 
 ```ts
 import attachOptimizationPreviewPanel from '@contentful/optimization-web-preview-panel'
 ```
 
-Initialize the preview panel with existing instances of the Contentful SDK and the Optimization Web
-SDK:
+Attach the preview panel with existing Contentful SDK and Optimization Web SDK instances:
 
 ```ts
-attachOptimizationPreviewPanel({ contentful: contentfulClient, optimization, nonce: undefined })
+attachOptimizationPreviewPanel({
+  contentful: contentfulClient,
+  optimization,
+})
 ```
 
-The `attachOptimizationPreviewPanel` function automatically attaches itself to the DOM and adds the
-toggle button with which the panel can be opened.
+The attach function appends the panel to the DOM and adds the toggle button that opens it.
 
 > [!IMPORTANT]
 >
-> The preview panel is intentionally tightly coupled to the Optimization Web SDK internals. It uses
-> the symbol-keyed preview bridge provided by `optimization.registerPreviewPanel(...)` and state
-> interceptors to read and mutate internal state for local preview overrides. This coupling is
-> deliberate and required for preview behavior parity.
+> The preview panel is intentionally coupled to Optimization Web SDK internals. It uses the
+> symbol-keyed preview bridge and state interceptors to read and mutate local preview state. This is
+> a first-party preview surface, not a general extension API.
+
+## When to Use This Package
+
+Use `@contentful/optimization-web-preview-panel` when a Web SDK or React Web SDK integration needs
+the browser preview panel attached to an existing Contentful SDK client and Optimization Web SDK
+instance. Application code should not use this package as a general state extension point.
+
+## Common Configuration
+
+| Option         | Required? | Default     | Description                                                |
+| -------------- | --------- | ----------- | ---------------------------------------------------------- |
+| `contentful`   | Yes       | N/A         | Existing Contentful client used to read preview content    |
+| `optimization` | Yes       | N/A         | Existing Optimization Web SDK instance                     |
+| `nonce`        | No        | `undefined` | CSP nonce applied to Lit styles when strict CSP is enabled |
+
+For the complete attach function signature, use the generated
+[Preview Panel reference](https://contentful.github.io/optimization/modules/_contentful_optimization-web-preview-panel.html).
 
 ## Content Security Policy Support
 
-In order to comply with strict CSP policies, a nonce can be supplied to the
-`attachOptimizationPreviewPanel` function as its third argument.
+In strict CSP environments, pass a nonce directly:
 
 ```ts
 attachOptimizationPreviewPanel({ contentful: contentfulClient, optimization, nonce })
 ```
 
-Alternatively, the nonce can be added to the `window` _before_ attaching the preview panel to the
-DOM.
+Alternatively, set `window.litNonce` before attaching the panel:
 
 ```ts
 window.litNonce = nonce
-attachOptimizationPreviewPanel({ contentful: contentfulClient, optimization, nonce: undefined })
+attachOptimizationPreviewPanel({ contentful: contentfulClient, optimization })
 ```
+
+## Related
+
+- [Preview Panel generated reference](https://contentful.github.io/optimization/modules/_contentful_optimization-web-preview-panel.html) -
+  exported attach function reference
+- [Optimization Web SDK](../web-sdk/README.md) - browser SDK that provides the preview bridge
+- [Optimization React Web SDK](../frameworks/react-web-sdk/README.md) - React layer commonly used
+  with the preview panel
+- [React Web integration guide](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-react-web-sdk-in-a-react-app.html#preview-panel) -
+  preview setup in a React application

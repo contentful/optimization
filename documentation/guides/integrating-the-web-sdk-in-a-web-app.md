@@ -25,6 +25,7 @@ providers, hooks, and router adapters, use the React Web guide instead.
 - [7. Track Entry Interactions and Follow-Up Events](#7-track-entry-interactions-and-follow-up-events)
   - [Automatic Entry Tracking](#automatic-entry-tracking)
   - [Manual Element Observation](#manual-element-observation)
+  - [Browser Tracking Mechanics](#browser-tracking-mechanics)
   - [Custom Browser Events](#custom-browser-events)
 - [8. Subscribe to `states` for Rerenders and UI Feedback](#8-subscribe-to-states-for-rerenders-and-ui-feedback)
 - [Share the Anonymous ID Cookie in Hybrid SSR + Browser Apps](#share-the-anonymous-id-cookie-in-hybrid-ssr-browser-apps)
@@ -440,7 +441,40 @@ optimization.tracking.enableElement('views', element, {
 ```
 
 Use `tracking.disableElement(...)` to force-disable a specific element or
-`tracking.clearElement(...)` to remove a manual override and return it to automatic behavior.
+`tracking.clearElement(...)` to remove a manual override and return it to automatic behavior. Manual
+API overrides take precedence over data-attribute overrides. After `clearElement(...)`, the element
+falls back to attribute overrides first, then normal automatic behavior.
+
+### Browser Tracking Mechanics
+
+Interaction observers are passive with respect to host event flow. They do not call
+`event.preventDefault()` or `event.stopPropagation()`.
+
+View tracking uses `IntersectionObserver` plus dwell-time timers. Track only relevant elements,
+disable tracking for elements that are no longer needed, and choose stable `minVisibleRatio` and
+`dwellTimeMs` values that match your UI so visibility cycles do not reset constantly.
+
+Hover tracking uses pointer and mouse enter/leave events with dwell-time timers. Tune `dwellTimeMs`
+and `hoverDurationUpdateIntervalMs` for pointer-heavy UIs so short pointer movement does not create
+unwanted event volume.
+
+Click tracking uses semantic clickability checks plus tracked-entry resolution. Prefer native
+clickable elements such as `<button>` and `<a href>`, role-based click targets, or
+`data-ctfl-clickable="true"` over relying only on JavaScript-assigned `onclick` handlers.
+
+Automatic elements can also use per-element `data-ctfl-*` overrides:
+
+| Attribute                                     | Purpose                                                     |
+| --------------------------------------------- | ----------------------------------------------------------- |
+| `data-ctfl-track-views`                       | Force-enable or force-disable view tracking for the element |
+| `data-ctfl-view-duration-update-interval-ms`  | Override periodic view-duration update interval             |
+| `data-ctfl-track-clicks`                      | Force-enable or force-disable click tracking                |
+| `data-ctfl-track-hovers`                      | Force-enable or force-disable hover tracking                |
+| `data-ctfl-hover-duration-update-interval-ms` | Override periodic hover-duration update interval            |
+
+Use the generated
+[Web SDK reference](https://contentful.github.io/optimization/modules/_contentful_optimization-web.html)
+for the complete option types behind these behaviors.
 
 ### Custom Browser Events
 

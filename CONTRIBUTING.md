@@ -45,6 +45,7 @@ gotchas.
 - [Validation Matrix](#validation-matrix)
 - [Code Style and Local Hooks](#code-style-and-local-hooks)
 - [Documentation](#documentation)
+  - [README Depth and Render Targets](#readme-depth-and-render-targets)
 - [Local Troubleshooting](#local-troubleshooting)
 - [Troubleshooting CI Issues](#troubleshooting-ci-issues)
   - [E2E Coverage and Environment](#e2e-coverage-and-environment)
@@ -324,6 +325,27 @@ keep these artifacts aligned:
 
 `documentation/` contains source markdown that TypeDoc publishes. `docs/` is generated output. Do
 not hand-edit generated TypeDoc output.
+
+### README Depth and Render Targets
+
+READMEs are orientation surfaces, not the only place every detail should live. Match depth to the
+README category:
+
+- Application-facing package READMEs keep purpose, install, minimal setup, common options, critical
+  caveats, and links to guides, reference implementations, and generated API reference.
+- Lower-level package READMEs explain the package's role in the SDK stack, who should use it
+  directly, common setup options where useful, and where exhaustive API details live.
+- Reference implementation READMEs stay procedural: what the implementation demonstrates,
+  prerequisites, setup, run/test commands, environment notes, and related package links.
+- Internal and placeholder READMEs stay short, explicit, and status-oriented.
+
+Move step-by-step implementation material into the existing guide for that runtime when one exists.
+Create a new guide only when no existing guide covers the reader goal. Keep exhaustive method
+catalogs, callback payload shapes, and exported type details in TypeDoc.
+
+Package README links must work in GitHub source browsing, generated TypeDoc project documents, and
+npmjs README rendering. Use canonical generated-doc URLs for shared header navigation and verify
+repo-relative links before relying on package README publish rewriting.
 
 ## Local Troubleshooting
 
