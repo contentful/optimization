@@ -17,13 +17,13 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 The Contentful Optimization API Client provides low-level transport for the Experience API and
 Insights API. Application-facing SDKs compose this package with event builders, state management,
 queueing, and runtime-specific defaults.
 
-Most applications should start with Web, React Web, Node, or React Native SDKs. Use this package
+We recommend starting applications with Web, React Web, Node, or React Native SDKs. Use this package
 directly when building or maintaining SDK layers, tests, tooling, or first-party integrations that
 need raw API access.
 
@@ -31,19 +31,19 @@ need raw API access.
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Getting Started](#getting-started)
-- [When to Use This Package](#when-to-use-this-package)
-- [Common Configuration](#common-configuration)
-- [API Surface](#api-surface)
+- [Getting started](#getting-started)
+- [When to use this package](#when-to-use-this-package)
+- [Common configuration](#common-configuration)
+- [API surface](#api-surface)
   - [Experience API](#experience-api)
   - [Insights API](#insights-api)
-  - [Fetch Helpers](#fetch-helpers)
+  - [Fetch helpers](#fetch-helpers)
 - [Related](#related)
 
 <!-- mtoc-end -->
 </details>
 
-## Getting Started
+## Getting started
 
 Install using an NPM-compatible package manager, pnpm for example:
 
@@ -63,13 +63,13 @@ const client = new ApiClient({
 })
 ```
 
-## When to Use This Package
+## When to use this package
 
 Use `@contentful/optimization-api-client` when you need direct low-level access to the Experience
 API or Insights API transport surface. Use an application-facing SDK when you need optimization
 state, consent handling, event builders, entry resolution, tracking, or platform defaults.
 
-## Common Configuration
+## Common configuration
 
 | Option         | Required? | Default                      | Description                                                 |
 | -------------- | --------- | ---------------------------- | ----------------------------------------------------------- |
@@ -90,7 +90,7 @@ Common Experience API options:
 | `plainText`       | No        | `false`                               | Sends performance-critical endpoints as text    |
 | `preflight`       | No        | `false`                               | Aggregates a profile state without storing it   |
 
-All Experience options except `baseUrl` may also be provided per request.
+All Experience options except `baseUrl` can also be provided per request.
 
 Common Insights API options:
 
@@ -106,7 +106,7 @@ responses.
 For every option, callback payload, request type, and response type, use the generated
 [API Client reference](https://contentful.github.io/optimization/modules/_contentful_optimization-api-client.html).
 
-## API Surface
+## API surface
 
 ### Experience API
 
@@ -136,9 +136,9 @@ await client.insights.sendBatchEvents({
 })
 ```
 
-Insights endpoints currently do not return response data.
+Insights endpoints do not return response data.
 
-### Fetch Helpers
+### Fetch helpers
 
 This package also exports fetch helper functions used by SDK layers:
 
@@ -157,5 +157,5 @@ Use generated reference docs for helper signatures and callback payloads.
 - [API Schemas](../api-schemas/README.md) - runtime validation schemas and inferred API types
 - [Optimization Core SDK](../core-sdk/README.md) - platform-agnostic SDK layer that composes this
   client
-- [Choosing the Right SDK](https://contentful.github.io/optimization/documents/Documentation.Guides.choosing-the-right-sdk.html) -
+- [Choosing the right SDK](https://contentful.github.io/optimization/documents/Documentation.Guides.choosing-the-right-sdk.html) -
   package selection guidance for application integrations

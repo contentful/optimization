@@ -8,13 +8,13 @@ before this file.
 This package owns platform-agnostic optimization business logic and the shared stateful and
 stateless core used by all platform SDKs.
 
-## Key Paths
+## Key paths
 
 - `src/` — root entry: stateless/stateful core, signals, events, queues, interceptors, resolvers
 - `src/preview-support/` — preview-panel toolkit with additional local guidance
 - `README.md`
 
-## Local Rules
+## Local rules
 
 - Prefer shared behavior fixes here when the problem affects more than one platform SDK.
 
@@ -25,6 +25,6 @@ stateless core used by all platform SDKs.
 - `pnpm --filter @contentful/optimization-core build`
 - `pnpm --filter @contentful/optimization-core size:check`
 
-## Usually Validate
+## Usually validate
 
 - Run `typecheck`, `test:unit`, and `build`.

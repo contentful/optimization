@@ -6,7 +6,7 @@ Read the repository root `AGENTS.md`, then `implementations/AGENTS.md`, before t
 
 This is the Web Vanilla reference implementation for `@contentful/optimization-web`.
 
-## Key Paths
+## Key paths
 
 - `public/`
 - `e2e/`
@@ -14,14 +14,14 @@ This is the Web Vanilla reference implementation for `@contentful/optimization-w
 - `.env.example`
 - `docker-compose.yaml`
 
-## Local Rules
+## Local rules
 
 - Keep this app minimal and example-oriented. Reusable runtime logic belongs in
   `packages/web/web-sdk`, not here.
 - `build` copies Web SDK and preview-panel assets into `public/dist`.
 - Docker is required for `serve:app` because the app is served through nginx on port `3000`.
 
-## Common Failure Modes
+## Common failure modes
 
 - `serve` fails with Docker or container errors: confirm Docker is running before retrying.
 - Playwright reports a missing browser or executable: run `pnpm playwright:install` before retrying
@@ -38,7 +38,7 @@ This is the Web Vanilla reference implementation for `@contentful/optimization-w
 - `pnpm implementation:run -- web-sdk serve:stop`
 - `pnpm implementation:run -- web-sdk implementation:test:e2e:run`
 
-## Usually Validate
+## Usually validate
 
 - Run `typecheck` for local changes.
 - Run `build` when changing static assets or SDK asset copying behavior.

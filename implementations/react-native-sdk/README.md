@@ -18,13 +18,13 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 This is a reference implementation for the
 [Optimization React Native SDK](../../packages/react-native-sdk/README.md) and is part of the
 [Contentful Optimization SDK Suite](../../README.md).
 
-## What This Demonstrates
+## What this demonstrates
 
 Use this implementation when you need an end-to-end React Native example for Android and iOS app
 targets. It demonstrates SDK initialization, optimized entry rendering, interaction tracking,
@@ -39,7 +39,7 @@ navigation/screen tracking, offline behavior, preview-panel scenarios, and Detox
 
 ## Setup
 
-All steps should be run from the monorepo root.
+Run all steps from the monorepo root.
 
 1. Install pnpm packages:
 
@@ -61,7 +61,7 @@ All steps should be run from the monorepo root.
 
 See `implementations/react-native-sdk/package.json` for more commands.
 
-## Running E2E Tests
+## Running E2E tests
 
 Android E2E tests use Detox. Run these commands from the monorepo root.
 
@@ -124,7 +124,7 @@ Android E2E tests use Detox. Run these commands from the monorepo root.
    pnpm implementation:run -- react-native-sdk test:e2e:ios:run
    ```
 
-## Increasing E2E Logging
+## Increasing E2E logging
 
 Local Android E2E logging is intentionally minimal by default.
 

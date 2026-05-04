@@ -31,7 +31,7 @@ const getAtPath = (value: unknown, path: string): unknown => {
  *
  * @public
  * @remarks
- * *Merge tags* are references to user profile data that may be embedded in content
+ * *Merge tags* are references to user profile data that can be embedded in content
  * and expanded at runtime. This resolver normalizes the merge-tag identifier into
  * a set of candidate selectors and searches the profile for a matching value.
  * Result values are returned as strings; numeric/boolean primitives are stringified.
@@ -102,7 +102,7 @@ const MergeTagValueResolver = {
    * fallback is available.
    * @remarks
    * The resolved value depends on the current request profile, so callers
-   * should not reuse rendered output across users or requests unless the
+   * must not reuse rendered output across users or requests unless the
    * cache varies on the same profile inputs.
    * @example
    * ```ts

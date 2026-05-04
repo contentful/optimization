@@ -1,22 +1,22 @@
 import { useCallback, useMemo, useState } from 'react'
 
 interface UseCollapsibleControlParams {
-  /** Whether collapsibles should be open by default */
+  /** Whether collapsibles are open by default. */
   initiallyOpen?: boolean
 }
 
 interface UseCollapsibleControlResult {
-  /** Toggle a specific collapsible by ID */
+  /** Toggle a specific collapsible by ID. */
   toggleCollapsible: (id: string) => void
-  /** Toggle all collapsibles at once */
+  /** Toggle all collapsibles at once. */
   toggleAllCollapsibles: () => void
-  /** Check if a specific collapsible is open */
+  /** Check whether a specific collapsible is open. */
   isCollapsibleOpen: (id: string) => boolean
-  /** Check if all collapsibles are currently open */
+  /** Check whether all collapsibles are open. */
   allCollapsiblesOpen: boolean
-  /** Initialize a new collapsible (call when mounting) */
+  /** Initialize a collapsible when it mounts. */
   initializeCollapsible: (id: string) => void
-  /** Set all collapsibles to a specific state */
+  /** Set all collapsibles to a specific state. */
   setAllCollapsibles: (open: boolean) => void
 }
 
@@ -24,8 +24,8 @@ interface UseCollapsibleControlResult {
  * Manages collapsible state across multiple items to implement
  * "Collapse All / Expand All" functionality.
  *
- * @param params - Optional configuration for initial open state
- * @returns Functions and state for controlling collapsible items
+ * @param params - Optional configuration for initial open state.
+ * @returns Functions and state for controlling collapsible items.
  *
  * @internal
  */

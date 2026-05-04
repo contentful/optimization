@@ -3,7 +3,7 @@ import type { BatchInsightsEventArray } from '@contentful/optimization-core/api-
 /**
  * Send a batch of analytics events using `navigator.sendBeacon`.
  *
- * @param url - The endpoint URL to which the beacon request should be sent.
+ * @param url - The endpoint URL that receives the beacon request.
  * @param events - The batch of events to serialize and send.
  * @returns `true` if the user agent successfully queued the data for transfer,
  * otherwise `false`.

@@ -6,14 +6,14 @@ Read the repository root `AGENTS.md`, then `packages/AGENTS.md`, before this fil
 
 This package owns the React Native SDK and its package-local development harness under `dev/`.
 
-## Key Paths
+## Key paths
 
 - `src/`
 - `dev/`
 - `__mocks__/`
 - `README.md`
 
-## Local Rules
+## Local rules
 
 - Keep reusable React Native SDK logic here rather than in `implementations/react-native-sdk`.
 - `dev/` is a package-local harness, not the published SDK surface, but it is still a maintained
@@ -35,7 +35,7 @@ This package owns the React Native SDK and its package-local development harness
 - `pnpm --filter @contentful/optimization-react-native dev:android`
 - `pnpm --filter @contentful/optimization-react-native dev:ios`
 
-## Usually Validate
+## Usually validate
 
 - Run `typecheck`, `test:unit`, and `build`.
 - Run `dev:test` when changing package-local harness behavior.

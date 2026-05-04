@@ -29,7 +29,7 @@ export const ResponseEnvelope = z.object({
    * Indicates whether an error occurred.
    *
    * @remarks
-   * May be `null` when the error state is unknown or not applicable.
+   * Can be `null` when the error state is unknown or not applicable.
    */
   error: z.nullable(z.boolean()),
 })

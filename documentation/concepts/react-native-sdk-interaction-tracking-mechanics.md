@@ -1,4 +1,4 @@
-# React Native SDK Interaction Tracking Mechanics
+# React Native SDK interaction tracking mechanics
 
 Use this concept document to understand exactly _what_ the `@contentful/optimization-react-native`
 SDK is tracking, _when_ each event fires, and _how_ it leaves the device. Every number, state
@@ -6,11 +6,11 @@ transition, and gate is grounded in SDK source so you can reason about tracking 
 running a live experiment.
 
 The companion
-[Integrating the Optimization React Native SDK in a React Native App](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md)
+[Integrating the Optimization React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md)
 walks through setup, consent, and screen wiring at a tutorial level. Read that first for "how do I
 plug the SDK in?" — come back here for "why isn't my entry view firing?"
 
-## What You Get Out Of The Box
+## What you get out of the box
 
 If you drop `OptimizationRoot` at the top, wrap `NavigationContainer` in
 `OptimizationNavigationContainer`, and wrap Contentful entries in `<OptimizedEntry />`, you get:
@@ -35,52 +35,55 @@ Things you still have to enable yourself:
 <details>
   <summary>Table of Contents</summary>
 
-- [What You Get Out Of The Box](#what-you-get-out-of-the-box)
-- [1. Events The SDK Emits](#1-events-the-sdk-emits)
-  - [Automatic Events](#automatic-events)
-  - [Manual Events](#manual-events)
-  - [Wire Type Mapping](#wire-type-mapping)
-- [2. How Events Flow From The Device](#2-how-events-flow-from-the-device)
-  - [The Two APIs](#the-two-apis)
-  - [Queueing, Flushing, And Offline](#queueing-flushing-and-offline)
-  - [Persistence Via AsyncStorage](#persistence-via-asyncstorage)
-- [3. Consent Gating](#3-consent-gating)
-  - ["Why Is Nothing Tracking?"](#why-is-nothing-tracking)
-- [4. Entry View Tracking Mechanics](#4-entry-view-tracking-mechanics)
-  - [Default Thresholds](#default-thresholds)
-  - [The Visibility State Machine](#the-visibility-state-machine)
-  - [Initial, Periodic, And Final Events](#initial-periodic-and-final-events)
-  - [App Backgrounding And Cleanup](#app-backgrounding-and-cleanup)
-- [5. Scroll Context And Viewport Resolution](#5-scroll-context-and-viewport-resolution)
+- [What you get out of the box](#what-you-get-out-of-the-box)
+- [1. Events the SDK emits](#1-events-the-sdk-emits)
+  - [Automatic events](#automatic-events)
+  - [Manual events](#manual-events)
+  - [Wire type mapping](#wire-type-mapping)
+- [2. How events flow from the device](#2-how-events-flow-from-the-device)
+  - [The two APIs](#the-two-apis)
+  - [Queueing, flushing, and offline](#queueing-flushing-and-offline)
+  - [Persistence via AsyncStorage](#persistence-via-asyncstorage)
+- [3. Consent gating](#3-consent-gating)
+  - ["Why is nothing tracking?"](#why-is-nothing-tracking)
+- [4. Entry view tracking mechanics](#4-entry-view-tracking-mechanics)
+  - [Default thresholds](#default-thresholds)
+  - [The visibility state machine](#the-visibility-state-machine)
+  - [Initial, periodic, and final events](#initial-periodic-and-final-events)
+  - [App backgrounding and cleanup](#app-backgrounding-and-cleanup)
+- [5. Scroll context and viewport resolution](#5-scroll-context-and-viewport-resolution)
   - [Inside OptimizationScrollProvider](#inside-optimizationscrollprovider)
   - [Outside OptimizationScrollProvider](#outside-optimizationscrollprovider)
-- [6. Tap Tracking Semantics](#6-tap-tracking-semantics)
-- [7. Screen Tracking Paths](#7-screen-tracking-paths)
+- [6. Tap tracking semantics](#6-tap-tracking-semantics)
+- [7. Screen tracking paths](#7-screen-tracking-paths)
   - [OptimizationNavigationContainer](#optimizationnavigationcontainer)
   - [useScreenTracking](#usescreentracking)
   - [useScreenTrackingCallback](#usescreentrackingcallback)
-- [8. The Configuration Surface](#8-the-configuration-surface)
-  - [OptimizationRoot Props](#optimizationroot-props)
-  - [OptimizedEntry Props](#optimizedentry-props)
-  - [SDK Init Config](#sdk-init-config)
-  - [Resolution Order](#resolution-order)
-- [9. Manual Tracking API](#9-manual-tracking-api)
-- [10. Putting It Together](#10-putting-it-together)
+- [8. The configuration surface](#8-the-configuration-surface)
+  - [OptimizationRoot props](#optimizationroot-props)
+  - [OptimizedEntry props](#optimizedentry-props)
+  - [SDK init config](#sdk-init-config)
+  - [Resolution order](#resolution-order)
+- [9. Manual tracking API](#9-manual-tracking-api)
+  - [Payload shapes](#payload-shapes)
+  - [When to reach for manual tracking](#when-to-reach-for-manual-tracking)
+- [10. Putting it together](#10-putting-it-together)
+- [Reference](#reference)
 
 </details>
 
-## 1. Events The SDK Emits
+## 1. Events the SDK emits
 
 "Tracking" in the React Native SDK is a small, fixed set of event types. Some are fired by the SDK
 as a side effect of component rendering and user behavior; others are explicit method calls you make
 from application code.
 
-### Automatic Events
+### Automatic events
 
 These are emitted by the SDK without an application-level call, as long as consent allows and the
 relevant provider/component is mounted.
 
-| Event                             | When It Fires                                                                                               | Required Wiring                                                                                             |
+| Event                             | When it fires                                                                                               | Required wiring                                                                                             |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | **Screen view**                   | Each time the active navigation route changes.                                                              | `<OptimizationNavigationContainer>` wrapping `NavigationContainer` (or `useScreenTracking` on each screen). |
 | **Entry view (initial)**          | When a wrapped entry has accumulated enough visible time (default 2000 ms at ≥ 80% visibility).             | `<OptimizedEntry entry={entry}>` with view tracking enabled (the default).                                  |
@@ -89,7 +92,7 @@ relevant provider/component is mounted.
 | **Entry tap**                     | On touch end, when the touch moved less than 10 points from touch start, on a wrapped entry.                | `<OptimizedEntry>` with tap tracking enabled (off by default; opt in via `trackTaps` or `onTap`).           |
 | **Flag view**                     | Internally emitted whenever `useFlag` / `getFlag` is called. Not strictly an interaction; worth knowing.    | Any `getFlag(...)` call.                                                                                    |
 
-### Manual Events
+### Manual events
 
 Call these on the SDK instance from `useOptimization()`. Use them for screens or components that
 don't fit the `OptimizedEntry` pattern, or for business events unrelated to a Contentful entry.
@@ -112,7 +115,7 @@ await optimization.trackView({ componentId: 'entry-123', experienceId: 'exp-456'
 
 At the wire level, "automatic" and "manual" events funnel through the same emission pipeline.
 
-### Wire Type Mapping
+### Wire type mapping
 
 The on-the-wire event types used by the Insights API do not always match the public method name. In
 particular:
@@ -126,9 +129,9 @@ particular:
 These wire types are defined in `packages/universal/core-sdk/src/CoreStatefulEventEmitter.ts:45-50`
 and are shared across all SDKs (web, iOS, RN).
 
-## 2. How Events Flow From The Device
+## 2. How events flow from the device
 
-### The Two APIs
+### The two APIs
 
 The SDK talks to two HTTP endpoints, both defaulting to Ninetailed hosts:
 
@@ -143,7 +146,7 @@ A single user action can touch either or both APIs. `trackView({ sticky: true })
 Experience first (sticky views become part of the profile) then through Insights. Plain `trackView`
 only hits Insights; `identify` only touches Experience.
 
-### Queueing, Flushing, And Offline
+### Queueing, flushing, and offline
 
 Both APIs are fronted by an in-memory queue in the core SDK. Events are enqueued, never sent
 synchronously. Insights events are batched and POSTed; Experience events are per-request but the
@@ -158,7 +161,7 @@ The React Native SDK layers RN-specific behavior on top:
    you keep tracking but lose offline durability. _Source:
    `packages/react-native-sdk/src/handlers/createOnlineChangeListener.ts:74-112`._
 2. **Background flushing.** On `AppState` transition to `background` or `inactive`, the SDK calls
-   `flush()` to drain the queue before the OS may suspend the process. _Source:
+   `flush()` to drain the queue before the OS might suspend the process. _Source:
    `packages/react-native-sdk/src/handlers/createAppStateChangeListener.ts:38-54`._
 3. **Final view event on background.** If an entry is mid-visibility-cycle when the app backgrounds,
    `useViewportTracking` pauses, emits a final view event if at least one event already fired, and
@@ -169,7 +172,7 @@ The offline queue has a cap (`queuePolicy.offlineMaxEvents`) and a drop callback
 [README](../../packages/react-native-sdk/README.md#common-configuration) for the common queue
 configuration entry point.
 
-### Persistence Via AsyncStorage
+### Persistence via AsyncStorage
 
 `AsyncStorageStore` persists the following across launches so tracking decisions and variant
 assignments survive a cold start:
@@ -191,7 +194,7 @@ Why this matters for tracking: selected optimizations persist, so a user placed 
 continues to see it on the next launch and view/tap events carry the correct `experienceId` /
 `variantIndex` without re-round-tripping Experience first.
 
-## 3. Consent Gating
+## 3. Consent gating
 
 The SDK gates event emission behind a three-valued consent state: `true`, `false`, or `undefined`
 (unset). This is the most common cause of "tracking isn't working" during integration — without
@@ -221,7 +224,7 @@ When consent flips:
 - **`consent(false)`** — the allow-list gate re-engages. In-flight events that already cleared the
   guard continue to flush.
 
-### "Why Is Nothing Tracking?"
+### "Why is nothing tracking?"
 
 Four checks, in order of likelihood:
 
@@ -232,12 +235,12 @@ Four checks, in order of likelihood:
 4. **No scroll context.** An entry below the fold without `<OptimizationScrollProvider>` will never
    pass the visibility threshold — `scrollY` is assumed `0`.
 
-## 4. Entry View Tracking Mechanics
+## 4. Entry view tracking mechanics
 
 This section describes the internals of `useViewportTracking`, the hook `<OptimizedEntry />` uses
 under the hood.
 
-### Default Thresholds
+### Default thresholds
 
 All defaults live as module constants in
 `packages/react-native-sdk/src/hooks/useViewportTracking.ts:72-75`:
@@ -255,7 +258,7 @@ Tap tracking has one additional threshold in
 | ------------------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------- |
 | `TAP_DISTANCE_THRESHOLD` | `10`  | Maximum pixel distance between `touchStart` and `touchEnd`. Beyond this, the gesture is classified as a scroll/drag, not a tap. |
 
-### The Visibility State Machine
+### The visibility state machine
 
 Each mounted `<OptimizedEntry>` runs a small state machine keyed on a "visibility cycle" — a cycle
 starts when the entry goes not-visible → visible, and ends when it transitions back or unmounts.
@@ -281,7 +284,7 @@ measured `{y, height}` and the current viewport `{scrollY, viewportHeight}` to d
 - **visible → not-visible** — `onVisibilityEnd` clears the fire timer, pauses accumulation, emits a
   **final** event if `attempts > 0`, and resets the cycle.
 
-### Initial, Periodic, And Final Events
+### Initial, periodic, and final events
 
 Within a cycle, events fire based on accumulated visible time. The schedule mirrors the Web SDK's
 `ElementViewObserver`:
@@ -316,7 +319,7 @@ A few consequences:
 - **Each event also carries `viewId`** — the UUID for the cycle. All events in one cycle share a
   `viewId`; a new cycle gets a fresh one. Use `viewId` downstream to correlate.
 
-### App Backgrounding And Cleanup
+### App backgrounding and cleanup
 
 Two additional transitions matter:
 
@@ -335,7 +338,7 @@ Combined, these guarantees mean that as long as the initial event fired, a final
 matching `viewId` and the true total duration) will always follow — whether visibility ends
 naturally, the user backgrounds the app, or the component unmounts.
 
-## 5. Scroll Context And Viewport Resolution
+## 5. Scroll context and viewport resolution
 
 `useViewportTracking` needs the entry's position (`{y, height}` from `onLayout`) and the viewport
 (`{scrollY, viewportHeight}`). Where the viewport comes from depends on whether the entry sits
@@ -371,13 +374,13 @@ With no scroll context, the hook falls back to screen dimensions — `scrollY = 
 This is correct for full-screen non-scrollable layouts, hero/banner content always on screen, and
 modal content. It is _wrong_ for anything below the fold in a `ScrollView` — wrap those.
 
-## 6. Tap Tracking Semantics
+## 6. Tap tracking semantics
 
 Tap tracking is implemented by `useTapTracking`. Behavior:
 
 1. The wrapping `View` gets `onTouchStart` / `onTouchEnd` (not `onPress`). Raw touch events mean
-   **taps are captured even when a child `Pressable` also handles the press** — if the SDK used a
-   `Pressable` wrapper the child's `onPress` would win.
+   **taps are captured even when a child `Pressable` also handles the press**. A `Pressable` wrapper
+   gives the child's `onPress` precedence.
 2. `onTouchStart` records `{ pageX, pageY }`.
 3. `onTouchEnd` computes Euclidean distance from start to end. Under `TAP_DISTANCE_THRESHOLD` (10
    points) → tap; over → scroll/drag, ignored.
@@ -391,7 +394,7 @@ Tap tracking is **off by default**. Enable via
 `<OptimizationRoot trackEntryInteraction={{ taps: true }}>`, `<OptimizedEntry trackTaps>`, or
 implicitly by passing `onTap`.
 
-## 7. Screen Tracking Paths
+## 7. Screen tracking paths
 
 Screen tracking emits `screen` events, which are allowed before consent and feed into route-based
 profile attribution. The SDK gives you three paths.
@@ -456,13 +459,13 @@ trackScreen('Deep Linked Article', { slug, source: 'email' })
 
 _Source: `packages/react-native-sdk/src/hooks/useScreenTracking.ts:55-71`._
 
-## 8. The Configuration Surface
+## 8. The configuration surface
 
 All interaction-tracking behavior is controlled at one of three layers: SDK init config,
 `OptimizationRoot` props, or per-component `<OptimizedEntry>` props. Lower layers override higher
 ones.
 
-### OptimizationRoot Props
+### OptimizationRoot props
 
 | Prop                    | Type                   | Default                        | Controls                                                                                          |
 | ----------------------- | ---------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------- |
@@ -475,7 +478,7 @@ ones.
 The "`{ views: true, taps: false }`" default lives in
 `packages/react-native-sdk/src/context/InteractionTrackingContext.tsx:38-44`.
 
-### OptimizedEntry Props
+### OptimizedEntry props
 
 | Prop                           | Type                                     | Default     | Controls                                                                                               |
 | ------------------------------ | ---------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------ |
@@ -493,7 +496,7 @@ Each default is defined alongside the corresponding prop in
 `packages/react-native-sdk/src/components/OptimizedEntry.tsx:64-141` and confirmed in
 `useViewportTracking.ts:72-75`.
 
-### SDK Init Config
+### SDK init config
 
 Beyond the layer above, the full `CoreStatefulConfig` is accepted as `OptimizationRoot` props (since
 `OptimizationRootProps extends CoreStatefulConfig`). The ones that directly shape tracking:
@@ -514,7 +517,7 @@ Beyond the layer above, the full `CoreStatefulConfig` is accepted as `Optimizati
 The full configuration reference lives in the
 [React Native SDK README](../../packages/react-native-sdk/README.md#common-configuration).
 
-### Resolution Order
+### Resolution order
 
 **View tracking enabled?**
 
@@ -540,7 +543,7 @@ _Source: `packages/react-native-sdk/src/components/OptimizedEntry.tsx:143-151, 2
 
 _Source: `packages/react-native-sdk/src/components/OptimizedEntry.tsx:229-231`._
 
-## 9. Manual Tracking API
+## 9. Manual tracking API
 
 For content that doesn't fit `<OptimizedEntry>` — custom screens, server-rendered fragments,
 non-Contentful components — call tracking methods directly on the SDK instance. These hit the same
@@ -559,7 +562,7 @@ useEffect(() => {
 }, [contentfulId, experienceId, optimization])
 ```
 
-### Payload Shapes
+### Payload shapes
 
 ```ts
 // trackView — Source: CoreStatefulEventEmitter.ts:215-237
@@ -581,11 +584,11 @@ optimization.trackClick({
 })
 ```
 
-### When To Reach For Manual Tracking
+### When to reach for manual tracking
 
 - **Screen-wide entry views without viewport-visibility semantics** — `trackView` from `useEffect`
   on mount.
-- **Non-Contentful UI that should count as a component click** — `trackClick` from a `Pressable`'s
+- **Non-Contentful UI that counts as a component click** — `trackClick` from a `Pressable`'s
   `onPress`.
 - **Business events unrelated to a Contentful entry** — `track('Added To Cart', { sku })`.
 
@@ -593,7 +596,7 @@ For anything backed by a Contentful entry, prefer `<OptimizedEntry>` — it hand
 initial/periodic/final sequencing, final-on-unmount, final-on-background, and `viewId` correlation
 for you.
 
-## 10. Putting It Together
+## 10. Putting it together
 
 A fully-instrumented list screen combines every mechanism in this guide:
 
@@ -657,6 +660,6 @@ For the broader integration walkthrough, read the
 - **Event emission pipeline:** `packages/universal/core-sdk/src/CoreStatefulEventEmitter.ts`
 - **Reference implementation:**
   [`implementations/react-native-sdk`](../../implementations/react-native-sdk/README.md) exercises
-  the latest React Native SDK API surface in this monorepo.
+  the React Native SDK API surface in this monorepo.
 - **Integration guide:**
-  [Integrating the Optimization React Native SDK in a React Native App](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md).
+  [Integrating the Optimization React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md).

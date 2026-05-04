@@ -7,7 +7,7 @@ import { HoverEvent } from './HoverEvent'
  * Zod schema describing an Insights event.
  *
  * @remarks
- * Insights events currently include {@link ViewEvent},
+ * Insights events include {@link ViewEvent},
  * {@link ClickEvent}, and {@link HoverEvent}.
  *
  * @public

@@ -48,7 +48,7 @@ import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from '.
 const coreLogger = createScopedLogger('CoreStateful')
 
 /**
- * Union of all event type keys that stateful Core may emit.
+ * Union of all event type keys that stateful Core can emit.
  *
  * @public
  */
@@ -139,7 +139,7 @@ export interface CoreStates {
   consent: Observable<boolean | undefined>
   /** Whether the preview panel has been attached to the host runtime. */
   previewPanelAttached: Observable<boolean>
-  /** Whether the preview panel is currently open in the host runtime. */
+  /** Whether the preview panel is open in the host runtime. */
   previewPanelOpen: Observable<boolean>
   /** Stream of the most recent blocked event payload. */
   blockedEventStream: Observable<BlockedEvent | undefined>
@@ -151,7 +151,7 @@ export interface CoreStates {
   profile: Observable<Profile | undefined>
   /** Live view of selected optimizations (variants). */
   selectedOptimizations: Observable<SelectedOptimizationArray | undefined>
-  /** Whether optimization data is currently available. */
+  /** Whether optimization data is available. */
   canOptimize: Observable<boolean>
 }
 

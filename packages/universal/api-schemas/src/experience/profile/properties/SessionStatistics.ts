@@ -51,7 +51,7 @@ export const SessionStatistics = z.object({
    * Average session duration across all sessions represented by this record.
    *
    * @remarks
-   * The unit should match `SessionStatistics.activeSessionLength`.
+   * The unit must match `SessionStatistics.activeSessionLength`.
    */
   averageSessionLength: z.number(),
 })

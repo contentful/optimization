@@ -4,7 +4,10 @@ Read the repository root `AGENTS.md` first, then the nearest package-specific `A
 
 These instructions apply to all workspace packages under `packages/`.
 
-## Package Boundaries
+For package README prose style, follow [`../STYLE_GUIDE.md`](../STYLE_GUIDE.md). This file owns
+package boundaries, package README structure, and package validation rules.
+
+## Package boundaries
 
 - Published SDK behavior belongs in packages, not in `implementations/` reference apps.
 - Keep reusable cross-platform behavior in `packages/universal/core-sdk` unless it is clearly
@@ -14,9 +17,9 @@ These instructions apply to all workspace packages under `packages/`.
 - When public SDK behavior changes, update the relevant TSDoc or JSDoc and the package README in the
   same change.
 
-## Package README Standards
+## Package README standards
 
-- Public package READMEs should open with the repository-standard centered Contentful header,
+- Public package READMEs must open with the repository-standard centered Contentful header,
   package-specific `<h3>`, navigation links to Guides, Reference, and Contributing, the pre-release
   warning, and a short paragraph that states the package layer and the SDK suite relationship.
 - Package README header navigation must work in GitHub source browsing, TypeDoc project documents,
@@ -25,53 +28,53 @@ These instructions apply to all workspace packages under `packages/`.
   publish rewriting and TypeDoc output have both been verified.
 - Include a collapsible table of contents for public package READMEs with more than a short status
   note. Preserve `<!-- mtoc-start -->` and `<!-- mtoc-end -->` markers.
-- Application-facing SDK package READMEs, such as Web, React Web, React Native, and Node, should
-  stay orientation-first. Keep purpose, install, minimal initialization, common setup options, one
-  or two core workflows, critical runtime caveats, and links to guides, reference implementations,
-  and generated reference docs. Do not turn these READMEs into exhaustive API manuals.
+- Application-facing SDK package READMEs, such as Web, React Web, React Native, and Node, must stay
+  orientation-first. Keep purpose, install, minimal initialization, common setup options, one or two
+  core workflows, critical runtime caveats, and links to guides, reference implementations, and
+  generated reference docs. Do not turn these READMEs into exhaustive API manuals.
 - Lower-level package READMEs, such as Core, API Client, API Schemas, preview-panel internals, and
-  bridge packages, should be maintainer-oriented. State who should use the package directly, explain
-  where it sits in the SDK stack, include only minimal usage or common options needed for successful
+  bridge packages, must be maintainer-oriented. State who uses the package directly, explain where
+  it sits in the SDK stack, include only minimal usage or common options needed for successful
   first-party work, and link to generated reference docs for exported APIs.
 - Prefer this public package section order unless the package has a clear local exception:
-  1. `## Getting Started`
-  2. `## When to Use This Package`
+  1. `## Getting started`
+  2. `## When to use this package`
   3. reference implementation, harness, or usage-orientation sections when relevant
   4. `## Configuration`
   5. common workflows, runtime notes, or package-layer notes
   6. `## Related`
-- In `Getting Started`, show installation with `pnpm install`, then the smallest useful import and
+- In `Getting started`, show installation with `pnpm install`, then the smallest useful import and
   initialization example. Mention CJS support only when the package supports it, but keep ESM
   preferred.
 - Use tables for common option references with `Option`, `Required?`, `Default`, and `Description`
   columns when those options are crucial to initial setup. Leave exhaustive config tables, callback
   payload shapes, method argument lists, and exported type details to generated reference docs
   unless they are needed to avoid an integration trap.
-- State "Most application code should use..." when documenting lower-level packages such as Core,
-  API Client, or API Schemas, so package hierarchy remains clear.
+- State "Most application code uses..." when documenting lower-level packages such as Core, API
+  Client, or API Schemas, so package hierarchy remains clear.
 - Link to repository reference implementations that exercise the package. Do not link to external
   demos as the primary example source.
-- Body links to other source-of-truth repo files may stay repo-relative when TypeDoc can resolve
+- Body links to other source-of-truth repo files can stay repo-relative when TypeDoc can resolve
   them and the package publish flow rewrites them for npm. If a package README link needs to work
   without publish rewriting, use a stable absolute GitHub or generated-docs URL instead.
-- Placeholder platform package READMEs, such as planned native SDKs, should remain status markers:
-  `# Optimization <Platform> SDK`, `## Current Status`, and `## When to Use This Directory`. Do not
+- Placeholder platform package READMEs, such as planned native SDKs, must remain status markers:
+  `# Optimization <platform> SDK`, `## Current status`, and `## When to use this directory`. Do not
   add install commands, exports, package scripts, or setup steps before the package exists.
-- Package-local dev harness README files should clearly distinguish the harness from the published
-  SDK surface and repo-level reference implementations. Prefer `## Quick Start`, `## Prerequisites`,
+- Package-local dev harness README files must clearly distinguish the harness from the published SDK
+  surface and repo-level reference implementations. Prefer `## Quick start`, `## Prerequisites`,
   `## Troubleshooting`, architecture, environment, and script sections when the harness has local
   app workflows.
-- Internal sub-entry or support README files should use a plain Markdown title, identify the surface
+- Internal sub-entry or support README files must use a plain Markdown title, identify the surface
   as internal, state the narrow first-party use case, and avoid presenting the entry as an
   application-facing SDK.
 
-## Generated And Derived Files
+## Generated and derived files
 
 - Edit package source, configuration, docs, tests, and harness files rather than generated outputs.
 - Do not hand-edit package `dist/`, `.rslib/`, `.rsdoctor/`, `coverage/`, or local `node_modules/`
   artifacts.
 
-## Common Pnpm Commands
+## Common pnpm commands
 
 For pnpm-managed packages with matching package scripts:
 
@@ -80,7 +83,7 @@ For pnpm-managed packages with matching package scripts:
 - `pnpm --filter <package-name> build`
 - `pnpm --filter <package-name> size:check`
 
-## Usually Validate
+## Usually validate
 
 - For pnpm-managed TypeScript or TSX packages, run the targeted package `typecheck`.
 - Run package unit tests when behavior, helpers, contracts, or test-covered code changed and a

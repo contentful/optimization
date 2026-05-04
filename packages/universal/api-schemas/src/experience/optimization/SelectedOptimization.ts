@@ -39,8 +39,8 @@ export const SelectedOptimization = z.object({
    * @defaultValue false
    *
    * @remarks
-   * Sticky selections should be reused on subsequent requests for the
-   * same user, rather than re-allocating a new variant.
+   * Reuse sticky selections on subsequent requests for the same user rather
+   * than re-allocating a new variant.
    */
   sticky: z.optional(z.prefault(z.boolean(), false)),
 })

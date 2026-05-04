@@ -17,15 +17,15 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 The Optimization React Web SDK provides React providers, hooks, router adapters, and entry-rendering
 primitives on top of the [Optimization Web SDK](../../web-sdk/README.md). Use it when a React
-browser application should not manage the lower-level Web SDK instance, state subscriptions, entry
+browser application must not manage the lower-level Web SDK instance, state subscriptions, entry
 resolution, and route tracking by hand.
 
 If you are integrating a React application, start with [Getting Started](#getting-started), then use
-[Integrating the Optimization React Web SDK in a React App](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-react-web-sdk-in-a-react-app.html)
+[Integrating the Optimization React Web SDK in a React app](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-react-web-sdk-in-a-react-app.html)
 for the step-by-step flow. This README keeps the package orientation and common setup options close
 at hand; generated [reference documentation](https://contentful.github.io/optimization) remains the
 source of truth for exported API signatures.
@@ -34,22 +34,22 @@ source of truth for exported API signatures.
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Getting Started](#getting-started)
-- [When to Use This Package](#when-to-use-this-package)
-- [Common Configuration](#common-configuration)
-- [Core Workflows](#core-workflows)
-  - [Provider and Hook Access](#provider-and-hook-access)
+- [Getting started](#getting-started)
+- [When to use this package](#when-to-use-this-package)
+- [Common configuration](#common-configuration)
+- [Core workflows](#core-workflows)
+  - [Provider and hook access](#provider-and-hook-access)
   - [OptimizedEntry](#optimizedentry)
-  - [Entry Interaction Tracking](#entry-interaction-tracking)
-  - [Router Page Events](#router-page-events)
-  - [Live Updates and Preview](#live-updates-and-preview)
-- [Development Harness](#development-harness)
+  - [Entry interaction tracking](#entry-interaction-tracking)
+  - [Router page events](#router-page-events)
+  - [Live updates and preview](#live-updates-and-preview)
+- [Development harness](#development-harness)
 - [Related](#related)
 
 <!-- mtoc-end -->
 </details>
 
-## Getting Started
+## Getting started
 
 Install using an NPM-compatible package manager, pnpm for example:
 
@@ -71,14 +71,14 @@ function App() {
 }
 ```
 
-## When to Use This Package
+## When to use this package
 
 Use `@contentful/optimization-react-web` for React browser applications that need provider-based SDK
 initialization, hooks, router page tracking, optimized entry rendering, automatic interaction
 tracking, and live update semantics. Use the lower-level Web SDK directly for non-React integrations
 or custom framework adapters.
 
-## Common Configuration
+## Common configuration
 
 `OptimizationRoot` accepts the Web SDK configuration props directly and adds a React-specific
 `liveUpdates` prop.
@@ -111,9 +111,9 @@ For every Web SDK option that passes through this package, use the
 [Web SDK README](../../web-sdk/README.md#common-configuration) and generated
 [reference documentation](https://contentful.github.io/optimization).
 
-## Core Workflows
+## Core workflows
 
-### Provider and Hook Access
+### Provider and hook access
 
 `OptimizationRoot` creates and tears down the Web SDK instance. Use `useOptimization()` when a
 component needs direct access to the instance:
@@ -147,11 +147,10 @@ function HeroEntry({ baselineEntry }) {
 Use `loadingFallback`, direct children, wrapper props, and nested composition patterns when needed.
 The React Web guide covers those variants in context.
 
-### Entry Interaction Tracking
+### Entry interaction tracking
 
 `OptimizedEntry` emits the Web SDK's `data-ctfl-*` tracking attributes for resolved entries. Enable
-automatic tracking in the root config when views, clicks, or hovers should be detected by the Web
-SDK:
+automatic tracking in the root config when views, clicks, or hovers must be detected by the Web SDK:
 
 ```tsx
 <OptimizationRoot
@@ -164,7 +163,7 @@ SDK:
 
 Use `sdk.tracking.enableElement(...)` from `useOptimization()` for manual element overrides.
 
-### Router Page Events
+### Router page events
 
 Router adapters emit `page()` events for supported client-side routers:
 
@@ -179,11 +178,11 @@ All adapters support static and dynamic page payload enrichment. See the
 [React Web integration guide](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-react-web-sdk-in-a-react-app.html#5-emit-page-events-with-supported-router-adapters)
 for router-specific examples.
 
-### Live Updates and Preview
+### Live updates and preview
 
 `liveUpdates` defaults to `false`, so optimized entries lock to the first resolved value. Set
-`liveUpdates` globally or per `OptimizedEntry` when entries should react to profile, flag, or
-preview changes:
+`liveUpdates` globally or per `OptimizedEntry` when entries must react to profile, flag, or preview
+changes:
 
 ```tsx
 <OptimizationRoot clientId="your-client-id" liveUpdates={true}>
@@ -198,7 +197,7 @@ The browser preview panel is provided by
 open, live updates are forced on for all `OptimizedEntry` components so authors can inspect variant
 changes immediately.
 
-## Development Harness
+## Development harness
 
 The package-local development harness runs from `packages/web/frameworks/react-web-sdk/dev/`. Launch
 it from the repo root:
@@ -212,7 +211,7 @@ behavior.
 
 ## Related
 
-- [Integrating the Optimization React Web SDK in a React App](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-react-web-sdk-in-a-react-app.html) -
+- [Integrating the Optimization React Web SDK in a React app](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-react-web-sdk-in-a-react-app.html) -
   step-by-step React integration guide
 - [Optimization Web SDK](../../web-sdk/README.md) - lower-level browser SDK wrapped by this package
 - [Optimization Web Preview Panel](../../preview-panel/README.md) - preview panel package for

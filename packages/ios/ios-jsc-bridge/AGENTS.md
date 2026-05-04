@@ -8,13 +8,13 @@ file.
 This package owns the TypeScript adapter compiled into the JavaScriptCore bridge UMD consumed by the
 native Swift package.
 
-## Key Paths
+## Key paths
 
 - `src/`
 - `package.json`
 - `rslib.config.ts`
 
-## Local Rules
+## Local rules
 
 - Keep the bridge API JavaScriptCore-friendly: JSON strings, callback pairs, and no browser-only or
   Node-only assumptions unless the Swift polyfill layer explicitly provides them.
@@ -31,7 +31,7 @@ native Swift package.
 - `pnpm --filter @contentful/optimization-ios-bridge typecheck`
 - `pnpm --filter @contentful/optimization-ios-bridge build`
 
-## Usually Validate
+## Usually validate
 
 - Run `typecheck` for TypeScript source changes.
 - Run `build` for runtime, export, dependency, bundler config, or bridge contract changes.

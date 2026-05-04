@@ -100,7 +100,7 @@ export class Optimization extends LitElement {
   @property({ attribute: false })
   accessor naturalValue: number | undefined = undefined
 
-  /** Index of the currently selected variant. */
+  /** Index of the selected variant. */
   @property({ attribute: false })
   accessor value = 0
 

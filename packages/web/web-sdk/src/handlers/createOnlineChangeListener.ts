@@ -18,7 +18,7 @@ type Callback = (isOnline: boolean) => Promise<void> | void
  * between connectivity states, and returns a cleanup function to remove all listeners.
  *
  * @param callback - Function invoked when the browser goes online (`true`) or offline (`false`).
- *   May return a promise.
+ *   Can return a promise.
  * @returns A function that removes the registered event listeners when called.
  *
  * @remarks

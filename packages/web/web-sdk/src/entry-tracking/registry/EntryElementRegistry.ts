@@ -15,7 +15,7 @@ interface EntryElementRegistrySubscriber {
 }
 
 /**
- * Registry that tracks entry elements currently present in the DOM and
+ * Registry that tracks entry elements present in the DOM and
  * notifies subscribers as entries are added or removed.
  *
  * @public

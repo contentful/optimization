@@ -18,7 +18,7 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 This is a reference implementation for the
 [Optimization Node SDK](../../packages/node/node-sdk/README.md) and is part of the
@@ -32,7 +32,7 @@ options directly to stateless event methods inside each incoming request handler
 > Cache only raw Contentful entries in SSR flows. Do not mutate shared cached entries during request
 > rendering, and do not share merge-tag-rendered output across users.
 
-## What This Demonstrates
+## What this demonstrates
 
 Use this implementation when you need a minimal server-rendered example for
 `@contentful/optimization-node`. It demonstrates request-scoped Experience API options, SSR-safe
@@ -45,7 +45,7 @@ entry resolution, merge-tag rendering, profile-aware event calls, and local mock
 
 ## Setup
 
-All steps should be run from the monorepo root.
+Run all steps from the monorepo root.
 
 1. Install pnpm packages:
 
@@ -71,7 +71,7 @@ All steps should be run from the monorepo root.
    the [mocks package](../../lib/mocks/README.md) for information on how to set up Contentful space
    with test data.
 
-## Running Locally
+## Running locally
 
 Run these commands from the monorepo root.
 
@@ -96,7 +96,7 @@ Run these commands from the monorepo root.
 The application can be accessed via Web browser at `http://localhost:3000`. See
 `implementations/node-sdk/package.json` for lower-level local commands.
 
-## Running E2E Tests
+## Running E2E tests
 
 E2E tests are run using Playwright.
 

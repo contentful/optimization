@@ -31,7 +31,7 @@ const LocalStore = {
    * Reset local caches used by the Web SDK.
    *
    * @param options - Optional flags controlling whether consent and debug keys
-   *   should also be removed.
+   *   must also be removed.
    * @returns Nothing.
    *
    * @example
@@ -50,7 +50,7 @@ const LocalStore = {
   },
 
   /**
-   * Anonymous identifier currently stored in localStorage, if any.
+   * Anonymous identifier stored in localStorage, if any.
    *
    * @returns The stored anonymous ID string, or `undefined` when absent.
    */

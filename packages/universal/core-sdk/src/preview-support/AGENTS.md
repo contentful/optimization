@@ -9,7 +9,7 @@ This subtree owns the cross-platform preview-panel support toolkit: override man
 preview-model building, Contentful entry mapping, fetch helpers, signals, and the dedicated
 `./preview-support` entry point.
 
-## Local Rules
+## Local rules
 
 - Contentful content-model knowledge (`nt_audience`, `nt_experience`, `nt_config`, ...) belongs
   here. Keep the rest of `core-sdk` platform-agnostic and free of Contentful schema knowledge.
@@ -17,7 +17,7 @@ preview-model building, Contentful entry mapping, fetch helpers, signals, and th
 - Keep override behavior aligned with preview-panel scenario contracts and platform wrapper
   expectations.
 
-## Usually Validate
+## Usually validate
 
 - Run `@contentful/optimization-core` unit tests for preview-support changes.
 - Re-validate React Native SDK preview behavior and the iOS JSC bridge when changing public

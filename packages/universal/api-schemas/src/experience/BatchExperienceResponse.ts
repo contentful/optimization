@@ -6,8 +6,8 @@ import { ResponseEnvelope } from './ResponseEnvelope'
  * Zod schema describing the `data` property of a batch experience response.
  *
  * @remarks
- * A batch request may return zero or more profiles. When no profiles are
- * returned, `profiles` may be omitted or an empty array.
+ * A batch request can return zero or more profiles. When no profiles are
+ * returned, `profiles` can be omitted or an empty array.
  *
  * @public
  */

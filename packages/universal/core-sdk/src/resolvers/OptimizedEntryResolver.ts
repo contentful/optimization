@@ -185,7 +185,7 @@ const OptimizedEntryResolver = {
    * @returns The matching {@link OptimizationEntry}, or `undefined` if not found/invalid.
    * @remarks
    * An optimization entry is an optimization configuration object supplied in an
-   * `OptimizedEntry.nt_experiences` array. An optimized entry may relate to
+   * `OptimizedEntry.nt_experiences` array. An optimized entry can relate to
    * multiple optimizations.
    * @example
    * ```ts

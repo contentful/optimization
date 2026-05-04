@@ -85,7 +85,7 @@ function getVariantName(entry: ContentfulEntry): string | undefined {
 /**
  * Resolves the variant reference id for a given distribution index from the
  * first optimization component. The preview panel only renders entry-replacement
- * components today; inline-variable components have no variant ref and resolve
+ * components in this toolkit; inline-variable components have no variant ref and resolve
  * to an empty string.
  *
  * @internal

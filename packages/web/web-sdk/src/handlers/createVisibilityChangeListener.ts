@@ -23,7 +23,7 @@ type Callback = (event: HideEvent) => Promise<void> | void
  * is hidden, and returns a cleanup function to remove all listeners.
  *
  * @param callback - Function invoked once when the page is being hidden, or
- * when a pagehide/beforeunload event occurs. May return a promise.
+ * when a pagehide/beforeunload event occurs. Can return a promise.
  * @returns A function that removes all registered event listeners when called.
  *
  * @remarks

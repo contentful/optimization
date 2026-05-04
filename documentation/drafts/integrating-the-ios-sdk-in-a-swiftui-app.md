@@ -1,17 +1,42 @@
-# Integrating the Optimization iOS SDK in a SwiftUI App
+# Integrating the Optimization iOS SDK in a SwiftUI app
 
 Use this guide when you want to add personalization and analytics to a SwiftUI application using the
 Contentful Optimization iOS SDK.
 
 This guide assumes familiarity with the shared concepts covered in
-[iOS SDK Fundamentals](./integrating-the-ios-sdk-fundamentals.md) — installation, configuration,
+[iOS SDK fundamentals](./integrating-the-ios-sdk-fundamentals.md) — installation, configuration,
 consent, reactive state, the tracking model, live updates, and the preview panel. Read that first if
 you have not already.
 
 Use the UIKit guide instead if your app is UIKit-based:
-[Integrating the Optimization iOS SDK in a UIKit App](./integrating-the-ios-sdk-in-a-uikit-app.md).
+[Integrating the Optimization iOS SDK in a UIKit app](./integrating-the-ios-sdk-in-a-uikit-app.md).
 
-## Scope And Capabilities
+<details>
+  <summary>Table of Contents</summary>
+<!-- mtoc-start -->
+
+- [Scope and capabilities](#scope-and-capabilities)
+- [Reference app](#reference-app)
+- [The integration flow](#the-integration-flow)
+- [1. Initialize with OptimizationRoot](#1-initialize-with-optimizationroot)
+- [2. Handle consent](#2-handle-consent)
+- [3. Personalize entries with OptimizedEntry](#3-personalize-entries-with-optimizedentry)
+  - [Basic usage](#basic-usage)
+  - [Render prop signature](#render-prop-signature)
+  - [OptimizationScrollView for scrollable content](#optimizationscrollview-for-scrollable-content)
+  - [Tuning visibility thresholds](#tuning-visibility-thresholds)
+- [4. Track entry interactions](#4-track-entry-interactions)
+  - [Global defaults on OptimizationRoot](#global-defaults-on-optimizationroot)
+  - [Per-entry overrides](#per-entry-overrides)
+- [5. Enable or disable live updates](#5-enable-or-disable-live-updates)
+- [6. Track screen views](#6-track-screen-views)
+- [7. Preview panel](#7-preview-panel)
+- [A complete example](#a-complete-example)
+
+<!-- mtoc-end -->
+</details>
+
+## Scope and capabilities
 
 The SwiftUI integration uses the SDK's SwiftUI-native API surface:
 
@@ -23,7 +48,7 @@ The SwiftUI integration uses the SDK's SwiftUI-native API surface:
 - `.trackScreen(name:)` emits a screen event when a view appears.
 - `PreviewPanelOverlay` renders a developer-only FAB that opens the preview panel sheet.
 
-## Reference App
+## Reference app
 
 See the SwiftUI demo at
 [Colorful-Team-Org/OptimizationiOSSDKDemo — SwiftUIDemo](https://github.com/Colorful-Team-Org/OptimizationiOSSDKDemo)
@@ -32,31 +57,7 @@ See the SwiftUI demo at
 exercises every pattern in this guide end-to-end against real Contentful content and is worth
 reading alongside this document.
 
-<details>
-  <summary>Table of Contents</summary>
-<!-- mtoc-start -->
-
-- [Scope And Capabilities](#scope-and-capabilities)
-- [The Integration Flow](#the-integration-flow)
-- [1. Initialize With OptimizationRoot](#1-initialize-with-optimizationroot)
-- [2. Handle Consent](#2-handle-consent)
-- [3. Personalize Entries With OptimizedEntry](#3-personalize-entries-with-optimizedentry)
-  - [Basic Usage](#basic-usage)
-  - [Render Prop Signature](#render-prop-signature)
-  - [OptimizationScrollView For Scrollable Content](#optimizationscrollview-for-scrollable-content)
-  - [Tuning Visibility Thresholds](#tuning-visibility-thresholds)
-- [4. Track Entry Interactions](#4-track-entry-interactions)
-  - [Global Defaults On OptimizationRoot](#global-defaults-on-optimizationroot)
-  - [Per-Entry Overrides](#per-entry-overrides)
-- [5. Enable Or Disable Live Updates](#5-enable-or-disable-live-updates)
-- [6. Track Screen Views](#6-track-screen-views)
-- [7. Preview Panel](#7-preview-panel)
-- [A Complete Example](#a-complete-example)
-
-<!-- mtoc-end -->
-</details>
-
-## The Integration Flow
+## The integration flow
 
 A typical SwiftUI integration is:
 
@@ -70,7 +71,7 @@ A typical SwiftUI integration is:
 7. Mark each screen with `.trackScreen(name:)`.
 8. Gate `PreviewPanelOverlay` on a debug flag.
 
-## 1. Initialize With OptimizationRoot
+## 1. Initialize with OptimizationRoot
 
 `OptimizationRoot` owns the `OptimizationClient` instance, initializes it in a `.task {}` block, and
 shows a `ProgressView` until `isInitialized` flips to `true`. All SwiftUI views in the tree can then
@@ -121,7 +122,7 @@ struct SomeView: View {
 }
 ```
 
-## 2. Handle Consent
+## 2. Handle consent
 
 See [Consent](./integrating-the-ios-sdk-fundamentals.md#consent) in the fundamentals guide for the
 consent model. In SwiftUI, a minimal banner looks like:
@@ -162,7 +163,7 @@ struct ConsentGate<Content: View>: View {
 For demos, pre-grant consent with `StorageDefaults(consent: true)` on the config you pass to
 `OptimizationRoot` and skip the banner entirely.
 
-## 3. Personalize Entries With OptimizedEntry
+## 3. Personalize entries with OptimizedEntry
 
 `OptimizedEntry` is the SwiftUI view you render each Contentful entry through. It:
 
@@ -172,7 +173,7 @@ For demos, pre-grant consent with `StorageDefaults(consent: true)` on the config
 - attaches view tracking (visibility + time-based) and tap tracking (gesture-based)
 - locks to the first resolved variant unless live updates are on
 
-### Basic Usage
+### Basic usage
 
 ```swift
 import ContentfulOptimization
@@ -193,7 +194,7 @@ The render closure receives `[String: Any]` — the resolved entry dictionary. P
 `entry["fields"] as? [String: Any]`. The demo app's `CTAHeader` and `BlogPostCardContent` views are
 good references for destructuring.
 
-### Render Prop Signature
+### Render prop signature
 
 ```swift
 OptimizedEntry(
@@ -213,7 +214,7 @@ OptimizedEntry(
 All tracking and live-update flags are `Optional<Bool>` — `nil` means "inherit from
 `OptimizationRoot`".
 
-### OptimizationScrollView For Scrollable Content
+### OptimizationScrollView for scrollable content
 
 Inside a plain `ScrollView`, `OptimizedEntry` falls back to "always visible" because it cannot read
 scroll position. Wrap the scroll region with `OptimizationScrollView` so view tracking reflects the
@@ -235,7 +236,7 @@ OptimizationScrollView {
 For full-screen content (heroes, modal cards, single-screen layouts), a plain container is fine —
 the entry is treated as always on screen.
 
-### Tuning Visibility Thresholds
+### Tuning visibility thresholds
 
 The 80% / 2 seconds / 5 second update defaults are good for feed-style content. Override per entry
 when a specific component needs different behavior:
@@ -250,9 +251,9 @@ OptimizedEntry(
 }
 ```
 
-## 4. Track Entry Interactions
+## 4. Track entry interactions
 
-### Global Defaults On OptimizationRoot
+### Global defaults on OptimizationRoot
 
 ```swift
 OptimizationRoot(
@@ -267,7 +268,7 @@ OptimizationRoot(
 The SDK defaults are `trackViews: true, trackTaps: false`. Views are safe to turn on everywhere;
 taps are opt-in because they are more application-specific.
 
-### Per-Entry Overrides
+### Per-entry overrides
 
 ```swift
 // Opt a specific entry out of view tracking
@@ -290,7 +291,7 @@ OptimizedEntry(entry: cta, onTap: { resolved in
 
 Passing `trackTaps: false` always wins — even if `onTap` is provided.
 
-## 5. Enable Or Disable Live Updates
+## 5. Enable or disable live updates
 
 See [Live Updates](./integrating-the-ios-sdk-fundamentals.md#live-updates) in the fundamentals for
 the resolution rules. In SwiftUI:
@@ -316,7 +317,7 @@ OptimizedEntry(entry: card) { resolved in
 While the preview panel is open, every `OptimizedEntry` in the tree switches to live mode regardless
 of these flags.
 
-## 6. Track Screen Views
+## 6. Track screen views
 
 Attach `.trackScreen(name:)` to any view — typically the root view of a screen:
 
@@ -351,7 +352,7 @@ struct DetailsScreen: View {
 }
 ```
 
-## 7. Preview Panel
+## 7. Preview panel
 
 Wrap your content in `PreviewPanelOverlay`, gated on a debug flag, to expose the developer FAB:
 
@@ -387,7 +388,7 @@ Tapping the FAB presents the panel as a sheet. While it is open, `client.isPrevi
 The `contentfulClient` parameter is optional — without it the panel shows audiences and experiences
 by ID. Passing it enables rich names, variant labels, and traffic percentages.
 
-## A Complete Example
+## A complete example
 
 The SwiftUI demo's app entry point ties all of this together — `OptimizationRoot` with pre-granted
 consent and live updates enabled, `PreviewPanelOverlay` wrapping a `NavigationStack`, and a home

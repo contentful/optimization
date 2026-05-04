@@ -62,7 +62,7 @@ export interface UseViewportTrackingOptions {
  * @public
  */
 export interface UseViewportTrackingReturn {
-  /** Whether the tracked element is currently visible in the viewport. */
+  /** Whether the tracked element is visible in the viewport. */
   isVisible: boolean
 
   /** Layout callback to attach to the tracked View's `onLayout` prop. */
@@ -170,7 +170,7 @@ export function extractTrackingMetadata(
 }
 
 /**
- * Compute remaining ms until the next event should fire, based on accumulated
+ * Compute remaining ms until the next event fires, based on accumulated
  * visible time and the number of events already emitted.
  *
  * Formula mirrors Web SDK `ElementViewObserver.getRemainingMsUntilNextFire`:
@@ -196,7 +196,7 @@ function getRemainingMsUntilNextFire(
  * 3. **Final event** when visibility ends (only if at least one event was already emitted).
  *
  * @param options - {@link UseViewportTrackingOptions} including the entry, thresholds, and selected optimization data.
- * @returns An object with `isVisible` state and an `onLayout` callback for the tracked View
+ * @returns An object with `isVisible` state and an `onLayout` callback for the tracked View.
  *
  * @throws Error if called outside of an {@link OptimizationProvider}
  *

@@ -6,27 +6,27 @@ These instructions apply to public integration guides under `documentation/guide
 
 ## Directory README
 
-- Keep `Choosing the Right SDK` under `## Start Here`.
-- List implementation guides under `## Integration Guides` in platform/layer order:
+- Keep `Choosing the right SDK` under `## Start here`.
+- List implementation guides under `## Integration guides` in platform/layer order:
   1. Node
   2. Web
   3. React Web
   4. React Native
 
-## Integration Guide Structure
+## Integration guide structure
 
 Use this structure for implementation guides:
 
-1. H1: `# Integrating the Optimization <SDK Name> SDK in a <Runtime> App`
+1. H1: `# Integrating the Optimization <SDK name> SDK in a <runtime> app`
 2. A short introduction that starts with the reader's implementation goal, usually
    `Use this guide when...`
 3. A collapsible table of contents immediately after the introduction and before the first `##`
    section.
-4. `## Scope and Capabilities`
-5. `## The Integration Flow`
+4. `## Scope and capabilities`
+5. `## The integration flow`
 6. Numbered `##` sections for core implementation steps only.
 7. Unnumbered `##` sections for optional or informative material.
-8. `## Reference Implementations to Compare Against`
+8. `## Reference implementations to compare against`
 
 Do not place a table of contents after a section it outlines. Do not turn an implementation guide
 into a deep mechanics reference. Link to a concept document when the reader needs lower-level
@@ -37,7 +37,7 @@ runtime. Keep package setup choices, common configuration, and workflow sequenci
 keep method-by-method API details in TypeDoc. Create a new guide only when the extracted material
 has a distinct implementation goal that is not covered by an existing guide.
 
-## Table of Contents
+## Table of contents
 
 Every guide must include this TOC wrapper:
 
@@ -45,8 +45,6 @@ Every guide must include this TOC wrapper:
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
-
-...
 
 <!-- mtoc-end -->
 </details>
@@ -56,7 +54,7 @@ Every guide must include this TOC wrapper:
 - Keep TOC entries and anchors synchronized with the headings after any heading edit.
 - Include both `##` and relevant `###` headings in the TOC.
 
-## Numbering Rules
+## Numbering rules
 
 - Number only core implementation steps.
 - Do not number optional or informational sections such as live updates, preview panels, caching
@@ -64,13 +62,13 @@ Every guide must include this TOC wrapper:
 - If a section is optional, say so in prose near the integration flow instead of making it part of
   the numbered flow.
 
-## Reference Implementation Policy
+## Reference implementation policy
 
 - Only link to or mention reference implementations that are co-located in this monorepo.
 - Do not link to or mention external demo applications.
 - Mention relevant monorepo reference implementations briefly near the top of an integration guide,
-  usually in `The Integration Flow`.
-- Expand reference links in `Reference Implementations to Compare Against`.
+  usually in `The integration flow`.
+- Expand reference links in `Reference implementations to compare against`.
 - Prefer links to implementation READMEs and relevant source files over vague references.
 
 ## Validation

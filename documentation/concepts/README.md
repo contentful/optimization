@@ -10,7 +10,7 @@ Start here when you need to understand how SDK features work, why they behave a 
 the implementation makes runtime decisions. Concepts complement package README files and guides;
 they are not the first stop for installation or setup commands.
 
-## Available Concepts
+## Available concepts
 
 - [React Native SDK Interaction Tracking Mechanics](./react-native-sdk-interaction-tracking-mechanics.md) -
   explains how the React Native SDK observes, gates, and emits tracking events, covering event

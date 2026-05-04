@@ -7,12 +7,12 @@ Read the repository root `AGENTS.md` first.
 This package contains internal build helpers used by workspace package builds, especially around
 build output, declaration emission, and shared bundle-size enforcement.
 
-## Key Paths
+## Key paths
 
 - `src/`
 - `bin/`
 
-## Local Rules
+## Local rules
 
 - Treat changes here as high-impact. Even a small helper change can affect many package builds.
 - Keep command-line interfaces and helper behavior stable unless the task explicitly changes them.
@@ -26,7 +26,7 @@ build output, declaration emission, and shared bundle-size enforcement.
 - `pnpm --filter build-tools typecheck`
 - `pnpm --filter build-tools test:unit`
 
-## Usually Validate
+## Usually validate
 
 - Always run `typecheck` and `test:unit`.
 - Also run at least one downstream package build, or `pnpm build`, when changing build behavior,

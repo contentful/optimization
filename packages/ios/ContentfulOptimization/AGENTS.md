@@ -9,14 +9,14 @@ This Swift Package owns the native iOS and macOS SDK layer: public Swift API, Sw
 tracking, persistence, JavaScriptCore lifecycle, preview-panel UI, native polyfills, resources, and
 Swift tests.
 
-## Key Paths
+## Key paths
 
 - `Sources/ContentfulOptimization/`
 - `Sources/ContentfulOptimization/Resources/`
 - `Tests/ContentfulOptimizationTests/`
 - `Package.swift`
 
-## Local Rules
+## Local rules
 
 - Keep native runtime concerns here. TypeScript bridge behavior belongs in `../ios-jsc-bridge/`;
   shared optimization behavior belongs in `packages/universal/core-sdk`.
@@ -35,7 +35,7 @@ Swift tests.
 - From `packages/ios/ContentfulOptimization/`: `swift test`
 - `pnpm --filter @contentful/optimization-ios-bridge build`
 
-## Usually Validate
+## Usually validate
 
 - Run Swift package tests for Swift source or resource changes.
 - Rebuild the bridge before Swift tests when the copied JavaScriptCore bridge resource changed.

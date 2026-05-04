@@ -266,7 +266,7 @@ export interface AudienceSectionProps {
   onToggleAudienceExpand?: (audienceId: string) => void
   /** Toggle all audiences expanded/collapsed */
   onToggleAllExpand?: () => void
-  /** Whether all audiences are currently expanded */
+  /** Whether all audiences are expanded. */
   allExpanded?: boolean
   /** Initialize a collapsible for an audience */
   initializeCollapsible?: (audienceId: string) => void
@@ -342,7 +342,7 @@ export interface ExperienceCardProps {
 export interface VariantSelectorProps {
   /** Experience definition with distribution */
   experience: ExperienceDefinition
-  /** Currently selected variant index */
+  /** Selected variant index. */
   selectedIndex: number
   /** Handler for variant selection */
   onSelect: (variantIndex: number) => void

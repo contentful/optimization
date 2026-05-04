@@ -6,7 +6,7 @@ Read the repository root `AGENTS.md`, then `implementations/AGENTS.md`, before t
 
 This is the React Native reference implementation for `@contentful/optimization-react-native`.
 
-## Key Paths
+## Key paths
 
 - `components/`
 - `screens/`
@@ -16,7 +16,7 @@ This is the React Native reference implementation for `@contentful/optimization-
 - `scripts/`
 - `.env.example`
 
-## Local Rules
+## Local rules
 
 - Keep this app focused on demonstrating SDK usage. Reusable SDK behavior belongs in
   `packages/react-native-sdk`.
@@ -24,7 +24,7 @@ This is the React Native reference implementation for `@contentful/optimization-
   Native tooling plus Detox.
 - Ensure an Android emulator is running before Android Detox flows.
 
-## Common Failure Modes
+## Common failure modes
 
 - Detox cannot launch or attach to a device: confirm an Android emulator is already running before
   retrying.
@@ -41,7 +41,7 @@ This is the React Native reference implementation for `@contentful/optimization-
 - `pnpm implementation:run -- react-native-sdk test:e2e:android:run`
 - `pnpm implementation:run -- react-native-sdk test:e2e:android:full`
 
-## Usually Validate
+## Usually validate
 
 - Run `typecheck` for local changes.
 - Run `test` for app-level Jest changes when they are relevant.

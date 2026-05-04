@@ -50,7 +50,7 @@ const loadNetInfoModule = async (): Promise<NetInfoModule> => {
  * between connectivity states, and returns a cleanup function to remove the listener.
  *
  * @param callback - Function invoked when the device goes online (`true`) or offline (`false`).
- *   May return a promise.
+ *   Can return a promise.
  * @returns A function that removes the registered event listener when called.
  *
  * @internal

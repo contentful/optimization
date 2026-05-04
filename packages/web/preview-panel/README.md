@@ -17,7 +17,7 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 This package implements the first-party browser preview panel for the
 [Optimization Web SDK](../web-sdk/README.md). It loads into the DOM as a Lit-based Web Component
@@ -28,16 +28,16 @@ micro-frontend and talks to the Web SDK through the preview bridge exposed by
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Getting Started](#getting-started)
-- [When to Use This Package](#when-to-use-this-package)
-- [Common Configuration](#common-configuration)
-- [Content Security Policy Support](#content-security-policy-support)
+- [Getting started](#getting-started)
+- [When to use this package](#when-to-use-this-package)
+- [Common configuration](#common-configuration)
+- [Content security policy support](#content-security-policy-support)
 - [Related](#related)
 
 <!-- mtoc-end -->
 </details>
 
-## Getting Started
+## Getting started
 
 Install using an NPM-compatible package manager, pnpm for example:
 
@@ -68,13 +68,13 @@ The attach function appends the panel to the DOM and adds the toggle button that
 > symbol-keyed preview bridge and state interceptors to read and mutate local preview state. This is
 > a first-party preview surface, not a general extension API.
 
-## When to Use This Package
+## When to use this package
 
 Use `@contentful/optimization-web-preview-panel` when a Web SDK or React Web SDK integration needs
 the browser preview panel attached to an existing Contentful SDK client and Optimization Web SDK
-instance. Application code should not use this package as a general state extension point.
+instance. Application code must not use this package as a general state extension point.
 
-## Common Configuration
+## Common configuration
 
 | Option         | Required? | Default     | Description                                                |
 | -------------- | --------- | ----------- | ---------------------------------------------------------- |
@@ -85,7 +85,7 @@ instance. Application code should not use this package as a general state extens
 For the complete attach function signature, use the generated
 [Preview Panel reference](https://contentful.github.io/optimization/modules/_contentful_optimization-web-preview-panel.html).
 
-## Content Security Policy Support
+## Content security policy support
 
 In strict CSP environments, pass a nonce directly:
 

@@ -6,7 +6,7 @@ import type { ChangeArray, Flags } from '@contentful/optimization-api-client/api
  * @public
  * @remarks
  * Given an Optimization {@link ChangeArray}, this utility flattens the list into a
- * simple key–value object suitable for quick lookups in client code. When `changes`
+ * key-value object suitable for lookups in client code. When `changes`
  * is `undefined`, an empty object is returned. If a change value is wrapped in an
  * object like `{ value: { ... } }`, this resolver unwraps it to the underlying object.
  */

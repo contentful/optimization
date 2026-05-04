@@ -5,7 +5,7 @@ import { UniversalEventProperties } from './UniversalEventProperties'
  * Zod schema describing an `alias` event.
  *
  * @remarks
- * Currently unused.
+ * Unused.
  *
  * Alias events are typically used to associate multiple identifiers
  * (for example, anonymous and authenticated IDs) with the same user.

@@ -1,17 +1,40 @@
-# Integrating the Optimization iOS SDK in a UIKit App
+# Integrating the Optimization iOS SDK in a UIKit app
 
 Use this guide when you want to add personalization and analytics to a UIKit application using the
 Contentful Optimization iOS SDK.
 
 This guide assumes familiarity with the shared concepts covered in
-[iOS SDK Fundamentals](./integrating-the-ios-sdk-fundamentals.md) — installation, configuration,
+[iOS SDK fundamentals](./integrating-the-ios-sdk-fundamentals.md) — installation, configuration,
 consent, reactive state, the tracking model, live updates, and the preview panel. Read that first if
 you have not already.
 
 Use the SwiftUI guide instead if your app is SwiftUI-based:
-[Integrating the Optimization iOS SDK in a SwiftUI App](./integrating-the-ios-sdk-in-a-swiftui-app.md).
+[Integrating the Optimization iOS SDK in a SwiftUI app](./integrating-the-ios-sdk-in-a-swiftui-app.md).
 
-## Scope And Capabilities
+<details>
+  <summary>Table of Contents</summary>
+<!-- mtoc-start -->
+
+- [Scope and capabilities](#scope-and-capabilities)
+- [Reference app](#reference-app)
+- [The integration flow](#the-integration-flow)
+- [1. Initialize in SceneDelegate](#1-initialize-in-scenedelegate)
+- [2. Handle consent](#2-handle-consent)
+- [3. Personalize entries](#3-personalize-entries)
+  - [Calling personalizeEntry](#calling-personalizeentry)
+  - [Reloading on selectedPersonalizations changes](#reloading-on-selectedpersonalizations-changes)
+  - [Live updates vs locked variants](#live-updates-vs-locked-variants)
+- [4. Track entry interactions](#4-track-entry-interactions)
+  - [Click tracking](#click-tracking)
+  - [View tracking](#view-tracking)
+- [5. Track screen views](#5-track-screen-views)
+- [6. Preview panel](#6-preview-panel)
+- [A complete example](#a-complete-example)
+
+<!-- mtoc-end -->
+</details>
+
+## Scope and capabilities
 
 The UIKit integration is more explicit than the SwiftUI one: the SDK does not ship UIKit-native
 views equivalent to `OptimizedEntry` or `OptimizationScrollView`. Instead, you work with
@@ -33,7 +56,7 @@ UIKit apps typically use:
 The preview panel's UI is itself SwiftUI, but `PreviewPanelViewController` wraps it in a
 `UIHostingController` so it drops cleanly into a UIKit navigation stack.
 
-## Reference App
+## Reference app
 
 See the UIKit demo at
 [Colorful-Team-Org/OptimizationiOSSDKDemo — UIKitDemo](https://github.com/Colorful-Team-Org/OptimizationiOSSDKDemo)
@@ -41,29 +64,7 @@ See the UIKit demo at
 [`../../../optimization-ios-demo/UIKitDemo`](../../../optimization-ios-demo/UIKitDemo)). It is
 functionally identical to the SwiftUI demo so you can compare side-by-side.
 
-<details>
-  <summary>Table of Contents</summary>
-<!-- mtoc-start -->
-
-- [Scope And Capabilities](#scope-and-capabilities)
-- [The Integration Flow](#the-integration-flow)
-- [1. Initialize In SceneDelegate](#1-initialize-in-scenedelegate)
-- [2. Handle Consent](#2-handle-consent)
-- [3. Personalize Entries](#3-personalize-entries)
-  - [Calling personalizeEntry](#calling-personalizeentry)
-  - [Reloading On selectedPersonalizations Changes](#reloading-on-selectedpersonalizations-changes)
-  - [Live Updates vs Locked Variants](#live-updates-vs-locked-variants)
-- [4. Track Entry Interactions](#4-track-entry-interactions)
-  - [Click Tracking](#click-tracking)
-  - [View Tracking](#view-tracking)
-- [5. Track Screen Views](#5-track-screen-views)
-- [6. Preview Panel](#6-preview-panel)
-- [A Complete Example](#a-complete-example)
-
-<!-- mtoc-end -->
-</details>
-
-## The Integration Flow
+## The integration flow
 
 A typical UIKit integration is:
 
@@ -80,10 +81,10 @@ A typical UIKit integration is:
 9. Mount the preview panel behind a debug flag with
    `PreviewPanelViewController.addFloatingButton(...)`.
 
-## 1. Initialize In SceneDelegate
+## 1. Initialize in SceneDelegate
 
 Own the `OptimizationClient` from `SceneDelegate` so its lifetime matches the scene and its instance
-is easy to pass into view controllers.
+is straightforward to pass into view controllers.
 
 ```swift
 import ContentfulOptimization
@@ -131,7 +132,7 @@ Pass `client` into each view controller's initializer. This gives every screen a
 singleton instance for calling `personalizeEntry`, tracking events, and observing
 `selectedPersonalizations`.
 
-## 2. Handle Consent
+## 2. Handle consent
 
 See [Consent](./integrating-the-ios-sdk-fundamentals.md#consent) in the fundamentals for the consent
 model. In UIKit, typical patterns are:
@@ -160,7 +161,7 @@ client.$state
     .store(in: &cancellables)
 ```
 
-## 3. Personalize Entries
+## 3. Personalize entries
 
 ### Calling personalizeEntry
 
@@ -196,7 +197,7 @@ func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> U
 Use `personalization != nil` to decide whether a user saw a personalized variant — useful when
 composing tracking payloads.
 
-### Reloading On selectedPersonalizations Changes
+### Reloading on selectedPersonalizations changes
 
 When `client.selectedPersonalizations` changes (for example, after the user's audience qualification
 shifts), re-resolve and redraw affected cells. Observe the property via Combine:
@@ -212,7 +213,7 @@ client.$selectedPersonalizations
     .store(in: &cancellables)
 ```
 
-### Live Updates vs Locked Variants
+### Live updates vs locked variants
 
 UIKit does not have an automatic "lock to first variant" mechanism — you decide when to re-resolve
 based on whether you want to stay locked or update live. Two common patterns:
@@ -226,9 +227,9 @@ based on whether you want to stay locked or update live. Two common patterns:
 A common compromise is to live-update while the preview panel is open (for developer feedback) and
 lock in production. You can check `client.isPreviewPanelOpen` to decide.
 
-## 4. Track Entry Interactions
+## 4. Track entry interactions
 
-### Click Tracking
+### Click tracking
 
 Wire up a tap action on the control and call `client.trackClick(_:)` with a `TrackClickPayload`:
 
@@ -254,7 +255,7 @@ ctaView.onButtonTap = { [weak self] in
 | `experienceId` | `String?` | The ID of the matching experience, if any.         |
 | `variantIndex` | `Int`     | `0` for baseline; `1+` for a personalized variant. |
 
-### View Tracking
+### View tracking
 
 UIKit does not have a visibility modifier, so you detect visibility yourself (e.g. via
 `collectionView(_:willDisplay:forItemAt:)` / `didEndDisplaying` or by observing cell visibility
@@ -282,7 +283,7 @@ per display with a short configurable duration. The SwiftUI `OptimizedEntry` use
 threshold-based algorithm described in the fundamentals; UIKit apps that want parity can port that
 logic or read `ViewTrackingController` in the SDK source as a reference.
 
-## 5. Track Screen Views
+## 5. Track screen views
 
 Call `client.screen(name:)` from `viewDidAppear(_:)`:
 
@@ -307,7 +308,7 @@ Task {
 }
 ```
 
-## 6. Preview Panel
+## 6. Preview panel
 
 Attach the floating action button in the scene delegate (or from a root view controller's
 `viewDidLoad`), gated on a debug flag:
@@ -343,7 +344,7 @@ experiences by ID. Passing `ContentfulHTTPPreviewClient` enables rich names, var
 traffic percentages. You can also implement `PreviewContentfulClient` directly if you already have a
 Contentful client you want to reuse.
 
-## A Complete Example
+## A complete example
 
 The UIKit demo's scene delegate and home view controller together show the full pattern — SDK init
 in `scene(_:willConnectTo:options:)`, a `UITableView` that calls `personalizeEntry` in

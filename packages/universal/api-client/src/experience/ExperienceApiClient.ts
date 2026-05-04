@@ -36,10 +36,10 @@ export type Feature = 'ip-enrichment' | 'location'
  */
 export interface ExperienceApiClientRequestOptions {
   /**
-   * Enabled features (for example, `"ip-enrichment"`) which the API should use for this request.
+   * Enabled features (for example, `"ip-enrichment"`) for the API to use for this request.
    *
    * @remarks
-   * When omitted, a default set of features may be applied.
+   * When omitted, the API can apply a default set of features.
    */
   enabledFeatures?: Feature[]
 
@@ -47,7 +47,7 @@ export interface ExperienceApiClientRequestOptions {
    * IP address to override the API behavior for IP analysis.
    *
    * @remarks
-   * Commonly used in ESR or SSR environments, as the API would otherwise use
+   * Commonly used in ESR or SSR environments, as the API otherwise uses
    * the server IP.
    */
   ip?: string
@@ -56,7 +56,7 @@ export interface ExperienceApiClientRequestOptions {
    * Locale used to translate `location.city` and `location.country`.
    *
    * @remarks
-   * When omitted, a server-side default may be used.
+   * When omitted, the API can use a server-side default.
    */
   locale?: string
 
@@ -470,7 +470,7 @@ export default class ExperienceApiClient extends ApiClientBase {
    * Constructs a request URL with query parameters derived from request options.
    *
    * @param path - Path relative to the Experience API base URL.
-   * @param options - Request options that may influence query parameters.
+   * @param options - Request options that can influence query parameters.
    * @returns The fully constructed URL as a string.
    *
    * @internal
@@ -494,7 +494,7 @@ export default class ExperienceApiClient extends ApiClientBase {
   /**
    * Constructs request headers based on request options and default configuration.
    *
-   * @param options - Request options that may influence headers.
+   * @param options - Request options that can influence headers.
    * @returns A record of HTTP headers to send with the request.
    *
    * @internal
@@ -521,7 +521,7 @@ export default class ExperienceApiClient extends ApiClientBase {
   /**
    * Constructs the `options` section of the request body for profile mutations.
    *
-   * @param options - Request options that may specify enabled features.
+   * @param options - Request options that can specify enabled features.
    * @returns Experience API body options including feature flags.
    *
    * @internal
@@ -543,8 +543,8 @@ export default class ExperienceApiClient extends ApiClientBase {
   /**
    * Construct and validate the singular Experience mutation request payload.
    *
-   * @param events - Events that should be evaluated by the Experience API.
-   * @param options - Request options that may contribute body options.
+   * @param events - Events for the Experience API to evaluate.
+   * @param options - Request options that can contribute body options.
    * @returns Validated singular Experience request body.
    *
    * @internal

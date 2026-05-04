@@ -6,8 +6,8 @@ import { App, Campaign, Channel, GeoLocation, Library, Page, Screen } from './pr
  * analytics events.
  *
  * @remarks
- * The `page` and screen` properties are optional, but should usually be
- * omitted for event types that are not `page` or `screen`
+ * The `page` and `screen` properties are optional, but we recommend omitting
+ * them for event types that are not `page` or `screen`.
  *
  * @public
  */
