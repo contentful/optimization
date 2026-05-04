@@ -1,19 +1,27 @@
 'use client'
 
 // The Web SDK requires browser APIs (localStorage, document.cookie) and cannot
-// be instantiated during SSR. Using next/dynamic with ssr:false ensures the
-// OptimizationProvider (and its OptimizationRoot) is only loaded and rendered
-// on the client. Without this, child components that call useOptimization()
-// would throw when rendered outside the provider during server rendering.
-// This causes a brief flash of empty content before the SDK mounts.
+// be instantiated during SSR. Using next/dynamic with ssr:false ensures
+// OptimizationRoot is only loaded and rendered on the client. Without this,
+// child components that call useOptimization() would throw when rendered
+// outside the provider during server rendering.
 
+import { optimizationConfig } from '@/lib/config'
 import dynamic from 'next/dynamic'
-import type { ReactNode } from 'react'
+import { Suspense, type ReactNode } from 'react'
 
-const OptimizationProvider = dynamic(
+const OptimizationRoot = dynamic(
   () =>
-    import('./OptimizationProvider').then((mod) => ({
-      default: mod.OptimizationProvider,
+    import('@contentful/optimization-react-web').then((mod) => ({
+      default: mod.OptimizationRoot,
+    })),
+  { ssr: false },
+)
+
+const NextAppAutoPageTracker = dynamic(
+  () =>
+    import('@contentful/optimization-react-web/router/next-app').then((mod) => ({
+      default: mod.NextAppAutoPageTracker,
     })),
   { ssr: false },
 )
@@ -23,5 +31,22 @@ interface ClientProviderWrapperProps {
 }
 
 export function ClientProviderWrapper({ children }: ClientProviderWrapperProps) {
-  return <OptimizationProvider>{children}</OptimizationProvider>
+  return (
+    <OptimizationRoot
+      clientId={optimizationConfig.clientId}
+      environment={optimizationConfig.environment}
+      api={optimizationConfig.api}
+      autoTrackEntryInteraction={{ views: true, clicks: true, hovers: true }}
+      logLevel="debug"
+      app={{
+        name: 'ContentfulOptimization SDK - Next.js Reference',
+        version: '0.1.0',
+      }}
+    >
+      <Suspense>
+        <NextAppAutoPageTracker />
+      </Suspense>
+      {children}
+    </OptimizationRoot>
+  )
 }

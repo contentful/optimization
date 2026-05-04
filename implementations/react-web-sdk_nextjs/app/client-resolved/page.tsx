@@ -13,7 +13,7 @@ function getEntryText(entry: ContentEntry): string {
 
 function ResolvedEntry({ entry }: { entry: ContentEntry }): JSX.Element {
   const { resolveEntry, resolveEntryData } = useOptimization()
-  const resolvedEntry = resolveEntry(entry) as ContentEntry
+  const resolvedEntry = resolveEntry(entry)
   const { selectedOptimization } = resolveEntryData(entry)
   const experienceId =
     selectedOptimization &&

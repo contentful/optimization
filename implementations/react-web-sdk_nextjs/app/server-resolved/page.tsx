@@ -1,19 +1,86 @@
-import Link from 'next/link'
+import { ENTRY_IDS } from '@/config/entries'
+import { fetchEntries } from '@/lib/contentful-client'
+import { sdk } from '@/lib/optimization-server'
+import type { ContentEntry } from '@/types/contentful'
+import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
+import { cookies, headers } from 'next/headers'
+import { InteractiveControls } from './InteractiveControls'
 
-export default function ServerResolvedPage() {
+function getEntryText(entry: ContentEntry): string {
+  return typeof entry.fields.text === 'string' ? entry.fields.text : 'No content'
+}
+
+function ServerRenderedEntry({
+  baselineEntry,
+  resolvedEntry,
+}: {
+  baselineEntry: ContentEntry
+  resolvedEntry: ContentEntry
+}) {
+  return (
+    <div
+      data-testid={`content-${baselineEntry.sys.id}`}
+      data-ctfl-entry-id={resolvedEntry.sys.id}
+      data-ctfl-baseline-id={baselineEntry.sys.id}
+      className="rounded-lg border border-zinc-200 p-4"
+    >
+      <p data-testid={`entry-text-${baselineEntry.sys.id}`}>{getEntryText(resolvedEntry)}</p>
+      <p className="text-xs text-zinc-400 mt-2">{`[Entry: ${baselineEntry.sys.id}]`}</p>
+    </div>
+  )
+}
+
+export default async function ServerResolvedPage() {
+  const cookieStore = await cookies()
+  const headerStore = await headers()
+
+  const anonymousId = cookieStore.get(ANONYMOUS_ID_COOKIE)?.value
+  const profile = anonymousId ? { id: anonymousId } : undefined
+
+  const [baselineEntries, optimizationData] = await Promise.all([
+    fetchEntries(ENTRY_IDS),
+    sdk.page({
+      locale: headerStore.get('accept-language')?.split(',')[0] ?? 'en-US',
+      userAgent: headerStore.get('user-agent') ?? 'next-js-server',
+      profile,
+    }),
+  ])
+
+  const resolvedEntries = baselineEntries.map((entry) => {
+    const { entry: resolved } = sdk.resolveOptimizedEntry(
+      entry,
+      optimizationData.selectedOptimizations,
+    )
+    return resolved
+  })
+
   return (
     <main className="flex-1 p-8 max-w-3xl mx-auto w-full">
       <h1 className="text-2xl font-semibold mb-2">Server-Resolved Pattern</h1>
       <p className="text-zinc-500 mb-6">
-        Entries are pre-resolved on the server via the Node SDK and passed as props to client
-        components for hydration. This pattern will be implemented in Phase 3.
+        Entries are pre-resolved on the server via the Node SDK. The HTML contains resolved content
+        with zero client-side JavaScript for rendering. Interactive features (consent, identify)
+        hydrate separately.
       </p>
-      <Link
-        href="/"
-        className="rounded-lg border border-zinc-200 px-4 py-2 hover:bg-zinc-50 transition-colors"
-      >
-        Back to Home
-      </Link>
+
+      <InteractiveControls />
+
+      <section className="mt-6">
+        <h2 className="text-lg font-medium mb-3">Entries (Server-Resolved)</h2>
+        {baselineEntries.length === 0 ? (
+          <p data-testid="entries-empty">No entries found.</p>
+        ) : (
+          <div className="grid gap-3">
+            {baselineEntries.map((entry, index) => (
+              <ServerRenderedEntry
+                key={entry.sys.id}
+                baselineEntry={entry}
+                resolvedEntry={resolvedEntries[index] ?? entry}
+              />
+            ))}
+          </div>
+        )}
+      </section>
     </main>
   )
 }
