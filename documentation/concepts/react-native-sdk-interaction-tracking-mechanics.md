@@ -83,14 +83,14 @@ from application code.
 These are emitted by the SDK without an application-level call, as long as consent allows and the
 relevant provider/component is mounted.
 
-| Event                             | When it fires                                                                                               | Required wiring                                                                                             |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| **Screen view**                   | Each time the active navigation route changes.                                                              | `<OptimizationNavigationContainer>` wrapping `NavigationContainer` (or `useScreenTracking` on each screen). |
-| **Entry view (initial)**          | When a wrapped entry has accumulated enough visible time (default 2000 ms at ≥ 80% visibility).             | `<OptimizedEntry entry={entry}>` with view tracking enabled (the default).                                  |
-| **Entry view (periodic updates)** | Every `viewDurationUpdateIntervalMs` (default 5000 ms) while the entry remains visible.                     | Same as above.                                                                                              |
-| **Entry view (final)**            | When visibility ends (scrolled away, unmounted, or app backgrounded) _if_ at least one event already fired. | Same as above.                                                                                              |
-| **Entry tap**                     | On touch end, when the touch moved less than 10 points from touch start, on a wrapped entry.                | `<OptimizedEntry>` with tap tracking enabled (off by default; opt in via `trackTaps` or `onTap`).           |
-| **Flag view**                     | Internally emitted whenever `useFlag` / `getFlag` is called. Not strictly an interaction; worth knowing.    | Any `getFlag(...)` call.                                                                                    |
+| Event                             | When it fires                                                                                                              | Required wiring                                                                                             |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Screen view**                   | Each time the active navigation route changes.                                                                             | `<OptimizationNavigationContainer>` wrapping `NavigationContainer` (or `useScreenTracking` on each screen). |
+| **Entry view (initial)**          | When a wrapped entry has accumulated enough visible time (default 2000 ms at ≥ 80% visibility).                            | `<OptimizedEntry entry={entry}>` with view tracking enabled (the default).                                  |
+| **Entry view (periodic updates)** | Every `viewDurationUpdateIntervalMs` (default 5000 ms) while the entry remains visible.                                    | Same as above.                                                                                              |
+| **Entry view (final)**            | When visibility ends (scrolled away, unmounted, or app backgrounded) _if_ at least one event already fired.                | Same as above.                                                                                              |
+| **Entry tap**                     | On touch end, when the touch moved less than 10 points from touch start, on a wrapped entry.                               | `<OptimizedEntry>` with tap tracking enabled (off by default; opt in via `trackTaps` or `onTap`).           |
+| **Flag view**                     | Internally emitted when a flag value changes (deduplicated via deep equality). Not strictly an interaction; worth knowing. | Any `getFlag(...)` call or `states.flag(...)` subscription.                                                 |
 
 ### Manual events
 

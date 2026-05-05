@@ -1,6 +1,7 @@
 ---
 title: Concepts
 children:
+  - ./core-state-management.md
   - ./react-native-sdk-interaction-tracking-mechanics.md
 ---
 
@@ -12,6 +13,10 @@ they are not the first stop for installation or setup commands.
 
 ## Available concepts
 
+- [Core state management](./core-state-management.md) - explains how `CoreStateful` stores internal
+  state using signals, why that state is protected from outside interference, and which
+  consumer-facing surfaces — observables, interceptors, and lifecycle methods — are the correct way
+  to observe and influence state.
 - [React Native SDK Interaction Tracking Mechanics](./react-native-sdk-interaction-tracking-mechanics.md) -
   explains how the React Native SDK observes, gates, and emits tracking events, covering event
   types, the viewport state machine, default thresholds, consent gating, scroll context, screen

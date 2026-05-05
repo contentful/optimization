@@ -60,6 +60,7 @@ abstract class CoreStatefulEventEmitter
   implements ConsentGuard
 {
   protected readonly flagObservables = new Map<string, Observable<Json>>()
+  private readonly lastTrackedFlagValues = new Map<string, Json>()
 
   protected abstract readonly allowedEventTypes: EventType[]
   protected abstract readonly experienceQueue: ExperienceQueue
@@ -68,11 +69,15 @@ abstract class CoreStatefulEventEmitter
 
   override getFlag(name: string, changes: ChangeArray | undefined = changesSignal.value): Json {
     const value = super.getFlag(name, changes)
-    const payload = this.buildFlagViewBuilderArgs(name, changes)
 
-    void this.trackFlagView(payload).catch((error: unknown) => {
-      logger.warn(`Failed to emit "flag view" event for "${name}"`, String(error))
-    })
+    if (!isEqual(value, this.lastTrackedFlagValues.get(name))) {
+      this.lastTrackedFlagValues.set(name, value)
+      const payload = this.buildFlagViewBuilderArgs(name, changes)
+
+      void this.trackFlagView(payload).catch((error: unknown) => {
+        logger.warn(`Failed to emit "flag view" event for "${name}"`, String(error))
+      })
+    }
 
     return value
   }

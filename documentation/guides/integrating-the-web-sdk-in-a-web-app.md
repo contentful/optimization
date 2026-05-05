@@ -356,7 +356,8 @@ optimization.states.flag('new-navigation').subscribe((value) => {
 ```
 
 Unlike the stateless Node SDK, the stateful Web SDK automatically emits flag-view tracking when you
-read a flag via `getFlag()` or `states.flag(name)`.
+read a flag via `getFlag()` or `states.flag(name)`. Both paths deduplicate tracking events using
+deep equality, so repeated reads of the same resolved value emit only one flag view event.
 
 ## 6. Identify known users and reset when identity changes
 
