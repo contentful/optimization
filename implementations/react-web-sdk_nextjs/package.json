@@ -2,7 +2,7 @@
   "name": "@implementation/react-web-sdk_nextjs",
   "private": true,
   "version": "0.0.0",
-  "description": "Reference implementation for Next.js (App Router) using @contentful/optimization-react-web and @contentful/optimization-node for SSR",
+  "description": "Reference implementation for Next.js (App Router) using @contentful/optimization-react-web for pure client-side entry resolution",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -29,7 +29,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@contentful/optimization-node": "0.0.0",
     "@contentful/optimization-react-web": "0.0.0",
     "@contentful/optimization-web-preview-panel": "0.0.0",
     "@contentful/rich-text-react-renderer": "16.1.6",
@@ -59,7 +58,6 @@
       "@contentful/optimization-api-client": "file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz",
       "@contentful/optimization-api-schemas": "file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz",
       "@contentful/optimization-core": "file:../../pkgs/contentful-optimization-core-0.0.0.tgz",
-      "@contentful/optimization-node": "file:../../pkgs/contentful-optimization-node-0.0.0.tgz",
       "@contentful/optimization-web": "file:../../pkgs/contentful-optimization-web-0.0.0.tgz",
       "@contentful/optimization-react-web": "file:../../pkgs/contentful-optimization-react-web-0.0.0.tgz",
       "@contentful/optimization-web-preview-panel": "file:../../pkgs/contentful-optimization-web-preview-panel-0.0.0.tgz"
