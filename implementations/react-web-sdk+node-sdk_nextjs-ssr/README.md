@@ -1,8 +1,8 @@
 # Next.js SSR Hybrid Reference Implementation
 
-`react-web-sdk+node-sdk_nextjs` — Next.js App Router reference using `@contentful/optimization-node`
-for server-side entry resolution and `@contentful/optimization-react-web` for client-side event
-tracking and interactive controls.
+`react-web-sdk+node-sdk_nextjs-ssr` — Next.js App Router reference using
+`@contentful/optimization-node` for server-side entry resolution and
+`@contentful/optimization-react-web` for client-side event tracking and interactive controls.
 
 ## Architecture
 
@@ -24,12 +24,12 @@ Browser
 
 ```bash
 pnpm build:pkgs
-pnpm implementation:run -- react-web-sdk+node-sdk_nextjs implementation:install
-cp implementations/react-web-sdk+node-sdk_nextjs/.env.example implementations/react-web-sdk+node-sdk_nextjs/.env
+pnpm implementation:run -- react-web-sdk+node-sdk_nextjs-ssr implementation:install
+cp implementations/react-web-sdk+node-sdk_nextjs-ssr/.env.example implementations/react-web-sdk+node-sdk_nextjs-ssr/.env
 ```
 
 ## Development
 
 ```bash
-pnpm implementation:run -- react-web-sdk+node-sdk_nextjs dev
+pnpm implementation:run -- react-web-sdk+node-sdk_nextjs-ssr dev
 ```

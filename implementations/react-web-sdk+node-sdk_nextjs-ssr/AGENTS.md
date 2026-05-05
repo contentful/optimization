@@ -32,12 +32,12 @@ This represents a customer setup where:
 
 ## Commands
 
-- `pnpm implementation:run -- react-web-sdk+node-sdk_nextjs implementation:install`
-- `pnpm implementation:run -- react-web-sdk+node-sdk_nextjs typecheck`
-- `pnpm implementation:run -- react-web-sdk+node-sdk_nextjs build`
-- `pnpm implementation:run -- react-web-sdk+node-sdk_nextjs dev`
-- `pnpm implementation:run -- react-web-sdk+node-sdk_nextjs serve`
-- `pnpm implementation:run -- react-web-sdk+node-sdk_nextjs serve:stop`
+- `pnpm implementation:run -- react-web-sdk+node-sdk_nextjs-ssr implementation:install`
+- `pnpm implementation:run -- react-web-sdk+node-sdk_nextjs-ssr typecheck`
+- `pnpm implementation:run -- react-web-sdk+node-sdk_nextjs-ssr build`
+- `pnpm implementation:run -- react-web-sdk+node-sdk_nextjs-ssr dev`
+- `pnpm implementation:run -- react-web-sdk+node-sdk_nextjs-ssr serve`
+- `pnpm implementation:run -- react-web-sdk+node-sdk_nextjs-ssr serve:stop`
 
 ## Usually Validate
 

@@ -1,5 +1,5 @@
 {
-  "name": "@implementation/react-web-sdk+node-sdk_nextjs",
+  "name": "@implementation/react-web-sdk+node-sdk_nextjs-ssr",
   "private": true,
   "version": "0.0.0",
   "description": "Reference implementation for Next.js (App Router) using @contentful/optimization-node for SSR entry resolution and @contentful/optimization-react-web for client-side event tracking",
