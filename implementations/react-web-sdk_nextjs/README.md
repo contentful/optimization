@@ -1,19 +1,71 @@
 # Next.js React Web SDK Reference Implementation
 
 Next.js App Router reference implementation demonstrating `@contentful/optimization-react-web`
-(client-side) and `@contentful/optimization-node` (server-side SSR) working together.
+(client-side) and `@contentful/optimization-node` (server-side SSR) as two independent integration
+patterns.
 
 ## Architecture
 
-This implementation shows two integration patterns:
+Each route is fully isolated with its own SDK setup. The root layout is neutral — no SDK
+initialization at the app level.
 
-- **Client-Resolved** (`/client-resolved`): Entries are resolved entirely in the browser via the
-  React SDK. The server renders an HTML shell; the Web SDK resolves optimizations client-side.
-- **Server-Resolved** (`/server-resolved`): Entries are pre-resolved on the server via the Node SDK
-  and passed as props to client components for hydration with full interactivity.
+### Client-Resolved (`/client-resolved`)
 
-Both patterns share a cookie-based profile (`ctfl-opt-aid`) managed by Next.js middleware, ensuring
-the same anonymous profile is used across server and client.
+The React SDK does everything in the browser. No Node SDK involvement.
+
+```
+Browser loads page
+  → JavaScript downloads and executes
+  → React SDK initializes (browser-only singleton via dynamic import, ssr:false)
+  → SDK calls Experience API from the browser
+  → Component fetches entries from Contentful CDA
+  → SDK resolves entries client-side
+  → React renders content
+```
+
+- **First paint**: empty/loading state until JS loads and SDK resolves
+- **Reactivity**: immediate — identify, consent, reset all re-resolve entries instantly
+- **Client JS**: required for all content rendering
+
+### Server-Resolved (`/server-resolved`)
+
+The Node SDK resolves entries on the server. Client JS is only needed for interactive controls
+(consent, identify) and event tracking — not for content rendering.
+
+```
+Request hits server
+  → Middleware reads ctfl-opt-aid cookie, calls Node SDK sdk.page(), sets/refreshes cookie
+  → Server Component reads cookie, calls Node SDK sdk.page() for selectedOptimizations
+  → Server Component fetches entries from Contentful CDA
+  → Node SDK resolves entries with sdk.resolveOptimizedEntry()
+  → Server renders final HTML with correct personalized content
+
+Browser receives HTML
+  → Content is visible immediately (static server HTML, zero JS)
+  → InteractiveControls component hydrates for consent/identify buttons
+  → Entry content does NOT re-render on hydration
+```
+
+- **First paint**: correct resolved content immediately, no loading flash
+- **Reactivity**: profile changes (identify/reset) require a page refresh to re-resolve entries
+- **Client JS**: only for interactive controls, not for content
+
+### Key Differences
+
+|                            | Client-Resolved       | Server-Resolved               |
+| -------------------------- | --------------------- | ----------------------------- |
+| Who resolves entries       | Browser (React SDK)   | Server (Node SDK)             |
+| First paint                | Loading state         | Correct content               |
+| Client JS for content      | Required              | None                          |
+| Experience API called from | Browser               | Server (middleware + page)    |
+| Profile changes            | Instant re-resolution | Requires page refresh         |
+| `"use client"` boundary    | Entire page           | Small controls component only |
+
+### Cookie-Based Profile Consistency
+
+Both patterns share the `ctfl-opt-aid` cookie managed by Next.js middleware. The middleware runs on
+every request and ensures an anonymous profile exists before any page renders. This is the bridge
+between server and client — both SDKs use the same profile identity.
 
 ## Setup
 
@@ -41,15 +93,57 @@ pnpm implementation:run -- react-web-sdk_nextjs serve:stop
 
 ```
 app/
-  layout.tsx              # Root layout (Server Component) wraps children in client provider
-  page.tsx                # Home page with navigation to both patterns
-  client-resolved/        # Client-side optimization resolution demo
-  server-resolved/        # Server-side pre-resolution + client hydration demo
-lib/
-  config.ts               # Shared SDK configuration from env vars
-  contentful-client.ts    # Contentful CDA client
-  optimization-server.ts  # Node SDK singleton for server-side use
+  layout.tsx                        # Root layout — neutral, no SDK
+  page.tsx                          # Home page with navigation to both patterns
+
+  client-resolved/
+    layout.tsx                      # Route layout — ClientProviderWrapper (React SDK)
+    page.tsx                        # "use client" — React SDK resolves entries, full interactivity
+
+  server-resolved/
+    layout.tsx                      # Route layout — ClientProviderWrapper (React SDK for tracking)
+    page.tsx                        # Server Component — Node SDK resolves entries, pure HTML
+    InteractiveControls.tsx         # "use client" — consent/identify buttons only
+
 components/
-  OptimizationProvider.tsx # "use client" wrapper for <OptimizationRoot>
-middleware.ts             # Cookie-based profile management
+  ClientProviderWrapper.tsx         # "use client" — dynamic import of OptimizationRoot (ssr:false)
+
+lib/
+  config.ts                         # Shared SDK configuration from env vars
+  contentful-client.ts              # Contentful CDA client
+  optimization-server.ts            # Node SDK singleton for server-side use
+
+middleware.ts                       # Cookie lifecycle — ensures ctfl-opt-aid exists on every request
+config/entries.ts                   # Entry IDs shared across both patterns
+types/contentful.ts                 # Contentful entry type definitions
 ```
+
+## Design Decisions
+
+### Why `next/dynamic` with `ssr: false`?
+
+The Web SDK requires browser APIs (`localStorage`, `document.cookie`) and cannot be instantiated
+during server rendering. Next.js server-renders `"use client"` components too — the directive only
+marks the hydration boundary, not the execution boundary. `dynamic({ ssr: false })` is the standard
+Next.js pattern for browser-only third-party SDKs.
+
+### Why isolated route layouts instead of a root provider?
+
+Each integration pattern is independent. A customer would choose one approach, not mix them. Keeping
+them isolated means:
+
+- No shared singleton conflicts between routes
+- Each pattern is self-contained and testable
+- Clear demonstration of what each approach requires
+
+### Why does the middleware also call `sdk.page()`?
+
+The middleware runs on every route. Its job is cookie lifecycle — ensuring `ctfl-opt-aid` exists for
+first-time visitors regardless of which page they land on. The server-resolved page makes its own
+`sdk.page()` call for data fetching. They serve different purposes.
+
+### Why don't server-resolved entries update on identify/reset?
+
+Server Components render once on the server. They are not reactive. To see updated entries after a
+profile change, the page needs a new server render (page refresh or `router.refresh()`). This is the
+fundamental SSR tradeoff: fast first paint at the cost of immediate reactivity.

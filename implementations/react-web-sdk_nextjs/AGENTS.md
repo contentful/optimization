@@ -6,30 +6,33 @@ Read the repository root `AGENTS.md` first.
 
 This is the Next.js (App Router) reference implementation demonstrating
 `@contentful/optimization-react-web` for client-side optimization and
-`@contentful/optimization-node` for server-side optimization in an SSR context.
+`@contentful/optimization-node` for server-side optimization.
 
-It shows two integration patterns:
+It shows two independent integration patterns, each with its own route layout and SDK setup:
 
-1. **Client-resolved**: entries are resolved entirely on the client via the React SDK
-2. **Server-pre-resolved**: entries are resolved on the server via the Node SDK and hydrated on the
-   client
+1. **Client-resolved** (`/client-resolved`): React SDK does everything in the browser — entry
+   resolution, event tracking, consent, identify. No Node SDK.
+2. **Server-resolved** (`/server-resolved`): Node SDK resolves entries on the server as pure HTML.
+   React SDK hydrates only for interactive controls (consent, identify) and event tracking.
 
 ## Key Paths
 
-- `app/` — Next.js App Router pages, layouts, and route handlers
+- `app/` — Next.js App Router pages and route-scoped layouts
+- `app/client-resolved/` — client-only pattern (React SDK)
+- `app/server-resolved/` — server pattern (Node SDK + React SDK for tracking)
 - `lib/` — shared utilities (SDK config, Contentful client, server-side helpers)
-- `components/` — React components (client and server)
+- `components/` — shared client wrapper (`ClientProviderWrapper`)
+- `middleware.ts` — cookie lifecycle management
 - `.env.example`
-- `middleware.ts` — Next.js middleware for cookie-based profile management
 
 ## Local Rules
 
 - This implementation uses the Next.js App Router exclusively. Do not add Pages Router files.
+- The root layout is neutral — no SDK provider. Each route owns its own SDK setup via route layouts.
 - All SDK usage on the client must live inside `"use client"` components. Server Components must not
   import from `@contentful/optimization-react-web` or `@contentful/optimization-web`.
 - Server-side SDK usage must import from `@contentful/optimization-node` only.
-- The React SDK (`OptimizationRoot`) must be initialized in a single client component wrapper in the
-  root layout. Do not create multiple provider instances.
+- Do not create a custom `OptimizationProvider` wrapper — use the SDK's `OptimizationRoot` directly.
 - Do not add a `src/optimization/` directory. Follow the same direct-import pattern as
   `implementations/react-web-sdk`.
 - If you changed a consumed package, run `pnpm build:pkgs` and reinstall this implementation before
@@ -46,6 +49,8 @@ It shows two integration patterns:
 - Behavior differs from the documented mock setup: compare `.env` with `.env.example` before
   changing code.
 - Next.js caching stale data: run `pnpm clean` to clear the `.next` directory.
+- `ContentfulOptimization is already initialized`: stale singleton from a previous dev session or
+  HMR. Run `window.contentfulOptimization?.destroy()` in the browser console and refresh.
 
 ## Commands
 
