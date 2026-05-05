@@ -21,6 +21,7 @@
     "implementation:react-web-sdk": "pnpm run implementation:run -- react-web-sdk",
     "implementation:web-sdk_react": "pnpm run implementation:run -- web-sdk_react",
     "implementation:react-web-sdk_nextjs": "pnpm run implementation:run -- react-web-sdk_nextjs",
+    "implementation:react-web-sdk+node-sdk_nextjs": "pnpm run implementation:run -- react-web-sdk+node-sdk_nextjs",
     "implementation:web-sdk": "pnpm run implementation:run -- web-sdk",
     "implementation:lint": "eslint implementations --cache --cache-location .cache/eslint/implementations",
     "implementation:lint:fix": "eslint implementations --fix",
