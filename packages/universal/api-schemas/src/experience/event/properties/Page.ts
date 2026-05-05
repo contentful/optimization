@@ -6,7 +6,7 @@ import { Dictionary } from './Dictionary'
  *
  * @remarks
  * The base object describes standard page attributes, while additional
- * JSON properties may be present due to the use of `z.catchall`.
+ * JSON properties can be present due to the use of `z.catchall`.
  *
  * @public
  */

@@ -83,7 +83,7 @@ export interface AudienceWithExperiences {
   experiences: ExperienceWithState[]
   /** Whether user naturally qualifies for this audience (from API) */
   isQualified: boolean
-  /** Whether audience is currently active (considering overrides) */
+  /** Whether the audience is active after overrides are applied. */
   isActive: boolean
   /** Current override state */
   overrideState: AudienceOverrideState

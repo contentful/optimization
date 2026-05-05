@@ -10,7 +10,7 @@ export type CtflDataset = DOMStringMap & {
   ctflBaselineId?: string
   /** Optional optimization/experience ID associated with the entry. */
   ctflOptimizationId?: string
-  /** Whether this entry interaction should be treated as sticky. */
+  /** Whether this entry interaction is sticky. */
   ctflSticky?: 'true' | 'false'
   /** Optional variant index for optimized variants (non-negative integer). */
   ctflVariantIndex?: string

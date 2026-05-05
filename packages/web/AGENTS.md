@@ -4,7 +4,7 @@ Read the repository root `AGENTS.md`, then `packages/AGENTS.md`, before this fil
 
 These instructions apply to Web-family packages under `packages/web/`.
 
-## Web Package Boundaries
+## Web package boundaries
 
 - Keep Web-family packages browser-oriented. Server-only assumptions belong in Node-specific
   packages or implementations.
@@ -17,7 +17,7 @@ These instructions apply to Web-family packages under `packages/web/`.
 - Keep Web package-local `dev/` harnesses aligned with the browser, preview, or framework behavior
   they demonstrate.
 
-## Usually Validate
+## Usually validate
 
 - Watch bundle-size impact for Web runtime changes.
 - Validate both `web-sdk` and `preview-panel` when preview bridge behavior, panel bootstrapping, or

@@ -5,7 +5,7 @@ import * as z from 'zod/mini'
  *
  * @remarks
  * The base object describes standard screen attributes, while additional
- * JSON properties may be present due to the use of `z.catchall`.
+ * JSON properties can be present due to the use of `z.catchall`.
  *
  * @public
  */

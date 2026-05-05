@@ -11,7 +11,7 @@ import { ExperienceRequestOptions } from './ExperienceRequest'
  */
 export const BatchExperienceRequestData = z.object({
   /**
-   * Batch experience events that should be evaluated by the Experience API.
+   * Batch experience events for the Experience API to evaluate.
    *
    * @remarks
    * Must contain at least one event.

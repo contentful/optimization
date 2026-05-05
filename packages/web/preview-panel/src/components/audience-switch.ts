@@ -46,7 +46,7 @@ export class AudienceSwitch extends LitElement {
   @property({ attribute: 'aria-labelledby' })
   accessor labelledBy: string | undefined = undefined
 
-  /** Currently selected audience override state. */
+  /** Selected audience override state. */
   @property({ attribute: false })
   accessor value: boolean | undefined = undefined
 

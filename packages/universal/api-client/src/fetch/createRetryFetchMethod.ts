@@ -21,7 +21,7 @@ const DEFAULT_RETRY_COUNT = 1
  * HTTP status code that triggers a retry.
  *
  * @remarks
- * This value is currently fixed to `503 Service Unavailable`.
+ * This value is fixed to `503 Service Unavailable`.
  *
  * @internal
  */

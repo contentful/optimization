@@ -8,7 +8,7 @@ before this file.
 This package owns Zod-based API schemas, inferred types, and schema helpers for Contentful CDA,
 Experience API, and Insights API payloads.
 
-## Key Paths
+## Key paths
 
 - `src/`
 - `README.md`
@@ -20,7 +20,7 @@ Experience API, and Insights API payloads.
 - `pnpm --filter @contentful/optimization-api-schemas build`
 - `pnpm --filter @contentful/optimization-api-schemas size:check`
 
-## Usually Validate
+## Usually validate
 
 - Run `typecheck` and `test:unit` for local changes.
 - Run `build` for export or packaging changes.

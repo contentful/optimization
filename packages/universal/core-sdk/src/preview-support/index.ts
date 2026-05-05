@@ -3,8 +3,7 @@
  *
  * Provides platform-agnostic preview functionality: override management,
  * preview-model building, and Contentful entry mapping. Consumed by the
- * React Native SDK, the iOS JS bridge, and (eventually) the web preview
- * panel UI.
+ * React Native SDK, the iOS JS bridge, and the web preview panel UI.
  *
  * @packageDocumentation
  */

@@ -1,17 +1,17 @@
-# Preview Support (internal)
+# Preview support (internal)
 
 > [!CAUTION]
 >
 > `@contentful/optimization-core/preview-support` is internal first-party preview infrastructure. It
-> is not part of the application-facing Core SDK surface and may change without a SemVer major bump.
-> Application integrations should use the preview-panel surface documented by their platform SDK.
+> is not part of the application-facing Core SDK surface and can change without a SemVer major bump.
+> Application integrations must use the preview-panel surface documented by their platform SDK.
 
 This entry point ships the cross-platform preview-panel toolkit used by React Native preview
-support, the iOS JavaScriptCore bridge, and future first-party preview surfaces. It owns the preview
-override state machine, preview view-model builder, Contentful content-model mappers, and minimal
-Contentful fetch helpers.
+support, the iOS JavaScriptCore bridge, and additional first-party preview surfaces. It owns the
+preview override state machine, preview view-model builder, Contentful content-model mappers, and
+minimal Contentful fetch helpers.
 
-## When to Use This Internal Entry
+## When to use this internal entry
 
 Use this entry only from first-party preview tooling or platform bridge code that must share preview
 override semantics. Platform-specific preview UI belongs in the platform SDK; Contentful
@@ -27,7 +27,7 @@ import {
 } from '@contentful/optimization-core/preview-support'
 ```
 
-## Package Surface
+## Package surface
 
 | Surface                                  | Purpose                                                                 |
 | ---------------------------------------- | ----------------------------------------------------------------------- |
@@ -49,7 +49,7 @@ snapshots into the preview-support helpers.
 > required for immediate local overrides without network round-trips and is not a general-purpose
 > extension point.
 
-## Behavior Notes
+## Behavior notes
 
 - `PreviewOverrideManager` registers a Core state interceptor so audience and variant overrides
   survive API refreshes. It can activate or deactivate audiences, set or reset individual variant
@@ -66,9 +66,9 @@ snapshots into the preview-support helpers.
 - Contentful fetch helpers page through `nt_audience` and `nt_experience` entries using a minimal
   `getEntries` contract. This package does not depend on the Contentful SDK directly.
 
-## What Belongs Elsewhere
+## What belongs elsewhere
 
-- Platform-specific preview UI belongs in the Web, React Native, iOS, or future platform SDK.
+- Platform-specific preview UI belongs in the Web, React Native, iOS, or another platform SDK.
 - Application setup belongs in the platform SDK README or integration guide.
 - Exhaustive method signatures, callback payloads, and exported type details belong in generated
   TypeDoc reference.

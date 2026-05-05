@@ -96,7 +96,7 @@ export interface OptimizedEntryProps {
   testID?: string
 
   /**
-   * Whether this component should react to optimization state changes in real-time.
+   * Whether this component reacts to optimization state changes in real time.
    * Only applies to optimized entries; ignored for non-optimized entries.
    * When `undefined`, inherits from the `liveUpdates` prop on {@link OptimizationRoot}.
    * When `false` (or inherited as `false`), the component locks to the first variant
@@ -158,7 +158,7 @@ function resolveTapsEnabled(
  * user's profile. For all entries, it tracks views and taps.
  *
  * @param props - {@link OptimizedEntryProps}
- * @returns A wrapper View with interaction tracking attached
+ * @returns A wrapper View with interaction tracking attached.
  *
  * @remarks
  * "Tracking" refers to tracking Contentful content entries,
@@ -170,7 +170,7 @@ function resolveTapsEnabled(
  * flashing. Set `liveUpdates` to `true` or open the preview panel to enable
  * real-time variant switching.
  *
- * @example Basic Usage with Render Prop
+ * @example Basic usage with render prop
  * ```tsx
  * <OptimizationScrollProvider>
  *   <OptimizedEntry entry={entry}>
@@ -184,14 +184,14 @@ function resolveTapsEnabled(
  * </OptimizationScrollProvider>
  * ```
  *
- * @example Static Children (Tracking Only)
+ * @example Static children (tracking only)
  * ```tsx
  * <OptimizedEntry entry={productEntry}>
  *   <ProductCard name={productEntry.fields.name} />
  * </OptimizedEntry>
  * ```
  *
- * @example With Tap Tracking
+ * @example With tap tracking
  * ```tsx
  * <OptimizedEntry entry={entry} trackTaps>
  *   {(resolvedEntry) => (

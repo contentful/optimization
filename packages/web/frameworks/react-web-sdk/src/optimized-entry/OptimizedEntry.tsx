@@ -35,7 +35,7 @@ export interface OptimizedEntryProps {
    */
   children: OptimizedEntryChildren
   /**
-   * Whether this component should react to optimization state changes in real-time.
+   * Whether this component reacts to optimization state changes in real time.
    * When `undefined`, inherits from the `liveUpdates` prop on {@link OptimizationRoot}.
    */
   liveUpdates?: boolean

@@ -18,7 +18,7 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 This is a reference implementation using both the
 [Optimization Node SDK](../../packages/node/node-sdk/README.md) and
@@ -38,7 +38,7 @@ hybrid SSR and ESR solutions.
 > code. If the server embeds personalized output or profile-derived values, treat that response as
 > personalized and avoid shared caching unless you vary on all relevant inputs.
 
-## What This Demonstrates
+## What this demonstrates
 
 Use this implementation when you need a hybrid SSR/browser example. It demonstrates a stateless Node
 SDK server flow, a stateful Web SDK browser flow, cookie-based profile continuity between them, and
@@ -51,7 +51,7 @@ local mock API usage for end-to-end validation.
 
 ## Setup
 
-All steps should be run from the monorepo root.
+Run all steps from the monorepo root.
 
 1. Install pnpm packages:
 
@@ -77,7 +77,7 @@ All steps should be run from the monorepo root.
    the [mocks package](../../lib/mocks/README.md) for information on how to set up Contentful space
    with test data.
 
-## Running Locally
+## Running locally
 
 Run these commands from the monorepo root.
 
@@ -102,7 +102,7 @@ Run these commands from the monorepo root.
 The application can be accessed via Web browser at `http://localhost:3000`. See
 `implementations/node-sdk+web-sdk/package.json` for lower-level local commands.
 
-## Running E2E Tests
+## Running E2E tests
 
 E2E tests are run using Playwright.
 

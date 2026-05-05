@@ -8,7 +8,7 @@ file.
 This package owns browser-specific SDK behavior, including Web runtime concerns and entry
 interaction tracking.
 
-## Key Paths
+## Key paths
 
 - `src/`
 - `dev/`
@@ -16,9 +16,9 @@ interaction tracking.
 - `dev/rsbuild.config.ts`
 - `README.md`
 
-## Local Rules
+## Local rules
 
-- The package-local `dev` flow is a maintained development surface and should stay relevant to the
+- The package-local `dev` flow is a maintained development surface and must stay relevant to the
   current browser SDK behavior.
 - Keep the `dev` flow up-to-date when developer-facing flows, configuration, runtime integration, or
   preview-related behavior changes.
@@ -31,7 +31,7 @@ interaction tracking.
 - `pnpm --filter @contentful/optimization-web size:check`
 - `pnpm --filter @contentful/optimization-web dev`
 
-## Usually Validate
+## Usually validate
 
 - Run `typecheck`, `test:unit`, and `build`.
 - Validate the package-local `dev` flow itself when changing package flows it is meant to

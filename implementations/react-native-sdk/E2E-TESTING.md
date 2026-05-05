@@ -1,9 +1,9 @@
-# E2E Testing with Detox
+# E2E testing with Detox
 
 This React Native application is configured with [Detox](https://wix.github.io/Detox/) for
 end-to-end testing.
 
-## Quick Start (Android)
+## Quick start (Android)
 
 For a fresh machine, run the automated setup script:
 
@@ -32,7 +32,7 @@ For CI environments, use:
 
 ### iOS
 
-- Xcode installed (latest version recommended)
+- Xcode installed (we recommend the supported version for the target simulator)
 - iOS Simulator
 - CocoaPods installed
 
@@ -45,7 +45,7 @@ For CI environments, use:
 
 ## Setup
 
-### iOS Setup
+### iOS setup
 
 1. Install iOS dependencies:
 
@@ -61,7 +61,7 @@ cd ..
 pnpm run test:e2e:ios:build
 ```
 
-### Android Setup
+### Android setup
 
 1. Ensure you have an Android emulator configured. You can check available emulators with:
 
@@ -80,7 +80,7 @@ emulator -list-avds
 pnpm run test:e2e:android:build
 ```
 
-## Running Tests
+## Running tests
 
 ### iOS
 
@@ -95,7 +95,7 @@ pnpm run test:e2e:ios:run
 
 ### Android
 
-#### One-Shot Script (Recommended)
+#### One-shot script (recommended)
 
 The easiest way to run Android E2E tests is using the all-in-one script:
 
@@ -145,7 +145,7 @@ MOCK_SERVER_PORT=9000 METRO_PORT=8082 ./scripts/run-e2e-android.sh
 - `metro.log` - Metro bundler output
 - `device.log` - Android device logcat output (React Native logs)
 
-#### Manual Steps
+#### Manual steps
 
 If you need more control, you can run each step separately:
 
@@ -158,7 +158,7 @@ pnpm run test:e2e:android:build
 pnpm run test:e2e:android:run
 ```
 
-## Test Files
+## Test files
 
 - Test files are located in `e2e/`
 - `e2e/app.test.js` - Main application tests
@@ -172,7 +172,7 @@ The Detox configuration is in `.detoxrc.js`. It includes:
 - Device/simulator configurations
 - Test runner settings
 
-## Writing Tests
+## Writing tests
 
 Tests use Detox's API along with Jest. Example:
 
@@ -232,7 +232,7 @@ The app components have been annotated with `testID` props for Detox to identify
 - Detox issues: Check the
   [Detox troubleshooting guide](https://wix.github.io/Detox/docs/introduction/troubleshooting)
 
-## CI/CD Integration
+## CI/CD integration
 
 Detox tests can be integrated into your CI/CD pipeline. Make sure to:
 
@@ -241,12 +241,12 @@ Detox tests can be integrated into your CI/CD pipeline. Make sure to:
 3. Build the app
 4. Run tests with appropriate timeout settings
 
-### GitHub Actions
+### GitHub actions
 
 The project includes a GitHub Actions workflow (`.github/workflows/main-pipeline.yaml`) that runs
 Android e2e tests for pull requests and for pushes to `main` when path filters request them.
 
-#### Testing Headless Locally (Before CI)
+#### Testing headless locally (before CI)
 
 To test the headless emulator setup locally before pushing to CI:
 
@@ -269,7 +269,7 @@ To test the headless emulator setup locally before pushing to CI:
    pnpm --filter @implementation/react-native-sdk run test:e2e:android:full
    ```
 
-#### CI Workflow Example
+#### CI workflow example
 
 The CI workflow uses `reactivecircus/android-emulator-runner` action which handles emulator
 lifecycle automatically. The action creates its own AVD, so no manual AVD creation is needed:

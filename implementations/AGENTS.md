@@ -5,7 +5,10 @@ Read the repository root `AGENTS.md` first, then the nearest implementation-spec
 These instructions apply to all reference implementations under `implementations/` and to shared
 implementation contracts such as `PREVIEW_PANEL_SCENARIOS.md`.
 
-## Implementation Boundaries
+For implementation README prose style, follow [`../STYLE_GUIDE.md`](../STYLE_GUIDE.md). This file
+owns implementation boundaries, implementation README structure, and local validation rules.
+
+## Implementation boundaries
 
 - Reference implementations demonstrate integration patterns. Reusable SDK behavior belongs in the
   relevant package under `packages/`.
@@ -15,25 +18,25 @@ implementation contracts such as `PREVIEW_PANEL_SCENARIOS.md`.
   implementations that have a `package.json`.
 - If the implementation has no `package.json`, use its local README or child `AGENTS.md` commands.
 
-## Implementation README Standards
+## Implementation README standards
 
-- Reference implementation READMEs should open with the repository-standard centered Contentful
+- Reference implementation READMEs must open with the repository-standard centered Contentful
   header, implementation-specific `<h3>`, navigation links including `Readme`, Guides, Reference,
   and Contributing, and the pre-release warning.
 - Header navigation in reference implementation READMEs is rendered in both GitHub source browsing
   and TypeDoc project documents. Keep Guides and Reference links as stable generated-docs URLs
   unless you have verified the replacement in both render targets.
-- The introduction should identify the SDK package or packages being demonstrated and link back to
-  the SDK suite root README.
-- Put `## What This Demonstrates` near the top and describe the smallest useful scenario, tested SDK
+- The introduction must identify the SDK package or packages being demonstrated and link back to the
+  SDK suite root README.
+- Put `## What this demonstrates` near the top and describe the smallest useful scenario, tested SDK
   surfaces, and any important architecture caveat. Keep the tone example-oriented, not marketing
   oriented.
 - Keep implementation READMEs procedural. Explain what code path demonstrates the SDK behavior and
   where to inspect it, but do not duplicate package API manuals or authored integration guides.
-- Use `## Prerequisites`, `## Setup`, `## Running Locally`, `## Running E2E Tests`, and `## Related`
-  when applicable. Omit sections that do not match the implementation, such as `Running Locally` for
+- Use `## Prerequisites`, `## Setup`, `## Running locally`, `## Running E2E tests`, and `## Related`
+  when applicable. Omit sections that do not match the implementation, such as `Running locally` for
   a test-only native app.
-- Setup and run commands should prefer monorepo-root commands first, especially `pnpm build:pkgs`,
+- Setup and run commands must prefer monorepo-root commands first, especially `pnpm build:pkgs`,
   `pnpm implementation:run -- <implementation> implementation:install`,
   `pnpm implementation:run -- <implementation> <script>`, and the root `setup:e2e:*` / `test:e2e:*`
   wrappers when they exist.
@@ -45,7 +48,7 @@ implementation contracts such as `PREVIEW_PANEL_SCENARIOS.md`.
 - End with `## Related` links to the demonstrated package README, nearby comparison implementations,
   shared mocks, and scenario contracts when relevant.
 
-## Shared Failure Modes
+## Shared failure modes
 
 - Package changes are not reflected in a package-backed implementation: run `pnpm build:pkgs`, then
   rerun `pnpm implementation:run -- <implementation> implementation:install`.
@@ -62,15 +65,15 @@ implementation contracts such as `PREVIEW_PANEL_SCENARIOS.md`.
   emulator requirements, `.env` drift, PM2 state, and local port conflicts belong in the relevant
   implementation `AGENTS.md`.
 
-## Preview Panel Contract
+## Preview panel contract
 
 - `PREVIEW_PANEL_SCENARIOS.md` is the shared contract for cross-platform preview-panel E2E behavior.
 - Keep scenario names, fixture IDs, accessibility identifiers, and test expectations aligned across
   React Native Detox and native iOS XCUITest coverage.
-- Do not add debug-only UI labels solely to satisfy preview-panel tests; assertions should observe
+- Do not add debug-only UI labels solely to satisfy preview-panel tests; assertions must observe
   rendered content or real controls.
 
-## Usually Validate
+## Usually validate
 
 - Run implementation `typecheck` for local TypeScript or TSX changes when the implementation
   provides it.

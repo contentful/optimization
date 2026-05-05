@@ -18,7 +18,7 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 Reference implementation demonstrating `@contentful/optimization-web` usage in a React web
 application with a local adapter layer.
@@ -37,7 +37,7 @@ application with a local adapter layer.
 > (Vite, Create React App, Next.js, etc.); the SDK integration patterns demonstrated here work the
 > same way.
 
-## What This Demonstrates
+## What this demonstrates
 
 This implementation provides a thin React adapter layer over `@contentful/optimization-web`,
 demonstrating:
@@ -75,7 +75,7 @@ pnpm build:pkgs
 pnpm implementation:run -- web-sdk_react implementation:install
 ```
 
-## Running Locally
+## Running locally
 
 From the **repository root**:
 
@@ -112,7 +112,7 @@ pnpm preview
 pnpm typecheck
 ```
 
-## Running E2E Tests
+## Running E2E tests
 
 1. Run the full E2E setup and test suite from the repository root:
 
@@ -146,7 +146,7 @@ pnpm implementation:run -- web-sdk_react test:e2e:ui
 pnpm implementation:run -- web-sdk_react test:e2e:codegen
 ```
 
-## Environment Variables
+## Environment variables
 
 Copy `.env.example` to `.env` and configure:
 
@@ -162,7 +162,7 @@ and `PUBLIC_CONTENTFUL_BASE_PATH=contentful`.
 Preview panel attachment is gated behind `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL`. Set it to
 `true` for development demos that need preview panel behavior.
 
-## Project Structure
+## Project structure
 
 ```
 web-sdk_react/
@@ -183,12 +183,12 @@ web-sdk_react/
 └── package.json
 ```
 
-## SDK Integration Patterns
+## SDK integration patterns
 
 This implementation demonstrates how to build a React adapter for `@contentful/optimization-web`.
 Key patterns include:
 
-### Provider Setup
+### Provider setup
 
 ```tsx
 import { OptimizationProvider } from './optimization'
@@ -202,7 +202,7 @@ function App() {
 }
 ```
 
-### Using Hooks
+### Using hooks
 
 ```tsx
 import { useOptimizationResolver, useOptimization } from './optimization'
@@ -216,7 +216,7 @@ function MyComponent() {
 }
 ```
 
-### Analytics Tracking
+### Analytics tracking
 
 ```tsx
 import { useAnalytics } from './optimization'
@@ -234,7 +234,7 @@ function TrackedComponent() {
 
 ## Related
 
-- [React Web SDK Reference Implementation](../react-web-sdk/README.md) - Primary React
+- [React Web SDK reference implementation](../react-web-sdk/README.md) - Primary React
   implementation using the official React SDK package
 - [React Native Implementation](../react-native-sdk/README.md) - Reference implementation for React
   Native

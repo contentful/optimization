@@ -18,7 +18,7 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 Reference implementation demonstrating `@contentful/optimization-react-web` usage in a React SPA.
 This is the primary React Web reference implementation for customer-style usage of the official
@@ -29,12 +29,12 @@ React framework package.
 > This implementation is the React Web SDK counterpart to
 > [`web-sdk_react`](../web-sdk_react/README.md). Where `web-sdk_react` builds its own React adapter
 > layer over `@contentful/optimization-web`, this implementation uses the official
-> `@contentful/optimization-react-web` framework package directly, as a customer would. There is no
-> `src/optimization/` adapter directory.
+> `@contentful/optimization-react-web` framework package directly to match customer integration
+> code. There is no `src/optimization/` adapter directory.
 
-## What This Demonstrates
+## What this demonstrates
 
-| Feature                      | SDK Surface Used                                                                           |
+| Feature                      | SDK surface used                                                                           |
 | ---------------------------- | ------------------------------------------------------------------------------------------ |
 | Provider + initialization    | `OptimizationRoot`                                                                         |
 | SPA page tracking            | `ReactRouterAutoPageTracker` from `@contentful/optimization-react-web/router/react-router` |
@@ -58,7 +58,7 @@ React framework package.
 - Node.js >= 20.19.0 (24.13.0 recommended to match `.nvmrc`)
 - pnpm 10.x
 
-## Quick Start
+## Quick start
 
 Run the one-shot launcher to configure everything and start the app:
 
@@ -82,7 +82,7 @@ Use flags to skip steps on subsequent runs:
 ./scripts/launch-reference-app.sh --skip-install
 ```
 
-## Manual Setup
+## Manual setup
 
 From the **repository root**:
 
@@ -91,7 +91,7 @@ pnpm build:pkgs
 pnpm implementation:run -- react-web-sdk implementation:install
 ```
 
-## Running Locally
+## Running locally
 
 From the **repository root**:
 
@@ -121,7 +121,7 @@ pnpm build
 pnpm typecheck
 ```
 
-## Running E2E Tests
+## Running E2E tests
 
 1. Run the full E2E setup and test suite from the repository root:
 
@@ -148,7 +148,7 @@ When finished:
 pnpm implementation:run -- react-web-sdk serve:stop
 ```
 
-## Environment Variables
+## Environment variables
 
 Copy `.env.example` to `.env`:
 
@@ -159,7 +159,7 @@ cp .env.example .env
 All variables have mock-safe defaults. To use local mock endpoints (the default), no changes are
 needed. See `.env.example` for the full list.
 
-## Project Structure
+## Project structure
 
 ```
 react-web-sdk/
@@ -198,9 +198,9 @@ react-web-sdk/
 └── README.md
 ```
 
-## SDK Integration Patterns
+## SDK integration patterns
 
-### Provider Setup
+### Provider setup
 
 ```tsx
 import { OptimizationRoot } from '@contentful/optimization-react-web'
@@ -245,7 +245,7 @@ const router = createBrowserRouter([
 ])
 ```
 
-### Rendering Optimized Content
+### Rendering optimized content
 
 ```tsx
 import { OptimizedEntry } from '@contentful/optimization-react-web'
@@ -259,7 +259,7 @@ function HeroSection({ entry }) {
 }
 ```
 
-### Live Updates
+### Live updates
 
 ```tsx
 // Global: controlled via OptimizationRoot prop (lifted state in parent)
@@ -276,7 +276,7 @@ function HeroSection({ entry }) {
 </OptimizedEntry>
 ```
 
-### Consent, Identify, Reset
+### Consent, identify, reset
 
 ```tsx
 import { useOptimizationContext } from '@contentful/optimization-react-web'
@@ -296,7 +296,7 @@ function Controls() {
 }
 ```
 
-### Manual Interaction Tracking
+### Manual interaction tracking
 
 ```tsx
 import { useOptimization } from '@contentful/optimization-react-web'
@@ -318,7 +318,7 @@ function ManuallyTrackedEntry({ entry }) {
 }
 ```
 
-### Auto Tracking Attributes
+### Auto tracking attributes
 
 For entries tracked via `autoTrackEntryInteraction`, apply `data-ctfl-*` attributes directly on the
 visible content element inside the render prop:
@@ -338,13 +338,15 @@ visible content element inside the render prop:
 </OptimizedEntry>
 ```
 
+> [!NOTE]
+>
 > The `OptimizationRoot` `autoTrackEntryInteraction` prop activates automatic view, click, and hover
 > tracking for any DOM element that has `data-ctfl-entry-id`. The SDK's MutationObserver registers
 > elements as they appear in the DOM after consent is given.
 
 ## Migration from web-sdk_react
 
-| `web-sdk_react` Local Code                            | `react-web-sdk` Equivalent                                            |
+| `web-sdk_react` local code                            | `react-web-sdk` equivalent                                            |
 | ----------------------------------------------------- | --------------------------------------------------------------------- |
 | `src/optimization/createOptimization.ts`              | Config props on `OptimizationRoot`                                    |
 | `src/optimization/OptimizationProvider.tsx`           | `OptimizationRoot` / `OptimizationProvider`                           |

@@ -17,7 +17,7 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 The Optimization iOS SDK is a pre-release Swift Package for native iOS applications. It is part of
 the [Contentful Optimization SDK Suite](../../README.md) and runs shared optimization behavior
@@ -28,15 +28,15 @@ persistence, networking, lifecycle handling, SwiftUI views, and preview-panel UI
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Current Status](#current-status)
-- [When to Use This Package](#when-to-use-this-package)
-- [Package Layout](#package-layout)
+- [Current status](#current-status)
+- [When to use this package](#when-to-use-this-package)
+- [Package layout](#package-layout)
 - [Related](#related)
 
 <!-- mtoc-end -->
 </details>
 
-## Current Status
+## Current status
 
 - The native Swift package exists under [`ContentfulOptimization`](./ContentfulOptimization/).
 - The JavaScriptCore adapter package lives under [`ios-jsc-bridge`](./ios-jsc-bridge/README.md) and
@@ -46,14 +46,14 @@ persistence, networking, lifecycle handling, SwiftUI views, and preview-panel UI
 - This surface is alpha implementation work. Treat the API, setup flow, and bridge contract as
   subject to change until a stable native iOS SDK release is declared.
 
-## When to Use This Package
+## When to use this package
 
 Use this directory when working on the native iOS SDK, SwiftUI integration, JavaScriptCore bridge
 handoff, preview-panel behavior, or cross-platform native validation. Application teams that need a
-stable mobile integration today should start with the JavaScript
+stable mobile integration can start with the JavaScript
 [`@contentful/optimization-react-native`](../react-native-sdk/README.md) package.
 
-## Package Layout
+## Package layout
 
 - [`ContentfulOptimization/`](./ContentfulOptimization/) - Swift Package source, public Swift API,
   native runtime, resources, and tests

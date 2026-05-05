@@ -32,7 +32,7 @@ export interface BuildPreviewModelInput {
    * Pre-override selected-optimizations snapshot used to expose the
    * `naturalVariantIndex` on overridden experiences. Typically sourced from
    * `PreviewOverrideManager.getBaselineSelectedOptimizations()`. When omitted
-   * the `naturalVariantIndex` is simply not surfaced.
+   * the `naturalVariantIndex` is not surfaced.
    */
   baselineSelectedOptimizations?: Readonly<SelectedOptimizationArray> | null
 }

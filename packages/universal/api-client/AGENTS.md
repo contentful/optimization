@@ -8,7 +8,7 @@ before this file.
 This package owns the unified client surface for Contentful Experience API and Insights API
 interactions.
 
-## Key Paths
+## Key paths
 
 - `src/`
 - `README.md`
@@ -20,7 +20,7 @@ interactions.
 - `pnpm --filter @contentful/optimization-api-client build`
 - `pnpm --filter @contentful/optimization-api-client size:check`
 
-## Usually Validate
+## Usually validate
 
 - Run `typecheck` and `test:unit` for local changes.
 - Run `build` for export, packaging, or runtime changes.

@@ -4,9 +4,9 @@ Read the repository root `AGENTS.md`, then `packages/AGENTS.md`, before this fil
 
 ## Scope
 
-This directory is currently documentation-only placeholder material for a future Android SDK.
+This directory contains documentation-only placeholder material for planned Android SDK work.
 
-## Local Rules
+## Local rules
 
 - Keep the README aligned with current repository reality.
 - Do not invent package scripts, build outputs, or implementation details that do not exist yet.

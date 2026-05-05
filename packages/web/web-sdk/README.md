@@ -17,7 +17,7 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 This SDK implements browser-specific optimization behavior on top of the
 [Optimization Core SDK](../../universal/core-sdk/README.md). Use it directly for non-React browser
@@ -26,7 +26,7 @@ persistence, automatic entry interaction tracking, and browser-side event delive
 
 If you are integrating a browser application, start with [Getting Started](#getting-started), then
 use
-[Integrating the Optimization Web SDK in a Web App](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-web-sdk-in-a-web-app.html)
+[Integrating the Optimization Web SDK in a web app](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-web-sdk-in-a-web-app.html)
 for the step-by-step flow. This README keeps the package orientation and common setup options close
 at hand; generated [reference documentation](https://contentful.github.io/optimization) remains the
 source of truth for exported API signatures.
@@ -35,22 +35,22 @@ source of truth for exported API signatures.
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Getting Started](#getting-started)
-  - [Usage in Vanilla JS Web Pages](#usage-in-vanilla-js-web-pages)
-- [When to Use This Package](#when-to-use-this-package)
-- [Common Configuration](#common-configuration)
-- [Core Workflows](#core-workflows)
-  - [Consent and Profile Events](#consent-and-profile-events)
-  - [Content Resolution](#content-resolution)
-  - [Entry Interaction Tracking](#entry-interaction-tracking)
-  - [State Subscriptions](#state-subscriptions)
-- [Runtime Notes](#runtime-notes)
+- [Getting started](#getting-started)
+  - [Usage in vanilla JS web pages](#usage-in-vanilla-js-web-pages)
+- [When to use this package](#when-to-use-this-package)
+- [Common configuration](#common-configuration)
+- [Core workflows](#core-workflows)
+  - [Consent and profile events](#consent-and-profile-events)
+  - [Content resolution](#content-resolution)
+  - [Entry interaction tracking](#entry-interaction-tracking)
+  - [State subscriptions](#state-subscriptions)
+- [Runtime notes](#runtime-notes)
 - [Related](#related)
 
 <!-- mtoc-end -->
 </details>
 
-## Getting Started
+## Getting started
 
 Install using an NPM-compatible package manager, pnpm for example:
 
@@ -78,7 +78,7 @@ const optimization = new ContentfulOptimization({
 > Initialize the Web SDK once per page runtime. Reuse `window.contentfulOptimization` or your own
 > singleton container binding instead of creating additional instances.
 
-### Usage in Vanilla JS Web Pages
+### Usage in vanilla JS web pages
 
 The UMD build is available for HTML pages that do not use a bundler:
 
@@ -92,17 +92,17 @@ The UMD build is available for HTML pages that do not use a bundler:
 </script>
 ```
 
-## When to Use This Package
+## When to use this package
 
 Use `@contentful/optimization-web` for browser applications that need the stateful Web runtime
 directly, including consent state, anonymous ID persistence, automatic entry interaction tracking,
 and browser-side event delivery.
 
-React applications should usually start with
+We recommend starting React applications with
 [`@contentful/optimization-react-web`](../frameworks/react-web-sdk/README.md), which wraps this SDK
 with React providers, hooks, router adapters, and entry-rendering primitives.
 
-## Common Configuration
+## Common configuration
 
 The Web SDK communicates with the Experience API for profile and optimization selection, and with
 the Insights API for event ingestion.
@@ -141,9 +141,9 @@ responses.
 For every option, callback payload, and exported type, use the generated
 [Web SDK reference](https://contentful.github.io/optimization/modules/_contentful_optimization-web.html).
 
-## Core Workflows
+## Core workflows
 
-### Consent and Profile Events
+### Consent and profile events
 
 Consent is application policy. The SDK stores the consent state and blocks non-allowed events until
 consent is accepted.
@@ -159,7 +159,7 @@ const data = await optimization.page({
 `page()`, `identify()`, `screen()`, `track()`, and sticky `trackView()` calls can return
 optimization data containing `profile`, `selectedOptimizations`, and `changes`.
 
-### Content Resolution
+### Content resolution
 
 Fetch Contentful entries in your application layer, then use the SDK to resolve the selected
 variant:
@@ -175,7 +175,7 @@ const resolvedEntry = optimization.resolveOptimizedEntry(
 Use `getMergeTagValue()` for Contentful Rich Text merge tags and `getFlag()` for Custom Flags. The
 Web SDK is stateful, so reading a flag also emits flag-view tracking.
 
-### Entry Interaction Tracking
+### Entry interaction tracking
 
 Enable automatic tracking when entry elements follow the standard data-attribute pattern:
 
@@ -201,7 +201,7 @@ optimization.tracking.enableElement('views', element, {
 For detection thresholds, data attributes, click and hover behavior, and manual overrides, use the
 [Web SDK integration guide](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-web-sdk-in-a-web-app.html#7-track-entry-interactions-and-follow-up-events).
 
-### State Subscriptions
+### State subscriptions
 
 The stateful Web SDK exposes observable state for UI feedback and integration glue:
 
@@ -215,20 +215,20 @@ Common state streams include `consent`, `profile`, `selectedOptimizations`, `cha
 `blockedEventStream`, `eventStream`, and preview-panel state. Use the generated reference for the
 complete `states` surface.
 
-## Runtime Notes
+## Runtime notes
 
 - Browser storage persistence is best-effort. If `localStorage` writes fail, the SDK continues with
-  in-memory state and retries persistence on future writes.
+  in-memory state and retries persistence on subsequent writes.
 - `reset()` clears internal state except consent. Use it when the active profile changes.
 - `flush()` drains queued Insights API and Experience API events.
 - `destroy()` releases listeners and singleton ownership for explicit teardown paths such as tests
   or hot-reload workflows.
 - Lifecycle interceptors exist for first-party SDK and preview-panel integration. Most application
-  code should not need them directly.
+  code does not need them directly.
 
 ## Related
 
-- [Integrating the Optimization Web SDK in a Web App](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-web-sdk-in-a-web-app.html) -
+- [Integrating the Optimization Web SDK in a web app](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-web-sdk-in-a-web-app.html) -
   step-by-step browser integration guide
 - [Web SDK generated reference](https://contentful.github.io/optimization/modules/_contentful_optimization-web.html) -
   exported API reference

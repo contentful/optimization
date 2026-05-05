@@ -9,14 +9,14 @@ This is the React Web SDK reference implementation demonstrating
 `implementations/web-sdk_react`, which builds its own adapter layer. This implementation uses the
 official React SDK surface directly — no local `src/optimization/` adapter directory.
 
-## Key Paths
+## Key paths
 
 - `src/`
 - `e2e/`
 - `scripts/`
 - `.env.example`
 
-## Local Rules
+## Local rules
 
 - Do not add a `src/optimization/` directory. All SDK usage comes from direct imports of
   `@contentful/optimization-react-web`.
@@ -25,7 +25,7 @@ official React SDK surface directly — no local `src/optimization/` adapter dir
   Do not switch to `BrowserRouter` + `Routes`.
 - `serve` uses PM2-managed processes. Use `serve:stop` when done.
 
-## Common Failure Modes
+## Common failure modes
 
 - Playwright reports a missing browser or executable: run `pnpm playwright:install` before retrying
   E2E.
@@ -43,7 +43,7 @@ official React SDK surface directly — no local `src/optimization/` adapter dir
 - `pnpm implementation:run -- react-web-sdk serve:stop`
 - `pnpm implementation:run -- react-web-sdk implementation:test:e2e:run`
 
-## Usually Validate
+## Usually validate
 
 - Run `typecheck` for local code changes.
 - Run `build` when changing production bundling behavior.

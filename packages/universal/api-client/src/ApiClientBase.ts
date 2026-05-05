@@ -47,7 +47,7 @@ export interface ApiConfig {
 }
 
 /**
- * Properties that may be shared between global and per-client API configuration.
+ * Properties that can be shared between global and per-client API configuration.
  *
  * @public
  */
@@ -58,9 +58,9 @@ export type GlobalApiConfigProperties = 'environment' | 'fetchOptions' | 'client
  *
  * @remarks
  * This abstract class is intended for internal use within the package and
- * should not be treated as part of the public API surface.
+ * must not be treated as part of the public API surface.
  *
- * Concrete API clients should extend this class to inherit consistent logging
+ * Concrete API clients must extend this class to inherit consistent logging
  * behavior and fetch configuration.
  *
  * @example

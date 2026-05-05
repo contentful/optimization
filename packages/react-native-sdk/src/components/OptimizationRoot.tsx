@@ -24,7 +24,7 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
   previewPanel?: PreviewPanelConfig
 
   /**
-   * Whether {@link OptimizedEntry} components should react to state changes in real-time.
+   * Whether {@link OptimizedEntry} components react to state changes in real time.
    *
    * @defaultValue `false`
    *
@@ -70,8 +70,8 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
  *
  * Handles SDK initialization internally — pass config properties directly as props.
  *
- * @param props - Component props
- * @returns The provider tree wrapping children
+ * @param props - Component props.
+ * @returns The provider tree wrapping children.
  *
  * @example Basic usage
  * ```tsx

@@ -1,15 +1,15 @@
-# Build Tools (internal)
+# Build tools (internal)
 
 > [!CAUTION]
 >
-> This package is internal workspace infrastructure. It is not a public SDK package and should not
-> be imported by application code.
+> This package is internal workspace infrastructure. It is not a public SDK package and must not be
+> imported by application code.
 
 `build-tools` contains shared command-line helpers used by Optimization SDK package builds,
 especially declaration emission and bundle-size checks. Keep cross-package build behavior here
 instead of duplicating one-off scripts in downstream package directories.
 
-## When to Use This Package
+## When to use this package
 
 Use this package when maintaining shared build helper behavior, declaration output handling, or
 bundle-size measurement. Package-specific bundle-size budgets belong in each package's

@@ -7,20 +7,20 @@ Read the repository root `AGENTS.md`, then `implementations/AGENTS.md`, before t
 This is the React Web reference implementation used to demonstrate `@contentful/optimization-web`
 usage in a React application.
 
-## Key Paths
+## Key paths
 
 - `src/`
 - `e2e/`
 - `.env.example`
 
-## Local Rules
+## Local rules
 
 - Keep this app focused on example usage. Reusable React SDK abstractions belong in
   `packages/web/frameworks/react-web-sdk`.
 - This implementation uses Rsbuild for consistency with the SDK toolchain.
 - `serve` uses PM2-managed processes. Use `serve:stop` when done.
 
-## Common Failure Modes
+## Common failure modes
 
 - Playwright reports a missing browser or executable: run `pnpm playwright:install` before retrying
   E2E.
@@ -37,7 +37,7 @@ usage in a React application.
 - `pnpm implementation:run -- web-sdk_react serve:stop`
 - `pnpm implementation:run -- web-sdk_react implementation:test:e2e:run`
 
-## Usually Validate
+## Usually validate
 
 - Run `typecheck` for local code changes.
 - Run `build` when changing production bundling behavior.

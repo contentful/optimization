@@ -5,7 +5,7 @@ import { UniversalEventProperties } from './UniversalEventProperties'
  * Zod schema describing a `group` event.
  *
  * @remarks
- * Currently unused.
+ * Unused.
  *
  * Group events typically associate a user with an organization, account,
  * or other grouping construct.

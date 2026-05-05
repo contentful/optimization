@@ -17,7 +17,7 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 The Contentful Optimization API Schema Library provides Zod Mini schemas, inferred TypeScript types,
 and small runtime helpers for Contentful CDA, Experience API, and Insights API payloads. SDK layers
@@ -27,18 +27,18 @@ use this package to validate API contracts and normalize optimization data.
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Getting Started](#getting-started)
-- [When to Use This Package](#when-to-use-this-package)
-- [Package Surface](#package-surface)
-  - [Contentful CDA Helpers](#contentful-cda-helpers)
-  - [Experience API Schemas](#experience-api-schemas)
-  - [Insights API Schemas](#insights-api-schemas)
+- [Getting started](#getting-started)
+- [When to use this package](#when-to-use-this-package)
+- [Package surface](#package-surface)
+  - [Contentful CDA helpers](#contentful-cda-helpers)
+  - [Experience API schemas](#experience-api-schemas)
+  - [Insights API schemas](#insights-api-schemas)
 - [Related](#related)
 
 <!-- mtoc-end -->
 </details>
 
-## Getting Started
+## Getting started
 
 Install using an NPM-compatible package manager, pnpm for example:
 
@@ -55,15 +55,15 @@ import { isOptimizedEntry, normalizeOptimizationConfig } from '@contentful/optim
 Consult [Zod's documentation](https://zod.dev/basics) for more information on working with
 [Zod Mini](https://zod.dev/packages/mini) schemas.
 
-## When to Use This Package
+## When to use this package
 
 Use `@contentful/optimization-api-schemas` when you need shared runtime validation schemas or
 inferred TypeScript types for Contentful CDA, Experience API, and Insights API payloads. Most
-application integrations should use an environment SDK instead of importing schemas directly.
+application integrations must use an environment SDK instead of importing schemas directly.
 
-## Package Surface
+## Package surface
 
-### Contentful CDA Helpers
+### Contentful CDA helpers
 
 These helpers identify and normalize Contentful entries for optimization:
 
@@ -78,23 +78,23 @@ These helpers identify and normalize Contentful entries for optimization:
 | `isOptimizationEntry`         | Type guard for optimization entries                             |
 | `normalizeOptimizationConfig` | Fills omitted optimization config fields with SDK-safe defaults |
 
-### Experience API Schemas
+### Experience API schemas
 
 Experience API schemas validate profile evaluation request and response payloads:
 
-| Export                       | Purpose                                                      |
-| ---------------------------- | ------------------------------------------------------------ |
-| `ExperienceRequestData`      | Request payload for a single Experience API call             |
-| `BatchExperienceRequestData` | Request payload for batch Experience API calls               |
-| `ExperienceEvent`            | Union of supported Experience API event schemas              |
-| `BatchExperienceEvent`       | Batch event schema with required `anonymousId` per event     |
-| `ExperienceResponse`         | Full Experience API response envelope                        |
-| `BatchExperienceResponse`    | Batch Experience API response envelope                       |
-| `Change`                     | Supported change union, currently including Custom Flag data |
-| `SelectedOptimization`       | Selected optimization outcome for a profile                  |
-| `Profile`                    | User profile returned by the Experience API                  |
+| Export                       | Purpose                                                  |
+| ---------------------------- | -------------------------------------------------------- |
+| `ExperienceRequestData`      | Request payload for a single Experience API call         |
+| `BatchExperienceRequestData` | Request payload for batch Experience API calls           |
+| `ExperienceEvent`            | Union of supported Experience API event schemas          |
+| `BatchExperienceEvent`       | Batch event schema with required `anonymousId` per event |
+| `ExperienceResponse`         | Full Experience API response envelope                    |
+| `BatchExperienceResponse`    | Batch Experience API response envelope                   |
+| `Change`                     | Supported change union, including Custom Flag data       |
+| `SelectedOptimization`       | Selected optimization outcome for a profile              |
+| `Profile`                    | User profile returned by the Experience API              |
 
-### Insights API Schemas
+### Insights API schemas
 
 Insights API schemas validate event ingestion payloads:
 
@@ -116,5 +116,5 @@ For every schema, inferred type, and helper signature, use the generated
 - [API Client](../api-client/README.md) - low-level Experience API and Insights API transport
 - [Optimization Core SDK](../core-sdk/README.md) - platform-agnostic SDK layer that consumes these
   schemas
-- [Choosing the Right SDK](https://contentful.github.io/optimization/documents/Documentation.Guides.choosing-the-right-sdk.html) -
+- [Choosing the right SDK](https://contentful.github.io/optimization/documents/Documentation.Guides.choosing-the-right-sdk.html) -
   package selection guidance for application integrations

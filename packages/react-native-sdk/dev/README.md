@@ -1,4 +1,4 @@
-# React Native Dev Dashboard
+# React Native dev dashboard
 
 Development application for testing the Contentful Optimization React Native SDK.
 
@@ -7,9 +7,9 @@ Use this harness when you need an interactive local app for the package under
 [README](../README.md). For the separate reference implementation used by repo-level E2E flows, see
 [`implementations/react-native-sdk`](../../../implementations/react-native-sdk/README.md).
 
-## Quick Start
+## Quick start
 
-### One-Command Setup (Recommended)
+### One-command setup (recommended)
 
 From the `packages/react-native-sdk` directory:
 
@@ -41,7 +41,7 @@ Or run the script directly:
 ./dev/scripts/run-dev-dashboard.sh --help
 ```
 
-### What the Script Does
+### What the script does
 
 1. Checks all prerequisites (Node.js, pnpm, Watchman, Xcode/CocoaPods or Android SDK)
 2. Installs workspace dependencies via `pnpm install`
@@ -59,11 +59,11 @@ All logs are written to `packages/react-native-sdk/dev/logs/`:
 - `mock-server.log`: Mock API server output
 - `metro.log`: Metro bundler output
 
-### Manual Setup
+### Manual setup
 
 If you prefer to set things up manually:
 
-#### 1. Install Dependencies
+#### 1. Install dependencies
 
 From the workspace root:
 
@@ -71,7 +71,7 @@ From the workspace root:
 pnpm install
 ```
 
-#### 2. Start the Mock Server
+#### 2. Start the mock server
 
 The dev app requires the mock server to be running. From the workspace root:
 
@@ -85,7 +85,7 @@ This starts the mock server on `http://localhost:8000` with:
 - **Insights API**: `http://localhost:8000/insights/`
 - **Contentful CDA**: `http://localhost:8000/contentful/`
 
-#### 3. Install iOS Dependencies (iOS only)
+#### 3. Install iOS dependencies (iOS only)
 
 ```sh
 cd packages/react-native-sdk/dev/ios
@@ -93,7 +93,7 @@ pod install --repo-update
 cd ..
 ```
 
-#### 4. Start Metro Bundler
+#### 4. Start Metro bundler
 
 From `packages/react-native-sdk`:
 
@@ -107,7 +107,7 @@ Or with cache reset:
 pnpm dev:start:clean
 ```
 
-#### 5. Run the App
+#### 5. Run the app
 
 In a new terminal, from `packages/react-native-sdk`:
 
@@ -134,7 +134,7 @@ pnpm dev:android
   brew install watchman
   ```
 
-### For iOS Development
+### For iOS development
 
 - **Xcode** with iOS Simulator
 - **CocoaPods**
@@ -142,14 +142,14 @@ pnpm dev:android
   sudo gem install cocoapods
   ```
 
-### For Android Development
+### For Android development
 
 - **Android Studio** with emulator configured
 - **ANDROID_HOME** environment variable set
 
 ## Troubleshooting
 
-### "Failed to fetch entries" Error
+### "Failed to fetch entries" error
 
 This usually means the mock server isn't running. Make sure to start it:
 
@@ -157,7 +157,7 @@ This usually means the mock server isn't running. Make sure to start it:
 pnpm serve:mocks
 ```
 
-### Port Already in Use
+### Port already in use
 
 First try to stop only the known development processes you started:
 
@@ -178,7 +178,7 @@ If a stale local process is definitely the dev dashboard or mock server, stop th
 with `kill <pid>`. Avoid broad or forceful cleanup unless you have confirmed the process is safe to
 terminate.
 
-### Metro Bundler Issues
+### Metro bundler issues
 
 Reset the cache:
 
@@ -186,7 +186,7 @@ Reset the cache:
 pnpm dev:start:clean
 ```
 
-### iOS Build Issues
+### iOS build issues
 
 Clean and reinstall pods:
 
@@ -199,7 +199,7 @@ pod install --repo-update
 If CocoaPods still resolves stale native dependencies, remove `Pods/` and `Podfile.lock` only from
 `packages/react-native-sdk/dev/ios/`, then run `pod install --repo-update` again.
 
-### Android Build Issues
+### Android build issues
 
 Clean Gradle cache:
 
@@ -227,7 +227,7 @@ dev/
 └── android/                # Android native project
 ```
 
-## Environment Configuration
+## Environment configuration
 
 The app connects to the mock server by default. Configuration is in `env.config.ts`:
 
@@ -235,7 +235,7 @@ The app connects to the mock server by default. Configuration is in `env.config.
 - `PUBLIC_INSIGHTS_API_BASE_URL`: Insights API endpoint
 - `PUBLIC_CONTENTFUL_CDA_HOST`: Contentful mock server host
 
-## What This App Tests
+## What this app tests
 
 1. **SDK Initialization:** Verifies the Optimization React Native SDK initializes correctly
 2. **Profile Management:** Tests profile creation and updates
@@ -243,7 +243,7 @@ The app connects to the mock server by default. Configuration is in `env.config.
 4. **Entry Tracking:** Tests viewport-based analytics tracking
 5. **Optimization:** Shows optimized content rendering
 
-## Available Scripts
+## Available scripts
 
 | Script                   | Description                                   |
 | ------------------------ | --------------------------------------------- |

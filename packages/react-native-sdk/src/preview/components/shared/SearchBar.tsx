@@ -6,8 +6,8 @@ import type { SearchBarProps } from '../../types'
 /**
  * Controlled search input with a clear button for filtering audiences and experiences.
  *
- * @param props - Component props
- * @returns The rendered search bar
+ * @param props - Component props.
+ * @returns The rendered search bar.
  *
  * @public
  */
@@ -59,7 +59,7 @@ export function SearchBar({
 }
 
 /**
- * Simple search icon component
+ * Search icon component.
  */
 function SearchIcon(): React.JSX.Element {
   return (
@@ -71,7 +71,7 @@ function SearchIcon(): React.JSX.Element {
 }
 
 /**
- * Simple clear/X icon component
+ * Clear icon component.
  */
 function ClearIcon(): React.JSX.Element {
   return (

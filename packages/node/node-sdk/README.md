@@ -17,14 +17,14 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 The Optimization Node SDK implements stateless server-side optimization behavior on top of the
 [Optimization Core SDK](../../universal/core-sdk/README.md). Use it for server rendering, server
 functions, and Node services that need request-scoped profile evaluation or event emission.
 
 If you are integrating a Node application, start with [Getting Started](#getting-started), then use
-[Integrating the Optimization Node SDK in a Node App](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-node-sdk-in-a-node-app.html)
+[Integrating the Optimization Node SDK in a Node app](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-node-sdk-in-a-node-app.html)
 for the step-by-step flow. This README keeps the package orientation and common setup options close
 at hand; generated [reference documentation](https://contentful.github.io/optimization) remains the
 source of truth for exported API signatures.
@@ -33,20 +33,20 @@ source of truth for exported API signatures.
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Getting Started](#getting-started)
-- [When to Use This Package](#when-to-use-this-package)
-- [Common Configuration](#common-configuration)
-- [Core Workflows](#core-workflows)
-  - [Request-Scoped Events](#request-scoped-events)
-  - [Content Resolution](#content-resolution)
-  - [Caching Guidance](#caching-guidance)
-- [Development Harness](#development-harness)
+- [Getting started](#getting-started)
+- [When to use this package](#when-to-use-this-package)
+- [Common configuration](#common-configuration)
+- [Core workflows](#core-workflows)
+  - [Request-scoped events](#request-scoped-events)
+  - [Content resolution](#content-resolution)
+  - [Caching guidance](#caching-guidance)
+- [Development harness](#development-harness)
 - [Related](#related)
 
 <!-- mtoc-end -->
 </details>
 
-## Getting Started
+## Getting started
 
 Install using an NPM-compatible package manager, pnpm for example:
 
@@ -73,14 +73,14 @@ const requestOptions = { locale: 'en-US' }
 const optimizationData = await optimization.page({ profile }, requestOptions)
 ```
 
-## When to Use This Package
+## When to use this package
 
 Use `@contentful/optimization-node` for server-side rendering, server functions, and Node services
 that need stateless profile evaluation or event emission. Use the Web or React Web SDK alongside it
 when browser-side consent, anonymous ID persistence, automatic interaction tracking, or live updates
 are part of the same application.
 
-## Common Configuration
+## Common configuration
 
 The Node SDK is stateless. It does not maintain consent, profile, or browser persistence state
 between requests.
@@ -119,9 +119,9 @@ responses.
 For every option, callback payload, and exported type, use the generated
 [Node SDK reference](https://contentful.github.io/optimization/modules/_contentful_optimization-node.html).
 
-## Core Workflows
+## Core workflows
 
-### Request-Scoped Events
+### Request-scoped events
 
 Build event context from the incoming request, then call `page()`, `identify()`, `screen()`,
 `track()`, or sticky `trackView()` when optimization data is needed:
@@ -143,7 +143,7 @@ app.get('/products/:slug', async (req, res) => {
 In stateless runtimes, Insights-backed methods require a profile for delivery. Non-sticky
 `trackView`, `trackClick`, `trackHover`, and `trackFlagView` require `payload.profile.id`.
 
-### Content Resolution
+### Content resolution
 
 Fetch Contentful entries in your application layer, then resolve variants with returned optimization
 data:
@@ -158,7 +158,7 @@ const resolvedEntry = optimization.resolveOptimizedEntry(
 Use `getMergeTagValue()` for Contentful Rich Text merge tags and `getFlag()` for Custom Flags. The
 Node SDK is stateless, so `getFlag()` does not automatically emit flag-view tracking.
 
-### Caching Guidance
+### Caching guidance
 
 Cache raw Contentful delivery payloads in your application layer, not profile-evaluated SDK event
 results.
@@ -175,7 +175,7 @@ The
 covers request context, profile persistence, Contentful entry resolution, and hybrid Node + browser
 setups in detail.
 
-## Development Harness
+## Development harness
 
 The package-local dev harness runs from `packages/node/node-sdk/dev/` and reads `.env` from this
 package directory.
@@ -190,7 +190,7 @@ package directory.
 
 ## Related
 
-- [Integrating the Optimization Node SDK in a Node App](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-node-sdk-in-a-node-app.html) -
+- [Integrating the Optimization Node SDK in a Node app](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-node-sdk-in-a-node-app.html) -
   step-by-step server-side integration guide
 - [Node SDK generated reference](https://contentful.github.io/optimization/modules/_contentful_optimization-node.html) -
   exported API reference

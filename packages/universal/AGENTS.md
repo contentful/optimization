@@ -4,7 +4,7 @@ Read the repository root `AGENTS.md`, then `packages/AGENTS.md`, before this fil
 
 These instructions apply to platform-agnostic packages under `packages/universal/`.
 
-## Layer Boundaries
+## Layer boundaries
 
 - `api-schemas` owns runtime schemas, inferred types, and schema helpers. Treat schema edits as API
   contract changes and prefer additive, backward-compatible changes unless the task explicitly
@@ -16,7 +16,7 @@ These instructions apply to platform-agnostic packages under `packages/universal
 - Keep universal packages free of browser, Node, React, React Native, Swift, Android, or other
   platform-specific runtime assumptions.
 
-## Usually Validate
+## Usually validate
 
 - If public schemas or schema helpers change, validate at least `api-client` and `core-sdk`
   downstream.

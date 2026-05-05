@@ -17,15 +17,15 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 The Optimization Core SDK owns the platform-agnostic optimization state machine, event builders,
 queues, resolvers, and interceptors used by the application-facing SDKs. Web, React Web, Node, React
 Native, and native bridge layers build on this package.
 
-Most application code should start with a platform SDK rather than Core directly. Use this README
-when building or maintaining SDK layers, and use
-[Choosing the Right SDK](https://contentful.github.io/optimization/documents/Documentation.Guides.choosing-the-right-sdk.html)
+We recommend starting application code with a platform SDK rather than Core directly. Use this
+README when building or maintaining SDK layers, and use
+[Choosing the right SDK](https://contentful.github.io/optimization/documents/Documentation.Guides.choosing-the-right-sdk.html)
 when deciding which application-facing package belongs in an integration. Generated
 [reference documentation](https://contentful.github.io/optimization) remains the source of truth for
 exported API signatures.
@@ -34,20 +34,20 @@ exported API signatures.
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Getting Started](#getting-started)
-- [When to Use This Package](#when-to-use-this-package)
-- [Core Variants](#core-variants)
+- [Getting started](#getting-started)
+- [When to use this package](#when-to-use-this-package)
+- [Core variants](#core-variants)
   - [Stateful Core](#stateful-core)
   - [Stateless Core](#stateless-core)
-- [Common Configuration](#common-configuration)
-- [Package Surface](#package-surface)
-- [Preview Support](#preview-support)
+- [Common configuration](#common-configuration)
+- [Package surface](#package-surface)
+- [Preview support](#preview-support)
 - [Related](#related)
 
 <!-- mtoc-end -->
 </details>
 
-## Getting Started
+## Getting started
 
 Install using an NPM-compatible package manager, pnpm for example:
 
@@ -74,14 +74,14 @@ await statelessOptimization.page(
 )
 ```
 
-## When to Use This Package
+## When to use this package
 
 Use `@contentful/optimization-core` when you are building or maintaining an SDK layer that needs the
 shared optimization state machine, event builders, queueing, resolvers, or interceptors. Most
-application code should use a platform SDK such as Web, React Web, Node, or React Native instead of
+application code uses a platform SDK such as Web, React Web, Node, or React Native instead of
 depending on Core directly.
 
-## Core Variants
+## Core variants
 
 ### Stateful Core
 
@@ -100,7 +100,7 @@ optimization, flag, event-stream, blocked-event, and preview-panel state as read
 server-side functions. It does not store consent or profile state. Consumers pass profile and
 request-scoped Experience options with each event call.
 
-## Common Configuration
+## Common configuration
 
 Shared Core configuration:
 
@@ -146,7 +146,7 @@ responses.
 For every option, callback payload, and exported type, use the generated
 [Core SDK reference](https://contentful.github.io/optimization/modules/_contentful_optimization-core.html).
 
-## Package Surface
+## Package surface
 
 Core exposes reusable primitives for SDK layers:
 
@@ -164,18 +164,18 @@ Core exposes reusable primitives for SDK layers:
 The generated reference owns method arguments, return types, callback payload shapes, and inherited
 members. Keep this README focused on package role and maintainer orientation.
 
-## Preview Support
+## Preview support
 
 Preview-panel helpers live under the internal [`preview-support`](./src/preview-support/README.md)
 entry. They are used by first-party preview surfaces to register preview state bridges, apply
 optimization overrides, and map Contentful entries for local authoring workflows.
 
-Application code should not use preview support directly unless it is building a first-party preview
+Application code must not use preview support directly unless it is building a first-party preview
 surface.
 
 ## Related
 
-- [Choosing the Right SDK](https://contentful.github.io/optimization/documents/Documentation.Guides.choosing-the-right-sdk.html) -
+- [Choosing the right SDK](https://contentful.github.io/optimization/documents/Documentation.Guides.choosing-the-right-sdk.html) -
   package selection guidance for application integrations
 - [Core SDK generated reference](https://contentful.github.io/optimization/modules/_contentful_optimization-core.html) -
   exported API reference

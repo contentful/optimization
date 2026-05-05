@@ -7,21 +7,21 @@ Read the repository root `AGENTS.md`, then `implementations/AGENTS.md`, before t
 This is the combined Node SSR + Web Vanilla reference implementation used to demonstrate shared
 cookie-based server and browser behavior.
 
-## Key Paths
+## Key paths
 
 - `src/`
 - `public/`
 - `e2e/`
 - `.env.example`
 
-## Local Rules
+## Local rules
 
 - Keep this app focused on demonstrating integration patterns, not housing reusable SDK logic.
 - `build` copies Web SDK and preview-panel assets into `public/dist`. Rebuild after changing those
   packages or the way assets are served.
 - `serve` uses PM2-managed processes. Use `serve:stop` when done.
 
-## Common Failure Modes
+## Common failure modes
 
 - Playwright reports a missing browser or executable: run `pnpm playwright:install` before retrying
   E2E.
@@ -38,7 +38,7 @@ cookie-based server and browser behavior.
 - `pnpm implementation:run -- node-sdk+web-sdk serve:stop`
 - `pnpm implementation:run -- node-sdk+web-sdk implementation:test:e2e:run`
 
-## Usually Validate
+## Usually validate
 
 - Run `typecheck` for local code changes.
 - Run `test:unit` when server-side logic or utilities change.

@@ -9,7 +9,7 @@ import { batch, computed, effect, signal, type Signal, untracked } from '@preact
 import type { BlockedEvent } from '../BlockedEvent'
 
 /**
- * Latest optimization changes returned by the Experience API.
+ * Most recent optimization changes returned by the Experience API.
  *
  * @public
  */
@@ -55,7 +55,7 @@ export const online = signal<boolean | undefined>(true)
 export const previewPanelAttached = signal<boolean>(false)
 
 /**
- * Indicates whether the preview panel is currently open.
+ * Indicates whether the preview panel is open.
  *
  * @defaultValue `false`
  * @public
@@ -63,7 +63,7 @@ export const previewPanelAttached = signal<boolean>(false)
 export const previewPanelOpen = signal<boolean>(false)
 
 /**
- * Latest selected optimization variants.
+ * Most recent selected optimization variants.
  *
  * @public
  */
@@ -91,7 +91,7 @@ export const profile: Signal<Profile | undefined> = signal<Profile | undefined>(
 export interface Signals {
   /** Most recent blocked-event metadata. */
   blockedEvent: typeof blockedEvent
-  /** Latest optimization changes payload. */
+  /** Most recent optimization changes payload. */
   changes: typeof changes
   /** Current consent signal. */
   consent: typeof consent
@@ -105,7 +105,7 @@ export interface Signals {
   previewPanelOpen: typeof previewPanelOpen
   /** Selected optimization variants signal. */
   selectedOptimizations: typeof selectedOptimizations
-  /** Whether optimization selection data is currently available. */
+  /** Whether optimization selection data is available. */
   canOptimize: typeof canOptimize
   /** Active profile signal. */
   profile: typeof profile

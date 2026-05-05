@@ -3,17 +3,17 @@ import { StyleSheet, Text, TouchableOpacity } from 'react-native'
 import { colors, spacing, typography } from '../../styles/theme'
 
 interface CollapseToggleButtonProps {
-  /** Whether all items are currently expanded */
+  /** Whether all items are expanded. */
   allExpanded: boolean
-  /** Handler for toggle action */
+  /** Handler for toggle action. */
   onToggle: () => void
 }
 
 /**
  * Button to collapse or expand all audience sections at once.
  *
- * @param props - Component props
- * @returns The rendered toggle button
+ * @param props - Component props.
+ * @returns The rendered toggle button.
  *
  * @public
  */

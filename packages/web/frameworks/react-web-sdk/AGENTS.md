@@ -8,7 +8,7 @@ file.
 This package owns the React framework layer on top of `@contentful/optimization-web`, including
 providers, hooks, and React-facing entry resolution primitives.
 
-## Key Paths
+## Key paths
 
 - `src/`
 - `dev/`
@@ -16,7 +16,7 @@ providers, hooks, and React-facing entry resolution primitives.
 - `scripts/`
 - `README.md`
 
-## Local Rules
+## Local rules
 
 - `dev/` is the package-local harness host shell. `dev/app/` contains the React harness app.
 - Keep both harness layers relevant to the current provider, hook, routing, and entry-rendering
@@ -35,7 +35,7 @@ providers, hooks, and React-facing entry resolution primitives.
 - `pnpm --filter @contentful/optimization-react-web size:check`
 - `pnpm --filter @contentful/optimization-react-web dev`
 
-## Usually Validate
+## Usually validate
 
 - Run `typecheck`, `test:unit`, and `build`.
 - Validate the `dev/` harness itself when changing package flows it is meant to demonstrate.
