@@ -1,8 +1,54 @@
 # Next.js React Web SDK Reference Implementation
 
 Next.js App Router reference implementation demonstrating `@contentful/optimization-react-web`
-(client-side) and `@contentful/optimization-node` (server-side SSR) as two independent integration
+(client-side) and `@contentful/optimization-node` (server-side SSR) as independent integration
 patterns.
+
+## Purpose and Context
+
+This reference implementation exists to explore and document the most common customer setups for
+personalization in Next.js. In practice, customer architectures vary significantly:
+
+- **Pure CSR**: SPA-style, React SDK handles everything in the browser
+- **Pure SSR with client-side tracking**: Node SDK resolves personalized content on the server,
+  client JS is limited to event tracking (page views, clicks, consent)
+- **Hybrid**: Server resolves entries for fast first paint, client takes over for live reactivity
+
+The right pattern depends on how the customer's solution is engineered — information typically
+gathered during pre-sales and post-sales. This implementation aims to demonstrate the range of
+setups so the team and customers can evaluate which approach fits their architecture.
+
+### Current Status
+
+This implementation currently demonstrates two patterns independently. They are **not designed to
+coexist in the same running application** — navigating between them will cause a singleton conflict
+because the Web SDK only allows one instance per runtime. A customer would choose one pattern for
+their application, not switch between them at runtime.
+
+### Known Limitation: Singleton Conflict Between Routes
+
+The `ContentfulOptimization` Web SDK is a singleton. Both route layouts (`/client-resolved` and
+`/server-resolved`) initialize their own `OptimizationRoot` via `ClientProviderWrapper`. Navigating
+between routes without a full page reload causes:
+
+```
+ContentfulOptimization SDK failed to initialize: ContentfulOptimization is already initialized
+```
+
+This is expected given the current setup — these patterns are meant to be viewed independently
+(e.g., direct navigation or separate browser tabs), not as a multi-page app with client-side routing
+between them. In a real customer deployment, only one pattern would be active across the
+application.
+
+### Future Direction
+
+To better understand what setups customers actually use, we may:
+
+- Gather architecture information from pre-sales and post-sales teams on how customer solutions are
+  engineered
+- Use an AI agent to simulate common customer architectures and identify the most frequent Next.js
+  feature usage patterns and personalization setups
+- Expand this reference implementation into separate focused examples per customer archetype
 
 ## Architecture
 
