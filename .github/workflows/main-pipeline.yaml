@@ -661,7 +661,7 @@ jobs:
 
   e2e-ios-sdk-build:
     name: 🍎 Build iOS UI Test Bundles
-    runs-on: nscloud-macos-arm64-8x32
+    runs-on: namespace-profile-macos-apple-silicon-arm64-6-cpu-14-gb
     timeout-minutes: 30
     needs: [setup, changes]
     if: needs.changes.outputs.e2e_ios == 'true'
