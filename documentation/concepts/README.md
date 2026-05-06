@@ -3,6 +3,7 @@ title: Concepts
 children:
   - ./core-state-management.md
   - ./entry-personalization-and-variant-resolution.md
+  - ./profile-synchronization-between-client-and-server.md
   - ./react-native-sdk-interaction-tracking-mechanics.md
 ---
 
@@ -21,6 +22,9 @@ they are not the first stop for installation or setup commands.
 - [Entry personalization and variant resolution](./entry-personalization-and-variant-resolution.md) -
   explains how the SDK resolves a Contentful baseline entry to the selected entry variant, including
   data model expectations, fallback behavior, resolution paths, and preview overrides.
+- [Profile synchronization between client and server](./profile-synchronization-between-client-and-server.md) -
+  explains how profile identity, profile data, cookies, browser storage, and Experience API
+  responses work together when Node and Web SDK runtimes share a visitor journey.
 - [React Native SDK Interaction Tracking Mechanics](./react-native-sdk-interaction-tracking-mechanics.md) -
   explains how the React Native SDK observes, gates, and emits tracking events, covering event
   types, the viewport state machine, default thresholds, consent gating, scroll context, screen

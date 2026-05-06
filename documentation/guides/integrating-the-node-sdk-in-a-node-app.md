@@ -594,6 +594,9 @@ is usually the right move when you need:
 - cookie-based profile continuity between SSR and client-side code
 - follow-up personalization after the first server render
 
+For the lower-level mechanics behind cookie-based continuity, see
+[Profile synchronization between client and server](../concepts/profile-synchronization-between-client-and-server.md).
+
 The hybrid reference implementation shows exactly that setup:
 
 - [Server integration](../../implementations/node-sdk+web-sdk/src/app.ts)
