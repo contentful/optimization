@@ -540,6 +540,9 @@ If your architecture uses both `@contentful/optimization-node` on the server and
 `@contentful/optimization-web` in the browser, let both runtimes continue the same anonymous journey
 by sharing the anonymous ID cookie.
 
+For the lower-level mechanics behind that handoff, see
+[Profile synchronization between client and server](../concepts/profile-synchronization-between-client-and-server.md).
+
 That is the pattern shown in the `node-sdk+web-sdk` reference implementation:
 
 - the server persists `ANONYMOUS_ID_COOKIE` with `path: '/'` and `sameSite: 'lax'`
