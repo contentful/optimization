@@ -6,12 +6,13 @@
 
 ## Pattern: SSR-Primary with CSR Analytics
 
-This setup is the simplest and most robust Next.js personalization pattern. The server owns
-all personalization decisions. The client owns all analytics and interactive concerns.
+This setup is the simplest and most robust Next.js personalization pattern. The server owns all
+personalization decisions. The client owns all analytics and interactive concerns.
 
 ### Why this pattern?
 
-- **No flicker.** Personalized content is in the HTML from the server. No loading states, no client-side variant swaps.
+- **No flicker.** Personalized content is in the HTML from the server. No loading states, no
+  client-side variant swaps.
 - **Full SEO.** Search engines see the resolved personalized content.
 - **Minimal client JS.** Content rendering requires zero JavaScript. Only tracking and interactive
   controls (consent, identify) need client hydration.
@@ -20,16 +21,16 @@ all personalization decisions. The client owns all analytics and interactive con
 
 ### Responsibility split
 
-| Concern | Where it runs | SDK used |
-|---------|--------------|----------|
-| Anonymous ID cookie lifecycle | Middleware (Edge Runtime) | Node SDK |
-| Profile resolution (`sdk.page()`) | Server Component | Node SDK |
-| Entry variant resolution | Server Component | Node SDK (`resolveOptimizedEntry`) |
-| HTML rendering of personalized content | Server Component | None (plain React) |
-| Page view tracking | Client (after hydration) | React Web SDK (`NextAppAutoPageTracker`) |
-| Entry interaction tracking (views/clicks/hovers) | Client (after hydration) | React Web SDK (`autoTrackEntryInteraction`) |
-| Consent management | Client (after hydration) | React Web SDK (`sdk.consent()`) |
-| User identification | Client (after hydration) | React Web SDK (`sdk.identify()`) |
+| Concern                                          | Where it runs             | SDK used                                    |
+| ------------------------------------------------ | ------------------------- | ------------------------------------------- |
+| Anonymous ID cookie lifecycle                    | Middleware (Edge Runtime) | Node SDK                                    |
+| Profile resolution (`sdk.page()`)                | Server Component          | Node SDK                                    |
+| Entry variant resolution                         | Server Component          | Node SDK (`resolveOptimizedEntry`)          |
+| HTML rendering of personalized content           | Server Component          | None (plain React)                          |
+| Page view tracking                               | Client (after hydration)  | React Web SDK (`NextAppAutoPageTracker`)    |
+| Entry interaction tracking (views/clicks/hovers) | Client (after hydration)  | React Web SDK (`autoTrackEntryInteraction`) |
+| Consent management                               | Client (after hydration)  | React Web SDK (`sdk.consent()`)             |
+| User identification                              | Client (after hydration)  | React Web SDK (`sdk.identify()`)            |
 
 ### Behavioral expectations
 
@@ -87,9 +88,9 @@ never contradicts what the server rendered.
 
 ### 1. Cookie as the identity bridge
 
-The `ctfl-opt-aid` cookie is the **only shared state** between server and client. Middleware
-creates it, the Server Component reads it, and the Web SDK reads it from `document.cookie` after
-hydration. This ensures both sides operate on the same anonymous profile.
+The `ctfl-opt-aid` cookie is the **only shared state** between server and client. Middleware creates
+it, the Server Component reads it, and the Web SDK reads it from `document.cookie` after hydration.
+This ensures both sides operate on the same anonymous profile.
 
 ```typescript
 // middleware.ts
@@ -119,7 +120,8 @@ Using `next/dynamic` with `ssr: false` prevents any server-side instantiation:
 ```typescript
 // components/ClientProviderWrapper.tsx
 const OptimizationRoot = dynamic(
-  () => import('@contentful/optimization-react-web').then((mod) => ({ default: mod.OptimizationRoot })),
+  () =>
+    import('@contentful/optimization-react-web').then((mod) => ({ default: mod.OptimizationRoot })),
   { ssr: false },
 )
 ```
@@ -127,8 +129,8 @@ const OptimizationRoot = dynamic(
 ### 4. Server Components never import from the React Web SDK
 
 This is a hard rule. Server Components use `@contentful/optimization-node` only. Client Components
-(`"use client"`) use `@contentful/optimization-react-web` only. Mixing them causes runtime errors
-or bundling issues.
+(`"use client"`) use `@contentful/optimization-react-web` only. Mixing them causes runtime errors or
+bundling issues.
 
 ### 5. Data attributes for automatic interaction tracking
 
@@ -138,23 +140,20 @@ elements and registers IntersectionObserver (views), click listeners, and hover 
 automatically:
 
 ```tsx
-<div
-  data-ctfl-entry-id={resolvedEntry.sys.id}
-  data-ctfl-baseline-id={baselineEntry.sys.id}
->
+<div data-ctfl-entry-id={resolvedEntry.sys.id} data-ctfl-baseline-id={baselineEntry.sys.id}>
   {/* content */}
 </div>
 ```
 
 ## When does the user see updated personalization?
 
-| User action | Effect on displayed content | When personalization updates |
-|---|---|---|
-| First page load (anonymous) | Baseline or variant per profile | Immediate (server-resolved) |
-| Grant/reject consent | No change to content | Next server request |
-| Identify (`sdk.identify()`) | No change to content | Next server request |
-| Navigate to another page (full navigation) | New server-resolved content | Immediate (new SSR) |
-| Browser refresh | Server re-resolves with updated profile | Immediate (new SSR) |
+| User action                                | Effect on displayed content             | When personalization updates |
+| ------------------------------------------ | --------------------------------------- | ---------------------------- |
+| First page load (anonymous)                | Baseline or variant per profile         | Immediate (server-resolved)  |
+| Grant/reject consent                       | No change to content                    | Next server request          |
+| Identify (`sdk.identify()`)                | No change to content                    | Next server request          |
+| Navigate to another page (full navigation) | New server-resolved content             | Immediate (new SSR)          |
+| Browser refresh                            | Server re-resolves with updated profile | Immediate (new SSR)          |
 
 The key insight: **client actions update the profile server-side (via the Experience API)**, but the
 rendered content is only a snapshot of the profile state at the time of the server request. The next
@@ -177,9 +176,10 @@ pnpm implementation:run -- react-web-sdk+node-sdk_nextjs-ssr dev
 ## When to use this pattern
 
 - Content-heavy marketing sites where SEO and first-paint performance matter
-- Sites where personalization is based on profile traits, audience segments, or geo — not
-  real-time interactions within the same page
-- Teams that want the simplest mental model: server decides what to show, client tracks what happened
+- Sites where personalization is based on profile traits, audience segments, or geo — not real-time
+  interactions within the same page
+- Teams that want the simplest mental model: server decides what to show, client tracks what
+  happened
 - Sites already using Next.js App Router with Server Components
 
 ## When NOT to use this pattern
