@@ -31,8 +31,6 @@ export default defineConfig(
       'docs/media/**',
       '**/ios/**',
       '**/node_modules',
-      'implementations/react-web-sdk+node-sdk_nextjs/**',
-      'implementations/react-web-sdk_nextjs/**',
     ],
   },
   js.configs.recommended,

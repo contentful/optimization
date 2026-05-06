@@ -1,13 +1,13 @@
 # Next.js Hybrid SSR + CSR Takeover Reference Implementation
 
-`react-web-sdk_nextjs` — Next.js App Router reference demonstrating the "SSR → CSR Takeover"
-pattern. First paint is server-resolved via the Node SDK (no flicker), after hydration the React
-Web SDK takes over for reactive entry resolution and SPA-style navigation.
+`react-web-sdk+node-sdk_nextjs-ssr-csr` — Next.js App Router reference demonstrating the "SSR → CSR Takeover"
+pattern. First paint is server-resolved via the Node SDK (no flicker), after hydration the React Web
+SDK takes over for reactive entry resolution and SPA-style navigation.
 
-## Pattern: Hybrid SSR + CSR Takeover 
+## Pattern: Hybrid SSR + CSR Takeover
 
-This is setup is the first page load is fully server-resolved (identical to nextJs-ssr), but
-after hydration the React Web SDK takes over. Subsequent navigations, identify, consent, and profile
+This is setup is the first page load is fully server-resolved (identical to nextJs-ssr), but after
+hydration the React Web SDK takes over. Subsequent navigations, identify, consent, and profile
 changes all re-resolve entries client-side without a server roundtrip.
 
 ### Why this pattern?
@@ -34,25 +34,25 @@ changes all re-resolve entries client-side without a server roundtrip.
 
 ### Responsibility split
 
-| Concern | First paint (Server) | After hydration (Client) |
-|---------|---------------------|--------------------------|
-| Profile resolution | Middleware + Server Component (Node SDK) | React Web SDK (automatic on init) |
-| Entry resolution | `sdk.resolveOptimizedEntry()` in Server Component | `resolveEntry()` / `<OptimizedEntry>` via hooks |
-| Entry fetching | Server-side from CDA | Client-side from CDA (for new routes) |
-| Page tracking | N/A | `NextAppAutoPageTracker` fires on route change |
-| Interaction tracking | N/A (data attributes rendered server-side) | `autoTrackEntryInteraction` observes elements |
-| Consent / Identify / Reset | N/A | React Web SDK — triggers immediate re-resolution |
+| Concern                    | First paint (Server)                              | After hydration (Client)                         |
+| -------------------------- | ------------------------------------------------- | ------------------------------------------------ |
+| Profile resolution         | Middleware + Server Component (Node SDK)          | React Web SDK (automatic on init)                |
+| Entry resolution           | `sdk.resolveOptimizedEntry()` in Server Component | `resolveEntry()` / `<OptimizedEntry>` via hooks  |
+| Entry fetching             | Server-side from CDA                              | Client-side from CDA (for new routes)            |
+| Page tracking              | N/A                                               | `NextAppAutoPageTracker` fires on route change   |
+| Interaction tracking       | N/A (data attributes rendered server-side)        | `autoTrackEntryInteraction` observes elements    |
+| Consent / Identify / Reset | N/A                                               | React Web SDK — triggers immediate re-resolution |
 
 ### Behavioral expectations
 
-| Phase | Content behavior |
-|-------|-----------------|
-| First page load | Server-resolved personalized HTML (no flicker, no loading state) |
-| After hydration | React Web SDK initializes, fires page event, starts tracking |
-| User identifies | `sdk.identify()` → `selectedOptimizations` updates → entries re-resolve instantly |
-| User grants consent | `sdk.consent()` → re-resolution if optimization rules depend on consent state |
-| Client-side navigation (`<Link>`) | `NextAppAutoPageTracker` fires page event → new entries fetched client-side → resolved via `resolveEntry()` |
-| Full page navigation (browser refresh) | Back to server-resolved first paint |
+| Phase                                  | Content behavior                                                                                            |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| First page load                        | Server-resolved personalized HTML (no flicker, no loading state)                                            |
+| After hydration                        | React Web SDK initializes, fires page event, starts tracking                                                |
+| User identifies                        | `sdk.identify()` → `selectedOptimizations` updates → entries re-resolve instantly                           |
+| User grants consent                    | `sdk.consent()` → re-resolution if optimization rules depend on consent state                               |
+| Client-side navigation (`<Link>`)      | `NextAppAutoPageTracker` fires page event → new entries fetched client-side → resolved via `resolveEntry()` |
+| Full page navigation (browser refresh) | Back to server-resolved first paint                                                                         |
 
 ## Architecture
 
@@ -171,25 +171,25 @@ state without a redundant API call. This would make the SSR → CSR handoff seam
 
 ## When does the user see updated personalization?
 
-| User action | Effect | Timing |
-|---|---|---|
-| First page load | Server-resolved personalized content | Immediate (in HTML) |
-| After hydration (same page) | No change — server content stays | Seamless |
-| Identify / consent / reset | Entries with `liveUpdates` re-resolve | Instant (client-side) |
-| Navigate via `<Link>` | New page entries resolved client-side | Fast (no server roundtrip) |
-| Browser refresh / full navigation | Back to server-resolved first paint | Immediate (new SSR) |
+| User action                       | Effect                                | Timing                     |
+| --------------------------------- | ------------------------------------- | -------------------------- |
+| First page load                   | Server-resolved personalized content  | Immediate (in HTML)        |
+| After hydration (same page)       | No change — server content stays      | Seamless                   |
+| Identify / consent / reset        | Entries with `liveUpdates` re-resolve | Instant (client-side)      |
+| Navigate via `<Link>`             | New page entries resolved client-side | Fast (no server roundtrip) |
+| Browser refresh / full navigation | Back to server-resolved first paint   | Immediate (new SSR)        |
 
 ## Comparison with nextJs-ssr
 
-| | nextJs-ssr (SSR + Events-Only) | (Hybrid SSR + CSR Takeover) |
-|---|---|---|
-| **First paint** | Personalized (server-resolved) | Personalized (server-resolved) |
-| **After identify** | No change until next server request | Immediate re-resolution |
-| **Subsequent navigation** | Full server roundtrip | Client-side (SPA) |
-| **Complexity** | Lower (server is sole truth) | Higher (two resolution paths) |
-| **Node SDK** | Required | Required (first paint only) |
-| **React Web SDK role** | Events/tracking only | Events + entry resolution |
-| **Content reactivity** | Static | Live |
+|                           | nextJs-ssr (SSR + Events-Only)      | (Hybrid SSR + CSR Takeover)    |
+| ------------------------- | ----------------------------------- | ------------------------------ |
+| **First paint**           | Personalized (server-resolved)      | Personalized (server-resolved) |
+| **After identify**        | No change until next server request | Immediate re-resolution        |
+| **Subsequent navigation** | Full server roundtrip               | Client-side (SPA)              |
+| **Complexity**            | Lower (server is sole truth)        | Higher (two resolution paths)  |
+| **Node SDK**              | Required                            | Required (first paint only)    |
+| **React Web SDK role**    | Events/tracking only                | Events + entry resolution      |
+| **Content reactivity**    | Static                              | Live                           |
 
 ## When to use this pattern
 
@@ -212,14 +212,14 @@ state without a redundant API call. This would make the SSR → CSR handoff seam
 
 ```bash
 pnpm build:pkgs
-pnpm implementation:run -- react-web-sdk_nextjs implementation:install
-cp implementations/react-web-sdk_nextjs/.env.example implementations/react-web-sdk_nextjs/.env
+pnpm implementation:run -- react-web-sdk+node-sdk_nextjs-ssr-csr implementation:install
+cp implementations/react-web-sdk+node-sdk_nextjs-ssr-csr/.env.example implementations/react-web-sdk+node-sdk_nextjs-ssr-csr/.env
 ```
 
 ## Development
 
 ```bash
-pnpm implementation:run -- react-web-sdk_nextjs dev
+pnpm implementation:run -- react-web-sdk+node-sdk_nextjs-ssr-csr dev
 ```
 
 ## Related

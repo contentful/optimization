@@ -1,8 +1,8 @@
 {
-  "name": "@implementation/react-web-sdk_nextjs",
+  "name": "@implementation/react-web-sdk+node-sdk_nextjs-ssr-csr",
   "private": true,
   "version": "0.0.0",
-  "description": "Reference implementation for Next.js (App Router) using @contentful/optimization-react-web for pure client-side entry resolution",
+  "description": "Reference implementation for Next.js (App Router) using @contentful/optimization-node for SSR first-paint and @contentful/optimization-react-web for CSR takeover",
   "license": "MIT",
   "type": "module",
   "scripts": {

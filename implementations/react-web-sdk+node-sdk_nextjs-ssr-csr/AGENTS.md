@@ -42,12 +42,12 @@ roundtrip — there the React Web SDK only handles events/tracking, never entry 
 
 ## Commands
 
-- `pnpm implementation:run -- react-web-sdk_nextjs implementation:install`
-- `pnpm implementation:run -- react-web-sdk_nextjs typecheck`
-- `pnpm implementation:run -- react-web-sdk_nextjs build`
-- `pnpm implementation:run -- react-web-sdk_nextjs dev`
-- `pnpm implementation:run -- react-web-sdk_nextjs serve`
-- `pnpm implementation:run -- react-web-sdk_nextjs serve:stop`
+- `pnpm implementation:run -- react-web-sdk+node-sdk_nextjs-ssr-csr implementation:install`
+- `pnpm implementation:run -- react-web-sdk+node-sdk_nextjs-ssr-csr typecheck`
+- `pnpm implementation:run -- react-web-sdk+node-sdk_nextjs-ssr-csr build`
+- `pnpm implementation:run -- react-web-sdk+node-sdk_nextjs-ssr-csr dev`
+- `pnpm implementation:run -- react-web-sdk+node-sdk_nextjs-ssr-csr serve`
+- `pnpm implementation:run -- react-web-sdk+node-sdk_nextjs-ssr-csr serve:stop`
 
 ## Usually Validate
 
