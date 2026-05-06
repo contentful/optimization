@@ -1,20 +1,22 @@
 # AGENTS.md
 
-This file defines repository-wide rules only. For any change, read this file first, then read the
-nearest `AGENTS.md` in the subtree you are editing.
+This file defines repository-wide rules only. For any change, read this file first, then read each
+applicable child `AGENTS.md` from outermost to nearest in the subtree you are editing.
 
 ## Hierarchy
 
 - The root `AGENTS.md` owns stable repo-wide policy.
-- `lib/*/AGENTS.md`, `packages/**/AGENTS.md`, and `implementations/*/AGENTS.md` own local
-  instructions, commands, and gotchas.
+- `packages/AGENTS.md` and `implementations/AGENTS.md` own shared policy for all packages and
+  reference implementations.
+- `lib/*/AGENTS.md`, `packages/**/AGENTS.md`, and `implementations/*/AGENTS.md` own more specific
+  local instructions, commands, and gotchas.
 - If local guidance conflicts with this file, follow the more specific `AGENTS.md` for that subtree.
 - When adding a new workspace package or implementation, add a sibling `AGENTS.md` in the same
   change.
 - Keep child `AGENTS.md` files focused on local behavior. Do not duplicate root policy unless the
   subtree has a local exception.
 
-## Environment And Tooling
+## Environment and tooling
 
 - Use the Node version from [`.nvmrc`](./.nvmrc) when possible. Repository engine constraints live
   in the root [`package.json`](./package.json).
@@ -27,7 +29,7 @@ nearest `AGENTS.md` in the subtree you are editing.
 - Some implementations have additional runtime prerequisites or process-management expectations. See
   the relevant implementation `AGENTS.md` before running local app or E2E flows.
 
-## Repository Layout
+## Repository layout
 
 - Shared libraries and published SDK packages live under `lib/` and `packages/`.
 - Reference implementations live under `implementations/`.
@@ -36,7 +38,7 @@ nearest `AGENTS.md` in the subtree you are editing.
 - Generated outputs such as `dist/`, `coverage/`, `docs/`, `pkgs/`, `playwright-report/`, and
   `test-results/` are not the source of truth.
 
-## Source Of Truth
+## Source of truth
 
 Prefer editing source files and configuration:
 
@@ -65,7 +67,7 @@ Do not hand-edit generated or local-only artifacts unless the task is explicitly
 - `node_modules/**`
 - local `.env` files
 
-## ESLint Discipline
+## ESLint discipline
 
 - Treat [`eslint.config.ts`](./eslint.config.ts) as an upfront design constraint, not a cleanup step
   after coding.
@@ -94,7 +96,7 @@ Do not hand-edit generated or local-only artifacts unless the task is explicitly
 - If code keeps fighting the linter, stop and rewrite the approach to match repository patterns
   rather than stacking fixes.
 
-## Validation Policy
+## Validation policy
 
 - Run the smallest meaningful validation that matches the change.
 - When linting or formatting is likely needed, prefer the smallest fix-enabled command that matches
@@ -106,14 +108,7 @@ Do not hand-edit generated or local-only artifacts unless the task is explicitly
   before finishing if the change grew.
 - For `implementations/` edits, prefer `pnpm implementation:lint` after the first meaningful patch
   and again before finishing if the change grew.
-- For a single workspace package, prefer targeted `typecheck`, `test:unit`, and `build`.
-- For built workspace packages, run the package `size:check` script when runtime code, published
-  dependencies, bundler config, exports, or bundle shape changes.
 - For cross-cutting changes, broaden validation to affected downstream packages or implementations.
-- For package changes used by implementations, run `pnpm build:pkgs` before reinstalling or running
-  implementation tests.
-- For implementation-only changes, use `pnpm implementation:lint`, targeted implementation
-  `typecheck`, and targeted E2E as needed.
 - If you skip a relevant check because of time or environment constraints, say exactly what was not
   run and why.
 
@@ -128,7 +123,7 @@ High-signal repo-wide commands:
 - `pnpm format:check`
 - `pnpm docs:generate`
 
-## Failure Handling And Recovery
+## Failure handling and recovery
 
 - Do not rerun the same failing command unchanged more than once.
 - Before retrying, classify the failure into one of these buckets:
@@ -175,43 +170,80 @@ High-signal repo-wide commands:
   - what you already tried
   - the smallest next action, user input, or approval needed
 
-Common repo-specific failure modes:
+## Docs, specs, and CI
 
-- An implementation does not reflect a package change: run `pnpm build:pkgs`, then rerun the
-  relevant `pnpm implementation:run -- <implementation> implementation:install`.
-- If the goal is E2E setup rather than the narrowest possible refresh step, prefer the combined root
-  wrapper `pnpm setup:e2e:<implementation>`. For a full E2E run, prefer
-  `pnpm test:e2e:<implementation>`.
-- Implementation-specific runtime failures such as Docker availability, Playwright browser setup,
-  emulator requirements, `.env` drift, PM2 state, and local port conflicts belong in the relevant
-  implementation `AGENTS.md`, not here.
-
-## Docs, Specs, And CI
-
-- When public SDK behavior changes, update the relevant TSDoc or JSDoc and the affected package
-  `README.md` in the same change.
 - Authored supporting docs live in `documentation/`; generated TypeDoc output lives in `docs/`.
-- If a package includes a package-local dev harness or other meaningful local dev surface, keep that
-  surface relevant to the current SDK behavior and update it in the same change when the package's
-  developer-facing flows, configuration, or core capabilities change.
 - If the repository later adds any replacement design, architecture, or specification artifacts for
   the changed area, keep them aligned in the same change.
 - `docs/` is generated by TypeDoc and is gitignored.
 - Implementation E2E in `.github/workflows/main-pipeline.yaml` is intentionally path-filtered. If a
-  change should alter E2E coverage, update the workflow and keep it aligned with
+  change needs to alter E2E coverage, update the workflow and keep it aligned with
   [CONTRIBUTING.md](./CONTRIBUTING.md).
 
-## Safety Rules
+## README and Markdown standards
+
+- Follow [`STYLE_GUIDE.md`](./STYLE_GUIDE.md) for Contentful technical writing conventions in
+  human-authored documentation, including READMEs, authored docs, TSDoc/JSDoc prose, and examples.
+  The nearest `AGENTS.md` still owns document structure, commands, and subtree-specific exceptions.
+- Treat README files as maintained source-of-truth orientation for humans. Keep them aligned with
+  package exports, implementation scripts, local `.env.example` files, and authored documentation in
+  the same change as behavior or workflow updates.
+- Preserve the README family already used by the target directory:
+  - root, published package, and reference implementation READMEs use the centered Contentful logo
+    header, `Contentful Personalization & Analytics` title, subtype `<h3>`, navigation links, and
+    pre-release warning.
+  - `documentation/**/README.md` files are navigation indexes with frontmatter.
+  - placeholder and internal-only README files can use a plain Markdown `#` title plus explicit
+    status or internal-use admonitions.
+- Use sentence case for Markdown headings, preserving official product, package, API, component,
+  hook, and file casing.
+- Lead with reader intent and scope: what to use, when to use it, and what belongs elsewhere. Prefer
+  concrete implementation guidance over marketing language.
+- Keep terminology consistent: "Optimization SDK Suite", "Personalization", "Analytics", "Experience
+  API", "Insights API", "reference implementation", and exact package names such as
+  `@contentful/optimization-web`.
+- Use fenced code blocks with language tags (`sh`, `ts`, `tsx`, `json`, `html`) and prefer `pnpm`
+  commands. Do not introduce npm, yarn, or undocumented global-tool instructions.
+- Use GitHub admonitions intentionally: warning/caution for pre-release, internal, destructive, or
+  unsafe flows; important for required contracts; note for helpful context that is not required.
+- Match README depth to the README category, not to the amount of available detail:
+  - application-facing package READMEs orient the integrator, preserve common setup options, and
+    link to authored guides or generated reference docs for deep workflows and exhaustive API
+    details
+  - lower-level package READMEs orient SDK maintainers and package authors, explain the layer's
+    role, and avoid application-integration tutorial depth
+  - reference implementation READMEs stay procedural and point readers to the code being
+    demonstrated instead of duplicating package API tutorials
+  - internal and placeholder READMEs stay short, explicit, and status-oriented
+- Move step-by-step implementation material into `documentation/guides/` when an existing guide is
+  the right home; create a new guide only when no existing guide covers that reader goal. Use
+  generated TypeDoc reference for exhaustive signatures, method catalogs, callback payload shapes,
+  and exported type details.
+- Before changing README navigation or cross-document links, account for every render target that
+  consumes that README: GitHub source browsing, TypeDoc project documents, and npmjs package README
+  rendering for published packages.
+- Keep relative links pointed at source-of-truth files in this repository when the README is only
+  consumed in-repo or by TypeDoc, or when the package README publish rewrite flow is known to
+  rewrite that link for npm. Use stable absolute URLs for links that must work unchanged across
+  GitHub, TypeDoc, and npm.
+- Link to generated reference docs for API reference and shared README header navigation that needs
+  to work in all render targets, not as a replacement for source README guidance.
+- When a README has a collapsible table of contents, preserve the exact `<!-- mtoc-start -->` and
+  `<!-- mtoc-end -->` markers and keep entries synchronized with headings.
+- For Markdown edits, run Prettier on touched files when practical and at least run
+  `git diff --check` before finishing.
+
+## Safety rules
 
 - Never overwrite or delete ignored local files just to get a clean run.
 - Do not run destructive Contentful scripts unless explicitly asked.
 - Do not use broad cleanup commands such as `pm2 delete all` unless explicitly asked.
 - Do not assume full cross-platform E2E is required for every change.
 
-## Preferred Workflow
+## Preferred workflow
 
 1. Read the root `AGENTS.md`.
-2. Read the nearest `AGENTS.md` in the subtree you will edit.
+2. Read each applicable child `AGENTS.md` from outermost to nearest in the subtree you will edit.
 3. Make the narrowest source-of-truth change in the correct layer.
 4. Run the smallest meaningful validation set.
 5. Broaden validation only when exports, build tooling, mocks, or shared behavior changed.

@@ -9,7 +9,7 @@ import { ResponseEnvelope } from './ResponseEnvelope'
  *
  * @remarks
  * Contains the evaluated profile, selected optimizations, and computed
- * changes that should be applied on the client.
+ * changes to apply on the client.
  *
  * @public
  */
@@ -27,7 +27,7 @@ export const ExperienceData = z.object({
   experiences: SelectedOptimizationArray,
 
   /**
-   * Currently used for Custom Flags.
+   * Used for Custom Flags.
    *
    * @see {@link ChangeArray}
    */

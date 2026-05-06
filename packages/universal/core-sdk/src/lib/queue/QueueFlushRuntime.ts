@@ -60,7 +60,7 @@ export class QueueFlushRuntime {
   }
 
   /**
-   * Clear the currently scheduled retry timer, if any.
+   * Clear the scheduled retry timer, if any.
    */
   clearScheduledRetry(): void {
     if (this.retryTimer === undefined) return
@@ -70,12 +70,12 @@ export class QueueFlushRuntime {
   }
 
   /**
-   * Determine whether flush should be skipped due to current state gates.
+   * Determine whether to skip flush due to current state gates.
    *
    * @param options - Flush gate options.
    * @param options.force - When true, bypass online/backoff/circuit gates.
    * @param options.isOnline - Whether connectivity gates permit flushing.
-   * @returns `true` when flush should be skipped.
+   * @returns `true` when flush is skipped.
    */
   shouldSkip(options: { force: boolean; isOnline: boolean }): boolean {
     const { force, isOnline } = options
@@ -178,7 +178,7 @@ export class QueueFlushRuntime {
   }
 
   /**
-   * Schedule a future flush attempt.
+   * Schedule a later flush attempt.
    *
    * @param delayMs - Delay in milliseconds before next attempt.
    */

@@ -1,5 +1,5 @@
 /**
- * Web SDK entrypoint for Contentful ContentfulOptimization.
+ * Web SDK entry point for Contentful Optimization.
  *
  * @remarks
  * Exposes a browser-wired {@link ContentfulOptimization} class built on top of {@link CoreStateful}.
@@ -190,8 +190,7 @@ function mergeConfig({
  * Provides browser-specific wiring:
  * - automatic persistence of consent, profile, and selectedOptimizations,
  * - cookie-based anonymous ID handling,
- * - automatic tracked entry interactions (currently views and clicks),
- * - automatic tracked entry interactions (currently views, clicks, and hovers),
+ * - automatic tracked entry interactions for views, clicks, and hovers,
  * - online-change based flushing of events,
  * - and visibility-change based flushing of events.
  *

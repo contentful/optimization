@@ -1,4 +1,4 @@
-# Integrating the Optimization Web SDK in a Web App
+# Integrating the Optimization Web SDK in a web app
 
 Use this guide when you want to implement client-side personalization and analytics in a browser
 application such as a static site, multi-page app, SPA, or custom frontend runtime using
@@ -12,28 +12,29 @@ providers, hooks, and router adapters, use the React Web guide instead.
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Scope and Capabilities](#scope-and-capabilities)
-- [The Integration Flow](#the-integration-flow)
-- [1. Install and Initialize the SDK](#1-install-and-initialize-the-sdk)
-- [2. Handle Consent in the UI Layer](#2-handle-consent-in-the-ui-layer)
-- [3. Emit `page()` on First Load and Route Changes](#3-emit-page-on-first-load-and-route-changes)
-- [4. Resolve Contentful Entries with `selectedOptimizations`](#4-resolve-contentful-entries-with-selectedoptimizations)
-- [5. Resolve Merge Tags and Custom Flags](#5-resolve-merge-tags-and-custom-flags)
-  - [Merge Tags](#merge-tags)
-  - [Custom Flags](#custom-flags)
-- [6. Identify Known Users and Reset When Identity Changes](#6-identify-known-users-and-reset-when-identity-changes)
-- [7. Track Entry Interactions and Follow-Up Events](#7-track-entry-interactions-and-follow-up-events)
-  - [Automatic Entry Tracking](#automatic-entry-tracking)
-  - [Manual Element Observation](#manual-element-observation)
-  - [Custom Browser Events](#custom-browser-events)
-- [8. Subscribe to `states` for Rerenders and UI Feedback](#8-subscribe-to-states-for-rerenders-and-ui-feedback)
-- [Share the Anonymous ID Cookie in Hybrid SSR + Browser Apps](#share-the-anonymous-id-cookie-in-hybrid-ssr-browser-apps)
-- [Reference Implementations to Compare Against](#reference-implementations-to-compare-against)
+- [Scope and capabilities](#scope-and-capabilities)
+- [The integration flow](#the-integration-flow)
+- [1. Install and initialize the SDK](#1-install-and-initialize-the-sdk)
+- [2. Handle consent in the UI layer](#2-handle-consent-in-the-ui-layer)
+- [3. Emit `page()` on first load and route changes](#3-emit-page-on-first-load-and-route-changes)
+- [4. Resolve Contentful entries with `selectedOptimizations`](#4-resolve-contentful-entries-with-selectedoptimizations)
+- [5. Resolve merge tags and custom flags](#5-resolve-merge-tags-and-custom-flags)
+  - [Merge tags](#merge-tags)
+  - [Custom flags](#custom-flags)
+- [6. Identify known users and reset when identity changes](#6-identify-known-users-and-reset-when-identity-changes)
+- [7. Track entry interactions and follow-up events](#7-track-entry-interactions-and-follow-up-events)
+  - [Automatic entry tracking](#automatic-entry-tracking)
+  - [Manual element observation](#manual-element-observation)
+  - [Browser tracking mechanics](#browser-tracking-mechanics)
+  - [Custom browser events](#custom-browser-events)
+- [8. Subscribe to `states` for rerenders and UI feedback](#8-subscribe-to-states-for-rerenders-and-ui-feedback)
+- [Share the anonymous ID cookie in hybrid SSR + browser apps](#share-the-anonymous-id-cookie-in-hybrid-ssr-browser-apps)
+- [Reference implementations to compare against](#reference-implementations-to-compare-against)
 
 <!-- mtoc-end -->
 </details>
 
-## Scope and Capabilities
+## Scope and capabilities
 
 The Web SDK is the browser-side package in the Optimization SDK Suite. It lets consumers:
 
@@ -55,7 +56,7 @@ The Web SDK also does not replace your Contentful delivery client. Your applicat
 entries from Contentful, renders the DOM, decides how consent works, and decides when user identity
 becomes known.
 
-## The Integration Flow
+## The integration flow
 
 In practice, most Web SDK integrations follow this high-level sequence:
 
@@ -64,7 +65,7 @@ In practice, most Web SDK integrations follow this high-level sequence:
 3. Emit `page()` on the first load and again whenever the active route changes.
 4. Fetch baseline Contentful entries and resolve variants with `resolveOptimizedEntry()`.
 5. Render flags and merge tags from current SDK state.
-6. Call `identify()` when the user becomes known, and `reset()` when identity should be discarded.
+6. Call `identify()` when the user becomes known, and `reset()` when identity must be discarded.
 7. Enable automatic or manual entry tracking and send follow-up business events with `track()`,
    `trackView()`, `trackClick()`, or `trackHover()`.
 8. Subscribe to `states` so the UI rerenders when profile or optimization state changes.
@@ -76,7 +77,7 @@ applications:
 - [Node SSR + Web SDK Vanilla](../../implementations/node-sdk+web-sdk/README.md)
 - [Web SDK React](../../implementations/web-sdk_react/README.md)
 
-## 1. Install and Initialize the SDK
+## 1. Install and initialize the SDK
 
 Install the package in your web application:
 
@@ -135,7 +136,7 @@ Notes:
 - If you are not bundling JavaScript at all, the package README also shows direct UMD usage in a
   plain HTML page.
 
-## 2. Handle Consent in the UI Layer
+## 2. Handle consent in the UI layer
 
 The Web SDK exposes a browser-side `consent()` method, but your application still owns the consent
 policy and user experience.
@@ -173,7 +174,7 @@ Important behavior:
 If your policy requires a stricter pre-consent posture, configure `allowedEventTypes: []` during
 initialization instead of relying on the default `['identify', 'page']`.
 
-## 3. Emit `page()` on First Load and Route Changes
+## 3. Emit `page()` on first load and route changes
 
 In a traditional multi-page site, calling `page()` after initialization is usually enough because
 the Web SDK can derive browser page properties such as URL, referrer, title, query parameters, and
@@ -219,13 +220,13 @@ router.onRouteChange(() => {
 ```
 
 Replace `router.onRouteChange(...)` with whatever hook your framework exposes. The important rule is
-that the browser should emit a new `page()` event whenever the user lands on a different route-like
+that the browser emits a new `page()` event whenever the user lands on a different route-like
 experience.
 
-## 4. Resolve Contentful Entries with `selectedOptimizations`
+## 4. Resolve Contentful entries with `selectedOptimizations`
 
-Once the page has been evaluated, fetch baseline Contentful entries the same way you normally would,
-then resolve each entry with `resolveOptimizedEntry()`.
+Once the page has been evaluated, fetch baseline Contentful entries the same way your application
+normally does, then resolve each entry with `resolveOptimizedEntry()`.
 
 ```ts
 async function renderEntry(entryId: string, element: HTMLElement): Promise<void> {
@@ -310,11 +311,11 @@ optimization.states.selectedOptimizations.subscribe((selectedOptimizations) => {
 > view-model state. Otherwise, a rerender can accidentally try to resolve a previously selected
 > variant as though it were the baseline entry.
 
-## 5. Resolve Merge Tags and Custom Flags
+## 5. Resolve merge tags and custom flags
 
 The Web SDK also exposes helpers for profile-aware merge tags and Custom Flags.
 
-### Merge Tags
+### Merge tags
 
 If a Rich Text field contains merge-tag entries, resolve them against current SDK state while
 rendering the field:
@@ -338,7 +339,7 @@ const html = documentToHtmlString(article.fields.body, {
 That is the same basic pattern used in the reference implementations, even when the final Rich Text
 renderer differs.
 
-### Custom Flags
+### Custom flags
 
 Use `getFlag()` when the current optimization response contains Custom Flag changes:
 
@@ -355,9 +356,10 @@ optimization.states.flag('new-navigation').subscribe((value) => {
 ```
 
 Unlike the stateless Node SDK, the stateful Web SDK automatically emits flag-view tracking when you
-read a flag via `getFlag()` or `states.flag(name)`.
+read a flag via `getFlag()` or `states.flag(name)`. Both paths deduplicate tracking events using
+deep equality, so repeated reads of the same resolved value emit only one flag view event.
 
-## 6. Identify Known Users and Reset When Identity Changes
+## 6. Identify known users and reset when identity changes
 
 Call `identify()` when the browser session becomes associated with a known user, such as after a
 sign-in, account lookup, or persisted auth refresh:
@@ -377,7 +379,7 @@ async function handleLogin(user: { id: string; plan: string }): Promise<void> {
 That lets the browser stitch the current anonymous profile to a known identity and update profile
 state for later entry resolution, flags, and event attribution.
 
-When the app should discard the current browser identity, call `reset()`:
+To discard the current browser identity, call `reset()`:
 
 ```ts
 async function handleLogout(): Promise<void> {
@@ -392,17 +394,17 @@ That is the same shape used in the vanilla reference implementation. `reset()` c
 ID cookie, cached profile data, cached flag changes, selected optimizations, and entry-tracking
 runtime state. It does not clear consent.
 
-## 7. Track Entry Interactions and Follow-Up Events
+## 7. Track entry interactions and follow-up events
 
 The Web SDK can emit more than page and identify events. Common browser-side cases are:
 
 - automatic entry `view`, `click`, and `hover` tracking from the DOM
 - manual `trackView()` calls for UI regions that are not directly tied to a Contentful entry
 - `track()` calls for business events such as quote requests or sign-up milestones
-- `trackClick()` and `trackHover()` calls when the app has custom interaction logic that should not
+- `trackClick()` and `trackHover()` calls when the app has custom interaction logic that must not
   rely on DOM auto-detection
 
-### Automatic Entry Tracking
+### Automatic entry tracking
 
 If you enable `autoTrackEntryInteraction`, add the standard `data-ctfl-*` attributes to the rendered
 element that contains the resolved entry content:
@@ -423,7 +425,7 @@ For click tracking, prefer semantic clickable elements such as `<button>` and `<
 mark clickability with `data-ctfl-clickable="true"`. The Web SDK can detect clicks on the tracked
 element itself, on a clickable ancestor, or on a clickable descendant inside the tracked entry.
 
-### Manual Element Observation
+### Manual element observation
 
 If your element structure does not fit the standard data-attribute pattern, force-enable tracking
 for a specific element:
@@ -440,9 +442,42 @@ optimization.tracking.enableElement('views', element, {
 ```
 
 Use `tracking.disableElement(...)` to force-disable a specific element or
-`tracking.clearElement(...)` to remove a manual override and return it to automatic behavior.
+`tracking.clearElement(...)` to remove a manual override and return it to automatic behavior. Manual
+API overrides take precedence over data-attribute overrides. After `clearElement(...)`, the element
+falls back to attribute overrides first, then normal automatic behavior.
 
-### Custom Browser Events
+### Browser tracking mechanics
+
+Interaction observers are passive with respect to host event flow. They do not call
+`event.preventDefault()` or `event.stopPropagation()`.
+
+View tracking uses `IntersectionObserver` plus dwell-time timers. Track only relevant elements,
+disable tracking for elements that are no longer needed, and choose stable `minVisibleRatio` and
+`dwellTimeMs` values that match your UI so visibility cycles do not reset constantly.
+
+Hover tracking uses pointer and mouse enter/leave events with dwell-time timers. Tune `dwellTimeMs`
+and `hoverDurationUpdateIntervalMs` for pointer-heavy UIs so short pointer movement does not create
+unwanted event volume.
+
+Click tracking uses semantic clickability checks plus tracked-entry resolution. Prefer native
+clickable elements such as `<button>` and `<a href>`, role-based click targets, or
+`data-ctfl-clickable="true"` over relying only on JavaScript-assigned `onclick` handlers.
+
+Automatic elements can also use per-element `data-ctfl-*` overrides:
+
+| Attribute                                     | Purpose                                                     |
+| --------------------------------------------- | ----------------------------------------------------------- |
+| `data-ctfl-track-views`                       | Force-enable or force-disable view tracking for the element |
+| `data-ctfl-view-duration-update-interval-ms`  | Override periodic view-duration update interval             |
+| `data-ctfl-track-clicks`                      | Force-enable or force-disable click tracking                |
+| `data-ctfl-track-hovers`                      | Force-enable or force-disable hover tracking                |
+| `data-ctfl-hover-duration-update-interval-ms` | Override periodic hover-duration update interval            |
+
+Use the generated
+[Web SDK reference](https://contentful.github.io/optimization/modules/_contentful_optimization-web.html)
+for the complete option types behind these behaviors.
+
+### Custom browser events
 
 Use `track()` for business events:
 
@@ -456,9 +491,9 @@ await optimization.track({
 })
 ```
 
-## 8. Subscribe to `states` for Rerenders and UI Feedback
+## 8. Subscribe to `states` for rerenders and UI feedback
 
-The Web SDK is stateful, so most browser integrations should react to SDK state changes instead of
+The Web SDK is stateful, so most browser integrations can react to SDK state changes instead of
 passing `OptimizationData` objects through every UI layer.
 
 Useful streams include:
@@ -495,11 +530,11 @@ window.addEventListener('beforeunload', () => {
 })
 ```
 
-Each observable immediately emits its current snapshot and then emits future updates. If you need a
-synchronous read instead of a subscription, use `.current`, for example
+Each observable immediately emits its current snapshot and then emits subsequent updates. If you
+need a synchronous read instead of a subscription, use `.current`, for example
 `optimization.states.profile.current`.
 
-## Share the Anonymous ID Cookie in Hybrid SSR + Browser Apps
+## Share the anonymous ID cookie in hybrid SSR + browser apps
 
 If your architecture uses both `@contentful/optimization-node` on the server and
 `@contentful/optimization-web` in the browser, let both runtimes continue the same anonymous journey
@@ -518,7 +553,7 @@ entries after hydration. If the server already embeds personalized HTML or profi
 treat that response as personalized and avoid shared caching unless you vary on all relevant
 personalization inputs.
 
-## Reference Implementations to Compare Against
+## Reference implementations to compare against
 
 Use these files when you want working repository examples instead of guide snippets:
 

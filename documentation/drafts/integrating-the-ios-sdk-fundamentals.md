@@ -1,4 +1,4 @@
-# iOS SDK Fundamentals
+# iOS SDK fundamentals
 
 This document is the shared reference for the Contentful Optimization iOS SDK. It describes what the
 SDK is, how it is architected, and the concepts that apply regardless of whether your app is built
@@ -6,10 +6,10 @@ with SwiftUI or UIKit.
 
 Read this first, then move on to the UI-framework-specific guide:
 
-- [Integrating the Optimization iOS SDK in a SwiftUI App](./integrating-the-ios-sdk-in-a-swiftui-app.md)
-- [Integrating the Optimization iOS SDK in a UIKit App](./integrating-the-ios-sdk-in-a-uikit-app.md)
+- [Integrating the Optimization iOS SDK in a SwiftUI app](./integrating-the-ios-sdk-in-a-swiftui-app.md)
+- [Integrating the Optimization iOS SDK in a UIKit app](./integrating-the-ios-sdk-in-a-uikit-app.md)
 
-## What The SDK Is
+## What the SDK is
 
 The iOS SDK (`ContentfulOptimization`, distributed via Swift Package Manager from
 [`packages/ios`](../../packages/ios)) is a native Swift layer that lets iOS apps render personalized
@@ -23,7 +23,7 @@ never interact with the JS layer directly; every public API is Swift.
 
 See [`packages/ios/CODE_MAP.md`](../../packages/ios/CODE_MAP.md) for the full architecture diagram.
 
-## Reference App
+## Reference app
 
 A working demo of both integration styles lives at
 [Colorful-Team-Org/OptimizationiOSSDKDemo](https://github.com/Colorful-Team-Org/OptimizationiOSSDKDemo)
@@ -56,7 +56,7 @@ Minimum platforms: iOS 15 / macOS 12.
 > demo's `./scripts/setup.sh` handles this). Consumers of a released package get the bundle
 > prebuilt.
 
-## Core Types
+## Core types
 
 The SDK's public surface is small. Most integrations use five types:
 
@@ -159,7 +159,7 @@ Both demo apps (SwiftUI and UIKit) use this shortcut.
 
 Consent state is exposed reactively as `client.state.consent` (see below).
 
-## Reactive State
+## Reactive state
 
 `OptimizationClient` is an `ObservableObject`. Several properties are `@Published` and update as the
 JS bridge pushes signals:
@@ -177,7 +177,7 @@ analytics/personalization events emitted by the JS bridge. Useful for debug over
 In SwiftUI, consume these with `@EnvironmentObject` + property wrappers; in UIKit, subscribe via
 Combine (`client.$selectedPersonalizations.sink { ... }`).
 
-## Personalizing Contentful Entries
+## Personalizing Contentful entries
 
 Fetch entries from Contentful as `[String: Any]` dictionaries (e.g. via `URLSession` or any
 Contentful client that returns JSON-shaped output) and include linked optimization references by
@@ -201,7 +201,7 @@ In SwiftUI, `OptimizedEntry` wraps this call for you and also handles variant lo
 tracking, and tap tracking. In UIKit, you call `personalizeEntry` yourself — typically in a cell
 configuration method — and attach tracking manually.
 
-## Tracking Model
+## Tracking model
 
 The iOS SDK tracks three kinds of events, each with a corresponding API:
 
@@ -214,7 +214,7 @@ The iOS SDK tracks three kinds of events, each with a corresponding API:
 You will also see `identify(userId:traits:)` and `page(properties:)`. On mobile, screen events are
 usually preferred over page events.
 
-### Entry View Tracking Thresholds
+### Entry view tracking thresholds
 
 For entry views, the SDK fires an event when the entry has been at least **80% visible for 2
 seconds**, then emits periodic duration updates every 5 seconds while it remains visible, and a
@@ -222,7 +222,7 @@ final event when it disappears. Both thresholds are configurable per-entry in Sw
 `OptimizedEntry(..., viewTimeMs:, threshold:, viewDurationUpdateIntervalMs:)`. In UIKit, you compute
 duration yourself and send a `TrackViewPayload`.
 
-## Live Updates
+## Live updates
 
 `OptimizedEntry` in SwiftUI (and any UIKit code that reads `client.selectedPersonalizations`) can
 either **lock to the first variant it resolves** or **update live** when the selected
@@ -238,7 +238,7 @@ Three layers control the behavior, from broadest to narrowest:
 
 The resolution priority is:
 
-| Preview Panel | Global  | Per-Entry | Result |
+| Preview panel | Global  | Per-entry | Result |
 | ------------- | ------- | --------- | ------ |
 | Open          | any     | any       | Live   |
 | Closed        | `true`  | `nil`     | Live   |
@@ -249,7 +249,7 @@ The resolution priority is:
 When the preview panel closes, SwiftUI's `OptimizedEntry` snapshots the current variants so that any
 overrides applied during the preview session become the new "locked" baseline.
 
-## Preview Panel
+## Preview panel
 
 The preview panel is an in-app developer tool that lets authors and engineers override audience
 membership and variant selections locally without touching production state. It is shipped as part
@@ -277,7 +277,7 @@ let contentfulClient = ContentfulHTTPPreviewClient(
 While the panel is open, `client.isPreviewPanelOpen` is `true` and all `OptimizedEntry` components
 switch to live update mode.
 
-## Offline Behavior
+## Offline behavior
 
 The SDK monitors network reachability via `NWPathMonitor`. When offline:
 
@@ -288,12 +288,12 @@ The SDK monitors network reachability via `NWPathMonitor`. When offline:
 
 No configuration is required. This behavior is identical across SwiftUI and UIKit integrations.
 
-## Where To Go Next
+## Where to go next
 
 - Building a SwiftUI app? Continue to
-  [Integrating the Optimization iOS SDK in a SwiftUI App](./integrating-the-ios-sdk-in-a-swiftui-app.md).
+  [Integrating the Optimization iOS SDK in a SwiftUI app](./integrating-the-ios-sdk-in-a-swiftui-app.md).
 - Building a UIKit app? Continue to
-  [Integrating the Optimization iOS SDK in a UIKit App](./integrating-the-ios-sdk-in-a-uikit-app.md).
+  [Integrating the Optimization iOS SDK in a UIKit app](./integrating-the-ios-sdk-in-a-uikit-app.md).
 - Mixing both UI frameworks in one app? The SwiftUI views work inside `UIHostingController`, and
   `OptimizationClient` is the shared underlying type — pass the same instance into both halves of
   your app.

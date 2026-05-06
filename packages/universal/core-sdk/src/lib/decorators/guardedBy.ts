@@ -60,7 +60,7 @@ export interface GuardedByOptions<T extends object> {
    * @remarks
    * - If a property key is supplied and the instance does not have a callable at that key,
    *   the hook is ignored.
-   * - The hook **must not** be `async`; any async work should be scheduled manually.
+   * - The hook **must not** be `async`; schedule any async work manually.
    */
   readonly onBlocked?: BlockHandler | (keyof T & (string | symbol))
 }

@@ -1,7 +1,7 @@
 import { cloneDeep } from 'es-toolkit'
 
 /**
- * A utility type representing a value that may be synchronously available or
+ * A utility type representing a value that can be synchronously available or
  * produced asynchronously.
  *
  * @typeParam T - The resolved value type.
@@ -17,7 +17,7 @@ export type MaybePromise<T> = T | Promise<T>
  * @typeParam T - The value type intercepted and returned.
  * @param value - The current (readonly) value in the interception chain.
  * @returns The next value for the chain, either directly or via a promise.
- * @remarks Implementations SHOULD avoid mutating `value` and instead return a
+ * @remarks We recommend that implementations avoid mutating `value` and instead return a
  * new or safely-updated instance.
  * @see {@link InterceptorManager}
  * @public
@@ -29,7 +29,7 @@ export type Interceptor<T> = (value: Readonly<T>) => MaybePromise<T>
  *
  * Interceptors are executed in insertion order. Each interceptor receives the
  * result of the previous interceptor (or the initial input for the first one)
- * and may return a new value synchronously or asynchronously.
+ * and can return a new value synchronously or asynchronously.
  *
  * @typeParam T - The value type processed by the interceptors.
  * @remarks This class snapshots the current interceptor list at invocation time
@@ -112,7 +112,7 @@ export class InterceptorManager<T> {
   }
 
   /**
-   * Get the number of currently registered interceptors.
+   * Get the number of registered interceptors.
    *
    * @returns The count of interceptors.
    * @example
@@ -133,7 +133,7 @@ export class InterceptorManager<T> {
    *
    * @param input - The initial value to pass to the first interceptor.
    * @returns A promise resolving to the final value after all interceptors have run.
-   * @throws May rethrow any error thrown by an interceptor. <!-- Intentionally vague: error type depends on interceptor implementation -->
+   * @throws Rethrows errors from interceptors. <!-- Intentionally vague: error type depends on interceptor implementation -->
    * @remarks The interceptor list is snapshotted at invocation time; changes to
    * the registry during execution do not affect the running sequence.
    * @example

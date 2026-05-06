@@ -14,7 +14,7 @@ const logger = createScopedLogger('PreviewOverrides')
 /**
  * Subset of {@link InterceptorManager} consumed by the preview override
  * manager. Picking only the public methods (`add` / `remove`) avoids the
- * nominal-typing mismatch that would otherwise arise when a consumer passes
+ * nominal-typing mismatch that can arise when a consumer passes
  * an `InterceptorManager` resolved from one bundle (e.g. the package root)
  * into a `PreviewOverrideManager` typed via a different bundle (e.g. the
  * `./preview-support` entry point), since `InterceptorManager`'s `private`

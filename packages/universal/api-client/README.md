@@ -17,41 +17,33 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
-The Contentful Optimization API Client Library provides methods for interfacing with Contentful's
-Experience API and Insights API, which serve its Personalization and Analytics products.
+The Contentful Optimization API Client provides low-level transport for the Experience API and
+Insights API. Application-facing SDKs compose this package with event builders, state management,
+queueing, and runtime-specific defaults.
 
-> [!NOTE]
->
-> The Experience API and Insights API are separate today, and this client provides a unified SDK
-> surface for both APIs.
+We recommend starting applications with Web, React Web, Node, or React Native SDKs. Use this package
+directly when building or maintaining SDK layers, tests, tooling, or first-party integrations that
+need raw API access.
 
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Getting Started](#getting-started)
-- [Configuration](#configuration)
-  - [Top-level Configuration Options](#top-level-configuration-options)
-  - [Fetch Options](#fetch-options)
-  - [Insights API Options](#insights-api-options)
-  - [Experience API Options](#experience-api-options)
-- [Working With the APIs](#working-with-the-apis)
+- [Getting started](#getting-started)
+- [When to use this package](#when-to-use-this-package)
+- [Common configuration](#common-configuration)
+- [API surface](#api-surface)
   - [Experience API](#experience-api)
-    - [Get Profile data](#get-profile-data)
-    - [Create a New Profile](#create-a-new-profile)
-    - [Update an Existing Profile](#update-an-existing-profile)
-    - [Upsert a Profile](#upsert-a-profile)
-    - [Upsert Many Profiles](#upsert-many-profiles)
   - [Insights API](#insights-api)
-    - [Send Batch Events](#send-batch-events)
-- [Event Construction](#event-construction)
+  - [Fetch helpers](#fetch-helpers)
+- [Related](#related)
 
 <!-- mtoc-end -->
 </details>
 
-## Getting Started
+## Getting started
 
 Install using an NPM-compatible package manager, pnpm for example:
 
@@ -59,199 +51,111 @@ Install using an NPM-compatible package manager, pnpm for example:
 pnpm install @contentful/optimization-api-client
 ```
 
-Import the API client; both CJS and ESM module systems are supported, ESM preferred:
+Import and initialize the unified API client; both CJS and ESM module systems are supported, ESM
+preferred:
 
 ```ts
 import { ApiClient } from '@contentful/optimization-api-client'
+
+const client = new ApiClient({
+  clientId: 'your-client-id',
+  environment: 'main',
+})
 ```
 
-Configure and initialize the API Client:
+## When to use this package
 
-```ts
-const client = new ApiClient({ clientId: 'abc123' })
-```
+Use `@contentful/optimization-api-client` when you need direct low-level access to the Experience
+API or Insights API transport surface. Use an application-facing SDK when you need optimization
+state, consent handling, event builders, entry resolution, tracking, or platform defaults.
 
-## Configuration
-
-### Top-level Configuration Options
+## Common configuration
 
 | Option         | Required? | Default                      | Description                                                 |
 | -------------- | --------- | ---------------------------- | ----------------------------------------------------------- |
-| `experience`   | No        | See "Experience API Options" | Configuration specific to the Experience API                |
 | `clientId`     | Yes       | N/A                          | Shared API key for Experience API and Insights API requests |
-| `environment`  | No        | `'main'`                     | The environment identifier                                  |
-| `fetchOptions` | No        | See "Fetch Options"          | Configuration for Fetch timeout and retry functionality     |
-| `insights`     | No        | See "Insights API Options"   | Configuration specific to the Insights API                  |
+| `environment`  | No        | `'main'`                     | Contentful environment identifier                           |
+| `experience`   | No        | See Experience options below | Experience API endpoint and default request options         |
+| `insights`     | No        | See Insights options below   | Insights API endpoint options                               |
+| `fetchOptions` | No        | SDK defaults                 | Fetch timeout and retry behavior                            |
 
-### Fetch Options
+Common Experience API options:
 
-Fetch options allow for configuration of both a Fetch API-compatible fetch method and the
-retry/timeout logic integrated into this API client. Specify the `fetchMethod` when the host
-application environment does not offer a `fetch` method that is compatible with the standard Fetch
-API in its global scope.
+| Option            | Required? | Default                               | Description                                     |
+| ----------------- | --------- | ------------------------------------- | ----------------------------------------------- |
+| `baseUrl`         | No        | `'https://experience.ninetailed.co/'` | Base URL for the Experience API                 |
+| `enabledFeatures` | No        | `['ip-enrichment', 'location']`       | Experience API features for each request        |
+| `ip`              | No        | `undefined`                           | IP address override for Experience API analysis |
+| `locale`          | No        | `'en-US'` (in API)                    | Locale used for Experience API location labels  |
+| `plainText`       | No        | `false`                               | Sends performance-critical endpoints as text    |
+| `preflight`       | No        | `false`                               | Aggregates a profile state without storing it   |
 
-| Option             | Required? | Default     | Description                                                           |
-| ------------------ | --------- | ----------- | --------------------------------------------------------------------- |
-| `fetchMethod`      | No        | `undefined` | Signature of a fetch method used by the API clients                   |
-| `intervalTimeout`  | No        | `0`         | Delay (in milliseconds) between retry attempts                        |
-| `onFailedAttempt`  | No        | `undefined` | Callback invoked whenever a retry attempt fails                       |
-| `onRequestTimeout` | No        | `undefined` | Callback invoked when a request exceeds the configured timeout        |
-| `requestTimeout`   | No        | `3000`      | Maximum time (in milliseconds) to wait for a response before aborting |
-| `retries`          | No        | `1`         | Maximum number of retry attempts                                      |
+All Experience options except `baseUrl` can also be provided per request.
 
-Configuration method signatures:
+Common Insights API options:
 
-- `fetchMethod`: `(url: string \| URL, init: RequestInit) => Promise<Response>`
-- `onFailedAttempt` and `onRequestTimeout`: `(options: FetchMethodCallbackOptions) => void`
+| Option          | Required? | Default                                    | Description                                           |
+| --------------- | --------- | ------------------------------------------ | ----------------------------------------------------- |
+| `baseUrl`       | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                         |
+| `beaconHandler` | No        | `undefined`                                | Custom handler for enqueueing event batches if needed |
 
-> [!NOTE]
->
-> Retry behavior is intentionally fixed to HTTP `503` responses (`Service Unavailable`) for the
-> default SDK transport policy. This matches current Experience API and Insights API expectations:
-> `503` is treated as the transient availability signal, while other response classes are handled by
-> caller logic and are intentionally not retried by default. Treat this as deliberate contract
-> behavior, not a transport gap; broaden retry status handling only with an explicit API contract
-> change.
+Common `fetchOptions` are `fetchMethod`, `requestTimeout`, `retries`, `intervalTimeout`,
+`onFailedAttempt`, and `onRequestTimeout`. Default retries intentionally apply only to HTTP `503`
+responses.
 
-### Insights API Options
+For every option, callback payload, request type, and response type, use the generated
+[API Client reference](https://contentful.github.io/optimization/modules/_contentful_optimization-api-client.html).
 
-| Option          | Required? | Default                                    | Description                                                              |
-| --------------- | --------- | ------------------------------------------ | ------------------------------------------------------------------------ |
-| `baseUrl`       | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                            |
-| `beaconHandler` | No        | `undefined`                                | Handler used to enqueue events via the Beacon API or a similar mechanism |
-
-Configuration method signatures:
-
-- `beaconHandler`: `(url: string | URL, data: BatchInsightsEventArray) => boolean`
-
-### Experience API Options
-
-| Option            | Required? | Default                               | Description                                                         |
-| ----------------- | --------- | ------------------------------------- | ------------------------------------------------------------------- |
-| `baseUrl`         | No        | `'https://experience.ninetailed.co/'` | Base URL for the Experience API                                     |
-| `enabledFeatures` | No        | `['ip-enrichment', 'location']`       | Enabled features which the API may use for each request             |
-| `ip`              | No        | `undefined`                           | IP address to override the API behavior for IP analysis             |
-| `locale`          | No        | `'en-US'` (in API)                    | Locale used to translate `location.city` and `location.country`     |
-| `plainText`       | No        | `false`                               | Sends performance-critical endpoints in plain text                  |
-| `preflight`       | No        | `false`                               | Instructs the API to aggregate a new profile state but not store it |
-
-> [!NOTE]
->
-> All options except `baseUrl` may also be provided on a per-request basis.
-
-## Working With the APIs
+## API surface
 
 ### Experience API
 
-Experience API methods are scoped to the client's `experience` member. All singular Experience API
-methods return a `Promise` that resolves with the following data:
-
-```json
-{
-  "profile": {
-    /* User profile data */
-  },
-  "selectedOptimizations": [
-    {
-      /* Optimization/Experience API configuration for the associated profile */
-    }
-  ],
-  "changes": [
-    {
-      /* Custom Flag changes associated with the evaluated profile */
-    }
-  ]
-}
-```
-
-#### Get Profile data
+Experience API methods are scoped to `client.experience` and return profile and optimization data:
 
 ```ts
-const client = new ApiClient({ clientId: 'abc123' })
-const { profile } = await client.experience.getProfile('profile-123', { locale: 'de-DE' })
-```
-
-#### Create a New Profile
-
-```ts
-const client = new ApiClient({ clientId: 'abc123' })
-const { profile } = await client.experience.createProfile({ events: [...] }, { locale: 'de-DE' })
-```
-
-#### Update an Existing Profile
-
-```ts
-const client = new ApiClient({ clientId: 'abc123' })
-const { profile } = await client.experience.updateProfile(
+const { profile, selectedOptimizations, changes } = await client.experience.upsertProfile(
   {
-    profileId: 'profile-123',
-    events: [...],
-  },
-  { locale: 'de-DE' }
-)
-```
-
-#### Upsert a Profile
-
-```ts
-const client = new ApiClient({ clientId: 'abc123' })
-const { profile } = await client.experience.upsertProfile(
-  {
-    profileId,
-    events: [...],
-  },
-  { locale: 'de-DE' }
-)
-```
-
-#### Upsert Many Profiles
-
-The `upsertManyProfiles` method returns a `Promise` that resolves with an array of user profiles.
-The `events` array must contain at least one event. Each event should have an additional
-`anonymousId` property set to the associated anonymous ID or profile ID.
-
-```ts
-const client = new ApiClient({ clientId: 'abc123' })
-const profiles = await client.experience.upsertManyProfiles(
-  {
-    events: [
-      {
-        anonymousId: 'anon-123',
-        // valid Experience API event payload fields
-      },
-    ],
+    profileId: 'profile-id',
+    events: [pageEvent],
   },
   { locale: 'de-DE' },
 )
 ```
 
+Common methods include `getProfile`, `createProfile`, `updateProfile`, `upsertProfile`, and
+`upsertManyProfiles`.
+
 ### Insights API
 
-Insights API methods are scoped to the client's `insights` member. The batch send method returns a
-`Promise` that resolves to `boolean`.
-
-#### Send Batch Events
+Insights API methods are scoped to `client.insights` and send analytics event batches:
 
 ```ts
-const client = new ApiClient({ clientId: 'abc123' })
-await client.insights.sendBatchEvents([
-  {
-    profile: { id: 'abc-123', ... },
-    events: [
-      {
-        type: 'component',
-        componentId: 'hero-banner',
-        componentType: 'Entry',
-        variantIndex: 0,
-        ...,
-      },
-    ],
-  }
-])
+await client.insights.sendBatchEvents({
+  profile,
+  events: [viewEvent],
+})
 ```
 
-## Event Construction
+Insights endpoints do not return response data.
 
-Event-construction helpers (`EventBuilder`) are part of
-[`@contentful/optimization-core`](../core-sdk/README.md) and environment SDKs that build on top of
-it. This package focuses on API transport and request/response validation.
+### Fetch helpers
+
+This package also exports fetch helper functions used by SDK layers:
+
+| Helper                       | Purpose                                                 |
+| ---------------------------- | ------------------------------------------------------- |
+| `createProtectedFetchMethod` | Adds timeout and retry protection around a fetch method |
+| `createRetryFetchMethod`     | Applies retry policy to retryable responses             |
+| `createTimeoutFetchMethod`   | Aborts requests after the configured timeout            |
+
+Use generated reference docs for helper signatures and callback payloads.
+
+## Related
+
+- [API Client generated reference](https://contentful.github.io/optimization/modules/_contentful_optimization-api-client.html) -
+  exported API reference
+- [API Schemas](../api-schemas/README.md) - runtime validation schemas and inferred API types
+- [Optimization Core SDK](../core-sdk/README.md) - platform-agnostic SDK layer that composes this
+  client
+- [Choosing the right SDK](https://contentful.github.io/optimization/documents/Documentation.Guides.choosing-the-right-sdk.html) -
+  package selection guidance for application integrations

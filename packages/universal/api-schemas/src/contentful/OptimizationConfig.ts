@@ -4,7 +4,7 @@ import * as z from 'zod/mini'
  * Zod schema describing a single entry replacement variant.
  *
  * @remarks
- * Each variant is identified by an `id` and may be marked as `hidden`.
+ * Each variant is identified by an `id` and can be marked as `hidden`.
  *
  * @public
  */
@@ -41,7 +41,7 @@ export const EntryReplacementComponent = z.object({
    * Discriminator for the component type.
    *
    * @remarks
-   * May be omitted, in which case the component is treated as an EntryReplacement.
+   * Can be omitted, in which case the component is treated as an EntryReplacement.
    */
   type: z.optional(z.literal('EntryReplacement')),
 
@@ -51,7 +51,7 @@ export const EntryReplacementComponent = z.object({
   baseline: EntryReplacementVariant,
 
   /**
-   * Additional variants that may be served.
+   * Additional variants that can be served.
    */
   variants: z.array(EntryReplacementVariant),
 })
@@ -67,7 +67,7 @@ export type EntryReplacementComponent = z.infer<typeof EntryReplacementComponent
  * Zod schema describing a variant for inline variables.
  *
  * @remarks
- * The value may be a primitive or a JSON object.
+ * The value can be a primitive or a JSON object.
  *
  * @public
  */
@@ -174,7 +174,7 @@ export const OptimizationConfig = z.object({
   distribution: z.optional(z.array(z.number())),
 
   /**
-   * Percentage of total traffic that should enter the optimization.
+   * Percentage of total traffic to include in the optimization.
    *
    */
   traffic: z.optional(z.number()),
@@ -186,7 +186,7 @@ export const OptimizationConfig = z.object({
   components: z.optional(OptimizationComponentArray),
 
   /**
-   * Controls whether the assignment should be sticky for a given user.
+   * Controls whether the assignment is sticky for a given user.
    *
    */
   sticky: z.optional(z.boolean()),

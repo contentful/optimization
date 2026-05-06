@@ -43,7 +43,7 @@ export const OptimizationEntryFields = z.extend(EntryFields, {
    * The description of the optimization (Short Text).
    *
    * @remarks
-   * Optional, may be `null` if no description is provided.
+   * Optional and can be `null` if no description is provided.
    */
   nt_description: z.optional(z.nullable(z.string())),
 
@@ -61,7 +61,7 @@ export const OptimizationEntryFields = z.extend(EntryFields, {
    * The audience of the optimization (Audience).
    *
    * @remarks
-   * Optional and nullable; when omitted or `null`, the optimization may apply
+   * Optional and nullable; when omitted or `null`, the optimization can apply
    * to all users.
    */
   nt_audience: z.optional(z.nullable(AudienceEntry)),
@@ -124,7 +124,7 @@ export type OptimizationEntrySkeleton = z.infer<typeof OptimizationEntrySkeleton
  * Zod schema describing an array of optimization entries or links.
  *
  * @remarks
- * Each element may be a {@link Link} or a fully resolved {@link OptimizationEntry}.
+ * Each element can be a {@link Link} or a fully resolved {@link OptimizationEntry}.
  *
  * @public
  */

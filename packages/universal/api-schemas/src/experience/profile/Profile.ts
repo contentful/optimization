@@ -36,7 +36,7 @@ export const Profile = z.object({
   random: z.number(),
 
   /**
-   * List of audience identifiers that this profile currently belongs to.
+   * List of audience identifiers that this profile belongs to.
    */
   audiences: z.array(z.string()),
 

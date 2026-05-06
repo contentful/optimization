@@ -1,10 +1,10 @@
-# iOS SDK Code Map — `packages/ios/`
+# iOS SDK code map — `packages/ios/`
 
-## High-Level Overview
+## High-level overview
 
-This diff introduces a complete **Contentful Optimization iOS SDK** — a Swift Package (iOS 15+/macOS
-12+) that enables content personalization and analytics tracking for native iOS apps. The SDK runs
-the existing JavaScript optimization core inside a **JavaScriptCore** context, bridged by a
+This directory contains the pre-release **Contentful Optimization iOS SDK** — a Swift Package (iOS
+15+/macOS 12+) that enables content personalization and analytics tracking for native iOS apps. The
+SDK runs the existing JavaScript optimization core inside a **JavaScriptCore** context, bridged by a
 TypeScript adapter layer. Swift code handles native concerns (persistence, networking, app
 lifecycle, SwiftUI integration) while the JS engine handles personalization logic, profile
 management, and analytics batching.
@@ -18,7 +18,7 @@ The architecture has two main sub-packages:
 
 ---
 
-## Component Diagram
+## Component diagram
 
 ```mermaid
 graph TB
@@ -101,7 +101,7 @@ graph TB
     PPC -->|"overrideAudience/Variant"| OC
 ```
 
-### Data Flow: Async Bridge Call
+### Data flow: async bridge call
 
 ```mermaid
 sequenceDiagram
@@ -118,7 +118,7 @@ sequenceDiagram
     JSM-->>Swift: Result<String, Error>
 ```
 
-### Data Flow: View Tracking Lifecycle
+### Data flow: view tracking lifecycle
 
 ```mermaid
 stateDiagram-v2
@@ -146,7 +146,7 @@ stateDiagram-v2
 
 ## Testing
 
-### What's Covered (63 test methods, ~1030 lines)
+### What's covered (63 test methods, ~1030 lines)
 
 | Area                                     | Tests                                                                                                                                                                                                                    | Coverage |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
@@ -168,7 +168,7 @@ stateDiagram-v2
 | **NativePolyfills.TimerStore**           | Isolation, cancelAll, fired-removes-entry                                                                                                                                                                                | 3 tests  |
 | **Timer lifecycle**                      | Register returns separate stores, destroy cancels timers                                                                                                                                                                 | 2 tests  |
 
-### Plausible Gaps
+### Plausible gaps
 
 - **Integration tests with real JS execution**: Most client tests use mocked JS contexts. End-to-end
   tests that exercise the full polyfill → UMD → bridge pipeline are limited to JSContextManager

@@ -1,4 +1,4 @@
-# Preview Panel E2E Scenarios (Cross-Platform Contract)
+# Preview panel E2E scenarios (cross-platform contract)
 
 This document is the **shared contract** driving preview-panel E2E tests on both React Native
 (Detox) and iOS (XCUITest). Both suites MUST mirror scenario names, data, and expected observations
@@ -81,9 +81,12 @@ Drive:
 
 Assert: entries linked to X now render their variant text.
 
-> **Note**: requires an audience the identified user does NOT qualify for. If the mock's identified
-> profile qualifies for every audience with content, extend the mock to add one unqualified
-> audience + experience. Skip scenario if not yet possible; log as known gap.
+> [!NOTE]
+>
+> This scenario requires an audience the identified user does not qualify for. If the mock's
+> identified profile qualifies for every audience with content, extend the mock to add one
+> unqualified audience and experience. Skip the scenario if it is not possible, and log it as a
+> known gap.
 
 ### 2. Deactivate a qualified audience renders baselines
 
@@ -178,10 +181,10 @@ Assert: test experience renders default (variant) content; preview panel Overrid
 - **iOS native**:
   `xcodebuild test -scheme OptimizationApp -only-testing:OptimizationAppUITests/PreviewPanelOverridesTests -destination 'platform=iOS Simulator,name=iPhone 16'`
 
-## Gaps / Known Limitations
+## Gaps / known limitations
 
-- **Scenario 1** (activate unqualified audience) currently unverifiable unless the mock is extended
-  with an audience the identified user does not qualify for. Document as TODO on the test, or adjust
-  the mock profile.
+- **Scenario 1** (activate unqualified audience) unverifiable until the mock is extended with an
+  audience the identified user does not qualify for. Document as TODO on the test, or adjust the
+  mock profile.
 - **Multi-index variant pickers**: all mock experiences are binary (index 0 or 1). Higher-index
   arithmetic is unit-tested at manager level.

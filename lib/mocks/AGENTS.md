@@ -7,19 +7,24 @@ Read the repository root `AGENTS.md` first.
 This package owns shared mock fixtures, MSW handlers, mock server behavior, and Contentful test
 space utilities used by unit tests and reference implementations.
 
-## Key Paths
+## Key paths
 
 - `src/`
 - `scripts/`
 - `.contentfulrc.json` for local Contentful credentials
 
-## Local Rules
+## Local rules
 
 - Keep mock contracts aligned with `@contentful/optimization-api-schemas`.
 - Server behavior changes here can affect multiple implementations at once. Broaden validation when
   endpoint behavior or fixture shape changes.
 - Do not commit secrets or local credentials from `.contentfulrc.json`.
 - Do not run `upload:ctfl:space` unless the user explicitly asked for Contentful space mutation.
+- Keep `README.md` framed as internal testing support, not as a public SDK package. Preserve the
+  sections that explain when to use mocks in unit tests, local dev and E2E flows, fixture updates,
+  and Contentful test-space setup.
+- README commands must prefer repo-root wrappers such as `pnpm serve:mocks` for common flows and
+  package-filter commands only for package-specific fixture or Contentful space utilities.
 
 ## Commands
 
@@ -29,7 +34,7 @@ space utilities used by unit tests and reference implementations.
 - `pnpm --filter mocks fetch:ctfl`
 - `pnpm --filter mocks generate:ctfl:types`
 
-## Usually Validate
+## Usually validate
 
 - Run `typecheck` and `test:unit` for code changes.
 - Run affected implementation E2E when mock server routes, fixtures, or API response shapes change.

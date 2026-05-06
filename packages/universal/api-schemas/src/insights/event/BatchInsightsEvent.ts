@@ -20,7 +20,7 @@ export const BatchInsightsEvent = z.object({
   profile: PartialProfile,
 
   /**
-   * Insights events that should be recorded for this profile.
+   * Insights events to record for this profile.
    *
    * @see {@link InsightsEventArray}
    */

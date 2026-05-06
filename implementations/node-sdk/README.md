@@ -18,7 +18,7 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 This is a reference implementation for the
 [Optimization Node SDK](../../packages/node/node-sdk/README.md) and is part of the
@@ -32,9 +32,20 @@ options directly to stateless event methods inside each incoming request handler
 > Cache only raw Contentful entries in SSR flows. Do not mutate shared cached entries during request
 > rendering, and do not share merge-tag-rendered output across users.
 
+## What this demonstrates
+
+Use this implementation when you need a minimal server-rendered example for
+`@contentful/optimization-node`. It demonstrates request-scoped Experience API options, SSR-safe
+entry resolution, merge-tag rendering, profile-aware event calls, and local mock API usage.
+
+## Prerequisites
+
+- Node.js >= 20.19.0 (24.13.0 recommended to match `.nvmrc`)
+- pnpm 10.x
+
 ## Setup
 
-All steps should be run from the monorepo root.
+Run all steps from the monorepo root.
 
 1. Install pnpm packages:
 
@@ -59,63 +70,57 @@ All steps should be run from the monorepo root.
    the mock server implementation. To test the implementation against a live server environment, see
    the [mocks package](../../lib/mocks/README.md) for information on how to set up Contentful space
    with test data.
-5. Start the mock API and application servers:
 
-   ```sh
-   pnpm --dir implementations/node-sdk --ignore-workspace serve
-   ```
+## Running locally
 
-6. The application can be accessed via Web browser at `http://localhost:3000`
-
-7. Stop the mock API and application servers:
-
-   ```sh
-   pnpm --dir implementations/node-sdk --ignore-workspace serve:stop
-   ```
-
-See `implementations/node-sdk/package.json` for more commands.
-
-## Running From Root Scripts
-
-You can run this implementation from the monorepo root via the root `package.json` implementation
-scripts.
+Run these commands from the monorepo root.
 
 1. Start servers:
 
    ```sh
-   pnpm run implementation:node-sdk -- serve
+   pnpm implementation:run -- node-sdk serve
    ```
 
 2. Stop servers:
 
    ```sh
-   pnpm run implementation:node-sdk -- serve:stop
+   pnpm implementation:run -- node-sdk serve:stop
    ```
 
 3. Run E2E:
 
    ```sh
-   pnpm run implementation:node-sdk -- test:e2e
+   pnpm test:e2e:node-sdk
    ```
 
-## Running E2E Tests
+The application can be accessed via Web browser at `http://localhost:3000`. See
+`implementations/node-sdk/package.json` for lower-level local commands.
+
+## Running E2E tests
 
 E2E tests are run using Playwright.
 
-1. Install Playwright dependencies:
+1. Install implementation dependencies, browser binaries, and system dependencies:
 
    ```sh
-   pnpm --dir implementations/node-sdk --ignore-workspace exec playwright install --with-deps
+   pnpm setup:e2e:node-sdk
    ```
 
 2. Run the E2E test suite:
 
    ```sh
-   pnpm --dir implementations/node-sdk --ignore-workspace test:e2e
+   pnpm test:e2e:node-sdk
    ```
 
    The tests can alternatively be run using Playwright's GUI:
 
    ```sh
-   pnpm --dir implementations/node-sdk --ignore-workspace test:e2e:ui
+   pnpm implementation:run -- node-sdk test:e2e:ui
    ```
+
+## Related
+
+- [@contentful/optimization-node](../../packages/node/node-sdk/README.md) - Node SDK package
+- [Node SSR + Web Vanilla](../node-sdk+web-sdk/README.md) - Hybrid server/browser reference
+  implementation
+- [Mocks package](../../lib/mocks/README.md) - Shared mock API server and fixtures

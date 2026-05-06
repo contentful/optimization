@@ -91,7 +91,7 @@ export function createEntryClickDetector(
   const resolveClickContext = (
     eventTarget: Element,
   ): { trackedEntryElement?: Element; hasClickablePath: boolean } => {
-    // Native selector traversal is a fast path for HTML semantics and data-attribute hints.
+    // Native selector traversal handles HTML semantics and data-attribute hints.
     const hasClickableSelectorPath = eventTarget.closest(CLICKABLE_SELECTOR) !== null
     let current: Element | null = eventTarget
     let trackedEntryElement: Element | undefined = undefined

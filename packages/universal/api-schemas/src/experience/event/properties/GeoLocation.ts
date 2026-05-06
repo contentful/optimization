@@ -34,7 +34,7 @@ const Coordinates = z.object({
  * Zod schema describing geo-location properties associated with an event.
  *
  * @remarks
- * All properties are optional and may be derived from IP or device data.
+ * All properties are optional and can be derived from IP or device data.
  *
  * @public
  */

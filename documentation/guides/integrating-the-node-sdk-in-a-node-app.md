@@ -1,4 +1,4 @@
-# Integrating the Optimization Node SDK in a Node App
+# Integrating the Optimization Node SDK in a Node app
 
 Use this guide when you want to implement server-side personalization in a Node runtime such as
 Express, a custom SSR server, or a server-side function.
@@ -9,27 +9,27 @@ The examples below use Express, but the same flow applies to any Node request ha
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Scope and Capabilities](#scope-and-capabilities)
-- [The Integration Flow](#the-integration-flow)
-- [1. Install and Initialize the SDK](#1-install-and-initialize-the-sdk)
-- [2. Turn the Express Request into SDK Event Context](#2-turn-the-express-request-into-sdk-event-context)
-- [3. Handle Consent in Your Application Layer](#3-handle-consent-in-your-application-layer)
-- [4. Decide How You Will Persist the Profile ID](#4-decide-how-you-will-persist-the-profile-id)
-- [5. Call `page()` and `identify()` at the Right Time](#5-call-page-and-identify-at-the-right-time)
-  - [Which Order Should `page()` and `identify()` Use?](#which-order-should-page-and-identify-use)
-- [6. Resolve Contentful Entries with `selectedOptimizations`](#6-resolve-contentful-entries-with-selectedoptimizations)
-- [7. Resolve Merge Tags and Custom Flags](#7-resolve-merge-tags-and-custom-flags)
-  - [Merge Tags](#merge-tags)
-  - [Custom Flags](#custom-flags)
-- [8. Emit Follow-Up Server Events When They Matter](#8-emit-follow-up-server-events-when-they-matter)
-- [Caching and Cache Safety](#caching-and-cache-safety)
-- [Know When the Web SDK Should Join the Architecture](#know-when-the-web-sdk-should-join-the-architecture)
-- [Reference Implementations to Compare Against](#reference-implementations-to-compare-against)
+- [Scope and capabilities](#scope-and-capabilities)
+- [The integration flow](#the-integration-flow)
+- [1. Install and initialize the SDK](#1-install-and-initialize-the-sdk)
+- [2. Turn the Express request into SDK event context](#2-turn-the-express-request-into-sdk-event-context)
+- [3. Handle consent in your application layer](#3-handle-consent-in-your-application-layer)
+- [4. Decide how you will persist the profile ID](#4-decide-how-you-will-persist-the-profile-id)
+- [5. Call `page()` and `identify()` at the right time](#5-call-page-and-identify-at-the-right-time)
+  - [`page()` and `identify()` call order](#page-and-identify-call-order)
+- [6. Resolve Contentful entries with `selectedOptimizations`](#6-resolve-contentful-entries-with-selectedoptimizations)
+- [7. Resolve merge tags and custom flags](#7-resolve-merge-tags-and-custom-flags)
+  - [Merge tags](#merge-tags)
+  - [Custom flags](#custom-flags)
+- [8. Emit follow-up server events when they matter](#8-emit-follow-up-server-events-when-they-matter)
+- [Caching and cache safety](#caching-and-cache-safety)
+- [Know when the Web SDK belongs in the architecture](#know-when-the-web-sdk-belongs-in-the-architecture)
+- [Reference implementations to compare against](#reference-implementations-to-compare-against)
 
 <!-- mtoc-end -->
 </details>
 
-## Scope and Capabilities
+## Scope and capabilities
 
 The Node SDK is the server-side package for Node-based applications in the Optimization SDK Suite.
 It lets consumers:
@@ -43,13 +43,13 @@ It lets consumers:
 
 The Node SDK is intentionally stateless. It does not manage consent, cookies, sessions, or
 long-lived profile state for you. Your application decides how profile IDs are persisted and when
-events should be sent.
+events are sent.
 
 It also does not replace your Contentful delivery client. Your app still fetches entries from
 Contentful. The Node SDK helps you choose the right variant for the current profile after that
 content has been fetched.
 
-## The Integration Flow
+## The integration flow
 
 In practice, most Node integrations follow this high-level sequence:
 
@@ -67,7 +67,7 @@ The two Node reference implementations in this repository show that pattern in w
 - [Node SSR Only](../../implementations/node-sdk/README.md)
 - [Node SSR + Web SDK Vanilla](../../implementations/node-sdk+web-sdk/README.md)
 
-## 1. Install and Initialize the SDK
+## 1. Install and initialize the SDK
 
 Install the package in your Node app:
 
@@ -116,10 +116,10 @@ Notes:
 - On modern Node runtimes, the built-in `fetch` implementation is usually enough. If your runtime
   does not expose a standard Fetch API, provide `fetchOptions.fetchMethod`.
 
-## 2. Turn the Express Request into SDK Event Context
+## 2. Turn the Express request into SDK event context
 
 The SDK can accept request-scoped event context such as locale, user agent, and page information.
-That context should be built fresh for every incoming request.
+That context must be built fresh for every incoming request.
 
 The reference implementations do this by translating the Express request into
 `UniversalEventBuilderArgs`:
@@ -180,12 +180,12 @@ stable, request-specific description of the current page or route.
 locale values are intentionally separate, even if your app derives them from the same request
 header.
 
-## 3. Handle Consent in Your Application Layer
+## 3. Handle consent in your application layer
 
 The Node SDK does not expose a server-side `consent()` state the way stateful SDKs do. In a Node
 app, consent belongs in your application layer.
 
-That usually means your app should:
+That usually means your app needs to:
 
 - store the user's consent decision in its own cookie, session, or user-preference store
 - decide which high-level SDK methods are allowed before consent, after consent, and after consent
@@ -221,7 +221,7 @@ function clearOptimizationIdentity(res: Response): void {
 The exact consent policy belongs to the application, not the SDK. The important part is that the
 server makes that decision before it persists identifiers or emits events on the user's behalf.
 
-## 4. Decide How You Will Persist the Profile ID
+## 4. Decide how you will persist the profile ID
 
 Because the Node SDK is stateless, it will not remember a visitor between requests on its own. Your
 app needs to persist the returned `profile.id` somewhere and pass it back into later SDK calls when
@@ -264,7 +264,7 @@ If your app will also run `@contentful/optimization-web` in the browser, avoid m
 as `HttpOnly`, because browser-side code needs to read it. If your app is server-only, a session
 store is equally valid. If consent is revoked, clear the same cookie or session value.
 
-## 5. Call `page()` and `identify()` at the Right Time
+## 5. Call `page()` and `identify()` at the right time
 
 The Node SDK returns optimization data from `page()`, `identify()`, `screen()`, `track()`, and
 sticky `trackView()` calls. In a typical SSR route, `page()` is the most important entry point.
@@ -345,27 +345,27 @@ That route lets a consumer accomplish two things:
 
 The returned `OptimizationData` usually gives you the three values you care about most:
 
-- `profile`: the current profile, including the profile ID you should persist
+- `profile`: the current profile, including the profile ID to persist
 - `changes`: Custom Flag inputs
 - `selectedOptimizations`: the variant choices to use when resolving Contentful entries
 
-### Which Order Should `page()` and `identify()` Use?
+### `page()` and `identify()` call order
 
 Both patterns appear in the reference implementations because they answer slightly different
 questions:
 
-- call `identify()` and then `page()` when the current page view should be attributed to the known
+- call `identify()` and then `page()` when the current page view must be attributed to the known
   user identity
-- call `page()` and then `identify()` when the request arrived anonymous but the response should
-  still render with data returned from the identify step
+- call `page()` and then `identify()` when the request arrived anonymous but the response must still
+  render with data returned from the identify step
 
 The important rule is simpler than the ordering nuance: always render from the most relevant
 response object for the user state you want on that response.
 
-## 6. Resolve Contentful Entries with `selectedOptimizations`
+## 6. Resolve Contentful entries with `selectedOptimizations`
 
-Once you have optimization data, fetch the baseline Contentful entry the same way you normally
-would, then hand it to `resolveOptimizedEntry()`.
+Once you have optimization data, fetch the baseline Contentful entry the same way your application
+normally does, then hand it to `resolveOptimizedEntry()`.
 
 In the example below, replace `ArticleSkeleton` with the generated Contentful skeleton type your app
 already uses.
@@ -429,11 +429,11 @@ This is the main server-side personalization loop:
 If your optimized entries contain linked entries or merge tags, fetch with an `include` depth that
 matches your content model. The SSR reference implementation uses `include: 10` for that reason.
 
-## 7. Resolve Merge Tags and Custom Flags
+## 7. Resolve merge tags and custom flags
 
 The Node SDK also exposes helpers for profile-aware merge tags and Custom Flags.
 
-### Merge Tags
+### Merge tags
 
 If a Rich Text field contains merge-tag entries, resolve them against the current profile while
 rendering the field:
@@ -456,7 +456,7 @@ const html = documentToHtmlString(richTextField, {
 
 That is the pattern used in the SSR-only reference implementation.
 
-### Custom Flags
+### Custom flags
 
 Use `getFlag()` when the response includes Custom Flag changes:
 
@@ -464,7 +464,7 @@ Use `getFlag()` when the response includes Custom Flag changes:
 const showNewNavigation = optimization.getFlag('new-navigation', pageResponse?.changes) === true
 ```
 
-In the Node SDK, `getFlag()` does not auto-track flag views. If a flag exposure should also be
+In the Node SDK, `getFlag()` does not auto-track flag views. If a flag exposure also needs to be
 captured as an Insights event, call `trackFlagView()` explicitly:
 
 ```ts
@@ -477,7 +477,7 @@ if (pageResponse?.profile) {
 }
 ```
 
-## 8. Emit Follow-Up Server Events When They Matter
+## 8. Emit follow-up server events when they matter
 
 The Node SDK can send more than page views. Common server-side cases are:
 
@@ -490,8 +490,8 @@ The Node SDK can send more than page views. Common server-side cases are:
 Gate these calls with the same consent policy your app applies to `page()` and `identify()`.
 
 In stateless Node usage, Insights-backed calls need a profile. `trackClick()`, `trackHover()`,
-`trackFlagView()`, and non-sticky `trackView()` should use a persisted or freshly returned profile.
-Sticky `trackView()` may omit `profile`, because it can reuse the paired Experience response
+`trackFlagView()`, and non-sticky `trackView()` must use a persisted or freshly returned profile.
+Sticky `trackView()` can omit `profile`, because it can reuse the paired Experience response
 profile.
 
 Example custom event:
@@ -535,7 +535,7 @@ if (selectedOptimization?.sticky) {
 }
 ```
 
-## Caching and Cache Safety
+## Caching and cache safety
 
 The Node SDK sits on one side of an important cache boundary:
 
@@ -563,8 +563,8 @@ Unsafe patterns:
 - sharing merge-tag-rendered Rich Text across users or requests
 
 The request-scoped SDK methods are not cacheable reads. They emit Experience or Insights events and
-may return updated profile state for the current visitor. Call them per request when personalization
-is needed.
+might return updated profile state for the current visitor. Call them per request when
+personalization is needed.
 
 If you want to cache variant resolution itself, key that cache by both:
 
@@ -577,11 +577,11 @@ Do not key personalized caches only by URL or entry ID.
 | -------------------------------------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------- |
 | Raw `contentful.js` entry or query response                                | Yes                | Key by entry or query, locale, include depth, environment, host, and delivery mode          |
 | `resolveOptimizedEntry(entry, selectedOptimizations)` result               | Conditionally      | Safe only if keyed by the baseline entry version plus a `selectedOptimizations` fingerprint |
-| Merge-tag-rendered Rich Text                                               | No                 | Depends on the current request `profile`                                                    |
+| Merge-tag-rendered rich text                                               | No                 | Depends on the current request `profile`                                                    |
 | SSR HTML with personalized content                                         | Usually no         | Safe only when the cache varies on all personalization inputs                               |
-| `page()`, `identify()`, `screen()`, `track()`, and `trackView()` responses | No                 | These methods perform side effects and should not be memoized                               |
+| `page()`, `identify()`, `screen()`, `track()`, and `trackView()` responses | No                 | These methods perform side effects and must not be memoized                                 |
 
-## Know When the Web SDK Should Join the Architecture
+## Know when the Web SDK belongs in the architecture
 
 Use the Node SDK by itself when the server is responsible for choosing the variant and rendering the
 response.
@@ -599,7 +599,7 @@ The hybrid reference implementation shows exactly that setup:
 - [Server integration](../../implementations/node-sdk+web-sdk/src/app.ts)
 - [Browser integration](../../implementations/node-sdk+web-sdk/src/index.ejs)
 
-## Reference Implementations to Compare Against
+## Reference implementations to compare against
 
 Use these files when you want working repository examples instead of guide snippets:
 

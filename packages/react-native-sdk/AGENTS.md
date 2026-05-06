@@ -1,19 +1,19 @@
 # AGENTS.md
 
-Read the repository root `AGENTS.md` first.
+Read the repository root `AGENTS.md`, then `packages/AGENTS.md`, before this file.
 
 ## Scope
 
 This package owns the React Native SDK and its package-local development harness under `dev/`.
 
-## Key Paths
+## Key paths
 
 - `src/`
 - `dev/`
 - `__mocks__/`
 - `README.md`
 
-## Local Rules
+## Local rules
 
 - Keep reusable React Native SDK logic here rather than in `implementations/react-native-sdk`.
 - `dev/` is a package-local harness, not the published SDK surface, but it is still a maintained
@@ -23,7 +23,6 @@ This package owns the React Native SDK and its package-local development harness
 - Do not let the harness drift into a stale demo that no longer exercises the important package
   paths.
 - Preserve optional peer dependency behavior unless the task explicitly changes it.
-- Update README and relevant TSDoc when public SDK behavior changes.
 
 ## Commands
 
@@ -36,10 +35,9 @@ This package owns the React Native SDK and its package-local development harness
 - `pnpm --filter @contentful/optimization-react-native dev:android`
 - `pnpm --filter @contentful/optimization-react-native dev:ios`
 
-## Usually Validate
+## Usually validate
 
 - Run `typecheck`, `test:unit`, and `build`.
-- Run `size:check` for runtime, export, dependency, or bundle-shape changes.
 - Run `dev:test` when changing package-local harness behavior.
 - Validate the `dev/` harness itself when changing SDK flows it is supposed to demonstrate.
 - Validate `implementations/react-native-sdk` when runtime tracking, storage, navigation, offline,

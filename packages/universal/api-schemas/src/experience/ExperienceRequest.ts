@@ -35,7 +35,7 @@ export type ExperienceRequestOptions = z.infer<typeof ExperienceRequestOptions>
  */
 export const ExperienceRequestData = z.object({
   /**
-   * Experience events that should be evaluated by the Experience API.
+   * Experience events for the Experience API to evaluate.
    *
    * @remarks
    * Must contain at least one event.

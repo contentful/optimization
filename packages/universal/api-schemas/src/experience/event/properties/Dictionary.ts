@@ -1,7 +1,7 @@
 import * as z from 'zod/mini'
 
 /**
- * Zod schema describing a simple string-to-string dictionary.
+ * Zod schema describing a string-to-string dictionary.
  *
  * @remarks
  * Commonly used for query parameters or other small key–value maps.

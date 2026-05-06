@@ -19,8 +19,8 @@ export interface ConsentController {
  *
  * @internal
  * @remarks
- * These methods are consumed by the `@guardedBy` decorator to decide whether to
- * proceed with an operation and how to report blocked calls.
+ * These methods are consumed by consent-gated send paths to decide whether to proceed with an
+ * operation and how to report blocked calls.
  */
 export interface ConsentGuard {
   /**
@@ -28,9 +28,9 @@ export interface ConsentGuard {
    * any allow‑list configuration.
    *
    * @param name - Logical operation/method name (e.g., `'track'`, `'page'`).
-   * @returns `true` if the operation may proceed; otherwise `false`.
+   * @returns `true` if the operation can proceed; otherwise `false`.
    * @remarks
-   * The mapping between method names and event type strings may be product‑specific.
+   * The mapping between method names and event type strings can be product‑specific.
    */
   hasConsent: (name: string) => boolean
 

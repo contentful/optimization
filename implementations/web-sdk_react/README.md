@@ -6,7 +6,7 @@
 
 <h1 align="center">Contentful Personalization & Analytics</h1>
 
-<h3 align="center">Web SDK React Reference Implementation</h3>
+<h3 align="center">Web SDK React Adapter Reference Implementation</h3>
 
 <div align="center">
 
@@ -18,17 +18,26 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 Reference implementation demonstrating `@contentful/optimization-web` usage in a React web
-application.
+application with a local adapter layer.
 
-> **Note:** This implementation uses [Rsbuild](https://rsbuild.dev/) for consistency with the SDK
-> build tooling. If you're creating your own React application, you can use any build tool you
-> prefer (Vite, Create React App, Next.js, etc.) — the SDK integration patterns demonstrated here
-> will work the same way.
+> [!NOTE]
+>
+> For customer React applications that use the official React framework package, start with the
+> [React Web SDK reference implementation](../react-web-sdk/README.md). This implementation remains
+> useful when you need to understand how a React adapter can be built directly on top of the Web
+> SDK.
 
-## Overview
+> [!NOTE]
+>
+> This implementation uses [Rsbuild](https://rsbuild.dev/) for consistency with the SDK build
+> tooling. If you're creating your own React application, you can use any build tool you prefer
+> (Vite, Create React App, Next.js, etc.); the SDK integration patterns demonstrated here work the
+> same way.
+
+## What this demonstrates
 
 This implementation provides a thin React adapter layer over `@contentful/optimization-web`,
 demonstrating:
@@ -54,64 +63,94 @@ on, and locked), while keeping the main entry rendering flow customer-oriented.
 
 From the **repository root**:
 
-```bash
-# Build SDK packages (required for local development)
-pnpm build:pkgs
+1. Build SDK packages, which is required for local development:
 
-# Install implementation dependencies
-pnpm run implementation:run -- web-sdk_react implementation:install
+```sh
+pnpm build:pkgs
 ```
 
-## Development
+2. Install implementation dependencies:
+
+```sh
+pnpm implementation:run -- web-sdk_react implementation:install
+```
+
+## Running locally
 
 From the **repository root**:
 
-```bash
-# Start development server
-pnpm run implementation:web-sdk_react dev
+1. Start the development server:
 
-# Build for production
-pnpm run implementation:web-sdk_react build
-
-# Preview production build
-pnpm run implementation:web-sdk_react preview
-
-# Type checking
-pnpm run implementation:web-sdk_react typecheck
+```sh
+pnpm implementation:run -- web-sdk_react dev
 ```
 
-Or from the **implementation directory** (`implementations/web-sdk_react`):
+2. Build for production:
 
-```bash
+```sh
+pnpm implementation:run -- web-sdk_react build
+```
+
+3. Preview the production build:
+
+```sh
+pnpm implementation:run -- web-sdk_react preview
+```
+
+4. Run type checking:
+
+```sh
+pnpm implementation:run -- web-sdk_react typecheck
+```
+
+The equivalent implementation-directory commands are:
+
+```sh
 pnpm dev
 pnpm build
 pnpm preview
 pnpm typecheck
 ```
 
-## Testing
+## Running E2E tests
 
-### E2E Tests
+1. Run the full E2E setup and test suite from the repository root:
 
-```bash
-# In terminal 1: start mocks + app preview
-pnpm run implementation:web-sdk_react serve
-
-# In terminal 2: run Playwright tests
-pnpm run implementation:web-sdk_react test:e2e
-
-# Interactive Playwright UI
-pnpm run implementation:web-sdk_react test:e2e:ui
-
-# Generate tests with Playwright codegen
-pnpm run implementation:web-sdk_react test:e2e:codegen
+```sh
+pnpm setup:e2e:web-sdk_react
+pnpm test:e2e:web-sdk_react
 ```
 
-## Environment Variables
+2. Or run the Playwright flow step by step:
+
+```sh
+pnpm implementation:run -- web-sdk_react serve
+```
+
+In another terminal:
+
+```sh
+pnpm --dir implementations/web-sdk_react --ignore-workspace exec playwright test
+```
+
+When finished:
+
+```sh
+pnpm implementation:run -- web-sdk_react serve:stop
+```
+
+3. Use Playwright UI or codegen when needed:
+
+```sh
+pnpm implementation:run -- web-sdk_react test:e2e:ui
+pnpm implementation:run -- web-sdk_react test:e2e:codegen
+```
+
+## Environment variables
 
 Copy `.env.example` to `.env` and configure:
 
-```bash
+```sh
 cp .env.example .env
 ```
 
@@ -123,7 +162,7 @@ and `PUBLIC_CONTENTFUL_BASE_PATH=contentful`.
 Preview panel attachment is gated behind `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL`. Set it to
 `true` for development demos that need preview panel behavior.
 
-## Project Structure
+## Project structure
 
 ```
 web-sdk_react/
@@ -144,12 +183,12 @@ web-sdk_react/
 └── package.json
 ```
 
-## SDK Integration Patterns
+## SDK integration patterns
 
 This implementation demonstrates how to build a React adapter for `@contentful/optimization-web`.
 Key patterns include:
 
-### Provider Setup
+### Provider setup
 
 ```tsx
 import { OptimizationProvider } from './optimization'
@@ -163,7 +202,7 @@ function App() {
 }
 ```
 
-### Using Hooks
+### Using hooks
 
 ```tsx
 import { useOptimizationResolver, useOptimization } from './optimization'
@@ -177,7 +216,7 @@ function MyComponent() {
 }
 ```
 
-### Analytics Tracking
+### Analytics tracking
 
 ```tsx
 import { useAnalytics } from './optimization'
@@ -195,6 +234,8 @@ function TrackedComponent() {
 
 ## Related
 
+- [React Web SDK reference implementation](../react-web-sdk/README.md) - Primary React
+  implementation using the official React SDK package
 - [React Native Implementation](../react-native-sdk/README.md) - Reference implementation for React
   Native
 - [Web Vanilla Implementation](../web-sdk/README.md) - Reference implementation for vanilla

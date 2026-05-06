@@ -4,7 +4,7 @@ import * as z from 'zod/mini'
  * Enumeration of supported change types.
  *
  * @remarks
- * Currently only the `'Variable'` change type is supported, but the union
+ * Only the `'Variable'` change type is supported, but the union
  * in `ChangeBase` allows for additional types to be introduced.
  *
  * @public
@@ -29,7 +29,7 @@ export const ChangeBase = z.object({
    * Discriminator for the change type.
    *
    * @remarks
-   * May be one of {@link ChangeType} or an arbitrary string for unknown types.
+   * Can be one of {@link ChangeType} or an arbitrary string for unknown types.
    */
   type: z.union([z.enum(ChangeType), z.string()]),
 
@@ -144,7 +144,7 @@ export type Flags = Record<string, Json>
  * Union of supported change types.
  *
  * @remarks
- * Currently only {@link VariableChange} is included.
+ * Only {@link VariableChange} is included.
  *
  * @public
  */

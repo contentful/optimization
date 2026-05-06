@@ -1,13 +1,14 @@
 # AGENTS.md
 
-Read the repository root `AGENTS.md` first.
+Read the repository root `AGENTS.md`, `packages/AGENTS.md`, and `packages/web/AGENTS.md` before this
+file.
 
 ## Scope
 
 This package owns the Web preview panel micro-frontend built with Lit and integrated with
 `@contentful/optimization-web`.
 
-## Key Paths
+## Key paths
 
 - `src/`
 - `dev/`
@@ -15,13 +16,10 @@ This package owns the Web preview panel micro-frontend built with Lit and integr
 - `dev/rsbuild.config.ts`
 - `README.md`
 
-## Local Rules
+## Local rules
 
-- This package is intentionally tightly coupled to Web SDK preview internals. Coordinate changes
-  with `packages/web/web-sdk`.
-- Prefer local fixes here for panel UI behavior, but shared preview bridge changes usually need
-  matching Web SDK changes.
-- The package-local `dev` flow is a maintained development surface and should stay relevant to the
+- Prefer local fixes here for panel UI behavior.
+- The package-local `dev` flow is a maintained development surface and must stay relevant to the
   current preview-panel behavior.
 - Keep the `dev` flow up-to-date when panel UI, preview bridge behavior, CSP-related setup, or
   developer-facing preview workflows change.
@@ -35,10 +33,7 @@ This package owns the Web preview panel micro-frontend built with Lit and integr
 - `pnpm --filter @contentful/optimization-web-preview-panel size:check`
 - `pnpm --filter @contentful/optimization-web-preview-panel dev`
 
-## Usually Validate
+## Usually validate
 
 - Run `typecheck` and `build`.
-- Run `size:check` for runtime, export, dependency, or bundle-shape changes.
 - Validate the package-local `dev` flow itself when changing panel flows it is meant to exercise.
-- Validate with a relevant Playwright implementation run when panel behavior or preview bridging
-  changes.

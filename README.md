@@ -18,7 +18,7 @@
 
 > [!WARNING]
 >
-> The Optimization SDK Suite is pre-release (alpha). Breaking changes may be published at any time.
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
 ## Introduction
 
@@ -38,30 +38,32 @@ enables developers and content creators to ship their products faster.
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
-- [Choosing a Package](#choosing-a-package)
-- [Published Packages](#published-packages)
-- [Planned SDKs](#planned-sdks)
-- [Reference Implementations](#reference-implementations)
-- [Repository Layout](#repository-layout)
-- [Get Involved](#get-involved)
+- [Choosing a package](#choosing-a-package)
+- [Published packages](#published-packages)
+- [Native and planned SDKs](#native-and-planned-sdks)
+- [Reference implementations](#reference-implementations)
+- [Repository layout](#repository-layout)
+- [Get involved](#get-involved)
 - [License](#license)
-- [Code of Conduct](#code-of-conduct)
+- [Code of conduct](#code-of-conduct)
 
 <!-- mtoc-end -->
 </details>
 
-## Choosing a Package
+## Choosing a package
 
 If you are deciding which SDK or library belongs in your application, start with
-[Choosing the Right SDK](./documentation/guides/choosing-the-right-sdk.md).
+[Choosing the right SDK](./documentation/guides/choosing-the-right-sdk.md).
 
-For additional narrative documentation, see the [Guides](./documentation/README.md) section.
+For step-by-step implementation docs, start with the [Guides](./documentation/guides/README.md)
+index. For behavior explanations, start with the [Concepts](./documentation/concepts/README.md)
+index.
 
-Package README files listed below are package-level overviews. Generated
+Package README files listed below are package-level guides and API surface summaries. Generated
 [reference documentation](https://contentful.github.io/optimization) remains the source of truth for
 exported API signatures.
 
-## Published Packages
+## Published packages
 
 The published package surface is intentionally layered. The table below is a package inventory and
 high-level role summary.
@@ -79,16 +81,24 @@ high-level role summary.
 
 General selection rules:
 
-- Most application code should start with an environment SDK or framework SDK.
+- We recommend starting application code with an environment SDK or framework SDK.
 - `@contentful/optimization-core` is the shared foundation for runtime adapters and SDK layering.
 - `@contentful/optimization-api-client` and `@contentful/optimization-api-schemas` are lower-level
   building blocks.
 
-## Planned SDKs
+## Native and planned SDKs
 
-These packages or layers are planned, but are not currently published from this repository:
+React Native support is available through
+[`@contentful/optimization-react-native`](./packages/react-native-sdk/README.md).
 
-- iOS Swift SDK
+Native iOS work is also present in this repository as a pre-release Swift Package under
+[`packages/ios`](./packages/ios/README.md), backed by the
+[`@contentful/optimization-ios-bridge`](./packages/ios/ios-jsc-bridge/README.md) JavaScriptCore
+adapter and the [iOS reference app](./implementations/ios-sdk/README.md). Treat this surface as
+alpha implementation work rather than a stable public native SDK.
+
+The following native and framework SDKs are planned but are not published from this repository:
+
 - Android Kotlin SDK
 - Android Java SDK
 - Nest.js SDK
@@ -96,21 +106,26 @@ These packages or layers are planned, but are not currently published from this 
 - Svelte SDK
 - Vue SDK
 
-## Reference Implementations
+## Reference implementations
 
 Reference implementations exist to exercise critical flows end to end and to document common usage
 patterns with intentionally minimal application code.
 
-- [Web Vanilla](./implementations/web-sdk/README.md): static browser integration for the Web SDK
-- [React Web](./implementations/web-sdk_react/README.md): React-based browser integration
-- [Node SSR Only](./implementations/node-sdk/README.md): server-rendered integration using the Node
+- [Web Vanilla](./implementations/web-sdk/README.md) - static browser integration for the Web SDK
+- [React Web](./implementations/react-web-sdk/README.md) - primary React browser integration using
+  the official React Web SDK package
+- [Web SDK React Adapter](./implementations/web-sdk_react/README.md) - adapter-based React example
+  built directly on top of the Web SDK
+- [Node SSR Only](./implementations/node-sdk/README.md) - server-rendered integration using the Node
   SDK
-- [Node SSR + Web Vanilla](./implementations/node-sdk+web-sdk/README.md): split server/browser flow
+- [Node SSR + Web Vanilla](./implementations/node-sdk+web-sdk/README.md) - split server/browser flow
   using Node and Web SDKs together
-- [React Native](./implementations/react-native-sdk/README.md): mobile application integration for
+- [React Native](./implementations/react-native-sdk/README.md) - mobile application integration for
   Android and iOS targets
+- [iOS Reference App](./implementations/ios-sdk/README.md) - native app and XCUITest surface for
+  current iOS bridge and preview-panel scenarios; this is not a published iOS SDK package
 
-## Repository Layout
+## Repository layout
 
 - `packages/`: published SDKs and supporting libraries
 - `implementations/`: reference applications used for examples and E2E coverage
@@ -118,7 +133,7 @@ patterns with intentionally minimal application code.
 - `documentation/`: authored supporting documentation published alongside TypeDoc
 - `docs/`: generated TypeDoc output; not source of truth
 
-## Get Involved
+## Get involved
 
 We appreciate any help on our repositories. For more details about how to contribute see our
 [CONTRIBUTING](./CONTRIBUTING.md) document.
@@ -127,7 +142,7 @@ We appreciate any help on our repositories. For more details about how to contri
 
 This repository is published under the [MIT](LICENSE) license.
 
-## Code of Conduct
+## Code of conduct
 
 We want to provide a safe, inclusive, welcoming, and harassment-free space and experience for all
 participants, regardless of gender identity and expression, sexual orientation, disability, physical

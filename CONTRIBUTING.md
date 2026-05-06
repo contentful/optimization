@@ -35,20 +35,21 @@ gotchas.
 <!-- mtoc-start -->
 
 - [Setup](#setup)
-- [Repository Map](#repository-map)
-- [Common Commands](#common-commands)
-- [Common Workflows](#common-workflows)
-  - [Change a Workspace Package](#change-a-workspace-package)
-  - [Change an Implementation](#change-an-implementation)
-  - [Run E2E for One Implementation](#run-e2e-for-one-implementation)
-  - [Implementation Helper Usage](#implementation-helper-usage)
-- [Validation Matrix](#validation-matrix)
-- [Code Style and Local Hooks](#code-style-and-local-hooks)
+- [Repository map](#repository-map)
+- [Common commands](#common-commands)
+- [Common workflows](#common-workflows)
+  - [Change a workspace package](#change-a-workspace-package)
+  - [Change an implementation](#change-an-implementation)
+  - [Run E2E for one implementation](#run-e2e-for-one-implementation)
+  - [Implementation helper usage](#implementation-helper-usage)
+- [Validation matrix](#validation-matrix)
+- [Code style and local hooks](#code-style-and-local-hooks)
 - [Documentation](#documentation)
-- [Local Troubleshooting](#local-troubleshooting)
-- [Troubleshooting CI Issues](#troubleshooting-ci-issues)
-  - [E2E Coverage and Environment](#e2e-coverage-and-environment)
-  - [License Check Failure](#license-check-failure)
+  - [README depth and render targets](#readme-depth-and-render-targets)
+- [Local troubleshooting](#local-troubleshooting)
+- [Troubleshooting CI issues](#troubleshooting-ci-issues)
+  - [E2E coverage and environment](#e2e-coverage-and-environment)
+  - [License check failure](#license-check-failure)
 
 <!-- mtoc-end -->
 </details>
@@ -82,7 +83,7 @@ pnpm version:pnpm
 
 `pnpm install` also installs the local Husky hooks used during commit and push.
 
-## Repository Map
+## Repository map
 
 | Path                 | Purpose                                                                             |
 | -------------------- | ----------------------------------------------------------------------------------- |
@@ -101,7 +102,7 @@ The most important repository-specific mechanic is this:
 - The targeted `pnpm setup:e2e:<implementation>` wrappers do this refresh for you as part of E2E
   setup.
 
-## Common Commands
+## Common commands
 
 The root [`package.json`](./package.json) contains more scripts than are listed below. These are the
 ones most contributors need regularly.
@@ -134,9 +135,9 @@ running the whole repository when the change is narrow.
 Before running `pnpm implementation:lint` across the repository, run `pnpm implementation:install`
 so the reference implementations have current local package tarballs installed.
 
-## Common Workflows
+## Common workflows
 
-### Change a Workspace Package
+### Change a workspace package
 
 1. Read the nearest package or `lib/` `AGENTS.md`.
 2. Make your change in the package source, tests, docs, or local harness.
@@ -164,7 +165,7 @@ pnpm setup:e2e:web-sdk
 pnpm test:e2e:web-sdk
 ```
 
-### Change an Implementation
+### Change an implementation
 
 1. Read the nearest implementation `AGENTS.md`.
 2. If your change depends on freshly built local packages, run `pnpm build:pkgs` and reinstall the
@@ -180,7 +181,7 @@ pnpm implementation:run -- web-sdk_react build
 pnpm implementation:run -- web-sdk_react implementation:test:e2e:run
 ```
 
-### Run E2E for One Implementation
+### Run E2E for one implementation
 
 1. Create a local `.env` from the implementation's `.env.example` if the implementation expects one
    and you do not already have it.
@@ -203,7 +204,7 @@ Environment notes:
 - Several implementations use PM2-managed processes for local serving; stop only the relevant
   implementation process rather than doing broad PM2 cleanup.
 
-### Implementation Helper Usage
+### Implementation helper usage
 
 `implementation:run` is the shared helper used by the implementation scripts listed above.
 
@@ -255,28 +256,28 @@ Prefer the root wrapper scripts when they already match what you want to do. For
 - `pnpm setup:e2e:<implementation>`
 - `pnpm test:e2e:<implementation>`
 
-## Validation Matrix
+## Validation matrix
 
 Use the smallest meaningful validation set for the change.
 
-| Change type                                                 | Usually run                                                                                     | Notes                                                                                 |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| Docs-only or markdown-only                                  | `pnpm format:check`                                                                             | Also run `pnpm docs:generate` if public API docs or linked markdown changed           |
-| Package or `lib/` TypeScript change                         | Targeted `lint`, `typecheck`, `test:unit`, and `build`                                          | Prefer `pnpm --filter <workspace> ...` when the change is narrow                      |
-| Built package runtime, export, dependency, or bundle change | Targeted `size:check` or root `pnpm size:check`                                                 | Bundle-size checks are currently a contributor-run validation, not a dedicated CI job |
-| Package change used by an implementation                    | `pnpm build:pkgs`, then reinstall the affected implementation                                   | Use `pnpm setup:e2e:<implementation>` if E2E is your next step                        |
-| Implementation code change                                  | `pnpm implementation:lint`, targeted implementation `typecheck`, and implementation-local tests | Some implementations have no meaningful unit tests; E2E matters more there            |
-| Shared build or packaging change                            | Broaden validation to downstream packages and at least one affected implementation              | Examples: `lib/build-tools`, package exports, tarball/install flow                    |
-| User-visible integration or runtime behavior change         | Targeted implementation E2E                                                                     | Choose the implementation that exercises the changed surface                          |
+| Change type                                                 | Usually run                                                                                     | Notes                                                                       |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Docs-only or markdown-only                                  | `pnpm format:check`                                                                             | Also run `pnpm docs:generate` if public API docs or linked markdown changed |
+| Package or `lib/` TypeScript change                         | Targeted `lint`, `typecheck`, `test:unit`, and `build`                                          | Prefer `pnpm --filter <workspace> ...` when the change is narrow            |
+| Built package runtime, export, dependency, or bundle change | Targeted `size:check` or root `pnpm size:check`                                                 | Bundle-size checks are contributor-run validation, not a dedicated CI job   |
+| Package change used by an implementation                    | `pnpm build:pkgs`, then reinstall the affected implementation                                   | Use `pnpm setup:e2e:<implementation>` if E2E is your next step              |
+| Implementation code change                                  | `pnpm implementation:lint`, targeted implementation `typecheck`, and implementation-local tests | Some implementations have no meaningful unit tests; E2E matters more there  |
+| Shared build or packaging change                            | Broaden validation to downstream packages and at least one affected implementation              | Examples: `lib/build-tools`, package exports, tarball/install flow          |
+| User-visible integration or runtime behavior change         | Targeted implementation E2E                                                                     | Choose the implementation that exercises the changed surface                |
 
 When in doubt, start targeted and broaden only if the change crosses package or implementation
 boundaries.
 
-## Code Style and Local Hooks
+## Code style and local hooks
 
 This project uses [ESLint](https://eslint.org/) and [Prettier](https://prettier.io/) to enforce
-coding and formatting conventions. It may be useful to enable related editor plugins to have a
-smoother experience when working on Optimization SDKs.
+coding and formatting conventions. You can enable related editor plugins to get the same feedback
+while working on Optimization SDKs.
 
 Please review the following files to familiarize yourself with current configurations:
 
@@ -325,11 +326,31 @@ keep these artifacts aligned:
 `documentation/` contains source markdown that TypeDoc publishes. `docs/` is generated output. Do
 not hand-edit generated TypeDoc output.
 
-## Local Troubleshooting
+### README depth and render targets
 
-- An implementation is not reflecting your latest package change: run `pnpm build:pkgs`, then
-  reinstall the affected implementation with
-  `pnpm implementation:run -- <implementation> implementation:install`.
+READMEs are orientation surfaces, not the only place for every detail. Match depth to the README
+category:
+
+- Application-facing package READMEs keep purpose, install, minimal setup, common options, critical
+  caveats, and links to guides, reference implementations, and generated API reference.
+- Lower-level package READMEs explain the package's role in the SDK stack, who uses it directly,
+  common setup options where useful, and where exhaustive API details live.
+- Reference implementation READMEs stay procedural: what the implementation demonstrates,
+  prerequisites, setup, run/test commands, environment notes, and related package links.
+- Internal and placeholder READMEs stay short, explicit, and status-oriented.
+
+Move step-by-step implementation material into the existing guide for that runtime when one exists.
+Create a new guide only when no existing guide covers the reader goal. Keep exhaustive method
+catalogs, callback payload shapes, and exported type details in TypeDoc.
+
+Package README links must work in GitHub source browsing, generated TypeDoc project documents, and
+npmjs README rendering. Use canonical generated-doc URLs for shared header navigation and verify
+repo-relative links before relying on package README publish rewriting.
+
+## Local troubleshooting
+
+- An implementation is not reflecting your package change: run `pnpm build:pkgs`, then reinstall the
+  affected implementation with `pnpm implementation:run -- <implementation> implementation:install`.
 - Playwright reports a missing browser: run `pnpm playwright:install`, or use the targeted
   `pnpm setup:e2e:<implementation>` wrapper.
 - Playwright system dependencies are missing on Linux: run `pnpm playwright:install-deps`.
@@ -340,9 +361,9 @@ not hand-edit generated TypeDoc output.
 - A local port such as `3000`, `8000`, or `8081` is already in use: stop only the relevant local
   process or implementation `serve` flow rather than using broad PM2 cleanup.
 
-## Troubleshooting CI Issues
+## Troubleshooting CI issues
 
-### E2E Coverage and Environment
+### E2E coverage and environment
 
 `Main Pipeline` runs implementation E2E jobs when path filters request them for both:
 
@@ -375,13 +396,13 @@ authoritative filter list.
 Skipping an implementation E2E job because its filter did not match is expected behavior, not a CI
 coverage defect.
 
-If a change should trigger an implementation E2E job but does not match the current filters, update
-the path filters in `.github/workflows/main-pipeline.yaml` in the same pull request.
+If a change needs to trigger an implementation E2E job but does not match the current filters,
+update the path filters in `.github/workflows/main-pipeline.yaml` in the same pull request.
 
 E2E setup does not depend on repository secrets. Each implementation creates `.env` from its own
 checked-in `.env.example` file in CI, which keeps fork PR behavior aligned with internal PRs.
 
-### License Check Failure
+### License check failure
 
 Run `license-checker` locally:
 

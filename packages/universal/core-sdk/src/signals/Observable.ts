@@ -7,7 +7,7 @@ import { cloneDeep } from 'es-toolkit'
  * @public
  */
 export interface Subscription {
-  /** Stop receiving future emissions for the subscription. */
+  /** Stop receiving subsequent emissions for the subscription. */
   unsubscribe: () => void
 }
 

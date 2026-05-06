@@ -1,4 +1,4 @@
-# Contentful Optimization SDK Suite Testing Support Library & Server
+# Contentful Optimization SDK suite testing support library & server
 
 > [!WARNING]
 >
@@ -11,12 +11,17 @@ The testing support library offers the following features:
 - MSW handlers for the Experience API and Insights API
 - Mock server based on the MSW handlers
 
-> [!INFO]
+> [!NOTE]
 >
 > In order to manage test data in a Contentful space, a `.contentfulrc.json` file must be
 > appropriately configured in `lib/mocks` based upon the supplied `.contentfulrc.example.json` file.
 
-## Using Mocks in Unit Tests
+## When to use this package
+
+Use this package for local test data, unit-test MSW handlers, and the mock API server consumed by
+reference implementations. It is an internal monorepo support package, not a public SDK dependency.
+
+## Using mocks in unit tests
 
 Ensure you have `msw` installed in your package:
 
@@ -52,27 +57,32 @@ afterEach(() => {
 ```
 
 With this setup, any calls to _supported_ Experience/Insights endpoints will be handled by the MSW
-handlers. MSW should additionally ensure that any _unsupported_ endpoints are captured and logged
-with warnings.
+handlers. MSW must additionally ensure that any _unsupported_ endpoints are captured and logged with
+warnings.
 
 > [!WARNING]
 >
 > MSW will similarly block any non-related calls to other APIs or networked services, so it is
 > highly encouraged to review [MSW's documentation](https://mswjs.io/docs/).
 
-## Using Mocks in Local Dev & E2E Tests
+## Using mocks in local dev & E2E tests
 
-Use this simple command to run a mock server instance:
+Use this command to run a mock server instance:
 
 ```sh
-pnpm --filter mocks serve
+pnpm serve:mocks
 ```
 
-The server runs in a process attached to the current terminal. It is recommended to use a process
-manager such as [PM2](https://pm2.keymetrics.io/docs/usage/process-management/) to manage the mock
-server as a detached daemon.
+From inside package-focused workflows, the equivalent package command is
+`pnpm --filter mocks serve`.
 
-## Updating Local Mocks & Fixtures
+The server runs in a process attached to the current terminal. When a detached process is needed,
+prefer implementation `serve` and `serve:stop` scripts because they use scoped PM2 process names.
+For example, `pnpm implementation:run -- web-sdk serve` starts both the Web implementation and a
+named mock-server process, and `pnpm implementation:run -- web-sdk serve:stop` stops only that
+implementation's processes.
+
+## Updating local mocks & fixtures
 
 To fetch space configuration data (Content Types, etc.) and entries in a given space, use the
 following command:
@@ -90,10 +100,10 @@ named according to its entry ID.
 > Do not commit updated Contentful space data or entry files to the repository without first
 > consulting the repository maintainers
 
-## Setting Up a New Contentful Test Space
+## Setting up a new Contentful test space
 
-Ensure your `.contentfulrc.json` file contains data for the new Contentful space. Then, simply run
-the following command:
+Ensure your `.contentfulrc.json` file contains data for the new Contentful space. Then, run the
+following command:
 
 ```sh
 pnpm --filter mocks upload:ctfl:space

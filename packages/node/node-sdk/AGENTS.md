@@ -1,12 +1,12 @@
 # AGENTS.md
 
-Read the repository root `AGENTS.md` first.
+Read the repository root `AGENTS.md`, then `packages/AGENTS.md`, before this file.
 
 ## Scope
 
 This package owns Node-specific SDK behavior built on top of `@contentful/optimization-core`.
 
-## Key Paths
+## Key paths
 
 - `src/`
 - `dev/`
@@ -15,7 +15,7 @@ This package owns Node-specific SDK behavior built on top of `@contentful/optimi
 - `.env.example`
 - `README.md`
 
-## Local Rules
+## Local rules
 
 - Keep this package Node-oriented. Do not add browser-only assumptions or DOM dependencies.
 - Reusable cross-platform behavior belongs in `core-sdk`.
@@ -25,7 +25,6 @@ This package owns Node-specific SDK behavior built on top of `@contentful/optimi
   `PUBLIC_...` keys shown in `.env.example`.
 - Keep the `dev` flow relevant and up-to-date when SDK initialization, server integration behavior,
   or developer-facing package flows change.
-- If user-facing SDK behavior changes, update the README and relevant TSDoc.
 
 ## Commands
 
@@ -35,9 +34,8 @@ This package owns Node-specific SDK behavior built on top of `@contentful/optimi
 - `pnpm --filter @contentful/optimization-node size:check`
 - `pnpm --filter @contentful/optimization-node dev`
 
-## Usually Validate
+## Usually validate
 
 - Run `typecheck`, `test:unit`, and `build`.
-- Run `size:check` for runtime, export, dependency, or bundle-shape changes.
 - Validate the package-local `dev` flow itself when changing flows it is meant to exercise.
 - Validate `implementations/node-sdk` E2E when runtime or SSR behavior changes.

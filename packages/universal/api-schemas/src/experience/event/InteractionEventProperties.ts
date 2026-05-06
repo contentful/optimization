@@ -24,7 +24,7 @@ export const InteractionEventProperties = z.extend(UniversalEventProperties, {
    * Identifier of the experience that rendered this entry or flag.
    *
    * @remarks
-   * Optional; interactions may occur outside of a specific experiment/personalization.
+   * Optional; interactions can occur outside of a specific experiment/personalization.
    */
   experienceId: z.optional(z.string()),
 
