@@ -1,8 +1,8 @@
 # Next.js Hybrid SSR + CSR Takeover Reference Implementation
 
-`react-web-sdk+node-sdk_nextjs-ssr-csr` — Next.js App Router reference demonstrating the "SSR → CSR Takeover"
-pattern. First paint is server-resolved via the Node SDK (no flicker), after hydration the React Web
-SDK takes over for reactive entry resolution and SPA-style navigation.
+`react-web-sdk+node-sdk_nextjs-ssr-csr` — Next.js App Router reference demonstrating the "SSR → CSR
+Takeover" pattern. First paint is server-resolved via the Node SDK (no flicker), after hydration the
+React Web SDK takes over for reactive entry resolution and SPA-style navigation.
 
 ## Pattern: Hybrid SSR + CSR Takeover
 
