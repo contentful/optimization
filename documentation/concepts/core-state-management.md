@@ -9,10 +9,10 @@ protected from outside interference, and which surface the SDK explicitly provid
 observe and influence state. Every mechanism described here is grounded in SDK source so you can
 reason about runtime behavior with confidence.
 
-The companion guides — for example,
-[Integrating the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md)
-— cover installation and setup. Come here when you need to understand _why_ state works the way it
-does, or when you want to extend behavior through the consumer-facing channels the SDK provides.
+For installation and setup, see companion guides such as
+[Integrating the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md).
+Use this document when you need to understand _why_ state works the way it does, or when you want to
+extend behavior through the consumer-facing channels the SDK provides.
 
 <details>
   <summary>Table of Contents</summary>
@@ -49,7 +49,7 @@ does, or when you want to extend behavior through the consumer-facing channels t
 
 ### Signals as the storage medium
 
-`CoreStateful` stores all runtime state in [Preact Signals](https://github.com/preactjs/signals) — a
+`CoreStateful` stores all runtime state in [Preact Signals](https://github.com/preactjs/signals), a
 lightweight reactive primitive that pushes value changes to dependent effects and computed values
 automatically. Signals live at module scope inside `core-sdk`, which means all code sharing the same
 JavaScript module graph reads the same values.
@@ -71,10 +71,10 @@ signal.
 | `changes`               | `ChangeArray \| undefined`                      | The optimization change payload returned by the Experience API, used to resolve Custom Flag values and optimized entries. |
 | `canOptimize`           | `boolean`                                       | A computed signal derived from `selectedOptimizations`. `true` when variant data is available.                            |
 | `event`                 | `InsightsEvent \| ExperienceEvent \| undefined` | The most recent event emitted to either API.                                                                              |
-| `blockedEvent`          | `BlockedEvent \| undefined`                     | Metadata about the most recent event that was blocked by a consent or runtime guard.                                      |
+| `blockedEvent`          | `BlockedEvent \| undefined`                     | Metadata about the most recent event that was blocked by consent gating.                                                  |
 | `online`                | `boolean \| undefined`                          | Runtime network connectivity, used by the queue flush logic. Defaults to `true`.                                          |
 | `previewPanelAttached`  | `boolean`                                       | Whether the Contentful preview panel bridge has been registered.                                                          |
-| `previewPanelOpen`      | `boolean`                                       | Whether the preview panel UI is currently open.                                                                           |
+| `previewPanelOpen`      | `boolean`                                       | Whether the preview panel UI is open.                                                                                     |
 
 ### One instance per runtime
 
@@ -82,38 +82,44 @@ signal.
 `globalThis`-based lock. Constructing a second instance before `destroy()` is called on the first
 throws an error:
 
-```
+```text
 Stateful Optimization SDK already initialized (CoreStateful#1). Only one stateful instance is supported per runtime.
 ```
 
-Because all signals are module-scoped, allowing multiple instances would cause them to interfere
-with each other's state. Call `destroy()` before re-initializing — for example, during hot-module
-replacement or test teardown.
+Because all signals are module-scoped, multiple instances can interfere with each other's state.
+Call `destroy()` before re-initializing, for example during hot-module replacement or test teardown.
 
 ## How state changes
 
 ### Entry points for state mutation
 
-Internal signals are private. Only `CoreStateful` and its queue infrastructure write to them, and
-only in response to specific method calls. The complete set of public entry points is:
+Internal signals are implementation details. Application code must use the supported consumer
+surfaces instead of writing signal values directly. The public consumer-facing entry points that can
+change Core state or event streams are:
 
-| Method                   | What it affects                                                                                      |
-| ------------------------ | ---------------------------------------------------------------------------------------------------- |
-| `consent(accept)`        | Sets the `consent` signal.                                                                           |
-| `identify(payload)`      | Sends an Experience event; updates `profile`, `selectedOptimizations`, and `changes` on response.    |
-| `page(payload)`          | Sends an Experience event; same response-driven updates.                                             |
-| `screen(payload)`        | Sends an Experience event; same response-driven updates.                                             |
-| `track(payload)`         | Sends an Experience event; same response-driven updates.                                             |
-| `trackView(payload)`     | Sends an Insights event; optionally sends an Experience event for view-triggered optimization.       |
-| `trackClick(payload)`    | Sends an Insights event.                                                                             |
-| `trackHover(payload)`    | Sends an Insights event.                                                                             |
-| `trackFlagView(payload)` | Sends an Insights event recording a Custom Flag observation.                                         |
-| `reset()`                | Clears `blockedEvent`, `event`, `changes`, `profile`, and `selectedOptimizations` in a single batch. |
-| `flush()`                | Triggers immediate queue flushes without writing to any signal directly.                             |
-| `destroy()`              | Flushes both queues and releases the singleton lock.                                                 |
+| Method or surface                   | What it affects                                                                                       |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `consent(accept)`                   | Sets the `consent` signal.                                                                            |
+| `identify(payload)`                 | Sends an Experience event; updates `profile`, `selectedOptimizations`, and `changes` on response.     |
+| `page(payload)`                     | Sends an Experience event; same response-driven updates.                                              |
+| `screen(payload)`                   | Sends an Experience event; same response-driven updates.                                              |
+| `track(payload)`                    | Sends an Experience event; same response-driven updates.                                              |
+| `trackView(payload)`                | Sends an Insights event; optionally sends an Experience event for view-triggered optimization.        |
+| `trackClick(payload)`               | Sends an Insights event.                                                                              |
+| `trackHover(payload)`               | Sends an Insights event.                                                                              |
+| `trackFlagView(payload)`            | Sends an Insights event recording a Custom Flag observation.                                          |
+| `getFlag(name)`                     | Resolves a Custom Flag value from `changes`; emits a flag view event when the resolved value changes. |
+| `states.flag(name).current`         | Reads the current Custom Flag value and emits a flag view event for that read.                        |
+| `states.flag(name).subscribe()`     | Subscribes to distinct Custom Flag values and emits a flag view event for each delivered value.       |
+| `states.flag(name).subscribeOnce()` | Waits for the first non-nullish Custom Flag value and emits a flag view event for that value.         |
+| `reset()`                           | Clears `blockedEvent`, `event`, `changes`, `profile`, and `selectedOptimizations` in a single batch.  |
+| `flush()`                           | Triggers immediate queue flushes without writing to any signal directly.                              |
+| `destroy()`                         | Flushes both queues and releases the singleton lock.                                                  |
 
-There is no setter, patch method, or object reference that lets a consumer write directly to a
-signal. State only changes through the methods above.
+The package also exports raw `signals` and `signalFns` references for SDK layers and first-party
+preview tooling. Those exports are not application consumer APIs. Application code must treat them
+as read-only implementation details and use the methods, observables, defaults, and interceptors
+described in this document.
 
 ### How the Experience API drives state
 
@@ -122,25 +128,26 @@ responds, `ExperienceQueue` calls `updateOutputSignals()`. That method runs the 
 registered state interceptors and then writes to `profile`, `selectedOptimizations`, and `changes`
 in a single reactive batch:
 
-```
+```text
 Consumer calls sdk.page()
-  → CoreStatefulEventEmitter builds event
-  → ExperienceQueue sends to Experience API
-  → API returns OptimizationData { profile, selectedOptimizations, changes }
-  → State interceptors run (in insertion order)
-  → batch(() => { profileSignal, selectedOptimizationsSignal, changesSignal }) all update at once
-  → Observables emit deep-cloned snapshots to all active subscribers
+  -> CoreStatefulEventEmitter builds event
+  -> ExperienceQueue runs event interceptors, validates the event, and updates the event signal
+  -> ExperienceQueue sends to Experience API
+  -> API returns OptimizationData { profile, selectedOptimizations, changes }
+  -> State interceptors run in insertion order
+  -> batch(() => { profileSignal, selectedOptimizationsSignal, changesSignal }) updates changed values
+  -> Exposed observables emit deep-cloned snapshots; flag observables re-resolve from changes
 ```
 
-Batching the writes means downstream effects and computed signals see a consistent snapshot — there
+Batching the writes means downstream effects and computed signals see a consistent snapshot. There
 is no intermediate state where `profile` has updated but `selectedOptimizations` has not.
 
 ### Consent gating
 
-Every event method is guarded by `@guardedBy`, a decorator that checks `hasConsent(methodName)`
-before allowing the call to proceed. When consent is `false` or `undefined`, the method is blocked,
-a `BlockedEvent` record is written to the `blockedEvent` signal, and the configured `onEventBlocked`
-callback is invoked.
+The send path checks `hasConsent(methodName)` inside `sendExperienceEvent` and `sendInsightsEvent`
+before a queue accepts the event. When consent is `false` or `undefined` and the event type is not
+allow-listed, the event is blocked, a `BlockedEvent` record is written to the `blockedEvent` signal,
+and the configured `onEventBlocked` callback is invoked.
 
 By default, `identify`, `page`, and `screen` are exempt from consent gating (they are in
 `allowedEventTypes`). All other event methods are gated. This default list can be changed via the
@@ -155,12 +162,12 @@ blocked before consent was granted.
 
 Every entry on `sdk.states` is an `Observable<T>` with three members:
 
-- **`current`** — Returns a deep-cloned snapshot of the current signal value. Reading it does not
+- **`current`** - Returns a deep-cloned snapshot of the current signal value. Reading it does not
   establish a reactive subscription.
-- **`subscribe(next)`** — Registers a callback that is called immediately with the current value and
+- **`subscribe(next)`** - Registers a callback that is called immediately with the current value and
   again whenever the underlying signal changes. Returns a `Subscription` with an `unsubscribe`
   method.
-- **`subscribeOnce(next)`** — Registers a callback that fires exactly once when the first
+- **`subscribeOnce(next)`** - Registers a callback that fires exactly once when the first
   non-nullish value is available, then automatically unsubscribes. Useful for one-time
   initialization that must wait for data to arrive.
 
@@ -169,37 +176,36 @@ reaching your code. Mutating a received value does not affect internal signal st
 
 ### Available observables
 
-| Observable                     | Type                                                        | Description                                                                                      |
-| ------------------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `states.consent`               | `Observable<boolean \| undefined>`                          | Current consent value.                                                                           |
-| `states.profile`               | `Observable<Profile \| undefined>`                          | Active user profile.                                                                             |
-| `states.selectedOptimizations` | `Observable<SelectedOptimizationArray \| undefined>`        | Active variant selections.                                                                       |
-| `states.changes`               | `Observable<ChangeArray \| undefined>`                      | Latest optimization change payload.                                                              |
-| `states.canOptimize`           | `Observable<boolean>`                                       | `true` when variant data is available.                                                           |
-| `states.eventStream`           | `Observable<InsightsEvent \| ExperienceEvent \| undefined>` | Most recently emitted event.                                                                     |
-| `states.blockedEventStream`    | `Observable<BlockedEvent \| undefined>`                     | Most recently blocked event.                                                                     |
-| `states.previewPanelAttached`  | `Observable<boolean>`                                       | Whether the preview panel bridge is registered.                                                  |
-| `states.previewPanelOpen`      | `Observable<boolean>`                                       | Whether the preview panel is open.                                                               |
-| `states.flag(name)`            | `Observable<Json>`                                          | Per-flag observable that emits the flag value and automatically tracks a flag view via Insights. |
+| Observable                     | Type                                                        | Description                                                                          |
+| ------------------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `states.consent`               | `Observable<boolean \| undefined>`                          | Current consent value.                                                               |
+| `states.profile`               | `Observable<Profile \| undefined>`                          | Active user profile.                                                                 |
+| `states.selectedOptimizations` | `Observable<SelectedOptimizationArray \| undefined>`        | Active variant selections.                                                           |
+| `states.canOptimize`           | `Observable<boolean>`                                       | `true` when variant data is available.                                               |
+| `states.eventStream`           | `Observable<InsightsEvent \| ExperienceEvent \| undefined>` | Most recently emitted event.                                                         |
+| `states.blockedEventStream`    | `Observable<BlockedEvent \| undefined>`                     | Most recently blocked event.                                                         |
+| `states.previewPanelAttached`  | `Observable<boolean>`                                       | Whether the preview panel bridge is registered.                                      |
+| `states.previewPanelOpen`      | `Observable<boolean>`                                       | Whether the preview panel is open.                                                   |
+| `states.flag(name)`            | `Observable<Json>`                                          | Per-flag observable that resolves from `changes` and tracks flag views via Insights. |
 
 ### Why observables, not direct signal access
 
-`core-sdk` exports the raw `signals` object and the `signalFns` helper bundle, so you can
-technically construct your own effects that read signal values directly. We recommend against doing
-this in application code for several reasons:
+`core-sdk` exports the raw `signals` object and the `signalFns` helper bundle for SDK layers and
+first-party preview tooling. Application code must not use those exports to read or write runtime
+state directly for several reasons:
 
-- **No isolation.** Signals emit their actual internal value. If your code mutates the object you
+- **No isolation** - Signals expose their actual internal value. If your code mutates the object you
   receive, that mutation leaks back into the shared signal and can corrupt state for every other
   subscriber in the runtime.
-- **No tracking side effects.** `states.flag(name)` does more than read a value — it emits a flag
-  view event to Insights so that flag observations are recorded. Reading the signal directly skips
-  that reporting.
-- **Coupling to internals.** Signal names and shapes are implementation details. The `states`
+- **No tracking side effects** - `states.flag(name)` does more than read a value. It emits flag view
+  events to Insights so flag observations are recorded. Reading the signal directly skips that
+  reporting.
+- **Coupling to internals** - Signal names and shapes are implementation details. The `states`
   surface is the stable, versioned API; signals are not.
 
 Use `states.*` observables in application code. Reserve `signals` and `signalFns` for SDK layers
-building on top of `CoreStateful` — for example, a framework integration that needs to bridge
-signals into a React context or synchronize them with local storage.
+building on top of `CoreStateful`, for example a framework integration that needs to bridge signals
+into a React context or synchronize them with local storage.
 
 ## Consumer-facing state features
 
@@ -243,7 +249,7 @@ sdk.states.canOptimize.subscribe((ready) => {
 })
 ```
 
-If you need to act only once — for example, to set an initial variant before rendering — use
+If you need to act only once, for example to set an initial variant before rendering, use
 `subscribeOnce`:
 
 ```ts
@@ -257,9 +263,8 @@ unsubscribes automatically.
 
 ### Reading a Custom Flag value reactively
 
-`states.flag(name)` returns an `Observable<Json>` that emits the resolved Custom Flag value whenever
-`changes` updates. Every read and subscription automatically emits a flag view event through
-Insights, so flag exposure is tracked without any extra calls on your part:
+`states.flag(name)` returns an `Observable<Json>` that resolves the Custom Flag value from the
+internal `changes` signal. The observable emits when the resolved value changes:
 
 ```ts
 const darkModeSubscription = sdk.states.flag('dark-mode').subscribe((value) => {
@@ -267,15 +272,15 @@ const darkModeSubscription = sdk.states.flag('dark-mode').subscribe((value) => {
 })
 ```
 
-Both `states.flag` and `getFlag` deduplicate flag view events using deep equality, so repeated reads
-of the same resolved value emit only one tracking event. The key difference is reactivity:
-`states.flag` pushes updates to subscribers when the underlying value changes, while `getFlag`
-requires the caller to poll.
+`states.flag(name).subscribe()` suppresses duplicate emitted values using deep equality and emits a
+flag view event for each delivered value. `states.flag(name).current` represents a direct read, so
+each `current` read emits a flag view event. `getFlag(name)` is nonreactive and deduplicates flag
+view events when repeated calls resolve the same value.
 
 ### Diagnosing blocked events
 
-Subscribe to `states.blockedEventStream` to receive details about any event that a consent or
-runtime guard prevented from being sent:
+Subscribe to `states.blockedEventStream` to receive details about any event that consent gating
+prevented from being sent:
 
 ```ts
 sdk.states.blockedEventStream.subscribe((blocked) => {
@@ -285,8 +290,9 @@ sdk.states.blockedEventStream.subscribe((blocked) => {
 })
 ```
 
-This is particularly useful during integration testing and consent-flow debugging. The `reason`
-field indicates whether the block came from consent gating or another runtime guard.
+This is particularly useful during integration testing and consent-flow debugging. Use
+`blocked.method` to see which SDK method was blocked and `blocked.reason` to confirm that consent
+gating blocked it.
 
 You can also handle blocks at construction time using the `onEventBlocked` config option:
 
@@ -339,9 +345,9 @@ sdk.states.consent.subscribe((value) => {
 })
 ```
 
-The SDK does not provide a consent UI. Consent policy — when to ask, what to display, how to store
-the user's choice — belongs to your application. The SDK exposes `consent()` to receive the decision
-and `states.consent` to let your application reflect it.
+The SDK does not provide a consent UI. Consent policy, including when to ask, what to display, and
+how to store the user's choice, belongs to your application. The SDK exposes `consent()` to receive
+the decision and `states.consent` to let your application reflect it.
 
 ### Resetting state
 
@@ -370,7 +376,7 @@ every event before it is validated and sent. An interceptor is a function that r
 
 ```ts
 const interceptorId = sdk.interceptors.event.add(async (event) => {
-  // Return a new object — do not mutate the readonly input
+  // Return a new object. Do not mutate the readonly input.
   return {
     ...event,
     context: {
@@ -431,8 +437,8 @@ the SDK method is called.
 ## What not to do: direct signal mutation
 
 `core-sdk` exports the `signals` bundle, which gives you a reference to every internal signal.
-Writing to a signal directly — `signals.profile.value = newProfile` — bypasses every layer that
-makes state changes safe and coherent:
+Writing to a signal directly, such as `signals.profile.value = newProfile`, bypasses every layer
+that makes state changes safe and coherent:
 
 - No consent check. A direct write fires even when consent is `false`.
 - No interceptors. Event and state interceptors are skipped entirely.
@@ -443,9 +449,8 @@ makes state changes safe and coherent:
 - No deep cloning. Subscribers receive a reference to the exact object you wrote. If you mutate that
   object later, all current subscribers' references are silently corrupted.
 
-If you find yourself wanting to write to a signal directly, consider whether one of the patterns
-above — a method call, a state interceptor, or a `defaults` configuration value — achieves the same
-goal through the supported surface.
+If you find yourself wanting to write to a signal directly, use one of the patterns above instead: a
+method call, a state interceptor, or a `defaults` configuration value.
 
 The `signals` and `signalFns` exports are intended for SDK layers that extend `CoreStateful` (such
 as the Web SDK or the React Native SDK) and for first-party preview tooling. They are not part of
