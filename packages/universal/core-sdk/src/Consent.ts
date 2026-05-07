@@ -19,8 +19,8 @@ export interface ConsentController {
  *
  * @internal
  * @remarks
- * These methods are consumed by the `@guardedBy` decorator to decide whether to
- * proceed with an operation and how to report blocked calls.
+ * These methods are consumed by consent-gated send paths to decide whether to proceed with an
+ * operation and how to report blocked calls.
  */
 export interface ConsentGuard {
   /**

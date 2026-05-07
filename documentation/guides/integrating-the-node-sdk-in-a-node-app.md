@@ -594,20 +594,20 @@ is usually the right move when you need:
 - cookie-based profile continuity between SSR and client-side code
 - follow-up personalization after the first server render
 
-The hybrid reference implementation shows exactly that setup:
+For the lower-level mechanics behind cookie-based continuity, see
+[Profile synchronization between client and server](../concepts/profile-synchronization-between-client-and-server.md).
 
-- [Server integration](../../implementations/node-sdk+web-sdk/src/app.ts)
-- [Browser integration](../../implementations/node-sdk+web-sdk/src/index.ejs)
+The [Node SSR + Web SDK reference implementation](../../implementations/node-sdk+web-sdk/README.md)
+shows that setup across its server and browser flows.
 
 ## Reference implementations to compare against
 
-Use these files when you want working repository examples instead of guide snippets:
+Use these reference implementations when you want working repository examples instead of guide
+snippets:
 
-- [`implementations/node-sdk/src/app.ts`](../../implementations/node-sdk/src/app.ts): server-only
-  SSR flow with `page()`, `identify()`, `resolveOptimizedEntry()`, and `getMergeTagValue()`
-- [`implementations/node-sdk/src/index.ejs`](../../implementations/node-sdk/src/index.ejs): rendered
-  output that consumes resolved entries
-- [`implementations/node-sdk+web-sdk/src/app.ts`](../../implementations/node-sdk+web-sdk/src/app.ts):
-  cookie sharing with `ANONYMOUS_ID_COOKIE` for Node and Web SDK continuity
-- [`implementations/node-sdk+web-sdk/src/index.ejs`](../../implementations/node-sdk+web-sdk/src/index.ejs):
-  browser-side follow-up tracking and entry resolution
+- [Node SSR Only](../../implementations/node-sdk/README.md): server-only SSR flow with `page()`,
+  `identify()`, `resolveOptimizedEntry()`, `getMergeTagValue()`, and rendered output that consumes
+  resolved entries.
+- [Node SSR + Web SDK Vanilla](../../implementations/node-sdk+web-sdk/README.md): cookie sharing
+  with `ANONYMOUS_ID_COOKIE` for Node and Web SDK continuity, plus browser-side follow-up tracking
+  and entry resolution.

@@ -126,8 +126,7 @@ particular:
 | `trackClick` | `component_click`                                                |
 | `trackHover` | `component_hover` (not emitted by RN; included for completeness) |
 
-These wire types are defined in `packages/universal/core-sdk/src/CoreStatefulEventEmitter.ts:45-50`
-and are shared across all SDKs (web, iOS, RN).
+These wire types are shared across SDK runtimes.
 
 ## 2. How events flow from the device
 
@@ -158,14 +157,12 @@ The React Native SDK layers RN-specific behavior on top:
 1. **Online/offline detection** via `@react-native-community/netinfo`. When offline, the queue
    buffers; when `isInternetReachable` (preferred) or `isConnected` flips back to `true`, the SDK
    resumes flushing. If NetInfo is not installed the SDK logs a warning and stays always-online —
-   you keep tracking but lose offline durability. _Source:
-   `packages/react-native-sdk/src/handlers/createOnlineChangeListener.ts:74-112`._
+   you keep tracking but lose offline durability.
 2. **Background flushing.** On `AppState` transition to `background` or `inactive`, the SDK calls
-   `flush()` to drain the queue before the OS might suspend the process. _Source:
-   `packages/react-native-sdk/src/handlers/createAppStateChangeListener.ts:38-54`._
+   `flush()` to drain the queue before the OS might suspend the process.
 3. **Final view event on background.** If an entry is mid-visibility-cycle when the app backgrounds,
    `useViewportTracking` pauses, emits a final view event if at least one event already fired, and
-   resets. _Source: `packages/react-native-sdk/src/hooks/useViewportTracking.ts:525-553`._
+   resets.
 
 The offline queue has a cap (`queuePolicy.offlineMaxEvents`) and a drop callback
 (`queuePolicy.onOfflineDrop`). See the
@@ -187,8 +184,7 @@ assignments survive a cold start:
 | `DEBUG_FLAG_KEY`                   | Forces `logLevel` to `'debug'` when set.                                           |
 
 Persistence is best-effort; write failures keep the SDK running on in-memory state. Structured
-values are schema-validated on load; malformed JSON is evicted. _Source:
-`packages/react-native-sdk/src/storage/AsyncStorageStore.ts`._
+values are schema-validated on load; malformed JSON is evicted.
 
 Why this matters for tracking: selected optimizations persist, so a user placed in Variant B
 continues to see it on the next launch and view/tap events carry the correct `experienceId` /
@@ -207,8 +203,7 @@ The SDK gates event emission behind a three-valued consent state: `true`, `false
 | `true`      | All event types emit.                                                                                            |
 | `false`     | Same as `undefined` — only `allowedEventTypes` emit. Persists until `consent(true)` is called again.             |
 
-The default allow-list comes from `packages/react-native-sdk/src/ContentfulOptimization.ts:52`. To
-widen it before consent, pass `allowedEventTypes` to `OptimizationRoot`:
+To widen the default pre-consent allow-list, pass `allowedEventTypes` to `OptimizationRoot`:
 
 ```tsx
 <OptimizationRoot clientId={CLIENT_ID} allowedEventTypes={['identify', 'screen', 'page']}>
@@ -242,8 +237,7 @@ under the hood.
 
 ### Default thresholds
 
-All defaults live as module constants in
-`packages/react-native-sdk/src/hooks/useViewportTracking.ts:72-75`:
+The default entry view thresholds are:
 
 | Constant                                   | Value  | Meaning                                                                                                             |
 | ------------------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------- |
@@ -251,8 +245,7 @@ All defaults live as module constants in
 | `DEFAULT_VIEW_TIME_MS`                     | `2000` | Minimum accumulated visible time (ms) before the **initial** view event fires. A.k.a. the "dwell time".             |
 | `DEFAULT_VIEW_DURATION_UPDATE_INTERVAL_MS` | `5000` | Interval (ms) between **periodic** duration update events after the initial event.                                  |
 
-Tap tracking has one additional threshold in
-`packages/react-native-sdk/src/hooks/useTapTracking.ts:17`:
+Tap tracking has one additional threshold:
 
 | Constant                 | Value | Meaning                                                                                                                         |
 | ------------------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------- |
@@ -272,8 +265,6 @@ interface ViewCycleState {
   attempts: number // Number of view events already emitted
 }
 ```
-
-_Source: `packages/react-native-sdk/src/hooks/useViewportTracking.ts:89-101`._
 
 On every scroll tick or layout change, `checkVisibility()` computes the overlap between the entry's
 measured `{y, height}` and the current viewport `{scrollY, viewportHeight}` to derive a
@@ -312,7 +303,7 @@ A few consequences:
 - **An entry briefly scrolled into view (< 2 s total) fires no events.** The initial gate is never
   crossed, so the final event is suppressed (guarded by `attempts > 0`).
 - **An entry scrolled into view for 2 s and then immediately unmounted** fires one initial event,
-  then one final event (from the unmount cleanup effect at `useViewportTracking.ts:555-568`).
+  then one final event from the unmount cleanup effect.
 - **Each event carries `viewDurationMs`**, computed from the cycle's accumulated time at the moment
   of emission. The sequence of events for a 12 s continuous view is: initial (~2000 ms), periodic
   (~7000 ms), periodic (~12 000 ms), final (~12 000 ms).
@@ -327,12 +318,10 @@ Two additional transitions matter:
    background/inactive, it clears the fire timer, pauses accumulation, and — if `attempts > 0` —
    emits a final event before resetting the cycle and marking `isVisibleRef.current = false`. When
    the app becomes `active` again, it re-checks visibility from scratch, which will start a new
-   cycle if the entry is still on screen. _Source:
-   `packages/react-native-sdk/src/hooks/useViewportTracking.ts:525-553`._
+   cycle if the entry is still on screen.
 
 2. **Component unmount.** The unmount cleanup clears the fire timer and, if the cycle had any
-   successful events (`attempts > 0`), flushes a final view event synchronously. _Source:
-   `packages/react-native-sdk/src/hooks/useViewportTracking.ts:555-568`._
+   successful events (`attempts > 0`), flushes a final view event synchronously.
 
 Combined, these guarantees mean that as long as the initial event fired, a final event (with a
 matching `viewId` and the true total duration) will always follow — whether visibility ends
@@ -361,15 +350,13 @@ no matter how far the user scrolls.
 </OptimizationScrollProvider>
 ```
 
-_Source: `packages/react-native-sdk/src/context/OptimizationScrollContext.tsx:80-154`._ The in-tree
-reference implementation wraps its entry list in
-[`OptimizationScrollProvider`](../../implementations/react-native-sdk/App.tsx).
+The [React Native reference implementation](../../implementations/react-native-sdk/README.md)
+demonstrates this scroll-provider pattern in its entry list.
 
 ### Outside OptimizationScrollProvider
 
 With no scroll context, the hook falls back to screen dimensions — `scrollY = 0`, viewport =
-`Dimensions.get('window').height` (with an orientation listener). _Source:
-`packages/react-native-sdk/src/hooks/useViewportTracking.ts:256-257`._
+`Dimensions.get('window').height` with an orientation listener.
 
 This is correct for full-screen non-scrollable layouts, hero/banner content always on screen, and
 modal content. It is _wrong_ for anything below the fold in a `ScrollView` — wrap those.
@@ -387,8 +374,6 @@ Tap tracking is implemented by `useTapTracking`. Behavior:
 4. On tap: `optimization.trackClick({ componentId, experienceId, variantIndex })` (wire type
    `component_click`). If `onTap` was passed on `<OptimizedEntry>`, it's also invoked synchronously
    with the resolved entry.
-
-_Source: `packages/react-native-sdk/src/hooks/useTapTracking.ts:95-156`._
 
 Tap tracking is **off by default**. Enable via
 `<OptimizationRoot trackEntryInteraction={{ taps: true }}>`, `<OptimizedEntry trackTaps>`, or
@@ -421,8 +406,7 @@ The highest-automation path. Wrap `NavigationContainer` in `<OptimizationNavigat
 
 `onReady` fires the initial screen event; `onStateChange` compares the current route name to the
 previous and emits a new screen event when they differ. `includeParams: true` includes the route
-params in the event's `properties` (they're JSON-validated via Zod before being attached). _Source:
-`packages/react-native-sdk/src/components/OptimizationNavigationContainer.tsx:108-167`._
+params in the event's `properties`, which are JSON-validated before being attached.
 
 ### useScreenTracking
 
@@ -443,8 +427,7 @@ function DetailsScreen() {
 ```
 
 With `trackOnMount: true` (the default), it fires once on mount. The hook also resets its internal
-`hasTrackedRef` whenever `name` changes, so renaming the screen mid-life re-fires. _Source:
-`packages/react-native-sdk/src/hooks/useScreenTracking.ts:113-167`._
+tracking state whenever `name` changes, so renaming the screen mid-life re-fires.
 
 ### useScreenTrackingCallback
 
@@ -456,8 +439,6 @@ that aren't known at render time (deep links, dynamic titles, navigation state t
 const trackScreen = useScreenTrackingCallback()
 trackScreen('Deep Linked Article', { slug, source: 'email' })
 ```
-
-_Source: `packages/react-native-sdk/src/hooks/useScreenTracking.ts:55-71`._
 
 ## 8. The configuration surface
 
@@ -475,8 +456,7 @@ ones.
 | `defaults.consent`      | `boolean \| undefined` | `undefined`                    | Initial consent state at startup. Overridden by `consent()` calls at runtime.                     |
 | `allowedEventTypes`     | `EventType[]`          | `['identify', 'screen']`       | Event types permitted while consent is `undefined` or `false`.                                    |
 
-The "`{ views: true, taps: false }`" default lives in
-`packages/react-native-sdk/src/context/InteractionTrackingContext.tsx:38-44`.
+The "`{ views: true, taps: false }`" default is the root interaction-tracking context default.
 
 ### OptimizedEntry props
 
@@ -492,9 +472,7 @@ The "`{ views: true, taps: false }`" default lives in
 | `entry`                        | `Entry`                                  | (required)  | The baseline or optimized Contentful entry.                                                            |
 | `children`                     | `ReactNode \| ((resolved) => ReactNode)` | (required)  | Render prop receives the resolved variant; static children are rendered as-is.                         |
 
-Each default is defined alongside the corresponding prop in
-`packages/react-native-sdk/src/components/OptimizedEntry.tsx:64-141` and confirmed in
-`useViewportTracking.ts:72-75`.
+Each default is defined by the SDK component and tracking hook behavior.
 
 ### SDK init config
 
@@ -532,16 +510,12 @@ The full configuration reference lives in the
 3. Else use `trackEntryInteraction.taps` from `OptimizationRoot`.
 4. Else use the default (`false`).
 
-_Source: `packages/react-native-sdk/src/components/OptimizedEntry.tsx:143-151, 272-273`._
-
 **Live updates enabled?**
 
 1. If the preview panel is open — always `true`, cannot be overridden.
 2. Else if `<OptimizedEntry liveUpdates={true|false}>`, use that.
 3. Else use `OptimizationRoot.liveUpdates`.
 4. Else default (`false`; the entry locks to its first variant).
-
-_Source: `packages/react-native-sdk/src/components/OptimizedEntry.tsx:229-231`._
 
 ## 9. Manual tracking API
 
@@ -565,7 +539,6 @@ useEffect(() => {
 ### Payload shapes
 
 ```ts
-// trackView — Source: CoreStatefulEventEmitter.ts:215-237
 optimization.trackView({
   componentId: string,
   viewId?: string,              // UUID; correlates events in a cycle
@@ -576,7 +549,6 @@ optimization.trackView({
   profile?: PartialProfile,
 })
 
-// trackClick — Source: CoreStatefulEventEmitter.ts:249-251 (wire type: component_click)
 optimization.trackClick({
   componentId: string,
   experienceId?: string,
@@ -652,14 +624,9 @@ For the broader integration walkthrough, read the
 
 ## Reference
 
-- **SDK source:** `packages/react-native-sdk/src/`
-- **Tracking hooks:** `hooks/useViewportTracking.ts`, `hooks/useTapTracking.ts`,
-  `hooks/useScreenTracking.ts`
-- **Context providers:** `context/InteractionTrackingContext.tsx`,
-  `context/OptimizationScrollContext.tsx`, `context/LiveUpdatesContext.tsx`
-- **Event emission pipeline:** `packages/universal/core-sdk/src/CoreStatefulEventEmitter.ts`
-- **Reference implementation:**
-  [`implementations/react-native-sdk`](../../implementations/react-native-sdk/README.md) exercises
-  the React Native SDK API surface in this monorepo.
-- **Integration guide:**
-  [Integrating the Optimization React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md).
+- [React Native SDK README](../../packages/react-native-sdk/README.md) - Package-level orientation
+  and common configuration.
+- [React Native reference implementation](../../implementations/react-native-sdk/README.md) -
+  Working app that exercises the React Native SDK API surface in this monorepo.
+- [Integrating the Optimization React Native SDK in a React Native app](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md) -
+  Step-by-step React Native integration flow.

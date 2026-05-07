@@ -445,6 +445,9 @@ function CustomEntry({ baselineEntry }) {
 `OptimizedEntry` emits data attributes on its wrapper element that the Web SDK uses for automatic
 entry interaction tracking (views, clicks, and hovers).
 
+For the lower-level runtime mechanics behind those attributes and the Web SDK detectors, see
+[Interaction tracking in Web SDKs](../concepts/interaction-tracking-in-web-sdks.md).
+
 ### Automatic tracking via OptimizedEntry
 
 When resolved content renders, the wrapper element receives:
@@ -586,8 +589,9 @@ export default function App({ Component, pageProps }: AppProps) {
 }
 ```
 
-Mount once in `pages/_app.tsx`. The adapter waits for `router.isReady`, emits on the first eligible
-render and on route changes, and suppresses duplicate consecutive `router.asPath` values.
+Mount once in the Pages Router application root. The adapter waits for `router.isReady`, emits on
+the first eligible render and on route changes, and suppresses duplicate consecutive `router.asPath`
+values.
 
 ### Next.js app router
 
@@ -607,9 +611,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
 }
 ```
 
-Mount in a `'use client'` component inside your App Router provider tree, typically via a
-`providers.tsx` wrapper used by `app/layout.tsx`. Emits on first render and on `pathname + search`
-changes.
+Mount in a `'use client'` component inside your App Router provider tree. Emits on first render and
+on `pathname + search` changes.
 
 ### TanStack router
 
