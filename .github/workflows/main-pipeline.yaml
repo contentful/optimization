@@ -871,7 +871,7 @@ jobs:
 
   e2e-ios-sdk:
     name: 🍎 E2E iOS UI (${{ matrix.scheme }})
-    runs-on: nscloud-macos-arm64-8x32
+    runs-on: namespace-profile-macos-apple-silicon-arm64-6-cpu-14-gb
     timeout-minutes: 45
     needs: [setup, changes, e2e-ios-sdk-build]
     if: needs.changes.outputs.e2e_ios == 'true'
