@@ -1,6 +1,9 @@
 'use client'
 
 import { optimizationConfig } from '@/lib/config'
+import type { Profile } from '@contentful/optimization-react-web/api-schemas'
+import type { SelectedOptimizationArray } from '@contentful/optimization-react-web/api-schemas'
+import type { ChangeArray } from '@contentful/optimization-react-web/api-schemas'
 import dynamic from 'next/dynamic'
 import { Suspense, type ReactNode } from 'react'
 
@@ -22,9 +25,14 @@ const NextAppAutoPageTracker = dynamic(
 
 interface ClientProviderWrapperProps {
   readonly children: ReactNode
+  readonly defaults?: {
+    profile?: Profile
+    selectedOptimizations?: SelectedOptimizationArray
+    changes?: ChangeArray
+  }
 }
 
-export function ClientProviderWrapper({ children }: ClientProviderWrapperProps) {
+export function ClientProviderWrapper({ children, defaults }: ClientProviderWrapperProps) {
   return (
     <OptimizationRoot
       clientId={optimizationConfig.clientId}
@@ -32,6 +40,7 @@ export function ClientProviderWrapper({ children }: ClientProviderWrapperProps) 
       api={optimizationConfig.api}
       autoTrackEntryInteraction={{ views: true, clicks: true, hovers: true }}
       logLevel="debug"
+      defaults={defaults}
       app={{
         name: 'ContentfulOptimization SDK - Next.js SSR+CSR Hybrid (Client)',
         version: '0.1.0',
