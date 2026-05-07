@@ -448,6 +448,9 @@ falls back to attribute overrides first, then normal automatic behavior.
 
 ### Browser tracking mechanics
 
+For a deeper explanation of the runtime model, see
+[Interaction tracking in Web SDKs](../concepts/interaction-tracking-in-web-sdks.md).
+
 Interaction observers are passive with respect to host event flow. They do not call
 `event.preventDefault()` or `event.stopPropagation()`.
 
@@ -558,16 +561,14 @@ personalization inputs.
 
 ## Reference implementations to compare against
 
-Use these files when you want working repository examples instead of guide snippets:
+Use these reference implementations when you want working repository examples instead of guide
+snippets:
 
-- [`implementations/web-sdk/public/index.html`](../../implementations/web-sdk/public/index.html):
-  vanilla browser initialization, consent handling, `page()`, entry resolution, merge tags, and
-  automatic or manual interaction tracking
-- [`implementations/node-sdk+web-sdk/src/index.ejs`](../../implementations/node-sdk+web-sdk/src/index.ejs):
-  browser-side continuation of an SSR flow with the Web SDK
-- [`implementations/node-sdk+web-sdk/src/app.ts`](../../implementations/node-sdk+web-sdk/src/app.ts):
-  shared anonymous cookie persistence for Node and Web SDK continuity
-- [`implementations/web-sdk_react/src/App.tsx`](../../implementations/web-sdk_react/src/App.tsx):
-  SPA-style `page()` emission, consent updates, `identify()`, and `reset()` patterns
-- [`implementations/web-sdk_react/src/sections/ContentEntry.tsx`](../../implementations/web-sdk_react/src/sections/ContentEntry.tsx):
-  resolved-entry rendering plus automatic and manual tracking metadata
+- [Web Vanilla](../../implementations/web-sdk/README.md): vanilla browser initialization, consent
+  handling, `page()`, entry resolution, merge tags, and automatic or manual interaction tracking.
+- [Node SSR + Web SDK Vanilla](../../implementations/node-sdk+web-sdk/README.md): browser-side
+  continuation of an SSR flow with the Web SDK and shared anonymous cookie persistence for Node and
+  Web SDK continuity.
+- [Web SDK React](../../implementations/web-sdk_react/README.md): SPA-style `page()` emission,
+  consent updates, `identify()`, `reset()` patterns, resolved-entry rendering, and automatic and
+  manual tracking metadata.

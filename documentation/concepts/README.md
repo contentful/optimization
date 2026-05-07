@@ -3,6 +3,7 @@ title: Concepts
 children:
   - ./core-state-management.md
   - ./entry-personalization-and-variant-resolution.md
+  - ./interaction-tracking-in-web-sdks.md
   - ./interaction-tracking-in-node-and-stateless-environments.md
   - ./profile-synchronization-between-client-and-server.md
   - ./react-native-sdk-interaction-tracking-mechanics.md
@@ -23,6 +24,10 @@ they are not the first stop for installation or setup commands.
 - [Entry personalization and variant resolution](./entry-personalization-and-variant-resolution.md) -
   explains how the SDK resolves a Contentful baseline entry to the selected entry variant, including
   data model expectations, fallback behavior, resolution paths, and preview overrides.
+- [Interaction tracking in Web SDKs](./interaction-tracking-in-web-sdks.md) - explains how
+  `@contentful/optimization-web` and `@contentful/optimization-react-web` detect browser entry
+  views, clicks, hovers, Custom Flag views, page events, and custom events, including consent,
+  profile, DOM, and delivery mechanics.
 - [Interaction tracking in Node and stateless environments](./interaction-tracking-in-node-and-stateless-environments.md) -
   explains what the Node SDK can track from a stateless server runtime, when browser observation is
   required, how the Web SDK can track server-generated HTML without owning personalization, and what
