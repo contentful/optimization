@@ -944,7 +944,20 @@ jobs:
             exit 1
           fi
 
+      - name: Verify built xctestrun exists for ${{ matrix.scheme }}
+        shell: 'bash -eo pipefail {0}'
+        run: |
+          shopt -s nullglob
+          matches=("$DERIVED_DATA"/Build/Products/OptimizationApp"$IOS_SCHEME"_*.xctestrun)
+          if [ ${#matches[@]} -eq 0 ]; then
+            echo "No xctestrun found for scheme $IOS_SCHEME under $DERIVED_DATA/Build/Products/" >&2
+            ls -la "$DERIVED_DATA/Build/Products/" || true
+            exit 1
+          fi
+          printf 'Found xctestrun: %s\n' "${matches[@]}"
+
       - name: Run iOS UI tests (${{ matrix.scheme }})
+        shell: 'bash -eo pipefail {0}'
         run: pnpm run implementation:ios-sdk -- test:e2e:ios:run:release
 
       - name: Stop Mock Server
