@@ -76,7 +76,7 @@ enum NativePolyfills {
     }
 
     private static func registerNativeSetTimeout(in context: JSContext, timerStore: TimerStore) {
-        weak let weakContext = context
+        weak var weakContext = context
         let nativeSetTimeout: @convention(block) (Int, Int) -> Void = { timerId, delayMs in
             let workItem = DispatchWorkItem {
                 guard let ctx = weakContext else { return }
@@ -107,7 +107,7 @@ enum NativePolyfills {
     }
 
     private static func registerNativeFetch(in context: JSContext) {
-        weak let weakContext = context
+        weak var weakContext = context
         let nativeFetch: @convention(block) (String, String, String, JSValue, Int) -> Void = {
             urlString, method, headersJSON, bodyValue, callbackId in
 
