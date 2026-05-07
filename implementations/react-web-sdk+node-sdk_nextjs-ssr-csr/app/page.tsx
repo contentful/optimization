@@ -1,6 +1,6 @@
-import { ENTRY_IDS } from '@/config/entries'
 import { HybridEntryList } from '@/components/HybridEntryList'
 import { InteractiveControls } from '@/components/InteractiveControls'
+import { ENTRY_IDS } from '@/config/entries'
 import { fetchEntries } from '@/lib/contentful-client'
 import { sdk } from '@/lib/optimization-server'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'

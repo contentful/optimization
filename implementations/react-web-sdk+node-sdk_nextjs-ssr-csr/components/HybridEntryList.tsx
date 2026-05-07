@@ -1,8 +1,8 @@
 'use client'
 
 import type { ContentEntry } from '@/types/contentful'
-import type { SelectedOptimizationArray } from '@contentful/optimization-react-web/api-schemas'
 import { useOptimization, useOptimizationContext } from '@contentful/optimization-react-web'
+import type { SelectedOptimizationArray } from '@contentful/optimization-react-web/api-schemas'
 import { type JSX, useEffect, useState } from 'react'
 
 function getEntryText(entry: ContentEntry): string {

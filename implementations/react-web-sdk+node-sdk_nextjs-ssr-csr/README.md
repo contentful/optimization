@@ -172,13 +172,13 @@ state without a redundant API call. This would make the SSR → CSR handoff seam
 
 ## When does the user see updated personalization?
 
-| User action                       | Effect                                | Timing                     |
-| --------------------------------- | ------------------------------------- | -------------------------- |
-| First page load                   | Server-resolved personalized content  | Immediate (in HTML)        |
-| After hydration (same page)       | No change — server content stays      | Seamless                   |
+| User action                       | Effect                                  | Timing                     |
+| --------------------------------- | --------------------------------------- | -------------------------- |
+| First page load                   | Server-resolved personalized content    | Immediate (in HTML)        |
+| After hydration (same page)       | No change — server content stays        | Seamless                   |
 | Identify / consent / reset        | Entries re-resolve via `resolveEntry()` | Instant (client-side)      |
-| Navigate via `<Link>`             | New page entries resolved client-side | Fast (no server roundtrip) |
-| Browser refresh / full navigation | Back to server-resolved first paint   | Immediate (new SSR)        |
+| Navigate via `<Link>`             | New page entries resolved client-side   | Fast (no server roundtrip) |
+| Browser refresh / full navigation | Back to server-resolved first paint     | Immediate (new SSR)        |
 
 ## Comparison with nextJs-ssr
 
