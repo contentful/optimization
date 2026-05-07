@@ -47,8 +47,11 @@ structure, cross-linking, and validation rules.
 ## Cross-linking
 
 - Link from guides to concepts when the reader needs deeper mechanics.
-- Link only to source-of-truth files, package READMEs, implementation READMEs, or relevant source
-  files.
+- Link only to source-of-truth documentation files, package READMEs, or implementation READMEs.
+- Guides and concepts must not link to or mention source code files directly, including package
+  `src/**`, test files, implementation source files, scripts, config files, generated source
+  outputs, or source line numbers. When code-level detail is useful, link to package README,
+  implementation README, generated reference docs, or a concept/guide that explains the behavior.
 - After moving a document, fix all affected relative links.
 
 ## Validation

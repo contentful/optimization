@@ -14,7 +14,9 @@ For step-by-step server setup, see
 [Integrating the Optimization Node SDK in a Node app](../guides/integrating-the-node-sdk-in-a-node-app.md).
 For browser setup, see
 [Integrating the Optimization Web SDK in a web app](../guides/integrating-the-web-sdk-in-a-web-app.md).
-For profile handoff between server and browser, see
+For Web SDK interaction tracking mechanics, see
+[Interaction tracking in Web SDKs](./interaction-tracking-in-web-sdks.md). For profile handoff
+between server and browser, see
 [Profile synchronization between client and server](./profile-synchronization-between-client-and-server.md).
 
 <details>
@@ -248,10 +250,10 @@ entry ID.
 
 ### Initialize the Web SDK without client-side personalization
 
-This browser code enables tracking but does not fetch entries or resolve variants:
+This browser code enables tracking but does not fetch entries or resolve variants. It assumes the
+Web SDK constructor is provided by your browser bundle or approved script delivery path:
 
 ```html
-<script src="/dist/contentful-optimization-web.umd.js"></script>
 <script>
   const optimization = new ContentfulOptimization({
     clientId: window.__OPTIMIZATION_CONFIG__.clientId,
@@ -473,9 +475,7 @@ Use this checklist when implementing interaction tracking for Node-rendered HTML
 
 - [Node SDK integration guide](../guides/integrating-the-node-sdk-in-a-node-app.md)
 - [Web SDK integration guide](../guides/integrating-the-web-sdk-in-a-web-app.md)
+- [Interaction tracking in Web SDKs](./interaction-tracking-in-web-sdks.md)
 - [Profile synchronization between client and server](./profile-synchronization-between-client-and-server.md)
 - [Node SSR + Web SDK reference implementation](../../implementations/node-sdk+web-sdk/README.md)
 - [Next.js SSR + React Web SDK reference implementation](../../implementations/react-web-sdk+node-sdk_nextjs-ssr/README.md)
-- [Node stateless runtime source](../../packages/universal/core-sdk/src/CoreStateless.ts)
-- [Web SDK tracking runtime source](../../packages/web/web-sdk/src/entry-tracking/EntryInteractionRuntime.ts)
-- [Web SDK tracking payload source](../../packages/web/web-sdk/src/entry-tracking/resolveTrackingPayload.ts)

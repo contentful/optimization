@@ -212,10 +212,9 @@ you don't need a runtime consent prompt, set `defaults.consent: true` so events 
 </OptimizationRoot>
 ```
 
-The default is applied once at startup; user input later takes precedence. The in-tree reference
-implementation shows an equivalent trusted-context shortcut in
-[`App.tsx`](../../implementations/react-native-sdk/App.tsx) by calling `sdk.consent(true)` after the
-provider initializes.
+The default is applied once at startup; user input later takes precedence. The
+[React Native reference implementation](../../implementations/react-native-sdk/README.md) shows an
+equivalent trusted-context shortcut by calling `sdk.consent(true)` after the provider initializes.
 
 ### Gating consent on a banner
 
@@ -297,8 +296,8 @@ Use `include: 10` on Contentful's Delivery API call:
 const cta = await contentfulClient.getEntry(CTA_ENTRY_ID, { include: 10 })
 ```
 
-The in-tree reference implementation centralizes this pattern in
-[`utils/sdkHelpers.ts`](../../implementations/react-native-sdk/utils/sdkHelpers.ts).
+The [React Native reference implementation](../../implementations/react-native-sdk/README.md)
+centralizes this Contentful fetching pattern in its application helper layer.
 
 ### Render the variant with a render prop
 
@@ -333,10 +332,9 @@ render prop:
 </OptimizedEntry>
 ```
 
-This is the same tracking pattern used by
-[`sections/ContentEntry.tsx`](../../implementations/react-native-sdk/sections/ContentEntry.tsx):
-entries are wrapped so the SDK can track views/taps, while non-optimized content passes through
-unchanged.
+This is the same tracking pattern used by the
+[React Native reference implementation](../../implementations/react-native-sdk/README.md): entries
+are wrapped so the SDK can track views/taps, while non-optimized content passes through unchanged.
 
 ## 4. Interaction tracking with OptimizedEntry
 
@@ -428,8 +426,8 @@ function BlogPostDetailScreen({ post }) {
 }
 ```
 
-The in-tree reference implementation wraps its entry list in `OptimizationScrollProvider` in
-[`App.tsx`](../../implementations/react-native-sdk/App.tsx) before rendering optimized entries.
+The [React Native reference implementation](../../implementations/react-native-sdk/README.md) wraps
+its entry list in `OptimizationScrollProvider` before rendering optimized entries.
 
 Without `OptimizationScrollProvider`, the SDK assumes scroll position is always `0` and the viewport
 equals the screen. That's fine for a single full-screen component, but for content that appears
@@ -473,10 +471,10 @@ export default function App() {
 }
 ```
 
-The in-tree reference implementation exercises this adapter in
-[`screens/NavigationTestScreen.tsx`](../../implementations/react-native-sdk/screens/NavigationTestScreen.tsx).
-The render-prop pattern means the wrapper does not depend on `@react-navigation/native` directly —
-navigation props are passed through to your real `NavigationContainer`.
+The [React Native reference implementation](../../implementations/react-native-sdk/README.md)
+exercises this adapter in its navigation test flow. The render-prop pattern means the wrapper does
+not depend on `@react-navigation/native` directly — navigation props are passed through to your real
+`NavigationContainer`.
 
 Available props:
 
@@ -694,14 +692,7 @@ function DebugBadge() {
 
 ## Reference implementations to compare against
 
-- [`implementations/react-native-sdk`](../../implementations/react-native-sdk/README.md): the
-  in-tree React Native reference implementation that is built and tested alongside the SDK itself
-- [`implementations/react-native-sdk/App.tsx`](../../implementations/react-native-sdk/App.tsx):
-  provider setup, consent bootstrap, page emission, entry rendering, scroll provider usage, and
-  navigation/live-updates test entry points
-- [`implementations/react-native-sdk/sections/ContentEntry.tsx`](../../implementations/react-native-sdk/sections/ContentEntry.tsx):
-  `OptimizedEntry` rendering plus tap tracking
-- [`implementations/react-native-sdk/screens/NavigationTestScreen.tsx`](../../implementations/react-native-sdk/screens/NavigationTestScreen.tsx):
-  `OptimizationNavigationContainer` usage and screen-event assertions
-- [`implementations/react-native-sdk/screens/LiveUpdatesTestScreen.tsx`](../../implementations/react-native-sdk/screens/LiveUpdatesTestScreen.tsx):
-  live-updates behavior and preview-panel visibility simulation
+- [React Native reference implementation](../../implementations/react-native-sdk/README.md): the
+  in-tree React Native app that is built and tested alongside the SDK itself. It demonstrates
+  provider setup, consent bootstrap, page emission, entry rendering, scroll provider usage,
+  `OptimizedEntry` rendering plus tap tracking, navigation tracking, and live-updates behavior.

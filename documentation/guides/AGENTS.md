@@ -69,7 +69,8 @@ Every guide must include this TOC wrapper:
 - Mention relevant monorepo reference implementations briefly near the top of an integration guide,
   usually in `The integration flow`.
 - Expand reference links in `Reference implementations to compare against`.
-- Prefer links to implementation READMEs and relevant source files over vague references.
+- Link to implementation READMEs, not implementation source files. Describe the demonstrated
+  workflow in prose when a specific implementation area matters.
 
 ## Validation
 
