@@ -1,0 +1,10 @@
+{
+  "name": "@implementation/ios-sdk",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "xcodegen": "xcodegen generate",
+    "test:e2e:ios:build:release": "set -o pipefail && pnpm run xcodegen && xcodebuild build-for-testing -project OptimizationApp.xcodeproj -scheme OptimizationAppSwiftUI -configuration Release -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/optimization-ios-derived-data CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO | xcbeautify && xcodebuild build-for-testing -project OptimizationApp.xcodeproj -scheme OptimizationAppUIKit -configuration Release -destination 'generic/platform=iOS Simulator' -derivedDataPath /tmp/optimization-ios-derived-data CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO | xcbeautify",
+    "test:e2e:ios:run:release": "set -o pipefail && xcodebuild test-without-building -xctestrun \"$(ls /tmp/optimization-ios-derived-data/Build/Products/OptimizationApp${IOS_SCHEME}_*.xctestrun | head -1)\" -destination \"platform=iOS Simulator,name=${IOS_SIM_NAME:-iPhone 16},OS=${IOS_SIM_OS:-latest}\" -resultBundlePath /tmp/optimization-ios-derived-data/Test-${IOS_SCHEME}.xcresult ${IOS_ONLY_TESTING:+-only-testing:${IOS_ONLY_TESTING}} | xcbeautify"
+  }
+}
