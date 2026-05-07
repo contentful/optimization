@@ -24,9 +24,9 @@ changes all re-resolve entries client-side without a server roundtrip.
 ### Trade-offs
 
 - **Higher complexity than nextJs-ssr.** Must manage both server-side resolution (Server Components)
-  and client-side resolution (Client Components with `<OptimizedEntry>`).
+  and client-side resolution (Client Components with `resolveEntry()`).
 - **Two resolution paths.** First paint uses `sdk.resolveOptimizedEntry()` on the server; subsequent
-  interactions use `resolveEntry()` / `<OptimizedEntry>` on the client.
+  interactions use `resolveEntry()` on the client via the `useOptimization()` hook.
 - **State handoff gap.** `OptimizationProvider` cannot currently accept pre-fetched server data — it
   always initializes fresh and calls the Experience API from the browser. This means the client SDK
   makes a redundant API call on hydration to get the same `selectedOptimizations` the server already
@@ -37,7 +37,7 @@ changes all re-resolve entries client-side without a server roundtrip.
 | Concern                    | First paint (Server)                              | After hydration (Client)                         |
 | -------------------------- | ------------------------------------------------- | ------------------------------------------------ |
 | Profile resolution         | Middleware + Server Component (Node SDK)          | React Web SDK (automatic on init)                |
-| Entry resolution           | `sdk.resolveOptimizedEntry()` in Server Component | `resolveEntry()` / `<OptimizedEntry>` via hooks  |
+| Entry resolution           | `sdk.resolveOptimizedEntry()` in Server Component | `resolveEntry()` via `useOptimization()` hook    |
 | Entry fetching             | Server-side from CDA                              | Client-side from CDA (for new routes)            |
 | Page tracking              | N/A                                               | `NextAppAutoPageTracker` fires on route change   |
 | Interaction tracking       | N/A (data attributes rendered server-side)        | `autoTrackEntryInteraction` observes elements    |
@@ -86,14 +86,13 @@ changes all re-resolve entries client-side without a server roundtrip.
 │  4. Subsequent navigations (client-side via <Link>)                 │
 │     ├─ NextAppAutoPageTracker fires page event for new route        │
 │     ├─ Client Component fetches entries from CDA                    │
-│     ├─ <OptimizedEntry> / resolveEntry() resolves with current      │
-│     │   selectedOptimizations                                       │
+│     ├─ resolveEntry() resolves with current selectedOptimizations   │
 │     └─ React renders personalized content (no server roundtrip)     │
 │                                                                     │
 │  5. User actions (identify, consent, reset)                         │
 │     ├─ sdk.identify() / sdk.consent() / sdk.reset()                │
 │     ├─ selectedOptimizations updates reactively                     │
-│     └─ <OptimizedEntry liveUpdates={true}> re-resolves immediately │
+│     └─ resolveEntry() returns updated variant immediately           │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -108,33 +107,35 @@ The first page the user hits resolves entries server-side. No loading state, no 
 const { entry: resolved } = sdk.resolveOptimizedEntry(entry, optimizationData.selectedOptimizations)
 ```
 
-### 2. Subsequent pages use Client Components with `<OptimizedEntry>`
+### 2. Subsequent pages use Client Components with `resolveEntry()`
 
 After hydration, navigating to other routes fetches entries client-side and resolves them via the
-React Web SDK:
+React Web SDK's `useOptimization()` hook:
 
 ```typescript
 // app/other-page/page.tsx ("use client")
-import { OptimizedEntry } from '@contentful/optimization-react-web'
+import { useOptimization } from '@contentful/optimization-react-web'
 
 function PersonalizedSection({ entry }) {
-  return (
-    <OptimizedEntry baselineEntry={entry} liveUpdates={true}>
-      {({ resolvedEntry }) => <div>{resolvedEntry.fields.text}</div>}
-    </OptimizedEntry>
-  )
+  const { resolveEntry } = useOptimization()
+  const resolvedEntry = resolveEntry(entry)
+
+  return <div>{resolvedEntry.fields.text}</div>
 }
 ```
 
-### 3. `liveUpdates={true}` enables reactive re-resolution
+### 3. Reactive re-resolution via `resolveEntry()`
 
-When the user's profile changes (identify, consent, reset), entries with `liveUpdates={true}`
-automatically re-resolve and re-render without any manual state management:
+When the user's profile changes (identify, consent, reset), `resolveEntry()` automatically returns
+the updated variant because it reads from the reactive `selectedOptimizations` state. The component
+re-renders with the new content — no manual state management or `liveUpdates` flag needed:
 
 ```typescript
-<OptimizedEntry baselineEntry={entry} liveUpdates={true}>
-  {({ resolvedEntry }) => <Content entry={resolvedEntry} />}
-</OptimizedEntry>
+function ClientResolvedEntry({ entry }) {
+  const { resolveEntry } = useOptimization()
+  const resolvedEntry = resolveEntry(entry) // re-resolves on profile changes
+  return <Content entry={resolvedEntry} />
+}
 ```
 
 ### 4. Cookie bridge (same as nextJs-ssr)
@@ -175,7 +176,7 @@ state without a redundant API call. This would make the SSR → CSR handoff seam
 | --------------------------------- | ------------------------------------- | -------------------------- |
 | First page load                   | Server-resolved personalized content  | Immediate (in HTML)        |
 | After hydration (same page)       | No change — server content stays      | Seamless                   |
-| Identify / consent / reset        | Entries with `liveUpdates` re-resolve | Instant (client-side)      |
+| Identify / consent / reset        | Entries re-resolve via `resolveEntry()` | Instant (client-side)      |
 | Navigate via `<Link>`             | New page entries resolved client-side | Fast (no server roundtrip) |
 | Browser refresh / full navigation | Back to server-resolved first paint   | Immediate (new SSR)        |
 

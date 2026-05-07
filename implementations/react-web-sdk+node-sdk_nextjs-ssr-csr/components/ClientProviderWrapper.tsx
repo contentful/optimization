@@ -1,11 +1,5 @@
 'use client'
 
-// The Web SDK requires browser APIs (localStorage, document.cookie) and cannot
-// be instantiated during SSR. Using next/dynamic with ssr:false ensures
-// OptimizationRoot is only loaded and rendered on the client. Without this,
-// child components that call useOptimization() would throw when rendered
-// outside the provider during server rendering.
-
 import { optimizationConfig } from '@/lib/config'
 import dynamic from 'next/dynamic'
 import { Suspense, type ReactNode } from 'react'
@@ -39,7 +33,7 @@ export function ClientProviderWrapper({ children }: ClientProviderWrapperProps) 
       autoTrackEntryInteraction={{ views: true, clicks: true, hovers: true }}
       logLevel="debug"
       app={{
-        name: 'ContentfulOptimization SDK - Next.js Reference',
+        name: 'ContentfulOptimization SDK - Next.js SSR+CSR Hybrid (Client)',
         version: '0.1.0',
       }}
     >

@@ -3,9 +3,9 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Optimization Next.js CSR Reference',
+  title: 'Optimization Next.js Hybrid SSR + CSR Takeover',
   description:
-    'Next.js App Router reference using @contentful/optimization-react-web for pure client-side entry resolution.',
+    'Next.js App Router reference: Node SDK resolves entries server-side for first paint, React SDK takes over for client-side reactivity and SPA navigation.',
 }
 
 export default function RootLayout({
