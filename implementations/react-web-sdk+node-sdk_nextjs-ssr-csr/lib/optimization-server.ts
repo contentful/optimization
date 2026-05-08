@@ -29,4 +29,4 @@ const getOptimizationData = cache(async () => {
   })
 })
 
-export { sdk, getOptimizationData }
+export { getOptimizationData, sdk }

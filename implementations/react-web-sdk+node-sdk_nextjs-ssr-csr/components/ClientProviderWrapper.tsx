@@ -1,9 +1,11 @@
 'use client'
 
 import { optimizationConfig } from '@/lib/config'
-import type { Profile } from '@contentful/optimization-react-web/api-schemas'
-import type { SelectedOptimizationArray } from '@contentful/optimization-react-web/api-schemas'
-import type { ChangeArray } from '@contentful/optimization-react-web/api-schemas'
+import type {
+  ChangeArray,
+  Profile,
+  SelectedOptimizationArray,
+} from '@contentful/optimization-react-web/api-schemas'
 import dynamic from 'next/dynamic'
 import { Suspense, type ReactNode } from 'react'
 
