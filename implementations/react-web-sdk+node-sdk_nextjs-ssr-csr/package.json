@@ -1,0 +1,68 @@
+{
+  "name": "@implementation/react-web-sdk+node-sdk_nextjs-ssr-csr",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Reference implementation for Next.js (App Router) using @contentful/optimization-node for SSR first-paint and @contentful/optimization-react-web for CSR takeover",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --port 3002",
+    "build": "next build",
+    "start": "next start --port 3002",
+    "clean": "rimraf .next coverage playwright-report test-results .tsbuildinfo",
+    "preview": "pnpm serve:mocks && pnpm start",
+    "serve": "pnpm serve:mocks && pnpm serve:app",
+    "serve:app": "pnpm build && pm2 start --name nextjs-ssr-csr-hybrid-app \"pnpm start\"",
+    "serve:app:stop": "pm2 stop nextjs-ssr-csr-hybrid-app && pm2 delete nextjs-ssr-csr-hybrid-app",
+    "serve:mocks": "pm2 start --name nextjs-ssr-csr-hybrid-mocks \"pnpm --dir ../../lib/mocks serve\"",
+    "serve:mocks:stop": "pm2 stop nextjs-ssr-csr-hybrid-mocks && pm2 delete nextjs-ssr-csr-hybrid-mocks",
+    "serve:stop": "pnpm serve:app:stop && pnpm serve:mocks:stop",
+    "test:e2e": "pnpm serve && playwright test; E2E_RESULT=$?; pnpm serve:stop; exit $E2E_RESULT",
+    "test:e2e:codegen": "playwright codegen",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:ui": "playwright test --ui",
+    "implementation:playwright:install": "playwright install",
+    "implementation:playwright:install-deps": "playwright install-deps",
+    "implementation:setup:e2e": "pnpm implementation:playwright:install && pnpm implementation:playwright:install-deps",
+    "test:unit": "echo \"No unit tests necessary\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@contentful/optimization-node": "0.0.0",
+    "@contentful/optimization-react-web": "0.0.0",
+    "@contentful/optimization-web-preview-panel": "0.0.0",
+    "@contentful/rich-text-react-renderer": "16.1.6",
+    "@contentful/rich-text-types": "17.2.5",
+    "contentful": "11.10.5",
+    "next": "16.2.4",
+    "react": "19.2.5",
+    "react-dom": "19.2.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.58.2",
+    "@tailwindcss/postcss": "4.1.11",
+    "@types/node": "24.11.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "dotenv": "17.3.1",
+    "eslint": "9.29.0",
+    "eslint-config-next": "16.2.4",
+    "pm2": "6.0.14",
+    "postcss": "8.5.6",
+    "rimraf": "6.1.3",
+    "tailwindcss": "4.1.11",
+    "typescript": "5.9.3"
+  },
+  "pnpm": {
+    "overrides": {
+      "@contentful/optimization-api-client": "file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz",
+      "@contentful/optimization-api-schemas": "file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz",
+      "@contentful/optimization-core": "file:../../pkgs/contentful-optimization-core-0.0.0.tgz",
+      "@contentful/optimization-node": "file:../../pkgs/contentful-optimization-node-0.0.0.tgz",
+      "@contentful/optimization-web": "file:../../pkgs/contentful-optimization-web-0.0.0.tgz",
+      "@contentful/optimization-react-web": "file:../../pkgs/contentful-optimization-react-web-0.0.0.tgz",
+      "@contentful/optimization-web-preview-panel": "file:../../pkgs/contentful-optimization-web-preview-panel-0.0.0.tgz"
+    }
+  }
+}

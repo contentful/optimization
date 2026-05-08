@@ -6,6 +6,8 @@ children:
   - ./integrating-the-web-sdk-in-a-web-app.md
   - ./integrating-the-react-web-sdk-in-a-react-app.md
   - ./integrating-the-react-native-sdk-in-a-react-native-app.md
+  - ./integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md
+  - ./integrating-the-optimization-sdk-in-a-nextjs-app-ssr-csr.md
 ---
 
 # Guides
@@ -33,3 +35,10 @@ inventory instead.
 - [Integrating the Optimization React Native SDK in a React Native app](./integrating-the-react-native-sdk-in-a-react-native-app.md) -
   step-by-step React Native / Expo integration guidance covering setup, consent, personalization and
   interaction tracking, screen tracking, live updates, and the in-app preview panel
+- [Integrating the Optimization SDK in a Next.js app (SSR-primary)](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md) -
+  step-by-step Next.js App Router guidance for the SSR-primary pattern where the Node SDK resolves
+  entries server-side and the React Web SDK handles client-side tracking and interactive controls
+- [Integrating the Optimization SDK in a Next.js app (hybrid SSR + CSR takeover)](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr-csr.md) -
+  step-by-step Next.js App Router guidance for the hybrid pattern where first paint is
+  server-resolved and the React Web SDK takes over for instant client-side reactivity after
+  hydration
