@@ -15,7 +15,7 @@ const SOURCE_MAP: SourceMap = {
 function renderHook(
   nodeId: string,
   sourceMap: SourceMap,
-): { getResult: () => UseOptimizedNodeResult; container: HTMLElement } {
+): { getResult: () => UseOptimizedNodeResult; cleanup: () => void } {
   let captured: UseOptimizedNodeResult | undefined = undefined
   const container = document.createElement('div')
   document.body.appendChild(container)
@@ -35,13 +35,18 @@ function renderHook(
       if (!captured) throw new Error('hook result not captured')
       return captured
     },
-    container,
+    cleanup() {
+      act(() => {
+        root.unmount()
+      })
+      container.remove()
+    },
   }
 }
 
 describe('useOptimizedNode', () => {
   it('resolves payload when node is in sourceMap', () => {
-    const { getResult } = renderHook('node-1', SOURCE_MAP)
+    const { cleanup, getResult } = renderHook('node-1', SOURCE_MAP)
 
     expect(getResult().payload).toEqual({
       entityId: 'exp-id',
@@ -49,16 +54,20 @@ describe('useOptimizedNode', () => {
       optimizationId: 'exp-id',
       variant: 'variant-a',
     })
+
+    cleanup()
   })
 
   it('returns undefined payload when nodeId is absent from sourceMap', () => {
-    const { getResult } = renderHook('nonexistent', SOURCE_MAP)
+    const { cleanup, getResult } = renderHook('nonexistent', SOURCE_MAP)
 
     expect(getResult().payload).toBeUndefined()
+
+    cleanup()
   })
 
   it('stamps dataset attributes when ref is called with an element', () => {
-    const { getResult } = renderHook('node-1', SOURCE_MAP)
+    const { cleanup, getResult } = renderHook('node-1', SOURCE_MAP)
     const el = document.createElement('div')
 
     act(() => {
@@ -70,23 +79,40 @@ describe('useOptimizedNode', () => {
     expect(el.dataset.ctflEntityKind).toBe('Experience')
     expect(el.dataset.ctflOptimizationId).toBe('exp-id')
     expect(el.dataset.ctflVariant).toBe('variant-a')
+
+    cleanup()
   })
 
-  it('ref is a no-op when payload is undefined', () => {
-    const { getResult } = renderHook('nonexistent', SOURCE_MAP)
+  it('clears node-view dataset attributes when payload is undefined', () => {
+    const { cleanup, getResult } = renderHook('nonexistent', SOURCE_MAP)
     const el = document.createElement('div')
+    el.dataset.ctflNodeId = 'previous-node'
+    el.dataset.ctflEntityId = 'previous-entity'
+    el.dataset.ctflEntityKind = 'Experience'
+    el.dataset.ctflOptimizationId = 'previous-optimization'
+    el.dataset.ctflVariant = 'previous-variant'
 
     act(() => {
       getResult().ref(el)
     })
 
     expect(el.dataset.ctflNodeId).toBeUndefined()
+    expect(el.dataset.ctflEntityId).toBeUndefined()
+    expect(el.dataset.ctflEntityKind).toBeUndefined()
+    expect(el.dataset.ctflOptimizationId).toBeUndefined()
+    expect(el.dataset.ctflVariant).toBeUndefined()
+
+    cleanup()
   })
 
   it('ref is a no-op when called with null', () => {
-    const { getResult } = renderHook('node-1', SOURCE_MAP)
+    const { cleanup, getResult } = renderHook('node-1', SOURCE_MAP)
     const { ref } = getResult()
 
-    expect(() => { ref(null) }).not.toThrow()
+    expect(() => {
+      ref(null)
+    }).not.toThrow()
+
+    cleanup()
   })
 })

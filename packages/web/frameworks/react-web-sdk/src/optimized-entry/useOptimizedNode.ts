@@ -63,9 +63,18 @@ export function useOptimizedNode({
 
   const ref = useCallback(
     (element: HTMLElement | SVGElement | null): void => {
-      if (!element || !payload) return
-
+      if (!element) return
       const { dataset } = element
+
+      if (!payload) {
+        delete dataset.ctflNodeId
+        delete dataset.ctflEntityId
+        delete dataset.ctflEntityKind
+        delete dataset.ctflOptimizationId
+        delete dataset.ctflVariant
+        return
+      }
+
       const { entityId, entityKind, optimizationId, variant } = payload
 
       dataset.ctflNodeId = nodeId
