@@ -71,6 +71,14 @@ local.properties
 !debug.keystore
 !**/gradle/wrapper/gradle-wrapper.jar
 
+# Android Native
+triage-out
+.gradle/
+app/build/
+uitests/build/
+local.properties
+logs/
+
 # node.js
 #
 node_modules/
@@ -114,3 +122,4 @@ yarn-error.log
 # Local environment configuration - commented out since we use safe defaults
 # Uncomment this line if you need to override with local secrets
 # env.config.ts
+
