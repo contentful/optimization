@@ -107,6 +107,12 @@ object TestHelpers {
         singleClick: Boolean = false,
     ) {
         val element = waitForElement(device, selector, timeout)
+        // Wait for the accessibility tree to settle before tapping. After a
+        // preceding action (e.g. an audience-toggle tap) the panel re-sorts
+        // via sortAudiences; if we click while Compose is mid-rebuild, the
+        // resolved AccessibilityNodeInfo can carry a different audience's
+        // identity than the one waitForElement matched on.
+        device.waitForIdle(1500L)
         tapElement(device, element, singleClick = singleClick)
     }
 
