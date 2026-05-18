@@ -312,17 +312,17 @@ describe('buildPreviewModel', () => {
       expect(model.audiencesWithExperiences[0]?.audience.id).toBe(ALL_VISITORS_AUDIENCE_ID)
     })
 
-    test('qualified audiences are sorted before unqualified', () => {
+    test('audiences are sorted alphabetically by name regardless of qualification', () => {
       const model = buildPreviewModel({
         audienceDefinitions: [audience('aud-b', 'Banana'), audience('aud-a', 'Apple')],
         experienceDefinitions: [],
         signals: { ...EMPTY_SIGNALS, profile: makeProfile(['aud-b']) },
         overrides: EMPTY_OVERRIDES,
       })
-      expect(model.audiencesWithExperiences.map((a) => a.audience.id)).toEqual(['aud-b', 'aud-a'])
+      expect(model.audiencesWithExperiences.map((a) => a.audience.id)).toEqual(['aud-a', 'aud-b'])
     })
 
-    test('audiences with the same activation state break ties alphabetically by name', () => {
+    test('audiences are ordered alphabetically by name', () => {
       const model = buildPreviewModel({
         audienceDefinitions: [
           audience('aud-c', 'Charlie'),
@@ -355,8 +355,8 @@ describe('buildPreviewModel', () => {
       expect(model.audiencesWithExperiences.map((a) => a.audience.id)).toEqual([
         ALL_VISITORS_AUDIENCE_ID,
         'aud-q1',
-        'aud-q2',
         'aud-u1',
+        'aud-q2',
         'aud-u2',
       ])
     })

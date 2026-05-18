@@ -4129,13 +4129,9 @@
                           ? -1
                           : t.audience.id === rc
                             ? 1
-                            : e.isActive !== t.isActive
-                              ? e.isActive
-                                ? -1
-                                : 1
-                              : e.audience.name.localeCompare(t.audience.name, void 0, {
-                                  sensitivity: 'base',
-                                }),
+                            : e.audience.name.localeCompare(t.audience.name, void 0, {
+                                sensitivity: 'base',
+                              }),
                       ),
                       unassociatedExperiences: d,
                       hasData: h,

@@ -92,10 +92,14 @@ function enrichExperience(
 
 /** @internal */
 function sortAudiences(audiences: AudienceWithExperiences[]): AudienceWithExperiences[] {
+  // ALL_VISITORS first, then strict alphabetical by name. The previous
+  // active-first ordering caused the panel UI to re-sort whenever an audience
+  // override flipped `isActive`, which on Android raced the
+  // accessibility-tree commit and routed back-to-back audience-toggle taps
+  // to the wrong audience's click handler.
   return [...audiences].sort((a, b) => {
     if (a.audience.id === ALL_VISITORS_AUDIENCE_ID) return -1
     if (b.audience.id === ALL_VISITORS_AUDIENCE_ID) return 1
-    if (a.isActive !== b.isActive) return a.isActive ? -1 : 1
     return a.audience.name.localeCompare(b.audience.name, undefined, { sensitivity: 'base' })
   })
 }
