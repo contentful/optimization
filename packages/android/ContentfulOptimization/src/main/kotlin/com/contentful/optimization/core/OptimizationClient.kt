@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -272,7 +273,12 @@ class OptimizationClient(private val applicationContext: Context) {
 
     private fun bridgeCallSyncWhenInitialized(method: String, args: String = "") {
         if (!_isInitialized.value) return
-        CoroutineScope(bridge.quickJsDispatcher).launch {
+        // Block on the QuickJS dispatcher so that any state mutations produced
+        // by the JS call (and the synchronous `__nativeOnStateChange` callback
+        // it triggers) have settled into our StateFlows before this function
+        // returns. Matches iOS's `JSContext.evaluateScript` semantics, where
+        // state callbacks fire before the bridge call returns to the caller.
+        runBlocking(bridge.quickJsDispatcher) {
             bridge.callSync(method, args)
         }
     }

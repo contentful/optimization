@@ -263,25 +263,26 @@ class ZiplineContextManager {
         }
     }
 
+    // The handlers below are dispatched from the QuickJS thread while a JS
+    // call is still in flight. Invoking the registered native callback
+    // synchronously here is what guarantees that StateFlow mutations have
+    // landed by the time the calling `bridge.callSync` returns. Hopping to
+    // Main would break that contract and reintroduce the panel-close race
+    // documented in PreviewPanelOverridesTests scenario 3. StateFlow,
+    // SharedFlow, and SharedPreferences are all safe to call from any thread.
     private fun handleStateChange(json: String) {
         val dict = parseJSONDict(json) ?: return
-        CoroutineScope(Dispatchers.Main).launch {
-            onStateChange?.invoke(dict)
-        }
+        onStateChange?.invoke(dict)
     }
 
     private fun handleEvent(json: String) {
         val dict = parseJSONDict(json) ?: return
-        CoroutineScope(Dispatchers.Main).launch {
-            onEvent?.invoke(dict)
-        }
+        onEvent?.invoke(dict)
     }
 
     private fun handleOverridesChanged(json: String) {
         val state = PreviewState.fromJSON(json) ?: return
-        CoroutineScope(Dispatchers.Main).launch {
-            onOverridesChanged?.invoke(state)
-        }
+        onOverridesChanged?.invoke(state)
     }
 
     private fun parseJSONDict(json: String): Map<String, Any>? {

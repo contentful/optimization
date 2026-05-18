@@ -77,7 +77,10 @@ fun OptimizedEntry(
 
     LaunchedEffect(isPreviewPanelOpen) {
         if (isPersonalized && !isPreviewPanelOpen && isLocked) {
-            lockedPersonalizations = selectedPersonalizations
+            // Read directly from the StateFlow rather than the Compose-state
+            // snapshot. The sync-bridge wrapper guarantees state has settled by
+            // the time this fires, so `.value` carries the post-action result.
+            lockedPersonalizations = client.selectedPersonalizations.value
         }
     }
 
