@@ -100,9 +100,14 @@ object TestHelpers {
         return node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
     }
 
-    fun waitAndTap(device: UiDevice, selector: BySelector, timeout: Long = ELEMENT_TIMEOUT) {
+    fun waitAndTap(
+        device: UiDevice,
+        selector: BySelector,
+        timeout: Long = ELEMENT_TIMEOUT,
+        singleClick: Boolean = false,
+    ) {
         val element = waitForElement(device, selector, timeout)
-        tapElement(device, element)
+        tapElement(device, element, singleClick = singleClick)
     }
 
     fun findElement(device: UiDevice, testId: String): UiObject2? {

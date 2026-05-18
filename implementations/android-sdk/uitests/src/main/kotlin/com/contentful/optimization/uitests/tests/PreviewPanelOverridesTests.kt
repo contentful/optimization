@@ -169,7 +169,11 @@ class PreviewPanelOverridesTests {
         openPanel()
         waitForDefinitionsLoaded()
         scrollPanelToElement("audience-toggle-$AUDIENCE_ID-off")
-        TestHelpers.waitAndTap(device, By.desc("audience-toggle-$AUDIENCE_ID-off"))
+        // singleClick: deactivating the audience demotes it in `sortAudiences`,
+        // so the row re-sorts between the accessibility click and the default
+        // coordinate-click fallback, landing the second tap on whichever audience
+        // now occupies the original screen position.
+        TestHelpers.waitAndTap(device, By.desc("audience-toggle-$AUDIENCE_ID-off"), singleClick = true)
         closePanel()
 
         assertEntryVisible(BASELINE_ENTRY_ID, "Expected baseline entry after deactivating audience")
@@ -180,8 +184,8 @@ class PreviewPanelOverridesTests {
         openPanel()
         waitForDefinitionsLoaded()
         scrollPanelToElement("audience-toggle-$AUDIENCE_ID-off")
-        TestHelpers.waitAndTap(device, By.desc("audience-toggle-$AUDIENCE_ID-off"))
-        TestHelpers.waitAndTap(device, By.desc("audience-toggle-$AUDIENCE_ID-default"))
+        TestHelpers.waitAndTap(device, By.desc("audience-toggle-$AUDIENCE_ID-off"), singleClick = true)
+        TestHelpers.waitAndTap(device, By.desc("audience-toggle-$AUDIENCE_ID-default"), singleClick = true)
         closePanel()
 
         assertEntryVisible(VARIANT_ENTRY_ID, "Expected variant entry after resetting audience override")
