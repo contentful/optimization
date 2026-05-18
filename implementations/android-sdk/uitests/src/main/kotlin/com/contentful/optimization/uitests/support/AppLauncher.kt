@@ -44,7 +44,7 @@ object AppLauncher {
     }
 
     fun forceStop(device: UiDevice) {
-        device.executeShellCommand("am start -a android.intent.action.MAIN -c android.intent.category.HOME")
+        device.executeShellCommand("am force-stop $APP_PACKAGE")
         Thread.sleep(500)
     }
 }
