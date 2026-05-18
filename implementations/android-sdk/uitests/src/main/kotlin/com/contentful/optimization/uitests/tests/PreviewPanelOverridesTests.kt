@@ -6,6 +6,7 @@ import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiScrollable
 import androidx.test.uiautomator.UiSelector
+import androidx.test.uiautomator.Until
 import com.contentful.optimization.uitests.support.AppLauncher
 import com.contentful.optimization.uitests.support.TestHelpers
 import com.contentful.optimization.uitests.support.clearProfileState
@@ -67,7 +68,13 @@ class PreviewPanelOverridesTests {
         val endY = bounds?.let { it.top + (it.height() / 4) } ?: (device.displayHeight / 4)
 
         for (i in 0 until 8) {
-            val el = device.findObject(By.descContains(desc))
+            // Wait for any in-flight scroll/animation to settle. Compose batches
+            // accessibility-tree updates during a fling and the tree we query
+            // here would otherwise be stale.
+            device.waitForIdle(1500L)
+            val el = device.wait(Until.hasObject(By.descContains(desc)), 500L)?.let {
+                device.findObject(By.descContains(desc))
+            }
             if (el != null) {
                 val elBounds = el.visibleBounds
                 if (elBounds.height() >= 5 && bounds != null &&
@@ -77,7 +84,6 @@ class PreviewPanelOverridesTests {
                 }
             }
             device.swipe(centerX, startY, centerX, endY, 25)
-            Thread.sleep(500)
         }
     }
 
