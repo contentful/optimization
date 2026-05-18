@@ -102,7 +102,7 @@ module.exports = {
     simulator: {
       type: 'ios.simulator',
       device: {
-        type: 'iPad Pro 13-inch (M4)',
+        type: process.env.DETOX_IOS_DEVICE || 'iPad Pro 13-inch (M4)',
       },
     },
     emulator: {

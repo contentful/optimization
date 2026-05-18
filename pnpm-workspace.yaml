@@ -4,6 +4,7 @@ packages:
   - packages/web/*
   - packages/web/frameworks/*
   - packages/ios/*
+  - packages/android/*
   - packages/node/node-sdk
   - packages/universal/*
 

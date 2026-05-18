@@ -1,0 +1,12 @@
+{
+  "name": "@implementation/android-sdk",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "./gradlew :app:assembleDebug",
+    "build:release": "./gradlew :app:assembleRelease",
+    "bootstrap": "./scripts/bootstrap.sh",
+    "test:ui": "./gradlew :uitests:connectedAndroidTest",
+    "test:e2e": "./scripts/run-e2e.sh"
+  }
+}

@@ -53,6 +53,14 @@ final class PreviewViewModel: ObservableObject {
                 experiences: experienceEntriesWithIncludes
             )
 
+            // The JS bridge updates its internal audienceDefinitions/
+            // experienceDefinitions caches synchronously here, but it does not
+            // fire `notifyChanged`, so Swift's `@Published previewState` would
+            // remain on the pre-loadDefinitions snapshot (with previewModel =
+            // nil). Pull the new snapshot now so the panel renders audiences
+            // immediately after definitions land.
+            client.refreshPreviewState()
+
             hasLoadedDefinitions = true
             isLoadingDefinitions = false
         } catch {

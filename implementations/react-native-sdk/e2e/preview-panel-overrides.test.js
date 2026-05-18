@@ -49,7 +49,7 @@ async function openPanel() {
 async function scrollPanelToId(testId) {
   await waitFor(element(by.id(testId)))
     .toBeVisible()
-    .whileElement(by.type('android.widget.ScrollView'))
+    .whileElement(by.id('preview-panel-scroll'))
     .scroll(300, 'down')
 }
 
@@ -123,11 +123,12 @@ describe('preview panel overrides', () => {
     await element(by.id(`variant-picker-${EXPERIENCE_ID}-0`)).tap()
     await scrollPanelToId('reset-all-overrides')
     await element(by.id('reset-all-overrides')).tap()
-    // Confirm alert.
-    await waitFor(element(by.text('Reset')))
+    // Confirmation is now an inline view inside the panel modal, so the
+    // confirm button is reachable by testID on both platforms.
+    await waitFor(element(by.id('reset-all-confirm')))
       .toBeVisible()
       .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
-    await element(by.text('Reset')).atIndex(0).tap()
+    await element(by.id('reset-all-confirm')).tap()
     await closePanel()
 
     await waitFor(element(by.id(`entry-text-${VARIANT_ENTRY_ID}`)))

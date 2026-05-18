@@ -26,7 +26,7 @@ struct OptimizationDemoApp: App {
                 trackViews: true,
                 trackTaps: true
             ) {
-                PreviewPanelOverlay {
+                PreviewPanelOverlay(contentfulClient: MockPreviewContentfulClient()) {
                     MainScreen()
                 }
             }
