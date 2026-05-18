@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -259,22 +260,30 @@ private fun AudienceSection(
             )
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(PreviewTheme.Spacing.sm)) {
+                // `key` ties each AudienceItem's slot identity to the audience id
+                // rather than its list position. Without it, `sortAudiences` reorder
+                // after an override would have Compose reuse slots by position and
+                // splice modifier values (Text contentDescription, clickable callback)
+                // across audiences within the same recomposition window, routing a
+                // tap on one audience-toggle to a different audience's callback.
                 filteredAudiences.forEach { audience ->
-                    AudienceItem(
-                        audience = audience,
-                        isExpanded = expandedAudiences.contains(audience.audience.id),
-                        onToggleExpand = { viewModel.toggleExpand(audience.audience.id) },
-                        onToggleOverride = { state ->
-                            viewModel.setAudienceOverride(
-                                audienceId = audience.audience.id,
-                                state = state,
-                                experienceIds = audience.experiences.map { it.id },
-                            )
-                        },
-                        onSelectVariant = { expId, variant ->
-                            viewModel.setVariantOverride(experienceId = expId, variantIndex = variant)
-                        },
-                    )
+                    key(audience.audience.id) {
+                        AudienceItem(
+                            audience = audience,
+                            isExpanded = expandedAudiences.contains(audience.audience.id),
+                            onToggleExpand = { viewModel.toggleExpand(audience.audience.id) },
+                            onToggleOverride = { state ->
+                                viewModel.setAudienceOverride(
+                                    audienceId = audience.audience.id,
+                                    state = state,
+                                    experienceIds = audience.experiences.map { it.id },
+                                )
+                            },
+                            onSelectVariant = { expId, variant ->
+                                viewModel.setVariantOverride(experienceId = expId, variantIndex = variant)
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -434,14 +443,16 @@ private fun OverridesSection(
                             ),
                         )
                         audienceOverrides.entries.sortedBy { audienceNameMap[it.key] ?: it.key }.forEach { (id, qualified) ->
-                            ListItemRow(
-                                label = audienceNameMap[id] ?: id,
-                                value = if (qualified) "Activated" else "Deactivated",
-                                action = Triple("Reset", ActionButtonVariant.RESET) {
-                                    viewModel.resetAudienceOverride(id)
-                                },
-                                actionAccessibilityID = "reset-audience-$id",
-                            )
+                            key(id) {
+                                ListItemRow(
+                                    label = audienceNameMap[id] ?: id,
+                                    value = if (qualified) "Activated" else "Deactivated",
+                                    action = Triple("Reset", ActionButtonVariant.RESET) {
+                                        viewModel.resetAudienceOverride(id)
+                                    },
+                                    actionAccessibilityID = "reset-audience-$id",
+                                )
+                            }
                         }
                     }
                 }
@@ -457,14 +468,16 @@ private fun OverridesSection(
                             ),
                         )
                         variantOverrides.entries.sortedBy { experienceNameMap[it.key] ?: it.key }.forEach { (expId, variant) ->
-                            ListItemRow(
-                                label = experienceNameMap[expId] ?: expId,
-                                value = if (variant == 0) "Baseline" else "Variant $variant",
-                                action = Triple("Reset", ActionButtonVariant.RESET) {
-                                    viewModel.resetVariantOverride(expId)
-                                },
-                                actionAccessibilityID = "reset-variant-$expId",
-                            )
+                            key(expId) {
+                                ListItemRow(
+                                    label = experienceNameMap[expId] ?: expId,
+                                    value = if (variant == 0) "Baseline" else "Variant $variant",
+                                    action = Triple("Reset", ActionButtonVariant.RESET) {
+                                        viewModel.resetVariantOverride(expId)
+                                    },
+                                    actionAccessibilityID = "reset-variant-$expId",
+                                )
+                            }
                         }
                     }
                 }
