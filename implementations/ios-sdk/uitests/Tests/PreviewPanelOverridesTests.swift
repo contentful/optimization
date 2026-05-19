@@ -31,6 +31,16 @@ final class PreviewPanelOverridesTests: XCTestCase {
     static let BASELINE_ENTRY_ID = "1JAU028vQ7v6nB2swl3NBo"
     static let VARIANT_ENTRY_ID = "2KIWllNZJT205BwOSkMINg"
 
+    // Scenario 1 uses the Mobile Browser audience, which the identified user
+    // does NOT qualify for. The associated experience (6ZjRMMvtP9MOfWYrON0yxz)
+    // is the first entry in the `nt_experiences` array of baseline
+    // xFwgG3oNaOcjzWiGe4vXo, so OptimizedEntryResolver picks it
+    // deterministically once activated. xFwgG3oNaOcjzWiGe4vXo is already in
+    // the demo app's entryIds (shared/Config.swift).
+    static let UNQUALIFIED_AUDIENCE_ID = "3MRuZPQ5EdwDqzUDRgOo7c"
+    static let MOBILE_BASELINE_ENTRY_ID = "xFwgG3oNaOcjzWiGe4vXo"
+    static let MOBILE_VARIANT_ENTRY_ID = "61KKjYYmSR9IukqA0u9Pwd"
+
     override func setUp() {
         continueAfterFailure = false
         app.launch()
@@ -131,10 +141,14 @@ final class PreviewPanelOverridesTests: XCTestCase {
     /// `[Entry: <expectedResolvedId>]` marker NestedEntryText writes for the
     /// resolved entry id. Dumps every visible content-entry-* label on
     /// failure so the cross-resolution snapshot is captured in the test log.
-    private func assertResolvedEntry(_ expectedResolvedId: String, message: String) {
-        let wrapper = app.otherElements["content-entry-\(Self.BASELINE_ENTRY_ID)"]
+    private func assertResolvedEntry(
+        _ expectedResolvedId: String,
+        forBaseline baselineId: String = PreviewPanelOverridesTests.BASELINE_ENTRY_ID,
+        message: String
+    ) {
+        let wrapper = app.otherElements["content-entry-\(baselineId)"]
         XCTAssertTrue(wrapper.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
-                      "\(message): wrapper content-entry-\(Self.BASELINE_ENTRY_ID) missing")
+                      "\(message): wrapper content-entry-\(baselineId) missing")
         let token = "[Entry: \(expectedResolvedId)]"
         let deadline = Date().addingTimeInterval(ELEMENT_VISIBILITY_TIMEOUT)
         var lastLabel = ""
@@ -149,7 +163,7 @@ final class PreviewPanelOverridesTests: XCTestCase {
             .map { "\($0.identifier) -> \($0.label)" }
         XCTFail("""
             \(message)
-            Wrapper content-entry-\(Self.BASELINE_ENTRY_ID) label: \"\(lastLabel)\"
+            Wrapper content-entry-\(baselineId) label: \"\(lastLabel)\"
             Expected to contain: \"\(token)\"
             All content-entry-* labels:
             \(allContentEntryLabels.joined(separator: "\n            "))
@@ -226,9 +240,86 @@ final class PreviewPanelOverridesTests: XCTestCase {
                             message: "Expected variant entry after reset-all")
     }
 
-    // TODO: scenarios 1, 5, 7, 8 — see implementations/PREVIEW_PANEL_SCENARIOS.md.
-    // - 1 (activate unqualified audience) requires a mock audience the identified user does not qualify for.
-    // - 5 (reset single variant override) taps the per-item reset button in the Overrides section.
-    // - 7 (override survives API refresh) drives preview-refresh-button between open/close.
-    // - 8 (destroy/remount) uses app.terminate() + app.launch().
+    func testScenario1ActivatingUnqualifiedAudienceRendersItsVariant() {
+        openPanel()
+        let toggleId = "audience-toggle-\(Self.UNQUALIFIED_AUDIENCE_ID)-on"
+        scrollPanelToElement(toggleId)
+        let toggle = app.buttons[toggleId]
+        XCTAssertTrue(toggle.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "On toggle not found for unqualified audience (\(toggleId))")
+        toggle.tap()
+        closePanel()
+
+        assertResolvedEntry(Self.MOBILE_VARIANT_ENTRY_ID,
+                            forBaseline: Self.MOBILE_BASELINE_ENTRY_ID,
+                            message: "Expected mobile variant after activating Mobile Browser audience")
+    }
+
+    func testScenario5ResettingSingleVariantOverrideRestoresVariant() {
+        // Drive scenario 4 first so a variant override exists in the Overrides section.
+        openPanel()
+        expandAudienceAndTapVariantPicker0()
+
+        // Tap the per-experience reset. The iOS panel applies the reset
+        // synchronously — no confirmation alert (unlike RN's Alert.alert).
+        let resetId = "reset-variant-\(Self.EXPERIENCE_ID)"
+        scrollPanelToElement(resetId)
+        let resetButton = app.buttons[resetId]
+        XCTAssertTrue(resetButton.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Per-experience reset button not found (\(resetId))")
+        resetButton.tap()
+        closePanel()
+
+        assertResolvedEntry(Self.VARIANT_ENTRY_ID,
+                            message: "Expected variant entry after resetting variant override")
+    }
+
+    func testScenario7OverrideSurvivesAPIRefresh() {
+        // Apply scenario 2's audience deactivation, refresh, then assert the
+        // baseline is still rendering — i.e. the override interceptor
+        // preserved the override across the experience-API push.
+        openPanel()
+        let offId = "audience-toggle-\(Self.AUDIENCE_ID)-off"
+        scrollPanelToElement(offId)
+        app.buttons[offId].tap()
+
+        let refreshId = "preview-refresh-button"
+        scrollPanelToElement(refreshId)
+        let refresh = app.buttons[refreshId]
+        XCTAssertTrue(refresh.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "preview-refresh-button not found")
+        refresh.tap()
+        closePanel()
+
+        assertResolvedEntry(Self.BASELINE_ENTRY_ID,
+                            message: "Expected baseline still rendering after API refresh")
+    }
+
+    func testScenario8DestroyRemountClearsOverrides() {
+        // Apply scenario 2 override (deactivate audience → baseline rendering).
+        openPanel()
+        let offId = "audience-toggle-\(Self.AUDIENCE_ID)-off"
+        scrollPanelToElement(offId)
+        app.buttons[offId].tap()
+        closePanel()
+        assertResolvedEntry(Self.BASELINE_ENTRY_ID,
+                            message: "Expected baseline after deactivating audience (pre-relaunch)")
+
+        // Cold relaunch with --reset wipes any persisted state; the override
+        // store is in-memory anyway, so any terminate+launch clears it.
+        app.relaunchClean()
+        identifyAndWaitForEntries()
+
+        // Override must be gone — variant renders again.
+        assertResolvedEntry(Self.VARIANT_ENTRY_ID,
+                            message: "Expected variant entry after destroy/remount cleared overrides")
+
+        // And the Overrides section should show its empty state.
+        openPanel()
+        scrollPanelToElement("reset-all-overrides")
+        let emptyText = app.staticTexts["No active overrides"]
+        XCTAssertTrue(emptyText.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Expected 'No active overrides' empty-state text in Overrides section")
+        closePanel()
+    }
 }
