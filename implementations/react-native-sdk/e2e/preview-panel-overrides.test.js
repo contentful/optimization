@@ -6,12 +6,32 @@
  * data identical so cross-platform regressions are visible in CI diff.
  */
 
-const { clearProfileState, ELEMENT_VISIBILITY_TIMEOUT, isVisibleById } = require('./helpers')
+const {
+  clearProfileState,
+  ELEMENT_VISIBILITY_TIMEOUT,
+  isVisibleById,
+  tapAlertButton,
+} = require('./helpers')
 
 const AUDIENCE_ID = '4yIqY7AWtzeehCZxtQSDB'
 const EXPERIENCE_ID = '7DyidZaPB7Jr1gWKjoogg0'
 const VARIANT_ENTRY_ID = '5a8ONfBdanJtlJ39WWnH1w'
 const BASELINE_ENTRY_ID = '5i4SdJXw9oDEY0vgO7CwF4'
+
+// Scenario 1 reuses the Mobile Browser audience, which the identified user does
+// NOT qualify for. The associated experience is the first entry in the
+// `nt_experiences` array of baseline xFwgG3oNaOcjzWiGe4vXo (see
+// lib/mocks/src/contentful/data/entries/xFwgG3oNaOcjzWiGe4vXo.json), so
+// `OptimizedEntryResolver` picks it deterministically once activated.
+//
+// xFwgG3oNaOcjzWiGe4vXo renders through the demo app's top-level `ContentEntry`
+// (sections/ContentEntry.tsx), whose testID is keyed on the *original* entry
+// id and stays constant across resolution. So scenario 1 asserts on the
+// resolved entry's accessibilityLabel (variant text + original baseline id)
+// — that label changes when the override flips the resolved variant.
+const UNQUALIFIED_AUDIENCE_ID = '3MRuZPQ5EdwDqzUDRgOo7c'
+const MOBILE_VARIANT_LABEL =
+  'This is a variant content entry for visitors using a mobile browser. [Entry: xFwgG3oNaOcjzWiGe4vXo]'
 
 async function identifyAndRelaunch() {
   await waitFor(element(by.id('identify-button')))
@@ -75,6 +95,17 @@ describe('preview panel overrides', () => {
     await identifyAndRelaunch()
   })
 
+  it('scenario 1: activating unqualified audience renders its variant', async () => {
+    await openPanel()
+    await scrollPanelToId(`audience-toggle-${UNQUALIFIED_AUDIENCE_ID}-on`)
+    await element(by.id(`audience-toggle-${UNQUALIFIED_AUDIENCE_ID}-on`)).tap()
+    await closePanel()
+
+    await waitFor(element(by.label(MOBILE_VARIANT_LABEL)))
+      .toExist()
+      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
+  })
+
   it('scenario 2: deactivating qualified audience renders baseline', async () => {
     await openPanel()
     await scrollPanelToId(`audience-toggle-${AUDIENCE_ID}-off`)
@@ -114,6 +145,25 @@ describe('preview panel overrides', () => {
       .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
   })
 
+  it('scenario 5: resetting single variant override restores variant', async () => {
+    // Drive scenario 4 first so a variant override exists in the Overrides section.
+    await openPanel()
+    await scrollPanelToId(`audience-toggle-${AUDIENCE_ID}-off`)
+    await element(by.text('Identified Users')).tap()
+    await scrollPanelToId(`variant-picker-${EXPERIENCE_ID}-0`)
+    await element(by.id(`variant-picker-${EXPERIENCE_ID}-0`)).tap()
+
+    // Tap the per-experience reset and confirm the native Alert.
+    await scrollPanelToId(`reset-variant-${EXPERIENCE_ID}`)
+    await element(by.id(`reset-variant-${EXPERIENCE_ID}`)).tap()
+    await tapAlertButton('Reset')
+    await closePanel()
+
+    await waitFor(element(by.id(`entry-text-${VARIANT_ENTRY_ID}`)))
+      .toExist()
+      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
+  })
+
   it('scenario 6: reset-all restores variant content', async () => {
     // Set a variant override, then reset all.
     await openPanel()
@@ -136,9 +186,49 @@ describe('preview panel overrides', () => {
       .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
   })
 
-  // TODO: scenarios 1, 5, 7, 8 — see implementations/PREVIEW_PANEL_SCENARIOS.md.
-  // - 1 (activate unqualified audience) requires a mock audience the identified user does not qualify for.
-  // - 5 (reset single variant override) requires tapping the per-item reset button inside the Overrides section.
-  // - 7 (override survives API refresh) drives the existing preview-refresh-button.
-  // - 8 (destroy/remount) uses device.terminateApp() + device.launchApp({ delete: true }).
+  it('scenario 7: override survives API refresh', async () => {
+    // Apply scenario 2 (audience deactivated → baseline rendering), then drive
+    // the in-panel Refresh to force a re-hit of the experience API. The
+    // override interceptor must preserve the audience override across the push.
+    await openPanel()
+    await scrollPanelToId(`audience-toggle-${AUDIENCE_ID}-off`)
+    await element(by.id(`audience-toggle-${AUDIENCE_ID}-off`)).tap()
+    await scrollPanelToId('preview-refresh-button')
+    await element(by.id('preview-refresh-button')).tap()
+    await closePanel()
+
+    await waitFor(element(by.id(`entry-text-${BASELINE_ENTRY_ID}`)))
+      .toExist()
+      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
+  })
+
+  it('scenario 8: destroy/remount clears overrides', async () => {
+    // Apply scenario 2 override (deactivate audience → baseline rendering).
+    await openPanel()
+    await scrollPanelToId(`audience-toggle-${AUDIENCE_ID}-off`)
+    await element(by.id(`audience-toggle-${AUDIENCE_ID}-off`)).tap()
+    await closePanel()
+    await waitFor(element(by.id(`entry-text-${BASELINE_ENTRY_ID}`)))
+      .toExist()
+      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
+
+    // Cold relaunch with fresh storage and re-identify, mirroring beforeEach.
+    await device.terminateApp()
+    await device.launchApp({ newInstance: true, delete: true })
+    await identifyAndRelaunch()
+
+    // Override should be gone — variant renders again.
+    await waitFor(element(by.id(`entry-text-${VARIANT_ENTRY_ID}`)))
+      .toExist()
+      .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
+
+    // And the Overrides section should be empty. The empty-state text sits
+    // below the fold in the panel ScrollView, so scroll the footer into view
+    // first — that pulls OverridesSection (rendered just above it) into the
+    // visible viewport.
+    await openPanel()
+    await scrollPanelToId('reset-all-overrides')
+    await expect(element(by.text('No active overrides'))).toExist()
+    await closePanel()
+  })
 })

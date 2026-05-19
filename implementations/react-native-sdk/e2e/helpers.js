@@ -167,6 +167,16 @@ async function getViewId(componentId) {
   return match && match[1] && match[1] !== 'N/A' ? match[1].trim() : null
 }
 
+// Native `Alert.alert` on both Android (AlertDialog) and iOS (UIAlertController)
+// exposes buttons as text-matchable elements. `atIndex(0)` guards against
+// duplicate matchers if the same label is also present elsewhere in the panel.
+async function tapAlertButton(label, timeout = ELEMENT_VISIBILITY_TIMEOUT) {
+  await waitFor(element(by.text(label)).atIndex(0))
+    .toBeVisible()
+    .withTimeout(timeout)
+  await element(by.text(label)).atIndex(0).tap()
+}
+
 module.exports = {
   clearProfileState,
   ELEMENT_VISIBILITY_TIMEOUT,
@@ -175,6 +185,7 @@ module.exports = {
   getElementTextById,
   isVisibleById,
   sleep,
+  tapAlertButton,
   tapIfVisibleById,
   waitForTrackedItemEventCount,
   waitForElementTextById,
