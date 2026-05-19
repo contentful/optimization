@@ -87,12 +87,70 @@ function ContentSections({
   )
 }
 
+interface LiveUpdatesControlsProps {
+  onClose: () => void
+  onIdentify: () => void
+  onReset: () => void
+  onToggleGlobalLiveUpdates: () => void
+}
+
+function LiveUpdatesControls({
+  onClose,
+  onIdentify,
+  onReset,
+  onToggleGlobalLiveUpdates,
+}: LiveUpdatesControlsProps): React.JSX.Element {
+  const sdk = useOptimization()
+  const liveUpdatesContext = useLiveUpdates()
+  const [isIdentified, setIsIdentified] = useState(false)
+
+  useEffect(() => {
+    const subscription = sdk.states.profile.subscribe((profile) => {
+      setIsIdentified(profile?.traits.identified === true)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [sdk])
+
+  const globalLiveUpdates = liveUpdatesContext?.globalLiveUpdates ?? false
+
+  return (
+    <View>
+      <Text>Live Updates Test Controls</Text>
+      <View>
+        <Button testID="close-live-updates-test-button" title="Close" onPress={onClose} />
+        {!isIdentified ? (
+          <Button testID="live-updates-identify-button" title="Identify" onPress={onIdentify} />
+        ) : (
+          <Button testID="live-updates-reset-button" title="Reset" onPress={onReset} />
+        )}
+        <Button
+          testID="toggle-global-live-updates-button"
+          title={`Global: ${globalLiveUpdates ? 'ON' : 'OFF'}`}
+          onPress={onToggleGlobalLiveUpdates}
+        />
+      </View>
+      <View>
+        <View>
+          <Text>Identified:</Text>
+          <Text testID="identified-status">{isIdentified ? 'Yes' : 'No'}</Text>
+        </View>
+        <View>
+          <Text>Global Live Updates:</Text>
+          <Text testID="global-live-updates-status">{globalLiveUpdates ? 'ON' : 'OFF'}</Text>
+        </View>
+      </View>
+    </View>
+  )
+}
+
 export function LiveUpdatesTestScreen({ onClose }: LiveUpdatesTestScreenProps): React.JSX.Element {
   const sdk = useOptimization()
   const [entry, setEntry] = useState<Entry | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isIdentified, setIsIdentified] = useState(false)
   const [globalLiveUpdates, setGlobalLiveUpdates] = useState(false)
   const [isPreviewPanelSimulated, setIsPreviewPanelSimulated] = useState(false)
 
@@ -121,13 +179,11 @@ export function LiveUpdatesTestScreen({ onClose }: LiveUpdatesTestScreenProps): 
 
   const handleIdentify = (): void => {
     void sdk.identify({ userId: 'charles', traits: { identified: true } })
-    setIsIdentified(true)
   }
 
   const handleReset = (): void => {
     sdk.reset()
     void sdk.page({ properties: { url: 'live-updates-test' } })
-    setIsIdentified(false)
   }
 
   const handleToggleGlobalLiveUpdates = (): void => {
@@ -161,36 +217,12 @@ export function LiveUpdatesTestScreen({ onClose }: LiveUpdatesTestScreenProps): 
       key={`${globalLiveUpdates}-${isPreviewPanelSimulated}`}
     >
       <SafeAreaView>
-        <View>
-          <Text>Live Updates Test Controls</Text>
-          <View>
-            <Button testID="close-live-updates-test-button" title="Close" onPress={onClose} />
-            {!isIdentified ? (
-              <Button
-                testID="live-updates-identify-button"
-                title="Identify"
-                onPress={handleIdentify}
-              />
-            ) : (
-              <Button testID="live-updates-reset-button" title="Reset" onPress={handleReset} />
-            )}
-            <Button
-              testID="toggle-global-live-updates-button"
-              title={`Global: ${globalLiveUpdates ? 'ON' : 'OFF'}`}
-              onPress={handleToggleGlobalLiveUpdates}
-            />
-          </View>
-          <View>
-            <View>
-              <Text>Identified:</Text>
-              <Text testID="identified-status">{isIdentified ? 'Yes' : 'No'}</Text>
-            </View>
-            <View>
-              <Text>Global Live Updates:</Text>
-              <Text testID="global-live-updates-status">{globalLiveUpdates ? 'ON' : 'OFF'}</Text>
-            </View>
-          </View>
-        </View>
+        <LiveUpdatesControls
+          onClose={onClose}
+          onIdentify={handleIdentify}
+          onReset={handleReset}
+          onToggleGlobalLiveUpdates={handleToggleGlobalLiveUpdates}
+        />
 
         <ContentSectionsWithPreviewSimulation
           entry={entry}
