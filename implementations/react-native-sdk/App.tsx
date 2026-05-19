@@ -129,7 +129,12 @@ function AppContent(): React.JSX.Element {
   }
 
   return (
-    <PreviewPanelOverlay contentfulClient={contentfulClient}>
+    <PreviewPanelOverlay
+      contentfulClient={contentfulClient}
+      onRefresh={() => {
+        void sdk.page({ properties: { url: 'app' } })
+      }}
+    >
       <SafeAreaView style={{ flex: 1 }}>
         <View style={{ padding: 10, gap: 10, flexDirection: 'row', flexWrap: 'wrap' }}>
           {!isIdentified ? (
