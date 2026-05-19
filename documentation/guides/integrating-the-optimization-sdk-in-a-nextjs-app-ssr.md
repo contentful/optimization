@@ -65,16 +65,16 @@ What it does not give you:
 
 ## The integration flow
 
-| Concern                             | Where it runs             | SDK used                                    |
-| ----------------------------------- | ------------------------- | ------------------------------------------- |
-| Anonymous ID cookie lifecycle       | Middleware (Edge Runtime) | Node SDK                                    |
-| Profile resolution and variant pick | Server Component          | Node SDK (`sdk.page()`)                     |
-| Entry variant resolution            | Server Component          | Node SDK (`sdk.resolveOptimizedEntry()`)    |
-| HTML rendering                      | Server Component          | None (plain React)                          |
-| Page view tracking                  | Client (after hydration)  | React Web SDK (`NextAppAutoPageTracker`)    |
-| Entry interaction tracking          | Client (after hydration)  | React Web SDK (`autoTrackEntryInteraction`) |
-| Consent management                  | Client (after hydration)  | React Web SDK (`sdk.consent()`)             |
-| User identification                 | Client (after hydration)  | React Web SDK (`sdk.identify()`)            |
+| Concern                             | Where it runs             | SDK used                                 |
+| ----------------------------------- | ------------------------- | ---------------------------------------- |
+| Anonymous ID cookie lifecycle       | Middleware (Edge Runtime) | Node SDK                                 |
+| Profile resolution and variant pick | Server Component          | Node SDK (`sdk.page()`)                  |
+| Entry variant resolution            | Server Component          | Node SDK (`sdk.resolveOptimizedEntry()`) |
+| HTML rendering                      | Server Component          | None (plain React)                       |
+| Page view tracking                  | Client (after hydration)  | React Web SDK (`NextAppAutoPageTracker`) |
+| Entry interaction tracking          | Client (after hydration)  | React Web SDK (`trackEntryInteraction`)  |
+| Consent management                  | Client (after hydration)  | React Web SDK (`sdk.consent()`)          |
+| User identification                 | Client (after hydration)  | React Web SDK (`sdk.identify()`)         |
 
 In practice, the integration follows this sequence:
 
@@ -238,7 +238,7 @@ baseline entry unchanged.
 
 ### Add data attributes for client-side tracking
 
-After hydration, the React Web SDK's `autoTrackEntryInteraction` option uses a `MutationObserver` to
+After hydration, the React Web SDK's `trackEntryInteraction` option uses a `MutationObserver` to
 find elements with specific `data-ctfl-*` attributes and register interaction trackers (views,
 clicks, hovers) against them. For automatic tracking to work on server-rendered entries, add these
 attributes to the wrapper element:
@@ -299,7 +299,9 @@ server-side rendering of client components). Without `ssr: false`, Next.js attem
 time.
 
 `ssr: false` tells Next.js to skip server rendering for `OptimizationRoot` entirely. The SDK
-initializes only after JavaScript loads in the browser.
+initializes only after JavaScript loads in the browser. Provider-owned initialization still happens
+outside React render and gates children until readiness; in normal browser rendering it uses
+layout-effect scheduling so ready children can mount before first visible client paint.
 
 ### Add the page tracker
 
@@ -316,7 +318,10 @@ const NextAppAutoPageTracker = dynamic(
 )
 ```
 
-Wrap the tracker in `<Suspense>` to prevent it from blocking the initial render.
+Wrap the tracker in `<Suspense>` to prevent it from blocking the initial render. If local
+diagnostics need SDK state subscriptions that are attached as soon as SDK state exists and before
+the first automatically emitted `page()` event, use `OptimizationRoot`'s `onStatesReady` prop to
+subscribe to `states.eventStream` or `states.blockedEventStream`.
 
 ## 6. Mount the client provider in your layout
 
@@ -350,7 +355,7 @@ export function ClientProviderWrapper({ children }: { children: ReactNode }) {
     <OptimizationRoot
       clientId={process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID ?? ''}
       environment={process.env.NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main'}
-      autoTrackEntryInteraction={{ views: true, clicks: true, hovers: true }}
+      trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
       logLevel="error"
     >
       <Suspense>

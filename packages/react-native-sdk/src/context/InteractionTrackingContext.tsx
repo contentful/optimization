@@ -4,7 +4,7 @@ import React, { createContext, useContext, useMemo, type ReactNode } from 'react
  * Supported entry interaction types for React Native.
  *
  * @remarks
- * Mirrors the web SDK's `EntryInteraction` but uses `taps` instead of `clicks`
+ * Mirrors React Web's entry interactions but uses `taps` instead of `clicks`
  * (RN terminology) and omits `hovers` (no mouse in RN).
  *
  * @public
@@ -12,8 +12,8 @@ import React, { createContext, useContext, useMemo, type ReactNode } from 'react
 export type EntryInteraction = 'views' | 'taps'
 
 /**
- * Auto-tracking configuration for entry interactions, mirroring the web SDK's
- * `autoTrackEntryInteraction` pattern.
+ * Auto-tracking configuration for entry interactions, mirroring React Web's
+ * `trackEntryInteraction` pattern.
  *
  * @remarks
  * Omitted keys fall back to their defaults: `views` defaults to `true`,

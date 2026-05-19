@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 
@@ -114,7 +114,15 @@ function hasExplicitFrozenLockfileFlag(args: readonly string[]): boolean {
 }
 
 function runPnpm(implementation: string, args: readonly string[]): number {
-  const commandArgs = ['--dir', `implementations/${implementation}`, '--ignore-workspace', ...args]
+  const implementationDir = `implementations/${implementation}`
+  const hasLocalWorkspaceConfig = existsSync(path.join(implementationDir, 'pnpm-workspace.yaml'))
+  const commandArgs = ['--dir', implementationDir]
+
+  if (!hasLocalWorkspaceConfig) {
+    commandArgs.push('--ignore-workspace')
+  }
+
+  commandArgs.push(...args)
 
   process.stdout.write(`\n> ${PNPM_COMMAND} ${commandArgs.join(' ')}\n`)
 
@@ -138,6 +146,20 @@ function runScript(
 ): number {
   const args = ['run', scriptName, ...scriptArgs]
   return runPnpm(implementation, args)
+}
+
+function runTypecheckAction(
+  implementation: ImplementationConfig,
+  actionArgs: readonly string[],
+): number {
+  if (!implementation.scripts.has('typecheck')) {
+    process.stdout.write(
+      `\n> skipping typecheck for "${implementation.name}" (no typecheck script)\n`,
+    )
+    return SUCCESS_EXIT_CODE
+  }
+
+  return runScript(implementation.name, 'typecheck', actionArgs)
 }
 
 function runAction(
@@ -167,6 +189,8 @@ function runAction(
     }
     case 'implementation:test:unit:run':
       return runScript(implementation.name, 'test:unit', actionArgs)
+    case 'typecheck':
+      return runTypecheckAction(implementation, actionArgs)
     case 'implementation:playwright:install':
       if (!implementation.usesPlaywright) {
         process.stdout.write(

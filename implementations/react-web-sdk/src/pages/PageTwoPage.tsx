@@ -9,7 +9,7 @@ import { ContentEntry } from '../sections/ContentEntry'
 
 export function PageTwoPage(): JSX.Element {
   const { consent, entriesById, isIdentified } = useOutletContext<AppOutletContext>()
-  const { sdk } = useOptimization()
+  const sdk = useOptimization()
   const pageTwoAutoEntry = entriesById.get(PAGE_TWO_AUTO_ENTRY_ID)
   const pageTwoManualEntry = entriesById.get(PAGE_TWO_MANUAL_ENTRY_ID)
 

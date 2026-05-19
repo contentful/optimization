@@ -33,7 +33,7 @@ function renderNestedContentItem(resolvedEntry: Entry): React.JSX.Element {
         <Text>{`[Entry: ${resolvedEntry.sys.id}]`}</Text>
       </View>
       {nestedEntries.filter(isEntry).map((nestedEntry) => (
-        <OptimizedEntry key={nestedEntry.sys.id} entry={nestedEntry}>
+        <OptimizedEntry key={nestedEntry.sys.id} baselineEntry={nestedEntry}>
           {renderNestedContentItem}
         </OptimizedEntry>
       ))}
@@ -43,7 +43,7 @@ function renderNestedContentItem(resolvedEntry: Entry): React.JSX.Element {
 
 export function NestedContentItem({ entry }: NestedContentItemProps): React.JSX.Element {
   return (
-    <OptimizedEntry entry={entry} testID={`nested-optimization-${entry.sys.id}`}>
+    <OptimizedEntry baselineEntry={entry} testID={`nested-optimization-${entry.sys.id}`}>
       {renderNestedContentItem}
     </OptimizedEntry>
   )

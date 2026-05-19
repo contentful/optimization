@@ -70,10 +70,10 @@ What it does not give you (compared to the SSR-primary pattern):
 | Concern                    | First paint (server)                              | After hydration (client)                         |
 | -------------------------- | ------------------------------------------------- | ------------------------------------------------ |
 | Profile resolution         | Middleware + Server Component (Node SDK)          | React Web SDK (automatic on init)                |
-| Entry resolution           | `sdk.resolveOptimizedEntry()` in Server Component | `resolveEntry()` via `useOptimization()` hook    |
+| Entry resolution           | `sdk.resolveOptimizedEntry()` in Server Component | `resolveEntry()` via `useEntryResolver()` hook   |
 | Entry fetching             | Server-side from Contentful                       | Client-side from Contentful (for new routes)     |
 | Page tracking              | N/A                                               | `NextAppAutoPageTracker` fires on route change   |
-| Interaction tracking       | N/A (data attributes rendered server-side)        | `autoTrackEntryInteraction` observes elements    |
+| Interaction tracking       | N/A (data attributes rendered server-side)        | `trackEntryInteraction` observes elements        |
 | Consent / identify / reset | N/A                                               | React Web SDK — triggers immediate re-resolution |
 
 In practice, the integration follows this sequence:
@@ -83,7 +83,7 @@ In practice, the integration follows this sequence:
 3. In the server layout, call `sdk.page()` once and pass the result as `defaults` into the client
    provider.
 4. In Server Component pages, use `sdk.resolveOptimizedEntry()` for first-paint content.
-5. In Client Component pages or components, use `resolveEntry()` from `useOptimization()` for
+5. In Client Component pages or components, use `resolveEntry()` from `useEntryResolver()` for
    reactive content.
 6. Load the React Web SDK with `next/dynamic` and `ssr: false`.
 7. Use Client Components for consent, identify, and any interactive SDK controls.
@@ -245,8 +245,9 @@ can register interaction trackers after hydration:
 
 The key difference from the SSR-primary pattern is passing `defaults` to `OptimizationRoot`. This
 seeds the client SDK with the profile and `selectedOptimizations` the server already resolved, which
-allows `resolveEntry()` calls in Client Components to return immediately on the first render after
-hydration.
+allows `resolveEntry()` calls in Client Components to return as soon as the client provider reaches
+readiness after hydration. In normal browser rendering, the React Web provider uses layout-effect
+initialization so ready children can mount before the first visible client paint.
 
 Create the client wrapper component:
 
@@ -292,7 +293,7 @@ export function ClientProviderWrapper({ children, defaults }: ClientProviderWrap
     <OptimizationRoot
       clientId={process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID ?? ''}
       environment={process.env.NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main'}
-      autoTrackEntryInteraction={{ views: true, clicks: true, hovers: true }}
+      trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
       logLevel="error"
       defaults={defaults}
     >
@@ -304,6 +305,10 @@ export function ClientProviderWrapper({ children, defaults }: ClientProviderWrap
   )
 }
 ```
+
+If local diagnostics need SDK state subscriptions that are attached as soon as SDK state exists and
+before the first automatically emitted `page()` event, use `OptimizationRoot`'s `onStatesReady` prop
+to subscribe to `states.eventStream` or `states.blockedEventStream`.
 
 ### Pass defaults from the server layout
 
@@ -348,7 +353,7 @@ Client Components that need to re-resolve entries when the profile changes subsc
 // components/HybridEntry.tsx
 'use client'
 
-import { useOptimization, useOptimizationContext } from '@contentful/optimization-react-web'
+import { useEntryResolver, useOptimizationContext } from '@contentful/optimization-react-web'
 import type { SelectedOptimizationArray } from '@contentful/optimization-react-web/api-schemas'
 import { useEffect, useState } from 'react'
 
@@ -360,7 +365,7 @@ function HybridEntry({
   serverResolvedEntry: ContentEntry
 }) {
   const { sdk, isReady } = useOptimizationContext()
-  const { resolveEntry } = useOptimization()
+  const { resolveEntry } = useEntryResolver()
   const [selectedOptimizations, setSelectedOptimizations] = useState<
     SelectedOptimizationArray | undefined
   >(undefined)

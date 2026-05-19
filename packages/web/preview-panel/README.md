@@ -21,8 +21,8 @@
 
 This package implements the first-party browser preview panel for the
 [Optimization Web SDK](../web-sdk/README.md). It loads into the DOM as a Lit-based Web Component
-micro-frontend and talks to the Web SDK through the preview bridge exposed by
-`optimization.registerPreviewPanel(...)`.
+micro-frontend and talks to the Web SDK through the preview bridge exposed by the Optimization Web
+SDK runtime.
 
 <details>
   <summary>Table of Contents</summary>
@@ -31,6 +31,7 @@ micro-frontend and talks to the Web SDK through the preview bridge exposed by
 - [Getting started](#getting-started)
 - [When to use this package](#when-to-use-this-package)
 - [Common configuration](#common-configuration)
+- [Production bundle control](#production-bundle-control)
 - [Content security policy support](#content-security-policy-support)
 - [Related](#related)
 
@@ -51,53 +52,72 @@ Import the attach function; both CJS and ESM module systems are supported, ESM p
 import attachOptimizationPreviewPanel from '@contentful/optimization-web-preview-panel'
 ```
 
-Attach the preview panel with existing Contentful SDK and Optimization Web SDK instances:
+Attach the preview panel with an existing Contentful SDK client. By default, the attach function
+uses the browser singleton created by the Optimization Web SDK:
 
 ```ts
 attachOptimizationPreviewPanel({
   contentful: contentfulClient,
-  optimization,
 })
 ```
 
-The attach function appends the panel to the DOM and adds the toggle button that opens it.
+The attach function appends the panel to the DOM and adds the toggle button that opens it. It is
+safe to call more than once; repeated calls reuse the in-flight or completed panel attachment.
 
 > [!IMPORTANT]
 >
-> The preview panel is intentionally coupled to Optimization Web SDK internals. It uses the
-> symbol-keyed preview bridge and state interceptors to read and mutate local preview state. This is
-> a first-party preview surface, not a general extension API.
+> Importing this package has no side effects. It does not attach the panel, define custom elements,
+> inject styles, touch storage, or mutate globals until `attachOptimizationPreviewPanel(...)` is
+> called.
 
 ## When to use this package
 
 Use `@contentful/optimization-web-preview-panel` when a Web SDK or React Web SDK integration needs
-the browser preview panel attached to an existing Contentful SDK client and Optimization Web SDK
-instance. Application code must not use this package as a general state extension point.
+the browser preview panel attached to an existing Contentful SDK client. Application code can pass
+an explicit Optimization Web SDK instance, but the common browser flow uses
+`window.contentfulOptimization`.
 
 ## Common configuration
 
-| Option         | Required? | Default     | Description                                                |
-| -------------- | --------- | ----------- | ---------------------------------------------------------- |
-| `contentful`   | Yes       | N/A         | Existing Contentful client used to read preview content    |
-| `optimization` | Yes       | N/A         | Existing Optimization Web SDK instance                     |
-| `nonce`        | No        | `undefined` | CSP nonce applied to Lit styles when strict CSP is enabled |
+| Option         | Required? | Default                         | Description                                                |
+| -------------- | --------- | ------------------------------- | ---------------------------------------------------------- |
+| `contentful`   | Yes       | N/A                             | Existing Contentful client used to read preview content    |
+| `optimization` | No        | `window.contentfulOptimization` | Existing Optimization Web SDK instance                     |
+| `nonce`        | No        | `undefined`                     | CSP nonce applied to Lit styles when strict CSP is enabled |
 
 For the complete attach function signature, use the generated
 [Preview Panel reference](https://contentful.github.io/optimization/modules/_contentful_optimization-web-preview-panel.html).
+
+## Production bundle control
+
+The preview panel is intended for development and staging builds. Consumers own that build policy
+and can wrap the attachment call in an environment-backed conditional:
+
+```ts
+import attachOptimizationPreviewPanel from '@contentful/optimization-web-preview-panel'
+
+if (import.meta.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true') {
+  void attachOptimizationPreviewPanel({ contentful: contentfulClient })
+}
+```
+
+When the consumer bundler replaces that condition with a build-time `false` value and performs
+dead-code elimination, the side-effect-free preview panel import graph can be removed from the
+production output.
 
 ## Content security policy support
 
 In strict CSP environments, pass a nonce directly:
 
 ```ts
-attachOptimizationPreviewPanel({ contentful: contentfulClient, optimization, nonce })
+attachOptimizationPreviewPanel({ contentful: contentfulClient, nonce })
 ```
 
 Alternatively, set `window.litNonce` before attaching the panel:
 
 ```ts
 window.litNonce = nonce
-attachOptimizationPreviewPanel({ contentful: contentfulClient, optimization })
+attachOptimizationPreviewPanel({ contentful: contentfulClient })
 ```
 
 ## Related

@@ -99,7 +99,7 @@ export function OptimizationDemoScreen({
         </View>
 
         <OptimizedEntry
-          entry={demoEntries.deviceType}
+          baselineEntry={demoEntries.deviceType}
           style={styles.optimizedEntryWrapper}
           testID="deviceTypeCard"
         >
@@ -109,7 +109,7 @@ export function OptimizationDemoScreen({
         </OptimizedEntry>
 
         <OptimizedEntry
-          entry={demoEntries.visitorType}
+          baselineEntry={demoEntries.visitorType}
           style={styles.optimizedEntryWrapper}
           testID="visitorTypeCard"
         >
@@ -119,7 +119,7 @@ export function OptimizationDemoScreen({
         </OptimizedEntry>
 
         <OptimizedEntry
-          entry={demoEntries.location}
+          baselineEntry={demoEntries.location}
           style={styles.optimizedEntryWrapper}
           testID="locationCard"
         >
@@ -129,7 +129,7 @@ export function OptimizationDemoScreen({
         </OptimizedEntry>
 
         <OptimizedEntry
-          entry={demoEntries.customEvent}
+          baselineEntry={demoEntries.customEvent}
           style={styles.optimizedEntryWrapper}
           testID="customEventCard"
         >

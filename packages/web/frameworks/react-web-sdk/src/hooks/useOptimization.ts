@@ -1,7 +1,4 @@
-import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
-import type { Entry, EntrySkeletonType } from 'contentful'
-import { useContext, useMemo } from 'react'
+import { useContext } from 'react'
 
 import {
   OptimizationContext,
@@ -26,32 +23,12 @@ export function useOptimizationContext(): OptimizationContextValue {
   return context
 }
 
-export interface UseOptimizationResult {
-  readonly consent: OptimizationSdk['consent']
-  readonly getFlag: OptimizationSdk['getFlag']
-  readonly getMergeTagValue: OptimizationSdk['getMergeTagValue']
-  readonly identify: OptimizationSdk['identify']
-  readonly interactionTracking: OptimizationSdk['tracking']
-  readonly page: OptimizationSdk['page']
-  readonly resolveOptimizedEntry: OptimizationSdk['resolveOptimizedEntry']
-  readonly resolveEntry: (entry: Entry, selectedOptimizations?: SelectedOptimizationArray) => Entry
-  readonly resolveEntryData: (
-    entry: Entry,
-    selectedOptimizations?: SelectedOptimizationArray,
-  ) => ResolvedData<EntrySkeletonType>
-  readonly sdk: OptimizationSdk
-  readonly track: OptimizationSdk['track']
-}
-
-function resolveEntryData(
-  sdk: OptimizationSdk,
-  entry: Entry,
-  selectedOptimizations = sdk.states.selectedOptimizations.current,
-): ResolvedData<EntrySkeletonType> {
-  return sdk.resolveOptimizedEntry(entry, selectedOptimizations)
-}
-
-export function useOptimization(): UseOptimizationResult {
+/**
+ * Returns the initialized Contentful Optimization SDK instance.
+ *
+ * @public
+ */
+export function useOptimization(): OptimizationSdk {
   const { sdk, isReady, error } = useOptimizationContext()
 
   if (!sdk || !isReady) {
@@ -67,26 +44,5 @@ export function useOptimization(): UseOptimizationResult {
     )
   }
 
-  return useMemo(
-    () => ({
-      sdk,
-      consent: (value) => {
-        sdk.consent(value)
-      },
-      getFlag: (name, changes) => sdk.getFlag(name, changes),
-      getMergeTagValue: (embeddedEntryNodeTarget, profile) =>
-        sdk.getMergeTagValue(embeddedEntryNodeTarget, profile),
-      identify: async (payload) => await sdk.identify(payload),
-      interactionTracking: sdk.tracking,
-      page: async (payload) => await sdk.page(payload),
-      resolveOptimizedEntry: (entry: Entry, selectedOptimizations?: SelectedOptimizationArray) =>
-        sdk.resolveOptimizedEntry(entry, selectedOptimizations),
-      resolveEntry: (entry, selectedOptimizations) =>
-        resolveEntryData(sdk, entry, selectedOptimizations).entry,
-      resolveEntryData: (entry, selectedOptimizations) =>
-        resolveEntryData(sdk, entry, selectedOptimizations),
-      track: async (payload) => await sdk.track(payload),
-    }),
-    [sdk],
-  )
+  return sdk
 }

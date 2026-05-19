@@ -131,15 +131,15 @@ describe('useViewportTracking', () => {
     rs.useRealTimers()
   })
 
-  describe('initial event after dwell threshold', () => {
-    it('should fire initial trackView after viewTimeMs of accumulated visible time', async () => {
+  describe('initial event after dwell time', () => {
+    it('should fire initial trackView after dwellTimeMs of accumulated visible time', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('entry-1')
 
       const { onLayout } = useViewportTracking({
         entry,
-        viewTimeMs: 2000,
-        threshold: 0.5,
+        dwellTimeMs: 2000,
+        minVisibleRatio: 0.5,
       })
 
       onLayout(createLayoutEvent())
@@ -156,14 +156,14 @@ describe('useViewportTracking', () => {
       expect(typeof call.viewId).toBe('string')
     })
 
-    it('should not fire if visibility ends before dwell threshold', async () => {
+    it('should not fire if visibility ends before dwell time', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('entry-2')
 
       useViewportTracking({
         entry,
-        viewTimeMs: 2000,
-        threshold: 0.8,
+        dwellTimeMs: 2000,
+        minVisibleRatio: 0.8,
       })
 
       expect(mockTrackView).not.toHaveBeenCalled()
@@ -181,9 +181,9 @@ describe('useViewportTracking', () => {
 
       const { onLayout } = useViewportTracking({
         entry,
-        viewTimeMs: 1000,
+        dwellTimeMs: 1000,
         viewDurationUpdateIntervalMs: 2000,
-        threshold: 0.5,
+        minVisibleRatio: 0.5,
       })
 
       onLayout(createLayoutEvent())
@@ -204,9 +204,9 @@ describe('useViewportTracking', () => {
 
       const { onLayout } = useViewportTracking({
         entry,
-        viewTimeMs: 1000,
+        dwellTimeMs: 1000,
         viewDurationUpdateIntervalMs: 2000,
-        threshold: 0.5,
+        minVisibleRatio: 0.5,
       })
 
       onLayout(createLayoutEvent())
@@ -228,9 +228,9 @@ describe('useViewportTracking', () => {
 
       const { onLayout } = useViewportTracking({
         entry,
-        viewTimeMs: 1000,
+        dwellTimeMs: 1000,
         viewDurationUpdateIntervalMs: 2000,
-        threshold: 0.5,
+        minVisibleRatio: 0.5,
       })
 
       onLayout(createLayoutEvent())
@@ -246,15 +246,15 @@ describe('useViewportTracking', () => {
   })
 
   describe('real accumulated viewDurationMs', () => {
-    it('should send real accumulated duration instead of configured viewTimeMs', async () => {
+    it('should send real accumulated duration instead of configured dwellTimeMs', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('entry-6')
 
       const { onLayout } = useViewportTracking({
         entry,
-        viewTimeMs: 1000,
+        dwellTimeMs: 1000,
         viewDurationUpdateIntervalMs: 5000,
-        threshold: 0.5,
+        minVisibleRatio: 0.5,
       })
 
       onLayout(createLayoutEvent())
@@ -274,8 +274,8 @@ describe('useViewportTracking', () => {
 
       const { onLayout } = useViewportTracking({
         entry,
-        viewTimeMs: 100,
-        threshold: 0.5,
+        dwellTimeMs: 100,
+        minVisibleRatio: 0.5,
       })
 
       onLayout(createLayoutEvent())
@@ -300,8 +300,8 @@ describe('useViewportTracking', () => {
       const { onLayout } = useViewportTracking({
         entry,
         selectedOptimization,
-        viewTimeMs: 100,
-        threshold: 0.5,
+        dwellTimeMs: 100,
+        minVisibleRatio: 0.5,
       })
 
       onLayout(createLayoutEvent())
@@ -332,9 +332,9 @@ describe('useViewportTracking', () => {
       const { onLayout } = useViewportTracking({
         entry,
         selectedOptimization,
-        viewTimeMs: 100,
+        dwellTimeMs: 100,
         viewDurationUpdateIntervalMs: 200,
-        threshold: 0.5,
+        minVisibleRatio: 0.5,
       })
 
       onLayout(createLayoutEvent())
@@ -364,9 +364,9 @@ describe('useViewportTracking', () => {
       const { onLayout } = useViewportTracking({
         entry,
         selectedOptimization,
-        viewTimeMs: 100,
+        dwellTimeMs: 100,
         viewDurationUpdateIntervalMs: 200,
-        threshold: 0.5,
+        minVisibleRatio: 0.5,
       })
 
       onLayout(createLayoutEvent())
@@ -399,15 +399,15 @@ describe('useViewportTracking', () => {
       const first = useViewportTracking({
         entry,
         selectedOptimization,
-        viewTimeMs: 100,
-        threshold: 0.5,
+        dwellTimeMs: 100,
+        minVisibleRatio: 0.5,
       })
 
       const second = useViewportTracking({
         entry,
         selectedOptimization,
-        viewTimeMs: 100,
-        threshold: 0.5,
+        dwellTimeMs: 100,
+        minVisibleRatio: 0.5,
       })
 
       first.onLayout(createLayoutEvent())
@@ -422,7 +422,7 @@ describe('useViewportTracking', () => {
   })
 
   describe('default options', () => {
-    it('should default threshold to 0.8, viewTimeMs to 2000, viewDurationUpdateIntervalMs to 5000', async () => {
+    it('should default minVisibleRatio to 0.8, dwellTimeMs to 2000, viewDurationUpdateIntervalMs to 5000', async () => {
       const { useViewportTracking } = await import('./useViewportTracking')
       const entry = createMockEntry('defaults-test')
 

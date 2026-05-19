@@ -2,8 +2,7 @@ import ContentfulOptimization from '@contentful/optimization-web'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import { rs } from '@rstest/core'
 import type { Entry } from 'contentful'
-import type { ReactElement } from 'react'
-import { act } from 'react'
+import { act, StrictMode, type ReactElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { renderToString } from 'react-dom/server'
 import {
@@ -12,19 +11,21 @@ import {
   OptimizationProvider,
   OptimizationRoot,
   OptimizedEntry,
+  useEntryResolver,
   useLiveUpdates,
   useOptimization,
   useOptimizationContext,
   useOptimizedEntry,
   type OptimizationContextValue,
-  type UseOptimizationResult,
+  type OptimizationSdk,
+  type UseEntryResolverResult,
 } from './index'
 import {
   captureRenderError,
   createObservable,
   createOptimizationSdk,
   createTestEntry,
-  requireOptimizationResult,
+  requireOptimizationSdk,
 } from './test/sdkTestUtils'
 
 const testConfig = {
@@ -36,12 +37,40 @@ const testConfig = {
   },
 }
 
+function renderClient(element: ReactElement): { unmount: () => void } {
+  const container = document.createElement('div')
+  document.body.append(container)
+  const root = createRoot(container)
+
+  act(() => {
+    root.render(element)
+  })
+
+  return {
+    unmount() {
+      act(() => {
+        root.unmount()
+      })
+      container.remove()
+    },
+  }
+}
+
+function requireEntryResolver(value: UseEntryResolverResult | undefined): UseEntryResolverResult {
+  if (value === undefined) {
+    throw new Error('Expected entry resolver to be captured')
+  }
+
+  return value
+}
+
 describe('@contentful/optimization-react-web core providers', () => {
   it('exports core API symbols', () => {
     expect(OptimizationContext).toBeDefined()
     expect(LiveUpdatesProvider).toBeTypeOf('function')
     expect(OptimizationProvider).toBeTypeOf('function')
     expect(OptimizationRoot).toBeTypeOf('function')
+    expect(useEntryResolver).toBeTypeOf('function')
     expect(useOptimization).toBeTypeOf('function')
     expect(useOptimizationContext).toBeTypeOf('function')
     expect(useOptimizedEntry).toBeTypeOf('function')
@@ -50,14 +79,14 @@ describe('@contentful/optimization-react-web core providers', () => {
   })
 
   it('creates optimization instance from config props via OptimizationProvider', () => {
-    let capturedOptimization: UseOptimizationResult | undefined = undefined
+    let capturedOptimization: OptimizationSdk | undefined = undefined
 
     function Probe(): null {
       capturedOptimization = useOptimization()
       return null
     }
 
-    renderToString(
+    const rendered = renderClient(
       <OptimizationProvider
         clientId={testConfig.clientId}
         environment={testConfig.environment}
@@ -67,15 +96,38 @@ describe('@contentful/optimization-react-web core providers', () => {
       </OptimizationProvider>,
     )
 
-    const optimization = requireOptimizationResult(capturedOptimization)
+    const optimization = requireOptimizationSdk(capturedOptimization)
 
-    expect(optimization.sdk).toBeInstanceOf(ContentfulOptimization)
-    expect(optimization.interactionTracking).toBeDefined()
-    expect(optimization.resolveEntry).toBeTypeOf('function')
+    expect(optimization).toBeInstanceOf(ContentfulOptimization)
+    expect(optimization.tracking).toBeDefined()
+    rendered.unmount()
+  })
+
+  it('does not create an owned optimization instance during server render', () => {
+    let renderedChild = false
+
+    function Probe(): null {
+      renderedChild = true
+      return null
+    }
+
+    const markup = renderToString(
+      <OptimizationProvider
+        clientId={testConfig.clientId}
+        environment={testConfig.environment}
+        api={testConfig.api}
+      >
+        <Probe />
+      </OptimizationProvider>,
+    )
+
+    expect(markup).toBe('')
+    expect(renderedChild).toBe(false)
+    expect(window.contentfulOptimization).toBeUndefined()
   })
 
   it('provides optimization and live updates from OptimizationRoot', () => {
-    let capturedOptimization: UseOptimizationResult | undefined = undefined
+    let capturedOptimization: OptimizationSdk | undefined = undefined
     let capturedGlobalLiveUpdates: boolean | null = null
 
     function Probe(): null {
@@ -85,7 +137,7 @@ describe('@contentful/optimization-react-web core providers', () => {
       return null
     }
 
-    renderToString(
+    const rendered = renderClient(
       <OptimizationRoot
         clientId={testConfig.clientId}
         environment={testConfig.environment}
@@ -96,10 +148,11 @@ describe('@contentful/optimization-react-web core providers', () => {
       </OptimizationRoot>,
     )
 
-    const optimization = requireOptimizationResult(capturedOptimization)
+    const optimization = requireOptimizationSdk(capturedOptimization)
 
-    expect(optimization.sdk).toBeInstanceOf(ContentfulOptimization)
+    expect(optimization).toBeInstanceOf(ContentfulOptimization)
     expect(capturedGlobalLiveUpdates).toBe(true)
+    rendered.unmount()
   })
 
   it('throws actionable error when useOptimization is called outside provider', () => {
@@ -187,18 +240,27 @@ describe('@contentful/optimization-react-web core providers', () => {
     )
   })
 
-  it('exposes interaction tracking and resolved-entry helpers from useOptimization', () => {
+  it('returns the SDK from useOptimization and exposes resolved-entry helpers from useEntryResolver', () => {
     const resolveOptimizedEntryCalls: unknown[] = []
-    let capturedOptimization: UseOptimizationResult | undefined = undefined
+    let capturedOptimization: OptimizationSdk | undefined = undefined
+    let capturedResolver: UseEntryResolverResult | undefined = undefined
 
     function Probe(): null {
       capturedOptimization = useOptimization()
+      capturedResolver = useEntryResolver()
       return null
     }
 
+    const selectedOptimizationState: SelectedOptimizationArray = [
+      {
+        experienceId: 'exp-a',
+        variantIndex: 1,
+        variants: { baseline: 'entry-variant' },
+      },
+    ]
     const sdk = createOptimizationSdk({
       resolveOptimizedEntry: (entry: Entry, selectedOptimizations?: SelectedOptimizationArray) => {
-        resolveOptimizedEntryCalls.push([entry, selectedOptimizations])
+        resolveOptimizedEntryCalls.push([entry, selectedOptimizations ?? selectedOptimizationState])
         return {
           entry: {
             ...entry,
@@ -211,13 +273,7 @@ describe('@contentful/optimization-react-web core providers', () => {
         }
       },
       states: {
-        selectedOptimizations: createObservable([
-          {
-            experienceId: 'exp-a',
-            variantIndex: 1,
-            variants: { baseline: 'entry-variant' },
-          },
-        ]),
+        selectedOptimizations: createObservable(selectedOptimizationState),
       },
     })
 
@@ -227,12 +283,13 @@ describe('@contentful/optimization-react-web core providers', () => {
       </OptimizationContext.Provider>,
     )
 
-    const optimization = requireOptimizationResult(capturedOptimization)
+    const optimization = requireOptimizationSdk(capturedOptimization)
+    const resolver = requireEntryResolver(capturedResolver)
     const baselineEntry = createTestEntry('entry-1')
 
-    expect(optimization.interactionTracking).toBe(sdk.tracking)
-    expect(optimization.resolveEntry(baselineEntry).sys.id).toBe('entry-variant')
-    expect(optimization.resolveEntryData(baselineEntry)).toEqual({
+    expect(optimization.tracking).toBe(sdk.tracking)
+    expect(resolver.resolveEntry(baselineEntry).sys.id).toBe('entry-variant')
+    expect(resolver.resolveEntryData(baselineEntry)).toEqual({
       entry: {
         ...baselineEntry,
         sys: {
@@ -275,7 +332,7 @@ describe('@contentful/optimization-react-web core providers', () => {
       return null
     }
 
-    renderToString(
+    const rendered = renderClient(
       <OptimizationRoot
         clientId={testConfig.clientId}
         environment={testConfig.environment}
@@ -286,6 +343,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     )
 
     expect(capturedGlobalLiveUpdates).toBe(false)
+    rendered.unmount()
   })
 
   it('throws actionable error when useLiveUpdates is called outside provider', () => {
@@ -343,8 +401,8 @@ describe('@contentful/optimization-react-web core providers', () => {
       )
     }
 
-    renderToString(<FirstScenario />)
-    renderToString(<SecondScenario />)
+    renderClient(<FirstScenario />).unmount()
+    renderClient(<SecondScenario />).unmount()
 
     expect(results).toEqual([true, false, true])
   })
@@ -397,10 +455,30 @@ describe('@contentful/optimization-react-web core providers', () => {
     container.remove()
   })
 
+  it('cleans up layout-effect initialization during StrictMode replay', () => {
+    const rendered = renderClient(
+      <StrictMode>
+        <OptimizationProvider
+          clientId={testConfig.clientId}
+          environment={testConfig.environment}
+          api={testConfig.api}
+        >
+          <div />
+        </OptimizationProvider>
+      </StrictMode>,
+    )
+
+    expect(window.contentfulOptimization).toBeInstanceOf(ContentfulOptimization)
+
+    rendered.unmount()
+
+    expect(window.contentfulOptimization).toBeUndefined()
+  })
+
   it('uses an injected sdk instance without taking ownership of teardown', () => {
     const sdk = createOptimizationSdk()
     const destroySpy = rs.spyOn(sdk, 'destroy')
-    let capturedOptimization: UseOptimizationResult | undefined = undefined
+    let capturedOptimization: OptimizationSdk | undefined = undefined
     const container = document.createElement('div')
     document.body.appendChild(container)
     const root = createRoot(container)
@@ -418,9 +496,9 @@ describe('@contentful/optimization-react-web core providers', () => {
       )
     })
 
-    const optimization = requireOptimizationResult(capturedOptimization)
+    const optimization = requireOptimizationSdk(capturedOptimization)
 
-    expect(optimization.sdk).toBe(sdk)
+    expect(optimization).toBe(sdk)
 
     act(() => {
       root.unmount()

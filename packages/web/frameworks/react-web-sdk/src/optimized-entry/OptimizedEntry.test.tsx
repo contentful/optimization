@@ -170,6 +170,24 @@ describe('OptimizedEntry', () => {
     await view.unmount()
   })
 
+  it('maps per-entry interaction tracking overrides to data attributes', async () => {
+    const { optimization } = createRuntime((entry) => ({ entry }))
+
+    const view = await renderComponent(
+      <OptimizedEntry baselineEntry={baseline} trackClicks trackHovers={false} trackViews={false}>
+        {(resolved) => readTitle(resolved)}
+      </OptimizedEntry>,
+      optimization,
+    )
+
+    const wrapper = getWrapper(view.container)
+    expect(wrapper.dataset.ctflTrackClicks).toBe('true')
+    expect(wrapper.dataset.ctflTrackHovers).toBe('false')
+    expect(wrapper.dataset.ctflTrackViews).toBe('false')
+
+    await view.unmount()
+  })
+
   it('supports testId/data-testid props with data-testid precedence', async () => {
     const { optimization } = createRuntime((entry) => ({ entry }))
 

@@ -45,6 +45,8 @@ import { createScopedLogger } from './logger'
 
 declare global {
   interface Window {
+    /** Singleton Optimization Web SDK instance. */
+    contentfulOptimization?: ContentfulOptimization
     /** Global nonce value used by the Lit framework */
     litNonce?: string
     /** Global OptimizationPreviewPanel class constructor. */
@@ -57,6 +59,9 @@ let defaults: {
   selectedOptimizations?: SelectedOptimizationArray
   changes?: ChangeArray
 } = {}
+
+/** @internal */
+let previewPanelAttachment: Promise<void> | undefined = undefined
 
 /** @internal */
 const overrides = new Map<string, number>()
@@ -179,12 +184,25 @@ function canDefineComponents(): void {
     )
 }
 
+function hasPreviewPanel(): boolean {
+  return typeof document !== 'undefined' && document.querySelector(PANEL_TAG) !== null
+}
+
+function resolveOptimization(
+  optimization: ContentfulOptimization | undefined,
+): ContentfulOptimization | undefined {
+  if (optimization !== undefined) return optimization
+  if (typeof window === 'undefined') return undefined
+
+  return window.contentfulOptimization
+}
+
 /**
- * Configuration for {@link attachOptimizationPreviewPanel}.
+ * Configuration for {@link attachOptimizationPreviewPanelToSdk}.
  *
  * @internal
  */
-export interface AttachOptimizationPreviewPanelArgs {
+interface AttachOptimizationPreviewPanelToSdkArgs {
   /** Contentful client used to fetch audience and optimization entries. */
   contentful: ContentfulClientApi<ChainModifiers>
   /** ContentfulOptimization Web SDK instance to register the preview panel with. */
@@ -194,7 +212,26 @@ export interface AttachOptimizationPreviewPanelArgs {
 }
 
 /**
- * Attaches the ContentfulOptimization preview panel to the DOM as a Web Component.
+ * Configuration for {@link attachOptimizationPreviewPanel}.
+ *
+ * @public
+ */
+export interface AttachOptimizationPreviewPanelArgs {
+  /** Contentful client used to fetch audience and optimization entries. */
+  contentful: ContentfulClientApi<ChainModifiers>
+  /**
+   * ContentfulOptimization Web SDK instance to register the preview panel with.
+   *
+   * @remarks
+   * When omitted, the attach function uses `window.contentfulOptimization`.
+   */
+  optimization?: ContentfulOptimization
+  /** Optional CSP nonce passed to the Lit framework for style injection. */
+  nonce?: string
+}
+
+/**
+ * Attaches the ContentfulOptimization preview panel to the supplied SDK instance.
  *
  * Registers all custom elements, fetches audiences and optimization entries from
  * Contentful, wires up state interceptors, and appends the panel to
@@ -205,20 +242,13 @@ export interface AttachOptimizationPreviewPanelArgs {
  * @throws Error if the preview panel has already been attached.
  * @throws Error if optimization states cannot be obtained during registration.
  *
- * @example
- * ```ts
- * import attachOptimizationPreviewPanel from '@contentful/optimization-web-preview-panel'
- *
- * await attachOptimizationPreviewPanel({ contentful: client, optimization, nonce: undefined })
- * ```
- *
- * @public
+ * @internal
  */
-export default async function attachOptimizationPreviewPanel({
+async function attachOptimizationPreviewPanelToSdk({
   contentful,
   optimization: contentfulOptimization,
   nonce,
-}: AttachOptimizationPreviewPanelArgs): Promise<void> {
+}: AttachOptimizationPreviewPanelToSdkArgs): Promise<void> {
   canDefineComponents()
 
   if (nonce !== undefined) window.litNonce = nonce
@@ -340,4 +370,61 @@ export default async function attachOptimizationPreviewPanel({
   document.body.appendChild(panel)
 
   signals.previewPanelAttached.value = true
+}
+
+/**
+ * Attaches the ContentfulOptimization preview panel to the DOM as a Web Component.
+ *
+ * Registers all custom elements, fetches audiences and optimization entries from
+ * Contentful, wires up state interceptors, and appends the panel to
+ * `document.body`.
+ * Calling this function more than once reuses the existing in-flight or completed
+ * attachment.
+ *
+ * @param args - Configuration containing the Contentful client, optional ContentfulOptimization instance, and optional CSP nonce.
+ * @returns Resolves once the panel has been appended to the document body.
+ * @throws Error if no Optimization Web SDK instance can be resolved.
+ * @throws Error if optimization states cannot be obtained during registration.
+ *
+ * @example
+ * ```ts
+ * import attachOptimizationPreviewPanel from '@contentful/optimization-web-preview-panel'
+ *
+ * await attachOptimizationPreviewPanel({ contentful: client, nonce: undefined })
+ * ```
+ *
+ * @public
+ */
+export default async function attachOptimizationPreviewPanel({
+  contentful,
+  optimization,
+  nonce,
+}: AttachOptimizationPreviewPanelArgs): Promise<void> {
+  if (previewPanelAttachment !== undefined) {
+    await previewPanelAttachment
+    return
+  }
+
+  if (hasPreviewPanel()) {
+    return
+  }
+
+  const resolvedOptimization = resolveOptimization(optimization)
+
+  if (resolvedOptimization === undefined) {
+    throw new Error(
+      '[ContentfulOptimization Preview Panel] ContentfulOptimization is not initialized',
+    )
+  }
+
+  previewPanelAttachment = attachOptimizationPreviewPanelToSdk({
+    contentful,
+    optimization: resolvedOptimization,
+    nonce,
+  }).catch((error: unknown) => {
+    previewPanelAttachment = undefined
+    throw error
+  })
+
+  await previewPanelAttachment
 }

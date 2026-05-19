@@ -1,7 +1,7 @@
 'use client'
 
 import type { ContentEntry } from '@/types/contentful'
-import { useOptimization, useOptimizationContext } from '@contentful/optimization-react-web'
+import { useEntryResolver, useOptimizationContext } from '@contentful/optimization-react-web'
 import type { SelectedOptimizationArray } from '@contentful/optimization-react-web/api-schemas'
 import { type JSX, useEffect, useState } from 'react'
 
@@ -17,7 +17,7 @@ function HybridEntry({
   serverResolvedEntry: ContentEntry
 }): JSX.Element {
   const { sdk, isReady } = useOptimizationContext()
-  const { resolveEntry } = useOptimization()
+  const { resolveEntry } = useEntryResolver()
   const [selectedOptimizations, setSelectedOptimizations] = useState<
     SelectedOptimizationArray | undefined
   >(undefined)

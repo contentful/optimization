@@ -40,7 +40,7 @@ export function ClientProviderWrapper({ children, defaults }: ClientProviderWrap
       clientId={optimizationConfig.clientId}
       environment={optimizationConfig.environment}
       api={optimizationConfig.api}
-      autoTrackEntryInteraction={{ views: true, clicks: true, hovers: true }}
+      trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
       logLevel="debug"
       defaults={defaults}
       app={{

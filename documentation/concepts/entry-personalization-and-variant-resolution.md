@@ -251,8 +251,8 @@ React Web wraps resolution in `useOptimizedEntry()` and `OptimizedEntry`. `Optim
 - Blocks nested `OptimizedEntry` components that use the same baseline entry ID to prevent duplicate
   rendered branches.
 
-React Web also exposes `useOptimization().resolveEntry()` and `useOptimization().resolveEntryData()`
-for components that need manual resolution without the `OptimizedEntry` wrapper.
+React Web also exposes `useEntryResolver()` for components that need manual resolution without the
+`OptimizedEntry` wrapper.
 
 React Native uses the same resolver inside its `OptimizedEntry` component. The component:
 

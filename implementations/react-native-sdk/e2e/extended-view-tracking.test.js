@@ -36,7 +36,7 @@ describe('Extended View Tracking', () => {
     const analyticsTitle = element(by.text('Analytics Events'))
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-    // Wait for the initial event (after dwell threshold ~2s)
+    // Wait for the initial event (after dwell requirement ~2s)
     await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
 
     // Wait for at least one periodic update (dwell 2s + update interval 5s = ~7s total)
@@ -52,7 +52,7 @@ describe('Extended View Tracking', () => {
 
     const duration = await getViewDuration(VISIBLE_ENTRY_ID)
 
-    // Duration should exceed the dwell threshold (2000ms) since we've had at least 2 events
+    // Duration should exceed the dwell requirement (2000ms) since we've had at least 2 events
     jestExpect(duration).toBeGreaterThan(2000)
   })
 
@@ -130,7 +130,7 @@ describe('Extended View Tracking', () => {
     jestExpect(secondCycleViewId).not.toBe(firstCycleViewId)
   })
 
-  it('should emit zero events when entry scrolls out before dwell threshold', async () => {
+  it('should emit zero events when entry scrolls out before dwell requirement', async () => {
     const analyticsTitle = element(by.text('Analytics Events'))
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
@@ -258,11 +258,11 @@ describe('Extended View Tracking', () => {
       .toBeVisible()
       .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-    // Wait for at least 2 events so duration accumulates beyond the dwell threshold
+    // Wait for at least 2 events so duration accumulates beyond the dwell requirement
     await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, EXTENDED_TIMEOUT)
     const firstCycleDuration = await getViewDuration(VISIBLE_ENTRY_ID)
 
-    // Duration after 2 events should be well above the dwell threshold
+    // Duration after 2 events should be well above the dwell requirement
     jestExpect(firstCycleDuration).toBeGreaterThan(4000)
 
     // Scroll entry out of view (end cycle, triggers final event)
@@ -278,7 +278,7 @@ describe('Extended View Tracking', () => {
     // New cycle initial = event 4
     await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 4, EXTENDED_TIMEOUT)
 
-    // The new cycle's duration should be around the dwell threshold (~2000ms),
+    // The new cycle's duration should be around the dwell requirement (~2000ms),
     // not carrying over the 4000+ms from cycle 1
     const secondCycleDuration = await getViewDuration(VISIBLE_ENTRY_ID)
     jestExpect(secondCycleDuration).toBeGreaterThanOrEqual(2000)

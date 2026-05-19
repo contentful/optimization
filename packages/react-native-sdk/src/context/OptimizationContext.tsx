@@ -5,9 +5,9 @@ import type ContentfulOptimization from '../ContentfulOptimization'
  * @internal
  */
 interface OptimizationContextValue {
-  instance: ContentfulOptimization | null
+  sdk: ContentfulOptimization | undefined
   isReady: boolean
-  initError: Error | null
+  error: Error | undefined
 }
 
 /**
@@ -23,7 +23,7 @@ const OptimizationContext = createContext<OptimizationContextValue | null>(null)
  * @returns The current {@link ContentfulOptimization} instance
  *
  * @throws Error if called outside of an {@link OptimizationProvider}
- * @throws Error if the SDK is still initializing
+ * @throws Error if the SDK failed to initialize or is still initializing
  *
  * @example
  * ```tsx
@@ -53,14 +53,20 @@ export function useOptimization(): ContentfulOptimization {
     )
   }
 
-  if (!context.instance) {
+  if (!context.sdk || !context.isReady) {
+    if (context.error) {
+      throw new Error(`ContentfulOptimization SDK failed to initialize: ${context.error.message}`, {
+        cause: context.error,
+      })
+    }
+
     throw new Error(
       'ContentfulOptimization SDK is still initializing. ' +
         'This should not happen when using the loading gate in OptimizationProvider.',
     )
   }
 
-  return context.instance
+  return context.sdk
 }
 
 export default OptimizationContext

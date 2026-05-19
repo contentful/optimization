@@ -69,7 +69,7 @@ export interface OptimizationScrollProviderProps extends ScrollViewProps {
  * @example
  * ```tsx
  * <OptimizationScrollProvider>
- *   <OptimizedEntry entry={entry}>
+ *   <OptimizedEntry baselineEntry={entry}>
  *     {(resolved) => <HeroComponent data={resolved} />}
  *   </OptimizedEntry>
  * </OptimizationScrollProvider>

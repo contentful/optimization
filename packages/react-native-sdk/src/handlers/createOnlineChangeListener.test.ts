@@ -11,9 +11,21 @@ const mockLogger = {
   fatal: rs.fn(),
 }
 
-const flushAsyncImports = async (): Promise<void> => {
-  await Promise.resolve()
-  await Promise.resolve()
+async function waitForExpectation(assertion: () => void): Promise<void> {
+  const deadline = Date.now() + 1000
+
+  while (Date.now() < deadline) {
+    try {
+      assertion()
+      return
+    } catch {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 10)
+      })
+    }
+  }
+
+  assertion()
 }
 
 describe('createOnlineChangeListener', () => {
@@ -34,12 +46,13 @@ describe('createOnlineChangeListener', () => {
       const callback = rs.fn()
 
       const cleanup = createOnlineChangeListener(callback)
-      await flushAsyncImports()
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        'RN:Network',
-        '@react-native-community/netinfo not installed. Offline detection disabled.',
-      )
+      await waitForExpectation(() => {
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+          'RN:Network',
+          '@react-native-community/netinfo not installed. Offline detection disabled.',
+        )
+      })
       expect(typeof cleanup).toBe('function')
 
       // Cleanup should be a no-op that doesn't throw
@@ -60,12 +73,13 @@ describe('createOnlineChangeListener', () => {
       const callback = rs.fn()
 
       const cleanup = createOnlineChangeListener(callback)
-      await flushAsyncImports()
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        'RN:Network',
-        '@react-native-community/netinfo not installed. Offline detection disabled.',
-      )
+      await waitForExpectation(() => {
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+          'RN:Network',
+          '@react-native-community/netinfo not installed. Offline detection disabled.',
+        )
+      })
       expect(typeof cleanup).toBe('function')
     })
 
@@ -78,12 +92,13 @@ describe('createOnlineChangeListener', () => {
       const callback = rs.fn()
 
       const cleanup = createOnlineChangeListener(callback)
-      await flushAsyncImports()
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        'RN:Network',
-        '@react-native-community/netinfo not installed. Offline detection disabled.',
-      )
+      await waitForExpectation(() => {
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+          'RN:Network',
+          '@react-native-community/netinfo not installed. Offline detection disabled.',
+        )
+      })
       expect(typeof cleanup).toBe('function')
     })
 
@@ -96,12 +111,13 @@ describe('createOnlineChangeListener', () => {
       const callback = rs.fn()
 
       const cleanup = createOnlineChangeListener(callback)
-      await flushAsyncImports()
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        'RN:Network',
-        '@react-native-community/netinfo not installed. Offline detection disabled.',
-      )
+      await waitForExpectation(() => {
+        expect(mockLogger.warn).toHaveBeenCalledWith(
+          'RN:Network',
+          '@react-native-community/netinfo not installed. Offline detection disabled.',
+        )
+      })
       expect(typeof cleanup).toBe('function')
     })
   })
@@ -114,9 +130,10 @@ describe('createOnlineChangeListener', () => {
       const callback = rs.fn()
 
       createOnlineChangeListener(callback)
-      await flushAsyncImports()
 
-      expect(mockLogger.warn).toHaveBeenCalled()
+      await waitForExpectation(() => {
+        expect(mockLogger.warn).toHaveBeenCalled()
+      })
     })
 
     it('should reject non-object module', async () => {
@@ -126,9 +143,10 @@ describe('createOnlineChangeListener', () => {
       const callback = rs.fn()
 
       createOnlineChangeListener(callback)
-      await flushAsyncImports()
 
-      expect(mockLogger.warn).toHaveBeenCalled()
+      await waitForExpectation(() => {
+        expect(mockLogger.warn).toHaveBeenCalled()
+      })
     })
   })
 })

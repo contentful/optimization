@@ -5,6 +5,7 @@ interface ImportMetaEnv {
   readonly PUBLIC_CONTENTFUL_ENVIRONMENT?: string
   readonly PUBLIC_CONTENTFUL_SPACE_ID?: string
   readonly PUBLIC_CONTENTFUL_TOKEN?: string
+  readonly PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL?: 'true' | 'false'
   readonly PUBLIC_OPTIMIZATION_LOG_LEVEL?: 'debug' | 'warn' | 'error'
   readonly PUBLIC_EXPERIENCE_API_BASE_URL?: string
   readonly PUBLIC_INSIGHTS_API_BASE_URL?: string
@@ -15,5 +16,3 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
-
-declare const ENABLE_PREVIEW_PANEL: boolean

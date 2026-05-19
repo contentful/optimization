@@ -21,16 +21,16 @@ personalization decisions. The client owns all analytics and interactive concern
 
 ### Responsibility split
 
-| Concern                                          | Where it runs             | SDK used                                    |
-| ------------------------------------------------ | ------------------------- | ------------------------------------------- |
-| Anonymous ID cookie lifecycle                    | Middleware (Edge Runtime) | Node SDK                                    |
-| Profile resolution (`sdk.page()`)                | Server Component          | Node SDK                                    |
-| Entry variant resolution                         | Server Component          | Node SDK (`resolveOptimizedEntry`)          |
-| HTML rendering of personalized content           | Server Component          | None (plain React)                          |
-| Page view tracking                               | Client (after hydration)  | React Web SDK (`NextAppAutoPageTracker`)    |
-| Entry interaction tracking (views/clicks/hovers) | Client (after hydration)  | React Web SDK (`autoTrackEntryInteraction`) |
-| Consent management                               | Client (after hydration)  | React Web SDK (`sdk.consent()`)             |
-| User identification                              | Client (after hydration)  | React Web SDK (`sdk.identify()`)            |
+| Concern                                          | Where it runs             | SDK used                                 |
+| ------------------------------------------------ | ------------------------- | ---------------------------------------- |
+| Anonymous ID cookie lifecycle                    | Middleware (Edge Runtime) | Node SDK                                 |
+| Profile resolution (`sdk.page()`)                | Server Component          | Node SDK                                 |
+| Entry variant resolution                         | Server Component          | Node SDK (`resolveOptimizedEntry`)       |
+| HTML rendering of personalized content           | Server Component          | None (plain React)                       |
+| Page view tracking                               | Client (after hydration)  | React Web SDK (`NextAppAutoPageTracker`) |
+| Entry interaction tracking (views/clicks/hovers) | Client (after hydration)  | React Web SDK (`trackEntryInteraction`)  |
+| Consent management                               | Client (after hydration)  | React Web SDK (`sdk.consent()`)          |
+| User identification                              | Client (after hydration)  | React Web SDK (`sdk.identify()`)         |
 
 ### Behavioral expectations
 
@@ -71,7 +71,7 @@ never contradicts what the server rendered.
 │     ├─ OptimizationRoot initializes Web SDK                         │
 │     ├─ Reads `ctfl-opt-aid` cookie → same identity as server       │
 │     ├─ NextAppAutoPageTracker fires page view event                 │
-│     └─ autoTrackEntryInteraction observes elements with             │
+│     └─ trackEntryInteraction observes elements with                 │
 │        data-ctfl-entry-id attributes (views, clicks, hovers)        │
 │                                                                     │
 │  4. InteractiveControls (client component)                          │
@@ -135,7 +135,7 @@ bundling issues.
 ### 5. Data attributes for automatic interaction tracking
 
 Server-rendered entries include `data-ctfl-entry-id` and `data-ctfl-baseline-id` attributes. After
-hydration, the Web SDK's `autoTrackEntryInteraction` uses a MutationObserver to detect these
+hydration, the React Web SDK's `trackEntryInteraction` uses a MutationObserver to detect these
 elements and registers IntersectionObserver (views), click listeners, and hover listeners
 automatically:
 
