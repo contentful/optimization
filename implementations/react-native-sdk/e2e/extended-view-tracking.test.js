@@ -60,15 +60,26 @@ describe('Extended View Tracking', () => {
     const analyticsTitle = element(by.text('Analytics Events'))
     await waitFor(analyticsTitle).toBeVisible().withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-    // Wait for at least 2 events
+    // Capture the viewId from the FIRST event of the cycle, before any periodic
+    // update can overwrite latestViewId. The previous version read the viewId
+    // only once after >=2 events, so it could not distinguish a genuinely
+    // stable cycle from an SDK that mints a fresh viewId on every event — the
+    // single read would still see *some* string either way.
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
+    const firstEventViewId = await getViewId(VISIBLE_ENTRY_ID)
+
+    jestExpect(firstEventViewId).not.toBeNull()
+    jestExpect(typeof firstEventViewId).toBe('string')
+    jestExpect(firstEventViewId.length).toBeGreaterThan(0)
+
+    // Wait for the next periodic event in the SAME visibility cycle and re-read.
+    // A correct SDK reuses one viewId for the whole cycle, so the second read
+    // must equal the first. This equality is the assertion that actually
+    // exercises the "stable viewId" contract the test name claims.
     await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, EXTENDED_TIMEOUT)
+    const secondEventViewId = await getViewId(VISIBLE_ENTRY_ID)
 
-    const viewId = await getViewId(VISIBLE_ENTRY_ID)
-
-    // The viewId should be a non-null string (UUID or fallback format)
-    jestExpect(viewId).not.toBeNull()
-    jestExpect(typeof viewId).toBe('string')
-    jestExpect(viewId.length).toBeGreaterThan(0)
+    jestExpect(secondEventViewId).toBe(firstEventViewId)
   })
 
   it('should emit a final event when scrolling a tracked entry out of view', async () => {
@@ -226,10 +237,23 @@ describe('Extended View Tracking', () => {
       .toBeVisible()
       .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
 
-    // Wait for at least 1 tracking event
+    // Establish the first visibility cycle and prove its viewId is stable
+    // across two events BEFORE backgrounding. Anchoring the post-resume
+    // comparison to a viewId proven stable within this process closes the
+    // hole the previous version had: comparing against a viewId captured
+    // after a single event meant any SDK that emits *some* fresh viewId on
+    // resume passed trivially, even one that never actually paused.
     await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 1, EXTENDED_TIMEOUT)
+    const firstCycleViewId = await getViewId(VISIBLE_ENTRY_ID)
+    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 2, EXTENDED_TIMEOUT)
+    jestExpect(await getViewId(VISIBLE_ENTRY_ID)).toBe(firstCycleViewId)
 
-    const preBackgroundViewId = await getViewId(VISIBLE_ENTRY_ID)
+    // Record the cycle's event count so the post-resume assertion can require
+    // a concrete delta rather than an arbitrary absolute threshold.
+    const preBackgroundText = await getElementTextById(`event-count-${VISIBLE_ENTRY_ID}`)
+    const preBackgroundMatch = /Count:\s*(\d+)/.exec(preBackgroundText)
+    const countBeforeBackground =
+      preBackgroundMatch && preBackgroundMatch[1] ? Number(preBackgroundMatch[1]) : 0
 
     // Send app to background
     await device.sendToHome()
@@ -244,13 +268,21 @@ describe('Extended View Tracking', () => {
       .whileElement(by.id('main-scroll-view'))
       .scroll(300, 'down')
 
-    // Backgrounding ends the cycle (final event) and foregrounding starts a new one.
-    // Wait for events from the new cycle.
-    await waitForTrackedItemEventCount(VISIBLE_ENTRY_ID, 3, EXTENDED_TIMEOUT)
+    // Backgrounding must end the cycle with a final event and foregrounding
+    // must start a fresh one with its own initial event, so the count must
+    // advance by at least 2. Requiring a delta — instead of the old absolute
+    // `>= 3` — means an always-on emitter that never paused cannot pass by
+    // simply having accumulated enough periodic events.
+    await waitForTrackedItemEventCount(
+      VISIBLE_ENTRY_ID,
+      countBeforeBackground + 2,
+      EXTENDED_TIMEOUT,
+    )
 
-    // The viewId should differ — new cycle after background/foreground
+    // The resumed cycle must carry a different viewId than the first cycle —
+    // whose stability we proved above — which is the real pause/resume contract.
     const postForegroundViewId = await getViewId(VISIBLE_ENTRY_ID)
-    jestExpect(postForegroundViewId).not.toBe(preBackgroundViewId)
+    jestExpect(postForegroundViewId).not.toBe(firstCycleViewId)
   })
 
   it('should reset accumulated duration for a new visibility cycle', async () => {
