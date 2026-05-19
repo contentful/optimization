@@ -74,6 +74,14 @@ export interface PreviewPanelProps {
    * (Contentful content type IDs created by the Optimization platform).
    */
   contentfulClient: ContentfulClient
+  /**
+   * Called when the in-panel "Refresh" button is pressed. Supplying this prop
+   * surfaces the button (with testID `preview-refresh-button`); omitting it
+   * hides the button entirely. Typically wired to `sdk.page(...)` so the
+   * experience API is re-fetched and the override interceptor runs over the
+   * fresh response.
+   */
+  onRefresh?: () => void
 }
 
 /**

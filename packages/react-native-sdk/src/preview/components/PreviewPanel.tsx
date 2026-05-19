@@ -79,6 +79,7 @@ export function PreviewPanel({
   style,
   onVisibilityChange,
   contentfulClient,
+  onRefresh,
 }: PreviewPanelProps): React.JSX.Element {
   const previewState = usePreviewState()
   const { profile, selectedOptimizations, consent, isLoading } = previewState
@@ -273,13 +274,24 @@ export function PreviewPanel({
             </View>
           </View>
         ) : (
-          <ActionButton
-            label="Reset to Actual State"
-            variant="destructive"
-            onPress={handleResetSdkPress}
-            style={styles.resetButton}
-            testID="reset-all-overrides"
-          />
+          <>
+            {onRefresh && (
+              <ActionButton
+                label="Refresh"
+                variant="secondary"
+                onPress={onRefresh}
+                style={styles.refreshButton}
+                testID="preview-refresh-button"
+              />
+            )}
+            <ActionButton
+              label="Reset to Actual State"
+              variant="destructive"
+              onPress={handleResetSdkPress}
+              style={styles.resetButton}
+              testID="reset-all-overrides"
+            />
+          </>
         )}
       </View>
     </SafeAreaView>
@@ -312,6 +324,11 @@ const styles = StyleSheet.create({
   resetButton: {
     width: '100%',
     paddingVertical: spacing.md,
+  },
+  refreshButton: {
+    width: '100%',
+    paddingVertical: spacing.md,
+    marginBottom: spacing.sm,
   },
   resetConfirm: {
     width: '100%',
