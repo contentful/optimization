@@ -1,6 +1,7 @@
 # iOS XCUITest fix plan — results
 
 Outcome of executing the six fix plans in this directory and re-running the iOS XCUITest suites.
+Both the SwiftUI and UIKit schemes now pass in full.
 
 ## SwiftUI scheme — 68 / 68 passing
 
@@ -40,45 +41,30 @@ Baseline was 47 / 68 (see [README](./README.md)). All six plans were applied and
    subscription was moved earlier (into `MainScreen.task`) so the synchronous flag-view event is not
    dropped by the `PassthroughSubject`.
 
-## UIKit scheme — 54 / 68 passing
+## UIKit scheme — 68 / 68 passing
 
-The six plans were authored solely from the SwiftUI run (the README states the baseline as "the
-SwiftUI scheme passed 47 of 68"). Running the same shared XCUITest suite against
-`OptimizationAppUIKit` surfaces 14 failures in two UIKit-specific areas the plans never audited.
-Every test the six plans target **does** pass on UIKit — including `IdentifiedVariantsTests`,
-`UnidentifiedVariantsTests`, `OfflineBehaviorTests`, `ExtendedViewTrackingTests`,
-`FlagViewTrackingTests`, and `AnalyticsTests`.
+Running the same shared XCUITest suite against `OptimizationAppUIKit` initially surfaced 14 failures
+in two UIKit-specific areas the SwiftUI-authored plans never audited (`PreviewPanelOverridesTests`
+×8 and `LiveUpdatesTests` ×6). Both clusters shared one root cause and are now fixed; the full UIKit
+suite passes.
 
-### Still failing — pre-existing UIKit gaps, outside plan scope
+### Root cause and fix
 
-**`PreviewPanelOverridesTests` ×8** — the UIKit preview panel opens (`Preview Panel` title appears)
-but renders no audience or variant controls: every `audience-toggle-*` / variant-picker /
-`Identified Users` lookup finds no match, and no `Loading definitions...` state is shown. The panel
-never surfaces the audience section. The audience/variant override UI for
-`PreviewPanelViewController` appears unimplemented on UIKit. `identifyAndRelaunch` itself passes, so
-plan 1's fixes are confirmed working on UIKit too — the failure is purely the missing panel UI.
-(`uikit/SceneDelegate.swift` was also updated to pass a real `MockPreviewContentfulClient` instead
-of `nil`, matching the SwiftUI app; this is a necessary prerequisite but is not sufficient on its
-own.)
+UIKit's `OptimizedEntryUIView` never re-resolved its content when personalization state changed
+(after `identify` or after a preview-panel override). The SwiftUI `OptimizedEntry` re-resolves
+reactively on every `body` pass, but `OptimizedEntryUIView` relies on explicit Combine sinks over
+`client.$selectedPersonalizations` / `client.$isPreviewPanelOpen`. `@Published` fires inside
+`willSet`, so a synchronous sink read the _previous_ value back off the client and re-resolved to
+stale data. Adding `.receive(on: RunLoop.main)` to both subscriptions defers re-resolution to the
+next run-loop turn, after the new value is committed.
 
-**`LiveUpdatesTests` ×6** — the UIKit `LiveUpdates` test screen's `OptimizedEntryUIView` sections do
-not re-resolve after `identify`: the `*-entry-id` labels stay at their pre-identify value. The
-SwiftUI `OptimizedEntry` re-resolves reactively on every `body` pass; the UIKit
-`OptimizedEntryUIView` depends entirely on its `subscribeToPersonalizations` sink driving
-`rebuildContent()`, and that path is not updating the rendered entry. The five `LiveUpdatesTests`
-that do not assert an entry-id change still pass.
-
-Both clusters are genuine UIKit-side gaps in the preview-panel and live-update integration. They are
-not regressions from this work: the SwiftUI equivalents of all 14 tests pass, and the only SDK
-change touching `OptimizedEntryUIView` (`shouldLiveUpdate`) is behaviourally identical to the
-previous code for these cases. Closing them is a separate effort — implementing the UIKit
-preview-panel audience/variant UI and fixing `OptimizedEntryUIView` re-resolution — and was not part
-of the six SwiftUI-scoped plans.
+`uikit/SceneDelegate.swift` was also updated to hand the preview panel a real
+`MockPreviewContentfulClient` instead of `nil`, matching the SwiftUI app, so the panel can load
+audience and experience definitions.
 
 ### Regression found and fixed during this work
 
 The plan 4 minimum-height constraint, when first added to `ContentEntryUIView` with a
 `lessThanOrEqual` bottom pin, left the view's height ambiguous and broke the UIKit scroll-content
 layout (`AnalyticsTests` failed with an invalid-frame hittability error). It was corrected to an
-equal-bottom pin plus a `greaterThanOrEqual` height constraint, which is unambiguous;
-`AnalyticsTests` passes.
+equal-bottom pin plus a `greaterThanOrEqual` height constraint, which is unambiguous.
