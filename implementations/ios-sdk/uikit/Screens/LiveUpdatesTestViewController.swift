@@ -208,7 +208,7 @@ final class LiveUpdatesTestViewController: UIViewController {
             subtitle: "No liveUpdates prop - inherits from OptimizationRoot (false)",
             liveUpdates: nil,
             prefix: "default",
-            sectionIdentifier: "default-personalization",
+            sectionIdentifier: "default-optimization",
             store: { [weak self] in self?.defaultSection = $0 }
         ))
         sectionsHost.addArrangedSubview(makeSection(
@@ -217,7 +217,7 @@ final class LiveUpdatesTestViewController: UIViewController {
             subtitle: "Always updates when personalization state changes",
             liveUpdates: true,
             prefix: "live",
-            sectionIdentifier: "live-personalization",
+            sectionIdentifier: "live-optimization",
             store: { [weak self] in self?.liveSection = $0 }
         ))
         sectionsHost.addArrangedSubview(makeSection(
@@ -226,7 +226,7 @@ final class LiveUpdatesTestViewController: UIViewController {
             subtitle: "Never updates - locks to first variant received",
             liveUpdates: false,
             prefix: "locked",
-            sectionIdentifier: "locked-personalization",
+            sectionIdentifier: "locked-optimization",
             store: { [weak self] in self?.lockedSection = $0 }
         ))
     }
@@ -300,6 +300,9 @@ final class LiveUpdatesTestViewController: UIViewController {
 
     private func togglePreviewPanel() {
         isPreviewPanelSimulated.toggle()
+        // Drive the SDK preview-panel flag so default/locked sections switch to
+        // live-update mode while the panel is "open".
+        client.setPreviewPanelOpen(isPreviewPanelSimulated)
         updatePreviewPanelButtonTitle()
         refreshUI()
     }

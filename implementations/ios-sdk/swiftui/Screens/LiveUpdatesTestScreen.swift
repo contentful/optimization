@@ -90,6 +90,9 @@ struct LiveUpdatesTestScreen: View {
         VStack(alignment: .leading) {
             Button(isPreviewPanelSimulated ? "Close Preview Panel" : "Simulate Preview Panel") {
                 isPreviewPanelSimulated.toggle()
+                // Drive the SDK preview-panel flag so default/locked sections
+                // switch to live-update mode while the panel is "open".
+                client.setPreviewPanelOpen(isPreviewPanelSimulated)
             }
             .accessibilityIdentifier("simulate-preview-panel-button")
             HStack {
@@ -111,7 +114,7 @@ struct LiveUpdatesTestScreen: View {
                         .font(.caption)
                     OptimizedEntry(
                         entry: entry,
-                        accessibilityIdentifier: "default-personalization"
+                        accessibilityIdentifier: "default-optimization"
                     ) { resolvedEntry in
                         LiveUpdatesEntryDisplay(entry: resolvedEntry, prefix: "default")
                     }
@@ -124,7 +127,7 @@ struct LiveUpdatesTestScreen: View {
                     OptimizedEntry(
                         entry: entry,
                         liveUpdates: true,
-                        accessibilityIdentifier: "live-personalization"
+                        accessibilityIdentifier: "live-optimization"
                     ) { resolvedEntry in
                         LiveUpdatesEntryDisplay(entry: resolvedEntry, prefix: "live")
                     }
@@ -137,7 +140,7 @@ struct LiveUpdatesTestScreen: View {
                     OptimizedEntry(
                         entry: entry,
                         liveUpdates: false,
-                        accessibilityIdentifier: "locked-personalization"
+                        accessibilityIdentifier: "locked-optimization"
                     ) { resolvedEntry in
                         LiveUpdatesEntryDisplay(entry: resolvedEntry, prefix: "locked")
                     }
