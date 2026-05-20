@@ -17,7 +17,7 @@ import {
 } from '@contentful/optimization-core/preview-support'
 
 type ResolveOptimizedEntryParams = Parameters<CoreStateful['resolveOptimizedEntry']>
-
+// TODO: Could we merge this with iOS
 interface BridgeConfig {
   clientId: string
   environment: string

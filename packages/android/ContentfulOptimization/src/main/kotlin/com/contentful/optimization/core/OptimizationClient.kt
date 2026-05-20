@@ -1,7 +1,7 @@
 package com.contentful.optimization.core
 
 import android.content.Context
-import com.contentful.optimization.bridge.ZiplineContextManager
+import com.contentful.optimization.bridge.QuickJsContextManager
 import com.contentful.optimization.handlers.AppLifecycleHandler
 import com.contentful.optimization.handlers.NetworkMonitor
 import com.contentful.optimization.polyfills.escapeForJS
@@ -43,7 +43,7 @@ class OptimizationClient(private val applicationContext: Context) {
     private val _events = MutableSharedFlow<Map<String, Any>>(extraBufferCapacity = 64)
     val events: SharedFlow<Map<String, Any>> = _events.asSharedFlow()
 
-    private val bridge = ZiplineContextManager()
+    private val bridge = QuickJsContextManager()
     private val store = SharedPreferencesStore(applicationContext)
     private var appLifecycleHandler: AppLifecycleHandler? = null
     private var networkMonitor: NetworkMonitor? = null
@@ -366,7 +366,7 @@ class OptimizationClient(private val applicationContext: Context) {
         fun parseJSONDict(json: String): Map<String, Any>? {
             if (json == "null") return null
             return try {
-                ZiplineContextManager.jsonObjectToMap(JSONObject(json))
+                QuickJsContextManager.jsonObjectToMap(JSONObject(json))
             } catch (_: Exception) {
                 DiagnosticLogger.warning { "[parse] JSON parse failed — input: ${json.take(200)}" }
                 null

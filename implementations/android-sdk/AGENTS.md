@@ -26,7 +26,7 @@ build.
 
 - Keep this app focused on validating native Android integration behavior. Reusable SDK behavior
   belongs in `packages/android/ContentfulOptimization`, and TypeScript bridge behavior belongs in
-  `packages/android/android-zipline-bridge`.
+  `packages/android/android-quickjs-bridge`.
 - The mock server must be running at `http://localhost:8000` before running the app. Use
   `adb reverse tcp:8000 tcp:8000` to forward the port to the emulator.
 - The app references the SDK via Gradle `include` + `project.dir` in `settings.gradle.kts`. After

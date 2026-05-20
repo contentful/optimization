@@ -235,7 +235,7 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
-  packages/android/android-zipline-bridge:
+  packages/android/android-quickjs-bridge:
     dependencies:
       '@contentful/optimization-core':
         specifier: workspace:*
