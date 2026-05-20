@@ -18,7 +18,7 @@
     }),
       (l.o = (e, t) => Object.prototype.hasOwnProperty.call(e, t)))
     var u = {}
-    l.d(u, { default: () => rk })
+    l.d(u, { default: () => rI })
     var c = Symbol.for('preact-signals')
     function d() {
       if (g > 1) g--
@@ -48,14 +48,14 @@
         d()
       }
     }
-    var h = void 0
-    function f(e) {
-      var t = h
-      h = void 0
+    var f = void 0
+    function h(e) {
+      var t = f
+      f = void 0
       try {
         return e()
       } finally {
-        h = t
+        f = t
       }
     }
     var v,
@@ -64,15 +64,15 @@
       m = 0,
       b = 0
     function w(e) {
-      if (void 0 !== h) {
+      if (void 0 !== f) {
         var t = e.n
-        if (void 0 === t || t.t !== h)
+        if (void 0 === t || t.t !== f)
           return (
-            (t = { i: 0, S: e, p: h.s, n: void 0, t: h, e: void 0, x: void 0, r: t }),
-            void 0 !== h.s && (h.s.n = t),
-            (h.s = t),
+            (t = { i: 0, S: e, p: f.s, n: void 0, t: f, e: void 0, x: void 0, r: t }),
+            void 0 !== f.s && (f.s.n = t),
+            (f.s = t),
             (e.n = t),
-            32 & h.f && e.S(t),
+            32 & f.f && e.S(t),
             t
           )
         if (-1 === t.i)
@@ -81,10 +81,10 @@
             void 0 !== t.n &&
               ((t.n.p = t.p),
               void 0 !== t.p && (t.p.n = t.n),
-              (t.p = h.s),
+              (t.p = f.s),
               (t.n = void 0),
-              (h.s.n = t),
-              (h.s = t)),
+              (f.s.n = t),
+              (f.s = t)),
             t
           )
       }
@@ -144,14 +144,14 @@
       var t = e.u
       if (((e.u = void 0), 'function' == typeof t)) {
         g++
-        var i = h
-        h = void 0
+        var i = f
+        f = void 0
         try {
           t()
         } catch (t) {
           throw ((e.f &= -2), (e.f |= 8), $(e), t)
         } finally {
-          ;((h = i), d())
+          ;((f = i), d())
         }
       }
     }
@@ -160,8 +160,8 @@
       ;((e.x = void 0), (e.s = void 0), I(e))
     }
     function P(e) {
-      if (h !== this) throw Error('Out-of-order effect')
-      ;(E(this), (h = e), (this.f &= -2), 8 & this.f && $(this), d())
+      if (f !== this) throw Error('Out-of-order effect')
+      ;(E(this), (f = e), (this.f &= -2), 8 & this.f && $(this), d())
     }
     function j(e, t) {
       ;((this.x = e),
@@ -207,7 +207,7 @@
           (this.t = e),
           void 0 !== i
             ? (i.e = e)
-            : f(function () {
+            : h(function () {
                 var e
                 null == (e = t.W) || e.call(t)
               }))
@@ -222,7 +222,7 @@
             e === this.t &&
               ((this.t = n),
               void 0 === n &&
-                f(function () {
+                h(function () {
                   var e
                   null == (e = t.Z) || e.call(t)
                 })))
@@ -233,12 +233,12 @@
         return A(
           function () {
             var i = t.value,
-              n = h
-            h = void 0
+              n = f
+            f = void 0
             try {
               e(i)
             } finally {
-              h = n
+              f = n
             }
           },
           { name: 'sub' },
@@ -254,12 +254,12 @@
         return this.value
       }),
       (_.prototype.peek = function () {
-        var e = h
-        h = void 0
+        var e = f
+        f = void 0
         try {
           return this.value
         } finally {
-          h = e
+          f = e
         }
       }),
       Object.defineProperty(_.prototype, 'value', {
@@ -284,16 +284,16 @@
         if (((this.f &= -3), 1 & this.f)) return !1
         if (32 == (36 & this.f) || ((this.f &= -5), this.g === b)) return !0
         if (((this.g = b), (this.f |= 1), this.i > 0 && !O(this))) return ((this.f &= -2), !0)
-        var e = h
+        var e = f
         try {
-          ;(S(this), (h = this))
+          ;(S(this), (f = this))
           var t = this.x()
           ;(16 & this.f || this.v !== t || 0 === this.i) &&
             ((this.v = t), (this.f &= -17), this.i++)
         } catch (e) {
           ;((this.v = e), (this.f |= 16), this.i++)
         }
-        return ((h = e), E(this), (this.f &= -2), !0)
+        return ((f = e), E(this), (this.f &= -2), !0)
       }),
       (x.prototype.S = function (e) {
         if (void 0 === this.t) {
@@ -335,8 +335,8 @@
       (j.prototype.S = function () {
         if (1 & this.f) throw Error('Cycle detected')
         ;((this.f |= 1), (this.f &= -9), I(this), S(this), g++)
-        var e = h
-        return ((h = this), P.bind(this, e))
+        var e = f
+        return ((f = this), P.bind(this, e))
       }),
       (j.prototype.N = function () {
         2 & this.f || ((this.f |= 2), (this.o = y), (y = this))
@@ -550,8 +550,8 @@
       ec = z(),
       ed = z(),
       ep = z(),
-      eh = z(!0),
-      ef = z(!1),
+      ef = z(!0),
+      eh = z(!1),
       ev = z(!1),
       ey = z(),
       eg = k(() => void 0 !== ey.value),
@@ -561,14 +561,14 @@
         changes: eu,
         consent: ed,
         event: ep,
-        online: eh,
-        previewPanelAttached: ef,
+        online: ef,
+        previewPanelAttached: eh,
         previewPanelOpen: ev,
         selectedOptimizations: ey,
         canOptimize: eg,
         profile: em,
       },
-      ew = { batch: p, computed: k, effect: A, untracked: f }
+      ew = { batch: p, computed: k, effect: A, untracked: h }
     function e_(e, t, i) {
       function n(i, n) {
         if (
@@ -1097,7 +1097,7 @@
       }
       void 0 === e.value ? i in n && (t.value[i] = void 0) : (t.value[i] = e.value)
     }
-    let th = e_('$ZodObject', (e, t) => {
+    let tf = e_('$ZodObject', (e, t) => {
       let i
       tt.init(e, t)
       let n = Object.getOwnPropertyDescriptor(t, 'shape')
@@ -1174,7 +1174,7 @@
             : t
       }
     })
-    function tf(e, t, i, n) {
+    function th(e, t, i, n) {
       for (let i of e) if (0 === i.issues.length) return ((t.value = i.value), t)
       let r = e.filter((e) => !eV(e))
       return 1 === r.length
@@ -1219,7 +1219,7 @@
               a.push(t)
             }
           }
-          return o ? Promise.all(a).then((t) => tf(t, r, e, s)) : tf(a, r, e, s)
+          return o ? Promise.all(a).then((t) => th(t, r, e, s)) : th(a, r, e, s)
         }
       }),
       ty = e_('$ZodDiscriminatedUnion', (e, t) => {
@@ -1555,7 +1555,7 @@
       return new tq({ type: 'array', element: e, ...eq(t) })
     }
     let tV = e_('ZodMiniObject', (e, t) => {
-      ;(th.init(e, t), tx.init(e, t), eP(e, 'shape', () => t.shape))
+      ;(tf.init(e, t), tx.init(e, t), eP(e, 'shape', () => t.shape))
     })
     function tN(e, t) {
       return new tV({ type: 'object', shape: e ?? {}, ...eq(t) })
@@ -2081,7 +2081,7 @@
           console.error(...e)
         },
       }
-    class nh extends nd {
+    class nf extends nd {
       name = 'ConsoleLogSink'
       verbosity
       constructor(e) {
@@ -2091,7 +2091,7 @@
         nc[e.level] < nc[this.verbosity] || np[e.level](...e.messages)
       }
     }
-    let nf = nu('ApiClient:Retry')
+    let nh = nu('ApiClient:Retry')
     class nv extends Error {
       status
       constructor(e, t = 500) {
@@ -2157,13 +2157,13 @@
                         let e = Error(
                           `Request to "${r.toString()}" failed with status: [${s.status}] ${s.statusText} - traceparent: ${s.headers.get('traceparent')}`,
                         )
-                        ;(nf.error('Request failed with non-OK status:', e), t.abort())
+                        ;(nh.error('Request failed with non-OK status:', e), t.abort())
                         return
                       }
-                      return (nf.debug(`Response from "${r.toString()}":`, s), s)
+                      return (nh.debug(`Response from "${r.toString()}":`, s), s)
                     } catch (e) {
                       if (e instanceof nv && 503 === e.status) throw e
-                      ;(nf.error(`Request to "${r.toString()}" failed:`, e), t.abort())
+                      ;(nh.error(`Request to "${r.toString()}" failed:`, e), t.abort())
                     }
                   }
                 })({ apiName: e, controller: a, fetchMethod: t, init: o, url: s })
@@ -2797,7 +2797,7 @@
       constructor(e, t = {}) {
         this.config = e
         const { eventBuilder: i, logLevel: n, environment: r, clientId: s, fetchOptions: o } = e
-        nl.addSink(new nh(n))
+        nl.addSink(new nf(n))
         const a = {
           clientId: s,
           environment: r,
@@ -3272,12 +3272,12 @@
       }
       async send(e) {
         let t = na(iY, await this.eventInterceptors.run(e))
-        if (((ep.value = t), eh.value)) return await this.upsertProfile([t])
+        if (((ep.value = t), ef.value)) return await this.upsertProfile([t])
         ;(n7.debug(`Queueing ${t.type} event`, t), this.enqueueEvent(t))
       }
       async flush(e = {}) {
         let { force: t = !1 } = e
-        if (this.flushRuntime.shouldSkip({ force: t, isOnline: !!eh.value })) return
+        if (this.flushRuntime.shouldSkip({ force: t, isOnline: !!ef.value })) return
         if (0 === this.queuedExperienceEvents.size)
           return void this.flushRuntime.clearScheduledRetry()
         n7.debug('Flushing offline Experience event queue')
@@ -3405,7 +3405,7 @@
       }
       async flush(e = {}) {
         let { force: t = !1 } = e
-        if (this.flushRuntime.shouldSkip({ force: t, isOnline: !!eh.value })) return
+        if (this.flushRuntime.shouldSkip({ force: t, isOnline: !!ef.value })) return
         rt.debug('Flushing insights event queue')
         let i = this.createBatches()
         if (!i.length) {
@@ -3482,7 +3482,7 @@
         eventStream: el(ep),
         canOptimize: el(eg),
         selectedOptimizations: el(ey),
-        previewPanelAttached: el(ef),
+        previewPanelAttached: el(eh),
         previewPanelOpen: el(ev),
         profile: el(em),
       }
@@ -3590,7 +3590,7 @@
             )
           }),
           A(() => {
-            eh.value &&
+            ef.value &&
               (this.insightsQueue.clearScheduledRetry(),
               this.experienceQueue.clearScheduledRetry(),
               this.flushQueues({ force: !0 }))
@@ -3627,10 +3627,10 @@
         ed.value = e
       }
       get online() {
-        return eh.value ?? !1
+        return ef.value ?? !1
       }
       set online(e) {
-        eh.value = e
+        ef.value = e
       }
       registerPreviewPanel(e) {
         ;(Reflect.set(e, rn, eb), Reflect.set(e, rr, ew))
@@ -3646,7 +3646,7 @@
     function rp(e, t) {
       return 'on' === e || ('off' !== e && t)
     }
-    function rh(e, t, i, n) {
+    function rf(e, t, i, n) {
       let r = t[e.id] ?? 0,
         s = void 0 !== i.selectedOptimizations[e.id],
         o = { ...e, currentVariantIndex: r, isOverridden: s }
@@ -3656,7 +3656,7 @@
       }
       return o
     }
-    function rf(e, t) {
+    function rh(e, t) {
       let i = Object.values(t)
       if (0 === i.length) return e
       let n = e.map((e) => {
@@ -3702,7 +3702,7 @@
               n = i
                 ? {
                     ...e,
-                    selectedOptimizations: rf(
+                    selectedOptimizations: rh(
                       e.selectedOptimizations,
                       this.overrides.selectedOptimizations,
                     ),
@@ -3789,7 +3789,7 @@
         this.baselineAudienceQualifications[e] = t
       }
       syncOverridesToSignal() {
-        ;((this.selectedOptimizations.value = rf(
+        ;((this.selectedOptimizations.value = rh(
           this.baselineSelectedOptimizations ?? [],
           this.overrides.selectedOptimizations,
         )),
@@ -3816,18 +3816,19 @@
     let rm = null,
       rb = null,
       rw = null,
-      r_ = null,
+      r_ = [],
       rz = null,
       rO = null,
-      rS = {},
+      rS = null,
       rE = {},
-      rx = {
+      rx = {},
+      rk = {
         initialize(e) {
-          ;(rm && rx.destroy(),
-            (rz = null),
+          ;(rm && rk.destroy(),
             (rO = null),
-            (rS = {}),
+            (rS = null),
             (rE = {}),
+            (rx = {}),
             (rm = new ru({
               clientId: e.clientId,
               environment: e.environment,
@@ -3841,13 +3842,13 @@
                 (eb.selectedOptimizations.value = e.defaults.optimizations)),
             rm.consent(!0))
           let t = globalThis
-          ;((r_ = new rg({
+          ;((rz = new rg({
             selectedOptimizations: eb.selectedOptimizations,
             profile: eb.profile,
             stateInterceptors: rm.interceptors.state,
             onOverridesChanged: () => {
               'function' == typeof t.__nativeOnOverridesChanged &&
-                t.__nativeOnOverridesChanged(rx.getPreviewState())
+                t.__nativeOnOverridesChanged(rk.getPreviewState())
             },
           })),
             (rb = A(() => {
@@ -3944,35 +3945,39 @@
           rm && rm.consent(e)
         },
         reset() {
-          rm && (r_?.resetAll(), rm.reset())
+          rm && (rz?.resetAll(), rm.reset())
         },
         setOnline(e) {
           eb.online.value = e
         },
+        flag(e) {
+          rm && r_.push(rm.states.flag(e).subscribe(() => void 0))
+        },
         personalizeEntry: (e, t) =>
           rm ? JSON.stringify(rm.resolveOptimizedEntry(e, t)) : JSON.stringify({ entry: e }),
+        getMergeTagValue: (e) => (rm ? (rm.getMergeTagValue(e) ?? null) : null),
         setPreviewPanelOpen(e) {
           rm && (eb.previewPanelOpen.value = e)
         },
         overrideAudience(e, t, i) {
-          r_ && (t ? r_.activateAudience(e, i) : r_.deactivateAudience(e, i))
+          rz && (t ? rz.activateAudience(e, i) : rz.deactivateAudience(e, i))
         },
         overrideVariant(e, t) {
-          r_?.setVariantOverride(e, t)
+          rz?.setVariantOverride(e, t)
         },
         resetAudienceOverride(e) {
-          r_?.resetAudienceOverride(e)
+          rz?.resetAudienceOverride(e)
         },
         resetVariantOverride(e) {
-          r_?.resetOptimizationOverride(e)
+          rz?.resetOptimizationOverride(e)
         },
         resetAllOverrides() {
-          r_?.resetAll()
+          rz?.resetAll()
         },
         loadDefinitions(e, t) {
           try {
             let i, n
-            for (let r of ((rz = e.map((e) => {
+            for (let r of ((rO = e.map((e) => {
               let t = e.fields
               return 'object' == typeof t && null !== t
                 ? {
@@ -3988,7 +3993,7 @@
                 i.set(e.sys.id, e)
               })
             }),
-            (rO = t.map((e) => {
+            (rS = t.map((e) => {
               let t = e.fields
               if ('object' != typeof t || null === t)
                 return {
@@ -4042,24 +4047,24 @@
                 r && (n[i] = r)
               }
             }),
-            (rE = n),
-            (rS = {}),
-            rz))
-              rS[r.id] = r.name
-            return JSON.stringify({ audienceCount: rz.length, experienceCount: rO.length })
+            (rx = n),
+            (rE = {}),
+            rO))
+              rE[r.id] = r.name
+            return JSON.stringify({ audienceCount: rO.length, experienceCount: rS.length })
           } catch (e) {
             return (
-              (rz = null),
               (rO = null),
-              (rS = {}),
+              (rS = null),
               (rE = {}),
+              (rx = {}),
               JSON.stringify({ error: e instanceof Error ? e.message : String(e) })
             )
           }
         },
         getPreviewState() {
-          let e = r_?.getOverrides() ?? { audiences: {}, selectedOptimizations: {} },
-            t = r_?.getBaselineSelectedOptimizations(),
+          let e = rz?.getOverrides() ?? { audiences: {}, selectedOptimizations: {} },
+            t = rz?.getBaselineSelectedOptimizations(),
             i = {}
           for (let [t, n] of Object.entries(e.audiences)) i[t] = n.isActive
           let n = {}
@@ -4068,7 +4073,7 @@
           if (t)
             for (let e of t) void 0 !== n[e.experienceId] && (r[e.experienceId] = e.variantIndex)
           let s =
-            rz && rO
+            rO && rS
               ? {
                   ...(function (e) {
                     let {
@@ -4093,9 +4098,9 @@
                       c = new Set(t.map((e) => e.id)),
                       d = i
                         .filter((e) => !e.audience?.id || !c.has(e.audience.id))
-                        .map((e) => rh(e, l, r, u)),
+                        .map((e) => rf(e, l, r, u)),
                       p = t.map((e) => {
-                        let t = i.filter((t) => t.audience?.id === e.id).map((e) => rh(e, l, r, u)),
+                        let t = i.filter((t) => t.audience?.id === e.id).map((e) => rf(e, l, r, u)),
                           n = a.has(e.id),
                           s = rd(r, e.id),
                           o = rp(s, n)
@@ -4122,7 +4127,7 @@
                         overrideState: e,
                       })
                     }
-                    let h = t.length > 0 || i.length > 0
+                    let f = t.length > 0 || i.length > 0
                     return {
                       audiencesWithExperiences: [...p].sort((e, t) =>
                         e.audience.id === rc
@@ -4134,12 +4139,12 @@
                               }),
                       ),
                       unassociatedExperiences: d,
-                      hasData: h,
+                      hasData: f,
                       sdkVariantIndices: l,
                     }
                   })({
-                    audienceDefinitions: rz,
-                    experienceDefinitions: rO,
+                    audienceDefinitions: rO,
+                    experienceDefinitions: rS,
                     signals: {
                       profile: eb.profile.value,
                       selectedOptimizations: eb.selectedOptimizations.value,
@@ -4149,8 +4154,8 @@
                     overrides: e,
                     baselineSelectedOptimizations: t,
                   }),
-                  audienceNameMap: rS,
-                  experienceNameMap: rE,
+                  audienceNameMap: rE,
+                  experienceNameMap: rx,
                 }
               : null
           return JSON.stringify({
@@ -4162,7 +4167,7 @@
             previewPanelOpen: eb.previewPanelOpen.value,
             audienceOverrides: i,
             variantOverrides: n,
-            defaultAudienceQualifications: r_?.getBaselineAudienceQualifications() ?? {},
+            defaultAudienceQualifications: rz?.getBaselineAudienceQualifications() ?? {},
             defaultVariantIndices: r,
             previewModel: s,
           })
@@ -4180,19 +4185,22 @@
             selectedPersonalizations: eb.selectedOptimizations.value ?? null,
           }),
         destroy() {
-          ;(r_?.destroy(),
-            (r_ = null),
-            (rz = null),
-            (rO = null),
-            (rS = {}),
-            (rE = {}),
+          for (let e of (rz?.destroy(),
+          (rz = null),
+          (rO = null),
+          (rS = null),
+          (rE = {}),
+          (rx = {}),
+          r_))
+            e.unsubscribe()
+          ;((r_ = []),
             rw && (rw(), (rw = null)),
             rb && (rb(), (rb = null)),
             rm && (rm.destroy(), (rm = null)))
         },
       }
-    globalThis.__bridge = rx
-    let rk = rx
+    globalThis.__bridge = rk
+    let rI = rk
     return u.default
   })(),
 )

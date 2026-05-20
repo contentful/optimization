@@ -15,5 +15,5 @@
   "include": ["./src/**/*"],
   "exclude": ["./src/**/*.test.*"],
   "extends": "../../../tsconfig.base.json",
-  "references": [{ "path": "../../universal/core-sdk/tsconfig.build.json" }]
+  "references": [{ "path": "../core-sdk/tsconfig.build.json" }]
 }

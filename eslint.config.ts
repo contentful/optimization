@@ -4,6 +4,7 @@ import prettier from 'eslint-config-prettier'
 import { configs as lit } from 'eslint-plugin-lit'
 import { configs as wc } from 'eslint-plugin-wc'
 import { defineConfig, type Config } from 'eslint/config'
+import { URL } from 'node:url'
 import typescript from 'typescript-eslint'
 
 // `eslint-config-love` currently exposes FlatConfig types that don't line up with ESLint v10 helpers.
@@ -30,6 +31,9 @@ export default defineConfig(
       '**/dist',
       'docs/media/**',
       '**/ios/**',
+      // Engine-targeted JS bridge glue compiled into the native SDKs; consolidated
+      // from the ios/android bridge packages, which were ignored under the rules above.
+      '**/optimization-js-bridge/**',
       '**/node_modules',
     ],
   },
