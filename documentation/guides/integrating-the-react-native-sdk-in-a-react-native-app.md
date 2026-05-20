@@ -13,6 +13,7 @@ to a React Native (or Expo) application using `@contentful/optimization-react-na
   - [Install peer dependencies](#install-peer-dependencies)
   - [The minimum setup](#the-minimum-setup)
   - [Access the SDK instance with hooks](#access-the-sdk-instance-with-hooks)
+  - [Subscribe to SDK state from the provider](#subscribe-to-sdk-state-from-the-provider)
 - [2. Handle consent](#2-handle-consent)
   - [Defaulting consent to `true`](#defaulting-consent-to-true)
   - [Gating consent on a banner](#gating-consent-on-a-banner)
@@ -25,7 +26,7 @@ to a React Native (or Expo) application using `@contentful/optimization-react-na
 - [4. Interaction tracking with OptimizedEntry](#4-interaction-tracking-with-optimizedentry)
   - [Global defaults via OptimizationRoot](#global-defaults-via-optimizationroot)
   - [Per-component overrides](#per-component-overrides)
-  - [Custom visibility and time thresholds](#custom-visibility-and-time-thresholds)
+  - [Custom visibility and dwell timing](#custom-visibility-and-dwell-timing)
   - [Use OptimizationScrollProvider for scrollable screens](#use-optimizationscrollprovider-for-scrollable-screens)
 - [5. Screen tracking](#5-screen-tracking)
   - [Automatic tracking with OptimizationNavigationContainer](#automatic-tracking-with-optimizationnavigationcontainer)
@@ -165,6 +166,7 @@ Common props on `OptimizationRoot`:
 | `previewPanel`          | `PreviewPanelConfig`         | No       | `undefined`                    | Enables the in-app preview panel; see [Preview Panel](#preview-panel) |
 | `liveUpdates`           | `boolean`                    | No       | `false`                        | Global live-updates default for `<OptimizedEntry />`                  |
 | `trackEntryInteraction` | `{ views?, taps? }`          | No       | `{ views: true, taps: false }` | Default interaction tracking for `<OptimizedEntry />`                 |
+| `onStatesReady`         | `(states) => cleanup`        | No       | `undefined`                    | Attach app-level state subscribers when SDK state is ready            |
 
 The full configuration reference (API endpoints, fetch retries, queue policy, event-builder
 overrides) is documented in the
@@ -191,6 +193,52 @@ function MyComponent() {
 `useOptimization()` throws if used outside an `OptimizationProvider` / `OptimizationRoot`, and is
 guaranteed to return a ready SDK instance — `OptimizationProvider` does not render its children
 until the SDK has finished initializing.
+
+React Native provider-owned initialization is async: the provider renders no children while platform
+state setup is pending, runs any `onStatesReady` callback, and then renders children. This matches
+the React Web provider contract, but React Native cannot use the Web layout-effect timing because
+SDK creation depends on async storage and platform APIs.
+
+### Subscribe to SDK state from the provider
+
+Use `onStatesReady` when application code needs SDK state subscriptions that line up with provider
+initialization. The provider calls it after async SDK state setup completes and before child screen,
+navigation, or entry effects can emit events.
+
+```tsx
+<OptimizationRoot
+  clientId="your-client-id"
+  onStatesReady={(states) => {
+    const subscriptions = [
+      states.eventStream.subscribe((event) => {
+        if (event) devToolsPanel.logEvent(event)
+      }),
+      states.blockedEventStream.subscribe((blocked) => {
+        if (blocked) devToolsPanel.logBlockedEvent(blocked)
+      }),
+    ]
+
+    return () => {
+      subscriptions.forEach((subscription) => subscription.unsubscribe())
+    }
+  }}
+>
+  <OptimizationNavigationContainer>
+    {(navigationProps) => (
+      <NavigationContainer {...navigationProps}>{/* navigators */}</NavigationContainer>
+    )}
+  </OptimizationNavigationContainer>
+</OptimizationRoot>
+```
+
+`onStatesReady` receives only the `states` surface. Use regular hooks and React effects for
+component-local state.
+
+Use `OptimizationProvider` directly with a pre-built `sdk` only when an application or framework
+adapter owns initialization. Without `onStatesReady`, children render immediately because the SDK is
+already available. When `onStatesReady` is provided, the provider waits until those subscribers are
+attached before children mount and runs the returned cleanup on unmount. In both cases, it does not
+call `destroy()` on the injected SDK.
 
 ## 2. Handle consent
 
@@ -230,7 +278,7 @@ function ConsentBanner() {
 
   return (
     <View>
-      <Text>We use cookies for personalization.</Text>
+      <Text>Allow personalized experiences and analytics?</Text>
       <Button title="Accept" onPress={() => optimization.consent(true)} />
       <Button title="Reject" onPress={() => optimization.consent(false)} />
     </View>
@@ -284,7 +332,7 @@ interactions on Contentful entries. It:
   variant for the current user profile.
 - Passes non-optimized entries through unchanged (so you can blanket-wrap a list and only the
   optimized entries actually personalize).
-- Emits view tracking when the entry crosses the visibility/time threshold.
+- Emits view tracking when the entry satisfies the visibility and dwell-time requirements.
 - Emits tap tracking when enabled.
 
 ### Fetch the entry with `include: 10`
@@ -309,7 +357,7 @@ import { OptimizedEntry } from '@contentful/optimization-react-native'
 
 function HeroSection({ baselineEntry }) {
   return (
-    <OptimizedEntry entry={baselineEntry}>
+    <OptimizedEntry baselineEntry={baselineEntry}>
       {(resolvedEntry) => <CTAHeader entry={resolvedEntry} />}
     </OptimizedEntry>
   )
@@ -321,13 +369,27 @@ profile) or the baseline entry (when no variant qualifies). Either way, `resolve
 the same shape as the baseline — so the renderer downstream doesn't need to know whether it's seeing
 a variant or not.
 
+Use `useEntryResolver()` when a component needs the same resolution behavior without the
+`OptimizedEntry` wrapper:
+
+```tsx
+import { useEntryResolver } from '@contentful/optimization-react-native'
+
+function HeroData({ baselineEntry }) {
+  const { resolveEntry } = useEntryResolver()
+  const resolvedEntry = resolveEntry(baselineEntry)
+
+  return <CTAHeader entry={resolvedEntry} />
+}
+```
+
 ### Pass-through for non-optimized entries
 
 When you only want to track an entry (no variant resolution), pass static children instead of a
 render prop:
 
 ```tsx
-<OptimizedEntry entry={blogPost}>
+<OptimizedEntry baselineEntry={blogPost}>
   <BlogPostCard post={blogPost} onPress={...} />
 </OptimizedEntry>
 ```
@@ -342,7 +404,7 @@ are wrapped so the SDK can track views/taps, while non-optimized content passes 
 least M ms) and **taps** (the user tapped the entry). View tracking is enabled by default; tap
 tracking is opt-in.
 
-For the deeper event timing, threshold, consent-gating, and viewport-state details, see
+For the deeper event timing, visibility ratio, consent-gating, and viewport-state details, see
 [React Native SDK Interaction Tracking Mechanics](../concepts/react-native-sdk-interaction-tracking-mechanics.md).
 
 ### Global defaults via OptimizationRoot
@@ -360,20 +422,20 @@ The default is `{ views: true, taps: false }`.
 
 ### Per-component overrides
 
-Override the global setting on individual entries with `trackViews` and `trackTaps`:
+Override the global setting on individual entries with `trackViews` and `trackTaps`.
+
+Track taps on a CTA, regardless of the global setting:
 
 ```tsx
-{
-  /* Track taps on this CTA, regardless of global setting */
-}
-;<OptimizedEntry entry={cta} trackTaps>
+<OptimizedEntry baselineEntry={cta} trackTaps>
   {(resolved) => <CTAHeader entry={resolved} />}
 </OptimizedEntry>
+```
 
-{
-  /* Disable view tracking for a high-frequency entry */
-}
-;<OptimizedEntry entry={feedItem} trackViews={false}>
+Disable view tracking for a high-frequency entry:
+
+```tsx
+<OptimizedEntry baselineEntry={feedItem} trackViews={false}>
   <FeedItemCard item={feedItem} />
 </OptimizedEntry>
 ```
@@ -383,22 +445,22 @@ implicitly enables tap tracking unless `trackTaps={false}` is explicit:
 
 ```tsx
 <OptimizedEntry
-  entry={cta}
+  baselineEntry={cta}
   onTap={(resolved) => navigation.navigate('CTA', { id: resolved.sys.id })}
 >
   {(resolved) => <CTAHeader entry={resolved} />}
 </OptimizedEntry>
 ```
 
-### Custom visibility and time thresholds
+### Custom visibility and dwell timing
 
 By default, view tracking fires when the entry is **80% visible for 2000 ms**. Customize per-entry:
 
 ```tsx
 <OptimizedEntry
-  entry={hero}
-  threshold={0.5} // 50% visible
-  viewTimeMs={1000} // for 1 second
+  baselineEntry={hero}
+  minVisibleRatio={0.5} // 50% visible
+  dwellTimeMs={1000} // for 1 second
 >
   {(resolved) => <Hero entry={resolved} />}
 </OptimizedEntry>
@@ -418,7 +480,7 @@ import { OptimizationScrollProvider, OptimizedEntry } from '@contentful/optimiza
 function BlogPostDetailScreen({ post }) {
   return (
     <OptimizationScrollProvider>
-      <OptimizedEntry entry={post}>
+      <OptimizedEntry baselineEntry={post}>
         <ArticleBody post={post} />
       </OptimizedEntry>
     </OptimizationScrollProvider>
@@ -560,27 +622,28 @@ in the app:
 
 ### Per-component live updates
 
-Override the global setting on individual entries:
+Override the global setting on individual entries.
+
+Always react to changes immediately:
 
 ```tsx
-{
-  /* Always reacts to changes immediately */
-}
-;<OptimizedEntry entry={dashboard} liveUpdates>
+<OptimizedEntry baselineEntry={dashboard} liveUpdates>
   {(resolved) => <Dashboard entry={resolved} />}
 </OptimizedEntry>
+```
 
-{
-  /* Locks to first variant, even if global liveUpdates is true */
-}
-;<OptimizedEntry entry={hero} liveUpdates={false}>
+Lock to the first variant, even when global `liveUpdates` is enabled:
+
+```tsx
+<OptimizedEntry baselineEntry={hero} liveUpdates={false}>
   {(resolved) => <Hero entry={resolved} />}
 </OptimizedEntry>
+```
 
-{
-  /* Inherits the global setting */
-}
-;<OptimizedEntry entry={banner}>{(resolved) => <Banner entry={resolved} />}</OptimizedEntry>
+Inherit the global setting:
+
+```tsx
+<OptimizedEntry baselineEntry={banner}>{(resolved) => <Banner entry={resolved} />}</OptimizedEntry>
 ```
 
 ### Resolution priority

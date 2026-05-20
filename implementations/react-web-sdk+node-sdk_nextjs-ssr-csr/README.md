@@ -26,7 +26,7 @@ changes all re-resolve entries client-side without a server roundtrip.
 - **Higher complexity than nextJs-ssr.** Must manage both server-side resolution (Server Components)
   and client-side resolution (Client Components with `resolveEntry()`).
 - **Two resolution paths.** First paint uses `sdk.resolveOptimizedEntry()` on the server; subsequent
-  interactions use `resolveEntry()` on the client via the `useOptimization()` hook.
+  interactions use `resolveEntry()` on the client via the `useEntryResolver()` hook.
 - **State handoff gap.** `OptimizationProvider` cannot currently accept pre-fetched server data — it
   always initializes fresh and calls the Experience API from the browser. This means the client SDK
   makes a redundant API call on hydration to get the same `selectedOptimizations` the server already
@@ -37,10 +37,10 @@ changes all re-resolve entries client-side without a server roundtrip.
 | Concern                    | First paint (Server)                              | After hydration (Client)                         |
 | -------------------------- | ------------------------------------------------- | ------------------------------------------------ |
 | Profile resolution         | Middleware + Server Component (Node SDK)          | React Web SDK (automatic on init)                |
-| Entry resolution           | `sdk.resolveOptimizedEntry()` in Server Component | `resolveEntry()` via `useOptimization()` hook    |
+| Entry resolution           | `sdk.resolveOptimizedEntry()` in Server Component | `resolveEntry()` via `useEntryResolver()` hook   |
 | Entry fetching             | Server-side from CDA                              | Client-side from CDA (for new routes)            |
 | Page tracking              | N/A                                               | `NextAppAutoPageTracker` fires on route change   |
-| Interaction tracking       | N/A (data attributes rendered server-side)        | `autoTrackEntryInteraction` observes elements    |
+| Interaction tracking       | N/A (data attributes rendered server-side)        | `trackEntryInteraction` observes elements        |
 | Consent / Identify / Reset | N/A                                               | React Web SDK — triggers immediate re-resolution |
 
 ### Behavioral expectations
@@ -110,14 +110,14 @@ const { entry: resolved } = sdk.resolveOptimizedEntry(entry, optimizationData.se
 ### 2. Subsequent pages use Client Components with `resolveEntry()`
 
 After hydration, navigating to other routes fetches entries client-side and resolves them via the
-React Web SDK's `useOptimization()` hook:
+React Web SDK's `useEntryResolver()` hook:
 
 ```typescript
 // app/other-page/page.tsx ("use client")
-import { useOptimization } from '@contentful/optimization-react-web'
+import { useEntryResolver } from '@contentful/optimization-react-web'
 
 function PersonalizedSection({ entry }) {
-  const { resolveEntry } = useOptimization()
+  const { resolveEntry } = useEntryResolver()
   const resolvedEntry = resolveEntry(entry)
 
   return <div>{resolvedEntry.fields.text}</div>
@@ -132,7 +132,7 @@ re-renders with the new content — no manual state management or `liveUpdates` 
 
 ```typescript
 function ClientResolvedEntry({ entry }) {
-  const { resolveEntry } = useOptimization()
+  const { resolveEntry } = useEntryResolver()
   const resolvedEntry = resolveEntry(entry) // re-resolves on profile changes
   return <Content entry={resolvedEntry} />
 }

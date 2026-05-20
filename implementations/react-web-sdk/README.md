@@ -38,19 +38,19 @@ React framework package.
 | ---------------------------- | ------------------------------------------------------------------------------------------ |
 | Provider + initialization    | `OptimizationRoot`                                                                         |
 | SPA page tracking            | `ReactRouterAutoPageTracker` from `@contentful/optimization-react-web/router/react-router` |
-| Entry resolution + rendering | `OptimizedEntry` (render-prop), `useOptimization().resolveEntry()`                         |
+| Entry resolution + rendering | `OptimizedEntry` (render-prop), `useEntryResolver().resolveEntry()`                        |
 | Live updates (global)        | `OptimizationRoot liveUpdates` prop                                                        |
 | Live updates (per-component) | `OptimizedEntry liveUpdates` prop                                                          |
 | Live updates (locked)        | `<OptimizedEntry liveUpdates={false}>`                                                     |
-| Merge tag rendering          | `useOptimization().getMergeTagValue()`                                                     |
+| Merge tag rendering          | `useMergeTagResolver().getMergeTagValue()`                                                 |
 | Nested personalization       | Nested `<OptimizedEntry>` composition                                                      |
 | Consent gating               | `sdk.consent()` via `useOptimizationContext()`                                             |
 | Identify / reset             | `sdk.identify()` / `sdk.reset()` via `useOptimizationContext()`                            |
-| Auto view/click/hover        | `autoTrackEntryInteraction` on `OptimizationRoot` + `data-ctfl-*` attributes               |
-| Manual view tracking         | `useOptimization().interactionTracking.enableElement()`                                    |
+| Auto view/click/hover        | `trackEntryInteraction` on `OptimizationRoot` + `data-ctfl-*` attributes                   |
+| Manual view tracking         | `useOptimization().tracking.enableElement()`                                               |
 | Flag view tracking           | `sdk.states.flag('boolean').subscribe()`                                                   |
 | Analytics event stream       | `sdk.states.eventStream.subscribe()`                                                       |
-| Preview panel toggle UI      | `useLiveUpdates().previewPanelVisible` / `setPreviewPanelVisible()`                        |
+| Preview panel attachment     | Env-gated `attachOptimizationPreviewPanel()` call                                          |
 | Offline queue / recovery     | Inherited from `@contentful/optimization-web` runtime                                      |
 
 ## Prerequisites
@@ -157,14 +157,15 @@ cp .env.example .env
 ```
 
 All variables have mock-safe defaults. To use local mock endpoints (the default), no changes are
-needed. See `.env.example` for the full list.
+needed. `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL="true"` attaches the browser preview panel for
+local and staging runs. See `.env.example` for the full list.
 
 ## Project structure
 
 ```
 react-web-sdk/
 ├── src/
-│   ├── main.tsx                        # OptimizationRoot + createBrowserRouter + ReactRouterAutoPageTracker
+│   ├── main.tsx                        # OptimizationRoot, preview panel attachment, createBrowserRouter
 │   ├── App.tsx                         # Shared layout: SDK state, entry loading, nav, AnalyticsEventDisplay
 │   ├── components/
 │   │   ├── AnalyticsEventDisplay.tsx   # Live event stream panel (persists across routes)
@@ -219,7 +220,7 @@ function RootLayout() {
         insightsBaseUrl: 'https://ingest.insights.ninetailed.co/',
         experienceBaseUrl: 'https://experience.ninetailed.co/',
       }}
-      autoTrackEntryInteraction={{ views: true, clicks: true, hovers: true }}
+      trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
       liveUpdates={liveUpdates}
     >
       <ReactRouterAutoPageTracker />
@@ -299,20 +300,21 @@ function Controls() {
 ### Manual interaction tracking
 
 ```tsx
-import { useOptimization } from '@contentful/optimization-react-web'
+import { useEntryResolver, useOptimization } from '@contentful/optimization-react-web'
 import { useEffect, useRef } from 'react'
 
 function ManuallyTrackedEntry({ entry }) {
-  const { interactionTracking, resolveEntry } = useOptimization()
+  const sdk = useOptimization()
+  const { resolveEntry } = useEntryResolver()
   const ref = useRef(null)
   const resolved = resolveEntry(entry)
 
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    interactionTracking.enableElement('views', el, { data: { entryId: resolved.sys.id } })
-    return () => interactionTracking.clearElement('views', el)
-  }, [resolved.sys.id, interactionTracking])
+    sdk.tracking.enableElement('views', el, { data: { entryId: resolved.sys.id } })
+    return () => sdk.tracking.clearElement('views', el)
+  }, [resolved.sys.id, sdk.tracking])
 
   return <div ref={ref}>{String(resolved.fields.text)}</div>
 }
@@ -320,7 +322,7 @@ function ManuallyTrackedEntry({ entry }) {
 
 ### Auto tracking attributes
 
-For entries tracked via `autoTrackEntryInteraction`, apply `data-ctfl-*` attributes directly on the
+For entries tracked via `trackEntryInteraction`, apply `data-ctfl-*` attributes directly on the
 visible content element inside the render prop:
 
 ```tsx
@@ -340,23 +342,21 @@ visible content element inside the render prop:
 
 > [!NOTE]
 >
-> The `OptimizationRoot` `autoTrackEntryInteraction` prop activates automatic view, click, and hover
+> The `OptimizationRoot` `trackEntryInteraction` prop activates automatic view, click, and hover
 > tracking for any DOM element that has `data-ctfl-entry-id`. The SDK's MutationObserver registers
 > elements as they appear in the DOM after consent is given.
 
-## Migration from web-sdk_react
+## Code orientation
 
-| `web-sdk_react` local code                            | `react-web-sdk` equivalent                                            |
-| ----------------------------------------------------- | --------------------------------------------------------------------- |
-| `src/optimization/createOptimization.ts`              | Config props on `OptimizationRoot`                                    |
-| `src/optimization/OptimizationProvider.tsx`           | `OptimizationRoot` / `OptimizationProvider`                           |
-| `src/optimization/hooks/useOptimization.ts`           | `useOptimization()` / `useOptimizationContext()`                      |
-| `src/optimization/hooks/useOptimizationResolver.ts`   | `useOptimization().resolveEntry()` / `resolveEntryData()`             |
-| `src/optimization/hooks/useOptimizationState.ts`      | Direct `sdk.states.*` subscriptions via `useOptimizationContext()`    |
-| `src/optimization/hooks/useAnalytics.ts`              | `sdk.trackView()` / `sdk.trackClick()` via `useOptimizationContext()` |
-| `src/optimization/liveUpdates/LiveUpdatesContext.tsx` | `useLiveUpdates()` from `@contentful/optimization-react-web`          |
-| Manual `sdk.page()` in `useEffect`                    | `ReactRouterAutoPageTracker`                                          |
-| Manual `selectedOptimizations` lock logic             | `<OptimizedEntry liveUpdates={false}>`                                |
+| File or area                               | Purpose                                                           |
+| ------------------------------------------ | ----------------------------------------------------------------- |
+| `src/main.tsx`                             | Configures `OptimizationRoot` and `ReactRouterAutoPageTracker`    |
+| `src/App.tsx`                              | Subscribes to provider state and renders route-level controls     |
+| `src/sections/ContentEntry.tsx`            | Demonstrates `OptimizedEntry`, `useEntryResolver()`, and tracking |
+| `src/sections/LiveUpdatesExampleEntry.tsx` | Demonstrates locked and live entry resolution                     |
+| `src/components/RichTextRenderer.tsx`      | Demonstrates merge tag rendering with `useMergeTagResolver()`     |
+| `src/components/AnalyticsEventDisplay.tsx` | Displays event stream output from `sdk.states.eventStream`        |
+| Manual `selectedOptimizations` lock logic  | `<OptimizedEntry liveUpdates={false}>`                            |
 
 **What stays the same:** `contentfulClient.ts`, entry/route config, type definitions,
 `RichTextRenderer`, E2E test files, page/section component structure.

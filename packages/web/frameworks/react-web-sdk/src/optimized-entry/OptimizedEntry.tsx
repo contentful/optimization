@@ -1,7 +1,6 @@
 import type { Entry } from 'contentful'
 import { createContext, useContext, useEffect, useMemo, useRef, type JSX } from 'react'
 import { createScopedLogger } from '../logger'
-import { DefaultLoadingFallback } from './DefaultLoadingFallback'
 import {
   resolveChildren,
   resolveLoadingFallback,
@@ -56,6 +55,18 @@ export interface OptimizedEntryProps {
    * Optional fallback rendered while optimization state is unresolved.
    */
   loadingFallback?: OptimizedEntryLoadingFallback
+  /**
+   * Per-component override for click tracking.
+   */
+  trackClicks?: boolean
+  /**
+   * Per-component override for hover tracking.
+   */
+  trackHovers?: boolean
+  /**
+   * Per-component override for view tracking.
+   */
+  trackViews?: boolean
 }
 
 const WRAPPER_STYLE = Object.freeze({ display: 'contents' as const })
@@ -101,7 +112,10 @@ export function OptimizedEntry({
   testId,
   'data-testid': dataTestIdProp,
   loadingFallback,
-}: OptimizedEntryProps): JSX.Element {
+  trackClicks,
+  trackHovers,
+  trackViews,
+}: OptimizedEntryProps): JSX.Element | null {
   const {
     sys: { id: baselineEntryId },
   } = baselineEntry
@@ -113,16 +127,13 @@ export function OptimizedEntry({
   })
 
   if (hasDuplicateBaselineAncestor) {
-    return <></>
+    return null
   }
 
   const hasCustomLoadingFallback = loadingFallback !== undefined
-  const baselineContent = resolveChildren(children, baselineEntry)
-  const resolvedLoadingFallback = hasCustomLoadingFallback ? (
-    resolveLoadingFallback(loadingFallback)
-  ) : (
-    <DefaultLoadingFallback>{baselineContent}</DefaultLoadingFallback>
-  )
+  const resolvedLoadingFallback = hasCustomLoadingFallback
+    ? resolveLoadingFallback(loadingFallback)
+    : undefined
   const { hideLoadingLayoutTarget, loadingContent, showLoadingFallback } =
     resolveLoadingRenderState({
       baselineChildren: children,
@@ -153,7 +164,11 @@ export function OptimizedEntry({
     )
   }
 
-  const trackingAttributes = resolveTrackingAttributes(resolvedData)
+  const trackingAttributes = resolveTrackingAttributes(resolvedData, {
+    trackClicks,
+    trackHovers,
+    trackViews,
+  })
 
   return (
     <OptimizedEntryNestingContext.Provider value={currentAndAncestorBaselineIds}>

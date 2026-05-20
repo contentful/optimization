@@ -130,7 +130,7 @@ export function HomePage(): JSX.Element {
     onReset,
     onToggleGlobalLiveUpdates,
   } = useOutletContext<AppOutletContext>()
-  const { globalLiveUpdates, previewPanelVisible, setPreviewPanelVisible } = useLiveUpdates()
+  const { globalLiveUpdates, previewPanelVisible } = useLiveUpdates()
   const isOptimizationReady = selectedOptimizationCount > 0 || entriesById.size > 0
 
   if (!isOptimizationReady) {
@@ -152,16 +152,6 @@ export function HomePage(): JSX.Element {
             type="button"
           >
             {`Global: ${globalLiveUpdates ? 'ON' : 'OFF'}`}
-          </button>
-
-          <button
-            data-testid="simulate-preview-panel-button"
-            onClick={() => {
-              setPreviewPanelVisible(!previewPanelVisible)
-            }}
-            type="button"
-          >
-            {previewPanelVisible ? 'Close Preview Panel' : 'Open Preview Panel'}
           </button>
         </div>
 

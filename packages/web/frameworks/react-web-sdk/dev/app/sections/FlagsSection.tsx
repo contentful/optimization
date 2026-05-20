@@ -1,9 +1,9 @@
 import type { MergeTagEntry } from '@contentful/optimization-api-schemas'
 import type { ReactElement } from 'react'
-import type { UseOptimizationResult } from '../../../src/hooks/useOptimization'
+import type { OptimizationSdk } from '../../../src'
 import { toJsonPreview } from '../utils'
 
-type FlagValue = ReturnType<UseOptimizationResult['getFlag']>
+type FlagValue = ReturnType<OptimizationSdk['getFlag']>
 
 interface FlagsSectionProps {
   flags: Record<string, FlagValue> | undefined

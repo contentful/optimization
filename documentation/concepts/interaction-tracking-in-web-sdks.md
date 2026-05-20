@@ -57,11 +57,11 @@ allowed, which event type it becomes, and which queue receives it.
 
 ## Layer responsibilities
 
-| Layer                                | Responsibility in interaction tracking                                                                                                                                         |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@contentful/optimization-core`      | Builds `page`, `identify`, `track`, entry view, entry click, entry hover, and Custom Flag view events. Applies consent gates. Queues Experience API and Insights API work.     |
-| `@contentful/optimization-web`       | Initializes Core for a browser runtime. Persists consent, profile data, selected optimizations, and anonymous IDs. Discovers tracked DOM elements and observes interactions.   |
-| `@contentful/optimization-react-web` | Creates and tears down the Web SDK instance, resolves entries in React, emits `data-ctfl-*` attributes, exposes `interactionTracking`, and emits router-driven `page()` calls. |
+| Layer                                | Responsibility in interaction tracking                                                                                                                                       |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@contentful/optimization-core`      | Builds `page`, `identify`, `track`, entry view, entry click, entry hover, and Custom Flag view events. Applies consent gates. Queues Experience API and Insights API work.   |
+| `@contentful/optimization-web`       | Initializes Core for a browser runtime. Persists consent, profile data, selected optimizations, and anonymous IDs. Discovers tracked DOM elements and observes interactions. |
+| `@contentful/optimization-react-web` | Creates and tears down the Web SDK instance, resolves entries in React, emits `data-ctfl-*` attributes, exposes the SDK instance, and emits router-driven `page()` calls.    |
 
 The application still owns Contentful fetching, rendering policy, consent UX, identity policy, route
 ownership, and any business event taxonomy passed to `track()`.
@@ -313,8 +313,9 @@ and sweeps disconnected element state.
 React Web wraps the Web SDK; it does not replace the Web SDK tracking runtime.
 
 `OptimizationRoot` creates one `ContentfulOptimization` instance from its props and destroys that
-instance on unmount. `autoTrackEntryInteraction`, `allowedEventTypes`, `defaults`, `queuePolicy`,
-and other Web SDK configuration values pass through to the underlying instance.
+instance on unmount. `trackEntryInteraction` maps to the lower-level Web SDK's
+`autoTrackEntryInteraction` option. `allowedEventTypes`, `defaults`, `queuePolicy`, and other Web
+SDK configuration values pass through to the underlying instance.
 
 `OptimizedEntry` does three tracking-related things:
 
@@ -344,7 +345,7 @@ not change based on the resolved entry.
 
 `useOptimizedEntry()` only resolves data. It does not add DOM attributes or register an element. If
 a component uses `useOptimizedEntry()` directly, it must either render the `data-ctfl-*` attributes
-itself or use `interactionTracking.enableElement(...)`.
+itself or use `sdk.tracking.enableElement(...)`.
 
 React Web router adapters emit `page()` calls when supported routers change route. They are page
 event helpers, not entry interaction detectors. Entry views, clicks, and hovers still come from the
@@ -379,8 +380,8 @@ When an expected interaction does not appear, check the gates in this order:
    needs a current profile in state.
 2. **Consent** - Confirm `states.consent.current === true` or configure `allowedEventTypes` for the
    event types that must emit before consent.
-3. **Detector startup** - Confirm `autoTrackEntryInteraction` or `tracking.enable(...)` is enabled
-   for the relevant interaction.
+3. **Detector startup** - Confirm React Web `trackEntryInteraction`, lower-level Web SDK
+   `autoTrackEntryInteraction`, or `tracking.enable(...)` is enabled for the relevant interaction.
 4. **Element metadata** - Confirm the tracked element is an HTML or SVG element with non-empty
    `data-ctfl-entry-id`, or that `enableElement(...)` supplies valid `data.entryId`.
 5. **View threshold** - Confirm the element stays above `minVisibleRatio` for `dwellTimeMs`.
@@ -392,7 +393,9 @@ When an expected interaction does not appear, check the gates in this order:
    not suppressing the element.
 
 For local diagnostics, subscribe to `states.eventStream` and `states.blockedEventStream`, and use
-`onEventBlocked` for consent-gating visibility.
+`onEventBlocked` for consent-gating visibility. In React Web, use `onStatesReady` on
+`OptimizationRoot` when those subscribers should be attached as soon as SDK state exists and before
+provider children can emit router `page()` events or entry interactions.
 
 ## Design boundaries
 

@@ -1,6 +1,8 @@
 import { defineConfig } from '@rsbuild/core'
 import { pluginReact } from '@rsbuild/plugin-react'
 
+const ENABLE_PREVIEW_PANEL = process.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true'
+
 export default defineConfig({
   plugins: [pluginReact()],
   source: {
@@ -8,8 +10,8 @@ export default defineConfig({
       index: './src/main.tsx',
     },
     define: {
-      ENABLE_PREVIEW_PANEL: JSON.stringify(
-        process.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true',
+      'import.meta.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL': JSON.stringify(
+        ENABLE_PREVIEW_PANEL ? 'true' : 'false',
       ),
     },
   },

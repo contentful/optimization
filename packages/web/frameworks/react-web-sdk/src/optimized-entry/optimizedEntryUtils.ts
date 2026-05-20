@@ -1,7 +1,7 @@
 import type { SelectedOptimization } from '@contentful/optimization-web/api-schemas'
 import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 
 export type LoadingFallback = ReactNode | (() => ReactNode)
 export type WrapperElement = 'div' | 'span'
@@ -15,20 +15,15 @@ export interface LoadingRenderState {
   showLoadingFallback: boolean
 }
 
-const LOADING_LAYOUT_TARGET_STYLE = Object.freeze({
-  display: 'block' as const,
-})
-const LOADING_LAYOUT_TARGET_STYLE_INLINE = Object.freeze({
-  display: 'inline' as const,
-})
-const LOADING_LAYOUT_TARGET_STYLE_HIDDEN = Object.freeze({
-  display: 'block' as const,
-  visibility: 'hidden' as const,
-})
-const LOADING_LAYOUT_TARGET_STYLE_INLINE_HIDDEN = Object.freeze({
-  display: 'inline' as const,
-  visibility: 'hidden' as const,
-})
+export interface TrackingAttributeOptions {
+  trackClicks?: boolean
+  trackHovers?: boolean
+  trackViews?: boolean
+}
+
+export type LoadingLayoutTargetStyle = Pick<CSSProperties, 'display' | 'visibility'>
+
+type TrackingAttributeValue = string | boolean | number | undefined
 
 export function resolveLoadingFallback(loadingFallback: LoadingFallback | undefined): ReactNode {
   if (typeof loadingFallback === 'function') {
@@ -51,14 +46,7 @@ export function resolveChildren(children: OptimizedEntryChildren, entry: Entry):
 }
 
 export function hasOptimizationReferences(entry: Entry): boolean {
-  const { fields } = entry
-  const { nt_experiences: ntExperiences } = fields
-
-  if (!Array.isArray(ntExperiences)) {
-    return false
-  }
-
-  return ntExperiences.length > 0
+  return Array.isArray(entry.fields.nt_experiences) && entry.fields.nt_experiences.length > 0
 }
 
 function resolveDuplicationScope(
@@ -94,45 +82,36 @@ export function resolveShouldLiveUpdate(params: {
 
 export function resolveTrackingAttributes(
   resolvedData: ResolvedData<EntrySkeletonType>,
-): Record<string, string | undefined> {
+  options: TrackingAttributeOptions = {},
+): Record<string, TrackingAttributeValue> {
   const {
     selectedOptimization,
     entry: {
       sys: { id: entryId },
     },
   } = resolvedData
+  const { trackClicks, trackHovers, trackViews } = options
 
   return {
     'data-ctfl-duplication-scope': resolveDuplicationScope(selectedOptimization),
     'data-ctfl-entry-id': entryId,
     'data-ctfl-optimization-id': selectedOptimization?.experienceId,
-    'data-ctfl-sticky':
-      selectedOptimization?.sticky === undefined ? undefined : String(selectedOptimization.sticky),
-    'data-ctfl-variant-index': String(selectedOptimization?.variantIndex ?? 0),
+    'data-ctfl-sticky': selectedOptimization?.sticky,
+    'data-ctfl-track-clicks': trackClicks,
+    'data-ctfl-track-hovers': trackHovers,
+    'data-ctfl-track-views': trackViews,
+    'data-ctfl-variant-index': selectedOptimization?.variantIndex ?? 0,
   }
 }
 
 export function resolveLoadingLayoutTargetStyle(
   wrapperElement: WrapperElement,
   isInvisible: boolean,
-):
-  | typeof LOADING_LAYOUT_TARGET_STYLE
-  | typeof LOADING_LAYOUT_TARGET_STYLE_INLINE
-  | typeof LOADING_LAYOUT_TARGET_STYLE_HIDDEN
-  | typeof LOADING_LAYOUT_TARGET_STYLE_INLINE_HIDDEN {
-  if (isInvisible) {
-    if (wrapperElement === 'span') {
-      return LOADING_LAYOUT_TARGET_STYLE_INLINE_HIDDEN
-    }
-
-    return LOADING_LAYOUT_TARGET_STYLE_HIDDEN
+): LoadingLayoutTargetStyle {
+  return {
+    display: wrapperElement === 'span' ? 'inline' : 'block',
+    visibility: isInvisible ? 'hidden' : undefined,
   }
-
-  if (wrapperElement === 'span') {
-    return LOADING_LAYOUT_TARGET_STYLE_INLINE
-  }
-
-  return LOADING_LAYOUT_TARGET_STYLE
 }
 
 export function resolveLoadingRenderState(params: {

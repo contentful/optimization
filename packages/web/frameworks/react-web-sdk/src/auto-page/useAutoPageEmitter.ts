@@ -25,7 +25,7 @@ export function useAutoPageEmitter<TRouteContext>({
   pagePayload,
   getPagePayload,
 }: UseAutoPageEmitterArgs<TRouteContext>): void {
-  const { sdk } = useOptimization()
+  const sdk = useOptimization()
 
   useEffect(() => {
     if (!enabled) {

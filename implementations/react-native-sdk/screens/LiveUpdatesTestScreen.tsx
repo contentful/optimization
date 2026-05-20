@@ -56,7 +56,7 @@ function ContentSections({
         <View>
           <Text>Default Behavior (inherits global setting)</Text>
           <Text>No liveUpdates prop - inherits from OptimizationRoot (false)</Text>
-          <OptimizedEntry entry={entry} testID="default-optimization">
+          <OptimizedEntry baselineEntry={entry} testID="default-optimization">
             {(resolvedEntry) => (
               <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="default" />
             )}
@@ -66,7 +66,7 @@ function ContentSections({
         <View>
           <Text>Live Updates Enabled (liveUpdates=true)</Text>
           <Text>Always updates when optimization state changes</Text>
-          <OptimizedEntry entry={entry} liveUpdates={true} testID="live-optimization">
+          <OptimizedEntry baselineEntry={entry} liveUpdates={true} testID="live-optimization">
             {(resolvedEntry) => (
               <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="live" />
             )}
@@ -76,7 +76,7 @@ function ContentSections({
         <View>
           <Text>Locked (liveUpdates=false)</Text>
           <Text>Never updates - locks to first variant received</Text>
-          <OptimizedEntry entry={entry} liveUpdates={false} testID="locked-optimization">
+          <OptimizedEntry baselineEntry={entry} liveUpdates={false} testID="locked-optimization">
             {(resolvedEntry) => (
               <LiveUpdatesEntryDisplay entry={resolvedEntry} testIdPrefix="locked" />
             )}

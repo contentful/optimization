@@ -1,4 +1,5 @@
 import { OptimizationRoot } from '@contentful/optimization-react-web'
+import { createScopedLogger } from '@contentful/optimization-react-web/logger'
 import { ReactRouterAutoPageTracker } from '@contentful/optimization-react-web/router/react-router'
 import { type ReactElement, StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -7,6 +8,7 @@ import App from './App'
 import { HOME_PATH } from './config/routes'
 import { HomePage } from './pages/HomePage'
 import { PageTwoPage } from './pages/PageTwoPage'
+import { getContentfulClient } from './services/contentfulClient'
 
 const CLIENT_ID = import.meta.env.PUBLIC_NINETAILED_CLIENT_ID?.trim() ?? 'mock-client-id'
 const ENVIRONMENT = import.meta.env.PUBLIC_NINETAILED_ENVIRONMENT?.trim() ?? 'main'
@@ -14,8 +16,11 @@ const INSIGHTS_BASE_URL =
   import.meta.env.PUBLIC_INSIGHTS_API_BASE_URL?.trim() ?? 'http://localhost:8000/insights/'
 const EXPERIENCE_BASE_URL =
   import.meta.env.PUBLIC_EXPERIENCE_API_BASE_URL?.trim() ?? 'http://localhost:8000/experience/'
+const ENABLE_PREVIEW_PANEL = import.meta.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true'
 
 type LogLevel = 'debug' | 'warn' | 'error'
+
+const previewPanelLogger = createScopedLogger('ReactWebReference:PreviewPanel')
 
 function resolveLogLevel(): LogLevel {
   const raw = import.meta.env.PUBLIC_OPTIMIZATION_LOG_LEVEL?.trim().toLowerCase()
@@ -25,6 +30,24 @@ function resolveLogLevel(): LogLevel {
   }
 
   return import.meta.env.DEV ? 'debug' : 'warn'
+}
+
+function attachPreviewPanel(): void {
+  if (!ENABLE_PREVIEW_PANEL) {
+    return
+  }
+
+  void import('@contentful/optimization-web-preview-panel')
+    .then(async ({ default: attachOptimizationPreviewPanel }) => {
+      await attachOptimizationPreviewPanel({
+        contentful:
+          getContentfulClient().withAllLocales.withoutLinkResolution.withoutUnresolvableLinks,
+        nonce: undefined,
+      })
+    })
+    .catch((error: unknown) => {
+      previewPanelLogger.warn('Failed to attach the Contentful Optimization preview panel.', error)
+    })
 }
 
 function RootLayout(): ReactElement {
@@ -42,12 +65,13 @@ function RootLayout(): ReactElement {
         insightsBaseUrl: INSIGHTS_BASE_URL,
         experienceBaseUrl: EXPERIENCE_BASE_URL,
       }}
-      autoTrackEntryInteraction={{ views: true, clicks: true, hovers: true }}
+      trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
       logLevel={resolveLogLevel()}
       app={{
         name: 'ContentfulOptimization SDK - React Web SDK Reference',
         version: '0.1.0',
       }}
+      onStatesReady={attachPreviewPanel}
       liveUpdates={globalLiveUpdates}
     >
       <ReactRouterAutoPageTracker />

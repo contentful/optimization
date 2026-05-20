@@ -18,6 +18,7 @@ to own the browser SDK integration without React abstractions.
 - [The integration flow](#the-integration-flow)
 - [1. Install and initialize with OptimizationRoot](#1-install-and-initialize-with-optimizationroot)
   - [Access the SDK instance with hooks](#access-the-sdk-instance-with-hooks)
+  - [Subscribe to SDK state from the provider](#subscribe-to-sdk-state-from-the-provider)
   - [Provide a pre-built SDK instance when needed](#provide-a-pre-built-sdk-instance-when-needed)
 - [2. Handle consent in React](#2-handle-consent-in-react)
   - [Reading consent state](#reading-consent-state)
@@ -113,20 +114,23 @@ function App() {
 }
 ```
 
-That is the minimum viable setup. `OptimizationRoot` initializes the underlying Web SDK instance,
-manages its lifecycle across React re-renders and StrictMode, and destroys the instance on unmount.
+That is the minimum viable setup. `OptimizationRoot` initializes the underlying Web SDK instance
+after React commit, outside render, renders no children while the SDK is pending, and destroys the
+instance on unmount. In normal browser rendering, initialization uses a layout-effect path so ready
+children can mount before the first visible paint.
 
 Available configuration props:
 
-| Prop                        | Type                               | Required | Default   | Description                                    |
-| --------------------------- | ---------------------------------- | -------- | --------- | ---------------------------------------------- |
-| `clientId`                  | `string`                           | Yes      | N/A       | Your Contentful Optimization client identifier |
-| `environment`               | `string`                           | No       | `'main'`  | Contentful environment                         |
-| `api`                       | `CoreApiConfig`                    | No       | See below | Experience API and Insights API configuration  |
-| `app`                       | `App`                              | No       | —         | Application metadata attached to events        |
-| `autoTrackEntryInteraction` | `AutoTrackEntryInteractionOptions` | No       | —         | Automatic entry interaction tracking options   |
-| `logLevel`                  | `LogLevels`                        | No       | `'error'` | Minimum log level for console output           |
-| `liveUpdates`               | `boolean`                          | No       | `false`   | Enable global live updates                     |
+| Prop                    | Type                           | Required | Default                                         | Description                                                |
+| ----------------------- | ------------------------------ | -------- | ----------------------------------------------- | ---------------------------------------------------------- |
+| `clientId`              | `string`                       | Yes      | N/A                                             | Your Contentful Optimization client identifier             |
+| `environment`           | `string`                       | No       | `'main'`                                        | Contentful environment                                     |
+| `api`                   | `CoreApiConfig`                | No       | See below                                       | Experience API and Insights API configuration              |
+| `app`                   | `App`                          | No       | —                                               | Application metadata attached to events                    |
+| `trackEntryInteraction` | `TrackEntryInteractionOptions` | No       | `{ views: true, clicks: false, hovers: false }` | Automatic entry interaction tracking options               |
+| `logLevel`              | `LogLevels`                    | No       | `'error'`                                       | Minimum log level for console output                       |
+| `liveUpdates`           | `boolean`                      | No       | `false`                                         | Enable global live updates                                 |
+| `onStatesReady`         | `(states) => cleanup`          | No       | —                                               | Attach app-level state subscribers when SDK state is ready |
 
 A more complete initialization with explicit API endpoints and interaction tracking:
 
@@ -138,7 +142,7 @@ A more complete initialization with explicit API endpoints and interaction track
     insightsBaseUrl: 'https://ingest.insights.ninetailed.co/',
     experienceBaseUrl: 'https://experience.ninetailed.co/',
   }}
-  autoTrackEntryInteraction={{ views: true, clicks: true, hovers: true }}
+  trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
   logLevel="warn"
   app={{
     name: 'my-react-app',
@@ -157,13 +161,18 @@ Inside the provider tree, use hooks to interact with the SDK:
 - `useOptimization()` returns the initialized SDK surface. It throws if the provider is missing or
   the SDK is not ready.
 - `useOptimizationContext()` returns `{ sdk, isReady, error }` without requiring readiness, which is
-  useful for conditional rendering during initialization.
+  useful for low-level diagnostics and error handling.
 
 ```tsx
-import { useOptimization, useOptimizationContext } from '@contentful/optimization-react-web'
+import {
+  useEntryResolver,
+  useOptimization,
+  useOptimizationContext,
+} from '@contentful/optimization-react-web'
 
 function MyComponent() {
-  const { consent, identify, page, track, getFlag, resolveEntry } = useOptimization()
+  const { consent, identify, page, track, getFlag } = useOptimization()
+  const { resolveEntry } = useEntryResolver()
   // SDK is guaranteed to be ready here
 }
 
@@ -176,6 +185,40 @@ function ConditionalComponent() {
   return <p>SDK ready</p>
 }
 ```
+
+### Subscribe to SDK state from the provider
+
+Use `onStatesReady` when application code needs SDK state subscriptions that line up with provider
+initialization. In React Web, avoid using `window.contentfulOptimization` as the coordination point
+for these subscriptions: it may not exist yet, or it may have existed long enough for router, page,
+or blocked-event data to be missed.
+
+```tsx
+<OptimizationRoot
+  clientId="your-client-id"
+  onStatesReady={(states) => {
+    const subscriptions = [
+      states.eventStream.subscribe((event) => {
+        if (event) devToolsPanel.logEvent(event)
+      }),
+      states.blockedEventStream.subscribe((blocked) => {
+        if (blocked) devToolsPanel.logBlockedEvent(blocked)
+      }),
+    ]
+
+    return () => {
+      subscriptions.forEach((subscription) => subscription.unsubscribe())
+    }
+  }}
+>
+  <ReactRouterAutoPageTracker />
+  <YourApp />
+</OptimizationRoot>
+```
+
+`onStatesReady` receives only the `states` surface. It runs as soon as the provider has initialized
+SDK state and before children mount, so subscriptions can observe events emitted by child effects
+such as router page tracking. Use regular hooks and React effects for component-local state.
 
 ### Provide a pre-built SDK instance when needed
 
@@ -199,8 +242,11 @@ function App() {
 }
 ```
 
-When using the `sdk` prop, the provider does not own the instance lifecycle, so it will not call
-`destroy()` on unmount.
+When using the `sdk` prop without `onStatesReady`, children render immediately because the SDK is
+already available and no provider-managed subscriber setup is required. If `onStatesReady` is
+provided, the provider waits until those subscribers are attached before children mount. In both
+cases, the provider does not own the injected instance lifecycle and will not call `destroy()` on
+unmount.
 
 ## 2. Handle consent in React
 
@@ -246,7 +292,7 @@ function ConsentBanner() {
 
   return (
     <div>
-      <p>We use cookies for personalization.</p>
+      <p>Allow personalized experiences and analytics?</p>
       <button onClick={() => consent(true)}>Accept</button>
       <button onClick={() => consent(false)}>Reject</button>
     </div>
@@ -464,7 +510,7 @@ auto-tracking at initialization:
 ```tsx
 <OptimizationRoot
   clientId="your-client-id"
-  autoTrackEntryInteraction={{ views: true, clicks: true, hovers: true }}
+  trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
 >
   <YourApp />
 </OptimizationRoot>
@@ -478,15 +524,16 @@ states are not tracked.
 
 ### Manual tracking via the tracking API
 
-For entries that are not rendered through `OptimizedEntry`, use the `interactionTracking` API from
+For entries that are not rendered through `OptimizedEntry`, use `sdk.tracking` from
 `useOptimization()`:
 
 ```tsx
-import { useOptimization } from '@contentful/optimization-react-web'
+import { useEntryResolver, useOptimization } from '@contentful/optimization-react-web'
 import { useEffect, useRef } from 'react'
 
 function ManuallyTrackedEntry({ entry }) {
-  const { interactionTracking, resolveEntry, resolveEntryData } = useOptimization()
+  const sdk = useOptimization()
+  const { resolveEntry, resolveEntryData } = useEntryResolver()
   const containerRef = useRef(null)
   const resolvedEntry = resolveEntry(entry)
   const { selectedOptimization } = resolveEntryData(entry)
@@ -495,7 +542,7 @@ function ManuallyTrackedEntry({ entry }) {
     const element = containerRef.current
     if (!element) return
 
-    interactionTracking.enableElement('views', element, {
+    sdk.tracking.enableElement('views', element, {
       data: {
         entryId: resolvedEntry.sys.id,
         optimizationId: selectedOptimization?.experienceId,
@@ -505,9 +552,9 @@ function ManuallyTrackedEntry({ entry }) {
     })
 
     return () => {
-      interactionTracking.clearElement('views', element)
+      sdk.tracking.clearElement('views', element)
     }
-  }, [interactionTracking, resolvedEntry.sys.id, selectedOptimization])
+  }, [sdk.tracking, resolvedEntry.sys.id, selectedOptimization])
 
   return (
     <div ref={containerRef}>

@@ -3,7 +3,7 @@ import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { type ReactElement, useMemo, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { useLiveUpdates, useOptimization } from '../../src'
+import { useEntryResolver, useLiveUpdates, useOptimization } from '../../src'
 import {
   BASELINE_IDS,
   CLIENT_ID,
@@ -38,7 +38,9 @@ type FlagValue = Json
 
 export function App(): ReactElement {
   const location = useLocation()
-  const { sdk, getFlag, getMergeTagValue, resolveEntry, resolveEntryData } = useOptimization()
+  const sdk = useOptimization()
+  const { getFlag, getMergeTagValue } = sdk
+  const { resolveEntry, resolveEntryData } = useEntryResolver()
   const { globalLiveUpdates, previewPanelVisible } = useLiveUpdates()
   const { entriesById, loading: entriesLoading, error: entriesError } = useDevEntries()
   const { consent, profile, selectedOptimizations, previewPanelOpen, eventLog } =

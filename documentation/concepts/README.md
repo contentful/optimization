@@ -37,5 +37,5 @@ they are not the first stop for installation or setup commands.
   responses work together when Node and Web SDK runtimes share a visitor journey.
 - [React Native SDK Interaction Tracking Mechanics](./react-native-sdk-interaction-tracking-mechanics.md) -
   explains how the React Native SDK observes, gates, and emits tracking events, covering event
-  types, the viewport state machine, default thresholds, consent gating, scroll context, screen
-  tracking paths, and the configuration resolution order
+  types, the viewport state machine, default visibility and timing, consent gating, scroll context,
+  screen tracking paths, and the configuration resolution order

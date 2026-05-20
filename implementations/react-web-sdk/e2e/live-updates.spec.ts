@@ -12,6 +12,10 @@ async function identify(page: Page): Promise<void> {
   await expect(page.getByTestId('identified-status')).toHaveText('Yes')
 }
 
+function getPreviewPanelToggle(page: Page): Locator {
+  return page.locator('ctfl-opt-preview-panel').locator('button.toggle-drawer')
+}
+
 test.describe('live updates behavior', () => {
   test.beforeEach(async ({ page }) => {
     await page.context().clearCookies()
@@ -85,7 +89,7 @@ test.describe('live updates behavior', () => {
     test.skip(!isPreviewPanelEnabled, 'Preview panel is disabled for this build.')
     const initialLockedEntryId = await getEntryId(page.getByTestId('entry-id-live-locked'))
 
-    await page.getByTestId('simulate-preview-panel-button').click()
+    await getPreviewPanelToggle(page).click()
     await expect(page.getByTestId('preview-panel-status')).toHaveText('Open')
 
     await identify(page)
@@ -95,18 +99,20 @@ test.describe('live updates behavior', () => {
       .not.toBe(initialLockedEntryId)
   })
 
-  test('screen controls toggle global live updates and preview panel', async ({ page }) => {
-    test.skip(!isPreviewPanelEnabled, 'Preview panel is disabled for this build.')
+  test('screen controls toggle global live updates', async ({ page }) => {
     await expect(page.getByTestId('global-live-updates-status')).toHaveText('OFF')
     await page.getByTestId('toggle-global-live-updates-button').click()
     await expect(page.getByTestId('global-live-updates-status')).toHaveText('ON')
     await page.getByTestId('toggle-global-live-updates-button').click()
     await expect(page.getByTestId('global-live-updates-status')).toHaveText('OFF')
+  })
 
+  test('built-in preview panel toggle opens and closes the panel', async ({ page }) => {
+    test.skip(!isPreviewPanelEnabled, 'Preview panel is disabled for this build.')
     await expect(page.getByTestId('preview-panel-status')).toHaveText('Closed')
-    await page.getByTestId('simulate-preview-panel-button').click()
+    await getPreviewPanelToggle(page).click()
     await expect(page.getByTestId('preview-panel-status')).toHaveText('Open')
-    await page.getByTestId('simulate-preview-panel-button').click()
+    await getPreviewPanelToggle(page).click()
     await expect(page.getByTestId('preview-panel-status')).toHaveText('Closed')
   })
 

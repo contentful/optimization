@@ -35,6 +35,7 @@ extend behavior through the consumer-facing channels the SDK provides.
   - [Reading a Custom Flag value reactively](#reading-a-custom-flag-value-reactively)
   - [Diagnosing blocked events](#diagnosing-blocked-events)
   - [Auditing all emitted events](#auditing-all-emitted-events)
+  - [Provider-managed framework subscriptions](#provider-managed-framework-subscriptions)
   - [Providing consent](#providing-consent)
   - [Resetting state](#resetting-state)
 - [Extending Core: interceptors](#extending-core-interceptors)
@@ -324,6 +325,45 @@ sdk.states.eventStream.subscribe((event) => {
 
 This is useful for building debugging overlays, integration tests that assert on emitted payloads,
 or custom telemetry pipelines that operate alongside the SDK's own delivery.
+
+### Provider-managed framework subscriptions
+
+React Web and React Native provider roots accept `onStatesReady` for app-level subscribers that
+should be coordinated by the provider instead of by application code polling or waiting for an SDK
+instance. This addresses both common timing problems: the SDK state surface might not exist yet when
+application code tries to subscribe, or the SDK might already have existed long enough for initial
+router, screen, or blocked-event data to be missed. The callback receives only the `states` surface
+and may return a cleanup function:
+
+```tsx
+<OptimizationRoot
+  clientId="my-client-id"
+  onStatesReady={(states) => {
+    const subscription = states.eventStream.subscribe((event) => {
+      if (event) devToolsPanel.logEvent(event)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }}
+>
+  <App />
+</OptimizationRoot>
+```
+
+`onStatesReady` complements, but does not replace, `onEventBlocked`. Use `onEventBlocked` for one
+startup callback dedicated to blocked events. Use `onStatesReady` when a framework app needs a clear
+provider-owned place to subscribe to `eventStream`, `blockedEventStream`, or other observables as
+soon as SDK state is available and before child router, screen, or entry effects run. Each
+subscription still immediately emits its current snapshot.
+
+Both framework roots set up provider-owned SDK instances outside render and render no children while
+SDK initialization or provider-managed state subscriber setup is pending. React Web uses
+layout-effect scheduling for provider-owned browser SDK creation so ready children normally mount
+before first visible paint. React Native keeps async effect scheduling because SDK creation depends
+on platform storage and device state. When a framework adapter injects an already-created SDK,
+children can render immediately unless `onStatesReady` is provided.
 
 ### Providing consent
 

@@ -1,4 +1,4 @@
-import { useOptimization } from '@contentful/optimization-react-web'
+import { useEntryResolver, useOptimization } from '@contentful/optimization-react-web'
 import type { JSX, RefObject } from 'react'
 import { useEffect, useRef } from 'react'
 import { RichTextRenderer } from '../components/RichTextRenderer'
@@ -125,7 +125,8 @@ function TrackedContent({
   containerRef,
   observation,
 }: TrackedContentProps): JSX.Element {
-  const { interactionTracking, resolveEntry, resolveEntryData } = useOptimization()
+  const sdk = useOptimization()
+  const { resolveEntry, resolveEntryData } = useEntryResolver()
   const resolvedEntry = resolveEntry(baselineEntry) as ContentEntryType
   const { selectedOptimization } = resolveEntryData(baselineEntry)
   const meta = resolveOptimizationMeta(selectedOptimization)
@@ -140,7 +141,7 @@ function TrackedContent({
       return undefined
     }
 
-    interactionTracking.enableElement('views', element, {
+    sdk.tracking.enableElement('views', element, {
       data: {
         entryId: resolvedEntry.sys.id,
         optimizationId: meta.experienceId,
@@ -150,16 +151,16 @@ function TrackedContent({
     })
 
     return () => {
-      interactionTracking.clearElement('views', element)
+      sdk.tracking.clearElement('views', element)
     }
   }, [
     containerRef,
-    interactionTracking,
     meta.experienceId,
     meta.sticky,
     meta.variantIndex,
     observation,
     resolvedEntry.sys.id,
+    sdk.tracking,
   ])
 
   const content = (

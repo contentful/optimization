@@ -9,7 +9,6 @@ import type { LiveUpdatesContextValue } from '../context/LiveUpdatesContext'
 import { LiveUpdatesContext } from '../context/LiveUpdatesContext'
 import type { OptimizationContextValue, OptimizationSdk } from '../context/OptimizationContext'
 import { OptimizationContext } from '../context/OptimizationContext'
-import type { UseOptimizationResult } from '../hooks/useOptimization'
 
 export type TestEntry = Entry
 export type SelectedOptimizationState = SelectedOptimizationArray | undefined
@@ -275,9 +274,7 @@ export function requireOptimizationContext(
   return value
 }
 
-export function requireOptimizationResult(
-  value: UseOptimizationResult | undefined,
-): UseOptimizationResult {
+export function requireOptimizationSdk(value: OptimizationSdk | undefined): OptimizationSdk {
   if (value === undefined) {
     throw new Error('Expected optimization instance to be captured')
   }

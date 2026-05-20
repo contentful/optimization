@@ -7,6 +7,7 @@ import {
 import { LiveUpdatesProvider } from '../context/LiveUpdatesContext'
 import type { PreviewPanelConfig } from '../preview'
 import { PreviewPanelOverlay } from '../preview/components/PreviewPanelOverlay'
+import type { OnStatesReady } from './OptimizationProvider'
 import { OptimizationProvider } from './OptimizationProvider'
 
 /**
@@ -43,7 +44,7 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
    * @defaultValue `{ views: true, taps: false }`
    *
    * @remarks
-   * Mirrors the web SDK's `autoTrackEntryInteraction` pattern. Uses `taps`
+   * Mirrors React Web's `trackEntryInteraction` pattern. Uses `taps`
    * instead of `clicks` to match React Native terminology.
    *
    * @example
@@ -57,6 +58,12 @@ export interface OptimizationRootProps extends CoreStatefulConfig {
    * ```
    */
   trackEntryInteraction?: TrackEntryInteractionOptions
+
+  /**
+   * Called once SDK state initialization completes and before provider children mount.
+   * Return a cleanup function to unsubscribe app-level state observers on teardown.
+   */
+  onStatesReady?: OnStatesReady
 
   /**
    * Children components that will have access to the {@link ContentfulOptimization} instance.
@@ -119,6 +126,7 @@ export function OptimizationRoot({
   previewPanel,
   liveUpdates = false,
   trackEntryInteraction,
+  onStatesReady,
   children,
   ...config
 }: OptimizationRootProps): React.JSX.Element {
@@ -136,7 +144,7 @@ export function OptimizationRoot({
   )
 
   return (
-    <OptimizationProvider {...config}>
+    <OptimizationProvider {...config} onStatesReady={onStatesReady}>
       <LiveUpdatesProvider globalLiveUpdates={liveUpdates}>
         <InteractionTrackingProvider trackEntryInteraction={trackEntryInteraction}>
           {content}

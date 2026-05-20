@@ -39,9 +39,11 @@ source of truth for exported API signatures.
 - [When to use this package](#when-to-use-this-package)
 - [Common configuration](#common-configuration)
 - [Core workflows](#core-workflows)
+  - [Provider lifecycle](#provider-lifecycle)
   - [Render optimized entries](#render-optimized-entries)
   - [Track entry interactions](#track-entry-interactions)
   - [Track screens](#track-screens)
+  - [Provider-managed state subscriptions](#provider-managed-state-subscriptions)
   - [Live updates and preview](#live-updates-and-preview)
   - [Offline support](#offline-support)
 - [Runtime notes](#runtime-notes)
@@ -111,6 +113,7 @@ Only `clientId` is required.
 | `trackEntryInteraction` | No        | `{ views: true, taps: false }` | Default view and tap tracking for `OptimizedEntry` components                  |
 | `liveUpdates`           | No        | `false`                        | Whether optimized entries react continuously to SDK state changes              |
 | `previewPanel`          | No        | `undefined`                    | Enables the in-app preview panel when provided with `enabled: true`            |
+| `onStatesReady`         | No        | `undefined`                    | Provider-managed app-level state subscription hook                             |
 | `getAnonymousId`        | No        | `undefined`                    | Function used to provide an anonymous ID from application-owned identity state |
 | `queuePolicy`           | No        | SDK defaults                   | Flush retry behavior and offline queue bounds                                  |
 | `logLevel`              | No        | `'error'`                      | Minimum log level for the default console sink                                 |
@@ -136,6 +139,13 @@ For every prop, callback payload, and exported type, use the generated
 
 ## Core workflows
 
+### Provider lifecycle
+
+`OptimizationRoot` owns async React Native SDK initialization. It renders no children while platform
+state setup is pending, runs any `onStatesReady` callback, and only then renders provider children.
+This matches the React Web provider contract, but React Native uses async effect scheduling because
+storage and platform setup cannot be completed before paint.
+
 ### Render optimized entries
 
 `OptimizedEntry` resolves optimized Contentful entries and passes non-optimized entries through
@@ -146,7 +156,7 @@ import { OptimizedEntry } from '@contentful/optimization-react-native'
 
 function HeroEntry({ entry }) {
   return (
-    <OptimizedEntry entry={entry}>
+    <OptimizedEntry baselineEntry={entry}>
       {(resolvedEntry) => <Hero data={resolvedEntry.fields} />}
     </OptimizedEntry>
   )
@@ -156,6 +166,20 @@ function HeroEntry({ entry }) {
 Fetch Contentful entries in your app layer. For optimized entries, request linked entries deeply
 enough for the baseline and variants, commonly with `include: 10`.
 
+Use `useEntryResolver()` when a component needs manual entry resolution without the `OptimizedEntry`
+wrapper:
+
+```tsx
+import { useEntryResolver } from '@contentful/optimization-react-native'
+
+function HeroData({ entry }) {
+  const { resolveEntry } = useEntryResolver()
+  const resolvedEntry = resolveEntry(entry)
+
+  return <Hero data={resolvedEntry.fields} />
+}
+```
+
 ### Track entry interactions
 
 Entry tracking records views and taps for Contentful entries, not arbitrary UI components. Global
@@ -163,7 +187,7 @@ defaults live on `OptimizationRoot`; individual `OptimizedEntry` components can 
 
 ```tsx
 <OptimizationRoot clientId="your-client-id" trackEntryInteraction={{ views: true, taps: true }}>
-  <OptimizedEntry entry={entry} trackViews={true} trackTaps={false}>
+  <OptimizedEntry baselineEntry={entry} trackViews={true} trackTaps={false}>
     {(resolvedEntry) => <Card entry={resolvedEntry} />}
   </OptimizedEntry>
 </OptimizationRoot>
@@ -187,6 +211,43 @@ Use `OptimizationNavigationContainer` to emit `screen` events from React Navigat
 Use `useScreenTracking()` for screen-level control and `useScreenTrackingCallback()` when names are
 derived from navigation state or other dynamic data.
 
+### Provider-managed state subscriptions
+
+Use `onStatesReady` when application code needs SDK state subscriptions that line up with provider
+initialization. The provider calls it after async SDK state setup completes and before child screen,
+navigation, or entry effects can emit events.
+
+```tsx
+<OptimizationRoot
+  clientId="your-client-id"
+  onStatesReady={(states) => {
+    const subscriptions = [
+      states.eventStream.subscribe((event) => {
+        if (event) devToolsPanel.logEvent(event)
+      }),
+      states.blockedEventStream.subscribe((blocked) => {
+        if (blocked) devToolsPanel.logBlockedEvent(blocked)
+      }),
+    ]
+
+    return () => {
+      subscriptions.forEach((subscription) => subscription.unsubscribe())
+    }
+  }}
+>
+  <YourApp />
+</OptimizationRoot>
+```
+
+The callback receives only `sdk.states`. Use regular hooks and React effects for component-local UI
+state under the provider.
+
+Use `OptimizationProvider` directly with a pre-built `sdk` only when an application or framework
+adapter owns initialization. Without `onStatesReady`, children render immediately because the SDK is
+already available. When `onStatesReady` is provided, the provider waits until those subscribers are
+attached before children mount and runs the returned cleanup on unmount. In both cases, it does not
+call `destroy()` on the injected SDK.
+
 ### Live updates and preview
 
 `liveUpdates` controls whether `OptimizedEntry` continuously reacts to SDK state changes. The
@@ -194,7 +255,7 @@ preview panel always forces live updates on while it is open.
 
 ```tsx
 <OptimizationRoot clientId="your-client-id" liveUpdates={true}>
-  <OptimizedEntry entry={entry} liveUpdates={false}>
+  <OptimizedEntry baselineEntry={entry} liveUpdates={false}>
     {(resolvedEntry) => <Card entry={resolvedEntry} />}
   </OptimizedEntry>
 </OptimizationRoot>

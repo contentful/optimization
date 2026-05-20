@@ -1,0 +1,7 @@
+sharedWorkspaceLockfile: false
+
+overrides:
+  '@contentful/optimization-api-client': 'file:../../pkgs/contentful-optimization-api-client-0.0.0.tgz'
+  '@contentful/optimization-api-schemas': 'file:../../pkgs/contentful-optimization-api-schemas-0.0.0.tgz'
+  '@contentful/optimization-core': 'file:../../pkgs/contentful-optimization-core-0.0.0.tgz'
+  '@contentful/optimization-react-native': 'file:../../pkgs/contentful-optimization-react-native-0.0.0.tgz'

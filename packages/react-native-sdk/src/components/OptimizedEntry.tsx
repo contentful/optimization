@@ -17,7 +17,7 @@ import { useViewportTracking } from '../hooks/useViewportTracking'
  */
 export interface OptimizedEntryProps {
   /**
-   * The Contentful entry to optimize and track.
+   * The baseline Contentful entry to optimize and track.
    * For optimized entries (those with `nt_experiences`), the component
    * automatically resolves variants. For non-optimized entries, the
    * entry is passed through unchanged.
@@ -29,7 +29,7 @@ export interface OptimizedEntryProps {
    * })
    * ```
    */
-  entry: Entry
+  baselineEntry: Entry
 
   /**
    * Content to render. Accepts either a render prop or static children.
@@ -42,7 +42,7 @@ export interface OptimizedEntryProps {
    *
    * @example Render prop (optimized content)
    * ```tsx
-   * <OptimizedEntry entry={entry}>
+   * <OptimizedEntry baselineEntry={entry}>
    *   {(resolvedEntry) => (
    *     <HeroComponent
    *       title={resolvedEntry.fields.title}
@@ -54,7 +54,7 @@ export interface OptimizedEntryProps {
    *
    * @example Static children (tracking only)
    * ```tsx
-   * <OptimizedEntry entry={productEntry}>
+   * <OptimizedEntry baselineEntry={productEntry}>
    *   <ProductCard name={productEntry.fields.name} />
    * </OptimizedEntry>
    * ```
@@ -67,7 +67,7 @@ export interface OptimizedEntryProps {
    *
    * @defaultValue `2000`
    */
-  viewTimeMs?: number
+  dwellTimeMs?: number
 
   /**
    * Minimum visibility ratio (0.0 - 1.0) required to consider
@@ -75,7 +75,7 @@ export interface OptimizedEntryProps {
    *
    * @defaultValue `0.8`
    */
-  threshold?: number
+  minVisibleRatio?: number
 
   /**
    * Interval (in milliseconds) between periodic view duration update events
@@ -173,7 +173,7 @@ function resolveTapsEnabled(
  * @example Basic usage with render prop
  * ```tsx
  * <OptimizationScrollProvider>
- *   <OptimizedEntry entry={entry}>
+ *   <OptimizedEntry baselineEntry={entry}>
  *     {(resolvedEntry) => (
  *       <HeroComponent
  *         title={resolvedEntry.fields.title}
@@ -186,14 +186,14 @@ function resolveTapsEnabled(
  *
  * @example Static children (tracking only)
  * ```tsx
- * <OptimizedEntry entry={productEntry}>
+ * <OptimizedEntry baselineEntry={productEntry}>
  *   <ProductCard name={productEntry.fields.name} />
  * </OptimizedEntry>
  * ```
  *
  * @example With tap tracking
  * ```tsx
- * <OptimizedEntry entry={entry} trackTaps>
+ * <OptimizedEntry baselineEntry={entry} trackTaps>
  *   {(resolvedEntry) => (
  *     <Pressable onPress={() => navigate(resolvedEntry)}>
  *       <Card title={resolvedEntry.fields.title} />
@@ -208,10 +208,10 @@ function resolveTapsEnabled(
  * @public
  */
 export function OptimizedEntry({
-  entry,
+  baselineEntry,
   children,
-  viewTimeMs,
-  threshold,
+  dwellTimeMs,
+  minVisibleRatio,
   viewDurationUpdateIntervalMs,
   style,
   testID,
@@ -224,7 +224,7 @@ export function OptimizedEntry({
   const liveUpdatesContext = useLiveUpdates()
   const interactionTracking = useInteractionTracking()
 
-  const isOptimized = isOptimizedEntry(entry)
+  const isOptimized = isOptimizedEntry(baselineEntry)
 
   const shouldLiveUpdate =
     liveUpdatesContext?.previewPanelVisible === true ||
@@ -264,9 +264,9 @@ export function OptimizedEntry({
   const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
     () =>
       isOptimized
-        ? contentfulOptimization.resolveOptimizedEntry(entry, lockedSelectedOptimizations)
-        : { entry },
-    [entry, contentfulOptimization, lockedSelectedOptimizations, isOptimized],
+        ? contentfulOptimization.resolveOptimizedEntry(baselineEntry, lockedSelectedOptimizations)
+        : { entry: baselineEntry },
+    [baselineEntry, contentfulOptimization, lockedSelectedOptimizations, isOptimized],
   )
 
   const viewsEnabled = trackViews ?? interactionTracking.views
@@ -275,8 +275,8 @@ export function OptimizedEntry({
   const { onLayout } = useViewportTracking({
     entry: resolvedData.entry,
     selectedOptimization: resolvedData.selectedOptimization,
-    threshold,
-    viewTimeMs,
+    dwellTimeMs,
+    minVisibleRatio,
     viewDurationUpdateIntervalMs,
     enabled: viewsEnabled,
   })

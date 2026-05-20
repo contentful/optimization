@@ -25,7 +25,7 @@ import type { CoreStatefulConfig } from '@contentful/optimization-core'
 export type OptimizationConfig = CoreStatefulConfig
 
 export { OptimizationProvider } from './components/OptimizationProvider'
-export type { OptimizationProviderProps } from './components/OptimizationProvider'
+export type { OnStatesReady, OptimizationProviderProps } from './components/OptimizationProvider'
 export { OptimizationRoot } from './components/OptimizationRoot'
 export type { OptimizationRootProps } from './components/OptimizationRoot'
 
@@ -51,6 +51,9 @@ export type {
   InteractionTrackingContextValue,
   TrackEntryInteractionOptions,
 } from './context/InteractionTrackingContext'
+
+export { useEntryResolver } from './hooks/useEntryResolver'
+export type { UseEntryResolverResult } from './hooks/useEntryResolver'
 
 export { useViewportTracking } from './hooks/useViewportTracking'
 export type {

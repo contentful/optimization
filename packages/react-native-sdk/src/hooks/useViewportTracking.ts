@@ -29,14 +29,14 @@ export interface UseViewportTrackingOptions {
    *
    * @defaultValue `0.8`
    */
-  threshold?: number
+  minVisibleRatio?: number
 
   /**
    * Minimum accumulated visible time (in milliseconds) before the first tracking event fires.
    *
    * @defaultValue `2000`
    */
-  viewTimeMs?: number
+  dwellTimeMs?: number
 
   /**
    * Whether view tracking is enabled for this entry.
@@ -70,8 +70,8 @@ export interface UseViewportTrackingReturn {
 }
 
 const PERCENTAGE_MULTIPLIER = 100
-const DEFAULT_THRESHOLD = 0.8
-const DEFAULT_VIEW_TIME_MS = 2000
+const DEFAULT_MIN_VISIBLE_RATIO = 0.8
+const DEFAULT_DWELL_TIME_MS = 2000
 const DEFAULT_VIEW_DURATION_UPDATE_INTERVAL_MS = 5000
 const HEX_RADIX = 16
 const createViewId = (): string => {
@@ -191,11 +191,11 @@ function getRemainingMsUntilNextFire(
  * events with accumulated duration tracking.
  *
  * The hook implements a three-phase event lifecycle per visibility cycle:
- * 1. **Initial event** after accumulated visible time reaches `viewTimeMs`.
+ * 1. **Initial event** after accumulated visible time reaches `dwellTimeMs`.
  * 2. **Periodic updates** every `viewDurationUpdateIntervalMs` while visible.
  * 3. **Final event** when visibility ends (only if at least one event was already emitted).
  *
- * @param options - {@link UseViewportTrackingOptions} including the entry, thresholds, and selected optimization data.
+ * @param options - {@link UseViewportTrackingOptions} including the entry, visibility timing, and selected optimization data.
  * @returns An object with `isVisible` state and an `onLayout` callback for the tracked View.
  *
  * @throws Error if called outside of an {@link OptimizationProvider}
@@ -211,8 +211,8 @@ function getRemainingMsUntilNextFire(
  * function TrackedEntry({ entry }: { entry: Entry }) {
  *   const { onLayout, isVisible } = useViewportTracking({
  *     entry,
- *     threshold: 0.8,
- *     viewTimeMs: 2000,
+ *     minVisibleRatio: 0.8,
+ *     dwellTimeMs: 2000,
  *   })
  *
  *   return (
@@ -228,8 +228,8 @@ function getRemainingMsUntilNextFire(
 export function useViewportTracking({
   entry,
   selectedOptimization,
-  threshold = DEFAULT_THRESHOLD,
-  viewTimeMs = DEFAULT_VIEW_TIME_MS,
+  minVisibleRatio = DEFAULT_MIN_VISIBLE_RATIO,
+  dwellTimeMs = DEFAULT_DWELL_TIME_MS,
   enabled = true,
   viewDurationUpdateIntervalMs = DEFAULT_VIEW_DURATION_UPDATE_INTERVAL_MS,
 }: UseViewportTrackingOptions): UseViewportTrackingReturn {
@@ -363,7 +363,11 @@ export function useViewportTracking({
     const now = Date.now()
     flushAccumulatedTime(cycle, now)
 
-    const remainingMs = getRemainingMsUntilNextFire(cycle, viewTimeMs, viewDurationUpdateIntervalMs)
+    const remainingMs = getRemainingMsUntilNextFire(
+      cycle,
+      dwellTimeMs,
+      viewDurationUpdateIntervalMs,
+    )
 
     if (remainingMs <= 0) {
       emitViewEvent()
@@ -382,7 +386,7 @@ export function useViewportTracking({
       emitViewEvent()
       scheduleNextFire()
     }, remainingMs)
-  }, [clearFireTimer, emitViewEvent, viewTimeMs, viewDurationUpdateIntervalMs])
+  }, [clearFireTimer, dwellTimeMs, emitViewEvent, viewDurationUpdateIntervalMs])
 
   const onVisibilityStart = useCallback(() => {
     if (!enabled) return
@@ -413,7 +417,7 @@ export function useViewportTracking({
       emitViewEvent()
     } else {
       logger.debug(
-        `Visibility ended for ${componentIdRef.current} before dwell threshold, no final event`,
+        `Visibility ended for ${componentIdRef.current} before dwell requirement, no final event`,
       )
     }
 
@@ -466,10 +470,10 @@ export function useViewportTracking({
       `${componentId} visibility check ${contextType}:
   Element: y=${elementY.toFixed(0)}, bottom=${elementBottom.toFixed(0)}
   Viewport: scrollY=${scrollY.toFixed(0)}, height=${viewportHeight.toFixed(0)}, top=${viewportTop.toFixed(0)}, bottom=${viewportBottom.toFixed(0)}
-  Visible: height=${visibleHeight.toFixed(0)}, ratio=${visibilityRatio.toFixed(2)}, threshold=${threshold}`,
+  Visible: height=${visibleHeight.toFixed(0)}, ratio=${visibilityRatio.toFixed(2)}, minVisibleRatio=${minVisibleRatio}`,
     )
 
-    const isNowVisible = visibilityRatio >= threshold
+    const isNowVisible = visibilityRatio >= minVisibleRatio
     const { current: wasVisible } = isVisibleRef
     isVisibleRef.current = isNowVisible
 
@@ -493,7 +497,7 @@ export function useViewportTracking({
   }, [
     canCheckVisibility,
     componentId,
-    threshold,
+    minVisibleRatio,
     scrollY,
     viewportHeight,
     onVisibilityStart,

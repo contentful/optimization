@@ -1,4 +1,4 @@
-import { useOptimization } from '@contentful/optimization-react-web'
+import { useMergeTagResolver } from '@contentful/optimization-react-web'
 import { isMergeTagEntry } from '@contentful/optimization-react-web/api-schemas'
 import { documentToReactComponents, type Options } from '@contentful/rich-text-react-renderer'
 import { INLINES } from '@contentful/rich-text-types'
@@ -17,7 +17,7 @@ interface RichTextRendererProps {
   richText: RichTextDocument
 }
 
-type GetMergeTagValue = ReturnType<typeof useOptimization>['getMergeTagValue']
+type GetMergeTagValue = ReturnType<typeof useMergeTagResolver>['getMergeTagValue']
 
 const EMBEDDED_ENTRY_NODE_TYPE = 'embedded-entry-inline'
 
@@ -64,7 +64,7 @@ export function getRichTextContent(
 }
 
 export function RichTextRenderer({ richText }: RichTextRendererProps): JSX.Element {
-  const { getMergeTagValue } = useOptimization()
+  const { getMergeTagValue } = useMergeTagResolver()
 
   const renderOptions: Options = {
     renderNode: {

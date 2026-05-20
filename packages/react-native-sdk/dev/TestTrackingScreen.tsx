@@ -129,9 +129,9 @@ export function TestTrackingScreen({
 
         {/* Optimized entry example */}
         <OptimizedEntry
-          entry={optimizedEntry}
-          viewTimeMs={2000} // 2 seconds
-          threshold={0.8} // 80% visible
+          baselineEntry={optimizedEntry}
+          dwellTimeMs={2000} // 2 seconds
+          minVisibleRatio={0.8} // 80% visible
           style={StyleSheet.flatten([styles.trackedView, { backgroundColor: '#6366f1' }])}
           testID="optimizationComponent"
         >
@@ -166,9 +166,9 @@ export function TestTrackingScreen({
         </View>
 
         <OptimizedEntry
-          entry={productEntry}
-          viewTimeMs={1500}
-          threshold={0.9}
+          baselineEntry={productEntry}
+          dwellTimeMs={1500}
+          minVisibleRatio={0.9}
           style={StyleSheet.flatten([styles.trackedView, { backgroundColor: '#10b981' }])}
           testID="analyticsComponent"
         >

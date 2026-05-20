@@ -10,9 +10,12 @@ export { LiveUpdatesContext } from './context/LiveUpdatesContext'
 export type { LiveUpdatesContextValue } from './context/LiveUpdatesContext'
 export { OptimizationContext } from './context/OptimizationContext'
 export type { OptimizationContextValue, OptimizationSdk } from './context/OptimizationContext'
+export { useEntryResolver } from './hooks/useEntryResolver'
+export type { UseEntryResolverResult } from './hooks/useEntryResolver'
 export { useLiveUpdates } from './hooks/useLiveUpdates'
+export { useMergeTagResolver } from './hooks/useMergeTagResolver'
+export type { UseMergeTagResolverResult } from './hooks/useMergeTagResolver'
 export { useOptimization, useOptimizationContext } from './hooks/useOptimization'
-export type { UseOptimizationResult } from './hooks/useOptimization'
 export { OptimizedEntry } from './optimized-entry/OptimizedEntry'
 export type {
   OptimizedEntryLoadingFallback,
@@ -26,7 +29,11 @@ export type {
 export { LiveUpdatesProvider } from './provider/LiveUpdatesProvider'
 export type { LiveUpdatesProviderProps } from './provider/LiveUpdatesProvider'
 export { OptimizationProvider } from './provider/OptimizationProvider'
-export type { OptimizationProviderProps } from './provider/OptimizationProvider'
+export type {
+  OnStatesReady,
+  OptimizationProviderProps,
+  TrackEntryInteractionOptions,
+} from './provider/OptimizationProvider'
 export { OptimizationRoot } from './root/OptimizationRoot'
 export type { OptimizationRootProps } from './root/OptimizationRoot'
 export type ContentfulOptimizationOrNull = ContentfulOptimization | null
