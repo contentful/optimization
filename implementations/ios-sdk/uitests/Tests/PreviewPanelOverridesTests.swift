@@ -63,8 +63,11 @@ final class PreviewPanelOverridesTests: XCTestCase {
         waitForElement(app.buttons["reset-button"], timeout: ELEMENT_VISIBILITY_TIMEOUT)
 
         // Terminate + relaunch so the identified-visitor mock payload is
-        // re-fetched on a fresh start.
+        // re-fetched on a fresh start. Clear `--reset` first: `relaunchClean()`
+        // (run in `setUp`) leaves it set, and relaunching with it here would
+        // wipe the identified profile this helper just persisted.
         app.terminate()
+        app.launchArguments = []
         app.launch()
 
         // Identified-visitor profile should render variant entries by default.
