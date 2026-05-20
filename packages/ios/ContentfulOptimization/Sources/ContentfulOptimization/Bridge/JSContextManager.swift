@@ -1,6 +1,5 @@
 import Foundation
 import JavaScriptCore
-import os
 
 /// Manages the JSContext lifecycle: polyfill injection, UMD bundle loading, and bridge calls.
 ///
@@ -10,25 +9,16 @@ final class JSContextManager {
     let callbackManager = BridgeCallbackManager()
     private var timerStore: NativePolyfills.TimerStore?
 
-    private static let signpostLog = OSLog(
-        subsystem: "com.contentful.optimization",
-        category: "Performance"
-    )
-
     var onLog: ((String, String) -> Void)?
     var onStateChange: (([String: Any]) -> Void)?
     var onEvent: (([String: Any]) -> Void)?
     var onOverridesChanged: ((PreviewState) -> Void)?
 
     /// Creates the JSContext, loads polyfills and the UMD bundle, and calls `__bridge.initialize()`.
+    // TODO: Run explicit security audit on the bridging between Swift and JS.
     func initialize(config: OptimizationConfig) throws {
-        let log = Self.signpostLog
-        let coldStartID = OSSignpostID(log: log)
-        os_signpost(.begin, log: log, name: "Cold Start", signpostID: coldStartID)
-
         // Create context
         guard let ctx = JSContext() else {
-            os_signpost(.end, log: log, name: "Cold Start", signpostID: coldStartID)
             throw OptimizationError.bridgeError("Failed to create JSContext")
         }
 
@@ -59,7 +49,6 @@ final class JSContextManager {
         // Verify __bridge exists
         let bridgeCheck = ctx.evaluateScript("typeof __bridge")
         guard bridgeCheck?.toString() == "object" else {
-            os_signpost(.end, log: log, name: "Cold Start", signpostID: coldStartID)
             throw OptimizationError.bridgeError(
                 "__bridge not found after bundle evaluation (got: \(bridgeCheck?.toString() ?? "nil"))"
             )
@@ -91,14 +80,12 @@ final class JSContextManager {
         do {
             configJSON = try config.toJSON()
         } catch {
-            os_signpost(.end, log: log, name: "Cold Start", signpostID: coldStartID)
             throw OptimizationError.configError("Failed to serialize config: \(error)")
         }
 
         ctx.evaluateScript("__bridge.initialize(\(configJSON))")
 
         self.context = ctx
-        os_signpost(.end, log: log, name: "Cold Start", signpostID: coldStartID)
     }
 
     // MARK: - Bridge calls
