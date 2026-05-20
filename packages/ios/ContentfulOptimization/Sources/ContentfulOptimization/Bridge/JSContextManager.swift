@@ -15,7 +15,6 @@ final class JSContextManager {
     var onOverridesChanged: ((PreviewState) -> Void)?
 
     /// Creates the JSContext, loads polyfills and the UMD bundle, and calls `__bridge.initialize()`.
-    // TODO: Run explicit security audit on the bridging between Swift and JS.
     func initialize(config: OptimizationConfig) throws {
         // Create context
         guard let ctx = JSContext() else {
@@ -27,7 +26,8 @@ final class JSContextManager {
             self?.onLog?("exception", msg)
         }
 
-        if #available(iOS 16.4, macOS 13.3, *) {
+        // Remote JS inspection is a debugging aid only; keep it out of release builds.
+        if config.debug, #available(iOS 16.4, macOS 13.3, *) {
             ctx.isInspectable = true
         }
 
