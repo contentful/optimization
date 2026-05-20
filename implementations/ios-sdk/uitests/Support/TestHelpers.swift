@@ -66,6 +66,12 @@ func waitForTextEquals(_ testId: String, expected: String, app: XCUIApplication,
     _ = waitForElementText(testId, app: app, timeout: timeout) { $0 == expected }
 }
 
+/// Polls element text until it differs from the supplied baseline.
+@discardableResult
+func waitForTextChange(_ testId: String, baseline: String, app: XCUIApplication, timeout: TimeInterval = ELEMENT_VISIBILITY_TIMEOUT) -> String {
+    return waitForElementText(testId, app: app, timeout: timeout) { $0 != baseline }
+}
+
 /// Parses "Events: N" text and waits until count >= minCount.
 func waitForEventsCountAtLeast(_ minCount: Int, app: XCUIApplication, timeout: TimeInterval = ELEMENT_VISIBILITY_TIMEOUT) {
     _ = waitForElementText("events-count", app: app, timeout: timeout) { text in

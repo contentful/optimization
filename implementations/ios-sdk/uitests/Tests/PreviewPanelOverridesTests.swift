@@ -1,75 +1,83 @@
 import XCTest
 
-/// Cross-platform preview-panel override scenarios (iOS side).
+/// 1:1 port of `preview-panel-overrides.test.js`.
 ///
-/// Scenario shape mirrors `implementations/PREVIEW_PANEL_SCENARIOS.md` and the
-/// RN Detox suite `preview-panel-overrides.test.js`, but the iOS asserts the
-/// **top-level** swap (1JAU → 2KIW via experience 1FHhEY) rather than the
-/// nested swap (5i4S → 5a8O via experience 7Dyid). Two reasons:
+/// The preview panel lets developers override audience membership and
+/// experience variant selection at runtime so they can preview each variant
+/// without changing the underlying visitor profile. This suite verifies that
+/// an audience override can activate an unqualified audience or deactivate a
+/// qualified one, that a per-experience variant index can be forced, that
+/// overrides can be reset individually or in bulk, that audience overrides
+/// survive an in-panel API refresh, and that a cold relaunch with cleared
+/// storage wipes all overrides so the identified-visitor baseline renders
+/// again.
 ///
-/// 1. SwiftUI accessibility merges OptimizedEntry's outer
-///    `accessibilityIdentifier("content-entry-<baseline>")` over its inner
-///    content's `entry-text-<resolved>` identifier, so XCUI cannot query
-///    `entry-text-<resolved-id>` at all on iOS. The resolved id only surfaces
-///    in the wrapper element's `.label` (formatted by NestedEntryText as
-///    `"<text> [Entry: <resolved-id>]"`).
-/// 2. The same audience (4yIqY) gates both experiences, so the override
-///    scenarios still exercise the audience/variant override surface; the
-///    top-level swap is the externally observable signal of identified-state
-///    propagation through the JS↔Swift bridge.
+/// Scenario names, accessibility identifiers, expected text, and ordering
+/// mirror the RN Detox suite and the platform-agnostic
+/// `preview-panel-overrides-pseudocode.md` contract. Two scenarios use an
+/// iOS-correct mechanism for a step the contract describes generically:
 ///
-/// Cross-platform parity with Android/RN is documented in
-/// `triage-preview-panel-overrides.md` as a known divergence until those
-/// suites are migrated to the same assertion shape.
+/// - Scenario 5: the per-experience reset (`reset-variant-<exp>`) is a plain
+///   row-action button on iOS (no confirmation alert), so iOS taps it
+///   directly. RN wraps the same action in `Alert.alert`.
+/// - Scenario 6: the reset-all control (`reset-all-overrides`) triggers a
+///   native `.alert` on iOS, so iOS confirms via `app.alerts.buttons["Reset"]`
+///   rather than the RN inline `reset-all-confirm` view.
 final class PreviewPanelOverridesTests: XCTestCase {
     let app = XCUIApplication()
 
     static let AUDIENCE_ID = "4yIqY7AWtzeehCZxtQSDB"
-    // Parent experience that drives the top-level 1JAU → 2KIW swap.
-    static let EXPERIENCE_ID = "1FHhEY0xkcCC9R5WCmnjRr"
-    // Top-level baseline / variant pair (NOT the nested 5i4S/5a8O).
-    static let BASELINE_ENTRY_ID = "1JAU028vQ7v6nB2swl3NBo"
-    static let VARIANT_ENTRY_ID = "2KIWllNZJT205BwOSkMINg"
+    static let EXPERIENCE_ID = "7DyidZaPB7Jr1gWKjoogg0"
+    static let VARIANT_ENTRY_ID = "5a8ONfBdanJtlJ39WWnH1w"
+    static let BASELINE_ENTRY_ID = "5i4SdJXw9oDEY0vgO7CwF4"
 
-    // Scenario 1 uses the Mobile Browser audience, which the identified user
-    // does NOT qualify for. The associated experience (6ZjRMMvtP9MOfWYrON0yxz)
-    // is the first entry in the `nt_experiences` array of baseline
-    // xFwgG3oNaOcjzWiGe4vXo, so OptimizedEntryResolver picks it
-    // deterministically once activated. xFwgG3oNaOcjzWiGe4vXo is already in
-    // the demo app's entryIds (shared/Config.swift).
+    // Scenario 1 reuses the Mobile Browser audience, which the identified user
+    // does NOT qualify for. The associated experience is the first entry in the
+    // `nt_experiences` array of baseline xFwgG3oNaOcjzWiGe4vXo, so
+    // `OptimizedEntryResolver` picks it deterministically once activated.
+    // xFwgG3oNaOcjzWiGe4vXo renders through the demo app's top-level content
+    // entry, whose identifier is keyed on the *original* entry id and stays
+    // constant across resolution — so scenario 1 asserts on the resolved
+    // entry's accessibility label (variant text + original baseline id).
     static let UNQUALIFIED_AUDIENCE_ID = "3MRuZPQ5EdwDqzUDRgOo7c"
-    static let MOBILE_BASELINE_ENTRY_ID = "xFwgG3oNaOcjzWiGe4vXo"
-    static let MOBILE_VARIANT_ENTRY_ID = "61KKjYYmSR9IukqA0u9Pwd"
+    static let MOBILE_VARIANT_LABEL =
+        "This is a variant content entry for visitors using a mobile browser. [Entry: xFwgG3oNaOcjzWiGe4vXo]"
 
     override func setUp() {
         continueAfterFailure = false
-        app.launch()
+        // Relaunch the app as a new instance with fresh storage so prior modal
+        // and override state cannot leak in.
+        app.relaunchClean()
         clearProfileState(app: app)
-        identifyAndWaitForEntries()
+        identifyAndRelaunch()
     }
 
-    // MARK: - Helpers
+    // MARK: - Local helpers
 
-    private func identifyAndWaitForEntries() {
+    /// Identifies the visitor, then relaunches so the identified-visitor mock
+    /// payload is re-fetched on a fresh app start.
+    private func identifyAndRelaunch() {
         let identifyButton = app.buttons["identify-button"]
-        waitForElement(identifyButton)
+        waitForElement(identifyButton, timeout: ELEMENT_VISIBILITY_TIMEOUT)
         identifyButton.tap()
-        waitForElement(app.buttons["reset-button"])
+        waitForElement(app.buttons["reset-button"], timeout: ELEMENT_VISIBILITY_TIMEOUT)
 
-        // Wait for the wrapper to mount. We do not assert on its label yet —
-        // OptimizedEntry's lock-on-first-non-nil-emission race ("Bug A") can
-        // latch onto pre-identify personalizations on the first scenario, and
-        // the lock only re-snapshots when the preview panel closes. Each
-        // scenario opens/closes the panel and asserts on the post-action
-        // label, which reflects the re-snapshotted state.
-        let wrapper = app.otherElements["content-entry-\(Self.BASELINE_ENTRY_ID)"]
-        XCTAssertTrue(wrapper.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
-                      "content-entry-\(Self.BASELINE_ENTRY_ID) wrapper missing — entries never mounted")
+        // Terminate + relaunch so the identified-visitor mock payload is
+        // re-fetched on a fresh start.
+        app.terminate()
+        app.launch()
+
+        // Identified-visitor profile should render variant entries by default.
+        XCTAssertTrue(
+            app.otherElements["entry-text-\(Self.VARIANT_ENTRY_ID)"].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+            "entry-text-\(Self.VARIANT_ENTRY_ID) missing — identified-visitor variant never rendered")
     }
 
+    /// Opens the preview panel modal from the floating action button.
     private func openPanel() {
         let fab = app.buttons["preview-panel-fab"]
-        waitForElement(fab)
+        XCTAssertTrue(fab.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "preview-panel-fab did not appear")
         fab.tap()
         XCTAssertTrue(app.staticTexts["Preview Panel"].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
                       "Preview Panel did not appear")
@@ -90,235 +98,194 @@ final class PreviewPanelOverridesTests: XCTestCase {
         XCTFail("Definitions did not finish loading within \(EXTENDED_TIMEOUT)s")
     }
 
-    /// Scrolls the preview-panel scroll view until the element identified by
-    /// `id` is hittable, mirroring `scrollToElement`. The panel can grow
-    /// taller than the screen once definitions, audiences, and the overrides
-    /// section are all rendered, so audience-toggle buttons frequently start
-    /// below the fold.
-    private func scrollPanelToElement(_ identifier: String) {
-        let target = app.buttons[identifier]
-        if target.exists && target.isHittable { return }
+    /// Scrolls the preview panel's internal scroll view until the requested
+    /// element is visible and hittable. The panel is tall and the target
+    /// audiences and controls typically sit below the fold.
+    private func scrollPanelToId(_ identifier: String) {
         let panel = app.scrollViews["preview-panel-list"]
         if !panel.exists { return }
         for _ in 0..<10 {
+            let target = findElement(identifier, app: app)
             if target.exists && target.isHittable { return }
             panel.swipeUp()
         }
     }
 
-    /// Variant pickers live inside the expanded `AudienceItem` body. Tap the
-    /// audience header to expand it first, then scroll to and tap the index-0
-    /// variant picker for the configured experience.
-    private func expandAudienceAndTapVariantPicker0() {
-        let expandId = "audience-expand-\(Self.AUDIENCE_ID)"
-        scrollPanelToElement(expandId)
-        let expand = app.buttons[expandId]
-        XCTAssertTrue(expand.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
-                      "audience-expand-\(Self.AUDIENCE_ID) not found")
-        expand.tap()
-
-        let pickerId = "variant-picker-\(Self.EXPERIENCE_ID)-0"
-        scrollPanelToElement(pickerId)
-        let picker = app.buttons[pickerId]
-        XCTAssertTrue(picker.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
-                      "variant-picker-\(Self.EXPERIENCE_ID)-0 not found after expanding audience")
-        picker.tap()
-    }
-
+    /// Dismisses the preview panel modal. The panel is a SwiftUI sheet with no
+    /// hardware back and no close button, so it is dismissed with a downward
+    /// swipe from the top of the sheet.
     private func closePanel() {
-        // The panel sheet is dismissed via the drag handle or close button;
-        // sheets can also be dismissed by swiping down on the header.
-        let dismissGesture = app.navigationBars.buttons.firstMatch
-        if dismissGesture.exists {
-            dismissGesture.tap()
-            return
-        }
-        // Fallback: swipe down from top of sheet to dismiss.
         app.swipeDown()
-    }
-
-    /// Poll the baseline wrapper's accessibility label until it contains the
-    /// `[Entry: <expectedResolvedId>]` marker NestedEntryText writes for the
-    /// resolved entry id. Dumps every visible content-entry-* label on
-    /// failure so the cross-resolution snapshot is captured in the test log.
-    private func assertResolvedEntry(
-        _ expectedResolvedId: String,
-        forBaseline baselineId: String = PreviewPanelOverridesTests.BASELINE_ENTRY_ID,
-        message: String
-    ) {
-        let wrapper = app.otherElements["content-entry-\(baselineId)"]
-        XCTAssertTrue(wrapper.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
-                      "\(message): wrapper content-entry-\(baselineId) missing")
-        let token = "[Entry: \(expectedResolvedId)]"
-        let deadline = Date().addingTimeInterval(ELEMENT_VISIBILITY_TIMEOUT)
-        var lastLabel = ""
-        while Date() < deadline {
-            lastLabel = wrapper.label
-            if lastLabel.contains(token) { return }
-            Thread.sleep(forTimeInterval: 0.2)
-        }
-        let allContentEntryLabels = app.otherElements
-            .matching(NSPredicate(format: "identifier BEGINSWITH 'content-entry-'"))
-            .allElementsBoundByIndex
-            .map { "\($0.identifier) -> \($0.label)" }
-        XCTFail("""
-            \(message)
-            Wrapper content-entry-\(baselineId) label: \"\(lastLabel)\"
-            Expected to contain: \"\(token)\"
-            All content-entry-* labels:
-            \(allContentEntryLabels.joined(separator: "\n            "))
-            """)
     }
 
     // MARK: - Scenarios
 
+    /// Scenario 1: turning on an audience that the identified visitor does not
+    /// qualify for activates an experience whose variant content then renders
+    /// on screen.
+    func testScenario1ActivatingUnqualifiedAudienceRendersItsVariant() {
+        openPanel()
+        let toggleId = "audience-toggle-\(Self.UNQUALIFIED_AUDIENCE_ID)-on"
+        scrollPanelToId(toggleId)
+        app.buttons[toggleId].tap()
+        closePanel()
+
+        XCTAssertTrue(app.otherElements[Self.MOBILE_VARIANT_LABEL].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Expected mobile variant content after activating Mobile Browser audience")
+    }
+
+    /// Scenario 2: turning off an audience the identified visitor does qualify
+    /// for forces the experience to fall back to its baseline entry.
     func testScenario2DeactivatingQualifiedAudienceRendersBaseline() {
         openPanel()
         let toggleId = "audience-toggle-\(Self.AUDIENCE_ID)-off"
-        scrollPanelToElement(toggleId)
-        let toggle = app.buttons[toggleId]
-        if !toggle.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT) {
-            let panelTexts = app.staticTexts.allElementsBoundByIndex
-                .map { $0.label }
-                .filter { !$0.isEmpty }
-            let panelButtons = app.buttons.allElementsBoundByIndex
-                .map { "[\($0.identifier)] \($0.label)" }
-                .filter { !$0.isEmpty }
-            XCTFail("""
-                Off toggle not found for audience (\(toggleId)).
-                Visible static texts: \(panelTexts.prefix(60))
-                Visible buttons: \(panelButtons.prefix(40))
-                """)
-            return
-        }
-        toggle.tap()
+        scrollPanelToId(toggleId)
+        app.buttons[toggleId].tap()
         closePanel()
 
-        assertResolvedEntry(Self.BASELINE_ENTRY_ID,
-                            message: "Expected baseline entry after deactivating audience")
+        XCTAssertTrue(
+            app.otherElements["entry-text-\(Self.BASELINE_ENTRY_ID)"].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+            "Expected baseline entry after deactivating qualified audience")
     }
 
+    /// Scenario 3: after deactivating a qualified audience, tapping the
+    /// audience's default toggle removes the override and restores the original
+    /// variant resolution.
     func testScenario3ResettingAudienceOverrideRestoresVariant() {
-        // Set up by first deactivating, then resetting to default.
         openPanel()
         let offId = "audience-toggle-\(Self.AUDIENCE_ID)-off"
-        scrollPanelToElement(offId)
+        scrollPanelToId(offId)
         app.buttons[offId].tap()
         app.buttons["audience-toggle-\(Self.AUDIENCE_ID)-default"].tap()
         closePanel()
 
-        assertResolvedEntry(Self.VARIANT_ENTRY_ID,
-                            message: "Expected variant entry after resetting audience override")
+        XCTAssertTrue(
+            app.otherElements["entry-text-\(Self.VARIANT_ENTRY_ID)"].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+            "Expected variant entry after resetting audience override")
     }
 
+    /// Scenario 4: explicitly picking the index-0 (baseline) variant for an
+    /// experience forces that experience to render its baseline entry, even
+    /// when the visitor qualifies for a non-baseline variant.
     func testScenario4SettingVariantOverrideToZeroRendersBaseline() {
         openPanel()
-        expandAudienceAndTapVariantPicker0()
+        // The audience must be expanded for its experience variant picker to
+        // mount; scrolling the off toggle into view also brings the audience
+        // row that owns the experience into view.
+        scrollPanelToId("audience-toggle-\(Self.AUDIENCE_ID)-off")
+        // Tap the audience header row to expand experiences.
+        app.staticTexts["Identified Users"].tap()
+        let pickerId = "variant-picker-\(Self.EXPERIENCE_ID)-0"
+        scrollPanelToId(pickerId)
+        app.buttons[pickerId].tap()
         closePanel()
 
-        assertResolvedEntry(Self.BASELINE_ENTRY_ID,
-                            message: "Expected baseline after variant-0 override")
+        XCTAssertTrue(
+            app.otherElements["entry-text-\(Self.BASELINE_ENTRY_ID)"].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+            "Expected baseline entry after setting variant override to 0")
     }
 
-    func testScenario6ResetAllRestoresVariantContent() {
-        // Apply a variant override, then reset all.
+    /// Scenario 5: after forcing a variant override, tapping the per-experience
+    /// reset control removes only that override and restores the original
+    /// variant resolution. The iOS panel applies the reset synchronously — the
+    /// `reset-variant-<exp>` control is a plain row-action button with no
+    /// confirmation alert (unlike RN's `Alert.alert`).
+    func testScenario5ResettingSingleVariantOverrideRestoresVariant() {
+        // Drive scenario 4 first so a variant override exists in the Overrides
+        // section.
         openPanel()
-        expandAudienceAndTapVariantPicker0()
-        let resetAll = app.buttons["reset-all-overrides"]
-        XCTAssertTrue(resetAll.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
-                      "Reset-all button not found")
-        resetAll.tap()
+        scrollPanelToId("audience-toggle-\(Self.AUDIENCE_ID)-off")
+        app.staticTexts["Identified Users"].tap()
+        let pickerId = "variant-picker-\(Self.EXPERIENCE_ID)-0"
+        scrollPanelToId(pickerId)
+        app.buttons[pickerId].tap()
 
-        // Confirm the alert.
+        // Tap the per-experience reset.
+        let resetId = "reset-variant-\(Self.EXPERIENCE_ID)"
+        scrollPanelToId(resetId)
+        app.buttons[resetId].tap()
+        closePanel()
+
+        XCTAssertTrue(
+            app.otherElements["entry-text-\(Self.VARIANT_ENTRY_ID)"].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+            "Expected variant entry after resetting single variant override")
+    }
+
+    /// Scenario 6: after forcing a variant override, tapping the panel's
+    /// reset-all control and confirming clears every override and restores the
+    /// original variant resolution. On iOS the reset-all confirmation is a
+    /// native `.alert`, so confirmation taps `app.alerts.buttons["Reset"]`.
+    func testScenario6ResetAllRestoresVariantContent() {
+        openPanel()
+        scrollPanelToId("audience-toggle-\(Self.AUDIENCE_ID)-off")
+        app.staticTexts["Identified Users"].tap()
+        let pickerId = "variant-picker-\(Self.EXPERIENCE_ID)-0"
+        scrollPanelToId(pickerId)
+        app.buttons[pickerId].tap()
+
+        scrollPanelToId("reset-all-overrides")
+        app.buttons["reset-all-overrides"].tap()
+
+        // Confirm the native alert.
         let resetButton = app.alerts.buttons["Reset"]
         XCTAssertTrue(resetButton.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
                       "Reset confirmation button not found")
         resetButton.tap()
         closePanel()
 
-        assertResolvedEntry(Self.VARIANT_ENTRY_ID,
-                            message: "Expected variant entry after reset-all")
+        XCTAssertTrue(
+            app.otherElements["entry-text-\(Self.VARIANT_ENTRY_ID)"].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+            "Expected variant entry after reset-all")
     }
 
-    func testScenario1ActivatingUnqualifiedAudienceRendersItsVariant() {
-        openPanel()
-        let toggleId = "audience-toggle-\(Self.UNQUALIFIED_AUDIENCE_ID)-on"
-        scrollPanelToElement(toggleId)
-        let toggle = app.buttons[toggleId]
-        XCTAssertTrue(toggle.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
-                      "On toggle not found for unqualified audience (\(toggleId))")
-        toggle.tap()
-        closePanel()
-
-        assertResolvedEntry(Self.MOBILE_VARIANT_ENTRY_ID,
-                            forBaseline: Self.MOBILE_BASELINE_ENTRY_ID,
-                            message: "Expected mobile variant after activating Mobile Browser audience")
-    }
-
-    func testScenario5ResettingSingleVariantOverrideRestoresVariant() {
-        // Drive scenario 4 first so a variant override exists in the Overrides section.
-        openPanel()
-        expandAudienceAndTapVariantPicker0()
-
-        // Tap the per-experience reset. The iOS panel applies the reset
-        // synchronously — no confirmation alert (unlike RN's Alert.alert).
-        let resetId = "reset-variant-\(Self.EXPERIENCE_ID)"
-        scrollPanelToElement(resetId)
-        let resetButton = app.buttons[resetId]
-        XCTAssertTrue(resetButton.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
-                      "Per-experience reset button not found (\(resetId))")
-        resetButton.tap()
-        closePanel()
-
-        assertResolvedEntry(Self.VARIANT_ENTRY_ID,
-                            message: "Expected variant entry after resetting variant override")
-    }
-
+    /// Scenario 7: deactivating an audience and then triggering the in-panel
+    /// refresh (which re-hits the experience API) keeps the audience override
+    /// in place so the experience still resolves to its baseline.
     func testScenario7OverrideSurvivesAPIRefresh() {
-        // Apply scenario 2's audience deactivation, refresh, then assert the
-        // baseline is still rendering — i.e. the override interceptor
-        // preserved the override across the experience-API push.
         openPanel()
         let offId = "audience-toggle-\(Self.AUDIENCE_ID)-off"
-        scrollPanelToElement(offId)
+        scrollPanelToId(offId)
         app.buttons[offId].tap()
 
         let refreshId = "preview-refresh-button"
-        scrollPanelToElement(refreshId)
-        let refresh = app.buttons[refreshId]
-        XCTAssertTrue(refresh.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
-                      "preview-refresh-button not found")
-        refresh.tap()
+        scrollPanelToId(refreshId)
+        app.buttons[refreshId].tap()
         closePanel()
 
-        assertResolvedEntry(Self.BASELINE_ENTRY_ID,
-                            message: "Expected baseline still rendering after API refresh")
+        XCTAssertTrue(
+            app.otherElements["entry-text-\(Self.BASELINE_ENTRY_ID)"].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+            "Expected baseline still rendering after API refresh")
     }
 
+    /// Scenario 8: a cold relaunch with cleared storage discards all overrides
+    /// — the variant renders again and the overrides section reports that none
+    /// remain.
     func testScenario8DestroyRemountClearsOverrides() {
-        // Apply scenario 2 override (deactivate audience → baseline rendering).
         openPanel()
         let offId = "audience-toggle-\(Self.AUDIENCE_ID)-off"
-        scrollPanelToElement(offId)
+        scrollPanelToId(offId)
         app.buttons[offId].tap()
         closePanel()
-        assertResolvedEntry(Self.BASELINE_ENTRY_ID,
-                            message: "Expected baseline after deactivating audience (pre-relaunch)")
 
-        // Cold relaunch with --reset wipes any persisted state; the override
-        // store is in-memory anyway, so any terminate+launch clears it.
+        XCTAssertTrue(
+            app.otherElements["entry-text-\(Self.BASELINE_ENTRY_ID)"].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+            "Expected baseline after deactivating audience (pre-relaunch)")
+
+        // Cold relaunch with fresh storage, then re-identify and rehydrate.
         app.relaunchClean()
-        identifyAndWaitForEntries()
+        identifyAndRelaunch()
 
         // Override must be gone — variant renders again.
-        assertResolvedEntry(Self.VARIANT_ENTRY_ID,
-                            message: "Expected variant entry after destroy/remount cleared overrides")
+        XCTAssertTrue(
+            app.otherElements["entry-text-\(Self.VARIANT_ENTRY_ID)"].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+            "Expected variant entry after destroy/remount cleared overrides")
 
-        // And the Overrides section should show its empty state.
+        // The Overrides section should show its empty state. The empty-state
+        // text sits below the fold, so scrolling the reset-all control into
+        // view also pulls the Overrides section into the viewport.
         openPanel()
-        scrollPanelToElement("reset-all-overrides")
-        let emptyText = app.staticTexts["No active overrides"]
-        XCTAssertTrue(emptyText.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+        scrollPanelToId("reset-all-overrides")
+        XCTAssertTrue(app.staticTexts["No active overrides"].exists,
                       "Expected 'No active overrides' empty-state text in Overrides section")
         closePanel()
     }
