@@ -111,6 +111,12 @@ public struct OptimizedEntry<Content: View>: View {
                 onTap: onTap,
                 client: client
             ))
+            // Expose the wrapper as an accessibility container rather than
+            // letting `accessibilityIdentifier` collapse onto — and override the
+            // identifier of — the single child element. This keeps the consumer's
+            // own nested identifiers (e.g. `entry-text-<id>`) individually
+            // queryable alongside this wrapper identifier.
+            .accessibilityElement(children: .contain)
             .accessibilityIdentifier(accessibilityIdentifier ?? "")
             .onReceive(client.$selectedPersonalizations) { newValue in
                 guard isPersonalized, !shouldLiveUpdate, !isLocked, newValue != nil else { return }
