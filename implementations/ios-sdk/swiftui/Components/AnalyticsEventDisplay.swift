@@ -56,7 +56,7 @@ struct AnalyticsEventDisplay: View {
                         .accessibilityIdentifier("event-view-id-\(cid)")
                 }
                 .accessibilityElement(children: .contain)
-                .accessibilityIdentifier("component-stats-\(cid)")
+                .accessibilityIdentifier("entry-stats-\(cid)")
             }
         }
     }
