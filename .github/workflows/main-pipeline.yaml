@@ -132,6 +132,7 @@ jobs:
               - 'implementations/android-sdk/**'
               - 'lib/mocks/**'
               - 'packages/android/**'
+              - 'packages/universal/optimization-js-bridge/**'
               - 'package.json'
               - 'pnpm-lock.yaml'
               - '.github/workflows/main-pipeline.yaml'
@@ -140,6 +141,7 @@ jobs:
               - 'implementations/ios-sdk/**'
               - 'lib/mocks/**'
               - 'packages/ios/**'
+              - 'packages/universal/optimization-js-bridge/**'
               - 'package.json'
               - 'pnpm-lock.yaml'
               - '.github/workflows/main-pipeline.yaml'
@@ -740,8 +742,8 @@ jobs:
       - name: Install JS dependencies
         run: pnpm install --prefer-offline --frozen-lockfile
 
-      - name: Build Android bridge JS bundle
-        run: pnpm --filter @contentful/optimization-android-bridge build
+      - name: Build the JS bridge bundles
+        run: pnpm --filter @contentful/optimization-js-bridge build
 
       - name: Build app and test APKs
         working-directory: implementations/android-sdk

@@ -33,7 +33,7 @@
 #   - Android SDK installed with adb and emulator in PATH (or ANDROID_HOME set)
 #   - At least one AVD configured (or a physical device connected)
 #   - pnpm dependencies installed at monorepo root
-#   - Android bridge built: pnpm --filter @contentful/optimization-android-bridge build
+#   - Android bridge built: pnpm --filter @contentful/optimization-js-bridge build
 #
 # Logs:
 #   All logs are written to implementations/android-sdk/logs/:
@@ -474,7 +474,7 @@ build_bridge() {
     fi
 
     log_info "Building Android bridge JS bundle..."
-    pnpm --dir "$ROOT_DIR" --filter @contentful/optimization-android-bridge build
+    pnpm --dir "$ROOT_DIR" --filter @contentful/optimization-js-bridge build
     log_info "Bridge bundle built"
 }
 

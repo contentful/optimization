@@ -4,20 +4,20 @@ Read the repository root `AGENTS.md`, then `packages/AGENTS.md`, before this fil
 
 ## Scope
 
-This directory owns native Android package work, including the Kotlin Android library module under
-`ContentfulOptimization/` and the QuickJS bridge package under `android-quickjs-bridge/`.
+This directory owns native Android package work: the Kotlin Android library module under
+`ContentfulOptimization/`. The shared TypeScript bridge it consumes lives in
+`packages/universal/optimization-js-bridge/`.
 
 ## Key paths
 
 - `ContentfulOptimization/` — Android library module (AAR), public Kotlin API, native runtime,
   Compose UI, preview panel, assets, and tests
-- `android-quickjs-bridge/` — TypeScript bridge compiled to a QuickJS-compatible UMD bundle
 - `README.md` — package status and public-facing notes
 
 ## Local rules
 
-- Keep Kotlin bridge calls, JSON payload shapes, and callback behavior aligned with
-  `android-quickjs-bridge/src/index.ts`.
+- Keep Kotlin bridge calls, JSON payload shapes, and callback behavior aligned with the shared
+  bridge source in `../universal/optimization-js-bridge/src/index.ts`.
 - Keep the bridge bundle flow one-way: edit TypeScript bridge source, build the bridge package, and
   let its build copy the generated UMD into Android assets.
 - Do not hand-edit `ContentfulOptimization/src/main/assets/optimization-android-bridge.umd.js`.
@@ -28,7 +28,6 @@ This directory owns native Android package work, including the Kotlin Android li
 
 ## Cross-boundary validation
 
-- Use the nearest child `AGENTS.md` for bridge or Kotlin module commands.
+- Use the nearest child `AGENTS.md` for Kotlin module commands, and
+  `packages/universal/optimization-js-bridge/AGENTS.md` for shared bridge commands.
 - Rebuild the bridge before relying on Kotlin or Android test results when bridge source changed.
-- Keep the bridge source (`android-quickjs-bridge/src/index.ts`) in sync with
-  `packages/ios/ios-jsc-bridge/src/index.ts`.

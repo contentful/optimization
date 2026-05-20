@@ -39,7 +39,8 @@ persistence, networking, lifecycle handling, SwiftUI views, and preview-panel UI
 ## Current status
 
 - The native Swift package exists under [`ContentfulOptimization`](./ContentfulOptimization/).
-- The JavaScriptCore adapter package lives under [`ios-jsc-bridge`](./ios-jsc-bridge/README.md) and
+- The shared TypeScript bridge package lives under
+  [`packages/universal/optimization-js-bridge`](../universal/optimization-js-bridge/README.md) and
   compiles the bridge bundle consumed by Swift.
 - The native [iOS reference app](../../implementations/ios-sdk/README.md) validates current bridge
   and preview-panel behavior against the shared mock API.
@@ -57,8 +58,8 @@ stable mobile integration can start with the JavaScript
 
 - [`ContentfulOptimization/`](./ContentfulOptimization/) - Swift Package source, public Swift API,
   native runtime, resources, and tests
-- [`ios-jsc-bridge/`](./ios-jsc-bridge/README.md) - internal TypeScript bridge compiled into the
-  JavaScriptCore UMD bundle consumed by the Swift Package
+- [`packages/universal/optimization-js-bridge`](../universal/optimization-js-bridge/README.md) -
+  shared TypeScript bridge compiled into the JavaScriptCore UMD bundle consumed by the Swift Package
 - [`CODE_MAP.md`](./CODE_MAP.md) - architecture map for the current native iOS implementation
 
 ## Related

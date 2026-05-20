@@ -62,9 +62,9 @@ jobs:
               documentation/*)
                 has_docs=true
                 ;;
-              packages/ios/ios-jsc-bridge/*)
+              packages/universal/optimization-js-bridge/*)
                 has_packages=true
-                add_package "@contentful/optimization-ios-bridge"
+                add_package "@contentful/optimization-js-bridge"
                 ;;
               packages/node/node-sdk/*)
                 has_packages=true

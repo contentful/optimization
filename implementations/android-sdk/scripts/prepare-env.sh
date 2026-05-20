@@ -64,7 +64,7 @@ check_bridge_bundle() {
     log_error "  ${bridge}"
     log_error ""
     log_error "Build it from the monorepo root:"
-    log_error "  pnpm --filter @contentful/optimization-android-bridge build"
+    log_error "  pnpm --filter @contentful/optimization-js-bridge build"
     return 1
 }
 

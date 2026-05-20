@@ -9,12 +9,13 @@ TypeScript adapter layer. Swift code handles native concerns (persistence, netwo
 lifecycle, SwiftUI integration) while the JS engine handles personalization logic, profile
 management, and analytics batching.
 
-The architecture has two main sub-packages:
+The architecture has two layers — the Swift package in this directory and the shared TypeScript
+bridge it compiles against:
 
-| Sub-package               | Language   | Purpose                                                                                                              |
-| ------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------- |
-| `ios-jsc-bridge/`         | TypeScript | Thin adapter wrapping `CoreStateful` from the optimization library, exposing a callback-based API for JavaScriptCore |
-| `ContentfulOptimization/` | Swift      | SPM library providing public API, SwiftUI views, tracking, persistence, and the JSContext lifecycle                  |
+| Component                                    | Language   | Purpose                                                                                               |
+| -------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------- |
+| `ContentfulOptimization/`                    | Swift      | SPM library providing public API, SwiftUI views, tracking, persistence, and the JSContext lifecycle   |
+| `packages/universal/optimization-js-bridge/` | TypeScript | Shared adapter wrapping `CoreStateful`, exposing a callback-based API; built into the UMD bundle here |
 
 ---
 
@@ -50,7 +51,7 @@ graph TB
         UMD["optimization-ios-bridge.umd.js\n<i>Compiled TS bridge bundle —\nexposes globalThis.__bridge</i>"]
     end
 
-    subgraph "TypeScript Bridge (ios-jsc-bridge/)"
+    subgraph "TypeScript Bridge (packages/universal/optimization-js-bridge/)"
         TSB["Bridge (index.ts)\n<i>Wraps CoreStateful, exposes\ncallback-based API on globalThis.__bridge</i>"]
     end
 

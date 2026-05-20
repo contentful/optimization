@@ -11,7 +11,7 @@ and preview overrides.
 
 - Kotlin Android library module under `ContentfulOptimization/`
 - QuickJS JavaScript engine integration
-- Shared TypeScript bridge under `android-quickjs-bridge/`
+- Shared TypeScript bridge in `packages/universal/optimization-js-bridge/`
 - Jetpack Compose UI layer (OptimizationRoot, OptimizedEntry, scroll/view/click tracking)
 - Preview panel with audience/experience overrides, variant selection, and Contentful integration
 - View-based app support via `PreviewPanelActivity`

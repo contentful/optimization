@@ -3,7 +3,7 @@ import Foundation
 /// Typed snapshot of the preview/debug state from the JS bridge.
 ///
 /// Decoded from the JSON string returned by the bridge's `getPreviewState()` method.
-/// The shape mirrors the object built in `ios-jsc-bridge/src/index.ts`.
+/// The shape mirrors the object built in `optimization-js-bridge/src/index.ts`.
 public struct PreviewState: Codable, Sendable {
     public let profile: JSONValue?
     public let consent: Bool?
