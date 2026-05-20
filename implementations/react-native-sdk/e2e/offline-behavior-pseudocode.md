@@ -3,19 +3,34 @@
 ## Goal
 
 Verify that the SDK remains resilient under offline conditions: event tracking continues while the
-device has no network, the app does not crash during connectivity loss or rapid network toggles, and
-queued events flush once connectivity is restored. Identified profile state and cached UI must
-survive a reconnect so that the app remains fully functional after the network returns.
+device has no network, and identify events generated offline (or after connectivity loss and rapid
+network toggles) are genuinely queued and flushed once connectivity is restored. Each test proves
+the recovery by relaunching and asserting that the SDK resolves the identified-only nested variant
+entry rather than the anonymous baseline, so a no-op SDK cannot pass.
 
 ## Test setup
 
 - **beforeAll**: Launch the application fresh.
-- **beforeEach**: Clear profile state — see
-  [clearProfileState](./helpers-pseudocode.md#clearprofilestate). Then ensure the device starts each
-  test with network connectivity — see
-  [enableNetwork](./networkHelpers-pseudocode.md#enablenetwork).
+- **beforeEach**: First restore network connectivity so the device starts each test online — see
+  [enableNetwork](./networkHelpers-pseudocode.md#enablenetwork). Then clear profile state with
+  `requireFreshAppInstance` set to `true`, forcing a relaunch from clean storage so the next test
+  starts from a true anonymous profile — see
+  [clearProfileState](./helpers-pseudocode.md#clearprofilestate).
 - **afterEach**: Always restore network connectivity so subsequent tests are not affected — see
   [enableNetwork](./networkHelpers-pseudocode.md#enablenetwork).
+
+Constants used in this file:
+
+- `QUEUE_FLUSH_GRACE_MS` = `10000` — time allowed after reconnecting for the SDK online signal to
+  flip and the resulting Experience API queue flush to land before the app is terminated.
+- `IDENTIFY_SETTLE_MS` = `3000` — time allowed after an online identify for the Experience upsert
+  round-trip to complete before the app is terminated.
+- `POST_RELAUNCH_TIMEOUT` = `30000` — timeout for the post-relaunch variant assertions, generous
+  enough for a cold start to boot, fetch entries, and run resolution.
+- `NESTED_VARIANT_TEST_ID` = `entry-text-2KIWllNZJT205BwOSkMINg` — nested level-0 entry id that only
+  appears once the SDK resolves the identified profile.
+- `NESTED_BASELINE_TEST_ID` = `entry-text-1JAU028vQ7v6nB2swl3NBo` — nested level-0 entry id that
+  only appears for an anonymous profile.
 
 Local helpers used in this file:
 
@@ -30,8 +45,10 @@ Local helpers used in this file:
 
 ### "should continue to track events while offline"
 
-**Verifies:** While the device is offline, tapping the identify button still causes the in-app
-analytics events counter to increment, proving local event tracking continues without network.
+**Verifies:** While the device is offline, tapping the identify button still increments the in-app
+analytics events counter, and the offline identify is genuinely queued — once connectivity is
+restored the flushed identify is delivered so a relaunched app resolves the identified-only nested
+variant rather than the anonymous baseline.
 
 **Steps:**
 
@@ -48,11 +65,19 @@ analytics events counter to increment, proving local event tracking continues wi
 6. Wait until the element with test ID `events-count` has text whose parsed events count is greater
    than or equal to `eventsBeforeIdentify + 1`, with a timeout of `ELEMENT_VISIBILITY_TIMEOUT` — see
    [waitForElementTextById](./helpers-pseudocode.md#waitforelementtextbyid).
+7. Restore network connectivity so the Experience queue flushes — see
+   [enableNetwork](./networkHelpers-pseudocode.md#enablenetwork).
+8. Wait `QUEUE_FLUSH_GRACE_MS` ms to let the queue flush round-trip land.
+9. Terminate the app and relaunch it as a new instance.
+10. Wait until the element with test ID `NESTED_VARIANT_TEST_ID` exists, using a timeout of
+    `POST_RELAUNCH_TIMEOUT`.
+11. Assert that the element with test ID `NESTED_BASELINE_TEST_ID` does not exist.
 
 ### "should recover gracefully when network is restored"
 
-**Verifies:** After toggling the device offline and then back online, the app remains visible and
-interactive, with no crash and no loss of core UI.
+**Verifies:** After an offline/online transition, the SDK can still complete an end-to-end identify
+pipeline — identify, Experience upsert, variant resolution — so a relaunched app resolves the
+identified-only nested variant rather than the anonymous baseline.
 
 **Steps:**
 
@@ -62,14 +87,21 @@ interactive, with no crash and no loss of core UI.
    [disableNetwork](./networkHelpers-pseudocode.md#disablenetwork).
 3. Wait `1000` ms to let the offline state stabilize before reconnecting.
 4. Restore network connectivity — see [enableNetwork](./networkHelpers-pseudocode.md#enablenetwork).
-5. Assert that the element with the exact text `Analytics Events` is still visible.
-6. Wait until the element with test ID `identify-button` is visible, using a timeout of
+5. Wait `IDENTIFY_SETTLE_MS` ms to let the connectivity transition settle before identifying online.
+6. Tap the element with test ID `identify-button`.
+7. Wait until the element with test ID `reset-button` is visible, using a timeout of
    `ELEMENT_VISIBILITY_TIMEOUT`.
+8. Wait `IDENTIFY_SETTLE_MS` ms to let the Experience upsert round-trip land.
+9. Terminate the app and relaunch it as a new instance.
+10. Wait until the element with test ID `NESTED_VARIANT_TEST_ID` exists, using a timeout of
+    `POST_RELAUNCH_TIMEOUT`.
+11. Assert that the element with test ID `NESTED_BASELINE_TEST_ID` does not exist.
 
 ### "should handle rapid network state changes"
 
-**Verifies:** Rapid back-to-back offline/online toggles do not destabilize or crash the app; core UI
-remains visible and interactive afterward.
+**Verifies:** After a burst of rapid offline/online toggles ending online, the SDK is still fully
+operational — a complete identify pipeline must still resolve the identified-only nested variant
+after relaunch rather than leaving the SDK wedged on the anonymous baseline.
 
 **Steps:**
 
@@ -84,16 +116,22 @@ remains visible and interactive afterward.
    [disableNetwork](./networkHelpers-pseudocode.md#disablenetwork).
 7. Wait `500` ms.
 8. Restore network connectivity — see [enableNetwork](./networkHelpers-pseudocode.md#enablenetwork).
-9. Wait until the element with the exact text `Analytics Events` is visible, using a timeout of
-   `ELEMENT_VISIBILITY_TIMEOUT`.
-10. Wait until the element with test ID `identify-button` is visible, using a timeout of
+9. Wait `IDENTIFY_SETTLE_MS` ms to let the connectivity churn settle before identifying.
+10. Tap the element with test ID `identify-button`.
+11. Wait until the element with test ID `reset-button` is visible, using a timeout of
     `ELEMENT_VISIBILITY_TIMEOUT`.
+12. Wait `IDENTIFY_SETTLE_MS` ms to let the Experience upsert round-trip land.
+13. Terminate the app and relaunch it as a new instance.
+14. Wait until the element with test ID `NESTED_VARIANT_TEST_ID` exists, using a timeout of
+    `POST_RELAUNCH_TIMEOUT`.
+15. Assert that the element with test ID `NESTED_BASELINE_TEST_ID` does not exist.
 
 ### "should queue events offline and eventually flush when online"
 
-**Verifies:** Events generated while offline are tracked locally; after reconnect the app remains
-functional and preserves the identified profile state (indicated by the `reset-button` becoming
-visible).
+**Verifies:** Events generated while offline are tracked locally; after reconnect the queued
+identify flushes to the Experience API end to end, so a relaunched app resolves the identified-only
+nested variant and shows the `reset-button` (which renders only for a rehydrated identified
+profile).
 
 **Steps:**
 
@@ -109,8 +147,13 @@ visible).
 6. Wait until the element with test ID `events-count` has text whose parsed events count is greater
    than or equal to `eventsBeforeIdentify + 1`, with a timeout of `ELEMENT_VISIBILITY_TIMEOUT` — see
    [waitForElementTextById](./helpers-pseudocode.md#waitforelementtextbyid).
-7. Restore network connectivity so queued events can flush — see
+7. Restore network connectivity so the offline Experience queue flushes — see
    [enableNetwork](./networkHelpers-pseudocode.md#enablenetwork).
-8. Wait until the element with test ID `reset-button` is visible, using a timeout of
-   `ELEMENT_VISIBILITY_TIMEOUT`, confirming the app remains functional and the identified state is
-   preserved after reconnect.
+8. Wait `QUEUE_FLUSH_GRACE_MS` ms to let the flush round-trip reach the server.
+9. Terminate the app and relaunch it as a new instance.
+10. Wait until the element with test ID `NESTED_VARIANT_TEST_ID` exists, using a timeout of
+    `POST_RELAUNCH_TIMEOUT`.
+11. Assert that the element with test ID `NESTED_BASELINE_TEST_ID` does not exist.
+12. Wait until the element with test ID `reset-button` is visible, using a timeout of
+    `POST_RELAUNCH_TIMEOUT`, confirming the identified profile state was preserved across the cold
+    start.

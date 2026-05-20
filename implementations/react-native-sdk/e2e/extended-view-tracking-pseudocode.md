@@ -65,20 +65,25 @@ confirming the duration accumulates across periodic updates within a cycle.
 ### "should maintain a stable viewId within a visibility cycle"
 
 **Verifies:** Within a single visibility cycle, the entry's `viewId` is a non-empty string that does
-not change between events.
+not change between the first event and a subsequent periodic event of the same cycle.
 
 **Steps:**
 
 1. Wait until the element with text "Analytics Events" is visible, using
    `ELEMENT_VISIBILITY_TIMEOUT` — see
    [ELEMENT_VISIBILITY_TIMEOUT](./helpers-pseudocode.md#element_visibility_timeout).
-2. Wait until the entry `VISIBLE_ENTRY_ID` has at least 2 tracked events, using `EXTENDED_TIMEOUT` —
+2. Wait until the entry `VISIBLE_ENTRY_ID` has at least 1 tracked event, using `EXTENDED_TIMEOUT` —
    see [waitForTrackedItemEventCount](./helpers-pseudocode.md#waitfortrackeditemeventcount).
-3. Read the current `viewId` for `VISIBLE_ENTRY_ID` — see
+3. Read the current `viewId` for `VISIBLE_ENTRY_ID` and store it as `firstEventViewId` — see
    [getViewId](./helpers-pseudocode.md#getviewid).
-4. Assert that the `viewId` is not null.
-5. Assert that the `viewId` is a string.
-6. Assert that the `viewId` length is greater than 0.
+4. Assert that `firstEventViewId` is not null.
+5. Assert that `firstEventViewId` is a string.
+6. Assert that `firstEventViewId` length is greater than 0.
+7. Wait until the entry `VISIBLE_ENTRY_ID` has at least 2 tracked events, using `EXTENDED_TIMEOUT` —
+   see [waitForTrackedItemEventCount](./helpers-pseudocode.md#waitfortrackeditemeventcount).
+8. Read the current `viewId` for `VISIBLE_ENTRY_ID` and store it as `secondEventViewId` — see
+   [getViewId](./helpers-pseudocode.md#getviewid).
+9. Assert that `secondEventViewId` equals `firstEventViewId`.
 
 ### "should emit a final event when scrolling a tracked entry out of view"
 
@@ -222,19 +227,28 @@ event), and bringing it back to the foreground starts a new cycle with a differe
    [ELEMENT_VISIBILITY_TIMEOUT](./helpers-pseudocode.md#element_visibility_timeout).
 2. Wait until the entry `VISIBLE_ENTRY_ID` has at least 1 tracked event, using `EXTENDED_TIMEOUT` —
    see [waitForTrackedItemEventCount](./helpers-pseudocode.md#waitfortrackeditemeventcount).
-3. Read the current `viewId` for `VISIBLE_ENTRY_ID` and store it as `preBackgroundViewId` — see
+3. Read the current `viewId` for `VISIBLE_ENTRY_ID` and store it as `firstCycleViewId` — see
    [getViewId](./helpers-pseudocode.md#getviewid).
-4. Send the app to home (background).
-5. Sleep for 1000 ms — see [sleep](./helpers-pseudocode.md#sleep).
-6. Relaunch the app without resetting state (resume from background).
-7. Scroll the element with test ID `main-scroll-view` downward in increments of 300 units until the
-   element with test ID `event-count-${VISIBLE_ENTRY_ID}` is visible.
-8. Wait until the entry `VISIBLE_ENTRY_ID` has at least 3 tracked events (accounting for the final
-   event from cycle 1 and at least the initial event of the new cycle), using `EXTENDED_TIMEOUT` —
+4. Wait until the entry `VISIBLE_ENTRY_ID` has at least 2 tracked events, using `EXTENDED_TIMEOUT` —
    see [waitForTrackedItemEventCount](./helpers-pseudocode.md#waitfortrackeditemeventcount).
-9. Read the current `viewId` for `VISIBLE_ENTRY_ID` and store it as `postForegroundViewId` — see
+5. Read the current `viewId` for `VISIBLE_ENTRY_ID` and assert it equals `firstCycleViewId` (proving
+   the first cycle's `viewId` is stable across two events) — see
    [getViewId](./helpers-pseudocode.md#getviewid).
-10. Assert that `postForegroundViewId` does not equal `preBackgroundViewId`.
+6. Read the text of the element with test ID `event-count-${VISIBLE_ENTRY_ID}` — see
+   [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
+7. Parse that text against the regex `/Count:\s*(\d+)/` and store the captured number as
+   `countBeforeBackground` (default to 0 if no match).
+8. Send the app to home (background).
+9. Sleep for 1000 ms — see [sleep](./helpers-pseudocode.md#sleep).
+10. Relaunch the app without resetting state (resume from background).
+11. Scroll the element with test ID `main-scroll-view` downward in increments of 300 units until the
+    element with test ID `event-count-${VISIBLE_ENTRY_ID}` is visible.
+12. Wait until the entry `VISIBLE_ENTRY_ID` has at least `countBeforeBackground + 2` tracked events
+    (the final event from cycle 1 plus the initial event of the new cycle), using `EXTENDED_TIMEOUT`
+    — see [waitForTrackedItemEventCount](./helpers-pseudocode.md#waitfortrackeditemeventcount).
+13. Read the current `viewId` for `VISIBLE_ENTRY_ID` and store it as `postForegroundViewId` — see
+    [getViewId](./helpers-pseudocode.md#getviewid).
+14. Assert that `postForegroundViewId` does not equal `firstCycleViewId`.
 
 ### "should reset accumulated duration for a new visibility cycle"
 

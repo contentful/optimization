@@ -23,8 +23,11 @@ across app restarts and must drive the correct decisioning for every entry it to
   6. Terminate the app.
   7. Relaunch the app as a new instance so the identified state is rehydrated from persistent
      storage.
-  8. Wait until the element with test ID `identify-button` is visible, with timeout
-     `ELEMENT_VISIBILITY_TIMEOUT`.
+  8. Wait until the element with test ID `reset-button` is visible, with timeout
+     `ELEMENT_VISIBILITY_TIMEOUT`. The relaunched app derives the identify/reset control from the
+     rehydrated identified profile, so `reset-button` (not `identify-button`) appears; waiting for
+     it confirms the relaunch finished loading and that the identified profile survived the cold
+     start.
 
 ## Tests
 

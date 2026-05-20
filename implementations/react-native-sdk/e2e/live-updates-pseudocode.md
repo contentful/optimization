@@ -7,6 +7,13 @@ changes (for example, after the user identifies). The default is locked-on-first
 chosen at first resolution stays fixed. The behavior can be opted in globally, set per-component to
 override the global setting, or force-enabled for all components while a preview panel is open.
 
+## Constants
+
+- `ENTRY_ID_TEXT_PATTERN`: regular expression `/^Entry: [a-zA-Z0-9]+$/`. Matches the text rendered
+  by the `*-entry-id` Text nodes — the segment after `Entry: ` is a Contentful `sys.id`
+  (alphanumeric, no spaces). Matching this proves the SDK resolved a real entry rather than
+  rendering an empty or default state.
+
 ## Test setup
 
 - **beforeAll**: Launch the app.
@@ -32,18 +39,25 @@ override the global setting, or force-enabled for all components while a preview
 #### "should NOT update variant when user identifies (global liveUpdates=false)"
 
 **Verifies:** With the global `liveUpdates` setting off, identifying the user does not change the
-resolved default entry's variant.
+resolved default entry's variant, while the always-live reference section does change.
 
 **Steps:**
 
 1. Wait until the element with test ID `default-entry-id` is visible, with a timeout of
    `ELEMENT_VISIBILITY_TIMEOUT`.
-2. Read the text of the element with test ID `default-entry-id` and store it as the initial default
-   entry id — see [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
-3. Tap the element with test ID `live-updates-identify-button`.
-4. Wait until the element with test ID `identified-status` has text `Yes`, with a timeout of
+2. Wait until the element with test ID `live-entry-id` is visible, with a timeout of
    `ELEMENT_VISIBILITY_TIMEOUT`.
-5. Wait until the element with test ID `default-entry-id` has text equal to the stored initial
+3. Read the text of the element with test ID `default-entry-id` and store it as the initial default
+   entry id — see [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
+4. Read the text of the element with test ID `live-entry-id` and store it as the initial live entry
+   id — see [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
+5. Tap the element with test ID `live-updates-identify-button`.
+6. Wait until the element with test ID `identified-status` has text `Yes`, with a timeout of
+   `ELEMENT_VISIBILITY_TIMEOUT`.
+7. Wait until the element with test ID `live-entry-id` has text different from the stored initial
+   live entry id (the `liveUpdates=true` section must re-resolve) — see
+   [waitForTextChangeById](./helpers-pseudocode.md#waitfortextchangebyid).
+8. Wait until the element with test ID `default-entry-id` has text equal to the stored initial
    default entry id — see [waitForTextEqualsById](./helpers-pseudocode.md#waitfortextequalsbyid).
 
 ### Group: "global liveUpdates enabled"
@@ -51,7 +65,7 @@ resolved default entry's variant.
 #### "should update default entries when user identifies"
 
 **Verifies:** When the global `liveUpdates` setting is turned on, identifying the user causes the
-default entry to re-resolve and remain rendered.
+default entry to re-resolve to a different variant.
 
 **Steps:**
 
@@ -60,15 +74,18 @@ default entry to re-resolve and remain rendered.
    `ELEMENT_VISIBILITY_TIMEOUT`.
 3. Wait until the element with test ID `default-entry-id` is visible, with a timeout of
    `ELEMENT_VISIBILITY_TIMEOUT`.
-4. Tap the element with test ID `live-updates-identify-button`.
-5. Wait until the element with test ID `identified-status` has text `Yes`, with a timeout of
+4. Read the text of the element with test ID `default-entry-id` and store it as the initial default
+   entry id — see [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
+5. Tap the element with test ID `live-updates-identify-button`.
+6. Wait until the element with test ID `identified-status` has text `Yes`, with a timeout of
    `ELEMENT_VISIBILITY_TIMEOUT`.
-6. Assert the element with test ID `default-entry-id` is visible.
+7. Wait until the element with test ID `default-entry-id` has text different from the stored initial
+   default entry id — see [waitForTextChangeById](./helpers-pseudocode.md#waitfortextchangebyid).
 
 #### "should NOT update locked entries even when global liveUpdates=true"
 
 **Verifies:** A component explicitly opted out of live updates does not refresh even with the global
-setting on.
+setting on, while the default section (no per-component prop) does re-resolve.
 
 **Steps:**
 
@@ -77,13 +94,20 @@ setting on.
    `ELEMENT_VISIBILITY_TIMEOUT`.
 3. Wait until the element with test ID `locked-entry-id` is visible, with a timeout of
    `ELEMENT_VISIBILITY_TIMEOUT`.
-4. Read the text of the element with test ID `locked-entry-id` and store it as the initial locked
-   entry id — see [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
-5. Tap the element with test ID `live-updates-identify-button`.
-6. Wait until the element with test ID `identified-status` has text `Yes`, with a timeout of
+4. Wait until the element with test ID `default-entry-id` is visible, with a timeout of
    `ELEMENT_VISIBILITY_TIMEOUT`.
-7. Wait until the element with test ID `locked-entry-id` has text equal to the stored initial locked
-   entry id — see [waitForTextEqualsById](./helpers-pseudocode.md#waitfortextequalsbyid).
+5. Read the text of the element with test ID `locked-entry-id` and store it as the initial locked
+   entry id — see [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
+6. Read the text of the element with test ID `default-entry-id` and store it as the initial default
+   entry id — see [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
+7. Tap the element with test ID `live-updates-identify-button`.
+8. Wait until the element with test ID `identified-status` has text `Yes`, with a timeout of
+   `ELEMENT_VISIBILITY_TIMEOUT`.
+9. Wait until the element with test ID `default-entry-id` has text different from the stored initial
+   default entry id (the live reference that proves the SDK swaps variants) — see
+   [waitForTextChangeById](./helpers-pseudocode.md#waitfortextchangebyid).
+10. Wait until the element with test ID `locked-entry-id` has text equal to the stored initial
+    locked entry id — see [waitForTextEqualsById](./helpers-pseudocode.md#waitfortextequalsbyid).
 
 ### Group: "per-component liveUpdates=true"
 
@@ -98,16 +122,20 @@ setting is off.
    of `ELEMENT_VISIBILITY_TIMEOUT`.
 2. Wait until the element with test ID `live-entry-id` is visible, with a timeout of
    `ELEMENT_VISIBILITY_TIMEOUT`.
-3. Tap the element with test ID `live-updates-identify-button`.
-4. Wait until the element with test ID `identified-status` has text `Yes`, with a timeout of
+3. Read the text of the element with test ID `live-entry-id` and store it as the initial live entry
+   id — see [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
+4. Tap the element with test ID `live-updates-identify-button`.
+5. Wait until the element with test ID `identified-status` has text `Yes`, with a timeout of
    `ELEMENT_VISIBILITY_TIMEOUT`.
-5. Assert the element with test ID `live-entry-id` is visible.
+6. Wait until the element with test ID `live-entry-id` has text different from the stored initial
+   live entry id — see [waitForTextChangeById](./helpers-pseudocode.md#waitfortextchangebyid).
 
 ### Group: "per-component liveUpdates=false"
 
 #### "should NOT update variant even when global liveUpdates=true"
 
-**Verifies:** A component with `liveUpdates=false` stays locked even when the global setting is on.
+**Verifies:** A component with `liveUpdates=false` stays locked even when the global setting is on,
+while the per-component `liveUpdates=true` section overrides the global setting and re-resolves.
 
 **Steps:**
 
@@ -116,21 +144,27 @@ setting is off.
    `ELEMENT_VISIBILITY_TIMEOUT`.
 3. Wait until the element with test ID `locked-entry-id` is visible, with a timeout of
    `ELEMENT_VISIBILITY_TIMEOUT`.
-4. Read the text of the element with test ID `locked-entry-id` and store it as the initial locked
-   entry id — see [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
-5. Tap the element with test ID `live-updates-identify-button`.
-6. Wait until the element with test ID `identified-status` has text `Yes`, with a timeout of
+4. Wait until the element with test ID `live-entry-id` is visible, with a timeout of
    `ELEMENT_VISIBILITY_TIMEOUT`.
-7. Wait until the element with test ID `locked-entry-id` has text equal to the stored initial locked
-   entry id — see [waitForTextEqualsById](./helpers-pseudocode.md#waitfortextequalsbyid).
+5. Read the text of the element with test ID `locked-entry-id` and store it as the initial locked
+   entry id — see [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
+6. Read the text of the element with test ID `live-entry-id` and store it as the initial live entry
+   id — see [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
+7. Tap the element with test ID `live-updates-identify-button`.
+8. Wait until the element with test ID `identified-status` has text `Yes`, with a timeout of
+   `ELEMENT_VISIBILITY_TIMEOUT`.
+9. Wait until the element with test ID `live-entry-id` has text different from the stored initial
+   live entry id — see [waitForTextChangeById](./helpers-pseudocode.md#waitfortextchangebyid).
+10. Wait until the element with test ID `locked-entry-id` has text equal to the stored initial
+    locked entry id — see [waitForTextEqualsById](./helpers-pseudocode.md#waitfortextequalsbyid).
 
 ### Group: "preview panel simulation"
 
 #### "should enable live updates for all entries when panel is open"
 
 **Verifies:** While the preview panel simulation is open, all three Optimization sections behave as
-live and remain rendered after the user identifies, overriding both global and per-component
-settings.
+live and re-resolve to different variants after the user identifies, overriding both global and
+per-component settings (including the per-component `liveUpdates=false` section).
 
 **Steps:**
 
@@ -145,12 +179,22 @@ settings.
    `ELEMENT_VISIBILITY_TIMEOUT`.
 6. Wait until the element with test ID `locked-entry-id` is visible, with a timeout of
    `ELEMENT_VISIBILITY_TIMEOUT`.
-7. Tap the element with test ID `live-updates-identify-button`.
-8. Wait until the element with test ID `identified-status` has text `Yes`, with a timeout of
-   `ELEMENT_VISIBILITY_TIMEOUT`.
-9. Assert the element with test ID `default-entry-id` is visible.
-10. Assert the element with test ID `live-entry-id` is visible.
-11. Assert the element with test ID `locked-entry-id` is visible.
+7. Read the text of the element with test ID `default-entry-id` and store it as the initial default
+   entry id — see [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
+8. Read the text of the element with test ID `live-entry-id` and store it as the initial live entry
+   id — see [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
+9. Read the text of the element with test ID `locked-entry-id` and store it as the initial locked
+   entry id — see [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
+10. Tap the element with test ID `live-updates-identify-button`.
+11. Wait until the element with test ID `identified-status` has text `Yes`, with a timeout of
+    `ELEMENT_VISIBILITY_TIMEOUT`.
+12. Wait until the element with test ID `default-entry-id` has text different from the stored
+    initial default entry id — see
+    [waitForTextChangeById](./helpers-pseudocode.md#waitfortextchangebyid).
+13. Wait until the element with test ID `live-entry-id` has text different from the stored initial
+    live entry id — see [waitForTextChangeById](./helpers-pseudocode.md#waitfortextchangebyid).
+14. Wait until the element with test ID `locked-entry-id` has text different from the stored initial
+    locked entry id — see [waitForTextChangeById](./helpers-pseudocode.md#waitfortextchangebyid).
 
 ### Group: "screen controls"
 
@@ -204,7 +248,7 @@ settings.
 #### "should display all three Optimization entry sections"
 
 **Verifies:** The Live Updates Test screen renders the default, live, and locked Optimization
-section containers.
+section containers, and each section's entry id text matches the SDK-resolved entry id pattern.
 
 **Steps:**
 
@@ -214,11 +258,27 @@ section containers.
    `ELEMENT_VISIBILITY_TIMEOUT`.
 3. Wait until the element with test ID `locked-optimization` is visible, with a timeout of
    `ELEMENT_VISIBILITY_TIMEOUT`.
+4. Wait until the element with test ID `default-entry-id` is visible, with a timeout of
+   `ELEMENT_VISIBILITY_TIMEOUT`.
+5. Wait until the element with test ID `live-entry-id` is visible, with a timeout of
+   `ELEMENT_VISIBILITY_TIMEOUT`.
+6. Wait until the element with test ID `locked-entry-id` is visible, with a timeout of
+   `ELEMENT_VISIBILITY_TIMEOUT`.
+7. Read the text of the element with test ID `default-entry-id` — see
+   [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
+8. Read the text of the element with test ID `live-entry-id` — see
+   [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
+9. Read the text of the element with test ID `locked-entry-id` — see
+   [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
+10. Assert the `default-entry-id` text matches `ENTRY_ID_TEXT_PATTERN`.
+11. Assert the `live-entry-id` text matches `ENTRY_ID_TEXT_PATTERN`.
+12. Assert the `locked-entry-id` text matches `ENTRY_ID_TEXT_PATTERN`.
 
 #### "should display entry content in all sections"
 
-**Verifies:** Each of the three Optimization sections renders its container, text, and entry id
-elements.
+**Verifies:** Each of the three Optimization sections renders its container and a non-empty,
+non-fallback text field, and before any identify/toggle/preview-panel action all three sections
+resolve to the same variant text.
 
 **Steps:**
 
@@ -228,9 +288,17 @@ elements.
    `ELEMENT_VISIBILITY_TIMEOUT`.
 3. Wait until the element with test ID `locked-container` is visible, with a timeout of
    `ELEMENT_VISIBILITY_TIMEOUT`.
-4. Assert the element with test ID `default-text` is visible.
-5. Assert the element with test ID `live-text` is visible.
-6. Assert the element with test ID `locked-text` is visible.
-7. Assert the element with test ID `default-entry-id` is visible.
-8. Assert the element with test ID `live-entry-id` is visible.
-9. Assert the element with test ID `locked-entry-id` is visible.
+4. Read the text of the element with test ID `default-text` — see
+   [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
+5. Read the text of the element with test ID `live-text` — see
+   [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
+6. Read the text of the element with test ID `locked-text` — see
+   [getElementTextById](./helpers-pseudocode.md#getelementtextbyid).
+7. Assert the `default-text` length is greater than 0.
+8. Assert the `live-text` length is greater than 0.
+9. Assert the `locked-text` length is greater than 0.
+10. Assert the `default-text` is not equal to `No content`.
+11. Assert the `live-text` is not equal to `No content`.
+12. Assert the `locked-text` is not equal to `No content`.
+13. Assert the `default-text` equals the `live-text`.
+14. Assert the `default-text` equals the `locked-text`.
