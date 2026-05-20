@@ -17,6 +17,9 @@ import {
 } from '@contentful/optimization-core/preview-support'
 
 type ResolveOptimizedEntryParams = Parameters<CoreStateful['resolveOptimizedEntry']>
+type GetMergeTagValueParams = Parameters<CoreStateful['getMergeTagValue']>
+
+// TODO: Remove pnpm-lock.yml?
 
 interface BridgeConfig {
   clientId: string
@@ -95,6 +98,8 @@ interface Bridge {
     baseline: Record<string, unknown>,
     personalizations?: Array<Record<string, unknown>>,
   ): string
+  getMergeTagValue(mergeTagEntry: Record<string, unknown>): string | null
+  flag(name: string): void
   setOnline(isOnline: boolean): void
 
   // Preview panel
@@ -111,6 +116,7 @@ interface Bridge {
 let instance: CoreStateful | null = null
 let disposeEffect: (() => void) | null = null
 let disposeEventEffect: (() => void) | null = null
+let flagSubscriptions: Array<{ unsubscribe: () => void }> = []
 let overrideManager: PreviewOverrideManager | null = null
 let audienceDefinitions: AudienceDefinition[] | null = null
 let experienceDefinitions: ExperienceDefinition[] | null = null
@@ -309,6 +315,13 @@ const bridge: Bridge = {
     signals.online.value = isOnline
   },
 
+  flag(name: string) {
+    if (!instance) return
+    // Subscribing to the flag observable emits a `component` flag-view event
+    // through the core event stream (and again on each distinct value change).
+    flagSubscriptions.push(instance.states.flag(name).subscribe(() => undefined))
+  },
+
   personalizeEntry(
     baseline: Record<string, unknown>,
     personalizations?: Array<Record<string, unknown>>,
@@ -319,6 +332,12 @@ const bridge: Bridge = {
       personalizations as unknown as ResolveOptimizedEntryParams[1],
     )
     return JSON.stringify(result)
+  },
+
+  getMergeTagValue(mergeTagEntry: Record<string, unknown>): string | null {
+    if (!instance) return null
+    const value = instance.getMergeTagValue(mergeTagEntry as unknown as GetMergeTagValueParams[0])
+    return value ?? null
   },
 
   setPreviewPanelOpen(open: boolean) {
@@ -468,6 +487,10 @@ const bridge: Bridge = {
     experienceDefinitions = null
     audienceNameMap = {}
     experienceNameMap = {}
+    for (const subscription of flagSubscriptions) {
+      subscription.unsubscribe()
+    }
+    flagSubscriptions = []
     if (disposeEventEffect) {
       disposeEventEffect()
       disposeEventEffect = null

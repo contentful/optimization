@@ -4,6 +4,8 @@ import SwiftUI
 struct NestedContentEntryView: View {
     let entry: [String: Any]
 
+    @EnvironmentObject private var client: OptimizationClient
+
     private var entryId: String {
         let sys = entry["sys"] as? [String: Any]
         return sys?["id"] as? String ?? ""
@@ -14,7 +16,7 @@ struct NestedContentEntryView: View {
             entry: entry,
             accessibilityIdentifier: "content-entry-\(entryId)"
         ) { resolvedEntry in
-            NestedContentItemView(resolvedEntry: resolvedEntry)
+            NestedContentItemView(resolvedEntry: resolvedEntry, client: client)
         }
     }
 }
@@ -24,6 +26,7 @@ struct NestedContentEntryView: View {
 /// variant's nested children rather than the baseline's.
 private struct NestedContentItemView: View {
     let resolvedEntry: [String: Any]
+    let client: OptimizationClient
 
     private var nestedEntries: [[String: Any]] {
         let fields = resolvedEntry["fields"] as? [String: Any]
@@ -36,7 +39,7 @@ private struct NestedContentItemView: View {
 
     var body: some View {
         VStack(alignment: .leading) {
-            NestedEntryText(entry: resolvedEntry)
+            NestedEntryText(entry: resolvedEntry, client: client)
 
             ForEach(0..<nestedEntries.count, id: \.self) { index in
                 NestedContentEntryView(entry: nestedEntries[index])
@@ -47,6 +50,7 @@ private struct NestedContentItemView: View {
 
 private struct NestedEntryText: View {
     let entry: [String: Any]
+    let client: OptimizationClient
 
     private var entryId: String {
         let sys = entry["sys"] as? [String: Any]
@@ -55,7 +59,7 @@ private struct NestedEntryText: View {
 
     private var text: String {
         let fields = entry["fields"] as? [String: Any]
-        return fields?["text"] as? String ?? "No content"
+        return RichText.resolveText(fields?["text"], client: client)
     }
 
     var body: some View {

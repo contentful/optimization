@@ -53,7 +53,7 @@ private final class NestedContentItemUIView: UIView {
             stack.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
 
-        stack.addArrangedSubview(NestedEntryText(entry: resolvedEntry))
+        stack.addArrangedSubview(NestedEntryText(entry: resolvedEntry, client: client))
 
         for child in nestedEntries(in: resolvedEntry) {
             stack.addArrangedSubview(NestedContentEntryUIView(client: client, entry: child, scrollView: scrollView))
@@ -74,13 +74,13 @@ private final class NestedContentItemUIView: UIView {
 
 private final class NestedEntryText: UIView {
 
-    init(entry: [String: Any]) {
+    init(entry: [String: Any], client: OptimizationClient) {
         super.init(frame: .zero)
         translatesAutoresizingMaskIntoConstraints = false
 
         let entryId = (entry["sys"] as? [String: Any])?["id"] as? String ?? ""
         let fields = entry["fields"] as? [String: Any]
-        let text = (fields?["text"] as? String) ?? "No content"
+        let text = RichText.resolveText(fields?["text"], client: client)
 
         let textLabel = UILabel()
         textLabel.text = text

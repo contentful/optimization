@@ -1,12 +1,14 @@
 import XCTest
 
-/// Tests offline behavior using network simulation via launch arguments.
+/// Tests offline behavior using runtime network simulation.
 ///
 /// The RN/Detox suite toggles real network state with adb airplane mode. XCUITest
-/// cannot toggle network at runtime, so offline state is simulated by relaunching
-/// with the `--simulate-offline` launch argument, which makes the app call
-/// `client.setOnline(false)`. Going back online is a relaunch without the flag
-/// (online is the SDK default).
+/// cannot toggle network at runtime, so the app exposes test-only `Go Offline` /
+/// `Go Online` controls (gated behind `--enable-network-controls`) that call
+/// `client.setOnline(false/true)` on the live process. Toggling online state on a
+/// running app — rather than relaunching — keeps the in-memory Experience queue
+/// intact across the offline/online transition, exactly as a real airplane-mode
+/// toggle would, so a queued offline identify can genuinely flush on reconnect.
 ///
 /// Each test preserves the hardened pseudocode contract: identify across an
 /// offline/online cycle, relaunch, then gate on the SDK resolving the IDENTIFIED
@@ -35,18 +37,13 @@ final class OfflineBehaviorTests: XCTestCase {
 
     override func setUp() {
         continueAfterFailure = false
-        // Restore connectivity first, then relaunch from clean storage. Each
-        // test identifies and leaves the app identified, so a fresh instance is
-        // required to guarantee the next test starts from a true anonymous
-        // profile with an unidentified variant resolution.
-        app.launchArguments = []
+        // Launch from clean storage (`--reset`) with the test-only network
+        // controls enabled. `--reset` guarantees a true anonymous starting
+        // profile; each test identifies and leaves the app identified, so the
+        // clean start matters for the next test's baseline resolution.
+        app.launchArguments = ["--reset", "--enable-network-controls"]
         app.launch()
-        clearProfileState(app: app, requireFreshAppInstance: true)
-    }
-
-    override func tearDown() {
-        // Always restore network state so subsequent tests are not affected.
-        app.launchArguments = []
+        waitForElement(app.buttons["identify-button"], timeout: ELEMENT_VISIBILITY_TIMEOUT)
     }
 
     /// Read the `events-count` element text and parse the integer event count.
@@ -54,18 +51,20 @@ final class OfflineBehaviorTests: XCTestCase {
         return parseEventsCount(getElementTextById("events-count", app: app))
     }
 
-    /// Relaunch the app offline via the `--simulate-offline` launch argument.
+    /// Take the live app offline by tapping the test-only `Go Offline` control.
+    /// The process stays alive, so the in-memory Experience queue survives.
     private func goOffline() {
-        app.terminate()
-        app.launchArguments = ["--simulate-offline"]
-        app.launch()
+        let button = app.buttons["simulate-offline-button"]
+        waitForElement(button, timeout: ELEMENT_VISIBILITY_TIMEOUT)
+        button.tap()
     }
 
-    /// Relaunch the app online by dropping the `--simulate-offline` argument.
+    /// Bring the live app back online by tapping the test-only `Go Online`
+    /// control, which flips the SDK online signal and flushes queued events.
     private func goOnline() {
-        app.terminate()
-        app.launchArguments = []
-        app.launch()
+        let button = app.buttons["simulate-online-button"]
+        waitForElement(button, timeout: ELEMENT_VISIBILITY_TIMEOUT)
+        button.tap()
     }
 
     func testContinuesToTrackEventsWhileOffline() {

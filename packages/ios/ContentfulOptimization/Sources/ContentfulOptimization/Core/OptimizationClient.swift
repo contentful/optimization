@@ -17,6 +17,9 @@ import JavaScriptCore
 ///     insightsBaseUrl: "https://example.com/insights/"
 /// ))
 /// ```
+
+// TODO: We need to include the blocked by consent state stream
+// blocked events state, implemented already in web
 @MainActor
 public final class OptimizationClient: ObservableObject {
 
@@ -201,7 +204,7 @@ public final class OptimizationClient: ObservableObject {
                 let pJSON = try serializeJSON(personalizations)
                 args = "\(baselineJSON), \(pJSON)"
             }
-
+            // TODO: These methods could be part of an enum
             guard let result = bridgeCallSyncWhenInitialized(method: "personalizeEntry", args: args),
                   !result.isNull && !result.isUndefined,
                   let str = result.toString(),
@@ -221,6 +224,35 @@ public final class OptimizationClient: ObservableObject {
             log.error("[personalize] Serialization error for entry \(entryId): \(error.localizedDescription)")
             return PersonalizedResult(entry: baseline, personalization: nil)
         }
+    }
+
+    /// Resolve a merge-tag entry's display value against the current profile.
+    ///
+    /// Pass the resolved `nt_mergetag` entry (the `embedded-entry-inline` node's
+    /// expanded `data.target`). Returns the resolved string, or `nil` when the
+    /// merge tag cannot be resolved against the current profile.
+    public func getMergeTagValue(mergeTagEntry: [String: Any]) -> String? {
+        guard isInitialized else { return nil }
+        do {
+            let json = try serializeJSON(mergeTagEntry)
+            guard let result = bridgeCallSyncWhenInitialized(method: "getMergeTagValue", args: json),
+                  !result.isNull, !result.isUndefined,
+                  let str = result.toString()
+            else { return nil }
+            return str
+        } catch {
+            return nil
+        }
+    }
+
+    /// Subscribe to a feature flag by name.
+    ///
+    /// Subscribing emits a flag-view (`component`) analytics event through the
+    /// SDK event stream, and again on each distinct flag value change — mirroring
+    /// the React Native `sdk.states.flag(name).subscribe(...)` contract.
+    public func subscribeToFlag(_ name: String) {
+        let escaped = NativePolyfills.escapeForJS(name)
+        bridgeCallSyncWhenInitialized(method: "flag", args: "'\(escaped)'")
     }
 
     /// Get the current profile synchronously.
@@ -345,7 +377,7 @@ public final class OptimizationClient: ObservableObject {
         store.clear()
     }
 
-    // MARK: - Testing
+    // MARK: - Testing TODO: this should probably be part of an optional extension
 
     /// Test-only hook to observe bridge log messages (including JS exceptions).
     /// Not part of the public API contract.

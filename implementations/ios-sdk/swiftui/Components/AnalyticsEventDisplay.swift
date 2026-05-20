@@ -1,9 +1,6 @@
-import Combine
-import ContentfulOptimization
 import SwiftUI
 
 struct AnalyticsEventDisplay: View {
-    @EnvironmentObject private var client: OptimizationClient
     @ObservedObject private var store = EventStore.shared
 
     var body: some View {
@@ -25,9 +22,6 @@ struct AnalyticsEventDisplay: View {
         .padding()
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("analytics-events-container")
-        .onAppear {
-            store.subscribe(to: client.eventPublisher)
-        }
     }
 
     private var nonComponentEvents: some View {
