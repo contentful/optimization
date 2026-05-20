@@ -157,10 +157,18 @@ public final class ViewTrackingController {
         resetCycle()
     }
 
-    /// Resume tracking after a pause. Resets visibility so it can be re-evaluated
-    /// by the next geometry callback.
+    /// Resume tracking after a pause. Resets visibility and immediately
+    /// re-evaluates it from the last known geometry so a still-visible element
+    /// starts a fresh cycle without waiting for an external geometry callback
+    /// (which may never fire if nothing scrolls after foregrounding).
     public func resume() {
         isVisible = false
+        updateVisibility(
+            elementY: lastElementY,
+            elementHeight: lastElementHeight,
+            scrollY: lastScrollY,
+            viewportHeight: lastViewportHeight
+        )
     }
 
     // MARK: - Private
