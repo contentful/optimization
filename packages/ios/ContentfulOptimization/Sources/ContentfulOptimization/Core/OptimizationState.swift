@@ -14,6 +14,10 @@ public struct OptimizationState: Equatable {
         changes: nil
     )
 
+    /// Hand-written `Equatable` conformance: `[String: Any]` is not `Equatable`, so `profile`
+    /// and `changes` are compared by canonical (`sortedKeys`) JSON serialization. This backs
+    /// SwiftUI/Combine `removeDuplicates`; it is not a duplicate of core's "what changed"
+    /// signal-write gate, which runs inside the JS core and never crosses the bridge.
     public static func == (lhs: OptimizationState, rhs: OptimizationState) -> Bool {
         let options: JSONSerialization.WritingOptions = [.sortedKeys]
         let lhsProfile = lhs.profile.flatMap { try? JSONSerialization.data(withJSONObject: $0, options: options) }
