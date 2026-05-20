@@ -129,3 +129,50 @@ func scrollToElement(testId: String, scrollViewId: String, app: XCUIApplication,
         scrollView.swipeUp()
     }
 }
+
+/// Scrolls a scroll view by a precise point offset with no fling momentum, so a
+/// tracked entry's on-screen dwell time is predictable. A positive `dy` reveals
+/// lower content; a negative `dy` reveals upper content. `swipeUp`/`swipeDown`
+/// flings are too coarse and momentum-heavy for dwell-sensitive assertions.
+///
+/// A larger `velocity` keeps the drag motion-free of fling momentum while still
+/// moving the content quickly — useful when an entry must transit the viewport
+/// faster than the dwell threshold.
+func scrollByOffset(
+    scrollViewId: String,
+    dy: CGFloat,
+    app: XCUIApplication,
+    velocity: XCUIGestureVelocity = .default
+) {
+    let scrollView = app.scrollViews[scrollViewId]
+    guard scrollView.exists else { return }
+    // Anchor near the bottom when dragging the finger up, near the top when
+    // dragging down, so even a near-full-screen drag endpoint stays on screen.
+    // The trailing hold cancels fling momentum.
+    let startNormalizedY: CGFloat = dy > 0 ? 0.9 : 0.1
+    let start = scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: startNormalizedY))
+    let end = start.withOffset(CGVector(dx: 0, dy: -dy))
+    start.press(forDuration: 0.05, thenDragTo: end, withVelocity: velocity, thenHoldForDuration: 0.2)
+}
+
+/// Fraction of `element` that is vertically inside `container` (0...1).
+func visibleRatio(of element: XCUIElement, in container: XCUIElement) -> CGFloat {
+    guard element.exists, container.exists else { return 0 }
+    let e = element.frame
+    let c = container.frame
+    guard e.height > 0 else { return 0 }
+    let top = max(e.minY, c.minY)
+    let bottom = min(e.maxY, c.maxY)
+    return max(0, bottom - top) / e.height
+}
+
+/// Scrolls (momentum-free) until `testId` is at least 85% visible inside the
+/// scroll view, so a fresh view-tracking cycle starts at a known instant.
+func scrollEntryIntoView(_ testId: String, scrollViewId: String, app: XCUIApplication, maxSteps: Int = 16) {
+    let scrollView = app.scrollViews[scrollViewId]
+    for _ in 0..<maxSteps {
+        let el = findElement(testId, app: app)
+        if el.exists && visibleRatio(of: el, in: scrollView) >= 0.85 { return }
+        scrollByOffset(scrollViewId: scrollViewId, dy: -260, app: app)
+    }
+}

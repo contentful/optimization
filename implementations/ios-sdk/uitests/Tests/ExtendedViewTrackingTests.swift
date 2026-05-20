@@ -93,40 +93,45 @@ final class ExtendedViewTrackingTests: XCTestCase {
     func testNewViewIdAfterScrollAwayAndBack() {
         waitForElement(app.staticTexts["Analytics Events"])
 
-        // Wait for at least 1 event in the first visibility cycle
+        // Cycle 1: wait for the initial event; reading the stats scrolls entry 0
+        // off, ending cycle 1 with a final event.
         waitForComponentEventCount(VISIBLE_ENTRY_ID, minCount: 1, app: app, timeout: EXTENDED_TIMEOUT)
-
         let firstCycleViewId = getViewId(VISIBLE_ENTRY_ID, app: app)
+        XCTAssertNotNil(firstCycleViewId)
+        let countAfterCycle1 = parseComponentCount(
+            getElementTextById("event-count-\(VISIBLE_ENTRY_ID)", app: app))
 
-        // Scroll the entry out of the viewport
-        let scrollView = app.scrollViews["main-scroll-view"]
-        scrollView.swipeUp(times: 2)
-        Thread.sleep(forTimeInterval: 1.0)
+        // Scroll entry 0 back into view to start a fresh cycle, and dwell past
+        // the threshold so the new cycle emits its initial event.
+        scrollEntryIntoView("content-entry-\(VISIBLE_ENTRY_ID)",
+                            scrollViewId: "main-scroll-view", app: app)
+        Thread.sleep(forTimeInterval: 2.6)
 
-        // Scroll back to the top to make the entry visible again
-        scrollView.swipeDown(times: 3)
-        Thread.sleep(forTimeInterval: 0.5)
-
-        // Wait for new events from the second visibility cycle
-        waitForComponentEventCount(VISIBLE_ENTRY_ID, minCount: 3, app: app, timeout: EXTENDED_TIMEOUT)
-
+        // Wait for the new cycle's event and confirm it carries a fresh viewId.
+        waitForComponentEventCount(VISIBLE_ENTRY_ID, minCount: countAfterCycle1 + 1,
+                                   app: app, timeout: EXTENDED_TIMEOUT)
         let secondCycleViewId = getViewId(VISIBLE_ENTRY_ID, app: app)
-
-        // The second cycle should have a different viewId
         XCTAssertNotNil(secondCycleViewId)
-        XCTAssertNotEqual(secondCycleViewId, firstCycleViewId)
+        XCTAssertNotEqual(secondCycleViewId, firstCycleViewId,
+            "Second visibility cycle should have a different viewId")
     }
 
     func testNoEventsBeforeDwellThreshold() {
-        waitForElement(app.staticTexts["Analytics Events"])
-
-        // Scroll down to bring the below-fold entry into view briefly
-        scrollToElement(testId: "content-entry-\(BELOW_FOLD_ENTRY_ID)",
-                        scrollViewId: "main-scroll-view", app: app)
-
-        // Immediately scroll back to top — the entry was visible for well under 2s
         let scrollView = app.scrollViews["main-scroll-view"]
-        scrollView.swipeDown(times: 3)
+        waitForElement(scrollView, timeout: ELEMENT_VISIBILITY_TIMEOUT)
+
+        // On a tall simulator the "below-fold" entry can render just inside the
+        // viewport at launch. Sweep it up and out with large, fast momentum-free
+        // drags: each single drag carries the entry all the way through the 0.8
+        // tracked-visibility band in a few hundred milliseconds and ends with it
+        // below that band, so it never rests on screen — between XCUITest
+        // gestures or otherwise — long enough to trip the 2000 ms dwell timer.
+        // A fling instead leaves the entry resting mid-viewport during XCUITest's
+        // post-gesture idle wait; a slow drag keeps it fully visible for seconds.
+        let fast = XCUIGestureVelocity(rawValue: 2500)
+        for _ in 0..<5 {
+            scrollByOffset(scrollViewId: "main-scroll-view", dy: 700, app: app, velocity: fast)
+        }
 
         // Wait long enough that an event WOULD have fired if tracking hadn't been cancelled
         Thread.sleep(forTimeInterval: 3.0)
@@ -194,32 +199,39 @@ final class ExtendedViewTrackingTests: XCTestCase {
     func testPauseResumeOnBackgroundForeground() {
         waitForElement(app.staticTexts["Analytics Events"])
 
-        // Establish the first visibility cycle and prove its viewId is stable
-        // across two events BEFORE backgrounding.
+        // Cycle 1: entry 0 is visible on launch. Wait for its initial event;
+        // reading the stats then scrolls it off, which ends cycle 1.
         waitForComponentEventCount(VISIBLE_ENTRY_ID, minCount: 1, app: app, timeout: EXTENDED_TIMEOUT)
         let firstCycleViewId = getViewId(VISIBLE_ENTRY_ID, app: app)
-        waitForComponentEventCount(VISIBLE_ENTRY_ID, minCount: 2, app: app, timeout: EXTENDED_TIMEOUT)
-        XCTAssertEqual(getViewId(VISIBLE_ENTRY_ID, app: app), firstCycleViewId)
+        XCTAssertNotNil(firstCycleViewId)
+        let countBeforeBackground = parseComponentCount(
+            getElementTextById("event-count-\(VISIBLE_ENTRY_ID)", app: app))
 
-        // Record the cycle's event count so the post-resume assertion can require
-        // a concrete delta rather than an arbitrary absolute threshold.
-        let preBackgroundText = getElementTextById("event-count-\(VISIBLE_ENTRY_ID)", app: app)
-        let countBeforeBackground = parseComponentCount(preBackgroundText)
+        // Start a cycle that is ACTIVE when the app backgrounds: scroll entry 0
+        // back into view and dwell past the threshold so its initial event
+        // fires. `pause()` must then emit a final event for this active cycle.
+        scrollEntryIntoView("content-entry-\(VISIBLE_ENTRY_ID)",
+                            scrollViewId: "main-scroll-view", app: app)
+        Thread.sleep(forTimeInterval: 3.0)
 
-        // Send app to background
+        // Send app to background — pause() ends the active cycle with a final event.
         XCUIDevice.shared.press(.home)
         Thread.sleep(forTimeInterval: 1.0)
 
-        // Bring app back to foreground (resume from background, no state reset)
+        // Foreground — resume() re-evaluates the stored geometry (entry 0 was
+        // visible at background time) and starts a fresh cycle.
         app.activate()
+        waitForElement(app.staticTexts["Analytics Events"])
 
-        // Wait for the stats display to be visible again
+        // Let the resumed cycle dwell past the threshold so its initial event
+        // fires, then scroll the stats into view to read the updated count.
+        Thread.sleep(forTimeInterval: 3.0)
         scrollToElement(testId: "event-count-\(VISIBLE_ENTRY_ID)",
                         scrollViewId: "main-scroll-view", app: app)
 
-        // Backgrounding must end the cycle with a final event and foregrounding
-        // must start a fresh one with its own initial event, so the count must
-        // advance by at least 2.
+        // Backgrounding ended the pre-background cycle with a final event and
+        // foregrounding started a fresh one with its own initial event, so the
+        // count must advance by at least 2.
         waitForComponentEventCount(VISIBLE_ENTRY_ID, minCount: countBeforeBackground + 2,
                                    app: app, timeout: EXTENDED_TIMEOUT)
 
@@ -232,31 +244,37 @@ final class ExtendedViewTrackingTests: XCTestCase {
     func testDurationResetOnNewCycle() {
         waitForElement(app.staticTexts["Analytics Events"])
 
-        // Wait for at least 2 events so duration accumulates beyond the dwell threshold
+        // Cycle 1: entry 0 is visible on launch. Leave it untouched well past the
+        // dwell threshold so cycle 1 accumulates more than 4000 ms of view time.
+        Thread.sleep(forTimeInterval: 6.0)
+
+        // Reading the stats scrolls entry 0 off, ending cycle 1 with a final
+        // event whose duration is the full ~6 s the entry was continuously
+        // visible — comfortably above the 4000 ms contract floor.
         waitForComponentEventCount(VISIBLE_ENTRY_ID, minCount: 2, app: app, timeout: EXTENDED_TIMEOUT)
-
         let firstCycleDuration = getViewDuration(VISIBLE_ENTRY_ID, app: app)
-
-        // Duration after 2 events should be well above the dwell threshold
         XCTAssertNotNil(firstCycleDuration)
         XCTAssertGreaterThan(firstCycleDuration!, 4000)
 
-        // Scroll entry out of view (end cycle, triggers final event)
-        let scrollView = app.scrollViews["main-scroll-view"]
-        scrollView.swipeUp(times: 2)
-        Thread.sleep(forTimeInterval: 1.0)
+        let countAfterCycle1 = parseComponentCount(
+            getElementTextById("event-count-\(VISIBLE_ENTRY_ID)", app: app))
 
-        // Scroll back to top (entry visible again, new cycle starts)
-        scrollView.swipeDown(times: 3)
-        Thread.sleep(forTimeInterval: 0.5)
+        // Start a fresh, short cycle. Scroll entry 0 back to the top, then reset
+        // its tracking cycle to a known start with a quick out-and-in jiggle —
+        // measuring from the jiggle (rather than from somewhere inside the slow
+        // scroll-in) keeps the new cycle's duration tightly bounded and well
+        // under 4000 ms, proving the accumulator reset between cycles.
+        let fastVelocity = XCUIGestureVelocity(rawValue: 2500)
+        scrollEntryIntoView("content-entry-\(VISIBLE_ENTRY_ID)",
+                            scrollViewId: "main-scroll-view", app: app)
+        scrollByOffset(scrollViewId: "main-scroll-view", dy: 260, app: app, velocity: fastVelocity)
+        scrollByOffset(scrollViewId: "main-scroll-view", dy: -260, app: app, velocity: fastVelocity)
+        Thread.sleep(forTimeInterval: 1.4)
+        waitForComponentEventCount(VISIBLE_ENTRY_ID, minCount: countAfterCycle1 + 1,
+                                   app: app, timeout: EXTENDED_TIMEOUT)
 
-        // Wait for the new cycle's initial event
-        // Cycle 1: initial(1) + periodic(2) + final(3) = 3 events
-        // New cycle initial = event 4
-        waitForComponentEventCount(VISIBLE_ENTRY_ID, minCount: 4, app: app, timeout: EXTENDED_TIMEOUT)
-
-        // The new cycle's duration should be around the dwell threshold (~2000ms),
-        // not carrying over the 4000+ms from cycle 1
+        // The new cycle's duration must have reset — it reflects only this short
+        // cycle, not the 4000+ ms accumulated in cycle 1.
         let secondCycleDuration = getViewDuration(VISIBLE_ENTRY_ID, app: app)
         XCTAssertNotNil(secondCycleDuration)
         XCTAssertGreaterThanOrEqual(secondCycleDuration!, 2000)
