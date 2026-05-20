@@ -4,9 +4,16 @@ import SwiftUI
 struct MainScreen: View {
     @EnvironmentObject var client: OptimizationClient
     @State private var entries: [[String: Any]] = []
-    @State private var isIdentified = false
     @State private var showNavigationTest = false
     @State private var showLiveUpdatesTest = false
+
+    /// Derived from the SDK profile so a rehydrated identified profile renders
+    /// the reset control after a cold start, and so the control only flips once
+    /// `identify` has actually resolved and been persisted.
+    private var isIdentified: Bool {
+        let traits = client.state.profile?["traits"] as? [String: Any]
+        return traits?["identified"] as? Bool == true
+    }
 
     var body: some View {
         if showNavigationTest {
@@ -92,7 +99,6 @@ struct MainScreen: View {
         Task {
             _ = try? await client.identify(userId: "charles", traits: ["identified": true])
         }
-        isIdentified = true
     }
 
     private func handleReset() {
@@ -100,6 +106,5 @@ struct MainScreen: View {
         Task {
             _ = try? await client.page(properties: ["url": "app"])
         }
-        isIdentified = false
     }
 }

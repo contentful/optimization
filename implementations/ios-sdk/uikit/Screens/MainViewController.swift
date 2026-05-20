@@ -6,7 +6,6 @@ final class MainViewController: UIViewController {
 
     private let client: OptimizationClient
     private var entries: [[String: Any]] = []
-    private var isIdentified = false
     private var firstAppearHandled = false
     private var cancellables = Set<AnyCancellable>()
 
@@ -47,7 +46,9 @@ final class MainViewController: UIViewController {
                 return l == r
             }
             .sink { [weak self] profile in
-                guard let self, profile != nil else { return }
+                guard let self else { return }
+                self.updateIdentifyControls(profile: profile)
+                guard profile != nil else { return }
                 Task { @MainActor in
                     let fetched = await ContentfulFetcher.fetchEntries(ids: AppConfig.entryIds)
                     self.entries = fetched
@@ -164,9 +165,6 @@ final class MainViewController: UIViewController {
         Task { @MainActor in
             _ = try? await client.identify(userId: "charles", traits: ["identified": true])
         }
-        isIdentified = true
-        identifyButton.isHidden = true
-        resetButton.isHidden = false
     }
 
     private func handleReset() {
@@ -174,9 +172,16 @@ final class MainViewController: UIViewController {
         Task { @MainActor in
             _ = try? await client.page(properties: ["url": "app"])
         }
-        isIdentified = false
-        identifyButton.isHidden = false
-        resetButton.isHidden = true
+    }
+
+    /// Derive the identify/reset control from the SDK profile so a rehydrated
+    /// identified profile shows the reset control after a cold start, and the
+    /// control only flips once `identify` has resolved and been persisted.
+    private func updateIdentifyControls(profile: [String: Any]?) {
+        let traits = profile?["traits"] as? [String: Any]
+        let identified = traits?["identified"] as? Bool == true
+        identifyButton.isHidden = identified
+        resetButton.isHidden = !identified
     }
 
     private func openNavigationTest() {
