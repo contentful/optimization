@@ -1,6 +1,7 @@
 package com.contentful.optimization.uitests.support
 
 import androidx.test.uiautomator.By
+import androidx.test.uiautomator.StaleObjectException
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 
@@ -43,7 +44,11 @@ fun UiDevice.scrollByOffset(
     scrollViewId: String = "main-scroll-view",
     fast: Boolean = false,
 ) {
-    val bounds = findObject(By.res(scrollViewId))?.visibleBounds ?: return
+    val bounds = try {
+        findObject(By.res(scrollViewId))?.visibleBounds
+    } catch (_: StaleObjectException) {
+        null
+    } ?: return
     val centerX = bounds.centerX()
     // Anchor near the bottom when revealing lower content, near the top when
     // revealing upper content, so the gesture endpoint stays on screen.

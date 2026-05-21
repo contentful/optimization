@@ -273,8 +273,13 @@ object TestHelpers {
         maxSwipes: Int = 12,
     ) {
         repeat(maxSwipes) {
-            val el = findElement(device, testId)
-            if (el != null && el.visibleBounds.height() > 0) return
+            try {
+                val el = findElement(device, testId)
+                if (el != null && el.visibleBounds.height() > 0) return
+            } catch (_: StaleObjectException) {
+                // Handle went stale mid-recomposition; re-query next loop, don't scroll.
+                return@repeat
+            }
             device.scrollByOffset(dy = 700, scrollViewId = scrollViewId)
         }
     }
@@ -291,13 +296,18 @@ object TestHelpers {
         maxSteps: Int = 16,
     ) {
         repeat(maxSteps) {
-            val el = findElement(device, testId)
-            val scrollView = device.findObject(By.res(scrollViewId))?.visibleBounds
-            if (el != null && scrollView != null) {
-                val b = el.visibleBounds
-                if (b.height() > 0 && b.top > scrollView.top + 8 && b.bottom < scrollView.bottom - 8) {
-                    return
+            try {
+                val el = findElement(device, testId)
+                val scrollView = device.findObject(By.res(scrollViewId))?.visibleBounds
+                if (el != null && scrollView != null) {
+                    val b = el.visibleBounds
+                    if (b.height() > 0 && b.top > scrollView.top + 8 && b.bottom < scrollView.bottom - 8) {
+                        return
+                    }
                 }
+            } catch (_: StaleObjectException) {
+                // Handle went stale mid-recomposition; re-query next loop, don't scroll.
+                return@repeat
             }
             device.scrollByOffset(dy = -260, scrollViewId = scrollViewId)
         }
