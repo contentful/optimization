@@ -266,14 +266,14 @@ class ExtendedViewTrackingTests {
             TestHelpers.getElementTextById(device, "event-count-$VISIBLE_ENTRY_ID"),
         )
 
-        // Start a fresh, short cycle: scroll entry 0 back to the top, then reset
-        // its cycle with a momentum-free out-and-in jiggle. The jiggle is slow
-        // enough that the SDK's visibility callbacks sample the entry leaving and
-        // re-entering the tracked band, so cycle 1 ends and a fresh cycle starts.
-        TestHelpers.scrollEntryIntoView(device, "content-entry-$VISIBLE_ENTRY_ID", "main-scroll-view")
-        device.scrollByOffset(dy = 260)
-        device.scrollByOffset(dy = -260)
-        Thread.sleep(1400)
+        // Start a fresh cycle: scroll entry 0 fully out — which reliably ends
+        // cycle 1 — then bring it back so a brand-new cycle starts. A full
+        // scroll-out crosses the visibility threshold dependably; a tiny jiggle
+        // does not. Then dwell just past the threshold so the new cycle emits.
+        device.swipeUpMultiple(2)
+        Thread.sleep(500)
+        device.swipeDownMultiple(2)
+        Thread.sleep(2400)
         TestHelpers.waitForComponentEventCount(
             device, VISIBLE_ENTRY_ID, countAfterCycle1 + 1, timeout = TestHelpers.EXTENDED_TIMEOUT,
         )
