@@ -177,6 +177,22 @@ class OptimizationClient(private val applicationContext: Context) {
         }
     }
 
+    /** Resolve a merge-tag entry's display value against the current profile. */
+    suspend fun getMergeTagValue(mergeTagEntry: Map<String, Any>): String? {
+        if (!_isInitialized.value) return null
+        return try {
+            val result = bridge.callSync("getMergeTagValue", JSONObject(mergeTagEntry).toString())
+            if (result == null || result == "null" || result == "undefined") null else result
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /** Subscribe to a feature flag by name. Emits a flag-view `component` event. */
+    fun subscribeToFlag(name: String) {
+        bridgeCallSyncWhenInitialized("flag", "'${escapeForJS(name)}'")
+    }
+
     suspend fun getProfile(): Map<String, Any>? {
         val result = bridge.callSync("getProfile")
         if (result == null || result == "null" || result == "undefined") return null
