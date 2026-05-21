@@ -34,9 +34,9 @@ fun MainScreen(simulateOffline: Boolean = false) {
     val scope = rememberCoroutineScope()
 
     var entries by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
-    var isIdentified by remember { mutableStateOf(false) }
     var showNavigationTest by remember { mutableStateOf(false) }
     var showLiveUpdatesTest by remember { mutableStateOf(false) }
+    var flagSubscribed by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         client.consent(true)
@@ -52,9 +52,24 @@ fun MainScreen(simulateOffline: Boolean = false) {
         }
     }
 
+    // Derive identification from the SDK profile rather than local Compose state
+    // so the reset control renders after a cold-start relaunch that rehydrates a
+    // persisted identified profile. Matches the iOS app's computed `isIdentified`.
+    val isIdentified = remember(state.profile) {
+        @Suppress("UNCHECKED_CAST")
+        val traits = state.profile?.get("traits") as? Map<String, Any>
+        traits?.get("identified") == true
+    }
+
     LaunchedEffect(profileKey) {
         if (state.profile != null) {
             entries = ContentfulFetcher.fetchEntries(AppConfig.entryIds)
+            // Subscribe to the `boolean` flag once a profile is available so a
+            // flag-view `component` event is emitted. Mirrors the iOS app.
+            if (!flagSubscribed) {
+                flagSubscribed = true
+                client.subscribeToFlag("boolean")
+            }
         }
     }
 
@@ -68,7 +83,6 @@ fun MainScreen(simulateOffline: Boolean = false) {
                 if (!isIdentified) {
                     Button(
                         onClick = {
-                            isIdentified = true
                             scope.launch {
                                 try {
                                     client.identify(
@@ -84,7 +98,6 @@ fun MainScreen(simulateOffline: Boolean = false) {
                     Button(
                         onClick = {
                             client.reset()
-                            isIdentified = false
                             scope.launch {
                                 try { client.page(mapOf("url" to "app")) } catch (_: Exception) {}
                             }
