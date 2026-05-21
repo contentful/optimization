@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.contentful.optimization.app.AppConfig
 import com.contentful.optimization.app.ContentfulFetcher
+import com.contentful.optimization.app.EventStore
 import com.contentful.optimization.app.components.AnalyticsEventDisplay
 import com.contentful.optimization.app.components.ContentEntryView
 import com.contentful.optimization.app.components.NestedContentEntryView
@@ -39,6 +40,9 @@ fun MainScreen(simulateOffline: Boolean = false) {
     var flagSubscribed by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
+        // Subscribe the event store before any bridge call so the synchronous
+        // flag-view event emitted by subscribeToFlag is not missed.
+        EventStore.subscribe(client.events, scope)
         client.consent(true)
         try { client.page(mapOf("url" to "app")) } catch (_: Exception) {}
         if (simulateOffline) {
