@@ -179,6 +179,10 @@ class ExtendedViewTrackingTests {
         // Scroll back to the top so the Navigation Test button is reachable.
         device.swipeDownMultiple(3)
 
+        // Dwell so the now-visible entry has an active, past-threshold tracking
+        // cycle — navigating away must then emit a final event for it.
+        Thread.sleep(2600)
+
         // Navigate away: this unmounts all tracked entries, triggering cleanup.
         TestHelpers.waitAndTap(device, By.res("navigation-test-button"))
         TestHelpers.waitForElement(device, By.res("close-navigation-test-button"), TestHelpers.ELEMENT_TIMEOUT)

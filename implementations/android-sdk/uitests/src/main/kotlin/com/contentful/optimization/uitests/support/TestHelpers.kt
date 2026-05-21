@@ -249,12 +249,14 @@ object TestHelpers {
     }
 
     fun getViewDuration(device: UiDevice, componentId: String): Long? {
+        scrollToElement(device, "event-duration-$componentId", "main-scroll-view")
         val text = getElementTextById(device, "event-duration-$componentId")
         val match = Regex("""Duration:\s*(\d+)""").find(text) ?: return null
         return match.groupValues[1].toLongOrNull()
     }
 
     fun getViewId(device: UiDevice, componentId: String): String? {
+        scrollToElement(device, "event-view-id-$componentId", "main-scroll-view")
         val text = getElementTextById(device, "event-view-id-$componentId")
         val match = Regex("""ViewId:\s*(.+)""").find(text) ?: return null
         val id = match.groupValues[1].trim()

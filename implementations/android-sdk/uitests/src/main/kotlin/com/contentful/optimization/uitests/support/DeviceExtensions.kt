@@ -10,6 +10,11 @@ import androidx.test.uiautomator.Until
 // dwell-sensitive view-tracking assertions.
 private const val MOMENTUM_FREE_STEPS = 160
 
+// A quick — but not instant — swipe (~300ms). Fast enough that a transiting
+// entry does not dwell, slow enough that the SDK's per-frame visibility
+// callbacks still sample the entry crossing the tracked-visibility band.
+private const val FAST_SWIPE_STEPS = 60
+
 // Quick bulk swipes (mirrors the iOS `swipeUp(times:)`/`swipeDown(times:)`): used
 // to move content a lot, fast, so a transiting entry never rests long enough to
 // trip the dwell timer. Momentum-free precision is `scrollByOffset`'s job.
@@ -48,7 +53,7 @@ fun UiDevice.scrollByOffset(
     }
     val endY = (anchorY - dy).coerceIn(bounds.top + 5, bounds.bottom - 5)
     if (endY == anchorY) return
-    swipe(centerX, anchorY, centerX, endY, if (fast) 12 else MOMENTUM_FREE_STEPS)
+    swipe(centerX, anchorY, centerX, endY, if (fast) FAST_SWIPE_STEPS else MOMENTUM_FREE_STEPS)
 }
 
 fun clearProfileState(device: UiDevice, requireFreshAppInstance: Boolean = false) {
