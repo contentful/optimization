@@ -11,6 +11,11 @@ android {
         minSdk = 24
         targetSdk = 35
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Run this UI Automator suite in its own instrumentation process rather
+        // than inside the app process. The tests force-stop and relaunch the app
+        // (AppLauncher.relaunchClean / clearProfileState); without self-
+        // instrumenting, `am force-stop` would SIGKILL the test runner itself.
+        experimentalProperties["android.experimental.self-instrumenting"] = true
     }
 
     compileOptions {
