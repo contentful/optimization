@@ -280,7 +280,7 @@ object TestHelpers {
                 // Handle went stale mid-recomposition; re-query next loop, don't scroll.
                 return@repeat
             }
-            device.scrollByOffset(dy = 700, scrollViewId = scrollViewId)
+            device.scrollByOffset(dy = 700, scrollViewId = scrollViewId, fast = true)
         }
     }
 

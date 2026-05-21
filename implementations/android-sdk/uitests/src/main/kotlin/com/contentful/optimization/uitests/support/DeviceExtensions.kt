@@ -10,26 +10,15 @@ import androidx.test.uiautomator.Until
 // dwell-sensitive view-tracking assertions.
 private const val MOMENTUM_FREE_STEPS = 160
 
+// Quick bulk swipes (mirrors the iOS `swipeUp(times:)`/`swipeDown(times:)`): used
+// to move content a lot, fast, so a transiting entry never rests long enough to
+// trip the dwell timer. Momentum-free precision is `scrollByOffset`'s job.
 fun UiDevice.swipeUpMultiple(times: Int, scrollViewId: String = "main-scroll-view") {
-    repeat(times) {
-        val bounds = findObject(By.res(scrollViewId))?.visibleBounds
-        val centerX = bounds?.centerX() ?: (displayWidth / 2)
-        val startY = bounds?.let { it.top + (it.height() * 3 / 4) } ?: (displayHeight * 3 / 4)
-        val endY = bounds?.let { it.top + (it.height() / 4) } ?: (displayHeight / 4)
-        swipe(centerX, startY, centerX, endY, MOMENTUM_FREE_STEPS)
-        Thread.sleep(300)
-    }
+    repeat(times) { scrollByOffset(dy = 1100, scrollViewId = scrollViewId, fast = true) }
 }
 
 fun UiDevice.swipeDownMultiple(times: Int, scrollViewId: String = "main-scroll-view") {
-    repeat(times) {
-        val bounds = findObject(By.res(scrollViewId))?.visibleBounds
-        val centerX = bounds?.centerX() ?: (displayWidth / 2)
-        val startY = bounds?.let { it.top + (it.height() / 4) } ?: (displayHeight / 4)
-        val endY = bounds?.let { it.top + (it.height() * 3 / 4) } ?: (displayHeight * 3 / 4)
-        swipe(centerX, startY, centerX, endY, MOMENTUM_FREE_STEPS)
-        Thread.sleep(300)
-    }
+    repeat(times) { scrollByOffset(dy = -1100, scrollViewId = scrollViewId, fast = true) }
 }
 
 /**
