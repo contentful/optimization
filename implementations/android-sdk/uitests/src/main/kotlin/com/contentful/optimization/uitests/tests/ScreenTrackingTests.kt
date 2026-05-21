@@ -23,7 +23,7 @@ class ScreenTrackingTests {
 
     private fun navigateToTestScreen() {
         TestHelpers.waitAndTap(device, By.res("navigation-test-button"), TestHelpers.EXTENDED_TIMEOUT)
-        TestHelpers.waitForElement(device, By.res("close-navigation-test-button"), TestHelpers.EXTENDED_TIMEOUT)
+        TestHelpers.waitForElement(device, By.res("go-to-view-one-button"), TestHelpers.EXTENDED_TIMEOUT)
     }
 
     @Test
@@ -31,8 +31,8 @@ class ScreenTrackingTests {
         navigateToTestScreen()
         TestHelpers.waitAndTap(device, By.res("go-to-view-one-button"))
 
-        TestHelpers.waitForElement(device, By.res("navigation-view-test-one"))
-        Thread.sleep(1000)
+        TestHelpers.waitForElement(device, By.res("navigation-view-test-one"), TestHelpers.EXTENDED_TIMEOUT)
+        TestHelpers.waitForElement(device, By.res("screen-event-log"), TestHelpers.EXTENDED_TIMEOUT)
         TestHelpers.waitForTextEquals(
             device, "screen-event-log", "NavigationHome,NavigationViewOne",
             timeout = TestHelpers.EXTENDED_TIMEOUT,
@@ -45,11 +45,10 @@ class ScreenTrackingTests {
         TestHelpers.waitAndTap(device, By.res("go-to-view-one-button"))
 
         TestHelpers.waitForElement(device, By.res("navigation-view-test-one"), TestHelpers.EXTENDED_TIMEOUT)
-        Thread.sleep(500)
         TestHelpers.waitAndTap(device, By.res("go-to-view-two-button"), TestHelpers.EXTENDED_TIMEOUT)
 
         TestHelpers.waitForElement(device, By.res("navigation-view-test-two"), TestHelpers.EXTENDED_TIMEOUT)
-        Thread.sleep(1000)
+        TestHelpers.waitForElement(device, By.res("screen-event-log"), TestHelpers.EXTENDED_TIMEOUT)
 
         val logText = TestHelpers.waitForElementText(
             device, "screen-event-log", timeout = TestHelpers.EXTENDED_TIMEOUT,
@@ -71,16 +70,14 @@ class ScreenTrackingTests {
         TestHelpers.waitAndTap(device, By.res("go-to-view-one-button"))
 
         TestHelpers.waitForElement(device, By.res("navigation-view-test-one"), TestHelpers.EXTENDED_TIMEOUT)
-        Thread.sleep(500)
         TestHelpers.waitAndTap(device, By.res("go-to-view-two-button"), TestHelpers.EXTENDED_TIMEOUT)
 
         TestHelpers.waitForElement(device, By.res("navigation-view-test-two"), TestHelpers.EXTENDED_TIMEOUT)
-        Thread.sleep(500)
 
         device.pressBack()
 
         TestHelpers.waitForElement(device, By.res("navigation-view-test-one"), TestHelpers.EXTENDED_TIMEOUT)
-        Thread.sleep(1000)
+        TestHelpers.waitForElement(device, By.res("screen-event-log"), TestHelpers.EXTENDED_TIMEOUT)
         TestHelpers.waitForTextEquals(
             device,
             "screen-event-log",

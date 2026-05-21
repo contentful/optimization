@@ -29,23 +29,45 @@ class PreviewPanelOverridesTests {
         // variant-0 / deactivating the audience renders BASELINE_ENTRY_ID.
         const val VARIANT_ENTRY_ID = "5a8ONfBdanJtlJ39WWnH1w"
         const val BASELINE_ENTRY_ID = "5i4SdJXw9oDEY0vgO7CwF4"
+        // Scenario 1: the Mobile Browser audience the identified user does NOT
+        // qualify for. Activating it surfaces the variant content for the
+        // xFwgG3oNaOcjzWiGe4vXo entry.
+        const val UNQUALIFIED_AUDIENCE_ID = "3MRuZPQ5EdwDqzUDRgOo7c"
+        const val MOBILE_VARIANT_LABEL =
+            "This is a variant content entry for visitors using a mobile browser. [Entry: xFwgG3oNaOcjzWiGe4vXo]"
     }
 
     @Before
     fun setUp() {
         device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
-        AppLauncher.launchApp(device)
+        // Relaunch the app as a new instance with fresh storage so prior modal
+        // and override state cannot leak in.
+        AppLauncher.relaunchClean(device)
         clearProfileState(device)
-        identifyAndWaitForVariant()
+        identifyAndRelaunch()
     }
 
-    private fun identifyAndWaitForVariant() {
+    // MARK: - Local helpers
+
+    /**
+     * Identifies the visitor, then relaunches so the identified-visitor mock
+     * payload is re-fetched on a fresh app start.
+     *
+     * Mirrors the pseudocode `identifyAndRelaunch` helper and the iOS
+     * `identifyAndRelaunch()` private function exactly.
+     */
+    private fun identifyAndRelaunch() {
         TestHelpers.waitAndTap(device, By.res("identify-button"))
         TestHelpers.waitForElement(device, By.res("reset-button"), TestHelpers.EXTENDED_TIMEOUT)
+        // Terminate + relaunch so the identified-visitor mock payload is
+        // re-fetched on a fresh start. The `reset` extra is NOT set here so
+        // the identified profile just persisted is preserved.
+        AppLauncher.forceStop(device)
+        AppLauncher.launchApp(device)
         // Identified-visitor profile should render the variant entry by default.
         // Asserting this here turns a previously-silent setup misalignment into
         // a clear precondition failure if the mock data ever drifts.
-        assertEntryVisible(VARIANT_ENTRY_ID, "Expected variant entry to render after identify")
+        assertEntryVisible(VARIANT_ENTRY_ID, "entry-text-$VARIANT_ENTRY_ID missing — identified-visitor variant never rendered")
     }
 
     private fun openPanel() {
@@ -170,6 +192,40 @@ class PreviewPanelOverridesTests {
         Assert.fail("$message (entry-text-$entryId not found; visible entry-text-* tags: $visibleEntryTags)")
     }
 
+    // MARK: - Scenarios
+
+    /**
+     * Scenario 1: turning on an audience that the identified visitor does not
+     * qualify for activates an experience whose variant content then renders
+     * on screen.
+     */
+    @Test
+    fun testScenario1ActivatingUnqualifiedAudienceRendersItsVariant() {
+        openPanel()
+        waitForDefinitionsLoaded()
+        scrollPanelToElement("audience-toggle-$UNQUALIFIED_AUDIENCE_ID-on")
+        // singleClick: the toggle is a set-state radio; singleClick avoids the
+        // coordinate-click fallback landing on a different row after re-sort.
+        TestHelpers.waitAndTap(device, By.desc("audience-toggle-$UNQUALIFIED_AUDIENCE_ID-on"), singleClick = true)
+        closePanel()
+
+        // The variant content for the Mobile Browser experience renders using
+        // the *original* baseline entry id (xFwgG3oNaOcjzWiGe4vXo) in the label.
+        val deadline = System.currentTimeMillis() + TestHelpers.EXTENDED_TIMEOUT
+        while (System.currentTimeMillis() < deadline) {
+            if (device.findObject(By.desc(MOBILE_VARIANT_LABEL)) != null) return
+            Thread.sleep(150)
+        }
+        Assert.fail(
+            "Expected mobile variant content after activating Mobile Browser audience " +
+                "(label: $MOBILE_VARIANT_LABEL)",
+        )
+    }
+
+    /**
+     * Scenario 2: turning off an audience the identified visitor does qualify
+     * for forces the experience to fall back to its baseline entry.
+     */
     @Test
     fun testScenario2DeactivatingQualifiedAudienceRendersBaseline() {
         openPanel()
@@ -185,6 +241,11 @@ class PreviewPanelOverridesTests {
         assertEntryVisible(BASELINE_ENTRY_ID, "Expected baseline entry after deactivating audience")
     }
 
+    /**
+     * Scenario 3: after deactivating a qualified audience, tapping the
+     * audience's default toggle removes the override and restores the original
+     * variant resolution.
+     */
     @Test
     fun testScenario3ResettingAudienceOverrideRestoresVariant() {
         openPanel()
@@ -197,6 +258,11 @@ class PreviewPanelOverridesTests {
         assertEntryVisible(VARIANT_ENTRY_ID, "Expected variant entry after resetting audience override")
     }
 
+    /**
+     * Scenario 4: explicitly picking the index-0 (baseline) variant for an
+     * experience forces that experience to render its baseline entry, even
+     * when the visitor qualifies for a non-baseline variant.
+     */
     @Test
     fun testScenario4SettingVariantOverrideToZeroRendersBaseline() {
         openPanel()
@@ -206,16 +272,105 @@ class PreviewPanelOverridesTests {
         assertEntryVisible(BASELINE_ENTRY_ID, "Expected baseline after variant-0 override")
     }
 
+    /**
+     * Scenario 5: after forcing a variant override, tapping the per-experience
+     * reset control removes only that override and restores the original
+     * variant resolution. On Android the `reset-variant-<exp>` button invokes
+     * the reset directly with no confirmation dialog (same as iOS).
+     */
+    @Test
+    fun testScenario5ResettingSingleVariantOverrideRestoresVariant() {
+        openPanel()
+        expandTargetAudienceAndTapVariant()
+
+        val resetDesc = "reset-variant-$EXPERIENCE_ID"
+        scrollPanelToElement(resetDesc)
+        TestHelpers.waitAndTap(device, By.desc(resetDesc))
+        closePanel()
+
+        assertEntryVisible(VARIANT_ENTRY_ID, "Expected variant entry after resetting single variant override")
+    }
+
+    /**
+     * Scenario 6: after forcing a variant override, tapping the panel's
+     * reset-all control and confirming via the native AlertDialog clears every
+     * override and restores the original variant resolution. On Android the
+     * confirmation is a Material3 AlertDialog — confirmed by tapping the
+     * button with text "Reset" (no inline `reset-all-confirm` view as in RN).
+     */
     @Test
     fun testScenario6ResetAllRestoresVariantContent() {
         openPanel()
         expandTargetAudienceAndTapVariant()
 
+        scrollPanelToElement("reset-all-overrides")
         TestHelpers.waitAndTap(device, By.desc("reset-all-overrides"))
+        // Confirm the native AlertDialog.
         TestHelpers.waitAndTap(device, By.text("Reset"))
 
         closePanel()
 
         assertEntryVisible(VARIANT_ENTRY_ID, "Expected variant entry after reset-all")
+    }
+
+    /**
+     * Scenario 7: deactivating an audience and then triggering the in-panel
+     * refresh (which re-hits the experience API) keeps the audience override
+     * in place so the experience still resolves to its baseline.
+     */
+    @Test
+    fun testScenario7OverrideSurvivesAPIRefresh() {
+        openPanel()
+        waitForDefinitionsLoaded()
+        scrollPanelToElement("audience-toggle-$AUDIENCE_ID-off")
+        TestHelpers.waitAndTap(device, By.desc("audience-toggle-$AUDIENCE_ID-off"), singleClick = true)
+
+        scrollPanelToElement("preview-refresh-button")
+        TestHelpers.waitAndTap(device, By.desc("preview-refresh-button"))
+        closePanel()
+
+        assertEntryVisible(BASELINE_ENTRY_ID, "Expected baseline still rendering after API refresh")
+    }
+
+    /**
+     * Scenario 8: a cold relaunch with cleared storage discards all overrides
+     * — the variant renders again and the overrides section reports that none
+     * remain.
+     */
+    @Test
+    fun testScenario8DestroyRemountClearsOverrides() {
+        openPanel()
+        waitForDefinitionsLoaded()
+        scrollPanelToElement("audience-toggle-$AUDIENCE_ID-off")
+        TestHelpers.waitAndTap(device, By.desc("audience-toggle-$AUDIENCE_ID-off"), singleClick = true)
+        closePanel()
+
+        assertEntryVisible(BASELINE_ENTRY_ID, "Expected baseline after deactivating audience (pre-relaunch)")
+
+        // Cold relaunch with fresh storage, then re-identify and rehydrate.
+        AppLauncher.relaunchClean(device)
+        identifyAndRelaunch()
+
+        // Override must be gone — variant renders again.
+        assertEntryVisible(VARIANT_ENTRY_ID, "Expected variant entry after destroy/remount cleared overrides")
+
+        // The Overrides section should show its empty state. The empty-state
+        // text sits below the fold so the panel content must be scrolled to
+        // reveal it. On Android, reset-all-overrides lives in the fixed footer
+        // (outside preview-panel-list), so scrollPanelToElement exhausts its
+        // swipe budget rather than returning early — this is expected. After
+        // the swipes the Overrides section is in or near the viewport. Use a
+        // timed wait so the accessibility tree can settle after the final swipe
+        // before asserting, mirroring the defensive pattern used by
+        // assertEntryVisible throughout this suite.
+        openPanel()
+        waitForDefinitionsLoaded()
+        scrollPanelToElement("reset-all-overrides")
+        val found = device.wait(Until.hasObject(By.text("No active overrides")), TestHelpers.EXTENDED_TIMEOUT)
+        Assert.assertTrue(
+            "Expected 'No active overrides' empty-state text in Overrides section",
+            found,
+        )
+        closePanel()
     }
 }

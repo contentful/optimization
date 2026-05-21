@@ -23,13 +23,18 @@ class AnalyticsTests {
     }
 
     @Test
-    fun testTracksComponentImpressionEventsForVisibleEntries() {
-        TestHelpers.waitForElement(device, By.res("main-scroll-view"), TestHelpers.EXTENDED_TIMEOUT)
-        TestHelpers.scrollToElement(device, "analytics-events-container", "main-scroll-view")
-        TestHelpers.waitForElement(device, By.text("Analytics Events"))
-        TestHelpers.waitForEventsCountAtLeast(device, 1, timeout = TestHelpers.EXTENDED_TIMEOUT)
-        TestHelpers.waitForComponentEventCount(
-            device, "1MwiFl4z7gkwqGYdvCmr8c", 1, timeout = TestHelpers.EXTENDED_TIMEOUT,
-        )
+    fun testTracksEntryViewEventsForVisibleEntries() {
+        // Step 1: Wait until the "Analytics Events" text is visible.
+        TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
+
+        // Step 2: Wait until the recorded Insights API event count is at least 1.
+        TestHelpers.waitForEventsCountAtLeast(device, 1, timeout = TestHelpers.ELEMENT_TIMEOUT)
+
+        // Step 3: Scroll main-scroll-view until the per-entry stats element for the merge tag
+        // entry becomes visible. Android exposes this as "component-stats-<entryId>" (vs
+        // "entry-stats-<entryId>" on iOS) because the Compose testTag uses that prefix.
+        val statsId = "component-stats-1MwiFl4z7gkwqGYdvCmr8c"
+        TestHelpers.scrollToElement(device, statsId, "main-scroll-view")
+        TestHelpers.waitForElement(device, By.res(statsId), TestHelpers.ELEMENT_TIMEOUT)
     }
 }

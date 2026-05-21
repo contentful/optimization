@@ -21,8 +21,14 @@ class FlagViewTrackingTests {
     }
 
     @Test
-    fun testEmitsComponentEventsForTrackedEntries() {
-        TestHelpers.waitForElement(device, By.res("main-scroll-view"), TestHelpers.EXTENDED_TIMEOUT)
-        TestHelpers.waitForEventsCountAtLeast(device, 1, timeout = TestHelpers.EXTENDED_TIMEOUT)
+    fun testEmitsFlagViewEventsForSubscribedBooleanFlag() {
+        // 1. Wait until the "Analytics Events" text is visible.
+        TestHelpers.scrollToElement(device, "analytics-events-container", "main-scroll-view")
+        TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
+
+        // 2. Wait until flag `boolean` has at least 1 view event.
+        TestHelpers.waitForComponentEventCount(
+            device, "boolean", 1, timeout = TestHelpers.ELEMENT_TIMEOUT,
+        )
     }
 }

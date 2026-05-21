@@ -22,26 +22,39 @@ class TapTrackingTests {
         clearProfileState(device)
     }
 
-    private fun tapEntryAndWaitForClickEvent(entryId: String) {
-        TestHelpers.waitForElement(device, By.res("main-scroll-view"), TestHelpers.EXTENDED_TIMEOUT)
-
-        val entry = TestHelpers.waitForElement(device, By.desc("content-entry-$entryId"))
-        val bounds = entry.visibleBounds
-        device.click(bounds.centerX(), bounds.centerY())
-        Thread.sleep(2000)
-
-        val testId = "event-component_click-$entryId"
-        TestHelpers.scrollToElement(device, testId, "main-scroll-view")
-        TestHelpers.waitForElement(device, By.res(testId), TestHelpers.EXTENDED_TIMEOUT)
-    }
-
     @Test
     fun testEmitsComponentClickWhenTappingContentEntry() {
-        tapEntryAndWaitForClickEvent("1MwiFl4z7gkwqGYdvCmr8c")
+        // Step 1: wait for "Analytics Events" text to be visible
+        TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
+
+        // Step 2: tap the content entry
+        val entry = TestHelpers.waitForElement(device, By.desc("content-entry-1MwiFl4z7gkwqGYdvCmr8c"))
+        TestHelpers.tapElement(device, entry)
+
+        // Step 3: wait until at least 1 event has been tracked
+        TestHelpers.waitForEventsCountAtLeast(device, 1)
+
+        // Step 4: scroll to and assert the component_click event element is visible
+        val testId = "event-component_click-1MwiFl4z7gkwqGYdvCmr8c"
+        TestHelpers.scrollToElement(device, testId, "main-scroll-view")
+        TestHelpers.waitForElement(device, By.res(testId), TestHelpers.ELEMENT_TIMEOUT)
     }
 
     @Test
     fun testEmitsComponentClickForDifferentEntry() {
-        tapEntryAndWaitForClickEvent("2Z2WLOx07InSewC3LUB3eX")
+        // Step 1: wait for "Analytics Events" text to be visible
+        TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
+
+        // Step 2: tap the content entry
+        val entry = TestHelpers.waitForElement(device, By.desc("content-entry-2Z2WLOx07InSewC3LUB3eX"))
+        TestHelpers.tapElement(device, entry)
+
+        // Step 3: wait until at least 1 event has been tracked
+        TestHelpers.waitForEventsCountAtLeast(device, 1)
+
+        // Step 4: scroll to and assert the component_click event element is visible
+        val testId = "event-component_click-2Z2WLOx07InSewC3LUB3eX"
+        TestHelpers.scrollToElement(device, testId, "main-scroll-view")
+        TestHelpers.waitForElement(device, By.res(testId), TestHelpers.ELEMENT_TIMEOUT)
     }
 }

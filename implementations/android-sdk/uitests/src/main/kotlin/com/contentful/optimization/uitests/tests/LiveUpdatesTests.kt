@@ -13,6 +13,12 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
+/**
+ * `*-entry-id` Text nodes render "Entry: <sys.id>" where sys.id is alphanumeric.
+ * Matching this pattern proves the SDK resolved a real entry rather than an empty/default state.
+ */
+private val ENTRY_ID_TEXT_PATTERN = Regex("""^Entry: [a-zA-Z0-9]+$""")
+
 @RunWith(AndroidJUnit4::class)
 class LiveUpdatesTests {
     private lateinit var device: UiDevice
@@ -24,6 +30,7 @@ class LiveUpdatesTests {
         clearProfileState(device)
 
         TestHelpers.waitAndTap(device, By.res("live-updates-test-button"))
+        // Android app exposes OptimizedEntry via contentDescription ("*-personalization")
         TestHelpers.waitForElement(device, By.desc("default-personalization"), TestHelpers.EXTENDED_TIMEOUT)
     }
 
@@ -38,15 +45,32 @@ class LiveUpdatesTests {
         )
     }
 
+    // -------------------------------------------------------------------------
+    // Default behavior (locked on first value)
+    // -------------------------------------------------------------------------
+
     @Test
-    fun testDefaultDoesNotUpdateOnIdentify() {
+    fun testDefaultDoesNotUpdateOnIdentifyGlobalLiveUpdatesFalse() {
         TestHelpers.waitForElement(device, By.res("default-entry-id"))
-        val initialText = TestHelpers.getElementTextById(device, "default-entry-id")
+        TestHelpers.waitForElement(device, By.res("live-entry-id"))
+
+        val initialDefaultEntryId = TestHelpers.getElementTextById(device, "default-entry-id")
+        val initialLiveEntryId = TestHelpers.getElementTextById(device, "live-entry-id")
 
         TestHelpers.waitAndTap(device, By.res("live-updates-identify-button"))
         TestHelpers.waitForTextEquals(device, "identified-status", "Yes")
-        TestHelpers.waitForTextEquals(device, "default-entry-id", initialText)
+
+        // The live-entry-id section has liveUpdates=true and MUST re-resolve — this is
+        // the live-reference that proves the SDK is actually swapping variants.
+        TestHelpers.waitForElementText(device, "live-entry-id") { it != initialLiveEntryId }
+
+        // Default section inherits the global setting (off), so the lock must hold.
+        TestHelpers.waitForTextEquals(device, "default-entry-id", initialDefaultEntryId)
     }
+
+    // -------------------------------------------------------------------------
+    // Global liveUpdates enabled
+    // -------------------------------------------------------------------------
 
     @Test
     fun testGlobalLiveUpdatesEnablesDefaultComponents() {
@@ -54,13 +78,13 @@ class LiveUpdatesTests {
         TestHelpers.waitForTextEquals(device, "global-live-updates-status", "ON")
 
         TestHelpers.waitForElement(device, By.res("default-entry-id"))
+        val initialDefaultEntryId = TestHelpers.getElementTextById(device, "default-entry-id")
+
         TestHelpers.waitAndTap(device, By.res("live-updates-identify-button"))
         TestHelpers.waitForTextEquals(device, "identified-status", "Yes")
 
-        Assert.assertNotNull(
-            "default-entry-id should exist",
-            device.findObject(By.res("default-entry-id")),
-        )
+        // Global=ON means the default section (no per-component prop) MUST re-resolve.
+        TestHelpers.waitForElementText(device, "default-entry-id") { it != initialDefaultEntryId }
     }
 
     @Test
@@ -69,26 +93,43 @@ class LiveUpdatesTests {
         TestHelpers.waitForTextEquals(device, "global-live-updates-status", "ON")
 
         TestHelpers.waitForElement(device, By.res("locked-entry-id"))
-        val initialText = TestHelpers.getElementTextById(device, "locked-entry-id")
+        TestHelpers.waitForElement(device, By.res("default-entry-id"))
+
+        val initialLockedEntryId = TestHelpers.getElementTextById(device, "locked-entry-id")
+        val initialDefaultEntryId = TestHelpers.getElementTextById(device, "default-entry-id")
 
         TestHelpers.waitAndTap(device, By.res("live-updates-identify-button"))
         TestHelpers.waitForTextEquals(device, "identified-status", "Yes")
-        TestHelpers.waitForTextEquals(device, "locked-entry-id", initialText)
+
+        // With global=ON the default section (no per-component prop) MUST re-resolve —
+        // the live-reference that proves the SDK is actually swapping variants.
+        TestHelpers.waitForElementText(device, "default-entry-id") { it != initialDefaultEntryId }
+
+        // Locked section has liveUpdates=false, so it must stay at its captured id.
+        TestHelpers.waitForTextEquals(device, "locked-entry-id", initialLockedEntryId)
     }
+
+    // -------------------------------------------------------------------------
+    // Per-component liveUpdates=true
+    // -------------------------------------------------------------------------
 
     @Test
     fun testLiveComponentUpdatesRegardlessOfGlobal() {
         TestHelpers.waitForTextEquals(device, "global-live-updates-status", "OFF")
         TestHelpers.waitForElement(device, By.res("live-entry-id"))
 
+        val initialLiveEntryId = TestHelpers.getElementTextById(device, "live-entry-id")
+
         TestHelpers.waitAndTap(device, By.res("live-updates-identify-button"))
         TestHelpers.waitForTextEquals(device, "identified-status", "Yes")
 
-        Assert.assertNotNull(
-            "live-entry-id should exist",
-            device.findObject(By.res("live-entry-id")),
-        )
+        // Per-component liveUpdates=true must override the global=OFF setting.
+        TestHelpers.waitForElementText(device, "live-entry-id") { it != initialLiveEntryId }
     }
+
+    // -------------------------------------------------------------------------
+    // Per-component liveUpdates=false
+    // -------------------------------------------------------------------------
 
     @Test
     fun testLockedComponentDoesNotUpdateEvenWhenGlobalOn() {
@@ -96,12 +137,24 @@ class LiveUpdatesTests {
         TestHelpers.waitForTextEquals(device, "global-live-updates-status", "ON")
 
         TestHelpers.waitForElement(device, By.res("locked-entry-id"))
-        val initialText = TestHelpers.getElementTextById(device, "locked-entry-id")
+        TestHelpers.waitForElement(device, By.res("live-entry-id"))
+
+        val initialLockedEntryId = TestHelpers.getElementTextById(device, "locked-entry-id")
+        val initialLiveEntryId = TestHelpers.getElementTextById(device, "live-entry-id")
 
         TestHelpers.waitAndTap(device, By.res("live-updates-identify-button"))
         TestHelpers.waitForTextEquals(device, "identified-status", "Yes")
-        TestHelpers.waitForTextEquals(device, "locked-entry-id", initialText)
+
+        // Live section (per-component liveUpdates=true) MUST change — the per-component
+        // prop is the path under test: it must override the global=ON setting and keep
+        // the locked section stable.
+        TestHelpers.waitForElementText(device, "live-entry-id") { it != initialLiveEntryId }
+        TestHelpers.waitForTextEquals(device, "locked-entry-id", initialLockedEntryId)
     }
+
+    // -------------------------------------------------------------------------
+    // Preview panel simulation
+    // -------------------------------------------------------------------------
 
     @Test
     fun testPreviewPanelEnablesLiveUpdatesForAll() {
@@ -113,13 +166,23 @@ class LiveUpdatesTests {
         TestHelpers.waitForElement(device, By.res("live-entry-id"))
         TestHelpers.waitForElement(device, By.res("locked-entry-id"))
 
+        val initialDefaultEntryId = TestHelpers.getElementTextById(device, "default-entry-id")
+        val initialLiveEntryId = TestHelpers.getElementTextById(device, "live-entry-id")
+        val initialLockedEntryId = TestHelpers.getElementTextById(device, "locked-entry-id")
+
         TestHelpers.waitAndTap(device, By.res("live-updates-identify-button"))
         TestHelpers.waitForTextEquals(device, "identified-status", "Yes")
 
-        Assert.assertNotNull(device.findObject(By.res("default-entry-id")))
-        Assert.assertNotNull(device.findObject(By.res("live-entry-id")))
-        Assert.assertNotNull(device.findObject(By.res("locked-entry-id")))
+        // While the preview panel is open, the SDK forces shouldLiveUpdate=true for ALL
+        // sections, including the per-component liveUpdates=false one.
+        TestHelpers.waitForElementText(device, "default-entry-id") { it != initialDefaultEntryId }
+        TestHelpers.waitForElementText(device, "live-entry-id") { it != initialLiveEntryId }
+        TestHelpers.waitForElementText(device, "locked-entry-id") { it != initialLockedEntryId }
     }
+
+    // -------------------------------------------------------------------------
+    // Screen controls
+    // -------------------------------------------------------------------------
 
     @Test
     fun testToggleGlobalLiveUpdates() {
@@ -148,20 +211,59 @@ class LiveUpdatesTests {
         TestHelpers.waitForTextEquals(device, "identified-status", "No")
     }
 
+    // -------------------------------------------------------------------------
+    // Three Optimization sections display
+    // -------------------------------------------------------------------------
+
     @Test
-    fun testDisplaysAllThreePersonalizationComponents() {
-        TestHelpers.waitForElement(device, By.desc("default-personalization"))
-        TestHelpers.waitForElement(device, By.desc("live-personalization"))
-        TestHelpers.waitForElement(device, By.desc("locked-personalization"))
+    fun testDisplaysAllThreeOptimizationEntrySections() {
+        // Android app exposes OptimizedEntry via contentDescription ("*-personalization").
+        // iOS uses "*-optimization". Both refer to the same SDK-rendered containers.
+        TestHelpers.waitForElement(device, By.desc("default-personalization"), TestHelpers.ELEMENT_TIMEOUT)
+        TestHelpers.waitForElement(device, By.desc("live-personalization"), TestHelpers.ELEMENT_TIMEOUT)
+        TestHelpers.waitForElement(device, By.desc("locked-personalization"), TestHelpers.ELEMENT_TIMEOUT)
+
+        TestHelpers.waitForElement(device, By.res("default-entry-id"))
+        TestHelpers.waitForElement(device, By.res("live-entry-id"))
+        TestHelpers.waitForElement(device, By.res("locked-entry-id"))
+
+        val defaultEntryIdText = TestHelpers.getElementTextById(device, "default-entry-id")
+        val liveEntryIdText = TestHelpers.getElementTextById(device, "live-entry-id")
+        val lockedEntryIdText = TestHelpers.getElementTextById(device, "locked-entry-id")
+
+        Assert.assertTrue(
+            "default-entry-id \"$defaultEntryIdText\" did not match ENTRY_ID_TEXT_PATTERN",
+            ENTRY_ID_TEXT_PATTERN.matches(defaultEntryIdText),
+        )
+        Assert.assertTrue(
+            "live-entry-id \"$liveEntryIdText\" did not match ENTRY_ID_TEXT_PATTERN",
+            ENTRY_ID_TEXT_PATTERN.matches(liveEntryIdText),
+        )
+        Assert.assertTrue(
+            "locked-entry-id \"$lockedEntryIdText\" did not match ENTRY_ID_TEXT_PATTERN",
+            ENTRY_ID_TEXT_PATTERN.matches(lockedEntryIdText),
+        )
     }
 
     @Test
     fun testDisplaysEntryContentInAllSections() {
-        TestHelpers.waitForElement(device, By.res("default-text"))
-        TestHelpers.waitForElement(device, By.res("live-text"))
-        TestHelpers.waitForElement(device, By.res("locked-text"))
-        Assert.assertNotNull(device.findObject(By.res("default-entry-id")))
-        Assert.assertNotNull(device.findObject(By.res("live-entry-id")))
-        Assert.assertNotNull(device.findObject(By.res("locked-entry-id")))
+        TestHelpers.waitForElement(device, By.res("default-container"))
+        TestHelpers.waitForElement(device, By.res("live-container"))
+        TestHelpers.waitForElement(device, By.res("locked-container"))
+
+        val defaultText = TestHelpers.getElementTextById(device, "default-text")
+        val liveText = TestHelpers.getElementTextById(device, "live-text")
+        val lockedText = TestHelpers.getElementTextById(device, "locked-text")
+
+        Assert.assertTrue("default-text should be non-empty", defaultText.isNotEmpty())
+        Assert.assertTrue("live-text should be non-empty", liveText.isNotEmpty())
+        Assert.assertTrue("locked-text should be non-empty", lockedText.isNotEmpty())
+        Assert.assertNotEquals("default-text should not be 'No content'", "No content", defaultText)
+        Assert.assertNotEquals("live-text should not be 'No content'", "No content", liveText)
+        Assert.assertNotEquals("locked-text should not be 'No content'", "No content", lockedText)
+        // Before any identify/toggle/preview-panel action all three sections wrap the
+        // same Contentful entry and MUST resolve to the same variant text.
+        Assert.assertEquals("default-text and live-text should match", defaultText, liveText)
+        Assert.assertEquals("default-text and locked-text should match", defaultText, lockedText)
     }
 }
