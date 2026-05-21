@@ -40,7 +40,9 @@ class OptimizationClient(private val applicationContext: Context) {
     private val _previewState = MutableStateFlow<PreviewState?>(null)
     val previewState: StateFlow<PreviewState?> = _previewState.asStateFlow()
 
-    private val _events = MutableSharedFlow<Map<String, Any>>(extraBufferCapacity = 64)
+    // `replay` lets a UI collector that subscribes slightly after startup still
+    // receive the one-shot flag-view event emitted synchronously by subscribeToFlag.
+    private val _events = MutableSharedFlow<Map<String, Any>>(replay = 64, extraBufferCapacity = 64)
     val events: SharedFlow<Map<String, Any>> = _events.asSharedFlow()
 
     private val bridge = QuickJsContextManager()
