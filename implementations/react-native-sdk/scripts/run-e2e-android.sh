@@ -15,6 +15,11 @@
 #   MOCK_SERVER_PORT  - Port for mock API server (default: 8000)
 #   METRO_PORT        - Port for Metro bundler (default: 8081)
 #   SKIP_BUILD        - Set to "true" to skip the Android build step (default: false)
+#   SKIP_PKG_REBUILD  - Set to "true" to skip rebuilding the SDK package tarball and
+#                       reinstalling it in the implementation. Default false because
+#                       a stale pkgs/contentful-optimization-react-native-0.0.0.tgz
+#                       silently serves old JS to Metro and produces hard-to-diagnose
+#                       test failures.
 #   METRO_VERBOSE     - Set to "true" to run Metro with --verbose logging (default: false)
 #   ENABLE_DEVICE_LOGCAT - Set to "true" to stream adb logcat during tests (default: false)
 #   DISABLE_EMULATOR_ANIMATIONS - Set to "false" to keep animation scales unchanged (default: true)
@@ -23,8 +28,9 @@
 #   PUBLIC_*           - Optional overrides for values loaded from .env.example
 #
 # Usage:
-#   ./scripts/run-e2e-android.sh              # Full run with build
-#   SKIP_BUILD=true ./scripts/run-e2e-android.sh  # Skip build step
+#   ./scripts/run-e2e-android.sh                       # Full run: rebuild pkgs + reinstall + build APK
+#   SKIP_BUILD=true ./scripts/run-e2e-android.sh       # Skip Android APK build only
+#   SKIP_PKG_REBUILD=true ./scripts/run-e2e-android.sh # Skip pkg rebuild (only if you know pkgs/ is fresh)
 #
 # Prerequisites:
 #   - Android emulator running (or will be started by CI action)
@@ -57,6 +63,7 @@ LOGCAT_PID=""
 MOCK_SERVER_PORT="${MOCK_SERVER_PORT:-8000}"
 METRO_PORT="${METRO_PORT:-8081}"
 SKIP_BUILD="${SKIP_BUILD:-false}"
+SKIP_PKG_REBUILD="${SKIP_PKG_REBUILD:-false}"
 CI="${CI:-false}"
 METRO_VERBOSE="${METRO_VERBOSE:-false}"
 ENABLE_DEVICE_LOGCAT="${ENABLE_DEVICE_LOGCAT:-false}"
@@ -89,7 +96,9 @@ Options:
 Environment Variables:
   MOCK_SERVER_PORT    Port for mock server (default: 8000)
   METRO_PORT          Port for Metro bundler (default: 8081)
-  SKIP_BUILD          Set to 'true' to skip build (default: false)
+  SKIP_BUILD          Set to 'true' to skip the Android APK build step (default: false)
+  SKIP_PKG_REBUILD    Set to 'true' to skip rebuilding pkgs/*.tgz and reinstalling
+                      the tarball in the implementation (default: false)
   METRO_VERBOSE       Set to 'true' to run Metro with --verbose logging (default: false)
   ENABLE_DEVICE_LOGCAT Set to 'true' to stream adb logcat output (default: false)
   DISABLE_EMULATOR_ANIMATIONS Set to 'false' to keep emulator animations enabled (default: true)
@@ -345,6 +354,28 @@ create_env_file() {
     log_info ".env file created at ${RN_DIR}/.env"
 }
 
+rebuild_packages() {
+    # Rebuild the SDK package tarballs in pkgs/ and reinstall them into the
+    # implementation's node_modules. Without this, Metro bundles the JS that
+    # was packed the last time `pnpm build:pkgs` ran — which may be stale
+    # source code, resulting in silent test failures (e.g. a removed
+    # Alert.alert still shows up at runtime because the old tarball is what
+    # the implementation actually consumes).
+    if [[ "$SKIP_PKG_REBUILD" == "true" ]]; then
+        log_warn "Skipping SDK package rebuild (SKIP_PKG_REBUILD=true). Tests will use whatever is currently in pkgs/."
+        return 0
+    fi
+
+    log_info "Rebuilding SDK package tarballs (pnpm build:pkgs)..."
+    cd "$ROOT_DIR"
+    pnpm build:pkgs
+
+    log_info "Reinstalling fresh tarball in implementations/react-native-sdk..."
+    pnpm run implementation:run -- react-native-sdk implementation:install
+
+    log_info "Package rebuild and reinstall complete"
+}
+
 start_mock_server() {
     log_info "Starting mock server on port ${MOCK_SERVER_PORT}..."
     
@@ -381,8 +412,11 @@ start_metro() {
     cd "$RN_DIR"
     
     npx kill-port "$METRO_PORT" 2>/dev/null || true
-    
-    local metro_cmd=(npx react-native start --port "$METRO_PORT")
+
+    # Always reset Metro's transform cache so it can't serve a previous
+    # session's bundle after the implementation's node_modules has been
+    # repopulated by rebuild_packages.
+    local metro_cmd=(npx react-native start --port "$METRO_PORT" --reset-cache)
     if [[ "$METRO_VERBOSE" == "true" ]]; then
         metro_cmd+=(--verbose)
     fi
@@ -514,7 +548,9 @@ main() {
     [[ -n "$TEST_NAME_PATTERN" ]] && log_info "Test pattern: $TEST_NAME_PATTERN"
     
     create_env_file
-    
+
+    rebuild_packages
+
     start_mock_server
     
     start_metro
