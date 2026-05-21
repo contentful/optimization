@@ -10,10 +10,10 @@ import androidx.test.uiautomator.Until
 // dwell-sensitive view-tracking assertions.
 private const val MOMENTUM_FREE_STEPS = 160
 
-// A quick — but not instant — swipe (~300ms). Fast enough that a transiting
-// entry does not dwell, slow enough that the SDK's per-frame visibility
-// callbacks still sample the entry crossing the tracked-visibility band.
-private const val FAST_SWIPE_STEPS = 60
+// A fast swipe for bulk scrolling and quick entry transits, so a transiting
+// entry never rests long enough to trip the dwell timer. Dwell-sensitive
+// positioning (the cycle-reset jiggle) uses the momentum-free path instead.
+private const val FAST_SWIPE_STEPS = 12
 
 // Quick bulk swipes (mirrors the iOS `swipeUp(times:)`/`swipeDown(times:)`): used
 // to move content a lot, fast, so a transiting entry never rests long enough to
