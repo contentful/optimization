@@ -10,6 +10,11 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
+/**
+ * Flag view tracking. Mirrors the iOS `FlagViewTrackingTests` XCUITest suite:
+ * subscribing to the `boolean` flag on app launch must emit a flag-view
+ * `component` event counted under `event-count-boolean`.
+ */
 @RunWith(AndroidJUnit4::class)
 class FlagViewTrackingTests {
     private lateinit var device: UiDevice
@@ -22,13 +27,11 @@ class FlagViewTrackingTests {
 
     @Test
     fun testEmitsFlagViewEventsForSubscribedBooleanFlag() {
-        // 1. Wait until the "Analytics Events" text is visible.
-        TestHelpers.scrollToElement(device, "analytics-events-container", "main-scroll-view")
+        // 1. Wait until the "Analytics Events" text is present.
         TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
 
-        // 2. Wait until flag `boolean` has at least 1 view event.
-        TestHelpers.waitForComponentEventCount(
-            device, "boolean", 1, timeout = TestHelpers.ELEMENT_TIMEOUT,
-        )
+        // 2. Wait until flag `boolean` has at least 1 view event. waitForComponentEventCount
+        //    scrolls the analytics stats into view itself.
+        TestHelpers.waitForComponentEventCount(device, "boolean", 1, timeout = TestHelpers.ELEMENT_TIMEOUT)
     }
 }

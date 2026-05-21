@@ -261,22 +261,45 @@ object TestHelpers {
         return if (id == "N/A") null else id
     }
 
+    /**
+     * Scrolls the scroll view until [testId] is found and on screen, using a
+     * manual momentum-free swipe loop. Mirrors the iOS `scrollToElement`; the
+     * `UiScrollable` search API is unreliable against a Compose `LazyColumn`.
+     */
     fun scrollToElement(
         device: UiDevice,
         testId: String,
         scrollViewId: String,
-        maxSwipes: Int = 10,
+        maxSwipes: Int = 12,
     ) {
-        val scrollable = UiScrollable(UiSelector().resourceId(scrollViewId))
-        scrollable.setMaxSearchSwipes(maxSwipes)
-        try {
-            scrollable.scrollIntoView(UiSelector().resourceId(testId))
-        } catch (_: Exception) {
-            try {
-                scrollable.scrollIntoView(UiSelector().description(testId))
-            } catch (_: Exception) {
-                // Element may already be visible or not scrollable
+        repeat(maxSwipes) {
+            val el = findElement(device, testId)
+            if (el != null && el.visibleBounds.height() > 0) return
+            device.scrollByOffset(dy = 700, scrollViewId = scrollViewId)
+        }
+    }
+
+    /**
+     * Scrolls (momentum-free) until the entry [testId] is fully within the
+     * scroll viewport — clipped at neither edge — so a fresh view-tracking cycle
+     * starts at a known instant. Mirrors the iOS `scrollEntryIntoView`.
+     */
+    fun scrollEntryIntoView(
+        device: UiDevice,
+        testId: String,
+        scrollViewId: String = "main-scroll-view",
+        maxSteps: Int = 16,
+    ) {
+        repeat(maxSteps) {
+            val el = findElement(device, testId)
+            val scrollView = device.findObject(By.res(scrollViewId))?.visibleBounds
+            if (el != null && scrollView != null) {
+                val b = el.visibleBounds
+                if (b.height() > 0 && b.top > scrollView.top + 8 && b.bottom < scrollView.bottom - 8) {
+                    return
+                }
             }
+            device.scrollByOffset(dy = -260, scrollViewId = scrollViewId)
         }
     }
 

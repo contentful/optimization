@@ -4,9 +4,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.Until
 import com.contentful.optimization.uitests.support.AppLauncher
 import com.contentful.optimization.uitests.support.TestHelpers
 import com.contentful.optimization.uitests.support.clearProfileState
+import com.contentful.optimization.uitests.support.scrollByOffset
 import com.contentful.optimization.uitests.support.swipeDownMultiple
 import com.contentful.optimization.uitests.support.swipeUpMultiple
 import org.junit.Assert
@@ -14,13 +16,23 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
+/**
+ * Extended view tracking. Mirrors the iOS `ExtendedViewTrackingTests` XCUITest
+ * suite body-for-body, using momentum-free controlled scrolling so dwell and
+ * lifecycle timing assertions are deterministic.
+ */
 @RunWith(AndroidJUnit4::class)
 class ExtendedViewTrackingTests {
     private lateinit var device: UiDevice
 
     companion object {
+        // The merge tag entry is always first in the list and visible on launch.
         const val VISIBLE_ENTRY_ID = "1MwiFl4z7gkwqGYdvCmr8c"
+
+        // Second entry visible on launch (immediately after the merge tag entry).
         const val SECOND_ENTRY_ID = "4ib0hsHWoSOnCVdDkizE8d"
+
+        // An entry that starts below the fold (not visible on launch).
         const val BELOW_FOLD_ENTRY_ID = "7pa5bOx8Z9NmNcr7mISvD"
     }
 
@@ -33,13 +45,18 @@ class ExtendedViewTrackingTests {
     @Test
     fun testPeriodicEventsForContinuouslyVisibleEntry() {
         TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
+
+        // Initial event after the dwell threshold (~2s).
         TestHelpers.waitForComponentEventCount(device, VISIBLE_ENTRY_ID, 1, timeout = TestHelpers.EXTENDED_TIMEOUT)
+
+        // At least one periodic update (dwell 2s + update interval 5s).
         TestHelpers.waitForComponentEventCount(device, VISIBLE_ENTRY_ID, 2, timeout = TestHelpers.EXTENDED_TIMEOUT)
     }
 
     @Test
     fun testIncreasingViewDurationMs() {
         TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
+
         TestHelpers.waitForComponentEventCount(device, VISIBLE_ENTRY_ID, 2, timeout = TestHelpers.EXTENDED_TIMEOUT)
 
         val duration = TestHelpers.getViewDuration(device, VISIBLE_ENTRY_ID)
@@ -50,14 +67,15 @@ class ExtendedViewTrackingTests {
     @Test
     fun testStableViewIdWithinCycle() {
         TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
-        TestHelpers.waitForComponentEventCount(device, VISIBLE_ENTRY_ID, 1, timeout = TestHelpers.EXTENDED_TIMEOUT)
 
+        // Capture the viewId from the first event of the cycle.
+        TestHelpers.waitForComponentEventCount(device, VISIBLE_ENTRY_ID, 1, timeout = TestHelpers.EXTENDED_TIMEOUT)
         val firstEventViewId = TestHelpers.getViewId(device, VISIBLE_ENTRY_ID)
         Assert.assertNotNull("First event viewId should not be null", firstEventViewId)
         Assert.assertTrue("First event viewId should not be empty", firstEventViewId!!.isNotEmpty())
 
+        // The next periodic event in the SAME cycle must reuse the same viewId.
         TestHelpers.waitForComponentEventCount(device, VISIBLE_ENTRY_ID, 2, timeout = TestHelpers.EXTENDED_TIMEOUT)
-
         val secondEventViewId = TestHelpers.getViewId(device, VISIBLE_ENTRY_ID)
         Assert.assertEquals(
             "ViewId should remain stable within a visibility cycle",
@@ -68,26 +86,21 @@ class ExtendedViewTrackingTests {
     @Test
     fun testFinalEventOnScrollOut() {
         TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
-        TestHelpers.waitForComponentEventCount(device, VISIBLE_ENTRY_ID, 1, timeout = TestHelpers.EXTENDED_TIMEOUT)
 
+        TestHelpers.waitForComponentEventCount(device, VISIBLE_ENTRY_ID, 1, timeout = TestHelpers.EXTENDED_TIMEOUT)
         val preScrollViewId = TestHelpers.getViewId(device, VISIBLE_ENTRY_ID)
 
+        // Scroll the entry out of the viewport, let the final event fire.
         device.swipeUpMultiple(2)
         Thread.sleep(1000)
+        device.swipeDownMultiple(3)
 
-        // Scroll directly to the analytics section from the current (scrolled-down) position.
-        // Skipping the swipe-back-to-top step prevents the content entry from re-entering the
-        // viewport and dwelling long enough to start a new cycle before the stats are read,
-        // which is what caused the viewId to change in the original test.
         TestHelpers.scrollToElement(device, "event-count-$VISIBLE_ENTRY_ID", "main-scroll-view")
-
-        TestHelpers.waitForComponentEventCount(
-            device, VISIBLE_ENTRY_ID, 2, timeout = TestHelpers.ELEMENT_TIMEOUT,
-        )
+        TestHelpers.waitForComponentEventCount(device, VISIBLE_ENTRY_ID, 2, timeout = TestHelpers.ELEMENT_TIMEOUT)
 
         val postScrollViewId = TestHelpers.getViewId(device, VISIBLE_ENTRY_ID)
         Assert.assertEquals(
-            "ViewId should remain the same cycle after scroll-out final event",
+            "ViewId should still match the original cycle after the scroll-out final event",
             preScrollViewId, postScrollViewId,
         )
     }
@@ -95,40 +108,48 @@ class ExtendedViewTrackingTests {
     @Test
     fun testNewViewIdAfterScrollAwayAndBack() {
         TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
+
+        // Cycle 1: reading the stats scrolls entry 0 off, ending cycle 1.
         TestHelpers.waitForComponentEventCount(device, VISIBLE_ENTRY_ID, 1, timeout = TestHelpers.EXTENDED_TIMEOUT)
-
         val firstCycleViewId = TestHelpers.getViewId(device, VISIBLE_ENTRY_ID)
+        Assert.assertNotNull("First cycle viewId should not be null", firstCycleViewId)
+        val countAfterCycle1 = TestHelpers.parseComponentCount(
+            TestHelpers.getElementTextById(device, "event-count-$VISIBLE_ENTRY_ID"),
+        )
 
-        device.swipeUpMultiple(5)
-        Thread.sleep(1000)
+        // Scroll entry 0 back into view to start a fresh cycle, and dwell past
+        // the threshold so the new cycle emits its initial event.
+        TestHelpers.scrollEntryIntoView(device, "content-entry-$VISIBLE_ENTRY_ID", "main-scroll-view")
+        Thread.sleep(2600)
 
-        device.swipeDownMultiple(5)
-        Thread.sleep(500)
-
-        TestHelpers.waitForComponentEventCount(device, VISIBLE_ENTRY_ID, 3, timeout = TestHelpers.EXTENDED_TIMEOUT)
-
+        TestHelpers.waitForComponentEventCount(
+            device, VISIBLE_ENTRY_ID, countAfterCycle1 + 1, timeout = TestHelpers.EXTENDED_TIMEOUT,
+        )
         val secondCycleViewId = TestHelpers.getViewId(device, VISIBLE_ENTRY_ID)
         Assert.assertNotNull("Second cycle viewId should not be null", secondCycleViewId)
         Assert.assertNotEquals(
-            "ViewId should change in new cycle",
+            "Second visibility cycle should have a different viewId",
             firstCycleViewId, secondCycleViewId,
         )
     }
 
     @Test
     fun testNoEventsBeforeDwellThreshold() {
-        TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
+        TestHelpers.waitForElement(device, By.res("main-scroll-view"), TestHelpers.ELEMENT_TIMEOUT)
 
-        TestHelpers.scrollToElementByDescription(
-            device, "content-entry-$BELOW_FOLD_ENTRY_ID", "main-scroll-view",
-        )
+        // Sweep the below-fold entry up and out with large, fast momentum-free
+        // drags so it transits the 0.8 visibility band without ever resting on
+        // screen long enough to trip the 2000ms dwell timer.
+        repeat(5) { device.scrollByOffset(dy = 700, fast = true) }
 
-        device.swipeDownMultiple(3)
-
+        // Wait long enough that an event WOULD have fired if tracking hadn't been cancelled.
         Thread.sleep(3000)
 
-        val statsElement = device.findObject(By.res("component-stats-$BELOW_FOLD_ENTRY_ID"))
-        Assert.assertNull("No events should have fired for below-fold entry", statsElement)
+        // The stats element only renders once an entry view event has fired.
+        val appeared = device.wait(
+            Until.hasObject(By.res("component-stats-$BELOW_FOLD_ENTRY_ID")), 2000L,
+        )
+        Assert.assertFalse("No events should have fired for the below-fold entry", appeared == true)
     }
 
     @Test
@@ -149,37 +170,28 @@ class ExtendedViewTrackingTests {
     @Test
     fun testFinalEventOnNavigationUnmount() {
         TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
+
         TestHelpers.waitForComponentEventCount(device, VISIBLE_ENTRY_ID, 1, timeout = TestHelpers.EXTENDED_TIMEOUT)
+        val preNavCount = TestHelpers.parseComponentCount(
+            TestHelpers.getElementTextById(device, "event-count-$VISIBLE_ENTRY_ID"),
+        )
 
-        val preNavText = TestHelpers.getElementTextById(device, "event-count-$VISIBLE_ENTRY_ID")
-        val preNavCount = TestHelpers.parseComponentCount(preNavText)
+        // Scroll back to the top so the Navigation Test button is reachable.
+        device.swipeDownMultiple(3)
 
-        try {
-            device.swipeDownMultiple(3)
-        } catch (_: Exception) {
-            // Scroll may fail if not scrollable; ignore
-        }
-
-        TestHelpers.waitAndTap(device, By.res("navigation-test-button"), TestHelpers.ELEMENT_TIMEOUT)
+        // Navigate away: this unmounts all tracked entries, triggering cleanup.
+        TestHelpers.waitAndTap(device, By.res("navigation-test-button"))
         TestHelpers.waitForElement(device, By.res("close-navigation-test-button"), TestHelpers.ELEMENT_TIMEOUT)
         Thread.sleep(500)
 
-        TestHelpers.waitAndTap(device, By.res("close-navigation-test-button"), TestHelpers.ELEMENT_TIMEOUT)
-
-        // Wait for the main screen to fully remount with its persisted event state before
-        // scrolling to the analytics section. scrollToElement silently swallows failures, so
-        // reading immediately after can find the element missing if the LazyColumn hasn't
-        // recomposed yet.
+        // Navigate back to the main screen.
+        TestHelpers.waitAndTap(device, By.res("close-navigation-test-button"))
         TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
+        TestHelpers.scrollToElement(device, "event-count-$VISIBLE_ENTRY_ID", "main-scroll-view")
 
-        // Use waitForComponentEventCount rather than a bare getElementTextById so the test
-        // waits for the final event to land in componentStats before asserting the count.
-        TestHelpers.waitForComponentEventCount(
-            device, VISIBLE_ENTRY_ID, preNavCount + 1, timeout = TestHelpers.EXTENDED_TIMEOUT,
+        val postNavCount = TestHelpers.parseComponentCount(
+            TestHelpers.getElementTextById(device, "event-count-$VISIBLE_ENTRY_ID"),
         )
-
-        val postNavText = TestHelpers.getElementTextById(device, "event-count-$VISIBLE_ENTRY_ID")
-        val postNavCount = TestHelpers.parseComponentCount(postNavText)
         Assert.assertTrue(
             "Event count should increase after navigation unmount (pre=$preNavCount, post=$postNavCount)",
             postNavCount > preNavCount,
@@ -189,45 +201,41 @@ class ExtendedViewTrackingTests {
     @Test
     fun testPauseResumeOnBackgroundForeground() {
         TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
+
+        // Cycle 1: reading the stats scrolls entry 0 off, ending cycle 1.
         TestHelpers.waitForComponentEventCount(device, VISIBLE_ENTRY_ID, 1, timeout = TestHelpers.EXTENDED_TIMEOUT)
-
         val firstCycleViewId = TestHelpers.getViewId(device, VISIBLE_ENTRY_ID)
-
-        TestHelpers.waitForComponentEventCount(device, VISIBLE_ENTRY_ID, 2, timeout = TestHelpers.EXTENDED_TIMEOUT)
-
-        val midCycleViewId = TestHelpers.getViewId(device, VISIBLE_ENTRY_ID)
-        Assert.assertEquals(
-            "ViewId should remain stable across two events in the same cycle",
-            firstCycleViewId, midCycleViewId,
-        )
-
+        Assert.assertNotNull("First cycle viewId should not be null", firstCycleViewId)
         val countBeforeBackground = TestHelpers.parseComponentCount(
             TestHelpers.getElementTextById(device, "event-count-$VISIBLE_ENTRY_ID"),
         )
 
+        // Start a cycle that is ACTIVE when the app backgrounds: scroll entry 0
+        // back into view and dwell past the threshold so its initial event fires.
+        TestHelpers.scrollEntryIntoView(device, "content-entry-$VISIBLE_ENTRY_ID", "main-scroll-view")
+        Thread.sleep(3000)
+
+        // Background — pause() ends the active cycle with a final event.
         device.pressHome()
         Thread.sleep(1000)
 
+        // Foreground — resume() re-evaluates the stored geometry and starts a fresh cycle.
         AppLauncher.bringToForeground(device)
-
-        // Wait for the app UI to fully restore before interacting with it. Without this,
-        // scrollToElement may run while the activity is still resuming, leaving the analytics
-        // section unrendered and causing waitForComponentEventCount to time out on an empty element.
         TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
 
-        // Allow the resumed cycle to dwell past the 2000 ms threshold so the new cycle's
-        // initial event fires before we scroll to the stats and poll the count.
+        // Let the resumed cycle dwell past the threshold so its initial event fires.
         Thread.sleep(3000)
-
         TestHelpers.scrollToElement(device, "event-count-$VISIBLE_ENTRY_ID", "main-scroll-view")
 
+        // Backgrounding ended the pre-background cycle with a final event and
+        // foregrounding started a fresh one, so the count must advance by 2.
         TestHelpers.waitForComponentEventCount(
             device, VISIBLE_ENTRY_ID, countBeforeBackground + 2, timeout = TestHelpers.EXTENDED_TIMEOUT,
         )
 
         val postForegroundViewId = TestHelpers.getViewId(device, VISIBLE_ENTRY_ID)
         Assert.assertNotEquals(
-            "ViewId should change after background/foreground cycle",
+            "ViewId should change after the background/foreground cycle",
             firstCycleViewId, postForegroundViewId,
         )
     }
@@ -236,15 +244,13 @@ class ExtendedViewTrackingTests {
     fun testDurationResetOnNewCycle() {
         TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
 
-        // Let the entry accumulate view time well past the 4000 ms contract floor before
-        // waitForComponentEventCount ever calls scrollToElement (which would scroll the entry
-        // off screen and end the cycle prematurely with a very short duration).
-        // Mirroring the iOS test: sleep 6 s first so the first cycle's duration is comfortably
-        // above 4000 ms when we read it.
+        // Cycle 1: leave entry 0 untouched well past the dwell threshold so it
+        // accumulates more than 4000ms of view time.
         Thread.sleep(6000)
 
+        // Reading the stats scrolls entry 0 off, ending cycle 1 with a final
+        // event whose duration is the full ~6s the entry was continuously visible.
         TestHelpers.waitForComponentEventCount(device, VISIBLE_ENTRY_ID, 2, timeout = TestHelpers.EXTENDED_TIMEOUT)
-
         val firstCycleDuration = TestHelpers.getViewDuration(device, VISIBLE_ENTRY_ID)
         Assert.assertNotNull("First cycle duration should not be null", firstCycleDuration)
         Assert.assertTrue(
@@ -252,13 +258,20 @@ class ExtendedViewTrackingTests {
             firstCycleDuration!! > 4000,
         )
 
-        device.swipeUpMultiple(5)
-        Thread.sleep(1000)
+        val countAfterCycle1 = TestHelpers.parseComponentCount(
+            TestHelpers.getElementTextById(device, "event-count-$VISIBLE_ENTRY_ID"),
+        )
 
-        device.swipeDownMultiple(5)
-        Thread.sleep(500)
-
-        TestHelpers.waitForComponentEventCount(device, VISIBLE_ENTRY_ID, 4, timeout = TestHelpers.EXTENDED_TIMEOUT)
+        // Start a fresh, short cycle: scroll entry 0 back to the top, then reset
+        // its cycle with a quick out-and-in jiggle so the new cycle's duration
+        // is tightly bounded and well under 4000ms.
+        TestHelpers.scrollEntryIntoView(device, "content-entry-$VISIBLE_ENTRY_ID", "main-scroll-view")
+        device.scrollByOffset(dy = 260, fast = true)
+        device.scrollByOffset(dy = -260, fast = true)
+        Thread.sleep(1400)
+        TestHelpers.waitForComponentEventCount(
+            device, VISIBLE_ENTRY_ID, countAfterCycle1 + 1, timeout = TestHelpers.EXTENDED_TIMEOUT,
+        )
 
         val secondCycleDuration = TestHelpers.getViewDuration(device, VISIBLE_ENTRY_ID)
         Assert.assertNotNull("Second cycle duration should not be null", secondCycleDuration)
@@ -267,7 +280,7 @@ class ExtendedViewTrackingTests {
             secondCycleDuration!! >= 2000,
         )
         Assert.assertTrue(
-            "Second cycle duration should reset — expected < 4000ms but got ${secondCycleDuration}ms",
+            "New cycle duration should reset — expected < 4000ms but got ${secondCycleDuration}ms",
             secondCycleDuration < 4000,
         )
     }
