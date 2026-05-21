@@ -9,11 +9,6 @@ object AppConfig {
     const val contentfulBaseUrl = "http://localhost:8000/contentful/"
     const val contentfulSpaceId = "mock-space-id"
 
-    // Minimum height (dp) for a content-entry card, so the home list reliably
-    // overflows the viewport and lower entries start below the fold — keeping
-    // view-tracking dwell assertions deterministic.
-    const val contentEntryMinHeightDp = 180
-
     val entryIds = listOf(
         "1MwiFl4z7gkwqGYdvCmr8c",
         "4ib0hsHWoSOnCVdDkizE8d",
