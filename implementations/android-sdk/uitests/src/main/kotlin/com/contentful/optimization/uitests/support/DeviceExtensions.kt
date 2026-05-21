@@ -4,13 +4,18 @@ import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 
+// A high step count slows the swipe so it ends at a low velocity with minimal
+// fling momentum, leaving a scrolled entry at a predictable position for
+// dwell-sensitive view-tracking assertions.
+private const val MOMENTUM_FREE_STEPS = 160
+
 fun UiDevice.swipeUpMultiple(times: Int, scrollViewId: String = "main-scroll-view") {
     repeat(times) {
         val bounds = findObject(By.res(scrollViewId))?.visibleBounds
         val centerX = bounds?.centerX() ?: (displayWidth / 2)
         val startY = bounds?.let { it.top + (it.height() * 3 / 4) } ?: (displayHeight * 3 / 4)
         val endY = bounds?.let { it.top + (it.height() / 4) } ?: (displayHeight / 4)
-        swipe(centerX, startY, centerX, endY, 10)
+        swipe(centerX, startY, centerX, endY, MOMENTUM_FREE_STEPS)
         Thread.sleep(300)
     }
 }
@@ -21,7 +26,7 @@ fun UiDevice.swipeDownMultiple(times: Int, scrollViewId: String = "main-scroll-v
         val centerX = bounds?.centerX() ?: (displayWidth / 2)
         val startY = bounds?.let { it.top + (it.height() / 4) } ?: (displayHeight / 4)
         val endY = bounds?.let { it.top + (it.height() * 3 / 4) } ?: (displayHeight * 3 / 4)
-        swipe(centerX, startY, centerX, endY, 10)
+        swipe(centerX, startY, centerX, endY, MOMENTUM_FREE_STEPS)
         Thread.sleep(300)
     }
 }

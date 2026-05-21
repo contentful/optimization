@@ -1,6 +1,7 @@
 package com.contentful.optimization.app.components
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -14,6 +15,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.contentful.optimization.app.AppConfig
 import com.contentful.optimization.compose.LocalOptimizationClient
 import com.contentful.optimization.compose.OptimizedEntry
 
@@ -42,6 +44,7 @@ private fun EntryContent(entry: Map<String, Any>, entryId: String) {
 
     Column(
         modifier = Modifier
+            .heightIn(min = AppConfig.contentEntryMinHeightDp.dp)
             .padding(16.dp)
             .testTag("entry-text-$entryId")
             .semantics(mergeDescendants = true) {
