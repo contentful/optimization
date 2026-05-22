@@ -31,16 +31,24 @@ function resolveExoLayer(
   layers: SourceMap['layers'],
   variants: SourceMap['variants'],
 ): ExoNodeLayer | undefined {
-  if (layerIndex === undefined) return undefined
+  if (layerIndex === undefined) {
+    return undefined
+  }
+
   const { [layerIndex]: layer } = layers
-  if (!layer) return undefined
+  if (!layer) {
+    return undefined
+  }
+
   const { kind, id } = layer
-  if (!isKnownEntityKind(kind)) return undefined
+  if (!isKnownEntityKind(kind)) {
+    return undefined
+  }
 
   const firstVariantIndex = layer.variants?.[0]
   const variantEntry = firstVariantIndex !== undefined ? variants[firstVariantIndex] : undefined
   const variant = variantEntry?.id
-  const optimizationId = variantEntry !== undefined ? id : undefined
+  const optimizationId = variantEntry ? id : undefined
 
   return { entityKind: kind, entityId: id, variant, optimizationId }
 }
@@ -55,7 +63,9 @@ function resolveLayerChain(
   for (let i = scopePosition; i < nodeLayers.length; i++) {
     const { [i]: layerIndex } = nodeLayers
     const exoLayer = resolveExoLayer(layerIndex, layers, variants)
-    if (exoLayer !== undefined) chain.push(exoLayer)
+    if (exoLayer) {
+      chain.push(exoLayer)
+    }
   }
   return chain
 }
@@ -69,7 +79,9 @@ function findAttributableLayer(
   for (let i = scopePosition; i < nodeLayers.length; i++) {
     const { [i]: layerIndex } = nodeLayers
     const exoLayer = resolveExoLayer(layerIndex, layers, variants)
-    if (exoLayer?.variant !== undefined) return { layer: exoLayer, nodeIndex: i }
+    if (exoLayer?.variant) {
+      return { layer: exoLayer, nodeIndex: i }
+    }
   }
   return undefined
 }
@@ -82,7 +94,9 @@ function findParentExperienceId(
   for (let i = attributedLayerNodeIndex + 1; i < nodeLayers.length; i++) {
     const { [i]: layerIndex } = nodeLayers
     const { [layerIndex ?? -1]: layer } = layers
-    if (layer?.kind === 'Experience') return layer.id
+    if (layer?.kind === 'Experience') {
+      return layer.id
+    }
   }
   return undefined
 }
@@ -112,14 +126,20 @@ export function resolveNodeViewPayload(
 ): ResolvedNodeMetadata | undefined {
   const { nodes, layers, variants } = sourceMap
   const { [nodeId]: node } = nodes
-  if (node === undefined) return undefined
+  if (node === undefined) {
+    return undefined
+  }
 
   const { layers: nodeLayers, scope } = node
   const scopePosition = nodeLayers.indexOf(scope)
-  if (scopePosition < 0) return undefined
+  if (scopePosition < 0) {
+    return undefined
+  }
 
   const attributed = findAttributableLayer(nodeLayers, scopePosition, layers, variants)
-  if (attributed === undefined) return undefined
+  if (attributed === undefined) {
+    return undefined
+  }
 
   const layerChain = resolveLayerChain(nodeLayers, scopePosition, layers, variants)
   const parentExperienceId = findParentExperienceId(nodeLayers, attributed.nodeIndex, layers)
