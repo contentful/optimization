@@ -1,5 +1,5 @@
 import CoreStateful, { type CoreStatefulConfig } from './CoreStateful'
-import type { NodeViewBuilderArgs } from './events'
+import type { NodeViewTrackingArgs } from './events'
 import { batch, signals } from './signals'
 import { profile as profileFixture } from './test/fixtures/profile'
 
@@ -35,7 +35,7 @@ describe('CoreStateful.trackNodeView', () => {
     rs.restoreAllMocks()
   })
 
-  const nodeViewPayload: NodeViewBuilderArgs = {
+  const nodeViewPayload: NodeViewTrackingArgs = {
     entityId: 'exp-sys-id',
     entityKind: 'Experience',
     variant: 'variant-a',
@@ -60,7 +60,9 @@ describe('CoreStateful.trackNodeView', () => {
     const batches = firstCall?.[0] ?? []
     const events = batches.flatMap((b) => b.events)
     expect(events).toHaveLength(1)
-    expect(events[0]?.type).toBe('exo_view')
+    const nodeViewEvent = events.find((e) => e.type === 'exo_view')
+    expect(nodeViewEvent).toBeDefined()
+    expect(nodeViewEvent?.anonymousId).toBe(profileFixture.id)
   })
 
   it('blocks trackNodeView when consent is not given', async () => {

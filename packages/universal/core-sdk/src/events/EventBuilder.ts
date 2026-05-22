@@ -243,6 +243,7 @@ export const TrackBuilderArgs = z.extend(UniversalEventBuilderArgs, {
 export type TrackBuilderArgs = z.infer<typeof TrackBuilderArgs>
 
 export const NodeViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
+  anonymousId: z.string(),
   entityId: z.string(),
   entityKind: z.union([
     z.literal('Experience'),
@@ -267,6 +268,21 @@ export const NodeViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
  * @public
  */
 export type NodeViewBuilderArgs = z.infer<typeof NodeViewBuilderArgs>
+
+export const NodeViewTrackingArgs = z.extend(NodeViewBuilderArgs, {
+  anonymousId: z.optional(z.string()),
+})
+
+/**
+ * Arguments accepted by runtime `trackNodeView` callers.
+ *
+ * @remarks
+ * Runtime integrations may omit `anonymousId`; the emitter derives it from
+ * the active profile when not provided.
+ *
+ * @public
+ */
+export type NodeViewTrackingArgs = z.infer<typeof NodeViewTrackingArgs>
 
 /**
  * Default page properties used when no explicit page information is available.
@@ -739,6 +755,7 @@ class EventBuilder {
    */
   buildNodeView(args: NodeViewBuilderArgs): NodeViewEvent {
     const {
+      anonymousId,
       entityId,
       entityKind,
       variant,
@@ -755,6 +772,7 @@ class EventBuilder {
 
     return {
       ...this.buildUniversalEventProperties(universal),
+      anonymousId,
       type: 'exo_view',
       entityId,
       entityKind,

@@ -22,6 +22,7 @@ import type {
   HoverBuilderArgs,
   IdentifyBuilderArgs,
   NodeViewBuilderArgs,
+  NodeViewTrackingArgs,
   PageViewBuilderArgs,
   ScreenViewBuilderArgs,
   TrackBuilderArgs,
@@ -306,11 +307,14 @@ abstract class CoreStatefulEventEmitter
    * })
    * ```
    */
-  async trackNodeView(payload: NodeViewBuilderArgs): Promise<void> {
+  async trackNodeView(payload: NodeViewTrackingArgs): Promise<void> {
+    const anonymousId = payload.anonymousId ?? profileSignal.value?.id ?? ''
+    const builderArgs: NodeViewBuilderArgs = { ...payload, anonymousId }
+
     await this.sendInsightsEvent(
       'trackNodeView',
       [payload],
-      this.eventBuilder.buildNodeView(payload),
+      this.eventBuilder.buildNodeView(builderArgs),
     )
   }
 

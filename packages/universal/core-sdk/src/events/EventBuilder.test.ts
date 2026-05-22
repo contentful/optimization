@@ -9,6 +9,7 @@ const builder = new EventBuilder({
 describe('EventBuilder.buildNodeView', () => {
   it('builds a valid exo_view event', () => {
     const event = builder.buildNodeView({
+      anonymousId: 'anon-id',
       entityId: 'exp-sys-id',
       entityKind: 'Experience',
       variant: 'variant-a',
@@ -18,6 +19,7 @@ describe('EventBuilder.buildNodeView', () => {
     })
 
     expect(event.type).toBe('exo_view')
+    expect(event.anonymousId).toBe('anon-id')
     expect(event.entityId).toBe('exp-sys-id')
     expect(event.entityKind).toBe('Experience')
     expect(event.variant).toBe('variant-a')
@@ -29,6 +31,7 @@ describe('EventBuilder.buildNodeView', () => {
 
   it('stamps universal context fields', () => {
     const event = builder.buildNodeView({
+      anonymousId: 'anon-id',
       entityId: 'exp-id',
       entityKind: 'Fragment',
       variant: 'default',
