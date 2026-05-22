@@ -66,6 +66,7 @@ function RootLayout(): ReactElement {
         experienceBaseUrl: EXPERIENCE_BASE_URL,
       }}
       trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
+      autoTrackNodeInteraction={{ views: true }}
       logLevel={resolveLogLevel()}
       app={{
         name: 'ContentfulOptimization SDK - React Web SDK Reference',
