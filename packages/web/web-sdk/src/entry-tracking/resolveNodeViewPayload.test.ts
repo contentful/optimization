@@ -27,6 +27,15 @@ describe('resolveNodeViewPayload', () => {
       entityKind: 'Experience',
       optimizationId: 'exp-id',
       variant: 'variant-a',
+      layers: [
+        {
+          entityKind: 'Experience',
+          entityId: 'exp-id',
+          variant: 'variant-a',
+          optimizationId: 'exp-id',
+        },
+      ],
+      parentExperienceId: undefined,
     })
   })
 
@@ -38,6 +47,21 @@ describe('resolveNodeViewPayload', () => {
       entityKind: 'Fragment',
       optimizationId: 'frag-id',
       variant: 'default',
+      layers: [
+        {
+          entityKind: 'Fragment',
+          entityId: 'frag-id',
+          variant: 'default',
+          optimizationId: 'frag-id',
+        },
+        {
+          entityKind: 'Experience',
+          entityId: 'exp-id',
+          variant: 'variant-a',
+          optimizationId: 'exp-id',
+        },
+      ],
+      parentExperienceId: 'exp-id',
     })
   })
 
@@ -78,6 +102,21 @@ describe('resolveNodeViewPayload', () => {
       entityKind: 'Experience',
       optimizationId: 'exp-id',
       variant: 'variant-b',
+      layers: [
+        {
+          entityKind: 'Fragment',
+          entityId: 'frag-no-variants',
+          variant: undefined,
+          optimizationId: undefined,
+        },
+        {
+          entityKind: 'Experience',
+          entityId: 'exp-id',
+          variant: 'variant-b',
+          optimizationId: 'exp-id',
+        },
+      ],
+      parentExperienceId: undefined,
     })
   })
 
@@ -108,5 +147,23 @@ describe('resolveNodeViewPayload', () => {
     const result = resolveNodeViewPayload('node-1', unknownKindSourceMap)
 
     expect(result).toBeUndefined()
+  })
+
+  it('sets parentExperienceId to the nearest ancestor Experience layer above the attributed layer', () => {
+    const nestedSourceMap: SourceMap = {
+      variants: [{ type: 'personalization', id: 'variant-x' }],
+      layers: [
+        { kind: 'Fragment', id: 'frag-id', variants: [0] },
+        { kind: 'Experience', id: 'parent-exp-id' },
+      ],
+      nodes: {
+        'node-1': { layers: [0, 1], scope: 0 },
+      },
+    }
+
+    const result = resolveNodeViewPayload('node-1', nestedSourceMap)
+
+    expect(result?.parentExperienceId).toBe('parent-exp-id')
+    expect(result?.entityId).toBe('frag-id')
   })
 })

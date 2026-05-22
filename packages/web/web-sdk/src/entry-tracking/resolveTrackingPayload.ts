@@ -37,6 +37,14 @@ export type CtflDataset = DOMStringMap & {
   ctflVariant?: string
   /** Optional per-element override for automatic node view tracking (`'true'`/`'false'`). */
   ctflTrackNodeViews?: 'true' | 'false'
+  /** Optional composite entity-kind identifier for `exo_view` events. */
+  ctflEntityKindId?: string
+  /** Optional CSV of Contentful `sys.id` values for `exo_view` events. */
+  ctflEntryIds?: string
+  /** Optional JSON-serialised `ExoNodeLayer[]` ancestor chain for `exo_view` events. */
+  ctflLayers?: string
+  /** Optional parent Experience `sys.id` for nested `exo_view` events. */
+  ctflParentExperienceId?: string
 }
 
 /**

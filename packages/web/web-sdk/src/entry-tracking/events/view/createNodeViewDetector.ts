@@ -1,4 +1,5 @@
 import type { NodeViewTrackingArgs } from '@contentful/optimization-core'
+import type { ExoNodeLayer } from '@contentful/optimization-core/api-schemas'
 import { isHtmlOrSvgElement } from '../createTimedEntryDetector'
 import type {
   ElementViewCallbackInfo,
@@ -45,6 +46,47 @@ function isKnownEntityKind(kind: string): kind is NodeViewTrackingArgs['entityKi
   )
 }
 
+function parseEntryIds(value: string | undefined): string[] | undefined {
+  if (!value?.trim()) return undefined
+  const ids = value
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  return ids.length > 0 ? ids : undefined
+}
+
+function parseLayerValue(raw: unknown): ExoNodeLayer | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const { entityKind, entityId, variant, optimizationId } = raw as {
+    entityKind?: unknown
+    entityId?: unknown
+    variant?: unknown
+    optimizationId?: unknown
+  }
+  if (typeof entityKind !== 'string' || typeof entityId !== 'string') return undefined
+  if (!isKnownEntityKind(entityKind)) return undefined
+  return {
+    entityKind,
+    entityId,
+    variant: typeof variant === 'string' ? variant : undefined,
+    optimizationId: typeof optimizationId === 'string' ? optimizationId : undefined,
+  }
+}
+
+function parseLayers(value: string | undefined): ExoNodeLayer[] | undefined {
+  if (!value?.trim()) return undefined
+  const parsed: unknown = (() => {
+    try {
+      return JSON.parse(value) as unknown
+    } catch {
+      return undefined
+    }
+  })()
+  if (!Array.isArray(parsed)) return undefined
+  const layers = parsed.map(parseLayerValue).filter((l): l is ExoNodeLayer => l !== undefined)
+  return layers.length > 0 ? layers : undefined
+}
+
 function resolveNodeViewArgs(
   element: Element,
   info: ElementViewCallbackInfo,
@@ -59,6 +101,10 @@ function resolveNodeViewArgs(
       ctflOptimizationId,
       ctflTrackNodeViews,
       ctflVariant,
+      ctflEntityKindId,
+      ctflEntryIds,
+      ctflLayers,
+      ctflParentExperienceId,
     },
   } = element
 
@@ -77,6 +123,10 @@ function resolveNodeViewArgs(
     variant: ctflVariant,
     viewId: info.viewId,
     viewDurationMs: Math.max(0, Math.round(info.totalVisibleMs)),
+    entityKindId: ctflEntityKindId,
+    entryIds: parseEntryIds(ctflEntryIds),
+    layers: parseLayers(ctflLayers),
+    parentExperienceId: ctflParentExperienceId,
   }
 }
 
