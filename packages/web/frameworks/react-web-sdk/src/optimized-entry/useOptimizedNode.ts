@@ -4,6 +4,30 @@ import { useCallback, useMemo } from 'react'
 
 export type { ResolvedNodeMetadata }
 
+const CTFL_ATTRS = [
+  'data-ctfl-node-id',
+  'data-ctfl-entity-id',
+  'data-ctfl-entity-kind',
+  'data-ctfl-entity-kind-id',
+  'data-ctfl-entry-ids',
+  'data-ctfl-layers',
+  'data-ctfl-optimization-id',
+  'data-ctfl-parent-experience-id',
+  'data-ctfl-variant',
+] as const
+
+function setOrRemoveAttr(
+  element: HTMLElement | SVGElement,
+  attr: string,
+  value: string | undefined,
+): void {
+  if (value !== undefined) {
+    element.setAttribute(attr, value)
+  } else {
+    element.removeAttribute(attr)
+  }
+}
+
 export interface UseOptimizedNodeParams {
   /** Rendered node ID matching a key in `sourceMap.nodes`. */
   nodeId: string
@@ -57,19 +81,14 @@ export function useOptimizedNode({
 
   const ref = useCallback(
     (element: HTMLElement | SVGElement | null): void => {
-      if (!element) return
-      const { dataset } = element
+      if (!element) {
+        return
+      }
 
       if (!payload) {
-        delete dataset.ctflNodeId
-        delete dataset.ctflEntityId
-        delete dataset.ctflEntityKind
-        delete dataset.ctflEntityKindId
-        delete dataset.ctflEntryIds
-        delete dataset.ctflLayers
-        delete dataset.ctflOptimizationId
-        delete dataset.ctflParentExperienceId
-        delete dataset.ctflVariant
+        for (const attr of CTFL_ATTRS) {
+          element.removeAttribute(attr)
+        }
         return
       }
 
@@ -84,19 +103,15 @@ export function useOptimizedNode({
         variant,
       } = payload
 
-      dataset.ctflNodeId = nodeId
-      dataset.ctflEntityId = entityId
-      dataset.ctflEntityKind = entityKind
-      if (entityKindId !== undefined) dataset.ctflEntityKindId = entityKindId
-      else delete dataset.ctflEntityKindId
-      if (entryIds !== undefined) dataset.ctflEntryIds = entryIds.join(',')
-      else delete dataset.ctflEntryIds
-      if (layers !== undefined) dataset.ctflLayers = JSON.stringify(layers)
-      else delete dataset.ctflLayers
-      dataset.ctflOptimizationId = optimizationId
-      if (parentExperienceId !== undefined) dataset.ctflParentExperienceId = parentExperienceId
-      else delete dataset.ctflParentExperienceId
-      dataset.ctflVariant = variant
+      element.setAttribute('data-ctfl-node-id', nodeId)
+      element.setAttribute('data-ctfl-entity-id', entityId)
+      element.setAttribute('data-ctfl-entity-kind', entityKind)
+      setOrRemoveAttr(element, 'data-ctfl-entity-kind-id', entityKindId)
+      setOrRemoveAttr(element, 'data-ctfl-entry-ids', entryIds?.join(','))
+      setOrRemoveAttr(element, 'data-ctfl-layers', layers ? JSON.stringify(layers) : undefined)
+      element.setAttribute('data-ctfl-optimization-id', optimizationId)
+      setOrRemoveAttr(element, 'data-ctfl-parent-experience-id', parentExperienceId)
+      element.setAttribute('data-ctfl-variant', variant)
     },
     [nodeId, payload],
   )
