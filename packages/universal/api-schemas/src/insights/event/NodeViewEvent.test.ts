@@ -18,6 +18,7 @@ const BASE_UNIVERSAL = {
 
 const VALID_NODE_VIEW = {
   ...BASE_UNIVERSAL,
+  anonymousId: 'anon-id',
   type: 'exo_view' as const,
   entityId: 'exp-sys-id',
   entityKind: 'Experience' as const,

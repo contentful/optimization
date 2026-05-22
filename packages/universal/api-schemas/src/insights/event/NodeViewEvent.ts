@@ -44,6 +44,11 @@ export type ExoNodeLayer = z.infer<typeof ExoNodeLayer>
  */
 export const NodeViewEvent = z.extend(UniversalEventProperties, {
   /**
+   * Stable anonymous user identifier for this event.
+   */
+  anonymousId: z.string(),
+
+  /**
    * Discriminator identifying this as an XDA node view event.
    */
   type: z.literal('exo_view'),
