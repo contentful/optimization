@@ -26,6 +26,7 @@ import {
 } from './constants'
 import type { AutoTrackEntryInteractionOptions, EntryInteractionApi } from './entry-tracking'
 import { EntryInteractionRuntime } from './entry-tracking/EntryInteractionRuntime'
+import { NodeViewRuntime } from './entry-tracking/NodeViewRuntime'
 import {
   beaconHandler,
   createOnlineChangeListener,
@@ -204,6 +205,13 @@ class ContentfulOptimization extends CoreStateful {
    * @internal
    */
   private readonly entryInteractionRuntime: EntryInteractionRuntime
+
+  /**
+   * Runtime for automatic `exo_view` viewport tracking.
+   *
+   * @internal
+   */
+  private readonly nodeViewRuntime: NodeViewRuntime
   /**
    * Namespaced tracking controls for automatic and per-element entry interactions.
    *
@@ -269,6 +277,8 @@ class ContentfulOptimization extends CoreStateful {
     this.entryInteractionRuntime = entryInteractionRuntime
     this.tracking = tracking
 
+    this.nodeViewRuntime = new NodeViewRuntime(this)
+
     this.cookieAttributes = {
       domain: mergedConfig.cookie?.domain,
       expires: mergedConfig.cookie?.expires ?? EXPIRATION_DAYS_DEFAULT,
@@ -296,6 +306,13 @@ class ContentfulOptimization extends CoreStateful {
       } = signals
 
       this.entryInteractionRuntime.syncAutoTrackedEntryInteractions(!!value)
+
+      if (value) {
+        this.nodeViewRuntime.start()
+      } else {
+        this.nodeViewRuntime.stop()
+      }
+
       LocalStore.consent = value
     })
 
@@ -380,6 +397,7 @@ class ContentfulOptimization extends CoreStateful {
    */
   reset(): void {
     this.entryInteractionRuntime.reset()
+    this.nodeViewRuntime.stop()
     removeCookie(ANONYMOUS_ID_COOKIE, this.cookieAttributes)
     LocalStore.reset()
     super.reset()
@@ -394,6 +412,7 @@ class ContentfulOptimization extends CoreStateful {
    */
   destroy(): void {
     this.entryInteractionRuntime.destroy()
+    this.nodeViewRuntime.destroy()
     this.cleanupOnlineListener()
     this.cleanupVisibilityListener()
 

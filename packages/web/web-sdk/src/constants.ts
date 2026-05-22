@@ -50,6 +50,13 @@ export { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-core/constants'
 export const ENTRY_SELECTOR = '[data-ctfl-entry-id]'
 
 /**
+ * Selector used to locate tracked XDA node elements in the DOM.
+ *
+ * @public
+ */
+export const NODE_VIEW_SELECTOR = '[data-ctfl-node-id]'
+
+/**
  * Flag indicating whether the current environment can safely add DOM
  * event listeners.
  *

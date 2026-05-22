@@ -40,6 +40,7 @@ export type {
   EntryViewInteractionElementOptions,
   EntryViewInteractionStartOptions,
 } from './entry-tracking'
+export * from './entry-tracking/resolveNodeViewPayload'
 export * from './handlers/beaconHandler'
 export * from './storage/LocalStore'
 

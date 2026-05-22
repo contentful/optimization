@@ -24,6 +24,17 @@ export type CtflDataset = DOMStringMap & {
   ctflViewDurationUpdateIntervalMs?: string
   /** Optional per-element hover-duration update interval override in milliseconds. */
   ctflHoverDurationUpdateIntervalMs?: string
+  /**
+   * Rendered node ID from the XDA `extensions.sourceMap.nodes` map.
+   * Presence of this attribute routes the element to `exo_view` tracking.
+   */
+  ctflNodeId?: string
+  /** Resolved Experience or Fragment `sys.id` for `exo_view` events. */
+  ctflEntityId?: string
+  /** Resolved entity kind for `exo_view` events. */
+  ctflEntityKind?: string
+  /** Resolved variant identifier for `exo_view` events. */
+  ctflVariant?: string
 }
 
 /**
