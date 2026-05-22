@@ -139,7 +139,7 @@ export default function App(): JSX.Element {
           Home
         </Link>
         <Link data-testid="link-exo" to={EXO_PATH}>
-          Exo
+          ExO
         </Link>
         <Link data-testid="link-page-two" to={PAGE_TWO_PATH}>
           Go to Page Two
