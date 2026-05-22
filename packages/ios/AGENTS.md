@@ -4,20 +4,19 @@ Read the repository root `AGENTS.md`, then `packages/AGENTS.md`, before this fil
 
 ## Scope
 
-This directory owns native iOS package work, including the Swift Package under
-`ContentfulOptimization/` and the JavaScriptCore bridge package under `ios-jsc-bridge/`.
+This directory owns native iOS package work: the Swift Package under `ContentfulOptimization/`. The
+shared JavaScriptCore bridge it consumes lives under `packages/universal/optimization-js-bridge/`.
 
 ## Key paths
 
 - `ContentfulOptimization/` - Swift Package, public Swift API, native runtime, resources, and tests
-- `ios-jsc-bridge/` - TypeScript bridge compiled to the JavaScriptCore UMD bundle
 - `CODE_MAP.md` - current architecture map for native iOS work
 - `README.md` - package status and public-facing notes
 
 ## Local rules
 
 - Keep Swift bridge calls, JSON payload shapes, and callback behavior aligned with
-  `ios-jsc-bridge/src/index.ts`.
+  `packages/universal/optimization-js-bridge/src/index.ts`.
 - Keep the bridge bundle flow one-way: edit TypeScript bridge source, build the bridge package, and
   let its build copy the generated UMD into Swift package resources.
 - Do not hand-edit

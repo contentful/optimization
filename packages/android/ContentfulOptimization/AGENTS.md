@@ -22,8 +22,8 @@ public API surface.
   (OptimizationRoot, OptimizedEntry, LazyColumn tracking, screen/click/view tracking)
 - `src/main/kotlin/com/contentful/optimization/preview/` — preview panel UI (theme, components,
   overlay, ViewModel, Contentful client, Activity)
-- `src/main/assets/` — JS bridge bundle and polyfill scripts (copied from android-zipline-bridge
-  build)
+- `src/main/assets/` — JS bridge bundle and polyfill scripts (copied from the
+  `@contentful/optimization-js-bridge` build)
 
 ## Local rules
 
@@ -34,7 +34,7 @@ public API surface.
 - Do not hand-edit files in `src/main/assets/`. They are copied from the bridge build and iOS
   polyfill sources.
 - Keep bridge call signatures and JSON payload shapes aligned with
-  `android-zipline-bridge/src/index.ts`.
+  `packages/universal/optimization-js-bridge/src/index.ts`.
 - Keep Compose UI components aligned with iOS SwiftUI views when changing shared tracking or preview
   contracts.
 - `PreviewPanelActivity` uses static client references for View-based app integration. Keep this
@@ -45,5 +45,5 @@ public API surface.
 ## Commands
 
 - Gradle build commands require Android SDK. Use `./gradlew build` from this directory.
-- Run `pnpm --filter @contentful/optimization-android-bridge build` to rebuild the JS bridge bundle
+- Run `pnpm --filter @contentful/optimization-js-bridge build` to rebuild the JS bridge bundle
   before Gradle build.

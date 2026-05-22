@@ -18,12 +18,13 @@ Swift tests.
 
 ## Local rules
 
-- Keep native runtime concerns here. TypeScript bridge behavior belongs in `../ios-jsc-bridge/`;
-  shared optimization behavior belongs in `packages/universal/core-sdk`.
+- Keep native runtime concerns here. TypeScript bridge behavior belongs in
+  `../../universal/optimization-js-bridge/`; shared optimization behavior belongs in
+  `packages/universal/core-sdk`.
 - Treat `Resources/optimization-ios-bridge.umd.js` as generated bridge output. Update it by building
-  `@contentful/optimization-ios-bridge`, not by hand-editing the copied file.
+  `@contentful/optimization-js-bridge`, not by hand-editing the copied file.
 - Keep Swift payload models and bridge method expectations aligned with
-  `../ios-jsc-bridge/src/index.ts`.
+  `../../universal/optimization-js-bridge/src/index.ts`.
 - Keep resource additions reflected in `Package.swift` when they must ship with the Swift package.
 - Preserve the package platform constraints in `Package.swift` unless the task explicitly changes
   supported platforms.
@@ -33,7 +34,7 @@ Swift tests.
 ## Commands
 
 - From `packages/ios/ContentfulOptimization/`: `swift test`
-- `pnpm --filter @contentful/optimization-ios-bridge build`
+- `pnpm --filter @contentful/optimization-js-bridge build`
 
 ## Usually validate
 
