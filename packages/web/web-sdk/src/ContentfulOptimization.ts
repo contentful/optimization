@@ -108,19 +108,6 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
   autoTrackNodeInteraction?: AutoTrackNodeInteractionOptions
 
   /**
-   * Controls automatic `exo_view` tracking for elements carrying
-   * `data-ctfl-node-id`.
-   *
-   * @remarks
-   * Deprecated alias for `autoTrackNodeInteraction.views`.
-   *
-   * @defaultValue `true`
-   *
-   * @deprecated Use `autoTrackNodeInteraction` instead.
-   */
-  autoTrackNodeViews?: boolean
-
-  /**
    * Cookie configuration used for persisting the anonymous identifier.
    *
    * @remarks
@@ -152,10 +139,9 @@ export type AutoTrackNodeInteractionOptions = Partial<Record<NodeInteraction, bo
 
 function resolveAutoTrackNodeInteractionOptions(
   options: AutoTrackNodeInteractionOptions | undefined,
-  legacyAutoTrackNodeViews: boolean | undefined,
 ): Record<NodeInteraction, boolean> {
   return {
-    views: options?.views ?? legacyAutoTrackNodeViews ?? true,
+    views: options?.views ?? true,
   }
 }
 
@@ -317,12 +303,7 @@ class ContentfulOptimization extends CoreStateful {
     if (typeof window !== 'undefined' && window.contentfulOptimization)
       throw new Error('ContentfulOptimization is already initialized')
 
-    const {
-      autoTrackEntryInteraction,
-      autoTrackNodeInteraction,
-      autoTrackNodeViews,
-      ...restConfig
-    } = config
+    const { autoTrackEntryInteraction, autoTrackNodeInteraction, ...restConfig } = config
 
     const mergedConfig: OptimizationWebConfig = mergeConfig(restConfig)
 
@@ -337,10 +318,7 @@ class ContentfulOptimization extends CoreStateful {
     this.tracking = tracking
 
     this.nodeViewRuntime = new NodeViewRuntime(this)
-    this.autoTrackNodeInteraction = resolveAutoTrackNodeInteractionOptions(
-      autoTrackNodeInteraction,
-      autoTrackNodeViews,
-    )
+    this.autoTrackNodeInteraction = resolveAutoTrackNodeInteractionOptions(autoTrackNodeInteraction)
 
     this.cookieAttributes = {
       domain: mergedConfig.cookie?.domain,
