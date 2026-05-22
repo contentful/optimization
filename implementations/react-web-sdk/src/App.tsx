@@ -4,7 +4,7 @@ import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useOutletContext } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
 import { ENTRY_IDS, LIVE_UPDATES_ENTRY_ID } from './config/entries'
-import { HOME_PATH, PAGE_TWO_PATH } from './config/routes'
+import { EXO_PATH, HOME_PATH, PAGE_TWO_PATH } from './config/routes'
 import { fetchEntries, getContentfulConfigError } from './services/contentfulClient'
 import type { ContentEntry } from './types/contentful'
 
@@ -137,6 +137,9 @@ export default function App(): JSX.Element {
       <nav style={{ display: 'flex', gap: 12 }}>
         <Link data-testid="link-home" to={HOME_PATH}>
           Home
+        </Link>
+        <Link data-testid="link-exo" to={EXO_PATH}>
+          Exo
         </Link>
         <Link data-testid="link-page-two" to={PAGE_TWO_PATH}>
           Go to Page Two

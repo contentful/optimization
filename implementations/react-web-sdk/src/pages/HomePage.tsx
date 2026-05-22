@@ -2,12 +2,10 @@ import { useLiveUpdates } from '@contentful/optimization-react-web'
 import type { JSX } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import type { AppOutletContext } from '../App'
-import { NodeViewDebugPanel } from '../components/NodeViewDebugPanel'
 import { AUTO_OBSERVED_ENTRY_IDS, MANUALLY_OBSERVED_ENTRY_IDS } from '../config/entries'
 import { type EntryClickScenario, ContentEntry } from '../sections/ContentEntry'
 import { LiveUpdatesExampleEntry } from '../sections/LiveUpdatesExampleEntry'
 import { NestedContentEntry } from '../sections/NestedContentEntry'
-import { NodeViewTrackingSection } from '../sections/NodeViewTrackingSection'
 import type { ContentEntry as ContentEntryType } from '../types/contentful'
 
 const AUTO_OBSERVED_CLICK_SCENARIO_BY_ENTRY_ID: Readonly<Record<string, EntryClickScenario>> = {
@@ -165,9 +163,6 @@ export function HomePage(): JSX.Element {
         <p data-testid="global-live-updates-status">{globalLiveUpdates ? 'ON' : 'OFF'}</p>
         <p data-testid="preview-panel-status">{previewPanelVisible ? 'Open' : 'Closed'}</p>
       </section>
-
-      <NodeViewTrackingSection />
-      <NodeViewDebugPanel />
 
       <section>
         <h2>Live Updates</h2>
