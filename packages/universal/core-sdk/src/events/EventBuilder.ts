@@ -3,10 +3,12 @@ import {
   Campaign,
   type Channel,
   type ClickEvent,
+  type ExoNodeLayer,
   GeoLocation,
   type HoverEvent,
   type IdentifyEvent,
   type Library,
+  type NodeViewEvent,
   Page,
   PageEventContext,
   type PageViewEvent,
@@ -239,6 +241,32 @@ export const TrackBuilderArgs = z.extend(UniversalEventBuilderArgs, {
  * @public
  */
 export type TrackBuilderArgs = z.infer<typeof TrackBuilderArgs>
+
+export const NodeViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
+  entityId: z.string(),
+  entityKind: z.union([
+    z.literal('Experience'),
+    z.literal('Fragment'),
+    z.literal('InlineFragment'),
+    z.literal('InlineComponent'),
+  ]),
+  variant: z.string(),
+  optimizationId: z.string(),
+  viewId: z.string(),
+  viewDurationMs: z.number(),
+  entityKindId: z.optional(z.string()),
+  entryIds: z.optional(z.array(z.string())),
+  layers: z.optional(z.array(z.custom<ExoNodeLayer>())),
+  parameters: z.optional(z.record(z.string(), z.unknown())),
+  parentExperienceId: z.optional(z.string()),
+})
+
+/**
+ * Arguments for constructing `exo_view` events.
+ *
+ * @public
+ */
+export type NodeViewBuilderArgs = z.infer<typeof NodeViewBuilderArgs>
 
 /**
  * Default page properties used when no explicit page information is available.
@@ -685,6 +713,60 @@ class EventBuilder {
       type: 'track',
       event,
       properties,
+    }
+  }
+
+  /**
+   * Builds an `exo_view` event payload for XDA graph node viewport
+   * tracking.
+   *
+   * @param args - {@link NodeViewBuilderArgs} arguments describing the node view.
+   * @returns A {@link NodeViewEvent} payload.
+   *
+   * @example
+   * ```ts
+   * const event = builder.buildNodeView({
+   *   entityId: 'experience-sys-id',
+   *   entityKind: 'Experience',
+   *   variant: 'variant-a',
+   *   optimizationId: 'optimization-id',
+   *   viewId: crypto.randomUUID(),
+   *   viewDurationMs: 1_000,
+   * })
+   * ```
+   *
+   * @public
+   */
+  buildNodeView(args: NodeViewBuilderArgs): NodeViewEvent {
+    const {
+      entityId,
+      entityKind,
+      variant,
+      optimizationId,
+      viewId,
+      viewDurationMs,
+      entityKindId,
+      entryIds,
+      layers,
+      parameters,
+      parentExperienceId,
+      ...universal
+    } = parseWithFriendlyError(NodeViewBuilderArgs, args)
+
+    return {
+      ...this.buildUniversalEventProperties(universal),
+      type: 'exo_view',
+      entityId,
+      entityKind,
+      variant,
+      optimizationId,
+      viewId,
+      viewDurationMs,
+      entityKindId,
+      entryIds,
+      layers,
+      parameters,
+      parentExperienceId,
     }
   }
 }
