@@ -53,6 +53,15 @@ describe('useOptimizedNode', () => {
       entityKind: 'Experience',
       optimizationId: 'exp-id',
       variant: 'variant-a',
+      layers: [
+        {
+          entityKind: 'Experience',
+          entityId: 'exp-id',
+          optimizationId: 'exp-id',
+          variant: 'variant-a',
+        },
+      ],
+      parentExperienceId: undefined,
     })
 
     cleanup()
@@ -79,6 +88,14 @@ describe('useOptimizedNode', () => {
     expect(el.dataset.ctflEntityKind).toBe('Experience')
     expect(el.dataset.ctflOptimizationId).toBe('exp-id')
     expect(el.dataset.ctflVariant).toBe('variant-a')
+    expect(JSON.parse(el.dataset.ctflLayers ?? '[]')).toEqual([
+      {
+        entityKind: 'Experience',
+        entityId: 'exp-id',
+        optimizationId: 'exp-id',
+        variant: 'variant-a',
+      },
+    ])
 
     cleanup()
   })
@@ -89,7 +106,11 @@ describe('useOptimizedNode', () => {
     el.dataset.ctflNodeId = 'previous-node'
     el.dataset.ctflEntityId = 'previous-entity'
     el.dataset.ctflEntityKind = 'Experience'
+    el.dataset.ctflEntityKindId = 'previous-entity'
+    el.dataset.ctflEntryIds = 'a,b'
+    el.dataset.ctflLayers = '[]'
     el.dataset.ctflOptimizationId = 'previous-optimization'
+    el.dataset.ctflParentExperienceId = 'previous-parent'
     el.dataset.ctflVariant = 'previous-variant'
 
     act(() => {
@@ -99,7 +120,11 @@ describe('useOptimizedNode', () => {
     expect(el.dataset.ctflNodeId).toBeUndefined()
     expect(el.dataset.ctflEntityId).toBeUndefined()
     expect(el.dataset.ctflEntityKind).toBeUndefined()
+    expect(el.dataset.ctflEntityKindId).toBeUndefined()
+    expect(el.dataset.ctflEntryIds).toBeUndefined()
+    expect(el.dataset.ctflLayers).toBeUndefined()
     expect(el.dataset.ctflOptimizationId).toBeUndefined()
+    expect(el.dataset.ctflParentExperienceId).toBeUndefined()
     expect(el.dataset.ctflVariant).toBeUndefined()
 
     cleanup()

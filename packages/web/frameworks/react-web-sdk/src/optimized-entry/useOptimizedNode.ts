@@ -1,7 +1,4 @@
-import {
-  resolveNodeViewPayload,
-  type ResolvedNodeMetadata,
-} from '@contentful/optimization-web'
+import { resolveNodeViewPayload, type ResolvedNodeMetadata } from '@contentful/optimization-web'
 import type { SourceMap } from '@contentful/optimization-web/api-schemas'
 import { useCallback, useMemo } from 'react'
 
@@ -42,7 +39,7 @@ export interface UseOptimizedNodeResult {
  *
  * @remarks
  * The stamped attributes are detected by the `NodeViewRuntime` for automatic
- * `exo/node_view` viewport tracking — no manual tracking call is needed.
+ * `exo_view` viewport tracking — no manual tracking call is needed.
  *
  * When `payload` is `undefined` the ref callback is a no-op; the element will
  * not be tracked.
@@ -56,10 +53,7 @@ export function useOptimizedNode({
   nodeId,
   sourceMap,
 }: UseOptimizedNodeParams): UseOptimizedNodeResult {
-  const payload = useMemo(
-    () => resolveNodeViewPayload(nodeId, sourceMap),
-    [nodeId, sourceMap],
-  )
+  const payload = useMemo(() => resolveNodeViewPayload(nodeId, sourceMap), [nodeId, sourceMap])
 
   const ref = useCallback(
     (element: HTMLElement | SVGElement | null): void => {
@@ -70,17 +64,38 @@ export function useOptimizedNode({
         delete dataset.ctflNodeId
         delete dataset.ctflEntityId
         delete dataset.ctflEntityKind
+        delete dataset.ctflEntityKindId
+        delete dataset.ctflEntryIds
+        delete dataset.ctflLayers
         delete dataset.ctflOptimizationId
+        delete dataset.ctflParentExperienceId
         delete dataset.ctflVariant
         return
       }
 
-      const { entityId, entityKind, optimizationId, variant } = payload
+      const {
+        entityId,
+        entityKind,
+        entityKindId,
+        entryIds,
+        layers,
+        optimizationId,
+        parentExperienceId,
+        variant,
+      } = payload
 
       dataset.ctflNodeId = nodeId
       dataset.ctflEntityId = entityId
       dataset.ctflEntityKind = entityKind
+      if (entityKindId !== undefined) dataset.ctflEntityKindId = entityKindId
+      else delete dataset.ctflEntityKindId
+      if (entryIds !== undefined) dataset.ctflEntryIds = entryIds.join(',')
+      else delete dataset.ctflEntryIds
+      if (layers !== undefined) dataset.ctflLayers = JSON.stringify(layers)
+      else delete dataset.ctflLayers
       dataset.ctflOptimizationId = optimizationId
+      if (parentExperienceId !== undefined) dataset.ctflParentExperienceId = parentExperienceId
+      else delete dataset.ctflParentExperienceId
       dataset.ctflVariant = variant
     },
     [nodeId, payload],
