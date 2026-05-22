@@ -98,6 +98,29 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
   autoTrackEntryInteraction?: AutoTrackEntryInteractionOptions
 
   /**
+   * Controls automatic `exo_view` tracking behavior for node elements.
+   *
+   * @remarks
+   * Supports node interactions via the `views` interaction.
+   *
+   * @defaultValue `{ views: true }`
+   */
+  autoTrackNodeInteraction?: AutoTrackNodeInteractionOptions
+
+  /**
+   * Controls automatic `exo_view` tracking for elements carrying
+   * `data-ctfl-node-id`.
+   *
+   * @remarks
+   * Deprecated alias for `autoTrackNodeInteraction.views`.
+   *
+   * @defaultValue `true`
+   *
+   * @deprecated Use `autoTrackNodeInteraction` instead.
+   */
+  autoTrackNodeViews?: boolean
+
+  /**
    * Cookie configuration used for persisting the anonymous identifier.
    *
    * @remarks
@@ -112,6 +135,29 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
  * @public
  */
 export type OptimizationTrackingApi = EntryInteractionApi
+
+/**
+ * Union of tracked node interaction keys.
+ *
+ * @public
+ */
+export type NodeInteraction = 'views'
+
+/**
+ * Auto-tracking configuration for tracked node interactions.
+ *
+ * @public
+ */
+export type AutoTrackNodeInteractionOptions = Partial<Record<NodeInteraction, boolean>>
+
+function resolveAutoTrackNodeInteractionOptions(
+  options: AutoTrackNodeInteractionOptions | undefined,
+  legacyAutoTrackNodeViews: boolean | undefined,
+): Record<NodeInteraction, boolean> {
+  return {
+    views: options?.views ?? legacyAutoTrackNodeViews ?? true,
+  }
+}
 
 function resolveDefaultState(
   defaults: CoreStatefulConfig['defaults'] | undefined,
@@ -212,6 +258,14 @@ class ContentfulOptimization extends CoreStateful {
    * @internal
    */
   private readonly nodeViewRuntime: NodeViewRuntime
+
+  /**
+   * Resolved automatic node-interaction tracking settings.
+   *
+   * @internal
+   */
+  private readonly autoTrackNodeInteraction: Record<NodeInteraction, boolean>
+
   /**
    * Namespaced tracking controls for automatic and per-element entry interactions.
    *
@@ -263,7 +317,12 @@ class ContentfulOptimization extends CoreStateful {
     if (typeof window !== 'undefined' && window.contentfulOptimization)
       throw new Error('ContentfulOptimization is already initialized')
 
-    const { autoTrackEntryInteraction, ...restConfig } = config
+    const {
+      autoTrackEntryInteraction,
+      autoTrackNodeInteraction,
+      autoTrackNodeViews,
+      ...restConfig
+    } = config
 
     const mergedConfig: OptimizationWebConfig = mergeConfig(restConfig)
 
@@ -278,6 +337,10 @@ class ContentfulOptimization extends CoreStateful {
     this.tracking = tracking
 
     this.nodeViewRuntime = new NodeViewRuntime(this)
+    this.autoTrackNodeInteraction = resolveAutoTrackNodeInteractionOptions(
+      autoTrackNodeInteraction,
+      autoTrackNodeViews,
+    )
 
     this.cookieAttributes = {
       domain: mergedConfig.cookie?.domain,
@@ -305,13 +368,7 @@ class ContentfulOptimization extends CoreStateful {
         consent: { value },
       } = signals
 
-      this.entryInteractionRuntime.syncAutoTrackedEntryInteractions(!!value)
-
-      if (value) {
-        this.nodeViewRuntime.start()
-      } else {
-        this.nodeViewRuntime.stop()
-      }
+      this.reconcileAutoTracking(value)
 
       LocalStore.consent = value
     })
@@ -336,6 +393,17 @@ class ContentfulOptimization extends CoreStateful {
     this.initializeFromCookieValues(cookieValue, legacyCookieValue)
 
     if (typeof window !== 'undefined') window.contentfulOptimization ??= this
+  }
+
+  private reconcileAutoTracking(consent: boolean | undefined): void {
+    this.entryInteractionRuntime.syncAutoTrackedEntryInteractions(!!consent)
+
+    if (consent && this.autoTrackNodeInteraction.views) {
+      this.nodeViewRuntime.start()
+      return
+    }
+
+    this.nodeViewRuntime.stop()
   }
 
   /**

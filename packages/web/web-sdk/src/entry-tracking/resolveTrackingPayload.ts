@@ -35,6 +35,8 @@ export type CtflDataset = DOMStringMap & {
   ctflEntityKind?: string
   /** Resolved variant identifier for `exo_view` events. */
   ctflVariant?: string
+  /** Optional per-element override for automatic node view tracking (`'true'`/`'false'`). */
+  ctflTrackNodeViews?: 'true' | 'false'
 }
 
 /**

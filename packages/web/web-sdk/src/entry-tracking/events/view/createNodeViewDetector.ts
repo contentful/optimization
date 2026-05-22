@@ -1,4 +1,4 @@
-import type { NodeViewBuilderArgs } from '@contentful/optimization-core'
+import type { NodeViewTrackingArgs } from '@contentful/optimization-core'
 import { isHtmlOrSvgElement } from '../createTimedEntryDetector'
 import type {
   ElementViewCallbackInfo,
@@ -12,7 +12,7 @@ import ElementViewObserver from './ElementViewObserver'
  * @internal
  */
 export interface NodeViewTrackingCore {
-  trackNodeView: (payload: NodeViewBuilderArgs) => Promise<void>
+  trackNodeView: (payload: NodeViewTrackingArgs) => Promise<void>
 }
 
 /**
@@ -29,7 +29,14 @@ export interface NodeViewDetector {
   disconnect: () => void
 }
 
-function isKnownEntityKind(kind: string): kind is NodeViewBuilderArgs['entityKind'] {
+function parseBooleanOverride(value: string | undefined): boolean | undefined {
+  const normalized = value?.trim().toLowerCase()
+  if (normalized === 'true') return true
+  if (normalized === 'false') return false
+  return undefined
+}
+
+function isKnownEntityKind(kind: string): kind is NodeViewTrackingArgs['entityKind'] {
   return (
     kind === 'Experience' ||
     kind === 'Fragment' ||
@@ -41,12 +48,22 @@ function isKnownEntityKind(kind: string): kind is NodeViewBuilderArgs['entityKin
 function resolveNodeViewArgs(
   element: Element,
   info: ElementViewCallbackInfo,
-): NodeViewBuilderArgs | undefined {
+): NodeViewTrackingArgs | undefined {
   if (!isHtmlOrSvgElement(element)) return undefined
 
   const {
-    dataset: { ctflNodeId, ctflEntityId, ctflEntityKind, ctflOptimizationId, ctflVariant },
+    dataset: {
+      ctflNodeId,
+      ctflEntityId,
+      ctflEntityKind,
+      ctflOptimizationId,
+      ctflTrackNodeViews,
+      ctflVariant,
+    },
   } = element
+
+  const override = parseBooleanOverride(ctflTrackNodeViews)
+  if (override === false) return undefined
 
   if (!ctflNodeId || !ctflEntityId || !ctflEntityKind || !ctflOptimizationId || !ctflVariant)
     return undefined
