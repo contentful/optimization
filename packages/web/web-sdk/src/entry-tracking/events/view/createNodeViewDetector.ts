@@ -47,11 +47,14 @@ function isKnownEntityKind(kind: string): kind is NodeViewTrackingArgs['entityKi
 }
 
 function parseEntryIds(value: string | undefined): string[] | undefined {
-  if (!value?.trim()) return undefined
+  if (!value?.trim()) {
+    return undefined
+  }
   const ids = value
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
+
   return ids.length > 0 ? ids : undefined
 }
 
@@ -73,16 +76,24 @@ function parseLayerValue(raw: unknown): ExoNodeLayer | undefined {
   }
 }
 
+function tryParseJson(value: string): unknown {
+  try {
+    return JSON.parse(value) as unknown
+  } catch {
+    return undefined
+  }
+}
+
 function parseLayers(value: string | undefined): ExoNodeLayer[] | undefined {
-  if (!value?.trim()) return undefined
-  const parsed: unknown = (() => {
-    try {
-      return JSON.parse(value) as unknown
-    } catch {
-      return undefined
-    }
-  })()
-  if (!Array.isArray(parsed)) return undefined
+  if (!value?.trim()) {
+    return undefined
+  }
+
+  const parsed = tryParseJson(value)
+  if (!Array.isArray(parsed)) {
+    return undefined
+  }
+
   const layers = parsed.map(parseLayerValue).filter((l): l is ExoNodeLayer => l !== undefined)
   return layers.length > 0 ? layers : undefined
 }
@@ -91,30 +102,34 @@ function resolveNodeViewArgs(
   element: Element,
   info: ElementViewCallbackInfo,
 ): NodeViewTrackingArgs | undefined {
-  if (!isHtmlOrSvgElement(element)) return undefined
+  if (!isHtmlOrSvgElement(element)) {
+    return undefined
+  }
+
+  const { dataset } = element
+  if (parseBooleanOverride(dataset.ctflTrackNodeViews) === false) {
+    return undefined
+  }
 
   const {
-    dataset: {
-      ctflNodeId,
-      ctflEntityId,
-      ctflEntityKind,
-      ctflOptimizationId,
-      ctflTrackNodeViews,
-      ctflVariant,
-      ctflEntityKindId,
-      ctflEntryIds,
-      ctflLayers,
-      ctflParentExperienceId,
-    },
-  } = element
+    ctflNodeId,
+    ctflEntityId,
+    ctflEntityKind,
+    ctflOptimizationId,
+    ctflVariant,
+    ctflEntityKindId,
+    ctflEntryIds,
+    ctflLayers,
+    ctflParentExperienceId,
+  } = dataset
 
-  const override = parseBooleanOverride(ctflTrackNodeViews)
-  if (override === false) return undefined
-
-  if (!ctflNodeId || !ctflEntityId || !ctflEntityKind || !ctflOptimizationId || !ctflVariant)
+  if (!ctflNodeId || !ctflEntityId || !ctflEntityKind || !ctflOptimizationId || !ctflVariant) {
     return undefined
+  }
 
-  if (!isKnownEntityKind(ctflEntityKind)) return undefined
+  if (!isKnownEntityKind(ctflEntityKind)) {
+    return undefined
+  }
 
   return {
     entityId: ctflEntityId,
