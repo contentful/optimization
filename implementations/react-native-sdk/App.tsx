@@ -57,6 +57,7 @@ function AppContent(): React.JSX.Element {
 
     const subscription = sdk.states.profile.subscribe((profile) => {
       setHasProfile(profile !== undefined)
+      setIsIdentified(profile?.traits.identified === true)
 
       if (!profile) {
         return
@@ -89,13 +90,11 @@ function AppContent(): React.JSX.Element {
 
   const handleIdentify = (): void => {
     void sdk.identify({ userId: 'charles', traits: { identified: true } })
-    setIsIdentified(true)
   }
 
   const handleReset = (): void => {
     sdk.reset()
     void sdk.page({ properties: { url: 'app' } })
-    setIsIdentified(false)
   }
 
   if (sdkError) {
@@ -129,7 +128,12 @@ function AppContent(): React.JSX.Element {
   }
 
   return (
-    <PreviewPanelOverlay contentfulClient={contentfulClient}>
+    <PreviewPanelOverlay
+      contentfulClient={contentfulClient}
+      onRefresh={() => {
+        void sdk.page({ properties: { url: 'app' } })
+      }}
+    >
       <SafeAreaView style={{ flex: 1 }}>
         <View style={{ padding: 10, gap: 10, flexDirection: 'row', flexWrap: 'wrap' }}>
           {!isIdentified ? (

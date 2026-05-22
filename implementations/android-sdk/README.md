@@ -29,7 +29,7 @@ integration pattern using Jetpack Compose and serves as a test target for UI Aut
 - Nested entry resolution and recursive rendering
 - Navigation with screen tracking via `ScreenTrackingEffect`
 - Live updates behavior: default (global), explicit live, and locked variants
-- `PreviewPanelOverlay` with audience/variant override controls
+- `PreviewPanelConfig` preview panel with audience/variant override controls
 - Analytics event display for debugging tracked events
 - All accessibility identifiers aligned with the iOS SwiftUI implementation for cross-platform E2E
   parity
@@ -40,7 +40,7 @@ integration pattern using Jetpack Compose and serves as a test target for UI Aut
 - Android emulator or connected device
 - `adb` in PATH
 - pnpm dependencies installed at monorepo root (`pnpm install`)
-- Android bridge built: `pnpm --filter @contentful/optimization-android-bridge build`
+- Android bridge built: `pnpm --filter @contentful/optimization-js-bridge build`
 
 ## Setup
 
@@ -48,7 +48,7 @@ From the monorepo root:
 
 ```sh
 pnpm install
-pnpm --filter @contentful/optimization-android-bridge build
+pnpm --filter @contentful/optimization-js-bridge build
 ```
 
 ## Running locally
@@ -98,7 +98,7 @@ Before running anything from the IDE, in a separate terminal:
 
 ```sh
 # From the monorepo root, build the bridge once (or after bridge source changes):
-pnpm --filter @contentful/optimization-android-bridge build
+pnpm --filter @contentful/optimization-js-bridge build
 
 # Then start the mock server and leave it running:
 pnpm --dir lib/mocks serve

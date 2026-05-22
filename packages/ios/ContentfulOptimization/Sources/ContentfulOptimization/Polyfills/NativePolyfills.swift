@@ -32,14 +32,20 @@ enum NativePolyfills {
     }
 
     /// Escapes a Swift string so it can be safely interpolated into a JS string literal.
+    ///
+    /// Covers backtick and the U+2028/U+2029 line terminators, both of which are valid
+    /// inside a JS string literal and would otherwise break out of it.
     static func escapeForJS(_ value: String) -> String {
         value
             .replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
             .replacingOccurrences(of: "'", with: "\\'")
+            .replacingOccurrences(of: "`", with: "\\`")
             .replacingOccurrences(of: "\n", with: "\\n")
             .replacingOccurrences(of: "\r", with: "\\r")
             .replacingOccurrences(of: "\t", with: "\\t")
+            .replacingOccurrences(of: "\u{2028}", with: "\\u2028")
+            .replacingOccurrences(of: "\u{2029}", with: "\\u2029")
     }
 
     private static let signpostLog = OSLog(
@@ -124,9 +130,8 @@ enum NativePolyfills {
             guard let url = Foundation.URL(string: urlString) else {
                 diagLog.error("[fetch] Invalid URL: \(urlString)")
                 DispatchQueue.main.async {
-                    let escaped = escapeForJS(urlString)
-                    weakContext?.evaluateScript(
-                        "__fetchComplete(\(callbackId), 0, \"{}\", \"\", \"Invalid URL: \(escaped)\")"
+                    weakContext?.objectForKeyedSubscript("__fetchComplete")?.call(
+                        withArguments: [callbackId, 0, "{}", "", "Invalid URL: \(urlString)"]
                     )
                     os_signpost(
                         .end, log: log, name: "Fetch Bridge Crossing",
@@ -190,16 +195,14 @@ enum NativePolyfills {
         }
 
         if let error = error {
-            diagLog.error("[fetch] Network error for \(urlString): \(error.localizedDescription)")
-            let escaped = escapeForJS(
-                error.localizedDescription
-            )
-            ctx.evaluateScript(
-                "__fetchComplete(\(callbackId), 0, \"{}\", \"\", \"\(escaped)\")"
+            let message = error.localizedDescription
+            diagLog.error("[fetch] Network error for \(urlString): \(message)")
+            ctx.objectForKeyedSubscript("__fetchComplete")?.call(
+                withArguments: [callbackId, 0, "{}", "", message]
             )
             os_signpost(
                 .end, log: log, name: "Fetch Bridge Crossing",
-                signpostID: fetchSignpostID, "error: %{public}s", escaped
+                signpostID: fetchSignpostID, "error: %{public}s", message
             )
             return
         }
@@ -222,11 +225,8 @@ enum NativePolyfills {
 
         let bodyText = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
 
-        let escapedBody = escapeForJS(bodyText)
-        let escapedHeaders = escapeForJS(headersJSONStr)
-
-        ctx.evaluateScript(
-            "__fetchComplete(\(callbackId), \(statusCode), \"\(escapedHeaders)\", \"\(escapedBody)\", \"\")"
+        ctx.objectForKeyedSubscript("__fetchComplete")?.call(
+            withArguments: [callbackId, statusCode, headersJSONStr, bodyText, ""]
         )
         os_signpost(
             .end, log: log, name: "Fetch Bridge Crossing",

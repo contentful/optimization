@@ -16,83 +16,212 @@ final class UnidentifiedVariantsTests: XCTestCase {
         clearProfileState(app: app, requireFreshAppInstance: true)
     }
 
-    func testDisplaysMergeTagEntry() {
-        // Merge tag entry uses rich text which renders as "No content" in the iOS app
-        let entry = app.otherElements["content-entry-1MwiFl4z7gkwqGYdvCmr8c"]
-        waitForElement(entry)
-        XCTAssertFalse(entry.label.isEmpty, "Entry should have content")
+    // MARK: - Local helper
+
+    /// Drives the unidentified -> identified round-trip the baseline tests rely
+    /// on. The home-screen OptimizedEntry instances lock on their first resolved
+    /// value, so a mid-test identify does not re-resolve them; only a relaunch
+    /// makes the SDK re-run audience evaluation against the now-identified
+    /// profile. That relaunch is exactly what turns a "baseline rendered"
+    /// assertion from a no-op-tolerant check into proof the SDK genuinely
+    /// evaluated the audience.
+    private func identifyAndRelaunch() {
+        let identifyButton = app.buttons["identify-button"]
+        waitForElement(identifyButton)
+        identifyButton.tap()
+        waitForElement(app.buttons["reset-button"])
+        app.terminate()
+        app.launchArguments = []
+        app.launch()
+        _ = app.wait(for: .runningForeground, timeout: 10)
     }
 
-    func testDisplaysContinentBasedEntry() {
-        let entry = app.otherElements["content-entry-4ib0hsHWoSOnCVdDkizE8d"]
+    // MARK: - common variants
+
+    func testDisplaysMergeTagContentWithResolvedValue() {
+        let entry = app.otherElements["entry-text-1MwiFl4z7gkwqGYdvCmr8c"]
         waitForElement(entry)
-        XCTAssertTrue(entry.label.contains("continent") || entry.label.contains("Europe"),
-                      "Expected continent-based content, got: \(entry.label)")
+
+        // Asserted against the element's label (not via a label subscript) because
+        // the merge tag label exceeds XCUITest's 128-character identifier limit.
+        let expectedLabel = "This is a merge tag content entry that displays the visitor's continent \"EU\" embedded within the text. [Entry: 1MwiFl4z7gkwqGYdvCmr8c]"
+        XCTAssertEqual(entry.label, expectedLabel,
+                       "Expected merge tag content with resolved continent value")
     }
 
-    func testDisplaysDeviceBasedEntry() {
-        let entry = app.otherElements["content-entry-xFwgG3oNaOcjzWiGe4vXo"]
+    func testDisplaysVariantForVisitorsFromEurope() {
+        let entry = app.otherElements["entry-text-4ib0hsHWoSOnCVdDkizE8d"]
         waitForElement(entry)
-        XCTAssertTrue(entry.label.contains("device") || entry.label.contains("desktop"),
-                      "Expected device-based content, got: \(entry.label)")
+
+        let expectedLabel = "This is a variant content entry for visitors from Europe. [Entry: 4ib0hsHWoSOnCVdDkizE8d]"
+        XCTAssertTrue(app.descendants(matching: .any)[expectedLabel].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Expected Europe variant content")
     }
 
-    func testDisplaysBaselineForNewVisitors() {
-        let entry = app.otherElements["content-entry-2Z2WLOx07InSewC3LUB3eX"]
+    func testDisplaysVariantForDesktopBrowserVisitors() {
+        let entry = app.otherElements["entry-text-xFwgG3oNaOcjzWiGe4vXo"]
         waitForElement(entry)
-        XCTAssertTrue(entry.label.contains("baseline") || entry.label.contains("new") || entry.label.contains("all"),
-                      "Expected baseline content, got: \(entry.label)")
+
+        let expectedLabel = "This is a variant content entry for visitors using a desktop browser. [Entry: xFwgG3oNaOcjzWiGe4vXo]"
+        XCTAssertTrue(app.descendants(matching: .any)[expectedLabel].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Expected desktop-browser variant content")
     }
 
-    func testDisplaysABCExperimentEntry() {
-        let entry = app.otherElements["content-entry-5XHssysWUDECHzKLzoIsg1"]
+    // MARK: - unidentified user variants
+
+    func testDisplaysVariantForNewVisitors() {
+        let entry = app.otherElements["entry-text-2Z2WLOx07InSewC3LUB3eX"]
         waitForElement(entry)
-        XCTAssertTrue(entry.label.contains("A/B/C") || entry.label.contains("experiment"),
-                      "Expected A/B/C experiment content, got: \(entry.label)")
+
+        let expectedLabel = "This is a variant content entry for new visitors. [Entry: 2Z2WLOx07InSewC3LUB3eX]"
+        XCTAssertTrue(app.descendants(matching: .any)[expectedLabel].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Expected new-visitor variant content")
     }
 
-    func testDisplaysCustomEventEntry() {
-        let entry = app.otherElements["content-entry-6zqoWXyiSrf0ja7I2WGtYj"]
+    func testDisplaysVariantBForABCExperiment() {
+        let entry = app.otherElements["entry-text-5XHssysWUDECHzKLzoIsg1"]
         waitForElement(entry)
-        XCTAssertTrue(entry.label.contains("custom event") || entry.label.contains("baseline"),
-                      "Expected custom event entry content, got: \(entry.label)")
+
+        let expectedLabel = "This is a variant content entry for an A/B/C experiment: B [Entry: 5XHssysWUDECHzKLzoIsg1]"
+        XCTAssertTrue(app.descendants(matching: .any)[expectedLabel].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Expected A/B/C experiment variant B")
     }
 
-    func testDisplaysIdentificationEntry() {
-        scrollToElement(testId: "content-entry-7pa5bOx8Z9NmNcr7mISvD",
+    func testDisplaysBaselineForVisitorsWithOrWithoutCustomEvent() {
+        // Unidentified visitor: the custom-event audience is unmatched, so the
+        // SDK must resolve this entry to its baseline rich-text body.
+        let entry = app.otherElements["entry-text-6zqoWXyiSrf0ja7I2WGtYj"]
+        waitForElement(entry)
+
+        let baselineLabel = "This is a baseline content entry for all visitors with or without a custom event. [Entry: 6zqoWXyiSrf0ja7I2WGtYj]"
+        XCTAssertTrue(app.descendants(matching: .any)[baselineLabel].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Expected baseline custom-event content")
+
+        // The baseline label alone is satisfied even by a no-op SDK: the render
+        // pipeline falls through to the untouched entry whenever no variant is
+        // selected, so "baseline rendered" and "SDK did nothing" are
+        // indistinguishable. Identifying must flip the SAME entry to its
+        // custom-event variant, whose body text exists only in the variant and
+        // is unreachable without real audience evaluation. Observing the swap
+        // retroactively proves the unidentified baseline was a genuine SDK
+        // decision rather than a pipeline artifact.
+        identifyAndRelaunch()
+
+        let variantLabel = "This is a variant content entry for visitors with a custom event. [Entry: 6zqoWXyiSrf0ja7I2WGtYj]"
+        XCTAssertTrue(app.descendants(matching: .any)[variantLabel].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Expected custom-event variant after identify")
+
+        // The baseline copy must be gone — the SDK replaced the rendered body.
+        XCTAssertFalse(app.descendants(matching: .any)[baselineLabel].exists,
+                       "Baseline custom-event content should be gone after identify")
+    }
+
+    func testDisplaysBaselineForAllIdentifiedOrUnidentifiedUsers() {
+        // Unidentified visitor: this "all users" experience has no qualifying
+        // variant for an anonymous profile, so it must render baseline.
+        scrollToElement(testId: "entry-text-7pa5bOx8Z9NmNcr7mISvD",
                         scrollViewId: "main-scroll-view", app: app)
-        let entry = app.otherElements["content-entry-7pa5bOx8Z9NmNcr7mISvD"]
+        let entry = app.otherElements["entry-text-7pa5bOx8Z9NmNcr7mISvD"]
         waitForElement(entry)
-        XCTAssertTrue(entry.label.contains("identified") || entry.label.contains("baseline"),
-                      "Expected identification entry content, got: \(entry.label)")
+
+        let baselineLabel = "This is a baseline content entry for all identified or unidentified users. [Entry: 7pa5bOx8Z9NmNcr7mISvD]"
+        XCTAssertTrue(app.descendants(matching: .any)[baselineLabel].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Expected baseline all-users content")
+
+        // "All users" is the most failure-open audience shape: a no-op SDK
+        // satisfies the baseline assertion above purely by accident. Identifying
+        // must flip this entry to its identified-users variant, whose body text
+        // never appears in the baseline. The swap is the evidence that the
+        // unidentified baseline was an evaluated outcome, not a fall-through.
+        identifyAndRelaunch()
+
+        let variantLabel = "This is a variant content entry for identified users. [Entry: 7pa5bOx8Z9NmNcr7mISvD]"
+        XCTAssertTrue(app.descendants(matching: .any)[variantLabel].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Expected identified-users variant after identify")
+
+        XCTAssertFalse(app.descendants(matching: .any)[baselineLabel].exists,
+                       "Baseline all-users content should be gone after identify")
     }
 
-    // MARK: - Nested optimization baselines
+    // MARK: - nested optimization baselines
 
-    func testDisplaysLevel0NestedBaseline() {
+    func testDisplaysLevel0NestedBaselineForNewVisitors() {
+        // New (unidentified) visitor: the level-0 nested experience is unmatched,
+        // so NestedContentEntry keys its content off the baseline entry.
         scrollToElement(testId: "content-entry-1JAU028vQ7v6nB2swl3NBo",
                         scrollViewId: "main-scroll-view", app: app)
-        let entry = app.otherElements["content-entry-1JAU028vQ7v6nB2swl3NBo"]
-        waitForElement(entry)
-        XCTAssertTrue(entry.label.contains("level 0") || entry.label.contains("nested") || entry.label.contains("baseline"),
-                      "Expected level 0 nested baseline content, got: \(entry.label)")
+        waitForElement(app.otherElements["content-entry-1JAU028vQ7v6nB2swl3NBo"])
+
+        let baselineLabel = "This is a level 0 nested baseline entry. [Entry: 1JAU028vQ7v6nB2swl3NBo]"
+        XCTAssertTrue(app.descendants(matching: .any)[baselineLabel].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Expected level 0 nested baseline content")
+
+        // The nested content is keyed off resolvedEntry.sys.id, so the variant id
+        // 2KIW... can only enter the tree if the SDK actually selects the level-0
+        // variant. A no-op SDK leaves the baseline id in place forever.
+        // Identifying must surface 2KIW... and retire 1JAU..., proving the
+        // unidentified baseline render was a real resolution decision rather than
+        // the entry passing through untouched.
+        identifyAndRelaunch()
+
+        let variantLabel = "This is a level 0 nested variant entry. [Entry: 2KIWllNZJT205BwOSkMINg]"
+        scrollToElement(testId: variantLabel, scrollViewId: "main-scroll-view", app: app)
+        XCTAssertTrue(app.descendants(matching: .any)[variantLabel].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Expected level 0 nested variant after identify")
+
+        XCTAssertFalse(app.descendants(matching: .any)[baselineLabel].exists,
+                       "Level 0 nested baseline content should be gone after identify")
     }
 
-    func testDisplaysLevel1NestedBaseline() {
+    func testDisplaysLevel1NestedBaselineForNewVisitors() {
+        // New (unidentified) visitor: the level-1 nested experience is unmatched,
+        // so the resolved content is the baseline entry.
         scrollToElement(testId: "content-entry-5i4SdJXw9oDEY0vgO7CwF4",
                         scrollViewId: "main-scroll-view", app: app)
-        let entry = app.otherElements["content-entry-5i4SdJXw9oDEY0vgO7CwF4"]
-        waitForElement(entry)
-        XCTAssertTrue(entry.label.contains("level 1") || entry.label.contains("nested") || entry.label.contains("baseline"),
-                      "Expected level 1 nested baseline content, got: \(entry.label)")
+        waitForElement(app.otherElements["content-entry-5i4SdJXw9oDEY0vgO7CwF4"])
+
+        let baselineLabel = "This is a level 1 nested baseline entry. [Entry: 5i4SdJXw9oDEY0vgO7CwF4]"
+        XCTAssertTrue(app.descendants(matching: .any)[baselineLabel].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Expected level 1 nested baseline content")
+
+        // Identifying must re-resolve the level-1 experience to its variant
+        // (5a8...), an id the host app never fetches directly — it only enters
+        // the tree when the SDK selects it. The baseline id must disappear,
+        // confirming the unidentified baseline was an evaluated outcome.
+        identifyAndRelaunch()
+
+        let variantLabel = "This is a level 1 nested variant entry. [Entry: 5a8ONfBdanJtlJ39WWnH1w]"
+        scrollToElement(testId: variantLabel, scrollViewId: "main-scroll-view", app: app)
+        XCTAssertTrue(app.descendants(matching: .any)[variantLabel].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Expected level 1 nested variant after identify")
+
+        XCTAssertFalse(app.descendants(matching: .any)[baselineLabel].exists,
+                       "Level 1 nested baseline content should be gone after identify")
     }
 
-    func testDisplaysLevel2NestedBaseline() {
+    func testDisplaysLevel2NestedBaselineForNewVisitors() {
+        // New (unidentified) visitor: the deepest nested experience is unmatched,
+        // so the resolved content is the baseline entry.
         scrollToElement(testId: "content-entry-uaNY4YJ0HFPAX3gKXiRdX",
                         scrollViewId: "main-scroll-view", app: app)
-        let entry = app.otherElements["content-entry-uaNY4YJ0HFPAX3gKXiRdX"]
-        waitForElement(entry)
-        XCTAssertTrue(entry.label.contains("level 2") || entry.label.contains("nested") || entry.label.contains("baseline"),
-                      "Expected level 2 nested baseline content, got: \(entry.label)")
+        waitForElement(app.otherElements["content-entry-uaNY4YJ0HFPAX3gKXiRdX"])
+
+        let baselineLabel = "This is a level 2 nested baseline entry. [Entry: uaNY4YJ0HFPAX3gKXiRdX]"
+        XCTAssertTrue(app.descendants(matching: .any)[baselineLabel].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Expected level 2 nested baseline content")
+
+        // Identifying must re-resolve the level-2 experience to its variant
+        // (4hDi...). Its appearance, paired with the baseline id disappearing,
+        // proves the SDK descends and evaluates audiences at every nesting depth
+        // rather than leaving deep entries untouched.
+        identifyAndRelaunch()
+
+        let variantLabel = "This is a level 2 nested variant entry. [Entry: 4hDiXxYEFrXHXcQgmdL9Uv]"
+        scrollToElement(testId: variantLabel, scrollViewId: "main-scroll-view", app: app)
+        XCTAssertTrue(app.descendants(matching: .any)[variantLabel].waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Expected level 2 nested variant after identify")
+
+        XCTAssertFalse(app.descendants(matching: .any)[baselineLabel].exists,
+                       "Level 2 nested baseline content should be gone after identify")
     }
 }

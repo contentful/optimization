@@ -18,7 +18,13 @@ describe('identified user', () => {
     await device.terminateApp()
     await device.launchApp({ newInstance: true })
 
-    await waitFor(element(by.id('identify-button')))
+    // After identifying and relaunching, the SDK rehydrates the persisted
+    // identified profile. App.tsx derives the identify/reset control from
+    // `sdk.states.profile`, so the relaunched app renders `reset-button`, not
+    // `identify-button`. Waiting for `reset-button` both confirms the relaunch
+    // finished loading and proves the identified profile actually survived the
+    // cold start — which is the precondition every test in this suite needs.
+    await waitFor(element(by.id('reset-button')))
       .toBeVisible()
       .withTimeout(ELEMENT_VISIBILITY_TIMEOUT)
   })

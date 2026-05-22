@@ -26,7 +26,7 @@ build.
 
 - Keep this app focused on validating native Android integration behavior. Reusable SDK behavior
   belongs in `packages/android/ContentfulOptimization`, and TypeScript bridge behavior belongs in
-  `packages/android/android-zipline-bridge`.
+  `packages/universal/optimization-js-bridge`.
 - The mock server must be running at `http://localhost:8000` before running the app. Use
   `adb reverse tcp:8000 tcp:8000` to forward the port to the emulator.
 - The app references the SDK via Gradle `include` + `project.dir` in `settings.gradle.kts`. After
@@ -45,7 +45,7 @@ build.
 - `pnpm serve:mocks` (from monorepo root)
 - From `implementations/android-sdk/`: `./gradlew :app:assembleDebug`
 - From `implementations/android-sdk/`: `./scripts/bootstrap.sh`
-- Build bridge first: `pnpm --filter @contentful/optimization-android-bridge build`
+- Build bridge first: `pnpm --filter @contentful/optimization-js-bridge build`
 - Build UI test APK: `./gradlew :uitests:assembleDebug`
 - Run all UI tests: `./gradlew :uitests:connectedAndroidTest`
 - Run single test class:
@@ -65,5 +65,5 @@ build.
 
 - Run the app on emulator after changes to verify UI renders correctly.
 - Verify accessibility identifiers match iOS counterparts when changing UI structure.
-- Rebuild `@contentful/optimization-android-bridge` before testing when bridge source changed.
+- Rebuild `@contentful/optimization-js-bridge` before testing when bridge source changed.
 - After UI structure changes, run `./gradlew :uitests:assembleDebug` to verify test APK compiles.

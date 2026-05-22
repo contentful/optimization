@@ -4,10 +4,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
@@ -15,18 +13,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.contentful.optimization.app.EventStore
-import com.contentful.optimization.compose.LocalOptimizationClient
 
 @Composable
 fun AnalyticsEventDisplay() {
-    val client = LocalOptimizationClient.current
     val events by EventStore.events.collectAsState()
     val componentStats by EventStore.componentStats.collectAsState()
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(Unit) {
-        EventStore.subscribe(client.events, scope)
-    }
 
     Column(
         modifier = Modifier

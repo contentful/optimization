@@ -1,7 +1,7 @@
 package com.contentful.optimization.core
 
 import android.content.Context
-import com.contentful.optimization.bridge.ZiplineContextManager
+import com.contentful.optimization.bridge.QuickJsContextManager
 import com.contentful.optimization.handlers.AppLifecycleHandler
 import com.contentful.optimization.handlers.NetworkMonitor
 import com.contentful.optimization.polyfills.escapeForJS
@@ -40,10 +40,12 @@ class OptimizationClient(private val applicationContext: Context) {
     private val _previewState = MutableStateFlow<PreviewState?>(null)
     val previewState: StateFlow<PreviewState?> = _previewState.asStateFlow()
 
-    private val _events = MutableSharedFlow<Map<String, Any>>(extraBufferCapacity = 64)
+    // `replay` lets a UI collector that subscribes slightly after startup still
+    // receive the one-shot flag-view event emitted synchronously by subscribeToFlag.
+    private val _events = MutableSharedFlow<Map<String, Any>>(replay = 64, extraBufferCapacity = 64)
     val events: SharedFlow<Map<String, Any>> = _events.asSharedFlow()
 
-    private val bridge = ZiplineContextManager()
+    private val bridge = QuickJsContextManager()
     private val store = SharedPreferencesStore(applicationContext)
     private var appLifecycleHandler: AppLifecycleHandler? = null
     private var networkMonitor: NetworkMonitor? = null
@@ -175,6 +177,22 @@ class OptimizationClient(private val applicationContext: Context) {
         } catch (_: Exception) {
             PersonalizedResult(entry = baseline, personalization = null)
         }
+    }
+
+    /** Resolve a merge-tag entry's display value against the current profile. */
+    suspend fun getMergeTagValue(mergeTagEntry: Map<String, Any>): String? {
+        if (!_isInitialized.value) return null
+        return try {
+            val result = bridge.callSync("getMergeTagValue", JSONObject(mergeTagEntry).toString())
+            if (result == null || result == "null" || result == "undefined") null else result
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /** Subscribe to a feature flag by name. Emits a flag-view `component` event. */
+    fun subscribeToFlag(name: String) {
+        bridgeCallSyncWhenInitialized("flag", "'${escapeForJS(name)}'")
     }
 
     suspend fun getProfile(): Map<String, Any>? {
@@ -366,7 +384,7 @@ class OptimizationClient(private val applicationContext: Context) {
         fun parseJSONDict(json: String): Map<String, Any>? {
             if (json == "null") return null
             return try {
-                ZiplineContextManager.jsonObjectToMap(JSONObject(json))
+                QuickJsContextManager.jsonObjectToMap(JSONObject(json))
             } catch (_: Exception) {
                 DiagnosticLogger.warning { "[parse] JSON parse failed — input: ${json.take(200)}" }
                 null

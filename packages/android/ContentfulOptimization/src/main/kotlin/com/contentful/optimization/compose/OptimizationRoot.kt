@@ -13,13 +13,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.contentful.optimization.core.OptimizationClient
 import com.contentful.optimization.core.OptimizationConfig
+import com.contentful.optimization.preview.PreviewPanelConfig
+import com.contentful.optimization.preview.PreviewPanelOverlay
 
+/**
+ * Top-level composable that initializes the [OptimizationClient] and provides it to descendant
+ * `OptimizedEntry` composables.
+ *
+ * Pass a [PreviewPanelConfig] to add the debug preview panel without manually wrapping content
+ * in [PreviewPanelOverlay].
+ *
+ * @param previewPanel Optional preview panel configuration. When provided with `enabled = true`,
+ *   the preview panel is available via a floating action button.
+ */
 @Composable
 fun OptimizationRoot(
     config: OptimizationConfig,
     trackViews: Boolean = true,
     trackTaps: Boolean = false,
     liveUpdates: Boolean = false,
+    previewPanel: PreviewPanelConfig? = null,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -40,7 +53,13 @@ fun OptimizationRoot(
         ),
     ) {
         if (isInitialized) {
-            content()
+            if (previewPanel != null && previewPanel.enabled) {
+                PreviewPanelOverlay(contentfulClient = previewPanel.contentfulClient) {
+                    content()
+                }
+            } else {
+                content()
+            }
         } else {
             Box(modifier = modifier, contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()

@@ -47,7 +47,7 @@ Things you still have to enable yourself:
 - [3. Consent gating](#3-consent-gating)
   - ["Why is nothing tracking?"](#why-is-nothing-tracking)
 - [4. Entry view tracking mechanics](#4-entry-view-tracking-mechanics)
-  - [Default visibility and timing](#default-visibility-and-timing)
+  - [Default thresholds](#default-thresholds)
   - [The visibility state machine](#the-visibility-state-machine)
   - [Initial, periodic, and final events](#initial-periodic-and-final-events)
   - [App backgrounding and cleanup](#app-backgrounding-and-cleanup)
@@ -86,7 +86,7 @@ relevant provider/component is mounted.
 | Event                             | When it fires                                                                                                              | Required wiring                                                                                             |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | **Screen view**                   | Each time the active navigation route changes.                                                                             | `<OptimizationNavigationContainer>` wrapping `NavigationContainer` (or `useScreenTracking` on each screen). |
-| **Entry view (initial)**          | When a wrapped entry has accumulated enough visible time (default 2000 ms at ≥ 80% visibility).                            | `<OptimizedEntry baselineEntry={entry}>` with view tracking enabled (the default).                          |
+| **Entry view (initial)**          | When a wrapped entry has accumulated enough visible time (default 2000 ms at ≥ 80% visibility).                            | `<OptimizedEntry entry={entry}>` with view tracking enabled (the default).                                  |
 | **Entry view (periodic updates)** | Every `viewDurationUpdateIntervalMs` (default 5000 ms) while the entry remains visible.                                    | Same as above.                                                                                              |
 | **Entry view (final)**            | When visibility ends (scrolled away, unmounted, or app backgrounded) _if_ at least one event already fired.                | Same as above.                                                                                              |
 | **Entry tap**                     | On touch end, when the touch moved less than 10 points from touch start, on a wrapped entry.                               | `<OptimizedEntry>` with tap tracking enabled (off by default; opt in via `trackTaps` or `onTap`).           |
@@ -226,18 +226,18 @@ Four checks, in order of likelihood:
 1. **Consent.** Without `defaults.consent: true` or a user accept, only `identify`/`screen` go out.
    Set `logLevel: 'info'` to see blocked events in the console.
 2. **Tap tracking opt-in.** Views default to `true`, taps default to `false`.
-3. **Visibility requirement.** Defaults are strict (80% for 2 s). Scroll-by content never fires.
+3. **Visibility threshold.** Defaults are strict (80% for 2 s). Scroll-by content never fires.
 4. **No scroll context.** An entry below the fold without `<OptimizationScrollProvider>` will never
-   pass the visibility requirement — `scrollY` is assumed `0`.
+   pass the visibility threshold — `scrollY` is assumed `0`.
 
 ## 4. Entry view tracking mechanics
 
 This section describes the internals of `useViewportTracking`, the hook `<OptimizedEntry />` uses
 under the hood.
 
-### Default visibility and timing
+### Default thresholds
 
-The default entry view settings are:
+The default entry view thresholds are:
 
 | Constant                                   | Value  | Meaning                                                                                                             |
 | ------------------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------- |
@@ -245,7 +245,7 @@ The default entry view settings are:
 | `DEFAULT_VIEW_TIME_MS`                     | `2000` | Minimum accumulated visible time (ms) before the **initial** view event fires. A.k.a. the "dwell time".             |
 | `DEFAULT_VIEW_DURATION_UPDATE_INTERVAL_MS` | `5000` | Interval (ms) between **periodic** duration update events after the initial event.                                  |
 
-Tap tracking has one additional requirement:
+Tap tracking has one additional threshold:
 
 | Constant                 | Value | Meaning                                                                                                                         |
 | ------------------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------- |
@@ -268,7 +268,7 @@ interface ViewCycleState {
 
 On every scroll tick or layout change, `checkVisibility()` computes the overlap between the entry's
 measured `{y, height}` and the current viewport `{scrollY, viewportHeight}` to derive a
-`visibilityRatio`, and compares it to `minVisibleRatio`:
+`visibilityRatio`, and compares it to `threshold`:
 
 - **not-visible → visible** — `onVisibilityStart` resets the cycle, mints a fresh `viewId`, sets
   `visibleSince = now`, and schedules the next fire.
@@ -281,7 +281,7 @@ Within a cycle, events fire based on accumulated visible time. The schedule mirr
 `ElementViewObserver`:
 
 ```
-requiredMs_for_event_N = dwellTimeMs + N * viewDurationUpdateIntervalMs
+requiredMs_for_event_N = viewTimeMs + N * viewDurationUpdateIntervalMs
 ```
 
 So with defaults:
@@ -344,7 +344,7 @@ no matter how far the user scrolls.
 
 ```tsx
 <OptimizationScrollProvider>
-  <OptimizedEntry baselineEntry={post}>
+  <OptimizedEntry entry={post}>
     <ArticleBody post={post} />
   </OptimizedEntry>
 </OptimizationScrollProvider>
@@ -453,14 +453,10 @@ ones.
 | `trackEntryInteraction` | `{ views?, taps? }`    | `{ views: true, taps: false }` | Default view/tap tracking for every `<OptimizedEntry>`. Omitted keys fall back to the defaults.   |
 | `liveUpdates`           | `boolean`              | `false`                        | Global live-updates default. When `false`, `<OptimizedEntry>` locks to the first variant it sees. |
 | `previewPanel`          | `PreviewPanelConfig`   | `undefined`                    | Forces `liveUpdates = true` whenever the panel is open (cannot be overridden).                    |
-| `onStatesReady`         | `(states) => cleanup`  | `undefined`                    | Registers app-level state subscribers when SDK state is ready.                                    |
 | `defaults.consent`      | `boolean \| undefined` | `undefined`                    | Initial consent state at startup. Overridden by `consent()` calls at runtime.                     |
 | `allowedEventTypes`     | `EventType[]`          | `['identify', 'screen']`       | Event types permitted while consent is `undefined` or `false`.                                    |
 
-The "`{ views: true, taps: false }`" default is the root interaction-tracking context default. Use
-`onStatesReady` when diagnostics or app-level observers should attach as soon as SDK state exists
-and before provider children can emit `screen`, `eventStream`, or `blockedEventStream` updates.
-Component-local state should still subscribe from hooks and effects under the provider.
+The "`{ views: true, taps: false }`" default is the root interaction-tracking context default.
 
 ### OptimizedEntry props
 
@@ -469,11 +465,11 @@ Component-local state should still subscribe from hooks and effects under the pr
 | `trackViews`                   | `boolean \| undefined`                   | `undefined` | Per-entry override for view tracking. `undefined` inherits from `trackEntryInteraction.views`.         |
 | `trackTaps`                    | `boolean \| undefined`                   | `undefined` | Per-entry override for tap tracking. `undefined` inherits from `trackEntryInteraction.taps`.           |
 | `onTap`                        | `(resolved) => void`                     | `undefined` | Implicitly enables tap tracking unless `trackTaps` is explicitly `false`. Fires after the click event. |
-| `minVisibleRatio`              | `number (0.0 – 1.0)`                     | `0.8`       | Visibility ratio required to consider the entry visible.                                               |
-| `dwellTimeMs`                  | `number`                                 | `2000`      | Dwell time before the initial view event.                                                              |
+| `threshold`                    | `number (0.0 – 1.0)`                     | `0.8`       | Visibility ratio required to consider the entry visible.                                               |
+| `viewTimeMs`                   | `number`                                 | `2000`      | Dwell time before the initial view event.                                                              |
 | `viewDurationUpdateIntervalMs` | `number`                                 | `5000`      | Interval between periodic duration updates after the initial event.                                    |
 | `liveUpdates`                  | `boolean \| undefined`                   | `undefined` | Per-entry live-updates override. See resolution order below.                                           |
-| `baselineEntry`                | `Entry`                                  | (required)  | The baseline or optimized Contentful entry.                                                            |
+| `entry`                        | `Entry`                                  | (required)  | The baseline or optimized Contentful entry.                                                            |
 | `children`                     | `ReactNode \| ((resolved) => ReactNode)` | (required)  | Render prop receives the resolved variant; static children are rendered as-is.                         |
 
 Each default is defined by the SDK component and tracking hook behavior.
@@ -601,7 +597,7 @@ function HomeScreen({ navigation }) {
       {posts.map((post) => (
         <OptimizedEntry
           key={post.sys.id}
-          baselineEntry={post}
+          entry={post}
           onTap={() => navigation.navigate('BlogPostDetail', { post })}
         >
           <BlogPostCard post={post} />

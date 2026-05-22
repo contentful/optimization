@@ -54,25 +54,27 @@ struct ContentfulFetcher {
         return resolveValue(entry, lookup: lookup) as? [String: Any] ?? entry
     }
 
+    // `depth` counts logical link hops, not JSON-tree nodes, so a budget of 10
+    // matches the `include=10` CDA contract regardless of how deeply the followed
+    // entries nest plain dictionaries and arrays.
     private static func resolveValue(_ value: Any, lookup: [String: [String: Any]], depth: Int = 0) -> Any {
-        guard depth < 10 else { return value }
-
         if let dict = value as? [String: Any] {
             if let sys = dict["sys"] as? [String: Any],
                let type = sys["type"] as? String,
                type == "Link",
                let id = sys["id"] as? String,
                let resolved = lookup[id] {
+                guard depth < 10 else { return value }
                 return resolveValue(resolved, lookup: lookup, depth: depth + 1)
             }
 
             var result: [String: Any] = [:]
             for (key, val) in dict {
-                result[key] = resolveValue(val, lookup: lookup, depth: depth + 1)
+                result[key] = resolveValue(val, lookup: lookup, depth: depth)
             }
             return result
         } else if let array = value as? [Any] {
-            return array.map { resolveValue($0, lookup: lookup, depth: depth + 1) }
+            return array.map { resolveValue($0, lookup: lookup, depth: depth) }
         }
 
         return value

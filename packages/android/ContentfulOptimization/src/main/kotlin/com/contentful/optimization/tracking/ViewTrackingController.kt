@@ -33,6 +33,12 @@ class ViewTrackingController(
     private var attempts: Int = 0
     private var timerJob: Job? = null
 
+    // Last known visibility geometry, for re-evaluation after resume.
+    private var lastElementY: Float = 0f
+    private var lastElementHeight: Float = 0f
+    private var lastScrollY: Float = 0f
+    private var lastViewportHeight: Float = 0f
+
     init {
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
     }
@@ -44,6 +50,11 @@ class ViewTrackingController(
         viewportHeight: Float,
     ) {
         if (elementHeight <= 0f) return
+
+        lastElementY = elementY
+        lastElementHeight = elementHeight
+        lastScrollY = scrollY
+        lastViewportHeight = viewportHeight
 
         val visibleTop = maxOf(elementY, scrollY)
         val visibleBottom = minOf(elementY + elementHeight, scrollY + viewportHeight)
@@ -91,7 +102,11 @@ class ViewTrackingController(
     }
 
     private fun resume() {
+        // Re-evaluate visibility from the last known geometry so a still-visible
+        // element starts a fresh cycle without waiting for a scroll callback
+        // (which may never fire after foregrounding). Mirrors iOS `resume()`.
         isVisible = false
+        updateVisibility(lastElementY, lastElementHeight, lastScrollY, lastViewportHeight)
     }
 
     private fun onBecameVisible() {

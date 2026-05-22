@@ -15,7 +15,7 @@ final class ContentEntryUIView: UIView {
             trackTaps: true,
             accessibilityIdentifier: "content-entry-\(entryId)"
         ) { resolved in
-            EntryContentView(entry: resolved, entryId: entryId)
+            EntryContentView(entry: resolved, entryId: entryId, client: client)
         }
         addSubview(optimized)
         NSLayoutConstraint.activate([
@@ -32,12 +32,12 @@ final class ContentEntryUIView: UIView {
 
 private final class EntryContentView: UIView {
 
-    init(entry: [String: Any], entryId: String) {
+    init(entry: [String: Any], entryId: String, client: OptimizationClient) {
         super.init(frame: .zero)
         translatesAutoresizingMaskIntoConstraints = false
 
         let fields = entry["fields"] as? [String: Any]
-        let text = (fields?["text"] as? String) ?? "No content"
+        let text = RichText.resolveText(fields?["text"], client: client)
 
         let textLabel = UILabel()
         textLabel.text = text
@@ -55,11 +55,17 @@ private final class EntryContentView: UIView {
         stack.isLayoutMarginsRelativeArrangement = true
         stack.layoutMargins = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
         addSubview(stack)
+        // A card-sized minimum height keeps the home list taller than the
+        // viewport so the lower entries genuinely start below the fold — the
+        // layout the cross-platform view-tracking contract assumes. The stack is
+        // pinned on all four edges so the view's height stays unambiguous; the
+        // `>=` height constraint just stretches it to the card minimum.
         NSLayoutConstraint.activate([
             stack.topAnchor.constraint(equalTo: topAnchor),
             stack.leadingAnchor.constraint(equalTo: leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: trailingAnchor),
             stack.bottomAnchor.constraint(equalTo: bottomAnchor),
+            heightAnchor.constraint(greaterThanOrEqualToConstant: AppConfig.contentEntryMinHeight),
         ])
 
         isAccessibilityElement = true

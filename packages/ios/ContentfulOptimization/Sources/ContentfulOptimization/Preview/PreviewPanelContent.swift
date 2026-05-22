@@ -52,6 +52,7 @@ final class PreviewViewModel: ObservableObject {
                 audiences: results.audiences.items,
                 experiences: experienceEntriesWithIncludes
             )
+            client.refreshPreviewState()
 
             hasLoadedDefinitions = true
             isLoadingDefinitions = false

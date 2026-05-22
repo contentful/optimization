@@ -4,9 +4,21 @@ import SwiftUI
 struct MainScreen: View {
     @EnvironmentObject var client: OptimizationClient
     @State private var entries: [[String: Any]] = []
-    @State private var isIdentified = false
     @State private var showNavigationTest = false
     @State private var showLiveUpdatesTest = false
+    @State private var flagSubscribed = false
+
+    /// Derived from the SDK profile so a rehydrated identified profile renders
+    /// the reset control after a cold start, and so the control only flips once
+    /// `identify` has actually resolved and been persisted.
+    private var isIdentified: Bool {
+        let traits = client.state.profile?["traits"] as? [String: Any]
+        return traits?["identified"] as? Bool == true
+    }
+
+    private var networkControlsEnabled: Bool {
+        ProcessInfo.processInfo.arguments.contains("--enable-network-controls")
+    }
 
     var body: some View {
         if showNavigationTest {
@@ -35,6 +47,19 @@ struct MainScreen: View {
             }
             .padding()
 
+            // Test-only runtime network controls. XCUITest cannot toggle real
+            // connectivity, so the offline-behavior suite drives the SDK online
+            // state on the live process — keeping the in-memory Experience queue
+            // intact across the offline/online transition.
+            if networkControlsEnabled {
+                HStack {
+                    Button("Go Offline") { client.setOnline(false) }
+                        .accessibilityIdentifier("simulate-offline-button")
+                    Button("Go Online") { client.setOnline(true) }
+                        .accessibilityIdentifier("simulate-online-button")
+                }
+            }
+
             if entries.isEmpty {
                 Text("Loading...")
             } else {
@@ -54,13 +79,13 @@ struct MainScreen: View {
             }
         }
         .task {
+            // Subscribe the event store before any event can fire. The flag-view
+            // event emits synchronously on `subscribeToFlag`, so a later
+            // subscription (e.g. in a child view's onAppear) would miss it —
+            // `eventPublisher` is a PassthroughSubject and does not buffer.
+            EventStore.shared.subscribe(to: client.eventPublisher)
             client.consent(true)
             _ = try? await client.page(properties: ["url": "app"])
-
-            // Network simulation for UI tests
-            if ProcessInfo.processInfo.arguments.contains("--simulate-offline") {
-                client.setOnline(false)
-            }
         }
         .onReceive(
             client.$state
@@ -73,6 +98,13 @@ struct MainScreen: View {
                 }
         ) { profile in
             guard profile != nil else { return }
+            // Subscribe to the `boolean` flag once a profile (and consent) is
+            // available so a flag-view `component` event is emitted — mirrors
+            // the React Native app's gated `sdk.states.flag(...).subscribe(...)`.
+            if !flagSubscribed {
+                flagSubscribed = true
+                client.subscribeToFlag("boolean")
+            }
             Task {
                 entries = await ContentfulFetcher.fetchEntries(ids: AppConfig.entryIds)
             }
@@ -92,7 +124,6 @@ struct MainScreen: View {
         Task {
             _ = try? await client.identify(userId: "charles", traits: ["identified": true])
         }
-        isIdentified = true
     }
 
     private func handleReset() {
@@ -100,6 +131,5 @@ struct MainScreen: View {
         Task {
             _ = try? await client.page(properties: ["url": "app"])
         }
-        isIdentified = false
     }
 }

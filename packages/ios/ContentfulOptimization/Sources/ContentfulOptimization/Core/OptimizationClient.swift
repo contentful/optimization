@@ -223,6 +223,35 @@ public final class OptimizationClient: ObservableObject {
         }
     }
 
+    /// Resolve a merge-tag entry's display value against the current profile.
+    ///
+    /// Pass the resolved `nt_mergetag` entry (the `embedded-entry-inline` node's
+    /// expanded `data.target`). Returns the resolved string, or `nil` when the
+    /// merge tag cannot be resolved against the current profile.
+    public func getMergeTagValue(mergeTagEntry: [String: Any]) -> String? {
+        guard isInitialized else { return nil }
+        do {
+            let json = try serializeJSON(mergeTagEntry)
+            guard let result = bridgeCallSyncWhenInitialized(method: "getMergeTagValue", args: json),
+                  !result.isNull, !result.isUndefined,
+                  let str = result.toString()
+            else { return nil }
+            return str
+        } catch {
+            return nil
+        }
+    }
+
+    /// Subscribe to a feature flag by name.
+    ///
+    /// Subscribing emits a flag-view (`component`) analytics event through the
+    /// SDK event stream, and again on each distinct flag value change — mirroring
+    /// the React Native `sdk.states.flag(name).subscribe(...)` contract.
+    public func subscribeToFlag(_ name: String) {
+        let escaped = NativePolyfills.escapeForJS(name)
+        bridgeCallSyncWhenInitialized(method: "flag", args: "'\(escaped)'")
+    }
+
     /// Get the current profile synchronously.
     public func getProfile() -> [String: Any]? {
         guard let result = bridge.callSync(method: "getProfile"),

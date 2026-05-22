@@ -143,7 +143,12 @@ fun LiveUpdatesTestScreen(onClose: () -> Unit) {
                     item {
                         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                             Button(
-                                onClick = { isPreviewPanelSimulated = !isPreviewPanelSimulated },
+                                onClick = {
+                                    isPreviewPanelSimulated = !isPreviewPanelSimulated
+                                    // Drive the SDK preview-panel flag so default/locked
+                                    // sections switch to live-update mode while open.
+                                    client.setPreviewPanelOpen(isPreviewPanelSimulated)
+                                },
                                 modifier = Modifier.testTag("simulate-preview-panel-button"),
                             ) {
                                 Text(

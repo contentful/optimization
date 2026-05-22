@@ -84,7 +84,7 @@ final class AnalyticsEventDisplayView: UIView {
             guard let s = stats[cid] else { continue }
             let container = UIView()
             container.translatesAutoresizingMaskIntoConstraints = false
-            container.accessibilityIdentifier = "component-stats-\(cid)"
+            container.accessibilityIdentifier = "entry-stats-\(cid)"
 
             let inner = UIStackView()
             inner.axis = .vertical

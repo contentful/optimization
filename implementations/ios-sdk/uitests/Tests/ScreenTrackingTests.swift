@@ -8,6 +8,15 @@ final class ScreenTrackingTests: XCTestCase {
         clearProfileState(app: app, requireFreshAppInstance: true)
     }
 
+    /// Reads the `screen-event-log` element and returns its visible text
+    /// (falling back to its accessibility label) as a string.
+    private func getScreenEventLogText() -> String {
+        let element = findElement("screen-event-log", app: app)
+        XCTAssertTrue(element.waitForExistence(timeout: ELEMENT_VISIBILITY_TIMEOUT),
+                      "Element screen-event-log not found")
+        return extractText(element)
+    }
+
     func testTrackSingleViewVisit() {
         waitForElement(app.buttons["navigation-test-button"])
         app.buttons["navigation-test-button"].tap()
@@ -16,6 +25,8 @@ final class ScreenTrackingTests: XCTestCase {
         app.buttons["go-to-view-one-button"].tap()
 
         waitForElement(app.otherElements["navigation-view-test-one"])
+        waitForElement(findElement("screen-event-log", app: app))
+
         waitForTextEquals("screen-event-log", expected: "NavigationHome,NavigationViewOne", app: app)
     }
 
@@ -31,17 +42,21 @@ final class ScreenTrackingTests: XCTestCase {
         app.buttons["go-to-view-two-button"].tap()
 
         waitForElement(app.otherElements["navigation-view-test-two"])
+        waitForElement(findElement("screen-event-log", app: app))
 
         let logText = waitForElementText("screen-event-log", app: app) { text in
             text.contains("NavigationViewTwo")
         }
 
-        let viewOneIndex = logText.range(of: "NavigationViewOne")
-        let viewTwoIndex = logText.range(of: "NavigationViewTwo")
+        let viewOneIndex = logText.range(of: "NavigationViewOne").map {
+            logText.distance(from: logText.startIndex, to: $0.lowerBound)
+        } ?? -1
+        let viewTwoIndex = logText.range(of: "NavigationViewTwo").map {
+            logText.distance(from: logText.startIndex, to: $0.lowerBound)
+        } ?? -1
 
-        XCTAssertNotNil(viewOneIndex)
-        XCTAssertNotNil(viewTwoIndex)
-        XCTAssertLessThan(viewOneIndex!.lowerBound, viewTwoIndex!.lowerBound)
+        XCTAssertGreaterThanOrEqual(viewOneIndex, 0)
+        XCTAssertGreaterThan(viewTwoIndex, viewOneIndex)
     }
 
     func testTrackRevisitingViewOneAfterViewTwo() {
@@ -57,10 +72,12 @@ final class ScreenTrackingTests: XCTestCase {
 
         waitForElement(app.otherElements["navigation-view-test-two"])
 
-        // Press back to return to view one
+        // Trigger platform back navigation to return to view one
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
         waitForElement(app.otherElements["navigation-view-test-one"])
+        waitForElement(findElement("screen-event-log", app: app))
+
         waitForTextEquals(
             "screen-event-log",
             expected: "NavigationHome,NavigationViewOne,NavigationViewTwo,NavigationViewOne",
