@@ -69,7 +69,11 @@ TEST_CLASS=""
 TEST_METHOD=""
 
 UITEST_PACKAGE="com.contentful.optimization.uitests.tests"
-APP_PACKAGE="com.contentful.optimization.app"
+# APP_PACKAGE selects which reference implementation to drive. Override via env var to switch
+# between the Compose impl (default) and the XML Views impl. The Gradle module name + APK file
+# name are derived from the package below in `resolve_app_module`.
+APP_PACKAGE="${APP_PACKAGE:-com.contentful.optimization.app}"
+APP_MODULE=""
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -152,6 +156,21 @@ parse_args() {
         usage
         exit 1
     fi
+}
+
+resolve_app_module() {
+    case "$APP_PACKAGE" in
+        com.contentful.optimization.app)
+            APP_MODULE="compose"
+            ;;
+        com.contentful.optimization.app.views)
+            APP_MODULE="views"
+            ;;
+        *)
+            echo "[ERROR] Unknown APP_PACKAGE: $APP_PACKAGE. Expected com.contentful.optimization.app or com.contentful.optimization.app.views." >&2
+            exit 1
+            ;;
+    esac
 }
 
 log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
@@ -484,14 +503,14 @@ build_apks() {
         return 0
     fi
 
-    log_info "Building app APK and test APK..."
+    log_info "Building $APP_MODULE app APK and test APK..."
     cd "$APP_DIR"
-    ./gradlew :compose:assembleDebug :uitests:assembleDebug
+    ./gradlew ":${APP_MODULE}:assembleDebug" :uitests:assembleDebug
     log_info "Build complete"
 }
 
 install_apks() {
-    local app_apk="$APP_DIR/compose/build/outputs/apk/debug/compose-debug.apk"
+    local app_apk="$APP_DIR/$APP_MODULE/build/outputs/apk/debug/${APP_MODULE}-debug.apk"
     local test_apk="$APP_DIR/uitests/build/outputs/apk/debug/uitests-debug.apk"
 
     if [[ ! -f "$app_apk" ]]; then
@@ -518,7 +537,8 @@ run_tests() {
 
     mkdir -p "$LOG_DIR"
 
-    local am_args="-w"
+    # Forward the target package to AppLauncher so the in-process tests know which app to drive.
+    local am_args="-w -e APP_PACKAGE ${APP_PACKAGE}"
 
     if [[ -n "$TEST_CLASS" ]]; then
         local full_class="${UITEST_PACKAGE}.${TEST_CLASS}"
@@ -565,10 +585,12 @@ run_tests() {
 
 main() {
     parse_args "$@"
+    resolve_app_module
 
     log_info "=== Android UI Automator 2 E2E Test Runner ==="
     log_info "Root directory: $ROOT_DIR"
     log_info "App directory: $APP_DIR"
+    log_info "Target app: $APP_PACKAGE (module :$APP_MODULE)"
     log_info "CI mode: $CI"
     [[ -n "$TEST_CLASS" ]] && log_info "Test class: $TEST_CLASS"
     [[ -n "$TEST_METHOD" ]] && log_info "Test method: $TEST_METHOD"
