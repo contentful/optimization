@@ -25,6 +25,24 @@ interface Subscription {
   unsubscribe: () => void
 }
 
+interface SdkStub {
+  destroy: () => void
+  states: {
+    eventStream: {
+      current: undefined
+      subscribe: () => Subscription
+      subscribeOnce: () => Subscription
+    }
+  }
+}
+
+function isContentfulOptimization(
+  value: SdkStub,
+): value is SdkStub & ContentfulOptimization {
+  void value
+  return true
+}
+
 function isTestRendererModule(value: unknown): value is TestRendererModule {
   if (typeof value !== 'object' || value === null) {
     return false
@@ -45,9 +63,7 @@ async function loadTestRenderer(): Promise<TestRendererModule> {
 }
 
 function createSdk(): ContentfulOptimization {
-  const sdk: ContentfulOptimization = Object.create(null)
-
-  Object.assign(sdk, {
+  const sdk: SdkStub = {
     destroy: rs.fn(),
     states: {
       eventStream: {
@@ -60,15 +76,19 @@ function createSdk(): ContentfulOptimization {
         },
       },
     },
-  })
+  }
+
+  if (!isContentfulOptimization(sdk)) {
+    throw new Error('Expected SDK stub to satisfy ContentfulOptimization')
+  }
 
   return sdk
 }
 
 describe('OptimizationProvider injected SDK performance', () => {
-  let renderer: TestRenderer | undefined
+  let renderer: TestRenderer | undefined = undefined
 
-  afterEach(() => {
+  void afterEach(() => {
     if (renderer) {
       act(() => {
         renderer?.unmount()
