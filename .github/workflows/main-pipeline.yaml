@@ -783,7 +783,10 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: |
-            set -o pipefail
+            # The emulator-runner action invokes the script via `/usr/bin/sh -c`, not bash, so
+            # `set -o pipefail` would error out with "Illegal option -o pipefail" and terminate
+            # the script before any test ran. The grep-on-test-output checks below already
+            # detect instrumentation failures regardless of pipe-status propagation.
             echo "Disabling animations..."
             adb shell settings put global window_animation_scale 0
             adb shell settings put global transition_animation_scale 0
