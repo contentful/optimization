@@ -28,6 +28,18 @@ import androidx.core.view.accessibility.AccessibilityNodeInfoCompat
  */
 fun View.setTestTag(testTag: String) {
     importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+    // Belt-and-suspenders: surface the test tag through contentDescription too. Some emulator
+    // configurations (notably the headless x86_64 emulator-runner image used in CI) appear to
+    // ignore the AccessibilityDelegate-driven `viewIdResourceName` override on certain XML
+    // views, so UiAutomator's `By.res("foo-bar")` lookups return null even though
+    // `Modifier.testTag("foo-bar") + testTagsAsResourceId = true` resolves on the Compose side.
+    // Setting contentDescription too means the existing `TestHelpers.findElement` fallback
+    // (`By.res` → `By.desc` → `By.text`) catches the view via `By.desc("foo-bar")`. We only
+    // assign when contentDescription is null so per-view content descriptions (entry text,
+    // accessibility identifiers on OptimizedEntryView, etc.) are preserved.
+    if (contentDescription == null) {
+        contentDescription = testTag
+    }
     ViewCompat.setAccessibilityDelegate(
         this,
         object : AccessibilityDelegateCompat() {
