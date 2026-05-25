@@ -76,6 +76,12 @@ class OptimizedEntryView @JvmOverloads constructor(
     private var lockedPersonalizations: List<Map<String, Any>>? = null
     private var isLocked: Boolean = false
     private var lastResult: PersonalizedResult? = null
+    // Track the (entry, personalization) tuple the current controller was built for so we
+    // don't tear it down on every personalization re-emission — that would reset the dwell
+    // timer and prevent component events from ever firing. Mirrors Compose's
+    // `remember(entry, personalization)` semantics.
+    private var controllerEntry: Map<String, Any>? = null
+    private var controllerPersonalization: Map<String, Any>? = null
 
     private val preDrawListener = ViewTreeObserver.OnPreDrawListener {
         updateVisibility()
@@ -146,6 +152,8 @@ class OptimizedEntryView @JvmOverloads constructor(
             it.destroy()
         }
         controller = null
+        controllerEntry = null
+        controllerPersonalization = null
         personalizationJob?.cancel()
         previewJob?.cancel()
 
@@ -210,6 +218,18 @@ class OptimizedEntryView @JvmOverloads constructor(
     private fun attachController(result: PersonalizedResult) {
         if (!resolveTrackViews()) return
         val entry = entry ?: return
+        val newPersonalization = result.personalization
+
+        // If the controller is already wired up for the same (entry, personalization) tuple,
+        // keep it — rebuilding would reset the dwell timer mid-cycle.
+        if (controller != null &&
+            controllerEntry === entry &&
+            controllerPersonalization == newPersonalization
+        ) {
+            updateVisibility()
+            return
+        }
+
         controller?.let {
             it.onDisappear()
             it.destroy()
@@ -217,11 +237,13 @@ class OptimizedEntryView @JvmOverloads constructor(
         controller = ViewTrackingController(
             client = OptimizationManager.client,
             entry = entry,
-            personalization = result.personalization,
+            personalization = newPersonalization,
             threshold = threshold,
             viewTimeMs = viewTimeMs,
             viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs,
         )
+        controllerEntry = entry
+        controllerPersonalization = newPersonalization
         updateVisibility()
     }
 

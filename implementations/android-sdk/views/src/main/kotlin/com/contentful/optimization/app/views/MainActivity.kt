@@ -18,6 +18,7 @@ import com.contentful.optimization.shared.AppConfig
 import com.contentful.optimization.shared.ContentfulFetcher
 import com.contentful.optimization.shared.EventStore
 import com.contentful.optimization.views.OptimizationManager
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -81,9 +82,14 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, LiveUpdatesTestActivity::class.java))
         }
 
-        // Mirrors MainScreen.LaunchedEffect(Unit): subscribe events, consent, page, optional offline.
+        // Mirrors MainScreen.LaunchedEffect(Unit): subscribe events, consent, page, optional
+        // offline. The Compose impl gates rendering on `client.isInitialized` via
+        // OptimizationRoot, so its content's LaunchedEffects always see an initialized client.
+        // The Views impl renders immediately, so we wait for init here before driving the SDK —
+        // otherwise consent/page silently no-op and the profile state flow never advances.
         EventStore.subscribe(client.events, lifecycleScope)
         lifecycleScope.launch {
+            client.isInitialized.first { it }
             client.consent(true)
             try {
                 client.page(mapOf("url" to "app"))
@@ -98,7 +104,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun observeProfileForEntries() {
-        var lastProfileFingerprint: String? = null
         lifecycleScope.launch {
             client.state.collect { state ->
                 val profile = state.profile
@@ -108,15 +113,17 @@ class MainActivity : AppCompatActivity() {
                 updateIdentifiedUI(identified)
 
                 if (profile == null) return@collect
-                val fingerprint = profile.toString()
-                if (fingerprint == lastProfileFingerprint) return@collect
-                lastProfileFingerprint = fingerprint
 
+                // Fetch + render entries exactly once per Activity lifetime. Subsequent profile
+                // emissions (consent updates, identify, etc.) flow through the SDK and update
+                // personalizations on existing OptimizedEntryView instances; recreating the
+                // entry list here would tear down view-tracking controllers mid-dwell and miss
+                // component events, which doesn't happen on the Compose side because Compose's
+                // diffing keeps existing nodes when the data is identical.
+                if (entriesLoaded) return@collect
+                entriesLoaded = true
+                client.subscribeToFlag("boolean")
                 val entries = ContentfulFetcher.fetchEntries(AppConfig.entryIds)
-                if (!entriesLoaded) {
-                    client.subscribeToFlag("boolean")
-                    entriesLoaded = true
-                }
                 renderEntries(entries)
             }
         }

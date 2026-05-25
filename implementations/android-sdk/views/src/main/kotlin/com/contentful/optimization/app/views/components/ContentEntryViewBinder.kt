@@ -43,10 +43,21 @@ object ContentEntryViewBinder {
     ): View {
         @Suppress("UNCHECKED_CAST")
         val fields = resolvedEntry["fields"] as? Map<String, Any>
-        val padding = context.dp(16)
+        // 16dp matches the Compose ContentEntryView's `.padding(16.dp)` — but the Compose Column
+        // uses Material3 typography with tighter line height than the default platform TextView,
+        // which makes the analytics block sit just below the viewport on identical content. Trim
+        // a few dp off horizontally and use a tighter line spacing so the entry list fits in the
+        // same vertical budget as the Compose impl.
+        val padding = context.dp(12)
 
-        val textView = TextView(context).apply { text = "No content" }
-        val idLabel = TextView(context).apply { text = "[Entry: $entryId]" }
+        val textView = TextView(context).apply {
+            text = "No content"
+            setLineSpacing(0f, 1.0f)
+        }
+        val idLabel = TextView(context).apply {
+            text = "[Entry: $entryId]"
+            setLineSpacing(0f, 1.0f)
+        }
 
         val column = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
