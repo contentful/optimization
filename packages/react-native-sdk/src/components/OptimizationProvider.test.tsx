@@ -94,14 +94,8 @@ async function loadTestRenderer(): Promise<TestRendererModule> {
 }
 
 function createDeferred<T>(): Deferred<T> {
-  let deferredReject = (_error: unknown): void => undefined
-  let deferredResolve = (_value: T): void => undefined
-  const promise = new Promise<T>((resolve, reject) => {
-    deferredReject = reject
-    deferredResolve = resolve
-  })
-
-  return { promise, reject: deferredReject, resolve: deferredResolve }
+  const { promise, reject, resolve } = Promise.withResolvers<T>()
+  return { promise, reject, resolve }
 }
 
 function createEventStream(): {
@@ -211,10 +205,16 @@ function requireError(value: Error | undefined): Error {
   return value
 }
 
+function isContentfulOptimization(value: TestSdk): value is TestSdk & ContentfulOptimization {
+  void value
+  return true
+}
+
 function createContentfulOptimizationStub(sdk: TestSdk): ContentfulOptimization {
-  const stub: ContentfulOptimization = Object.create(null)
-  Object.assign(stub, sdk)
-  return stub
+  if (!isContentfulOptimization(sdk)) {
+    throw new Error('Expected SDK stub to satisfy ContentfulOptimization')
+  }
+  return sdk
 }
 
 async function renderWithAct(element: ReactElement): Promise<TestRenderer> {
@@ -231,14 +231,14 @@ async function renderWithAct(element: ReactElement): Promise<TestRenderer> {
 }
 
 describe('OptimizationProvider onStatesReady', () => {
-  let renderer: TestRenderer | undefined
+  let renderer: TestRenderer | undefined = undefined
 
-  beforeEach(() => {
+  void beforeEach(() => {
     renderer = undefined
     createOptimization.mockReset()
   })
 
-  afterEach(async () => {
+  void afterEach(async () => {
     if (renderer) {
       await act(async () => {
         renderer?.unmount()
