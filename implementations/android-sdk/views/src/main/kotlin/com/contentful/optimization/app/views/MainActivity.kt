@@ -80,6 +80,17 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_main)
 
+        // Attach the preview-panel floating button synchronously so it's visible on the same
+        // frame as the action row. testFABIsVisible uses a no-wait findObject(By.desc(...)) so
+        // the FAB has to be in the accessibility tree by the time the @Before setUp's wait for
+        // the identify button returns. The Compose impl gets this for free because
+        // OptimizationRoot/PreviewPanelOverlay synthesizes the FAB inside the initial
+        // composition. OptimizationManager.attachPreviewPanel only needs the OptimizationClient
+        // reference (already non-null after initialize() returns), not the bridge having
+        // finished its async initialize() — the FAB tap won't open PreviewPanelActivity until
+        // the user actually taps it, by which time init has settled.
+        OptimizationManager.attachPreviewPanel(this)
+
         identifyButton = findViewById(R.id.identify_button)
         resetButton = findViewById(R.id.reset_button)
         navigationTestButton = findViewById(R.id.navigation_test_button)
@@ -121,12 +132,6 @@ class MainActivity : AppCompatActivity() {
             if (simulateOffline) {
                 client.setOnline(false)
             }
-            // Attach the preview-panel floating action button once the client is initialized.
-            // Mirrors OptimizationRoot's `previewPanel = PreviewPanelConfig(...)` parameter on
-            // the Compose side, which adds the FAB through PreviewPanelOverlay. The FAB needs
-            // an initialized client to look up the contentful preview client wired in via
-            // OptimizationManager.initialize.
-            OptimizationManager.attachPreviewPanel(this@MainActivity)
         }
 
         observeProfileForEntries()

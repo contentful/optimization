@@ -730,16 +730,20 @@ jobs:
 
       - name: Collect APK artifacts at stable paths
         run: |
-          mkdir -p /tmp/android-apks
-          cp implementations/android-sdk/compose/build/outputs/apk/debug/compose-debug.apk /tmp/android-apks/
-          cp implementations/android-sdk/views/build/outputs/apk/debug/views-debug.apk /tmp/android-apks/
-          cp implementations/android-sdk/uitests/build/outputs/apk/debug/uitests-debug.apk /tmp/android-apks/
-          ls -la /tmp/android-apks/
+          # Use a workspace-relative directory because actions/upload-artifact@v7 keys the
+          # in-artifact paths off the least-common-ancestor of the inputs — an absolute
+          # /tmp path produces /tmp/... inside the zip, which then unpacks under the download
+          # target instead of into it.
+          mkdir -p android-apks
+          cp implementations/android-sdk/compose/build/outputs/apk/debug/compose-debug.apk android-apks/
+          cp implementations/android-sdk/views/build/outputs/apk/debug/views-debug.apk android-apks/
+          cp implementations/android-sdk/uitests/build/outputs/apk/debug/uitests-debug.apk android-apks/
+          ls -la android-apks/
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: android-apks
-          path: /tmp/android-apks/
+          path: android-apks/
           if-no-files-found: error
           retention-days: 1
 
@@ -822,7 +826,7 @@ jobs:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: android-apks
-          path: /tmp/android-apks
+          path: android-apks
 
       - name: Start Mock Server
         run: |
@@ -864,8 +868,8 @@ jobs:
             adb shell settings put global transition_animation_scale 0
             adb shell settings put global animator_duration_scale 0
             echo "Installing APKs (target app: $APP_PACKAGE)..."
-            adb install -r "/tmp/android-apks/$APP_APK"
-            adb install -r /tmp/android-apks/uitests-debug.apk
+            adb install -r "android-apks/$APP_APK"
+            adb install -r android-apks/uitests-debug.apk
             echo "Setting up adb reverse port forwarding..."
             adb reverse tcp:8000 tcp:8000
             sleep 3
