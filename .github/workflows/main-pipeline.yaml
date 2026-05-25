@@ -783,6 +783,7 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: |
+            set -o pipefail
             echo "Disabling animations..."
             adb shell settings put global window_animation_scale 0
             adb shell settings put global transition_animation_scale 0
@@ -798,6 +799,7 @@ jobs:
             adb shell am instrument -w com.contentful.optimization.uitests/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee /tmp/test-output.log
             grep -q "FAILURES" /tmp/test-output.log && { echo "::error::Android UI tests failed"; exit 1; } || true
             grep -q "Process crashed" /tmp/test-output.log && { echo "::error::Test process crashed"; exit 1; } || true
+            grep -q "OK (" /tmp/test-output.log || { echo "::error::Android UI tests did not complete successfully (missing OK status)"; exit 1; }
 
       - name: Upload logs on failure
         if: failure()
