@@ -205,9 +205,15 @@ function requireError(value: Error | undefined): Error {
   return value
 }
 
+// The OptimizationProvider only touches the TestSdk-shaped subset of
+// ContentfulOptimization in this test. The predicate validates that subset
+// at runtime so the type narrowing isn't a blind assertion.
 function isContentfulOptimization(value: TestSdk): value is TestSdk & ContentfulOptimization {
-  void value
-  return true
+  return (
+    typeof value.destroy === 'function' &&
+    typeof value.screen === 'function' &&
+    typeof value.states.eventStream.subscribe === 'function'
+  )
 }
 
 function createContentfulOptimizationStub(sdk: TestSdk): ContentfulOptimization {

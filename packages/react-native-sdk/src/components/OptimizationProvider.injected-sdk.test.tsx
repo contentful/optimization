@@ -36,11 +36,15 @@ interface SdkStub {
   }
 }
 
-function isContentfulOptimization(
-  value: SdkStub,
-): value is SdkStub & ContentfulOptimization {
-  void value
-  return true
+// The OptimizationProvider only touches the SdkStub-shaped subset of
+// ContentfulOptimization in this test. The predicate validates that subset
+// at runtime so the type narrowing isn't a blind assertion.
+function isContentfulOptimization(value: SdkStub): value is SdkStub & ContentfulOptimization {
+  return (
+    typeof value.destroy === 'function' &&
+    typeof value.states.eventStream.subscribe === 'function' &&
+    typeof value.states.eventStream.subscribeOnce === 'function'
+  )
 }
 
 function isTestRendererModule(value: unknown): value is TestRendererModule {
