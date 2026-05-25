@@ -8,8 +8,14 @@ import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 
 object AppLauncher {
-    const val APP_PACKAGE = "com.contentful.optimization.app"
-    private const val MAIN_ACTIVITY = "$APP_PACKAGE.MainActivity"
+    // Read the target app package from the instrumentation runner arguments so the same test APK
+    // can drive both the Compose and the XML Views reference impls. Default is the Compose impl
+    // so local IDE runs (`./gradlew :uitests:connectedAndroidTest`) keep working without extra
+    // flags. The Android CI matrix and `scripts/run-e2e.sh` set `-e APP_PACKAGE <pkg>`.
+    val APP_PACKAGE: String =
+        InstrumentationRegistry.getArguments().getString("APP_PACKAGE")
+            ?: "com.contentful.optimization.app"
+    private val MAIN_ACTIVITY: String = "$APP_PACKAGE.MainActivity"
 
     fun launchApp(device: UiDevice, extras: Map<String, Boolean> = emptyMap()) {
         val context = InstrumentationRegistry.getInstrumentation().context
