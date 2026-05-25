@@ -11,6 +11,7 @@ import com.contentful.optimization.app.views.support.setTestTag
 import com.contentful.optimization.shared.ContentfulFetcher
 import com.contentful.optimization.views.OptimizationManager
 import com.contentful.optimization.views.OptimizedEntryView
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -50,6 +51,16 @@ class LiveUpdatesTestActivity : AppCompatActivity() {
         bindViews()
         applyTestTags()
         wireButtons()
+
+        // Compose's LiveUpdatesTestScreen is mounted/unmounted within a single Activity, so the
+        // bridge's preview-panel flag and the locked state of OptimizedEntry composables reset
+        // naturally between visits via Compose's `key(..., isPreviewPanelSimulated)` block. The
+        // Views impl is a separate Activity reused across UI Automator test cases, so we
+        // explicitly close the SDK preview panel here to mirror that fresh-start contract.
+        // Without this, a prior test that toggled the panel can leave it open in the bridge,
+        // which forces shouldLive=true for the locked slots in the next test and breaks the
+        // "locked must not update after identify" assertions.
+        OptimizationManager.client.setPreviewPanelOpen(false)
 
         loadEntry()
     }
@@ -97,6 +108,16 @@ class LiveUpdatesTestActivity : AppCompatActivity() {
 
     private fun loadEntry() {
         lifecycleScope.launch {
+            // Wait for the SDK to populate selectedPersonalizations before mounting any
+            // OptimizedEntryView. Compose renders LiveUpdatesTestScreen inside the same
+            // Activity as MainScreen, so by the time the user taps the test button, the
+            // bridge has already emitted a non-null personalizations value and the screen's
+            // `liveUpdates = false` slots lock onto a variant on their first collect. The
+            // Views impl uses a separate Activity, and without this gate the slots see the
+            // initial `null` emission first and publish baseline content, then lock onto the
+            // variant on the second emission — the test then sees the entry id change after
+            // identify even though the slot is supposedly locked.
+            OptimizationManager.client.selectedPersonalizations.first { it != null }
             val entries = ContentfulFetcher.fetchEntries(listOf("2Z2WLOx07InSewC3LUB3eX"))
             loadedEntry = entries.firstOrNull() ?: return@launch
             attachSlotRenderers()
