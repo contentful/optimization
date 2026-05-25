@@ -747,7 +747,7 @@ jobs:
 
       - name: Build app and test APKs
         working-directory: implementations/android-sdk
-        run: ./gradlew :app:assembleDebug :uitests:assembleDebug
+        run: ./gradlew :compose:assembleDebug :uitests:assembleDebug
 
       - name: Start Mock Server
         run: |
@@ -789,7 +789,7 @@ jobs:
             adb shell settings put global transition_animation_scale 0
             adb shell settings put global animator_duration_scale 0
             echo "Installing APKs..."
-            adb install -r implementations/android-sdk/app/build/outputs/apk/debug/app-debug.apk
+            adb install -r implementations/android-sdk/compose/build/outputs/apk/debug/compose-debug.apk
             adb install -r implementations/android-sdk/uitests/build/outputs/apk/debug/uitests-debug.apk
             echo "Setting up adb reverse port forwarding..."
             adb reverse tcp:8000 tcp:8000

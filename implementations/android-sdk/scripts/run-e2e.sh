@@ -486,12 +486,12 @@ build_apks() {
 
     log_info "Building app APK and test APK..."
     cd "$APP_DIR"
-    ./gradlew :app:assembleDebug :uitests:assembleDebug
+    ./gradlew :compose:assembleDebug :uitests:assembleDebug
     log_info "Build complete"
 }
 
 install_apks() {
-    local app_apk="$APP_DIR/app/build/outputs/apk/debug/app-debug.apk"
+    local app_apk="$APP_DIR/compose/build/outputs/apk/debug/compose-debug.apk"
     local test_apk="$APP_DIR/uitests/build/outputs/apk/debug/uitests-debug.apk"
 
     if [[ ! -f "$app_apk" ]]; then

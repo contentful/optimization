@@ -23,7 +23,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    targetProjectPath = ":app"
+    // The compose reference impl is the default target. Step 5 reads APP_PACKAGE from the
+    // instrumentation arguments to switch targets at runtime, but Gradle still needs a single
+    // compile-time link. Keeping the link pointed at the Compose app preserves the existing
+    // CI surface; the matrix CI leg installs the views APK separately before running.
+    targetProjectPath = ":compose"
 }
 
 kotlin {

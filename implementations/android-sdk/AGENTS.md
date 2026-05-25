@@ -10,9 +10,12 @@ build.
 
 ## Key paths
 
-- `app/src/main/kotlin/com/contentful/optimization/app/` — App source
-- `app/src/main/kotlin/com/contentful/optimization/app/screens/` — Screen composables
-- `app/src/main/kotlin/com/contentful/optimization/app/components/` — Reusable UI components
+- `compose/src/main/kotlin/com/contentful/optimization/app/` — Jetpack Compose app source
+- `compose/src/main/kotlin/com/contentful/optimization/app/screens/` — Screen composables
+- `compose/src/main/kotlin/com/contentful/optimization/app/components/` — Reusable UI components
+- `shared/src/main/kotlin/com/contentful/optimization/shared/` — Platform-agnostic Kotlin helpers
+  (AppConfig, ContentfulFetcher, EventStore, MockPreviewContentfulClient, RichText) shared by every
+  reference app under this directory
 - `uitests/` — UI Automator 2 E2E test module (`com.android.test`)
 - `uitests/src/main/kotlin/.../uitests/tests/` — Test files (1:1 mirror of iOS XCUITest suite)
 - `uitests/src/main/kotlin/.../uitests/support/` — Shared test helpers, app launcher, device
@@ -20,7 +23,7 @@ build.
 - `scripts/` — Build and run scripts
 - `build.gradle.kts` — Root build config (plugin versions)
 - `settings.gradle.kts` — Project structure (includes SDK module + uitests via project.dir)
-- `app/build.gradle.kts` — App module build config and dependencies
+- `compose/build.gradle.kts` — Compose app module build config and dependencies
 
 ## Local rules
 
@@ -30,7 +33,7 @@ build.
 - The mock server must be running at `http://localhost:8000` before running the app. Use
   `adb reverse tcp:8000 tcp:8000` to forward the port to the emulator.
 - The app references the SDK via Gradle `include` + `project.dir` in `settings.gradle.kts`. After
-  SDK source changes, rebuild via `./gradlew :app:assembleDebug` from this directory.
+  SDK source changes, rebuild via `./gradlew :compose:assembleDebug` from this directory.
 - Keep accessibility identifiers (testTags) aligned with the iOS SwiftUI implementation and
   `implementations/PREVIEW_PANEL_SCENARIOS.md`.
 - Use `Modifier.testTag()` for app-level test identifiers. The root composable sets
@@ -43,7 +46,7 @@ build.
 ## Commands
 
 - `pnpm serve:mocks` (from monorepo root)
-- From `implementations/android-sdk/`: `./gradlew :app:assembleDebug`
+- From `implementations/android-sdk/`: `./gradlew :compose:assembleDebug`
 - From `implementations/android-sdk/`: `./scripts/bootstrap.sh`
 - Build bridge first: `pnpm --filter @contentful/optimization-js-bridge build`
 - Build UI test APK: `./gradlew :uitests:assembleDebug`

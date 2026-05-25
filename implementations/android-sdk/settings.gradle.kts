@@ -16,7 +16,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "OptimizationAndroidApp"
 
-include(":app")
+include(":compose")
 include(":shared")
 include(":uitests")
 include(":ContentfulOptimization")
