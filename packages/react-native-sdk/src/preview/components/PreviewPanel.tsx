@@ -203,7 +203,11 @@ export function PreviewPanel({
       )}
 
       {/* Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        testID="preview-panel-scroll"
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <PreviewPanelContent
           isLoading={entriesLoading}
           error={entriesError}
