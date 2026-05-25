@@ -862,11 +862,12 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: |
-            set -o pipefail
-            # The emulator-runner action's `disable-animations: true` already handles the
-            # animation-scale settings; running them manually here exits the script under
-            # the action's `bash -e` wrapper when `adb shell settings put` returns non-zero
-            # on a freshly-booted API 35 image, before any test ever runs.
+            # The emulator-runner action invokes the script via `/usr/bin/sh -c`, not bash, so
+            # `set -o pipefail` would error out with "Illegal option -o pipefail" and terminate
+            # the script before any test ran. The grep-on-test-output checks below already
+            # detect instrumentation failures regardless of pipe-status propagation.
+            # The action's `disable-animations: true` already disables animation scales — no
+            # need to run the manual adb shell settings put lines here.
             echo "Installing APKs (target app: $APP_PACKAGE)..."
             adb install -r "android-apks/$APP_APK"
             adb install -r android-apks/uitests-debug.apk
