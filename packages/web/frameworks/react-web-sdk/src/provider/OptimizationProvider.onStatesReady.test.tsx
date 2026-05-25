@@ -332,10 +332,9 @@ describe('OptimizationProvider onStatesReady', () => {
 
   it('runs onStatesReady cleanup before owned sdk teardown', () => {
     const order: string[] = []
-    const originalDestroy = Reflect.get(
-      ContentfulOptimization.prototype,
-      'destroy',
-    ) as (this: ContentfulOptimization) => void
+    const originalDestroy = Reflect.get(ContentfulOptimization.prototype, 'destroy') as (
+      this: ContentfulOptimization,
+    ) => void
     const destroySpy = rs
       .spyOn(ContentfulOptimization.prototype, 'destroy')
       .mockImplementation(function destroy(this: ContentfulOptimization): void {
