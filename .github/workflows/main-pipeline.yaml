@@ -863,10 +863,10 @@ jobs:
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: |
             set -o pipefail
-            echo "Disabling animations..."
-            adb shell settings put global window_animation_scale 0
-            adb shell settings put global transition_animation_scale 0
-            adb shell settings put global animator_duration_scale 0
+            # The emulator-runner action's `disable-animations: true` already handles the
+            # animation-scale settings; running them manually here exits the script under
+            # the action's `bash -e` wrapper when `adb shell settings put` returns non-zero
+            # on a freshly-booted API 35 image, before any test ever runs.
             echo "Installing APKs (target app: $APP_PACKAGE)..."
             adb install -r "android-apks/$APP_APK"
             adb install -r android-apks/uitests-debug.apk
