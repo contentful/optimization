@@ -1,4 +1,4 @@
-package com.contentful.optimization.app
+package com.contentful.optimization.shared
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

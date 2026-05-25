@@ -22,9 +22,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import com.contentful.optimization.app.AppConfig
-import com.contentful.optimization.app.ContentfulFetcher
-import com.contentful.optimization.app.EventStore
+import com.contentful.optimization.shared.AppConfig
+import com.contentful.optimization.shared.ContentfulFetcher
+import com.contentful.optimization.shared.EventStore
 import com.contentful.optimization.app.components.AnalyticsEventDisplay
 import com.contentful.optimization.app.components.ContentEntryView
 import com.contentful.optimization.app.components.NestedContentEntryView

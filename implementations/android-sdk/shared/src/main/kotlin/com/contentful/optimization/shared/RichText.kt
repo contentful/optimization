@@ -1,4 +1,4 @@
-package com.contentful.optimization.app.components
+package com.contentful.optimization.shared
 
 import com.contentful.optimization.core.OptimizationClient
 

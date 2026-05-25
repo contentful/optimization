@@ -1,4 +1,4 @@
-package com.contentful.optimization.app
+package com.contentful.optimization.shared
 
 object AppConfig {
     const val clientId = "mock-client-id"

@@ -17,6 +17,8 @@ import com.contentful.optimization.app.screens.MainScreen
 import com.contentful.optimization.compose.OptimizationRoot
 import com.contentful.optimization.core.OptimizationConfig
 import com.contentful.optimization.preview.PreviewPanelConfig
+import com.contentful.optimization.shared.AppConfig
+import com.contentful.optimization.shared.MockPreviewContentfulClient
 
 class MainActivity : ComponentActivity() {
 

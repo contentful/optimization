@@ -26,7 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.contentful.optimization.app.ContentfulFetcher
+import com.contentful.optimization.shared.ContentfulFetcher
 import com.contentful.optimization.compose.LocalOptimizationClient
 import com.contentful.optimization.compose.LocalTrackingConfig
 import com.contentful.optimization.compose.OptimizationLazyColumn

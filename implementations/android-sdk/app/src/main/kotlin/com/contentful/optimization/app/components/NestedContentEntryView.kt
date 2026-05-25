@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.contentful.optimization.compose.LocalOptimizationClient
 import com.contentful.optimization.compose.OptimizedEntry
+import com.contentful.optimization.shared.RichText
 
 @Composable
 fun NestedContentEntryView(entry: Map<String, Any>) {

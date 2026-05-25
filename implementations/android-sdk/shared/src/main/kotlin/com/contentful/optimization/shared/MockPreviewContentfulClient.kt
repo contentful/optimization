@@ -1,4 +1,4 @@
-package com.contentful.optimization.app
+package com.contentful.optimization.shared
 
 import com.contentful.optimization.preview.ContentfulEntriesResult
 import com.contentful.optimization.preview.ContentfulIncludes
