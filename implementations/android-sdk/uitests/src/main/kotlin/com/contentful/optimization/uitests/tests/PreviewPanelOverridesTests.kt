@@ -252,6 +252,12 @@ class PreviewPanelOverridesTests {
         waitForDefinitionsLoaded()
         scrollPanelToElement("audience-toggle-$AUDIENCE_ID-off")
         TestHelpers.waitAndTap(device, By.desc("audience-toggle-$AUDIENCE_ID-off"), singleClick = true)
+        // The deactivation drops this audience below all qualified ones in
+        // `sortAudiences`, so the toggle row scrolls off-screen. Bring it
+        // back into the viewport before tapping the `default` segment;
+        // without this, UiAutomator finds the segment in the off-screen
+        // (accessibility-cached) tree and its `ACTION_CLICK` silently no-ops.
+        scrollPanelToElement("audience-toggle-$AUDIENCE_ID-default")
         TestHelpers.waitAndTap(device, By.desc("audience-toggle-$AUDIENCE_ID-default"), singleClick = true)
         closePanel()
 
