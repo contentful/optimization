@@ -14,9 +14,12 @@ import com.contentful.optimization.app.views.components.ContentEntryViewBinder
 import com.contentful.optimization.app.views.components.NestedContentEntryViewBinder
 import com.contentful.optimization.app.views.components.isNestedContent
 import com.contentful.optimization.app.views.support.setTestTag
+import com.contentful.optimization.core.OptimizationConfig
+import com.contentful.optimization.preview.PreviewPanelConfig
 import com.contentful.optimization.shared.AppConfig
 import com.contentful.optimization.shared.ContentfulFetcher
 import com.contentful.optimization.shared.EventStore
+import com.contentful.optimization.shared.MockPreviewContentfulClient
 import com.contentful.optimization.views.OptimizationManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -54,6 +57,26 @@ class MainActivity : AppCompatActivity() {
                 .apply()
         }
         val simulateOffline = intent.getBooleanExtra("simulate_offline", false)
+
+        // Initialize the SDK after the reset check so a `--ez reset true` cold start clears the
+        // persisted profile before the bridge reads it. OptimizationManager.initialize is
+        // idempotent across activities, so launching NavigationTestActivity / LiveUpdatesTestActivity
+        // before MainActivity's onCreate has finished is still safe.
+        OptimizationManager.initialize(
+            context = this,
+            config = OptimizationConfig(
+                clientId = AppConfig.clientId,
+                environment = AppConfig.environment,
+                experienceBaseUrl = AppConfig.experienceBaseUrl,
+                insightsBaseUrl = AppConfig.insightsBaseUrl,
+                debug = true,
+            ),
+            trackViews = true,
+            trackTaps = true,
+            previewPanel = PreviewPanelConfig(
+                contentfulClient = MockPreviewContentfulClient(),
+            ),
+        )
 
         setContentView(R.layout.activity_main)
 
@@ -98,6 +121,12 @@ class MainActivity : AppCompatActivity() {
             if (simulateOffline) {
                 client.setOnline(false)
             }
+            // Attach the preview-panel floating action button once the client is initialized.
+            // Mirrors OptimizationRoot's `previewPanel = PreviewPanelConfig(...)` parameter on
+            // the Compose side, which adds the FAB through PreviewPanelOverlay. The FAB needs
+            // an initialized client to look up the contentful preview client wired in via
+            // OptimizationManager.initialize.
+            OptimizationManager.attachPreviewPanel(this@MainActivity)
         }
 
         observeProfileForEntries()
@@ -137,7 +166,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleIdentify() {
+        // Activity render is not gated on isInitialized, so the user can tap Identify before
+        // the bridge finishes booting. client.identify requires an initialized client and would
+        // otherwise throw + get caught silently here, leaving the UI stuck on the Identify state.
         lifecycleScope.launch {
+            client.isInitialized.first { it }
             try {
                 client.identify(
                     userId = "charles",
@@ -149,8 +182,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleReset() {
-        client.reset()
         lifecycleScope.launch {
+            client.isInitialized.first { it }
+            client.reset()
             try {
                 client.page(mapOf("url" to "app"))
             } catch (_: Exception) {

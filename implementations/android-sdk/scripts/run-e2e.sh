@@ -470,6 +470,16 @@ start_mock_server() {
     fi
 }
 
+force_stop_other_apps() {
+    # Local convenience: a previous run against the OTHER reference impl leaves its process
+    # cached by Android, and its stale focused window confuses UiAutomator window discovery
+    # in this run. CI never hits this because each matrix leg has its own emulator with only
+    # one app installed; this is purely a local-state hygiene step.
+    for pkg in com.contentful.optimization.app com.contentful.optimization.app.views; do
+        adb shell am force-stop "$pkg" 2>/dev/null || true
+    done
+}
+
 setup_adb() {
     log_info "Setting up adb reverse port forwarding..."
     adb reverse tcp:${MOCK_SERVER_PORT} tcp:${MOCK_SERVER_PORT}
@@ -598,6 +608,7 @@ main() {
     verify_device
     start_mock_server
     setup_adb
+    force_stop_other_apps
     build_bridge
     build_apks
     install_apks

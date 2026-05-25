@@ -21,7 +21,13 @@ object NestedContentEntryViewBinder {
             accessibilityIdentifier = "content-entry-$entryId"
         }
         wrapper.setContentRenderer { resolvedEntry ->
-            ContentEntryViewBinder.renderEntryColumn(context, resolvedEntry, entryId)
+            // Compose's NestedEntryText derives the test tag id from the RESOLVED entry, so the
+            // personalization variant's sys.id becomes the test tag (e.g.
+            // `entry-text-2KIWllNZJT205BwOSkMINg` for the nested return-visitor variant). The
+            // outer OptimizedEntryView's accessibilityIdentifier stays on the BASE id to match
+            // the non-nested path.
+            val resolvedId = entryId(resolvedEntry)
+            ContentEntryViewBinder.renderEntryColumn(context, resolvedEntry, resolvedId)
         }
         wrapper.setEntry(entry)
         column.addView(wrapper)
