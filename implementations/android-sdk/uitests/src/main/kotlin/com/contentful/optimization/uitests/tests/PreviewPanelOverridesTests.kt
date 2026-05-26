@@ -82,15 +82,8 @@ class PreviewPanelOverridesTests {
     }
 
     private fun scrollPanelToElement(desc: String) {
-        // Read the panel bounds robustly: the panel handle can go stale on a
-        // recent recomposition (e.g. after an audience-toggle reorders the
-        // list). Fall back to the display extents if so — the swipe just
-        // needs a vertical gesture, not the exact panel inner bounds.
-        val bounds = try {
-            device.findObject(By.desc("preview-panel-list"))?.visibleBounds
-        } catch (_: androidx.test.uiautomator.StaleObjectException) {
-            null
-        }
+        val panel = device.findObject(By.desc("preview-panel-list"))
+        val bounds = panel?.visibleBounds
 
         val centerX = bounds?.centerX() ?: (device.displayWidth / 2)
         val startY = bounds?.let { it.top + (it.height() * 3 / 4) } ?: (device.displayHeight * 3 / 4)
@@ -104,19 +97,13 @@ class PreviewPanelOverridesTests {
             val el = device.wait(Until.hasObject(By.descContains(desc)), 500L)?.let {
                 device.findObject(By.descContains(desc))
             }
-            // Stale handles are common right after a panel-state mutation; the
-            // swipe below is what actually shakes the accessibility tree
-            // loose, so treat a stale probe the same as "not yet visible" and
-            // keep scrolling.
-            val elBounds = try {
-                el?.visibleBounds
-            } catch (_: androidx.test.uiautomator.StaleObjectException) {
-                null
-            }
-            if (elBounds != null && elBounds.height() >= 5 && bounds != null &&
-                elBounds.top >= bounds.top && elBounds.bottom <= bounds.bottom
-            ) {
-                return
+            if (el != null) {
+                val elBounds = el.visibleBounds
+                if (elBounds.height() >= 5 && bounds != null &&
+                    elBounds.top >= bounds.top && elBounds.bottom <= bounds.bottom
+                ) {
+                    return
+                }
             }
             device.swipe(centerX, startY, centerX, endY, 25)
         }
@@ -265,12 +252,6 @@ class PreviewPanelOverridesTests {
         waitForDefinitionsLoaded()
         scrollPanelToElement("audience-toggle-$AUDIENCE_ID-off")
         TestHelpers.waitAndTap(device, By.desc("audience-toggle-$AUDIENCE_ID-off"), singleClick = true)
-        // The deactivation drops this audience below all qualified ones in
-        // `sortAudiences`, so the toggle row scrolls off-screen. Bring it
-        // back into the viewport before tapping the `default` segment;
-        // without this, UiAutomator finds the segment in the off-screen
-        // (accessibility-cached) tree and its `ACTION_CLICK` silently no-ops.
-        scrollPanelToElement("audience-toggle-$AUDIENCE_ID-default")
         TestHelpers.waitAndTap(device, By.desc("audience-toggle-$AUDIENCE_ID-default"), singleClick = true)
         closePanel()
 

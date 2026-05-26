@@ -92,10 +92,12 @@ function enrichExperience(
 
 /** @internal */
 function sortAudiences(audiences: AudienceWithExperiences[]): AudienceWithExperiences[] {
+  // All-Visitors first, then alphabetical by name. Audiences keep their slot
+  // when their override flips so the panel doesn't shuffle under the user
+  // mid-interaction.
   return [...audiences].sort((a, b) => {
     if (a.audience.id === ALL_VISITORS_AUDIENCE_ID) return -1
     if (b.audience.id === ALL_VISITORS_AUDIENCE_ID) return 1
-    if (a.isActive !== b.isActive) return a.isActive ? -1 : 1
     return a.audience.name.localeCompare(b.audience.name, undefined, { sensitivity: 'base' })
   })
 }
@@ -107,8 +109,9 @@ function sortAudiences(audiences: AudienceWithExperiences[]): AudienceWithExperi
  * Experiences without a specific audience — or targeting an audience that isn't in
  * `audienceDefinitions` — are grouped under an "All Visitors" fallback audience.
  *
- * Output ordering is deterministic: All-Visitors first, then qualified audiences
- * before unqualified ones, with alphabetical tie-break by name.
+ * Output ordering is deterministic: All-Visitors first, then alphabetical by
+ * audience name. Audience position is independent of qualification or override
+ * state so toggling an override doesn't shuffle the panel under the user.
  *
  * @public
  */
