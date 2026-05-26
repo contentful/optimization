@@ -106,8 +106,14 @@ object TestHelpers {
         timeout: Long = ELEMENT_TIMEOUT,
         singleClick: Boolean = false,
     ) {
-        val element = waitForElement(device, selector, timeout)
+        // Settle first, then resolve the element against the post-recomposition
+        // accessibility tree. The previous order (resolve → idle → tap) handed
+        // the captured UiObject2 across the idle wait — exactly the window in
+        // which Compose recomposition invalidates the underlying node id,
+        // causing the subsequent click to silently no-op on a stale handle.
+        waitForElement(device, selector, timeout)
         device.waitForIdle(1500L)
+        val element = waitForElement(device, selector, timeout)
         tapElement(device, element, singleClick = singleClick)
     }
 
