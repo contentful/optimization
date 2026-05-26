@@ -26,11 +26,20 @@ object AppLauncher {
 
     fun relaunchClean(device: UiDevice) {
         forceStop(device)
+        // Let UiAutomator's accessibility cache drain old-window nodes before
+        // the new activity registers — `am force-stop` kills the app process
+        // but the instrumentation process keeps holding `AccessibilityNodeInfo`
+        // references from the previous window, and a too-fast relaunch leaves
+        // the next `findObject` resolving against a stale snapshot.
+        device.waitForIdle(1_000L)
         launchApp(device, extras = mapOf("reset" to true))
         device.wait(
             Until.hasObject(By.res("identify-button")),
             TestHelpers.ELEMENT_TIMEOUT
         )
+        // After identify-button is present, give Compose's initial accessibility
+        // tree one more idle round so the next findObject sees the settled tree.
+        device.waitForIdle(1_000L)
     }
 
     fun bringToForeground(device: UiDevice) {
@@ -45,6 +54,18 @@ object AppLauncher {
 
     fun forceStop(device: UiDevice) {
         device.executeShellCommand("am force-stop $APP_PACKAGE")
-        Thread.sleep(500)
+        // Poll until the app process is actually gone — `am force-stop` returns
+        // immediately but the kernel-side teardown lags. Without this gate, the
+        // subsequent `am start` can race against the dying process and the new
+        // activity's accessibility tree gets attached before the old one is
+        // fully torn down.
+        val deadline = System.currentTimeMillis() + 5_000L
+        while (System.currentTimeMillis() < deadline) {
+            val pid = device.executeShellCommand("pidof $APP_PACKAGE").trim()
+            if (pid.isEmpty()) return
+            Thread.sleep(100)
+        }
+        // Don't fail the test if we can't confirm death — the process may have
+        // already exited and the next `am start` will work; just fall through.
     }
 }
