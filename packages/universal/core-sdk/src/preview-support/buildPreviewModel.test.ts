@@ -312,17 +312,20 @@ describe('buildPreviewModel', () => {
       expect(model.audiencesWithExperiences[0]?.audience.id).toBe(ALL_VISITORS_AUDIENCE_ID)
     })
 
-    test('qualified audiences are sorted before unqualified', () => {
+    test('qualification does not affect audience order', () => {
+      // "Apple" qualifies and "Banana" does not, but alphabetical order wins
+      // — the panel must stay stable when an override flips an audience's
+      // active state.
       const model = buildPreviewModel({
         audienceDefinitions: [audience('aud-b', 'Banana'), audience('aud-a', 'Apple')],
         experienceDefinitions: [],
-        signals: { ...EMPTY_SIGNALS, profile: makeProfile(['aud-b']) },
+        signals: { ...EMPTY_SIGNALS, profile: makeProfile(['aud-a']) },
         overrides: EMPTY_OVERRIDES,
       })
-      expect(model.audiencesWithExperiences.map((a) => a.audience.id)).toEqual(['aud-b', 'aud-a'])
+      expect(model.audiencesWithExperiences.map((a) => a.audience.id)).toEqual(['aud-a', 'aud-b'])
     })
 
-    test('audiences with the same activation state break ties alphabetically by name', () => {
+    test('audiences are sorted alphabetically by name', () => {
       const model = buildPreviewModel({
         audienceDefinitions: [
           audience('aud-c', 'Charlie'),
@@ -341,6 +344,8 @@ describe('buildPreviewModel', () => {
     })
 
     test('ordering is deterministic for a known mixed input', () => {
+      // Names: Acorn (q1), Alpha (u1), Beta (q2), Zeta (u2). All-Visitors
+      // first, then strict alphabetical regardless of qualification.
       const model = buildPreviewModel({
         audienceDefinitions: [
           audience('aud-u2', 'Zeta'),
@@ -355,8 +360,8 @@ describe('buildPreviewModel', () => {
       expect(model.audiencesWithExperiences.map((a) => a.audience.id)).toEqual([
         ALL_VISITORS_AUDIENCE_ID,
         'aud-q1',
-        'aud-q2',
         'aud-u1',
+        'aud-q2',
         'aud-u2',
       ])
     })

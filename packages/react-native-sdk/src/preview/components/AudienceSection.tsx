@@ -64,17 +64,11 @@ export function AudienceSection({
     [audiencesWithExperiences, searchQuery],
   )
 
-  // Sort audiences: qualified first, then alphabetically
+  // Sort audiences alphabetically by name. Position is independent of
+  // qualification/active state so toggling an override doesn't reorder rows
+  // under the user. Matches the core SDK's `sortAudiences` contract.
   const sortedAudiences = useMemo(
-    () =>
-      [...filteredAudiences].sort((a, b) => {
-        // Qualified audiences first
-        if (a.isQualified && !b.isQualified) return -1
-        if (!a.isQualified && b.isQualified) return 1
-
-        // Then by name
-        return a.audience.name.localeCompare(b.audience.name)
-      }),
+    () => [...filteredAudiences].sort((a, b) => a.audience.name.localeCompare(b.audience.name)),
     [filteredAudiences],
   )
 
