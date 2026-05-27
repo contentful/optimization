@@ -77,8 +77,7 @@ snapshots into the preview-support helpers.
 
 - [Core SDK README](../../README.md) - package-level Core orientation
 - [React Native SDK README](../../../../react-native-sdk/README.md) - mobile preview-panel surface
-- [iOS JavaScriptCore bridge README](../../../../ios/ios-jsc-bridge/README.md) - native bridge
-  consumer
+- [Shared JS bridge README](../../../optimization-js-bridge/README.md) - native bridge consumer
 - [Core SDK generated reference](https://contentful.github.io/optimization/modules/_contentful_optimization-core.html) -
   exported Core reference, including preview-support types that are re-exported through first-party
   packages

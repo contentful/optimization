@@ -11,10 +11,10 @@ management, and analytics batching.
 
 The architecture has two main sub-packages:
 
-| Sub-package               | Language   | Purpose                                                                                                              |
-| ------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------- |
-| `ios-jsc-bridge/`         | TypeScript | Thin adapter wrapping `CoreStateful` from the optimization library, exposing a callback-based API for JavaScriptCore |
-| `ContentfulOptimization/` | Swift      | SPM library providing public API, SwiftUI views, tracking, persistence, and the JSContext lifecycle                  |
+| Sub-package                                  | Language   | Purpose                                                                                                              |
+| -------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------- |
+| `packages/universal/optimization-js-bridge/` | TypeScript | Thin adapter wrapping `CoreStateful` from the optimization library, exposing a callback-based API for JavaScriptCore |
+| `ContentfulOptimization/`                    | Swift      | SPM library providing public API, SwiftUI views, tracking, persistence, and the JSContext lifecycle                  |
 
 ---
 
@@ -50,7 +50,7 @@ graph TB
         UMD["optimization-ios-bridge.umd.js\n<i>Compiled TS bridge bundle —\nexposes globalThis.__bridge</i>"]
     end
 
-    subgraph "TypeScript Bridge (ios-jsc-bridge/)"
+    subgraph "TypeScript Bridge (packages/universal/optimization-js-bridge/)"
         TSB["Bridge (index.ts)\n<i>Wraps CoreStateful, exposes\ncallback-based API on globalThis.__bridge</i>"]
     end
 

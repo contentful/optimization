@@ -30,6 +30,10 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         self.window = window
         window.makeKeyAndVisible()
 
-        PreviewPanelViewController.addFloatingButton(to: main, client: client, contentfulClient: nil)
+        PreviewPanelViewController.addFloatingButton(
+            to: main,
+            client: client,
+            contentfulClient: MockPreviewContentfulClient()
+        )
     }
 }

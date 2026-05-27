@@ -1,6 +1,6 @@
 import { createScopedLogger } from '@contentful/optimization-core/logger'
 import React, { useCallback, useEffect, useState } from 'react'
-import { Alert, ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native'
+import { ScrollView, StatusBar, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { usePreviewOverrides } from '../context/PreviewOverrideContext'
 import {
@@ -79,6 +79,7 @@ export function PreviewPanel({
   style,
   onVisibilityChange,
   contentfulClient,
+  onRefresh,
 }: PreviewPanelProps): React.JSX.Element {
   const previewState = usePreviewState()
   const { profile, selectedOptimizations, consent, isLoading } = previewState
@@ -97,6 +98,11 @@ export function PreviewPanel({
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('')
+
+  // Inline reset confirmation state. Replaces a UIAlertController/AlertDialog
+  // so the confirm/cancel buttons live inside the panel's Modal hierarchy and
+  // are reachable by Detox on iOS.
+  const [isConfirmingReset, setIsConfirmingReset] = useState(false)
 
   // Collapsible control for expand/collapse all
   const {
@@ -174,15 +180,17 @@ export function PreviewPanel({
     })
   }, [profile, selectedOptimizations, consent, overrides])
 
-  const handleResetSdk = (): void => {
-    Alert.alert(
-      'Reset to Actual State',
-      'This will clear all manual overrides and restore the SDK state to the values last received from the API. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Reset', style: 'destructive', onPress: actions.resetSdkState },
-      ],
-    )
+  const handleResetSdkPress = (): void => {
+    setIsConfirmingReset(true)
+  }
+
+  const handleResetCancel = (): void => {
+    setIsConfirmingReset(false)
+  }
+
+  const handleResetConfirm = (): void => {
+    setIsConfirmingReset(false)
+    actions.resetSdkState()
   }
 
   return (
@@ -203,7 +211,11 @@ export function PreviewPanel({
       )}
 
       {/* Content */}
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        testID="preview-panel-scroll"
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <PreviewPanelContent
           isLoading={entriesLoading}
           error={entriesError}
@@ -238,13 +250,49 @@ export function PreviewPanel({
 
       {/* Footer */}
       <View style={commonStyles.footer}>
-        <ActionButton
-          label="Reset to Actual State"
-          variant="destructive"
-          onPress={handleResetSdk}
-          style={styles.resetButton}
-          testID="reset-all-overrides"
-        />
+        {isConfirmingReset ? (
+          <View style={styles.resetConfirm} testID="reset-all-confirm-prompt">
+            <Text style={styles.resetConfirmText}>
+              This will clear all manual overrides and restore the SDK state to the values last
+              received from the API. Continue?
+            </Text>
+            <View style={styles.resetConfirmButtons}>
+              <ActionButton
+                label="Cancel"
+                variant="secondary"
+                onPress={handleResetCancel}
+                style={styles.resetConfirmButton}
+                testID="reset-all-cancel"
+              />
+              <ActionButton
+                label="Reset"
+                variant="destructive"
+                onPress={handleResetConfirm}
+                style={styles.resetConfirmButton}
+                testID="reset-all-confirm"
+              />
+            </View>
+          </View>
+        ) : (
+          <>
+            {onRefresh && (
+              <ActionButton
+                label="Refresh"
+                variant="secondary"
+                onPress={onRefresh}
+                style={styles.refreshButton}
+                testID="preview-refresh-button"
+              />
+            )}
+            <ActionButton
+              label="Reset to Actual State"
+              variant="destructive"
+              onPress={handleResetSdkPress}
+              style={styles.resetButton}
+              testID="reset-all-overrides"
+            />
+          </>
+        )}
       </View>
     </SafeAreaView>
   )
@@ -275,6 +323,27 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     width: '100%',
+    paddingVertical: spacing.md,
+  },
+  refreshButton: {
+    width: '100%',
+    paddingVertical: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  resetConfirm: {
+    width: '100%',
+    gap: spacing.md,
+  },
+  resetConfirmText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.primary,
+  },
+  resetConfirmButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  resetConfirmButton: {
+    flex: 1,
     paddingVertical: spacing.md,
   },
 })

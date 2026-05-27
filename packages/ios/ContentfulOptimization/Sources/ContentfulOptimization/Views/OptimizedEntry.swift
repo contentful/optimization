@@ -63,9 +63,13 @@ public struct OptimizedEntry<Content: View>: View {
         return fields["nt_experiences"] != nil
     }
 
+    // An open preview panel always forces live updates, overriding an explicit
+    // `liveUpdates: false`. The global toggle only acts as the default when no
+    // explicit per-component value is set.
     private var shouldLiveUpdate: Bool {
+        if client.isPreviewPanelOpen { return true }
         if let explicit = liveUpdates { return explicit }
-        return trackingConfig.liveUpdates || client.isPreviewPanelOpen
+        return trackingConfig.liveUpdates
     }
 
     private var effectivePersonalizations: [[String: Any]]? {
@@ -111,6 +115,12 @@ public struct OptimizedEntry<Content: View>: View {
                 onTap: onTap,
                 client: client
             ))
+            // Expose the wrapper as an accessibility container rather than
+            // letting `accessibilityIdentifier` collapse onto — and override the
+            // identifier of — the single child element. This keeps the consumer's
+            // own nested identifiers (e.g. `entry-text-<id>`) individually
+            // queryable alongside this wrapper identifier.
+            .accessibilityElement(children: .contain)
             .accessibilityIdentifier(accessibilityIdentifier ?? "")
             .onReceive(client.$selectedPersonalizations) { newValue in
                 guard isPersonalized, !shouldLiveUpdate, !isLocked, newValue != nil else { return }

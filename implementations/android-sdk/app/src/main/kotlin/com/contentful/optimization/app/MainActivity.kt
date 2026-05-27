@@ -16,7 +16,7 @@ import androidx.compose.ui.semantics.testTagsAsResourceId
 import com.contentful.optimization.app.screens.MainScreen
 import com.contentful.optimization.compose.OptimizationRoot
 import com.contentful.optimization.core.OptimizationConfig
-import com.contentful.optimization.preview.PreviewPanelOverlay
+import com.contentful.optimization.preview.PreviewPanelConfig
 
 class MainActivity : ComponentActivity() {
 
@@ -50,10 +50,11 @@ class MainActivity : ComponentActivity() {
                     ),
                     trackViews = true,
                     trackTaps = true,
+                    previewPanel = PreviewPanelConfig(
+                        contentfulClient = MockPreviewContentfulClient(),
+                    ),
                 ) {
-                    PreviewPanelOverlay(contentfulClient = MockPreviewContentfulClient()) {
-                        MainScreen(simulateOffline = simulateOffline)
-                    }
+                    MainScreen(simulateOffline = simulateOffline)
                 }
             }
         }

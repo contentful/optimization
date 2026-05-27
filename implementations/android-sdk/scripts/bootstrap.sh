@@ -19,7 +19,7 @@
 # Prerequisites:
 #   - Android SDK installed with ANDROID_HOME set
 #   - pnpm dependencies installed at monorepo root
-#   - Android bridge built: pnpm --filter @contentful/optimization-android-bridge build
+#   - Android bridge built: pnpm --filter @contentful/optimization-js-bridge build
 
 set -euo pipefail
 

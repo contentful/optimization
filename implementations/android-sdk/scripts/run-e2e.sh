@@ -22,6 +22,11 @@
 #   STREAM_BACKGROUND_LOGS - Set to "true" to stream mock server logs to stdout (default: false)
 #   EMULATOR_AVD      - AVD to require/auto-launch (default: pixel_7_api35_e2e, pinned to match CI)
 #   CI                - Set to "true" when running in CI environment (default: false)
+#   FAIL_FAST         - Set to "false" to run all tests even after a failure
+#                       (default: true — aborts suite on first failing test or
+#                       crash so a deterministic root-cause failure doesn't
+#                       waste ~25 minutes waiting for every later @Before to
+#                       time out)
 #
 # Usage:
 #   ./scripts/run-e2e.sh                                    # Full run with build
@@ -33,7 +38,7 @@
 #   - Android SDK installed with adb and emulator in PATH (or ANDROID_HOME set)
 #   - At least one AVD configured (or a physical device connected)
 #   - pnpm dependencies installed at monorepo root
-#   - Android bridge built: pnpm --filter @contentful/optimization-android-bridge build
+#   - Android bridge built: pnpm --filter @contentful/optimization-js-bridge build
 #
 # Logs:
 #   All logs are written to implementations/android-sdk/logs/:
@@ -474,7 +479,7 @@ build_bridge() {
     fi
 
     log_info "Building Android bridge JS bundle..."
-    pnpm --dir "$ROOT_DIR" --filter @contentful/optimization-android-bridge build
+    pnpm --dir "$ROOT_DIR" --filter @contentful/optimization-js-bridge build
     log_info "Bridge bundle built"
 }
 
@@ -535,8 +540,36 @@ run_tests() {
 
     local test_runner="com.contentful.optimization.uitests/androidx.test.runner.AndroidJUnitRunner"
 
+    # Fail-fast: stream am instrument output through awk; on the first
+    # "Error in test" or "Process crashed" line, force-stop the test process
+    # to abort the remaining suite. AndroidJUnitRunner has no built-in
+    # early-exit, so without this every subsequent @Before waits its full
+    # 20-30s waitForElement timeout — a single failing class of 10 tests
+    # could turn a deterministic root-cause failure into ~25 minutes of wall
+    # time. force-stop on the .uitests process kills the instrumentation; the
+    # remote `am instrument -w` exits and the local pipeline collapses.
+    # Set FAIL_FAST=false to disable (useful when diagnosing why a *later*
+    # test fails — without this you'd never see the later test run).
+    local fail_fast="${FAIL_FAST:-true}"
     set +e
-    adb shell am instrument $am_args "$test_runner" 2>&1 | tee "$TEST_LOG"
+    if [[ "$fail_fast" == "true" ]]; then
+        adb shell am instrument $am_args "$test_runner" 2>&1 | tee "$TEST_LOG" | awk '
+            /Error in test|Process crashed/ {
+                if (!aborted) {
+                    aborted = 1
+                    print
+                    print "[fail-fast] aborting remaining suite"
+                    fflush()
+                    system("adb shell am force-stop com.contentful.optimization.uitests >/dev/null 2>&1")
+                    exit 1
+                }
+                next
+            }
+            { print; fflush() }
+        '
+    else
+        adb shell am instrument $am_args "$test_runner" 2>&1 | tee "$TEST_LOG"
+    fi
     local test_exit_code="${PIPESTATUS[0]}"
     set -e
 

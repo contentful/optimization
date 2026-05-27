@@ -1,11 +1,16 @@
 package com.contentful.optimization.app.screens
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -14,16 +19,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.contentful.optimization.app.AppConfig
 import com.contentful.optimization.app.ContentfulFetcher
+import com.contentful.optimization.app.EventStore
 import com.contentful.optimization.app.components.AnalyticsEventDisplay
 import com.contentful.optimization.app.components.ContentEntryView
 import com.contentful.optimization.app.components.NestedContentEntryView
 import com.contentful.optimization.app.components.isNestedContent
 import com.contentful.optimization.compose.LocalOptimizationClient
-import com.contentful.optimization.compose.OptimizationLazyColumn
+import com.contentful.optimization.compose.LocalScrollContext
+import com.contentful.optimization.compose.ScrollContext
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
@@ -34,11 +42,13 @@ fun MainScreen(simulateOffline: Boolean = false) {
     val scope = rememberCoroutineScope()
 
     var entries by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
-    var isIdentified by remember { mutableStateOf(false) }
     var showNavigationTest by remember { mutableStateOf(false) }
     var showLiveUpdatesTest by remember { mutableStateOf(false) }
+    var flagSubscribed by remember { mutableStateOf(false) }
+    var viewportHeight by remember { mutableStateOf(0f) }
 
     LaunchedEffect(Unit) {
+        EventStore.subscribe(client.events, scope)
         client.consent(true)
         try { client.page(mapOf("url" to "app")) } catch (_: Exception) {}
         if (simulateOffline) {
@@ -52,9 +62,19 @@ fun MainScreen(simulateOffline: Boolean = false) {
         }
     }
 
+    val isIdentified = remember(state.profile) {
+        @Suppress("UNCHECKED_CAST")
+        val traits = state.profile?.get("traits") as? Map<String, Any>
+        traits?.get("identified") == true
+    }
+
     LaunchedEffect(profileKey) {
         if (state.profile != null) {
             entries = ContentfulFetcher.fetchEntries(AppConfig.entryIds)
+            if (!flagSubscribed) {
+                flagSubscribed = true
+                client.subscribeToFlag("boolean")
+            }
         }
     }
 
@@ -68,7 +88,6 @@ fun MainScreen(simulateOffline: Boolean = false) {
                 if (!isIdentified) {
                     Button(
                         onClick = {
-                            isIdentified = true
                             scope.launch {
                                 try {
                                     client.identify(
@@ -84,7 +103,6 @@ fun MainScreen(simulateOffline: Boolean = false) {
                     Button(
                         onClick = {
                             client.reset()
-                            isIdentified = false
                             scope.launch {
                                 try { client.page(mapOf("url" to "app")) } catch (_: Exception) {}
                             }
@@ -105,19 +123,31 @@ fun MainScreen(simulateOffline: Boolean = false) {
             if (entries.isEmpty()) {
                 Text("Loading...")
             } else {
-                OptimizationLazyColumn(
-                    modifier = Modifier.testTag("main-scroll-view"),
-                ) {
-                    items(entries.size) { index ->
-                        val entry = entries[index]
-                        if (isNestedContent(entry)) {
-                            NestedContentEntryView(entry = entry)
-                        } else {
-                            ContentEntryView(entry = entry)
+    
+                val scrollContext = remember(viewportHeight) {
+                    ScrollContext(scrollY = 0f, viewportHeight = viewportHeight)
+                }
+                CompositionLocalProvider(LocalScrollContext provides scrollContext) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .onGloballyPositioned { viewportHeight = it.size.height.toFloat() },
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .testTag("main-scroll-view")
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState()),
+                        ) {
+                            entries.forEach { entry ->
+                                if (isNestedContent(entry)) {
+                                    NestedContentEntryView(entry = entry)
+                                } else {
+                                    ContentEntryView(entry = entry)
+                                }
+                            }
+                            AnalyticsEventDisplay()
                         }
-                    }
-                    item {
-                        AnalyticsEventDisplay()
                     }
                 }
             }

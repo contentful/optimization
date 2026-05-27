@@ -20,7 +20,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.util.concurrent.Executors
 
-class ZiplineContextManager {
+class QuickJsContextManager {
     private var quickJs: QuickJs? = null
     private val callbackManager = BridgeCallbackManager()
     private var timerStore: TimerStore? = null

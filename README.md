@@ -92,8 +92,8 @@ React Native support is available through
 [`@contentful/optimization-react-native`](./packages/react-native-sdk/README.md).
 
 Native iOS work is also present in this repository as a pre-release Swift Package under
-[`packages/ios`](./packages/ios/README.md), backed by the
-[`@contentful/optimization-ios-bridge`](./packages/ios/ios-jsc-bridge/README.md) JavaScriptCore
+[`packages/ios`](./packages/ios/README.md), backed by the shared
+[`@contentful/optimization-js-bridge`](./packages/universal/optimization-js-bridge/README.md)
 adapter and the [iOS reference app](./implementations/ios-sdk/README.md). Treat this surface as
 alpha implementation work rather than a stable public native SDK.
 

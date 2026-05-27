@@ -24,11 +24,12 @@ struct OptimizationDemoApp: App {
                     debug: true
                 ),
                 trackViews: true,
-                trackTaps: true
+                trackTaps: true,
+                previewPanel: PreviewPanelConfig(
+                    contentfulClient: MockPreviewContentfulClient()
+                )
             ) {
-                PreviewPanelOverlay {
-                    MainScreen()
-                }
+                MainScreen()
             }
         }
     }

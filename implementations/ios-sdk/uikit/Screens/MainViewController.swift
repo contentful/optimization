@@ -6,14 +6,16 @@ final class MainViewController: UIViewController {
 
     private let client: OptimizationClient
     private var entries: [[String: Any]] = []
-    private var isIdentified = false
     private var firstAppearHandled = false
+    private var flagSubscribed = false
     private var cancellables = Set<AnyCancellable>()
 
     private let identifyButton = UIButton(type: .system)
     private let resetButton = UIButton(type: .system)
     private let navigationTestButton = UIButton(type: .system)
     private let liveUpdatesTestButton = UIButton(type: .system)
+    private let simulateOfflineButton = UIButton(type: .system)
+    private let simulateOnlineButton = UIButton(type: .system)
     private let scrollView = UIScrollView()
     private let contentStack = UIStackView()
     private let analyticsView = AnalyticsEventDisplayView()
@@ -47,7 +49,15 @@ final class MainViewController: UIViewController {
                 return l == r
             }
             .sink { [weak self] profile in
-                guard let self, profile != nil else { return }
+                guard let self else { return }
+                self.updateIdentifyControls(profile: profile)
+                guard profile != nil else { return }
+                // Subscribe to the `boolean` flag once a profile (and consent)
+                // is available so a flag-view `component` event is emitted.
+                if !self.flagSubscribed {
+                    self.flagSubscribed = true
+                    self.client.subscribeToFlag("boolean")
+                }
                 Task { @MainActor in
                     let fetched = await ContentfulFetcher.fetchEntries(ids: AppConfig.entryIds)
                     self.entries = fetched
@@ -65,10 +75,11 @@ final class MainViewController: UIViewController {
         client.consent(true)
         Task { @MainActor in
             _ = try? await client.page(properties: ["url": "app"])
-            if ProcessInfo.processInfo.arguments.contains("--simulate-offline") {
-                client.setOnline(false)
-            }
         }
+    }
+
+    private var networkControlsEnabled: Bool {
+        ProcessInfo.processInfo.arguments.contains("--enable-network-controls")
     }
 
     // MARK: - Layout
@@ -91,6 +102,14 @@ final class MainViewController: UIViewController {
         liveUpdatesTestButton.accessibilityIdentifier = "live-updates-test-button"
         liveUpdatesTestButton.addAction(UIAction { [weak self] _ in self?.openLiveUpdatesTest() }, for: .touchUpInside)
 
+        simulateOfflineButton.setTitle("Go Offline", for: .normal)
+        simulateOfflineButton.accessibilityIdentifier = "simulate-offline-button"
+        simulateOfflineButton.addAction(UIAction { [weak self] _ in self?.client.setOnline(false) }, for: .touchUpInside)
+
+        simulateOnlineButton.setTitle("Go Online", for: .normal)
+        simulateOnlineButton.accessibilityIdentifier = "simulate-online-button"
+        simulateOnlineButton.addAction(UIAction { [weak self] _ in self?.client.setOnline(true) }, for: .touchUpInside)
+
         loadingLabel.text = "Loading..."
         loadingLabel.textAlignment = .center
     }
@@ -109,10 +128,24 @@ final class MainViewController: UIViewController {
         buttonRow.distribution = .fillEqually
         buttonRow.spacing = 8
 
-        let root = UIStackView(arrangedSubviews: [buttonRow, scrollView])
+        let root = UIStackView(arrangedSubviews: [buttonRow])
         root.axis = .vertical
         root.spacing = 8
         root.translatesAutoresizingMaskIntoConstraints = false
+
+        // Test-only runtime network controls. XCUITest cannot toggle real
+        // connectivity, so the offline-behavior suite drives the SDK online
+        // state on the live process — keeping the in-memory Experience queue
+        // intact across the offline/online transition.
+        if networkControlsEnabled {
+            let networkRow = UIStackView(arrangedSubviews: [simulateOfflineButton, simulateOnlineButton])
+            networkRow.axis = .horizontal
+            networkRow.distribution = .fillEqually
+            networkRow.spacing = 8
+            root.addArrangedSubview(networkRow)
+        }
+
+        root.addArrangedSubview(scrollView)
         view.addSubview(root)
 
         contentStack.translatesAutoresizingMaskIntoConstraints = false
@@ -164,9 +197,6 @@ final class MainViewController: UIViewController {
         Task { @MainActor in
             _ = try? await client.identify(userId: "charles", traits: ["identified": true])
         }
-        isIdentified = true
-        identifyButton.isHidden = true
-        resetButton.isHidden = false
     }
 
     private func handleReset() {
@@ -174,9 +204,16 @@ final class MainViewController: UIViewController {
         Task { @MainActor in
             _ = try? await client.page(properties: ["url": "app"])
         }
-        isIdentified = false
-        identifyButton.isHidden = false
-        resetButton.isHidden = true
+    }
+
+    /// Derive the identify/reset control from the SDK profile so a rehydrated
+    /// identified profile shows the reset control after a cold start, and the
+    /// control only flips once `identify` has resolved and been persisted.
+    private func updateIdentifyControls(profile: [String: Any]?) {
+        let traits = profile?["traits"] as? [String: Any]
+        let identified = traits?["identified"] as? Bool == true
+        identifyButton.isHidden = identified
+        resetButton.isHidden = !identified
     }
 
     private func openNavigationTest() {

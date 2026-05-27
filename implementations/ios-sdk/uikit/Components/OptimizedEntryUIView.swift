@@ -88,9 +88,13 @@ final class OptimizedEntryUIView: UIView {
         return fields["nt_experiences"] != nil
     }
 
+    // An open preview panel always forces live updates, overriding an explicit
+    // `liveUpdates: false`. The global toggle only acts as the default when no
+    // explicit per-component value is set.
     private var shouldLiveUpdate: Bool {
+        if client.isPreviewPanelOpen { return true }
         if let explicit = liveUpdates { return explicit }
-        return globalLiveUpdates || client.isPreviewPanelOpen
+        return globalLiveUpdates
     }
 
     private var effectivePersonalizations: [[String: Any]]? {
@@ -113,6 +117,10 @@ final class OptimizedEntryUIView: UIView {
 
     private func subscribeToPersonalizations() {
         client.$selectedPersonalizations
+            // `@Published` fires in `willSet`, so a synchronous sink would read
+            // the *previous* value back off the client. Hop to the next main
+            // run-loop turn so re-resolution sees the committed personalizations.
+            .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 guard let self else { return }
                 if self.shouldLiveUpdate {
@@ -129,6 +137,7 @@ final class OptimizedEntryUIView: UIView {
     private func subscribeToPreviewPanel() {
         client.$isPreviewPanelOpen
             .dropFirst()
+            .receive(on: RunLoop.main)
             .sink { [weak self] open in
                 guard let self else { return }
                 if !open, self.hasLocked {

@@ -587,6 +587,7 @@ struct AudienceItemHeader: View {
             }
             .buttonStyle(.plain)
             .contentShape(Rectangle())
+            .accessibilityIdentifier("audience-expand-\(audience.audience.id)")
             .onLongPressGesture(minimumDuration: 0.5, perform: onCopyId)
 
             // Description

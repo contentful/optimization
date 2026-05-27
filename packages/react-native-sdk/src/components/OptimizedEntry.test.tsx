@@ -4,6 +4,9 @@ import React, { act, type ReactElement } from 'react'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
+const TEST_DWELL_TIME_MS = 1234
+const TEST_MIN_VISIBLE_RATIO = 0.4
+
 const selectedOptimizations = {
   current: undefined,
   subscribe: rs.fn(() => ({ unsubscribe: rs.fn() })),
@@ -92,13 +95,18 @@ function createEntry(id: string): Entry {
 function getCallOptions(
   mock: typeof useViewportTracking | typeof useTapTracking,
 ): Record<string, unknown> {
-  const call = mock.mock.calls[0]
+  const {
+    mock: {
+      calls: [call],
+    },
+  } = mock
 
   if (call === undefined) {
     throw new Error('Expected hook to be called')
   }
 
-  const options: unknown = call[0]
+  const [firstArg] = call
+  const options: unknown = firstArg
 
   if (!isRecord(options)) {
     throw new Error('Expected hook options to be captured')
@@ -108,14 +116,14 @@ function getCallOptions(
 }
 
 describe('OptimizedEntry', () => {
-  let renderer: TestRenderer | undefined
+  let renderer: TestRenderer | undefined = undefined
 
-  beforeEach(() => {
+  void beforeEach(() => {
     rs.clearAllMocks()
     selectedOptimizations.current = undefined
   })
 
-  afterEach(() => {
+  void afterEach(() => {
     if (renderer) {
       act(() => {
         renderer?.unmount()
@@ -131,7 +139,11 @@ describe('OptimizedEntry', () => {
 
     act(() => {
       renderer = testRenderer.create(
-        <OptimizedEntry baselineEntry={baselineEntry} dwellTimeMs={1234} minVisibleRatio={0.4}>
+        <OptimizedEntry
+          baselineEntry={baselineEntry}
+          dwellTimeMs={TEST_DWELL_TIME_MS}
+          minVisibleRatio={TEST_MIN_VISIBLE_RATIO}
+        >
           content
         </OptimizedEntry>,
       )
@@ -139,8 +151,8 @@ describe('OptimizedEntry', () => {
 
     const viewportOptions = getCallOptions(useViewportTracking)
     expect(viewportOptions.entry).toBe(baselineEntry)
-    expect(viewportOptions.dwellTimeMs).toBe(1234)
-    expect(viewportOptions.minVisibleRatio).toBe(0.4)
+    expect(viewportOptions.dwellTimeMs).toBe(TEST_DWELL_TIME_MS)
+    expect(viewportOptions.minVisibleRatio).toBe(TEST_MIN_VISIBLE_RATIO)
     expect(viewportOptions).not.toHaveProperty('viewTimeMs')
     expect(viewportOptions).not.toHaveProperty('threshold')
   })

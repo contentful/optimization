@@ -6,7 +6,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -31,7 +30,6 @@ fun OptimizedEntry(
     val client = LocalOptimizationClient.current
     val trackingConfig = LocalTrackingConfig.current
 
-    val selectedPersonalizations by client.selectedPersonalizations.collectAsState()
     val isPreviewPanelOpen by client.isPreviewPanelOpen.collectAsState()
 
     var lockedPersonalizations by remember { mutableStateOf<List<Map<String, Any>>?>(null) }
@@ -42,8 +40,10 @@ fun OptimizedEntry(
         fields?.containsKey("nt_experiences") == true
     }
 
-    val shouldLiveUpdate = liveUpdates ?: (trackingConfig.liveUpdates || isPreviewPanelOpen)
-    val effectivePersonalizations = if (shouldLiveUpdate) selectedPersonalizations else lockedPersonalizations
+    // An open preview panel always forces live updates, overriding an explicit
+    // `liveUpdates = false`. The global toggle is only the default when no
+    // explicit per-component value is set. Mirrors the iOS `shouldLiveUpdate`.
+    val shouldLiveUpdate = if (isPreviewPanelOpen) true else liveUpdates ?: trackingConfig.liveUpdates
 
     val viewsEnabled = trackViews ?: trackingConfig.trackViews
     val tapsEnabled = when {
@@ -52,50 +52,46 @@ fun OptimizedEntry(
         else -> trackingConfig.trackTaps
     }
 
-    // Collect directly from the underlying StateFlow rather than keying a
-    // LaunchedEffect on `collectAsState`. Compose snapshot conflation can
-    // coalesce a rapid null → cached → anonymous → identified sequence into
-    // a single observed value, latching the lock onto the wrong emission.
+    var result by remember(entry) {
+        mutableStateOf(PersonalizedResult(entry = entry, personalization = null))
+    }
+
+    // Re-resolve by collecting the personalizations StateFlow directly rather
+    // than keying `produceState` on a `collectAsState()` snapshot. Compose
+    // snapshot conflation can coalesce the rapid emission sequence that
+    // `identify()` produces, which left a long-mounted live entry stuck on its
+    // first resolution. Collecting the flow observes every emission.
     //
-    // Until we see an identified profile (`profile.userId` non-null), follow
-    // the latest personalizations instead of permanently locking. This keeps
-    // anti-flashing behavior for identified sessions (the steady state) while
-    // letting transient anonymous/cached emissions be replaced once `identify`
-    // resolves. A late-mounting nested OptimizedEntry that subscribes after a
-    // mid-flight reset/identify cycle will therefore reflect the final state.
-    LaunchedEffect(Unit) {
+    // Live entries follow the latest personalizations on every emission. Locked
+    // entries freeze on the first non-null value — mirrors the iOS `onReceive`
+    // lock — and ignore later updates until the component is remounted.
+    LaunchedEffect(entry, shouldLiveUpdate) {
+        if (!isPersonalized) {
+            result = PersonalizedResult(entry = entry, personalization = null)
+            return@LaunchedEffect
+        }
         client.selectedPersonalizations.collect { newValue ->
-            if (isPersonalized && !shouldLiveUpdate && newValue != null && !isLocked) {
-                val isIdentified = (client.state.value.profile?.get("userId") as? String) != null
+            if (!shouldLiveUpdate && !isLocked && newValue != null) {
                 lockedPersonalizations = newValue
-                if (isIdentified) {
-                    isLocked = true
-                }
+                isLocked = true
             }
+            val personalizations = if (shouldLiveUpdate) newValue else lockedPersonalizations
+            result = client.personalizeEntry(
+                baseline = entry,
+                personalizations = personalizations,
+            )
         }
     }
 
+    // When the preview panel closes, snapshot the current personalizations so
+    // the locked state reflects any overrides applied during the session.
     LaunchedEffect(isPreviewPanelOpen) {
         if (isPersonalized && !isPreviewPanelOpen && isLocked) {
-            // Read directly from the StateFlow rather than the Compose-state
-            // snapshot. The sync-bridge wrapper guarantees state has settled by
-            // the time this fires, so `.value` carries the post-action result.
             lockedPersonalizations = client.selectedPersonalizations.value
-        }
-    }
-
-    val result by produceState(
-        initialValue = PersonalizedResult(entry = entry, personalization = null),
-        key1 = entry,
-        key2 = effectivePersonalizations,
-    ) {
-        value = if (isPersonalized) {
-            client.personalizeEntry(
+            result = client.personalizeEntry(
                 baseline = entry,
-                personalizations = effectivePersonalizations,
+                personalizations = lockedPersonalizations,
             )
-        } else {
-            PersonalizedResult(entry = entry, personalization = null)
         }
     }
 

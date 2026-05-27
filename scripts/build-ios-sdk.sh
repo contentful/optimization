@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-BRIDGE_DIR="$ROOT_DIR/packages/ios/ios-jsc-bridge"
+BRIDGE_DIR="$ROOT_DIR/packages/universal/optimization-js-bridge"
 PACKAGE_DIR="$ROOT_DIR/packages/ios/ContentfulOptimization"
 RESOURCES_DIR="$PACKAGE_DIR/Sources/ContentfulOptimization/Resources"
 

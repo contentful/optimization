@@ -2,16 +2,16 @@
 
 Native Android (Kotlin) SDK for the Contentful Optimization SDK Suite. Uses a hybrid
 native-JavaScript architecture where Kotlin owns UI, persistence, and lifecycle while a shared
-JavaScript core (via Zipline/QuickJS) handles personalization logic, audience qualification, event
-batching, and preview overrides.
+JavaScript core (via QuickJS, embedded through `io.github.dokar3:quickjs-kt`) handles
+personalization logic, audience qualification, event batching, and preview overrides.
 
 ## Current status
 
 > [!CAUTION] Pre-release. API surface is not yet stable.
 
 - Kotlin Android library module under `ContentfulOptimization/`
-- Zipline (QuickJS) JavaScript engine integration
-- Shared TypeScript bridge under `android-zipline-bridge/`
+- QuickJS JavaScript engine integration via `quickjs-kt`
+- Shared TypeScript bridge under `packages/universal/optimization-js-bridge/`
 - Jetpack Compose UI layer (OptimizationRoot, OptimizedEntry, scroll/view/click tracking)
 - Preview panel with audience/experience overrides, variant selection, and Contentful integration
 - View-based app support via `PreviewPanelActivity`
@@ -20,8 +20,8 @@ batching, and preview overrides.
 
 The SDK mirrors the iOS SDK architecture:
 
-- **Zipline (QuickJS)** replaces JavaScriptCore as the JavaScript engine
-- **`ZiplineContextManager`** manages the JS runtime on a dedicated single-thread dispatcher
+- **QuickJS** (via `io.github.dokar3:quickjs-kt`) replaces JavaScriptCore as the JavaScript engine
+- **`QuickJsContextManager`** manages the JS runtime on a dedicated single-thread dispatcher
 - **`NativePolyfills`** provides native Kotlin implementations for fetch, timers, crypto, console,
   and URL — the same polyfill JS scripts are shared with iOS
 - **`OptimizationClient`** exposes reactive state via `StateFlow` and async operations via `suspend`
@@ -37,7 +37,7 @@ The SDK mirrors the iOS SDK architecture:
 
 | Aspect         | iOS                    | Android                                  |
 | -------------- | ---------------------- | ---------------------------------------- |
-| JS engine      | JavaScriptCore         | Zipline (QuickJS)                        |
+| JS engine      | JavaScriptCore         | QuickJS (via `quickjs-kt`)               |
 | Threading      | Main thread            | Dedicated single-thread dispatcher       |
 | Reactive state | `@Published` / Combine | `StateFlow` / `SharedFlow`               |
 | Async          | `async`/`await`        | `suspend` functions                      |

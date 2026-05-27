@@ -2,7 +2,7 @@ package com.contentful.optimization.storage
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.contentful.optimization.bridge.ZiplineContextManager
+import com.contentful.optimization.bridge.QuickJsContextManager
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -126,9 +126,9 @@ class SharedPreferencesStore(context: Context) : PersistentStore {
     private fun parseJSON(json: String): Any {
         return if (json.trimStart().startsWith("[")) {
             val arr = JSONArray(json)
-            (0 until arr.length()).map { ZiplineContextManager.jsonObjectToMap(arr.getJSONObject(it)) }
+            (0 until arr.length()).map { QuickJsContextManager.jsonObjectToMap(arr.getJSONObject(it)) }
         } else {
-            ZiplineContextManager.jsonObjectToMap(JSONObject(json))
+            QuickJsContextManager.jsonObjectToMap(JSONObject(json))
         }
     }
 }
