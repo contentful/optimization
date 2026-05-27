@@ -767,44 +767,6 @@ jobs:
             exit 1
           fi
 
-      # Snapshot caching for the AVD. Booting a fresh x86_64 Pixel 7 + api 35
-      # emulator from scratch takes 1-3 minutes on every CI run. With
-      # force-avd-creation=false and a cache against ~/.android/avd plus
-      # ~/.android/adb*, subsequent runs resume from the saved snapshot in
-      # ~30 seconds. The cache key pins to every dimension that the snapshot
-      # depends on (api-level, arch, target, profile, device-name) — change
-      # any of them and a new snapshot has to be generated.
-      - name: AVD cache
-        id: avd-cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.android/avd/*
-            ~/.android/adb*
-          key: avd-api35-pixel7-x86_64-google_apis-v1
-
-      # Cache-miss path: create the AVD and generate a snapshot we can re-use
-      # on later runs. Headless boot, no audio, no boot animation; the no-
-      # snapshot-save flag is OMITTED here on purpose so the emulator writes
-      # the snapshot back at shutdown for the cache step to pick up.
-      - name: Generate AVD snapshot for caching
-        if: steps.avd-cache.outputs.cache-hit != 'true'
-        uses: reactivecircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a # v2.37.0
-        with:
-          api-level: 35
-          arch: x86_64
-          target: google_apis
-          profile: pixel_7
-          avd-name: test
-          force-avd-creation: false
-          emulator-boot-timeout: 600
-          cores: 6
-          ram-size: 4096M
-          disk-size: 8G
-          disable-animations: true
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
-          script: echo "AVD snapshot generated for caching."
-
       - name: Run Android E2E Tests (emulator)
         uses: reactivecircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a # v2.37.0
         with:
@@ -813,18 +775,13 @@ jobs:
           target: google_apis
           profile: pixel_7
           avd-name: test
-          # force-avd-creation: false reuses the cached AVD instead of
-          # recreating it on every run. -no-snapshot-save below prevents the
-          # test-run from overwriting the cached snapshot with whatever dirty
-          # state the suite leaves behind, so the cache stays clean.
-          force-avd-creation: false
+          force-avd-creation: true
           emulator-boot-timeout: 600
           cores: 6
           ram-size: 4096M
           disk-size: 8G
           disable-animations: true
-          emulator-options:
-            -no-snapshot-save -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           script: |
             # The emulator-runner action invokes the script via `/usr/bin/sh -c`, not bash, so
             # `set -o pipefail` would error out with "Illegal option -o pipefail" and terminate
