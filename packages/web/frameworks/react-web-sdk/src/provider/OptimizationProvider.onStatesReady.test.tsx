@@ -67,7 +67,7 @@ function createPageEvent(): EventPayload {
 }
 
 describe('OptimizationProvider onStatesReady', () => {
-  void beforeEach(() => {
+  beforeEach(() => {
     resetAutoPageEmitterState()
   })
 
@@ -94,11 +94,10 @@ describe('OptimizationProvider onStatesReady', () => {
     const eventSubscribers = new Set<EventSubscriber>()
     const observedEvents: EventPayload[] = []
     const pageEvent = createPageEvent()
-    const notifySubscriber = (subscriber: EventSubscriber): void => {
-      subscriber(pageEvent)
-    }
     const page = rs.fn(async () => {
-      eventSubscribers.forEach(notifySubscriber)
+      eventSubscribers.forEach((subscriber) => {
+        subscriber(pageEvent)
+      })
       await Promise.resolve()
       return undefined
     })
@@ -332,9 +331,7 @@ describe('OptimizationProvider onStatesReady', () => {
 
   it('runs onStatesReady cleanup before owned sdk teardown', () => {
     const order: string[] = []
-    const originalDestroy = Reflect.get(ContentfulOptimization.prototype, 'destroy') as (
-      this: ContentfulOptimization,
-    ) => void
+    const { destroy: originalDestroy } = ContentfulOptimization.prototype
     const destroySpy = rs
       .spyOn(ContentfulOptimization.prototype, 'destroy')
       .mockImplementation(function destroy(this: ContentfulOptimization): void {

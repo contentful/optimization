@@ -34,8 +34,6 @@ jobs:
           )"
 
           has_docs=false
-          has_guides=false
-          has_concepts=false
           has_packages=false
           changed_packages=""
 
@@ -51,20 +49,12 @@ jobs:
             case "$file" in
               documentation/drafts/*)
                 ;;
-              documentation/guides/*)
-                has_docs=true
-                has_guides=true
-                ;;
-              documentation/concepts/*)
-                has_docs=true
-                has_concepts=true
-                ;;
               documentation/*)
                 has_docs=true
                 ;;
-              packages/universal/optimization-js-bridge/*)
+              packages/ios/ios-jsc-bridge/*)
                 has_packages=true
-                add_package "@contentful/optimization-js-bridge"
+                add_package "@contentful/optimization-ios-bridge"
                 ;;
               packages/node/node-sdk/*)
                 has_packages=true
@@ -113,34 +103,14 @@ jobs:
           )"
 
           if [ "$has_docs" = "true" ] && [ "$has_packages" = "true" ]; then
-            if [ "$has_guides" = "true" ] && [ "$has_concepts" = "true" ]; then
-              message_title="📚📦 Docs and packages just landed"
-              message_body="Guide, concept, and package updates all landed together. @TECH_WRITER@, there is fresh guide goodness in the mix for your reading list!"
-            elif [ "$has_guides" = "true" ]; then
-              message_title="🧭📦 Guides and packages just landed"
-              message_body="Fresh guide updates and package changes are live. @TECH_WRITER@, something new and useful just landed in your favorite corner of the docs!"
-            elif [ "$has_concepts" = "true" ]; then
-              message_title="💡📦 Concepts and packages just landed"
-              message_body="Concept docs and package updates moved forward together. A tidy little upgrade for readers and builders!"
-            else
-              message_title="📝📦 Docs and packages just landed"
-              message_body="Documentation and package updates were merged together. Better docs, fresher packages!"
-            fi
+            message_title="📝📦 Documentation and packages just landed"
+            message_body="Documentation has been updated, and package changes were merged. @TECH_WRITER@, fresh docs goodness just landed for your reading list!"
           elif [ "$has_packages" = "true" ]; then
             message_title="📦 Package changes just landed"
             message_body="Package updates were merged. Fresh bits are ready for the next build!"
-          elif [ "$has_guides" = "true" ] && [ "$has_concepts" = "true" ]; then
-            message_title="📚 Guides and concepts just landed"
-            message_body="Guide and concept documentation both got updates. @TECH_WRITER@, fresh guide goodness just landed for your reading list!"
-          elif [ "$has_guides" = "true" ]; then
-            message_title="🧭 Guide documentation just landed"
-            message_body="Fresh guide updates are live. @TECH_WRITER@, something new and useful just landed in your favorite corner of the docs!"
-          elif [ "$has_concepts" = "true" ]; then
-            message_title="💡 Concept documentation just landed"
-            message_body="Concept docs got a little clearer today. Nice boost for the next reader!"
           else
             message_title="📝 Documentation just landed"
-            message_body="A documentation update was merged. Small polish, better docs!"
+            message_body="Documentation has been updated. @TECH_WRITER@, fresh docs goodness just landed for your reading list!"
           fi
 
           {
@@ -171,7 +141,7 @@ jobs:
 
           if [[ "$message_body" == *"@TECH_WRITER@"* ]]; then
             if [ -z "$SLACK_TECH_WRITER_ID" ]; then
-              echo "SLACK_TECH_WRITER_ID is required for guide notifications." >&2
+              echo "SLACK_TECH_WRITER_ID is required for documentation notifications." >&2
               exit 1
             fi
 

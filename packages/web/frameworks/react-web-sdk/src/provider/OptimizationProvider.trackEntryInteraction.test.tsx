@@ -13,7 +13,6 @@ rs.mock('@contentful/optimization-web', () => ({
     }
 
     destroy(): void {
-      void this
       Reflect.deleteProperty(window, 'contentfulOptimization')
     }
   },
@@ -39,7 +38,7 @@ function renderProvider(element: ReactElement): { unmount: () => void } {
 }
 
 function requireConfig(index: number): Record<string, unknown> {
-  const { [index]: config } = constructedConfigs
+  const config = constructedConfigs[index]
 
   if (config === undefined) {
     throw new Error('Expected SDK config to be captured')
