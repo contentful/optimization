@@ -2,7 +2,7 @@ package com.contentful.optimization.views
 
 import android.app.Activity
 import android.content.Context
-import android.widget.ImageButton
+import android.view.View
 import com.contentful.optimization.core.OptimizationClient
 import com.contentful.optimization.core.OptimizationConfig
 import com.contentful.optimization.preview.PreviewContentfulClient
@@ -99,7 +99,7 @@ object OptimizationManager {
      * been called. Mirrors [com.contentful.optimization.compose.OptimizationRoot]'s
      * `previewPanel` parameter, which inserts the same overlay on the Compose side.
      */
-    fun attachPreviewPanel(activity: Activity): ImageButton? {
+    fun attachPreviewPanel(activity: Activity): View? {
         val c = clientRef.get() ?: return null
         return PreviewPanelActivity.addFloatingButton(
             activity = activity,
