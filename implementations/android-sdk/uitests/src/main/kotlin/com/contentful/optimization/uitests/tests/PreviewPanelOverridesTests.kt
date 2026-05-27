@@ -8,15 +8,21 @@ import androidx.test.uiautomator.UiScrollable
 import androidx.test.uiautomator.UiSelector
 import androidx.test.uiautomator.Until
 import com.contentful.optimization.uitests.support.AppLauncher
+import com.contentful.optimization.uitests.support.PerTestRule
 import com.contentful.optimization.uitests.support.TestHelpers
 import com.contentful.optimization.uitests.support.clearProfileState
 import org.junit.Assert
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestRule
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class PreviewPanelOverridesTests {
+    @get:Rule
+    val rule: TestRule = PerTestRule.create()
+
     private lateinit var device: UiDevice
 
     companion object {

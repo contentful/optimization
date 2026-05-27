@@ -5,12 +5,15 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import com.contentful.optimization.uitests.support.AppLauncher
+import com.contentful.optimization.uitests.support.PerTestRule
 import com.contentful.optimization.uitests.support.TestHelpers
 import com.contentful.optimization.uitests.support.clearProfileState
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestRule
 import org.junit.runner.RunWith
 
 /**
@@ -21,6 +24,9 @@ private val ENTRY_ID_TEXT_PATTERN = Regex("""^Entry: [a-zA-Z0-9]+$""")
 
 @RunWith(AndroidJUnit4::class)
 class LiveUpdatesTests {
+    @get:Rule
+    val rule: TestRule = PerTestRule.create()
+
     private lateinit var device: UiDevice
 
     @Before
