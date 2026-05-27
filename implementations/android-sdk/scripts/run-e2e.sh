@@ -74,11 +74,16 @@ TEST_CLASS=""
 TEST_METHOD=""
 
 UITEST_PACKAGE="com.contentful.optimization.uitests.tests"
-# APP_PACKAGE selects which reference implementation to drive. Override via env var to switch
-# between the Compose impl (default) and the XML Views impl. The Gradle module name + APK file
+# APP_PACKAGE selects which reference implementation to drive. When unset (or set to
+# "all"/"both"), the script runs the suite twice: once against the Compose impl and once
+# against the XML Views impl, mirroring the CI matrix in main-pipeline.yaml. Override via env
+# var to a single package value to drive only one impl. The Gradle module name + APK file
 # name are derived from the package below in `resolve_app_module`.
-APP_PACKAGE="${APP_PACKAGE:-com.contentful.optimization.app}"
+APP_PACKAGE="${APP_PACKAGE:-all}"
 APP_MODULE=""
+
+COMPOSE_PACKAGE="com.contentful.optimization.app"
+VIEWS_PACKAGE="com.contentful.optimization.app.views"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -165,14 +170,14 @@ parse_args() {
 
 resolve_app_module() {
     case "$APP_PACKAGE" in
-        com.contentful.optimization.app)
+        "$COMPOSE_PACKAGE")
             APP_MODULE="compose"
             ;;
-        com.contentful.optimization.app.views)
+        "$VIEWS_PACKAGE")
             APP_MODULE="views"
             ;;
         *)
-            echo "[ERROR] Unknown APP_PACKAGE: $APP_PACKAGE. Expected com.contentful.optimization.app or com.contentful.optimization.app.views." >&2
+            echo "[ERROR] Unknown APP_PACKAGE: $APP_PACKAGE. Expected $COMPOSE_PACKAGE or $VIEWS_PACKAGE." >&2
             exit 1
             ;;
     esac
@@ -518,9 +523,13 @@ build_apks() {
         return 0
     fi
 
-    log_info "Building $APP_MODULE app APK and test APK..."
+    # Build both implementation APKs and the test APK in a single Gradle invocation. Even
+    # when only one impl is requested, the cost of an extra :assembleDebug is negligible
+    # against the Gradle daemon startup and configures the cache for the "all" run path
+    # without a separate Gradle invocation per impl.
+    log_info "Building compose, views, and uitests APKs..."
     cd "$APP_DIR"
-    ./gradlew ":${APP_MODULE}:assembleDebug" :uitests:assembleDebug
+    ./gradlew :compose:assembleDebug :views:assembleDebug :uitests:assembleDebug
     log_info "Build complete"
 }
 
@@ -626,14 +635,39 @@ run_tests() {
     fi
 }
 
+run_for_app() {
+    local package="$1"
+    APP_PACKAGE="$package"
+    resolve_app_module
+    # Per-app test log so a follow-on run does not clobber the previous app's log.
+    TEST_LOG="${LOG_DIR}/test-results-${APP_MODULE}.log"
+
+    log_info "--- Running E2E suite against $APP_PACKAGE (module :$APP_MODULE) ---"
+
+    force_stop_other_apps
+    install_apks
+    run_tests
+}
+
 main() {
     parse_args "$@"
-    resolve_app_module
+
+    local apps_to_run=()
+    case "$APP_PACKAGE" in
+        all|both|"")
+            apps_to_run=("$COMPOSE_PACKAGE" "$VIEWS_PACKAGE")
+            ;;
+        *)
+            # Validate single-app selection up front.
+            APP_PACKAGE="$APP_PACKAGE" resolve_app_module
+            apps_to_run=("$APP_PACKAGE")
+            ;;
+    esac
 
     log_info "=== Android UI Automator 2 E2E Test Runner ==="
     log_info "Root directory: $ROOT_DIR"
     log_info "App directory: $APP_DIR"
-    log_info "Target app: $APP_PACKAGE (module :$APP_MODULE)"
+    log_info "Target apps: ${apps_to_run[*]}"
     log_info "CI mode: $CI"
     [[ -n "$TEST_CLASS" ]] && log_info "Test class: $TEST_CLASS"
     [[ -n "$TEST_METHOD" ]] && log_info "Test method: $TEST_METHOD"
@@ -641,11 +675,12 @@ main() {
     verify_device
     start_mock_server
     setup_adb
-    force_stop_other_apps
     build_bridge
     build_apks
-    install_apks
-    run_tests
+
+    for package in "${apps_to_run[@]}"; do
+        run_for_app "$package"
+    done
 
     log_info "=== All tests completed successfully ==="
 }
