@@ -6,12 +6,12 @@ before this file.
 ## Scope
 
 This directory is the Android library module (AAR) for the Contentful Optimization SDK. It contains
-the Kotlin native runtime, Zipline (QuickJS) bridge integration, polyfill implementations, and
-public API surface.
+the Kotlin native runtime, QuickJS bridge integration (via `io.github.dokar3:quickjs-kt`), polyfill
+implementations, and public API surface.
 
 ## Key paths
 
-- `src/main/kotlin/com/contentful/optimization/bridge/` — Zipline context manager and callback
+- `src/main/kotlin/com/contentful/optimization/bridge/` — QuickJS context manager and callback
   manager
 - `src/main/kotlin/com/contentful/optimization/core/` — public API, data models, config
 - `src/main/kotlin/com/contentful/optimization/polyfills/` — native polyfill implementations
@@ -27,7 +27,7 @@ public API surface.
 
 ## Local rules
 
-- All QuickJs access must go through `ZiplineContextManager`. Never call `quickJs.evaluate()` from
+- All QuickJs access must go through `QuickJsContextManager`. Never call `quickJs.evaluate()` from
   outside the manager.
 - All JS engine calls must happen on the dedicated `quickJsDispatcher` thread. The manager enforces
   this.
