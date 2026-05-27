@@ -52,15 +52,7 @@ describe('useOptimizedNode', () => {
       entityId: 'exp-id',
       entityKind: 'Experience',
       optimizationId: 'exp-id',
-      variant: 'variant-a',
-      layers: [
-        {
-          entityKind: 'Experience',
-          entityId: 'exp-id',
-          optimizationId: 'exp-id',
-          variant: 'variant-a',
-        },
-      ],
+      variantId: 'variant-a',
       parentExperienceId: undefined,
     })
 
@@ -88,14 +80,6 @@ describe('useOptimizedNode', () => {
     expect(el.dataset.ctflEntityKind).toBe('Experience')
     expect(el.dataset.ctflOptimizationId).toBe('exp-id')
     expect(el.dataset.ctflVariant).toBe('variant-a')
-    expect(JSON.parse(el.dataset.ctflLayers ?? '[]')).toEqual([
-      {
-        entityKind: 'Experience',
-        entityId: 'exp-id',
-        optimizationId: 'exp-id',
-        variant: 'variant-a',
-      },
-    ])
 
     cleanup()
   })

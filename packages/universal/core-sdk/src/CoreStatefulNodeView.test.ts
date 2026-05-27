@@ -38,7 +38,7 @@ describe('CoreStateful.trackNodeView', () => {
   const nodeViewPayload: NodeViewTrackingArgs = {
     entityId: 'exp-sys-id',
     entityKind: 'Experience',
-    variant: 'variant-a',
+    variantId: 'variant-a',
     optimizationId: 'opt-id',
     viewId: 'view-uuid',
     viewDurationMs: 1500,

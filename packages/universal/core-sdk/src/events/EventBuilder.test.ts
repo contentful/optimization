@@ -12,7 +12,7 @@ describe('EventBuilder.buildNodeView', () => {
       anonymousId: 'anon-id',
       entityId: 'exp-sys-id',
       entityKind: 'Experience',
-      variant: 'variant-a',
+      variantId: 'variant-a',
       optimizationId: 'opt-id',
       viewId: 'view-uuid',
       viewDurationMs: 1500,
@@ -22,7 +22,7 @@ describe('EventBuilder.buildNodeView', () => {
     expect(event.anonymousId).toBe('anon-id')
     expect(event.entityId).toBe('exp-sys-id')
     expect(event.entityKind).toBe('Experience')
-    expect(event.variant).toBe('variant-a')
+    expect(event.variantId).toBe('variant-a')
     expect(event.optimizationId).toBe('opt-id')
     expect(event.viewId).toBe('view-uuid')
     expect(event.viewDurationMs).toBe(1500)
@@ -34,7 +34,7 @@ describe('EventBuilder.buildNodeView', () => {
       anonymousId: 'anon-id',
       entityId: 'exp-id',
       entityKind: 'Fragment',
-      variant: 'default',
+      variantId: 'default',
       optimizationId: 'opt-id',
       viewId: 'view-uuid',
       viewDurationMs: 0,

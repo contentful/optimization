@@ -8,7 +8,7 @@
     "build:ci": "pnpm --filter @contentful/* --stream build:ci",
     "build:pkgs": "pnpm build && pnpm run pack:pkgs",
     "build:rsdoctor": "pnpm --filter @contentful/* --stream build:rsdoctor",
-    "clean": "pnpm -r --parallel clean",
+    "clean": "pnpm clean",
     "docs:generate": "typedoc",
     "docs:watch": "typedoc --watch",
     "format:check": "prettier . --check",

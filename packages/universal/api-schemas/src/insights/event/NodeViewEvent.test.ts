@@ -22,7 +22,7 @@ const VALID_NODE_VIEW = {
   type: 'exo_view' as const,
   entityId: 'exp-sys-id',
   entityKind: 'Experience' as const,
-  variant: 'variant-a',
+  variantId: 'variant-a',
   optimizationId: 'opt-id',
   viewId: 'view-uuid',
   viewDurationMs: 1500,

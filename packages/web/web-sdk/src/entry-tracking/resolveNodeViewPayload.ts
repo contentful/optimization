@@ -13,10 +13,9 @@ export type ResolvedNodeMetadata = Pick<
   | 'entityId'
   | 'entityKind'
   | 'optimizationId'
-  | 'variant'
+  | 'variantId'
   | 'entityKindId'
   | 'entryIds'
-  | 'layers'
   | 'parentExperienceId'
 >
 
@@ -47,27 +46,10 @@ function resolveExoLayer(
 
   const firstVariantIndex = layer.variants?.[0]
   const variantEntry = firstVariantIndex !== undefined ? variants[firstVariantIndex] : undefined
-  const variant = variantEntry?.id
+  const variantId = variantEntry?.id
   const optimizationId = variantEntry ? id : undefined
 
-  return { entityKind: kind, entityId: id, variant, optimizationId }
-}
-
-function resolveLayerChain(
-  nodeLayers: number[],
-  scopePosition: number,
-  layers: SourceMap['layers'],
-  variants: SourceMap['variants'],
-): ExoNodeLayer[] {
-  const chain: ExoNodeLayer[] = []
-  for (let i = scopePosition; i < nodeLayers.length; i++) {
-    const { [i]: layerIndex } = nodeLayers
-    const exoLayer = resolveExoLayer(layerIndex, layers, variants)
-    if (exoLayer) {
-      chain.push(exoLayer)
-    }
-  }
-  return chain
+  return { entityKind: kind, entityId: id, variantId, optimizationId }
 }
 
 function findAttributableLayer(
@@ -79,7 +61,7 @@ function findAttributableLayer(
   for (let i = scopePosition; i < nodeLayers.length; i++) {
     const { [i]: layerIndex } = nodeLayers
     const exoLayer = resolveExoLayer(layerIndex, layers, variants)
-    if (exoLayer?.variant) {
+    if (exoLayer?.variantId) {
       return { layer: exoLayer, nodeIndex: i }
     }
   }
@@ -141,15 +123,13 @@ export function resolveNodeViewPayload(
     return undefined
   }
 
-  const layerChain = resolveLayerChain(nodeLayers, scopePosition, layers, variants)
   const parentExperienceId = findParentExperienceId(nodeLayers, attributed.nodeIndex, layers)
 
   return {
     entityId: attributed.layer.entityId,
     entityKind: attributed.layer.entityKind,
     optimizationId: attributed.layer.optimizationId ?? attributed.layer.entityId,
-    variant: attributed.layer.variant ?? '',
-    layers: layerChain.length > 0 ? layerChain : undefined,
+    variantId: attributed.layer.variantId ?? '',
     parentExperienceId,
   }
 }

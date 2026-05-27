@@ -97,10 +97,9 @@ export function useOptimizedNode({
         entityKind,
         entityKindId,
         entryIds,
-        layers,
         optimizationId,
         parentExperienceId,
-        variant,
+        variantId,
       } = payload
 
       element.setAttribute('data-ctfl-node-id', nodeId)
@@ -108,10 +107,9 @@ export function useOptimizedNode({
       element.setAttribute('data-ctfl-entity-kind', entityKind)
       setOrRemoveAttr(element, 'data-ctfl-entity-kind-id', entityKindId)
       setOrRemoveAttr(element, 'data-ctfl-entry-ids', entryIds?.join(','))
-      setOrRemoveAttr(element, 'data-ctfl-layers', layers ? JSON.stringify(layers) : undefined)
       element.setAttribute('data-ctfl-optimization-id', optimizationId)
       setOrRemoveAttr(element, 'data-ctfl-parent-experience-id', parentExperienceId)
-      element.setAttribute('data-ctfl-variant', variant)
+      element.setAttribute('data-ctfl-variant', variantId)
     },
     [nodeId, payload],
   )

@@ -16,7 +16,7 @@ const EntityKind = z.union([
 export const ExoNodeLayer = z.object({
   entityKind: EntityKind,
   entityId: z.string(),
-  variant: z.optional(z.string()),
+  variantId: z.optional(z.string()),
   optimizationId: z.optional(z.string()),
 })
 
@@ -69,7 +69,7 @@ export const NodeViewEvent = z.extend(UniversalEventProperties, {
    * @remarks
    * Resolved from `extensions.sourceMap.variants[].id`.
    */
-  variant: z.string(),
+  variantId: z.string(),
 
   /**
    * Ninetailed experience (optimization) ID associated with this node.
@@ -102,12 +102,6 @@ export const NodeViewEvent = z.extend(UniversalEventProperties, {
    * Contentful `sys.id` values of content entries associated with this node.
    */
   entryIds: z.optional(z.array(z.string())),
-
-  /**
-   * Ancestor personalization layers resolved from the XDA sourceMap, ordered
-   * leaf-to-root.
-   */
-  layers: z.optional(z.array(ExoNodeLayer)),
 
   /**
    * Arbitrary key-value parameters captured at view time.

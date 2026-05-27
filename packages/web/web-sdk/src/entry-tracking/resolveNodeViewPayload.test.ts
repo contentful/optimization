@@ -26,15 +26,7 @@ describe('resolveNodeViewPayload', () => {
       entityId: 'exp-id',
       entityKind: 'Experience',
       optimizationId: 'exp-id',
-      variant: 'variant-a',
-      layers: [
-        {
-          entityKind: 'Experience',
-          entityId: 'exp-id',
-          variant: 'variant-a',
-          optimizationId: 'exp-id',
-        },
-      ],
+      variantId: 'variant-a',
       parentExperienceId: undefined,
     })
   })
@@ -46,21 +38,7 @@ describe('resolveNodeViewPayload', () => {
       entityId: 'frag-id',
       entityKind: 'Fragment',
       optimizationId: 'frag-id',
-      variant: 'default',
-      layers: [
-        {
-          entityKind: 'Fragment',
-          entityId: 'frag-id',
-          variant: 'default',
-          optimizationId: 'frag-id',
-        },
-        {
-          entityKind: 'Experience',
-          entityId: 'exp-id',
-          variant: 'variant-a',
-          optimizationId: 'exp-id',
-        },
-      ],
+      variantId: 'default',
       parentExperienceId: 'exp-id',
     })
   })
@@ -101,21 +79,7 @@ describe('resolveNodeViewPayload', () => {
       entityId: 'exp-id',
       entityKind: 'Experience',
       optimizationId: 'exp-id',
-      variant: 'variant-b',
-      layers: [
-        {
-          entityKind: 'Fragment',
-          entityId: 'frag-no-variants',
-          variant: undefined,
-          optimizationId: undefined,
-        },
-        {
-          entityKind: 'Experience',
-          entityId: 'exp-id',
-          variant: 'variant-b',
-          optimizationId: 'exp-id',
-        },
-      ],
+      variantId: 'variant-b',
       parentExperienceId: undefined,
     })
   })
