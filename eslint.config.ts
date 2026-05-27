@@ -4,7 +4,6 @@ import prettier from 'eslint-config-prettier'
 import { configs as lit } from 'eslint-plugin-lit'
 import { configs as wc } from 'eslint-plugin-wc'
 import { defineConfig, type Config } from 'eslint/config'
-import { URL } from 'node:url'
 import typescript from 'typescript-eslint'
 
 // `eslint-config-love` currently exposes FlatConfig types that don't line up with ESLint v10 helpers.
@@ -16,7 +15,8 @@ const strictConfigs = Array.isArray(typescript.configs.strict)
 const stylisticConfigs = Array.isArray(typescript.configs.stylistic)
   ? typescript.configs.stylistic
   : [typescript.configs.stylistic]
-const { pathname: tsconfigRootDir } = new URL('.', import.meta.url)
+const url: URL = new URL('.', import.meta.url)
+const { pathname: tsconfigRootDir } = url
 
 export default defineConfig(
   {
@@ -89,7 +89,16 @@ export default defineConfig(
   lit['flat/recommended'],
   {
     // https://github.com/vitest-dev/vitest/issues/4543#issuecomment-1824628142
-    files: ['**/src/**/*.test.ts', '**/src/**/*.spec.ts', '**/test/**/*.ts', '**/e2e/**/*.ts'],
+    files: [
+      '**/src/**/*.test.ts',
+      '**/src/**/*.test.tsx',
+      '**/src/**/*.spec.ts',
+      '**/src/**/*.spec.tsx',
+      '**/test/**/*.ts',
+      '**/test/**/*.tsx',
+      '**/e2e/**/*.ts',
+      '**/e2e/**/*.tsx',
+    ],
     rules: {
       '@typescript-eslint/class-methods-use-this': 'off',
       '@typescript-eslint/init-declarations': 'off',
