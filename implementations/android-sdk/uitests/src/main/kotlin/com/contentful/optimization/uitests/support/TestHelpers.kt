@@ -28,7 +28,7 @@ object TestHelpers {
             if (element != null) return element
             Thread.sleep(POLL_INTERVAL)
         }
-        throw AssertionError("Element did not appear within ${timeout}ms")
+        throw AssertionError("Element matching $selector did not appear within ${timeout}ms")
     }
 
     fun tapElement(device: UiDevice, element: UiObject2, singleClick: Boolean = false) {

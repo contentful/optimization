@@ -82,42 +82,76 @@ class PreviewPanelOverridesTests {
     }
 
     private fun scrollPanelToElement(desc: String) {
-        // Read the panel bounds robustly: the panel handle can go stale on a
-        // recent recomposition. Fall back to the display extents if so — the
-        // swipe just needs a vertical gesture, not the exact panel inner bounds.
-        val bounds = try {
-            device.findObject(By.desc("preview-panel-list"))?.visibleBounds
-        } catch (_: androidx.test.uiautomator.StaleObjectException) {
-            null
+        // Compose's verticalScroll virtualizes its accessibility tree — items
+        // outside the viewport are NOT in the tree at all (findObject returns
+        // null on off-screen rows). So the loop has to physically scroll the
+        // panel until the target row materializes.
+        //
+        // Use UiObject2.scroll(Direction.DOWN, ...) on the scrollable node
+        // directly rather than device.swipe with raw coordinates. A coordinate
+        // swipe can be interpreted by the parent ModalBottomSheet as a drag-
+        // to-dismiss gesture once the inner scroll exhausts — observed via
+        // diagnostic logging: the sheet disappeared mid-scroll and every
+        // subsequent findObject returned null because the panel was gone, not
+        // because the target was off-screen. A semantic scroll on the inner
+        // scrollable node routes the gesture to the inner scroll only and
+        // returns false when the scroll cannot proceed further (so we don't
+        // spam-scroll past the content).
+        fun panel(): androidx.test.uiautomator.UiObject2? = try {
+            device.findObject(By.desc("preview-panel-list"))
+        } catch (_: Exception) { null }
+
+        fun tryFind(): Boolean {
+            device.waitForIdle(2_000L)
+            var elBounds: android.graphics.Rect? = null
+            repeat(3) {
+                val el = try {
+                    device.findObject(By.descContains(desc))
+                } catch (_: androidx.test.uiautomator.StaleObjectException) {
+                    null
+                } ?: return@repeat
+                val b = try { el.visibleBounds } catch (_: Exception) { null }
+                if (b != null) {
+                    elBounds = b
+                    return@repeat
+                }
+                Thread.sleep(200)
+            }
+            val panelBounds = panel()?.let {
+                try { it.visibleBounds } catch (_: Exception) { null }
+            } ?: return false
+            val b = elBounds ?: return false
+            return b.height() >= 5 && b.bottom > panelBounds.top && b.top < panelBounds.bottom
         }
 
-        val centerX = bounds?.centerX() ?: (device.displayWidth / 2)
-        val startY = bounds?.let { it.top + (it.height() * 3 / 4) } ?: (device.displayHeight * 3 / 4)
-        val endY = bounds?.let { it.top + (it.height() / 4) } ?: (device.displayHeight / 4)
+        fun scrollOnce(direction: androidx.test.uiautomator.Direction): Boolean {
+            val p = panel() ?: return false
+            try { p.setGestureMargin((p.visibleBounds.width() * 0.1).toInt()) } catch (_: Exception) {}
+            return try { p.scroll(direction, 0.4f) } catch (_: Exception) { false }
+        }
 
-        for (i in 0 until 8) {
-            // Wait for any in-flight scroll/animation to settle. Compose batches
-            // accessibility-tree updates during a fling and the tree we query
-            // here would otherwise be stale.
-            device.waitForIdle(1500L)
-            val el = device.wait(Until.hasObject(By.descContains(desc)), 500L)?.let {
-                device.findObject(By.descContains(desc))
-            }
-            // Stale handles are common right after a panel-state mutation; the
-            // swipe below is what actually shakes the accessibility tree
-            // loose, so treat a stale probe the same as "not yet visible" and
-            // keep scrolling.
-            val elBounds = try {
-                el?.visibleBounds
-            } catch (_: androidx.test.uiautomator.StaleObjectException) {
-                null
-            }
-            if (elBounds != null && elBounds.height() >= 5 && bounds != null &&
-                elBounds.top >= bounds.top && elBounds.bottom <= bounds.bottom
-            ) {
-                return
-            }
-            device.swipe(centerX, startY, centerX, endY, 25)
+        // Phase 1: scroll DOWN searching for the element. The previous element
+        // (the test step's first scrollPanelToElement call OR an interleaved
+        // tap that triggered a scroll-to-keep-visible) may have left the
+        // panel scrolled, so iter 0 might already be near the bottom — but
+        // most targets sit above where we currently are. We still try DOWN
+        // first because the panel resets to scroll-position-0 on open and the
+        // first call from a fresh openPanel always needs to head down.
+        repeat(20) {
+            if (tryFind()) return
+            if (!scrollOnce(androidx.test.uiautomator.Direction.DOWN)) return@repeat
+            Thread.sleep(600)
+        }
+        // Phase 2: scroll UP searching for the element. This recovers when
+        // the panel was already past the target on entry. Safe to use bidir
+        // here because UiObject2.scroll dispatches a semantic scroll on the
+        // inner scrollable Compose node — it does NOT bubble up to the
+        // ModalBottomSheet container as a drag-to-dismiss the way a raw
+        // device.swipe would once the inner scroll exhausts.
+        repeat(25) {
+            if (tryFind()) return
+            if (!scrollOnce(androidx.test.uiautomator.Direction.UP)) return
+            Thread.sleep(600)
         }
     }
 
