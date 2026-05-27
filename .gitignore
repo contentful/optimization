@@ -121,4 +121,3 @@ yarn-error.log
 # Uncomment this line if you need to override with local secrets
 # env.config.ts
 triage-out
-.claude/

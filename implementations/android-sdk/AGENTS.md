@@ -105,3 +105,5 @@ UI Automator 2 suite from `uitests/`. This mirrors the iOS `swiftui/` + `uikit/`
   points to a test-id or behavior divergence between the two reference impls.
 - Rebuild `@contentful/optimization-js-bridge` before testing when bridge source changed.
 - Verify accessibility identifiers match iOS counterparts when changing UI structure.
+- Rebuild `@contentful/optimization-js-bridge` before testing when bridge source changed.
+- After UI structure changes, run `./gradlew :uitests:assembleDebug` to verify test APK compiles.
