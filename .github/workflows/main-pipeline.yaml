@@ -803,29 +803,23 @@ jobs:
             # "Error in test" or "Process crashed" line, force-stop the test
             # process to abort the remaining suite. AndroidJUnitRunner has no
             # built-in early-exit, so without this every subsequent @Before
-            # waits its full 20-30s waitForElement timeout — one failing class
-            # of 10 tests turned a single root-cause failure into ~25 minutes
-            # of CI wall time before the job timed out on the 45-minute job
-            # limit. force-stop on the .uitests process kills the
-            # instrumentation; the remote `am instrument -w` exits and the
-            # local pipeline collapses. fflush keeps the GitHub Actions log
-            # live so we see the failure when it happens, not at the end.
-            adb shell am instrument -w com.contentful.optimization.uitests/androidx.test.runner.AndroidJUnitRunner 2>&1 \
-              | tee /tmp/test-output.log \
-              | awk '
-                  /Error in test|Process crashed/ {
-                    if (!aborted) {
-                      aborted = 1
-                      print
-                      print "::error::Test failure detected — aborting remaining suite"
-                      fflush()
-                      system("adb shell am force-stop com.contentful.optimization.uitests >/dev/null 2>&1")
-                      exit 1
-                    }
-                    next
-                  }
-                  { print; fflush() }
-                '
+            # waits its full 20-30s waitForElement timeout and one root-cause
+            # failure in an early class burns the whole 45-minute job budget.
+            # force-stop on the .uitests process kills the instrumentation;
+            # the remote `am instrument -w` exits and the local pipeline
+            # collapses. fflush keeps the GitHub Actions log live so we see
+            # the failure when it happens, not at the end.
+            #
+            # IMPORTANT: this MUST be a single physical YAML line. The
+            # reactivecircus/android-emulator-runner action's parseScript()
+            # splits the multi-line `script:` block on every newline and runs
+            # each line as a separate `sh -c`, so a multi-line pipeline with
+            # `\` continuations gets broken into three independent commands —
+            # `am instrument` runs standalone and the `| tee` / `| awk` lines
+            # are dropped as no-op syntax errors. Verified in the action's
+            # src/script-parser.ts:
+            #   rawScript.trim().split(/\r\n|\n|\r/)
+            adb shell am instrument -w com.contentful.optimization.uitests/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee /tmp/test-output.log | awk 'BEGIN{aborted=0} /Error in test|Process crashed/{if(!aborted){aborted=1;print;print "::error::Test failure detected — aborting remaining suite";fflush();system("adb shell am force-stop com.contentful.optimization.uitests >/dev/null 2>&1");exit 1} next} {print;fflush()}'
             grep -q "FAILURES\|Error in test" /tmp/test-output.log && { echo "::error::Android UI tests failed"; exit 1; } || true
             grep -q "Process crashed" /tmp/test-output.log && { echo "::error::Test process crashed"; exit 1; } || true
             grep -q "OK (" /tmp/test-output.log || { echo "::error::Android UI tests did not complete successfully (missing OK status)"; exit 1; }
