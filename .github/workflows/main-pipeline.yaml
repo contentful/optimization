@@ -881,24 +881,38 @@ jobs:
             adb logcat -c
             echo "Running UI Automator 2 E2E tests against $APP_PACKAGE..."
             # Fail-fast: stream am instrument output through awk; on the first
-            # "Error in test" or "Process crashed" line, force-stop the test
-            # process to abort the remaining suite. AndroidJUnitRunner has no
-            # built-in early-exit, so without this every subsequent @Before
-            # waits its full 20-30s waitForElement timeout and one root-cause
-            # failure in an early class burns the whole 45-minute job budget.
-            # force-stop on the .uitests process kills the instrumentation;
-            # the remote `am instrument -w` exits and the local pipeline
-            # collapses. fflush keeps the GitHub Actions log live so we see
-            # the failure when it happens, not at the end.
+            # per-test error (INSTRUMENTATION_STATUS_CODE -1/-2) or device-side
+            # process crash, force-stop the test process to abort the remaining
+            # suite. AndroidJUnitRunner has no built-in early-exit, so without
+            # this every subsequent @Before waits its full 20-30s
+            # waitForElement timeout and one root-cause failure in an early
+            # class burns the whole 45-minute job budget. force-stop on the
+            # .uitests process kills the instrumentation; the remote
+            # `am instrument -w` exits and the local pipeline collapses.
+            # fflush keeps the GitHub Actions log live so we see the failure
+            # when it happens, not at the end.
+            #
+            # `-r` (raw mode) is REQUIRED for streaming: without it
+            # `am instrument` buffers the entire human-readable summary
+            # (dots, `OK (N tests)` / `FAILURES!!!`) until end-of-suite, so
+            # the awk fail-fast never sees per-test progress and a single
+            # 20-min hang produces zero output until the outer `timeout 1200`
+            # kills the pipeline (observed on run 26534799046 views matrix
+            # entry). With `-r`, AndroidJUnitRunner emits
+            # `INSTRUMENTATION_STATUS_CODE: <N>` after each test (1=started,
+            # 0=passed, -1=assumption-failed, -2=errored/failed) and the awk
+            # regex matches the failure codes in real time.
             #
             # Per-test wedges are caught by the JUnit `Timeout` rule in
-            # PerTestRule.kt (60s/test). The outer `timeout 1200` here is a
-            # belt-and-suspenders safety net: it caps total wall time at
-            # 20 min (normal happy path ~7 min) so a deadlock that prevents
-            # JUnit's worker-thread from firing — or a wedged `adb` — can't
-            # burn the full 45-min job budget. On `timeout` kill the awk
-            # pipeline sees EOF without matching any pattern; the `OK (`
-            # post-grep then fails the step.
+            # PerTestRule.kt (60s/test), which surfaces as a `stack=...`
+            # block followed by `INSTRUMENTATION_STATUS_CODE: -2`. The outer
+            # `timeout 1200` here is a belt-and-suspenders safety net: it
+            # caps total wall time at 20 min (normal happy path ~7 min) so a
+            # deadlock that prevents JUnit's worker-thread from firing — or
+            # a wedged `adb` — can't burn the full 45-min job budget. On
+            # `timeout` kill, the post-grep for `INSTRUMENTATION_CODE: ` (the
+            # final overall-run code emitted only when am instrument
+            # completes cleanly) is missing and the step fails.
             #
             # IMPORTANT: this MUST be a single physical YAML line. The
             # reactivecircus/android-emulator-runner action's parseScript()
@@ -909,10 +923,10 @@ jobs:
             # are dropped as no-op syntax errors. Verified in the action's
             # src/script-parser.ts:
             #   rawScript.trim().split(/\r\n|\n|\r/)
-            timeout --kill-after=30 1200 adb shell am instrument -w -e APP_PACKAGE "$APP_PACKAGE" com.contentful.optimization.uitests/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee /tmp/test-output.log | awk 'BEGIN{aborted=0} /Error in test|Process crashed/{if(!aborted){aborted=1;print;print "::error::Test failure detected — aborting remaining suite";fflush();system("adb shell am force-stop com.contentful.optimization.uitests >/dev/null 2>&1");exit 1} next} {print;fflush()}'; e=$?; echo "--- capturing post-run debug context (logcat + /sdcard/test-failures) ---"; adb logcat -d > /tmp/logcat.log 2>&1 || true; rm -rf /tmp/test-failures; adb pull /sdcard/test-failures /tmp/test-failures 2>&1 || true; exit $e
-            grep -q "FAILURES\|Error in test" /tmp/test-output.log && { echo "::error::Android UI tests failed"; exit 1; } || true
+            timeout --kill-after=30 1200 adb shell am instrument -w -r -e APP_PACKAGE "$APP_PACKAGE" com.contentful.optimization.uitests/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee /tmp/test-output.log | awk 'BEGIN{aborted=0} /^INSTRUMENTATION_STATUS_CODE:[[:space:]]+-[12]$|Process crashed/{if(!aborted){aborted=1;print;print "::error::Test failure detected — aborting remaining suite";fflush();system("adb shell am force-stop com.contentful.optimization.uitests >/dev/null 2>&1");exit 1} next} {print;fflush()}'; e=$?; echo "--- capturing post-run debug context (logcat + /sdcard/test-failures) ---"; adb logcat -d > /tmp/logcat.log 2>&1 || true; rm -rf /tmp/test-failures; adb pull /sdcard/test-failures /tmp/test-failures 2>&1 || true; exit $e
+            grep -qE "^INSTRUMENTATION_STATUS_CODE:[[:space:]]+-[12]$" /tmp/test-output.log && { echo "::error::Android UI tests failed (per-test failure detected)"; exit 1; } || true
             grep -q "Process crashed" /tmp/test-output.log && { echo "::error::Test process crashed"; exit 1; } || true
-            grep -q "OK (" /tmp/test-output.log || { echo "::error::Android UI tests did not complete successfully (missing OK status — likely timeout or hang)"; exit 1; }
+            grep -qE "^INSTRUMENTATION_CODE:[[:space:]]+-?[0-9]+$" /tmp/test-output.log || { echo "::error::Android UI tests did not complete cleanly (missing terminal INSTRUMENTATION_CODE — likely timeout, hang, or am instrument abort)"; exit 1; }
 
       - name: Print debug context on failure
         if: failure()
