@@ -31,6 +31,7 @@ persistence, networking, lifecycle handling, SwiftUI views, and preview-panel UI
 - [Current status](#current-status)
 - [When to use this package](#when-to-use-this-package)
 - [Package layout](#package-layout)
+- [Releasing](#releasing)
 - [Related](#related)
 
 <!-- mtoc-end -->
@@ -61,6 +62,20 @@ stable mobile integration can start with the JavaScript
 - [`optimization-js-bridge/`](../universal/optimization-js-bridge/README.md) - shared internal
   TypeScript bridge compiled into the JavaScriptCore UMD bundle consumed by the Swift Package
 - [`CODE_MAP.md`](./CODE_MAP.md) - architecture map for the current native iOS implementation
+
+## Releasing
+
+The Swift Package is published to a separate distribution repository,
+[`contentful/optimization.swift`](https://github.com/contentful/optimization.swift), so consumers
+can add it by URL (`from: "x.y.z"`) without cloning the monorepo. Publishing is automated by
+[`publish-spm.yaml`](../../.github/workflows/publish-spm.yaml): on each `v*` release it builds the
+JS bridge (stamping the version into the UMD), assembles the package payload, and pushes a commit
+and tag to the distribution repo.
+
+The distribution repo is generated output, like an npm `dist/`: nobody pushes to it by hand. The UMD
+bundle is no longer committed to the monorepo — it is built on demand (and gitignored). Build it
+locally before `swift build`/`swift test` with `pnpm run ios:bridge`, or use the convenience scripts
+`pnpm run ios:build` and `pnpm run ios:test` from the repo root.
 
 ## Related
 
