@@ -122,9 +122,7 @@ class OptimizedEntryView @JvmOverloads constructor(
         super.onAttachedToWindow()
         trackingScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
         viewTreeObserver.addOnPreDrawListener(preDrawListener)
-        if (resolveTrackTaps()) {
-            setOnClickListener { fireTrackClick() }
-        }
+        setOnClickListener { fireTrackClick() }
         restartObservation()
     }
 
@@ -279,6 +277,7 @@ class OptimizedEntryView @JvmOverloads constructor(
     }
 
     private fun fireTrackClick() {
+        if (!resolveTrackTaps()) return
         val entry = entry ?: return
         val scope = trackingScope ?: return
         val metadata = TrackingMetadata(entry, lastResult?.personalization)
