@@ -100,18 +100,16 @@ class ViewTrackingController internal constructor(
         val nowVisible = visibilityRatio >= threshold
 
         if (nowVisible && !isVisible) {
-            Log.d(
-                "ViewTracking",
+            trackingLog {
                 "componentId=${metadata.componentId} BECAME_VISIBLE " +
-                    "ratio=${"%.2f".format(visibilityRatio)} h=$elementHeight vh=$visibleHeight",
-            )
+                    "ratio=${"%.2f".format(visibilityRatio)} h=$elementHeight vh=$visibleHeight"
+            }
             onBecameVisible()
         } else if (!nowVisible && isVisible) {
-            Log.d(
-                "ViewTracking",
+            trackingLog {
                 "componentId=${metadata.componentId} BECAME_INVISIBLE " +
-                    "ratio=${"%.2f".format(visibilityRatio)} h=$elementHeight vh=$visibleHeight attempts=$attempts",
-            )
+                    "ratio=${"%.2f".format(visibilityRatio)} h=$elementHeight vh=$visibleHeight attempts=$attempts"
+            }
             onBecameInvisible()
         }
     }
@@ -216,10 +214,9 @@ class ViewTrackingController internal constructor(
             viewDurationMs = accumulatedMs.toInt(),
             sticky = metadata.sticky,
         )
-        Log.i(
-            "ViewTracking",
-            "EMIT componentId=${metadata.componentId} duration=${accumulatedMs.toInt()}ms attempt=$attempts",
-        )
+        trackingLog {
+            "EMIT componentId=${metadata.componentId} duration=${accumulatedMs.toInt()}ms attempt=$attempts"
+        }
         scope.launch {
             try {
                 onTrackView(payload)
@@ -237,5 +234,11 @@ class ViewTrackingController internal constructor(
         visibleSinceMs = null
         accumulatedMs = 0.0
         attempts = 0
+    }
+}
+
+private inline fun trackingLog(message: () -> String) {
+    if (Log.isLoggable("ViewTracking", Log.DEBUG)) {
+        Log.d("ViewTracking", message())
     }
 }

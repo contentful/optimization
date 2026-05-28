@@ -226,15 +226,15 @@ class OptimizedEntryView @JvmOverloads constructor(
             controllerEntry === entry &&
             controllerPersonalization == newPersonalization
         ) {
-            android.util.Log.d("ViewTracking", "attachController KEEP componentId=$entryId")
+            trackingLog { "attachController KEEP componentId=$entryId" }
             updateVisibility()
             return
         }
 
         if (controller != null) {
-            android.util.Log.d("ViewTracking", "attachController REBUILD componentId=$entryId (was different tuple)")
+            trackingLog { "attachController REBUILD componentId=$entryId (was different tuple)" }
         } else {
-            android.util.Log.d("ViewTracking", "attachController CREATE componentId=$entryId")
+            trackingLog { "attachController CREATE componentId=$entryId" }
         }
 
         controller?.let {
@@ -305,5 +305,11 @@ class OptimizedEntryView @JvmOverloads constructor(
             explicit != null || onTap != null -> true
             else -> OptimizationManager.trackTaps
         }
+    }
+}
+
+private inline fun trackingLog(message: () -> String) {
+    if (android.util.Log.isLoggable("ViewTracking", android.util.Log.DEBUG)) {
+        android.util.Log.d("ViewTracking", message())
     }
 }
