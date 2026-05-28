@@ -29,6 +29,22 @@ android {
     buildFeatures {
         compose = true
     }
+
+    testOptions {
+        unitTests {
+            // ViewTrackingController tests are pure JVM (TestScope + TestLifecycleOwner +
+            // fake collaborators) and don't touch Android resources, so skip the Robolectric-style
+            // resource bundling that AGP would otherwise add to the unit-test classpath. Keeps
+            // `./gradlew :ContentfulOptimization:testDebugUnitTest` under a second.
+            isIncludeAndroidResources = false
+            // ViewTrackingController emits diagnostic `Log.d/Log.i/Log.w` calls under the
+            // "ViewTracking" tag. Without `isReturnDefaultValues = true` the JVM test runtime
+            // throws `RuntimeException: Method d in android.util.Log not mocked` on the first
+            // call; with it, the Android framework stubs return defaults (0/null/false) so the
+            // logging is a no-op in unit tests while still firing normally in production.
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 kotlin {
@@ -55,4 +71,5 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
+    testImplementation("androidx.lifecycle:lifecycle-runtime-testing:2.8.7")
 }

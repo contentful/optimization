@@ -13,20 +13,55 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-class ViewTrackingController(
-    private val client: OptimizationClient,
+/**
+ * The primary constructor is `internal` so JVM unit tests can supply a controlled
+ * [CoroutineScope] (typically a `kotlinx-coroutines-test` `TestScope`), a fake [LifecycleOwner]
+ * (typically `TestLifecycleOwner`), a recording [onTrackView] sink, and a virtual [clock] without
+ * dragging the full [OptimizationClient] (which requires a real `Context` for SharedPreferences
+ * and a JNI-loaded QuickJS bridge) into the test target. The public secondary constructor below
+ * preserves the prior `client: OptimizationClient` call shape used by [OptimizedEntryView]'s
+ * `attachController` and the Compose `Modifier.trackViews` so production call sites are
+ * unchanged. The dwell state machine (visibility threshold, 2s-then-5s timer cadence, attempts
+ * counter, resetCycle on becoming-invisible-before-first-emit) lives entirely in this class
+ * and is covered by `ViewTrackingControllerTest` in `src/test/`.
+ */
+class ViewTrackingController internal constructor(
     entry: Map<String, Any>,
     personalization: Map<String, Any>?,
+    private val onTrackView: suspend (TrackViewPayload) -> Unit,
     private val threshold: Double = 0.8,
     private val viewTimeMs: Int = 2000,
     private val viewDurationUpdateIntervalMs: Int = 5000,
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Main),
+    private val lifecycleOwner: LifecycleOwner = ProcessLifecycleOwner.get(),
+    private val clock: () -> Long = { System.currentTimeMillis() },
 ) : DefaultLifecycleObserver {
+
+    /**
+     * Production constructor used by `OptimizedEntryView` and `Modifier.trackViews`. Adapts the
+     * concrete [OptimizationClient]'s `trackView` to the suspending sink the controller calls
+     * through, and uses `Dispatchers.Main` + `ProcessLifecycleOwner` for the runtime defaults.
+     */
+    constructor(
+        client: OptimizationClient,
+        entry: Map<String, Any>,
+        personalization: Map<String, Any>?,
+        threshold: Double = 0.8,
+        viewTimeMs: Int = 2000,
+        viewDurationUpdateIntervalMs: Int = 5000,
+    ) : this(
+        entry = entry,
+        personalization = personalization,
+        onTrackView = { payload -> client.trackView(payload) },
+        threshold = threshold,
+        viewTimeMs = viewTimeMs,
+        viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs,
+    )
 
     var isVisible: Boolean = false
         private set
 
     private val metadata = TrackingMetadata(entry, personalization)
-    private val scope = CoroutineScope(Dispatchers.Main)
 
     private var viewId: String? = null
     private var visibleSinceMs: Long? = null
@@ -41,7 +76,7 @@ class ViewTrackingController(
     private var lastViewportHeight: Float = 0f
 
     init {
-        ProcessLifecycleOwner.get().lifecycle.addObserver(this)
+        lifecycleOwner.lifecycle.addObserver(this)
     }
 
     fun updateVisibility(
@@ -90,7 +125,7 @@ class ViewTrackingController(
     fun destroy() {
         timerJob?.cancel()
         timerJob = null
-        ProcessLifecycleOwner.get().lifecycle.removeObserver(this)
+        lifecycleOwner.lifecycle.removeObserver(this)
     }
 
     override fun onStop(owner: LifecycleOwner) {
@@ -123,7 +158,7 @@ class ViewTrackingController(
     private fun onBecameVisible() {
         isVisible = true
         viewId = UUID.randomUUID().toString()
-        visibleSinceMs = System.currentTimeMillis()
+        visibleSinceMs = clock()
         accumulatedMs = 0.0
         attempts = 0
         scheduleNextFire()
@@ -142,13 +177,13 @@ class ViewTrackingController(
 
     private fun flushAccumulatedTime() {
         val since = visibleSinceMs ?: return
-        accumulatedMs += (System.currentTimeMillis() - since).toDouble()
-        visibleSinceMs = System.currentTimeMillis()
+        accumulatedMs += (clock() - since).toDouble()
+        visibleSinceMs = clock()
     }
 
     private fun pauseAccumulation() {
         val since = visibleSinceMs ?: return
-        accumulatedMs += (System.currentTimeMillis() - since).toDouble()
+        accumulatedMs += (clock() - since).toDouble()
         visibleSinceMs = null
     }
 
@@ -187,7 +222,7 @@ class ViewTrackingController(
         )
         scope.launch {
             try {
-                client.trackView(payload)
+                onTrackView(payload)
             } catch (e: Exception) {
                 Log.w(
                     "ViewTracking",

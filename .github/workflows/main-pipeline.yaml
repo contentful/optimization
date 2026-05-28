@@ -353,6 +353,75 @@ jobs:
       - run: pnpm install --prefer-offline --frozen-lockfile
       - run: pnpm --filter ${{ matrix.package }} test:unit
 
+  test-android-sdk-unit:
+    # JVM unit tests for the Android SDK's pure-Kotlin code paths, run via Gradle without an
+    # emulator. Currently covers `ViewTrackingController`'s dwell state machine, which is the
+    # timing-sensitive piece that the AndroidJUnitRunner E2E suite was previously asserting
+    # through three layers of noise (real swipe → real layout → JS bridge dispatch). Gated on
+    # the same paths-filter as the E2E job so it only runs when Android SDK or test-app
+    # sources change.
+    name: 🤖 Test Android SDK (JVM unit)
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
+    timeout-minutes: 15
+    needs: [setup, changes]
+    if: needs.changes.outputs.e2e_android == 'true'
+    env:
+      GRADLE_OPTS: >-
+        -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx4g
+        -Dkotlin.daemon.jvm.options=-Xmx2g
+    steps:
+      - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+
+      - name: Set Android SDK environment variables
+        run: |
+          echo "ANDROID_SDK_ROOT=$HOME/.android/sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$HOME/.android/sdk" >> "$GITHUB_ENV"
+
+      - name: Prepare cache directories
+        run: |
+          mkdir -p "$HOME/.android/sdk" "$HOME/.android/cache"
+
+      - name: Set up caches (Namespace)
+        uses: namespacelabs/nscloud-cache-action@15799a6b54e5765f85b2aac25b3f0df43ed571c0 # v1.4.3
+        with:
+          cache: |
+            pnpm
+            gradle
+          path: |
+            ~/.android/sdk
+            ~/.android/cache
+
+      - name: Setup Java
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+
+      - name: Install JS dependencies
+        run: pnpm install --prefer-offline --frozen-lockfile
+
+      - name: Run Android SDK JVM unit tests
+        working-directory: implementations/android-sdk
+        run: ./gradlew :ContentfulOptimization:testDebugUnitTest
+
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-results-android-sdk-unit
+          path: packages/android/ContentfulOptimization/build/reports/tests/
+          retention-days: 7
+
   e2e-node-sdk:
     name: 🖥️ E2E Node SSR Only
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
