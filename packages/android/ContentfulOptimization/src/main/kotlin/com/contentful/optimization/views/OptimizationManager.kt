@@ -11,6 +11,7 @@ import com.contentful.optimization.preview.PreviewPanelConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.util.concurrent.atomic.AtomicReference
@@ -113,13 +114,14 @@ object OptimizationManager {
      */
     fun resetForTesting() {
         clientRef.getAndSet(null)?.let { c ->
-            runBlocking {
+            runBlocking(Dispatchers.Default) {
                 try {
                     c.destroy()
                 } catch (_: Exception) {
                 }
             }
         }
+        initScope.coroutineContext.cancelChildren()
         previewClientRef.set(null)
     }
 }
