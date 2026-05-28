@@ -34,6 +34,7 @@ Things you still have to enable yourself:
 
 <details>
   <summary>Table of Contents</summary>
+<!-- mtoc-start -->
 
 - [What you get out of the box](#what-you-get-out-of-the-box)
 - [1. Events the SDK emits](#1-events-the-sdk-emits)
@@ -70,6 +71,7 @@ Things you still have to enable yourself:
 - [10. Putting it together](#10-putting-it-together)
 - [Reference](#reference)
 
+<!-- mtoc-end -->
 </details>
 
 ## 1. Events the SDK emits
@@ -134,16 +136,19 @@ These wire types are shared across SDK runtimes.
 
 The SDK talks to two HTTP endpoints, both defaulting to Ninetailed hosts:
 
-| API                | Default base URL                         | Purpose                                                                                       |
-| ------------------ | ---------------------------------------- | --------------------------------------------------------------------------------------------- |
-| **Experience API** | `https://experience.ninetailed.co/`      | Variant resolution, identify, sticky entry views, profile aggregation.                        |
-| **Insights API**   | `https://ingest.insights.ninetailed.co/` | All fire-and-forget interaction events: entry views, clicks, flag views, track, page, screen. |
+| API                | Default base URL                         | Purpose                                                                                                       |
+| ------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **Experience API** | `https://experience.ninetailed.co/`      | Profile evaluation and updates for identify, page, screen, track, sticky entry views, and variant resolution. |
+| **Insights API**   | `https://ingest.insights.ninetailed.co/` | Fire-and-forget Analytics interaction events: entry views, taps or clicks, and flag views.                    |
 
 Both are configurable via the `api` config on the SDK (see section 8).
 
 A single user action can touch either or both APIs. `trackView({ sticky: true })` delivers through
 Experience first (sticky views become part of the profile) then through Insights. Plain `trackView`
 only hits Insights; `identify` only touches Experience.
+
+Third-party analytics integrations that need one exposure for a sticky view must dedupe by semantic
+fields such as `viewId`, `componentId`, `experienceId`, and `variantIndex`, not by `messageId`.
 
 ### Queueing, flushing, and offline
 

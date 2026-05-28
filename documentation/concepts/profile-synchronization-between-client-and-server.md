@@ -18,6 +18,7 @@ For the in-memory state model used by stateful SDKs, see
 
 <details>
   <summary>Table of Contents</summary>
+<!-- mtoc-start -->
 
 - [The synchronization model](#the-synchronization-model)
 - [Runtime responsibilities](#runtime-responsibilities)
@@ -39,6 +40,7 @@ For the in-memory state model used by stateful SDKs, see
 - [Edge cases and failure modes](#edge-cases-and-failure-modes)
 - [Implementation checklist](#implementation-checklist)
 
+<!-- mtoc-end -->
 </details>
 
 ## The synchronization model

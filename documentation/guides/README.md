@@ -10,6 +10,7 @@ children:
   - ./integrating-the-optimization-sdk-in-a-nextjs-app-ssr-csr.md
   - ./contributing-to-the-ios-sdk.md
   - ./contributing-to-the-android-sdk.md
+  - ./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md
 ---
 
 # Guides
@@ -53,3 +54,8 @@ inventory instead.
 - [Contributing to the Android SDK](./contributing-to-the-android-sdk.md) - fresh-clone bootstrap
   through a debuggable change in Android Studio, including how the composite-build SDK module and
   the `buildJsBridge` Gradle task keep both Kotlin and TypeScript layers in sync on every build
+## Supplemental guides
+
+- [Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) -
+  guidance for forwarding Contentful optimization context to analytics, tag-management,
+  customer-data, and product-analytics systems

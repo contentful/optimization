@@ -41,6 +41,7 @@ to own the browser SDK integration without React abstractions.
   - [Next.js app router](#nextjs-app-router)
   - [TanStack router](#tanstack-router)
   - [Page payload enrichment](#page-payload-enrichment)
+- [Forward optimization context to third-party analytics](#forward-optimization-context-to-third-party-analytics)
 - [Live updates](#live-updates)
   - [Global live updates](#global-live-updates)
   - [Per-component live updates](#per-component-live-updates)
@@ -715,6 +716,57 @@ The `context` shape varies by adapter:
 | Next.js Pages   | `asPath`, `pathname`, `query`, `routeKey`, `router`                              |
 | Next.js App     | `pathname`, `routeKey`, `router`, `search`, `searchParams`, `url`                |
 | TanStack Router | `hash`, `location`, `matches`, `pathname`, `routeKey`, `router`, `search`, `url` |
+
+## Forward optimization context to third-party analytics
+
+Use this optional step when your React app already sends events to a tag manager, customer-data
+platform, or analytics destination. The Optimization SDK still sends events to Contentful. Your
+application decides which approved Contentful context, if any, should also be forwarded.
+
+| Reporting need                             | React Web SDK handoff                                                           |
+| ------------------------------------------ | ------------------------------------------------------------------------------- |
+| SDK page, custom, view, click, or hover    | Register one `states.eventStream` subscription from `onStatesReady`.            |
+| Business event attribution                 | Add Contentful fields in the button, form, or route action that owns the event. |
+| Entry or variant attribution               | Use the resolved entry metadata from `OptimizedEntry` or `useOptimizedEntry`.   |
+| Custom Flag attribution                    | Forward from the component or hook path that reads or renders the flag.         |
+| Consent or duplicate-delivery verification | Use `states.blockedEventStream`, `messageId` dedupe, and destination debuggers. |
+
+`eventStream` is a live handoff, not a replay queue. Register the subscription at provider
+initialization; if the analytics destination is not ready yet, buffer forwarded payloads in
+application code with an explicit size, TTL, and drop policy.
+
+When `OptimizationRoot` owns SDK setup, attach app-level analytics subscriptions with
+`onStatesReady` so router adapters and child effects cannot emit events before the subscriber is
+registered:
+
+```tsx
+<OptimizationRoot
+  clientId="your-client-id"
+  onStatesReady={(states) => {
+    const forwardedMessageIds = new Set<string>()
+
+    const eventSubscription = states.eventStream.subscribe((event) => {
+      if (!event) return
+      if (forwardedMessageIds.has(event.messageId)) return
+      if (!canForwardSdkEvent(event)) return
+
+      forwardedMessageIds.add(event.messageId)
+
+      analytics.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
+    })
+
+    return () => eventSubscription.unsubscribe()
+  }}
+>
+  <ReactRouterAutoPageTracker />
+  <YourApp />
+</OptimizationRoot>
+```
+
+Use
+[Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)
+for the `canForwardSdkEvent` and `pickContentfulEventProperties` helpers, vendor mappings, consent,
+identity, dedupe, and governance guidance.
 
 ## Live updates
 
