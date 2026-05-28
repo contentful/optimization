@@ -8,6 +8,7 @@ children:
   - ./integrating-the-react-native-sdk-in-a-react-native-app.md
   - ./integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md
   - ./integrating-the-optimization-sdk-in-a-nextjs-app-ssr-csr.md
+  - ./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md
 ---
 
 # Guides
@@ -42,3 +43,9 @@ inventory instead.
   step-by-step Next.js App Router guidance for the hybrid pattern where first paint is
   server-resolved and the React Web SDK takes over for instant client-side reactivity after
   hydration
+
+## Supplemental guides
+
+- [Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) -
+  guidance for forwarding Contentful optimization context to analytics, tag-management,
+  customer-data, and product-analytics systems
