@@ -1,5 +1,6 @@
 package com.contentful.optimization.shared
 
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +43,10 @@ object EventStore {
     private fun processEvent(dict: Map<String, Any>) {
         val type = dict["type"] as? String ?: return
 
+        if (type == "component") {
+            Log.i("EventTrace", "EventStore.processEvent component cid=${dict["componentId"]}")
+        }
+
         val event = AnalyticsEvent(
             type = type,
             componentId = dict["componentId"] as? String,
@@ -61,6 +66,7 @@ object EventStore {
             event.viewId?.let { stats.latestViewId = it }
             current[cid] = stats
             _componentStats.value = current
+            Log.i("EventTrace", "EventStore.componentStats updated cid=$cid count=${stats.count}")
         }
     }
 }
