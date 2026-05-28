@@ -26,17 +26,18 @@ type ProfileValue = typeof signals.profile.value
 type ChangesValue = typeof signals.changes.value
 type SelectedOptimizationsValue = typeof signals.selectedOptimizations.value
 
-// Native runtimes (iOS WKWebView, Android WebView) install these callbacks on
-// the JS engine's globalThis before the bridge is loaded. The bridge calls them
-// to push state/event updates back into the native layer.
-declare global {
-  interface Window {
-    __nativeOnStateChange?: (json: string) => void
-    __nativeOnEventEmitted?: (json: string) => void
-    __nativeOnOverridesChanged?: (json: string) => void
-    __bridge?: Bridge
-  }
+// Native runtimes (iOS JavaScriptCore, Android QuickJS) install these callbacks
+// on the JS engine's globalThis before the bridge is loaded. The bridge calls
+// them to push state/event updates back into the native layer. `window` is NOT
+// defined in QuickJS or JSC — only `globalThis` is universal across both
+// engines plus any browser-style WebView consumer.
+interface NativeGlobal {
+  __nativeOnStateChange?: (json: string) => void
+  __nativeOnEventEmitted?: (json: string) => void
+  __nativeOnOverridesChanged?: (json: string) => void
+  __bridge?: Bridge
 }
+const nativeGlobal = globalThis as typeof globalThis & NativeGlobal
 
 interface BridgeConfig {
   clientId: string
@@ -195,7 +196,7 @@ const bridge: Bridge = {
       profile: signals.profile,
       stateInterceptors: instance.interceptors.state,
       onOverridesChanged: () => {
-        window.__nativeOnOverridesChanged?.(bridge.getPreviewState())
+        nativeGlobal.__nativeOnOverridesChanged?.(bridge.getPreviewState())
       },
     })
 
@@ -208,7 +209,7 @@ const bridge: Bridge = {
         selectedPersonalizations: signals.selectedOptimizations.value ?? null,
       }
 
-      window.__nativeOnStateChange?.(JSON.stringify(state))
+      nativeGlobal.__nativeOnStateChange?.(JSON.stringify(state))
     })
 
     disposeEventEffect = effect(() => {
@@ -216,7 +217,7 @@ const bridge: Bridge = {
         event: { value },
       } = signals
       if (value) {
-        window.__nativeOnEventEmitted?.(JSON.stringify(value))
+        nativeGlobal.__nativeOnEventEmitted?.(JSON.stringify(value))
       }
     })
   },
@@ -486,6 +487,6 @@ const bridge: Bridge = {
   },
 }
 
-window.__bridge = bridge
+nativeGlobal.__bridge = bridge
 
 export default bridge

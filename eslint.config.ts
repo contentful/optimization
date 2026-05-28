@@ -31,6 +31,9 @@ export default defineConfig(
       '**/dist',
       'docs/media/**',
       '**/ios/**',
+      // Engine-targeted JS bridge glue compiled into the native SDKs; consolidated
+      // from the ios/android bridge packages, which were ignored under the rules above.
+      '**/optimization-js-bridge/**',
       '**/node_modules',
     ],
   },
