@@ -1,6 +1,7 @@
 package com.contentful.optimization.core
 
 import android.content.Context
+import android.util.Log
 import com.contentful.optimization.bridge.QuickJsContextManager
 import com.contentful.optimization.handlers.AppLifecycleHandler
 import com.contentful.optimization.handlers.NetworkMonitor
@@ -53,7 +54,12 @@ class OptimizationClient(private val applicationContext: Context) {
 
     init {
         bridge.onStateChange = { dict -> handleStateUpdate(dict) }
-        bridge.onEvent = { dict -> _events.tryEmit(dict) }
+        bridge.onEvent = { dict ->
+            if (dict["type"] == "component") {
+                Log.i("EventTrace", "bridge.onEvent component cid=${dict["componentId"]}")
+            }
+            _events.tryEmit(dict)
+        }
         bridge.onOverridesChanged = { state -> _previewState.value = state }
     }
 

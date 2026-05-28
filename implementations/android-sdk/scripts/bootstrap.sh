@@ -192,12 +192,12 @@ build_app() {
 
     log_info "Building Android app..."
     cd "$APP_DIR"
-    ./gradlew :app:assembleDebug
+    ./gradlew :compose:assembleDebug
     log_info "Build complete"
 }
 
 install_and_launch() {
-    local apk="$APP_DIR/app/build/outputs/apk/debug/app-debug.apk"
+    local apk="$APP_DIR/compose/build/outputs/apk/debug/compose-debug.apk"
 
     if [[ ! -f "$apk" ]]; then
         log_error "APK not found at $apk. Did the build succeed?"

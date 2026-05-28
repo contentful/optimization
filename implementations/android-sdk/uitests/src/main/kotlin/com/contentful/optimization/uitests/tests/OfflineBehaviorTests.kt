@@ -5,16 +5,22 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import com.contentful.optimization.uitests.support.AppLauncher
+import com.contentful.optimization.uitests.support.PerTestRule
 import com.contentful.optimization.uitests.support.TestHelpers
 import com.contentful.optimization.uitests.support.clearProfileState
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestRule
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class OfflineBehaviorTests {
+    @get:Rule
+    val rule: TestRule = PerTestRule.create()
+
     private lateinit var device: UiDevice
 
     // Time allowed after reconnecting for the SDK online signal to flip and the

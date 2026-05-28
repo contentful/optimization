@@ -74,7 +74,16 @@ TEST_CLASS=""
 TEST_METHOD=""
 
 UITEST_PACKAGE="com.contentful.optimization.uitests.tests"
-APP_PACKAGE="com.contentful.optimization.app"
+# APP_PACKAGE selects which reference implementation to drive. When unset (or set to
+# "all"/"both"), the script runs the suite twice: once against the Compose impl and once
+# against the XML Views impl, mirroring the CI matrix in main-pipeline.yaml. Override via env
+# var to a single package value to drive only one impl. The Gradle module name + APK file
+# name are derived from the package below in `resolve_app_module`.
+APP_PACKAGE="${APP_PACKAGE:-all}"
+APP_MODULE=""
+
+COMPOSE_PACKAGE="com.contentful.optimization.app"
+VIEWS_PACKAGE="com.contentful.optimization.app.views"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -157,6 +166,21 @@ parse_args() {
         usage
         exit 1
     fi
+}
+
+resolve_app_module() {
+    case "$APP_PACKAGE" in
+        "$COMPOSE_PACKAGE")
+            APP_MODULE="compose"
+            ;;
+        "$VIEWS_PACKAGE")
+            APP_MODULE="views"
+            ;;
+        *)
+            echo "[ERROR] Unknown APP_PACKAGE: $APP_PACKAGE. Expected $COMPOSE_PACKAGE or $VIEWS_PACKAGE." >&2
+            exit 1
+            ;;
+    esac
 }
 
 log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
@@ -456,6 +480,16 @@ start_mock_server() {
     fi
 }
 
+force_stop_other_apps() {
+    # Local convenience: a previous run against the OTHER reference impl leaves its process
+    # cached by Android, and its stale focused window confuses UiAutomator window discovery
+    # in this run. CI never hits this because each matrix leg has its own emulator with only
+    # one app installed; this is purely a local-state hygiene step.
+    for pkg in com.contentful.optimization.app com.contentful.optimization.app.views; do
+        adb shell am force-stop "$pkg" 2>/dev/null || true
+    done
+}
+
 setup_adb() {
     log_info "Setting up adb reverse port forwarding..."
     adb reverse tcp:${MOCK_SERVER_PORT} tcp:${MOCK_SERVER_PORT}
@@ -489,14 +523,18 @@ build_apks() {
         return 0
     fi
 
-    log_info "Building app APK and test APK..."
+    # Build both implementation APKs and the test APK in a single Gradle invocation. Even
+    # when only one impl is requested, the cost of an extra :assembleDebug is negligible
+    # against the Gradle daemon startup and configures the cache for the "all" run path
+    # without a separate Gradle invocation per impl.
+    log_info "Building compose, views, and uitests APKs..."
     cd "$APP_DIR"
-    ./gradlew :app:assembleDebug :uitests:assembleDebug
+    ./gradlew :compose:assembleDebug :views:assembleDebug :uitests:assembleDebug
     log_info "Build complete"
 }
 
 install_apks() {
-    local app_apk="$APP_DIR/app/build/outputs/apk/debug/app-debug.apk"
+    local app_apk="$APP_DIR/$APP_MODULE/build/outputs/apk/debug/${APP_MODULE}-debug.apk"
     local test_apk="$APP_DIR/uitests/build/outputs/apk/debug/uitests-debug.apk"
 
     if [[ ! -f "$app_apk" ]]; then
@@ -523,7 +561,8 @@ run_tests() {
 
     mkdir -p "$LOG_DIR"
 
-    local am_args="-w"
+    # Forward the target package to AppLauncher so the in-process tests know which app to drive.
+    local am_args="-w -e APP_PACKAGE ${APP_PACKAGE}"
 
     if [[ -n "$TEST_CLASS" ]]; then
         local full_class="${UITEST_PACKAGE}.${TEST_CLASS}"
@@ -596,12 +635,39 @@ run_tests() {
     fi
 }
 
+run_for_app() {
+    local package="$1"
+    APP_PACKAGE="$package"
+    resolve_app_module
+    # Per-app test log so a follow-on run does not clobber the previous app's log.
+    TEST_LOG="${LOG_DIR}/test-results-${APP_MODULE}.log"
+
+    log_info "--- Running E2E suite against $APP_PACKAGE (module :$APP_MODULE) ---"
+
+    force_stop_other_apps
+    install_apks
+    run_tests
+}
+
 main() {
     parse_args "$@"
+
+    local apps_to_run=()
+    case "$APP_PACKAGE" in
+        all|both|"")
+            apps_to_run=("$COMPOSE_PACKAGE" "$VIEWS_PACKAGE")
+            ;;
+        *)
+            # Validate single-app selection up front.
+            APP_PACKAGE="$APP_PACKAGE" resolve_app_module
+            apps_to_run=("$APP_PACKAGE")
+            ;;
+    esac
 
     log_info "=== Android UI Automator 2 E2E Test Runner ==="
     log_info "Root directory: $ROOT_DIR"
     log_info "App directory: $APP_DIR"
+    log_info "Target apps: ${apps_to_run[*]}"
     log_info "CI mode: $CI"
     [[ -n "$TEST_CLASS" ]] && log_info "Test class: $TEST_CLASS"
     [[ -n "$TEST_METHOD" ]] && log_info "Test method: $TEST_METHOD"
@@ -611,8 +677,10 @@ main() {
     setup_adb
     build_bridge
     build_apks
-    install_apks
-    run_tests
+
+    for package in "${apps_to_run[@]}"; do
+        run_for_app "$package"
+    done
 
     log_info "=== All tests completed successfully ==="
 }

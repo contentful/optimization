@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:fitsSystemWindows="true">
+
+    <!-- Action row mirrors MainScreen.kt: Identify (or Reset) | Navigation Test | Live Updates Test -->
+    <LinearLayout
+        android:id="@+id/action_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp">
+
+        <Button
+            android:id="@+id/identify_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Identify" />
+
+        <Button
+            android:id="@+id/reset_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Reset"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/navigation_test_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Navigation Test" />
+
+        <Button
+            android:id="@+id/live_updates_test_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Live Updates Test" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/loading_indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:text="Loading..." />
+
+    <!-- Scrollable entry list + analytics-events footer, mirroring MainScreen's verticalScroll Column. -->
+    <ScrollView
+        android:id="@+id/main_scroll_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:id="@+id/entries_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+</LinearLayout>

@@ -69,8 +69,8 @@ pnpm serve:mocks
 # Terminal 2: Build and install
 cd implementations/android-sdk
 adb reverse tcp:8000 tcp:8000
-./gradlew :app:assembleDebug
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+./gradlew :compose:assembleDebug
+adb install -r compose/build/outputs/apk/debug/compose-debug.apk
 adb shell am start -n com.contentful.optimization.app/.MainActivity
 ```
 

@@ -8,15 +8,21 @@ import androidx.test.uiautomator.UiScrollable
 import androidx.test.uiautomator.UiSelector
 import androidx.test.uiautomator.Until
 import com.contentful.optimization.uitests.support.AppLauncher
+import com.contentful.optimization.uitests.support.PerTestRule
 import com.contentful.optimization.uitests.support.TestHelpers
 import com.contentful.optimization.uitests.support.clearProfileState
 import org.junit.Assert
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestRule
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class PreviewPanelOverridesTests {
+    @get:Rule
+    val rule: TestRule = PerTestRule.create()
+
     private lateinit var device: UiDevice
 
     companion object {
@@ -352,8 +358,27 @@ class PreviewPanelOverridesTests {
 
         scrollPanelToElement("reset-all-overrides")
         TestHelpers.waitAndTap(device, By.desc("reset-all-overrides"))
-        // Confirm the native AlertDialog.
-        TestHelpers.waitAndTap(device, By.text("Reset"))
+        // Confirm the native AlertDialog. Use the dialog confirm button's
+        // testTag rather than By.text("Reset") because the panel beneath the
+        // dialog also has per-row "Reset" labels (reset-variant-* /
+        // reset-audience-*) and a text-based selector would non-
+        // deterministically match one of those first.
+        TestHelpers.waitAndTap(device, By.desc("reset-all-confirm"))
+        // Wait until the dialog body text is gone before pressing back to
+        // close the panel. Without this gate, closePanel's pressBack can race
+        // the dialog's dismissal: the back can be consumed by the still-
+        // attached dialog window instead of the bottom sheet, leaving the
+        // panel open when assertEntryVisible runs and rendering the variant
+        // entry unreachable (the modal sheet excludes the activity's entries
+        // from the accessibility tree). The dialog title and the panel footer
+        // share the "Reset to Actual State" text, so we key off the dialog
+        // body copy — which only exists while the dialog is open.
+        val dialogBodyPrefix = "This will clear all manual overrides"
+        val dialogGoneDeadline = System.currentTimeMillis() + TestHelpers.ELEMENT_TIMEOUT
+        while (System.currentTimeMillis() < dialogGoneDeadline) {
+            if (device.findObject(By.textStartsWith(dialogBodyPrefix)) == null) break
+            Thread.sleep(100)
+        }
 
         closePanel()
 
