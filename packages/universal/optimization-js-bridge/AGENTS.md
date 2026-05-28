@@ -12,14 +12,21 @@ native SDKs: the iOS Swift package (JavaScriptCore) and the Android Kotlin SDK (
 ## Key paths
 
 - `src/index.ts` — the shared bridge adapter over `@contentful/optimization-core`
-- `rslib.config.ts` — builds one UMD bundle per native platform
+- `src/polyfills/` — the eight JS polyfill scripts (`console`, `timers`, `fetch`, `crypto`, `url`,
+  `abort-controller`, `promise-utilities`, `text-encoding`) prepended to each UMD bundle at build
+  time. Single source of truth for both platforms; do not fork per platform.
+- `rslib.config.ts` — builds one UMD bundle per native platform and prepends polyfill source
 - `package.json` — `postbuild` copies each bundle into its native SDK
 
 ## Local rules
 
 - Keep the bridge engine-agnostic: JSON strings, callback pairs, and no browser-only or Node-only
-  assumptions. Both JavaScriptCore and QuickJS host this bundle; runtime gaps are filled by each
-  native polyfill layer, not here.
+  assumptions. Both JavaScriptCore and QuickJS host this bundle; runtime gaps are filled by the JS
+  polyfills under `src/polyfills/` (prepended into the bundle) plus the native bindings each SDK
+  registers (`__nativeLog`, `__nativeFetch`, `__nativeSetTimeout`, etc.) before the bundle runs.
+- Polyfills must not diverge per platform. If a future feature genuinely needs platform-specific
+  behavior, do it via `__OPTIMIZATION_PACKAGE_NAME__`-style defines in the bridge entry, not by
+  re-forking polyfill files.
 - The build emits two UMD bundles from the one source — `optimization-ios-bridge.umd.js` and
   `optimization-android-bridge.umd.js`. They differ only in the `__OPTIMIZATION_PACKAGE_NAME__`
   define, which Core stamps into the analytics `library.name`. Keep both platform names in

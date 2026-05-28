@@ -6,15 +6,17 @@ before this file.
 ## Scope
 
 This directory is the Android library module (AAR) for the Contentful Optimization SDK. It contains
-the Kotlin native runtime, QuickJS bridge integration (via `io.github.dokar3:quickjs-kt`), polyfill
-implementations, and public API surface.
+the Kotlin native runtime, QuickJS bridge integration (via `io.github.dokar3:quickjs-kt`), native
+polyfill bindings (URLSession/OkHttp/timers/UUID), and public API surface.
 
 ## Key paths
 
 - `src/main/kotlin/com/contentful/optimization/bridge/` — QuickJS context manager and callback
   manager
 - `src/main/kotlin/com/contentful/optimization/core/` — public API, data models, config
-- `src/main/kotlin/com/contentful/optimization/polyfills/` — native polyfill implementations
+- `src/main/kotlin/com/contentful/optimization/polyfills/` — native bindings exposed to JS
+  (`__nativeFetch`, `__nativeSetTimeout`, etc.); JS polyfill source lives in
+  `packages/universal/optimization-js-bridge/src/polyfills/` and is prepended into the UMD bundle
 - `src/main/kotlin/com/contentful/optimization/storage/` — SharedPreferences persistence
 - `src/main/kotlin/com/contentful/optimization/handlers/` — lifecycle and network handlers
 - `src/main/kotlin/com/contentful/optimization/tracking/` — view tracking state machine and metadata
@@ -22,8 +24,8 @@ implementations, and public API surface.
   (OptimizationRoot, OptimizedEntry, LazyColumn tracking, screen/click/view tracking)
 - `src/main/kotlin/com/contentful/optimization/preview/` — preview panel UI (theme, components,
   overlay, ViewModel, Contentful client, Activity)
-- `src/main/assets/` — JS bridge bundle and polyfill scripts (copied from the
-  `@contentful/optimization-js-bridge` build)
+- `src/main/assets/` — JS bridge UMD bundle (copied from the `@contentful/optimization-js-bridge`
+  build; polyfills are prepended into the bundle itself)
 
 ## Local rules
 
@@ -31,8 +33,8 @@ implementations, and public API surface.
   outside the manager.
 - All JS engine calls must happen on the dedicated `quickJsDispatcher` thread. The manager enforces
   this.
-- Do not hand-edit files in `src/main/assets/`. They are copied from the bridge build and iOS
-  polyfill sources.
+- Do not hand-edit files in `src/main/assets/`. The UMD bundle is copied from the bridge build,
+  which prepends polyfill sources from `packages/universal/optimization-js-bridge/src/polyfills/`.
 - Keep bridge call signatures and JSON payload shapes aligned with
   `packages/universal/optimization-js-bridge/src/index.ts`.
 - Keep Compose UI components aligned with iOS SwiftUI views when changing shared tracking or preview
