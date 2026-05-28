@@ -1,25 +1,60 @@
 package com.contentful.optimization.shared
 
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.concurrent.TimeUnit
 
 object ContentfulFetcher {
 
-    private val httpClient = OkHttpClient()
+    private const val TAG = "ContentfulFetcher"
+    private const val MAX_ATTEMPTS = 3
+    private const val RETRY_BACKOFF_MS = 250L
+
+    // OkHttp's defaults (10s) are too aggressive for localhost via `adb reverse` on the
+    // x86_64 CI emulator, where the first fetch after activity launch consistently
+    // returned null silently — leaving 7 of 8 AppConfig entries unrendered and breaking
+    // testTracksEntryViewEventsForVisibleEntries, which asserts on a specific entry's
+    // component-stats. Generous timeouts plus a small retry loop keep this fetch path
+    // deterministic across both arm64 (local) and x86_64 (CI) host environments.
+    private val httpClient = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .callTimeout(45, TimeUnit.SECONDS)
+        .build()
 
     suspend fun fetchEntries(ids: List<String>): List<Map<String, Any>> {
         val entries = mutableListOf<Map<String, Any>>()
         for (id in ids) {
-            fetchEntry(id)?.let { entries.add(it) }
+            val entry = fetchEntry(id)
+            if (entry != null) {
+                entries.add(entry)
+            } else {
+                Log.w(TAG, "fetchEntries: dropped entry id=$id (all attempts returned null)")
+            }
         }
+        Log.i(TAG, "fetchEntries: requested=${ids.size}, returned=${entries.size}")
         return entries
     }
 
     private suspend fun fetchEntry(id: String): Map<String, Any>? {
+        repeat(MAX_ATTEMPTS) { attempt ->
+            val result = fetchEntryOnce(id, attempt)
+            if (result != null) return result
+            if (attempt < MAX_ATTEMPTS - 1) {
+                delay(RETRY_BACKOFF_MS * (attempt + 1))
+            }
+        }
+        return null
+    }
+
+    private suspend fun fetchEntryOnce(id: String, attempt: Int): Map<String, Any>? {
         val url = "${AppConfig.contentfulBaseUrl}spaces/${AppConfig.contentfulSpaceId}" +
             "/environments/${AppConfig.environment}/entries?sys.id=$id&include=10"
 
@@ -27,16 +62,25 @@ object ContentfulFetcher {
             try {
                 val request = Request.Builder().url(url).build()
                 val response = httpClient.newCall(request).execute()
-                val body = response.body?.string() ?: return@withContext null
+                val code = response.code
+                val body = response.body?.string()
+                if (body == null) {
+                    Log.w(TAG, "fetchEntry[$id] attempt=$attempt: empty body (status=$code)")
+                    return@withContext null
+                }
 
                 val json = JSONObject(body)
-                val items = json.optJSONArray("items") ?: return@withContext null
-                if (items.length() == 0) return@withContext null
+                val items = json.optJSONArray("items")
+                if (items == null || items.length() == 0) {
+                    Log.w(TAG, "fetchEntry[$id] attempt=$attempt: no items (status=$code, body length=${body.length})")
+                    return@withContext null
+                }
 
                 val entry = jsonObjectToMap(items.getJSONObject(0))
                 val includes = json.optJSONObject("includes")?.let { jsonObjectToMap(it) }
                 resolveLinks(entry, includes)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w(TAG, "fetchEntry[$id] attempt=$attempt: ${e.javaClass.simpleName}: ${e.message}")
                 null
             }
         }
