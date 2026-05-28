@@ -51,7 +51,7 @@ inventory instead.
 - [Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) -
   guidance for forwarding Contentful optimization context to analytics, tag-management,
   customer-data, and product-analytics systems
-  
+
 ## Contributor guides
 
 - [Contributing to the iOS SDK](./contributing-to-the-ios-sdk.md) - fresh-clone bootstrap through a
@@ -60,3 +60,9 @@ inventory instead.
 - [Contributing to the Android SDK](./contributing-to-the-android-sdk.md) - fresh-clone bootstrap
   through a debuggable change in Android Studio, including how the composite-build SDK module and
   the `buildJsBridge` Gradle task keep both Kotlin and TypeScript layers in sync on every build
+
+## Supplemental guides
+
+- [Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) -
+  guidance for forwarding Contentful optimization context to analytics, tag-management,
+  customer-data, and product-analytics systems
