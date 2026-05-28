@@ -1,4 +1,6 @@
 import { RsdoctorRspackPlugin } from '@rsdoctor/rspack-plugin'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
@@ -83,3 +85,20 @@ export const ensureUmdDefaultExport = (config: { output?: unknown }): void => {
   // Expose the default export directly on the UMD global.
   library.export = 'default'
 }
+
+/**
+ * Reads polyfill `.js` files from `dir` in the order specified and concatenates
+ * their contents into a single string suitable for use as an
+ * `rspack.BannerPlugin` `banner` value. The text is meant to be emitted before
+ * the UMD IIFE so top-level `var` / `function` declarations bind on the global
+ * object when evaluated by JavaScriptCore or QuickJS. Files are joined with
+ * `\n;\n` to defend against ASI hazards between adjacent scripts.
+ *
+ * @param dir - Absolute path to the directory holding the polyfill `.js` files.
+ * @param fileNames - Polyfill basenames (without `.js`) in evaluation order.
+ * @returns Concatenated polyfill source.
+ *
+ * @public
+ */
+export const concatPolyfills = (dir: string, fileNames: readonly string[]): string =>
+  fileNames.map((name) => readFileSync(path.join(dir, `${name}.js`), 'utf8')).join('\n;\n')
