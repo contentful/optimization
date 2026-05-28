@@ -219,6 +219,8 @@ class OptimizedEntryView @JvmOverloads constructor(
         if (!resolveTrackViews()) return
         val entry = entry ?: return
         val newPersonalization = result.personalization
+        @Suppress("UNCHECKED_CAST")
+        val entryId = (entry["sys"] as? Map<String, Any>)?.get("id") as? String ?: ""
 
         // If the controller is already wired up for the same (entry, personalization) tuple,
         // keep it — rebuilding would reset the dwell timer mid-cycle.
@@ -226,8 +228,15 @@ class OptimizedEntryView @JvmOverloads constructor(
             controllerEntry === entry &&
             controllerPersonalization == newPersonalization
         ) {
+            android.util.Log.d("ViewTracking", "attachController KEEP componentId=$entryId")
             updateVisibility()
             return
+        }
+
+        if (controller != null) {
+            android.util.Log.d("ViewTracking", "attachController REBUILD componentId=$entryId (was different tuple)")
+        } else {
+            android.util.Log.d("ViewTracking", "attachController CREATE componentId=$entryId")
         }
 
         controller?.let {

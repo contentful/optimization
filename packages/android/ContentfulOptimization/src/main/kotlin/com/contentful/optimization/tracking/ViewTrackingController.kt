@@ -1,5 +1,6 @@
 package com.contentful.optimization.tracking
 
+import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -64,8 +65,18 @@ class ViewTrackingController(
         val nowVisible = visibilityRatio >= threshold
 
         if (nowVisible && !isVisible) {
+            Log.d(
+                "ViewTracking",
+                "componentId=${metadata.componentId} BECAME_VISIBLE " +
+                    "ratio=${"%.2f".format(visibilityRatio)} h=$elementHeight vh=$visibleHeight",
+            )
             onBecameVisible()
         } else if (!nowVisible && isVisible) {
+            Log.d(
+                "ViewTracking",
+                "componentId=${metadata.componentId} BECAME_INVISIBLE " +
+                    "ratio=${"%.2f".format(visibilityRatio)} h=$elementHeight vh=$visibleHeight attempts=$attempts",
+            )
             onBecameInvisible()
         }
     }
@@ -170,10 +181,18 @@ class ViewTrackingController(
             viewDurationMs = accumulatedMs.toInt(),
             sticky = metadata.sticky,
         )
+        Log.i(
+            "ViewTracking",
+            "EMIT componentId=${metadata.componentId} duration=${accumulatedMs.toInt()}ms attempt=$attempts",
+        )
         scope.launch {
             try {
                 client.trackView(payload)
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                Log.w(
+                    "ViewTracking",
+                    "trackView failed componentId=${metadata.componentId}: ${e.javaClass.simpleName}: ${e.message}",
+                )
             }
         }
     }
