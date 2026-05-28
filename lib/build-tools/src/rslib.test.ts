@@ -1,5 +1,8 @@
 import { RsdoctorRspackPlugin } from '@rsdoctor/rspack-plugin'
-import { ensureUmdDefaultExport, maybeEnableRsDoctor } from './rslib'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { concatPolyfills, ensureUmdDefaultExport, maybeEnableRsDoctor } from './rslib'
 
 describe('maybeEnableRsDoctor', () => {
   const originalRsDoctor = process.env.RSDOCTOR
@@ -101,5 +104,21 @@ describe('ensureUmdDefaultExport', () => {
     expect(() => {
       ensureUmdDefaultExport({ output: { library: null } })
     }).not.toThrow()
+  })
+})
+
+describe('concatPolyfills', () => {
+  it('reads files in the requested order and joins them with a newline-semicolon separator', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'build-tools-concat-polyfills-'))
+
+    try {
+      writeFileSync(join(dir, 'a.js'), 'var a = 1', 'utf8')
+      writeFileSync(join(dir, 'b.js'), 'var b = 2', 'utf8')
+
+      expect(concatPolyfills(dir, ['a', 'b'])).toBe('var a = 1\n;\nvar b = 2')
+      expect(concatPolyfills(dir, ['b', 'a'])).toBe('var b = 2\n;\nvar a = 1')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })

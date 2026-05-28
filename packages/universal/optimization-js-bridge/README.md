@@ -30,6 +30,12 @@ the `postbuild` step copies each into its native SDK:
 The two bundles are identical apart from the `library.name` analytics identifier, kept
 platform-specific so iOS and Android events remain distinguishable.
 
+The JS polyfills required by JavaScriptCore and QuickJS — `console`, `timers`, `fetch`, `crypto`,
+`url`, `abort-controller`, `promise-utilities`, `text-encoding` — live in `src/polyfills/` and are
+prepended verbatim to each emitted UMD bundle at build time. This is the single source of truth for
+both platforms; each native SDK only registers the `__native*` host bindings (URLSession/OkHttp,
+DispatchQueue/Handler, etc.) before evaluating the bundle.
+
 ```sh
 pnpm --filter @contentful/optimization-js-bridge build
 ```

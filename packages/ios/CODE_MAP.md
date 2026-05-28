@@ -43,11 +43,10 @@ graph TB
     end
 
     subgraph "JavaScriptCore Bridge"
-        JSM["JSContextManager\n<i>Owns JSContext lifecycle: polyfills,\nUMD bundle, sync/async calls</i>"]
+        JSM["JSContextManager\n<i>Owns JSContext lifecycle: native bindings,\nUMD bundle, sync/async calls</i>"]
         BCM["BridgeCallbackManager\n<i>Generates unique callback pairs\nfor async JS ↔ Swift roundtrips</i>"]
         NP["NativePolyfills\n<i>Registers Swift-backed natives:\nfetch, timers, crypto, logging</i>"]
-        PSL["PolyfillScriptLoader\n<i>Loads 8 JS polyfill scripts\nin correct order</i>"]
-        UMD["optimization-ios-bridge.umd.js\n<i>Compiled TS bridge bundle —\nexposes globalThis.__bridge</i>"]
+        UMD["optimization-ios-bridge.umd.js\n<i>Compiled TS bridge bundle with\nprepended polyfills — exposes globalThis.__bridge</i>"]
     end
 
     subgraph "TypeScript Bridge (packages/universal/optimization-js-bridge/)"
@@ -83,7 +82,6 @@ graph TB
     %% Core → Bridge
     OC -->|"owns & delegates all\nJS calls to"| JSM
     JSM -->|"registers callbacks via"| BCM
-    JSM -->|"loads polyfills via"| PSL
     JSM -->|"registers natives via"| NP
     JSM -->|"loads & calls"| UMD
 
@@ -153,7 +151,7 @@ stateDiagram-v2
 | **OptimizationConfig**                   | Serialization, defaults, nil URL omission                                                                                                                                                                                | 3 tests  |
 | **OptimizationState**                    | Empty state, equality (incl. multi-key dictionaries), inequality                                                                                                                                                         | 4 tests  |
 | **OptimizationError**                    | All error case descriptions                                                                                                                                                                                              | 1 test   |
-| **PolyfillScriptLoader**                 | Loads all 8 scripts in order                                                                                                                                                                                             | 1 test   |
+| **Polyfill availability**                | console/setTimeout/clearTimeout/fetch/crypto/URL/AbortController/TextEncoder present after init                                                                                                                          | 1 test   |
 | **BridgeCallbackManager**                | Unique ID generation, auto-cleanup after invocation                                                                                                                                                                      | 2 tests  |
 | **JSContextManager**                     | Initialize, destroy, getProfile, getState                                                                                                                                                                                | 4 tests  |
 | **OptimizationClient**                   | Initial state, initialize, destroy, pre-init no-ops, not-initialized throws for all async methods (identify, page, screen, flush, trackView, trackClick), consent/reset/setOnline passthrough, personalizeEntry baseline | 14 tests |

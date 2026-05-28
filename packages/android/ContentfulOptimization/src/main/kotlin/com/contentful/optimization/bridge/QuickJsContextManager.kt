@@ -8,7 +8,6 @@ import com.contentful.optimization.core.OptimizationConfig
 import com.contentful.optimization.core.OptimizationError
 import com.contentful.optimization.core.PreviewState
 import com.contentful.optimization.polyfills.NativeImpl
-import com.contentful.optimization.polyfills.PolyfillScriptLoader
 import com.contentful.optimization.polyfills.TimerStore
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -79,11 +78,6 @@ class QuickJsContextManager {
                 }
             }
             qjs.evaluate<Any?>(NativeImpl.BOOTSTRAP_SCRIPT, "native-bootstrap.js")
-
-            val polyfillScripts = PolyfillScriptLoader.loadAll(assets)
-            for (script in polyfillScripts) {
-                qjs.evaluate<Any?>(script, "polyfill.js")
-            }
 
             val bundleSource = loadBundleSource(assets)
             qjs.evaluate<Any?>(bundleSource, "optimization-android-bridge.umd.js")

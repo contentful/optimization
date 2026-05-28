@@ -12,4 +12,4 @@ export {
   restorePublishReadme,
   rewriteReadmeForPublish,
 } from './publishReadme'
-export { ensureUmdDefaultExport, maybeEnableRsDoctor } from './rslib'
+export { concatPolyfills, ensureUmdDefaultExport, maybeEnableRsDoctor } from './rslib'
