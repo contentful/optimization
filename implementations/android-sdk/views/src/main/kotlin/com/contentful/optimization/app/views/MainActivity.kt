@@ -20,6 +20,7 @@ import com.contentful.optimization.shared.AppConfig
 import com.contentful.optimization.shared.ContentfulFetcher
 import com.contentful.optimization.shared.EventStore
 import com.contentful.optimization.shared.MockPreviewContentfulClient
+import com.contentful.optimization.shared.RichText
 import com.contentful.optimization.views.OptimizationManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -158,7 +159,27 @@ class MainActivity : AppCompatActivity() {
                 entriesLoaded = true
                 client.subscribeToFlag("boolean")
                 val entries = ContentfulFetcher.fetchEntries(AppConfig.entryIds)
-                renderEntries(entries)
+                // Pre-resolve each entry's rich text on the (suspending) coroutine
+                // path BEFORE handing the entry to the synchronous view binder. This
+                // mirrors the iOS pattern where `RichText.resolveText` is a synchronous
+                // function (no `await`), so UILabel.text is set at construction time
+                // and the view's measured height is stable from the first layout pass.
+                // The Views path's previous behavior — async resolution inside an
+                // `onViewAttachedToWindow` listener — caused the merge-tag entry's
+                // TextView to grow from a "No content" placeholder to its resolved text
+                // height (164 → 207 px observed) up to ~1 s after `OptimizedEntryView`
+                // had already fired `ViewTrackingController.onBecameVisible` at the
+                // smaller height, and that height growth combined with the test's
+                // scroll-to-stats swipe dropped the visible ratio below the 0.8
+                // threshold, hitting `onBecameInvisible` while `attempts == 0` and
+                // resetting the 2s dwell cycle — so the entry's `trackView` event
+                // never fired and `component-stats-1MwiFl4z…` never appeared.
+                val resolvedBaselineTexts = entries.map { entry ->
+                    @Suppress("UNCHECKED_CAST")
+                    val fields = entry["fields"] as? Map<String, Any>
+                    RichText.resolveText(fields?.get("text"), client)
+                }
+                renderEntries(entries, resolvedBaselineTexts)
             }
         }
     }
@@ -197,7 +218,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun renderEntries(entries: List<Map<String, Any>>) {
+    private fun renderEntries(
+        entries: List<Map<String, Any>>,
+        resolvedBaselineTexts: List<String> = emptyList(),
+    ) {
         if (entries.isEmpty()) {
             loadingIndicator.visibility = View.VISIBLE
             return
@@ -205,11 +229,12 @@ class MainActivity : AppCompatActivity() {
         loadingIndicator.visibility = View.GONE
         entriesContainer.removeAllViews()
 
-        entries.forEach { entry ->
+        entries.forEachIndexed { index, entry ->
+            val resolvedText = resolvedBaselineTexts.getOrNull(index)
             val child = if (isNestedContent(entry)) {
                 NestedContentEntryViewBinder.create(this, entry)
             } else {
-                ContentEntryViewBinder.create(this, entry)
+                ContentEntryViewBinder.create(this, entry, resolvedText)
             }
             entriesContainer.addView(child)
         }

@@ -22,7 +22,20 @@ import kotlinx.coroutines.launch
  */
 object ContentEntryViewBinder {
 
-    fun create(context: Context, entry: Map<String, Any>): View {
+    /**
+     * @param resolvedBaselineText Pre-resolved rich text for the BASE entry, computed on the
+     * caller's suspending path. When supplied and the SDK's content renderer is invoked with the
+     * original (non-personalized) resolved entry, this text is used as the initial TextView value
+     * so the column's measured height is stable from the first layout pass — mirroring iOS's
+     * synchronous `RichText.resolveText`. When `null` (or when a personalized variant with a
+     * different sys.id is handed in), [renderEntryColumn] falls back to the previous async
+     * `onViewAttachedToWindow` resolution path.
+     */
+    fun create(
+        context: Context,
+        entry: Map<String, Any>,
+        resolvedBaselineText: String? = null,
+    ): View {
         val entryId = entryId(entry)
 
         val view = OptimizedEntryView(context).apply {
@@ -30,7 +43,12 @@ object ContentEntryViewBinder {
             trackTaps = true
         }
         view.setContentRenderer { resolvedEntry ->
-            renderEntryColumn(context, resolvedEntry, entryId)
+            val text = if (resolvedBaselineText != null && entryId(resolvedEntry) == entryId) {
+                resolvedBaselineText
+            } else {
+                null
+            }
+            renderEntryColumn(context, resolvedEntry, entryId, text)
         }
         view.setEntry(entry)
         return view
@@ -40,6 +58,7 @@ object ContentEntryViewBinder {
         context: Context,
         resolvedEntry: Map<String, Any>,
         entryId: String,
+        preResolvedText: String? = null,
     ): View {
         @Suppress("UNCHECKED_CAST")
         val fields = resolvedEntry["fields"] as? Map<String, Any>
@@ -50,8 +69,9 @@ object ContentEntryViewBinder {
         // same vertical budget as the Compose impl.
         val padding = context.dp(12)
 
+        val initialText = preResolvedText ?: "No content"
         val textView = TextView(context).apply {
-            text = "No content"
+            text = initialText
             setLineSpacing(0f, 1.0f)
         }
         val idLabel = TextView(context).apply {
@@ -65,30 +85,33 @@ object ContentEntryViewBinder {
             addView(textView)
             addView(idLabel)
             setTestTag("entry-text-$entryId")
-            contentDescription = "No content [Entry: $entryId]"
+            contentDescription = "$initialText [Entry: $entryId]"
         }
 
-        // Resolve rich text after the view is attached so we can hook into its lifecycle. The
-        // suspending RichText.resolveText needs the client to be initialized; if the view is
-        // detached before the resolution finishes we drop the result silently.
-        column.addOnAttachStateChangeListener(
-            object : View.OnAttachStateChangeListener {
-                override fun onViewAttachedToWindow(v: View) {
-                    val owner = v.findViewTreeLifecycleOwner() ?: return
-                    owner.lifecycleScope.launch {
-                        val resolved = RichText.resolveText(
-                            fields?.get("text"),
-                            OptimizationManager.client,
-                        )
-                        textView.text = resolved
-                        column.contentDescription = "$resolved [Entry: $entryId]"
+        // Only fall back to async resolution when the caller did NOT pre-resolve the text. With
+        // pre-resolved text the TextView is rendered at its final size from the first layout
+        // pass, so OptimizedEntryView's `ViewTrackingController` sees a stable height and its 2s
+        // dwell cycle is not reset by a layout-driven visibility transition.
+        if (preResolvedText == null) {
+            column.addOnAttachStateChangeListener(
+                object : View.OnAttachStateChangeListener {
+                    override fun onViewAttachedToWindow(v: View) {
+                        val owner = v.findViewTreeLifecycleOwner() ?: return
+                        owner.lifecycleScope.launch {
+                            val resolved = RichText.resolveText(
+                                fields?.get("text"),
+                                OptimizationManager.client,
+                            )
+                            textView.text = resolved
+                            column.contentDescription = "$resolved [Entry: $entryId]"
+                        }
                     }
-                }
 
-                override fun onViewDetachedFromWindow(v: View) {
-                }
-            },
-        )
+                    override fun onViewDetachedFromWindow(v: View) {
+                    }
+                },
+            )
+        }
 
         return column
     }
