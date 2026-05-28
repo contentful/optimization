@@ -25,6 +25,18 @@ This directory owns native Android package work: the Kotlin Android library modu
   in `packages/universal/core-sdk`.
 - Keep Android preview-panel behavior aligned with iOS and React Native preview-panel behavior when
   changing shared preview contracts.
+- The SDK ships **two** public UI adapter packages over the same `core` API:
+  - `com.contentful.optimization.compose` — Jetpack Compose adapter (`OptimizationRoot`,
+    `OptimizedEntry`, `ScreenTrackingEffect`, `OptimizationLazyColumn`, view/tap-tracking
+    Modifiers).
+  - `com.contentful.optimization.views` — XML Views adapter (`OptimizationManager`,
+    `OptimizedEntryView`, `ScreenTracker`, `TrackingRecyclerView`). Static-singleton client lookup
+    extends the previously-documented `PreviewPanelActivity.addFloatingButton` pattern; consumers
+    call `OptimizationManager.initialize` from `Application.onCreate` and read
+    `OptimizationManager.client` from any `Activity`/`Fragment`.
+  - Behavior parity between the two adapters is validated end-to-end by the Android matrix CI leg
+    (`e2e-android-sdk` runs the same UI Automator suite against both reference impls). A change in
+    one adapter that drifts from the other will fail one matrix leg.
 
 ## Cross-boundary validation
 

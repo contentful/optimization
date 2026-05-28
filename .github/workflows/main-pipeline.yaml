@@ -353,6 +353,75 @@ jobs:
       - run: pnpm install --prefer-offline --frozen-lockfile
       - run: pnpm --filter ${{ matrix.package }} test:unit
 
+  test-android-sdk-unit:
+    # JVM unit tests for the Android SDK's pure-Kotlin code paths, run via Gradle without an
+    # emulator. Currently covers `ViewTrackingController`'s dwell state machine, which is the
+    # timing-sensitive piece that the AndroidJUnitRunner E2E suite was previously asserting
+    # through three layers of noise (real swipe → real layout → JS bridge dispatch). Gated on
+    # the same paths-filter as the E2E job so it only runs when Android SDK or test-app
+    # sources change.
+    name: 🤖 Test Android SDK (JVM unit)
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
+    timeout-minutes: 15
+    needs: [setup, changes]
+    if: needs.changes.outputs.e2e_android == 'true'
+    env:
+      GRADLE_OPTS: >-
+        -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx4g
+        -Dkotlin.daemon.jvm.options=-Xmx2g
+    steps:
+      - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+
+      - name: Set Android SDK environment variables
+        run: |
+          echo "ANDROID_SDK_ROOT=$HOME/.android/sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$HOME/.android/sdk" >> "$GITHUB_ENV"
+
+      - name: Prepare cache directories
+        run: |
+          mkdir -p "$HOME/.android/sdk" "$HOME/.android/cache"
+
+      - name: Set up caches (Namespace)
+        uses: namespacelabs/nscloud-cache-action@15799a6b54e5765f85b2aac25b3f0df43ed571c0 # v1.4.3
+        with:
+          cache: |
+            pnpm
+            gradle
+          path: |
+            ~/.android/sdk
+            ~/.android/cache
+
+      - name: Setup Java
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+
+      - name: Install JS dependencies
+        run: pnpm install --prefer-offline --frozen-lockfile
+
+      - name: Run Android SDK JVM unit tests
+        working-directory: implementations/android-sdk
+        run: ./gradlew :ContentfulOptimization:testDebugUnitTest
+
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-results-android-sdk-unit
+          path: packages/android/ContentfulOptimization/build/reports/tests/
+          retention-days: 7
+
   e2e-node-sdk:
     name: 🖥️ E2E Node SSR Only
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
@@ -670,10 +739,10 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  e2e-android-sdk:
-    name: 🤖 E2E Android Native
+  e2e-android-sdk-build:
+    name: 🤖 Build Android APKs
     runs-on: namespace-profile-linux-16-vcpu-32-gb-ram-optimal
-    timeout-minutes: 45
+    timeout-minutes: 30
     needs: [setup, changes]
     if: needs.changes.outputs.e2e_android == 'true'
     env:
@@ -697,8 +766,7 @@ jobs:
           echo "ANDROID_HOME=$HOME/.android/sdk" >> "$GITHUB_ENV"
 
       - name: Prepare cache directories
-        run: |
-          mkdir -p "$HOME/.android/sdk" "$HOME/.android/avd" "$HOME/.android/cache"
+        run: mkdir -p "$HOME/.android/sdk" "$HOME/.android/cache"
 
       - name: Set up caches (Namespace)
         uses: namespacelabs/nscloud-cache-action@15799a6b54e5765f85b2aac25b3f0df43ed571c0 # v1.4.3
@@ -706,6 +774,88 @@ jobs:
           cache: |
             pnpm
             gradle
+          path: |
+            ~/.android/sdk
+            ~/.android/cache
+
+      - name: Setup Java
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+
+      - name: Install JS dependencies
+        run: pnpm install --prefer-offline --frozen-lockfile
+
+      - name: Build the JS bridge bundles
+        run: pnpm --filter @contentful/optimization-js-bridge build
+
+      - name: Build Compose, Views, and UI test APKs
+        working-directory: implementations/android-sdk
+        run: ./gradlew :compose:assembleDebug :views:assembleDebug :uitests:assembleDebug
+
+      - name: Collect APK artifacts at stable paths
+        run: |
+          # Use a workspace-relative directory because actions/upload-artifact@v7 keys the
+          # in-artifact paths off the least-common-ancestor of the inputs — an absolute
+          # /tmp path produces /tmp/... inside the zip, which then unpacks under the download
+          # target instead of into it.
+          mkdir -p android-apks
+          cp implementations/android-sdk/compose/build/outputs/apk/debug/compose-debug.apk android-apks/
+          cp implementations/android-sdk/views/build/outputs/apk/debug/views-debug.apk android-apks/
+          cp implementations/android-sdk/uitests/build/outputs/apk/debug/uitests-debug.apk android-apks/
+          ls -la android-apks/
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: android-apks
+          path: android-apks/
+          if-no-files-found: error
+          retention-days: 1
+
+  e2e-android-sdk:
+    name: 🤖 E2E Android (${{ matrix.app }})
+    runs-on: namespace-profile-linux-16-vcpu-32-gb-ram-optimal
+    timeout-minutes: 45
+    needs: [setup, changes, e2e-android-sdk-build]
+    if: needs.changes.outputs.e2e_android == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: compose
+            package: com.contentful.optimization.app
+          - app: views
+            package: com.contentful.optimization.app.views
+    env:
+      CI: 'true'
+      APP_PACKAGE: ${{ matrix.package }}
+      APP_APK: ${{ matrix.app }}-debug.apk
+    steps:
+      - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+
+      - name: Set Android SDK environment variables
+        run: |
+          echo "ANDROID_SDK_ROOT=$HOME/.android/sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$HOME/.android/sdk" >> "$GITHUB_ENV"
+
+      - name: Prepare cache directories
+        run: mkdir -p "$HOME/.android/sdk" "$HOME/.android/avd" "$HOME/.android/cache"
+
+      - name: Set up caches (Namespace)
+        uses: namespacelabs/nscloud-cache-action@15799a6b54e5765f85b2aac25b3f0df43ed571c0 # v1.4.3
+        with:
+          cache: pnpm
           path: |
             ~/.android/sdk
             ~/.android/avd
@@ -742,12 +892,10 @@ jobs:
       - name: Install JS dependencies
         run: pnpm install --prefer-offline --frozen-lockfile
 
-      - name: Build the JS bridge bundles
-        run: pnpm --filter @contentful/optimization-js-bridge build
-
-      - name: Build app and test APKs
-        working-directory: implementations/android-sdk
-        run: ./gradlew :app:assembleDebug :uitests:assembleDebug
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: android-apks
+          path: android-apks
 
       - name: Start Mock Server
         run: |
@@ -787,28 +935,53 @@ jobs:
             # `set -o pipefail` would error out with "Illegal option -o pipefail" and terminate
             # the script before any test ran. The grep-on-test-output checks below already
             # detect instrumentation failures regardless of pipe-status propagation.
-            echo "Disabling animations..."
-            adb shell settings put global window_animation_scale 0
-            adb shell settings put global transition_animation_scale 0
-            adb shell settings put global animator_duration_scale 0
-            echo "Installing APKs..."
-            adb install -r implementations/android-sdk/app/build/outputs/apk/debug/app-debug.apk
-            adb install -r implementations/android-sdk/uitests/build/outputs/apk/debug/uitests-debug.apk
+            # The action's `disable-animations: true` already disables animation scales — no
+            # need to run the manual adb shell settings put lines here.
+            echo "Installing APKs (target app: $APP_PACKAGE)..."
+            adb install -r "android-apks/$APP_APK"
+            adb install -r android-apks/uitests-debug.apk
             echo "Setting up adb reverse port forwarding..."
             adb reverse tcp:8000 tcp:8000
             sleep 3
             adb shell "for i in 1 2 3 4 5 6 7 8 9 10; do nc -z localhost 8000 2>/dev/null && echo 'Mock server tunnel verified' && exit 0; sleep 1; done; echo 'WARNING: tunnel verification timed out'"
-            echo "Running UI Automator 2 E2E tests..."
+            echo "Resetting per-test failure context dump target (test app's external files dir)..."
+            adb shell "rm -rf /sdcard/Android/data/com.contentful.optimization.uitests/files/test-failures" 2>/dev/null || true
+            echo "Clearing logcat ring buffer (will be dumped post-run by the workflow)..."
+            adb logcat -c
+            echo "Running UI Automator 2 E2E tests against $APP_PACKAGE..."
             # Fail-fast: stream am instrument output through awk; on the first
-            # "Error in test" or "Process crashed" line, force-stop the test
-            # process to abort the remaining suite. AndroidJUnitRunner has no
-            # built-in early-exit, so without this every subsequent @Before
-            # waits its full 20-30s waitForElement timeout and one root-cause
-            # failure in an early class burns the whole 45-minute job budget.
-            # force-stop on the .uitests process kills the instrumentation;
-            # the remote `am instrument -w` exits and the local pipeline
-            # collapses. fflush keeps the GitHub Actions log live so we see
-            # the failure when it happens, not at the end.
+            # per-test error (INSTRUMENTATION_STATUS_CODE -1/-2) or device-side
+            # process crash, force-stop the test process to abort the remaining
+            # suite. AndroidJUnitRunner has no built-in early-exit, so without
+            # this every subsequent @Before waits its full 20-30s
+            # waitForElement timeout and one root-cause failure in an early
+            # class burns the whole 45-minute job budget. force-stop on the
+            # .uitests process kills the instrumentation; the remote
+            # `am instrument -w` exits and the local pipeline collapses.
+            # fflush keeps the GitHub Actions log live so we see the failure
+            # when it happens, not at the end.
+            #
+            # `-r` (raw mode) is REQUIRED for streaming: without it
+            # `am instrument` buffers the entire human-readable summary
+            # (dots, `OK (N tests)` / `FAILURES!!!`) until end-of-suite, so
+            # the awk fail-fast never sees per-test progress and a single
+            # 20-min hang produces zero output until the outer `timeout 1200`
+            # kills the pipeline (observed on run 26534799046 views matrix
+            # entry). With `-r`, AndroidJUnitRunner emits
+            # `INSTRUMENTATION_STATUS_CODE: <N>` after each test (1=started,
+            # 0=passed, -1=assumption-failed, -2=errored/failed) and the awk
+            # regex matches the failure codes in real time.
+            #
+            # Per-test wedges are caught by the JUnit `Timeout` rule in
+            # PerTestRule.kt (60s/test), which surfaces as a `stack=...`
+            # block followed by `INSTRUMENTATION_STATUS_CODE: -2`. The outer
+            # `timeout 1200` here is a belt-and-suspenders safety net: it
+            # caps total wall time at 20 min (normal happy path ~7 min) so a
+            # deadlock that prevents JUnit's worker-thread from firing — or
+            # a wedged `adb` — can't burn the full 45-min job budget. On
+            # `timeout` kill, the post-grep for `INSTRUMENTATION_CODE: ` (the
+            # final overall-run code emitted only when am instrument
+            # completes cleanly) is missing and the step fails.
             #
             # IMPORTANT: this MUST be a single physical YAML line. The
             # reactivecircus/android-emulator-runner action's parseScript()
@@ -819,16 +992,25 @@ jobs:
             # are dropped as no-op syntax errors. Verified in the action's
             # src/script-parser.ts:
             #   rawScript.trim().split(/\r\n|\n|\r/)
-            adb shell am instrument -w com.contentful.optimization.uitests/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee /tmp/test-output.log | awk 'BEGIN{aborted=0} /Error in test|Process crashed/{if(!aborted){aborted=1;print;print "::error::Test failure detected — aborting remaining suite";fflush();system("adb shell am force-stop com.contentful.optimization.uitests >/dev/null 2>&1");exit 1} next} {print;fflush()}'
-            grep -q "FAILURES\|Error in test" /tmp/test-output.log && { echo "::error::Android UI tests failed"; exit 1; } || true
+            # `-e CI true` passes the CI flag through to the AndroidJUnitRunner; tests gated on
+            # `CiSkip.skipOnCi(...)` read it via InstrumentationRegistry.getArguments() and skip
+            # via Assume.assumeFalse — see implementations/android-sdk/uitests/support/CiSkip.kt.
+            # The local scripts/run-e2e.sh does NOT pass this flag, so local invocations still
+            # exercise the dwell-sensitive tests.
+            timeout --kill-after=30 1200 adb shell am instrument -w -r -e CI true -e APP_PACKAGE "$APP_PACKAGE" com.contentful.optimization.uitests/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee /tmp/test-output.log | awk 'BEGIN{aborted=0} /^INSTRUMENTATION_STATUS_CODE:[[:space:]]+-[12]$|Process crashed/{if(!aborted){aborted=1;print;print "::error::Test failure detected — aborting remaining suite";fflush();system("adb shell am force-stop com.contentful.optimization.uitests >/dev/null 2>&1");exit 1} next} {print;fflush()}'; e=$?; echo "--- capturing post-run debug context (logcat + per-test failure dumps) ---"; adb logcat -d > /tmp/logcat.log 2>&1 || true; rm -rf /tmp/test-failures; adb pull /sdcard/Android/data/com.contentful.optimization.uitests/files/test-failures /tmp/test-failures 2>&1 || true; exit $e
+            grep -qE "^INSTRUMENTATION_STATUS_CODE:[[:space:]]+-[12]$" /tmp/test-output.log && { echo "::error::Android UI tests failed (per-test failure detected)"; exit 1; } || true
             grep -q "Process crashed" /tmp/test-output.log && { echo "::error::Test process crashed"; exit 1; } || true
-            grep -q "OK (" /tmp/test-output.log || { echo "::error::Android UI tests did not complete successfully (missing OK status)"; exit 1; }
+            grep -qE "^INSTRUMENTATION_CODE:[[:space:]]+-?[0-9]+$" /tmp/test-output.log || { echo "::error::Android UI tests did not complete cleanly (missing terminal INSTRUMENTATION_CODE — likely timeout, hang, or am instrument abort)"; exit 1; }
 
-      - name: Upload logs on failure
+      - name: Print debug context on failure
         if: failure()
         run: |
           echo "=== Mock Server Logs ==="
           cat /tmp/mock-server.log || echo "No mock server logs found"
+          echo "=== Per-test failure captures (/tmp/test-failures) ==="
+          ls -la /tmp/test-failures 2>/dev/null || echo "No per-test failure captures pulled"
+          echo "=== Logcat tail (/tmp/logcat.log, last 500 lines) ==="
+          tail -n 500 /tmp/logcat.log 2>/dev/null || echo "No logcat dump found"
 
       - name: Stop Mock Server
         if: always()
@@ -838,11 +1020,13 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
-          name: ci-results-android-sdk
+          name: ci-results-android-sdk-${{ matrix.app }}
           path: |
             implementations/android-sdk/logs/
             /tmp/mock-server.log
             /tmp/test-output.log
+            /tmp/logcat.log
+            /tmp/test-failures/
           retention-days: 7
 
   e2e-ios-sdk-build:

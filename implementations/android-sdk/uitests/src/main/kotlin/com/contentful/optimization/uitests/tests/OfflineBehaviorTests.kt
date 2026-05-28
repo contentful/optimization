@@ -5,16 +5,23 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import com.contentful.optimization.uitests.support.AppLauncher
+import com.contentful.optimization.uitests.support.CiSkip
+import com.contentful.optimization.uitests.support.PerTestRule
 import com.contentful.optimization.uitests.support.TestHelpers
 import com.contentful.optimization.uitests.support.clearProfileState
 import org.junit.After
 import org.junit.Assert
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestRule
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class OfflineBehaviorTests {
+    @get:Rule
+    val rule: TestRule = PerTestRule.create()
+
     private lateinit var device: UiDevice
 
     // Time allowed after reconnecting for the SDK online signal to flip and the
@@ -105,6 +112,10 @@ class OfflineBehaviorTests {
 
     @Test
     fun testContinuesToTrackEventsWhileOffline() {
+        CiSkip.skipOnCi(
+            "Asserts on `events-count` whose minimum threshold requires the same dwell-fired component events " +
+                "covered by ViewTrackingControllerTest.",
+        )
         // Step 1: wait until "Analytics Events" label is visible.
         TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
         // Step 2: wait until at least 1 event has been tracked.
@@ -226,6 +237,10 @@ class OfflineBehaviorTests {
 
     @Test
     fun testQueueEventsOfflineAndFlushWhenOnline() {
+        CiSkip.skipOnCi(
+            "Asserts on `events-count` whose minimum threshold requires the same dwell-fired component events " +
+                "covered by ViewTrackingControllerTest.",
+        )
         // Step 1: wait until "Analytics Events" label is visible.
         TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
         // Step 2: wait until at least 1 event has been tracked.

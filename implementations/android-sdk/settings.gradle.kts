@@ -16,7 +16,9 @@ dependencyResolutionManagement {
 
 rootProject.name = "OptimizationAndroidApp"
 
-include(":app")
+include(":compose")
+include(":views")
+include(":shared")
 include(":uitests")
 include(":ContentfulOptimization")
 project(":ContentfulOptimization").projectDir =

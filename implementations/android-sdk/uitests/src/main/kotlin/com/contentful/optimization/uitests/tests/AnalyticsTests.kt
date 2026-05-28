@@ -5,14 +5,21 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import com.contentful.optimization.uitests.support.AppLauncher
+import com.contentful.optimization.uitests.support.CiSkip
+import com.contentful.optimization.uitests.support.PerTestRule
 import com.contentful.optimization.uitests.support.TestHelpers
 import com.contentful.optimization.uitests.support.clearProfileState
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestRule
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class AnalyticsTests {
+    @get:Rule
+    val rule: TestRule = PerTestRule.create()
+
     private lateinit var device: UiDevice
 
     @Before
@@ -24,6 +31,11 @@ class AnalyticsTests {
 
     @Test
     fun testTracksEntryViewEventsForVisibleEntries() {
+        CiSkip.skipOnCi(
+            "ViewTrackingController dwell timing is covered deterministically by ViewTrackingControllerTest " +
+                "(packages/android/.../tracking/) — this E2E variant races the scroll-during-dwell threshold on the " +
+                "x86_64 CI emulator.",
+        )
         // Step 1: Wait until the "Analytics Events" text is visible.
         TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
 

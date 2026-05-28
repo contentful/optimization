@@ -10,14 +10,34 @@ import {
   type ContentfulEntry,
   type ExperienceDefinition,
   PreviewOverrideManager,
-  buildPreviewModel,
   createAudienceDefinitions,
   createExperienceDefinitions,
   createExperienceNameMap,
 } from '@contentful/optimization-core/preview-support'
+import { computePreviewModel, transformOverrides } from './previewStateHelpers'
 
-type ResolveOptimizedEntryParams = Parameters<CoreStateful['resolveOptimizedEntry']>
-type GetMergeTagValueParams = Parameters<CoreStateful['getMergeTagValue']>
+type ResolveOptimizedEntryArgs = Parameters<CoreStateful['resolveOptimizedEntry']>
+type ResolveOptimizedEntryEntry = ResolveOptimizedEntryArgs[0]
+type ResolveOptimizedEntrySelections = ResolveOptimizedEntryArgs[1]
+type GetMergeTagValueEntry = Parameters<CoreStateful['getMergeTagValue']>[0]
+type ScreenProperties = Parameters<CoreStateful['screen']>[0]['properties']
+
+type ProfileValue = typeof signals.profile.value
+type ChangesValue = typeof signals.changes.value
+type SelectedOptimizationsValue = typeof signals.selectedOptimizations.value
+
+// Native runtimes (iOS JavaScriptCore, Android QuickJS) install these callbacks
+// on the JS engine's globalThis before the bridge is loaded. The bridge calls
+// them to push state/event updates back into the native layer. `window` is NOT
+// defined in QuickJS or JSC — only `globalThis` is universal across both
+// engines plus any browser-style WebView consumer.
+interface NativeGlobal {
+  __nativeOnStateChange?: (json: string) => void
+  __nativeOnEventEmitted?: (json: string) => void
+  __nativeOnOverridesChanged?: (json: string) => void
+  __bridge?: Bridge
+}
+const nativeGlobal = globalThis as typeof globalThis & NativeGlobal
 
 interface BridgeConfig {
   clientId: string
@@ -26,18 +46,18 @@ interface BridgeConfig {
   insightsBaseUrl?: string
   defaults?: {
     consent?: boolean
-    profile?: unknown
-    changes?: unknown
-    optimizations?: unknown
+    profile?: ProfileValue
+    changes?: ChangesValue
+    optimizations?: SelectedOptimizationsValue
   }
 }
 
 interface BridgeState {
-  profile: unknown
+  profile: ProfileValue | null
   consent: boolean | undefined
   canPersonalize: boolean
-  changes: unknown
-  selectedPersonalizations: unknown
+  changes: ChangesValue | null
+  selectedPersonalizations: SelectedOptimizationsValue | null
 }
 
 interface TrackViewPayload {
@@ -56,59 +76,65 @@ interface TrackClickPayload {
 }
 
 interface Bridge {
-  initialize(config: BridgeConfig): void
-  identify(
+  initialize: (config: BridgeConfig) => void
+  identify: (
     payload: { userId: string; traits?: Traits },
     onSuccess: (json: string) => void,
     onError: (error: string) => void,
-  ): void
-  page(
+  ) => void
+  page: (
     payload: Record<string, unknown>,
     onSuccess: (json: string) => void,
     onError: (error: string) => void,
-  ): void
-  getProfile(): string | null
-  getState(): string
-  destroy(): void
+  ) => void
+  getProfile: () => string | null
+  getState: () => string
+  destroy: () => void
 
   // Async with callbacks
-  screen(
-    payload: { name: string; properties?: Record<string, unknown> },
+  screen: (
+    payload: { name: string; properties?: ScreenProperties },
     onSuccess: (json: string) => void,
     onError: (error: string) => void,
-  ): void
-  flush(onSuccess: (json: string) => void, onError: (error: string) => void): void
-  trackView(
+  ) => void
+  flush: (onSuccess: (json: string) => void, onError: (error: string) => void) => void
+  trackView: (
     payload: TrackViewPayload,
     onSuccess: (json: string) => void,
     onError: (error: string) => void,
-  ): void
-  trackClick(
+  ) => void
+  trackClick: (
     payload: TrackClickPayload,
     onSuccess: (json: string) => void,
     onError: (error: string) => void,
-  ): void
+  ) => void
 
   // Synchronous
-  consent(accept: boolean): void
-  reset(): void
-  personalizeEntry(
-    baseline: Record<string, unknown>,
-    personalizations?: Array<Record<string, unknown>>,
-  ): string
-  getMergeTagValue(mergeTagEntry: Record<string, unknown>): string | null
-  flag(name: string): void
-  setOnline(isOnline: boolean): void
+  consent: (accept: boolean) => void
+  reset: () => void
+  // Native code passes JSON-shaped objects; the bridge trusts the shape and
+  // forwards them straight to core. TypeScript types here document the
+  // expected payload, but no runtime narrowing is performed.
+  personalizeEntry: (
+    baseline: ResolveOptimizedEntryEntry,
+    personalizations?: ResolveOptimizedEntrySelections,
+  ) => string
+  getMergeTagValue: (mergeTagEntry: GetMergeTagValueEntry) => string | null
+  flag: (name: string) => void
+  setOnline: (isOnline: boolean) => void
 
   // Preview panel
-  setPreviewPanelOpen(open: boolean): void
-  overrideAudience(audienceId: string, qualified: boolean, experienceIds: string[]): void
-  overrideVariant(experienceId: string, variantIndex: number): void
-  resetAudienceOverride(audienceId: string): void
-  resetVariantOverride(experienceId: string): void
-  resetAllOverrides(): void
-  loadDefinitions(audienceEntries: unknown[], experienceEntries: unknown[]): string
-  getPreviewState(): string
+  setPreviewPanelOpen: (open: boolean) => void
+  overrideAudience: (audienceId: string, qualified: boolean, experienceIds: string[]) => void
+  overrideVariant: (experienceId: string, variantIndex: number) => void
+  resetAudienceOverride: (audienceId: string) => void
+  resetVariantOverride: (experienceId: string) => void
+  resetAllOverrides: () => void
+  loadDefinitions: (
+    audienceEntries: ContentfulEntry[],
+    experienceEntries: ContentfulEntry[],
+  ) => string
+  getPreviewState: () => string
 }
 
 let instance: CoreStateful | null = null
@@ -144,19 +170,20 @@ const bridge: Bridge = {
     instance = new CoreStateful(coreConfig)
 
     // Apply stored defaults before any other operations
-    if (config.defaults) {
-      if (config.defaults.consent !== undefined) {
-        instance.consent(config.defaults.consent)
+    const { defaults } = config
+    if (defaults) {
+      const { consent, profile, changes, optimizations } = defaults
+      if (consent !== undefined) {
+        instance.consent(consent)
       }
-      if (config.defaults.profile !== undefined) {
-        signals.profile.value = config.defaults.profile as typeof signals.profile.value
+      if (profile !== undefined) {
+        signals.profile.value = profile
       }
-      if (config.defaults.changes !== undefined) {
-        signals.changes.value = config.defaults.changes as typeof signals.changes.value
+      if (changes !== undefined) {
+        signals.changes.value = changes
       }
-      if (config.defaults.optimizations !== undefined) {
-        signals.selectedOptimizations.value = config.defaults
-          .optimizations as typeof signals.selectedOptimizations.value
+      if (optimizations !== undefined) {
+        signals.selectedOptimizations.value = optimizations
       }
     }
     instance.consent(true)
@@ -164,16 +191,12 @@ const bridge: Bridge = {
     // Create the override manager — registers a state interceptor that
     // preserves overrides across API refreshes and correctly appends
     // new experience entries when overriding audiences the user was never in.
-    const g = globalThis as Record<string, unknown>
-
     overrideManager = new PreviewOverrideManager({
       selectedOptimizations: signals.selectedOptimizations,
       profile: signals.profile,
       stateInterceptors: instance.interceptors.state,
       onOverridesChanged: () => {
-        if (typeof g.__nativeOnOverridesChanged === 'function') {
-          ;(g.__nativeOnOverridesChanged as (json: string) => void)(bridge.getPreviewState())
-        }
+        nativeGlobal.__nativeOnOverridesChanged?.(bridge.getPreviewState())
       },
     })
 
@@ -186,15 +209,15 @@ const bridge: Bridge = {
         selectedPersonalizations: signals.selectedOptimizations.value ?? null,
       }
 
-      if (typeof g.__nativeOnStateChange === 'function') {
-        ;(g.__nativeOnStateChange as (json: string) => void)(JSON.stringify(state))
-      }
+      nativeGlobal.__nativeOnStateChange?.(JSON.stringify(state))
     })
 
     disposeEventEffect = effect(() => {
-      const evt = signals.event.value
-      if (evt && typeof g.__nativeOnEventEmitted === 'function') {
-        ;(g.__nativeOnEventEmitted as (json: string) => void)(JSON.stringify(evt))
+      const {
+        event: { value },
+      } = signals
+      if (value) {
+        nativeGlobal.__nativeOnEventEmitted?.(JSON.stringify(value))
       }
     })
   },
@@ -240,7 +263,7 @@ const bridge: Bridge = {
     instance
       .screen({
         name: payload.name,
-        properties: (payload.properties ?? {}) as Record<string, never>,
+        properties: payload.properties ?? {},
       })
       .then((data) => {
         onSuccess(JSON.stringify(data ?? null))
@@ -320,21 +343,15 @@ const bridge: Bridge = {
     flagSubscriptions.push(instance.states.flag(name).subscribe(() => undefined))
   },
 
-  personalizeEntry(
-    baseline: Record<string, unknown>,
-    personalizations?: Array<Record<string, unknown>>,
-  ): string {
+  personalizeEntry(baseline, personalizations): string {
     if (!instance) return JSON.stringify({ entry: baseline })
-    const result = instance.resolveOptimizedEntry(
-      baseline as unknown as ResolveOptimizedEntryParams[0],
-      personalizations as unknown as ResolveOptimizedEntryParams[1],
-    )
+    const result = instance.resolveOptimizedEntry(baseline, personalizations)
     return JSON.stringify(result)
   },
 
-  getMergeTagValue(mergeTagEntry: Record<string, unknown>): string | null {
+  getMergeTagValue(mergeTagEntry): string | null {
     if (!instance) return null
-    const value = instance.getMergeTagValue(mergeTagEntry as unknown as GetMergeTagValueParams[0])
+    const value = instance.getMergeTagValue(mergeTagEntry)
     return value ?? null
   },
 
@@ -368,17 +385,14 @@ const bridge: Bridge = {
     overrideManager?.resetAll()
   },
 
-  loadDefinitions(audienceEntries: unknown[], experienceEntries: unknown[]): string {
+  loadDefinitions(audienceEntries, experienceEntries): string {
     try {
-      const audEntries = audienceEntries as ContentfulEntry[]
-      const expEntries = experienceEntries as ContentfulEntry[]
-
-      audienceDefinitions = createAudienceDefinitions(audEntries)
-      experienceDefinitions = createExperienceDefinitions(expEntries)
-      experienceNameMap = createExperienceNameMap(expEntries)
+      audienceDefinitions = createAudienceDefinitions(audienceEntries)
+      experienceDefinitions = createExperienceDefinitions(experienceEntries)
+      experienceNameMap = createExperienceNameMap(experienceEntries)
       audienceNameMap = {}
-      for (const def of audienceDefinitions) {
-        audienceNameMap[def.id] = def.name
+      for (const { id, name } of audienceDefinitions) {
+        audienceNameMap[id] = name
       }
 
       return JSON.stringify({
@@ -401,51 +415,18 @@ const bridge: Bridge = {
       audiences: {},
       selectedOptimizations: {},
     }
-    const baselineOptimizations = overrideManager?.getBaselineSelectedOptimizations()
+    const baselineOptimizations = overrideManager?.getBaselineSelectedOptimizations() ?? null
 
-    // Transform audience overrides to the shape Swift expects: Record<string, boolean>
-    const audienceOverrides: Record<string, boolean> = {}
-    for (const [id, aud] of Object.entries(overrides.audiences)) {
-      audienceOverrides[id] = aud.isActive
-    }
+    const { audienceOverrides, variantOverrides, defaultVariantIndices } = transformOverrides(
+      overrides,
+      baselineOptimizations,
+    )
 
-    // Transform variant overrides to the shape Swift expects: Record<string, number>
-    const variantOverrides: Record<string, number> = {}
-    for (const [id, opt] of Object.entries(overrides.selectedOptimizations)) {
-      variantOverrides[id] = opt.variantIndex
-    }
-
-    // Derive default variant indices from the baseline
-    const defaultVariantIndices: Record<string, number> = {}
-    if (baselineOptimizations) {
-      for (const sel of baselineOptimizations) {
-        if (variantOverrides[sel.experienceId] !== undefined) {
-          defaultVariantIndices[sel.experienceId] = sel.variantIndex
-        }
-      }
-    }
-
-    // Compute the pre-baked UI model when definitions have been loaded by the host.
-    // Null when loadDefinitions() has not yet been called — iOS renders an empty state.
-    const previewModel =
-      audienceDefinitions && experienceDefinitions
-        ? {
-            ...buildPreviewModel({
-              audienceDefinitions,
-              experienceDefinitions,
-              signals: {
-                profile: signals.profile.value,
-                selectedOptimizations: signals.selectedOptimizations.value,
-                consent: signals.consent.value,
-                isLoading: false,
-              },
-              overrides,
-              baselineSelectedOptimizations: baselineOptimizations,
-            }),
-            audienceNameMap,
-            experienceNameMap,
-          }
-        : null
+    const previewModel = computePreviewModel(
+      { audienceDefinitions, experienceDefinitions, audienceNameMap, experienceNameMap },
+      overrides,
+      baselineOptimizations,
+    )
 
     return JSON.stringify({
       profile: signals.profile.value ?? null,
@@ -463,8 +444,10 @@ const bridge: Bridge = {
   },
 
   getProfile(): string | null {
-    const p = signals.profile.value
-    return p ? JSON.stringify(p) : null
+    const {
+      profile: { value },
+    } = signals
+    return value ? JSON.stringify(value) : null
   },
 
   getState(): string {
@@ -504,6 +487,6 @@ const bridge: Bridge = {
   },
 }
 
-;(globalThis as Record<string, unknown>).__bridge = bridge
+nativeGlobal.__bridge = bridge
 
 export default bridge

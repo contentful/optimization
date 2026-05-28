@@ -201,10 +201,37 @@ private fun PreviewPanelMain(viewModel: PreviewViewModel) {
                 TextButton(onClick = { showResetAlert = false }) { Text("Cancel") }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.resetAllOverrides()
-                    showResetAlert = false
-                }) { Text("Reset") }
+                // Stand the confirm button up as a clickable Text rather than a
+                // Material3 TextButton so the `contentDescription` lives on the
+                // exact node that owns the click action — mirroring the proven
+                // pattern used by the panel's per-row reset controls in
+                // PreviewActionButton. Wrapping a TextButton in a non-merging
+                // semantics modifier instead produces a separate semantic node
+                // above the click handler, which UI Automator's
+                // accessibility-click then routes to the nearest clickable
+                // ancestor (the AlertDialog root) and ends up dismissing the
+                // dialog without invoking the reset. By.text("Reset") on its
+                // own can't disambiguate either, because the panel's
+                // reset-variant-* / reset-audience-* rows below the dialog
+                // also render a "Reset" label.
+                Text(
+                    text = "Reset",
+                    modifier = Modifier
+                        .clickable {
+                            viewModel.resetAllOverrides()
+                            showResetAlert = false
+                        }
+                        .padding(
+                            horizontal = PreviewTheme.Spacing.md,
+                            vertical = PreviewTheme.Spacing.sm,
+                        )
+                        .semantics { contentDescription = "reset-all-confirm" },
+                    style = TextStyle(
+                        fontSize = PreviewTheme.FontSize.sm,
+                        fontWeight = FontWeight.Medium,
+                        color = PreviewTheme.Colors.Action.reset,
+                    ),
+                )
             },
         )
     }
