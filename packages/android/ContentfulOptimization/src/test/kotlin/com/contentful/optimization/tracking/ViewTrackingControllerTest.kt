@@ -26,12 +26,11 @@ import org.junit.Test
  * visible. These tests use `advanceTimeBy(N)` followed by `runCurrent()` to step the virtual
  * clock by a known interval and drain only the tasks that became eligible at the new time.
  *
- * This is the right layer for the dwell contract. The E2E tests that previously asserted on
- * `component-stats-<id>` resource ids after a real swipe were conflating three independent
- * concerns (scrolling, demo-app analytics rendering, and tracker firing) and were intolerant of
- * the real layout/swipe timing on the x86_64 CI emulator — see
- * `implementations/android-sdk/uitests/support/CiSkip.kt` and the affected `@Test` methods now
- * tagged with `CiSkip.skipOnCi(...)`.
+ * This is the right layer for the dwell contract. The E2E `@Test` methods that previously
+ * asserted on `component-stats-<id>` resource ids after a real swipe were conflating three
+ * independent concerns (scrolling, demo-app analytics rendering, and tracker firing) and were
+ * intolerant of the real layout/swipe timing on the x86_64 CI emulator. They have been deleted
+ * — see `implementations/android-sdk/uitests/README.md` for the catalogue and rationale.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ViewTrackingControllerTest {
