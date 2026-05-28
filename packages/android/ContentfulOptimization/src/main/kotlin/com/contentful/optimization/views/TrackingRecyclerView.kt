@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.View
 import android.view.ViewGroup
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
 /**
@@ -25,8 +26,23 @@ class TrackingRecyclerView @JvmOverloads constructor(
         addOnScrollListener(
             object : OnScrollListener() {
                 override fun onScrolled(rv: RecyclerView, dx: Int, dy: Int) {
-                    forEachOptimizedEntry(this@TrackingRecyclerView) {
-                        it.requestVisibilityCheck()
+                    val lm = layoutManager as? LinearLayoutManager
+                    if (lm != null) {
+                        val first = lm.findFirstVisibleItemPosition()
+                        val last = lm.findLastVisibleItemPosition()
+                        if (first == RecyclerView.NO_POSITION || last == RecyclerView.NO_POSITION) {
+                            return
+                        }
+                        for (i in first..last) {
+                            val itemView = findViewHolderForAdapterPosition(i)?.itemView ?: continue
+                            forEachOptimizedEntry(itemView) {
+                                it.requestVisibilityCheck()
+                            }
+                        }
+                    } else {
+                        forEachOptimizedEntry(this@TrackingRecyclerView) {
+                            it.requestVisibilityCheck()
+                        }
                     }
                 }
             },
