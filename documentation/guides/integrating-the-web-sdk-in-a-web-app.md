@@ -28,6 +28,7 @@ providers, hooks, and router adapters, use the React Web guide instead.
   - [Browser tracking mechanics](#browser-tracking-mechanics)
   - [Custom browser events](#custom-browser-events)
 - [8. Subscribe to `states` for rerenders and UI feedback](#8-subscribe-to-states-for-rerenders-and-ui-feedback)
+- [Forward optimization context to third-party analytics](#forward-optimization-context-to-third-party-analytics)
 - [Share the anonymous ID cookie in hybrid SSR + browser apps](#share-the-anonymous-id-cookie-in-hybrid-ssr-browser-apps)
 - [Reference implementations to compare against](#reference-implementations-to-compare-against)
 
@@ -536,6 +537,50 @@ window.addEventListener('beforeunload', () => {
 Each observable immediately emits its current snapshot and then emits subsequent updates. If you
 need a synchronous read instead of a subscription, use `.current`, for example
 `optimization.states.profile.current`.
+
+## Forward optimization context to third-party analytics
+
+Use this optional step when your browser app already sends events to a tag manager, customer-data
+platform, or analytics destination. The Optimization SDK still sends events to Contentful. Your
+application decides which approved Contentful context, if any, should also be forwarded.
+
+| Reporting need                             | Web SDK handoff                                                                 |
+| ------------------------------------------ | ------------------------------------------------------------------------------- |
+| SDK page, custom, view, click, or hover    | Subscribe once to `optimization.states.eventStream`.                            |
+| Business event attribution                 | Add Contentful fields beside the existing `track()` or destination event call.  |
+| Entry or variant attribution               | Use the resolved entry and `selectedOptimization` from the render/action path.  |
+| Custom Flag attribution                    | Forward from the same code path that reads or renders the flag.                 |
+| Consent or duplicate-delivery verification | Use `states.blockedEventStream`, `messageId` dedupe, and destination debuggers. |
+
+`eventStream` is a live handoff, not a replay queue. Register the subscription at SDK
+initialization; if the analytics destination is not ready yet, buffer forwarded payloads in
+application code with an explicit size, TTL, and drop policy.
+
+For a browser-owned analytics handoff, register one app-level subscription after constructing the
+SDK instance:
+
+```ts
+const forwardedMessageIds = new Set<string>()
+
+const analyticsSubscription = optimization.states.eventStream.subscribe((event) => {
+  if (!event) return
+  if (forwardedMessageIds.has(event.messageId)) return
+  if (!canForwardSdkEvent(event)) return
+
+  forwardedMessageIds.add(event.messageId)
+
+  analytics.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
+})
+
+window.addEventListener('beforeunload', () => {
+  analyticsSubscription.unsubscribe()
+})
+```
+
+Use
+[Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)
+for the `canForwardSdkEvent` and `pickContentfulEventProperties` helpers, vendor mappings, consent,
+identity, dedupe, and governance guidance.
 
 ## Share the anonymous ID cookie in hybrid SSR + browser apps
 

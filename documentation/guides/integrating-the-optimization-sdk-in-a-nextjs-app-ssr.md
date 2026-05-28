@@ -26,6 +26,7 @@ instead.
   - [Add the page tracker](#add-the-page-tracker)
 - [6. Mount the client provider in your layout](#6-mount-the-client-provider-in-your-layout)
 - [7. Handle consent and identify from client components](#7-handle-consent-and-identify-from-client-components)
+- [Forward optimization context to third-party analytics](#forward-optimization-context-to-third-party-analytics)
 - [Understand when personalization updates](#understand-when-personalization-updates)
 - [Caching considerations](#caching-considerations)
 - [The server and client SDK boundary](#the-server-and-client-sdk-boundary)
@@ -443,6 +444,61 @@ to be children of Server Components.
 Client actions update the Optimization profile via the Experience API, but they do not re-render the
 server-resolved content on the current page. The updated profile is reflected on the next server
 request (navigation or browser refresh).
+
+## Forward optimization context to third-party analytics
+
+Use this optional step when your Next.js app already sends events to a tag manager, customer-data
+platform, or analytics destination. The Optimization SDK still sends events to Contentful. Your
+application decides which approved Contentful context, if any, should also be forwarded.
+
+| Reporting need                             | SSR-primary handoff                                                                      |
+| ------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Server-rendered first-paint attribution    | Use request-local `OptimizationData` and `selectedOptimization` in the Server Component. |
+| Hydrated page and entry interaction events | Register one React Web `states.eventStream` subscription from `onStatesReady`.           |
+| Business event attribution                 | Add Contentful fields in the server action or Client Component handler that owns it.     |
+| Consent or duplicate-delivery verification | Use `states.blockedEventStream`, `messageId` dedupe, and destination debuggers.          |
+
+Treat server and browser analytics forwarding as separate handoffs. Server-rendered attribution uses
+request-local SDK data; hydrated client activity uses a live React Web subscription, not a replay
+queue. If a tag or analytics library loads after hydration, buffer forwarded payloads in application
+code with an explicit size, TTL, and drop policy.
+
+For hydrated activity, add the subscription to the client provider wrapper that already mounts
+`OptimizationRoot`:
+
+```tsx
+<OptimizationRoot
+  clientId={process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID ?? ''}
+  environment={process.env.NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main'}
+  trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
+  logLevel="error"
+  onStatesReady={(states) => {
+    const forwardedMessageIds = new Set<string>()
+
+    const eventSubscription = states.eventStream.subscribe((event) => {
+      if (!event) return
+      if (forwardedMessageIds.has(event.messageId)) return
+      if (!canForwardSdkEvent(event)) return
+
+      forwardedMessageIds.add(event.messageId)
+
+      analytics.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
+    })
+
+    return () => eventSubscription.unsubscribe()
+  }}
+>
+  <Suspense>
+    <NextAppAutoPageTracker />
+  </Suspense>
+  {children}
+</OptimizationRoot>
+```
+
+Use
+[Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)
+for request-local server mapping, React Web subscription helpers, vendor examples, consent,
+identity, dedupe, and governance guidance.
 
 ## Understand when personalization updates
 
