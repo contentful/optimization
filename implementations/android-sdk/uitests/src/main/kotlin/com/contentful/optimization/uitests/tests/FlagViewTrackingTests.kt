@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
+import com.contentful.optimization.uitests.support.CiSkip
 import com.contentful.optimization.uitests.support.PerTestRule
 import com.contentful.optimization.uitests.support.TestHelpers
 import com.contentful.optimization.uitests.support.clearProfileState
@@ -33,6 +34,9 @@ class FlagViewTrackingTests {
 
     @Test
     fun testEmitsFlagViewEventsForSubscribedBooleanFlag() {
+        CiSkip.skipOnCi(
+            "Flag-view event count depends on the same 2 s dwell timer covered by ViewTrackingControllerTest.",
+        )
         // 1. Wait until the "Analytics Events" text is present.
         TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
 
