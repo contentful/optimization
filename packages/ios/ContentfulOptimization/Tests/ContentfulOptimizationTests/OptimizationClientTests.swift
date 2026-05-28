@@ -145,17 +145,34 @@ final class OptimizationClientTests: XCTestCase {
         XCTAssertEqual(configErr.errorDescription, "Config error: bad config")
     }
 
-    // MARK: - Polyfill Script Loader Tests
+    // MARK: - Polyfill Availability Tests
 
-    func testPolyfillScriptsLoad() throws {
-        let scripts = try PolyfillScriptLoader.loadAll()
-        XCTAssertEqual(scripts.count, 8, "Expected 8 polyfill scripts")
+    @MainActor
+    func testPolyfillsAvailableAfterInitialize() throws {
+        let manager = JSContextManager()
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            environment: "master",
+            experienceBaseUrl: "http://localhost:8000/experience/",
+            insightsBaseUrl: "http://localhost:8000/insights/"
+        )
 
-        // Verify they contain expected content
-        XCTAssertTrue(scripts[0].contains("__nativeLog"), "console.js should reference __nativeLog")
-        XCTAssertTrue(scripts[1].contains("__nativeSetTimeout"), "timers.js should reference __nativeSetTimeout")
-        XCTAssertTrue(scripts[2].contains("__nativeFetch"), "fetch.js should reference __nativeFetch")
-        XCTAssertTrue(scripts[3].contains("__nativeRandomUUID"), "crypto.js should reference __nativeRandomUUID")
+        try manager.initialize(config: config)
+
+        let checks: [(name: String, expr: String)] = [
+            ("console.log",          "typeof console.log"),
+            ("setTimeout",           "typeof setTimeout"),
+            ("clearTimeout",         "typeof clearTimeout"),
+            ("fetch",                "typeof fetch"),
+            ("crypto.randomUUID",    "typeof crypto.randomUUID"),
+            ("URL",                  "typeof URL"),
+            ("AbortController",      "typeof AbortController"),
+            ("TextEncoder",          "typeof TextEncoder"),
+        ]
+        for check in checks {
+            let actual = manager.context?.evaluateScript(check.expr)?.toString()
+            XCTAssertEqual(actual, "function", "\(check.name) should be a function after bundle eval")
+        }
     }
 
     // MARK: - Bridge Callback Manager Tests

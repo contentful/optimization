@@ -1,7 +1,7 @@
 import Foundation
 import JavaScriptCore
 
-/// Manages the JSContext lifecycle: polyfill injection, UMD bundle loading, and bridge calls.
+/// Manages the JSContext lifecycle: native polyfill bindings, UMD bundle loading, and bridge calls.
 ///
 /// This is an internal implementation detail. Public API is exposed via `OptimizationClient`.
 final class JSContextManager {
@@ -36,13 +36,7 @@ final class JSContextManager {
             self?.onLog?(level, msg)
         }
 
-        // Evaluate JS polyfill scripts
-        let polyfillScripts = try PolyfillScriptLoader.loadAll()
-        for script in polyfillScripts {
-            ctx.evaluateScript(script)
-        }
-
-        // Load UMD bundle
+        // Load UMD bundle (polyfills are prepended into the bundle at build time)
         let bundleSource = try loadBundleSource()
         ctx.evaluateScript(bundleSource)
 

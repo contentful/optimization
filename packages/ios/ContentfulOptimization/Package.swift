@@ -16,7 +16,6 @@ let package = Package(
             name: "ContentfulOptimization",
             resources: [
                 .copy("Resources/optimization-ios-bridge.umd.js"),
-                .copy("Resources/polyfills"),
             ],
             linkerSettings: [
                 .linkedFramework("JavaScriptCore"),
