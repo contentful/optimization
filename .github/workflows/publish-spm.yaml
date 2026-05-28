@@ -1,0 +1,99 @@
+name: Publish Swift Package
+
+permissions:
+  contents: read
+  id-token: write
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag (e.g. v1.2.3)'
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Retrieve mirror deploy key from Vault
+        id: vault
+        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        with:
+          url: ${{ secrets.VAULT_URL }}
+          role: ${{ github.event.repository.name }}-github-action
+          method: jwt
+          path: github-actions
+          secrets: |
+            secret/data/github/spm_mirror_deploy_key SSH_PRIVATE_KEY | MIRROR_DEPLOY_KEY;
+
+      - name: Derive release version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG='${{ github.event.release.tag_name }}'
+          else
+            TAG='${{ inputs.tag }}'
+          fi
+          echo "RELEASE_TAG=$TAG"         >> "$GITHUB_ENV"
+          echo "RELEASE_VERSION=${TAG#v}" >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+
+      - run: pnpm install --prefer-offline --frozen-lockfile
+
+      - name: Build the JS bridge (stamps the version into the UMD)
+        run: pnpm --filter @contentful/optimization-js-bridge build
+        env:
+          RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
+
+      - name: Assemble the package payload
+        run: |
+          SRC=packages/ios/ContentfulOptimization
+          DST="$RUNNER_TEMP/pkg"
+          mkdir -p "$DST"
+          # Swift sources, Package.swift, polyfills, README, LICENSE — but not the UMD (built below)
+          rsync -a --exclude='Resources/optimization-ios-bridge.umd.js' "$SRC"/ "$DST"/
+          cp packages/universal/optimization-js-bridge/dist/optimization-ios-bridge.umd.js \
+             "$DST/Sources/ContentfulOptimization/Resources/"
+
+      - name: Verify the payload is complete
+        run: |
+          test -f "$RUNNER_TEMP/pkg/Package.swift"
+          test -f "$RUNNER_TEMP/pkg/Sources/ContentfulOptimization/Resources/optimization-ios-bridge.umd.js"
+          test -d "$RUNNER_TEMP/pkg/Sources/ContentfulOptimization/Resources/polyfills"
+
+      - name: Set up the deploy key for SSH push
+        env:
+          MIRROR_DEPLOY_KEY: ${{ steps.vault.outputs.MIRROR_DEPLOY_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$MIRROR_DEPLOY_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Commit, tag, and push to the distribution repo
+        run: |
+          git clone --depth 1 git@github.com:contentful/optimization.swift.git mirror
+          # --delete so files removed in the monorepo also disappear from the mirror
+          rsync -a --delete --exclude='.git' "$RUNNER_TEMP/pkg"/ mirror/
+          cd mirror
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No content changes since the last release commit; moving the tag only."
+          else
+            git -c user.name='contentful-ci' -c user.email='ci@contentful.com' \
+                commit -m "Release $RELEASE_TAG (from contentful/optimization@${GITHUB_SHA:0:7})"
+            git push origin HEAD:main
+          fi
+          git tag --force "$RELEASE_TAG"
+          git push origin "refs/tags/$RELEASE_TAG" --force
