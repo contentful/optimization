@@ -37,6 +37,23 @@ kotlin {
     }
 }
 
+// Rebuild the shared JS bridge before this SDK module compiles, so that editing
+// TypeScript under packages/universal/optimization-js-bridge/src/ and clicking
+// Build in Android Studio refreshes src/main/assets/optimization-android-bridge.umd.js
+// transparently. The inputs/outputs declarations make the task UP-TO-DATE when the
+// asset is already newer than the bridge source, so a no-op rebuild does not respawn pnpm.
+val repoRoot = projectDir.resolve("../../..")
+val buildJsBridge = tasks.register<Exec>("buildJsBridge") {
+    workingDir = repoRoot
+    commandLine("pnpm", "--filter", "@contentful/optimization-js-bridge", "build")
+    inputs.dir(repoRoot.resolve("packages/universal/optimization-js-bridge/src"))
+        .withPropertyName("bridgeSource")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.file(layout.projectDirectory.file("src/main/assets/optimization-android-bridge.umd.js"))
+        .withPropertyName("bridgeBundle")
+}
+tasks.named("preBuild").configure { dependsOn(buildJsBridge) }
+
 dependencies {
     implementation("io.github.dokar3:quickjs-kt:1.0.5")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
