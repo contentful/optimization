@@ -5,7 +5,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import com.contentful.optimization.uitests.support.AppLauncher
-import com.contentful.optimization.uitests.support.CiSkip
 import com.contentful.optimization.uitests.support.PerTestRule
 import com.contentful.optimization.uitests.support.TestHelpers
 import com.contentful.optimization.uitests.support.clearProfileState
@@ -23,10 +22,6 @@ class OfflineBehaviorTests {
     val rule: TestRule = PerTestRule.create()
 
     private lateinit var device: UiDevice
-
-    // Time allowed after reconnecting for the SDK online signal to flip and the
-    // resulting Experience API queue flush to land before the app is terminated.
-    private val QUEUE_FLUSH_GRACE_MS = 10_000L
 
     // Time allowed after an online identify for the Experience upsert round-trip
     // to complete before the app is terminated.
@@ -100,60 +95,8 @@ class OfflineBehaviorTests {
     }
 
     // ---------------------------------------------------------------------------
-    // Local helpers
-    // ---------------------------------------------------------------------------
-
-    private fun getEventsCount(): Int =
-        TestHelpers.parseEventsCount(TestHelpers.getElementTextById(device, "events-count"))
-
-    // ---------------------------------------------------------------------------
     // Tests
     // ---------------------------------------------------------------------------
-
-    @Test
-    fun testContinuesToTrackEventsWhileOffline() {
-        CiSkip.skipOnCi(
-            "Asserts on `events-count` whose minimum threshold requires the same dwell-fired component events " +
-                "covered by ViewTrackingControllerTest.",
-        )
-        // Step 1: wait until "Analytics Events" label is visible.
-        TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
-        // Step 2: wait until at least 1 event has been tracked.
-        TestHelpers.waitForEventsCountAtLeast(device, 1)
-
-        // Step 3: go offline.
-        disableNetwork()
-
-        // Step 4: capture current events count.
-        val eventsBeforeIdentify = getEventsCount()
-
-        // Step 5: tap identify.
-        TestHelpers.waitAndTap(device, By.res("identify-button"))
-
-        // Step 6: wait until events-count has advanced by at least 1.
-        TestHelpers.waitForElementText(device, "events-count") { text ->
-            TestHelpers.parseEventsCount(text) >= eventsBeforeIdentify + 1
-        }
-
-        // Step 7: restore network so the Experience queue flushes.
-        enableNetwork()
-
-        // Step 8: wait for the queue flush round-trip to land.
-        Thread.sleep(QUEUE_FLUSH_GRACE_MS)
-
-        // Step 9: terminate and relaunch as a new instance.
-        AppLauncher.forceStop(device)
-        AppLauncher.launchApp(device)
-
-        // Step 10: wait until the identified nested variant entry exists.
-        TestHelpers.waitForElement(device, By.res(NESTED_VARIANT_TEST_ID), POST_RELAUNCH_TIMEOUT)
-
-        // Step 11: assert the anonymous baseline entry does not exist.
-        Assert.assertNull(
-            "Baseline nested entry $NESTED_BASELINE_TEST_ID should not exist after identified flush",
-            device.findObject(By.res(NESTED_BASELINE_TEST_ID)),
-        )
-    }
 
     @Test
     fun testRecoverGracefullyWhenNetworkRestored() {
@@ -233,53 +176,5 @@ class OfflineBehaviorTests {
             "Baseline nested entry $NESTED_BASELINE_TEST_ID should not exist after rapid toggles",
             device.findObject(By.res(NESTED_BASELINE_TEST_ID)),
         )
-    }
-
-    @Test
-    fun testQueueEventsOfflineAndFlushWhenOnline() {
-        CiSkip.skipOnCi(
-            "Asserts on `events-count` whose minimum threshold requires the same dwell-fired component events " +
-                "covered by ViewTrackingControllerTest.",
-        )
-        // Step 1: wait until "Analytics Events" label is visible.
-        TestHelpers.waitForElement(device, By.text("Analytics Events"), TestHelpers.ELEMENT_TIMEOUT)
-        // Step 2: wait until at least 1 event has been tracked.
-        TestHelpers.waitForEventsCountAtLeast(device, 1)
-
-        // Step 3: go offline.
-        disableNetwork()
-
-        // Step 4: capture current events count.
-        val eventsBeforeIdentify = getEventsCount()
-
-        // Step 5: tap identify.
-        TestHelpers.waitAndTap(device, By.res("identify-button"))
-
-        // Step 6: wait until events-count has advanced by at least 1 (event tracked offline).
-        TestHelpers.waitForElementText(device, "events-count") { text ->
-            TestHelpers.parseEventsCount(text) >= eventsBeforeIdentify + 1
-        }
-
-        // Step 7: restore network so the offline Experience queue flushes.
-        enableNetwork()
-
-        // Step 8: wait for the flush round-trip to reach the server.
-        Thread.sleep(QUEUE_FLUSH_GRACE_MS)
-
-        // Step 9: terminate and relaunch as a new instance.
-        AppLauncher.forceStop(device)
-        AppLauncher.launchApp(device)
-
-        // Step 10: wait until the identified nested variant entry exists.
-        TestHelpers.waitForElement(device, By.res(NESTED_VARIANT_TEST_ID), POST_RELAUNCH_TIMEOUT)
-
-        // Step 11: assert the anonymous baseline entry does not exist.
-        Assert.assertNull(
-            "Baseline nested entry $NESTED_BASELINE_TEST_ID should not exist after queued flush",
-            device.findObject(By.res(NESTED_BASELINE_TEST_ID)),
-        )
-
-        // Step 12: wait until reset-button is visible (identified profile preserved across cold start).
-        TestHelpers.waitForElement(device, By.res("reset-button"), POST_RELAUNCH_TIMEOUT)
     }
 }
