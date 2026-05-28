@@ -16,6 +16,7 @@ extend behavior through the consumer-facing channels the SDK provides.
 
 <details>
   <summary>Table of Contents</summary>
+<!-- mtoc-start -->
 
 - [How Core stores state](#how-core-stores-state)
   - [Signals as the storage medium](#signals-as-the-storage-medium)
@@ -44,6 +45,7 @@ extend behavior through the consumer-facing channels the SDK provides.
   - [When to use interceptors](#when-to-use-interceptors)
 - [What not to do: direct signal mutation](#what-not-to-do-direct-signal-mutation)
 
+<!-- mtoc-end -->
 </details>
 
 ## How Core stores state
@@ -212,14 +214,13 @@ into a React context or synchronize them with local storage.
 
 ### Reacting to profile changes
 
-Subscribe to `states.profile` to be notified whenever the active profile changes. This is useful for
-syncing profile data into your own application state or updating UI that depends on identity.
+Subscribe to `states.profile` to be notified whenever the active Optimization profile changes. This
+is useful for readiness checks, diagnostics, or SDK-adjacent UI that depends on profile
+availability.
 
 ```ts
 const subscription = sdk.states.profile.subscribe((profile) => {
-  if (profile) {
-    analytics.identify(profile.id, profile.traits)
-  }
+  setOptimizationProfileReady(profile !== undefined)
 })
 
 // Later, when the component unmounts or the SDK is no longer needed:
@@ -227,7 +228,8 @@ subscription.unsubscribe()
 ```
 
 `subscribe` emits the current value immediately upon registration, so you do not need a separate
-call to read the initial state.
+call to read the initial state. Use your application user ID for third-party analytics identity
+calls. Do not pass the Optimization profile ID to a vendor `identify()` call as the known-user ID.
 
 ### Reacting to optimization variant changes
 
@@ -278,6 +280,10 @@ flag view event for each delivered value. `states.flag(name).current` represents
 each `current` read emits a flag view event. `getFlag(name)` is nonreactive and deduplicates flag
 view events when repeated calls resolve the same value.
 
+If you forward Custom Flag values to a third-party analytics destination, use the same flag read or
+render path that your application already owns. Adding a `states.flag(name)` subscription only for
+third-party forwarding also creates an additional Contentful flag-view observation.
+
 ### Diagnosing blocked events
 
 Subscribe to `states.blockedEventStream` to receive details about any event that consent gating
@@ -325,6 +331,11 @@ sdk.states.eventStream.subscribe((event) => {
 
 This is useful for building debugging overlays, integration tests that assert on emitted payloads,
 or custom telemetry pipelines that operate alongside the SDK's own delivery.
+
+Sticky `trackView()` calls produce two `eventStream` records for one semantic view: an Experience
+record followed by a paired Insights record. They have distinct `messageId` values, so analytics
+integrations that need one exposure must dedupe by semantic fields such as `viewId`, `componentId`,
+`experienceId`, and `variantIndex`.
 
 ### Provider-managed framework subscriptions
 

@@ -32,6 +32,7 @@ to a React Native (or Expo) application using `@contentful/optimization-react-na
   - [Automatic tracking with OptimizationNavigationContainer](#automatic-tracking-with-optimizationnavigationcontainer)
   - [Per-screen tracking with `useScreenTracking`](#per-screen-tracking-with-usescreentracking)
   - [Dynamic names with `useScreenTrackingCallback`](#dynamic-names-with-usescreentrackingcallback)
+- [Forward optimization context to third-party analytics](#forward-optimization-context-to-third-party-analytics)
 - [Live updates](#live-updates)
   - [Default behavior](#default-behavior)
   - [Global live updates](#global-live-updates)
@@ -599,6 +600,59 @@ function DynamicScreen({ screenName }: { screenName: string }) {
   return <View>...</View>
 }
 ```
+
+## Forward optimization context to third-party analytics
+
+Use this optional step when your mobile app already sends events to a customer-data platform,
+product analytics destination, or vendor SDK. The Optimization SDK still sends events to Contentful.
+Your application decides which approved Contentful context, if any, should also be forwarded.
+
+| Reporting need                              | React Native SDK handoff                                                         |
+| ------------------------------------------- | -------------------------------------------------------------------------------- |
+| SDK screen, custom, view, tap, or flag view | Register one `states.eventStream` subscription from `onStatesReady`.             |
+| Business event attribution                  | Add Contentful fields in the tap handler or screen action that owns the event.   |
+| Entry or variant attribution                | Use the resolved entry metadata from `OptimizedEntry` or the action render path. |
+| Custom Flag attribution                     | Forward from the same component or hook path that reads or renders the flag.     |
+| Consent or duplicate-delivery verification  | Use `states.blockedEventStream`, `messageId` dedupe, and destination debuggers.  |
+
+`eventStream` is a live handoff, not a replay queue. Register the subscription at provider
+initialization; if the analytics destination is not ready yet, buffer forwarded payloads in
+application code with an explicit size, TTL, and drop policy.
+
+Attach app-level analytics subscriptions with `onStatesReady` so screen, navigation, and entry
+effects cannot emit SDK events before the subscriber is registered:
+
+```tsx
+<OptimizationRoot
+  clientId="your-client-id"
+  onStatesReady={(states) => {
+    const forwardedMessageIds = new Set<string>()
+
+    const eventSubscription = states.eventStream.subscribe((event) => {
+      if (!event) return
+      if (forwardedMessageIds.has(event.messageId)) return
+      if (!canForwardSdkEvent(event)) return
+
+      forwardedMessageIds.add(event.messageId)
+
+      analytics.track(`Contentful ${event.type}`, pickContentfulEventProperties(event))
+    })
+
+    return () => eventSubscription.unsubscribe()
+  }}
+>
+  <OptimizationNavigationContainer>
+    {(navigationProps) => (
+      <NavigationContainer {...navigationProps}>{/* navigators */}</NavigationContainer>
+    )}
+  </OptimizationNavigationContainer>
+</OptimizationRoot>
+```
+
+Use
+[Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)
+for the `canForwardSdkEvent` and `pickContentfulEventProperties` helpers, vendor mappings, consent,
+identity, dedupe, and governance guidance.
 
 ## Live updates
 

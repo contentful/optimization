@@ -21,6 +21,7 @@ between server and browser, see
 
 <details>
   <summary>Table of Contents</summary>
+<!-- mtoc-start -->
 
 - [The core boundary](#the-core-boundary)
 - [What stateless tracking means](#what-stateless-tracking-means)
@@ -40,6 +41,7 @@ between server and browser, see
 - [Implementation checklist](#implementation-checklist)
 - [Reference](#reference)
 
+<!-- mtoc-end -->
 </details>
 
 ## The core boundary

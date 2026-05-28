@@ -13,6 +13,7 @@ resolution, see [Core state management](./core-state-management.md).
 
 <details>
   <summary>Table of Contents</summary>
+<!-- mtoc-start -->
 
 - [Resolution boundary](#resolution-boundary)
 - [Data model](#data-model)
@@ -29,6 +30,7 @@ resolution, see [Core state management](./core-state-management.md).
   - [Render with framework components](#render-with-framework-components)
   - [Preview selected variants](#preview-selected-variants)
 
+<!-- mtoc-end -->
 </details>
 
 ## Resolution boundary
