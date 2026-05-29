@@ -5,7 +5,8 @@ import { type ReactElement, StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, Navigate, Outlet, RouterProvider } from 'react-router-dom'
 import App from './App'
-import { HOME_PATH } from './config/routes'
+import { EXO_PATH, HOME_PATH } from './config/routes'
+import { ExoPage } from './pages/ExoPage'
 import { HomePage } from './pages/HomePage'
 import { PageTwoPage } from './pages/PageTwoPage'
 import { getContentfulClient } from './services/contentfulClient'
@@ -66,6 +67,7 @@ function RootLayout(): ReactElement {
         experienceBaseUrl: EXPERIENCE_BASE_URL,
       }}
       trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
+      autoTrackNodeInteraction={{ views: true }}
       logLevel={resolveLogLevel()}
       app={{
         name: 'ContentfulOptimization SDK - React Web SDK Reference',
@@ -89,6 +91,7 @@ const router = createBrowserRouter([
         element: <App />,
         children: [
           { index: true, element: <HomePage /> },
+          { path: EXO_PATH.slice(1), element: <ExoPage /> },
           { path: 'page-two', element: <PageTwoPage /> },
           { path: '*', element: <Navigate replace to={HOME_PATH} /> },
         ],
