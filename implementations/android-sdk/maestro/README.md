@@ -27,11 +27,15 @@ selector), and `identify-button` / `reset-button` are exposed as resource-ids (m
 - The mock server running on `localhost:8000` with `adb reverse tcp:8000 tcp:8000` (the demo apps
   point at `http://localhost:8000` via `AppConfig`).
 
-Locally, use `scripts/run-maestro-e2e.sh` (see `implementations/android-sdk/scripts/`), which wires
-up the mock server, port forwarding, and runs the flows against both apps.
+Locally, run `pnpm test:e2e` (or `pnpm test:e2e:compose` / `pnpm test:e2e:views`), which uses
+`scripts/run-e2e.sh` to manage the emulator, mock server, and port forwarding, then runs the flows
+against both apps. Pass `--flow <suite>` (e.g. `preview-panel`) to run a single suite.
 
 ## Status
 
-PoC scope: `PreviewPanelTests` only. The UiAutomator `uitests` module is retained in the tree but
-its CI run job is disabled while we measure Maestro's reliability. See the repository plan and
-`uitests/README.md` for the migration context.
+Maestro is now the canonical Android E2E suite — the entire UiAutomator suite (`ScreenTracking`,
+`TapTracking`, `OfflineBehavior`, `Identified`/`UnidentifiedVariants`, `LiveUpdates`,
+`PreviewPanel`, `PreviewPanelOverrides`) has been ported here and the UiAutomator CI run job has
+been removed. The dwell/view-tracking contract intentionally stays out of E2E — it is owned by
+`ViewTrackingControllerTest` (JVM unit) and the iOS XCUITest suite. The `uitests/` module source is
+retained for now pending its removal in a follow-up.
