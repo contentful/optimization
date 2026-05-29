@@ -33,14 +33,22 @@ scroll/relaunch/destroy plumbing and produced no signal CI could act on:
 | `OfflineBehaviorTests.testQueueEventsOfflineAndFlushWhenOnline`         | Same as above                                                                                                                                                                                                                                                                                                                                                      |
 | `PreviewPanelOverridesTests.testScenario8DestroyRemountClearsOverrides` | `PreviewOverrideManager.test.ts` (`registers a state interceptor and starts with empty overrides`) — the "empty store ⇒ empty overrides" claim. The Compose empty-state label (`OverridesSection`) is a trivial 4-line `if (hasOverrides) … else Text("No active overrides")`. The destroy/remount path itself is exercised by every other test's `@Before` setUp. |
 
-All four asserted on the per-entry `component-stats-<id>` (or `events-count >= N`) UI elements,
-which required the SDK to emit a tracker event, which in turn required a real swipe to settle into
-the 0.8 visibility threshold and stay there for 2 s. On the CI emulator the swipe routinely clipped
-the visible-ratio back below threshold mid-dwell, `onBecameInvisible` reset the cycle with
-`attempts=0`, and the stats element never appeared. The SDK was enforcing the documented contract
-correctly — the harness was racing it. See
+The first four (the view-tracking cluster) asserted on the per-entry `component-stats-<id>` (or
+`events-count >= N`) UI elements, which required the SDK to emit a tracker event, which in turn
+required a real swipe to settle into the 0.8 visibility threshold and stay there for 2 s. On the CI
+emulator the swipe routinely clipped the visible-ratio back below threshold mid-dwell,
+`onBecameInvisible` reset the cycle with `attempts=0`, and the stats element never appeared. The SDK
+was enforcing the documented contract correctly — the harness was racing it. See
 [`ANDROID_VIEW_TRACKING_TESTS.md`](../../../ANDROID_VIEW_TRACKING_TESTS.md) for the full incident
 write-up.
+
+`testScenario8DestroyRemountClearsOverrides` was a different failure: it hung in
+`AppLauncher.relaunchClean` after the in-test `forceStop`, because the cumulative
+`forceStop → waitForIdle → launchApp → identifyAndRelaunch → waitForIdle → openPanel → scrollPanel`
+sequence blew the per-test 60 s budget. Reproduced deterministically on local arm64. The SDK
+contract it nominally checked (empty store ⇒ empty overrides) was already a unit test in
+`PreviewOverrideManager.test.ts`; the demo-app destroy/remount plumbing this exercised has no SDK
+contract claim, so the test was deleted rather than fixed.
 
 ## What still belongs here
 
