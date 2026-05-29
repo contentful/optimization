@@ -17,6 +17,14 @@ verify timing, threshold math, or coroutine sequencing should be a JVM unit test
 [`packages/android/ContentfulOptimization/src/test/`](../../../packages/android/ContentfulOptimization/src/test/),
 not here.
 
+> [!IMPORTANT] Maestro proof-of-concept in progress. The `PreviewPanelTests` contract has been
+> ported to [Maestro](https://maestro.dev) flows under [`../maestro/preview-panel/`](../maestro/),
+> which drive both apps from a single flow set with built-in auto-waiting (no hand-rolled polling).
+> While we measure Maestro's reliability, **this UiAutomator suite's CI run job (`e2e-android-sdk`)
+> is disabled** to avoid burning CI time — the source here is retained unchanged for comparison and
+> potential rollback. If the Maestro flake-rate delta is convincing, the remaining classes will be
+> ported and this module retired. See [`../maestro/README.md`](../maestro/README.md).
+
 ## Deleted tests
 
 The following `@Test` methods were deleted because each one's nominal SDK contract is already owned

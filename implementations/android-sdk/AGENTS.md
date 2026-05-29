@@ -10,6 +10,12 @@ apps demonstrate the same SDK capabilities, expose the same test IDs, and are dr
 UI Automator 2 suite from `uitests/`. This mirrors the iOS `swiftui/` + `uikit/` pair at
 `implementations/ios-sdk/`.
 
+> **Maestro PoC:** the `PreviewPanelTests` suite has been ported to Maestro flows under
+> `maestro/preview-panel/` (single flow set, both apps via `appId: ${APP_ID}`), run locally with
+> `pnpm test:e2e:maestro` and in CI via the `e2e-android-maestro` job. While its reliability is
+> evaluated, the UiAutomator CI run job (`e2e-android-sdk`) is disabled; the `uitests/` source stays
+> in lock-step regardless. See `maestro/README.md`.
+
 ## Key paths
 
 - `compose/src/main/kotlin/com/contentful/optimization/app/` — Jetpack Compose reference impl
