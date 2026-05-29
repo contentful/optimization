@@ -1,0 +1,33 @@
+# Mirrors OfflineBehaviorTests.testHandleRapidNetworkStateChanges — rapid offline/online
+# churn ending online must not corrupt the SDK: a subsequent identify still resolves the
+# identified profile and persists it across a relaunch.
+appId: ${APP_ID}
+---
+- setAirplaneMode: disabled
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'identify-button'
+# Rapid toggles ending online.
+- setAirplaneMode: enabled
+- setAirplaneMode: disabled
+- setAirplaneMode: enabled
+- setAirplaneMode: disabled
+- tapOn:
+    id: 'identify-button'
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-2KIWllNZJT205BwOSkMINg'
+    direction: DOWN
+- assertNotVisible:
+    id: 'entry-text-1JAU028vQ7v6nB2swl3NBo'
