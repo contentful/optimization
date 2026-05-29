@@ -1,0 +1,47 @@
+# Mirrors PreviewPanelOverridesTests.testScenario2DeactivatingQualifiedAudienceRendersBaseline
+# — turning OFF an audience the identified visitor qualifies for forces the experience to
+# fall back to its baseline entry. Shared preamble: identify + relaunch so the
+# identified-visitor mock renders the variant entry by default.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'identify-button'
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+# Identified-visitor variant entry renders by default (setup precondition).
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-5a8ONfBdanJtlJ39WWnH1w'
+    direction: DOWN
+# Open the preview panel and wait for audience/experience definitions to load.
+- tapOn: 'preview-panel-fab'
+- assertVisible: 'Preview Panel'
+- extendedWaitUntil:
+    notVisible:
+      text: '.*Loading definitions.*'
+    timeout: 30000
+# Deactivate the qualified audience.
+- scrollUntilVisible:
+    element:
+      text: 'audience-toggle-4yIqY7AWtzeehCZxtQSDB-off'
+    direction: DOWN
+- tapOn:
+    text: 'audience-toggle-4yIqY7AWtzeehCZxtQSDB-off'
+- back
+# The experience now resolves to its baseline entry.
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-5i4SdJXw9oDEY0vgO7CwF4'
+    direction: DOWN

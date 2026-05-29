@@ -1,0 +1,45 @@
+# Mirrors PreviewPanelOverridesTests.testScenario3ResettingAudienceOverrideRestoresVariant
+# — after deactivating a qualified audience, tapping its default toggle removes the
+# override and restores the original variant resolution.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'identify-button'
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-5a8ONfBdanJtlJ39WWnH1w'
+    direction: DOWN
+- tapOn: 'preview-panel-fab'
+- assertVisible: 'Preview Panel'
+- extendedWaitUntil:
+    notVisible:
+      text: '.*Loading definitions.*'
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: 'audience-toggle-4yIqY7AWtzeehCZxtQSDB-off'
+    direction: DOWN
+- tapOn:
+    text: 'audience-toggle-4yIqY7AWtzeehCZxtQSDB-off'
+- tapOn:
+    text: 'audience-toggle-4yIqY7AWtzeehCZxtQSDB-default'
+- back
+# Override cleared — the variant entry resolves again.
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-5a8ONfBdanJtlJ39WWnH1w'
+    direction: DOWN

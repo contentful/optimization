@@ -1,0 +1,43 @@
+# Mirrors PreviewPanelOverridesTests.testScenario1ActivatingUnqualifiedAudienceRendersItsVariant
+# — activating an audience the identified visitor does NOT qualify for activates an
+# experience whose variant content then renders on screen.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'identify-button'
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-5a8ONfBdanJtlJ39WWnH1w'
+    direction: DOWN
+- tapOn: 'preview-panel-fab'
+- assertVisible: 'Preview Panel'
+- extendedWaitUntil:
+    notVisible:
+      text: '.*Loading definitions.*'
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: 'audience-toggle-3MRuZPQ5EdwDqzUDRgOo7c-on'
+    direction: DOWN
+- tapOn:
+    text: 'audience-toggle-3MRuZPQ5EdwDqzUDRgOo7c-on'
+- back
+# The Mobile Browser experience variant renders (using the xFwgG… entry's copy).
+- scrollUntilVisible:
+    element:
+      text: '.*for visitors using a mobile browser.*'
+    direction: DOWN
