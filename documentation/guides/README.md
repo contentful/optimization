@@ -9,6 +9,8 @@ children:
   - ./integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md
   - ./integrating-the-optimization-sdk-in-a-nextjs-app-ssr-csr.md
   - ./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md
+  - ./contributing-to-the-ios-sdk.md
+  - ./contributing-to-the-android-sdk.md
 ---
 
 # Guides
@@ -43,6 +45,21 @@ inventory instead.
   step-by-step Next.js App Router guidance for the hybrid pattern where first paint is
   server-resolved and the React Web SDK takes over for instant client-side reactivity after
   hydration
+
+## Supplemental guides
+
+- [Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) -
+  guidance for forwarding Contentful optimization context to analytics, tag-management,
+  customer-data, and product-analytics systems
+
+## Contributor guides
+
+- [Contributing to the iOS SDK](./contributing-to-the-ios-sdk.md) - fresh-clone bootstrap through a
+  debuggable change in Xcode, including how the reference impl rebuilds the SDK package and the JS
+  bridge automatically on Build
+- [Contributing to the Android SDK](./contributing-to-the-android-sdk.md) - fresh-clone bootstrap
+  through a debuggable change in Android Studio, including how the composite-build SDK module and
+  the `buildJsBridge` Gradle task keep both Kotlin and TypeScript layers in sync on every build
 
 ## Supplemental guides
 

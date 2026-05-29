@@ -32,6 +32,36 @@ targets:
       - package: ContentfulOptimization
     scheme:
       testTargets: [OptimizationAppUITestsSwiftUI]
+      # Scheme pre-actions fire before any target (including Swift Package
+      # dependencies) is built, so the UMD asset under
+      # packages/ios/.../Resources/ exists before Bundle.module is generated.
+      # A per-target preBuildScripts entry would fire too late — after the SDK
+      # package compile.
+      preActions:
+        - name: Build JS bridge
+          settingsTarget: OptimizationAppSwiftUI
+          script: |
+            set -euo pipefail
+            exec > /tmp/optimization-ios-build-js-bridge.log 2>&1
+            if ! command -v pnpm >/dev/null 2>&1; then
+              for candidate in /opt/homebrew/bin/pnpm /usr/local/bin/pnpm "$HOME/.local/share/pnpm/pnpm"; do
+                if [ -x "$candidate" ]; then export PATH="$(dirname "$candidate"):$PATH"; break; fi
+              done
+            fi
+            if ! command -v pnpm >/dev/null 2>&1; then
+              echo "error: pnpm not found on PATH. Install via Corepack and restart Xcode." >&2
+              exit 1
+            fi
+            cd "$SRCROOT/../.."
+            # Skip the rebuild when the bundle is already newer than every
+            # source file under the bridge's src/ directory. Mirrors the
+            # buildJsBridge Gradle task's inputs/outputs up-to-date check.
+            bundle="packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Resources/optimization-ios-bridge.umd.js"
+            if [ -f "$bundle" ] && [ -z "$(find packages/universal/optimization-js-bridge/src -type f -newer "$bundle" -print -quit)" ]; then
+              echo "JS bridge bundle is up to date; skipping rebuild."
+              exit 0
+            fi
+            pnpm --filter @contentful/optimization-js-bridge build
 
   OptimizationAppUIKit:
     type: application
@@ -48,6 +78,28 @@ targets:
       - package: ContentfulOptimization
     scheme:
       testTargets: [OptimizationAppUITestsUIKit]
+      preActions:
+        - name: Build JS bridge
+          settingsTarget: OptimizationAppUIKit
+          script: |
+            set -euo pipefail
+            exec > /tmp/optimization-ios-build-js-bridge.log 2>&1
+            if ! command -v pnpm >/dev/null 2>&1; then
+              for candidate in /opt/homebrew/bin/pnpm /usr/local/bin/pnpm "$HOME/.local/share/pnpm/pnpm"; do
+                if [ -x "$candidate" ]; then export PATH="$(dirname "$candidate"):$PATH"; break; fi
+              done
+            fi
+            if ! command -v pnpm >/dev/null 2>&1; then
+              echo "error: pnpm not found on PATH. Install via Corepack and restart Xcode." >&2
+              exit 1
+            fi
+            cd "$SRCROOT/../.."
+            bundle="packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Resources/optimization-ios-bridge.umd.js"
+            if [ -f "$bundle" ] && [ -z "$(find packages/universal/optimization-js-bridge/src -type f -newer "$bundle" -print -quit)" ]; then
+              echo "JS bridge bundle is up to date; skipping rebuild."
+              exit 0
+            fi
+            pnpm --filter @contentful/optimization-js-bridge build
 
   OptimizationAppUITestsSwiftUI:
     type: bundle.ui-testing

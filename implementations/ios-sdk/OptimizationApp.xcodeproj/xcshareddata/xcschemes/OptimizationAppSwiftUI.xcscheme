@@ -6,6 +6,24 @@
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES"
       runPostActionsOnFailure = "NO">
+      <PreActions>
+         <ExecutionAction
+            ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
+            <ActionContent
+               title = "Build JS bridge"
+               scriptText = "set -euo pipefail&#10;exec &gt; /tmp/optimization-ios-build-js-bridge.log 2&gt;&amp;1&#10;if ! command -v pnpm &gt;/dev/null 2&gt;&amp;1; then&#10;  for candidate in /opt/homebrew/bin/pnpm /usr/local/bin/pnpm &quot;$HOME/.local/share/pnpm/pnpm&quot;; do&#10;    if [ -x &quot;$candidate&quot; ]; then export PATH=&quot;$(dirname &quot;$candidate&quot;):$PATH&quot;; break; fi&#10;  done&#10;fi&#10;if ! command -v pnpm &gt;/dev/null 2&gt;&amp;1; then&#10;  echo &quot;error: pnpm not found on PATH. Install via Corepack and restart Xcode.&quot; &gt;&amp;2&#10;  exit 1&#10;fi&#10;cd &quot;$SRCROOT/../..&quot;&#10;# Skip the rebuild when the bundle is already newer than every&#10;# source file under the bridge&apos;s src/ directory. Mirrors the&#10;# buildJsBridge Gradle task&apos;s inputs/outputs up-to-date check.&#10;bundle=&quot;packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Resources/optimization-ios-bridge.umd.js&quot;&#10;if [ -f &quot;$bundle&quot; ] &amp;&amp; [ -z &quot;$(find packages/universal/optimization-js-bridge/src -type f -newer &quot;$bundle&quot; -print -quit)&quot; ]; then&#10;  echo &quot;JS bridge bundle is up to date; skipping rebuild.&quot;&#10;  exit 0&#10;fi&#10;pnpm --filter @contentful/optimization-js-bridge build&#10;">
+               <EnvironmentBuildable>
+                  <BuildableReference
+                     BuildableIdentifier = "primary"
+                     BlueprintIdentifier = "6B18419FBDE96C10776B1E0D"
+                     BuildableName = "OptimizationAppSwiftUI.app"
+                     BlueprintName = "OptimizationAppSwiftUI"
+                     ReferencedContainer = "container:OptimizationApp.xcodeproj">
+                  </BuildableReference>
+               </EnvironmentBuildable>
+            </ActionContent>
+         </ExecutionAction>
+      </PreActions>
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
