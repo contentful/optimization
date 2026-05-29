@@ -1,0 +1,32 @@
+# Mirrors LiveUpdatesTests.testDisplaysEntryContentInAllSections — all three sections
+# render non-empty content and, before any identify/toggle/preview action, resolve to the
+# SAME variant text (they wrap the same Contentful entry).
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'live-updates-test-button'
+- assertVisible: 'default-personalization'
+- assertVisible:
+    id: 'default-container'
+- assertVisible:
+    id: 'live-container'
+- assertVisible:
+    id: 'locked-container'
+- copyTextFrom:
+    id: 'default-text'
+- evalScript: ${output.text = maestro.copiedText}
+# Content must be resolved, not the empty placeholder.
+- assertNotVisible:
+    id: 'default-text'
+    text: 'No content'
+# live and locked sections wrap the same entry, so they match the default text.
+- assertVisible:
+    id: 'live-text'
+    text: '${output.text}'
+- assertVisible:
+    id: 'locked-text'
+    text: '${output.text}'

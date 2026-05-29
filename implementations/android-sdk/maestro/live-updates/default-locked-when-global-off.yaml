@@ -1,0 +1,33 @@
+# Mirrors LiveUpdatesTests.testDefaultDoesNotUpdateOnIdentifyGlobalLiveUpdatesFalse —
+# with global liveUpdates OFF, the live (liveUpdates=true) section re-resolves on
+# identify while the default section (inherits global) stays locked on its first value.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'live-updates-test-button'
+- assertVisible: 'default-personalization'
+- copyTextFrom:
+    id: 'default-entry-id'
+- evalScript: ${output.def = maestro.copiedText}
+- copyTextFrom:
+    id: 'live-entry-id'
+- evalScript: ${output.live = maestro.copiedText}
+- tapOn:
+    id: 'live-updates-identify-button'
+- assertVisible:
+    id: 'identified-status'
+    text: 'Yes'
+# liveUpdates=true section MUST re-resolve (its entry id changes).
+- extendedWaitUntil:
+    notVisible:
+      id: 'live-entry-id'
+      text: '${output.live}'
+    timeout: 30000
+# default section inherits global=OFF, so it stays locked on its captured id.
+- assertVisible:
+    id: 'default-entry-id'
+    text: '${output.def}'

@@ -1,0 +1,36 @@
+# Mirrors LiveUpdatesTests.testLockedComponentDoesNotUpdateEvenWhenGlobalOn — with
+# global ON, the per-component liveUpdates=true section re-resolves while the
+# liveUpdates=false section stays locked.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'live-updates-test-button'
+- assertVisible: 'default-personalization'
+- tapOn:
+    id: 'toggle-global-live-updates-button'
+- assertVisible:
+    id: 'global-live-updates-status'
+    text: 'ON'
+- copyTextFrom:
+    id: 'locked-entry-id'
+- evalScript: ${output.locked = maestro.copiedText}
+- copyTextFrom:
+    id: 'live-entry-id'
+- evalScript: ${output.live = maestro.copiedText}
+- tapOn:
+    id: 'live-updates-identify-button'
+- assertVisible:
+    id: 'identified-status'
+    text: 'Yes'
+- extendedWaitUntil:
+    notVisible:
+      id: 'live-entry-id'
+      text: '${output.live}'
+    timeout: 30000
+- assertVisible:
+    id: 'locked-entry-id'
+    text: '${output.locked}'

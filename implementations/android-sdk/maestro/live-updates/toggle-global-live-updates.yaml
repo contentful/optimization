@@ -1,0 +1,24 @@
+# Mirrors LiveUpdatesTests.testToggleGlobalLiveUpdates — the global liveUpdates control
+# flips OFF -> ON -> OFF.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'live-updates-test-button'
+- assertVisible: 'default-personalization'
+- assertVisible:
+    id: 'global-live-updates-status'
+    text: 'OFF'
+- tapOn:
+    id: 'toggle-global-live-updates-button'
+- assertVisible:
+    id: 'global-live-updates-status'
+    text: 'ON'
+- tapOn:
+    id: 'toggle-global-live-updates-button'
+- assertVisible:
+    id: 'global-live-updates-status'
+    text: 'OFF'
