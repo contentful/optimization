@@ -7,22 +7,24 @@ const builder = new EventBuilder({
 })
 
 describe('EventBuilder.buildNodeView', () => {
-  it('builds a valid exo_view event', () => {
+  it('builds a valid exo_node_view event', () => {
     const event = builder.buildNodeView({
       anonymousId: 'anon-id',
       entityId: 'exp-sys-id',
       entityKind: 'Experience',
       variantId: 'variant-a',
+      variantIndex: 1,
       optimizationId: 'opt-id',
       viewId: 'view-uuid',
       viewDurationMs: 1500,
     })
 
-    expect(event.type).toBe('exo_view')
+    expect(event.type).toBe('exo_node_view')
     expect(event.anonymousId).toBe('anon-id')
     expect(event.entityId).toBe('exp-sys-id')
     expect(event.entityKind).toBe('Experience')
     expect(event.variantId).toBe('variant-a')
+    expect(event.variantIndex).toBe(1)
     expect(event.optimizationId).toBe('opt-id')
     expect(event.viewId).toBe('view-uuid')
     expect(event.viewDurationMs).toBe(1500)
@@ -35,6 +37,7 @@ describe('EventBuilder.buildNodeView', () => {
       entityId: 'exp-id',
       entityKind: 'Fragment',
       variantId: 'default',
+      variantIndex: 0,
       optimizationId: 'opt-id',
       viewId: 'view-uuid',
       viewDurationMs: 0,

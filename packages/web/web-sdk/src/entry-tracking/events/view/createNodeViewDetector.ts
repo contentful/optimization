@@ -57,6 +57,66 @@ function parseEntryIds(value: string | undefined): string[] | undefined {
   return ids.length > 0 ? ids : undefined
 }
 
+function parseVariantIndex(value: string | undefined): number | undefined {
+  if (!value || !/^\d+$/.test(value)) return undefined
+
+  const n = Number(value)
+  return Number.isSafeInteger(n) ? n : undefined
+}
+
+function resolveNodeViewDataset(dataset: DOMStringMap):
+  | {
+      entityId: string
+      entityKind: NodeViewTrackingArgs['entityKind']
+      optimizationId: string
+      variantId: string
+      variantIndex: number
+      entityKindId?: string
+      entryIds?: string
+      parentExperienceId?: string
+    }
+  | undefined {
+  const {
+    ctflNodeId,
+    ctflEntityId,
+    ctflEntityKind,
+    ctflOptimizationId,
+    ctflVariant,
+    ctflVariantIndex,
+    ctflEntityKindId,
+    ctflEntryIds,
+    ctflParentExperienceId,
+  } = dataset
+
+  const variantIndex = parseVariantIndex(ctflVariantIndex)
+  const required = {
+    nodeId: ctflNodeId ?? '',
+    entityId: ctflEntityId ?? '',
+    entityKind: ctflEntityKind ?? '',
+    optimizationId: ctflOptimizationId ?? '',
+    variantId: ctflVariant ?? '',
+  }
+
+  if (Object.values(required).some((value) => !value) || variantIndex === undefined) {
+    return undefined
+  }
+
+  if (!isKnownEntityKind(required.entityKind)) {
+    return undefined
+  }
+
+  return {
+    entityId: required.entityId,
+    entityKind: required.entityKind,
+    optimizationId: required.optimizationId,
+    variantId: required.variantId,
+    variantIndex,
+    entityKindId: ctflEntityKindId,
+    entryIds: ctflEntryIds,
+    parentExperienceId: ctflParentExperienceId,
+  }
+}
+
 function resolveNodeViewArgs(
   element: Element,
   info: ElementViewCallbackInfo,
@@ -70,35 +130,22 @@ function resolveNodeViewArgs(
     return undefined
   }
 
-  const {
-    ctflNodeId,
-    ctflEntityId,
-    ctflEntityKind,
-    ctflOptimizationId,
-    ctflVariant,
-    ctflEntityKindId,
-    ctflEntryIds,
-    ctflParentExperienceId,
-  } = dataset
-
-  if (!ctflNodeId || !ctflEntityId || !ctflEntityKind || !ctflOptimizationId || !ctflVariant) {
-    return undefined
-  }
-
-  if (!isKnownEntityKind(ctflEntityKind)) {
+  const resolved = resolveNodeViewDataset(dataset)
+  if (resolved === undefined) {
     return undefined
   }
 
   return {
-    entityId: ctflEntityId,
-    entityKind: ctflEntityKind,
-    optimizationId: ctflOptimizationId,
-    variantId: ctflVariant,
+    entityId: resolved.entityId,
+    entityKind: resolved.entityKind,
+    optimizationId: resolved.optimizationId,
+    variantId: resolved.variantId,
+    variantIndex: resolved.variantIndex,
     viewId: info.viewId,
     viewDurationMs: Math.max(0, Math.round(info.totalVisibleMs)),
-    entityKindId: ctflEntityKindId,
-    entryIds: parseEntryIds(ctflEntryIds),
-    parentExperienceId: ctflParentExperienceId,
+    entityKindId: resolved.entityKindId,
+    entryIds: parseEntryIds(resolved.entryIds),
+    parentExperienceId: resolved.parentExperienceId,
   }
 }
 

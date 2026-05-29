@@ -53,6 +53,7 @@ describe('createNodeViewDetector', () => {
       ctflEntityKind: 'Unknown',
       ctflOptimizationId: 'opt-id',
       ctflVariant: 'variant-a',
+      ctflVariantIndex: '1',
     })
 
     detector.observe(el)

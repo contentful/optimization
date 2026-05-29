@@ -17,6 +17,7 @@ export const ExoNodeLayer = z.object({
   entityKind: EntityKind,
   entityId: z.string(),
   variantId: z.optional(z.string()),
+  variantIndex: z.optional(z.number()),
   optimizationId: z.optional(z.string()),
 })
 
@@ -28,7 +29,7 @@ export const ExoNodeLayer = z.object({
 export type ExoNodeLayer = z.infer<typeof ExoNodeLayer>
 
 /**
- * Zod schema describing an `exo_view` event used for XDA graph node
+ * Zod schema describing an `exo_node_view` event used for XDA graph node
  * viewport tracking.
  *
  * @remarks
@@ -51,7 +52,7 @@ export const NodeViewEvent = z.extend(UniversalEventProperties, {
   /**
    * Discriminator identifying this as an XDA node view event.
    */
-  type: z.literal('exo_view'),
+  type: z.literal('exo_node_view'),
 
   /**
    * `sys.id` of the Experience or Fragment that owns this node.
@@ -70,6 +71,15 @@ export const NodeViewEvent = z.extend(UniversalEventProperties, {
    * Resolved from `extensions.sourceMap.variants[].id`.
    */
   variantId: z.string(),
+
+  /**
+   * Variant index selected for this node.
+   *
+   * @remarks
+   * Resolved from the selected `extensions.sourceMap.layers[].variants[]`
+   * reference. The default variant is index `0`.
+   */
+  variantIndex: z.number(),
 
   /**
    * Ninetailed experience (optimization) ID associated with this node.

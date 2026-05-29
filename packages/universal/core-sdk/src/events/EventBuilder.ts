@@ -251,6 +251,7 @@ export const NodeViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
     z.literal('InlineComponent'),
   ]),
   variantId: z.string(),
+  variantIndex: z.number(),
   optimizationId: z.string(),
   viewId: z.string(),
   viewDurationMs: z.number(),
@@ -261,7 +262,7 @@ export const NodeViewBuilderArgs = z.extend(UniversalEventBuilderArgs, {
 })
 
 /**
- * Arguments for constructing `exo_view` events.
+ * Arguments for constructing `exo_node_view` events.
  *
  * @public
  */
@@ -731,7 +732,7 @@ class EventBuilder {
   }
 
   /**
-   * Builds an `exo_view` event payload for XDA graph node viewport
+   * Builds an `exo_node_view` event payload for XDA graph node viewport
    * tracking.
    *
    * @param args - {@link NodeViewBuilderArgs} arguments describing the node view.
@@ -743,6 +744,7 @@ class EventBuilder {
    *   entityId: 'experience-sys-id',
    *   entityKind: 'Experience',
    *   variantId: 'variant-a',
+   *   variantIndex: 1,
    *   optimizationId: 'optimization-id',
    *   viewId: crypto.randomUUID(),
    *   viewDurationMs: 1_000,
@@ -757,6 +759,7 @@ class EventBuilder {
       entityId,
       entityKind,
       variantId,
+      variantIndex,
       optimizationId,
       viewId,
       viewDurationMs,
@@ -770,10 +773,11 @@ class EventBuilder {
     return {
       ...this.buildUniversalEventProperties(universal),
       anonymousId,
-      type: 'exo_view',
+      type: 'exo_node_view',
       entityId,
       entityKind,
       variantId,
+      variantIndex,
       optimizationId,
       viewId,
       viewDurationMs,

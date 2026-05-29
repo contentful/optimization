@@ -14,6 +14,7 @@ const CTFL_ATTRS = [
   'data-ctfl-optimization-id',
   'data-ctfl-parent-experience-id',
   'data-ctfl-variant',
+  'data-ctfl-variant-index',
 ] as const
 
 function setOrRemoveAttr(
@@ -63,7 +64,7 @@ export interface UseOptimizedNodeResult {
  *
  * @remarks
  * The stamped attributes are detected by the `NodeViewRuntime` for automatic
- * `exo_view` viewport tracking — no manual tracking call is needed.
+ * `exo_node_view` viewport tracking — no manual tracking call is needed.
  *
  * When `payload` is `undefined` the ref callback is a no-op; the element will
  * not be tracked.
@@ -100,6 +101,7 @@ export function useOptimizedNode({
         optimizationId,
         parentExperienceId,
         variantId,
+        variantIndex,
       } = payload
 
       element.setAttribute('data-ctfl-node-id', nodeId)
@@ -110,6 +112,7 @@ export function useOptimizedNode({
       element.setAttribute('data-ctfl-optimization-id', optimizationId)
       setOrRemoveAttr(element, 'data-ctfl-parent-experience-id', parentExperienceId)
       element.setAttribute('data-ctfl-variant', variantId)
+      element.setAttribute('data-ctfl-variant-index', String(variantIndex))
     },
     [nodeId, payload],
   )

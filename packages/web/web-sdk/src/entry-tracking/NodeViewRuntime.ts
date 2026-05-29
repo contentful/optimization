@@ -8,7 +8,7 @@ import type { ElementViewObserverOptions } from './events/view/element-view-obse
 import ElementExistenceObserver from './registry/ElementExistenceObserver'
 
 /**
- * Runtime that manages automatic `exo_view` tracking for all DOM elements
+ * Runtime that manages automatic `exo_node_view` tracking for all DOM elements
  * carrying `data-ctfl-node-id` attributes.
  *
  * @remarks

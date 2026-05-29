@@ -5,8 +5,11 @@ import { createRoot } from 'react-dom/client'
 import { useOptimizedNode, type UseOptimizedNodeResult } from './useOptimizedNode'
 
 const SOURCE_MAP: SourceMap = {
-  variants: [{ type: 'personalization', id: 'variant-a' }],
-  layers: [{ kind: 'Experience', id: 'exp-id', variants: [0] }],
+  variants: [
+    { type: 'personalization', id: 'default' },
+    { type: 'personalization', id: 'variant-a' },
+  ],
+  layers: [{ kind: 'Experience', id: 'exp-id', variants: [1] }],
   nodes: {
     'node-1': { layers: [0], scope: 0 },
   },
@@ -53,6 +56,7 @@ describe('useOptimizedNode', () => {
       entityKind: 'Experience',
       optimizationId: 'exp-id',
       variantId: 'variant-a',
+      variantIndex: 1,
       parentExperienceId: undefined,
     })
 
@@ -80,6 +84,7 @@ describe('useOptimizedNode', () => {
     expect(el.dataset.ctflEntityKind).toBe('Experience')
     expect(el.dataset.ctflOptimizationId).toBe('exp-id')
     expect(el.dataset.ctflVariant).toBe('variant-a')
+    expect(el.dataset.ctflVariantIndex).toBe('1')
 
     cleanup()
   })
@@ -96,6 +101,7 @@ describe('useOptimizedNode', () => {
     el.dataset.ctflOptimizationId = 'previous-optimization'
     el.dataset.ctflParentExperienceId = 'previous-parent'
     el.dataset.ctflVariant = 'previous-variant'
+    el.dataset.ctflVariantIndex = '2'
 
     act(() => {
       getResult().ref(el)
@@ -110,6 +116,7 @@ describe('useOptimizedNode', () => {
     expect(el.dataset.ctflOptimizationId).toBeUndefined()
     expect(el.dataset.ctflParentExperienceId).toBeUndefined()
     expect(el.dataset.ctflVariant).toBeUndefined()
+    expect(el.dataset.ctflVariantIndex).toBeUndefined()
 
     cleanup()
   })

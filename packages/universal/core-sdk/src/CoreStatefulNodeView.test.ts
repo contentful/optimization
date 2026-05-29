@@ -39,6 +39,7 @@ describe('CoreStateful.trackNodeView', () => {
     entityId: 'exp-sys-id',
     entityKind: 'Experience',
     variantId: 'variant-a',
+    variantIndex: 1,
     optimizationId: 'opt-id',
     viewId: 'view-uuid',
     viewDurationMs: 1500,
@@ -60,9 +61,10 @@ describe('CoreStateful.trackNodeView', () => {
     const batches = firstCall?.[0] ?? []
     const events = batches.flatMap((b) => b.events)
     expect(events).toHaveLength(1)
-    const nodeViewEvent = events.find((e) => e.type === 'exo_view')
+    const nodeViewEvent = events.find((e) => e.type === 'exo_node_view')
     expect(nodeViewEvent).toBeDefined()
     expect(nodeViewEvent?.anonymousId).toBe(profileFixture.id)
+    expect(nodeViewEvent?.variantIndex).toBe(1)
   })
 
   it('blocks trackNodeView when consent is not given', async () => {

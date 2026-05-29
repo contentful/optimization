@@ -98,7 +98,7 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
   autoTrackEntryInteraction?: AutoTrackEntryInteractionOptions
 
   /**
-   * Controls automatic `exo_view` tracking behavior for node elements.
+   * Controls automatic `exo_node_view` tracking behavior for node elements.
    *
    * @remarks
    * Supports node interactions via the `views` interaction.
@@ -239,7 +239,7 @@ class ContentfulOptimization extends CoreStateful {
   private readonly entryInteractionRuntime: EntryInteractionRuntime
 
   /**
-   * Runtime for automatic `exo_view` viewport tracking.
+   * Runtime for automatic `exo_node_view` viewport tracking.
    *
    * @internal
    */

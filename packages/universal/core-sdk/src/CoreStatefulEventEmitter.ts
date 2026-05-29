@@ -49,7 +49,7 @@ const CONSENT_EVENT_TYPE_MAP: Readonly<Partial<Record<string, EventType>>> = {
   trackFlagView: 'component',
   trackClick: 'component_click',
   trackHover: 'component_hover',
-  trackNodeView: 'exo_view',
+  trackNodeView: 'exo_node_view',
 }
 
 /**
@@ -300,7 +300,8 @@ abstract class CoreStatefulEventEmitter
    * await core.trackNodeView({
    *   entityId: 'experience-sys-id',
    *   entityKind: 'Experience',
-   *   variant: 'variant-a',
+   *   variantId: 'variant-a',
+   *   variantIndex: 1,
    *   optimizationId: 'optimization-id',
    *   viewId: crypto.randomUUID(),
    *   viewDurationMs: 1_000,

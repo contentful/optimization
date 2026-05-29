@@ -27,6 +27,7 @@ describe('resolveNodeViewPayload', () => {
       entityKind: 'Experience',
       optimizationId: 'exp-id',
       variantId: 'variant-a',
+      variantIndex: 1,
       parentExperienceId: undefined,
     })
   })
@@ -39,6 +40,7 @@ describe('resolveNodeViewPayload', () => {
       entityKind: 'Fragment',
       optimizationId: 'frag-id',
       variantId: 'default',
+      variantIndex: 0,
       parentExperienceId: 'exp-id',
     })
   })
@@ -63,10 +65,13 @@ describe('resolveNodeViewPayload', () => {
 
   it('skips scope layer without variants and falls through to next layer', () => {
     const mixedSourceMap: SourceMap = {
-      variants: [{ type: 'personalization', id: 'variant-b' }],
+      variants: [
+        { type: 'personalization', id: 'default' },
+        { type: 'personalization', id: 'variant-b' },
+      ],
       layers: [
         { kind: 'Fragment', id: 'frag-no-variants' },
-        { kind: 'Experience', id: 'exp-id', variants: [0] },
+        { kind: 'Experience', id: 'exp-id', variants: [1] },
       ],
       nodes: {
         'node-1': { layers: [0, 1], scope: 0 },
@@ -80,16 +85,20 @@ describe('resolveNodeViewPayload', () => {
       entityKind: 'Experience',
       optimizationId: 'exp-id',
       variantId: 'variant-b',
+      variantIndex: 1,
       parentExperienceId: undefined,
     })
   })
 
   it('does not use unrelated global layers outside the node layer chain', () => {
     const sourceMapWithUnrelatedLayer: SourceMap = {
-      variants: [{ type: 'personalization', id: 'variant-c' }],
+      variants: [
+        { type: 'personalization', id: 'default' },
+        { type: 'personalization', id: 'variant-c' },
+      ],
       layers: [
         { kind: 'Fragment', id: 'frag-no-variants' },
-        { kind: 'Experience', id: 'unrelated-exp', variants: [0] },
+        { kind: 'Experience', id: 'unrelated-exp', variants: [1] },
       ],
       nodes: {
         'node-1': { layers: [0], scope: 0 },
@@ -103,8 +112,11 @@ describe('resolveNodeViewPayload', () => {
 
   it('returns undefined when layer kind is not a known entity kind', () => {
     const unknownKindSourceMap: SourceMap = {
-      variants: [{ type: 'personalization', id: 'v' }],
-      layers: [{ kind: 'Unknown', id: 'unknown-id', variants: [0] }],
+      variants: [
+        { type: 'personalization', id: 'default' },
+        { type: 'personalization', id: 'v' },
+      ],
+      layers: [{ kind: 'Unknown', id: 'unknown-id', variants: [1] }],
       nodes: { 'node-1': { layers: [0], scope: 0 } },
     }
 
@@ -115,9 +127,12 @@ describe('resolveNodeViewPayload', () => {
 
   it('sets parentExperienceId to the nearest ancestor Experience layer above the attributed layer', () => {
     const nestedSourceMap: SourceMap = {
-      variants: [{ type: 'personalization', id: 'variant-x' }],
+      variants: [
+        { type: 'personalization', id: 'default' },
+        { type: 'personalization', id: 'variant-x' },
+      ],
       layers: [
-        { kind: 'Fragment', id: 'frag-id', variants: [0] },
+        { kind: 'Fragment', id: 'frag-id', variants: [1] },
         { kind: 'Experience', id: 'parent-exp-id' },
       ],
       nodes: {
@@ -129,5 +144,6 @@ describe('resolveNodeViewPayload', () => {
 
     expect(result?.parentExperienceId).toBe('parent-exp-id')
     expect(result?.entityId).toBe('frag-id')
+    expect(result?.variantIndex).toBe(1)
   })
 })

@@ -14,6 +14,7 @@ export type ResolvedNodeMetadata = Pick<
   | 'entityKind'
   | 'optimizationId'
   | 'variantId'
+  | 'variantIndex'
   | 'entityKindId'
   | 'entryIds'
   | 'parentExperienceId'
@@ -47,9 +48,10 @@ function resolveExoLayer(
   const firstVariantIndex = layer.variants?.[0]
   const variantEntry = firstVariantIndex !== undefined ? variants[firstVariantIndex] : undefined
   const variantId = variantEntry?.id
+  const variantIndex = variantEntry ? firstVariantIndex : undefined
   const optimizationId = variantEntry ? id : undefined
 
-  return { entityKind: kind, entityId: id, variantId, optimizationId }
+  return { entityKind: kind, entityId: id, variantId, variantIndex, optimizationId }
 }
 
 function findAttributableLayer(
@@ -130,6 +132,7 @@ export function resolveNodeViewPayload(
     entityKind: attributed.layer.entityKind,
     optimizationId: attributed.layer.optimizationId ?? attributed.layer.entityId,
     variantId: attributed.layer.variantId ?? '',
+    variantIndex: attributed.layer.variantIndex ?? 0,
     parentExperienceId,
   }
 }

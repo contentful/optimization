@@ -19,10 +19,11 @@ const BASE_UNIVERSAL = {
 const VALID_NODE_VIEW = {
   ...BASE_UNIVERSAL,
   anonymousId: 'anon-id',
-  type: 'exo_view' as const,
+  type: 'exo_node_view' as const,
   entityId: 'exp-sys-id',
   entityKind: 'Experience' as const,
   variantId: 'variant-a',
+  variantIndex: 1,
   optimizationId: 'opt-id',
   viewId: 'view-uuid',
   viewDurationMs: 1500,
@@ -66,12 +67,12 @@ describe('NodeViewEvent schema', () => {
 })
 
 describe('InsightsEvent discriminated union', () => {
-  it('discriminates exo_view correctly', () => {
+  it('discriminates exo_node_view correctly', () => {
     const result = InsightsEvent.safeParse(VALID_NODE_VIEW)
 
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.data.type).toBe('exo_view')
+      expect(result.data.type).toBe('exo_node_view')
     }
   })
 })
