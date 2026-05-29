@@ -993,9 +993,11 @@ final class OptimizationClientTests: XCTestCase {
         controller.pause()
         XCTAssertFalse(controller.isVisible)
 
-        // resume() resets visibility flag so it can be re-evaluated
+        // resume() resets the visibility flag and immediately re-evaluates from the
+        // last known geometry, so a still-visible element starts a fresh cycle and
+        // becomes visible again without waiting for an external geometry callback.
         controller.resume()
-        XCTAssertFalse(controller.isVisible)
+        XCTAssertTrue(controller.isVisible)
     }
 
     @MainActor

@@ -21,8 +21,13 @@ Swift tests.
 - Keep native runtime concerns here. TypeScript bridge behavior belongs in
   `../../universal/optimization-js-bridge/`; shared optimization behavior belongs in
   `packages/universal/core-sdk`.
-- Treat `Resources/optimization-ios-bridge.umd.js` as generated bridge output. Update it by building
-  `@contentful/optimization-js-bridge`, not by hand-editing the copied file.
+- Treat `Resources/optimization-ios-bridge.umd.js` as generated bridge output. It is gitignored and
+  not committed; build it by running `@contentful/optimization-js-bridge` (`pnpm run ios:bridge`)
+  before `swift build`/`swift test`, and never hand-edit the copied file.
+- This package is published to the generated distribution repo `contentful/optimization.swift` by
+  `.github/workflows/publish-spm.yaml` on each `v*` release. The mirror is generated output; nobody
+  pushes to it by hand. Files in this directory (sources, `Package.swift`, polyfills, `README.md`,
+  `LICENSE`) are what ships, so keep them consumer-facing and free of monorepo-internal references.
 - Keep Swift payload models and bridge method expectations aligned with
   `../../universal/optimization-js-bridge/src/index.ts`.
 - Keep resource additions reflected in `Package.swift` when they must ship with the Swift package.
