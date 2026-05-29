@@ -22,6 +22,7 @@ The examples below use Express, but the same flow applies to any Node request ha
   - [Merge tags](#merge-tags)
   - [Custom flags](#custom-flags)
 - [8. Emit follow-up server events when they matter](#8-emit-follow-up-server-events-when-they-matter)
+- [Forward optimization context to third-party analytics](#forward-optimization-context-to-third-party-analytics)
 - [Caching and cache safety](#caching-and-cache-safety)
 - [Know when the Web SDK belongs in the architecture](#know-when-the-web-sdk-belongs-in-the-architecture)
 - [Reference implementations to compare against](#reference-implementations-to-compare-against)
@@ -534,6 +535,47 @@ if (selectedOptimization?.sticky) {
   await optimization.trackView({ ...viewPayload, profile: pageResponse.profile }, requestOptions)
 }
 ```
+
+## Forward optimization context to third-party analytics
+
+Use this optional step when your Node app already sends server-side events to an analytics,
+customer-data, or tag-management destination. The Optimization SDK still sends events to Contentful.
+Your application decides which approved Contentful context, if any, should also be forwarded.
+
+| Reporting need                             | Node SDK handoff                                                                 |
+| ------------------------------------------ | -------------------------------------------------------------------------------- |
+| Server-rendered exposure attribution       | Use request-local `OptimizationData` from `page()`, `identify()`, or `track()`.  |
+| Business event attribution                 | Add Contentful fields in the server action or event collector that owns it.      |
+| Entry or variant attribution               | Use `selectedOptimization` from the same `resolveOptimizedEntry()` call.         |
+| Hybrid browser interactions                | Forward later browser activity from the Web or React Web SDK subscription path.  |
+| Consent or duplicate-delivery verification | Gate both SDK and destination calls with the same request-scoped consent policy. |
+
+The Node SDK is request-local and does not expose process-wide subscriptions. Use the
+`OptimizationData` returned by the SDK call that belongs to the request or server-side business
+event.
+
+Keep the third-party payload in the same request or server event collector that already owns the
+business event:
+
+```ts
+const { entry: resolvedHeroEntry, selectedOptimization } = optimization.resolveOptimizedEntry(
+  baselineHeroEntry,
+  pageResponse.selectedOptimizations,
+)
+
+analytics.track('Quote Requested', {
+  plan: 'enterprise',
+  contentful_profile_id: canForwardOptimizationProfileId ? pageResponse.profile.id : undefined,
+  contentful_experience_id: selectedOptimization?.experienceId,
+  contentful_variant_index: selectedOptimization?.variantIndex,
+  contentful_variant_entry_id: selectedOptimization ? resolvedHeroEntry.sys.id : undefined,
+  contentful_baseline_entry_id: baselineHeroEntry.sys.id,
+})
+```
+
+Use
+[Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md)
+for request-local mapping, vendor examples, consent, identity, dedupe, and governance guidance.
 
 ## Caching and cache safety
 

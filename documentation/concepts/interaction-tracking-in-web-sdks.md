@@ -18,6 +18,7 @@ For server-owned rendering, see
 
 <details>
   <summary>Table of Contents</summary>
+<!-- mtoc-start -->
 
 - [Tracking boundary](#tracking-boundary)
 - [Layer responsibilities](#layer-responsibilities)
@@ -35,6 +36,7 @@ For server-owned rendering, see
 - [Design boundaries](#design-boundaries)
 - [Reference](#reference)
 
+<!-- mtoc-end -->
 </details>
 
 ## Tracking boundary
@@ -92,6 +94,9 @@ The entry interaction methods map to these wire event types:
 Sticky entry views touch both paths. When `trackView({ sticky: true, ... })` is called, Core sends
 the view through Experience first, then sends an Insights view event. Non-sticky views only use
 Insights.
+
+Third-party analytics integrations that need one exposure for a sticky view must dedupe by semantic
+fields such as `viewId`, `componentId`, `experienceId`, and `variantIndex`, not by `messageId`.
 
 ## Consent and profile gates
 
