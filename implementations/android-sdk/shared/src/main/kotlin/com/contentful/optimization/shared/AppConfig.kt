@@ -3,10 +3,22 @@ package com.contentful.optimization.shared
 object AppConfig {
     const val clientId = "mock-client-id"
     const val environment = "master"
-    const val experienceBaseUrl = "http://localhost:8000/experience/"
-    const val insightsBaseUrl = "http://localhost:8000/insights/"
 
-    const val contentfulBaseUrl = "http://localhost:8000/contentful/"
+    // The mock API server runs on the HOST machine. From inside an Android
+    // emulator, `localhost`/`127.0.0.1` is the emulator's OWN loopback, not the
+    // host — reaching the host that way requires an `adb reverse tcp:8000`
+    // forward. That forward is NOT persistent: any `adbd`/adb-server restart
+    // (common on loaded CI emulators, and observed mid-run on the Namespace
+    // x86_64 runner) silently drops it, after which every host call fails with
+    // "Connection refused". Navigation flows survived; everything that resolves
+    // content over the network did not. `10.0.2.2` is the emulator's stable,
+    // built-in alias for the host loopback and needs no adb forward, so it is
+    // immune to that churn on every architecture (arm64 locally, x86_64 in CI).
+    const val mockHost = "http://10.0.2.2:8000"
+    const val experienceBaseUrl = "$mockHost/experience/"
+    const val insightsBaseUrl = "$mockHost/insights/"
+
+    const val contentfulBaseUrl = "$mockHost/contentful/"
     const val contentfulSpaceId = "mock-space-id"
 
     val entryIds = listOf(

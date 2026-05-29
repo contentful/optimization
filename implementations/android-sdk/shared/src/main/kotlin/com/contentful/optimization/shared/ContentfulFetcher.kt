@@ -16,12 +16,11 @@ object ContentfulFetcher {
     private const val MAX_ATTEMPTS = 3
     private const val RETRY_BACKOFF_MS = 250L
 
-    // OkHttp's defaults (10s) are too aggressive for localhost via `adb reverse` on the
-    // x86_64 CI emulator, where the first fetch after activity launch consistently
-    // returned null silently — leaving 7 of 8 AppConfig entries unrendered and breaking
-    // testTracksEntryViewEventsForVisibleEntries, which asserts on a specific entry's
-    // component-stats. Generous timeouts plus a small retry loop keep this fetch path
-    // deterministic across both arm64 (local) and x86_64 (CI) host environments.
+    // Generous timeouts plus a small retry loop keep this fetch path deterministic on a
+    // loaded CI emulator, where the first fetch after activity launch could otherwise time
+    // out under OkHttp's 10s defaults and silently return null — leaving AppConfig entries
+    // unrendered. The mock is reached via the emulator host alias `10.0.2.2` (see
+    // AppConfig.mockHost), so this no longer rides the fragile `adb reverse` tunnel.
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
