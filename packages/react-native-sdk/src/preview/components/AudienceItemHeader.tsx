@@ -80,6 +80,7 @@ const styles = StyleSheet.create({
   expandRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing.sm,
   },
   expandIcon: {
