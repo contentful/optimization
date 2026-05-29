@@ -1,0 +1,54 @@
+# Mirrors the anonymous-profile assertions in UnidentifiedVariantsTests — on a fresh
+# (unidentified) launch the common variants and the baseline entries resolve. Entries
+# whose entry-text-<id> is shared with the identified profile but differ in copy (new
+# vs return visitor, baseline vs variant) are asserted by a regex-safe text substring;
+# entries with a distinct id are asserted by id.
+appId: ${APP_ID}
+---
+- setAirplaneMode: disabled
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'identify-button'
+# Merge tag resolves the visitor's continent.
+- assertVisible: '.*merge tag content entry.*EU.*'
+# Common (continent/device/experiment) variants — same for anonymous and identified.
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-4ib0hsHWoSOnCVdDkizE8d'
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-xFwgG3oNaOcjzWiGe4vXo'
+    direction: DOWN
+# New-visitor variant (entry 2Z2WLOx resolves to "new visitors" when anonymous).
+- scrollUntilVisible:
+    element:
+      text: '.*for new visitors.*'
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-5XHssysWUDECHzKLzoIsg1'
+    direction: DOWN
+# Baselines for entries that only switch to a variant once identified.
+- scrollUntilVisible:
+    element:
+      text: '.*with or without a custom event.*'
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      text: '.*all identified or unidentified users.*'
+    direction: DOWN
+# Nested baselines (distinct ids).
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-1JAU028vQ7v6nB2swl3NBo'
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-5i4SdJXw9oDEY0vgO7CwF4'
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-uaNY4YJ0HFPAX3gKXiRdX'
+    direction: DOWN

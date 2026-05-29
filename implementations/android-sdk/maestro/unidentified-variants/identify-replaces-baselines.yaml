@@ -1,0 +1,52 @@
+# Mirrors the baseline -> identify -> relaunch transitions in UnidentifiedVariantsTests:
+# the entries that show a baseline while anonymous switch to their identified variant
+# after an identify + relaunch, and the anonymous nested baselines disappear.
+appId: ${APP_ID}
+---
+- setAirplaneMode: disabled
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'identify-button'
+# Identify, then relaunch so the identified profile rehydrates on cold start.
+- tapOn:
+    id: 'identify-button'
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+# Entries that were baselines while anonymous now resolve to their identified variant.
+- scrollUntilVisible:
+    element:
+      text: '.*for visitors with a custom event.*'
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      text: '.*for identified users.*'
+    direction: DOWN
+# Nested variants resolve (distinct ids)...
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-2KIWllNZJT205BwOSkMINg'
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-5a8ONfBdanJtlJ39WWnH1w'
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-4hDiXxYEFrXHXcQgmdL9Uv'
+    direction: DOWN
+# ...and the anonymous nested baselines are gone.
+- assertNotVisible:
+    id: 'entry-text-1JAU028vQ7v6nB2swl3NBo'
+- assertNotVisible:
+    id: 'entry-text-5i4SdJXw9oDEY0vgO7CwF4'
+- assertNotVisible:
+    id: 'entry-text-uaNY4YJ0HFPAX3gKXiRdX'
