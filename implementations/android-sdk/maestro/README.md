@@ -24,8 +24,9 @@ selector), and `identify-button` / `reset-button` are exposed as resource-ids (m
 ## Prerequisites
 
 - A running Android emulator/device (the flows assume the demo app is installed).
-- The mock server running on `localhost:8000` with `adb reverse tcp:8000 tcp:8000` (the demo apps
-  point at `http://localhost:8000` via `AppConfig`).
+- The mock server running on the host at port `8000`. The demo apps reach it via the emulator host
+  alias `http://10.0.2.2:8000` (`AppConfig.mockHost`), which needs no `adb reverse` and survives the
+  adb-daemon restarts that silently wipe reverse forwards on loaded CI emulators.
 
 Locally, run `pnpm test:e2e` (or `pnpm test:e2e:compose` / `pnpm test:e2e:views`), which uses
 `scripts/run-e2e.sh` to manage the emulator, mock server, and port forwarding, then runs the flows

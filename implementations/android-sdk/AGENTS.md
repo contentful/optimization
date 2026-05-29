@@ -53,8 +53,9 @@ UI Automator 2 suite from `uitests/`. This mirrors the iOS `swiftui/` + `uikit/`
   behavior belongs in `packages/universal/optimization-js-bridge`. Platform-agnostic helpers shared
   between `:compose` and `:views` belong in `:shared`. Compose-only or Views-only glue stays in its
   own app module.
-- The mock server must be running at `http://localhost:8000` before running either app. Use
-  `adb reverse tcp:8000 tcp:8000` to forward the port to the emulator.
+- The mock server must be running on the host at port `8000` before running either app. The apps
+  reach it via the emulator host alias `http://10.0.2.2:8000` (`AppConfig.mockHost`), so no
+  `adb reverse` is required; `10.0.2.2` survives adb-daemon restarts that wipe reverse forwards.
 - After SDK source changes, rebuild both apps via
   `./gradlew :compose:assembleDebug :views:assembleDebug` from this directory.
 - Keep accessibility identifiers (testTags) aligned with the iOS SwiftUI implementation and
