@@ -69,10 +69,9 @@ Owner key: **SDK** = Optimization SDK team, **CI** = release engineering.
    populates everything in it, so it needs no README/LICENSE committed by hand.
 2. Provision the push credential. Someone with **admin** on `optimization.swift` runs
    `scripts/setup-spm-mirror-credential.sh`. It generates an SSH keypair, registers the public key
-   on the mirror as a writable deploy key, and stores the private key in Vault at
-   `secret/github/spm_mirror_deploy_key` (field `SSH_PRIVATE_KEY`) — exactly what the Step 4
-   workflow reads. (Admin is required because deploy-key management needs it; `MAINTAIN` is not
-   enough.)
+   on the mirror as a writable deploy key, and stores the private key as the `SPM_MIRROR_DEPLOY_KEY`
+   Actions secret on `contentful/optimization` — exactly what the Step 4 workflow reads. (Admin is
+   required because deploy-key management needs it; `MAINTAIN` is not enough.)
 3. Treat `main` as generated: humans don't push to it. The deploy key in step 2 is the only
    non-admin write path, and it's used only by the workflow.
 
@@ -105,7 +104,6 @@ name: Publish Swift Package
 
 permissions:
   contents: read
-  id-token: write
 
 on:
   release:
@@ -120,17 +118,6 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Retrieve mirror deploy key from Vault
-        id: vault
-        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
-        with:
-          url: ${{ secrets.VAULT_URL }}
-          role: ${{ github.event.repository.name }}-github-action
-          method: jwt
-          path: github-actions
-          secrets: |
-            secret/data/github/spm_mirror_deploy_key SSH_PRIVATE_KEY | MIRROR_DEPLOY_KEY;
-
       - name: Derive release version
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
@@ -177,7 +164,7 @@ jobs:
 
       - name: Set up the deploy key for SSH push
         env:
-          MIRROR_DEPLOY_KEY: ${{ steps.vault.outputs.MIRROR_DEPLOY_KEY }}
+          MIRROR_DEPLOY_KEY: ${{ secrets.SPM_MIRROR_DEPLOY_KEY }}
         run: |
           mkdir -p ~/.ssh
           printf '%s\n' "$MIRROR_DEPLOY_KEY" > ~/.ssh/id_ed25519
@@ -202,9 +189,9 @@ Notes:
 
 - The push credential is a **writable deploy key** on `contentful/optimization.swift` (an SSH key
   scoped to that one repo). It's provisioned by `scripts/setup-spm-mirror-credential.sh`, which adds
-  the public key to the mirror and stores the private key in Vault at
-  `secret/github/spm_mirror_deploy_key` (field `SSH_PRIVATE_KEY`). A deploy key is used rather than
-  a PAT because it can be created entirely from the CLI and isn't tied to a person's account.
+  the public key to the mirror and stores the private key as the `SPM_MIRROR_DEPLOY_KEY` Actions
+  secret on `contentful/optimization`. A deploy key is used rather than a PAT because it can be
+  created entirely from the CLI and isn't tied to a person's account.
 - No `fetch-depth: 0`, no force-push on `main` — each release is a normal commit on a linear
   history, with the source SHA in the message.
 - `--force` on the **tag** only, to allow re-running a release (e.g. a hotfix re-tag).

@@ -9,23 +9,26 @@
 # built-in GITHUB_TOKEN can only write to its own repo, so we need a credential
 # that can push to the mirror. This script creates that credential as a
 # *writable deploy key* (an SSH key scoped to the mirror repo only) and stores
-# the private half in Vault for the workflow to read.
+# the private half as a GitHub Actions secret on the source repo for the
+# workflow to read.
 #
-# WHO RUNS THIS: someone with ADMIN on contentful/optimization.swift. Deploy-key
-# management requires admin; MAINTAIN/WRITE is not enough.
+# WHO RUNS THIS: someone with ADMIN on contentful/optimization.swift (deploy-key
+# management requires admin; MAINTAIN/WRITE is not enough) and permission to set
+# Actions secrets on contentful/optimization.
 #
 # WHAT IT DOES:
 #   1. Checks prerequisites (gh authed + admin on the mirror, ssh-keygen).
 #   2. Generates a fresh ed25519 keypair locally (no passphrase — CI can't type one).
 #   3. Registers the PUBLIC key on contentful/optimization.swift as a deploy key
 #      with write access.
-#   4. Stores the PRIVATE key in Vault (or prints the exact command if Vault isn't
-#      available on this machine).
+#   4. Stores the PRIVATE key as a GitHub Actions secret on the source repo (or
+#      prints the exact command if it can't be set from this machine).
 #   5. Prints the workflow snippet that consumes it, then offers to delete the
 #      local private key.
 #
-# It is safe to re-run: it detects an existing deploy key with the same title and
-# asks before replacing it.
+# It is idempotent: re-running replaces the deploy key we previously created
+# (matched by title) and overwrites the Actions secret, converging to the same
+# end state every time.
 #
 # Usage:
 #   ./setup-spm-mirror-credential.sh           # interactive
@@ -34,16 +37,16 @@
 set -euo pipefail
 
 # ----------------------------------------------------------------------------
-# Configuration — change only if the repo or Vault layout changes.
+# Configuration — change only if the repo layout changes.
 # ----------------------------------------------------------------------------
 MIRROR_REPO="contentful/optimization.swift"
+SOURCE_REPO="contentful/optimization"
 KEY_TITLE="spm-publish (contentful/optimization release workflow)"
 KEY_COMMENT="spm-mirror-publish"
 
-# Vault KV v2: you WRITE to secret/<path>, the workflow READS from secret/data/<path>.
-VAULT_WRITE_PATH="secret/github/spm_mirror_deploy_key"
-VAULT_READ_PATH="secret/data/github/spm_mirror_deploy_key"
-VAULT_FIELD="SSH_PRIVATE_KEY"
+# The release workflow reads the private key from this Actions secret on the
+# source repo.
+SECRET_NAME="SPM_MIRROR_DEPLOY_KEY"
 
 KEY_PATH="${KEY_PATH:-$HOME/.ssh/optimization-swift-deploy}"
 
@@ -83,6 +86,17 @@ if [[ "$IS_ADMIN" != "true" ]]; then
 fi
 ok "You have admin on $MIRROR_REPO"
 
+# Setting Actions secrets needs the repo's "secrets" permission, not full admin.
+# Listing secrets requires that same permission, so it's a non-destructive probe:
+# if you can list them, you can set them.
+if gh api "repos/$SOURCE_REPO/actions/secrets" >/dev/null 2>&1; then
+  ok "You can manage Actions secrets on $SOURCE_REPO"
+else
+  die "You can't manage Actions secrets on $SOURCE_REPO.
+      You need the 'secrets' permission there (admin, or a role/grant that includes it).
+      Ask an org admin to run this script, or to grant you that access."
+fi
+
 # ----------------------------------------------------------------------------
 # 2. Summary + confirm
 # ----------------------------------------------------------------------------
@@ -90,7 +104,7 @@ step "This will:"
 cat <<EOF
     • generate an SSH keypair at: $KEY_PATH(.pub)
     • add the public key to $MIRROR_REPO as a WRITABLE deploy key
-    • store the private key in Vault at: $VAULT_WRITE_PATH (field: $VAULT_FIELD)
+    • store the private key as the $SECRET_NAME Actions secret on $SOURCE_REPO
 EOF
 confirm "Proceed?" || die "Aborted by user."
 
@@ -120,18 +134,15 @@ chmod 600 "$KEY_PATH"
 # ----------------------------------------------------------------------------
 step "Registering the deploy key on $MIRROR_REPO"
 
-EXISTING_ID="$(gh api "repos/$MIRROR_REPO/keys" --jq \
-  ".[] | select(.title == \"$KEY_TITLE\") | .id" 2>/dev/null || true)"
-
-if [[ -n "$EXISTING_ID" ]]; then
-  warn "A deploy key titled \"$KEY_TITLE\" already exists (id: $EXISTING_ID)."
-  if confirm "Delete it and add the new key?"; then
-    gh api -X DELETE "repos/$MIRROR_REPO/keys/$EXISTING_ID" >/dev/null
-    ok "Removed old deploy key"
-  else
-    die "Aborted: cannot add a duplicate key. Remove the old one first or reuse it."
-  fi
-fi
+# Idempotent: drop any deploy key we previously created (matched by title), then
+# add the current public key. GitHub rejects re-adding an identical key with
+# "key is already in use", so deleting first is what makes re-runs safe.
+while read -r existing_id; do
+  [[ -z "$existing_id" ]] && continue
+  gh api -X DELETE "repos/$MIRROR_REPO/keys/$existing_id" >/dev/null
+  ok "Removed previous deploy key (id: $existing_id)"
+done < <(gh api "repos/$MIRROR_REPO/keys" --jq \
+  ".[] | select(.title == \"$KEY_TITLE\") | .id" 2>/dev/null || true)
 
 gh api -X POST "repos/$MIRROR_REPO/keys" \
   -f title="$KEY_TITLE" \
@@ -140,45 +151,50 @@ gh api -X POST "repos/$MIRROR_REPO/keys" \
 ok "Added writable deploy key to $MIRROR_REPO"
 
 # ----------------------------------------------------------------------------
-# 5. Store the private key in Vault (or print instructions)
+# 5. Store the private key as a GitHub Actions secret (or print instructions)
 # ----------------------------------------------------------------------------
-step "Storing the private key in Vault"
+step "Storing the private key as a GitHub Actions secret"
 
-VAULT_DONE=false
-if command -v vault >/dev/null 2>&1 && vault token lookup >/dev/null 2>&1; then
-  if confirm "Write the private key to Vault at $VAULT_WRITE_PATH now?"; then
-    vault kv put "$VAULT_WRITE_PATH" "$VAULT_FIELD=@$KEY_PATH" >/dev/null
-    ok "Stored private key in Vault"
-    VAULT_DONE=true
-  fi
+# gh secret set overwrites an existing value, so this is idempotent on its own.
+SECRET_DONE=false
+if gh secret set "$SECRET_NAME" --repo "$SOURCE_REPO" < "$KEY_PATH"; then
+  ok "Stored private key as $SECRET_NAME on $SOURCE_REPO"
+  SECRET_DONE=true
 else
-  warn "Vault CLI not available or not logged in on this machine."
-fi
-
-if [[ "$VAULT_DONE" == false ]]; then
+  warn "Could not set the secret (do you have admin/secrets access on $SOURCE_REPO?)."
   cat <<EOF
-    To store the private key, run this on a machine with Vault access:
+    Finish provisioning by running this with gh access to $SOURCE_REPO:
 
-        vault kv put $VAULT_WRITE_PATH $VAULT_FIELD=@$KEY_PATH
+        gh secret set $SECRET_NAME --repo $SOURCE_REPO < $KEY_PATH
 
-    (The '@' makes Vault read the file directly, so the key is never pasted into
-    your shell history.)
+    (Reading from the file via '<' keeps the key out of your shell history.)
 EOF
 fi
 
 # ----------------------------------------------------------------------------
-# 6. What the workflow needs
+# 6. Verify the end state — read both values back and fail if either is missing
+# ----------------------------------------------------------------------------
+step "Verifying the configuration is complete"
+
+VERIFIED_KEY="$(gh api "repos/$MIRROR_REPO/keys" --jq \
+  ".[] | select(.title == \"$KEY_TITLE\" and .read_only == false) | .id" 2>/dev/null || true)"
+[[ -n "$VERIFIED_KEY" ]] \
+  || die "Verification failed: no writable deploy key titled \"$KEY_TITLE\" on $MIRROR_REPO."
+ok "Writable deploy key present on $MIRROR_REPO (id: $VERIFIED_KEY)"
+
+gh api "repos/$SOURCE_REPO/actions/secrets/$SECRET_NAME" >/dev/null 2>&1 \
+  || die "Verification failed: $SECRET_NAME secret is not set on $SOURCE_REPO."
+ok "$SECRET_NAME secret present on $SOURCE_REPO"
+
+# ----------------------------------------------------------------------------
+# 7. What the workflow needs
 # ----------------------------------------------------------------------------
 step "Done. The publish workflow consumes this credential like so:"
 cat <<EOF
 
-    # In .github/workflows/publish-spm.yaml — fetch the key from Vault:
-    secrets: |
-      $VAULT_READ_PATH $VAULT_FIELD | MIRROR_DEPLOY_KEY ;
-
-    # ...then push over SSH:
+    # In .github/workflows/publish-spm.yaml — push over SSH using the secret:
     mkdir -p ~/.ssh
-    echo "\${{ steps.vault.outputs.MIRROR_DEPLOY_KEY }}" > ~/.ssh/id_ed25519
+    echo "\${{ secrets.$SECRET_NAME }}" > ~/.ssh/id_ed25519
     chmod 600 ~/.ssh/id_ed25519
     ssh-keyscan github.com >> ~/.ssh/known_hosts
     git clone --depth 1 git@github.com:$MIRROR_REPO.git mirror
@@ -186,18 +202,18 @@ cat <<EOF
 EOF
 
 # ----------------------------------------------------------------------------
-# 7. Clean up the local private key
+# 8. Clean up the local private key
 # ----------------------------------------------------------------------------
-if [[ "$VAULT_DONE" == true ]]; then
+if [[ "$SECRET_DONE" == true ]]; then
   step "Cleanup"
-  if confirm "Vault now holds the key. Delete the local private key at $KEY_PATH?"; then
+  if confirm "$SOURCE_REPO now holds the key. Delete the local private key at $KEY_PATH?"; then
     rm -f "$KEY_PATH" "$KEY_PATH.pub"
     ok "Deleted local keypair"
   else
     warn "Local private key kept at $KEY_PATH — delete it once you've confirmed the workflow works."
   fi
 else
-  warn "Keep $KEY_PATH safe until it's in Vault, then delete it."
+  warn "Keep $KEY_PATH safe until the $SECRET_NAME secret is set, then delete it."
 fi
 
 printf '\n\033[1;32mAll set.\033[0m\n'

@@ -2,7 +2,6 @@ name: Publish Swift Package
 
 permissions:
   contents: read
-  id-token: write
 
 on:
   release:
@@ -17,17 +16,6 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Retrieve mirror deploy key from Vault
-        id: vault
-        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
-        with:
-          url: ${{ secrets.VAULT_URL }}
-          role: ${{ github.event.repository.name }}-github-action
-          method: jwt
-          path: github-actions
-          secrets: |
-            secret/data/github/spm_mirror_deploy_key SSH_PRIVATE_KEY | MIRROR_DEPLOY_KEY;
-
       - name: Derive release version
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
@@ -74,7 +62,7 @@ jobs:
 
       - name: Set up the deploy key for SSH push
         env:
-          MIRROR_DEPLOY_KEY: ${{ steps.vault.outputs.MIRROR_DEPLOY_KEY }}
+          MIRROR_DEPLOY_KEY: ${{ secrets.SPM_MIRROR_DEPLOY_KEY }}
         run: |
           mkdir -p ~/.ssh
           printf '%s\n' "$MIRROR_DEPLOY_KEY" > ~/.ssh/id_ed25519
