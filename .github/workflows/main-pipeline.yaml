@@ -818,7 +818,7 @@ jobs:
 
   e2e-android-sdk:
     name: 🤖 E2E Android (${{ matrix.app }})
-    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
+    runs-on: namespace-profile-linux-16-vcpu-32-gb-ram-optimal
     timeout-minutes: 45
     needs: [setup, changes, e2e-android-sdk-build]
     if: needs.changes.outputs.e2e_android == 'true'
