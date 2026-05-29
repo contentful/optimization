@@ -13,7 +13,7 @@
     "tsBuildInfoFile": "./.tsbuildinfo"
   },
   "include": ["./src/**/*"],
-  "exclude": ["./src/**/*.test.*"],
+  "exclude": ["./src/**/*.test.*", "./src/polyfills/**/*"],
   "extends": "../../../tsconfig.base.json",
   "references": [{ "path": "../core-sdk/tsconfig.build.json" }]
 }
