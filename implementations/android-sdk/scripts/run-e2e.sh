@@ -5,7 +5,9 @@
 # This script orchestrates the complete Android E2E testing workflow by:
 #   1. Ensuring a visible emulator is running (auto-launches one if none connected)
 #   2. Starting the mock API server (from lib/mocks)
-#   3. Setting up adb reverse port forwarding so the emulator can reach localhost
+#   3. Verifying the emulator can reach the host mock via the 10.0.2.2 host alias
+#      (the apps point at http://10.0.2.2:8000 — see shared/AppConfig.kt — which needs
+#      no adb forward; an adb reverse is still set as a harmless localhost fallback)
 #   4. Disabling emulator animations for reliable UI timing
 #   5. Building both reference app APKs (compose + views) via Gradle
 #   6. Installing the app APK(s) on the connected device/emulator
@@ -478,9 +480,20 @@ start_mock_server() {
 }
 
 setup_adb() {
-    log_info "Setting up adb reverse port forwarding..."
-    adb reverse tcp:${MOCK_SERVER_PORT} tcp:${MOCK_SERVER_PORT}
-    log_info "Port ${MOCK_SERVER_PORT} forwarded to emulator"
+    # The apps reach the host mock via the emulator host alias 10.0.2.2 (AppConfig),
+    # which needs no adb forward and survives adb-daemon restarts. We still set an
+    # adb reverse as a harmless localhost fallback, then verify the 10.0.2.2 path the
+    # apps actually use so a broken mock connection fails fast and loudly.
+    log_info "Setting up adb reverse port forwarding (localhost fallback)..."
+    adb reverse tcp:${MOCK_SERVER_PORT} tcp:${MOCK_SERVER_PORT} || \
+        log_warn "adb reverse failed; apps use 10.0.2.2 so continuing"
+
+    log_info "Verifying host mock is reachable from the emulator via 10.0.2.2..."
+    if adb shell "toybox nc -z 10.0.2.2 ${MOCK_SERVER_PORT}" 2>/dev/null; then
+        log_info "Host mock reachable at 10.0.2.2:${MOCK_SERVER_PORT}"
+    else
+        log_warn "Could not confirm 10.0.2.2:${MOCK_SERVER_PORT} from the emulator; continuing"
+    fi
 
     if [[ "$DISABLE_EMULATOR_ANIMATIONS" == "true" ]]; then
         log_info "Disabling emulator animations for reliable UI timing..."

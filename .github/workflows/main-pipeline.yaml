@@ -952,10 +952,11 @@ jobs:
             echo "Installing app APKs (Compose + XML Views)..."
             adb install -r android-apks/compose-debug.apk
             adb install -r android-apks/views-debug.apk
-            echo "Setting up adb reverse port forwarding..."
-            adb reverse tcp:8000 tcp:8000
+            echo "Setting up adb reverse port forwarding (harmless localhost fallback)..."
+            adb reverse tcp:8000 tcp:8000 || echo "::warning::adb reverse failed; apps use 10.0.2.2 so continuing"
             sleep 3
-            adb shell "for i in 1 2 3 4 5 6 7 8 9 10; do nc -z localhost 8000 2>/dev/null && echo 'Mock server tunnel verified' && exit 0; sleep 1; done; echo 'WARNING: tunnel verification timed out'"
+            echo "Verifying the host mock is reachable from the emulator via 10.0.2.2 (the host alias the apps use; immune to adb-daemon restarts that wipe reverse forwards)..."
+            adb shell "for i in 1 2 3 4 5 6 7 8 9 10; do toybox nc -z 10.0.2.2 8000 2>/dev/null && echo 'Mock server reachable via 10.0.2.2' && exit 0; sleep 1; done; echo '::warning::mock 10.0.2.2 verification timed out'"
             echo "Running Maestro flows against both apps ($MAESTRO_ITERATIONS iteration(s))..."
             m(){ a=1; while [ "$a" -le "${MAESTRO_ATTEMPTS:-2}" ]; do "$HOME/.maestro/bin/maestro" test -e APP_ID="$1" implementations/android-sdk/maestro && return 0; echo "::warning::Maestro retry $a for $1 (a flow failed; retrying the suite)"; a=$((a+1)); done; return 1; }; rc=0; i=0; while [ "$i" -lt "$MAESTRO_ITERATIONS" ]; do echo "=== iteration $((i+1))/$MAESTRO_ITERATIONS ==="; m com.contentful.optimization.app || rc=1; m com.contentful.optimization.app.views || rc=1; i=$((i+1)); done; exit $rc
 
