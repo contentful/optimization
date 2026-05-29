@@ -888,6 +888,12 @@ jobs:
 
       - run: pnpm install --prefer-offline --frozen-lockfile
 
+      # The UMD bridge is generated (gitignored), so it must be built before the
+      # implementation app compiles — SwiftPM silently ships an empty resource
+      # bundle if it's missing, which breaks the SDK at runtime.
+      - name: Build the JS bridge
+        run: pnpm run ios:bridge
+
       - name: Build iOS UI test bundles (SwiftUI + UIKit)
         run: pnpm run implementation:ios-sdk -- test:e2e:ios:build:release
 
