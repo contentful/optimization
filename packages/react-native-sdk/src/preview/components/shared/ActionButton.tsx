@@ -88,6 +88,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: typography.fontSize.sm,
     fontWeight: typography.fontWeight.medium,
+    textAlign: 'center',
   },
   disabled: {
     opacity: 0.5,

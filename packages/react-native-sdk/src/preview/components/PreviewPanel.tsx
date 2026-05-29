@@ -322,11 +322,11 @@ const styles = StyleSheet.create({
     height: spacing.xl,
   },
   resetButton: {
-    width: '100%',
+    alignSelf: 'stretch',
     paddingVertical: spacing.md,
   },
   refreshButton: {
-    width: '100%',
+    alignSelf: 'stretch',
     paddingVertical: spacing.md,
     marginBottom: spacing.sm,
   },

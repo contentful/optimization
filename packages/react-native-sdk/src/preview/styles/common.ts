@@ -112,6 +112,7 @@ export const commonStyles = StyleSheet.create({
   // Footer styles
   footer: {
     padding: spacing.xl,
+    alignItems: 'center',
     backgroundColor: colors.background.secondary,
     borderTopWidth: 1,
     borderTopColor: colors.border.primary,
