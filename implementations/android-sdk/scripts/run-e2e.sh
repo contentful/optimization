@@ -65,6 +65,11 @@ CI="${CI:-false}"
 DISABLE_EMULATOR_ANIMATIONS="${DISABLE_EMULATOR_ANIMATIONS:-true}"
 STREAM_BACKGROUND_LOGS="${STREAM_BACKGROUND_LOGS:-false}"
 MAESTRO_ITERATIONS="${MAESTRO_ITERATIONS:-1}"
+# Attempts per app before declaring failure. Maestro 2.x has no --retries flag, and a
+# long emulator session occasionally drops a single flow (adb/gRPC hiccup or a slow
+# re-resolution late in the run). One retry of the app's suite lets that self-heal; a
+# genuine failure still fails every attempt. Set to 1 to disable retries.
+MAESTRO_ATTEMPTS="${MAESTRO_ATTEMPTS:-2}"
 
 # AVD pinned to match the CI emulator-runner config in
 # .github/workflows/main-pipeline.yaml (e2e-android-maestro):
@@ -540,8 +545,19 @@ run_maestro_for_app() {
         exit 1
     fi
 
-    log_info "--- Running Maestro flows against $package ---"
-    "$MAESTRO_BIN" test -e "APP_ID=$package" "$flows_dir"
+    local attempt
+    for ((attempt = 1; attempt <= MAESTRO_ATTEMPTS; attempt++)); do
+        if [[ "$attempt" -gt 1 ]]; then
+            log_warn "Retry $attempt/$MAESTRO_ATTEMPTS for $package (a flow failed on the previous attempt)..."
+        else
+            log_info "--- Running Maestro flows against $package ---"
+        fi
+        if "$MAESTRO_BIN" test -e "APP_ID=$package" "$flows_dir"; then
+            return 0
+        fi
+    done
+    log_error "Maestro flows failed for $package after $MAESTRO_ATTEMPTS attempt(s)"
+    return 1
 }
 
 main() {
