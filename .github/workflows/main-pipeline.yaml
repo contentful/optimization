@@ -888,9 +888,6 @@ jobs:
 
       - run: pnpm install --prefer-offline --frozen-lockfile
 
-      # The UMD bridge is generated (gitignored), so it must be built before the
-      # implementation app compiles — SwiftPM silently ships an empty resource
-      # bundle if it's missing, which breaks the SDK at runtime.
       - name: Build the JS bridge
         run: pnpm run ios:bridge
 
@@ -940,7 +937,6 @@ jobs:
 
       - run: pnpm install --prefer-offline --frozen-lockfile
 
-      # The UMD bridge is generated (gitignored), so it must be built before Swift compiles.
       - name: Build the JS bridge
         run: pnpm run ios:bridge
 
@@ -1126,8 +1122,6 @@ jobs:
       IOS_SCHEME: ${{ matrix.scheme }}
       IOS_SIM_NAME: 'iPhone 16'
       IOS_SIM_OS: 'latest'
-      # Smoke mode for the first PR — restrict to one test class per scheme.
-      # Remove this env var in a follow-up PR to enable the full suite.
       IOS_ONLY_TESTING: OptimizationAppUITests${{ matrix.scheme }}/PreviewPanelTests
     steps:
       - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
