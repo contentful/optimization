@@ -1,7 +1,7 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { commonStyles } from '../styles/common'
-import { spacing } from '../styles/theme'
+import { colors, spacing, typography } from '../styles/theme'
 import type { ProfileSectionProps } from '../types'
 import { copyToClipboard } from '../utils'
 import { JsonViewer, ListItem, Section } from './shared'
@@ -52,11 +52,12 @@ export function ProfileSection({ profile, isLoading }: ProfileSectionProps): Rea
         <Text style={commonStyles.subsectionTitle}>Traits ({traitEntries.length})</Text>
         {traitEntries.length > 0 ? (
           traitEntries.map(([key, value]) => (
-            <ListItem
-              key={key}
-              label={key}
-              value={typeof value === 'object' ? JSON.stringify(value) : String(value)}
-            />
+            <View key={key} style={styles.traitRow}>
+              <Text style={styles.traitKey}>{key}</Text>
+              <Text style={styles.traitValue} numberOfLines={2}>
+                {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+              </Text>
+            </View>
           ))
         ) : (
           <Text style={commonStyles.emptyText}>No traits available</Text>
@@ -91,6 +92,27 @@ export function ProfileSection({ profile, isLoading }: ProfileSectionProps): Rea
 const styles = StyleSheet.create({
   subsection: {
     marginBottom: spacing.lg,
+  },
+  traitRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.primary,
+  },
+  traitKey: {
+    flexShrink: 0,
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
+    color: colors.text.primary,
+  },
+  traitValue: {
+    flexShrink: 1,
+    textAlign: 'right',
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
   },
 })
 
