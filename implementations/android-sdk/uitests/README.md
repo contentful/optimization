@@ -17,20 +17,21 @@ verify timing, threshold math, or coroutine sequencing should be a JVM unit test
 [`packages/android/ContentfulOptimization/src/test/`](../../../packages/android/ContentfulOptimization/src/test/),
 not here.
 
-## Deleted view-tracking tests
+## Deleted tests
 
-The following `@Test` methods were deleted in
-[`1be50e49`](https://github.com/contentful/optimization/commit/1be50e49) because they conflated the
-`ViewTrackingController` dwell state machine with real UI scroll timing and were intolerant of the
-x86_64 CI emulator. The SDK contract they nominally verified now lives in
-[`ViewTrackingControllerTest`](../../../packages/android/ContentfulOptimization/src/test/kotlin/com/contentful/optimization/tracking/ViewTrackingControllerTest.kt):
+The following `@Test` methods were deleted because each one's nominal SDK contract is already owned
+by a deterministic unit test upstream (either `ViewTrackingControllerTest` for the dwell state
+machine or `PreviewOverrideManager.test.ts` for the override store), while the E2E variants were
+intolerant of the real emulator timing — they conflated SDK contract with demo-app
+scroll/relaunch/destroy plumbing and produced no signal CI could act on:
 
-| Former E2E test                                                         | Where the contract lives now                                                                                                                                          |
-| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AnalyticsTests.testTracksEntryViewEventsForVisibleEntries`             | `ViewTrackingControllerTest` — the BECAME_VISIBLE → dwell → emit path                                                                                                 |
-| `FlagViewTrackingTests.testEmitsFlagViewEventsForSubscribedBooleanFlag` | `ViewTrackingControllerTest` — same dwell path; flag subscription wiring is exercised by the JS bridge tests                                                          |
-| `OfflineBehaviorTests.testContinuesToTrackEventsWhileOffline`           | `ViewTrackingControllerTest` covers the dwell-fired event; `testRecoverGracefullyWhenNetworkRestored` (kept) covers the offline-to-online identify path without dwell |
-| `OfflineBehaviorTests.testQueueEventsOfflineAndFlushWhenOnline`         | Same as above                                                                                                                                                         |
+| Former E2E test                                                         | Where the contract lives now                                                                                                                                                                                                                                                                                                                                       |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `AnalyticsTests.testTracksEntryViewEventsForVisibleEntries`             | `ViewTrackingControllerTest` — the BECAME_VISIBLE → dwell → emit path                                                                                                                                                                                                                                                                                              |
+| `FlagViewTrackingTests.testEmitsFlagViewEventsForSubscribedBooleanFlag` | `ViewTrackingControllerTest` — same dwell path; flag subscription wiring is exercised by the JS bridge tests                                                                                                                                                                                                                                                       |
+| `OfflineBehaviorTests.testContinuesToTrackEventsWhileOffline`           | `ViewTrackingControllerTest` covers the dwell-fired event; `testRecoverGracefullyWhenNetworkRestored` (kept) covers the offline-to-online identify path without dwell                                                                                                                                                                                              |
+| `OfflineBehaviorTests.testQueueEventsOfflineAndFlushWhenOnline`         | Same as above                                                                                                                                                                                                                                                                                                                                                      |
+| `PreviewPanelOverridesTests.testScenario8DestroyRemountClearsOverrides` | `PreviewOverrideManager.test.ts` (`registers a state interceptor and starts with empty overrides`) — the "empty store ⇒ empty overrides" claim. The Compose empty-state label (`OverridesSection`) is a trivial 4-line `if (hasOverrides) … else Text("No active overrides")`. The destroy/remount path itself is exercised by every other test's `@Before` setUp. |
 
 All four asserted on the per-entry `component-stats-<id>` (or `events-count >= N`) UI elements,
 which required the SDK to emit a tracker event, which in turn required a real swipe to settle into

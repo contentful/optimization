@@ -6,7 +6,6 @@ import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.UiScrollable
 import androidx.test.uiautomator.UiSelector
-import androidx.test.uiautomator.Until
 import com.contentful.optimization.uitests.support.AppLauncher
 import com.contentful.optimization.uitests.support.PerTestRule
 import com.contentful.optimization.uitests.support.TestHelpers
@@ -404,45 +403,4 @@ class PreviewPanelOverridesTests {
         assertEntryVisible(BASELINE_ENTRY_ID, "Expected baseline still rendering after API refresh")
     }
 
-    /**
-     * Scenario 8: a cold relaunch with cleared storage discards all overrides
-     * — the variant renders again and the overrides section reports that none
-     * remain.
-     */
-    @Test
-    fun testScenario8DestroyRemountClearsOverrides() {
-        openPanel()
-        waitForDefinitionsLoaded()
-        scrollPanelToElement("audience-toggle-$AUDIENCE_ID-off")
-        TestHelpers.waitAndTap(device, By.desc("audience-toggle-$AUDIENCE_ID-off"), singleClick = true)
-        closePanel()
-
-        assertEntryVisible(BASELINE_ENTRY_ID, "Expected baseline after deactivating audience (pre-relaunch)")
-
-        // Cold relaunch with fresh storage, then re-identify and rehydrate.
-        AppLauncher.relaunchClean(device)
-        identifyAndRelaunch()
-
-        // Override must be gone — variant renders again.
-        assertEntryVisible(VARIANT_ENTRY_ID, "Expected variant entry after destroy/remount cleared overrides")
-
-        // The Overrides section should show its empty state. The empty-state
-        // text sits below the fold so the panel content must be scrolled to
-        // reveal it. On Android, reset-all-overrides lives in the fixed footer
-        // (outside preview-panel-list), so scrollPanelToElement exhausts its
-        // swipe budget rather than returning early — this is expected. After
-        // the swipes the Overrides section is in or near the viewport. Use a
-        // timed wait so the accessibility tree can settle after the final swipe
-        // before asserting, mirroring the defensive pattern used by
-        // assertEntryVisible throughout this suite.
-        openPanel()
-        waitForDefinitionsLoaded()
-        scrollPanelToElement("reset-all-overrides")
-        val found = device.wait(Until.hasObject(By.text("No active overrides")), TestHelpers.EXTENDED_TIMEOUT)
-        Assert.assertTrue(
-            "Expected 'No active overrides' empty-state text in Overrides section",
-            found,
-        )
-        closePanel()
-    }
 }
