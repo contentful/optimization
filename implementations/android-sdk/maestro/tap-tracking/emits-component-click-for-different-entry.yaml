@@ -1,0 +1,15 @@
+# Mirrors TapTrackingTests.testEmitsComponentClickForDifferentEntry — same contract for
+# a different content entry, proving the click event carries the tapped entry's id.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- assertVisible: 'Analytics Events'
+- scrollUntilVisible:
+    element: 'content-entry-2Z2WLOx07InSewC3LUB3eX'
+    direction: DOWN
+- tapOn: 'content-entry-2Z2WLOx07InSewC3LUB3eX'
+- scrollUntilVisible:
+    element:
+      id: 'event-component_click-2Z2WLOx07InSewC3LUB3eX'
+    direction: DOWN
