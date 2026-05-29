@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -31,14 +32,17 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import com.contentful.optimization.compose.LocalOptimizationClient
 import com.contentful.optimization.core.JSONValue
+import org.json.JSONArray
 import org.json.JSONObject
 
 @Composable
@@ -320,37 +324,79 @@ private fun AudienceSection(
 @Composable
 private fun ProfileSection(profile: JSONValue?) {
     SectionCard(title = "Profile", collapsible = true) {
-        val profileMap = profile?.let { jsonValueToMap(it) }
+        val profileObj = profile?.objectValue
 
-        if (profileMap != null) {
+        if (profileObj != null) {
+            val id = profileObj["id"]?.stringValue
+            val traits = profileObj["traits"]?.objectValue ?: emptyMap()
+            val audiences = profileObj["audiences"]?.arrayValue ?: emptyList()
+
             Column(verticalArrangement = Arrangement.spacedBy(PreviewTheme.Spacing.md)) {
-                profileMap.keys.sorted().forEach { key ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .semantics { contentDescription = "profile-item-$key" },
-                    ) {
-                        Text(
-                            text = key,
-                            style = TextStyle(
-                                fontSize = PreviewTheme.FontSize.xs,
-                                fontWeight = FontWeight.SemiBold,
-                                color = PreviewTheme.Colors.TextColor.primary,
-                            ),
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(
-                            text = stringValue(profileMap[key]),
-                            style = TextStyle(fontSize = PreviewTheme.FontSize.xs, color = PreviewTheme.Colors.TextColor.secondary),
-                            maxLines = 2,
+                // Flat per-key rows keep the profile shape test-addressable via
+                // `profile-item-<key>` identifiers — matches the shared contract the
+                // UiAutomator suite drives, mirroring iOS. The curated subsections below
+                // add the organized, human-readable view aligned with React Native.
+                profileObj.keys.sorted().forEach { profileKey ->
+                    key(profileKey) {
+                        ProfileKeyValueRow(
+                            label = profileKey,
+                            value = traitDisplayValue(profileObj.getValue(profileKey)),
+                            labelColor = PreviewTheme.Colors.TextColor.primary,
+                            labelWeight = FontWeight.SemiBold,
+                            valueColor = PreviewTheme.Colors.TextColor.secondary,
+                            modifier = Modifier.semantics { contentDescription = "profile-item-$profileKey" },
                         )
                     }
                 }
 
                 HorizontalDivider()
 
+                // Profile ID
+                ListItemRow(label = "Profile ID", value = id ?: "—")
+
+                HorizontalDivider()
+
+                // Traits
+                Column(verticalArrangement = Arrangement.spacedBy(PreviewTheme.Spacing.xs)) {
+                    ProfileSubsectionTitle("Traits (${traits.size})")
+                    if (traits.isNotEmpty()) {
+                        traits.entries.sortedBy { it.key }.forEach { entry ->
+                            key("trait-${entry.key}") {
+                                ProfileKeyValueRow(
+                                    label = entry.key,
+                                    value = traitDisplayValue(entry.value),
+                                    labelColor = PreviewTheme.Colors.TextColor.secondary,
+                                    labelWeight = FontWeight.Normal,
+                                    valueColor = PreviewTheme.Colors.TextColor.primary,
+                                )
+                            }
+                        }
+                    } else {
+                        ProfileEmptyText("No traits available")
+                    }
+                }
+
+                HorizontalDivider()
+
+                // Audiences
+                Column(verticalArrangement = Arrangement.spacedBy(PreviewTheme.Spacing.xs)) {
+                    ProfileSubsectionTitle("Audiences (${audiences.size})")
+                    if (audiences.isNotEmpty()) {
+                        audiences.forEachIndexed { index, value ->
+                            val audienceId = value.stringValue ?: ""
+                            key(audienceId.ifEmpty { "audience-$index" }) {
+                                ListItemRow(label = audienceId, badge = "API" to BadgeVariant.API)
+                            }
+                        }
+                    } else {
+                        ProfileEmptyText("No audiences assigned")
+                    }
+                }
+
+                HorizontalDivider()
+
                 val profileJson = try {
-                    JSONObject(profileMap).toString(2)
+                    (jsonValueToOrgJson(JSONValue.Obj(profileObj)) as JSONObject).toString(2)
                 } catch (_: Exception) {
                     "{}"
                 }
@@ -367,6 +413,62 @@ private fun ProfileSection(profile: JSONValue?) {
             )
         }
     }
+}
+
+@Composable
+private fun ProfileSubsectionTitle(text: String) {
+    Text(
+        text = text,
+        style = TextStyle(
+            fontSize = PreviewTheme.FontSize.sm,
+            fontWeight = FontWeight.SemiBold,
+            color = PreviewTheme.Colors.TextColor.primary,
+        ),
+    )
+}
+
+/** A label/value row with the label on the left and the value pinned to the right (2-line clamp). */
+@Composable
+private fun ProfileKeyValueRow(
+    label: String,
+    value: String,
+    labelColor: Color,
+    labelWeight: FontWeight,
+    valueColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        verticalAlignment = Alignment.Top,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Text(
+            text = label,
+            style = TextStyle(
+                fontSize = PreviewTheme.FontSize.xs,
+                fontWeight = labelWeight,
+                color = labelColor,
+            ),
+        )
+        Spacer(modifier = Modifier.width(PreviewTheme.Spacing.sm))
+        Text(
+            text = value,
+            style = TextStyle(fontSize = PreviewTheme.FontSize.xs, color = valueColor),
+            maxLines = 2,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun ProfileEmptyText(text: String) {
+    Text(
+        text = text,
+        style = TextStyle(fontSize = PreviewTheme.FontSize.sm, color = PreviewTheme.Colors.TextColor.muted),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = PreviewTheme.Spacing.sm),
+    )
 }
 
 @Composable
@@ -548,31 +650,33 @@ private fun PanelFooter(hasOverrides: Boolean, onResetClick: () -> Unit) {
     }
 }
 
-@Suppress("UNCHECKED_CAST")
-private fun jsonValueToMap(value: JSONValue): Map<String, Any>? {
-    return when (value) {
-        is JSONValue.Obj -> value.value.mapValues { jsonValueToAny(it.value) }
-        else -> null
-    }
-}
-
-private fun jsonValueToAny(value: JSONValue): Any {
+/** Converts a [JSONValue] tree into org.json types (JSONObject/JSONArray/scalars) for serialization. */
+private fun jsonValueToOrgJson(value: JSONValue): Any {
     return when (value) {
         is JSONValue.Str -> value.value
         is JSONValue.Number -> value.value
         is JSONValue.Bool -> value.value
-        is JSONValue.Array -> value.value.map { jsonValueToAny(it) }
-        is JSONValue.Obj -> value.value.mapValues { jsonValueToAny(it.value) }
-        JSONValue.Null -> "null"
+        is JSONValue.Array -> JSONArray().apply { value.value.forEach { put(jsonValueToOrgJson(it)) } }
+        is JSONValue.Obj -> JSONObject().apply {
+            value.value.forEach { (entryKey, entryValue) -> put(entryKey, jsonValueToOrgJson(entryValue)) }
+        }
+        JSONValue.Null -> JSONObject.NULL
     }
 }
 
-private fun stringValue(value: Any?): String {
-    if (value == null) return "nil"
+/**
+ * Renders a single trait value for display: scalars are stringified, objects and arrays are
+ * serialized to compact JSON, mirroring the React Native profile section.
+ */
+private fun traitDisplayValue(value: JSONValue): String {
     return when (value) {
-        is String -> value
-        is Boolean -> if (value) "true" else "false"
-        is Number -> value.toString()
-        else -> value.toString()
+        is JSONValue.Str -> value.value
+        is JSONValue.Bool -> value.value.toString()
+        is JSONValue.Number -> {
+            val number = value.value
+            if (number % 1.0 == 0.0 && !number.isInfinite()) number.toLong().toString() else number.toString()
+        }
+        JSONValue.Null -> "null"
+        is JSONValue.Array, is JSONValue.Obj -> jsonValueToOrgJson(value).toString()
     }
 }
