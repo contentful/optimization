@@ -1,0 +1,26 @@
+# Mirrors ScreenTrackingTests.testTrackRevisitingViewOneAfterViewTwo — navigating
+# Home -> ViewOne -> ViewTwo, then back to ViewOne, records the revisit as a new entry.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'navigation-test-button'
+- assertVisible:
+    id: 'go-to-view-one-button'
+- tapOn:
+    id: 'go-to-view-one-button'
+- assertVisible:
+    id: 'navigation-view-test-one'
+- tapOn:
+    id: 'go-to-view-two-button'
+- assertVisible:
+    id: 'navigation-view-test-two'
+- back
+- assertVisible:
+    id: 'navigation-view-test-one'
+- assertVisible:
+    id: 'screen-event-log'
+    text: 'NavigationHome,NavigationViewOne,NavigationViewTwo,NavigationViewOne'

@@ -1,0 +1,24 @@
+# Mirrors ScreenTrackingTests.testTrackMultipleViewVisitsInOrder — Home -> ViewOne ->
+# ViewTwo records views in order. The exact-text assertion encodes the ordering
+# (ViewOne before ViewTwo) deterministically.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'navigation-test-button'
+- assertVisible:
+    id: 'go-to-view-one-button'
+- tapOn:
+    id: 'go-to-view-one-button'
+- assertVisible:
+    id: 'navigation-view-test-one'
+- tapOn:
+    id: 'go-to-view-two-button'
+- assertVisible:
+    id: 'navigation-view-test-two'
+- assertVisible:
+    id: 'screen-event-log'
+    text: 'NavigationHome,NavigationViewOne,NavigationViewTwo'
