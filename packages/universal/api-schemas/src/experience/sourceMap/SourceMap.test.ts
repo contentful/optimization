@@ -23,6 +23,25 @@ describe('SourceMap schema', () => {
     expect(result.success).toBe(true)
   })
 
+  it('accepts explicit optimization metadata on variants', () => {
+    const result = SourceMap.safeParse({
+      ...VALID_SOURCE_MAP,
+      variants: [
+        { type: 'personalization', id: 'default' },
+        {
+          type: 'personalization',
+          id: 'variant-a',
+          experienceId: 'exp-id',
+          optimizationId: 'opt-id',
+          variantId: 'variant-a',
+          variantIndex: 1,
+        },
+      ],
+    })
+
+    expect(result.success).toBe(true)
+  })
+
   it('accepts layers without variants', () => {
     const result = SourceMap.safeParse({
       ...VALID_SOURCE_MAP,

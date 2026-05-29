@@ -14,6 +14,22 @@ export const SourceMapVariant = z.object({
    * Variant identifier, e.g. `'default'` or a variant sys.id.
    */
   id: z.string(),
+  /**
+   * Contentful Experience `sys.id` associated with this variant.
+   */
+  experienceId: z.optional(z.string()),
+  /**
+   * Ninetailed optimization ID associated with this variant.
+   */
+  optimizationId: z.optional(z.string()),
+  /**
+   * Selected variant identifier associated with this variant.
+   */
+  variantId: z.optional(z.string()),
+  /**
+   * Selected variant index associated with this variant.
+   */
+  variantIndex: z.optional(z.number()),
 })
 
 /**

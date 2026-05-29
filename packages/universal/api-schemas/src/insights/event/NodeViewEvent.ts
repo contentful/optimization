@@ -68,7 +68,8 @@ export const NodeViewEvent = z.extend(UniversalEventProperties, {
    * Variant identifier selected for this node.
    *
    * @remarks
-   * Resolved from `extensions.sourceMap.variants[].id`.
+   * Resolved from `extensions.sourceMap.variants[].variantId`, falling back to
+   * `extensions.sourceMap.variants[].id`.
    */
   variantId: z.string(),
 
@@ -76,8 +77,9 @@ export const NodeViewEvent = z.extend(UniversalEventProperties, {
    * Variant index selected for this node.
    *
    * @remarks
-   * Resolved from the selected `extensions.sourceMap.layers[].variants[]`
-   * reference. The default variant is index `0`.
+   * Resolved from `extensions.sourceMap.variants[].variantIndex`, falling back
+   * to the selected `extensions.sourceMap.layers[].variants[]` reference. The
+   * default variant is index `0`.
    */
   variantIndex: z.number(),
 

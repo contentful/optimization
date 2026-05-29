@@ -26,6 +26,37 @@ function isKnownEntityKind(kind: string): kind is ResolvedNodeMetadata['entityKi
   return KNOWN_ENTITY_KINDS.has(kind)
 }
 
+function resolveVariantIndex(
+  variantEntry: SourceMap['variants'][number],
+  fallbackVariantIndex: number | undefined,
+): number | undefined {
+  if (variantEntry.variantIndex !== undefined) {
+    return variantEntry.variantIndex
+  }
+
+  if (variantEntry.id === 'default') {
+    return 0
+  }
+
+  return fallbackVariantIndex
+}
+
+function resolveVariantMetadata(
+  variantEntry: SourceMap['variants'][number] | undefined,
+  fallbackVariantIndex: number | undefined,
+  fallbackOptimizationId: string,
+): Pick<ExoNodeLayer, 'optimizationId' | 'variantId' | 'variantIndex'> {
+  if (variantEntry === undefined) {
+    return {}
+  }
+
+  return {
+    variantId: variantEntry.variantId ?? variantEntry.id,
+    variantIndex: resolveVariantIndex(variantEntry, fallbackVariantIndex),
+    optimizationId: variantEntry.optimizationId ?? fallbackOptimizationId,
+  }
+}
+
 function resolveExoLayer(
   layerIndex: number | undefined,
   layers: SourceMap['layers'],
@@ -47,11 +78,9 @@ function resolveExoLayer(
 
   const firstVariantIndex = layer.variants?.[0]
   const variantEntry = firstVariantIndex !== undefined ? variants[firstVariantIndex] : undefined
-  const variantId = variantEntry?.id
-  const variantIndex = variantEntry ? firstVariantIndex : undefined
-  const optimizationId = variantEntry ? id : undefined
+  const variantMetadata = resolveVariantMetadata(variantEntry, firstVariantIndex, id)
 
-  return { entityKind: kind, entityId: id, variantId, variantIndex, optimizationId }
+  return { entityKind: kind, entityId: id, ...variantMetadata }
 }
 
 function findAttributableLayer(

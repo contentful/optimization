@@ -32,6 +32,37 @@ describe('resolveNodeViewPayload', () => {
     })
   })
 
+  it('prefers explicit variant metadata from sourceMap variants', () => {
+    const explicitMetadataSourceMap: SourceMap = {
+      variants: [
+        { type: 'personalization', id: 'default' },
+        {
+          type: 'personalization',
+          id: 'variant-entry-id',
+          experienceId: 'exp-id',
+          optimizationId: 'opt-id',
+          variantId: 'variant-a',
+          variantIndex: 1,
+        },
+      ],
+      layers: [{ kind: 'Experience', id: 'exp-id', variants: [1] }],
+      nodes: {
+        'node-1': { layers: [0], scope: 0 },
+      },
+    }
+
+    const result = resolveNodeViewPayload('node-1', explicitMetadataSourceMap)
+
+    expect(result).toEqual({
+      entityId: 'exp-id',
+      entityKind: 'Experience',
+      optimizationId: 'opt-id',
+      variantId: 'variant-a',
+      variantIndex: 1,
+      parentExperienceId: undefined,
+    })
+  })
+
   it('resolves metadata for a node scoped to a Fragment layer', () => {
     const result = resolveNodeViewPayload('node-frag', SOURCE_MAP)
 
