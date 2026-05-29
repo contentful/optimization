@@ -793,9 +793,9 @@ jobs:
       - name: Build the JS bridge bundles
         run: pnpm --filter @contentful/optimization-js-bridge build
 
-      - name: Build Compose, Views, and UI test APKs
+      - name: Build Compose and Views APKs
         working-directory: implementations/android-sdk
-        run: ./gradlew :compose:assembleDebug :views:assembleDebug :uitests:assembleDebug
+        run: ./gradlew :compose:assembleDebug :views:assembleDebug
 
       - name: Collect APK artifacts at stable paths
         run: |
@@ -806,7 +806,6 @@ jobs:
           mkdir -p android-apks
           cp implementations/android-sdk/compose/build/outputs/apk/debug/compose-debug.apk android-apks/
           cp implementations/android-sdk/views/build/outputs/apk/debug/views-debug.apk android-apks/
-          cp implementations/android-sdk/uitests/build/outputs/apk/debug/uitests-debug.apk android-apks/
           ls -la android-apks/
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -817,14 +816,14 @@ jobs:
           retention-days: 1
 
   e2e-android-maestro:
-    # Maestro proof-of-concept replacing the flaky UiAutomator `PreviewPanelTests`.
-    # One flow set (implementations/android-sdk/maestro/preview-panel) drives BOTH the
-    # Compose and XML Views apps via Maestro's `appId: ${APP_ID}` parameterization,
-    # mirroring the iOS single-bundle paradigm. Maestro's built-in auto-waiting and
-    # scrollUntilVisible replace the hand-rolled polling/sleeps that made UiAutomator
-    # flaky. Reuses the proven Linux x86_64 + KVM emulator path (Namespace's only
-    # hardware-accelerated emulator architecture).
-    name: 🤖 E2E Android Maestro (preview-panel)
+    # Android E2E via Maestro — the canonical Android E2E suite (the UiAutomator
+    # `uitests` run was removed). One flow set under implementations/android-sdk/maestro
+    # drives BOTH the Compose and XML Views apps via Maestro's `appId: ${APP_ID}`
+    # parameterization, mirroring the iOS single-bundle paradigm. Maestro's built-in
+    # auto-waiting and scrollUntilVisible replace the hand-rolled polling/sleeps that made
+    # UiAutomator flaky. Reuses the proven Linux x86_64 + KVM emulator path (Namespace's
+    # only hardware-accelerated emulator architecture).
+    name: 🤖 E2E Android Maestro
     runs-on: namespace-profile-linux-16-vcpu-32-gb-ram-optimal
     timeout-minutes: 45
     needs: [setup, changes, e2e-android-sdk-build]
@@ -950,7 +949,7 @@ jobs:
             sleep 3
             adb shell "for i in 1 2 3 4 5 6 7 8 9 10; do nc -z localhost 8000 2>/dev/null && echo 'Mock server tunnel verified' && exit 0; sleep 1; done; echo 'WARNING: tunnel verification timed out'"
             echo "Running Maestro preview-panel flows against both apps ($MAESTRO_ITERATIONS iteration(s))..."
-            i=0; rc=0; while [ "$i" -lt "$MAESTRO_ITERATIONS" ]; do echo "=== iteration $((i+1))/$MAESTRO_ITERATIONS ==="; "$HOME/.maestro/bin/maestro" test -e APP_ID=com.contentful.optimization.app implementations/android-sdk/maestro/preview-panel || rc=1; "$HOME/.maestro/bin/maestro" test -e APP_ID=com.contentful.optimization.app.views implementations/android-sdk/maestro/preview-panel || rc=1; i=$((i+1)); done; exit $rc
+            i=0; rc=0; while [ "$i" -lt "$MAESTRO_ITERATIONS" ]; do echo "=== iteration $((i+1))/$MAESTRO_ITERATIONS ==="; "$HOME/.maestro/bin/maestro" test -e APP_ID=com.contentful.optimization.app implementations/android-sdk/maestro || rc=1; "$HOME/.maestro/bin/maestro" test -e APP_ID=com.contentful.optimization.app.views implementations/android-sdk/maestro || rc=1; i=$((i+1)); done; exit $rc
 
       - name: Print debug context on failure
         if: failure()
@@ -972,219 +971,6 @@ jobs:
           path: |
             ~/.maestro/tests/
             /tmp/mock-server.log
-          retention-days: 7
-
-  e2e-android-sdk:
-    name: 🤖 E2E Android (${{ matrix.app }})
-    runs-on: namespace-profile-linux-16-vcpu-32-gb-ram-optimal
-    timeout-minutes: 45
-    needs: [setup, changes, e2e-android-sdk-build]
-    # DISABLED: superseded by the Maestro PoC job `e2e-android-maestro`. The
-    # UiAutomator `uitests` suite remains in the tree (source untouched) but no longer
-    # runs in CI, to stop burning CI time on the chronically flaky run while we measure
-    # Maestro's reliability. Re-enable by restoring this to
-    # `needs.changes.outputs.e2e_android == 'true'`.
-    if: ${{ false && needs.changes.outputs.e2e_android == 'true' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - app: compose
-            package: com.contentful.optimization.app
-          - app: views
-            package: com.contentful.optimization.app.views
-    env:
-      CI: 'true'
-      APP_PACKAGE: ${{ matrix.package }}
-      APP_APK: ${{ matrix.app }}-debug.apk
-    steps:
-      - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
-
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version-file: '.nvmrc'
-          package-manager-cache: false
-
-      - uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
-
-      - name: Set Android SDK environment variables
-        run: |
-          echo "ANDROID_SDK_ROOT=$HOME/.android/sdk" >> "$GITHUB_ENV"
-          echo "ANDROID_HOME=$HOME/.android/sdk" >> "$GITHUB_ENV"
-
-      - name: Prepare cache directories
-        run: mkdir -p "$HOME/.android/sdk" "$HOME/.android/avd" "$HOME/.android/cache"
-
-      - name: Set up caches (Namespace)
-        uses: namespacelabs/nscloud-cache-action@15799a6b54e5765f85b2aac25b3f0df43ed571c0 # v1.4.3
-        with:
-          cache: pnpm
-          path: |
-            ~/.android/sdk
-            ~/.android/avd
-            ~/.android/cache
-
-      - name: Install system dependencies (Android emulator)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            ca-certificates curl unzip zip git \
-            netcat-openbsd cpu-checker \
-            libgl1 libnss3 libx11-6 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 libxtst6 \
-            libxi6 libxrender1 libxkbcommon0 libgbm1 libdbus-1-3 libdrm2 libpulse0
-          sudo apt-get install -y --no-install-recommends libasound2 || sudo apt-get install -y --no-install-recommends libasound2t64
-
-      - name: Verify KVM is available
-        run: |
-          if [ ! -e /dev/kvm ]; then
-            echo "/dev/kvm not found; Android hardware acceleration will not work." >&2
-            exit 1
-          fi
-          ls -l /dev/kvm
-          sudo kvm-ok || true
-
-      - name: Setup Java
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
-
-      - name: Install JS dependencies
-        run: pnpm install --prefer-offline --frozen-lockfile
-
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: android-apks
-          path: android-apks
-
-      - name: Start Mock Server
-        run: |
-          pnpm --dir lib/mocks serve > /tmp/mock-server.log 2>&1 &
-          echo $! > /tmp/mock-server.pid
-          for i in {1..60}; do
-            if nc -z localhost 8000 2>/dev/null; then
-              echo "Mock server is ready"
-              break
-            fi
-            echo "Waiting for mock server... ($i/60)"
-            sleep 1
-          done
-          if ! nc -z localhost 8000 2>/dev/null; then
-            echo "Mock server failed to start:"
-            cat /tmp/mock-server.log
-            exit 1
-          fi
-
-      - name: Run Android E2E Tests (emulator)
-        uses: reactivecircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a # v2.37.0
-        with:
-          api-level: 35
-          arch: x86_64
-          target: google_apis
-          profile: pixel_7
-          avd-name: test
-          force-avd-creation: true
-          emulator-boot-timeout: 600
-          cores: 6
-          ram-size: 4096M
-          disk-size: 8G
-          disable-animations: true
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
-          script: |
-            # The emulator-runner action invokes the script via `/usr/bin/sh -c`, not bash, so
-            # `set -o pipefail` would error out with "Illegal option -o pipefail" and terminate
-            # the script before any test ran. The grep-on-test-output checks below already
-            # detect instrumentation failures regardless of pipe-status propagation.
-            # The action's `disable-animations: true` already disables animation scales — no
-            # need to run the manual adb shell settings put lines here.
-            echo "Installing APKs (target app: $APP_PACKAGE)..."
-            adb install -r "android-apks/$APP_APK"
-            adb install -r android-apks/uitests-debug.apk
-            echo "Setting up adb reverse port forwarding..."
-            adb reverse tcp:8000 tcp:8000
-            sleep 3
-            adb shell "for i in 1 2 3 4 5 6 7 8 9 10; do nc -z localhost 8000 2>/dev/null && echo 'Mock server tunnel verified' && exit 0; sleep 1; done; echo 'WARNING: tunnel verification timed out'"
-            echo "Resetting per-test failure context dump target (test app's external files dir)..."
-            adb shell "rm -rf /sdcard/Android/data/com.contentful.optimization.uitests/files/test-failures" 2>/dev/null || true
-            echo "Clearing logcat ring buffer (will be dumped post-run by the workflow)..."
-            adb logcat -c
-            echo "Running UI Automator 2 E2E tests against $APP_PACKAGE..."
-            # Fail-fast: stream am instrument output through awk; on the first
-            # per-test error (INSTRUMENTATION_STATUS_CODE -1/-2) or device-side
-            # process crash, force-stop the test process to abort the remaining
-            # suite. AndroidJUnitRunner has no built-in early-exit, so without
-            # this every subsequent @Before waits its full 20-30s
-            # waitForElement timeout and one root-cause failure in an early
-            # class burns the whole 45-minute job budget. force-stop on the
-            # .uitests process kills the instrumentation; the remote
-            # `am instrument -w` exits and the local pipeline collapses.
-            # fflush keeps the GitHub Actions log live so we see the failure
-            # when it happens, not at the end.
-            #
-            # `-r` (raw mode) is REQUIRED for streaming: without it
-            # `am instrument` buffers the entire human-readable summary
-            # (dots, `OK (N tests)` / `FAILURES!!!`) until end-of-suite, so
-            # the awk fail-fast never sees per-test progress and a single
-            # 20-min hang produces zero output until the outer `timeout 1200`
-            # kills the pipeline (observed on run 26534799046 views matrix
-            # entry). With `-r`, AndroidJUnitRunner emits
-            # `INSTRUMENTATION_STATUS_CODE: <N>` after each test (1=started,
-            # 0=passed, -1=assumption-failed, -2=errored/failed) and the awk
-            # regex matches the failure codes in real time.
-            #
-            # Per-test wedges are caught by the JUnit `Timeout` rule in
-            # PerTestRule.kt (60s/test), which surfaces as a `stack=...`
-            # block followed by `INSTRUMENTATION_STATUS_CODE: -2`. The outer
-            # `timeout 1200` here is a belt-and-suspenders safety net: it
-            # caps total wall time at 20 min (normal happy path ~7 min) so a
-            # deadlock that prevents JUnit's worker-thread from firing — or
-            # a wedged `adb` — can't burn the full 45-min job budget. On
-            # `timeout` kill, the post-grep for `INSTRUMENTATION_CODE: ` (the
-            # final overall-run code emitted only when am instrument
-            # completes cleanly) is missing and the step fails.
-            #
-            # IMPORTANT: this MUST be a single physical YAML line. The
-            # reactivecircus/android-emulator-runner action's parseScript()
-            # splits the multi-line `script:` block on every newline and runs
-            # each line as a separate `sh -c`, so a multi-line pipeline with
-            # `\` continuations gets broken into three independent commands —
-            # `am instrument` runs standalone and the `| tee` / `| awk` lines
-            # are dropped as no-op syntax errors. Verified in the action's
-            # src/script-parser.ts:
-            #   rawScript.trim().split(/\r\n|\n|\r/)
-            timeout --kill-after=30 1200 adb shell am instrument -w -r -e APP_PACKAGE "$APP_PACKAGE" com.contentful.optimization.uitests/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee /tmp/test-output.log | awk 'BEGIN{aborted=0} /^INSTRUMENTATION_STATUS_CODE:[[:space:]]+-[12]$|Process crashed/{if(!aborted){aborted=1;print;print "::error::Test failure detected — aborting remaining suite";fflush();system("adb shell am force-stop com.contentful.optimization.uitests >/dev/null 2>&1");exit 1} next} {print;fflush()}'; e=$?; echo "--- capturing post-run debug context (logcat + per-test failure dumps) ---"; adb logcat -d > /tmp/logcat.log 2>&1 || true; rm -rf /tmp/test-failures; adb pull /sdcard/Android/data/com.contentful.optimization.uitests/files/test-failures /tmp/test-failures 2>&1 || true; exit $e
-            grep -qE "^INSTRUMENTATION_STATUS_CODE:[[:space:]]+-[12]$" /tmp/test-output.log && { echo "::error::Android UI tests failed (per-test failure detected)"; exit 1; } || true
-            grep -q "Process crashed" /tmp/test-output.log && { echo "::error::Test process crashed"; exit 1; } || true
-            grep -qE "^INSTRUMENTATION_CODE:[[:space:]]+-?[0-9]+$" /tmp/test-output.log || { echo "::error::Android UI tests did not complete cleanly (missing terminal INSTRUMENTATION_CODE — likely timeout, hang, or am instrument abort)"; exit 1; }
-
-      - name: Print debug context on failure
-        if: failure()
-        run: |
-          echo "=== Mock Server Logs ==="
-          cat /tmp/mock-server.log || echo "No mock server logs found"
-          echo "=== Per-test failure captures (/tmp/test-failures) ==="
-          ls -la /tmp/test-failures 2>/dev/null || echo "No per-test failure captures pulled"
-          echo "=== Logcat tail (/tmp/logcat.log, last 500 lines) ==="
-          tail -n 500 /tmp/logcat.log 2>/dev/null || echo "No logcat dump found"
-
-      - name: Stop Mock Server
-        if: always()
-        run: |
-          kill $(cat /tmp/mock-server.pid) 2>/dev/null || true
-
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: always()
-        with:
-          name: ci-results-android-sdk-${{ matrix.app }}
-          path: |
-            implementations/android-sdk/logs/
-            /tmp/mock-server.log
-            /tmp/test-output.log
-            /tmp/logcat.log
-            /tmp/test-failures/
           retention-days: 7
 
   e2e-ios-sdk-build:
