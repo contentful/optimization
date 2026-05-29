@@ -637,6 +637,7 @@ private fun PanelFooter(hasOverrides: Boolean, onResetClick: () -> Unit) {
                 fontSize = PreviewTheme.FontSize.sm,
                 fontWeight = FontWeight.SemiBold,
                 color = PreviewTheme.Colors.TextColor.inverse,
+                textAlign = TextAlign.Center,
             ),
             modifier = Modifier
                 .fillMaxWidth()
