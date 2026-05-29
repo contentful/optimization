@@ -1,0 +1,15 @@
+# Mirrors PreviewPanelTests.testFABIsVisible — the preview-panel FAB is present on
+# the main screen. APP_ID is supplied at runtime so the same flow drives both the
+# Compose app (com.contentful.optimization.app) and the XML Views app
+# (com.contentful.optimization.app.views).
+appId: ${APP_ID}
+---
+# clearState replaces the UiAutomator relaunchClean + "reset" intent extra: it wipes
+# app data so we start unidentified (identify-button visible), the suite's baseline.
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'identify-button'
+# Preview-panel elements are exposed via Android contentDescription; Maestro's text
+# matcher resolves contentDescription, so the bare string matches in both apps.
+- assertVisible: 'preview-panel-fab'

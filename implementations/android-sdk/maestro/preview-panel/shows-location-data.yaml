@@ -1,0 +1,15 @@
+# Mirrors PreviewPanelTests.testShowsLocationData — the location row resolves to a
+# Berlin / DE value. Scroll the row into view, then assert the rendered value text.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn: 'preview-panel-fab'
+- assertVisible: 'Preview Panel'
+- scrollUntilVisible:
+    element: 'profile-item-location'
+    direction: DOWN
+# Regex equivalent of the original text.contains("Berlin") || text.contains("DE").
+- assertVisible: '.*(Berlin|DE).*'

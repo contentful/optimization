@@ -1,0 +1,14 @@
+# Mirrors PreviewPanelTests.testShowsConsentAccepted — the debug consent row shows
+# "Accepted". Scroll it into view, then assert the rendered status text.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn: 'preview-panel-fab'
+- assertVisible: 'Preview Panel'
+- scrollUntilVisible:
+    element: 'debug-consent'
+    direction: DOWN
+- assertVisible: '.*Accepted.*'

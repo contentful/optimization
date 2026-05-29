@@ -1,0 +1,23 @@
+# Mirrors PreviewPanelTests.testProfileUpdatesAfterIdentify — after identifying, the
+# panel shows resolved profile data (no empty state) including the profile id row.
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'identify-button'
+# Identify round-trips to the mock Experience API; the reset-button replacing the
+# identify-button is the signal it completed. extendedWaitUntil covers the original
+# EXTENDED_TIMEOUT (30s).
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+- tapOn: 'preview-panel-fab'
+- assertVisible: 'Preview Panel'
+- assertNotVisible: 'no-profile-data'
+- scrollUntilVisible:
+    element: 'profile-item-id'
+    direction: DOWN
