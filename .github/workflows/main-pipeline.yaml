@@ -28,6 +28,7 @@ jobs:
       e2e_react_native_android: ${{ steps.filter.outputs.e2e_react_native_android }}
       e2e_android: ${{ steps.filter.outputs.e2e_android }}
       e2e_ios: ${{ steps.filter.outputs.e2e_ios }}
+      swift_package: ${{ steps.filter.outputs.swift_package }}
     steps:
       - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
 
@@ -141,6 +142,13 @@ jobs:
               - 'implementations/ios-sdk/**'
               - 'lib/mocks/**'
               - 'packages/ios/**'
+              - 'packages/universal/optimization-js-bridge/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - '.github/workflows/main-pipeline.yaml'
+            # Swift Package build/test scope (the package published to optimization.swift).
+            swift_package:
+              - 'packages/ios/ContentfulOptimization/**'
               - 'packages/universal/optimization-js-bridge/**'
               - 'package.json'
               - 'pnpm-lock.yaml'
@@ -880,6 +888,9 @@ jobs:
 
       - run: pnpm install --prefer-offline --frozen-lockfile
 
+      - name: Build the JS bridge
+        run: pnpm run ios:bridge
+
       - name: Build iOS UI test bundles (SwiftUI + UIKit)
         run: pnpm run implementation:ios-sdk -- test:e2e:ios:build:release
 
@@ -895,6 +906,45 @@ jobs:
           path: /tmp/ios-artifact/
           if-no-files-found: error
           retention-days: 1
+
+  swift-package-build:
+    name: 🍎 Swift Package Build & Test
+    runs-on: namespace-profile-macos-apple-silicon-arm64-6-cpu-14-gb
+    timeout-minutes: 30
+    needs: [setup, changes]
+    if: needs.changes.outputs.swift_package == 'true'
+    steps:
+      - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+
+      - name: Set up caches (Namespace)
+        uses: namespacelabs/nscloud-cache-action@15799a6b54e5765f85b2aac25b3f0df43ed571c0 # v1.4.3
+        with:
+          cache: pnpm
+          path: |
+            ~/Library/Caches/org.swift.swiftpm
+
+      - name: Show toolchain
+        run: |
+          swift --version
+          xcodebuild -version
+
+      - run: pnpm install --prefer-offline --frozen-lockfile
+
+      - name: Build the JS bridge
+        run: pnpm run ios:bridge
+
+      - name: Swift build
+        run: swift build --package-path packages/ios/ContentfulOptimization
+
+      - name: Swift test
+        run: swift test --package-path packages/ios/ContentfulOptimization
 
   e2e-react-native-android:
     name: 📱 E2E React Native Android (shard ${{ matrix.shard }}/2)
@@ -1072,8 +1122,6 @@ jobs:
       IOS_SCHEME: ${{ matrix.scheme }}
       IOS_SIM_NAME: 'iPhone 16'
       IOS_SIM_OS: 'latest'
-      # Smoke mode for the first PR — restrict to one test class per scheme.
-      # Remove this env var in a follow-up PR to enable the full suite.
       IOS_ONLY_TESTING: OptimizationAppUITests${{ matrix.scheme }}/PreviewPanelTests
     steps:
       - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
