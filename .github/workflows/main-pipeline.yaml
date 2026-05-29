@@ -816,12 +816,175 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  e2e-android-maestro:
+    # Maestro proof-of-concept replacing the flaky UiAutomator `PreviewPanelTests`.
+    # One flow set (implementations/android-sdk/maestro/preview-panel) drives BOTH the
+    # Compose and XML Views apps via Maestro's `appId: ${APP_ID}` parameterization,
+    # mirroring the iOS single-bundle paradigm. Maestro's built-in auto-waiting and
+    # scrollUntilVisible replace the hand-rolled polling/sleeps that made UiAutomator
+    # flaky. Reuses the proven Linux x86_64 + KVM emulator path (Namespace's only
+    # hardware-accelerated emulator architecture).
+    name: 🤖 E2E Android Maestro (preview-panel)
+    runs-on: namespace-profile-linux-16-vcpu-32-gb-ram-optimal
+    timeout-minutes: 45
+    needs: [setup, changes, e2e-android-sdk-build]
+    if: needs.changes.outputs.e2e_android == 'true'
+    env:
+      CI: 'true'
+      # Pinned to the version validated locally against both apps (8/8 flows each).
+      # The Maestro install script honours $MAESTRO_VERSION.
+      MAESTRO_VERSION: '2.6.0'
+      # How many times to repeat the full two-app flow set, for measuring flake rate.
+      # Defaults to 1 on PRs/pushes; raise via a manual run to sweep for flakes.
+      MAESTRO_ITERATIONS: '1'
+    steps:
+      - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+
+      - name: Set Android SDK environment variables
+        run: |
+          echo "ANDROID_SDK_ROOT=$HOME/.android/sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$HOME/.android/sdk" >> "$GITHUB_ENV"
+
+      - name: Prepare cache directories
+        run: mkdir -p "$HOME/.android/sdk" "$HOME/.android/avd" "$HOME/.android/cache"
+
+      - name: Set up caches (Namespace)
+        uses: namespacelabs/nscloud-cache-action@15799a6b54e5765f85b2aac25b3f0df43ed571c0 # v1.4.3
+        with:
+          cache: pnpm
+          path: |
+            ~/.android/sdk
+            ~/.android/avd
+            ~/.android/cache
+
+      - name: Install system dependencies (Android emulator)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ca-certificates curl unzip zip git \
+            netcat-openbsd cpu-checker \
+            libgl1 libnss3 libx11-6 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 libxtst6 \
+            libxi6 libxrender1 libxkbcommon0 libgbm1 libdbus-1-3 libdrm2 libpulse0
+          sudo apt-get install -y --no-install-recommends libasound2 || sudo apt-get install -y --no-install-recommends libasound2t64
+
+      - name: Verify KVM is available
+        run: |
+          if [ ! -e /dev/kvm ]; then
+            echo "/dev/kvm not found; Android hardware acceleration will not work." >&2
+            exit 1
+          fi
+          ls -l /dev/kvm
+          sudo kvm-ok || true
+
+      - name: Setup Java
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+
+      - name: Install JS dependencies
+        run: pnpm install --prefer-offline --frozen-lockfile
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: android-apks
+          path: android-apks
+
+      - name: Start Mock Server
+        run: |
+          pnpm --dir lib/mocks serve > /tmp/mock-server.log 2>&1 &
+          echo $! > /tmp/mock-server.pid
+          for i in {1..60}; do
+            if nc -z localhost 8000 2>/dev/null; then
+              echo "Mock server is ready"
+              break
+            fi
+            echo "Waiting for mock server... ($i/60)"
+            sleep 1
+          done
+          if ! nc -z localhost 8000 2>/dev/null; then
+            echo "Mock server failed to start:"
+            cat /tmp/mock-server.log
+            exit 1
+          fi
+
+      - name: Run Maestro E2E (emulator)
+        uses: reactivecircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a # v2.37.0
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_7
+          avd-name: test
+          force-avd-creation: true
+          emulator-boot-timeout: 600
+          cores: 6
+          ram-size: 4096M
+          disk-size: 8G
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          script: |
+            # IMPORTANT: the emulator-runner action's parseScript() splits this block on
+            # every newline and runs each line as a separate `sh -c`, so environment
+            # exports and `cd` do NOT persist across lines, and any loop/pipeline must
+            # live on a single physical line. We therefore invoke Maestro by absolute
+            # path ($HOME/.maestro/bin/maestro) rather than relying on PATH.
+            # MAESTRO_VERSION (job env) pins the release the install script fetches.
+            echo "Installing Maestro CLI ($MAESTRO_VERSION)..."
+            curl -Ls "https://get.maestro.mobile.dev" | bash
+            echo "Installing app APKs (Compose + XML Views)..."
+            adb install -r android-apks/compose-debug.apk
+            adb install -r android-apks/views-debug.apk
+            echo "Setting up adb reverse port forwarding..."
+            adb reverse tcp:8000 tcp:8000
+            sleep 3
+            adb shell "for i in 1 2 3 4 5 6 7 8 9 10; do nc -z localhost 8000 2>/dev/null && echo 'Mock server tunnel verified' && exit 0; sleep 1; done; echo 'WARNING: tunnel verification timed out'"
+            echo "Running Maestro preview-panel flows against both apps ($MAESTRO_ITERATIONS iteration(s))..."
+            i=0; rc=0; while [ "$i" -lt "$MAESTRO_ITERATIONS" ]; do echo "=== iteration $((i+1))/$MAESTRO_ITERATIONS ==="; "$HOME/.maestro/bin/maestro" test -e APP_ID=com.contentful.optimization.app implementations/android-sdk/maestro/preview-panel || rc=1; "$HOME/.maestro/bin/maestro" test -e APP_ID=com.contentful.optimization.app.views implementations/android-sdk/maestro/preview-panel || rc=1; i=$((i+1)); done; exit $rc
+
+      - name: Print debug context on failure
+        if: failure()
+        run: |
+          echo "=== Mock Server Logs ==="
+          cat /tmp/mock-server.log || echo "No mock server logs found"
+          echo "=== Maestro test output tree (~/.maestro/tests) ==="
+          ls -la "$HOME/.maestro/tests" 2>/dev/null || echo "No Maestro test output found"
+
+      - name: Stop Mock Server
+        if: always()
+        run: |
+          kill $(cat /tmp/mock-server.pid) 2>/dev/null || true
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: ci-results-android-maestro
+          path: |
+            ~/.maestro/tests/
+            /tmp/mock-server.log
+          retention-days: 7
+
   e2e-android-sdk:
     name: 🤖 E2E Android (${{ matrix.app }})
     runs-on: namespace-profile-linux-16-vcpu-32-gb-ram-optimal
     timeout-minutes: 45
     needs: [setup, changes, e2e-android-sdk-build]
-    if: needs.changes.outputs.e2e_android == 'true'
+    # DISABLED: superseded by the Maestro PoC job `e2e-android-maestro`. The
+    # UiAutomator `uitests` suite remains in the tree (source untouched) but no longer
+    # runs in CI, to stop burning CI time on the chronically flaky run while we measure
+    # Maestro's reliability. Re-enable by restoring this to
+    # `needs.changes.outputs.e2e_android == 'true'`.
+    if: ${{ false && needs.changes.outputs.e2e_android == 'true' }}
     strategy:
       fail-fast: false
       matrix:
