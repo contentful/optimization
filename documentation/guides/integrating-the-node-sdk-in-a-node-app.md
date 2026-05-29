@@ -102,13 +102,26 @@ export const optimization = new ContentfulOptimization({
     experienceBaseUrl: process.env.CONTENTFUL_EXPERIENCE_API_BASE_URL,
     insightsBaseUrl: process.env.CONTENTFUL_INSIGHTS_API_BASE_URL,
   },
+  contentfulLocales: {
+    default: 'en-US',
+    supported: ['en-US', 'de-DE', 'fr-FR'],
+  },
   logLevel: 'error',
 })
 ```
 
 Treat that SDK as a module-level singleton for the current Node process. Do not create a new
-`ContentfulOptimization` instance per incoming request. Instead, compute request-scoped Experience
-options per request and pass them as the final argument to stateless event methods.
+`ContentfulOptimization` instance per incoming request. Pass request-scoped Experience API options
+as the final argument to stateless event methods.
+
+Use `contentfulLocales.default` for single-locale apps, and add `contentfulLocales.supported` when
+the app needs request locale matching across multiple Contentful locales. Copy those codes from
+Contentful locale settings or the CMA locale list. The `contentfulLocale` returned by
+`resolveRequestLocale(reqOrAcceptLanguage)`, when present, is the Contentful locale code to use for
+CDA fetches and the Experience API request option. Use `eventLocale` separately in event context.
+
+For the full matching rules, configuration cases, and Experience API locale behavior, see
+[Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
 
 Notes:
 
@@ -127,10 +140,7 @@ The reference implementations do this by translating the Express request into
 
 ```ts
 import type { Request } from 'express'
-import type {
-  CoreStatelessRequestOptions,
-  UniversalEventBuilderArgs,
-} from '@contentful/optimization-node/core-sdk'
+import type { UniversalEventBuilderArgs } from '@contentful/optimization-node/core-sdk'
 
 function toQueryValue(value: unknown): string | null {
   if (value === undefined || value === null) return null
@@ -140,7 +150,7 @@ function toQueryValue(value: unknown): string | null {
   return JSON.stringify(value)
 }
 
-function getRequestContext(req: Request): UniversalEventBuilderArgs {
+function getRequestContext(req: Request, eventLocale: string): UniversalEventBuilderArgs {
   const url = new URL(`${req.protocol}://${req.get('host') ?? 'localhost'}${req.originalUrl}`)
 
   const query = Object.keys(req.query).reduce<Record<string, string>>((acc, key) => {
@@ -154,7 +164,7 @@ function getRequestContext(req: Request): UniversalEventBuilderArgs {
   }, {})
 
   return {
-    locale: req.acceptsLanguages()[0] ?? 'en-US',
+    locale: eventLocale,
     userAgent: req.get('user-agent') ?? 'node-server',
     page: {
       path: req.path,
@@ -165,21 +175,15 @@ function getRequestContext(req: Request): UniversalEventBuilderArgs {
     },
   }
 }
-
-function getExperienceRequestOptions(req: Request): CoreStatelessRequestOptions {
-  return {
-    locale: req.acceptsLanguages()[0] ?? 'en-US',
-  }
-}
 ```
 
 The exact page fields do not need to come from Express. The important part is that the app passes a
 stable, request-specific description of the current page or route.
 
-`getRequestContext(req).locale` affects the event payload context.
-`getExperienceRequestOptions(req).locale` affects the Experience API request itself. Those two
-locale values are intentionally separate, even if your app derives them from the same request
-header.
+`getRequestContext(req, eventLocale).locale` affects the event payload context. The stateless
+per-call `{ locale }` request option instead sets the Experience API `locale` query parameter. When
+an SSR response renders Contentful entries that can contain MergeTags, use the resolved Contentful
+locale for that request option so localized profile values match the entry language.
 
 ## 3. Handle consent in your application layer
 
@@ -292,29 +296,23 @@ app.get('/', async (req, res) => {
     })
   }
 
-  const requestContext = getRequestContext(req)
-  const requestOptions = getExperienceRequestOptions(req)
+  const { eventLocale } = optimization.resolveRequestLocale(req)
+  const requestContext = getRequestContext(req, eventLocale)
   const existingProfile = getProfileFromRequest(req)
-  const pageResponse: OptimizationData | undefined = await optimization.page(
-    {
-      ...requestContext,
-      profile: existingProfile,
-    },
-    requestOptions,
-  )
+  const pageResponse: OptimizationData | undefined = await optimization.page({
+    ...requestContext,
+    profile: existingProfile,
+  })
 
   const userId = getAuthenticatedUserId(req)
 
   const identifyResponse = userId
-    ? await optimization.identify(
-        {
-          ...requestContext,
-          profile: pageResponse?.profile ?? existingProfile,
-          userId,
-          traits: { authenticated: true },
-        },
-        requestOptions,
-      )
+    ? await optimization.identify({
+        ...requestContext,
+        profile: pageResponse?.profile ?? existingProfile,
+        userId,
+        traits: { authenticated: true },
+      })
     : undefined
 
   if (consented) {
@@ -372,6 +370,7 @@ In the example below, replace `ArticleSkeleton` with the generated Contentful sk
 already uses.
 
 ```ts
+import type { Request } from 'express'
 import type { Entry } from 'contentful'
 import * as contentful from 'contentful'
 
@@ -383,26 +382,29 @@ const contentfulClient = contentful.createClient({
 
 type ArticleEntry = Entry<ArticleSkeleton>
 
-async function getArticle(entryId: string): Promise<ArticleEntry> {
+async function getArticle(entryId: string, locale?: string): Promise<ArticleEntry> {
   return await contentfulClient.getEntry<ArticleSkeleton>(entryId, {
     include: 10,
+    ...(locale ? { locale } : {}),
   })
 }
 
 app.get('/article/:entryId', async (req, res) => {
   const consented = hasOptimizationConsent(req)
-  const requestOptions = getExperienceRequestOptions(req)
+  const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
+  const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
   const pageResponse = consented
     ? await optimization.page(
         {
-          ...getRequestContext(req),
+          ...getRequestContext(req, eventLocale),
+          locale: eventLocale,
           profile: getProfileFromRequest(req),
         },
         requestOptions,
       )
     : undefined
 
-  const article = await getArticle(req.params.entryId)
+  const article = await getArticle(req.params.entryId, contentfulLocale)
 
   const { entry: optimizedArticle, selectedOptimization } = optimization.resolveOptimizedEntry(
     article,
@@ -424,11 +426,20 @@ app.get('/article/:entryId', async (req, res) => {
 This is the main server-side personalization loop:
 
 1. Ask Optimization for the current profile's selected variants.
-2. Fetch the baseline Contentful entry.
+2. Fetch the baseline Contentful entry with `contentfulLocale` returned by `resolveRequestLocale()`
+   when configured, or intentionally omit the CDA locale option for no-config API default behavior.
 3. Resolve the optimized entry variant before rendering.
 
 If your optimized entries contain linked entries or merge tags, fetch with an `include` depth that
 matches your content model. The SSR reference implementation uses `include: 10` for that reason.
+All-locale CDA responses from `contentful.js` `withAllLocales` or raw CDA `locale=*` are not valid
+input for `resolveOptimizedEntry()` because they contain locale-keyed fields. The resolver expects a
+standard single-locale CDA entry shape where `fields.nt_experiences` and `fields.nt_variants` are
+direct field values. See
+[Entry personalization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
+for the entry contract and
+[Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md)
+for the broader locale model.
 
 ## 7. Resolve merge tags and custom flags
 
@@ -457,6 +468,11 @@ const html = documentToHtmlString(richTextField, {
 
 That is the pattern used in the SSR-only reference implementation.
 
+If a merge tag references localized profile fields such as `location.city` or `location.country`,
+its resolved value can change with the per-call `{ locale }` request option used to fetch that
+profile. Use the same resolved Contentful locale for that option so `getMergeTagValue()` reads
+localized profile values in the same language as the Contentful entry being rendered.
+
 ### Custom flags
 
 Use `getFlag()` when the response includes Custom Flag changes:
@@ -471,7 +487,7 @@ captured as an Insights event, call `trackFlagView()` explicitly:
 ```ts
 if (pageResponse?.profile) {
   await optimization.trackFlagView({
-    ...getRequestContext(req),
+    ...getRequestContext(req, eventLocale),
     componentId: 'new-navigation',
     profile: pageResponse.profile,
   })
@@ -498,20 +514,15 @@ profile.
 Example custom event:
 
 ```ts
-const requestOptions = getExperienceRequestOptions(req)
-
-await optimization.track(
-  {
-    ...getRequestContext(req),
-    profile: pageResponse?.profile,
-    event: 'quote_requested',
-    properties: {
-      plan: 'enterprise',
-      source: 'pricing-page',
-    },
+await optimization.track({
+  ...getRequestContext(req, eventLocale),
+  profile: pageResponse?.profile,
+  event: 'quote_requested',
+  properties: {
+    plan: 'enterprise',
+    source: 'pricing-page',
   },
-  requestOptions,
-)
+})
 ```
 
 Example rendered-entry view event:
@@ -519,9 +530,8 @@ Example rendered-entry view event:
 ```ts
 import { randomUUID } from 'node:crypto'
 
-const requestOptions = getExperienceRequestOptions(req)
 const viewPayload = {
-  ...getRequestContext(req),
+  ...getRequestContext(req, eventLocale),
   componentId: optimizedArticle.sys.id,
   experienceId: selectedOptimization?.experienceId,
   variantIndex: selectedOptimization?.variantIndex,
@@ -530,9 +540,9 @@ const viewPayload = {
 }
 
 if (selectedOptimization?.sticky) {
-  await optimization.trackView({ ...viewPayload, sticky: true }, requestOptions)
+  await optimization.trackView({ ...viewPayload, sticky: true })
 } else if (pageResponse?.profile) {
-  await optimization.trackView({ ...viewPayload, profile: pageResponse.profile }, requestOptions)
+  await optimization.trackView({ ...viewPayload, profile: pageResponse.profile })
 }
 ```
 

@@ -18,6 +18,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             environment: AppConfig.environment,
             experienceBaseUrl: AppConfig.experienceBaseUrl,
             insightsBaseUrl: AppConfig.insightsBaseUrl,
+            contentfulLocales: AppConfig.contentfulLocales,
+            locale: AppConfig.defaultContentfulLocale,
             debug: true
         ))
 

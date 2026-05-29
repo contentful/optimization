@@ -1,5 +1,7 @@
 docs
 pnpm-lock.yaml
+**/.next/**
+**/next-env.d.ts
 **/ios/Pods/**
 **/ios/build/**
 **/android/build/**

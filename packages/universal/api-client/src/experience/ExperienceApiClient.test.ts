@@ -169,6 +169,33 @@ describe('ExperienceApiClient', () => {
       )
     })
 
+    it('uses the mutable default locale when request options omit locale', async () => {
+      const requested: { locale?: string | null } = {}
+
+      server.use(
+        http.get(
+          `${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles/:id`,
+          ({ request }) => {
+            requested.locale = getLocaleParam(request.url)
+
+            return HttpResponse.json({ data: { id: 'profile-id' } }, { status: 200 })
+          },
+        ),
+      )
+
+      const client = makeClient({ locale: 'en-US' })
+
+      await client.getProfile('profile-id')
+      expect(requested.locale).toBe('en-US')
+
+      client.setLocale('de-DE')
+      await client.getProfile('profile-id')
+      expect(requested.locale).toBe('de-DE')
+
+      await client.getProfile('profile-id', { locale: 'fr-FR' })
+      expect(requested.locale).toBe('fr-FR')
+    })
+
     it('logs an error when the request fails (network error)', async () => {
       server.use(
         http.get(`${EXPERIENCE_BASE_URL}v2/organizations/:org/environments/:env/profiles/:id`, () =>

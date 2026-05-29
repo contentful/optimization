@@ -202,9 +202,9 @@ function resolveOptimization(
  *
  * @internal
  */
-interface AttachOptimizationPreviewPanelToSdkArgs {
+interface AttachOptimizationPreviewPanelToSdkArgs<M extends ChainModifiers = ChainModifiers> {
   /** Contentful client used to fetch audience and optimization entries. */
-  contentful: ContentfulClientApi<ChainModifiers>
+  contentful: ContentfulClientApi<M>
   /** ContentfulOptimization Web SDK instance to register the preview panel with. */
   optimization: ContentfulOptimization
   /** Optional CSP nonce passed to the Lit framework for style injection. */
@@ -216,9 +216,9 @@ interface AttachOptimizationPreviewPanelToSdkArgs {
  *
  * @public
  */
-export interface AttachOptimizationPreviewPanelArgs {
+export interface AttachOptimizationPreviewPanelArgs<M extends ChainModifiers = ChainModifiers> {
   /** Contentful client used to fetch audience and optimization entries. */
-  contentful: ContentfulClientApi<ChainModifiers>
+  contentful: ContentfulClientApi<M>
   /**
    * ContentfulOptimization Web SDK instance to register the preview panel with.
    *
@@ -244,11 +244,11 @@ export interface AttachOptimizationPreviewPanelArgs {
  *
  * @internal
  */
-async function attachOptimizationPreviewPanelToSdk({
+async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = ChainModifiers>({
   contentful,
   optimization: contentfulOptimization,
   nonce,
-}: AttachOptimizationPreviewPanelToSdkArgs): Promise<void> {
+}: AttachOptimizationPreviewPanelToSdkArgs<M>): Promise<void> {
   canDefineComponents()
 
   if (nonce !== undefined) window.litNonce = nonce
@@ -278,8 +278,8 @@ async function attachOptimizationPreviewPanelToSdk({
   definePanel()
 
   const [audiences, optimizationEntries]: [Entry[], Entry[]] = await Promise.all([
-    getAllEntries<AudienceEntrySkeleton>(contentful, 'nt_audience'),
-    getAllEntries<OptimizationEntrySkeleton>(contentful, 'nt_experience'),
+    getAllEntries<AudienceEntrySkeleton, M>(contentful, 'nt_audience'),
+    getAllEntries<OptimizationEntrySkeleton, M>(contentful, 'nt_experience'),
   ])
 
   const panel = document.createElement(PANEL_TAG)
@@ -395,11 +395,9 @@ async function attachOptimizationPreviewPanelToSdk({
  *
  * @public
  */
-export default async function attachOptimizationPreviewPanel({
-  contentful,
-  optimization,
-  nonce,
-}: AttachOptimizationPreviewPanelArgs): Promise<void> {
+export default async function attachOptimizationPreviewPanel<
+  M extends ChainModifiers = ChainModifiers,
+>({ contentful, optimization, nonce }: AttachOptimizationPreviewPanelArgs<M>): Promise<void> {
   if (previewPanelAttachment !== undefined) {
     await previewPanelAttachment
     return

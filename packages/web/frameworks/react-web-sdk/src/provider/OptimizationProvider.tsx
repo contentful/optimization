@@ -122,6 +122,7 @@ function disposeRuntime(runtime: ProviderRuntime | undefined): void {
 export function OptimizationProvider(props: OptimizationProviderProps): ReactElement | null {
   const { children } = props
   const initialPropsRef = useRef(props)
+  const liveLocale = props.sdk === undefined ? props.locale : undefined
   const [state, setState] = useState<ProviderState>(() => ({
     error: undefined,
     isReady: !props.onStatesReady && props.sdk !== undefined,
@@ -149,6 +150,18 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
       setState({ error: toError(error), isReady: false, sdk: undefined })
     }
   }, [])
+
+  useLayoutEffect(() => {
+    if (state.sdk === undefined || props.sdk !== undefined || liveLocale === undefined) {
+      return
+    }
+
+    try {
+      state.sdk.setLocale(liveLocale)
+    } catch (error: unknown) {
+      setState({ error: toError(error), isReady: true, sdk: state.sdk })
+    }
+  }, [liveLocale, props.sdk, state.sdk])
 
   const shouldRenderChildren = state.isReady || state.error !== undefined
 

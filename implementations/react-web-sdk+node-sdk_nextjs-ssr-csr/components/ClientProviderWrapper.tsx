@@ -27,6 +27,7 @@ const NextAppAutoPageTracker = dynamic(
 
 interface ClientProviderWrapperProps {
   readonly children: ReactNode
+  readonly contentfulLocale: string
   readonly defaults?: {
     profile?: Profile
     selectedOptimizations?: SelectedOptimizationArray
@@ -34,11 +35,17 @@ interface ClientProviderWrapperProps {
   }
 }
 
-export function ClientProviderWrapper({ children, defaults }: ClientProviderWrapperProps) {
+export function ClientProviderWrapper({
+  children,
+  contentfulLocale,
+  defaults,
+}: ClientProviderWrapperProps) {
   return (
     <OptimizationRoot
       clientId={optimizationConfig.clientId}
       environment={optimizationConfig.environment}
+      contentfulLocales={optimizationConfig.contentfulLocales}
+      locale={contentfulLocale}
       api={optimizationConfig.api}
       trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
       logLevel="debug"

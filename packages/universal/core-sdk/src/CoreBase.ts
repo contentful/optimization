@@ -19,6 +19,7 @@ import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'conte
 import { OPTIMIZATION_CORE_SDK_NAME, OPTIMIZATION_CORE_SDK_VERSION } from './constants'
 import { EventBuilder, type EventBuilderConfig } from './events'
 import { InterceptorManager } from './lib/interceptor'
+import { normalizeExplicitLocale, type ContentfulLocales } from './locale'
 import type { ResolvedData } from './resolvers'
 import { FlagsResolver, MergeTagValueResolver, OptimizedEntryResolver } from './resolvers'
 
@@ -41,6 +42,11 @@ export interface LifecycleInterceptors {
  */
 export interface CoreConfig extends Pick<ApiClientConfig, GlobalApiConfigProperties> {
   /**
+   * Contentful locale configuration used to resolve the CDA locale.
+   */
+  contentfulLocales?: ContentfulLocales
+
+  /**
    * Event builder configuration (channel/library metadata, etc.).
    */
   eventBuilder?: EventBuilderConfig
@@ -52,6 +58,10 @@ export interface CoreConfig extends Pick<ApiClientConfig, GlobalApiConfigPropert
 interface CoreBaseApiClientConfig {
   experience?: ApiClientConfig['experience']
   insights?: ApiClientConfig['insights']
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 /**
@@ -79,6 +89,13 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
     state: new InterceptorManager<OptimizationData>(),
   }
 
+  private resolvedLocale: string | undefined
+
+  /** Resolved Contentful locale for CDA entry fetches. */
+  get locale(): string | undefined {
+    return this.resolvedLocale
+  }
+
   /**
    * Create the core with API client and logging preconfigured.
    *
@@ -88,8 +105,9 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
    * const sdk = new CoreStateless({ clientId: 'abc123', environment: 'prod' })
    * ```
    */
-  constructor(config: TConfig, api: CoreBaseApiClientConfig = {}) {
+  constructor(config: TConfig, api: CoreBaseApiClientConfig = {}, locale?: string) {
     this.config = config
+    this.resolvedLocale = locale
 
     const { eventBuilder, logLevel, environment, clientId, fetchOptions } = config
 
@@ -105,12 +123,87 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
 
     this.api = new ApiClient(apiConfig)
 
-    this.eventBuilder = new EventBuilder(
-      eventBuilder ?? {
-        channel: 'server',
-        library: { name: OPTIMIZATION_CORE_SDK_NAME, version: OPTIMIZATION_CORE_SDK_VERSION },
+    const resolvedEventBuilder = eventBuilder ?? {
+      channel: 'server',
+      library: { name: OPTIMIZATION_CORE_SDK_NAME, version: OPTIMIZATION_CORE_SDK_VERSION },
+    }
+
+    this.eventBuilder = new EventBuilder({
+      ...resolvedEventBuilder,
+      getLocale: resolvedEventBuilder.getLocale ?? (() => this.locale),
+    })
+  }
+
+  protected setResolvedLocale(locale: string | undefined): void {
+    this.resolvedLocale = locale
+  }
+
+  private getQueryWithLocale(query: unknown): unknown {
+    if (this.locale === undefined) {
+      return query
+    }
+
+    if (query === undefined) {
+      return { locale: this.locale }
+    }
+
+    if (!isRecord(query)) {
+      return query
+    }
+
+    if (query.locale !== undefined) {
+      const locale = normalizeExplicitLocale(query.locale, 'query.locale')
+      return locale === query.locale ? query : { ...query, locale }
+    }
+
+    return { ...query, locale: this.locale }
+  }
+
+  /**
+   * Wrap a Contentful CDA client so `getEntry()` and `getEntries()` use the resolved SDK locale.
+   *
+   * @param client - Contentful client to wrap.
+   * @returns The same client surface with locale-aware entry methods.
+   *
+   * @public
+   */
+  withOptimizationLocale<TClient extends object>(client: TClient): TClient {
+    return new Proxy(client, {
+      get: (target, property, receiver): unknown => {
+        const value: unknown = Reflect.get(target, property, receiver)
+
+        if (typeof value !== 'function') {
+          return value
+        }
+
+        if (property === 'getEntry') {
+          return (...args: unknown[]) => {
+            const [entryId, query, ...rest] = args
+            const result: unknown = Reflect.apply(value, target, [
+              entryId,
+              this.getQueryWithLocale(query),
+              ...rest,
+            ])
+
+            return result
+          }
+        }
+
+        if (property === 'getEntries') {
+          return (...args: unknown[]) => {
+            const [query, ...rest] = args
+            const result: unknown = Reflect.apply(value, target, [
+              this.getQueryWithLocale(query),
+              ...rest,
+            ])
+
+            return result
+          }
+        }
+
+        return value.bind(target)
       },
-    )
+    })
   }
 
   /**

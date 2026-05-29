@@ -258,7 +258,7 @@ export function useViewportTracking({
 
   const dimensionsRef = useRef<{ y: number; height: number } | null>(null)
   const isVisibleRef = useRef(false)
-  const fireTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const fireTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cycleRef = useRef<ViewCycleState>(createInitialCycleState())
 
   const optimizationRef = useRef(contentfulOptimization)

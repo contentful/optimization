@@ -44,6 +44,11 @@ interface BridgeConfig {
   environment: string
   experienceBaseUrl?: string
   insightsBaseUrl?: string
+  api?: {
+    locale?: string
+  }
+  contentfulLocales?: CoreStatefulConfig['contentfulLocales']
+  locale?: string
   defaults?: {
     consent?: boolean
     profile?: ProfileValue
@@ -57,6 +62,7 @@ interface BridgeState {
   consent: boolean | undefined
   canPersonalize: boolean
   changes: ChangesValue | null
+  locale: string | null
   selectedPersonalizations: SelectedOptimizationsValue | null
 }
 
@@ -111,6 +117,7 @@ interface Bridge {
 
   // Synchronous
   consent: (accept: boolean) => void
+  setLocale: (locale: string) => string | null
   reset: () => void
   // Native code passes JSON-shaped objects; the bridge trusts the shape and
   // forwards them straight to core. TypeScript types here document the
@@ -161,9 +168,12 @@ const bridge: Bridge = {
     const coreConfig: CoreStatefulConfig = {
       clientId: config.clientId,
       environment: config.environment,
+      contentfulLocales: config.contentfulLocales,
+      locale: config.locale,
       api: {
         experienceBaseUrl: config.experienceBaseUrl,
         insightsBaseUrl: config.insightsBaseUrl,
+        locale: config.api?.locale,
       },
     }
 
@@ -206,6 +216,7 @@ const bridge: Bridge = {
         consent: signals.consent.value,
         canPersonalize: signals.canOptimize.value,
         changes: signals.changes.value ?? null,
+        locale: signals.locale.value ?? null,
         selectedPersonalizations: signals.selectedOptimizations.value ?? null,
       }
 
@@ -326,6 +337,11 @@ const bridge: Bridge = {
     instance.consent(accept)
   },
 
+  setLocale(locale: string): string | null {
+    if (!instance) return null
+    return instance.setLocale(locale) ?? null
+  },
+
   reset() {
     if (!instance) return
     overrideManager?.resetAll()
@@ -433,6 +449,7 @@ const bridge: Bridge = {
       consent: signals.consent.value,
       canPersonalize: signals.canOptimize.value,
       changes: signals.changes.value ?? null,
+      locale: signals.locale.value ?? null,
       selectedPersonalizations: signals.selectedOptimizations.value ?? null,
       previewPanelOpen: signals.previewPanelOpen.value,
       audienceOverrides,
@@ -456,6 +473,7 @@ const bridge: Bridge = {
       consent: signals.consent.value,
       canPersonalize: signals.canOptimize.value,
       changes: signals.changes.value ?? null,
+      locale: signals.locale.value ?? null,
       selectedPersonalizations: signals.selectedOptimizations.value ?? null,
     }
     return JSON.stringify(state)

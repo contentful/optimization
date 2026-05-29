@@ -2,13 +2,19 @@ import { HybridEntryList } from '@/components/HybridEntryList'
 import { InteractiveControls } from '@/components/InteractiveControls'
 import { ENTRY_IDS } from '@/config/entries'
 import { fetchEntries } from '@/lib/contentful-client'
-import { getOptimizationData, sdk } from '@/lib/optimization-server'
+import { getOptimizationData, requireContentfulLocale, sdk } from '@/lib/optimization-server'
 import type { ContentEntry } from '@/types/contentful'
+import { headers } from 'next/headers'
 
 export default async function Home() {
+  const headerStore = await headers()
+  const { contentfulLocale, eventLocale } = sdk.resolveRequestLocale(
+    headerStore.get('accept-language'),
+  )
+  const resolvedContentfulLocale = requireContentfulLocale(contentfulLocale)
   const [baselineEntries, optimizationData] = await Promise.all([
-    fetchEntries(ENTRY_IDS),
-    getOptimizationData(),
+    fetchEntries(ENTRY_IDS, resolvedContentfulLocale),
+    getOptimizationData(eventLocale, resolvedContentfulLocale),
   ])
 
   const resolvedEntries = baselineEntries.map((entry: ContentEntry) => {

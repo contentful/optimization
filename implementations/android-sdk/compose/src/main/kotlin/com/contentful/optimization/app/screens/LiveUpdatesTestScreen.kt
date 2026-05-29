@@ -26,12 +26,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.contentful.optimization.shared.ContentfulFetcher
 import com.contentful.optimization.compose.LocalOptimizationClient
 import com.contentful.optimization.compose.LocalTrackingConfig
 import com.contentful.optimization.compose.OptimizationLazyColumn
 import com.contentful.optimization.compose.OptimizedEntry
 import com.contentful.optimization.compose.TrackingConfig
+import com.contentful.optimization.shared.AppConfig
+import com.contentful.optimization.shared.ContentfulFetcher
 import kotlinx.coroutines.launch
 
 @Composable
@@ -46,7 +47,10 @@ fun LiveUpdatesTestScreen(onClose: () -> Unit) {
     var isPreviewPanelSimulated by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        val entries = ContentfulFetcher.fetchEntries(listOf("2Z2WLOx07InSewC3LUB3eX"))
+        val entries = ContentfulFetcher.fetchEntries(
+            listOf("2Z2WLOx07InSewC3LUB3eX"),
+            client.locale ?: AppConfig.defaultContentfulLocale,
+        )
         entry = entries.firstOrNull()
         isLoading = false
     }

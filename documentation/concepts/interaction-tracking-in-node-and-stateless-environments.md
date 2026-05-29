@@ -123,9 +123,18 @@ Server-side `page()` is the normal SSR entry point. It records the page request,
 `OptimizationData`, and gives the server `profile`, `selectedOptimizations`, and `changes` for the
 render.
 
+Event `context.locale` is event data. It can be used by analytics and audience rules that inspect
+event context, but it does not choose the CDA locale for Contentful entry fetches and it is separate
+from the Experience API request `locale` query parameter. For the broader locale model, see
+[Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md).
+
 ```ts
+const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
+const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
+
 const pageResponse = await optimization.page(
   {
+    locale: eventLocale,
     profile: profileId ? { id: profileId } : undefined,
     page: {
       path: req.path,
@@ -136,16 +145,20 @@ const pageResponse = await optimization.page(
     },
     userAgent: req.get('user-agent') ?? 'node-server',
   },
-  { locale: req.acceptsLanguages()[0] ?? 'en-US' },
+  requestOptions,
 )
 ```
 
 Use server-side `track()` for server-known business events:
 
 ```ts
+const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
+const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
+
 await optimization.track(
   {
     profile: pageResponse.profile,
+    locale: eventLocale,
     event: 'quote_requested',
     properties: {
       plan: 'enterprise',
@@ -163,11 +176,16 @@ visibility, use browser tracking.
 ```ts
 import { randomUUID } from 'node:crypto'
 
+const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
+const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
+
 await optimization.trackView(
   {
     profile: pageResponse.profile,
+    locale: eventLocale,
     componentId: resolvedEntry.sys.id,
     experienceId: selectedOptimization?.experienceId,
+    sticky: selectedOptimization?.sticky ?? false,
     variantIndex: selectedOptimization?.variantIndex,
     viewDurationMs: 0,
     viewId: randomUUID(),

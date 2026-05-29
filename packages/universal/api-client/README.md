@@ -86,11 +86,18 @@ Common Experience API options:
 | `baseUrl`         | No        | `'https://experience.ninetailed.co/'` | Base URL for the Experience API                 |
 | `enabledFeatures` | No        | `['ip-enrichment', 'location']`       | Experience API features for each request        |
 | `ip`              | No        | `undefined`                           | IP address override for Experience API analysis |
-| `locale`          | No        | `'en-US'` (in API)                    | Locale used for Experience API location labels  |
+| `locale`          | No        | API default                           | Locale query parameter for localized responses  |
 | `plainText`       | No        | `false`                               | Sends performance-critical endpoints as text    |
 | `preflight`       | No        | `false`                               | Aggregates a profile state without storing it   |
 
-All Experience options except `baseUrl` can also be provided per request.
+All Experience options except `baseUrl` can also be provided per request. `locale` is sent as the
+Experience API `locale` query parameter and can localize profile fields such as `location.city` and
+`location.country`. Higher-level SDK merge-tag helpers resolve against the profile values returned
+by the Experience API, so applications that render localized Contentful entries commonly pass the
+same locale used for the CDA entry fetch. Pass a valid locale tag; invalid locale syntax can fail
+Experience API request validation. See
+[Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
+for how this request locale relates to Contentful and SDK-resolved locales.
 
 Common Insights API options:
 

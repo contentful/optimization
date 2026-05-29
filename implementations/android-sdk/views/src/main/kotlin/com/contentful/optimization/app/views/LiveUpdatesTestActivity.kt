@@ -8,6 +8,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.contentful.optimization.app.views.support.setTestTag
+import com.contentful.optimization.shared.AppConfig
 import com.contentful.optimization.shared.ContentfulFetcher
 import com.contentful.optimization.views.OptimizationManager
 import com.contentful.optimization.views.OptimizedEntryView
@@ -118,7 +119,10 @@ class LiveUpdatesTestActivity : AppCompatActivity() {
             // variant on the second emission — the test then sees the entry id change after
             // identify even though the slot is supposedly locked.
             OptimizationManager.client.selectedPersonalizations.first { it != null }
-            val entries = ContentfulFetcher.fetchEntries(listOf("2Z2WLOx07InSewC3LUB3eX"))
+            val entries = ContentfulFetcher.fetchEntries(
+                listOf("2Z2WLOx07InSewC3LUB3eX"),
+                client.locale ?: AppConfig.defaultContentfulLocale,
+            )
             loadedEntry = entries.firstOrNull() ?: return@launch
             attachSlotRenderers()
             renderSlots()

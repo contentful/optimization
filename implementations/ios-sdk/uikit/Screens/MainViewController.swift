@@ -59,7 +59,10 @@ final class MainViewController: UIViewController {
                     self.client.subscribeToFlag("boolean")
                 }
                 Task { @MainActor in
-                    let fetched = await ContentfulFetcher.fetchEntries(ids: AppConfig.entryIds)
+                    let fetched = await ContentfulFetcher.fetchEntries(
+                        ids: AppConfig.entryIds,
+                        locale: self.client.locale ?? AppConfig.defaultContentfulLocale
+                    )
                     self.entries = fetched
                     self.reloadContent()
                 }

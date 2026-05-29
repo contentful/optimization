@@ -21,6 +21,7 @@ import {
   acquireStatefulRuntimeSingleton,
   releaseStatefulRuntimeSingleton,
 } from './lib/singleton/StatefulRuntimeSingleton'
+import { normalizeExplicitLocale, resolveContentfulLocale } from './locale'
 import { ExperienceQueue, type ExperienceQueueDropContext } from './queues/ExperienceQueue'
 import { InsightsQueue } from './queues/InsightsQueue'
 import {
@@ -31,6 +32,7 @@ import {
   consent as consentSignal,
   effect,
   event as eventSignal,
+  locale as localeSignal,
   type Observable,
   online as onlineSignal,
   previewPanelAttached as previewPanelAttachedSignal,
@@ -63,16 +65,17 @@ const hasDefinedValues = (record: Record<string, unknown>): boolean =>
 
 const createStatefulExperienceApiConfig = (
   api: CoreStatefulApiConfig | undefined,
+  locale: string | undefined,
 ): ApiClientConfig['experience'] => {
-  if (api === undefined) return undefined
+  if (api === undefined && locale === undefined) return undefined
 
   const experienceConfig = {
-    baseUrl: api.experienceBaseUrl,
-    enabledFeatures: api.enabledFeatures,
-    ip: api.ip,
-    locale: api.locale,
-    plainText: api.plainText,
-    preflight: api.preflight,
+    baseUrl: api?.experienceBaseUrl,
+    enabledFeatures: api?.enabledFeatures,
+    ip: api?.ip,
+    locale,
+    plainText: api?.plainText,
+    preflight: api?.preflight,
   }
 
   return hasDefinedValues(experienceConfig) ? experienceConfig : undefined
@@ -145,6 +148,8 @@ export interface CoreStates {
   blockedEventStream: Observable<BlockedEvent | undefined>
   /** Stream of the most recent event emitted. */
   eventStream: Observable<InsightsEventPayload | ExperienceEventPayload | undefined>
+  /** Live view of the resolved Contentful locale. */
+  locale: Observable<string | undefined>
   /** Key-scoped observable for a single Custom Flag value. */
   flag: (name: string) => Observable<Json>
   /** Live view of the current profile. */
@@ -183,6 +188,11 @@ export interface CoreStatefulConfig extends CoreConfig {
   api?: CoreStatefulApiConfig
 
   /**
+   * Initial app/content locale candidate used to resolve the Contentful locale.
+   */
+  locale?: string
+
+  /**
    * Allow-listed event type strings permitted when consent is not set.
    */
   allowedEventTypes?: EventType[]
@@ -211,6 +221,7 @@ let statefulInstanceCounter = 0
  */
 class CoreStateful extends CoreStatefulEventEmitter implements ConsentController, ConsentGuard {
   private readonly singletonOwner: string
+  private readonly configuredExperienceLocale: string | undefined
   private destroyed = false
   protected readonly allowedEventTypes: EventType[]
   protected readonly experienceQueue: ExperienceQueue
@@ -225,6 +236,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     flag: (name: string): Observable<Json> => this.getFlagObservable(name),
     consent: toObservable(consentSignal),
     eventStream: toObservable(eventSignal),
+    locale: toObservable(localeSignal),
     canOptimize: toObservable(canOptimizeSignal),
     selectedOptimizations: toObservable(selectedOptimizationsSignal),
     previewPanelAttached: toObservable(previewPanelAttachedSignal),
@@ -233,11 +245,23 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   }
 
   constructor(config: CoreStatefulConfig) {
-    super(config, {
-      experience: createStatefulExperienceApiConfig(config.api),
-      insights: createStatefulInsightsApiConfig(config.api),
+    const locale = resolveContentfulLocale({
+      contentfulLocales: config.contentfulLocales,
+      locale: config.locale,
     })
+    const configuredExperienceLocale = normalizeExplicitLocale(config.api?.locale, 'api.locale')
+    const experienceLocale = configuredExperienceLocale ?? locale
 
+    super(
+      config,
+      {
+        experience: createStatefulExperienceApiConfig(config.api, experienceLocale),
+        insights: createStatefulInsightsApiConfig(config.api),
+      },
+      locale,
+    )
+
+    this.configuredExperienceLocale = configuredExperienceLocale
     this.singletonOwner = `CoreStateful#${++statefulInstanceCounter}`
     acquireStatefulRuntimeSingleton(this.singletonOwner)
 
@@ -253,6 +277,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
 
       this.allowedEventTypes = allowedEventTypes ?? DEFAULT_ALLOWED_EVENT_TYPES
       this.onEventBlocked = onEventBlocked
+      localeSignal.value = locale
       this.insightsQueue = new InsightsQueue({
         eventInterceptors: this.interceptors.event,
         flushPolicy: resolvedQueuePolicy.flush,
@@ -349,6 +374,27 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
 
   consent(accept: boolean): void {
     consentSignal.value = accept
+  }
+
+  /**
+   * Update the app/content locale for future entry fetches and default Experience API requests.
+   *
+   * @param locale - Next app/content locale candidate.
+   * @returns The resolved Contentful locale.
+   *
+   * @public
+   */
+  setLocale(locale: string): string | undefined {
+    const resolvedLocale = resolveContentfulLocale({
+      contentfulLocales: this.config.contentfulLocales,
+      locale,
+    })
+
+    this.setResolvedLocale(resolvedLocale)
+    localeSignal.value = resolvedLocale
+    this.api.experience.setLocale(this.configuredExperienceLocale ?? resolvedLocale)
+
+    return resolvedLocale
   }
 
   protected get online(): boolean {

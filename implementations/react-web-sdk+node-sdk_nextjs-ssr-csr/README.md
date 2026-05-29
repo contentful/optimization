@@ -54,6 +54,20 @@ changes all re-resolve entries client-side without a server roundtrip.
 | Client-side navigation (`<Link>`)      | `NextAppAutoPageTracker` fires page event → new entries fetched client-side → resolved via `resolveEntry()` |
 | Full page navigation (browser refresh) | Back to server-resolved first paint                                                                         |
 
+## CDA locale handling
+
+Server-side code configures SDK `contentfulLocales` and calls `resolveRequestLocale()` per request.
+The Node SDK receives `eventLocale` as event context, while CDA fetches and server/client Experience
+API calls use `contentfulLocale`. Hydrated client resolution reuses the single-locale entries
+supplied by the server. The hydrated React provider receives that same `contentfulLocale` through
+its top-level `locale` prop before client-side entry resolution takes over. Do not use
+`contentful.js` `withAllLocales` or raw CDA `locale=*`; SDK entry resolution expects direct
+single-locale fields such as `fields.nt_experiences` and `fields.nt_variants`. See
+[Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md)
+for the broader locale model and
+[Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
+for the entry contract.
+
 ## Architecture
 
 ```

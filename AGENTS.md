@@ -119,13 +119,36 @@ High-signal repo-wide commands:
 - `pnpm test:unit`
 - `pnpm build`
 - `pnpm size:check`
+- `pnpm size:report`
 - `pnpm build:pkgs`
 - `pnpm format:check`
 - `pnpm docs:generate`
 
+## Bundle budget failures
+
+- When `pnpm size:check` or a package `size:check` fails, do not add package exports, new bundle
+  entries, new chunks, budget config changes, aliases, or separate build outputs to move bytes
+  outside the failing budget unless the user explicitly asks for that approach.
+- `size:check` can stop at the first failing package or bundle. After a `size:check` failure, run
+  `pnpm size:report` or the relevant package `size:report` before drawing conclusions about the full
+  set of bundle-budget failures.
+- For bundle-budget failures, the only source changes allowed without user direction are concise,
+  behavior-preserving reductions to code you added or changed for the task.
+- Before attempting any bundle-budget fix, report:
+  - the exact command
+  - the failing package or bundle
+  - the budget, actual size, and delta
+  - the task-related files changed since the last known passing baseline
+  - the smallest behavior-preserving concision option, if one is clear
+  - the specific human direction needed if concision is not obvious
+
 ## Failure handling and recovery
 
 - Do not rerun the same failing command unchanged more than once.
+- Treat validation failures as diagnostic evidence before treating them as code defects. Do not edit
+  source, add compatibility shims, or change reference implementation code until you have classified
+  whether the failure is caused by source behavior, stale generated artifacts, install state,
+  package packaging, environment setup, or tooling.
 - Before retrying, classify the failure into one of these buckets:
   - command resolution or PATH
   - missing prerequisite or setup
@@ -136,6 +159,9 @@ High-signal repo-wide commands:
   - unknown
 - Prefer a small probe before a full rerun. Check the nearest `AGENTS.md`, the target
   `package.json`, and any relevant `README.md` or `CONTRIBUTING.md` section before guessing.
+- If the classified failure is not in source code, stop making source changes. Use the documented
+  package or implementation script for that failure class, or report the root cause and smallest
+  next action if cleanup, approval, or environment repair is needed.
 - If a lint or format command fails with findings that the tool can auto-fix, prefer a targeted
   fix-enabled rerun over repeated check-only runs, then revalidate once.
 - If the shell reports a command as missing:
@@ -239,6 +265,16 @@ High-signal repo-wide commands:
 - Do not run destructive Contentful scripts unless explicitly asked.
 - Do not use broad cleanup commands such as `pm2 delete all` unless explicitly asked.
 - Do not assume full cross-platform E2E is required for every change.
+
+## Context resume audit
+
+- After context compaction, interruption, or a long-running resume, audit before editing: reread the
+  latest user instruction, inspect `git status`, inspect relevant diffs, and restate the active
+  constraints in a short commentary update.
+- If resumed context is missing, contradictory, or no longer explains why a change exists, stop and
+  ask or report the uncertainty instead of continuing from memory.
+- Keep resumed work scoped to the newest user request. Do not continue older plans unless they are
+  still required by the latest instruction.
 
 ## Preferred workflow
 

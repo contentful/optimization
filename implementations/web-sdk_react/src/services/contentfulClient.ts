@@ -1,4 +1,5 @@
 import { createClient } from 'contentful'
+import { getOptimization } from '../optimization/createOptimization'
 import type { ContentEntrySkeleton, ContentfulEntry } from '../types/contentful'
 
 const INCLUDE_DEPTH = 10
@@ -29,9 +30,11 @@ function createContentfulClient(): ReturnType<typeof createClient> {
 }
 
 const contentfulClient = createContentfulClient()
+let localizedContentfulClient: ReturnType<typeof createClient> | undefined = undefined
 
 export function getContentfulClient(): ReturnType<typeof createClient> {
-  return contentfulClient
+  localizedContentfulClient ??= getOptimization().withOptimizationLocale(contentfulClient)
+  return localizedContentfulClient
 }
 
 export function getContentfulConfigError(): string | null {
@@ -48,7 +51,7 @@ export async function fetchEntry(entryId: string): Promise<ContentfulEntry | und
   }
 
   try {
-    return await contentfulClient.getEntry<ContentEntrySkeleton>(entryId, {
+    return await getContentfulClient().getEntry<ContentEntrySkeleton>(entryId, {
       include: INCLUDE_DEPTH,
     })
   } catch {
@@ -57,7 +60,9 @@ export async function fetchEntry(entryId: string): Promise<ContentfulEntry | und
 }
 
 export async function fetchEntries(entryIds: readonly string[]): Promise<ContentfulEntry[]> {
-  const fetchedEntries = await Promise.all(entryIds.map(fetchEntry))
+  const fetchedEntries = await Promise.all(
+    entryIds.map(async (entryId) => await fetchEntry(entryId)),
+  )
 
   return fetchedEntries.filter((entry): entry is ContentfulEntry => entry !== undefined)
 }

@@ -43,6 +43,20 @@ request where the Node SDK re-resolves entries with the updated profile).
 This is intentional: the server is the single source of truth for what content to show. The client
 never contradicts what the server rendered.
 
+## CDA locale handling
+
+Server-side code configures SDK `contentfulLocales` and calls `resolveRequestLocale()` per request.
+The Node SDK receives `eventLocale` as event context, while CDA fetches and server/client Experience
+API calls use `contentfulLocale` so MergeTags that read localized profile fields match the rendered
+entries. The hydrated React provider receives that same `contentfulLocale` through its top-level
+`locale` prop. Do not use `contentful.js` `withAllLocales` or raw CDA `locale=*`; SDK entry
+resolution expects direct single-locale fields such as `fields.nt_experiences` and
+`fields.nt_variants`. See
+[Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md)
+for the broader locale model and
+[Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
+for the entry contract.
+
 ## Architecture
 
 ```

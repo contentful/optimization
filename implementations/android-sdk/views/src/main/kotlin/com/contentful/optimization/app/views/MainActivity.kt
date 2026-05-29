@@ -69,6 +69,8 @@ class MainActivity : AppCompatActivity() {
                 environment = AppConfig.environment,
                 experienceBaseUrl = AppConfig.experienceBaseUrl,
                 insightsBaseUrl = AppConfig.insightsBaseUrl,
+                contentfulLocales = AppConfig.contentfulLocales,
+                locale = AppConfig.defaultContentfulLocale,
                 debug = true,
             ),
             trackViews = true,
@@ -154,7 +156,10 @@ class MainActivity : AppCompatActivity() {
                 if (entriesLoaded) return@collect
                 entriesLoaded = true
                 client.subscribeToFlag("boolean")
-                val entries = ContentfulFetcher.fetchEntries(AppConfig.entryIds)
+                val entries = ContentfulFetcher.fetchEntries(
+                    AppConfig.entryIds,
+                    client.locale ?: AppConfig.defaultContentfulLocale,
+                )
                 // Pre-resolve each entry's rich text on the (suspending) coroutine
                 // path BEFORE handing the entry to the synchronous view binder. This
                 // mirrors the iOS pattern where `RichText.resolveText` is a synchronous

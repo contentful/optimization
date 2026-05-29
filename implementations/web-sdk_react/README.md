@@ -54,6 +54,19 @@ demonstrating:
 The live updates section demonstrates the same parity scenarios directly in-page (default, forced
 on, and locked), while keeping the main entry rendering flow customer-oriented.
 
+## CDA locale handling
+
+The adapter configures SDK `contentfulLocales` and an initial app/content `locale`, then wraps the
+Contentful CDA client with `withOptimizationLocale()` so entry fetches use the live resolved
+`optimization.locale`. Experience API calls use that resolved locale by default unless `api.locale`
+is configured as an explicit API override. Do not use `contentful.js` `withAllLocales` or raw CDA
+`locale=*` for entries passed to the adapter resolver; SDK entry resolution expects direct
+single-locale fields such as `fields.nt_experiences` and `fields.nt_variants`. See
+[Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md)
+for the broader locale model and
+[Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
+for the entry contract.
+
 ## Prerequisites
 
 - Node.js >= 20.19.0 (24.13.0 recommended to match `.nvmrc`)

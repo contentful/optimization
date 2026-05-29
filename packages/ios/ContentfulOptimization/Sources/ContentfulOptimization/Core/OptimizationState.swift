@@ -6,12 +6,14 @@ public struct OptimizationState: Equatable {
     public var consent: Bool?
     public var canPersonalize: Bool
     public var changes: [[String: Any]]?
+    public var locale: String? = nil
 
     public static let empty = OptimizationState(
         profile: nil,
         consent: nil,
         canPersonalize: false,
-        changes: nil
+        changes: nil,
+        locale: nil
     )
 
     public static func == (lhs: OptimizationState, rhs: OptimizationState) -> Bool {
@@ -25,5 +27,6 @@ public struct OptimizationState: Equatable {
             && lhs.consent == rhs.consent
             && lhs.canPersonalize == rhs.canPersonalize
             && lhsChanges == rhsChanges
+            && lhs.locale == rhs.locale
     }
 }

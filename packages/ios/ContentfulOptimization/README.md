@@ -100,6 +100,47 @@ try client.initialize(
 let result = try await client.screen(name: "Home")
 ```
 
+## Locale handling
+
+For a single-locale app, configure the Contentful locale default only:
+
+```swift
+let config = OptimizationConfig(
+    clientId: "<your-client-id>",
+    environment: "master",
+    contentfulLocales: ContentfulLocales(default: "en-US")
+)
+```
+
+For an app that matches the user's runtime locale to multiple Contentful locales, add `supported`
+with the locale codes configured in your Contentful space:
+
+```swift
+let appLocale = Locale.current.identifier
+
+let config = OptimizationConfig(
+    clientId: "<your-client-id>",
+    environment: "master",
+    contentfulLocales: ContentfulLocales(
+        default: "en-US",
+        supported: ["en-US", "de-DE", "fr-FR"]
+    ),
+    locale: appLocale
+)
+```
+
+Use `client.locale` when your app-owned Contentful Delivery API client fetches entries that will be
+passed to `OptimizedEntry` or `client.personalizeEntry(...)`. The native SDK does not fetch
+Contentful entries for your app layer, so this value belongs in your CDA request code.
+
+`OptimizationApiConfig.locale` is an explicit Experience API override for localized profile fields.
+It does not replace the CDA locale used to fetch Contentful entries.
+
+For the full locale model, see
+[Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html).
+For the single-locale CDA entry contract, see
+[Entry personalization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract).
+
 See the [guides](https://contentful.github.io/optimization/documents/Documentation.Guides.html) and
 [API reference](https://contentful.github.io/optimization) for the full API, SwiftUI helpers, and
 preview-panel setup.

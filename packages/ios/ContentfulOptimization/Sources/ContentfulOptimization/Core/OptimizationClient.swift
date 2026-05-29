@@ -26,6 +26,9 @@ public final class OptimizationClient: ObservableObject {
     /// Whether the SDK has been successfully initialized.
     @Published public private(set) var isInitialized = false
 
+    /// Resolved Contentful locale for CDA entry fetches.
+    @Published public private(set) var locale: String? = nil
+
     /// The currently selected personalizations, updated reactively from JS signals.
     @Published public private(set) var selectedPersonalizations: [[String: Any]]?
 
@@ -100,6 +103,7 @@ public final class OptimizationClient: ObservableObject {
         if mergedConfig.defaults?.personalizations == nil, let storedP = store.personalizations {
             mergedConfig.defaults?.personalizations = storedP
         }
+        locale = try mergedConfig.resolvedLocale()
 
         // Wire up JS bridge logging
         bridge.onLog = { [weak self] level, msg in
@@ -183,6 +187,23 @@ public final class OptimizationClient: ObservableObject {
     /// Set the online/offline state.
     public func setOnline(_ isOnline: Bool) {
         bridgeCallSyncWhenInitialized(method: "setOnline", args: isOnline ? "true" : "false")
+    }
+
+    /// Update the app/content locale used for future entry personalization and Experience requests.
+    @discardableResult
+    public func setLocale(_ locale: String) throws -> String? {
+        try requireInitialized()
+        let escaped = NativePolyfills.escapeForJS(locale)
+
+        guard let result = bridge.callSync(method: "setLocale", args: "'\(escaped)'"),
+              !result.isUndefined
+        else {
+            throw OptimizationError.configError("Failed to update locale")
+        }
+
+        let resolvedLocale = result.isNull ? nil : result.toString()
+        self.locale = resolvedLocale
+        return resolvedLocale
     }
 
     /// Personalize a Contentful entry using the current personalization state.
@@ -370,6 +391,7 @@ public final class OptimizationClient: ObservableObject {
         bridge.destroy()
         isInitialized = false
         state = .empty
+        locale = nil
         selectedPersonalizations = nil
         store.clear()
     }
@@ -443,6 +465,7 @@ public final class OptimizationClient: ObservableObject {
         let profile = Self.extractJSONValue(dict["profile"])
         let changes = Self.extractJSONArray(dict["changes"])
         let consent = dict["consent"] as? Bool
+        let locale = dict["locale"] as? String
 
         if let profile = profile {
             log.info("[state] Profile updated with \(profile.keys.sorted().joined(separator: ", "))")
@@ -454,8 +477,10 @@ public final class OptimizationClient: ObservableObject {
             profile: profile,
             consent: consent,
             canPersonalize: dict["canPersonalize"] as? Bool ?? false,
-            changes: changes
+            changes: changes,
+            locale: locale
         )
+        self.locale = locale
 
         let personalizations = Self.extractJSONArray(dict["selectedPersonalizations"])
         self.selectedPersonalizations = personalizations

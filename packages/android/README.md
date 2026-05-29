@@ -15,6 +15,17 @@ personalization logic, audience qualification, event batching, and preview overr
 - Jetpack Compose UI layer (OptimizationRoot, OptimizedEntry, scroll/view/click tracking)
 - Preview panel with audience/experience overrides, variant selection, and Contentful integration
 - View-based app support via `PreviewPanelActivity`
+- `OptimizationConfig.locale` is the app/content locale candidate used to resolve `client.locale`.
+  `OptimizationApiConfig.locale` is the explicit Experience API locale override. Runtime locale
+  changes use `OptimizationClient.setLocale(locale)`. Explicit invalid locale values throw, and
+  invalid ambient device locale candidates are ignored.
+- `ContentfulLocales(default = "en-US")` is enough for single-locale apps. Add `supported` only when
+  the app needs device-locale matching across multiple Contentful locales.
+- Use `client.locale` for app-owned CDA fetches that feed SDK entry resolution. Do not pass
+  all-locale CDA responses from `withAllLocales` or `locale=*`; see
+  [Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
+  For the broader locale model, see
+  [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md).
 
 ## Architecture
 

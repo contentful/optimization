@@ -1,24 +1,29 @@
-import { sdk } from '@/lib/optimization-server'
+import { requireContentfulLocale, sdk } from '@/lib/optimization-server'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import { type NextRequest, NextResponse } from 'next/server'
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const anonymousId = request.cookies.get(ANONYMOUS_ID_COOKIE)?.value
   const profile = anonymousId ? { id: anonymousId } : undefined
+  const { contentfulLocale, eventLocale } = sdk.resolveRequestLocale(request)
+  const resolvedContentfulLocale = requireContentfulLocale(contentfulLocale)
 
   const url = new URL(request.url)
-  const data = await sdk.page({
-    locale: request.headers.get('accept-language')?.split(',')[0] ?? 'en-US',
-    userAgent: request.headers.get('user-agent') ?? 'next-js-server',
-    page: {
-      path: url.pathname,
-      query: Object.fromEntries(url.searchParams),
-      referrer: request.headers.get('referer') ?? '',
-      search: url.search,
-      url: request.url,
+  const data = await sdk.page(
+    {
+      locale: eventLocale,
+      userAgent: request.headers.get('user-agent') ?? 'next-js-server',
+      page: {
+        path: url.pathname,
+        query: Object.fromEntries(url.searchParams),
+        referrer: request.headers.get('referer') ?? '',
+        search: url.search,
+        url: request.url,
+      },
+      profile,
     },
-    profile,
-  })
+    { locale: resolvedContentfulLocale },
+  )
 
   const response = NextResponse.next()
 

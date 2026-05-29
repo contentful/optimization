@@ -17,18 +17,25 @@ function createContentfulClient(): ReturnType<typeof createClient> {
 
 const contentfulClient = createContentfulClient()
 
-export async function fetchEntry(entryId: string): Promise<ContentEntry | undefined> {
+export async function fetchEntry(
+  entryId: string,
+  locale: string,
+): Promise<ContentEntry | undefined> {
   try {
     return await contentfulClient.getEntry<ContentEntrySkeleton>(entryId, {
       include: INCLUDE_DEPTH,
+      locale,
     })
   } catch {
     return undefined
   }
 }
 
-export async function fetchEntries(entryIds: readonly string[]): Promise<ContentEntry[]> {
-  const fetchedEntries = await Promise.all(entryIds.map(fetchEntry))
+export async function fetchEntries(
+  entryIds: readonly string[],
+  locale: string,
+): Promise<ContentEntry[]> {
+  const fetchedEntries = await Promise.all(entryIds.map((entryId) => fetchEntry(entryId, locale)))
 
   return fetchedEntries.filter((entry): entry is ContentEntry => entry !== undefined)
 }

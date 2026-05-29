@@ -2,18 +2,20 @@ import Foundation
 
 struct ContentfulFetcher {
 
-    static func fetchEntries(ids: [String]) async -> [[String: Any]] {
+    static func fetchEntries(ids: [String], locale: String) async -> [[String: Any]] {
         var entries: [[String: Any]] = []
         for id in ids {
-            if let entry = await fetchEntry(id: id) {
+            if let entry = await fetchEntry(id: id, locale: locale) {
                 entries.append(entry)
             }
         }
         return entries
     }
 
-    static func fetchEntry(id: String) async -> [String: Any]? {
-        let urlString = "\(AppConfig.contentfulBaseUrl)spaces/\(AppConfig.contentfulSpaceId)/environments/\(AppConfig.environment)/entries?sys.id=\(id)&include=10"
+    static func fetchEntry(id: String, locale: String) async -> [String: Any]? {
+        let queryLocale = locale.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
+            ?? AppConfig.defaultContentfulLocale
+        let urlString = "\(AppConfig.contentfulBaseUrl)spaces/\(AppConfig.contentfulSpaceId)/environments/\(AppConfig.environment)/entries?sys.id=\(id)&include=10&locale=\(queryLocale)"
         guard let url = URL(string: urlString) else { return nil }
 
         do {

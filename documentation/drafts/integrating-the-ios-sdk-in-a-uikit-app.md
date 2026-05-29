@@ -109,6 +109,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         try? client.initialize(config: OptimizationConfig(
             clientId: AppConfig.optimizationClientId,
             environment: AppConfig.optimizationEnvironment,
+            contentfulLocales: ContentfulLocales(default: "en-US"),
+            locale: "en-US",
             defaults: StorageDefaults(consent: true), // demo pre-grant
             debug: true
         ))
@@ -368,6 +370,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         try? client.initialize(config: OptimizationConfig(
             clientId: AppConfig.optimizationClientId,
             environment: AppConfig.optimizationEnvironment,
+            contentfulLocales: ContentfulLocales(default: "en-US"),
+            locale: "en-US",
             defaults: StorageDefaults(consent: true),
             debug: true
         ))

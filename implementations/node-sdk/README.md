@@ -32,6 +32,19 @@ options directly to stateless event methods inside each incoming request handler
 > Cache only raw Contentful entries in SSR flows. Do not mutate shared cached entries during request
 > rendering, and do not share merge-tag-rendered output across users.
 
+## CDA locale handling
+
+This app configures SDK `contentfulLocales` and calls `resolveRequestLocale()` per request. SDK
+event context uses the returned `eventLocale`, while CDA fetches and Experience API request options
+use the returned `contentfulLocale`. Raw entry cache keys include the Contentful locale so
+request-specific entry data cannot drift. Do not use `contentful.js` `withAllLocales` or raw CDA
+`locale=*`; SDK entry resolution expects direct single-locale fields such as `fields.nt_experiences`
+and `fields.nt_variants`. See
+[Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md)
+for the broader locale model and
+[Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
+for the entry contract.
+
 ## What this demonstrates
 
 Use this implementation when you need a minimal server-rendered example for

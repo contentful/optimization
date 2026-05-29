@@ -21,6 +21,8 @@ struct OptimizationDemoApp: App {
                     environment: AppConfig.environment,
                     experienceBaseUrl: AppConfig.experienceBaseUrl,
                     insightsBaseUrl: AppConfig.insightsBaseUrl,
+                    contentfulLocales: AppConfig.contentfulLocales,
+                    locale: AppConfig.defaultContentfulLocale,
                     debug: true
                 ),
                 trackViews: true,

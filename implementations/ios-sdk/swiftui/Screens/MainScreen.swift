@@ -106,7 +106,10 @@ struct MainScreen: View {
                 client.subscribeToFlag("boolean")
             }
             Task {
-                entries = await ContentfulFetcher.fetchEntries(ids: AppConfig.entryIds)
+                entries = await ContentfulFetcher.fetchEntries(
+                    ids: AppConfig.entryIds,
+                    locale: client.locale ?? AppConfig.defaultContentfulLocale
+                )
             }
         }
     }

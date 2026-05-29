@@ -1,7 +1,7 @@
 import { InteractiveControls } from '@/components/InteractiveControls'
 import { ENTRY_IDS } from '@/config/entries'
 import { fetchEntries } from '@/lib/contentful-client'
-import { sdk } from '@/lib/optimization-server'
+import { requireContentfulLocale, sdk } from '@/lib/optimization-server'
 import type { ContentEntry } from '@/types/contentful'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import { cookies, headers } from 'next/headers'
@@ -36,14 +36,21 @@ export default async function Home() {
 
   const anonymousId = cookieStore.get(ANONYMOUS_ID_COOKIE)?.value
   const profile = anonymousId ? { id: anonymousId } : undefined
+  const { contentfulLocale, eventLocale } = sdk.resolveRequestLocale(
+    headerStore.get('accept-language'),
+  )
+  const resolvedContentfulLocale = requireContentfulLocale(contentfulLocale)
 
   const [baselineEntries, optimizationData] = await Promise.all([
-    fetchEntries(ENTRY_IDS),
-    sdk.page({
-      locale: headerStore.get('accept-language')?.split(',')[0] ?? 'en-US',
-      userAgent: headerStore.get('user-agent') ?? 'next-js-server',
-      profile,
-    }),
+    fetchEntries(ENTRY_IDS, resolvedContentfulLocale),
+    sdk.page(
+      {
+        locale: eventLocale,
+        userAgent: headerStore.get('user-agent') ?? 'next-js-server',
+        profile,
+      },
+      { locale: resolvedContentfulLocale },
+    ),
   ])
 
   const resolvedEntries = baselineEntries.map((entry) => {

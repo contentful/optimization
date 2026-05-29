@@ -36,6 +36,8 @@ structure, cross-linking, and validation rules.
 
 ## Heading and writing style
 
+- Write for human software engineers integrating the SDK into consumer applications. Authored docs
+  are not internal agent instructions or maintainer runbooks.
 - Use sentence case for headings.
 - Preserve official product, package, API, component, and hook casing.
 - Lead with what the reader is trying to implement.
@@ -43,6 +45,12 @@ structure, cross-linking, and validation rules.
 - State what the SDK does not own when relevant, especially Contentful fetching, consent policy,
   identity policy, routing, and rendering.
 - Prefer concrete implementation guidance over marketing language.
+- When documenting an integration constraint, tell the reader what breaks, what to do instead, and
+  how to choose a default or fallback for their own integration.
+- Explain the consequence behind constraints. Prefer reader-facing phrasing such as "all-locale CDA
+  responses are incompatible with the resolver because..." over unexplained "do not" rules.
+- Use direct imperatives only when they help an engineer avoid a concrete integration bug, security
+  issue, data leak, or broken runtime behavior. Pair them with the reason or the safer alternative.
 
 ## Cross-linking
 

@@ -24,6 +24,7 @@ import type {
   TrackBuilderArgs,
   ViewBuilderArgs,
 } from './events'
+import { resolveContentfulLocale } from './locale'
 
 /**
  * Request-bound Experience API options for stateless runtimes.
@@ -120,12 +121,14 @@ const requireInsightsProfile = (
 
 const createStatelessExperienceApiConfig = (
   api: CoreStatelessConfig['api'] | undefined,
+  locale: string | undefined,
 ): ApiClientConfig['experience'] => {
-  if (api === undefined) return undefined
+  if (api === undefined && locale === undefined) return undefined
 
   const experienceConfig = {
-    baseUrl: api.experienceBaseUrl,
-    enabledFeatures: api.enabledFeatures,
+    baseUrl: api?.experienceBaseUrl,
+    enabledFeatures: api?.enabledFeatures,
+    locale,
   }
 
   return hasDefinedValues(experienceConfig) ? experienceConfig : undefined
@@ -155,10 +158,18 @@ const createStatelessInsightsApiConfig = (
  */
 class CoreStateless extends CoreBase {
   constructor(config: CoreStatelessConfig) {
-    super(config, {
-      experience: createStatelessExperienceApiConfig(config.api),
-      insights: createStatelessInsightsApiConfig(config.api),
+    const locale = resolveContentfulLocale({
+      contentfulLocales: config.contentfulLocales,
     })
+
+    super(
+      config,
+      {
+        experience: createStatelessExperienceApiConfig(config.api, locale),
+        insights: createStatelessInsightsApiConfig(config.api),
+      },
+      locale,
+    )
   }
 
   async identify(

@@ -1,3 +1,4 @@
+import type { ContentfulOptimization } from '@contentful/optimization-react-native'
 import {
   CHANGES_CACHE_KEY,
   PROFILE_CACHE_KEY,
@@ -11,24 +12,27 @@ import { ENV_CONFIG } from '../env.config'
 const logger = createScopedLogger('Demo:Helpers')
 const INCLUDE_DEPTH = 10
 
-function createContentfulClient(): ReturnType<typeof createClient> {
-  return createClient({
-    space: ENV_CONFIG.contentful.spaceId,
-    environment: ENV_CONFIG.contentful.environment,
-    accessToken: ENV_CONFIG.contentful.accessToken,
-    host: ENV_CONFIG.contentful.host,
-    basePath: ENV_CONFIG.contentful.basePath,
-    insecure: true,
-  })
+function createContentfulClient(sdk: ContentfulOptimization): ReturnType<typeof createClient> {
+  return sdk.withOptimizationLocale(
+    createClient({
+      space: ENV_CONFIG.contentful.spaceId,
+      environment: ENV_CONFIG.contentful.environment,
+      accessToken: ENV_CONFIG.contentful.accessToken,
+      host: ENV_CONFIG.contentful.host,
+      basePath: ENV_CONFIG.contentful.basePath,
+      insecure: true,
+    }),
+  )
 }
 
 export async function fetchEntries(
   entryIds: string[],
+  sdk: ContentfulOptimization,
   setEntries: (entries: Entry[]) => void,
   setSdkError: (error: string) => void,
 ): Promise<void> {
   try {
-    const contentfulClient = createContentfulClient()
+    const contentfulClient = createContentfulClient(sdk)
     const fetchedEntries: Entry[] = []
 
     for (const entryId of entryIds) {

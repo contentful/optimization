@@ -14,11 +14,12 @@ import {
   CoreStateful,
   type CoreStatefulConfig,
   effect,
+  resolveContentfulLocale,
   signals,
 } from '@contentful/optimization-core'
 import type { App } from '@contentful/optimization-core/api-schemas'
 import { ANONYMOUS_ID_COOKIE_LEGACY } from '@contentful/optimization-core/constants'
-import { getLocale, getPageProperties, getUserAgent } from './builders'
+import { getPageProperties, getUserAgent } from './builders'
 import {
   ANONYMOUS_ID_COOKIE,
   OPTIMIZATION_WEB_SDK_NAME,
@@ -71,6 +72,10 @@ export interface CookieAttributes {
  * @internal
  */
 const EXPIRATION_DAYS_DEFAULT = 365
+
+function getRuntimeLocaleCandidates(): string[] {
+  return [...navigator.languages, navigator.language]
+}
 
 /**
  * Configuration options for the ContentfulOptimization Web SDK.
@@ -150,8 +155,14 @@ function mergeConfig({
 }: OptimizationWebConfig): CoreStatefulConfig {
   const baseDefaults = resolveDefaultState(defaults)
   const { eventBuilder: configuredEventBuilder } = config
+  const locale = resolveContentfulLocale({
+    candidates: getRuntimeLocaleCandidates(),
+    contentfulLocales: config.contentfulLocales,
+    locale: config.locale,
+  })
   const mergedConfig: CoreStatefulConfig = {
     ...config,
+    locale,
     api: {
       beaconHandler,
       ...config.api,
@@ -163,7 +174,6 @@ function mergeConfig({
     eventBuilder: {
       app,
       channel: 'web',
-      getLocale,
       getPageProperties,
       getUserAgent,
       ...configuredEventBuilder,
