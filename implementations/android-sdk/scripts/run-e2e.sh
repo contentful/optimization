@@ -505,6 +505,17 @@ setup_adb() {
             fi
         done
     fi
+
+    # Suppress system ANR/crash dialogs. On a loaded/headless emulator the Pixel
+    # Launcher can ANR, and its "isn't responding" dialog overlays the app under
+    # test — Maestro then resolves its accessibility tree against the dialog window
+    # and fails to find app elements (observed in CI as "identify-button not visible"
+    # across every flow while the app had actually rendered fine behind the dialog).
+    if adb shell settings put global hide_error_dialogs 1 > /dev/null 2>&1; then
+        log_info "Suppressed system ANR/crash dialogs (hide_error_dialogs=1)"
+    else
+        log_warn "Could not set hide_error_dialogs=1; continuing"
+    fi
 }
 
 build_bridge() {
