@@ -11,7 +11,7 @@
     "build": "pnpm clean && pnpm build:dist",
     "build:ci": "pnpm build:dist",
     "build:dist": "rslib build",
-    "postbuild": "cp dist/optimization-ios-bridge.umd.js ../../ios/ContentfulOptimization/Sources/ContentfulOptimization/Resources/ && cp dist/optimization-android-bridge.umd.js ../../android/ContentfulOptimization/src/main/assets/",
+    "postbuild": "mkdir -p ../../ios/ContentfulOptimization/Sources/ContentfulOptimization/Resources ../../android/ContentfulOptimization/src/main/assets && cp dist/optimization-ios-bridge.umd.js ../../ios/ContentfulOptimization/Sources/ContentfulOptimization/Resources/ && cp dist/optimization-android-bridge.umd.js ../../android/ContentfulOptimization/src/main/assets/",
     "clean": "rimraf ./.rslib ./dist ./coverage .tsbuildinfo",
     "test:unit": "echo 'No tests yet'",
     "typecheck": "tsc --noEmit"
