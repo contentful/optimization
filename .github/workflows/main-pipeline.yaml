@@ -833,7 +833,7 @@ jobs:
     # only hardware-accelerated emulator architecture).
     name: 🤖 E2E Android Maestro
     runs-on: namespace-profile-linux-16-vcpu-32-gb-ram-optimal
-    timeout-minutes: 45
+    timeout-minutes: 60
     needs: [setup, changes, e2e-android-sdk-build]
     if: needs.changes.outputs.e2e_android == 'true'
     env:
@@ -935,11 +935,16 @@ jobs:
           avd-name: test
           force-avd-creation: true
           emulator-boot-timeout: 600
-          cores: 6
-          ram-size: 4096M
+          cores: 8
+          ram-size: 8192M
           disk-size: 8G
           disable-animations: true
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          # 8GB RAM (runner has 32GB): 4GB caused progressive memory pressure — flow
+          # times grew 18s→30s over a run and the Pixel Launcher ANR'd, overlaying the
+          # app. -no-snapshot-* forces a clean boot so no stale launcher state is restored.
+          emulator-options:
+            -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot-load
+            -no-snapshot-save
           script: |
             # IMPORTANT: the emulator-runner action's parseScript() splits this block on
             # every newline and runs each line as a separate `sh -c`, so environment
@@ -959,6 +964,12 @@ jobs:
             adb shell "for i in 1 2 3 4 5 6 7 8 9 10; do toybox nc -z 10.0.2.2 8000 2>/dev/null && echo 'Mock server reachable via 10.0.2.2' && exit 0; sleep 1; done; echo '::warning::mock 10.0.2.2 verification timed out'"
             echo "Suppressing system ANR/crash dialogs (Pixel Launcher ANRs under the software GPU and its 'isn't responding' dialog overlays the app, hiding identify-button from Maestro)..."
             adb shell settings put global hide_error_dialogs 1 || echo "::warning::could not set hide_error_dialogs"
+            echo "Lightening the Pixel Launcher (disable the Google feed/smartspace, the usual launcher-ANR trigger) and dismissing keyguard..."
+            adb shell pm disable-user --user 0 com.google.android.googlequicksearchbox || echo "::warning::could not disable googlequicksearchbox"
+            adb shell wm dismiss-keyguard || true
+            echo "Starting background logcat capture to /tmp/android-logcat.txt..."
+            adb logcat -c || true
+            nohup adb logcat -v threadtime > /tmp/android-logcat.txt 2>&1 &
             echo "Running Maestro flows against both apps ($MAESTRO_ITERATIONS iteration(s))..."
             m(){ a=1; while [ "$a" -le "${MAESTRO_ATTEMPTS:-2}" ]; do "$HOME/.maestro/bin/maestro" test -e APP_ID="$1" implementations/android-sdk/maestro && return 0; echo "::warning::Maestro retry $a for $1 (a flow failed; retrying the suite)"; a=$((a+1)); done; return 1; }; rc=0; i=0; while [ "$i" -lt "$MAESTRO_ITERATIONS" ]; do echo "=== iteration $((i+1))/$MAESTRO_ITERATIONS ==="; m com.contentful.optimization.app || rc=1; m com.contentful.optimization.app.views || rc=1; i=$((i+1)); done; exit $rc
 
@@ -969,6 +980,8 @@ jobs:
           cat /tmp/mock-server.log || echo "No mock server logs found"
           echo "=== Maestro test output tree (~/.maestro/tests) ==="
           ls -la "$HOME/.maestro/tests" 2>/dev/null || echo "No Maestro test output found"
+          echo "=== logcat ANR / crash lines ==="
+          grep -nE "ANR in|Reason:|FATAL EXCEPTION|not responding|lowmemorykiller|Process .* died|Low on memory" /tmp/android-logcat.txt 2>/dev/null | head -60 || echo "No logcat captured"
 
       - name: Stop Mock Server
         if: always()
@@ -982,6 +995,7 @@ jobs:
           path: |
             ~/.maestro/tests/
             /tmp/mock-server.log
+            /tmp/android-logcat.txt
           retention-days: 7
 
   e2e-ios-sdk-build:
