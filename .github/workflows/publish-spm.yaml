@@ -51,7 +51,8 @@ jobs:
           SRC=packages/ios/ContentfulOptimization
           DST="$RUNNER_TEMP/pkg"
           mkdir -p "$DST"
-          # Swift sources, Package.swift, polyfills, README, LICENSE — but not the UMD (built below)
+          # Swift sources, Package.swift, README, LICENSE — but not the UMD (built below).
+          # Polyfills are bundled into the UMD now, so there is no separate polyfills dir.
           rsync -a --exclude='Resources/optimization-ios-bridge.umd.js' "$SRC"/ "$DST"/
           cp packages/universal/optimization-js-bridge/dist/optimization-ios-bridge.umd.js \
              "$DST/Sources/ContentfulOptimization/Resources/"
@@ -60,7 +61,6 @@ jobs:
         run: |
           test -f "$RUNNER_TEMP/pkg/Package.swift"
           test -f "$RUNNER_TEMP/pkg/Sources/ContentfulOptimization/Resources/optimization-ios-bridge.umd.js"
-          test -d "$RUNNER_TEMP/pkg/Sources/ContentfulOptimization/Resources/polyfills"
 
       - name: Set up the deploy key for SSH push
         env:
