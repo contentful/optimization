@@ -4,9 +4,19 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
+    // Pin plugin versions here so this module builds standalone (e.g. for publishing),
+    // not only when it is pulled into the demo's composite build. Keep these aligned
+    // with the demo's root build.gradle.kts so local and published builds match.
+    plugins {
+        id("com.android.library") version "8.7.3"
+        id("org.jetbrains.kotlin.android") version "2.3.20"
+        id("org.jetbrains.kotlin.plugin.compose") version "2.3.20"
+        id("com.vanniktech.maven.publish") version "0.36.0"
+    }
 }
 
-dependencyResolution {
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
         google()
         mavenCentral()
