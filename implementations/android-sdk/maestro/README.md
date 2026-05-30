@@ -34,9 +34,10 @@ against both apps. Pass `--flow <suite>` (e.g. `preview-panel`) to run a single 
 
 ## Status
 
-Maestro is now the canonical Android E2E suite — the entire UiAutomator suite (`ScreenTracking`,
-`TapTracking`, `OfflineBehavior`, `Identified`/`UnidentifiedVariants`, `LiveUpdates`,
-`PreviewPanel`, `PreviewPanelOverrides`) has been ported here and the UiAutomator CI run job has
-been removed. The dwell/view-tracking contract intentionally stays out of E2E — it is owned by
-`ViewTrackingControllerTest` (JVM unit) and the iOS XCUITest suite. The `uitests/` module source is
-retained for now pending its removal in a follow-up.
+Maestro is now the canonical Android E2E suite — the UiAutomator suite (`ScreenTracking`,
+`TapTracking`, `Identified`/`UnidentifiedVariants`, `LiveUpdates`, `PreviewPanel`,
+`PreviewPanelOverrides`) has been ported here and the UiAutomator CI run job has been removed.
+`OfflineBehavior` was intentionally not carried over — see
+[`OFFLINE_TESTING.md`](./OFFLINE_TESTING.md). The dwell/view-tracking contract intentionally stays
+out of E2E — it is owned by `ViewTrackingControllerTest` (JVM unit) and the iOS XCUITest suite. The
+`uitests/` module source is retained for now pending its removal in a follow-up.

@@ -74,8 +74,9 @@ UI Automator 2 suite from `uitests/`. This mirrors the iOS `swiftui/` + `uikit/`
   `accessibilityIdentifier` parameter) are surfaced through `contentDescription` and matched by
   tests with `By.desc("content-entry-${id}")`. This applies to both impls; the SDK adapter is
   responsible for setting the `contentDescription` so the same selector resolves.
-- Test launch arguments use intent extras: `--ez reset true` clears SDK SharedPreferences,
-  `--ez simulate_offline true` sets the client offline.
+- Test launch arguments use intent extras: `--ez reset true` clears SDK SharedPreferences for a
+  clean unidentified start. (Offline simulation was removed — see
+  [`maestro/OFFLINE_TESTING.md`](./maestro/OFFLINE_TESTING.md).)
 
 ## Commands
 

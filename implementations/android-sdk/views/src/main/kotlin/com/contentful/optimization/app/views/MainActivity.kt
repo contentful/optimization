@@ -57,7 +57,6 @@ class MainActivity : AppCompatActivity() {
                 .clear()
                 .apply()
         }
-        val simulateOffline = intent.getBooleanExtra("simulate_offline", false)
 
         // Initialize the SDK after the reset check so a `--ez reset true` cold start clears the
         // persisted profile before the bridge reads it. OptimizationManager.initialize is
@@ -129,9 +128,6 @@ class MainActivity : AppCompatActivity() {
             try {
                 client.page(mapOf("url" to "app"))
             } catch (_: Exception) {
-            }
-            if (simulateOffline) {
-                client.setOnline(false)
             }
         }
 

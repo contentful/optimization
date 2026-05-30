@@ -6,7 +6,6 @@
 # resolved); the merge tag is asserted by its resolved text (continent "EU").
 appId: ${APP_ID}
 ---
-- setAirplaneMode: disabled
 - stopApp
 - launchApp:
     arguments:

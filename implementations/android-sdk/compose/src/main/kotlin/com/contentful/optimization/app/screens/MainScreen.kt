@@ -36,7 +36,7 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 @Composable
-fun MainScreen(simulateOffline: Boolean = false) {
+fun MainScreen() {
     val client = LocalOptimizationClient.current
     val state by client.state.collectAsState()
     val scope = rememberCoroutineScope()
@@ -51,9 +51,6 @@ fun MainScreen(simulateOffline: Boolean = false) {
         EventStore.subscribe(client.events, scope)
         client.consent(true)
         try { client.page(mapOf("url" to "app")) } catch (_: Exception) {}
-        if (simulateOffline) {
-            client.setOnline(false)
-        }
     }
 
     val profileKey = remember(state.profile) {

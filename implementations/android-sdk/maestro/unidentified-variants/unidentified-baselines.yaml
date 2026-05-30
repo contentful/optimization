@@ -5,7 +5,6 @@
 # entries with a distinct id are asserted by id.
 appId: ${APP_ID}
 ---
-- setAirplaneMode: disabled
 - stopApp
 - launchApp:
     arguments:

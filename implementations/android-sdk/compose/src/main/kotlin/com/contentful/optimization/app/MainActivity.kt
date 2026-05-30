@@ -33,8 +33,6 @@ class MainActivity : ComponentActivity() {
                 .apply()
         }
 
-        val simulateOffline = intent.getBooleanExtra("simulate_offline", false)
-
         setContent {
             Surface(
                 modifier = Modifier
@@ -56,7 +54,7 @@ class MainActivity : ComponentActivity() {
                         contentfulClient = MockPreviewContentfulClient(),
                     ),
                 ) {
-                    MainScreen(simulateOffline = simulateOffline)
+                    MainScreen()
                 }
             }
         }

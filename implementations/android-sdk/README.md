@@ -74,11 +74,10 @@ adb install -r compose/build/outputs/apk/debug/compose-debug.apk
 adb shell am start -n com.contentful.optimization.app/.MainActivity
 ```
 
-To launch with test arguments (clear state or simulate offline):
+To launch with a clean SDK state (clears the persisted profile on cold start):
 
 ```sh
 adb shell am start -n com.contentful.optimization.app/.MainActivity --ez reset true
-adb shell am start -n com.contentful.optimization.app/.MainActivity --ez simulate_offline true
 ```
 
 ## Android Studio

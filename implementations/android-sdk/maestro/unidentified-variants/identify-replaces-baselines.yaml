@@ -3,7 +3,6 @@
 # after an identify + relaunch, and the anonymous nested baselines disappear.
 appId: ${APP_ID}
 ---
-- setAirplaneMode: disabled
 - stopApp
 - launchApp:
     arguments:
