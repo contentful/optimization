@@ -832,7 +832,12 @@ jobs:
     # UiAutomator flaky. Reuses the proven Linux x86_64 + KVM emulator path (Namespace's
     # only hardware-accelerated emulator architecture).
     name: 🤖 E2E Android Maestro
-    runs-on: namespace-profile-linux-16-vcpu-32-gb-ram-optimal
+    # GitHub-hosted runner: the canonical, widely-proven environment for
+    # reactivecircus/android-emulator-runner. Public-repo ubuntu-latest is 4 vCPU / 16 GB
+    # with /dev/kvm (KVM enabled on GitHub Linux runners), so the x86_64 emulator is
+    # hardware-accelerated. Moved off the Namespace KVM emulator, whose launcher-ANR /
+    # PackageManager-wedge instability was the source of the chronic flakiness.
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     needs: [setup, changes, e2e-android-sdk-build]
     if: needs.changes.outputs.e2e_android == 'true'
@@ -845,7 +850,7 @@ jobs:
       # Defaults to 1 on PRs/pushes; raise via a manual run to sweep for flakes.
       MAESTRO_ITERATIONS: '1'
     steps:
-      - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
@@ -854,23 +859,10 @@ jobs:
 
       - uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
 
-      - name: Set Android SDK environment variables
-        run: |
-          echo "ANDROID_SDK_ROOT=$HOME/.android/sdk" >> "$GITHUB_ENV"
-          echo "ANDROID_HOME=$HOME/.android/sdk" >> "$GITHUB_ENV"
-
-      - name: Prepare cache directories
-        run: mkdir -p "$HOME/.android/sdk" "$HOME/.android/avd" "$HOME/.android/cache"
-
-      - name: Set up caches (Namespace)
-        uses: namespacelabs/nscloud-cache-action@15799a6b54e5765f85b2aac25b3f0df43ed571c0 # v1.4.3
-        with:
-          cache: pnpm
-          path: |
-            ~/.android/sdk
-            ~/.android/avd
-            ~/.android/cache
-
+      # On GitHub-hosted runners the Android SDK is preinstalled at $ANDROID_SDK_ROOT;
+      # android-actions/setup-android (below) tops it up. No Namespace cache action here —
+      # actions/cache would be the GitHub-runner equivalent, but a cold pnpm install + SDK
+      # top-up is fast enough for this job and keeps the runner swap minimal.
       - name: Install system dependencies (Android emulator)
         run: |
           sudo apt-get update
@@ -935,13 +927,13 @@ jobs:
           avd-name: test
           force-avd-creation: true
           emulator-boot-timeout: 600
-          cores: 8
-          ram-size: 8192M
+          cores: 3
+          ram-size: 6144M
           disk-size: 8G
           disable-animations: true
-          # 8GB RAM (runner has 32GB): 4GB caused progressive memory pressure — flow
-          # times grew 18s→30s over a run and the Pixel Launcher ANR'd, overlaying the
-          # app. -no-snapshot-* forces a clean boot so no stale launcher state is restored.
+          # Sized for the GitHub-hosted runner (4 vCPU / 16 GB): 3 cores + 6 GB for the
+          # emulator leaves headroom for the framework, Maestro, the mock server and the
+          # host. -no-snapshot-* forces a clean boot so no stale state is restored.
           emulator-options:
             -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot-load
             -no-snapshot-save
