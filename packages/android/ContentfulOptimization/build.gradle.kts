@@ -5,7 +5,12 @@ plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+<<<<<<< Updated upstream
     id("com.vanniktech.maven.publish")
+=======
+    // Version inline so the module builds when included as a subproject (parent builds don't pin it).
+    id("com.vanniktech.maven.publish") version "0.30.0"
+>>>>>>> Stashed changes
 }
 
 // Published coordinate: com.contentful.java:optimization-android. We reuse Contentful's existing,
