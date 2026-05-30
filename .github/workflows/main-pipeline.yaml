@@ -964,13 +964,14 @@ jobs:
             adb shell "for i in 1 2 3 4 5 6 7 8 9 10; do toybox nc -z 10.0.2.2 8000 2>/dev/null && echo 'Mock server reachable via 10.0.2.2' && exit 0; sleep 1; done; echo '::warning::mock 10.0.2.2 verification timed out'"
             echo "Suppressing system ANR/crash dialogs (Pixel Launcher ANRs under the software GPU and its 'isn't responding' dialog overlays the app, hiding identify-button from Maestro)..."
             adb shell settings put global hide_error_dialogs 1 || echo "::warning::could not set hide_error_dialogs"
-            echo "Disabling the Pixel Launcher so HOME falls back to the lightweight com.android.settings.FallbackHome. The Pixel Launcher intermittently ANRs on the software GPU during the clearState->relaunch transition; its 'isn't responding' dialog then overlays the app and Maestro can't see any element. Maestro launches the app directly via am start, so no real launcher is needed; FallbackHome is a blank screen that cannot ANR (validated: clearState flows still pass)."
-            adb shell pm disable-user --user 0 com.google.android.apps.nexuslauncher || echo "::warning::could not disable Pixel Launcher"
+            echo "Lightening the Pixel Launcher (disable the Google feed/smartspace, a common launcher-ANR trigger) and dismissing keyguard. NOTE: we keep the launcher ENABLED — disabling it leaves com.android.settings.FallbackHome busy-looping 'no home...' and destabilises the emulator; the ANR watchdog below clears its dialog reactively instead."
             adb shell pm disable-user --user 0 com.google.android.googlequicksearchbox || echo "::warning::could not disable googlequicksearchbox"
             adb shell wm dismiss-keyguard || true
             echo "Starting background logcat capture to /tmp/android-logcat.txt..."
             adb logcat -c || true
             nohup adb logcat -v threadtime > /tmp/android-logcat.txt 2>&1 &
+            echo "Starting background ANR watchdog (force-stops the launcher when it ANRs so its dialog can't overlay the app)..."
+            nohup bash implementations/android-sdk/scripts/ci-anr-watchdog.sh > /tmp/anr-watchdog.log 2>&1 &
             echo "Running Maestro flows against both apps ($MAESTRO_ITERATIONS iteration(s)); on failure only the failed flows are retried, not the whole suite (a full re-run wedged the package manager)..."
             bash implementations/android-sdk/scripts/ci-maestro-run.sh com.contentful.optimization.app com.contentful.optimization.app.views
 
@@ -997,6 +998,7 @@ jobs:
             ~/.maestro/tests/
             /tmp/mock-server.log
             /tmp/android-logcat.txt
+            /tmp/anr-watchdog.log
           retention-days: 7
 
   e2e-ios-sdk-build:
