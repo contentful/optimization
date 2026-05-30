@@ -858,7 +858,13 @@ jobs:
       # stay identical — a mismatch makes the cached snapshot fail to load (cold boot).
       API_LEVEL: '35'
       ARCH: x86_64
-      TARGET: google_apis
+      # AOSP Automated Test Device image: Google's purpose-built CI image, stripped of
+      # Google Play Services, the feed-laden Pixel Launcher, and the setup wizard. The
+      # google_apis image runs those heavyweight components, which ANR on a headless
+      # software-GPU emulator ("Process system isn't responding" / "Pixel Launcher isn't
+      # responding") and overlay the app, blocking Maestro. The demo app needs no Google
+      # APIs (mock backend + QuickJS bridge + OkHttp), so aosp_atd removes the ANR sources.
+      TARGET: aosp_atd
       PROFILE: pixel_7
       # Emulator flags shared by BOTH boots. The test boot appends -no-snapshot-save so it
       # loads the cached snapshot without overwriting it with dirty post-test state.
