@@ -65,6 +65,32 @@ From the monorepo root, start the mock API server before running UI tests:
 pnpm serve:mocks
 ```
 
+## Running locally
+
+The bootstrap script runs preflight checks, then configures, builds, and launches the app on an iOS
+Simulator with the mock server running. When it finishes it leaves a simulator booted with the
+reference app and the mock server running in the foreground:
+
+```sh
+cd implementations/ios-sdk
+./scripts/bootstrap.sh
+```
+
+The preflight checks verify that you are on macOS with Xcode (full IDE, not just the Command Line
+Tools), an iOS Simulator runtime, Node.js, and pnpm. If a check fails, the script prints the exact
+remediation steps and stops before building anything. XcodeGen is installed automatically via
+Homebrew if it is missing.
+
+Useful environment variables:
+
+- `APP_SHELL` — `swiftui` (default) or `uikit`.
+- `IOS_SIM_NAME` — simulator device name (default `iPhone 16`); falls back to the first available
+  iPhone if the named device is absent.
+- `SKIP_BUILD` — set to `true` to reuse the last build.
+
+Unlike the Android app, no port forwarding is required: the iOS Simulator shares the host network,
+so the app reaches the mock server at `localhost:8000` directly.
+
 ## Running E2E tests
 
 Run the full suite against both app shells from `implementations/ios-sdk/`:
