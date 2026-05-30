@@ -185,11 +185,19 @@ read -r -s -p "    Central Portal token PASSWORD: " CP_PASS; echo
 # 5. Store the five GitHub Actions secrets
 # ----------------------------------------------------------------------------
 step "Storing GitHub Actions secrets on $SOURCE_REPO"
-gh secret set "$SECRET_USERNAME"     --repo "$SOURCE_REPO" --body "$CP_USER"        && ok "$SECRET_USERNAME"
-gh secret set "$SECRET_PASSWORD"     --repo "$SOURCE_REPO" --body "$CP_PASS"        && ok "$SECRET_PASSWORD"
-gh secret set "$SECRET_KEY"          --repo "$SOURCE_REPO" --body "$ARMORED_KEY"    && ok "$SECRET_KEY"
-gh secret set "$SECRET_KEY_ID"       --repo "$SOURCE_REPO" --body "$KEY_ID_SHORT"   && ok "$SECRET_KEY_ID"
-gh secret set "$SECRET_KEY_PASSWORD" --repo "$SOURCE_REPO" --body "$GPG_PASSPHRASE" && ok "$SECRET_KEY_PASSWORD"
+# Pipe values via stdin rather than --body so the secrets never appear in the process
+# argument list (ps / /proc/<pid>/cmdline). Each call is its own statement so `set -e`
+# aborts on a failed upload instead of being swallowed by a `&&` short-circuit.
+set_secret() {
+  local name="$1" value="$2"
+  printf '%s' "$value" | gh secret set "$name" --repo "$SOURCE_REPO"
+  ok "$name"
+}
+set_secret "$SECRET_USERNAME"     "$CP_USER"
+set_secret "$SECRET_PASSWORD"     "$CP_PASS"
+set_secret "$SECRET_KEY"          "$ARMORED_KEY"
+set_secret "$SECRET_KEY_ID"       "$KEY_ID_SHORT"
+set_secret "$SECRET_KEY_PASSWORD" "$GPG_PASSPHRASE"
 
 # ----------------------------------------------------------------------------
 # 6. Verify the end state
@@ -208,34 +216,40 @@ for s in "$SECRET_USERNAME" "$SECRET_PASSWORD" "$SECRET_KEY" "$SECRET_KEY_ID" "$
 done
 
 # 6b. The token actually authenticates against the Central Portal API.
-# There is no pure "ping" endpoint, so we hit a read-only endpoint that never
-# creates a deployment. The Portal returns 401 for bad/missing credentials and a
-# non-401 (200/400/404) once the Bearer token is accepted — verified empirically.
+# There is no pure "ping" endpoint, so we hit a read-only endpoint that never creates a
+# deployment. 401/403 means the credentials were rejected; 2xx is a positive confirmation.
+# Other codes (e.g. 404 for the probe version, 5xx) mean the token was not rejected but we
+# can't positively confirm it, so we warn rather than claim success.
 B64="$(printf '%s:%s' "$CP_USER" "$CP_PASS" | base64 | tr -d '\n')"
 CODE="$(curl -s -o /dev/null -w '%{http_code}' \
   -H "Authorization: Bearer $B64" \
   "https://central.sonatype.com/api/v1/publisher/published?namespace=$NAMESPACE&name=$ARTIFACT&version=0.0.0-probe" || echo 000)"
 case "$CODE" in
+  2*)      ok "Central Portal token authenticated (HTTP $CODE)" ;;
   401|403) warn "Central Portal rejected the token (HTTP $CODE) — wrong token or no access to '$NAMESPACE'."; FAILED=1 ;;
   000)     warn "Could not reach the Central Portal API (network?)."; FAILED=1 ;;
-  *)       ok "Central Portal token authenticated (HTTP $CODE)" ;;
+  *)       warn "Central Portal returned HTTP $CODE — credentials were not rejected, but the token could not be positively confirmed. Verify the first real publish." ;;
 esac
 
-# 6c. The public key is retrievable from a keyserver (by fingerprint, in a throwaway
-# keyring). Propagation lags, so retry a few times before giving up.
+# 6c. The public key is retrievable by fingerprint from at least one of the keyservers we
+# published to (in a throwaway keyring). It only needs to be servable by one for Maven Central
+# to validate signatures; keys.openpgp.org in particular won't serve until the UID email is
+# confirmed, so requiring all of them would give a false failure. Propagation lags, so retry.
 TMP_GNUPG="$(mktemp -d)"
 KEY_FOUND=0
 for attempt in 1 2 3 4 5; do
-  if GNUPGHOME="$TMP_GNUPG" gpg --batch --keyserver keyserver.ubuntu.com \
-       --recv-keys "$KEY_FPR" >/dev/null 2>&1; then
-    KEY_FOUND=1; break
-  fi
+  for ks in "${KEYSERVERS[@]}"; do
+    if GNUPGHOME="$TMP_GNUPG" gpg --batch --keyserver "$ks" \
+         --recv-keys "$KEY_FPR" >/dev/null 2>&1; then
+      KEY_FOUND=1; FOUND_KS="$ks"; break 2
+    fi
+  done
   sleep 10
 done
 if [[ "$KEY_FOUND" == 1 ]]; then
-  ok "Public key retrievable from keyserver.ubuntu.com"
+  ok "Public key retrievable from $FOUND_KS"
 else
-  warn "Public key not yet on keyserver.ubuntu.com — propagation can take minutes; re-check later with:
+  warn "Public key not yet retrievable from ${KEYSERVERS[*]} — propagation can take minutes; re-check later with:
       gpg --keyserver keyserver.ubuntu.com --recv-keys $KEY_FPR"
   FAILED=1
 fi
