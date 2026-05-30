@@ -930,7 +930,13 @@ jobs:
         with:
           api-level: 35
           arch: x86_64
-          target: google_apis
+          # aosp_atd (AOSP Automated Test Device): no Google Play Services / GMS, no
+          # feed-laden Pixel Launcher, no setup wizard. The google_apis image runs those
+          # heavyweight components, which ANR on the headless software-GPU emulator
+          # ("Process system isn't responding" / "Pixel Launcher isn't responding") and
+          # overlay the app, blocking Maestro. Isolating the image change here to test
+          # whether it fixes the chronic flakiness on the Namespace runner too.
+          target: aosp_atd
           profile: pixel_7
           avd-name: test
           force-avd-creation: true
