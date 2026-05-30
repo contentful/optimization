@@ -970,8 +970,8 @@ jobs:
             echo "Starting background logcat capture to /tmp/android-logcat.txt..."
             adb logcat -c || true
             nohup adb logcat -v threadtime > /tmp/android-logcat.txt 2>&1 &
-            echo "Running Maestro flows against both apps ($MAESTRO_ITERATIONS iteration(s))..."
-            m(){ a=1; while [ "$a" -le "${MAESTRO_ATTEMPTS:-2}" ]; do "$HOME/.maestro/bin/maestro" test -e APP_ID="$1" implementations/android-sdk/maestro && return 0; echo "::warning::Maestro retry $a for $1 (a flow failed; retrying the suite)"; a=$((a+1)); done; return 1; }; rc=0; i=0; while [ "$i" -lt "$MAESTRO_ITERATIONS" ]; do echo "=== iteration $((i+1))/$MAESTRO_ITERATIONS ==="; m com.contentful.optimization.app || rc=1; m com.contentful.optimization.app.views || rc=1; i=$((i+1)); done; exit $rc
+            echo "Running Maestro flows against both apps ($MAESTRO_ITERATIONS iteration(s)); on failure only the failed flows are retried, not the whole suite (a full re-run wedged the package manager)..."
+            bash implementations/android-sdk/scripts/ci-maestro-run.sh com.contentful.optimization.app com.contentful.optimization.app.views
 
       - name: Print debug context on failure
         if: failure()
