@@ -40,11 +40,6 @@ fun OptimizedEntry(
         fields?.containsKey("nt_experiences") == true
     }
 
-    // An open preview panel always forces live updates, overriding an explicit
-    // `liveUpdates = false`. The global toggle is only the default when no
-    // explicit per-component value is set. Mirrors the iOS `shouldLiveUpdate`.
-    val shouldLiveUpdate = if (isPreviewPanelOpen) true else liveUpdates ?: trackingConfig.liveUpdates
-
     val viewsEnabled = trackViews ?: trackingConfig.trackViews
     val tapsEnabled = when {
         trackTaps == false -> false
@@ -57,20 +52,33 @@ fun OptimizedEntry(
     }
 
     // Re-resolve by collecting the personalizations StateFlow directly rather
-    // than keying `produceState` on a `collectAsState()` snapshot. Compose
-    // snapshot conflation can coalesce the rapid emission sequence that
-    // `identify()` produces, which left a long-mounted live entry stuck on its
-    // first resolution. Collecting the flow observes every emission.
+    // than keying on a `collectAsState()` snapshot. Compose snapshot conflation
+    // can coalesce the rapid emission sequence that `identify()` produces, which
+    // left a long-mounted live entry stuck on its first resolution. Collecting
+    // the flow observes every emission.
+    //
+    // IMPORTANT: key this collector ONLY on `entry`, and read the current
+    // preview-panel state INSIDE the collect via `isPreviewPanelOpen.value` —
+    // never key the effect on a derived `shouldLiveUpdate`. Keying on the panel
+    // state cancels and restarts the collector every time the panel opens or
+    // closes, which can drop the `selectedPersonalizations` emission produced by
+    // a preview override change (e.g. reset-variant) and leave the entry
+    // resolved against a stale personalization set (observed as the baseline
+    // sticking after reset-variant). The View-based `OptimizedEntryView` uses
+    // this same long-lived collector; keeping them identical is what makes
+    // Compose and Views behave the same.
     //
     // Live entries follow the latest personalizations on every emission. Locked
     // entries freeze on the first non-null value — mirrors the iOS `onReceive`
     // lock — and ignore later updates until the component is remounted.
-    LaunchedEffect(entry, shouldLiveUpdate) {
+    LaunchedEffect(entry) {
         if (!isPersonalized) {
             result = PersonalizedResult(entry = entry, personalization = null)
             return@LaunchedEffect
         }
         client.selectedPersonalizations.collect { newValue ->
+            val shouldLiveUpdate =
+                if (client.isPreviewPanelOpen.value) true else liveUpdates ?: trackingConfig.liveUpdates
             if (!shouldLiveUpdate && !isLocked && newValue != null) {
                 lockedPersonalizations = newValue
                 isLocked = true
