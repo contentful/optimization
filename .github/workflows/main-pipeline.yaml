@@ -984,14 +984,9 @@ jobs:
             sleep 3
             echo "Verifying the host mock is reachable from the emulator via 10.0.2.2..."
             adb shell "for i in 1 2 3 4 5 6 7 8 9 10; do toybox nc -z 10.0.2.2 8000 2>/dev/null && echo 'Mock server reachable via 10.0.2.2' && exit 0; sleep 1; done; echo '::warning::mock 10.0.2.2 verification timed out'"
-            echo "Suppressing system crash dialogs and lightening the launcher (insurance against home-transition ANRs)..."
-            adb shell settings put global hide_error_dialogs 1 || echo "::warning::could not set hide_error_dialogs"
-            adb shell pm disable-user --user 0 com.google.android.googlequicksearchbox || echo "::warning::could not disable googlequicksearchbox"
-            adb shell wm dismiss-keyguard || true
-            echo "Starting background logcat capture and ANR watchdog..."
+            echo "Starting background logcat capture (diagnostics on failure)..."
             adb logcat -c || true
             nohup adb logcat -v threadtime > /tmp/android-logcat.txt 2>&1 &
-            nohup bash implementations/android-sdk/scripts/ci-anr-watchdog.sh > /tmp/anr-watchdog.log 2>&1 &
             echo "Running Maestro flows for ${{ matrix.package }} ($MAESTRO_ITERATIONS iteration(s); only failed flows are retried)..."
             bash implementations/android-sdk/scripts/ci-maestro-run.sh ${{ matrix.package }}
 
@@ -1018,7 +1013,6 @@ jobs:
             ~/.maestro/tests/
             /tmp/mock-server.log
             /tmp/android-logcat.txt
-            /tmp/anr-watchdog.log
           retention-days: 7
 
   e2e-ios-sdk-build:
