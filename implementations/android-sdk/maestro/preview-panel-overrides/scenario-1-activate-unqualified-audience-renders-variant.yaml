@@ -3,8 +3,10 @@
 # experience whose variant content then renders on screen.
 appId: ${APP_ID}
 ---
+- stopApp
 - launchApp:
-    clearState: true
+    arguments:
+      reset: true
 - assertVisible:
     id: 'identify-button'
 - tapOn:

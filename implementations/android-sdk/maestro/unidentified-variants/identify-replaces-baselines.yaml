@@ -4,8 +4,10 @@
 appId: ${APP_ID}
 ---
 - setAirplaneMode: disabled
+- stopApp
 - launchApp:
-    clearState: true
+    arguments:
+      reset: true
 - assertVisible:
     id: 'identify-button'
 # Identify, then relaunch so the identified profile rehydrates on cold start.

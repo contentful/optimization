@@ -2,8 +2,10 @@
 # content entry emits a component_click event, surfaced as an event row in the log.
 appId: ${APP_ID}
 ---
+- stopApp
 - launchApp:
-    clearState: true
+    arguments:
+      reset: true
 - assertVisible: 'Analytics Events'
 - scrollUntilVisible:
     element: 'content-entry-1MwiFl4z7gkwqGYdvCmr8c'

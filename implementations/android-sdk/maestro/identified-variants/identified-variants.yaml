@@ -7,8 +7,10 @@
 appId: ${APP_ID}
 ---
 - setAirplaneMode: disabled
+- stopApp
 - launchApp:
-    clearState: true
+    arguments:
+      reset: true
 - assertVisible:
     id: 'identify-button'
 - tapOn:

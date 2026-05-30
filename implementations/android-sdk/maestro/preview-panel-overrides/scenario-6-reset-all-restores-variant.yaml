@@ -5,8 +5,10 @@
 # the per-row reset labels beneath the dialog.
 appId: ${APP_ID}
 ---
+- stopApp
 - launchApp:
-    clearState: true
+    arguments:
+      reset: true
 - assertVisible:
     id: 'identify-button'
 - tapOn:

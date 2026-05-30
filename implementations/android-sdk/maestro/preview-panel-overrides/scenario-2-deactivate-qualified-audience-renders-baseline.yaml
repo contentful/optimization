@@ -4,8 +4,10 @@
 # identified-visitor mock renders the variant entry by default.
 appId: ${APP_ID}
 ---
+- stopApp
 - launchApp:
-    clearState: true
+    arguments:
+      reset: true
 - assertVisible:
     id: 'identify-button'
 - tapOn:

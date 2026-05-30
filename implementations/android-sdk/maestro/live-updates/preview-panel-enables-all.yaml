@@ -3,8 +3,10 @@
 # and even the locked (liveUpdates=false) section re-resolve on identify.
 appId: ${APP_ID}
 ---
+- stopApp
 - launchApp:
-    clearState: true
+    arguments:
+      reset: true
 - assertVisible:
     id: 'identify-button'
 - tapOn:

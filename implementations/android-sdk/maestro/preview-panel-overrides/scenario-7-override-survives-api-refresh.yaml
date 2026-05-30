@@ -3,8 +3,10 @@
 # keeps the audience override in place, so the experience still resolves to its baseline.
 appId: ${APP_ID}
 ---
+- stopApp
 - launchApp:
-    clearState: true
+    arguments:
+      reset: true
 - assertVisible:
     id: 'identify-button'
 - tapOn:

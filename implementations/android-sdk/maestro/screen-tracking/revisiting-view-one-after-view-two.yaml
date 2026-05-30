@@ -2,8 +2,10 @@
 # Home -> ViewOne -> ViewTwo, then back to ViewOne, records the revisit as a new entry.
 appId: ${APP_ID}
 ---
+- stopApp
 - launchApp:
-    clearState: true
+    arguments:
+      reset: true
 - assertVisible:
     id: 'identify-button'
 - tapOn:

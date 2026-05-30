@@ -4,10 +4,15 @@
 # (com.contentful.optimization.app.views).
 appId: ${APP_ID}
 ---
-# clearState replaces the UiAutomator relaunchClean + "reset" intent extra: it wipes
-# app data so we start unidentified (identify-button visible), the suite's baseline.
+# stopApp + a `reset` launch arg is the unidentified baseline (identify-button visible).
+# The forced cold start makes MainActivity clear the SDK's SharedPreferences WITHOUT a
+# `pm clear`: Maestro's clearState runs pm clear / pm list packages, and that volume
+# wedges the CI PackageManager mid-suite. am force-stop (stopApp) avoids PackageManager
+# entirely, so the suite no longer wedges.
+- stopApp
 - launchApp:
-    clearState: true
+    arguments:
+      reset: true
 - assertVisible:
     id: 'identify-button'
 # Preview-panel elements are exposed via Android contentDescription; Maestro's text

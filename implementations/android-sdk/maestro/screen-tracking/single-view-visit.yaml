@@ -2,8 +2,10 @@
 # records the screen-view sequence the SDK emits, rendered in the screen-event-log.
 appId: ${APP_ID}
 ---
+- stopApp
 - launchApp:
-    clearState: true
+    arguments:
+      reset: true
 - assertVisible:
     id: 'identify-button'
 - tapOn:

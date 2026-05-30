@@ -2,8 +2,10 @@
 # liveUpdates=true section re-resolves on identify even when global is OFF.
 appId: ${APP_ID}
 ---
+- stopApp
 - launchApp:
-    clearState: true
+    arguments:
+      reset: true
 - assertVisible:
     id: 'identify-button'
 - tapOn:

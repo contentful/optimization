@@ -2,8 +2,10 @@
 # Berlin / DE value. Scroll the row into view, then assert the rendered value text.
 appId: ${APP_ID}
 ---
+- stopApp
 - launchApp:
-    clearState: true
+    arguments:
+      reset: true
 - assertVisible:
     id: 'identify-button'
 - tapOn: 'preview-panel-fab'

@@ -7,8 +7,10 @@ appId: ${APP_ID}
 # Start online and from a clean anonymous profile (mirrors the beforeEach). Starting with
 # airplane mode off also resets any leftover offline state from a prior failed flow.
 - setAirplaneMode: disabled
+- stopApp
 - launchApp:
-    clearState: true
+    arguments:
+      reset: true
 - assertVisible:
     id: 'identify-button'
 # Drop the network, then restore it — the SDK must recover, not wedge.
@@ -21,7 +23,7 @@ appId: ${APP_ID}
     visible:
       id: 'reset-button'
     timeout: 30000
-# Relaunch from stored state (no clearState). reset-button reappearing proves the
+# Relaunch from stored state (no reset arg, so the profile persists). reset-button reappearing proves the
 # identified profile survived the cold start (same gate IdentifiedVariantsTests uses).
 - stopApp
 - launchApp

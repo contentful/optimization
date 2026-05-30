@@ -2,8 +2,10 @@
 # profile and the "no profile data" empty state must still be absent afterward.
 appId: ${APP_ID}
 ---
+- stopApp
 - launchApp:
-    clearState: true
+    arguments:
+      reset: true
 - assertVisible:
     id: 'identify-button'
 - tapOn: 'preview-panel-fab'

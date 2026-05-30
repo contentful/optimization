@@ -3,8 +3,10 @@
 # (proving a resolved entry, not an empty/default state).
 appId: ${APP_ID}
 ---
+- stopApp
 - launchApp:
-    clearState: true
+    arguments:
+      reset: true
 - assertVisible:
     id: 'identify-button'
 - tapOn:
