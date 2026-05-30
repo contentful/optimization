@@ -1,7 +1,7 @@
 # Offline behavior testing (Android E2E)
 
-> [!NOTE] Offline/network-loss behavior is **not** currently exercised by the Android Maestro E2E
-> suite. This is a deliberate, temporary removal — see the rationale below before reintroducing it.
+**Status:** offline/network-loss behavior is not currently exercised by the Android Maestro E2E
+suite — a deliberate, temporary removal. See the rationale below before reintroducing it.
 
 ## What was removed
 
@@ -16,22 +16,18 @@
 
 ## Why
 
-The flows drove offline behavior by toggling the **emulator's real WiFi**
-(`setAirplaneMode: enabled/disabled`). On a headless CI emulator the network is provided by netsim,
-and **re-association after airplane mode is turned back off is nondeterministic** — sometimes it
-takes well over 30 seconds. The flows identify immediately after restoring the network and assert
-the identified state appears, so when the network had not actually recovered yet the identify call
-never completed and the flow failed. This was the **last remaining source of flakiness** once the
-real root cause of the chronic Android E2E instability was fixed (using the `aosp_atd` system image
-instead of `google_apis`, whose Google Play Services and Pixel Launcher ANR on the software-GPU
-emulator and overlay the app). No amount of retrying reliably fixes a network stack that genuinely
-has not come back yet.
+The flows drove offline behavior by toggling the **emulator's real WiFi** (`setAirplaneMode`). On a
+headless CI emulator the network is provided by netsim, and re-association after airplane mode is
+turned back off is **nondeterministic** — it can take well over 30 seconds. The flows identify
+immediately after restoring the network and assert the identified state appears, so when the network
+has not actually recovered yet the identify never completes and the flow fails. No retry count
+reliably fixes a network stack that genuinely has not come back.
 
-Crucially, offline handling lives in the shared **JS bridge**
-(`packages/universal/optimization-js-bridge`), not in the thin Android native wrapper. The **iOS
-native E2E suite already exercises the same bridge logic** — both native SDKs are thin wrappers over
-the one bridge — so removing the flaky Android-emulator network toggling does not leave the offline
-code path uncovered.
+Offline handling also lives in the shared **JS bridge**
+(`packages/universal/optimization-js-bridge`), not in the thin Android native wrapper, and the iOS
+native E2E suite already exercises that bridge logic — both native SDKs are thin wrappers over the
+one bridge — so dropping the flaky Android-emulator network toggling does not leave the offline code
+path uncovered.
 
 ## How to reintroduce it properly
 

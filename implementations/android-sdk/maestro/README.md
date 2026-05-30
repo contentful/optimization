@@ -1,10 +1,9 @@
-# Maestro E2E flows (preview-panel proof-of-concept)
+# Android Maestro E2E flows
 
-These [Maestro](https://maestro.dev) flows are a proof-of-concept replacement for the flakiest
-UiAutomator suite, `uitests/.../tests/PreviewPanelTests.kt`. They exist to evaluate whether
-Maestro's built-in auto-waiting and `scrollUntilVisible` eliminate the timing flakiness inherent to
-the black-box UiAutomator polling harness, while keeping a **single flow set that drives both
-reference apps**.
+These [Maestro](https://maestro.dev) flows are the Android E2E suite. A **single flow set drives
+both reference apps** — the Compose app and the XML Views app — at runtime, mirroring the iOS
+paradigm of one test bundle across the SwiftUI and UIKit targets. Maestro's built-in auto-waiting
+and `scrollUntilVisible` replace the hand-rolled polling of the retired UiAutomator harness.
 
 ## Single bundle, both APKs
 
@@ -12,14 +11,14 @@ Every flow declares `appId: ${APP_ID}`. The same flows run against both apps by 
 at runtime — mirroring the iOS paradigm of one test bundle across the SwiftUI and UIKit targets:
 
 ```sh
-maestro test -e APP_ID=com.contentful.optimization.app maestro/preview-panel        # Compose
-maestro test -e APP_ID=com.contentful.optimization.app.views maestro/preview-panel  # XML Views
+maestro test -e APP_ID=com.contentful.optimization.app maestro        # Compose
+maestro test -e APP_ID=com.contentful.optimization.app.views maestro  # XML Views
 ```
 
-This works because both apps expose the same identifiers: the preview-panel elements come from the
+This works because both apps expose the same identifiers: SDK preview-panel elements come from the
 shared `PreviewPanelContent` composable (Android `contentDescription`, matched by Maestro's text
-selector), and `identify-button` / `reset-button` are exposed as resource-ids (matched by Maestro's
-`id:` selector) in both apps.
+selector), and app identifiers like `identify-button` / `reset-button` are exposed as resource-ids
+(matched by Maestro's `id:` selector) in both apps.
 
 ## Prerequisites
 
@@ -29,7 +28,7 @@ selector), and `identify-button` / `reset-button` are exposed as resource-ids (m
   adb-daemon restarts that silently wipe reverse forwards on loaded CI emulators.
 
 Locally, run `pnpm test:e2e` (or `pnpm test:e2e:compose` / `pnpm test:e2e:views`), which uses
-`scripts/run-e2e.sh` to manage the emulator, mock server, and port forwarding, then runs the flows
+`scripts/run-e2e.sh` to manage the emulator, mock server, and app installs, then runs the flows
 against both apps. Pass `--flow <suite>` (e.g. `preview-panel`) to run a single suite.
 
 ## Status

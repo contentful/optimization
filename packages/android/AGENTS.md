@@ -34,9 +34,9 @@ This directory owns native Android package work: the Kotlin Android library modu
     extends the previously-documented `PreviewPanelActivity.addFloatingButton` pattern; consumers
     call `OptimizationManager.initialize` from `Application.onCreate` and read
     `OptimizationManager.client` from any `Activity`/`Fragment`.
-  - Behavior parity between the two adapters is validated end-to-end by the Android matrix CI leg
-    (`e2e-android-sdk` runs the same UI Automator suite against both reference impls). A change in
-    one adapter that drifts from the other will fail one matrix leg.
+  - Behavior parity between the two adapters is validated end-to-end by the Android E2E CI job
+    (`e2e-android-maestro` runs the same Maestro flow set against both reference impls via a per-app
+    matrix). A change in one adapter that drifts from the other fails that app's leg.
 
 ## Cross-boundary validation
 
