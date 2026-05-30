@@ -1,8 +1,23 @@
+import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
+import com.vanniktech.maven.publish.SonatypeHost
+
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    // Version inline so the module builds when included as a subproject (parent builds don't pin it).
+    id("com.vanniktech.maven.publish") version "0.30.0"
 }
+
+// Published coordinate: com.contentful.java:optimization-android. We reuse Contentful's existing,
+// already-verified Maven Central namespace (com.contentful.java) rather than registering a new one.
+// The Android package namespace stays com.contentful.optimization (group != package, no conflict).
+// Version flows from the release tag in CI (-Pcontentful.optimization.version / RELEASE_VERSION),
+// matching the npm and SPM release versions cut from the same tag.
+group = "com.contentful.java"
+version = (project.findProperty("contentful.optimization.version") as String?)
+    ?: System.getenv("RELEASE_VERSION")
+    ?: "0.0.0-SNAPSHOT"
 
 android {
     namespace = "com.contentful.optimization"
@@ -69,6 +84,61 @@ val buildJsBridge = tasks.register<Exec>("buildJsBridge") {
         .withPropertyName("bridgeBundle")
 }
 tasks.named("preBuild").configure { dependsOn(buildJsBridge) }
+
+// Maven Central publishing via the Sonatype Central Portal. The vanniktech plugin configures the
+// AGP single-variant ("release") publication, including sources and javadoc jars, so we do NOT add
+// an android { publishing { singleVariant(...) } } block ourselves (that would double-configure it).
+mavenPublishing {
+    configure(
+        AndroidSingleVariantLibrary(
+            variant = "release",
+            sourcesJar = true,
+            publishJavadocJar = true,
+        )
+    )
+
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL, automaticRelease = true)
+
+    // Sign with the in-memory GPG key supplied by CI (ORG_GRADLE_PROJECT_signingInMemoryKey*).
+    // Skipped automatically when no key is configured (e.g. local publishToMavenLocal smoke tests),
+    // so the artifact can be assembled and consumed locally without GPG.
+    if (project.findProperty("signingInMemoryKey") != null) {
+        signAllPublications()
+    }
+
+    coordinates("com.contentful.java", "optimization-android", version.toString())
+
+    pom {
+        name.set("Contentful Optimization Android SDK")
+        description.set(
+            "Native Android (Kotlin) SDK for the Contentful Optimization product: " +
+                "personalization, audience qualification, view/click tracking, and preview overrides."
+        )
+        inceptionYear.set("2026")
+        url.set("https://github.com/contentful/optimization")
+        licenses {
+            license {
+                name.set("MIT License")
+                url.set("https://opensource.org/licenses/MIT")
+                distribution.set("repo")
+            }
+        }
+        developers {
+            developer {
+                id.set("contentful")
+                name.set("Contentful")
+                url.set("https://github.com/contentful")
+                organization.set("Contentful")
+                organizationUrl.set("https://www.contentful.com/")
+            }
+        }
+        scm {
+            url.set("https://github.com/contentful/optimization")
+            connection.set("scm:git:git://github.com/contentful/optimization.git")
+            developerConnection.set("scm:git:ssh://git@github.com/contentful/optimization.git")
+        }
+    }
+}
 
 dependencies {
     implementation("io.github.dokar3:quickjs-kt:1.0.5")

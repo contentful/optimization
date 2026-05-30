@@ -1,0 +1,70 @@
+name: Publish Android Library
+
+permissions:
+  contents: read
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag (e.g. v1.2.3)'
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Derive release version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG='${{ github.event.release.tag_name }}'
+          else
+            TAG='${{ inputs.tag }}'
+          fi
+          echo "RELEASE_TAG=$TAG"         >> "$GITHUB_ENV"
+          echo "RELEASE_VERSION=${TAG#v}" >> "$GITHUB_ENV"
+
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+
+      - run: pnpm install --prefer-offline --frozen-lockfile
+
+      - name: Build the JS bridge (stamps the version into the UMD)
+        run: pnpm --filter @contentful/optimization-js-bridge build
+        env:
+          RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
+
+      - uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+
+      # Build the signed AAR (+ sources/javadoc/POM) and publish+release it to Maven Central via the
+      # Sonatype Central Portal. vanniktech reads credentials and the in-memory GPG key from the
+      # ORG_GRADLE_PROJECT_* env vars below, populated from the Actions secrets that
+      # scripts/setup-maven-central-credential.sh provisions.
+      - name: Publish to Maven Central
+        working-directory: packages/android/ContentfulOptimization
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.MAVEN_SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyId: ${{ secrets.MAVEN_SIGNING_KEY_ID }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.MAVEN_SIGNING_PASSWORD }}
+          RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
+        run: |
+          ./gradlew publishAndReleaseToMavenCentral \
+            -Pcontentful.optimization.version="$RELEASE_VERSION" \
+            --no-configuration-cache --no-daemon --stacktrace

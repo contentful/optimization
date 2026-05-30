@@ -46,6 +46,21 @@ polyfill bindings (URLSession/OkHttp/timers/UUID), and public API surface.
 
 ## Commands
 
-- Gradle build commands require Android SDK. Use `./gradlew build` from this directory.
+- Gradle build commands require Android SDK. Use `./gradlew build` from this directory (the module
+  ships its own pinned wrapper, 8.10.2, and pins its plugin versions in `settings.gradle.kts`, so it
+  builds standalone — not only inside the demo's composite build).
 - Run `pnpm --filter @contentful/optimization-js-bridge build` to rebuild the JS bridge bundle
-  before Gradle build.
+  before Gradle build. `buildJsBridge` (wired into `preBuild`) also does this automatically.
+
+## Releasing
+
+- Published to Maven Central (Sonatype Central Portal) as `com.contentful.java:optimization-android`
+  by `.github/workflows/publish-android.yaml` on each `v*` release, in parallel with the Swift
+  package. Version comes from the tag (`-Pcontentful.optimization.version` / `RELEASE_VERSION`); the
+  group reuses Contentful's existing verified namespace `com.contentful.java`.
+- Credentials are GitHub Actions secrets on `contentful/optimization`, provisioned and self-verified
+  by `scripts/setup-maven-central-credential.sh` (Central Portal token + GPG signing key). The
+  published artifacts are generated; nobody edits them by hand.
+- Smoke-test packaging locally with
+  `./gradlew publishToMavenLocal -Pcontentful.optimization.version=0.0.0-local` and consume it from
+  a real app via `mavenLocal()` — this is how the Android demo is verified before a real release.
