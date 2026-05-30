@@ -361,6 +361,75 @@ jobs:
       - run: pnpm install --prefer-offline --frozen-lockfile
       - run: pnpm --filter ${{ matrix.package }} test:unit
 
+  test-android-sdk-unit:
+    # JVM unit tests for the Android SDK's pure-Kotlin code paths, run via Gradle without an
+    # emulator. Currently covers `ViewTrackingController`'s dwell state machine, which is the
+    # timing-sensitive piece that the AndroidJUnitRunner E2E suite was previously asserting
+    # through three layers of noise (real swipe → real layout → JS bridge dispatch). Gated on
+    # the same paths-filter as the E2E job so it only runs when Android SDK or test-app
+    # sources change.
+    name: 🤖 Test Android SDK (JVM unit)
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
+    timeout-minutes: 15
+    needs: [setup, changes]
+    if: needs.changes.outputs.e2e_android == 'true'
+    env:
+      GRADLE_OPTS: >-
+        -Dorg.gradle.daemon=false -Dorg.gradle.parallel=true -Dorg.gradle.jvmargs=-Xmx4g
+        -Dkotlin.daemon.jvm.options=-Xmx2g
+    steps:
+      - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+
+      - name: Set Android SDK environment variables
+        run: |
+          echo "ANDROID_SDK_ROOT=$HOME/.android/sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$HOME/.android/sdk" >> "$GITHUB_ENV"
+
+      - name: Prepare cache directories
+        run: |
+          mkdir -p "$HOME/.android/sdk" "$HOME/.android/cache"
+
+      - name: Set up caches (Namespace)
+        uses: namespacelabs/nscloud-cache-action@15799a6b54e5765f85b2aac25b3f0df43ed571c0 # v1.4.3
+        with:
+          cache: |
+            pnpm
+            gradle
+          path: |
+            ~/.android/sdk
+            ~/.android/cache
+
+      - name: Setup Java
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+
+      - name: Install JS dependencies
+        run: pnpm install --prefer-offline --frozen-lockfile
+
+      - name: Run Android SDK JVM unit tests
+        working-directory: implementations/android-sdk
+        run: ./gradlew :ContentfulOptimization:testDebugUnitTest
+
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-results-android-sdk-unit
+          path: packages/android/ContentfulOptimization/build/reports/tests/
+          retention-days: 7
+
   e2e-node-sdk:
     name: 🖥️ E2E Node SSR Only
     runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
@@ -678,10 +747,10 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  e2e-android-sdk:
-    name: 🤖 E2E Android Native
+  e2e-android-sdk-build:
+    name: 🤖 Build Android APKs
     runs-on: namespace-profile-linux-16-vcpu-32-gb-ram-optimal
-    timeout-minutes: 45
+    timeout-minutes: 30
     needs: [setup, changes]
     if: needs.changes.outputs.e2e_android == 'true'
     env:
@@ -705,8 +774,7 @@ jobs:
           echo "ANDROID_HOME=$HOME/.android/sdk" >> "$GITHUB_ENV"
 
       - name: Prepare cache directories
-        run: |
-          mkdir -p "$HOME/.android/sdk" "$HOME/.android/avd" "$HOME/.android/cache"
+        run: mkdir -p "$HOME/.android/sdk" "$HOME/.android/cache"
 
       - name: Set up caches (Namespace)
         uses: namespacelabs/nscloud-cache-action@15799a6b54e5765f85b2aac25b3f0df43ed571c0 # v1.4.3
@@ -716,27 +784,7 @@ jobs:
             gradle
           path: |
             ~/.android/sdk
-            ~/.android/avd
             ~/.android/cache
-
-      - name: Install system dependencies (Android emulator)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            ca-certificates curl unzip zip git \
-            netcat-openbsd cpu-checker \
-            libgl1 libnss3 libx11-6 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 libxtst6 \
-            libxi6 libxrender1 libxkbcommon0 libgbm1 libdbus-1-3 libdrm2 libpulse0
-          sudo apt-get install -y --no-install-recommends libasound2 || sudo apt-get install -y --no-install-recommends libasound2t64
-
-      - name: Verify KVM is available
-        run: |
-          if [ ! -e /dev/kvm ]; then
-            echo "/dev/kvm not found; Android hardware acceleration will not work." >&2
-            exit 1
-          fi
-          ls -l /dev/kvm
-          sudo kvm-ok || true
 
       - name: Setup Java
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
@@ -753,9 +801,142 @@ jobs:
       - name: Build the JS bridge bundles
         run: pnpm --filter @contentful/optimization-js-bridge build
 
-      - name: Build app and test APKs
+      - name: Build Compose and Views APKs
         working-directory: implementations/android-sdk
-        run: ./gradlew :app:assembleDebug :uitests:assembleDebug
+        run: ./gradlew :compose:assembleDebug :views:assembleDebug
+
+      - name: Collect APK artifacts at stable paths
+        run: |
+          # Use a workspace-relative directory because actions/upload-artifact@v7 keys the
+          # in-artifact paths off the least-common-ancestor of the inputs — an absolute
+          # /tmp path produces /tmp/... inside the zip, which then unpacks under the download
+          # target instead of into it.
+          mkdir -p android-apks
+          cp implementations/android-sdk/compose/build/outputs/apk/debug/compose-debug.apk android-apks/
+          cp implementations/android-sdk/views/build/outputs/apk/debug/views-debug.apk android-apks/
+          ls -la android-apks/
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: android-apks
+          path: android-apks/
+          if-no-files-found: error
+          retention-days: 1
+
+  e2e-android-maestro:
+    # Canonical reactivecircus/android-emulator-runner setup on a GitHub-hosted runner:
+    # - GitHub-hosted ubuntu-latest (public repo: 4 vCPU / 16 GB with /dev/kvm) is the
+    #   widely-proven environment for this action; it replaces the Namespace KVM emulator
+    #   whose launcher-ANR / PackageManager-wedge instability drove the chronic flakiness.
+    # - ONE emulator PER APP (matrix) so each emulator runs a single 36-flow suite, not 72
+    #   back-to-back flows whose accumulated state / pm-clears wedged the PackageManager.
+    # - Cached AVD snapshot (warm boot) — the action's headline reliability feature — for
+    #   fast, consistent boots instead of cold-creating an AVD every run.
+    # - In-app reset (stopApp + a `reset` launch arg in the flows) instead of clearState,
+    #   so there are no `pm clear` operations to wedge the PackageManager.
+    name: 🤖 E2E Android Maestro (${{ matrix.app }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: [setup, changes, e2e-android-sdk-build]
+    if: needs.changes.outputs.e2e_android == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: compose
+            package: com.contentful.optimization.app
+            apk: compose-debug.apk
+          - app: views
+            package: com.contentful.optimization.app.views
+            apk: views-debug.apk
+    env:
+      CI: 'true'
+      # The Maestro install script honours $MAESTRO_VERSION.
+      MAESTRO_VERSION: '2.6.0'
+      MAESTRO_ITERATIONS: '1'
+      # AVD config in env so the snapshot-generation boot, the test boot, and the cache key
+      # stay identical — a mismatch makes the cached snapshot fail to load (cold boot).
+      API_LEVEL: '35'
+      ARCH: x86_64
+      # AOSP Automated Test Device image: Google's purpose-built CI image, stripped of
+      # Google Play Services, the feed-laden Pixel Launcher, and the setup wizard. The
+      # google_apis image runs those heavyweight components, which ANR on a headless
+      # software-GPU emulator ("Process system isn't responding" / "Pixel Launcher isn't
+      # responding") and overlay the app, blocking Maestro. The demo app needs no Google
+      # APIs (mock backend + QuickJS bridge + OkHttp), so aosp_atd removes the ANR sources.
+      TARGET: aosp_atd
+      PROFILE: pixel_7
+      # Emulator flags shared by BOTH boots. The test boot appends -no-snapshot-save so it
+      # loads the cached snapshot without overwriting it with dirty post-test state.
+      EMULATOR_OPTIONS:
+        -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          if [ ! -e /dev/kvm ]; then
+            echo "/dev/kvm not found; Android hardware acceleration unavailable." >&2
+            exit 1
+          fi
+          ls -l /dev/kvm
+
+      - name: Setup Java
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
+
+      - name: Install JS dependencies
+        run: pnpm install --prefer-offline --frozen-lockfile
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: android-apks
+          path: android-apks
+
+      - name: AVD cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-${{ env.API_LEVEL }}-${{ env.ARCH }}-${{ env.TARGET }}-${{ env.PROFILE }}
+
+      # On a cache miss, create the AVD and boot it once so the emulator writes a boot
+      # snapshot; actions/cache then saves ~/.android/avd for subsequent warm boots. Must
+      # use the SAME AVD config and EMULATOR_OPTIONS as the test boot below.
+      - name: Create AVD and generate snapshot for caching
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a # v2.37.0
+        with:
+          api-level: ${{ env.API_LEVEL }}
+          arch: ${{ env.ARCH }}
+          target: ${{ env.TARGET }}
+          profile: ${{ env.PROFILE }}
+          avd-name: test
+          force-avd-creation: false
+          emulator-boot-timeout: 600
+          cores: 3
+          ram-size: 6144M
+          disk-size: 8G
+          disable-animations: false
+          emulator-options: ${{ env.EMULATOR_OPTIONS }}
+          script: echo "Generated AVD snapshot for caching."
 
       - name: Start Mock Server
         run: |
@@ -775,68 +956,49 @@ jobs:
             exit 1
           fi
 
-      - name: Run Android E2E Tests (emulator)
+      - name: Run Maestro E2E (emulator, warm boot from cached snapshot)
         uses: reactivecircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a # v2.37.0
         with:
-          api-level: 35
-          arch: x86_64
-          target: google_apis
-          profile: pixel_7
+          api-level: ${{ env.API_LEVEL }}
+          arch: ${{ env.ARCH }}
+          target: ${{ env.TARGET }}
+          profile: ${{ env.PROFILE }}
           avd-name: test
-          force-avd-creation: true
+          force-avd-creation: false
           emulator-boot-timeout: 600
-          cores: 6
-          ram-size: 4096M
+          cores: 3
+          ram-size: 6144M
           disk-size: 8G
           disable-animations: true
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          emulator-options: ${{ env.EMULATOR_OPTIONS }} -no-snapshot-save
           script: |
-            # The emulator-runner action invokes the script via `/usr/bin/sh -c`, not bash, so
-            # `set -o pipefail` would error out with "Illegal option -o pipefail" and terminate
-            # the script before any test ran. The grep-on-test-output checks below already
-            # detect instrumentation failures regardless of pipe-status propagation.
-            echo "Disabling animations..."
-            adb shell settings put global window_animation_scale 0
-            adb shell settings put global transition_animation_scale 0
-            adb shell settings put global animator_duration_scale 0
-            echo "Installing APKs..."
-            adb install -r implementations/android-sdk/app/build/outputs/apk/debug/app-debug.apk
-            adb install -r implementations/android-sdk/uitests/build/outputs/apk/debug/uitests-debug.apk
-            echo "Setting up adb reverse port forwarding..."
-            adb reverse tcp:8000 tcp:8000
+            # parseScript() splits this block on every newline and runs each line as a
+            # separate `sh -c`, so env exports / `cd` do NOT persist and any loop or
+            # pipeline must stay on one physical line. Maestro is invoked by absolute path.
+            echo "Installing Maestro CLI ($MAESTRO_VERSION)..."
+            curl -Ls "https://get.maestro.mobile.dev" | bash
+            echo "Installing ${{ matrix.app }} APK (${{ matrix.apk }})..."
+            adb install -r android-apks/${{ matrix.apk }}
+            echo "Setting up adb reverse (harmless localhost fallback; the apps use 10.0.2.2)..."
+            adb reverse tcp:8000 tcp:8000 || echo "::warning::adb reverse failed; apps use 10.0.2.2 so continuing"
             sleep 3
-            adb shell "for i in 1 2 3 4 5 6 7 8 9 10; do nc -z localhost 8000 2>/dev/null && echo 'Mock server tunnel verified' && exit 0; sleep 1; done; echo 'WARNING: tunnel verification timed out'"
-            echo "Running UI Automator 2 E2E tests..."
-            # Fail-fast: stream am instrument output through awk; on the first
-            # "Error in test" or "Process crashed" line, force-stop the test
-            # process to abort the remaining suite. AndroidJUnitRunner has no
-            # built-in early-exit, so without this every subsequent @Before
-            # waits its full 20-30s waitForElement timeout and one root-cause
-            # failure in an early class burns the whole 45-minute job budget.
-            # force-stop on the .uitests process kills the instrumentation;
-            # the remote `am instrument -w` exits and the local pipeline
-            # collapses. fflush keeps the GitHub Actions log live so we see
-            # the failure when it happens, not at the end.
-            #
-            # IMPORTANT: this MUST be a single physical YAML line. The
-            # reactivecircus/android-emulator-runner action's parseScript()
-            # splits the multi-line `script:` block on every newline and runs
-            # each line as a separate `sh -c`, so a multi-line pipeline with
-            # `\` continuations gets broken into three independent commands —
-            # `am instrument` runs standalone and the `| tee` / `| awk` lines
-            # are dropped as no-op syntax errors. Verified in the action's
-            # src/script-parser.ts:
-            #   rawScript.trim().split(/\r\n|\n|\r/)
-            adb shell am instrument -w com.contentful.optimization.uitests/androidx.test.runner.AndroidJUnitRunner 2>&1 | tee /tmp/test-output.log | awk 'BEGIN{aborted=0} /Error in test|Process crashed/{if(!aborted){aborted=1;print;print "::error::Test failure detected — aborting remaining suite";fflush();system("adb shell am force-stop com.contentful.optimization.uitests >/dev/null 2>&1");exit 1} next} {print;fflush()}'
-            grep -q "FAILURES\|Error in test" /tmp/test-output.log && { echo "::error::Android UI tests failed"; exit 1; } || true
-            grep -q "Process crashed" /tmp/test-output.log && { echo "::error::Test process crashed"; exit 1; } || true
-            grep -q "OK (" /tmp/test-output.log || { echo "::error::Android UI tests did not complete successfully (missing OK status)"; exit 1; }
+            echo "Verifying the host mock is reachable from the emulator via 10.0.2.2..."
+            adb shell "for i in 1 2 3 4 5 6 7 8 9 10; do toybox nc -z 10.0.2.2 8000 2>/dev/null && echo 'Mock server reachable via 10.0.2.2' && exit 0; sleep 1; done; echo '::warning::mock 10.0.2.2 verification timed out'"
+            echo "Starting background logcat capture (diagnostics on failure)..."
+            adb logcat -c || true
+            nohup adb logcat -v threadtime > /tmp/android-logcat.txt 2>&1 &
+            echo "Running Maestro flows for ${{ matrix.package }} ($MAESTRO_ITERATIONS iteration(s); only failed flows are retried)..."
+            bash implementations/android-sdk/scripts/ci-maestro-run.sh ${{ matrix.package }}
 
-      - name: Upload logs on failure
+      - name: Print debug context on failure
         if: failure()
         run: |
           echo "=== Mock Server Logs ==="
           cat /tmp/mock-server.log || echo "No mock server logs found"
+          echo "=== Maestro test output tree (~/.maestro/tests) ==="
+          ls -la "$HOME/.maestro/tests" 2>/dev/null || echo "No Maestro test output found"
+          echo "=== logcat ANR / crash lines ==="
+          grep -nE "ANR in|FATAL EXCEPTION|not responding|lowmemorykiller|Process .* died|Low on memory" /tmp/android-logcat.txt 2>/dev/null | head -60 || echo "No logcat captured"
 
       - name: Stop Mock Server
         if: always()
@@ -846,11 +1008,11 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
-          name: ci-results-android-sdk
+          name: ci-results-android-maestro-${{ matrix.app }}
           path: |
-            implementations/android-sdk/logs/
+            ~/.maestro/tests/
             /tmp/mock-server.log
-            /tmp/test-output.log
+            /tmp/android-logcat.txt
           retention-days: 7
 
   e2e-ios-sdk-build:
