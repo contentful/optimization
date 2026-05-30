@@ -1,0 +1,15 @@
+# Mirrors PreviewPanelTests.testShowsProfileData — after opening the panel the
+# "no profile data" empty state must not be shown (profile resolved from the mock
+# server). assertNotVisible auto-waits for the empty state to disappear, replacing
+# the original Thread.sleep(2000) + assertNull.
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn: 'preview-panel-fab'
+- assertVisible: 'Preview Panel'
+- assertNotVisible: 'no-profile-data'

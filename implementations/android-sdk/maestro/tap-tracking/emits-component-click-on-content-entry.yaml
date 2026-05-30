@@ -1,0 +1,18 @@
+# Mirrors TapTrackingTests.testEmitsComponentClickWhenTappingContentEntry — tapping a
+# content entry emits a component_click event, surfaced as an event row in the log.
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible: 'Analytics Events'
+- scrollUntilVisible:
+    element: 'content-entry-1MwiFl4z7gkwqGYdvCmr8c'
+    direction: DOWN
+- tapOn: 'content-entry-1MwiFl4z7gkwqGYdvCmr8c'
+# The component_click event row appearing confirms the SDK tracked the tap.
+- scrollUntilVisible:
+    element:
+      id: 'event-component_click-1MwiFl4z7gkwqGYdvCmr8c'
+    direction: DOWN

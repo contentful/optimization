@@ -1,0 +1,57 @@
+# Mirrors PreviewPanelOverridesTests.testScenario5ResettingSingleVariantOverrideRestoresVariant
+# — after forcing a variant override, the per-experience reset control removes only that
+# override and restores the original variant resolution.
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'identify-button'
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-5a8ONfBdanJtlJ39WWnH1w'
+    direction: DOWN
+- tapOn: 'preview-panel-fab'
+- assertVisible: 'Preview Panel'
+- extendedWaitUntil:
+    notVisible:
+      text: '.*Loading definitions.*'
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: 'audience-expand-4yIqY7AWtzeehCZxtQSDB'
+    direction: DOWN
+- tapOn:
+    text: 'audience-expand-4yIqY7AWtzeehCZxtQSDB'
+- scrollUntilVisible:
+    element:
+      text: 'variant-picker-7DyidZaPB7Jr1gWKjoogg0-0'
+    direction: DOWN
+- tapOn:
+    text: 'variant-picker-7DyidZaPB7Jr1gWKjoogg0-0'
+# Reset just this experience's override.
+- scrollUntilVisible:
+    element:
+      text: 'reset-variant-7DyidZaPB7Jr1gWKjoogg0'
+    direction: DOWN
+- tapOn:
+    text: 'reset-variant-7DyidZaPB7Jr1gWKjoogg0'
+- back
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-5a8ONfBdanJtlJ39WWnH1w'
+    direction: DOWN

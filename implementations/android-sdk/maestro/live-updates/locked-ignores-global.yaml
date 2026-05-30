@@ -1,0 +1,40 @@
+# Mirrors LiveUpdatesTests.testLockedComponentsIgnoreGlobalLiveUpdates — with global ON
+# the default section re-resolves, but the locked (liveUpdates=false) section ignores
+# the global setting and stays put.
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'live-updates-test-button'
+- assertVisible: 'default-personalization'
+- tapOn:
+    id: 'toggle-global-live-updates-button'
+- assertVisible:
+    id: 'global-live-updates-status'
+    text: 'ON'
+- copyTextFrom:
+    id: 'locked-entry-id'
+- evalScript: ${output.locked = maestro.copiedText}
+- copyTextFrom:
+    id: 'default-entry-id'
+- evalScript: ${output.def = maestro.copiedText}
+- tapOn:
+    id: 'live-updates-identify-button'
+- assertVisible:
+    id: 'identified-status'
+    text: 'Yes'
+# default (global=ON) re-resolves...
+- extendedWaitUntil:
+    notVisible:
+      id: 'default-entry-id'
+      text: '${output.def}'
+    timeout: 30000
+# ...locked (liveUpdates=false) stays at its captured id.
+- assertVisible:
+    id: 'locked-entry-id'
+    text: '${output.locked}'

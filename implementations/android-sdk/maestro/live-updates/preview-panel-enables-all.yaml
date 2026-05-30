@@ -1,0 +1,51 @@
+# Mirrors LiveUpdatesTests.testPreviewPanelEnablesLiveUpdatesForAll — while the preview
+# panel is open the SDK forces shouldLiveUpdate=true for ALL sections, so default, live,
+# and even the locked (liveUpdates=false) section re-resolve on identify.
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'live-updates-test-button'
+- assertVisible: 'default-personalization'
+- assertVisible:
+    id: 'preview-panel-status'
+    text: 'Closed'
+- tapOn:
+    id: 'simulate-preview-panel-button'
+- assertVisible:
+    id: 'preview-panel-status'
+    text: 'Open'
+- copyTextFrom:
+    id: 'default-entry-id'
+- evalScript: ${output.def = maestro.copiedText}
+- copyTextFrom:
+    id: 'live-entry-id'
+- evalScript: ${output.live = maestro.copiedText}
+- copyTextFrom:
+    id: 'locked-entry-id'
+- evalScript: ${output.locked = maestro.copiedText}
+- tapOn:
+    id: 'live-updates-identify-button'
+- assertVisible:
+    id: 'identified-status'
+    text: 'Yes'
+- extendedWaitUntil:
+    notVisible:
+      id: 'default-entry-id'
+      text: '${output.def}'
+    timeout: 30000
+- extendedWaitUntil:
+    notVisible:
+      id: 'live-entry-id'
+      text: '${output.live}'
+    timeout: 30000
+- extendedWaitUntil:
+    notVisible:
+      id: 'locked-entry-id'
+      text: '${output.locked}'
+    timeout: 30000

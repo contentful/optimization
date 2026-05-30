@@ -1,0 +1,26 @@
+# Mirrors LiveUpdatesTests.testIdentifyAndReset — identify flips identified-status to
+# Yes; reset flips it back to No.
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'live-updates-test-button'
+- assertVisible: 'default-personalization'
+- assertVisible:
+    id: 'identified-status'
+    text: 'No'
+- tapOn:
+    id: 'live-updates-identify-button'
+- assertVisible:
+    id: 'identified-status'
+    text: 'Yes'
+- tapOn:
+    id: 'live-updates-reset-button'
+- assertVisible:
+    id: 'identified-status'
+    text: 'No'

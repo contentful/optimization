@@ -1,0 +1,17 @@
+# Mirrors PreviewPanelTests.testRefreshButtonWorks — tapping refresh re-resolves the
+# profile and the "no profile data" empty state must still be absent afterward.
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn: 'preview-panel-fab'
+- assertVisible: 'Preview Panel'
+- scrollUntilVisible:
+    element: 'preview-refresh-button'
+    direction: DOWN
+- tapOn: 'preview-refresh-button'
+- assertNotVisible: 'no-profile-data'
