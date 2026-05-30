@@ -824,31 +824,46 @@ jobs:
           retention-days: 1
 
   e2e-android-maestro:
-    # Android E2E via Maestro — the canonical Android E2E suite (the UiAutomator
-    # `uitests` run was removed). One flow set under implementations/android-sdk/maestro
-    # drives BOTH the Compose and XML Views apps via Maestro's `appId: ${APP_ID}`
-    # parameterization, mirroring the iOS single-bundle paradigm. Maestro's built-in
-    # auto-waiting and scrollUntilVisible replace the hand-rolled polling/sleeps that made
-    # UiAutomator flaky. Reuses the proven Linux x86_64 + KVM emulator path (Namespace's
-    # only hardware-accelerated emulator architecture).
-    name: 🤖 E2E Android Maestro
-    # GitHub-hosted runner: the canonical, widely-proven environment for
-    # reactivecircus/android-emulator-runner. Public-repo ubuntu-latest is 4 vCPU / 16 GB
-    # with /dev/kvm (KVM enabled on GitHub Linux runners), so the x86_64 emulator is
-    # hardware-accelerated. Moved off the Namespace KVM emulator, whose launcher-ANR /
-    # PackageManager-wedge instability was the source of the chronic flakiness.
+    # Canonical reactivecircus/android-emulator-runner setup on a GitHub-hosted runner:
+    # - GitHub-hosted ubuntu-latest (public repo: 4 vCPU / 16 GB with /dev/kvm) is the
+    #   widely-proven environment for this action; it replaces the Namespace KVM emulator
+    #   whose launcher-ANR / PackageManager-wedge instability drove the chronic flakiness.
+    # - ONE emulator PER APP (matrix) so each emulator runs a single 36-flow suite, not 72
+    #   back-to-back flows whose accumulated state / pm-clears wedged the PackageManager.
+    # - Cached AVD snapshot (warm boot) — the action's headline reliability feature — for
+    #   fast, consistent boots instead of cold-creating an AVD every run.
+    # - In-app reset (stopApp + a `reset` launch arg in the flows) instead of clearState,
+    #   so there are no `pm clear` operations to wedge the PackageManager.
+    name: 🤖 E2E Android Maestro (${{ matrix.app }})
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 45
     needs: [setup, changes, e2e-android-sdk-build]
     if: needs.changes.outputs.e2e_android == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: compose
+            package: com.contentful.optimization.app
+            apk: compose-debug.apk
+          - app: views
+            package: com.contentful.optimization.app.views
+            apk: views-debug.apk
     env:
       CI: 'true'
-      # Pinned to the version validated locally against both apps (8/8 flows each).
       # The Maestro install script honours $MAESTRO_VERSION.
       MAESTRO_VERSION: '2.6.0'
-      # How many times to repeat the full two-app flow set, for measuring flake rate.
-      # Defaults to 1 on PRs/pushes; raise via a manual run to sweep for flakes.
       MAESTRO_ITERATIONS: '1'
+      # AVD config in env so the snapshot-generation boot, the test boot, and the cache key
+      # stay identical — a mismatch makes the cached snapshot fail to load (cold boot).
+      API_LEVEL: '35'
+      ARCH: x86_64
+      TARGET: google_apis
+      PROFILE: pixel_7
+      # Emulator flags shared by BOTH boots. The test boot appends -no-snapshot-save so it
+      # loads the cached snapshot without overwriting it with dirty post-test state.
+      EMULATOR_OPTIONS:
+        -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
@@ -859,28 +874,16 @@ jobs:
 
       - uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
 
-      # On GitHub-hosted runners the Android SDK is preinstalled at $ANDROID_SDK_ROOT;
-      # android-actions/setup-android (below) tops it up. No Namespace cache action here —
-      # actions/cache would be the GitHub-runner equivalent, but a cold pnpm install + SDK
-      # top-up is fast enough for this job and keeps the runner swap minimal.
-      - name: Install system dependencies (Android emulator)
+      - name: Enable KVM
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            ca-certificates curl unzip zip git \
-            netcat-openbsd cpu-checker \
-            libgl1 libnss3 libx11-6 libx11-xcb1 libxcomposite1 libxdamage1 libxrandr2 libxtst6 \
-            libxi6 libxrender1 libxkbcommon0 libgbm1 libdbus-1-3 libdrm2 libpulse0
-          sudo apt-get install -y --no-install-recommends libasound2 || sudo apt-get install -y --no-install-recommends libasound2t64
-
-      - name: Verify KVM is available
-        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
           if [ ! -e /dev/kvm ]; then
-            echo "/dev/kvm not found; Android hardware acceleration will not work." >&2
+            echo "/dev/kvm not found; Android hardware acceleration unavailable." >&2
             exit 1
           fi
           ls -l /dev/kvm
-          sudo kvm-ok || true
 
       - name: Setup Java
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
@@ -898,6 +901,36 @@ jobs:
         with:
           name: android-apks
           path: android-apks
+
+      - name: AVD cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-${{ env.API_LEVEL }}-${{ env.ARCH }}-${{ env.TARGET }}-${{ env.PROFILE }}
+
+      # On a cache miss, create the AVD and boot it once so the emulator writes a boot
+      # snapshot; actions/cache then saves ~/.android/avd for subsequent warm boots. Must
+      # use the SAME AVD config and EMULATOR_OPTIONS as the test boot below.
+      - name: Create AVD and generate snapshot for caching
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a # v2.37.0
+        with:
+          api-level: ${{ env.API_LEVEL }}
+          arch: ${{ env.ARCH }}
+          target: ${{ env.TARGET }}
+          profile: ${{ env.PROFILE }}
+          avd-name: test
+          force-avd-creation: false
+          emulator-boot-timeout: 600
+          cores: 3
+          ram-size: 6144M
+          disk-size: 8G
+          disable-animations: false
+          emulator-options: ${{ env.EMULATOR_OPTIONS }}
+          script: echo "Generated AVD snapshot for caching."
 
       - name: Start Mock Server
         run: |
@@ -917,55 +950,44 @@ jobs:
             exit 1
           fi
 
-      - name: Run Maestro E2E (emulator)
+      - name: Run Maestro E2E (emulator, warm boot from cached snapshot)
         uses: reactivecircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a # v2.37.0
         with:
-          api-level: 35
-          arch: x86_64
-          target: google_apis
-          profile: pixel_7
+          api-level: ${{ env.API_LEVEL }}
+          arch: ${{ env.ARCH }}
+          target: ${{ env.TARGET }}
+          profile: ${{ env.PROFILE }}
           avd-name: test
-          force-avd-creation: true
+          force-avd-creation: false
           emulator-boot-timeout: 600
           cores: 3
           ram-size: 6144M
           disk-size: 8G
           disable-animations: true
-          # Sized for the GitHub-hosted runner (4 vCPU / 16 GB): 3 cores + 6 GB for the
-          # emulator leaves headroom for the framework, Maestro, the mock server and the
-          # host. -no-snapshot-* forces a clean boot so no stale state is restored.
-          emulator-options:
-            -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot-load
-            -no-snapshot-save
+          emulator-options: ${{ env.EMULATOR_OPTIONS }} -no-snapshot-save
           script: |
-            # IMPORTANT: the emulator-runner action's parseScript() splits this block on
-            # every newline and runs each line as a separate `sh -c`, so environment
-            # exports and `cd` do NOT persist across lines, and any loop/pipeline must
-            # live on a single physical line. We therefore invoke Maestro by absolute
-            # path ($HOME/.maestro/bin/maestro) rather than relying on PATH.
-            # MAESTRO_VERSION (job env) pins the release the install script fetches.
+            # parseScript() splits this block on every newline and runs each line as a
+            # separate `sh -c`, so env exports / `cd` do NOT persist and any loop or
+            # pipeline must stay on one physical line. Maestro is invoked by absolute path.
             echo "Installing Maestro CLI ($MAESTRO_VERSION)..."
             curl -Ls "https://get.maestro.mobile.dev" | bash
-            echo "Installing app APKs (Compose + XML Views)..."
-            adb install -r android-apks/compose-debug.apk
-            adb install -r android-apks/views-debug.apk
-            echo "Setting up adb reverse port forwarding (harmless localhost fallback)..."
+            echo "Installing ${{ matrix.app }} APK (${{ matrix.apk }})..."
+            adb install -r android-apks/${{ matrix.apk }}
+            echo "Setting up adb reverse (harmless localhost fallback; the apps use 10.0.2.2)..."
             adb reverse tcp:8000 tcp:8000 || echo "::warning::adb reverse failed; apps use 10.0.2.2 so continuing"
             sleep 3
-            echo "Verifying the host mock is reachable from the emulator via 10.0.2.2 (the host alias the apps use; immune to adb-daemon restarts that wipe reverse forwards)..."
+            echo "Verifying the host mock is reachable from the emulator via 10.0.2.2..."
             adb shell "for i in 1 2 3 4 5 6 7 8 9 10; do toybox nc -z 10.0.2.2 8000 2>/dev/null && echo 'Mock server reachable via 10.0.2.2' && exit 0; sleep 1; done; echo '::warning::mock 10.0.2.2 verification timed out'"
-            echo "Suppressing system ANR/crash dialogs (Pixel Launcher ANRs under the software GPU and its 'isn't responding' dialog overlays the app, hiding identify-button from Maestro)..."
+            echo "Suppressing system crash dialogs and lightening the launcher (insurance against home-transition ANRs)..."
             adb shell settings put global hide_error_dialogs 1 || echo "::warning::could not set hide_error_dialogs"
-            echo "Lightening the Pixel Launcher (disable the Google feed/smartspace, a common launcher-ANR trigger) and dismissing keyguard. NOTE: we keep the launcher ENABLED — disabling it leaves com.android.settings.FallbackHome busy-looping 'no home...' and destabilises the emulator; the ANR watchdog below clears its dialog reactively instead."
             adb shell pm disable-user --user 0 com.google.android.googlequicksearchbox || echo "::warning::could not disable googlequicksearchbox"
             adb shell wm dismiss-keyguard || true
-            echo "Starting background logcat capture to /tmp/android-logcat.txt..."
+            echo "Starting background logcat capture and ANR watchdog..."
             adb logcat -c || true
             nohup adb logcat -v threadtime > /tmp/android-logcat.txt 2>&1 &
-            echo "Starting background ANR watchdog (force-stops the launcher when it ANRs so its dialog can't overlay the app)..."
             nohup bash implementations/android-sdk/scripts/ci-anr-watchdog.sh > /tmp/anr-watchdog.log 2>&1 &
-            echo "Running Maestro flows against both apps ($MAESTRO_ITERATIONS iteration(s)); on failure only the failed flows are retried, not the whole suite (a full re-run wedged the package manager)..."
-            bash implementations/android-sdk/scripts/ci-maestro-run.sh com.contentful.optimization.app com.contentful.optimization.app.views
+            echo "Running Maestro flows for ${{ matrix.package }} ($MAESTRO_ITERATIONS iteration(s); only failed flows are retried)..."
+            bash implementations/android-sdk/scripts/ci-maestro-run.sh ${{ matrix.package }}
 
       - name: Print debug context on failure
         if: failure()
@@ -975,7 +997,7 @@ jobs:
           echo "=== Maestro test output tree (~/.maestro/tests) ==="
           ls -la "$HOME/.maestro/tests" 2>/dev/null || echo "No Maestro test output found"
           echo "=== logcat ANR / crash lines ==="
-          grep -nE "ANR in|Reason:|FATAL EXCEPTION|not responding|lowmemorykiller|Process .* died|Low on memory" /tmp/android-logcat.txt 2>/dev/null | head -60 || echo "No logcat captured"
+          grep -nE "ANR in|FATAL EXCEPTION|not responding|lowmemorykiller|Process .* died|Low on memory" /tmp/android-logcat.txt 2>/dev/null | head -60 || echo "No logcat captured"
 
       - name: Stop Mock Server
         if: always()
@@ -985,7 +1007,7 @@ jobs:
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
-          name: ci-results-android-maestro
+          name: ci-results-android-maestro-${{ matrix.app }}
           path: |
             ~/.maestro/tests/
             /tmp/mock-server.log
