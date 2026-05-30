@@ -618,21 +618,14 @@ fun AudienceItemHeader(
         modifier = Modifier
             .padding(horizontal = PreviewTheme.Spacing.md, vertical = PreviewTheme.Spacing.sm),
     ) {
+        // Row 1: audience name + qualification indicator (matches RN nameRow)
         Row(
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(PreviewTheme.Spacing.md),
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onToggleExpand)
-                .semantics { contentDescription = "audience-expand-${audience.audience.id}" },
+                .clickable(onClick = onToggleExpand),
         ) {
-            Text(
-                text = if (isExpanded) "▼" else "▶",
-                style = TextStyle(
-                    fontSize = PreviewTheme.FontSize.xl,
-                    color = PreviewTheme.Colors.CP.hover,
-                ),
-            )
-            Spacer(modifier = Modifier.width(PreviewTheme.Spacing.sm))
             Text(
                 text = audience.audience.name,
                 style = TextStyle(
@@ -640,14 +633,29 @@ fun AudienceItemHeader(
                     fontWeight = FontWeight.Medium,
                     color = PreviewTheme.Colors.TextColor.primary,
                 ),
-                maxLines = 1,
+                maxLines = if (isExpanded) Int.MAX_VALUE else 2,
                 modifier = Modifier.weight(1f, fill = false),
             )
             if (audience.isQualified) {
-                Spacer(modifier = Modifier.width(PreviewTheme.Spacing.sm))
                 QualificationIndicator()
             }
-            Spacer(modifier = Modifier.weight(1f))
+        }
+
+        // Row 2: expand arrow + experience count, left-aligned on its own row (matches RN expandRow)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(PreviewTheme.Spacing.sm),
+            modifier = Modifier
+                .clickable(onClick = onToggleExpand)
+                .semantics { contentDescription = "audience-expand-${audience.audience.id}" },
+        ) {
+            Text(
+                text = if (isExpanded) "▼" else "▶",
+                style = TextStyle(
+                    fontSize = PreviewTheme.FontSize.xl,
+                    color = PreviewTheme.Colors.TextColor.primary,
+                ),
+            )
             Text(
                 text = "${audience.experiences.size} experience${if (audience.experiences.size == 1) "" else "s"}",
                 style = TextStyle(fontSize = PreviewTheme.FontSize.xs, color = PreviewTheme.Colors.TextColor.muted),
