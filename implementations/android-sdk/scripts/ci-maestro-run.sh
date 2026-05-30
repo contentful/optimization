@@ -86,6 +86,26 @@ cooldown() {
     sleep 8
 }
 
+# Restart the Android framework between apps. A full session's worth of clearState
+# (pm clear) operations wedges the PackageManager — Maestro's pre-clear "pm list packages"
+# starts timing out and every subsequent flow fails with "Unable to clear state". Bouncing
+# system_server gives the next app a fresh PackageManager (each app then does ~36 clears,
+# well under the wedge threshold). Device settings (hide_error_dialogs, the disabled Google
+# feed) live in the settings provider and persist across the restart.
+reset_framework() {
+    echo "[ci-maestro] restarting Android framework so the next app gets a fresh PackageManager..."
+    adb shell stop >/dev/null 2>&1 || true
+    adb shell start >/dev/null 2>&1 || true
+    adb wait-for-device >/dev/null 2>&1 || true
+    local i
+    for i in $(seq 1 60); do
+        [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] && break
+        sleep 2
+    done
+    adb shell wm dismiss-keyguard >/dev/null 2>&1 || true
+    sleep 3
+}
+
 run_app() {
     local app="$1" attempt=1 names files count
     echo "--- Maestro: ${app} (attempt 1, full suite) ---"
@@ -128,11 +148,14 @@ main() {
         exit 2
     fi
 
-    local rc=0 iter=0
+    local rc=0 iter=0 first
     while [ "${iter}" -lt "${ITERATIONS}" ]; do
         iter=$((iter + 1))
         [ "${ITERATIONS}" -gt 1 ] && echo "=== iteration ${iter}/${ITERATIONS} ==="
+        first=1
         for app in "$@"; do
+            [ "${first}" -eq 0 ] && reset_framework
+            first=0
             run_app "${app}" || rc=1
         done
     done
