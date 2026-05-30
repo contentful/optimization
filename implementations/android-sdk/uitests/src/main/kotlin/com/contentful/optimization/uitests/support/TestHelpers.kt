@@ -32,8 +32,25 @@ object TestHelpers {
     }
 
     fun tapElement(device: UiDevice, element: UiObject2, singleClick: Boolean = false) {
-        performAccessibilityClick(element)
-        if (singleClick) return
+        val accessibilityClickFired = performAccessibilityClick(element)
+        // The device.click() is a fallback for when the accessibility action
+        // failed to dispatch (e.g., uiAutomation returned no root, or the node
+        // wasn't found in the live tree). When the accessibility click did
+        // fire, doing a second tap 100ms later at the original bounds is
+        // actively harmful: if the first tap morphed the button in place
+        // (e.g., Identify → Reset on the live-updates test screen), the
+        // physical click lands on the morphed button and undoes the action.
+        if (singleClick || accessibilityClickFired) {
+            // performAction(ACTION_CLICK) only enqueues the action — the
+            // caller's next step (e.g., the test's follow-up pressBack)
+            // races against the UI thread processing the click. Sleep so the
+            // click is dispatched, then wait for an idle frame so the
+            // resulting state change (dialog dismissal, button morph, etc.)
+            // is committed before we return.
+            Thread.sleep(100)
+            device.waitForIdle(1500L)
+            return
+        }
         Thread.sleep(100)
         try {
             val bounds = element.visibleBounds

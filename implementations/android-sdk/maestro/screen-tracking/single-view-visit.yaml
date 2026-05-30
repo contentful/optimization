@@ -1,0 +1,22 @@
+# Mirrors ScreenTrackingTests.testTrackSingleViewVisit — navigating Home -> ViewOne
+# records the screen-view sequence the SDK emits, rendered in the screen-event-log.
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'navigation-test-button'
+- assertVisible:
+    id: 'go-to-view-one-button'
+- tapOn:
+    id: 'go-to-view-one-button'
+- assertVisible:
+    id: 'navigation-view-test-one'
+# The event log node must contain exactly the visited sequence.
+- assertVisible:
+    id: 'screen-event-log'
+    text: 'NavigationHome,NavigationViewOne'

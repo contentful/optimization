@@ -1,0 +1,42 @@
+# Android Maestro E2E flows
+
+These [Maestro](https://maestro.dev) flows are the Android E2E suite. A **single flow set drives
+both reference apps** — the Compose app and the XML Views app — at runtime, mirroring the iOS
+paradigm of one test bundle across the SwiftUI and UIKit targets. Maestro's built-in auto-waiting
+and `scrollUntilVisible` replace the hand-rolled polling of the retired UiAutomator harness.
+
+## Single bundle, both APKs
+
+Every flow declares `appId: ${APP_ID}`. The same flows run against both apps by passing the package
+at runtime — mirroring the iOS paradigm of one test bundle across the SwiftUI and UIKit targets:
+
+```sh
+maestro test -e APP_ID=com.contentful.optimization.app maestro        # Compose
+maestro test -e APP_ID=com.contentful.optimization.app.views maestro  # XML Views
+```
+
+This works because both apps expose the same identifiers: SDK preview-panel elements come from the
+shared `PreviewPanelContent` composable (Android `contentDescription`, matched by Maestro's text
+selector), and app identifiers like `identify-button` / `reset-button` are exposed as resource-ids
+(matched by Maestro's `id:` selector) in both apps.
+
+## Prerequisites
+
+- A running Android emulator/device (the flows assume the demo app is installed).
+- The mock server running on the host at port `8000`. The demo apps reach it via the emulator host
+  alias `http://10.0.2.2:8000` (`AppConfig.mockHost`), which needs no `adb reverse` and survives the
+  adb-daemon restarts that silently wipe reverse forwards on loaded CI emulators.
+
+Locally, run `pnpm test:e2e` (or `pnpm test:e2e:compose` / `pnpm test:e2e:views`), which uses
+`scripts/run-e2e.sh` to manage the emulator, mock server, and app installs, then runs the flows
+against both apps. Pass `--flow <suite>` (e.g. `preview-panel`) to run a single suite.
+
+## Status
+
+Maestro is now the canonical Android E2E suite — the UiAutomator suite (`ScreenTracking`,
+`TapTracking`, `Identified`/`UnidentifiedVariants`, `LiveUpdates`, `PreviewPanel`,
+`PreviewPanelOverrides`) has been ported here and the UiAutomator CI run job has been removed.
+`OfflineBehavior` was intentionally not carried over — see
+[`OFFLINE_TESTING.md`](./OFFLINE_TESTING.md). The dwell/view-tracking contract intentionally stays
+out of E2E — it is owned by `ViewTrackingControllerTest` (JVM unit) and the iOS XCUITest suite. The
+`uitests/` module source is retained for now pending its removal in a follow-up.

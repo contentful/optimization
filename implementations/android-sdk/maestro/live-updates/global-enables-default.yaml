@@ -1,0 +1,32 @@
+# Mirrors LiveUpdatesTests.testGlobalLiveUpdatesEnablesDefaultComponents — turning the
+# global liveUpdates toggle ON makes the default section (no per-component prop)
+# re-resolve on identify.
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'live-updates-test-button'
+- assertVisible: 'default-personalization'
+- tapOn:
+    id: 'toggle-global-live-updates-button'
+- assertVisible:
+    id: 'global-live-updates-status'
+    text: 'ON'
+- copyTextFrom:
+    id: 'default-entry-id'
+- evalScript: ${output.def = maestro.copiedText}
+- tapOn:
+    id: 'live-updates-identify-button'
+- assertVisible:
+    id: 'identified-status'
+    text: 'Yes'
+- extendedWaitUntil:
+    notVisible:
+      id: 'default-entry-id'
+      text: '${output.def}'
+    timeout: 30000

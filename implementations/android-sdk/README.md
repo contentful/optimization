@@ -19,8 +19,10 @@
 > [!CAUTION] Pre-release. API surface is not yet stable.
 
 This is the native Android reference implementation for the
-[Contentful Optimization Android SDK](../../packages/android/README.md). It demonstrates the minimal
-integration pattern using Jetpack Compose and serves as a test target for UI Automator 2 E2E tests.
+[Contentful Optimization Android SDK](../../packages/android/README.md). It demonstrates the
+integration pattern for both Jetpack Compose (`:compose`) and XML Views (`:views`), and is the
+target for the shared [Maestro](https://maestro.dev) E2E suite (see
+[`maestro/README.md`](./maestro/README.md)).
 
 ## What this demonstrates
 
@@ -66,35 +68,26 @@ Or manually:
 # Terminal 1: Start mock server
 pnpm serve:mocks
 
-# Terminal 2: Build and install
+# Terminal 2: Build and install (the app reaches the host mock via 10.0.2.2 — no adb reverse needed)
 cd implementations/android-sdk
-adb reverse tcp:8000 tcp:8000
-./gradlew :app:assembleDebug
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+./gradlew :compose:assembleDebug
+adb install -r compose/build/outputs/apk/debug/compose-debug.apk
 adb shell am start -n com.contentful.optimization.app/.MainActivity
 ```
 
-To launch with test arguments (clear state or simulate offline):
+To launch with a clean SDK state (clears the persisted profile on cold start):
 
 ```sh
 adb shell am start -n com.contentful.optimization.app/.MainActivity --ez reset true
-adb shell am start -n com.contentful.optimization.app/.MainActivity --ez simulate_offline true
 ```
 
 ## Android Studio
 
 Open this directory (`implementations/android-sdk/`) as an Android Studio project. After Gradle
-sync, three run configurations are available in the toolbar dropdown:
+sync, build and launch either app on the selected device (`MainActivity` in `:compose` or `:views`),
+set breakpoints in the app or SDK source, and run the JVM unit tests from the gutter.
 
-- **App** — builds and launches `MainActivity` on the selected device.
-- **All UI Tests** — runs the full UI Automator 2 instrumented suite.
-- **Prepare Env** — standalone check that the mock server is reachable, the bridge JS bundle is
-  built, and `adb reverse` is set up.
-
-**App** and **All UI Tests** both run **Prepare Env** as a "Before launch" step, so the run will
-fail fast with instructions if the mock server is not up or the bridge bundle has not been built.
-
-Before running anything from the IDE, in a separate terminal:
+Before running the app from the IDE, in a separate terminal:
 
 ```sh
 # From the monorepo root, build the bridge once (or after bridge source changes):
@@ -104,13 +97,8 @@ pnpm --filter @contentful/optimization-js-bridge build
 pnpm --dir lib/mocks serve
 ```
 
-To run or debug a single test, open any file under
-`uitests/src/main/kotlin/com/contentful/optimization/uitests/tests/`, right-click a `@Test` method
-or class, and choose **Run** or **Debug**. Android Studio creates a temporary instrumented-test
-configuration and attaches the debugger automatically. Set breakpoints in test or production code —
-they will be hit on the device. Note that ad-hoc gutter runs skip the **Prepare Env** check, so make
-sure the mock server is running first (running **Prepare Env** once per session is enough as long as
-`adb reverse` survives).
+The E2E suite is [Maestro](https://maestro.dev), run from the command line rather than an IDE run
+configuration — `pnpm test:e2e` (both apps) or see [`maestro/README.md`](./maestro/README.md).
 
 ## Related
 

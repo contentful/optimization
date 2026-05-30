@@ -1,0 +1,67 @@
+# Mirrors PreviewPanelOverridesTests.testScenario6ResetAllRestoresVariantContent — after
+# forcing a variant override, the reset-all control plus the native confirmation dialog
+# clears every override and restores the original variant resolution. The confirm button
+# is matched by its testTag (reset-all-confirm), not the text "Reset", to avoid matching
+# the per-row reset labels beneath the dialog.
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'identify-button'
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-5a8ONfBdanJtlJ39WWnH1w'
+    direction: DOWN
+- tapOn: 'preview-panel-fab'
+- assertVisible: 'Preview Panel'
+- extendedWaitUntil:
+    notVisible:
+      text: '.*Loading definitions.*'
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: 'audience-expand-4yIqY7AWtzeehCZxtQSDB'
+    direction: DOWN
+- tapOn:
+    text: 'audience-expand-4yIqY7AWtzeehCZxtQSDB'
+- scrollUntilVisible:
+    element:
+      text: 'variant-picker-7DyidZaPB7Jr1gWKjoogg0-0'
+    direction: DOWN
+- tapOn:
+    text: 'variant-picker-7DyidZaPB7Jr1gWKjoogg0-0'
+# Reset all overrides and confirm via the native AlertDialog.
+- scrollUntilVisible:
+    element:
+      text: 'reset-all-overrides'
+    direction: DOWN
+- tapOn:
+    text: 'reset-all-overrides'
+- tapOn:
+    text: 'reset-all-confirm'
+# Wait for the dialog to dismiss before closing the panel (its body copy only exists
+# while the dialog is open), so `back` closes the sheet rather than the dialog.
+- extendedWaitUntil:
+    notVisible:
+      text: '.*This will clear all manual overrides.*'
+    timeout: 20000
+- back
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-5a8ONfBdanJtlJ39WWnH1w'
+    direction: DOWN

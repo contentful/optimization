@@ -1,0 +1,16 @@
+# Mirrors PreviewPanelTests.testShowsCanPersonalize — the debug canPersonalize row
+# shows "Yes". Scroll it into view, then assert the rendered status text.
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn: 'preview-panel-fab'
+- assertVisible: 'Preview Panel'
+- scrollUntilVisible:
+    element: 'debug-can-personalize'
+    direction: DOWN
+- assertVisible: '.*Yes.*'

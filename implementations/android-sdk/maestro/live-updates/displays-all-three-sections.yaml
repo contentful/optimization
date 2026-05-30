@@ -1,0 +1,26 @@
+# Mirrors LiveUpdatesTests.testDisplaysAllThreeOptimizationEntrySections — all three
+# OptimizedEntry sections render and each entry-id resolves to a real "Entry: <id>"
+# (proving a resolved entry, not an empty/default state).
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'live-updates-test-button'
+- assertVisible: 'default-personalization'
+- assertVisible: 'live-personalization'
+- assertVisible: 'locked-personalization'
+# Each entry-id node matches the "Entry: <alphanumeric>" contract.
+- assertVisible:
+    id: 'default-entry-id'
+    text: 'Entry: [a-zA-Z0-9]+'
+- assertVisible:
+    id: 'live-entry-id'
+    text: 'Entry: [a-zA-Z0-9]+'
+- assertVisible:
+    id: 'locked-entry-id'
+    text: 'Entry: [a-zA-Z0-9]+'

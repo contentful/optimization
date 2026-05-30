@@ -3,10 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build": "./gradlew :app:assembleDebug",
-    "build:release": "./gradlew :app:assembleRelease",
+    "build": "./gradlew :compose:assembleDebug",
+    "build:compose": "./gradlew :compose:assembleDebug",
+    "build:views": "./gradlew :views:assembleDebug",
+    "build:apks": "./gradlew :compose:assembleDebug :views:assembleDebug",
+    "build:release": "./gradlew :compose:assembleRelease",
     "bootstrap": "./scripts/bootstrap.sh",
-    "test:ui": "./gradlew :uitests:connectedAndroidTest",
-    "test:e2e": "./scripts/run-e2e.sh"
+    "test:e2e": "./scripts/run-e2e.sh",
+    "test:e2e:compose": "APP_PACKAGE=com.contentful.optimization.app ./scripts/run-e2e.sh",
+    "test:e2e:views": "APP_PACKAGE=com.contentful.optimization.app.views ./scripts/run-e2e.sh"
   }
 }
