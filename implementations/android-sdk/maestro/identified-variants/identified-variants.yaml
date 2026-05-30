@@ -1,0 +1,68 @@
+# Mirrors IdentifiedVariantsTests — after identifying and relaunching (so the identified
+# profile rehydrates from storage on cold start), every identified/common/nested variant
+# entry resolves. Combined into one flow because the original shares a single @BeforeClass
+# identify+relaunch precondition across all its assertions. Each variant is asserted by its
+# distinctive entry-text-<id> resource-id (the deterministic signal of which variant
+# resolved); the merge tag is asserted by its resolved text (continent "EU").
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'identify-button'
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+# Relaunch so the identified profile is rehydrated from persistent storage.
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+# Merge tag (entry 1MwiFl…) resolves the visitor's continent into the copy.
+- assertVisible: '.*merge tag content entry.*EU.*'
+# Common variants.
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-4ib0hsHWoSOnCVdDkizE8d'
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-xFwgG3oNaOcjzWiGe4vXo'
+    direction: DOWN
+# Identified-user variants.
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-2Z2WLOx07InSewC3LUB3eX'
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-5XHssysWUDECHzKLzoIsg1'
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-6zqoWXyiSrf0ja7I2WGtYj'
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-7pa5bOx8Z9NmNcr7mISvD'
+    direction: DOWN
+# Nested optimization variants (levels 0/1/2).
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-2KIWllNZJT205BwOSkMINg'
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-5a8ONfBdanJtlJ39WWnH1w'
+    direction: DOWN
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-4hDiXxYEFrXHXcQgmdL9Uv'
+    direction: DOWN

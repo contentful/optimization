@@ -1,0 +1,34 @@
+# Mirrors PreviewPanelTests.testShowsAllExpectedProfileKeys — every expected profile
+# key row is present. scrollUntilVisible replaces the hand-rolled 20-swipe loop and
+# is itself the assertion (it fails if the element never becomes visible).
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn: 'preview-panel-fab'
+- assertVisible: 'Preview Panel'
+- scrollUntilVisible:
+    element: 'profile-item-audiences'
+    direction: DOWN
+- scrollUntilVisible:
+    element: 'profile-item-id'
+    direction: DOWN
+- scrollUntilVisible:
+    element: 'profile-item-location'
+    direction: DOWN
+- scrollUntilVisible:
+    element: 'profile-item-random'
+    direction: DOWN
+- scrollUntilVisible:
+    element: 'profile-item-session'
+    direction: DOWN
+- scrollUntilVisible:
+    element: 'profile-item-stableId'
+    direction: DOWN
+- scrollUntilVisible:
+    element: 'profile-item-traits'
+    direction: DOWN
