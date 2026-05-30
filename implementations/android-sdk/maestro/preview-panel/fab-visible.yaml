@@ -1,0 +1,20 @@
+# Mirrors PreviewPanelTests.testFABIsVisible — the preview-panel FAB is present on
+# the main screen. APP_ID is supplied at runtime so the same flow drives both the
+# Compose app (com.contentful.optimization.app) and the XML Views app
+# (com.contentful.optimization.app.views).
+appId: ${APP_ID}
+---
+# stopApp + a `reset` launch arg is the unidentified baseline (identify-button visible).
+# The forced cold start makes MainActivity clear the SDK's SharedPreferences WITHOUT a
+# `pm clear`: Maestro's clearState runs pm clear / pm list packages, and that volume
+# wedges the CI PackageManager mid-suite. am force-stop (stopApp) avoids PackageManager
+# entirely, so the suite no longer wedges.
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible:
+    id: 'identify-button'
+# Preview-panel elements are exposed via Android contentDescription; Maestro's text
+# matcher resolves contentDescription, so the bare string matches in both apps.
+- assertVisible: 'preview-panel-fab'

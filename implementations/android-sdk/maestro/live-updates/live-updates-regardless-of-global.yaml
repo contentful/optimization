@@ -1,0 +1,29 @@
+# Mirrors LiveUpdatesTests.testLiveComponentUpdatesRegardlessOfGlobal — a per-component
+# liveUpdates=true section re-resolves on identify even when global is OFF.
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'live-updates-test-button'
+- assertVisible: 'default-personalization'
+- assertVisible:
+    id: 'global-live-updates-status'
+    text: 'OFF'
+- copyTextFrom:
+    id: 'live-entry-id'
+- evalScript: ${output.live = maestro.copiedText}
+- tapOn:
+    id: 'live-updates-identify-button'
+- assertVisible:
+    id: 'identified-status'
+    text: 'Yes'
+- extendedWaitUntil:
+    notVisible:
+      id: 'live-entry-id'
+      text: '${output.live}'
+    timeout: 30000

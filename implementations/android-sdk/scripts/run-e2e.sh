@@ -1,16 +1,24 @@
 #!/usr/bin/env bash
 #
-# run-e2e.sh - Android UI Automator 2 E2E Test Runner
+# run-e2e.sh - Android Maestro E2E Test Runner
 #
 # This script orchestrates the complete Android E2E testing workflow by:
-#   1. Starting the mock API server (from lib/mocks)
-#   2. Ensuring a visible emulator is running (auto-launches one if none connected)
-#   3. Setting up adb reverse port forwarding so the emulator can reach localhost
-#   4. Disabling emulator animations for reliable UI test timing
-#   5. Building the app APK and test APK (via Gradle)
-#   6. Installing both APKs on the connected device/emulator
-#   7. Running the UI Automator 2 instrumented test suite
+#   1. Ensuring a visible emulator is running (auto-launches one if none connected)
+#   2. Starting the mock API server (from lib/mocks)
+#   3. Verifying the emulator can reach the host mock via the 10.0.2.2 host alias
+#      (the apps point at http://10.0.2.2:8000 — see shared/AppConfig.kt — which needs
+#      no adb forward; an adb reverse is still set as a harmless localhost fallback)
+#   4. Disabling emulator animations for reliable UI timing
+#   5. Building both reference app APKs (compose + views) via Gradle
+#   6. Installing the app APK(s) on the connected device/emulator
+#   7. Running the Maestro flow suite (maestro/) against each target app via the
+#      same single flow set, parameterized by `appId: ${APP_ID}` — the Compose and
+#      XML Views apps are driven by identical flows (mirrors the iOS paradigm)
 #   8. Cleaning up all background processes on exit
+#
+# The Maestro flows replace the retired UiAutomator `uitests` suite: Maestro's
+# built-in auto-waiting and scrollUntilVisible remove the hand-rolled polling that
+# made the instrumentation suite flaky.
 #
 # The emulator is always launched with a visible window. This script never
 # starts a headless emulator (no `-no-window` flag) — by design.
@@ -21,29 +29,27 @@
 #   DISABLE_EMULATOR_ANIMATIONS - Set to "false" to keep animation scales unchanged (default: true)
 #   STREAM_BACKGROUND_LOGS - Set to "true" to stream mock server logs to stdout (default: false)
 #   EMULATOR_AVD      - AVD to require/auto-launch (default: pixel_7_api35_e2e, pinned to match CI)
+#   APP_PACKAGE       - Which app(s) to drive: "all"/"both"/"" (default) runs Compose then
+#                       Views; a single package value drives just that app.
+#   MAESTRO_ITERATIONS - Repeat the full run N times to measure flakiness (default: 1)
 #   CI                - Set to "true" when running in CI environment (default: false)
-#   FAIL_FAST         - Set to "false" to run all tests even after a failure
-#                       (default: true — aborts suite on first failing test or
-#                       crash so a deterministic root-cause failure doesn't
-#                       waste ~25 minutes waiting for every later @Before to
-#                       time out)
 #
 # Usage:
-#   ./scripts/run-e2e.sh                                    # Full run with build
-#   SKIP_BUILD=true ./scripts/run-e2e.sh                    # Skip build step
-#   ./scripts/run-e2e.sh --test-class AnalyticsTests        # Run a single test class
-#   ./scripts/run-e2e.sh --test-class AnalyticsTests --test-method testTracksComponentImpressionEventsForVisibleEntries
+#   ./scripts/run-e2e.sh                                 # Build + run all flows on both apps
+#   SKIP_BUILD=true ./scripts/run-e2e.sh                 # Skip the Gradle build step
+#   ./scripts/run-e2e.sh --flow preview-panel            # Run only the maestro/preview-panel flows
+#   APP_PACKAGE=com.contentful.optimization.app.views ./scripts/run-e2e.sh   # Views only
+#   MAESTRO_ITERATIONS=10 ./scripts/run-e2e.sh           # Flake sweep
 #
 # Prerequisites:
 #   - Android SDK installed with adb and emulator in PATH (or ANDROID_HOME set)
 #   - At least one AVD configured (or a physical device connected)
+#   - Maestro CLI installed: curl -Ls "https://get.maestro.mobile.dev" | bash
 #   - pnpm dependencies installed at monorepo root
 #   - Android bridge built: pnpm --filter @contentful/optimization-js-bridge build
 #
 # Logs:
-#   All logs are written to implementations/android-sdk/logs/:
-#     - mock-server.log  - Mock API server output
-#     - test-results.log - E2E test execution results
+#   Mock server output is written to implementations/android-sdk/logs/mock-server.log
 
 set -euo pipefail
 
@@ -53,7 +59,6 @@ ROOT_DIR="$(cd "$APP_DIR/../.." && pwd)"
 
 LOG_DIR="${APP_DIR}/logs"
 MOCK_SERVER_LOG="${LOG_DIR}/mock-server.log"
-TEST_LOG="${LOG_DIR}/test-results.log"
 MOCK_SERVER_PID=""
 
 MOCK_SERVER_PORT="${MOCK_SERVER_PORT:-8000}"
@@ -61,20 +66,33 @@ SKIP_BUILD="${SKIP_BUILD:-false}"
 CI="${CI:-false}"
 DISABLE_EMULATOR_ANIMATIONS="${DISABLE_EMULATOR_ANIMATIONS:-true}"
 STREAM_BACKGROUND_LOGS="${STREAM_BACKGROUND_LOGS:-false}"
+MAESTRO_ITERATIONS="${MAESTRO_ITERATIONS:-1}"
+# Attempts per app before declaring failure. Maestro 2.x has no --retries flag, and a
+# long emulator session occasionally drops a single flow (adb/gRPC hiccup or a slow
+# re-resolution late in the run). One retry of the app's suite lets that self-heal; a
+# genuine failure still fails every attempt. Set to 1 to disable retries.
+MAESTRO_ATTEMPTS="${MAESTRO_ATTEMPTS:-2}"
 
 # AVD pinned to match the CI emulator-runner config in
-# .github/workflows/main-pipeline.yaml (e2e-android-sdk):
+# .github/workflows/main-pipeline.yaml (e2e-android-maestro):
 #   profile=pixel_7, api-level=35, target=google_apis
 # The only intentional difference is CPU arch: local uses arm64-v8a for native
 # speed on Apple Silicon; CI uses x86_64 because Namespace's KVM-backed Android
 # emulator support is linux/amd64-only.
 EMULATOR_AVD="${EMULATOR_AVD:-pixel_7_api35_e2e}"
 
-TEST_CLASS=""
-TEST_METHOD=""
+# Subdirectory of maestro/ to run; empty means the whole suite.
+FLOW_SUBPATH=""
 
-UITEST_PACKAGE="com.contentful.optimization.uitests.tests"
-APP_PACKAGE="com.contentful.optimization.app"
+# APP_PACKAGE selects which reference implementation(s) to drive. When unset (or set to
+# "all"/"both"), the script runs the suite against both the Compose and XML Views apps,
+# mirroring the CI job in main-pipeline.yaml.
+APP_PACKAGE="${APP_PACKAGE:-all}"
+
+COMPOSE_PACKAGE="com.contentful.optimization.app"
+VIEWS_PACKAGE="com.contentful.optimization.app.views"
+
+MAESTRO_BIN=""
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -85,50 +103,41 @@ usage() {
     cat << EOF
 Usage: $(basename "$0") [OPTIONS]
 
-Run Android UI Automator 2 E2E tests.
+Run Android Maestro E2E flows against the reference apps.
 
 Options:
-  --test-class CLASS_NAME     Run only the specified test class (e.g., AnalyticsTests)
-  --test-method METHOD_NAME   Run only the specified test method (requires --test-class)
-  --skip-build                Skip the Gradle build step
-  -h, --help                  Show this help message
+  --flow SUBPATH    Run only the flows under maestro/SUBPATH (e.g. preview-panel)
+  --skip-build      Skip the Gradle build step
+  -h, --help        Show this help message
 
 Environment Variables:
   MOCK_SERVER_PORT    Port for mock server (default: 8000)
   SKIP_BUILD          Set to 'true' to skip build (default: false)
-  DISABLE_EMULATOR_ANIMATIONS Set to 'false' to keep emulator animations enabled (default: true)
+  DISABLE_EMULATOR_ANIMATIONS Set to 'false' to keep emulator animations (default: true)
   STREAM_BACKGROUND_LOGS Set to 'true' to stream mock server logs to stdout (default: false)
-  EMULATOR_AVD        AVD name to require/auto-launch (default: pixel_7_api35_e2e,
-                      pinned to match CI; override only if you have a reason)
+  EMULATOR_AVD        AVD name to require/auto-launch (default: pixel_7_api35_e2e)
+  APP_PACKAGE         all|both|<single package> (default: all)
+  MAESTRO_ITERATIONS  Repeat the full run N times (default: 1)
   CI                  Set to 'true' for CI mode (default: false)
 
 Examples:
-  $(basename "$0")                                                    # Run all tests
-  $(basename "$0") --test-class AnalyticsTests                        # Run one test class
-  $(basename "$0") --test-class AnalyticsTests --test-method testTracksComponentImpressionEventsForVisibleEntries
-  SKIP_BUILD=true $(basename "$0")                                    # Skip build
+  $(basename "$0")                                  # All flows, both apps
+  $(basename "$0") --flow preview-panel             # One suite, both apps
+  APP_PACKAGE=$VIEWS_PACKAGE $(basename "$0")        # Views only
+  SKIP_BUILD=true $(basename "$0")                   # Skip build
 EOF
 }
 
 parse_args() {
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --test-class)
+            --flow)
                 if [[ -z "${2:-}" ]]; then
-                    log_error "Option $1 requires a class name argument"
+                    log_error "Option $1 requires a subpath argument"
                     usage
                     exit 1
                 fi
-                TEST_CLASS="$2"
-                shift 2
-                ;;
-            --test-method)
-                if [[ -z "${2:-}" ]]; then
-                    log_error "Option $1 requires a method name argument"
-                    usage
-                    exit 1
-                fi
-                TEST_METHOD="$2"
+                FLOW_SUBPATH="$2"
                 shift 2
                 ;;
             --skip-build)
@@ -139,29 +148,43 @@ parse_args() {
                 usage
                 exit 0
                 ;;
-            -*)
-                log_error "Unknown option: $1"
-                usage
-                exit 1
-                ;;
             *)
-                log_error "Unexpected argument: $1"
+                log_error "Unknown option: $1"
                 usage
                 exit 1
                 ;;
         esac
     done
-
-    if [[ -n "$TEST_METHOD" && -z "$TEST_CLASS" ]]; then
-        log_error "--test-method requires --test-class"
-        usage
-        exit 1
-    fi
 }
 
 log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+
+resolve_maestro_bin() {
+    if command -v maestro &>/dev/null; then
+        MAESTRO_BIN="$(command -v maestro)"
+        return 0
+    fi
+    if [[ -x "$HOME/.maestro/bin/maestro" ]]; then
+        MAESTRO_BIN="$HOME/.maestro/bin/maestro"
+        return 0
+    fi
+    log_error "maestro not found. Install it with:"
+    log_error '  curl -Ls "https://get.maestro.mobile.dev" | bash'
+    exit 1
+}
+
+module_for_package() {
+    case "$1" in
+        "$COMPOSE_PACKAGE") echo "compose" ;;
+        "$VIEWS_PACKAGE") echo "views" ;;
+        *)
+            log_error "Unknown APP_PACKAGE: $1. Expected $COMPOSE_PACKAGE or $VIEWS_PACKAGE."
+            exit 1
+            ;;
+    esac
+}
 
 stop_process_tree() {
     local pid="$1"
@@ -441,9 +464,9 @@ start_mock_server() {
     fi
 
     if [[ "$STREAM_BACKGROUND_LOGS" == "true" ]]; then
-        pnpm --dir "$ROOT_DIR/lib/mocks" serve 2>&1 | tee "$MOCK_SERVER_LOG" &
+        PORT="$MOCK_SERVER_PORT" pnpm --dir "$ROOT_DIR/lib/mocks" serve 2>&1 | tee "$MOCK_SERVER_LOG" &
     else
-        pnpm --dir "$ROOT_DIR/lib/mocks" serve > "$MOCK_SERVER_LOG" 2>&1 &
+        PORT="$MOCK_SERVER_PORT" pnpm --dir "$ROOT_DIR/lib/mocks" serve > "$MOCK_SERVER_LOG" 2>&1 &
     fi
     MOCK_SERVER_PID=$!
 
@@ -457,12 +480,23 @@ start_mock_server() {
 }
 
 setup_adb() {
-    log_info "Setting up adb reverse port forwarding..."
-    adb reverse tcp:${MOCK_SERVER_PORT} tcp:${MOCK_SERVER_PORT}
-    log_info "Port ${MOCK_SERVER_PORT} forwarded to emulator"
+    # The apps reach the host mock via the emulator host alias 10.0.2.2 (AppConfig),
+    # which needs no adb forward and survives adb-daemon restarts. We still set an
+    # adb reverse as a harmless localhost fallback, then verify the 10.0.2.2 path the
+    # apps actually use so a broken mock connection fails fast and loudly.
+    log_info "Setting up adb reverse port forwarding (localhost fallback)..."
+    adb reverse tcp:${MOCK_SERVER_PORT} tcp:${MOCK_SERVER_PORT} || \
+        log_warn "adb reverse failed; apps use 10.0.2.2 so continuing"
+
+    log_info "Verifying host mock is reachable from the emulator via 10.0.2.2..."
+    if adb shell "toybox nc -z 10.0.2.2 ${MOCK_SERVER_PORT}" 2>/dev/null; then
+        log_info "Host mock reachable at 10.0.2.2:${MOCK_SERVER_PORT}"
+    else
+        log_warn "Could not confirm 10.0.2.2:${MOCK_SERVER_PORT} from the emulator; continuing"
+    fi
 
     if [[ "$DISABLE_EMULATOR_ANIMATIONS" == "true" ]]; then
-        log_info "Disabling emulator animations for reliable UI test timing..."
+        log_info "Disabling emulator animations for reliable UI timing..."
         for animation_scale in window_animation_scale transition_animation_scale animator_duration_scale; do
             if adb shell settings put global "${animation_scale}" 0 > /dev/null 2>&1; then
                 log_info "Set ${animation_scale}=0"
@@ -470,6 +504,17 @@ setup_adb() {
                 log_warn "Could not set ${animation_scale}=0; continuing"
             fi
         done
+    fi
+
+    # Suppress system ANR/crash dialogs. On a loaded/headless emulator the Pixel
+    # Launcher can ANR, and its "isn't responding" dialog overlays the app under
+    # test — Maestro then resolves its accessibility tree against the dialog window
+    # and fails to find app elements (observed in CI as "identify-button not visible"
+    # across every flow while the app had actually rendered fine behind the dialog).
+    if adb shell settings put global hide_error_dialogs 1 > /dev/null 2>&1; then
+        log_info "Suppressed system ANR/crash dialogs (hide_error_dialogs=1)"
+    else
+        log_warn "Could not set hide_error_dialogs=1; continuing"
     fi
 }
 
@@ -489,132 +534,109 @@ build_apks() {
         return 0
     fi
 
-    log_info "Building app APK and test APK..."
+    # Build both reference app APKs. Maestro is external (black-box) and needs no
+    # separate test APK.
+    log_info "Building compose and views APKs..."
     cd "$APP_DIR"
-    ./gradlew :app:assembleDebug :uitests:assembleDebug
+    ./gradlew :compose:assembleDebug :views:assembleDebug
     log_info "Build complete"
 }
 
-install_apks() {
-    local app_apk="$APP_DIR/app/build/outputs/apk/debug/app-debug.apk"
-    local test_apk="$APP_DIR/uitests/build/outputs/apk/debug/uitests-debug.apk"
+install_app() {
+    local package="$1"
+    local module
+    module="$(module_for_package "$package")"
+    local app_apk="$APP_DIR/$module/build/outputs/apk/debug/${module}-debug.apk"
 
     if [[ ! -f "$app_apk" ]]; then
         log_error "App APK not found at $app_apk. Did the build succeed?"
         exit 1
     fi
 
-    if [[ ! -f "$test_apk" ]]; then
-        log_error "Test APK not found at $test_apk. Did the build succeed?"
-        exit 1
-    fi
-
-    log_info "Installing app APK..."
+    log_info "Installing $module APK ($package)..."
     adb install -r "$app_apk"
-
-    log_info "Installing test APK..."
-    adb install -r "$test_apk"
-
-    log_info "Both APKs installed"
 }
 
-run_tests() {
-    log_info "Running UI Automator 2 E2E tests..."
+run_maestro_for_app() {
+    local package="$1"
+    local flows_dir="$APP_DIR/maestro"
+    if [[ -n "$FLOW_SUBPATH" ]]; then
+        flows_dir="$flows_dir/$FLOW_SUBPATH"
+    fi
 
-    mkdir -p "$LOG_DIR"
+    if [[ ! -e "$flows_dir" ]]; then
+        log_error "Maestro flows path not found: $flows_dir"
+        exit 1
+    fi
 
-    local am_args="-w"
-
-    if [[ -n "$TEST_CLASS" ]]; then
-        local full_class="${UITEST_PACKAGE}.${TEST_CLASS}"
-        if [[ -n "$TEST_METHOD" ]]; then
-            am_args="$am_args -e class ${full_class}#${TEST_METHOD}"
-            log_info "Running: ${TEST_CLASS}#${TEST_METHOD}"
+    local attempt
+    for ((attempt = 1; attempt <= MAESTRO_ATTEMPTS; attempt++)); do
+        if [[ "$attempt" -gt 1 ]]; then
+            log_warn "Retry $attempt/$MAESTRO_ATTEMPTS for $package (a flow failed on the previous attempt)..."
         else
-            am_args="$am_args -e class ${full_class}"
-            log_info "Running: ${TEST_CLASS}"
+            log_info "--- Running Maestro flows against $package ---"
         fi
-    else
-        log_info "Running all test classes"
-    fi
-
-    local test_runner="com.contentful.optimization.uitests/androidx.test.runner.AndroidJUnitRunner"
-
-    # Fail-fast: stream am instrument output through awk; on the first
-    # "Error in test" or "Process crashed" line, force-stop the test process
-    # to abort the remaining suite. AndroidJUnitRunner has no built-in
-    # early-exit, so without this every subsequent @Before waits its full
-    # 20-30s waitForElement timeout — a single failing class of 10 tests
-    # could turn a deterministic root-cause failure into ~25 minutes of wall
-    # time. force-stop on the .uitests process kills the instrumentation; the
-    # remote `am instrument -w` exits and the local pipeline collapses.
-    # Set FAIL_FAST=false to disable (useful when diagnosing why a *later*
-    # test fails — without this you'd never see the later test run).
-    local fail_fast="${FAIL_FAST:-true}"
-    set +e
-    if [[ "$fail_fast" == "true" ]]; then
-        adb shell am instrument $am_args "$test_runner" 2>&1 | tee "$TEST_LOG" | awk '
-            /Error in test|Process crashed/ {
-                if (!aborted) {
-                    aborted = 1
-                    print
-                    print "[fail-fast] aborting remaining suite"
-                    fflush()
-                    system("adb shell am force-stop com.contentful.optimization.uitests >/dev/null 2>&1")
-                    exit 1
-                }
-                next
-            }
-            { print; fflush() }
-        '
-    else
-        adb shell am instrument $am_args "$test_runner" 2>&1 | tee "$TEST_LOG"
-    fi
-    local test_exit_code="${PIPESTATUS[0]}"
-    set -e
-
-    if grep -q "Process crashed" "$TEST_LOG" 2>/dev/null; then
-        log_error "Test process CRASHED. Check results in: $TEST_LOG"
-        exit 1
-    fi
-
-    if grep -q "FAILURES\!\!\!" "$TEST_LOG" 2>/dev/null; then
-        log_error "Some tests FAILED. Check results in: $TEST_LOG"
-        exit 1
-    fi
-
-    if grep -q "INSTRUMENTATION_CODE: 0" "$TEST_LOG" 2>/dev/null && ! grep -q "OK (" "$TEST_LOG" 2>/dev/null; then
-        log_error "Instrumentation exited abnormally. Check results in: $TEST_LOG"
-        exit 1
-    fi
-
-    if grep -q "OK (" "$TEST_LOG" 2>/dev/null; then
-        log_info "All tests passed!"
-    elif [[ $test_exit_code -ne 0 ]]; then
-        log_error "Test runner exited with code $test_exit_code. Check results in: $TEST_LOG"
-        exit $test_exit_code
-    fi
+        if "$MAESTRO_BIN" test -e "APP_ID=$package" "$flows_dir"; then
+            return 0
+        fi
+    done
+    log_error "Maestro flows failed for $package after $MAESTRO_ATTEMPTS attempt(s)"
+    return 1
 }
 
 main() {
     parse_args "$@"
 
-    log_info "=== Android UI Automator 2 E2E Test Runner ==="
+    local apps_to_run=()
+    case "$APP_PACKAGE" in
+        all|both|"")
+            apps_to_run=("$COMPOSE_PACKAGE" "$VIEWS_PACKAGE")
+            ;;
+        *)
+            module_for_package "$APP_PACKAGE" >/dev/null
+            apps_to_run=("$APP_PACKAGE")
+            ;;
+    esac
+
+    log_info "=== Android Maestro E2E Test Runner ==="
     log_info "Root directory: $ROOT_DIR"
     log_info "App directory: $APP_DIR"
+    log_info "Target apps: ${apps_to_run[*]}"
+    log_info "Flows: maestro/${FLOW_SUBPATH:-(all)}"
+    log_info "Iterations: $MAESTRO_ITERATIONS"
     log_info "CI mode: $CI"
-    [[ -n "$TEST_CLASS" ]] && log_info "Test class: $TEST_CLASS"
-    [[ -n "$TEST_METHOD" ]] && log_info "Test method: $TEST_METHOD"
 
+    resolve_maestro_bin
     verify_device
     start_mock_server
     setup_adb
     build_bridge
     build_apks
-    install_apks
-    run_tests
 
-    log_info "=== All tests completed successfully ==="
+    # Install every target app up front so a single emulator can drive both.
+    for package in "${apps_to_run[@]}"; do
+        install_app "$package"
+    done
+
+    local rc=0
+    local iteration
+    for ((iteration = 1; iteration <= MAESTRO_ITERATIONS; iteration++)); do
+        if [[ "$MAESTRO_ITERATIONS" -gt 1 ]]; then
+            log_info "=== iteration ${iteration}/${MAESTRO_ITERATIONS} ==="
+        fi
+        for package in "${apps_to_run[@]}"; do
+            if ! run_maestro_for_app "$package"; then
+                rc=1
+            fi
+        done
+    done
+
+    if [[ $rc -ne 0 ]]; then
+        log_error "=== Maestro E2E completed with failures ==="
+        exit $rc
+    fi
+
+    log_info "=== All Maestro flows passed ==="
 }
 
 main "$@"

@@ -1,0 +1,51 @@
+# Mirrors PreviewPanelOverridesTests.testScenario7OverrideSurvivesAPIRefresh — deactivating
+# an audience and then triggering the in-panel refresh (which re-hits the experience API)
+# keeps the audience override in place, so the experience still resolves to its baseline.
+appId: ${APP_ID}
+---
+- stopApp
+- launchApp:
+    arguments:
+      reset: true
+- assertVisible:
+    id: 'identify-button'
+- tapOn:
+    id: 'identify-button'
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: 'reset-button'
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-5a8ONfBdanJtlJ39WWnH1w'
+    direction: DOWN
+- tapOn: 'preview-panel-fab'
+- assertVisible: 'Preview Panel'
+- extendedWaitUntil:
+    notVisible:
+      text: '.*Loading definitions.*'
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: 'audience-toggle-4yIqY7AWtzeehCZxtQSDB-off'
+    direction: DOWN
+- tapOn:
+    text: 'audience-toggle-4yIqY7AWtzeehCZxtQSDB-off'
+# Refresh re-hits the experience API; the override must survive it.
+- scrollUntilVisible:
+    element:
+      text: 'preview-refresh-button'
+    direction: DOWN
+- tapOn:
+    text: 'preview-refresh-button'
+- back
+- scrollUntilVisible:
+    element:
+      id: 'entry-text-5i4SdJXw9oDEY0vgO7CwF4'
+    direction: DOWN
