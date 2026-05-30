@@ -964,7 +964,8 @@ jobs:
             adb shell "for i in 1 2 3 4 5 6 7 8 9 10; do toybox nc -z 10.0.2.2 8000 2>/dev/null && echo 'Mock server reachable via 10.0.2.2' && exit 0; sleep 1; done; echo '::warning::mock 10.0.2.2 verification timed out'"
             echo "Suppressing system ANR/crash dialogs (Pixel Launcher ANRs under the software GPU and its 'isn't responding' dialog overlays the app, hiding identify-button from Maestro)..."
             adb shell settings put global hide_error_dialogs 1 || echo "::warning::could not set hide_error_dialogs"
-            echo "Lightening the Pixel Launcher (disable the Google feed/smartspace, the usual launcher-ANR trigger) and dismissing keyguard..."
+            echo "Disabling the Pixel Launcher so HOME falls back to the lightweight com.android.settings.FallbackHome. The Pixel Launcher intermittently ANRs on the software GPU during the clearState->relaunch transition; its 'isn't responding' dialog then overlays the app and Maestro can't see any element. Maestro launches the app directly via am start, so no real launcher is needed; FallbackHome is a blank screen that cannot ANR (validated: clearState flows still pass)."
+            adb shell pm disable-user --user 0 com.google.android.apps.nexuslauncher || echo "::warning::could not disable Pixel Launcher"
             adb shell pm disable-user --user 0 com.google.android.googlequicksearchbox || echo "::warning::could not disable googlequicksearchbox"
             adb shell wm dismiss-keyguard || true
             echo "Starting background logcat capture to /tmp/android-logcat.txt..."
