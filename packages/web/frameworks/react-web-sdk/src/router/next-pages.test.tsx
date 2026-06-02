@@ -85,7 +85,14 @@ describe('NextPagesAutoPageTracker', () => {
     const rendered = await renderTracker(<NextPagesAutoPageTracker />, sdk)
 
     expect(page).toHaveBeenCalledTimes(1)
-    expect(page).toHaveBeenCalledWith({})
+    expect(page).toHaveBeenCalledWith({
+      properties: {
+        path: '/',
+        query: {},
+        search: '',
+        url: `${window.location.origin}/`,
+      },
+    })
 
     await rendered.unmount()
   })
@@ -98,14 +105,21 @@ describe('NextPagesAutoPageTracker', () => {
     const sdk = createOptimizationSdk({ page })
     const rendered = await renderTracker(<NextPagesAutoPageTracker />, sdk)
 
-    routerState.asPath = '/products'
+    routerState.asPath = '/products?tab=featured'
     routerState.pathname = '/products'
-    routerState.query = { slug: 'products' }
+    routerState.query = { tab: 'featured' }
 
     await rendered.rerender(<NextPagesAutoPageTracker />)
 
     expect(page).toHaveBeenCalledTimes(2)
-    expect(page).toHaveBeenNthCalledWith(2, {})
+    expect(page).toHaveBeenNthCalledWith(2, {
+      properties: {
+        path: '/products',
+        query: { tab: 'featured' },
+        search: '?tab=featured',
+        url: `${window.location.origin}/products?tab=featured`,
+      },
+    })
 
     await rendered.unmount()
   })
@@ -184,9 +198,12 @@ describe('NextPagesAutoPageTracker', () => {
     expect(page).toHaveBeenCalledWith({
       locale: 'en-US',
       properties: {
-        path: '/',
-        source: 'dynamic',
         campaign: 'spring',
+        path: '/',
+        query: {},
+        search: '',
+        source: 'dynamic',
+        url: `${window.location.origin}/`,
       },
     })
     expect(getPagePayload).toHaveBeenCalledWith({
