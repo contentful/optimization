@@ -6,6 +6,8 @@ overrides to a UIKit application using the Optimization iOS SDK.
 For shared runtime behavior, consent gates, tracking thresholds, live-update precedence, and offline
 delivery, see
 [iOS SDK runtime and interaction mechanics](../concepts/ios-sdk-runtime-and-interaction-mechanics.md).
+For cross-SDK consent policy guidance, see
+[Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md).
 Use the SwiftUI guide instead if your app is SwiftUI-based:
 [Integrating the Optimization iOS SDK in a SwiftUI app](./integrating-the-optimization-ios-sdk-in-a-swiftui-app.md).
 
@@ -56,7 +58,8 @@ Most UIKit integrations follow this sequence:
 
 1. Add the Swift Package and create an `OptimizationConfig`.
 2. Create a shared `OptimizationClient` and call `initialize(config:)`.
-3. Collect consent, or seed consent for demos and trusted internal contexts.
+3. Apply the application's consent policy: seed consent when default-on SDK activity is permitted,
+   or collect consent in app UI.
 4. Pass the client into the view controllers that render Contentful content.
 5. Fetch Contentful entries with linked optimization references.
 6. Resolve entries in cell or view configuration with
@@ -85,14 +88,13 @@ let config = OptimizationConfig(
     environment: "master",
     contentfulLocales: ContentfulLocales(default: "en-US"),
     locale: "en-US",
-    defaults: StorageDefaults(consent: true),
     debug: true
 )
 ```
 
-Only `clientId` is required. Use `defaults: StorageDefaults(consent: true)` only when the app can
-start with consent already granted, such as a demo or an internal validation app. For production
-apps, connect `client.consent(true)` and `client.consent(false)` to the app's consent UI.
+Only `clientId` is required. If application policy permits Optimization by default and no end-user
+consent UI is rendered, set `defaults: StorageDefaults(consent: true)`. Otherwise, leave defaults
+unset and connect `client.consent(true)` and `client.consent(false)` to the app's consent UI.
 
 Use `contentfulLocales` and `locale` when the same screen renders localized Contentful entries. For
 the full locale model, see
@@ -138,11 +140,22 @@ lifecycle details, see
 
 ## 3. Handle consent
 
-The SDK blocks most Analytics events until consent is granted. `identify` and `screen` remain
-allowed before consent so a mobile journey can establish profile context and anonymous screen
-analytics.
+If your application policy permits Optimization by default, seed accepted consent in
+`OptimizationConfig` and omit consent controls:
 
-Connect the app's consent controls to the client:
+```swift
+let config = OptimizationConfig(
+    clientId: "your-client-id",
+    defaults: StorageDefaults(consent: true)
+)
+```
+
+That starts all gated SDK events immediately and permits durable profile-continuity storage for
+profile, selected optimizations, changes, and the anonymous ID.
+
+When application policy depends on user choice, leave consent unset and connect the app's consent
+controls to the client. `identify` and `screen` remain allowed before consent so a mobile journey
+can establish profile context and anonymous screen analytics.
 
 ```swift
 @objc private func acceptTapped() {
@@ -166,6 +179,15 @@ client.$state
     }
     .store(in: &cancellables)
 ```
+
+Boolean consent updates both event emission and durable profile-continuity persistence by default.
+If your policy allows events but not durable continuity, call
+`client.consent(events: true, persistence: false)` and observe `client.state.persistenceConsent` or
+`client.$state.map(\.persistenceConsent)` when the UI needs to show that separate state.
+
+When durable profile-continuity persistence is allowed, SDK state from an Experience response is
+published only after the corresponding storage write has settled. Wait for SDK-derived state instead
+of adding sleeps before relaunching or terminating the app in tests.
 
 ## 4. Personalize entries
 

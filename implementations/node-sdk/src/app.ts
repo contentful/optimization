@@ -180,26 +180,28 @@ app.get('/', limiter, async (req, res) => {
   const resolvedContentfulLocale = requireContentfulLocale(contentfulLocale)
   const universalEventBuilderArgs = getUniversalEventBuilderArgs(req, eventLocale)
   const experienceRequestOptions = { locale: resolvedContentfulLocale }
+  const requestOptimization = sdk.forRequest({
+    consent: true,
+    eventContext: universalEventBuilderArgs,
+    experienceOptions: experienceRequestOptions,
+  })
 
   const userId = isNonEmptyString(req.query.userId) ? req.query.userId.trim() : undefined
-
-  const optimizationResponse: OptimizationData = isNonEmptyString(userId)
+  const optimizationResponse: OptimizationData | undefined = isNonEmptyString(userId)
     ? await (async (): Promise<OptimizationData> => {
-        const pageResponse = await sdk.page(
-          { ...universalEventBuilderArgs },
-          experienceRequestOptions,
-        )
-        return await sdk.identify(
-          {
-            ...universalEventBuilderArgs,
-            userId,
-            traits: { identified: true },
-            profile: pageResponse.profile,
-          },
-          experienceRequestOptions,
-        )
+        const pageResponse = await requestOptimization.page()
+        const identifyResponse = await requestOptimization.identify({
+          userId,
+          traits: { identified: true },
+        })
+
+        return identifyResponse ?? pageResponse ?? failOptimizationResponse()
       })()
-    : await sdk.page({ ...universalEventBuilderArgs }, experienceRequestOptions)
+    : await requestOptimization.page()
+
+  if (optimizationResponse === undefined) {
+    throw new Error('Expected Optimization data for consented Node SDK request.')
+  }
 
   const { profile, selectedOptimizations } = optimizationResponse
 
@@ -260,3 +262,7 @@ app.listen(port, () => {
 })
 
 export default app
+
+function failOptimizationResponse(): never {
+  throw new Error('Expected Optimization data for consented Node SDK request.')
+}

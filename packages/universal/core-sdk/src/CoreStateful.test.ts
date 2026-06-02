@@ -83,6 +83,7 @@ describe('CoreStateful blocked event handling', () => {
       signals.event.value = undefined
       signals.locale.value = undefined
       signals.online.value = true
+      signals.persistenceConsent.value = undefined
       signals.selectedOptimizations.value = undefined
       signals.previewPanelAttached.value = false
       signals.previewPanelOpen.value = false
@@ -147,9 +148,8 @@ describe('CoreStateful blocked event handling', () => {
     expect(signals.blockedEvent.value).toBeUndefined()
   })
 
-  it('defaults allowedEventTypes to identify/page/screen in core', async () => {
+  it('defaults allowedEventTypes to empty in core', async () => {
     const core = createCoreStateful()
-    const payload: TrackBuilderArgs = { event: 'purchase' }
     const blockedEvents: Array<BlockedEvent | undefined> = []
     const subscription = core.states.blockedEventStream.subscribe((event) => {
       blockedEvents.push(event)
@@ -158,16 +158,121 @@ describe('CoreStateful blocked event handling', () => {
     await core.identify({ userId: 'user-1' })
     await core.page({})
     await core.screen({ name: 'Home', properties: {}, screen: { name: 'Home' } })
-    await core.track(payload)
 
-    expect(blockedEvents.at(-1)).toEqual(
-      expect.objectContaining({
-        reason: 'consent',
-        method: 'track',
-      }),
-    )
+    expect(blockedEvents.filter((event) => event !== undefined)).toEqual([
+      expect.objectContaining({ method: 'identify', reason: 'consent' }),
+      expect.objectContaining({ method: 'page', reason: 'consent' }),
+      expect.objectContaining({ method: 'screen', reason: 'consent' }),
+    ])
 
     subscription.unsubscribe()
+  })
+
+  it('maps boolean consent to event and persistence consent', () => {
+    const core = createCoreStateful()
+
+    core.consent(true)
+
+    expect(signals.consent.value).toBe(true)
+    expect(signals.persistenceConsent.value).toBe(true)
+
+    core.consent(false)
+
+    expect(signals.consent.value).toBe(false)
+    expect(signals.persistenceConsent.value).toBe(false)
+  })
+
+  it('initializes module-scoped state from absent defaults instead of stale prior state', () => {
+    const first = createCoreStateful({
+      defaults: {
+        changes: FLAG_CHANGES,
+        consent: true,
+        persistenceConsent: true,
+        profile: profileFixture,
+        selectedOptimizations: selectedOptimizationsFixture,
+      },
+    })
+
+    expect(signals.consent.value).toBe(true)
+    expect(signals.persistenceConsent.value).toBe(true)
+
+    first.destroy()
+    createCoreStateful()
+
+    expect(signals.consent.value).toBeUndefined()
+    expect(signals.persistenceConsent.value).toBeUndefined()
+    expect(signals.changes.value).toBeUndefined()
+    expect(signals.profile.value).toBeUndefined()
+    expect(signals.selectedOptimizations.value).toBeUndefined()
+  })
+
+  it('updates event and persistence consent independently with object consent', () => {
+    const core = createCoreStateful({ defaults: { consent: true } })
+
+    core.consent({ persistence: false })
+
+    expect(signals.consent.value).toBe(true)
+    expect(signals.persistenceConsent.value).toBe(false)
+
+    core.consent({ events: false })
+
+    expect(signals.consent.value).toBe(false)
+    expect(signals.persistenceConsent.value).toBe(false)
+  })
+
+  it('marks allow-listed pre-consent events with actual event consent', async () => {
+    const core = createCoreStateful({ allowedEventTypes: ['identify'] })
+    const upsertProfile = rs.spyOn(core.api.experience, 'upsertProfile').mockResolvedValue({
+      changes: [],
+      selectedOptimizations: [],
+      profile: profileFixture,
+    })
+
+    await core.identify({ userId: 'user-1' })
+
+    expect(upsertProfile.mock.calls[0]?.[0].events[0]?.context.gdpr.isConsentGiven).toBe(false)
+
+    core.consent({ events: true })
+    await core.identify({ userId: 'user-2' })
+
+    expect(upsertProfile.mock.calls[1]?.[0].events[0]?.context.gdpr.isConsentGiven).toBe(true)
+  })
+
+  it('purges queued Experience events when event consent is withdrawn', async () => {
+    const core = createCoreStatefulHarness({ defaults: { consent: true } })
+    const upsertProfile = rs.spyOn(core.api.experience, 'upsertProfile').mockResolvedValue({
+      changes: [],
+      selectedOptimizations: [],
+      profile: profileFixture,
+    })
+
+    core.setOnlineState(false)
+    await core.track({ event: 'queued-experience-event' })
+
+    core.consent({ events: false })
+    core.setOnlineState(true)
+    await core.flush()
+
+    expect(upsertProfile).not.toHaveBeenCalled()
+  })
+
+  it('purges queued Insights events when event consent is withdrawn', async () => {
+    const core = createCoreStatefulHarness({
+      defaults: {
+        consent: true,
+        profile: profileFixture,
+      },
+    })
+    const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+
+    core.setOnlineState(false)
+    await core.trackClick({ componentId: 'hero-banner' })
+
+    core.consent({ events: false })
+    core.setOnlineState(true)
+    await core.flush()
+
+    expect(sendBatchEvents).not.toHaveBeenCalled()
   })
 
   it('uses shared queuePolicy.flush for insights retries when provided', async () => {
@@ -332,6 +437,7 @@ describe('CoreStateful blocked event handling', () => {
     expect(secondStates.blockedEventStream).toBe(firstStates.blockedEventStream)
     expect(secondStates.flag).toBe(firstStates.flag)
     expect(secondStates.consent).toBe(firstStates.consent)
+    expect(secondStates.persistenceConsent).toBe(firstStates.persistenceConsent)
     expect(secondStates.eventStream).toBe(firstStates.eventStream)
     expect(secondStates.locale).toBe(firstStates.locale)
     expect(secondStates.canOptimize).toBe(firstStates.canOptimize)

@@ -1,4 +1,14 @@
 /**
+ * Consent value accepted by stateful SDK `consent()` methods.
+ *
+ * Pass `true` or `false` to update event consent and the persistence consent value together. The
+ * persistence consent value controls durable profile-continuity storage. Pass an object when an
+ * application needs to update either capability independently, such as allowing events while keeping
+ * profile continuity session-only.
+ */
+export type ConsentInput = boolean | { events?: boolean; persistence?: boolean }
+
+/**
  * Controller for updating the current consent state.
  *
  * @internal
@@ -9,9 +19,11 @@ export interface ConsentController {
   /**
    * Update the runtime consent state.
    *
-   * @param accept - `true` when the user has granted consent; `false` otherwise.
+   * @param accept - `true` or `false` for both event consent and the persistence consent value, or
+   * an object to update either consent capability independently. Persistence consent controls
+   * durable profile-continuity storage.
    */
-  consent: (accept: boolean) => void
+  consent: (accept: ConsentInput) => void
 }
 
 /**

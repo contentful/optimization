@@ -4,6 +4,7 @@ interface ClickScenario {
   name: string
   entryTestId: string
   clickTargetTestId: string
+  expectedResolvedEntryId: string
 }
 
 const clickScenarios: ClickScenario[] = [
@@ -11,16 +12,19 @@ const clickScenarios: ClickScenario[] = [
     name: 'direct entry button',
     entryTestId: 'entry-click-direct-entry',
     clickTargetTestId: 'entry-click-direct-entry',
+    expectedResolvedEntryId: '4k6ZyFQnR2POY5IJLLlJRb',
   },
   {
     name: 'clickable descendant button',
     entryTestId: 'entry-click-descendant-entry',
     clickTargetTestId: 'entry-click-descendant-button',
+    expectedResolvedEntryId: '6iyPl6vfDH5AoClf3MtYlh',
   },
   {
     name: 'clickable ancestor button wrapper',
     entryTestId: 'entry-click-ancestor-entry',
     clickTargetTestId: 'entry-click-ancestor-wrapper',
+    expectedResolvedEntryId: '1UFf7qr4mHET3HYuYmcpEj',
   },
 ]
 
@@ -72,16 +76,15 @@ test.describe('entry click tracking', () => {
           .poll(async () => await readResolvedEntryId(page, scenario.entryTestId), {
             message: `${scenario.name}: resolved entry id should be available`,
           })
-          .not.toEqual('')
+          .toEqual(scenario.expectedResolvedEntryId)
 
-        const resolvedEntryId = await readResolvedEntryId(page, scenario.entryTestId)
         const target = page.getByTestId(scenario.clickTargetTestId)
 
         await target.scrollIntoViewIfNeeded()
         await target.click()
 
         await expect(
-          page.getByTestId(resolvedEntryId).filter({
+          page.getByTestId(scenario.expectedResolvedEntryId).filter({
             hasText: 'component_click',
           }),
         ).toBeVisible()

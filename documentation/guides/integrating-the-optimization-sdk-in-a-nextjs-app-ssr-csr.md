@@ -80,8 +80,10 @@ What it does not give you (compared to the SSR-primary pattern):
 In practice, the integration follows this sequence:
 
 1. Create one Node SDK instance shared across Server Components and middleware.
-2. Use Next.js middleware to maintain the anonymous ID cookie on every request.
-3. In the server layout, call `sdk.page()` once and pass the result as `defaults` into the client
+2. Use Next.js middleware to maintain the anonymous ID cookie when application policy permits
+   profile continuity.
+3. In the server layout, bind request-scoped consent with `sdk.forRequest()`; the examples below use
+   accepted consent for a default-on policy and pass the result as `defaults` into the client
    provider.
 4. In Server Component pages, use `sdk.resolveOptimizedEntry()` for first-paint content.
 5. In Client Component pages or components, use `resolveEntry()` from `useEntryResolver()` for
@@ -101,15 +103,16 @@ pnpm add @contentful/optimization-node @contentful/optimization-react-web
 
 ## 2. Create the Node SDK singleton and a cached page helper
 
-Create the SDK once at module level, then wrap `sdk.page()` in React's `cache()` function so that
-multiple Server Components on the same request share a single API call:
+Create the SDK once at module level, then wrap the consent-allowed request-bound page call in
+React's `cache()` function so that multiple Server Components on the same request share a single API
+call:
 
 ```ts
 // lib/optimization-server.ts
 import ContentfulOptimization from '@contentful/optimization-node'
-import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import { cookies, headers } from 'next/headers'
 import { cache } from 'react'
+import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 
 const sdk = new ContentfulOptimization({
   clientId: process.env.CONTENTFUL_OPTIMIZATION_CLIENT_ID ?? '',
@@ -135,16 +138,17 @@ const getOptimizationData = cache(async (eventLocale: string, contentfulLocale?:
 
   const anonymousId = cookieStore.get(ANONYMOUS_ID_COOKIE)?.value
   const profile = anonymousId ? { id: anonymousId } : undefined
-  const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
-
-  return sdk.page(
-    {
+  const requestOptimization = sdk.forRequest({
+    consent: { events: true, persistence: true },
+    eventContext: {
       locale: eventLocale,
       userAgent: headerStore.get('user-agent') ?? 'next-js-server',
-      profile,
     },
-    requestOptions,
-  )
+    experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
+    profile,
+  })
+
+  return requestOptimization.page()
 })
 
 export { sdk, getOptimizationData }
@@ -157,14 +161,14 @@ is present. Merge tags that reference localized profile fields such as `location
 `location.country` then resolve in a language consistent with the rendered content.
 
 `cache()` is a React Server Component primitive that deduplicates calls within a single render pass.
-Both the layout and the page can call `getOptimizationData()` and only one HTTP request to the
-Experience API is made per server request. This is more important in the hybrid pattern than in the
-SSR-primary pattern because the layout also needs the data to seed the client provider.
+Both the layout and the page can call `getOptimizationData()` and only one default-on HTTP request
+to the Experience API is made per server request. If application policy depends on user choice, read
+that state before the SDK call and return `undefined` when server personalization is not permitted.
 
 ## 3. Set up the anonymous ID cookie in middleware
 
-This step is identical to the SSR-primary pattern. Middleware runs before every request and ensures
-the anonymous ID cookie is set before any Server Component reads it:
+Middleware runs before every request and keeps the anonymous ID cookie aligned with the default-on
+server `requestOptimization.page()` calls:
 
 ```ts
 import { sdk } from '@/lib/optimization-server'
@@ -172,14 +176,16 @@ import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import { type NextRequest, NextResponse } from 'next/server'
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
+  const response = NextResponse.next()
+
   const anonymousId = request.cookies.get(ANONYMOUS_ID_COOKIE)?.value
   const profile = anonymousId ? { id: anonymousId } : undefined
   const { contentfulLocale, eventLocale } = sdk.resolveRequestLocale(request)
-  const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
 
   const url = new URL(request.url)
-  const data = await sdk.page(
-    {
+  const requestOptimization = sdk.forRequest({
+    consent: { events: true, persistence: true },
+    eventContext: {
       locale: eventLocale,
       userAgent: request.headers.get('user-agent') ?? 'next-js-server',
       page: {
@@ -189,14 +195,13 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         search: url.search,
         url: request.url,
       },
-      profile,
     },
-    requestOptions,
-  )
+    experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
+    profile,
+  })
+  const data = await requestOptimization.page()
 
-  const response = NextResponse.next()
-
-  if (data.profile.id) {
+  if (requestOptimization.canPersistProfile && data?.profile.id) {
     response.cookies.set(ANONYMOUS_ID_COOKIE, data.profile.id, {
       path: '/',
       sameSite: 'lax',
@@ -213,7 +218,9 @@ export const config = {
 
 The `ANONYMOUS_ID_COOKIE` constant is shared between the Node SDK and the React Web SDK. After
 hydration, the Web SDK reads the same cookie from `document.cookie` and continues the same anonymous
-profile journey. Do not mark this cookie as `HttpOnly`.
+profile journey. Do not mark this cookie as `HttpOnly`. If application policy depends on user
+choice, keep that consent state in a CMP, session, account preference, or cookie and clear
+`ANONYMOUS_ID_COOKIE` when profile continuity is not permitted.
 
 ## 4. Resolve entries on the server for first paint
 
@@ -238,7 +245,7 @@ export default async function Home() {
   const resolvedEntries = baselineEntries.map((entry) => {
     const { entry: resolved } = sdk.resolveOptimizedEntry(
       entry,
-      optimizationData.selectedOptimizations,
+      optimizationData?.selectedOptimizations,
     )
     return resolved
   })
@@ -269,14 +276,20 @@ for the broader locale model.
 
 ### Add data attributes for client-side tracking
 
-Include `data-ctfl-entry-id` and `data-ctfl-baseline-id` on the wrapper element so the React Web SDK
-can register interaction trackers after hydration:
+Include `data-ctfl-entry-id` on the wrapper element so the React Web SDK can register interaction
+trackers after hydration. Keep the original baseline ID in application-owned metadata such as
+`data-ctfl-baseline-id` when your rendering code needs it:
 
 ```tsx
 <div data-ctfl-entry-id={resolvedEntry.sys.id} data-ctfl-baseline-id={baselineEntry.sys.id}>
   {resolvedEntry.fields.title}
 </div>
 ```
+
+`data-ctfl-baseline-id` is not used in Web SDK event payloads. When the server has selected
+optimization context available, also render `data-ctfl-optimization-id`, `data-ctfl-sticky`, and
+`data-ctfl-variant-index` so client-side interaction events can carry the same optimization
+identifiers.
 
 ## 5. Seed the React Web SDK with server-resolved state
 
@@ -320,6 +333,7 @@ interface ClientProviderWrapperProps {
   children: ReactNode
   contentfulLocale?: string
   defaults?: {
+    consent?: boolean
     profile?: Profile
     selectedOptimizations?: SelectedOptimizationArray
     changes?: ChangeArray
@@ -379,18 +393,21 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   )
   const optimizationData = await getOptimizationData(eventLocale, contentfulLocale)
   const htmlLang = getHtmlLang(contentfulLocale)
+  const defaults = {
+    consent: true,
+    ...(optimizationData
+      ? {
+          profile: optimizationData.profile,
+          selectedOptimizations: optimizationData.selectedOptimizations,
+          changes: optimizationData.changes,
+        }
+      : {}),
+  }
 
   return (
     <html lang={htmlLang}>
       <body>
-        <ClientProviderWrapper
-          contentfulLocale={contentfulLocale}
-          defaults={{
-            profile: optimizationData.profile,
-            selectedOptimizations: optimizationData.selectedOptimizations,
-            changes: optimizationData.changes,
-          }}
-        >
+        <ClientProviderWrapper contentfulLocale={contentfulLocale} defaults={defaults}>
           {children}
         </ClientProviderWrapper>
       </body>
@@ -400,7 +417,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 ```
 
 Because `getOptimizationData()` is wrapped with `cache()`, calling it in the layout and in a page
-Server Component on the same request makes only one API call to the Experience API.
+Server Component on the same request makes only one API call to the Experience API for the
+default-on accepted request policy.
 
 ## 6. Re-resolve entries client-side after hydration
 
@@ -490,8 +508,13 @@ changes. This is the right choice for sections of the page that do not need the 
 
 ## 7. Handle consent and identify from client components
 
-Consent and identify controls are identical to the SSR-primary pattern. Create a Client Component
-that reads the SDK state and exposes controls:
+With a default-on policy, no consent UI is required. The server examples above bind
+`consent: { events: true, persistence: true }`, and the browser provider receives
+`defaults={{ consent: true, ...serverResolvedState }}` so client-side page and interaction tracking
+can emit immediately.
+
+If application policy depends on user choice, keep server request consent, the anonymous ID cookie,
+and browser SDK consent aligned from a Client Component that reads SDK state and exposes controls:
 
 ```tsx
 // components/InteractiveControls.tsx
@@ -500,6 +523,13 @@ that reads the SDK state and exposes controls:
 import { useOptimizationContext } from '@contentful/optimization-react-web'
 import { useEffect, useState } from 'react'
 
+const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
+
+function setAppConsentCookie(consented: boolean): void {
+  const value = consented ? 'granted' : 'denied'
+  document.cookie = `${APP_PERSONALIZATION_CONSENT_COOKIE}=${value}; Path=/; SameSite=Lax`
+}
+
 export function InteractiveControls() {
   const { sdk, isReady } = useOptimizationContext()
   const [consent, setConsent] = useState<boolean | undefined>(undefined)
@@ -507,7 +537,10 @@ export function InteractiveControls() {
   useEffect(() => {
     if (!sdk || !isReady) return
 
-    const sub = sdk.states.consent.subscribe(setConsent)
+    const sub = sdk.states.consent.subscribe((value) => {
+      setConsent(value)
+      if (typeof value === 'boolean') setAppConsentCookie(value)
+    })
 
     return () => sub.unsubscribe()
   }, [sdk, isReady])
@@ -516,7 +549,11 @@ export function InteractiveControls() {
 
   return (
     <div>
-      <button onClick={() => sdk.consent(consent !== true)}>
+      <button
+        onClick={() => {
+          sdk.consent(consent !== true)
+        }}
+      >
         {consent === true ? 'Reject consent' : 'Accept consent'}
       </button>
       <button onClick={() => sdk.identify({ userId: 'user-123' })}>Identify</button>
@@ -529,6 +566,10 @@ export function InteractiveControls() {
 In this pattern, unlike the SSR-primary pattern, calling `sdk.identify()` or `sdk.consent()`
 immediately updates `selectedOptimizations` in the client SDK, which causes all Client Components
 subscribed to that state to re-render with the new variant. No page refresh is required.
+
+The cookie write keeps the next server request aligned with the browser-side `sdk.consent()` state.
+In production, replace this with the same CMP or account-preference state that drives your browser
+consent UI.
 
 ## Forward optimization context to third-party analytics
 

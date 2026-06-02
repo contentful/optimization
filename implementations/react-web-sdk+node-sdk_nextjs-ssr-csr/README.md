@@ -75,17 +75,17 @@ for the entry contract.
 │ FIRST REQUEST (Server — identical to nextJs-ssr)                       │
 │                                                                     │
 │  1. Middleware (Edge Runtime)                                       │
-│     ├─ Read `ctfl-opt-aid` cookie from request                     │
-│     ├─ Call Node SDK `sdk.page()` with request context + profile    │
-│     └─ Set `ctfl-opt-aid` cookie on response with profile.id       │
+│     ├─ Read consent + `ctfl-opt-aid` cookies from request          │
+│     ├─ Clear `ctfl-opt-aid` and skip SDK calls without app consent │
+│     └─ With consent, call `requestOptimization.page()` and persist ID │
 │                                                                     │
 │  2. Server Component (landing page)                                 │
-│     ├─ Read `ctfl-opt-aid` cookie                                  │
-│     ├─ Fetch entries from CDA + call `sdk.page()` in parallel      │
-│     ├─ `sdk.resolveOptimizedEntry()` for each entry                │
-│     └─ Render personalized HTML (zero client JS for content)        │
+│     ├─ Read app consent + `ctfl-opt-aid` cookies                    │
+│     ├─ Fetch entries from CDA                                      │
+│     ├─ With consent, call `requestOptimization.page()`              │
+│     └─ Render baseline or personalized HTML                        │
 │                                                                     │
-│  ↓ HTML response with personalized content                          │
+│  ↓ HTML response with baseline or personalized content              │
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -154,8 +154,11 @@ function ClientResolvedEntry({ entry }) {
 
 ### 4. Cookie bridge (same as nextJs-ssr)
 
-Middleware creates `ctfl-opt-aid`, Server Components read it, and the Web SDK picks it up from
-`document.cookie` on hydration. Same identity across server and client.
+Middleware creates `ctfl-opt-aid` only when the application-owned consent cookie permits profile
+continuity. When consent is missing or denied, middleware clears `ctfl-opt-aid` and skips Node SDK
+calls. Server Components render baseline content until a consented request permits server
+personalization, and the Web SDK picks the shared cookie up from `document.cookie` on hydration once
+continuity is allowed.
 
 ### 5. `<Link>` for SPA navigation
 

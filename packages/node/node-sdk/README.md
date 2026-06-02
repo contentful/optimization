@@ -60,8 +60,7 @@ Import the Optimization class; both CJS and ESM module systems are supported, ES
 import ContentfulOptimization from '@contentful/optimization-node'
 ```
 
-Create the SDK once per module or process, then pass request-scoped event context inside each
-incoming request:
+Create the SDK once per module or process, then bind consent and request context in each route:
 
 ```ts
 const optimization = new ContentfulOptimization({
@@ -72,14 +71,26 @@ const optimization = new ContentfulOptimization({
   },
 })
 
-async function renderRequest(req: { headers: { 'accept-language'?: string } }, profileId: string) {
-  const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
-  const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
+function appPolicyAllowsOptimizationEvent(req: { cookies?: Record<string, string> }): boolean {
+  return req.cookies?.['app-personalization-consent'] === 'granted'
+}
 
-  return await optimization.page(
-    { locale: eventLocale, profile: { id: profileId } },
-    requestOptions,
-  )
+async function renderRequest(
+  req: { cookies?: Record<string, string>; headers: { 'accept-language'?: string } },
+  profileId: string,
+) {
+  const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
+  const requestOptimization = optimization.forRequest({
+    consent: {
+      events: appPolicyAllowsOptimizationEvent(req),
+      persistence: appPolicyAllowsOptimizationEvent(req),
+    },
+    eventContext: { locale: eventLocale },
+    experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
+    profile: { id: profileId },
+  })
+
+  return await requestOptimization.page()
 }
 ```
 
@@ -93,18 +104,20 @@ are part of the same application.
 ## Common configuration
 
 The Node SDK is stateless. It does not maintain consent, profile, or browser persistence state
-between requests.
+between requests. For cross-SDK consent guidance, see
+[Consent management in the Optimization SDK Suite](../../../documentation/concepts/consent-management-in-the-optimization-sdk-suite.md).
 
-| Option              | Required? | Default               | Description                                                 |
-| ------------------- | --------- | --------------------- | ----------------------------------------------------------- |
-| `clientId`          | Yes       | N/A                   | Shared API key for Experience API and Insights API requests |
-| `environment`       | No        | `'main'`              | Contentful environment identifier                           |
-| `api`               | No        | See API options below | Experience API and Insights API endpoint options            |
-| `app`               | No        | `undefined`           | Application metadata attached to outgoing event context     |
-| `contentfulLocales` | No        | `undefined`           | Contentful locale codes used by `resolveRequestLocale()`    |
-| `fetchOptions`      | No        | SDK defaults          | Fetch timeout and retry behavior                            |
-| `eventBuilder`      | No        | Node SDK defaults     | Event metadata overrides for SDK-layer authors              |
-| `logLevel`          | No        | `'error'`             | Minimum log level for the default console sink              |
+| Option              | Required? | Default                | Description                                                 |
+| ------------------- | --------- | ---------------------- | ----------------------------------------------------------- |
+| `clientId`          | Yes       | N/A                    | Shared API key for Experience API and Insights API requests |
+| `environment`       | No        | `'main'`               | Contentful environment identifier                           |
+| `api`               | No        | See API options below  | Experience API and Insights API endpoint options            |
+| `app`               | No        | `undefined`            | Application metadata attached to outgoing event context     |
+| `contentfulLocales` | No        | `undefined`            | Contentful locale codes used by `resolveRequestLocale()`    |
+| `fetchOptions`      | No        | SDK defaults           | Fetch timeout and retry behavior                            |
+| `allowedEventTypes` | No        | `['identify', 'page']` | Event types allowed before request event consent is granted |
+| `eventBuilder`      | No        | Node SDK defaults      | Event metadata overrides for SDK-layer authors              |
+| `logLevel`          | No        | `'error'`              | Minimum log level for the default console sink              |
 
 Common `api` options:
 
@@ -114,7 +127,8 @@ Common `api` options:
 | `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                    |
 | `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Experience API features to apply to each request |
 
-Request-scoped Experience options belong in the final argument to stateless event methods:
+Request-scoped Experience options belong in `experienceOptions` when creating the request-bound
+client:
 
 | Option      | Description                                                   |
 | ----------- | ------------------------------------------------------------- |
@@ -157,30 +171,57 @@ For every option, callback payload, and exported type, use the generated
 
 ### Request-scoped events
 
-Build event context from the incoming request, then call `page()`, `identify()`, `screen()`,
-`track()`, or sticky `trackView()` when optimization data is needed:
+Build event context from the incoming request, bind application-owned consent state with
+`forRequest()`, then call `page()`, `identify()`, `screen()`, `track()`, or sticky `trackView()` on
+the returned request object:
 
 ```ts
 import type { Request } from 'express'
 
 app.get('/products/:slug', async (req, res) => {
   const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
-  const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
-  const optimizationData = await optimization.page(
-    {
-      locale: eventLocale,
-      profile: { id: req.cookies.profileId },
-      properties: { path: req.path },
+  const requestOptimization = optimization.forRequest({
+    consent: {
+      events: appPolicyAllowsOptimizationEvent(req),
+      persistence: appPolicyAllowsOptimizationEvent(req),
     },
-    requestOptions,
-  )
+    eventContext: {
+      locale: eventLocale,
+    },
+    experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
+    profile: { id: req.cookies.profileId },
+  })
+  const optimizationData = await requestOptimization.page({
+    properties: { path: req.path },
+  })
+
+  if (requestOptimization.canPersistProfile && optimizationData?.profile.id) {
+    persistProfileId(res, optimizationData.profile.id)
+  }
 
   res.render('product', { optimizationData })
 })
 ```
 
-In stateless runtimes, Insights-backed methods require a profile for delivery. Non-sticky
-`trackView`, `trackClick`, `trackHover`, and `trackFlagView` require `payload.profile.id`.
+For default-on application policies that do not render an end-user consent UI, replace the
+request-specific consent lookup with accepted consent:
+
+```ts
+const requestOptimization = optimization.forRequest({
+  consent: { events: true, persistence: true },
+  eventContext: { locale: eventLocale },
+  profile,
+})
+```
+
+Node SDK event calls fail closed except for the default pre-consent allowlist, `identify` and
+`page`. Those allowlisted events are sent with `context.gdpr.isConsentGiven: false` when request
+event consent is not granted. Pass `allowedEventTypes: []` to require strict opt-in for all
+stateless event methods.
+
+In stateless runtimes, Insights-backed methods require a request-bound profile for delivery.
+Non-sticky `trackView`, `trackClick`, `trackHover`, and `trackFlagView` require a profile ID passed
+to `forRequest()`.
 
 ### Content resolution
 

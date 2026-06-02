@@ -54,7 +54,6 @@ function AppContent(): React.JSX.Element {
   const [showLiveUpdatesTest, setShowLiveUpdatesTest] = useState<boolean>(false)
 
   useEffect(() => {
-    sdk.consent(true)
     void sdk.page({ properties: { url: 'app' } })
 
     const subscription = sdk.states.profile.subscribe((profile) => {
@@ -175,7 +174,11 @@ function AppContent(): React.JSX.Element {
 
 function App(): React.JSX.Element {
   return (
-    <OptimizationProvider {...ENV_CONFIG.optimization} logLevel="debug">
+    <OptimizationProvider
+      {...ENV_CONFIG.optimization}
+      defaults={{ consent: true }}
+      logLevel="debug"
+    >
       <AppContent />
     </OptimizationProvider>
   )

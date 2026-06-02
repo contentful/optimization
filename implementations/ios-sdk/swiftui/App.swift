@@ -23,6 +23,7 @@ struct OptimizationDemoApp: App {
                     insightsBaseUrl: AppConfig.insightsBaseUrl,
                     contentfulLocales: AppConfig.contentfulLocales,
                     locale: AppConfig.defaultContentfulLocale,
+                    defaults: StorageDefaults(consent: true),
                     debug: true
                 ),
                 trackViews: true,

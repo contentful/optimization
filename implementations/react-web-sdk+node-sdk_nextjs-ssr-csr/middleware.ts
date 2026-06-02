@@ -2,15 +2,35 @@ import { requireContentfulLocale, sdk } from '@/lib/optimization-server'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import { type NextRequest, NextResponse } from 'next/server'
 
+const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
+
+function getAppConsent(request: NextRequest): boolean | undefined {
+  const consent = request.cookies.get(APP_PERSONALIZATION_CONSENT_COOKIE)?.value
+
+  if (consent === 'granted') return true
+  if (consent === 'denied') return false
+
+  return undefined
+}
+
 export async function middleware(request: NextRequest): Promise<NextResponse> {
+  const appConsent = getAppConsent(request)
+  const response = NextResponse.next()
+
+  if (appConsent !== true) {
+    response.cookies.delete(ANONYMOUS_ID_COOKIE)
+    return response
+  }
+
   const anonymousId = request.cookies.get(ANONYMOUS_ID_COOKIE)?.value
   const profile = anonymousId ? { id: anonymousId } : undefined
   const { contentfulLocale, eventLocale } = sdk.resolveRequestLocale(request)
   const resolvedContentfulLocale = requireContentfulLocale(contentfulLocale)
 
   const url = new URL(request.url)
-  const data = await sdk.page(
-    {
+  const requestOptimization = sdk.forRequest({
+    consent: { events: true, persistence: true },
+    eventContext: {
       locale: eventLocale,
       userAgent: request.headers.get('user-agent') ?? 'next-js-server',
       page: {
@@ -20,14 +40,13 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         search: url.search,
         url: request.url,
       },
-      profile,
     },
-    { locale: resolvedContentfulLocale },
-  )
+    experienceOptions: { locale: resolvedContentfulLocale },
+    profile,
+  })
+  const data = await requestOptimization.page()
 
-  const response = NextResponse.next()
-
-  if (data.profile.id) {
+  if (requestOptimization.canPersistProfile && data?.profile.id) {
     response.cookies.set(ANONYMOUS_ID_COOKIE, data.profile.id, {
       path: '/',
       sameSite: 'lax',

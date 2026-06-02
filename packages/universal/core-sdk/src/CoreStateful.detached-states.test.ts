@@ -28,6 +28,7 @@ function resetSignals(): void {
     signals.event.value = undefined
     signals.locale.value = undefined
     signals.online.value = true
+    signals.persistenceConsent.value = undefined
     signals.selectedOptimizations.value = undefined
     signals.previewPanelAttached.value = false
     signals.previewPanelOpen.value = false

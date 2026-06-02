@@ -90,17 +90,20 @@ private func getFallbackMatchKeys(_ matchKey: String) -> [String] {
 /// Defaults that can be restored from persistent storage.
 public struct StorageDefaults {
     public var consent: Bool?
+    public var persistenceConsent: Bool?
     public var profile: [String: Any]?
     public var changes: [[String: Any]]?
     public var personalizations: [[String: Any]]?
 
     public init(
         consent: Bool? = nil,
+        persistenceConsent: Bool? = nil,
         profile: [String: Any]? = nil,
         changes: [[String: Any]]? = nil,
         personalizations: [[String: Any]]? = nil
     ) {
         self.consent = consent
+        self.persistenceConsent = persistenceConsent
         self.profile = profile
         self.changes = changes
         self.personalizations = personalizations
@@ -172,7 +175,10 @@ public struct OptimizationConfig {
     }
 
     /// Serializes config to a JSON string for passing to the JS bridge.
-    func toJSON(localeCandidates: [String] = Locale.preferredLanguages) throws -> String {
+    func toJSON(
+        localeCandidates: [String] = Locale.preferredLanguages,
+        anonymousId: String? = nil
+    ) throws -> String {
         var dict: [String: Any] = [
             "clientId": clientId,
             "environment": environment,
@@ -196,20 +202,25 @@ public struct OptimizationConfig {
             let apiLocale = try normalizeExplicitLocale(configuredApiLocale, name: "api.locale")
             dict["api"] = ["locale": apiLocale]
         }
-
-        if let defaults = defaults {
+        if defaults != nil || anonymousId != nil {
             var defaultsDict: [String: Any] = [:]
-            if let consent = defaults.consent {
+            if let consent = defaults?.consent {
                 defaultsDict["consent"] = consent
             }
-            if let profile = defaults.profile {
+            if let persistenceConsent = defaults?.persistenceConsent {
+                defaultsDict["persistenceConsent"] = persistenceConsent
+            }
+            if let profile = defaults?.profile {
                 defaultsDict["profile"] = profile
             }
-            if let changes = defaults.changes {
+            if let changes = defaults?.changes {
                 defaultsDict["changes"] = changes
             }
-            if let personalizations = defaults.personalizations {
+            if let personalizations = defaults?.personalizations {
                 defaultsDict["optimizations"] = personalizations
+            }
+            if let anonymousId {
+                defaultsDict["anonymousId"] = anonymousId
             }
             if !defaultsDict.isEmpty {
                 dict["defaults"] = defaultsDict

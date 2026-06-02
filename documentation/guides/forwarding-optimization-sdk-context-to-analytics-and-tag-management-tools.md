@@ -260,8 +260,12 @@ Node and SSR flows do not expose process-wide subscriptions. Keep third-party fo
 request or server-side business event that produced the SDK data.
 
 ```ts
-const optimizationData = await optimization.page({
+const requestOptimization = optimization.forRequest({
+  consent: true,
   profile,
+})
+
+const optimizationData = await requestOptimization.page({
   properties: { path: req.path },
 })
 

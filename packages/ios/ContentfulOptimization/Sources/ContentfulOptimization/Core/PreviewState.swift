@@ -7,6 +7,7 @@ import Foundation
 public struct PreviewState: Codable, Sendable {
     public let profile: JSONValue?
     public let consent: Bool?
+    public let persistenceConsent: Bool?
     public let canPersonalize: Bool
     public let changes: [PreviewChange]?
     public let selectedPersonalizations: [SelectedPersonalization]?

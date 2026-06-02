@@ -35,7 +35,7 @@ class QuickJsContextManager {
     var onEvent: ((Map<String, Any>) -> Unit)? = null
     var onOverridesChanged: ((PreviewState) -> Unit)? = null
 
-    suspend fun initialize(config: OptimizationConfig, assets: AssetManager) {
+    suspend fun initialize(config: OptimizationConfig, assets: AssetManager, anonymousId: String? = null) {
         withContext(quickJsDispatcher) {
             val qjs = QuickJs.create(quickJsDispatcher)
             val store = TimerStore()
@@ -92,7 +92,7 @@ class QuickJsContextManager {
 
             registerCallbacks(qjs)
 
-            val configJSON = config.toJSON()
+            val configJSON = config.toJSON(anonymousId = anonymousId)
             qjs.evaluate<Any?>("__bridge.initialize($configJSON)", "bridge-init.js")
 
             quickJs = qjs

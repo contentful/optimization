@@ -1,26 +1,14 @@
 # AGENTS.md
 
-Read the repository root `AGENTS.md`, `packages/AGENTS.md`, and `packages/universal/AGENTS.md`
-before this file.
-
-## Scope
-
-This package owns Zod-based API schemas, inferred types, and schema helpers for Contentful CDA,
-Experience API, and Insights API payloads.
-
-## Key paths
-
-- `src/`
-- `README.md`
+Owns Zod-based API schemas, inferred types, and schema helpers for Contentful CDA, Experience API,
+and Insights API payloads.
 
 ## Commands
 
-- `pnpm --filter @contentful/optimization-api-schemas typecheck`
-- `pnpm --filter @contentful/optimization-api-schemas test:unit`
-- `pnpm --filter @contentful/optimization-api-schemas build`
-- `pnpm --filter @contentful/optimization-api-schemas size:check`
+- `pnpm --filter @contentful/optimization-api-schemas <script>` with `typecheck`, `test:unit`,
+  `build`, or `size:check`.
 
-## Usually validate
+## Validate
 
 - Run `typecheck` and `test:unit` for local changes.
 - Run `build` for export or packaging changes.

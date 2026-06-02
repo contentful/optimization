@@ -5,9 +5,7 @@ final class PreviewPanelTests: XCTestCase {
 
     override func setUp() {
         continueAfterFailure = false
-        app.launch()
-        clearProfileState(app: app)
-        waitForElement(app.buttons["identify-button"])
+        clearProfileState(app: app, requireFreshAppInstance: true)
     }
 
     // MARK: - Helpers

@@ -125,7 +125,10 @@ sticky `trackView()`.
 
 Stateful SDKs write that response to in-memory signals as a single batch. This means subscribers see
 the profile, selected optimizations, and changes as one consistent snapshot. Browser and React
-Native packages then persist that snapshot through platform-specific effects.
+Native packages read platform storage during initialization to seed continuity, then live SDK state
+reads come from memory. When durable profile-continuity persistence consent is enabled, those
+packages mirror the same response snapshot to platform storage before the new observable in-memory
+state is published.
 
 Stateless SDKs return the same `OptimizationData` to the caller and do not retain it. The caller
 decides what to render, what to persist, and what to pass into later SDK calls.
@@ -133,25 +136,25 @@ decides what to render, what to persist, and what to pass into later SDK calls.
 ## Server-side mechanics
 
 The Node SDK extends the stateless Core runtime. Create the Node SDK once per process or module, but
-pass request-scoped inputs into every SDK method call.
+bind request-scoped inputs with `forRequest()` before calling event methods.
 
 ### Profile upsert behavior
 
-In Node, Experience methods use `payload.profile?.id` as the profile selector:
+In Node, Experience methods use the request-bound profile ID as the profile selector:
 
 ```ts
 const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
-const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
 const profileId = req.cookies[ANONYMOUS_ID_COOKIE]
+const requestOptimization = optimization.forRequest({
+  consent: true,
+  eventContext: { locale: eventLocale },
+  experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
+  profile: profileId ? { id: profileId } : undefined,
+})
 
-const optimizationData = await optimization.page(
-  {
-    locale: eventLocale,
-    profile: profileId ? { id: profileId } : undefined,
-    properties: { path: req.path },
-  },
-  requestOptions,
-)
+const optimizationData = await requestOptimization.page({
+  properties: { path: req.path },
+})
 ```
 
 For the difference between `contentfulLocale`, `eventLocale`, and the Experience API request
@@ -161,10 +164,10 @@ For the difference between `contentfulLocale`, `eventLocale`, and the Experience
 The Node SDK passes that ID to the Experience API as `profileId`. If the ID is absent, the API can
 create a profile and return the new `profile.id`.
 
-Insights-only stateless methods need an explicit profile because there is no ambient state. For
-example, non-sticky `trackView()`, `trackClick()`, `trackHover()`, and `trackFlagView()` require
-`payload.profile.id`. Sticky `trackView()` first sends an Experience event and can use the returned
-profile for the paired Insights event.
+Insights-only stateless methods need a request-bound profile because there is no ambient state. For
+example, non-sticky `trackView()`, `trackClick()`, `trackHover()`, and `trackFlagView()` require a
+profile ID passed to `forRequest()`. Sticky `trackView()` first sends an Experience event and can
+use the returned profile for the paired Insights event.
 
 ### Request-scoped state
 
@@ -221,17 +224,33 @@ The Web SDK persists these values in localStorage:
 | Key                                   | Contents                                                                |
 | ------------------------------------- | ----------------------------------------------------------------------- |
 | `__ctfl_opt_anonymous_id__`           | Anonymous profile ID used by future browser Experience calls.           |
-| `__ctfl_opt_consent__`                | `'accepted'`, `'denied'`, or absent.                                    |
+| `__ctfl_opt_consent__`                | SDK event consent value.                                                |
+| `__ctfl_opt_persistence_consent__`    | SDK durable profile-continuity persistence consent value.               |
 | `__ctfl_opt_profile__`                | Full `Profile` returned by the Experience API.                          |
 | `__ctfl_opt_selected-optimizations__` | Selected optimization records used for browser-side variant resolution. |
 | `__ctfl_opt_changes__`                | Change records used for Custom Flags.                                   |
 | `__ctfl_opt_debug__`                  | Debug logging toggle.                                                   |
+
+The `app-personalization-consent` name appears in examples only as an application-owned consent
+cookie (`'granted'`, `'denied'`, or absent) that server and browser code can read. It is not an SDK
+localStorage key.
 
 Structured cache values are schema-validated when they are read. Malformed JSON or invalid shapes
 are removed instead of being used as SDK state.
 
 The browser also persists the profile ID in the `ctfl-opt-aid` cookie. This cookie is the only
 built-in browser-server synchronization channel.
+
+Persistence consent controls whether the SDK writes and reloads the profile-continuity keys:
+anonymous ID, profile, selected optimizations, changes, and the `ctfl-opt-aid` cookie. It does not
+disable SDK storage of `__ctfl_opt_consent__` or `__ctfl_opt_debug__`.
+
+Stateful browser and mobile SDKs treat profile-continuity persistence as a durability gate around
+publishing an Experience response, not as the source for live state reads. When persistence consent
+is granted, SDK-derived identified state is visible only after the relevant storage write for that
+same response snapshot has settled or failed gracefully. Consumers should still handle storage
+failure as a possible durability loss, but they should not need sleeps between observing identified
+SDK state and relaunching, navigating, or terminating an app in tests.
 
 ### Cookie and localStorage reconciliation
 
@@ -270,8 +289,9 @@ queue logs a warning and skips delivery.
 
 A Node and Web SDK application usually follows this lifecycle:
 
-1. **First server request.** The request has no `ctfl-opt-aid` cookie. The server calls `page()` or
-   `identify()` without a profile ID. The Experience API creates or evaluates a profile.
+1. **First server request.** The request has no `ctfl-opt-aid` cookie. If the application's consent
+   policy permits the server event, the server calls `page()` or `identify()` without a profile ID.
+   The Experience API creates or evaluates a profile.
 2. **Server response.** The server persists the returned `profile.id` in `ctfl-opt-aid` with
    `path: '/'` and a readable cookie policy for browser code.
 3. **Browser initialization.** The Web SDK reads the cookie. If localStorage has a different
@@ -298,17 +318,17 @@ On the server, pass the current anonymous profile ID when identifying a known us
 
 ```ts
 const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
-const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
+const requestOptimization = optimization.forRequest({
+  consent: true,
+  eventContext: { locale: eventLocale },
+  experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
+  profile: { id: anonymousId },
+})
 
-const identifyResponse = await optimization.identify(
-  {
-    locale: eventLocale,
-    profile: { id: anonymousId },
-    userId,
-    traits: { authenticated: true },
-  },
-  requestOptions,
-)
+const identifyResponse = await requestOptimization.identify({
+  userId,
+  traits: { authenticated: true },
+})
 ```
 
 Then render and persist from the response that matches the user state you want for that response. If
@@ -366,12 +386,14 @@ Different lifecycle methods have different synchronization effects:
 | ----------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `optimization.reset()` in Web | Clears profile, selected optimizations, changes, event streams, anonymous ID localStorage, and cookie. |
 | `LocalStore.reset()` default  | Clears profile-related browser caches and anonymous ID, but preserves consent and debug values.        |
-| `optimization.consent(false)` | Blocks gated future events in stateful clients. It does not clear the profile ID by itself.            |
+| `optimization.consent(false)` | Blocks gated future events, purges SDK queues, and clears SDK-managed durable profile continuity.      |
 | `optimization.destroy()`      | Flushes queues and releases runtime listeners. It does not clear persisted user state.                 |
 | Server consent revocation     | Must clear the application-owned consent state and any persisted profile ID such as `ctfl-opt-aid`.    |
 
-If consent revocation must also remove profile continuity, call `reset()` in the browser and clear
-the server-side cookie or session value in the same user flow.
+`consent(false)` leaves the active in-memory SDK profile, selected optimizations, and changes
+available until the application calls `reset()` or tears down the runtime. If consent revocation
+must also remove active session personalization, call `reset()` in the browser and clear the
+server-side cookie or session value in the same user flow.
 
 ## Edge cases and failure modes
 

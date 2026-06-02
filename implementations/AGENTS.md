@@ -1,96 +1,67 @@
 # AGENTS.md
 
-Read the repository root `AGENTS.md` first, then the nearest implementation-specific `AGENTS.md`.
+Applies to reference implementations and shared implementation contracts under `implementations/`.
 
-These instructions apply to all reference implementations under `implementations/` and to shared
-implementation contracts such as `PREVIEW_PANEL_SCENARIOS.md`.
+## Boundaries
 
-For implementation README prose style, follow [`../STYLE_GUIDE.md`](../STYLE_GUIDE.md). This file
-owns implementation boundaries, implementation README structure, and local validation rules.
+- Reference implementations demonstrate SDK integration patterns; reusable SDK behavior belongs in
+  `packages/`.
+- Keep apps small, example-oriented, and aligned with the public SDK surface they demonstrate.
+- CDA entry fetches used for SDK entry resolution must stay single-locale. Do not use
+  `withAllLocales` or `locale=*`; use SDK-assisted locale resolution instead.
+- Experience API calls that render MergeTags must use the same resolved Contentful locale.
+- Prefer root wrappers: `pnpm implementation:run -- <implementation> <script>`. If an implementation
+  has no `package.json`, use its local README or child `AGENTS.md`.
 
-## Implementation boundaries
+## Implementation READMEs
 
-- Reference implementations demonstrate integration patterns. Reusable SDK behavior belongs in the
-  relevant package under `packages/`.
-- Keep implementation code minimal, example-oriented, and aligned with the public SDK surface it is
-  demonstrating.
-- When a reference implementation fetches CDA entries for SDK entry resolution, keep those fetches
-  single-locale. Do not use `withAllLocales` or `locale=*`; configure SDK `contentfulLocales` and
-  use the resolved SDK `locale`, `withOptimizationLocale()`, native `client.locale`, or Node
-  `resolveRequestLocale()` result. When the implementation calls the Experience API for content that
-  can render MergeTags, use that same resolved Contentful locale through SDK-assisted stateful
-  config or the stateless per-call `{ locale }` request option.
-- Prefer root wrapper commands such as `pnpm implementation:run -- <implementation> <script>` for
-  implementations that have a `package.json`.
-- If the implementation has no `package.json`, use its local README or child `AGENTS.md` commands.
-
-## Implementation README standards
-
-- Reference implementation READMEs must open with the repository-standard centered Contentful
-  header, implementation-specific `<h3>`, navigation links including `Readme`, Guides, Reference,
-  and Contributing, and the pre-release warning.
-- Header navigation in reference implementation READMEs is rendered in both GitHub source browsing
-  and TypeDoc project documents. Keep Guides and Reference links as stable generated-docs URLs
-  unless you have verified the replacement in both render targets.
-- The introduction must identify the SDK package or packages being demonstrated and link back to the
-  SDK suite root README.
-- Put `## What this demonstrates` near the top and describe the smallest useful scenario, tested SDK
-  surfaces, and any important architecture caveat. Keep the tone example-oriented, not marketing
-  oriented.
-- Keep implementation READMEs procedural. Explain what code path demonstrates the SDK behavior and
-  where to inspect it, but do not duplicate package API manuals or authored integration guides.
+- Follow root Markdown rules and [`../STYLE_GUIDE.md`](../STYLE_GUIDE.md).
+- Use the repo-standard header, implementation-specific `<h3>`, Readme/Guides/Reference/Contributing
+  navigation, pre-release warning, and an introduction naming the demonstrated SDK packages.
+- Put `## What this demonstrates` near the top. Keep the tone procedural and example-oriented, not a
+  package API manual.
 - Use `## Prerequisites`, `## Setup`, `## Running locally`, `## Running E2E tests`, and `## Related`
-  when applicable. Omit sections that do not match the implementation, such as `Running locally` for
-  a test-only native app.
-- Setup and run commands must prefer monorepo-root commands first, especially `pnpm build:pkgs`,
-  `pnpm implementation:run -- <implementation> implementation:install`,
-  `pnpm implementation:run -- <implementation> <script>`, and the root `setup:e2e:*` / `test:e2e:*`
-  wrappers when they exist.
-- Keep `.env` instructions tied to the implementation-local `.env.example`. Do not suggest
-  overwriting an existing `.env`, and state when defaults are mock-safe.
-- If the README mentions ports, scripts, process cleanup, browsers, Docker, Detox, Xcode,
-  Playwright, PM2, or emulator requirements, keep those details aligned with the implementation
-  `package.json`, nearest child `AGENTS.md`, and actual scripts.
-- End with `## Related` links to the demonstrated package README, nearby comparison implementations,
-  shared mocks, and scenario contracts when relevant.
+  when they fit the implementation.
+- Prefer monorepo-root setup/run commands, local `.env.example` guidance, and links to demonstrated
+  package READMEs, related implementations, shared mocks, or scenario contracts.
+- Keep ports, process cleanup, Docker, Playwright, Detox, Xcode, emulator, and PM2 details aligned
+  with scripts and local `AGENTS.md`.
 
 ## Shared failure modes
 
-- Package changes are not reflected in a package-backed implementation: run `pnpm build:pkgs`, then
-  rerun `pnpm implementation:run -- <implementation> implementation:install`.
-- Missing SDK APIs or stale SDK types in a package-backed implementation are package artifact or
-  install-state failures until proven otherwise. First compare the built package/tarball
-  declarations with the implementation's installed declarations. Do not add local shims, copied
-  types, wrapper types, casts, or source patches in the reference implementation to compensate for
-  stale installed SDK packages.
-- If the goal is full E2E setup rather than the narrowest refresh step, prefer the root
-  `pnpm setup:e2e:<implementation>` wrapper when one exists.
-- For a full E2E run, prefer the root `pnpm test:e2e:<implementation>` wrapper when one exists.
-- Behavior differs from the documented mock setup: compare the implementation `.env` with
-  `.env.example` before changing code.
-- The app or mocks fail to bind local ports: stop only the affected implementation's local processes
-  with its documented stop command.
-- Do not use broad PM2 cleanup for reference apps. Prefer implementation-local `serve:stop` scripts
-  where they exist.
-- Implementation-specific runtime failures such as Docker availability, Playwright browser setup,
-  emulator requirements, `.env` drift, PM2 state, and local port conflicts belong in the relevant
-  implementation `AGENTS.md`.
+- If package changes are not reflected in an implementation, run `pnpm build:pkgs`, then rerun that
+  implementation's install script.
+- Missing SDK APIs or stale SDK types in an implementation are artifact or install-state failures
+  until proven otherwise; compare built package declarations with installed declarations before
+  adding implementation-local shims.
+- Prefer root `pnpm setup:e2e:<implementation>` and `pnpm test:e2e:<implementation>` wrappers when
+  they exist.
+- For native and React Native E2E, prefer the child implementation's runner script over raw tool
+  invocations. The runners start mocks, build/install apps, configure ports, and clean up their own
+  child processes.
+- Do not treat a missing attached emulator/simulator before a runner starts as proof that E2E cannot
+  run locally. Try the documented runner or report its concrete preflight failure.
+- Do not treat a generic implementation `test` script as a replacement for Playwright, Detox,
+  Maestro, or XCUITest. If the E2E concern is app behavior, run the E2E command.
+- If behavior differs from documented mocks, compare the implementation `.env` with `.env.example`
+  before changing code.
+- Stop only the affected implementation's local processes with its documented stop command. Do not
+  use broad PM2 cleanup.
 
 ## Preview panel contract
 
-- `PREVIEW_PANEL_SCENARIOS.md` is the shared contract for cross-platform preview-panel E2E behavior.
-- Keep scenario names, fixture IDs, accessibility identifiers, and test expectations aligned across
-  React Native Detox and native iOS XCUITest coverage.
-- Do not add debug-only UI labels solely to satisfy preview-panel tests; assertions must observe
-  rendered content or real controls.
+- `PREVIEW_PANEL_SCENARIOS.md` is the shared cross-platform preview-panel E2E contract.
+- Keep scenario names, fixture IDs, accessibility identifiers, and expectations aligned across React
+  Native Detox, native iOS XCUITest, Android Maestro, and affected package tests.
+- Do not add debug-only UI labels solely for tests; assertions should observe rendered content or
+  real controls.
 
-## Usually validate
+## Validate
 
-- Run implementation `typecheck` for local TypeScript or TSX changes when the implementation
-  provides it.
-- Run `build` when changing production bundling, static assets, copied SDK assets, or serving
-  behavior.
-- Run implementation unit tests only when meaningful local unit tests exist and the changed behavior
-  is covered there.
-- Run Detox or XCUITest for native implementation changes that affect runtime tracking, preview
-  behavior, navigation, offline behavior, or end-to-end user experience.
+- Run implementation `typecheck` for local TypeScript or TSX changes when available.
+- Run `build` for production bundling, static assets, copied SDK assets, or serving changes.
+- Run unit tests only when meaningful local tests exist for the changed behavior.
+- Run Playwright, Detox, XCUITest, or Maestro when user-visible behavior, routing, event flow,
+  tracking, preview behavior, navigation, offline behavior, or native lifecycle behavior changes.
+- Use targeted E2E first: Playwright project/file filters, RN Detox `--test-file` or `-t`, Android
+  Maestro `--flow`, and iOS `IOS_ONLY_TESTING` or the local iOS runner's `ONLY_TESTING`.

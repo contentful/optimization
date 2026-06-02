@@ -41,8 +41,8 @@ The Web SDK is the browser-side package in the Optimization SDK Suite. It lets c
 
 - evaluate browser events such as `page()`, `identify()`, and `track()` and receive profile data,
   selected optimizations, and Custom Flag changes
-- persist consent, profile state, selected optimizations, and the anonymous profile identifier in
-  browser-managed storage
+- persist consent and, when persistence consent permits it, profile state, selected optimizations,
+  changes, and the anonymous profile identifier in browser-managed storage
 - resolve optimized Contentful entries in the browser after baseline content has been fetched
 - resolve merge tags against the current profile
 - emit page, component view, click, hover, and custom business events from the browser
@@ -62,7 +62,8 @@ becomes known.
 In practice, most Web SDK integrations follow this high-level sequence:
 
 1. Create one SDK instance for the current page or SPA runtime.
-2. Let the application own consent UI and call `consent(true | false)` when the user makes a choice.
+2. Apply the application's consent policy: seed `defaults: { consent: true }` for default-on
+   integrations, or call `consent(true | false)` from a consent UI or CMP callback.
 3. Emit `page()` on the first load and again whenever the active route changes.
 4. Fetch baseline Contentful entries and resolve variants with `resolveOptimizedEntry()`.
 5. Render flags and merge tags from current SDK state.
@@ -158,9 +159,23 @@ Notes:
 The Web SDK exposes a browser-side `consent()` method, but your application still owns the consent
 policy and user experience.
 
-By default, only `identify` and `page` are allowed before consent is explicitly set. Other event
-types are blocked until the user accepts consent. When consent is accepted, the Web SDK also starts
-any auto-enabled entry interaction trackers.
+If your application policy permits Optimization by default and you do not render an end-user consent
+UI, seed accepted consent during initialization:
+
+```ts
+export const optimization = new ContentfulOptimization({
+  clientId: APP_CONFIG.optimizationClientId,
+  defaults: { consent: true },
+})
+```
+
+That starts all gated SDK events immediately and permits durable profile-continuity storage for
+profile, selected optimizations, changes, and the anonymous ID. Consent defaults do not change
+feature defaults such as `autoTrackEntryInteraction`; configure those separately when you want
+automatic tracking enabled.
+
+If your application policy depends on user choice, leave SDK consent unset at startup and call
+`consent(true | false)` from an application-owned banner or CMP callback:
 
 ```ts
 const acceptButton = document.querySelector<HTMLButtonElement>('#consent-accept')
@@ -188,8 +203,16 @@ Important behavior:
 - `reset()` is not a consent API; it clears profile-related state but intentionally preserves the
   consent choice
 
+By default, only `identify` and `page` are allowed before consent is explicitly set. Other event
+types are blocked until consent is granted or the event type is allow-listed. For cross-SDK consent
+policy guidance, see
+[Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md).
+
 If your policy requires a stricter pre-consent posture, configure `allowedEventTypes: []` during
 initialization instead of relying on the default `['identify', 'page']`.
+
+If events are allowed but durable profile continuity must stay session-only, call
+`optimization.consent({ events: true, persistence: false })`.
 
 ## 3. Emit `page()` on first load and route changes
 
@@ -628,7 +651,8 @@ For the lower-level mechanics behind that handoff, see
 
 That is the pattern shown in the `node-sdk+web-sdk` reference implementation:
 
-- the server persists `ANONYMOUS_ID_COOKIE` with `path: '/'` and `sameSite: 'lax'`
+- the server persists `ANONYMOUS_ID_COOKIE` with `path: '/'` and `sameSite: 'lax'` when consent
+  permits profile continuity
 - the browser Web SDK reads the same cookie during initialization
 - after hydration, browser events continue from the same anonymous profile instead of starting over
 

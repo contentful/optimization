@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { getAnonymousIdFromCookie, getAnonymousIdFromStorage } from './utils'
 
 test.describe('unidentified user', () => {
   test.beforeEach(async ({ page }) => {
@@ -6,33 +7,32 @@ test.describe('unidentified user', () => {
     await page.waitForLoadState('domcontentloaded')
   })
 
-  test('displays common variants', async ({ page }) => {
+  test('does not store profile continuity before app consent', async ({ context }) => {
+    await expect.poll(async () => await getAnonymousIdFromCookie(context)).toBeUndefined()
+    await expect.poll(async () => await getAnonymousIdFromStorage(context)).toBeUndefined()
+  })
+
+  test('displays common baselines before app consent', async ({ page }) => {
     await expect(
-      page.getByText(
-        'This is a merge tag content entry that displays the visitor\'s continent "EU" embedded within the text.',
-      ),
+      page.getByText('This is a baseline content entry for visitors from any continent.'),
     ).toBeVisible()
 
     await expect(
-      page.getByText('This is a variant content entry for visitors from Europe.'),
-    ).toBeVisible()
-
-    await expect(
-      page.getByText('This is a variant content entry for visitors using a desktop browser.'),
+      page.getByText('This is a baseline content entry for all visitors using any device.'),
     ).toBeVisible()
   })
 
-  test('displays unidentified user variants', async ({ page }) => {
+  test('displays unidentified user baselines before app consent', async ({ page }) => {
     await expect(page.getByText('This is a level 0 nested baseline entry.')).toBeVisible()
 
     await expect(page.getByText('This is a level 1 nested baseline entry.')).toBeVisible()
 
     await expect(page.getByText('This is a level 2 nested baseline entry.')).toBeVisible()
 
-    await expect(page.getByText('This is a variant content entry for new visitors.')).toBeVisible()
+    await expect(page.getByText('This is a baseline content entry for all users.')).toBeVisible()
 
     await expect(
-      page.getByText('This is a variant content entry for an A/B/C experiment: B'),
+      page.getByText('This is a baseline content entry for an A/B/C experiment: A'),
     ).toBeVisible()
 
     await expect(

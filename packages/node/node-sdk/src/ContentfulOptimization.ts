@@ -3,6 +3,7 @@ import {
   normalizeLocale,
   resolveContentfulLocale,
   type CoreStatelessConfig,
+  type EventType,
 } from '@contentful/optimization-core'
 import type { App } from '@contentful/optimization-core/api-schemas'
 import { OPTIMIZATION_NODE_SDK_NAME, OPTIMIZATION_NODE_SDK_VERSION } from './constants'
@@ -10,8 +11,10 @@ import { OPTIMIZATION_NODE_SDK_NAME, OPTIMIZATION_NODE_SDK_VERSION } from './con
 const DEFAULT_RUNTIME_LOCALE = 'en-US'
 const DEFAULT_ACCEPT_LANGUAGE_QUALITY = 1
 const QUALITY_PARAM_PATTERN = /;\s*q=/
+const DEFAULT_NODE_ALLOWED_EVENT_TYPES: EventType[] = ['identify', 'page']
 
 type NodeEventBuilderConfig = Partial<Omit<NonNullable<CoreStatelessConfig['eventBuilder']>, 'app'>>
+type PublicNodeEventBuilderConfig = Omit<NodeEventBuilderConfig, 'getConsent'>
 
 interface HeaderRequestLike {
   acceptsLanguages?: () => string[]
@@ -64,10 +67,13 @@ export interface OptimizationNodeConfig extends Omit<CoreStatelessConfig, 'event
    *
    * @remarks
    * Any provided fields are merged with the default Node SDK metadata.
+   * Request-scoped consent should be bound with `forRequest()`, not configured
+   * on the SDK singleton.
+   *
    * This differs from {@link CoreStatelessConfig} eventBuilder, which expects
    * a full configuration object.
    */
-  eventBuilder?: NodeEventBuilderConfig
+  eventBuilder?: PublicNodeEventBuilderConfig
 }
 
 function normalizeHeaderValue(header: unknown): string | undefined {
@@ -173,9 +179,13 @@ function getRequestLocaleCandidates(input: RequestLocaleInput): string[] {
  *   logLevel: 'info',
  * })
  *
- * const requestOptions = { locale: 'fr-CA' }
+ * const requestOptimization = sdk.forRequest({
+ *   consent: true,
+ *   experienceOptions: { locale: 'fr-CA' },
+ *   profile: { id: 'profile-id' },
+ * })
  *
- * await sdk.page({ profile: { id: 'profile-id' } }, requestOptions)
+ * await requestOptimization.page()
  * ```
  *
  * @see {@link CoreStateless}
@@ -196,11 +206,16 @@ class ContentfulOptimization extends CoreStateless {
    * const optimization = new ContentfulOptimization({ clientId: 'my-client-id' })
    * ```
    */
-  constructor({ app, eventBuilder, ...config }: OptimizationNodeConfig) {
-    const { library, ...eventBuilderConfig } = eventBuilder ?? {}
+  constructor({ app, allowedEventTypes, eventBuilder, ...config }: OptimizationNodeConfig) {
+    const {
+      library,
+      getConsent: _getConsent,
+      ...eventBuilderConfig
+    } = (eventBuilder ?? {}) as NodeEventBuilderConfig
 
     super({
       ...config,
+      allowedEventTypes: allowedEventTypes ?? DEFAULT_NODE_ALLOWED_EVENT_TYPES,
       eventBuilder: {
         app,
         channel: 'server',
@@ -209,6 +224,7 @@ class ContentfulOptimization extends CoreStateless {
           version: OPTIMIZATION_NODE_SDK_VERSION,
           ...library,
         },
+        getConsent: () => false,
         ...eventBuilderConfig,
       },
     })

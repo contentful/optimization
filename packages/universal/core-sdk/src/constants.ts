@@ -52,6 +52,13 @@ export const ANONYMOUS_ID_KEY = '__ctfl_opt_anonymous_id__'
 export const CONSENT_KEY = '__ctfl_opt_consent__'
 
 /**
+ * Storage key for the persisted profile-continuity persistence consent status.
+ *
+ * @internal
+ */
+export const PERSISTENCE_CONSENT_KEY = '__ctfl_opt_persistence_consent__'
+
+/**
  * Storage key for cached Custom Flags.
  *
  * @internal

@@ -1,48 +1,39 @@
 # AGENTS.md
 
-Read the repository root `AGENTS.md`, then `implementations/AGENTS.md`, before this file.
+React Native reference implementation for `@contentful/optimization-react-native`.
 
-## Scope
+## Rules
 
-This is the React Native reference implementation for `@contentful/optimization-react-native`.
-
-## Key paths
-
-- `components/`
-- `screens/`
-- `sections/`
-- `utils/`
-- `e2e/`
-- `scripts/`
-- `.env.example`
-
-## Local rules
-
-- Keep this app focused on demonstrating SDK usage. Reusable SDK behavior belongs in
-  `packages/react-native-sdk`.
-- This implementation is heavier to run than the web and Node implementations because it uses React
-  Native tooling plus Detox.
-- Ensure an Android emulator is running before Android Detox flows.
-
-## Common failure modes
-
-- Detox cannot launch or attach to a device: confirm an Android emulator is already running before
-  retrying.
-- Metro or React Native tooling reports a port `8081` conflict: use
-  `pnpm implementation:run -- react-native-sdk start:clean` or otherwise stop only the conflicting
-  local process.
+- Keep reusable SDK behavior in `packages/react-native-sdk`.
+- React Native plus Detox flows are heavier than the web and Node implementations.
+- Prefer the one-shot Android Detox runner for local E2E. It creates `.env` from `.env.example`,
+  starts mocks and Metro, builds through Detox, runs tests, writes logs, and cleans up its own child
+  processes.
+- A missing `adb devices` entry before the Detox runner starts is not proof that RN E2E cannot run
+  on this machine; Detox can launch the configured emulator during the test run. Report the runner's
+  actual failure if setup does not complete.
+- For Metro port `8081` conflicts, use `pnpm implementation:run -- react-native-sdk start:clean` or
+  stop only the conflicting local process.
 
 ## Commands
 
-- `pnpm implementation:run -- react-native-sdk implementation:install`
-- `pnpm implementation:run -- react-native-sdk typecheck`
-- `pnpm implementation:run -- react-native-sdk test`
-- `pnpm implementation:run -- react-native-sdk test:e2e:android:build`
-- `pnpm implementation:run -- react-native-sdk test:e2e:android:run`
-- `pnpm implementation:run -- react-native-sdk test:e2e:android:full`
+- Install local package tarballs after package changes:
+  `pnpm implementation:run -- react-native-sdk implementation:install`
+- Typecheck: `pnpm implementation:run -- react-native-sdk typecheck`
+- Lint: `pnpm implementation:run -- react-native-sdk lint`
+- Full local Android Detox flow: `pnpm implementation:run -- react-native-sdk test:e2e:android:full`
+- Target one Android Detox file:
+  `pnpm implementation:run -- react-native-sdk test:e2e:android:full -- --test-file e2e/<file>.test.js`
+- Target one Android Detox test name:
+  `pnpm implementation:run -- react-native-sdk test:e2e:android:full -- -t "<name pattern>"`
+- Build/run split when reusing artifacts:
+  `pnpm implementation:run -- react-native-sdk test:e2e:android:build` then
+  `pnpm implementation:run -- react-native-sdk test:e2e:android:run -- e2e/<file>.test.js`
+- `test` is plain Jest for app-level tests, not the Detox E2E path. If it fails in setup before
+  reaching app assertions, do not use that result to claim RN E2E cannot run locally.
 
-## Usually validate
+## Validate
 
 - Run `typecheck` for local changes.
-- Run `test` for app-level Jest changes when they are relevant.
+- Run `test` only for relevant app-level Jest changes after confirming the Jest setup is the target.
 - Run Android Detox for runtime tracking, offline behavior, navigation, or end-to-end UX changes.

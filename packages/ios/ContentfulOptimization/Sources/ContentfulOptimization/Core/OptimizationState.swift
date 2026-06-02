@@ -4,6 +4,7 @@ import Foundation
 public struct OptimizationState: Equatable {
     public var profile: [String: Any]?
     public var consent: Bool?
+    public var persistenceConsent: Bool? = nil
     public var canPersonalize: Bool
     public var changes: [[String: Any]]?
     public var locale: String? = nil
@@ -11,6 +12,7 @@ public struct OptimizationState: Equatable {
     public static let empty = OptimizationState(
         profile: nil,
         consent: nil,
+        persistenceConsent: nil,
         canPersonalize: false,
         changes: nil,
         locale: nil
@@ -25,6 +27,7 @@ public struct OptimizationState: Equatable {
 
         return lhsProfile == rhsProfile
             && lhs.consent == rhs.consent
+            && lhs.persistenceConsent == rhs.persistenceConsent
             && lhs.canPersonalize == rhs.canPersonalize
             && lhsChanges == rhsChanges
             && lhs.locale == rhs.locale

@@ -1,40 +1,24 @@
 # AGENTS.md
 
-Read the repository root `AGENTS.md` first.
+Shared mock fixtures, MSW handlers, mock server behavior, and Contentful test-space utilities used
+by unit tests and reference implementations.
 
-## Scope
-
-This package owns shared mock fixtures, MSW handlers, mock server behavior, and Contentful test
-space utilities used by unit tests and reference implementations.
-
-## Key paths
-
-- `src/`
-- `scripts/`
-- `.contentfulrc.json` for local Contentful credentials
-
-## Local rules
+## Rules
 
 - Keep mock contracts aligned with `@contentful/optimization-api-schemas`.
-- Server behavior changes here can affect multiple implementations at once. Broaden validation when
-  endpoint behavior or fixture shape changes.
+- Treat endpoint behavior and fixture-shape changes as cross-implementation changes.
 - Do not commit secrets or local credentials from `.contentfulrc.json`.
-- Do not run `upload:ctfl:space` unless the user explicitly asked for Contentful space mutation.
-- Keep `README.md` framed as internal testing support, not as a public SDK package. Preserve the
-  sections that explain when to use mocks in unit tests, local dev and E2E flows, fixture updates,
-  and Contentful test-space setup.
-- README commands must prefer repo-root wrappers such as `pnpm serve:mocks` for common flows and
-  package-filter commands only for package-specific fixture or Contentful space utilities.
+- Do not run `upload:ctfl:space` unless the user explicitly requested Contentful space mutation.
+- Keep `README.md` framed as internal testing support with mock usage, fixture updates, and
+  Contentful test-space setup. Prefer repo-root wrappers such as `pnpm serve:mocks` for common
+  flows.
 
 ## Commands
 
-- `pnpm --filter mocks serve`
-- `pnpm --filter mocks typecheck`
-- `pnpm --filter mocks test:unit`
-- `pnpm --filter mocks fetch:ctfl`
-- `pnpm --filter mocks generate:ctfl:types`
+- `pnpm --filter mocks <script>` with `serve`, `typecheck`, `test:unit`, `fetch:ctfl`, or
+  `generate:ctfl:types`.
 
-## Usually validate
+## Validate
 
 - Run `typecheck` and `test:unit` for code changes.
-- Run affected implementation E2E when mock server routes, fixtures, or API response shapes change.
+- Run affected implementation E2E when routes, fixtures, or API response shapes change.

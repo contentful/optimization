@@ -54,7 +54,8 @@ Most Compose integrations follow this sequence:
 
 1. Add the Maven dependency and create an `OptimizationConfig`.
 2. Wrap the app's root content in `OptimizationRoot`.
-3. Collect consent, or seed consent for demos and trusted internal contexts.
+3. Apply the application's consent policy: seed consent when default-on SDK activity is permitted,
+   or collect consent in app UI.
 4. Fetch Contentful entries with linked optimization references.
 5. Render each Contentful entry through `OptimizedEntry`.
 6. Enable view and tap tracking where they fit the screen.
@@ -90,14 +91,13 @@ val optimizationConfig = OptimizationConfig(
     environment = "master",
     contentfulLocales = ContentfulLocales(default = "en-US"),
     locale = "en-US",
-    defaults = StorageDefaults(consent = true),
     debug = BuildConfig.DEBUG,
 )
 ```
 
-Only `clientId` is required. Use `defaults = StorageDefaults(consent = true)` only when the app can
-start with consent already granted, such as a demo or an internal validation app. For production
-apps, connect `client.consent(true)` and `client.consent(false)` to the app's consent UI.
+Only `clientId` is required. If application policy permits Optimization by default and no end-user
+consent UI is rendered, set `defaults = StorageDefaults(consent = true)`. Otherwise, leave defaults
+unset and connect `client.consent(true)` and `client.consent(false)` to the app's consent UI.
 
 Use `contentfulLocales` and `locale` when the same screen renders localized Contentful entries. For
 the full locale model, see
@@ -152,9 +152,21 @@ coroutines. For lifecycle details, see
 
 ## 3. Handle consent
 
-The SDK blocks most Analytics events until consent is granted. `identify` and `screen` remain
-allowed before consent so a mobile journey can establish profile context and anonymous screen
-analytics.
+If your application policy permits Optimization by default, seed accepted consent in
+`OptimizationConfig` and omit the consent gate:
+
+```kotlin
+val optimizationConfig = OptimizationConfig(
+    clientId = "your-client-id",
+    defaults = StorageDefaults(consent = true),
+)
+```
+
+That starts all gated SDK events immediately and permits durable profile-continuity storage for
+profile, selected optimizations, changes, and the anonymous ID.
+
+When application policy depends on user choice, leave consent unset and call
+`client.consent(true | false)` from an application-owned consent UI.
 
 ```kotlin
 @Composable
@@ -180,8 +192,20 @@ fun ConsentGate(content: @Composable () -> Unit) {
 }
 ```
 
-The consent value is persisted and restored on later launches. Use the app's consent policy to
-decide whether a stored value remains valid.
+`identify` and `screen` remain allowed before consent so a mobile journey can establish profile
+context and anonymous screen analytics. For cross-SDK consent policy guidance, see
+[Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md).
+
+The consent value is persisted and restored on later launches. Profile-continuity state persists
+only when persistence consent allows it. Use the app's consent policy to decide whether a stored
+value remains valid.
+
+When durable profile-continuity persistence is allowed, SDK state from an Experience response is
+published only after the corresponding storage write has settled. Wait for SDK-derived state instead
+of adding sleeps before relaunching or terminating the app in tests.
+
+Use `client.consent(events = true, persistence = false)` when events are allowed but durable profile
+continuity must stay session-only.
 
 ## 4. Personalize entries with OptimizedEntry
 

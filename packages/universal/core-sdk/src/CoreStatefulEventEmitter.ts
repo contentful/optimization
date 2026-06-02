@@ -62,7 +62,7 @@ abstract class CoreStatefulEventEmitter
   protected readonly flagObservables = new Map<string, Observable<Json>>()
   private readonly lastTrackedFlagValues = new Map<string, Json>()
 
-  protected abstract readonly allowedEventTypes: EventType[]
+  protected abstract readonly allowedEventTypes: readonly string[]
   protected abstract readonly experienceQueue: ExperienceQueue
   protected abstract readonly insightsQueue: InsightsQueue
   protected abstract readonly onEventBlocked?: CoreStatefulConfig['onEventBlocked']
@@ -288,20 +288,16 @@ abstract class CoreStatefulEventEmitter
   }
 
   hasConsent(name: string): boolean {
-    const { [name]: mappedEventType } = CONSENT_EVENT_TYPE_MAP
-    const isAllowed =
-      mappedEventType !== undefined
-        ? this.allowedEventTypes.includes(mappedEventType)
-        : this.allowedEventTypes.some((eventType) => eventType === name)
-
-    return !!consentSignal.value || isAllowed
+    return (
+      !!consentSignal.value || this.allowedEventTypes.includes(CONSENT_EVENT_TYPE_MAP[name] ?? name)
+    )
   }
 
   onBlockedByConsent(name: string, args: readonly unknown[]): void {
     coreLogger.warn(
       `Event "${name}" was blocked due to lack of consent; payload: ${JSON.stringify(args)}`,
     )
-    this.reportBlockedEvent('consent', name, args)
+    this.reportBlockedEvent(name, args)
   }
 
   protected async sendExperienceEvent(
@@ -392,12 +388,8 @@ abstract class CoreStatefulEventEmitter
     return trackedObservable
   }
 
-  private reportBlockedEvent(
-    reason: BlockedEvent['reason'],
-    method: string,
-    args: readonly unknown[],
-  ): void {
-    const event: BlockedEvent = { reason, method, args }
+  private reportBlockedEvent(method: string, args: readonly unknown[]): void {
+    const event: BlockedEvent = { reason: 'consent', method, args }
 
     try {
       this.onEventBlocked?.(event)

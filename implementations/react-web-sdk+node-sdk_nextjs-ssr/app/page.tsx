@@ -6,6 +6,8 @@ import type { ContentEntry } from '@/types/contentful'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import { cookies, headers } from 'next/headers'
 
+const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
+
 function getEntryText(entry: ContentEntry): string {
   return typeof entry.fields.text === 'string' ? entry.fields.text : 'No content'
 }
@@ -35,6 +37,7 @@ export default async function Home() {
   const headerStore = await headers()
 
   const anonymousId = cookieStore.get(ANONYMOUS_ID_COOKIE)?.value
+  const appConsent = cookieStore.get(APP_PERSONALIZATION_CONSENT_COOKIE)?.value === 'granted'
   const profile = anonymousId ? { id: anonymousId } : undefined
   const { contentfulLocale, eventLocale } = sdk.resolveRequestLocale(
     headerStore.get('accept-language'),
@@ -43,21 +46,25 @@ export default async function Home() {
 
   const [baselineEntries, optimizationData] = await Promise.all([
     fetchEntries(ENTRY_IDS, resolvedContentfulLocale),
-    sdk.page(
-      {
-        locale: eventLocale,
-        userAgent: headerStore.get('user-agent') ?? 'next-js-server',
-        profile,
-      },
-      { locale: resolvedContentfulLocale },
-    ),
+    appConsent
+      ? sdk
+          .forRequest({
+            consent: { events: true, persistence: true },
+            eventContext: {
+              locale: eventLocale,
+              userAgent: headerStore.get('user-agent') ?? 'next-js-server',
+            },
+            experienceOptions: { locale: resolvedContentfulLocale },
+            profile,
+          })
+          .page()
+      : undefined,
   ])
 
   const resolvedEntries = baselineEntries.map((entry) => {
-    const { entry: resolved } = sdk.resolveOptimizedEntry(
-      entry,
-      optimizationData.selectedOptimizations,
-    )
+    const { entry: resolved } = optimizationData
+      ? sdk.resolveOptimizedEntry(entry, optimizationData.selectedOptimizations)
+      : { entry }
     return resolved
   })
 

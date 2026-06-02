@@ -26,18 +26,18 @@ export default async function RootLayout({
   const resolvedContentfulLocale = requireContentfulLocale(contentfulLocale)
   const optimizationData = await getOptimizationData(eventLocale, resolvedContentfulLocale)
   const htmlLang = getHtmlLang(resolvedContentfulLocale)
+  const defaults = optimizationData
+    ? {
+        profile: optimizationData.profile,
+        selectedOptimizations: optimizationData.selectedOptimizations,
+        changes: optimizationData.changes,
+      }
+    : undefined
 
   return (
     <html lang={htmlLang} className="h-full antialiased">
       <body className="min-h-full flex flex-col">
-        <ClientProviderWrapper
-          contentfulLocale={resolvedContentfulLocale}
-          defaults={{
-            profile: optimizationData.profile,
-            selectedOptimizations: optimizationData.selectedOptimizations,
-            changes: optimizationData.changes,
-          }}
-        >
+        <ClientProviderWrapper contentfulLocale={resolvedContentfulLocale} defaults={defaults}>
           {children}
         </ClientProviderWrapper>
       </body>

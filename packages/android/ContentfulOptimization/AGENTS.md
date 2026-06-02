@@ -1,66 +1,43 @@
 # AGENTS.md
 
-Read the repository root `AGENTS.md`, then `packages/AGENTS.md`, then `packages/android/AGENTS.md`,
-before this file.
+Android library module (AAR) for the native Kotlin SDK: public API, QuickJS bridge integration,
+native bindings, persistence, lifecycle/network handlers, tracking, Compose UI, preview panel, and
+assets.
 
-## Scope
+## Rules
 
-This directory is the Android library module (AAR) for the Contentful Optimization SDK. It contains
-the Kotlin native runtime, QuickJS bridge integration (via `io.github.dokar3:quickjs-kt`), native
-polyfill bindings (URLSession/OkHttp/timers/UUID), and public API surface.
-
-## Key paths
-
-- `src/main/kotlin/com/contentful/optimization/bridge/` — QuickJS context manager and callback
-  manager
-- `src/main/kotlin/com/contentful/optimization/core/` — public API, data models, config
-- `src/main/kotlin/com/contentful/optimization/polyfills/` — native bindings exposed to JS
-  (`__nativeFetch`, `__nativeSetTimeout`, etc.); JS polyfill source lives in
-  `packages/universal/optimization-js-bridge/src/polyfills/` and is prepended into the UMD bundle
-- `src/main/kotlin/com/contentful/optimization/storage/` — SharedPreferences persistence
-- `src/main/kotlin/com/contentful/optimization/handlers/` — lifecycle and network handlers
-- `src/main/kotlin/com/contentful/optimization/tracking/` — view tracking state machine and metadata
-- `src/main/kotlin/com/contentful/optimization/compose/` — Jetpack Compose UI layer
-  (OptimizationRoot, OptimizedEntry, LazyColumn tracking, screen/click/view tracking)
-- `src/main/kotlin/com/contentful/optimization/preview/` — preview panel UI (theme, components,
-  overlay, ViewModel, Contentful client, Activity)
-- `src/main/assets/` — JS bridge UMD bundle (copied from the `@contentful/optimization-js-bridge`
-  build; polyfills are prepended into the bundle itself)
-
-## Local rules
-
-- All QuickJs access must go through `QuickJsContextManager`. Never call `quickJs.evaluate()` from
-  outside the manager.
-- All JS engine calls must happen on the dedicated `quickJsDispatcher` thread. The manager enforces
-  this.
-- Do not hand-edit files in `src/main/assets/`. The UMD bundle is copied from the bridge build,
-  which prepends polyfill sources from `packages/universal/optimization-js-bridge/src/polyfills/`.
-- Keep bridge call signatures and JSON payload shapes aligned with
+- All QuickJS access goes through `QuickJsContextManager` on the dedicated `quickJsDispatcher`
+  thread.
+- Do not hand-edit `src/main/assets/`; it is copied from the bridge build with shared polyfills
+  prepended.
+- Keep bridge signatures and JSON payload shapes aligned with
   `packages/universal/optimization-js-bridge/src/index.ts`.
-- Keep Compose UI components aligned with iOS SwiftUI views when changing shared tracking or preview
+- Keep Compose UI components aligned with iOS SwiftUI views for shared tracking or preview
   contracts.
-- `PreviewPanelActivity` uses static client references for View-based app integration. Keep this
-  pattern minimal and document the lifecycle implications.
-- `ViewTrackingController` uses `positionInRoot()` coordinates. The `ScrollContext.scrollY` is
-  always 0 because element positions already account for scroll offset.
+- `PreviewPanelActivity` uses static client references for View-based integration; keep the pattern
+  minimal and document lifecycle implications.
+- `ViewTrackingController` uses `positionInRoot()` coordinates; `ScrollContext.scrollY` stays `0`
+  because positions already include scroll offset.
 
 ## Commands
 
-- Gradle build commands require Android SDK. Use `./gradlew build` from this directory (the module
-  ships its own pinned wrapper, 8.10.2, and pins its plugin versions in `settings.gradle.kts`, so it
-  builds standalone — not only inside the demo's composite build).
-- Run `pnpm --filter @contentful/optimization-js-bridge build` to rebuild the JS bridge bundle
-  before Gradle build. `buildJsBridge` (wired into `preBuild`) also does this automatically.
+- From this directory: `./gradlew build`
+- Bridge build: `pnpm --filter @contentful/optimization-js-bridge build`
+- Local Maven smoke test:
+  `./gradlew publishToMavenLocal -Pcontentful.optimization.version=0.0.0-local`
+- Downstream Maestro after SDK runtime or UI adapter changes:
+  `pnpm implementation:run -- android-sdk test:e2e:compose -- --flow <suite>` and
+  `pnpm implementation:run -- android-sdk test:e2e:views -- --flow <suite>`.
 
 ## Releasing
 
-- Published to Maven Central (Sonatype Central Portal) as `com.contentful.java:optimization-android`
-  by `.github/workflows/publish-android.yaml` on each `v*` release, in parallel with the Swift
-  package. Version comes from the tag (`-Pcontentful.optimization.version` / `RELEASE_VERSION`); the
-  group reuses Contentful's existing verified namespace `com.contentful.java`.
-- Credentials are GitHub Actions secrets on `contentful/optimization`, provisioned and self-verified
-  by `scripts/setup-maven-central-credential.sh` (Central Portal token + GPG signing key). The
-  published artifacts are generated; nobody edits them by hand.
-- Smoke-test packaging locally with
-  `./gradlew publishToMavenLocal -Pcontentful.optimization.version=0.0.0-local` and consume it from
-  a real app via `mavenLocal()` — this is how the Android demo is verified before a real release.
+- Maven Central publishing uses `.github/workflows/publish-android.yaml` on `v*` tags with group
+  `com.contentful.java` and artifact `optimization-android`.
+- Published artifacts are generated; do not edit them by hand.
+
+## Validate
+
+- Rebuild the bridge before Gradle checks when bridge source changed.
+- Smoke-test packaging with `publishToMavenLocal` before release-sensitive changes.
+- Run targeted Android Maestro through the reference implementation runner for behavior that affects
+  persistence, lifecycle, tracking, preview-panel UI, or public Compose/XML Views adapters.

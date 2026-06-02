@@ -71,6 +71,28 @@ class OptimizationConfigTest {
     }
 
     @Test
+    fun `serializes persistence consent default`() {
+        val config = OptimizationConfig(
+            clientId = "test-client",
+            defaults = StorageDefaults(consent = true, persistenceConsent = false),
+        )
+
+        val defaults = JSONObject(config.toJSON()).getJSONObject("defaults")
+
+        assertEquals(true, defaults.getBoolean("consent"))
+        assertEquals(false, defaults.getBoolean("persistenceConsent"))
+    }
+
+    @Test
+    fun `serializes bridge-only anonymous id default`() {
+        val config = OptimizationConfig(clientId = "test-client")
+
+        val defaults = JSONObject(config.toJSON(anonymousId = "anonymous-id")).getJSONObject("defaults")
+
+        assertEquals("anonymous-id", defaults.getString("anonymousId"))
+    }
+
+    @Test
     fun `checks exact matches before fallback matches`() {
         val config = OptimizationConfig(
             clientId = "test-client",

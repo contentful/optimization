@@ -1,45 +1,21 @@
 # AGENTS.md
 
-Read the repository root `AGENTS.md`, then `implementations/AGENTS.md`, before this file.
+React reference implementation demonstrating direct `@contentful/optimization-web` usage in a React
+application.
 
-## Scope
+## Rules
 
-This is the React Web reference implementation used to demonstrate `@contentful/optimization-web`
-usage in a React application.
-
-## Key paths
-
-- `src/`
-- `e2e/`
-- `.env.example`
-
-## Local rules
-
-- Keep this app focused on example usage. Reusable React SDK abstractions belong in
-  `packages/web/frameworks/react-web-sdk`.
+- Keep reusable React SDK abstractions in `packages/web/frameworks/react-web-sdk`, not here.
 - This implementation uses Rsbuild for consistency with the SDK toolchain.
-- `serve` uses PM2-managed processes. Use `serve:stop` when done.
-
-## Common failure modes
-
-- Playwright reports a missing browser or executable: run `pnpm playwright:install` before retrying
-  E2E.
-- The app or mocks fail to bind local ports such as `3000` or `8000`: stop only this
-  implementation's local processes with `pnpm implementation:run -- web-sdk_react serve:stop`.
+- `serve` uses PM2-managed processes; use `serve:stop` when done.
 
 ## Commands
 
-- `pnpm implementation:run -- web-sdk_react implementation:install`
-- `pnpm implementation:run -- web-sdk_react typecheck`
-- `pnpm implementation:run -- web-sdk_react build`
-- `pnpm implementation:run -- web-sdk_react dev`
-- `pnpm implementation:run -- web-sdk_react serve`
-- `pnpm implementation:run -- web-sdk_react serve:stop`
-- `pnpm implementation:run -- web-sdk_react implementation:test:e2e:run`
+- `pnpm implementation:run -- web-sdk_react <script>` with `implementation:install`, `typecheck`,
+  `build`, `dev`, `serve`, `serve:stop`, or `implementation:test:e2e:run`.
 
-## Usually validate
+## Validate
 
 - Run `typecheck` for local code changes.
-- Run `build` when changing production bundling behavior.
+- Run `build` for production bundling changes.
 - Run Playwright E2E for user-visible behavior, routing, event flow, or React integration changes.
-- There are no meaningful unit tests here.

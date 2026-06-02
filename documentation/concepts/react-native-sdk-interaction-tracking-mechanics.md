@@ -21,8 +21,8 @@ If you drop `OptimizationRoot` at the top, wrap `NavigationContainer` in
 - **Identify/screen events before consent** (blocked events: everything else until consent is
   `true`).
 - **Offline queueing and background flushing** when `@react-native-community/netinfo` is installed.
-- **Persistence across launches** via AsyncStorage (consent, profile, anonymous ID, selected
-  optimizations).
+- **Persistence across launches** via AsyncStorage for consent state and, when persistence consent
+  permits it, profile-continuity values such as profile, anonymous ID, and selected optimizations.
 
 Things you still have to enable yourself:
 
@@ -164,7 +164,7 @@ The React Native SDK layers RN-specific behavior on top:
    resumes flushing. If NetInfo is not installed the SDK logs a warning and stays always-online —
    you keep tracking but lose offline durability.
 2. **Background flushing.** On `AppState` transition to `background` or `inactive`, the SDK calls
-   `flush()` to drain the queue before the OS might suspend the process.
+   `flush()` and drains pending AsyncStorage persistence before the OS might suspend the process.
 3. **Final view event on background.** If an entry is mid-visibility-cycle when the app backgrounds,
    `useViewportTracking` pauses, emits a final view event if at least one event already fired, and
    resets.
@@ -176,24 +176,40 @@ configuration entry point.
 
 ### Persistence via AsyncStorage
 
-`AsyncStorageStore` persists the following across launches so tracking decisions and variant
-assignments survive a cold start:
+`AsyncStorageStore` persists consent-related state independently from profile-continuity values:
+
+| Key                       | Contents                                 |
+| ------------------------- | ---------------------------------------- |
+| `CONSENT_KEY`             | `'accepted'` / `'denied'` / absent.      |
+| `PERSISTENCE_CONSENT_KEY` | `'accepted'` / `'denied'` / absent.      |
+| `DEBUG_FLAG_KEY`          | Forces `logLevel` to `'debug'` when set. |
+
+Profile-continuity values persist and reload only when persistence consent allows durable storage:
 
 | Key                                | Contents                                                                           |
 | ---------------------------------- | ---------------------------------------------------------------------------------- |
-| `CONSENT_KEY`                      | `'accepted'` / `'denied'` / absent.                                                |
 | `PROFILE_CACHE_KEY`                | The aggregated profile returned from the Experience API.                           |
 | `SELECTED_OPTIMIZATIONS_CACHE_KEY` | Current audience/variant assignments. Drives which variant renders on next launch. |
 | `ANONYMOUS_ID_KEY`                 | Stable anonymous identifier until `identify` is called.                            |
 | `CHANGES_CACHE_KEY`                | Pending profile changes.                                                           |
-| `DEBUG_FLAG_KEY`                   | Forces `logLevel` to `'debug'` when set.                                           |
 
 Persistence is best-effort; write failures keep the SDK running on in-memory state. Structured
 values are schema-validated on load; malformed JSON is evicted.
 
-Why this matters for tracking: selected optimizations persist, so a user placed in Variant B
-continues to see it on the next launch and view/tap events carry the correct `experienceId` /
-`variantIndex` without re-round-tripping Experience first.
+AsyncStorage is not the source for live state reads after SDK initialization. The SDK hydrates
+allowed continuity values into memory during startup, then `sdk.states`, entry rendering, tracking
+metadata, and later Experience requests read from in-memory SDK state.
+
+AsyncStorage writes are serialized. When persistence consent permits durable profile continuity,
+Experience responses from `identify`, `page`, `screen`, `track`, or sticky `trackView` are mirrored
+to storage before the SDK publishes the resulting profile, selected optimizations, or changes
+through `sdk.states`. If AsyncStorage rejects a write, the SDK logs the failure and publishes the
+in-memory state only after that failure has been handled.
+
+Why this matters for tracking: when persistence consent permits durable profile continuity, selected
+optimizations persist, so a user placed in Variant B continues to see it on the next launch and
+view/tap events carry the correct `experienceId` / `variantIndex` without re-round-tripping
+Experience first.
 
 ## 3. Consent gating
 
@@ -216,13 +232,21 @@ To widen the default pre-consent allow-list, pass `allowedEventTypes` to `Optimi
 </OptimizationRoot>
 ```
 
+For default-on application policies without an end-user consent prompt, set
+`defaults={{ consent: true }}` on `OptimizationRoot` during initialization. Avoid setting default
+consent later from a component effect; that delays persistence policy until after child effects can
+start emitting events.
+
 When consent flips:
 
 - **`consent(true)`** — new events flow normally. Blocked events are _not_ retroactively replayed;
-  they were dropped at the guard (you can observe this via `onEventBlocked`). Consent persists to
-  AsyncStorage.
+  they were dropped at the guard (you can observe this via `onEventBlocked`). Event consent and
+  durable profile-continuity persistence consent persist to AsyncStorage.
+- **`consent({ events: true, persistence: false })`** — new events flow normally, but profile,
+  selected optimizations, changes, and the anonymous ID stay session-only until persistence consent
+  is granted.
 - **`consent(false)`** — the allow-list gate re-engages. In-flight events that already cleared the
-  guard continue to flush.
+  guard are purged from SDK queues. SDK-managed durable profile-continuity storage is cleared.
 
 ### "Why is nothing tracking?"
 
@@ -453,14 +477,15 @@ ones.
 
 ### OptimizationRoot props
 
-| Prop                    | Type                   | Default                        | Controls                                                                                          |
-| ----------------------- | ---------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------- |
-| `trackEntryInteraction` | `{ views?, taps? }`    | `{ views: true, taps: false }` | Default view/tap tracking for every `<OptimizedEntry>`. Omitted keys fall back to the defaults.   |
-| `liveUpdates`           | `boolean`              | `false`                        | Global live-updates default. When `false`, `<OptimizedEntry>` locks to the first variant it sees. |
-| `previewPanel`          | `PreviewPanelConfig`   | `undefined`                    | Forces `liveUpdates = true` whenever the panel is open (cannot be overridden).                    |
-| `onStatesReady`         | `(states) => cleanup`  | `undefined`                    | Registers app-level state subscribers when SDK state is ready.                                    |
-| `defaults.consent`      | `boolean \| undefined` | `undefined`                    | Initial consent state at startup. Overridden by `consent()` calls at runtime.                     |
-| `allowedEventTypes`     | `EventType[]`          | `['identify', 'screen']`       | Event types permitted while consent is `undefined` or `false`.                                    |
+| Prop                          | Type                   | Default                        | Controls                                                                                                            |
+| ----------------------------- | ---------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `trackEntryInteraction`       | `{ views?, taps? }`    | `{ views: true, taps: false }` | Default view/tap tracking for every `<OptimizedEntry>`. Omitted keys fall back to the defaults.                     |
+| `liveUpdates`                 | `boolean`              | `false`                        | Global live-updates default. When `false`, `<OptimizedEntry>` locks to the first variant it sees.                   |
+| `previewPanel`                | `PreviewPanelConfig`   | `undefined`                    | Forces `liveUpdates = true` whenever the panel is open (cannot be overridden).                                      |
+| `onStatesReady`               | `(states) => cleanup`  | `undefined`                    | Registers app-level state subscribers when SDK state is ready.                                                      |
+| `defaults.consent`            | `boolean \| undefined` | `undefined`                    | Initial consent state at startup. Overridden by `consent()` calls at runtime.                                       |
+| `defaults.persistenceConsent` | `boolean \| undefined` | `undefined`                    | Initial durable profile-continuity persistence consent. Boolean `defaults.consent` seeds both when this is omitted. |
+| `allowedEventTypes`           | `EventType[]`          | `['identify', 'screen']`       | Event types permitted while consent is `undefined` or `false`.                                                      |
 
 The "`{ views: true, taps: false }`" default is the root interaction-tracking context default. Use
 `onStatesReady` when diagnostics or app-level observers should attach as soon as SDK state exists
@@ -627,6 +652,10 @@ What fires:
 - **On backgrounding mid-view** — a final view event for any card mid-cycle; the queue flushes
   before the OS suspends the process.
 - **Offline** — events buffer; they replay on reconnect.
+
+If application policy depends on user choice, omit `defaults={{ consent: true }}` and call
+`optimization.consent(true)` from the application-owned consent UI. Until that happens, view and tap
+events wait behind the consent gate.
 
 For the broader integration walkthrough, read the
 [React Native SDK integration guide](../guides/integrating-the-react-native-sdk-in-a-react-native-app.md).

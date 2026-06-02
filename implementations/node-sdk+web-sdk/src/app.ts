@@ -50,6 +50,7 @@ const config = {
 } as const
 
 const sdk = new ContentfulOptimization(config.optimization)
+const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
 
 function requireContentfulLocale(contentfulLocale: string | undefined): string {
   if (contentfulLocale !== undefined) return contentfulLocale
@@ -63,6 +64,12 @@ type QsValue = QsPrimitive | QsArray | undefined
 interface ProfileResult {
   readonly contentfulLocale: string
   readonly optimizationData: OptimizationData | undefined
+}
+interface RenderResponseOptions {
+  readonly appConsent: boolean | undefined
+  readonly contentfulLocale: string
+  readonly id?: string
+  readonly userId?: string
 }
 
 function toStringValue(value: QsValue): string | null {
@@ -104,80 +111,126 @@ function getUniversalEventBuilderArgs(
   }
 }
 
-function getAnonymousIdFromCookies(cookies: unknown): string | undefined {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- req.cookies is of type any
-  return (cookies as Record<string, string>)[ANONYMOUS_ID_COOKIE] ?? undefined
+function getCookieValue(cookies: unknown, name: string): string | undefined {
+  if (typeof cookies !== 'object' || cookies === null) return undefined
+
+  const value: unknown = Reflect.get(cookies, name)
+
+  return typeof value === 'string' ? value : undefined
 }
 
-function respond(res: Response, id: string, contentfulLocale: string, userId?: string): void {
-  res.cookie(ANONYMOUS_ID_COOKIE, id, {
-    path: '/',
-    sameSite: 'lax', // good default for same-site apps
-  })
+function getAnonymousIdFromCookies(cookies: unknown): string | undefined {
+  return getCookieValue(cookies, ANONYMOUS_ID_COOKIE)
+}
 
-  res.render('index', { config, contentfulLocale, identified: userId })
+function getAppConsentFromCookies(cookies: unknown): boolean | undefined {
+  const consent = getCookieValue(cookies, APP_PERSONALIZATION_CONSENT_COOKIE)
+
+  if (consent === 'granted') return true
+  if (consent === 'denied') return false
+
+  return undefined
+}
+
+function respond(
+  res: Response,
+  { appConsent, contentfulLocale, id, userId }: RenderResponseOptions,
+): void {
+  if (appConsent === true && id) {
+    res.cookie(ANONYMOUS_ID_COOKIE, id, {
+      path: '/',
+      sameSite: 'lax', // good default for same-site apps
+    })
+  } else {
+    res.clearCookie(ANONYMOUS_ID_COOKIE, { path: '/' })
+  }
+
+  res.render('index', {
+    config,
+    appConsent: appConsent ?? null,
+    contentfulLocale,
+    identified: userId,
+  })
 }
 
 async function getProfile(
   req: Request,
+  appConsent: boolean | undefined,
   userId?: string,
   anonymousId?: string,
 ): Promise<ProfileResult> {
   const { contentfulLocale, eventLocale } = sdk.resolveRequestLocale(req)
   const resolvedContentfulLocale = requireContentfulLocale(contentfulLocale)
+
+  if (appConsent !== true) {
+    return {
+      contentfulLocale: resolvedContentfulLocale,
+      optimizationData: undefined,
+    }
+  }
+
   const args = getUniversalEventBuilderArgs(req, eventLocale)
   const experienceRequestOptions = { locale: resolvedContentfulLocale }
   const cookieProfile = anonymousId ? { id: anonymousId } : undefined
+  const requestOptimization = sdk.forRequest({
+    consent: { events: true, persistence: true },
+    eventContext: args,
+    experienceOptions: experienceRequestOptions,
+    profile: cookieProfile,
+  })
 
   if (!userId) {
     return {
       contentfulLocale: resolvedContentfulLocale,
-      optimizationData: await sdk.page(
-        { ...args, profile: cookieProfile },
-        experienceRequestOptions,
-      ),
+      optimizationData: await requestOptimization.page(),
     }
   }
 
-  const identifyResponse = await sdk.identify(
-    {
-      ...args,
-      userId,
-      profile: cookieProfile,
-      traits: { identified: true },
-    },
-    experienceRequestOptions,
-  )
+  await requestOptimization.identify({
+    userId,
+    traits: { identified: true },
+  })
 
   return {
     contentfulLocale: resolvedContentfulLocale,
-    optimizationData: await sdk.page(
-      {
-        ...args,
-        profile: cookieProfile ?? { id: identifyResponse.profile.id },
-      },
-      experienceRequestOptions,
-    ),
+    optimizationData: await requestOptimization.page(),
   }
 }
 
 app.get('/', limiter, async (req, res) => {
-  const { contentfulLocale, optimizationData } = await getProfile(req)
+  const appConsent = getAppConsentFromCookies(req.cookies)
+  const { contentfulLocale, optimizationData } = await getProfile(req, appConsent)
 
-  respond(res, optimizationData?.profile.id ?? '', contentfulLocale)
+  respond(res, {
+    appConsent,
+    contentfulLocale,
+    id: optimizationData?.profile.id,
+  })
 })
 app.get('/smoke-test', limiter, (_, res) => {
   res.render('index', {
+    appConsent: null,
     config,
     contentfulLocale: config.optimization.contentfulLocales.default,
   })
 })
 app.get('/user/:id', limiter, async (req, res) => {
   const anonymousId = getAnonymousIdFromCookies(req.cookies)
+  const appConsent = getAppConsentFromCookies(req.cookies)
   const userId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
-  const { contentfulLocale, optimizationData } = await getProfile(req, userId, anonymousId)
+  const { contentfulLocale, optimizationData } = await getProfile(
+    req,
+    appConsent,
+    userId,
+    anonymousId,
+  )
 
-  respond(res, optimizationData?.profile.id ?? '', contentfulLocale, userId)
+  respond(res, {
+    appConsent,
+    contentfulLocale,
+    id: optimizationData?.profile.id,
+    userId,
+  })
 })
 app.use('/dist', express.static('./public/dist'))
 

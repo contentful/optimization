@@ -100,6 +100,35 @@ try client.initialize(
 let result = try await client.screen(name: "Home")
 ```
 
+## Consent
+
+Consent policy remains application-owned. Boolean consent controls both event emission and durable
+profile-continuity persistence by default:
+
+```swift
+let config = OptimizationConfig(
+    clientId: "<your-client-id>",
+    defaults: StorageDefaults(consent: true)
+)
+```
+
+Use that default when application policy permits Optimization by default and no end-user consent UI
+is rendered. When application policy depends on user choice, call consent from the app's controls:
+
+```swift
+client.consent(true)
+client.consent(false)
+```
+
+Use split consent when events are allowed but profile continuity should stay session-only:
+
+```swift
+client.consent(events: true, persistence: false)
+```
+
+For cross-SDK consent policy guidance, see
+[Consent management in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Consent_management_in_the_Optimization_SDK_Suite.html).
+
 ## Locale handling
 
 For a single-locale app, configure the Contentful locale default only:

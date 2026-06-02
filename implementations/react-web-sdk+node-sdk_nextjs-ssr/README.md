@@ -21,16 +21,16 @@ personalization decisions. The client owns all analytics and interactive concern
 
 ### Responsibility split
 
-| Concern                                          | Where it runs             | SDK used                                 |
-| ------------------------------------------------ | ------------------------- | ---------------------------------------- |
-| Anonymous ID cookie lifecycle                    | Middleware (Edge Runtime) | Node SDK                                 |
-| Profile resolution (`sdk.page()`)                | Server Component          | Node SDK                                 |
-| Entry variant resolution                         | Server Component          | Node SDK (`resolveOptimizedEntry`)       |
-| HTML rendering of personalized content           | Server Component          | None (plain React)                       |
-| Page view tracking                               | Client (after hydration)  | React Web SDK (`NextAppAutoPageTracker`) |
-| Entry interaction tracking (views/clicks/hovers) | Client (after hydration)  | React Web SDK (`trackEntryInteraction`)  |
-| Consent management                               | Client (after hydration)  | React Web SDK (`sdk.consent()`)          |
-| User identification                              | Client (after hydration)  | React Web SDK (`sdk.identify()`)         |
+| Concern                                           | Where it runs             | SDK used                                 |
+| ------------------------------------------------- | ------------------------- | ---------------------------------------- |
+| Anonymous ID cookie lifecycle                     | Middleware (Edge Runtime) | Node SDK                                 |
+| Profile resolution (`requestOptimization.page()`) | Server Component          | Node SDK                                 |
+| Entry variant resolution                          | Server Component          | Node SDK (`resolveOptimizedEntry`)       |
+| HTML rendering of personalized content            | Server Component          | None (plain React)                       |
+| Page view tracking                                | Client (after hydration)  | React Web SDK (`NextAppAutoPageTracker`) |
+| Entry interaction tracking (views/clicks/hovers)  | Client (after hydration)  | React Web SDK (`trackEntryInteraction`)  |
+| Consent management                                | Client (after hydration)  | React Web SDK (`sdk.consent()`)          |
+| User identification                               | Client (after hydration)  | React Web SDK (`sdk.identify()`)         |
 
 ### Behavioral expectations
 
@@ -64,18 +64,18 @@ for the entry contract.
 │ REQUEST PHASE (Server)                                              │
 │                                                                     │
 │  1. Middleware (Edge Runtime)                                       │
-│     ├─ Read `ctfl-opt-aid` cookie from request                     │
-│     ├─ Call Node SDK `sdk.page()` with request context + profile    │
-│     └─ Set `ctfl-opt-aid` cookie on response with profile.id       │
+│     ├─ Read consent + `ctfl-opt-aid` cookies from request          │
+│     ├─ Clear `ctfl-opt-aid` and skip SDK calls without app consent │
+│     └─ With consent, call `requestOptimization.page()` and persist ID │
 │                                                                     │
 │  2. Server Component (page.tsx)                                     │
-│     ├─ Read `ctfl-opt-aid` cookie (set by middleware in same cycle) │
+│     ├─ Read app consent + `ctfl-opt-aid` cookies                    │
 │     ├─ Fetch Contentful entries from CDA (in parallel)              │
-│     ├─ Call Node SDK `sdk.page()` → get selectedOptimizations       │
-│     ├─ For each entry: `sdk.resolveOptimizedEntry(entry, selected)` │
-│     └─ Render resolved entries as plain HTML                        │
+│     ├─ With consent, call `requestOptimization.page()`               │
+│     ├─ Without consent, keep baseline entries                       │
+│     └─ Render baseline or resolved entries as plain HTML            │
 │                                                                     │
-│  ↓ HTML response with personalized content                          │
+│  ↓ HTML response with baseline or personalized content              │
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -102,16 +102,33 @@ for the entry contract.
 
 ### 1. Cookie as the identity bridge
 
-The `ctfl-opt-aid` cookie is the **only shared state** between server and client. Middleware creates
-it, the Server Component reads it, and the Web SDK reads it from `document.cookie` after hydration.
-This ensures both sides operate on the same anonymous profile.
+The `ctfl-opt-aid` cookie is the shared profile-continuity state between server and client.
+Middleware creates it only when the application-owned consent cookie allows continuity, the Server
+Component reads it, and the Web SDK reads it from `document.cookie` after hydration. This ensures
+both sides operate on the same anonymous profile after consent allows that continuity.
 
 ```typescript
 // middleware.ts
+const appConsent = request.cookies.get('app-personalization-consent')?.value === 'granted'
+const response = NextResponse.next()
+
+if (!appConsent) {
+  response.cookies.delete(ANONYMOUS_ID_COOKIE)
+  return response
+}
+
 const anonymousId = request.cookies.get(ANONYMOUS_ID_COOKIE)?.value
 const profile = anonymousId ? { id: anonymousId } : undefined
-const data = await sdk.page({ ...requestContext, profile })
-response.cookies.set(ANONYMOUS_ID_COOKIE, data.profile.id, { path: '/', sameSite: 'lax' })
+const requestOptimization = sdk.forRequest({
+  consent: { events: true, persistence: true },
+  eventContext: requestContext,
+  profile,
+})
+const data = await requestOptimization.page()
+
+if (data.profile.id) {
+  response.cookies.set(ANONYMOUS_ID_COOKIE, data.profile.id, { path: '/', sameSite: 'lax' })
+}
 ```
 
 ### 2. Node SDK as a module-level singleton
@@ -163,7 +180,8 @@ automatically:
 
 | User action                                | Effect on displayed content             | When personalization updates |
 | ------------------------------------------ | --------------------------------------- | ---------------------------- |
-| First page load (anonymous)                | Baseline or variant per profile         | Immediate (server-resolved)  |
+| First page load without app consent        | Baseline content                        | Until consented request      |
+| First page load with app consent           | Baseline or variant per profile         | Immediate (server-resolved)  |
 | Grant/reject consent                       | No change to content                    | Next server request          |
 | Identify (`sdk.identify()`)                | No change to content                    | Next server request          |
 | Navigate to another page (full navigation) | New server-resolved content             | Immediate (new SSR)          |

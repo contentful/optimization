@@ -1,70 +1,36 @@
 # AGENTS.md
 
-Read the repository root `AGENTS.md` first.
+Applies to authored documentation under `documentation/`.
 
-These instructions apply to authored documentation under `documentation/`.
+## Structure
 
-For prose style, follow [`../STYLE_GUIDE.md`](../STYLE_GUIDE.md). This file adds documentation
-structure, cross-linking, and validation rules.
+- Follow [`../STYLE_GUIDE.md`](../STYLE_GUIDE.md) plus root Markdown rules.
+- Put step-by-step implementation material in `guides/`, mechanics explanations in `concepts/`, and
+  unpublished or nonconforming material in `drafts/`.
+- When README content grows beyond orientation and common setup, update an existing guide or concept
+  before creating a new document.
+- Generated TypeDoc owns exhaustive API reference; authored docs explain integration flow,
+  decisions, and mechanics.
 
-## Documentation categories
+## Directory READMEs
 
-- Put step-by-step implementation material in `guides/`.
-- Put "how it works" explanations in `concepts/`.
-- Put nonconforming or unpublished material in `drafts/`. Drafts are not part of public navigation
-  unless the user explicitly asks to publish or link them.
-- When package README content grows beyond orientation and common setup, first look for an existing
-  guide or concept that matches the reader goal and update that document instead of creating a new
-  one. Create a new guide only when the material has no existing guide home.
-- Do not move exhaustive API reference material from READMEs into authored docs when generated
-  TypeDoc already owns the detail. Authored docs must explain integration flow, decisions, and
-  mechanics that generated reference docs cannot.
+- Treat directory `README.md` files as navigation indexes.
+- Keep frontmatter `children`, visible list order, and one-sentence child descriptions aligned.
+- When adding, moving, or removing docs, update the nearest directory README and affected links.
+- Preserve observed index headings and frontmatter `title` values matching the visible `#` heading.
 
-## Directory README files
+## Writing and links
 
-- Keep directory `README.md` frontmatter `children` aligned with the visible list order in the same
-  file.
-- When adding, moving, or removing a document, update the nearest directory `README.md` and any
-  affected relative links in the same change.
-- Treat directory README files as navigation indexes, not full guides or concepts. Keep the body to
-  a short "start here" paragraph and grouped lists of child documents with one-sentence
-  descriptions.
-- Use the observed index headings for consistency: `## Sections` at the documentation root,
-  `## Start here` and `## Integration guides` under `guides/`, and `## Available concepts` under
-  `concepts/`.
-- Preserve frontmatter `title` values that match the visible `#` heading.
+- Write for engineers integrating the SDK into consumer applications.
+- Lead with the reader goal, keep default paths before advanced variants, and explain consequences
+  behind constraints.
+- Separate SDK responsibilities from application responsibilities, especially fetching, consent
+  policy, identity policy, routing, and rendering.
+- Link from guides to concepts for deeper mechanics.
+- Guides and concepts may link to docs, package READMEs, implementation READMEs, and generated
+  reference docs, but not directly to source code, tests, generated outputs, or source line numbers.
 
-## Heading and writing style
+## Validate
 
-- Write for human software engineers integrating the SDK into consumer applications. Authored docs
-  are not internal agent instructions or maintainer runbooks.
-- Use sentence case for headings.
-- Preserve official product, package, API, component, and hook casing.
-- Lead with what the reader is trying to implement.
-- Separate SDK responsibilities from application responsibilities.
-- State what the SDK does not own when relevant, especially Contentful fetching, consent policy,
-  identity policy, routing, and rendering.
-- Prefer concrete implementation guidance over marketing language.
-- When documenting an integration constraint, tell the reader what breaks, what to do instead, and
-  how to choose a default or fallback for their own integration.
-- Explain the consequence behind constraints. Prefer reader-facing phrasing such as "all-locale CDA
-  responses are incompatible with the resolver because..." over unexplained "do not" rules.
-- Use direct imperatives only when they help an engineer avoid a concrete integration bug, security
-  issue, data leak, or broken runtime behavior. Pair them with the reason or the safer alternative.
-
-## Cross-linking
-
-- Link from guides to concepts when the reader needs deeper mechanics.
-- Link only to source-of-truth documentation files, package READMEs, or implementation READMEs.
-- Guides and concepts must not link to or mention source code files directly, including package
-  `src/**`, test files, implementation source files, scripts, config files, generated source
-  outputs, or source line numbers. When code-level detail is useful, link to package README,
-  implementation README, generated reference docs, or a concept/guide that explains the behavior.
-- After moving a document, fix all affected relative links.
-
-## Validation
-
-- Run Prettier on touched Markdown files.
-- Run `git diff --check`.
-- For moved or newly linked documents, verify relative Markdown links resolve to existing files when
-  the target is inside the repository.
+- Run Prettier on touched Markdown files and `git diff --check`.
+- For moved or newly linked documents, verify repository-local relative links resolve.

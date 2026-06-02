@@ -40,6 +40,7 @@ source of truth for exported API signatures.
 - [Common configuration](#common-configuration)
 - [Core workflows](#core-workflows)
   - [Provider lifecycle](#provider-lifecycle)
+  - [Consent and persistence](#consent-and-persistence)
   - [Render optimized entries](#render-optimized-entries)
   - [Track entry interactions](#track-entry-interactions)
   - [Track screens](#track-screens)
@@ -119,7 +120,7 @@ Only `clientId` is required.
 | `api`                   | No        | See API options below                         | Experience API and Insights API endpoint and request options                          |
 | `contentfulLocales`     | No        | `undefined`                                   | Contentful locale codes used for SDK-assisted CDA locale resolution                   |
 | `locale`                | No        | `undefined` unless `contentfulLocales` is set | Initial app/content locale candidate; changing this prop updates the owned SDK locale |
-| `defaults`              | No        | `undefined`                                   | Initial state, commonly including consent or profile values                           |
+| `defaults`              | No        | `undefined`                                   | Initial state, commonly including consent, persistence consent, or profile values     |
 | `allowedEventTypes`     | No        | `['identify', 'screen']`                      | Event types allowed before consent is explicitly set                                  |
 | `trackEntryInteraction` | No        | `{ views: true, taps: false }`                | Default view and tap tracking for `OptimizedEntry` components                         |
 | `liveUpdates`           | No        | `false`                                       | Whether optimized entries react continuously to SDK state changes                     |
@@ -186,6 +187,40 @@ For every prop, callback payload, and exported type, use the generated
 state setup is pending, runs any `onStatesReady` callback, and only then renders provider children.
 This matches the React Web provider contract, but React Native uses async effect scheduling because
 storage and platform setup cannot be completed before paint.
+
+When persistence consent permits durable profile continuity, SDK state from an Experience response
+is published only after the corresponding AsyncStorage write for that same response snapshot has
+settled or failed gracefully. AsyncStorage hydrates continuity during initialization and mirrors
+changes for the next launch; after startup, `sdk.states`, entry rendering, and tracking metadata
+read from in-memory SDK state. Application code can wait for `sdk.states.profile`,
+`sdk.states.selectedOptimizations`, or rendered SDK-derived UI instead of adding storage-timing
+delays before a relaunch-sensitive action.
+
+### Consent and persistence
+
+Consent policy remains application-owned. For default-on application policies that do not render an
+end-user consent prompt, set `defaults: { consent: true }` on `OptimizationRoot`:
+
+```tsx
+<OptimizationRoot clientId="your-client-id" defaults={{ consent: true }}>
+  <YourApp />
+</OptimizationRoot>
+```
+
+When application policy depends on user choice, leave `defaults.consent` unset and call
+`consent(true | false)` from the application-owned control. Boolean consent calls control both event
+emission and durable profile-continuity persistence by default. Use
+`consent({ events: true, persistence: false })` when events are allowed but continuity should stay
+session-only.
+
+Do not use a component effect to grant default consent for an app that has no consent prompt.
+Seeding `defaults.consent` during SDK initialization applies the persistence policy before child
+effects, screen tracking, or manual `identify()` calls can run.
+
+AsyncStorage persists consent and, when persistence consent permits it, profile-continuity state
+across app launches. It is not consulted for every live state read after initialization. For
+cross-SDK consent guidance, see
+[Consent management in the Optimization SDK Suite](../../documentation/concepts/consent-management-in-the-optimization-sdk-suite.md).
 
 ### Render optimized entries
 
@@ -324,14 +359,13 @@ Enable the preview panel only in authoring or development flows and provide a Co
 
 ### Offline support
 
-AsyncStorage persists SDK state across app launches. When NetInfo is installed, the SDK can queue
-events while the device is offline and flush them after connectivity returns. Tune queue bounds and
-retry behavior with `queuePolicy` when the defaults are not appropriate for your app.
+When NetInfo is installed, the SDK can queue events while the device is offline and flush them after
+connectivity returns. When the app moves to the background or inactive state, the SDK also flushes
+queued events and drains pending AsyncStorage persistence. Tune queue bounds and retry behavior with
+`queuePolicy` when the defaults are not appropriate for your app.
 
 ## Runtime notes
 
-- Consent policy remains application-owned. The SDK stores consent and blocks non-allowed events
-  until consent is accepted.
 - `ContentfulOptimization.create(...)` is asynchronous. Prefer `OptimizationRoot` when React needs
   to own initialization.
 - View tracking defaults to enabled; tap tracking defaults to disabled.

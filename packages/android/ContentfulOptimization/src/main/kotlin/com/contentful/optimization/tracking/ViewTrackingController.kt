@@ -13,6 +13,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.UUID
 
+internal const val VIEW_TRACKING_LOG_TAG = "ViewTracking"
+
 /**
  * The primary constructor is `internal` so JVM unit tests can supply a controlled
  * [CoroutineScope] (typically a `kotlinx-coroutines-test` `TestScope`), a fake [LifecycleOwner]
@@ -222,7 +224,7 @@ class ViewTrackingController internal constructor(
                 onTrackView(payload)
             } catch (e: Exception) {
                 Log.w(
-                    "ViewTracking",
+                    VIEW_TRACKING_LOG_TAG,
                     "trackView failed componentId=${metadata.componentId}: ${e.javaClass.simpleName}: ${e.message}",
                 )
             }
@@ -238,7 +240,7 @@ class ViewTrackingController internal constructor(
 }
 
 private inline fun trackingLog(message: () -> String) {
-    if (Log.isLoggable("ViewTracking", Log.DEBUG)) {
-        Log.d("ViewTracking", message())
+    if (Log.isLoggable(VIEW_TRACKING_LOG_TAG, Log.DEBUG)) {
+        Log.d(VIEW_TRACKING_LOG_TAG, message())
     }
 }

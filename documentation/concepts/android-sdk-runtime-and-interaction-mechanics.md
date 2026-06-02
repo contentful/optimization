@@ -91,7 +91,6 @@ OptimizationConfig(
     environment = "master",
     contentfulLocales = ContentfulLocales(default = "en-US"),
     locale = "en-US",
-    defaults = StorageDefaults(consent = true),
     debug = BuildConfig.DEBUG,
 )
 ```
@@ -124,8 +123,9 @@ Compose code reads these values through `collectAsState()` or effects. XML Views
 collects them from lifecycle-aware coroutines.
 
 The SDK persists state with `SharedPreferences`. `StorageDefaults` can seed values such as consent,
-profile, selected changes, and personalizations on first launch. Seeds are applied only when no
-persisted value exists, so an existing user choice is not overwritten.
+profile-continuity persistence consent, profile, selected changes, and personalizations on first
+launch. Seeds are applied only when no persisted value exists, so an existing user choice is not
+overwritten.
 
 ## Consent and event gates
 
@@ -140,7 +140,11 @@ establish profile context and anonymous screen analytics.
 | `false`       | `identify` and `screen` can emit; other events are blocked. |
 
 Call `client.consent(true)` when the visitor grants consent and `client.consent(false)` when the
-visitor rejects it. The value is persisted and restored on later launches.
+visitor rejects it. Boolean consent controls both event emission and durable profile-continuity
+persistence by default. Use `client.consent(events = true, persistence = false)` when event emission
+is allowed but profile continuity must remain session-only. Withdrawing consent purges SDK queues
+and clears SDK-managed durable profile-continuity storage while leaving active in-memory state
+available until the app resets or tears down the client.
 
 ## Entry personalization boundary
 

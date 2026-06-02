@@ -950,6 +950,8 @@ jobs:
             echo "Installing Maestro CLI ($MAESTRO_VERSION)..."
             curl -Ls "https://get.maestro.mobile.dev" | bash
             echo "Installing ${{ matrix.app }} APK (${{ matrix.apk }})..."
+            echo "Removing any cached install of ${{ matrix.package }} to avoid signature mismatches from the cached AVD..."
+            adb uninstall ${{ matrix.package }} >/dev/null 2>&1 || true
             adb install -r android-apks/${{ matrix.apk }}
             echo "Setting up adb reverse (harmless localhost fallback; the apps use 10.0.2.2)..."
             adb reverse tcp:8000 tcp:8000 || echo "::warning::adb reverse failed; apps use 10.0.2.2 so continuing"

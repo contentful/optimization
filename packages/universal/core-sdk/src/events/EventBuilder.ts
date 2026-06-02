@@ -105,6 +105,13 @@ export interface EventBuilderConfig {
    * @returns A user agent string, or `undefined` if unavailable.
    */
   getUserAgent?: () => string | undefined
+
+  /**
+   * Function used to resolve whether event consent has been granted.
+   *
+   * @returns `true` when event consent is granted, `false` or `undefined` otherwise.
+   */
+  getConsent?: () => boolean | undefined
 }
 
 export const UniversalEventBuilderArgs = z.object({
@@ -325,6 +332,13 @@ class EventBuilder {
   getUserAgent: () => string | undefined
 
   /**
+   * Function that provides the current event consent value.
+   *
+   * @internal
+   */
+  getConsent: () => boolean | undefined
+
+  /**
    * Creates a new {@link EventBuilder} instance.
    *
    * @param config - Configuration used to customize event payloads.
@@ -342,13 +356,14 @@ class EventBuilder {
    * ```
    */
   constructor(config: EventBuilderConfig) {
-    const { app, channel, library, getLocale, getPageProperties, getUserAgent } = config
+    const { app, channel, library, getLocale, getPageProperties, getUserAgent, getConsent } = config
     this.app = app
     this.channel = channel
     this.library = library
     this.getLocale = getLocale ?? (() => 'en-US')
     this.getPageProperties = getPageProperties ?? (() => DEFAULT_PAGE_PROPERTIES)
     this.getUserAgent = getUserAgent ?? (() => undefined)
+    this.getConsent = getConsent ?? (() => undefined)
   }
 
   /**
@@ -376,7 +391,7 @@ class EventBuilder {
       context: {
         app: this.app,
         campaign,
-        gdpr: { isConsentGiven: true },
+        gdpr: { isConsentGiven: this.getConsent() === true },
         library: this.library,
         locale: locale ?? this.getLocale() ?? 'en-US',
         location,

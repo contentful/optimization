@@ -38,6 +38,7 @@ source of truth for exported API signatures.
 - [When to use this package](#when-to-use-this-package)
 - [Common configuration](#common-configuration)
 - [Core workflows](#core-workflows)
+  - [Consent](#consent)
   - [Provider and hook access](#provider-and-hook-access)
   - [Provider-managed state subscriptions](#provider-managed-state-subscriptions)
   - [OptimizedEntry](#optimizedentry)
@@ -106,7 +107,7 @@ such as `liveUpdates` and `onStatesReady`.
 | `app`                   | No        | `undefined`                                     | Application metadata attached to outgoing event context                               |
 | `contentfulLocales`     | No        | `undefined`                                     | Contentful locale codes used for SDK-assisted CDA locale resolution                   |
 | `locale`                | No        | `undefined` unless `contentfulLocales` is set   | Initial app/content locale candidate; changing this prop updates the owned SDK locale |
-| `defaults`              | No        | `undefined`                                     | Initial state, commonly including consent or profile values                           |
+| `defaults`              | No        | `undefined`                                     | Initial state, commonly including consent, persistence consent, or profile values     |
 | `allowedEventTypes`     | No        | `['identify', 'page']`                          | Event types allowed before consent is explicitly set                                  |
 | `trackEntryInteraction` | No        | `{ views: true, clicks: false, hovers: false }` | Automatic entry interaction tracking for `OptimizedEntry` elements                    |
 | `cookie`                | No        | `{ domain: undefined, expires: 365 }`           | Anonymous ID cookie settings inherited from the Web SDK                               |
@@ -166,13 +167,19 @@ loader, or CDA fetch flow when localized data needs to change.
 
 ## Core workflows
 
-### Provider and hook access
+### Consent
 
-`OptimizationRoot` owns the Web SDK lifecycle. Provider-owned initialization runs after React
-commit, outside render, and renders no children while the SDK is pending. In normal browser
-rendering this uses a layout-effect path so ready children can mount before the first visible paint.
+Consent policy remains application-owned. For default-on application policies that do not render an
+end-user consent UI, seed accepted consent on `OptimizationRoot`:
 
-Use `useOptimization()` when a component needs direct access to the instance:
+```tsx
+<OptimizationRoot clientId="your-client-id" defaults={{ consent: true }}>
+  <YourApp />
+</OptimizationRoot>
+```
+
+When application policy depends on user choice, leave `defaults.consent` unset and call `consent()`
+from the relevant control:
 
 ```tsx
 import { useOptimization } from '@contentful/optimization-react-web'
@@ -183,8 +190,20 @@ function ConsentButton() {
 }
 ```
 
-Use `useEntryResolver()` when a component needs manual entry resolution without the `OptimizedEntry`
-wrapper:
+Boolean consent calls control both event emission and durable profile-continuity persistence by
+default. Use `sdk.consent({ events: true, persistence: false })` when events are allowed but
+continuity should stay session-only. For cross-SDK consent guidance, see
+[Consent management in the Optimization SDK Suite](../../../../documentation/concepts/consent-management-in-the-optimization-sdk-suite.md).
+
+### Provider and hook access
+
+`OptimizationRoot` owns the Web SDK lifecycle. Provider-owned initialization runs after React
+commit, outside render, and renders no children while the SDK is pending. In normal browser
+rendering this uses a layout-effect path so ready children can mount before the first visible paint.
+
+Use `useOptimization()` when a component needs direct access to the instance for methods such as
+`identify()`, `reset()`, or manual tracking. Use `useEntryResolver()` when a component needs manual
+entry resolution without the `OptimizedEntry` wrapper:
 
 ```tsx
 import { useEntryResolver } from '@contentful/optimization-react-web'

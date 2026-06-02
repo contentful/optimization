@@ -302,7 +302,14 @@ The Node SDK is stateless. Pass the request-local `selectedOptimizations` return
 `identify()`, `screen()`, `track()`, or sticky `trackView()`.
 
 ```ts
-const optimizationData = await optimization.page({ profile, properties: { path: req.path } })
+const requestOptimization = optimization.forRequest({
+  consent: true,
+  profile,
+})
+
+const optimizationData = await requestOptimization.page({
+  properties: { path: req.path },
+})
 const { entry, selectedOptimization } = optimization.resolveOptimizedEntry(
   baselineEntry,
   optimizationData?.selectedOptimizations,

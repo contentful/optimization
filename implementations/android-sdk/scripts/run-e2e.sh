@@ -553,6 +553,9 @@ install_app() {
         exit 1
     fi
 
+    log_info "Removing any existing $module install ($package)..."
+    adb uninstall "$package" >/dev/null 2>&1 || true
+
     log_info "Installing $module APK ($package)..."
     adb install -r "$app_apk"
 }
