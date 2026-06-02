@@ -1,8 +1,39 @@
 import { useRouter, type NextRouter } from 'next/router'
-import type { ReactElement } from 'react'
-import { useMemo } from 'react'
-import type { AutoPagePayloadOptions } from '../auto-page/types'
+import { useCallback, useMemo, type ReactElement } from 'react'
+import { buildAutoPagePayload } from '../auto-page/pagePayload'
+import type { AutoPagePayload, AutoPagePayloadOptions } from '../auto-page/types'
 import { useAutoPageEmitter } from '../auto-page/useAutoPageEmitter'
+
+function splitAsPath(asPath: string): { path: string; search: string } {
+  const queryIndex = asPath.indexOf('?')
+  if (queryIndex === -1) {
+    return { path: asPath, search: '' }
+  }
+  return { path: asPath.slice(0, queryIndex), search: asPath.slice(queryIndex) }
+}
+
+function flattenQuery(query: NextRouter['query']): Record<string, string> {
+  const flattened: Record<string, string> = {}
+  for (const [key, value] of Object.entries(query)) {
+    if (typeof value === 'string') {
+      flattened[key] = value
+    } else if (Array.isArray(value) && value.length > 0) {
+      flattened[key] = value.join(',')
+    }
+  }
+  return flattened
+}
+
+function resolveAbsoluteUrl(href: string): string {
+  if (typeof window === 'undefined') {
+    return href
+  }
+  try {
+    return new URL(href, window.location.origin).toString()
+  } catch {
+    return href
+  }
+}
 
 export interface NextPagesAutoPageContext {
   readonly routeKey: string
@@ -19,27 +50,42 @@ export function NextPagesAutoPageTracker({
   getPagePayload,
 }: NextPagesAutoPageTrackerProps): ReactElement | null {
   const router = useRouter()
+  const { asPath, pathname, query, isReady } = router
+  const routeKey = asPath
 
-  const route = useMemo(
-    () => ({
-      routeKey: router.asPath,
-      context: {
-        routeKey: router.asPath,
-        pathname: router.pathname,
-        asPath: router.asPath,
-        query: router.query,
-        router,
+  const routerPayload = useMemo<AutoPagePayload>(() => {
+    const { path, search } = splitAsPath(asPath)
+    return {
+      properties: {
+        path,
+        query: flattenQuery(query),
+        search,
+        url: resolveAbsoluteUrl(asPath),
       },
-    }),
-    [router, router.asPath, router.pathname, router.query],
+    }
+  }, [asPath, query])
+
+  const buildPayload = useCallback(
+    ({ isInitialEmission }: { isInitialEmission: boolean }): AutoPagePayload =>
+      buildAutoPagePayload(
+        routerPayload,
+        { pagePayload, getPagePayload },
+        {
+          isInitialEmission,
+          routeKey,
+          context: {
+            routeKey,
+            asPath,
+            pathname,
+            query,
+            router,
+          },
+        },
+      ),
+    [asPath, getPagePayload, pagePayload, pathname, query, routeKey, router, routerPayload],
   )
 
-  useAutoPageEmitter({
-    enabled: router.isReady,
-    route,
-    pagePayload,
-    getPagePayload,
-  })
+  useAutoPageEmitter({ enabled: isReady, routeKey, buildPayload })
 
   return null
 }
