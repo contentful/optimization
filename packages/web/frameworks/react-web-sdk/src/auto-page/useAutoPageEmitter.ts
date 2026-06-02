@@ -1,30 +1,49 @@
 import { useEffect } from 'react'
 import { useOptimization } from '../hooks/useOptimization'
-import { composePagePayload } from './pagePayload'
-import type { AutoPageEmissionContext, AutoPagePayloadOptions, AutoPageRouteState } from './types'
+import type { AutoPagePayload } from './types'
 
 let lastEmittedRouteKeyBySdk = new WeakMap<object, string>()
 
-function mergePagePayload<TRouteContext>(
-  options: AutoPagePayloadOptions<TRouteContext>,
-  context: AutoPageEmissionContext<TRouteContext>,
-): ReturnType<typeof composePagePayload> {
-  return composePagePayload(options.pagePayload, options.getPagePayload?.(context))
+export interface AutoPageEmissionMetadata {
+  readonly isInitialEmission: boolean
 }
 
-export interface UseAutoPageEmitterArgs<
-  TRouteContext,
-> extends AutoPagePayloadOptions<TRouteContext> {
+export interface UseAutoPageEmitterArgs {
+  /**
+   * When `false` the emitter is inert. Adapters that depend on a router being
+   * ready (e.g. Next.js Pages router) should gate on their readiness signal
+   * here.
+   */
   readonly enabled: boolean
-  readonly route: AutoPageRouteState<TRouteContext>
+  /**
+   * Stable string identity for the current route. Consecutive emissions with
+   * the same `routeKey` are deduplicated, which also suppresses StrictMode's
+   * double-effect invocations.
+   */
+  readonly routeKey: string
+  /**
+   * Builds the page event payload to emit. Called only when an emission would
+   * actually happen (after the dedup check), so it never runs more than once
+   * per route change. Receives `isInitialEmission` to pass through to
+   * consumer callbacks if the adapter exposes one.
+   */
+  readonly buildPayload: (metadata: AutoPageEmissionMetadata) => AutoPagePayload
 }
 
-export function useAutoPageEmitter<TRouteContext>({
+/**
+ * Emit a page event when the route changes.
+ *
+ * The hook is intentionally narrow: it owns dedup and emission only. Each
+ * router adapter is responsible for building the finished payload and passing
+ * it through `buildPayload`.
+ *
+ * @internal
+ */
+export function useAutoPageEmitter({
   enabled,
-  route,
-  pagePayload,
-  getPagePayload,
-}: UseAutoPageEmitterArgs<TRouteContext>): void {
+  routeKey,
+  buildPayload,
+}: UseAutoPageEmitterArgs): void {
   const sdk = useOptimization()
 
   useEffect(() => {
@@ -32,25 +51,17 @@ export function useAutoPageEmitter<TRouteContext>({
       return
     }
 
-    const isInitialEmission = !lastEmittedRouteKeyBySdk.has(sdk)
     const previousRouteKey = lastEmittedRouteKeyBySdk.get(sdk)
 
-    if (previousRouteKey === route.routeKey) {
+    if (previousRouteKey === routeKey) {
       return
     }
 
-    lastEmittedRouteKeyBySdk.set(sdk, route.routeKey)
+    const isInitialEmission = !lastEmittedRouteKeyBySdk.has(sdk)
+    lastEmittedRouteKeyBySdk.set(sdk, routeKey)
 
-    void sdk.page(
-      mergePagePayload(
-        { pagePayload, getPagePayload },
-        {
-          ...route,
-          isInitialEmission,
-        },
-      ),
-    )
-  }, [enabled, getPagePayload, pagePayload, route, sdk])
+    void sdk.page(buildPayload({ isInitialEmission }))
+  }, [buildPayload, enabled, routeKey, sdk])
 }
 
 export function resetAutoPageEmitterState(): void {
