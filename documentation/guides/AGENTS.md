@@ -12,6 +12,10 @@ These instructions apply to public integration guides under `documentation/guide
   2. Web
   3. React Web
   4. React Native
+  5. iOS SwiftUI
+  6. iOS UIKit
+  7. Next.js SSR-primary
+  8. Next.js hybrid SSR + CSR takeover
 
 ## Integration guide structure
 

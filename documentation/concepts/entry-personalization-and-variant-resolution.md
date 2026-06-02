@@ -316,6 +316,19 @@ server-provided or request-local data because it avoids depending on ambient SDK
 Provide optimization data before expecting personalized content. `page()`, `identify()`, `screen()`,
 `track()`, and sticky `trackView()` can return the selected optimization data used by this method.
 
+The iOS SDK exposes the same local boundary through
+`OptimizationClient.personalizeEntry(baseline:personalizations:)`. UIKit apps usually pass
+`client.selectedPersonalizations` during cell or view configuration. The method returns a
+`PersonalizedResult` containing the resolved `entry` and optional `personalization` metadata, and
+returns the baseline unchanged when no selected personalization matches the entry.
+
+The Android SDK exposes the same local boundary through
+`OptimizationClient.personalizeEntry(baseline = ..., personalizations = ...)`. XML Views apps
+usually rely on `OptimizedEntryView` or pass `client.selectedPersonalizations.value` when resolving
+directly. The method returns a `PersonalizedResult` containing the resolved `entry` and optional
+`personalization` metadata, and returns the baseline unchanged when no selected personalization
+matches the entry.
+
 ### Render with framework components
 
 Use framework components when rendering is already inside a supported React tree. They subscribe to
@@ -346,6 +359,17 @@ React Native uses the same resolver inside its `OptimizedEntry` component. The c
 
 React Native does not render DOM data attributes. It passes the resolved entry and optimization
 metadata directly into its viewport and tap tracking hooks.
+
+SwiftUI uses the same resolver inside `OptimizedEntry`. The component passes non-optimized entries
+through unchanged, resolves optimized entries from the client's selected personalizations, can lock
+to the first resolved variant, can re-resolve when live updates are enabled, and can attach iOS view
+and tap tracking for the resolved entry.
+
+Android Compose uses the same resolver inside `OptimizedEntry`, and Android XML Views use it inside
+`OptimizedEntryView`. Both adapters pass non-optimized entries through unchanged, resolve optimized
+entries from the client's selected personalizations, can lock to the first resolved variant, can
+re-resolve when live updates are enabled, and can attach Android view and tap tracking for the
+resolved entry.
 
 ### Preview selected variants
 

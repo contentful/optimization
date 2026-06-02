@@ -6,11 +6,13 @@ children:
   - ./integrating-the-web-sdk-in-a-web-app.md
   - ./integrating-the-react-web-sdk-in-a-react-app.md
   - ./integrating-the-react-native-sdk-in-a-react-native-app.md
+  - ./integrating-the-optimization-ios-sdk-in-a-swiftui-app.md
+  - ./integrating-the-optimization-ios-sdk-in-a-uikit-app.md
+  - ./integrating-the-optimization-android-sdk-in-a-compose-app.md
+  - ./integrating-the-optimization-android-sdk-in-a-views-app.md
   - ./integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md
   - ./integrating-the-optimization-sdk-in-a-nextjs-app-ssr-csr.md
   - ./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md
-  - ./contributing-to-the-ios-sdk.md
-  - ./contributing-to-the-android-sdk.md
 ---
 
 # Guides
@@ -22,7 +24,7 @@ inventory instead.
 ## Start here
 
 - [Choosing the right SDK](./choosing-the-right-sdk.md) - pick the narrowest published package layer
-  for a browser, React, Node, or React Native application
+  for a browser, React, Node, React Native, or native iOS application
 
 ## Integration guides
 
@@ -38,6 +40,18 @@ inventory instead.
 - [Integrating the Optimization React Native SDK in a React Native app](./integrating-the-react-native-sdk-in-a-react-native-app.md) -
   step-by-step React Native / Expo integration guidance covering setup, consent, personalization and
   interaction tracking, screen tracking, live updates, and the in-app preview panel
+- [Integrating the Optimization iOS SDK in a SwiftUI app](./integrating-the-optimization-ios-sdk-in-a-swiftui-app.md) -
+  step-by-step SwiftUI integration guidance covering setup, consent, entry personalization,
+  interaction tracking, screen tracking, live updates, and the in-app preview panel
+- [Integrating the Optimization iOS SDK in a UIKit app](./integrating-the-optimization-ios-sdk-in-a-uikit-app.md) -
+  step-by-step UIKit integration guidance covering direct client setup, consent, manual entry
+  personalization, interaction tracking, screen tracking, live updates, and the in-app preview panel
+- [Integrating the Optimization Android SDK in a Jetpack Compose app](./integrating-the-optimization-android-sdk-in-a-compose-app.md) -
+  step-by-step Compose integration guidance covering setup, consent, entry personalization,
+  interaction tracking, screen tracking, live updates, and the in-app preview panel
+- [Integrating the Optimization Android SDK in an XML Views app](./integrating-the-optimization-android-sdk-in-a-views-app.md) -
+  step-by-step XML Views integration guidance covering `OptimizationManager`, consent, entry
+  personalization, interaction tracking, screen tracking, live updates, and the in-app preview panel
 - [Integrating the Optimization SDK in a Next.js app (SSR-primary)](./integrating-the-optimization-sdk-in-a-nextjs-app-ssr.md) -
   step-by-step Next.js App Router guidance for the SSR-primary pattern where the Node SDK resolves
   entries server-side and the React Web SDK handles client-side tracking and interactive controls
@@ -45,21 +59,6 @@ inventory instead.
   step-by-step Next.js App Router guidance for the hybrid pattern where first paint is
   server-resolved and the React Web SDK takes over for instant client-side reactivity after
   hydration
-
-## Supplemental guides
-
-- [Forwarding Optimization SDK context to analytics and tag-management tools](./forwarding-optimization-sdk-context-to-analytics-and-tag-management-tools.md) -
-  guidance for forwarding Contentful optimization context to analytics, tag-management,
-  customer-data, and product-analytics systems
-
-## Contributor guides
-
-- [Contributing to the iOS SDK](./contributing-to-the-ios-sdk.md) - fresh-clone bootstrap through a
-  debuggable change in Xcode, including how the reference impl rebuilds the SDK package and the JS
-  bridge automatically on Build
-- [Contributing to the Android SDK](./contributing-to-the-android-sdk.md) - fresh-clone bootstrap
-  through a debuggable change in Android Studio, including how the composite-build SDK module and
-  the `buildJsBridge` Gradle task keep both Kotlin and TypeScript layers in sync on every build
 
 ## Supplemental guides
 

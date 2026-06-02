@@ -108,6 +108,57 @@ Useful environment variables:
 Unlike the Android app, no port forwarding is required: the iOS Simulator shares the host network,
 so the app reaches the mock server at `localhost:8000` directly.
 
+## Maintainer edit loop
+
+Use this app when you need a debuggable native iOS surface for changes in
+`packages/ios/ContentfulOptimization` or the shared JS bridge. The Xcode project references the SDK
+as a local Swift Package, so app builds compile the package from workspace source rather than from a
+published artifact.
+
+The app schemes include a pre-action that builds `@contentful/optimization-js-bridge` before Swift
+Package resource resolution when bridge source is newer than the copied UMD resource. The pre-action
+writes its output to `/tmp/optimization-ios-build-js-bridge.log`; check that file if Xcode appears
+to use a stale bridge bundle or cannot find `pnpm`.
+
+The normal loop is:
+
+1. Edit Swift in `packages/ios/ContentfulOptimization/Sources/...` or bridge TypeScript in
+   `packages/universal/optimization-js-bridge/src/...`.
+2. Build or run the `OptimizationAppSwiftUI` or `OptimizationAppUIKit` scheme. Xcode recompiles the
+   local Swift Package and refreshes the bridge bundle when needed.
+3. Validate with the targeted app flow or XCUITest scenario that exercises the changed behavior.
+
+From the command line, build a shell from `implementations/ios-sdk/`:
+
+```sh
+xcodebuild build \
+  -project OptimizationApp.xcodeproj \
+  -scheme OptimizationAppSwiftUI \
+  -destination 'platform=iOS Simulator,name=iPhone 16'
+```
+
+## Maintainer validation
+
+Run the smallest check that covers the changed surface:
+
+| Change area                              | Suggested validation                                                                                                      |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Bridge TypeScript only                   | `pnpm --filter @contentful/optimization-js-bridge typecheck` and `pnpm --filter @contentful/optimization-js-bridge build` |
+| Swift package behavior                   | Targeted `xcodebuild test` for the affected app shell or XCUITest class                                                   |
+| Preview-panel or cross-platform behavior | Targeted preview-panel XCUITest plus the matching shared scenario contract review                                         |
+| Documentation-only README changes        | Prettier on touched Markdown and `git diff --check`                                                                       |
+
+Common local pitfalls:
+
+- Run `xcodegen generate` after changing `project.yml` or adding, moving, or renaming iOS sources.
+- Build through a scheme, not a raw target, so the bridge pre-action runs before Swift Package
+  resource resolution.
+- If Xcode cannot find `pnpm`, launch Xcode from a shell where `pnpm --version` works or check the
+  pre-action log for the exact PATH issue.
+- After switching branches, force a bridge rebuild if the copied UMD resource has a newer timestamp
+  than the checked-out bridge source.
+- Substitute another available simulator if the local Xcode runtime does not include `iPhone 16`.
+
 ## Running E2E tests
 
 Run the full suite against both app shells from `implementations/ios-sdk/`:
@@ -149,6 +200,10 @@ IDs identical across platforms so cross-platform regressions are visible in CI d
 ## Related
 
 - [iOS SDK package status](../../packages/ios/README.md) - Planned native iOS SDK status marker
+- [iOS SDK code map](../../packages/ios/CODE_MAP.md) - Maintainer architecture map for the native
+  iOS package
+- [Native bridge architecture](../../packages/universal/optimization-js-bridge/BRIDGE_ARCHITECTURE.md) -
+  Shared bridge runtime and build notes
 - [Mocks package](../../lib/mocks/README.md) - Shared mock API server and fixtures
 - [Preview panel scenario contract](../PREVIEW_PANEL_SCENARIOS.md) - Cross-platform preview-panel
   scenario source of truth

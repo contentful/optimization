@@ -90,6 +90,9 @@ locally before `swift build`/`swift test` with `pnpm run ios:bridge`, or use the
 
 ## Related
 
+- [iOS SDK code map](./CODE_MAP.md) - Maintainer architecture map for the native iOS package
+- [Native bridge architecture](../universal/optimization-js-bridge/BRIDGE_ARCHITECTURE.md) - Shared
+  bridge runtime and build notes
 - [iOS reference app](../../implementations/ios-sdk/README.md) - Native app and XCUITest surface for
   bridge and preview-panel validation
 - [React Native SDK](../react-native-sdk/README.md) - Current stable mobile-facing JavaScript SDK

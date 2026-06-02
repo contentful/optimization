@@ -1,67 +1,268 @@
-# Optimization Android SDK
+<p align="center">
+  <a href="https://www.contentful.com/developers/docs/personalization/">
+    <img alt="Contentful Logo" title="Contentful" src="../../contentful-icon.png" width="150">
+  </a>
+</p>
 
-Native Android (Kotlin) SDK for the Contentful Optimization SDK Suite. Uses a hybrid
-native-JavaScript architecture where Kotlin owns UI, persistence, and lifecycle while a shared
-JavaScript core (via QuickJS, embedded through `io.github.dokar3:quickjs-kt`) handles
-personalization logic, audience qualification, event batching, and preview overrides.
+<h1 align="center">Contentful Personalization & Analytics</h1>
 
-## Current status
+<h3 align="center">Optimization Android SDK</h3>
 
-> [!CAUTION] Pre-release. API surface is not yet stable.
+<div align="center">
 
-- Kotlin Android library module under `ContentfulOptimization/`
-- QuickJS JavaScript engine integration via `quickjs-kt`
-- Shared TypeScript bridge under `packages/universal/optimization-js-bridge/`
-- Jetpack Compose UI layer (OptimizationRoot, OptimizedEntry, scroll/view/click tracking)
-- Preview panel with audience/experience overrides, variant selection, and Contentful integration
-- View-based app support via `PreviewPanelActivity`
-- `OptimizationConfig.locale` is the app/content locale candidate used to resolve `client.locale`.
-  `OptimizationApiConfig.locale` is the explicit Experience API locale override. Runtime locale
-  changes use `OptimizationClient.setLocale(locale)`. Explicit invalid locale values throw, and
-  invalid ambient device locale candidates are ignored.
-- `ContentfulLocales(default = "en-US")` is enough for single-locale apps. Add `supported` only when
-  the app needs device-locale matching across multiple Contentful locales.
-- Use `client.locale` for app-owned CDA fetches that feed SDK entry resolution. Do not pass
-  all-locale CDA responses from `withAllLocales` or `locale=*`; see
-  [Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
-  For the broader locale model, see
-  [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md).
+[Guides](https://contentful.github.io/optimization/documents/Documentation.Guides.html) ·
+[Reference](https://contentful.github.io/optimization) · [Contributing](../../CONTRIBUTING.md)
 
-## Architecture
+</div>
 
-The SDK mirrors the iOS SDK architecture:
+> [!WARNING]
+>
+> The Optimization SDK Suite is pre-release (alpha). Breaking changes can be published at any time.
 
-- **QuickJS** (via `io.github.dokar3:quickjs-kt`) replaces JavaScriptCore as the JavaScript engine
-- **`QuickJsContextManager`** manages the JS runtime on a dedicated single-thread dispatcher
-- **`NativePolyfills`** provides native Kotlin implementations for fetch, timers, crypto, console,
-  and URL — the same polyfill JS scripts are shared with iOS
-- **`OptimizationClient`** exposes reactive state via `StateFlow` and async operations via `suspend`
-  functions
-- **`SharedPreferencesStore`** persists SDK state across app launches
-- **`ViewTrackingController`** implements the three-phase viewport tracking state machine
-- **Compose UI layer** provides `OptimizationRoot`, `OptimizedEntry`, `OptimizationLazyColumn`,
-  `ScreenTrackingEffect`, and click/view tracking modifiers
-- **Preview panel** provides a debug overlay with audience toggles, variant selectors, profile
-  inspection, and override management
+The Optimization Android SDK is a pre-release Kotlin Android library for native Android
+applications. It is part of the [Contentful Optimization SDK Suite](../../README.md) and runs shared
+optimization behavior through a local QuickJS bridge while Kotlin code owns native app concerns such
+as persistence, networking, lifecycle handling, Jetpack Compose UI, XML Views UI, and preview-panel
+UI.
 
-## Key differences from iOS
+<details>
+  <summary>Table of Contents</summary>
+<!-- mtoc-start -->
 
-| Aspect         | iOS                    | Android                                  |
-| -------------- | ---------------------- | ---------------------------------------- |
-| JS engine      | JavaScriptCore         | QuickJS (via `quickjs-kt`)               |
-| Threading      | Main thread            | Dedicated single-thread dispatcher       |
-| Reactive state | `@Published` / Combine | `StateFlow` / `SharedFlow`               |
-| Async          | `async`/`await`        | `suspend` functions                      |
-| Persistence    | `UserDefaults`         | `SharedPreferences`                      |
-| Lifecycle      | `NotificationCenter`   | `ProcessLifecycleOwner`                  |
-| Network        | `NWPathMonitor`        | `ConnectivityManager`                    |
-| HTTP           | `URLSession`           | `OkHttp`                                 |
-| UI framework   | SwiftUI                | Jetpack Compose                          |
-| DI / context   | `@EnvironmentObject`   | `CompositionLocal`                       |
-| Preview panel  | `.sheet` + UIHosting   | `ModalBottomSheet` + `ComponentActivity` |
+- [Getting started](#getting-started)
+  - [Requirements](#requirements)
+  - [Add the dependency](#add-the-dependency)
+  - [Compose quick start](#compose-quick-start)
+  - [XML Views quick start](#xml-views-quick-start)
+- [When to use this package](#when-to-use-this-package)
+- [Reference implementation](#reference-implementation)
+- [Configuration](#configuration)
+  - [Common options](#common-options)
+  - [Locale handling](#locale-handling)
+- [Runtime notes](#runtime-notes)
+- [Related](#related)
 
-## When to use this directory
+<!-- mtoc-end -->
+</details>
 
-Use this SDK when building a native Android application that needs Contentful personalization and
-analytics. For React Native applications, use
-[@contentful/optimization-react-native](../react-native-sdk/README.md) instead.
+## Getting started
+
+### Requirements
+
+- Android `minSdk` 24 or later.
+- Java 11 bytecode support in the consuming Android project.
+- A Kotlin Android application built with Jetpack Compose or XML Views.
+- Maven Central configured in the consuming build.
+
+### Add the dependency
+
+Add the SDK to your Android application module:
+
+```kotlin
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation("com.contentful.java:optimization-android:<version>")
+}
+```
+
+Use the version that matches the Optimization SDK Suite release you are adopting. The package is
+published to Maven Central as `com.contentful.java:optimization-android`.
+
+### Compose quick start
+
+Compose apps usually initialize the SDK with `OptimizationRoot`, render Contentful entries with
+`OptimizedEntry`, and emit screen events with `ScreenTrackingEffect`.
+
+```kotlin
+val optimizationConfig = OptimizationConfig(
+    clientId = "your-client-id",
+    environment = "master",
+    contentfulLocales = ContentfulLocales(default = "en-US"),
+    defaults = StorageDefaults(consent = true),
+    debug = BuildConfig.DEBUG,
+)
+
+@Composable
+fun AppRoot(heroEntry: Map<String, Any>) {
+    OptimizationRoot(
+        config = optimizationConfig,
+        trackViews = true,
+        trackTaps = false,
+        previewPanel = if (BuildConfig.DEBUG) PreviewPanelConfig() else null,
+    ) {
+        HomeScreen(heroEntry = heroEntry)
+    }
+}
+
+@Composable
+fun HomeScreen(heroEntry: Map<String, Any>) {
+    ScreenTrackingEffect(screenName = "Home")
+
+    OptimizedEntry(
+        entry = heroEntry,
+        trackTaps = true,
+    ) { resolvedEntry ->
+        HeroCard(entry = resolvedEntry)
+    }
+}
+```
+
+For the full Compose flow, see
+[Integrating the Optimization Android SDK in a Jetpack Compose app](../../documentation/guides/integrating-the-optimization-android-sdk-in-a-compose-app.md).
+
+### XML Views quick start
+
+XML Views apps usually initialize the SDK once from `Application.onCreate`, render Contentful
+entries with `OptimizedEntryView`, and emit screen events with `ScreenTracker`.
+
+```kotlin
+class MyApplication : Application() {
+    override fun onCreate() {
+        super.onCreate()
+
+        OptimizationManager.initialize(
+            context = this,
+            config = optimizationConfig,
+            trackViews = true,
+            trackTaps = false,
+            previewPanel = PreviewPanelConfig(),
+        )
+    }
+}
+
+class HomeActivity : AppCompatActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        if (BuildConfig.DEBUG) {
+            OptimizationManager.attachPreviewPanel(this)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        ScreenTracker.trackScreen("Home")
+    }
+
+    fun renderHero(entry: Map<String, Any>): View {
+        return OptimizedEntryView(this).apply {
+            trackTaps = true
+            setContentRenderer { resolvedEntry ->
+                HeroBinder.create(context, resolvedEntry)
+            }
+            setEntry(entry)
+        }
+    }
+}
+```
+
+For the full XML Views flow, see
+[Integrating the Optimization Android SDK in an XML Views app](../../documentation/guides/integrating-the-optimization-android-sdk-in-a-views-app.md).
+
+## When to use this package
+
+Use this package when building a native Android application that needs Contentful Personalization
+and Analytics through Kotlin APIs. The same AAR includes:
+
+- `com.contentful.optimization.core` for the stateful `OptimizationClient`, configuration, entry
+  personalization, event tracking, and preview controls.
+- `com.contentful.optimization.compose` for Jetpack Compose apps.
+- `com.contentful.optimization.views` for XML Views apps.
+
+For React Native applications, use
+[`@contentful/optimization-react-native`](../react-native-sdk/README.md) instead.
+
+## Reference implementation
+
+The [Android reference implementation](../../implementations/android-sdk/README.md) demonstrates the
+same SDK behavior in Compose and XML Views shells. It exercises entry resolution, interaction
+tracking, screen tracking, live updates, preview-panel overrides, and shared mock API flows.
+
+## Configuration
+
+### Common options
+
+| Option              | Required? | Default  | Description                                                                                         |
+| ------------------- | --------- | -------- | --------------------------------------------------------------------------------------------------- |
+| `clientId`          | Yes       | None     | Optimization client identifier used for Experience API and Insights API calls.                      |
+| `environment`       | No        | `master` | Contentful environment name used by the Optimization APIs.                                          |
+| `contentfulLocales` | No        | `null`   | Contentful locale configuration used to resolve `client.locale` for app-owned CDA requests.         |
+| `locale`            | No        | Runtime  | Initial app/content locale candidate. When omitted, the SDK can resolve from `LocaleList`.          |
+| `api.locale`        | No        | `null`   | Explicit Experience API locale override for localized profile fields.                               |
+| `defaults`          | No        | `null`   | Initial persisted-state seeds such as consent or profile values, applied only when no value exists. |
+| `debug`             | No        | `false`  | Enables SDK diagnostic logging.                                                                     |
+
+`OptimizationRoot` and `OptimizationManager.initialize(...)` also accept global `trackViews`,
+`trackTaps`, and `liveUpdates` defaults. `OptimizedEntry` and `OptimizedEntryView` can override
+those defaults per entry.
+
+### Locale handling
+
+For a single-locale app, configure the Contentful locale default only:
+
+```kotlin
+val config = OptimizationConfig(
+    clientId = "your-client-id",
+    environment = "master",
+    contentfulLocales = ContentfulLocales(default = "en-US"),
+)
+```
+
+For an app that matches the user's runtime locale to multiple Contentful locales, add `supported`
+with the locale codes configured in your Contentful space:
+
+```kotlin
+val config = OptimizationConfig(
+    clientId = "your-client-id",
+    environment = "master",
+    contentfulLocales = ContentfulLocales(
+        default = "en-US",
+        supported = listOf("en-US", "de-DE", "fr-FR"),
+    ),
+)
+```
+
+Use `client.locale` when your app-owned Contentful Delivery API client fetches entries that will be
+passed to `OptimizedEntry`, `OptimizedEntryView`, or `client.personalizeEntry(...)`. The native SDK
+does not fetch Contentful entries for your app layer, so this value belongs in your CDA request
+code.
+
+`OptimizationApiConfig.locale` is an explicit Experience API override for localized profile fields.
+It does not replace the CDA locale used to fetch Contentful entries.
+
+For the full locale model, see
+[Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md).
+For the single-locale CDA entry contract, see
+[Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
+
+## Runtime notes
+
+- The SDK library manifest declares the required network permissions and the non-exported preview
+  panel Activity.
+- No JavaScript bridge setup is required in consuming applications. The generated QuickJS bundle is
+  packaged inside the AAR.
+- SDK state is persisted with `SharedPreferences`.
+- Analytics events queue while the device is offline and flush when connectivity returns or the app
+  moves toward the background.
+- For bridge architecture and maintainer build details, see
+  [Native bridge architecture](../universal/optimization-js-bridge/BRIDGE_ARCHITECTURE.md).
+
+## Related
+
+- [Compose integration guide](../../documentation/guides/integrating-the-optimization-android-sdk-in-a-compose-app.md) -
+  step-by-step setup for `OptimizationRoot`, `OptimizedEntry`, screen tracking, and preview panel
+  mounting.
+- [XML Views integration guide](../../documentation/guides/integrating-the-optimization-android-sdk-in-a-views-app.md) -
+  step-by-step setup for `OptimizationManager`, `OptimizedEntryView`, screen tracking, and preview
+  panel mounting.
+- [Android SDK runtime and interaction mechanics](../../documentation/concepts/android-sdk-runtime-and-interaction-mechanics.md) -
+  explains runtime state, consent, tracking, live updates, preview overrides, and offline delivery.
+- [Android reference implementation](../../implementations/android-sdk/README.md) - Compose and XML
+  Views apps that validate the SDK against the shared mock API.
+- [React Native SDK](../react-native-sdk/README.md) - Mobile integration for React Native
+  applications.
+- [Core SDK](../universal/core-sdk/README.md) - Shared optimization foundation used through the
+  native bridge.

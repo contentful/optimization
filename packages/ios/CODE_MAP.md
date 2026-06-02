@@ -116,6 +116,42 @@ sequenceDiagram
     JSM-->>Swift: Result<String, Error>
 ```
 
+### JavaScriptCore bridge runtime notes
+
+The shared bridge contract is documented in
+[`packages/universal/optimization-js-bridge/BRIDGE_ARCHITECTURE.md`](../universal/optimization-js-bridge/BRIDGE_ARCHITECTURE.md).
+The iOS package owns the JavaScriptCore-specific host side of that contract:
+
+- `JSContextManager` creates one `JSContext` for the lifetime of an `OptimizationClient`, registers
+  native bindings, evaluates the UMD bundle, validates `globalThis.__bridge`, registers push-back
+  globals, and calls `__bridge.initialize(configJSON)`.
+- `NativePolyfills` registers Swift-backed `__nativeLog`, `__nativeSetTimeout`,
+  `__nativeClearTimeout`, `__nativeRandomUUID`, and `__nativeFetch` globals before the UMD bundle
+  evaluates.
+- `BridgeCallbackManager` generates the success/error callback-name pairs that async bridge methods
+  use when JavaScript promises settle.
+- `OptimizationClient` is `@MainActor`, so public bridge calls enter JavaScriptCore from the main
+  actor. Fetch and timer completions marshal back to the main queue before re-entering JS.
+- The push-back globals (`__nativeOnStateChange`, `__nativeOnEventEmitted`, and
+  `__nativeOnOverridesChanged`) republish bridge state into Swift observables after decoding JSON.
+
+### Bundle resource and diagnostics notes
+
+`Package.swift` declares `optimization-ios-bridge.umd.js` as a copied Swift Package resource and
+links JavaScriptCore for consuming apps. `JSContextManager.loadBundleSource()` reads that resource
+from `Bundle.module` and throws `OptimizationError.resourceLoadError` if the bundle is missing.
+
+The copied UMD bundle is generated from `packages/universal/optimization-js-bridge`. Keep the flow
+one-way: edit the TypeScript bridge or polyfill source, build the bridge package, and let the bridge
+build refresh the Swift Package resource. Do not hand-edit the copied UMD resource.
+
+Diagnostics flow through two channels:
+
+- JavaScriptCore exceptions route through the context exception handler and the SDK diagnostic
+  logger.
+- Native fetch crossings are bracketed with signposts under the `com.contentful.optimization`
+  performance log so Instruments can measure bridge round-trip cost without SDK-code timing hooks.
+
 ### Data flow: view tracking lifecycle
 
 ```mermaid

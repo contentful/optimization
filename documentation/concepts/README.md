@@ -8,9 +8,8 @@ children:
   - ./interaction-tracking-in-node-and-stateless-environments.md
   - ./profile-synchronization-between-client-and-server.md
   - ./react-native-sdk-interaction-tracking-mechanics.md
-  - ./native-mobile-sdk-architecture.md
-  - ./ios-sdk-bridge.md
-  - ./android-sdk-bridge.md
+  - ./ios-sdk-runtime-and-interaction-mechanics.md
+  - ./android-sdk-runtime-and-interaction-mechanics.md
 ---
 
 # Concepts
@@ -46,13 +45,11 @@ they are not the first stop for installation or setup commands.
   explains how the React Native SDK observes, gates, and emits tracking events, covering event
   types, the viewport state machine, default visibility and timing, consent gating, scroll context,
   screen tracking paths, and the configuration resolution order
-- [Native mobile SDK architecture](./native-mobile-sdk-architecture.md) - explains how one
-  TypeScript core runs inside JavaScriptCore on iOS and QuickJS on Android, how polyfills are
-  prepended into the UMD bundle at build time, and how identify, screen, and personalizeEntry
-  round-trip across the JS-native bridge.
-- [iOS SDK bridge](./ios-sdk-bridge.md) - explains the JavaScriptCore context lifecycle, native
-  polyfill bindings, async callback registration, the threading model, and the diagnostics channels
-  (exception handler, fetch signposts) used by the iOS SDK.
-- [Android SDK bridge](./android-sdk-bridge.md) - explains the QuickJS engine wrapper, the
-  single-threaded dispatcher that serializes JS evaluation, the `__native.log`-routing mechanism
-  that delivers async callbacks to Kotlin, and the coroutine integration on the public API.
+- [iOS SDK runtime and interaction mechanics](./ios-sdk-runtime-and-interaction-mechanics.md) -
+  explains how the iOS SDK runs shared optimization behavior through a native bridge, how SwiftUI
+  and UIKit integrations share runtime state, and how consent, personalization, tracking, preview
+  overrides, and offline delivery work
+- [Android SDK runtime and interaction mechanics](./android-sdk-runtime-and-interaction-mechanics.md) -
+  explains how the Android SDK runs shared optimization behavior through QuickJS, how Compose and
+  XML Views integrations share runtime state, and how consent, personalization, tracking, preview
+  overrides, and offline delivery work
