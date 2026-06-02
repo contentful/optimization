@@ -111,7 +111,7 @@ describe('TanStackRouterAutoPageTracker', () => {
     expect(TanStackRouterAutoPageTracker).toBeTypeOf('function')
   })
 
-  it('emits on initial render and route changes', async () => {
+  it('emits on initial render and route changes with router-derived page properties', async () => {
     const page = rs.fn(async () => {
       await Promise.resolve()
       return undefined
@@ -121,12 +121,28 @@ describe('TanStackRouterAutoPageTracker', () => {
     const rendered = await renderRouter(<RouterProvider router={router} />)
 
     expect(page).toHaveBeenCalledTimes(1)
-    expect(page).toHaveBeenNthCalledWith(1, {})
+    expect(page).toHaveBeenNthCalledWith(1, {
+      properties: {
+        hash: '',
+        path: '/',
+        query: {},
+        search: '',
+        url: `${window.location.origin}/`,
+      },
+    })
 
     await navigateTo(router, '/products?tab=featured#hero')
 
     expect(page).toHaveBeenCalledTimes(2)
-    expect(page).toHaveBeenNthCalledWith(2, {})
+    expect(page).toHaveBeenNthCalledWith(2, {
+      properties: {
+        hash: '#hero',
+        path: '/products',
+        query: { tab: 'featured' },
+        search: '?tab=featured',
+        url: `${window.location.origin}/products?tab=featured#hero`,
+      },
+    })
 
     await rendered.unmount()
   })
@@ -206,9 +222,13 @@ describe('TanStackRouterAutoPageTracker', () => {
       locale: 'en-US',
       properties: {
         campaign: 'spring',
+        hash: `#${location.hash}`,
         matchCount: matches.length,
         path: location.href,
+        query: { tab: 'featured' },
+        search: location.searchStr,
         source: 'dynamic',
+        url: `${window.location.origin}${location.href}`,
       },
     })
     if (captured.current === undefined) {
@@ -226,6 +246,30 @@ describe('TanStackRouterAutoPageTracker', () => {
       isInitialEmission: true,
     })
     expect(captured.current.matches).toHaveLength(matches.length)
+
+    await rendered.unmount()
+  })
+
+  it('uses router state for page properties even when window.location lags behind', async () => {
+    const page = rs.fn(async () => {
+      await Promise.resolve()
+      return undefined
+    })
+    const sdk = createOptimizationSdk({ page })
+    const router = await createTestRouter(sdk, <TanStackRouterAutoPageTracker />, '/products')
+    const rendered = await renderRouter(<RouterProvider router={router} />)
+
+    expect(page).toHaveBeenNthCalledWith(1, {
+      properties: {
+        hash: '',
+        path: '/products',
+        query: {},
+        search: '',
+        url: `${window.location.origin}/products`,
+      },
+    })
+
+    expect(window.location.pathname).not.toBe('/products')
 
     await rendered.unmount()
   })

@@ -20,9 +20,19 @@ function mergeRecords(
   return result
 }
 
+/**
+ * Compose page payload layers from lowest to highest precedence.
+ *
+ * Each subsequent layer deep-merges over the previous one; later arguments win
+ * on key conflicts. `undefined` layers are skipped.
+ *
+ * @internal
+ */
 export function composePagePayload(
-  staticPayload: AutoPagePayload | undefined,
-  dynamicPayload: AutoPagePayload | undefined,
+  ...layers: ReadonlyArray<AutoPagePayload | undefined>
 ): AutoPagePayload {
-  return mergeRecords(staticPayload ?? {}, dynamicPayload ?? {}) as AutoPagePayload
+  return layers.reduce<Record<string, unknown>>(
+    (accumulator, layer) => (layer ? mergeRecords(accumulator, layer) : accumulator),
+    {},
+  ) as AutoPagePayload
 }
