@@ -117,9 +117,59 @@ pnpm --dir lib/mocks serve
 The E2E suite is [Maestro](https://maestro.dev), run from the command line rather than an IDE run
 configuration — `pnpm test:e2e` (both apps) or see [`maestro/README.md`](./maestro/README.md).
 
+## Maintainer edit loop
+
+Use this app when you need a debuggable native Android surface for changes in
+`packages/android/ContentfulOptimization` or the shared JS bridge. The Gradle project includes the
+SDK module from the workspace through a composite build, so app builds compile the Kotlin source and
+package the local bridge asset rather than a published AAR.
+
+The normal loop is:
+
+1. Edit Kotlin in `packages/android/ContentfulOptimization/src/main/kotlin/...` or bridge TypeScript
+   in `packages/universal/optimization-js-bridge/src/...`.
+2. Build the changed app or both app shells from `implementations/android-sdk/`:
+
+   ```sh
+   ./gradlew :compose:assembleDebug :views:assembleDebug
+   ```
+
+3. Run the Compose or Views app locally, then validate with the matching Maestro flow.
+
+If bridge source changed, rebuild the bridge before treating app results as meaningful:
+
+```sh
+pnpm --filter @contentful/optimization-js-bridge build
+```
+
+## Maintainer validation
+
+Run the smallest check that covers the changed surface:
+
+| Change area                       | Suggested validation                                                                                                      |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Bridge TypeScript only            | `pnpm --filter @contentful/optimization-js-bridge typecheck` and `pnpm --filter @contentful/optimization-js-bridge build` |
+| Kotlin SDK or UI adapter behavior | `./gradlew :compose:assembleDebug :views:assembleDebug`                                                                   |
+| Compose or Views user flow        | `pnpm test:e2e:compose -- --flow <suite>` or `pnpm test:e2e:views -- --flow <suite>`                                      |
+| Shared preview-panel behavior     | Run the affected Maestro suite against both apps                                                                          |
+| Documentation-only README changes | Prettier on touched Markdown and `git diff --check`                                                                       |
+
+Common local pitfalls:
+
+- Keep the Compose and Views apps in lock-step. New screens, controls, and test identifiers must
+  exist in both app shells.
+- The apps reach the host mock through `http://10.0.2.2:8000`; no manual `adb reverse` setup is
+  required for normal local runs.
+- The old UiAutomator module is dormant. Add or update Maestro flows instead.
+- After switching branches, force a bridge rebuild if the copied Android UMD asset may not match the
+  checked-out bridge source.
+- If an E2E regression appears in only one app shell, check app test-tag parity before changing SDK
+  behavior.
+
 ## Related
 
 - [Android SDK](../../packages/android/README.md)
+- [Native bridge architecture](../../packages/universal/optimization-js-bridge/BRIDGE_ARCHITECTURE.md)
 - [iOS SDK Reference Implementation](../ios-sdk/README.md)
 - [React Native Reference Implementation](../react-native-sdk/README.md)
 - [Preview Panel Scenarios](../PREVIEW_PANEL_SCENARIOS.md)

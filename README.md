@@ -97,10 +97,15 @@ Native iOS work is also present in this repository as a pre-release Swift Packag
 adapter and the [iOS reference app](./implementations/ios-sdk/README.md). Treat this surface as
 alpha implementation work rather than a stable public native SDK.
 
-The following native and framework SDKs are planned but are not published from this repository:
+Native Android support is also present as a pre-release Kotlin Android library under
+[`packages/android`](./packages/android/README.md), published as the Maven AAR
+`com.contentful.java:optimization-android`, backed by the shared
+[`@contentful/optimization-js-bridge`](./packages/universal/optimization-js-bridge/README.md)
+adapter and the [Android reference app](./implementations/android-sdk/README.md). Treat this surface
+as alpha implementation work rather than a stable public native SDK.
 
-- Android Kotlin SDK
-- Android Java SDK
+The following framework SDKs are planned but are not published from this repository:
+
 - Nest.js SDK
 - Angular SDK
 - Svelte SDK
@@ -123,7 +128,9 @@ patterns with intentionally minimal application code.
 - [React Native](./implementations/react-native-sdk/README.md) - mobile application integration for
   Android and iOS targets
 - [iOS Reference App](./implementations/ios-sdk/README.md) - native app and XCUITest surface for
-  current iOS bridge and preview-panel scenarios; this is not a published iOS SDK package
+  current iOS bridge and preview-panel scenarios
+- [Android Reference App](./implementations/android-sdk/README.md) - native Compose and XML Views
+  app shells plus Maestro E2E coverage for Android bridge and preview-panel scenarios
 
 ## Repository layout
 

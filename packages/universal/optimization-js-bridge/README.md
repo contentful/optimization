@@ -43,6 +43,11 @@ pnpm --filter @contentful/optimization-js-bridge build
 Do not hand-edit `dist/` output or the copied native bundles. Regenerate them through the build
 flow.
 
+## Architecture notes
+
+For the bridge runtime contract, UMD bundle flow, prepended polyfills, native bindings, callback
+shape, and lifecycle constraints, see [Native bridge architecture](./BRIDGE_ARCHITECTURE.md).
+
 ## Commands
 
 Run commands from the monorepo root:
@@ -57,6 +62,7 @@ Android SDKs and the reference apps that exercise the changed behavior.
 
 ## Related
 
+- [Native bridge architecture](./BRIDGE_ARCHITECTURE.md) - Shared bridge runtime and build notes
 - [iOS SDK package](../../ios/README.md) - Native iOS SDK status and package layout
 - [Android SDK package](../../android/README.md) - Native Android SDK status and package layout
 - [Core preview support](../core-sdk/src/preview-support/README.md) - Shared preview override
