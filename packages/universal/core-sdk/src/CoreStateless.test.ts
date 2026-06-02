@@ -81,6 +81,33 @@ describe('CoreStateless', () => {
     expect(Reflect.get(core.api.experience, 'preflight')).toBeUndefined()
   })
 
+  it('exposes the configured default Contentful locale', () => {
+    const core = new CoreStateless({
+      clientId: 'key_123',
+      environment: 'main',
+      contentfulLocales: {
+        default: 'en-US',
+        supported: ['en-US', 'de-DE'],
+      },
+    })
+
+    expect(core.locale).toBe('en-US')
+    expect(Reflect.get(core.api.experience, 'locale')).toBe('en-US')
+  })
+
+  it('exposes the configured default Contentful locale from default-only config', () => {
+    const core = new CoreStateless({
+      clientId: 'key_123',
+      environment: 'main',
+      contentfulLocales: {
+        default: 'en-US',
+      },
+    })
+
+    expect(core.locale).toBe('en-US')
+    expect(Reflect.get(core.api.experience, 'locale')).toBe('en-US')
+  })
+
   it('forwards request-bound options and explicit profiles through Experience upserts', async () => {
     const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
     const upsertProfile = rs

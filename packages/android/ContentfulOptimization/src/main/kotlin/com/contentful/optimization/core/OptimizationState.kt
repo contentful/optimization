@@ -8,6 +8,7 @@ data class OptimizationState(
     val consent: Boolean? = null,
     val canPersonalize: Boolean = false,
     val changes: List<Map<String, Any>>? = null,
+    val locale: String? = null,
 ) {
     companion object {
         val EMPTY = OptimizationState()
@@ -19,7 +20,8 @@ data class OptimizationState(
         return sortedJson(profile) == sortedJson(other.profile) &&
             consent == other.consent &&
             canPersonalize == other.canPersonalize &&
-            sortedJson(changes) == sortedJson(other.changes)
+            sortedJson(changes) == sortedJson(other.changes) &&
+            locale == other.locale
     }
 
     override fun hashCode(): Int {
@@ -27,6 +29,7 @@ data class OptimizationState(
         result = 31 * result + (consent?.hashCode() ?: 0)
         result = 31 * result + canPersonalize.hashCode()
         result = 31 * result + sortedJson(changes).hashCode()
+        result = 31 * result + (locale?.hashCode() ?: 0)
         return result
     }
 

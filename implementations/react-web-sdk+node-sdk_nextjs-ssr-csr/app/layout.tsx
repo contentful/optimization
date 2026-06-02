@@ -1,6 +1,7 @@
 import { ClientProviderWrapper } from '@/components/ClientProviderWrapper'
-import { getOptimizationData } from '@/lib/optimization-server'
+import { getOptimizationData, requireContentfulLocale, sdk } from '@/lib/optimization-server'
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -9,17 +10,28 @@ export const metadata: Metadata = {
     'Next.js App Router reference: Node SDK resolves entries server-side for first paint, React SDK takes over for client-side reactivity and SPA navigation.',
 }
 
+function getHtmlLang(locale: string | undefined): string {
+  return locale?.split('-')[0] ?? 'en'
+}
+
 export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const optimizationData = await getOptimizationData()
+  const headerStore = await headers()
+  const { contentfulLocale, eventLocale } = sdk.resolveRequestLocale(
+    headerStore.get('accept-language'),
+  )
+  const resolvedContentfulLocale = requireContentfulLocale(contentfulLocale)
+  const optimizationData = await getOptimizationData(eventLocale, resolvedContentfulLocale)
+  const htmlLang = getHtmlLang(resolvedContentfulLocale)
 
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang={htmlLang} className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         <ClientProviderWrapper
+          contentfulLocale={resolvedContentfulLocale}
           defaults={{
             profile: optimizationData.profile,
             selectedOptimizations: optimizationData.selectedOptimizations,

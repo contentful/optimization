@@ -169,7 +169,14 @@ function runAction(
 ): number {
   switch (requestedAction) {
     case 'implementation:install': {
-      const installArgs = ['install', '--force', ...actionArgs]
+      const installArgs = [
+        'install',
+        '--force',
+        '--no-lockfile',
+        '--no-optimistic-repeat-install',
+        '--update-checksums',
+        ...actionArgs,
+      ]
 
       if (!hasExplicitFrozenLockfileFlag(actionArgs)) {
         installArgs.push('--no-frozen-lockfile')

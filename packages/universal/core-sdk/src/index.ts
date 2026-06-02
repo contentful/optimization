@@ -33,6 +33,7 @@ export type {
   QueueFlushPolicy,
   QueueFlushRecoveredContext,
 } from './lib/queue'
+export * from './locale'
 export type { ExperienceQueue } from './queues/ExperienceQueue'
 export type { InsightsQueue } from './queues/InsightsQueue'
 export * from './resolvers'

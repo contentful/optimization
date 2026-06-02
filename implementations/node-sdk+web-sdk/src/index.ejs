@@ -201,17 +201,20 @@
 
     <script>
       const CONFIG = <%- JSON.stringify(config) %>
+      const CONTENTFUL_LOCALE = <%- JSON.stringify(contentfulLocale) %>
     </script>
     <script>
       /* --- Standard Initialization Code --- */
 
-      const contentfulClient = contentful.createClient(CONFIG.contentful)
+      let contentfulClient = contentful.createClient(CONFIG.contentful)
       window.contentfulOptimization = new ContentfulOptimization({
         ...CONFIG.optimization,
         autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
+        locale: CONTENTFUL_LOCALE,
         app: { name: document.title, version: '0.0.0' },
       })
       const contentfulOptimization = window.contentfulOptimization
+      contentfulClient = contentfulOptimization.withOptimizationLocale(contentfulClient)
       attachOptimizationPreviewPanel({
         contentful: contentfulClient,
         optimization: window.contentfulOptimization,
@@ -402,7 +405,9 @@
       // Get the optimized entry to render
       async function addOptimizedEntry(entryId, element, autoObserve = true) {
         try {
-          const entry = await contentfulClient.getEntry(entryId, { include: 10 })
+          const entry = await contentfulClient.getEntry(entryId, {
+            include: 10,
+          })
           return renderOptimizedEntry(entry, element, autoObserve)
         } catch (error) {
           console.warn(`Entry "${entryId}" could not be found in the current space`)

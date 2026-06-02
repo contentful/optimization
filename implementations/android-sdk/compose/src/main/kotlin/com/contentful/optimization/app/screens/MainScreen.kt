@@ -67,7 +67,10 @@ fun MainScreen() {
 
     LaunchedEffect(profileKey) {
         if (state.profile != null) {
-            entries = ContentfulFetcher.fetchEntries(AppConfig.entryIds)
+            entries = ContentfulFetcher.fetchEntries(
+                AppConfig.entryIds,
+                client.locale ?: AppConfig.defaultContentfulLocale,
+            )
             if (!flagSubscribed) {
                 flagSubscribed = true
                 client.subscribeToFlag("boolean")

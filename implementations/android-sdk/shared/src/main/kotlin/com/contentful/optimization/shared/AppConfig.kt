@@ -1,6 +1,9 @@
 package com.contentful.optimization.shared
 
+import com.contentful.optimization.core.ContentfulLocales
+
 object AppConfig {
+    const val defaultContentfulLocale = "en-US"
     const val clientId = "mock-client-id"
     const val environment = "master"
 
@@ -20,6 +23,7 @@ object AppConfig {
 
     const val contentfulBaseUrl = "$mockHost/contentful/"
     const val contentfulSpaceId = "mock-space-id"
+    val contentfulLocales = ContentfulLocales(default = defaultContentfulLocale)
 
     val entryIds = listOf(
         "1MwiFl4z7gkwqGYdvCmr8c",

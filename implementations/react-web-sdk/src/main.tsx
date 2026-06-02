@@ -17,10 +17,12 @@ const INSIGHTS_BASE_URL =
 const EXPERIENCE_BASE_URL =
   import.meta.env.PUBLIC_EXPERIENCE_API_BASE_URL?.trim() ?? 'http://localhost:8000/experience/'
 const ENABLE_PREVIEW_PANEL = import.meta.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true'
+const CONTENTFUL_LOCALE = 'en-US'
 
 type LogLevel = 'debug' | 'warn' | 'error'
 
 const previewPanelLogger = createScopedLogger('ReactWebReference:PreviewPanel')
+let previewPanelAttachmentStarted = false
 
 function resolveLogLevel(): LogLevel {
   const raw = import.meta.env.PUBLIC_OPTIMIZATION_LOG_LEVEL?.trim().toLowerCase()
@@ -33,19 +35,20 @@ function resolveLogLevel(): LogLevel {
 }
 
 function attachPreviewPanel(): void {
-  if (!ENABLE_PREVIEW_PANEL) {
+  if (!ENABLE_PREVIEW_PANEL || previewPanelAttachmentStarted) {
     return
   }
 
+  previewPanelAttachmentStarted = true
   void import('@contentful/optimization-web-preview-panel')
     .then(async ({ default: attachOptimizationPreviewPanel }) => {
       await attachOptimizationPreviewPanel({
-        contentful:
-          getContentfulClient().withAllLocales.withoutLinkResolution.withoutUnresolvableLinks,
+        contentful: getContentfulClient(),
         nonce: undefined,
       })
     })
     .catch((error: unknown) => {
+      previewPanelAttachmentStarted = false
       previewPanelLogger.warn('Failed to attach the Contentful Optimization preview panel.', error)
     })
 }
@@ -64,6 +67,10 @@ function RootLayout(): ReactElement {
       api={{
         insightsBaseUrl: INSIGHTS_BASE_URL,
         experienceBaseUrl: EXPERIENCE_BASE_URL,
+      }}
+      locale={CONTENTFUL_LOCALE}
+      contentfulLocales={{
+        default: CONTENTFUL_LOCALE,
       }}
       trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
       logLevel={resolveLogLevel()}

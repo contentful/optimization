@@ -8,6 +8,9 @@ const EXPERIENCE_BASE_URL =
 export const optimizationConfig = {
   clientId: CLIENT_ID,
   environment: ENVIRONMENT,
+  contentfulLocales: {
+    default: 'en-US',
+  },
   api: {
     insightsBaseUrl: INSIGHTS_BASE_URL,
     experienceBaseUrl: EXPERIENCE_BASE_URL,

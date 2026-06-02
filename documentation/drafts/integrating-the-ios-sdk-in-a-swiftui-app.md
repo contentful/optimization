@@ -89,6 +89,8 @@ struct MyApp: App {
                 config: OptimizationConfig(
                     clientId: "your-client-id",
                     environment: "master",
+                    contentfulLocales: ContentfulLocales(default: "en-US"),
+                    locale: "en-US",
                     defaults: StorageDefaults(consent: true),  // demo: pre-grant
                     debug: true
                 ),
@@ -411,6 +413,8 @@ struct SwiftUIDemoApp: App {
                 config: OptimizationConfig(
                     clientId: AppConfig.optimizationClientId,
                     environment: AppConfig.optimizationEnvironment,
+                    contentfulLocales: ContentfulLocales(default: "en-US"),
+                    locale: "en-US",
                     defaults: StorageDefaults(consent: true),
                     debug: true
                 ),

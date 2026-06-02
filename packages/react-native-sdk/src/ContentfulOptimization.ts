@@ -2,6 +2,7 @@ import {
   type CoreStatefulConfig,
   CoreStateful,
   effect,
+  resolveContentfulLocale,
   signals,
 } from '@contentful/optimization-core'
 import { merge } from 'es-toolkit'
@@ -12,6 +13,11 @@ import {
 import { createAppStateChangeListener, createOnlineChangeListener } from './handlers'
 import AsyncStorageStore from './storage/AsyncStorageStore'
 
+function getRuntimeLocaleCandidates(): string[] {
+  const { locale } = Intl.DateTimeFormat().resolvedOptions()
+  return [locale]
+}
+
 async function mergeConfig({
   allowedEventTypes,
   defaults,
@@ -19,6 +25,11 @@ async function mergeConfig({
   ...config
 }: CoreStatefulConfig): Promise<CoreStatefulConfig> {
   await AsyncStorageStore.initialize()
+  const locale = resolveContentfulLocale({
+    candidates: getRuntimeLocaleCandidates(),
+    contentfulLocales: config.contentfulLocales,
+    locale: config.locale,
+  })
 
   const {
     consent = AsyncStorageStore.consent,
@@ -49,6 +60,7 @@ async function mergeConfig({
 
   return {
     ...mergedConfig,
+    locale,
     allowedEventTypes: allowedEventTypes ?? ['identify', 'screen'],
   }
 }

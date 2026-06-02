@@ -53,7 +53,8 @@ export interface ExperienceApiClientRequestOptions {
   ip?: string
 
   /**
-   * Locale used to translate `location.city` and `location.country`.
+   * Experience API `locale` query parameter used to translate profile location fields such as
+   * `location.city` and `location.country`.
    *
    * @remarks
    * When omitted, the API can use a server-side default.
@@ -174,7 +175,7 @@ export default class ExperienceApiClient extends ApiClientBase {
 
   private readonly enabledFeatures?: ExperienceApiClientRequestOptions['enabledFeatures']
   private readonly ip?: ExperienceApiClientRequestOptions['ip']
-  private readonly locale?: ExperienceApiClientRequestOptions['locale']
+  private locale?: ExperienceApiClientRequestOptions['locale']
   private readonly plainText?: ExperienceApiClientRequestOptions['plainText']
   private readonly preflight?: ExperienceApiClientRequestOptions['preflight']
 
@@ -195,6 +196,17 @@ export default class ExperienceApiClient extends ApiClientBase {
     this.locale = locale
     this.plainText = plainText
     this.preflight = preflight
+  }
+
+  /**
+   * Update the default Experience API locale used when request options omit `locale`.
+   *
+   * @param locale - Next default Experience API locale.
+   *
+   * @public
+   */
+  public setLocale(locale: ExperienceApiClientRequestOptions['locale']): void {
+    this.locale = locale
   }
 
   /**

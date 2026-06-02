@@ -34,6 +34,9 @@ const optimizationConfig: OptimizationNodeConfig = {
   clientId: process.env.PUBLIC_NINETAILED_CLIENT_ID ?? '',
   environment: process.env.PUBLIC_NINETAILED_ENVIRONMENT ?? '',
   logLevel: 'debug',
+  contentfulLocales: {
+    default: 'en-US',
+  },
   api: {
     insightsBaseUrl: process.env.PUBLIC_INSIGHTS_API_BASE_URL,
     experienceBaseUrl: process.env.PUBLIC_EXPERIENCE_API_BASE_URL,
@@ -41,6 +44,12 @@ const optimizationConfig: OptimizationNodeConfig = {
 }
 
 const sdk = new ContentfulOptimization(optimizationConfig)
+
+function requireContentfulLocale(contentfulLocale: string | undefined): string {
+  if (contentfulLocale !== undefined) return contentfulLocale
+
+  throw new Error('This implementation requires contentfulLocales for localized CDA fetches.')
+}
 
 const ctflConfig: contentful.CreateClientParams = {
   accessToken: process.env.PUBLIC_CONTENTFUL_TOKEN ?? '',
@@ -59,12 +68,39 @@ type ContentEntrySkeleton =
   | TypeNestedContentSkeleton
 type ContentEntry = Entry<ContentEntrySkeleton>
 
-async function getContentfulEntry(entryId: string): Promise<ContentEntry | undefined> {
+function getCachedEntryKey(entryId: string, locale: string): string {
+  return `${locale}:${entryId}`
+}
+
+async function getContentfulEntry(
+  entryId: string,
+  locale: string,
+): Promise<ContentEntry | undefined> {
   try {
     return await ctfl.getEntry<ContentEntrySkeleton>(entryId, {
       include: 10,
+      locale,
     })
   } catch (_error) {}
+}
+
+async function getCachedContentfulEntry(
+  entryId: string,
+  locale: string,
+): Promise<ContentEntry | undefined> {
+  const cacheKey = getCachedEntryKey(entryId, locale)
+  const cachedEntry = cachedEntries.get(cacheKey)
+
+  if (cachedEntry) {
+    return cachedEntry
+  }
+
+  const entry = await getContentfulEntry(entryId, locale)
+  if (entry) {
+    cachedEntries.set(cacheKey, entry)
+  }
+
+  return entry
 }
 
 function cloneContentEntry(entry: ContentEntry): ContentEntry {
@@ -96,17 +132,6 @@ const entryIds: string[] = [
 
 const cachedEntries = new Map<string, ContentEntry>()
 
-Promise.all(
-  entryIds.map(async (entryId) => {
-    const entry = await getContentfulEntry(entryId)
-    if (!entry) return
-    cachedEntries.set(entryId, entry)
-  }),
-).catch((error: unknown) => {
-  // eslint-disable-next-line no-console -- debug
-  console.log(error)
-})
-
 type QsPrimitive = string | ParsedQs
 type QsArray = QsPrimitive[] // Note: mixed arrays are allowed by ParsedQs
 type QsValue = QsPrimitive | QsArray | undefined
@@ -132,10 +157,13 @@ export function getQueryRecordFromRequest(qs: ParsedQs): Record<string, string> 
   }, {})
 }
 
-function getUniversalEventBuilderArgs(req: Request): UniversalEventBuilderArgs {
+function getUniversalEventBuilderArgs(
+  req: Request,
+  eventLocale: string,
+): UniversalEventBuilderArgs {
   const url = new URL(req.protocol + '://' + req.get('host') + req.originalUrl)
   return {
-    locale: req.acceptsLanguages()[0] ?? 'en-US',
+    locale: eventLocale,
     userAgent: req.get('User-Agent') ?? 'node-js-server',
     page: {
       path: req.path,
@@ -148,16 +176,19 @@ function getUniversalEventBuilderArgs(req: Request): UniversalEventBuilderArgs {
 }
 
 app.get('/', limiter, async (req, res) => {
-  const universalEventBuilderArgs = getUniversalEventBuilderArgs(req)
-  const requestOptions = {
-    locale: universalEventBuilderArgs.locale,
-  }
+  const { contentfulLocale, eventLocale } = sdk.resolveRequestLocale(req)
+  const resolvedContentfulLocale = requireContentfulLocale(contentfulLocale)
+  const universalEventBuilderArgs = getUniversalEventBuilderArgs(req, eventLocale)
+  const experienceRequestOptions = { locale: resolvedContentfulLocale }
 
   const userId = isNonEmptyString(req.query.userId) ? req.query.userId.trim() : undefined
 
   const optimizationResponse: OptimizationData = isNonEmptyString(userId)
     ? await (async (): Promise<OptimizationData> => {
-        const pageResponse = await sdk.page({ ...universalEventBuilderArgs }, requestOptions)
+        const pageResponse = await sdk.page(
+          { ...universalEventBuilderArgs },
+          experienceRequestOptions,
+        )
         return await sdk.identify(
           {
             ...universalEventBuilderArgs,
@@ -165,10 +196,10 @@ app.get('/', limiter, async (req, res) => {
             traits: { identified: true },
             profile: pageResponse.profile,
           },
-          requestOptions,
+          experienceRequestOptions,
         )
       })()
-    : await sdk.page({ ...universalEventBuilderArgs }, requestOptions)
+    : await sdk.page({ ...universalEventBuilderArgs }, experienceRequestOptions)
 
   const { profile, selectedOptimizations } = optimizationResponse
 
@@ -180,9 +211,14 @@ app.get('/', limiter, async (req, res) => {
     }
   >()
 
-  entryIds.forEach((entryId) => {
-    const cachedEntry = cachedEntries.get(entryId)
+  const baselineEntryResults = await Promise.all(
+    entryIds.map(
+      async (entryId) =>
+        [entryId, await getCachedContentfulEntry(entryId, resolvedContentfulLocale)] as const,
+    ),
+  )
 
+  baselineEntryResults.forEach(([entryId, cachedEntry]) => {
     if (!cachedEntry) return
 
     const optimizedEntry = sdk.resolveOptimizedEntry<ContentEntrySkeleton>(

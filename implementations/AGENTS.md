@@ -14,6 +14,12 @@ owns implementation boundaries, implementation README structure, and local valid
   relevant package under `packages/`.
 - Keep implementation code minimal, example-oriented, and aligned with the public SDK surface it is
   demonstrating.
+- When a reference implementation fetches CDA entries for SDK entry resolution, keep those fetches
+  single-locale. Do not use `withAllLocales` or `locale=*`; configure SDK `contentfulLocales` and
+  use the resolved SDK `locale`, `withOptimizationLocale()`, native `client.locale`, or Node
+  `resolveRequestLocale()` result. When the implementation calls the Experience API for content that
+  can render MergeTags, use that same resolved Contentful locale through SDK-assisted stateful
+  config or the stateless per-call `{ locale }` request option.
 - Prefer root wrapper commands such as `pnpm implementation:run -- <implementation> <script>` for
   implementations that have a `package.json`.
 - If the implementation has no `package.json`, use its local README or child `AGENTS.md` commands.
@@ -52,6 +58,11 @@ owns implementation boundaries, implementation README structure, and local valid
 
 - Package changes are not reflected in a package-backed implementation: run `pnpm build:pkgs`, then
   rerun `pnpm implementation:run -- <implementation> implementation:install`.
+- Missing SDK APIs or stale SDK types in a package-backed implementation are package artifact or
+  install-state failures until proven otherwise. First compare the built package/tarball
+  declarations with the implementation's installed declarations. Do not add local shims, copied
+  types, wrapper types, casts, or source patches in the reference implementation to compensate for
+  stale installed SDK packages.
 - If the goal is full E2E setup rather than the narrowest refresh step, prefer the root
   `pnpm setup:e2e:<implementation>` wrapper when one exists.
 - For a full E2E run, prefer the root `pnpm test:e2e:<implementation>` wrapper when one exists.

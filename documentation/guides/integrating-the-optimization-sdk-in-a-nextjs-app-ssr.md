@@ -112,6 +112,10 @@ const sdk = new ContentfulOptimization({
     experienceBaseUrl: process.env.CONTENTFUL_EXPERIENCE_API_BASE_URL,
     insightsBaseUrl: process.env.CONTENTFUL_INSIGHTS_API_BASE_URL,
   },
+  contentfulLocales: {
+    default: 'en-US',
+    supported: ['en-US', 'de-DE', 'fr-FR'],
+  },
   app: {
     name: 'my-next-app',
     version: '1.0.0',
@@ -124,7 +128,13 @@ export { sdk }
 
 Do not create a new instance per request. The Node SDK is designed to be a process-level singleton.
 Pass request-scoped context (locale, user agent, profile, page URL) as arguments to each method
-call.
+call. The optional final argument to each method accepts Experience API request options.
+
+The per-call `{ locale }` request option is sent as the Experience API `locale` query parameter.
+Call `sdk.resolveRequestLocale(reqOrAcceptLanguage)` for each request, use `eventLocale` in event
+context, and use `contentfulLocale` for the CDA fetch and the Experience API request option when it
+is present. Merge tags that reference localized profile fields such as `location.city` and
+`location.country` then resolve in a language consistent with the rendered content.
 
 ## 3. Set up the anonymous ID cookie in middleware
 
@@ -133,7 +143,6 @@ to ensure the anonymous ID cookie exists and is populated before the Server Comp
 it.
 
 ```ts
-// middleware.ts
 import { sdk } from '@/lib/optimization-server'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import { type NextRequest, NextResponse } from 'next/server'
@@ -141,20 +150,25 @@ import { type NextRequest, NextResponse } from 'next/server'
 export async function middleware(request: NextRequest): Promise<NextResponse> {
   const anonymousId = request.cookies.get(ANONYMOUS_ID_COOKIE)?.value
   const profile = anonymousId ? { id: anonymousId } : undefined
+  const { contentfulLocale, eventLocale } = sdk.resolveRequestLocale(request)
+  const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
 
   const url = new URL(request.url)
-  const data = await sdk.page({
-    locale: request.headers.get('accept-language')?.split(',')[0] ?? 'en-US',
-    userAgent: request.headers.get('user-agent') ?? 'next-js-server',
-    page: {
-      path: url.pathname,
-      query: Object.fromEntries(url.searchParams),
-      referrer: request.headers.get('referer') ?? '',
-      search: url.search,
-      url: request.url,
+  const data = await sdk.page(
+    {
+      locale: eventLocale,
+      userAgent: request.headers.get('user-agent') ?? 'next-js-server',
+      page: {
+        path: url.pathname,
+        query: Object.fromEntries(url.searchParams),
+        referrer: request.headers.get('referer') ?? '',
+        search: url.search,
+        url: request.url,
+      },
+      profile,
     },
-    profile,
-  })
+    requestOptions,
+  )
 
   const response = NextResponse.next()
 
@@ -190,7 +204,6 @@ Inside a Server Component, read the cookie, call `sdk.page()` in parallel with y
 fetch, then resolve each entry:
 
 ```tsx
-// app/page.tsx
 import { sdk } from '@/lib/optimization-server'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import { cookies, headers } from 'next/headers'
@@ -198,17 +211,25 @@ import { cookies, headers } from 'next/headers'
 export default async function Home() {
   const cookieStore = await cookies()
   const headerStore = await headers()
+  const { contentfulLocale, eventLocale } = sdk.resolveRequestLocale(
+    headerStore.get('accept-language'),
+  )
+  const contentfulOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
+  const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
 
   const anonymousId = cookieStore.get(ANONYMOUS_ID_COOKIE)?.value
   const profile = anonymousId ? { id: anonymousId } : undefined
 
   const [baselineEntries, optimizationData] = await Promise.all([
-    fetchEntriesFromContentful(),
-    sdk.page({
-      locale: headerStore.get('accept-language')?.split(',')[0] ?? 'en-US',
-      userAgent: headerStore.get('user-agent') ?? 'next-js-server',
-      profile,
-    }),
+    fetchEntriesFromContentful(contentfulOptions),
+    sdk.page(
+      {
+        locale: eventLocale,
+        userAgent: headerStore.get('user-agent') ?? 'next-js-server',
+        profile,
+      },
+      requestOptions,
+    ),
   ])
 
   const resolvedEntries = baselineEntries.map((entry) => {
@@ -232,6 +253,17 @@ export default async function Home() {
 Fetch Contentful entries with `include: 10` so that linked optimization data (such as
 `nt_experiences`) is included in the response. The Node SDK needs those nested fields to evaluate
 variants.
+
+Also fetch entries with one CDA locale. Configure `contentfulLocales.default` for single-locale
+apps, and add `contentfulLocales.supported` for localized apps that need request locale matching.
+Use the `contentfulLocale` returned by `resolveRequestLocale()` for CDA requests when it is present.
+All-locale responses from `contentful.js` `withAllLocales` or raw CDA `locale=*` contain
+locale-keyed maps, while the resolver expects `fields.nt_experiences` and `fields.nt_variants` to be
+direct single-locale field values. See
+[Entry personalization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
+for the entry contract and
+[Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md)
+for the broader locale model.
 
 `resolveOptimizedEntry` is synchronous. It picks the correct variant from the resolved entry based
 on `selectedOptimizations` returned by `sdk.page()`. If no optimization applies, it returns the
@@ -351,11 +383,22 @@ const NextAppAutoPageTracker = dynamic(
   { ssr: false },
 )
 
-export function ClientProviderWrapper({ children }: { children: ReactNode }) {
+export function ClientProviderWrapper({
+  children,
+  contentfulLocale,
+}: {
+  children: ReactNode
+  contentfulLocale?: string
+}) {
   return (
     <OptimizationRoot
       clientId={process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID ?? ''}
       environment={process.env.NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main'}
+      contentfulLocales={{
+        default: 'en-US',
+        supported: ['en-US', 'de-DE', 'fr-FR'],
+      }}
+      locale={contentfulLocale}
       trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
       logLevel="error"
     >
@@ -371,12 +414,24 @@ export function ClientProviderWrapper({ children }: { children: ReactNode }) {
 ```tsx
 // app/layout.tsx
 import { ClientProviderWrapper } from '@/components/ClientProviderWrapper'
+import { sdk } from '@/lib/optimization-server'
+import { headers } from 'next/headers'
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+function getHtmlLang(locale: string | undefined): string {
+  return locale?.split('-')[0] ?? 'en'
+}
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const headerStore = await headers()
+  const { contentfulLocale } = sdk.resolveRequestLocale(headerStore.get('accept-language'))
+  const htmlLang = getHtmlLang(contentfulLocale)
+
   return (
-    <html lang="en">
+    <html lang={htmlLang}>
       <body>
-        <ClientProviderWrapper>{children}</ClientProviderWrapper>
+        <ClientProviderWrapper contentfulLocale={contentfulLocale}>
+          {children}
+        </ClientProviderWrapper>
       </body>
     </html>
   )

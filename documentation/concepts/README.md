@@ -3,6 +3,7 @@ title: Concepts
 children:
   - ./core-state-management.md
   - ./entry-personalization-and-variant-resolution.md
+  - ./locale-handling-in-the-optimization-sdk-suite.md
   - ./interaction-tracking-in-web-sdks.md
   - ./interaction-tracking-in-node-and-stateless-environments.md
   - ./profile-synchronization-between-client-and-server.md
@@ -27,6 +28,9 @@ they are not the first stop for installation or setup commands.
 - [Entry personalization and variant resolution](./entry-personalization-and-variant-resolution.md) -
   explains how the SDK resolves a Contentful baseline entry to the selected entry variant, including
   data model expectations, fallback behavior, resolution paths, and preview overrides.
+- [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md) -
+  explains how Contentful locales, `contentful.js` locale response shapes, Experience API locale
+  options, SDK-assisted locale resolution, and runtime-specific locale sources work together.
 - [Interaction tracking in Web SDKs](./interaction-tracking-in-web-sdks.md) - explains how
   `@contentful/optimization-web` and `@contentful/optimization-react-web` detect browser entry
   views, clicks, hovers, Custom Flag views, page events, and custom events, including consent,

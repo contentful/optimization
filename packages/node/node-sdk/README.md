@@ -60,17 +60,27 @@ Import the Optimization class; both CJS and ESM module systems are supported, ES
 import ContentfulOptimization from '@contentful/optimization-node'
 ```
 
-Create the SDK once per module or process, then pass request-scoped Experience options to event
-methods inside each incoming request:
+Create the SDK once per module or process, then pass request-scoped event context inside each
+incoming request:
 
 ```ts
 const optimization = new ContentfulOptimization({
   clientId: 'your-client-id',
   environment: 'main',
+  contentfulLocales: {
+    default: 'en-US',
+  },
 })
 
-const requestOptions = { locale: 'en-US' }
-const optimizationData = await optimization.page({ profile }, requestOptions)
+async function renderRequest(req: { headers: { 'accept-language'?: string } }, profileId: string) {
+  const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
+  const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
+
+  return await optimization.page(
+    { locale: eventLocale, profile: { id: profileId } },
+    requestOptions,
+  )
+}
 ```
 
 ## When to use this package
@@ -85,15 +95,16 @@ are part of the same application.
 The Node SDK is stateless. It does not maintain consent, profile, or browser persistence state
 between requests.
 
-| Option         | Required? | Default               | Description                                                 |
-| -------------- | --------- | --------------------- | ----------------------------------------------------------- |
-| `clientId`     | Yes       | N/A                   | Shared API key for Experience API and Insights API requests |
-| `environment`  | No        | `'main'`              | Contentful environment identifier                           |
-| `api`          | No        | See API options below | Experience API and Insights API endpoint options            |
-| `app`          | No        | `undefined`           | Application metadata attached to outgoing event context     |
-| `fetchOptions` | No        | SDK defaults          | Fetch timeout and retry behavior                            |
-| `eventBuilder` | No        | Node SDK defaults     | Event metadata overrides for SDK-layer authors              |
-| `logLevel`     | No        | `'error'`             | Minimum log level for the default console sink              |
+| Option              | Required? | Default               | Description                                                 |
+| ------------------- | --------- | --------------------- | ----------------------------------------------------------- |
+| `clientId`          | Yes       | N/A                   | Shared API key for Experience API and Insights API requests |
+| `environment`       | No        | `'main'`              | Contentful environment identifier                           |
+| `api`               | No        | See API options below | Experience API and Insights API endpoint options            |
+| `app`               | No        | `undefined`           | Application metadata attached to outgoing event context     |
+| `contentfulLocales` | No        | `undefined`           | Contentful locale codes used by `resolveRequestLocale()`    |
+| `fetchOptions`      | No        | SDK defaults          | Fetch timeout and retry behavior                            |
+| `eventBuilder`      | No        | Node SDK defaults     | Event metadata overrides for SDK-layer authors              |
+| `logLevel`          | No        | `'error'`             | Minimum log level for the default console sink              |
 
 Common `api` options:
 
@@ -105,16 +116,39 @@ Common `api` options:
 
 Request-scoped Experience options belong in the final argument to stateless event methods:
 
-| Option      | Description                                                 |
-| ----------- | ----------------------------------------------------------- |
-| `ip`        | IP address override used by the Experience API              |
-| `locale`    | Locale used for Experience API location labels              |
-| `plainText` | Sends performance-critical Experience API endpoints as text |
-| `preflight` | Aggregates a new profile state without storing it           |
+| Option      | Description                                                   |
+| ----------- | ------------------------------------------------------------- |
+| `ip`        | IP address override used by the Experience API                |
+| `locale`    | Locale query parameter for localized Experience API responses |
+| `plainText` | Sends performance-critical Experience API endpoints as text   |
+| `preflight` | Aggregates a new profile state without storing it             |
 
 Common `fetchOptions` are `fetchMethod`, `requestTimeout`, `retries`, `intervalTimeout`,
 `onFailedAttempt`, and `onRequestTimeout`. Default retries intentionally apply only to HTTP `503`
 responses.
+
+Use `contentfulLocales.default` for single-locale apps. For apps that match request locale input to
+multiple Contentful locales, keep `default` as the fallback and list the supported Contentful locale
+codes:
+
+```ts
+const optimization = new ContentfulOptimization({
+  clientId: 'your-client-id',
+  contentfulLocales: {
+    default: 'en-US',
+    supported: ['en-US', 'de-DE', 'fr-FR'],
+  },
+})
+```
+
+Copy `contentfulLocales.default` and optional `contentfulLocales.supported` from Contentful locale
+settings or the CMA locale list. The returned `contentfulLocale`, when present, is the configured
+Contentful locale code to use for CDA fetches and the Experience API request option. Use
+`eventLocale` separately in event context. Merge tags that reference localized profile fields such
+as `location.city` and `location.country` then resolve in a language consistent with the rendered
+content. See
+[Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
+for the full locale model.
 
 For every option, callback payload, and exported type, use the generated
 [Node SDK reference](https://contentful.github.io/optimization/modules/_contentful_optimization-node.html).
@@ -127,13 +161,18 @@ Build event context from the incoming request, then call `page()`, `identify()`,
 `track()`, or sticky `trackView()` when optimization data is needed:
 
 ```ts
+import type { Request } from 'express'
+
 app.get('/products/:slug', async (req, res) => {
+  const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
+  const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
   const optimizationData = await optimization.page(
     {
+      locale: eventLocale,
       profile: { id: req.cookies.profileId },
       properties: { path: req.path },
     },
-    { locale: req.acceptsLanguages()[0] ?? 'en-US' },
+    requestOptions,
   )
 
   res.render('product', { optimizationData })
@@ -155,8 +194,22 @@ const resolvedEntry = optimization.resolveOptimizedEntry(
 )
 ```
 
-Use `getMergeTagValue()` for Contentful Rich Text merge tags and `getFlag()` for Custom Flags. The
-Node SDK is stateless, so `getFlag()` does not automatically emit flag-view tracking.
+Fetch entries with one CDA locale in the app layer. For localized apps, configure
+`contentfulLocales`, then use the `contentfulLocale` returned by `resolveRequestLocale()` for CDA
+fetches and the per-call `{ locale }` request option so MergeTags that read localized profile fields
+match the entry language. When `contentfulLocale` is absent because no `contentfulLocales` config is
+present, omit the CDA and Experience API locale options intentionally. Do not pass all-locale CDA
+responses from `withAllLocales` or `locale=*` into `resolveOptimizedEntry()`; the resolver expects
+direct single-locale field values. See
+[Entry personalization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
+for the entry contract and
+[Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
+for request locale behavior.
+
+Use `getMergeTagValue()` for Contentful Rich Text merge tags and `getFlag()` for Custom Flags. If a
+merge tag references localized profile fields such as `location.city` or `location.country`, its
+resolved value follows the localized profile data returned by the Experience API. The Node SDK is
+stateless, so `getFlag()` does not automatically emit flag-view tracking.
 
 ### Caching guidance
 

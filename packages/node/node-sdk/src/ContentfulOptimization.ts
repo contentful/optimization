@@ -1,7 +1,42 @@
-import { CoreStateless, type CoreStatelessConfig } from '@contentful/optimization-core'
+import {
+  CoreStateless,
+  normalizeLocale,
+  resolveContentfulLocale,
+  type CoreStatelessConfig,
+} from '@contentful/optimization-core'
 import type { App } from '@contentful/optimization-core/api-schemas'
-import { merge } from 'es-toolkit'
 import { OPTIMIZATION_NODE_SDK_NAME, OPTIMIZATION_NODE_SDK_VERSION } from './constants'
+
+const DEFAULT_RUNTIME_LOCALE = 'en-US'
+const DEFAULT_ACCEPT_LANGUAGE_QUALITY = 1
+const QUALITY_PARAM_PATTERN = /;\s*q=/
+
+type NodeEventBuilderConfig = Partial<Omit<NonNullable<CoreStatelessConfig['eventBuilder']>, 'app'>>
+
+interface HeaderRequestLike {
+  acceptsLanguages?: () => string[]
+  get?: (name: string) => string | null | undefined
+  headers?: unknown
+}
+
+/**
+ * Locale pair resolved from an incoming server request.
+ *
+ * @public
+ */
+export interface ResolvedRequestLocale {
+  /** Locale to place on SDK event context. */
+  readonly eventLocale: string
+  /** Contentful locale to use for CDA fetches and Experience API request options, when configured. */
+  readonly contentfulLocale?: string
+}
+
+/**
+ * Accepted inputs for {@link ContentfulOptimization.resolveRequestLocale}.
+ *
+ * @public
+ */
+export type RequestLocaleInput = string | null | undefined | HeaderRequestLike
 
 /**
  * Configuration for the Node-specific ContentfulOptimization SDK.
@@ -32,33 +67,91 @@ export interface OptimizationNodeConfig extends Omit<CoreStatelessConfig, 'event
    * This differs from {@link CoreStatelessConfig} eventBuilder, which expects
    * a full configuration object.
    */
-  eventBuilder?: Partial<Omit<CoreStatelessConfig['eventBuilder'], 'app'>>
+  eventBuilder?: NodeEventBuilderConfig
 }
 
-/**
- * Merge user-supplied configuration with defaults for the Node SDK.
- *
- * @param config - The input configuration supplied by the caller.
- * @returns A fully composed {@link CoreStatelessConfig} object suitable for
- *          constructing the core runtime.
- *
- * @remarks
- * Ensures that the Node SDK always identifies itself via a `server` channel
- * and a `library` metadata block unless explicitly overridden.
- *
- * @internal
- */
-function mergeConfig(config: OptimizationNodeConfig): CoreStatelessConfig {
-  const { app, ...restConfig } = config
-
-  const defaultConfig: Partial<CoreStatelessConfig> = {
-    eventBuilder: {
-      app,
-      channel: 'server',
-      library: { name: OPTIMIZATION_NODE_SDK_NAME, version: OPTIMIZATION_NODE_SDK_VERSION },
-    },
+function normalizeHeaderValue(header: unknown): string | undefined {
+  if (typeof header === 'string') {
+    return header
   }
-  return merge(defaultConfig, restConfig)
+
+  return Array.isArray(header)
+    ? header.filter((item): item is string => typeof item === 'string').join(',')
+    : undefined
+}
+
+function getAcceptLanguageHeader(input: RequestLocaleInput): string | undefined {
+  if (typeof input === 'string') {
+    return input
+  }
+
+  if (typeof input !== 'object' || input === null) {
+    return undefined
+  }
+
+  const headerFromGetter = input.get?.('accept-language')
+
+  if (typeof headerFromGetter === 'string') {
+    return headerFromGetter
+  }
+
+  const { headers } = input
+
+  if (typeof headers !== 'object' || headers === null) {
+    return undefined
+  }
+
+  const get: unknown = Reflect.get(headers, 'get')
+  const header: unknown =
+    typeof get === 'function'
+      ? Reflect.apply(get, headers, ['accept-language'])
+      : (Reflect.get(headers, 'accept-language') ?? Reflect.get(headers, 'Accept-Language'))
+
+  return normalizeHeaderValue(header)
+}
+
+function parseAcceptLanguage(acceptLanguage: string | undefined): string[] {
+  const candidates: Array<{ index: number; locale: string; quality: number }> = []
+
+  for (const [index, value] of (acceptLanguage ?? '').split(',').entries()) {
+    const [rawLocale, rawQuality] = value.split(QUALITY_PARAM_PATTERN)
+    const locale = normalizeLocale(rawLocale)
+
+    if (locale === undefined) {
+      continue
+    }
+
+    const parsedQuality =
+      rawQuality === undefined ? DEFAULT_ACCEPT_LANGUAGE_QUALITY : Number(rawQuality)
+    const quality = Number.isFinite(parsedQuality) ? parsedQuality : DEFAULT_ACCEPT_LANGUAGE_QUALITY
+
+    if (quality > 0) {
+      candidates.push({ index, locale, quality })
+    }
+  }
+
+  return candidates
+    .sort((left, right) => right.quality - left.quality || left.index - right.index)
+    .map((candidate) => candidate.locale)
+}
+
+function getRequestLocaleCandidates(input: RequestLocaleInput): string[] {
+  const parsedHeaderLocales = parseAcceptLanguage(getAcceptLanguageHeader(input))
+
+  if (parsedHeaderLocales.length > 0) {
+    return parsedHeaderLocales
+  }
+
+  if (typeof input !== 'object' || input === null) {
+    return []
+  }
+
+  return (
+    input
+      .acceptsLanguages?.()
+      .map(normalizeLocale)
+      .filter((locale): locale is string => locale !== undefined) ?? []
+  )
 }
 
 /**
@@ -80,9 +173,9 @@ function mergeConfig(config: OptimizationNodeConfig): CoreStatelessConfig {
  *   logLevel: 'info',
  * })
  *
- * const requestOptions = { locale: 'en-US' }
+ * const requestOptions = { locale: 'fr-CA' }
  *
- * await sdk.track({ event: 'server_event', properties: { id: 1 } }, requestOptions)
+ * await sdk.page({ profile: { id: 'profile-id' } }, requestOptions)
  * ```
  *
  * @see {@link CoreStateless}
@@ -103,10 +196,45 @@ class ContentfulOptimization extends CoreStateless {
    * const optimization = new ContentfulOptimization({ clientId: 'my-client-id' })
    * ```
    */
-  constructor(config: OptimizationNodeConfig) {
-    const mergedConfig: CoreStatelessConfig = mergeConfig(config)
+  constructor({ app, eventBuilder, ...config }: OptimizationNodeConfig) {
+    const { library, ...eventBuilderConfig } = eventBuilder ?? {}
 
-    super(mergedConfig)
+    super({
+      ...config,
+      eventBuilder: {
+        app,
+        channel: 'server',
+        library: {
+          name: OPTIMIZATION_NODE_SDK_NAME,
+          version: OPTIMIZATION_NODE_SDK_VERSION,
+          ...library,
+        },
+        ...eventBuilderConfig,
+      },
+    })
+  }
+
+  /**
+   * Resolve request and Contentful locales from `Accept-Language`.
+   *
+   * @param input - Raw `Accept-Language` header or a request-like object.
+   * @returns Event-context locale and Contentful CDA locale.
+   *
+   * @example
+   * ```ts
+   * const { eventLocale, contentfulLocale } = optimization.resolveRequestLocale(req)
+   * ```
+   */
+  resolveRequestLocale(input: RequestLocaleInput): ResolvedRequestLocale {
+    const candidates = getRequestLocaleCandidates(input)
+    const eventLocale = candidates[0] ?? DEFAULT_RUNTIME_LOCALE
+    const contentfulLocale =
+      resolveContentfulLocale({
+        candidates,
+        contentfulLocales: this.config.contentfulLocales,
+      }) ?? this.locale
+
+    return contentfulLocale === undefined ? { eventLocale } : { eventLocale, contentfulLocale }
   }
 }
 

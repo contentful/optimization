@@ -78,6 +78,15 @@ These helpers identify and normalize Contentful entries for optimization:
 | `isOptimizationEntry`         | Type guard for optimization entries                             |
 | `normalizeOptimizationConfig` | Fills omitted optimization config fields with SDK-safe defaults |
 
+These schemas model the SDK's single-locale CDA entry contract. Fetch entries in the app layer with
+one CDA locale. Use the resolved SDK `locale`, `withOptimizationLocale(contentfulClient)`, or the
+Node SDK's `resolveRequestLocale()` result before passing entries to SDK resolution helpers. Avoid
+`withAllLocales` or `locale=*` in that path. See
+[Entry personalization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
+for the entry contract and
+[Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
+for the broader locale model.
+
 ### Experience API schemas
 
 Experience API schemas validate profile evaluation request and response payloads:

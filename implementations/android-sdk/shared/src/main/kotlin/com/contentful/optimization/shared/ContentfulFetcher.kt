@@ -8,6 +8,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
 object ContentfulFetcher {
@@ -28,10 +29,10 @@ object ContentfulFetcher {
         .callTimeout(45, TimeUnit.SECONDS)
         .build()
 
-    suspend fun fetchEntries(ids: List<String>): List<Map<String, Any>> {
+    suspend fun fetchEntries(ids: List<String>, locale: String): List<Map<String, Any>> {
         val entries = mutableListOf<Map<String, Any>>()
         for (id in ids) {
-            val entry = fetchEntry(id)
+            val entry = fetchEntry(id, locale)
             if (entry != null) {
                 entries.add(entry)
             } else {
@@ -41,9 +42,9 @@ object ContentfulFetcher {
         return entries
     }
 
-    private suspend fun fetchEntry(id: String): Map<String, Any>? {
+    private suspend fun fetchEntry(id: String, locale: String): Map<String, Any>? {
         repeat(MAX_ATTEMPTS) { attempt ->
-            val result = fetchEntryOnce(id, attempt)
+            val result = fetchEntryOnce(id, locale, attempt)
             if (result != null) return result
             if (attempt < MAX_ATTEMPTS - 1) {
                 delay(RETRY_BACKOFF_MS * (attempt + 1))
@@ -52,9 +53,11 @@ object ContentfulFetcher {
         return null
     }
 
-    private suspend fun fetchEntryOnce(id: String, attempt: Int): Map<String, Any>? {
+    private suspend fun fetchEntryOnce(id: String, locale: String, attempt: Int): Map<String, Any>? {
+        val queryLocale = URLEncoder.encode(locale, Charsets.UTF_8.name())
         val url = "${AppConfig.contentfulBaseUrl}spaces/${AppConfig.contentfulSpaceId}" +
-            "/environments/${AppConfig.environment}/entries?sys.id=$id&include=10"
+            "/environments/${AppConfig.environment}/entries?sys.id=$id&include=10" +
+            "&locale=$queryLocale"
 
         return withContext(Dispatchers.IO) {
             try {

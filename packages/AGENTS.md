@@ -82,6 +82,7 @@ For pnpm-managed packages with matching package scripts:
 - `pnpm --filter <package-name> test:unit`
 - `pnpm --filter <package-name> build`
 - `pnpm --filter <package-name> size:check`
+- `pnpm --filter <package-name> size:report`
 
 ## Usually validate
 
@@ -91,7 +92,8 @@ For pnpm-managed packages with matching package scripts:
 - Run the package `build` when exports, bundling, emitted declarations, runtime code, or packaging
   changed and the package provides a build script.
 - Run `size:check` for runtime, export, dependency, bundler config, or bundle-shape changes when the
-  package provides that script.
+  package provides that script. If it fails and broader bundle status matters, run `size:report`
+  before treating the first failure as complete coverage.
 - Validate the package-local harness itself when changing flows it is meant to demonstrate.
 - For package changes consumed by implementations, run `pnpm build:pkgs` before reinstalling or
   running implementation tests.

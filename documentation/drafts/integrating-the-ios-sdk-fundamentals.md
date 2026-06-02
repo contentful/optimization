@@ -82,13 +82,18 @@ OptimizationConfig(
     environment: "master",
     experienceBaseUrl: nil,     // optional override for the Experience API
     insightsBaseUrl: nil,       // optional override for the Insights API
+    contentfulLocales: ContentfulLocales(default: "en-US", supported: ["en-US", "de-DE"]),
+    locale: "en-US",            // app/content locale candidate used to resolve client.locale
     defaults: StorageDefaults(consent: true),
     debug: true                 // emits os.Logger output under com.contentful.optimization
 )
 ```
 
 Only `clientId` is required; `environment` defaults to `"master"`. Leave the base URLs as `nil` to
-hit production endpoints.
+hit production endpoints. When the same screen renders Contentful entries with MergeTags, configure
+`contentfulLocales` from the Contentful space and set `locale` to the app/content locale candidate
+that the SDK resolves to `client.locale`. Use `api.locale` only when an integration needs an
+explicit Experience API locale override.
 
 `debug: true` enables structured logging to Xcode console and `Console.app` under the subsystem
 `com.contentful.optimization`. Leave it off in production.

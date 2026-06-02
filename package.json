@@ -24,13 +24,13 @@
     "implementation:react-web-sdk+node-sdk_nextjs-ssr": "pnpm run implementation:run -- react-web-sdk+node-sdk_nextjs-ssr",
     "implementation:react-web-sdk+node-sdk_nextjs-ssr-csr": "pnpm run implementation:run -- react-web-sdk+node-sdk_nextjs-ssr-csr",
     "implementation:web-sdk": "pnpm run implementation:run -- web-sdk",
-    "implementation:lint": "eslint implementations --ignore-pattern implementations/react-web-sdk+node-sdk_nextjs-ssr --ignore-pattern implementations/react-web-sdk+node-sdk_nextjs-ssr-csr --cache --cache-location .cache/eslint/implementations && pnpm run implementation:run -- react-web-sdk+node-sdk_nextjs-ssr lint",
+    "implementation:lint": "eslint implementations --ignore-pattern implementations/react-web-sdk+node-sdk_nextjs-ssr --ignore-pattern implementations/react-web-sdk+node-sdk_nextjs-ssr-csr && pnpm run implementation:run -- react-web-sdk+node-sdk_nextjs-ssr lint",
     "implementation:lint:fix": "eslint implementations --ignore-pattern implementations/react-web-sdk+node-sdk_nextjs-ssr --ignore-pattern implementations/react-web-sdk+node-sdk_nextjs-ssr-csr --fix && pnpm run implementation:run -- react-web-sdk+node-sdk_nextjs-ssr lint",
     "implementation:typecheck": "pnpm run implementation:run -- --all -- typecheck",
     "ios:bridge": "pnpm --filter @contentful/optimization-js-bridge build",
     "ios:build": "pnpm run ios:bridge && swift build --package-path packages/ios/ContentfulOptimization",
     "ios:test": "pnpm run ios:bridge && swift test --package-path packages/ios/ContentfulOptimization",
-    "lint": "eslint lib packages --cache --cache-location .cache/eslint/workspace",
+    "lint": "eslint lib packages",
     "lint:fix": "eslint lib packages --fix",
     "notices:generate": "pnpm --filter \"@contentful/*\" licenses list --prod --json | pnpm dlx @quantco/pnpm-licenses generate-disclaimer --json-input --output-file THIRD_PARTY_NOTICES.txt",
     "pack:pkgs": "pnpm pack --filter @contentful/* --pack-destination pkgs",
@@ -69,7 +69,7 @@
   "engines": {
     "node": ">=20.19.0"
   },
-  "packageManager": "pnpm@11.4.0+sha512.f0febc7e37552ab485494a914241b338e0b3580b93d54ce31f00933015880863129038a1b4ae4e414a0ee63ac35bf21197e990172c4a68256450b5636310968f",
+  "packageManager": "pnpm@11.5.0+sha512.dbfcc4f81cf48597afd4bc391ffdf12c11f1a9fb83a395bfa6b0a2d9cc2fd8ffebafdb1ccbd529632153f793904c2615b7f09fe1a345473fd1c35845172a8eb1",
   "devDependencies": {
     "@rstest/core": "catalog:",
     "@eslint/js": "^10.0.1",

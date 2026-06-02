@@ -53,6 +53,20 @@ React framework package.
 | Preview panel attachment     | Env-gated `attachOptimizationPreviewPanel()` call                                          |
 | Offline queue / recovery     | Inherited from `@contentful/optimization-web` runtime                                      |
 
+## CDA locale handling
+
+This app uses default-only SDK `contentfulLocales` for its single Contentful locale and passes the
+same locale constant through the provider `locale` prop. Entry fetches use the recommended
+`withOptimizationLocale()` helper so they use the live resolved `optimization.locale`. Experience
+API calls use that resolved locale by default unless `api.locale` is configured as an explicit API
+override. Do not use `contentful.js` `withAllLocales` or raw CDA `locale=*` for entries passed to
+`OptimizedEntry` or `useEntryResolver()`; SDK entry resolution expects direct single-locale fields
+such as `fields.nt_experiences` and `fields.nt_variants`. See
+[Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md)
+for the broader locale model and
+[Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
+for the entry contract.
+
 ## Prerequisites
 
 - Node.js >= 20.19.0 (24.13.0 recommended to match `.nvmrc`)
@@ -158,7 +172,7 @@ cp .env.example .env
 
 All variables have mock-safe defaults. To use local mock endpoints (the default), no changes are
 needed. `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL="true"` attaches the browser preview panel for
-local and staging runs. See `.env.example` for the full list.
+local and staging development runs. See `.env.example` for the full list.
 
 ## Project structure
 
