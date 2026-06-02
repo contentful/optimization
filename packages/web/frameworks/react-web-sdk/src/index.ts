@@ -21,6 +21,13 @@ export type {
   OptimizedEntryLoadingFallback,
   OptimizedEntryProps,
 } from './optimized-entry/OptimizedEntry'
+export { OptimizedExperience } from './optimized-entry/OptimizedExperience'
+export type {
+  ExperienceComponentMap,
+  ExperienceComponentTypeLink,
+  ExperienceTreeNode,
+  OptimizedExperienceProps,
+} from './optimized-entry/OptimizedExperience'
 export { useOptimizedEntry } from './optimized-entry/useOptimizedEntry'
 export type {
   UseOptimizedEntryParams,
