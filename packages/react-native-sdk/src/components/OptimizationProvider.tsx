@@ -77,8 +77,8 @@ function getCleanup(
  * @returns `null` while initialization is pending, then a context provider for ready or error state
  *
  * @remarks
- * Config is captured on first render and subsequent prop changes are ignored.
- * To force re-initialization, change the React `key` prop.
+ * Config is captured on first render, except `locale`, which updates the SDK live.
+ * To force full re-initialization, change the React `key` prop.
  *
  * Prefer using {@link OptimizationRoot} instead, which wraps this provider
  * with additional functionality such as live updates and the preview panel.
@@ -97,6 +97,7 @@ function getCleanup(
 export function OptimizationProvider(props: OptimizationProviderProps): React.JSX.Element | null {
   const { children } = props
   const initialPropsRef = useRef(props)
+  const liveLocale = props.sdk === undefined ? props.locale : undefined
   const cleanupRef = useRef<Cleanup | undefined>(undefined)
   const ownsSdkRef = useRef(false)
   const sdkRef = useRef<ContentfulOptimization | undefined>(undefined)
@@ -184,6 +185,20 @@ export function OptimizationProvider(props: OptimizationProviderProps): React.JS
       dispose()
     }
   }, [])
+
+  useEffect(() => {
+    if (state.sdk === undefined || props.sdk !== undefined || liveLocale === undefined) {
+      return
+    }
+
+    try {
+      state.sdk.setLocale(liveLocale)
+    } catch (error: unknown) {
+      const err = toError(error)
+      logger.error('Failed to update SDK locale:', err.message)
+      setState({ error: err, isReady: true, sdk: state.sdk })
+    }
+  }, [liveLocale, props.sdk, state.sdk])
 
   const shouldRenderChildren = state.isReady || state.error !== undefined
 

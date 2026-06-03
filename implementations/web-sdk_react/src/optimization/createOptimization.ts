@@ -45,6 +45,10 @@ function createOptimizationConfig(): OptimizationConfig {
     environment: OPTIMIZATION_ENVIRONMENT,
     logLevel: resolveLogLevel(),
     autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
+    locale: 'en-US',
+    contentfulLocales: {
+      default: 'en-US',
+    },
     app: {
       name: 'ContentfulOptimization SDK - React Web Reference',
       version: '0.1.0',

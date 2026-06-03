@@ -39,6 +39,9 @@ const config = {
     clientId: process.env.PUBLIC_NINETAILED_CLIENT_ID ?? '',
     environment: process.env.PUBLIC_NINETAILED_ENVIRONMENT,
     logLevel: 'debug',
+    contentfulLocales: {
+      default: 'en-US',
+    },
     api: {
       insightsBaseUrl: process.env.PUBLIC_INSIGHTS_API_BASE_URL,
       experienceBaseUrl: process.env.PUBLIC_EXPERIENCE_API_BASE_URL,
@@ -48,9 +51,19 @@ const config = {
 
 const sdk = new ContentfulOptimization(config.optimization)
 
+function requireContentfulLocale(contentfulLocale: string | undefined): string {
+  if (contentfulLocale !== undefined) return contentfulLocale
+
+  throw new Error('This implementation requires contentfulLocales for localized CDA fetches.')
+}
+
 type QsPrimitive = string | ParsedQs
 type QsArray = QsPrimitive[] // Note: mixed arrays are allowed by ParsedQs
 type QsValue = QsPrimitive | QsArray | undefined
+interface ProfileResult {
+  readonly contentfulLocale: string
+  readonly optimizationData: OptimizationData | undefined
+}
 
 function toStringValue(value: QsValue): string | null {
   if (value === undefined) return null
@@ -73,10 +86,13 @@ export function getQueryRecordFromRequest(qs: ParsedQs): Record<string, string> 
   }, {})
 }
 
-function getUniversalEventBuilderArgs(req: Request): UniversalEventBuilderArgs {
+function getUniversalEventBuilderArgs(
+  req: Request,
+  eventLocale: string,
+): UniversalEventBuilderArgs {
   const url = new URL(req.protocol + '://' + req.get('host') + req.originalUrl)
   return {
-    locale: req.acceptsLanguages()[0] ?? 'en-US',
+    locale: eventLocale,
     userAgent: req.get('User-Agent') ?? 'node-js-server',
     page: {
       path: req.path,
@@ -93,28 +109,34 @@ function getAnonymousIdFromCookies(cookies: unknown): string | undefined {
   return (cookies as Record<string, string>)[ANONYMOUS_ID_COOKIE] ?? undefined
 }
 
-function respond(res: Response, id: string, userId?: string): void {
+function respond(res: Response, id: string, contentfulLocale: string, userId?: string): void {
   res.cookie(ANONYMOUS_ID_COOKIE, id, {
     path: '/',
     sameSite: 'lax', // good default for same-site apps
   })
 
-  res.render('index', { config, identified: userId })
+  res.render('index', { config, contentfulLocale, identified: userId })
 }
 
 async function getProfile(
   req: Request,
   userId?: string,
   anonymousId?: string,
-): Promise<OptimizationData | undefined> {
-  const args = getUniversalEventBuilderArgs(req)
-  const requestOptions = {
-    locale: args.locale,
-  }
+): Promise<ProfileResult> {
+  const { contentfulLocale, eventLocale } = sdk.resolveRequestLocale(req)
+  const resolvedContentfulLocale = requireContentfulLocale(contentfulLocale)
+  const args = getUniversalEventBuilderArgs(req, eventLocale)
+  const experienceRequestOptions = { locale: resolvedContentfulLocale }
   const cookieProfile = anonymousId ? { id: anonymousId } : undefined
 
   if (!userId) {
-    return await sdk.page({ ...args, profile: cookieProfile }, requestOptions)
+    return {
+      contentfulLocale: resolvedContentfulLocale,
+      optimizationData: await sdk.page(
+        { ...args, profile: cookieProfile },
+        experienceRequestOptions,
+      ),
+    }
   }
 
   const identifyResponse = await sdk.identify(
@@ -124,32 +146,38 @@ async function getProfile(
       profile: cookieProfile,
       traits: { identified: true },
     },
-    requestOptions,
+    experienceRequestOptions,
   )
 
-  return await sdk.page(
-    {
-      ...args,
-      profile: cookieProfile ?? { id: identifyResponse.profile.id },
-    },
-    requestOptions,
-  )
+  return {
+    contentfulLocale: resolvedContentfulLocale,
+    optimizationData: await sdk.page(
+      {
+        ...args,
+        profile: cookieProfile ?? { id: identifyResponse.profile.id },
+      },
+      experienceRequestOptions,
+    ),
+  }
 }
 
 app.get('/', limiter, async (req, res) => {
-  const { profile } = (await getProfile(req)) ?? {}
+  const { contentfulLocale, optimizationData } = await getProfile(req)
 
-  respond(res, profile?.id ?? '')
+  respond(res, optimizationData?.profile.id ?? '', contentfulLocale)
 })
 app.get('/smoke-test', limiter, (_, res) => {
-  res.render('index', { config })
+  res.render('index', {
+    config,
+    contentfulLocale: config.optimization.contentfulLocales.default,
+  })
 })
 app.get('/user/:id', limiter, async (req, res) => {
   const anonymousId = getAnonymousIdFromCookies(req.cookies)
   const userId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id
-  const { profile } = (await getProfile(req, userId, anonymousId)) ?? {}
+  const { contentfulLocale, optimizationData } = await getProfile(req, userId, anonymousId)
 
-  respond(res, profile?.id ?? '', userId)
+  respond(res, optimizationData?.profile.id ?? '', contentfulLocale, userId)
 })
 app.use('/dist', express.static('./public/dist'))
 

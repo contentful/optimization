@@ -6,20 +6,26 @@ title: Entry personalization and variant resolution
 
 Use this document to understand how the Optimization SDK Suite resolves a Contentful baseline entry
 to the entry variant selected for a visitor. It explains the runtime contract shared by the Core,
-Web, React Web, React Native, and Node SDKs.
+Web, React Web, React Native, and Node SDKs. Because rendered entries can also contain MergeTag
+entries, it also calls out where profile-dependent MergeTag value resolution differs from entry
+replacement.
 
 For installation and package setup, use the relevant integration guide. For state propagation before
-resolution, see [Core state management](./core-state-management.md).
+resolution, see [Core state management](./core-state-management.md). For a broader explanation of
+Contentful, Experience API, and runtime locale handling, see
+[Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md).
 
 <details>
   <summary>Table of Contents</summary>
 <!-- mtoc-start -->
 
 - [Resolution boundary](#resolution-boundary)
+- [Single-locale CDA entry contract](#single-locale-cda-entry-contract)
 - [Data model](#data-model)
   - [Baseline entry](#baseline-entry)
   - [Optimization entry](#optimization-entry)
   - [Selected optimization](#selected-optimization)
+  - [Merge tags and localized profile values](#merge-tags-and-localized-profile-values)
 - [Resolution flow](#resolution-flow)
   - [Worked example](#worked-example)
   - [Variant indexing](#variant-indexing)
@@ -58,6 +64,57 @@ Application fetches Contentful baseline entry
   -> Experience API returns selectedOptimizations
   -> SDK resolver matches selectedOptimizations to entry.fields.nt_experiences
   -> SDK returns baseline or linked variant entry for rendering
+```
+
+## Single-locale CDA entry contract
+
+The resolver expects standard single-locale Contentful Delivery API entry payloads. In that shape,
+localized fields are direct field values, so optimization references are available as
+`entry.fields.nt_experiences` and variant entries are available as
+`optimizationEntry.fields.nt_variants`.
+
+All-locale CDA payloads are incompatible with SDK entry resolution. `contentful.js` `withAllLocales`
+and raw CDA `locale=*` return locale-keyed field maps instead of direct values, for example
+`fields.nt_experiences['en-US']`. The SDK resolver intentionally handles one localized entry at a
+time, so locale-keyed maps do not match the `OptimizedEntry` schema and resolution falls back to the
+baseline entry.
+
+Fetch the entry with a single CDA locale and enough include depth for optimization links:
+
+```ts
+const optimization = new ContentfulOptimization({
+  clientId,
+  environment,
+  contentfulLocales: {
+    default: 'en-US',
+    supported: ['en-US', 'de-DE', 'fr-FR'],
+  },
+})
+
+const contentful = optimization.withOptimizationLocale(contentfulClient)
+const baselineEntry = await contentful.getEntry(entryId, {
+  include: 10,
+})
+```
+
+Use the SDK-resolved Contentful locale for CDA entry fetches that feed entry resolution. Browser,
+React Web, and React Native apps can use `withOptimizationLocale(contentfulClient)` or pass
+`optimization.locale` explicitly. Node and SSR apps can use the `contentfulLocale` returned by
+`resolveRequestLocale(reqOrAcceptLanguage)`. Native iOS and Android apps can use `client.locale` in
+their app-owned CDA request code.
+
+That Contentful locale is separate from event context locale and from an explicit Experience API
+`api.locale` override. For the full locale model, including runtime candidates, fallback order,
+Experience API localization, and environment-specific surfaces, see
+[Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md).
+
+For entries that will be passed to the Optimization SDK resolver, use a concrete locale instead of
+the CDA wildcard locale:
+
+```ts
+// These patterns return all locales and produce locale-keyed fields.
+await contentfulClient.withAllLocales.getEntry(entryId, { include: 10 })
+await fetch(`/spaces/${space}/environments/${environment}/entries/${entryId}?include=10&locale=*`)
 ```
 
 ## Data model
@@ -102,6 +159,28 @@ resolved through the Custom Flag and `changes` flow, not through `resolveOptimiz
 
 The resolver uses `experienceId` and `variantIndex`. It returns the full `SelectedOptimization` as
 metadata only when it resolves to a non-baseline variant.
+
+### Merge tags and localized profile values
+
+Entry rendering can also involve MergeTag entries embedded in Rich Text. MergeTag helpers such as
+`getMergeTagValue()` resolve against the current profile data returned by the Experience API. This
+is separate from entry replacement: `resolveOptimizedEntry()` chooses the entry variant, while
+MergeTag helpers resolve profile-dependent values inside rendered fields.
+
+Stateful SDKs use the current resolved app/content locale as the default Experience API locale
+unless an explicit `api.locale` override is provided. Apps can change that resolved locale with
+`setLocale()` or, in React providers, by changing the provider `locale` prop. Locale changes update
+SDK state only; fetch content or call `page()`, `screen()`, or `identify()` again when the rendered
+data needs to refresh. Stateless server code should pass the `contentfulLocale` returned by
+`resolveRequestLocale()` as the per-call `{ locale }` request option when that value is present.
+That keeps localized profile values, such as `location.city` and `location.country`, in the same
+language as the rendered Contentful content. When `contentfulLocale` is absent because no
+`contentfulLocales` config is present, omit the request locale option intentionally.
+
+That request locale is not a Contentful CDA locale. The Experience API validates locale tag syntax
+and uses its own default when the query parameter is omitted. If the locale tag is invalid, the API
+request can fail validation before a profile response is returned. If the tag is valid but a
+specific location translation is not available, localized location values may remain untranslated.
 
 ## Resolution flow
 
@@ -237,6 +316,19 @@ server-provided or request-local data because it avoids depending on ambient SDK
 Provide optimization data before expecting personalized content. `page()`, `identify()`, `screen()`,
 `track()`, and sticky `trackView()` can return the selected optimization data used by this method.
 
+The iOS SDK exposes the same local boundary through
+`OptimizationClient.personalizeEntry(baseline:personalizations:)`. UIKit apps usually pass
+`client.selectedPersonalizations` during cell or view configuration. The method returns a
+`PersonalizedResult` containing the resolved `entry` and optional `personalization` metadata, and
+returns the baseline unchanged when no selected personalization matches the entry.
+
+The Android SDK exposes the same local boundary through
+`OptimizationClient.personalizeEntry(baseline = ..., personalizations = ...)`. XML Views apps
+usually rely on `OptimizedEntryView` or pass `client.selectedPersonalizations.value` when resolving
+directly. The method returns a `PersonalizedResult` containing the resolved `entry` and optional
+`personalization` metadata, and returns the baseline unchanged when no selected personalization
+matches the entry.
+
 ### Render with framework components
 
 Use framework components when rendering is already inside a supported React tree. They subscribe to
@@ -267,6 +359,17 @@ React Native uses the same resolver inside its `OptimizedEntry` component. The c
 
 React Native does not render DOM data attributes. It passes the resolved entry and optimization
 metadata directly into its viewport and tap tracking hooks.
+
+SwiftUI uses the same resolver inside `OptimizedEntry`. The component passes non-optimized entries
+through unchanged, resolves optimized entries from the client's selected personalizations, can lock
+to the first resolved variant, can re-resolve when live updates are enabled, and can attach iOS view
+and tap tracking for the resolved entry.
+
+Android Compose uses the same resolver inside `OptimizedEntry`, and Android XML Views use it inside
+`OptimizedEntryView`. Both adapters pass non-optimized entries through unchanged, resolve optimized
+entries from the client's selected personalizations, can lock to the first resolved variant, can
+re-resolve when live updates are enabled, and can attach Android view and tap tracking for the
+resolved entry.
 
 ### Preview selected variants
 

@@ -79,6 +79,8 @@ describe('@contentful/optimization-react-web core providers', () => {
   })
 
   it('creates optimization instance from config props via OptimizationProvider', () => {
+    rs.spyOn(navigator, 'languages', 'get').mockReturnValue(['DE_AT', 'es-ES'])
+    rs.spyOn(navigator, 'language', 'get').mockReturnValue('es-ES')
     let capturedOptimization: OptimizationSdk | undefined = undefined
 
     function Probe(): null {
@@ -91,6 +93,7 @@ describe('@contentful/optimization-react-web core providers', () => {
         clientId={testConfig.clientId}
         environment={testConfig.environment}
         api={testConfig.api}
+        contentfulLocales={{ default: 'en-US', supported: ['en-US', 'de-DE'] }}
       >
         <Probe />
       </OptimizationProvider>,
@@ -99,8 +102,25 @@ describe('@contentful/optimization-react-web core providers', () => {
     const optimization = requireOptimizationSdk(capturedOptimization)
 
     expect(optimization).toBeInstanceOf(ContentfulOptimization)
+    expect(optimization.locale).toBe('de-DE')
     expect(optimization.tracking).toBeDefined()
     rendered.unmount()
+
+    capturedOptimization = undefined
+    const defaultOnly = renderClient(
+      <OptimizationProvider
+        clientId={testConfig.clientId}
+        environment={testConfig.environment}
+        api={testConfig.api}
+        contentfulLocales={{ default: 'en-US' }}
+      >
+        <Probe />
+      </OptimizationProvider>,
+    )
+
+    expect(requireOptimizationSdk(capturedOptimization).locale).toBe('en-US')
+    defaultOnly.unmount()
+    rs.restoreAllMocks()
   })
 
   it('does not create an owned optimization instance during server render', () => {

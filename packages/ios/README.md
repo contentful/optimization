@@ -45,6 +45,17 @@ persistence, networking, lifecycle handling, SwiftUI views, and preview-panel UI
   bundle consumed by Swift.
 - The native [iOS reference app](../../implementations/ios-sdk/README.md) validates current bridge
   and preview-panel behavior against the shared mock API.
+- `OptimizationConfig.locale` is the app/content locale candidate used to resolve `client.locale`.
+  `OptimizationApiConfig.locale` is the explicit Experience API locale override. Runtime locale
+  changes use `OptimizationClient.setLocale(_:)`. Explicit invalid locale values throw, and invalid
+  ambient device locale candidates are ignored.
+- `ContentfulLocales(default: "en-US")` is enough for single-locale apps. Add `supported` only when
+  the app needs device-locale matching across multiple Contentful locales.
+- Use `client.locale` for app-owned CDA fetches that feed SDK entry resolution. Do not pass
+  all-locale CDA responses from `withAllLocales` or `locale=*`; see
+  [Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
+  For the broader locale model, see
+  [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md).
 - This surface is alpha implementation work. Treat the API, setup flow, and bridge contract as
   subject to change until a stable native iOS SDK release is declared.
 
@@ -79,6 +90,9 @@ locally before `swift build`/`swift test` with `pnpm run ios:bridge`, or use the
 
 ## Related
 
+- [iOS SDK code map](./CODE_MAP.md) - Maintainer architecture map for the native iOS package
+- [Native bridge architecture](../universal/optimization-js-bridge/BRIDGE_ARCHITECTURE.md) - Shared
+  bridge runtime and build notes
 - [iOS reference app](../../implementations/ios-sdk/README.md) - Native app and XCUITest surface for
   bridge and preview-panel validation
 - [React Native SDK](../react-native-sdk/README.md) - Current stable mobile-facing JavaScript SDK

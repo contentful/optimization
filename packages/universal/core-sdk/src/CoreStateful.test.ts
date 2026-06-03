@@ -81,6 +81,7 @@ describe('CoreStateful blocked event handling', () => {
       signals.changes.value = undefined
       signals.consent.value = undefined
       signals.event.value = undefined
+      signals.locale.value = undefined
       signals.online.value = true
       signals.selectedOptimizations.value = undefined
       signals.previewPanelAttached.value = false
@@ -332,6 +333,7 @@ describe('CoreStateful blocked event handling', () => {
     expect(secondStates.flag).toBe(firstStates.flag)
     expect(secondStates.consent).toBe(firstStates.consent)
     expect(secondStates.eventStream).toBe(firstStates.eventStream)
+    expect(secondStates.locale).toBe(firstStates.locale)
     expect(secondStates.canOptimize).toBe(firstStates.canOptimize)
     expect(secondStates.selectedOptimizations).toBe(firstStates.selectedOptimizations)
     expect(secondStates.previewPanelAttached).toBe(firstStates.previewPanelAttached)

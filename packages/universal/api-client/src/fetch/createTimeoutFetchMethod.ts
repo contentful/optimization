@@ -82,7 +82,10 @@ export function createTimeoutFetchMethod({
       controller.abort()
     }, requestTimeout)
 
-    const response = await fetchMethod(url, { ...init, signal: controller.signal })
+    const requestInit: RequestInit = { ...init }
+    Object.assign(requestInit, { signal: controller.signal })
+
+    const response = await fetchMethod(url, requestInit)
 
     clearTimeout(id)
 

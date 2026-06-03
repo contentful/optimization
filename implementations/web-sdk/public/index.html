@@ -216,6 +216,10 @@
         environment: '<!--#echo var="NGINX_NINETAILED_ENVIRONMENT" -->',
         logLevel: 'debug',
         autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
+        locale: 'en-US',
+        contentfulLocales: {
+          default: 'en-US',
+        },
         app: {
           name: document.title,
           version: '0.0.0',
@@ -225,6 +229,7 @@
           experienceBaseUrl: '<!--#echo var="NGINX_EXPERIENCE_API_BASE_URL" -->',
         },
       })
+      contentfulClient = window.contentfulOptimization.withOptimizationLocale(contentfulClient)
 
       attachOptimizationPreviewPanel({
         contentful: contentfulClient,
@@ -443,7 +448,9 @@
         let rawEntry
 
         try {
-          rawEntry = await contentfulClient.getEntry(entryId, { include: 10 })
+          rawEntry = await contentfulClient.getEntry(entryId, {
+            include: 10,
+          })
         } catch (error) {
           console.warn(`Entry "${entryId}" could not be found in the current space`)
           return []

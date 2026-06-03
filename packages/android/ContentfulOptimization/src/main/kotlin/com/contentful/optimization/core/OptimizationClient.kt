@@ -1,6 +1,7 @@
 package com.contentful.optimization.core
 
 import android.content.Context
+import android.os.LocaleList
 import android.util.Log
 import com.contentful.optimization.bridge.QuickJsContextManager
 import com.contentful.optimization.handlers.AppLifecycleHandler
@@ -31,6 +32,9 @@ class OptimizationClient(private val applicationContext: Context) {
 
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
+
+    var locale: String? = null
+        private set
 
     private val _selectedPersonalizations = MutableStateFlow<List<Map<String, Any>>?>(null)
     val selectedPersonalizations: StateFlow<List<Map<String, Any>>?> = _selectedPersonalizations.asStateFlow()
@@ -70,7 +74,9 @@ class OptimizationClient(private val applicationContext: Context) {
         log.info { "[init] Starting SDK initialization (clientId=${config.clientId}, env=${config.environment})" }
 
         store.load()
+        val resolvedLocale = config.resolvedLocale(getRuntimeLocaleCandidates())
         val mergedConfig = config.copy(
+            locale = resolvedLocale,
             defaults = (config.defaults ?: StorageDefaults()).let { d ->
                 d.copy(
                     consent = d.consent ?: store.consent,
@@ -80,6 +86,7 @@ class OptimizationClient(private val applicationContext: Context) {
                 )
             }
         )
+        locale = resolvedLocale
 
         bridge.onLog = { level, msg -> log.debug { "[js:$level] $msg" } }
 
@@ -148,6 +155,19 @@ class OptimizationClient(private val applicationContext: Context) {
 
     fun setOnline(isOnline: Boolean) {
         bridgeCallSyncWhenInitialized("setOnline", if (isOnline) "true" else "false")
+    }
+
+    fun setLocale(locale: String): String? {
+        requireInitialized()
+        val result = runBlocking(bridge.quickJsDispatcher) {
+            bridge.callSync("setLocale", "'${escapeForJS(locale)}'")
+        }
+        if (result == null || result == "undefined") {
+            throw OptimizationError.ConfigError("Failed to update locale")
+        }
+        val resolvedLocale = result.takeUnless { it == "null" }
+        this.locale = resolvedLocale
+        return resolvedLocale
     }
 
     suspend fun personalizeEntry(
@@ -272,8 +292,14 @@ class OptimizationClient(private val applicationContext: Context) {
         bridge.destroy()
         _isInitialized.value = false
         _state.value = OptimizationState.EMPTY
+        locale = null
         _selectedPersonalizations.value = null
         store.clear()
+    }
+
+    private fun getRuntimeLocaleCandidates(): List<String> {
+        val localeList = LocaleList.getDefault()
+        return (0 until localeList.size()).map { localeList[it].toLanguageTag() }
     }
 
     // MARK: - Testing
@@ -356,13 +382,16 @@ class OptimizationClient(private val applicationContext: Context) {
         @Suppress("UNCHECKED_CAST")
         val changes = extractJSONArray(dict["changes"]) as? List<Map<String, Any>>
         val consent = dict["consent"] as? Boolean
+        val locale = dict["locale"] as? String
 
         _state.value = OptimizationState(
             profile = profile,
             consent = consent,
             canPersonalize = dict["canPersonalize"] as? Boolean ?: false,
             changes = changes,
+            locale = locale,
         )
+        this.locale = locale
 
         @Suppress("UNCHECKED_CAST")
         val personalizations = extractJSONArray(dict["selectedPersonalizations"]) as? List<Map<String, Any>>

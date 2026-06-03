@@ -140,14 +140,23 @@ pass request-scoped inputs into every SDK method call.
 In Node, Experience methods use `payload.profile?.id` as the profile selector:
 
 ```ts
+const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
+const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
+const profileId = req.cookies[ANONYMOUS_ID_COOKIE]
+
 const optimizationData = await optimization.page(
   {
-    profile: { id: req.cookies[ANONYMOUS_ID_COOKIE] },
+    locale: eventLocale,
+    profile: profileId ? { id: profileId } : undefined,
     properties: { path: req.path },
   },
-  { locale: req.acceptsLanguages()[0] ?? 'en-US' },
+  requestOptions,
 )
 ```
+
+For the difference between `contentfulLocale`, `eventLocale`, and the Experience API request
+`locale`, see
+[Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md).
 
 The Node SDK passes that ID to the Experience API as `profileId`. If the ID is absent, the API can
 create a profile and return the new `profile.id`.
@@ -288,8 +297,12 @@ the profile ID continues to select the Experience API profile being updated.
 On the server, pass the current anonymous profile ID when identifying a known user:
 
 ```ts
+const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
+const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
+
 const identifyResponse = await optimization.identify(
   {
+    locale: eventLocale,
     profile: { id: anonymousId },
     userId,
     traits: { authenticated: true },

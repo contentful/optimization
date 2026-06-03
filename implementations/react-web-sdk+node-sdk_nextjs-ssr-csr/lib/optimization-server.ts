@@ -7,6 +7,7 @@ import { optimizationConfig } from './config'
 const sdk = new ContentfulOptimization({
   clientId: optimizationConfig.clientId,
   environment: optimizationConfig.environment,
+  contentfulLocales: optimizationConfig.contentfulLocales,
   logLevel: 'debug',
   api: optimizationConfig.api,
   app: {
@@ -15,18 +16,27 @@ const sdk = new ContentfulOptimization({
   },
 })
 
-const getOptimizationData = cache(async () => {
+const getOptimizationData = cache(async (eventLocale: string, contentfulLocale: string) => {
   const cookieStore = await cookies()
   const headerStore = await headers()
 
   const anonymousId = cookieStore.get(ANONYMOUS_ID_COOKIE)?.value
   const profile = anonymousId ? { id: anonymousId } : undefined
 
-  return sdk.page({
-    locale: headerStore.get('accept-language')?.split(',')[0] ?? 'en-US',
-    userAgent: headerStore.get('user-agent') ?? 'next-js-server',
-    profile,
-  })
+  return sdk.page(
+    {
+      locale: eventLocale,
+      userAgent: headerStore.get('user-agent') ?? 'next-js-server',
+      profile,
+    },
+    { locale: contentfulLocale },
+  )
 })
 
-export { getOptimizationData, sdk }
+function requireContentfulLocale(contentfulLocale: string | undefined): string {
+  if (contentfulLocale !== undefined) return contentfulLocale
+
+  throw new Error('This implementation requires contentfulLocales for localized CDA fetches.')
+}
+
+export { getOptimizationData, requireContentfulLocale, sdk }

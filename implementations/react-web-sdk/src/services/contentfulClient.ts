@@ -1,3 +1,4 @@
+import type { OptimizationSdk } from '@contentful/optimization-react-web'
 import { createClient } from 'contentful'
 import type { ContentEntry, ContentEntrySkeleton } from '../types/contentful'
 
@@ -30,8 +31,10 @@ function createContentfulClient(): ReturnType<typeof createClient> {
 
 const contentfulClient = createContentfulClient()
 
-export function getContentfulClient(): ReturnType<typeof createClient> {
-  return contentfulClient
+export function getContentfulClient(
+  optimization?: OptimizationSdk,
+): ReturnType<typeof createClient> {
+  return optimization?.withOptimizationLocale(contentfulClient) ?? contentfulClient
 }
 
 export function getContentfulConfigError(): string | null {
@@ -42,13 +45,16 @@ export function getContentfulConfigError(): string | null {
   return `Missing required Contentful env vars: ${MISSING_ENV_ERROR}. See implementations/react-web-sdk/.env.example.`
 }
 
-export async function fetchEntry(entryId: string): Promise<ContentEntry | undefined> {
+export async function fetchEntry(
+  entryId: string,
+  optimization: OptimizationSdk,
+): Promise<ContentEntry | undefined> {
   if (getContentfulConfigError()) {
     return undefined
   }
 
   try {
-    return await contentfulClient.getEntry<ContentEntrySkeleton>(entryId, {
+    return await getContentfulClient(optimization).getEntry<ContentEntrySkeleton>(entryId, {
       include: INCLUDE_DEPTH,
     })
   } catch {
@@ -56,8 +62,13 @@ export async function fetchEntry(entryId: string): Promise<ContentEntry | undefi
   }
 }
 
-export async function fetchEntries(entryIds: readonly string[]): Promise<ContentEntry[]> {
-  const fetchedEntries = await Promise.all(entryIds.map(fetchEntry))
+export async function fetchEntries(
+  entryIds: readonly string[],
+  optimization: OptimizationSdk,
+): Promise<ContentEntry[]> {
+  const fetchedEntries = await Promise.all(
+    entryIds.map(async (entryId) => await fetchEntry(entryId, optimization)),
+  )
 
   return fetchedEntries.filter((entry): entry is ContentEntry => entry !== undefined)
 }

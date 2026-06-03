@@ -38,6 +38,20 @@ hybrid SSR and ESR solutions.
 > code. If the server embeds personalized output or profile-derived values, treat that response as
 > personalized and avoid shared caching unless you vary on all relevant inputs.
 
+## CDA locale handling
+
+The server calls `resolveRequestLocale()` for request-scoped `eventLocale` and `contentfulLocale`.
+The browser configures SDK `contentfulLocales`, receives an initial app/content `locale`, and wraps
+the CDA client with `withOptimizationLocale()`. Browser Experience API calls use the live resolved
+locale by default, and server Experience API calls pass the per-request `contentfulLocale`
+explicitly. Do not use `contentful.js` `withAllLocales` or raw CDA `locale=*` for entries passed to
+SDK resolution; the resolver expects direct single-locale fields such as `fields.nt_experiences` and
+`fields.nt_variants`. See
+[Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md)
+for the broader locale model and
+[Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
+for the entry contract.
+
 ## What this demonstrates
 
 Use this implementation when you need a hybrid SSR/browser example. It demonstrates a stateless Node

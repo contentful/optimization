@@ -52,8 +52,8 @@ Import the attach function; both CJS and ESM module systems are supported, ESM p
 import attachOptimizationPreviewPanel from '@contentful/optimization-web-preview-panel'
 ```
 
-Attach the preview panel with an existing Contentful SDK client. By default, the attach function
-uses the browser singleton created by the Optimization Web SDK:
+Attach the preview panel with an existing, unmodified Contentful Delivery API client. By default,
+the attach function uses the browser singleton created by the Optimization Web SDK:
 
 ```ts
 attachOptimizationPreviewPanel({

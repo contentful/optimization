@@ -12,17 +12,98 @@ final class OptimizationClientTests: XCTestCase {
             clientId: "test-client",
             environment: "master",
             experienceBaseUrl: "http://localhost:8000/experience/",
-            insightsBaseUrl: "http://localhost:8000/insights/"
+            insightsBaseUrl: "http://localhost:8000/insights/",
+            locale: "en-US"
         )
 
         let json = try config.toJSON()
         let data = json.data(using: .utf8)!
-        let dict = try JSONSerialization.jsonObject(with: data) as! [String: String]
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
 
-        XCTAssertEqual(dict["clientId"], "test-client")
-        XCTAssertEqual(dict["environment"], "master")
-        XCTAssertEqual(dict["experienceBaseUrl"], "http://localhost:8000/experience/")
-        XCTAssertEqual(dict["insightsBaseUrl"], "http://localhost:8000/insights/")
+        XCTAssertEqual(dict["clientId"] as? String, "test-client")
+        XCTAssertEqual(dict["environment"] as? String, "master")
+        XCTAssertEqual(dict["experienceBaseUrl"] as? String, "http://localhost:8000/experience/")
+        XCTAssertEqual(dict["insightsBaseUrl"] as? String, "http://localhost:8000/insights/")
+        XCTAssertEqual(dict["locale"] as? String, "en-US")
+    }
+
+    func testConfigToJSONResolvesContentfulLocales() throws {
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            contentfulLocales: ContentfulLocales(
+                default: "en-US",
+                supported: ["en-US", "de-DE", "fr-FR"]
+            )
+        )
+
+        let json = try config.toJSON(localeCandidates: ["de-AT", "es-ES"])
+        let data = json.data(using: .utf8)!
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        XCTAssertEqual(dict["locale"] as? String, "de-DE")
+        XCTAssertNotNil(dict["contentfulLocales"])
+    }
+
+    func testConfigToJSONResolvesDefaultOnlyContentfulLocales() throws {
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            contentfulLocales: ContentfulLocales(default: "en-US")
+        )
+
+        let json = try config.toJSON(localeCandidates: ["de-AT", "es-ES"])
+        let data = json.data(using: .utf8)!
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        let contentfulLocales = dict["contentfulLocales"] as? [String: Any]
+
+        XCTAssertEqual(dict["locale"] as? String, "en-US")
+        XCTAssertEqual(contentfulLocales?["default"] as? String, "en-US")
+        XCTAssertEqual(contentfulLocales?["supported"] as? [String], [])
+        XCTAssertEqual(try config.resolvedLocale(candidates: ["de-AT"]), "en-US")
+    }
+
+    func testExplicitLocaleIsResolvedAgainstContentfulLocales() throws {
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            contentfulLocales: ContentfulLocales(
+                default: "en-US",
+                supported: ["en-US", "de-DE"]
+            ),
+            locale: "de-AT"
+        )
+
+        XCTAssertEqual(try config.resolvedLocale(candidates: ["fr-FR"]), "de-DE")
+    }
+
+    func testApiLocaleSerializesNestedApiConfig() throws {
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            contentfulLocales: ContentfulLocales(
+                default: "en-US",
+                supported: ["en-US", "de-DE"]
+            ),
+            locale: "de-AT",
+            api: OptimizationApiConfig(locale: "fr-FR")
+        )
+
+        let json = try config.toJSON()
+        let data = json.data(using: .utf8)!
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+        let api = dict["api"] as? [String: Any]
+
+        XCTAssertEqual(dict["locale"] as? String, "de-DE")
+        XCTAssertEqual(api?["locale"] as? String, "fr-FR")
+    }
+
+    func testExactLocaleMatchesWinBeforeFallbackMatches() throws {
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            contentfulLocales: ContentfulLocales(
+                default: "en-US",
+                supported: ["en-US", "de-DE", "fr-FR"]
+            )
+        )
+
+        XCTAssertEqual(try config.resolvedLocale(candidates: ["de-AT", "fr-FR"]), "fr-FR")
     }
 
     func testConfigDefaultEnvironment() {
@@ -30,6 +111,8 @@ final class OptimizationClientTests: XCTestCase {
         XCTAssertEqual(config.environment, "master")
         XCTAssertNil(config.experienceBaseUrl)
         XCTAssertNil(config.insightsBaseUrl)
+        XCTAssertNil(config.locale)
+        XCTAssertNil(config.api)
     }
 
     func testConfigToJSONOmitsNilUrls() throws {
@@ -76,6 +159,7 @@ final class OptimizationClientTests: XCTestCase {
         XCTAssertNil(state.consent)
         XCTAssertFalse(state.canPersonalize)
         XCTAssertNil(state.changes)
+        XCTAssertNil(state.locale)
     }
 
     func testOptimizationStateEquality() {
@@ -458,6 +542,42 @@ final class OptimizationClientTests: XCTestCase {
         // Should not throw
         client.setOnline(true)
         client.setOnline(false)
+    }
+
+    @MainActor
+    func testClientSetLocaleUpdatesResolvedLocale() throws {
+        let client = OptimizationClient()
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            environment: "master",
+            experienceBaseUrl: "http://localhost:8000/experience/",
+            insightsBaseUrl: "http://localhost:8000/insights/",
+            contentfulLocales: ContentfulLocales(
+                default: "en-US",
+                supported: ["en-US", "de-DE"]
+            )
+        )
+
+        try client.initialize(config: config)
+
+        XCTAssertEqual(client.locale, "en-US")
+        XCTAssertEqual(try client.setLocale("de-AT"), "de-DE")
+        XCTAssertEqual(client.locale, "de-DE")
+    }
+
+    @MainActor
+    func testClientSetLocaleRejectsInvalidLocale() throws {
+        let client = OptimizationClient()
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            environment: "master",
+            experienceBaseUrl: "http://localhost:8000/experience/",
+            insightsBaseUrl: "http://localhost:8000/insights/"
+        )
+
+        try client.initialize(config: config)
+
+        XCTAssertThrowsError(try client.setLocale("*"))
     }
 
     @MainActor

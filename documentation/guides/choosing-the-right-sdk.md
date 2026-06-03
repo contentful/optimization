@@ -11,6 +11,8 @@ Use this guide to choose the narrowest package layer that matches the runtime yo
   - [React applications on the web](#react-applications-on-the-web)
   - [Node servers and server-side rendering](#node-servers-and-server-side-rendering)
   - [React Native applications](#react-native-applications)
+  - [Native iOS applications](#native-ios-applications)
+  - [Native Android applications](#native-android-applications)
 - [Lower-level building blocks](#lower-level-building-blocks)
   - [`@contentful/optimization-core`](#contentfuloptimization-core)
   - [`@contentful/optimization-api-client`](#contentfuloptimization-api-client)
@@ -54,6 +56,26 @@ Choose `@contentful/optimization-react-native` for React Native applications tha
 optimization behavior on mobile, including offline-aware event handling and React Native-specific
 tracking utilities.
 
+### Native iOS applications
+
+Choose the `ContentfulOptimization` Swift Package for native SwiftUI or UIKit applications that need
+stateful optimization behavior on iOS, including native persistence, screen tracking, entry
+personalization, interaction tracking, and the in-app preview panel.
+
+The native iOS SDK is separate from `@contentful/optimization-react-native`. Use React Native when
+the application is built with React Native, and use the Swift Package when the application is built
+with SwiftUI or UIKit.
+
+### Native Android applications
+
+Choose `com.contentful.java:optimization-android` for native Android applications that need stateful
+optimization behavior on Android, including native persistence, screen tracking, entry
+personalization, interaction tracking, and the in-app preview panel.
+
+The native Android SDK is separate from `@contentful/optimization-react-native`. Use React Native
+when the application is built with React Native, and use the Android SDK when the application is
+built with Jetpack Compose or XML Views.
+
 ## Lower-level building blocks
 
 Choose one of the lower layers only when the environment SDKs are too opinionated for the use case
@@ -82,6 +104,9 @@ Optimization APIs and Contentful entry-shape helpers.
 - Browser application with author preview: `@contentful/optimization-web` and
   `@contentful/optimization-web-preview-panel`
 - React browser application: `@contentful/optimization-react-web`
+- Native mobile application: `@contentful/optimization-react-native` for React Native,
+  `ContentfulOptimization` for SwiftUI and UIKit, or `com.contentful.java:optimization-android` for
+  Jetpack Compose and XML Views
 - Server-rendered application with browser follow-up tracking: `@contentful/optimization-node` on
   the server and `@contentful/optimization-web` in the browser
 - Custom internal SDK layer: `@contentful/optimization-core`, optionally with

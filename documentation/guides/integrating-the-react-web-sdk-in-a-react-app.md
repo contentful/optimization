@@ -122,16 +122,18 @@ children can mount before the first visible paint.
 
 Available configuration props:
 
-| Prop                    | Type                           | Required | Default                                         | Description                                                |
-| ----------------------- | ------------------------------ | -------- | ----------------------------------------------- | ---------------------------------------------------------- |
-| `clientId`              | `string`                       | Yes      | N/A                                             | Your Contentful Optimization client identifier             |
-| `environment`           | `string`                       | No       | `'main'`                                        | Contentful environment                                     |
-| `api`                   | `CoreApiConfig`                | No       | See below                                       | Experience API and Insights API configuration              |
-| `app`                   | `App`                          | No       | —                                               | Application metadata attached to events                    |
-| `trackEntryInteraction` | `TrackEntryInteractionOptions` | No       | `{ views: true, clicks: false, hovers: false }` | Automatic entry interaction tracking options               |
-| `logLevel`              | `LogLevels`                    | No       | `'error'`                                       | Minimum log level for console output                       |
-| `liveUpdates`           | `boolean`                      | No       | `false`                                         | Enable global live updates                                 |
-| `onStatesReady`         | `(states) => cleanup`          | No       | —                                               | Attach app-level state subscribers when SDK state is ready |
+| Prop                    | Type                           | Required | Default                                         | Description                                                         |
+| ----------------------- | ------------------------------ | -------- | ----------------------------------------------- | ------------------------------------------------------------------- |
+| `clientId`              | `string`                       | Yes      | N/A                                             | Your Contentful Optimization client identifier                      |
+| `environment`           | `string`                       | No       | `'main'`                                        | Contentful environment                                              |
+| `api`                   | `CoreApiConfig`                | No       | See below                                       | Experience API and Insights API configuration                       |
+| `app`                   | `App`                          | No       | —                                               | Application metadata attached to events                             |
+| `contentfulLocales`     | `ContentfulLocales`            | No       | —                                               | Contentful locale codes used for SDK-assisted CDA locale resolution |
+| `locale`                | `string`                       | No       | `undefined` unless `contentfulLocales` is set   | Initial app/content locale candidate                                |
+| `trackEntryInteraction` | `TrackEntryInteractionOptions` | No       | `{ views: true, clicks: false, hovers: false }` | Automatic entry interaction tracking options                        |
+| `logLevel`              | `LogLevels`                    | No       | `'error'`                                       | Minimum log level for console output                                |
+| `liveUpdates`           | `boolean`                      | No       | `false`                                         | Enable global live updates                                          |
+| `onStatesReady`         | `(states) => cleanup`          | No       | —                                               | Attach app-level state subscribers when SDK state is ready          |
 
 A more complete initialization with explicit API endpoints and interaction tracking:
 
@@ -143,6 +145,11 @@ A more complete initialization with explicit API endpoints and interaction track
     insightsBaseUrl: 'https://ingest.insights.ninetailed.co/',
     experienceBaseUrl: 'https://experience.ninetailed.co/',
   }}
+  contentfulLocales={{
+    default: 'en-US',
+    supported: ['en-US', 'de-DE', 'fr-FR'],
+  }}
+  locale="en-US"
   trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
   logLevel="warn"
   app={{
@@ -154,6 +161,20 @@ A more complete initialization with explicit API endpoints and interaction track
   <YourApp />
 </OptimizationRoot>
 ```
+
+Use `contentfulLocales.default` for single-locale apps, and add `contentfulLocales.supported` when
+the app needs browser locale matching across multiple Contentful locales. Copy those codes from
+Contentful locale settings or the CMA locale list. The `locale` prop supplies the initial
+app/content locale. The resolved `optimization.locale`, when present, is the Contentful locale code
+used by `withOptimizationLocale()` and by default Experience API localization unless you provide an
+explicit `api.locale` override.
+
+Changing the provider `locale` prop after initialization calls `optimization.setLocale(nextLocale)`
+and updates `optimization.locale` plus `optimization.states.locale`. It does not fetch content or
+refresh profile state; call `page`, `identify`, or CDA methods again when your app needs localized
+data refreshed. For the full matching rules, configuration cases, and Experience API locale
+behavior, see
+[Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
 
 ### Access the SDK instance with hooks
 
@@ -359,8 +380,17 @@ optimization state and renders the result.
 
 ### Basic usage
 
-Pass a baseline entry fetched from Contentful (with `include: 10` to resolve linked optimization
-data) and a render prop that receives the resolved entry:
+Pass a baseline entry fetched from Contentful (with `include: 10` and a single CDA locale to resolve
+linked optimization data) and a render prop that receives the resolved entry:
+
+```tsx
+const optimization = useOptimization()
+const contentful = optimization.withOptimizationLocale(contentfulClient)
+
+const baselineEntry = await contentful.getEntry(entryId, {
+  include: 10,
+})
+```
 
 ```tsx
 import { OptimizedEntry } from '@contentful/optimization-react-web'
@@ -378,6 +408,18 @@ function HeroSection({ baselineEntry }) {
   )
 }
 ```
+
+For localized apps, configure `contentfulLocales` on `OptimizationRoot` with the locale codes from
+your Contentful space, then use the recommended `withOptimizationLocale()` helper or pass
+`optimization.locale` explicitly when fetching entries. The wrapper injects `optimization.locale`
+into `getEntry()` and `getEntries()` calls when the caller does not provide a locale and the SDK has
+resolved one. `contentful.js` `withAllLocales` and raw CDA `locale=*` return locale-keyed fields;
+the SDK resolver works with the standard single-locale CDA entry shape where `fields.nt_experiences`
+and `fields.nt_variants` are direct field values. See
+[Entry personalization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
+for the entry contract and
+[Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md)
+for the broader locale model.
 
 The component automatically determines readiness:
 
@@ -856,7 +898,8 @@ pnpm add @contentful/optimization-web-preview-panel
 ```
 
 Import and attach it after the SDK is initialized. The preview panel requires both a Contentful
-client (for fetching audience and optimization entries) and the SDK instance:
+client (for fetching audience and optimization entries) and the SDK instance. Pass the unmodified
+Contentful Delivery API client.
 
 ```tsx
 import { useOptimizationContext } from '@contentful/optimization-react-web'
@@ -878,8 +921,7 @@ function PreviewPanelLoader() {
     void import('@contentful/optimization-web-preview-panel').then(
       ({ default: attachOptimizationPreviewPanel }) => {
         attachOptimizationPreviewPanel({
-          contentful:
-            contentfulClient.withAllLocales.withoutLinkResolution.withoutUnresolvableLinks,
+          contentful: contentfulClient,
           optimization: sdk,
           nonce: undefined,
         }).catch((error) => {
@@ -907,7 +949,7 @@ In environments with strict CSP policies, pass a nonce:
 
 ```tsx
 attachOptimizationPreviewPanel({
-  contentful: contentfulClient.withAllLocales.withoutLinkResolution.withoutUnresolvableLinks,
+  contentful: contentfulClient,
   optimization: sdk,
   nonce: 'your-csp-nonce',
 })

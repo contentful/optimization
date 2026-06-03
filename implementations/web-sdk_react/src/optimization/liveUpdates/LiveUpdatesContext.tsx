@@ -20,7 +20,6 @@ interface LiveUpdatesContextValue {
 
 const LiveUpdatesContext = createContext<LiveUpdatesContextValue | undefined>(undefined)
 type PreviewPanelAttacher = typeof attachOptimizationPreviewPanel
-type PreviewPanelContentful = Parameters<PreviewPanelAttacher>[0]['contentful']
 
 interface PreviewPanelConfig {
   contentful: ContentfulClientApi<undefined>
@@ -47,10 +46,6 @@ function getPreviewPanelToggleButton(): HTMLButtonElement | null {
   return toggleButton instanceof HTMLButtonElement ? toggleButton : null
 }
 
-function toPreviewPanelContentful(client: ContentfulClientApi<undefined>): PreviewPanelContentful {
-  return client.withAllLocales.withoutLinkResolution.withoutUnresolvableLinks
-}
-
 async function attachPreviewPanel(previewPanel: PreviewPanelConfig): Promise<void> {
   if (!ENABLE_PREVIEW_PANEL) {
     return
@@ -66,7 +61,7 @@ async function attachPreviewPanel(previewPanel: PreviewPanelConfig): Promise<voi
   const { default: attachOptimizationPreviewPanel }: { default: PreviewPanelAttacher } =
     await import('@contentful/optimization-web-preview-panel')
   const attachment = attachOptimizationPreviewPanel({
-    contentful: toPreviewPanelContentful(previewPanel.contentful),
+    contentful: previewPanel.contentful,
     optimization: previewPanel.optimization,
     nonce: undefined,
   }).catch((error: unknown) => {

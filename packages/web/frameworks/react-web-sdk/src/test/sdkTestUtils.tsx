@@ -88,13 +88,16 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
       await Promise.resolve()
       return undefined
     },
+    locale: undefined,
     page: async () => {
       await Promise.resolve()
       return undefined
     },
     resolveOptimizedEntry: (entry: Entry) => ({ entry }),
     reset: () => undefined,
+    setLocale: () => undefined,
     states: {
+      locale: createObservable(undefined),
       blockedEventStream: createObservable(undefined),
       canOptimize: createObservable(false),
       consent: createObservable(undefined),
@@ -126,6 +129,7 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
       enableElement: () => undefined,
       ...trackingOverrides,
     },
+    withOptimizationLocale: <TClient extends object>(client: TClient): TClient => client,
     ...sdkOverrides,
   }
 }

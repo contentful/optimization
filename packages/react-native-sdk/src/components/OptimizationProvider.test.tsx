@@ -45,7 +45,7 @@ interface TestRendererModule {
 
 type EventStream = ContentfulOptimization['states']['eventStream']
 type EventPayload = NonNullable<EventStream['current']>
-type TestSdk = Pick<ContentfulOptimization, 'destroy' | 'screen'> & {
+type TestSdk = Pick<ContentfulOptimization, 'destroy' | 'screen' | 'setLocale'> & {
   states: Pick<ContentfulOptimization['states'], 'eventStream'>
 }
 
@@ -164,6 +164,7 @@ function createSdk(): {
     destroy: () => {
       teardownOrder.push('destroy')
     },
+    setLocale: () => undefined,
     screen: async () => {
       eventStream.emit(screenEvent)
       await Promise.resolve()
@@ -212,6 +213,7 @@ function isContentfulOptimization(value: TestSdk): value is TestSdk & Contentful
   return (
     typeof value.destroy === 'function' &&
     typeof value.screen === 'function' &&
+    typeof value.setLocale === 'function' &&
     typeof value.states.eventStream.subscribe === 'function'
   )
 }
@@ -343,6 +345,28 @@ describe('OptimizationProvider onStatesReady', () => {
     await flushPromises()
 
     expect(childRendered).toBe(true)
+  })
+
+  it('passes contentfulLocales through owned initialization', async () => {
+    const { OptimizationProvider } = await import('./OptimizationProvider')
+    const { sdk } = createSdk()
+    const contentfulLocales = {
+      default: 'en-US',
+      supported: ['en-US', 'de-DE'],
+    }
+    createOptimization.mockResolvedValue(sdk)
+
+    renderer = await renderWithAct(
+      <OptimizationProvider clientId="test-client-id" contentfulLocales={contentfulLocales}>
+        <></>
+      </OptimizationProvider>,
+    )
+
+    expect(createOptimization).toHaveBeenCalledWith(
+      expect.objectContaining({
+        contentfulLocales,
+      }),
+    )
   })
 
   it('runs onStatesReady cleanup before destroying the sdk', async () => {

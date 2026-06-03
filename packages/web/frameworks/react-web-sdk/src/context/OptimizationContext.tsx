@@ -11,13 +11,16 @@ export type OptimizationSdk = Pick<
   | 'getFlag'
   | 'getMergeTagValue'
   | 'identify'
+  | 'locale'
   | 'page'
   | 'reset'
   | 'states'
+  | 'setLocale'
   | 'track'
   | 'trackClick'
   | 'trackView'
   | 'tracking'
+  | 'withOptimizationLocale'
 > & {
   resolveOptimizedEntry: (
     entry: Entry,

@@ -39,6 +39,13 @@ export const event: Signal<AnalyticsEvent | OptimizationEvent | undefined> = sig
 >()
 
 /**
+ * Resolved Contentful locale used by stateful SDK entry fetches and default Experience requests.
+ *
+ * @public
+ */
+export const locale: Signal<string | undefined> = signal<string | undefined>()
+
+/**
  * Runtime online/offline signal used by queue flush logic.
  *
  * @defaultValue `true`
@@ -97,6 +104,8 @@ export interface Signals {
   consent: typeof consent
   /** Most recent emitted event signal. */
   event: typeof event
+  /** Resolved Contentful locale signal. */
+  locale: typeof locale
   /** Runtime connectivity signal. */
   online: typeof online
   /** Preview panel attachment signal. */
@@ -137,6 +146,7 @@ export const signals: Signals = {
   changes,
   consent,
   event,
+  locale,
   online,
   previewPanelAttached,
   previewPanelOpen,
