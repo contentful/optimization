@@ -17,6 +17,30 @@ import type { z } from 'zod/mini'
 
 const logger = createScopedLogger('Web:LocalStore')
 
+function getLocalStorage(): Storage | undefined {
+  try {
+    return typeof localStorage === 'undefined' ? undefined : localStorage
+  } catch (error) {
+    logger.warn('Failed to access localStorage', error)
+    return undefined
+  }
+}
+
+function getStorageItem(key: string): string | null {
+  const storage = getLocalStorage()
+
+  if (storage === undefined) {
+    return null
+  }
+
+  try {
+    return storage.getItem(key)
+  } catch (error) {
+    logger.warn(`Failed to read localStorage key "${key}"`, error)
+    return null
+  }
+}
+
 /**
  * Local storage abstraction used by the Web SDK to persist optimization state.
  *
@@ -55,11 +79,11 @@ const LocalStore = {
    * @returns The stored anonymous ID string, or `undefined` when absent.
    */
   get anonymousId(): string | undefined {
-    const legacyAnonymousIdValue = localStorage.getItem(ANONYMOUS_ID_KEY_LEGACY)
+    const legacyAnonymousIdValue = getStorageItem(ANONYMOUS_ID_KEY_LEGACY)
 
     if (legacyAnonymousIdValue) LocalStore.setCache(ANONYMOUS_ID_KEY_LEGACY, undefined)
 
-    return legacyAnonymousIdValue ?? localStorage.getItem(ANONYMOUS_ID_KEY) ?? undefined
+    return legacyAnonymousIdValue ?? getStorageItem(ANONYMOUS_ID_KEY) ?? undefined
   },
 
   /**
@@ -78,7 +102,7 @@ const LocalStore = {
    * `denied`, or `undefined` when no value is stored.
    */
   get consent(): boolean | undefined {
-    const consent = localStorage.getItem(CONSENT_KEY)
+    const consent = getStorageItem(CONSENT_KEY)
 
     switch (consent) {
       case 'accepted':
@@ -107,7 +131,7 @@ const LocalStore = {
    * @returns `true` or `false` when stored, or `undefined` otherwise.
    */
   get debug(): boolean | undefined {
-    const debug = localStorage.getItem(DEBUG_FLAG_KEY)
+    const debug = getStorageItem(DEBUG_FLAG_KEY)
 
     return debug ? debug === 'true' : undefined
   },
@@ -184,7 +208,7 @@ const LocalStore = {
    * @returns Parsed data when present and valid, otherwise `undefined`.
    */
   getCache<T extends z.ZodMiniType>(key: string, parser: T): z.output<T> | undefined {
-    const cacheString = localStorage.getItem(key)
+    const cacheString = getStorageItem(key)
 
     if (!cacheString) return
 
@@ -208,11 +232,17 @@ const LocalStore = {
    * restricted storage environments (e.g. quota exhaustion, denied access).
    */
   setCache(key: string, data: unknown): void {
+    const storage = getLocalStorage()
+
+    if (storage === undefined) {
+      return
+    }
+
     try {
       if (data === undefined) {
-        localStorage.removeItem(key)
+        storage.removeItem(key)
       } else {
-        localStorage.setItem(key, typeof data === 'string' ? data : JSON.stringify(data))
+        storage.setItem(key, typeof data === 'string' ? data : JSON.stringify(data))
       }
     } catch (error) {
       logger.warn(`Failed to persist localStorage key "${key}"`, error)

@@ -16,6 +16,7 @@ describe('LocalStore', () => {
 
   afterEach(() => {
     rs.restoreAllMocks()
+    rs.unstubAllGlobals()
   })
 
   it('deletes malformed JSON cache values', () => {
@@ -52,6 +53,30 @@ describe('LocalStore', () => {
       LocalStore.setCache(CHANGES_CACHE_KEY, { foo: 'bar' })
     }).not.toThrow()
     expect(setSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns undefined when localStorage is unavailable', () => {
+    rs.stubGlobal('localStorage', undefined)
+
+    expect(LocalStore.anonymousId).toBeUndefined()
+    expect(LocalStore.consent).toBeUndefined()
+    expect(LocalStore.debug).toBeUndefined()
+    expect(LocalStore.changes).toBeUndefined()
+    expect(() => {
+      LocalStore.setCache(CHANGES_CACHE_KEY, { foo: 'bar' })
+    }).not.toThrow()
+  })
+
+  it('swallows localStorage.getItem failures during cache reads', () => {
+    const getSpy = rs.spyOn(localStorage, 'getItem').mockImplementation(() => {
+      throw new Error('storage blocked')
+    })
+
+    expect(LocalStore.anonymousId).toBeUndefined()
+    expect(LocalStore.consent).toBeUndefined()
+    expect(LocalStore.debug).toBeUndefined()
+    expect(LocalStore.changes).toBeUndefined()
+    expect(getSpy).toHaveBeenCalled()
   })
 
   it('prefers legacy anonymous id and clears legacy key', () => {

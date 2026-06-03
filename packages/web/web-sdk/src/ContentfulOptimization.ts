@@ -27,6 +27,7 @@ import {
 } from './constants'
 import type { AutoTrackEntryInteractionOptions, EntryInteractionApi } from './entry-tracking'
 import { EntryInteractionRuntime } from './entry-tracking/EntryInteractionRuntime'
+import { NodeViewRuntime } from './entry-tracking/NodeViewRuntime'
 import {
   beaconHandler,
   createOnlineChangeListener,
@@ -102,6 +103,16 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
   autoTrackEntryInteraction?: AutoTrackEntryInteractionOptions
 
   /**
+   * Controls automatic `exo_node_view` tracking behavior for node elements.
+   *
+   * @remarks
+   * Supports node interactions via the `views` interaction.
+   *
+   * @defaultValue `{ views: true }`
+   */
+  autoTrackNodeInteraction?: AutoTrackNodeInteractionOptions
+
+  /**
    * Cookie configuration used for persisting the anonymous identifier.
    *
    * @remarks
@@ -116,6 +127,28 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
  * @public
  */
 export type OptimizationTrackingApi = EntryInteractionApi
+
+/**
+ * Union of tracked node interaction keys.
+ *
+ * @public
+ */
+export type NodeInteraction = 'views'
+
+/**
+ * Auto-tracking configuration for tracked node interactions.
+ *
+ * @public
+ */
+export type AutoTrackNodeInteractionOptions = Partial<Record<NodeInteraction, boolean>>
+
+function resolveAutoTrackNodeInteractionOptions(
+  options: AutoTrackNodeInteractionOptions | undefined,
+): Record<NodeInteraction, boolean> {
+  return {
+    views: options?.views ?? true,
+  }
+}
 
 function resolveDefaultState(
   defaults: CoreStatefulConfig['defaults'] | undefined,
@@ -214,6 +247,21 @@ class ContentfulOptimization extends CoreStateful {
    * @internal
    */
   private readonly entryInteractionRuntime: EntryInteractionRuntime
+
+  /**
+   * Runtime for automatic `exo_node_view` viewport tracking.
+   *
+   * @internal
+   */
+  private readonly nodeViewRuntime: NodeViewRuntime
+
+  /**
+   * Resolved automatic node-interaction tracking settings.
+   *
+   * @internal
+   */
+  private readonly autoTrackNodeInteraction: Record<NodeInteraction, boolean>
+
   /**
    * Namespaced tracking controls for automatic and per-element entry interactions.
    *
@@ -265,7 +313,7 @@ class ContentfulOptimization extends CoreStateful {
     if (typeof window !== 'undefined' && window.contentfulOptimization)
       throw new Error('ContentfulOptimization is already initialized')
 
-    const { autoTrackEntryInteraction, ...restConfig } = config
+    const { autoTrackEntryInteraction, autoTrackNodeInteraction, ...restConfig } = config
 
     const mergedConfig: OptimizationWebConfig = mergeConfig(restConfig)
 
@@ -278,6 +326,9 @@ class ContentfulOptimization extends CoreStateful {
     const { tracking } = entryInteractionRuntime
     this.entryInteractionRuntime = entryInteractionRuntime
     this.tracking = tracking
+
+    this.nodeViewRuntime = new NodeViewRuntime(this)
+    this.autoTrackNodeInteraction = resolveAutoTrackNodeInteractionOptions(autoTrackNodeInteraction)
 
     this.cookieAttributes = {
       domain: mergedConfig.cookie?.domain,
@@ -305,7 +356,8 @@ class ContentfulOptimization extends CoreStateful {
         consent: { value },
       } = signals
 
-      this.entryInteractionRuntime.syncAutoTrackedEntryInteractions(!!value)
+      this.reconcileAutoTracking(value)
+
       LocalStore.consent = value
     })
 
@@ -329,6 +381,17 @@ class ContentfulOptimization extends CoreStateful {
     this.initializeFromCookieValues(cookieValue, legacyCookieValue)
 
     if (typeof window !== 'undefined') window.contentfulOptimization ??= this
+  }
+
+  private reconcileAutoTracking(consent: boolean | undefined): void {
+    this.entryInteractionRuntime.syncAutoTrackedEntryInteractions(!!consent)
+
+    if (consent && this.autoTrackNodeInteraction.views) {
+      this.nodeViewRuntime.start()
+      return
+    }
+
+    this.nodeViewRuntime.stop()
   }
 
   /**
@@ -390,6 +453,7 @@ class ContentfulOptimization extends CoreStateful {
    */
   reset(): void {
     this.entryInteractionRuntime.reset()
+    this.nodeViewRuntime.stop()
     removeCookie(ANONYMOUS_ID_COOKIE, this.cookieAttributes)
     LocalStore.reset()
     super.reset()
@@ -404,6 +468,7 @@ class ContentfulOptimization extends CoreStateful {
    */
   destroy(): void {
     this.entryInteractionRuntime.destroy()
+    this.nodeViewRuntime.destroy()
     this.cleanupOnlineListener()
     this.cleanupVisibilityListener()
 

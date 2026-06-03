@@ -21,6 +21,8 @@ import type {
   FlagViewBuilderArgs,
   HoverBuilderArgs,
   IdentifyBuilderArgs,
+  NodeViewBuilderArgs,
+  NodeViewTrackingArgs,
   PageViewBuilderArgs,
   ScreenViewBuilderArgs,
   TrackBuilderArgs,
@@ -47,6 +49,7 @@ const CONSENT_EVENT_TYPE_MAP: Readonly<Partial<Record<string, EventType>>> = {
   trackFlagView: 'component',
   trackClick: 'component_click',
   trackHover: 'component_hover',
+  trackNodeView: 'exo_node_view',
 }
 
 /**
@@ -284,6 +287,35 @@ abstract class CoreStatefulEventEmitter
       'trackFlagView',
       [payload],
       this.eventBuilder.buildFlagView(payload),
+    )
+  }
+
+  /**
+   * Track an XDA graph node view through Insights.
+   *
+   * @param payload - Node view builder arguments.
+   * @returns A promise that resolves when processing completes.
+   * @example
+   * ```ts
+   * await core.trackNodeView({
+   *   entityId: 'experience-sys-id',
+   *   entityKind: 'Experience',
+   *   variantId: 'variant-a',
+   *   variantIndex: 1,
+   *   optimizationId: 'optimization-id',
+   *   viewId: crypto.randomUUID(),
+   *   viewDurationMs: 1_000,
+   * })
+   * ```
+   */
+  async trackNodeView(payload: NodeViewTrackingArgs): Promise<void> {
+    const anonymousId = payload.anonymousId ?? profileSignal.value?.id ?? ''
+    const builderArgs: NodeViewBuilderArgs = { ...payload, anonymousId }
+
+    await this.sendInsightsEvent(
+      'trackNodeView',
+      [payload],
+      this.eventBuilder.buildNodeView(builderArgs),
     )
   }
 

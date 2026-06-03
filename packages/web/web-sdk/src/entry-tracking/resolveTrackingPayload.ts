@@ -24,6 +24,27 @@ export type CtflDataset = DOMStringMap & {
   ctflViewDurationUpdateIntervalMs?: string
   /** Optional per-element hover-duration update interval override in milliseconds. */
   ctflHoverDurationUpdateIntervalMs?: string
+  /**
+   * Rendered node ID from the XDA `extensions.sourceMap.nodes` map.
+   * Presence of this attribute routes the element to `exo_node_view` tracking.
+   */
+  ctflNodeId?: string
+  /** Resolved Experience or Fragment `sys.id` for `exo_node_view` events. */
+  ctflEntityId?: string
+  /** Resolved entity kind for `exo_node_view` events. */
+  ctflEntityKind?: string
+  /** Resolved variant identifier for `exo_node_view` events. */
+  ctflVariant?: string
+  /** Optional per-element override for automatic node view tracking (`'true'`/`'false'`). */
+  ctflTrackNodeViews?: 'true' | 'false'
+  /** Optional composite entity-kind identifier for `exo_node_view` events. */
+  ctflEntityKindId?: string
+  /** Optional CSV of Contentful `sys.id` values for `exo_node_view` events. */
+  ctflEntryIds?: string
+  /** Optional JSON-serialised `ExoNodeLayer[]` ancestor chain for `exo_node_view` events. */
+  ctflLayers?: string
+  /** Optional parent Experience `sys.id` for nested `exo_node_view` events. */
+  ctflParentExperienceId?: string
 }
 
 /**

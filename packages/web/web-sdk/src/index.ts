@@ -19,6 +19,7 @@ export {
   CAN_ADD_LISTENERS,
   ENTRY_SELECTOR,
   HAS_MUTATION_OBSERVER,
+  NODE_VIEW_SELECTOR,
   OPTIMIZATION_WEB_SDK_NAME,
   OPTIMIZATION_WEB_SDK_VERSION,
 } from './constants'
@@ -40,6 +41,7 @@ export type {
   EntryViewInteractionElementOptions,
   EntryViewInteractionStartOptions,
 } from './entry-tracking'
+export * from './entry-tracking/resolveNodeViewPayload'
 export * from './handlers/beaconHandler'
 export * from './storage/LocalStore'
 

@@ -26,6 +26,12 @@ export type {
   UseOptimizedEntryParams,
   UseOptimizedEntryResult,
 } from './optimized-entry/useOptimizedEntry'
+export { useOptimizedNode } from './optimized-entry/useOptimizedNode'
+export type {
+  ResolvedNodeMetadata,
+  UseOptimizedNodeParams,
+  UseOptimizedNodeResult,
+} from './optimized-entry/useOptimizedNode'
 export { LiveUpdatesProvider } from './provider/LiveUpdatesProvider'
 export type { LiveUpdatesProviderProps } from './provider/LiveUpdatesProvider'
 export { OptimizationProvider } from './provider/OptimizationProvider'

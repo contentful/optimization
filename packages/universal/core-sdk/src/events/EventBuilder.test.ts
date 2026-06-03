@@ -6,6 +6,52 @@ const builder = new EventBuilder({
   library: { name: '@contentful/optimization-ios', version: '0.0.1' },
 })
 
+describe('EventBuilder.buildNodeView', () => {
+  it('builds a valid exo_node_view event', () => {
+    const event = builder.buildNodeView({
+      anonymousId: 'anon-id',
+      entityId: 'exp-sys-id',
+      entityKind: 'Experience',
+      variantId: 'variant-a',
+      variantIndex: 1,
+      optimizationId: 'opt-id',
+      viewId: 'view-uuid',
+      viewDurationMs: 1500,
+    })
+
+    expect(event.type).toBe('exo_node_view')
+    expect(event.anonymousId).toBe('anon-id')
+    expect(event.entityId).toBe('exp-sys-id')
+    expect(event.entityKind).toBe('Experience')
+    expect(event.variantId).toBe('variant-a')
+    expect(event.variantIndex).toBe(1)
+    expect(event.optimizationId).toBe('opt-id')
+    expect(event.viewId).toBe('view-uuid')
+    expect(event.viewDurationMs).toBe(1500)
+    expect(event.channel).toBe('mobile')
+  })
+
+  it('stamps universal context fields', () => {
+    const event = builder.buildNodeView({
+      anonymousId: 'anon-id',
+      entityId: 'exp-id',
+      entityKind: 'Fragment',
+      variantId: 'default',
+      variantIndex: 0,
+      optimizationId: 'opt-id',
+      viewId: 'view-uuid',
+      viewDurationMs: 0,
+    })
+
+    expect(event.messageId).toBeTruthy()
+    expect(event.timestamp).toBeTruthy()
+    expect(event.context.library).toEqual({
+      name: '@contentful/optimization-ios',
+      version: '0.0.1',
+    })
+  })
+})
+
 describe('EventBuilder.buildScreenView', () => {
   it('builds a valid screen event without an explicit screen context', () => {
     const event = builder.buildScreenView({ name: 'Home', properties: {} })
