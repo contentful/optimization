@@ -14,11 +14,7 @@ function toSearch(searchParams: ReturnType<typeof useSearchParams>): string {
 function toQueryDictionary(
   searchParams: ReturnType<typeof useSearchParams>,
 ): Record<string, string> {
-  const query: Record<string, string> = {}
-  for (const [key, value] of searchParams) {
-    query[key] = value
-  }
-  return query
+  return Object.fromEntries(searchParams)
 }
 
 function resolveAbsoluteUrl(href: string): string {

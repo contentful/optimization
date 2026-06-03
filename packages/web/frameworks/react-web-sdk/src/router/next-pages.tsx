@@ -13,15 +13,16 @@ function splitAsPath(asPath: string): { path: string; search: string } {
 }
 
 function flattenQuery(query: NextRouter['query']): Record<string, string> {
-  const flattened: Record<string, string> = {}
-  for (const [key, value] of Object.entries(query)) {
+  const entries = Object.entries(query).flatMap<[string, string]>(([key, value]) => {
     if (typeof value === 'string') {
-      flattened[key] = value
-    } else if (Array.isArray(value) && value.length > 0) {
-      flattened[key] = value.join(',')
+      return [[key, value]]
     }
-  }
-  return flattened
+    if (Array.isArray(value) && value.length > 0) {
+      return [[key, value.join(',')]]
+    }
+    return []
+  })
+  return Object.fromEntries(entries)
 }
 
 function resolveAbsoluteUrl(href: string): string {

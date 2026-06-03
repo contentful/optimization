@@ -9,12 +9,7 @@ function toRouteKey(location: Pick<Location, 'pathname' | 'search' | 'hash'>): s
 }
 
 function buildQueryDictionary(searchStr: string): Record<string, string> {
-  const params = new URLSearchParams(searchStr)
-  const query: Record<string, string> = {}
-  for (const [key, value] of params) {
-    query[key] = value
-  }
-  return query
+  return Object.fromEntries(new URLSearchParams(searchStr))
 }
 
 function resolveAbsoluteUrl(href: string): string {
