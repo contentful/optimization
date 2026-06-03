@@ -27,7 +27,8 @@ const testConfig = {
 function TestAutoPageEmitter(): null {
   useAutoPageEmitter({
     enabled: true,
-    route: { routeKey: '/', context: undefined },
+    routeKey: '/',
+    buildPayload: () => ({}),
   })
 
   return null

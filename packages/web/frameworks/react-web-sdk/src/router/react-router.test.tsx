@@ -78,7 +78,7 @@ describe('ReactRouterAutoPageTracker', () => {
     expect(ReactRouterAutoPageTracker).toBeTypeOf('function')
   })
 
-  it('emits on initial render and route changes', async () => {
+  it('emits router-derived URL data on initial render and route changes', async () => {
     const page = rs.fn(async () => {
       await Promise.resolve()
       return undefined
@@ -87,7 +87,15 @@ describe('ReactRouterAutoPageTracker', () => {
     const rendered = await renderTracker(<ReactRouterAutoPageTracker />, sdk)
 
     expect(page).toHaveBeenCalledTimes(1)
-    expect(page).toHaveBeenNthCalledWith(1, {})
+    expect(page).toHaveBeenNthCalledWith(1, {
+      properties: {
+        hash: '',
+        path: '/',
+        query: {},
+        search: '',
+        url: `${window.location.origin}/`,
+      },
+    })
 
     locationState.pathname = '/products'
     locationState.search = '?tab=featured'
@@ -98,7 +106,15 @@ describe('ReactRouterAutoPageTracker', () => {
     await rendered.rerender(<ReactRouterAutoPageTracker />)
 
     expect(page).toHaveBeenCalledTimes(2)
-    expect(page).toHaveBeenNthCalledWith(2, {})
+    expect(page).toHaveBeenNthCalledWith(2, {
+      properties: {
+        hash: '#hero',
+        path: '/products',
+        query: { tab: 'featured' },
+        search: '?tab=featured',
+        url: `${window.location.origin}/products?tab=featured#hero`,
+      },
+    })
 
     await rendered.unmount()
   })
@@ -181,9 +197,13 @@ describe('ReactRouterAutoPageTracker', () => {
       locale: 'en-US',
       properties: {
         campaign: 'spring',
+        hash: '#hero',
         matchCount: 2,
         path: '/products?tab=featured#hero',
+        query: { tab: 'featured' },
+        search: '?tab=featured',
         source: 'dynamic',
+        url: `${window.location.origin}/products?tab=featured#hero`,
       },
     })
     expect(getPagePayload).toHaveBeenCalledWith({

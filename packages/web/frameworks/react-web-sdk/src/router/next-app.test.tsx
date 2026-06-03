@@ -99,7 +99,14 @@ describe('NextAppAutoPageTracker', () => {
     const rendered = await renderTracker(<NextAppAutoPageTracker />, sdk)
 
     expect(page).toHaveBeenCalledTimes(1)
-    expect(page).toHaveBeenCalledWith({})
+    expect(page).toHaveBeenCalledWith({
+      properties: {
+        path: '/',
+        query: {},
+        search: '',
+        url: `${window.location.origin}/`,
+      },
+    })
 
     await rendered.unmount()
   })
@@ -121,7 +128,14 @@ describe('NextAppAutoPageTracker', () => {
     await rendered.rerender(<NextAppAutoPageTracker />)
 
     expect(page).toHaveBeenCalledTimes(2)
-    expect(page).toHaveBeenNthCalledWith(2, {})
+    expect(page).toHaveBeenNthCalledWith(2, {
+      properties: {
+        path: '/products',
+        query: { tab: 'featured' },
+        search: '?tab=featured',
+        url: `${window.location.origin}/products?tab=featured`,
+      },
+    })
 
     await rendered.unmount()
   })
@@ -182,9 +196,12 @@ describe('NextAppAutoPageTracker', () => {
     expect(page).toHaveBeenCalledWith({
       locale: 'en-US',
       properties: {
-        path: '/products?tab=featured',
-        source: 'dynamic',
         campaign: 'spring',
+        path: '/products?tab=featured',
+        query: { tab: 'featured' },
+        search: '?tab=featured',
+        source: 'dynamic',
+        url: `${window.location.origin}/products?tab=featured`,
       },
     })
     expect(getPagePayload).toHaveBeenCalledWith({
