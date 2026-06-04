@@ -39,6 +39,7 @@ UI.
 - [Configuration](#configuration)
   - [Common options](#common-options)
   - [Locale handling](#locale-handling)
+  - [Consent and persistence](#consent-and-persistence)
 - [Runtime notes](#runtime-notes)
 - [Related](#related)
 
@@ -81,7 +82,6 @@ val optimizationConfig = OptimizationConfig(
     clientId = "your-client-id",
     environment = "master",
     contentfulLocales = ContentfulLocales(default = "en-US"),
-    defaults = StorageDefaults(consent = true),
     debug = BuildConfig.DEBUG,
 )
 
@@ -185,15 +185,15 @@ tracking, screen tracking, live updates, preview-panel overrides, and shared moc
 
 ### Common options
 
-| Option              | Required? | Default  | Description                                                                                         |
-| ------------------- | --------- | -------- | --------------------------------------------------------------------------------------------------- |
-| `clientId`          | Yes       | None     | Optimization client identifier used for Experience API and Insights API calls.                      |
-| `environment`       | No        | `master` | Contentful environment name used by the Optimization APIs.                                          |
-| `contentfulLocales` | No        | `null`   | Contentful locale configuration used to resolve `client.locale` for app-owned CDA requests.         |
-| `locale`            | No        | Runtime  | Initial app/content locale candidate. When omitted, the SDK can resolve from `LocaleList`.          |
-| `api.locale`        | No        | `null`   | Explicit Experience API locale override for localized profile fields.                               |
-| `defaults`          | No        | `null`   | Initial persisted-state seeds such as consent or profile values, applied only when no value exists. |
-| `debug`             | No        | `false`  | Enables SDK diagnostic logging.                                                                     |
+| Option              | Required? | Default  | Description                                                                                 |
+| ------------------- | --------- | -------- | ------------------------------------------------------------------------------------------- |
+| `clientId`          | Yes       | None     | Optimization client identifier used for Experience API and Insights API calls.              |
+| `environment`       | No        | `master` | Contentful environment name used by the Optimization APIs.                                  |
+| `contentfulLocales` | No        | `null`   | Contentful locale configuration used to resolve `client.locale` for app-owned CDA requests. |
+| `locale`            | No        | Runtime  | Initial app/content locale candidate. When omitted, the SDK can resolve from `LocaleList`.  |
+| `api.locale`        | No        | `null`   | Explicit Experience API locale override for localized profile fields.                       |
+| `defaults`          | No        | `null`   | Initial persisted-state seeds such as consent, persistence consent, or profile values.      |
+| `debug`             | No        | `false`  | Enables SDK diagnostic logging.                                                             |
 
 `OptimizationRoot` and `OptimizationManager.initialize(...)` also accept global `trackViews`,
 `trackTaps`, and `liveUpdates` defaults. `OptimizedEntry` and `OptimizedEntryView` can override
@@ -238,13 +238,37 @@ For the full locale model, see
 For the single-locale CDA entry contract, see
 [Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract).
 
+### Consent and persistence
+
+SDK state is persisted with `SharedPreferences`. For default-on application policies that do not
+render an end-user consent UI, set `defaults = StorageDefaults(consent = true)` on
+`OptimizationConfig`:
+
+```kotlin
+val config = OptimizationConfig(
+    clientId = "your-client-id",
+    defaults = StorageDefaults(consent = true),
+)
+```
+
+When application policy depends on user choice, leave consent unset and call `client.consent(true)`
+or `client.consent(false)` from the application-owned control. Boolean consent calls control both
+event emission and durable profile-continuity persistence by default. Use
+`client.consent(events = true, persistence = false)` when events are allowed but continuity should
+stay session-only. For cross-SDK consent guidance, see
+[Consent management in the Optimization SDK Suite](../../documentation/concepts/consent-management-in-the-optimization-sdk-suite.md).
+
+When durable profile-continuity persistence is allowed, the Android SDK settles the
+`SharedPreferences` write for profile, changes, personalizations, and anonymous ID before publishing
+the corresponding client state. Application code and E2E tests can wait for SDK-derived state rather
+than adding storage-timing delays before relaunching.
+
 ## Runtime notes
 
 - The SDK library manifest declares the required network permissions and the non-exported preview
   panel Activity.
 - No JavaScript bridge setup is required in consuming applications. The generated QuickJS bundle is
   packaged inside the AAR.
-- SDK state is persisted with `SharedPreferences`.
 - Analytics events queue while the device is offline and flush when connectivity returns or the app
   moves toward the background.
 - For bridge architecture and maintainer build details, see

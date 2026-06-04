@@ -6,6 +6,9 @@ test.describe('identified user', () => {
     await page.waitForLoadState('domcontentloaded')
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
 
+    await page.getByTestId('consent-button').click()
+    await expect(page.getByTestId('consent-status')).toHaveText('Consent: true')
+
     await page.getByTestId('live-updates-identify-button').click()
     await expect(page.getByTestId('live-updates-reset-button')).toBeVisible()
 

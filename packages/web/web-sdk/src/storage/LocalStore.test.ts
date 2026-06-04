@@ -4,6 +4,7 @@ import {
   CHANGES_CACHE_KEY,
   CONSENT_KEY,
   DEBUG_FLAG_KEY,
+  PERSISTENCE_CONSENT_KEY,
   PROFILE_CACHE_KEY,
   SELECTED_OPTIMIZATIONS_CACHE_KEY,
 } from '@contentful/optimization-core/constants'
@@ -86,6 +87,20 @@ describe('LocalStore', () => {
     expect(LocalStore.consent).toBeUndefined()
   })
 
+  it('translates persistence consent and falls back to accepted legacy consent', () => {
+    LocalStore.persistenceConsent = true
+    expect(localStorage.getItem(PERSISTENCE_CONSENT_KEY)).toBe('accepted')
+    expect(LocalStore.persistenceConsent).toBe(true)
+
+    LocalStore.persistenceConsent = false
+    expect(localStorage.getItem(PERSISTENCE_CONSENT_KEY)).toBe('denied')
+    expect(LocalStore.persistenceConsent).toBe(false)
+
+    LocalStore.persistenceConsent = undefined
+    LocalStore.consent = true
+    expect(LocalStore.persistenceConsent).toBe(true)
+  })
+
   it('returns undefined for unrecognized consent value', () => {
     localStorage.setItem(CONSENT_KEY, 'unknown')
     expect(LocalStore.consent).toBeUndefined()
@@ -107,6 +122,7 @@ describe('LocalStore', () => {
 
   it('preserves consent/debug on reset by default', () => {
     localStorage.setItem(CONSENT_KEY, 'accepted')
+    localStorage.setItem(PERSISTENCE_CONSENT_KEY, 'accepted')
     localStorage.setItem(DEBUG_FLAG_KEY, 'true')
     localStorage.setItem(ANONYMOUS_ID_KEY, 'anon')
     localStorage.setItem(CHANGES_CACHE_KEY, '{"foo":1}')
@@ -116,6 +132,7 @@ describe('LocalStore', () => {
     LocalStore.reset()
 
     expect(localStorage.getItem(CONSENT_KEY)).toBe('accepted')
+    expect(localStorage.getItem(PERSISTENCE_CONSENT_KEY)).toBe('accepted')
     expect(localStorage.getItem(DEBUG_FLAG_KEY)).toBe('true')
     expect(localStorage.getItem(ANONYMOUS_ID_KEY)).toBeNull()
     expect(localStorage.getItem(CHANGES_CACHE_KEY)).toBeNull()
@@ -125,11 +142,13 @@ describe('LocalStore', () => {
 
   it('can reset consent/debug when requested', () => {
     localStorage.setItem(CONSENT_KEY, 'accepted')
+    localStorage.setItem(PERSISTENCE_CONSENT_KEY, 'accepted')
     localStorage.setItem(DEBUG_FLAG_KEY, 'true')
 
     LocalStore.reset({ resetConsent: true, resetDebug: true })
 
     expect(localStorage.getItem(CONSENT_KEY)).toBeNull()
+    expect(localStorage.getItem(PERSISTENCE_CONSENT_KEY)).toBeNull()
     expect(localStorage.getItem(DEBUG_FLAG_KEY)).toBeNull()
   })
 

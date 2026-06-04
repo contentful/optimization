@@ -9,6 +9,7 @@ import {
   CHANGES_CACHE_KEY,
   CONSENT_KEY,
   DEBUG_FLAG_KEY,
+  PERSISTENCE_CONSENT_KEY,
   PROFILE_CACHE_KEY,
   SELECTED_OPTIMIZATIONS_CACHE_KEY,
 } from '@contentful/optimization-core/constants'
@@ -41,9 +42,15 @@ const LocalStore = {
    */
   reset(options = { resetConsent: false, resetDebug: false }) {
     if (options.resetConsent) LocalStore.setCache(CONSENT_KEY, undefined)
+    if (options.resetConsent) LocalStore.setCache(PERSISTENCE_CONSENT_KEY, undefined)
     if (options.resetDebug) LocalStore.setCache(DEBUG_FLAG_KEY, undefined)
 
+    LocalStore.clearProfileContinuity()
+  },
+
+  clearProfileContinuity(): void {
     LocalStore.setCache(ANONYMOUS_ID_KEY, undefined)
+    LocalStore.setCache(ANONYMOUS_ID_KEY_LEGACY, undefined)
     LocalStore.setCache(CHANGES_CACHE_KEY, undefined)
     LocalStore.setCache(PROFILE_CACHE_KEY, undefined)
     LocalStore.setCache(SELECTED_OPTIMIZATIONS_CACHE_KEY, undefined)
@@ -99,6 +106,25 @@ const LocalStore = {
     const translated = consent ? 'accepted' : 'denied'
 
     LocalStore.setCache(CONSENT_KEY, consent === undefined ? undefined : translated)
+  },
+
+  get persistenceConsent(): boolean | undefined {
+    const consent = localStorage.getItem(PERSISTENCE_CONSENT_KEY)
+
+    switch (consent) {
+      case 'accepted':
+        return true
+      case 'denied':
+        return false
+      default:
+        return LocalStore.consent === true ? true : undefined
+    }
+  },
+
+  set persistenceConsent(consent: boolean | undefined) {
+    const translated = consent ? 'accepted' : 'denied'
+
+    LocalStore.setCache(PERSISTENCE_CONSENT_KEY, consent === undefined ? undefined : translated)
   },
 
   /**

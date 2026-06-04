@@ -19,13 +19,15 @@ export {
 } from './signals'
 
 export type * from './BlockedEvent'
-export type { ConsentController, ConsentGuard } from './Consent'
+export type { ConsentController, ConsentGuard, ConsentInput } from './Consent'
 export * from './constants'
 export type * from './CoreApiConfig'
 export * from './CoreBase'
 export * from './CoreStateful'
 export * from './CoreStateless'
+export * from './CoreStatelessRequest'
 export * from './events'
+export * from './EventType'
 export * from './lib/decorators'
 export * from './lib/interceptor'
 export type {

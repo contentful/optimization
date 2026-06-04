@@ -30,6 +30,13 @@ export const blockedEvent: Signal<BlockedEvent | undefined> = signal<BlockedEven
 export const consent = signal<boolean | undefined>()
 
 /**
+ * Current durable profile-continuity persistence consent state.
+ *
+ * @public
+ */
+export const persistenceConsent = signal<boolean | undefined>()
+
+/**
  * Most recent emitted optimization event.
  *
  * @public
@@ -112,6 +119,8 @@ export interface Signals {
   previewPanelAttached: typeof previewPanelAttached
   /** Preview panel open-state signal. */
   previewPanelOpen: typeof previewPanelOpen
+  /** Durable profile-continuity persistence consent signal. */
+  persistenceConsent: typeof persistenceConsent
   /** Selected optimization variants signal. */
   selectedOptimizations: typeof selectedOptimizations
   /** Whether optimization selection data is available. */
@@ -150,6 +159,7 @@ export const signals: Signals = {
   online,
   previewPanelAttached,
   previewPanelOpen,
+  persistenceConsent,
   selectedOptimizations,
   canOptimize,
   profile,

@@ -19,6 +19,7 @@ to a React Native (or Expo) application using `@contentful/optimization-react-na
   - [Gating consent on a banner](#gating-consent-on-a-banner)
   - [Reading and reacting to consent state](#reading-and-reacting-to-consent-state)
   - [Revoking consent](#revoking-consent)
+  - [Optional consent policy controls](#optional-consent-policy-controls)
 - [3. Personalize entries with OptimizedEntry](#3-personalize-entries-with-optimizedentry)
   - [Fetch the entry with `include: 10`](#fetch-the-entry-with-include-10)
   - [Render the variant with a render prop](#render-the-variant-with-a-render-prop)
@@ -53,7 +54,8 @@ The React Native SDK builds on the Optimization Core Library and adds React Nati
 providers, hooks, and components. It lets consumers:
 
 - initialize and own a mobile SDK instance through `OptimizationRoot` or explicit providers
-- persist consent, profile state, selected optimizations, and anonymous identity with AsyncStorage
+- persist consent and, when persistence consent permits it, profile state, selected optimizations,
+  and anonymous identity with AsyncStorage
 - personalize Contentful entries with `OptimizedEntry`
 - emit entry view and tap tracking from React Native components
 - emit screen events through React Navigation adapters or screen-level hooks
@@ -70,7 +72,8 @@ Most React Native integrations follow this sequence:
 
 1. Install the SDK and its required peer dependencies.
 2. Wrap the app in `OptimizationRoot` with the minimum config (`clientId`).
-3. Decide how consent behaves (default-on for trusted contexts, or gated by a UI prompt).
+3. Decide how consent behaves: default-on when application policy permits it, or gated by a UI
+   prompt.
 4. Wrap each personalizable Contentful entry in `<OptimizedEntry>`.
 5. Enable view and/or tap tracking for the entries you care about.
 6. Wrap scrollable screens in `<OptimizationScrollProvider>` so viewport tracking is accurate.
@@ -99,9 +102,9 @@ For offline support (recommended), also install:
 pnpm add @react-native-community/netinfo
 ```
 
-The SDK uses AsyncStorage to persist consent, profile, and selected optimizations across app
-launches. `netinfo` is optional but lets the SDK queue events while the device is offline and flush
-them automatically when connectivity returns.
+The SDK uses AsyncStorage to persist consent and, when persistence consent permits it, profile state
+and selected optimizations across app launches. `netinfo` is optional but lets the SDK queue events
+while the device is offline and flush them automatically when connectivity returns.
 
 > [!NOTE]
 >
@@ -132,8 +135,8 @@ export default function App() {
 That is the minimum viable setup. `clientId` is the only required prop; everything else falls back
 to safe defaults (environment defaults to `'main'`, channel to `'mobile'`, etc.).
 
-A fuller application usually adds environment-specific config, a defaults block, optional preview
-panel settings, and navigation integration:
+A fuller application usually adds environment-specific config, optional preview panel settings, and
+navigation integration:
 
 ```tsx
 <OptimizationRoot
@@ -145,7 +148,6 @@ panel settings, and navigation integration:
   }}
   locale="en-US"
   logLevel={__DEV__ ? 'info' : 'warn'}
-  defaults={{ consent: true }}
   previewPanel={{
     enabled: __DEV__,
     contentfulClient: client,
@@ -168,6 +170,7 @@ Common props on `OptimizationRoot`:
 | `clientId`              | `string`                     | Yes      | N/A                                     | Your Contentful Optimization client identifier                        |
 | `environment`           | `string`                     | No       | `'main'`                                | Optimization environment to read from                                 |
 | `defaults`              | `{ consent?: boolean, ... }` | No       | `undefined`                             | Initial values applied at startup (e.g. `consent: true`)              |
+| `allowedEventTypes`     | `EventType[]`                | No       | `['identify', 'screen']`                | Event types allowed before consent is explicitly set                  |
 | `logLevel`              | `LogLevels`                  | No       | `'error'`                               | Minimum console log level                                             |
 | `previewPanel`          | `PreviewPanelConfig`         | No       | `undefined`                             | Enables the in-app preview panel; see [Preview Panel](#preview-panel) |
 | `liveUpdates`           | `boolean`                    | No       | `false`                                 | Global live-updates default for `<OptimizedEntry />`                  |
@@ -264,17 +267,14 @@ call `destroy()` on the injected SDK.
 
 ## 2. Handle consent
 
-The SDK gates non-essential event types behind a consent state. By default, only `identify` and
-`screen` events are allowed before consent is explicitly set. All other event types (including entry
-view/tap tracking) are blocked until the user accepts or rejects consent.
-
-You can change which event types are permitted before consent via the `allowedEventTypes` config
-option.
+React Native applications usually choose one startup policy: seed accepted consent when application
+policy permits Optimization by default, or leave SDK consent unset and connect application-owned
+controls to `consent(true | false)`.
 
 ### Defaulting consent to `true`
 
-If your app already collects consent at install time (e.g. through a prior onboarding flow) or if
-you don't need a runtime consent prompt, set `defaults.consent: true` so events flow immediately:
+If your application policy permits Optimization by default and you do not render an end-user consent
+prompt, set `defaults.consent: true` so events flow immediately:
 
 ```tsx
 <OptimizationRoot clientId="your-client-id" defaults={{ consent: true }}>
@@ -282,14 +282,21 @@ you don't need a runtime consent prompt, set `defaults.consent: true` so events 
 </OptimizationRoot>
 ```
 
-The default is applied once at startup; user input later takes precedence. The
-[React Native reference implementation](../../implementations/react-native-sdk/README.md) shows an
-equivalent trusted-context shortcut by calling `sdk.consent(true)` after the provider initializes.
+The default is applied once at startup; user input later takes precedence. It also permits durable
+profile-continuity storage for profile, selected optimizations, changes, and the anonymous ID. Set
+this default during SDK initialization rather than from a component effect so the persistence policy
+is in place before child effects, screen tracking, or manual `identify()` calls can run.
+
+When durable profile-continuity persistence is allowed, SDK state from an Experience response is
+published only after the corresponding AsyncStorage write for that same response snapshot has
+settled or failed gracefully. This affects durability timing, not the live source of truth: after
+startup hydration, SDK state and rendered SDK-derived UI read from in-memory SDK state. Wait for
+SDK-derived state or UI instead of adding sleeps before relaunching or terminating the app in tests.
 
 ### Gating consent on a banner
 
-For apps that need an explicit prompt, leave `defaults.consent` unset and call `consent()` from your
-banner UI:
+When your application policy depends on user choice, leave `defaults.consent` unset and call
+`consent()` from your banner UI:
 
 ```tsx
 import { useOptimization } from '@contentful/optimization-react-native'
@@ -311,6 +318,11 @@ function ConsentBanner() {
 When consent is accepted (`true`), all event types are permitted. When consent is rejected
 (`false`), non-allowed event types are blocked and `<OptimizedEntry />` view/tap tracking will be
 silently dropped at the SDK boundary. Consent state persists across app launches via AsyncStorage.
+
+By default, only `identify` and `screen` events are allowed before consent is explicitly set. All
+other event types, including entry view/tap tracking, are blocked until consent is granted or the
+event type is allow-listed. For cross-SDK consent policy guidance, see
+[Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md).
 
 ### Reading and reacting to consent state
 
@@ -344,6 +356,14 @@ To revoke consent after it was previously accepted, just call `consent(false)`:
 ```tsx
 optimization.consent(false)
 ```
+
+### Optional consent policy controls
+
+Use these options only when your application policy needs a stricter or split consent model:
+
+- Set `allowedEventTypes={[]}` for strict opt-in before any Optimization event can emit.
+- Call `optimization.consent({ events: true, persistence: false })` when events are allowed but
+  durable profile continuity must stay session-only.
 
 ## 3. Personalize entries with OptimizedEntry
 

@@ -63,6 +63,12 @@ export class InsightsQueue {
     this.flushRuntime.clearScheduledRetry()
   }
 
+  clearQueuedEvents(): void {
+    this.queuedInsightsByProfile.clear()
+    this.flushRuntime.reset()
+    this.reconcilePeriodicFlushTimer()
+  }
+
   clearPeriodicFlushTimer(): void {
     if (this.insightsPeriodicFlushTimer === undefined) return
 

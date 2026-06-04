@@ -21,9 +21,11 @@ to own the browser SDK integration without React abstractions.
   - [Subscribe to SDK state from the provider](#subscribe-to-sdk-state-from-the-provider)
   - [Provide a pre-built SDK instance when needed](#provide-a-pre-built-sdk-instance-when-needed)
 - [2. Handle consent in React](#2-handle-consent-in-react)
-  - [Reading consent state](#reading-consent-state)
+  - [Default-on consent](#default-on-consent)
   - [Updating consent](#updating-consent)
+  - [Reading consent state](#reading-consent-state)
   - [Revoking consent](#revoking-consent)
+  - [Optional consent policy controls](#optional-consent-policy-controls)
   - [Consent-gated rendering](#consent-gated-rendering)
 - [3. Personalize entries with OptimizedEntry](#3-personalize-entries-with-optimizedentry)
   - [Basic usage](#basic-usage)
@@ -78,7 +80,8 @@ In practice, most React integrations follow this high-level sequence:
 
 1. Wrap the app with `OptimizationRoot` or `OptimizationProvider` + `LiveUpdatesProvider`.
 2. Read the SDK through hooks such as `useOptimization()` or `useOptimizationContext()`.
-3. Handle consent in application UI before enabling broader event collection.
+3. Apply the application's consent policy: seed `defaults={{ consent: true }}` for default-on
+   integrations, or call `consent(true | false)` from a consent UI or CMP callback.
 4. Render personalized entries with `OptimizedEntry` or `useOptimizedEntry`.
 5. Enable automatic or manual entry interaction tracking where needed.
 6. Add a router adapter so `page()` events follow client-side navigation.
@@ -122,18 +125,21 @@ children can mount before the first visible paint.
 
 Available configuration props:
 
-| Prop                    | Type                           | Required | Default                                         | Description                                                         |
-| ----------------------- | ------------------------------ | -------- | ----------------------------------------------- | ------------------------------------------------------------------- |
-| `clientId`              | `string`                       | Yes      | N/A                                             | Your Contentful Optimization client identifier                      |
-| `environment`           | `string`                       | No       | `'main'`                                        | Contentful environment                                              |
-| `api`                   | `CoreApiConfig`                | No       | See below                                       | Experience API and Insights API configuration                       |
-| `app`                   | `App`                          | No       | —                                               | Application metadata attached to events                             |
-| `contentfulLocales`     | `ContentfulLocales`            | No       | —                                               | Contentful locale codes used for SDK-assisted CDA locale resolution |
-| `locale`                | `string`                       | No       | `undefined` unless `contentfulLocales` is set   | Initial app/content locale candidate                                |
-| `trackEntryInteraction` | `TrackEntryInteractionOptions` | No       | `{ views: true, clicks: false, hovers: false }` | Automatic entry interaction tracking options                        |
-| `logLevel`              | `LogLevels`                    | No       | `'error'`                                       | Minimum log level for console output                                |
-| `liveUpdates`           | `boolean`                      | No       | `false`                                         | Enable global live updates                                          |
-| `onStatesReady`         | `(states) => cleanup`          | No       | —                                               | Attach app-level state subscribers when SDK state is ready          |
+| Prop                    | Type                           | Required | Default                                         | Description                                                          |
+| ----------------------- | ------------------------------ | -------- | ----------------------------------------------- | -------------------------------------------------------------------- |
+| `clientId`              | `string`                       | Yes      | N/A                                             | Your Contentful Optimization client identifier                       |
+| `environment`           | `string`                       | No       | `'main'`                                        | Contentful environment                                               |
+| `api`                   | `CoreApiConfig`                | No       | See below                                       | Experience API and Insights API configuration                        |
+| `app`                   | `App`                          | No       | —                                               | Application metadata attached to events                              |
+| `contentfulLocales`     | `ContentfulLocales`            | No       | —                                               | Contentful locale codes used for SDK-assisted CDA locale resolution  |
+| `locale`                | `string`                       | No       | `undefined` unless `contentfulLocales` is set   | Initial app/content locale candidate                                 |
+| `defaults`              | `CoreConfigDefaults`           | No       | `undefined`                                     | Initial consent, persistence consent, profile, or optimization state |
+| `allowedEventTypes`     | `EventType[]`                  | No       | `['identify', 'page']`                          | Event types allowed before consent is explicitly set                 |
+| `trackEntryInteraction` | `TrackEntryInteractionOptions` | No       | `{ views: true, clicks: false, hovers: false }` | Automatic entry interaction tracking options                         |
+| `cookie`                | `CookieAttributes`             | No       | `{ domain: undefined, expires: 365 }`           | Anonymous ID cookie settings inherited from the Web SDK              |
+| `logLevel`              | `LogLevels`                    | No       | `'error'`                                       | Minimum log level for console output                                 |
+| `liveUpdates`           | `boolean`                      | No       | `false`                                         | Enable global live updates                                           |
+| `onStatesReady`         | `(states) => cleanup`          | No       | —                                               | Attach app-level state subscribers when SDK state is ready           |
 
 A more complete initialization with explicit API endpoints and interaction tracking:
 
@@ -272,9 +278,53 @@ unmount.
 
 ## 2. Handle consent in React
 
-The SDK gates certain event types behind a consent state. By default, only `identify` and `page`
-events are allowed before consent is explicitly set. All other event types are blocked until the
-user accepts or rejects consent.
+React applications usually choose one startup policy: seed accepted consent when application policy
+permits Optimization by default, or leave SDK consent unset and connect application-owned controls
+to `consent(true | false)`.
+
+### Default-on consent
+
+If your application policy permits Optimization by default and you do not render an end-user consent
+UI, seed accepted consent on `OptimizationRoot`:
+
+```tsx
+<OptimizationRoot clientId="your-client-id" defaults={{ consent: true }}>
+  <YourApp />
+</OptimizationRoot>
+```
+
+That starts all gated SDK events immediately and permits durable profile-continuity storage for
+profile, selected optimizations, changes, and the anonymous ID.
+
+### Updating consent
+
+When your application policy depends on user choice, call `consent()` from the banner, CMP callback,
+or account settings flow that owns the user's choice:
+
+```tsx
+import { useOptimization } from '@contentful/optimization-react-web'
+
+function ConsentBanner() {
+  const { consent } = useOptimization()
+
+  return (
+    <div>
+      <p>Allow personalized experiences and analytics?</p>
+      <button onClick={() => consent(true)}>Accept</button>
+      <button onClick={() => consent(false)}>Reject</button>
+    </div>
+  )
+}
+```
+
+When consent is accepted (`true`), all event types are permitted and any auto-enabled entry
+interaction trackers are started. When consent is rejected (`false`), auto-enabled interaction
+trackers are disabled and non-allowed event types are blocked.
+
+By default, only `identify` and `page` events are allowed before consent is explicitly set. All
+other event types are blocked until consent is granted or the event type is allow-listed. For
+cross-SDK consent policy guidance, see
+[Consent management in the Optimization SDK Suite](../concepts/consent-management-in-the-optimization-sdk-suite.md).
 
 ### Reading consent state
 
@@ -302,30 +352,6 @@ function ConsentStatus() {
 }
 ```
 
-### Updating consent
-
-Call `consent()` to accept or reject:
-
-```tsx
-import { useOptimization } from '@contentful/optimization-react-web'
-
-function ConsentBanner() {
-  const { consent } = useOptimization()
-
-  return (
-    <div>
-      <p>Allow personalized experiences and analytics?</p>
-      <button onClick={() => consent(true)}>Accept</button>
-      <button onClick={() => consent(false)}>Reject</button>
-    </div>
-  )
-}
-```
-
-When consent is accepted (`true`), all event types are permitted and any auto-enabled entry
-interaction trackers are started. When consent is rejected (`false`), auto-enabled interaction
-trackers are disabled and non-allowed event types are blocked.
-
 ### Revoking consent
 
 To revoke consent after it was previously accepted:
@@ -341,6 +367,14 @@ function RevokeConsent() {
   return <button onClick={handleRevoke}>Revoke Consent</button>
 }
 ```
+
+### Optional consent policy controls
+
+Use these options only when your application policy needs a stricter or split consent model:
+
+- Set `allowedEventTypes={[]}` for strict opt-in before any Optimization event can emit.
+- Call `consent({ events: true, persistence: false })` when events are allowed but durable profile
+  continuity must stay session-only.
 
 ### Consent-gated rendering
 

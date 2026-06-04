@@ -1,30 +1,17 @@
 # AGENTS.md
 
-Read the repository root `AGENTS.md`, `packages/AGENTS.md`, and `packages/universal/AGENTS.md`
-before this file.
+Owns the platform-agnostic optimization core used by all platform SDKs.
 
-## Scope
+## Rules
 
-This package owns platform-agnostic optimization business logic and the shared stateful and
-stateless core used by all platform SDKs.
-
-## Key paths
-
-- `src/` — root entry: stateless/stateful core, signals, events, queues, interceptors, resolvers
-- `src/preview-support/` — preview-panel toolkit with additional local guidance
-- `README.md`
-
-## Local rules
-
-- Prefer shared behavior fixes here when the problem affects more than one platform SDK.
+- Prefer shared fixes here when a problem affects more than one platform SDK.
+- `src/preview-support/` has additional guidance for preview-panel support.
 
 ## Commands
 
-- `pnpm --filter @contentful/optimization-core typecheck`
-- `pnpm --filter @contentful/optimization-core test:unit`
-- `pnpm --filter @contentful/optimization-core build`
-- `pnpm --filter @contentful/optimization-core size:check`
+- `pnpm --filter @contentful/optimization-core <script>` with `typecheck`, `test:unit`, `build`, or
+  `size:check`.
 
-## Usually validate
+## Validate
 
 - Run `typecheck`, `test:unit`, and `build`.

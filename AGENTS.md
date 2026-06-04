@@ -1,286 +1,179 @@
 # AGENTS.md
 
-This file defines repository-wide rules only. For any change, read this file first, then read each
-applicable child `AGENTS.md` from outermost to nearest in the subtree you are editing.
+Repository-wide baseline. Child files add local constraints; the nearest child file wins.
 
 ## Hierarchy
 
-- The root `AGENTS.md` owns stable repo-wide policy.
-- `packages/AGENTS.md` and `implementations/AGENTS.md` own shared policy for all packages and
-  reference implementations.
-- `lib/*/AGENTS.md`, `packages/**/AGENTS.md`, and `implementations/*/AGENTS.md` own more specific
-  local instructions, commands, and gotchas.
-- If local guidance conflicts with this file, follow the more specific `AGENTS.md` for that subtree.
-- When adding a new workspace package or implementation, add a sibling `AGENTS.md` in the same
-  change.
-- Keep child `AGENTS.md` files focused on local behavior. Do not duplicate root policy unless the
-  subtree has a local exception.
+- Read this file, then each child `AGENTS.md` from the repository root to the edited path.
+- Root owns stable repo policy. `packages/AGENTS.md` and `implementations/AGENTS.md` own shared
+  package or implementation policy. Deeper files own local boundaries, commands, and gotchas.
+- Add a sibling `AGENTS.md` when adding a workspace package or reference implementation.
+- Do not repeat parent policy in child files unless the subtree has a real exception.
 
-## Environment and tooling
+## Tools and source files
 
-- Use the Node version from [`.nvmrc`](./.nvmrc) when possible. Repository engine constraints live
-  in the root [`package.json`](./package.json).
-- Use `pnpm` only. The pinned package-manager version lives in the root
+- Use the Node version in [`.nvmrc`](./.nvmrc) and the pnpm version pinned in
   [`package.json`](./package.json).
-- Prefer `pnpm <script>` over `pnpm run <script>` when both forms are equivalent.
-- Prefer `rg` and `rg --files` for code search.
-- `.env` files are ignored. Start from the checked-in `.env.example` where applicable, and do not
-  overwrite an existing `.env` without a clear reason.
-- Some implementations have additional runtime prerequisites or process-management expectations. See
-  the relevant implementation `AGENTS.md` before running local app or E2E flows.
+- Use `pnpm` only; prefer `pnpm <script>` when equivalent. Prefer `rg`/`rg --files` for search.
+- Edit source of truth: `src/**`, `e2e/**`, `__tests__/**`, `scripts/**`, `documentation/**`,
+  `README.md`, `package.json`, `tsconfig*.json`, `rstest.config.ts`, `playwright.config.mjs`,
+  `eslint.config.ts`, `.prettierrc`, and `.github/workflows/**`.
+- Treat `dist/**`, `coverage/**`, `docs/**`, `pkgs/**`, `.rslib/**`, `.rsdoctor/**`,
+  `node_modules/**`, and local `.env` files as generated or local-only unless the task explicitly
+  targets them.
+- Start env setup from `.env.example`; do not overwrite an existing `.env` casually.
+- Implementations consume local package tarballs from `pkgs/` after `pnpm build:pkgs` plus the
+  implementation install step.
 
-## Repository layout
+## Code discipline
 
-- Shared libraries and published SDK packages live under `lib/` and `packages/`.
-- Reference implementations live under `implementations/`.
-- Implementations consume local package tarballs from `pkgs/` after `pnpm build:pkgs` and
-  implementation install steps.
-- Generated outputs such as `dist/`, `coverage/`, `docs/`, `pkgs/`, `playwright-report/`, and
-  `test-results/` are not the source of truth.
+- Treat [`eslint.config.ts`](./eslint.config.ts) as an upfront design constraint.
+- Match nearby idioms before adding abstractions. Common repo idioms: `_` for intentional unused
+  bindings, named constants for non-obvious magic values, strict typed code, and Prettier-organized
+  imports.
+- Make lint fixes AST-local where possible. If a local rewrite keeps failing, inspect the exact rule
+  and choose a pattern the repo already uses.
+- Never add `eslint-disable`, `eslint-disable-next-line`, or `eslint-disable-line` unless the user
+  explicitly asks.
+- Do not copy test-only lint relaxations into production code.
 
-## Source of truth
+## Validation
 
-Prefer editing source files and configuration:
+- Run the smallest meaningful validation for the change. For TypeScript, TSX, JavaScript, package,
+  implementation, or shared tooling edits, include lint before claiming validation is complete.
+- If no local lint script exists, use the nearest aggregate command: `pnpm lint` for `lib/` or
+  `packages/`; `pnpm implementation:lint` for `implementations/`.
+- Run Prettier on touched Markdown or expected-format files, then run `git diff --check`.
+- Validate package and implementation changes in dependency order: source package typecheck/tests,
+  source package build, `pnpm build:pkgs` when implementations consume it, implementation install,
+  then downstream checks.
+- For native, React Native, or E2E validation, use the implementation-specific runner documented in
+  the nearest `AGENTS.md`, package scripts, or README before deciding the test cannot run locally.
+  Missing attached devices, simulators, emulators, mock servers, or Metro are setup states; many
+  local runners start or resolve them themselves.
+- Do not substitute a generic `test` script for Playwright, Detox, Maestro, or XCUITest E2E. If a
+  generic test command fails before reaching the intended E2E runner, classify it as that command's
+  failure and try the documented E2E command instead.
+- When an upstream package changes, run bundle-size validation for every downstream published
+  package that can bundle or re-export it, not only the package edited directly. If the affected
+  downstream set is uncertain, run the aggregate `pnpm size:check`.
+- Stop downstream validation when an upstream package build fails; stale downstream artifacts are
+  not evidence.
+- After public exports, entry graphs, shared types, or bundled runtime paths change in an Rslib
+  package, run its `clean` script before trusting output. Rslib `clean` scripts must remove
+  package-local `./node_modules/.cache/rspack`.
+- Broaden checks for exported APIs, shared runtime behavior, generated artifacts, mocks, or behavior
+  used by multiple SDKs or implementations.
+- If you skip a relevant check, state exactly what was skipped and why.
 
-- `src/**`
-- `e2e/**`
-- `__tests__/**`
-- `scripts/**`
-- `documentation/**`
-- `README.md`
-- `package.json`
-- `tsconfig*.json`
-- `rstest.config.ts`
-- `playwright.config.mjs`
-- `eslint.config.ts`
-- `.prettierrc`
-- `.github/workflows/**`
-
-Do not hand-edit generated or local-only artifacts unless the task is explicitly about them:
-
-- `dist/**`
-- `coverage/**`
-- `docs/**`
-- `pkgs/**`
-- `.rslib/**`
-- `.rsdoctor/**`
-- `node_modules/**`
-- local `.env` files
-
-## ESLint discipline
-
-- Treat [`eslint.config.ts`](./eslint.config.ts) as an upfront design constraint, not a cleanup step
-  after coding.
-- Before editing TypeScript or TSX in an unfamiliar area, skim
-  [`eslint.config.ts`](./eslint.config.ts) and nearby files to match existing idioms.
-- Prefer code that naturally satisfies the rules over later suppression or churn.
-- For isolated lint findings, start with the smallest AST-local fix possible. Prefer changing the
-  flagged expression, declaration, or statement before considering any surrounding refactor.
-- If the first local rewrite fails, inspect the exact rule configuration and error location before
-  trying broader changes.
-- Do not broaden a one-line lint fix into helper rewrites, data-flow changes, or nearby refactors
-  unless the minimal local options are exhausted and there is a clear semantic reason to do so.
-- Match existing local patterns before introducing new ones. In this repo, that usually means:
-  - prefix intentionally unused variables, parameters, caught errors, and array slots with `_`
-  - avoid introducing unexplained magic numbers in production code; extract named constants when the
-    value is not obviously one of the common allowed literals
-  - keep strict typed-code hygiene and avoid broad `any`-style shortcuts
-  - rely on Prettier and `prettier-plugin-organize-imports` for formatting and import order rather
-    than manual styling
-- Never add `eslint-disable`, `eslint-disable-next-line`, or `eslint-disable-line` comments unless
-  the user explicitly instructs you to do so.
-- If a lint fix stops being small and local, stop and reassess instead of escalating into trial-and-
-  error rewrites.
-- Do not copy test-only patterns into production code. Test and E2E files have targeted rule
-  relaxations that do not apply elsewhere.
-- If code keeps fighting the linter, stop and rewrite the approach to match repository patterns
-  rather than stacking fixes.
-
-## Validation policy
-
-- Run the smallest meaningful validation that matches the change.
-- When linting or formatting is likely needed, prefer the smallest fix-enabled command that matches
-  the edited area first, then confirm with a check-only command if needed. Avoid the pattern of
-  running a pure check, then rerunning the same tool again only to apply obvious auto-fixes.
-- For TypeScript or TSX edits, run the relevant lint command early enough to influence the shape of
-  the implementation, not only at the end.
-- For `lib/` or `packages/` edits, prefer `pnpm lint` after the first meaningful patch and again
-  before finishing if the change grew.
-- For `implementations/` edits, prefer `pnpm implementation:lint` after the first meaningful patch
-  and again before finishing if the change grew.
-- For cross-cutting changes, broaden validation to affected downstream packages or implementations.
-- If you skip a relevant check because of time or environment constraints, say exactly what was not
-  run and why.
-
-High-signal repo-wide commands:
+High-signal commands:
 
 - `pnpm lint`
+- `pnpm implementation:lint`
 - `pnpm typecheck`
 - `pnpm test:unit`
 - `pnpm build`
+- `pnpm build:pkgs`
 - `pnpm size:check`
 - `pnpm size:report`
-- `pnpm build:pkgs`
 - `pnpm format:check`
 - `pnpm docs:generate`
 
-## Bundle budget failures
+Native and E2E examples; narrow with test-file, suite, scheme, or flow arguments when possible:
 
-- When `pnpm size:check` or a package `size:check` fails, do not add package exports, new bundle
-  entries, new chunks, budget config changes, aliases, or separate build outputs to move bytes
-  outside the failing budget unless the user explicitly asks for that approach.
-- `size:check` can stop at the first failing package or bundle. After a `size:check` failure, run
-  `pnpm size:report` or the relevant package `size:report` before drawing conclusions about the full
-  set of bundle-budget failures.
-- For bundle-budget failures, the only source changes allowed without user direction are concise,
-  behavior-preserving reductions to code you added or changed for the task.
-- Before attempting any bundle-budget fix, report:
-  - the exact command
-  - the failing package or bundle
-  - the budget, actual size, and delta
-  - the task-related files changed since the last known passing baseline
-  - the smallest behavior-preserving concision option, if one is clear
-  - the specific human direction needed if concision is not obvious
+- React Native Android Detox:
+  `pnpm implementation:run -- react-native-sdk test:e2e:android:full -- --test-file <file>`
+- Android Maestro Compose:
+  `pnpm implementation:run -- android-sdk test:e2e:compose -- --flow <suite>`
+- Android Maestro Views: `pnpm implementation:run -- android-sdk test:e2e:views -- --flow <suite>`
+- iOS Swift package: `pnpm ios:test`
+- iOS XCUITest build: `pnpm implementation:run -- ios-sdk test:e2e:ios:build:release`
+- iOS XCUITest run: `IOS_SCHEME=SwiftUI pnpm implementation:run -- ios-sdk test:e2e:ios:run:release`
 
-## Failure handling and recovery
+## Failure handling
 
-- Do not rerun the same failing command unchanged more than once.
-- Treat validation failures as diagnostic evidence before treating them as code defects. Do not edit
-  source, add compatibility shims, or change reference implementation code until you have classified
-  whether the failure is caused by source behavior, stale generated artifacts, install state,
-  package packaging, environment setup, or tooling.
-- Before retrying, classify the failure into one of these buckets:
-  - command resolution or PATH
-  - missing prerequisite or setup
-  - permission or sandbox
-  - expected long-running process
-  - transient network or external-service failure
-  - stale local state, artifact, or process conflict
-  - unknown
-- Prefer a small probe before a full rerun. Check the nearest `AGENTS.md`, the target
-  `package.json`, and any relevant `README.md` or `CONTRIBUTING.md` section before guessing.
-- If the classified failure is not in source code, stop making source changes. Use the documented
-  package or implementation script for that failure class, or report the root cause and smallest
-  next action if cleanup, approval, or environment repair is needed.
-- If a lint or format command fails with findings that the tool can auto-fix, prefer a targeted
-  fix-enabled rerun over repeated check-only runs, then revalidate once.
-- If the shell reports a command as missing:
-  - first prefer `pnpm <script>` or `pnpm exec <tool>` over assuming a global binary
-  - check whether the command is defined in the relevant `package.json`
-  - do not install new global tools to work around a missing PATH entry unless the user explicitly
-    asked for that setup
-  - if the tool is absent and not documented as a prerequisite, stop and report instead of
-    improvising
-- If a documented prerequisite is missing, run that prerequisite once, then retry the original
-  command once. Common repository prerequisites include:
-  - `pnpm install`
-  - `pnpm build:pkgs`
-  - `pnpm implementation:install`
-  - a local `.env` copied from `.env.example`
-  - implementation-specific setup documented in the nearest child `AGENTS.md`
-- If the error suggests a permissions or sandbox problem, such as `EACCES`, `EPERM`, network
-  blocking, or write denial, do not keep retrying. Request approval or escalation on the next
-  attempt rather than searching for workarounds.
-- If a command is supposed to stay alive, such as a dev server, watcher, mock server, preview
-  server, or emulator tooling, treat continued execution as expected behavior. Poll or inspect logs
-  instead of restarting it repeatedly.
-- If a failure looks transient, such as a registry timeout or flaky external network call, retry at
-  most once. If it fails again, stop and report the blocker.
-- Before cleanup, decide whether the issue is stale state. Prefer targeted cleanup of only the
-  artifacts or processes created by the failed flow. Do not delete unrelated outputs, local `.env`
-  files, or use broad cleanup such as `pm2 delete all`.
-- After two failed attempts with the same strategy, stop and summarize:
-  - the exact command
-  - the failure class
-  - the relevant stderr or symptom
-  - what you already tried
-  - the smallest next action, user input, or approval needed
+- Classify failures before retrying or editing: command/PATH, missing setup, permission/sandbox,
+  long-running process, transient external service, stale local state or process conflict, source
+  defect, or unknown.
+- Retry the same failing command at most once after a targeted fix or probe. For missing commands,
+  prefer repo scripts or `pnpm exec`; do not install globals unless asked.
+- For missing documented prerequisites, run the prerequisite once, then retry once. Common
+  prerequisites include `pnpm install`, `pnpm build:pkgs`, implementation installs, `.env` from
+  `.env.example`, and implementation-specific setup.
+- For native and React Native E2E, a failed preflight or absent device is not enough to say local
+  testing is impossible. Run the local runner that performs setup, or report the exact missing
+  prerequisite and the command that exposed it.
+- For permission, sandbox, or network-blocking symptoms, request escalation on the next attempt
+  instead of working around the sandbox.
+- Treat expected servers, watchers, mock servers, preview servers, emulators, and similar commands
+  as long-running; poll or inspect logs instead of restarting them.
+- For stale state, clean only the artifacts or processes created by the failed flow. Do not delete
+  local `.env` files, ignored outputs, or broad process groups.
+- Own validation failures surfaced by current or recent Codex work. Inspect status, diffs,
+  APIs/artifacts, and skipped checks; then fix the root cause in the right layer or report a
+  concrete blocker.
+- If a downstream implementation reports stale SDK types or runtime behavior, verify upstream build,
+  `pnpm build:pkgs`, and implementation install before adding local shims or casts.
+- If Rslib/Rspack reports an internal dependency-graph panic, classify stale persistent cache first:
+  run the affected package `clean` script once, confirm it removes `node_modules/.cache/rspack`,
+  then retry the build once.
+- After two failed attempts with the same strategy, stop and report the command, failure class,
+  relevant stderr, what was tried, and the smallest next action.
 
-## Docs, specs, and CI
+## Bundle size
 
-- Authored supporting docs live in `documentation/`; generated TypeDoc output lives in `docs/`.
-- If the repository later adds any replacement design, architecture, or specification artifacts for
-  the changed area, keep them aligned in the same change.
-- `docs/` is generated by TypeDoc and is gitignored.
-- Implementation E2E in `.github/workflows/main-pipeline.yaml` is intentionally path-filtered. If a
-  change needs to alter E2E coverage, update the workflow and keep it aligned with
-  [CONTRIBUTING.md](./CONTRIBUTING.md).
+- Before bundle-size investigation or changes, inspect `git status --short` and run the relevant
+  `size:check` or `size:report` against the actual worktree.
+- For upstream package changes, treat downstream bundle-size checks as required validation. Run the
+  smallest complete downstream set when it is clear, or `pnpm size:check` when the dependency impact
+  crosses package families or is uncertain.
+- On failure, report the command, package or bundle, budget, actual size, and delta.
+- Do not change budgets, bundle entries, aliases, chunks, exports, or source shape solely for bundle
+  size unless the user approves that work.
+- Unapplied proposals must be labeled `UNAPPLIED PROPOSAL`, printed in chat, and not written into
+  the project tree.
+- After approved bundle-size source changes, validate the touched package with typecheck, relevant
+  tests, build when emitted output/declarations are affected, and `size:check`.
 
-## README and Markdown standards
+## Docs and README
 
-- Follow [`STYLE_GUIDE.md`](./STYLE_GUIDE.md) for Contentful technical writing conventions in
-  human-authored documentation, including READMEs, authored docs, TSDoc/JSDoc prose, and examples.
-  The nearest `AGENTS.md` still owns document structure, commands, and subtree-specific exceptions.
-- Treat README files as maintained source-of-truth orientation for humans. Keep them aligned with
-  package exports, implementation scripts, local `.env.example` files, and authored documentation in
-  the same change as behavior or workflow updates.
-- Preserve the README family already used by the target directory:
-  - root, published package, and reference implementation READMEs use the centered Contentful logo
-    header, `Contentful Personalization & Analytics` title, subtype `<h3>`, navigation links, and
-    pre-release warning.
-  - `documentation/**/README.md` files are navigation indexes with frontmatter.
-  - placeholder and internal-only README files can use a plain Markdown `#` title plus explicit
-    status or internal-use admonitions.
-- Use sentence case for Markdown headings, preserving official product, package, API, component,
-  hook, and file casing.
-- Lead with reader intent and scope: what to use, when to use it, and what belongs elsewhere. Prefer
-  concrete implementation guidance over marketing language.
-- Keep terminology consistent: "Optimization SDK Suite", "Personalization", "Analytics", "Experience
-  API", "Insights API", "reference implementation", and exact package names such as
-  `@contentful/optimization-web`.
-- Use fenced code blocks with language tags (`sh`, `ts`, `tsx`, `json`, `html`) and prefer `pnpm`
-  commands. Do not introduce npm, yarn, or undocumented global-tool instructions.
-- Use GitHub admonitions intentionally: warning/caution for pre-release, internal, destructive, or
-  unsafe flows; important for required contracts; note for helpful context that is not required.
-- Match README depth to the README category, not to the amount of available detail:
-  - application-facing package READMEs orient the integrator, preserve common setup options, and
-    link to authored guides or generated reference docs for deep workflows and exhaustive API
-    details
-  - lower-level package READMEs orient SDK maintainers and package authors, explain the layer's
-    role, and avoid application-integration tutorial depth
-  - reference implementation READMEs stay procedural and point readers to the code being
-    demonstrated instead of duplicating package API tutorials
-  - internal and placeholder READMEs stay short, explicit, and status-oriented
-- Move step-by-step implementation material into `documentation/guides/` when an existing guide is
-  the right home; create a new guide only when no existing guide covers that reader goal. Use
-  generated TypeDoc reference for exhaustive signatures, method catalogs, callback payload shapes,
-  and exported type details.
-- Before changing README navigation or cross-document links, account for every render target that
-  consumes that README: GitHub source browsing, TypeDoc project documents, and npmjs package README
-  rendering for published packages.
-- Keep relative links pointed at source-of-truth files in this repository when the README is only
-  consumed in-repo or by TypeDoc, or when the package README publish rewrite flow is known to
-  rewrite that link for npm. Use stable absolute URLs for links that must work unchanged across
-  GitHub, TypeDoc, and npm.
-- Link to generated reference docs for API reference and shared README header navigation that needs
-  to work in all render targets, not as a replacement for source README guidance.
-- When a README has a collapsible table of contents, preserve the exact `<!-- mtoc-start -->` and
-  `<!-- mtoc-end -->` markers and keep entries synchronized with headings.
-- For Markdown edits, run Prettier on touched files when practical and at least run
-  `git diff --check` before finishing.
+- Follow [`STYLE_GUIDE.md`](./STYLE_GUIDE.md) for human-authored prose. Authored docs live in
+  `documentation/`; generated TypeDoc output lives in `docs/`.
+- Preserve existing README families: repo/package/reference implementation headers, navigation, and
+  pre-release warnings; documentation indexes; short status READMEs for placeholders or
+  internal-only surfaces.
+- Use sentence-case Markdown headings, official product/API casing, fenced code blocks with language
+  tags, and `pnpm` commands.
+- Keep package READMEs orientation-first, implementation READMEs procedural, and lower-level package
+  READMEs maintainer-oriented. Generated docs own exhaustive signatures and exported type detail.
+- Move deep implementation guidance into `documentation/guides/` when an existing guide fits; create
+  a new guide only for a distinct reader goal.
+- Account for every README render target before changing links: GitHub, TypeDoc project docs, and
+  npm package README rendering.
+- Preserve `<!-- mtoc-start -->` and `<!-- mtoc-end -->` markers and keep TOCs synchronized.
 
-## Safety rules
+## Safety and resume
 
 - Never overwrite or delete ignored local files just to get a clean run.
 - Do not run destructive Contentful scripts unless explicitly asked.
 - Do not use broad cleanup commands such as `pm2 delete all` unless explicitly asked.
+- Do not manually terminate processes without explicit user permission in the current turn. This
+  includes `kill`, `pkill`, `killall`, `xargs kill`, emulator termination, container termination,
+  and similar process-stop commands. If a validation, server, installer, emulator, or watcher is
+  running and the user says to skip, pause, or change direction, ask whether to let it finish or
+  terminate it; do not infer termination permission.
+- Repository scripts may clean up their own child processes only as part of the documented command
+  the user asked to run. Do not replace that with manual process termination unless the user
+  explicitly approves it.
 - Do not assume full cross-platform E2E is required for every change.
-
-## Context resume audit
-
-- After context compaction, interruption, or a long-running resume, audit before editing: reread the
-  latest user instruction, inspect `git status`, inspect relevant diffs, and restate the active
-  constraints in a short commentary update.
-- If resumed context is missing, contradictory, or no longer explains why a change exists, stop and
-  ask or report the uncertainty instead of continuing from memory.
-- Keep resumed work scoped to the newest user request. Do not continue older plans unless they are
-  still required by the latest instruction.
+- After compaction, interruption, or a long-running resume, reread the latest user request, inspect
+  `git status` and relevant diffs, then continue only with the current request.
 
 ## Preferred workflow
 
-1. Read the root `AGENTS.md`.
-2. Read each applicable child `AGENTS.md` from outermost to nearest in the subtree you will edit.
-3. Make the narrowest source-of-truth change in the correct layer.
-4. Run the smallest meaningful validation set.
-5. Broaden validation only when exports, build tooling, mocks, or shared behavior changed.
-6. Summarize what changed, what was verified, what was skipped, and any follow-up risk.
+1. Read the applicable `AGENTS.md` chain.
+2. Make the narrowest source-of-truth change in the correct layer.
+3. Run the smallest meaningful validation.
+4. Broaden validation only when shared behavior, exports, generated artifacts, mocks, or downstream
+   consumers are affected.
+5. Summarize changes, validation, skipped checks, and residual risk.

@@ -80,8 +80,8 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "index.cjs": 1800,
-        "index.mjs": 1300
+        "index.cjs": 2000,
+        "index.mjs": 1500
       }
     }
   },
@@ -90,7 +90,7 @@
     "build:ci": "pnpm build:dist",
     "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
     "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist",
-    "clean": "rimraf ./.rsdoctor ./.rslib ./.rslib ./dist ./coverage .tsbuildinfo",
+    "clean": "rimraf ./.rsdoctor ./.rslib ./.rslib ./dist ./coverage .tsbuildinfo ./node_modules/.cache/rspack",
     "dev": "tsx watch --env-file=.env ./dev/server.ts",
     "size:check": "pnpm build:dist && build-tools bundle-size",
     "size:report": "build-tools bundle-size --report-only",

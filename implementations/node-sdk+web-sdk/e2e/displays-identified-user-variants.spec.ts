@@ -1,8 +1,19 @@
 import { expect, test } from '@playwright/test'
 import { getAnonymousIdFromCookie, getAnonymousIdFromStorage } from './utils'
 
+const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
+
 test.describe('identified user', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, context }) => {
+    await context.addCookies([
+      {
+        name: APP_PERSONALIZATION_CONSENT_COOKIE,
+        value: 'granted',
+        domain: 'localhost',
+        path: '/',
+        sameSite: 'Lax',
+      },
+    ])
     await page.goto(`/user/someone`)
     await page.waitForLoadState('domcontentloaded')
   })

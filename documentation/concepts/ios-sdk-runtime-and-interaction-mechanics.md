@@ -83,7 +83,6 @@ OptimizationConfig(
     environment: "master",
     contentfulLocales: ContentfulLocales(default: "en-US"),
     locale: "en-US",
-    defaults: StorageDefaults(consent: true),
     debug: true
 )
 ```
@@ -116,8 +115,14 @@ SwiftUI code reads these values through `@EnvironmentObject`. UIKit code can sub
 Combine publishers such as `client.$state` and `client.$selectedPersonalizations`.
 
 The SDK persists state with `UserDefaults`. `StorageDefaults` can seed values such as consent,
-profile, selected changes, and personalizations on first launch. Seeds are applied only when no
-persisted value exists, so an existing user choice is not overwritten.
+profile-continuity persistence consent, profile, selected changes, and personalizations on first
+launch. Seeds are applied only when no persisted value exists, so an existing user choice is not
+overwritten.
+
+When durable profile-continuity persistence is allowed, the client writes profile-continuity values
+to `UserDefaults` before publishing the corresponding state snapshot and selected personalizations.
+Application code and XCUITest flows can wait for SDK-derived state rather than adding storage-timing
+delays before relaunching.
 
 ## Consent and event gates
 
@@ -132,7 +137,18 @@ establish profile context and anonymous screen analytics.
 | `false`       | `identify` and `screen` can emit; other events are blocked. |
 
 Call `client.consent(true)` when the visitor grants consent and `client.consent(false)` when the
-visitor rejects it. The value is persisted and restored on later launches.
+visitor rejects it. Boolean consent controls both event emission and durable profile-continuity
+persistence by default. Use `client.consent(events:persistence:)` when event emission and durable
+profile continuity need separate policy decisions:
+
+```swift
+client.consent(events: true, persistence: false)
+```
+
+Read `client.state.consent` for event consent and `client.state.persistenceConsent` for durable
+profile-continuity persistence consent. Withdrawing consent purges SDK queues and clears SDK-managed
+durable profile-continuity storage while leaving active in-memory state available until the app
+resets or tears down the client.
 
 ## Entry personalization boundary
 

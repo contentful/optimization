@@ -40,7 +40,7 @@
     "build:ci": "pnpm build:dist",
     "build:dist": "rslib build && build-tools emit-dual-dts ./dist",
     "build:rsdoctor": "RSDOCTOR=true rslib build && build-tools emit-dual-dts ./dist",
-    "clean": "rimraf ./.rsdoctor ./.rslib ./dist .tsbuildinfo",
+    "clean": "rimraf ./.rsdoctor ./.rslib ./dist .tsbuildinfo ./node_modules/.cache/rspack",
     "size:check": "pnpm build:dist && build-tools bundle-size",
     "size:report": "build-tools bundle-size --report-only",
     "test:unit": "rstest run",

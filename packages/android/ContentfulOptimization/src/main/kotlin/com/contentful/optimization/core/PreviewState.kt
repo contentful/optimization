@@ -6,6 +6,7 @@ import org.json.JSONObject
 data class PreviewState(
     val profile: JSONValue?,
     val consent: Boolean?,
+    val persistenceConsent: Boolean?,
     val canPersonalize: Boolean,
     val changes: List<PreviewChange>?,
     val selectedPersonalizations: List<SelectedPersonalization>?,
@@ -23,6 +24,7 @@ data class PreviewState(
                 PreviewState(
                     profile = if (obj.isNull("profile")) null else JSONValue.fromAny(obj.get("profile")),
                     consent = if (obj.isNull("consent")) null else obj.optBoolean("consent"),
+                    persistenceConsent = if (obj.isNull("persistenceConsent")) null else obj.optBoolean("persistenceConsent"),
                     canPersonalize = obj.optBoolean("canPersonalize", false),
                     changes = obj.optJSONArray("changes")?.let { parseChanges(it) },
                     selectedPersonalizations = obj.optJSONArray("selectedPersonalizations")?.let { parsePersonalizations(it) },

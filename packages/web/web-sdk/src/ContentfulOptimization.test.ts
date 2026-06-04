@@ -1,5 +1,11 @@
-import type { CoreConfig } from '@contentful/optimization-core'
+import { batch, signals, type CoreConfig } from '@contentful/optimization-core'
 import type { OptimizationData, Profile } from '@contentful/optimization-core/api-schemas'
+import {
+  ANONYMOUS_ID_KEY,
+  CONSENT_KEY,
+  PERSISTENCE_CONSENT_KEY,
+  PROFILE_CACHE_KEY,
+} from '@contentful/optimization-core/constants'
 import ContentfulOptimization from './ContentfulOptimization'
 import { OPTIMIZATION_WEB_SDK_NAME } from './constants'
 
@@ -94,6 +100,19 @@ describe('ContentfulOptimization', () => {
   beforeEach(() => {
     delete window.contentfulOptimization
     localStorage.clear()
+    batch(() => {
+      signals.blockedEvent.value = undefined
+      signals.changes.value = undefined
+      signals.consent.value = undefined
+      signals.event.value = undefined
+      signals.locale.value = undefined
+      signals.online.value = true
+      signals.persistenceConsent.value = undefined
+      signals.previewPanelAttached.value = false
+      signals.previewPanelOpen.value = false
+      signals.profile.value = undefined
+      signals.selectedOptimizations.value = undefined
+    })
   })
 
   afterEach(() => {
@@ -318,6 +337,77 @@ describe('ContentfulOptimization', () => {
 
     expect(upsertProfile).toHaveBeenCalledTimes(1)
     expect(onEventBlocked).not.toHaveBeenCalled()
+  })
+
+  it('keeps explicit default profile in memory until persistence consent is granted', () => {
+    const web = new ContentfulOptimization({
+      ...config,
+      defaults: {
+        profile: DEFAULT_PROFILE,
+      },
+    })
+
+    expect(web.states.profile.current).toEqual(DEFAULT_PROFILE)
+    expect(localStorage.getItem(PROFILE_CACHE_KEY)).toBeNull()
+
+    web.consent({ persistence: true })
+
+    expect(JSON.parse(localStorage.getItem(PROFILE_CACHE_KEY) ?? 'null')).toEqual(DEFAULT_PROFILE)
+  })
+
+  it('clears durable profile continuity on persistence consent withdrawal without clearing memory', () => {
+    const web = new ContentfulOptimization({
+      ...config,
+      defaults: {
+        consent: true,
+        profile: DEFAULT_PROFILE,
+      },
+    })
+
+    expect(localStorage.getItem(PROFILE_CACHE_KEY)).not.toBeNull()
+
+    web.consent({ persistence: false })
+
+    expect(localStorage.getItem(PROFILE_CACHE_KEY)).toBeNull()
+    expect(web.states.profile.current).toEqual(DEFAULT_PROFILE)
+  })
+
+  it('preserves the anonymous ID when profile continuity is cleared while persistence consent remains granted', () => {
+    const web = new ContentfulOptimization({
+      ...config,
+      defaults: {
+        consent: true,
+        profile: DEFAULT_PROFILE,
+      },
+    })
+
+    expect(web.states.profile.current).toEqual(DEFAULT_PROFILE)
+    expect(localStorage.getItem(ANONYMOUS_ID_KEY)).toBe(DEFAULT_PROFILE.id)
+
+    signals.profile.value = undefined
+
+    expect(localStorage.getItem(PROFILE_CACHE_KEY)).toBeNull()
+    expect(localStorage.getItem(ANONYMOUS_ID_KEY)).toBe(DEFAULT_PROFILE.id)
+  })
+
+  it('does not load persisted profile continuity when persistence consent is denied', () => {
+    localStorage.setItem(PERSISTENCE_CONSENT_KEY, 'denied')
+    localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(DEFAULT_PROFILE))
+
+    const web = new ContentfulOptimization(config)
+
+    expect(web.states.profile.current).toBeUndefined()
+    expect(localStorage.getItem(PROFILE_CACHE_KEY)).toBeNull()
+  })
+
+  it('loads persisted profile continuity from accepted legacy consent', () => {
+    localStorage.setItem(CONSENT_KEY, 'accepted')
+    localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(DEFAULT_PROFILE))
+
+    const web = new ContentfulOptimization(config)
+
+    expect(web.states.profile.current).toEqual(DEFAULT_PROFILE)
+    expect(web.states.persistenceConsent.current).toBe(true)
   })
 
   it('supports page() without an explicit payload', async () => {

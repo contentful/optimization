@@ -7,7 +7,7 @@ import rateLimit from 'express-rate-limit'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ContentfulOptimization from '../src'
-import type { OptimizationData, PartialProfile, SelectedOptimization } from '../src/api-schemas'
+import type { PartialProfile, Profile, SelectedOptimization } from '../src/api-schemas'
 import { isMergeTagEntry } from '../src/api-schemas'
 
 /* eslint-disable @typescript-eslint/naming-convention -- standardized var names */
@@ -151,35 +151,83 @@ function resetState(profileId?: unknown): void {
   profileState.set(profileId.trim(), { consent: false })
 }
 
-app.get('/', limiter, async (req, res) => {
-  let profileId = isNonEmptyString(req.query.profileId) ? req.query.profileId.trim() : undefined
+function applyRequestState({
+  consent,
+  profileId,
+  reset,
+  userId,
+}: {
+  consent?: unknown
+  profileId?: unknown
+  reset?: unknown
+  userId?: unknown
+}): string | undefined {
+  const requestProfileId = isNonEmptyString(profileId) ? profileId.trim() : undefined
 
-  if (req.query.reset === 'true') {
-    resetState(profileId)
-    profileId = undefined
-  } else {
-    updateState({
-      profileId,
-      consent: req.query.consent,
-      userId: req.query.userId,
-    })
+  if (reset === 'true') {
+    resetState(requestProfileId)
+    return undefined
   }
 
-  const { consent, userId } = profileId ? (profileState.get(profileId) ?? {}) : {}
+  updateState({
+    profileId: requestProfileId,
+    consent,
+    userId,
+  })
 
+  return requestProfileId
+}
+
+async function getRequestOptimizationData({
+  consent,
+  profileId,
+  userId,
+}: {
+  consent?: boolean
+  profileId?: string
+  userId?: string
+}): Promise<{
+  profile: Profile | undefined
+  selectedOptimizations: SelectedOptimization[] | undefined
+}> {
   const requestProfile: PartialProfile | undefined =
     typeof profileId === 'string' ? { id: profileId } : undefined
 
-  let apiResponse: OptimizationData = await sdk.page({ profile: requestProfile })
+  const requestOptimization = sdk.forRequest({
+    consent: { events: consent === true, persistence: consent === true },
+    profile: requestProfile,
+  })
+  let apiResponse = await requestOptimization.page()
 
   if (isNonEmptyString(userId)) {
-    apiResponse = await sdk.identify({
+    apiResponse = await requestOptimization.identify({ userId })
+  }
+
+  const profile = apiResponse?.profile
+  const selectedOptimizations = apiResponse?.selectedOptimizations
+
+  if (requestOptimization.canPersistProfile && profile?.id !== undefined) {
+    updateState({
+      profileId: profile.id,
+      consent: consent === true ? 'true' : undefined,
       userId,
-      profile: requestProfile,
     })
   }
 
-  const { profile, selectedOptimizations } = apiResponse
+  return {
+    profile,
+    selectedOptimizations,
+  }
+}
+
+app.get('/', limiter, async (req, res) => {
+  const profileId = applyRequestState(req.query)
+  const { consent, userId } = profileId ? (profileState.get(profileId) ?? {}) : {}
+  const { profile, selectedOptimizations } = await getRequestOptimizationData({
+    consent,
+    profileId,
+    userId,
+  })
 
   const entryIds: string[] = [
     '1MwiFl4z7gkwqGYdvCmr8c', // Rich Text field Entry with Merge Tag

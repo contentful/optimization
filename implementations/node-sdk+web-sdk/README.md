@@ -26,7 +26,10 @@ This is a reference implementation using both the
 [Contentful Optimization SDK Suite](../../README.md).
 
 On the server side, the stateless Node SDK is created once at module load and each request passes
-its request-scoped options directly to stateless event methods.
+its request-scoped options directly to stateless event methods. The demo stores application-owned
+consent in a server-readable cookie and writes the shared anonymous ID cookie only when consent
+permits profile continuity. When app consent is missing or denied, the server clears the shared
+anonymous ID cookie, skips Node SDK event calls, and lets the browser render baseline entries.
 
 The goal of this reference implementation is to illustrate the usage of cookie-based communication
 in both the Node and Web SDKs, which is an important component of many server-side/client-side
@@ -55,8 +58,8 @@ for the entry contract.
 ## What this demonstrates
 
 Use this implementation when you need a hybrid SSR/browser example. It demonstrates a stateless Node
-SDK server flow, a stateful Web SDK browser flow, cookie-based profile continuity between them, and
-local mock API usage for end-to-end validation.
+SDK server flow, a stateful Web SDK browser flow, consent-aware cookie-based profile continuity
+between them, and local mock API usage for end-to-end validation.
 
 ## Prerequisites
 

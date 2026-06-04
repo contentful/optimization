@@ -64,14 +64,18 @@ const statefulOptimization = new CoreStateful({ clientId: 'your-client-id' })
 const statelessOptimization = new CoreStateless({ clientId: 'your-client-id' })
 ```
 
-Stateful runtimes own durable in-process SDK state. Stateless runtimes pass request-scoped
-Experience API options as the final event-method argument:
+Stateful runtimes own durable in-process SDK state. Stateless runtimes bind request-scoped consent,
+profile state, event context, and Experience API options before calling event methods:
 
 ```ts
-await statelessOptimization.page(
-  { profile: { id: 'profile-id' } },
-  { locale: 'de-DE', preflight: false },
-)
+const requestOptimization = statelessOptimization.forRequest({
+  consent: true,
+  eventContext: { locale: 'en-US' },
+  experienceOptions: { locale: 'de-DE', preflight: false },
+  profile: { id: 'profile-id' },
+})
+
+await requestOptimization.page()
 ```
 
 ## When to use this package
@@ -97,8 +101,9 @@ optimization, flag, event-stream, blocked-event, and preview-panel state as read
 ### Stateless Core
 
 `CoreStateless` is the basis for SDKs that run in stateless environments such as Node servers and
-server-side functions. It does not store consent or profile state. Consumers pass profile and
-request-scoped Experience options with each event call.
+server-side functions. It does not store consent or profile state between requests. Consumers call
+`forRequest()` to create a request-bound event client with the consent, profile, event context, and
+Experience options for that one incoming request.
 
 ## Common configuration
 
@@ -113,15 +118,28 @@ Shared Core configuration:
 | `fetchOptions` | No        | SDK defaults          | Fetch timeout and retry behavior                            |
 | `logLevel`     | No        | `'error'`             | Minimum log level for the default console sink              |
 
+Consent and event configuration:
+
+| Option              | Required? | Default     | Description                                                  |
+| ------------------- | --------- | ----------- | ------------------------------------------------------------ |
+| `allowedEventTypes` | No        | `[]`        | Event types allowed before consent is explicitly set         |
+| `onEventBlocked`    | No        | `undefined` | Callback invoked when consent or guard logic blocks an event |
+
+Core itself fails closed before consent. Platform SDKs set runtime-specific defaults for the event
+types that make sense in that runtime, such as browser `identify`/`page`, server `identify`/`page`,
+and mobile `identify`/`screen`.
+
 Stateful-only configuration:
 
-| Option              | Required? | Default                          | Description                                                                    |
-| ------------------- | --------- | -------------------------------- | ------------------------------------------------------------------------------ |
-| `allowedEventTypes` | No        | `['identify', 'page', 'screen']` | Event types allowed before consent is explicitly set                           |
-| `defaults`          | No        | `undefined`                      | Initial state, commonly including consent or profile values                    |
-| `getAnonymousId`    | No        | `undefined`                      | Function used to provide an anonymous ID from application-owned identity state |
-| `onEventBlocked`    | No        | `undefined`                      | Callback invoked when consent or guard logic blocks an event                   |
-| `queuePolicy`       | No        | SDK defaults                     | Flush retry behavior and offline queue bounds                                  |
+| Option           | Required? | Default      | Description                                                                       |
+| ---------------- | --------- | ------------ | --------------------------------------------------------------------------------- |
+| `defaults`       | No        | `undefined`  | Initial state, commonly including consent, persistence consent, or profile values |
+| `getAnonymousId` | No        | `undefined`  | Function used to provide an anonymous ID from application-owned identity state    |
+| `queuePolicy`    | No        | SDK defaults | Flush retry behavior and offline queue bounds                                     |
+
+Persistence consent controls durable profile-continuity storage for SDKs with runtime storage:
+profile, anonymous ID, changes, and selected optimization caches. Event consent, stored consent
+decisions, and debug state are tracked separately.
 
 Common `api` options:
 
@@ -136,8 +154,8 @@ Common `api` options:
 | `plainText`         | Stateful   | `false`                                    | Sends performance-critical endpoints as text    |
 | `preflight`         | Stateful   | `false`                                    | Aggregates a profile state without storing it   |
 
-In stateless environments, pass `ip`, `locale`, `plainText`, and `preflight` as the final argument
-to stateless event methods instead of constructor config.
+In stateless environments, pass `ip`, `locale`, `plainText`, and `preflight` as `experienceOptions`
+when creating the request-bound client instead of constructor config.
 
 Core-backed stateful SDKs can accept `contentfulLocales`, an initial app/content `locale`, and
 runtime `setLocale(locale)` calls. They expose the resolved Contentful locale through the live

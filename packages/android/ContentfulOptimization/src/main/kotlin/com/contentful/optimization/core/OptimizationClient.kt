@@ -73,16 +73,30 @@ class OptimizationClient(private val applicationContext: Context) {
         log.setEnabled(config.debug)
         log.info { "[init] Starting SDK initialization (clientId=${config.clientId}, env=${config.environment})" }
 
-        store.load()
+        store.loadConsentState()
         val resolvedLocale = config.resolvedLocale(getRuntimeLocaleCandidates())
+        val configuredDefaultConsent = config.defaults?.consent
+        var storedAnonymousId: String? = null
         val mergedConfig = config.copy(
             locale = resolvedLocale,
             defaults = (config.defaults ?: StorageDefaults()).let { d ->
+                val requestedPersistenceConsent =
+                    d.persistenceConsent ?: configuredDefaultConsent ?: store.persistenceConsent ?: d.consent
+                val persistenceConsent = requestedPersistenceConsent
+                val canLoadPersistedContinuity = persistenceConsent == true
+                if (canLoadPersistedContinuity) {
+                    store.loadProfileContinuity()
+                    storedAnonymousId = store.anonymousId
+                } else if (persistenceConsent == false) {
+                    store.clearProfileContinuity()
+                }
+
                 d.copy(
                     consent = d.consent ?: store.consent,
-                    profile = d.profile ?: store.profile,
-                    changes = d.changes ?: store.changes,
-                    personalizations = d.personalizations ?: store.personalizations,
+                    persistenceConsent = persistenceConsent,
+                    profile = d.profile ?: if (canLoadPersistedContinuity) store.profile else null,
+                    changes = d.changes ?: if (canLoadPersistedContinuity) store.changes else null,
+                    personalizations = d.personalizations ?: if (canLoadPersistedContinuity) store.personalizations else null,
                 )
             }
         )
@@ -90,7 +104,7 @@ class OptimizationClient(private val applicationContext: Context) {
 
         bridge.onLog = { level, msg -> log.debug { "[js:$level] $msg" } }
 
-        bridge.initialize(mergedConfig, applicationContext.assets)
+        bridge.initialize(mergedConfig, applicationContext.assets, storedAnonymousId)
         _isInitialized.value = true
         log.info { "[init] SDK initialized successfully" }
 
@@ -147,10 +161,17 @@ class OptimizationClient(private val applicationContext: Context) {
         bridgeCallSyncWhenInitialized("consent", if (accept) "true" else "false")
     }
 
+    fun consent(events: Boolean? = null, persistence: Boolean? = null) {
+        val fields = mutableListOf<String>()
+        events?.let { fields.add("events: ${if (it) "true" else "false"}") }
+        persistence?.let { fields.add("persistence: ${if (it) "true" else "false"}") }
+        bridgeCallSyncWhenInitialized("consent", "{${fields.joinToString(",")}}")
+    }
+
     fun reset() {
         if (!_isInitialized.value) return
         bridgeCallSyncWhenInitialized("reset")
-        store.clear()
+        store.clearProfileContinuity()
     }
 
     fun setOnline(isOnline: Boolean) {
@@ -294,7 +315,6 @@ class OptimizationClient(private val applicationContext: Context) {
         _state.value = OptimizationState.EMPTY
         locale = null
         _selectedPersonalizations.value = null
-        store.clear()
     }
 
     private fun getRuntimeLocaleCandidates(): List<String> {
@@ -382,27 +402,34 @@ class OptimizationClient(private val applicationContext: Context) {
         @Suppress("UNCHECKED_CAST")
         val changes = extractJSONArray(dict["changes"]) as? List<Map<String, Any>>
         val consent = dict["consent"] as? Boolean
+        val persistenceConsent = dict["persistenceConsent"] as? Boolean
         val locale = dict["locale"] as? String
+        @Suppress("UNCHECKED_CAST")
+        val personalizations = extractJSONArray(dict["selectedPersonalizations"]) as? List<Map<String, Any>>
 
+        this.locale = locale
+
+        store.consent = consent
+        store.persistenceConsent = persistenceConsent
+        if (persistenceConsent == true) {
+            store.profile = profile
+            store.changes = changes
+            store.personalizations = personalizations
+            @Suppress("UNCHECKED_CAST")
+            store.anonymousId = (profile?.get("id") as? String) ?: store.anonymousId
+        } else if (persistenceConsent == false) {
+            store.clearProfileContinuity()
+        }
+
+        _selectedPersonalizations.value = personalizations
         _state.value = OptimizationState(
             profile = profile,
             consent = consent,
+            persistenceConsent = persistenceConsent,
             canPersonalize = dict["canPersonalize"] as? Boolean ?: false,
             changes = changes,
             locale = locale,
         )
-        this.locale = locale
-
-        @Suppress("UNCHECKED_CAST")
-        val personalizations = extractJSONArray(dict["selectedPersonalizations"]) as? List<Map<String, Any>>
-        _selectedPersonalizations.value = personalizations
-
-        store.profile = profile
-        store.consent = consent
-        store.changes = changes
-        store.personalizations = personalizations
-        @Suppress("UNCHECKED_CAST")
-        store.anonymousId = (profile?.get("id") as? String) ?: store.anonymousId
     }
 
     companion object {

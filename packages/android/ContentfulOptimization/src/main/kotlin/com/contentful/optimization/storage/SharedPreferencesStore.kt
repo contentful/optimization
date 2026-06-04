@@ -3,6 +3,7 @@ package com.contentful.optimization.storage
 import android.content.Context
 import android.content.SharedPreferences
 import com.contentful.optimization.bridge.QuickJsContextManager
+import com.contentful.optimization.core.DiagnosticLogger
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -11,14 +12,24 @@ class SharedPreferencesStore(context: Context) : PersistentStore {
         context.getSharedPreferences("com.contentful.optimization", Context.MODE_PRIVATE)
     private val keyPrefix = "com.contentful.optimization."
     private val cache = mutableMapOf<String, Any?>()
+    private val consentStateKeys = listOf("consent", "persistenceConsent", "debug")
+    private val profileContinuityKeys = listOf("profile", "changes", "personalizations", "anonymousId")
+    private val keys = consentStateKeys + profileContinuityKeys
 
-    override fun load() {
-        val keys = listOf("profile", "consent", "changes", "personalizations", "anonymousId", "debug")
+    override fun loadConsentState() {
+        load(consentStateKeys)
+    }
+
+    override fun loadProfileContinuity() {
+        load(profileContinuityKeys)
+    }
+
+    private fun load(keys: List<String>) {
         for (key in keys) {
             val fullKey = keyPrefix + key
             val stored = prefs.getString(fullKey, null) ?: continue
             when (key) {
-                "consent" -> cache[key] = stored
+                "consent", "persistenceConsent" -> cache[key] = stored
                 "anonymousId" -> cache[key] = stored
                 "debug" -> cache[key] = stored == "true"
                 else -> {
@@ -33,13 +44,21 @@ class SharedPreferencesStore(context: Context) : PersistentStore {
     }
 
     override fun clear() {
-        val keys = listOf("profile", "consent", "changes", "personalizations", "anonymousId", "debug")
         val editor = prefs.edit()
         for (key in keys) {
             editor.remove(keyPrefix + key)
         }
-        editor.apply()
+        editor.commitPersistedUpdate("clear")
         cache.clear()
+    }
+
+    override fun clearProfileContinuity() {
+        val editor = prefs.edit()
+        for (key in profileContinuityKeys) {
+            editor.remove(keyPrefix + key)
+            cache.remove(key)
+        }
+        editor.commitPersistedUpdate("clear profile continuity")
     }
 
     override var profile: Map<String, Any>?
@@ -64,6 +83,20 @@ class SharedPreferencesStore(context: Context) : PersistentStore {
             val translated = value?.let { if (it) "accepted" else "denied" }
             cache["consent"] = translated
             writeString(translated, "consent")
+        }
+
+    override var persistenceConsent: Boolean?
+        get() {
+            return when (cache["persistenceConsent"] as? String) {
+                "accepted" -> true
+                "denied" -> false
+                else -> if (consent == true) true else null
+            }
+        }
+        set(value) {
+            val translated = value?.let { if (it) "accepted" else "denied" }
+            cache["persistenceConsent"] = translated
+            writeString(translated, "persistenceConsent")
         }
 
     override var changes: List<Map<String, Any>>?
@@ -108,18 +141,24 @@ class SharedPreferencesStore(context: Context) : PersistentStore {
                 is List<*> -> JSONArray(value).toString()
                 else -> value.toString()
             }
-            prefs.edit().putString(fullKey, json).apply()
+            prefs.edit().putString(fullKey, json).commitPersistedUpdate("write $key")
         } else {
-            prefs.edit().remove(fullKey).apply()
+            prefs.edit().remove(fullKey).commitPersistedUpdate("remove $key")
         }
     }
 
     private fun writeString(value: String?, key: String) {
         val fullKey = keyPrefix + key
         if (value != null) {
-            prefs.edit().putString(fullKey, value).apply()
+            prefs.edit().putString(fullKey, value).commitPersistedUpdate("write $key")
         } else {
-            prefs.edit().remove(fullKey).apply()
+            prefs.edit().remove(fullKey).commitPersistedUpdate("remove $key")
+        }
+    }
+
+    private fun SharedPreferences.Editor.commitPersistedUpdate(operation: String) {
+        if (!commit()) {
+            DiagnosticLogger.warning { "[storage] SharedPreferences commit failed during $operation" }
         }
     }
 

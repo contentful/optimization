@@ -18,7 +18,7 @@ export async function initializeSDK(
       api: { experienceBaseUrl, insightsBaseUrl },
     } = ENV_CONFIG
 
-    await AsyncStorageStore.initialize()
+    await AsyncStorageStore.initializeConsentState()
     AsyncStorageStore.consent = true
 
     const sdkInstance = await ContentfulOptimization.create({

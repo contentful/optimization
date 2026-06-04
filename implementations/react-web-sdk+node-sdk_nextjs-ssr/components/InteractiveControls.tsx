@@ -4,6 +4,13 @@ import { useOptimizationContext } from '@contentful/optimization-react-web'
 import type { Profile } from '@contentful/optimization-react-web/api-schemas'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 
+const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
+
+function setAppConsentCookie(consented: boolean): void {
+  const value = consented ? 'granted' : 'denied'
+  document.cookie = `${APP_PERSONALIZATION_CONSENT_COOKIE}=${value}; Path=/; SameSite=Lax`
+}
+
 export function InteractiveControls(): JSX.Element {
   const { sdk, isReady } = useOptimizationContext()
   const [consent, setConsent] = useState<boolean | undefined>(undefined)
@@ -16,6 +23,7 @@ export function InteractiveControls(): JSX.Element {
 
     const consentSub = sdk.states.consent.subscribe((value: boolean | undefined) => {
       setConsent(value)
+      if (typeof value === 'boolean') setAppConsentCookie(value)
     })
 
     const profileSub = sdk.states.profile.subscribe((value: Profile | undefined) => {

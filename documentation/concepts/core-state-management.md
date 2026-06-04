@@ -25,6 +25,7 @@ extend behavior through the consumer-facing channels the SDK provides.
 - [How state changes](#how-state-changes)
   - [Entry points for state mutation](#entry-points-for-state-mutation)
   - [How the Experience API drives state](#how-the-experience-api-drives-state)
+  - [Persistence-settled publication](#persistence-settled-publication)
   - [Consent gating](#consent-gating)
 - [What consumers receive: the `states` surface](#what-consumers-receive-the-states-surface)
   - [The `Observable` contract](#the-observable-contract)
@@ -69,6 +70,7 @@ signal.
 | Signal                  | Type                                            | Description                                                                                                               |
 | ----------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `consent`               | `boolean \| undefined`                          | Whether the user has granted or denied tracking consent. `undefined` means the value has not yet been set.                |
+| `persistenceConsent`    | `boolean \| undefined`                          | Whether durable profile-continuity storage is allowed. `undefined` means the value has not yet been set.                  |
 | `profile`               | `Profile \| undefined`                          | The active user profile returned by the Experience API, including ID, traits, and location.                               |
 | `selectedOptimizations` | `SelectedOptimizationArray \| undefined`        | The set of variant selections returned by the Experience API for the current profile.                                     |
 | `changes`               | `ChangeArray \| undefined`                      | The optimization change payload returned by the Experience API, used to resolve Custom Flag values and optimized entries. |
@@ -102,7 +104,7 @@ change Core state or event streams are:
 
 | Method or surface                   | What it affects                                                                                       |
 | ----------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `consent(accept)`                   | Sets the `consent` signal.                                                                            |
+| `consent(accept)`                   | Sets event consent and, when provided, durable profile-continuity persistence consent.                |
 | `identify(payload)`                 | Sends an Experience event; updates `profile`, `selectedOptimizations`, and `changes` on response.     |
 | `page(payload)`                     | Sends an Experience event; same response-driven updates.                                              |
 | `screen(payload)`                   | Sends an Experience event; same response-driven updates.                                              |
@@ -145,6 +147,25 @@ Consumer calls sdk.page()
 Batching the writes means downstream effects and computed signals see a consistent snapshot. There
 is no intermediate state where `profile` has updated but `selectedOptimizations` has not.
 
+### Persistence-settled publication
+
+State interceptors run before Core writes Experience API response data to observable state. Runtime
+state remains memory-backed: platform storage is read during initialization to seed continuity, and
+live reads use the SDK's in-memory signals. Platform SDKs use the interceptor hook to mirror the
+same response snapshot to durable profile-continuity storage before publishing the in-memory state
+that depends on it.
+
+When durable profile-continuity persistence consent is `true`, a stateful SDK should not emit a new
+`states.profile`, `states.selectedOptimizations`, or `states.canOptimize` value for an Experience
+response until the platform storage write has either completed or failed and been handled. This does
+not make storage infallible or make storage the source of truth for live state; a failed write can
+still leave the SDK running on the response data in memory. It does mean application code and tests
+can wait for SDK-derived state instead of adding arbitrary delays before relaunch-sensitive work.
+
+When durable persistence consent is `false` or unset, profile-continuity values are not written for
+the response. The SDK may still publish in-memory state for allowed events, but that state should be
+treated as session-only.
+
 ### Consent gating
 
 The send path checks `hasConsent(methodName)` inside `sendExperienceEvent` and `sendInsightsEvent`
@@ -152,12 +173,15 @@ before a queue accepts the event. When consent is `false` or `undefined` and the
 allow-listed, the event is blocked, a `BlockedEvent` record is written to the `blockedEvent` signal,
 and the configured `onEventBlocked` callback is invoked.
 
-By default, `identify`, `page`, and `screen` are exempt from consent gating (they are in
-`allowedEventTypes`). All other event methods are gated. This default list can be changed via the
-`allowedEventTypes` configuration option.
+Core defaults `allowedEventTypes` to `[]`, so Core itself fails closed before consent. Platform SDKs
+set runtime-specific defaults for event types that are valid in that runtime. For example, Web and
+Node use `identify`/`page`, while mobile runtimes use `identify`/`screen`. This list can be changed
+via the `allowedEventTypes` configuration option.
 
-Calling `consent(true)` unblocks all gated events going forward. It does not replay events that were
-blocked before consent was granted.
+Calling `consent(true)` unblocks all gated events going forward and grants durable
+profile-continuity persistence consent. Calling `consent({ events: true, persistence: false })`
+allows event emission while keeping profile continuity session-only. Blocked events are not replayed
+after consent is granted.
 
 ## What consumers receive: the `states` surface
 
@@ -182,6 +206,7 @@ reaching your code. Mutating a received value does not affect internal signal st
 | Observable                     | Type                                                        | Description                                                                          |
 | ------------------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | `states.consent`               | `Observable<boolean \| undefined>`                          | Current consent value.                                                               |
+| `states.persistenceConsent`    | `Observable<boolean \| undefined>`                          | Current durable profile-continuity persistence consent value.                        |
 | `states.profile`               | `Observable<Profile \| undefined>`                          | Active user profile.                                                                 |
 | `states.selectedOptimizations` | `Observable<SelectedOptimizationArray \| undefined>`        | Active variant selections.                                                           |
 | `states.canOptimize`           | `Observable<boolean>`                                       | `true` when variant data is available.                                               |
@@ -381,8 +406,11 @@ children can render immediately unless `onStatesReady` is provided.
 Consent is a precondition for most event emission. Set it with the `consent` method:
 
 ```ts
-// Grant consent (e.g., after the user accepts your cookie banner)
+// Grant consent after application policy allows SDK event emission.
 sdk.consent(true)
+
+// Allow events but keep durable profile continuity disabled
+sdk.consent({ events: true, persistence: false })
 
 // Revoke consent
 sdk.consent(false)
@@ -397,8 +425,11 @@ sdk.states.consent.subscribe((value) => {
 ```
 
 The SDK does not provide a consent UI. Consent policy, including when to ask, what to display, and
-how to store the user's choice, belongs to your application. The SDK exposes `consent()` to receive
-the decision and `states.consent` to let your application reflect it.
+how to store any user choice, belongs to your application. If application policy permits SDK
+activity by default, stateful SDKs can start from `defaults.consent: true` instead of rendering an
+end-user consent UI. The SDK exposes `consent()` to receive runtime changes and `states.consent` to
+let your application reflect them. Use `states.persistenceConsent` when the application needs to
+reflect whether durable profile-continuity storage is allowed separately from event emission.
 
 ### Resetting state
 

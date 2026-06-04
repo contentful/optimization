@@ -55,8 +55,8 @@ content has been fetched.
 In practice, most Node integrations follow this high-level sequence:
 
 1. Create one SDK instance for the Node process.
-2. Read the request-scoped inputs your app owns: consent state, existing `profile.id`, known user
-   identity, and page context.
+2. Bind the application's request policy with `forRequest()`: pass accepted consent for default-on
+   integrations, or read request-scoped consent state before SDK calls.
 3. Call the SDK to evaluate the request and, when appropriate, associate a known user with the
    current profile.
 4. Use the returned profile data, selected optimizations, and flag changes to render the response.
@@ -111,8 +111,8 @@ export const optimization = new ContentfulOptimization({
 ```
 
 Treat that SDK as a module-level singleton for the current Node process. Do not create a new
-`ContentfulOptimization` instance per incoming request. Pass request-scoped Experience API options
-as the final argument to stateless event methods.
+`ContentfulOptimization` instance per incoming request. Use `forRequest()` to bind request-scoped
+consent, profile, event context, and Experience API options before calling event methods.
 
 Use `contentfulLocales.default` for single-locale apps, and add `contentfulLocales.supported` when
 the app needs request locale matching across multiple Contentful locales. Copy those codes from
@@ -190,7 +190,21 @@ locale for that request option so localized profile values match the entry langu
 The Node SDK does not expose a server-side `consent()` state the way stateful SDKs do. In a Node
 app, consent belongs in your application layer.
 
-That usually means your app needs to:
+When application policy permits Optimization by default and no end-user consent UI is rendered, bind
+each request with accepted event and persistence consent:
+
+```ts
+const requestOptimization = optimization.forRequest({
+  consent: { events: true, persistence: true },
+  eventContext: getRequestContext(req, eventLocale),
+  profile: getProfileFromRequest(req),
+})
+```
+
+That allows SDK calls to emit events and lets `requestOptimization.canPersistProfile` return `true`
+when a response includes a profile ID.
+
+When consent depends on user choice, your app needs to:
 
 - store the user's consent decision in its own cookie, session, or user-preference store
 - decide which high-level SDK methods are allowed before consent, after consent, and after consent
@@ -212,10 +226,12 @@ If your app stores consent in cookies, register cookie parsing middleware before
 import type { Request, Response } from 'express'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 
-const OPTIMIZATION_CONSENT_COOKIE = 'ctfl-opt-consent'
+const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
 
-function hasOptimizationConsent(req: Request): boolean {
-  return req.cookies[OPTIMIZATION_CONSENT_COOKIE] === 'true'
+function appPolicyAllowsOptimizationEvent(req: Request): boolean {
+  const consent = req.cookies[APP_PERSONALIZATION_CONSENT_COOKIE]
+
+  return consent === 'granted'
 }
 
 function clearOptimizationIdentity(res: Response): void {
@@ -223,8 +239,10 @@ function clearOptimizationIdentity(res: Response): void {
 }
 ```
 
-The exact consent policy belongs to the application, not the SDK. The important part is that the
-server makes that decision before it persists identifiers or emits events on the user's behalf.
+The exact consent policy belongs to the application, not the SDK. The important parts are that the
+server makes the call/no-call decision before it persists identifiers or emits events on the user's
+behalf. Bind that decision with `forRequest()` so emitted events are labeled with the request's
+actual consent state.
 
 ## 4. Decide how you will persist the profile ID
 
@@ -287,35 +305,27 @@ function getAuthenticatedUserId(req: Request): string | undefined {
 }
 
 app.get('/', async (req, res) => {
-  const consented = hasOptimizationConsent(req)
-  if (!consented) {
-    return res.json({
-      profile: undefined,
-      changes: undefined,
-      selectedOptimizations: undefined,
-    })
-  }
-
   const { eventLocale } = optimization.resolveRequestLocale(req)
-  const requestContext = getRequestContext(req, eventLocale)
-  const existingProfile = getProfileFromRequest(req)
-  const pageResponse: OptimizationData | undefined = await optimization.page({
-    ...requestContext,
-    profile: existingProfile,
+  const requestOptimization = optimization.forRequest({
+    consent: {
+      events: appPolicyAllowsOptimizationEvent(req),
+      persistence: appPolicyAllowsOptimizationEvent(req),
+    },
+    eventContext: getRequestContext(req, eventLocale),
+    profile: getProfileFromRequest(req),
   })
+  const pageResponse: OptimizationData | undefined = await requestOptimization.page()
 
   const userId = getAuthenticatedUserId(req)
 
   const identifyResponse = userId
-    ? await optimization.identify({
-        ...requestContext,
-        profile: pageResponse?.profile ?? existingProfile,
+    ? await requestOptimization.identify({
         userId,
         traits: { authenticated: true },
       })
     : undefined
 
-  if (consented) {
+  if (requestOptimization.canPersistProfile) {
     persistProfile(res, identifyResponse?.profile?.id ?? pageResponse?.profile?.id)
   }
 
@@ -332,8 +342,24 @@ Replace `getAuthenticatedUserId()` with the lookup your app actually uses, such 
 cookie, or upstream auth middleware.
 
 This example shows the common "evaluate first, then identify when the user is known" flow. If your
-policy allows a different pre-consent behavior, implement that policy in your application layer
-before you call SDK methods.
+policy allows a specific pre-consent server event, configure that event type in `allowedEventTypes`
+and bind request consent as false. Do not persist `profile.id` returned by an approved pre-consent
+event unless `requestOptimization.canPersistProfile` is true.
+
+```ts
+const optimization = new ContentfulOptimization({
+  allowedEventTypes: ['page'],
+  clientId: 'your-client-id',
+})
+
+const requestOptimization = optimization.forRequest({
+  consent: { events: false, persistence: false },
+  eventContext: { locale: eventLocale },
+  profile,
+})
+
+const data = await requestOptimization.page()
+```
 
 That route lets a consumer accomplish two things:
 
@@ -390,18 +416,18 @@ async function getArticle(entryId: string, locale?: string): Promise<ArticleEntr
 }
 
 app.get('/article/:entryId', async (req, res) => {
-  const consented = hasOptimizationConsent(req)
   const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
-  const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
-  const pageResponse = consented
-    ? await optimization.page(
-        {
-          ...getRequestContext(req, eventLocale),
-          locale: eventLocale,
-          profile: getProfileFromRequest(req),
-        },
-        requestOptions,
-      )
+  const requestOptimization = optimization.forRequest({
+    consent: {
+      events: appPolicyAllowsOptimizationEvent(req),
+      persistence: appPolicyAllowsOptimizationEvent(req),
+    },
+    eventContext: getRequestContext(req, eventLocale),
+    experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
+    profile: getProfileFromRequest(req),
+  })
+  const pageResponse = appPolicyAllowsOptimizationEvent(req)
+    ? await requestOptimization.page()
     : undefined
 
   const article = await getArticle(req.params.entryId, contentfulLocale)
@@ -411,7 +437,7 @@ app.get('/article/:entryId', async (req, res) => {
     pageResponse?.selectedOptimizations,
   )
 
-  if (consented) {
+  if (appPolicyAllowsOptimizationEvent(req)) {
     persistProfile(res, pageResponse?.profile?.id)
   }
 
@@ -485,11 +511,15 @@ In the Node SDK, `getFlag()` does not auto-track flag views. If a flag exposure 
 captured as an Insights event, call `trackFlagView()` explicitly:
 
 ```ts
-if (pageResponse?.profile) {
-  await optimization.trackFlagView({
-    ...getRequestContext(req, eventLocale),
-    componentId: 'new-navigation',
+if (appPolicyAllowsOptimizationEvent(req) && pageResponse?.profile) {
+  const requestOptimization = optimization.forRequest({
+    consent: true,
+    eventContext: getRequestContext(req, eventLocale),
     profile: pageResponse.profile,
+  })
+
+  await requestOptimization.trackFlagView({
+    componentId: 'new-navigation',
   })
 }
 ```
@@ -506,23 +536,29 @@ The Node SDK can send more than page views. Common server-side cases are:
 
 Gate these calls with the same consent policy your app applies to `page()` and `identify()`.
 
-In stateless Node usage, Insights-backed calls need a profile. `trackClick()`, `trackHover()`,
-`trackFlagView()`, and non-sticky `trackView()` must use a persisted or freshly returned profile.
-Sticky `trackView()` can omit `profile`, because it can reuse the paired Experience response
-profile.
+In stateless Node usage, Insights-backed calls need a request-bound profile. `trackClick()`,
+`trackHover()`, `trackFlagView()`, and non-sticky `trackView()` must use a persisted or freshly
+returned profile bound with `forRequest()`. Sticky `trackView()` can start without a profile,
+because it can reuse the paired Experience response profile.
 
 Example custom event:
 
 ```ts
-await optimization.track({
-  ...getRequestContext(req, eventLocale),
-  profile: pageResponse?.profile,
-  event: 'quote_requested',
-  properties: {
-    plan: 'enterprise',
-    source: 'pricing-page',
-  },
-})
+if (appPolicyAllowsOptimizationEvent(req)) {
+  const requestOptimization = optimization.forRequest({
+    consent: true,
+    eventContext: getRequestContext(req, eventLocale),
+    profile: pageResponse?.profile,
+  })
+
+  await requestOptimization.track({
+    event: 'quote_requested',
+    properties: {
+      plan: 'enterprise',
+      source: 'pricing-page',
+    },
+  })
+}
 ```
 
 Example rendered-entry view event:
@@ -531,7 +567,6 @@ Example rendered-entry view event:
 import { randomUUID } from 'node:crypto'
 
 const viewPayload = {
-  ...getRequestContext(req, eventLocale),
   componentId: optimizedArticle.sys.id,
   experienceId: selectedOptimization?.experienceId,
   variantIndex: selectedOptimization?.variantIndex,
@@ -539,10 +574,22 @@ const viewPayload = {
   viewId: randomUUID(),
 }
 
-if (selectedOptimization?.sticky) {
-  await optimization.trackView({ ...viewPayload, sticky: true })
-} else if (pageResponse?.profile) {
-  await optimization.trackView({ ...viewPayload, profile: pageResponse.profile })
+if (appPolicyAllowsOptimizationEvent(req) && selectedOptimization?.sticky) {
+  const requestOptimization = optimization.forRequest({
+    consent: true,
+    eventContext: getRequestContext(req, eventLocale),
+    profile: pageResponse?.profile,
+  })
+
+  await requestOptimization.trackView({ ...viewPayload, sticky: true })
+} else if (appPolicyAllowsOptimizationEvent(req) && pageResponse?.profile) {
+  const requestOptimization = optimization.forRequest({
+    consent: true,
+    eventContext: getRequestContext(req, eventLocale),
+    profile: pageResponse.profile,
+  })
+
+  await requestOptimization.trackView(viewPayload)
 }
 ```
 

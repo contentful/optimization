@@ -16,6 +16,20 @@ const variantEntryTexts: Record<string, string> = {
     'This is a baseline content entry for all identified or unidentified users.',
 }
 
+const baselineEntryTexts: Record<string, string> = {
+  '1JAU028vQ7v6nB2swl3NBo': 'This is a level 0 nested baseline entry.',
+  '5i4SdJXw9oDEY0vgO7CwF4': 'This is a level 1 nested baseline entry.',
+  uaNY4YJ0HFPAX3gKXiRdX: 'This is a level 2 nested baseline entry.',
+  '4ib0hsHWoSOnCVdDkizE8d': 'This is a baseline content entry for visitors from any continent.',
+  xFwgG3oNaOcjzWiGe4vXo: 'This is a baseline content entry for all visitors using any device.',
+  '2Z2WLOx07InSewC3LUB3eX': 'This is a baseline content entry for all users.',
+  '5XHssysWUDECHzKLzoIsg1': 'This is a baseline content entry for an A/B/C experiment: A',
+  '6zqoWXyiSrf0ja7I2WGtYj':
+    'This is a baseline content entry for all visitors with or without a custom event.',
+  '7pa5bOx8Z9NmNcr7mISvD':
+    'This is a baseline content entry for all identified or unidentified users.',
+}
+
 test.describe('entry view tracking', () => {
   test.describe('without consent', () => {
     test.beforeEach(async ({ page }) => {
@@ -24,14 +38,14 @@ test.describe('entry view tracking', () => {
       await page.waitForLoadState('domcontentloaded')
     })
 
-    test('page event has been emitted', async ({ page }) => {
+    test('page event has not been emitted', async ({ page }) => {
       await expect(
         page.getByRole('listitem').filter({ has: page.getByRole('button', { name: 'page' }) }),
-      ).toBeVisible()
+      ).toHaveCount(0)
     })
 
     test('entry view events have not been emitted', async ({ page }) => {
-      for (const entryText of Object.values(variantEntryTexts)) {
+      for (const entryText of Object.values(baselineEntryTexts)) {
         const element = page.getByText(entryText)
 
         await element.scrollIntoViewIfNeeded()
@@ -51,6 +65,9 @@ test.describe('entry view tracking', () => {
 
       const consent = page.getByRole('button', { name: 'Accept Consent' })
       await consent.click()
+      await expect(
+        page.getByText('This is a variant content entry for an A/B/C experiment: B'),
+      ).toBeVisible()
     })
 
     test('page event has been emitted', async ({ page }) => {
@@ -65,7 +82,8 @@ test.describe('entry view tracking', () => {
 
         if (!entryText) continue
 
-        const element = page.getByText(entryText)
+        const element = page.getByText(entryText).first()
+        await expect(element).toBeVisible()
 
         await element.scrollIntoViewIfNeeded()
 

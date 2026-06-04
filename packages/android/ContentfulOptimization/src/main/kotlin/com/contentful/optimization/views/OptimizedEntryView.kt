@@ -9,6 +9,7 @@ import android.widget.FrameLayout
 import com.contentful.optimization.core.PersonalizedResult
 import com.contentful.optimization.core.TrackClickPayload
 import com.contentful.optimization.tracking.TrackingMetadata
+import com.contentful.optimization.tracking.VIEW_TRACKING_LOG_TAG
 import com.contentful.optimization.tracking.ViewTrackingController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -309,7 +310,7 @@ class OptimizedEntryView @JvmOverloads constructor(
 }
 
 private inline fun trackingLog(message: () -> String) {
-    if (android.util.Log.isLoggable("ViewTracking", android.util.Log.DEBUG)) {
-        android.util.Log.d("ViewTracking", message())
+    if (android.util.Log.isLoggable(VIEW_TRACKING_LOG_TAG, android.util.Log.DEBUG)) {
+        android.util.Log.d(VIEW_TRACKING_LOG_TAG, message())
     }
 }

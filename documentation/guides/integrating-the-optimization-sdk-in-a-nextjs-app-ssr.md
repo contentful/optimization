@@ -69,7 +69,7 @@ What it does not give you:
 | Concern                             | Where it runs             | SDK used                                 |
 | ----------------------------------- | ------------------------- | ---------------------------------------- |
 | Anonymous ID cookie lifecycle       | Middleware (Edge Runtime) | Node SDK                                 |
-| Profile resolution and variant pick | Server Component          | Node SDK (`sdk.page()`)                  |
+| Profile resolution and variant pick | Server Component          | Node SDK (`requestOptimization.page()`)  |
 | Entry variant resolution            | Server Component          | Node SDK (`sdk.resolveOptimizedEntry()`) |
 | HTML rendering                      | Server Component          | None (plain React)                       |
 | Page view tracking                  | Client (after hydration)  | React Web SDK (`NextAppAutoPageTracker`) |
@@ -80,8 +80,10 @@ What it does not give you:
 In practice, the integration follows this sequence:
 
 1. Create one Node SDK instance shared across Server Components and middleware.
-2. Use Next.js middleware to maintain the anonymous ID cookie on every request.
-3. In Server Components, read the cookie, call `sdk.page()`, and resolve each entry variant.
+2. Use Next.js middleware to maintain the anonymous ID cookie when application policy permits
+   profile continuity.
+3. In Server Components, bind request-scoped consent with `sdk.forRequest()`; the examples below use
+   accepted consent for a default-on policy.
 4. Load the React Web SDK with `next/dynamic` and `ssr: false` so it only runs in the browser.
 5. Mount the React Web SDK provider and page tracker in a `'use client'` wrapper in your layout.
 6. Use Client Components for consent, identify, and any interactive SDK controls.
@@ -127,8 +129,8 @@ export { sdk }
 ```
 
 Do not create a new instance per request. The Node SDK is designed to be a process-level singleton.
-Pass request-scoped context (locale, user agent, profile, page URL) as arguments to each method
-call. The optional final argument to each method accepts Experience API request options.
+Use `forRequest()` to bind request-scoped consent, locale, user agent, profile, page URL, and
+Experience API request options before calling event methods.
 
 The per-call `{ locale }` request option is sent as the Experience API `locale` query parameter.
 Call `sdk.resolveRequestLocale(reqOrAcceptLanguage)` for each request, use `eventLocale` in event
@@ -148,14 +150,16 @@ import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import { type NextRequest, NextResponse } from 'next/server'
 
 export async function middleware(request: NextRequest): Promise<NextResponse> {
+  const response = NextResponse.next()
+
   const anonymousId = request.cookies.get(ANONYMOUS_ID_COOKIE)?.value
   const profile = anonymousId ? { id: anonymousId } : undefined
   const { contentfulLocale, eventLocale } = sdk.resolveRequestLocale(request)
-  const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
 
   const url = new URL(request.url)
-  const data = await sdk.page(
-    {
+  const requestOptimization = sdk.forRequest({
+    consent: { events: true, persistence: true },
+    eventContext: {
       locale: eventLocale,
       userAgent: request.headers.get('user-agent') ?? 'next-js-server',
       page: {
@@ -165,14 +169,13 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
         search: url.search,
         url: request.url,
       },
-      profile,
     },
-    requestOptions,
-  )
+    experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
+    profile,
+  })
+  const data = await requestOptimization.page()
 
-  const response = NextResponse.next()
-
-  if (data.profile.id) {
+  if (requestOptimization.canPersistProfile && data?.profile.id) {
     response.cookies.set(ANONYMOUS_ID_COOKIE, data.profile.id, {
       path: '/',
       sameSite: 'lax',
@@ -191,17 +194,15 @@ The `ANONYMOUS_ID_COOKIE` constant is the shared cookie name used by both the No
 Web SDK. Using the same name means that after hydration, the Web SDK reads the same anonymous ID
 from `document.cookie` and continues the same profile journey the server started.
 
-Do not mark this cookie as `HttpOnly`. The Web SDK reads it from the browser.
-
-Why the middleware calls `sdk.page()` in addition to the Server Component doing the same: the
-middleware call ensures the cookie is set and populated in the `Set-Cookie` header of the response
-before the Server Component runs. Without this, the first request to a page that has no existing
-cookie would see an empty cookie store in the Server Component.
+Do not mark this cookie as `HttpOnly`. The Web SDK reads it from the browser. The example uses a
+default-on policy, so middleware binds accepted event and persistence consent before calling
+`requestOptimization.page()`. If application policy depends on user choice, read that state before
+the SDK call and clear the shared anonymous ID cookie when profile continuity is not permitted.
 
 ## 4. Resolve entries in a Server Component
 
-Inside a Server Component, read the cookie, call `sdk.page()` in parallel with your Contentful
-fetch, then resolve each entry:
+Inside a Server Component, read the anonymous ID cookie and bind accepted consent for the default-on
+request policy:
 
 ```tsx
 import { sdk } from '@/lib/optimization-server'
@@ -215,28 +216,29 @@ export default async function Home() {
     headerStore.get('accept-language'),
   )
   const contentfulOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
-  const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
 
   const anonymousId = cookieStore.get(ANONYMOUS_ID_COOKIE)?.value
   const profile = anonymousId ? { id: anonymousId } : undefined
 
   const [baselineEntries, optimizationData] = await Promise.all([
     fetchEntriesFromContentful(contentfulOptions),
-    sdk.page(
-      {
-        locale: eventLocale,
-        userAgent: headerStore.get('user-agent') ?? 'next-js-server',
+    sdk
+      .forRequest({
+        consent: { events: true, persistence: true },
+        eventContext: {
+          locale: eventLocale,
+          userAgent: headerStore.get('user-agent') ?? 'next-js-server',
+        },
+        experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
         profile,
-      },
-      requestOptions,
-    ),
+      })
+      .page(),
   ])
 
   const resolvedEntries = baselineEntries.map((entry) => {
-    const { entry: resolved } = sdk.resolveOptimizedEntry(
-      entry,
-      optimizationData.selectedOptimizations,
-    )
+    const { entry: resolved } = optimizationData
+      ? sdk.resolveOptimizedEntry(entry, optimizationData.selectedOptimizations)
+      : { entry }
     return resolved
   })
 
@@ -266,15 +268,15 @@ for the entry contract and
 for the broader locale model.
 
 `resolveOptimizedEntry` is synchronous. It picks the correct variant from the resolved entry based
-on `selectedOptimizations` returned by `sdk.page()`. If no optimization applies, it returns the
-baseline entry unchanged.
+on `selectedOptimizations` returned by `requestOptimization.page()`. If no optimization applies, it
+returns the baseline entry unchanged.
 
 ### Add data attributes for client-side tracking
 
 After hydration, the React Web SDK's `trackEntryInteraction` option uses a `MutationObserver` to
 find elements with specific `data-ctfl-*` attributes and register interaction trackers (views,
-clicks, hovers) against them. For automatic tracking to work on server-rendered entries, add these
-attributes to the wrapper element:
+clicks, hovers) against them. For automatic tracking to work on server-rendered entries, add
+`data-ctfl-entry-id` to the wrapper element:
 
 ```tsx
 function ServerRenderedEntry({
@@ -292,9 +294,12 @@ function ServerRenderedEntry({
 }
 ```
 
-`data-ctfl-entry-id` is the resolved (possibly variant) entry ID. `data-ctfl-baseline-id` is the
-original baseline entry ID. Both are required for the client SDK to associate interaction events
-with the correct optimization context.
+`data-ctfl-entry-id` is the resolved (possibly variant) entry ID and is required for automatic
+interaction tracking. `data-ctfl-baseline-id` is application-owned metadata for keeping the original
+baseline entry ID available to your rendering code; the Web SDK does not include it in event
+payloads. When the server has selected optimization context available, also render
+`data-ctfl-optimization-id`, `data-ctfl-sticky`, and `data-ctfl-variant-index` so client-side
+interaction events can carry the same optimization identifiers.
 
 ## 5. Load the React Web SDK on the client only
 
@@ -394,6 +399,7 @@ export function ClientProviderWrapper({
     <OptimizationRoot
       clientId={process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID ?? ''}
       environment={process.env.NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main'}
+      defaults={{ consent: true }}
       contentfulLocales={{
         default: 'en-US',
         supported: ['en-US', 'de-DE', 'fr-FR'],
@@ -457,8 +463,13 @@ NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT="main"
 
 ## 7. Handle consent and identify from client components
 
-Consent and identify are client-side concerns. Create a Client Component that subscribes to the SDK
-state and exposes the controls:
+With a default-on policy, no consent UI is required. The server examples above bind
+`consent: { events: true, persistence: true }`, and the browser provider seeds
+`defaults={{ consent: true }}` so client-side page and interaction tracking can emit immediately.
+
+If application policy depends on user choice, keep server request consent, the anonymous ID cookie,
+and browser SDK consent aligned from a Client Component that subscribes to SDK state and exposes the
+controls:
 
 ```tsx
 // components/InteractiveControls.tsx
@@ -467,6 +478,13 @@ state and exposes the controls:
 import { useOptimizationContext } from '@contentful/optimization-react-web'
 import { useEffect, useState } from 'react'
 
+const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
+
+function setAppConsentCookie(consented: boolean): void {
+  const value = consented ? 'granted' : 'denied'
+  document.cookie = `${APP_PERSONALIZATION_CONSENT_COOKIE}=${value}; Path=/; SameSite=Lax`
+}
+
 export function InteractiveControls() {
   const { sdk, isReady } = useOptimizationContext()
   const [consent, setConsent] = useState<boolean | undefined>(undefined)
@@ -474,7 +492,10 @@ export function InteractiveControls() {
   useEffect(() => {
     if (!sdk || !isReady) return
 
-    const sub = sdk.states.consent.subscribe(setConsent)
+    const sub = sdk.states.consent.subscribe((value) => {
+      setConsent(value)
+      if (typeof value === 'boolean') setAppConsentCookie(value)
+    })
 
     return () => sub.unsubscribe()
   }, [sdk, isReady])
@@ -483,7 +504,11 @@ export function InteractiveControls() {
 
   return (
     <div>
-      <button onClick={() => sdk.consent(consent !== true)}>
+      <button
+        onClick={() => {
+          sdk.consent(consent !== true)
+        }}
+      >
         {consent === true ? 'Reject consent' : 'Accept consent'}
       </button>
       <button onClick={() => sdk.identify({ userId: 'user-123' })}>Identify</button>
@@ -495,6 +520,10 @@ export function InteractiveControls() {
 
 `InteractiveControls` can be mounted inside a Server Component page — React allows Client Components
 to be children of Server Components.
+
+The cookie write keeps the next server request aligned with the browser-side `sdk.consent()` state.
+In production, replace this with the same CMP or account-preference state that drives your browser
+consent UI.
 
 Client actions update the Optimization profile via the Experience API, but they do not re-render the
 server-resolved content on the current page. The updated profile is reflected on the next server
@@ -577,8 +606,8 @@ client never re-resolves entries in this pattern.
 The personalization loop makes certain pieces of your response non-cacheable at the CDN or reverse
 proxy layer:
 
-- The result of `sdk.page()` must not be cached and reused across requests. It performs a
-  server-side effect and returns profile state for the current visitor.
+- The result of `requestOptimization.page()` must not be cached and reused across requests. It
+  performs a server-side effect and returns profile state for the current visitor.
 - Resolved entry HTML (the output of `resolveOptimizedEntry()`) is only cache-safe if you vary the
   cache on both the baseline entry version and a fingerprint of `selectedOptimizations`. In
   practice, most teams treat server-rendered personalized responses as uncacheable.

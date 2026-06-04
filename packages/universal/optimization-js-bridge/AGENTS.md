@@ -1,51 +1,28 @@
 # AGENTS.md
 
-Read the repository root `AGENTS.md`, then `packages/AGENTS.md`, then
-`packages/universal/AGENTS.md`, before this file.
+Shared TypeScript bridge source compiled into the native UMD bundles consumed by iOS JavaScriptCore
+and Android QuickJS.
 
-## Scope
+## Rules
 
-This package owns the shared TypeScript bridge source compiled into the UMD bundles consumed by both
-native SDKs: the iOS Swift package (JavaScriptCore) and the Android Kotlin SDK (QuickJS). One
-`src/index.ts` is the single source of truth — there is no separate per-platform bridge.
-
-## Key paths
-
-- `src/index.ts` — the shared bridge adapter over `@contentful/optimization-core`
-- `src/polyfills/` — the eight JS polyfill scripts (`console`, `timers`, `fetch`, `crypto`, `url`,
-  `abort-controller`, `promise-utilities`, `text-encoding`) prepended to each UMD bundle at build
-  time. Single source of truth for both platforms; do not fork per platform.
-- `rslib.config.ts` — builds one UMD bundle per native platform and prepends polyfill source
-- `package.json` — `postbuild` copies each bundle into its native SDK
-
-## Local rules
-
+- `src/index.ts` is the single bridge source of truth; do not fork per platform.
 - Keep the bridge engine-agnostic: JSON strings, callback pairs, and no browser-only or Node-only
-  assumptions. Both JavaScriptCore and QuickJS host this bundle; runtime gaps are filled by the JS
-  polyfills under `src/polyfills/` (prepended into the bundle) plus the native bindings each SDK
-  registers (`__nativeLog`, `__nativeFetch`, `__nativeSetTimeout`, etc.) before the bundle runs.
-- Polyfills must not diverge per platform. If a future feature genuinely needs platform-specific
-  behavior, do it via `__OPTIMIZATION_PACKAGE_NAME__`-style defines in the bridge entry, not by
-  re-forking polyfill files.
-- The build emits two UMD bundles from the one source — `optimization-ios-bridge.umd.js` and
-  `optimization-android-bridge.umd.js`. They differ only in the `__OPTIMIZATION_PACKAGE_NAME__`
-  define, which Core stamps into the analytics `library.name`. Keep both platform names in
-  `rslib.config.ts` so iOS and Android events stay distinguishable.
-- Keep bridge state shapes and method contracts aligned with both native model layers, under
-  `packages/ios/ContentfulOptimization/Sources/ContentfulOptimization/Core/` and
-  `packages/android/ContentfulOptimization/src/main/kotlin/com/contentful/optimization/`.
-- Keep preview override calls aligned with `@contentful/optimization-core/preview-support`.
-- Do not hand-edit `dist/` or the copied native bundle outputs. Build this package to refresh them.
+  assumptions.
+- Polyfills under `src/polyfills/` are shared and prepended into both bundles. Platform-specific
+  behavior should use build defines, not forked polyfill files.
+- The build emits `optimization-ios-bridge.umd.js` and `optimization-android-bridge.umd.js`; keep
+  platform names in `rslib.config.ts` so analytics `library.name` remains distinguishable.
+- Keep method contracts, payload shapes, and preview override calls aligned with native model layers
+  and `@contentful/optimization-core/preview-support`.
+- Do not hand-edit `dist/` or copied native bundle outputs. Build this package to refresh them.
 
 ## Commands
 
-- `pnpm --filter @contentful/optimization-js-bridge typecheck`
-- `pnpm --filter @contentful/optimization-js-bridge build`
+- `pnpm --filter @contentful/optimization-js-bridge <script>` with `typecheck` or `build`.
 
-## Usually validate
+## Validate
 
 - Run `typecheck` for TypeScript source changes.
-- Run `build` for runtime, export, dependency, bundler config, or bridge contract changes — it
-  refreshes both native bundles.
-- After bridge contract or payload-shape changes, validate the iOS Swift package and the Android
-  Kotlin SDK, plus targeted reference-app coverage that exercises the changed behavior.
+- Run `build` for runtime, export, dependency, bundler config, or bridge contract changes.
+- After bridge contract or payload-shape changes, validate the iOS Swift package, Android Kotlin
+  SDK, and targeted reference-app coverage.

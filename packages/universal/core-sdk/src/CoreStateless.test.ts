@@ -1,14 +1,15 @@
 import type { OptimizationData } from './api-schemas'
+import type { BlockedEvent } from './BlockedEvent'
 import CoreStateless from './CoreStateless'
 
 const TRACK_CLICK_PROFILE_ERROR =
-  'CoreStateless.trackClick() requires `payload.profile.id` for Insights delivery.'
+  'CoreStatelessRequest.trackClick() requires a request-bound profile id for Insights delivery.'
 const TRACK_HOVER_PROFILE_ERROR =
-  'CoreStateless.trackHover() requires `payload.profile.id` for Insights delivery.'
+  'CoreStatelessRequest.trackHover() requires a request-bound profile id for Insights delivery.'
 const TRACK_FLAG_VIEW_PROFILE_ERROR =
-  'CoreStateless.trackFlagView() requires `payload.profile.id` for Insights delivery.'
+  'CoreStatelessRequest.trackFlagView() requires a request-bound profile id for Insights delivery.'
 const NON_STICKY_TRACK_VIEW_PROFILE_ERROR =
-  'CoreStateless.trackView() requires `payload.profile.id` when `payload.sticky` is not `true`.'
+  'CoreStatelessRequest.trackView() requires a request-bound profile id when `payload.sticky` is not `true`.'
 
 const EMPTY_OPTIMIZATION_DATA: OptimizationData = {
   changes: [],
@@ -39,17 +40,17 @@ const EMPTY_OPTIMIZATION_DATA: OptimizationData = {
 }
 
 async function invokeUntypedMethod(
-  core: CoreStateless,
+  requestOptimization: ReturnType<CoreStateless['forRequest']>,
   method: 'trackClick' | 'trackHover' | 'trackFlagView' | 'trackView',
   payload: Record<string, unknown>,
 ): Promise<unknown> {
-  const methodRef = Reflect.get(core, method)
+  const methodRef = Reflect.get(requestOptimization, method)
 
   if (typeof methodRef !== 'function') {
     throw new Error(`Expected "${method}" to be a function`)
   }
 
-  return await Reflect.apply(methodRef, core, [payload])
+  return await Reflect.apply(methodRef, requestOptimization, [payload])
 }
 
 describe('CoreStateless', () => {
@@ -108,7 +109,7 @@ describe('CoreStateless', () => {
     expect(Reflect.get(core.api.experience, 'locale')).toBe('en-US')
   })
 
-  it('forwards request-bound options and explicit profiles through Experience upserts', async () => {
+  it('binds consent, profile, event context, and Experience request options with forRequest()', async () => {
     const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
     const upsertProfile = rs
       .spyOn(core.api.experience, 'upsertProfile')
@@ -119,31 +120,59 @@ describe('CoreStateless', () => {
       plainText: false,
       preflight: true,
     }
+    const requestOptimization = core.forRequest({
+      consent: { events: true, persistence: true },
+      eventContext: {
+        locale: 'en-US',
+        page: {
+          path: '/products',
+          query: {},
+          referrer: '',
+          search: '',
+          title: 'Products',
+          url: 'https://example.test/products',
+        },
+        userAgent: 'unit-test',
+      },
+      experienceOptions: requestOptions,
+      profile: { id: 'profile-123' },
+    })
 
-    await core.identify({ userId: 'user-123', profile: { id: 'profile-123' } }, requestOptions)
+    await requestOptimization.identify({ userId: 'user-123' })
 
+    expect(requestOptimization.canPersistProfile).toBe(true)
     expect(upsertProfile).toHaveBeenCalledWith(
       expect.objectContaining({
         profileId: 'profile-123',
-        events: [expect.objectContaining({ type: 'identify' })],
+        events: [
+          expect.objectContaining({
+            context: expect.objectContaining({
+              gdpr: expect.objectContaining({ isConsentGiven: true }),
+              locale: 'en-US',
+              page: expect.objectContaining({ path: '/products' }),
+              userAgent: 'unit-test',
+            }),
+            type: 'identify',
+          }),
+        ],
       }),
       requestOptions,
     )
   })
 
-  it('keeps request locale and event locale separate', async () => {
+  it('keeps request event locale and Experience request locale separate', async () => {
     const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
     const upsertProfile = rs
       .spyOn(core.api.experience, 'upsertProfile')
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const requestOptimization = core.forRequest({
+      consent: true,
+      eventContext: { locale: 'en-US' },
+      experienceOptions: { locale: 'de-DE' },
+      profile: { id: 'profile-123' },
+    })
 
-    await core.page(
-      {
-        locale: 'en-US',
-        profile: { id: 'profile-123' },
-      },
-      { locale: 'de-DE' },
-    )
+    await requestOptimization.page()
 
     expect(upsertProfile).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -156,29 +185,120 @@ describe('CoreStateless', () => {
     )
   })
 
-  it('isolates request-bound options between separate stateless calls', async () => {
-    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
+  it('defaults allowedEventTypes to empty for stateless core requests', async () => {
+    const blockedEvents: BlockedEvent[] = []
+    const core = new CoreStateless({
+      clientId: 'key_123',
+      environment: 'main',
+      onEventBlocked: (event) => blockedEvents.push(event),
+    })
     const upsertProfile = rs
       .spyOn(core.api.experience, 'upsertProfile')
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const requestOptimization = core.forRequest({
+      consent: { events: false },
+      profile: { id: 'profile-123' },
+    })
 
-    await Promise.all([
-      core.track({ event: 'first' }, { ip: '203.0.113.10', locale: 'de-DE' }),
-      core.track({ event: 'second' }, { ip: '198.51.100.5', locale: 'en-US', plainText: false }),
+    await requestOptimization.identify({ userId: 'user-123' })
+    await requestOptimization.page()
+    await requestOptimization.screen({ name: 'Home', properties: {} })
+
+    expect(core.allowedEventTypes).toEqual([])
+    expect(upsertProfile).not.toHaveBeenCalled()
+    expect(blockedEvents.map((event) => event.method)).toEqual(['identify', 'page', 'screen'])
+  })
+
+  it('blocks non-allowlisted events before consent and reports diagnostics', async () => {
+    const blockedEvents: BlockedEvent[] = []
+    const core = new CoreStateless({
+      clientId: 'key_123',
+      environment: 'main',
+      onEventBlocked: (event) => blockedEvents.push(event),
+    })
+    const upsertProfile = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const requestOptimization = core.forRequest({
+      consent: false,
+      profile: { id: 'profile-123' },
+    })
+
+    await expect(requestOptimization.track({ event: 'conversion' })).resolves.toBeUndefined()
+
+    expect(upsertProfile).not.toHaveBeenCalled()
+    expect(blockedEvents).toEqual([
+      {
+        args: [{ event: 'conversion' }],
+        method: 'track',
+        reason: 'consent',
+      },
     ])
+  })
 
-    const requestOptions = upsertProfile.mock.calls.map(([, options]) => options)
+  it('blocks all events before consent when allowedEventTypes is empty', async () => {
+    const blockedEvents: BlockedEvent[] = []
+    const core = new CoreStateless({
+      allowedEventTypes: [],
+      clientId: 'key_123',
+      environment: 'main',
+      onEventBlocked: (event) => blockedEvents.push(event),
+    })
+    const upsertProfile = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const requestOptimization = core.forRequest({
+      consent: false,
+      profile: { id: 'profile-123' },
+    })
 
-    expect(requestOptions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ ip: '203.0.113.10', locale: 'de-DE' }),
-        expect.objectContaining({
-          ip: '198.51.100.5',
-          locale: 'en-US',
-          plainText: false,
-        }),
-      ]),
-    )
+    await expect(requestOptimization.page()).resolves.toBeUndefined()
+
+    expect(upsertProfile).not.toHaveBeenCalled()
+    expect(blockedEvents).toHaveLength(1)
+    expect(blockedEvents[0]?.method).toBe('page')
+  })
+
+  it('allows consumers to widen pre-consent stateless event types', async () => {
+    const core = new CoreStateless({
+      allowedEventTypes: ['track'],
+      clientId: 'key_123',
+      environment: 'main',
+    })
+    const upsertProfile = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const requestOptimization = core.forRequest({
+      consent: false,
+      profile: { id: 'profile-123' },
+    })
+
+    await requestOptimization.track({ event: 'server-preflight' })
+
+    expect(upsertProfile.mock.calls[0]?.[0].events[0]?.context.gdpr.isConsentGiven).toBe(false)
+  })
+
+  it('updates the request-bound profile across sequential Experience calls', async () => {
+    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
+    const firstProfile = { ...EMPTY_OPTIMIZATION_DATA.profile, id: 'first-profile' }
+    const secondProfile = { ...EMPTY_OPTIMIZATION_DATA.profile, id: 'second-profile' }
+    const upsertProfile = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockResolvedValueOnce({ ...EMPTY_OPTIMIZATION_DATA, profile: firstProfile })
+      .mockResolvedValueOnce({ ...EMPTY_OPTIMIZATION_DATA, profile: secondProfile })
+    const requestOptimization = core.forRequest({
+      consent: true,
+      profile: { id: 'initial-profile' },
+    })
+
+    await requestOptimization.page()
+    await requestOptimization.identify({ userId: 'user-123' })
+
+    expect(upsertProfile.mock.calls.map(([body]) => body.profileId)).toEqual([
+      'initial-profile',
+      'first-profile',
+    ])
+    expect(requestOptimization.profile).toEqual(secondProfile)
   })
 
   it('sends sticky entry views through both the Experience API and Insights API', async () => {
@@ -187,17 +307,18 @@ describe('CoreStateless', () => {
       .spyOn(core.api.experience, 'upsertProfile')
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const requestOptimization = core.forRequest({
+      consent: true,
+      experienceOptions: { preflight: true },
+      profile: { id: 'profile-123' },
+    })
 
-    await core.trackView(
-      {
-        componentId: 'hero-banner',
-        sticky: true,
-        viewId: 'hero-banner-view',
-        viewDurationMs: 1000,
-        profile: { id: 'profile-123' },
-      },
-      { preflight: true },
-    )
+    await requestOptimization.trackView({
+      componentId: 'hero-banner',
+      sticky: true,
+      viewDurationMs: 1000,
+      viewId: 'hero-banner-view',
+    })
 
     expect(upsertProfile).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -209,29 +330,74 @@ describe('CoreStateless', () => {
     expect(sendBatchEvents).toHaveBeenCalledWith([
       {
         profile: EMPTY_OPTIMIZATION_DATA.profile,
-        events: [expect.objectContaining({ type: 'component' })],
+        events: [
+          expect.objectContaining({
+            context: expect.objectContaining({
+              gdpr: expect.objectContaining({ isConsentGiven: true }),
+            }),
+            type: 'component',
+          }),
+        ],
       },
     ])
   })
 
-  it('rejects insights-only stateless methods without a profile id', async () => {
-    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
+  it('blocks Insights-only events before consent', async () => {
+    const blockedEvents: BlockedEvent[] = []
+    const core = new CoreStateless({
+      clientId: 'key_123',
+      environment: 'main',
+      onEventBlocked: (event) => blockedEvents.push(event),
+    })
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const requestOptimization = core.forRequest({
+      consent: false,
+      profile: { id: 'profile-123' },
+    })
+
+    await requestOptimization.trackClick({ componentId: 'hero-banner' })
+
+    expect(sendBatchEvents).not.toHaveBeenCalled()
+    expect(blockedEvents[0]?.method).toBe('trackClick')
+  })
+
+  it('blocks Insights-only events before profile validation when consent is missing', async () => {
+    const blockedEvents: BlockedEvent[] = []
+    const core = new CoreStateless({
+      clientId: 'key_123',
+      environment: 'main',
+      onEventBlocked: (event) => blockedEvents.push(event),
+    })
+    const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const requestOptimization = core.forRequest({ consent: false })
 
     await expect(
-      invokeUntypedMethod(core, 'trackClick', {
+      requestOptimization.trackClick({ componentId: 'hero-banner' }),
+    ).resolves.toBeUndefined()
+
+    expect(sendBatchEvents).not.toHaveBeenCalled()
+    expect(blockedEvents[0]?.method).toBe('trackClick')
+  })
+
+  it('rejects insights-only request methods without a request-bound profile id', async () => {
+    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
+    const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const requestOptimization = core.forRequest({ consent: true })
+
+    await expect(
+      invokeUntypedMethod(requestOptimization, 'trackClick', {
         componentId: 'hero-banner',
       }),
     ).rejects.toThrow(TRACK_CLICK_PROFILE_ERROR)
     await expect(
-      invokeUntypedMethod(core, 'trackHover', {
+      invokeUntypedMethod(requestOptimization, 'trackHover', {
         componentId: 'hero-banner',
         hoverDurationMs: 1000,
         hoverId: 'hover-id',
       }),
     ).rejects.toThrow(TRACK_HOVER_PROFILE_ERROR)
     await expect(
-      invokeUntypedMethod(core, 'trackFlagView', {
+      invokeUntypedMethod(requestOptimization, 'trackFlagView', {
         componentId: 'new-navigation',
       }),
     ).rejects.toThrow(TRACK_FLAG_VIEW_PROFILE_ERROR)
@@ -245,34 +411,43 @@ describe('CoreStateless', () => {
       .spyOn(core.api.experience, 'upsertProfile')
       .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const requestOptimization = core.forRequest({
+      consent: true,
+      experienceOptions: { preflight: true },
+      profile: { id: 'profile-123' },
+    })
 
     await expect(
-      core.trackView(
-        {
-          componentId: 'hero-banner',
-          viewId: 'hero-banner-view',
-          viewDurationMs: 1000,
-          profile: { id: 'profile-123' },
-        },
-        { preflight: true },
-      ),
+      requestOptimization.trackView({
+        componentId: 'hero-banner',
+        viewDurationMs: 1000,
+        viewId: 'hero-banner-view',
+      }),
     ).resolves.toBeUndefined()
 
     expect(upsertProfile).not.toHaveBeenCalled()
     expect(sendBatchEvents).toHaveBeenCalledWith([
       {
         profile: { id: 'profile-123' },
-        events: [expect.objectContaining({ type: 'component' })],
+        events: [
+          expect.objectContaining({
+            context: expect.objectContaining({
+              gdpr: expect.objectContaining({ isConsentGiven: true }),
+            }),
+            type: 'component',
+          }),
+        ],
       },
     ])
   })
 
-  it('rejects non-sticky entry views without a profile id', async () => {
+  it('rejects non-sticky entry views without a request-bound profile id', async () => {
     const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const requestOptimization = core.forRequest({ consent: true })
 
     await expect(
-      invokeUntypedMethod(core, 'trackView', {
+      invokeUntypedMethod(requestOptimization, 'trackView', {
         componentId: 'hero-banner',
         viewDurationMs: 1000,
         viewId: 'hero-banner-view',
@@ -290,16 +465,17 @@ describe('CoreStateless', () => {
       profile: responseProfile,
     })
     const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const requestOptimization = core.forRequest({
+      consent: true,
+      experienceOptions: { preflight: true },
+    })
 
-    const result = await core.trackView(
-      {
-        componentId: 'hero-banner',
-        sticky: true,
-        viewDurationMs: 1000,
-        viewId: 'hero-banner-view',
-      },
-      { preflight: true },
-    )
+    const result = await requestOptimization.trackView({
+      componentId: 'hero-banner',
+      sticky: true,
+      viewDurationMs: 1000,
+      viewId: 'hero-banner-view',
+    })
 
     expect(result).toEqual({
       ...EMPTY_OPTIMIZATION_DATA,
@@ -318,60 +494,6 @@ describe('CoreStateless', () => {
         events: [expect.objectContaining({ type: 'component' })],
       },
     ])
-  })
-
-  it('prefers the Experience response profile over a stale input profile for sticky entry views', async () => {
-    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
-    const staleProfile = { id: 'stale-profile' }
-    const responseProfile = { ...EMPTY_OPTIMIZATION_DATA.profile, id: 'fresh-profile' }
-    rs.spyOn(core.api.experience, 'upsertProfile').mockResolvedValue({
-      ...EMPTY_OPTIMIZATION_DATA,
-      profile: responseProfile,
-    })
-    const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
-
-    await core.trackView(
-      {
-        componentId: 'hero-banner',
-        sticky: true,
-        viewDurationMs: 1000,
-        viewId: 'hero-banner-view',
-        profile: staleProfile,
-      },
-      { preflight: true },
-    )
-
-    expect(sendBatchEvents).toHaveBeenCalledWith([
-      {
-        profile: responseProfile,
-        events: [expect.objectContaining({ type: 'component' })],
-      },
-    ])
-  })
-
-  it('keeps request-bound options off insights-only methods', async () => {
-    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
-    const upsertProfile = rs
-      .spyOn(core.api.experience, 'upsertProfile')
-      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
-    const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
-
-    await core.trackClick(
-      { componentId: 'hero-banner', profile: { id: 'profile-123' } },
-      {
-        ip: '203.0.113.10',
-        locale: 'de-DE',
-        plainText: false,
-        preflight: true,
-      },
-    )
-
-    expect(upsertProfile).not.toHaveBeenCalled()
-    expect(sendBatchEvents).toHaveBeenCalledWith([
-      {
-        profile: { id: 'profile-123' },
-        events: [expect.objectContaining({ type: 'component_click' })],
-      },
-    ])
+    expect(requestOptimization.profile).toEqual(responseProfile)
   })
 })

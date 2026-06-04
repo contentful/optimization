@@ -20,6 +20,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
             insightsBaseUrl: AppConfig.insightsBaseUrl,
             contentfulLocales: AppConfig.contentfulLocales,
             locale: AppConfig.defaultContentfulLocale,
+            defaults: StorageDefaults(consent: true),
             debug: true
         ))
 

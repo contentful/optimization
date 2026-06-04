@@ -2,19 +2,18 @@ import type { ApiClientConfig } from '@contentful/optimization-api-client'
 import type {
   ChangeArray,
   ExperienceEvent as ExperienceEventPayload,
-  ExperienceEventType,
   InsightsEvent as InsightsEventPayload,
-  InsightsEventType,
   Json,
   Profile,
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger, logger } from '@contentful/optimization-api-client/logger'
 import type { BlockedEvent } from './BlockedEvent'
-import type { ConsentController, ConsentGuard } from './Consent'
+import type { ConsentController, ConsentGuard, ConsentInput } from './Consent'
 import type { CoreStatefulApiConfig } from './CoreApiConfig'
 import type { CoreConfig } from './CoreBase'
 import CoreStatefulEventEmitter from './CoreStatefulEventEmitter'
+import { DEFAULT_ALLOWED_EVENT_TYPES, type EventType } from './EventType'
 import { toPositiveInt } from './lib/number'
 import { type QueueFlushPolicy, resolveQueueFlushPolicy } from './lib/queue'
 import {
@@ -35,6 +34,7 @@ import {
   locale as localeSignal,
   type Observable,
   online as onlineSignal,
+  persistenceConsent as persistenceConsentSignal,
   previewPanelAttached as previewPanelAttachedSignal,
   previewPanelOpen as previewPanelOpenSignal,
   profile as profileSignal,
@@ -49,15 +49,8 @@ import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from '.
 
 const coreLogger = createScopedLogger('CoreStateful')
 
-/**
- * Union of all event type keys that stateful Core can emit.
- *
- * @public
- */
-export type EventType = InsightsEventType | ExperienceEventType
-
-const DEFAULT_ALLOWED_EVENT_TYPES: EventType[] = ['identify', 'page', 'screen']
 const OFFLINE_QUEUE_MAX_EVENTS = 100
+export type { EventType } from './EventType'
 export type { ExperienceQueueDropContext } from './queues/ExperienceQueue'
 
 const hasDefinedValues = (record: Record<string, unknown>): boolean =>
@@ -140,6 +133,8 @@ export interface PreviewPanelSignalObject {
 export interface CoreStates {
   /** Current consent value (if any). */
   consent: Observable<boolean | undefined>
+  /** Current durable profile-continuity persistence consent value (if any). */
+  persistenceConsent: Observable<boolean | undefined>
   /** Whether the preview panel has been attached to the host runtime. */
   previewPanelAttached: Observable<boolean>
   /** Whether the preview panel is open in the host runtime. */
@@ -168,6 +163,8 @@ export interface CoreStates {
 export interface CoreConfigDefaults {
   /** Global consent default applied at construction time. */
   consent?: boolean
+  /** Durable profile-continuity persistence consent default applied at construction time. */
+  persistenceConsent?: boolean
   /** Default active profile used for optimization and insights. */
   profile?: Profile
   /** Initial diff of changes produced by the service. */
@@ -235,6 +232,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     blockedEventStream: toObservable(blockedEventSignal),
     flag: (name: string): Observable<Json> => this.getFlagObservable(name),
     consent: toObservable(consentSignal),
+    persistenceConsent: toObservable(persistenceConsentSignal),
     eventStream: toObservable(eventSignal),
     locale: toObservable(localeSignal),
     canOptimize: toObservable(canOptimizeSignal),
@@ -261,6 +259,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
       locale,
     )
 
+    this.eventBuilder.getConsent = () => consentSignal.value
     this.configuredExperienceLocale = configuredExperienceLocale
     this.singletonOwner = `CoreStateful#${++statefulInstanceCounter}`
     acquireStatefulRuntimeSingleton(this.singletonOwner)
@@ -270,6 +269,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
       const {
         changes: defaultChanges,
         consent: defaultConsent,
+        persistenceConsent: defaultPersistenceConsent,
         selectedOptimizations: defaultSelectedOptimizations,
         profile: defaultProfile,
       } = defaults ?? {}
@@ -293,14 +293,12 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
         stateInterceptors: this.interceptors.state,
       })
 
-      if (defaultConsent !== undefined) consentSignal.value = defaultConsent
-
       batch(() => {
-        if (defaultChanges !== undefined) changesSignal.value = defaultChanges
-        if (defaultSelectedOptimizations !== undefined) {
-          selectedOptimizationsSignal.value = defaultSelectedOptimizations
-        }
-        if (defaultProfile !== undefined) profileSignal.value = defaultProfile
+        consentSignal.value = defaultConsent
+        persistenceConsentSignal.value = defaultPersistenceConsent ?? defaultConsent
+        changesSignal.value = defaultChanges
+        selectedOptimizationsSignal.value = defaultSelectedOptimizations
+        profileSignal.value = defaultProfile
       })
 
       this.initializeEffects()
@@ -330,6 +328,12 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     })
 
     effect(() => {
+      coreLogger.info(
+        `Core ${persistenceConsentSignal.value ? 'will' : 'will not'} persist profile continuity due to persistence consent (${persistenceConsentSignal.value})`,
+      )
+    })
+
+    effect(() => {
       if (!onlineSignal.value) return
 
       this.insightsQueue.clearScheduledRetry()
@@ -341,6 +345,11 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   private async flushQueues(options: { force?: boolean } = {}): Promise<void> {
     await this.insightsQueue.flush(options)
     await this.experienceQueue.flush(options)
+  }
+
+  private clearQueuedEvents(): void {
+    this.insightsQueue.clearQueuedEvents()
+    this.experienceQueue.clearQueuedEvents()
   }
 
   destroy(): void {
@@ -372,8 +381,17 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     await this.flushQueues()
   }
 
-  consent(accept: boolean): void {
-    consentSignal.value = accept
+  consent(accept: ConsentInput): void {
+    const isBoolean = typeof accept === 'boolean'
+    const eventConsent = isBoolean ? accept : accept.events
+    const persistenceConsent = isBoolean ? accept : accept.persistence
+
+    batch(() => {
+      if (eventConsent !== undefined) consentSignal.value = eventConsent
+      if (persistenceConsent !== undefined) persistenceConsentSignal.value = persistenceConsent
+    })
+
+    if (eventConsent === false) this.clearQueuedEvents()
   }
 
   /**

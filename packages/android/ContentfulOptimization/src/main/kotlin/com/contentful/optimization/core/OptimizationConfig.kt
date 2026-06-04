@@ -70,6 +70,7 @@ private fun getFallbackMatchKeys(matchKey: String): List<String> {
 
 data class StorageDefaults(
     var consent: Boolean? = null,
+    var persistenceConsent: Boolean? = null,
     var profile: Map<String, Any>? = null,
     var changes: List<Map<String, Any>>? = null,
     var personalizations: List<Map<String, Any>>? = null,
@@ -99,7 +100,7 @@ data class OptimizationConfig(
             contentfulLocales?.resolve(listOf(it)) ?: normalizeExplicitLocale(it, "locale")
         } ?: contentfulLocales?.resolve(candidates)
 
-    fun toJSON(): String {
+    internal fun toJSON(anonymousId: String? = null): String {
         val obj = JSONObject()
         obj.put("clientId", clientId)
         obj.put("environment", environment)
@@ -118,12 +119,15 @@ data class OptimizationConfig(
             obj.put("api", JSONObject().put("locale", normalizeExplicitLocale(it, "api.locale")))
         }
 
-        defaults?.let { d ->
+        if (defaults != null || anonymousId != null) {
             val defaultsObj = JSONObject()
-            d.consent?.let { defaultsObj.put("consent", it) }
-            d.profile?.let { defaultsObj.put("profile", JSONObject(it)) }
-            d.changes?.let { defaultsObj.put("changes", toJSONArray(it)) }
-            d.personalizations?.let { defaultsObj.put("optimizations", toJSONArray(it)) }
+            val d = defaults
+            d?.consent?.let { defaultsObj.put("consent", it) }
+            d?.persistenceConsent?.let { defaultsObj.put("persistenceConsent", it) }
+            d?.profile?.let { defaultsObj.put("profile", JSONObject(it)) }
+            d?.changes?.let { defaultsObj.put("changes", toJSONArray(it)) }
+            d?.personalizations?.let { defaultsObj.put("optimizations", toJSONArray(it)) }
+            anonymousId?.let { defaultsObj.put("anonymousId", it) }
             if (defaultsObj.length() > 0) {
                 obj.put("defaults", defaultsObj)
             }

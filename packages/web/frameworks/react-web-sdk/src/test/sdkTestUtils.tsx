@@ -103,6 +103,7 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
       consent: createObservable(undefined),
       eventStream: createObservable(undefined),
       flag: () => createObservable(undefined),
+      persistenceConsent: createObservable(undefined),
       previewPanelAttached: createObservable(false),
       previewPanelOpen: createObservable(false),
       profile: createObservable(undefined),

@@ -113,22 +113,22 @@ with React providers, hooks, router adapters, and entry-rendering primitives.
 The Web SDK communicates with the Experience API for profile and optimization selection, and with
 the Insights API for event ingestion.
 
-| Option                      | Required? | Default                                          | Description                                                                    |
-| --------------------------- | --------- | ------------------------------------------------ | ------------------------------------------------------------------------------ |
-| `clientId`                  | Yes       | N/A                                              | Shared API key for Experience API and Insights API requests                    |
-| `environment`               | No        | `'main'`                                         | Contentful environment identifier                                              |
-| `api`                       | No        | See API options below                            | Experience API and Insights API endpoint and request options                   |
-| `app`                       | No        | `undefined`                                      | Application metadata attached to outgoing event context                        |
-| `contentfulLocales`         | No        | `undefined`                                      | Contentful locale codes used for SDK-assisted CDA locale resolution            |
-| `locale`                    | No        | `undefined` unless `contentfulLocales` is set    | Initial app/content locale candidate used to resolve the Contentful locale     |
-| `defaults`                  | No        | `undefined`                                      | Initial state, commonly including consent or profile values                    |
-| `allowedEventTypes`         | No        | `['identify', 'page']`                           | Event types allowed before consent is explicitly set                           |
-| `autoTrackEntryInteraction` | No        | `{ views: false, clicks: false, hovers: false }` | Opt-in automatic tracking for entry views, clicks, and hovers                  |
-| `cookie`                    | No        | `{ domain: undefined, expires: 365 }`            | Anonymous ID cookie settings                                                   |
-| `getAnonymousId`            | No        | `undefined`                                      | Function used to provide an anonymous ID from application-owned identity state |
-| `queuePolicy`               | No        | SDK defaults                                     | Flush retry behavior and offline queue bounds                                  |
-| `logLevel`                  | No        | `'error'`                                        | Minimum log level for the default console sink                                 |
-| `onEventBlocked`            | No        | `undefined`                                      | Callback invoked when consent or guard logic blocks an event                   |
+| Option                      | Required? | Default                                          | Description                                                                       |
+| --------------------------- | --------- | ------------------------------------------------ | --------------------------------------------------------------------------------- |
+| `clientId`                  | Yes       | N/A                                              | Shared API key for Experience API and Insights API requests                       |
+| `environment`               | No        | `'main'`                                         | Contentful environment identifier                                                 |
+| `api`                       | No        | See API options below                            | Experience API and Insights API endpoint and request options                      |
+| `app`                       | No        | `undefined`                                      | Application metadata attached to outgoing event context                           |
+| `contentfulLocales`         | No        | `undefined`                                      | Contentful locale codes used for SDK-assisted CDA locale resolution               |
+| `locale`                    | No        | `undefined` unless `contentfulLocales` is set    | Initial app/content locale candidate used to resolve the Contentful locale        |
+| `defaults`                  | No        | `undefined`                                      | Initial state, commonly including consent, persistence consent, or profile values |
+| `allowedEventTypes`         | No        | `['identify', 'page']`                           | Event types allowed before consent is explicitly set                              |
+| `autoTrackEntryInteraction` | No        | `{ views: false, clicks: false, hovers: false }` | Opt-in automatic tracking for entry views, clicks, and hovers                     |
+| `cookie`                    | No        | `{ domain: undefined, expires: 365 }`            | Anonymous ID cookie settings                                                      |
+| `getAnonymousId`            | No        | `undefined`                                      | Function used to provide an anonymous ID from application-owned identity state    |
+| `queuePolicy`               | No        | SDK defaults                                     | Flush retry behavior and offline queue bounds                                     |
+| `logLevel`                  | No        | `'error'`                                        | Minimum log level for the default console sink                                    |
+| `onEventBlocked`            | No        | `undefined`                                      | Callback invoked when consent or guard logic blocks an event                      |
 
 Common `api` options:
 
@@ -181,16 +181,34 @@ For every option, callback payload, and exported type, use the generated
 
 ### Consent and profile events
 
-Consent is application policy. The SDK stores the consent state and blocks non-allowed events until
-consent is accepted.
+Consent is application policy. The SDK stores event consent, blocks non-allowed events until event
+consent is accepted, and can track durable profile-continuity persistence consent separately. For
+cross-SDK consent guidance, see
+[Consent management in the Optimization SDK Suite](../../../documentation/concepts/consent-management-in-the-optimization-sdk-suite.md).
+
+For default-on application policies that do not render an end-user consent UI, seed accepted consent
+at startup:
+
+```ts
+const optimization = new ContentfulOptimization({
+  clientId: 'your-client-id',
+  defaults: { consent: true },
+})
+```
 
 ```ts
 optimization.consent(true)
+
+optimization.consent({ events: true, persistence: false })
 
 const data = await optimization.page({
   properties: { path: window.location.pathname },
 })
 ```
+
+The startup default and boolean consent calls grant or withdraw both event emission and durable
+profile continuity by default. Object-form consent lets events emit while keeping profile, selected
+optimizations, changes, and the anonymous ID session-only until persistence consent is granted.
 
 `page()`, `identify()`, `screen()`, `track()`, and sticky `trackView()` calls can return
 optimization data containing `profile`, `selectedOptimizations`, and `changes`.
@@ -260,15 +278,16 @@ const unsubscribe = optimization.states.profile.subscribe((profile) => {
 })
 ```
 
-Common state streams include `consent`, `profile`, `selectedOptimizations`, `changes`,
-`blockedEventStream`, `eventStream`, and preview-panel state. Use the generated reference for the
-complete `states` surface.
+Common state streams include `consent`, `persistenceConsent`, `profile`, `selectedOptimizations`,
+`changes`, `blockedEventStream`, `eventStream`, and preview-panel state. Use the generated reference
+for the complete `states` surface.
 
 ## Runtime notes
 
 - Browser storage persistence is best-effort. If `localStorage` writes fail, the SDK continues with
   in-memory state and retries persistence on subsequent writes.
-- `reset()` clears internal state except consent. Use it when the active profile changes.
+- `reset()` clears internal state except consent and persistence consent. Use it when the active
+  profile changes.
 - `flush()` drains queued Insights API and Experience API events.
 - `destroy()` releases listeners and singleton ownership for explicit teardown paths such as tests
   or hot-reload workflows.

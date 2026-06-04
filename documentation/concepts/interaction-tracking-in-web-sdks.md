@@ -59,11 +59,11 @@ allowed, which event type it becomes, and which queue receives it.
 
 ## Layer responsibilities
 
-| Layer                                | Responsibility in interaction tracking                                                                                                                                       |
-| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@contentful/optimization-core`      | Builds `page`, `identify`, `track`, entry view, entry click, entry hover, and Custom Flag view events. Applies consent gates. Queues Experience API and Insights API work.   |
-| `@contentful/optimization-web`       | Initializes Core for a browser runtime. Persists consent, profile data, selected optimizations, and anonymous IDs. Discovers tracked DOM elements and observes interactions. |
-| `@contentful/optimization-react-web` | Creates and tears down the Web SDK instance, resolves entries in React, emits `data-ctfl-*` attributes, exposes the SDK instance, and emits router-driven `page()` calls.    |
+| Layer                                | Responsibility in interaction tracking                                                                                                                                                                                |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@contentful/optimization-core`      | Builds `page`, `identify`, `track`, entry view, entry click, entry hover, and Custom Flag view events. Applies consent gates. Queues Experience API and Insights API work.                                            |
+| `@contentful/optimization-web`       | Initializes Core for a browser runtime. Persists consent and, when persistence consent permits it, profile data, selected optimizations, and anonymous IDs. Discovers tracked DOM elements and observes interactions. |
+| `@contentful/optimization-react-web` | Creates and tears down the Web SDK instance, resolves entries in React, emits `data-ctfl-*` attributes, exposes the SDK instance, and emits router-driven `page()` calls.                                             |
 
 The application still owns Contentful fetching, rendering policy, consent UX, identity policy, route
 ownership, and any business event taxonomy passed to `track()`.
@@ -100,9 +100,9 @@ fields such as `viewId`, `componentId`, `experienceId`, and `variantIndex`, not 
 
 ## Consent and profile gates
 
-The Web SDK defaults `allowedEventTypes` to `['identify', 'page']`. Until consent is accepted, Core
-blocks non-allowed event types such as `track`, `component`, `component_click`, and
-`component_hover`.
+The Web SDK defaults `allowedEventTypes` to `['identify', 'page']`. Until consent is granted or an
+event type is allow-listed, Core blocks non-allowed event types such as `track`, `component`,
+`component_click`, and `component_hover`.
 
 Consent affects two parts of automatic entry tracking:
 
@@ -372,10 +372,11 @@ The Web SDK wires browser lifecycle events into this queue model:
 - `visibilitychange`, `pagehide`, and `beforeunload` call `flush()` once per hide cycle.
 - Insights delivery uses the configured beacon handler, which defaults to `navigator.sendBeacon()`.
 
-Browser persistence is best-effort. Consent, profile, selected optimizations, Custom Flag changes,
-and the anonymous ID are read from `localStorage` at startup when available. The anonymous ID is
-also persisted in the `ctfl-opt-aid` cookie and migrated from the legacy anonymous ID cookie when
-present.
+Browser persistence is best-effort. Consent is read from `localStorage` at startup when available.
+Profile-continuity values such as profile, selected optimizations, Custom Flag changes, and
+anonymous ID are read only when persistence consent permits it. The anonymous ID is also persisted
+in the `ctfl-opt-aid` cookie and migrated from the legacy anonymous ID cookie when profile
+continuity is enabled.
 
 ## Debugging model
 

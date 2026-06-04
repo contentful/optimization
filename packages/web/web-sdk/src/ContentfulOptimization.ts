@@ -117,17 +117,55 @@ export interface OptimizationWebConfig extends CoreStatefulConfig {
  */
 export type OptimizationTrackingApi = EntryInteractionApi
 
+function resolvePersistedDefault<T>(
+  configured: T | undefined,
+  canLoadPersistedContinuity: boolean,
+  readPersistedValue: () => T | undefined,
+): T | undefined {
+  if (configured !== undefined) return configured
+  if (!canLoadPersistedContinuity) return undefined
+
+  return readPersistedValue()
+}
+
 function resolveDefaultState(
   defaults: CoreStatefulConfig['defaults'] | undefined,
 ): NonNullable<CoreStatefulConfig['defaults']> {
-  const {
-    consent = LocalStore.consent,
-    profile = LocalStore.profile,
-    changes = LocalStore.changes,
-    selectedOptimizations = LocalStore.selectedOptimizations,
-  } = defaults ?? {}
+  const consent = defaults?.consent ?? LocalStore.consent
+  const persistenceConsent =
+    defaults?.persistenceConsent ?? defaults?.consent ?? LocalStore.persistenceConsent
+  const canLoadPersistedContinuity = persistenceConsent === true
+  const profile = resolvePersistedDefault(
+    defaults?.profile,
+    canLoadPersistedContinuity,
+    () => LocalStore.profile,
+  )
+  const changes = resolvePersistedDefault(
+    defaults?.changes,
+    canLoadPersistedContinuity,
+    () => LocalStore.changes,
+  )
+  const selectedOptimizations = resolvePersistedDefault(
+    defaults?.selectedOptimizations,
+    canLoadPersistedContinuity,
+    () => LocalStore.selectedOptimizations,
+  )
 
-  return { consent, changes, profile, selectedOptimizations }
+  return { consent, persistenceConsent, changes, profile, selectedOptimizations }
+}
+
+function readInitialCookieValues(canLoadPersistedContinuity: boolean): {
+  cookieValue?: string
+  legacyCookieValue?: string
+} {
+  if (!canLoadPersistedContinuity) return {}
+
+  const legacyCookieValue = getCookie(ANONYMOUS_ID_COOKIE_LEGACY)
+
+  return {
+    cookieValue: legacyCookieValue ?? getCookie(ANONYMOUS_ID_COOKIE),
+    legacyCookieValue,
+  }
 }
 
 /**
@@ -170,6 +208,7 @@ function mergeConfig({
     defaults: {
       ...baseDefaults,
       ...defaults,
+      persistenceConsent: baseDefaults.persistenceConsent,
     },
     eventBuilder: {
       app,
@@ -183,7 +222,9 @@ function mergeConfig({
         ...configuredEventBuilder?.library,
       },
     },
-    getAnonymousId: config.getAnonymousId ?? (() => LocalStore.anonymousId),
+    getAnonymousId:
+      config.getAnonymousId ??
+      (() => (LocalStore.persistenceConsent === true ? LocalStore.anonymousId : undefined)),
     logLevel: LocalStore.debug ? 'debug' : logLevel,
   }
 
@@ -271,8 +312,8 @@ class ContentfulOptimization extends CoreStateful {
 
     super(mergedConfig)
 
-    const legacyCookieValue = getCookie(ANONYMOUS_ID_COOKIE_LEGACY)
-    const cookieValue = legacyCookieValue ?? getCookie(ANONYMOUS_ID_COOKIE)
+    const canLoadPersistedContinuity = mergedConfig.defaults?.persistenceConsent === true
+    const { cookieValue, legacyCookieValue } = readInitialCookieValues(canLoadPersistedContinuity)
 
     const entryInteractionRuntime = new EntryInteractionRuntime(this, autoTrackEntryInteraction)
     const { tracking } = entryInteractionRuntime
@@ -295,9 +336,10 @@ class ContentfulOptimization extends CoreStateful {
     effect(() => {
       const {
         changes: { value },
+        persistenceConsent: { value: persistenceConsent },
       } = signals
 
-      LocalStore.changes = value
+      if (persistenceConsent === true) LocalStore.changes = value
     })
 
     effect(() => {
@@ -311,19 +353,36 @@ class ContentfulOptimization extends CoreStateful {
 
     effect(() => {
       const {
-        profile: { value },
+        persistenceConsent: { value },
       } = signals
 
-      LocalStore.profile = value
-      this.setAnonymousId(value?.id)
+      LocalStore.persistenceConsent = value
+      if (value === false) {
+        removeCookie(ANONYMOUS_ID_COOKIE, this.cookieAttributes)
+        removeCookie(ANONYMOUS_ID_COOKIE_LEGACY, this.cookieAttributes)
+        LocalStore.clearProfileContinuity()
+      }
     })
 
     effect(() => {
       const {
+        persistenceConsent: { value: persistenceConsent },
+        profile: { value },
+      } = signals
+
+      if (persistenceConsent !== true) return
+
+      LocalStore.profile = value
+      this.setAnonymousId(value?.id ?? LocalStore.anonymousId)
+    })
+
+    effect(() => {
+      const {
+        persistenceConsent: { value: persistenceConsent },
         selectedOptimizations: { value },
       } = signals
 
-      LocalStore.selectedOptimizations = value
+      if (persistenceConsent === true) LocalStore.selectedOptimizations = value
     })
 
     this.initializeFromCookieValues(cookieValue, legacyCookieValue)

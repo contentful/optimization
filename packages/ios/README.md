@@ -91,6 +91,8 @@ locally before `swift build`/`swift test` with `pnpm run ios:bridge`, or use the
 ## Related
 
 - [iOS SDK code map](./CODE_MAP.md) - Maintainer architecture map for the native iOS package
+- [Consent management in the Optimization SDK Suite](../../documentation/concepts/consent-management-in-the-optimization-sdk-suite.md) -
+  Cross-SDK consent policy guidance
 - [Native bridge architecture](../universal/optimization-js-bridge/BRIDGE_ARCHITECTURE.md) - Shared
   bridge runtime and build notes
 - [iOS reference app](../../implementations/ios-sdk/README.md) - Native app and XCUITest surface for

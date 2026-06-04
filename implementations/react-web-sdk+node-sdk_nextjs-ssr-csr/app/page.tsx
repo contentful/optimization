@@ -18,10 +18,9 @@ export default async function Home() {
   ])
 
   const resolvedEntries = baselineEntries.map((entry: ContentEntry) => {
-    const { entry: resolved } = sdk.resolveOptimizedEntry(
-      entry,
-      optimizationData.selectedOptimizations,
-    )
+    const { entry: resolved } = optimizationData
+      ? sdk.resolveOptimizedEntry(entry, optimizationData.selectedOptimizations)
+      : { entry }
     return resolved
   })
 

@@ -2,6 +2,7 @@
 title: Concepts
 children:
   - ./core-state-management.md
+  - ./consent-management-in-the-optimization-sdk-suite.md
   - ./entry-personalization-and-variant-resolution.md
   - ./locale-handling-in-the-optimization-sdk-suite.md
   - ./interaction-tracking-in-web-sdks.md
@@ -24,6 +25,9 @@ they are not the first stop for installation or setup commands.
   state using signals, why that state is protected from outside interference, and which
   consumer-facing surfaces — observables, interceptors, and lifecycle methods — are the correct way
   to observe and influence state.
+- [Consent management in the Optimization SDK Suite](./consent-management-in-the-optimization-sdk-suite.md) -
+  explains how SDK consent state, event allow-lists, blocked-event diagnostics, persistence, and
+  application-owned CMP policy work together to support consent-aware integrations.
 - [Entry personalization and variant resolution](./entry-personalization-and-variant-resolution.md) -
   explains how the SDK resolves a Contentful baseline entry to the selected entry variant, including
   data model expectations, fallback behavior, resolution paths, and preview overrides.

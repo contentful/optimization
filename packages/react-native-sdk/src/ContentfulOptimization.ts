@@ -1,10 +1,11 @@
 import {
+  type ConsentInput,
   type CoreStatefulConfig,
   CoreStateful,
-  effect,
   resolveContentfulLocale,
   signals,
 } from '@contentful/optimization-core'
+import type { OptimizationData } from '@contentful/optimization-core/api-schemas'
 import { merge } from 'es-toolkit'
 import {
   OPTIMIZATION_REACT_NATIVE_SDK_NAME,
@@ -18,34 +19,70 @@ function getRuntimeLocaleCandidates(): string[] {
   return [locale]
 }
 
+function resolvePersistedDefault<T>(
+  configured: T | undefined,
+  canLoadPersistedContinuity: boolean,
+  readPersistedValue: () => T | undefined,
+): T | undefined {
+  if (configured !== undefined) return configured
+  if (!canLoadPersistedContinuity) return undefined
+
+  return readPersistedValue()
+}
+
+function resolveStorageDefaults(
+  defaults: CoreStatefulConfig['defaults'] | undefined,
+): NonNullable<CoreStatefulConfig['defaults']> {
+  const consent = defaults?.consent ?? AsyncStorageStore.consent
+  const persistenceConsent =
+    defaults?.persistenceConsent ?? defaults?.consent ?? AsyncStorageStore.persistenceConsent
+  const canLoadPersistedContinuity = persistenceConsent === true
+  const profile = resolvePersistedDefault(
+    defaults?.profile,
+    canLoadPersistedContinuity,
+    () => AsyncStorageStore.profile,
+  )
+  const changes = resolvePersistedDefault(
+    defaults?.changes,
+    canLoadPersistedContinuity,
+    () => AsyncStorageStore.changes,
+  )
+  const selectedOptimizations = resolvePersistedDefault(
+    defaults?.selectedOptimizations,
+    canLoadPersistedContinuity,
+    () => AsyncStorageStore.selectedOptimizations,
+  )
+
+  return { consent, persistenceConsent, profile, changes, selectedOptimizations }
+}
+
 async function mergeConfig({
   allowedEventTypes,
   defaults,
   logLevel,
   ...config
 }: CoreStatefulConfig): Promise<CoreStatefulConfig> {
-  await AsyncStorageStore.initialize()
+  await AsyncStorageStore.initializeConsentState()
+  const persistenceConsent =
+    defaults?.persistenceConsent ?? defaults?.consent ?? AsyncStorageStore.persistenceConsent
+
+  if (persistenceConsent === true) {
+    await AsyncStorageStore.initializeProfileContinuity()
+  } else if (persistenceConsent === false) {
+    await AsyncStorageStore.clearProfileContinuity()
+  }
+
   const locale = resolveContentfulLocale({
     candidates: getRuntimeLocaleCandidates(),
     contentfulLocales: config.contentfulLocales,
     locale: config.locale,
   })
 
-  const {
-    consent = AsyncStorageStore.consent,
-    profile = AsyncStorageStore.profile,
-    changes = AsyncStorageStore.changes,
-    selectedOptimizations = AsyncStorageStore.selectedOptimizations,
-  } = defaults ?? {}
+  const storageDefaults = resolveStorageDefaults(defaults)
 
   const mergedConfig = merge(
     {
-      defaults: {
-        consent,
-        profile,
-        changes,
-        selectedOptimizations,
-      },
+      defaults: storageDefaults,
       eventBuilder: {
         channel: 'mobile',
         library: {
@@ -54,6 +91,12 @@ async function mergeConfig({
         },
       },
       logLevel: AsyncStorageStore.debug ? 'debug' : logLevel,
+      getAnonymousId:
+        config.getAnonymousId ??
+        (() =>
+          AsyncStorageStore.persistenceConsent === true
+            ? AsyncStorageStore.anonymousId
+            : undefined),
     },
     config,
   )
@@ -66,6 +109,52 @@ async function mergeConfig({
 }
 
 let activeOptimizationInstance: ContentfulOptimization | undefined = undefined
+
+async function enqueueConsentStatePersistence(): Promise<void> {
+  await AsyncStorageStore.writeConsentState({
+    consent: signals.consent.value,
+    persistenceConsent: signals.persistenceConsent.value,
+  })
+}
+
+async function enqueueCurrentProfileContinuityPersistence(): Promise<void> {
+  await AsyncStorageStore.writeProfileContinuity({
+    changes: signals.changes.value,
+    profile: signals.profile.value,
+    selectedOptimizations: signals.selectedOptimizations.value,
+  })
+}
+
+async function enqueueContinuityWriteForPolicy(data?: OptimizationData): Promise<void> {
+  switch (signals.persistenceConsent.value) {
+    case true:
+      await (data
+        ? AsyncStorageStore.writeProfileContinuity(data)
+        : enqueueCurrentProfileContinuityPersistence())
+      break
+    case false:
+      await AsyncStorageStore.clearProfileContinuity()
+      break
+    default:
+      await AsyncStorageStore.drainPersistence()
+  }
+}
+
+async function persistCurrentStateForPolicy(): Promise<void> {
+  const consentWrite = enqueueConsentStatePersistence()
+  const continuityWrite = enqueueContinuityWriteForPolicy()
+
+  await consentWrite
+  await continuityWrite
+}
+
+async function persistOptimizationData(data: OptimizationData): Promise<void> {
+  const consentWrite = enqueueConsentStatePersistence()
+  const continuityWrite = enqueueContinuityWriteForPolicy(data)
+
+  await consentWrite
+  await continuityWrite
+}
 
 /**
  * Main entry point for the Contentful Optimization React Native SDK.
@@ -103,8 +192,15 @@ class ContentfulOptimization extends CoreStateful {
 
   private readonly cleanupAppStateListener: () => void
 
+  private readonly statePersistenceInterceptorId: number
+
   private constructor(config: CoreStatefulConfig) {
     super(config)
+
+    this.statePersistenceInterceptorId = this.interceptors.state.add(async (data) => {
+      await persistOptimizationData(data)
+      return data
+    })
 
     this.cleanupOnlineListener = createOnlineChangeListener((isOnline) => {
       this.online = isOnline
@@ -112,42 +208,7 @@ class ContentfulOptimization extends CoreStateful {
 
     this.cleanupAppStateListener = createAppStateChangeListener(async () => {
       await this.flush()
-    })
-
-    effect(() => {
-      const {
-        changes: { value },
-      } = signals
-
-      AsyncStorageStore.changes = value
-    })
-
-    effect(() => {
-      const {
-        consent: { value },
-      } = signals
-
-      AsyncStorageStore.consent = value
-    })
-
-    effect(() => {
-      const {
-        profile: { value },
-      } = signals
-
-      AsyncStorageStore.profile = value
-
-      const { anonymousId: storedAnonymousId } = AsyncStorageStore
-
-      AsyncStorageStore.anonymousId = value?.id ?? storedAnonymousId
-    })
-
-    effect(() => {
-      const {
-        selectedOptimizations: { value },
-      } = signals
-
-      AsyncStorageStore.selectedOptimizations = value
+      await AsyncStorageStore.drainPersistence()
     })
   }
 
@@ -177,9 +238,28 @@ class ContentfulOptimization extends CoreStateful {
     const mergedConfig = await mergeConfig(config)
 
     const instance = new ContentfulOptimization(mergedConfig)
+
     activeOptimizationInstance = instance
+    try {
+      await persistCurrentStateForPolicy()
+    } catch (error: unknown) {
+      activeOptimizationInstance = undefined
+      instance.destroy()
+      throw error
+    }
 
     return instance
+  }
+
+  override consent(accept: ConsentInput): void {
+    super.consent(accept)
+
+    void persistCurrentStateForPolicy()
+  }
+
+  override reset(): void {
+    void AsyncStorageStore.clearProfileContinuity()
+    super.reset()
   }
 
   /**
@@ -198,12 +278,14 @@ class ContentfulOptimization extends CoreStateful {
   destroy(): void {
     this.cleanupOnlineListener()
     this.cleanupAppStateListener()
+    this.interceptors.state.remove(this.statePersistenceInterceptorId)
 
     if (activeOptimizationInstance === this) {
       activeOptimizationInstance = undefined
     }
 
     super.destroy()
+    void AsyncStorageStore.drainPersistence()
   }
 }
 

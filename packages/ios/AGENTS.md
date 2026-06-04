@@ -1,36 +1,24 @@
 # AGENTS.md
 
-Read the repository root `AGENTS.md`, then `packages/AGENTS.md`, before this file.
+Native iOS package work under `ContentfulOptimization/`; the shared JavaScriptCore bridge comes from
+`packages/universal/optimization-js-bridge/`.
 
-## Scope
+## Rules
 
-This directory owns native iOS package work: the Swift Package under `ContentfulOptimization/`. The
-shared JavaScriptCore bridge it consumes lives under `packages/universal/optimization-js-bridge/`.
-
-## Key paths
-
-- `ContentfulOptimization/` - Swift Package, public Swift API, native runtime, resources, and tests
-- `CODE_MAP.md` - current architecture map for native iOS work
-- `README.md` - package status and public-facing notes
-
-## Local rules
-
-- Keep Swift bridge calls, JSON payload shapes, and callback behavior aligned with
-  `packages/universal/optimization-js-bridge/src/index.ts`.
-- Keep the bridge bundle flow one-way: edit TypeScript bridge source, build the bridge package, and
-  let its build copy the generated UMD into Swift package resources.
+- Keep Swift bridge calls, JSON payloads, and callbacks aligned with the shared bridge source.
+- Bridge bundle flow is one-way: edit TypeScript bridge source, build the bridge package, and let
+  the build copy the UMD into Swift package resources.
 - Do not hand-edit
   `ContentfulOptimization/Sources/ContentfulOptimization/Resources/optimization-ios-bridge.umd.js`.
-- Native Swift SDK behavior belongs in `ContentfulOptimization/`. Shared optimization logic belongs
+- Native Swift SDK behavior belongs in `ContentfulOptimization/`; shared optimization logic belongs
   in `packages/universal/core-sdk`.
-- Keep iOS preview-panel behavior aligned with React Native preview-panel behavior when changing
-  shared preview contracts.
-- Keep `README.md` and `CODE_MAP.md` aligned with current repository reality when touching iOS
-  package structure or public status.
+- Keep iOS preview-panel behavior aligned with React Native and Android when changing shared preview
+  contracts.
+- Keep `README.md` and `CODE_MAP.md` current when touching iOS package structure or public status.
 
-## Cross-boundary validation
+## Validate
 
 - Use the nearest child `AGENTS.md` for bridge or Swift package commands.
 - Rebuild the bridge before relying on Swift or XCUITest results when bridge source changed.
-- Validate `implementations/ios-sdk` XCUITest flows when runtime tracking, preview-panel behavior,
-  JavaScriptCore integration, or cross-platform preview contracts change.
+- Validate `implementations/ios-sdk` XCUITest flows for runtime tracking, preview-panel behavior,
+  JavaScriptCore integration, or cross-platform preview contract changes.

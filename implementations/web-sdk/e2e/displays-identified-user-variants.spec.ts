@@ -6,6 +6,9 @@ test.describe('identified user', () => {
     await page.waitForLoadState('domcontentloaded')
     await page.waitForLoadState('networkidle')
 
+    await page.getByRole('button', { name: 'Accept Consent' }).click()
+    await expect(page.getByRole('button', { name: 'Reject Consent' })).toBeVisible()
+
     const identify = page.getByRole('button', { name: 'Identify' })
     await identify.click()
     await expect(page.getByRole('button', { name: 'Reset Profile' })).toBeVisible()

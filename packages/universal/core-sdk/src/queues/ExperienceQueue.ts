@@ -98,6 +98,11 @@ export class ExperienceQueue {
     this.flushRuntime.clearScheduledRetry()
   }
 
+  clearQueuedEvents(): void {
+    this.queuedExperienceEvents.clear()
+    this.flushRuntime.reset()
+  }
+
   async send(event: ExperienceEventPayload): Promise<OptimizationData | undefined> {
     const intercepted = await this.eventInterceptors.run(event)
     const validEvent = parseWithFriendlyError(ExperienceEventSchema, intercepted)

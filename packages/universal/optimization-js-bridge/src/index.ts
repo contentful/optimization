@@ -1,5 +1,6 @@
 import type { Traits } from '@contentful/optimization-api-client/api-schemas'
 import {
+  type ConsentInput,
   CoreStateful,
   type CoreStatefulConfig,
   effect,
@@ -25,6 +26,10 @@ type ScreenProperties = Parameters<CoreStateful['screen']>[0]['properties']
 type ProfileValue = typeof signals.profile.value
 type ChangesValue = typeof signals.changes.value
 type SelectedOptimizationsValue = typeof signals.selectedOptimizations.value
+const DEFAULT_NATIVE_ALLOWED_EVENT_TYPES: NonNullable<CoreStatefulConfig['allowedEventTypes']> = [
+  'identify',
+  'screen',
+]
 
 // Native runtimes (iOS JavaScriptCore, Android QuickJS) install these callbacks
 // on the JS engine's globalThis before the bridge is loaded. The bridge calls
@@ -49,17 +54,21 @@ interface BridgeConfig {
   }
   contentfulLocales?: CoreStatefulConfig['contentfulLocales']
   locale?: string
+  allowedEventTypes?: CoreStatefulConfig['allowedEventTypes']
   defaults?: {
     consent?: boolean
+    persistenceConsent?: boolean
     profile?: ProfileValue
     changes?: ChangesValue
     optimizations?: SelectedOptimizationsValue
+    anonymousId?: string
   }
 }
 
 interface BridgeState {
   profile: ProfileValue | null
   consent: boolean | undefined
+  persistenceConsent: boolean | undefined
   canPersonalize: boolean
   changes: ChangesValue | null
   locale: string | null
@@ -116,7 +125,7 @@ interface Bridge {
   ) => void
 
   // Synchronous
-  consent: (accept: boolean) => void
+  consent: (accept: ConsentInput) => void
   setLocale: (locale: string) => string | null
   reset: () => void
   // Native code passes JSON-shaped objects; the bridge trusts the shape and
@@ -153,6 +162,7 @@ let audienceDefinitions: AudienceDefinition[] | null = null
 let experienceDefinitions: ExperienceDefinition[] | null = null
 let audienceNameMap: Record<string, string> = {}
 let experienceNameMap: Record<string, string> = {}
+let anonymousId: string | undefined = undefined
 
 const bridge: Bridge = {
   initialize(config: BridgeConfig) {
@@ -164,17 +174,20 @@ const bridge: Bridge = {
     experienceDefinitions = null
     audienceNameMap = {}
     experienceNameMap = {}
+    anonymousId = config.defaults?.anonymousId
 
     const coreConfig: CoreStatefulConfig = {
       clientId: config.clientId,
       environment: config.environment,
       contentfulLocales: config.contentfulLocales,
       locale: config.locale,
+      allowedEventTypes: config.allowedEventTypes ?? DEFAULT_NATIVE_ALLOWED_EVENT_TYPES,
       api: {
         experienceBaseUrl: config.experienceBaseUrl,
         insightsBaseUrl: config.insightsBaseUrl,
         locale: config.api?.locale,
       },
+      getAnonymousId: () => (signals.persistenceConsent.value === true ? anonymousId : undefined),
     }
 
     instance = new CoreStateful(coreConfig)
@@ -182,8 +195,10 @@ const bridge: Bridge = {
     // Apply stored defaults before any other operations
     const { defaults } = config
     if (defaults) {
-      const { consent, profile, changes, optimizations } = defaults
-      if (consent !== undefined) {
+      const { consent, persistenceConsent, profile, changes, optimizations } = defaults
+      if (persistenceConsent !== undefined) {
+        instance.consent({ events: consent, persistence: persistenceConsent })
+      } else if (consent !== undefined) {
         instance.consent(consent)
       }
       if (profile !== undefined) {
@@ -196,7 +211,6 @@ const bridge: Bridge = {
         signals.selectedOptimizations.value = optimizations
       }
     }
-    instance.consent(true)
 
     // Create the override manager — registers a state interceptor that
     // preserves overrides across API refreshes and correctly appends
@@ -211,9 +225,19 @@ const bridge: Bridge = {
     })
 
     disposeEffect = effect(() => {
+      const profile = signals.profile.value
+      const persistenceConsent = signals.persistenceConsent.value
+
+      if (persistenceConsent === false) {
+        anonymousId = undefined
+      } else if (persistenceConsent === true && profile?.id) {
+        anonymousId = profile.id
+      }
+
       const state: BridgeState = {
-        profile: signals.profile.value ?? null,
+        profile: profile ?? null,
         consent: signals.consent.value,
+        persistenceConsent,
         canPersonalize: signals.canOptimize.value,
         changes: signals.changes.value ?? null,
         locale: signals.locale.value ?? null,
@@ -332,7 +356,7 @@ const bridge: Bridge = {
       })
   },
 
-  consent(accept: boolean) {
+  consent(accept) {
     if (!instance) return
     instance.consent(accept)
   },
@@ -447,6 +471,7 @@ const bridge: Bridge = {
     return JSON.stringify({
       profile: signals.profile.value ?? null,
       consent: signals.consent.value,
+      persistenceConsent: signals.persistenceConsent.value,
       canPersonalize: signals.canOptimize.value,
       changes: signals.changes.value ?? null,
       locale: signals.locale.value ?? null,
@@ -471,6 +496,7 @@ const bridge: Bridge = {
     const state: BridgeState = {
       profile: signals.profile.value ?? null,
       consent: signals.consent.value,
+      persistenceConsent: signals.persistenceConsent.value,
       canPersonalize: signals.canOptimize.value,
       changes: signals.changes.value ?? null,
       locale: signals.locale.value ?? null,
@@ -502,6 +528,7 @@ const bridge: Bridge = {
       instance.destroy()
       instance = null
     }
+    anonymousId = undefined
   },
 }
 

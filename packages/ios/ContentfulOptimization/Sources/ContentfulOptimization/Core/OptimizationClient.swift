@@ -85,23 +85,42 @@ public final class OptimizationClient: ObservableObject {
             log.debug("[init] experienceBaseUrl=<default>")
         }
 
-        // Load persisted state and merge into config defaults
-        store.load()
+        // Load consent state before touching profile-continuity storage.
+        store.loadConsentState()
         var mergedConfig = config
+        let configuredDefaultConsent = config.defaults?.consent
         if mergedConfig.defaults == nil {
             mergedConfig.defaults = StorageDefaults()
         }
         if mergedConfig.defaults?.consent == nil, let storedConsent = store.consent {
             mergedConfig.defaults?.consent = storedConsent
         }
-        if mergedConfig.defaults?.profile == nil, let storedProfile = store.profile {
-            mergedConfig.defaults?.profile = storedProfile
-        }
-        if mergedConfig.defaults?.changes == nil, let storedChanges = store.changes {
-            mergedConfig.defaults?.changes = storedChanges
-        }
-        if mergedConfig.defaults?.personalizations == nil, let storedP = store.personalizations {
-            mergedConfig.defaults?.personalizations = storedP
+        let requestedPersistenceConsent =
+            mergedConfig.defaults?.persistenceConsent
+            ?? configuredDefaultConsent
+            ?? store.persistenceConsent
+            ?? mergedConfig.defaults?.consent
+        mergedConfig.defaults?.persistenceConsent = requestedPersistenceConsent
+        let canLoadPersistedContinuity = mergedConfig.defaults?.persistenceConsent == true
+        let storedAnonymousId: String?
+        if canLoadPersistedContinuity {
+            store.loadProfileContinuity()
+            storedAnonymousId = store.anonymousId
+
+            if mergedConfig.defaults?.profile == nil, let storedProfile = store.profile {
+                mergedConfig.defaults?.profile = storedProfile
+            }
+            if mergedConfig.defaults?.changes == nil, let storedChanges = store.changes {
+                mergedConfig.defaults?.changes = storedChanges
+            }
+            if mergedConfig.defaults?.personalizations == nil, let storedP = store.personalizations {
+                mergedConfig.defaults?.personalizations = storedP
+            }
+        } else {
+            storedAnonymousId = nil
+            if mergedConfig.defaults?.persistenceConsent == false {
+                store.clearProfileContinuity()
+            }
         }
         locale = try mergedConfig.resolvedLocale()
 
@@ -110,7 +129,7 @@ public final class OptimizationClient: ObservableObject {
             self?.log.debug("[js:\(level)] \(msg)")
         }
 
-        try bridge.initialize(config: mergedConfig)
+        try bridge.initialize(config: mergedConfig, anonymousId: storedAnonymousId)
         isInitialized = true
         log.info("[init] SDK initialized successfully")
 
@@ -177,11 +196,23 @@ public final class OptimizationClient: ObservableObject {
         bridgeCallSyncWhenInitialized(method: "consent", args: accept ? "true" : "false")
     }
 
+    /// Set event and profile-continuity persistence consent independently.
+    public func consent(events: Bool? = nil, persistence: Bool? = nil) {
+        var fields: [String] = []
+        if let events {
+            fields.append("events: \(events ? "true" : "false")")
+        }
+        if let persistence {
+            fields.append("persistence: \(persistence ? "true" : "false")")
+        }
+        bridgeCallSyncWhenInitialized(method: "consent", args: "{\(fields.joined(separator: ","))}")
+    }
+
     /// Reset the SDK state (clears profile, changes, selected personalizations).
     public func reset() {
         guard isInitialized else { return }
         bridgeCallSyncWhenInitialized(method: "reset")
-        store.clear()
+        store.clearProfileContinuity()
     }
 
     /// Set the online/offline state.
@@ -393,7 +424,6 @@ public final class OptimizationClient: ObservableObject {
         state = .empty
         locale = nil
         selectedPersonalizations = nil
-        store.clear()
     }
 
     // MARK: - Testing
@@ -465,7 +495,9 @@ public final class OptimizationClient: ObservableObject {
         let profile = Self.extractJSONValue(dict["profile"])
         let changes = Self.extractJSONArray(dict["changes"])
         let consent = dict["consent"] as? Bool
+        let persistenceConsent = dict["persistenceConsent"] as? Bool
         let locale = dict["locale"] as? String
+        let personalizations = Self.extractJSONArray(dict["selectedPersonalizations"])
 
         if let profile = profile {
             log.info("[state] Profile updated with \(profile.keys.sorted().joined(separator: ", "))")
@@ -473,17 +505,7 @@ public final class OptimizationClient: ObservableObject {
             log.debug("[state] State update received (profile=nil, consent=\(consent.map(String.init) ?? "nil"), canPersonalize=\(dict["canPersonalize"] as? Bool ?? false))")
         }
 
-        state = OptimizationState(
-            profile: profile,
-            consent: consent,
-            canPersonalize: dict["canPersonalize"] as? Bool ?? false,
-            changes: changes,
-            locale: locale
-        )
         self.locale = locale
-
-        let personalizations = Self.extractJSONArray(dict["selectedPersonalizations"])
-        self.selectedPersonalizations = personalizations
 
         if let changes = changes {
             log.debug("[state] Changes: \(changes.count) entries")
@@ -493,11 +515,26 @@ public final class OptimizationClient: ObservableObject {
         }
 
         // Persist state to storage
-        store.profile = profile
         store.consent = consent
-        store.changes = changes
-        store.personalizations = personalizations
-        store.anonymousId = (profile?["id"] as? String) ?? store.anonymousId
+        store.persistenceConsent = persistenceConsent
+        if persistenceConsent == true {
+            store.profile = profile
+            store.changes = changes
+            store.personalizations = personalizations
+            store.anonymousId = (profile?["id"] as? String) ?? store.anonymousId
+        } else if persistenceConsent == false {
+            store.clearProfileContinuity()
+        }
+
+        self.selectedPersonalizations = personalizations
+        state = OptimizationState(
+            profile: profile,
+            consent: consent,
+            persistenceConsent: persistenceConsent,
+            canPersonalize: dict["canPersonalize"] as? Bool ?? false,
+            changes: changes,
+            locale: locale
+        )
     }
 
     /// Extracts a JSON-compatible dictionary from a value that may be NSNull, nil, or a dict.

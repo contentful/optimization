@@ -1,44 +1,28 @@
 # AGENTS.md
 
-Read the repository root `AGENTS.md`, then `packages/AGENTS.md`, before this file.
+Owns the React Native SDK and package-local development harness.
 
-## Scope
+## Rules
 
-This package owns the React Native SDK and its package-local development harness under `dev/`.
-
-## Key paths
-
-- `src/`
-- `dev/`
-- `__mocks__/`
-- `README.md`
-
-## Local rules
-
-- Keep reusable React Native SDK logic here rather than in `implementations/react-native-sdk`.
-- `dev/` is a package-local harness, not the published SDK surface, but it is still a maintained
-  verification and development surface.
-- Keep the `dev/` harness relevant and up-to-date when SDK behavior, initialization,
-  developer-facing flows, preview behavior, navigation behavior, or configuration changes.
-- Do not let the harness drift into a stale demo that no longer exercises the important package
-  paths.
+- Keep reusable React Native SDK logic here, not in `implementations/react-native-sdk`.
+- `dev/` is a maintained harness, not the published SDK surface.
+- Keep `dev/` current for SDK behavior, initialization, preview behavior, navigation behavior,
+  configuration, and developer-facing flows.
 - Preserve optional peer dependency behavior unless the task explicitly changes it.
 
 ## Commands
 
-- `pnpm --filter @contentful/optimization-react-native typecheck`
-- `pnpm --filter @contentful/optimization-react-native test:unit`
-- `pnpm --filter @contentful/optimization-react-native build`
-- `pnpm --filter @contentful/optimization-react-native size:check`
-- `pnpm --filter @contentful/optimization-react-native dev:test`
-- `pnpm --filter @contentful/optimization-react-native dev:start`
-- `pnpm --filter @contentful/optimization-react-native dev:android`
-- `pnpm --filter @contentful/optimization-react-native dev:ios`
+- `pnpm --filter @contentful/optimization-react-native <script>` with `typecheck`, `test:unit`,
+  `build`, `size:check`, `dev:test`, `dev:start`, `dev:android`, or `dev:ios`.
+- Downstream Android Detox after SDK runtime changes: `pnpm build:pkgs`, then
+  `pnpm implementation:run -- react-native-sdk implementation:install`, then
+  `pnpm implementation:run -- react-native-sdk test:e2e:android:full -- --test-file <file>`.
+- The React Native implementation's `test` script is not an E2E substitute; use
+  `test:e2e:android:full` for local Detox validation.
 
-## Usually validate
+## Validate
 
 - Run `typecheck`, `test:unit`, and `build`.
-- Run `dev:test` when changing package-local harness behavior.
-- Validate the `dev/` harness itself when changing SDK flows it is supposed to demonstrate.
-- Validate `implementations/react-native-sdk` when runtime tracking, storage, navigation, offline,
-  or preview behavior changes.
+- Run `dev:test` for harness behavior changes.
+- Validate `dev/` or `implementations/react-native-sdk` when SDK flows, runtime tracking, storage,
+  navigation, offline behavior, or preview behavior changes.

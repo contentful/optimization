@@ -82,7 +82,7 @@ does not retain profile, consent, page, cookie, session, or browser-storage stat
 In practice, the application must supply:
 
 - the current profile ID, usually from `ANONYMOUS_ID_COOKIE` (`ctfl-opt-aid`) or a session
-- the consent decision, usually from an application-owned consent cookie, session, or user setting
+- the application policy decision for whether the server should call the SDK
 - page context such as `path`, `url`, `referrer`, `query`, and locale
 - user agent and optional IP override when server-side evaluation needs client request metadata
 - the selected entry metadata needed for entry interaction events
@@ -96,15 +96,15 @@ were pure data lookups.
 
 Tracking uses two API paths with different semantics:
 
-| Path           | Methods                                                                     | Purpose                                                        | Profile behavior                                                                             |
-| -------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Experience API | `page()`, `identify()`, `screen()`, `track()`, sticky `trackView()`         | Evaluates or updates a profile and returns `OptimizationData`. | Uses `payload.profile?.id` in stateless Node calls. If absent, the API can create a profile. |
-| Insights API   | non-sticky `trackView()`, `trackClick()`, `trackHover()`, `trackFlagView()` | Sends fire-and-forget Analytics interaction events.            | Requires a profile in stateless Node calls because there is no ambient SDK state.            |
+| Path           | Methods                                                                     | Purpose                                                        | Profile behavior                                                                        |
+| -------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Experience API | `page()`, `identify()`, `screen()`, `track()`, sticky `trackView()`         | Evaluates or updates a profile and returns `OptimizationData`. | Uses the profile ID bound with `forRequest()`. If absent, the API can create a profile. |
+| Insights API   | non-sticky `trackView()`, `trackClick()`, `trackHover()`, `trackFlagView()` | Sends fire-and-forget Analytics interaction events.            | Requires a request-bound profile because there is no ambient SDK state.                 |
 
 Sticky entry views are the exception that touches both paths. In Node, `trackView({ sticky: true })`
 sends a view event through Experience first, then sends the paired Insights event using the profile
 returned by the Experience response. Non-sticky `trackView()` only uses Insights and therefore
-requires `payload.profile.id`.
+requires a request-bound profile ID.
 
 The interaction wire event types are:
 
@@ -123,6 +123,10 @@ Server-side `page()` is the normal SSR entry point. It records the page request,
 `OptimizationData`, and gives the server `profile`, `selectedOptimizations`, and `changes` for the
 render.
 
+The examples below bind application-owned consent into a request-scoped client. Node SDK event calls
+fail closed except for the configured `allowedEventTypes`; the Node default permits `identify` and
+`page` before consent and labels those events as not consented.
+
 Event `context.locale` is event data. It can be used by analytics and audience rules that inspect
 event context, but it does not choose the CDA locale for Contentful entry fetches and it is separate
 from the Experience API request `locale` query parameter. For the broader locale model, see
@@ -130,12 +134,13 @@ from the Experience API request `locale` query parameter. For the broader locale
 
 ```ts
 const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
-const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
-
-const pageResponse = await optimization.page(
-  {
+const requestOptimization = optimization.forRequest({
+  consent: {
+    events: appPolicyAllowsOptimizationEvent(req),
+    persistence: appPolicyAllowsOptimizationEvent(req),
+  },
+  eventContext: {
     locale: eventLocale,
-    profile: profileId ? { id: profileId } : undefined,
     page: {
       path: req.path,
       query,
@@ -145,28 +150,31 @@ const pageResponse = await optimization.page(
     },
     userAgent: req.get('user-agent') ?? 'node-server',
   },
-  requestOptions,
-)
+  experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
+  profile: profileId ? { id: profileId } : undefined,
+})
+
+const pageResponse = await requestOptimization.page()
 ```
 
 Use server-side `track()` for server-known business events:
 
 ```ts
 const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
-const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
+const requestOptimization = optimization.forRequest({
+  consent: true,
+  eventContext: { locale: eventLocale },
+  experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
+  profile: pageResponse.profile,
+})
 
-await optimization.track(
-  {
-    profile: pageResponse.profile,
-    locale: eventLocale,
-    event: 'quote_requested',
-    properties: {
-      plan: 'enterprise',
-      source: 'pricing-page',
-    },
+await requestOptimization.track({
+  event: 'quote_requested',
+  properties: {
+    plan: 'enterprise',
+    source: 'pricing-page',
   },
-  requestOptions,
-)
+})
 ```
 
 Use server-side `trackView()` only when the event definition is "the server rendered this entry into
@@ -177,21 +185,21 @@ visibility, use browser tracking.
 import { randomUUID } from 'node:crypto'
 
 const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
-const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
+const requestOptimization = optimization.forRequest({
+  consent: true,
+  eventContext: { locale: eventLocale },
+  experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
+  profile: pageResponse.profile,
+})
 
-await optimization.trackView(
-  {
-    profile: pageResponse.profile,
-    locale: eventLocale,
-    componentId: resolvedEntry.sys.id,
-    experienceId: selectedOptimization?.experienceId,
-    sticky: selectedOptimization?.sticky ?? false,
-    variantIndex: selectedOptimization?.variantIndex,
-    viewDurationMs: 0,
-    viewId: randomUUID(),
-  },
-  requestOptions,
-)
+await requestOptimization.trackView({
+  componentId: resolvedEntry.sys.id,
+  experienceId: selectedOptimization?.experienceId,
+  sticky: selectedOptimization?.sticky ?? false,
+  variantIndex: selectedOptimization?.variantIndex,
+  viewDurationMs: 0,
+  viewId: randomUUID(),
+})
 ```
 
 Use `trackClick()` and `trackHover()` on the server only for interactions that the server actually
@@ -349,8 +357,8 @@ the browser.
 Keep personalization server-owned by enforcing these boundaries:
 
 - Server-only modules, routes, loaders, middleware, actions, or Server Components import
-  `@contentful/optimization-node`, call `sdk.page()`, call `sdk.resolveOptimizedEntry(...)`, and
-  render plain React elements.
+  `@contentful/optimization-node`, call `requestOptimization.page()`, call
+  `sdk.resolveOptimizedEntry(...)`, and render plain React elements.
 - Server-rendered entry wrappers include `data-ctfl-entry-id` and `data-ctfl-baseline-id`, so the
   browser tracking runtime can observe them after hydration.
 - Client-only modules import `@contentful/optimization-react-web` for `OptimizationRoot`, router

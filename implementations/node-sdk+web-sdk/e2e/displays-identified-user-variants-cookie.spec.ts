@@ -3,11 +3,19 @@ import { expect, test } from '@playwright/test'
 import { getAnonymousIdFromCookie, getAnonymousIdFromStorage } from './utils'
 
 const CUSTOM_PROFILE_ID = 'custom-profile-id'
+const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
 
 test.describe('identified user: cookie', () => {
   test.beforeEach(async ({ page, context }) => {
     // user is already identified with a custom profile id
     await context.addCookies([
+      {
+        name: APP_PERSONALIZATION_CONSENT_COOKIE,
+        value: 'granted',
+        domain: 'localhost',
+        path: '/',
+        sameSite: 'Lax',
+      },
       {
         name: ANONYMOUS_ID_COOKIE,
         value: CUSTOM_PROFILE_ID,

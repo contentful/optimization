@@ -318,16 +318,16 @@ Stateless Node code passes the Experience API locale per request:
 
 ```ts
 const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
-const requestOptions = contentfulLocale ? { locale: contentfulLocale } : undefined
+const requestOptimization = optimization.forRequest({
+  consent: true,
+  eventContext: { locale: eventLocale },
+  experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
+  profile: { id: profileId },
+})
 
-const data = await optimization.page(
-  {
-    locale: eventLocale,
-    profile: { id: profileId },
-    properties: { path: req.path },
-  },
-  requestOptions,
-)
+const data = await requestOptimization.page({
+  properties: { path: req.path },
+})
 ```
 
 Use the same resolved Contentful locale for CDA and Experience API requests when merge tags must

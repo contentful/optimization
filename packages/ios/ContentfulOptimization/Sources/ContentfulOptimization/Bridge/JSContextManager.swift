@@ -15,7 +15,7 @@ final class JSContextManager {
     var onOverridesChanged: ((PreviewState) -> Void)?
 
     /// Creates the JSContext, loads polyfills and the UMD bundle, and calls `__bridge.initialize()`.
-    func initialize(config: OptimizationConfig) throws {
+    func initialize(config: OptimizationConfig, anonymousId: String? = nil) throws {
         // Create context
         guard let ctx = JSContext() else {
             throw OptimizationError.bridgeError("Failed to create JSContext")
@@ -72,7 +72,7 @@ final class JSContextManager {
         // Initialize the bridge
         let configJSON: String
         do {
-            configJSON = try config.toJSON()
+            configJSON = try config.toJSON(anonymousId: anonymousId)
         } catch {
             throw OptimizationError.configError("Failed to serialize config: \(error)")
         }
