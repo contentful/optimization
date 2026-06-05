@@ -1,3 +1,12 @@
 #!/bin/bash
 
-pnpm exec lint-staged --allow-empty
+set -e
+
+LINT_STAGED="node_modules/.bin/lint-staged"
+
+if [ ! -x "$LINT_STAGED" ]; then
+  echo "lint-staged is not installed. Run 'pnpm install --frozen-lockfile' before committing."
+  exit 1
+fi
+
+"$LINT_STAGED" --allow-empty
