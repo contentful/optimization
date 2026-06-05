@@ -11,6 +11,10 @@ on:
       tag:
         description: 'Existing release tag (e.g. v1.2.3)'
         required: true
+      publish:
+        description: 'Actually publish'
+        type: boolean
+        default: false
 
 jobs:
   publish:
@@ -51,11 +55,22 @@ jobs:
 
       - uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
 
+      - name: Verify Maven publishing assembles
+        if: github.event_name == 'workflow_dispatch' && !inputs.publish
+        working-directory: packages/android/ContentfulOptimization
+        env:
+          RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
+        run: |
+          ./gradlew publishToMavenLocal \
+            -Pcontentful.optimization.version="$RELEASE_VERSION" \
+            --no-configuration-cache --no-daemon --console=plain
+
       # Build the signed AAR (+ sources/javadoc/POM) and publish+release it to Maven Central via the
       # Sonatype Central Portal. vanniktech reads credentials and the in-memory GPG key from the
       # ORG_GRADLE_PROJECT_* env vars below, populated from the Actions secrets that
       # scripts/setup-maven-central-credential.sh provisions.
       - name: Publish to Maven Central
+        if: github.event_name == 'release' || inputs.publish
         working-directory: packages/android/ContentfulOptimization
         env:
           ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
