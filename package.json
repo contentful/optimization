@@ -33,7 +33,7 @@
     "lint": "eslint lib packages",
     "lint:fix": "eslint lib packages --fix",
     "notices:generate": "pnpm --filter \"@contentful/*\" licenses list --prod --json | pnpm dlx @quantco/pnpm-licenses generate-disclaimer --json-input --output-file THIRD_PARTY_NOTICES.txt",
-    "pack:pkgs": "pnpm pack --filter @contentful/* --pack-destination pkgs",
+    "pack:pkgs": "pnpm pack --filter @contentful/* --filter '!@contentful/optimization-js-bridge' --pack-destination pkgs",
     "playwright:install": "pnpm run implementation:run -- --all -- implementation:playwright:install",
     "playwright:install-deps": "pnpm run implementation:run -- --all -- implementation:playwright:install-deps",
     "pm2:delete:all": "pm2 delete all",

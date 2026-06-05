@@ -1,7 +1,13 @@
 {
+  "private": true,
   "name": "@contentful/optimization-js-bridge",
   "version": "0.0.0",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/contentful/optimization.git",
+    "directory": "packages/universal/optimization-js-bridge"
+  },
   "type": "module",
   "main": "./dist/optimization-ios-bridge.umd.js",
   "files": [

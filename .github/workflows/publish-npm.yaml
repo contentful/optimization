@@ -60,7 +60,8 @@ jobs:
 
       - name: Bump package.json versions
         run: |
-          pnpm -r --filter "@contentful/optimization-*" exec \
+          pnpm -r --filter "@contentful/optimization-*" \
+            --filter "!@contentful/optimization-js-bridge" exec \
             npm --no-git-tag-version --force version "$RELEASE_VERSION"
         env:
           RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
@@ -71,12 +72,16 @@ jobs:
           RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
 
       - name: Prepare package READMEs for publish
-        run: pnpm -r --filter "@contentful/optimization-*" exec build-tools rewrite-readme prepare
+        run: |
+          pnpm -r --filter "@contentful/optimization-*" \
+            --filter "!@contentful/optimization-js-bridge" exec build-tools rewrite-readme prepare
         env:
           RELEASE_TAG: ${{ env.RELEASE_TAG }}
 
       - name: Create packages for troubleshooting
-        run: pnpm pack --filter "@contentful/optimization-*" --pack-destination pkgs
+        run: |
+          pnpm pack --filter "@contentful/optimization-*" \
+            --filter "!@contentful/optimization-js-bridge" --pack-destination pkgs
 
       - name: Upload packages for troubleshooting
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -96,10 +101,14 @@ jobs:
 
       - name: Publish
         if: github.event_name == 'release' || inputs.publish
-        run: pnpm -r --filter "@contentful/optimization-*" publish --access public --no-git-checks
+        run: |
+          pnpm -r --filter "@contentful/optimization-*" \
+            --filter "!@contentful/optimization-js-bridge" publish --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ steps.vault.outputs.GITHUB_PACKAGES_WRITE_TOKEN }}
 
       - name: Restore package READMEs after publish
         if: always()
-        run: pnpm -r --filter "@contentful/optimization-*" exec build-tools rewrite-readme restore
+        run: |
+          pnpm -r --filter "@contentful/optimization-*" \
+            --filter "!@contentful/optimization-js-bridge" exec build-tools rewrite-readme restore

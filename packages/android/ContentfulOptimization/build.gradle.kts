@@ -1,12 +1,11 @@
 import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
-import com.vanniktech.maven.publish.SonatypeHost
 
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     // Version inline so the module builds when included as a subproject (parent builds don't pin it).
-    id("com.vanniktech.maven.publish") version "0.30.0"
+    id("com.vanniktech.maven.publish") version "0.34.0"
 }
 
 // Published coordinate: com.contentful.java:optimization-android. We reuse Contentful's existing,
@@ -97,7 +96,7 @@ mavenPublishing {
         )
     )
 
-    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL, automaticRelease = true)
+    publishToMavenCentral(automaticRelease = true)
 
     // Sign with the in-memory GPG key supplied by CI (ORG_GRADLE_PROJECT_signingInMemoryKey*).
     // Skipped automatically when no key is configured (e.g. local publishToMavenLocal smoke tests),
