@@ -118,6 +118,7 @@ export default defineConfig({
       output: {
         distPath: { root: 'dist' },
         filename: { js: '[name].js' },
+        legalComments: 'none',
         sourceMap: true,
         cleanDistPath: false,
         minify: true,

@@ -1,6 +1,6 @@
 import { checkBundleSize } from './bundleSize'
 import { emitDualDts } from './emitDualDts'
-import { preparePublishReadme, restorePublishReadme } from './publishReadme'
+import { preparePublishReadme } from './publishReadme'
 
 function printUsage(): void {
   process.stderr.write(
@@ -8,13 +8,11 @@ function printUsage(): void {
       '  build-tools emit-dual-dts [distDir]\n' +
       '  build-tools bundle-size [packageDir] [--report-only]\n' +
       '  build-tools rewrite-readme prepare [packageDir]\n' +
-      '  build-tools rewrite-readme restore [packageDir]\n' +
       '\n' +
       'Examples:\n' +
       '  build-tools emit-dual-dts ./dist\n' +
       '  build-tools bundle-size\n' +
       '  build-tools rewrite-readme prepare\n' +
-      '  build-tools rewrite-readme restore ./packages/universal/core-sdk\n' +
       '  build-tools bundle-size ./packages/web/web-sdk --report-only\n',
   )
 }
@@ -80,11 +78,6 @@ function runRewriteReadmeCommand(args: string[]): void {
 
   if (action === 'prepare') {
     preparePublishReadme(packageDir)
-    return
-  }
-
-  if (action === 'restore') {
-    restorePublishReadme(packageDir)
     return
   }
 
