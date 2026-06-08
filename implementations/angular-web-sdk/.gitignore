@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+
+# Angular cache
+.angular/
+
+# env files (copy from .env.example to set up locally)
+.env
+.env*.local
+
+# logs produced by launch-reference-app.sh
+logs/
+
+# debug
+*.log
+.pnpm-debug.log*
+
+# misc
+.DS_Store
+*.tsbuildinfo
