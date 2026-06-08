@@ -57,6 +57,7 @@ export class Optimization {
   readonly sdk: OptimizationInstance | undefined
   readonly error: Error | undefined
   readonly consent$: Observable<boolean | undefined>
+  readonly profile$: Observable<unknown>
 
   constructor() {
     const config = inject(CONFIG)
@@ -76,6 +77,13 @@ export class Optimization {
             sub.next(undefined)
           })
 
+    this.profile$ =
+      this.sdk !== undefined
+        ? fromSdkObservable<unknown>(this.sdk.states.profile)
+        : new Observable<unknown>((sub) => {
+            sub.next(undefined)
+          })
+
     // Page events are the most critical call in the integration — the SDK uses the current URL
     // to resolve which experiences and variants apply to the user. Without this, personalisation
     // does not work. Must fire on every route change including the initial load, and fires
@@ -89,5 +97,15 @@ export class Optimization {
 
   setConsent(value: boolean): void {
     this.sdk?.consent(value)
+  }
+
+  identify(): void {
+    void this.sdk?.identify({ userId: 'charles', traits: { identified: true } })
+  }
+
+  reset(): void {
+    this.sdk?.reset()
+    // reset() does not auto-emit a page event; fire one immediately after.
+    void this.sdk?.page()
   }
 }

@@ -27,6 +27,17 @@ export class Home implements OnInit {
   protected readonly loading = signal(true)
 
   protected readonly consent = toSignal(this.optimization.consent$)
+  protected readonly profile = toSignal(this.optimization.profile$)
+  protected readonly isIdentified = computed(() => {
+    const p = this.profile()
+    if (p === null || typeof p !== 'object') return false
+    if (!('traits' in p)) return false
+    const { traits } = p as { traits: unknown }
+    if (traits === null || typeof traits !== 'object') return false
+    if (!('identified' in traits)) return false
+    const { identified } = traits as { identified: unknown }
+    return Boolean(identified)
+  })
 
   protected readonly selectedOptimizations = toSignal(
     this.optimization.sdk !== undefined
@@ -55,6 +66,14 @@ export class Home implements OnInit {
 
   protected toggleConsent(): void {
     this.optimization.setConsent(this.consent() !== true)
+  }
+
+  protected identify(): void {
+    this.optimization.identify()
+  }
+
+  protected reset(): void {
+    this.optimization.reset()
   }
 
   ngOnInit(): void {

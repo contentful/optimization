@@ -16,6 +16,9 @@
   <p class="panel__stat" data-testid="consent-status">
     Consent: {{ consent() === undefined ? 'undefined' : consent() }}
   </p>
+  <p class="panel__stat" data-testid="identified-status">
+    Identified: {{ isIdentified() ? 'Yes' : 'No' }}
+  </p>
   <div class="panel__actions">
     @if (consent() === true) {
     <button class="btn btn--danger" data-testid="unconsent-button" (click)="toggleConsent()">
@@ -26,6 +29,10 @@
       Grant consent
     </button>
     }
+    <button class="btn btn--primary" data-testid="identify-button" (click)="identify()">
+      Identify
+    </button>
+    <button class="btn btn--secondary" data-testid="reset-button" (click)="reset()">Reset</button>
   </div>
 </section>
 

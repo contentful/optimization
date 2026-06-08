@@ -229,6 +229,16 @@ main {
   border-color: var(--color-primary-hover);
 }
 
+.btn--secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.btn--secondary:hover {
+  background: var(--color-bg);
+}
+
 .btn--danger {
   background: #dc2626;
   color: #fff;
