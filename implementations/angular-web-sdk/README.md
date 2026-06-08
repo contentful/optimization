@@ -34,26 +34,15 @@ This is a scaffold. SDK integration will be added once the Angular surface is re
 
 ## Quick start
 
-```sh
-./implementations/angular-web-sdk/scripts/launch-reference-app.sh
-```
-
-Or from the **implementation directory**:
-
-```sh
-pnpm launch
-```
-
-Once complete, the app is available at `http://localhost:3000`.
-
-## Manual setup
-
 From the **repository root**:
 
 ```sh
 pnpm build:pkgs
 pnpm implementation:run -- angular-web-sdk implementation:install
+pnpm implementation:run -- angular-web-sdk dev
 ```
+
+Once complete, the app is available at `http://localhost:3000`.
 
 ## Running locally
 

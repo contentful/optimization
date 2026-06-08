@@ -14,7 +14,6 @@ server alongside the shared mock API server.
 
 ## Commands
 
-- `pnpm launch` or `./scripts/launch-reference-app.sh`
 - `pnpm implementation:run -- angular-web-sdk <script>` with `implementation:install`, `typecheck`,
   `build`, `dev`, or `serve:mocks`.
 
