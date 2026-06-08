@@ -81,29 +81,6 @@ Copy `.env.example` to `.env`:
 cp .env.example .env
 ```
 
-## Project structure
-
-```
-angular-web-sdk/
-├── src/
-│   ├── main.ts               # Application bootstrap
-│   ├── index.html            # HTML shell
-│   ├── styles.css            # Global styles
-│   └── app/
-│       ├── app.ts            # Root standalone component
-│       ├── app.config.ts     # Application providers
-│       └── app.routes.ts     # Route definitions
-├── angular.json              # Angular CLI build config
-├── tsconfig.json
-├── .env.example
-├── package.json
-├── pnpm-workspace.yaml
-├── scripts/
-│   └── launch-reference-app.sh
-├── AGENTS.md
-└── README.md
-```
-
 ## Related
 
 - [react-web-sdk](../react-web-sdk/README.md) - React Web SDK reference implementation
