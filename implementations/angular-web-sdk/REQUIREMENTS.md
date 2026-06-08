@@ -271,8 +271,8 @@ Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 
 | Req | Feature                                                               | New deps                                                              | Status         |
 | --- | --------------------------------------------------------------------- | --------------------------------------------------------------------- | -------------- |
-| 1   | SDK initialisation — singleton, init with config, graceful error      | `@contentful/optimization-web`                                        | ⬜ Not started |
-| 2   | Page tracking — emit on every route change incl. initial load         | —                                                                     | ⬜ Not started |
+| 1   | SDK initialisation — singleton, init with config, graceful error      | `@contentful/optimization-web`                                        | ✅ Done        |
+| 2   | Page tracking — emit on every route change incl. initial load         | —                                                                     | ✅ Done        |
 | 18  | Locale consistency — CDA client wrapped with `withOptimizationLocale` | `contentful`                                                          | ⬜ Not started |
 | 3   | Entry resolution — resolve variant or fall back to baseline           | —                                                                     | ⬜ Not started |
 | 4   | Auto-tracking — `data-ctfl-*` attributes, SDK observes DOM            | —                                                                     | ⬜ Not started |
