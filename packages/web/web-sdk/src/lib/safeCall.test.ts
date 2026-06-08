@@ -40,6 +40,23 @@ describe('safeCall', () => {
 
     expect(onError).toHaveBeenCalledTimes(2)
   })
+
+  it('swallows sync failures when onError is not provided', () => {
+    expect(() => {
+      safeCall(() => {
+        throw new Error('sync-failure')
+      })
+    }).not.toThrow()
+  })
+
+  it('swallows async failures when onError is not provided', async () => {
+    expect(() => {
+      safeCall(async () => await Promise.reject(new Error('async-failure')))
+    }).not.toThrow()
+
+    await Promise.resolve()
+    await Promise.resolve()
+  })
 })
 
 describe('safeCallAsync', () => {
@@ -92,6 +109,20 @@ describe('safeCallAsync', () => {
           throw new Error('onError-failure')
         },
       ),
+    ).resolves.toBeUndefined()
+  })
+
+  it('swallows sync failures when onError is not provided', async () => {
+    await expect(
+      safeCallAsync(() => {
+        throw new Error('sync-failure')
+      }),
+    ).resolves.toBeUndefined()
+  })
+
+  it('swallows async failures when onError is not provided', async () => {
+    await expect(
+      safeCallAsync(async () => await Promise.reject(new Error('async-failure'))),
     ).resolves.toBeUndefined()
   })
 })

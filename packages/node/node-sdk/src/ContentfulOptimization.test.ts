@@ -182,6 +182,110 @@ describe('ContentfulOptimization', () => {
     })
   })
 
+  it('reads accept-language from a Headers-like object via headers.get', () => {
+    const node = new ContentfulOptimization({
+      ...config,
+      contentfulLocales: { default: 'en-US', supported: ['en-US', 'de-DE'] },
+    })
+
+    expect(
+      node.resolveRequestLocale({
+        headers: new Headers({ 'accept-language': 'de-DE;q=0.9, en-US;q=0.5' }),
+      }),
+    ).toEqual({
+      eventLocale: 'de-DE',
+      contentfulLocale: 'de-DE',
+    })
+  })
+
+  it('reads accept-language from a plain headers object using the lowercase key', () => {
+    const node = new ContentfulOptimization({
+      ...config,
+      contentfulLocales: { default: 'en-US', supported: ['en-US', 'fr-FR'] },
+    })
+
+    expect(
+      node.resolveRequestLocale({
+        headers: { 'accept-language': 'fr-FR;q=0.9, en-US;q=0.5' },
+      }),
+    ).toEqual({
+      eventLocale: 'fr-FR',
+      contentfulLocale: 'fr-FR',
+    })
+  })
+
+  it('reads accept-language from a plain headers object using the capitalized key', () => {
+    const node = new ContentfulOptimization({
+      ...config,
+      contentfulLocales: { default: 'en-US', supported: ['en-US', 'fr-FR'] },
+    })
+
+    expect(
+      node.resolveRequestLocale({
+        headers: { 'Accept-Language': 'fr-FR' },
+      }),
+    ).toEqual({
+      eventLocale: 'fr-FR',
+      contentfulLocale: 'fr-FR',
+    })
+  })
+
+  it('joins array-valued accept-language headers and filters non-string entries', () => {
+    const node = new ContentfulOptimization({
+      ...config,
+      contentfulLocales: { default: 'en-US', supported: ['en-US', 'de-DE'] },
+    })
+
+    expect(
+      node.resolveRequestLocale({
+        headers: { 'accept-language': ['de-DE;q=0.9', 42, 'en-US;q=0.5'] },
+      }),
+    ).toEqual({
+      eventLocale: 'de-DE',
+      contentfulLocale: 'de-DE',
+    })
+  })
+
+  it('falls back when input is neither a string nor an object', () => {
+    const node = new ContentfulOptimization({
+      ...config,
+      contentfulLocales: { default: 'en-US' },
+    })
+
+    expect(node.resolveRequestLocale(null)).toEqual({
+      eventLocale: 'en-US',
+      contentfulLocale: 'en-US',
+    })
+  })
+
+  it('falls back when headers is not an object', () => {
+    const node = new ContentfulOptimization({
+      ...config,
+      contentfulLocales: { default: 'en-US' },
+    })
+
+    expect(node.resolveRequestLocale({ headers: 'not-an-object' })).toEqual({
+      eventLocale: 'en-US',
+      contentfulLocale: 'en-US',
+    })
+  })
+
+  it('falls back when the resolved header is neither string nor array', () => {
+    const node = new ContentfulOptimization({
+      ...config,
+      contentfulLocales: { default: 'en-US' },
+    })
+
+    expect(
+      node.resolveRequestLocale({
+        headers: { 'accept-language': 123 },
+      }),
+    ).toEqual({
+      eventLocale: 'en-US',
+      contentfulLocale: 'en-US',
+    })
+  })
+
   it('keeps unbound direct event methods unavailable from the public Node SDK', () => {
     const node = new ContentfulOptimization(config)
     // @ts-expect-error Use forRequest() before calling event methods.

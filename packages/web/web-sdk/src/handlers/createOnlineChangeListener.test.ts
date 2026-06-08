@@ -57,4 +57,17 @@ describe('createOnlineChangeListener', () => {
 
     expect(cb).toHaveBeenCalledTimes(1)
   })
+
+  it('routes callback failures into the safeCall error handler without throwing', async () => {
+    rs.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
+    const cb = rs.fn(async () => await Promise.reject(new Error('callback-failure')))
+
+    const cleanup = createOnlineChangeListener(cb)
+
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(cb).toHaveBeenCalledTimes(1)
+    cleanup()
+  })
 })

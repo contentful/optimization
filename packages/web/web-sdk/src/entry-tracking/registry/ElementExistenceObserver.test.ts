@@ -205,6 +205,132 @@ describe('ElementExistenceObserver', () => {
     eo.disconnect()
   })
 
+  it('collects descendants of added Elements', () => {
+    const root = document.createElement('div')
+    document.body.append(root)
+
+    const onAdded = rs.fn()
+    const eo = new ElementExistenceObserver({ root, onAdded })
+    const [mo] = instances
+
+    const wrapper = document.createElement('section')
+    const child = document.createElement('span')
+    wrapper.append(child)
+    root.append(wrapper)
+
+    mo?.emit([{ addedNodes: [wrapper], removedNodes: [] }])
+
+    const {
+      mock: { calls: [[elements = []] = []] = [] },
+    } = onAdded
+    expect(new Set(elements)).toEqual(new Set([wrapper, child]))
+
+    eo.disconnect()
+  })
+
+  it('collects descendants of DocumentFragment payloads', () => {
+    const root = document.createElement('div')
+    document.body.append(root)
+
+    const onRemoved = rs.fn()
+    const eo = new ElementExistenceObserver({ root, onRemoved })
+    const [mo] = instances
+
+    const fragment = document.createDocumentFragment()
+    const child = document.createElement('span')
+    fragment.append(child)
+
+    mo?.emit([{ addedNodes: [], removedNodes: [fragment] }])
+
+    const {
+      mock: { calls: [[elements = []] = []] = [] },
+    } = onRemoved
+    expect(elements).toEqual([child])
+
+    eo.disconnect()
+  })
+
+  it('coalesces removed-then-added moves so no add/remove delivered', () => {
+    const root = document.createElement('div')
+    document.body.append(root)
+
+    const onAdded = rs.fn()
+    const onRemoved = rs.fn()
+    const eo = new ElementExistenceObserver({ root, onAdded, onRemoved })
+    const [mo] = instances
+
+    const el = document.createElement('i')
+    root.append(el)
+    mo?.emit([{ addedNodes: [el], removedNodes: [] }])
+    onAdded.mockClear()
+
+    mo?.emit([
+      { addedNodes: [el], removedNodes: [] },
+      { addedNodes: [], removedNodes: [el] },
+    ])
+
+    expect(onAdded).toHaveBeenCalledTimes(0)
+    expect(onRemoved).toHaveBeenCalledTimes(0)
+
+    eo.disconnect()
+  })
+
+  it('returns a no-op subscription when subscribe is called after disconnect', () => {
+    const root = document.createElement('div')
+    document.body.append(root)
+
+    const eo = new ElementExistenceObserver({ root })
+    eo.disconnect()
+
+    const onAdded = rs.fn()
+    const cleanup = eo.subscribe({ onAdded })
+
+    expect(() => {
+      cleanup()
+    }).not.toThrow()
+    expect(onAdded).not.toHaveBeenCalled()
+  })
+
+  it('returns a no-op subscription when subscriber has no callbacks', () => {
+    const root = document.createElement('div')
+    document.body.append(root)
+
+    const eo = new ElementExistenceObserver({ root })
+    const cleanup = eo.subscribe({})
+
+    expect(instances).toHaveLength(0)
+    expect(() => {
+      cleanup()
+    }).not.toThrow()
+
+    eo.disconnect()
+  })
+
+  it('is a no-op when unsubscribe is called without an active observer', () => {
+    const root = document.createElement('div')
+    document.body.append(root)
+
+    const eo = new ElementExistenceObserver({ root })
+
+    expect(() => {
+      eo.unsubscribe({ onAdded: () => undefined })
+    }).not.toThrow()
+
+    eo.disconnect()
+  })
+
+  it('is a no-op when disconnect is called twice', () => {
+    const root = document.createElement('div')
+    document.body.append(root)
+
+    const eo = new ElementExistenceObserver({ root, onAdded: () => undefined })
+    eo.disconnect()
+
+    expect(() => {
+      eo.disconnect()
+    }).not.toThrow()
+  })
+
   it('reports sync and async callback errors via onError', async () => {
     const root = document.createElement('div')
     document.body.append(root)

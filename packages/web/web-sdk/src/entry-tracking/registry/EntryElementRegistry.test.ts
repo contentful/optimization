@@ -160,4 +160,129 @@ describe('EntryElementRegistry', () => {
 
     expect(cleanup).toHaveBeenCalledTimes(1)
   })
+
+  it('seeds existing DOM entries to subscribers when first subscribed', () => {
+    const seeded = createEntryElement('seeded')
+    const ignored = document.createElement('div')
+    document.body.append(seeded, ignored)
+
+    const { observer } = createMockExistenceObserver()
+    const registry = new EntryElementRegistry(observer)
+    const onAdded = rs.fn()
+
+    registry.subscribe({ onAdded })
+
+    expect(onAdded).toHaveBeenCalledTimes(1)
+    expect(onAdded).toHaveBeenCalledWith(seeded)
+
+    registry.disconnect()
+  })
+
+  it('replays already-seen entries to a late subscriber without re-seeding', () => {
+    const { observer, getSubscriber } = createMockExistenceObserver()
+    const registry = new EntryElementRegistry(observer)
+    const earlyOnAdded = rs.fn()
+    registry.subscribe({ onAdded: earlyOnAdded })
+
+    const existenceSubscriber = getSubscriber()
+    if (!existenceSubscriber?.onAdded) {
+      throw new Error('Expected registry to register an onAdded existence subscriber')
+    }
+
+    const entry = createEntryElement('replayed')
+    existenceSubscriber.onAdded([entry])
+    expect(earlyOnAdded).toHaveBeenCalledTimes(1)
+
+    const lateOnAdded = rs.fn()
+    registry.subscribe({ onAdded: lateOnAdded })
+
+    expect(lateOnAdded).toHaveBeenCalledTimes(1)
+    expect(lateOnAdded).toHaveBeenCalledWith(entry)
+
+    registry.disconnect()
+  })
+
+  it('ignores duplicate add notifications for entries already in the registry', () => {
+    const { observer, getSubscriber } = createMockExistenceObserver()
+    const registry = new EntryElementRegistry(observer)
+    const onAdded = rs.fn()
+    registry.subscribe({ onAdded })
+
+    const existenceSubscriber = getSubscriber()
+    if (!existenceSubscriber?.onAdded) {
+      throw new Error('Expected registry to register an onAdded existence subscriber')
+    }
+
+    const entry = createEntryElement('duplicate')
+    existenceSubscriber.onAdded([entry])
+    existenceSubscriber.onAdded([entry])
+
+    expect(onAdded).toHaveBeenCalledTimes(1)
+
+    registry.disconnect()
+  })
+
+  it('ignores remove notifications for entries that were never added', () => {
+    const { observer, getSubscriber } = createMockExistenceObserver()
+    const registry = new EntryElementRegistry(observer)
+    const onRemoved = rs.fn()
+    registry.subscribe({ onRemoved })
+
+    const existenceSubscriber = getSubscriber()
+    if (!existenceSubscriber?.onRemoved) {
+      throw new Error('Expected registry to register an onRemoved existence subscriber')
+    }
+
+    existenceSubscriber.onRemoved([createEntryElement('never-added')])
+
+    expect(onRemoved).not.toHaveBeenCalled()
+
+    registry.disconnect()
+  })
+
+  it('skips mutation elements that are neither entries nor contain nested entries', () => {
+    const { observer, getSubscriber } = createMockExistenceObserver()
+    const registry = new EntryElementRegistry(observer)
+    const onAdded = rs.fn()
+    const onRemoved = rs.fn()
+    registry.subscribe({ onAdded, onRemoved })
+
+    const existenceSubscriber = getSubscriber()
+    if (!existenceSubscriber?.onAdded || !existenceSubscriber.onRemoved) {
+      throw new Error('Expected registry to register onAdded/onRemoved existence subscribers')
+    }
+
+    const plain = document.createElement('div')
+
+    existenceSubscriber.onAdded([plain])
+    existenceSubscriber.onRemoved([plain])
+
+    expect(onAdded).not.toHaveBeenCalled()
+    expect(onRemoved).not.toHaveBeenCalled()
+
+    registry.disconnect()
+  })
+
+  it('omits notifications for subscribers that do not provide a callback', () => {
+    const { observer, getSubscriber } = createMockExistenceObserver()
+    const registry = new EntryElementRegistry(observer)
+    const onAddedOnly = rs.fn()
+    const onRemovedOnly = rs.fn()
+    registry.subscribe({ onAdded: onAddedOnly })
+    registry.subscribe({ onRemoved: onRemovedOnly })
+
+    const existenceSubscriber = getSubscriber()
+    if (!existenceSubscriber?.onAdded || !existenceSubscriber.onRemoved) {
+      throw new Error('Expected registry to register onAdded/onRemoved existence subscribers')
+    }
+
+    const entry = createEntryElement('partial-subscribers')
+    existenceSubscriber.onAdded([entry])
+    existenceSubscriber.onRemoved([entry])
+
+    expect(onAddedOnly).toHaveBeenCalledTimes(1)
+    expect(onRemovedOnly).toHaveBeenCalledTimes(1)
+
+    registry.disconnect()
+  })
 })
