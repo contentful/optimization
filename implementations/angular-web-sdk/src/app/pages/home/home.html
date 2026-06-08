@@ -1,15 +1,25 @@
 @if (loading()) {
-<p data-testid="home-loading">Loading entries…</p>
+<p class="page-loading" data-testid="home-loading">Loading entries…</p>
 } @else {
-<section id="utility-panel" class="utility-panel">
-  <h2>Utilities</h2>
-  <p data-testid="selected-optimizations-count">
-    Selected optimizations: {{ selectedOptimizationCount() }}
+<div class="page-header">
+  <h1>Angular Web SDK</h1>
+  <p class="page-header__sub">
+    Reference implementation — connect mock server to see personalised variants
+  </p>
+</div>
+
+<section class="panel">
+  <h2 class="panel__title">SDK state</h2>
+  <p class="panel__stat" data-testid="selected-optimizations-count">
+    Active optimizations <span>{{ selectedOptimizationCount() }}</span>
   </p>
 </section>
 
-<section>
-  <h2>Auto-observed entries</h2>
+<section class="page-section">
+  <header class="page-section__header">
+    <h2>Auto-observed entries</h2>
+    <p>Tracked via <code>data-ctfl-*</code> attributes — SDK observes the DOM automatically.</p>
+  </header>
   <div id="auto-observed" class="entry-grid">
     @for (id of autoIds; track id) { @let entry = entryFor(id); @if (entry) {
     <app-content-entry
@@ -22,8 +32,11 @@
   </div>
 </section>
 
-<section>
-  <h2>Manually-observed entries</h2>
+<section class="page-section">
+  <header class="page-section__header">
+    <h2>Manually-observed entries</h2>
+    <p>Tracked via explicit <code>enableElement</code> / <code>clearElement</code> calls.</p>
+  </header>
   <div id="manually-observed" class="entry-grid">
     @for (id of manualIds; track id) { @let entry = entryFor(id); @if (entry) {
     <app-content-entry

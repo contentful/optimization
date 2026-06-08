@@ -1,5 +1,6 @@
 @let baseline = baselineId(); @let resolved = resolvedId(); @let m = meta(); @let scenario =
-clickScenario(); @let mode = observation(); @let isAuto = mode === 'auto';
+clickScenario(); @let mode = observation(); @let isAuto = mode === 'auto'; @let variant =
+isVariant();
 
 <section [attr.data-testid]="'content-entry-' + baseline">
   @if (scenario === 'ancestor' && isAuto) {
@@ -13,6 +14,8 @@ clickScenario(); @let mode = observation(); @let isAuto = mode === 'auto';
 
 <ng-template #entryContent>
   <div
+    class="entry-card"
+    [class.entry-card--variant]="variant"
     [attr.data-testid]="'content-' + baseline"
     [attr.data-ctfl-entry-id]="isAuto ? resolved : null"
     [attr.data-ctfl-baseline-id]="isAuto ? baseline : null"
@@ -23,9 +26,18 @@ clickScenario(); @let mode = observation(); @let isAuto = mode === 'auto';
     [attr.data-ctfl-clickable]="scenario === 'direct' && isAuto ? 'true' : null"
     [attr.data-entry-id]="!isAuto ? baseline : null"
   >
+    <div class="entry-card__header">
+      <span class="entry-card__badge" [class.entry-card__badge--variant]="variant">
+        {{ variant ? 'variant' : 'baseline' }}
+      </span>
+      @if (variant) {
+      <span class="entry-card__experience">{{ m.experienceId }}</span>
+      }
+    </div>
+
     <div [attr.data-testid]="'entry-text-' + baseline" [attr.aria-label]="'Entry: ' + resolved">
       <p>{{ entryText() }}</p>
-      <p>{{ '[Entry: ' + baseline + ']' }}</p>
+      <p class="entry-card__id">{{ '[Entry: ' + baseline + ']' }}</p>
     </div>
 
     @if (scenario === 'descendant') {

@@ -70,6 +70,7 @@ export class ContentEntry implements OnDestroy {
 
   protected readonly baselineId = computed(() => this.entry().sys.id)
   protected readonly resolvedId = computed(() => this.resolvedEntry().sys.id)
+  protected readonly isVariant = computed(() => this.meta().experienceId !== undefined)
 
   protected readonly richTextField = computed(() =>
     Object.values(this.resolvedEntry().fields).find(isRichTextField),
