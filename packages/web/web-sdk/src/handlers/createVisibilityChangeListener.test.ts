@@ -86,4 +86,18 @@ describe('createVisibilityChangeListener', () => {
 
     expect(cb).not.toHaveBeenCalled()
   })
+
+  it('routes callback failures into the safeCall error handler without throwing', async () => {
+    const cb = rs.fn(async () => await Promise.reject(new Error('callback-failure')))
+    const cleanup = createVisibilityChangeListener(cb)
+
+    setVisibilityState('hidden')
+    document.dispatchEvent(new Event('visibilitychange'))
+
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(cb).toHaveBeenCalledTimes(1)
+    cleanup()
+  })
 })

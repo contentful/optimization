@@ -1,6 +1,7 @@
 import { batch, signals, type CoreConfig } from '@contentful/optimization-core'
 import type { OptimizationData, Profile } from '@contentful/optimization-core/api-schemas'
 import {
+  ANONYMOUS_ID_COOKIE,
   ANONYMOUS_ID_KEY,
   CONSENT_KEY,
   PERSISTENCE_CONSENT_KEY,
@@ -444,5 +445,38 @@ describe('ContentfulOptimization', () => {
     first.destroy()
 
     expect(createSecondOptimization).not.toThrow()
+  })
+
+  it('clears persisted anonymous ID state when reset() is called', () => {
+    const web = new ContentfulOptimization({
+      ...config,
+      defaults: { consent: true, profile: DEFAULT_PROFILE },
+    })
+
+    expect(localStorage.getItem(ANONYMOUS_ID_KEY)).toBe(DEFAULT_PROFILE.id)
+    expect(localStorage.getItem(PROFILE_CACHE_KEY)).not.toBeNull()
+    expect(document.cookie).toContain(`${ANONYMOUS_ID_COOKIE}=${DEFAULT_PROFILE.id}`)
+
+    web.reset()
+
+    expect(localStorage.getItem(ANONYMOUS_ID_KEY)).toBeNull()
+    expect(localStorage.getItem(PROFILE_CACHE_KEY)).toBeNull()
+    expect(document.cookie).not.toContain(`${ANONYMOUS_ID_COOKIE}=${DEFAULT_PROFILE.id}`)
+  })
+
+  it('clears persisted anonymous ID when the profile signal becomes undefined while persistence consent is granted', () => {
+    const web = new ContentfulOptimization({
+      ...config,
+      defaults: { consent: true, profile: DEFAULT_PROFILE },
+    })
+
+    expect(web.states.profile.current).toEqual(DEFAULT_PROFILE)
+    expect(localStorage.getItem(ANONYMOUS_ID_KEY)).toBe(DEFAULT_PROFILE.id)
+
+    localStorage.removeItem(ANONYMOUS_ID_KEY)
+    signals.profile.value = undefined
+
+    expect(localStorage.getItem(ANONYMOUS_ID_KEY)).toBeNull()
+    expect(document.cookie).not.toContain(`${ANONYMOUS_ID_COOKIE}=${DEFAULT_PROFILE.id}`)
   })
 })
