@@ -1,0 +1,37 @@
+@if (loading()) {
+<p data-testid="home-loading">Loading entries…</p>
+} @else {
+<section id="utility-panel" class="utility-panel">
+  <h2>Utilities</h2>
+  <p data-testid="selected-optimizations-count">
+    Selected optimizations: {{ selectedOptimizationCount() }}
+  </p>
+</section>
+
+<section>
+  <h2>Auto-observed entries</h2>
+  <div id="auto-observed" class="entry-grid">
+    @for (id of autoIds; track id) { @let entry = entryFor(id); @if (entry) {
+    <app-content-entry
+      [entry]="entry"
+      observation="auto"
+      [clickScenario]="clickScenario(id)"
+      [selectedOptimizations]="selectedOptimizations()"
+    />
+    } }
+  </div>
+</section>
+
+<section>
+  <h2>Manually-observed entries</h2>
+  <div id="manually-observed" class="entry-grid">
+    @for (id of manualIds; track id) { @let entry = entryFor(id); @if (entry) {
+    <app-content-entry
+      [entry]="entry"
+      observation="manual"
+      [selectedOptimizations]="selectedOptimizations()"
+    />
+    } }
+  </div>
+</section>
+}

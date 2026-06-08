@@ -274,10 +274,10 @@ Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 | 1   | SDK initialisation — singleton, init with config, graceful error      | `@contentful/optimization-web`                                        | ✅ Done        |
 | 2   | Page tracking — emit on every route change incl. initial load         | —                                                                     | ✅ Done        |
 | 18  | Locale consistency — CDA client wrapped with `withOptimizationLocale` | `contentful`                                                          | ✅ Done        |
-| 3   | Entry resolution — resolve variant or fall back to baseline           | —                                                                     | ⬜ Not started |
-| 4   | Auto-tracking — `data-ctfl-*` attributes, SDK observes DOM            | —                                                                     | ⬜ Not started |
-| 5   | Manual tracking — explicit `enableElement` / `clearElement`           | —                                                                     | ⬜ Not started |
-| 6   | Click scenarios — direct / descendant / ancestor                      | —                                                                     | ⬜ Not started |
+| 3   | Entry resolution — resolve variant or fall back to baseline           | —                                                                     | ✅ Done        |
+| 4   | Auto-tracking — `data-ctfl-*` attributes, SDK observes DOM            | —                                                                     | ✅ Done        |
+| 5   | Manual tracking — explicit `enableElement` / `clearElement`           | —                                                                     | ✅ Done        |
+| 6   | Click scenarios — direct / descendant / ancestor                      | —                                                                     | ✅ Done        |
 | 7   | Consent — toggle UI, gate tracking events                             | —                                                                     | ⬜ Not started |
 | 8   | Identify / reset — fixed user ID + traits, persist across reload      | —                                                                     | ⬜ Not started |
 | 9   | Live updates — global toggle (default off)                            | —                                                                     | ⬜ Not started |

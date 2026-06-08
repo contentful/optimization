@@ -1,0 +1,37 @@
+@let baseline = baselineId(); @let resolved = resolvedId(); @let m = meta(); @let scenario =
+clickScenario(); @let mode = observation(); @let isAuto = mode === 'auto';
+
+<section [attr.data-testid]="'content-entry-' + baseline">
+  @if (scenario === 'ancestor' && isAuto) {
+  <div data-ctfl-clickable="true" data-testid="entry-click-ancestor-wrapper">
+    <ng-container [ngTemplateOutlet]="entryContent" />
+  </div>
+  } @else {
+  <ng-container [ngTemplateOutlet]="entryContent" />
+  }
+</section>
+
+<ng-template #entryContent>
+  <div
+    [attr.data-testid]="'content-' + baseline"
+    [attr.data-ctfl-entry-id]="isAuto ? resolved : null"
+    [attr.data-ctfl-baseline-id]="isAuto ? baseline : null"
+    [attr.data-ctfl-optimization-id]="isAuto ? (m.experienceId ?? null) : null"
+    [attr.data-ctfl-sticky]="isAuto ? stickyAttr() : null"
+    [attr.data-ctfl-variant-index]="isAuto ? variantIndexAttr() : null"
+    [attr.data-ctfl-hover-duration-update-interval-ms]="isAuto ? '1000' : null"
+    [attr.data-ctfl-clickable]="scenario === 'direct' && isAuto ? 'true' : null"
+    [attr.data-entry-id]="!isAuto ? baseline : null"
+  >
+    <div [attr.data-testid]="'entry-text-' + baseline" [attr.aria-label]="'Entry: ' + resolved">
+      <p>{{ entryText() }}</p>
+      <p>{{ '[Entry: ' + baseline + ']' }}</p>
+    </div>
+
+    @if (scenario === 'descendant') {
+    <button data-ctfl-clickable="true" data-testid="entry-click-descendant-button" type="button">
+      Trigger entry click tracking from descendant button
+    </button>
+    }
+  </div>
+</ng-template>
