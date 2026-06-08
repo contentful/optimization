@@ -1,6 +1,12 @@
 <nav>
-  <a data-testid="link-home" routerLink="/">Home</a>
-  <a data-testid="link-page-two" routerLink="/page-two">Page Two</a>
+  <a
+    data-testid="link-home"
+    routerLink="/"
+    routerLinkActive="active"
+    [routerLinkActiveOptions]="{ exact: true }"
+    >Home</a
+  >
+  <a data-testid="link-page-two" routerLink="/page-two" routerLinkActive="active">Page Two</a>
 </nav>
 <main>
   <router-outlet />
