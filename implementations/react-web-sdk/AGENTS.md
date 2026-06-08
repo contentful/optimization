@@ -13,7 +13,6 @@ React SPA reference implementation for the official `@contentful/optimization-re
 
 ## Commands
 
-- `pnpm launch` or `./scripts/launch-reference-app.sh`
 - `pnpm implementation:run -- react-web-sdk <script>` with `implementation:install`, `typecheck`,
   `build`, `dev`, `serve`, `serve:stop`, or `implementation:test:e2e:run`.
 
