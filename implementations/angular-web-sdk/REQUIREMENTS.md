@@ -258,56 +258,39 @@ The app runs against the local mock server out of the box with no manual credent
 
 ## Implementation progress
 
-| Step | Description                                                                                                                                                                                                           | Status         |
-| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
-| 0    | Pre-flight: build tarballs, add `@contentful/optimization-web`, `contentful`, `@contentful/optimization-web-preview-panel`, `@contentful/rich-text-html-renderer`, `dotenv-cli` to `package.json`, run `pnpm install` | ⬜ Not started |
-| 1    | `angular.json` `define` block + dotenv-aware `dev` script + full `.env.example` (12 vars)                                                                                                                             | ⬜ Not started |
-| 2    | `config/environment.ts` + `config/entries.ts` + `config/routes.ts` + `types/contentful.ts` + `utils/type-guards.ts`                                                                                                   | ⬜ Not started |
-| 3    | `services/contentful-client.ts` — CDA factory, `withOptimizationLocale`, `fetchEntry`/`fetchEntries`                                                                                                                  | ⬜ Not started |
-| 4    | `optimization/optimization.service.ts` — singleton, init, page tracking, consent/identify/reset, state observables, preview panel attach                                                                              | ⬜ Not started |
-| 5    | `optimization/optimization-resolver.service.ts` — `resolveEntry`, `getMergeTagValue`, `toStringValue`                                                                                                                 | ⬜ Not started |
-| 6    | `optimization/live-updates.service.ts` — global toggle, `previewPanelVisible$`                                                                                                                                        | ⬜ Not started |
-| 7    | `optimization/merge-tag.pipe.ts`                                                                                                                                                                                      | ⬜ Not started |
-| 8    | `components/optimized-entry/optimized-entry.component.ts` — `data-ctfl-*` attrs, auto/manual tracking, live-update lock logic                                                                                         | ⬜ Not started |
-| 9    | `sections/content-entry/content-entry.component.ts` — auto + manual + click scenarios                                                                                                                                 | ⬜ Not started |
-| 10   | `sections/live-updates-entry/live-updates-entry.component.ts` — default / always-on / locked modes                                                                                                                    | ⬜ Not started |
-| 11   | `sections/nested-content-entry/` + `sections/nested-content-item/` — recursive nested resolution                                                                                                                      | ⬜ Not started |
-| 12   | `components/rich-text-renderer/rich-text-renderer.component.ts` — rich text + merge tag injection                                                                                                                     | ⬜ Not started |
-| 13   | `components/analytics-event-display/analytics-event-display.component.ts` — heartbeat dedup, event feed                                                                                                               | ⬜ Not started |
-| 14   | `pages/home/home.component.ts` — utility panel, entry sections, loading guard                                                                                                                                         | ⬜ Not started |
-| 15   | `pages/page-two/page-two.component.ts` — manual `trackView`, entries, nav link                                                                                                                                        | ⬜ Not started |
-| 16   | `app.routes.ts` + `app.ts` (root layout) — routing, nav, analytics display, entry fetch, flag subscription                                                                                                            | ⬜ Not started |
-| 17   | Validation — `typecheck`, `build`, `implementation:lint`                                                                                                                                                              | ⬜ Not started |
-
 Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 
----
+### Foundation
 
-## Requirement → step mapping
+| #   | Feature                                                           | New deps | Status  |
+| --- | ----------------------------------------------------------------- | -------- | ------- |
+| —   | Config token (`CONFIG` `InjectionToken`, hardcoded mock defaults) | —        | ✅ Done |
+| —   | App shell (routes, root layout, nav)                              | —        | ✅ Done |
 
-| Req | Title                             | Step(s)                        |
-| --- | --------------------------------- | ------------------------------ |
-| 1   | SDK initialisation                | 4                              |
-| 2   | Page tracking                     | 4                              |
-| 3   | Entry resolution                  | 5, 8                           |
-| 4   | Auto-tracking                     | 8, 9                           |
-| 5   | Manual tracking                   | 8, 9                           |
-| 6   | Click scenarios                   | 9                              |
-| 7   | Consent                           | 4, 14                          |
-| 8   | Identify / reset                  | 4, 14                          |
-| 9   | Live updates — global toggle      | 6, 14                          |
-| 10  | Live updates — per-entry override | 8, 10                          |
-| 11  | Preview panel forced live         | 6, 8                           |
-| 12  | Nested entries                    | 11                             |
-| 13  | Merge tags                        | 7, 12                          |
-| 14  | Rich text rendering               | 12                             |
-| 15  | Analytics event display           | 13                             |
-| 16  | Preview panel                     | 4                              |
-| 17  | Multi-route navigation            | 15, 16                         |
-| 18  | Locale consistency                | 3                              |
-| 19  | Feature flags                     | 16                             |
-| 20  | Offline queue / recovery          | SDK-native, no app code needed |
-| 22  | Environment config                | 1, 2                           |
+### SDK features
+
+| Req | Feature                                                               | New deps                                                              | Status         |
+| --- | --------------------------------------------------------------------- | --------------------------------------------------------------------- | -------------- |
+| 1   | SDK initialisation — singleton, init with config, graceful error      | `@contentful/optimization-web`                                        | ⬜ Not started |
+| 2   | Page tracking — emit on every route change incl. initial load         | —                                                                     | ⬜ Not started |
+| 18  | Locale consistency — CDA client wrapped with `withOptimizationLocale` | `contentful`                                                          | ⬜ Not started |
+| 3   | Entry resolution — resolve variant or fall back to baseline           | —                                                                     | ⬜ Not started |
+| 4   | Auto-tracking — `data-ctfl-*` attributes, SDK observes DOM            | —                                                                     | ⬜ Not started |
+| 5   | Manual tracking — explicit `enableElement` / `clearElement`           | —                                                                     | ⬜ Not started |
+| 6   | Click scenarios — direct / descendant / ancestor                      | —                                                                     | ⬜ Not started |
+| 7   | Consent — toggle UI, gate tracking events                             | —                                                                     | ⬜ Not started |
+| 8   | Identify / reset — fixed user ID + traits, persist across reload      | —                                                                     | ⬜ Not started |
+| 9   | Live updates — global toggle (default off)                            | —                                                                     | ⬜ Not started |
+| 10  | Live updates — per-entry override (always-on / locked / default)      | —                                                                     | ⬜ Not started |
+| 11  | Preview panel forced live — all entries live while panel open         | `@contentful/optimization-web-preview-panel`                          | ⬜ Not started |
+| 12  | Nested entries — recursive resolution via `fields.nested`             | —                                                                     | ⬜ Not started |
+| 13  | Merge tags — inline personalised values in rich text                  | —                                                                     | ⬜ Not started |
+| 14  | Rich text rendering — standard nodes + embedded merge tag entries     | `@contentful/rich-text-html-renderer` · `@contentful/rich-text-types` | ⬜ Not started |
+| 15  | Analytics event display — live feed, heartbeat dedup                  | —                                                                     | ⬜ Not started |
+| 16  | Preview panel — env-gated, lazy-loaded, open/close                    | —                                                                     | ⬜ Not started |
+| 17  | Multi-route navigation — two routes, page events, manual conversion   | —                                                                     | ⬜ Not started |
+| 19  | Feature flags — subscribe to `'boolean'` flag, auto-emits view event  | —                                                                     | ⬜ Not started |
+| 20  | Offline queue / recovery                                              | SDK-native — no app code needed                                       | ✅ N/A         |
 
 ---
 

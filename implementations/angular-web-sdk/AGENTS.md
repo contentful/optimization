@@ -13,6 +13,8 @@ server alongside the shared mock API server.
   when it exists.
 - This implementation uses Angular CLI (`@angular/build`) and PM2-managed mock server processes.
 - Use standalone components (no NgModule).
+- Do not use the `.component.ts` suffix — name files after the concept only (e.g. `home.ts`,
+  `app.ts`). This matches the existing `app.ts` convention in this implementation.
 
 ## Commands
 
