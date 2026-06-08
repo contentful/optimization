@@ -1,7 +1,9 @@
 import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
+import java.util.zip.ZipFile
 
 plugins {
     id("com.android.library")
+    id("com.mikepenz.aboutlibraries.plugin") version "13.2.1"
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     // Version inline so the module builds when included as a subproject (parent builds don't pin it).
@@ -84,6 +86,81 @@ val buildJsBridge = tasks.register<Exec>("buildJsBridge") {
 }
 tasks.named("preBuild").configure { dependsOn(buildJsBridge) }
 
+val thirdPartyNoticesFile =
+    providers.gradleProperty("contentful.optimization.thirdPartyNoticesFile")
+        .map { repoRoot.resolve(it) }
+        .orElse(
+            repoRoot.resolve(
+                "build/reports/third-party-notices/android-published-third-party-notices.txt",
+            ),
+        )
+val licenseFile = repoRoot.resolve("LICENSE")
+val generatedThirdPartyNoticesAssetsDir =
+    layout.buildDirectory.dir("generated/third-party-notices/assets")
+val copyThirdPartyNotices = tasks.register("copyThirdPartyNotices") {
+    val noticesOutputFile = generatedThirdPartyNoticesAssetsDir.map {
+        it.file("THIRD_PARTY_NOTICES.txt")
+    }
+    val licenseOutputFile = generatedThirdPartyNoticesAssetsDir.map { it.file("LICENSE") }
+
+    inputs.file(thirdPartyNoticesFile)
+    inputs.file(licenseFile)
+    outputs.files(noticesOutputFile, licenseOutputFile)
+
+    doLast {
+        val noticesFile = thirdPartyNoticesFile.get()
+        val outputDir = generatedThirdPartyNoticesAssetsDir.get().asFile
+        val noticesTargetFile = noticesOutputFile.get().asFile
+        val licenseTargetFile = licenseOutputFile.get().asFile
+
+        check(noticesFile.isFile) {
+            "Missing $noticesFile. Run pnpm notices:generate:android before publishing."
+        }
+        check(licenseFile.isFile) {
+            "Missing $licenseFile."
+        }
+
+        outputDir.deleteRecursively()
+        outputDir.mkdirs()
+        noticesFile.copyTo(noticesTargetFile, overwrite = true)
+        licenseFile.copyTo(licenseTargetFile, overwrite = true)
+    }
+}
+android.sourceSets.getByName("main").assets.srcDir(generatedThirdPartyNoticesAssetsDir)
+tasks.matching { it.name == "packageReleaseAssets" }.configureEach {
+    dependsOn(copyThirdPartyNotices)
+}
+
+val verifyThirdPartyNoticesInReleaseAar = tasks.register("verifyThirdPartyNoticesInReleaseAar") {
+    val releaseAar = layout.buildDirectory.file("outputs/aar/ContentfulOptimization-release.aar")
+
+    dependsOn("bundleReleaseAar")
+    dependsOn(copyThirdPartyNotices)
+    inputs.file(releaseAar)
+    doLast {
+        val releaseAarFile = releaseAar.get().asFile
+
+        check(releaseAarFile.isFile) {
+            "Missing release AAR at $releaseAarFile."
+        }
+        ZipFile(releaseAarFile).use { aar ->
+            check(aar.getEntry("assets/THIRD_PARTY_NOTICES.txt") != null) {
+                "Missing assets/THIRD_PARTY_NOTICES.txt in $releaseAarFile."
+            }
+            check(aar.getEntry("assets/LICENSE") != null) {
+                "Missing assets/LICENSE in $releaseAarFile."
+            }
+        }
+    }
+}
+tasks.matching {
+    it.name == "publishToMavenLocal" ||
+        it.name == "publishAndReleaseToMavenCentral" ||
+        it.name.startsWith("publishMavenPublicationTo")
+}.configureEach {
+    dependsOn(verifyThirdPartyNoticesInReleaseAar)
+}
+
 // Maven Central publishing via the Sonatype Central Portal. The vanniktech plugin configures the
 // AGP single-variant ("release") publication, including sources and javadoc jars, so we do NOT add
 // an android { publishing { singleVariant(...) } } block ourselves (that would double-configure it).
@@ -136,6 +213,21 @@ mavenPublishing {
             connection.set("scm:git:git://github.com/contentful/optimization.git")
             developerConnection.set("scm:git:ssh://git@github.com/contentful/optimization.git")
         }
+    }
+}
+
+aboutLibraries {
+    offlineMode = false
+    collect {
+        filterVariants.add("release")
+        includePlatform = false
+        fetchRemoteLicense = false
+        fetchRemoteFunding = false
+    }
+    export {
+        outputFile = layout.buildDirectory.file("reports/dependency-license/android-third-party-notices.json").get().asFile
+        variant = "release"
+        prettyPrint = true
     }
 }
 

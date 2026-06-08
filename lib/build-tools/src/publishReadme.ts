@@ -1,9 +1,7 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 
 const README_FILE_NAME = 'README.md'
-const README_BACKUP_DIR_NAME = '.tmp'
-const README_BACKUP_FILE_NAME = 'build-tools-publish-readme-backup.md'
 const README_BASE_URL = 'https://publish-readme.invalid'
 const ABSOLUTE_TARGET_PATTERN = /^(?:[a-z][a-z\d+.-]*:|\/\/|#)/i
 const RELATIVE_IMAGE_EXTENSIONS = new Set([
@@ -37,10 +35,6 @@ interface PackageJsonLike {
 
 function getReadmePath(packageDir: string): string {
   return path.resolve(packageDir, README_FILE_NAME)
-}
-
-function getReadmeBackupPath(packageDir: string): string {
-  return path.resolve(packageDir, README_BACKUP_DIR_NAME, README_BACKUP_FILE_NAME)
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -238,14 +232,6 @@ export function preparePublishReadme(
 ): void {
   const resolvedPackageDir = path.resolve(packageDir)
   const readmePath = getReadmePath(resolvedPackageDir)
-  const backupPath = getReadmeBackupPath(resolvedPackageDir)
-  const backupReadme = readFileIfExists(backupPath)
-
-  if (backupReadme !== undefined) {
-    writeFileSync(readmePath, backupReadme)
-    rmSync(backupPath, { force: true })
-  }
-
   const originalReadme = readFileIfExists(readmePath)
 
   if (originalReadme === undefined) {
@@ -260,20 +246,5 @@ export function preparePublishReadme(
     return
   }
 
-  mkdirSync(path.dirname(backupPath), { recursive: true })
-  writeFileSync(backupPath, originalReadme)
   writeFileSync(readmePath, rewrittenReadme)
-}
-
-export function restorePublishReadme(packageDir = '.'): void {
-  const resolvedPackageDir = path.resolve(packageDir)
-  const backupPath = getReadmeBackupPath(resolvedPackageDir)
-  const originalReadme = readFileIfExists(backupPath)
-
-  if (originalReadme === undefined) {
-    return
-  }
-
-  writeFileSync(getReadmePath(resolvedPackageDir), originalReadme)
-  rmSync(backupPath, { force: true })
 }

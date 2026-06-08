@@ -85,7 +85,8 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "dist/**/*"
+    "dist/**/*",
+    "THIRD_PARTY_NOTICES.txt"
   ],
   "buildTools": {
     "bundleSize": {

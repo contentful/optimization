@@ -71,6 +71,9 @@ jobs:
         env:
           RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
 
+      - name: Generate npm third-party notices
+        run: pnpm notices:generate:npm
+
       - name: Prepare package READMEs for publish
         run: |
           pnpm -r --filter "@contentful/optimization-*" \
@@ -78,10 +81,45 @@ jobs:
         env:
           RELEASE_TAG: ${{ env.RELEASE_TAG }}
 
-      - name: Create packages for troubleshooting
+      - name: Stage third-party notices for publish
         run: |
-          pnpm pack --filter "@contentful/optimization-*" \
-            --filter "!@contentful/optimization-js-bridge" --pack-destination pkgs
+          notice_targets="$(./node_modules/.bin/tsx scripts/list-npm-notice-targets.ts npm-targets)"
+
+          if [ -z "$notice_targets" ]; then
+            echo "No npm notice targets found." >&2
+            exit 1
+          fi
+
+          while IFS= read -r target_info; do
+            if [ -z "$target_info" ]; then
+              continue
+            fi
+
+            IFS=$'\t' read -r package_name package_dir report_path <<< "$target_info"
+
+            if [ -z "$package_name" ] || [ -z "$package_dir" ] || [ -z "$report_path" ]; then
+              echo "Invalid npm notice target: $target_info" >&2
+              exit 1
+            fi
+
+            notices_file="$GITHUB_WORKSPACE/$report_path"
+            target="$package_dir/THIRD_PARTY_NOTICES.txt"
+
+            test -f "$notices_file"
+
+            if [ -e "$target" ] && ! cmp -s "$notices_file" "$target"; then
+              echo "Refusing to overwrite existing $target." >&2
+              exit 1
+            fi
+
+            cp "$notices_file" "$target"
+          done <<< "$notice_targets"
+
+      - name: Create packages for troubleshooting
+        run: pnpm run pack:pkgs
+
+      - name: Verify packages include third-party notices
+        run: bash ./scripts/verify-npm-package-notices.sh pkgs
 
       - name: Upload packages for troubleshooting
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -106,9 +144,3 @@ jobs:
             --filter "!@contentful/optimization-js-bridge" publish --access public --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ steps.vault.outputs.GITHUB_PACKAGES_WRITE_TOKEN }}
-
-      - name: Restore package READMEs after publish
-        if: always()
-        run: |
-          pnpm -r --filter "@contentful/optimization-*" \
-            --filter "!@contentful/optimization-js-bridge" exec build-tools rewrite-readme restore

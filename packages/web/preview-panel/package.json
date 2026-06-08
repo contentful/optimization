@@ -45,7 +45,8 @@
     }
   },
   "files": [
-    "dist/**/*"
+    "dist/**/*",
+    "THIRD_PARTY_NOTICES.txt"
   ],
   "buildTools": {
     "bundleSize": {

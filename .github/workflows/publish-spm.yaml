@@ -18,7 +18,7 @@ on:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: Derive release version
         run: |
@@ -48,6 +48,9 @@ jobs:
         env:
           RELEASE_VERSION: ${{ env.RELEASE_VERSION }}
 
+      - name: Generate Swift third-party notices
+        run: pnpm notices:generate:swift
+
       - name: Assemble the package payload
         run: |
           SRC=packages/ios/ContentfulOptimization
@@ -58,11 +61,16 @@ jobs:
           rsync -a --exclude='Resources/optimization-ios-bridge.umd.js' "$SRC"/ "$DST"/
           cp packages/universal/optimization-js-bridge/dist/optimization-ios-bridge.umd.js \
              "$DST/Sources/ContentfulOptimization/Resources/"
+          cp build/reports/third-party-notices/swift-published-third-party-notices.txt \
+             "$DST/THIRD_PARTY_NOTICES.txt"
 
       - name: Verify the payload is complete
         run: |
           test -f "$RUNNER_TEMP/pkg/Package.swift"
+          test -f "$RUNNER_TEMP/pkg/THIRD_PARTY_NOTICES.txt"
           test -f "$RUNNER_TEMP/pkg/Sources/ContentfulOptimization/Resources/optimization-ios-bridge.umd.js"
+          cmp -s build/reports/third-party-notices/swift-published-third-party-notices.txt \
+            "$RUNNER_TEMP/pkg/THIRD_PARTY_NOTICES.txt"
 
       - name: Set up the deploy key for SSH push
         if: github.event_name == 'release' || inputs.publish

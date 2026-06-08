@@ -1,0 +1,10 @@
+options:
+  packagePaths:
+    - packages/ios/ContentfulOptimization/Package.swift
+  outputPath: build/reports/third-party-notices/ios-license-plist
+  markdownPath: build/reports/third-party-notices/ios-third-party-notices.raw.md
+  prefix: ios-third-party-notices
+  force: true
+  addVersionNumbers: true
+  addSources: true
+  suppressOpeningDirectory: true

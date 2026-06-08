@@ -31,6 +31,8 @@ Repository-wide baseline. Child files add local constraints; the nearest child f
 - Match nearby idioms before adding abstractions. Common repo idioms: `_` for intentional unused
   bindings, named constants for non-obvious magic values, strict typed code, and Prettier-organized
   imports.
+- Write new JavaScript/Node tooling as TypeScript whenever the repo toolchain can run it; do not add
+  `.js` or `.mjs` scripts when a `.ts` script is practical.
 - Make lint fixes AST-local where possible. If a local rewrite keeps failing, inspect the exact rule
   and choose a pattern the repo already uses.
 - Never add `eslint-disable`, `eslint-disable-next-line`, or `eslint-disable-line` unless the user
@@ -43,7 +45,9 @@ Repository-wide baseline. Child files add local constraints; the nearest child f
   implementation, or shared tooling edits, include lint before claiming validation is complete.
 - If no local lint script exists, use the nearest aggregate command: `pnpm lint` for `lib/` or
   `packages/`; `pnpm implementation:lint` for `implementations/`.
-- Run Prettier on touched Markdown or expected-format files, then run `git diff --check`.
+- Run Prettier on touched Markdown or expected-format files. Use `git diff --check` only when
+  touched files are not fully covered by Prettier or are especially whitespace-sensitive, such as
+  shell scripts, Gradle files, patch files, or mixed generated-adjacent text.
 - Validate package and implementation changes in dependency order: source package typecheck/tests,
   source package build, `pnpm build:pkgs` when implementations consume it, implementation install,
   then downstream checks.
