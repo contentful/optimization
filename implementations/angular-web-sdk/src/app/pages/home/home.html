@@ -13,6 +13,20 @@
   <p class="panel__stat" data-testid="selected-optimizations-count">
     Active optimizations <span>{{ selectedOptimizationCount() }}</span>
   </p>
+  <p class="panel__stat" data-testid="consent-status">
+    Consent: {{ consent() === undefined ? 'undefined' : consent() }}
+  </p>
+  <div class="panel__actions">
+    @if (consent() === true) {
+    <button class="btn btn--danger" data-testid="unconsent-button" (click)="toggleConsent()">
+      Withdraw consent
+    </button>
+    } @else {
+    <button class="btn btn--primary" data-testid="consent-button" (click)="toggleConsent()">
+      Grant consent
+    </button>
+    }
+  </div>
 </section>
 
 <section class="page-section">

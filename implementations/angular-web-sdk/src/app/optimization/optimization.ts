@@ -1,10 +1,24 @@
 import { inject, Injectable } from '@angular/core'
 import { NavigationEnd, Router } from '@angular/router'
 import ContentfulOptimization from '@contentful/optimization-web'
+import { Observable } from 'rxjs'
 import { filter } from 'rxjs/operators'
 import { CONFIG } from '../config/config.token'
 
 export type OptimizationInstance = ContentfulOptimization
+
+export function fromSdkObservable<T>(sdkObs: {
+  subscribe: (fn: (v: T) => void) => { unsubscribe: () => void }
+}): Observable<T> {
+  return new Observable<T>((subscriber) => {
+    const sub = sdkObs.subscribe((v) => {
+      subscriber.next(v)
+    })
+    return () => {
+      sub.unsubscribe()
+    }
+  })
+}
 
 function resolveLogLevel(raw: string): 'debug' | 'warn' | 'error' {
   if (raw === 'debug' || raw === 'warn' || raw === 'error') return raw
@@ -42,6 +56,7 @@ function getOrCreateInstance(config: {
 export class Optimization {
   readonly sdk: OptimizationInstance | undefined
   readonly error: Error | undefined
+  readonly consent$: Observable<boolean | undefined>
 
   constructor() {
     const config = inject(CONFIG)
@@ -54,6 +69,13 @@ export class Optimization {
       this.error = err instanceof Error ? err : new Error(String(err))
     }
 
+    this.consent$ =
+      this.sdk !== undefined
+        ? fromSdkObservable<boolean | undefined>(this.sdk.states.consent)
+        : new Observable<boolean | undefined>((sub) => {
+            sub.next(undefined)
+          })
+
     // Page events are the most critical call in the integration — the SDK uses the current URL
     // to resolve which experiences and variants apply to the user. Without this, personalisation
     // does not work. Must fire on every route change including the initial load, and fires
@@ -63,5 +85,9 @@ export class Optimization {
       .subscribe((e) => {
         void this.sdk?.page({ properties: { url: e.urlAfterRedirects } })
       })
+  }
+
+  setConsent(value: boolean): void {
+    this.sdk?.consent(value)
   }
 }

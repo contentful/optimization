@@ -3,25 +3,10 @@ import { toSignal } from '@angular/core/rxjs-interop'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import { Observable } from 'rxjs'
 import { AUTO_OBSERVED_ENTRY_IDS, MANUALLY_OBSERVED_ENTRY_IDS } from '../../config/entries'
-import { Optimization } from '../../optimization/optimization'
+import { fromSdkObservable, Optimization } from '../../optimization/optimization'
 import { ContentEntry, type EntryClickScenario } from '../../sections/content-entry/content-entry'
 import { ContentfulClient } from '../../services/contentful-client'
 import type { ContentfulEntry } from '../../types/contentful'
-
-// The SDK's Observable uses a plain-function subscriber protocol (not RxJS Observer objects).
-// This adapter bridges the two so `toSignal` and the async pipe can consume SDK state.
-function fromSdkObservable<T>(sdkObs: {
-  subscribe: (fn: (v: T) => void) => { unsubscribe: () => void }
-}): Observable<T> {
-  return new Observable<T>((subscriber) => {
-    const sub = sdkObs.subscribe((v) => {
-      subscriber.next(v)
-    })
-    return () => {
-      sub.unsubscribe()
-    }
-  })
-}
 
 const CLICK_SCENARIO_BY_ENTRY_ID: Readonly<Record<string, EntryClickScenario>> = {
   '4ib0hsHWoSOnCVdDkizE8d': 'direct',
@@ -40,6 +25,8 @@ export class Home implements OnInit {
 
   protected readonly entriesById = signal<Map<string, ContentfulEntry>>(new Map())
   protected readonly loading = signal(true)
+
+  protected readonly consent = toSignal(this.optimization.consent$)
 
   protected readonly selectedOptimizations = toSignal(
     this.optimization.sdk !== undefined
@@ -64,6 +51,10 @@ export class Home implements OnInit {
 
   protected clickScenario(id: string): EntryClickScenario | undefined {
     return CLICK_SCENARIO_BY_ENTRY_ID[id]
+  }
+
+  protected toggleConsent(): void {
+    this.optimization.setConsent(this.consent() !== true)
   }
 
   ngOnInit(): void {
