@@ -153,6 +153,8 @@ export interface CoreStates {
   selectedOptimizations: Observable<SelectedOptimizationArray | undefined>
   /** Whether optimization data is available. */
   canOptimize: Observable<boolean>
+  /** Whether the current consent + allow-list configuration could ever produce optimizations. */
+  optimizationPossible: Observable<boolean>
 }
 
 /**
@@ -216,6 +218,16 @@ let statefulInstanceCounter = 0
  *
  * @public
  */
+const OPTIMIZATION_UNLOCKING_EVENT_TYPES: readonly EventType[] = [
+  'identify',
+  'page',
+  'screen',
+  'track',
+  'group',
+  'alias',
+  'component',
+]
+
 class CoreStateful extends CoreStatefulEventEmitter implements ConsentController, ConsentGuard {
   private readonly singletonOwner: string
   private readonly configuredExperienceLocale: string | undefined
@@ -224,6 +236,11 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   protected readonly experienceQueue: ExperienceQueue
   protected readonly insightsQueue: InsightsQueue
   protected readonly onEventBlocked?: CoreStatefulConfig['onEventBlocked']
+
+  private readonly optimizationPossibleSignal = signalFns.computed<boolean>(() => {
+    if (consentSignal.value === true) return true
+    return OPTIMIZATION_UNLOCKING_EVENT_TYPES.some((type) => this.allowedEventTypes.includes(type))
+  })
 
   /**
    * Expose merged observable state for consumers.
@@ -236,6 +253,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     eventStream: toObservable(eventSignal),
     locale: toObservable(localeSignal),
     canOptimize: toObservable(canOptimizeSignal),
+    optimizationPossible: toObservable(this.optimizationPossibleSignal),
     selectedOptimizations: toObservable(selectedOptimizationsSignal),
     previewPanelAttached: toObservable(previewPanelAttachedSignal),
     previewPanelOpen: toObservable(previewPanelOpenSignal),

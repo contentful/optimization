@@ -139,6 +139,51 @@ describe('OptimizedEntry', () => {
     await view.unmount()
   })
 
+  it('renders baseline immediately for optimized entries when optimization is not possible', async () => {
+    const { optimization } = createRuntime((entry, selectedOptimizations) => {
+      if (!selectedOptimizations?.length) return { entry }
+      return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
+    }, false)
+
+    const view = await renderComponent(
+      <OptimizedEntry baselineEntry={optimizedBaseline} loadingFallback={() => 'loading'}>
+        {(resolved) => readTitle(resolved)}
+      </OptimizedEntry>,
+      optimization,
+    )
+
+    expect(view.container.textContent).toContain('optimized-baseline')
+    expect(view.container.textContent).not.toContain('loading')
+
+    await view.unmount()
+  })
+
+  it('transitions out of the loading fallback once optimization becomes impossible', async () => {
+    const { optimization, setOptimizationPossible } = createRuntime(
+      (entry, selectedOptimizations) => {
+        if (!selectedOptimizations?.length) return { entry }
+        return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
+      },
+      true,
+    )
+
+    const view = await renderComponent(
+      <OptimizedEntry baselineEntry={optimizedBaseline} loadingFallback={() => 'loading'}>
+        {(resolved) => readTitle(resolved)}
+      </OptimizedEntry>,
+      optimization,
+    )
+
+    expect(view.container.textContent).toContain('loading')
+
+    await setOptimizationPossible(false)
+
+    expect(view.container.textContent).toContain('optimized-baseline')
+    expect(view.container.textContent).not.toContain('loading')
+
+    await view.unmount()
+  })
+
   it('maps data-ctfl-* attributes from resolved optimization metadata', async () => {
     const { optimization, emit } = createRuntime((entry, selectedOptimizations) => {
       const selected = selectedOptimizations?.[0]

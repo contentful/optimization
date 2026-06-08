@@ -31,6 +31,7 @@ export function useOptimizedEntry({
     SelectedOptimizationArray | undefined
   >(undefined)
   const [canOptimize, setCanOptimize] = useState(false)
+  const [optimizationPossible, setOptimizationPossible] = useState(true)
   const [sdkInitialized, setSdkInitialized] = useState(false)
 
   const shouldLiveUpdate = resolveShouldLiveUpdate({
@@ -42,6 +43,7 @@ export function useOptimizedEntry({
   useEffect(() => {
     if (!sdk || !isReady) {
       setCanOptimize(false)
+      setOptimizationPossible(true)
       return
     }
 
@@ -65,9 +67,14 @@ export function useOptimizedEntry({
       setCanOptimize(value)
     })
 
+    const optimizationPossibleSubscription = sdk.states.optimizationPossible.subscribe((value) => {
+      setOptimizationPossible(value)
+    })
+
     return () => {
       selectedOptimizationsSubscription.unsubscribe()
       canOptimizeSubscription.unsubscribe()
+      optimizationPossibleSubscription.unsubscribe()
     }
   }, [isReady, sdk, shouldLiveUpdate])
 
@@ -84,7 +91,7 @@ export function useOptimizedEntry({
   )
 
   const requiresOptimization = hasOptimizationReferences(baselineEntry)
-  const isContentReady = requiresOptimization ? canOptimize : true
+  const isContentReady = requiresOptimization ? canOptimize || !optimizationPossible : true
 
   return {
     canOptimize,
