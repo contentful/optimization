@@ -72,56 +72,39 @@ for the entry contract.
 - Node.js >= 20.19.0 (24.13.0 recommended to match `.nvmrc`)
 - pnpm 10.x
 
-## Quick start
-
-Run the one-shot launcher to configure everything and start the app:
-
-```sh
-./implementations/react-web-sdk/scripts/launch-reference-app.sh
-```
-
-Or from the **implementation directory**:
-
-```sh
-pnpm launch
-```
-
-This single command will install dependencies, build SDK packages, set up `.env`, start the mock API
-server, and launch the dev server. Once complete, the app is available at `http://localhost:3000`.
-
-Use flags to skip steps on subsequent runs:
-
-```sh
-./scripts/launch-reference-app.sh --skip-build
-./scripts/launch-reference-app.sh --skip-install
-```
-
-## Manual setup
+## Setup
 
 From the **repository root**:
 
 ```sh
 pnpm build:pkgs
 pnpm implementation:run -- react-web-sdk implementation:install
+test -f implementations/react-web-sdk/.env || cp implementations/react-web-sdk/.env.example implementations/react-web-sdk/.env
 ```
 
 ## Running locally
 
 From the **repository root**:
 
-1. Start the development server:
+1. Start the mock API server:
+
+```sh
+pnpm serve:mocks
+```
+
+2. In another terminal, start the development server:
 
 ```sh
 pnpm implementation:run -- react-web-sdk dev
 ```
 
-2. Build for production:
+3. Build for production:
 
 ```sh
 pnpm implementation:run -- react-web-sdk build
 ```
 
-3. Run type checking:
+4. Run type checking:
 
 ```sh
 pnpm implementation:run -- react-web-sdk typecheck
