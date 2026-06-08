@@ -4,4 +4,4 @@ import { Component } from '@angular/core'
   selector: 'app-page-two',
   template: `<p>Page Two</p>`,
 })
-export class PageTwoComponent {}
+export class PageTwo {}
