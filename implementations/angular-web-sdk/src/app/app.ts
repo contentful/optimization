@@ -9,6 +9,8 @@ import { AnalyticsEventDisplay } from './components/analytics-event-display/anal
   templateUrl: './app.html',
 })
 export class App {
-  // forces singleton creation on startup to wire up page tracking before first route
-  private readonly _ = inject(NgContentfulOptimization)
+  constructor() {
+    // forces singleton creation on startup to wire up page tracking before first route
+    inject(NgContentfulOptimization)
+  }
 }
