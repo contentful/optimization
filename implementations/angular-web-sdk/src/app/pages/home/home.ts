@@ -2,7 +2,12 @@ import { Component, computed, inject, type OnInit, signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import { Observable } from 'rxjs'
-import { AUTO_OBSERVED_ENTRY_IDS, MANUALLY_OBSERVED_ENTRY_IDS } from '../../config/entries'
+import {
+  AUTO_OBSERVED_ENTRY_IDS,
+  LIVE_UPDATES_ENTRY_ID,
+  MANUALLY_OBSERVED_ENTRY_IDS,
+} from '../../config/entries'
+import { LiveUpdates } from '../../optimization/live-updates'
 import { fromSdkObservable, Optimization } from '../../optimization/optimization'
 import { ContentEntry, type EntryClickScenario } from '../../sections/content-entry/content-entry'
 import { ContentfulClient } from '../../services/contentful-client'
@@ -22,6 +27,7 @@ const CLICK_SCENARIO_BY_ENTRY_ID: Readonly<Record<string, EntryClickScenario>> =
 export class Home implements OnInit {
   private readonly contentfulClient = inject(ContentfulClient)
   private readonly optimization = inject(Optimization)
+  protected readonly liveUpdatesService = inject(LiveUpdates)
 
   protected readonly entriesById = signal<Map<string, ContentfulEntry>>(new Map())
   protected readonly loading = signal(true)
@@ -51,6 +57,7 @@ export class Home implements OnInit {
 
   protected readonly autoIds = AUTO_OBSERVED_ENTRY_IDS
   protected readonly manualIds = MANUALLY_OBSERVED_ENTRY_IDS
+  protected readonly liveUpdatesEntryId = LIVE_UPDATES_ENTRY_ID
 
   protected readonly selectedOptimizationCount = computed(
     () => this.selectedOptimizations()?.length ?? 0,
@@ -76,13 +83,22 @@ export class Home implements OnInit {
     this.optimization.reset()
   }
 
+  protected toggleGlobalLiveUpdates(): void {
+    this.liveUpdatesService.toggle()
+  }
+
   ngOnInit(): void {
     void this.loadEntries()
   }
 
   private async loadEntries(): Promise<void> {
-    const allIds = [...AUTO_OBSERVED_ENTRY_IDS, ...MANUALLY_OBSERVED_ENTRY_IDS]
-    const entries = await this.contentfulClient.fetchEntries(allIds)
+    const allIds = [
+      ...AUTO_OBSERVED_ENTRY_IDS,
+      ...MANUALLY_OBSERVED_ENTRY_IDS,
+      LIVE_UPDATES_ENTRY_ID,
+    ]
+    const unique = [...new Set(allIds)]
+    const entries = await this.contentfulClient.fetchEntries(unique)
     const map = new Map<string, ContentfulEntry>()
     for (const entry of entries) {
       map.set(entry.sys.id, entry)

@@ -19,6 +19,9 @@
   <p class="panel__stat" data-testid="identified-status">
     Identified: {{ isIdentified() ? 'Yes' : 'No' }}
   </p>
+  <p class="panel__stat" data-testid="live-updates-status">
+    Global live updates: <span>{{ liveUpdatesService.globalLiveUpdates() ? 'ON' : 'OFF' }}</span>
+  </p>
   <div class="panel__actions">
     @if (consent() === true) {
     <button class="btn btn--danger" data-testid="unconsent-button" (click)="toggleConsent()">
@@ -33,39 +36,91 @@
       Identify
     </button>
     <button class="btn btn--secondary" data-testid="reset-button" (click)="reset()">Reset</button>
+    <button
+      class="btn btn--secondary"
+      data-testid="live-updates-toggle"
+      (click)="toggleGlobalLiveUpdates()"
+    >
+      Global: {{ liveUpdatesService.globalLiveUpdates() ? 'ON' : 'OFF' }}
+    </button>
   </div>
 </section>
 
-<section class="page-section">
-  <header class="page-section__header">
-    <h2>Auto-observed entries</h2>
-    <p>Tracked via <code>data-ctfl-*</code> attributes — SDK observes the DOM automatically.</p>
-  </header>
-  <div id="auto-observed" class="entry-grid">
-    @for (id of autoIds; track id) { @let entry = entryFor(id); @if (entry) {
-    <app-content-entry
-      [entry]="entry"
-      observation="auto"
-      [clickScenario]="clickScenario(id)"
-      [selectedOptimizations]="selectedOptimizations()"
-    />
-    } }
-  </div>
-</section>
+<div class="sections-row">
+  <section class="page-section">
+    <header class="page-section__header">
+      <h2>Auto-observed</h2>
+      <p>Tracked via <code>data-ctfl-*</code> attributes.</p>
+    </header>
+    <div id="auto-observed" class="entry-grid">
+      @for (id of autoIds; track id) { @let entry = entryFor(id); @if (entry) {
+      <app-content-entry
+        [entry]="entry"
+        observation="auto"
+        [clickScenario]="clickScenario(id)"
+        [selectedOptimizations]="selectedOptimizations()"
+      />
+      } }
+    </div>
+  </section>
 
-<section class="page-section">
-  <header class="page-section__header">
-    <h2>Manually-observed entries</h2>
-    <p>Tracked via explicit <code>enableElement</code> / <code>clearElement</code> calls.</p>
-  </header>
-  <div id="manually-observed" class="entry-grid">
-    @for (id of manualIds; track id) { @let entry = entryFor(id); @if (entry) {
-    <app-content-entry
-      [entry]="entry"
-      observation="manual"
-      [selectedOptimizations]="selectedOptimizations()"
-    />
-    } }
-  </div>
-</section>
+  <section class="page-section">
+    <header class="page-section__header">
+      <h2>Manually-observed</h2>
+      <p>Tracked via explicit <code>enableElement</code> calls.</p>
+    </header>
+    <div id="manually-observed" class="entry-grid">
+      @for (id of manualIds; track id) { @let entry = entryFor(id); @if (entry) {
+      <app-content-entry
+        [entry]="entry"
+        observation="manual"
+        [selectedOptimizations]="selectedOptimizations()"
+      />
+      } }
+    </div>
+  </section>
+
+  <section class="page-section" data-testid="live-updates-section">
+    <header class="page-section__header">
+      <h2>Live updates</h2>
+      <p>Default · always-on · locked.</p>
+    </header>
+    @let liveEntry = entryFor(liveUpdatesEntryId); @if (liveEntry) {
+    <div class="entry-grid">
+      <div class="live-updates-item">
+        <p class="live-updates-item__label" data-testid="live-updates-default-label">
+          Default ({{ liveUpdatesService.globalLiveUpdates() ? 'ON' : 'OFF' }})
+        </p>
+        <app-content-entry
+          [entry]="liveEntry"
+          observation="auto"
+          [selectedOptimizations]="selectedOptimizations()"
+        />
+      </div>
+      <div class="live-updates-item">
+        <p class="live-updates-item__label" data-testid="live-updates-always-on-label">
+          Always live
+        </p>
+        <app-content-entry
+          [entry]="liveEntry"
+          observation="auto"
+          [liveUpdates]="true"
+          [selectedOptimizations]="selectedOptimizations()"
+        />
+      </div>
+      <div class="live-updates-item">
+        <p class="live-updates-item__label" data-testid="live-updates-locked-label">
+          Always locked
+        </p>
+        <app-content-entry
+          [entry]="liveEntry"
+          observation="auto"
+          [liveUpdates]="false"
+          [selectedOptimizations]="selectedOptimizations()"
+        />
+      </div>
+    </div>
+    }
+  </section>
+</div>
 }

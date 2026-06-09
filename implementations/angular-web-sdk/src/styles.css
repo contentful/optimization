@@ -124,11 +124,19 @@ nav a.active {
 /* Layout */
 
 main {
-  max-width: 960px;
+  max-width: 1280px;
   margin: 1.5rem auto;
   padding: 0 1.5rem 3rem;
   display: grid;
-  gap: 2rem;
+  gap: 1.5rem;
+}
+
+.sections-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+  margin-top: 1rem;
 }
 
 /* Card */
@@ -260,7 +268,6 @@ main {
 .page-section__header {
   border-left: 3px solid var(--color-primary);
   padding: 0.25rem 0 0.25rem 0.75rem;
-  margin-top: 1.5rem;
   margin-bottom: 1rem;
 }
 
@@ -303,6 +310,7 @@ main {
 
 .entry-grid {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.5rem;
 }
 
@@ -365,4 +373,20 @@ main {
   color: var(--color-text-muted);
   font-family: monospace;
   margin-top: 0.25rem;
+}
+
+/* Live updates section */
+
+.live-updates-item {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.live-updates-item__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  margin: 0;
 }

@@ -9,10 +9,13 @@ import {
   input,
   type OnDestroy,
   signal,
+  untracked,
 } from '@angular/core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
+import type { EntrySkeletonType } from 'contentful'
+import { LiveUpdates } from '../../optimization/live-updates'
 import { Optimization } from '../../optimization/optimization'
-import { OptimizationResolver } from '../../optimization/optimization-resolver'
+import { OptimizationResolver, type ResolvedData } from '../../optimization/optimization-resolver'
 import type { ContentfulEntry, RichTextDocument } from '../../types/contentful'
 import { isRecord } from '../../utils/type-guards'
 
@@ -54,14 +57,78 @@ export class ContentEntry implements OnDestroy {
   readonly clickScenario = input<EntryClickScenario | undefined>(undefined)
   // Passed down from Home so re-resolution happens whenever selectedOptimizations changes.
   readonly selectedOptimizations = input<SelectedOptimizationArray | undefined>(undefined)
+  // undefined = follow global toggle; true = always live; false = always locked
+  readonly liveUpdates = input<boolean | undefined>(undefined)
 
   private readonly optimization = inject(Optimization)
   private readonly resolver = inject(OptimizationResolver)
   private readonly elementRef = inject<ElementRef<Element>>(ElementRef)
+  private readonly liveUpdatesService = inject(LiveUpdates)
 
-  private readonly resolved = computed(() =>
-    this.resolver.resolveEntry(this.entry(), this.selectedOptimizations()),
-  )
+  // Whether this entry should react to profile changes right now.
+  private readonly isLive = computed(() => {
+    const override = this.liveUpdates()
+    if (override !== undefined) return override
+    return this.liveUpdatesService.globalLiveUpdates()
+  })
+
+  // Frozen snapshot captured when live-updates is off. undefined means "live mode, resolve fresh".
+  private readonly lockedSnapshot = signal<ResolvedData<EntrySkeletonType> | undefined>(undefined)
+
+  constructor() {
+    // When isLive changes: clear the snapshot (live) or capture it (locked).
+    effect(() => {
+      const live = this.isLive()
+      if (live) {
+        untracked(() => {
+          this.lockedSnapshot.set(undefined)
+        })
+      } else {
+        const fresh = this.resolver.resolveEntry(
+          untracked(() => this.entry()),
+          untracked(() => this.selectedOptimizations()),
+        )
+        untracked(() => {
+          this.lockedSnapshot.set(fresh)
+        })
+      }
+    })
+
+    afterNextRender(() => {
+      this.domReady.set(true)
+    })
+
+    // Re-run whenever the resolved entry changes so manual tracking stays in sync with live updates.
+    effect(() => {
+      const ready = this.domReady()
+      const mode = this.observation()
+      if (!ready || mode !== 'manual' || this.optimization.sdk === undefined) return
+
+      const meta = this.meta()
+
+      if (this.manualTrackingActive) {
+        this.optimization.sdk.tracking.clearElement('views', this.elementRef.nativeElement)
+        this.manualTrackingActive = false
+      }
+
+      this.optimization.sdk.tracking.enableElement('views', this.elementRef.nativeElement, {
+        data: {
+          entryId: this.resolvedId(),
+          optimizationId: meta.experienceId,
+          sticky: meta.sticky,
+          variantIndex: meta.variantIndex,
+        },
+      })
+      this.manualTrackingActive = true
+    })
+  }
+
+  private readonly resolved = computed(() => {
+    const locked = this.lockedSnapshot()
+    if (locked !== undefined) return locked
+    // Live mode: re-resolve whenever selectedOptimizations or entry changes.
+    return this.resolver.resolveEntry(this.entry(), this.selectedOptimizations())
+  })
 
   protected readonly resolvedEntry = computed(() => this.resolved().entry as ContentfulEntry)
   protected readonly meta = computed(() =>
@@ -96,36 +163,6 @@ export class ContentEntry implements OnDestroy {
   private readonly domReady = signal(false)
   // Guards clearElement — only call it when enableElement was previously called on this element.
   private manualTrackingActive = false
-
-  constructor() {
-    afterNextRender(() => {
-      this.domReady.set(true)
-    })
-
-    // Re-run whenever the resolved entry changes so manual tracking stays in sync with live updates.
-    effect(() => {
-      const ready = this.domReady()
-      const mode = this.observation()
-      if (!ready || mode !== 'manual' || this.optimization.sdk === undefined) return
-
-      const meta = this.meta()
-
-      if (this.manualTrackingActive) {
-        this.optimization.sdk.tracking.clearElement('views', this.elementRef.nativeElement)
-        this.manualTrackingActive = false
-      }
-
-      this.optimization.sdk.tracking.enableElement('views', this.elementRef.nativeElement, {
-        data: {
-          entryId: this.resolvedId(),
-          optimizationId: meta.experienceId,
-          sticky: meta.sticky,
-          variantIndex: meta.variantIndex,
-        },
-      })
-      this.manualTrackingActive = true
-    })
-  }
 
   ngOnDestroy(): void {
     if (this.manualTrackingActive) {
