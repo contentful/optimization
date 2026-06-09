@@ -1,53 +1,11 @@
 # Angular Web SDK — Requirements
 
-> SDK: `@contentful/optimization-web` (raw Web SDK — no Angular-specific package exists yet)
-> Pattern: Angular service/directive adapter over the raw Web SDK, mirroring `web-sdk_react`
+Angular service/directive adapter over the raw `@contentful/optimization-web` SDK, mirroring the
+React reference implementation.
 
 ---
 
-## Implementation progress
-
-Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
-
-### Foundation
-
-| #   | Feature                                                           | New deps | Status  |
-| --- | ----------------------------------------------------------------- | -------- | ------- |
-| —   | Config token (`CONFIG` `InjectionToken`, hardcoded mock defaults) | —        | ✅ Done |
-| —   | App shell (routes, root layout, nav)                              | —        | ✅ Done |
-
-### SDK features
-
-| Req | Feature                                                               | New deps                                     | Status  |
-| --- | --------------------------------------------------------------------- | -------------------------------------------- | ------- |
-| 1   | SDK initialisation — singleton, init with config, graceful error      | `@contentful/optimization-web`               | ✅ Done |
-| 2   | Page tracking — emit on every route change incl. initial load         | —                                            | ✅ Done |
-| 3   | Entry resolution — resolve variant or fall back to baseline           | —                                            | ✅ Done |
-| 4   | Auto-tracking — `data-ctfl-*` attributes, SDK observes DOM            | —                                            | ✅ Done |
-| 5   | Manual tracking — explicit `enableElement` / `clearElement`           | —                                            | ✅ Done |
-| 6   | Click scenarios — direct / descendant / ancestor                      | —                                            | ✅ Done |
-| 7   | Consent — toggle UI, gate tracking events                             | —                                            | ✅ Done |
-| 8   | Identify / reset — fixed user ID + traits, persist across reload      | —                                            | ✅ Done |
-| 9   | Live updates — global toggle (default off)                            | —                                            | ✅ Done |
-| 10  | Live updates — per-entry override (always-on / locked / default)      | —                                            | ✅ Done |
-| 11  | Preview panel forced live — all entries live while panel open         | `@contentful/optimization-web-preview-panel` | ✅ Done |
-| 12  | Nested entries — recursive resolution via `fields.nested`             | —                                            | ✅ Done |
-| 13  | Merge tags — inline personalised values in rich text                  | —                                            | ✅ Done |
-| 14  | Rich text rendering — standard nodes + embedded merge tag entries     | `@contentful/rich-text-types`                | ✅ Done |
-| 15  | Analytics event display — live feed, heartbeat dedup                  | —                                            | ✅ Done |
-| 16  | Preview panel — env-gated, lazy-loaded, open/close                    | `@contentful/optimization-web-preview-panel` | ✅ Done |
-| 17  | Multi-route navigation — two routes, page events, manual conversion   | —                                            | ✅ Done |
-| 18  | Locale consistency — CDA client wrapped with `withOptimizationLocale` | `contentful`                                 | ✅ Done |
-| 19  | Feature flags — subscribe to `'boolean'` flag, auto-emits view event  | —                                            | ✅ Done |
-| 20  | Offline queue / recovery                                              | SDK-native — no app code needed              | ✅ N/A  |
-
----
-
-## Features and acceptance criteria
-
----
-
-### 1. SDK initialisation
+## 1. SDK initialisation
 
 - On load, the app initialises the SDK with the correct client credentials and API endpoints from
   environment config.
@@ -57,7 +15,7 @@ Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 
 ---
 
-### 2. Page tracking
+## 2. Page tracking
 
 - A page event is emitted when the app first loads.
 - A page event is emitted each time the user navigates to a different route within the SPA.
@@ -65,7 +23,7 @@ Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 
 ---
 
-### 3. Entry resolution
+## 3. Entry resolution
 
 - When a user has no active experience, the baseline entry content is shown.
 - When a user matches an experience, the resolved variant content is shown instead of the baseline.
@@ -74,7 +32,7 @@ Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 
 ---
 
-### 4. Auto-tracking
+## 4. Auto-tracking
 
 - When an entry becomes visible in the viewport, a view event is emitted automatically.
 - When the user clicks an entry, a click event is emitted automatically.
@@ -83,7 +41,7 @@ Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 
 ---
 
-### 5. Manual tracking
+## 5. Manual tracking
 
 - A designated set of entries is tracked via explicit SDK calls rather than DOM attributes.
 - Those entries emit view events identical to auto-tracked entries.
@@ -91,7 +49,7 @@ Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 
 ---
 
-### 6. Click scenarios
+## 6. Click scenarios
 
 - Clicking the entry element itself emits a `component_click` event (direct).
 - Clicking a button or link inside the entry emits a `component_click` event (descendant).
@@ -100,7 +58,7 @@ Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 
 ---
 
-### 7. Consent
+## 7. Consent
 
 - On first load, no tracking events (views, clicks, hovers) are emitted.
 - After the user grants consent, tracking begins immediately.
@@ -110,7 +68,7 @@ Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 
 ---
 
-### 8. Identify and reset
+## 8. Identify and reset
 
 - After clicking Identify, the SDK associates the session with a fixed user ID and traits.
 - The UI shows an "identified" status (`Yes` / `No`) that updates immediately.
@@ -120,7 +78,7 @@ Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 
 ---
 
-### 9. Live updates — global toggle
+## 9. Live updates — global toggle
 
 - When live updates are off (default), an entry shows the variant it first resolved to and does not
   change even if the profile changes.
@@ -129,7 +87,7 @@ Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 
 ---
 
-### 10. Live updates — per-entry override
+## 10. Live updates — per-entry override
 
 - An entry marked "always live" updates its content on profile changes even when the global toggle
   is off.
@@ -139,7 +97,7 @@ Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 
 ---
 
-### 11. Preview panel forced live
+## 11. Preview panel forced live
 
 - With the preview panel open, an entry marked "always locked" still updates when the panel changes
   the active audience or variant.
@@ -155,21 +113,21 @@ Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 
 ---
 
-### 12. Nested entries
+## 12. Nested entries
 
 - A parent entry and its nested child entries are all displayed.
 - Each nested entry resolves to its own variant independently of the parent.
 - Adding or removing nesting levels in the content model does not require code changes — the
   rendering recurses automatically.
 
-**Visual verification:** Entry `1JAU028vQ7v6nB2swl3NBo` in the Auto-observed section renders as a
-tree — the top-level card shows its text with a `nested` badge, and each child is indented below
-with its own card. Each level resolves its own SDK variant independently. Enable Live Updates and
-click Identify to see each level switch to its variant.
+**Visual verification:** The nested entry card in the Auto-observed section renders as a tree — the
+top-level card shows its text with a `nested` badge, and each child is indented below with its own
+card. Each level resolves its own SDK variant independently. Enable Live Updates and click Identify
+to see each level switch to its variant.
 
 ---
 
-### 13. Merge tags
+## 13. Merge tags
 
 - Rich text that contains a merge tag entry renders the personalised value at that position.
 - When no personalised value is available, a visible fallback placeholder is shown instead of blank
@@ -182,7 +140,7 @@ placeholder.
 
 ---
 
-### 14. Rich text rendering
+## 14. Rich text rendering
 
 - All standard rich text node types (headings, paragraphs, lists, inline entries, etc.) are rendered
   correctly.
@@ -194,7 +152,7 @@ Merge tag nodes within the document are replaced with their resolved value.
 
 ---
 
-### 15. Analytics event display
+## 15. Analytics event display
 
 - Every tracking event (page, view, click, hover) appears in the panel as it occurs.
 - View and hover events with the same ID show a single row that updates its duration rather than
@@ -205,12 +163,12 @@ Merge tag nodes within the document are replaced with their resolved value.
 
 ---
 
-### 16. Preview panel
+## 16. Preview panel
 
-- When the preview panel feature is enabled (via environment variable), the panel attaches on load.
+- When the preview panel feature is enabled, the panel attaches on load and is lazy-loaded (no panel
+  code is loaded when the feature is disabled).
 - The panel can be opened and closed without affecting the app's normal operation.
 - While open, the panel drives live content updates as described in feature 11.
-- When the feature is disabled, no panel code is loaded.
 
 **Visual verification:**
 
@@ -218,11 +176,10 @@ Merge tag nodes within the document are replaced with their resolved value.
 2. Click **"Preview panel"** button — the Contentful panel slides in on the right side of the page.
 3. The status row updates to **Preview panel: Open**.
 4. Click the button again — the panel closes, status returns to **Closed**.
-5. To disable: set `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL=false` in `.env` — no panel attaches.
 
 ---
 
-### 17. Multi-route navigation
+## 17. Multi-route navigation
 
 - The app has at least two routes, navigable via an in-app link.
 - Navigating to the second route emits a page event for that route.
@@ -233,14 +190,14 @@ Merge tag nodes within the document are replaced with their resolved value.
 
 ---
 
-### 18. Locale consistency
+## 18. Locale consistency
 
 - All Contentful entry fetches use the locale that the SDK has resolved for the current session.
 - The Contentful CDA client is wrapped with the SDK's locale resolver so the two never diverge.
 
 ---
 
-### 19. Feature flags
+## 19. Feature flags
 
 - The app subscribes to a flag named `'boolean'` via the SDK's flag state API.
 - Accessing the flag automatically emits a view event to the event stream — no explicit tracking
@@ -256,26 +213,7 @@ Merge tag nodes within the document are replaced with their resolved value.
 
 ---
 
-### 20. Offline queue and recovery
+## 20. Offline queue and recovery
 
 SDK-native — no app code needed. The SDK queues events that fail to reach the Insights API while the
 network is unavailable and delivers them when connectivity is restored.
-
----
-
-## Environment variables
-
-| Variable                                   | Purpose                 | Default                               |
-| ------------------------------------------ | ----------------------- | ------------------------------------- |
-| `PUBLIC_NINETAILED_CLIENT_ID`              | SDK client ID           | `'mock-client-id'`                    |
-| `PUBLIC_NINETAILED_ENVIRONMENT`            | SDK environment         | `'main'`                              |
-| `PUBLIC_INSIGHTS_API_BASE_URL`             | Insights API endpoint   | `'http://localhost:8000/insights/'`   |
-| `PUBLIC_EXPERIENCE_API_BASE_URL`           | Experience API endpoint | `'http://localhost:8000/experience/'` |
-| `PUBLIC_CONTENTFUL_TOKEN`                  | CDA delivery token      | `'mock-token'`                        |
-| `PUBLIC_CONTENTFUL_PREVIEW_TOKEN`          | CDA preview token       | `'mock-preview-token'`                |
-| `PUBLIC_CONTENTFUL_ENVIRONMENT`            | Contentful environment  | `'master'`                            |
-| `PUBLIC_CONTENTFUL_SPACE_ID`               | Contentful space ID     | `'mock-space-id'`                     |
-| `PUBLIC_CONTENTFUL_CDA_HOST`               | CDA host override       | `'localhost:8000'`                    |
-| `PUBLIC_CONTENTFUL_BASE_PATH`              | CDA URL path prefix     | `'contentful'`                        |
-| `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL` | Enable preview panel    | `'true'` (default on)                 |
-| `PUBLIC_OPTIMIZATION_LOG_LEVEL`            | Log level               | `'debug'`                             |
