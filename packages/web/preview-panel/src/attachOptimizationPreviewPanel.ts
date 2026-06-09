@@ -271,6 +271,15 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
   panel.defaultSelectedOptimizations = [...(storedDefaults.selectedOptimizations ?? [])]
   panel.overrides = new Map(initialOverrides)
 
+  const syncChangesSignal = (overridesMap: Map<string, number>): void => {
+    if (storedDefaults.changes === undefined) return
+    signals.changes.value = applyChangeOverrides(
+      storedDefaults.changes,
+      panel.optimizationEntries,
+      overridesMap,
+    )
+  }
+
   const manager = new PreviewOverrideManager({
     selectedOptimizations: signals.selectedOptimizations,
     profile: signals.profile,
@@ -279,6 +288,7 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
       const overridesMap = overridesToMap(state.selectedOptimizations)
       panel.overrides = new Map(overridesMap)
       persistOverrideState(overridesMap)
+      syncChangesSignal(overridesMap)
     },
   })
 
