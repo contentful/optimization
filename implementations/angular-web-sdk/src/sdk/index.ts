@@ -1,6 +1,10 @@
-export { OPTIMIZATION_CONFIG, type OptimizationConfig } from './config'
-export { LiveUpdates, togglePreviewPanel } from './live-updates'
+export { NG_CONTENTFUL_OPTIMIZATION_CONFIG, type NgContentfulOptimizationConfig } from './config'
+export { NgContentfulLiveUpdates, togglePreviewPanel } from './live-updates'
 export { MergeTagPipe, isMergeTagEntry } from './merge-tag.pipe'
-export { Optimization, fromSdkObservable, type OptimizationInstance } from './optimization'
-export { OptimizationResolver, type ResolvedData } from './optimization-resolver'
+export {
+  NgContentfulOptimization,
+  fromSdkObservable,
+  type NgContentfulOptimizationInstance,
+} from './optimization'
+export { NgContentfulOptimizationResolver, type ResolvedData } from './optimization-resolver'
 export { isRecord } from './utils'

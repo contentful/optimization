@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core'
-import { Optimization } from '@contentful/optimization-angular'
+import { NgContentfulOptimization } from '@contentful/optimization-angular'
 import { createClient } from 'contentful'
 import { CONFIG } from '../config/config.token'
 import type { ContentEntrySkeleton, ContentfulEntry } from '../types/contentful'
@@ -13,7 +13,7 @@ export class ContentfulClient {
 
   constructor() {
     const config = inject(CONFIG)
-    const { sdk } = inject(Optimization)
+    const { sdk } = inject(NgContentfulOptimization)
 
     this.client = createClient({
       accessToken: config.contentfulToken,

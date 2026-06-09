@@ -5,7 +5,7 @@ import {
   provideZonelessChangeDetection,
 } from '@angular/core'
 import { provideRouter } from '@angular/router'
-import { OPTIMIZATION_CONFIG } from '@contentful/optimization-angular'
+import { NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '@contentful/optimization-angular'
 import { routes } from './app.routes'
 import { CONFIG } from './config/config.token'
 
@@ -15,7 +15,7 @@ export const appConfig: ApplicationConfig = {
     provideZonelessChangeDetection(),
     provideRouter(routes),
     {
-      provide: OPTIMIZATION_CONFIG,
+      provide: NG_CONTENTFUL_OPTIMIZATION_CONFIG,
       useFactory: () => {
         const c = inject(CONFIG)
         return {

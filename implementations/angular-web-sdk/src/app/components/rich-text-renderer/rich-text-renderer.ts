@@ -1,6 +1,6 @@
 import { Component, computed, inject, input } from '@angular/core'
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser'
-import { isMergeTagEntry, OptimizationResolver } from '@contentful/optimization-angular'
+import { isMergeTagEntry, NgContentfulOptimizationResolver } from '@contentful/optimization-angular'
 import { BLOCKS, INLINES } from '@contentful/rich-text-types'
 import type { RichTextDocument } from '../../types/contentful'
 import { isRecord } from '../../utils/type-guards'
@@ -62,7 +62,7 @@ function renderNode(node: unknown, getMergeTag: GetMergeTag): string {
 export class RichTextRenderer {
   readonly richText = input.required<RichTextDocument>()
 
-  private readonly resolver = inject(OptimizationResolver)
+  private readonly resolver = inject(NgContentfulOptimizationResolver)
   private readonly sanitizer = inject(DomSanitizer)
 
   protected readonly html = computed<SafeHtml>(() => {

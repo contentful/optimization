@@ -1,6 +1,6 @@
 import { InjectionToken } from '@angular/core'
 
-export interface OptimizationConfig {
+export interface NgContentfulOptimizationConfig {
   clientId: string
   environment: string
   insightsBaseUrl: string
@@ -20,4 +20,6 @@ export interface OptimizationConfig {
   }
 }
 
-export const OPTIMIZATION_CONFIG = new InjectionToken<OptimizationConfig>('OPTIMIZATION_CONFIG')
+export const NG_CONTENTFUL_OPTIMIZATION_CONFIG = new InjectionToken<NgContentfulOptimizationConfig>(
+  'NG_CONTENTFUL_OPTIMIZATION_CONFIG',
+)

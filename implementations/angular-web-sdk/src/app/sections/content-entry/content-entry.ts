@@ -12,9 +12,9 @@ import {
   untracked,
 } from '@angular/core'
 import {
-  LiveUpdates,
-  Optimization,
-  OptimizationResolver,
+  NgContentfulLiveUpdates,
+  NgContentfulOptimization,
+  NgContentfulOptimizationResolver,
   type ResolvedData,
 } from '@contentful/optimization-angular'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
@@ -50,10 +50,10 @@ export class ContentEntry implements OnDestroy {
   // undefined = follow global toggle; true = always live; false = always locked
   readonly liveUpdates = input<boolean | undefined>(undefined)
 
-  private readonly optimization = inject(Optimization)
-  private readonly resolver = inject(OptimizationResolver)
+  private readonly optimization = inject(NgContentfulOptimization)
+  private readonly resolver = inject(NgContentfulOptimizationResolver)
   private readonly elementRef = inject<ElementRef<Element>>(ElementRef)
-  private readonly liveUpdatesService = inject(LiveUpdates)
+  private readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
 
   // Whether this entry should react to profile changes right now.
   // Preview panel open forces live regardless of any override or global toggle (feature 11).
@@ -61,7 +61,7 @@ export class ContentEntry implements OnDestroy {
     if (this.liveUpdatesService.previewPanelVisible()) return true
     const override = this.liveUpdates()
     if (override !== undefined) return override
-    return this.liveUpdatesService.globalLiveUpdates()
+    return this.liveUpdatesService.globalNgContentfulLiveUpdates()
   })
 
   // Frozen snapshot captured when live-updates is off. undefined means "live mode, resolve fresh".

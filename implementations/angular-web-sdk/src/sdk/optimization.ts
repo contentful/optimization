@@ -5,10 +5,10 @@ import type { SelectedOptimizationArray } from '@contentful/optimization-web/api
 import { createClient } from 'contentful'
 import { Observable } from 'rxjs'
 import { filter } from 'rxjs/operators'
-import type { OptimizationConfig } from './config'
-import { OPTIMIZATION_CONFIG } from './config'
+import type { NgContentfulOptimizationConfig } from './config'
+import { NG_CONTENTFUL_OPTIMIZATION_CONFIG } from './config'
 
-export type OptimizationInstance = ContentfulOptimization
+export type NgContentfulOptimizationInstance = ContentfulOptimization
 
 export function fromSdkObservable<T>(sdkObs: {
   subscribe: (fn: (v: T) => void) => { unsubscribe: () => void }
@@ -28,12 +28,12 @@ function resolveLogLevel(raw: string | undefined): 'debug' | 'warn' | 'error' {
   return 'debug'
 }
 
-let instance: OptimizationInstance | undefined = undefined
+let instance: NgContentfulOptimizationInstance | undefined = undefined
 let attachmentStarted = false
 
 async function attachPreviewPanel(
-  sdk: OptimizationInstance,
-  config: NonNullable<OptimizationConfig['previewPanel']>,
+  sdk: NgContentfulOptimizationInstance,
+  config: NonNullable<NgContentfulOptimizationConfig['previewPanel']>,
 ): Promise<void> {
   if (attachmentStarted) return
   attachmentStarted = true
@@ -54,7 +54,9 @@ async function attachPreviewPanel(
   }
 }
 
-function getOrCreateInstance(config: OptimizationConfig): OptimizationInstance {
+function getOrCreateInstance(
+  config: NgContentfulOptimizationConfig,
+): NgContentfulOptimizationInstance {
   instance ??= new ContentfulOptimization({
     clientId: config.clientId,
     environment: config.environment,
@@ -76,8 +78,8 @@ function getOrCreateInstance(config: OptimizationConfig): OptimizationInstance {
 }
 
 @Injectable({ providedIn: 'root' })
-export class Optimization {
-  readonly sdk: OptimizationInstance | undefined
+export class NgContentfulOptimization {
+  readonly sdk: NgContentfulOptimizationInstance | undefined
   readonly error: Error | undefined
   readonly consent$: Observable<boolean | undefined>
   readonly profile$: Observable<unknown>
@@ -86,7 +88,7 @@ export class Optimization {
   readonly selectedOptimizations$: Observable<SelectedOptimizationArray | undefined>
 
   constructor() {
-    const config = inject(OPTIMIZATION_CONFIG)
+    const config = inject(NG_CONTENTFUL_OPTIMIZATION_CONFIG)
     const router = inject(Router)
 
     try {

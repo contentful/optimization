@@ -1,6 +1,10 @@
 import { Component, computed, inject, input } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
-import { LiveUpdates, Optimization, togglePreviewPanel } from '@contentful/optimization-angular'
+import {
+  NgContentfulLiveUpdates,
+  NgContentfulOptimization,
+  togglePreviewPanel,
+} from '@contentful/optimization-angular'
 
 @Component({
   selector: 'app-control-panel',
@@ -9,8 +13,8 @@ import { LiveUpdates, Optimization, togglePreviewPanel } from '@contentful/optim
 export class ControlPanel {
   readonly onTrackConversion = input<(() => void) | undefined>(undefined)
 
-  private readonly optimization = inject(Optimization)
-  protected readonly liveUpdatesService = inject(LiveUpdates)
+  private readonly optimization = inject(NgContentfulOptimization)
+  protected readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
 
   protected readonly consent = toSignal(this.optimization.consent$)
   protected readonly profile = toSignal(this.optimization.profile$)
@@ -48,7 +52,7 @@ export class ControlPanel {
     this.optimization.reset()
   }
 
-  protected toggleGlobalLiveUpdates(): void {
+  protected toggleGlobalNgContentfulLiveUpdates(): void {
     this.liveUpdatesService.toggle()
   }
 

@@ -1,6 +1,9 @@
 import { Component, computed, forwardRef, inject, input } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
-import { Optimization, OptimizationResolver } from '@contentful/optimization-angular'
+import {
+  NgContentfulOptimization,
+  NgContentfulOptimizationResolver,
+} from '@contentful/optimization-angular'
 import type { ContentfulEntry } from '../../types/contentful'
 import { getSelectedOptimizationMeta, isEntry } from '../../utils/type-guards'
 
@@ -12,8 +15,8 @@ import { getSelectedOptimizationMeta, isEntry } from '../../utils/type-guards'
 export class NestedContentItem {
   readonly entry = input.required<ContentfulEntry>()
 
-  private readonly optimization = inject(Optimization)
-  private readonly resolver = inject(OptimizationResolver)
+  private readonly optimization = inject(NgContentfulOptimization)
+  private readonly resolver = inject(NgContentfulOptimizationResolver)
 
   protected readonly selectedOptimizations = toSignal(this.optimization.selectedOptimizations$)
 

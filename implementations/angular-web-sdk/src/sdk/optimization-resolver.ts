@@ -5,7 +5,7 @@ import type {
 } from '@contentful/optimization-web/api-schemas'
 import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
-import { Optimization } from './optimization'
+import { NgContentfulOptimization } from './optimization'
 
 export type { ResolvedData }
 
@@ -23,8 +23,8 @@ function fallbackResolveEntry(entry: Entry): ResolvedData<EntrySkeletonType> {
 }
 
 @Injectable({ providedIn: 'root' })
-export class OptimizationResolver {
-  private readonly optimization = inject(Optimization)
+export class NgContentfulOptimizationResolver {
+  private readonly optimization = inject(NgContentfulOptimization)
 
   resolveEntry(
     baseline: Entry,

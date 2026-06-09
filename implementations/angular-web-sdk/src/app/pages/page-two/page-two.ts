@@ -1,6 +1,6 @@
 import { Component, inject, type OnInit, signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
-import { Optimization } from '@contentful/optimization-angular'
+import { NgContentfulOptimization } from '@contentful/optimization-angular'
 import { ControlPanel } from '../../components/control-panel/control-panel'
 import { PAGE_TWO_AUTO_ENTRY_ID, PAGE_TWO_MANUAL_ENTRY_ID } from '../../config/entries'
 import { ContentEntry } from '../../sections/content-entry/content-entry'
@@ -16,7 +16,7 @@ const PAGE_TWO_COMPONENT_ID = 'page-two-conversion'
   host: { style: 'display: contents' },
 })
 export class PageTwo implements OnInit {
-  private readonly optimization = inject(Optimization)
+  private readonly optimization = inject(NgContentfulOptimization)
   private readonly contentfulClient = inject(ContentfulClient)
 
   protected readonly loading = signal(true)

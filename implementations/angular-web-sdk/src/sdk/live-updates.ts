@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { BehaviorSubject, combineLatest, map, Observable } from 'rxjs'
-import { Optimization } from './optimization'
+import { NgContentfulOptimization } from './optimization'
 import { isRecord } from './utils'
 
 const PREVIEW_PANEL_TAG = 'ctfl-opt-preview-panel'
@@ -26,7 +26,7 @@ function isSdkBoolObservable(obs: unknown): obs is SdkBoolObservable {
   return isRecord(obs) && typeof obs.subscribe === 'function'
 }
 
-function sdkBoolObs(sdk: Optimization['sdk'], key: string): Observable<boolean> {
+function sdkBoolObs(sdk: NgContentfulOptimization['sdk'], key: string): Observable<boolean> {
   const fallback = new Observable<boolean>((sub) => {
     sub.next(false)
   })
@@ -46,15 +46,15 @@ function sdkBoolObs(sdk: Optimization['sdk'], key: string): Observable<boolean> 
 }
 
 @Injectable({ providedIn: 'root' })
-export class LiveUpdates {
+export class NgContentfulLiveUpdates {
   private readonly subject = new BehaviorSubject<boolean>(false)
-  readonly globalLiveUpdates$ = this.subject.asObservable()
-  readonly globalLiveUpdates = toSignal(this.subject, { initialValue: false })
+  readonly globalNgContentfulLiveUpdates$ = this.subject.asObservable()
+  readonly globalNgContentfulLiveUpdates = toSignal(this.subject, { initialValue: false })
 
   readonly previewPanelVisible = toSignal(
     combineLatest([
-      sdkBoolObs(inject(Optimization).sdk, 'previewPanelAttached'),
-      sdkBoolObs(inject(Optimization).sdk, 'previewPanelOpen'),
+      sdkBoolObs(inject(NgContentfulOptimization).sdk, 'previewPanelAttached'),
+      sdkBoolObs(inject(NgContentfulOptimization).sdk, 'previewPanelOpen'),
     ]).pipe(map(([attached, open]) => attached && open)),
     { initialValue: false },
   )

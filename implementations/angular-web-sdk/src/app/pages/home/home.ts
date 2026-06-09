@@ -1,6 +1,6 @@
 import { Component, inject, type OnInit, signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
-import { LiveUpdates, Optimization } from '@contentful/optimization-angular'
+import { NgContentfulLiveUpdates, NgContentfulOptimization } from '@contentful/optimization-angular'
 import { ControlPanel } from '../../components/control-panel/control-panel'
 import {
   AUTO_OBSERVED_ENTRY_IDS,
@@ -33,8 +33,8 @@ const CLICK_SCENARIO_BY_ENTRY_ID: Readonly<Record<string, EntryClickScenario>> =
 })
 export class Home implements OnInit {
   private readonly contentfulClient = inject(ContentfulClient)
-  private readonly optimization = inject(Optimization)
-  protected readonly liveUpdatesService = inject(LiveUpdates)
+  private readonly optimization = inject(NgContentfulOptimization)
+  protected readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
 
   protected readonly entriesById = signal<Map<string, ContentfulEntry>>(new Map())
   protected readonly loading = signal(true)

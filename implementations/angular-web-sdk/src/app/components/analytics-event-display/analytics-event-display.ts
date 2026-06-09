@@ -1,5 +1,5 @@
 import { Component, inject, type OnDestroy, type OnInit, signal } from '@angular/core'
-import { Optimization } from '@contentful/optimization-angular'
+import { NgContentfulOptimization } from '@contentful/optimization-angular'
 import type { Subscription } from 'rxjs'
 import { isRecord } from '../../utils/type-guards'
 
@@ -82,7 +82,7 @@ function eventTestId(event: AnalyticsEvent): string {
   templateUrl: './analytics-event-display.html',
 })
 export class AnalyticsEventDisplay implements OnInit, OnDestroy {
-  private readonly optimization = inject(Optimization)
+  private readonly optimization = inject(NgContentfulOptimization)
   private subscription: Subscription | undefined
   private nextId = 0
 

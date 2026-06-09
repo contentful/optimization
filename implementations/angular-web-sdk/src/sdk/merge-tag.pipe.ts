@@ -1,6 +1,6 @@
 import { inject, Pipe, type PipeTransform } from '@angular/core'
 import type { MergeTagEntry } from '@contentful/optimization-web/api-schemas'
-import { OptimizationResolver } from './optimization-resolver'
+import { NgContentfulOptimizationResolver } from './optimization-resolver'
 import { isRecord } from './utils'
 
 function isMergeTagEntry(entry: unknown): entry is MergeTagEntry {
@@ -14,7 +14,7 @@ export { isMergeTagEntry }
 
 @Pipe({ name: 'mergeTag' })
 export class MergeTagPipe implements PipeTransform {
-  private readonly resolver = inject(OptimizationResolver)
+  private readonly resolver = inject(NgContentfulOptimizationResolver)
 
   transform(target: unknown): string {
     if (!isMergeTagEntry(target)) return '[Merge Tag]'
