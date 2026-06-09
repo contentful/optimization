@@ -13,12 +13,19 @@ import {
   batch,
   changes as changesSignal,
   event as eventSignal,
+  experienceRequestState as experienceRequestStateSignal,
   online as onlineSignal,
   profile as profileSignal,
   selectedOptimizations as selectedOptimizationsSignal,
+  type ExperienceRequestFailureReason,
 } from '../signals'
 
 const coreLogger = createScopedLogger('CoreStateful')
+
+const classifyExperienceRequestFailure = (error: unknown): ExperienceRequestFailureReason => {
+  if (error instanceof Error && error.name === 'AbortError') return 'timeout'
+  return 'api-error'
+}
 
 /**
  * Context payload emitted when offline Experience events are dropped.
@@ -209,18 +216,28 @@ export class ExperienceQueue {
     }
   }
 
-  private async upsertProfile(events: ExperienceEventArray): Promise<OptimizationData> {
+  protected async upsertProfile(events: ExperienceEventArray): Promise<OptimizationData> {
     const anonymousId = this.getAnonymousId()
     if (anonymousId) coreLogger.debug(`Anonymous ID found: ${anonymousId}`)
 
-    const data = await this.experienceApi.upsertProfile({
-      profileId: anonymousId ?? profileSignal.value?.id,
-      events,
-    })
+    experienceRequestStateSignal.value = { status: 'pending' }
 
-    await this.updateOutputSignals(data)
+    try {
+      const data = await this.experienceApi.upsertProfile({
+        profileId: anonymousId ?? profileSignal.value?.id,
+        events,
+      })
 
-    return data
+      await this.updateOutputSignals(data)
+
+      return data
+    } catch (error) {
+      experienceRequestStateSignal.value = {
+        status: 'failed',
+        reason: classifyExperienceRequestFailure(error),
+      }
+      throw error
+    }
   }
 
   private async updateOutputSignals(data: OptimizationData): Promise<void> {
@@ -233,6 +250,7 @@ export class ExperienceQueue {
       if (!isEqual(selectedOptimizationsSignal.value, selectedOptimizations)) {
         selectedOptimizationsSignal.value = selectedOptimizations
       }
+      experienceRequestStateSignal.value = { status: 'success' }
     })
   }
 }
