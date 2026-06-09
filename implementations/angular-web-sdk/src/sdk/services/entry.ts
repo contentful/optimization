@@ -13,7 +13,7 @@ import {
 } from '@angular/core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { Entry } from 'contentful'
-import { NgContentfulLiveUpdates } from '../../app/live-updates'
+import { NgContentfulLiveUpdates } from '../../app/services/live-updates'
 import { isMergeTagEntry, isRecord } from '../utils'
 import { NgContentfulOptimization } from './optimization'
 

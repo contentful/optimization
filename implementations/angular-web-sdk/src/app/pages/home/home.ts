@@ -3,7 +3,7 @@ import { NgContentfulClient, NgContentfulOptimization } from '@contentful/optimi
 import { ContentCard, ContentEntry } from '../../components/content-card'
 import { ControlPanel } from '../../components/control-panel/control-panel'
 import { FIXTURES } from '../../fixtures'
-import { NgContentfulLiveUpdates } from '../../live-updates'
+import { NgContentfulLiveUpdates } from '../../services/live-updates'
 import type { ContentfulEntry } from '../../types/contentful'
 
 @Component({
