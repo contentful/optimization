@@ -462,6 +462,46 @@ describe('CoreStateful blocked event handling', () => {
     subscription.unsubscribe()
   })
 
+  it('exposes optimizationPossible as false when consent is unset and allow-list is empty', () => {
+    const core = createCoreStateful()
+    const values: boolean[] = []
+    const subscription = core.states.optimizationPossible.subscribe((value) => {
+      values.push(value)
+    })
+
+    expect(values.at(-1)).toBe(false)
+
+    subscription.unsubscribe()
+  })
+
+  it('exposes optimizationPossible as true when allowedEventTypes includes an Experience event type', () => {
+    const core = createCoreStateful({ allowedEventTypes: ['page'] })
+    const values: boolean[] = []
+    const subscription = core.states.optimizationPossible.subscribe((value) => {
+      values.push(value)
+    })
+
+    expect(values.at(-1)).toBe(true)
+
+    subscription.unsubscribe()
+  })
+
+  it('flips optimizationPossible to true when consent is granted at runtime', () => {
+    const core = createCoreStateful()
+    const values: boolean[] = []
+    const subscription = core.states.optimizationPossible.subscribe((value) => {
+      values.push(value)
+    })
+
+    expect(values.at(-1)).toBe(false)
+
+    signals.consent.value = true
+
+    expect(values.at(-1)).toBe(true)
+
+    subscription.unsubscribe()
+  })
+
   it('defaults resolveOptimizedEntry to the selectedOptimizations signal', () => {
     const core = createCoreStateful()
 

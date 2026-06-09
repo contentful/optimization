@@ -32,6 +32,7 @@ export interface RuntimeOptimization extends OptimizationSdk {
   resolveOptimizedEntry: ResolveOptimizedEntry
   states: OptimizationSdk['states'] & {
     canOptimize: ObservableLike<boolean>
+    optimizationPossible: ObservableLike<boolean>
     selectedOptimizations: ObservableLike<SelectedOptimizationState>
   }
 }
@@ -100,6 +101,7 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
       locale: createObservable(undefined),
       blockedEventStream: createObservable(undefined),
       canOptimize: createObservable(false),
+      optimizationPossible: createObservable(true),
       consent: createObservable(undefined),
       eventStream: createObservable(undefined),
       flag: () => createObservable(undefined),
@@ -135,14 +137,20 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
   }
 }
 
-export function createRuntime(resolveOptimizedEntry: ResolveOptimizedEntry): {
+export function createRuntime(
+  resolveOptimizedEntry: ResolveOptimizedEntry,
+  initialOptimizationPossible = true,
+): {
   emit: (value: SelectedOptimizationState) => Promise<void>
+  setOptimizationPossible: (value: boolean) => Promise<void>
   optimization: RuntimeOptimization
 } {
   const selectedOptimizationSubscribers = new Set<RuntimeSubscriber<SelectedOptimizationState>>()
   const canOptimizeSubscribers = new Set<RuntimeSubscriber<boolean>>()
+  const optimizationPossibleSubscribers = new Set<RuntimeSubscriber<boolean>>()
   let current: SelectedOptimizationState = undefined
   let canOptimize = false
+  let optimizationPossible = initialOptimizationPossible
 
   const optimization = createOptimizationSdk({
     resolveOptimizedEntry,
@@ -163,6 +171,25 @@ export function createRuntime(resolveOptimizedEntry: ResolveOptimizedEntry): {
         },
         subscribeOnce(next: RuntimeSubscriber<boolean>) {
           next(canOptimize)
+          return { unsubscribe: () => undefined }
+        },
+      },
+      optimizationPossible: {
+        get current() {
+          return optimizationPossible
+        },
+        subscribe(next: RuntimeSubscriber<boolean>) {
+          optimizationPossibleSubscribers.add(next)
+          next(optimizationPossible)
+
+          return {
+            unsubscribe() {
+              optimizationPossibleSubscribers.delete(next)
+            },
+          }
+        },
+        subscribeOnce(next: RuntimeSubscriber<boolean>) {
+          next(optimizationPossible)
           return { unsubscribe: () => undefined }
         },
       },
@@ -205,7 +232,18 @@ export function createRuntime(resolveOptimizedEntry: ResolveOptimizedEntry): {
     })
   }
 
-  return { emit, optimization }
+  async function setOptimizationPossible(value: boolean): Promise<void> {
+    optimizationPossible = value
+
+    await act(async () => {
+      await Promise.resolve()
+      optimizationPossibleSubscribers.forEach((subscriber) => {
+        subscriber(value)
+      })
+    })
+  }
+
+  return { emit, setOptimizationPossible, optimization }
 }
 
 export function defaultLiveUpdatesContext(): LiveUpdatesContextValue {
