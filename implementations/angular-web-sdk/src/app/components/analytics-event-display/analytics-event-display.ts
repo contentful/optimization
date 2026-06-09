@@ -1,10 +1,12 @@
-import { Component, inject, type OnDestroy, type OnInit, signal } from '@angular/core'
+import { Component, computed, inject, type OnDestroy, type OnInit, signal } from '@angular/core'
 import { isRecord, NgContentfulOptimization } from '@contentful/optimization-angular'
 import type { Subscription } from 'rxjs'
 
 interface AnalyticsEvent {
   id: string
   type: string
+  label: string
+  testId: string
   componentId?: string
   viewId?: string
   hoverId?: string
@@ -23,37 +25,6 @@ function toPageUrl(event: Record<string, unknown>): string | undefined {
   } catch {
     return url
   }
-}
-
-function toAnalyticsEvent(raw: unknown, id: string): AnalyticsEvent | undefined {
-  if (!isRecord(raw) || typeof raw.type !== 'string') return undefined
-  return {
-    id,
-    type: raw.type,
-    componentId: typeof raw.componentId === 'string' ? raw.componentId : undefined,
-    viewId: typeof raw.viewId === 'string' ? raw.viewId : undefined,
-    hoverId: typeof raw.hoverId === 'string' ? raw.hoverId : undefined,
-    viewDurationMs: typeof raw.viewDurationMs === 'number' ? raw.viewDurationMs : undefined,
-    hoverDurationMs: typeof raw.hoverDurationMs === 'number' ? raw.hoverDurationMs : undefined,
-    pageUrl: raw.type === 'page' ? toPageUrl(raw) : undefined,
-  }
-}
-
-function heartbeatKey(event: AnalyticsEvent): string | undefined {
-  if (event.type === 'component' && event.viewId !== undefined) return `component:${event.viewId}`
-  if (event.type === 'component_hover' && event.hoverId !== undefined)
-    return `component_hover:${event.hoverId}`
-  return undefined
-}
-
-function upsert(list: AnalyticsEvent[], next: AnalyticsEvent): AnalyticsEvent[] {
-  const key = heartbeatKey(next)
-  if (!key) return [next, ...list]
-  const idx = list.findIndex((e) => heartbeatKey(e) === key)
-  if (idx === -1) return [next, ...list]
-  const updated = [...list]
-  updated[idx] = { ...next, id: list[idx].id }
-  return updated
 }
 
 function eventLabel(event: AnalyticsEvent): string {
@@ -76,28 +47,76 @@ function eventTestId(event: AnalyticsEvent): string {
   return `event-${event.type}-${event.id}`
 }
 
+function toAnalyticsEvent(raw: unknown, id: string): AnalyticsEvent | undefined {
+  if (!isRecord(raw) || typeof raw.type !== 'string') return undefined
+  const componentId = typeof raw.componentId === 'string' ? raw.componentId : undefined
+  const viewId = typeof raw.viewId === 'string' ? raw.viewId : undefined
+  const hoverId = typeof raw.hoverId === 'string' ? raw.hoverId : undefined
+  const viewDurationMs = typeof raw.viewDurationMs === 'number' ? raw.viewDurationMs : undefined
+  const hoverDurationMs = typeof raw.hoverDurationMs === 'number' ? raw.hoverDurationMs : undefined
+  const pageUrl = raw.type === 'page' ? toPageUrl(raw) : undefined
+  const event: AnalyticsEvent = {
+    id,
+    type: raw.type,
+    label: '',
+    testId: '',
+    componentId,
+    viewId,
+    hoverId,
+    viewDurationMs,
+    hoverDurationMs,
+    pageUrl,
+  }
+  event.label = eventLabel(event)
+  event.testId = eventTestId(event)
+  return event
+}
+
+function heartbeatKey(event: AnalyticsEvent): string | undefined {
+  if (event.type === 'component' && event.viewId !== undefined) return `component:${event.viewId}`
+  if (event.type === 'component_hover' && event.hoverId !== undefined)
+    return `component_hover:${event.hoverId}`
+  return undefined
+}
+
+function upsert(list: AnalyticsEvent[], next: AnalyticsEvent): AnalyticsEvent[] {
+  const key = heartbeatKey(next)
+  if (!key) return [next, ...list]
+  const idx = list.findIndex((e) => heartbeatKey(e) === key)
+  if (idx === -1) return [next, ...list]
+  const updated = [...list]
+  updated[idx] = { ...next, id: list[idx].id }
+  return updated
+}
+
 @Component({
   selector: 'app-analytics-event-display',
   templateUrl: './analytics-event-display.html',
 })
 export class AnalyticsEventDisplay implements OnInit, OnDestroy {
+  // injected dependencies
   private readonly optimization = inject(NgContentfulOptimization)
+
+  // private state
   private subscription: Subscription | undefined
   private nextId = 0
 
-  protected readonly events = signal<AnalyticsEvent[]>([])
-  protected readonly rawCount = signal(0)
+  // protected state
+  protected readonly uniqueEvents = signal<AnalyticsEvent[]>([])
+  protected readonly rawEvents = signal<AnalyticsEvent[]>([])
+  protected readonly mode = signal<'unique' | 'raw'>('unique')
+  protected readonly visibleEvents = computed(() =>
+    this.mode() === 'unique' ? this.uniqueEvents() : this.rawEvents(),
+  )
 
-  protected readonly eventLabel = eventLabel
-  protected readonly eventTestId = eventTestId
-
+  // lifecycle
   ngOnInit(): void {
     this.subscription = this.optimization.eventStream$.subscribe((raw) => {
       const event = toAnalyticsEvent(raw, `event-${this.nextId}`)
       if (!event) return
       this.nextId++
-      this.rawCount.update((c) => c + 1)
-      this.events.update((list) => upsert(list, event))
+      this.rawEvents.update((list) => [event, ...list])
+      this.uniqueEvents.update((list) => upsert(list, event))
     })
   }
 

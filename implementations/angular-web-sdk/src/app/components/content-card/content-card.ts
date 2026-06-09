@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core'
+import { Component, computed, input } from '@angular/core'
 import { isRecord } from '@contentful/optimization-angular'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { EntryClickScenario } from '../../config/entries'
@@ -16,7 +16,7 @@ function isNestedContentEntry(entry: ContentfulEntry): boolean {
   selector: 'app-content-card',
   imports: [ContentEntry, NestedContentEntry],
   template: `
-    @if (isNested(entry())) {
+    @if (isNested()) {
       <app-nested-content-entry [entry]="entry()" />
     } @else {
       <app-content-entry
@@ -36,5 +36,5 @@ export class ContentCard {
   readonly selectedOptimizations = input<SelectedOptimizationArray | undefined>(undefined)
   readonly liveUpdates = input<boolean | undefined>(undefined)
 
-  protected readonly isNested = isNestedContentEntry
+  protected readonly isNested = computed(() => isNestedContentEntry(this.entry()))
 }
