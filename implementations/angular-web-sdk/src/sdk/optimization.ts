@@ -5,7 +5,8 @@ import type { SelectedOptimizationArray } from '@contentful/optimization-web/api
 import { createClient } from 'contentful'
 import { Observable } from 'rxjs'
 import { filter } from 'rxjs/operators'
-import { type Config, CONFIG } from '../app/config/config.token'
+import type { OptimizationConfig } from './config'
+import { OPTIMIZATION_CONFIG } from './config'
 
 export type OptimizationInstance = ContentfulOptimization
 
@@ -22,56 +23,50 @@ export function fromSdkObservable<T>(sdkObs: {
   })
 }
 
-function resolveLogLevel(raw: string): 'debug' | 'warn' | 'error' {
+function resolveLogLevel(raw: string | undefined): 'debug' | 'warn' | 'error' {
   if (raw === 'debug' || raw === 'warn' || raw === 'error') return raw
   return 'debug'
 }
 
-// Module-level variables guarantee single SDK instance and single panel attachment.
 let instance: OptimizationInstance | undefined = undefined
 let attachmentStarted = false
 
 async function attachPreviewPanel(
   sdk: OptimizationInstance,
-  contentfulClient: ReturnType<typeof createClient>,
+  config: NonNullable<OptimizationConfig['previewPanel']>,
 ): Promise<void> {
   if (attachmentStarted) return
   attachmentStarted = true
   try {
+    const contentfulClient = createClient({
+      accessToken: config.contentfulToken,
+      environment: config.contentfulEnvironment,
+      space: config.contentfulSpaceId,
+      host: config.contentfulCdaHost,
+      insecure: config.contentfulCdaHost.includes('localhost'),
+      basePath: config.contentfulBasePath,
+    })
     const { default: attach } = await import('@contentful/optimization-web-preview-panel')
-    await attach({ contentful: contentfulClient, optimization: sdk, nonce: undefined })
+    await attach({ contentful: contentfulClient, optimization: sdk, nonce: config.nonce })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     if (!msg.includes('already been attached')) throw err
   }
 }
 
-function createRawContentfulClient(config: Config): ReturnType<typeof createClient> {
-  return createClient({
-    accessToken: config.contentfulToken,
-    environment: config.contentfulEnvironment,
-    space: config.contentfulSpaceId,
-    host: config.contentfulCdaHost,
-    insecure: config.contentfulCdaHost.includes('localhost'),
-    basePath: config.contentfulBasePath,
-  })
-}
-
-function getOrCreateInstance(config: {
-  clientId: string
-  sdkEnvironment: string
-  insightsBaseUrl: string
-  experienceBaseUrl: string
-  logLevel: string
-}): OptimizationInstance {
+function getOrCreateInstance(config: OptimizationConfig): OptimizationInstance {
   instance ??= new ContentfulOptimization({
     clientId: config.clientId,
-    environment: config.sdkEnvironment,
+    environment: config.environment,
     logLevel: resolveLogLevel(config.logLevel),
-    autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
-    locale: 'en-US',
-    contentfulLocales: { default: 'en-US' },
-    app: { name: 'ContentfulOptimization SDK - Angular Web Reference', version: '0.0.0' },
+    autoTrackEntryInteraction: config.autoTrackEntryInteraction ?? {
+      views: true,
+      clicks: true,
+      hovers: true,
+    },
+    locale: config.locale,
+    contentfulLocales: config.contentfulLocales,
+    app: config.app,
     api: {
       insightsBaseUrl: config.insightsBaseUrl,
       experienceBaseUrl: config.experienceBaseUrl,
@@ -91,18 +86,17 @@ export class Optimization {
   readonly selectedOptimizations$: Observable<SelectedOptimizationArray | undefined>
 
   constructor() {
-    const config = inject(CONFIG)
+    const config = inject(OPTIMIZATION_CONFIG)
     const router = inject(Router)
 
-    // Errors are stored rather than thrown so components can degrade gracefully.
     try {
       this.sdk = getOrCreateInstance(config)
     } catch (err) {
       this.error = err instanceof Error ? err : new Error(String(err))
     }
 
-    if (config.enablePreviewPanel && this.sdk !== undefined) {
-      void attachPreviewPanel(this.sdk, createRawContentfulClient(config))
+    if (config.previewPanel !== undefined && this.sdk !== undefined) {
+      void attachPreviewPanel(this.sdk, config.previewPanel)
     }
 
     this.consent$ =
@@ -133,7 +127,6 @@ export class Optimization {
             sub.next(undefined)
           })
 
-    // Subscribing to a flag automatically emits a component view event — no explicit tracking needed.
     this.booleanFlag$ =
       this.sdk !== undefined
         ? fromSdkObservable<unknown>(this.sdk.states.flag('boolean'))
@@ -141,10 +134,8 @@ export class Optimization {
             sub.next(undefined)
           })
 
-    // Page events are the most critical call in the integration — the SDK uses the current URL
-    // to resolve which experiences and variants apply to the user. Without this, personalisation
-    // does not work. Must fire on every route change including the initial load, and fires
-    // regardless of consent state — that is SDK behaviour, not something the app controls.
+    // Page events must fire on every route change including the initial load.
+    // The SDK uses the current URL to resolve which experiences apply to the user.
     router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe((e) => {
@@ -156,13 +147,12 @@ export class Optimization {
     this.sdk?.consent(value)
   }
 
-  identify(): void {
-    void this.sdk?.identify({ userId: 'charles', traits: { identified: true } })
+  identify(userId: string, traits?: Record<string, string | number | boolean | null>): void {
+    void this.sdk?.identify({ userId, traits })
   }
 
   reset(): void {
     this.sdk?.reset()
-    // reset() does not auto-emit a page event; fire one immediately after.
     void this.sdk?.page()
   }
 }

@@ -41,7 +41,7 @@ export class ControlPanel {
   }
 
   protected identify(): void {
-    this.optimization.identify()
+    this.optimization.identify('charles', { identified: true })
   }
 
   protected reset(): void {

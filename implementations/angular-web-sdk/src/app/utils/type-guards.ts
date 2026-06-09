@@ -1,8 +1,7 @@
+import { isRecord } from '@contentful/optimization-angular'
 import type { ContentfulEntry } from '../types/contentful'
 
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
+export { isRecord }
 
 export function isEntry(value: unknown): value is ContentfulEntry {
   return (

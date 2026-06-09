@@ -1,8 +1,8 @@
 import { inject, Injectable } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { BehaviorSubject, combineLatest, map, Observable } from 'rxjs'
-import { isRecord } from '../app/utils/type-guards'
 import { Optimization } from './optimization'
+import { isRecord } from './utils'
 
 const PREVIEW_PANEL_TAG = 'ctfl-opt-preview-panel'
 const PREVIEW_PANEL_TOGGLE_SELECTOR = 'button.toggle-drawer'

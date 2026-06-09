@@ -1,4 +1,6 @@
+export { OPTIMIZATION_CONFIG, type OptimizationConfig } from './config'
 export { LiveUpdates, togglePreviewPanel } from './live-updates'
 export { MergeTagPipe, isMergeTagEntry } from './merge-tag.pipe'
 export { Optimization, fromSdkObservable, type OptimizationInstance } from './optimization'
 export { OptimizationResolver, type ResolvedData } from './optimization-resolver'
+export { isRecord } from './utils'
