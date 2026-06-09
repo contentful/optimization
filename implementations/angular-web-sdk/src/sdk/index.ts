@@ -1,7 +1,6 @@
-export { provideContentfulOptimizationConfig, type NgContentfulOptimizationConfig } from './config'
+export { provideContentfulOptimizationConfig } from './config'
 export { NgContentfulClient } from './services/contentful-client'
 export { NgContentfulEntry, type ObservationMode } from './services/entry'
 export { NgContentfulLiveUpdates } from './services/live-updates'
-export { MergeTagPipe } from './services/merge-tag.pipe'
 export { NgContentfulOptimization } from './services/optimization'
 export { NgContentfulOptimizationResolver } from './services/optimization-resolver'
