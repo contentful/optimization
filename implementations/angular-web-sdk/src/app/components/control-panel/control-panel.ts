@@ -1,9 +1,7 @@
 import { Component, computed, inject, input } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
-import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import { Observable } from 'rxjs'
 import { LiveUpdates, togglePreviewPanel } from '../../optimization/live-updates'
-import { fromSdkObservable, Optimization } from '../../optimization/optimization'
+import { Optimization } from '../../optimization/optimization'
 
 @Component({
   selector: 'app-control-panel',
@@ -29,13 +27,7 @@ export class ControlPanel {
   })
 
   protected readonly selectedOptimizationCount = toSignal(
-    this.optimization.sdk !== undefined
-      ? fromSdkObservable<SelectedOptimizationArray | undefined>(
-          this.optimization.sdk.states.selectedOptimizations,
-        )
-      : new Observable<SelectedOptimizationArray | undefined>((sub) => {
-          sub.next(undefined)
-        }),
+    this.optimization.selectedOptimizations$,
     { initialValue: undefined },
   )
 

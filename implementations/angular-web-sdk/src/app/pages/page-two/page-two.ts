@@ -1,10 +1,8 @@
 import { Component, inject, type OnInit, signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
-import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import { Observable } from 'rxjs'
 import { ControlPanel } from '../../components/control-panel/control-panel'
 import { PAGE_TWO_AUTO_ENTRY_ID, PAGE_TWO_MANUAL_ENTRY_ID } from '../../config/entries'
-import { fromSdkObservable, Optimization } from '../../optimization/optimization'
+import { Optimization } from '../../optimization/optimization'
 import { ContentEntry } from '../../sections/content-entry/content-entry'
 import { ContentfulClient } from '../../services/contentful-client'
 import type { ContentfulEntry } from '../../types/contentful'
@@ -25,15 +23,7 @@ export class PageTwo implements OnInit {
   protected readonly autoEntry = signal<ContentfulEntry | undefined>(undefined)
   protected readonly manualEntry = signal<ContentfulEntry | undefined>(undefined)
 
-  protected readonly selectedOptimizations = toSignal(
-    this.optimization.sdk !== undefined
-      ? fromSdkObservable<SelectedOptimizationArray | undefined>(
-          this.optimization.sdk.states.selectedOptimizations,
-        )
-      : new Observable<SelectedOptimizationArray | undefined>((sub) => {
-          sub.next(undefined)
-        }),
-  )
+  protected readonly selectedOptimizations = toSignal(this.optimization.selectedOptimizations$)
 
   ngOnInit(): void {
     this.trackArrival()
@@ -53,7 +43,7 @@ export class PageTwo implements OnInit {
   }
 
   private async loadEntries(): Promise<void> {
-    const ids = [...new Set([PAGE_TWO_AUTO_ENTRY_ID, PAGE_TWO_MANUAL_ENTRY_ID])]
+    const ids = [PAGE_TWO_AUTO_ENTRY_ID, PAGE_TWO_MANUAL_ENTRY_ID]
     const entries = await this.contentfulClient.fetchEntries(ids)
     const byId = new Map(entries.map((e) => [e.sys.id, e]))
     this.autoEntry.set(byId.get(PAGE_TWO_AUTO_ENTRY_ID))

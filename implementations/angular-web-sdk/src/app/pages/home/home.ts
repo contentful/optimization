@@ -1,7 +1,5 @@
 import { Component, inject, type OnInit, signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
-import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import { Observable } from 'rxjs'
 import { ControlPanel } from '../../components/control-panel/control-panel'
 import {
   AUTO_OBSERVED_ENTRY_IDS,
@@ -9,7 +7,7 @@ import {
   MANUALLY_OBSERVED_ENTRY_IDS,
 } from '../../config/entries'
 import { LiveUpdates } from '../../optimization/live-updates'
-import { fromSdkObservable, Optimization } from '../../optimization/optimization'
+import { Optimization } from '../../optimization/optimization'
 import { ContentEntry, type EntryClickScenario } from '../../sections/content-entry/content-entry'
 import { NestedContentEntry } from '../../sections/nested-content-entry/nested-content-entry'
 import { ContentfulClient } from '../../services/contentful-client'
@@ -42,15 +40,7 @@ export class Home implements OnInit {
   protected readonly entriesById = signal<Map<string, ContentfulEntry>>(new Map())
   protected readonly loading = signal(true)
 
-  protected readonly selectedOptimizations = toSignal(
-    this.optimization.sdk !== undefined
-      ? fromSdkObservable<SelectedOptimizationArray | undefined>(
-          this.optimization.sdk.states.selectedOptimizations,
-        )
-      : new Observable<SelectedOptimizationArray | undefined>((sub) => {
-          sub.next(undefined)
-        }),
-  )
+  protected readonly selectedOptimizations = toSignal(this.optimization.selectedOptimizations$)
 
   protected readonly autoIds = AUTO_OBSERVED_ENTRY_IDS
   protected readonly manualIds = MANUALLY_OBSERVED_ENTRY_IDS

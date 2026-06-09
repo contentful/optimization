@@ -12,3 +12,17 @@ export function isEntry(value: unknown): value is ContentfulEntry {
     isRecord(value.fields)
   )
 }
+
+export function getSelectedOptimizationMeta(value: unknown): {
+  experienceId: string | undefined
+  sticky: boolean | undefined
+  variantIndex: number | undefined
+} {
+  if (!isRecord(value))
+    return { experienceId: undefined, sticky: undefined, variantIndex: undefined }
+  return {
+    experienceId: typeof value.experienceId === 'string' ? value.experienceId : undefined,
+    sticky: typeof value.sticky === 'boolean' ? value.sticky : undefined,
+    variantIndex: typeof value.variantIndex === 'number' ? value.variantIndex : undefined,
+  }
+}

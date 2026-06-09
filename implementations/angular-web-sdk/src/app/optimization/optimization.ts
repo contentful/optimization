@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core'
 import { NavigationEnd, Router } from '@angular/router'
 import ContentfulOptimization from '@contentful/optimization-web'
+import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import { createClient } from 'contentful'
 import { Observable } from 'rxjs'
 import { filter } from 'rxjs/operators'
@@ -87,6 +88,7 @@ export class Optimization {
   readonly profile$: Observable<unknown>
   readonly eventStream$: Observable<unknown>
   readonly booleanFlag$: Observable<unknown>
+  readonly selectedOptimizations$: Observable<SelectedOptimizationArray | undefined>
 
   constructor() {
     const config = inject(CONFIG)
@@ -121,6 +123,15 @@ export class Optimization {
       this.sdk !== undefined
         ? fromSdkObservable<unknown>(this.sdk.states.eventStream)
         : new Observable<unknown>()
+
+    this.selectedOptimizations$ =
+      this.sdk !== undefined
+        ? fromSdkObservable<SelectedOptimizationArray | undefined>(
+            this.sdk.states.selectedOptimizations,
+          )
+        : new Observable<SelectedOptimizationArray | undefined>((sub) => {
+            sub.next(undefined)
+          })
 
     // Subscribing to a flag automatically emits a component view event — no explicit tracking needed.
     this.booleanFlag$ =
