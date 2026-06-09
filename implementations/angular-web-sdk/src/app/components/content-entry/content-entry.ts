@@ -13,8 +13,8 @@ import {
 } from '@angular/core'
 import { NgContentfulLiveEntry, NgContentfulOptimization } from '@contentful/optimization-angular'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import { RichTextRenderer } from '../../components/rich-text-renderer/rich-text-renderer'
 import type { ContentfulEntry, RichTextDocument } from '../../types/contentful'
+import { RichTextRenderer } from '../rich-text-renderer/rich-text-renderer'
 
 export type EntryClickScenario = 'direct' | 'descendant' | 'ancestor'
 

@@ -1,10 +1,6 @@
 import { Component, inject, input } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
-import {
-  NgContentfulLiveUpdates,
-  NgContentfulOptimization,
-  togglePreviewPanel,
-} from '@contentful/optimization-angular'
+import { NgContentfulLiveUpdates, NgContentfulOptimization } from '@contentful/optimization-angular'
 import { map } from 'rxjs'
 
 @Component({
@@ -50,6 +46,4 @@ export class ControlPanel {
   protected reset(): void {
     this.optimization.reset()
   }
-
-  protected readonly togglePreviewPanel = togglePreviewPanel
 }

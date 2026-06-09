@@ -1,9 +1,9 @@
 import { Component, inject, type OnInit, signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { NgContentfulClient, NgContentfulOptimization } from '@contentful/optimization-angular'
+import { ContentEntry } from '../../components/content-entry/content-entry'
 import { ControlPanel } from '../../components/control-panel/control-panel'
 import { PAGE_TWO_AUTO_ENTRY_ID, PAGE_TWO_MANUAL_ENTRY_ID } from '../../config/entries'
-import { ContentEntry } from '../../sections/content-entry/content-entry'
 import type { ContentfulEntry } from '../../types/contentful'
 
 const PAGE_TWO_COMPONENT_ID = 'page-two-conversion'

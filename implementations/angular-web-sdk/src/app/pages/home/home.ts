@@ -5,14 +5,14 @@ import {
   NgContentfulLiveUpdates,
   NgContentfulOptimization,
 } from '@contentful/optimization-angular'
+import { ContentEntry, type EntryClickScenario } from '../../components/content-entry/content-entry'
 import { ControlPanel } from '../../components/control-panel/control-panel'
+import { NestedContentEntry } from '../../components/nested-content-entry/nested-content-entry'
 import {
   AUTO_OBSERVED_ENTRY_IDS,
   LIVE_UPDATES_ENTRY_ID,
   MANUALLY_OBSERVED_ENTRY_IDS,
 } from '../../config/entries'
-import { ContentEntry, type EntryClickScenario } from '../../sections/content-entry/content-entry'
-import { NestedContentEntry } from '../../sections/nested-content-entry/nested-content-entry'
 import type { ContentfulEntry } from '../../types/contentful'
 import { isRecord } from '../../utils/type-guards'
 
