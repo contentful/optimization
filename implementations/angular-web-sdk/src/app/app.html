@@ -8,6 +8,11 @@
   >
   <a data-testid="link-page-two" routerLink="/page-two" routerLinkActive="active">Page Two</a>
 </nav>
-<main>
-  <router-outlet />
-</main>
+<div class="app-layout">
+  <main>
+    <router-outlet />
+  </main>
+  <aside class="app-sidebar">
+    <app-analytics-event-display />
+  </aside>
+</div>

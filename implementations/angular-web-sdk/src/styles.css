@@ -123,10 +123,25 @@ nav a.active {
 
 /* Layout */
 
+.app-layout {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  align-items: start;
+  min-height: calc(100vh - 52px);
+}
+
+.app-sidebar {
+  position: sticky;
+  top: 0;
+  height: calc(100vh - 52px);
+  overflow-y: auto;
+  border-left: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
 main {
-  max-width: 1280px;
-  margin: 1.5rem auto;
-  padding: 0 1.5rem 3rem;
+  min-width: 0;
+  padding: 1.5rem 1.5rem 3rem;
   display: grid;
   gap: 1.5rem;
 }
@@ -383,6 +398,80 @@ main {
   color: var(--color-text-muted);
   font-family: monospace;
   margin-top: 0.25rem;
+}
+
+/* Analytics event panel */
+
+.events-panel {
+  padding: 1rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.events-panel__meta {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.events-panel__empty {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.events-panel__list {
+  list-style: none;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.events-panel__item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.4rem;
+  align-items: baseline;
+  font-size: 0.775rem;
+}
+
+.events-panel__type {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  background: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.events-panel__type--page {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.events-panel__type--component {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.events-panel__type--component_click {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.events-panel__type--component_hover {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+.events-panel__label {
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Live updates section */

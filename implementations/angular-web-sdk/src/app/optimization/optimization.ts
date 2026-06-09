@@ -58,6 +58,7 @@ export class Optimization {
   readonly error: Error | undefined
   readonly consent$: Observable<boolean | undefined>
   readonly profile$: Observable<unknown>
+  readonly eventStream$: Observable<unknown>
 
   constructor() {
     const config = inject(CONFIG)
@@ -83,6 +84,11 @@ export class Optimization {
         : new Observable<unknown>((sub) => {
             sub.next(undefined)
           })
+
+    this.eventStream$ =
+      this.sdk !== undefined
+        ? fromSdkObservable<unknown>(this.sdk.states.eventStream)
+        : new Observable<unknown>()
 
     // Page events are the most critical call in the integration — the SDK uses the current URL
     // to resolve which experiences and variants apply to the user. Without this, personalisation
