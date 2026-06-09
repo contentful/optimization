@@ -4,7 +4,7 @@ import type { SelectedOptimizationArray } from '@contentful/optimization-web/api
 import type { EntryClickScenario } from '../../config/entries'
 import type { ContentfulEntry } from '../../types/contentful'
 import { ContentEntry } from '../content-entry/content-entry'
-import { NestedContentEntry } from '../nested-content-entry/nested-content-entry'
+import { NestedContentItem } from '../nested-content-item/nested-content-item'
 
 function isNestedContentEntry(entry: ContentfulEntry): boolean {
   const ct: unknown = entry.sys.contentType
@@ -14,10 +14,12 @@ function isNestedContentEntry(entry: ContentfulEntry): boolean {
 
 @Component({
   selector: 'app-content-card',
-  imports: [ContentEntry, NestedContentEntry],
+  imports: [ContentEntry, NestedContentItem],
   template: `
     @if (isNested()) {
-      <app-nested-content-entry [entry]="entry()" />
+      <section [attr.data-testid]="'nested-content-entry-' + entry().sys.id">
+        <app-nested-content-item [entry]="entry()" />
+      </section>
     } @else {
       <app-content-entry
         [entry]="entry()"
