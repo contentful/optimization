@@ -232,13 +232,12 @@ automatically tracked.
 
 **How to verify visually:**
 
-1. Start the mock server (`pnpm serve:mocks`) and the app (`pnpm dev`).
-2. Open the app — the control panel shows `Flag "boolean": undefined` (anonymous session has no flag
-   value).
-3. Click **Identify** — the flag resolves to `true` and the control panel updates immediately.
-4. Watch the analytics sidebar — a `component` event with the flag's component ID appears
-   automatically with no explicit tracking call in the app.
-5. Click **Reset** — the flag returns to `undefined`.
+1. On load the control panel shows `Flag "boolean": undefined` — anonymous sessions have no flag
+   value.
+2. Click **Identify** — the flag resolves to `true` and the control panel updates immediately.
+3. A `component` event with the flag's component ID appears in the analytics sidebar automatically —
+   no explicit tracking call in the app.
+4. Click **Reset** — the flag returns to `undefined`.
 
 ---
 
