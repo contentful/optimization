@@ -286,7 +286,7 @@ Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 | 12  | Nested entries — recursive resolution via `fields.nested`             | —                                                                     | ⬜ Not started |
 | 13  | Merge tags — inline personalised values in rich text                  | —                                                                     | ⬜ Not started |
 | 14  | Rich text rendering — standard nodes + embedded merge tag entries     | `@contentful/rich-text-html-renderer` · `@contentful/rich-text-types` | ⬜ Not started |
-| 15  | Analytics event display — live feed, heartbeat dedup                  | —                                                                     | ⬜ Not started |
+| 15  | Analytics event display — live feed, heartbeat dedup                  | —                                                                     | ✅ Done        |
 | 16  | Preview panel — env-gated, lazy-loaded, open/close                    | —                                                                     | ⬜ Not started |
 | 17  | Multi-route navigation — two routes, page events, manual conversion   | —                                                                     | ✅ Done        |
 | 19  | Feature flags — subscribe to `'boolean'` flag, auto-emits view event  | —                                                                     | ⬜ Not started |
