@@ -13,12 +13,11 @@ import {
 } from '@angular/core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { Entry } from 'contentful'
-import type { ObservationMode } from './live-entry'
 import { NgContentfulLiveUpdates } from './live-updates'
 import { NgContentfulOptimization } from './optimization'
 import { NgContentfulOptimizationResolver, type ResolvedEntryView } from './optimization-resolver'
 
-export type { ObservationMode }
+export type ObservationMode = 'auto' | 'manual'
 
 @Injectable()
 export class NgContentfulEntry implements OnDestroy {

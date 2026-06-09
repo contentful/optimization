@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, type Signal } from '@angular/core'
+import { inject, Injectable } from '@angular/core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
@@ -73,10 +73,6 @@ export class NgContentfulOptimizationResolver {
       meta,
       isVariant: meta.experienceId !== undefined,
     }
-  }
-
-  with(config: { entry: Signal<Entry> }): Signal<ResolvedEntryView> {
-    return computed(() => this.resolveWithMeta(config.entry()))
   }
 
   resolveMergeTag(target: unknown): string {
