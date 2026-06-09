@@ -1,4 +1,4 @@
-import { InjectionToken } from '@angular/core'
+import { InjectionToken, type FactoryProvider } from '@angular/core'
 
 export interface NgContentfulOptimizationConfig {
   clientId: string
@@ -27,3 +27,12 @@ export interface NgContentfulOptimizationConfig {
 export const NG_CONTENTFUL_OPTIMIZATION_CONFIG = new InjectionToken<NgContentfulOptimizationConfig>(
   'NG_CONTENTFUL_OPTIMIZATION_CONFIG',
 )
+
+export function provideContentfulOptimizationConfig(
+  factory: () => NgContentfulOptimizationConfig,
+): FactoryProvider {
+  return {
+    provide: NG_CONTENTFUL_OPTIMIZATION_CONFIG,
+    useFactory: factory,
+  }
+}
