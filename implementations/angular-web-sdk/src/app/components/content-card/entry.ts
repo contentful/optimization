@@ -1,7 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common'
 import { Component, computed, inject, input } from '@angular/core'
-import type { ObservationMode } from '@contentful/optimization-angular'
-import { NgContentfulLiveEntry } from '@contentful/optimization-angular'
+import { NgContentfulEntry, type ObservationMode } from '@contentful/optimization-angular'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { EntryClickScenario } from '../../config/entries'
 import type { ContentfulEntry, RichTextDocument } from '../../types/contentful'
@@ -23,7 +22,7 @@ function isRichTextField(field: unknown): field is RichTextDocument {
   selector: 'app-content-entry',
   imports: [NgTemplateOutlet, RichText, EntryBadge],
   templateUrl: './entry.html',
-  providers: [NgContentfulLiveEntry],
+  providers: [NgContentfulEntry],
 })
 export class ContentEntry {
   // inputs
@@ -34,7 +33,7 @@ export class ContentEntry {
   readonly liveUpdates = input<boolean | undefined>(undefined)
 
   // injected dependencies
-  private readonly liveEntry = inject(NgContentfulLiveEntry).with({
+  private readonly liveEntry = inject(NgContentfulEntry).with({
     entry: this.entry,
     selectedOptimizations: this.selectedOptimizations,
     liveUpdates: this.liveUpdates,

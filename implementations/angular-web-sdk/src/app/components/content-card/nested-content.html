@@ -1,4 +1,4 @@
-@let r = resolved(); @let baseline = r.baselineId; @let variant = r.isVariant; @let m = r.meta;
+@if (resolved(); as r) { @let baseline = r.baselineId; @let variant = r.isVariant; @let m = r.meta;
 
 <div
   class="entry-card"
@@ -50,3 +50,4 @@
   </div>
   }
 </div>
+}

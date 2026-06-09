@@ -1,5 +1,5 @@
 import { Component, computed, forwardRef, inject, input } from '@angular/core'
-import { isRecord, NgContentfulOptimizationResolver } from '@contentful/optimization-angular'
+import { isRecord, NgContentfulEntry } from '@contentful/optimization-angular'
 import type { ContentfulEntry } from '../../types/contentful'
 import { buildNestedBadges, EntryBadge } from './badge'
 
@@ -16,20 +16,21 @@ function isEntry(value: unknown): value is ContentfulEntry {
   selector: 'app-nested-content',
   imports: [forwardRef(() => NestedContent), EntryBadge],
   templateUrl: './nested-content.html',
+  providers: [NgContentfulEntry],
 })
 export class NestedContent {
   // inputs
   readonly entry = input.required<ContentfulEntry>()
 
   // protected state
-  protected readonly resolved = inject(NgContentfulOptimizationResolver).with({ entry: this.entry })
-  protected readonly badges = computed(() => buildNestedBadges(this.resolved().isVariant))
+  protected readonly resolved = inject(NgContentfulEntry).with({ entry: this.entry }).resolved
+  protected readonly badges = computed(() => buildNestedBadges(this.resolved()?.isVariant ?? false))
   protected readonly entryText = computed(() => {
-    const text: unknown = this.resolved().resolvedEntry.fields.text
+    const text: unknown = this.resolved()?.resolvedEntry.fields.text
     return typeof text === 'string' ? text : ''
   })
   protected readonly nestedEntries = computed(() => {
-    const nested: unknown = this.resolved().resolvedEntry.fields.nested
+    const nested: unknown = this.resolved()?.resolvedEntry.fields.nested
     return Array.isArray(nested) ? nested.filter(isEntry) : []
   })
 }
