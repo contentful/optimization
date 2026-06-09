@@ -280,8 +280,8 @@ Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 | 6   | Click scenarios — direct / descendant / ancestor                      | —                                                                     | ✅ Done        |
 | 7   | Consent — toggle UI, gate tracking events                             | —                                                                     | ✅ Done        |
 | 8   | Identify / reset — fixed user ID + traits, persist across reload      | —                                                                     | ✅ Done        |
-| 9   | Live updates — global toggle (default off)                            | —                                                                     | ⬜ Not started |
-| 10  | Live updates — per-entry override (always-on / locked / default)      | —                                                                     | ⬜ Not started |
+| 9   | Live updates — global toggle (default off)                            | —                                                                     | ✅ Done        |
+| 10  | Live updates — per-entry override (always-on / locked / default)      | —                                                                     | ✅ Done        |
 | 11  | Preview panel forced live — all entries live while panel open         | `@contentful/optimization-web-preview-panel`                          | ⬜ Not started |
 | 12  | Nested entries — recursive resolution via `fields.nested`             | —                                                                     | ⬜ Not started |
 | 13  | Merge tags — inline personalised values in rich text                  | —                                                                     | ⬜ Not started |
