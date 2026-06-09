@@ -57,13 +57,17 @@ function upsert(list: AnalyticsEvent[], next: AnalyticsEvent): AnalyticsEvent[] 
   return updated
 }
 
+function componentLabel(componentId: string): string {
+  // Contentful entry IDs are long alphanumeric strings; flag/conversion IDs are short readable names.
+  return /^[A-Za-z0-9]{15,}$/.test(componentId) ? `id: ${componentId}` : componentId
+}
+
 function eventLabel(event: AnalyticsEvent): string {
   if (event.componentId !== undefined) {
-    if (event.viewDurationMs !== undefined)
-      return `${event.componentId} — ${event.viewDurationMs}ms`
-    if (event.hoverDurationMs !== undefined)
-      return `${event.componentId} — ${event.hoverDurationMs}ms`
-    return event.componentId
+    const base = componentLabel(event.componentId)
+    if (event.viewDurationMs !== undefined) return `${base} — ${event.viewDurationMs}ms`
+    if (event.hoverDurationMs !== undefined) return `${base} — ${event.hoverDurationMs}ms`
+    return base
   }
   if (event.pageUrl !== undefined) return event.pageUrl
   return ''
