@@ -23,14 +23,12 @@ export class Home {
   protected readonly manualIds = FIXTURES.home.manual
   protected readonly liveUpdatesEntryId = FIXTURES.home.liveUpdates
 
-  private readonly entries = resource({
+  protected readonly entries = resource({
     loader: async () => {
       const list = await this.contentfulClient.fetchEntries(FIXTURES.home.ids)
       return new Map(list.map((e) => [e.sys.id, e]))
     },
   })
-
-  protected readonly loading = this.entries.isLoading
 
   protected entryFor(id: string): ContentfulEntry | undefined {
     return this.entries.value()?.get(id)

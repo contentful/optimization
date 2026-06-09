@@ -19,14 +19,12 @@ export class PageTwo {
 
   protected readonly selectedOptimizations = this.optimization.selectedOptimizations
 
-  private readonly entries = resource({
+  protected readonly entries = resource({
     loader: async (): Promise<Map<string, ContentfulEntry>> => {
       const list = await this.contentfulClient.fetchEntries(FIXTURES.pageTwo.ids)
       return new Map(list.map((e) => [e.sys.id, e]))
     },
   })
-
-  protected readonly loading = this.entries.isLoading
 
   protected autoEntry(): ContentfulEntry | undefined {
     return this.entries.value()?.get(FIXTURES.pageTwo.auto)
@@ -36,7 +34,7 @@ export class PageTwo {
     return this.entries.value()?.get(FIXTURES.pageTwo.manual)
   }
 
-  protected trackConversion(): void {
+  protected readonly trackConversion = (): void => {
     void this.optimization.sdk.trackView({
       componentId: PAGE_TWO_COMPONENT_ID,
       viewId: crypto.randomUUID(),
