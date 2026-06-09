@@ -3,9 +3,10 @@ import { toSignal } from '@angular/core/rxjs-interop'
 import { NavigationEnd, Router } from '@angular/router'
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
+import { Profile } from '@contentful/optimization-web/api-schemas'
 import { createClient } from 'contentful'
 import { Observable } from 'rxjs'
-import { filter } from 'rxjs/operators'
+import { filter, map } from 'rxjs/operators'
 import type { NgContentfulOptimizationConfig } from '../config'
 import { NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../config'
 
@@ -87,11 +88,12 @@ export class NgContentfulOptimization {
   readonly sdk: NgContentfulOptimizationInstance | undefined
   readonly error: Error | undefined
   readonly consent$: Observable<boolean | undefined>
-  readonly profile$: Observable<unknown>
+  readonly profile$: Observable<Profile | undefined>
   readonly eventStream$: Observable<unknown>
   readonly booleanFlag$: Observable<unknown>
   readonly selectedOptimizations$: Observable<SelectedOptimizationArray | undefined>
   readonly selectedOptimizations: ReturnType<typeof toSignal<SelectedOptimizationArray | undefined>>
+  readonly profile: ReturnType<typeof toSignal<Profile | undefined>>
 
   constructor() {
     const config = inject(NG_CONTENTFUL_OPTIMIZATION_CONFIG)
@@ -116,8 +118,13 @@ export class NgContentfulOptimization {
 
     this.profile$ =
       this.sdk !== undefined
-        ? fromSdkObservable<unknown>(this.sdk.states.profile)
-        : new Observable<unknown>((sub) => {
+        ? fromSdkObservable<unknown>(this.sdk.states.profile).pipe(
+            map((raw) => {
+              const result = Profile.safeParse(raw)
+              return result.success ? result.data : undefined
+            }),
+          )
+        : new Observable<Profile | undefined>((sub) => {
             sub.next(undefined)
           })
 
@@ -136,6 +143,7 @@ export class NgContentfulOptimization {
           })
 
     this.selectedOptimizations = toSignal(this.selectedOptimizations$)
+    this.profile = toSignal(this.profile$)
 
     this.booleanFlag$ =
       this.sdk !== undefined
