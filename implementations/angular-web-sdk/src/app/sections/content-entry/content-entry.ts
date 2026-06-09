@@ -102,7 +102,14 @@ export class ContentEntry implements OnDestroy {
 
   protected readonly baselineId = computed(() => this.liveEntry.resolved()?.baselineId)
   protected readonly resolvedId = computed(() => this.liveEntry.resolved()?.resolvedId)
-  protected readonly meta = computed(() => this.liveEntry.resolved()?.meta)
+  protected readonly meta = computed(
+    () =>
+      this.liveEntry.resolved()?.meta ?? {
+        experienceId: undefined,
+        sticky: undefined,
+        variantIndex: undefined,
+      },
+  )
   protected readonly isVariant = computed(() => this.liveEntry.resolved()?.isVariant ?? false)
   protected readonly stickyAttr = computed(() => {
     const { sticky } = this.liveEntry.resolved()?.meta ?? {}

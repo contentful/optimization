@@ -52,7 +52,7 @@ export class ControlPanel {
     this.optimization.reset()
   }
 
-  protected toggleGlobalNgContentfulLiveUpdates(): void {
+  protected toggleGlobalLiveUpdates(): void {
     this.liveUpdatesService.toggle()
   }
 
