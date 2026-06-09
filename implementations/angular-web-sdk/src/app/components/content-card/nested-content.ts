@@ -1,7 +1,7 @@
 import { Component, computed, forwardRef, inject, input } from '@angular/core'
 import { isRecord, NgContentfulOptimizationResolver } from '@contentful/optimization-angular'
 import type { ContentfulEntry } from '../../types/contentful'
-import { EntryBadge } from './badge'
+import { buildNestedBadges, EntryBadge } from './badge'
 
 function isEntry(value: unknown): value is ContentfulEntry {
   return (
@@ -26,28 +26,7 @@ export class NestedContent {
 
   // protected state
   protected readonly resolved = computed(() => this.resolver.resolveWithMeta(this.entry()))
-  protected readonly badges = computed(() => {
-    const r = this.resolved()
-    const tags: Array<{ label: string; mod: string; title: string }> = []
-    tags.push({
-      label: r.isVariant ? 'variant' : 'baseline',
-      mod: r.isVariant ? 'variant' : '',
-      title: r.isVariant
-        ? 'This entry is a variant selected by the optimization SDK'
-        : 'This entry is the baseline (no optimization applied)',
-    })
-    tags.push({
-      label: 'auto',
-      mod: 'auto',
-      title: 'Entry tracking is handled automatically via data attributes',
-    })
-    tags.push({
-      label: 'nested',
-      mod: 'nested',
-      title: 'This entry is a nested child resolved via the optimization resolver',
-    })
-    return tags
-  })
+  protected readonly badges = computed(() => buildNestedBadges(this.resolved().isVariant))
   protected readonly entryText = computed(() => {
     const text: unknown = this.resolved().resolvedEntry.fields.text
     return typeof text === 'string' ? text : ''
