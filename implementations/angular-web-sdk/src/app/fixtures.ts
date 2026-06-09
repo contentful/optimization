@@ -6,7 +6,7 @@ const clickScenarios: Record<string, EntryClickScenario> = {
   '2Z2WLOx07InSewC3LUB3eX': 'ancestor',
 }
 
-export const ENTRIES = {
+export const FIXTURES = {
   home: {
     auto: [
       '1JAU028vQ7v6nB2swl3NBo',

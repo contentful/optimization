@@ -1,4 +1,4 @@
-import { Component, inject, type OnInit, signal } from '@angular/core'
+import { Component, inject, signal, type OnInit } from '@angular/core'
 import {
   NgContentfulClient,
   NgContentfulLiveUpdates,
@@ -6,7 +6,7 @@ import {
 } from '@contentful/optimization-angular'
 import { ContentCard, ContentEntry } from '../../components/content-card'
 import { ControlPanel } from '../../components/control-panel/control-panel'
-import { ENTRIES, type EntryClickScenario } from '../../config/entries'
+import { FIXTURES, type EntryClickScenario } from '../../fixtures'
 import type { ContentfulEntry } from '../../types/contentful'
 
 @Component({
@@ -24,9 +24,9 @@ export class Home implements OnInit {
   protected readonly loading = signal(true)
   protected readonly entriesById = signal<Map<string, ContentfulEntry>>(new Map())
   protected readonly selectedOptimizations = inject(NgContentfulOptimization).selectedOptimizations
-  protected readonly autoIds = ENTRIES.home.auto
-  protected readonly manualIds = ENTRIES.home.manual
-  protected readonly liveUpdatesEntryId = ENTRIES.home.liveUpdates
+  protected readonly autoIds = FIXTURES.home.auto
+  protected readonly manualIds = FIXTURES.home.manual
+  protected readonly liveUpdatesEntryId = FIXTURES.home.liveUpdates
 
   // lifecycle
   ngOnInit(): void {
@@ -39,12 +39,12 @@ export class Home implements OnInit {
   }
 
   protected clickScenario(id: string): EntryClickScenario | undefined {
-    return ENTRIES.home.clickScenarios[id]
+    return FIXTURES.home.clickScenarios[id]
   }
 
   // private methods
   private async loadEntries(): Promise<void> {
-    const ids = [...new Set([...ENTRIES.home.auto, ...ENTRIES.home.manual])]
+    const ids = [...new Set([...FIXTURES.home.auto, ...FIXTURES.home.manual])]
     const entries = await this.contentfulClient.fetchEntries(ids)
     const map = new Map<string, ContentfulEntry>()
     for (const entry of entries) {

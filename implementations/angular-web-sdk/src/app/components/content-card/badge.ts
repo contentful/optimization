@@ -1,6 +1,6 @@
 import { Component, input } from '@angular/core'
 import type { ObservationMode } from '@contentful/optimization-angular'
-import type { EntryClickScenario } from '../../config/entries'
+import type { EntryClickScenario } from '../../fixtures'
 import type { RichTextDocument } from '../../types/contentful'
 
 export interface Badge {

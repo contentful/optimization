@@ -1,7 +1,7 @@
 import { Component, computed, input } from '@angular/core'
 import type { ObservationMode } from '@contentful/optimization-angular'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import type { EntryClickScenario } from '../../config/entries'
+import type { EntryClickScenario } from '../../fixtures'
 import type { ContentfulEntry } from '../../types/contentful'
 import { ContentEntry } from './entry'
 import { NestedContent } from './nested-content'

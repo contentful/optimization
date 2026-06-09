@@ -2,7 +2,7 @@ import { Component, inject, type OnInit, signal } from '@angular/core'
 import { NgContentfulClient, NgContentfulOptimization } from '@contentful/optimization-angular'
 import { ContentEntry } from '../../components/content-card'
 import { ControlPanel } from '../../components/control-panel/control-panel'
-import { ENTRIES } from '../../config/entries'
+import { FIXTURES } from '../../fixtures'
 import type { ContentfulEntry } from '../../types/contentful'
 
 const PAGE_TWO_COMPONENT_ID = 'page-two-conversion'
@@ -41,11 +41,11 @@ export class PageTwo implements OnInit {
 
   // private methods
   private async loadEntries(): Promise<void> {
-    const ids = [ENTRIES.pageTwo.auto, ENTRIES.pageTwo.manual]
+    const ids = [FIXTURES.pageTwo.auto, FIXTURES.pageTwo.manual]
     const entries = await this.contentfulClient.fetchEntries(ids)
     const byId = new Map(entries.map((e) => [e.sys.id, e]))
-    this.autoEntry.set(byId.get(ENTRIES.pageTwo.auto))
-    this.manualEntry.set(byId.get(ENTRIES.pageTwo.manual))
+    this.autoEntry.set(byId.get(FIXTURES.pageTwo.auto))
+    this.manualEntry.set(byId.get(FIXTURES.pageTwo.manual))
     this.loading.set(false)
   }
 }
