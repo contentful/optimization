@@ -3,7 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop'
 import { NgContentfulClient, NgContentfulOptimization } from '@contentful/optimization-angular'
 import { ContentEntry } from '../../components/content-entry/content-entry'
 import { ControlPanel } from '../../components/control-panel/control-panel'
-import { PAGE_TWO_AUTO_ENTRY_ID, PAGE_TWO_MANUAL_ENTRY_ID } from '../../config/entries'
+import { ENTRIES } from '../../config/entries'
 import type { ContentfulEntry } from '../../types/contentful'
 
 const PAGE_TWO_COMPONENT_ID = 'page-two-conversion'
@@ -40,11 +40,11 @@ export class PageTwo implements OnInit {
 
   // private methods
   private async loadEntries(): Promise<void> {
-    const ids = [PAGE_TWO_AUTO_ENTRY_ID, PAGE_TWO_MANUAL_ENTRY_ID]
+    const ids = [ENTRIES.pageTwo.auto, ENTRIES.pageTwo.manual]
     const entries = await this.contentfulClient.fetchEntries(ids)
     const byId = new Map(entries.map((e) => [e.sys.id, e]))
-    this.autoEntry.set(byId.get(PAGE_TWO_AUTO_ENTRY_ID))
-    this.manualEntry.set(byId.get(PAGE_TWO_MANUAL_ENTRY_ID))
+    this.autoEntry.set(byId.get(ENTRIES.pageTwo.auto))
+    this.manualEntry.set(byId.get(ENTRIES.pageTwo.manual))
     this.loading.set(false)
   }
 }

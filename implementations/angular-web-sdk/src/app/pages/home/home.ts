@@ -8,14 +8,7 @@ import {
 import { ContentCard } from '../../components/content-card/content-card'
 import { ContentEntry } from '../../components/content-entry/content-entry'
 import { ControlPanel } from '../../components/control-panel/control-panel'
-import {
-  ALL_ENTRY_IDS,
-  AUTO_OBSERVED_ENTRY_IDS,
-  CLICK_SCENARIO_BY_ENTRY_ID,
-  type EntryClickScenario,
-  LIVE_UPDATES_ENTRY_ID,
-  MANUALLY_OBSERVED_ENTRY_IDS,
-} from '../../config/entries'
+import { ENTRIES, type EntryClickScenario } from '../../config/entries'
 import type { ContentfulEntry } from '../../types/contentful'
 
 @Component({
@@ -36,9 +29,9 @@ export class Home implements OnInit {
   protected readonly selectedOptimizations = toSignal(this.optimization.selectedOptimizations$)
 
   // config
-  protected readonly autoIds = AUTO_OBSERVED_ENTRY_IDS
-  protected readonly manualIds = MANUALLY_OBSERVED_ENTRY_IDS
-  protected readonly liveUpdatesEntryId = LIVE_UPDATES_ENTRY_ID
+  protected readonly autoIds = ENTRIES.home.auto
+  protected readonly manualIds = ENTRIES.home.manual
+  protected readonly liveUpdatesEntryId = ENTRIES.home.liveUpdates
 
   // lifecycle
   ngOnInit(): void {
@@ -51,12 +44,13 @@ export class Home implements OnInit {
   }
 
   protected clickScenario(id: string): EntryClickScenario | undefined {
-    return CLICK_SCENARIO_BY_ENTRY_ID[id]
+    return ENTRIES.home.clickScenarios[id]
   }
 
   // private methods
   private async loadEntries(): Promise<void> {
-    const entries = await this.contentfulClient.fetchEntries(ALL_ENTRY_IDS)
+    const ids = [...new Set([...ENTRIES.home.auto, ...ENTRIES.home.manual])]
+    const entries = await this.contentfulClient.fetchEntries(ids)
     const map = new Map<string, ContentfulEntry>()
     for (const entry of entries) {
       map.set(entry.sys.id, entry)
