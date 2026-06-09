@@ -1,4 +1,4 @@
-import { Component, inject, signal, type OnInit } from '@angular/core'
+import { Component, inject, resource } from '@angular/core'
 import {
   NgContentfulClient,
   NgContentfulLiveUpdates,
@@ -15,42 +15,28 @@ import type { ContentfulEntry } from '../../types/contentful'
   templateUrl: './home.html',
   host: { style: 'display: contents' },
 })
-export class Home implements OnInit {
-  // injected dependencies
+export class Home {
   private readonly contentfulClient = inject(NgContentfulClient)
   protected readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
-
-  // protected state
-  protected readonly loading = signal(true)
-  protected readonly entriesById = signal<Map<string, ContentfulEntry>>(new Map())
   protected readonly selectedOptimizations = inject(NgContentfulOptimization).selectedOptimizations
   protected readonly autoIds = FIXTURES.home.auto
   protected readonly manualIds = FIXTURES.home.manual
   protected readonly liveUpdatesEntryId = FIXTURES.home.liveUpdates
 
-  // lifecycle
-  ngOnInit(): void {
-    void this.loadEntries()
-  }
+  private readonly entries = resource({
+    loader: async () => {
+      const list = await this.contentfulClient.fetchEntries(FIXTURES.home.ids)
+      return new Map(list.map((e) => [e.sys.id, e]))
+    },
+  })
 
-  // public methods
+  protected readonly loading = this.entries.isLoading
+
   protected entryFor(id: string): ContentfulEntry | undefined {
-    return this.entriesById().get(id)
+    return this.entries.value()?.get(id)
   }
 
-  protected clickScenario(id: string): EntryClickScenario | undefined {
+  protected static clickScenario(id: string): EntryClickScenario | undefined {
     return FIXTURES.home.clickScenarios[id]
-  }
-
-  // private methods
-  private async loadEntries(): Promise<void> {
-    const ids = [...new Set([...FIXTURES.home.auto, ...FIXTURES.home.manual])]
-    const entries = await this.contentfulClient.fetchEntries(ids)
-    const map = new Map<string, ContentfulEntry>()
-    for (const entry of entries) {
-      map.set(entry.sys.id, entry)
-    }
-    this.entriesById.set(map)
-    this.loading.set(false)
   }
 }
