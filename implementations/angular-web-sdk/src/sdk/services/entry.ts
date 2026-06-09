@@ -13,7 +13,6 @@ import {
 } from '@angular/core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { Entry } from 'contentful'
-import { NgContentfulLiveUpdates } from '../../app/services/live-updates'
 import { isMergeTagEntry, isRecord } from '../utils'
 import { NgContentfulOptimization } from './optimization'
 
@@ -54,24 +53,16 @@ function toStringValue(value: unknown): string {
 
 @Injectable()
 export class NgContentfulEntry implements OnDestroy {
-  private readonly liveUpdates = inject(NgContentfulLiveUpdates)
   private readonly optimization = inject(NgContentfulOptimization)
   private readonly elementRef = inject<ElementRef<Element>>(ElementRef)
 
   private readonly _entry = signal<Entry | undefined>(undefined)
   private readonly _selectedOptimizations = signal<SelectedOptimizationArray | undefined>(undefined)
-  private readonly _liveUpdatesOverride = signal<boolean | undefined>(undefined)
+  private readonly _liveUpdates = signal<boolean>(false)
   private readonly _lockedSnapshot = signal<ResolvedEntryView | undefined>(undefined)
   private readonly _observation = signal<ObservationMode>('auto')
   private readonly _domReady = signal(false)
   private manualTrackingActive = false
-
-  private readonly isLive = computed(() => {
-    if (this.liveUpdates.previewPanelVisible()) return true
-    const override = this._liveUpdatesOverride()
-    if (override !== undefined) return override
-    return this.liveUpdates.globalLiveUpdates()
-  })
 
   readonly resolved: Signal<ResolvedEntryView | undefined> = computed(() => {
     const entry = this._entry()
@@ -83,7 +74,7 @@ export class NgContentfulEntry implements OnDestroy {
 
   constructor() {
     effect(() => {
-      const live = this.isLive()
+      const live = this._liveUpdates()
       if (live) {
         untracked(() => {
           this.clearSnapshot()
@@ -128,14 +119,14 @@ export class NgContentfulEntry implements OnDestroy {
     entry: InputSignal<Entry>
     observation?: InputSignal<ObservationMode>
     selectedOptimizations?: InputSignal<SelectedOptimizationArray | undefined>
-    liveUpdates?: InputSignal<boolean | undefined>
+    liveUpdates?: Signal<boolean>
   }): this {
     effect(() => {
       this._entry.set(config.entry())
       if (config.observation) this._observation.set(config.observation())
       if (config.selectedOptimizations)
         this._selectedOptimizations.set(config.selectedOptimizations())
-      if (config.liveUpdates) this._liveUpdatesOverride.set(config.liveUpdates())
+      if (config.liveUpdates) this._liveUpdates.set(config.liveUpdates())
     })
     return this
   }

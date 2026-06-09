@@ -3,6 +3,7 @@ import { Component, computed, inject, input } from '@angular/core'
 import { NgContentfulEntry, type ObservationMode } from '@contentful/optimization-angular'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { EntryClickScenario } from '../../fixtures'
+import { NgContentfulLiveUpdates } from '../../services/live-updates'
 import type { ContentfulEntry, RichTextDocument } from '../../types/contentful'
 import { buildEntryBadges, EntryBadge } from './badge'
 import { RichText } from './rich-text'
@@ -33,10 +34,18 @@ export class ContentEntry {
   readonly liveUpdates = input<boolean | undefined>(undefined)
 
   // injected dependencies
+  private readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
+  private readonly isLive = computed(() => {
+    if (this.liveUpdatesService.previewPanelVisible()) return true
+    const override = this.liveUpdates()
+    if (override !== undefined) return override
+    return this.liveUpdatesService.globalLiveUpdates()
+  })
+
   private readonly liveEntry = inject(NgContentfulEntry).with({
     entry: this.entry,
     selectedOptimizations: this.selectedOptimizations,
-    liveUpdates: this.liveUpdates,
+    liveUpdates: this.isLive,
     observation: this.observation,
   })
 
