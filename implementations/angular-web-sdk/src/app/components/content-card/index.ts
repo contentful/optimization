@@ -43,6 +43,7 @@ export class ContentCard {
   protected readonly isNested = computed(() => isNestedContentEntry(this.entry()))
 }
 
+export { EntryBadge } from './badge'
 export { ContentEntry } from './entry'
 export { NestedContent } from './nested-content'
 export { RichText } from './rich-text'

@@ -45,11 +45,7 @@
       </div>
       <div class="entry-card__badges">
         @for (badge of badges(); track badge.mod) {
-        <span
-          class="entry-card__badge"
-          [class]="badge.mod ? 'entry-card__badge entry-card__badge--' + badge.mod : 'entry-card__badge'"
-          >{{ badge.label }}</span
-        >
+        <app-entry-badge [label]="badge.label" [mod]="badge.mod" [title]="badge.title" />
         }
       </div>
     </div>

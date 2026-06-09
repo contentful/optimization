@@ -406,6 +406,7 @@ main > .sections-row {
 }
 
 .entry-card__badge {
+  position: relative;
   font-size: 0.5rem;
   font-weight: 600;
   letter-spacing: 0.03em;
@@ -414,6 +415,26 @@ main > .sections-row {
   border-radius: 999px;
   background: var(--color-border);
   color: var(--color-text-muted);
+  cursor: default;
+}
+
+.entry-card__badge[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: #1e293b;
+  color: #f8fafc;
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 100;
 }
 
 .entry-card__badge--variant {
