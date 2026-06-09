@@ -21,11 +21,8 @@ export class NestedContent {
   // inputs
   readonly entry = input.required<ContentfulEntry>()
 
-  // injected dependencies
-  private readonly resolver = inject(NgContentfulOptimizationResolver)
-
   // protected state
-  protected readonly resolved = computed(() => this.resolver.resolveWithMeta(this.entry()))
+  protected readonly resolved = inject(NgContentfulOptimizationResolver).resolveWith(this.entry)
   protected readonly badges = computed(() => buildNestedBadges(this.resolved().isVariant))
   protected readonly entryText = computed(() => {
     const text: unknown = this.resolved().resolvedEntry.fields.text
