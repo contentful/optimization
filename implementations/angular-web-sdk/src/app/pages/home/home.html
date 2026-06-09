@@ -11,42 +11,6 @@
 <app-control-panel />
 
 <div class="sections-row">
-  <section class="page-section">
-    <header class="page-section__header">
-      <h2>Auto-observed</h2>
-      <p>Tracked via <code>data-ctfl-*</code> attributes.</p>
-    </header>
-    <div id="auto-observed" class="entry-grid">
-      @for (id of autoIds; track id) { @let entry = entryFor(id); @if (entry) { @if
-      (isNested(entry)) {
-      <app-nested-content-entry [entry]="entry" />
-      } @else {
-      <app-content-entry
-        [entry]="entry"
-        observation="auto"
-        [clickScenario]="clickScenario(id)"
-        [selectedOptimizations]="selectedOptimizations()"
-      />
-      } } }
-    </div>
-  </section>
-
-  <section class="page-section">
-    <header class="page-section__header">
-      <h2>Manually-observed</h2>
-      <p>Tracked via explicit <code>enableElement</code> calls.</p>
-    </header>
-    <div id="manually-observed" class="entry-grid">
-      @for (id of manualIds; track id) { @let entry = entryFor(id); @if (entry) {
-      <app-content-entry
-        [entry]="entry"
-        observation="manual"
-        [selectedOptimizations]="selectedOptimizations()"
-      />
-      } }
-    </div>
-  </section>
-
   <section class="page-section" data-testid="live-updates-section">
     <header class="page-section__header">
       <h2>Live updates</h2>
@@ -88,6 +52,42 @@
       </div>
     </div>
     }
+  </section>
+
+  <section class="page-section">
+    <header class="page-section__header">
+      <h2>Auto-observed</h2>
+      <p>Tracked via <code>data-ctfl-*</code> attributes.</p>
+    </header>
+    <div id="auto-observed" class="entry-grid">
+      @for (id of autoIds; track id) { @let entry = entryFor(id); @if (entry) { @if
+      (isNested(entry)) {
+      <app-nested-content-entry [entry]="entry" />
+      } @else {
+      <app-content-entry
+        [entry]="entry"
+        observation="auto"
+        [clickScenario]="clickScenario(id)"
+        [selectedOptimizations]="selectedOptimizations()"
+      />
+      } } }
+    </div>
+  </section>
+
+  <section class="page-section">
+    <header class="page-section__header">
+      <h2>Manually-observed</h2>
+      <p>Tracked via explicit <code>enableElement</code> calls.</p>
+    </header>
+    <div id="manually-observed" class="entry-grid">
+      @for (id of manualIds; track id) { @let entry = entryFor(id); @if (entry) {
+      <app-content-entry
+        [entry]="entry"
+        observation="manual"
+        [selectedOptimizations]="selectedOptimizations()"
+      />
+      } }
+    </div>
   </section>
 </div>
 }
