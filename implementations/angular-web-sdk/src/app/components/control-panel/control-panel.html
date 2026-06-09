@@ -1,65 +1,85 @@
 <section class="panel">
   <h2 class="panel__title">SDK state</h2>
-  <p class="panel__stat" data-testid="selected-optimizations-count">
-    Active optimizations <span>{{ optimizationCount() }}</span>
-  </p>
-  <p class="panel__stat" data-testid="consent-status">
-    Consent: {{ consent() === undefined ? 'undefined' : consent() }}
-  </p>
-  <p class="panel__stat" data-testid="identified-status">
-    Identified: {{ isIdentified() ? 'Yes' : 'No' }}
-  </p>
-  <p class="panel__stat" data-testid="live-updates-status">
-    Global live updates:
-    <span>{{ liveUpdatesService.globalLiveUpdates() ? 'ON' : 'OFF' }}</span>
-  </p>
-  <p class="panel__stat" data-testid="boolean-flag-status">
-    Flag "boolean":
-    <span>{{ booleanFlag() === undefined ? 'undefined' : booleanFlag() }}</span>
-  </p>
-  <p class="panel__stat" data-testid="preview-panel-status">
-    Preview panel:
-    <span>{{ liveUpdatesService.previewPanelVisible() ? 'Open' : 'Closed' }}</span>
-  </p>
-  <div class="panel__actions">
+
+  <div class="panel__row" data-testid="consent-status">
+    <span class="panel__row-label"
+      >Consent: {{ consent() === undefined ? 'undefined' : consent() }}</span
+    >
     @if (consent() === true) {
-    <button class="btn btn--danger" data-testid="unconsent-button" (click)="toggleConsent()">
+    <button
+      class="btn btn--danger btn--sm"
+      data-testid="unconsent-button"
+      (click)="toggleConsent()"
+    >
       Withdraw consent
     </button>
     } @else {
-    <button class="btn btn--primary" data-testid="consent-button" (click)="toggleConsent()">
+    <button class="btn btn--primary btn--sm" data-testid="consent-button" (click)="toggleConsent()">
       Grant consent
     </button>
-    } @if (isIdentified()) {
-    <button class="btn btn--secondary" data-testid="reset-button" (click)="reset()">Reset</button>
+    }
+  </div>
+
+  <div class="panel__row" data-testid="identified-status">
+    <span class="panel__row-label">Identified: {{ isIdentified() ? 'Yes' : 'No' }}</span>
+    @if (isIdentified()) {
+    <button class="btn btn--secondary btn--sm" data-testid="reset-button" (click)="reset()">
+      Reset
+    </button>
     } @else {
-    <button class="btn btn--primary" data-testid="identify-button" (click)="identify()">
+    <button class="btn btn--primary btn--sm" data-testid="identify-button" (click)="identify()">
       Identify
     </button>
     }
+  </div>
+
+  <div class="panel__row" data-testid="live-updates-status">
+    <span class="panel__row-label">
+      Global live updates: {{ liveUpdatesService.globalLiveUpdates() ? 'ON' : 'OFF' }}
+    </span>
     <button
-      class="btn btn--secondary"
+      class="btn btn--secondary btn--sm"
       data-testid="live-updates-toggle"
       (click)="toggleGlobalLiveUpdates()"
     >
-      Global: {{ liveUpdatesService.globalLiveUpdates() ? 'ON' : 'OFF' }}
+      Toggle
     </button>
+  </div>
+
+  <div class="panel__row" data-testid="boolean-flag-status">
+    <span class="panel__row-label">
+      Flag "boolean": {{ booleanFlag() === undefined ? 'undefined' : booleanFlag() }}
+    </span>
+  </div>
+
+  <div class="panel__row" data-testid="selected-optimizations-count">
+    <span class="panel__row-label">Active optimizations: {{ optimizationCount() }}</span>
+  </div>
+
+  <div class="panel__row" data-testid="preview-panel-status">
+    <span class="panel__row-label">
+      Preview panel: {{ liveUpdatesService.previewPanelVisible() ? 'Open' : 'Closed' }}
+    </span>
     <button
-      class="btn btn--secondary"
+      class="btn btn--secondary btn--sm"
       data-testid="preview-panel-toggle"
       type="button"
       (click)="togglePreviewPanel()"
     >
-      Preview panel
+      Toggle
     </button>
+  </div>
+
+  <div class="panel__row">
+    <span class="panel__row-label">Conversion</span>
     <button
-      class="btn btn--primary"
+      class="btn btn--primary btn--sm"
       data-testid="track-conversion-button"
       type="button"
       [disabled]="!onTrackConversion()"
       (click)="onTrackConversion()!()"
     >
-      Track conversion
+      Track
     </button>
   </div>
 </section>
