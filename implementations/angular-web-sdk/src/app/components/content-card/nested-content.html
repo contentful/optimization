@@ -46,7 +46,7 @@
   @if (nestedEntries().length > 0) {
   <div class="nested-children">
     @for (child of nestedEntries(); track child.sys.id) {
-    <app-nested-content-item [entry]="child" />
+    <app-nested-content [entry]="child" />
     }
   </div>
   }

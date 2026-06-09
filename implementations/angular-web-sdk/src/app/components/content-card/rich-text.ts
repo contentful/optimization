@@ -59,10 +59,10 @@ function renderNode(node: unknown, getMergeTag: GetMergeTag): string {
 }
 
 @Component({
-  selector: 'app-rich-text-renderer',
+  selector: 'app-rich-text',
   template: `<div class="rich-text" [innerHTML]="html()"></div>`,
 })
-export class RichTextRenderer {
+export class RichText {
   readonly richText = input.required<RichTextDocument>()
 
   private readonly resolver = inject(NgContentfulOptimizationResolver)

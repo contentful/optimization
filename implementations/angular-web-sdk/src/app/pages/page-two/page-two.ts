@@ -19,23 +19,25 @@ export class PageTwo implements OnInit {
   private readonly optimization = inject(NgContentfulOptimization)
   private readonly contentfulClient = inject(NgContentfulClient)
 
-  // state
+  // protected state
   protected readonly loading = signal(true)
   protected readonly autoEntry = signal<ContentfulEntry | undefined>(undefined)
   protected readonly manualEntry = signal<ContentfulEntry | undefined>(undefined)
   protected readonly selectedOptimizations = toSignal(this.optimization.selectedOptimizations$)
-  protected readonly trackConversion = (): void => {
-    void this.optimization.sdk?.trackView({
-      componentId: PAGE_TWO_COMPONENT_ID,
-      viewId: crypto.randomUUID(),
-      viewDurationMs: 0,
-    })
-  }
 
   // lifecycle
   ngOnInit(): void {
     this.trackConversion()
     void this.loadEntries()
+  }
+
+  // public methods
+  protected trackConversion(): void {
+    void this.optimization.sdk?.trackView({
+      componentId: PAGE_TWO_COMPONENT_ID,
+      viewId: crypto.randomUUID(),
+      viewDurationMs: 0,
+    })
   }
 
   // private methods

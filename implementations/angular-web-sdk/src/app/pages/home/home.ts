@@ -20,14 +20,12 @@ export class Home implements OnInit {
   // injected dependencies
   private readonly contentfulClient = inject(NgContentfulClient)
   private readonly optimization = inject(NgContentfulOptimization)
-  protected readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
+  private readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
 
-  // state
+  // protected state
   protected readonly loading = signal(true)
   protected readonly entriesById = signal<Map<string, ContentfulEntry>>(new Map())
   protected readonly selectedOptimizations = toSignal(this.optimization.selectedOptimizations$)
-
-  // config
   protected readonly autoIds = ENTRIES.home.auto
   protected readonly manualIds = ENTRIES.home.manual
   protected readonly liveUpdatesEntryId = ENTRIES.home.liveUpdates

@@ -13,9 +13,9 @@ export class ControlPanel {
 
   // injected dependencies
   private readonly optimization = inject(NgContentfulOptimization)
-  protected readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
+  private readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
 
-  // state
+  // protected state
   protected readonly consent = toSignal(this.optimization.consent$)
   protected readonly isIdentified = toSignal(
     this.optimization.profile$.pipe(

@@ -61,7 +61,7 @@
 
     <div [attr.data-testid]="'entry-text-' + baseline" [attr.aria-label]="'Entry: ' + r.resolvedId">
       @if (richTextField(); as rt) {
-      <app-rich-text-renderer [richText]="rt" />
+      <app-rich-text [richText]="rt" />
       } @else {
       <p>{{ entryText() }}</p>
       }
