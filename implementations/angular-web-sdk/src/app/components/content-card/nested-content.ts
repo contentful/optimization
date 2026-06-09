@@ -1,9 +1,5 @@
 import { Component, computed, forwardRef, inject, input } from '@angular/core'
-import {
-  isRecord,
-  NgContentfulOptimization,
-  NgContentfulOptimizationResolver,
-} from '@contentful/optimization-angular'
+import { isRecord, NgContentfulOptimizationResolver } from '@contentful/optimization-angular'
 import type { ContentfulEntry } from '../../types/contentful'
 
 function isEntry(value: unknown): value is ContentfulEntry {
@@ -26,12 +22,9 @@ export class NestedContent {
 
   // injected dependencies
   private readonly resolver = inject(NgContentfulOptimizationResolver)
-  private readonly selectedOptimizations = inject(NgContentfulOptimization).selectedOptimizations
 
   // protected state
-  protected readonly resolved = computed(() =>
-    this.resolver.resolveWithMeta(this.entry(), this.selectedOptimizations()),
-  )
+  protected readonly resolved = computed(() => this.resolver.resolveWithMeta(this.entry()))
   protected readonly entryText = computed(() => {
     const text: unknown = this.resolved().resolvedEntry.fields.text
     return typeof text === 'string' ? text : ''

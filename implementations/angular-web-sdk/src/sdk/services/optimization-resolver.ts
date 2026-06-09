@@ -63,7 +63,10 @@ export class NgContentfulOptimizationResolver {
     baseline: Entry,
     selectedOptimizations?: SelectedOptimizationArray,
   ): ResolvedEntryView {
-    const resolved = this.resolveEntry(baseline, selectedOptimizations)
+    const resolved = this.resolveEntry(
+      baseline,
+      selectedOptimizations ?? this.optimization.selectedOptimizations(),
+    )
     const { entry: resolvedEntry } = resolved
     const meta = extractMeta(resolved.selectedOptimization)
     return {
