@@ -5,7 +5,7 @@ import type { SelectedOptimizationArray } from '@contentful/optimization-web/api
 import { createClient } from 'contentful'
 import { Observable } from 'rxjs'
 import { filter } from 'rxjs/operators'
-import { type Config, CONFIG } from '../config/config.token'
+import { type Config, CONFIG } from '../app/config/config.token'
 
 export type OptimizationInstance = ContentfulOptimization
 

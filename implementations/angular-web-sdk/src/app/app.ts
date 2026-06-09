@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core'
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router'
+import { Optimization } from '@contentful/optimization-angular'
 import { AnalyticsEventDisplay } from './components/analytics-event-display/analytics-event-display'
-import { Optimization } from './optimization/optimization'
 
 @Component({
   selector: 'app-root',

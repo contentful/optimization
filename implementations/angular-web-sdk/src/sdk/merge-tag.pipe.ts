@@ -1,6 +1,6 @@
 import { inject, Pipe, type PipeTransform } from '@angular/core'
 import type { MergeTagEntry } from '@contentful/optimization-web/api-schemas'
-import { isRecord } from '../utils/type-guards'
+import { isRecord } from '../app/utils/type-guards'
 import { OptimizationResolver } from './optimization-resolver'
 
 function isMergeTagEntry(entry: unknown): entry is MergeTagEntry {

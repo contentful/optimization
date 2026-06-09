@@ -11,12 +11,15 @@ import {
   signal,
   untracked,
 } from '@angular/core'
+import {
+  LiveUpdates,
+  Optimization,
+  OptimizationResolver,
+  type ResolvedData,
+} from '@contentful/optimization-angular'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { EntrySkeletonType } from 'contentful'
 import { RichTextRenderer } from '../../components/rich-text-renderer/rich-text-renderer'
-import { LiveUpdates } from '../../optimization/live-updates'
-import { Optimization } from '../../optimization/optimization'
-import { OptimizationResolver, type ResolvedData } from '../../optimization/optimization-resolver'
 import type { ContentfulEntry, RichTextDocument } from '../../types/contentful'
 import { getSelectedOptimizationMeta } from '../../utils/type-guards'
 

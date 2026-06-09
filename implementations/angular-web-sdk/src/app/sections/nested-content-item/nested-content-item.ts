@@ -1,7 +1,6 @@
 import { Component, computed, forwardRef, inject, input } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
-import { Optimization } from '../../optimization/optimization'
-import { OptimizationResolver } from '../../optimization/optimization-resolver'
+import { Optimization, OptimizationResolver } from '@contentful/optimization-angular'
 import type { ContentfulEntry } from '../../types/contentful'
 import { getSelectedOptimizationMeta, isEntry } from '../../utils/type-guards'
 

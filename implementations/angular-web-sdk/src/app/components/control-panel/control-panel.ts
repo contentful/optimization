@@ -1,7 +1,6 @@
 import { Component, computed, inject, input } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
-import { LiveUpdates, togglePreviewPanel } from '../../optimization/live-updates'
-import { Optimization } from '../../optimization/optimization'
+import { LiveUpdates, Optimization, togglePreviewPanel } from '@contentful/optimization-angular'
 
 @Component({
   selector: 'app-control-panel',

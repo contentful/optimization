@@ -1,13 +1,12 @@
 import { Component, inject, type OnInit, signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
+import { LiveUpdates, Optimization } from '@contentful/optimization-angular'
 import { ControlPanel } from '../../components/control-panel/control-panel'
 import {
   AUTO_OBSERVED_ENTRY_IDS,
   LIVE_UPDATES_ENTRY_ID,
   MANUALLY_OBSERVED_ENTRY_IDS,
 } from '../../config/entries'
-import { LiveUpdates } from '../../optimization/live-updates'
-import { Optimization } from '../../optimization/optimization'
 import { ContentEntry, type EntryClickScenario } from '../../sections/content-entry/content-entry'
 import { NestedContentEntry } from '../../sections/nested-content-entry/nested-content-entry'
 import { ContentfulClient } from '../../services/contentful-client'

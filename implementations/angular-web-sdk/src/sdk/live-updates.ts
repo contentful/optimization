@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { BehaviorSubject, combineLatest, map, Observable } from 'rxjs'
-import { isRecord } from '../utils/type-guards'
+import { isRecord } from '../app/utils/type-guards'
 import { Optimization } from './optimization'
 
 const PREVIEW_PANEL_TAG = 'ctfl-opt-preview-panel'

@@ -8,7 +8,10 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "paths": {
+      "@contentful/optimization-angular": ["./src/sdk/index.ts"]
+    }
   },
   "include": ["src/**/*.ts"]
 }
