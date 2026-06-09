@@ -32,7 +32,7 @@ export class PageTwo implements OnInit {
 
   // public methods
   protected trackConversion(): void {
-    void this.optimization.sdk?.trackView({
+    this.optimization.trackView({
       componentId: PAGE_TWO_COMPONENT_ID,
       viewId: crypto.randomUUID(),
       viewDurationMs: 0,

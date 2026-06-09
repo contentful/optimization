@@ -108,6 +108,10 @@ export class NgContentfulEntry implements OnDestroy {
     return this
   }
 
+  resolveMergeTag(target: unknown): string {
+    return this.resolver.resolveMergeTag(target)
+  }
+
   lockSnapshot(): void {
     const entry = untracked(() => this._entry())
     if (entry === undefined) return

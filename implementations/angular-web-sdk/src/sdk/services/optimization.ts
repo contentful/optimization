@@ -169,6 +169,10 @@ export class NgContentfulOptimization {
     void this.sdk?.identify({ userId, traits })
   }
 
+  trackView(payload: Parameters<NgContentfulOptimizationInstance['trackView']>[0]): void {
+    void this.sdk?.trackView(payload)
+  }
+
   reset(): void {
     this.sdk?.reset()
     void this.sdk?.page()
