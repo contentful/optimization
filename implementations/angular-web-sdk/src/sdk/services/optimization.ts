@@ -85,8 +85,7 @@ function getOrCreateInstance(
 
 @Injectable({ providedIn: 'root' })
 export class NgContentfulOptimization {
-  readonly sdk: NgContentfulOptimizationInstance | undefined
-  readonly error: Error | undefined
+  readonly sdk: NgContentfulOptimizationInstance
   readonly consent$: Observable<boolean | undefined>
   readonly profile$: Observable<Profile | undefined>
   readonly eventStream$: Observable<unknown>
@@ -99,82 +98,55 @@ export class NgContentfulOptimization {
     const config = inject(NG_CONTENTFUL_OPTIMIZATION_CONFIG)
     const router = inject(Router)
 
-    try {
-      this.sdk = getOrCreateInstance(config)
-    } catch (err) {
-      this.error = err instanceof Error ? err : new Error(String(err))
-    }
+    this.sdk = getOrCreateInstance(config)
 
-    if (config.previewPanel !== undefined && this.sdk !== undefined) {
+    if (config.previewPanel !== undefined) {
       void attachPreviewPanel(this.sdk, config)
     }
 
-    this.consent$ =
-      this.sdk !== undefined
-        ? fromSdkObservable<boolean | undefined>(this.sdk.states.consent)
-        : new Observable<boolean | undefined>((sub) => {
-            sub.next(undefined)
-          })
+    this.consent$ = fromSdkObservable<boolean | undefined>(this.sdk.states.consent)
 
-    this.profile$ =
-      this.sdk !== undefined
-        ? fromSdkObservable<unknown>(this.sdk.states.profile).pipe(
-            map((raw) => {
-              const result = Profile.safeParse(raw)
-              return result.success ? result.data : undefined
-            }),
-          )
-        : new Observable<Profile | undefined>((sub) => {
-            sub.next(undefined)
-          })
+    this.profile$ = fromSdkObservable<unknown>(this.sdk.states.profile).pipe(
+      map((raw) => {
+        const result = Profile.safeParse(raw)
+        return result.success ? result.data : undefined
+      }),
+    )
 
-    this.eventStream$ =
-      this.sdk !== undefined
-        ? fromSdkObservable<unknown>(this.sdk.states.eventStream)
-        : new Observable<unknown>()
+    this.eventStream$ = fromSdkObservable<unknown>(this.sdk.states.eventStream)
 
-    this.selectedOptimizations$ =
-      this.sdk !== undefined
-        ? fromSdkObservable<SelectedOptimizationArray | undefined>(
-            this.sdk.states.selectedOptimizations,
-          )
-        : new Observable<SelectedOptimizationArray | undefined>((sub) => {
-            sub.next(undefined)
-          })
+    this.selectedOptimizations$ = fromSdkObservable<SelectedOptimizationArray | undefined>(
+      this.sdk.states.selectedOptimizations,
+    )
 
     this.selectedOptimizations = toSignal(this.selectedOptimizations$)
     this.profile = toSignal(this.profile$)
 
-    this.booleanFlag$ =
-      this.sdk !== undefined
-        ? fromSdkObservable<unknown>(this.sdk.states.flag('boolean'))
-        : new Observable<unknown>((sub) => {
-            sub.next(undefined)
-          })
+    this.booleanFlag$ = fromSdkObservable<unknown>(this.sdk.states.flag('boolean'))
 
     // Page events must fire on every route change including the initial load.
     // The SDK uses the current URL to resolve which experiences apply to the user.
     router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe((e) => {
-        void this.sdk?.page({ properties: { url: e.urlAfterRedirects } })
+        void this.sdk.page({ properties: { url: e.urlAfterRedirects } })
       })
   }
 
   setConsent(value: boolean): void {
-    this.sdk?.consent(value)
+    this.sdk.consent(value)
   }
 
   identify(userId: string, traits?: Record<string, string | number | boolean | null>): void {
-    void this.sdk?.identify({ userId, traits })
+    void this.sdk.identify({ userId, traits })
   }
 
   trackView(payload: Parameters<NgContentfulOptimizationInstance['trackView']>[0]): void {
-    void this.sdk?.trackView(payload)
+    void this.sdk.trackView(payload)
   }
 
   reset(): void {
-    this.sdk?.reset()
-    void this.sdk?.page()
+    this.sdk.reset()
+    void this.sdk.page()
   }
 }

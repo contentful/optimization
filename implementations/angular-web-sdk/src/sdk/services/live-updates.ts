@@ -24,14 +24,16 @@ function isSdkBoolObservable(obs: unknown): obs is SdkBoolObservable {
 }
 
 function sdkBoolObs(sdk: NgContentfulOptimization['sdk'], key: string): Observable<boolean> {
-  const fallback = new Observable<boolean>((sub) => {
-    sub.next(false)
-  })
-  if (sdk === undefined) return fallback
   const states: unknown = sdk.states
-  if (!isRecord(states)) return fallback
+  if (!isRecord(states))
+    return new Observable<boolean>((sub) => {
+      sub.next(false)
+    })
   const obs: unknown = states[key]
-  if (!isSdkBoolObservable(obs)) return fallback
+  if (!isSdkBoolObservable(obs))
+    return new Observable<boolean>((sub) => {
+      sub.next(false)
+    })
   return new Observable<boolean>((subscriber) => {
     const sub = obs.subscribe((v) => {
       subscriber.next(v === true)

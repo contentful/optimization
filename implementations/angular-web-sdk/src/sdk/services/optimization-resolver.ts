@@ -40,10 +40,6 @@ function toStringValue(value: unknown): string {
   return JSON.stringify(value)
 }
 
-function fallbackResolveEntry(entry: Entry): ResolvedData<EntrySkeletonType> {
-  return { entry }
-}
-
 @Injectable({ providedIn: 'root' })
 export class NgContentfulOptimizationResolver {
   private readonly optimization = inject(NgContentfulOptimization)
@@ -52,7 +48,6 @@ export class NgContentfulOptimizationResolver {
     baseline: Entry,
     selectedOptimizations?: SelectedOptimizationArray,
   ): ResolvedData<EntrySkeletonType> {
-    if (this.optimization.sdk === undefined) return fallbackResolveEntry(baseline)
     return this.optimization.sdk.resolveOptimizedEntry(baseline, selectedOptimizations)
   }
 
@@ -77,7 +72,6 @@ export class NgContentfulOptimizationResolver {
 
   resolveMergeTag(target: unknown): string {
     if (!isMergeTagEntry(target)) return '[Merge Tag]'
-    if (this.optimization.sdk === undefined) return ''
     return toStringValue(this.optimization.sdk.getMergeTagValue(target))
   }
 }

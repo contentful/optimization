@@ -70,7 +70,7 @@ export class NgContentfulEntry implements OnDestroy {
     effect(() => {
       const ready = this._domReady()
       const mode = this._observation()
-      if (!ready || mode !== 'manual' || this.optimization.sdk === undefined) return
+      if (!ready || mode !== 'manual') return
 
       const resolved = this.resolved()
       if (resolved === undefined) return
@@ -129,7 +129,7 @@ export class NgContentfulEntry implements OnDestroy {
 
   ngOnDestroy(): void {
     if (this.manualTrackingActive) {
-      this.optimization.sdk?.tracking.clearElement('views', this.elementRef.nativeElement)
+      this.optimization.sdk.tracking.clearElement('views', this.elementRef.nativeElement)
       this.manualTrackingActive = false
     }
   }
