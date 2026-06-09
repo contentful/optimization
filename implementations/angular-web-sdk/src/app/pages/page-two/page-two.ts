@@ -15,6 +15,7 @@ const PAGE_TWO_COMPONENT_ID = 'page-two-conversion'
   selector: 'app-page-two',
   imports: [ContentEntry, ControlPanel],
   templateUrl: './page-two.html',
+  host: { style: 'display: contents' },
 })
 export class PageTwo implements OnInit {
   private readonly optimization = inject(Optimization)

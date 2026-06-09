@@ -32,6 +32,7 @@ const CLICK_SCENARIO_BY_ENTRY_ID: Readonly<Record<string, EntryClickScenario>> =
   selector: 'app-home',
   imports: [ContentEntry, NestedContentEntry, ControlPanel],
   templateUrl: './home.html',
+  host: { style: 'display: contents' },
 })
 export class Home implements OnInit {
   private readonly contentfulClient = inject(ContentfulClient)
