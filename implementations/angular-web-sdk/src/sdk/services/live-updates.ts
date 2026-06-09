@@ -48,8 +48,8 @@ function sdkBoolObs(sdk: NgContentfulOptimization['sdk'], key: string): Observab
 @Injectable({ providedIn: 'root' })
 export class NgContentfulLiveUpdates {
   private readonly subject = new BehaviorSubject<boolean>(false)
-  readonly globalNgContentfulLiveUpdates$ = this.subject.asObservable()
-  readonly globalNgContentfulLiveUpdates = toSignal(this.subject, { initialValue: false })
+  readonly globalLiveUpdates$ = this.subject.asObservable()
+  readonly globalLiveUpdates = toSignal(this.subject, { initialValue: false })
 
   readonly previewPanelVisible = toSignal(
     combineLatest([

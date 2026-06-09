@@ -18,7 +18,7 @@ export class NgContentfulLiveEntry {
     if (this.liveUpdates.previewPanelVisible()) return true
     const override = this._liveUpdatesOverride()
     if (override !== undefined) return override
-    return this.liveUpdates.globalNgContentfulLiveUpdates()
+    return this.liveUpdates.globalLiveUpdates()
   })
 
   readonly resolved = computed((): ResolvedEntryView | undefined => {
