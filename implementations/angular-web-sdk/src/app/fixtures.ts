@@ -6,6 +6,9 @@ const clickScenarios: Record<string, EntryClickScenario> = {
   '2Z2WLOx07InSewC3LUB3eX': 'ancestor',
 }
 
+const pageTwoAuto = '2Z2WLOx07InSewC3LUB3eX' as const
+const pageTwoManual = '5XHssysWUDECHzKLzoIsg1' as const
+
 const homeAuto = [
   '1JAU028vQ7v6nB2swl3NBo',
   '1MwiFl4z7gkwqGYdvCmr8c',
@@ -29,7 +32,8 @@ export const FIXTURES = {
     clickScenarios,
   },
   pageTwo: {
-    auto: '2Z2WLOx07InSewC3LUB3eX' as const,
-    manual: '5XHssysWUDECHzKLzoIsg1' as const,
+    ids: [pageTwoAuto, pageTwoManual] as const,
+    auto: pageTwoAuto,
+    manual: pageTwoManual,
   },
 } as const

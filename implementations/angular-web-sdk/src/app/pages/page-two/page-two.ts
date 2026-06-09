@@ -21,10 +21,7 @@ export class PageTwo {
 
   private readonly entries = resource({
     loader: async (): Promise<Map<string, ContentfulEntry>> => {
-      const list = await this.contentfulClient.fetchEntries([
-        FIXTURES.pageTwo.auto,
-        FIXTURES.pageTwo.manual,
-      ])
+      const list = await this.contentfulClient.fetchEntries(FIXTURES.pageTwo.ids)
       return new Map(list.map((e) => [e.sys.id, e]))
     },
   })
