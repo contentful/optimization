@@ -1,7 +1,7 @@
 import { Component, inject, type OnInit, signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { NgContentfulClient, NgContentfulOptimization } from '@contentful/optimization-angular'
-import { ContentEntry } from '../../components/content-entry/content-entry'
+import { ContentEntry } from '../../components/content-card'
 import { ControlPanel } from '../../components/control-panel/control-panel'
 import { ENTRIES } from '../../config/entries'
 import type { ContentfulEntry } from '../../types/contentful'

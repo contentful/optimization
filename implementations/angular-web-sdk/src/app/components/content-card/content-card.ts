@@ -3,8 +3,8 @@ import { isRecord } from '@contentful/optimization-angular'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { EntryClickScenario } from '../../config/entries'
 import type { ContentfulEntry } from '../../types/contentful'
-import { ContentEntry } from '../content-entry/content-entry'
-import { NestedContentItem } from '../nested-content-item/nested-content-item'
+import { ContentEntry } from './content-entry'
+import { NestedContentItem } from './nested-content-item'
 
 function isNestedContentEntry(entry: ContentfulEntry): boolean {
   const ct: unknown = entry.sys.contentType

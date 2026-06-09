@@ -5,8 +5,7 @@ import {
   NgContentfulLiveUpdates,
   NgContentfulOptimization,
 } from '@contentful/optimization-angular'
-import { ContentCard } from '../../components/content-card/content-card'
-import { ContentEntry } from '../../components/content-entry/content-entry'
+import { ContentCard, ContentEntry } from '../../components/content-card'
 import { ControlPanel } from '../../components/control-panel/control-panel'
 import { ENTRIES, type EntryClickScenario } from '../../config/entries'
 import type { ContentfulEntry } from '../../types/contentful'
