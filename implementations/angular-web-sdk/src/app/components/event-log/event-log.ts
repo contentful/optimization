@@ -1,6 +1,6 @@
-import { Component, computed, inject, type OnDestroy, type OnInit, signal } from '@angular/core'
+import { Component, computed, inject, signal } from '@angular/core'
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
 import { NgContentfulOptimization } from '@contentful/optimization-angular'
-import type { Subscription } from 'rxjs'
 import { isRecord } from '../../utils'
 
 interface AnalyticsEvent {
@@ -94,15 +94,10 @@ function upsert(list: AnalyticsEvent[], next: AnalyticsEvent): AnalyticsEvent[] 
   selector: 'app-event-log',
   templateUrl: './event-log.html',
 })
-export class EventLog implements OnInit, OnDestroy {
-  // injected dependencies
+export class EventLog {
   private readonly optimization = inject(NgContentfulOptimization)
-
-  // private state
-  private subscription: Subscription | undefined
   private nextId = 0
 
-  // protected state
   protected readonly uniqueEvents = signal<AnalyticsEvent[]>([])
   protected readonly rawEvents = signal<AnalyticsEvent[]>([])
   protected readonly mode = signal<'unique' | 'raw'>('unique')
@@ -110,18 +105,13 @@ export class EventLog implements OnInit, OnDestroy {
     this.mode() === 'unique' ? this.uniqueEvents() : this.rawEvents(),
   )
 
-  // lifecycle
-  ngOnInit(): void {
-    this.subscription = this.optimization.eventStream$.subscribe((raw) => {
+  constructor() {
+    this.optimization.eventStream$.pipe(takeUntilDestroyed()).subscribe((raw) => {
       const event = toAnalyticsEvent(raw, `event-${this.nextId}`)
       if (!event) return
       this.nextId++
       this.rawEvents.update((list) => [event, ...list])
       this.uniqueEvents.update((list) => upsert(list, event))
     })
-  }
-
-  ngOnDestroy(): void {
-    this.subscription?.unsubscribe()
   }
 }
