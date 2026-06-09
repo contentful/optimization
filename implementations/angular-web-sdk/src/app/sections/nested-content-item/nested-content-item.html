@@ -1,0 +1,51 @@
+@let baseline = baselineId(); @let resolved = resolvedId(); @let variant = isVariant(); @let m =
+meta();
+
+<div
+  class="entry-card"
+  [class.entry-card--variant]="variant"
+  [attr.data-testid]="'content-' + baseline"
+  data-ctfl-entry-id="{{ resolved }}"
+  data-ctfl-baseline-id="{{ baseline }}"
+  [attr.data-ctfl-optimization-id]="m.experienceId ?? null"
+  [attr.data-ctfl-sticky]="stickyAttr()"
+  [attr.data-ctfl-variant-index]="variantIndexAttr()"
+  data-ctfl-hover-duration-update-interval-ms="1000"
+>
+  <div class="entry-card__header">
+    <div class="entry-card__ids">
+      <p class="entry-card__id">
+        <span class="entry-card__id-label">base</span
+        ><span class="entry-card__id-value">{{ baseline }}</span>
+      </p>
+      @if (variant) {
+      <p class="entry-card__id">
+        <span class="entry-card__id-label">var</span
+        ><span class="entry-card__id-value">{{ resolved }}</span>
+      </p>
+      <p class="entry-card__id">
+        <span class="entry-card__id-label">exp</span
+        ><span class="entry-card__id-value">{{ m.experienceId }}</span>
+      </p>
+      }
+    </div>
+    <div class="entry-card__badges">
+      <span class="entry-card__badge" [class.entry-card__badge--variant]="variant">
+        {{ variant ? 'variant' : 'baseline' }}
+      </span>
+      <span class="entry-card__badge entry-card__badge--nested">nested</span>
+    </div>
+  </div>
+
+  <div [attr.data-testid]="'entry-text-' + resolved" [attr.aria-label]="'Entry: ' + resolved">
+    <p>{{ entryText() }}</p>
+  </div>
+
+  @if (nestedEntries().length > 0) {
+  <div class="nested-children">
+    @for (child of nestedEntries(); track child.sys.id) {
+    <app-nested-content-item [entry]="child" />
+    }
+  </div>
+  }
+</div>

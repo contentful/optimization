@@ -378,11 +378,11 @@ main {
 }
 
 .entry-card__badge {
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
-  padding: 0.15rem 0.5rem;
+  padding: 0.1rem 0.35rem;
   border-radius: 999px;
   background: var(--color-border);
   color: var(--color-text-muted);
@@ -411,6 +411,19 @@ main {
 .entry-card__badge--click {
   background: #ffedd5;
   color: #c2410c;
+}
+
+.entry-card__badge--nested {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.nested-children {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--color-border);
 }
 
 .entry-card__ids {

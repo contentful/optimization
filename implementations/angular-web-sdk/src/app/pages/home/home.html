@@ -17,14 +17,17 @@
       <p>Tracked via <code>data-ctfl-*</code> attributes.</p>
     </header>
     <div id="auto-observed" class="entry-grid">
-      @for (id of autoIds; track id) { @let entry = entryFor(id); @if (entry) {
+      @for (id of autoIds; track id) { @let entry = entryFor(id); @if (entry) { @if
+      (isNested(entry)) {
+      <app-nested-content-entry [entry]="entry" />
+      } @else {
       <app-content-entry
         [entry]="entry"
         observation="auto"
         [clickScenario]="clickScenario(id)"
         [selectedOptimizations]="selectedOptimizations()"
       />
-      } }
+      } } }
     </div>
   </section>
 

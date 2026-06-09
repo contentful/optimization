@@ -11,8 +11,16 @@ import {
 import { LiveUpdates } from '../../optimization/live-updates'
 import { fromSdkObservable, Optimization } from '../../optimization/optimization'
 import { ContentEntry, type EntryClickScenario } from '../../sections/content-entry/content-entry'
+import { NestedContentEntry } from '../../sections/nested-content-entry/nested-content-entry'
 import { ContentfulClient } from '../../services/contentful-client'
 import type { ContentfulEntry } from '../../types/contentful'
+import { isRecord } from '../../utils/type-guards'
+
+function isNestedContentEntry(entry: ContentfulEntry): boolean {
+  const ct: unknown = entry.sys.contentType
+  if (!isRecord(ct) || !isRecord(ct.sys)) return false
+  return ct.sys.id === 'nestedContent'
+}
 
 const CLICK_SCENARIO_BY_ENTRY_ID: Readonly<Record<string, EntryClickScenario>> = {
   '4ib0hsHWoSOnCVdDkizE8d': 'direct',
@@ -22,7 +30,7 @@ const CLICK_SCENARIO_BY_ENTRY_ID: Readonly<Record<string, EntryClickScenario>> =
 
 @Component({
   selector: 'app-home',
-  imports: [ContentEntry, ControlPanel],
+  imports: [ContentEntry, NestedContentEntry, ControlPanel],
   templateUrl: './home.html',
 })
 export class Home implements OnInit {
@@ -53,6 +61,10 @@ export class Home implements OnInit {
 
   protected clickScenario(id: string): EntryClickScenario | undefined {
     return CLICK_SCENARIO_BY_ENTRY_ID[id]
+  }
+
+  protected isNested(entry: ContentfulEntry): boolean {
+    return isNestedContentEntry(entry)
   }
 
   ngOnInit(): void {

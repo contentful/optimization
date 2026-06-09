@@ -150,6 +150,11 @@ independently.
 - Adding or removing nesting levels in the content model does not require code changes — the
   rendering recurses automatically.
 
+**Visual verification:** Entry `1JAU028vQ7v6nB2swl3NBo` in the Auto-observed section renders as a
+tree — the top-level card shows its text with a `nested` badge, and each child is indented below
+with its own card. Each level resolves its own SDK variant independently. Enable Live Updates and
+click Identify to see each level switch to its variant.
+
 ---
 
 ### 13. Merge tags
@@ -301,7 +306,7 @@ Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 | 9   | Live updates — global toggle (default off)                            | —                                            | ✅ Done        |
 | 10  | Live updates — per-entry override (always-on / locked / default)      | —                                            | ✅ Done        |
 | 11  | Preview panel forced live — all entries live while panel open         | `@contentful/optimization-web-preview-panel` | ⬜ Not started |
-| 12  | Nested entries — recursive resolution via `fields.nested`             | —                                            | ⬜ Not started |
+| 12  | Nested entries — recursive resolution via `fields.nested`             | —                                            | ✅ Done        |
 | 13  | Merge tags — inline personalised values in rich text                  | —                                            | ✅ Done        |
 | 14  | Rich text rendering — standard nodes + embedded merge tag entries     | `@contentful/rich-text-types`                | ✅ Done        |
 | 15  | Analytics event display — live feed, heartbeat dedup                  | —                                            | ✅ Done        |
