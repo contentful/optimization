@@ -24,23 +24,6 @@ export class NestedContentItem {
     this.resolver.resolveWithMeta(this.entry(), this.selectedOptimizations()),
   )
 
-  protected readonly baselineId = computed(() => this.resolved().baselineId)
-  protected readonly resolvedId = computed(() => this.resolved().resolvedId)
-  protected readonly meta = computed(() => this.resolved().meta)
-  protected readonly isVariant = computed(() => this.resolved().isVariant)
-  protected readonly stickyAttr = computed(() => {
-    const {
-      meta: { sticky },
-    } = this.resolved()
-    return sticky === undefined ? null : String(sticky)
-  })
-  protected readonly variantIndexAttr = computed(() => {
-    const {
-      meta: { variantIndex },
-    } = this.resolved()
-    return variantIndex === undefined ? null : String(variantIndex)
-  })
-
   protected readonly entryText = computed(() => {
     const text: unknown = this.resolved().resolvedEntry.fields.text
     return typeof text === 'string' ? text : ''
