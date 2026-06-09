@@ -1,11 +1,11 @@
 import { Component, inject } from '@angular/core'
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router'
 import { NgContentfulOptimization } from '@contentful/optimization-angular'
-import { AnalyticsEventDisplay } from './components/analytics-event-display/analytics-event-display'
+import { EventLog } from './components/event-log/event-log'
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, AnalyticsEventDisplay],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, EventLog],
   templateUrl: './app.html',
 })
 export class App {

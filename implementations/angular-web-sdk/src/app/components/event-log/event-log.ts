@@ -90,10 +90,10 @@ function upsert(list: AnalyticsEvent[], next: AnalyticsEvent): AnalyticsEvent[] 
 }
 
 @Component({
-  selector: 'app-analytics-event-display',
-  templateUrl: './analytics-event-display.html',
+  selector: 'app-event-log',
+  templateUrl: './event-log.html',
 })
-export class AnalyticsEventDisplay implements OnInit, OnDestroy {
+export class EventLog implements OnInit, OnDestroy {
   // injected dependencies
   private readonly optimization = inject(NgContentfulOptimization)
 
