@@ -1,8 +1,4 @@
-export {
-  NG_CONTENTFUL_OPTIMIZATION_CONFIG,
-  provideContentfulOptimizationConfig,
-  type NgContentfulOptimizationConfig,
-} from './config'
+export { provideContentfulOptimizationConfig, type NgContentfulOptimizationConfig } from './config'
 export { NgContentfulClient } from './services/contentful-client'
 export { NgContentfulEntry, type ObservationMode } from './services/entry'
 export { NgContentfulLiveUpdates } from './services/live-updates'
