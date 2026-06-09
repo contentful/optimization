@@ -154,7 +154,7 @@ main {
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
   align-items: start;
-  margin-top: 1rem;
+  margin-top: 2rem;
 }
 
 .sections-row--two {
