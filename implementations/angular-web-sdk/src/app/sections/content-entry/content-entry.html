@@ -1,8 +1,7 @@
-@let baseline = baselineId(); @let resolved = resolvedId(); @let m = meta(); @let scenario =
-clickScenario(); @let mode = observation(); @let isAuto = mode === 'auto'; @let variant =
-isVariant();
+@let r = resolved(); @let scenario = clickScenario(); @let mode = observation(); @let isAuto = mode
+=== 'auto';
 
-<section [attr.data-testid]="'content-entry-' + baseline">
+<section [attr.data-testid]="'content-entry-' + (r?.baselineId ?? '')">
   @if (scenario === 'ancestor' && isAuto) {
   <div data-ctfl-clickable="true" data-testid="entry-click-ancestor-wrapper">
     <ng-container [ngTemplateOutlet]="entryContent" />
@@ -13,15 +12,16 @@ isVariant();
 </section>
 
 <ng-template #entryContent>
+  @if (r) { @let baseline = r.baselineId; @let variant = r.isVariant; @let m = r.meta;
   <div
     class="entry-card"
     [class.entry-card--variant]="variant"
     [attr.data-testid]="'content-' + baseline"
-    [attr.data-ctfl-entry-id]="isAuto ? resolved : null"
+    [attr.data-ctfl-entry-id]="isAuto ? r.resolvedId : null"
     [attr.data-ctfl-baseline-id]="isAuto ? baseline : null"
     [attr.data-ctfl-optimization-id]="isAuto ? (m.experienceId ?? null) : null"
-    [attr.data-ctfl-sticky]="isAuto ? stickyAttr() : null"
-    [attr.data-ctfl-variant-index]="isAuto ? variantIndexAttr() : null"
+    [attr.data-ctfl-sticky]="isAuto ? (m.sticky !== undefined ? m.sticky.toString() : null) : null"
+    [attr.data-ctfl-variant-index]="isAuto ? (m.variantIndex !== undefined ? m.variantIndex.toString() : null) : null"
     [attr.data-ctfl-hover-duration-update-interval-ms]="isAuto ? '1000' : null"
     [attr.data-ctfl-clickable]="scenario === 'direct' && isAuto ? 'true' : null"
     [attr.data-entry-id]="!isAuto ? baseline : null"
@@ -35,7 +35,7 @@ isVariant();
         @if (variant) {
         <p class="entry-card__id">
           <span class="entry-card__id-label">var</span
-          ><span class="entry-card__id-value">{{ resolved }}</span>
+          ><span class="entry-card__id-value">{{ r.resolvedId }}</span>
         </p>
         <p class="entry-card__id">
           <span class="entry-card__id-label">exp</span
@@ -59,7 +59,7 @@ isVariant();
       </div>
     </div>
 
-    <div [attr.data-testid]="'entry-text-' + baseline" [attr.aria-label]="'Entry: ' + resolved">
+    <div [attr.data-testid]="'entry-text-' + baseline" [attr.aria-label]="'Entry: ' + r.resolvedId">
       @if (richTextField(); as rt) {
       <app-rich-text-renderer [richText]="rt" />
       } @else {
@@ -73,4 +73,5 @@ isVariant();
     </button>
     }
   </div>
+  }
 </ng-template>
