@@ -44,17 +44,12 @@
         }
       </div>
       <div class="entry-card__badges">
-        <span class="entry-card__badge" [class.entry-card__badge--variant]="variant">
-          {{ variant ? 'variant' : 'baseline' }}
-        </span>
-        @if (richTextField()) {
-        <span class="entry-card__badge entry-card__badge--richtext">rich text</span>
-        } @if (richTextField() && hasMergeTag()) {
-        <span class="entry-card__badge entry-card__badge--mergetag">merge tag</span>
-        } @if (!isAuto) {
-        <span class="entry-card__badge entry-card__badge--manual">manual</span>
-        } @if (scenario) {
-        <span class="entry-card__badge entry-card__badge--click">{{ scenario }}</span>
+        @for (badge of badges(); track badge.mod) {
+        <span
+          class="entry-card__badge"
+          [class]="badge.mod ? 'entry-card__badge entry-card__badge--' + badge.mod : 'entry-card__badge'"
+          >{{ badge.label }}</span
+        >
         }
       </div>
     </div>

@@ -50,13 +50,22 @@ export class ContentEntry {
   protected readonly richTextField = computed(() =>
     Object.values(this.liveEntry.resolved()?.resolvedEntry.fields ?? {}).find(isRichTextField),
   )
-  protected readonly hasMergeTag = computed(() => {
-    const rt = this.richTextField()
-    if (!rt) return false
-    return JSON.stringify(rt).includes('"nt_mergetag"')
-  })
   protected readonly entryText = computed(() => {
     const text: unknown = this.liveEntry.resolved()?.resolvedEntry.fields.text
     return typeof text === 'string' ? text : 'No content'
+  })
+  protected readonly badges = computed(() => {
+    const r = this.resolved()
+    if (!r) return []
+    const tags: Array<{ label: string; mod: string }> = []
+    tags.push({ label: r.isVariant ? 'variant' : 'baseline', mod: r.isVariant ? 'variant' : '' })
+    const rt = this.richTextField()
+    if (rt) tags.push({ label: 'rich text', mod: 'richtext' })
+    if (rt && JSON.stringify(rt).includes('"nt_mergetag"'))
+      tags.push({ label: 'merge tag', mod: 'mergetag' })
+    tags.push({ label: this.observation(), mod: this.observation() })
+    const scenario = this.clickScenario()
+    if (scenario) tags.push({ label: scenario, mod: 'click' })
+    return tags
   })
 }

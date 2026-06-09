@@ -25,6 +25,14 @@ export class NestedContent {
 
   // protected state
   protected readonly resolved = computed(() => this.resolver.resolveWithMeta(this.entry()))
+  protected readonly badges = computed(() => {
+    const r = this.resolved()
+    const tags: Array<{ label: string; mod: string }> = []
+    tags.push({ label: r.isVariant ? 'variant' : 'baseline', mod: r.isVariant ? 'variant' : '' })
+    tags.push({ label: 'auto', mod: 'auto' })
+    tags.push({ label: 'nested', mod: 'nested' })
+    return tags
+  })
   protected readonly entryText = computed(() => {
     const text: unknown = this.resolved().resolvedEntry.fields.text
     return typeof text === 'string' ? text : ''

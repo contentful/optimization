@@ -29,10 +29,13 @@
       }
     </div>
     <div class="entry-card__badges">
-      <span class="entry-card__badge" [class.entry-card__badge--variant]="variant">
-        {{ variant ? 'variant' : 'baseline' }}
-      </span>
-      <span class="entry-card__badge entry-card__badge--nested">nested</span>
+      @for (badge of badges(); track badge.mod) {
+      <span
+        class="entry-card__badge"
+        [class]="badge.mod ? 'entry-card__badge entry-card__badge--' + badge.mod : 'entry-card__badge'"
+        >{{ badge.label }}</span
+      >
+      }
     </div>
   </div>
 
