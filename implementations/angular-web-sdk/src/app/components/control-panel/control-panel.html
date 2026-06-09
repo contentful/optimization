@@ -30,11 +30,13 @@
     <button class="btn btn--primary" data-testid="consent-button" (click)="toggleConsent()">
       Grant consent
     </button>
-    }
+    } @if (isIdentified()) {
+    <button class="btn btn--secondary" data-testid="reset-button" (click)="reset()">Reset</button>
+    } @else {
     <button class="btn btn--primary" data-testid="identify-button" (click)="identify()">
       Identify
     </button>
-    <button class="btn btn--secondary" data-testid="reset-button" (click)="reset()">Reset</button>
+    }
     <button
       class="btn btn--secondary"
       data-testid="live-updates-toggle"
