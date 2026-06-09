@@ -209,28 +209,30 @@ main {
   margin-bottom: 0.5rem;
 }
 
-.panel__row {
-  display: flex;
+.panel__table {
+  display: grid;
+  grid-template-columns: 10rem 6rem auto;
+  gap: 0.25rem 0.75rem;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.3rem 0;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.panel__row:last-child {
-  border-bottom: none;
+  justify-items: start;
 }
 
 .panel__row-label {
   font-size: 0.825rem;
   color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.panel__row-value {
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
 }
 
 .btn--sm {
   padding: 0.2rem 0.6rem;
   font-size: 0.75rem;
-  flex-shrink: 0;
 }
 
 /* Buttons */
@@ -280,6 +282,17 @@ main {
 .btn--danger:hover {
   background: #b91c1c;
   border-color: #b91c1c;
+}
+
+.btn--success {
+  background: #16a34a;
+  color: #fff;
+  border-color: #16a34a;
+}
+
+.btn--success:hover {
+  background: #15803d;
+  border-color: #15803d;
 }
 
 .btn:disabled {
