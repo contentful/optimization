@@ -1,10 +1,11 @@
-import { Component, computed, inject, input } from '@angular/core'
+import { Component, inject, input } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import {
   NgContentfulLiveUpdates,
   NgContentfulOptimization,
   togglePreviewPanel,
 } from '@contentful/optimization-angular'
+import { map } from 'rxjs'
 
 @Component({
   selector: 'app-control-panel',
@@ -15,26 +16,25 @@ export class ControlPanel {
 
   private readonly optimization = inject(NgContentfulOptimization)
   protected readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
-
   protected readonly consent = toSignal(this.optimization.consent$)
-  protected readonly profile = toSignal(this.optimization.profile$)
 
-  protected readonly isIdentified = computed(() => {
-    const p = this.profile()
-    if (p === null || typeof p !== 'object') return false
-    if (!('traits' in p)) return false
-    const { traits } = p as { traits: unknown }
-    if (traits === null || typeof traits !== 'object') return false
-    if (!('identified' in traits)) return false
-    return Boolean((traits as { identified: unknown }).identified)
-  })
+  protected readonly isIdentified = toSignal(
+    this.optimization.profile$.pipe(
+      map((p) => {
+        if (p === null || typeof p !== 'object') return false
+        if (!('traits' in p)) return false
+        const { traits } = p as { traits: unknown }
+        if (traits === null || typeof traits !== 'object') return false
+        if (!('identified' in traits)) return false
+        return Boolean((traits as { identified: unknown }).identified)
+      }),
+    ),
+    { initialValue: false },
+  )
 
-  private readonly selectedOptimizationCount = toSignal(this.optimization.selectedOptimizations$, {
-    initialValue: undefined,
-  })
-
-  protected readonly optimizationCount = computed(
-    () => this.selectedOptimizationCount()?.length ?? 0,
+  protected readonly optimizationCount = toSignal(
+    this.optimization.selectedOptimizations$.pipe(map((s) => s?.length ?? 0)),
+    { initialValue: 0 },
   )
 
   protected readonly booleanFlag = toSignal(this.optimization.booleanFlag$)
