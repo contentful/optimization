@@ -6,8 +6,18 @@ import OptimizationContext from '../context/OptimizationContext'
 
 const logger = createScopedLogger('RN:Provider')
 
-type OnStatesReadyResult = ReturnType<() => void> | (() => void)
+/**
+ * Return value accepted from {@link OnStatesReady}.
+ *
+ * @public
+ */
+export type OnStatesReadyResult = ReturnType<() => void> | (() => void)
 
+/**
+ * Callback invoked after SDK state initialization and before provider children mount.
+ *
+ * @public
+ */
 export type OnStatesReady = (states: ContentfulOptimization['states']) => OnStatesReadyResult
 
 type Cleanup = () => void
@@ -38,6 +48,11 @@ export interface OptimizationProviderConfigProps extends OptimizationConfig {
   sdk?: never
 }
 
+/**
+ * Props for {@link OptimizationProvider} when an existing SDK instance is injected.
+ *
+ * @public
+ */
 export interface OptimizationProviderSdkProps {
   /**
    * Children components that will have access to the {@link ContentfulOptimization} instance.
@@ -51,6 +66,11 @@ export interface OptimizationProviderSdkProps {
   sdk: ContentfulOptimization
 }
 
+/**
+ * Props accepted by the {@link OptimizationProvider} component.
+ *
+ * @public
+ */
 export type OptimizationProviderProps =
   | OptimizationProviderConfigProps
   | OptimizationProviderSdkProps

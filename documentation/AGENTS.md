@@ -6,9 +6,9 @@ Applies to authored documentation under `documentation/`.
 
 - Follow [`../STYLE_GUIDE.md`](../STYLE_GUIDE.md) plus root Markdown rules.
 - Put step-by-step implementation material in `guides/`, mechanics explanations in `concepts/`, and
-  unpublished or nonconforming material in `drafts/`.
-- When README content grows beyond orientation and common setup, update an existing guide or concept
-  before creating a new document.
+  product requirements, product-surface planning, and validation expectations in `product/`.
+- When README content grows beyond orientation and common setup, update an existing guide, concept,
+  or product document before creating a new document.
 - Generated TypeDoc owns exhaustive API reference; authored docs explain integration flow,
   decisions, and mechanics.
 
@@ -27,8 +27,9 @@ Applies to authored documentation under `documentation/`.
 - Separate SDK responsibilities from application responsibilities, especially fetching, consent
   policy, identity policy, routing, and rendering.
 - Link from guides to concepts for deeper mechanics.
-- Guides and concepts may link to docs, package READMEs, implementation READMEs, and generated
-  reference docs, but not directly to source code, tests, generated outputs, or source line numbers.
+- Guides, concepts, and product documents may link to docs, package READMEs, implementation READMEs,
+  and generated reference docs, but not directly to source code, tests, generated outputs, or source
+  line numbers.
 
 ## Validate
 

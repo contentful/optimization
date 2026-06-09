@@ -1,9 +1,5 @@
 <div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../../documentation/assets/contentful-logo-dark.png" />
-    <source media="(prefers-color-scheme: light)" srcset="../../documentation/assets/contentful-logo-light.png" />
-    <img width="300" alt="Contentful" src="../../documentation/assets/contentful-logo-light.png" />
-  </picture>
+  <img alt="Contentful Logo" title="Contentful" src="../../contentful-icon.png" width="150">
 
 ### Contentful Personalization & Analytics
 
