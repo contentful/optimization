@@ -6,7 +6,7 @@ import {
 } from '@contentful/optimization-angular'
 import { ContentCard, ContentEntry } from '../../components/content-card'
 import { ControlPanel } from '../../components/control-panel/control-panel'
-import { FIXTURES, type EntryClickScenario } from '../../fixtures'
+import { FIXTURES } from '../../fixtures'
 import type { ContentfulEntry } from '../../types/contentful'
 
 @Component({
@@ -36,7 +36,5 @@ export class Home {
     return this.entries.value()?.get(id)
   }
 
-  protected static clickScenario(id: string): EntryClickScenario | undefined {
-    return FIXTURES.home.clickScenarios[id]
-  }
+  protected readonly clickScenarios = FIXTURES.home.clickScenarios
 }
