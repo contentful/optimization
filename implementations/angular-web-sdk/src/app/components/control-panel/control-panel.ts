@@ -8,12 +8,15 @@ import { map } from 'rxjs'
   templateUrl: './control-panel.html',
 })
 export class ControlPanel {
+  // inputs
   readonly onTrackConversion = input<(() => void) | undefined>(undefined)
 
+  // injected dependencies
   private readonly optimization = inject(NgContentfulOptimization)
   protected readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
-  protected readonly consent = toSignal(this.optimization.consent$)
 
+  // state
+  protected readonly consent = toSignal(this.optimization.consent$)
   protected readonly isIdentified = toSignal(
     this.optimization.profile$.pipe(
       map((p) => {
@@ -27,14 +30,13 @@ export class ControlPanel {
     ),
     { initialValue: false },
   )
-
   protected readonly optimizationCount = toSignal(
     this.optimization.selectedOptimizations$.pipe(map((s) => s?.length ?? 0)),
     { initialValue: 0 },
   )
-
   protected readonly booleanFlag = toSignal(this.optimization.booleanFlag$)
 
+  // public methods
   protected toggleConsent(): void {
     this.optimization.setConsent(this.consent() !== true)
   }

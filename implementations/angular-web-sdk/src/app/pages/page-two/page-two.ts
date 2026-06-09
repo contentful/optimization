@@ -15,15 +15,15 @@ const PAGE_TWO_COMPONENT_ID = 'page-two-conversion'
   host: { style: 'display: contents' },
 })
 export class PageTwo implements OnInit {
+  // injected dependencies
   private readonly optimization = inject(NgContentfulOptimization)
   private readonly contentfulClient = inject(NgContentfulClient)
 
+  // state
   protected readonly loading = signal(true)
   protected readonly autoEntry = signal<ContentfulEntry | undefined>(undefined)
   protected readonly manualEntry = signal<ContentfulEntry | undefined>(undefined)
-
   protected readonly selectedOptimizations = toSignal(this.optimization.selectedOptimizations$)
-
   protected readonly trackConversion = (): void => {
     void this.optimization.sdk?.trackView({
       componentId: PAGE_TWO_COMPONENT_ID,
@@ -32,11 +32,13 @@ export class PageTwo implements OnInit {
     })
   }
 
+  // lifecycle
   ngOnInit(): void {
     this.trackConversion()
     void this.loadEntries()
   }
 
+  // private methods
   private async loadEntries(): Promise<void> {
     const ids = [PAGE_TWO_AUTO_ENTRY_ID, PAGE_TWO_MANUAL_ENTRY_ID]
     const entries = await this.contentfulClient.fetchEntries(ids)

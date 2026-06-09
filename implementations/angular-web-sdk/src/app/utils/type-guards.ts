@@ -3,6 +3,12 @@ import type { ContentfulEntry } from '../types/contentful'
 
 export { isRecord }
 
+export function isNestedContentEntry(entry: ContentfulEntry): boolean {
+  const ct: unknown = entry.sys.contentType
+  if (!isRecord(ct) || !isRecord(ct.sys)) return false
+  return ct.sys.id === 'nestedContent'
+}
+
 export function isEntry(value: unknown): value is ContentfulEntry {
   return (
     isRecord(value) &&

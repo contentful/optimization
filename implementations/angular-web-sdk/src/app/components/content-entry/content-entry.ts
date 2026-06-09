@@ -13,10 +13,9 @@ import {
 } from '@angular/core'
 import { NgContentfulLiveEntry, NgContentfulOptimization } from '@contentful/optimization-angular'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
+import type { EntryClickScenario } from '../../config/entries'
 import type { ContentfulEntry, RichTextDocument } from '../../types/contentful'
 import { RichTextRenderer } from '../rich-text-renderer/rich-text-renderer'
-
-export type EntryClickScenario = 'direct' | 'descendant' | 'ancestor'
 
 function isRichTextField(field: unknown): field is RichTextDocument {
   return (
@@ -36,21 +35,23 @@ function isRichTextField(field: unknown): field is RichTextDocument {
   providers: [NgContentfulLiveEntry],
 })
 export class ContentEntry implements OnDestroy {
+  // inputs
   readonly entry = input.required<ContentfulEntry>()
   readonly observation = input.required<'auto' | 'manual'>()
   readonly clickScenario = input<EntryClickScenario | undefined>(undefined)
-  // Passed down from Home so re-resolution happens whenever selectedOptimizations changes.
   readonly selectedOptimizations = input<SelectedOptimizationArray | undefined>(undefined)
-  // undefined = follow global toggle; true = always live; false = always locked
   readonly liveUpdates = input<boolean | undefined>(undefined)
 
+  // injected dependencies
   private readonly optimization = inject(NgContentfulOptimization)
   private readonly elementRef = inject<ElementRef<Element>>(ElementRef)
   private readonly liveEntry = inject(NgContentfulLiveEntry)
 
+  // private state
   private readonly domReady = signal(false)
   private manualTrackingActive = false
 
+  // constructor (effects)
   constructor() {
     effect(() => {
       this.liveEntry.setEntry(this.entry())
@@ -100,23 +101,22 @@ export class ContentEntry implements OnDestroy {
     })
   }
 
+  // protected state (template-facing)
   protected readonly resolved = this.liveEntry.resolved
-
   protected readonly richTextField = computed(() =>
     Object.values(this.liveEntry.resolved()?.resolvedEntry.fields ?? {}).find(isRichTextField),
   )
-
   protected readonly hasMergeTag = computed(() => {
     const rt = this.richTextField()
     if (!rt) return false
     return JSON.stringify(rt).includes('"nt_mergetag"')
   })
-
   protected readonly entryText = computed(() => {
     const text: unknown = this.liveEntry.resolved()?.resolvedEntry.fields.text
     return typeof text === 'string' ? text : 'No content'
   })
 
+  // lifecycle
   ngOnDestroy(): void {
     if (this.manualTrackingActive) {
       this.optimization.sdk?.tracking.clearElement('views', this.elementRef.nativeElement)
