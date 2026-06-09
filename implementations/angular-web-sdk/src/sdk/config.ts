@@ -19,6 +19,8 @@ export interface NgContentfulOptimizationConfig {
   }
   previewPanel?: {
     nonce?: string
+    tag?: string
+    toggleSelector?: string
   }
 }
 

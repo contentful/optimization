@@ -1,21 +1,18 @@
 import { inject, Injectable } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { BehaviorSubject, combineLatest, map, Observable } from 'rxjs'
+import { NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../config'
 import { isRecord } from '../utils'
 import { NgContentfulOptimization } from './optimization'
 
-const PREVIEW_PANEL_TAG = 'ctfl-opt-preview-panel'
-const PREVIEW_PANEL_TOGGLE_SELECTOR = 'button.toggle-drawer'
-
-function getPreviewPanelToggleButton(): HTMLButtonElement | null {
-  const panel = document.querySelector(PREVIEW_PANEL_TAG)
+function getPreviewPanelToggleButton(
+  tag: string,
+  toggleSelector: string,
+): HTMLButtonElement | null {
+  const panel = document.querySelector(tag)
   if (!(panel instanceof HTMLElement)) return null
-  const btn = panel.shadowRoot?.querySelector(PREVIEW_PANEL_TOGGLE_SELECTOR)
+  const btn = panel.shadowRoot?.querySelector(toggleSelector)
   return btn instanceof HTMLButtonElement ? btn : null
-}
-
-export function togglePreviewPanel(): void {
-  getPreviewPanelToggleButton()?.click()
 }
 
 interface SdkBoolObservable {
@@ -48,6 +45,8 @@ function sdkBoolObs(sdk: NgContentfulOptimization['sdk'], key: string): Observab
 @Injectable({ providedIn: 'root' })
 export class NgContentfulLiveUpdates {
   private readonly subject = new BehaviorSubject<boolean>(false)
+  private readonly config = inject(NG_CONTENTFUL_OPTIMIZATION_CONFIG)
+
   readonly globalLiveUpdates$ = this.subject.asObservable()
   readonly globalLiveUpdates = toSignal(this.subject, { initialValue: false })
 
@@ -61,5 +60,11 @@ export class NgContentfulLiveUpdates {
 
   toggle(): void {
     this.subject.next(!this.subject.value)
+  }
+
+  togglePreviewPanel(): void {
+    const tag = this.config.previewPanel?.tag ?? 'ctfl-opt-preview-panel'
+    const toggleSelector = this.config.previewPanel?.toggleSelector ?? 'button.toggle-drawer'
+    getPreviewPanelToggleButton(tag, toggleSelector)?.click()
   }
 }
