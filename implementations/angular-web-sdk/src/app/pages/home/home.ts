@@ -1,12 +1,9 @@
 import { Component, inject, resource } from '@angular/core'
-import {
-  NgContentfulClient,
-  NgContentfulLiveUpdates,
-  NgContentfulOptimization,
-} from '@contentful/optimization-angular'
+import { NgContentfulClient, NgContentfulOptimization } from '@contentful/optimization-angular'
 import { ContentCard, ContentEntry } from '../../components/content-card'
 import { ControlPanel } from '../../components/control-panel/control-panel'
 import { FIXTURES } from '../../fixtures'
+import { NgContentfulLiveUpdates } from '../../live-updates'
 import type { ContentfulEntry } from '../../types/contentful'
 
 @Component({

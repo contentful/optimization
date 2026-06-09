@@ -13,8 +13,8 @@ import {
 } from '@angular/core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { Entry } from 'contentful'
+import { NgContentfulLiveUpdates } from '../../app/live-updates'
 import { isMergeTagEntry, isRecord } from '../utils'
-import { NgContentfulLiveUpdates } from './live-updates'
 import { NgContentfulOptimization } from './optimization'
 
 export type ObservationMode = 'auto' | 'manual'

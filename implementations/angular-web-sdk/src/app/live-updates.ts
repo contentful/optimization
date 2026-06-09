@@ -1,9 +1,9 @@
 import { inject, Injectable } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
+import { NgContentfulOptimization } from '@contentful/optimization-angular'
 import { BehaviorSubject, combineLatest, map, Observable } from 'rxjs'
-import { NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../config'
-import { isRecord } from '../utils'
-import { NgContentfulOptimization } from './optimization'
+import { NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../sdk/config'
+import { isRecord } from './utils'
 
 function getPreviewPanelToggleButton(
   tag: string,

@@ -1,7 +1,8 @@
 import { Component, computed, inject, input } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
-import { NgContentfulLiveUpdates, NgContentfulOptimization } from '@contentful/optimization-angular'
+import { NgContentfulOptimization } from '@contentful/optimization-angular'
 import { map } from 'rxjs/operators'
+import { NgContentfulLiveUpdates } from '../../live-updates'
 
 @Component({
   selector: 'app-control-panel',
