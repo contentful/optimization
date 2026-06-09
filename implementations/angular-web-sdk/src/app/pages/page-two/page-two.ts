@@ -1,5 +1,4 @@
 import { Component, inject, type OnInit, signal } from '@angular/core'
-import { toSignal } from '@angular/core/rxjs-interop'
 import { NgContentfulClient, NgContentfulOptimization } from '@contentful/optimization-angular'
 import { ContentEntry } from '../../components/content-card'
 import { ControlPanel } from '../../components/control-panel/control-panel'
@@ -23,7 +22,7 @@ export class PageTwo implements OnInit {
   protected readonly loading = signal(true)
   protected readonly autoEntry = signal<ContentfulEntry | undefined>(undefined)
   protected readonly manualEntry = signal<ContentfulEntry | undefined>(undefined)
-  protected readonly selectedOptimizations = toSignal(this.optimization.selectedOptimizations$)
+  protected readonly selectedOptimizations = this.optimization.selectedOptimizations
 
   // lifecycle
   ngOnInit(): void {

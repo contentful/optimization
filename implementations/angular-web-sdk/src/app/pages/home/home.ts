@@ -1,5 +1,4 @@
 import { Component, inject, type OnInit, signal } from '@angular/core'
-import { toSignal } from '@angular/core/rxjs-interop'
 import {
   NgContentfulClient,
   NgContentfulLiveUpdates,
@@ -19,13 +18,12 @@ import type { ContentfulEntry } from '../../types/contentful'
 export class Home implements OnInit {
   // injected dependencies
   private readonly contentfulClient = inject(NgContentfulClient)
-  private readonly optimization = inject(NgContentfulOptimization)
-  private readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
+  protected readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
 
   // protected state
   protected readonly loading = signal(true)
   protected readonly entriesById = signal<Map<string, ContentfulEntry>>(new Map())
-  protected readonly selectedOptimizations = toSignal(this.optimization.selectedOptimizations$)
+  protected readonly selectedOptimizations = inject(NgContentfulOptimization).selectedOptimizations
   protected readonly autoIds = ENTRIES.home.auto
   protected readonly manualIds = ENTRIES.home.manual
   protected readonly liveUpdatesEntryId = ENTRIES.home.liveUpdates

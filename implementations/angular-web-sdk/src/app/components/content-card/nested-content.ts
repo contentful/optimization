@@ -1,5 +1,4 @@
 import { Component, computed, forwardRef, inject, input } from '@angular/core'
-import { toSignal } from '@angular/core/rxjs-interop'
 import {
   isRecord,
   NgContentfulOptimization,
@@ -26,11 +25,8 @@ export class NestedContent {
   readonly entry = input.required<ContentfulEntry>()
 
   // injected dependencies
-  private readonly optimization = inject(NgContentfulOptimization)
   private readonly resolver = inject(NgContentfulOptimizationResolver)
-
-  // private state
-  private readonly selectedOptimizations = toSignal(this.optimization.selectedOptimizations$)
+  private readonly selectedOptimizations = inject(NgContentfulOptimization).selectedOptimizations
 
   // protected state
   protected readonly resolved = computed(() =>

@@ -1,4 +1,5 @@
 import { inject, Injectable } from '@angular/core'
+import { toSignal } from '@angular/core/rxjs-interop'
 import { NavigationEnd, Router } from '@angular/router'
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
@@ -90,6 +91,7 @@ export class NgContentfulOptimization {
   readonly eventStream$: Observable<unknown>
   readonly booleanFlag$: Observable<unknown>
   readonly selectedOptimizations$: Observable<SelectedOptimizationArray | undefined>
+  readonly selectedOptimizations: ReturnType<typeof toSignal<SelectedOptimizationArray | undefined>>
 
   constructor() {
     const config = inject(NG_CONTENTFUL_OPTIMIZATION_CONFIG)
@@ -132,6 +134,8 @@ export class NgContentfulOptimization {
         : new Observable<SelectedOptimizationArray | undefined>((sub) => {
             sub.next(undefined)
           })
+
+    this.selectedOptimizations = toSignal(this.selectedOptimizations$)
 
     this.booleanFlag$ =
       this.sdk !== undefined
