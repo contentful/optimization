@@ -1,5 +1,5 @@
 import { NgTemplateOutlet } from '@angular/common'
-import { Component, computed, effect, inject, input } from '@angular/core'
+import { Component, computed, inject, input } from '@angular/core'
 import type { ObservationMode } from '@contentful/optimization-angular'
 import { NgContentfulLiveEntry } from '@contentful/optimization-angular'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
@@ -34,18 +34,12 @@ export class ContentEntry {
   readonly liveUpdates = input<boolean | undefined>(undefined)
 
   // injected dependencies
-  private readonly liveEntry = inject(NgContentfulLiveEntry)
-
-  constructor() {
-    effect(() => {
-      this.liveEntry.configure({
-        entry: this.entry(),
-        selectedOptimizations: this.selectedOptimizations(),
-        liveUpdates: this.liveUpdates(),
-        observation: this.observation(),
-      })
-    })
-  }
+  private readonly liveEntry = inject(NgContentfulLiveEntry).with({
+    entry: this.entry,
+    selectedOptimizations: this.selectedOptimizations,
+    liveUpdates: this.liveUpdates,
+    observation: this.observation,
+  })
 
   // protected state
   protected readonly resolved = this.liveEntry.resolved

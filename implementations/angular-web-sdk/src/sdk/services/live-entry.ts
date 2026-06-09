@@ -7,6 +7,7 @@ import {
   Injectable,
   signal,
   untracked,
+  type InputSignal,
   type OnDestroy,
 } from '@angular/core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
@@ -93,16 +94,19 @@ export class NgContentfulLiveEntry implements OnDestroy {
     })
   }
 
-  configure(config: {
-    entry: Entry
-    selectedOptimizations: SelectedOptimizationArray | undefined
-    liveUpdates: boolean | undefined
-    observation: ObservationMode
-  }): void {
-    this._entry.set(config.entry)
-    this._selectedOptimizations.set(config.selectedOptimizations)
-    this._liveUpdatesOverride.set(config.liveUpdates)
-    this._observation.set(config.observation)
+  with(config: {
+    entry: InputSignal<Entry>
+    selectedOptimizations: InputSignal<SelectedOptimizationArray | undefined>
+    liveUpdates: InputSignal<boolean | undefined>
+    observation: InputSignal<ObservationMode>
+  }): this {
+    effect(() => {
+      this._entry.set(config.entry())
+      this._selectedOptimizations.set(config.selectedOptimizations())
+      this._liveUpdatesOverride.set(config.liveUpdates())
+      this._observation.set(config.observation())
+    })
+    return this
   }
 
   lockSnapshot(): void {

@@ -78,8 +78,8 @@ export class NgContentfulOptimizationResolver {
     }
   }
 
-  resolveWith(entry: Signal<Entry>): Signal<ResolvedEntryView> {
-    return computed(() => this.resolveWithMeta(entry()))
+  with(config: { entry: Signal<Entry> }): Signal<ResolvedEntryView> {
+    return computed(() => this.resolveWithMeta(config.entry()))
   }
 
   getMergeTagValue(mergeTagEntry: MergeTagEntry): string {
