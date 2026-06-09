@@ -69,7 +69,7 @@ function eventLabel(event: AnalyticsEvent): string {
     if (event.hoverDurationMs !== undefined) return `${base} — ${event.hoverDurationMs}ms`
     return base
   }
-  if (event.pageUrl !== undefined) return event.pageUrl
+  if (event.pageUrl !== undefined) return `url: ${event.pageUrl}`
   return ''
 }
 
