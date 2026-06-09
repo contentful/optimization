@@ -15,7 +15,7 @@ import { NgContentfulLiveEntry, NgContentfulOptimization } from '@contentful/opt
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { EntryClickScenario } from '../../config/entries'
 import type { ContentfulEntry, RichTextDocument } from '../../types/contentful'
-import { RichTextRenderer } from '../rich-text-renderer/rich-text-renderer'
+import { RichTextRenderer } from './rich-text-renderer'
 
 function isRichTextField(field: unknown): field is RichTextDocument {
   return (
