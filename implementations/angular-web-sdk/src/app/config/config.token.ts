@@ -11,6 +11,7 @@ export interface Config {
   contentfulEnvironment: string
   contentfulCdaHost: string
   contentfulBasePath: string
+  enablePreviewPanel: boolean
 }
 
 export const CONFIG = new InjectionToken<Config>('CONFIG', {
@@ -26,5 +27,6 @@ export const CONFIG = new InjectionToken<Config>('CONFIG', {
     contentfulEnvironment: 'master',
     contentfulCdaHost: 'localhost:8000',
     contentfulBasePath: 'contentful',
+    enablePreviewPanel: import.meta.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL !== 'false',
   }),
 })

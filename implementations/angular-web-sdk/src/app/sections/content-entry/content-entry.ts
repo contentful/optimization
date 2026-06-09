@@ -67,7 +67,9 @@ export class ContentEntry implements OnDestroy {
   private readonly liveUpdatesService = inject(LiveUpdates)
 
   // Whether this entry should react to profile changes right now.
+  // Preview panel open forces live regardless of any override or global toggle (feature 11).
   private readonly isLive = computed(() => {
+    if (this.liveUpdatesService.previewPanelVisible()) return true
     const override = this.liveUpdates()
     if (override !== undefined) return override
     return this.liveUpdatesService.globalLiveUpdates()

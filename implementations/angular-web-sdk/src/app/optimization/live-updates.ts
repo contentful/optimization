@@ -1,12 +1,63 @@
-import { Injectable } from '@angular/core'
+import { inject, Injectable } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
-import { BehaviorSubject } from 'rxjs'
+import { BehaviorSubject, combineLatest, map, Observable } from 'rxjs'
+import { isRecord } from '../utils/type-guards'
+import { Optimization } from './optimization'
+
+const PREVIEW_PANEL_TAG = 'ctfl-opt-preview-panel'
+const PREVIEW_PANEL_TOGGLE_SELECTOR = 'button.toggle-drawer'
+
+function getPreviewPanelToggleButton(): HTMLButtonElement | null {
+  const panel = document.querySelector(PREVIEW_PANEL_TAG)
+  if (!(panel instanceof HTMLElement)) return null
+  const btn = panel.shadowRoot?.querySelector(PREVIEW_PANEL_TOGGLE_SELECTOR)
+  return btn instanceof HTMLButtonElement ? btn : null
+}
+
+export function togglePreviewPanel(): void {
+  getPreviewPanelToggleButton()?.click()
+}
+
+interface SdkBoolObservable {
+  subscribe: (fn: (v: unknown) => void) => { unsubscribe: () => void }
+}
+
+function isSdkBoolObservable(obs: unknown): obs is SdkBoolObservable {
+  return isRecord(obs) && typeof obs.subscribe === 'function'
+}
+
+function sdkBoolObs(sdk: Optimization['sdk'], key: string): Observable<boolean> {
+  const fallback = new Observable<boolean>((sub) => {
+    sub.next(false)
+  })
+  if (sdk === undefined) return fallback
+  const states: unknown = sdk.states
+  if (!isRecord(states)) return fallback
+  const obs: unknown = states[key]
+  if (!isSdkBoolObservable(obs)) return fallback
+  return new Observable<boolean>((subscriber) => {
+    const sub = obs.subscribe((v) => {
+      subscriber.next(v === true)
+    })
+    return () => {
+      sub.unsubscribe()
+    }
+  })
+}
 
 @Injectable({ providedIn: 'root' })
 export class LiveUpdates {
   private readonly subject = new BehaviorSubject<boolean>(false)
   readonly globalLiveUpdates$ = this.subject.asObservable()
   readonly globalLiveUpdates = toSignal(this.subject, { initialValue: false })
+
+  readonly previewPanelVisible = toSignal(
+    combineLatest([
+      sdkBoolObs(inject(Optimization).sdk, 'previewPanelAttached'),
+      sdkBoolObs(inject(Optimization).sdk, 'previewPanelOpen'),
+    ]).pipe(map(([attached, open]) => attached && open)),
+    { initialValue: false },
+  )
 
   toggle(): void {
     this.subject.next(!this.subject.value)

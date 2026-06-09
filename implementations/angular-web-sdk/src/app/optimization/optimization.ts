@@ -1,9 +1,10 @@
 import { inject, Injectable } from '@angular/core'
 import { NavigationEnd, Router } from '@angular/router'
 import ContentfulOptimization from '@contentful/optimization-web'
+import { createClient } from 'contentful'
 import { Observable } from 'rxjs'
 import { filter } from 'rxjs/operators'
-import { CONFIG } from '../config/config.token'
+import { type Config, CONFIG } from '../config/config.token'
 
 export type OptimizationInstance = ContentfulOptimization
 
@@ -25,9 +26,35 @@ function resolveLogLevel(raw: string): 'debug' | 'warn' | 'error' {
   return 'debug'
 }
 
-// Module-level variable guarantees a single SDK instance for the entire app lifetime,
-// even if Angular constructs the service more than once (e.g. in tests or strict mode).
+// Module-level variables guarantee single SDK instance and single panel attachment.
 let instance: OptimizationInstance | undefined = undefined
+let attachmentStarted = false
+
+async function attachPreviewPanel(
+  sdk: OptimizationInstance,
+  contentfulClient: ReturnType<typeof createClient>,
+): Promise<void> {
+  if (attachmentStarted) return
+  attachmentStarted = true
+  try {
+    const { default: attach } = await import('@contentful/optimization-web-preview-panel')
+    await attach({ contentful: contentfulClient, optimization: sdk, nonce: undefined })
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (!msg.includes('already been attached')) throw err
+  }
+}
+
+function createRawContentfulClient(config: Config): ReturnType<typeof createClient> {
+  return createClient({
+    accessToken: config.contentfulToken,
+    environment: config.contentfulEnvironment,
+    space: config.contentfulSpaceId,
+    host: config.contentfulCdaHost,
+    insecure: config.contentfulCdaHost.includes('localhost'),
+    basePath: config.contentfulBasePath,
+  })
+}
 
 function getOrCreateInstance(config: {
   clientId: string
@@ -70,6 +97,10 @@ export class Optimization {
       this.sdk = getOrCreateInstance(config)
     } catch (err) {
       this.error = err instanceof Error ? err : new Error(String(err))
+    }
+
+    if (config.enablePreviewPanel && this.sdk !== undefined) {
+      void attachPreviewPanel(this.sdk, createRawContentfulClient(config))
     }
 
     this.consent$ =

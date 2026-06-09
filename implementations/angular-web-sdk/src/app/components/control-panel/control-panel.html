@@ -17,6 +17,10 @@
     Flag "boolean":
     <span>{{ booleanFlag() === undefined ? 'undefined' : booleanFlag() }}</span>
   </p>
+  <p class="panel__stat" data-testid="preview-panel-status">
+    Preview panel:
+    <span>{{ liveUpdatesService.previewPanelVisible() ? 'Open' : 'Closed' }}</span>
+  </p>
   <div class="panel__actions">
     @if (consent() === true) {
     <button class="btn btn--danger" data-testid="unconsent-button" (click)="toggleConsent()">
@@ -37,6 +41,14 @@
       (click)="toggleGlobalLiveUpdates()"
     >
       Global: {{ liveUpdatesService.globalLiveUpdates() ? 'ON' : 'OFF' }}
+    </button>
+    <button
+      class="btn btn--secondary"
+      data-testid="preview-panel-toggle"
+      type="button"
+      (click)="togglePreviewPanel()"
+    >
+      Preview panel
     </button>
     <button
       class="btn btn--primary"

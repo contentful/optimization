@@ -2,7 +2,7 @@ import { Component, computed, inject, input } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import { Observable } from 'rxjs'
-import { LiveUpdates } from '../../optimization/live-updates'
+import { LiveUpdates, togglePreviewPanel } from '../../optimization/live-updates'
 import { fromSdkObservable, Optimization } from '../../optimization/optimization'
 
 @Component({
@@ -60,4 +60,6 @@ export class ControlPanel {
   protected toggleGlobalLiveUpdates(): void {
     this.liveUpdatesService.toggle()
   }
+
+  protected readonly togglePreviewPanel = togglePreviewPanel
 }
