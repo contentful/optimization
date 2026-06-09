@@ -44,7 +44,7 @@ function toStringValue(value: unknown): string {
 export class NgContentfulOptimizationResolver {
   private readonly optimization = inject(NgContentfulOptimization)
 
-  resolveEntry(
+  private resolveEntry(
     baseline: Entry,
     selectedOptimizations?: SelectedOptimizationArray,
   ): ResolvedData<EntrySkeletonType> {

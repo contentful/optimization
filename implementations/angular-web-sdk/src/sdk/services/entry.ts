@@ -34,7 +34,7 @@ export class NgContentfulEntry implements OnDestroy {
   private readonly _domReady = signal(false)
   private manualTrackingActive = false
 
-  readonly isLive = computed(() => {
+  private readonly isLive = computed(() => {
     if (this.liveUpdates.previewPanelVisible()) return true
     const override = this._liveUpdatesOverride()
     if (override !== undefined) return override
@@ -112,7 +112,7 @@ export class NgContentfulEntry implements OnDestroy {
     return this.resolver.resolveMergeTag(target)
   }
 
-  lockSnapshot(): void {
+  private lockSnapshot(): void {
     const entry = untracked(() => this._entry())
     if (entry === undefined) return
     this._lockedSnapshot.set(
@@ -123,7 +123,7 @@ export class NgContentfulEntry implements OnDestroy {
     )
   }
 
-  clearSnapshot(): void {
+  private clearSnapshot(): void {
     this._lockedSnapshot.set(undefined)
   }
 

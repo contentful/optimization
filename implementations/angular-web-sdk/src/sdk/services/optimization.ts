@@ -132,21 +132,4 @@ export class NgContentfulOptimization {
         void this.sdk.page({ properties: { url: e.urlAfterRedirects } })
       })
   }
-
-  setConsent(value: boolean): void {
-    this.sdk.consent(value)
-  }
-
-  identify(userId: string, traits?: Record<string, string | number | boolean | null>): void {
-    void this.sdk.identify({ userId, traits })
-  }
-
-  trackView(payload: Parameters<NgContentfulOptimizationInstance['trackView']>[0]): void {
-    void this.sdk.trackView(payload)
-  }
-
-  reset(): void {
-    this.sdk.reset()
-    void this.sdk.page()
-  }
 }

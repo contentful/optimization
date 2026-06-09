@@ -49,7 +49,6 @@ export class NgContentfulLiveUpdates {
   private readonly subject = new BehaviorSubject<boolean>(false)
   private readonly config = inject(NG_CONTENTFUL_OPTIMIZATION_CONFIG)
 
-  readonly globalLiveUpdates$ = this.subject.asObservable()
   readonly globalLiveUpdates = toSignal(this.subject, { initialValue: false })
 
   readonly previewPanelVisible = toSignal(

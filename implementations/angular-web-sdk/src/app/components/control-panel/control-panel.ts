@@ -28,14 +28,15 @@ export class ControlPanel {
 
   // public methods
   protected toggleConsent(): void {
-    this.optimization.setConsent(this.consent() !== true)
+    this.optimization.sdk.consent(this.consent() !== true)
   }
 
   protected identify(): void {
-    this.optimization.identify('charles', { identified: true })
+    void this.optimization.sdk.identify({ userId: 'charles', traits: { identified: true } })
   }
 
   protected reset(): void {
-    this.optimization.reset()
+    this.optimization.sdk.reset()
+    void this.optimization.sdk.page()
   }
 }

@@ -8,14 +8,13 @@ const INCLUDE_DEPTH = 10
 
 @Injectable({ providedIn: 'root' })
 export class NgContentfulClient {
-  private readonly client: ReturnType<typeof createClient>
-  private readonly localizedClient: ReturnType<typeof createClient> | undefined = undefined
+  private readonly resolvedClient: ReturnType<typeof createClient>
 
   constructor() {
     const config = inject(NG_CONTENTFUL_OPTIMIZATION_CONFIG)
     const { sdk } = inject(NgContentfulOptimization)
 
-    this.client = createClient({
+    const client = createClient({
       accessToken: config.contentful.accessToken,
       environment: config.contentful.environment,
       space: config.contentful.spaceId,
@@ -27,13 +26,7 @@ export class NgContentfulClient {
     // Wrapping the client ensures the SDK and CDA always use the same locale.
     // Without this, personalisation breaks when the SDK resolves a different locale
     // than what the CDA fetches entries with.
-    if (sdk !== undefined) {
-      this.localizedClient = sdk.withOptimizationLocale(this.client)
-    }
-  }
-
-  private get resolvedClient(): ReturnType<typeof createClient> {
-    return this.localizedClient ?? this.client
+    this.resolvedClient = sdk.withOptimizationLocale(client)
   }
 
   async fetchEntry<T extends EntrySkeletonType>(entryId: string): Promise<Entry<T> | undefined> {
