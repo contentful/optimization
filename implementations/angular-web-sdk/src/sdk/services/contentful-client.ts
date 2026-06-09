@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { createClient } from 'contentful'
-import { NG_CONTENTFUL_OPTIMIZATION_CONFIG } from './config'
+import { NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../config'
 import { NgContentfulOptimization } from './optimization'
 
 const INCLUDE_DEPTH = 10

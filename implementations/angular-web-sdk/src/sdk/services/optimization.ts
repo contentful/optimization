@@ -5,8 +5,8 @@ import type { SelectedOptimizationArray } from '@contentful/optimization-web/api
 import { createClient } from 'contentful'
 import { Observable } from 'rxjs'
 import { filter } from 'rxjs/operators'
-import type { NgContentfulOptimizationConfig } from './config'
-import { NG_CONTENTFUL_OPTIMIZATION_CONFIG } from './config'
+import type { NgContentfulOptimizationConfig } from '../config'
+import { NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../config'
 
 export type NgContentfulOptimizationInstance = ContentfulOptimization
 
