@@ -294,8 +294,6 @@ main {
 }
 
 .page-section__header {
-  border-left: 3px solid var(--color-primary);
-  padding: 0.25rem 0 0.25rem 0.75rem;
   margin-bottom: 1rem;
 }
 
