@@ -1,5 +1,5 @@
 import { Component, computed, input } from '@angular/core'
-import { isRecord } from '@contentful/optimization-angular'
+import { isRecord, type ObservationMode } from '@contentful/optimization-angular'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { EntryClickScenario } from '../../config/entries'
 import type { ContentfulEntry } from '../../types/contentful'
@@ -34,7 +34,7 @@ function isNestedContentEntry(entry: ContentfulEntry): boolean {
 export class ContentCard {
   // inputs
   readonly entry = input.required<ContentfulEntry>()
-  readonly observation = input<'auto' | 'manual'>('auto')
+  readonly observation = input<ObservationMode>('auto')
   readonly clickScenario = input<EntryClickScenario | undefined>(undefined)
   readonly selectedOptimizations = input<SelectedOptimizationArray | undefined>(undefined)
   readonly liveUpdates = input<boolean | undefined>(undefined)

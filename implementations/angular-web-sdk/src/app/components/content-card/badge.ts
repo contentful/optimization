@@ -1,4 +1,5 @@
 import { Component, input } from '@angular/core'
+import type { ObservationMode } from '@contentful/optimization-angular'
 import type { EntryClickScenario } from '../../config/entries'
 import type { RichTextDocument } from '../../types/contentful'
 
@@ -8,12 +9,12 @@ export interface Badge {
   title: string
 }
 
-const OBSERVATION_TITLES: Record<string, string> = {
+const OBSERVATION_TITLES: Record<ObservationMode, string> = {
   auto: 'Entry tracking is handled automatically via data attributes',
   manual: 'Entry tracking is triggered manually by the app',
 }
 
-const CLICK_SCENARIO_TITLES: Record<string, string> = {
+const CLICK_SCENARIO_TITLES: Record<EntryClickScenario, string> = {
   direct: 'Click tracking fires directly on this entry element',
   ancestor: 'Click tracking fires on an ancestor wrapper element',
   descendant: 'Click tracking fires from a descendant button inside this entry',
@@ -21,7 +22,7 @@ const CLICK_SCENARIO_TITLES: Record<string, string> = {
 
 export function buildEntryBadges(
   isVariant: boolean,
-  obs: 'auto' | 'manual',
+  obs: ObservationMode,
   rt: RichTextDocument | undefined,
   scenario: EntryClickScenario | undefined,
 ): Badge[] {
@@ -33,7 +34,7 @@ export function buildEntryBadges(
         ? 'This entry is a variant selected by the optimization SDK'
         : 'This entry is the baseline (no optimization applied)',
     },
-    { label: obs, mod: obs, title: OBSERVATION_TITLES[obs] ?? obs },
+    { label: obs, mod: obs, title: OBSERVATION_TITLES[obs] },
   ]
   if (rt)
     tags.push({ label: 'rich text', mod: 'richtext', title: 'Entry contains a rich text field' })
@@ -43,8 +44,7 @@ export function buildEntryBadges(
       mod: 'mergetag',
       title: 'Rich text contains merge tag entries that are resolved at render time',
     })
-  if (scenario)
-    tags.push({ label: scenario, mod: 'click', title: CLICK_SCENARIO_TITLES[scenario] ?? scenario })
+  if (scenario) tags.push({ label: scenario, mod: 'click', title: CLICK_SCENARIO_TITLES[scenario] })
   return tags
 }
 

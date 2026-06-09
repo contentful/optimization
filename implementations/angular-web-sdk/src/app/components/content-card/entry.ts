@@ -1,5 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common'
 import { Component, computed, effect, inject, input } from '@angular/core'
+import type { ObservationMode } from '@contentful/optimization-angular'
 import { NgContentfulLiveEntry } from '@contentful/optimization-angular'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { EntryClickScenario } from '../../config/entries'
@@ -27,7 +28,7 @@ function isRichTextField(field: unknown): field is RichTextDocument {
 export class ContentEntry {
   // inputs
   readonly entry = input.required<ContentfulEntry>()
-  readonly observation = input.required<'auto' | 'manual'>()
+  readonly observation = input.required<ObservationMode>()
   readonly clickScenario = input<EntryClickScenario | undefined>(undefined)
   readonly selectedOptimizations = input<SelectedOptimizationArray | undefined>(undefined)
   readonly liveUpdates = input<boolean | undefined>(undefined)

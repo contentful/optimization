@@ -15,6 +15,8 @@ import { NgContentfulLiveUpdates } from './live-updates'
 import { NgContentfulOptimization } from './optimization'
 import { NgContentfulOptimizationResolver, type ResolvedEntryView } from './optimization-resolver'
 
+export type ObservationMode = 'auto' | 'manual'
+
 @Injectable()
 export class NgContentfulLiveEntry implements OnDestroy {
   // injected dependencies
@@ -28,7 +30,7 @@ export class NgContentfulLiveEntry implements OnDestroy {
   private readonly _selectedOptimizations = signal<SelectedOptimizationArray | undefined>(undefined)
   private readonly _liveUpdatesOverride = signal<boolean | undefined>(undefined)
   private readonly _lockedSnapshot = signal<ResolvedEntryView | undefined>(undefined)
-  private readonly _observation = signal<'auto' | 'manual'>('auto')
+  private readonly _observation = signal<ObservationMode>('auto')
   private readonly _domReady = signal(false)
   private manualTrackingActive = false
 
@@ -95,7 +97,7 @@ export class NgContentfulLiveEntry implements OnDestroy {
     entry: Entry
     selectedOptimizations: SelectedOptimizationArray | undefined
     liveUpdates: boolean | undefined
-    observation: 'auto' | 'manual'
+    observation: ObservationMode
   }): void {
     this._entry.set(config.entry)
     this._selectedOptimizations.set(config.selectedOptimizations)

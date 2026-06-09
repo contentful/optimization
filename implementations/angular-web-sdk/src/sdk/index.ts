@@ -1,6 +1,6 @@
 export { NG_CONTENTFUL_OPTIMIZATION_CONFIG, type NgContentfulOptimizationConfig } from './config'
 export { NgContentfulClient } from './services/contentful-client'
-export { NgContentfulLiveEntry } from './services/live-entry'
+export { NgContentfulLiveEntry, type ObservationMode } from './services/live-entry'
 export { NgContentfulLiveUpdates } from './services/live-updates'
 export { MergeTagPipe, isMergeTagEntry } from './services/merge-tag.pipe'
 export {
