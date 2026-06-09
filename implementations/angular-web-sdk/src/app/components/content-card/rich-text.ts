@@ -1,8 +1,9 @@
 import { Component, computed, inject, input } from '@angular/core'
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser'
-import { isRecord, NgContentfulOptimizationResolver } from '@contentful/optimization-angular'
+import { NgContentfulOptimizationResolver } from '@contentful/optimization-angular'
 import { BLOCKS, INLINES } from '@contentful/rich-text-types'
 import type { RichTextDocument } from '../../types/contentful'
+import { isRecord } from '../../utils'
 
 function escape(text: string): string {
   return text

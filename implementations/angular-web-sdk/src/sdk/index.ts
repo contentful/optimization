@@ -2,16 +2,6 @@ export { NG_CONTENTFUL_OPTIMIZATION_CONFIG, type NgContentfulOptimizationConfig 
 export { NgContentfulClient } from './services/contentful-client'
 export { NgContentfulEntry, type ObservationMode } from './services/entry'
 export { NgContentfulLiveUpdates } from './services/live-updates'
-export { MergeTagPipe, isMergeTagEntry } from './services/merge-tag.pipe'
-export {
-  NgContentfulOptimization,
-  fromSdkObservable,
-  type NgContentfulOptimizationInstance,
-} from './services/optimization'
-export {
-  NgContentfulOptimizationResolver,
-  type EntryMeta,
-  type ResolvedData,
-  type ResolvedEntryView,
-} from './services/optimization-resolver'
-export { isRecord } from './utils'
+export { MergeTagPipe } from './services/merge-tag.pipe'
+export { NgContentfulOptimization } from './services/optimization'
+export { NgContentfulOptimizationResolver } from './services/optimization-resolver'

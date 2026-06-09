@@ -1,5 +1,5 @@
 import { Component, computed, input } from '@angular/core'
-import { isRecord, type ObservationMode } from '@contentful/optimization-angular'
+import type { ObservationMode } from '@contentful/optimization-angular'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { EntryClickScenario } from '../../config/entries'
 import type { ContentfulEntry } from '../../types/contentful'
@@ -7,9 +7,7 @@ import { ContentEntry } from './entry'
 import { NestedContent } from './nested-content'
 
 function isNestedContentEntry(entry: ContentfulEntry): boolean {
-  const ct: unknown = entry.sys.contentType
-  if (!isRecord(ct) || !isRecord(ct.sys)) return false
-  return ct.sys.id === 'nestedContent'
+  return entry.sys.contentType.sys.id === 'nestedContent'
 }
 
 @Component({

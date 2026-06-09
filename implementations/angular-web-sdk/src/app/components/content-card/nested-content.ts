@@ -1,6 +1,7 @@
 import { Component, computed, forwardRef, inject, input } from '@angular/core'
-import { isRecord, NgContentfulEntry } from '@contentful/optimization-angular'
+import { NgContentfulEntry } from '@contentful/optimization-angular'
 import type { ContentfulEntry } from '../../types/contentful'
+import { isRecord } from '../../utils'
 import { buildNestedBadges, EntryBadge } from './badge'
 
 function isEntry(value: unknown): value is ContentfulEntry {
