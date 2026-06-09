@@ -24,12 +24,7 @@ export class PageTwo implements OnInit {
 
   protected readonly selectedOptimizations = toSignal(this.optimization.selectedOptimizations$)
 
-  ngOnInit(): void {
-    this.trackArrival()
-    void this.loadEntries()
-  }
-
-  protected trackConversion(): void {
+  protected readonly trackConversion = (): void => {
     void this.optimization.sdk?.trackView({
       componentId: PAGE_TWO_COMPONENT_ID,
       viewId: crypto.randomUUID(),
@@ -37,8 +32,9 @@ export class PageTwo implements OnInit {
     })
   }
 
-  private trackArrival(): void {
+  ngOnInit(): void {
     this.trackConversion()
+    void this.loadEntries()
   }
 
   private async loadEntries(): Promise<void> {
