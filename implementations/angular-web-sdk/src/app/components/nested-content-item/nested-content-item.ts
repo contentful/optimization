@@ -3,9 +3,18 @@ import { toSignal } from '@angular/core/rxjs-interop'
 import {
   NgContentfulOptimization,
   NgContentfulOptimizationResolver,
+  isRecord,
 } from '@contentful/optimization-angular'
 import type { ContentfulEntry } from '../../types/contentful'
-import { isEntry } from '../../utils/type-guards'
+
+function isEntry(value: unknown): value is ContentfulEntry {
+  return (
+    isRecord(value) &&
+    isRecord(value.sys) &&
+    typeof value.sys.id === 'string' &&
+    isRecord(value.fields)
+  )
+}
 
 @Component({
   selector: 'app-nested-content-item',

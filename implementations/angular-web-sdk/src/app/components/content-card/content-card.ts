@@ -1,10 +1,16 @@
 import { Component, input } from '@angular/core'
+import { isRecord } from '@contentful/optimization-angular'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { EntryClickScenario } from '../../config/entries'
 import type { ContentfulEntry } from '../../types/contentful'
-import { isNestedContentEntry } from '../../utils/type-guards'
 import { ContentEntry } from '../content-entry/content-entry'
 import { NestedContentEntry } from '../nested-content-entry/nested-content-entry'
+
+function isNestedContentEntry(entry: ContentfulEntry): boolean {
+  const ct: unknown = entry.sys.contentType
+  if (!isRecord(ct) || !isRecord(ct.sys)) return false
+  return ct.sys.id === 'nestedContent'
+}
 
 @Component({
   selector: 'app-content-card',

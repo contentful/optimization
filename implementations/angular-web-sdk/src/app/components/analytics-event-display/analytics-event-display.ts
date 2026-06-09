@@ -1,7 +1,6 @@
 import { Component, inject, type OnDestroy, type OnInit, signal } from '@angular/core'
-import { NgContentfulOptimization } from '@contentful/optimization-angular'
+import { isRecord, NgContentfulOptimization } from '@contentful/optimization-angular'
 import type { Subscription } from 'rxjs'
-import { isRecord } from '../../utils/type-guards'
 
 interface AnalyticsEvent {
   id: string

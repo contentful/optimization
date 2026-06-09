@@ -1,9 +1,12 @@
 import { Component, computed, inject, input } from '@angular/core'
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser'
-import { isMergeTagEntry, NgContentfulOptimizationResolver } from '@contentful/optimization-angular'
+import {
+  isMergeTagEntry,
+  isRecord,
+  NgContentfulOptimizationResolver,
+} from '@contentful/optimization-angular'
 import { BLOCKS, INLINES } from '@contentful/rich-text-types'
 import type { RichTextDocument } from '../../types/contentful'
-import { isRecord } from '../../utils/type-guards'
 
 function escape(text: string): string {
   return text
