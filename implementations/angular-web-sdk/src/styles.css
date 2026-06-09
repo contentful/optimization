@@ -139,6 +139,10 @@ main {
   margin-top: 1rem;
 }
 
+.sections-row--two {
+  grid-template-columns: repeat(2, 1fr);
+}
+
 /* Card */
 
 .card {
@@ -256,6 +260,12 @@ main {
 .btn--danger:hover {
   background: #b91c1c;
   border-color: #b91c1c;
+}
+
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 /* Page section */

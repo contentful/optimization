@@ -1,0 +1,42 @@
+@if (loading()) {
+<p class="page-loading" data-testid="page-two-loading">Loading entries…</p>
+} @else {
+<div class="page-header">
+  <h1>Page Two</h1>
+  <p class="page-header__sub">Multi-route demo — SDK state persists across navigation.</p>
+</div>
+
+<app-control-panel [onTrackConversion]="trackConversion.bind(this)" />
+
+<div class="sections-row sections-row--two">
+  @if (autoEntry(); as entry) {
+  <section class="page-section">
+    <header class="page-section__header">
+      <h2>Auto-observed</h2>
+      <p>Tracked via <code>data-ctfl-*</code> attributes.</p>
+    </header>
+    <div class="entry-grid">
+      <app-content-entry
+        [entry]="entry"
+        observation="auto"
+        [selectedOptimizations]="selectedOptimizations()"
+      />
+    </div>
+  </section>
+  } @if (manualEntry(); as entry) {
+  <section class="page-section">
+    <header class="page-section__header">
+      <h2>Manually-observed</h2>
+      <p>Tracked via explicit <code>enableElement</code> calls.</p>
+    </header>
+    <div class="entry-grid">
+      <app-content-entry
+        [entry]="entry"
+        observation="manual"
+        [selectedOptimizations]="selectedOptimizations()"
+      />
+    </div>
+  </section>
+  }
+</div>
+}
