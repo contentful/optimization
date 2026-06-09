@@ -60,13 +60,13 @@ function upsert(list: AnalyticsEvent[], next: AnalyticsEvent): AnalyticsEvent[] 
 function eventLabel(event: AnalyticsEvent): string {
   if (event.componentId !== undefined) {
     if (event.viewDurationMs !== undefined)
-      return `${event.type} — ${event.componentId} — ${event.viewDurationMs}ms`
+      return `${event.componentId} — ${event.viewDurationMs}ms`
     if (event.hoverDurationMs !== undefined)
-      return `${event.type} — ${event.componentId} — hover ${event.hoverDurationMs}ms`
-    return `${event.type} — ${event.componentId}`
+      return `${event.componentId} — ${event.hoverDurationMs}ms`
+    return event.componentId
   }
-  if (event.pageUrl !== undefined) return `${event.type} — ${event.pageUrl}`
-  return event.type
+  if (event.pageUrl !== undefined) return event.pageUrl
+  return ''
 }
 
 function eventTestId(event: AnalyticsEvent): string {
