@@ -211,10 +211,16 @@ main {
 
 .panel__table {
   display: grid;
-  grid-template-columns: 10rem 6rem auto;
-  gap: 0.25rem 0.75rem;
+  grid-template-columns: 9rem 5rem auto;
+  gap: 0.4rem 1.5rem;
   align-items: center;
   justify-items: start;
+  width: fit-content;
+}
+
+.panel__actions {
+  margin-top: 1.25rem;
+  width: fit-content;
 }
 
 .panel__row-label {
@@ -231,8 +237,8 @@ main {
 }
 
 .btn--sm {
-  padding: 0.2rem 0.6rem;
-  font-size: 0.75rem;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.7rem;
 }
 
 /* Buttons */
@@ -249,7 +255,12 @@ main {
   cursor: pointer;
   transition:
     background 0.15s,
-    border-color 0.15s;
+    border-color 0.15s,
+    transform 0.1s;
+}
+
+.btn:active {
+  transform: scale(0.95);
 }
 
 .btn--primary {
@@ -371,7 +382,6 @@ main {
 
 .entry-card--variant {
   border-left-color: #16a34a;
-  background: #f0fdf4;
 }
 
 .entry-card__header {

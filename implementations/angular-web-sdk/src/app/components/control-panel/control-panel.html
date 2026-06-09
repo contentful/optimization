@@ -52,14 +52,7 @@
     <span class="panel__row-value"
       >{{ liveUpdatesService.previewPanelVisible() ? 'Open' : 'Closed' }}</span
     >
-    <button
-      class="btn btn--secondary btn--sm"
-      data-testid="preview-panel-toggle"
-      type="button"
-      (click)="togglePreviewPanel()"
-    >
-      {{ liveUpdatesService.previewPanelVisible() ? 'Close' : 'Open' }}
-    </button>
+    <span></span>
 
     <span class="panel__row-label" data-testid="boolean-flag-status">Flag "boolean"</span>
     <span class="panel__row-value"
@@ -72,17 +65,18 @@
     >
     <span class="panel__row-value">{{ optimizationCount() }}</span>
     <span></span>
+  </div>
 
-    <span class="panel__row-label">Conversion</span>
-    <span></span>
+  @if (onTrackConversion()) {
+  <div class="panel__actions">
     <button
       class="btn btn--secondary btn--sm"
       data-testid="track-conversion-button"
       type="button"
-      [disabled]="!onTrackConversion()"
       (click)="onTrackConversion()!()"
     >
-      Track
+      Trigger custom event
     </button>
   </div>
+  }
 </section>
