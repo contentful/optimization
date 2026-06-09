@@ -13,6 +13,7 @@ import {
 } from '@angular/core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { EntrySkeletonType } from 'contentful'
+import { RichTextRenderer } from '../../components/rich-text-renderer/rich-text-renderer'
 import { LiveUpdates } from '../../optimization/live-updates'
 import { Optimization } from '../../optimization/optimization'
 import { OptimizationResolver, type ResolvedData } from '../../optimization/optimization-resolver'
@@ -48,7 +49,7 @@ function getSelectedOptimizationMeta(value: unknown): {
 
 @Component({
   selector: 'app-content-entry',
-  imports: [NgTemplateOutlet],
+  imports: [NgTemplateOutlet, RichTextRenderer],
   templateUrl: './content-entry.html',
 })
 export class ContentEntry implements OnDestroy {
@@ -142,6 +143,12 @@ export class ContentEntry implements OnDestroy {
   protected readonly richTextField = computed(() =>
     Object.values(this.resolvedEntry().fields).find(isRichTextField),
   )
+
+  protected readonly hasMergeTag = computed(() => {
+    const rt = this.richTextField()
+    if (!rt) return false
+    return JSON.stringify(rt).includes('"nt_mergetag"')
+  })
 
   protected readonly entryText = computed(() => {
     const text: unknown = this.resolvedEntry().fields.text

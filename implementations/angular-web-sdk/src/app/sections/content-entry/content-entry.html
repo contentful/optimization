@@ -27,17 +27,44 @@ isVariant();
     [attr.data-entry-id]="!isAuto ? baseline : null"
   >
     <div class="entry-card__header">
-      <span class="entry-card__badge" [class.entry-card__badge--variant]="variant">
-        {{ variant ? 'variant' : 'baseline' }}
-      </span>
-      @if (variant) {
-      <span class="entry-card__experience">{{ m.experienceId }}</span>
-      }
+      <div class="entry-card__ids">
+        <p class="entry-card__id">
+          <span class="entry-card__id-label">base</span
+          ><span class="entry-card__id-value">{{ baseline }}</span>
+        </p>
+        @if (variant) {
+        <p class="entry-card__id">
+          <span class="entry-card__id-label">var</span
+          ><span class="entry-card__id-value">{{ resolved }}</span>
+        </p>
+        <p class="entry-card__id">
+          <span class="entry-card__id-label">exp</span
+          ><span class="entry-card__id-value">{{ m.experienceId }}</span>
+        </p>
+        }
+      </div>
+      <div class="entry-card__badges">
+        <span class="entry-card__badge" [class.entry-card__badge--variant]="variant">
+          {{ variant ? 'variant' : 'baseline' }}
+        </span>
+        @if (richTextField()) {
+        <span class="entry-card__badge entry-card__badge--richtext">rich text</span>
+        } @if (richTextField() && hasMergeTag()) {
+        <span class="entry-card__badge entry-card__badge--mergetag">merge tag</span>
+        } @if (!isAuto) {
+        <span class="entry-card__badge entry-card__badge--manual">manual</span>
+        } @if (scenario) {
+        <span class="entry-card__badge entry-card__badge--click">{{ scenario }}</span>
+        }
+      </div>
     </div>
 
     <div [attr.data-testid]="'entry-text-' + baseline" [attr.aria-label]="'Entry: ' + resolved">
+      @if (richTextField(); as rt) {
+      <app-rich-text-renderer [richText]="rt" />
+      } @else {
       <p>{{ entryText() }}</p>
-      <p class="entry-card__id">{{ '[Entry: ' + baseline + ']' }}</p>
+      }
     </div>
 
     @if (scenario === 'descendant') {

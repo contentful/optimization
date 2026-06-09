@@ -338,7 +338,6 @@ main {
 
 .entry-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.5rem;
 }
 
@@ -364,9 +363,18 @@ main {
 
 .entry-card__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
+}
+
+.entry-card__badges {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .entry-card__badge {
@@ -385,22 +393,90 @@ main {
   color: #15803d;
 }
 
-.entry-card__experience {
-  font-size: 0.7rem;
-  font-family: monospace;
-  color: #16a34a;
-  opacity: 0.8;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 260px;
+.entry-card__badge--richtext {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.entry-card__badge--mergetag {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.entry-card__badge--manual {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+.entry-card__badge--click {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.entry-card__ids {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.05rem 0.4rem;
+  min-width: 0;
 }
 
 .entry-card__id {
+  display: contents;
+}
+
+.entry-card__id-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  opacity: 0.6;
+  white-space: nowrap;
+  align-self: baseline;
+}
+
+.entry-card__id-value {
   font-size: 0.75rem;
   color: var(--color-text-muted);
   font-family: monospace;
-  margin-top: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Rich text */
+
+.rich-text p {
+  margin-bottom: 0.4rem;
+}
+
+.rich-text h1,
+.rich-text h2,
+.rich-text h3,
+.rich-text h4,
+.rich-text h5,
+.rich-text h6 {
+  margin-bottom: 0.3rem;
+  color: var(--color-text);
+}
+
+.rich-text ul,
+.rich-text ol {
+  padding-left: 1.25rem;
+  margin-bottom: 0.4rem;
+}
+
+.rich-text blockquote {
+  border-left: 3px solid var(--color-border);
+  padding-left: 0.75rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.rich-text a {
+  color: var(--color-primary);
+  text-decoration: underline;
 }
 
 /* Analytics event panel */

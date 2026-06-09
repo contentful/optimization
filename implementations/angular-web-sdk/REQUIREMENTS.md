@@ -160,6 +160,11 @@ The app injects personalised values inline into rich text content.
 - When no personalised value is available, a visible fallback placeholder is shown instead of blank
   content.
 
+**Visual verification:** Entry cards with a rich text field show a yellow `merge tag` badge. The
+rendered text contains the merge tag value inline (e.g. a first name). Use Identify on the control
+panel to set a user profile — the inline value updates. Reset reverts to the fallback `[Merge Tag]`
+placeholder.
+
 ---
 
 ### 14. Rich text rendering
@@ -169,6 +174,10 @@ The app renders Contentful rich text documents including embedded entries.
 - All standard rich text node types (headings, paragraphs, lists, inline entries, etc.) are rendered
   correctly.
 - Embedded entry nodes that are merge tags are resolved as described in feature 13.
+
+**Visual verification:** Entry cards with a rich text field show a blue `rich text` badge. The card
+body renders the document as formatted HTML (paragraphs, headings, lists) rather than raw JSON.
+Merge tag nodes within the document are replaced with their resolved value.
 
 ---
 
@@ -278,28 +287,28 @@ Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 
 ### SDK features
 
-| Req | Feature                                                               | New deps                                                              | Status         |
-| --- | --------------------------------------------------------------------- | --------------------------------------------------------------------- | -------------- |
-| 1   | SDK initialisation — singleton, init with config, graceful error      | `@contentful/optimization-web`                                        | ✅ Done        |
-| 2   | Page tracking — emit on every route change incl. initial load         | —                                                                     | ✅ Done        |
-| 18  | Locale consistency — CDA client wrapped with `withOptimizationLocale` | `contentful`                                                          | ✅ Done        |
-| 3   | Entry resolution — resolve variant or fall back to baseline           | —                                                                     | ✅ Done        |
-| 4   | Auto-tracking — `data-ctfl-*` attributes, SDK observes DOM            | —                                                                     | ✅ Done        |
-| 5   | Manual tracking — explicit `enableElement` / `clearElement`           | —                                                                     | ✅ Done        |
-| 6   | Click scenarios — direct / descendant / ancestor                      | —                                                                     | ✅ Done        |
-| 7   | Consent — toggle UI, gate tracking events                             | —                                                                     | ✅ Done        |
-| 8   | Identify / reset — fixed user ID + traits, persist across reload      | —                                                                     | ✅ Done        |
-| 9   | Live updates — global toggle (default off)                            | —                                                                     | ✅ Done        |
-| 10  | Live updates — per-entry override (always-on / locked / default)      | —                                                                     | ✅ Done        |
-| 11  | Preview panel forced live — all entries live while panel open         | `@contentful/optimization-web-preview-panel`                          | ⬜ Not started |
-| 12  | Nested entries — recursive resolution via `fields.nested`             | —                                                                     | ⬜ Not started |
-| 13  | Merge tags — inline personalised values in rich text                  | —                                                                     | ⬜ Not started |
-| 14  | Rich text rendering — standard nodes + embedded merge tag entries     | `@contentful/rich-text-html-renderer` · `@contentful/rich-text-types` | ⬜ Not started |
-| 15  | Analytics event display — live feed, heartbeat dedup                  | —                                                                     | ✅ Done        |
-| 16  | Preview panel — env-gated, lazy-loaded, open/close                    | —                                                                     | ⬜ Not started |
-| 17  | Multi-route navigation — two routes, page events, manual conversion   | —                                                                     | ✅ Done        |
-| 19  | Feature flags — subscribe to `'boolean'` flag, auto-emits view event  | —                                                                     | ✅ Done        |
-| 20  | Offline queue / recovery                                              | SDK-native — no app code needed                                       | ✅ N/A         |
+| Req | Feature                                                               | New deps                                     | Status         |
+| --- | --------------------------------------------------------------------- | -------------------------------------------- | -------------- |
+| 1   | SDK initialisation — singleton, init with config, graceful error      | `@contentful/optimization-web`               | ✅ Done        |
+| 2   | Page tracking — emit on every route change incl. initial load         | —                                            | ✅ Done        |
+| 18  | Locale consistency — CDA client wrapped with `withOptimizationLocale` | `contentful`                                 | ✅ Done        |
+| 3   | Entry resolution — resolve variant or fall back to baseline           | —                                            | ✅ Done        |
+| 4   | Auto-tracking — `data-ctfl-*` attributes, SDK observes DOM            | —                                            | ✅ Done        |
+| 5   | Manual tracking — explicit `enableElement` / `clearElement`           | —                                            | ✅ Done        |
+| 6   | Click scenarios — direct / descendant / ancestor                      | —                                            | ✅ Done        |
+| 7   | Consent — toggle UI, gate tracking events                             | —                                            | ✅ Done        |
+| 8   | Identify / reset — fixed user ID + traits, persist across reload      | —                                            | ✅ Done        |
+| 9   | Live updates — global toggle (default off)                            | —                                            | ✅ Done        |
+| 10  | Live updates — per-entry override (always-on / locked / default)      | —                                            | ✅ Done        |
+| 11  | Preview panel forced live — all entries live while panel open         | `@contentful/optimization-web-preview-panel` | ⬜ Not started |
+| 12  | Nested entries — recursive resolution via `fields.nested`             | —                                            | ⬜ Not started |
+| 13  | Merge tags — inline personalised values in rich text                  | —                                            | ✅ Done        |
+| 14  | Rich text rendering — standard nodes + embedded merge tag entries     | `@contentful/rich-text-types`                | ✅ Done        |
+| 15  | Analytics event display — live feed, heartbeat dedup                  | —                                            | ✅ Done        |
+| 16  | Preview panel — env-gated, lazy-loaded, open/close                    | —                                            | ⬜ Not started |
+| 17  | Multi-route navigation — two routes, page events, manual conversion   | —                                            | ✅ Done        |
+| 19  | Feature flags — subscribe to `'boolean'` flag, auto-emits view event  | —                                            | ✅ Done        |
+| 20  | Offline queue / recovery                                              | SDK-native — no app code needed              | ✅ N/A         |
 
 ---
 
