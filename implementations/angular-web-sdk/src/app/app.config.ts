@@ -28,17 +28,14 @@ export const appConfig: ApplicationConfig = {
           contentfulLocales: { default: 'en-US' },
           app: { name: 'ContentfulOptimization SDK - Angular Web Reference', version: '0.0.0' },
           autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
-          ...(c.enablePreviewPanel
-            ? {
-                previewPanel: {
-                  contentfulToken: c.contentfulToken,
-                  contentfulEnvironment: c.contentfulEnvironment,
-                  contentfulSpaceId: c.contentfulSpaceId,
-                  contentfulCdaHost: c.contentfulCdaHost,
-                  contentfulBasePath: c.contentfulBasePath,
-                },
-              }
-            : {}),
+          contentful: {
+            accessToken: c.contentfulToken,
+            environment: c.contentfulEnvironment,
+            spaceId: c.contentfulSpaceId,
+            cdaHost: c.contentfulCdaHost,
+            basePath: c.contentfulBasePath,
+          },
+          ...(c.enablePreviewPanel ? { previewPanel: {} } : {}),
         }
       },
     },

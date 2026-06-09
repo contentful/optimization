@@ -10,12 +10,14 @@ export interface NgContentfulOptimizationConfig {
   contentfulLocales: { default: string }
   app: { name: string; version: string }
   autoTrackEntryInteraction?: { views?: boolean; clicks?: boolean; hovers?: boolean }
+  contentful: {
+    accessToken: string
+    environment: string
+    spaceId: string
+    cdaHost: string
+    basePath: string
+  }
   previewPanel?: {
-    contentfulToken: string
-    contentfulEnvironment: string
-    contentfulSpaceId: string
-    contentfulCdaHost: string
-    contentfulBasePath: string
     nonce?: string
   }
 }

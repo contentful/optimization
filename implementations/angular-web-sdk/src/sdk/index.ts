@@ -1,4 +1,5 @@
 export { NG_CONTENTFUL_OPTIMIZATION_CONFIG, type NgContentfulOptimizationConfig } from './config'
+export { NgContentfulClient } from './contentful-client'
 export { NgContentfulLiveUpdates, togglePreviewPanel } from './live-updates'
 export { MergeTagPipe, isMergeTagEntry } from './merge-tag.pipe'
 export {

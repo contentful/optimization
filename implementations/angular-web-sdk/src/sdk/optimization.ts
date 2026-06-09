@@ -33,21 +33,25 @@ let attachmentStarted = false
 
 async function attachPreviewPanel(
   sdk: NgContentfulOptimizationInstance,
-  config: NonNullable<NgContentfulOptimizationConfig['previewPanel']>,
+  config: NgContentfulOptimizationConfig,
 ): Promise<void> {
   if (attachmentStarted) return
   attachmentStarted = true
   try {
     const contentfulClient = createClient({
-      accessToken: config.contentfulToken,
-      environment: config.contentfulEnvironment,
-      space: config.contentfulSpaceId,
-      host: config.contentfulCdaHost,
-      insecure: config.contentfulCdaHost.includes('localhost'),
-      basePath: config.contentfulBasePath,
+      accessToken: config.contentful.accessToken,
+      environment: config.contentful.environment,
+      space: config.contentful.spaceId,
+      host: config.contentful.cdaHost,
+      insecure: config.contentful.cdaHost.includes('localhost'),
+      basePath: config.contentful.basePath,
     })
     const { default: attach } = await import('@contentful/optimization-web-preview-panel')
-    await attach({ contentful: contentfulClient, optimization: sdk, nonce: config.nonce })
+    await attach({
+      contentful: contentfulClient,
+      optimization: sdk,
+      nonce: config.previewPanel?.nonce,
+    })
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     if (!msg.includes('already been attached')) throw err
@@ -98,7 +102,7 @@ export class NgContentfulOptimization {
     }
 
     if (config.previewPanel !== undefined && this.sdk !== undefined) {
-      void attachPreviewPanel(this.sdk, config.previewPanel)
+      void attachPreviewPanel(this.sdk, config)
     }
 
     this.consent$ =

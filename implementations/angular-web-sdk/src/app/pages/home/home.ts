@@ -1,6 +1,10 @@
 import { Component, inject, type OnInit, signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
-import { NgContentfulLiveUpdates, NgContentfulOptimization } from '@contentful/optimization-angular'
+import {
+  NgContentfulClient,
+  NgContentfulLiveUpdates,
+  NgContentfulOptimization,
+} from '@contentful/optimization-angular'
 import { ControlPanel } from '../../components/control-panel/control-panel'
 import {
   AUTO_OBSERVED_ENTRY_IDS,
@@ -9,7 +13,6 @@ import {
 } from '../../config/entries'
 import { ContentEntry, type EntryClickScenario } from '../../sections/content-entry/content-entry'
 import { NestedContentEntry } from '../../sections/nested-content-entry/nested-content-entry'
-import { ContentfulClient } from '../../services/contentful-client'
 import type { ContentfulEntry } from '../../types/contentful'
 import { isRecord } from '../../utils/type-guards'
 
@@ -32,7 +35,7 @@ const CLICK_SCENARIO_BY_ENTRY_ID: Readonly<Record<string, EntryClickScenario>> =
   host: { style: 'display: contents' },
 })
 export class Home implements OnInit {
-  private readonly contentfulClient = inject(ContentfulClient)
+  private readonly contentfulClient = inject(NgContentfulClient)
   private readonly optimization = inject(NgContentfulOptimization)
   protected readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
 
