@@ -34,7 +34,6 @@ export class ContentEntry {
   // injected dependencies
   private readonly liveEntry = inject(NgContentfulLiveEntry)
 
-  // constructor (effects)
   constructor() {
     effect(() => {
       this.liveEntry.configure({
