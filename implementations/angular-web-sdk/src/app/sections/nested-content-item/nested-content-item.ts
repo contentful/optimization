@@ -5,7 +5,7 @@ import {
   NgContentfulOptimizationResolver,
 } from '@contentful/optimization-angular'
 import type { ContentfulEntry } from '../../types/contentful'
-import { getSelectedOptimizationMeta, isEntry } from '../../utils/type-guards'
+import { isEntry } from '../../utils/type-guards'
 
 @Component({
   selector: 'app-nested-content-item',
@@ -18,39 +18,36 @@ export class NestedContentItem {
   private readonly optimization = inject(NgContentfulOptimization)
   private readonly resolver = inject(NgContentfulOptimizationResolver)
 
-  protected readonly selectedOptimizations = toSignal(this.optimization.selectedOptimizations$)
+  private readonly selectedOptimizations = toSignal(this.optimization.selectedOptimizations$)
 
   protected readonly resolved = computed(() =>
-    this.resolver.resolveEntry(this.entry(), this.selectedOptimizations()),
+    this.resolver.resolveWithMeta(this.entry(), this.selectedOptimizations()),
   )
 
-  protected readonly resolvedEntry = computed(() => this.resolved().entry as ContentfulEntry)
-
-  protected readonly meta = computed(() =>
-    getSelectedOptimizationMeta(this.resolved().selectedOptimization),
-  )
-
-  protected readonly baselineId = computed(() => this.entry().sys.id)
-  protected readonly resolvedId = computed(() => this.resolvedEntry().sys.id)
-  protected readonly isVariant = computed(() => this.meta().experienceId !== undefined)
-
-  protected readonly entryText = computed(() => {
-    const text: unknown = this.resolvedEntry().fields.text
-    return typeof text === 'string' ? text : ''
-  })
-
+  protected readonly baselineId = computed(() => this.resolved().baselineId)
+  protected readonly resolvedId = computed(() => this.resolved().resolvedId)
+  protected readonly meta = computed(() => this.resolved().meta)
+  protected readonly isVariant = computed(() => this.resolved().isVariant)
   protected readonly stickyAttr = computed(() => {
-    const { sticky } = this.meta()
+    const {
+      meta: { sticky },
+    } = this.resolved()
     return sticky === undefined ? null : String(sticky)
   })
-
   protected readonly variantIndexAttr = computed(() => {
-    const { variantIndex } = this.meta()
+    const {
+      meta: { variantIndex },
+    } = this.resolved()
     return variantIndex === undefined ? null : String(variantIndex)
   })
 
+  protected readonly entryText = computed(() => {
+    const text: unknown = this.resolved().resolvedEntry.fields.text
+    return typeof text === 'string' ? text : ''
+  })
+
   protected readonly nestedEntries = computed(() => {
-    const nested: unknown = this.resolvedEntry().fields.nested
+    const nested: unknown = this.resolved().resolvedEntry.fields.nested
     return Array.isArray(nested) ? nested.filter(isEntry) : []
   })
 }
