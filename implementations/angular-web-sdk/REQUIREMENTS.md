@@ -289,7 +289,7 @@ Legend: ⬜ Not started · 🔄 In progress · ✅ Done · ❌ Blocked
 | 15  | Analytics event display — live feed, heartbeat dedup                  | —                                                                     | ✅ Done        |
 | 16  | Preview panel — env-gated, lazy-loaded, open/close                    | —                                                                     | ⬜ Not started |
 | 17  | Multi-route navigation — two routes, page events, manual conversion   | —                                                                     | ✅ Done        |
-| 19  | Feature flags — subscribe to `'boolean'` flag, auto-emits view event  | —                                                                     | ⬜ Not started |
+| 19  | Feature flags — subscribe to `'boolean'` flag, auto-emits view event  | —                                                                     | ✅ Done        |
 | 20  | Offline queue / recovery                                              | SDK-native — no app code needed                                       | ✅ N/A         |
 
 ---
