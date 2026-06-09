@@ -13,6 +13,10 @@
     Global live updates:
     <span>{{ liveUpdatesService.globalLiveUpdates() ? 'ON' : 'OFF' }}</span>
   </p>
+  <p class="panel__stat" data-testid="boolean-flag-status">
+    Flag "boolean":
+    <span>{{ booleanFlag() === undefined ? 'undefined' : booleanFlag() }}</span>
+  </p>
   <div class="panel__actions">
     @if (consent() === true) {
     <button class="btn btn--danger" data-testid="unconsent-button" (click)="toggleConsent()">

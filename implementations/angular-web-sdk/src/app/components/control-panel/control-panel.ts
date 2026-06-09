@@ -43,6 +43,8 @@ export class ControlPanel {
     () => this.selectedOptimizationCount()?.length ?? 0,
   )
 
+  protected readonly booleanFlag = toSignal(this.optimization.booleanFlag$)
+
   protected toggleConsent(): void {
     this.optimization.setConsent(this.consent() !== true)
   }

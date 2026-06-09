@@ -59,6 +59,7 @@ export class Optimization {
   readonly consent$: Observable<boolean | undefined>
   readonly profile$: Observable<unknown>
   readonly eventStream$: Observable<unknown>
+  readonly booleanFlag$: Observable<unknown>
 
   constructor() {
     const config = inject(CONFIG)
@@ -89,6 +90,14 @@ export class Optimization {
       this.sdk !== undefined
         ? fromSdkObservable<unknown>(this.sdk.states.eventStream)
         : new Observable<unknown>()
+
+    // Subscribing to a flag automatically emits a component view event — no explicit tracking needed.
+    this.booleanFlag$ =
+      this.sdk !== undefined
+        ? fromSdkObservable<unknown>(this.sdk.states.flag('boolean'))
+        : new Observable<unknown>((sub) => {
+            sub.next(undefined)
+          })
 
     // Page events are the most critical call in the integration — the SDK uses the current URL
     // to resolve which experiences and variants apply to the user. Without this, personalisation
