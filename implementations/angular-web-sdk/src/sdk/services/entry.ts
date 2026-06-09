@@ -13,15 +13,47 @@ import {
 } from '@angular/core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { Entry } from 'contentful'
+import { isMergeTagEntry, isRecord } from '../utils'
 import { NgContentfulLiveUpdates } from './live-updates'
 import { NgContentfulOptimization } from './optimization'
-import { NgContentfulOptimizationResolver, type ResolvedEntryView } from './optimization-resolver'
 
 export type ObservationMode = 'auto' | 'manual'
 
+export interface EntryMeta {
+  experienceId: string | undefined
+  sticky: boolean | undefined
+  variantIndex: number | undefined
+}
+
+export interface ResolvedEntryView {
+  resolvedEntry: Entry
+  baselineId: string
+  resolvedId: string
+  meta: EntryMeta
+  isVariant: boolean
+}
+
+function extractMeta(value: unknown): EntryMeta {
+  if (!isRecord(value))
+    return { experienceId: undefined, sticky: undefined, variantIndex: undefined }
+  return {
+    experienceId: typeof value.experienceId === 'string' ? value.experienceId : undefined,
+    sticky: typeof value.sticky === 'boolean' ? value.sticky : undefined,
+    variantIndex: typeof value.variantIndex === 'number' ? value.variantIndex : undefined,
+  }
+}
+
+function toStringValue(value: unknown): string {
+  if (value === undefined || value === null) return ''
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'bigint' || typeof value === 'boolean')
+    return `${value}`
+  if (typeof value === 'symbol') return value.description ?? value.toString()
+  return JSON.stringify(value)
+}
+
 @Injectable()
 export class NgContentfulEntry implements OnDestroy {
-  private readonly resolver = inject(NgContentfulOptimizationResolver)
   private readonly liveUpdates = inject(NgContentfulLiveUpdates)
   private readonly optimization = inject(NgContentfulOptimization)
   private readonly elementRef = inject<ElementRef<Element>>(ElementRef)
@@ -46,7 +78,7 @@ export class NgContentfulEntry implements OnDestroy {
     if (entry === undefined) return undefined
     const locked = this._lockedSnapshot()
     if (locked !== undefined) return locked
-    return this.resolver.resolveWithMeta(entry, this._selectedOptimizations())
+    return this.resolveEntry(entry, this._selectedOptimizations())
   })
 
   constructor() {
@@ -109,14 +141,34 @@ export class NgContentfulEntry implements OnDestroy {
   }
 
   resolveMergeTag(target: unknown): string {
-    return this.resolver.resolveMergeTag(target)
+    if (!isMergeTagEntry(target)) return '[Merge Tag]'
+    return toStringValue(this.optimization.sdk.getMergeTagValue(target))
+  }
+
+  private resolveEntry(
+    baseline: Entry,
+    selectedOptimizations?: SelectedOptimizationArray,
+  ): ResolvedEntryView {
+    const resolved = this.optimization.sdk.resolveOptimizedEntry(
+      baseline,
+      selectedOptimizations ?? this.optimization.selectedOptimizations(),
+    )
+    const { entry: resolvedEntry } = resolved
+    const meta = extractMeta(resolved.selectedOptimization)
+    return {
+      resolvedEntry,
+      baselineId: baseline.sys.id,
+      resolvedId: resolvedEntry.sys.id,
+      meta,
+      isVariant: meta.experienceId !== undefined,
+    }
   }
 
   private lockSnapshot(): void {
     const entry = untracked(() => this._entry())
     if (entry === undefined) return
     this._lockedSnapshot.set(
-      this.resolver.resolveWithMeta(
+      this.resolveEntry(
         entry,
         untracked(() => this._selectedOptimizations()),
       ),
