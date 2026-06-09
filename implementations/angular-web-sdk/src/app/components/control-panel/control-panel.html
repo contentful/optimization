@@ -43,7 +43,7 @@
       [class.btn--secondary]="!liveUpdatesService.globalLiveUpdates()"
       [class.btn--danger]="liveUpdatesService.globalLiveUpdates()"
       data-testid="live-updates-toggle"
-      (click)="toggleGlobalLiveUpdates()"
+      (click)="liveUpdatesService.toggle()"
     >
       {{ liveUpdatesService.globalLiveUpdates() ? 'OFF' : 'ON' }}
     </button>

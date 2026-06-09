@@ -29,10 +29,9 @@ export class ControlPanel {
     return Boolean((traits as { identified: unknown }).identified)
   })
 
-  protected readonly selectedOptimizationCount = toSignal(
-    this.optimization.selectedOptimizations$,
-    { initialValue: undefined },
-  )
+  private readonly selectedOptimizationCount = toSignal(this.optimization.selectedOptimizations$, {
+    initialValue: undefined,
+  })
 
   protected readonly optimizationCount = computed(
     () => this.selectedOptimizationCount()?.length ?? 0,
@@ -50,10 +49,6 @@ export class ControlPanel {
 
   protected reset(): void {
     this.optimization.reset()
-  }
-
-  protected toggleGlobalLiveUpdates(): void {
-    this.liveUpdatesService.toggle()
   }
 
   protected readonly togglePreviewPanel = togglePreviewPanel
