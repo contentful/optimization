@@ -21,6 +21,7 @@ function isEntry(value: unknown): value is ContentfulEntry {
 export class NestedContent {
   // inputs
   readonly entry = input.required<ContentfulEntry>()
+  // TODO: nested entries currently always use auto observation — add observation input if manual tracking is needed
 
   // protected state
   protected readonly resolved = inject(NgContentfulEntry).with({ entry: this.entry }).resolved

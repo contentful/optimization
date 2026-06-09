@@ -1,10 +1,6 @@
 import { Component, computed, inject, input } from '@angular/core'
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser'
-import {
-  isMergeTagEntry,
-  isRecord,
-  NgContentfulOptimizationResolver,
-} from '@contentful/optimization-angular'
+import { isRecord, NgContentfulOptimizationResolver } from '@contentful/optimization-angular'
 import { BLOCKS, INLINES } from '@contentful/rich-text-types'
 import type { RichTextDocument } from '../../types/contentful'
 
@@ -69,13 +65,7 @@ export class RichText {
   private readonly sanitizer = inject(DomSanitizer)
 
   protected readonly html = computed<SafeHtml>(() => {
-    const getMergeTag = (target: unknown): string => {
-      if (!isMergeTagEntry(target)) return '[Merge Tag]'
-      return this.resolver.getMergeTagValue(target)
-    }
-    const raw = this.richText()
-      .content.map((node) => renderNode(node, getMergeTag))
-      .join('')
+    const raw = renderNode(this.richText(), (target) => this.resolver.resolveMergeTag(target))
     return this.sanitizer.bypassSecurityTrustHtml(raw)
   })
 }

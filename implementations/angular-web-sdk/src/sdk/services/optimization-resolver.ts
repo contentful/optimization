@@ -1,11 +1,8 @@
 import { computed, inject, Injectable, type Signal } from '@angular/core'
-import type {
-  MergeTagEntry,
-  SelectedOptimizationArray,
-} from '@contentful/optimization-web/api-schemas'
+import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
-import { isRecord } from '../utils'
+import { isMergeTagEntry, isRecord } from '../utils'
 import { NgContentfulOptimization } from './optimization'
 
 export type { ResolvedData }
@@ -82,8 +79,9 @@ export class NgContentfulOptimizationResolver {
     return computed(() => this.resolveWithMeta(config.entry()))
   }
 
-  getMergeTagValue(mergeTagEntry: MergeTagEntry): string {
+  resolveMergeTag(target: unknown): string {
+    if (!isMergeTagEntry(target)) return '[Merge Tag]'
     if (this.optimization.sdk === undefined) return ''
-    return toStringValue(this.optimization.sdk.getMergeTagValue(mergeTagEntry))
+    return toStringValue(this.optimization.sdk.getMergeTagValue(target))
   }
 }
