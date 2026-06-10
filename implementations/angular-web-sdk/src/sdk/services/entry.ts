@@ -55,7 +55,6 @@ function toStringValue(value: unknown): string {
 export class NgContentfulEntry implements OnDestroy {
   private readonly optimization = inject(NgContentfulOptimization)
   private readonly elementRef = inject<ElementRef<Element>>(ElementRef)
-
   private readonly _entry = signal<Entry | undefined>(undefined)
   private readonly _selectedOptimizations = signal<SelectedOptimizationArray | undefined>(undefined)
   private readonly _liveUpdates = signal<boolean>(false)
@@ -74,16 +73,18 @@ export class NgContentfulEntry implements OnDestroy {
 
   constructor() {
     effect(() => {
-      const live = this._liveUpdates()
-      if (live) {
+      if (this._liveUpdates()) {
         untracked(() => {
-          this.clearSnapshot()
+          this._lockedSnapshot.set(undefined)
         })
-      } else {
-        untracked(() => {
-          this.lockSnapshot()
-        })
+        return
       }
+
+      const entry = this._entry()
+      if (entry === undefined) return
+      untracked(() => {
+        this._lockedSnapshot.set(this.resolveEntry(entry, this._selectedOptimizations()))
+      })
     })
 
     afterNextRender(() => {
@@ -91,9 +92,7 @@ export class NgContentfulEntry implements OnDestroy {
     })
 
     effect(() => {
-      const ready = this._domReady()
-      const mode = this._observation()
-      if (!ready || mode !== 'manual') return
+      if (!this._domReady() || this._observation() !== 'manual') return
 
       const resolved = this.resolved()
       if (resolved === undefined) return
@@ -153,21 +152,6 @@ export class NgContentfulEntry implements OnDestroy {
       meta,
       isVariant: meta.experienceId !== undefined,
     }
-  }
-
-  private lockSnapshot(): void {
-    const entry = untracked(() => this._entry())
-    if (entry === undefined) return
-    this._lockedSnapshot.set(
-      this.resolveEntry(
-        entry,
-        untracked(() => this._selectedOptimizations()),
-      ),
-    )
-  }
-
-  private clearSnapshot(): void {
-    this._lockedSnapshot.set(undefined)
   }
 
   ngOnDestroy(): void {
