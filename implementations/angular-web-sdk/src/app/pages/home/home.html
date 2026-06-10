@@ -46,8 +46,8 @@
     <div class="live-updates-item">
       <p class="live-updates-item__label" data-testid="live-updates-locked-label">Always locked</p>
       <p class="live-updates-item__description">
-        Per-entry override set to <code>false</code> — never re-resolves, even when the global
-        toggle is ON or the preview panel is open.
+        Per-entry override set to <code>false</code> — never re-resolves even when the global toggle
+        is ON, but will re-resolve when the preview panel is open.
       </p>
       <app-content-entry
         [entry]="liveEntry"
@@ -64,7 +64,10 @@
   <section class="page-section">
     <header class="page-section__header">
       <h2>Auto-observed</h2>
-      <p>Tracked via <code>data-ctfl-*</code> attributes.</p>
+      <p>
+        Tracking only — content resolution is unaffected. View, click, and hover events fire
+        automatically via <code>data-ctfl-*</code> attributes once consent is granted.
+      </p>
     </header>
     <div id="auto-observed" class="entry-grid">
       @for (id of autoIds; track id) { @let entry = entryFor(id); @if (entry) {
@@ -81,7 +84,10 @@
   <section class="page-section">
     <header class="page-section__header">
       <h2>Manually-observed</h2>
-      <p>Tracked via explicit <code>enableElement</code> calls.</p>
+      <p>
+        Tracking only — content resolution is unaffected. View events fire via explicit
+        <code>enableElement</code> calls; no click or hover events.
+      </p>
     </header>
     <div id="manually-observed" class="entry-grid">
       @for (id of manualIds; track id) { @let entry = entryFor(id); @if (entry) {
