@@ -4,7 +4,13 @@ import { DomSanitizer, type SafeHtml } from '@angular/platform-browser'
 import { NgContentfulEntry, type ObservationMode } from '@contentful/optimization-angular'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import { BLOCKS, INLINES, type Document } from '@contentful/rich-text-types'
-import type { EntryClickScenario } from '../../fixtures'
+import {
+  BADGE_MAP,
+  type BadgeKey,
+  type EntryClickScenario,
+  type LiveMode,
+  type MergeTagMode,
+} from '../../fixtures'
 import { NgContentfulLiveUpdates } from '../../services/live-updates'
 import type { ContentfulEntry } from '../../types/contentful'
 import { isRecord } from '../../utils'
@@ -17,45 +23,19 @@ interface BadgeItem {
   title: string
 }
 
-const OBSERVATION_TITLES: Record<ObservationMode, string> = {
-  auto: 'Entry tracking is handled automatically via data attributes',
-  manual: 'Entry tracking is triggered manually by the app',
-}
-
-const CLICK_SCENARIO_TITLES: Record<EntryClickScenario, string> = {
-  direct: 'Click tracking fires directly on this entry element',
-  ancestor: 'Click tracking fires on an ancestor wrapper element',
-  descendant: 'Click tracking fires from a descendant button inside this entry',
-}
-
-type LiveMode = 'default-on' | 'default-off' | 'always-on' | 'always-off'
-
-const LIVE_MODE_TITLES: Record<LiveMode, string> = {
-  'default-on': 'Following global toggle — currently live, re-resolves on profile change',
-  'default-off': 'Following global toggle — currently frozen, will update when toggle is ON',
-  'always-on': 'Per-entry override: always re-resolves on profile change',
-  'always-off': 'Per-entry override: ignores the global toggle, does not update on profile change',
-}
-
 interface BadgeOptions {
   isVariant: boolean
   liveMode: LiveMode
   obs: ObservationMode
   hasRichText: boolean
-  mergeTagResolved: boolean | undefined
+  mergeTagMode: MergeTagMode | undefined
   scenario: EntryClickScenario | undefined
 }
 
-function liveBadgeLabel(liveMode: LiveMode): string {
-  if (liveMode === 'always-on') return 'always live'
-  if (liveMode === 'always-off') return 'locked'
-  return 'live'
-}
-
-function liveBadgeMod(liveMode: LiveMode): string {
-  if (liveMode === 'always-on') return 'live-always-on'
-  if (liveMode === 'always-off') return 'live-always-off'
-  return liveMode === 'default-on' ? 'live-on' : 'live-off'
+function mergeTagKey(resolved: boolean | undefined): MergeTagMode | undefined {
+  if (resolved === true) return 'mergetag'
+  if (resolved === false) return 'mergetag-fallback'
+  return undefined
 }
 
 function buildBadges({
@@ -63,41 +43,18 @@ function buildBadges({
   liveMode,
   obs,
   hasRichText,
-  mergeTagResolved,
+  mergeTagMode,
   scenario,
 }: BadgeOptions): BadgeItem[] {
-  const badges: BadgeItem[] = [
-    {
-      label: isVariant ? 'variant' : 'baseline',
-      mod: isVariant ? 'variant' : '',
-      title: isVariant
-        ? 'This entry is a variant selected by the optimization SDK'
-        : 'This entry is the baseline (no optimization applied)',
-    },
-    { label: obs, mod: obs, title: OBSERVATION_TITLES[obs] },
-    {
-      label: liveBadgeLabel(liveMode),
-      mod: liveBadgeMod(liveMode),
-      title: LIVE_MODE_TITLES[liveMode],
-    },
+  const keys: BadgeKey[] = [
+    isVariant ? 'variant' : 'baseline',
+    obs,
+    liveMode,
+    ...(hasRichText ? (['richtext'] as const) : []),
+    ...(mergeTagMode ? [mergeTagMode] : []),
+    ...(scenario ? [scenario] : []),
   ]
-  if (hasRichText)
-    badges.push({ label: 'rich text', mod: 'richtext', title: 'Entry contains a rich text field' })
-  if (mergeTagResolved === true)
-    badges.push({
-      label: 'merge tag',
-      mod: 'mergetag',
-      title: 'Rich text merge tags resolved with visitor profile',
-    })
-  if (mergeTagResolved === false)
-    badges.push({
-      label: 'merge tag fallback',
-      mod: 'mergetag-fallback',
-      title: 'Rich text merge tags showing fallback — no visitor profile',
-    })
-  if (scenario)
-    badges.push({ label: scenario, mod: 'click', title: CLICK_SCENARIO_TITLES[scenario] })
-  return badges
+  return keys.map((k) => BADGE_MAP[k])
 }
 
 @Component({
@@ -241,7 +198,7 @@ export class ContentCard {
       liveMode,
       obs: this.observation(),
       hasRichText: Object.values(r.resolvedEntry.fields).some(isRichTextField),
-      mergeTagResolved: r.meta.mergeTagResolved,
+      mergeTagMode: mergeTagKey(r.meta.mergeTagResolved),
       scenario: this.clickScenario(),
     })
   })
