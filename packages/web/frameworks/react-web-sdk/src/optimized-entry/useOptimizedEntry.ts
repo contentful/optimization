@@ -100,9 +100,8 @@ export function useOptimizedEntry({
   )
 
   const requiresOptimization = hasOptimizationReferences(baselineEntry)
-  const isContentReady = requiresOptimization
-    ? canOptimize || !optimizationPossible || experienceRequestFailed
-    : true
+  const optimizationResolved = canOptimize || !optimizationPossible || experienceRequestFailed
+  const isContentReady = !requiresOptimization || optimizationResolved
 
   return {
     canOptimize,
