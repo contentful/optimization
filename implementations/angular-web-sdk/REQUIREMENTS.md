@@ -117,25 +117,6 @@ capability. All SDK interaction must go through public package APIs.
 
 ---
 
-## Entry resolution _(which variant is displayed)_
-
-### SDK-automatic
-
-- Component wraps the baseline entry; the SDK picks and renders the correct variant without any app
-  logic; always falls back to baseline on invalid data.
-- Confirm: load — all cards show `baseline` badge; live updates ON, **Identify** — active experience
-  cards switch to `variant` with `var`/`exp` IDs; **Reset** — cards revert to `baseline`.
-
-### App-triggered _(TODO)_
-
-- App calls `sdk.resolveOptimizedEntry(entry)` directly; resolution triggered explicitly by app
-  code, not automatically by the SDK; no variant selection logic in app code.
-- Confirm: **Manually-resolved** section renders entries via the manual path; with live updates ON
-  and after **Identify**, manually-resolved entries update to their variant. Structural: resolution
-  uses the SDK's public resolver — no app-level resolution logic duplicated.
-
----
-
 ## Live updates
 
 ### Global toggle
@@ -159,6 +140,15 @@ capability. All SDK interaction must go through public package APIs.
 ---
 
 ## Content
+
+### Entry resolution _(which variant is displayed)_
+
+- **Component-based** — component wraps the baseline entry; SDK picks the correct variant without
+  app logic; falls back to baseline on invalid data. Confirm: load — `baseline` badges; live updates
+  ON, **Identify** — `variant` badges with `var`/`exp` IDs; **Reset** — revert to `baseline`.
+- **Model-based** — app accesses personalised entry data directly via the SDK without a component
+  wrapper; no local variant logic. In Angular the component-based wrapper already exposes this model
+  via signals — relevant mainly for runtimes without a component layer (e.g. Node.js).
 
 ### Nested entries
 
