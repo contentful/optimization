@@ -17,21 +17,6 @@ import { isRecord } from '../../utils'
 
 // — Badge —
 
-interface BadgeItem {
-  label: string
-  mod: string
-  title: string
-}
-
-interface BadgeOptions {
-  isVariant: boolean
-  liveMode: LiveMode
-  obs: ObservationMode
-  hasRichText: boolean
-  mergeTagMode: MergeTagMode | undefined
-  scenario: EntryClickScenario | undefined
-}
-
 function liveModeKey(override: boolean | undefined, isLive: boolean): LiveMode {
   if (override === true) return 'always-on'
   if (override === false) return 'always-off'
@@ -42,25 +27,6 @@ function mergeTagKey(resolved: boolean | undefined): MergeTagMode | undefined {
   if (resolved === true) return 'mergetag'
   if (resolved === false) return 'mergetag-fallback'
   return undefined
-}
-
-function buildBadges({
-  isVariant,
-  liveMode,
-  obs,
-  hasRichText,
-  mergeTagMode,
-  scenario,
-}: BadgeOptions): BadgeItem[] {
-  const keys: BadgeKey[] = [
-    isVariant ? 'variant' : 'baseline',
-    obs,
-    liveMode,
-    ...(hasRichText ? (['richtext'] as const) : []),
-    ...(mergeTagMode ? [mergeTagMode] : []),
-    ...(scenario ? [scenario] : []),
-  ]
-  return keys.map((k) => BADGE_MAP[k])
 }
 
 @Component({
@@ -189,13 +155,18 @@ export class ContentCard {
   protected readonly badges = computed(() => {
     const r = this.resolved()
     if (!r) return []
-    return buildBadges({
-      isVariant: r.meta.experienceId !== undefined,
-      liveMode: liveModeKey(this.liveUpdates(), this.isLive()),
-      obs: this.observation(),
-      hasRichText: Object.values(r.resolvedEntry.fields).some(isRichTextField),
-      mergeTagMode: mergeTagKey(r.meta.mergeTagResolved),
-      scenario: this.clickScenario(),
-    })
+    const mergeTag = mergeTagKey(r.meta.mergeTagResolved)
+    const scenario = this.clickScenario()
+    const keys: BadgeKey[] = [
+      r.meta.experienceId !== undefined ? 'variant' : 'baseline',
+      this.observation(),
+      liveModeKey(this.liveUpdates(), this.isLive()),
+      ...(Object.values(r.resolvedEntry.fields).some(isRichTextField)
+        ? (['richtext'] as const)
+        : []),
+      ...(mergeTag ? [mergeTag] : []),
+      ...(scenario ? [scenario] : []),
+    ]
+    return keys.map((k) => BADGE_MAP[k])
   })
 }
