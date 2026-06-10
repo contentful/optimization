@@ -55,52 +55,37 @@ function toStringValue(value: unknown): string {
 export class NgContentfulEntry implements OnDestroy {
   private readonly optimization = inject(NgContentfulOptimization)
   private readonly elementRef = inject<ElementRef<Element>>(ElementRef)
-  private readonly _entry = signal<Entry | undefined>(undefined)
-  private readonly _selectedOptimizations = signal<SelectedOptimizationArray | undefined>(undefined)
-  private readonly _liveUpdates = signal<boolean>(false)
-  private readonly _lockedSnapshot = signal<ResolvedEntryView | undefined>(undefined)
-  private readonly _observation = signal<ObservationMode>('auto')
+
+  private _entry: Signal<Entry | undefined> = signal(undefined)
+  private _selectedOptimizations: Signal<SelectedOptimizationArray | undefined> = signal(undefined)
+  private _liveUpdates: Signal<boolean> = signal(false)
+  private _observation: Signal<ObservationMode> = signal('auto')
   private readonly _domReady = signal(false)
   private manualTrackingActive = false
 
   readonly resolved: Signal<ResolvedEntryView | undefined> = computed(() => {
     const entry = this._entry()
     if (entry === undefined) return undefined
-    const locked = this._lockedSnapshot()
-    if (locked !== undefined) return locked
-    return this.resolveEntry(entry, this._selectedOptimizations())
+    if (this._liveUpdates()) {
+      return this.resolveEntry(entry, this._selectedOptimizations())
+    }
+
+    // untracked drops selectedOptimizations as a dependency, preventing rerenders when locked.
+    return untracked(() => this.resolveEntry(entry, this._selectedOptimizations()))
   })
 
   constructor() {
-    effect(() => {
-      if (this._liveUpdates()) {
-        untracked(() => {
-          this._lockedSnapshot.set(undefined)
-        })
-        return
-      }
-
-      const entry = this._entry()
-      if (entry === undefined) return
-      untracked(() => {
-        this._lockedSnapshot.set(this.resolveEntry(entry, this._selectedOptimizations()))
-      })
-    })
-
     afterNextRender(() => {
       this._domReady.set(true)
     })
 
     effect(() => {
-      if (!this._domReady() || this._observation() !== 'manual') return
+      this.clearManualTracking()
+
+      if (!this._domReady() || this._observation() === 'auto') return
 
       const resolved = this.resolved()
       if (resolved === undefined) return
-
-      if (this.manualTrackingActive) {
-        this.optimization.sdk.tracking.clearElement('views', this.elementRef.nativeElement)
-        this.manualTrackingActive = false
-      }
 
       this.optimization.sdk.tracking.enableElement('views', this.elementRef.nativeElement, {
         data: {
@@ -114,19 +99,21 @@ export class NgContentfulEntry implements OnDestroy {
     })
   }
 
-  with(config: {
+  with({
+    entry,
+    observation,
+    selectedOptimizations,
+    liveUpdates,
+  }: {
     entry: InputSignal<Entry>
     observation?: InputSignal<ObservationMode>
     selectedOptimizations?: InputSignal<SelectedOptimizationArray | undefined>
     liveUpdates?: Signal<boolean>
   }): this {
-    effect(() => {
-      this._entry.set(config.entry())
-      if (config.observation) this._observation.set(config.observation())
-      if (config.selectedOptimizations)
-        this._selectedOptimizations.set(config.selectedOptimizations())
-      if (config.liveUpdates) this._liveUpdates.set(config.liveUpdates())
-    })
+    this._entry = entry
+    if (observation) this._observation = observation
+    if (selectedOptimizations) this._selectedOptimizations = selectedOptimizations
+    if (liveUpdates) this._liveUpdates = liveUpdates
     return this
   }
 
@@ -154,10 +141,14 @@ export class NgContentfulEntry implements OnDestroy {
     }
   }
 
-  ngOnDestroy(): void {
+  private clearManualTracking(): void {
     if (this.manualTrackingActive) {
       this.optimization.sdk.tracking.clearElement('views', this.elementRef.nativeElement)
       this.manualTrackingActive = false
     }
+  }
+
+  ngOnDestroy(): void {
+    this.clearManualTracking()
   }
 }
