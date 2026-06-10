@@ -28,16 +28,39 @@ const CLICK_SCENARIO_TITLES: Record<EntryClickScenario, string> = {
   descendant: 'Click tracking fires from a descendant button inside this entry',
 }
 
+type LiveMode = 'default-on' | 'default-off' | 'always-on' | 'always-off'
+
+const LIVE_MODE_TITLES: Record<LiveMode, string> = {
+  'default-on': 'Following global toggle — currently live, re-resolves on profile change',
+  'default-off': 'Following global toggle — currently frozen, will update when toggle is ON',
+  'always-on': 'Per-entry override: always re-resolves on profile change',
+  'always-off': 'Per-entry override: ignores the global toggle, does not update on profile change',
+}
+
 interface BadgeOptions {
   isVariant: boolean
+  liveMode: LiveMode
   obs: ObservationMode
   hasRichText: boolean
   mergeTagResolved: boolean | undefined
   scenario: EntryClickScenario | undefined
 }
 
+function liveBadgeLabel(liveMode: LiveMode): string {
+  if (liveMode === 'always-on') return 'always live'
+  if (liveMode === 'always-off') return 'locked'
+  return 'live'
+}
+
+function liveBadgeMod(liveMode: LiveMode): string {
+  if (liveMode === 'always-on') return 'live-always-on'
+  if (liveMode === 'always-off') return 'live-always-off'
+  return liveMode === 'default-on' ? 'live-on' : 'live-off'
+}
+
 function buildBadges({
   isVariant,
+  liveMode,
   obs,
   hasRichText,
   mergeTagResolved,
@@ -52,6 +75,11 @@ function buildBadges({
         : 'This entry is the baseline (no optimization applied)',
     },
     { label: obs, mod: obs, title: OBSERVATION_TITLES[obs] },
+    {
+      label: liveBadgeLabel(liveMode),
+      mod: liveBadgeMod(liveMode),
+      title: LIVE_MODE_TITLES[liveMode],
+    },
   ]
   if (hasRichText)
     badges.push({ label: 'rich text', mod: 'richtext', title: 'Entry contains a rich text field' })
@@ -198,8 +226,19 @@ export class ContentCard {
   protected readonly badges = computed(() => {
     const r = this.resolved()
     if (!r) return []
+    const override = this.liveUpdates()
+    const isLive = this.isLive()
+    const liveMode: LiveMode =
+      override === true
+        ? 'always-on'
+        : override === false
+          ? 'always-off'
+          : isLive
+            ? 'default-on'
+            : 'default-off'
     return buildBadges({
       isVariant: r.meta.experienceId !== undefined,
+      liveMode,
       obs: this.observation(),
       hasRichText: Object.values(r.resolvedEntry.fields).some(isRichTextField),
       mergeTagResolved: r.meta.mergeTagResolved,

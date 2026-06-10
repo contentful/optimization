@@ -462,6 +462,26 @@ main > .sections-row {
   color: #c2410c;
 }
 
+.entry-card__badge--live-on {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.entry-card__badge--live-off {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.entry-card__badge--live-always-on {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.entry-card__badge--live-always-off {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
 .entry-card__badge--nested {
   background: #e0f2fe;
   color: #0369a1;
