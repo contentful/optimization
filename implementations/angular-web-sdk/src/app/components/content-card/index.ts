@@ -3,23 +3,92 @@ import { Component, computed, forwardRef, inject, input } from '@angular/core'
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser'
 import { NgContentfulEntry, type ObservationMode } from '@contentful/optimization-angular'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import { BLOCKS, INLINES } from '@contentful/rich-text-types'
+import { BLOCKS, INLINES, type Document } from '@contentful/rich-text-types'
 import type { EntryClickScenario } from '../../fixtures'
 import { NgContentfulLiveUpdates } from '../../services/live-updates'
-import type { ContentfulEntry, RichTextDocument } from '../../types/contentful'
+import type { ContentfulEntry } from '../../types/contentful'
 import { isRecord } from '../../utils'
-import { BadgeComponent, buildBadges } from './badge'
 
-function isContentfulEntry(value: unknown): value is ContentfulEntry {
-  return (
-    isRecord(value) &&
-    isRecord(value.sys) &&
-    typeof value.sys.id === 'string' &&
-    isRecord(value.fields)
-  )
+// — Badge —
+
+interface BadgeItem {
+  label: string
+  mod: string
+  title: string
 }
 
-function isRichTextField(field: unknown): field is RichTextDocument {
+const OBSERVATION_TITLES: Record<ObservationMode, string> = {
+  auto: 'Entry tracking is handled automatically via data attributes',
+  manual: 'Entry tracking is triggered manually by the app',
+}
+
+const CLICK_SCENARIO_TITLES: Record<EntryClickScenario, string> = {
+  direct: 'Click tracking fires directly on this entry element',
+  ancestor: 'Click tracking fires on an ancestor wrapper element',
+  descendant: 'Click tracking fires from a descendant button inside this entry',
+}
+
+interface BadgeOptions {
+  isVariant: boolean
+  obs: ObservationMode
+  hasRichText: boolean
+  mergeTagResolved: boolean | undefined
+  scenario: EntryClickScenario | undefined
+}
+
+function buildBadges({
+  isVariant,
+  obs,
+  hasRichText,
+  mergeTagResolved,
+  scenario,
+}: BadgeOptions): BadgeItem[] {
+  const badges: BadgeItem[] = [
+    {
+      label: isVariant ? 'variant' : 'baseline',
+      mod: isVariant ? 'variant' : '',
+      title: isVariant
+        ? 'This entry is a variant selected by the optimization SDK'
+        : 'This entry is the baseline (no optimization applied)',
+    },
+    { label: obs, mod: obs, title: OBSERVATION_TITLES[obs] },
+  ]
+  if (hasRichText)
+    badges.push({ label: 'rich text', mod: 'richtext', title: 'Entry contains a rich text field' })
+  if (mergeTagResolved === true)
+    badges.push({
+      label: 'merge tag',
+      mod: 'mergetag',
+      title: 'Rich text merge tags resolved with visitor profile',
+    })
+  if (mergeTagResolved === false)
+    badges.push({
+      label: 'merge tag fallback',
+      mod: 'mergetag-fallback',
+      title: 'Rich text merge tags showing fallback — no visitor profile',
+    })
+  if (scenario)
+    badges.push({ label: scenario, mod: 'click', title: CLICK_SCENARIO_TITLES[scenario] })
+  return badges
+}
+
+@Component({
+  selector: 'app-content-card-badge',
+  template: `<span
+    [class]="mod() ? 'entry-card__badge entry-card__badge--' + mod() : 'entry-card__badge'"
+    [attr.data-tooltip]="title()"
+    >{{ label() }}</span
+  >`,
+})
+export class Badge {
+  readonly label = input.required<string>()
+  readonly mod = input<string>('')
+  readonly title = input<string>('')
+}
+
+// — Rich text renderer —
+
+function isRichTextField(field: unknown): field is Document {
   return (
     isRecord(field) &&
     field.nodeType === 'document' &&
@@ -71,21 +140,30 @@ function renderNode(node: unknown): string {
   return renderer !== undefined ? renderer(children, data) : children()
 }
 
+// — ContentCard —
+
+function isContentfulEntry(value: unknown): value is ContentfulEntry {
+  return (
+    isRecord(value) &&
+    isRecord(value.sys) &&
+    typeof value.sys.id === 'string' &&
+    isRecord(value.fields)
+  )
+}
+
 @Component({
   selector: 'app-content-card',
-  imports: [NgTemplateOutlet, BadgeComponent, forwardRef(() => ContentCard)],
+  imports: [NgTemplateOutlet, Badge, forwardRef(() => ContentCard)],
   templateUrl: './index.html',
   providers: [NgContentfulEntry],
 })
 export class ContentCard {
-  // inputs
   readonly entry = input.required<ContentfulEntry>()
   readonly observation = input<ObservationMode>('auto')
   readonly clickScenario = input<EntryClickScenario | undefined>(undefined)
   readonly selectedOptimizations = input<SelectedOptimizationArray | undefined>(undefined)
   readonly liveUpdates = input<boolean | undefined>(undefined)
 
-  // injected dependencies
   private readonly sanitizer = inject(DomSanitizer)
   private readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
   private readonly isLive = computed(() => {
@@ -104,7 +182,8 @@ export class ContentCard {
 
   protected readonly resolved = this.liveEntry.resolved
   protected readonly richTextHtml = computed<SafeHtml | undefined>(() => {
-    const doc = Object.values(this.resolved()?.resolvedEntry.fields ?? {}).find(isRichTextField)
+    const fields = this.resolved()?.resolvedEntry.fields
+    const doc = fields ? Object.values(fields).find(isRichTextField) : undefined
     if (!doc) return undefined
     return this.sanitizer.bypassSecurityTrustHtml(renderNode(doc))
   })
@@ -122,13 +201,9 @@ export class ContentCard {
     return buildBadges({
       isVariant: r.meta.experienceId !== undefined,
       obs: this.observation(),
-      hasRichText: Object.values(r.resolvedEntry.fields as Record<string, unknown>).some(
-        isRichTextField,
-      ),
+      hasRichText: Object.values(r.resolvedEntry.fields).some(isRichTextField),
       mergeTagResolved: r.meta.mergeTagResolved,
       scenario: this.clickScenario(),
     })
   })
 }
-
-export { BadgeComponent } from './badge'

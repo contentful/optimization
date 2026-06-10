@@ -47,7 +47,7 @@
       </div>
       <div class="entry-card__badges">
         @for (badge of badges(); track badge.mod) {
-        <app-badge [label]="badge.label" [mod]="badge.mod" [title]="badge.title" />
+        <app-content-card-badge [label]="badge.label" [mod]="badge.mod" [title]="badge.title" />
         }
       </div>
     </div>

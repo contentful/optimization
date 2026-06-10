@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core'
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router'
 import { NgContentfulOptimization } from '@contentful/optimization-angular'
-import { EventLog } from './components/event-log/event-log'
+import { EventLog } from './components/event-log'
 
 @Component({
   selector: 'app-root',

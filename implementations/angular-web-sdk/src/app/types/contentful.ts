@@ -1,4 +1,3 @@
-import type { Document } from '@contentful/rich-text-types'
 import type { Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 
 export interface ContentEntryFields {
@@ -8,4 +7,3 @@ export interface ContentEntryFields {
 
 export type ContentEntrySkeleton = EntrySkeletonType<ContentEntryFields>
 export type ContentfulEntry = Entry<ContentEntrySkeleton>
-export type RichTextDocument = Document

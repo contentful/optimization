@@ -6,7 +6,7 @@ import { NgContentfulLiveUpdates } from '../../services/live-updates'
 
 @Component({
   selector: 'app-control-panel',
-  templateUrl: './control-panel.html',
+  templateUrl: './index.html',
 })
 export class ControlPanel {
   // inputs

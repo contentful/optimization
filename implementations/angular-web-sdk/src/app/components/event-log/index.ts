@@ -92,7 +92,7 @@ function upsert(list: AnalyticsEvent[], next: AnalyticsEvent): AnalyticsEvent[] 
 
 @Component({
   selector: 'app-event-log',
-  templateUrl: './event-log.html',
+  templateUrl: './index.html',
 })
 export class EventLog {
   private readonly optimization = inject(NgContentfulOptimization)
