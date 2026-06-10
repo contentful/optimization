@@ -1,26 +1,21 @@
-# Angular Web SDK — Requirements
+# Web SDK Reference Implementation — Requirements
 
-Angular service/directive adapter over the raw `@contentful/optimization-web` SDK, mirroring the
-React reference implementation.
+Verification requirements for the `@contentful/optimization-web` SDK reference implementation.
 
 ---
 
 ## Prerequisites
 
-Visual verification steps for features 3, 8, 9, 10, and 11 require the mock server to be running
-with a seed experience that targets the identified user profile. Without an active experience the
-variant state cannot be observed and negative assertions (e.g. "card does not change") are
-unverifiable. Start the app with the mock server and use the `charles` user ID that is hardcoded in
-the Identify call.
+Features 3, 8, 9, 10, and 11 require the mock server running with a seed experience targeting the
+identified user profile. Use the `charles` user ID hardcoded in the Identify call.
 
 Terminology used throughout:
 
-- **baseline** — the entry the SDK falls back to when no experience is active; shown with a grey
-  `baseline` badge.
-- **variant** — the resolved alternative when an experience is active; shown with a green `variant`
+- **baseline** — fallback entry when no experience is active; shown with a grey `baseline` badge.
+- **variant** — resolved alternative when an experience is active; shown with a green `variant`
   badge.
-- **clean session** — a browser session with no prior consent granted and no identified user (clear
-  localStorage or use a private window).
+- **clean session** — no prior consent and no identified user (clear localStorage or use a private
+  window).
 
 ---
 
@@ -35,10 +30,8 @@ Terminology used throughout:
 
 **Visual verification:**
 
-1. Load the app — the page renders entry cards and the control panel shows **Active optimizations:
-   0**. This confirms the SDK initialised successfully.
-2. The app does not show a blank screen or an unhandled error — entries fall back to baseline
-   content if the SDK fails.
+1. Load the app — entry cards render and the control panel shows **Active optimizations: 0**.
+2. No blank screen or unhandled error — entries fall back to baseline if the SDK fails.
 
 ---
 
@@ -50,12 +43,11 @@ Terminology used throughout:
 
 **Visual verification:**
 
-1. Start a clean session and load the app — the **Analytics Events** sidebar immediately shows a
-   `page — /` event without any consent interaction.
-2. Click **Page Two** in the nav — a `page — /page-two` event appears in the sidebar.
-3. Click **Home** — another `page — /` event appears.
-4. Click **Withdraw consent** (or leave consent at `undefined`) and navigate between routes — `page`
-   events continue to appear regardless of consent state.
+1. Start a clean session — the sidebar immediately shows a `page — /` event without any consent
+   interaction.
+2. Navigate between **Page Two** and **Home** — a `page` event appears for each route change.
+3. With consent withdrawn (or `undefined`), navigate between routes — `page` events continue to
+   appear.
 
 ---
 
@@ -69,12 +61,10 @@ Terminology used throughout:
 
 **Visual verification:**
 
-1. On load, all entry cards show their baseline IDs in the left column (`base` label) and a grey
-   `baseline` badge.
-2. In the control panel, click **Global: OFF** to turn live updates ON.
-3. Click **Identify** — entry cards with active experiences show a green left border and a green
-   `variant` badge; the `var` and `exp` labels appear in the ID column.
-4. Click **Reset** — cards revert to the grey `baseline` badge and the `var`/`exp` rows disappear.
+1. On load, all entry cards show the `baseline` badge.
+2. Turn live updates ON, then click **Identify** — cards with active experiences switch to the
+   `variant` badge and show `var`/`exp` IDs.
+3. Click **Reset** — cards revert to `baseline` and the `var`/`exp` rows disappear.
 
 ---
 
@@ -87,13 +77,12 @@ Terminology used throughout:
 
 **Visual verification:**
 
-1. Start a clean session — scroll through the **Auto-observed** section. No `component` events
-   appear in the analytics sidebar (only `page` events are present).
-2. Click **Grant consent** — the control panel shows **Consent: true**.
-3. Scroll back to the Auto-observed section — `component` view events appear for each card as it
-   enters the viewport.
-4. Click an entry card — a `component_click` event appears in the sidebar.
-5. Hover over a card — a `component_hover` event appears in the sidebar.
+1. Start a clean session — scroll through the **Auto-observed** section; no `component` events
+   appear (only `page`).
+2. Click **Grant consent**, then scroll back — `component` view events appear as cards enter the
+   viewport.
+3. Click an entry card — a `component_click` event appears.
+4. Hover over a card — a `component_hover` event appears.
 
 ---
 
@@ -106,12 +95,10 @@ Terminology used throughout:
 
 **Visual verification:**
 
-1. Grant consent and scroll to the **Manually-observed** section.
-2. `component` view events appear in the sidebar for the manually-observed cards, exactly as they do
-   for auto-observed cards.
-3. Click a manually-observed card — no `component_click` event appears (distinguishing manual from
-   auto tracking).
-4. Hover over a manually-observed card — no `component_hover` event appears.
+1. Grant consent and scroll to the **Manually-observed** section — `component` view events appear,
+   same as auto-tracked.
+2. Click a manually-observed card — no `component_click` event appears.
+3. Hover over a manually-observed card — no `component_hover` event appears.
 
 ---
 
@@ -125,14 +112,11 @@ Terminology used throughout:
 
 **Visual verification:**
 
-1. Grant consent and go to the home page.
-2. In the Auto-observed section, locate the three click-scenario cards — each shows a coloured badge
-   indicating its scenario (`direct`, `descendant`, or `ancestor`).
-3. Click directly on the **direct** card body — a `component_click` event appears in the sidebar.
-4. Click the **Click me** button rendered inside the **descendant** card — a `component_click` event
-   appears.
-5. Click the visible outer border/wrapper that surrounds the **ancestor** card (outside the card
-   itself, but inside the wrapper element) — a `component_click` event appears.
+1. Grant consent and locate the three click-scenario cards in the Auto-observed section (`direct`,
+   `descendant`, `ancestor` badges).
+2. Click the **direct** card body — a `component_click` event appears.
+3. Click the **Click me** button inside the **descendant** card — a `component_click` event appears.
+4. Click the outer wrapper surrounding the **ancestor** card — a `component_click` event appears.
 
 ---
 
@@ -146,12 +130,10 @@ Terminology used throughout:
 
 **Visual verification:**
 
-1. Start a clean session — the control panel shows **Consent: undefined**. Scroll through all
-   entries and confirm no `component` events appear in the sidebar (only `page` events).
-2. Click **Grant consent** — the control panel shows **Consent: true**. Scroll over entries — view
-   events start appearing.
-3. Click **Withdraw consent** — the control panel shows **Consent: false**. Scroll over entries — no
-   new view events appear.
+1. Start a clean session — control panel shows **Consent: undefined**; scroll through all entries
+   and confirm no `component` events appear.
+2. Click **Grant consent** — scroll over entries; view events start appearing.
+3. Click **Withdraw consent** — scroll over entries; no new view events appear.
 4. Navigate to Page Two — a `page` event appears regardless of consent state.
 
 ---
@@ -169,15 +151,12 @@ Terminology used throughout:
 
 **Visual verification:**
 
-1. Control panel shows **Identified: No** on a clean session load.
-2. Click **Identify** — the button is replaced by **Reset** and the status changes to **Identified:
-   Yes** immediately.
-3. With **Global live updates ON**, entry cards with active experiences switch to their variant
-   (green border, `variant` badge).
-4. Click **Reset** — the button is replaced by **Identify** and the status returns to **Identified:
-   No**; variant cards revert to baseline.
-5. Click **Identify** again, then reload the page — the control panel shows **Identified: Yes**
-   immediately on reload, confirming the SDK persisted the session.
+1. Clean session shows **Identified: No**.
+2. Click **Identify** — status changes to **Identified: Yes**; with live updates ON, variant cards
+   update.
+3. Click **Reset** — status returns to **No**; variant cards revert to baseline.
+4. Click **Identify** again, then reload — control panel shows **Identified: Yes** immediately,
+   confirming SDK persistence.
 
 ---
 
@@ -192,15 +171,12 @@ Terminology used throughout:
 
 **Visual verification:**
 
-Prerequisite: an active experience must be configured for the entry shown in the Live updates
-section for profile changes to produce an observable difference.
+Prerequisite: active experience required (see Prerequisites).
 
-1. The **Live updates** section on the home page shows three labelled cards. The first card label
-   reads **Default (OFF)**.
+1. The **Live updates** section shows three cards; the first reads **Default (OFF)**.
 2. With global updates OFF, click **Identify** — the Default card does not change.
-3. Click **Global: OFF** in the control panel — it toggles to **Global: ON** and the Default card
-   label updates to **Default (ON)**.
-4. Click **Reset** — the Default card updates its content immediately.
+3. Toggle to **Global: ON** — the Default card label updates to **Default (ON)**.
+4. Click **Reset** — the Default card updates immediately.
 
 ---
 
@@ -214,16 +190,13 @@ section for profile changes to produce an observable difference.
 
 **Visual verification:**
 
-Prerequisite: same active experience requirement as feature 9.
+Prerequisite: active experience required (see Prerequisites).
 
-1. Ensure **Global live updates is OFF** in the control panel.
-2. Click **Identify** — in the Live updates section, only the **Always live** card updates; the
-   **Default** and **Always locked** cards stay frozen.
-3. Click **Global: OFF** to turn it ON.
-4. Click **Reset** — the **Default** and **Always live** cards update; the **Always locked** card
-   remains frozen.
-5. Confirm the Always locked card did not change in steps 2, 3, or 4 — it must stay frozen
-   regardless of the global toggle state or profile changes.
+1. With global updates OFF, click **Identify** — only the **Always live** card updates; **Default**
+   and **Always locked** stay frozen.
+2. Toggle global updates ON, then click **Reset** — **Default** and **Always live** update; **Always
+   locked** remains frozen.
+3. Confirm **Always locked** did not change at any point.
 
 ---
 
@@ -235,16 +208,13 @@ Prerequisite: same active experience requirement as feature 9.
 
 **Visual verification:**
 
-Prerequisite: same active experience requirement as feature 9.
+Prerequisite: active experience required (see Prerequisites).
 
-1. Ensure **Global live updates is OFF** in the control panel.
-2. The **Always locked** card in the Live updates section should be frozen — click **Identify** and
-   confirm the Always locked card does not change.
-3. Click **Preview panel** — the Contentful panel slides in; status shows **Preview panel: Open**.
-4. Click **Reset** — the Always locked card now updates its variant (it normally wouldn't).
-5. Click **Preview panel** again to close it — status returns to **Closed**.
-6. Click **Identify** — the Always locked card does **not** change, confirming it returned to its
-   locked behaviour after the panel was closed.
+1. With global updates OFF, click **Identify** — confirm **Always locked** does not change.
+2. Open the **Preview panel** — status shows **Preview panel: Open**.
+3. Click **Reset** — the Always locked card updates (override in effect).
+4. Close the panel, then click **Identify** — **Always locked** does not change, confirming the
+   override was removed.
 
 ---
 
@@ -257,11 +227,10 @@ Prerequisite: same active experience requirement as feature 9.
 
 **Visual verification:**
 
-1. In the **Auto-observed** section on the home page, the first card renders as a tree — the
-   top-level card shows a `nested` badge, and child entries are indented below it with their own
-   cards and their own `base`/`var`/`exp` ID rows.
-2. Turn **Global live updates ON** and click **Identify** — each nested level independently updates
-   to its own variant (different entry IDs may resolve to different variants or stay at baseline).
+1. In the **Auto-observed** section, the first card shows a `nested` badge with indented child
+   entries, each with their own `base`/`var`/`exp` ID rows.
+2. Turn live updates ON and click **Identify** — each nested level independently updates to its own
+   variant.
 
 ---
 
@@ -273,11 +242,10 @@ Prerequisite: same active experience requirement as feature 9.
 
 **Visual verification:**
 
-1. Entry cards with merge tags show a yellow `merge tag` badge.
-2. On a clean session, the inline merge tag position shows `[Merge Tag]`.
-3. Turn **Global live updates ON** and click **Identify** — the merge tag placeholder is replaced
-   with the resolved personalised value inline within the rich text.
-4. Click **Reset** — the value reverts to `[Merge Tag]`.
+1. On a clean session, merge tag cards (yellow `merge tag` badge) show `[Merge Tag]` inline.
+2. Turn live updates ON and click **Identify** — the placeholder is replaced with the resolved
+   value.
+3. Click **Reset** — reverts to `[Merge Tag]`.
 
 ---
 
@@ -289,11 +257,9 @@ Prerequisite: same active experience requirement as feature 9.
 
 **Visual verification:**
 
-1. Entry cards with a rich text field show a blue `rich text` badge.
-2. The card body renders as formatted HTML — paragraphs, headings, and lists appear as styled
-   elements, not raw JSON.
-3. Merge tag nodes within the document are replaced with their resolved value (or `[Merge Tag]`
-   fallback), not left as raw entry objects.
+1. Rich text cards (blue `rich text` badge) render as formatted HTML — not raw JSON.
+2. Merge tag nodes are replaced with their resolved value or `[Merge Tag]` fallback (see feature
+   13).
 
 ---
 
@@ -309,13 +275,11 @@ Prerequisite: same active experience requirement as feature 9.
 
 **Visual verification:**
 
-1. Start a clean session — the sidebar shows a single `page — /` event and both the list count and
-   raw count equal 1.
-2. Grant consent and hover over an entry for several seconds — a `component_hover` row appears and
-   its duration updates in place while **Raw count** increases with each heartbeat.
-3. Navigate to Page Two — a `page — /page-two` event appears; all previous events are still visible.
-4. Click **Identify** — a `component` event for the boolean flag appears automatically (see feature
-   19 for details).
+1. Clean session — sidebar shows a single `page — /` event; list count and raw count both equal 1.
+2. Grant consent and hover over an entry — a `component_hover` row appears; its duration updates in
+   place while **Raw count** increases.
+3. Navigate to Page Two — a `page — /page-two` event appears; prior events are still visible.
+4. Click **Identify** — a `component` event for the boolean flag appears automatically (feature 19).
 
 ---
 
@@ -329,10 +293,9 @@ Prerequisite: same active experience requirement as feature 9.
 
 **Visual verification:**
 
-1. Load the app — the control panel shows **Preview panel: Closed**.
-2. Click **Preview panel** — the Contentful panel slides in on the right side of the page.
-3. The control panel status updates to **Preview panel: Open**.
-4. Click **Preview panel** again — the panel closes, status returns to **Closed**.
+1. Load the app — control panel shows **Preview panel: Closed**.
+2. Click **Preview panel** — the panel slides in; status updates to **Open**.
+3. Click again — panel closes, status returns to **Closed**.
 
 ---
 
@@ -350,14 +313,11 @@ Prerequisite: same active experience requirement as feature 9.
 
 **Visual verification:**
 
-1. Click **Page Two** in the nav — the sidebar shows a `page — /page-two` event and a
-   `component — page-two-conversion` event, both fired automatically on arrival.
-2. The **Track conversion** button in the control panel is enabled. Click it — a second
-   `component — page-two-conversion` event appears in the sidebar.
-3. Navigate back to **Home** — the Track conversion button is greyed out; the full event history
-   from Page Two is still visible in the sidebar.
-4. Navigate to Page Two and back to Home several times — the sidebar does not show repeated SDK init
-   entries, confirming the SDK is not re-initialised on route changes.
+1. Click **Page Two** — sidebar shows a `page — /page-two` and a `component — page-two-conversion`
+   event, both fired automatically.
+2. Click **Track conversion** — a second `component — page-two-conversion` event appears.
+3. Navigate back to **Home** — Track conversion is greyed out; full event history is still visible.
+4. Navigate between routes several times — no repeated SDK init entries in the sidebar.
 
 ---
 
@@ -366,9 +326,8 @@ Prerequisite: same active experience requirement as feature 9.
 - All Contentful entry fetches use the locale that the SDK has resolved for the current session.
 - The Contentful CDA client is wrapped with the SDK's locale resolver so the two never diverge.
 
-**Verification:** This is a structural constraint with no direct UI signal. Verify by code
-inspection: `contentful-client.ts` wraps the raw Contentful client with
-`sdk.withOptimizationLocale()` before any entry is fetched.
+**Verification:** Structural constraint — verify by code inspection that the Contentful client is
+wrapped with `sdk.withOptimizationLocale()` before any entry is fetched.
 
 ---
 
@@ -383,12 +342,10 @@ inspection: `contentful-client.ts` wraps the raw Contentful client with
 
 **Visual verification:**
 
-1. On a clean session, the control panel shows **Flag "boolean": undefined**.
-2. Click **Identify** — the flag resolves to `true` (or its configured value) and the control panel
-   updates immediately.
-3. A `component` event for the flag appears in the analytics sidebar automatically — no button was
-   clicked to cause this.
-4. Click **Reset** — the flag returns to `undefined`.
+1. Clean session — control panel shows **Flag "boolean": undefined**.
+2. Click **Identify** — flag resolves to `true` and a `component` event appears in the sidebar
+   automatically.
+3. Click **Reset** — flag returns to `undefined`.
 
 ---
 
