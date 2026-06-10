@@ -32,6 +32,12 @@ interface BadgeOptions {
   scenario: EntryClickScenario | undefined
 }
 
+function liveModeKey(override: boolean | undefined, isLive: boolean): LiveMode {
+  if (override === true) return 'always-on'
+  if (override === false) return 'always-off'
+  return isLive ? 'default-on' : 'default-off'
+}
+
 function mergeTagKey(resolved: boolean | undefined): MergeTagMode | undefined {
   if (resolved === true) return 'mergetag'
   if (resolved === false) return 'mergetag-fallback'
@@ -183,19 +189,9 @@ export class ContentCard {
   protected readonly badges = computed(() => {
     const r = this.resolved()
     if (!r) return []
-    const override = this.liveUpdates()
-    const isLive = this.isLive()
-    const liveMode: LiveMode =
-      override === true
-        ? 'always-on'
-        : override === false
-          ? 'always-off'
-          : isLive
-            ? 'default-on'
-            : 'default-off'
     return buildBadges({
       isVariant: r.meta.experienceId !== undefined,
-      liveMode,
+      liveMode: liveModeKey(this.liveUpdates(), this.isLive()),
       obs: this.observation(),
       hasRichText: Object.values(r.resolvedEntry.fields).some(isRichTextField),
       mergeTagMode: mergeTagKey(r.meta.mergeTagResolved),
