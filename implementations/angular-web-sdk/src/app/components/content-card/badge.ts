@@ -1,7 +1,6 @@
 import { Component, input } from '@angular/core'
 import type { ObservationMode } from '@contentful/optimization-angular'
 import type { EntryClickScenario } from '../../fixtures'
-import type { RichTextDocument } from '../../types/contentful'
 
 export interface Badge {
   label: string
@@ -20,12 +19,23 @@ const CLICK_SCENARIO_TITLES: Record<EntryClickScenario, string> = {
   descendant: 'Click tracking fires from a descendant button inside this entry',
 }
 
-export function buildEntryBadges(
-  isVariant: boolean,
-  obs: ObservationMode,
-  rt: RichTextDocument | undefined,
-  scenario: EntryClickScenario | undefined,
-): Badge[] {
+export interface EntryBadgeOptions {
+  isVariant: boolean
+  obs: ObservationMode
+  hasRichText: boolean
+  hasMergeTag: boolean
+  mergeTagResolved: boolean
+  scenario: EntryClickScenario | undefined
+}
+
+export function buildEntryBadges({
+  isVariant,
+  obs,
+  hasRichText,
+  hasMergeTag,
+  mergeTagResolved,
+  scenario,
+}: EntryBadgeOptions): Badge[] {
   const tags: Badge[] = [
     {
       label: isVariant ? 'variant' : 'baseline',
@@ -36,13 +46,19 @@ export function buildEntryBadges(
     },
     { label: obs, mod: obs, title: OBSERVATION_TITLES[obs] },
   ]
-  if (rt)
+  if (hasRichText)
     tags.push({ label: 'rich text', mod: 'richtext', title: 'Entry contains a rich text field' })
-  if (rt && JSON.stringify(rt).includes('"nt_mergetag"'))
+  if (hasMergeTag && mergeTagResolved)
     tags.push({
       label: 'merge tag',
       mod: 'mergetag',
-      title: 'Rich text contains merge tag entries that are resolved at render time',
+      title: 'Rich text merge tags resolved with visitor profile',
+    })
+  if (hasMergeTag && !mergeTagResolved)
+    tags.push({
+      label: 'merge tag fallback',
+      mod: 'mergetag-fallback',
+      title: 'Rich text merge tags showing fallback — no visitor profile',
     })
   if (scenario) tags.push({ label: scenario, mod: 'click', title: CLICK_SCENARIO_TITLES[scenario] })
   return tags

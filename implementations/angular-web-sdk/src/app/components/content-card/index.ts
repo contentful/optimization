@@ -44,4 +44,3 @@ export class ContentCard {
 export { EntryBadge } from './badge'
 export { ContentEntry } from './entry'
 export { NestedContent } from './nested-content'
-export { RichText } from './rich-text'

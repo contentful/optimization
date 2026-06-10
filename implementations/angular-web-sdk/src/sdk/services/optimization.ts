@@ -111,7 +111,9 @@ export class NgContentfulOptimization implements OnDestroy {
     this.profile$ = fromSdkObservable<unknown>(this.sdk.states.profile).pipe(
       map((raw) => {
         const result = Profile.safeParse(raw)
-        return result.success ? result.data : undefined
+        if (!result.success) return undefined
+        // anonymous profiles exist after reset — only expose when the user is identified
+        return result.data.traits.identified ? result.data : undefined
       }),
     )
 

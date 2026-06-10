@@ -12,6 +12,8 @@ import {
   type Signal,
 } from '@angular/core'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
+import type { Document } from '@contentful/rich-text-types'
+import { INLINES } from '@contentful/rich-text-types'
 import type { Entry } from 'contentful'
 import { isMergeTagEntry, isRecord } from '../utils'
 import { NgContentfulOptimization } from './optimization'
@@ -23,6 +25,10 @@ export interface EntryMeta {
   sticky: boolean | undefined
   variantIndex: number | undefined
   isVariant: boolean
+  isMergeTag: boolean
+  hasRichText: boolean
+  hasMergeTag: boolean
+  mergeTagResolved: boolean
 }
 
 export interface ResolvedEntryView {
@@ -30,6 +36,18 @@ export interface ResolvedEntryView {
   baselineId: string
   resolvedId: string
   meta: EntryMeta
+}
+
+function isEntry(value: unknown): value is Entry {
+  return isRecord(value) && isRecord(value.sys) && typeof value.sys.id === 'string'
+}
+
+function isRichTextDocument(value: unknown): value is Document {
+  return (
+    isRecord(value) &&
+    value.nodeType === 'document' &&
+    Array.isArray(isRecord(value) && value.content)
+  )
 }
 
 function mapToResolvedEntryView(
@@ -47,6 +65,12 @@ function mapToResolvedEntryView(
       sticky: typeof opt?.sticky === 'boolean' ? opt.sticky : undefined,
       variantIndex: typeof opt?.variantIndex === 'number' ? opt.variantIndex : undefined,
       isVariant: experienceId !== undefined,
+      isMergeTag: isMergeTagEntry(baseline),
+      hasRichText: Object.values(baseline.fields as Record<string, unknown>).some(
+        isRichTextDocument,
+      ),
+      hasMergeTag: entryHasMergeTag(baseline),
+      mergeTagResolved: false,
     },
   }
 }
@@ -58,6 +82,56 @@ function toStringValue(value: unknown): string {
     return `${value}`
   if (typeof value === 'symbol') return value.description ?? value.toString()
   return JSON.stringify(value)
+}
+
+function hasMergeTagNode(node: unknown): boolean {
+  if (!isRecord(node)) return false
+  if (node.nodeType === INLINES.EMBEDDED_ENTRY) return true
+  if (Array.isArray(node.content)) return node.content.some(hasMergeTagNode)
+  return false
+}
+
+function entryHasMergeTag(entry: Entry): boolean {
+  return Object.values(entry.fields as Record<string, unknown>).some(
+    (field) => isRichTextDocument(field) && hasMergeTagNode(field),
+  )
+}
+
+function resolveRichTextMergeTags(
+  node: Document,
+  resolveMergeTag: (target: unknown) => string,
+): Document {
+  const resolve = (n: unknown): unknown => {
+    if (!isRecord(n)) return n
+    if (n.nodeType === INLINES.EMBEDDED_ENTRY) {
+      const data = isRecord(n.data) ? n.data : {}
+      return { nodeType: 'text', value: resolveMergeTag(data.target), marks: [], data: {} }
+    }
+    if (!Array.isArray(n.content)) return n
+    return { ...n, content: n.content.map(resolve) }
+  }
+  const content = node.content.map(resolve)
+  if (!content.every((n): n is Document['content'][number] => isRecord(n))) return node
+  return { ...node, content }
+}
+
+function resolveEntryFields(
+  fields: Record<string, unknown>,
+  resolveMergeTag: (target: unknown) => string,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(fields)) {
+    result[key] = isRichTextDocument(value)
+      ? resolveRichTextMergeTags(value, resolveMergeTag)
+      : value
+  }
+  return result
+}
+
+function resolveEntryMergeTags(entry: Entry, resolveMergeTag: (target: unknown) => string): Entry {
+  return Object.assign({}, entry, {
+    fields: resolveEntryFields(entry.fields as Record<string, unknown>, resolveMergeTag),
+  }) as Entry
 }
 
 @Injectable()
@@ -72,22 +146,47 @@ export class NgContentfulEntry implements OnDestroy {
   private readonly _domReady = signal(false)
   private manualTrackingActive = false
 
-  readonly resolved: Signal<ResolvedEntryView | undefined> = computed(() => {
-    const entry = this._entry()
-    if (entry === undefined) return undefined
+  // Resolves entry variant only — no profile dependency so profile changes don't re-resolve variants.
+  // untracked drops selectedOptimizations as a dependency when locked, preventing rerenders.
+  private readonly _resolvedVariant: Signal<ResolvedEntryView | undefined> = computed(() => {
+    const raw = this._entry()
+    if (!isEntry(raw)) return undefined
 
-    // untracked drops selectedOptimizations as a dependency, preventing rerenders when locked.
-    const selectedOptimizations = this._liveUpdates()
-      ? this._selectedOptimizations()
-      : untracked(() => this._selectedOptimizations())
+    const isLive = this._liveUpdates()
+    const selectedOptimizations = isLive
+      ? (this._selectedOptimizations() ?? this.optimization.selectedOptimizations())
+      : untracked(() => this._selectedOptimizations() ?? this.optimization.selectedOptimizations())
 
     return mapToResolvedEntryView(
-      entry,
-      this.optimization.sdk.resolveOptimizedEntry(
-        entry,
-        selectedOptimizations ?? this.optimization.selectedOptimizations(),
-      ),
+      raw,
+      this.optimization.sdk.resolveOptimizedEntry(raw, selectedOptimizations),
     )
+  })
+
+  // Applies merge tags on top of the resolved variant. When live, profile() is tracked so merge
+  // tags update reactively. When locked, profile is untracked — no rerenders from profile changes.
+  readonly resolved: Signal<ResolvedEntryView | undefined> = computed(() => {
+    const variant = this._resolvedVariant()
+    if (!variant) return undefined
+
+    const isLive = this._liveUpdates()
+    const profile = isLive
+      ? this.optimization.profile()
+      : untracked(() => this.optimization.profile())
+    const resolveMergeTag = (target: unknown): string => {
+      if (!isMergeTagEntry(target)) return ''
+      if (!profile) return toStringValue(target.fields.nt_fallback)
+      return toStringValue(this.optimization.sdk.getMergeTagValue(target, profile))
+    }
+
+    return {
+      ...variant,
+      resolvedEntry: resolveEntryMergeTags(variant.resolvedEntry, resolveMergeTag),
+      meta: {
+        ...variant.meta,
+        mergeTagResolved: variant.meta.hasMergeTag && profile !== undefined,
+      },
+    }
   })
 
   constructor() {
@@ -101,7 +200,7 @@ export class NgContentfulEntry implements OnDestroy {
       if (!this._domReady() || this._observation() === 'auto') return
 
       const resolved = this.resolved()
-      if (resolved === undefined) return
+      if (!resolved) return
 
       this.optimization.sdk.tracking.enableElement('views', this.elementRef.nativeElement, {
         data: {
@@ -121,7 +220,7 @@ export class NgContentfulEntry implements OnDestroy {
     selectedOptimizations,
     liveUpdates,
   }: {
-    entry: InputSignal<Entry>
+    entry: Signal<Entry>
     observation?: InputSignal<ObservationMode>
     selectedOptimizations?: InputSignal<SelectedOptimizationArray | undefined>
     liveUpdates?: Signal<boolean>
@@ -131,11 +230,6 @@ export class NgContentfulEntry implements OnDestroy {
     if (selectedOptimizations) this._selectedOptimizations = selectedOptimizations
     if (liveUpdates) this._liveUpdates = liveUpdates
     return this
-  }
-
-  resolveMergeTag(target: unknown): string {
-    if (!isMergeTagEntry(target)) return '[Merge Tag]'
-    return toStringValue(this.optimization.sdk.getMergeTagValue(target))
   }
 
   private clearManualTracking(): void {
