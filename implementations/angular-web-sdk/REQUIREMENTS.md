@@ -22,14 +22,16 @@ identified user profile. Use the `charles` user ID hardcoded in the Identify cal
 
 - Initialises once per page load from environment config; enforced by a module-level singleton.
 - Falls back to baseline rendering on init failure — no crash or blank screen.
-- On teardown, the Angular service cleans up SDK subscriptions without side effects. _(TODO)_
+- On teardown, the Angular service unsubscribes the router subscription, calls `sdk.destroy()` to
+  flush queues and stop entry interaction tracking, and resets the singleton so the SDK can be
+  recreated cleanly if needed.
 
 **Verification:**
 
 1. Load the app — entry cards render and control panel shows **Active optimizations: 0**.
 2. No blank screen or error on init failure — entries show baseline.
 3. Structural: SDK is created through the public Angular service; no private internals imported.
-   _(TODO: verify teardown — navigate away and confirm no subscription leaks in DevTools.)_
+4. Teardown: navigate away and confirm no subscription leaks in DevTools.
 
 ---
 

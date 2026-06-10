@@ -1,11 +1,11 @@
-import { inject, Injectable } from '@angular/core'
+import { inject, Injectable, type OnDestroy } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { NavigationEnd, Router } from '@angular/router'
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import { Profile } from '@contentful/optimization-web/api-schemas'
 import { createClient } from 'contentful'
-import { Observable } from 'rxjs'
+import { Observable, type Subscription } from 'rxjs'
 import { filter, map } from 'rxjs/operators'
 import type { NgContentfulOptimizationConfig } from '../config'
 import { NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../config'
@@ -84,7 +84,7 @@ function getOrCreateInstance(
 }
 
 @Injectable({ providedIn: 'root' })
-export class NgContentfulOptimization {
+export class NgContentfulOptimization implements OnDestroy {
   readonly sdk: NgContentfulOptimizationInstance
   readonly consent$: Observable<boolean | undefined>
   readonly profile$: Observable<Profile | undefined>
@@ -93,6 +93,8 @@ export class NgContentfulOptimization {
   readonly selectedOptimizations$: Observable<SelectedOptimizationArray | undefined>
   readonly selectedOptimizations: ReturnType<typeof toSignal<SelectedOptimizationArray | undefined>>
   readonly profile: ReturnType<typeof toSignal<Profile | undefined>>
+
+  private readonly routerSubscription: Subscription
 
   constructor() {
     const config = inject(NG_CONTENTFUL_OPTIMIZATION_CONFIG)
@@ -126,10 +128,17 @@ export class NgContentfulOptimization {
 
     // Page events must fire on every route change including the initial load.
     // The SDK uses the current URL to resolve which experiences apply to the user.
-    router.events
+    this.routerSubscription = router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe((e) => {
         void this.sdk.page({ properties: { url: e.urlAfterRedirects } })
       })
+  }
+
+  ngOnDestroy(): void {
+    this.routerSubscription.unsubscribe()
+    this.sdk.destroy()
+    instance = undefined
+    attachmentStarted = false
   }
 }
