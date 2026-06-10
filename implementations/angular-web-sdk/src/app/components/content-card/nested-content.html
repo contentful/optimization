@@ -1,5 +1,5 @@
-@if (resolved(); as r) { @let baseline = r.baselineId; @let variant = r.meta.isVariant; @let m =
-r.meta;
+@if (resolved(); as r) { @let baseline = r.baselineId; @let variant = r.meta.experienceId !==
+undefined; @let m = r.meta;
 
 <div
   class="entry-card"

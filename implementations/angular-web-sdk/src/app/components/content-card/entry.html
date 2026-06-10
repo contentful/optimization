@@ -12,10 +12,12 @@
 </section>
 
 <ng-template #entryContent>
-  @if (r) { @let baseline = r.baselineId; @let variant = r.meta.isVariant; @let m = r.meta;
+  @if (r) { @let baseline = r.baselineId; @let variant = r.meta.experienceId !== undefined; @let m =
+  r.meta;
   <div
     class="entry-card"
     [class.entry-card--variant]="variant"
+    [class.entry-card--mergetag-resolved]="m.mergeTagResolved === true"
     [attr.data-testid]="'content-' + baseline"
     [attr.data-ctfl-entry-id]="isAuto ? r.resolvedId : null"
     [attr.data-ctfl-baseline-id]="isAuto ? baseline : null"

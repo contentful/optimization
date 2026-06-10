@@ -24,11 +24,7 @@ export interface EntryMeta {
   experienceId: string | undefined
   sticky: boolean | undefined
   variantIndex: number | undefined
-  isVariant: boolean
-  isMergeTag: boolean
-  hasRichText: boolean
-  hasMergeTag: boolean
-  mergeTagResolved: boolean
+  mergeTagResolved: boolean | undefined
 }
 
 export interface ResolvedEntryView {
@@ -64,13 +60,7 @@ function mapToResolvedEntryView(
       experienceId,
       sticky: typeof opt?.sticky === 'boolean' ? opt.sticky : undefined,
       variantIndex: typeof opt?.variantIndex === 'number' ? opt.variantIndex : undefined,
-      isVariant: experienceId !== undefined,
-      isMergeTag: isMergeTagEntry(baseline),
-      hasRichText: Object.values(baseline.fields as Record<string, unknown>).some(
-        isRichTextDocument,
-      ),
-      hasMergeTag: entryHasMergeTag(baseline),
-      mergeTagResolved: false,
+      mergeTagResolved: entryHasMergeTag(baseline) ? false : undefined,
     },
   }
 }
@@ -184,7 +174,8 @@ export class NgContentfulEntry implements OnDestroy {
       resolvedEntry: resolveEntryMergeTags(variant.resolvedEntry, resolveMergeTag),
       meta: {
         ...variant.meta,
-        mergeTagResolved: variant.meta.hasMergeTag && profile !== undefined,
+        mergeTagResolved:
+          variant.meta.mergeTagResolved !== undefined ? profile !== undefined : undefined,
       },
     }
   })

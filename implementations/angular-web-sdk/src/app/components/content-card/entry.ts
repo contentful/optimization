@@ -107,10 +107,11 @@ export class ContentEntry {
     const r = this.resolved()
     if (!r) return []
     return buildEntryBadges({
-      isVariant: r.meta.isVariant,
+      isVariant: r.meta.experienceId !== undefined,
       obs: this.observation(),
-      hasRichText: r.meta.hasRichText,
-      hasMergeTag: r.meta.hasMergeTag,
+      hasRichText: Object.values(r.resolvedEntry.fields as Record<string, unknown>).some(
+        isRichTextField,
+      ),
       mergeTagResolved: r.meta.mergeTagResolved,
       scenario: this.clickScenario(),
     })

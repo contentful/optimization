@@ -23,8 +23,7 @@ export interface EntryBadgeOptions {
   isVariant: boolean
   obs: ObservationMode
   hasRichText: boolean
-  hasMergeTag: boolean
-  mergeTagResolved: boolean
+  mergeTagResolved: boolean | undefined
   scenario: EntryClickScenario | undefined
 }
 
@@ -32,11 +31,10 @@ export function buildEntryBadges({
   isVariant,
   obs,
   hasRichText,
-  hasMergeTag,
   mergeTagResolved,
   scenario,
 }: EntryBadgeOptions): Badge[] {
-  const tags: Badge[] = [
+  const badges: Badge[] = [
     {
       label: isVariant ? 'variant' : 'baseline',
       mod: isVariant ? 'variant' : '',
@@ -47,21 +45,22 @@ export function buildEntryBadges({
     { label: obs, mod: obs, title: OBSERVATION_TITLES[obs] },
   ]
   if (hasRichText)
-    tags.push({ label: 'rich text', mod: 'richtext', title: 'Entry contains a rich text field' })
-  if (hasMergeTag && mergeTagResolved)
-    tags.push({
+    badges.push({ label: 'rich text', mod: 'richtext', title: 'Entry contains a rich text field' })
+  if (mergeTagResolved === true)
+    badges.push({
       label: 'merge tag',
       mod: 'mergetag',
       title: 'Rich text merge tags resolved with visitor profile',
     })
-  if (hasMergeTag && !mergeTagResolved)
-    tags.push({
+  if (mergeTagResolved === false)
+    badges.push({
       label: 'merge tag fallback',
       mod: 'mergetag-fallback',
       title: 'Rich text merge tags showing fallback — no visitor profile',
     })
-  if (scenario) tags.push({ label: scenario, mod: 'click', title: CLICK_SCENARIO_TITLES[scenario] })
-  return tags
+  if (scenario)
+    badges.push({ label: scenario, mod: 'click', title: CLICK_SCENARIO_TITLES[scenario] })
+  return badges
 }
 
 export function buildNestedBadges(isVariant: boolean): Badge[] {

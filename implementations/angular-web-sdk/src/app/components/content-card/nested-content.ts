@@ -27,7 +27,7 @@ export class NestedContent {
   // protected state
   protected readonly resolved = inject(NgContentfulEntry).with({ entry: this.entry }).resolved
   protected readonly badges = computed(() =>
-    buildNestedBadges(this.resolved()?.meta.isVariant ?? false),
+    buildNestedBadges(this.resolved()?.meta.experienceId !== undefined),
   )
   protected readonly entryText = computed(() => {
     const text: unknown = this.resolved()?.resolvedEntry.fields.text
