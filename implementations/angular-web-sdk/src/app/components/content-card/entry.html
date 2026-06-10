@@ -12,7 +12,7 @@
 </section>
 
 <ng-template #entryContent>
-  @if (r) { @let baseline = r.baselineId; @let variant = r.isVariant; @let m = r.meta;
+  @if (r) { @let baseline = r.baselineId; @let variant = r.meta.isVariant; @let m = r.meta;
   <div
     class="entry-card"
     [class.entry-card--variant]="variant"

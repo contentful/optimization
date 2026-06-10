@@ -22,6 +22,7 @@ export interface EntryMeta {
   experienceId: string | undefined
   sticky: boolean | undefined
   variantIndex: number | undefined
+  isVariant: boolean
 }
 
 export interface ResolvedEntryView {
@@ -29,16 +30,24 @@ export interface ResolvedEntryView {
   baselineId: string
   resolvedId: string
   meta: EntryMeta
-  isVariant: boolean
 }
 
-function extractMeta(value: unknown): EntryMeta {
-  if (!isRecord(value))
-    return { experienceId: undefined, sticky: undefined, variantIndex: undefined }
+function mapToResolvedEntryView(
+  baseline: Entry,
+  { entry: resolvedEntry, selectedOptimization }: { entry: Entry; selectedOptimization?: unknown },
+): ResolvedEntryView {
+  const opt = isRecord(selectedOptimization) ? selectedOptimization : undefined
+  const experienceId = typeof opt?.experienceId === 'string' ? opt.experienceId : undefined
   return {
-    experienceId: typeof value.experienceId === 'string' ? value.experienceId : undefined,
-    sticky: typeof value.sticky === 'boolean' ? value.sticky : undefined,
-    variantIndex: typeof value.variantIndex === 'number' ? value.variantIndex : undefined,
+    resolvedEntry,
+    baselineId: baseline.sys.id,
+    resolvedId: resolvedEntry.sys.id,
+    meta: {
+      experienceId,
+      sticky: typeof opt?.sticky === 'boolean' ? opt.sticky : undefined,
+      variantIndex: typeof opt?.variantIndex === 'number' ? opt.variantIndex : undefined,
+      isVariant: experienceId !== undefined,
+    },
   }
 }
 
@@ -66,12 +75,19 @@ export class NgContentfulEntry implements OnDestroy {
   readonly resolved: Signal<ResolvedEntryView | undefined> = computed(() => {
     const entry = this._entry()
     if (entry === undefined) return undefined
-    if (this._liveUpdates()) {
-      return this.resolveEntry(entry, this._selectedOptimizations())
-    }
 
     // untracked drops selectedOptimizations as a dependency, preventing rerenders when locked.
-    return untracked(() => this.resolveEntry(entry, this._selectedOptimizations()))
+    const selectedOptimizations = this._liveUpdates()
+      ? this._selectedOptimizations()
+      : untracked(() => this._selectedOptimizations())
+
+    return mapToResolvedEntryView(
+      entry,
+      this.optimization.sdk.resolveOptimizedEntry(
+        entry,
+        selectedOptimizations ?? this.optimization.selectedOptimizations(),
+      ),
+    )
   })
 
   constructor() {
@@ -120,25 +136,6 @@ export class NgContentfulEntry implements OnDestroy {
   resolveMergeTag(target: unknown): string {
     if (!isMergeTagEntry(target)) return '[Merge Tag]'
     return toStringValue(this.optimization.sdk.getMergeTagValue(target))
-  }
-
-  private resolveEntry(
-    baseline: Entry,
-    selectedOptimizations?: SelectedOptimizationArray,
-  ): ResolvedEntryView {
-    const resolved = this.optimization.sdk.resolveOptimizedEntry(
-      baseline,
-      selectedOptimizations ?? this.optimization.selectedOptimizations(),
-    )
-    const { entry: resolvedEntry } = resolved
-    const meta = extractMeta(resolved.selectedOptimization)
-    return {
-      resolvedEntry,
-      baselineId: baseline.sys.id,
-      resolvedId: resolvedEntry.sys.id,
-      meta,
-      isVariant: meta.experienceId !== undefined,
-    }
   }
 
   private clearManualTracking(): void {

@@ -62,7 +62,7 @@ export class ContentEntry {
     const r = this.resolved()
     if (!r) return []
     return buildEntryBadges(
-      r.isVariant,
+      r.meta.isVariant,
       this.observation(),
       this.richTextField(),
       this.clickScenario(),
