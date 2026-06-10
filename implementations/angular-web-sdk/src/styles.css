@@ -442,11 +442,6 @@ main > .sections-row {
   color: #15803d;
 }
 
-.entry-card__badge--richtext {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-
 .entry-card__badge--mergetag {
   background: #fef9c3;
   color: #854d0e;

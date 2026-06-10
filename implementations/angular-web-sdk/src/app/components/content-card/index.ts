@@ -161,9 +161,6 @@ export class ContentCard {
       r.meta.experienceId !== undefined ? 'variant' : 'baseline',
       this.observation(),
       liveModeKey(this.liveUpdates(), this.isLive()),
-      ...(Object.values(r.resolvedEntry.fields).some(isRichTextField)
-        ? (['richtext'] as const)
-        : []),
       ...(mergeTag ? [mergeTag] : []),
       ...(scenario ? [scenario] : []),
     ]

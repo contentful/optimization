@@ -9,7 +9,6 @@ export type BadgeKey =
   | 'baseline'
   | ObservationMode
   | LiveMode
-  | 'richtext'
   | MergeTagMode
   | EntryClickScenario
 
@@ -53,11 +52,6 @@ export const BADGE_MAP: Record<BadgeKey, { label: string; mod: string; title: st
     label: 'locked',
     mod: 'live-always-off',
     title: 'Per-entry override: ignores the global toggle, does not update on profile change',
-  },
-  richtext: {
-    label: 'rich text',
-    mod: 'richtext',
-    title: 'Entry contains a rich text field',
   },
   mergetag: {
     label: 'merge tag',
