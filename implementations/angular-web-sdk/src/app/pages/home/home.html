@@ -20,6 +20,10 @@
       <p class="live-updates-item__label" data-testid="live-updates-default-label">
         Default ({{ liveUpdatesService.globalLiveUpdates() ? 'ON' : 'OFF' }})
       </p>
+      <p class="live-updates-item__description">
+        No per-entry override — follows the global toggle. Updates when the toggle is ON; stays
+        frozen when it is OFF.
+      </p>
       <app-content-entry
         [entry]="liveEntry"
         observation="auto"
@@ -28,6 +32,10 @@
     </div>
     <div class="live-updates-item">
       <p class="live-updates-item__label" data-testid="live-updates-always-on-label">Always live</p>
+      <p class="live-updates-item__description">
+        Per-entry override set to <code>true</code> — always re-resolves on profile changes,
+        regardless of the global toggle.
+      </p>
       <app-content-entry
         [entry]="liveEntry"
         observation="auto"
@@ -37,6 +45,10 @@
     </div>
     <div class="live-updates-item">
       <p class="live-updates-item__label" data-testid="live-updates-locked-label">Always locked</p>
+      <p class="live-updates-item__description">
+        Per-entry override set to <code>false</code> — never re-resolves, even when the global
+        toggle is ON or the preview panel is open.
+      </p>
       <app-content-entry
         [entry]="liveEntry"
         observation="auto"

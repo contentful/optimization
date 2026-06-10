@@ -643,3 +643,9 @@ main > .sections-row {
   color: var(--color-text-muted);
   margin: 0;
 }
+
+.live-updates-item__description {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin: 0;
+}
