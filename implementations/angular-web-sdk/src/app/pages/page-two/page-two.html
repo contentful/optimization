@@ -16,7 +16,7 @@
       <p>Tracked via <code>data-ctfl-*</code> attributes.</p>
     </header>
     <div class="entry-grid">
-      <app-content-entry
+      <app-content-card
         [entry]="entry"
         observation="auto"
         [selectedOptimizations]="selectedOptimizations()"
@@ -30,7 +30,7 @@
       <p>Tracked via explicit <code>enableElement</code> calls.</p>
     </header>
     <div class="entry-grid">
-      <app-content-entry
+      <app-content-card
         [entry]="entry"
         observation="manual"
         [selectedOptimizations]="selectedOptimizations()"

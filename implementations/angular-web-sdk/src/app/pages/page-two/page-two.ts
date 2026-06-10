@@ -1,6 +1,6 @@
 import { Component, inject, resource } from '@angular/core'
 import { NgContentfulClient, NgContentfulOptimization } from '@contentful/optimization-angular'
-import { ContentEntry } from '../../components/content-card'
+import { ContentCard } from '../../components/content-card'
 import { ControlPanel } from '../../components/control-panel/control-panel'
 import { FIXTURES } from '../../fixtures'
 import type { ContentfulEntry } from '../../types/contentful'
@@ -9,7 +9,7 @@ const PAGE_TWO_COMPONENT_ID = 'page-two-conversion'
 
 @Component({
   selector: 'app-page-two',
-  imports: [ContentEntry, ControlPanel],
+  imports: [ContentCard, ControlPanel],
   templateUrl: './page-two.html',
   host: { style: 'display: contents' },
 })

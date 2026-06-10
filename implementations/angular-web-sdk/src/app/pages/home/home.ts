@@ -1,6 +1,6 @@
 import { Component, inject, resource } from '@angular/core'
 import { NgContentfulClient, NgContentfulOptimization } from '@contentful/optimization-angular'
-import { ContentCard, ContentEntry } from '../../components/content-card'
+import { ContentCard } from '../../components/content-card'
 import { ControlPanel } from '../../components/control-panel/control-panel'
 import { FIXTURES } from '../../fixtures'
 import { NgContentfulLiveUpdates } from '../../services/live-updates'
@@ -8,7 +8,7 @@ import type { ContentfulEntry } from '../../types/contentful'
 
 @Component({
   selector: 'app-home',
-  imports: [ContentCard, ContentEntry, ControlPanel],
+  imports: [ContentCard, ControlPanel],
   templateUrl: './home.html',
   host: { style: 'display: contents' },
 })

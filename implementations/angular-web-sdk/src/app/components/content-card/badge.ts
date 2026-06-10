@@ -19,7 +19,7 @@ const CLICK_SCENARIO_TITLES: Record<EntryClickScenario, string> = {
   descendant: 'Click tracking fires from a descendant button inside this entry',
 }
 
-export interface EntryBadgeOptions {
+export interface BadgeOptions {
   isVariant: boolean
   obs: ObservationMode
   hasRichText: boolean
@@ -27,13 +27,13 @@ export interface EntryBadgeOptions {
   scenario: EntryClickScenario | undefined
 }
 
-export function buildEntryBadges({
+export function buildBadges({
   isVariant,
   obs,
   hasRichText,
   mergeTagResolved,
   scenario,
-}: EntryBadgeOptions): Badge[] {
+}: BadgeOptions): Badge[] {
   const badges: Badge[] = [
     {
       label: isVariant ? 'variant' : 'baseline',
@@ -64,14 +64,14 @@ export function buildEntryBadges({
 }
 
 @Component({
-  selector: 'app-entry-badge',
+  selector: 'app-badge',
   template: `<span
     [class]="mod() ? 'entry-card__badge entry-card__badge--' + mod() : 'entry-card__badge'"
     [attr.data-tooltip]="title()"
     >{{ label() }}</span
   >`,
 })
-export class EntryBadge {
+export class BadgeComponent {
   readonly label = input.required<string>()
   readonly mod = input<string>('')
   readonly title = input<string>('')

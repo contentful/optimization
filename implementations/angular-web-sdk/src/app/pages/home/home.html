@@ -24,7 +24,7 @@
         No per-entry override — follows the global toggle. Updates when the toggle is ON; stays
         frozen when it is OFF.
       </p>
-      <app-content-entry
+      <app-content-card
         [entry]="liveEntry"
         observation="auto"
         [selectedOptimizations]="selectedOptimizations()"
@@ -36,7 +36,7 @@
         Per-entry override set to <code>true</code> — always re-resolves on profile changes,
         regardless of the global toggle.
       </p>
-      <app-content-entry
+      <app-content-card
         [entry]="liveEntry"
         observation="auto"
         [liveUpdates]="true"
@@ -49,7 +49,7 @@
         Per-entry override set to <code>false</code> — never re-resolves even when the global toggle
         is ON, but will re-resolve when the preview panel is open.
       </p>
-      <app-content-entry
+      <app-content-card
         [entry]="liveEntry"
         observation="auto"
         [liveUpdates]="false"
@@ -91,7 +91,7 @@
     </header>
     <div id="manually-observed" class="entry-grid">
       @for (id of manualIds; track id) { @let entry = entryFor(id); @if (entry) {
-      <app-content-entry
+      <app-content-card
         [entry]="entry"
         observation="manual"
         [selectedOptimizations]="selectedOptimizations()"

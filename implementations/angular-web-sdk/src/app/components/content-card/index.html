@@ -1,7 +1,7 @@
 @let r = resolved(); @let scenario = clickScenario(); @let mode = observation(); @let isAuto = mode
 === 'auto';
 
-<section [attr.data-testid]="'content-entry-' + (r?.baselineId ?? '')">
+<section [attr.data-testid]="'content-card-' + (r?.baselineId ?? '')">
   @if (scenario === 'ancestor' && isAuto) {
   <div data-ctfl-clickable="true" data-testid="entry-click-ancestor-wrapper">
     <ng-container [ngTemplateOutlet]="entryContent" />
@@ -47,7 +47,7 @@
       </div>
       <div class="entry-card__badges">
         @for (badge of badges(); track badge.mod) {
-        <app-entry-badge [label]="badge.label" [mod]="badge.mod" [title]="badge.title" />
+        <app-badge [label]="badge.label" [mod]="badge.mod" [title]="badge.title" />
         }
       </div>
     </div>
@@ -64,6 +64,12 @@
     <button data-ctfl-clickable="true" data-testid="entry-click-descendant-button" type="button">
       Trigger entry click tracking from descendant button
     </button>
+    } @if (nestedEntries().length > 0) {
+    <div class="nested-children">
+      @for (child of nestedEntries(); track child.sys.id) {
+      <app-content-card [entry]="child" />
+      }
+    </div>
     }
   </div>
   }
