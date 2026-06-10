@@ -1,5 +1,4 @@
-@if (resolved(); as r) { @let baseline = r.baselineId; @let variant = r.meta.experienceId !==
-undefined; @let m = r.meta;
+@if (resolved(); as r) { @let baseline = r.baselineId; @let variant = isVariant(); @let m = r.meta;
 
 <div
   class="entry-card"
@@ -30,9 +29,20 @@ undefined; @let m = r.meta;
       }
     </div>
     <div class="entry-card__badges">
-      @for (badge of badges(); track badge.mod) {
-      <app-entry-badge [label]="badge.label" [mod]="badge.mod" [title]="badge.title" />
-      }
+      <app-entry-badge
+        [label]="variant ? 'variant' : 'baseline'"
+        [mod]="variant ? 'variant' : ''"
+        [title]="
+          variant
+            ? 'This entry is a variant selected by the optimization SDK'
+            : 'This entry is the baseline (no optimization applied)'
+        "
+      />
+      <app-entry-badge
+        label="auto"
+        mod="auto"
+        title="Entry tracking is handled automatically via data attributes"
+      />
     </div>
   </div>
 

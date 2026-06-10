@@ -63,28 +63,6 @@ export function buildEntryBadges({
   return badges
 }
 
-export function buildNestedBadges(isVariant: boolean): Badge[] {
-  return [
-    {
-      label: isVariant ? 'variant' : 'baseline',
-      mod: isVariant ? 'variant' : '',
-      title: isVariant
-        ? 'This entry is a variant selected by the optimization SDK'
-        : 'This entry is the baseline (no optimization applied)',
-    },
-    {
-      label: 'auto',
-      mod: 'auto',
-      title: 'Entry tracking is handled automatically via data attributes',
-    },
-    {
-      label: 'nested',
-      mod: 'nested',
-      title: 'This entry is a nested child resolved via the optimization resolver',
-    },
-  ]
-}
-
 @Component({
   selector: 'app-entry-badge',
   template: `<span

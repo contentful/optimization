@@ -2,7 +2,7 @@ import { Component, computed, forwardRef, inject, input } from '@angular/core'
 import { NgContentfulEntry } from '@contentful/optimization-angular'
 import type { ContentfulEntry } from '../../types/contentful'
 import { isRecord } from '../../utils'
-import { buildNestedBadges, EntryBadge } from './badge'
+import { EntryBadge } from './badge'
 
 function isEntry(value: unknown): value is ContentfulEntry {
   return (
@@ -26,9 +26,7 @@ export class NestedContent {
 
   // protected state
   protected readonly resolved = inject(NgContentfulEntry).with({ entry: this.entry }).resolved
-  protected readonly badges = computed(() =>
-    buildNestedBadges(this.resolved()?.meta.experienceId !== undefined),
-  )
+  protected readonly isVariant = computed(() => this.resolved()?.meta.experienceId !== undefined)
   protected readonly entryText = computed(() => {
     const text: unknown = this.resolved()?.resolvedEntry.fields.text
     return typeof text === 'string' ? text : ''
