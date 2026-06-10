@@ -215,7 +215,8 @@ Prerequisite: active experience required (see Prerequisites).
 - Every tracking event (page, view, click, hover) appears in the sidebar as it occurs.
 - View and hover rows update in place (duration); **Raw count** increases faster than the
   deduplicated list.
-- Events blocked by consent do not appear in the sidebar. _(TODO)_
+- Events blocked by consent do not appear in the sidebar — the SDK's `eventStream` only emits
+  delivered events; blocked events are routed to `blockedEventStream` and never reach the log.
 - History persists across route changes.
 
 **Verification:**
@@ -235,7 +236,7 @@ Prerequisite: active experience required (see Prerequisites).
 - Opening the panel forces live re-resolution for all entries, overriding per-entry lock settings.
 - Closing the panel restores each entry's configured live-update behaviour.
 - The panel supports: audience activation/deactivation, variant override, variant reset, reset all,
-  refresh, and remount. _(TODO)_
+  refresh, and remount — all handled by the panel itself; no app code required.
 
 **Verification:**
 
@@ -245,9 +246,9 @@ Prerequisite: active experience required (see Prerequisites).
 2. Global OFF, click **Identify** — **Always locked** does not change.
 3. Open panel, click **Reset** — **Always locked** updates (forced live override in effect).
 4. Close panel, click **Identify** — **Always locked** does not change (override removed).
-5. _(TODO)_ Inside the open panel: activate an audience override — entry updates to the overridden
-   variant; deactivate — entry reverts.
-6. _(TODO)_ Apply a variant override, then reset — entry returns to its SDK-resolved variant.
+5. Inside the open panel: activate an audience override — entry updates to the overridden variant;
+   deactivate — entry reverts.
+6. Apply a variant override, then reset — entry returns to its SDK-resolved variant.
 
 ---
 
