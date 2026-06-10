@@ -141,14 +141,12 @@ capability. All SDK interaction must go through public package APIs.
 
 ## Content
 
-### Entry resolution _(which variant is displayed)_
+### Entry resolution
 
-- **Component-based** — component wraps the baseline entry; SDK picks the correct variant without
-  app logic; falls back to baseline on invalid data. Confirm: load — `baseline` badges; live updates
-  ON, **Identify** — `variant` badges with `var`/`exp` IDs; **Reset** — revert to `baseline`.
-- **Model-based** — app accesses personalised entry data directly via the SDK without a component
-  wrapper; no local variant logic. In Angular the component-based wrapper already exposes this model
-  via signals — relevant mainly for runtimes without a component layer (e.g. Node.js).
+- SDK resolves the correct variant for each entry; always falls back to baseline on invalid data; no
+  variant selection logic in app code.
+- Confirm: load — all cards show `baseline` badge; live updates ON, **Identify** — active experience
+  cards switch to `variant` with `var`/`exp` IDs; **Reset** — cards revert to `baseline`.
 
 ### Nested entries
 
