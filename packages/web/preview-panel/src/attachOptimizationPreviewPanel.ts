@@ -1,16 +1,20 @@
-import { PreviewOverrideManager } from '@contentful/optimization-core/preview-support'
+import {
+  PreviewOverrideManager,
+  applyChangeOverrides,
+} from '@contentful/optimization-core/preview-support'
 import type ContentfulOptimization from '@contentful/optimization-web'
 import type {
   AudienceEntrySkeleton,
   ChangeArray,
-  OptimizationData,
   OptimizationEntry,
   OptimizationEntrySkeleton,
   Profile,
-  SelectedOptimizationArray,
 } from '@contentful/optimization-web/api-schemas'
 import type { PreviewPanelSignalObject } from '@contentful/optimization-web/core-sdk'
-import { PREVIEW_PANEL_SIGNALS_SYMBOL } from '@contentful/optimization-web/symbols'
+import {
+  PREVIEW_PANEL_SIGNALS_SYMBOL,
+  PREVIEW_PANEL_SIGNAL_FNS_SYMBOL,
+} from '@contentful/optimization-web/symbols'
 import type { ChainModifiers, ContentfulClientApi, Entry } from 'contentful'
 import {
   AUDIENCE_SWITCH_CHANGE,
@@ -34,8 +38,6 @@ import {
 } from './components/panel'
 import { defineSearch } from './components/search'
 import { getAllEntries, isAudienceEntry, isOptimizationEntry } from './lib/entries'
-import { applyChangeOverrides } from './lib/overrides'
-import { isChange, isSelectedOptimization } from './lib/schemaGuards'
 import { createScopedLogger } from './logger'
 
 declare global {
@@ -50,16 +52,9 @@ declare global {
 }
 
 /** @internal */
-let storedDefaults: {
-  selectedOptimizations?: SelectedOptimizationArray
-  changes?: ChangeArray
-} = {}
-
-/** @internal */
 let previewPanelAttachment: Promise<void> | undefined = undefined
 
 const OVERRIDES_STORAGE_KEY = '__ctfl_opt_preview_overrides__'
-const DEFAULTS_STORAGE_KEY = '__ctfl_opt_preview_defaults__'
 const storageLogger = createScopedLogger('PreviewPanelStorage')
 
 /** @internal */
@@ -88,42 +83,14 @@ function loadOverridesFromStorage(): Map<string, number> {
   return overrides
 }
 
-/** @internal */
-function loadDefaultsFromStorage(): void {
-  storedDefaults = {}
-
-  try {
-    const stored = localStorage.getItem(DEFAULTS_STORAGE_KEY)
-    if (!stored) return
-
-    const parsed = JSON.parse(stored) as unknown
-    if (!isRecord(parsed)) return
-    const { selectedOptimizations: storedSelectedOptimizations, changes: storedChanges } = parsed
-
-    storedDefaults.selectedOptimizations =
-      Array.isArray(storedSelectedOptimizations) &&
-      storedSelectedOptimizations.every(isSelectedOptimization)
-        ? storedSelectedOptimizations
-        : undefined
-    storedDefaults.changes =
-      Array.isArray(storedChanges) && storedChanges.every(isChange) ? storedChanges : undefined
-  } catch (error) {
-    storageLogger.warn(`Failed to read localStorage key "${DEFAULTS_STORAGE_KEY}"`, error)
-  }
-}
-
-function persistOverrideState(overrides: Map<string, number>): void {
+function persistOverrideMap(overrides: Map<string, number>): void {
   try {
     if (overrides.size === 0) {
       localStorage.removeItem(OVERRIDES_STORAGE_KEY)
-      localStorage.removeItem(DEFAULTS_STORAGE_KEY)
       return
     }
 
     localStorage.setItem(OVERRIDES_STORAGE_KEY, JSON.stringify(Object.fromEntries(overrides)))
-    if ((storedDefaults.selectedOptimizations ?? storedDefaults.changes) !== undefined) {
-      localStorage.setItem(DEFAULTS_STORAGE_KEY, JSON.stringify(storedDefaults))
-    }
   } catch (error) {
     storageLogger.warn('Failed to persist preview panel override state', error)
   }
@@ -156,6 +123,23 @@ function resolveOptimization(
   if (typeof window === 'undefined') return undefined
 
   return window.contentfulOptimization
+}
+
+/**
+ * Convert the manager's selectedOptimizations override record into the
+ * `Map<string, number>` shape consumed by the panel UI, the persistence
+ * helpers, and `applyChangeOverrides`.
+ *
+ * @internal
+ */
+function overridesToMap(
+  selectedOptimizations: Record<string, { experienceId: string; variantIndex: number }>,
+): Map<string, number> {
+  const result = new Map<string, number>()
+  for (const { experienceId, variantIndex } of Object.values(selectedOptimizations)) {
+    result.set(experienceId, variantIndex)
+  }
+  return result
 }
 
 /**
@@ -192,27 +176,11 @@ export interface AttachOptimizationPreviewPanelArgs<M extends ChainModifiers = C
 }
 
 /**
- * Convert the manager's selectedOptimizations override record into the
- * `Map<string, number>` shape consumed by the panel UI and `applyChangeOverrides`.
- *
- * @internal
- */
-function overridesToMap(
-  selectedOptimizations: Record<string, { experienceId: string; variantIndex: number }>,
-): Map<string, number> {
-  const result = new Map<string, number>()
-  for (const { experienceId, variantIndex } of Object.values(selectedOptimizations)) {
-    result.set(experienceId, variantIndex)
-  }
-  return result
-}
-
-/**
  * Attaches the ContentfulOptimization preview panel to the supplied SDK instance.
  *
  * Registers all custom elements, fetches audiences and optimization entries from
- * Contentful, wires up state interceptors via the shared
- * {@link PreviewOverrideManager}, and appends the panel to `document.body`.
+ * Contentful, wires up the shared {@link PreviewOverrideManager}, and appends
+ * the panel to `document.body`.
  *
  * @param args - Configuration containing the Contentful client, ContentfulOptimization instance, and optional CSP nonce.
  * @returns Resolves once the panel has been appended to the document body.
@@ -235,14 +203,14 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
   contentfulOptimization.registerPreviewPanel(previewPanelSignalObject)
 
   const signals = Reflect.get(previewPanelSignalObject, PREVIEW_PANEL_SIGNALS_SYMBOL)
+  const signalFns = Reflect.get(previewPanelSignalObject, PREVIEW_PANEL_SIGNAL_FNS_SYMBOL)
 
-  if (!signals)
+  if (!signals || !signalFns)
     throw new Error(
       '[ContentfulOptimization Preview Panel] The preview panel failed to find optimization states',
     )
 
   const initialOverrides = loadOverridesFromStorage()
-  loadDefaultsFromStorage()
 
   defineIndicator()
   defineMatchedText()
@@ -268,17 +236,33 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
   panel.optimizationEntries = optimizationEntries.filter(
     (optimization): optimization is OptimizationEntry => isOptimizationEntry(optimization),
   )
-  panel.defaultSelectedOptimizations = [...(storedDefaults.selectedOptimizations ?? [])]
   panel.overrides = new Map(initialOverrides)
+  panel.defaultSelectedOptimizations = []
 
-  const syncChangesSignal = (overridesMap: Map<string, number>): void => {
-    if (storedDefaults.changes === undefined) return
+  // The web panel keeps its own `changes` baseline so it can re-derive
+  // inline-variable Variable changes whenever an override mutates. The shared
+  // PreviewOverrideManager only knows about `selectedOptimizations`; mobile
+  // platforms don't need the changes pipeline today.
+  let baselineChanges: ChangeArray | null = signals.changes.value ?? null
+
+  const syncChangesSignal = (
+    overrides: Record<string, { experienceId: string; variantIndex: number }>,
+  ): void => {
+    if (baselineChanges === null) return
     signals.changes.value = applyChangeOverrides(
-      storedDefaults.changes,
+      baselineChanges,
       panel.optimizationEntries,
-      overridesMap,
+      overrides,
     )
   }
+
+  // Capture the un-overridden `changes` baseline on every API refresh. Runs
+  // after the manager's own interceptor (added during `new PreviewOverrideManager`),
+  // which means manager state is already up to date when this fires.
+  contentfulOptimization.interceptors.state.add((states) => {
+    baselineChanges = [...states.changes]
+    return states
+  })
 
   const manager = new PreviewOverrideManager({
     selectedOptimizations: signals.selectedOptimizations,
@@ -287,34 +271,15 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
     onOverridesChanged: (state) => {
       const overridesMap = overridesToMap(state.selectedOptimizations)
       panel.overrides = new Map(overridesMap)
-      persistOverrideState(overridesMap)
-      syncChangesSignal(overridesMap)
+      persistOverrideMap(overridesMap)
+
+      // Keep the panel UI's "default" badges in sync with whatever the manager
+      // currently considers the un-overridden API baseline.
+      const baseline = manager.getBaselineSelectedOptimizations()
+      if (baseline) panel.defaultSelectedOptimizations = [...baseline]
+
+      syncChangesSignal(state.selectedOptimizations)
     },
-  })
-
-  // Web-only interceptor: keep the inline-variable Variable changes in sync
-  // with overrides. The manager's interceptor runs first and rewrites
-  // selectedOptimizations to honor overrides; we read the clean baseline back
-  // from the manager so storedDefaults / panel.defaultSelectedOptimizations
-  // reflect the un-overridden state.
-  contentfulOptimization.interceptors.state.add((states): OptimizationData => {
-    const { changes, ...otherStates } = states
-    const baseline = manager.getBaselineSelectedOptimizations() ?? states.selectedOptimizations
-
-    storedDefaults = {
-      selectedOptimizations: [...baseline],
-      changes: [...changes],
-    }
-    panel.defaultSelectedOptimizations = [...baseline]
-
-    const overridesMap = overridesToMap(manager.getOverrides().selectedOptimizations)
-    if (overridesMap.size > 0) persistOverrideState(overridesMap)
-
-    return {
-      ...otherStates,
-      selectedOptimizations: states.selectedOptimizations,
-      changes: applyChangeOverrides(changes, panel.optimizationEntries, overridesMap),
-    }
   })
 
   panel.addEventListener(PANEL_DRAWER_TOGGLE, (event: Event) => {
@@ -333,7 +298,9 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
     const {
       detail: { key: experienceId, value: variantIndex },
     } = event
-    manager.setVariantOverride(experienceId, variantIndex)
+    signalFns.batch(() => {
+      manager.setVariantOverride(experienceId, variantIndex)
+    })
   })
 
   const onAudienceSwitchReset = (audienceId: string | undefined, experienceIds: string[]): void => {
@@ -366,25 +333,31 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
     const audienceId = target.audience?.sys.id
     const experienceIds = target.optimizations.map(({ fields: { nt_experience_id: id } }) => id)
 
-    if (event.detail.length === 0) {
-      onAudienceSwitchReset(audienceId, experienceIds)
-      return
-    }
-
-    if (!audienceId) {
-      for (const { key, value } of event.detail) {
-        manager.setVariantOverride(key, value)
+    signalFns.batch(() => {
+      if (event.detail.length === 0) {
+        onAudienceSwitchReset(audienceId, experienceIds)
+        return
       }
-      return
-    }
 
-    const variantIndex = event.detail[0]?.value ?? 0
-    onAudienceSwitchActivate(audienceId, experienceIds, variantIndex)
+      if (!audienceId) {
+        for (const { key, value } of event.detail) {
+          manager.setVariantOverride(key, value)
+        }
+        return
+      }
+
+      const variantIndex = event.detail[0]?.value ?? 0
+      onAudienceSwitchActivate(audienceId, experienceIds, variantIndex)
+    })
   })
 
   panel.addEventListener(PANEL_RESET, () => {
-    manager.resetAll()
-    panel.defaultSelectedOptimizations = [...(storedDefaults.selectedOptimizations ?? [])]
+    signalFns.batch(() => {
+      manager.resetAll()
+      // resetAll wipes overrides; the manager won't repopulate `signals.changes`,
+      // so do it ourselves with an empty override map (= baseline restored).
+      syncChangesSignal({})
+    })
   })
 
   signals.profile.subscribe((profile: Profile | undefined) => {
@@ -392,24 +365,13 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
   })
 
   // Hydrate overrides loaded from storage into the manager so its state
-  // interceptor and downstream signals reflect them on first render. The
-  // manager re-derives `signals.selectedOptimizations` from its baseline on
-  // every setVariantOverride call.
+  // interceptor and downstream signals reflect them on first render.
   if (initialOverrides.size > 0) {
-    for (const [experienceId, variantIndex] of initialOverrides) {
-      manager.setVariantOverride(experienceId, variantIndex)
-    }
-
-    // Re-apply change overrides against the cached changes baseline so
-    // inline-variable flag values reflect the restored selection until the
-    // next API refresh runs the interceptor chain.
-    if (storedDefaults.changes) {
-      signals.changes.value = applyChangeOverrides(
-        storedDefaults.changes,
-        panel.optimizationEntries,
-        initialOverrides,
-      )
-    }
+    signalFns.batch(() => {
+      for (const [experienceId, variantIndex] of initialOverrides) {
+        manager.setVariantOverride(experienceId, variantIndex)
+      }
+    })
   }
 
   document.body.appendChild(panel)
@@ -421,7 +383,7 @@ async function attachOptimizationPreviewPanelToSdk<M extends ChainModifiers = Ch
  * Attaches the ContentfulOptimization preview panel to the DOM as a Web Component.
  *
  * Registers all custom elements, fetches audiences and optimization entries from
- * Contentful, wires up state interceptors, and appends the panel to
+ * Contentful, wires up the shared override manager, and appends the panel to
  * `document.body`.
  * Calling this function more than once reuses the existing in-flight or completed
  * attachment.

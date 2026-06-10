@@ -1,13 +1,21 @@
 import type {
   ChangeArray,
   InlineVariableComponent,
+  OptimizationComponent,
   OptimizationEntry,
-} from '@contentful/optimization-web/api-schemas'
-import { isInlineVariableComponent } from './schemaGuards'
+} from '@contentful/optimization-api-client/api-schemas'
+import type { OptimizationOverride } from './types'
+
+// Local discriminator-only check. Equivalent to the canonical
+// `isInlineVariableComponent` guard but does not pull the rest of the
+// api-schemas guard file (which transitively bundles zod) into web UMD builds.
+function isInlineVariable(component: OptimizationComponent): component is InlineVariableComponent {
+  return component.type === 'InlineVariable'
+}
 
 function getInlineVariableComponents(optimization: OptimizationEntry): InlineVariableComponent[] {
   const { components } = optimization.fields.nt_config ?? {}
-  return Array.isArray(components) ? components.filter(isInlineVariableComponent) : []
+  return Array.isArray(components) ? components.filter(isInlineVariable) : []
 }
 
 /**
@@ -15,29 +23,32 @@ function getInlineVariableComponents(optimization: OptimizationEntry): InlineVar
  *
  * For every overridden experience, any `InlineVariable` components are converted
  * into `Variable` changes so the runtime flag APIs resolve the selected preview
- * value from `changes`.
+ * value from `changes`. This keeps `getFlag()` consumers in sync with manual
+ * variant picks made in a preview panel.
  *
- * @param changes - Current array of custom-flag changes.
+ * @param changes - Current array of custom-flag changes (the un-overridden API baseline).
  * @param optimizationEntries - Available optimization entries indexed for preview.
- * @param overrides - Map of experience ID to the desired variant index.
+ * @param overrides - Map of experience ID to the desired override.
  * @returns A new array with inline-variable change overrides applied, or the original array when no overrides exist.
  *
  * @public
  */
 export function applyChangeOverrides(
   changes: ChangeArray,
-  optimizationEntries: OptimizationEntry[],
-  overrides: Map<string, number>,
+  optimizationEntries: readonly OptimizationEntry[],
+  overrides: Record<string, OptimizationOverride>,
 ): ChangeArray {
-  if (overrides.size === 0) return changes
+  const overrideValues = Object.values(overrides)
+  if (overrideValues.length === 0) return changes
 
   const overrideChanges = optimizationEntries.flatMap((optimization): ChangeArray => {
     const {
       fields: { nt_experience_id: experienceId },
     } = optimization
-    const variantIndex = overrides.get(experienceId)
+    const { [experienceId]: override } = overrides
+    if (override === undefined) return []
 
-    if (variantIndex === undefined) return []
+    const { variantIndex } = override
 
     return getInlineVariableComponents(optimization).map((component): ChangeArray[number] => ({
       key: component.key,
