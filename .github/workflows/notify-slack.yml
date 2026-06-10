@@ -10,7 +10,6 @@ on:
     branches: [main]
     paths:
       - 'documentation/**'
-      - '!documentation/drafts/**'
       - 'packages/**'
 
 jobs:
@@ -30,7 +29,7 @@ jobs:
 
           changed_files="$(
             gh api --paginate "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" \
-              --jq '.[].filename'
+              --jq '.[] | [.filename, .status] | @tsv'
           )"
 
           has_docs=false
@@ -45,12 +44,16 @@ jobs:
             fi
           }
 
-          while IFS= read -r file; do
+          while IFS=$'\t' read -r file status; do
             case "$file" in
-              documentation/drafts/*)
+              documentation/concepts/README.md | documentation/guides/README.md)
                 ;;
-              documentation/*)
-                has_docs=true
+              documentation/concepts/*.md | documentation/guides/*.md)
+                case "$status" in
+                  added | modified)
+                    has_docs=true
+                    ;;
+                esac
                 ;;
               packages/ios/ios-jsc-bridge/*)
                 has_packages=true

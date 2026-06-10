@@ -14,13 +14,33 @@ const QUALITY_PARAM_PATTERN = /;\s*q=/
 const DEFAULT_NODE_ALLOWED_EVENT_TYPES: EventType[] = ['identify', 'page']
 
 type NodeEventBuilderConfig = Partial<Omit<NonNullable<CoreStatelessConfig['eventBuilder']>, 'app'>>
-type PublicNodeEventBuilderConfig = Omit<NodeEventBuilderConfig, 'getConsent'>
 
-interface HeaderRequestLike {
+/**
+ * Request-like shape used to resolve an `Accept-Language` header in Node runtimes.
+ *
+ * @public
+ */
+export interface HeaderRequestLike {
+  /** Express-style locale helper, when available. */
   acceptsLanguages?: () => string[]
+  /** Fetch Headers-style getter, when available on the request object. */
   get?: (name: string) => string | null | undefined
+  /** Request headers object, map, or Headers-compatible value. */
   headers?: unknown
 }
+
+/**
+ * Public Node event-builder overrides accepted by {@link OptimizationNodeConfig.eventBuilder}.
+ *
+ * @remarks
+ * Request-scoped consent is bound with {@link ContentfulOptimization.forRequest}, so `getConsent`
+ * is intentionally omitted from singleton SDK configuration.
+ *
+ * @public
+ */
+export type PublicNodeEventBuilderConfig = Partial<
+  Omit<NonNullable<CoreStatelessConfig['eventBuilder']>, 'app' | 'getConsent'>
+>
 
 /**
  * Locale pair resolved from an incoming server request.

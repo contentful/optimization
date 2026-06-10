@@ -11,7 +11,24 @@
     "packages/web/*",
     "packages/node/node-sdk",
     "packages/react-native-sdk",
-    "packages/universal/*"
+    "packages/universal/api-client",
+    "packages/universal/api-schemas",
+    "packages/universal/core-sdk"
+  ],
+  "highlightLanguages": [
+    "bash",
+    "console",
+    "css",
+    "html",
+    "javascript",
+    "json",
+    "jsonc",
+    "json5",
+    "kotlin",
+    "swift",
+    "tsx",
+    "typescript",
+    "yaml"
   ],
   "projectDocuments": [
     "documentation/README.md",
