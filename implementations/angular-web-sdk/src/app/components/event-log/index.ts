@@ -15,6 +15,7 @@ interface AnalyticsEvent {
   viewId?: string
   hoverId?: string
   pageUrl?: string
+  userId?: string
 }
 
 function toPageUrl(event: Record<string, unknown>): string | undefined {
@@ -32,7 +33,8 @@ function toPageUrl(event: Record<string, unknown>): string | undefined {
 function eventLabel(event: AnalyticsEvent): string {
   if (event.componentId !== undefined) return event.componentId
   if (event.pageUrl !== undefined) return event.pageUrl
-  return event.type
+  if (event.userId !== undefined) return event.userId
+  return ''
 }
 
 function eventTestId(event: AnalyticsEvent): string {
@@ -78,6 +80,7 @@ function toAnalyticsEvent(raw: unknown, id: string): AnalyticsEvent | undefined 
   const viewId = typeof raw.viewId === 'string' ? raw.viewId : undefined
   const hoverId = typeof raw.hoverId === 'string' ? raw.hoverId : undefined
   const pageUrl = raw.type === 'page' ? toPageUrl(raw) : undefined
+  const userId = typeof raw.userId === 'string' ? raw.userId : undefined
   const event: AnalyticsEvent = {
     id,
     type: raw.type,
@@ -89,6 +92,7 @@ function toAnalyticsEvent(raw: unknown, id: string): AnalyticsEvent | undefined 
     viewId,
     hoverId,
     pageUrl,
+    userId,
   }
   event.label = eventLabel(event)
   event.testId = eventTestId(event)
