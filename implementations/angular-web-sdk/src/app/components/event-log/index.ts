@@ -1,5 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core'
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop'
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core'
 import { NgContentfulOptimization } from '@contentful/optimization-angular'
 import { isRecord } from '../../utils'
 
@@ -106,12 +105,15 @@ export class EventLog {
   )
 
   constructor() {
-    this.optimization.eventStream$.pipe(takeUntilDestroyed()).subscribe((raw) => {
+    const sub = this.optimization.sdk.states.eventStream.subscribe((raw) => {
       const event = toAnalyticsEvent(raw, `event-${this.nextId}`)
       if (!event) return
       this.nextId++
       this.rawEvents.update((list) => [event, ...list])
       this.uniqueEvents.update((list) => upsert(list, event))
+    })
+    inject(DestroyRef).onDestroy(() => {
+      sub.unsubscribe()
     })
   }
 }

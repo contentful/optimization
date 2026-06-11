@@ -7,3 +7,4 @@ export {
   type ResolvedEntryView,
 } from './services/entry'
 export { NgContentfulOptimization } from './services/optimization'
+export { fromSdkState, type SdkObservable } from './utils'

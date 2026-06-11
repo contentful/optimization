@@ -3,7 +3,7 @@
 
   <div class="panel__table">
     <span class="panel__row-label" data-testid="consent-status">Consent</span>
-    <span class="panel__row-value">{{ consent() === undefined ? 'undefined' : consent() }}</span>
+    <span class="panel__row-value">{{ consent() ?? 'undefined' }}</span>
     @if (consent() === true) {
     <button
       class="btn btn--danger btn--sm"
@@ -55,9 +55,7 @@
     <span></span>
 
     <span class="panel__row-label" data-testid="boolean-flag-status">Flag "boolean"</span>
-    <span class="panel__row-value"
-      >{{ booleanFlag() === undefined ? 'undefined' : booleanFlag() }}</span
-    >
+    <span class="panel__row-value">{{ booleanFlag() ?? 'undefined' }}</span>
     <span></span>
 
     <span class="panel__row-label" data-testid="selected-optimizations-count"
@@ -73,7 +71,7 @@
       class="btn btn--secondary btn--sm"
       data-testid="track-conversion-button"
       type="button"
-      (click)="onTrackConversion()!()"
+      (click)="trackConversion()"
     >
       Trigger custom event
     </button>

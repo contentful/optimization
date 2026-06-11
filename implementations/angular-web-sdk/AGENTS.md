@@ -19,6 +19,8 @@ Angular SPA reference implementation of `@contentful/optimization-web`. Serves t
   `OptimizationService`, `MergeTag` not `MergeTagPipe`, etc.
 - Avoid unsafe type assertions (`as SomeType`). Use `isRecord()` and typed type-guard functions
   instead. The `no-unsafe-type-assertion` ESLint rule is enforced and blocks commits.
+- Use explicit named types instead of `ReturnType<typeof ...>` inference. Prefer the actual type
+  (e.g. `Signal<Foo>`, `ContentfulClientApi<undefined>`) over derived magic types.
 - Follow the Angular style guide class member ordering: inputs → injected dependencies → private
   state → constructor (effects/setup) → protected state (template-facing computed/signals) →
   lifecycle hooks → public methods → private methods.

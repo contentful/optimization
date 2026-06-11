@@ -1,7 +1,5 @@
 import { Component, computed, inject, input } from '@angular/core'
-import { toSignal } from '@angular/core/rxjs-interop'
-import { NgContentfulOptimization } from '@contentful/optimization-angular'
-import { map } from 'rxjs/operators'
+import { fromSdkState, NgContentfulOptimization } from '@contentful/optimization-angular'
 import { NgContentfulLiveUpdates } from '../../services/live-updates'
 
 @Component({
@@ -17,15 +15,16 @@ export class ControlPanel {
   protected readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
 
   // protected state
-  protected readonly consent = toSignal(this.optimization.consent$)
+  protected readonly consent = this.optimization.consent
   protected readonly isIdentified = computed(() =>
     Boolean(this.optimization.profile()?.traits.identified),
   )
-  protected readonly optimizationCount = toSignal(
-    this.optimization.selectedOptimizations$.pipe(map((s) => s?.length ?? 0)),
-    { initialValue: 0 },
+  protected readonly optimizationCount = computed(
+    () => this.optimization.selectedOptimizations()?.length ?? 0,
   )
-  protected readonly booleanFlag = toSignal(this.optimization.booleanFlag$)
+  protected readonly booleanFlag = fromSdkState<unknown>(
+    this.optimization.sdk.states.flag('boolean'),
+  )
 
   // public methods
   protected toggleConsent(): void {
@@ -39,5 +38,9 @@ export class ControlPanel {
   protected reset(): void {
     this.optimization.sdk.reset()
     void this.optimization.sdk.page()
+  }
+
+  protected trackConversion(): void {
+    this.onTrackConversion()?.()
   }
 }

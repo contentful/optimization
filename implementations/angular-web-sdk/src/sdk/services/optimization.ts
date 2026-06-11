@@ -1,28 +1,15 @@
-import { inject, Injectable, type OnDestroy } from '@angular/core'
-import { toSignal } from '@angular/core/rxjs-interop'
+import { computed, inject, Injectable, type OnDestroy, type Signal } from '@angular/core'
 import { NavigationEnd, Router } from '@angular/router'
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import { Profile } from '@contentful/optimization-web/api-schemas'
-import { Observable, type Subscription } from 'rxjs'
-import { filter, map } from 'rxjs/operators'
+import type { Subscription } from 'rxjs'
+import { filter } from 'rxjs/operators'
 import type { NgContentfulOptimizationConfig } from '../config'
 import { getOrCreateBaseClient, NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../config'
+import { fromSdkState } from '../utils'
 
 export type NgContentfulOptimizationInstance = ContentfulOptimization
-
-export function fromSdkObservable<T>(sdkObs: {
-  subscribe: (fn: (v: T) => void) => { unsubscribe: () => void }
-}): Observable<T> {
-  return new Observable<T>((subscriber) => {
-    const sub = sdkObs.subscribe((v) => {
-      subscriber.next(v)
-    })
-    return () => {
-      sub.unsubscribe()
-    }
-  })
-}
 
 function resolveLogLevel(raw: string | undefined): 'debug' | 'warn' | 'error' {
   if (raw === 'debug' || raw === 'warn' || raw === 'error') return raw
@@ -78,13 +65,9 @@ function getOrCreateInstance(
 @Injectable({ providedIn: 'root' })
 export class NgContentfulOptimization implements OnDestroy {
   readonly sdk: NgContentfulOptimizationInstance
-  readonly consent$: Observable<boolean | undefined>
-  readonly profile$: Observable<Profile | undefined>
-  readonly eventStream$: Observable<unknown>
-  readonly booleanFlag$: Observable<unknown>
-  readonly selectedOptimizations$: Observable<SelectedOptimizationArray | undefined>
-  readonly selectedOptimizations: ReturnType<typeof toSignal<SelectedOptimizationArray | undefined>>
-  readonly profile: ReturnType<typeof toSignal<Profile | undefined>>
+  readonly consent: Signal<boolean | undefined>
+  readonly profile: Signal<Profile | undefined>
+  readonly selectedOptimizations: Signal<SelectedOptimizationArray | undefined>
 
   private readonly routerSubscription: Subscription
 
@@ -98,27 +81,17 @@ export class NgContentfulOptimization implements OnDestroy {
       void attachPreviewPanel(this.sdk, config)
     }
 
-    this.consent$ = fromSdkObservable<boolean | undefined>(this.sdk.states.consent)
+    this.consent = fromSdkState(this.sdk.states.consent)
 
-    this.profile$ = fromSdkObservable<unknown>(this.sdk.states.profile).pipe(
-      map((raw) => {
-        const result = Profile.safeParse(raw)
-        if (!result.success) return undefined
-        // anonymous profiles exist after reset — only expose when the user is identified
-        return result.data.traits.identified ? result.data : undefined
-      }),
-    )
+    const rawProfile = fromSdkState<unknown>(this.sdk.states.profile)
+    this.profile = computed(() => {
+      const result = Profile.safeParse(rawProfile())
+      if (!result.success) return undefined
+      // anonymous profiles exist after reset — only expose when the user is identified
+      return result.data.traits.identified ? result.data : undefined
+    })
 
-    this.eventStream$ = fromSdkObservable<unknown>(this.sdk.states.eventStream)
-
-    this.selectedOptimizations$ = fromSdkObservable<SelectedOptimizationArray | undefined>(
-      this.sdk.states.selectedOptimizations,
-    )
-
-    this.selectedOptimizations = toSignal(this.selectedOptimizations$)
-    this.profile = toSignal(this.profile$)
-
-    this.booleanFlag$ = fromSdkObservable<unknown>(this.sdk.states.flag('boolean'))
+    this.selectedOptimizations = fromSdkState(this.sdk.states.selectedOptimizations)
 
     // Page events must fire on every route change including the initial load.
     // The SDK uses the current URL to resolve which experiences apply to the user.

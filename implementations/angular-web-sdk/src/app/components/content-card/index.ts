@@ -146,6 +146,7 @@ export class ContentCard {
     const nested: unknown = this.resolved()?.resolvedEntry.fields.nested
     return Array.isArray(nested) ? nested.filter(isContentfulEntry) : []
   })
+  protected readonly isAuto = computed(() => this.observation() === 'auto')
   protected readonly badges = computed(() => {
     const r = this.resolved()
     if (!r) return []
