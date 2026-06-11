@@ -26,12 +26,14 @@ export const BADGE_MAP: Record<BadgeKey, { label: string; mod: string; title: st
   auto: {
     label: 'auto',
     mod: 'auto',
-    title: 'Entry tracking is handled automatically via data attributes',
+    title:
+      'View, click, and hover events fire automatically via data-ctfl-* attributes once consent is granted — content resolution is unaffected',
   },
   manual: {
     label: 'manual',
     mod: 'manual',
-    title: 'Entry tracking is triggered manually by the app',
+    title:
+      'View events fire via explicit enableElement calls; no click or hover events — content resolution is unaffected',
   },
   'default-on': {
     label: 'live',

@@ -153,11 +153,12 @@ main {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .sections-row--two {
   grid-template-columns: repeat(2, 1fr);
+  align-items: start;
 }
 
 main > .page-section,
@@ -579,26 +580,4 @@ main > .sections-row {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* Live updates section */
-
-.live-updates-item {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.live-updates-item__label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--color-text-muted);
-  margin: 0;
-}
-
-.live-updates-item__description {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  margin: 0;
 }

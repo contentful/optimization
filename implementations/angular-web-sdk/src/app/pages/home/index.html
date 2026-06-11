@@ -16,32 +16,9 @@
   </header>
   @let liveEntry = entryFor(liveUpdatesEntryId); @if (liveEntry) {
   <div class="sections-row">
-    <div class="live-updates-item">
-      <p class="live-updates-item__label" data-testid="live-updates-default-label">
-        Default ({{ liveUpdatesService.globalLiveUpdates() ? 'ON' : 'OFF' }})
-      </p>
-      <p class="live-updates-item__description">
-        No per-entry override — follows the global toggle. Updates when the toggle is ON; stays
-        frozen when it is OFF.
-      </p>
-      <app-content-card [entry]="liveEntry" observation="auto" />
-    </div>
-    <div class="live-updates-item">
-      <p class="live-updates-item__label" data-testid="live-updates-always-on-label">Always live</p>
-      <p class="live-updates-item__description">
-        Per-entry override set to <code>true</code> — always re-resolves on profile changes,
-        regardless of the global toggle.
-      </p>
-      <app-content-card [entry]="liveEntry" observation="auto" [liveUpdates]="true" />
-    </div>
-    <div class="live-updates-item">
-      <p class="live-updates-item__label" data-testid="live-updates-locked-label">Always locked</p>
-      <p class="live-updates-item__description">
-        Per-entry override set to <code>false</code> — never re-resolves even when the global toggle
-        is ON, but will re-resolve when the preview panel is open.
-      </p>
-      <app-content-card [entry]="liveEntry" observation="auto" [liveUpdates]="false" />
-    </div>
+    <app-content-card [entry]="liveEntry" observation="auto" />
+    <app-content-card [entry]="liveEntry" observation="auto" [liveUpdates]="true" />
+    <app-content-card [entry]="liveEntry" observation="auto" [liveUpdates]="false" />
   </div>
   }
 </section>
@@ -50,10 +27,6 @@
   <section class="page-section">
     <header class="page-section__header">
       <h2>Auto-observed</h2>
-      <p>
-        Tracking only — content resolution is unaffected. View, click, and hover events fire
-        automatically via <code>data-ctfl-*</code> attributes once consent is granted.
-      </p>
     </header>
     <div id="auto-observed" class="entry-grid">
       @for (id of autoIds; track id) { @let entry = entryFor(id); @if (entry) {
@@ -65,10 +38,6 @@
   <section class="page-section">
     <header class="page-section__header">
       <h2>Manually-observed</h2>
-      <p>
-        Tracking only — content resolution is unaffected. View events fire via explicit
-        <code>enableElement</code> calls; no click or hover events.
-      </p>
     </header>
     <div id="manually-observed" class="entry-grid">
       @for (id of manualIds; track id) { @let entry = entryFor(id); @if (entry) {
