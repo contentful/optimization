@@ -31,7 +31,7 @@ function toPageUrl(event: Record<string, unknown>): string | undefined {
 }
 
 function eventLabel(event: AnalyticsEvent): string {
-  if (event.componentId !== undefined) return event.componentId.toUpperCase()
+  if (event.componentId !== undefined) return event.componentId
   if (event.pageUrl !== undefined) return event.pageUrl
   if (event.userId !== undefined) return event.userId
   return ''
