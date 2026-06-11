@@ -1,4 +1,5 @@
 import { InjectionToken, type ValueProvider } from '@angular/core'
+import { type ContentfulClientApi, createClient } from 'contentful'
 
 export interface NgContentfulOptimizationConfig {
   clientId: string
@@ -30,4 +31,22 @@ export function provideContentfulOptimizationConfig(
   config: NgContentfulOptimizationConfig,
 ): ValueProvider {
   return { provide: NG_CONTENTFUL_OPTIMIZATION_CONFIG, useValue: config }
+}
+
+// Shared base client singleton — one CDA connection for both NgContentfulClient and the preview
+// panel attachment. The Contentful client is stateless so it is never torn down.
+let baseClient: ContentfulClientApi<undefined> | undefined = undefined
+
+export function getOrCreateBaseClient(
+  config: NgContentfulOptimizationConfig,
+): ContentfulClientApi<undefined> {
+  baseClient ??= createClient({
+    accessToken: config.contentful.accessToken,
+    environment: config.contentful.environment,
+    space: config.contentful.spaceId,
+    host: config.contentful.cdaHost,
+    insecure: config.contentful.cdaHost.includes('localhost'),
+    basePath: config.contentful.basePath,
+  })
+  return baseClient
 }

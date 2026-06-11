@@ -1,27 +1,19 @@
 import { inject, Injectable } from '@angular/core'
 import type { Entry, EntrySkeletonType } from 'contentful'
-import { createClient } from 'contentful'
-import { NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../config'
+import { getOrCreateBaseClient, NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../config'
 import { NgContentfulOptimization } from './optimization'
 
 const INCLUDE_DEPTH = 10
 
 @Injectable({ providedIn: 'root' })
 export class NgContentfulClient {
-  private readonly resolvedClient: ReturnType<typeof createClient>
+  private readonly resolvedClient: ReturnType<typeof getOrCreateBaseClient>
 
   constructor() {
     const config = inject(NG_CONTENTFUL_OPTIMIZATION_CONFIG)
     const { sdk } = inject(NgContentfulOptimization)
 
-    const client = createClient({
-      accessToken: config.contentful.accessToken,
-      environment: config.contentful.environment,
-      space: config.contentful.spaceId,
-      host: config.contentful.cdaHost,
-      insecure: config.contentful.cdaHost.includes('localhost'),
-      basePath: config.contentful.basePath,
-    })
+    const client = getOrCreateBaseClient(config)
 
     // Wrapping the client ensures the SDK and CDA always use the same locale.
     // Without this, personalisation breaks when the SDK resolves a different locale

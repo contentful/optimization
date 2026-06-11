@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { NgContentfulOptimization } from '@contentful/optimization-angular'
-import { BehaviorSubject, combineLatest, map, Observable } from 'rxjs'
+import { BehaviorSubject, combineLatest, map, Observable, of } from 'rxjs'
 import { isRecord } from '../utils'
 
 interface SdkBoolObservable {
@@ -14,15 +14,9 @@ function isSdkBoolObservable(obs: unknown): obs is SdkBoolObservable {
 
 function sdkBoolObs(sdk: NgContentfulOptimization['sdk'], key: string): Observable<boolean> {
   const states: unknown = sdk.states
-  if (!isRecord(states))
-    return new Observable<boolean>((sub) => {
-      sub.next(false)
-    })
+  if (!isRecord(states)) return of(false)
   const obs: unknown = states[key]
-  if (!isSdkBoolObservable(obs))
-    return new Observable<boolean>((sub) => {
-      sub.next(false)
-    })
+  if (!isSdkBoolObservable(obs)) return of(false)
   return new Observable<boolean>((subscriber) => {
     const sub = obs.subscribe((v) => {
       subscriber.next(v === true)

@@ -39,11 +39,7 @@ function isEntry(value: unknown): value is Entry {
 }
 
 function isRichTextDocument(value: unknown): value is Document {
-  return (
-    isRecord(value) &&
-    value.nodeType === 'document' &&
-    Array.isArray(isRecord(value) && value.content)
-  )
+  return isRecord(value) && value.nodeType === 'document' && Array.isArray(value.content)
 }
 
 function mapToResolvedEntryView(
@@ -109,13 +105,12 @@ function resolveEntryFields(
   fields: Record<string, unknown>,
   resolveMergeTag: (target: unknown) => string,
 ): Record<string, unknown> {
-  const result: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(fields)) {
-    result[key] = isRichTextDocument(value)
-      ? resolveRichTextMergeTags(value, resolveMergeTag)
-      : value
-  }
-  return result
+  return Object.fromEntries(
+    Object.entries(fields).map(([key, value]) => [
+      key,
+      isRichTextDocument(value) ? resolveRichTextMergeTags(value, resolveMergeTag) : value,
+    ]),
+  )
 }
 
 function resolveEntryMergeTags(entry: Entry, resolveMergeTag: (target: unknown) => string): Entry {

@@ -46,11 +46,7 @@ export class Badge {
 // — Rich text renderer —
 
 function isRichTextField(field: unknown): field is Document {
-  return (
-    isRecord(field) &&
-    field.nodeType === 'document' &&
-    Array.isArray(isRecord(field) && field.content)
-  )
+  return isRecord(field) && field.nodeType === 'document' && Array.isArray(field.content)
 }
 
 function escape(text: string): string {

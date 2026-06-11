@@ -4,11 +4,10 @@ import { NavigationEnd, Router } from '@angular/router'
 import ContentfulOptimization from '@contentful/optimization-web'
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import { Profile } from '@contentful/optimization-web/api-schemas'
-import { createClient } from 'contentful'
 import { Observable, type Subscription } from 'rxjs'
 import { filter, map } from 'rxjs/operators'
 import type { NgContentfulOptimizationConfig } from '../config'
-import { NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../config'
+import { getOrCreateBaseClient, NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../config'
 
 export type NgContentfulOptimizationInstance = ContentfulOptimization
 
@@ -40,14 +39,7 @@ async function attachPreviewPanel(
   if (attachmentStarted) return
   attachmentStarted = true
   try {
-    const contentfulClient = createClient({
-      accessToken: config.contentful.accessToken,
-      environment: config.contentful.environment,
-      space: config.contentful.spaceId,
-      host: config.contentful.cdaHost,
-      insecure: config.contentful.cdaHost.includes('localhost'),
-      basePath: config.contentful.basePath,
-    })
+    const contentfulClient = getOrCreateBaseClient(config)
     const { default: attach } = await import('@contentful/optimization-web-preview-panel')
     await attach({
       contentful: contentfulClient,
