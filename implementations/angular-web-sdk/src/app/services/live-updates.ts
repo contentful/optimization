@@ -1,5 +1,6 @@
 import { computed, inject, Injectable, signal } from '@angular/core'
-import { fromSdkState, NgContentfulOptimization } from '@contentful/optimization-angular'
+import { fromSdkState } from '../utils'
+import { NgContentfulOptimization } from './optimization'
 
 @Injectable({ providedIn: 'root' })
 export class NgContentfulLiveUpdates {

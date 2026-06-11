@@ -4,8 +4,8 @@ import {
   provideZonelessChangeDetection,
 } from '@angular/core'
 import { provideRouter } from '@angular/router'
-import { provideContentfulOptimizationConfig } from '@contentful/optimization-angular'
 import { routes } from './app.routes'
+import { provideContentfulOptimizationConfig } from './config'
 
 function resolveLogLevel(raw: string | undefined): 'debug' | 'warn' | 'error' {
   if (raw === 'warn' || raw === 'error') return raw

@@ -1,6 +1,7 @@
 import { Component, computed, inject, input } from '@angular/core'
-import { fromSdkState, NgContentfulOptimization } from '@contentful/optimization-angular'
 import { NgContentfulLiveUpdates } from '../../services/live-updates'
+import { NgContentfulOptimization } from '../../services/optimization'
+import { fromSdkState } from '../../utils'
 
 @Component({
   selector: 'app-control-panel',

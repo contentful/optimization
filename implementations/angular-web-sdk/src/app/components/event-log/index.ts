@@ -1,5 +1,5 @@
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core'
-import { NgContentfulOptimization } from '@contentful/optimization-angular'
+import { NgContentfulOptimization } from '../../services/optimization'
 import { isRecord } from '../../utils'
 
 interface AnalyticsEvent {

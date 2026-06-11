@@ -1,7 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common'
 import { Component, computed, forwardRef, inject, input } from '@angular/core'
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser'
-import { NgContentfulEntry, type ObservationMode } from '@contentful/optimization-angular'
 import { BLOCKS, INLINES, type Document } from '@contentful/rich-text-types'
 import {
   BADGE_MAP,
@@ -10,6 +9,7 @@ import {
   type LiveMode,
   type MergeTagMode,
 } from '../../fixtures'
+import { NgContentfulEntry, type ObservationMode } from '../../services/entry'
 import { NgContentfulLiveUpdates } from '../../services/live-updates'
 import type { ContentfulEntry } from '../../types/contentful'
 import { isRecord } from '../../utils'

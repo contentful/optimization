@@ -1,4 +1,4 @@
-import type { ObservationMode } from '@contentful/optimization-angular'
+import type { ObservationMode } from './services/entry'
 
 export type EntryClickScenario = 'direct' | 'descendant' | 'ancestor'
 export type LiveMode = 'live-on' | 'live-off' | 'live-always-on' | 'live-always-off'
