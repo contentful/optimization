@@ -47,19 +47,22 @@ function isRichTextDocument(value: unknown): value is Document {
 
 function generateMeta(
   baseline: Entry,
-  { entry: resolvedEntry, selectedOptimization }: { entry: Entry; selectedOptimization?: unknown },
+  resolvedEntry: Entry,
+  selectedOptimization: unknown,
+  profile: unknown,
 ): EntryMeta {
   const opt = isRecord(selectedOptimization) ? selectedOptimization : undefined
   const experienceId = typeof opt?.experienceId === 'string' ? opt.experienceId : undefined
   const sticky = typeof opt?.sticky === 'boolean' ? opt.sticky : undefined
   const variantIndex = typeof opt?.variantIndex === 'number' ? opt.variantIndex : undefined
+  const hasMergeTag = entryHasMergeTag(baseline)
   return {
     baselineId: baseline.sys.id,
     resolvedId: resolvedEntry.sys.id,
     experienceId,
     sticky,
     variantIndex,
-    mergeTagResolved: entryHasMergeTag(baseline) ? false : undefined,
+    mergeTagResolved: hasMergeTag ? profile !== undefined : undefined,
   }
 }
 
@@ -114,41 +117,33 @@ export class NgContentfulEntry implements OnDestroy {
   private readonly _domReady = signal(false)
   private manualTrackingActive = false
 
-  // Resolves entry variant only — no profile dependency so profile changes don't re-resolve variants.
-  // untracked drops selectedOptimizations as a dependency when locked, preventing rerenders.
-  private readonly _resolvedVariant: Signal<ResolvedEntryView | undefined> = computed(() => {
+  private liveRead<T>(sig: Signal<T>): T {
+    return this._liveUpdates() ? sig() : untracked(sig)
+  }
+
+  private readonly _variant = computed(() => {
     const raw = this._entry()
     if (!isEntry(raw)) return undefined
-
-    const isLive = this._liveUpdates()
-    const selectedOptimizations = isLive
-      ? this.optimization.selectedOptimizations()
-      : untracked(() => this.optimization.selectedOptimizations())
-
-    const resolved = this.optimization.sdk.resolveOptimizedEntry(raw, selectedOptimizations)
-    return { resolvedEntry: resolved.entry, meta: generateMeta(raw, resolved) }
+    const selectedOptimizations = this.liveRead(this.optimization.selectedOptimizations)
+    return {
+      raw,
+      resolved: this.optimization.sdk.resolveOptimizedEntry(raw, selectedOptimizations),
+    }
   })
 
-  // Applies merge tags on top of the resolved variant. When live, profile() is tracked so merge
-  // tags update reactively. When locked, profile is untracked — no rerenders from profile changes.
   readonly resolved: Signal<ResolvedEntryView | undefined> = computed(() => {
-    const variant = this._resolvedVariant()
+    const variant = this._variant()
     if (!variant) return undefined
 
-    const isLive = this._liveUpdates()
-    const profile = isLive
-      ? this.optimization.profile()
-      : untracked(() => this.optimization.profile())
-
-    const { resolvedEntry, meta } = variant
-    const mergeTagResolved = meta.mergeTagResolved !== undefined ? profile !== undefined : undefined
+    const profile = this.liveRead(this.optimization.profile)
+    const { raw, resolved } = variant
     return {
-      resolvedEntry: resolveEntryMergeTags(resolvedEntry, (target) =>
+      resolvedEntry: resolveEntryMergeTags(resolved.entry, (target) =>
         profile
           ? this.optimization.sdk.getMergeTagValue(target, profile)
           : target.fields.nt_fallback,
       ),
-      meta: { ...meta, mergeTagResolved },
+      meta: generateMeta(raw, resolved.entry, resolved.selectedOptimization, profile),
     }
   })
 
