@@ -1,10 +1,9 @@
 import { NgTemplateOutlet } from '@angular/common'
-import { Component, computed, effect, forwardRef, inject, input } from '@angular/core'
+import { Component, computed, forwardRef, inject, input } from '@angular/core'
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser'
 import { BLOCKS, INLINES, type Document } from '@contentful/rich-text-types'
 import {
   BADGE_MAP,
-  ENTRY_NAMES,
   type BadgeKey,
   type EntryClickScenario,
   type LiveMode,
@@ -12,7 +11,6 @@ import {
 } from '../../fixtures'
 import type { ContentfulEntry } from '../../services/contentful-client'
 import { NgContentfulEntry, type ObservationMode } from '../../services/entry'
-import { NgEntryRegistry } from '../../services/entry-registry'
 import { NgContentfulLiveUpdates } from '../../services/live-updates'
 import { isRecord } from '../../utils'
 
@@ -134,16 +132,7 @@ export class ContentCard {
   })
 
   protected readonly resolved = this.liveEntry.resolved
-  private readonly registry = inject(NgEntryRegistry)
-  protected readonly entryNames = ENTRY_NAMES
   protected readonly meta = computed(() => this.resolved()?.meta)
-
-  constructor() {
-    effect(() => {
-      const m = this.meta()
-      if (m) this.registry.register(m.resolvedId, m.baselineId)
-    })
-  }
   protected readonly isVariant = computed(() => this.resolved()?.meta.experienceId !== undefined)
   protected readonly richTextHtml = computed<SafeHtml | undefined>(() => {
     const fields = this.resolved()?.resolvedEntry.fields
