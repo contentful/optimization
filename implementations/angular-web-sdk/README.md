@@ -6,11 +6,10 @@
 
 <h1 align="center">Contentful Personalization & Analytics</h1>
 
-<h3 align="center">Angular Web SDK Reference Implementation</h3>
+<h3 align="center">Web SDK + Angular Reference Implementation</h3>
 
 <div align="center">
 
-[Readme](./README.md) ·
 [Guides](https://contentful.github.io/optimization/documents/Documentation.Guides.html) ·
 [Reference](https://contentful.github.io/optimization) · [Contributing](../../CONTRIBUTING.md)
 
@@ -62,17 +61,14 @@ pnpm implementation:run -- angular-web-sdk dev
 The app is available at `http://localhost:4200`. The mock server must be running for entry data and
 variant resolution to work.
 
-## Running locally
-
-From the **repository root**:
+Other commands from the **repository root**:
 
 ```sh
-pnpm implementation:run -- angular-web-sdk dev
 pnpm implementation:run -- angular-web-sdk build
 pnpm implementation:run -- angular-web-sdk typecheck
 ```
 
-Or from the **implementation directory**:
+Or equivalently from the **implementation directory**:
 
 ```sh
 pnpm dev

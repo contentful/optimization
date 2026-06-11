@@ -2,7 +2,7 @@
   "name": "@implementation/angular-web-sdk",
   "private": true,
   "version": "0.0.0",
-  "description": "Reference implementation for Angular Web applications using @contentful/optimization-web",
+  "description": "Reference implementation of @contentful/optimization-web for Angular applications.",
   "license": "MIT",
   "scripts": {
     "dev": "ng serve",
