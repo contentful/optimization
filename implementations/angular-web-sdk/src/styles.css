@@ -125,7 +125,7 @@ nav a.active {
 
 .app-layout {
   display: grid;
-  grid-template-columns: 280px 1fr;
+  grid-template-columns: 340px 1fr;
   grid-template-areas: 'sidebar main';
   align-items: start;
   min-height: calc(100vh - 52px);
@@ -144,7 +144,7 @@ nav a.active {
 main {
   grid-area: main;
   min-width: 0;
-  padding: 1.5rem 26rem 3rem 1.5rem;
+  padding: 1.5rem 24rem 3rem 1.5rem;
   display: grid;
   gap: 2.5rem;
 }
@@ -501,45 +501,24 @@ main > .sections-row {
   gap: 0.5rem;
 }
 
-.events-panel__meta {
-  display: flex;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-}
-
-.events-panel__mode-btn {
-  padding: 0.2rem 0.6rem;
-  border-radius: 4px;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  color: var(--color-text-muted);
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.events-panel__mode-btn--active {
-  background: var(--color-border);
-  color: var(--color-text);
-}
-
 .events-panel__empty {
   font-size: 0.8rem;
   color: var(--color-text-muted);
   margin: 0;
 }
 
-.events-panel__list {
-  list-style: none;
-  display: grid;
-  gap: 0.25rem;
+.events-panel__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.775rem;
 }
 
-.events-panel__item {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.4rem;
-  align-items: baseline;
-  font-size: 0.775rem;
+.events-panel__table tr {
+  vertical-align: baseline;
+}
+
+.events-panel__table td {
+  padding: 0.15rem 0.4rem 0.15rem 0;
 }
 
 .events-panel__type {
@@ -579,4 +558,21 @@ main > .sections-row {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 200px;
+}
+
+.events-panel__count {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  opacity: 0.6;
+}
+
+.events-panel__time {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  opacity: 0.5;
+  padding-right: 0.5rem;
 }

@@ -1,4 +1,6 @@
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core'
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core'
+import { toSignal } from '@angular/core/rxjs-interop'
+import { interval } from 'rxjs'
 import { NgContentfulOptimization } from '../../services/optimization'
 import { isRecord } from '../../utils'
 
@@ -7,11 +9,11 @@ interface AnalyticsEvent {
   type: string
   label: string
   testId: string
+  count: number
+  firedAt: number
   componentId?: string
   viewId?: string
   hoverId?: string
-  viewDurationMs?: number
-  hoverDurationMs?: number
   pageUrl?: string
 }
 
@@ -28,15 +30,8 @@ function toPageUrl(event: Record<string, unknown>): string | undefined {
 }
 
 function eventLabel(event: AnalyticsEvent): string {
-  if (event.componentId !== undefined) {
-    const base = `id: ${event.componentId}`
-    if (event.viewDurationMs !== undefined && event.viewDurationMs > 0)
-      return `${base} — ${event.viewDurationMs}ms`
-    if (event.hoverDurationMs !== undefined && event.hoverDurationMs > 0)
-      return `${base} — ${event.hoverDurationMs}ms`
-    return base
-  }
-  if (event.pageUrl !== undefined) return `url: ${event.pageUrl}`
+  if (event.componentId !== undefined) return event.componentId
+  if (event.pageUrl !== undefined) return event.pageUrl
   return ''
 }
 
@@ -47,24 +42,52 @@ function eventTestId(event: AnalyticsEvent): string {
   return `event-${event.type}-${event.id}`
 }
 
+const EVENT_TYPE_LABEL: Record<string, string> = {
+  component: 'view',
+  component_hover: 'hover',
+  component_click: 'click',
+  page: 'page',
+}
+
+function eventTypeLabel(type: string): string {
+  return EVENT_TYPE_LABEL[type] ?? type
+}
+
+const MS_PER_SECOND = 1000
+const SECONDS_PER_MINUTE = 60
+const MINUTES_PER_HOUR = 60
+const TICK_INTERVAL_SECONDS = 5
+
+function timeAgo(firedAt: number, now: number): string {
+  const s = Math.floor((now - firedAt) / MS_PER_SECOND)
+  if (s < SECONDS_PER_MINUTE) return `${s}s ago`
+  const m = Math.floor(s / SECONDS_PER_MINUTE)
+  if (m < MINUTES_PER_HOUR) return `${m}m ago`
+  return `${Math.floor(m / MINUTES_PER_HOUR)}h ago`
+}
+
+function dedupeKey(event: AnalyticsEvent): string {
+  if (event.componentId !== undefined) return `${event.type}:${event.componentId}`
+  if (event.pageUrl !== undefined) return `page:${event.pageUrl}`
+  return event.id
+}
+
 function toAnalyticsEvent(raw: unknown, id: string): AnalyticsEvent | undefined {
   if (!isRecord(raw) || typeof raw.type !== 'string') return undefined
   const componentId = typeof raw.componentId === 'string' ? raw.componentId : undefined
   const viewId = typeof raw.viewId === 'string' ? raw.viewId : undefined
   const hoverId = typeof raw.hoverId === 'string' ? raw.hoverId : undefined
-  const viewDurationMs = typeof raw.viewDurationMs === 'number' ? raw.viewDurationMs : undefined
-  const hoverDurationMs = typeof raw.hoverDurationMs === 'number' ? raw.hoverDurationMs : undefined
   const pageUrl = raw.type === 'page' ? toPageUrl(raw) : undefined
   const event: AnalyticsEvent = {
     id,
     type: raw.type,
     label: '',
     testId: '',
+    count: 1,
+    firedAt: Date.now(),
     componentId,
     viewId,
     hoverId,
-    viewDurationMs,
-    hoverDurationMs,
     pageUrl,
   }
   event.label = eventLabel(event)
@@ -72,21 +95,16 @@ function toAnalyticsEvent(raw: unknown, id: string): AnalyticsEvent | undefined 
   return event
 }
 
-function heartbeatKey(event: AnalyticsEvent): string | undefined {
-  if (event.type === 'component' && event.viewId !== undefined) return `component:${event.viewId}`
-  if (event.type === 'component_hover' && event.hoverId !== undefined)
-    return `component_hover:${event.hoverId}`
-  return undefined
-}
-
 function upsert(list: AnalyticsEvent[], next: AnalyticsEvent): AnalyticsEvent[] {
-  const key = heartbeatKey(next)
-  if (!key) return [next, ...list]
-  const idx = list.findIndex((e) => heartbeatKey(e) === key)
+  const key = dedupeKey(next)
+  const idx = list.findIndex((e) => dedupeKey(e) === key)
   if (idx === -1) return [next, ...list]
   const updated = [...list]
-  updated[idx] = { ...next, id: list[idx].id }
-  return updated
+  const [existing] = updated.splice(idx, 1)
+  return [
+    { ...next, id: existing.id, count: existing.count + 1, firedAt: next.firedAt },
+    ...updated,
+  ]
 }
 
 @Component({
@@ -97,20 +115,24 @@ export class EventLog {
   private readonly optimization = inject(NgContentfulOptimization)
   private nextId = 0
 
-  protected readonly uniqueEvents = signal<AnalyticsEvent[]>([])
-  protected readonly rawEvents = signal<AnalyticsEvent[]>([])
-  protected readonly mode = signal<'unique' | 'raw'>('unique')
-  protected readonly visibleEvents = computed(() =>
-    this.mode() === 'unique' ? this.uniqueEvents() : this.rawEvents(),
-  )
+  protected readonly eventTypeLabel = eventTypeLabel
+  protected readonly timeAgo = timeAgo
+  private readonly events = signal<AnalyticsEvent[]>([])
+  private readonly tick = toSignal(interval(TICK_INTERVAL_SECONDS * MS_PER_SECOND), {
+    initialValue: 0,
+  })
+  protected readonly displayEvents = computed(() => {
+    this.tick()
+    const now = Date.now()
+    return this.events().map((e) => ({ ...e, timeAgo: timeAgo(e.firedAt, now) }))
+  })
 
   constructor() {
     const sub = this.optimization.sdk.states.eventStream.subscribe((raw) => {
       const event = toAnalyticsEvent(raw, `event-${this.nextId}`)
       if (!event) return
       this.nextId++
-      this.rawEvents.update((list) => [event, ...list])
-      this.uniqueEvents.update((list) => upsert(list, event))
+      this.events.update((list) => upsert(list, event))
     })
     inject(DestroyRef).onDestroy(() => {
       sub.unsubscribe()

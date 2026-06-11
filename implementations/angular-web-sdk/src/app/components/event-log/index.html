@@ -1,34 +1,22 @@
 <section class="events-panel" data-testid="analytics-events-container">
   <h2 class="panel__title">Analytics Events</h2>
-  <div class="events-panel__meta">
-    <button
-      class="events-panel__mode-btn"
-      [class.events-panel__mode-btn--active]="mode() === 'unique'"
-      data-testid="events-count"
-      (click)="mode.set('unique')"
-    >
-      Unique: {{ uniqueEvents().length }}
-    </button>
-    <button
-      class="events-panel__mode-btn"
-      [class.events-panel__mode-btn--active]="mode() === 'raw'"
-      data-testid="raw-events-count"
-      (click)="mode.set('raw')"
-    >
-      Total: {{ rawEvents().length }}
-    </button>
-  </div>
 
-  @if (visibleEvents().length === 0) {
+  @if (displayEvents().length === 0) {
   <p class="events-panel__empty" data-testid="no-events-message">No events tracked yet</p>
   } @else {
-  <ul class="events-panel__list">
-    @for (event of visibleEvents(); track event.id) {
-    <li class="events-panel__item" [attr.data-testid]="event.testId">
-      <span class="events-panel__type events-panel__type--{{ event.type }}">{{ event.type }}</span>
-      <span class="events-panel__label">{{ event.label }}</span>
-    </li>
+  <table class="events-panel__table">
+    @for (event of displayEvents(); track event.id) {
+    <tr [attr.data-testid]="event.testId">
+      <td class="events-panel__time">{{ event.timeAgo }}</td>
+      <td>
+        <span class="events-panel__type events-panel__type--{{ event.type }}"
+          >{{ eventTypeLabel(event.type) }}</span
+        >
+      </td>
+      <td class="events-panel__label">{{ event.label }}</td>
+      <td class="events-panel__count">@if (event.count > 1) { ×{{ event.count }} }</td>
+    </tr>
     }
-  </ul>
+  </table>
   }
 </section>
