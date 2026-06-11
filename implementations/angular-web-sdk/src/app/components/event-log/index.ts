@@ -1,7 +1,7 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { interval } from 'rxjs'
-import { ENTRY_NAMES } from '../../fixtures'
+import { NgEntryRegistry } from '../../services/entry-registry'
 import { NgContentfulOptimization } from '../../services/optimization'
 import { isRecord } from '../../utils'
 
@@ -33,12 +33,9 @@ function toPageUrl(event: Record<string, unknown>): string | undefined {
 
 const TRUNCATE_ID_LENGTH = 8
 
-function resolveId(id: string): string {
-  return ENTRY_NAMES[id] ?? `…${id.slice(-TRUNCATE_ID_LENGTH)}`
-}
-
-function eventLabel(event: AnalyticsEvent): string {
-  if (event.componentId !== undefined) return resolveId(event.componentId)
+function eventLabel(event: AnalyticsEvent, registry: NgEntryRegistry): string {
+  if (event.componentId !== undefined)
+    return registry.resolve(event.componentId) ?? `…${event.componentId.slice(-TRUNCATE_ID_LENGTH)}`
   if (event.pageUrl !== undefined) return event.pageUrl
   if (event.userId !== undefined) return event.userId
   return ''
@@ -81,7 +78,11 @@ function dedupeKey(event: AnalyticsEvent): string {
   return event.type
 }
 
-function toAnalyticsEvent(raw: unknown, id: string): AnalyticsEvent | undefined {
+function toAnalyticsEvent(
+  raw: unknown,
+  id: string,
+  registry: NgEntryRegistry,
+): AnalyticsEvent | undefined {
   if (!isRecord(raw) || typeof raw.type !== 'string') return undefined
   const componentId = typeof raw.componentId === 'string' ? raw.componentId : undefined
   const viewId = typeof raw.viewId === 'string' ? raw.viewId : undefined
@@ -101,7 +102,7 @@ function toAnalyticsEvent(raw: unknown, id: string): AnalyticsEvent | undefined 
     pageUrl,
     userId,
   }
-  event.label = eventLabel(event)
+  event.label = eventLabel(event, registry)
   event.testId = eventTestId(event)
   return event
 }
@@ -124,6 +125,7 @@ function upsert(list: AnalyticsEvent[], next: AnalyticsEvent): AnalyticsEvent[] 
 })
 export class EventLog {
   private readonly optimization = inject(NgContentfulOptimization)
+  private readonly registry = inject(NgEntryRegistry)
   private nextId = 0
 
   protected readonly eventTypeLabel = eventTypeLabel
@@ -140,7 +142,7 @@ export class EventLog {
 
   constructor() {
     const sub = this.optimization.sdk.states.eventStream.subscribe((raw) => {
-      const event = toAnalyticsEvent(raw, `event-${this.nextId}`)
+      const event = toAnalyticsEvent(raw, `event-${this.nextId}`, this.registry)
       if (!event) return
       this.nextId++
       this.events.update((list) => upsert(list, event))

@@ -82,7 +82,7 @@ export const BADGE_MAP: Record<BadgeKey, { label: string; mod: string; title: st
   },
 }
 
-export const ENTRY_NAMES: Record<string, string> = {
+export const ENTRY_NAMES: Record<string, string | undefined> = {
   '1JAU028vQ7v6nB2swl3NBo': 'auto-a',
   '1MwiFl4z7gkwqGYdvCmr8c': 'auto-b',
   '4ib0hsHWoSOnCVdDkizE8d': 'click-direct',
