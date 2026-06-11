@@ -132,6 +132,8 @@ export class ContentCard {
   })
 
   protected readonly resolved = this.liveEntry.resolved
+  protected readonly meta = computed(() => this.resolved()?.meta)
+  protected readonly isVariant = computed(() => this.resolved()?.meta.experienceId !== undefined)
   protected readonly richTextHtml = computed<SafeHtml | undefined>(() => {
     const fields = this.resolved()?.resolvedEntry.fields
     const doc = fields ? Object.values(fields).find(isRichTextField) : undefined
@@ -153,7 +155,7 @@ export class ContentCard {
     const mergeTag = mergeTagKey(r.meta.mergeTagResolved)
     const scenario = this.clickScenario()
     const keys: BadgeKey[] = [
-      r.meta.experienceId !== undefined ? 'variant' : 'baseline',
+      this.isVariant() ? 'variant' : 'baseline',
       this.observation(),
       liveModeKey(this.liveUpdates(), this.isLive()),
       ...(mergeTag ? [mergeTag] : []),

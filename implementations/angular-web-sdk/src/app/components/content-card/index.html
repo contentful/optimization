@@ -1,6 +1,6 @@
-@let r = resolved(); @let scenario = clickScenario();
+@let scenario = clickScenario();
 
-<section [attr.data-testid]="'content-card-' + (r?.meta?.baselineId ?? '')">
+<section [attr.data-testid]="'content-card-' + (meta()?.baselineId ?? '')">
   @if (scenario === 'ancestor' && isAuto()) {
   <div data-ctfl-clickable="true" data-testid="entry-click-ancestor-wrapper">
     <ng-container [ngTemplateOutlet]="entryContent" />
@@ -11,32 +11,30 @@
 </section>
 
 <ng-template #entryContent>
-  @if (r) { @let baseline = r.meta.baselineId; @let variant = r.meta.experienceId !== undefined;
-  @let m = r.meta;
+  @if (meta(); as m) {
   <div
     class="entry-card"
-    [class.entry-card--variant]="variant"
     [class.entry-card--mergetag-resolved]="m.mergeTagResolved === true"
-    [attr.data-testid]="'content-' + baseline"
-    [attr.data-ctfl-entry-id]="isAuto() ? r.meta.resolvedId : null"
-    [attr.data-ctfl-baseline-id]="isAuto() ? baseline : null"
+    [attr.data-testid]="'content-' + m.baselineId"
+    [attr.data-ctfl-entry-id]="isAuto() ? m.resolvedId : null"
+    [attr.data-ctfl-baseline-id]="isAuto() ? m.baselineId : null"
     [attr.data-ctfl-optimization-id]="isAuto() ? (m.experienceId ?? null) : null"
     [attr.data-ctfl-sticky]="isAuto() ? (m.sticky !== undefined ? m.sticky.toString() : null) : null"
     [attr.data-ctfl-variant-index]="isAuto() ? (m.variantIndex !== undefined ? m.variantIndex.toString() : null) : null"
     [attr.data-ctfl-hover-duration-update-interval-ms]="isAuto() ? '1000' : null"
     [attr.data-ctfl-clickable]="scenario === 'direct' && isAuto() ? 'true' : null"
-    [attr.data-entry-id]="!isAuto() ? baseline : null"
+    [attr.data-entry-id]="!isAuto() ? m.baselineId : null"
   >
     <div class="entry-card__header">
       <div class="entry-card__ids">
         <p class="entry-card__id">
           <span class="entry-card__id-label">base</span
-          ><span class="entry-card__id-value">{{ baseline }}</span>
+          ><span class="entry-card__id-value">{{ m.baselineId }}</span>
         </p>
-        @if (variant) {
+        @if (isVariant()) {
         <p class="entry-card__id">
           <span class="entry-card__id-label">var</span
-          ><span class="entry-card__id-value">{{ r.meta.resolvedId }}</span>
+          ><span class="entry-card__id-value">{{ m.resolvedId }}</span>
         </p>
         <p class="entry-card__id">
           <span class="entry-card__id-label">exp</span
@@ -52,8 +50,8 @@
     </div>
 
     <div
-      [attr.data-testid]="'entry-text-' + baseline"
-      [attr.aria-label]="'Entry: ' + r.meta.resolvedId"
+      [attr.data-testid]="'entry-text-' + m.baselineId"
+      [attr.aria-label]="'Entry: ' + m.resolvedId"
     >
       @if (richTextHtml(); as html) {
       <div class="rich-text" [innerHTML]="html"></div>
