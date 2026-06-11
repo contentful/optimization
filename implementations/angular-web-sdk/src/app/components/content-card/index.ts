@@ -17,9 +17,9 @@ import { isRecord } from '../../utils'
 // — Badge —
 
 function liveModeKey(override: boolean | undefined, isLive: boolean): LiveMode {
-  if (override === true) return 'always-on'
-  if (override === false) return 'always-off'
-  return isLive ? 'default-on' : 'default-off'
+  if (override === true) return 'live-always-on'
+  if (override === false) return 'live-always-off'
+  return isLive ? 'live-on' : 'live-off'
 }
 
 function mergeTagKey(resolved: boolean | undefined): MergeTagMode | undefined {

@@ -395,11 +395,6 @@ main > .sections-row {
   color: #475569;
 }
 
-.entry-card__badge--manual {
-  background: #f3e8ff;
-  color: #7e22ce;
-}
-
 .entry-card__badge--click {
   background: #ffedd5;
   color: #c2410c;

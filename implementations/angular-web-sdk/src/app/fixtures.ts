@@ -1,7 +1,7 @@
 import type { ObservationMode } from '@contentful/optimization-angular'
 
 export type EntryClickScenario = 'direct' | 'descendant' | 'ancestor'
-export type LiveMode = 'default-on' | 'default-off' | 'always-on' | 'always-off'
+export type LiveMode = 'live-on' | 'live-off' | 'live-always-on' | 'live-always-off'
 export type MergeTagMode = 'mergetag' | 'mergetag-fallback'
 
 export type BadgeKey =
@@ -24,44 +24,44 @@ export const BADGE_MAP: Record<BadgeKey, { label: string; mod: string; title: st
     title: 'This entry is the baseline (no optimization applied)',
   },
   auto: {
-    label: 'auto',
+    label: 'tracking ↺',
     mod: 'auto',
     title:
       'View, click, and hover events fire automatically via data-ctfl-* attributes once consent is granted — content resolution is unaffected',
   },
   manual: {
-    label: 'manual',
+    label: 'tracking ⚙',
     mod: 'manual',
     title:
       'View events fire via explicit enableElement calls; no click or hover events — content resolution is unaffected',
   },
-  'default-on': {
-    label: 'live',
+  'live-on': {
+    label: 'live ✓',
     mod: 'live-on',
     title: 'Following global toggle — currently live, re-resolves on profile change',
   },
-  'default-off': {
-    label: 'live',
+  'live-off': {
+    label: 'live ✗',
     mod: 'live-off',
     title: 'Following global toggle — currently frozen, will update when toggle is ON',
   },
-  'always-on': {
-    label: 'always live',
+  'live-always-on': {
+    label: '📌 live ✓',
     mod: 'live-always-on',
     title: 'Per-entry override: always re-resolves on profile change',
   },
-  'always-off': {
-    label: 'locked',
+  'live-always-off': {
+    label: '📌 live ✗',
     mod: 'live-always-off',
     title: 'Per-entry override: ignores the global toggle, does not update on profile change',
   },
   mergetag: {
-    label: 'merge tag',
+    label: 'merge tag ✓',
     mod: 'mergetag',
     title: 'Rich text merge tags resolved with visitor profile',
   },
   'mergetag-fallback': {
-    label: 'merge tag',
+    label: 'merge tag ✗',
     mod: 'mergetag-fallback',
     title: 'Rich text merge tags showing fallback — no visitor profile',
   },
