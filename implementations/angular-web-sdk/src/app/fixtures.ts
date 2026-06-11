@@ -59,7 +59,7 @@ export const BADGE_MAP: Record<BadgeKey, { label: string; mod: string; title: st
     title: 'Rich text merge tags resolved with visitor profile',
   },
   'mergetag-fallback': {
-    label: 'merge tag fallback',
+    label: 'merge tag',
     mod: 'mergetag-fallback',
     title: 'Rich text merge tags showing fallback — no visitor profile',
   },

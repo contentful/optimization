@@ -385,8 +385,13 @@ main > .sections-row {
 }
 
 .entry-card__badge--mergetag {
-  background: #fef9c3;
-  color: #854d0e;
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.entry-card__badge--mergetag-fallback {
+  background: #f1f5f9;
+  color: #475569;
 }
 
 .entry-card__badge--manual {
