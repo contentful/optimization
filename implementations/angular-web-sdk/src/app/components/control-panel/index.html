@@ -2,7 +2,12 @@
   <h2 class="panel__title">SDK state</h2>
 
   <div class="panel__table">
-    <span class="panel__row-label" data-testid="consent-status">Consent</span>
+    <span
+      class="panel__row-label"
+      data-testid="consent-status"
+      data-tooltip="SDK tracking is active only when consent is true"
+      >Consent</span
+    >
     <span class="panel__row-value">{{ consent() ?? 'undefined' }}</span>
     @if (consent() === true) {
     <button
@@ -22,7 +27,12 @@
     </button>
     }
 
-    <span class="panel__row-label" data-testid="identified-status">Identified</span>
+    <span
+      class="panel__row-label"
+      data-testid="identified-status"
+      data-tooltip="User has been identified with a profile via the identify() call"
+      >Identified</span
+    >
     <span class="panel__row-value">{{ isIdentified() ? 'Yes' : 'No' }}</span>
     @if (isIdentified()) {
     <button class="btn btn--danger btn--sm" data-testid="reset-button" (click)="reset()">
@@ -34,7 +44,12 @@
     </button>
     }
 
-    <span class="panel__row-label" data-testid="live-updates-status">Live updates</span>
+    <span
+      class="panel__row-label"
+      data-testid="live-updates-status"
+      data-tooltip="When ON, entries re-resolve and rerender on profile changes"
+      >Live updates</span
+    >
     <span class="panel__row-value"
       >{{ liveUpdatesService.globalLiveUpdates() ? 'ON' : 'OFF' }}</span
     >
@@ -48,17 +63,30 @@
       {{ liveUpdatesService.globalLiveUpdates() ? 'OFF' : 'ON' }}
     </button>
 
-    <span class="panel__row-label" data-testid="preview-panel-status">Preview panel</span>
+    <span
+      class="panel__row-label"
+      data-testid="preview-panel-status"
+      data-tooltip="Contentful preview panel is open — forces live updates regardless of the global toggle"
+      >Preview panel</span
+    >
     <span class="panel__row-value"
       >{{ liveUpdatesService.previewPanelVisible() ? 'Open' : 'Closed' }}</span
     >
     <span></span>
 
-    <span class="panel__row-label" data-testid="boolean-flag-status">Flag "boolean"</span>
+    <span
+      class="panel__row-label"
+      data-testid="boolean-flag-status"
+      data-tooltip="Value of the boolean feature flag from the SDK"
+      >Flag "boolean"</span
+    >
     <span class="panel__row-value">{{ booleanFlag() ?? 'undefined' }}</span>
     <span></span>
 
-    <span class="panel__row-label" data-testid="selected-optimizations-count"
+    <span
+      class="panel__row-label"
+      data-testid="selected-optimizations-count"
+      data-tooltip="Number of selected optimization variants currently applied"
       >Active optimizations</span
     >
     <span class="panel__row-value">{{ optimizationCount() }}</span>

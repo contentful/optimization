@@ -155,11 +155,11 @@ export class ContentCard {
     const mergeTag = mergeTagKey(r.meta.mergeTagResolved)
     const scenario = this.clickScenario()
     const keys: BadgeKey[] = [
+      ...(mergeTag ? [mergeTag] : []),
+      ...(scenario ? [scenario] : []),
       this.isVariant() ? 'variant' : 'baseline',
       this.observation(),
       liveModeKey(this.liveUpdates(), this.isLive()),
-      ...(mergeTag ? [mergeTag] : []),
-      ...(scenario ? [scenario] : []),
     ]
     return keys.map((k) => BADGE_MAP[k])
   })

@@ -31,16 +31,14 @@
           <span class="entry-card__id-label">base</span
           ><span class="entry-card__id-value">{{ m.baselineId }}</span>
         </p>
-        @if (isVariant()) {
         <p class="entry-card__id">
           <span class="entry-card__id-label">var</span
-          ><span class="entry-card__id-value">{{ m.resolvedId }}</span>
+          ><span class="entry-card__id-value">{{ isVariant() ? m.resolvedId : '—' }}</span>
         </p>
         <p class="entry-card__id">
           <span class="entry-card__id-label">exp</span
-          ><span class="entry-card__id-value">{{ m.experienceId }}</span>
+          ><span class="entry-card__id-value">{{ m.experienceId ?? '—' }}</span>
         </p>
-        }
       </div>
       <div class="entry-card__badges">
         @for (badge of badges(); track badge.mod) {

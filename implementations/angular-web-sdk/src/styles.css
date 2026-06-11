@@ -340,12 +340,12 @@ main > .sections-row {
   display: flex;
   align-items: flex-start;
   gap: 0.2rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
   justify-content: flex-end;
 }
 
 .entry-card__badge {
-  position: relative;
   font-size: 0.5rem;
   font-weight: 600;
   letter-spacing: 0.03em;
@@ -354,10 +354,14 @@ main > .sections-row {
   border-radius: 999px;
   background: var(--color-border);
   color: var(--color-text-muted);
+}
+
+[data-tooltip] {
+  position: relative;
   cursor: default;
 }
 
-.entry-card__badge[data-tooltip]:hover::after {
+[data-tooltip]:hover::after {
   content: attr(data-tooltip);
   position: absolute;
   bottom: calc(100% + 6px);
