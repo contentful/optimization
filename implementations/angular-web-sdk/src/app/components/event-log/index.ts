@@ -32,7 +32,7 @@ function toPageUrl(event: Record<string, unknown>): string | undefined {
 function eventLabel(event: AnalyticsEvent): string {
   if (event.componentId !== undefined) return event.componentId
   if (event.pageUrl !== undefined) return event.pageUrl
-  return ''
+  return event.type
 }
 
 function eventTestId(event: AnalyticsEvent): string {
@@ -69,7 +69,7 @@ function timeAgo(firedAt: number, now: number): string {
 function dedupeKey(event: AnalyticsEvent): string {
   if (event.componentId !== undefined) return `${event.type}:${event.componentId}`
   if (event.pageUrl !== undefined) return `page:${event.pageUrl}`
-  return event.id
+  return event.type
 }
 
 function toAnalyticsEvent(raw: unknown, id: string): AnalyticsEvent | undefined {
