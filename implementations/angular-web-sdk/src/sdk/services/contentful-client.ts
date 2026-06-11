@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core'
-import type { Entry, EntrySkeletonType } from 'contentful'
+import type { ContentfulClientApi, Entry, EntrySkeletonType } from 'contentful'
 import { getOrCreateBaseClient, NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../config'
 import { NgContentfulOptimization } from './optimization'
 
@@ -7,7 +7,7 @@ const INCLUDE_DEPTH = 10
 
 @Injectable({ providedIn: 'root' })
 export class NgContentfulClient {
-  private readonly resolvedClient: ReturnType<typeof getOrCreateBaseClient>
+  private readonly resolvedClient: ContentfulClientApi<undefined>
 
   constructor() {
     const config = inject(NG_CONTENTFUL_OPTIMIZATION_CONFIG)
