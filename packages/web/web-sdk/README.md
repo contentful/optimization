@@ -70,9 +70,7 @@ Configure and initialize the Optimization Web SDK once per page runtime:
 const optimization = new ContentfulOptimization({
   clientId: 'your-client-id',
   environment: 'main',
-  contentfulLocales: {
-    default: 'en-US',
-  },
+  locale: 'en-US',
 })
 ```
 
@@ -91,9 +89,7 @@ The UMD build is available for HTML pages that do not use a bundler:
   window.contentfulOptimization = new ContentfulOptimization({
     clientId: 'your-client-id',
     environment: 'main',
-    contentfulLocales: {
-      default: 'en-US',
-    },
+    locale: 'en-US',
   })
 </script>
 ```
@@ -119,8 +115,7 @@ the Insights API for event ingestion.
 | `environment`               | No        | `'main'`                                         | Contentful environment identifier                                                 |
 | `api`                       | No        | See API options below                            | Experience API and Insights API endpoint and request options                      |
 | `app`                       | No        | `undefined`                                      | Application metadata attached to outgoing event context                           |
-| `contentfulLocales`         | No        | `undefined`                                      | Contentful locale codes used for SDK-assisted CDA locale resolution               |
-| `locale`                    | No        | `undefined` unless `contentfulLocales` is set    | Initial app/content locale candidate used to resolve the Contentful locale        |
+| `locale`                    | No        | `undefined`                                      | SDK Experience API and default event locale                                       |
 | `defaults`                  | No        | `undefined`                                      | Initial state, commonly including consent, persistence consent, or profile values |
 | `allowedEventTypes`         | No        | `['identify', 'page']`                           | Event types allowed before consent is explicitly set                              |
 | `autoTrackEntryInteraction` | No        | `{ views: false, clicks: false, hovers: false }` | Opt-in automatic tracking for entry views, clicks, and hovers                     |
@@ -136,7 +131,6 @@ Common `api` options:
 | ------------------- | --------- | ------------------------------------------ | ----------------------------------------------------------------- |
 | `experienceBaseUrl` | No        | `'https://experience.ninetailed.co/'`      | Base URL for the Experience API                                   |
 | `insightsBaseUrl`   | No        | `'https://ingest.insights.ninetailed.co/'` | Base URL for the Insights API                                     |
-| `locale`            | No        | API default                                | Locale query parameter for localized Experience API responses     |
 | `enabledFeatures`   | No        | `['ip-enrichment', 'location']`            | Experience API features to apply to each request                  |
 | `preflight`         | No        | `false`                                    | Aggregate a new profile state without storing it                  |
 | `beaconHandler`     | No        | Built-in beacon integration                | Custom handler for enqueueing Insights API batches when needed    |
@@ -146,33 +140,16 @@ Common `fetchOptions` are `fetchMethod`, `requestTimeout`, `retries`, `intervalT
 `onFailedAttempt`, and `onRequestTimeout`. Default retries intentionally apply only to HTTP `503`
 responses.
 
-Use `contentfulLocales.default` for single-locale apps. For apps that match browser locale input to
-multiple Contentful locales, keep `default` as the fallback and list the supported Contentful locale
-codes:
-
-```ts
-contentfulLocales: {
-  default: 'en-US',
-  supported: ['en-US', 'de-DE', 'fr-FR'],
-}
-```
-
-Copy `contentfulLocales.default` and optional `contentfulLocales.supported` from Contentful locale
-settings or the CMA locale list. The resolved `optimization.locale`, when present, is the configured
-Contentful locale code to use for CDA fetches and default Experience API localization. `api.locale`
-remains an explicit Experience API override. The recommended helper,
-`withOptimizationLocale(contentfulClient)`, reads the live SDK locale and injects it into
-`getEntry()` and `getEntries()` calls when a caller does not provide one; data layers that need
-direct control can pass `optimization.locale` explicitly instead. See
+Choose the application Contentful locale in your router, i18n layer, or app configuration. Pass that
+value directly to Contentful CDA requests. Use the top-level SDK `locale` when Experience API
+responses and event context should use the same language. See
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
 for the full locale model.
 
 Use `optimization.setLocale(nextLocale)` when the application locale changes. The method validates
-the explicit input, resolves it to a configured Contentful locale code when `contentfulLocales` is
-present, updates `optimization.locale` and `optimization.states.locale`, and changes the default
-Experience API locale unless `api.locale` is configured. It does not fetch content or refresh
-profile state; call `page()`, `identify()`, or CDA methods again when the app needs localized data
-for the new locale.
+the explicit input, updates `optimization.locale` and `optimization.states.locale`, and changes the
+default Experience API locale. It does not fetch content or refresh profile state; call `page()`,
+`identify()`, or CDA methods again when the app needs localized data for the new locale.
 
 For every option, callback payload, and exported type, use the generated
 [Web SDK reference](https://contentful.github.io/optimization/modules/_contentful_optimization-web.html).
@@ -226,16 +203,14 @@ const resolvedEntry = optimization.resolveOptimizedEntry(
 )
 ```
 
-Fetch entries with one CDA locale in the app layer. For localized apps, configure
-`contentfulLocales`, then use `optimization.withOptimizationLocale(contentfulClient)` or pass
-`optimization.locale` explicitly before calling `getEntry()` or `getEntries()`. Without
-`contentfulLocales` or an explicit top-level `locale`, the wrapper omits the CDA locale and lets
-Contentful use the space default. Do not pass all-locale CDA responses from `withAllLocales` or
-`locale=*`; the resolver expects direct single-locale field values. See
+Fetch entries with one CDA locale in the app layer. For localized apps, configure your application
+locale and pass it directly before calling `getEntry()` or `getEntries()`. Do not pass all-locale
+CDA responses from `withAllLocales` or `locale=*`; the resolver expects direct single-locale field
+values. See
 [Entry personalization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
 for the entry contract and
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
-for runtime locale behavior.
+for the broader locale model.
 
 Use `getMergeTagValue()` for Contentful Rich Text merge tags and `getFlag()` for Custom Flags. If a
 merge tag references localized profile fields such as `location.city` or `location.country`, its

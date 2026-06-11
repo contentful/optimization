@@ -49,7 +49,7 @@ fun LiveUpdatesTestScreen(onClose: () -> Unit) {
     LaunchedEffect(Unit) {
         val entries = ContentfulFetcher.fetchEntries(
             listOf("2Z2WLOx07InSewC3LUB3eX"),
-            client.locale ?: AppConfig.defaultContentfulLocale,
+            AppConfig.defaultContentfulLocale,
         )
         entry = entries.firstOrNull()
         isLoading = false

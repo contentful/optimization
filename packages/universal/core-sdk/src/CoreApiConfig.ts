@@ -27,8 +27,6 @@ export interface CoreStatefulApiConfig extends CoreSharedApiConfig {
   beaconHandler?: InsightsApiClientConfig['beaconHandler']
   /** Experience API IP override. */
   ip?: ExperienceApiClientConfig['ip']
-  /** Experience API `locale` query parameter for localized profile fields in API responses. */
-  locale?: ExperienceApiClientConfig['locale']
   /** Experience API plain-text request toggle. */
   plainText?: ExperienceApiClientConfig['plainText']
   /** Experience API preflight request toggle. */

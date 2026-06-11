@@ -323,9 +323,13 @@ the behavior.
 - Entry resolution must use the same single-locale CDA payload contract.
 - Fallback behavior must render baseline content instead of failing hard when optimization data is
   absent or invalid.
-- Locale helpers must return configured Contentful locale codes, not raw runtime locale candidates.
-- Experience API localization must remain separate from Contentful CDA locale selection and event
-  context locale.
+- Applications must own Contentful CDA locale selection and pass one single-locale CDA payload shape
+  into SDK entry-resolution helpers.
+- SDK `locale` state must represent the current Experience API and default event locale, not a
+  resolved Contentful locale.
+- Experience API localization must remain separate from application-owned Contentful CDA locale
+  selection, while docs should show how to keep the values aligned when localized content requires
+  it.
 - Profile data, selected optimizations, and changes must have the same conceptual meaning across
   stateful and stateless SDKs.
 - Preview overrides must not mutate production content, profile evaluation, or remote audience

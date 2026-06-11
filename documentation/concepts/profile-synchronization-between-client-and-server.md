@@ -143,12 +143,11 @@ bind request-scoped inputs with `forRequest()` before calling event methods.
 In Node, Experience methods use the request-bound profile ID as the profile selector:
 
 ```ts
-const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
+const appLocale = getAppLocale(req)
 const profileId = req.cookies[ANONYMOUS_ID_COOKIE]
 const requestOptimization = optimization.forRequest({
   consent: true,
-  eventContext: { locale: eventLocale },
-  experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
+  locale: appLocale,
   profile: profileId ? { id: profileId } : undefined,
 })
 
@@ -157,8 +156,8 @@ const optimizationData = await requestOptimization.page({
 })
 ```
 
-For the difference between `contentfulLocale`, `eventLocale`, and the Experience API request
-`locale`, see
+For the difference between the application Contentful locale and the SDK Experience/event locale,
+see
 [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md).
 
 The Node SDK passes that ID to the Experience API as `profileId`. If the ID is absent, the API can
@@ -317,11 +316,10 @@ the profile ID continues to select the Experience API profile being updated.
 On the server, pass the current anonymous profile ID when identifying a known user:
 
 ```ts
-const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
+const appLocale = getAppLocale(req)
 const requestOptimization = optimization.forRequest({
   consent: true,
-  eventContext: { locale: eventLocale },
-  experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
+  locale: appLocale,
   profile: { id: anonymousId },
 })
 

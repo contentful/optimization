@@ -69,7 +69,7 @@ fun MainScreen() {
         if (state.profile != null) {
             entries = ContentfulFetcher.fetchEntries(
                 AppConfig.entryIds,
-                client.locale ?: AppConfig.defaultContentfulLocale,
+                AppConfig.defaultContentfulLocale,
             )
             if (!flagSubscribed) {
                 flagSubscribed = true

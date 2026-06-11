@@ -61,7 +61,7 @@ final class MainViewController: UIViewController {
                 Task { @MainActor in
                     let fetched = await ContentfulFetcher.fetchEntries(
                         ids: AppConfig.entryIds,
-                        locale: self.client.locale ?? AppConfig.defaultContentfulLocale
+                        locale: AppConfig.defaultContentfulLocale
                     )
                     self.entries = fetched
                     self.reloadContent()

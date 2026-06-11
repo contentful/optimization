@@ -127,20 +127,20 @@ The examples below bind application-owned consent into a request-scoped client. 
 fail closed except for the configured `allowedEventTypes`; the Node default permits `identify` and
 `page` before consent and labels those events as not consented.
 
-Event `context.locale` is event data. It can be used by analytics and audience rules that inspect
-event context, but it does not choose the CDA locale for Contentful entry fetches and it is separate
-from the Experience API request `locale` query parameter. For the broader locale model, see
+Choose an application locale from your router, i18n, or request logic. Use that same value for CDA
+fetches and pass it to `forRequest({ locale })` when Experience API responses and events should use
+that locale. For the broader locale model, see
 [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md).
 
 ```ts
-const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
+const appLocale = getAppLocale(req)
 const requestOptimization = optimization.forRequest({
   consent: {
     events: appPolicyAllowsOptimizationEvent(req),
     persistence: appPolicyAllowsOptimizationEvent(req),
   },
+  locale: appLocale,
   eventContext: {
-    locale: eventLocale,
     page: {
       path: req.path,
       query,
@@ -150,7 +150,6 @@ const requestOptimization = optimization.forRequest({
     },
     userAgent: req.get('user-agent') ?? 'node-server',
   },
-  experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
   profile: profileId ? { id: profileId } : undefined,
 })
 
@@ -160,11 +159,10 @@ const pageResponse = await requestOptimization.page()
 Use server-side `track()` for server-known business events:
 
 ```ts
-const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
+const appLocale = getAppLocale(req)
 const requestOptimization = optimization.forRequest({
   consent: true,
-  eventContext: { locale: eventLocale },
-  experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
+  locale: appLocale,
   profile: pageResponse.profile,
 })
 
@@ -184,11 +182,10 @@ visibility, use browser tracking.
 ```ts
 import { randomUUID } from 'node:crypto'
 
-const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
+const appLocale = getAppLocale(req)
 const requestOptimization = optimization.forRequest({
   consent: true,
-  eventContext: { locale: eventLocale },
-  experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
+  locale: appLocale,
   profile: pageResponse.profile,
 })
 

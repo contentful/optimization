@@ -1,7 +1,7 @@
 import { ClientProviderWrapper } from '@/components/ClientProviderWrapper'
-import { getOptimizationData, requireContentfulLocale, sdk } from '@/lib/optimization-server'
+import { APP_LOCALE } from '@/lib/config'
+import { getOptimizationData } from '@/lib/optimization-server'
 import type { Metadata } from 'next'
-import { headers } from 'next/headers'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -19,13 +19,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const headerStore = await headers()
-  const { contentfulLocale, eventLocale } = sdk.resolveRequestLocale(
-    headerStore.get('accept-language'),
-  )
-  const resolvedContentfulLocale = requireContentfulLocale(contentfulLocale)
-  const optimizationData = await getOptimizationData(eventLocale, resolvedContentfulLocale)
-  const htmlLang = getHtmlLang(resolvedContentfulLocale)
+  const optimizationData = await getOptimizationData()
+  const htmlLang = getHtmlLang(APP_LOCALE)
   const defaults = optimizationData
     ? {
         profile: optimizationData.profile,
@@ -37,7 +32,7 @@ export default async function RootLayout({
   return (
     <html lang={htmlLang} className="h-full antialiased">
       <body className="min-h-full flex flex-col">
-        <ClientProviderWrapper contentfulLocale={resolvedContentfulLocale} defaults={defaults}>
+        <ClientProviderWrapper appLocale={APP_LOCALE} defaults={defaults}>
           {children}
         </ClientProviderWrapper>
       </body>

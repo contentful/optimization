@@ -14,7 +14,6 @@ import {
   CoreStateful,
   type CoreStatefulConfig,
   effect,
-  resolveContentfulLocale,
   signals,
 } from '@contentful/optimization-core'
 import type { App } from '@contentful/optimization-core/api-schemas'
@@ -72,10 +71,6 @@ export interface CookieAttributes {
  * @internal
  */
 const EXPIRATION_DAYS_DEFAULT = 365
-
-function getRuntimeLocaleCandidates(): string[] {
-  return [...navigator.languages, navigator.language]
-}
 
 /**
  * Configuration options for the ContentfulOptimization Web SDK.
@@ -178,7 +173,7 @@ function readInitialCookieValues(canLoadPersistedContinuity: boolean): {
  * @remarks
  * This helper wires together:
  * - consent/profile/selectedOptimizations from LocalStore,
- * - Web-specific eventBuilder functions (locale, page, user agent),
+ * - Web-specific eventBuilder functions (page, user agent),
  * - beacon-based Insights delivery,
  * - and anonymous ID retrieval.
  *
@@ -193,14 +188,8 @@ function mergeConfig({
 }: OptimizationWebConfig): CoreStatefulConfig {
   const baseDefaults = resolveDefaultState(defaults)
   const { eventBuilder: configuredEventBuilder } = config
-  const locale = resolveContentfulLocale({
-    candidates: getRuntimeLocaleCandidates(),
-    contentfulLocales: config.contentfulLocales,
-    locale: config.locale,
-  })
   const mergedConfig: CoreStatefulConfig = {
     ...config,
-    locale,
     api: {
       beaconHandler,
       ...config.api,

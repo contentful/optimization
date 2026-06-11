@@ -2,7 +2,6 @@ import {
   type ConsentInput,
   type CoreStatefulConfig,
   CoreStateful,
-  resolveContentfulLocale,
   signals,
 } from '@contentful/optimization-core'
 import type { OptimizationData } from '@contentful/optimization-core/api-schemas'
@@ -13,11 +12,6 @@ import {
 } from './constants'
 import { createAppStateChangeListener, createOnlineChangeListener } from './handlers'
 import AsyncStorageStore from './storage/AsyncStorageStore'
-
-function getRuntimeLocaleCandidates(): string[] {
-  const { locale } = Intl.DateTimeFormat().resolvedOptions()
-  return [locale]
-}
 
 function resolvePersistedDefault<T>(
   configured: T | undefined,
@@ -72,12 +66,6 @@ async function mergeConfig({
     await AsyncStorageStore.clearProfileContinuity()
   }
 
-  const locale = resolveContentfulLocale({
-    candidates: getRuntimeLocaleCandidates(),
-    contentfulLocales: config.contentfulLocales,
-    locale: config.locale,
-  })
-
   const storageDefaults = resolveStorageDefaults(defaults)
 
   const mergedConfig = merge(
@@ -103,7 +91,6 @@ async function mergeConfig({
 
   return {
     ...mergedConfig,
-    locale,
     allowedEventTypes: allowedEventTypes ?? ['identify', 'screen'],
   }
 }

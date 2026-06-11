@@ -142,10 +142,6 @@ navigation integration:
 <OptimizationRoot
   clientId={OPTIMIZATION_CLIENT_ID}
   environment={OPTIMIZATION_ENVIRONMENT}
-  contentfulLocales={{
-    default: 'en-US',
-    supported: ['en-US', 'de-DE', 'fr-FR'],
-  }}
   locale="en-US"
   logLevel={__DEV__ ? 'info' : 'warn'}
   previewPanel={{
@@ -165,36 +161,31 @@ navigation integration:
 
 Common props on `OptimizationRoot`:
 
-| Prop                    | Type                         | Required | Default                                 | Description                                                           |
-| ----------------------- | ---------------------------- | -------- | --------------------------------------- | --------------------------------------------------------------------- |
-| `clientId`              | `string`                     | Yes      | N/A                                     | Your Contentful Optimization client identifier                        |
-| `environment`           | `string`                     | No       | `'main'`                                | Optimization environment to read from                                 |
-| `defaults`              | `{ consent?: boolean, ... }` | No       | `undefined`                             | Initial values applied at startup (e.g. `consent: true`)              |
-| `allowedEventTypes`     | `EventType[]`                | No       | `['identify', 'screen']`                | Event types allowed before consent is explicitly set                  |
-| `logLevel`              | `LogLevels`                  | No       | `'error'`                               | Minimum console log level                                             |
-| `previewPanel`          | `PreviewPanelConfig`         | No       | `undefined`                             | Enables the in-app preview panel; see [Preview Panel](#preview-panel) |
-| `liveUpdates`           | `boolean`                    | No       | `false`                                 | Global live-updates default for `<OptimizedEntry />`                  |
-| `locale`                | `string`                     | No       | `undefined` unless locale config is set | Initial app/content locale candidate                                  |
-| `trackEntryInteraction` | `{ views?, taps? }`          | No       | `{ views: true, taps: false }`          | Default interaction tracking for `<OptimizedEntry />`                 |
-| `onStatesReady`         | `(states) => cleanup`        | No       | `undefined`                             | Attach app-level state subscribers when SDK state is ready            |
+| Prop                    | Type                         | Required | Default                        | Description                                                           |
+| ----------------------- | ---------------------------- | -------- | ------------------------------ | --------------------------------------------------------------------- |
+| `clientId`              | `string`                     | Yes      | N/A                            | Your Contentful Optimization client identifier                        |
+| `environment`           | `string`                     | No       | `'main'`                       | Optimization environment to read from                                 |
+| `defaults`              | `{ consent?: boolean, ... }` | No       | `undefined`                    | Initial values applied at startup (e.g. `consent: true`)              |
+| `allowedEventTypes`     | `EventType[]`                | No       | `['identify', 'screen']`       | Event types allowed before consent is explicitly set                  |
+| `logLevel`              | `LogLevels`                  | No       | `'error'`                      | Minimum console log level                                             |
+| `previewPanel`          | `PreviewPanelConfig`         | No       | `undefined`                    | Enables the in-app preview panel; see [Preview Panel](#preview-panel) |
+| `liveUpdates`           | `boolean`                    | No       | `false`                        | Global live-updates default for `<OptimizedEntry />`                  |
+| `locale`                | `string`                     | No       | `undefined`                    | SDK Experience API and default event locale                           |
+| `trackEntryInteraction` | `{ views?, taps? }`          | No       | `{ views: true, taps: false }` | Default interaction tracking for `<OptimizedEntry />`                 |
+| `onStatesReady`         | `(states) => cleanup`        | No       | `undefined`                    | Attach app-level state subscribers when SDK state is ready            |
 
 The full configuration reference (API endpoints, fetch retries, queue policy, event-builder
 overrides) is documented in the
 [React Native SDK README](../../packages/react-native-sdk/README.md#common-configuration).
 
-Use `contentfulLocales` when the same app screen renders localized Contentful entries. Configure
-`contentfulLocales.default` for single-locale apps, and add `contentfulLocales.supported` when the
-app needs device locale matching across multiple Contentful locales. Copy those codes from
-Contentful locale settings or the CMA locale list. The `locale` prop supplies the initial
-app/content locale. The resolved `optimization.locale`, when present, is the Contentful locale code
-used by `withOptimizationLocale()` and by default Experience API localization unless you provide an
-explicit `api.locale` override.
+Choose the application Contentful locale in your navigation, i18n, or app configuration layer. Pass
+that value to Contentful CDA requests and use the provider `locale` prop when Experience API
+responses and events should use the same language.
 
 Changing the provider `locale` prop after initialization calls `optimization.setLocale(nextLocale)`
 and updates `optimization.locale` plus `optimization.states.locale`. It does not fetch content or
 refresh profile state; call `screen`, `identify`, or CDA methods again when your app needs localized
-data refreshed. For the full matching rules, configuration cases, and Experience API locale
-behavior, see
+data refreshed. For the full locale model, see
 [Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
 
 ### Access the SDK instance with hooks
@@ -383,22 +374,20 @@ For variant data to resolve, the entry must be fetched with linked optimization 
 Use `include: 10` and one CDA locale on Contentful's Delivery API call:
 
 ```tsx
-const optimization = useOptimization()
-const contentful = optimization.withOptimizationLocale(contentfulClient)
+const appLocale = getAppLocale()
 
-const cta = await contentful.getEntry(CTA_ENTRY_ID, {
+const cta = await contentfulClient.getEntry(CTA_ENTRY_ID, {
   include: 10,
+  locale: appLocale,
 })
 ```
 
 The [React Native reference implementation](../../implementations/react-native-sdk/README.md)
 centralizes this Contentful fetching pattern in its application helper layer.
 
-Configure `contentfulLocales.default` for single-locale apps, and add `contentfulLocales.supported`
-for localized apps that need device locale matching. The recommended `withOptimizationLocale()`
-helper lets Contentful entry fetches use the live resolved locale by default; data layers that need
-direct control can pass `optimization.locale` explicitly. Use `optimization.setLocale(nextLocale)`
-when the app changes language after initialization. `contentful.js` `withAllLocales` and raw CDA
+Your app owns the Contentful locale used for CDA fetches. Use `optimization.setLocale(nextLocale)`
+when the app changes language after initialization, then refetch Contentful entries with the new CDA
+locale and rerun the app's normal profile refresh flow. `contentful.js` `withAllLocales` and raw CDA
 `locale=*` return locale-keyed fields; the SDK resolver expects a standard single-locale CDA entry
 shape where `fields.nt_experiences` and `fields.nt_variants` are direct field values. See
 [Entry personalization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)

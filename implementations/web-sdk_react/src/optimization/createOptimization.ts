@@ -11,6 +11,7 @@ const EXPERIENCE_API_BASE_URL =
 const INSIGHTS_API_BASE_URL =
   import.meta.env.PUBLIC_INSIGHTS_API_BASE_URL?.trim() ?? 'http://localhost:8000/insights/'
 const OPTIMIZATION_LOG_LEVEL = import.meta.env.PUBLIC_OPTIMIZATION_LOG_LEVEL?.trim().toLowerCase()
+export const APP_LOCALE = 'en-US'
 type OptimizationLogLevel = 'debug' | 'warn' | 'error'
 
 function resolveLogLevel(): OptimizationLogLevel {
@@ -45,10 +46,7 @@ function createOptimizationConfig(): OptimizationConfig {
     environment: OPTIMIZATION_ENVIRONMENT,
     logLevel: resolveLogLevel(),
     autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
-    locale: 'en-US',
-    contentfulLocales: {
-      default: 'en-US',
-    },
+    locale: APP_LOCALE,
     app: {
       name: 'ContentfulOptimization SDK - React Web Reference',
       version: '0.1.0',

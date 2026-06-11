@@ -89,7 +89,6 @@ Every Android integration builds an `OptimizationConfig`:
 OptimizationConfig(
     clientId = "your-client-id",
     environment = "master",
-    contentfulLocales = ContentfulLocales(default = "en-US"),
     locale = "en-US",
     debug = BuildConfig.DEBUG,
 )
@@ -98,12 +97,10 @@ OptimizationConfig(
 Only `clientId` is required. `environment` defaults to `"master"`. Base URL overrides belong only in
 integrations that need non-default Experience API or Insights API endpoints.
 
-Use `contentfulLocales` and `locale` when the application renders localized Contentful entries. The
-resolved `client.locale` belongs in the app-owned Contentful Delivery API request before entries are
-passed to `OptimizedEntry`, `OptimizedEntryView`, or `personalizeEntry(...)`.
-
-`OptimizationApiConfig.locale` is an explicit Experience API locale override. It does not replace
-the CDA locale used to fetch entries. For the full locale model, see
+Use top-level `locale` for the SDK Experience/event locale. When the application renders localized
+Contentful entries, choose an app-owned Contentful locale and pass it to the app's Contentful
+Delivery API request before entries are passed to `OptimizedEntry`, `OptimizedEntryView`, or
+`personalizeEntry(...)`. For the full locale model, see
 [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md).
 
 ## State and persistence

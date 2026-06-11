@@ -108,7 +108,7 @@ struct MainScreen: View {
             Task {
                 entries = await ContentfulFetcher.fetchEntries(
                     ids: AppConfig.entryIds,
-                    locale: client.locale ?? AppConfig.defaultContentfulLocale
+                    locale: AppConfig.defaultContentfulLocale
                 )
             }
         }

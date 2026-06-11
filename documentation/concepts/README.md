@@ -32,8 +32,7 @@ they are not the first stop for installation or setup commands.
   explains how the SDK resolves a Contentful baseline entry to the selected entry variant, including
   data model expectations, fallback behavior, resolution paths, and preview overrides.
 - [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md) -
-  explains how Contentful locales, `contentful.js` locale response shapes, Experience API locale
-  options, SDK-assisted locale resolution, and runtime-specific locale sources work together.
+  explains how application-owned Contentful locales differ from SDK Experience/event locales.
 - [Interaction tracking in Web SDKs](./interaction-tracking-in-web-sdks.md) - explains how
   `@contentful/optimization-web` and `@contentful/optimization-react-web` detect browser entry
   views, clicks, hovers, Custom Flag views, page events, and custom events, including consent,

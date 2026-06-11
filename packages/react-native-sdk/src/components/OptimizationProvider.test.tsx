@@ -347,24 +347,20 @@ describe('OptimizationProvider onStatesReady', () => {
     expect(childRendered).toBe(true)
   })
 
-  it('passes contentfulLocales through owned initialization', async () => {
+  it('passes locale through owned initialization', async () => {
     const { OptimizationProvider } = await import('./OptimizationProvider')
     const { sdk } = createSdk()
-    const contentfulLocales = {
-      default: 'en-US',
-      supported: ['en-US', 'de-DE'],
-    }
     createOptimization.mockResolvedValue(sdk)
 
     renderer = await renderWithAct(
-      <OptimizationProvider clientId="test-client-id" contentfulLocales={contentfulLocales}>
+      <OptimizationProvider clientId="test-client-id" locale="en-US">
         <></>
       </OptimizationProvider>,
     )
 
     expect(createOptimization).toHaveBeenCalledWith(
       expect.objectContaining({
-        contentfulLocales,
+        locale: 'en-US',
       }),
     )
   })
