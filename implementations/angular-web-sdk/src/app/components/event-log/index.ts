@@ -30,8 +30,10 @@ function toPageUrl(event: Record<string, unknown>): string | undefined {
   }
 }
 
+const TRUNCATE_ID_LENGTH = 5
+
 function eventLabel(event: AnalyticsEvent): string {
-  if (event.componentId !== undefined) return event.componentId
+  if (event.componentId !== undefined) return `…${event.componentId.slice(-TRUNCATE_ID_LENGTH)}`
   if (event.pageUrl !== undefined) return event.pageUrl
   if (event.userId !== undefined) return event.userId
   return ''
