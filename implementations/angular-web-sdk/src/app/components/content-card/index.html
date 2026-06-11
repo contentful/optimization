@@ -28,7 +28,10 @@
       <div class="entry-card__ids">
         <p class="entry-card__id">
           <span class="entry-card__id-label">base</span
-          ><span class="entry-card__id-value">{{ entryNames[m.baselineId] ?? m.baselineId }}</span>
+          ><span class="entry-card__id-value"
+            >{{ entryNames[m.baselineId] ? entryNames[m.baselineId] + ' …' + m.baselineId.slice(-5)
+            : m.baselineId }}</span
+          >
         </p>
         <p class="entry-card__id">
           <span class="entry-card__id-label">var</span

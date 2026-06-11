@@ -31,11 +31,16 @@ function toPageUrl(event: Record<string, unknown>): string | undefined {
   }
 }
 
-const TRUNCATE_ID_LENGTH = 8
+const TRUNCATE_ID_LENGTH = 5
+
+function formatId(id: string, name: string | undefined): string {
+  const suffix = `…${id.slice(-TRUNCATE_ID_LENGTH)}`
+  return name !== undefined ? `${name} ${suffix}` : suffix
+}
 
 function eventLabel(event: AnalyticsEvent, registry: NgEntryRegistry): string {
   if (event.componentId !== undefined)
-    return registry.resolve(event.componentId) ?? `…${event.componentId.slice(-TRUNCATE_ID_LENGTH)}`
+    return formatId(event.componentId, registry.resolve(event.componentId))
   if (event.pageUrl !== undefined) return event.pageUrl
   if (event.userId !== undefined) return event.userId
   return ''
