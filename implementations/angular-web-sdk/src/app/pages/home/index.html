@@ -24,11 +24,7 @@
         No per-entry override — follows the global toggle. Updates when the toggle is ON; stays
         frozen when it is OFF.
       </p>
-      <app-content-card
-        [entry]="liveEntry"
-        observation="auto"
-        [selectedOptimizations]="selectedOptimizations()"
-      />
+      <app-content-card [entry]="liveEntry" observation="auto" />
     </div>
     <div class="live-updates-item">
       <p class="live-updates-item__label" data-testid="live-updates-always-on-label">Always live</p>
@@ -36,12 +32,7 @@
         Per-entry override set to <code>true</code> — always re-resolves on profile changes,
         regardless of the global toggle.
       </p>
-      <app-content-card
-        [entry]="liveEntry"
-        observation="auto"
-        [liveUpdates]="true"
-        [selectedOptimizations]="selectedOptimizations()"
-      />
+      <app-content-card [entry]="liveEntry" observation="auto" [liveUpdates]="true" />
     </div>
     <div class="live-updates-item">
       <p class="live-updates-item__label" data-testid="live-updates-locked-label">Always locked</p>
@@ -49,12 +40,7 @@
         Per-entry override set to <code>false</code> — never re-resolves even when the global toggle
         is ON, but will re-resolve when the preview panel is open.
       </p>
-      <app-content-card
-        [entry]="liveEntry"
-        observation="auto"
-        [liveUpdates]="false"
-        [selectedOptimizations]="selectedOptimizations()"
-      />
+      <app-content-card [entry]="liveEntry" observation="auto" [liveUpdates]="false" />
     </div>
   </div>
   }
@@ -71,12 +57,7 @@
     </header>
     <div id="auto-observed" class="entry-grid">
       @for (id of autoIds; track id) { @let entry = entryFor(id); @if (entry) {
-      <app-content-card
-        [entry]="entry"
-        observation="auto"
-        [clickScenario]="clickScenarios[id]"
-        [selectedOptimizations]="selectedOptimizations()"
-      />
+      <app-content-card [entry]="entry" observation="auto" [clickScenario]="clickScenarios[id]" />
       } }
     </div>
   </section>
@@ -91,11 +72,7 @@
     </header>
     <div id="manually-observed" class="entry-grid">
       @for (id of manualIds; track id) { @let entry = entryFor(id); @if (entry) {
-      <app-content-card
-        [entry]="entry"
-        observation="manual"
-        [selectedOptimizations]="selectedOptimizations()"
-      />
+      <app-content-card [entry]="entry" observation="manual" />
       } }
     </div>
   </section>

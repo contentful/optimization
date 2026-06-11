@@ -1,5 +1,5 @@
 import { Component, inject, resource } from '@angular/core'
-import { NgContentfulClient, NgContentfulOptimization } from '@contentful/optimization-angular'
+import { NgContentfulClient } from '@contentful/optimization-angular'
 import { ContentCard } from '../../components/content-card'
 import { ControlPanel } from '../../components/control-panel'
 import { FIXTURES } from '../../fixtures'
@@ -15,7 +15,6 @@ import type { ContentfulEntry } from '../../types/contentful'
 export class Home {
   private readonly contentfulClient = inject(NgContentfulClient)
   protected readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
-  protected readonly selectedOptimizations = inject(NgContentfulOptimization).selectedOptimizations
   protected readonly autoIds = FIXTURES.home.auto
   protected readonly manualIds = FIXTURES.home.manual
   protected readonly liveUpdatesEntryId = FIXTURES.home.liveUpdates

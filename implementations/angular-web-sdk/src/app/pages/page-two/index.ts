@@ -17,8 +17,6 @@ export class PageTwo {
   private readonly optimization = inject(NgContentfulOptimization)
   private readonly contentfulClient = inject(NgContentfulClient)
 
-  protected readonly selectedOptimizations = this.optimization.selectedOptimizations
-
   protected readonly entries = resource({
     loader: async (): Promise<Map<string, ContentfulEntry>> => {
       const list = await this.contentfulClient.fetchEntries(FIXTURES.pageTwo.ids)

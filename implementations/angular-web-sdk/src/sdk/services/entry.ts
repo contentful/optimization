@@ -11,7 +11,7 @@ import {
   type OnDestroy,
   type Signal,
 } from '@angular/core'
-import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
+
 import type { Document } from '@contentful/rich-text-types'
 import { INLINES } from '@contentful/rich-text-types'
 import type { Entry } from 'contentful'
@@ -125,9 +125,8 @@ export class NgContentfulEntry implements OnDestroy {
   private readonly elementRef = inject<ElementRef<Element>>(ElementRef)
 
   private _entry: Signal<Entry | undefined> = signal(undefined)
-  private _selectedOptimizations: Signal<SelectedOptimizationArray | undefined> = signal(undefined)
   private _liveUpdates: Signal<boolean> = signal(false)
-  private _observation: Signal<ObservationMode> = signal('auto')
+  private _observation: Signal<ObservationMode> | InputSignal<ObservationMode> = signal('auto')
   private readonly _domReady = signal(false)
   private manualTrackingActive = false
 
@@ -139,8 +138,8 @@ export class NgContentfulEntry implements OnDestroy {
 
     const isLive = this._liveUpdates()
     const selectedOptimizations = isLive
-      ? (this._selectedOptimizations() ?? this.optimization.selectedOptimizations())
-      : untracked(() => this._selectedOptimizations() ?? this.optimization.selectedOptimizations())
+      ? this.optimization.selectedOptimizations()
+      : untracked(() => this.optimization.selectedOptimizations())
 
     return mapToResolvedEntryView(
       raw,
@@ -203,17 +202,14 @@ export class NgContentfulEntry implements OnDestroy {
   with({
     entry,
     observation,
-    selectedOptimizations,
     liveUpdates,
   }: {
     entry: Signal<Entry>
     observation?: InputSignal<ObservationMode>
-    selectedOptimizations?: InputSignal<SelectedOptimizationArray | undefined>
     liveUpdates?: Signal<boolean>
   }): this {
     this._entry = entry
     if (observation) this._observation = observation
-    if (selectedOptimizations) this._selectedOptimizations = selectedOptimizations
     if (liveUpdates) this._liveUpdates = liveUpdates
     return this
   }

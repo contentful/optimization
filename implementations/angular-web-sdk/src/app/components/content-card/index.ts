@@ -2,7 +2,6 @@ import { NgTemplateOutlet } from '@angular/common'
 import { Component, computed, forwardRef, inject, input } from '@angular/core'
 import { DomSanitizer, type SafeHtml } from '@angular/platform-browser'
 import { NgContentfulEntry, type ObservationMode } from '@contentful/optimization-angular'
-import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import { BLOCKS, INLINES, type Document } from '@contentful/rich-text-types'
 import {
   BADGE_MAP,
@@ -114,10 +113,10 @@ export class ContentCard {
   readonly entry = input.required<ContentfulEntry>()
   readonly observation = input<ObservationMode>('auto')
   readonly clickScenario = input<EntryClickScenario | undefined>(undefined)
-  readonly selectedOptimizations = input<SelectedOptimizationArray | undefined>(undefined)
   readonly liveUpdates = input<boolean | undefined>(undefined)
 
   private readonly sanitizer = inject(DomSanitizer)
+
   private readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
   private readonly isLive = computed(() => {
     if (this.liveUpdatesService.previewPanelVisible()) return true
@@ -128,7 +127,6 @@ export class ContentCard {
 
   private readonly liveEntry = inject(NgContentfulEntry).with({
     entry: this.entry,
-    selectedOptimizations: this.selectedOptimizations,
     liveUpdates: this.isLive,
     observation: this.observation,
   })
