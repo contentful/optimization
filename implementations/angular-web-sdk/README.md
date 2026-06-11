@@ -43,11 +43,9 @@ the preview panel.
 - Analytics event display with heartbeat deduplication
 - Multi-route navigation with conversion tracking
 
-See [`REQUIREMENTS.md`](./REQUIREMENTS.md) for full feature specs and visual verification steps.
-
 ## Prerequisites
 
-- Node.js >= 20.19.0 (24.13.0 recommended to match `.nvmrc`)
+- Node.js ^24.15.0 (to match `.nvmrc`)
 - pnpm 10.x
 
 ## Quick start
@@ -92,5 +90,4 @@ cp .env.example .env
 
 ## Related
 
-- [web-sdk_react](../web-sdk_react/README.md) — React Web SDK reference implementation
 - [@contentful/optimization-web](../../packages/web/web-sdk/README.md) — Web SDK

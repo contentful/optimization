@@ -6,15 +6,14 @@ import { Profile } from '@contentful/optimization-web/api-schemas'
 import type { Subscription } from 'rxjs'
 import { filter } from 'rxjs/operators'
 import type { NgContentfulOptimizationConfig } from '../config'
-import { getOrCreateBaseClient, NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../config'
+import {
+  getOrCreateBaseClient,
+  NG_CONTENTFUL_OPTIMIZATION_CONFIG,
+  resolveLogLevel,
+} from '../config'
 import { fromSdkState } from '../utils'
 
 export type NgContentfulOptimizationInstance = ContentfulOptimization
-
-function resolveLogLevel(raw: string | undefined): 'debug' | 'warn' | 'error' {
-  if (raw === 'debug' || raw === 'warn' || raw === 'error') return raw
-  return 'debug'
-}
 
 let instance: NgContentfulOptimizationInstance | undefined = undefined
 let attachmentStarted = false

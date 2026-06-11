@@ -14,7 +14,6 @@
   @if (meta(); as m) {
   <div
     class="entry-card"
-    [class.entry-card--mergetag-resolved]="m.mergeTagResolved === true"
     [attr.data-testid]="'content-' + m.baselineId"
     [attr.data-ctfl-entry-id]="isAuto() ? m.resolvedId : null"
     [attr.data-ctfl-baseline-id]="isAuto() ? m.baselineId : null"

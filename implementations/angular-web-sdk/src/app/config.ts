@@ -23,6 +23,11 @@ export interface NgContentfulOptimizationConfig {
   }
 }
 
+export function resolveLogLevel(raw: string | undefined): 'debug' | 'warn' | 'error' {
+  if (raw === 'debug' || raw === 'warn' || raw === 'error') return raw
+  return 'debug'
+}
+
 export const NG_CONTENTFUL_OPTIMIZATION_CONFIG = new InjectionToken<NgContentfulOptimizationConfig>(
   'NG_CONTENTFUL_OPTIMIZATION_CONFIG',
 )

@@ -5,12 +5,7 @@ import {
 } from '@angular/core'
 import { provideRouter } from '@angular/router'
 import { routes } from './app.routes'
-import { provideContentfulOptimizationConfig } from './config'
-
-function resolveLogLevel(raw: string | undefined): 'debug' | 'warn' | 'error' {
-  if (raw === 'warn' || raw === 'error') return raw
-  return 'debug'
-}
+import { provideContentfulOptimizationConfig, resolveLogLevel } from './config'
 
 export const appConfig: ApplicationConfig = {
   providers: [
