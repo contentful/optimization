@@ -4,6 +4,7 @@ import { DomSanitizer, type SafeHtml } from '@angular/platform-browser'
 import { BLOCKS, INLINES, type Document } from '@contentful/rich-text-types'
 import {
   BADGE_MAP,
+  ENTRY_NAMES,
   type BadgeKey,
   type EntryClickScenario,
   type LiveMode,
@@ -132,6 +133,7 @@ export class ContentCard {
   })
 
   protected readonly resolved = this.liveEntry.resolved
+  protected readonly entryNames = ENTRY_NAMES
   protected readonly meta = computed(() => this.resolved()?.meta)
   protected readonly isVariant = computed(() => this.resolved()?.meta.experienceId !== undefined)
   protected readonly richTextHtml = computed<SafeHtml | undefined>(() => {

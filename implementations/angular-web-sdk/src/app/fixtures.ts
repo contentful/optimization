@@ -82,6 +82,17 @@ export const BADGE_MAP: Record<BadgeKey, { label: string; mod: string; title: st
   },
 }
 
+export const ENTRY_NAMES: Record<string, string> = {
+  '1JAU028vQ7v6nB2swl3NBo': 'auto-a',
+  '1MwiFl4z7gkwqGYdvCmr8c': 'auto-b',
+  '4ib0hsHWoSOnCVdDkizE8d': 'click-direct',
+  xFwgG3oNaOcjzWiGe4vXo: 'click-descendant',
+  '2Z2WLOx07InSewC3LUB3eX': 'click-ancestor',
+  '5XHssysWUDECHzKLzoIsg1': 'manual-a',
+  '6zqoWXyiSrf0ja7I2WGtYj': 'manual-b',
+  '7pa5bOx8Z9NmNcr7mISvD': 'manual-c',
+}
+
 const clickScenarios: Record<string, EntryClickScenario> = {
   '4ib0hsHWoSOnCVdDkizE8d': 'direct',
   xFwgG3oNaOcjzWiGe4vXo: 'descendant',

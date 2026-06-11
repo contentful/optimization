@@ -1,6 +1,7 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { interval } from 'rxjs'
+import { ENTRY_NAMES } from '../../fixtures'
 import { NgContentfulOptimization } from '../../services/optimization'
 import { isRecord } from '../../utils'
 
@@ -30,8 +31,14 @@ function toPageUrl(event: Record<string, unknown>): string | undefined {
   }
 }
 
+const TRUNCATE_ID_LENGTH = 8
+
+function resolveId(id: string): string {
+  return ENTRY_NAMES[id] ?? `…${id.slice(-TRUNCATE_ID_LENGTH)}`
+}
+
 function eventLabel(event: AnalyticsEvent): string {
-  if (event.componentId !== undefined) return event.componentId
+  if (event.componentId !== undefined) return resolveId(event.componentId)
   if (event.pageUrl !== undefined) return event.pageUrl
   if (event.userId !== undefined) return event.userId
   return ''
