@@ -24,6 +24,8 @@ export type ObservationMode = 'auto' | 'manual'
 type MergeTagResolver = (target: MergeTagEntry) => string | undefined
 
 export interface EntryMeta {
+  baselineId: string
+  resolvedId: string
   experienceId: string | undefined
   sticky: boolean | undefined
   variantIndex: number | undefined
@@ -32,8 +34,6 @@ export interface EntryMeta {
 
 export interface ResolvedEntryView {
   resolvedEntry: Entry
-  baselineId: string
-  resolvedId: string
   meta: EntryMeta
 }
 
@@ -45,22 +45,21 @@ function isRichTextDocument(value: unknown): value is Document {
   return isRecord(value) && value.nodeType === 'document' && Array.isArray(value.content)
 }
 
-function mapToResolvedEntryView(
+function generateMeta(
   baseline: Entry,
   { entry: resolvedEntry, selectedOptimization }: { entry: Entry; selectedOptimization?: unknown },
-): ResolvedEntryView {
+): EntryMeta {
   const opt = isRecord(selectedOptimization) ? selectedOptimization : undefined
   const experienceId = typeof opt?.experienceId === 'string' ? opt.experienceId : undefined
+  const sticky = typeof opt?.sticky === 'boolean' ? opt.sticky : undefined
+  const variantIndex = typeof opt?.variantIndex === 'number' ? opt.variantIndex : undefined
   return {
-    resolvedEntry,
     baselineId: baseline.sys.id,
     resolvedId: resolvedEntry.sys.id,
-    meta: {
-      experienceId,
-      sticky: typeof opt?.sticky === 'boolean' ? opt.sticky : undefined,
-      variantIndex: typeof opt?.variantIndex === 'number' ? opt.variantIndex : undefined,
-      mergeTagResolved: entryHasMergeTag(baseline) ? false : undefined,
-    },
+    experienceId,
+    sticky,
+    variantIndex,
+    mergeTagResolved: entryHasMergeTag(baseline) ? false : undefined,
   }
 }
 
@@ -126,10 +125,8 @@ export class NgContentfulEntry implements OnDestroy {
       ? this.optimization.selectedOptimizations()
       : untracked(() => this.optimization.selectedOptimizations())
 
-    return mapToResolvedEntryView(
-      raw,
-      this.optimization.sdk.resolveOptimizedEntry(raw, selectedOptimizations),
-    )
+    const resolved = this.optimization.sdk.resolveOptimizedEntry(raw, selectedOptimizations)
+    return { resolvedEntry: resolved.entry, meta: generateMeta(raw, resolved) }
   })
 
   // Applies merge tags on top of the resolved variant. When live, profile() is tracked so merge
@@ -142,18 +139,16 @@ export class NgContentfulEntry implements OnDestroy {
     const profile = isLive
       ? this.optimization.profile()
       : untracked(() => this.optimization.profile())
+
+    const { resolvedEntry, meta } = variant
+    const mergeTagResolved = meta.mergeTagResolved !== undefined ? profile !== undefined : undefined
     return {
-      ...variant,
-      resolvedEntry: resolveEntryMergeTags(variant.resolvedEntry, (target) =>
+      resolvedEntry: resolveEntryMergeTags(resolvedEntry, (target) =>
         profile
           ? this.optimization.sdk.getMergeTagValue(target, profile)
           : target.fields.nt_fallback,
       ),
-      meta: {
-        ...variant.meta,
-        mergeTagResolved:
-          variant.meta.mergeTagResolved !== undefined ? profile !== undefined : undefined,
-      },
+      meta: { ...meta, mergeTagResolved },
     }
   })
 
@@ -190,7 +185,7 @@ export class NgContentfulEntry implements OnDestroy {
   private enableManualTracking(resolved: ResolvedEntryView): void {
     this.optimization.sdk.tracking.enableElement('views', this.elementRef.nativeElement, {
       data: {
-        entryId: resolved.resolvedId,
+        entryId: resolved.meta.resolvedId,
         optimizationId: resolved.meta.experienceId,
         sticky: resolved.meta.sticky,
         variantIndex: resolved.meta.variantIndex,
