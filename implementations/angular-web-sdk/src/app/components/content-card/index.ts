@@ -9,9 +9,9 @@ import {
   type LiveMode,
   type MergeTagMode,
 } from '../../fixtures'
+import type { ContentfulEntry } from '../../services/contentful-client'
 import { NgContentfulEntry, type ObservationMode } from '../../services/entry'
 import { NgContentfulLiveUpdates } from '../../services/live-updates'
-import type { ContentfulEntry } from '../../types/contentful'
 import { isRecord } from '../../utils'
 
 // — Badge —

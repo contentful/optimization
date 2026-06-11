@@ -2,9 +2,9 @@ import { Component, inject, resource } from '@angular/core'
 import { ContentCard } from '../../components/content-card'
 import { ControlPanel } from '../../components/control-panel'
 import { FIXTURES } from '../../fixtures'
+import type { ContentfulEntry } from '../../services/contentful-client'
 import { NgContentfulClient } from '../../services/contentful-client'
 import { NgContentfulOptimization } from '../../services/optimization'
-import type { ContentfulEntry } from '../../types/contentful'
 
 const PAGE_TWO_COMPONENT_ID = 'page-two-conversion'
 

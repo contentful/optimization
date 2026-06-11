@@ -2,9 +2,9 @@ import { Component, inject, resource } from '@angular/core'
 import { ContentCard } from '../../components/content-card'
 import { ControlPanel } from '../../components/control-panel'
 import { FIXTURES } from '../../fixtures'
+import type { ContentfulEntry } from '../../services/contentful-client'
 import { NgContentfulClient } from '../../services/contentful-client'
 import { NgContentfulLiveUpdates } from '../../services/live-updates'
-import type { ContentfulEntry } from '../../types/contentful'
 
 @Component({
   selector: 'app-home',

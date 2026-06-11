@@ -1,7 +1,15 @@
 import { inject, Injectable } from '@angular/core'
-import type { ContentfulClientApi, Entry, EntrySkeletonType } from 'contentful'
+import type { ContentfulClientApi, Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { getOrCreateBaseClient, NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../config'
 import { NgContentfulOptimization } from './optimization'
+
+export interface ContentEntryFields {
+  text?: EntryFieldTypes.Text | EntryFieldTypes.RichText
+  nested?: EntryFieldTypes.Array<EntryFieldTypes.EntryLink<ContentEntrySkeleton>>
+}
+
+export type ContentEntrySkeleton = EntrySkeletonType<ContentEntryFields>
+export type ContentfulEntry = Entry<ContentEntrySkeleton>
 
 const INCLUDE_DEPTH = 10
 
