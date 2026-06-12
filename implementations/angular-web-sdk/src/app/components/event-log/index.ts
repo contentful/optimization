@@ -59,8 +59,7 @@ export class EventLog {
 
   constructor() {
     const sub = this.optimization.sdk.states.eventStream.subscribe((raw) => {
-      if (!raw) return
-      switch (raw.type) {
+      switch (raw?.type) {
         case 'page': {
           const {
             properties: { url },
