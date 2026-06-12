@@ -1,5 +1,5 @@
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
+import type { ExperienceRequestState, ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import type { ReactElement, ReactNode } from 'react'
 import { act } from 'react'
@@ -33,6 +33,7 @@ export interface RuntimeOptimization extends OptimizationSdk {
   states: OptimizationSdk['states'] & {
     canOptimize: ObservableLike<boolean>
     optimizationPossible: ObservableLike<boolean>
+    experienceRequestState: ObservableLike<ExperienceRequestState>
     selectedOptimizations: ObservableLike<SelectedOptimizationState>
   }
 }
@@ -102,6 +103,7 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
       blockedEventStream: createObservable(undefined),
       canOptimize: createObservable(false),
       optimizationPossible: createObservable(true),
+      experienceRequestState: createObservable<ExperienceRequestState>({ status: 'idle' }),
       consent: createObservable(undefined),
       eventStream: createObservable(undefined),
       flag: () => createObservable(undefined),
@@ -139,17 +141,21 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
 export function createRuntime(
   resolveOptimizedEntry: ResolveOptimizedEntry,
   initialOptimizationPossible = true,
+  initialExperienceRequestState: ExperienceRequestState = { status: 'idle' },
 ): {
   emit: (value: SelectedOptimizationState) => Promise<void>
   setOptimizationPossible: (value: boolean) => Promise<void>
+  setExperienceRequestState: (value: ExperienceRequestState) => Promise<void>
   optimization: RuntimeOptimization
 } {
   const selectedOptimizationSubscribers = new Set<RuntimeSubscriber<SelectedOptimizationState>>()
   const canOptimizeSubscribers = new Set<RuntimeSubscriber<boolean>>()
   const optimizationPossibleSubscribers = new Set<RuntimeSubscriber<boolean>>()
+  const experienceRequestStateSubscribers = new Set<RuntimeSubscriber<ExperienceRequestState>>()
   let current: SelectedOptimizationState = undefined
   let canOptimize = false
   let optimizationPossible = initialOptimizationPossible
+  let experienceRequestStateValue: ExperienceRequestState = initialExperienceRequestState
 
   const optimization = createOptimizationSdk({
     resolveOptimizedEntry,
@@ -192,6 +198,25 @@ export function createRuntime(
           return { unsubscribe: () => undefined }
         },
       },
+      experienceRequestState: {
+        get current() {
+          return experienceRequestStateValue
+        },
+        subscribe(next: RuntimeSubscriber<ExperienceRequestState>) {
+          experienceRequestStateSubscribers.add(next)
+          next(experienceRequestStateValue)
+
+          return {
+            unsubscribe() {
+              experienceRequestStateSubscribers.delete(next)
+            },
+          }
+        },
+        subscribeOnce(next: RuntimeSubscriber<ExperienceRequestState>) {
+          next(experienceRequestStateValue)
+          return { unsubscribe: () => undefined }
+        },
+      },
       selectedOptimizations: {
         get current() {
           return current
@@ -219,6 +244,9 @@ export function createRuntime(
   async function emit(value: SelectedOptimizationState): Promise<void> {
     current = value
     canOptimize = value !== undefined
+    if (canOptimize) {
+      experienceRequestStateValue = { status: 'success' }
+    }
 
     await act(async () => {
       await Promise.resolve()
@@ -228,6 +256,11 @@ export function createRuntime(
       selectedOptimizationSubscribers.forEach((subscriber) => {
         subscriber(value)
       })
+      if (canOptimize) {
+        experienceRequestStateSubscribers.forEach((subscriber) => {
+          subscriber({ status: 'success' })
+        })
+      }
     })
   }
 
@@ -242,7 +275,18 @@ export function createRuntime(
     })
   }
 
-  return { emit, setOptimizationPossible, optimization }
+  async function setExperienceRequestState(value: ExperienceRequestState): Promise<void> {
+    experienceRequestStateValue = value
+
+    await act(async () => {
+      await Promise.resolve()
+      experienceRequestStateSubscribers.forEach((subscriber) => {
+        subscriber(value)
+      })
+    })
+  }
+
+  return { emit, setOptimizationPossible, setExperienceRequestState, optimization }
 }
 
 export function defaultLiveUpdatesContext(): LiveUpdatesContextValue {

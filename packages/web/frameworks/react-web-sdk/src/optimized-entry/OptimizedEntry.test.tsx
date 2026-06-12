@@ -113,10 +113,12 @@ describe('OptimizedEntry', () => {
   })
 
   it('uses loadingFallback while unresolved and removes resolved tracking attrs during loading', async () => {
-    const { optimization, emit } = createRuntime((entry, selectedOptimizations) => {
-      if (!selectedOptimizations?.length) return { entry }
-      return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
-    })
+    const { optimization, emit, setExperienceRequestState } = createRuntime(
+      (entry, selectedOptimizations) => {
+        if (!selectedOptimizations?.length) return { entry }
+        return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
+      },
+    )
 
     const view = await renderComponent(
       <OptimizedEntry baselineEntry={optimizedBaseline} loadingFallback={() => 'loading'}>
@@ -124,6 +126,8 @@ describe('OptimizedEntry', () => {
       </OptimizedEntry>,
       optimization,
     )
+
+    await setExperienceRequestState({ status: 'pending' })
 
     expect(view.container.textContent).toContain('loading')
 
@@ -139,11 +143,11 @@ describe('OptimizedEntry', () => {
     await view.unmount()
   })
 
-  it('renders baseline immediately for optimized entries when optimization is not possible', async () => {
+  it('renders baseline immediately for optimized entries when no request is in flight', async () => {
     const { optimization } = createRuntime((entry, selectedOptimizations) => {
       if (!selectedOptimizations?.length) return { entry }
       return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
-    }, false)
+    })
 
     const view = await renderComponent(
       <OptimizedEntry baselineEntry={optimizedBaseline} loadingFallback={() => 'loading'}>
@@ -158,8 +162,8 @@ describe('OptimizedEntry', () => {
     await view.unmount()
   })
 
-  it('transitions out of the loading fallback once optimization becomes impossible', async () => {
-    const { optimization, setOptimizationPossible } = createRuntime(
+  it('transitions out of the loading fallback once the experience request fails', async () => {
+    const { optimization, setExperienceRequestState } = createRuntime(
       (entry, selectedOptimizations) => {
         if (!selectedOptimizations?.length) return { entry }
         return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
@@ -174,9 +178,11 @@ describe('OptimizedEntry', () => {
       optimization,
     )
 
+    await setExperienceRequestState({ status: 'pending' })
+
     expect(view.container.textContent).toContain('loading')
 
-    await setOptimizationPossible(false)
+    await setExperienceRequestState({ status: 'failed', reason: 'api-error' })
 
     expect(view.container.textContent).toContain('optimized-baseline')
     expect(view.container.textContent).not.toContain('loading')
@@ -351,10 +357,12 @@ describe('OptimizedEntry', () => {
   })
 
   it('does not render entry content initially in SPA mode', async () => {
-    const { optimization } = createRuntime((entry, selectedOptimizations) => {
-      if (!selectedOptimizations?.length) return { entry }
-      return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
-    })
+    const { optimization, setExperienceRequestState } = createRuntime(
+      (entry, selectedOptimizations) => {
+        if (!selectedOptimizations?.length) return { entry }
+        return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
+      },
+    )
 
     const view = await renderComponent(
       <OptimizedEntry baselineEntry={optimizedBaseline}>
@@ -362,6 +370,8 @@ describe('OptimizedEntry', () => {
       </OptimizedEntry>,
       optimization,
     )
+
+    await setExperienceRequestState({ status: 'pending' })
 
     expect(view.container.textContent).toContain('optimized-baseline')
 
@@ -373,7 +383,7 @@ describe('OptimizedEntry', () => {
     await view.unmount()
   })
 
-  it('renders loading until canOptimize is true for optimized flow', async () => {
+  it('renders baseline until optimized data arrives in optimized flow', async () => {
     const { optimization, emit } = createRuntime((entry, selectedOptimizations) => {
       if (!selectedOptimizations?.length) return { entry }
       return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
@@ -445,10 +455,12 @@ describe('OptimizedEntry', () => {
   })
 
   it('retains loading layout-target behavior when display:contents visibility is unsupported', async () => {
-    const { optimization } = createRuntime((entry, selectedOptimizations) => {
-      if (!selectedOptimizations?.length) return { entry }
-      return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
-    })
+    const { optimization, setExperienceRequestState } = createRuntime(
+      (entry, selectedOptimizations) => {
+        if (!selectedOptimizations?.length) return { entry }
+        return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
+      },
+    )
 
     const divView = await renderComponent(
       <OptimizedEntry baselineEntry={optimizedBaseline}>
@@ -456,6 +468,7 @@ describe('OptimizedEntry', () => {
       </OptimizedEntry>,
       optimization,
     )
+    await setExperienceRequestState({ status: 'pending' })
     const divLoadingTarget = getRequiredElement(
       divView.container,
       '[data-ctfl-loading-layout-target]',
@@ -464,12 +477,19 @@ describe('OptimizedEntry', () => {
     expect(divLoadingTarget.style.display).toBe('block')
     await divView.unmount()
 
+    const { optimization: optimization2, setExperienceRequestState: setExperienceRequestState2 } =
+      createRuntime((entry, selectedOptimizations) => {
+        if (!selectedOptimizations?.length) return { entry }
+        return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
+      })
+
     const spanView = await renderComponent(
       <OptimizedEntry baselineEntry={optimizedBaseline} as="span">
         {(resolved) => readTitle(resolved)}
       </OptimizedEntry>,
-      optimization,
+      optimization2,
     )
+    await setExperienceRequestState2({ status: 'pending' })
     const spanLoadingTarget = getRequiredElement(
       spanView.container,
       '[data-ctfl-loading-layout-target]',

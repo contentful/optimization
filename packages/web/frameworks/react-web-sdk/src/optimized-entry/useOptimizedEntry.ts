@@ -1,5 +1,5 @@
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
+import type { ExperienceRequestState, ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { useEffect, useMemo, useState } from 'react'
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
@@ -31,7 +31,7 @@ export function useOptimizedEntry({
     SelectedOptimizationArray | undefined
   >(undefined)
   const [canOptimize, setCanOptimize] = useState(false)
-  const [optimizationPossible, setOptimizationPossible] = useState(true)
+  const [experienceRequestPending, setExperienceRequestPending] = useState(false)
   const [sdkInitialized, setSdkInitialized] = useState(false)
 
   const shouldLiveUpdate = resolveShouldLiveUpdate({
@@ -43,7 +43,7 @@ export function useOptimizedEntry({
   useEffect(() => {
     if (!sdk || !isReady) {
       setCanOptimize(false)
-      setOptimizationPossible(true)
+      setExperienceRequestPending(false)
       return
     }
 
@@ -67,14 +67,16 @@ export function useOptimizedEntry({
       setCanOptimize(value)
     })
 
-    const optimizationPossibleSubscription = sdk.states.optimizationPossible.subscribe((value) => {
-      setOptimizationPossible(value)
-    })
+    const experienceRequestStateSubscription = sdk.states.experienceRequestState.subscribe(
+      (state: ExperienceRequestState) => {
+        setExperienceRequestPending(state.status === 'pending')
+      },
+    )
 
     return () => {
       selectedOptimizationsSubscription.unsubscribe()
       canOptimizeSubscription.unsubscribe()
-      optimizationPossibleSubscription.unsubscribe()
+      experienceRequestStateSubscription.unsubscribe()
     }
   }, [isReady, sdk, shouldLiveUpdate])
 
@@ -91,7 +93,7 @@ export function useOptimizedEntry({
   )
 
   const requiresOptimization = hasOptimizationReferences(baselineEntry)
-  const isContentReady = requiresOptimization ? canOptimize || !optimizationPossible : true
+  const isContentReady = !requiresOptimization || !experienceRequestPending
 
   return {
     canOptimize,
