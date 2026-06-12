@@ -66,10 +66,7 @@ function resolveEntryMergeTags(entry: Entry, resolveMergeTag: MergeTagResolver):
   }) as Entry
 }
 
-function setupManualTracking(
-  result: Signal<ResolvedEntry>,
-  observation: Signal<ObservationMode>,
-): void {
+function setupManualTracking(result: Signal<ResolvedEntry>, manualTracking: Signal<boolean>): void {
   const optimization = inject(NgContentfulOptimization)
   const elementRef = inject<ElementRef<Element>>(ElementRef)
   const destroyRef = inject(DestroyRef)
@@ -90,7 +87,7 @@ function setupManualTracking(
 
   effect(() => {
     clear()
-    if (!domReady() || observation() === 'auto') return
+    if (!domReady() || !manualTracking()) return
     const { entryId, optimizationId, sticky, variantIndex } = result()
     optimization.sdk.tracking.enableElement('views', elementRef.nativeElement, {
       data: { entryId, optimizationId, sticky, variantIndex },
@@ -104,11 +101,11 @@ function setupManualTracking(
 export function injectContentfulEntry({
   entry,
   isLive = signal(false),
-  observation = signal<ObservationMode>('auto'),
+  manualTracking = signal(false),
 }: {
   entry: Signal<Entry>
   isLive?: Signal<boolean>
-  observation?: Signal<ObservationMode>
+  manualTracking?: Signal<boolean>
 }): Signal<ResolvedEntry> {
   const optimization = inject(NgContentfulOptimization)
 
@@ -149,7 +146,7 @@ export function injectContentfulEntry({
     }
   })
 
-  setupManualTracking(result, observation)
+  setupManualTracking(result, manualTracking)
 
   return result
 }

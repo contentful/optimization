@@ -124,10 +124,12 @@ export class EntryCard {
     return this.liveUpdates() ?? this.liveUpdatesService.globalLiveUpdates()
   })
 
+  private readonly manualTracking = computed(() => this.observation() === 'manual')
+
   protected readonly resolved = injectContentfulEntry({
     entry: this.entry,
     isLive: this.isLive,
-    observation: this.observation,
+    manualTracking: this.manualTracking,
   })
 
   protected readonly isVariant = computed(() => this.resolved().optimizationId !== undefined)
