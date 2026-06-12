@@ -29,7 +29,7 @@ function mergeTagKey(resolved: boolean | undefined): MergeTagMode | undefined {
 }
 
 @Component({
-  selector: 'app-content-card-badge',
+  selector: 'app-entry-card-badge',
   template: `<span
     [class]="mod() ? 'entry-card__badge entry-card__badge--' + mod() : 'entry-card__badge'"
     [attr.data-tooltip]="title()"
@@ -93,7 +93,7 @@ function renderNode(node: unknown): string {
   return renderer !== undefined ? renderer(children, data) : children()
 }
 
-// — ContentCard —
+// — Entry card —
 
 function isContentfulEntry(value: unknown): value is ContentfulEntry {
   return (
@@ -105,13 +105,13 @@ function isContentfulEntry(value: unknown): value is ContentfulEntry {
 }
 
 @Component({
-  selector: 'app-content-card',
-  imports: [NgTemplateOutlet, Badge, forwardRef(() => ContentCard)],
+  selector: 'app-entry-card',
+  imports: [NgTemplateOutlet, Badge, forwardRef(() => EntryCard)],
   templateUrl: './index.html',
   styleUrl: './index.scss',
   providers: [NgContentfulEntry],
 })
-export class ContentCard {
+export class EntryCard {
   readonly entry = input.required<ContentfulEntry>()
   readonly observation = input<ObservationMode>('auto')
   readonly clickScenario = input<EntryClickScenario | undefined>(undefined)

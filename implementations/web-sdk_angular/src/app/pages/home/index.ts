@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core'
-import { ContentCard } from '../../components/content-card'
 import { ControlPanel } from '../../components/control-panel'
+import { EntryCard } from '../../components/entry-card'
 import { FIXTURES } from '../../fixtures'
 import type { ContentfulEntry } from '../../services/contentful-client'
 import { NgContentfulClient } from '../../services/contentful-client'
@@ -8,7 +8,7 @@ import { NgLiveUpdates } from '../../services/live-updates'
 
 @Component({
   selector: 'app-home',
-  imports: [ContentCard, ControlPanel],
+  imports: [EntryCard, ControlPanel],
   templateUrl: './index.html',
   host: { style: 'display: contents' },
 })
