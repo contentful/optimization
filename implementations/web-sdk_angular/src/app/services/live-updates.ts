@@ -3,7 +3,7 @@ import { fromSdkState } from '../utils'
 import { NgContentfulOptimization } from './optimization'
 
 @Injectable({ providedIn: 'root' })
-export class NgContentfulLiveUpdates {
+export class NgLiveUpdates {
   private readonly globalLiveUpdatesSignal = signal(false)
 
   readonly globalLiveUpdates = this.globalLiveUpdatesSignal.asReadonly()

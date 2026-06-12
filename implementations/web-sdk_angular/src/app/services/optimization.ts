@@ -51,7 +51,6 @@ function getOrCreateInstance(
       hovers: true,
     },
     locale: config.locale,
-    contentfulLocales: config.contentfulLocales,
     app: config.app,
     api: {
       insightsBaseUrl: config.insightsBaseUrl,

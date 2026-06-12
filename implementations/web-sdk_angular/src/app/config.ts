@@ -8,7 +8,6 @@ export interface NgContentfulOptimizationConfig {
   experienceBaseUrl: string
   logLevel?: 'debug' | 'warn' | 'error'
   locale: string
-  contentfulLocales: { default: string }
   app: { name: string; version: string }
   autoTrackEntryInteraction?: { views?: boolean; clicks?: boolean; hovers?: boolean }
   contentful: {

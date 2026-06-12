@@ -1,5 +1,5 @@
 import { Component, computed, inject, input } from '@angular/core'
-import { NgContentfulLiveUpdates } from '../../services/live-updates'
+import { NgLiveUpdates } from '../../services/live-updates'
 import { NgContentfulOptimization } from '../../services/optimization'
 import { fromSdkState } from '../../utils'
 
@@ -13,7 +13,7 @@ export class ControlPanel {
 
   // injected dependencies
   private readonly optimization = inject(NgContentfulOptimization)
-  protected readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
+  protected readonly liveUpdatesService = inject(NgLiveUpdates)
 
   // protected state
   protected readonly consent = this.optimization.consent

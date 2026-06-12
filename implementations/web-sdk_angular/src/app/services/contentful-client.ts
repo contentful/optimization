@@ -1,7 +1,6 @@
 import { inject, Injectable } from '@angular/core'
 import type { ContentfulClientApi, Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { getOrCreateBaseClient, NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../config'
-import { NgContentfulOptimization } from './optimization'
 
 export interface ContentEntryFields {
   text?: EntryFieldTypes.Text | EntryFieldTypes.RichText
@@ -15,23 +14,18 @@ const INCLUDE_DEPTH = 10
 
 @Injectable({ providedIn: 'root' })
 export class NgContentfulClient {
-  private readonly resolvedClient: ContentfulClientApi<undefined>
+  private readonly client: ContentfulClientApi<undefined>
+  private readonly locale: string
 
   constructor() {
     const config = inject(NG_CONTENTFUL_OPTIMIZATION_CONFIG)
-    const { sdk } = inject(NgContentfulOptimization)
-
-    const client = getOrCreateBaseClient(config)
-
-    // Wrapping the client ensures the SDK and CDA always use the same locale.
-    // Without this, personalisation breaks when the SDK resolves a different locale
-    // than what the CDA fetches entries with.
-    this.resolvedClient = sdk.withOptimizationLocale(client)
+    this.client = getOrCreateBaseClient(config)
+    ;({ locale: this.locale } = config)
   }
 
   async fetchEntry<T extends EntrySkeletonType>(entryId: string): Promise<Entry<T> | undefined> {
     try {
-      return await this.resolvedClient.getEntry<T>(entryId, { include: INCLUDE_DEPTH })
+      return await this.client.getEntry<T>(entryId, { include: INCLUDE_DEPTH, locale: this.locale })
     } catch {
       return undefined
     }

@@ -21,7 +21,6 @@ export const appConfig: ApplicationConfig = {
         import.meta.env.PUBLIC_EXPERIENCE_API_BASE_URL ?? 'http://localhost:8000/experience/',
       logLevel: resolveLogLevel(import.meta.env.PUBLIC_OPTIMIZATION_LOG_LEVEL),
       locale: 'en-US',
-      contentfulLocales: { default: 'en-US' },
       app: { name: 'ContentfulOptimization SDK - Angular Web Reference', version: '0.0.0' },
       autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
       contentful: {

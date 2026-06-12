@@ -11,7 +11,7 @@ import {
 } from '../../fixtures'
 import type { ContentfulEntry } from '../../services/contentful-client'
 import { NgContentfulEntry, type ObservationMode } from '../../services/entry'
-import { NgContentfulLiveUpdates } from '../../services/live-updates'
+import { NgLiveUpdates } from '../../services/live-updates'
 import { isRecord } from '../../utils'
 
 // — Badge —
@@ -117,7 +117,7 @@ export class ContentCard {
 
   private readonly sanitizer = inject(DomSanitizer)
 
-  private readonly liveUpdatesService = inject(NgContentfulLiveUpdates)
+  private readonly liveUpdatesService = inject(NgLiveUpdates)
   private readonly isLive = computed(() => {
     if (this.liveUpdatesService.previewPanelVisible()) return true
     const override = this.liveUpdates()
