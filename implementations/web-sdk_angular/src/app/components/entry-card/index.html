@@ -15,9 +15,9 @@
   <div
     class="entry-card"
     [attr.data-testid]="'content-' + r.baselineId"
-    [attr.data-ctfl-entry-id]="manualTracking() ? null : r.resolvedId"
+    [attr.data-ctfl-entry-id]="manualTracking() ? null : r.entryId"
     [attr.data-ctfl-baseline-id]="manualTracking() ? null : r.baselineId"
-    [attr.data-ctfl-optimization-id]="manualTracking() ? null : (r.experienceId ?? null)"
+    [attr.data-ctfl-optimization-id]="manualTracking() ? null : (r.optimizationId ?? null)"
     [attr.data-ctfl-sticky]="manualTracking() ? null : (r.sticky !== undefined ? r.sticky.toString() : null)"
     [attr.data-ctfl-variant-index]="manualTracking() ? null : (r.variantIndex !== undefined ? r.variantIndex.toString() : null)"
     [attr.data-ctfl-hover-duration-update-interval-ms]="manualTracking() ? null : '1000'"
@@ -32,11 +32,11 @@
         </p>
         <p class="entry-card__id">
           <span class="entry-card__id-label">var</span
-          ><span class="entry-card__id-value">{{ isVariant() ? r.resolvedId : '—' }}</span>
+          ><span class="entry-card__id-value">{{ isVariant() ? r.entryId : '—' }}</span>
         </p>
         <p class="entry-card__id">
           <span class="entry-card__id-label">exp</span
-          ><span class="entry-card__id-value">{{ r.experienceId ?? '—' }}</span>
+          ><span class="entry-card__id-value">{{ r.optimizationId ?? '—' }}</span>
         </p>
       </div>
       <div class="entry-card__badges">
@@ -48,7 +48,7 @@
 
     <div
       [attr.data-testid]="'entry-text-' + r.baselineId"
-      [attr.aria-label]="'Entry: ' + r.resolvedId"
+      [attr.aria-label]="'Entry: ' + r.entryId"
     >
       @if (richTextHtml(); as html) {
       <div class="rich-text" [innerHTML]="html"></div>
