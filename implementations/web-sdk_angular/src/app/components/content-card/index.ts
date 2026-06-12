@@ -107,6 +107,7 @@ function isContentfulEntry(value: unknown): value is ContentfulEntry {
   selector: 'app-content-card',
   imports: [NgTemplateOutlet, Badge, forwardRef(() => ContentCard)],
   templateUrl: './index.html',
+  styleUrl: './index.scss',
   providers: [NgContentfulEntry],
 })
 export class ContentCard {
