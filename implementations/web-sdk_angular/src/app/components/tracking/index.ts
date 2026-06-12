@@ -26,10 +26,10 @@ function timeAgo(firedAt: number, now: number): string {
 }
 
 @Component({
-  selector: 'app-event-log',
+  selector: 'app-tracking',
   templateUrl: './index.html',
 })
-export class EventLog {
+export class Tracking {
   private readonly optimization = inject(NgContentfulOptimization)
 
   private readonly events = signal<Map<string, AnalyticsEvent>>(new Map())
