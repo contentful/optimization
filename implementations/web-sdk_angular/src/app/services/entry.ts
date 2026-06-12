@@ -16,7 +16,7 @@ import type { MergeTagEntry } from '@contentful/optimization-web/api-schemas'
 import type { Document, Text } from '@contentful/rich-text-types'
 import { INLINES } from '@contentful/rich-text-types'
 import type { Entry } from 'contentful'
-import { isMergeTagEntry, isRecord } from '../utils'
+import { isRecord } from '../utils'
 import { NgContentfulOptimization } from './optimization'
 
 export type ObservationMode = 'auto' | 'manual'
@@ -35,6 +35,13 @@ export interface EntryMeta {
 export interface ResolvedEntryView {
   resolvedEntry: Entry
   meta: EntryMeta
+}
+
+function isMergeTagEntry(entry: unknown): entry is MergeTagEntry {
+  if (!isRecord(entry) || !isRecord(entry.sys)) return false
+  if (!isRecord(entry.sys.contentType)) return false
+  if (!isRecord(entry.sys.contentType.sys)) return false
+  return entry.sys.contentType.sys.id === 'nt_mergetag'
 }
 
 function isRichTextDocument(value: unknown): value is Document {
@@ -64,7 +71,7 @@ function resolveNode(node: unknown, resolveMergeTag: MergeTagResolver): unknown 
 function resolveEntryMergeTags(entry: Entry, resolveMergeTag: MergeTagResolver): Entry {
   return Object.assign({}, entry, {
     fields: Object.fromEntries(
-      Object.entries(entry.fields as Record<string, unknown>).map(([key, value]) => [
+      Object.entries(entry.fields).map(([key, value]) => [
         key,
         isRichTextDocument(value) ? resolveNode(value, resolveMergeTag) : value,
       ]),
