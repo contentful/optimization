@@ -12,7 +12,7 @@ replacement.
 
 For installation and package setup, use the relevant integration guide. For state propagation before
 resolution, see [Core state management](./core-state-management.md). For a broader explanation of
-Contentful, Experience API, and runtime locale handling, see
+Contentful and SDK Experience/event locale handling, see
 [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md).
 
 <details>
@@ -82,30 +82,23 @@ baseline entry.
 Fetch the entry with a single CDA locale and enough include depth for optimization links:
 
 ```ts
+const appLocale = getAppLocale()
+
 const optimization = new ContentfulOptimization({
   clientId,
   environment,
-  contentfulLocales: {
-    default: 'en-US',
-    supported: ['en-US', 'de-DE', 'fr-FR'],
-  },
+  locale: appLocale,
 })
 
-const contentful = optimization.withOptimizationLocale(contentfulClient)
-const baselineEntry = await contentful.getEntry(entryId, {
+const baselineEntry = await contentfulClient.getEntry(entryId, {
   include: 10,
+  locale: appLocale,
 })
 ```
 
-Use the SDK-resolved Contentful locale for CDA entry fetches that feed entry resolution. Browser,
-React Web, and React Native apps can use `withOptimizationLocale(contentfulClient)` or pass
-`optimization.locale` explicitly. Node and SSR apps can use the `contentfulLocale` returned by
-`resolveRequestLocale(reqOrAcceptLanguage)`. Native iOS and Android apps can use `client.locale` in
-their app-owned CDA request code.
-
-That Contentful locale is separate from event context locale and from an explicit Experience API
-`api.locale` override. For the full locale model, including runtime candidates, fallback order,
-Experience API localization, and environment-specific surfaces, see
+Use an application-owned Contentful locale for CDA entry fetches that feed entry resolution. The SDK
+top-level `locale` or Node `forRequest({ locale })` configures the SDK Experience/event locale, but
+it does not modify Contentful client requests for you. For the full locale model, see
 [Locale handling in the Optimization SDK Suite](./locale-handling-in-the-optimization-sdk-suite.md).
 
 For entries that will be passed to the Optimization SDK resolver, use a concrete locale instead of
@@ -167,15 +160,11 @@ Entry rendering can also involve MergeTag entries embedded in Rich Text. MergeTa
 is separate from entry replacement: `resolveOptimizedEntry()` chooses the entry variant, while
 MergeTag helpers resolve profile-dependent values inside rendered fields.
 
-Stateful SDKs use the current resolved app/content locale as the default Experience API locale
-unless an explicit `api.locale` override is provided. Apps can change that resolved locale with
-`setLocale()` or, in React providers, by changing the provider `locale` prop. Locale changes update
-SDK state only; fetch content or call `page()`, `screen()`, or `identify()` again when the rendered
-data needs to refresh. Stateless server code should pass the `contentfulLocale` returned by
-`resolveRequestLocale()` as the per-call `{ locale }` request option when that value is present.
-That keeps localized profile values, such as `location.city` and `location.country`, in the same
-language as the rendered Contentful content. When `contentfulLocale` is absent because no
-`contentfulLocales` config is present, omit the request locale option intentionally.
+Stateful SDKs use their current SDK locale as the default Experience API locale and default event
+context locale. Apps can change that value with `setLocale()` or, in React providers, by changing
+the provider `locale` prop. Locale changes update SDK state only; fetch content or call `page()`,
+`screen()`, or `identify()` again when the rendered data needs to refresh. Stateless server code
+should pass the application locale through `forRequest({ locale: appLocale })`.
 
 That request locale is not a Contentful CDA locale. The Experience API validates locale tag syntax
 and uses its own default when the query parameter is omitted. If the locale tag is invalid, the API

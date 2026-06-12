@@ -1,7 +1,6 @@
 package com.contentful.optimization.core
 
 import android.content.Context
-import android.os.LocaleList
 import android.util.Log
 import com.contentful.optimization.bridge.QuickJsContextManager
 import com.contentful.optimization.handlers.AppLifecycleHandler
@@ -74,11 +73,10 @@ class OptimizationClient(private val applicationContext: Context) {
         log.info { "[init] Starting SDK initialization (clientId=${config.clientId}, env=${config.environment})" }
 
         store.loadConsentState()
-        val resolvedLocale = config.resolvedLocale(getRuntimeLocaleCandidates())
+        val sdkLocale = config.normalizedLocale()
         val configuredDefaultConsent = config.defaults?.consent
         var storedAnonymousId: String? = null
         val mergedConfig = config.copy(
-            locale = resolvedLocale,
             defaults = (config.defaults ?: StorageDefaults()).let { d ->
                 val requestedPersistenceConsent =
                     d.persistenceConsent ?: configuredDefaultConsent ?: store.persistenceConsent ?: d.consent
@@ -100,7 +98,7 @@ class OptimizationClient(private val applicationContext: Context) {
                 )
             }
         )
-        locale = resolvedLocale
+        locale = sdkLocale
 
         bridge.onLog = { level, msg -> log.debug { "[js:$level] $msg" } }
 
@@ -186,9 +184,9 @@ class OptimizationClient(private val applicationContext: Context) {
         if (result == null || result == "undefined") {
             throw OptimizationError.ConfigError("Failed to update locale")
         }
-        val resolvedLocale = result.takeUnless { it == "null" }
-        this.locale = resolvedLocale
-        return resolvedLocale
+        val sdkLocale = result.takeUnless { it == "null" }
+        this.locale = sdkLocale
+        return sdkLocale
     }
 
     suspend fun personalizeEntry(
@@ -315,11 +313,6 @@ class OptimizationClient(private val applicationContext: Context) {
         _state.value = OptimizationState.EMPTY
         locale = null
         _selectedPersonalizations.value = null
-    }
-
-    private fun getRuntimeLocaleCandidates(): List<String> {
-        val localeList = LocaleList.getDefault()
-        return (0 until localeList.size()).map { localeList[it].toLanguageTag() }
     }
 
     // MARK: - Testing

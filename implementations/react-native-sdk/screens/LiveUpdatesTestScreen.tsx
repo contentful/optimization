@@ -101,7 +101,6 @@ export function LiveUpdatesTestScreen({ onClose }: LiveUpdatesTestScreenProps): 
       setIsLoading(true)
       await fetchEntries(
         [ENV_CONFIG.entries.optimized],
-        sdk,
         (entries) => {
           if (entries.length > 0 && entries[0] !== undefined) {
             setEntry(entries[0])

@@ -42,7 +42,7 @@ struct LiveUpdatesTestScreen: View {
             let personalizedId = "2Z2WLOx07InSewC3LUB3eX"
             let entries = await ContentfulFetcher.fetchEntries(
                 ids: [personalizedId],
-                locale: client.locale ?? AppConfig.defaultContentfulLocale
+                locale: AppConfig.defaultContentfulLocale
             )
             entry = entries.first
             isLoading = false

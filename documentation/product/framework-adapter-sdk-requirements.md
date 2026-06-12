@@ -223,16 +223,19 @@ defines a separate native framework adapter package.
 
 ## Locale requirements
 
-- **FSDK-51 Resolved Contentful locale** - Adapters must expose the runtime SDK's resolved
-  Contentful locale for application-owned CDA fetches.
-- **FSDK-52 Runtime locale inputs** - Adapters must define which framework or runtime locale inputs
-  are used as locale candidates.
-- **FSDK-53 Request locale pairing** - Server adapters must expose the pair of event-context locale
-  and Contentful CDA locale when the framework has request locale inputs.
-- **FSDK-54 Experience API locale separation** - Adapters must preserve the distinction between
-  Contentful CDA locale, event-context locale, and explicit Experience API locale overrides.
-- **FSDK-55 Locale validation** - Adapter APIs must reject invalid explicit locale values through
-  the shared runtime locale validation behavior.
+- **FSDK-51 Application Contentful locale ownership** - Adapters must leave Contentful CDA locale
+  selection to the application and must document where the app passes that locale to CDA requests.
+- **FSDK-52 SDK Experience/event locale input** - Stateful adapters must expose one promoted
+  top-level SDK locale for Experience API requests and default event context. Stateless adapters
+  must expose an equivalent request-scoped locale option.
+- **FSDK-53 Request locale pairing** - Server adapters must make it easy to apply the
+  application-chosen locale to a single request's Experience API calls and default event context
+  without taking over CDA locale resolution.
+- **FSDK-54 Experience API pass-through separation** - Adapters must preserve advanced low-level
+  Experience API locale pass-throughs while documenting top-level or request-scoped `locale` as the
+  promoted path.
+- **FSDK-55 Locale validation** - Adapter APIs must reject invalid explicit SDK/request locale
+  values through the shared SDK locale validation behavior.
 
 ## Preview requirements
 

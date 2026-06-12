@@ -120,92 +120,17 @@ describe('CoreBase', () => {
     })
   })
 
-  it('wraps Contentful getEntry and getEntries calls with the resolved locale', async () => {
+  it('exposes the SDK Experience API/event locale through locale', () => {
     const core = new TestCore(config, {}, 'de-DE')
-    const contentfulClient = {
-      getEntry: rs.fn(
-        async (_entryId: string, query?: Record<string, unknown>) => await Promise.resolve(query),
-      ),
-      getEntries: rs.fn(async (query?: Record<string, unknown>) => await Promise.resolve(query)),
-    }
 
-    const wrappedClient = core.withOptimizationLocale(contentfulClient)
-
-    await wrappedClient.getEntry('entry-id', { include: 10 })
-    await wrappedClient.getEntries({ content_type: 'page' })
-
-    expect(contentfulClient.getEntry).toHaveBeenCalledWith('entry-id', {
-      include: 10,
-      locale: 'de-DE',
-    })
-    expect(contentfulClient.getEntries).toHaveBeenCalledWith({
-      content_type: 'page',
-      locale: 'de-DE',
-    })
+    expect(core.locale).toBe('de-DE')
   })
 
-  it('does not inject a Contentful query locale when no SDK locale is resolved', async () => {
-    const core = new TestCore(config)
-    const contentfulClient = {
-      getEntry: rs.fn(
-        async (_entryId: string, query?: Record<string, unknown>) => await Promise.resolve(query),
-      ),
-      getEntries: rs.fn(async (query?: Record<string, unknown>) => await Promise.resolve(query)),
-    }
-
-    const wrappedClient = core.withOptimizationLocale(contentfulClient)
-
-    await wrappedClient.getEntry('entry-id', { include: 10 })
-    await wrappedClient.getEntries({ content_type: 'page' })
-
-    expect(contentfulClient.getEntry).toHaveBeenCalledWith('entry-id', { include: 10 })
-    expect(contentfulClient.getEntries).toHaveBeenCalledWith({ content_type: 'page' })
-  })
-
-  it('does not override explicit Contentful query locales and normalizes them', async () => {
-    const core = new TestCore(config, {}, 'de-DE')
-    const contentfulClient = {
-      getEntry: rs.fn(
-        async (_entryId: string, query?: Record<string, unknown>) => await Promise.resolve(query),
-      ),
-      getEntries: rs.fn(async (query?: Record<string, unknown>) => await Promise.resolve(query)),
-    }
-
-    const wrappedClient = core.withOptimizationLocale(contentfulClient)
-
-    await wrappedClient.getEntry('entry-id', { include: 10, locale: ' fr_FR ' })
-
-    expect(contentfulClient.getEntry).toHaveBeenCalledWith('entry-id', {
-      include: 10,
-      locale: 'fr-FR',
-    })
-  })
-
-  it('rejects invalid explicit Contentful query locales', () => {
-    const core = new TestCore(config, {}, 'de-DE')
-    const contentfulClient = {
-      getEntries: rs.fn((query?: Record<string, unknown>) => query),
-    }
-
-    const wrappedClient = core.withOptimizationLocale(contentfulClient)
-
-    expect(() => wrappedClient.getEntries({ locale: '*' })).toThrow(/query.locale/)
-    expect(contentfulClient.getEntries).not.toHaveBeenCalled()
-  })
-
-  it('uses the live locale when wrapping Contentful clients', async () => {
+  it('uses the live SDK locale as the default event locale', () => {
     const core = new TestCore(config, {}, 'en-US')
-    const contentfulClient = {
-      getEntries: rs.fn(async (query?: Record<string, unknown>) => await Promise.resolve(query)),
-    }
-    const wrappedClient = core.withOptimizationLocale(contentfulClient)
 
     core.setLocale('de-DE')
-    await wrappedClient.getEntries({ content_type: 'page' })
 
-    expect(contentfulClient.getEntries).toHaveBeenCalledWith({
-      content_type: 'page',
-      locale: 'de-DE',
-    })
+    expect(core.eventBuilder.buildPageView({}).context.locale).toBe('de-DE')
   })
 })

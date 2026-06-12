@@ -4,13 +4,12 @@ const INSIGHTS_BASE_URL =
   process.env.PUBLIC_INSIGHTS_API_BASE_URL?.trim() ?? 'http://localhost:8000/insights/'
 const EXPERIENCE_BASE_URL =
   process.env.PUBLIC_EXPERIENCE_API_BASE_URL?.trim() ?? 'http://localhost:8000/experience/'
+export const APP_LOCALE = 'en-US'
 
 export const optimizationConfig = {
   clientId: CLIENT_ID,
   environment: ENVIRONMENT,
-  contentfulLocales: {
-    default: 'en-US',
-  },
+  locale: APP_LOCALE,
   api: {
     insightsBaseUrl: INSIGHTS_BASE_URL,
     experienceBaseUrl: EXPERIENCE_BASE_URL,

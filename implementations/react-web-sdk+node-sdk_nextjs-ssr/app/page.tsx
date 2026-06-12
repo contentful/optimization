@@ -1,7 +1,8 @@
 import { InteractiveControls } from '@/components/InteractiveControls'
 import { ENTRY_IDS } from '@/config/entries'
+import { APP_LOCALE } from '@/lib/config'
 import { fetchEntries } from '@/lib/contentful-client'
-import { requireContentfulLocale, sdk } from '@/lib/optimization-server'
+import { sdk } from '@/lib/optimization-server'
 import type { ContentEntry } from '@/types/contentful'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import { cookies, headers } from 'next/headers'
@@ -39,22 +40,17 @@ export default async function Home() {
   const anonymousId = cookieStore.get(ANONYMOUS_ID_COOKIE)?.value
   const appConsent = cookieStore.get(APP_PERSONALIZATION_CONSENT_COOKIE)?.value === 'granted'
   const profile = anonymousId ? { id: anonymousId } : undefined
-  const { contentfulLocale, eventLocale } = sdk.resolveRequestLocale(
-    headerStore.get('accept-language'),
-  )
-  const resolvedContentfulLocale = requireContentfulLocale(contentfulLocale)
-
   const [baselineEntries, optimizationData] = await Promise.all([
-    fetchEntries(ENTRY_IDS, resolvedContentfulLocale),
+    fetchEntries(ENTRY_IDS, APP_LOCALE),
     appConsent
       ? sdk
           .forRequest({
             consent: { events: true, persistence: true },
+            locale: APP_LOCALE,
             eventContext: {
-              locale: eventLocale,
+              locale: APP_LOCALE,
               userAgent: headerStore.get('user-agent') ?? 'next-js-server',
             },
-            experienceOptions: { locale: resolvedContentfulLocale },
             profile,
           })
           .page()

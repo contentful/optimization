@@ -200,6 +200,8 @@
     <script>
       /* --- Standard Initialization Code --- */
 
+      const APP_LOCALE = 'en-US'
+
       // Initialize Contentful CDA SDK
       var contentfulClient = contentful.createClient({
         accessToken: '<!--#echo var="NGINX_CONTENTFUL_TOKEN" -->',
@@ -216,10 +218,7 @@
         environment: '<!--#echo var="NGINX_NINETAILED_ENVIRONMENT" -->',
         logLevel: 'debug',
         autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
-        locale: 'en-US',
-        contentfulLocales: {
-          default: 'en-US',
-        },
+        locale: APP_LOCALE,
         app: {
           name: document.title,
           version: '0.0.0',
@@ -229,7 +228,6 @@
           experienceBaseUrl: '<!--#echo var="NGINX_EXPERIENCE_API_BASE_URL" -->',
         },
       })
-      contentfulClient = window.contentfulOptimization.withOptimizationLocale(contentfulClient)
 
       attachOptimizationPreviewPanel({
         contentful: contentfulClient,
@@ -450,6 +448,7 @@
         try {
           rawEntry = await contentfulClient.getEntry(entryId, {
             include: 10,
+            locale: APP_LOCALE,
           })
         } catch (error) {
           console.warn(`Entry "${entryId}" could not be found in the current space`)

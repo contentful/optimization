@@ -73,16 +73,11 @@ function App() {
 }
 ```
 
-For a single-locale app that fetches Contentful entries, add default-only `contentfulLocales`:
+For a single-locale app that fetches Contentful entries, pass the application locale to the SDK when
+Experience API responses and events should use the same language:
 
 ```tsx
-<OptimizationRoot
-  clientId="your-client-id"
-  environment="main"
-  contentfulLocales={{
-    default: 'en-US',
-  }}
->
+<OptimizationRoot clientId="your-client-id" environment="main" locale="en-US">
   <YourApp />
 </OptimizationRoot>
 ```
@@ -99,23 +94,22 @@ or custom framework adapters.
 `OptimizationRoot` accepts the Web SDK configuration props directly and adds React-specific props
 such as `liveUpdates` and `onStatesReady`.
 
-| Prop                    | Required? | Default                                         | Description                                                                           |
-| ----------------------- | --------- | ----------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `clientId`              | Yes       | N/A                                             | Shared API key for Experience API and Insights API requests                           |
-| `environment`           | No        | `'main'`                                        | Contentful environment identifier                                                     |
-| `api`                   | No        | Web SDK defaults                                | Experience API and Insights API endpoint and request options                          |
-| `app`                   | No        | `undefined`                                     | Application metadata attached to outgoing event context                               |
-| `contentfulLocales`     | No        | `undefined`                                     | Contentful locale codes used for SDK-assisted CDA locale resolution                   |
-| `locale`                | No        | `undefined` unless `contentfulLocales` is set   | Initial app/content locale candidate; changing this prop updates the owned SDK locale |
-| `defaults`              | No        | `undefined`                                     | Initial state, commonly including consent, persistence consent, or profile values     |
-| `allowedEventTypes`     | No        | `['identify', 'page']`                          | Event types allowed before consent is explicitly set                                  |
-| `trackEntryInteraction` | No        | `{ views: true, clicks: false, hovers: false }` | Automatic entry interaction tracking for `OptimizedEntry` elements                    |
-| `cookie`                | No        | `{ domain: undefined, expires: 365 }`           | Anonymous ID cookie settings inherited from the Web SDK                               |
-| `liveUpdates`           | No        | `false`                                         | Whether `OptimizedEntry` components react continuously to SDK state                   |
-| `onStatesReady`         | No        | `undefined`                                     | Provider-managed app-level state subscription hook                                    |
-| `queuePolicy`           | No        | SDK defaults                                    | Flush retry behavior and offline queue bounds                                         |
-| `logLevel`              | No        | `'error'`                                       | Minimum log level for the default console sink                                        |
-| `onEventBlocked`        | No        | `undefined`                                     | Callback invoked when consent or guard logic blocks an event                          |
+| Prop                    | Required? | Default                                         | Description                                                                       |
+| ----------------------- | --------- | ----------------------------------------------- | --------------------------------------------------------------------------------- |
+| `clientId`              | Yes       | N/A                                             | Shared API key for Experience API and Insights API requests                       |
+| `environment`           | No        | `'main'`                                        | Contentful environment identifier                                                 |
+| `api`                   | No        | Web SDK defaults                                | Experience API and Insights API endpoint and request options                      |
+| `app`                   | No        | `undefined`                                     | Application metadata attached to outgoing event context                           |
+| `locale`                | No        | `undefined`                                     | SDK Experience API and default event locale                                       |
+| `defaults`              | No        | `undefined`                                     | Initial state, commonly including consent, persistence consent, or profile values |
+| `allowedEventTypes`     | No        | `['identify', 'page']`                          | Event types allowed before consent is explicitly set                              |
+| `trackEntryInteraction` | No        | `{ views: true, clicks: false, hovers: false }` | Automatic entry interaction tracking for `OptimizedEntry` elements                |
+| `cookie`                | No        | `{ domain: undefined, expires: 365 }`           | Anonymous ID cookie settings inherited from the Web SDK                           |
+| `liveUpdates`           | No        | `false`                                         | Whether `OptimizedEntry` components react continuously to SDK state               |
+| `onStatesReady`         | No        | `undefined`                                     | Provider-managed app-level state subscription hook                                |
+| `queuePolicy`           | No        | SDK defaults                                    | Flush retry behavior and offline queue bounds                                     |
+| `logLevel`              | No        | `'error'`                                       | Minimum log level for the default console sink                                    |
+| `onEventBlocked`        | No        | `undefined`                                     | Callback invoked when consent or guard logic blocks an event                      |
 
 Use `OptimizationProvider` directly only when an application or framework adapter must own a
 pre-built SDK instance:
@@ -134,29 +128,9 @@ For every Web SDK option that passes through this package, use the
 [Web SDK README](../../web-sdk/README.md#common-configuration) and generated
 [reference documentation](https://contentful.github.io/optimization).
 
-Use `contentfulLocales.default` for single-locale apps, and add `contentfulLocales.supported` for
-localized apps that need browser locale matching.
-
-For apps that match browser locale input to multiple Contentful locales, keep `default` as the
-fallback and list the supported Contentful locale codes:
-
-```tsx
-<OptimizationRoot
-  clientId="your-client-id"
-  contentfulLocales={{
-    default: 'en-US',
-    supported: ['en-US', 'de-DE', 'fr-FR'],
-  }}
->
-  <YourApp />
-</OptimizationRoot>
-```
-
-Copy `contentfulLocales.default` and optional `contentfulLocales.supported` from Contentful locale
-settings or the CMA locale list. The resolved `optimization.locale`, when present, is the configured
-Contentful locale code to use for CDA fetches and default Experience API localization. The simplest
-path is `useOptimization().withOptimizationLocale(contentfulClient)` when fetching entries; data
-layers that need direct control can pass `optimization.locale` explicitly instead. See
+Choose the application Contentful locale in your router, i18n layer, or app configuration. Pass that
+value directly to Contentful CDA requests, and pass the same value to the provider `locale` prop
+when Experience API responses and event context should use the same language. See
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
 for the full locale model.
 
@@ -216,16 +190,14 @@ function HeroEntry({ baselineEntry }) {
 }
 ```
 
-Fetch Contentful entries in the app layer with one CDA locale. For localized apps, configure
-`contentfulLocales`, then use `useOptimization().withOptimizationLocale(contentfulClient)` or pass
-`optimization.locale` explicitly before passing entries to `OptimizedEntry`, `useEntryResolver()`,
-or `useOptimizedEntry()`. Without `contentfulLocales` or an explicit top-level `locale`, the wrapper
-omits the CDA locale and lets Contentful use the space default. Do not pass all-locale CDA responses
-from `withAllLocales` or `locale=*`; these APIs expect direct single-locale field values. See
+Fetch Contentful entries in the app layer with one CDA locale. For localized apps, configure your
+application locale and pass it directly before passing entries to `OptimizedEntry`,
+`useEntryResolver()`, or `useOptimizedEntry()`. Do not pass all-locale CDA responses from
+`withAllLocales` or `locale=*`; these APIs expect direct single-locale field values. See
 [Entry personalization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)
 for the entry contract and
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html)
-for runtime locale behavior.
+for the broader locale model.
 
 Use `useMergeTagResolver()` when a component needs to resolve embedded merge tag entries:
 

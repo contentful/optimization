@@ -129,78 +129,28 @@ describe('ContentfulOptimization', () => {
     expect(web.eventBuilder.library.name).toEqual(OPTIMIZATION_WEB_SDK_NAME)
   })
 
-  it('resolves contentfulLocales from browser runtime candidates', () => {
-    rs.spyOn(navigator, 'languages', 'get').mockReturnValue(['DE_AT', 'es-ES'])
-    rs.spyOn(navigator, 'language', 'get').mockReturnValue('es-ES')
-
+  it('uses top-level locale as the SDK Experience API/event locale', () => {
     const web = new ContentfulOptimization({
       ...config,
-      contentfulLocales: {
-        default: 'en-US',
-        supported: ['en-US', 'de-DE'],
-      },
+      locale: ' de_DE ',
     })
 
     expect(web.locale).toBe('de-DE')
     expect(Reflect.get(web.api.experience, 'locale')).toBe('de-DE')
+    expect(web.eventBuilder.buildPageView({}).context.locale).toBe('de-DE')
   })
 
-  it('falls back to default-only contentfulLocales from browser runtime candidates', () => {
-    rs.spyOn(navigator, 'languages', 'get').mockReturnValue(['DE_AT', 'es-ES'])
-    rs.spyOn(navigator, 'language', 'get').mockReturnValue('es-ES')
+  it('omits the Experience API locale when top-level locale is omitted', () => {
+    const web = new ContentfulOptimization(config)
 
-    const web = new ContentfulOptimization({
-      ...config,
-      contentfulLocales: {
-        default: 'en-US',
-      },
-    })
-
-    expect(web.locale).toBe('en-US')
-    expect(Reflect.get(web.api.experience, 'locale')).toBe('en-US')
-  })
-
-  it('keeps api.locale scoped to Experience API requests', () => {
-    rs.spyOn(navigator, 'languages', 'get').mockReturnValue(['de-AT', 'es-ES'])
-    rs.spyOn(navigator, 'language', 'get').mockReturnValue('es-ES')
-
-    const web = new ContentfulOptimization({
-      ...config,
-      api: { locale: 'fr-FR' },
-      contentfulLocales: {
-        default: 'en-US',
-        supported: ['en-US', 'de-DE'],
-      },
-    })
-
-    expect(web.locale).toBe('de-DE')
-    expect(Reflect.get(web.api.experience, 'locale')).toBe('fr-FR')
-  })
-
-  it('uses top-level locale as the app/content locale input', () => {
-    rs.spyOn(navigator, 'languages', 'get').mockReturnValue(['en-US'])
-    rs.spyOn(navigator, 'language', 'get').mockReturnValue('en-US')
-
-    const web = new ContentfulOptimization({
-      ...config,
-      locale: 'de-AT',
-      contentfulLocales: {
-        default: 'en-US',
-        supported: ['en-US', 'de-DE'],
-      },
-    })
-
-    expect(web.locale).toBe('de-DE')
-    expect(Reflect.get(web.api.experience, 'locale')).toBe('de-DE')
+    expect(web.locale).toBeUndefined()
+    expect(Reflect.get(web.api.experience, 'locale')).toBeUndefined()
   })
 
   it('updates the live locale without refreshing optimization data', () => {
     const web = new ContentfulOptimization({
       ...config,
-      contentfulLocales: {
-        default: 'en-US',
-        supported: ['en-US', 'de-DE'],
-      },
+      locale: 'en-US',
     })
     const page = rs.spyOn(web, 'page')
     const values: Array<string | undefined> = []
@@ -208,7 +158,7 @@ describe('ContentfulOptimization', () => {
       values.push(locale)
     })
 
-    const nextLocale = web.setLocale('de-AT')
+    const nextLocale = web.setLocale(' de_DE ')
 
     expect(nextLocale).toBe('de-DE')
     expect(web.locale).toBe('de-DE')

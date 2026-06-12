@@ -1,5 +1,5 @@
 import { createClient } from 'contentful'
-import { getOptimization } from '../optimization/createOptimization'
+import { APP_LOCALE } from '../optimization/createOptimization'
 import type { ContentEntrySkeleton, ContentfulEntry } from '../types/contentful'
 
 const INCLUDE_DEPTH = 10
@@ -30,11 +30,9 @@ function createContentfulClient(): ReturnType<typeof createClient> {
 }
 
 const contentfulClient = createContentfulClient()
-let localizedContentfulClient: ReturnType<typeof createClient> | undefined = undefined
 
 export function getContentfulClient(): ReturnType<typeof createClient> {
-  localizedContentfulClient ??= getOptimization().withOptimizationLocale(contentfulClient)
-  return localizedContentfulClient
+  return contentfulClient
 }
 
 export function getContentfulConfigError(): string | null {
@@ -53,6 +51,7 @@ export async function fetchEntry(entryId: string): Promise<ContentfulEntry | und
   try {
     return await getContentfulClient().getEntry<ContentEntrySkeleton>(entryId, {
       include: INCLUDE_DEPTH,
+      locale: APP_LOCALE,
     })
   } catch {
     return undefined

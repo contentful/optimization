@@ -1,7 +1,6 @@
 import { ClientProviderWrapper } from '@/components/ClientProviderWrapper'
-import { requireContentfulLocale, sdk } from '@/lib/optimization-server'
+import { APP_LOCALE } from '@/lib/config'
 import type { Metadata } from 'next'
-import { headers } from 'next/headers'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -14,22 +13,17 @@ function getHtmlLang(locale: string | undefined): string {
   return locale?.split('-')[0] ?? 'en'
 }
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const headerStore = await headers()
-  const { contentfulLocale } = sdk.resolveRequestLocale(headerStore.get('accept-language'))
-  const resolvedContentfulLocale = requireContentfulLocale(contentfulLocale)
-  const htmlLang = getHtmlLang(resolvedContentfulLocale)
+  const htmlLang = getHtmlLang(APP_LOCALE)
 
   return (
     <html lang={htmlLang} className="h-full antialiased">
       <body className="min-h-full flex flex-col">
-        <ClientProviderWrapper contentfulLocale={resolvedContentfulLocale}>
-          {children}
-        </ClientProviderWrapper>
+        <ClientProviderWrapper appLocale={APP_LOCALE}>{children}</ClientProviderWrapper>
       </body>
     </html>
   )

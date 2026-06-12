@@ -69,7 +69,6 @@ class MainActivity : AppCompatActivity() {
                 environment = AppConfig.environment,
                 experienceBaseUrl = AppConfig.experienceBaseUrl,
                 insightsBaseUrl = AppConfig.insightsBaseUrl,
-                contentfulLocales = AppConfig.contentfulLocales,
                 locale = AppConfig.defaultContentfulLocale,
                 debug = true,
             ),
@@ -158,7 +157,7 @@ class MainActivity : AppCompatActivity() {
                 client.subscribeToFlag("boolean")
                 val entries = ContentfulFetcher.fetchEntries(
                     AppConfig.entryIds,
-                    client.locale ?: AppConfig.defaultContentfulLocale,
+                    AppConfig.defaultContentfulLocale,
                 )
                 // Pre-resolve each entry's rich text on the (suspending) coroutine
                 // path BEFORE handing the entry to the synchronous view binder. This

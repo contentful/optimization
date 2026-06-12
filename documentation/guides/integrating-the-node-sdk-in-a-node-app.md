@@ -102,25 +102,20 @@ export const optimization = new ContentfulOptimization({
     experienceBaseUrl: process.env.CONTENTFUL_EXPERIENCE_API_BASE_URL,
     insightsBaseUrl: process.env.CONTENTFUL_INSIGHTS_API_BASE_URL,
   },
-  contentfulLocales: {
-    default: 'en-US',
-    supported: ['en-US', 'de-DE', 'fr-FR'],
-  },
+  locale: 'en-US',
   logLevel: 'error',
 })
 ```
 
 Treat that SDK as a module-level singleton for the current Node process. Do not create a new
 `ContentfulOptimization` instance per incoming request. Use `forRequest()` to bind request-scoped
-consent, profile, event context, and Experience API options before calling event methods.
+consent, profile, event context, and SDK locale before calling event methods.
 
-Use `contentfulLocales.default` for single-locale apps, and add `contentfulLocales.supported` when
-the app needs request locale matching across multiple Contentful locales. Copy those codes from
-Contentful locale settings or the CMA locale list. The `contentfulLocale` returned by
-`resolveRequestLocale(reqOrAcceptLanguage)`, when present, is the Contentful locale code to use for
-CDA fetches and the Experience API request option. Use `eventLocale` separately in event context.
+Choose the application Contentful locale in your router, i18n, or request layer. Pass that value to
+CDA fetches and to `forRequest({ locale: appLocale })` when Experience API responses and events
+should use the same locale.
 
-For the full matching rules, configuration cases, and Experience API locale behavior, see
+For the full locale model, see
 [Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
 
 Notes:
@@ -150,7 +145,7 @@ function toQueryValue(value: unknown): string | null {
   return JSON.stringify(value)
 }
 
-function getRequestContext(req: Request, eventLocale: string): UniversalEventBuilderArgs {
+function getRequestContext(req: Request, appLocale: string): UniversalEventBuilderArgs {
   const url = new URL(`${req.protocol}://${req.get('host') ?? 'localhost'}${req.originalUrl}`)
 
   const query = Object.keys(req.query).reduce<Record<string, string>>((acc, key) => {
@@ -164,7 +159,7 @@ function getRequestContext(req: Request, eventLocale: string): UniversalEventBui
   }, {})
 
   return {
-    locale: eventLocale,
+    locale: appLocale,
     userAgent: req.get('user-agent') ?? 'node-server',
     page: {
       path: req.path,
@@ -180,10 +175,10 @@ function getRequestContext(req: Request, eventLocale: string): UniversalEventBui
 The exact page fields do not need to come from Express. The important part is that the app passes a
 stable, request-specific description of the current page or route.
 
-`getRequestContext(req, eventLocale).locale` affects the event payload context. The stateless
-per-call `{ locale }` request option instead sets the Experience API `locale` query parameter. When
-an SSR response renders Contentful entries that can contain MergeTags, use the resolved Contentful
-locale for that request option so localized profile values match the entry language.
+`getRequestContext(req, appLocale).locale` affects the event payload context. The request-scoped
+`forRequest({ locale: appLocale })` value sets the Experience API `locale` query parameter. When an
+SSR response renders Contentful entries that can contain MergeTags, use the same `appLocale` for CDA
+fetches and request-scoped SDK locale so localized profile values match the entry language.
 
 ## 3. Handle consent in your application layer
 
@@ -196,7 +191,8 @@ each request with accepted event and persistence consent:
 ```ts
 const requestOptimization = optimization.forRequest({
   consent: { events: true, persistence: true },
-  eventContext: getRequestContext(req, eventLocale),
+  locale: appLocale,
+  eventContext: getRequestContext(req, appLocale),
   profile: getProfileFromRequest(req),
 })
 ```
@@ -305,13 +301,14 @@ function getAuthenticatedUserId(req: Request): string | undefined {
 }
 
 app.get('/', async (req, res) => {
-  const { eventLocale } = optimization.resolveRequestLocale(req)
+  const appLocale = getAppLocale(req)
   const requestOptimization = optimization.forRequest({
     consent: {
       events: appPolicyAllowsOptimizationEvent(req),
       persistence: appPolicyAllowsOptimizationEvent(req),
     },
-    eventContext: getRequestContext(req, eventLocale),
+    locale: appLocale,
+    eventContext: getRequestContext(req, appLocale),
     profile: getProfileFromRequest(req),
   })
   const pageResponse: OptimizationData | undefined = await requestOptimization.page()
@@ -354,7 +351,8 @@ const optimization = new ContentfulOptimization({
 
 const requestOptimization = optimization.forRequest({
   consent: { events: false, persistence: false },
-  eventContext: { locale: eventLocale },
+  locale: appLocale,
+  eventContext: { locale: appLocale },
   profile,
 })
 
@@ -416,21 +414,21 @@ async function getArticle(entryId: string, locale?: string): Promise<ArticleEntr
 }
 
 app.get('/article/:entryId', async (req, res) => {
-  const { contentfulLocale, eventLocale } = optimization.resolveRequestLocale(req)
+  const appLocale = getAppLocale(req)
   const requestOptimization = optimization.forRequest({
     consent: {
       events: appPolicyAllowsOptimizationEvent(req),
       persistence: appPolicyAllowsOptimizationEvent(req),
     },
-    eventContext: getRequestContext(req, eventLocale),
-    experienceOptions: contentfulLocale ? { locale: contentfulLocale } : undefined,
+    locale: appLocale,
+    eventContext: getRequestContext(req, appLocale),
     profile: getProfileFromRequest(req),
   })
   const pageResponse = appPolicyAllowsOptimizationEvent(req)
     ? await requestOptimization.page()
     : undefined
 
-  const article = await getArticle(req.params.entryId, contentfulLocale)
+  const article = await getArticle(req.params.entryId, appLocale)
 
   const { entry: optimizedArticle, selectedOptimization } = optimization.resolveOptimizedEntry(
     article,
@@ -452,8 +450,8 @@ app.get('/article/:entryId', async (req, res) => {
 This is the main server-side personalization loop:
 
 1. Ask Optimization for the current profile's selected variants.
-2. Fetch the baseline Contentful entry with `contentfulLocale` returned by `resolveRequestLocale()`
-   when configured, or intentionally omit the CDA locale option for no-config API default behavior.
+2. Fetch the baseline Contentful entry with the application Contentful locale chosen by your router,
+   i18n layer, or request policy.
 3. Resolve the optimized entry variant before rendering.
 
 If your optimized entries contain linked entries or merge tags, fetch with an `include` depth that
@@ -514,7 +512,8 @@ captured as an Insights event, call `trackFlagView()` explicitly:
 if (appPolicyAllowsOptimizationEvent(req) && pageResponse?.profile) {
   const requestOptimization = optimization.forRequest({
     consent: true,
-    eventContext: getRequestContext(req, eventLocale),
+    locale: appLocale,
+    eventContext: getRequestContext(req, appLocale),
     profile: pageResponse.profile,
   })
 
@@ -547,7 +546,8 @@ Example custom event:
 if (appPolicyAllowsOptimizationEvent(req)) {
   const requestOptimization = optimization.forRequest({
     consent: true,
-    eventContext: getRequestContext(req, eventLocale),
+    locale: appLocale,
+    eventContext: getRequestContext(req, appLocale),
     profile: pageResponse?.profile,
   })
 
@@ -577,7 +577,8 @@ const viewPayload = {
 if (appPolicyAllowsOptimizationEvent(req) && selectedOptimization?.sticky) {
   const requestOptimization = optimization.forRequest({
     consent: true,
-    eventContext: getRequestContext(req, eventLocale),
+    locale: appLocale,
+    eventContext: getRequestContext(req, appLocale),
     profile: pageResponse?.profile,
   })
 
@@ -585,7 +586,8 @@ if (appPolicyAllowsOptimizationEvent(req) && selectedOptimization?.sticky) {
 } else if (appPolicyAllowsOptimizationEvent(req) && pageResponse?.profile) {
   const requestOptimization = optimization.forRequest({
     consent: true,
-    eventContext: getRequestContext(req, eventLocale),
+    locale: appLocale,
+    eventContext: getRequestContext(req, appLocale),
     profile: pageResponse.profile,
   })
 

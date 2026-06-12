@@ -75,16 +75,16 @@ and UIKit shells:
 ## 1. Add the package and create the config
 
 Add `ContentfulOptimization` through Swift Package Manager as described in the
-[Optimization iOS SDK README](../../packages/ios/ContentfulOptimization/README.md). Then create an
-`OptimizationConfig` with the Optimization client ID and the Contentful locale information your app
-uses when fetching entries:
+[Optimization iOS SDK README](../../packages/ios/ContentfulOptimization/README.md). Then choose the
+application locale and create an `OptimizationConfig` with the Optimization client ID:
 
 ```swift
+let appLocale = "en-US"
+
 let config = OptimizationConfig(
     clientId: "your-client-id",
     environment: "master",
-    contentfulLocales: ContentfulLocales(default: "en-US"),
-    locale: "en-US",
+    locale: appLocale,
     debug: true
 )
 ```
@@ -93,8 +93,8 @@ Only `clientId` is required. If application policy permits Optimization by defau
 consent UI is rendered, set `defaults: StorageDefaults(consent: true)`. Otherwise, leave defaults
 unset and connect `client.consent(true)` and `client.consent(false)` to the app's consent UI.
 
-Use `contentfulLocales` and `locale` when the same screen renders localized Contentful entries. For
-the full locale model, see
+Use the same `appLocale` in app-owned Contentful Delivery API requests when the same screen renders
+localized Contentful entries. For the full locale model, see
 [Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
 
 ## 2. Initialize with OptimizationRoot

@@ -56,11 +56,9 @@ on, and locked), while keeping the main entry rendering flow customer-oriented.
 
 ## CDA locale handling
 
-The adapter configures SDK `contentfulLocales` and an initial app/content `locale`, then wraps the
-Contentful CDA client with `withOptimizationLocale()` so entry fetches use the live resolved
-`optimization.locale`. Experience API calls use that resolved locale by default unless `api.locale`
-is configured as an explicit API override. Do not use `contentful.js` `withAllLocales` or raw CDA
-`locale=*` for entries passed to the adapter resolver; SDK entry resolution expects direct
+The adapter defines one `APP_LOCALE`, passes it as the Web SDK top-level `locale`, and passes it
+directly to Contentful CDA `getEntry()` calls. Do not use `contentful.js` `withAllLocales` or raw
+CDA `locale=*` for entries passed to the adapter resolver; SDK entry resolution expects direct
 single-locale fields such as `fields.nt_experiences` and `fields.nt_variants`. See
 [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md)
 for the broader locale model and

@@ -70,8 +70,9 @@ profile state, event context, and Experience API options before calling event me
 ```ts
 const requestOptimization = statelessOptimization.forRequest({
   consent: true,
+  locale: 'en-US',
   eventContext: { locale: 'en-US' },
-  experienceOptions: { locale: 'de-DE', preflight: false },
+  experienceOptions: { preflight: false },
   profile: { id: 'profile-id' },
 })
 
@@ -150,24 +151,21 @@ Common `api` options:
 | `enabledFeatures`   | All        | `['ip-enrichment', 'location']`            | Experience API features for each request        |
 | `beaconHandler`     | Stateful   | `undefined`                                | Custom handler for enqueueing Insights batches  |
 | `ip`                | Stateful   | `undefined`                                | IP address override for Experience API analysis |
-| `locale`            | Stateful   | API default                                | Locale query parameter for localized responses  |
 | `plainText`         | Stateful   | `false`                                    | Sends performance-critical endpoints as text    |
 | `preflight`         | Stateful   | `false`                                    | Aggregates a profile state without storing it   |
 
 In stateless environments, pass `ip`, `locale`, `plainText`, and `preflight` as `experienceOptions`
-when creating the request-bound client instead of constructor config.
+when creating the request-bound client instead of constructor config. Pass request-specific Insights
+API options, such as `beaconHandler`, as `insightsOptions`.
 
-Core-backed stateful SDKs can accept `contentfulLocales`, an initial app/content `locale`, and
-runtime `setLocale(locale)` calls. They expose the resolved Contentful locale through the live
-`locale` getter and `states.locale` observable. The stateful `api.locale` config remains an explicit
-Experience API override; otherwise stateful SDK layers use the current resolved Contentful locale
-for Experience API localization. Stateless server SDKs should pass the request-scoped Contentful
-locale as the per-call `{ locale }` option.
+Core-backed stateful SDKs can accept an initial top-level `locale` and runtime `setLocale(locale)`
+calls. They expose that SDK Experience API and default event locale through the live `locale` getter
+and `states.locale` observable. Stateless server SDKs should pass the request-scoped SDK locale as
+`forRequest({ locale })`; advanced callers can still pass `experienceOptions.locale` when no request
+`locale` is supplied.
 
-`contentfulLocales.default` and optional `contentfulLocales.supported` values should use the locale
-codes configured in Contentful locale settings or returned by the CMA locale list. The resolved
-value remains the configured Contentful locale code because that code is the API identifier used for
-CDA requests. For configuration cases, matching rules, and runtime-specific locale sources, see
+Applications own Contentful CDA locale selection and pass that locale directly to their Contentful
+client. For the full locale model, see
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html).
 
 Common `fetchOptions` are `fetchMethod`, `requestTimeout`, `retries`, `intervalTimeout`,
@@ -193,8 +191,7 @@ Core exposes reusable primitives for SDK layers:
 | Signal and observable utilities | Lightweight reactive primitives used internally by stateful SDK layers |
 
 Resolution helpers expect Contentful entries fetched by the app layer with one CDA locale. Use the
-resolved SDK `locale`, `withOptimizationLocale(contentfulClient)`, or the Node SDK's
-`resolveRequestLocale()` result before resolving entries. Do not pass all-locale CDA responses from
+application Contentful locale before resolving entries. Do not pass all-locale CDA responses from
 `withAllLocales` or `locale=*`; optimization fields such as `fields.nt_experiences` and
 `fields.nt_variants` must be direct single-locale field values. See
 [Entry personalization and variant resolution](https://contentful.github.io/optimization/documents/Documentation.Concepts.Entry_personalization_and_variant_resolution.html#single-locale-cda-entry-contract)

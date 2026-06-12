@@ -19,7 +19,6 @@ import type { ChainModifiers, Entry, EntrySkeletonType, LocaleCode } from 'conte
 import { OPTIMIZATION_CORE_SDK_NAME, OPTIMIZATION_CORE_SDK_VERSION } from './constants'
 import { EventBuilder, type EventBuilderConfig } from './events'
 import { InterceptorManager } from './lib/interceptor'
-import { normalizeExplicitLocale, type ContentfulLocales } from './locale'
 import type { ResolvedData } from './resolvers'
 import { FlagsResolver, MergeTagValueResolver, OptimizedEntryResolver } from './resolvers'
 
@@ -42,9 +41,9 @@ export interface LifecycleInterceptors {
  */
 export interface CoreConfig extends Pick<ApiClientConfig, GlobalApiConfigProperties> {
   /**
-   * Contentful locale configuration used to resolve the CDA locale.
+   * Default SDK locale used for Experience API requests and event context.
    */
-  contentfulLocales?: ContentfulLocales
+  locale?: string
 
   /**
    * Event builder configuration (channel/library metadata, etc.).
@@ -58,10 +57,6 @@ export interface CoreConfig extends Pick<ApiClientConfig, GlobalApiConfigPropert
 interface CoreBaseApiClientConfig {
   experience?: ApiClientConfig['experience']
   insights?: ApiClientConfig['insights']
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 /**
@@ -91,7 +86,7 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
 
   private resolvedLocale: string | undefined
 
-  /** Resolved Contentful locale for CDA entry fetches. */
+  /** Current SDK locale for Experience API requests and event context. */
   get locale(): string | undefined {
     return this.resolvedLocale
   }
@@ -136,74 +131,6 @@ abstract class CoreBase<TConfig extends CoreConfig = CoreConfig> {
 
   protected setResolvedLocale(locale: string | undefined): void {
     this.resolvedLocale = locale
-  }
-
-  private getQueryWithLocale(query: unknown): unknown {
-    if (this.locale === undefined) {
-      return query
-    }
-
-    if (query === undefined) {
-      return { locale: this.locale }
-    }
-
-    if (!isRecord(query)) {
-      return query
-    }
-
-    if (query.locale !== undefined) {
-      const locale = normalizeExplicitLocale(query.locale, 'query.locale')
-      return locale === query.locale ? query : { ...query, locale }
-    }
-
-    return { ...query, locale: this.locale }
-  }
-
-  /**
-   * Wrap a Contentful CDA client so `getEntry()` and `getEntries()` use the resolved SDK locale.
-   *
-   * @param client - Contentful client to wrap.
-   * @returns The same client surface with locale-aware entry methods.
-   *
-   * @public
-   */
-  withOptimizationLocale<TClient extends object>(client: TClient): TClient {
-    return new Proxy(client, {
-      get: (target, property, receiver): unknown => {
-        const value: unknown = Reflect.get(target, property, receiver)
-
-        if (typeof value !== 'function') {
-          return value
-        }
-
-        if (property === 'getEntry') {
-          return (...args: unknown[]) => {
-            const [entryId, query, ...rest] = args
-            const result: unknown = Reflect.apply(value, target, [
-              entryId,
-              this.getQueryWithLocale(query),
-              ...rest,
-            ])
-
-            return result
-          }
-        }
-
-        if (property === 'getEntries') {
-          return (...args: unknown[]) => {
-            const [query, ...rest] = args
-            const result: unknown = Reflect.apply(value, target, [
-              this.getQueryWithLocale(query),
-              ...rest,
-            ])
-
-            return result
-          }
-        }
-
-        return value.bind(target)
-      },
-    })
   }
 
   /**

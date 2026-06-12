@@ -89,11 +89,12 @@ Then create an `OptimizationConfig` with the Optimization client ID and the Cont
 information your app uses when fetching entries:
 
 ```kotlin
+val appLocale = "en-US"
+
 val optimizationConfig = OptimizationConfig(
     clientId = "your-client-id",
     environment = "master",
-    contentfulLocales = ContentfulLocales(default = "en-US"),
-    locale = "en-US",
+    locale = appLocale,
     debug = BuildConfig.DEBUG,
 )
 ```
@@ -102,8 +103,8 @@ Only `clientId` is required. If application policy permits Optimization by defau
 consent UI is rendered, set `defaults = StorageDefaults(consent = true)`. Otherwise, leave defaults
 unset and connect `client.consent(true)` and `client.consent(false)` to the app's consent UI.
 
-Use `contentfulLocales` and `locale` when the same screen renders localized Contentful entries. For
-the full locale model, see
+Use the same `appLocale` in app-owned Contentful Delivery API requests when the same screen renders
+localized Contentful entries. For the full locale model, see
 [Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
 
 ## 2. Initialize with OptimizationManager
@@ -208,16 +209,17 @@ entries against the selected variants for the visitor, and can attach view and t
 Fetch entries from Contentful as single-locale JSON-shaped maps and include linked optimization
 references in the payload. Pass those maps to `OptimizedEntryView`.
 
-Use the resolved `client.locale` value for app-owned Contentful Delivery API requests that feed SDK
+Use the application Contentful locale for app-owned Contentful Delivery API requests that feed SDK
 entry resolution:
 
 ```kotlin
 lifecycleScope.launch {
+    val appLocale = getAppLocale()
+
     repeatOnLifecycle(Lifecycle.State.STARTED) {
         OptimizationManager.client.isInitialized.collect { isInitialized ->
             if (isInitialized) {
-                val locale = OptimizationManager.client.locale ?: "en-US"
-                val entries = contentfulClient.fetchHomeEntries(locale = locale)
+                val entries = contentfulClient.fetchHomeEntries(locale = appLocale)
                 renderEntries(entries)
             }
         }
@@ -409,11 +411,12 @@ class HomeActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
+            val appLocale = getAppLocale()
+
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 OptimizationManager.client.isInitialized.collect { isInitialized ->
                     if (isInitialized) {
-                        val locale = OptimizationManager.client.locale ?: "en-US"
-                        val entries = fetchHomeEntries(locale = locale)
+                        val entries = fetchHomeEntries(locale = appLocale)
                         list.adapter = ContentEntryAdapter(entries)
                     }
                 }

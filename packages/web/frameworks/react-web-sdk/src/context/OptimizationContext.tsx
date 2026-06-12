@@ -20,7 +20,6 @@ export type OptimizationSdk = Pick<
   | 'trackClick'
   | 'trackView'
   | 'tracking'
-  | 'withOptimizationLocale'
 > & {
   resolveOptimizedEntry: (
     entry: Entry,

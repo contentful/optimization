@@ -201,7 +201,7 @@
 
     <script>
       const CONFIG = <%- JSON.stringify(config) %>
-      const CONTENTFUL_LOCALE = <%- JSON.stringify(contentfulLocale) %>
+      const APP_LOCALE = <%- JSON.stringify(appLocale) %>
       const SERVER_APP_CONSENT = <%- JSON.stringify(appConsent) %>
     </script>
     <script>
@@ -214,11 +214,10 @@
           ? { defaults: { consent: SERVER_APP_CONSENT } }
           : {}),
         autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
-        locale: CONTENTFUL_LOCALE,
+        locale: APP_LOCALE,
         app: { name: document.title, version: '0.0.0' },
       })
       const contentfulOptimization = window.contentfulOptimization
-      contentfulClient = contentfulOptimization.withOptimizationLocale(contentfulClient)
       attachOptimizationPreviewPanel({
         contentful: contentfulClient,
         optimization: window.contentfulOptimization,
@@ -415,6 +414,7 @@
         try {
           const entry = await contentfulClient.getEntry(entryId, {
             include: 10,
+            locale: APP_LOCALE,
           })
           return renderOptimizedEntry(entry, element, autoObserve)
         } catch (error) {

@@ -17,7 +17,6 @@ struct AppConfig {
 
     static let contentfulBaseUrl = "http://localhost:8000/contentful/"
     static let contentfulSpaceId = "mock-space-id"
-    static let contentfulLocales = ContentfulLocales(default: defaultContentfulLocale)
 
     static let entryIds = [
         "1MwiFl4z7gkwqGYdvCmr8c",

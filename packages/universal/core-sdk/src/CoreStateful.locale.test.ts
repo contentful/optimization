@@ -47,102 +47,49 @@ describe('CoreStateful locale state', () => {
     rs.restoreAllMocks()
   })
 
-  it('initializes locale from contentfulLocales and exposes it through states.locale', () => {
+  it('initializes the SDK locale from top-level locale', () => {
     const core = createCoreStateful({
-      contentfulLocales: {
-        default: 'en-US',
-        supported: ['en-US', 'de-DE'],
-      },
-    })
-
-    expect(core.locale).toBe('en-US')
-    expect(core.states.locale.current).toBe('en-US')
-    expect(Reflect.get(core.api.experience, 'locale')).toBe('en-US')
-  })
-
-  it('initializes locale from default-only contentfulLocales', () => {
-    const core = createCoreStateful({
-      contentfulLocales: {
-        default: 'en-US',
-      },
-    })
-
-    expect(core.locale).toBe('en-US')
-    expect(core.states.locale.current).toBe('en-US')
-    expect(Reflect.get(core.api.experience, 'locale')).toBe('en-US')
-  })
-
-  it('resolves explicit locale candidates and updates default Experience API locale', () => {
-    const core = createCoreStateful({
-      contentfulLocales: {
-        default: 'en-US',
-        supported: ['en-US', 'de-DE'],
-      },
-      locale: 'de-AT',
-    })
-    const values: Array<string | undefined> = []
-    const subscription = core.states.locale.subscribe((locale) => {
-      values.push(locale)
-    })
-
-    const nextLocale = core.setLocale('fr-FR')
-
-    expect(nextLocale).toBe('en-US')
-    expect(core.locale).toBe('en-US')
-    expect(core.states.locale.current).toBe('en-US')
-    expect(Reflect.get(core.api.experience, 'locale')).toBe('en-US')
-    expect(values).toEqual(['de-DE', 'en-US'])
-
-    subscription.unsubscribe()
-  })
-
-  it('falls back to the configured default when setting locale with default-only contentfulLocales', () => {
-    const core = createCoreStateful({
-      contentfulLocales: {
-        default: 'en-US',
-      },
-    })
-    const values: Array<string | undefined> = []
-    const subscription = core.states.locale.subscribe((locale) => {
-      values.push(locale)
-    })
-
-    const nextLocale = core.setLocale('de-AT')
-
-    expect(nextLocale).toBe('en-US')
-    expect(core.locale).toBe('en-US')
-    expect(core.states.locale.current).toBe('en-US')
-    expect(Reflect.get(core.api.experience, 'locale')).toBe('en-US')
-    expect(values).toEqual(['en-US'])
-
-    subscription.unsubscribe()
-  })
-
-  it('keeps api.locale as the Experience API override when content locale changes', () => {
-    const core = createCoreStateful({
-      api: { locale: 'fr-FR' },
-      contentfulLocales: {
-        default: 'en-US',
-        supported: ['en-US', 'de-DE'],
-      },
-      locale: 'de-AT',
+      locale: ' de_DE ',
     })
 
     expect(core.locale).toBe('de-DE')
-    expect(Reflect.get(core.api.experience, 'locale')).toBe('fr-FR')
+    expect(core.states.locale.current).toBe('de-DE')
+    expect(Reflect.get(core.api.experience, 'locale')).toBe('de-DE')
+    expect(core.eventBuilder.buildPageView({}).context.locale).toBe('de-DE')
+  })
 
-    expect(core.setLocale('en-GB')).toBe('en-US')
+  it('omits the Experience API locale when no SDK locale is configured', () => {
+    const core = createCoreStateful()
 
-    expect(core.locale).toBe('en-US')
+    expect(core.locale).toBeUndefined()
+    expect(core.states.locale.current).toBeUndefined()
+    expect(Reflect.get(core.api.experience, 'locale')).toBeUndefined()
+  })
+
+  it('updates state, event context, and default Experience API locale from setLocale()', () => {
+    const core = createCoreStateful({
+      locale: 'en-US',
+    })
+    const values: Array<string | undefined> = []
+    const subscription = core.states.locale.subscribe((locale) => {
+      values.push(locale)
+    })
+
+    const nextLocale = core.setLocale(' fr_FR ')
+
+    expect(nextLocale).toBe('fr-FR')
+    expect(core.locale).toBe('fr-FR')
+    expect(core.states.locale.current).toBe('fr-FR')
     expect(Reflect.get(core.api.experience, 'locale')).toBe('fr-FR')
+    expect(core.eventBuilder.buildPageView({}).context.locale).toBe('fr-FR')
+    expect(values).toEqual(['en-US', 'fr-FR'])
+
+    subscription.unsubscribe()
   })
 
   it('rejects invalid explicit locale changes without changing locale state', () => {
     const core = createCoreStateful({
-      contentfulLocales: {
-        default: 'en-US',
-        supported: ['en-US', 'de-DE'],
-      },
+      locale: 'en-US',
     })
 
     expect(() => core.setLocale('*')).toThrow(/valid locale/)

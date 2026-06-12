@@ -23,10 +23,6 @@ interface EnvConfig {
     clientId: string
     environment: string
     locale: string
-    contentfulLocales: {
-      default: string
-      supported?: readonly string[]
-    }
     api: {
       experienceBaseUrl: string
       insightsBaseUrl: string
@@ -62,9 +58,6 @@ export const ENV_CONFIG = {
     clientId: PUBLIC_NINETAILED_CLIENT_ID,
     environment: PUBLIC_NINETAILED_ENVIRONMENT,
     locale: 'en-US',
-    contentfulLocales: {
-      default: 'en-US',
-    },
     api: {
       experienceBaseUrl: getAndroidCompatibleUrl(PUBLIC_EXPERIENCE_API_BASE_URL),
       insightsBaseUrl: getAndroidCompatibleUrl(PUBLIC_INSIGHTS_API_BASE_URL),

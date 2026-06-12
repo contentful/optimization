@@ -32,10 +32,8 @@ copying, and Playwright coverage for browser-side optimization and tracking beha
 
 ## CDA locale handling
 
-The static app configures SDK `contentfulLocales` and an initial app/content `locale`, then wraps
-the Contentful CDA client with `withOptimizationLocale()` so entry fetches use the live resolved
-`optimization.locale`. Experience API calls use that resolved locale by default unless `api.locale`
-is configured as an explicit API override. Do not use `withAllLocales` or `locale=*`; SDK entry
+The static app defines one `APP_LOCALE`, passes it as the Web SDK top-level `locale`, and passes it
+directly to Contentful CDA `getEntry()` calls. Do not use `withAllLocales` or `locale=*`; SDK entry
 resolution expects direct single-locale fields such as `fields.nt_experiences` and
 `fields.nt_variants`. See
 [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md)

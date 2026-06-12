@@ -49,8 +49,6 @@ rs.mock('@react-native-community/netinfo', () => ({
   },
 }))
 
-let restoreRuntimeLocale: (() => void) | undefined = undefined
-
 const DEFAULT_PROFILE: Profile = {
   id: 'profile-id',
   stableId: 'profile-id',
@@ -178,15 +176,6 @@ function getAppStateChangeHandler(): (nextAppState: string) => void {
   return appStateChangeHandler
 }
 
-function mockRuntimeLocale(locale: string): void {
-  const formatter = new Intl.DateTimeFormat(locale)
-  const dateTimeFormatSpy = rs.spyOn(Intl, 'DateTimeFormat').mockImplementation(() => formatter)
-
-  restoreRuntimeLocale = () => {
-    dateTimeFormatSpy.mockRestore()
-  }
-}
-
 describe('ContentfulOptimization locale resolution', () => {
   let optimization: { destroy: () => void } | undefined
 
@@ -214,82 +203,37 @@ describe('ContentfulOptimization locale resolution', () => {
   afterEach(() => {
     optimization?.destroy()
     optimization = undefined
-    restoreRuntimeLocale?.()
-    restoreRuntimeLocale = undefined
     rs.clearAllMocks()
   })
 
-  it('resolves contentfulLocales from the React Native runtime locale', async () => {
-    mockRuntimeLocale('de-AT')
+  it('uses top-level locale as the SDK Experience API/event locale', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
     const created = await ContentfulOptimization.create({
       clientId: 'test-client-id',
       environment: 'main',
-      contentfulLocales: {
-        default: 'en-US',
-        supported: ['en-US', 'de-DE'],
-      },
+      locale: ' de_DE ',
     })
     optimization = created
 
     expect(created.locale).toBe('de-DE')
     expect(Reflect.get(created.api.experience, 'locale')).toBe('de-DE')
+    expect(
+      created.eventBuilder.buildScreenView({ name: 'Home', properties: {} }).context.locale,
+    ).toBe('de-DE')
   })
 
-  it('falls back to default-only contentfulLocales from the React Native runtime locale', async () => {
-    mockRuntimeLocale('de-AT')
+  it('omits the Experience API locale when top-level locale is omitted', async () => {
     const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
 
     const created = await ContentfulOptimization.create({
       clientId: 'test-client-id',
       environment: 'main',
-      contentfulLocales: {
-        default: 'en-US',
-      },
     })
     optimization = created
 
-    expect(created.locale).toBe('en-US')
-    expect(Reflect.get(created.api.experience, 'locale')).toBe('en-US')
-  })
-
-  it('keeps api locale scoped to Experience API requests', async () => {
-    mockRuntimeLocale('de-AT')
-    const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
-
-    const created = await ContentfulOptimization.create({
-      clientId: 'test-client-id',
-      environment: 'main',
-      api: { locale: 'fr-FR' },
-      contentfulLocales: {
-        default: 'en-US',
-        supported: ['en-US', 'de-DE'],
-      },
-    })
-    optimization = created
-
-    expect(created.locale).toBe('de-DE')
-    expect(Reflect.get(created.api.experience, 'locale')).toBe('fr-FR')
-  })
-
-  it('uses top-level locale as the app/content locale input', async () => {
-    mockRuntimeLocale('en-US')
-    const { default: ContentfulOptimization } = await import('./ContentfulOptimization')
-
-    const created = await ContentfulOptimization.create({
-      clientId: 'test-client-id',
-      environment: 'main',
-      locale: 'de-AT',
-      contentfulLocales: {
-        default: 'en-US',
-        supported: ['en-US', 'de-DE'],
-      },
-    })
-    optimization = created
-
-    expect(created.locale).toBe('de-DE')
-    expect(Reflect.get(created.api.experience, 'locale')).toBe('de-DE')
+    expect(created.locale).toBeUndefined()
+    expect(Reflect.get(created.api.experience, 'locale')).toBeUndefined()
   })
 
   it('updates live locale without refreshing optimization data', async () => {
@@ -298,15 +242,12 @@ describe('ContentfulOptimization locale resolution', () => {
     const created = await ContentfulOptimization.create({
       clientId: 'test-client-id',
       environment: 'main',
-      contentfulLocales: {
-        default: 'en-US',
-        supported: ['en-US', 'de-DE'],
-      },
+      locale: 'en-US',
     })
     optimization = created
     const screen = rs.spyOn(created, 'screen')
 
-    expect(created.setLocale('de-AT')).toBe('de-DE')
+    expect(created.setLocale(' de_DE ')).toBe('de-DE')
     expect(created.locale).toBe('de-DE')
     expect(Reflect.get(created.api.experience, 'locale')).toBe('de-DE')
     expect(screen).not.toHaveBeenCalled()
