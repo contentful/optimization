@@ -120,9 +120,7 @@ export class ContentCard {
   private readonly liveUpdatesService = inject(NgLiveUpdates)
   private readonly isLive = computed(() => {
     if (this.liveUpdatesService.previewPanelVisible()) return true
-    const override = this.liveUpdates()
-    if (override !== undefined) return override
-    return this.liveUpdatesService.globalLiveUpdates()
+    return this.liveUpdates() ?? this.liveUpdatesService.globalLiveUpdates()
   })
 
   private readonly liveEntry = inject(NgContentfulEntry).with({
