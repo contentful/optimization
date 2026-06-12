@@ -45,40 +45,6 @@ function isRichTextDocument(value: unknown): value is Document {
   return isRecord(value) && value.nodeType === 'document' && Array.isArray(value.content)
 }
 
-function generateMeta(
-  baseline: Entry,
-  resolvedEntry: Entry,
-  selectedOptimization: unknown,
-  profile: unknown,
-): EntryMeta {
-  const opt = isRecord(selectedOptimization) ? selectedOptimization : undefined
-  const experienceId = typeof opt?.experienceId === 'string' ? opt.experienceId : undefined
-  const sticky = typeof opt?.sticky === 'boolean' ? opt.sticky : undefined
-  const variantIndex = typeof opt?.variantIndex === 'number' ? opt.variantIndex : undefined
-  const hasMergeTag = entryHasMergeTag(baseline)
-  return {
-    baselineId: baseline.sys.id,
-    resolvedId: resolvedEntry.sys.id,
-    experienceId,
-    sticky,
-    variantIndex,
-    mergeTagResolved: hasMergeTag ? profile !== undefined : undefined,
-  }
-}
-
-function hasMergeTagNode(node: unknown): boolean {
-  if (!isRecord(node)) return false
-  if (node.nodeType === INLINES.EMBEDDED_ENTRY) return true
-  if (Array.isArray(node.content)) return node.content.some(hasMergeTagNode)
-  return false
-}
-
-function entryHasMergeTag(entry: Entry): boolean {
-  return Object.values(entry.fields as Record<string, unknown>).some(
-    (field) => isRichTextDocument(field) && hasMergeTagNode(field),
-  )
-}
-
 function resolveRichTextMergeTags(node: Document, resolveMergeTag: MergeTagResolver): Document {
   const resolve = (n: unknown): unknown => {
     if (!isRecord(n)) return n
@@ -135,15 +101,26 @@ export class NgContentfulEntry implements OnDestroy {
     const variant = this._variant()
     if (!variant) return undefined
 
-    const profile = this.liveRead(this.optimization.profile)
     const { raw, resolved } = variant
+    const profile = this.liveRead(this.optimization.profile)
+    let mergeTagResolved: boolean | undefined = undefined
+    const resolvedEntry = resolveEntryMergeTags(resolved.entry, (target) => {
+      const value = profile ? this.optimization.sdk.getMergeTagValue(target, profile) : undefined
+      if (value !== undefined) mergeTagResolved = true
+      else mergeTagResolved ??= false
+      return value ?? target.fields.nt_fallback
+    })
+
     return {
-      resolvedEntry: resolveEntryMergeTags(resolved.entry, (target) =>
-        profile
-          ? this.optimization.sdk.getMergeTagValue(target, profile)
-          : target.fields.nt_fallback,
-      ),
-      meta: generateMeta(raw, resolved.entry, resolved.selectedOptimization, profile),
+      resolvedEntry,
+      meta: {
+        baselineId: raw.sys.id,
+        resolvedId: resolved.entry.sys.id,
+        experienceId: resolved.selectedOptimization?.experienceId,
+        sticky: resolved.selectedOptimization?.sticky,
+        variantIndex: resolved.selectedOptimization?.variantIndex,
+        mergeTagResolved,
+      },
     }
   })
 
