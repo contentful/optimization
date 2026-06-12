@@ -75,11 +75,11 @@ function resolveEntryMergeTags(entry: Entry, resolveMergeTag: MergeTagResolver):
 
 export function injectContentfulEntry({
   entry,
-  liveUpdates = signal(false),
+  isLive = signal(false),
   observation = signal<ObservationMode>('auto'),
 }: {
   entry: Signal<Entry>
-  liveUpdates?: Signal<boolean>
+  isLive?: Signal<boolean>
   observation?: Signal<ObservationMode>
 }): Signal<ResolvedEntryView | undefined> {
   const optimization = inject(NgContentfulOptimization)
@@ -94,7 +94,7 @@ export function injectContentfulEntry({
   })
 
   function liveRead<T>(sig: Signal<T>): T {
-    return liveUpdates() ? sig() : untracked(sig)
+    return isLive() ? sig() : untracked(sig)
   }
 
   const variant = computed(() => {

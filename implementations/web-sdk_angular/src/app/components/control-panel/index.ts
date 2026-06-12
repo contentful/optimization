@@ -9,14 +9,11 @@ import { fromSdkState } from '../../utils'
   styleUrl: './index.scss',
 })
 export class ControlPanel {
-  // inputs
   readonly onTrackConversion = input<(() => void) | undefined>(undefined)
 
-  // injected dependencies
   private readonly optimization = inject(NgContentfulOptimization)
   protected readonly liveUpdatesService = inject(NgLiveUpdates)
 
-  // protected state
   protected readonly consent = this.optimization.consent
   protected readonly isIdentified = computed(() =>
     Boolean(this.optimization.profile()?.traits.identified),
@@ -28,7 +25,6 @@ export class ControlPanel {
     this.optimization.sdk.states.flag('boolean'),
   )
 
-  // public methods
   protected toggleConsent(): void {
     this.optimization.sdk.consent(this.consent() !== true)
   }

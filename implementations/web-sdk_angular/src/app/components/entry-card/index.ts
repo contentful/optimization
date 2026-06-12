@@ -126,9 +126,10 @@ export class EntryCard {
 
   protected readonly resolved = injectContentfulEntry({
     entry: this.entry,
-    liveUpdates: this.isLive,
+    isLive: this.isLive,
     observation: this.observation,
   })
+
   protected readonly isVariant = computed(() => this.resolved()?.experienceId !== undefined)
   protected readonly richTextHtml = computed<SafeHtml | undefined>(() => {
     const fields = this.resolved()?.resolvedEntry.fields
