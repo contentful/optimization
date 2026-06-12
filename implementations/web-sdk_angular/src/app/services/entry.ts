@@ -77,17 +77,22 @@ function setupManualTracking(result: Signal<ResolvedEntry>, manualTracking: Sign
     domReady.set(true)
   })
 
+  function track(): void {
+    const { entryId, optimizationId, sticky, variantIndex } = result()
+    optimization.sdk.tracking.enableElement('views', elementRef.nativeElement, {
+      data: { entryId, optimizationId, sticky, variantIndex },
+    })
+  }
+
   function clear(): void {
     optimization.sdk.tracking.clearElement('views', elementRef.nativeElement)
   }
 
   effect(() => {
     clear()
-    if (!domReady() || !manualTracking()) return
-    const { entryId, optimizationId, sticky, variantIndex } = result()
-    optimization.sdk.tracking.enableElement('views', elementRef.nativeElement, {
-      data: { entryId, optimizationId, sticky, variantIndex },
-    })
+    if (domReady() && manualTracking()) {
+      track()
+    }
   })
 
   destroyRef.onDestroy(clear)
