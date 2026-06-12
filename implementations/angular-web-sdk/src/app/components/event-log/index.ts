@@ -2,57 +2,27 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core'
 import { toSignal } from '@angular/core/rxjs-interop'
 import { interval } from 'rxjs'
 import { NgContentfulOptimization } from '../../services/optimization'
-import { isRecord } from '../../utils'
+
+type EventType = 'component' | 'component_hover' | 'component_click' | 'page'
 
 interface AnalyticsEvent {
-  id: string
-  type: string
+  type: EventType
   label: string
   testId: string
+  key: string
   count: number
   firedAt: number
-  componentId?: string
-  viewId?: string
-  hoverId?: string
-  pageUrl?: string
-  userId?: string
 }
 
-function toPageUrl(event: Record<string, unknown>): string | undefined {
-  const { properties } = event
-  if (!isRecord(properties)) return undefined
-  const { url } = properties
-  if (typeof url !== 'string' || url.length === 0) return undefined
-  try {
-    return new URL(url, window.location.origin).pathname
-  } catch {
-    return url
-  }
-}
-
-function eventLabel(event: AnalyticsEvent): string {
-  if (event.componentId !== undefined) return event.componentId
-  if (event.pageUrl !== undefined) return event.pageUrl
-  if (event.userId !== undefined) return event.userId
-  return ''
-}
-
-function eventTestId(event: AnalyticsEvent): string {
-  if (event.viewId !== undefined) return `event-view-${event.viewId}`
-  if (event.hoverId !== undefined) return `event-${event.type}-hover-${event.hoverId}`
-  if (event.componentId !== undefined) return `event-${event.type}-${event.componentId}`
-  return `event-${event.type}-${event.id}`
-}
-
-const EVENT_TYPE_LABEL: Record<string, string> = {
+const EVENT_TYPE_LABEL: Record<EventType, string> = {
   component: 'view',
   component_hover: 'hover',
   component_click: 'click',
   page: 'page',
 }
 
-function eventTypeLabel(type: string): string {
-  return EVENT_TYPE_LABEL[type] ?? type
+function eventTypeLabel(type: EventType): string {
+  return EVENT_TYPE_LABEL[type]
 }
 
 const MS_PER_SECOND = 1000
@@ -68,47 +38,20 @@ function timeAgo(firedAt: number, now: number): string {
   return `${Math.floor(m / MINUTES_PER_HOUR)}h ago`
 }
 
-function dedupeKey(event: AnalyticsEvent): string {
-  if (event.componentId !== undefined) return `${event.type}:${event.componentId}`
-  if (event.pageUrl !== undefined) return `page:${event.pageUrl}`
-  return event.type
-}
-
-function toAnalyticsEvent(raw: unknown, id: string): AnalyticsEvent | undefined {
-  if (!isRecord(raw) || typeof raw.type !== 'string') return undefined
-  const componentId = typeof raw.componentId === 'string' ? raw.componentId : undefined
-  const viewId = typeof raw.viewId === 'string' ? raw.viewId : undefined
-  const hoverId = typeof raw.hoverId === 'string' ? raw.hoverId : undefined
-  const pageUrl = raw.type === 'page' ? toPageUrl(raw) : undefined
-  const userId = typeof raw.userId === 'string' ? raw.userId : undefined
-  const event: AnalyticsEvent = {
-    id,
-    type: raw.type,
-    label: '',
-    testId: '',
-    count: 1,
-    firedAt: Date.now(),
-    componentId,
-    viewId,
-    hoverId,
-    pageUrl,
-    userId,
+function toPageUrl(url: string): string {
+  try {
+    return new URL(url, window.location.origin).pathname
+  } catch {
+    return url
   }
-  event.label = eventLabel(event)
-  event.testId = eventTestId(event)
-  return event
 }
 
 function upsert(list: AnalyticsEvent[], next: AnalyticsEvent): AnalyticsEvent[] {
-  const key = dedupeKey(next)
-  const idx = list.findIndex((e) => dedupeKey(e) === key)
+  const idx = list.findIndex((e) => e.key === next.key)
   if (idx === -1) return [next, ...list]
   const updated = [...list]
   const [existing] = updated.splice(idx, 1)
-  return [
-    { ...next, id: existing.id, count: existing.count + 1, firedAt: next.firedAt },
-    ...updated,
-  ]
+  return [{ ...next, count: existing.count + 1, firedAt: next.firedAt }, ...updated]
 }
 
 @Component({
@@ -117,7 +60,6 @@ function upsert(list: AnalyticsEvent[], next: AnalyticsEvent): AnalyticsEvent[] 
 })
 export class EventLog {
   private readonly optimization = inject(NgContentfulOptimization)
-  private nextId = 0
 
   protected readonly eventTypeLabel = eventTypeLabel
   protected readonly timeAgo = timeAgo
@@ -131,12 +73,30 @@ export class EventLog {
     return this.events().map((e) => ({ ...e, timeAgo: timeAgo(e.firedAt, now) }))
   })
 
+  private track(event: Omit<AnalyticsEvent, 'count' | 'firedAt' | 'testId'>): void {
+    const testId = `event-${event.key}`
+    this.events.update((list) => upsert(list, { ...event, testId, count: 1, firedAt: Date.now() }))
+  }
+
   constructor() {
     const sub = this.optimization.sdk.states.eventStream.subscribe((raw) => {
-      const event = toAnalyticsEvent(raw, `event-${this.nextId}`)
-      if (!event) return
-      this.nextId++
-      this.events.update((list) => upsert(list, event))
+      if (!raw) return
+      switch (raw.type) {
+        case 'page': {
+          const pageUrl = toPageUrl(raw.properties.url)
+          this.track({ type: 'page', label: pageUrl, key: `page-${pageUrl}` })
+          break
+        }
+        case 'component':
+        case 'component_hover':
+        case 'component_click': {
+          const { type, componentId } = raw
+          this.track({ type, label: componentId, key: `${type}-${componentId}` })
+          break
+        }
+        default:
+          break
+      }
     })
     inject(DestroyRef).onDestroy(() => {
       sub.unsubscribe()
