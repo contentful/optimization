@@ -23,18 +23,14 @@ export type ObservationMode = 'auto' | 'manual'
 
 type MergeTagResolver = (target: MergeTagEntry) => string | undefined
 
-export interface EntryMeta {
+export interface ResolvedEntryView {
+  resolvedEntry: Entry
   baselineId: string
   resolvedId: string
   experienceId: string | undefined
   sticky: boolean | undefined
   variantIndex: number | undefined
   mergeTagResolved: boolean | undefined
-}
-
-export interface ResolvedEntryView {
-  resolvedEntry: Entry
-  meta: EntryMeta
 }
 
 function isMergeTagEntry(entry: unknown): entry is MergeTagEntry {
@@ -120,14 +116,12 @@ export class NgContentfulEntry implements OnDestroy {
 
     return {
       resolvedEntry,
-      meta: {
-        baselineId: raw.sys.id,
-        resolvedId: resolved.entry.sys.id,
-        experienceId: resolved.selectedOptimization?.experienceId,
-        sticky: resolved.selectedOptimization?.sticky,
-        variantIndex: resolved.selectedOptimization?.variantIndex,
-        mergeTagResolved,
-      },
+      baselineId: raw.sys.id,
+      resolvedId: resolved.entry.sys.id,
+      experienceId: resolved.selectedOptimization?.experienceId,
+      sticky: resolved.selectedOptimization?.sticky,
+      variantIndex: resolved.selectedOptimization?.variantIndex,
+      mergeTagResolved,
     }
   })
 
@@ -164,10 +158,10 @@ export class NgContentfulEntry implements OnDestroy {
   private enableManualTracking(resolved: ResolvedEntryView): void {
     this.optimization.sdk.tracking.enableElement('views', this.elementRef.nativeElement, {
       data: {
-        entryId: resolved.meta.resolvedId,
-        optimizationId: resolved.meta.experienceId,
-        sticky: resolved.meta.sticky,
-        variantIndex: resolved.meta.variantIndex,
+        entryId: resolved.resolvedId,
+        optimizationId: resolved.experienceId,
+        sticky: resolved.sticky,
+        variantIndex: resolved.variantIndex,
       },
     })
     this.manualTrackingActive = true
