@@ -35,6 +35,7 @@ function mergeTagKey(resolved: boolean | undefined): MergeTagMode | undefined {
     [attr.data-tooltip]="title()"
     >{{ label() }}</span
   >`,
+  styleUrl: './index.scss',
 })
 export class Badge {
   readonly label = input.required<string>()

@@ -6,6 +6,7 @@ import { fromSdkState } from '../../utils'
 @Component({
   selector: 'app-control-panel',
   templateUrl: './index.html',
+  styleUrl: './index.scss',
 })
 export class ControlPanel {
   // inputs
