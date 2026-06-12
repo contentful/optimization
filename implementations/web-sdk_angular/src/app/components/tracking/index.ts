@@ -45,19 +45,6 @@ export class Tracking {
       .map((e) => ({ ...e, timeAgo: timeAgo(e.firedAt, now) }))
   })
 
-  private track(event: Omit<AnalyticsEvent, 'count' | 'firedAt' | 'testId'>): void {
-    const { key } = event
-    this.events.update((map) => {
-      const existing = map.get(key)
-      return new Map(map).set(key, {
-        ...event,
-        testId: `event-${key}`,
-        count: (existing?.count ?? 0) + 1,
-        firedAt: Date.now(),
-      })
-    })
-  }
-
   constructor() {
     const sub = this.optimization.sdk.states.eventStream.subscribe((raw) => {
       switch (raw?.type) {
@@ -93,6 +80,19 @@ export class Tracking {
     })
     inject(DestroyRef).onDestroy(() => {
       sub.unsubscribe()
+    })
+  }
+
+  private track(event: Omit<AnalyticsEvent, 'count' | 'firedAt' | 'testId'>): void {
+    const { key } = event
+    this.events.update((map) => {
+      const existing = map.get(key)
+      return new Map(map).set(key, {
+        ...event,
+        testId: `event-${key}`,
+        count: (existing?.count ?? 0) + 1,
+        firedAt: Date.now(),
+      })
     })
   }
 }

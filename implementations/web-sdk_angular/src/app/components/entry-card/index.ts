@@ -118,8 +118,8 @@ export class EntryCard {
   readonly liveUpdates = input<boolean | undefined>(undefined)
 
   private readonly sanitizer = inject(DomSanitizer)
-
   private readonly liveUpdatesService = inject(NgLiveUpdates)
+
   private readonly isLive = computed(() => {
     if (this.liveUpdatesService.previewPanelVisible()) return true
     return this.liveUpdates() ?? this.liveUpdatesService.globalLiveUpdates()
