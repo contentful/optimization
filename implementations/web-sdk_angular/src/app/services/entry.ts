@@ -21,11 +21,11 @@ export type ObservationMode = 'auto' | 'manual'
 
 type MergeTagResolver = (target: MergeTagEntry) => string | undefined
 
-export interface ResolvedEntryView {
-  resolvedEntry: Entry
+export interface ResolvedEntry {
+  entry: Entry
   baselineId: string
-  resolvedId: string
-  experienceId: string | undefined
+  entryId: string
+  optimizationId: string | undefined
   sticky: boolean | undefined
   variantIndex: number | undefined
   mergeTagResolved: boolean | undefined
@@ -66,6 +66,41 @@ function resolveEntryMergeTags(entry: Entry, resolveMergeTag: MergeTagResolver):
   }) as Entry
 }
 
+function setupManualTracking(
+  result: Signal<ResolvedEntry>,
+  observation: Signal<ObservationMode>,
+): void {
+  const optimization = inject(NgContentfulOptimization)
+  const elementRef = inject<ElementRef<Element>>(ElementRef)
+  const destroyRef = inject(DestroyRef)
+
+  const domReady = signal(false)
+  let active = false
+
+  afterNextRender(() => {
+    domReady.set(true)
+  })
+
+  function clear(): void {
+    if (active) {
+      optimization.sdk.tracking.clearElement('views', elementRef.nativeElement)
+      active = false
+    }
+  }
+
+  effect(() => {
+    clear()
+    if (!domReady() || observation() === 'auto') return
+    const { entryId, optimizationId, sticky, variantIndex } = result()
+    optimization.sdk.tracking.enableElement('views', elementRef.nativeElement, {
+      data: { entryId, optimizationId, sticky, variantIndex },
+    })
+    active = true
+  })
+
+  destroyRef.onDestroy(clear)
+}
+
 export function injectContentfulEntry({
   entry,
   isLive = signal(false),
@@ -74,17 +109,8 @@ export function injectContentfulEntry({
   entry: Signal<Entry>
   isLive?: Signal<boolean>
   observation?: Signal<ObservationMode>
-}): Signal<ResolvedEntryView | undefined> {
+}): Signal<ResolvedEntry> {
   const optimization = inject(NgContentfulOptimization)
-  const elementRef = inject<ElementRef<Element>>(ElementRef)
-  const destroyRef = inject(DestroyRef)
-
-  const domReady = signal(false)
-  let manualTrackingActive = false
-
-  afterNextRender(() => {
-    domReady.set(true)
-  })
 
   function liveRead<T>(sig: Signal<T>): T {
     return isLive() ? sig() : untracked(sig)
@@ -105,7 +131,7 @@ export function injectContentfulEntry({
     const { raw, resolved } = variant()
     const profile = liveRead(optimization.profile)
     let mergeTagResolved: boolean | undefined = undefined
-    const resolvedEntry = resolveEntryMergeTags(resolved.entry, (target) => {
+    const entry = resolveEntryMergeTags(resolved.entry, (target) => {
       const value = profile ? optimization.sdk.getMergeTagValue(target, profile) : undefined
       if (value !== undefined) mergeTagResolved = true
       else mergeTagResolved ??= false
@@ -113,44 +139,17 @@ export function injectContentfulEntry({
     })
 
     return {
-      resolvedEntry,
+      entry,
       baselineId: raw.sys.id,
-      resolvedId: resolved.entry.sys.id,
-      experienceId: resolved.selectedOptimization?.experienceId,
+      entryId: resolved.entry.sys.id,
+      optimizationId: resolved.selectedOptimization?.experienceId,
       sticky: resolved.selectedOptimization?.sticky,
       variantIndex: resolved.selectedOptimization?.variantIndex,
       mergeTagResolved,
     }
   })
 
-  function enableManualTracking(r: ResolvedEntryView): void {
-    optimization.sdk.tracking.enableElement('views', elementRef.nativeElement, {
-      data: {
-        entryId: r.resolvedId,
-        optimizationId: r.experienceId,
-        sticky: r.sticky,
-        variantIndex: r.variantIndex,
-      },
-    })
-    manualTrackingActive = true
-  }
-
-  function clearManualTracking(): void {
-    if (manualTrackingActive) {
-      optimization.sdk.tracking.clearElement('views', elementRef.nativeElement)
-      manualTrackingActive = false
-    }
-  }
-
-  effect(() => {
-    clearManualTracking()
-    if (!domReady() || observation() === 'auto') return
-    enableManualTracking(result())
-  })
-
-  destroyRef.onDestroy(() => {
-    clearManualTracking()
-  })
+  setupManualTracking(result, observation)
 
   return result
 }

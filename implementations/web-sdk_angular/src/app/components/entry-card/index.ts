@@ -130,25 +130,24 @@ export class EntryCard {
     observation: this.observation,
   })
 
-  protected readonly isVariant = computed(() => this.resolved()?.experienceId !== undefined)
+  protected readonly isVariant = computed(() => this.resolved().optimizationId !== undefined)
   protected readonly richTextHtml = computed<SafeHtml | undefined>(() => {
-    const fields = this.resolved()?.resolvedEntry.fields
-    const doc = fields ? Object.values(fields).find(isRichTextField) : undefined
+    const { entry } = this.resolved()
+    const doc = Object.values(entry.fields).find(isRichTextField)
     if (!doc) return undefined
     return this.sanitizer.bypassSecurityTrustHtml(renderNode(doc))
   })
   protected readonly entryText = computed(() => {
-    const text: unknown = this.resolved()?.resolvedEntry.fields.text
+    const text: unknown = this.resolved().entry.fields.text
     return typeof text === 'string' ? text : 'No content'
   })
   protected readonly nestedEntries = computed(() => {
-    const nested: unknown = this.resolved()?.resolvedEntry.fields.nested
+    const nested: unknown = this.resolved().entry.fields.nested
     return Array.isArray(nested) ? nested.filter(isContentfulEntry) : []
   })
   protected readonly isAuto = computed(() => this.observation() === 'auto')
   protected readonly badges = computed(() => {
     const r = this.resolved()
-    if (!r) return []
     const mergeTag = mergeTagKey(r.mergeTagResolved)
     const scenario = this.clickScenario()
     const keys: BadgeKey[] = [
