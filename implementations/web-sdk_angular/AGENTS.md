@@ -5,8 +5,6 @@ Angular SPA reference implementation of `@contentful/optimization-web`. Serves t
 
 ## Rules
 
-- Read [`REQUIREMENTS.md`](./REQUIREMENTS.md) before making any changes — it is the source of truth
-  for what this implementation must do and how it must behave.
 - Do not add local adapter shims; import SDK behaviour directly from the published package surface
   when it exists.
 - This implementation uses Angular CLI (`@angular/build`) and PM2-managed mock server processes.
