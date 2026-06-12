@@ -48,8 +48,10 @@ async function renderHook(params: {
 describe('useOptimizedEntry', () => {
   it('returns baseline state before optimization is available', async () => {
     const baselineEntry = makeOptimizableEntry('baseline')
-    const { optimization } = createRuntime((entry) => ({ entry }))
+    const { optimization, setExperienceRequestState } = createRuntime((entry) => ({ entry }))
     const rendered = await renderHook({ baselineEntry, optimization })
+
+    await setExperienceRequestState({ status: 'pending' })
 
     expect(rendered.getResult()).toMatchObject({
       entry: baselineEntry,

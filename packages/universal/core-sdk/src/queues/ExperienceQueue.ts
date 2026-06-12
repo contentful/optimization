@@ -244,6 +244,9 @@ export class ExperienceQueue {
     const intercepted = await this.stateInterceptors.run(data)
     const { changes, profile, selectedOptimizations } = intercepted
 
+    // success must be written inside this batch because experienceRequestState transitions
+    // to 'success' atomically with selectedOptimizations so consumers never observe
+    // a render where !pending is true but canOptimize is still false
     batch(() => {
       if (!isEqual(changesSignal.value, changes)) changesSignal.value = changes
       if (!isEqual(profileSignal.value, profile)) profileSignal.value = profile

@@ -397,6 +397,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
       changesSignal.value = undefined
       profileSignal.value = undefined
       selectedOptimizationsSignal.value = undefined
+      experienceRequestStateSignal.value = { status: 'idle' }
     })
   }
 

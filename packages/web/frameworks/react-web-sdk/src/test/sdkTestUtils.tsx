@@ -245,6 +245,9 @@ export function createRuntime(
   async function emit(value: SelectedOptimizationState): Promise<void> {
     current = value
     canOptimize = value !== undefined
+    if (canOptimize) {
+      experienceRequestStateValue = { status: 'success' }
+    }
 
     await act(async () => {
       await Promise.resolve()
@@ -254,6 +257,11 @@ export function createRuntime(
       selectedOptimizationSubscribers.forEach((subscriber) => {
         subscriber(value)
       })
+      if (canOptimize) {
+        experienceRequestStateSubscribers.forEach((subscriber) => {
+          subscriber({ status: 'success' })
+        })
+      }
     })
   }
 
