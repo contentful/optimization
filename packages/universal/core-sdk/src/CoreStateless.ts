@@ -1,6 +1,7 @@
 import type {
   ApiClientConfig,
   ExperienceApiClientRequestOptions,
+  InsightsApiClientRequestOptions,
 } from '@contentful/optimization-api-client'
 import type { BlockedEvent } from './BlockedEvent'
 import type { CoreStatelessApiConfig } from './CoreApiConfig'
@@ -8,7 +9,7 @@ import CoreBase, { type CoreConfig } from './CoreBase'
 import { CoreStatelessRequest, type CoreStatelessForRequestOptions } from './CoreStatelessRequest'
 import { DEFAULT_ALLOWED_EVENT_TYPES, type EventType } from './EventType'
 import type { EventBuilderConfig } from './events'
-import { resolveContentfulLocale } from './locale'
+import { normalizeExplicitLocale } from './locale'
 
 /**
  * Request-bound Experience API options for stateless runtimes.
@@ -18,6 +19,16 @@ import { resolveContentfulLocale } from './locale'
 export interface CoreStatelessRequestOptions extends Pick<
   ExperienceApiClientRequestOptions,
   'ip' | 'locale' | 'plainText' | 'preflight'
+> {}
+
+/**
+ * Request-bound Insights API options for stateless runtimes.
+ *
+ * @public
+ */
+export interface CoreStatelessInsightsOptions extends Pick<
+  InsightsApiClientRequestOptions,
+  'beaconHandler'
 > {}
 
 /**
@@ -108,9 +119,7 @@ class CoreStateless extends CoreBase {
 
   constructor(config: CoreStatelessConfig) {
     const { allowedEventTypes = DEFAULT_ALLOWED_EVENT_TYPES, onEventBlocked } = config
-    const locale = resolveContentfulLocale({
-      contentfulLocales: config.contentfulLocales,
-    })
+    const locale = normalizeExplicitLocale(config.locale)
 
     super(
       config,

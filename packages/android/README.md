@@ -78,10 +78,12 @@ Compose apps usually initialize the SDK with `OptimizationRoot`, render Contentf
 `OptimizedEntry`, and emit screen events with `ScreenTrackingEffect`.
 
 ```kotlin
+val appLocale = "en-US"
+
 val optimizationConfig = OptimizationConfig(
     clientId = "your-client-id",
     environment = "master",
-    contentfulLocales = ContentfulLocales(default = "en-US"),
+    locale = appLocale,
     debug = BuildConfig.DEBUG,
 )
 
@@ -185,15 +187,13 @@ tracking, screen tracking, live updates, preview-panel overrides, and shared moc
 
 ### Common options
 
-| Option              | Required? | Default  | Description                                                                                 |
-| ------------------- | --------- | -------- | ------------------------------------------------------------------------------------------- |
-| `clientId`          | Yes       | None     | Optimization client identifier used for Experience API and Insights API calls.              |
-| `environment`       | No        | `master` | Contentful environment name used by the Optimization APIs.                                  |
-| `contentfulLocales` | No        | `null`   | Contentful locale configuration used to resolve `client.locale` for app-owned CDA requests. |
-| `locale`            | No        | Runtime  | Initial app/content locale candidate. When omitted, the SDK can resolve from `LocaleList`.  |
-| `api.locale`        | No        | `null`   | Explicit Experience API locale override for localized profile fields.                       |
-| `defaults`          | No        | `null`   | Initial persisted-state seeds such as consent, persistence consent, or profile values.      |
-| `debug`             | No        | `false`  | Enables SDK diagnostic logging.                                                             |
+| Option        | Required? | Default  | Description                                                                            |
+| ------------- | --------- | -------- | -------------------------------------------------------------------------------------- |
+| `clientId`    | Yes       | None     | Optimization client identifier used for Experience API and Insights API calls.         |
+| `environment` | No        | `master` | Contentful environment name used by the Optimization APIs.                             |
+| `locale`      | No        | `null`   | SDK Experience API and default event locale.                                           |
+| `defaults`    | No        | `null`   | Initial persisted-state seeds such as consent, persistence consent, or profile values. |
+| `debug`       | No        | `false`  | Enables SDK diagnostic logging.                                                        |
 
 `OptimizationRoot` and `OptimizationManager.initialize(...)` also accept global `trackViews`,
 `trackTaps`, and `liveUpdates` defaults. `OptimizedEntry` and `OptimizedEntryView` can override
@@ -201,37 +201,35 @@ those defaults per entry.
 
 ### Locale handling
 
-For a single-locale app, configure the Contentful locale default only:
+For a single-locale app, choose the application Contentful locale and pass the same value to SDK
+`locale` when Experience API responses and events should use that language:
 
 ```kotlin
+val appLocale = "en-US"
+
 val config = OptimizationConfig(
     clientId = "your-client-id",
     environment = "master",
-    contentfulLocales = ContentfulLocales(default = "en-US"),
+    locale = appLocale,
 )
 ```
 
-For an app that matches the user's runtime locale to multiple Contentful locales, add `supported`
-with the locale codes configured in your Contentful space:
+For localized apps, derive `appLocale` from your navigation, i18n, or app configuration layer:
 
 ```kotlin
+val appLocale = getAppLocale()
+
 val config = OptimizationConfig(
     clientId = "your-client-id",
     environment = "master",
-    contentfulLocales = ContentfulLocales(
-        default = "en-US",
-        supported = listOf("en-US", "de-DE", "fr-FR"),
-    ),
+    locale = appLocale,
 )
 ```
 
-Use `client.locale` when your app-owned Contentful Delivery API client fetches entries that will be
-passed to `OptimizedEntry`, `OptimizedEntryView`, or `client.personalizeEntry(...)`. The native SDK
-does not fetch Contentful entries for your app layer, so this value belongs in your CDA request
-code.
-
-`OptimizationApiConfig.locale` is an explicit Experience API override for localized profile fields.
-It does not replace the CDA locale used to fetch Contentful entries.
+Use the same `appLocale` when your app-owned Contentful Delivery API client fetches entries that
+will be passed to `OptimizedEntry`, `OptimizedEntryView`, or `client.personalizeEntry(...)`. The
+native SDK does not fetch Contentful entries for your app layer, so the CDA locale belongs in your
+CDA request code.
 
 For the full locale model, see
 [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md).

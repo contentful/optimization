@@ -91,7 +91,7 @@ export default function App(): JSX.Element {
       return
     }
 
-    void fetchEntries(ENTRY_IDS, sdk).then((nextEntries) => {
+    void fetchEntries(ENTRY_IDS).then((nextEntries) => {
       setEntries(nextEntries)
     })
   }, [isReady, sdk])

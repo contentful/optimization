@@ -26,12 +26,10 @@ This is a reference implementation for the
 
 ## CDA locale handling
 
-The app configures SDK `contentfulLocales` and an initial app/content `locale`, then wraps the
-Contentful CDA client with `withOptimizationLocale()` so entry fetches use the live resolved
-`optimization.locale`. Experience API calls use that resolved locale by default unless `api.locale`
-is configured as an explicit API override. Do not use `contentful.js` `withAllLocales` or raw CDA
-`locale=*` for entries passed to `OptimizedEntry`; SDK entry resolution expects direct single-locale
-fields such as `fields.nt_experiences` and `fields.nt_variants`. See
+The app defines one locale in `env.config.ts`, passes it to the React Native SDK as top-level
+`locale`, and passes it directly to Contentful CDA entry fetches. Do not use `contentful.js`
+`withAllLocales` or raw CDA `locale=*` for entries passed to `OptimizedEntry`; SDK entry resolution
+expects direct single-locale fields such as `fields.nt_experiences` and `fields.nt_variants`. See
 [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md)
 for the broader locale model and
 [Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)

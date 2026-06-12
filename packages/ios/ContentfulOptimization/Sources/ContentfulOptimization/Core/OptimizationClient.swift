@@ -26,7 +26,7 @@ public final class OptimizationClient: ObservableObject {
     /// Whether the SDK has been successfully initialized.
     @Published public private(set) var isInitialized = false
 
-    /// Resolved Contentful locale for CDA entry fetches.
+    /// Current SDK locale for Experience API requests and event context.
     @Published public private(set) var locale: String? = nil
 
     /// The currently selected personalizations, updated reactively from JS signals.
@@ -122,7 +122,7 @@ public final class OptimizationClient: ObservableObject {
                 store.clearProfileContinuity()
             }
         }
-        locale = try mergedConfig.resolvedLocale()
+        locale = try mergedConfig.normalizedLocale()
 
         // Wire up JS bridge logging
         bridge.onLog = { [weak self] level, msg in
@@ -220,7 +220,7 @@ public final class OptimizationClient: ObservableObject {
         bridgeCallSyncWhenInitialized(method: "setOnline", args: isOnline ? "true" : "false")
     }
 
-    /// Update the app/content locale used for future entry personalization and Experience requests.
+    /// Update the SDK locale used for future Experience API requests and event context.
     @discardableResult
     public func setLocale(_ locale: String) throws -> String? {
         try requireInitialized()
@@ -232,9 +232,9 @@ public final class OptimizationClient: ObservableObject {
             throw OptimizationError.configError("Failed to update locale")
         }
 
-        let resolvedLocale = result.isNull ? nil : result.toString()
-        self.locale = resolvedLocale
-        return resolvedLocale
+        let sdkLocale = result.isNull ? nil : result.toString()
+        self.locale = sdkLocale
+        return sdkLocale
     }
 
     /// Personalize a Contentful entry using the current personalization state.

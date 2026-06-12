@@ -132,7 +132,6 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
       enableElement: () => undefined,
       ...trackingOverrides,
     },
-    withOptimizationLocale: <TClient extends object>(client: TClient): TClient => client,
     ...sdkOverrides,
   }
 }

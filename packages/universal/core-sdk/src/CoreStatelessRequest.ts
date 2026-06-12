@@ -8,7 +8,7 @@ import {
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type CoreStateless from './CoreStateless'
-import type { CoreStatelessRequestOptions } from './CoreStateless'
+import type { CoreStatelessInsightsOptions, CoreStatelessRequestOptions } from './CoreStateless'
 import type { EventType } from './EventType'
 import { PartialProfile, type OptimizationData } from './api-schemas'
 import type {
@@ -22,6 +22,7 @@ import type {
   UniversalEventBuilderArgs,
   ViewBuilderArgs,
 } from './events'
+import { normalizeExplicitLocale } from './locale'
 
 const coreLogger = createScopedLogger('CoreStateless')
 
@@ -58,12 +59,16 @@ export type CoreStatelessRequestConsent =
 export interface CoreStatelessForRequestOptions {
   /** Request-scoped event and persistence consent. */
   consent: CoreStatelessRequestConsent
+  /** Request-scoped SDK locale used for Experience API requests and default event context. */
+  locale?: string
   /** Profile already known for the request, such as an anonymous ID from a cookie. */
   profile?: PartialProfile
   /** Universal event context shared by event calls made through this request object. */
   eventContext?: UniversalEventBuilderArgs
   /** Experience API options shared by Experience calls made through this request object. */
   experienceOptions?: CoreStatelessRequestOptions
+  /** Insights API options shared by Insights calls made through this request object. */
+  insightsOptions?: CoreStatelessInsightsOptions
 }
 
 /**
@@ -138,18 +143,27 @@ export class CoreStatelessRequest {
   private readonly requestEventConsent: boolean | undefined
   private readonly eventContext: UniversalEventBuilderArgs
   private readonly experienceOptions: CoreStatelessRequestOptions | undefined
+  private readonly insightsOptions: CoreStatelessInsightsOptions | undefined
   readonly canPersistProfile: boolean
 
   constructor(core: CoreStateless, options: CoreStatelessForRequestOptions) {
-    const { consent, eventContext, experienceOptions, profile } = options
+    const { consent, eventContext, experienceOptions, insightsOptions, locale, profile } = options
     const isBooleanConsent = typeof consent === 'boolean'
+    const requestLocale = normalizeExplicitLocale(locale)
 
     this.core = core
     this.currentProfile = profile
     this.requestEventConsent = isBooleanConsent ? consent : consent.events
     this.canPersistProfile = (isBooleanConsent ? consent : consent.persistence) === true
-    this.eventContext = eventContext ?? {}
-    this.experienceOptions = experienceOptions
+    this.eventContext =
+      requestLocale === undefined
+        ? (eventContext ?? {})
+        : { ...eventContext, locale: requestLocale }
+    this.experienceOptions =
+      requestLocale === undefined
+        ? experienceOptions
+        : { ...experienceOptions, locale: requestLocale }
+    this.insightsOptions = insightsOptions
   }
 
   /**
@@ -323,7 +337,12 @@ export class CoreStatelessRequest {
       { profile: parseWithFriendlyError(PartialProfile, profile), events: [validEvent] },
     ])
 
-    await this.core.api.insights.sendBatchEvents(batchEvent)
+    if (this.insightsOptions === undefined) {
+      await this.core.api.insights.sendBatchEvents(batchEvent)
+      return
+    }
+
+    await this.core.api.insights.sendBatchEvents(batchEvent, this.insightsOptions)
   }
 
   private reportBlockedEvent(method: string, args: readonly unknown[]): void {

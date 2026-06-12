@@ -1,4 +1,4 @@
-import { getLocale, getPageProperties, getUserAgent } from './EventBuilder'
+import { getPageProperties, getUserAgent } from './EventBuilder'
 
 describe('EventBuilder', () => {
   afterEach(() => {
@@ -6,20 +6,6 @@ describe('EventBuilder', () => {
     rs.unstubAllGlobals()
     document.title = ''
     window.history.pushState({}, '', '/')
-  })
-
-  it('prefers the first locale from navigator.languages', () => {
-    rs.spyOn(navigator, 'languages', 'get').mockReturnValue(['fr-CA', 'en-US'])
-    rs.spyOn(navigator, 'language', 'get').mockReturnValue('en-US')
-
-    expect(getLocale()).toBe('fr-CA')
-  })
-
-  it('falls back to navigator.language when languages is empty', () => {
-    rs.spyOn(navigator, 'languages', 'get').mockReturnValue([])
-    rs.spyOn(navigator, 'language', 'get').mockReturnValue('de-DE')
-
-    expect(getLocale()).toBe('de-DE')
   })
 
   it('collects page properties from window and document state', () => {

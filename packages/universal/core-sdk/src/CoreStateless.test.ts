@@ -82,31 +82,25 @@ describe('CoreStateless', () => {
     expect(Reflect.get(core.api.experience, 'preflight')).toBeUndefined()
   })
 
-  it('exposes the configured default Contentful locale', () => {
+  it('exposes the configured top-level SDK locale', () => {
     const core = new CoreStateless({
       clientId: 'key_123',
       environment: 'main',
-      contentfulLocales: {
-        default: 'en-US',
-        supported: ['en-US', 'de-DE'],
-      },
+      locale: ' de_DE ',
     })
 
-    expect(core.locale).toBe('en-US')
-    expect(Reflect.get(core.api.experience, 'locale')).toBe('en-US')
+    expect(core.locale).toBe('de-DE')
+    expect(Reflect.get(core.api.experience, 'locale')).toBe('de-DE')
   })
 
-  it('exposes the configured default Contentful locale from default-only config', () => {
+  it('omits the default Experience API locale when no SDK locale is configured', () => {
     const core = new CoreStateless({
       clientId: 'key_123',
       environment: 'main',
-      contentfulLocales: {
-        default: 'en-US',
-      },
     })
 
-    expect(core.locale).toBe('en-US')
-    expect(Reflect.get(core.api.experience, 'locale')).toBe('en-US')
+    expect(core.locale).toBeUndefined()
+    expect(Reflect.get(core.api.experience, 'locale')).toBeUndefined()
   })
 
   it('binds consent, profile, event context, and Experience request options with forRequest()', async () => {
@@ -160,7 +154,7 @@ describe('CoreStateless', () => {
     )
   })
 
-  it('keeps request event locale and Experience request locale separate', async () => {
+  it('keeps request event locale and advanced Experience request locale separate', async () => {
     const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
     const upsertProfile = rs
       .spyOn(core.api.experience, 'upsertProfile')
@@ -182,6 +176,32 @@ describe('CoreStateless', () => {
         ],
       }),
       expect.objectContaining({ locale: 'de-DE' }),
+    )
+  })
+
+  it('uses request locale for event defaults and Experience options when both locale paths are provided', async () => {
+    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
+    const upsertProfile = rs
+      .spyOn(core.api.experience, 'upsertProfile')
+      .mockResolvedValue(EMPTY_OPTIMIZATION_DATA)
+    const requestOptimization = core.forRequest({
+      consent: true,
+      eventContext: { locale: 'en-US' },
+      experienceOptions: { locale: 'fr-FR', preflight: true },
+      locale: ' de_DE ',
+      profile: { id: 'profile-123' },
+    })
+
+    await requestOptimization.page()
+
+    expect(upsertProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        profileId: 'profile-123',
+        events: [
+          expect.objectContaining({ context: expect.objectContaining({ locale: 'de-DE' }) }),
+        ],
+      }),
+      expect.objectContaining({ locale: 'de-DE', preflight: true }),
     )
   })
 
@@ -359,6 +379,24 @@ describe('CoreStateless', () => {
 
     expect(sendBatchEvents).not.toHaveBeenCalled()
     expect(blockedEvents[0]?.method).toBe('trackClick')
+  })
+
+  it('passes request-scoped Insights options to Insights-only events', async () => {
+    const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
+    const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const beaconHandler = (): boolean => true
+    const requestOptimization = core.forRequest({
+      consent: true,
+      insightsOptions: { beaconHandler },
+      profile: { id: 'profile-123' },
+    })
+
+    await requestOptimization.trackClick({ componentId: 'hero-banner' })
+
+    expect(sendBatchEvents).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({ beaconHandler }),
+    )
   })
 
   it('blocks Insights-only events before profile validation when consent is missing', async () => {

@@ -56,12 +56,11 @@ changes all re-resolve entries client-side without a server roundtrip.
 
 ## CDA locale handling
 
-Server-side code configures SDK `contentfulLocales` and calls `resolveRequestLocale()` per request.
-The Node SDK receives `eventLocale` as event context, while CDA fetches and server/client Experience
-API calls use `contentfulLocale`. Hydrated client resolution reuses the single-locale entries
-supplied by the server. The hydrated React provider receives that same `contentfulLocale` through
-its top-level `locale` prop before client-side entry resolution takes over. Do not use
-`contentful.js` `withAllLocales` or raw CDA `locale=*`; SDK entry resolution expects direct
+Server-side code defines one `APP_LOCALE`, passes it to `forRequest({ locale: APP_LOCALE })`, uses
+it in event context, and passes it directly to Contentful CDA fetches. Hydrated client resolution
+reuses the single-locale entries supplied by the server. The hydrated React provider receives that
+same value through its top-level `locale` prop before client-side entry resolution takes over. Do
+not use `contentful.js` `withAllLocales` or raw CDA `locale=*`; SDK entry resolution expects direct
 single-locale fields such as `fields.nt_experiences` and `fields.nt_variants`. See
 [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md)
 for the broader locale model and

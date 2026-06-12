@@ -121,7 +121,7 @@ class LiveUpdatesTestActivity : AppCompatActivity() {
             OptimizationManager.client.selectedPersonalizations.first { it != null }
             val entries = ContentfulFetcher.fetchEntries(
                 listOf("2Z2WLOx07InSewC3LUB3eX"),
-                client.locale ?: AppConfig.defaultContentfulLocale,
+                AppConfig.defaultContentfulLocale,
             )
             loadedEntry = entries.firstOrNull() ?: return@launch
             attachSlotRenderers()

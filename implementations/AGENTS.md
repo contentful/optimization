@@ -8,8 +8,10 @@ Applies to reference implementations and shared implementation contracts under `
   `packages/`.
 - Keep apps small, example-oriented, and aligned with the public SDK surface they demonstrate.
 - CDA entry fetches used for SDK entry resolution must stay single-locale. Do not use
-  `withAllLocales` or `locale=*`; use SDK-assisted locale resolution instead.
-- Experience API calls that render MergeTags must use the same resolved Contentful locale.
+  `withAllLocales` or `locale=*`; choose the application Contentful locale in the implementation and
+  pass it explicitly to CDA requests.
+- Experience API calls that render MergeTags should use the same app locale through SDK top-level or
+  request-scoped `locale`.
 - Prefer root wrappers: `pnpm implementation:run -- <implementation> <script>`. If an implementation
   has no `package.json`, use its local README or child `AGENTS.md`.
 

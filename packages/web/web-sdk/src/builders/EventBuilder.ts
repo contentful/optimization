@@ -19,25 +19,6 @@ function buildQuery(url: string | URL): Dictionary {
 }
 
 /**
- * Determine the preferred locale of the current browser.
- *
- * @returns The first language from `navigator.languages`, or `navigator.language`
- * if `languages` is not available.
- *
- * @example
- * ```ts
- * const locale = getLocale()
- * ```
- *
- * @public
- */
-export function getLocale(): string {
-  const { languages, language } = navigator
-
-  return languages[0] ?? language
-}
-
-/**
  * Collect page-related properties from the current browser context.
  *
  * @returns A {@link Page} object describing the current URL, dimensions and

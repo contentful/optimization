@@ -5,6 +5,7 @@ import { type ReactElement, StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, Navigate, Outlet, RouterProvider } from 'react-router-dom'
 import App from './App'
+import { APP_LOCALE } from './config/locale'
 import { HOME_PATH } from './config/routes'
 import { HomePage } from './pages/HomePage'
 import { PageTwoPage } from './pages/PageTwoPage'
@@ -17,7 +18,6 @@ const INSIGHTS_BASE_URL =
 const EXPERIENCE_BASE_URL =
   import.meta.env.PUBLIC_EXPERIENCE_API_BASE_URL?.trim() ?? 'http://localhost:8000/experience/'
 const ENABLE_PREVIEW_PANEL = import.meta.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true'
-const CONTENTFUL_LOCALE = 'en-US'
 
 type LogLevel = 'debug' | 'warn' | 'error'
 
@@ -68,10 +68,7 @@ function RootLayout(): ReactElement {
         insightsBaseUrl: INSIGHTS_BASE_URL,
         experienceBaseUrl: EXPERIENCE_BASE_URL,
       }}
-      locale={CONTENTFUL_LOCALE}
-      contentfulLocales={{
-        default: CONTENTFUL_LOCALE,
-      }}
+      locale={APP_LOCALE}
       trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
       logLevel={resolveLogLevel()}
       app={{

@@ -49,10 +49,6 @@ interface BridgeConfig {
   environment: string
   experienceBaseUrl?: string
   insightsBaseUrl?: string
-  api?: {
-    locale?: string
-  }
-  contentfulLocales?: CoreStatefulConfig['contentfulLocales']
   locale?: string
   allowedEventTypes?: CoreStatefulConfig['allowedEventTypes']
   defaults?: {
@@ -179,13 +175,11 @@ const bridge: Bridge = {
     const coreConfig: CoreStatefulConfig = {
       clientId: config.clientId,
       environment: config.environment,
-      contentfulLocales: config.contentfulLocales,
       locale: config.locale,
       allowedEventTypes: config.allowedEventTypes ?? DEFAULT_NATIVE_ALLOWED_EVENT_TYPES,
       api: {
         experienceBaseUrl: config.experienceBaseUrl,
         insightsBaseUrl: config.insightsBaseUrl,
-        locale: config.api?.locale,
       },
       getAnonymousId: () => (signals.persistenceConsent.value === true ? anonymousId : undefined),
     }

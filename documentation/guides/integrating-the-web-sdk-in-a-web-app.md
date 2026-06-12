@@ -103,7 +103,9 @@ const APP_CONFIG = {
   insightsBaseUrl: 'https://ingest.insights.ninetailed.co/',
 } as const
 
-const rawContentfulClient = contentful.createClient({
+const APP_LOCALE = 'en-US'
+
+export const contentfulClient = contentful.createClient({
   accessToken: APP_CONFIG.contentfulAccessToken,
   environment: APP_CONFIG.contentfulEnvironment,
   space: APP_CONFIG.contentfulSpaceId,
@@ -112,7 +114,7 @@ const rawContentfulClient = contentful.createClient({
 export const optimization = new ContentfulOptimization({
   clientId: APP_CONFIG.optimizationClientId,
   environment: APP_CONFIG.optimizationEnvironment,
-  locale: 'en-US',
+  locale: APP_LOCALE,
   app: {
     name: 'my-web-app',
     version: '1.0.0',
@@ -121,22 +123,14 @@ export const optimization = new ContentfulOptimization({
     experienceBaseUrl: APP_CONFIG.experienceBaseUrl,
     insightsBaseUrl: APP_CONFIG.insightsBaseUrl,
   },
-  contentfulLocales: {
-    default: 'en-US',
-    supported: ['en-US', 'de-DE', 'fr-FR'],
-  },
   autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
   logLevel: 'warn',
 })
-
-export const contentfulClient = optimization.withOptimizationLocale(rawContentfulClient)
 ```
 
-Use `contentfulLocales.default` for single-locale apps, and add `contentfulLocales.supported` when
-the app needs browser locale matching across multiple Contentful locales. Copy those codes from
-Contentful locale settings or the CMA locale list. The resolved `optimization.locale`, when present,
-is the Contentful locale code used by `withOptimizationLocale()` and by default Experience API
-localization unless you provide an explicit `api.locale` override.
+Choose the application Contentful locale in your router, i18n layer, or app configuration. Pass that
+value to Contentful CDA requests and use the top-level SDK `locale` when Experience API responses
+and events should use the same language.
 
 For the full matching rules, configuration cases, and Experience API locale behavior, see
 [Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
@@ -272,6 +266,7 @@ normally does, then resolve each entry with `resolveOptimizedEntry()`.
 async function renderEntry(entryId: string, element: HTMLElement): Promise<void> {
   const baseline = await contentfulClient.getEntry<MarketingHeroSkeleton>(entryId, {
     include: 10,
+    locale: APP_LOCALE,
   })
 
   const { entry, selectedOptimization } = optimization.resolveOptimizedEntry(baseline)
@@ -319,15 +314,12 @@ This is the main browser-side personalization loop:
 2. Fetch the baseline Contentful entry with one CDA locale.
 3. Resolve the optimized entry variant before rendering it into the DOM.
 
-Configure `contentfulLocales.default` once for single-locale apps, and add
-`contentfulLocales.supported` for localized apps that need browser locale matching. If the app
-locale changes after initialization, call `optimization.setLocale(nextLocale)` and then run the
-app's normal profile and content refresh flow. The recommended `withOptimizationLocale()` helper
-lets Contentful entry fetches use that same resolved locale by default; data layers that need direct
-control can pass `optimization.locale` explicitly. Fetching entries with `contentful.js`
-`withAllLocales` or raw CDA `locale=*` returns locale-keyed fields, but the SDK resolver expects a
-standard single-locale CDA entry where `fields.nt_experiences` and `fields.nt_variants` are direct
-field values. See
+Your app owns the Contentful locale used for CDA fetches. If the app locale changes after
+initialization, call `optimization.setLocale(nextLocale)`, refetch Contentful entries with the new
+CDA locale, and rerun the app's normal profile and content refresh flow. Fetching entries with
+`contentful.js` `withAllLocales` or raw CDA `locale=*` returns locale-keyed fields, but the SDK
+resolver expects a standard single-locale CDA entry where `fields.nt_experiences` and
+`fields.nt_variants` are direct field values. See
 [Entry personalization and variant resolution](../concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
 for the entry contract and
 [Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md)
@@ -395,8 +387,8 @@ renderer differs.
 
 If a merge tag references localized profile fields such as `location.city` or `location.country`,
 its resolved value follows the localized profile values returned by the Experience API. In this
-guide, `contentfulLocales` and the current SDK locale let the SDK keep the default Experience API
-locale aligned with the CDA entry fetch locale.
+guide, the same `APP_LOCALE` value is passed to Contentful CDA requests and to the SDK's top-level
+`locale`, so localized profile values match the entry language.
 
 ### Custom flags
 

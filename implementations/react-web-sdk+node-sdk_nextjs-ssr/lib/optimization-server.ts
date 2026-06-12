@@ -4,7 +4,7 @@ import { optimizationConfig } from './config'
 const sdk = new ContentfulOptimization({
   clientId: optimizationConfig.clientId,
   environment: optimizationConfig.environment,
-  contentfulLocales: optimizationConfig.contentfulLocales,
+  locale: optimizationConfig.locale,
   logLevel: 'debug',
   api: optimizationConfig.api,
   app: {
@@ -13,10 +13,4 @@ const sdk = new ContentfulOptimization({
   },
 })
 
-function requireContentfulLocale(contentfulLocale: string | undefined): string {
-  if (contentfulLocale !== undefined) return contentfulLocale
-
-  throw new Error('This implementation requires contentfulLocales for localized CDA fetches.')
-}
-
-export { requireContentfulLocale, sdk }
+export { sdk }

@@ -43,12 +43,11 @@ hybrid SSR and ESR solutions.
 
 ## CDA locale handling
 
-The server calls `resolveRequestLocale()` for request-scoped `eventLocale` and `contentfulLocale`.
-The browser configures SDK `contentfulLocales`, receives an initial app/content `locale`, and wraps
-the CDA client with `withOptimizationLocale()`. Browser Experience API calls use the live resolved
-locale by default, and server Experience API calls pass the per-request `contentfulLocale`
-explicitly. Do not use `contentful.js` `withAllLocales` or raw CDA `locale=*` for entries passed to
-SDK resolution; the resolver expects direct single-locale fields such as `fields.nt_experiences` and
+The server and browser share one `APP_LOCALE`. Server code passes it to
+`forRequest({ locale: APP_LOCALE })`, event context, and Contentful CDA fetches. Browser code passes
+the same value as the Web SDK top-level `locale` and directly to CDA entry fetches. Do not use
+`contentful.js` `withAllLocales` or raw CDA `locale=*` for entries passed to SDK resolution; the
+resolver expects direct single-locale fields such as `fields.nt_experiences` and
 `fields.nt_variants`. See
 [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md)
 for the broader locale model and

@@ -33,17 +33,15 @@ function AppContent(): React.JSX.Element {
   const sdk = useOptimization()
   const contentfulClient = useMemo(
     () =>
-      sdk.withOptimizationLocale(
-        createClient({
-          space: ENV_CONFIG.contentful.spaceId,
-          environment: ENV_CONFIG.contentful.environment,
-          accessToken: ENV_CONFIG.contentful.accessToken,
-          host: ENV_CONFIG.contentful.host,
-          basePath: ENV_CONFIG.contentful.basePath,
-          insecure: true,
-        }),
-      ),
-    [sdk],
+      createClient({
+        space: ENV_CONFIG.contentful.spaceId,
+        environment: ENV_CONFIG.contentful.environment,
+        accessToken: ENV_CONFIG.contentful.accessToken,
+        host: ENV_CONFIG.contentful.host,
+        basePath: ENV_CONFIG.contentful.basePath,
+        insecure: true,
+      }),
+    [],
   )
   const [entries, setEntries] = useState<Entry[]>([])
   const [sdkError, setSdkError] = useState<string | null>(null)
@@ -64,7 +62,7 @@ function AppContent(): React.JSX.Element {
         return
       }
 
-      void fetchEntries(ENTRY_IDS, sdk, setEntries, setSdkError)
+      void fetchEntries(ENTRY_IDS, setEntries, setSdkError)
     })
 
     const consentSubscription = sdk.states.consent.subscribe((consent) => {

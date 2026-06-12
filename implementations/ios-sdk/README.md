@@ -42,20 +42,19 @@ can be compared across UI frameworks.
 
 ## CDA locale handling
 
-The app configures native SDK `contentfulLocales` and an app/content `locale`, then uses
-`client.locale` in the shared raw CDA fetch helper. Experience API calls use that resolved locale by
-default unless nested `api.locale` is configured as an explicit API override. Entries passed to SDK
-resolution use the standard single-locale CDA entry shape. Do not use all-locale CDA responses or
-`locale=*`, because entry resolution expects direct single-locale fields such as
-`fields.nt_experiences` and `fields.nt_variants`. See
+The app defines one locale in shared config, passes it to the native SDK as top-level `locale`, and
+passes it directly to the shared raw CDA fetch helper. Entries passed to SDK resolution use the
+standard single-locale CDA entry shape. Do not use all-locale CDA responses or `locale=*`, because
+entry resolution expects direct single-locale fields such as `fields.nt_experiences` and
+`fields.nt_variants`. See
 [Locale handling in the Optimization SDK Suite](../../documentation/concepts/locale-handling-in-the-optimization-sdk-suite.md)
 for the broader locale model and
 [Entry personalization and variant resolution](../../documentation/concepts/entry-personalization-and-variant-resolution.md#single-locale-cda-entry-contract)
 for the entry contract.
 
-This mock app uses one Contentful locale, so `ContentfulLocales(default: "en-US")` is enough. Add
-`supported` only when a production app needs device-locale matching across multiple Contentful
-locales.
+This mock app uses one Contentful locale. A production app can derive the application locale from
+its own navigation, i18n, or account-preference layer and pass that value to both SDK `locale` and
+CDA requests when they should stay aligned.
 
 ## Prerequisites
 

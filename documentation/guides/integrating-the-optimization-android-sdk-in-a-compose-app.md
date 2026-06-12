@@ -86,11 +86,12 @@ Then create an `OptimizationConfig` with the Optimization client ID and the Cont
 information your app uses when fetching entries:
 
 ```kotlin
+val appLocale = "en-US"
+
 val optimizationConfig = OptimizationConfig(
     clientId = "your-client-id",
     environment = "master",
-    contentfulLocales = ContentfulLocales(default = "en-US"),
-    locale = "en-US",
+    locale = appLocale,
     debug = BuildConfig.DEBUG,
 )
 ```
@@ -99,8 +100,8 @@ Only `clientId` is required. If application policy permits Optimization by defau
 consent UI is rendered, set `defaults = StorageDefaults(consent = true)`. Otherwise, leave defaults
 unset and connect `client.consent(true)` and `client.consent(false)` to the app's consent UI.
 
-Use `contentfulLocales` and `locale` when the same screen renders localized Contentful entries. For
-the full locale model, see
+Use the same `appLocale` in app-owned Contentful Delivery API requests when the same screen renders
+localized Contentful entries. For the full locale model, see
 [Locale handling in the Optimization SDK Suite](../concepts/locale-handling-in-the-optimization-sdk-suite.md).
 
 ## 2. Initialize with OptimizationRoot
@@ -218,18 +219,17 @@ against the selected variants for the visitor, and can attach view and tap track
 Fetch entries from Contentful as single-locale JSON-shaped maps and include linked optimization
 references in the payload. Pass those maps to `OptimizedEntry`.
 
-Use the resolved `client.locale` value for app-owned Contentful Delivery API requests that feed SDK
+Use the application Contentful locale for app-owned Contentful Delivery API requests that feed SDK
 entry resolution:
 
 ```kotlin
 @Composable
 fun HomeScreen(contentfulClient: ContentfulDeliveryClient) {
-    val client = LocalOptimizationClient.current
+    val appLocale = getAppLocale()
     var entries by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
 
-    LaunchedEffect(client.locale) {
-        val locale = client.locale ?: "en-US"
-        entries = contentfulClient.fetchHomeEntries(locale = locale)
+    LaunchedEffect(appLocale) {
+        entries = contentfulClient.fetchHomeEntries(locale = appLocale)
     }
 
     HomeContent(entries = entries)
@@ -411,13 +411,13 @@ fun AppRoot(previewContentfulClient: PreviewContentfulClient?) {
 
 @Composable
 fun HomeScreen() {
-    val client = LocalOptimizationClient.current
+    val appLocale = getAppLocale()
     var entries by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
 
     ScreenTrackingEffect(screenName = "Home")
 
-    LaunchedEffect(client.locale) {
-        entries = fetchHomeEntries(locale = client.locale ?: "en-US")
+    LaunchedEffect(appLocale) {
+        entries = fetchHomeEntries(locale = appLocale)
     }
 
     OptimizationLazyColumn {

@@ -44,7 +44,7 @@ final class LiveUpdatesTestViewController: UIViewController {
         Task { @MainActor in
             let entries = await ContentfulFetcher.fetchEntries(
                 ids: [personalizedEntryId],
-                locale: client.locale ?? AppConfig.defaultContentfulLocale
+                locale: AppConfig.defaultContentfulLocale
             )
             self.entry = entries.first
             self.refreshUI()

@@ -131,39 +131,34 @@ For cross-SDK consent policy guidance, see
 
 ## Locale handling
 
-For a single-locale app, configure the Contentful locale default only:
+For a single-locale app, choose the application Contentful locale and pass the same value to SDK
+`locale` when Experience API responses and events should use that language:
 
 ```swift
-let config = OptimizationConfig(
-    clientId: "<your-client-id>",
-    environment: "master",
-    contentfulLocales: ContentfulLocales(default: "en-US")
-)
-```
-
-For an app that matches the user's runtime locale to multiple Contentful locales, add `supported`
-with the locale codes configured in your Contentful space:
-
-```swift
-let appLocale = Locale.current.identifier
+let appLocale = "en-US"
 
 let config = OptimizationConfig(
     clientId: "<your-client-id>",
     environment: "master",
-    contentfulLocales: ContentfulLocales(
-        default: "en-US",
-        supported: ["en-US", "de-DE", "fr-FR"]
-    ),
     locale: appLocale
 )
 ```
 
-Use `client.locale` when your app-owned Contentful Delivery API client fetches entries that will be
-passed to `OptimizedEntry` or `client.personalizeEntry(...)`. The native SDK does not fetch
-Contentful entries for your app layer, so this value belongs in your CDA request code.
+For localized apps, derive `appLocale` from your navigation, i18n, or app configuration layer:
 
-`OptimizationApiConfig.locale` is an explicit Experience API override for localized profile fields.
-It does not replace the CDA locale used to fetch Contentful entries.
+```swift
+let appLocale = getAppLocale()
+
+let config = OptimizationConfig(
+    clientId: "<your-client-id>",
+    environment: "master",
+    locale: appLocale
+)
+```
+
+Use the same `appLocale` when your app-owned Contentful Delivery API client fetches entries that
+will be passed to `OptimizedEntry` or `client.personalizeEntry(...)`. The native SDK does not fetch
+Contentful entries for your app layer, so the CDA locale belongs in your CDA request code.
 
 For the full locale model, see
 [Locale handling in the Optimization SDK Suite](https://contentful.github.io/optimization/documents/Documentation.Concepts.Locale_handling_in_the_Optimization_SDK_Suite.html).

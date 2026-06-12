@@ -20,7 +20,7 @@ import {
   acquireStatefulRuntimeSingleton,
   releaseStatefulRuntimeSingleton,
 } from './lib/singleton/StatefulRuntimeSingleton'
-import { normalizeExplicitLocale, resolveContentfulLocale } from './locale'
+import { normalizeExplicitLocale } from './locale'
 import { ExperienceQueue, type ExperienceQueueDropContext } from './queues/ExperienceQueue'
 import { InsightsQueue } from './queues/InsightsQueue'
 import {
@@ -143,7 +143,7 @@ export interface CoreStates {
   blockedEventStream: Observable<BlockedEvent | undefined>
   /** Stream of the most recent event emitted. */
   eventStream: Observable<InsightsEventPayload | ExperienceEventPayload | undefined>
-  /** Live view of the resolved Contentful locale. */
+  /** Live view of the SDK Experience API/event locale. */
   locale: Observable<string | undefined>
   /** Key-scoped observable for a single Custom Flag value. */
   flag: (name: string) => Observable<Json>
@@ -187,11 +187,6 @@ export interface CoreStatefulConfig extends CoreConfig {
   api?: CoreStatefulApiConfig
 
   /**
-   * Initial app/content locale candidate used to resolve the Contentful locale.
-   */
-  locale?: string
-
-  /**
    * Allow-listed event type strings permitted when consent is not set.
    */
   allowedEventTypes?: EventType[]
@@ -230,7 +225,6 @@ const OPTIMIZATION_UNLOCKING_EVENT_TYPES: readonly EventType[] = [
 
 class CoreStateful extends CoreStatefulEventEmitter implements ConsentController, ConsentGuard {
   private readonly singletonOwner: string
-  private readonly configuredExperienceLocale: string | undefined
   private destroyed = false
   protected readonly allowedEventTypes: EventType[]
   protected readonly experienceQueue: ExperienceQueue
@@ -261,24 +255,18 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   }
 
   constructor(config: CoreStatefulConfig) {
-    const locale = resolveContentfulLocale({
-      contentfulLocales: config.contentfulLocales,
-      locale: config.locale,
-    })
-    const configuredExperienceLocale = normalizeExplicitLocale(config.api?.locale, 'api.locale')
-    const experienceLocale = configuredExperienceLocale ?? locale
+    const locale = normalizeExplicitLocale(config.locale)
 
     super(
       config,
       {
-        experience: createStatefulExperienceApiConfig(config.api, experienceLocale),
+        experience: createStatefulExperienceApiConfig(config.api, locale),
         insights: createStatefulInsightsApiConfig(config.api),
       },
       locale,
     )
 
     this.eventBuilder.getConsent = () => consentSignal.value
-    this.configuredExperienceLocale = configuredExperienceLocale
     this.singletonOwner = `CoreStateful#${++statefulInstanceCounter}`
     acquireStatefulRuntimeSingleton(this.singletonOwner)
 
@@ -413,22 +401,19 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   }
 
   /**
-   * Update the app/content locale for future entry fetches and default Experience API requests.
+   * Update the SDK locale for future Experience API requests and default event context.
    *
-   * @param locale - Next app/content locale candidate.
-   * @returns The resolved Contentful locale.
+   * @param locale - Next SDK Experience API/event locale.
+   * @returns The normalized SDK locale.
    *
    * @public
    */
   setLocale(locale: string): string | undefined {
-    const resolvedLocale = resolveContentfulLocale({
-      contentfulLocales: this.config.contentfulLocales,
-      locale,
-    })
+    const resolvedLocale = normalizeExplicitLocale(locale)
 
     this.setResolvedLocale(resolvedLocale)
     localeSignal.value = resolvedLocale
-    this.api.experience.setLocale(this.configuredExperienceLocale ?? resolvedLocale)
+    this.api.experience.setLocale(resolvedLocale)
 
     return resolvedLocale
   }

@@ -26,6 +26,7 @@ const limiter = rateLimit({
 
 const app: Express = express()
 app.use(limiter)
+const APP_LOCALE = 'en-US'
 
 app.set('view engine', 'ejs') // configure EJS as the view engine
 app.set('views', path.join(__dirname, '.')) // define the directory for view templates
@@ -34,9 +35,7 @@ const optimizationConfig: OptimizationNodeConfig = {
   clientId: process.env.PUBLIC_NINETAILED_CLIENT_ID ?? '',
   environment: process.env.PUBLIC_NINETAILED_ENVIRONMENT ?? '',
   logLevel: 'debug',
-  contentfulLocales: {
-    default: 'en-US',
-  },
+  locale: APP_LOCALE,
   api: {
     insightsBaseUrl: process.env.PUBLIC_INSIGHTS_API_BASE_URL,
     experienceBaseUrl: process.env.PUBLIC_EXPERIENCE_API_BASE_URL,
@@ -44,12 +43,6 @@ const optimizationConfig: OptimizationNodeConfig = {
 }
 
 const sdk = new ContentfulOptimization(optimizationConfig)
-
-function requireContentfulLocale(contentfulLocale: string | undefined): string {
-  if (contentfulLocale !== undefined) return contentfulLocale
-
-  throw new Error('This implementation requires contentfulLocales for localized CDA fetches.')
-}
 
 const ctflConfig: contentful.CreateClientParams = {
   accessToken: process.env.PUBLIC_CONTENTFUL_TOKEN ?? '',
@@ -176,14 +169,11 @@ function getUniversalEventBuilderArgs(
 }
 
 app.get('/', limiter, async (req, res) => {
-  const { contentfulLocale, eventLocale } = sdk.resolveRequestLocale(req)
-  const resolvedContentfulLocale = requireContentfulLocale(contentfulLocale)
-  const universalEventBuilderArgs = getUniversalEventBuilderArgs(req, eventLocale)
-  const experienceRequestOptions = { locale: resolvedContentfulLocale }
+  const universalEventBuilderArgs = getUniversalEventBuilderArgs(req, APP_LOCALE)
   const requestOptimization = sdk.forRequest({
     consent: true,
     eventContext: universalEventBuilderArgs,
-    experienceOptions: experienceRequestOptions,
+    locale: APP_LOCALE,
   })
 
   const userId = isNonEmptyString(req.query.userId) ? req.query.userId.trim() : undefined
@@ -215,8 +205,7 @@ app.get('/', limiter, async (req, res) => {
 
   const baselineEntryResults = await Promise.all(
     entryIds.map(
-      async (entryId) =>
-        [entryId, await getCachedContentfulEntry(entryId, resolvedContentfulLocale)] as const,
+      async (entryId) => [entryId, await getCachedContentfulEntry(entryId, APP_LOCALE)] as const,
     ),
   )
 

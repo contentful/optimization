@@ -1,5 +1,5 @@
-import type { OptimizationSdk } from '@contentful/optimization-react-web'
 import { createClient } from 'contentful'
+import { APP_LOCALE } from '../config/locale'
 import type { ContentEntry, ContentEntrySkeleton } from '../types/contentful'
 
 const INCLUDE_DEPTH = 10
@@ -31,10 +31,8 @@ function createContentfulClient(): ReturnType<typeof createClient> {
 
 const contentfulClient = createContentfulClient()
 
-export function getContentfulClient(
-  optimization?: OptimizationSdk,
-): ReturnType<typeof createClient> {
-  return optimization?.withOptimizationLocale(contentfulClient) ?? contentfulClient
+export function getContentfulClient(): ReturnType<typeof createClient> {
+  return contentfulClient
 }
 
 export function getContentfulConfigError(): string | null {
@@ -45,29 +43,24 @@ export function getContentfulConfigError(): string | null {
   return `Missing required Contentful env vars: ${MISSING_ENV_ERROR}. See implementations/react-web-sdk/.env.example.`
 }
 
-export async function fetchEntry(
-  entryId: string,
-  optimization: OptimizationSdk,
-): Promise<ContentEntry | undefined> {
+export async function fetchEntry(entryId: string): Promise<ContentEntry | undefined> {
   if (getContentfulConfigError()) {
     return undefined
   }
 
   try {
-    return await getContentfulClient(optimization).getEntry<ContentEntrySkeleton>(entryId, {
+    return await getContentfulClient().getEntry<ContentEntrySkeleton>(entryId, {
       include: INCLUDE_DEPTH,
+      locale: APP_LOCALE,
     })
   } catch {
     return undefined
   }
 }
 
-export async function fetchEntries(
-  entryIds: readonly string[],
-  optimization: OptimizationSdk,
-): Promise<ContentEntry[]> {
+export async function fetchEntries(entryIds: readonly string[]): Promise<ContentEntry[]> {
   const fetchedEntries = await Promise.all(
-    entryIds.map(async (entryId) => await fetchEntry(entryId, optimization)),
+    entryIds.map(async (entryId) => await fetchEntry(entryId)),
   )
 
   return fetchedEntries.filter((entry): entry is ContentEntry => entry !== undefined)
