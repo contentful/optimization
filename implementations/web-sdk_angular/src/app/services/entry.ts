@@ -1,14 +1,12 @@
 import {
   afterNextRender,
   computed,
+  DestroyRef,
   effect,
   ElementRef,
   inject,
-  Injectable,
   signal,
   untracked,
-  type InputSignal,
-  type OnDestroy,
   type Signal,
 } from '@angular/core'
 
@@ -75,40 +73,47 @@ function resolveEntryMergeTags(entry: Entry, resolveMergeTag: MergeTagResolver):
   }) as Entry
 }
 
-@Injectable()
-export class NgContentfulEntry implements OnDestroy {
-  private readonly optimization = inject(NgContentfulOptimization)
-  private readonly elementRef = inject<ElementRef<Element>>(ElementRef)
+export function injectContentfulEntry({
+  entry,
+  liveUpdates = signal(false),
+  observation = signal<ObservationMode>('auto'),
+}: {
+  entry: Signal<Entry>
+  liveUpdates?: Signal<boolean>
+  observation?: Signal<ObservationMode>
+}): Signal<ResolvedEntryView | undefined> {
+  const optimization = inject(NgContentfulOptimization)
+  const elementRef = inject<ElementRef<Element>>(ElementRef)
+  const destroyRef = inject(DestroyRef)
 
-  private _entry: Signal<Entry | undefined> = signal(undefined)
-  private _liveUpdates: Signal<boolean> = signal(false)
-  private _observation: Signal<ObservationMode> | InputSignal<ObservationMode> = signal('auto')
-  private readonly _domReady = signal(false)
-  private manualTrackingActive = false
+  const domReady = signal(false)
+  let manualTrackingActive = false
 
-  private liveRead<T>(sig: Signal<T>): T {
-    return this._liveUpdates() ? sig() : untracked(sig)
+  afterNextRender(() => {
+    domReady.set(true)
+  })
+
+  function liveRead<T>(sig: Signal<T>): T {
+    return liveUpdates() ? sig() : untracked(sig)
   }
 
-  private readonly _variant = computed(() => {
-    const raw = this._entry()
-    if (!raw) return undefined
-    const selectedOptimizations = this.liveRead(this.optimization.selectedOptimizations)
+  const variant = computed(() => {
+    const raw = entry()
     return {
       raw,
-      resolved: this.optimization.sdk.resolveOptimizedEntry(raw, selectedOptimizations),
+      resolved: optimization.sdk.resolveOptimizedEntry(
+        raw,
+        liveRead(optimization.selectedOptimizations),
+      ),
     }
   })
 
-  readonly resolved: Signal<ResolvedEntryView | undefined> = computed(() => {
-    const variant = this._variant()
-    if (!variant) return undefined
-
-    const { raw, resolved } = variant
-    const profile = this.liveRead(this.optimization.profile)
+  const result = computed(() => {
+    const { raw, resolved } = variant()
+    const profile = liveRead(optimization.profile)
     let mergeTagResolved: boolean | undefined = undefined
     const resolvedEntry = resolveEntryMergeTags(resolved.entry, (target) => {
-      const value = profile ? this.optimization.sdk.getMergeTagValue(target, profile) : undefined
+      const value = profile ? optimization.sdk.getMergeTagValue(target, profile) : undefined
       if (value !== undefined) mergeTagResolved = true
       else mergeTagResolved ??= false
       return value ?? target.fields.nt_fallback
@@ -125,56 +130,34 @@ export class NgContentfulEntry implements OnDestroy {
     }
   })
 
-  constructor() {
-    afterNextRender(() => {
-      this._domReady.set(true)
-    })
-
-    effect(() => {
-      this.clearManualTracking()
-
-      if (!this._domReady() || this._observation() === 'auto') return
-
-      const resolved = this.resolved()
-      if (resolved) this.enableManualTracking(resolved)
-    })
-  }
-
-  with({
-    entry,
-    observation,
-    liveUpdates,
-  }: {
-    entry: Signal<Entry>
-    observation?: InputSignal<ObservationMode>
-    liveUpdates?: Signal<boolean>
-  }): this {
-    this._entry = entry
-    if (observation) this._observation = observation
-    if (liveUpdates) this._liveUpdates = liveUpdates
-    return this
-  }
-
-  private enableManualTracking(resolved: ResolvedEntryView): void {
-    this.optimization.sdk.tracking.enableElement('views', this.elementRef.nativeElement, {
+  function enableManualTracking(r: ResolvedEntryView): void {
+    optimization.sdk.tracking.enableElement('views', elementRef.nativeElement, {
       data: {
-        entryId: resolved.resolvedId,
-        optimizationId: resolved.experienceId,
-        sticky: resolved.sticky,
-        variantIndex: resolved.variantIndex,
+        entryId: r.resolvedId,
+        optimizationId: r.experienceId,
+        sticky: r.sticky,
+        variantIndex: r.variantIndex,
       },
     })
-    this.manualTrackingActive = true
+    manualTrackingActive = true
   }
 
-  private clearManualTracking(): void {
-    if (this.manualTrackingActive) {
-      this.optimization.sdk.tracking.clearElement('views', this.elementRef.nativeElement)
-      this.manualTrackingActive = false
+  function clearManualTracking(): void {
+    if (manualTrackingActive) {
+      optimization.sdk.tracking.clearElement('views', elementRef.nativeElement)
+      manualTrackingActive = false
     }
   }
 
-  ngOnDestroy(): void {
-    this.clearManualTracking()
-  }
+  effect(() => {
+    clearManualTracking()
+    if (!domReady() || observation() === 'auto') return
+    enableManualTracking(result())
+  })
+
+  destroyRef.onDestroy(() => {
+    clearManualTracking()
+  })
+
+  return result
 }

@@ -10,7 +10,7 @@ import {
   type MergeTagMode,
 } from '../../fixtures'
 import type { ContentfulEntry } from '../../services/contentful-client'
-import { NgContentfulEntry, type ObservationMode } from '../../services/entry'
+import { injectContentfulEntry, type ObservationMode } from '../../services/entry'
 import { NgLiveUpdates } from '../../services/live-updates'
 import { isRecord } from '../../utils'
 
@@ -109,7 +109,6 @@ function isContentfulEntry(value: unknown): value is ContentfulEntry {
   imports: [NgTemplateOutlet, Badge, forwardRef(() => EntryCard)],
   templateUrl: './index.html',
   styleUrl: './index.scss',
-  providers: [NgContentfulEntry],
 })
 export class EntryCard {
   readonly entry = input.required<ContentfulEntry>()
@@ -125,13 +124,11 @@ export class EntryCard {
     return this.liveUpdates() ?? this.liveUpdatesService.globalLiveUpdates()
   })
 
-  private readonly liveEntry = inject(NgContentfulEntry).with({
+  protected readonly resolved = injectContentfulEntry({
     entry: this.entry,
     liveUpdates: this.isLive,
     observation: this.observation,
   })
-
-  protected readonly resolved = this.liveEntry.resolved
   protected readonly isVariant = computed(() => this.resolved()?.experienceId !== undefined)
   protected readonly richTextHtml = computed<SafeHtml | undefined>(() => {
     const fields = this.resolved()?.resolvedEntry.fields
