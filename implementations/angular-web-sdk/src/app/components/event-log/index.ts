@@ -68,8 +68,12 @@ export class EventLog {
           break
         }
         case 'component': {
-          const { componentId } = raw
-          this.track({ type: 'view', value: componentId, key: `component-${componentId}` })
+          const { componentId, viewId } = raw
+          this.track({
+            type: viewId ? 'view' : 'comp',
+            value: viewId ?? componentId,
+            key: `component-${componentId}`,
+          })
           break
         }
         case 'component_hover': {
