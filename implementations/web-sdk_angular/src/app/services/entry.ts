@@ -10,7 +10,7 @@ import {
   type Signal,
 } from '@angular/core'
 
-import type { MergeTagEntry } from '@contentful/optimization-web/api-schemas'
+import { isMergeTagEntry, type MergeTagEntry } from '@contentful/optimization-web/api-schemas'
 import type { Document, Text } from '@contentful/rich-text-types'
 import { INLINES } from '@contentful/rich-text-types'
 import type { Entry } from 'contentful'
@@ -31,30 +31,23 @@ export interface ResolvedEntryView {
   mergeTagResolved: boolean | undefined
 }
 
-function isMergeTagEntry(entry: unknown): entry is MergeTagEntry {
-  if (!isRecord(entry) || !isRecord(entry.sys)) return false
-  if (!isRecord(entry.sys.contentType)) return false
-  if (!isRecord(entry.sys.contentType.sys)) return false
-  return entry.sys.contentType.sys.id === 'nt_mergetag'
-}
-
 function isRichTextDocument(value: unknown): value is Document {
-  return isRecord(value) && value.nodeType === 'document' && Array.isArray(value.content)
+  return isRecord(value) && value.nodeType === 'document'
 }
 
 function resolveNode(node: unknown, resolveMergeTag: MergeTagResolver): unknown {
   if (!isRecord(node)) return node
-  if (
-    node.nodeType === INLINES.EMBEDDED_ENTRY &&
-    isRecord(node.data) &&
-    isMergeTagEntry(node.data.target)
-  ) {
-    return {
-      nodeType: 'text',
-      value: resolveMergeTag(node.data.target) ?? '',
-      marks: [],
-      data: {},
-    } satisfies Text
+  const { data } = node
+  if (node.nodeType === INLINES.EMBEDDED_ENTRY && isRecord(data)) {
+    const { target } = data
+    if (isMergeTagEntry(target)) {
+      return {
+        nodeType: 'text',
+        value: resolveMergeTag(target) ?? '',
+        marks: [],
+        data: {},
+      } satisfies Text
+    }
   }
   if (Array.isArray(node.content)) {
     return { ...node, content: node.content.map((child) => resolveNode(child, resolveMergeTag)) }
