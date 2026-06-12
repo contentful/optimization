@@ -20,6 +20,7 @@
     "implementation:react-native-sdk": "pnpm run implementation:run -- react-native-sdk",
     "implementation:run": "tsx ./scripts/run-implementation-script.ts",
     "implementation:react-web-sdk": "pnpm run implementation:run -- react-web-sdk",
+    "implementation:web-sdk_angular": "pnpm run implementation:run -- web-sdk_angular",
     "implementation:web-sdk_react": "pnpm run implementation:run -- web-sdk_react",
     "implementation:react-web-sdk+node-sdk_nextjs-ssr": "pnpm run implementation:run -- react-web-sdk+node-sdk_nextjs-ssr",
     "implementation:react-web-sdk+node-sdk_nextjs-ssr-csr": "pnpm run implementation:run -- react-web-sdk+node-sdk_nextjs-ssr-csr",

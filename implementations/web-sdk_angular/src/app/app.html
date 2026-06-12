@@ -1,0 +1,18 @@
+<nav>
+  <a
+    data-testid="link-home"
+    routerLink="/"
+    routerLinkActive="active"
+    [routerLinkActiveOptions]="{ exact: true }"
+    >Home</a
+  >
+  <a data-testid="link-page-two" routerLink="/page-two" routerLinkActive="active">Page Two</a>
+</nav>
+<div class="app-layout">
+  <aside class="app-sidebar">
+    <app-tracking-log />
+  </aside>
+  <main>
+    <router-outlet />
+  </main>
+</div>

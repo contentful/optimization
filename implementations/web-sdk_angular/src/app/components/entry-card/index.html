@@ -1,0 +1,73 @@
+@let scenario = clickScenario();
+
+<section [attr.data-testid]="'entry-card-' + (resolved()?.baselineId ?? '')">
+  @if (scenario === 'ancestor' && !manualTracking()) {
+  <div data-ctfl-clickable="true" data-testid="entry-click-ancestor-wrapper">
+    <ng-container [ngTemplateOutlet]="entryContent" />
+  </div>
+  } @else {
+  <ng-container [ngTemplateOutlet]="entryContent" />
+  }
+</section>
+
+<ng-template #entryContent>
+  @if (resolved(); as r) {
+  <div
+    class="entry-card"
+    [attr.data-testid]="'content-' + r.baselineId"
+    [attr.data-ctfl-entry-id]="manualTracking() ? null : r.entryId"
+    [attr.data-ctfl-baseline-id]="manualTracking() ? null : r.baselineId"
+    [attr.data-ctfl-optimization-id]="manualTracking() ? null : (r.optimizationId ?? null)"
+    [attr.data-ctfl-sticky]="manualTracking() ? null : (r.sticky !== undefined ? r.sticky.toString() : null)"
+    [attr.data-ctfl-variant-index]="manualTracking() ? null : (r.variantIndex !== undefined ? r.variantIndex.toString() : null)"
+    [attr.data-ctfl-hover-duration-update-interval-ms]="manualTracking() ? null : '1000'"
+    [attr.data-ctfl-clickable]="manualTracking() || scenario !== 'direct' ? null : 'true'"
+    [attr.data-entry-id]="manualTracking() ? r.baselineId : null"
+  >
+    <div class="entry-card__header">
+      <div class="entry-card__ids">
+        <p class="entry-card__id">
+          <span class="entry-card__id-label">base</span
+          ><span class="entry-card__id-value">{{ r.baselineId }}</span>
+        </p>
+        <p class="entry-card__id">
+          <span class="entry-card__id-label">var</span
+          ><span class="entry-card__id-value">{{ isVariant() ? r.entryId : '—' }}</span>
+        </p>
+        <p class="entry-card__id">
+          <span class="entry-card__id-label">exp</span
+          ><span class="entry-card__id-value">{{ r.optimizationId ?? '—' }}</span>
+        </p>
+      </div>
+      <div class="entry-card__badges">
+        @for (badge of badges(); track badge.key) {
+        <app-entry-card-badge [label]="badge.label" [key]="badge.key" [title]="badge.title" />
+        }
+      </div>
+    </div>
+
+    <div
+      [attr.data-testid]="'entry-text-' + r.baselineId"
+      [attr.aria-label]="'Entry: ' + r.entryId"
+    >
+      @if (richTextHtml(); as html) {
+      <div class="rich-text" [innerHTML]="html"></div>
+      } @else {
+      <p>{{ entryText() }}</p>
+      }
+    </div>
+
+    @if (scenario === 'descendant') {
+    <button data-ctfl-clickable="true" data-testid="entry-click-descendant-button" type="button">
+      Trigger entry click tracking from descendant button
+    </button>
+    } @if (nestedEntries().length > 0) {
+    <div class="nested-children">
+      @for (child of nestedEntries(); track child.sys.id) {
+      <app-entry-card [entry]="child" />
+      }
+    </div>
+    }
+  </div>
+  }
+</ng-template>
