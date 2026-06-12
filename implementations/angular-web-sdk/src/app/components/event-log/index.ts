@@ -3,23 +3,13 @@ import { toSignal } from '@angular/core/rxjs-interop'
 import { interval } from 'rxjs'
 import { NgContentfulOptimization } from '../../services/optimization'
 
-type EventType = 'component' | 'component_hover' | 'component_click' | 'page'
-
 interface AnalyticsEvent {
-  type: EventType
-  typeLabel: string
-  label: string
+  type: string
+  value: string
   testId: string
   key: string
   count: number
   firedAt: number
-}
-
-const EVENT_TYPE_LABEL: Record<EventType, string> = {
-  component: 'view',
-  component_hover: 'hover',
-  component_click: 'click',
-  page: 'page',
 }
 
 const MS_PER_SECOND = 1000
@@ -54,13 +44,12 @@ export class EventLog {
       .map((e) => ({ ...e, timeAgo: timeAgo(e.firedAt, now) }))
   })
 
-  private track(event: Omit<AnalyticsEvent, 'count' | 'firedAt' | 'testId' | 'typeLabel'>): void {
-    const { key, type } = event
+  private track(event: Omit<AnalyticsEvent, 'count' | 'firedAt' | 'testId'>): void {
+    const { key } = event
     this.events.update((map) => {
       const existing = map.get(key)
       return new Map(map).set(key, {
         ...event,
-        typeLabel: EVENT_TYPE_LABEL[type],
         testId: `event-${key}`,
         count: (existing?.count ?? 0) + 1,
         firedAt: Date.now(),
@@ -76,14 +65,22 @@ export class EventLog {
           const {
             properties: { url },
           } = raw
-          this.track({ type: 'page', label: url, key: `page-${url}` })
+          this.track({ type: 'page', value: url, key: `page-${url}` })
           break
         }
-        case 'component':
-        case 'component_hover':
+        case 'component': {
+          const { componentId } = raw
+          this.track({ type: 'view', value: componentId, key: `component-${componentId}` })
+          break
+        }
+        case 'component_hover': {
+          const { componentId } = raw
+          this.track({ type: 'hover', value: componentId, key: `component_hover-${componentId}` })
+          break
+        }
         case 'component_click': {
-          const { type, componentId } = raw
-          this.track({ type, label: componentId, key: `${type}-${componentId}` })
+          const { componentId } = raw
+          this.track({ type: 'click', value: componentId, key: `component_click-${componentId}` })
           break
         }
         default:

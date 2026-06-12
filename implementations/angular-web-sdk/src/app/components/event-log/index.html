@@ -9,10 +9,10 @@
       <td class="events-panel__time">{{ event.timeAgo }}</td>
       <td>
         <span class="events-panel__type events-panel__type--{{ event.type }}"
-          >{{ event.typeLabel }}</span
+          >{{ event.type }}</span
         >
       </td>
-      <td class="events-panel__label">{{ event.label }}</td>
+      <td class="events-panel__label">{{ event.value }}</td>
       <td class="events-panel__count">@if (event.count > 1) { ×{{ event.count }} }</td>
     </tr>
     }
