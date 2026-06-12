@@ -40,8 +40,8 @@
         </p>
       </div>
       <div class="entry-card__badges">
-        @for (badge of badges(); track badge.mod) {
-        <app-entry-card-badge [label]="badge.label" [mod]="badge.mod" [title]="badge.title" />
+        @for (badge of badges(); track badge.key) {
+        <app-entry-card-badge [label]="badge.label" [key]="badge.key" [title]="badge.title" />
         }
       </div>
     </div>

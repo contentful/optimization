@@ -31,7 +31,7 @@ function mergeTagKey(resolved: boolean | undefined): MergeTagMode | undefined {
 @Component({
   selector: 'app-entry-card-badge',
   template: `<span
-    [class]="mod() ? 'entry-card__badge entry-card__badge--' + mod() : 'entry-card__badge'"
+    [class]="'entry-card__badge entry-card__badge--' + key()"
     [attr.data-tooltip]="title()"
     >{{ label() }}</span
   >`,
@@ -39,7 +39,7 @@ function mergeTagKey(resolved: boolean | undefined): MergeTagMode | undefined {
 })
 export class Badge {
   readonly label = input.required<string>()
-  readonly mod = input<string>('')
+  readonly key = input.required<string>()
   readonly title = input<string>('')
 }
 
@@ -156,6 +156,6 @@ export class EntryCard {
       this.manualTracking() ? 'manual' : 'auto',
       liveModeKey(this.liveUpdates(), this.isLive()),
     ]
-    return keys.map((k) => BADGE_MAP[k])
+    return keys.map((k) => ({ key: k, ...BADGE_MAP[k] }))
   })
 }

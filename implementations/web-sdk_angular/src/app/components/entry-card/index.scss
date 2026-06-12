@@ -54,7 +54,9 @@
   color: #475569;
 }
 
-.entry-card__badge--click {
+.entry-card__badge--direct,
+.entry-card__badge--ancestor,
+.entry-card__badge--descendant {
   background: #ffedd5;
   color: #c2410c;
 }

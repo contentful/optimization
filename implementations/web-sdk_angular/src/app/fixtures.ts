@@ -1,5 +1,3 @@
-import type { ObservationMode } from './services/entry'
-
 export type EntryClickScenario = 'direct' | 'descendant' | 'ancestor'
 export type LiveMode = 'live-on' | 'live-off' | 'live-always-on' | 'live-always-off'
 export type MergeTagMode = 'mergetag' | 'mergetag-fallback'
@@ -7,77 +5,65 @@ export type MergeTagMode = 'mergetag' | 'mergetag-fallback'
 export type BadgeKey =
   | 'variant'
   | 'baseline'
-  | ObservationMode
+  | 'auto'
+  | 'manual'
   | LiveMode
   | MergeTagMode
   | EntryClickScenario
 
-export const BADGE_MAP: Record<BadgeKey, { label: string; mod: string; title: string }> = {
+export const BADGE_MAP: Record<BadgeKey, { label: string; title: string }> = {
   variant: {
     label: 'variant',
-    mod: 'variant',
     title: 'This entry is a variant selected by the optimization SDK',
   },
   baseline: {
     label: 'baseline',
-    mod: '',
     title: 'This entry is the baseline (no optimization applied)',
   },
   auto: {
     label: 'tracking ↺',
-    mod: 'auto',
     title:
       'View, click, and hover events fire automatically via data-ctfl-* attributes once consent is granted — content resolution is unaffected',
   },
   manual: {
     label: 'tracking ⚙',
-    mod: 'manual',
     title:
       'View events fire via explicit enableElement calls; no click or hover events — content resolution is unaffected',
   },
   'live-on': {
     label: 'live ✓',
-    mod: 'live-on',
     title: 'Following global toggle — currently live, re-resolves on profile change',
   },
   'live-off': {
     label: 'live ✗',
-    mod: 'live-off',
     title: 'Following global toggle — currently frozen, will update when toggle is ON',
   },
   'live-always-on': {
     label: '📌 live ✓',
-    mod: 'live-always-on',
     title: 'Per-entry override: always re-resolves on profile change',
   },
   'live-always-off': {
     label: '📌 live ✗',
-    mod: 'live-always-off',
     title: 'Per-entry override: ignores the global toggle, does not update on profile change',
   },
   mergetag: {
     label: 'merge tag ✓',
-    mod: 'mergetag',
     title: 'Rich text merge tags resolved with visitor profile',
   },
   'mergetag-fallback': {
     label: 'merge tag ✗',
-    mod: 'mergetag-fallback',
     title: 'Rich text merge tags showing fallback — no visitor profile',
   },
   direct: {
     label: 'direct',
-    mod: 'click',
     title: 'Click tracking fires directly on this entry element',
   },
   ancestor: {
     label: 'ancestor',
-    mod: 'click',
     title: 'Click tracking fires on an ancestor wrapper element',
   },
   descendant: {
     label: 'descendant',
-    mod: 'click',
     title: 'Click tracking fires from a descendant button inside this entry',
   },
 }
