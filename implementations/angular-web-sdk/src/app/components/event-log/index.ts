@@ -38,22 +38,6 @@ function timeAgo(firedAt: number, now: number): string {
   return `${Math.floor(m / MINUTES_PER_HOUR)}h ago`
 }
 
-function toPageUrl(url: string): string {
-  try {
-    return new URL(url, window.location.origin).pathname
-  } catch {
-    return url
-  }
-}
-
-function upsert(list: AnalyticsEvent[], next: AnalyticsEvent): AnalyticsEvent[] {
-  const idx = list.findIndex((e) => e.key === next.key)
-  if (idx === -1) return [next, ...list]
-  const updated = [...list]
-  const [existing] = updated.splice(idx, 1)
-  return [{ ...next, count: existing.count + 1, firedAt: next.firedAt }, ...updated]
-}
-
 @Component({
   selector: 'app-event-log',
   templateUrl: './index.html',
@@ -62,20 +46,29 @@ export class EventLog {
   private readonly optimization = inject(NgContentfulOptimization)
 
   protected readonly eventTypeLabel = eventTypeLabel
-  protected readonly timeAgo = timeAgo
-  private readonly events = signal<AnalyticsEvent[]>([])
+  private readonly events = signal<Map<string, AnalyticsEvent>>(new Map())
   private readonly tick = toSignal(interval(TICK_INTERVAL_SECONDS * MS_PER_SECOND), {
     initialValue: 0,
   })
   protected readonly displayEvents = computed(() => {
     this.tick()
     const now = Date.now()
-    return this.events().map((e) => ({ ...e, timeAgo: timeAgo(e.firedAt, now) }))
+    return [...this.events().values()]
+      .sort((a, b) => b.firedAt - a.firedAt)
+      .map((e) => ({ ...e, timeAgo: timeAgo(e.firedAt, now) }))
   })
 
   private track(event: Omit<AnalyticsEvent, 'count' | 'firedAt' | 'testId'>): void {
     const testId = `event-${event.key}`
-    this.events.update((list) => upsert(list, { ...event, testId, count: 1, firedAt: Date.now() }))
+    this.events.update((map) => {
+      const existing = map.get(event.key)
+      return new Map(map).set(event.key, {
+        ...event,
+        testId,
+        count: (existing?.count ?? 0) + 1,
+        firedAt: Date.now(),
+      })
+    })
   }
 
   constructor() {
@@ -83,8 +76,10 @@ export class EventLog {
       if (!raw) return
       switch (raw.type) {
         case 'page': {
-          const pageUrl = toPageUrl(raw.properties.url)
-          this.track({ type: 'page', label: pageUrl, key: `page-${pageUrl}` })
+          const {
+            properties: { url },
+          } = raw
+          this.track({ type: 'page', label: url, key: `page-${url}` })
           break
         }
         case 'component':
