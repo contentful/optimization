@@ -1,16 +1,15 @@
 <section class="events-panel" data-testid="analytics-events-container">
   <h2 class="panel__title">Tracking</h2>
-
-  @if (displayEvents().length === 0) {
+  @let events = displayEvents(); @if (events.length === 0) {
   <p class="events-panel__empty" data-testid="no-events-message">No events tracked yet</p>
   } @else {
   <table class="events-panel__table">
-    @for (event of displayEvents(); track event.key) {
+    @for (event of events; track event.key) {
     <tr [attr.data-testid]="event.testId">
       <td class="events-panel__time">{{ event.timeAgo }}</td>
       <td>
         <span class="events-panel__type events-panel__type--{{ event.type }}"
-          >{{ eventTypeLabel(event.type) }}</span
+          >{{ event.typeLabel }}</span
         >
       </td>
       <td class="events-panel__label">{{ event.label }}</td>

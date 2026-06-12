@@ -7,6 +7,7 @@ type EventType = 'component' | 'component_hover' | 'component_click' | 'page'
 
 interface AnalyticsEvent {
   type: EventType
+  typeLabel: string
   label: string
   testId: string
   key: string
@@ -19,10 +20,6 @@ const EVENT_TYPE_LABEL: Record<EventType, string> = {
   component_hover: 'hover',
   component_click: 'click',
   page: 'page',
-}
-
-function eventTypeLabel(type: EventType): string {
-  return EVENT_TYPE_LABEL[type]
 }
 
 const MS_PER_SECOND = 1000
@@ -45,7 +42,6 @@ function timeAgo(firedAt: number, now: number): string {
 export class EventLog {
   private readonly optimization = inject(NgContentfulOptimization)
 
-  protected readonly eventTypeLabel = eventTypeLabel
   private readonly events = signal<Map<string, AnalyticsEvent>>(new Map())
   private readonly tick = toSignal(interval(TICK_INTERVAL_SECONDS * MS_PER_SECOND), {
     initialValue: 0,
@@ -58,13 +54,14 @@ export class EventLog {
       .map((e) => ({ ...e, timeAgo: timeAgo(e.firedAt, now) }))
   })
 
-  private track(event: Omit<AnalyticsEvent, 'count' | 'firedAt' | 'testId'>): void {
-    const testId = `event-${event.key}`
+  private track(event: Omit<AnalyticsEvent, 'count' | 'firedAt' | 'testId' | 'typeLabel'>): void {
+    const { key, type } = event
     this.events.update((map) => {
-      const existing = map.get(event.key)
-      return new Map(map).set(event.key, {
+      const existing = map.get(key)
+      return new Map(map).set(key, {
         ...event,
-        testId,
+        typeLabel: EVENT_TYPE_LABEL[type],
+        testId: `event-${key}`,
         count: (existing?.count ?? 0) + 1,
         firedAt: Date.now(),
       })
