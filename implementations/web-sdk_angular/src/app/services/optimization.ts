@@ -96,7 +96,7 @@ export class NgContentfulOptimization implements OnDestroy {
     this.routerSubscription = router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe((e) => {
-        void this.sdk.page({ properties: { url: e.urlAfterRedirects } })
+        void this.sdk.page({ properties: { url: window.location.origin + e.urlAfterRedirects } })
       })
   }
 
