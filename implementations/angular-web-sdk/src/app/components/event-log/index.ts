@@ -71,7 +71,7 @@ export class EventLog {
           const { componentId, viewId } = raw
           this.track({
             type: viewId ? 'view' : 'comp',
-            value: viewId ?? componentId,
+            value: componentId,
             key: `component-${componentId}`,
           })
           break
