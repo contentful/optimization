@@ -13,7 +13,7 @@ import {
 } from '@angular/core'
 
 import type { MergeTagEntry } from '@contentful/optimization-web/api-schemas'
-import type { Block, Document, Inline, Text } from '@contentful/rich-text-types'
+import type { Document, Text } from '@contentful/rich-text-types'
 import { INLINES } from '@contentful/rich-text-types'
 import type { Entry } from 'contentful'
 import { isMergeTagEntry, isRecord } from '../utils'
@@ -37,19 +37,17 @@ export interface ResolvedEntryView {
   meta: EntryMeta
 }
 
-function isEntry(value: unknown): value is Entry {
-  return isRecord(value) && isRecord(value.sys) && typeof value.sys.id === 'string'
-}
-
 function isRichTextDocument(value: unknown): value is Document {
   return isRecord(value) && value.nodeType === 'document' && Array.isArray(value.content)
 }
 
-type RichTextNode = Block | Inline | Text
-
-function resolveNode(node: RichTextNode, resolveMergeTag: MergeTagResolver): RichTextNode {
-  if (node.nodeType === INLINES.EMBEDDED_ENTRY) {
-    if (!isMergeTagEntry(node.data.target)) return node
+function resolveNode(node: unknown, resolveMergeTag: MergeTagResolver): unknown {
+  if (!isRecord(node)) return node
+  if (
+    node.nodeType === INLINES.EMBEDDED_ENTRY &&
+    isRecord(node.data) &&
+    isMergeTagEntry(node.data.target)
+  ) {
     return {
       nodeType: 'text',
       value: resolveMergeTag(node.data.target) ?? '',
@@ -57,20 +55,10 @@ function resolveNode(node: RichTextNode, resolveMergeTag: MergeTagResolver): Ric
       data: {},
     } satisfies Text
   }
-  if ('content' in node) {
-    return {
-      ...node,
-      content: node.content.map((child) => resolveNode(child, resolveMergeTag)),
-    } satisfies Block | Inline
+  if (Array.isArray(node.content)) {
+    return { ...node, content: node.content.map((child) => resolveNode(child, resolveMergeTag)) }
   }
   return node
-}
-
-function resolveRichTextMergeTags(node: Document, resolveMergeTag: MergeTagResolver): Document {
-  return {
-    ...node,
-    content: node.content.map((child) => resolveNode(child, resolveMergeTag)),
-  } satisfies Document
 }
 
 function resolveEntryMergeTags(entry: Entry, resolveMergeTag: MergeTagResolver): Entry {
@@ -78,7 +66,7 @@ function resolveEntryMergeTags(entry: Entry, resolveMergeTag: MergeTagResolver):
     fields: Object.fromEntries(
       Object.entries(entry.fields as Record<string, unknown>).map(([key, value]) => [
         key,
-        isRichTextDocument(value) ? resolveRichTextMergeTags(value, resolveMergeTag) : value,
+        isRichTextDocument(value) ? resolveNode(value, resolveMergeTag) : value,
       ]),
     ),
   }) as Entry
@@ -101,7 +89,7 @@ export class NgContentfulEntry implements OnDestroy {
 
   private readonly _variant = computed(() => {
     const raw = this._entry()
-    if (!isEntry(raw)) return undefined
+    if (!raw) return undefined
     const selectedOptimizations = this.liveRead(this.optimization.selectedOptimizations)
     return {
       raw,
