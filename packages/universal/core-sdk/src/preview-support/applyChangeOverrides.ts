@@ -1,21 +1,14 @@
 import type {
   ChangeArray,
   InlineVariableComponent,
-  OptimizationComponent,
   OptimizationEntry,
 } from '@contentful/optimization-api-client/api-schemas'
+import { isInlineVariableComponent } from '@contentful/optimization-api-client/api-schemas'
 import type { OptimizationOverride } from './types'
-
-// Local discriminator-only check. Equivalent to the canonical
-// `isInlineVariableComponent` guard but does not pull the rest of the
-// api-schemas guard file (which transitively bundles zod) into web UMD builds.
-function isInlineVariable(component: OptimizationComponent): component is InlineVariableComponent {
-  return component.type === 'InlineVariable'
-}
 
 function getInlineVariableComponents(optimization: OptimizationEntry): InlineVariableComponent[] {
   const { components } = optimization.fields.nt_config ?? {}
-  return Array.isArray(components) ? components.filter(isInlineVariable) : []
+  return Array.isArray(components) ? components.filter(isInlineVariableComponent) : []
 }
 
 /**
