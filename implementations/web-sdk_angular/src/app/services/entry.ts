@@ -72,17 +72,13 @@ function setupManualTracking(result: Signal<ResolvedEntry>, manualTracking: Sign
   const destroyRef = inject(DestroyRef)
 
   const domReady = signal(false)
-  let active = false
 
   afterNextRender(() => {
     domReady.set(true)
   })
 
   function clear(): void {
-    if (active) {
-      optimization.sdk.tracking.clearElement('views', elementRef.nativeElement)
-      active = false
-    }
+    optimization.sdk.tracking.clearElement('views', elementRef.nativeElement)
   }
 
   effect(() => {
@@ -92,7 +88,6 @@ function setupManualTracking(result: Signal<ResolvedEntry>, manualTracking: Sign
     optimization.sdk.tracking.enableElement('views', elementRef.nativeElement, {
       data: { entryId, optimizationId, sticky, variantIndex },
     })
-    active = true
   })
 
   destroyRef.onDestroy(clear)
