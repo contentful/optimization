@@ -15,7 +15,7 @@
       <h2>Auto-observed</h2>
     </header>
     <div class="entry-grid">
-      <app-entry-card [entry]="entry" observation="auto" />
+      <app-entry-card [entry]="entry" />
     </div>
   </section>
   } @if (manualEntry(); as entry) {
@@ -24,7 +24,7 @@
       <h2>Manually-observed</h2>
     </header>
     <div class="entry-grid">
-      <app-entry-card [entry]="entry" observation="manual" />
+      <app-entry-card [entry]="entry" [manualTracking]="true" />
     </div>
   </section>
   }

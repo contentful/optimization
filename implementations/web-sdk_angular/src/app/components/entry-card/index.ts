@@ -10,7 +10,7 @@ import {
   type MergeTagMode,
 } from '../../fixtures'
 import type { ContentfulEntry } from '../../services/contentful-client'
-import { injectContentfulEntry, type ObservationMode } from '../../services/entry'
+import { injectContentfulEntry } from '../../services/entry'
 import { NgLiveUpdates } from '../../services/live-updates'
 import { isRecord } from '../../utils'
 
@@ -112,7 +112,7 @@ function isContentfulEntry(value: unknown): value is ContentfulEntry {
 })
 export class EntryCard {
   readonly entry = input.required<ContentfulEntry>()
-  readonly observation = input<ObservationMode>('auto')
+  readonly manualTracking = input(false)
   readonly clickScenario = input<EntryClickScenario | undefined>(undefined)
   readonly liveUpdates = input<boolean | undefined>(undefined)
 
@@ -123,8 +123,6 @@ export class EntryCard {
     if (this.liveUpdatesService.previewPanelVisible()) return true
     return this.liveUpdates() ?? this.liveUpdatesService.globalLiveUpdates()
   })
-
-  private readonly manualTracking = computed(() => this.observation() === 'manual')
 
   protected readonly resolved = injectContentfulEntry({
     entry: this.entry,
@@ -147,7 +145,7 @@ export class EntryCard {
     const nested: unknown = this.resolved().entry.fields.nested
     return Array.isArray(nested) ? nested.filter(isContentfulEntry) : []
   })
-  protected readonly isAuto = computed(() => this.observation() === 'auto')
+  protected readonly isAuto = computed(() => !this.manualTracking())
   protected readonly badges = computed(() => {
     const r = this.resolved()
     const mergeTag = mergeTagKey(r.mergeTagResolved)
@@ -156,7 +154,7 @@ export class EntryCard {
       ...(mergeTag ? [mergeTag] : []),
       ...(scenario ? [scenario] : []),
       this.isVariant() ? 'variant' : 'baseline',
-      this.observation(),
+      this.manualTracking() ? 'manual' : 'auto',
       liveModeKey(this.liveUpdates(), this.isLive()),
     ]
     return keys.map((k) => BADGE_MAP[k])

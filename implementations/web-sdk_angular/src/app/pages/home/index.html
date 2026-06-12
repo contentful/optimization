@@ -14,9 +14,9 @@
   </header>
   @let liveEntry = entryFor(liveUpdatesEntryId); @if (liveEntry) {
   <div class="sections-row">
-    <app-entry-card [entry]="liveEntry" observation="auto" />
-    <app-entry-card [entry]="liveEntry" observation="auto" [liveUpdates]="true" />
-    <app-entry-card [entry]="liveEntry" observation="auto" [liveUpdates]="false" />
+    <app-entry-card [entry]="liveEntry" />
+    <app-entry-card [entry]="liveEntry" [liveUpdates]="true" />
+    <app-entry-card [entry]="liveEntry" [liveUpdates]="false" />
   </div>
   }
 </section>
@@ -28,7 +28,7 @@
     </header>
     <div id="auto-observed" class="entry-grid">
       @for (id of autoIds; track id) { @let entry = entryFor(id); @if (entry) {
-      <app-entry-card [entry]="entry" observation="auto" [clickScenario]="clickScenarios[id]" />
+      <app-entry-card [entry]="entry" [clickScenario]="clickScenarios[id]" />
       } }
     </div>
   </section>
@@ -39,7 +39,7 @@
     </header>
     <div id="manually-observed" class="entry-grid">
       @for (id of manualIds; track id) { @let entry = entryFor(id); @if (entry) {
-      <app-entry-card [entry]="entry" observation="manual" />
+      <app-entry-card [entry]="entry" [manualTracking]="true" />
       } }
     </div>
   </section>
