@@ -13,7 +13,7 @@ import {
 } from '@angular/core'
 
 import type { MergeTagEntry } from '@contentful/optimization-web/api-schemas'
-import type { Document } from '@contentful/rich-text-types'
+import type { Block, Document, Inline, Text } from '@contentful/rich-text-types'
 import { INLINES } from '@contentful/rich-text-types'
 import type { Entry } from 'contentful'
 import { isMergeTagEntry, isRecord } from '../utils'
@@ -45,20 +45,32 @@ function isRichTextDocument(value: unknown): value is Document {
   return isRecord(value) && value.nodeType === 'document' && Array.isArray(value.content)
 }
 
-function resolveRichTextMergeTags(node: Document, resolveMergeTag: MergeTagResolver): Document {
-  const resolve = (n: unknown): unknown => {
-    if (!isRecord(n)) return n
-    if (n.nodeType === INLINES.EMBEDDED_ENTRY) {
-      const data = isRecord(n.data) ? n.data : {}
-      if (!isMergeTagEntry(data.target)) return n
-      return { nodeType: 'text', value: resolveMergeTag(data.target) ?? '', marks: [], data: {} }
-    }
-    if (!Array.isArray(n.content)) return n
-    return { ...n, content: n.content.map(resolve) }
+type RichTextNode = Block | Inline | Text
+
+function resolveNode(node: RichTextNode, resolveMergeTag: MergeTagResolver): RichTextNode {
+  if (node.nodeType === INLINES.EMBEDDED_ENTRY) {
+    if (!isMergeTagEntry(node.data.target)) return node
+    return {
+      nodeType: 'text',
+      value: resolveMergeTag(node.data.target) ?? '',
+      marks: [],
+      data: {},
+    } satisfies Text
   }
-  const content = node.content.map(resolve)
-  if (!content.every((n): n is Document['content'][number] => isRecord(n))) return node
-  return { ...node, content }
+  if ('content' in node) {
+    return {
+      ...node,
+      content: node.content.map((child) => resolveNode(child, resolveMergeTag)),
+    } satisfies Block | Inline
+  }
+  return node
+}
+
+function resolveRichTextMergeTags(node: Document, resolveMergeTag: MergeTagResolver): Document {
+  return {
+    ...node,
+    content: node.content.map((child) => resolveNode(child, resolveMergeTag)),
+  } satisfies Document
 }
 
 function resolveEntryMergeTags(entry: Entry, resolveMergeTag: MergeTagResolver): Entry {
