@@ -1,11 +1,14 @@
 import type {
+  ChangeArray,
   OptimizationData,
+  OptimizationEntry,
   Profile,
   SelectedOptimizationArray,
 } from '@contentful/optimization-api-client/api-schemas'
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
-import type { Signal } from '@preact/signals-core'
+import { batch, type Signal } from '@preact/signals-core'
 import type { InterceptorManager } from '../lib/interceptor'
+import { applyChangeOverrides } from './applyChangeOverrides'
 import { applyOptimizationOverrides } from './applyOptimizationOverrides'
 import type { OptimizationOverride, OverrideState } from './types'
 
@@ -45,6 +48,23 @@ export interface PreviewOverrideManagerConfig {
    */
   profile?: Signal<Profile | undefined>
 
+  /**
+   * Optional `changes` signal. When provided alongside {@link optimizationEntries},
+   * the manager keeps inline-variable Variable changes in sync with overrides on
+   * every mutation and on every API refresh — so `getFlag()` consumers see the
+   * preview-selected variant value without a round-trip.
+   */
+  changes?: Signal<ChangeArray | undefined>
+
+  /**
+   * Optional provider for the optimization entries the panel knows about.
+   * Required to coordinate {@link changes}; the manager uses each entry's
+   * `nt_config.components` to translate variant overrides into Variable changes.
+   * Implemented as a function so callers can return an up-to-date list as the
+   * panel fetches additional entries.
+   */
+  optimizationEntries?: () => readonly OptimizationEntry[]
+
   /** The state interceptor registry to register with. */
   stateInterceptors: StateInterceptorAccess<OptimizationData>
 
@@ -73,18 +93,30 @@ export interface PreviewOverrideManagerConfig {
  */
 export class PreviewOverrideManager {
   private baselineSelectedOptimizations: SelectedOptimizationArray | null = null
+  private baselineChanges: ChangeArray | null = null
   private baselineAudienceQualifications: Record<string, boolean> = {}
   private overrides: OverrideState = { ...INITIAL_STATE, audiences: {}, selectedOptimizations: {} }
   private interceptorId: number | null = null
 
   private readonly selectedOptimizations: Signal<SelectedOptimizationArray | undefined>
+  private readonly changes: Signal<ChangeArray | undefined> | undefined
+  private readonly optimizationEntries: (() => readonly OptimizationEntry[]) | undefined
   private readonly profile: Signal<Profile | undefined> | undefined
   private readonly stateInterceptors: StateInterceptorAccess<OptimizationData>
   private readonly onOverridesChanged: ((state: Readonly<OverrideState>) => void) | undefined
 
   constructor(config: PreviewOverrideManagerConfig) {
-    const { selectedOptimizations, profile, stateInterceptors, onOverridesChanged } = config
+    const {
+      selectedOptimizations,
+      changes,
+      optimizationEntries,
+      profile,
+      stateInterceptors,
+      onOverridesChanged,
+    } = config
     this.selectedOptimizations = selectedOptimizations
+    this.changes = changes
+    this.optimizationEntries = optimizationEntries
     this.profile = profile
     this.stateInterceptors = stateInterceptors
     this.onOverridesChanged = onOverridesChanged
@@ -97,21 +129,28 @@ export class PreviewOverrideManager {
       logger.debug('Captured initial signal state as baseline')
     }
 
+    if (changes) {
+      const { value: initialChanges } = changes
+      if (initialChanges) this.baselineChanges = initialChanges
+    }
+
     // Register state interceptor to preserve overrides when API responses arrive
     this.interceptorId = config.stateInterceptors.add(
       (data: Readonly<OptimizationData>): OptimizationData => {
-        // Cache the un-overridden selectedOptimizations as the new baseline
-        const { selectedOptimizations: incoming } = data
-        this.baselineSelectedOptimizations = incoming
+        // Cache the un-overridden state as the new baseline
+        const { selectedOptimizations: incomingSelected, changes: incomingChanges } = data
+        this.baselineSelectedOptimizations = incomingSelected
+        this.baselineChanges = incomingChanges
 
         const hasOverrides = Object.keys(this.overrides.selectedOptimizations).length > 0
-        const next = hasOverrides
+        const next: OptimizationData = hasOverrides
           ? {
               ...data,
               selectedOptimizations: applyOptimizationOverrides(
                 data.selectedOptimizations,
                 this.overrides.selectedOptimizations,
               ),
+              changes: this.deriveChanges(data.changes),
             }
           : { ...data }
 
@@ -233,8 +272,8 @@ export class PreviewOverrideManager {
   // ---------------------------------------------------------------------------
 
   /**
-   * Clear all overrides and restore the `selectedOptimizations` signal to the
-   * clean API baseline.
+   * Clear all overrides and restore the tracked signals to their clean
+   * API baselines.
    */
   resetAll(): void {
     logger.info('Resetting all overrides to baseline')
@@ -242,11 +281,17 @@ export class PreviewOverrideManager {
     this.overrides = { audiences: {}, selectedOptimizations: {} }
     this.baselineAudienceQualifications = {}
 
-    // Restore signal to baseline
-    const { baselineSelectedOptimizations } = this
+    const { baselineSelectedOptimizations, baselineChanges, changes } = this
     if (baselineSelectedOptimizations) {
-      this.selectedOptimizations.value = baselineSelectedOptimizations
-      logger.debug('Restored signal to baseline')
+      if (changes && baselineChanges) {
+        batch(() => {
+          this.selectedOptimizations.value = baselineSelectedOptimizations
+          changes.value = baselineChanges
+        })
+      } else {
+        this.selectedOptimizations.value = baselineSelectedOptimizations
+      }
+      logger.debug('Restored signals to baseline')
     }
 
     this.notifyChanged()
@@ -264,6 +309,11 @@ export class PreviewOverrideManager {
   /** Returns the cached baseline selected optimizations, or null if no baseline yet. */
   getBaselineSelectedOptimizations(): Readonly<SelectedOptimizationArray> | null {
     return this.baselineSelectedOptimizations
+  }
+
+  /** Returns the cached baseline changes array, or null if no baseline yet. */
+  getBaselineChanges(): Readonly<ChangeArray> | null {
+    return this.baselineChanges
   }
 
   /**
@@ -294,6 +344,7 @@ export class PreviewOverrideManager {
 
     this.overrides = { audiences: {}, selectedOptimizations: {} }
     this.baselineSelectedOptimizations = null
+    this.baselineChanges = null
     this.baselineAudienceQualifications = {}
   }
 
@@ -319,15 +370,42 @@ export class PreviewOverrideManager {
   }
 
   /**
-   * Recompute the signal from the clean API baseline + current overrides.
-   * Never reads from the current signal — always derives from baseline.
+   * Recompute the tracked signals from their clean API baselines + current
+   * overrides. Both writes happen inside one signals batch so subscribers
+   * never observe a half-updated state. Never reads from the current
+   * signal values — always derives from the cached baselines.
    */
   private syncOverridesToSignal(): void {
-    this.selectedOptimizations.value = applyOptimizationOverrides(
+    const nextSelected = applyOptimizationOverrides(
       this.baselineSelectedOptimizations ?? [],
       this.overrides.selectedOptimizations,
     )
-    logger.debug('Synced overrides to signal')
+
+    if (this.changes) {
+      const nextChanges = this.deriveChanges(this.baselineChanges ?? [])
+      batch(() => {
+        this.selectedOptimizations.value = nextSelected
+        if (this.changes) this.changes.value = nextChanges
+      })
+    } else {
+      this.selectedOptimizations.value = nextSelected
+    }
+
+    logger.debug('Synced overrides to signals')
+  }
+
+  /**
+   * Translate the current variant overrides into Variable changes and merge
+   * them into the supplied baseline `changes` array. Returns the input
+   * unchanged when the manager wasn't given an `optimizationEntries` provider.
+   */
+  private deriveChanges(baseline: ChangeArray): ChangeArray {
+    if (!this.optimizationEntries) return baseline
+    return applyChangeOverrides(
+      baseline,
+      this.optimizationEntries(),
+      this.overrides.selectedOptimizations,
+    )
   }
 
   private setAudienceOverride(
