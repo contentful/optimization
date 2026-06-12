@@ -1,4 +1,4 @@
-import { Component, inject, resource } from '@angular/core'
+import { Component, inject } from '@angular/core'
 import { ContentCard } from '../../components/content-card'
 import { ControlPanel } from '../../components/control-panel'
 import { FIXTURES } from '../../fixtures'
@@ -18,12 +18,7 @@ export class PageTwo {
   private readonly optimization = inject(NgContentfulOptimization)
   private readonly contentfulClient = inject(NgContentfulClient)
 
-  protected readonly entries = resource({
-    loader: async (): Promise<Map<string, ContentfulEntry>> => {
-      const list = await this.contentfulClient.fetchEntries(FIXTURES.pageTwo.ids)
-      return new Map(list.map((e) => [e.sys.id, e]))
-    },
-  })
+  protected readonly entries = this.contentfulClient.loadEntries(FIXTURES.pageTwo.ids)
 
   protected autoEntry(): ContentfulEntry | undefined {
     return this.entries.value()?.get(FIXTURES.pageTwo.auto)

@@ -1,4 +1,4 @@
-import { Component, inject, resource } from '@angular/core'
+import { Component, inject } from '@angular/core'
 import { ContentCard } from '../../components/content-card'
 import { ControlPanel } from '../../components/control-panel'
 import { FIXTURES } from '../../fixtures'
@@ -19,12 +19,7 @@ export class Home {
   protected readonly manualIds = FIXTURES.home.manual
   protected readonly liveUpdatesEntryId = FIXTURES.home.liveUpdates
 
-  protected readonly entries = resource({
-    loader: async () => {
-      const list = await this.contentfulClient.fetchEntries(FIXTURES.home.ids)
-      return new Map(list.map((e) => [e.sys.id, e]))
-    },
-  })
+  protected readonly entries = this.contentfulClient.loadEntries(FIXTURES.home.ids)
 
   protected entryFor(id: string): ContentfulEntry | undefined {
     return this.entries.value()?.get(id)

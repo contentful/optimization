@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core'
+import { inject, Injectable, resource, type ResourceRef } from '@angular/core'
 import type { ContentfulClientApi, Entry, EntryFieldTypes, EntrySkeletonType } from 'contentful'
 import { getOrCreateBaseClient, NG_CONTENTFUL_OPTIMIZATION_CONFIG } from '../config'
 
@@ -37,4 +37,12 @@ export class NgContentfulClient {
     const results = await Promise.all(entryIds.map(async (id) => await this.fetchEntry<T>(id)))
     return results.filter((e): e is Entry<T> => e !== undefined)
   }
+
+  loadEntries = (ids: readonly string[]): ResourceRef<Map<string, ContentfulEntry> | undefined> =>
+    resource({
+      loader: async (): Promise<Map<string, ContentfulEntry>> => {
+        const list = await this.fetchEntries(ids)
+        return new Map(list.map((e) => [e.sys.id, e]))
+      },
+    })
 }
