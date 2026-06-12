@@ -1,7 +1,7 @@
 @let scenario = clickScenario();
 
 <section [attr.data-testid]="'entry-card-' + (resolved()?.baselineId ?? '')">
-  @if (scenario === 'ancestor' && isAuto()) {
+  @if (scenario === 'ancestor' && !manualTracking()) {
   <div data-ctfl-clickable="true" data-testid="entry-click-ancestor-wrapper">
     <ng-container [ngTemplateOutlet]="entryContent" />
   </div>
@@ -15,14 +15,14 @@
   <div
     class="entry-card"
     [attr.data-testid]="'content-' + r.baselineId"
-    [attr.data-ctfl-entry-id]="isAuto() ? r.resolvedId : null"
-    [attr.data-ctfl-baseline-id]="isAuto() ? r.baselineId : null"
-    [attr.data-ctfl-optimization-id]="isAuto() ? (r.experienceId ?? null) : null"
-    [attr.data-ctfl-sticky]="isAuto() ? (r.sticky !== undefined ? r.sticky.toString() : null) : null"
-    [attr.data-ctfl-variant-index]="isAuto() ? (r.variantIndex !== undefined ? r.variantIndex.toString() : null) : null"
-    [attr.data-ctfl-hover-duration-update-interval-ms]="isAuto() ? '1000' : null"
-    [attr.data-ctfl-clickable]="scenario === 'direct' && isAuto() ? 'true' : null"
-    [attr.data-entry-id]="!isAuto() ? r.baselineId : null"
+    [attr.data-ctfl-entry-id]="manualTracking() ? null : r.resolvedId"
+    [attr.data-ctfl-baseline-id]="manualTracking() ? null : r.baselineId"
+    [attr.data-ctfl-optimization-id]="manualTracking() ? null : (r.experienceId ?? null)"
+    [attr.data-ctfl-sticky]="manualTracking() ? null : (r.sticky !== undefined ? r.sticky.toString() : null)"
+    [attr.data-ctfl-variant-index]="manualTracking() ? null : (r.variantIndex !== undefined ? r.variantIndex.toString() : null)"
+    [attr.data-ctfl-hover-duration-update-interval-ms]="manualTracking() ? null : '1000'"
+    [attr.data-ctfl-clickable]="manualTracking() || scenario !== 'direct' ? null : 'true'"
+    [attr.data-entry-id]="manualTracking() ? r.baselineId : null"
   >
     <div class="entry-card__header">
       <div class="entry-card__ids">

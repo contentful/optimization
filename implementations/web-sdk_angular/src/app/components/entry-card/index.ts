@@ -145,7 +145,6 @@ export class EntryCard {
     const nested: unknown = this.resolved().entry.fields.nested
     return Array.isArray(nested) ? nested.filter(isContentfulEntry) : []
   })
-  protected readonly isAuto = computed(() => !this.manualTracking())
   protected readonly badges = computed(() => {
     const r = this.resolved()
     const mergeTag = mergeTagKey(r.mergeTagResolved)
