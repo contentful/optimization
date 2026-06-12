@@ -1,5 +1,5 @@
 {
-  "name": "@implementation/angular-web-sdk",
+  "name": "@implementation/web-sdk_angular",
   "private": true,
   "version": "0.0.0",
   "description": "Reference implementation of @contentful/optimization-web for Angular applications.",
@@ -8,8 +8,8 @@
     "dev": "ng serve",
     "build": "ng build",
     "clean": "rimraf ./dist",
-    "serve:mocks": "pm2 start --name angular-web-sdk-mocks \"pnpm --dir ../../lib/mocks serve\"",
-    "serve:mocks:stop": "pm2 stop angular-web-sdk-mocks && pm2 delete angular-web-sdk-mocks",
+    "serve:mocks": "pm2 start --name web-sdk_angular-mocks \"pnpm --dir ../../lib/mocks serve\"",
+    "serve:mocks:stop": "pm2 stop web-sdk_angular-mocks && pm2 delete web-sdk_angular-mocks",
     "test:unit": "echo \"No unit tests necessary\"",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },

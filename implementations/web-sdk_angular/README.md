@@ -53,9 +53,9 @@ From the **repository root**:
 
 ```sh
 pnpm build:pkgs
-pnpm implementation:run -- angular-web-sdk implementation:install
-pnpm implementation:run -- angular-web-sdk serve:mocks
-pnpm implementation:run -- angular-web-sdk dev
+pnpm implementation:run -- web-sdk_angular implementation:install
+pnpm implementation:run -- web-sdk_angular serve:mocks
+pnpm implementation:run -- web-sdk_angular dev
 ```
 
 The app is available at `http://localhost:4200`. The mock server must be running for entry data and
@@ -64,8 +64,8 @@ variant resolution to work.
 Other commands from the **repository root**:
 
 ```sh
-pnpm implementation:run -- angular-web-sdk build
-pnpm implementation:run -- angular-web-sdk typecheck
+pnpm implementation:run -- web-sdk_angular build
+pnpm implementation:run -- web-sdk_angular typecheck
 ```
 
 Or equivalently from the **implementation directory**:

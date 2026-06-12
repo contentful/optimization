@@ -28,11 +28,11 @@ Angular SPA reference implementation of `@contentful/optimization-web`. Serves t
 ## Commands
 
 ```sh
-pnpm implementation:run -- angular-web-sdk implementation:install
-pnpm implementation:run -- angular-web-sdk serve:mocks
-pnpm implementation:run -- angular-web-sdk dev
-pnpm implementation:run -- angular-web-sdk build
-pnpm implementation:run -- angular-web-sdk typecheck
+pnpm implementation:run -- web-sdk_angular implementation:install
+pnpm implementation:run -- web-sdk_angular serve:mocks
+pnpm implementation:run -- web-sdk_angular dev
+pnpm implementation:run -- web-sdk_angular build
+pnpm implementation:run -- web-sdk_angular typecheck
 ```
 
 ## Validate
