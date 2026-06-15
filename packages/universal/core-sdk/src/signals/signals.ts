@@ -98,6 +98,43 @@ export const canOptimize = computed<boolean>(() => selectedOptimizations.value !
 export const profile: Signal<Profile | undefined> = signal<Profile | undefined>()
 
 /**
+ * Reason for an Experience API request to enter the `failed` state.
+ *
+ * - `timeout`: the request was aborted by the configured request timeout.
+ * - `api-error`: the API responded with a non-success HTTP status or returned an unparseable body.
+ *
+ * @public
+ */
+export type ExperienceRequestFailureReason = 'timeout' | 'api-error'
+
+/**
+ * Outcome of the most recent Experience API request.
+ *
+ * Transitions: `idle` -> `pending` (request started) -> `success` | `failed`. Once a terminal state
+ * is reached it stays there until the next request transitions back to `pending`.
+ *
+ * Consumers can subscribe to this state to fail-open to baseline rendering when the Experience API
+ * cannot resolve optimization data (network failures, timeouts, 5xx).
+ *
+ * @public
+ */
+export type ExperienceRequestState =
+  | { status: 'idle' }
+  | { status: 'pending' }
+  | { status: 'success' }
+  | { status: 'failed'; reason: ExperienceRequestFailureReason }
+
+/**
+ * Outcome signal for the most recent Experience API request.
+ *
+ * Written exclusively by the `ExperienceQueue`; exposed read-only on `CoreStateful.states`.
+ *
+ * @public
+ */
+export const experienceRequestState: Signal<ExperienceRequestState> =
+  signal<ExperienceRequestState>({ status: 'idle' })
+
+/**
  * Collection of shared stateful Core signals.
  *
  * @public
@@ -127,6 +164,8 @@ export interface Signals {
   canOptimize: typeof canOptimize
   /** Active profile signal. */
   profile: typeof profile
+  /** Outcome of the most recent Experience API request. */
+  experienceRequestState: typeof experienceRequestState
 }
 
 /**
@@ -163,6 +202,7 @@ export const signals: Signals = {
   selectedOptimizations,
   canOptimize,
   profile,
+  experienceRequestState,
 }
 
 /**

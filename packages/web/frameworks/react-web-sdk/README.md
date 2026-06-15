@@ -266,7 +266,10 @@ function HeroEntry({ baselineEntry }) {
 ```
 
 Use `loadingFallback`, direct children, wrapper props, and nested composition patterns when needed.
-The React Web guide covers those variants in context.
+For optimized entries, the loading phase begins immediately while optimization is unresolved. If the
+state is still unresolved after 5 seconds, the component reveals baseline content so loading does
+not persist forever. Without a custom `loadingFallback`, the wrapper preserves layout by hiding the
+baseline until that timeout elapses. The React Web guide covers those variants in context.
 
 ### Entry interaction tracking
 

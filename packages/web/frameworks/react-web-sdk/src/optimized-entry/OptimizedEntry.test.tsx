@@ -1,4 +1,5 @@
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
+import { act } from 'react'
 import { OptimizedEntry } from './OptimizedEntry'
 import {
   createRuntime,
@@ -44,6 +45,10 @@ describe('OptimizedEntry', () => {
       },
     },
   ]
+
+  afterEach(() => {
+    rs.useRealTimers()
+  })
 
   it('renders baseline by default when optimization is unresolved and no loading fallback is provided', async () => {
     const { optimization } = createRuntime((entry, selectedOptimizations) => {
@@ -139,11 +144,13 @@ describe('OptimizedEntry', () => {
     await view.unmount()
   })
 
-  it('renders baseline immediately for optimized entries when optimization is not possible', async () => {
+  it('reveals baseline after the unresolved loading timeout when a custom fallback is provided', async () => {
+    rs.useFakeTimers()
+
     const { optimization } = createRuntime((entry, selectedOptimizations) => {
       if (!selectedOptimizations?.length) return { entry }
       return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
-    }, false)
+    })
 
     const view = await renderComponent(
       <OptimizedEntry baselineEntry={optimizedBaseline} loadingFallback={() => 'loading'}>
@@ -152,14 +159,25 @@ describe('OptimizedEntry', () => {
       optimization,
     )
 
+    expect(view.container.textContent).toContain('loading')
+    expect(view.container.textContent).not.toContain('optimized-baseline')
+
+    await act(async () => {
+      await rs.advanceTimersByTimeAsync(5000)
+    })
+
     expect(view.container.textContent).toContain('optimized-baseline')
     expect(view.container.textContent).not.toContain('loading')
 
+    const loadingWrapper = getWrapper(view.container)
+    expect(loadingWrapper.dataset.ctflEntryId).toBeUndefined()
+
     await view.unmount()
+    rs.useRealTimers()
   })
 
-  it('transitions out of the loading fallback once optimization becomes impossible', async () => {
-    const { optimization, setOptimizationPossible } = createRuntime(
+  it('transitions out of the loading fallback once the experience request fails', async () => {
+    const { optimization, setExperienceRequestState } = createRuntime(
       (entry, selectedOptimizations) => {
         if (!selectedOptimizations?.length) return { entry }
         return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
@@ -176,7 +194,7 @@ describe('OptimizedEntry', () => {
 
     expect(view.container.textContent).toContain('loading')
 
-    await setOptimizationPossible(false)
+    await setExperienceRequestState({ status: 'failed', reason: 'api-error' })
 
     expect(view.container.textContent).toContain('optimized-baseline')
     expect(view.container.textContent).not.toContain('loading')
@@ -373,7 +391,7 @@ describe('OptimizedEntry', () => {
     await view.unmount()
   })
 
-  it('renders loading until canOptimize is true for optimized flow', async () => {
+  it('renders hidden baseline until optimized data arrives in optimized flow', async () => {
     const { optimization, emit } = createRuntime((entry, selectedOptimizations) => {
       if (!selectedOptimizations?.length) return { entry }
       return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
@@ -388,11 +406,41 @@ describe('OptimizedEntry', () => {
 
     expect(view.container.textContent).toContain('optimized-baseline')
     expect(view.container.textContent).not.toContain('variant-a')
+    expect(getWrapper(view.container).dataset.ctflEntryId).toBeUndefined()
 
     await emit(variantOneState)
 
     expect(view.container.textContent).toContain('variant-a')
     expect(view.container.textContent).not.toContain('optimized-baseline')
+
+    await view.unmount()
+  })
+
+  it('reveals baseline after the unresolved loading timeout without a custom fallback', async () => {
+    rs.useFakeTimers()
+
+    const { optimization } = createRuntime((entry, selectedOptimizations) => {
+      if (!selectedOptimizations?.length) return { entry }
+      return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
+    })
+
+    const view = await renderComponent(
+      <OptimizedEntry baselineEntry={optimizedBaseline}>
+        {(resolved) => readTitle(resolved)}
+      </OptimizedEntry>,
+      optimization,
+    )
+
+    const loadingTarget = getRequiredElement(view.container, '[data-ctfl-loading-layout-target]')
+    expect(loadingTarget.style.visibility).toBe('hidden')
+
+    await act(async () => {
+      await rs.advanceTimersByTimeAsync(5000)
+    })
+
+    expect(view.container.textContent).toContain('optimized-baseline')
+    expect(loadingTarget.style.visibility).toBe('')
+    expect(getWrapper(view.container).dataset.ctflEntryId).toBeUndefined()
 
     await view.unmount()
   })
@@ -464,11 +512,16 @@ describe('OptimizedEntry', () => {
     expect(divLoadingTarget.style.display).toBe('block')
     await divView.unmount()
 
+    const { optimization: optimization2 } = createRuntime((entry, selectedOptimizations) => {
+      if (!selectedOptimizations?.length) return { entry }
+      return { entry: variantA, selectedOptimization: selectedOptimizations[0] }
+    })
+
     const spanView = await renderComponent(
       <OptimizedEntry baselineEntry={optimizedBaseline} as="span">
         {(resolved) => readTitle(resolved)}
       </OptimizedEntry>,
-      optimization,
+      optimization2,
     )
     const spanLoadingTarget = getRequiredElement(
       spanView.container,

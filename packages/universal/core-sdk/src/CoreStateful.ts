@@ -31,6 +31,8 @@ import {
   consent as consentSignal,
   effect,
   event as eventSignal,
+  type ExperienceRequestState,
+  experienceRequestState as experienceRequestStateSignal,
   locale as localeSignal,
   type Observable,
   online as onlineSignal,
@@ -155,6 +157,8 @@ export interface CoreStates {
   canOptimize: Observable<boolean>
   /** Whether the current consent + allow-list configuration could ever produce optimizations. */
   optimizationPossible: Observable<boolean>
+  /** Outcome of the most recent Experience API request. */
+  experienceRequestState: Observable<ExperienceRequestState>
 }
 
 /**
@@ -248,6 +252,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
     locale: toObservable(localeSignal),
     canOptimize: toObservable(canOptimizeSignal),
     optimizationPossible: toObservable(this.optimizationPossibleSignal),
+    experienceRequestState: toObservable(experienceRequestStateSignal),
     selectedOptimizations: toObservable(selectedOptimizationsSignal),
     previewPanelAttached: toObservable(previewPanelAttachedSignal),
     previewPanelOpen: toObservable(previewPanelOpenSignal),
@@ -380,6 +385,7 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
       changesSignal.value = undefined
       profileSignal.value = undefined
       selectedOptimizationsSignal.value = undefined
+      experienceRequestStateSignal.value = { status: 'idle' }
     })
   }
 

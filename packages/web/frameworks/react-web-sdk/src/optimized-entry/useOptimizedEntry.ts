@@ -1,5 +1,5 @@
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
+import type { ExperienceRequestState, ResolvedData } from '@contentful/optimization-web/core-sdk'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { useEffect, useMemo, useState } from 'react'
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
@@ -27,11 +27,12 @@ export function useOptimizedEntry({
 }: UseOptimizedEntryParams): UseOptimizedEntryResult {
   const { sdk, isReady } = useOptimizationContext()
   const liveUpdatesContext = useLiveUpdates()
+  const requiresOptimization = hasOptimizationReferences(baselineEntry)
   const [lockedSelectedOptimizations, setLockedSelectedOptimizations] = useState<
     SelectedOptimizationArray | undefined
   >(undefined)
   const [canOptimize, setCanOptimize] = useState(false)
-  const [optimizationPossible, setOptimizationPossible] = useState(true)
+  const [experienceRequestSettled, setExperienceRequestSettled] = useState(false)
   const [sdkInitialized, setSdkInitialized] = useState(false)
 
   const shouldLiveUpdate = resolveShouldLiveUpdate({
@@ -43,7 +44,7 @@ export function useOptimizedEntry({
   useEffect(() => {
     if (!sdk || !isReady) {
       setCanOptimize(false)
-      setOptimizationPossible(true)
+      setExperienceRequestSettled(false)
       return
     }
 
@@ -67,14 +68,16 @@ export function useOptimizedEntry({
       setCanOptimize(value)
     })
 
-    const optimizationPossibleSubscription = sdk.states.optimizationPossible.subscribe((value) => {
-      setOptimizationPossible(value)
-    })
+    const experienceRequestStateSubscription = sdk.states.experienceRequestState.subscribe(
+      (state: ExperienceRequestState) => {
+        setExperienceRequestSettled(state.status === 'success' || state.status === 'failed')
+      },
+    )
 
     return () => {
       selectedOptimizationsSubscription.unsubscribe()
       canOptimizeSubscription.unsubscribe()
-      optimizationPossibleSubscription.unsubscribe()
+      experienceRequestStateSubscription.unsubscribe()
     }
   }, [isReady, sdk, shouldLiveUpdate])
 
@@ -90,8 +93,7 @@ export function useOptimizedEntry({
     [baselineEntry, isReady, lockedSelectedOptimizations, sdk],
   )
 
-  const requiresOptimization = hasOptimizationReferences(baselineEntry)
-  const isContentReady = requiresOptimization ? canOptimize || !optimizationPossible : true
+  const isContentReady = !requiresOptimization || experienceRequestSettled
 
   return {
     canOptimize,

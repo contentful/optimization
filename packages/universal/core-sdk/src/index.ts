@@ -11,6 +11,8 @@ export {
   signals,
   toDistinctObservable,
   toObservable,
+  type ExperienceRequestFailureReason,
+  type ExperienceRequestState,
   type Observable,
   type Signal,
   type SignalFns,
