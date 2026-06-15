@@ -1,0 +1,21 @@
+<section class="tracking-log" data-testid="analytics-events-container">
+  <h2 class="tracking-log__title">Tracking</h2>
+  @let events = displayEvents(); @if (events.length === 0) {
+  <p class="tracking-log__empty" data-testid="no-events-message">No events tracked yet</p>
+  } @else {
+  <table class="tracking-log__table">
+    @for (event of events; track event.key) {
+    <tr [attr.data-testid]="event.testId">
+      <td class="tracking-log__time">{{ event.timeAgo }}</td>
+      <td>
+        <span class="tracking-log__type tracking-log__type--{{ event.type }}"
+          >{{ event.type }}</span
+        >
+      </td>
+      <td class="tracking-log__label">{{ event.value }}</td>
+      <td class="tracking-log__count">@if (event.count > 1) { ×{{ event.count }} }</td>
+    </tr>
+    }
+  </table>
+  }
+</section>

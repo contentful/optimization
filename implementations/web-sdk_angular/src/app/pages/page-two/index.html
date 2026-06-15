@@ -1,0 +1,32 @@
+@if (entries.isLoading()) {
+<p class="page-loading" data-testid="page-two-loading">Loading entries…</p>
+} @else {
+<div class="page-header">
+  <h1>Page Two</h1>
+  <p class="page-header__sub">Multi-route demo — SDK state persists across navigation.</p>
+</div>
+
+<app-control-panel [onTrackConversion]="trackConversion" />
+
+<div class="sections-row sections-row--two">
+  @if (autoEntry(); as entry) {
+  <section class="page-section">
+    <header class="page-section__header">
+      <h2>Auto-observed</h2>
+    </header>
+    <div class="entry-grid">
+      <app-entry-card [entry]="entry" />
+    </div>
+  </section>
+  } @if (manualEntry(); as entry) {
+  <section class="page-section">
+    <header class="page-section__header">
+      <h2>Manually-observed</h2>
+    </header>
+    <div class="entry-grid">
+      <app-entry-card [entry]="entry" [manualTracking]="true" />
+    </div>
+  </section>
+  }
+</div>
+}
