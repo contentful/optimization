@@ -119,6 +119,7 @@ export function resolveLoadingRenderState(params: {
   baselineEntry: Entry
   hasCustomLoadingFallback: boolean
   isLoading: boolean
+  revealTimedOutBaseline: boolean
   resolvedLoadingFallback: ReactNode
   sdkInitialized: boolean
 }): LoadingRenderState {
@@ -127,17 +128,18 @@ export function resolveLoadingRenderState(params: {
     baselineEntry,
     hasCustomLoadingFallback,
     isLoading,
+    revealTimedOutBaseline,
     resolvedLoadingFallback,
     sdkInitialized,
   } = params
   const isServerRender = typeof window === 'undefined'
   const showLoadingFallback = isLoading || (isServerRender && !sdkInitialized)
-  const loadingContent = hasCustomLoadingFallback
-    ? !sdkInitialized && !isServerRender
-      ? resolveChildren(baselineChildren, baselineEntry)
-      : resolvedLoadingFallback
-    : resolveChildren(baselineChildren, baselineEntry)
-  const hideLoadingLayoutTarget = !hasCustomLoadingFallback || isServerRender || !sdkInitialized
+  const renderBaselineInsteadOfFallback = !hasCustomLoadingFallback || revealTimedOutBaseline
+  const loadingContent = renderBaselineInsteadOfFallback
+    ? resolveChildren(baselineChildren, baselineEntry)
+    : resolvedLoadingFallback
+  const hideLoadingLayoutTarget =
+    isServerRender || (renderBaselineInsteadOfFallback && !revealTimedOutBaseline)
 
   return {
     hideLoadingLayoutTarget,

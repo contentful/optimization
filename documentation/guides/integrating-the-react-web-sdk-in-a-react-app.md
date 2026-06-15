@@ -477,9 +477,15 @@ When `loadingFallback` is provided, it renders while optimization state is unres
 </OptimizedEntry>
 ```
 
+For optimized entries, unresolved means the SDK has not yet reached a successful or failed
+Experience API outcome. That includes the initial pre-request window before the first eligible event
+is sent. If the state is still unresolved after 5 seconds, the component reveals baseline content so
+the loading UI does not persist forever.
+
 When no `loadingFallback` is provided, a default loading UI wraps the baseline content until
-optimization readiness is available. Entries without optimization references skip loading and render
-directly.
+optimization readiness is available. The baseline content is initially hidden to preserve layout and
+is revealed after that same 5 second timeout if the optimization state is still unresolved. Entries
+without optimization references skip loading and render directly.
 
 ### Direct ReactNode children
 

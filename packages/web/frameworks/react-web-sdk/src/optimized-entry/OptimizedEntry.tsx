@@ -1,5 +1,5 @@
 import type { Entry } from 'contentful'
-import { createContext, useContext, useEffect, useMemo, useRef, type JSX } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import { createScopedLogger } from '../logger'
 import {
   resolveChildren,
@@ -17,6 +17,8 @@ import { useOptimizedEntry } from './useOptimizedEntry'
 export type OptimizedEntryLoadingFallback = LoadingFallback
 export type OptimizedEntryWrapperElement = WrapperElement
 export type OptimizedEntryRenderProp = RenderProp
+
+const LOADING_BASELINE_REVEAL_MS = 5000
 
 /**
  * Props for the {@link OptimizedEntry} component.
@@ -125,6 +127,24 @@ export function OptimizedEntry({
     baselineEntry,
     liveUpdates,
   })
+  const [revealTimedOutBaseline, setRevealTimedOutBaseline] = useState(false)
+
+  useEffect(() => {
+    if (!isLoading) {
+      setRevealTimedOutBaseline(false)
+      return
+    }
+
+    setRevealTimedOutBaseline(false)
+
+    const timer = window.setTimeout(() => {
+      setRevealTimedOutBaseline(true)
+    }, LOADING_BASELINE_REVEAL_MS)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [isLoading])
 
   if (hasDuplicateBaselineAncestor) {
     return null
@@ -140,6 +160,7 @@ export function OptimizedEntry({
       baselineEntry,
       hasCustomLoadingFallback,
       isLoading,
+      revealTimedOutBaseline,
       resolvedLoadingFallback,
       sdkInitialized: isReady,
     })

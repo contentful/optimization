@@ -27,11 +27,12 @@ export function useOptimizedEntry({
 }: UseOptimizedEntryParams): UseOptimizedEntryResult {
   const { sdk, isReady } = useOptimizationContext()
   const liveUpdatesContext = useLiveUpdates()
+  const requiresOptimization = hasOptimizationReferences(baselineEntry)
   const [lockedSelectedOptimizations, setLockedSelectedOptimizations] = useState<
     SelectedOptimizationArray | undefined
   >(undefined)
   const [canOptimize, setCanOptimize] = useState(false)
-  const [experienceRequestPending, setExperienceRequestPending] = useState(false)
+  const [experienceRequestSettled, setExperienceRequestSettled] = useState(false)
   const [sdkInitialized, setSdkInitialized] = useState(false)
 
   const shouldLiveUpdate = resolveShouldLiveUpdate({
@@ -43,7 +44,7 @@ export function useOptimizedEntry({
   useEffect(() => {
     if (!sdk || !isReady) {
       setCanOptimize(false)
-      setExperienceRequestPending(false)
+      setExperienceRequestSettled(false)
       return
     }
 
@@ -69,7 +70,7 @@ export function useOptimizedEntry({
 
     const experienceRequestStateSubscription = sdk.states.experienceRequestState.subscribe(
       (state: ExperienceRequestState) => {
-        setExperienceRequestPending(state.status === 'pending')
+        setExperienceRequestSettled(state.status === 'success' || state.status === 'failed')
       },
     )
 
@@ -92,8 +93,7 @@ export function useOptimizedEntry({
     [baselineEntry, isReady, lockedSelectedOptimizations, sdk],
   )
 
-  const requiresOptimization = hasOptimizationReferences(baselineEntry)
-  const isContentReady = !requiresOptimization || !experienceRequestPending
+  const isContentReady = !requiresOptimization || experienceRequestSettled
 
   return {
     canOptimize,
