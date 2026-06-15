@@ -102,11 +102,10 @@ export const profile: Signal<Profile | undefined> = signal<Profile | undefined>(
  *
  * - `timeout`: the request was aborted by the configured request timeout.
  * - `api-error`: the API responded with a non-success HTTP status or returned an unparseable body.
- * - `aborted`: the request was aborted for any reason other than the request timeout.
  *
  * @public
  */
-export type ExperienceRequestFailureReason = 'timeout' | 'api-error' | 'aborted'
+export type ExperienceRequestFailureReason = 'timeout' | 'api-error'
 
 /**
  * Outcome of the most recent Experience API request.
