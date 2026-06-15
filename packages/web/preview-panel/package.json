@@ -70,6 +70,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@contentful/optimization-core": "workspace:*",
     "@contentful/optimization-web": "workspace:*",
     "@leeoniya/ufuzzy": "^1.0.19",
     "@lit/context": "^1.1.6",

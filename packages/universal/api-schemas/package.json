@@ -24,6 +24,7 @@
     },
     "./package.json": "./package.json"
   },
+  "sideEffects": false,
   "files": [
     "dist/**/*",
     "THIRD_PARTY_NOTICES.txt"

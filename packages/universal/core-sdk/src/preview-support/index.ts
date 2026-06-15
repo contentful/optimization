@@ -8,6 +8,7 @@
  * @packageDocumentation
  */
 
+export { applyChangeOverrides } from './applyChangeOverrides'
 export { applyOptimizationOverrides } from './applyOptimizationOverrides'
 export {
   buildPreviewModel,
