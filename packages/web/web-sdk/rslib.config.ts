@@ -57,6 +57,8 @@ export default defineConfig({
           logger: './src/logger.ts',
           constants: './src/constants.ts',
           symbols: './src/symbols.ts',
+          presentation: './src/presentation/index.ts',
+          'web-components': './src/web-components/index.ts',
           'core-sdk': './src/core-sdk.ts',
           'api-client': './src/api-client.ts',
           'api-schemas': './src/api-schemas.ts',
@@ -93,6 +95,8 @@ export default defineConfig({
           logger: './src/logger.ts',
           constants: './src/constants.ts',
           symbols: './src/symbols.ts',
+          presentation: './src/presentation/index.ts',
+          'web-components': './src/web-components/index.ts',
           'core-sdk': './src/core-sdk.ts',
           'api-client': './src/api-client.ts',
           'api-schemas': './src/api-schemas.ts',
@@ -134,6 +138,29 @@ export default defineConfig({
           ensureUmdDefaultExport(config)
           maybeEnableRsDoctor(config)
         },
+      },
+    },
+
+    {
+      ...common,
+      format: 'umd',
+      autoExternal: false,
+      umdName: 'ContentfulOptimizationWebComponents',
+      source: {
+        entry: {
+          'contentful-optimization-web-components.umd': './src/web-components/index.ts',
+        },
+      },
+      output: {
+        distPath: { root: 'dist' },
+        filename: { js: '[name].js' },
+        sourceMap: true,
+        cleanDistPath: false,
+        minify: true,
+      },
+      dts: false,
+      tools: {
+        rspack: maybeEnableRsDoctor,
       },
     },
   ],

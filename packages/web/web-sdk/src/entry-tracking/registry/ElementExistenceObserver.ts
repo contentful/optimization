@@ -1,4 +1,4 @@
-import { CAN_ADD_LISTENERS, HAS_MUTATION_OBSERVER } from '../../constants'
+import { CAN_ADD_LISTENERS, ENTRY_ID_ATTRIBUTE, HAS_MUTATION_OBSERVER } from '../../constants'
 import { safeCall } from '../../lib'
 
 const isNode = (value: unknown): value is Node =>
@@ -35,6 +35,43 @@ function collectElements(
 
     node.querySelectorAll('*').forEach((element) => {
       if (!requireConnected || element.isConnected) target.add(element)
+    })
+  }
+}
+
+function collectEntryAttributeMutation(
+  record: MutationRecord,
+  addedNodes: Set<Node>,
+  removedNodes: Set<Node>,
+): boolean {
+  if (record.type !== 'attributes' || record.attributeName !== ENTRY_ID_ATTRIBUTE) {
+    return false
+  }
+
+  if (isNode(record.target)) {
+    removedNodes.add(record.target)
+    addedNodes.add(record.target)
+  }
+
+  return true
+}
+
+function collectChildListMutation(
+  record: MutationRecord,
+  addedNodes: Set<Node>,
+  removedNodes: Set<Node>,
+): void {
+  if (record.addedNodes.length > 0) {
+    record.addedNodes.forEach((node) => {
+      if (removedNodes.delete(node)) return
+      addedNodes.add(node)
+    })
+  }
+
+  if (record.removedNodes.length > 0) {
+    record.removedNodes.forEach((node) => {
+      if (addedNodes.delete(node)) return
+      removedNodes.add(node)
     })
   }
 }
@@ -99,6 +136,8 @@ class ElementExistenceObserver {
     })
 
     this.observer.observe(this.root, {
+      attributeFilter: [ENTRY_ID_ATTRIBUTE],
+      attributes: true,
       childList: true,
       subtree: true,
     })
@@ -118,19 +157,9 @@ class ElementExistenceObserver {
     const removedNodes = new Set<Node>()
 
     for (const record of records) {
-      if (record.addedNodes.length > 0) {
-        record.addedNodes.forEach((node) => {
-          if (removedNodes.delete(node)) return
-          addedNodes.add(node)
-        })
-      }
+      if (collectEntryAttributeMutation(record, addedNodes, removedNodes)) continue
 
-      if (record.removedNodes.length > 0) {
-        record.removedNodes.forEach((node) => {
-          if (addedNodes.delete(node)) return
-          removedNodes.add(node)
-        })
-      }
+      collectChildListMutation(record, addedNodes, removedNodes)
     }
 
     if (addedNodes.size === 0 && removedNodes.size === 0) return

@@ -10,7 +10,7 @@ const clickScenarios: ClickScenario[] = [
   {
     name: 'direct entry button',
     entryTestId: 'entry-click-direct-entry',
-    clickTargetTestId: 'entry-click-direct-entry',
+    clickTargetTestId: 'content-4ib0hsHWoSOnCVdDkizE8d',
   },
   {
     name: 'clickable descendant button',
@@ -65,8 +65,8 @@ test.describe('entry click tracking', () => {
       page,
     }) => {
       for (const scenario of clickScenarios) {
-        const entryLocator = page.getByTestId(scenario.entryTestId)
-        await expect(entryLocator, `${scenario.name}: entry should render`).toBeVisible()
+        const target = page.getByTestId(scenario.clickTargetTestId)
+        await expect(target, `${scenario.name}: click target should render`).toBeVisible()
 
         await expect
           .poll(async () => await readResolvedEntryId(page, scenario.entryTestId), {
@@ -75,7 +75,6 @@ test.describe('entry click tracking', () => {
           .not.toEqual('')
 
         const resolvedEntryId = await readResolvedEntryId(page, scenario.entryTestId)
-        const target = page.getByTestId(scenario.clickTargetTestId)
 
         await target.scrollIntoViewIfNeeded()
         await target.click()

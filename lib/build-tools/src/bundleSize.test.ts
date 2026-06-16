@@ -35,12 +35,14 @@ describe('checkBundleSize', () => {
 
       expect(results).toEqual([
         {
+          files: ['index.mjs'],
           file: 'index.mjs',
           rawBytes: Buffer.byteLength(indexContents),
           gzipBytes: indexGzipBytes,
           budgetBytes: indexGzipBytes,
         },
         {
+          files: ['logger.mjs'],
           file: 'logger.mjs',
           rawBytes: Buffer.byteLength(loggerContents),
           gzipBytes: loggerGzipBytes,
@@ -55,6 +57,65 @@ describe('checkBundleSize', () => {
           overBytes: 1,
         },
       ])
+    } finally {
+      rmSync(packageDir, { force: true, recursive: true })
+    }
+  })
+
+  it('includes local chunks reachable from configured JavaScript entries', () => {
+    const packageDir = mkdtempSync(join(tmpdir(), 'build-tools-bundle-size-'))
+    const distDir = join(packageDir, 'dist')
+    const indexContents =
+      'import"./shared.mjs";export{value}from"./feature.mjs";require("./cjs.cjs");'
+    const sharedContents = 'export const shared = "shared";'
+    const featureContents = 'import "./shared.mjs"; export const value = "feature";'
+    const cjsContents = 'require("./leaf.js"); exports.value = "cjs";'
+    const leafContents = 'export const leaf = "leaf";'
+    const expectedRawBytes =
+      Buffer.byteLength(indexContents) +
+      Buffer.byteLength(sharedContents) +
+      Buffer.byteLength(featureContents) +
+      Buffer.byteLength(cjsContents) +
+      Buffer.byteLength(leafContents)
+    const expectedGzipBytes =
+      gzipSync(Buffer.from(indexContents), { level: 9 }).byteLength +
+      gzipSync(Buffer.from(sharedContents), { level: 9 }).byteLength +
+      gzipSync(Buffer.from(featureContents), { level: 9 }).byteLength +
+      gzipSync(Buffer.from(cjsContents), { level: 9 }).byteLength +
+      gzipSync(Buffer.from(leafContents), { level: 9 }).byteLength
+
+    try {
+      mkdirSync(distDir)
+      writeFileSync(
+        join(packageDir, 'package.json'),
+        JSON.stringify({
+          buildTools: {
+            bundleSize: {
+              gzipBudgets: {
+                'index.mjs': expectedGzipBytes,
+              },
+            },
+          },
+        }),
+      )
+      writeFileSync(join(distDir, 'index.mjs'), indexContents)
+      writeFileSync(join(distDir, 'shared.mjs'), sharedContents)
+      writeFileSync(join(distDir, 'feature.mjs'), featureContents)
+      writeFileSync(join(distDir, 'cjs.cjs'), cjsContents)
+      writeFileSync(join(distDir, 'leaf.js'), leafContents)
+
+      const { failures, results } = checkBundleSize({ packageDir })
+
+      expect(results).toEqual([
+        {
+          budgetBytes: expectedGzipBytes,
+          file: 'index.mjs',
+          files: ['index.mjs', 'shared.mjs', 'feature.mjs', 'cjs.cjs', 'leaf.js'],
+          gzipBytes: expectedGzipBytes,
+          rawBytes: expectedRawBytes,
+        },
+      ])
+      expect(failures).toEqual([])
     } finally {
       rmSync(packageDir, { force: true, recursive: true })
     }

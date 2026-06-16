@@ -21,3 +21,10 @@ Web-family packages under `packages/web/`.
   changes.
 - Validate affected Web reference implementations for browser behavior, preview behavior, routing,
   event flow, or React integration changes.
+- Schedule Web-family package validation by dependency order. `@contentful/optimization-web` is
+  upstream of `@contentful/optimization-react-web` and `@contentful/optimization-web-preview-panel`;
+  run Web SDK build, size, and packaging commands to completion before starting dependent Web
+  package build, size, or packaging commands.
+- Do not run Web SDK `build`, `clean`, `size:report`, or `size:check` concurrently with React Web or
+  preview-panel build, declaration, package, or size commands. Those dependents may read Web SDK
+  `dist/` output, including emitted shared chunks and declarations.

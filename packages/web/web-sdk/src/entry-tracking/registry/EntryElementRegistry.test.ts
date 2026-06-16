@@ -222,6 +222,55 @@ describe('EntryElementRegistry', () => {
     registry.disconnect()
   })
 
+  it('registers an entry when the entry id attribute is added after subscription', () => {
+    const { observer, getSubscriber } = createMockExistenceObserver()
+    const registry = new EntryElementRegistry(observer)
+    const onAdded = rs.fn()
+    registry.subscribe({ onAdded })
+
+    const existenceSubscriber = getSubscriber()
+    if (!existenceSubscriber?.onAdded || !existenceSubscriber.onRemoved) {
+      throw new Error('Expected registry to register onAdded/onRemoved existence subscribers')
+    }
+
+    const entry = document.createElement('div')
+    entry.dataset.ctflEntryId = 'late-entry'
+
+    existenceSubscriber.onRemoved([entry])
+    existenceSubscriber.onAdded([entry])
+
+    expect(onAdded).toHaveBeenCalledTimes(1)
+    expect(onAdded).toHaveBeenCalledWith(entry)
+
+    registry.disconnect()
+  })
+
+  it('unregisters an entry when the entry id attribute is removed after subscription', () => {
+    const { observer, getSubscriber } = createMockExistenceObserver()
+    const registry = new EntryElementRegistry(observer)
+    const onAdded = rs.fn()
+    const onRemoved = rs.fn()
+    registry.subscribe({ onAdded, onRemoved })
+
+    const existenceSubscriber = getSubscriber()
+    if (!existenceSubscriber?.onAdded || !existenceSubscriber.onRemoved) {
+      throw new Error('Expected registry to register onAdded/onRemoved existence subscribers')
+    }
+
+    const entry = createEntryElement('removed-entry-id')
+    existenceSubscriber.onAdded([entry])
+
+    delete entry.dataset.ctflEntryId
+    existenceSubscriber.onRemoved([entry])
+    existenceSubscriber.onAdded([entry])
+
+    expect(onAdded).toHaveBeenCalledTimes(1)
+    expect(onRemoved).toHaveBeenCalledTimes(1)
+    expect(onRemoved).toHaveBeenCalledWith(entry)
+
+    registry.disconnect()
+  })
+
   it('ignores remove notifications for entries that were never added', () => {
     const { observer, getSubscriber } = createMockExistenceObserver()
     const registry = new EntryElementRegistry(observer)

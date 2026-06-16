@@ -42,3 +42,15 @@ For pnpm-managed packages with matching scripts, use `pnpm --filter <package-nam
   install or tests.
 - Broaden to affected downstream SDKs or reference implementations for shared behavior, public
   contracts, preview behavior, event flow, or platform integration changes.
+- Schedule package validation by the workspace dependency graph. Do not manually run SDK `build`,
+  `clean`, `build:pkgs`, implementation install, `size:report`, or `size:check` commands in parallel
+  across packages when one package can consume another package's generated output.
+- Run upstream SDK build, package, and size commands to completion before starting downstream SDK
+  build, package, or size commands. When the affected graph is broad or uncertain, prefer the
+  aggregate workspace command so pnpm owns the dependency scheduling.
+- Common package order is: `@contentful/optimization-api-schemas`, then
+  `@contentful/optimization-api-client`, then `@contentful/optimization-core`, then leaf packages
+  such as `@contentful/optimization-node`, `@contentful/optimization-react-native`,
+  `@contentful/optimization-web`, and `@contentful/optimization-js-bridge`. Web dependents such as
+  `@contentful/optimization-react-web` and `@contentful/optimization-web-preview-panel` run after
+  `@contentful/optimization-web`.

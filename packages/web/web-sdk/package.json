@@ -52,6 +52,26 @@
         "default": "./dist/symbols.cjs"
       }
     },
+    "./presentation": {
+      "import": {
+        "types": "./dist/presentation.d.mts",
+        "default": "./dist/presentation.mjs"
+      },
+      "require": {
+        "types": "./dist/presentation.d.cts",
+        "default": "./dist/presentation.cjs"
+      }
+    },
+    "./web-components": {
+      "import": {
+        "types": "./dist/web-components.d.mts",
+        "default": "./dist/web-components.mjs"
+      },
+      "require": {
+        "types": "./dist/web-components.d.cts",
+        "default": "./dist/web-components.cjs"
+      }
+    },
     "./core-sdk": {
       "import": {
         "types": "./dist/core-sdk.d.mts",
@@ -91,8 +111,13 @@
     "bundleSize": {
       "gzipBudgets": {
         "contentful-optimization-web.umd.js": 33000,
-        "index.cjs": 11500,
-        "index.mjs": 10600
+        "index.cjs": 11600,
+        "index.mjs": 11700,
+        "contentful-optimization-web-components.umd.js": 36400,
+        "presentation.cjs": 2650,
+        "presentation.mjs": 2250,
+        "web-components.cjs": 15200,
+        "web-components.mjs": 16150
       }
     }
   },
@@ -110,6 +135,7 @@
   },
   "dependencies": {
     "@contentful/optimization-core": "workspace:*",
+    "contentful": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
