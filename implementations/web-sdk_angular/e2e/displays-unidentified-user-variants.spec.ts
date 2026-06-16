@@ -39,8 +39,8 @@ test.describe('unidentified user', () => {
 
   test('displays unidentified user variants', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Auto Observed Entries' })).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Manually Observed Entries' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Auto-observed' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Manually-observed' })).toBeVisible()
 
     await expect(page.getByText('This is a level 0 nested baseline entry.')).toBeVisible()
     await expect(page.getByText('This is a level 1 nested baseline entry.')).toBeVisible()

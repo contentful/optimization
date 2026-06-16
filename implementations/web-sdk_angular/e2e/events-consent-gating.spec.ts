@@ -32,7 +32,7 @@ test.describe('consent gating', () => {
 
     await expect(pageEvents.first()).toBeVisible()
 
-    await page.getByRole('button', { name: 'Accept Consent' }).click()
+    await page.getByTestId('consent-button').click()
     await scrollThroughEntries(page)
 
     await expect.poll(async () => await viewEvents.count()).toBeGreaterThan(0)

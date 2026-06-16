@@ -53,13 +53,23 @@ export class TrackingLog {
     let pageSeq = 0
     let componentSeq = 0
     const sub = this.optimization.sdk.states.eventStream.subscribe((raw) => {
+      if (raw != null) {
+        this.rawEventsCount.update((n) => n + 1)
+      }
       switch (raw?.type) {
         case 'page': {
           const {
             properties: { url },
           } = raw
           pageSeq += 1
-          this.track({ type: 'page', value: url, key: `page-${pageSeq}-${url}` })
+          const pathname = (() => {
+            try {
+              return new URL(url, window.location.origin).pathname
+            } catch {
+              return url
+            }
+          })()
+          this.track({ type: 'page', value: pathname, key: `page-${pageSeq}-${url}` })
           break
         }
         case 'component': {
@@ -113,7 +123,6 @@ export class TrackingLog {
     testId?: string,
   ): void {
     const { key } = event
-    this.rawEventsCount.update((n) => n + 1)
     this.events.update((map) => {
       const existing = map.get(key)
       return new Map(map).set(key, {
