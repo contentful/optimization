@@ -179,6 +179,25 @@ Use `useOptimization()` when a component needs direct access to the instance for
 `identify()`, `reset()`, or manual tracking. Use `useEntryResolver()` when a component needs manual
 entry resolution without the `OptimizedEntry` wrapper:
 
+`useOptimization()` returns the SDK instance itself. Keep that instance in a variable and call
+methods from it. Do not destructure SDK methods from the returned value because those methods rely
+on the instance `this` binding.
+
+```tsx
+import { useOptimization } from '@contentful/optimization-react-web'
+
+function ProductCta() {
+  const optimization = useOptimization()
+
+  return <button onClick={() => optimization.track({ event: 'purchase' })}>Buy now</button>
+}
+```
+
+```tsx
+// Avoid destructuring SDK methods; this loses the instance binding.
+const { track } = useOptimization()
+```
+
 ```tsx
 import { useEntryResolver } from '@contentful/optimization-react-web'
 
