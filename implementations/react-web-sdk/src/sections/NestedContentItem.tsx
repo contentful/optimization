@@ -22,7 +22,7 @@ function renderText(entry: ContentEntry): string {
 
 export function NestedContentItem({ entry }: NestedContentItemProps): JSX.Element {
   return (
-    <OptimizedEntry baselineEntry={entry}>
+    <OptimizedEntry baselineEntry={entry} hoverDurationUpdateIntervalMs={1000}>
       {(resolvedEntry) => {
         const asCf = resolvedEntry as ContentEntry
         const nestedEntries = Array.isArray(asCf.fields.nested) ? asCf.fields.nested : []
@@ -30,7 +30,7 @@ export function NestedContentItem({ entry }: NestedContentItemProps): JSX.Elemen
         const fullLabel = `${text} [Entry: ${resolvedEntry.sys.id}]`
 
         return (
-          <div data-ctfl-hover-duration-update-interval-ms="1000">
+          <div>
             <div data-testid={`entry-text-${resolvedEntry.sys.id}`} aria-label={fullLabel}>
               <p>{text}</p>
               <p>{`[Entry: ${resolvedEntry.sys.id}]`}</p>

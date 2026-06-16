@@ -319,6 +319,23 @@ automatic tracking in the root config when views, clicks, or hovers must be dete
 </OptimizationRoot>
 ```
 
+Use `OptimizedEntry` props to configure Web SDK entry-tracking attributes without setting
+`data-ctfl-*` metadata manually:
+
+```tsx
+<OptimizedEntry
+  baselineEntry={entry}
+  clickable
+  hoverDurationUpdateIntervalMs={1000}
+  viewDurationUpdateIntervalMs={1000}
+>
+  {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
+</OptimizedEntry>
+```
+
+`OptimizedEntry` derives entry ID, baseline ID, optimization ID, sticky state, variant index, and
+duplication scope from the resolved entry state.
+
 Use `sdk.tracking.enableElement(...)` from `useOptimization()` for manual element overrides.
 
 ### Router page events

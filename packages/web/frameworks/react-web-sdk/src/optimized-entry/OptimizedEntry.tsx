@@ -58,6 +58,10 @@ export interface OptimizedEntryProps {
    */
   loadingFallback?: OptimizedEntryLoadingFallback
   /**
+   * Marks the optimized entry wrapper as a click target for entry click tracking.
+   */
+  clickable?: boolean
+  /**
    * Per-component override for click tracking.
    */
   trackClicks?: boolean
@@ -69,6 +73,14 @@ export interface OptimizedEntryProps {
    * Per-component override for view tracking.
    */
   trackViews?: boolean
+  /**
+   * Per-component override for view-duration update events, in milliseconds.
+   */
+  viewDurationUpdateIntervalMs?: number
+  /**
+   * Per-component override for hover-duration update events, in milliseconds.
+   */
+  hoverDurationUpdateIntervalMs?: number
 }
 
 const WRAPPER_STYLE = Object.freeze({ display: 'contents' as const })
@@ -114,9 +126,12 @@ export function OptimizedEntry({
   testId,
   'data-testid': dataTestIdProp,
   loadingFallback,
+  clickable,
+  hoverDurationUpdateIntervalMs,
   trackClicks,
   trackHovers,
   trackViews,
+  viewDurationUpdateIntervalMs,
 }: OptimizedEntryProps): JSX.Element | null {
   const {
     sys: { id: baselineEntryId },
@@ -186,9 +201,13 @@ export function OptimizedEntry({
   }
 
   const trackingAttributes = resolveTrackingAttributes(resolvedData, {
+    baselineEntryId,
+    clickable,
+    hoverDurationUpdateIntervalMs,
     trackClicks,
     trackHovers,
     trackViews,
+    viewDurationUpdateIntervalMs,
   })
 
   return (
