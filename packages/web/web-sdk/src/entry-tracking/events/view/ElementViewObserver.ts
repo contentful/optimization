@@ -28,12 +28,16 @@ import {
   type ElementViewObserverOptions,
   type Interval,
   NOW,
-  Num,
-  type PerElementEffectiveOptions,
   clearFireTimer,
+  createElementState,
   derefElement,
+  getRemainingMsUntilNextFire,
+  initElementViewObserverOptions,
   isPageVisible,
+  pauseVisibilityCycle,
+  resetVisibilityCycle,
 } from './element-view-observer-support'
+import ElementViewSourceController from './elementViewSourceController'
 
 const logger = createScopedLogger('Web:ElementViewObserver')
 const createViewId = (): string => crypto.randomUUID()
@@ -48,6 +52,7 @@ class ElementViewObserver {
   private readonly callback: ElementViewCallback
   private readonly opts: EffectiveObserverOptions
   private readonly io: IntersectionObserver
+  private readonly sourceController: ElementViewSourceController
   private readonly states = new WeakMap<Element, ElementState>()
   private readonly activeStates = new Set<ElementState>()
   private cleanupVisibilityListener?: () => void
@@ -55,7 +60,7 @@ class ElementViewObserver {
 
   public constructor(callback: ElementViewCallback, options?: ElementViewObserverOptions) {
     this.callback = callback
-    this.opts = ElementViewObserver.initOptions(options)
+    this.opts = initElementViewObserverOptions(options)
     this.io = new IntersectionObserver(
       (entries) => {
         this.onIntersect(entries)
@@ -66,6 +71,12 @@ class ElementViewObserver {
         threshold: this.opts.minVisibleRatio === 0 ? [0] : [0, this.opts.minVisibleRatio],
       },
     )
+    this.sourceController = new ElementViewSourceController(this.io, this.opts, {
+      onDropped: this.finalizeDroppedState.bind(this),
+      onHidden: this.onVisibilityEnd.bind(this),
+      onVisible: this.onIntersecting.bind(this),
+      sweep: this.sweepOrphans.bind(this),
+    })
 
     this.cleanupVisibilityListener = addVisibilityChangeListener(() => {
       this.onPageVisibilityChange()
@@ -76,21 +87,23 @@ class ElementViewObserver {
     let state = this.states.get(element)
 
     if (!state) {
-      state = this.createState(element, options)
+      state = createElementState(element, this.opts, options)
       this.states.set(element, state)
       this.activeStates.add(state)
       this.ensureSweeper()
     }
 
-    this.io.observe(element)
+    this.sourceController.apply(state, false)
   }
 
   public unobserve(element: Element): void {
-    this.io.unobserve(element)
-
     const state = this.states.get(element)
-    if (!state) return
+    if (!state) {
+      this.io.unobserve(element)
+      return
+    }
 
+    this.sourceController.remove(state)
     clearFireTimer(state)
     state.done = true
     this.activeStates.delete(state)
@@ -103,11 +116,13 @@ class ElementViewObserver {
 
   public disconnect(): void {
     this.io.disconnect()
+    this.sourceController.disconnect()
 
     for (const state of this.activeStates) {
       clearFireTimer(state)
       state.done = true
       state.strongRef = null
+      state.target = null
     }
 
     this.activeStates.clear()
@@ -118,47 +133,6 @@ class ElementViewObserver {
     this.stopSweeper()
   }
 
-  private static initOptions(options?: ElementViewObserverOptions): EffectiveObserverOptions {
-    return {
-      dwellTimeMs: Num.nonNeg(options?.dwellTimeMs, DEFAULTS.DWELL_MS),
-      viewDurationUpdateIntervalMs: Num.nonNeg(
-        options?.viewDurationUpdateIntervalMs,
-        DEFAULTS.VIEW_DURATION_UPDATE_INTERVAL_MS,
-      ),
-      minVisibleRatio: Num.clamp01(options?.minVisibleRatio, DEFAULTS.RATIO),
-      root: options?.root ?? null,
-      rootMargin: options?.rootMargin ?? '0px',
-    }
-  }
-
-  private createState(element: Element, options?: ElementViewElementOptions): ElementState {
-    const opts: PerElementEffectiveOptions = {
-      dwellTimeMs: Num.nonNeg(options?.dwellTimeMs, this.opts.dwellTimeMs),
-      viewDurationUpdateIntervalMs: Num.nonNeg(
-        options?.viewDurationUpdateIntervalMs,
-        this.opts.viewDurationUpdateIntervalMs,
-      ),
-    }
-
-    const hasWeakRef = typeof WeakRef === 'function'
-
-    return {
-      ref: hasWeakRef ? new WeakRef(element) : null,
-      strongRef: hasWeakRef ? null : element,
-      opts,
-      data: options?.data,
-      accumulatedMs: 0,
-      visibleSince: null,
-      fireTimer: null,
-      attempts: 0,
-      viewId: null,
-      done: false,
-      inFlight: false,
-      lastKnownVisible: false,
-      pendingFinal: false,
-    }
-  }
-
   private onPageVisibilityChange(): void {
     const now = NOW()
     const hidden = !isPageVisible()
@@ -166,23 +140,12 @@ class ElementViewObserver {
     for (const state of this.activeStates) {
       if (state.done) continue
 
-      hidden
-        ? ElementViewObserver.pauseVisibilityCycle(state, now)
-        : this.resumeVisibilityCycle(state, now)
+      hidden ? pauseVisibilityCycle(state, now) : this.resumeVisibilityCycle(state, now)
     }
+
+    if (!hidden) this.sourceController.requestVirtualMeasurement()
 
     this.sweepOrphans()
-  }
-
-  private static pauseVisibilityCycle(state: ElementState, now: number): void {
-    if (!state.lastKnownVisible) return
-
-    if (state.visibleSince !== null) {
-      state.accumulatedMs += now - state.visibleSince
-      state.visibleSince = null
-    }
-
-    clearFireTimer(state)
   }
 
   private resumeVisibilityCycle(state: ElementState, now: number): void {
@@ -197,17 +160,21 @@ class ElementViewObserver {
     const now = NOW()
 
     for (const entry of entries) {
-      const state = this.states.get(entry.target)
+      const states = this.sourceController.getStatesForTarget(entry.target)
 
-      if (!state || state.done) continue
+      if (!states) continue
 
-      const intersectsThreshold =
-        entry.isIntersecting && entry.intersectionRatio >= this.opts.minVisibleRatio
+      for (const state of states) {
+        if (state.done) continue
 
-      if (intersectsThreshold) {
-        this.onIntersecting(state, now)
-      } else {
-        this.onVisibilityEnd(state, now)
+        const intersectsThreshold =
+          entry.isIntersecting && entry.intersectionRatio >= this.opts.minVisibleRatio
+
+        if (intersectsThreshold) {
+          this.onIntersecting(state, now)
+        } else {
+          this.onVisibilityEnd(state, now)
+        }
       }
     }
 
@@ -250,7 +217,7 @@ class ElementViewObserver {
     state.lastKnownVisible = false
 
     if (state.viewId === null || state.attempts === 0) {
-      ElementViewObserver.resetVisibilityCycle(state)
+      resetVisibilityCycle(state)
       return
     }
 
@@ -260,16 +227,6 @@ class ElementViewObserver {
     }
 
     void this.attemptCallback(state, state.accumulatedMs)
-  }
-
-  private static resetVisibilityCycle(state: ElementState): void {
-    state.lastKnownVisible = false
-    state.pendingFinal = false
-    state.accumulatedMs = 0
-    state.visibleSince = null
-    state.attempts = 0
-    state.viewId = null
-    clearFireTimer(state)
   }
 
   private scheduleFireIfDue(state: ElementState, now: number): void {
@@ -286,7 +243,7 @@ class ElementViewObserver {
 
     const elapsed =
       state.accumulatedMs + (state.visibleSince !== null ? now - state.visibleSince : 0)
-    const remaining = ElementViewObserver.getRemainingMsUntilNextFire(state, elapsed)
+    const remaining = getRemainingMsUntilNextFire(state, elapsed)
 
     if (remaining <= 0) {
       this.trigger(state, now)
@@ -365,7 +322,7 @@ class ElementViewObserver {
         return
       }
 
-      ElementViewObserver.resetVisibilityCycle(state)
+      resetVisibilityCycle(state)
       return
     }
 
@@ -376,14 +333,8 @@ class ElementViewObserver {
     this.scheduleFireIfDue(state, now)
   }
 
-  private static getRemainingMsUntilNextFire(state: ElementState, elapsedMs: number): number {
-    const requiredElapsedMs =
-      state.opts.dwellTimeMs + state.attempts * state.opts.viewDurationUpdateIntervalMs
-
-    return requiredElapsedMs - elapsedMs
-  }
-
   private finalizeDroppedState(state: ElementState): void {
+    this.sourceController.remove(state)
     finalizeDroppedState(state, { activeStates: this.activeStates, states: this.states })
     this.maybeStopSweeper()
   }

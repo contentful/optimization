@@ -16,6 +16,8 @@ const defaultPerElOpts: PerElementEffectiveOptions = {
 const makeState = (overrides: Partial<ElementState> = {}): ElementState => ({
   ref: null,
   strongRef: null,
+  source: 'element',
+  target: null,
   opts: defaultPerElOpts,
   data: undefined,
   accumulatedMs: 0,
