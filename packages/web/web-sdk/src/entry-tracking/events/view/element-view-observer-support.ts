@@ -54,9 +54,13 @@ export type PerElementEffectiveOptions = Required<
   Pick<EffectiveObserverOptions, 'dwellTimeMs' | 'viewDurationUpdateIntervalMs'>
 >
 
+export type ElementViewSource = 'element' | 'virtual'
+
 export interface ElementState {
   ref: WeakRef<Element> | null
   strongRef: Element | null
+  source: ElementViewSource
+  target: Element | null
   opts: PerElementEffectiveOptions
   data?: unknown
   accumulatedMs: number
@@ -68,4 +72,79 @@ export interface ElementState {
   inFlight: boolean
   lastKnownVisible: boolean
   pendingFinal: boolean
+}
+
+export const initElementViewObserverOptions = (
+  options?: ElementViewObserverOptions,
+): EffectiveObserverOptions => ({
+  dwellTimeMs: Num.nonNeg(options?.dwellTimeMs, DEFAULTS.DWELL_MS),
+  viewDurationUpdateIntervalMs: Num.nonNeg(
+    options?.viewDurationUpdateIntervalMs,
+    DEFAULTS.VIEW_DURATION_UPDATE_INTERVAL_MS,
+  ),
+  minVisibleRatio: Num.clamp01(options?.minVisibleRatio, DEFAULTS.RATIO),
+  root: options?.root ?? null,
+  rootMargin: options?.rootMargin ?? '0px',
+})
+
+export const createElementState = (
+  element: Element,
+  observerOptions: EffectiveObserverOptions,
+  elementOptions?: ElementViewElementOptions,
+): ElementState => {
+  const opts: PerElementEffectiveOptions = {
+    dwellTimeMs: Num.nonNeg(elementOptions?.dwellTimeMs, observerOptions.dwellTimeMs),
+    viewDurationUpdateIntervalMs: Num.nonNeg(
+      elementOptions?.viewDurationUpdateIntervalMs,
+      observerOptions.viewDurationUpdateIntervalMs,
+    ),
+  }
+
+  const hasWeakRef = typeof WeakRef === 'function'
+
+  return {
+    ref: hasWeakRef ? new WeakRef(element) : null,
+    strongRef: hasWeakRef ? null : element,
+    source: 'element',
+    target: null,
+    opts,
+    data: elementOptions?.data,
+    accumulatedMs: 0,
+    visibleSince: null,
+    fireTimer: null,
+    attempts: 0,
+    viewId: null,
+    done: false,
+    inFlight: false,
+    lastKnownVisible: false,
+    pendingFinal: false,
+  }
+}
+
+export const pauseVisibilityCycle = (state: ElementState, now: number): void => {
+  if (!state.lastKnownVisible) return
+
+  if (state.visibleSince !== null) {
+    state.accumulatedMs += now - state.visibleSince
+    state.visibleSince = null
+  }
+
+  clearFireTimer(state)
+}
+
+export const resetVisibilityCycle = (state: ElementState): void => {
+  state.lastKnownVisible = false
+  state.pendingFinal = false
+  state.accumulatedMs = 0
+  state.visibleSince = null
+  state.attempts = 0
+  state.viewId = null
+  clearFireTimer(state)
+}
+
+export const getRemainingMsUntilNextFire = (state: ElementState, elapsedMs: number): number => {
+  const requiredElapsedMs =
+    state.opts.dwellTimeMs + state.attempts * state.opts.viewDurationUpdateIntervalMs
+
+  return requiredElapsedMs - elapsedMs
 }

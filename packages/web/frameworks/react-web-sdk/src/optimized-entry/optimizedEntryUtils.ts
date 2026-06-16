@@ -16,9 +16,13 @@ export interface LoadingRenderState {
 }
 
 export interface TrackingAttributeOptions {
+  baselineEntryId: string
+  clickable?: boolean
+  hoverDurationUpdateIntervalMs?: number
   trackClicks?: boolean
   trackHovers?: boolean
   trackViews?: boolean
+  viewDurationUpdateIntervalMs?: number
 }
 
 export type LoadingLayoutTargetStyle = Pick<CSSProperties, 'display' | 'visibility'>
@@ -82,7 +86,7 @@ export function resolveShouldLiveUpdate(params: {
 
 export function resolveTrackingAttributes(
   resolvedData: ResolvedData<EntrySkeletonType>,
-  options: TrackingAttributeOptions = {},
+  options: TrackingAttributeOptions,
 ): Record<string, TrackingAttributeValue> {
   const {
     selectedOptimization,
@@ -90,17 +94,29 @@ export function resolveTrackingAttributes(
       sys: { id: entryId },
     },
   } = resolvedData
-  const { trackClicks, trackHovers, trackViews } = options
+  const {
+    baselineEntryId,
+    clickable,
+    hoverDurationUpdateIntervalMs,
+    trackClicks,
+    trackHovers,
+    trackViews,
+    viewDurationUpdateIntervalMs,
+  } = options
 
   return {
+    'data-ctfl-baseline-id': baselineEntryId,
+    'data-ctfl-clickable': clickable === true ? true : undefined,
     'data-ctfl-duplication-scope': resolveDuplicationScope(selectedOptimization),
     'data-ctfl-entry-id': entryId,
+    'data-ctfl-hover-duration-update-interval-ms': hoverDurationUpdateIntervalMs,
     'data-ctfl-optimization-id': selectedOptimization?.experienceId,
     'data-ctfl-sticky': selectedOptimization?.sticky,
     'data-ctfl-track-clicks': trackClicks,
     'data-ctfl-track-hovers': trackHovers,
     'data-ctfl-track-views': trackViews,
     'data-ctfl-variant-index': selectedOptimization?.variantIndex ?? 0,
+    'data-ctfl-view-duration-update-interval-ms': viewDurationUpdateIntervalMs,
   }
 }
 

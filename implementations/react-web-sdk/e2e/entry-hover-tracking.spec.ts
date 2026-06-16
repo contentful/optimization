@@ -37,9 +37,12 @@ async function movePointerAwayFromEntries(page: Page): Promise<void> {
 }
 
 async function readResolvedEntryId(page: Page): Promise<string> {
-  const entryId = await page
+  const entryMetadata = page
     .getByTestId(`content-${HOVER_ENTRY_BASELINE_ID}`)
-    .getAttribute('data-ctfl-entry-id')
+    .locator('xpath=ancestor::*[@data-ctfl-entry-id][1]')
+  const entryId = await entryMetadata
+    .getAttribute('data-ctfl-entry-id', { timeout: 500 })
+    .catch(() => undefined)
 
   return entryId ?? ''
 }
