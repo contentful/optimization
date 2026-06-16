@@ -113,30 +113,22 @@ export function injectContentfulEntry({
     return isLive() ? sig() : untracked(sig)
   }
 
-  const variant = computed(() => {
-    const raw = entry()
-    return {
-      raw,
-      resolved: optimization.sdk.resolveOptimizedEntry(
-        raw,
-        liveRead(optimization.selectedOptimizations),
-      ),
-    }
-  })
-
   const result = computed(() => {
-    const { raw, resolved } = variant()
-    const profile = liveRead(optimization.profile)
+    const raw = entry()
     let mergeTagResolved: boolean | undefined = undefined
-    const entry = resolveEntryMergeTags(resolved.entry, (target) => {
-      const value = profile ? optimization.sdk.getMergeTagValue(target, profile) : undefined
-      if (value !== undefined) mergeTagResolved = true
-      else mergeTagResolved ??= false
-      return value ?? target.fields.nt_fallback
-    })
+
+    const resolved = optimization.sdk.resolveOptimizedEntry(
+      raw,
+      liveRead(optimization.selectedOptimizations),
+    )
 
     return {
-      entry,
+      entry: resolveEntryMergeTags(resolved.entry, (target) => {
+        const value = optimization.sdk.getMergeTagValue(target)
+        if (value !== undefined) mergeTagResolved = true
+        else mergeTagResolved ??= false
+        return value ?? target.fields.nt_fallback
+      }),
       baselineId: raw.sys.id,
       entryId: resolved.entry.sys.id,
       optimizationId: resolved.selectedOptimization?.experienceId,

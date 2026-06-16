@@ -13,10 +13,19 @@
     <h2>Live updates</h2>
   </header>
   @let liveEntry = entryFor(liveUpdatesEntryId); @if (liveEntry) {
-  <div class="sections-row">
-    <app-entry-card [entry]="liveEntry" />
-    <app-entry-card [entry]="liveEntry" [liveUpdates]="true" />
-    <app-entry-card [entry]="liveEntry" [liveUpdates]="false" />
+  <div class="sections-row" data-testid="live-updates-examples">
+    <section data-testid="live-updates-default">
+      <h3>Default (inherits global setting)</h3>
+      <app-entry-card [entry]="liveEntry" testIdPrefix="live-default" />
+    </section>
+    <section data-testid="live-updates-enabled">
+      <h3>Always On (liveUpdates=true)</h3>
+      <app-entry-card [entry]="liveEntry" [liveUpdates]="true" testIdPrefix="live-enabled" />
+    </section>
+    <section data-testid="live-updates-locked">
+      <h3>Locked (liveUpdates=false)</h3>
+      <app-entry-card [entry]="liveEntry" [liveUpdates]="false" testIdPrefix="live-locked" />
+    </section>
   </div>
   }
 </section>

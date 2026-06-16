@@ -115,6 +115,7 @@ export class EntryCard {
   readonly manualTracking = input(false)
   readonly clickScenario = input<EntryClickScenario | undefined>(undefined)
   readonly liveUpdates = input<boolean | undefined>(undefined)
+  readonly testIdPrefix = input<string | undefined>(undefined)
 
   private readonly sanitizer = inject(DomSanitizer)
   private readonly liveUpdatesService = inject(NgLiveUpdates)

@@ -10,6 +10,8 @@ interface AnalyticsEvent {
   key: string
   count: number
   firedAt: number
+  hoverDurationMs?: number
+  viewDurationMs?: number
 }
 
 const MS_PER_SECOND = 1000
@@ -34,9 +36,11 @@ export class TrackingLog {
   private readonly optimization = inject(NgContentfulOptimization)
 
   private readonly events = signal<Map<string, AnalyticsEvent>>(new Map())
+  private readonly rawEventsCount = signal(0)
   private readonly tick = toSignal(interval(TICK_INTERVAL_SECONDS * MS_PER_SECOND), {
     initialValue: 0,
   })
+  protected readonly rawEventsDisplay = this.rawEventsCount.asReadonly()
   protected readonly displayEvents = computed(() => {
     this.tick()
     const now = Date.now()
@@ -46,27 +50,48 @@ export class TrackingLog {
   })
 
   constructor() {
+    let pageSeq = 0
+    let componentSeq = 0
     const sub = this.optimization.sdk.states.eventStream.subscribe((raw) => {
       switch (raw?.type) {
         case 'page': {
           const {
             properties: { url },
           } = raw
-          this.track({ type: 'page', value: url, key: `page-${url}` })
+          pageSeq += 1
+          this.track({ type: 'page', value: url, key: `page-${pageSeq}-${url}` })
           break
         }
         case 'component': {
-          const { componentId, viewId } = raw
-          this.track({
-            type: viewId ? 'view' : 'comp',
-            value: componentId,
-            key: `component-${componentId}`,
-          })
+          const { componentId, viewId, viewDurationMs } = raw
+          if (viewId) {
+            this.track({
+              type: 'view',
+              value: componentId,
+              key: `view-${viewId}`,
+              viewDurationMs: typeof viewDurationMs === 'number' ? viewDurationMs : undefined,
+            })
+          } else {
+            componentSeq += 1
+            this.track(
+              { type: 'comp', value: componentId, key: `component-${componentId}-${componentSeq}` },
+              `event-component-${componentId}`,
+            )
+          }
           break
         }
         case 'component_hover': {
-          const { componentId } = raw
-          this.track({ type: 'hover', value: componentId, key: `component_hover-${componentId}` })
+          const { componentId, hoverId, hoverDurationMs } = raw
+          if (hoverId) {
+            this.track({
+              type: 'component_hover',
+              value: componentId,
+              key: `component_hover-hover-${hoverId}`,
+              hoverDurationMs: typeof hoverDurationMs === 'number' ? hoverDurationMs : undefined,
+            })
+          } else {
+            this.track({ type: 'hover', value: componentId, key: `component_hover-${componentId}` })
+          }
           break
         }
         case 'component_click': {
@@ -83,13 +108,17 @@ export class TrackingLog {
     })
   }
 
-  private track(event: Omit<AnalyticsEvent, 'count' | 'firedAt' | 'testId'>): void {
+  private track(
+    event: Omit<AnalyticsEvent, 'count' | 'firedAt' | 'testId'>,
+    testId?: string,
+  ): void {
     const { key } = event
+    this.rawEventsCount.update((n) => n + 1)
     this.events.update((map) => {
       const existing = map.get(key)
       return new Map(map).set(key, {
         ...event,
-        testId: `event-${key}`,
+        testId: testId ?? `event-${key}`,
         count: (existing?.count ?? 0) + 1,
         firedAt: Date.now(),
       })

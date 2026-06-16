@@ -1,6 +1,9 @@
 <section class="tracking-log" data-testid="analytics-events-container">
-  <h2 class="tracking-log__title">Tracking</h2>
-  @let events = displayEvents(); @if (events.length === 0) {
+  <h2>Tracking</h2>
+  @let events = displayEvents();
+  <p data-testid="events-count">Events: {{ events.length }}</p>
+  <p data-testid="raw-events-count">Raw Events: {{ rawEventsDisplay() }}</p>
+  @if (events.length === 0) {
   <p class="tracking-log__empty" data-testid="no-events-message">No events tracked yet</p>
   } @else {
   <table class="tracking-log__table">
@@ -12,7 +15,13 @@
           >{{ event.type }}</span
         >
       </td>
-      <td class="tracking-log__label">{{ event.value }}</td>
+      <td class="tracking-log__label">
+        @if (event.hoverDurationMs !== undefined) { {{ event.type }} - Entry/Flag: {{ event.value }}
+        - Hover Duration: {{ event.hoverDurationMs }}ms } @else if (event.viewDurationMs !==
+        undefined) { {{ event.type }} - Entry/Flag: {{ event.value }} - Duration: {{
+        event.viewDurationMs }}ms } @else if (event.type === 'page') { {{ event.type }} - URL: {{
+        event.value }} } @else { {{ event.type }} - Entry/Flag: {{ event.value }} }
+      </td>
       <td class="tracking-log__count">@if (event.count > 1) { ×{{ event.count }} }</td>
     </tr>
     }
