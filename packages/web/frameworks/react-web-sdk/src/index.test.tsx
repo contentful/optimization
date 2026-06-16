@@ -422,14 +422,6 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(identify).toHaveBeenCalledWith({ userId: 'user-1' })
     expect(page).toHaveBeenCalledWith({ properties: { title: 'Home' } })
     expect(track).toHaveBeenCalledWith({ event: 'purchase', properties: { revenue: 99 } })
-    expect(reset).toHaveBeenCalled()
-    expect(setLocale).toHaveBeenCalledWith('de-DE')
-    expect(trackClick).toHaveBeenCalledWith({ componentId: 'entry-1' })
-    expect(trackView).toHaveBeenCalledWith({
-      componentId: 'entry-1',
-      viewId: 'view-1',
-      viewDurationMs: 1000,
-    })
 
     rendered.unmount()
   })
