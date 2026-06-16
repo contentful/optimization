@@ -51,6 +51,49 @@ export function createObservable<T>(current: T): ObservableLike<T> {
   }
 }
 
+export function createMutableCloningObservable<T>(initial: T): {
+  emit: (value: T) => Promise<void>
+  observable: ObservableLike<T>
+} {
+  const subscribers = new Set<RuntimeSubscriber<T>>()
+  let current = structuredClone(initial)
+
+  const observable: ObservableLike<T> = {
+    get current() {
+      return structuredClone(current)
+    },
+    subscribe(next: RuntimeSubscriber<T>) {
+      subscribers.add(next)
+      next(structuredClone(current))
+
+      return {
+        unsubscribe() {
+          subscribers.delete(next)
+        },
+      }
+    },
+    subscribeOnce(next: (value: NonNullable<T>) => void) {
+      if (current !== undefined && current !== null) {
+        next(structuredClone(current) as NonNullable<T>)
+      }
+      return { unsubscribe: () => undefined }
+    },
+  }
+
+  async function emit(value: T): Promise<void> {
+    current = structuredClone(value)
+
+    await act(async () => {
+      await Promise.resolve()
+      subscribers.forEach((subscriber) => {
+        subscriber(structuredClone(current))
+      })
+    })
+  }
+
+  return { emit, observable }
+}
+
 export function createTestEntry(id: string): TestEntry {
   return {
     fields: { title: id },

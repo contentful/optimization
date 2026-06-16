@@ -153,14 +153,14 @@ end-user consent UI, seed accepted consent on `OptimizationRoot`:
 ```
 
 When application policy depends on user choice, leave `defaults.consent` unset and call `consent()`
-from the relevant control:
+from `useOptimizationActions()` in the relevant control:
 
 ```tsx
-import { useOptimization } from '@contentful/optimization-react-web'
+import { useOptimizationActions } from '@contentful/optimization-react-web'
 
 function ConsentButton() {
-  const sdk = useOptimization()
-  return <button onClick={() => sdk.consent(true)}>Accept</button>
+  const { consent } = useOptimizationActions()
+  return <button onClick={() => consent(true)}>Accept</button>
 }
 ```
 
@@ -175,9 +175,24 @@ continuity should stay session-only. For cross-SDK consent guidance, see
 commit, outside render, and renders no children while the SDK is pending. In normal browser
 rendering this uses a layout-effect path so ready children can mount before the first visible paint.
 
-Use `useOptimization()` when a component needs direct access to the instance for methods such as
-`identify()`, `reset()`, or manual tracking. Use `useEntryResolver()` when a component needs manual
-entry resolution without the `OptimizedEntry` wrapper:
+Use the dedicated React SDK action hooks when components need common Optimization actions:
+
+```tsx
+import { useOptimizationActions } from '@contentful/optimization-react-web'
+
+function ProductCta() {
+  const { track } = useOptimizationActions()
+
+  return <button onClick={() => track({ event: 'purchase' })}>Buy now</button>
+}
+```
+
+Use `useOptimization()` when a component needs direct access to the SDK instance itself, and prefer
+`useOptimizationActions()` when a component wants destructurable action methods such as `track()`,
+`identify()`, `page()`, or `consent()`.
+
+Use `useEntryResolver()` when a component needs manual entry resolution without the `OptimizedEntry`
+wrapper:
 
 `useOptimization()` returns the SDK instance itself. Keep that instance in a variable and call
 methods from it. Do not destructure SDK methods from the returned value because those methods rely
