@@ -16,6 +16,8 @@ export { useLiveUpdates } from './hooks/useLiveUpdates'
 export { useMergeTagResolver } from './hooks/useMergeTagResolver'
 export type { UseMergeTagResolverResult } from './hooks/useMergeTagResolver'
 export { useOptimization, useOptimizationContext } from './hooks/useOptimization'
+export { useOptimizationActions } from './hooks/useOptimizationActions'
+export type { UseOptimizationActionsResult } from './hooks/useOptimizationActions'
 export { OptimizedEntry } from './optimized-entry/OptimizedEntry'
 export type {
   OptimizedEntryLoadingFallback,
