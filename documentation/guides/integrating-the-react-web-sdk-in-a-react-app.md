@@ -186,12 +186,16 @@ Inside the provider tree, use hooks to interact with the SDK:
 import {
   useEntryResolver,
   useOptimization,
+  useOptimizationActions,
   useOptimizationContext,
 } from '@contentful/optimization-react-web'
 
 function MyComponent() {
-  const { consent, identify, page, track, getFlag } = useOptimization()
+  const { consent, identify, page, track } = useOptimizationActions()
+  const optimization = useOptimization()
   const { resolveEntry } = useEntryResolver()
+
+  optimization.getFlag('hero-copy')
   // SDK is guaranteed to be ready here
 }
 
@@ -293,10 +297,10 @@ When your application policy depends on user choice, call `consent()` from the b
 or account settings flow that owns the user's choice:
 
 ```tsx
-import { useOptimization } from '@contentful/optimization-react-web'
+import { useOptimizationActions } from '@contentful/optimization-react-web'
 
 function ConsentBanner() {
-  const { consent } = useOptimization()
+  const { consent } = useOptimizationActions()
 
   return (
     <div>
@@ -348,14 +352,12 @@ function ConsentStatus() {
 To revoke consent after it was previously accepted:
 
 ```tsx
+import { useOptimizationActions } from '@contentful/optimization-react-web'
+
 function RevokeConsent() {
-  const { consent } = useOptimization()
+  const { consent } = useOptimizationActions()
 
-  const handleRevoke = () => {
-    consent(false)
-  }
-
-  return <button onClick={handleRevoke}>Revoke Consent</button>
+  return <button onClick={() => consent(false)}>Revoke Consent</button>
 }
 ```
 
