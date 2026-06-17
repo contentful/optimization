@@ -47,7 +47,14 @@ export { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-core/constants'
  *
  * @public
  */
-export const ENTRY_SELECTOR = '[data-ctfl-entry-id]'
+export const ENTRY_ID_ATTRIBUTE = 'data-ctfl-entry-id'
+
+/**
+ * Selector used to locate tracked entry elements in the DOM.
+ *
+ * @public
+ */
+export const ENTRY_SELECTOR = `[${ENTRY_ID_ATTRIBUTE}]`
 
 /**
  * Flag indicating whether the current environment can safely add DOM

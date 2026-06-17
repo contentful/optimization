@@ -18,6 +18,10 @@ React-facing entry resolution primitives.
 ## Validate
 
 - Run `typecheck`, `test:unit`, and `build`.
+- Before React Web `build`, `size:report`, or `size:check`, make sure any required
+  `@contentful/optimization-web` build, clean, package, or size command has completed. Do not run
+  React Web build, declaration, package, or size commands concurrently with Web SDK commands that
+  clean, write, or measure `dist/`.
 - Validate the `dev/` harness when changing package flows it demonstrates.
 - Validate `implementations/react-web-sdk` Playwright flows for readiness state, live updates, entry
   rendering, or other runtime behavior changes.

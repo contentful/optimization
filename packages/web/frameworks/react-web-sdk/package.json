@@ -121,8 +121,8 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "index.cjs": 3450,
-        "index.mjs": 2560
+        "index.cjs": 3500,
+        "index.mjs": 3000
       }
     }
   },

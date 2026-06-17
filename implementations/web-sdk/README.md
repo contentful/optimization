@@ -27,8 +27,9 @@ This is a reference implementation for the
 ## What this demonstrates
 
 Use this implementation when you need the smallest browser example for the Web SDK without a
-framework layer. It demonstrates a static HTML integration, local mock API usage, Web SDK asset
-copying, and Playwright coverage for browser-side optimization and tracking behavior.
+framework layer. It demonstrates a static HTML integration, Web Components entry rendering, local
+mock API usage, Web SDK asset copying, and Playwright coverage for browser-side optimization,
+tracking, live updates, consent gating, and offline recovery behavior.
 
 ## CDA locale handling
 

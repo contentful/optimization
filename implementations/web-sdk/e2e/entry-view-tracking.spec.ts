@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 const variantEntryTexts: Record<string, string> = {
   '1JAU028vQ7v6nB2swl3NBo': 'This is a level 0 nested baseline entry.',
@@ -16,6 +16,12 @@ const variantEntryTexts: Record<string, string> = {
     'This is a baseline content entry for all identified or unidentified users.',
 }
 
+const MANUAL_VIEW_BASELINE_ENTRY_ID = '5XHssysWUDECHzKLzoIsg1'
+
+function getRenderedEntries(page: Page): Locator {
+  return page.locator('#auto-observed, #manually-observed')
+}
+
 test.describe('entry view tracking', () => {
   test.describe('without consent', () => {
     test.beforeEach(async ({ page }) => {
@@ -31,8 +37,10 @@ test.describe('entry view tracking', () => {
     })
 
     test('entry view events have not been emitted', async ({ page }) => {
+      const renderedEntries = getRenderedEntries(page)
+
       for (const entryText of Object.values(variantEntryTexts)) {
-        const element = page.getByText(entryText)
+        const element = renderedEntries.getByText(entryText)
 
         await element.scrollIntoViewIfNeeded()
 
@@ -60,12 +68,14 @@ test.describe('entry view tracking', () => {
     })
 
     test('entry view events have been emitted', async ({ page }) => {
+      const renderedEntries = getRenderedEntries(page)
+
       for (const entryId of Object.keys(variantEntryTexts)) {
         const entryText = variantEntryTexts[entryId]
 
         if (!entryText) continue
 
-        const element = page.getByText(entryText)
+        const element = renderedEntries.getByText(entryText)
 
         await element.scrollIntoViewIfNeeded()
 
@@ -96,6 +106,28 @@ test.describe('entry view tracking', () => {
       }
 
       expect(new Set(viewIds).size).toEqual(viewIds.length)
+    })
+
+    test('manual view example emits one view event without auto double tracking', async ({
+      page,
+    }) => {
+      const manualEntry = page.getByTestId('manual-view-entry')
+
+      await expect(manualEntry).toHaveAttribute('track-views', 'false')
+      await expect(manualEntry).toHaveAttribute('data-ctfl-track-views', 'false')
+      await expect(manualEntry).toHaveAttribute('data-ctfl-entry-id', /.+/)
+
+      const resolvedEntryId = await manualEntry.getAttribute('data-ctfl-entry-id')
+      expect(resolvedEntryId).not.toBeNull()
+
+      await page.getByTestId(`content-${MANUAL_VIEW_BASELINE_ENTRY_ID}`).scrollIntoViewIfNeeded()
+      await page.clock.fastForward('02:00')
+
+      await expect(
+        page.locator(
+          `#event-stream li button[data-component-id="${resolvedEntryId}"][data-view-id]`,
+        ),
+      ).toHaveCount(1)
     })
   })
 })

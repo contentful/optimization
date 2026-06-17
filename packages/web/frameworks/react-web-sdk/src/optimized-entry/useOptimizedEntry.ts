@@ -1,10 +1,13 @@
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import type { ExperienceRequestState, ResolvedData } from '@contentful/optimization-web/core-sdk'
+import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
+import {
+  OptimizedEntryController,
+  type OptimizedEntrySnapshot,
+} from '@contentful/optimization-web/presentation'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { useEffect, useMemo, useState } from 'react'
 import { useLiveUpdates } from '../hooks/useLiveUpdates'
 import { useOptimizationContext } from '../hooks/useOptimization'
-import { hasOptimizationReferences, resolveShouldLiveUpdate } from './optimizedEntryUtils'
 
 export interface UseOptimizedEntryParams {
   baselineEntry: Entry
@@ -21,87 +24,105 @@ export interface UseOptimizedEntryResult {
   selectedOptimizations: SelectedOptimizationArray | undefined
 }
 
-export function useOptimizedEntry({
+export interface UseOptimizedEntrySnapshotParams extends UseOptimizedEntryParams {
+  clickable?: boolean
+  hasCustomLoadingFallback?: boolean
+  hoverDurationUpdateIntervalMs?: number
+  targetDisplay?: 'block' | 'inline'
+  trackClicks?: boolean
+  trackHovers?: boolean
+  trackViews?: boolean
+  viewDurationUpdateIntervalMs?: number
+}
+
+export function useOptimizedEntrySnapshot({
   baselineEntry,
+  clickable,
+  hasCustomLoadingFallback,
+  hoverDurationUpdateIntervalMs,
   liveUpdates,
-}: UseOptimizedEntryParams): UseOptimizedEntryResult {
+  targetDisplay,
+  trackClicks,
+  trackHovers,
+  trackViews,
+  viewDurationUpdateIntervalMs,
+}: UseOptimizedEntrySnapshotParams): OptimizedEntrySnapshot {
   const { sdk, isReady } = useOptimizationContext()
   const liveUpdatesContext = useLiveUpdates()
-  const requiresOptimization = hasOptimizationReferences(baselineEntry)
-  const [lockedSelectedOptimizations, setLockedSelectedOptimizations] = useState<
-    SelectedOptimizationArray | undefined
-  >(undefined)
-  const [canOptimize, setCanOptimize] = useState(false)
-  const [experienceRequestSettled, setExperienceRequestSettled] = useState(false)
-  const [sdkInitialized, setSdkInitialized] = useState(false)
+  const [isPresentationReady, setIsPresentationReady] = useState(false)
 
-  const shouldLiveUpdate = resolveShouldLiveUpdate({
-    componentLiveUpdates: liveUpdates,
-    globalLiveUpdates: liveUpdatesContext.globalLiveUpdates,
-    previewPanelVisible: liveUpdatesContext.previewPanelVisible,
-  })
-
-  useEffect(() => {
-    if (!sdk || !isReady) {
-      setCanOptimize(false)
-      setExperienceRequestSettled(false)
-      return
-    }
-
-    const selectedOptimizationsSubscription = sdk.states.selectedOptimizations.subscribe(
-      (selectedOptimizations: SelectedOptimizationArray | undefined) => {
-        setLockedSelectedOptimizations((previous: SelectedOptimizationArray | undefined) => {
-          if (shouldLiveUpdate) {
-            return selectedOptimizations
-          }
-
-          if (previous === undefined && selectedOptimizations !== undefined) {
-            return selectedOptimizations
-          }
-
-          return previous
-        })
-      },
-    )
-
-    const canOptimizeSubscription = sdk.states.canOptimize.subscribe((value) => {
-      setCanOptimize(value)
-    })
-
-    const experienceRequestStateSubscription = sdk.states.experienceRequestState.subscribe(
-      (state: ExperienceRequestState) => {
-        setExperienceRequestSettled(state.status === 'success' || state.status === 'failed')
-      },
-    )
-
-    return () => {
-      selectedOptimizationsSubscription.unsubscribe()
-      canOptimizeSubscription.unsubscribe()
-      experienceRequestStateSubscription.unsubscribe()
-    }
-  }, [isReady, sdk, shouldLiveUpdate])
+  const controllerOptions = useMemo(
+    () => ({
+      isPresentationReady,
+      baselineEntry,
+      entryLiveUpdatesEnabled: liveUpdates,
+      rootLiveUpdatesEnabled: liveUpdatesContext.globalLiveUpdates,
+      hasCustomLoadingFallback,
+      isPreviewPanelOpen: liveUpdatesContext.previewPanelVisible,
+      sdk,
+      isSdkStateReady: isReady,
+      targetDisplay,
+      clickable,
+      hoverDurationUpdateIntervalMs,
+      trackClicks,
+      trackHovers,
+      trackViews,
+      viewDurationUpdateIntervalMs,
+    }),
+    [
+      isPresentationReady,
+      baselineEntry,
+      clickable,
+      hasCustomLoadingFallback,
+      hoverDurationUpdateIntervalMs,
+      isReady,
+      liveUpdates,
+      liveUpdatesContext.globalLiveUpdates,
+      liveUpdatesContext.previewPanelVisible,
+      sdk,
+      targetDisplay,
+      trackClicks,
+      trackHovers,
+      trackViews,
+      viewDurationUpdateIntervalMs,
+    ],
+  )
+  const [controller] = useState(() => new OptimizedEntryController(controllerOptions))
+  const [snapshot, setSnapshot] = useState<OptimizedEntrySnapshot>(() => controller.getSnapshot())
 
   useEffect(() => {
-    setSdkInitialized(isReady)
+    setIsPresentationReady(isReady)
   }, [isReady])
 
-  const resolvedData: ResolvedData<EntrySkeletonType> = useMemo(
-    () =>
-      sdk && isReady
-        ? sdk.resolveOptimizedEntry(baselineEntry, lockedSelectedOptimizations)
-        : { entry: baselineEntry, selectedOptimization: undefined },
-    [baselineEntry, isReady, lockedSelectedOptimizations, sdk],
-  )
+  useEffect(() => {
+    controller.setSnapshotListener(setSnapshot)
+    return () => {
+      controller.setSnapshotListener(undefined)
+    }
+  }, [controller])
 
-  const isContentReady = !requiresOptimization || experienceRequestSettled
+  useEffect(() => {
+    controller.updateOptions(controllerOptions)
+    controller.connect()
+
+    return () => {
+      controller.disconnect()
+    }
+  }, [controller, controllerOptions])
+
+  return snapshot
+}
+
+export function useOptimizedEntry(params: UseOptimizedEntryParams): UseOptimizedEntryResult {
+  const snapshot = useOptimizedEntrySnapshot(params)
 
   return {
-    canOptimize,
-    entry: resolvedData.entry,
-    isLoading: !isContentReady,
-    isReady: sdkInitialized,
-    selectedOptimization: resolvedData.selectedOptimization,
-    resolvedData,
-    selectedOptimizations: lockedSelectedOptimizations,
+    canOptimize: snapshot.canOptimize,
+    entry: snapshot.entry,
+    isLoading: snapshot.isLoading,
+    isReady: snapshot.isReady,
+    selectedOptimization: snapshot.selectedOptimization,
+    resolvedData: snapshot.resolvedData,
+    selectedOptimizations: snapshot.selectedOptimizations,
   }
 }

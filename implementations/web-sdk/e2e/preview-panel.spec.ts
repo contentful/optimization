@@ -12,7 +12,11 @@ async function selectPreviewVariant(
   optimization: Locator,
   variantLabel: 'Baseline' | 'Variant 1',
 ): Promise<void> {
-  await optimization.getByLabel(variantLabel).evaluate((input: { click: () => void }) => {
+  await optimization.getByLabel(variantLabel).evaluate((input) => {
+    if (!(input instanceof HTMLElement)) {
+      throw new Error(`Expected "${variantLabel}" control to be an HTML element.`)
+    }
+
     input.click()
   })
 }

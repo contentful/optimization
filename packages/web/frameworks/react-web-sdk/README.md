@@ -45,6 +45,7 @@ source of truth for exported API signatures.
   - [Entry interaction tracking](#entry-interaction-tracking)
   - [Router page events](#router-page-events)
   - [Live updates and preview](#live-updates-and-preview)
+  - [Web Components](#web-components)
 - [Development harness](#development-harness)
 - [Related](#related)
 
@@ -372,6 +373,18 @@ The browser preview panel is provided by
 open, live updates are forced on for all `OptimizedEntry` components so authors can inspect variant
 changes immediately.
 
+### Web Components
+
+The React SDK keeps rendering React components. `OptimizedEntry` does not render through custom
+elements, and this package does not import or register Web Components.
+
+Use the optional `@contentful/optimization-web/web-components` subpath only when a non-React app or
+a deliberate custom-element island needs vanilla custom elements. Framework wrappers around those
+elements should assign complex DOM properties such as `baselineEntry`, `defaults`, `api`, `sdk`, and
+callbacks after hydration, and listen for entry lifecycle events instead of trying to emulate React
+render props. See the [Web SDK README](../../web-sdk/README.md#usage-with-web-components) for raw
+custom-element and UMD usage.
+
 ## Development harness
 
 The package-local development harness runs from `packages/web/frameworks/react-web-sdk/dev/`. Launch
@@ -389,6 +402,8 @@ behavior.
 - [Integrating the Optimization React Web SDK in a React app](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-react-web-sdk-in-a-react-app.html) -
   step-by-step React integration guide
 - [Optimization Web SDK](../../web-sdk/README.md) - lower-level browser SDK wrapped by this package
+- [Optimization Web Components](../../web-sdk/README.md#usage-with-web-components) - optional
+  vanilla custom elements exposed from the Web SDK package
 - [Optimization Web Preview Panel](../../preview-panel/README.md) - preview panel package for
   browser authoring workflows
 - [React Web reference implementation](../../../../implementations/react-web-sdk/README.md) -

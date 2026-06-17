@@ -148,6 +148,7 @@ describe('OptimizedEntry', () => {
     expect(view.container.textContent).toContain('variant-a')
     const resolvedWrapper = getWrapper(view.container)
     expect(resolvedWrapper.dataset.ctflClickable).toBe('true')
+    expect(resolvedWrapper.dataset.ctflBaselineId).toBe('optimized-baseline')
     expect(resolvedWrapper.dataset.ctflEntryId).toBe('variant-a')
     expect(resolvedWrapper.dataset.ctflHoverDurationUpdateIntervalMs).toBe('1000')
 

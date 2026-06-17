@@ -3,19 +3,23 @@ import ElementExistenceObserver from './ElementExistenceObserver'
 
 type MinimalRecord = Readonly<{
   addedNodes: readonly Node[]
+  attributeName?: string | null
   removedNodes: readonly Node[]
+  target?: Node
+  type?: MutationRecordType
 }>
 
 class MOStub {
   private readonly cb: (records: readonly MinimalRecord[]) => void
+  public observeOptions?: MutationObserverInit
 
   public constructor(callback: (records: readonly MinimalRecord[]) => void) {
     this.cb = callback
     instances.push(this)
   }
 
-  public observe(): void {
-    /* no-op */
+  public observe(_target: Node, options?: MutationObserverInit): void {
+    this.observeOptions = options
   }
 
   public disconnect(): void {
@@ -56,6 +60,13 @@ describe('ElementExistenceObserver', () => {
     root.append(child)
 
     const [mo] = instances
+    expect(mo?.observeOptions).toMatchObject({
+      attributeFilter: ['data-ctfl-entry-id'],
+      attributes: true,
+      childList: true,
+      subtree: true,
+    })
+
     mo?.emit([{ addedNodes: [child], removedNodes: [] }])
 
     expect(onAdded).toHaveBeenCalledTimes(1)
@@ -63,6 +74,34 @@ describe('ElementExistenceObserver', () => {
       mock: { calls: [[elements = []] = []] = [] },
     } = onAdded
     expect(elements).toEqual([child])
+
+    eo.disconnect()
+  })
+
+  it('reports entry id attribute changes as remove and add candidates', () => {
+    const root = document.createElement('div')
+    const entry = document.createElement('div')
+    document.body.append(root)
+    root.append(entry)
+
+    const onAdded = rs.fn()
+    const onRemoved = rs.fn()
+    const eo = new ElementExistenceObserver({ root, onAdded, onRemoved })
+    const [mo] = instances
+
+    entry.dataset.ctflEntryId = 'entry-attribute'
+    mo?.emit([
+      {
+        addedNodes: [],
+        attributeName: 'data-ctfl-entry-id',
+        removedNodes: [],
+        target: entry,
+        type: 'attributes',
+      },
+    ])
+
+    expect(onRemoved).toHaveBeenCalledWith([entry])
+    expect(onAdded).toHaveBeenCalledWith([entry])
 
     eo.disconnect()
   })

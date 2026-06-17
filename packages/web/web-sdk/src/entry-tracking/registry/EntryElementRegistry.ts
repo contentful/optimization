@@ -22,7 +22,7 @@ interface EntryElementRegistrySubscriber {
  */
 export class EntryElementRegistry {
   private readonly elementExistenceObserver: ElementExistenceObserver
-  private readonly entries = new Set<EntryElement>()
+  private readonly entries = new Map<Element, EntryElement>()
   private readonly subscribers = new Set<EntryElementRegistrySubscriber>()
   private cleanupExistenceSubscription?: () => void
 
@@ -76,7 +76,7 @@ export class EntryElementRegistry {
   private onEntryAdded(entryElement: EntryElement): void {
     if (this.entries.has(entryElement)) return
 
-    this.entries.add(entryElement)
+    this.entries.set(entryElement, entryElement)
 
     this.subscribers.forEach((subscriber) => {
       EntryElementRegistry.notifyAdded(subscriber, entryElement)
@@ -101,6 +101,13 @@ export class EntryElementRegistry {
 
   private onElementsRemoved(elements: readonly Element[]): void {
     elements.forEach((element) => {
+      const registeredEntryElement = this.entries.get(element)
+
+      if (registeredEntryElement && !isEntryElement(element)) {
+        this.onEntryRemoved(registeredEntryElement)
+        return
+      }
+
       const entryElement = EntryElementRegistry.resolveEntryElementFromMutation(element)
       if (!entryElement) return
       this.onEntryRemoved(entryElement)
