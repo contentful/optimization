@@ -111,8 +111,10 @@ export function injectContentfulEntry({
 
   function liveRead<T>(sig: Signal<T>): T {
     if (isLive()) return sig()
-    // Stay reactive until the first real value arrives so locked entries don't
-    // permanently snapshot `undefined` when the SDK hasn't responded yet.
+    // untracked(sig) would snapshot undefined before the SDK responds, permanently
+    // freezing the computed. The tracked fallback keeps reactivity alive only until
+    // the first real value arrives; after that untracked(sig) is non-null and the
+    // reactive dependency is never taken.
     return untracked(sig) ?? sig()
   }
 
