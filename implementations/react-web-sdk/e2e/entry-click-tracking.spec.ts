@@ -25,7 +25,12 @@ const clickScenarios: ClickScenario[] = [
 ]
 
 async function readResolvedEntryId(page: Page, entryTestId: string): Promise<string> {
-  const entryId = await page.getByTestId(entryTestId).getAttribute('data-ctfl-entry-id')
+  const entryMetadata = page
+    .getByTestId(entryTestId)
+    .locator('xpath=ancestor::*[@data-ctfl-entry-id][1]')
+  const entryId = await entryMetadata
+    .getAttribute('data-ctfl-entry-id', { timeout: 500 })
+    .catch(() => undefined)
 
   return entryId ?? ''
 }

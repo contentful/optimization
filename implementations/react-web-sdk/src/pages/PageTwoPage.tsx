@@ -47,7 +47,7 @@ export function PageTwoPage(): JSX.Element {
         {pageTwoAutoEntry ? (
           <div>
             <p>Auto tracked example</p>
-            <ContentEntry entry={pageTwoAutoEntry} observation="auto" />
+            <ContentEntry entry={pageTwoAutoEntry} viewTracking="auto" />
           </div>
         ) : (
           <p>Auto tracked entry is unavailable.</p>
@@ -56,7 +56,7 @@ export function PageTwoPage(): JSX.Element {
         {pageTwoManualEntry ? (
           <div>
             <p>Manual tracked example</p>
-            <ContentEntry entry={pageTwoManualEntry} observation="manual" />
+            <ContentEntry entry={pageTwoManualEntry} viewTracking="manual" />
           </div>
         ) : (
           <p>Manual tracked entry is unavailable.</p>

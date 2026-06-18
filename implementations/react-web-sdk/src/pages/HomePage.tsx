@@ -91,7 +91,7 @@ function AutoObservedEntries({ entriesById }: AutoObservedEntriesProps): JSX.Ele
             key={entry.sys.id}
             clickScenario={AUTO_OBSERVED_CLICK_SCENARIO_BY_ENTRY_ID[entry.sys.id]}
             entry={entry}
-            observation="auto"
+            viewTracking="auto"
           />
         )
       })}
@@ -112,7 +112,7 @@ function ManuallyObservedEntries({ entriesById }: ManuallyObservedEntriesProps):
           return null
         }
 
-        return <ContentEntry key={entry.sys.id} entry={entry} observation="manual" />
+        return <ContentEntry key={entry.sys.id} entry={entry} viewTracking="manual" />
       })}
     </div>
   )
