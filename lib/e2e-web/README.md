@@ -59,12 +59,23 @@ so the server startup behaviour (port, build step, env) is fully owned by that i
 
 ## Adding a new implementation
 
-1. Add a `serve:e2e` script to the implementation's `package.json` that builds and starts the app.
-2. Add a `test:e2e` script that delegates to `lib/e2e-web`:
-   ```sh
-   "test:e2e": "IMPLEMENTATION=<folder-name> APP_PORT=<port> pnpm --dir ../../lib/e2e-web test"
-   ```
-3. Align UI labels and `data-testid` attributes with the selectors used in the specs.
+Two changes are needed in the implementation's `package.json` — no new dependencies, no new spec
+files, no Playwright config:
+
+```jsonc
+// implementations/my-web-sdk/package.json
+{
+  "scripts": {
+    // Builds and starts the app on a fixed port for Playwright to target
+    "serve:e2e": "<your build + serve command>",
+
+    // Points the shared suite at this implementation
+    "test:e2e": "IMPLEMENTATION=my-web-sdk pnpm --dir ../../lib/e2e-web test",
+  },
+}
+```
+
+Then align UI labels and `data-testid` attributes with the selectors used in the specs.
 
 Playwright browsers are installed once in `lib/e2e-web` and shared — run `pnpm setup:e2e` there once
 before running any implementation's suite for the first time.
