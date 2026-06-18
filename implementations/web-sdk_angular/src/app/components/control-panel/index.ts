@@ -1,7 +1,7 @@
 import { Component, computed, inject, input } from '@angular/core'
 import { NgLiveUpdates } from '../../services/live-updates'
 import { NgContentfulOptimization } from '../../services/optimization'
-import { fromSdkState } from '../../utils'
+import { fromSdkConditionalState } from '../../utils'
 
 @Component({
   selector: 'app-control-panel',
@@ -21,8 +21,13 @@ export class ControlPanel {
   protected readonly optimizationCount = computed(
     () => this.optimization.selectedOptimizations()?.length ?? 0,
   )
-  protected readonly booleanFlag = fromSdkState<unknown>(
-    this.optimization.sdk.states.flag('boolean'),
+  // Consent-gated flag: sdk.states.flag() returns a new observable instance on every call,
+  // so the factory must be re-invoked on each consent change rather than holding a reference —
+  // a stale reference from a previous consent session would miss updates or emit after revoke.
+  // fromSdkConditionalState re-runs the factory reactively: subscribes on grant, unsubscribes
+  // and resets to undefined on revoke. flag-view-tracking.spec.ts covers both cases.
+  protected readonly booleanFlag = fromSdkConditionalState(() =>
+    this.consent() === true ? this.optimization.sdk.states.flag('boolean') : undefined,
   )
 
   protected toggleConsent(): void {

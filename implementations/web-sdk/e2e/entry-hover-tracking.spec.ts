@@ -10,7 +10,7 @@ const hoverScenarios: HoverScenario[] = [
   {
     name: 'direct entry button',
     entryTestId: 'entry-click-direct-entry',
-    hoverTargetTestId: 'entry-click-direct-entry',
+    hoverTargetTestId: 'content-4ib0hsHWoSOnCVdDkizE8d',
   },
   {
     name: 'hoverable descendant button',
@@ -20,7 +20,7 @@ const hoverScenarios: HoverScenario[] = [
   {
     name: 'inline entry nested in clickable ancestor',
     entryTestId: 'entry-click-ancestor-entry',
-    hoverTargetTestId: 'entry-click-ancestor-entry',
+    hoverTargetTestId: 'content-2Z2WLOx07InSewC3LUB3eX',
   },
 ]
 
@@ -81,10 +81,9 @@ test.describe('entry hover tracking', () => {
       const hoverButtons = getHoverButtons(page)
 
       for (const scenario of hoverScenarios) {
-        const entryLocator = page.getByTestId(scenario.entryTestId)
-        await expect(entryLocator, `${scenario.name}: entry should render`).toBeVisible()
-
         const target = page.getByTestId(scenario.hoverTargetTestId)
+        await expect(target, `${scenario.name}: hover target should render`).toBeVisible()
+
         const baselineHoverEventCount = await hoverButtons.count()
 
         await target.scrollIntoViewIfNeeded()

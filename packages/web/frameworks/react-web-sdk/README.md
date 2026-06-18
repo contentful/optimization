@@ -45,6 +45,7 @@ source of truth for exported API signatures.
   - [Entry interaction tracking](#entry-interaction-tracking)
   - [Router page events](#router-page-events)
   - [Live updates and preview](#live-updates-and-preview)
+  - [Web Components](#web-components)
 - [Development harness](#development-harness)
 - [Related](#related)
 
@@ -153,14 +154,14 @@ end-user consent UI, seed accepted consent on `OptimizationRoot`:
 ```
 
 When application policy depends on user choice, leave `defaults.consent` unset and call `consent()`
-from the relevant control:
+from `useOptimizationActions()` in the relevant control:
 
 ```tsx
-import { useOptimization } from '@contentful/optimization-react-web'
+import { useOptimizationActions } from '@contentful/optimization-react-web'
 
 function ConsentButton() {
-  const sdk = useOptimization()
-  return <button onClick={() => sdk.consent(true)}>Accept</button>
+  const { consent } = useOptimizationActions()
+  return <button onClick={() => consent(true)}>Accept</button>
 }
 ```
 
@@ -175,9 +176,43 @@ continuity should stay session-only. For cross-SDK consent guidance, see
 commit, outside render, and renders no children while the SDK is pending. In normal browser
 rendering this uses a layout-effect path so ready children can mount before the first visible paint.
 
-Use `useOptimization()` when a component needs direct access to the instance for methods such as
-`identify()`, `reset()`, or manual tracking. Use `useEntryResolver()` when a component needs manual
-entry resolution without the `OptimizedEntry` wrapper:
+Use the dedicated React SDK action hooks when components need common Optimization actions:
+
+```tsx
+import { useOptimizationActions } from '@contentful/optimization-react-web'
+
+function ProductCta() {
+  const { track } = useOptimizationActions()
+
+  return <button onClick={() => track({ event: 'purchase' })}>Buy now</button>
+}
+```
+
+Use `useOptimization()` when a component needs direct access to the SDK instance itself, and prefer
+`useOptimizationActions()` when a component wants destructurable action methods such as `track()`,
+`identify()`, `page()`, or `consent()`.
+
+Use `useEntryResolver()` when a component needs manual entry resolution without the `OptimizedEntry`
+wrapper:
+
+`useOptimization()` returns the SDK instance itself. Keep that instance in a variable and call
+methods from it. Do not destructure SDK methods from the returned value because those methods rely
+on the instance `this` binding.
+
+```tsx
+import { useOptimization } from '@contentful/optimization-react-web'
+
+function ProductCta() {
+  const optimization = useOptimization()
+
+  return <button onClick={() => optimization.track({ event: 'purchase' })}>Buy now</button>
+}
+```
+
+```tsx
+// Avoid destructuring SDK methods; this loses the instance binding.
+const { track } = useOptimization()
+```
 
 ```tsx
 import { useEntryResolver } from '@contentful/optimization-react-web'
@@ -285,6 +320,23 @@ automatic tracking in the root config when views, clicks, or hovers must be dete
 </OptimizationRoot>
 ```
 
+Use `OptimizedEntry` props to configure Web SDK entry-tracking attributes without setting
+`data-ctfl-*` metadata manually:
+
+```tsx
+<OptimizedEntry
+  baselineEntry={entry}
+  clickable
+  hoverDurationUpdateIntervalMs={1000}
+  viewDurationUpdateIntervalMs={1000}
+>
+  {(resolvedEntry) => <HeroCard entry={resolvedEntry} />}
+</OptimizedEntry>
+```
+
+`OptimizedEntry` derives entry ID, baseline ID, optimization ID, sticky state, variant index, and
+duplication scope from the resolved entry state.
+
 Use `sdk.tracking.enableElement(...)` from `useOptimization()` for manual element overrides.
 
 ### Router page events
@@ -321,6 +373,18 @@ The browser preview panel is provided by
 open, live updates are forced on for all `OptimizedEntry` components so authors can inspect variant
 changes immediately.
 
+### Web Components
+
+The React SDK keeps rendering React components. `OptimizedEntry` does not render through custom
+elements, and this package does not import or register Web Components.
+
+Use the optional `@contentful/optimization-web/web-components` subpath only when a non-React app or
+a deliberate custom-element island needs vanilla custom elements. Framework wrappers around those
+elements should assign complex DOM properties such as `baselineEntry`, `defaults`, `api`, `sdk`, and
+callbacks after hydration, and listen for entry lifecycle events instead of trying to emulate React
+render props. See the [Web SDK README](../../web-sdk/README.md#usage-with-web-components) for raw
+custom-element and UMD usage.
+
 ## Development harness
 
 The package-local development harness runs from `packages/web/frameworks/react-web-sdk/dev/`. Launch
@@ -338,6 +402,8 @@ behavior.
 - [Integrating the Optimization React Web SDK in a React app](https://contentful.github.io/optimization/documents/Documentation.Guides.integrating-the-react-web-sdk-in-a-react-app.html) -
   step-by-step React integration guide
 - [Optimization Web SDK](../../web-sdk/README.md) - lower-level browser SDK wrapped by this package
+- [Optimization Web Components](../../web-sdk/README.md#usage-with-web-components) - optional
+  vanilla custom elements exposed from the Web SDK package
 - [Optimization Web Preview Panel](../../preview-panel/README.md) - preview panel package for
   browser authoring workflows
 - [React Web reference implementation](../../../../implementations/react-web-sdk/README.md) -

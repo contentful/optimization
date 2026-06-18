@@ -27,7 +27,7 @@ export function PageTwoPage({ consent, entriesById, isIdentified }: PageTwoPageP
 
   const handleDemoCta = (): void => {
     void trackView({
-      componentId: 'page-two-demo-cta',
+      componentId: 'track-conversion-button',
       viewId: crypto.randomUUID(),
       viewDurationMs: 0,
     })
@@ -35,6 +35,9 @@ export function PageTwoPage({ consent, entriesById, isIdentified }: PageTwoPageP
 
   return (
     <section data-testid="page-two-view" style={{ display: 'grid', gap: 16 }}>
+      <Link data-testid="link-back-home" to={HOME_PATH}>
+        Back to Home
+      </Link>
       <h2>Page Two</h2>
       <p>
         Demo route for SPA navigation, route context (<code>/page-two</code>), and conversion-style
@@ -68,14 +71,10 @@ export function PageTwoPage({ consent, entriesById, isIdentified }: PageTwoPageP
       </section>
       <section data-testid="page-two-conversion" style={{ display: 'grid', gap: 8 }}>
         <h3>Conversion Step Demo</h3>
-        <button data-testid="page-two-demo-cta" onClick={handleDemoCta} type="button">
+        <button data-testid="track-conversion-button" onClick={handleDemoCta} type="button">
           Trigger Page Two CTA Event
         </button>
       </section>
-
-      <Link data-testid="link-back-home" to={HOME_PATH}>
-        Back to Home
-      </Link>
     </section>
   )
 }

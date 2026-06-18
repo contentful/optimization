@@ -25,6 +25,7 @@ jobs:
       e2e_node_sdk_web_sdk: ${{ steps.filter.outputs.e2e_node_sdk_web_sdk }}
       e2e_web_sdk: ${{ steps.filter.outputs.e2e_web_sdk }}
       e2e_web_sdk_react: ${{ steps.filter.outputs.e2e_web_sdk_react }}
+      e2e_web_sdk_angular: ${{ steps.filter.outputs.e2e_web_sdk_angular }}
       e2e_react_web_sdk: ${{ steps.filter.outputs.e2e_react_web_sdk }}
       e2e_react_native_android: ${{ steps.filter.outputs.e2e_react_native_android }}
       e2e_android: ${{ steps.filter.outputs.e2e_android }}
@@ -72,6 +73,11 @@ jobs:
             # React + Web SDK implementation E2E coverage scope.
             e2e_web_sdk_react:
               - '{implementations/web-sdk_react/**,lib/**,packages/web/web-sdk/**,packages/web/preview-panel/**,packages/universal/core-sdk/**,packages/universal/api-client/**,packages/universal/api-schemas/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
+              - '!**/*.@(md|mdx|markdown)'
+              - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
+            # Angular + Web SDK implementation E2E coverage scope.
+            e2e_web_sdk_angular:
+              - '{implementations/web-sdk_angular/**,lib/**,packages/web/web-sdk/**,packages/web/preview-panel/**,packages/universal/core-sdk/**,packages/universal/api-client/**,packages/universal/api-schemas/**,package.json,pnpm-lock.yaml,.github/workflows/main-pipeline.yaml}'
               - '!**/*.@(md|mdx|markdown)'
               - '!{docs/**,documentation/**,**/docs/**,**/documentation/**}'
             # React Web SDK (optimization-react-web) implementation E2E coverage scope.
@@ -544,8 +550,8 @@ jobs:
           path: pkgs
       - run: pnpm store prune
       - run: pnpm run implementation:web-sdk_react -- implementation:install -- --no-frozen-lockfile
-      - run:
-          pnpm run implementation:web-sdk_react -- implementation:playwright:install -- --with-deps
+      - run: pnpm --dir lib/e2e-web install --no-frozen-lockfile
+      - run: pnpm --dir lib/e2e-web run setup:e2e
       - run: pnpm run implementation:web-sdk_react -- implementation:test:e2e:run
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -553,8 +559,56 @@ jobs:
         with:
           name: ci-results-web-sdk_react
           path: |
-            ./implementations/web-sdk_react/playwright-report/
-            ./implementations/web-sdk_react/test-results/
+            ./lib/e2e-web/playwright-report/
+            ./lib/e2e-web/test-results/
+          retention-days: 1
+
+  e2e-web-sdk_angular:
+    name: 🅰️ E2E Angular + Web SDK
+    runs-on: namespace-profile-linux-8-vcpu-16-gb-ram-optimal
+    timeout-minutes: 15
+    needs: [setup, changes, build]
+    if: needs.changes.outputs.e2e_web_sdk_angular == 'true'
+    steps:
+      - uses: namespacelabs/nscloud-checkout-action@938f5d2d403d6224d9a0c0dc559b1dae09c2ede4 # v8.1.1
+
+      - name: Create .env from .env.example
+        run: cp implementations/web-sdk_angular/.env.example implementations/web-sdk_angular/.env
+
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: '.nvmrc'
+          package-manager-cache: false
+
+      - uses: pnpm/action-setup@903f9c1a6ebcba6cf41d87230be49611ac97822e # v6.0.3
+
+      - name: Set up caches (Namespace)
+        uses: namespacelabs/nscloud-cache-action@15799a6b54e5765f85b2aac25b3f0df43ed571c0 # v1.4.3
+        with:
+          cache: |
+            pnpm
+            playwright
+            apt
+
+      - run: pnpm install --prefer-offline --frozen-lockfile
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sdk-package-tarballs
+          path: pkgs
+      - run: pnpm store prune
+      - run:
+          pnpm run implementation:web-sdk_angular -- implementation:install -- --no-frozen-lockfile
+      - run: pnpm --dir lib/e2e-web install --no-frozen-lockfile
+      - run: pnpm --dir lib/e2e-web run setup:e2e
+      - run: pnpm run implementation:web-sdk_angular -- implementation:test:e2e:run
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: ci-results-web-sdk_angular
+          path: |
+            ./lib/e2e-web/playwright-report/
+            ./lib/e2e-web/test-results/
           retention-days: 1
 
   e2e-react-web-sdk:

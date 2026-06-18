@@ -1,13 +1,8 @@
 import { type BrowserContext, type Page, expect, test } from '@playwright/test'
 
-function parseCounterValue(text: string): number {
-  const match = /:\s*(\d+)/.exec(text)
-  return match?.[1] ? Number.parseInt(match[1], 10) : 0
-}
-
 async function getRawEventsCount(page: Page): Promise<number> {
   const text = await page.getByTestId('raw-events-count').innerText()
-  return parseCounterValue(text)
+  return Number.parseInt(text, 10)
 }
 
 async function expectRawEventsToIncrease(page: Page, baselineCount: number): Promise<void> {
@@ -20,7 +15,6 @@ async function setOffline(context: BrowserContext, offline: boolean): Promise<vo
 
 async function waitForBaseUi(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
-  await expect(page.getByTestId('events-count')).toBeVisible()
   await expect(page.getByTestId('raw-events-count')).toBeVisible()
 }
 
@@ -43,7 +37,7 @@ test.describe('offline queue and recovery', () => {
     await setOffline(context, true)
     await page.getByTestId('link-page-two').click()
     await expect(page.getByTestId('page-two-view')).toBeVisible()
-    await page.getByTestId('page-two-demo-cta').click()
+    await page.getByTestId('track-conversion-button').click()
     await expectRawEventsToIncrease(page, baselineCount)
   })
 
@@ -55,7 +49,7 @@ test.describe('offline queue and recovery', () => {
     await setOffline(context, false)
     await page.getByTestId('link-back-home').click()
     await waitForBaseUi(page)
-    await expect(page.getByTestId('live-updates-identify-button')).toBeVisible()
+    await expect(page.getByTestId('identify-button')).toBeVisible()
   })
 
   test('remains stable across rapid network state changes', async ({ context, page }) => {
@@ -65,11 +59,11 @@ test.describe('offline queue and recovery', () => {
     await setOffline(context, false)
 
     await waitForBaseUi(page)
-    await expect(page.getByTestId('live-updates-identify-button')).toBeVisible()
+    await expect(page.getByTestId('identify-button')).toBeVisible()
     const baselineCount = await getRawEventsCount(page)
     await page.getByTestId('link-page-two').click()
     await expect(page.getByTestId('page-two-view')).toBeVisible()
-    await page.getByTestId('page-two-demo-cta').click()
+    await page.getByTestId('track-conversion-button').click()
     await expectRawEventsToIncrease(page, baselineCount)
   })
 
@@ -80,12 +74,12 @@ test.describe('offline queue and recovery', () => {
     const baselineCount = await getRawEventsCount(page)
 
     await setOffline(context, true)
-    await page.getByTestId('live-updates-identify-button').click()
+    await page.getByTestId('identify-button').click()
     await expectRawEventsToIncrease(page, baselineCount)
     await expect(page.getByTestId('identified-status')).toHaveText('No')
 
     await setOffline(context, false)
-    await expect(page.getByTestId('live-updates-reset-button')).toBeVisible()
+    await expect(page.getByTestId('reset-button')).toBeVisible()
     await expect(page.getByTestId('identified-status')).toHaveText('Yes')
   })
 })

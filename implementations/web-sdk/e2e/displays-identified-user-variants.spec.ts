@@ -1,4 +1,8 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
+
+function getRenderedEntries(page: Page): Locator {
+  return page.locator('#auto-observed, #manually-observed')
+}
 
 test.describe('identified user', () => {
   test.beforeEach(async ({ page }) => {
@@ -23,42 +27,50 @@ test.describe('identified user', () => {
   })
 
   test('displays common variants', async ({ page }) => {
+    const renderedEntries = getRenderedEntries(page)
+
     await expect(
-      page.getByText(
+      renderedEntries.getByText(
         'This is a merge tag content entry that displays the visitor\'s continent "EU" embedded within the text.',
       ),
     ).toBeVisible()
 
     await expect(
-      page.getByText('This is a variant content entry for visitors from Europe.'),
+      renderedEntries.getByText('This is a variant content entry for visitors from Europe.'),
     ).toBeVisible()
 
     await expect(
-      page.getByText('This is a variant content entry for visitors using a desktop browser.'),
+      renderedEntries.getByText(
+        'This is a variant content entry for visitors using a desktop browser.',
+      ),
     ).toBeVisible()
   })
 
   test('displays identified user variants', async ({ page }) => {
-    await expect(page.getByText('This is a level 0 nested variant entry.')).toBeVisible()
+    const renderedEntries = getRenderedEntries(page)
 
-    await expect(page.getByText('This is a level 1 nested variant entry.')).toBeVisible()
+    await expect(renderedEntries.getByText('This is a level 0 nested variant entry.')).toBeVisible()
 
-    await expect(page.getByText('This is a level 2 nested variant entry.')).toBeVisible()
+    await expect(renderedEntries.getByText('This is a level 1 nested variant entry.')).toBeVisible()
+
+    await expect(renderedEntries.getByText('This is a level 2 nested variant entry.')).toBeVisible()
 
     await expect(
-      page.getByText('This is a variant content entry for return visitors.'),
+      renderedEntries.getByText('This is a variant content entry for return visitors.'),
     ).toBeVisible()
 
     await expect(
-      page.getByText('This is a variant content entry for an A/B/C experiment: B'),
+      renderedEntries.getByText('This is a variant content entry for an A/B/C experiment: B'),
     ).toBeVisible()
 
     await expect(
-      page.getByText('This is a variant content entry for visitors with a custom event.'),
+      renderedEntries.getByText(
+        'This is a variant content entry for visitors with a custom event.',
+      ),
     ).toBeVisible()
 
     await expect(
-      page.getByText('This is a variant content entry for identified users.'),
+      renderedEntries.getByText('This is a variant content entry for identified users.'),
     ).toBeVisible()
   })
 })

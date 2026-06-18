@@ -110,7 +110,10 @@ export function injectContentfulEntry({
   const optimization = inject(NgContentfulOptimization)
 
   function liveRead<T>(sig: Signal<T>): T {
-    return isLive() ? sig() : untracked(sig)
+    if (isLive()) return sig()
+    // Stay reactive until the first real value arrives so locked entries don't
+    // permanently snapshot `undefined` when the SDK hasn't responded yet.
+    return untracked(sig) ?? sig()
   }
 
   const variant = computed(() => {

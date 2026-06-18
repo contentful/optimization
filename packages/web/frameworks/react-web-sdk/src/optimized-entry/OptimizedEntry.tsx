@@ -1,24 +1,24 @@
+import {
+  OPTIMIZED_ENTRY_HOST_DISPLAY,
+  resolveOptimizedEntryNestingState,
+} from '@contentful/optimization-web/presentation'
 import type { Entry } from 'contentful'
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, type JSX } from 'react'
 import { createScopedLogger } from '../logger'
 import {
   resolveChildren,
   resolveLoadingFallback,
   resolveLoadingLayoutTargetStyle,
-  resolveLoadingRenderState,
-  resolveTrackingAttributes,
   type LoadingFallback,
   type OptimizedEntryChildren,
   type RenderProp,
   type WrapperElement,
 } from './optimizedEntryUtils'
-import { useOptimizedEntry } from './useOptimizedEntry'
+import { useOptimizedEntrySnapshot } from './useOptimizedEntry'
 
 export type OptimizedEntryLoadingFallback = LoadingFallback
 export type OptimizedEntryWrapperElement = WrapperElement
 export type OptimizedEntryRenderProp = RenderProp
-
-const LOADING_BASELINE_REVEAL_MS = 5000
 
 /**
  * Props for the {@link OptimizedEntry} component.
@@ -58,6 +58,10 @@ export interface OptimizedEntryProps {
    */
   loadingFallback?: OptimizedEntryLoadingFallback
   /**
+   * Marks the optimized entry wrapper as a click target for entry click tracking.
+   */
+  clickable?: boolean
+  /**
    * Per-component override for click tracking.
    */
   trackClicks?: boolean
@@ -69,9 +73,17 @@ export interface OptimizedEntryProps {
    * Per-component override for view tracking.
    */
   trackViews?: boolean
+  /**
+   * Per-component override for view-duration update events, in milliseconds.
+   */
+  viewDurationUpdateIntervalMs?: number
+  /**
+   * Per-component override for hover-duration update events, in milliseconds.
+   */
+  hoverDurationUpdateIntervalMs?: number
 }
 
-const WRAPPER_STYLE = Object.freeze({ display: 'contents' as const })
+const WRAPPER_STYLE = Object.freeze({ display: OPTIMIZED_ENTRY_HOST_DISPLAY })
 const OptimizedEntryNestingContext = createContext<ReadonlySet<string> | null>(null)
 const logger = createScopedLogger('React:OptimizedEntry')
 
@@ -81,7 +93,10 @@ function useDuplicateBaselineGuard(baselineEntryId: string): {
 } {
   const ancestorBaselineIds = useContext(OptimizedEntryNestingContext)
   const warnedDuplicateBaselineId = useRef(false)
-  const hasDuplicateBaselineAncestor = ancestorBaselineIds?.has(baselineEntryId) ?? false
+  const { currentAndAncestorBaselineIds, hasDuplicateBaselineAncestor } = useMemo(
+    () => resolveOptimizedEntryNestingState(baselineEntryId, ancestorBaselineIds),
+    [ancestorBaselineIds, baselineEntryId],
+  )
 
   useEffect(() => {
     if (!hasDuplicateBaselineAncestor || warnedDuplicateBaselineId.current) {
@@ -97,12 +112,6 @@ function useDuplicateBaselineGuard(baselineEntryId: string): {
     warnedDuplicateBaselineId.current = true
   }, [baselineEntryId, hasDuplicateBaselineAncestor])
 
-  const currentAndAncestorBaselineIds = useMemo(() => {
-    const nextIds = new Set(ancestorBaselineIds ?? [])
-    nextIds.add(baselineEntryId)
-    return nextIds
-  }, [ancestorBaselineIds, baselineEntryId])
-
   return { currentAndAncestorBaselineIds, hasDuplicateBaselineAncestor }
 }
 
@@ -114,62 +123,59 @@ export function OptimizedEntry({
   testId,
   'data-testid': dataTestIdProp,
   loadingFallback,
+  clickable,
+  hoverDurationUpdateIntervalMs,
   trackClicks,
   trackHovers,
   trackViews,
+  viewDurationUpdateIntervalMs,
 }: OptimizedEntryProps): JSX.Element | null {
   const {
     sys: { id: baselineEntryId },
   } = baselineEntry
   const { currentAndAncestorBaselineIds, hasDuplicateBaselineAncestor } =
     useDuplicateBaselineGuard(baselineEntryId)
-  const { entry, isLoading, isReady, resolvedData } = useOptimizedEntry({
+  const hasCustomLoadingFallback = loadingFallback !== undefined
+  const targetDisplay = as === 'span' ? 'inline' : 'block'
+  const snapshot = useOptimizedEntrySnapshot({
     baselineEntry,
+    clickable,
+    hasCustomLoadingFallback,
+    hoverDurationUpdateIntervalMs,
     liveUpdates,
+    targetDisplay,
+    trackClicks,
+    trackHovers,
+    trackViews,
+    viewDurationUpdateIntervalMs,
   })
-  const [revealTimedOutBaseline, setRevealTimedOutBaseline] = useState(false)
-
-  useEffect(() => {
-    if (!isLoading) {
-      setRevealTimedOutBaseline(false)
-      return
-    }
-
-    setRevealTimedOutBaseline(false)
-
-    const timer = window.setTimeout(() => {
-      setRevealTimedOutBaseline(true)
-    }, LOADING_BASELINE_REVEAL_MS)
-
-    return () => {
-      window.clearTimeout(timer)
-    }
-  }, [isLoading])
 
   if (hasDuplicateBaselineAncestor) {
     return null
   }
 
-  const hasCustomLoadingFallback = loadingFallback !== undefined
   const resolvedLoadingFallback = hasCustomLoadingFallback
     ? resolveLoadingFallback(loadingFallback)
     : undefined
-  const { hideLoadingLayoutTarget, loadingContent, showLoadingFallback } =
-    resolveLoadingRenderState({
-      baselineChildren: children,
-      baselineEntry,
-      hasCustomLoadingFallback,
-      isLoading,
-      revealTimedOutBaseline,
-      resolvedLoadingFallback,
-      sdkInitialized: isReady,
-    })
+  const { entry, hostAttributes, loadingPresentation } = snapshot
+  const {
+    hideLoadingLayoutTarget,
+    shouldRenderBaselineWhileLoading,
+    showLoadingFallback,
+    targetDisplay: loadingTargetDisplay,
+  } = loadingPresentation
+  const loadingContent = shouldRenderBaselineWhileLoading
+    ? resolveChildren(children, baselineEntry)
+    : resolvedLoadingFallback
   const dataTestId = dataTestIdProp ?? testId
   const Wrapper = as
 
   if (showLoadingFallback) {
     const LoadingLayoutTarget = Wrapper
-    const loadingLayoutTargetStyle = resolveLoadingLayoutTargetStyle(as, hideLoadingLayoutTarget)
+    const loadingLayoutTargetStyle = resolveLoadingLayoutTargetStyle(
+      loadingTargetDisplay,
+      hideLoadingLayoutTarget,
+    )
 
     return (
       <OptimizedEntryNestingContext.Provider value={currentAndAncestorBaselineIds}>
@@ -185,15 +191,9 @@ export function OptimizedEntry({
     )
   }
 
-  const trackingAttributes = resolveTrackingAttributes(resolvedData, {
-    trackClicks,
-    trackHovers,
-    trackViews,
-  })
-
   return (
     <OptimizedEntryNestingContext.Provider value={currentAndAncestorBaselineIds}>
-      <Wrapper style={WRAPPER_STYLE} data-testid={dataTestId} {...trackingAttributes}>
+      <Wrapper style={WRAPPER_STYLE} data-testid={dataTestId} {...hostAttributes}>
         {resolveChildren(children, entry)}
       </Wrapper>
     </OptimizedEntryNestingContext.Provider>

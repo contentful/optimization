@@ -14,11 +14,13 @@ import {
   useEntryResolver,
   useLiveUpdates,
   useOptimization,
+  useOptimizationActions,
   useOptimizationContext,
   useOptimizedEntry,
   type OptimizationContextValue,
   type OptimizationSdk,
   type UseEntryResolverResult,
+  type UseOptimizationActionsResult,
 } from './index'
 import {
   captureRenderError,
@@ -37,7 +39,10 @@ const testConfig = {
   },
 }
 
-function renderClient(element: ReactElement): { unmount: () => void } {
+function renderClient(element: ReactElement): {
+  rerender: (next: ReactElement) => void
+  unmount: () => void
+} {
   const container = document.createElement('div')
   document.body.append(container)
   const root = createRoot(container)
@@ -47,6 +52,11 @@ function renderClient(element: ReactElement): { unmount: () => void } {
   })
 
   return {
+    rerender(next: ReactElement) {
+      act(() => {
+        root.render(next)
+      })
+    },
     unmount() {
       act(() => {
         root.unmount()
@@ -72,6 +82,7 @@ describe('@contentful/optimization-react-web core providers', () => {
     expect(OptimizationRoot).toBeTypeOf('function')
     expect(useEntryResolver).toBeTypeOf('function')
     expect(useOptimization).toBeTypeOf('function')
+    expect(useOptimizationActions).toBeTypeOf('function')
     expect(useOptimizationContext).toBeTypeOf('function')
     expect(useOptimizedEntry).toBeTypeOf('function')
     expect(useLiveUpdates).toBeTypeOf('function')
@@ -337,6 +348,82 @@ describe('@contentful/optimization-react-web core providers', () => {
         ],
       ],
     ])
+  })
+
+  it('exposes bound SDK action hooks that are safe to destructure', async () => {
+    const consent = rs.fn(() => undefined)
+    const identify: OptimizationSdk['identify'] = rs.fn(async () => {
+      await Promise.resolve()
+      return undefined
+    })
+    const page: OptimizationSdk['page'] = rs.fn(async () => {
+      await Promise.resolve()
+      return undefined
+    })
+    const reset = rs.fn(() => undefined)
+    const setLocale = rs.fn(() => undefined)
+    const track: OptimizationSdk['track'] = rs.fn(async () => {
+      await Promise.resolve()
+      return undefined
+    })
+    const trackClick: OptimizationSdk['trackClick'] = rs.fn(async () => {
+      await Promise.resolve()
+      return undefined
+    })
+    const trackView: OptimizationSdk['trackView'] = rs.fn(async () => {
+      await Promise.resolve()
+      return undefined
+    })
+    const captures: UseOptimizationActionsResult[] = []
+
+    function Probe(): null {
+      captures.push(useOptimizationActions())
+      return null
+    }
+
+    const sdk = createOptimizationSdk({
+      consent,
+      identify,
+      page,
+      reset,
+      setLocale,
+      track,
+      trackClick,
+      trackView,
+    })
+
+    const rendered = renderClient(
+      <OptimizationContext.Provider value={{ sdk, isReady: true, error: undefined }}>
+        <Probe />
+      </OptimizationContext.Provider>,
+    )
+
+    rendered.rerender(
+      <OptimizationContext.Provider value={{ sdk, isReady: true, error: undefined }}>
+        <Probe />
+      </OptimizationContext.Provider>,
+    )
+
+    const [firstRender, secondRender] = captures
+
+    expect(secondRender).toBeDefined()
+    if (!firstRender || !secondRender) {
+      throw new Error('Expected action-hook captures across renders')
+    }
+
+    expect(secondRender).toBe(firstRender)
+
+    firstRender.consent(true)
+    await firstRender.identify({ userId: 'user-1' })
+    await firstRender.page({ properties: { title: 'Home' } })
+    await firstRender.track({ event: 'purchase', properties: { revenue: 99 } })
+
+    expect(consent).toHaveBeenCalledWith(true)
+    expect(identify).toHaveBeenCalledWith({ userId: 'user-1' })
+    expect(page).toHaveBeenCalledWith({ properties: { title: 'Home' } })
+    expect(track).toHaveBeenCalledWith({ event: 'purchase', properties: { revenue: 99 } })
+
+    rendered.unmount()
   })
 
   it('defaults liveUpdates to false in OptimizationRoot', () => {

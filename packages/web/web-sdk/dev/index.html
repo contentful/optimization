@@ -99,7 +99,8 @@
         grid-auto-rows: minmax(75dvh, auto);
         margin-block-end: 2rem;
 
-        > div {
+        > button,
+        > ctfl-optimized-entry > .entry-content {
           display: grid;
           grid-gap: inherit;
           grid-auto-rows: inherit;
@@ -110,6 +111,24 @@
           overflow: visible;
         }
 
+        > ctfl-optimized-entry > .entry-content--inline {
+          display: inline;
+          width: auto;
+          height: auto;
+          padding: 0;
+          background: transparent;
+        }
+
+        > button {
+          appearance: none;
+          border: 0;
+          text-align: left;
+        }
+
+        > button .entry-content {
+          display: inline;
+        }
+
         div.nested {
           display: grid;
           grid-gap: inherit;
@@ -118,92 +137,118 @@
           border: 1px solid #ccc;
           overflow: visible;
         }
+
+        [data-e2e-entry-inline='true'] {
+          display: block;
+        }
       }
     </style>
   </head>
   <body>
     <h1>ContentfulOptimization Web SDK Dev Development Dashboard</h1>
 
-    <main>
-      <section id="utility-panel">
-        <h2>Utilities</h2>
+    <ctfl-optimization-root id="web-components-root">
+      <main>
+        <section id="utility-panel">
+          <h2>Utilities</h2>
 
-        <span>
-          <button id="consent">Accept Consent</button>
-          <button id="unconsent">Reject Consent</button>
-        </span>
-        |
-        <span>
-          <button id="identify">Identify</button>
-          <button id="unidentify">Reset Profile</button>
-        </span>
-        |
-        <button commandfor="profile-dialog" command="show-modal">View Profile</button>
-        <dialog id="profile-dialog">
-          <pre id="profile"></pre>
-          <form method="dialog">
-            <button type="submit">Close</button>
+          <span>
+            <button id="consent">Accept Consent</button>
+            <button id="unconsent">Reject Consent</button>
+          </span>
+          |
+          <span>
+            <button id="identify">Identify</button>
+            <button id="unidentify">Reset Profile</button>
+          </span>
+          |
+          <button commandfor="profile-dialog" command="show-modal">View Profile</button>
+          <dialog id="profile-dialog">
+            <pre id="profile"></pre>
+            <form method="dialog">
+              <button type="submit">Close</button>
+            </form>
+          </dialog>
+          |
+          <button commandfor="selected-optimizations-dialog" command="show-modal">
+            View Selected Optimizations
+          </button>
+          <dialog id="selected-optimizations-dialog">
+            <pre id="selected-optimizations"></pre>
+            <form method="dialog">
+              <button type="submit">Close</button>
+            </form>
+          </dialog>
+        </section>
+
+        <section>
+          <h2>Entry Data</h2>
+
+          <form id="entry-form">
+            <fieldset>
+              <legend>Inspect Contentful Entry</legend>
+              <input type="text" name="entryId" id="entry-id" />
+              <button type="submit">Submit</button>
+            </fieldset>
           </form>
-        </dialog>
-        |
-        <button commandfor="selected-optimizations-dialog" command="show-modal">
-          View Selected Optimizations
-        </button>
-        <dialog id="selected-optimizations-dialog">
-          <pre id="selected-optimizations"></pre>
-          <form method="dialog">
-            <button type="submit">Close</button>
-          </form>
-        </dialog>
-      </section>
 
-      <section>
-        <h2>Entry Data</h2>
+          <details>
+            <summary>Entry Data</summary>
+            <ol id="entries"></ol>
+          </details>
+        </section>
 
-        <form id="entry-form">
-          <fieldset>
-            <legend>Resolve Contentful Entry</legend>
-            <input type="text" name="entryId" id="entry-id" />
-            <button type="submit">Submit</button>
-          </fieldset>
-        </form>
+        <section id="event-stream-panel">
+          <div>
+            <h2>Event Stream</h2>
 
-        <details>
-          <summary>Entry Data</summary>
-          <ol id="entries"></ol>
-        </details>
-      </section>
-
-      <section id="event-stream-panel">
-        <div>
-          <h2>Event Stream</h2>
-
-          <ol id="event-stream"></ol>
-        </div>
-      </section>
-
-      <section>
-        <h2>Entries</h2>
-
-        <div id="auto-observed">
-          <div data-ctfl-entry-id="1JAU028vQ7v6nB2swl3NBo">
-            <!-- Nested Entry -->
+            <ol id="event-stream"></ol>
           </div>
-          <div data-ctfl-entry-id="1MwiFl4z7gkwqGYdvCmr8c">
-            <!-- Merge Tag "Rich Text" Entry -->
-          </div>
-          <div data-ctfl-entry-id="4ib0hsHWoSOnCVdDkizE8d"></div>
-          <div data-ctfl-entry-id="xFwgG3oNaOcjzWiGe4vXo"></div>
-          <div data-ctfl-entry-id="2Z2WLOx07InSewC3LUB3eX"></div>
-        </div>
+        </section>
 
-        <div id="manually-observed">
-          <div data-entry-id="5XHssysWUDECHzKLzoIsg1"></div>
-          <div data-entry-id="6zqoWXyiSrf0ja7I2WGtYj"></div>
-          <div data-entry-id="7pa5bOx8Z9NmNcr7mISvD"></div>
-        </div>
-      </section>
-    </main>
+        <section>
+          <h2>Entries</h2>
+
+          <div id="auto-observed">
+            <ctfl-optimized-entry data-entry-id="1JAU028vQ7v6nB2swl3NBo">
+              <!-- Nested Entry -->
+            </ctfl-optimized-entry>
+            <ctfl-optimized-entry data-entry-id="1MwiFl4z7gkwqGYdvCmr8c">
+              <!-- Merge Tag "Rich Text" Entry -->
+            </ctfl-optimized-entry>
+            <ctfl-optimized-entry
+              data-ctfl-clickable="true"
+              data-ctfl-hover-duration-update-interval-ms="1000"
+              data-entry-id="4ib0hsHWoSOnCVdDkizE8d"
+            ></ctfl-optimized-entry>
+            <ctfl-optimized-entry
+              data-e2e-click-scenario="descendant"
+              data-ctfl-hover-duration-update-interval-ms="1000"
+              data-entry-id="xFwgG3oNaOcjzWiGe4vXo"
+            ></ctfl-optimized-entry>
+            <button type="button">
+              <ctfl-optimized-entry
+                data-e2e-click-scenario="ancestor"
+                data-e2e-entry-inline="true"
+                data-ctfl-hover-duration-update-interval-ms="1000"
+                data-entry-id="2Z2WLOx07InSewC3LUB3eX"
+              ></ctfl-optimized-entry>
+            </button>
+            <ctfl-optimized-entry data-entry-id="6zqoWXyiSrf0ja7I2WGtYj"></ctfl-optimized-entry>
+            <ctfl-optimized-entry data-entry-id="7pa5bOx8Z9NmNcr7mISvD"></ctfl-optimized-entry>
+          </div>
+
+          <div id="manually-observed">
+            <ctfl-optimized-entry
+              data-testid="manual-view-entry"
+              data-manual-view-tracking="true"
+              data-entry-id="5XHssysWUDECHzKLzoIsg1"
+              track-views="false"
+            ></ctfl-optimized-entry>
+          </div>
+        </section>
+      </main>
+    </ctfl-optimization-root>
 
     <template id="event-dialog">
       <li>
@@ -236,6 +281,8 @@
     <script type="module">
       /* --- Standard Initialization Code --- */
 
+      const APP_LOCALE = 'en-US'
+
       // Initialize Contentful CDA SDK
       var contentfulClient = contentful.createClient({
         accessToken: '<%= PUBLIC_CONTENTFUL_TOKEN %>',
@@ -251,7 +298,8 @@
         clientId: '<%= PUBLIC_NINETAILED_CLIENT_ID %>',
         environment: '<%= PUBLIC_NINETAILED_ENVIRONMENT %>',
         logLevel: 'debug',
-        autoTrackEntryInteraction: { views: true, hovers: true },
+        autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
+        locale: APP_LOCALE,
         app: {
           name: document.title,
           version: '0.0.0',
@@ -262,8 +310,7 @@
         },
       })
 
-      // Emit page event
-      contentfulOptimization.page()
+      ContentfulOptimizationWebComponents.defineContentfulOptimizationElements()
 
       /* --- Utility Functionality --- */
 
@@ -311,6 +358,7 @@
       const eventStream = document.querySelector('#event-stream')
       const viewEventDialogs = new Map()
       const hoverEventDialogs = new Map()
+      let currentConsent
 
       function isViewHeartbeatEvent(event) {
         return (
@@ -416,9 +464,11 @@
         const data = new FormData(form)
         const entryId = data.get('entryId')
 
-        await addOptimizedEntry(entryId)
+        await inspectEntry(entryId)
 
-        localStorage.setItem(LAST_ENTRY_ID_KEY, entryId)
+        if (typeof entryId === 'string') {
+          localStorage.setItem(LAST_ENTRY_ID_KEY, entryId)
+        }
       })
 
       /* --- Standard Rendering Code --- */
@@ -457,150 +507,185 @@
         }
       }
 
-      let renderEntriesPromise = Promise.resolve()
+      const manualViewEntryElements = new Map()
+      const configuredOptimizedEntryElements = new WeakSet()
+      const entryCache = new Map()
 
-      // Render optimized entries
-      async function renderOptimizedEntry(rawEntry, element, autoObserve = true) {
-        const { entry, selectedOptimization } =
-          contentfulOptimization.resolveOptimizedEntry(rawEntry)
-
-        if (isRichText(entry.fields?.text)) {
-          const div = document.createElement('div')
-          simpleRenderRichText(entry.fields.text, div)
-          element.replaceChildren(div)
-        } else {
-          const p = document.createElement('p')
-          p.innerText = entry.fields?.text
-          element.replaceChildren(p)
-        }
-
-        if (entry.fields?.nested) {
-          const div = document.createElement('div')
-          div.className = 'nested'
-
-          for (const nestedEntry of entry.fields.nested) {
-            await renderOptimizedEntry(nestedEntry, div, autoObserve)
-          }
-
-          element.appendChild(div)
-        }
-
-        document
-          .getElementById('entries')
-          .appendChild(
-            createEntryDialog(entry.fields.internalTitle, rawEntry, entry, selectedOptimization),
-          )
-
-        // NOTE: Elements that are not auto-observed may still be auto-tracked (see below)
-        if (autoObserve) {
-          // The `data-ctfl-entry-id` data attribute is required for auto-observing
-          element.dataset.ctflEntryId = entry.sys?.id
-
-          // Store the original optimized baseline ID so later rerenders do not resolve a variant entry
-          if (rawEntry.fields.nt_experiences) element.dataset.ctflBaselineId = rawEntry.sys?.id
-
-          // Other standard auto-observing attributes are optional
-          if (selectedOptimization) {
-            element.dataset.ctflOptimizationId = selectedOptimization?.experienceId
-            element.dataset.ctflSticky = selectedOptimization?.sticky
-            element.dataset.ctflVariantIndex = selectedOptimization?.variantIndex
-          }
-        }
-
-        return [entry, selectedOptimization]
-      }
-
-      // Get the optimized entry to render
-      async function addOptimizedEntry(entryId, element, autoObserve = true) {
-        let rawEntry
-
-        try {
-          rawEntry = await contentfulClient.getEntry(entryId, { include: 10 })
-        } catch (error) {
-          console.warn(`Entry "${entryId}" could not be found in the current space`)
-          return []
-        }
-
-        return renderOptimizedEntry(rawEntry, element, autoObserve)
-      }
-
-      const manuallyObservedEntryElements = new Map()
-
-      // Manually observe view elements for auto-tracking
-      function manuallyObserveEntryElement(element, entry, selectedOptimization) {
-        if (!entry?.sys?.id) return
+      function enableManualViewTracking(element, entry, selectedOptimization) {
+        if (!entry?.sys?.id || element.dataset.manualViewTracking !== 'true') return
 
         contentfulOptimization.tracking.clearElement('views', element)
+        manualViewEntryElements.set(element, [entry, selectedOptimization])
 
-        // Manually observe the element for auto-tracking (does not use `data-ctfl-*` attributes)
+        if (currentConsent !== true) return
+
         contentfulOptimization.tracking.enableElement('views', element, {
           data: {
-            // The `entryId` property is required for auto-tracking
             entryId: entry.sys.id,
             optimizationId: selectedOptimization?.experienceId,
             sticky: selectedOptimization?.sticky,
             variantIndex: selectedOptimization?.variantIndex,
           },
         })
-
-        manuallyObservedEntryElements.set(element.dataset.entryId, [entry, selectedOptimization])
       }
 
-      // Render all the entries
-      async function renderEntries() {
-        document.getElementById('entries').replaceChildren()
+      function getEntryText(entry) {
+        return typeof entry.fields?.text === 'string' ? entry.fields.text : 'No content'
+      }
 
-        const autoObservedElements = Array.from(document.querySelectorAll('[data-ctfl-entry-id]'))
+      function getBaselineEntryId(element, fallbackEntry) {
+        return element.dataset.manualEntryId ?? element.dataset.entryId ?? fallbackEntry.sys.id
+      }
 
-        await Promise.all(
-          autoObservedElements.map(async (element) => {
-            await addOptimizedEntry(
-              element.dataset.ctflBaselineId ?? element.dataset.ctflEntryId,
-              element,
-              true,
-            )
-          }),
+      function createNestedOptimizedEntry(nestedEntry) {
+        const nestedElement = document.createElement('ctfl-optimized-entry')
+
+        nestedElement.dataset.entryId = nestedEntry.sys.id
+        configureOptimizedEntryElement(nestedElement, nestedEntry)
+
+        return nestedElement
+      }
+
+      function decorateClickableEntryScenario(element, content) {
+        if (element.dataset.e2eClickScenario !== 'descendant') return
+
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.dataset.testid = 'entry-click-descendant-button'
+        button.innerText = 'Trigger entry click tracking from descendant button'
+
+        content.appendChild(button)
+      }
+
+      function renderResolvedEntry(element, rawEntry, entry, selectedOptimization) {
+        const renderInline =
+          element.dataset.e2eEntryInline === 'true' || element.closest('button') !== null
+        const content = document.createElement(renderInline ? 'span' : 'div')
+        const baselineEntryId = getBaselineEntryId(element, rawEntry)
+
+        content.className = renderInline ? 'entry-content entry-content--inline' : 'entry-content'
+        content.dataset.testid = `content-${baselineEntryId}`
+
+        if (isRichText(entry.fields?.text)) {
+          simpleRenderRichText(entry.fields.text, content)
+        } else {
+          const textElement = document.createElement(renderInline ? 'span' : 'p')
+          textElement.innerText = getEntryText(entry)
+          content.appendChild(textElement)
+        }
+
+        if (entry.fields?.nested) {
+          const nested = document.createElement('div')
+          nested.className = 'nested'
+
+          for (const nestedEntry of entry.fields.nested) {
+            nested.appendChild(createNestedOptimizedEntry(nestedEntry))
+          }
+
+          content.appendChild(nested)
+        }
+
+        element.replaceChildren(content)
+        decorateClickableEntryScenario(element, content)
+
+        enableManualViewTracking(element, entry, selectedOptimization)
+      }
+
+      function handleOptimizedEntryResolved(event) {
+        if (event.target !== event.currentTarget) return
+
+        const element = event.currentTarget
+        const rawEntry = element.baselineEntry
+
+        if (!rawEntry) return
+
+        renderResolvedEntry(
+          element,
+          rawEntry,
+          event.detail.entry,
+          event.detail.selectedOptimization,
+        )
+      }
+
+      function configureOptimizedEntryElement(element, baselineEntry) {
+        if (!configuredOptimizedEntryElements.has(element)) {
+          element.addEventListener('ctfl-entry-resolved', handleOptimizedEntryResolved)
+          configuredOptimizedEntryElements.add(element)
+        }
+
+        element.baselineEntry = baselineEntry
+      }
+
+      async function fetchEntry(entryId) {
+        if (entryCache.has(entryId)) return entryCache.get(entryId)
+
+        try {
+          const entry = await contentfulClient.getEntry(entryId, {
+            include: 10,
+            locale: APP_LOCALE,
+          })
+
+          entryCache.set(entryId, entry)
+
+          return entry
+        } catch (error) {
+          console.warn(`Entry "${entryId}" could not be found in the current space`)
+
+          return undefined
+        }
+      }
+
+      async function inspectEntry(entryId) {
+        if (typeof entryId !== 'string' || entryId.length === 0) return
+
+        const rawEntry = await fetchEntry(entryId)
+        if (!rawEntry) return
+
+        const { entry, selectedOptimization } =
+          contentfulOptimization.resolveOptimizedEntry(rawEntry)
+
+        document
+          .getElementById('entries')
+          .appendChild(
+            createEntryDialog(entry.fields.internalTitle, rawEntry, entry, selectedOptimization),
+          )
+      }
+
+      async function initializeOptimizedEntries() {
+        const optimizedEntryElements = Array.from(
+          document.querySelectorAll('ctfl-optimized-entry[data-entry-id]'),
         )
 
-        const manuallyObservedElements = Array.from(document.querySelectorAll('[data-entry-id]'))
-
         await Promise.all(
-          manuallyObservedElements.map(async (element) => {
-            const [entry, selectedOptimization] = await addOptimizedEntry(
-              element.dataset.entryId,
-              element,
-              false,
-            )
+          optimizedEntryElements.map(async (element) => {
+            const entryId = element.dataset.entryId
+            if (!entryId) return
 
+            const entry = await fetchEntry(entryId)
             if (!entry) return
 
-            manuallyObserveEntryElement(element, entry, selectedOptimization)
+            configureOptimizedEntryElement(element, entry)
           }),
         )
       }
 
-      function scheduleRenderEntries() {
-        renderEntriesPromise = renderEntriesPromise
-          .catch(() => undefined)
-          .then(() => renderEntries())
-
-        return renderEntriesPromise
-      }
+      void initializeOptimizedEntries()
 
       // Subscribe to consent state
-      contentfulOptimization.states.consent.subscribe(async (consent) => {
-        toggleConsent(consent)
+      contentfulOptimization.states.consent.subscribe(async (consented) => {
+        currentConsent = consented
+        toggleConsent(consented)
 
-        if (consent)
-          document.querySelectorAll('[data-entry-id]').forEach((element) => {
-            const settings = manuallyObservedEntryElements.get(element.dataset.entryId)
-
-            if (!settings) return
-
+        manualViewEntryElements.forEach((settings, element) => {
+          if (consented) {
             const [entry, selectedOptimization] = settings
 
-            manuallyObserveEntryElement(element, entry, selectedOptimization)
-          })
+            enableManualViewTracking(element, entry, selectedOptimization)
+            return
+          }
+
+          contentfulOptimization.tracking.clearElement('views', element)
+        })
       })
 
       // Subscribe to the event stream
@@ -645,21 +730,17 @@
       })
 
       // Subscribe to selectedOptimizations state
-      contentfulOptimization.states.selectedOptimizations.subscribe(
-        async (selectedOptimizations) => {
-          if (!selectedOptimizations) return
+      contentfulOptimization.states.selectedOptimizations.subscribe((selectedOptimizations) => {
+        if (!selectedOptimizations) return
 
-          document.querySelector('#selected-optimizations').innerText = JSON.stringify(
-            selectedOptimizations,
-            null,
-            2,
-          )
+        document.querySelector('#selected-optimizations').innerText = JSON.stringify(
+          selectedOptimizations,
+          null,
+          2,
+        )
+      })
 
-          void scheduleRenderEntries()
-        },
-      )
-
-      // Subscribe to profile state, find entries in the markup, and render them
+      // Subscribe to profile state
       contentfulOptimization.states.profile.subscribe((profile) => {
         if (!profile) return
 
@@ -671,6 +752,9 @@
 
         toggleIdentity(profile.traits && Object.keys(profile.traits).length)
       })
+
+      // Emit the initial page event after subscribers are attached so the dashboard can display it.
+      void contentfulOptimization.page()
     </script>
   </body>
 </html>

@@ -1,6 +1,6 @@
 @let scenario = clickScenario();
 
-<section [attr.data-testid]="'entry-card-' + (resolved()?.baselineId ?? '')">
+<section [attr.data-testid]="'entry-card-' + effectiveTestId()">
   @if (scenario === 'ancestor' && !manualTracking()) {
   <div data-ctfl-clickable="true" data-testid="entry-click-ancestor-wrapper">
     <ng-container [ngTemplateOutlet]="entryContent" />
@@ -14,7 +14,8 @@
   @if (resolved(); as r) {
   <div
     class="entry-card"
-    [attr.data-testid]="'content-' + r.baselineId"
+    [attr.data-testid]="'content-' + effectiveTestId()"
+    [attr.data-test-entry-id]="r.entryId"
     [attr.data-ctfl-entry-id]="manualTracking() ? null : r.entryId"
     [attr.data-ctfl-baseline-id]="manualTracking() ? null : r.baselineId"
     [attr.data-ctfl-optimization-id]="manualTracking() ? null : (r.optimizationId ?? null)"
@@ -47,7 +48,7 @@
     </div>
 
     <div
-      [attr.data-testid]="'entry-text-' + r.baselineId"
+      [attr.data-testid]="'entry-text-' + effectiveTestId()"
       [attr.aria-label]="'Entry: ' + r.entryId"
     >
       @if (richTextHtml(); as html) {

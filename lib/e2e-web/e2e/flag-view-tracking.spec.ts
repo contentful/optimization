@@ -12,8 +12,8 @@ test.describe('flag view tracking', () => {
 
     await expect(flagEvents).toHaveCount(0)
 
-    await page.getByTestId('live-updates-identify-button').click()
-    await expect(page.getByTestId('live-updates-reset-button')).toBeVisible()
+    await page.getByTestId('identify-button').click()
+    await expect(page.getByTestId('reset-button')).toBeVisible()
 
     await expect(flagEvents).toHaveCount(0)
   })
@@ -32,8 +32,8 @@ test.describe('flag view tracking', () => {
 
     const afterConsentFlagEventCount = await flagEvents.count()
 
-    await page.getByTestId('live-updates-identify-button').click()
-    await expect(page.getByTestId('live-updates-reset-button')).toBeVisible()
+    await page.getByTestId('identify-button').click()
+    await expect(page.getByTestId('reset-button')).toBeVisible()
 
     await expect
       .poll(async () => await flagEvents.count(), {

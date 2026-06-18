@@ -15,6 +15,10 @@ Use this package when maintaining shared build helper behavior, declaration outp
 bundle-size measurement. Package-specific bundle-size budgets belong in each package's
 `package.json` under `buildTools.bundleSize.gzipBudgets`.
 
+Bundle-size checks measure configured files as entrypoints. For JavaScript files, the reported `raw`
+and `gzip` values include local static chunks reachable from the configured file in `dist/`, so
+split ESM output is budgeted by effective entrypoint cost rather than by the tiny facade file alone.
+
 ## Commands
 
 Run commands from the monorepo root:

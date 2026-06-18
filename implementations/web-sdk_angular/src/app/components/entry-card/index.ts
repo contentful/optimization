@@ -115,6 +115,7 @@ export class EntryCard {
   readonly manualTracking = input(false)
   readonly clickScenario = input<EntryClickScenario | undefined>(undefined)
   readonly liveUpdates = input<boolean | undefined>(undefined)
+  readonly testIdPrefix = input<string | undefined>(undefined)
 
   private readonly sanitizer = inject(DomSanitizer)
   private readonly liveUpdatesService = inject(NgLiveUpdates)
@@ -130,6 +131,9 @@ export class EntryCard {
     manualTracking: this.manualTracking,
   })
 
+  protected readonly effectiveTestId = computed(
+    () => this.testIdPrefix() ?? this.resolved().baselineId,
+  )
   protected readonly isVariant = computed(() => this.resolved().optimizationId !== undefined)
   protected readonly richTextHtml = computed<SafeHtml | undefined>(() => {
     const { entry } = this.resolved()

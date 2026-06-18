@@ -51,6 +51,20 @@ Repository-wide baseline. Child files add local constraints; the nearest child f
 - Validate package and implementation changes in dependency order: source package typecheck/tests,
   source package build, `pnpm build:pkgs` when implementations consume it, implementation install,
   then downstream checks.
+- Treat package build outputs as shared mutable state across all SDKs. Never manually run `build`,
+  `clean`, `build:pkgs`, implementation install, `size:report`, `size:check`, or any command that
+  reads, writes, removes, or packages generated artifacts in parallel with another package command
+  that can touch the same package or an upstream/downstream package in its dependency graph.
+- `size:report` and `size:check` read generated package output and may depend on emitted chunks from
+  upstream packages. Serialize them with any build, clean, package, or size command for the package
+  being measured and every upstream or downstream SDK that can consume its output.
+- Do not manually parallelize validation for packages with dependency edges between them. Prefer the
+  aggregate workspace command, such as `pnpm build`, `pnpm build:pkgs`, or `pnpm size:check`, when
+  the full graph is involved because pnpm can schedule workspace dependencies. When running narrowed
+  package commands yourself, run each dependency level to completion before starting dependents.
+- Manual parallel commands are only appropriate for read-only inspection or checks that are
+  demonstrably independent and do not clean, rebuild, package, install, or measure generated package
+  artifacts.
 - For native, React Native, or E2E validation, use the implementation-specific runner documented in
   the nearest `AGENTS.md`, package scripts, or README before deciding the test cannot run locally.
   Missing attached devices, simulators, emulators, mock servers, or Metro are setup states; many

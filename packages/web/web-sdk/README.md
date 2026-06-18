@@ -37,6 +37,7 @@ source of truth for exported API signatures.
 
 - [Getting started](#getting-started)
   - [Usage in vanilla JS web pages](#usage-in-vanilla-js-web-pages)
+  - [Usage with Web Components](#usage-with-web-components)
 - [When to use this package](#when-to-use-this-package)
 - [Common configuration](#common-configuration)
 - [Core workflows](#core-workflows)
@@ -93,6 +94,77 @@ The UMD build is available for HTML pages that do not use a bundler:
   })
 </script>
 ```
+
+### Usage with Web Components
+
+The optional Web Components entrypoint provides vanilla custom elements from the same package:
+
+```ts
+import { defineContentfulOptimizationElements } from '@contentful/optimization-web/web-components'
+
+defineContentfulOptimizationElements()
+```
+
+Importing `@contentful/optimization-web/web-components` is side-effect-free. Custom elements are
+registered only when `defineContentfulOptimizationElements()` runs, and the main
+`@contentful/optimization-web` entrypoint does not export or register them.
+
+Use `<ctfl-optimization-root>` once around the entries that should share one SDK instance:
+
+```html
+<ctfl-optimization-root client-id="your-client-id" environment="main" locale="en-US">
+  <ctfl-optimized-entry id="hero-entry">
+    <article>Baseline content rendered by your app</article>
+  </ctfl-optimized-entry>
+</ctfl-optimization-root>
+```
+
+Assign complex values as DOM properties, not string attributes:
+
+```ts
+const root = document.querySelector('ctfl-optimization-root')
+const entry = document.querySelector('ctfl-optimized-entry')
+
+root.defaults = { consent: true }
+root.api = { preflight: false }
+root.trackEntryInteraction = { views: true, clicks: true }
+root.onStatesReady = (states) => {
+  const subscription = states.profile.subscribe((profile) => {
+    console.log(profile?.id)
+  })
+
+  return () => {
+    subscription.unsubscribe()
+  }
+}
+
+entry.baselineEntry = baselineEntry
+entry.addEventListener('ctfl-entry-resolved', (event) => {
+  renderHero(event.detail.entry)
+})
+```
+
+`baselineEntry` is property-only because Contentful entries are structured objects. For framework
+wrappers, assign `baselineEntry`, `sdk`, `defaults`, `api`, and callback properties after client
+hydration, then listen for `ctfl-entry-loading`, `ctfl-entry-resolved`, and `ctfl-entry-error` to
+render framework-owned UI. The custom element intentionally does not provide a framework-neutral
+render-prop API.
+
+For script-tag usage, load the main Web SDK UMD bundle and the separate Web Components UMD bundle:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@contentful/optimization-web@latest/dist/contentful-optimization-web.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@contentful/optimization-web@latest/dist/contentful-optimization-web-components.umd.js"></script>
+<script>
+  ContentfulOptimizationWebComponents.defineContentfulOptimizationElements()
+</script>
+```
+
+SSR output can include inert custom-element markup. On the client, call
+`defineContentfulOptimizationElements()` and assign object properties before expecting entries to
+resolve. A root shares SDK readiness and preview-panel live-update state with descendant entries;
+entries diff `data-ctfl-*` host attributes and clean up subscriptions on disconnect. Prefer one root
+per SDK instance unless a page genuinely needs separate SDK ownership.
 
 ## When to use this package
 

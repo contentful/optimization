@@ -92,7 +92,7 @@
     "bundleSize": {
       "gzipBudgets": {
         "index.cjs": 16000,
-        "index.mjs": 14000,
+        "index.mjs": 15000,
         "preview-support.cjs": 6500,
         "preview-support.mjs": 5500
       }

@@ -13,6 +13,27 @@
   gap: 0.5rem;
 }
 
+.tracking-log__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.tracking-log__badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  background: var(--color-border);
+  color: var(--color-text-muted);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
 .tracking-log__empty {
   font-size: 0.8rem;
   color: var(--color-text-muted);
@@ -31,6 +52,18 @@
 
 .tracking-log__table td {
   padding: 0.15rem 0.4rem 0.15rem 0;
+}
+
+.tracking-log__thead th {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  opacity: 0.5;
+  padding: 0 0.4rem 0.35rem 0;
+  text-align: left;
+  white-space: nowrap;
 }
 
 .tracking-log__type {
@@ -72,14 +105,18 @@
 
 .tracking-log__label {
   color: var(--color-text-muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-all;
+}
+
+.tracking-log__duration {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
   white-space: nowrap;
-  max-width: 200px;
+  opacity: 0.7;
 }
 
 .tracking-log__count {
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   font-weight: 600;
   color: var(--color-text-muted);
   white-space: nowrap;
@@ -87,7 +124,7 @@
 }
 
 .tracking-log__time {
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   color: var(--color-text-muted);
   white-space: nowrap;
   opacity: 0.5;

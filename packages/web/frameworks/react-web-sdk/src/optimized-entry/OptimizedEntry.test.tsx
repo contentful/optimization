@@ -1,6 +1,6 @@
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import { act } from 'react'
-import { OptimizedEntry } from './OptimizedEntry'
+import { act, createElement } from 'react'
+import { OptimizedEntry, type OptimizedEntryProps } from './OptimizedEntry'
 import {
   createRuntime,
   getRequiredElement,
@@ -11,6 +11,7 @@ import {
   renderComponent,
   renderComponentToString,
   renderToStringWithoutWindow,
+  type TestEntry,
 } from './OptimizedEntry.testUtils'
 
 describe('OptimizedEntry', () => {
@@ -124,7 +125,12 @@ describe('OptimizedEntry', () => {
     })
 
     const view = await renderComponent(
-      <OptimizedEntry baselineEntry={optimizedBaseline} loadingFallback={() => 'loading'}>
+      <OptimizedEntry
+        baselineEntry={optimizedBaseline}
+        clickable
+        hoverDurationUpdateIntervalMs={1000}
+        loadingFallback={() => 'loading'}
+      >
         {(resolved) => readTitle(resolved)}
       </OptimizedEntry>,
       optimization,
@@ -133,13 +139,18 @@ describe('OptimizedEntry', () => {
     expect(view.container.textContent).toContain('loading')
 
     const loadingWrapper = getWrapper(view.container)
+    expect(loadingWrapper.dataset.ctflClickable).toBeUndefined()
     expect(loadingWrapper.dataset.ctflEntryId).toBeUndefined()
+    expect(loadingWrapper.dataset.ctflHoverDurationUpdateIntervalMs).toBeUndefined()
 
     await emit(variantOneState)
 
     expect(view.container.textContent).toContain('variant-a')
     const resolvedWrapper = getWrapper(view.container)
+    expect(resolvedWrapper.dataset.ctflClickable).toBe('true')
+    expect(resolvedWrapper.dataset.ctflBaselineId).toBe('optimized-baseline')
     expect(resolvedWrapper.dataset.ctflEntryId).toBe('variant-a')
+    expect(resolvedWrapper.dataset.ctflHoverDurationUpdateIntervalMs).toBe('1000')
 
     await view.unmount()
   })
@@ -224,6 +235,7 @@ describe('OptimizedEntry', () => {
     await emit(variantTwoState)
 
     const wrapper = getWrapper(view.container)
+    expect(wrapper.dataset.ctflBaselineId).toBe('baseline')
     expect(wrapper.dataset.ctflEntryId).toBe('variant-b')
     expect(wrapper.dataset.ctflOptimizationId).toBe('exp-hero')
     expect(wrapper.dataset.ctflSticky).toBe('false')
@@ -233,20 +245,80 @@ describe('OptimizedEntry', () => {
     await view.unmount()
   })
 
-  it('maps per-entry interaction tracking overrides to data attributes', async () => {
+  it('maps configurable Web SDK attributes to data attributes', async () => {
     const { optimization } = createRuntime((entry) => ({ entry }))
 
     const view = await renderComponent(
-      <OptimizedEntry baselineEntry={baseline} trackClicks trackHovers={false} trackViews={false}>
+      <OptimizedEntry
+        baselineEntry={baseline}
+        clickable
+        hoverDurationUpdateIntervalMs={1000}
+        trackClicks
+        trackHovers={false}
+        trackViews={false}
+        viewDurationUpdateIntervalMs={2000}
+      >
         {(resolved) => readTitle(resolved)}
       </OptimizedEntry>,
       optimization,
     )
 
     const wrapper = getWrapper(view.container)
+    expect(wrapper.dataset.ctflClickable).toBe('true')
+    expect(wrapper.dataset.ctflHoverDurationUpdateIntervalMs).toBe('1000')
     expect(wrapper.dataset.ctflTrackClicks).toBe('true')
     expect(wrapper.dataset.ctflTrackHovers).toBe('false')
     expect(wrapper.dataset.ctflTrackViews).toBe('false')
+    expect(wrapper.dataset.ctflViewDurationUpdateIntervalMs).toBe('2000')
+
+    await view.unmount()
+  })
+
+  it('does not expose caller overrides for derived metadata attributes', async () => {
+    type DerivedMetadataOverrideProps = OptimizedEntryProps & {
+      'data-ctfl-baseline-id': string
+      'data-ctfl-duplication-scope': string
+      'data-ctfl-entry-id': string
+      'data-ctfl-optimization-id': string
+      'data-ctfl-sticky': string
+      'data-ctfl-variant-index': string
+    }
+
+    const { optimization, emit } = createRuntime((entry, selectedOptimizations) => {
+      const selected = selectedOptimizations?.[0]
+      if (!selected) return { entry }
+
+      return {
+        entry: variantB,
+        selectedOptimization: {
+          ...selected,
+          duplicationScope: 'session',
+        },
+      }
+    })
+
+    const props: DerivedMetadataOverrideProps = {
+      baselineEntry: baseline,
+      children: (resolved: TestEntry) => readTitle(resolved),
+      'data-ctfl-baseline-id': 'caller-baseline',
+      'data-ctfl-duplication-scope': 'caller-scope',
+      'data-ctfl-entry-id': 'caller-entry',
+      'data-ctfl-optimization-id': 'caller-exp',
+      'data-ctfl-sticky': 'true',
+      'data-ctfl-variant-index': '99',
+    }
+
+    const view = await renderComponent(createElement(OptimizedEntry, props), optimization)
+
+    await emit(variantTwoState)
+
+    const wrapper = getWrapper(view.container)
+    expect(wrapper.dataset.ctflBaselineId).toBe('baseline')
+    expect(wrapper.dataset.ctflDuplicationScope).toBe('session')
+    expect(wrapper.dataset.ctflEntryId).toBe('variant-b')
+    expect(wrapper.dataset.ctflOptimizationId).toBe('exp-hero')
+    expect(wrapper.dataset.ctflSticky).toBe('false')
+    expect(wrapper.dataset.ctflVariantIndex).toBe('2')
 
     await view.unmount()
   })

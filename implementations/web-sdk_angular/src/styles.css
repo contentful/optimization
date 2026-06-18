@@ -144,9 +144,13 @@ nav a.active {
 main {
   grid-area: main;
   min-width: 0;
-  padding: 1.5rem 24rem 3rem 1.5rem;
+  padding: 1.5rem 1.5rem 3rem;
   display: grid;
   gap: 2.5rem;
+}
+
+main.preview-panel-open {
+  padding-right: 28rem;
 }
 
 .sections-row {

@@ -6,14 +6,10 @@ async function getRecentPageEventUrls(page: Page): Promise<string[]> {
   const urls: string[] = []
 
   for (let index = 0; index < count; index += 1) {
-    const text = await pageEvents.nth(index).innerText()
-    const marker = 'URL: '
-    const markerIndex = text.indexOf(marker)
-    if (markerIndex === -1) {
-      continue
+    const url = await pageEvents.nth(index).getAttribute('data-page-url')
+    if (url !== null) {
+      urls.push(url)
     }
-
-    urls.push(text.slice(markerIndex + marker.length).trim())
   }
 
   return urls

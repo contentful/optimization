@@ -1,7 +1,12 @@
-import ContentfulOptimization, {
-  type AutoTrackEntryInteractionOptions,
-  type OptimizationWebConfig,
-} from '@contentful/optimization-web'
+import ContentfulOptimization from '@contentful/optimization-web'
+import {
+  createOptimizationRootSdkBinding,
+  disposeOptimizationRootSdkBinding,
+  type OptimizationRootSdkBinding,
+  type OptimizationRootSdkConfig,
+  type OnStatesReady as SharedOnStatesReady,
+  type TrackEntryInteractionOptions as SharedTrackEntryInteractionOptions,
+} from '@contentful/optimization-web/presentation'
 import { useLayoutEffect, useRef, useState, type PropsWithChildren, type ReactElement } from 'react'
 
 import { OptimizationContext, type OptimizationSdk } from '../context/OptimizationContext'
@@ -11,32 +16,16 @@ import { OptimizationContext, type OptimizationSdk } from '../context/Optimizati
  *
  * @public
  */
-type Cleanup = () => void
-type OnStatesReadyResult = Cleanup | ReturnType<Cleanup>
+export type OnStatesReady = SharedOnStatesReady<OptimizationSdk>
+export type TrackEntryInteractionOptions = SharedTrackEntryInteractionOptions
 
-export type OnStatesReady = (states: OptimizationSdk['states']) => OnStatesReadyResult
-export type TrackEntryInteractionOptions = AutoTrackEntryInteractionOptions
-
-type OptimizationProviderBaseConfigProps = Omit<OptimizationWebConfig, 'autoTrackEntryInteraction'>
-
-interface ProviderRuntime {
-  readonly cleanup?: Cleanup
-  readonly ownsInstance: boolean
-  readonly sdk: OptimizationSdk
-}
+type OptimizationProviderBaseConfigProps = OptimizationRootSdkConfig
+type ProviderSdkBinding = OptimizationRootSdkBinding<OptimizationSdk>
 
 interface ProviderState {
   readonly error: Error | undefined
   readonly isReady: boolean
   readonly sdk: OptimizationSdk | undefined
-}
-
-function getCleanup(
-  sdk: OptimizationSdk,
-  onStatesReady: OnStatesReady | undefined,
-): Cleanup | undefined {
-  const cleanup = onStatesReady?.(sdk.states)
-  return typeof cleanup === 'function' ? cleanup : undefined
 }
 
 export type OptimizationProviderConfigProps = PropsWithChildren<
@@ -73,50 +62,25 @@ function toError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error))
 }
 
-function resolveTrackEntryInteractionOptions(
-  trackEntryInteraction: TrackEntryInteractionOptions | undefined,
-): Required<AutoTrackEntryInteractionOptions> {
-  return {
-    clicks: trackEntryInteraction?.clicks ?? false,
-    hovers: trackEntryInteraction?.hovers ?? false,
-    views: trackEntryInteraction?.views ?? true,
-  }
-}
-
-function createInjectedRuntime(props: OptimizationProviderSdkProps): ProviderRuntime {
+function createInjectedSdkBinding(props: OptimizationProviderSdkProps): ProviderSdkBinding {
   const { onStatesReady, sdk } = props
 
-  return {
-    cleanup: getCleanup(sdk, onStatesReady),
-    ownsInstance: false,
-    sdk,
-  }
+  return createOptimizationRootSdkBinding({ onStatesReady, sdk })
 }
 
-function createOwnedRuntime(props: OptimizationProviderConfigProps): ProviderRuntime {
+function createOwnedSdkBinding(props: OptimizationProviderConfigProps): ProviderSdkBinding {
   const { children: _children, onStatesReady, sdk: _sdk, trackEntryInteraction, ...config } = props
-  const sdk = new ContentfulOptimization({
-    ...config,
-    autoTrackEntryInteraction: resolveTrackEntryInteractionOptions(trackEntryInteraction),
-  })
 
-  try {
-    return {
-      cleanup: getCleanup(sdk, onStatesReady),
-      ownsInstance: true,
-      sdk,
-    }
-  } catch (error) {
-    sdk.destroy()
-    throw error
-  }
+  return createOptimizationRootSdkBinding({
+    config,
+    createSdk: (sdkConfig) => new ContentfulOptimization(sdkConfig) as OptimizationSdk,
+    onStatesReady,
+    trackEntryInteraction,
+  })
 }
 
-function disposeRuntime(runtime: ProviderRuntime | undefined): void {
-  runtime?.cleanup?.()
-  if (runtime?.ownsInstance === true) {
-    runtime.sdk.destroy()
-  }
+function disposeSdkBinding(sdkBinding: ProviderSdkBinding | undefined): void {
+  disposeOptimizationRootSdkBinding(sdkBinding)
 }
 
 export function OptimizationProvider(props: OptimizationProviderProps): ReactElement | null {
@@ -137,14 +101,14 @@ export function OptimizationProvider(props: OptimizationProviderProps): ReactEle
     }
 
     try {
-      const runtime =
+      const sdkBinding =
         initialProps.sdk === undefined
-          ? createOwnedRuntime(initialProps)
-          : createInjectedRuntime(initialProps)
-      setState({ error: undefined, isReady: true, sdk: runtime.sdk })
+          ? createOwnedSdkBinding(initialProps)
+          : createInjectedSdkBinding(initialProps)
+      setState({ error: undefined, isReady: true, sdk: sdkBinding.sdk })
 
       return () => {
-        disposeRuntime(runtime)
+        disposeSdkBinding(sdkBinding)
       }
     } catch (error: unknown) {
       setState({ error: toError(error), isReady: false, sdk: undefined })

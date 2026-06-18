@@ -1,6 +1,41 @@
 import { advance, createEntryTrackingHarness, installIOPolyfill } from '../../../test/helpers'
 import { createEntryViewDetector, type EntryViewTrackingCore } from './createEntryViewDetector'
 
+const rect = (left: number, top: number, width: number, height: number): DOMRect =>
+  new DOMRect(left, top, width, height)
+
+const setRect = (element: Element, value: DOMRectReadOnly): void => {
+  rs.spyOn(element, 'getBoundingClientRect').mockReturnValue(value)
+}
+
+const toDomRectList = (rects: DOMRect[]): DOMRectList => {
+  const list: DOMRectList = {
+    [Symbol.iterator]: () => rects[Symbol.iterator](),
+    item: (index: number): DOMRect | null => rects[index] ?? null,
+    length: rects.length,
+  }
+
+  rects.forEach((value, index) => {
+    Object.defineProperty(list, index, { value })
+  })
+
+  return list
+}
+
+const stubRangeRects = (rectsByElement: Map<Element, DOMRect[]>): void => {
+  let selected: Element | undefined
+  const range = document.createRange()
+
+  rs.spyOn(range, 'detach').mockImplementation(() => undefined)
+  rs.spyOn(range, 'getClientRects').mockImplementation(() =>
+    toDomRectList(selected ? (rectsByElement.get(selected) ?? []) : []),
+  )
+  rs.spyOn(range, 'selectNodeContents').mockImplementation((node: Node) => {
+    selected = node instanceof Element ? node : undefined
+  })
+  rs.spyOn(document, 'createRange').mockReturnValue(range)
+}
+
 function createCore(): {
   core: EntryViewTrackingCore
   trackView: ReturnType<typeof rs.fn>
@@ -19,6 +54,14 @@ describe('EntryViewTracker', () => {
 
   beforeEach(() => {
     rs.useFakeTimers()
+    rs.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback): number =>
+      window.setTimeout(() => {
+        callback(Date.now())
+      }, 0),
+    )
+    rs.stubGlobal('cancelAnimationFrame', (id: number): void => {
+      window.clearTimeout(id)
+    })
     document.body.innerHTML = ''
   })
 
@@ -56,6 +99,214 @@ describe('EntryViewTracker', () => {
     expect(trackView).toHaveBeenCalledWith(
       expect.objectContaining({
         componentId: 'entry-auto-view',
+        viewId: expect.any(String),
+        viewDurationMs: 0,
+      }),
+    )
+
+    cleanup()
+  })
+
+  it('tracks a display:contents entry through its single rendered child', async () => {
+    const entry = document.createElement('div')
+    entry.dataset.ctflEntryId = 'entry-single-child-view'
+    entry.style.display = 'contents'
+    const child = document.createElement('section')
+    entry.append(child)
+    document.body.append(entry)
+
+    const { core, trackView } = createCore()
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
+
+    tracker.start({ dwellTimeMs: 0 })
+
+    const instance = io.getLast()
+
+    if (!instance) {
+      throw new Error('IntersectionObserver polyfill instance not found')
+    }
+
+    instance.trigger({ target: child, isIntersecting: true, intersectionRatio: 1 })
+
+    await advance(0)
+
+    expect(trackView).toHaveBeenCalledTimes(1)
+    expect(trackView).toHaveBeenCalledWith(
+      expect.objectContaining({
+        componentId: 'entry-single-child-view',
+        viewId: expect.any(String),
+        viewDurationMs: 0,
+      }),
+    )
+
+    cleanup()
+  })
+
+  it('tracks a multi-child display:contents entry from aggregate child visibility', async () => {
+    const root = document.createElement('div')
+    setRect(root, rect(0, 0, 300, 100))
+    document.body.append(root)
+
+    const entry = document.createElement('div')
+    entry.dataset.ctflEntryId = 'entry-aggregate-view'
+    entry.style.display = 'contents'
+
+    const first = document.createElement('div')
+    const second = document.createElement('div')
+    entry.append(first, second)
+    root.append(entry)
+
+    stubRangeRects(
+      new Map<Element, DOMRect[]>([[entry, [rect(0, 180, 100, 60), rect(160, 20, 100, 60)]]]),
+    )
+
+    const { core, trackView } = createCore()
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
+
+    tracker.start({ dwellTimeMs: 0, root })
+
+    await advance(0)
+
+    expect(trackView).toHaveBeenCalledTimes(1)
+    expect(trackView).toHaveBeenCalledWith(
+      expect.objectContaining({
+        componentId: 'entry-aggregate-view',
+        viewId: expect.any(String),
+        viewDurationMs: 0,
+      }),
+    )
+
+    cleanup()
+  })
+
+  it('uses virtual aggregate tracking for text display:contents entries', async () => {
+    const root = document.createElement('div')
+    setRect(root, rect(0, 0, 300, 100))
+    document.body.append(root)
+
+    const entry = document.createElement('div')
+    entry.dataset.ctflEntryId = 'entry-text-view'
+    entry.style.display = 'contents'
+    entry.append('Plain text')
+    root.append(entry)
+
+    stubRangeRects(new Map<Element, DOMRect[]>([[entry, [rect(10, 10, 120, 20)]]]))
+
+    const { core, trackView } = createCore()
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
+
+    tracker.start({ dwellTimeMs: 0, root })
+
+    await advance(0)
+
+    expect(trackView).toHaveBeenCalledTimes(1)
+    expect(trackView).toHaveBeenCalledWith(
+      expect.objectContaining({
+        componentId: 'entry-text-view',
+        viewId: expect.any(String),
+        viewDurationMs: 0,
+      }),
+    )
+
+    cleanup()
+  })
+
+  it('emits periodic and final updates for virtual aggregate entries', async () => {
+    const root = document.createElement('div')
+    setRect(root, rect(0, 0, 300, 100))
+    document.body.append(root)
+
+    const entry = document.createElement('div')
+    entry.dataset.ctflEntryId = 'entry-aggregate-duration'
+    entry.style.display = 'contents'
+    entry.append(document.createElement('div'), document.createElement('div'))
+    root.append(entry)
+
+    const rectsByElement = new Map<Element, DOMRect[]>([[entry, [rect(10, 10, 100, 40)]]])
+    stubRangeRects(rectsByElement)
+
+    const { core, trackView } = createCore()
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
+
+    tracker.start({ dwellTimeMs: 0, root, viewDurationUpdateIntervalMs: 1000 })
+
+    await advance(0)
+    await advance(1000)
+
+    rectsByElement.set(entry, [rect(10, 140, 100, 40)])
+    document.dispatchEvent(new Event('scroll'))
+    await advance(0)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(trackView).toHaveBeenCalledTimes(3)
+
+    const firstPayload = trackView.mock.calls[0]?.[0]
+    const secondPayload = trackView.mock.calls[1]?.[0]
+    const finalPayload = trackView.mock.calls[2]?.[0]
+
+    expect(firstPayload).toEqual(
+      expect.objectContaining({
+        componentId: 'entry-aggregate-duration',
+        viewDurationMs: 0,
+      }),
+    )
+    expect(secondPayload).toEqual(
+      expect.objectContaining({
+        componentId: 'entry-aggregate-duration',
+        viewId: firstPayload?.viewId,
+        viewDurationMs: 1000,
+      }),
+    )
+    expect(finalPayload).toEqual(
+      expect.objectContaining({
+        componentId: 'entry-aggregate-duration',
+        viewId: firstPayload?.viewId,
+        viewDurationMs: 1000,
+      }),
+    )
+
+    cleanup()
+  })
+
+  it('retargets display:contents entries after child mutations without duplicate tracking', async () => {
+    const root = document.createElement('div')
+    setRect(root, rect(0, 0, 300, 100))
+    document.body.append(root)
+
+    const entry = document.createElement('div')
+    entry.dataset.ctflEntryId = 'entry-retarget-view'
+    entry.style.display = 'contents'
+
+    const first = document.createElement('div')
+    entry.append(first)
+    root.append(entry)
+
+    stubRangeRects(new Map<Element, DOMRect[]>([[entry, [rect(10, 10, 100, 40)]]]))
+
+    const { core, trackView } = createCore()
+    const { cleanup, tracker } = createEntryTrackingHarness(createEntryViewDetector(core))
+
+    tracker.start({ dwellTimeMs: 0, root })
+
+    const instance = io.getLast()
+
+    if (!instance) {
+      throw new Error('IntersectionObserver polyfill instance not found')
+    }
+
+    const second = document.createElement('div')
+    entry.append(second)
+    await Promise.resolve()
+    await advance(0)
+
+    instance.trigger({ target: first, isIntersecting: true, intersectionRatio: 1 })
+    await advance(0)
+
+    expect(trackView).toHaveBeenCalledTimes(1)
+    expect(trackView).toHaveBeenCalledWith(
+      expect.objectContaining({
+        componentId: 'entry-retarget-view',
         viewId: expect.any(String),
         viewDurationMs: 0,
       }),
