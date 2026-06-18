@@ -10,8 +10,10 @@ test.describe('flag view tracking', () => {
   test('does not emit flag view events without consent', async ({ page }) => {
     const flagEvents = page.locator('[data-testid="event-component-boolean"]')
 
+    // no events on page load
     await expect(flagEvents).toHaveCount(0)
 
+    // identifying without consent must not record flag exposure
     await page.getByTestId('identify-button').click()
     await expect(page.getByTestId('reset-button')).toBeVisible()
 
@@ -23,11 +25,13 @@ test.describe('flag view tracking', () => {
   }) => {
     const flagEvents = page.locator('[data-testid="event-component-boolean"]')
 
+    // identify first — flag value updates but no event because no consent yet
     await page.getByTestId('identify-button').click()
     await expect(page.getByTestId('reset-button')).toBeVisible()
-
     await expect(flagEvents).toHaveCount(0)
 
+    // consent opens a fresh subscription which emits the current flag value immediately,
+    // recording exposure even though identity was already established before consent
     await page.getByTestId('consent-button').click()
 
     await expect
@@ -43,6 +47,7 @@ test.describe('flag view tracking', () => {
     const flagEvents = page.locator('[data-testid="event-component-boolean"]')
     const baselineFlagEventCount = await flagEvents.count()
 
+    // consent while anonymous — records the anonymous user's exposure
     await page.getByTestId('consent-button').click()
 
     await expect
@@ -53,6 +58,8 @@ test.describe('flag view tracking', () => {
 
     const afterConsentFlagEventCount = await flagEvents.count()
 
+    // identify — profile change may update the flag value, re-recording exposure for the
+    // now-identified user
     await page.getByTestId('identify-button').click()
     await expect(page.getByTestId('reset-button')).toBeVisible()
 

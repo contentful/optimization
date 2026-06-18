@@ -21,14 +21,17 @@ export class ControlPanel {
   protected readonly optimizationCount = computed(
     () => this.optimization.selectedOptimizations()?.length ?? 0,
   )
-  // states.flag() emits on value changes only, not on consent changes. A direct subscription
-  // fires the initial emission before consent is held; trackFlagView is blocked, the value
-  // stays stable, and no event is ever recorded after consent is granted. Passing a thunk
-  // makes fromSdkState re-subscribe reactively: on consent grant a fresh subscription emits
-  // the current value while consent is held; on revoke the subscription is dropped and the
-  // signal resets to undefined.
-  // Ideally the core SDK would make states.flag() consent-aware so a direct observable could
-  // be passed here — see flag-view-tracking.spec.ts for the cases this gate must satisfy.
+  // The flag value is always correct for display regardless of consent — even a direct
+  // fromSdkState subscription would show the right value. The consent gate is purely about
+  // tracking: states.flag().subscribe() bundles value delivery and trackFlagView in the same
+  // callback. If the subscription opens before consent, the initial emission is blocked by
+  // hasConsent(); the value then stays stable so the observable never re-fires and
+  // trackFlagView is never retried — the flag view event is silently lost even after consent
+  // is granted. Passing a thunk re-triggers the subscription on consent change: on grant a
+  // fresh subscription opens and immediately emits the current value while consent is held,
+  // so trackFlagView succeeds; on revoke the subscription is dropped.
+  // Ideally the core SDK would decouple these: deliver the value unconditionally, fire
+  // trackFlagView internally on consent change — see flag-view-tracking.spec.ts.
   protected readonly booleanFlag = fromSdkState(() =>
     this.consent() === true ? this.optimization.sdk.states.flag('boolean') : undefined,
   )
