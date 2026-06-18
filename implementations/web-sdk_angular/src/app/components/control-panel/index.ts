@@ -1,7 +1,7 @@
 import { Component, computed, inject, input } from '@angular/core'
 import { NgLiveUpdates } from '../../services/live-updates'
 import { NgContentfulOptimization } from '../../services/optimization'
-import { fromSdkConditionalState } from '../../utils'
+import { fromSdkState } from '../../utils'
 
 @Component({
   selector: 'app-control-panel',
@@ -21,12 +21,15 @@ export class ControlPanel {
   protected readonly optimizationCount = computed(
     () => this.optimization.selectedOptimizations()?.length ?? 0,
   )
-  // Consent-gated flag: sdk.states.flag() returns a new observable instance on every call,
-  // so the factory must be re-invoked on each consent change rather than holding a reference —
-  // a stale reference from a previous consent session would miss updates or emit after revoke.
-  // fromSdkConditionalState re-runs the factory reactively: subscribes on grant, unsubscribes
-  // and resets to undefined on revoke. flag-view-tracking.spec.ts covers both cases.
-  protected readonly booleanFlag = fromSdkConditionalState(() =>
+  // states.flag() emits on value changes only, not on consent changes. A direct subscription
+  // fires the initial emission before consent is held; trackFlagView is blocked, the value
+  // stays stable, and no event is ever recorded after consent is granted. Passing a thunk
+  // makes fromSdkState re-subscribe reactively: on consent grant a fresh subscription emits
+  // the current value while consent is held; on revoke the subscription is dropped and the
+  // signal resets to undefined.
+  // Ideally the core SDK would make states.flag() consent-aware so a direct observable could
+  // be passed here — see flag-view-tracking.spec.ts for the cases this gate must satisfy.
+  protected readonly booleanFlag = fromSdkState(() =>
     this.consent() === true ? this.optimization.sdk.states.flag('boolean') : undefined,
   )
 
