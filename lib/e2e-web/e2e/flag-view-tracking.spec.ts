@@ -18,10 +18,9 @@ test.describe('flag view tracking', () => {
     await expect(flagEvents).toHaveCount(0)
   })
 
-  // Anonymous users can be in experiments too. Granting consent must record a flag view
-  // for the current user — even if they haven't identified yet — so exposure data is
-  // complete for experiment analysis regardless of when identity is established.
-  test('emits flag view events after consent when already identified', async ({ page }) => {
+  test('emits flag view event on consent grant for identified user — anonymous exposure must be recorded for complete experiment analysis', async ({
+    page,
+  }) => {
     const flagEvents = page.locator('[data-testid="event-component-boolean"]')
 
     await page.getByTestId('identify-button').click()
@@ -38,10 +37,9 @@ test.describe('flag view tracking', () => {
       .toBeGreaterThan(0)
   })
 
-  // Consent triggers a flag view event for the anonymous user (exposure recorded before
-  // identity is known). Identify then updates the profile, which may change the flag value
-  // and records a second flag view event for the now-identified user.
-  test('emits flag view events after consent and profile updates', async ({ page }) => {
+  test('emits flag view event on consent for anonymous user, then again after identify — each profile change re-records exposure', async ({
+    page,
+  }) => {
     const flagEvents = page.locator('[data-testid="event-component-boolean"]')
     const baselineFlagEventCount = await flagEvents.count()
 
