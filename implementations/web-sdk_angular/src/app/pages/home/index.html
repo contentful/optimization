@@ -14,9 +14,9 @@
   </header>
   @let liveEntry = entryFor(liveUpdatesEntryId); @if (liveEntry) {
   <div class="sections-row" data-testid="live-updates-examples">
-    <app-entry-card [entry]="liveEntry" testIdPrefix="live-default" />
-    <app-entry-card [entry]="liveEntry" [liveUpdates]="true" testIdPrefix="live-enabled" />
-    <app-entry-card [entry]="liveEntry" [liveUpdates]="false" testIdPrefix="live-locked" />
+    <app-entry-card [entry]="liveEntry" testId="live-default" />
+    <app-entry-card [entry]="liveEntry" [liveUpdates]="true" testId="live-enabled" />
+    <app-entry-card [entry]="liveEntry" [liveUpdates]="false" testId="live-locked" />
   </div>
   }
 </section>
