@@ -30,10 +30,18 @@ Supported implementations: `web-sdk_react`, `web-sdk_angular`.
 `playwright.config.mjs` uses two env vars to know which app to test:
 
 - `IMPLEMENTATION` — the folder name under `implementations/` (e.g. `web-sdk_angular`). The config
-  uses this to resolve the implementation directory and run its `serve:e2e` script, which builds and
-  starts the app.
+  uses this to resolve the implementation directory and registers its `serve:e2e` script as a
+  Playwright `webServer`. Playwright starts the server automatically before the suite runs and shuts
+  it down after — or reuses it if it is already listening on the port. This means no manual pm2
+  process tracking: you can run `pnpm test:e2e` from a cold start and the app comes up, tests run,
+  and the process is cleaned up without any extra steps. Playwright browsers are installed once in
+  `lib/e2e-web` via `setup:e2e` and shared across all implementations — no per-implementation
+  install, no duplicating Playwright config, test scripts, or spec files. The value is validated
+  against `/^[a-z0-9_-]+$/` and resolved to an absolute path before use, so it is never interpolated
+  directly into a shell command.
 - `APP_PORT` — the port the app listens on. Defaults to `3000`. Angular dev server uses `4200`, so
-  it must be set explicitly.
+  it must be set explicitly. Having a configurable port also makes it possible to run E2E suites for
+  multiple implementations in parallel — each on its own port with no conflicts.
 
 Each implementation sets both in its own `test:e2e` script:
 
@@ -45,7 +53,9 @@ IMPLEMENTATION=web-sdk_angular APP_PORT=4200 pnpm --dir ../../lib/e2e-web test
 IMPLEMENTATION=web-sdk_react pnpm --dir ../../lib/e2e-web test
 ```
 
-The config also starts the shared mock server (`lib/mocks`) automatically before running any specs.
+The config also starts the shared mock server (`lib/mocks`) with the same lifecycle — spun up before
+the suite and reused if already running. Each implementation registers its own `serve:e2e` command,
+so the server startup behaviour (port, build step, env) is fully owned by that implementation.
 
 ## Adding a new implementation
 
