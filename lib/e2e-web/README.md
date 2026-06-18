@@ -7,13 +7,11 @@ and Angular without duplicating spec files.
 
 ## Running tests
 
-From an implementation directory:
-
 ```sh
-# First-time setup (installs Playwright browsers)
-pnpm implementation:setup:e2e
+# First-time setup — installs Playwright browsers, run once from the repo root
+pnpm --dir lib/e2e-web setup:e2e
 
-# Run the full suite
+# Run the full suite (from an implementation directory)
 pnpm test:e2e
 
 # Open the interactive UI runner
