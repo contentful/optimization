@@ -5,7 +5,7 @@
   "description": "Reference implementation of @contentful/optimization-web for Angular applications.",
   "license": "MIT",
   "scripts": {
-    "generate:e2e-env": "../../node_modules/.bin/tsx scripts/generate-e2e-env.ts",
+    "generate:e2e-env": "pnpm tsx scripts/generate-e2e-env.ts",
     "dev": "ng serve",
     "build": "ng build",
     "clean": "rimraf ./dist",
