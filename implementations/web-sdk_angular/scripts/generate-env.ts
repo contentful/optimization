@@ -1,5 +1,5 @@
 import { config } from 'dotenv'
-import { writeFileSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const root = resolve(__dirname, '..')
@@ -27,4 +27,6 @@ ${entries},
 }
 `
 
-writeFileSync(resolve(root, 'src/environments/environment.ts'), content)
+const outDir = resolve(root, 'src/environments')
+mkdirSync(outDir, { recursive: true })
+writeFileSync(resolve(outDir, 'environment.ts'), content)
