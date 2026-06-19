@@ -9,7 +9,7 @@ export default defineConfig({
     },
     define: {
       ENABLE_PREVIEW_PANEL: JSON.stringify(
-        process.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL !== 'false',
+        process.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true',
       ),
     },
   },

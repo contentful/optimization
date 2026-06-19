@@ -30,7 +30,7 @@ export const appConfig: ApplicationConfig = {
         cdaHost: import.meta.env.PUBLIC_CONTENTFUL_CDA_HOST ?? 'localhost:8000',
         basePath: import.meta.env.PUBLIC_CONTENTFUL_BASE_PATH ?? 'contentful',
       },
-      ...(import.meta.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL !== 'false'
+      ...(import.meta.env.PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL === 'true'
         ? { previewPanel: {} }
         : {}),
     }),
