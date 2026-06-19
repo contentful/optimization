@@ -1,14 +1,13 @@
-// Default values — overwritten at build time by scripts/generate-env.ts
-export const environment: Record<string, string | undefined> = {
-  PUBLIC_NINETAILED_CLIENT_ID: '',
-  PUBLIC_NINETAILED_ENVIRONMENT: '',
-  PUBLIC_INSIGHTS_API_BASE_URL: '',
-  PUBLIC_EXPERIENCE_API_BASE_URL: '',
-  PUBLIC_CONTENTFUL_TOKEN: '',
-  PUBLIC_CONTENTFUL_ENVIRONMENT: '',
-  PUBLIC_CONTENTFUL_SPACE_ID: '',
-  PUBLIC_CONTENTFUL_CDA_HOST: '',
-  PUBLIC_CONTENTFUL_BASE_PATH: '',
-  PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL: '',
+export const environment = {
+  PUBLIC_NINETAILED_CLIENT_ID: 'mock-client-id',
+  PUBLIC_NINETAILED_ENVIRONMENT: 'main',
+  PUBLIC_INSIGHTS_API_BASE_URL: 'http://localhost:8000/insights/',
+  PUBLIC_EXPERIENCE_API_BASE_URL: 'http://localhost:8000/experience/',
+  PUBLIC_CONTENTFUL_TOKEN: 'mock-token',
+  PUBLIC_CONTENTFUL_ENVIRONMENT: 'master',
+  PUBLIC_CONTENTFUL_SPACE_ID: 'mock-space-id',
+  PUBLIC_CONTENTFUL_CDA_HOST: 'localhost:8000',
+  PUBLIC_CONTENTFUL_BASE_PATH: 'contentful',
+  PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL: 'true',
   PUBLIC_OPTIMIZATION_LOG_LEVEL: '',
 }
