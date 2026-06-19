@@ -11,6 +11,9 @@ dist/
 .env
 .env*.local
 
+# generated from .env by generate:env
+src/environments/environment.ts
+
 # logs produced by launch-reference-app.sh
 logs/
 
