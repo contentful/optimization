@@ -41,6 +41,10 @@ Supported implementations: `web-sdk_react`, `web-sdk_angular`.
   it must be set explicitly. Having a configurable port also makes it possible to run E2E suites for
   multiple implementations in parallel — each on its own port with no conflicts.
 
+The config also loads the implementation's `.env` file via `process.loadEnvFile()` before the suite
+runs, so vars like `PUBLIC_OPTIMIZATION_ENABLE_PREVIEW_PANEL` are available to both the test process
+and the app server without any manual forwarding.
+
 Each implementation sets both in its own `test:e2e` script:
 
 ```sh
@@ -67,7 +71,7 @@ files, no Playwright config:
     // Builds and starts the app on a fixed port for Playwright to target
     "serve:e2e": "<your build + serve command>",
 
-    // Points the shared suite at this implementation
+    // Points the shared suite at this implementation; .env is loaded automatically
     "test:e2e": "IMPLEMENTATION=my-web-sdk pnpm --dir ../../lib/e2e-web test",
   },
 }
