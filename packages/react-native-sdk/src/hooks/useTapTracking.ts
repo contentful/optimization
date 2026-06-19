@@ -104,11 +104,6 @@ export function useTapTracking({
 
   const touchStartRef = useRef<{ pageX: number; pageY: number } | null>(null)
 
-  const { componentId, experienceId, variantIndex } = extractTrackingMetadata(
-    entry,
-    selectedOptimization,
-  )
-
   const handleTouchStart = useCallback((e: GestureResponderEvent) => {
     const {
       nativeEvent: { pageX, pageY },
@@ -130,19 +125,26 @@ export function useTapTracking({
 
       if (distance >= TAP_DISTANCE_THRESHOLD) return
 
-      logger.info(`Tap detected on ${componentId}, emitting entry tap event`)
+      if (optimizationRef.current.hasConsent('trackClick')) {
+        const { componentId, experienceId, variantIndex } = extractTrackingMetadata(
+          entry,
+          selectedOptimization,
+        )
 
-      void optimizationRef.current.trackClick({
-        componentId,
-        experienceId,
-        variantIndex,
-      })
+        logger.info(`Tap detected on ${componentId}, emitting entry tap event`)
+
+        void optimizationRef.current.trackClick({
+          componentId,
+          experienceId,
+          variantIndex,
+        })
+      }
 
       if (typeof onTap === 'function') {
         onTap(entry)
       }
     },
-    [componentId, experienceId, variantIndex, entry, onTap],
+    [entry, onTap, selectedOptimization],
   )
 
   if (!enabled) {

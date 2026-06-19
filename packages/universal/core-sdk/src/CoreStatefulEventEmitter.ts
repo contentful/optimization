@@ -15,7 +15,8 @@ import { isEqual } from 'es-toolkit/predicate'
 import type { BlockedEvent } from './BlockedEvent'
 import type { ConsentGuard } from './Consent'
 import CoreBase from './CoreBase'
-import type { CoreStatefulConfig, EventType } from './CoreStateful'
+import type { CoreStatefulConfig } from './CoreStateful'
+import type { EventEmissionResult } from './EventEmissionResult'
 import type {
   ClickBuilderArgs,
   FlagViewBuilderArgs,
@@ -26,6 +27,7 @@ import type {
   TrackBuilderArgs,
   ViewBuilderArgs,
 } from './events'
+import type { AllowedEventType } from './EventType'
 import type { ExperienceQueue } from './queues/ExperienceQueue'
 import type { InsightsQueue } from './queues/InsightsQueue'
 import type { ResolvedData } from './resolvers'
@@ -42,11 +44,24 @@ import {
 
 const coreLogger = createScopedLogger('CoreStateful')
 
-const CONSENT_EVENT_TYPE_MAP: Readonly<Partial<Record<string, EventType>>> = {
-  trackView: 'component',
-  trackFlagView: 'component',
-  trackClick: 'component_click',
-  trackHover: 'component_hover',
+const CONSENT_EVENT_TYPE_MAP: Readonly<Partial<Record<string, readonly AllowedEventType[]>>> = {
+  trackView: ['component'],
+  trackFlagView: ['flag', 'component'],
+  trackClick: ['component_click'],
+  trackHover: ['component_hover'],
+}
+
+type FlagViewTrackingSignature = readonly [
+  value: Json,
+  componentId: string,
+  experienceId: string | undefined,
+  variantIndex: number | undefined,
+  profileId: string,
+]
+
+interface AttemptedFlagViewTrackingSignature {
+  attemptId: number
+  signature: FlagViewTrackingSignature
 }
 
 /**
@@ -60,24 +75,25 @@ abstract class CoreStatefulEventEmitter
   implements ConsentGuard
 {
   protected readonly flagObservables = new Map<string, Observable<Json>>()
-  private readonly lastTrackedFlagValues = new Map<string, Json>()
+  private readonly lastAcceptedFlagViewSignatures = new Map<
+    string,
+    AttemptedFlagViewTrackingSignature
+  >()
+  private readonly pendingFlagViewSignatures = new Map<
+    string,
+    AttemptedFlagViewTrackingSignature[]
+  >()
+  private readonly activeFlagSubscriptionCounts = new Map<string, number>()
+  private nextFlagViewTrackingAttemptId = 0
 
-  protected abstract readonly allowedEventTypes: readonly string[]
+  protected abstract readonly allowedEventTypes: readonly AllowedEventType[]
   protected abstract readonly experienceQueue: ExperienceQueue
   protected abstract readonly insightsQueue: InsightsQueue
   protected abstract readonly onEventBlocked?: CoreStatefulConfig['onEventBlocked']
 
   override getFlag(name: string, changes: ChangeArray | undefined = changesSignal.value): Json {
     const value = super.getFlag(name, changes)
-
-    if (!isEqual(value, this.lastTrackedFlagValues.get(name))) {
-      this.lastTrackedFlagValues.set(name, value)
-      const payload = this.buildFlagViewBuilderArgs(name, changes)
-
-      void this.trackFlagView(payload).catch((error: unknown) => {
-        logger.warn(`Failed to emit "flag view" event for "${name}"`, String(error))
-      })
-    }
+    this.attemptFlagViewTracking(name, value, changes)
 
     return value
   }
@@ -149,8 +165,25 @@ abstract class CoreStatefulEventEmitter
   async page(
     payload: PageViewBuilderArgs & { profile?: PartialProfile } = {},
   ): Promise<OptimizationData | undefined> {
+    const { data } = await this.pageWithEmissionResult(payload)
+    return data
+  }
+
+  /**
+   * Emit a page event and expose whether Core accepted it.
+   *
+   * @remarks
+   * Use this when coordinating automatic current-page tracking. A blocked
+   * event returns `{ accepted: false }`; an offline-queued but consent-allowed
+   * event returns `{ accepted: true }`.
+   *
+   * @internal
+   */
+  protected async pageWithEmissionResult(
+    payload: PageViewBuilderArgs & { profile?: PartialProfile } = {},
+  ): Promise<EventEmissionResult> {
     const { profile, ...builderArgs } = payload
-    return await this.sendExperienceEvent(
+    return await this.sendExperienceEventWithResult(
       'page',
       [payload],
       this.eventBuilder.buildPageView(builderArgs),
@@ -171,8 +204,25 @@ abstract class CoreStatefulEventEmitter
   async screen(
     payload: ScreenViewBuilderArgs & { profile?: PartialProfile },
   ): Promise<OptimizationData | undefined> {
+    const { data } = await this.screenWithEmissionResult(payload)
+    return data
+  }
+
+  /**
+   * Emit a screen event and expose whether Core accepted it.
+   *
+   * @remarks
+   * Use this when coordinating automatic current-screen tracking. A blocked
+   * event returns `{ accepted: false }`; an offline-queued but consent-allowed
+   * event returns `{ accepted: true }`.
+   *
+   * @internal
+   */
+  protected async screenWithEmissionResult(
+    payload: ScreenViewBuilderArgs & { profile?: PartialProfile },
+  ): Promise<EventEmissionResult> {
     const { profile, ...builderArgs } = payload
-    return await this.sendExperienceEvent(
+    return await this.sendExperienceEventWithResult(
       'screen',
       [payload],
       this.eventBuilder.buildScreenView(builderArgs),
@@ -288,9 +338,14 @@ abstract class CoreStatefulEventEmitter
   }
 
   hasConsent(name: string): boolean {
-    return (
-      !!consentSignal.value || this.allowedEventTypes.includes(CONSENT_EVENT_TYPE_MAP[name] ?? name)
-    )
+    if (consentSignal.value) return true
+
+    const { [name]: mappedEventTypes } = CONSENT_EVENT_TYPE_MAP
+    if (mappedEventTypes !== undefined) {
+      return mappedEventTypes.some((eventType) => this.allowedEventTypes.includes(eventType))
+    }
+
+    return this.allowedEventTypes.some((eventType) => eventType === name)
   }
 
   onBlockedByConsent(name: string, args: readonly unknown[]): void {
@@ -306,12 +361,25 @@ abstract class CoreStatefulEventEmitter
     event: ExperienceEventPayload,
     _profile?: PartialProfile,
   ): Promise<OptimizationData | undefined> {
+    const { data } = await this.sendExperienceEventWithResult(method, args, event, _profile)
+    return data
+  }
+
+  protected async sendExperienceEventWithResult(
+    method: string,
+    args: readonly unknown[],
+    event: ExperienceEventPayload,
+    _profile?: PartialProfile,
+  ): Promise<EventEmissionResult> {
     if (!this.hasConsent(method)) {
       this.onBlockedByConsent(method, args)
-      return undefined
+      return { accepted: false }
     }
 
-    return await this.experienceQueue.send(event)
+    const data = await this.experienceQueue.send(event)
+    if (data === undefined) return { accepted: true }
+
+    return { accepted: true, data }
   }
 
   protected async sendInsightsEvent(
@@ -341,44 +409,151 @@ abstract class CoreStatefulEventEmitter
     }
   }
 
+  private buildFlagViewTrackingSignature(
+    value: Json,
+    payload: FlagViewBuilderArgs,
+    profileId: string,
+  ): FlagViewTrackingSignature {
+    return [value, payload.componentId, payload.experienceId, payload.variantIndex, profileId]
+  }
+
+  protected initializeFlagViewConsentEffect(): void {
+    let wasReadyToTrack = this.hasConsent('trackFlagView') && profileSignal.value?.id !== undefined
+    let previousProfileId = profileSignal.value?.id
+
+    signalFns.effect(() => {
+      const profileId = profileSignal.value?.id
+      const isReadyToTrack = this.hasConsent('trackFlagView') && profileId !== undefined
+
+      if (isReadyToTrack && (!wasReadyToTrack || profileId !== previousProfileId)) {
+        this.trackActiveFlagSubscriptionViews()
+      }
+
+      wasReadyToTrack = isReadyToTrack
+      previousProfileId = profileId
+    })
+  }
+
+  private attemptFlagViewTracking(
+    name: string,
+    value: Json,
+    changes: ChangeArray | undefined = changesSignal.value,
+  ): void {
+    const payload = this.buildFlagViewBuilderArgs(name, changes)
+    const profileId = profileSignal.value?.id
+
+    if (!this.hasConsent('trackFlagView')) {
+      this.onBlockedByConsent('trackFlagView', [payload])
+      return
+    }
+
+    if (profileId === undefined) return
+
+    const signature = this.buildFlagViewTrackingSignature(value, payload, profileId)
+    if (isEqual(this.lastAcceptedFlagViewSignatures.get(name)?.signature, signature)) {
+      return
+    }
+
+    let pendingSignatures = this.pendingFlagViewSignatures.get(name)
+    if (pendingSignatures?.some((pending) => isEqual(pending.signature, signature)) === true) {
+      return
+    }
+
+    pendingSignatures ??= []
+    this.pendingFlagViewSignatures.set(name, pendingSignatures)
+    const pendingSignature = {
+      attemptId: this.nextFlagViewTrackingAttemptId++,
+      signature,
+    }
+    pendingSignatures.push(pendingSignature)
+
+    void this.trackFlagView(payload)
+      .then(() => {
+        const lastAccepted = this.lastAcceptedFlagViewSignatures.get(name)
+        if (!lastAccepted || pendingSignature.attemptId > lastAccepted.attemptId) {
+          this.lastAcceptedFlagViewSignatures.set(name, pendingSignature)
+        }
+      })
+      .catch((error: unknown) => {
+        logger.warn(`Failed to emit "flag view" event for "${name}"`, String(error))
+      })
+      .finally(() => {
+        const pendingIndex = pendingSignatures.findIndex(
+          ({ attemptId }) => attemptId === pendingSignature.attemptId,
+        )
+        if (pendingIndex !== -1) {
+          pendingSignatures.splice(pendingIndex, 1)
+        }
+        if (pendingSignatures.length === 0) {
+          this.pendingFlagViewSignatures.delete(name)
+        }
+      })
+  }
+
+  private trackActiveFlagSubscriptionViews(): void {
+    const { value: changes } = changesSignal
+
+    for (const [name, count] of this.activeFlagSubscriptionCounts) {
+      if (count <= 0) continue
+
+      this.attemptFlagViewTracking(name, super.getFlag(name, changes), changes)
+    }
+  }
+
+  private registerActiveFlagSubscription(name: string): () => void {
+    this.activeFlagSubscriptionCounts.set(
+      name,
+      (this.activeFlagSubscriptionCounts.get(name) ?? 0) + 1,
+    )
+
+    return () => {
+      const nextCount = (this.activeFlagSubscriptionCounts.get(name) ?? 0) - 1
+
+      if (nextCount <= 0) {
+        this.activeFlagSubscriptionCounts.delete(name)
+        return
+      }
+
+      this.activeFlagSubscriptionCounts.set(name, nextCount)
+    }
+  }
+
   protected getFlagObservable(name: string): Observable<Json> {
     const existingObservable = this.flagObservables.get(name)
     if (existingObservable) return existingObservable
 
-    const trackFlagView = this.trackFlagView.bind(this)
-    const buildFlagViewBuilderArgs = this.buildFlagViewBuilderArgs.bind(this)
+    const attemptFlagViewTracking = this.attemptFlagViewTracking.bind(this)
+    const registerActiveFlagSubscription = this.registerActiveFlagSubscription.bind(this)
     const valueSignal = signalFns.computed<Json>(() => super.getFlag(name, changesSignal.value))
     const distinctObservable = toDistinctObservable(valueSignal, isEqual)
 
     const trackedObservable: Observable<Json> = {
       get current() {
         const { current: value } = distinctObservable
-        const payload = buildFlagViewBuilderArgs(name, changesSignal.value)
 
-        void trackFlagView(payload).catch((error: unknown) => {
-          logger.warn(`Failed to emit "flag view" event for "${name}"`, String(error))
-        })
+        attemptFlagViewTracking(name, value, changesSignal.value)
 
         return value
       },
 
-      subscribe: (next) =>
-        distinctObservable.subscribe((value) => {
-          const payload = buildFlagViewBuilderArgs(name, changesSignal.value)
-
-          void trackFlagView(payload).catch((error: unknown) => {
-            logger.warn(`Failed to emit "flag view" event for "${name}"`, String(error))
-          })
+      subscribe: (next) => {
+        const unregister = registerActiveFlagSubscription(name)
+        const subscription = distinctObservable.subscribe((value) => {
+          attemptFlagViewTracking(name, value, changesSignal.value)
           next(value)
-        }),
+        })
+
+        return {
+          unsubscribe: () => {
+            subscription.unsubscribe()
+            unregister()
+          },
+        }
+      },
 
       subscribeOnce: (next) =>
         distinctObservable.subscribeOnce((value) => {
-          const payload = buildFlagViewBuilderArgs(name, changesSignal.value)
-
-          void trackFlagView(payload).catch((error: unknown) => {
-            logger.warn(`Failed to emit "flag view" event for "${name}"`, String(error))
-          })
+          attemptFlagViewTracking(name, value, changesSignal.value)
           next(value)
         }),
     }

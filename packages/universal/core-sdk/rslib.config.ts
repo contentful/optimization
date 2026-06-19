@@ -24,6 +24,7 @@ export default defineConfig({
       'api-client': './src/api-client.ts',
       'api-schemas': './src/api-schemas.ts',
       'preview-support': './src/preview-support/index.ts',
+      'sdk-support': './src/sdk-support/index.ts',
     },
     tsconfigPath: './tsconfig.build.json',
     decorators: { version: '2022-03' }, // stage-3 decorators

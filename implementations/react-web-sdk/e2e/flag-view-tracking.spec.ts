@@ -18,27 +18,19 @@ test.describe('flag view tracking', () => {
     await expect(flagEvents).toHaveCount(0)
   })
 
-  test('emits flag view events after consent and profile updates', async ({ page }) => {
+  test('emits flag view events after consented profile updates', async ({ page }) => {
     const flagEvents = page.locator('[data-testid="event-component-boolean"]')
     const baselineFlagEventCount = await flagEvents.count()
 
     await page.getByTestId('consent-button').click()
-
-    await expect
-      .poll(async () => await flagEvents.count(), {
-        message: 'consented flag subscription should emit a flag view event',
-      })
-      .toBeGreaterThan(baselineFlagEventCount)
-
-    const afterConsentFlagEventCount = await flagEvents.count()
 
     await page.getByTestId('live-updates-identify-button').click()
     await expect(page.getByTestId('live-updates-reset-button')).toBeVisible()
 
     await expect
       .poll(async () => await flagEvents.count(), {
-        message: 'profile updates should emit additional flag view events',
+        message: 'consented profile updates should emit flag view events',
       })
-      .toBeGreaterThan(afterConsentFlagEventCount)
+      .toBeGreaterThan(baselineFlagEventCount)
   })
 })

@@ -2,6 +2,11 @@ import Combine
 import Foundation
 import JavaScriptCore
 
+struct EventEmissionResult {
+    let accepted: Bool
+    let data: [String: Any]?
+}
+
 /// The main public entry point for the Contentful Optimization SDK.
 ///
 /// `OptimizationClient` is an `ObservableObject` that wraps the JavaScript bridge
@@ -172,6 +177,21 @@ public final class OptimizationClient: ObservableObject {
         }
     }
 
+    func screenWithEmissionResult(name: String, properties: [String: Any]? = nil) async throws -> EventEmissionResult {
+        let result = try await bridgeCallAsyncJSON(method: "screenWithEmissionResult") {
+            var payloadDict: [String: Any] = ["name": name]
+            if let properties = properties {
+                payloadDict["properties"] = properties
+            }
+            return try serializeJSON(payloadDict)
+        }
+
+        return EventEmissionResult(
+            accepted: result?["accepted"] as? Bool ?? false,
+            data: result?["data"] as? [String: Any]
+        )
+    }
+
     /// Flush pending analytics and personalization events.
     public func flush() async throws {
         try await bridgeCallAsyncVoid(method: "flush", payload: "")
@@ -316,6 +336,18 @@ public final class OptimizationClient: ObservableObject {
     /// Get the current state synchronously.
     public func getState() -> OptimizationState {
         return state
+    }
+
+    /// Return whether Core would currently allow the named event method.
+    func hasConsent(method: String) -> Bool {
+        guard isInitialized else { return false }
+        let escaped = NativePolyfills.escapeForJS(method)
+
+        guard let result = bridgeCallSyncWhenInitialized(method: "hasConsent", args: "'\(escaped)'"),
+              !result.isNull && !result.isUndefined
+        else { return false }
+
+        return result.toBool()
     }
 
     // MARK: - Preview Panel

@@ -1,5 +1,6 @@
 import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { ExperienceRequestState, ResolvedData } from '@contentful/optimization-web/core-sdk'
+import { installCurrentPageTrackerSdkSupport } from '@contentful/optimization-web/sdk-support'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import type { ReactElement, ReactNode } from 'react'
 import { act } from 'react'
@@ -123,21 +124,25 @@ export function createOptimizableTestEntry(id: string): TestEntry {
 
 export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}): OptimizationSdk {
   const { states: stateOverrides, tracking: trackingOverrides, ...sdkOverrides } = overrides
+  const page =
+    sdkOverrides.page ??
+    (async () => {
+      await Promise.resolve()
+      return undefined
+    })
 
-  return {
+  const sdk: OptimizationSdk = {
     consent: () => undefined,
     destroy: () => undefined,
     getFlag: () => undefined,
     getMergeTagValue: () => undefined,
+    hasConsent: () => true,
     identify: async () => {
       await Promise.resolve()
       return undefined
     },
     locale: undefined,
-    page: async () => {
-      await Promise.resolve()
-      return undefined
-    },
+    page,
     resolveOptimizedEntry: (entry: Entry) => ({ entry }),
     reset: () => undefined,
     setLocale: () => undefined,
@@ -179,6 +184,17 @@ export function createOptimizationSdk(overrides: OptimizationSdkOverrides = {}):
     },
     ...sdkOverrides,
   }
+
+  installCurrentPageTrackerSdkSupport(sdk, {
+    pageWithEmissionResult: async (payload: Parameters<OptimizationSdk['page']>[0]) => {
+      const data = await page(payload)
+      if (data === undefined) return { accepted: true }
+
+      return { accepted: true, data }
+    },
+  })
+
+  return sdk
 }
 
 export function createRuntime(

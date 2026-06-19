@@ -13,7 +13,7 @@ import type { ConsentController, ConsentGuard, ConsentInput } from './Consent'
 import type { CoreStatefulApiConfig } from './CoreApiConfig'
 import type { CoreConfig } from './CoreBase'
 import CoreStatefulEventEmitter from './CoreStatefulEventEmitter'
-import { DEFAULT_ALLOWED_EVENT_TYPES, type EventType } from './EventType'
+import { type AllowedEventType, DEFAULT_ALLOWED_EVENT_TYPES, type EventType } from './EventType'
 import { toPositiveInt } from './lib/number'
 import { type QueueFlushPolicy, resolveQueueFlushPolicy } from './lib/queue'
 import {
@@ -23,6 +23,7 @@ import {
 import { normalizeExplicitLocale } from './locale'
 import { ExperienceQueue, type ExperienceQueueDropContext } from './queues/ExperienceQueue'
 import { InsightsQueue } from './queues/InsightsQueue'
+import { installCoreStatefulSdkSupport } from './sdk-support/CoreStatefulSdkSupport'
 import {
   batch,
   blockedEvent as blockedEventSignal,
@@ -52,7 +53,7 @@ import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from '.
 const coreLogger = createScopedLogger('CoreStateful')
 
 const OFFLINE_QUEUE_MAX_EVENTS = 100
-export type { EventType } from './EventType'
+export type { AllowedEventType, EventType } from './EventType'
 export type { ExperienceQueueDropContext } from './queues/ExperienceQueue'
 
 const hasDefinedValues = (record: Record<string, unknown>): boolean =>
@@ -193,7 +194,7 @@ export interface CoreStatefulConfig extends CoreConfig {
   /**
    * Allow-listed event type strings permitted when consent is not set.
    */
-  allowedEventTypes?: EventType[]
+  allowedEventTypes?: AllowedEventType[]
 
   /** Optional set of default values applied on initialization. */
   defaults?: CoreConfigDefaults
@@ -230,7 +231,7 @@ const OPTIMIZATION_UNLOCKING_EVENT_TYPES: readonly EventType[] = [
 class CoreStateful extends CoreStatefulEventEmitter implements ConsentController, ConsentGuard {
   private readonly singletonOwner: string
   private destroyed = false
-  protected readonly allowedEventTypes: EventType[]
+  protected readonly allowedEventTypes: AllowedEventType[]
   protected readonly experienceQueue: ExperienceQueue
   protected readonly insightsQueue: InsightsQueue
   protected readonly onEventBlocked?: CoreStatefulConfig['onEventBlocked']
@@ -303,6 +304,10 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
         onOfflineDrop: resolvedQueuePolicy.onOfflineDrop,
         stateInterceptors: this.interceptors.state,
       })
+      installCoreStatefulSdkSupport(this, {
+        pageWithEmissionResult: this.pageWithEmissionResult.bind(this),
+        screenWithEmissionResult: this.screenWithEmissionResult.bind(this),
+      })
 
       batch(() => {
         consentSignal.value = defaultConsent
@@ -320,6 +325,8 @@ class CoreStateful extends CoreStatefulEventEmitter implements ConsentController
   }
 
   private initializeEffects(): void {
+    this.initializeFlagViewConsentEffect()
+
     effect(() => {
       coreLogger.debug(
         `Profile ${profileSignal.value && `with ID ${profileSignal.value.id}`} has been ${profileSignal.value ? 'set' : 'cleared'}`,

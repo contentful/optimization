@@ -203,15 +203,28 @@
       const CONFIG = <%- JSON.stringify(config) %>
       const APP_LOCALE = <%- JSON.stringify(appLocale) %>
       const SERVER_APP_CONSENT = <%- JSON.stringify(appConsent) %>
+      const SERVER_OPTIMIZATION_DATA = <%- JSON.stringify(optimizationData) %>
     </script>
     <script>
       /* --- Standard Initialization Code --- */
 
+      const SERVER_SDK_DEFAULTS = {
+        ...(typeof SERVER_APP_CONSENT === 'boolean'
+          ? { consent: SERVER_APP_CONSENT }
+          : {}),
+        ...(SERVER_OPTIMIZATION_DATA
+          ? {
+              changes: SERVER_OPTIMIZATION_DATA.changes,
+              profile: SERVER_OPTIMIZATION_DATA.profile,
+              selectedOptimizations: SERVER_OPTIMIZATION_DATA.selectedOptimizations,
+            }
+          : {}),
+      }
       let contentfulClient = contentful.createClient(CONFIG.contentful)
       window.contentfulOptimization = new ContentfulOptimization({
         ...CONFIG.optimization,
-        ...(typeof SERVER_APP_CONSENT === 'boolean'
-          ? { defaults: { consent: SERVER_APP_CONSENT } }
+        ...(Object.keys(SERVER_SDK_DEFAULTS).length > 0
+          ? { defaults: SERVER_SDK_DEFAULTS }
           : {}),
         autoTrackEntryInteraction: { views: true, clicks: true, hovers: true },
         locale: APP_LOCALE,
@@ -358,7 +371,7 @@
       }
 
       let renderEntriesPromise = Promise.resolve()
-      let pageEventEmittedForCurrentConsent = false
+      let hasEmittedClientConsentPage = SERVER_OPTIMIZATION_DATA !== null
 
       // Render optimized entries
       async function renderOptimizedEntry(rawEntry, element, autoObserve = true) {
@@ -484,13 +497,8 @@
         if (typeof consent === 'boolean') setAppConsentCookie(consent)
         toggleConsent(consent)
 
-        if (consent !== true) {
-          pageEventEmittedForCurrentConsent = false
-          return
-        }
-
-        if (!pageEventEmittedForCurrentConsent) {
-          pageEventEmittedForCurrentConsent = true
+        if (consent === true && !hasEmittedClientConsentPage) {
+          hasEmittedClientConsentPage = true
           void contentfulOptimization.page()
         }
       })
@@ -544,12 +552,8 @@
         },
       )
 
-      contentfulOptimization.states.profile.subscribe((profile) => {
-        if (!profile) return
-
-        // Emit and log flag access
-        const booleanFlag = contentfulOptimization.getFlag('boolean')
-        console.log('Flag "boolean" value:', booleanFlag)
+      contentfulOptimization.states.flag('boolean').subscribe((value) => {
+        console.log('Flag "boolean" value:', value)
       })
 
       void scheduleRenderEntries()

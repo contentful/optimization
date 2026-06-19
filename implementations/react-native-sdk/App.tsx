@@ -45,8 +45,6 @@ function AppContent(): React.JSX.Element {
   )
   const [entries, setEntries] = useState<Entry[]>([])
   const [sdkError, setSdkError] = useState<string | null>(null)
-  const [hasConsent, setHasConsent] = useState<boolean>(false)
-  const [hasProfile, setHasProfile] = useState<boolean>(false)
   const [isIdentified, setIsIdentified] = useState<boolean>(false)
   const [showNavigationTest, setShowNavigationTest] = useState<boolean>(false)
   const [showLiveUpdatesTest, setShowLiveUpdatesTest] = useState<boolean>(false)
@@ -55,7 +53,6 @@ function AppContent(): React.JSX.Element {
     void sdk.page({ properties: { url: 'app' } })
 
     const subscription = sdk.states.profile.subscribe((profile) => {
-      setHasProfile(profile !== undefined)
       setIsIdentified(profile?.traits.identified === true)
 
       if (!profile) {
@@ -65,18 +62,13 @@ function AppContent(): React.JSX.Element {
       void fetchEntries(ENTRY_IDS, setEntries, setSdkError)
     })
 
-    const consentSubscription = sdk.states.consent.subscribe((consent) => {
-      setHasConsent(consent === true)
-    })
-
     return () => {
       subscription.unsubscribe()
-      consentSubscription.unsubscribe()
     }
   }, [sdk])
 
   useEffect(() => {
-    if (!hasConsent || !hasProfile) {
+    if (entries.length === 0) {
       return
     }
 
@@ -85,7 +77,7 @@ function AppContent(): React.JSX.Element {
     return () => {
       flagSubscription.unsubscribe()
     }
-  }, [hasConsent, hasProfile, sdk])
+  }, [entries.length, sdk])
 
   const handleIdentify = (): void => {
     void sdk.identify({ userId: 'charles', traits: { identified: true } })

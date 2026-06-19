@@ -298,6 +298,79 @@ describe('CoreStateless', () => {
     expect(upsertProfile.mock.calls[0]?.[0].events[0]?.context.gdpr.isConsentGiven).toBe(false)
   })
 
+  it('uses the flag allow-list selector without allowing entry views before consent', async () => {
+    const blockedEvents: BlockedEvent[] = []
+    const core = new CoreStateless({
+      allowedEventTypes: ['flag'],
+      clientId: 'key_123',
+      environment: 'main',
+      onEventBlocked: (event) => blockedEvents.push(event),
+    })
+    const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const requestOptimization = core.forRequest({
+      consent: false,
+      profile: { id: 'profile-123' },
+    })
+
+    await requestOptimization.trackView({
+      componentId: 'entry-card',
+      viewDurationMs: 100,
+      viewId: 'entry-card-view',
+    })
+    await requestOptimization.trackFlagView({ componentId: 'dark-mode' })
+
+    expect(blockedEvents.map((event) => event.method)).toEqual(['trackView'])
+    expect(sendBatchEvents).toHaveBeenCalledWith([
+      {
+        profile: { id: 'profile-123' },
+        events: [
+          expect.objectContaining({
+            componentId: 'dark-mode',
+            componentType: 'Variable',
+            type: 'component',
+          }),
+        ],
+      },
+    ])
+  })
+
+  it('keeps component allow-list compatibility for stateless entry views and flag views', async () => {
+    const blockedEvents: BlockedEvent[] = []
+    const core = new CoreStateless({
+      allowedEventTypes: ['component'],
+      clientId: 'key_123',
+      environment: 'main',
+      onEventBlocked: (event) => blockedEvents.push(event),
+    })
+    const sendBatchEvents = rs.spyOn(core.api.insights, 'sendBatchEvents').mockResolvedValue(true)
+    const requestOptimization = core.forRequest({
+      consent: false,
+      profile: { id: 'profile-123' },
+    })
+
+    await requestOptimization.trackView({
+      componentId: 'entry-card',
+      viewDurationMs: 100,
+      viewId: 'entry-card-view',
+    })
+    await requestOptimization.trackFlagView({ componentId: 'dark-mode' })
+
+    expect(blockedEvents).toEqual([])
+    expect(sendBatchEvents).toHaveBeenCalledTimes(2)
+    expect(sendBatchEvents.mock.calls.map(([events]) => events[0]?.events[0])).toEqual([
+      expect.objectContaining({
+        componentId: 'entry-card',
+        componentType: 'Entry',
+        type: 'component',
+      }),
+      expect.objectContaining({
+        componentId: 'dark-mode',
+        componentType: 'Variable',
+        type: 'component',
+      }),
+    ])
+  })
+
   it('updates the request-bound profile across sequential Experience calls', async () => {
     const core = new CoreStateless({ clientId: 'key_123', environment: 'main' })
     const firstProfile = { ...EMPTY_OPTIMIZATION_DATA.profile, id: 'first-profile' }

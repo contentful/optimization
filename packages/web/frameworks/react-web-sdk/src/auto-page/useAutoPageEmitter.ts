@@ -1,8 +1,11 @@
+import {
+  getCurrentPageTracker,
+  resetCurrentPageTrackerState,
+} from '@contentful/optimization-web/sdk-support'
 import { useEffect } from 'react'
 import { useOptimization } from '../hooks/useOptimization'
+import { useConsentState } from '../hooks/useOptimizationState'
 import type { AutoPagePayload } from './types'
-
-let lastEmittedRouteKeyBySdk = new WeakMap<object, string>()
 
 export interface AutoPageEmissionMetadata {
   readonly isInitialEmission: boolean
@@ -45,25 +48,24 @@ export function useAutoPageEmitter({
   buildPayload,
 }: UseAutoPageEmitterArgs): void {
   const sdk = useOptimization()
+  const consent = useConsentState()
 
   useEffect(() => {
     if (!enabled) {
       return
     }
 
-    const previousRouteKey = lastEmittedRouteKeyBySdk.get(sdk)
+    const tracker = getCurrentPageTracker(sdk)
 
-    if (previousRouteKey === routeKey) {
-      return
-    }
-
-    const isInitialEmission = !lastEmittedRouteKeyBySdk.has(sdk)
-    lastEmittedRouteKeyBySdk.set(sdk, routeKey)
-
-    void sdk.page(buildPayload({ isInitialEmission }))
-  }, [buildPayload, enabled, routeKey, sdk])
+    void tracker
+      .emitIfNeeded(sdk, {
+        buildPayload,
+        routeKey,
+      })
+      .catch(() => undefined)
+  }, [buildPayload, consent, enabled, routeKey, sdk])
 }
 
 export function resetAutoPageEmitterState(): void {
-  lastEmittedRouteKeyBySdk = new WeakMap<object, string>()
+  resetCurrentPageTrackerState()
 }

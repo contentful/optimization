@@ -188,8 +188,14 @@ Allow-listed events can emit before event consent is granted, but their SDK-buil
 When the consent guard blocks an event, the SDK writes blocked-event metadata and calls the
 configured `onEventBlocked` callback. You can also subscribe to `states.blockedEventStream` in
 stateful JavaScript SDKs. Blocked events are dropped at the SDK boundary and are not replayed after
-`consent(true)`. If the application needs an event after consent, emit a fresh `page()`,
-`identify()`, `screen()`, or interaction event when policy allows.
+`consent(true)`. Do not store or resend suppressed interaction events such as clicks, taps, hovers,
+or custom interactions.
+
+SDK-owned current-state surfaces can still emit a fresh event after consent when the underlying
+condition is still current and the event has not already been accepted. Automatic page or screen
+trackers can emit the active page or screen after tracking becomes allowed, and active flag
+subscriptions can emit a flag-view event for the current flag value. Those emissions represent the
+current application state after consent, not replay of the previously blocked event.
 
 ### Revocation and profile cleanup
 
@@ -366,5 +372,5 @@ Before releasing a consent-aware Optimization SDK integration, verify these impl
   third-party destinations.
 - Subscribe to `states.blockedEventStream` or use `onEventBlocked` during validation to confirm
   denied events are blocked.
-- Verify post-consent flows emit fresh events instead of relying on replay of previously blocked
-  events.
+- Verify post-consent flows never replay suppressed interactions, and that page, screen, or flag
+  current-state emitters send only fresh events for conditions that are still current.

@@ -13,13 +13,15 @@ struct TapTrackingModifier: ViewModifier {
         if enabled {
             content
                 .simultaneousGesture(TapGesture().onEnded {
-                    let metadata = TrackingMetadata(entry: entry, personalization: personalization)
-                    let payload = TrackClickPayload(
-                        componentId: metadata.componentId,
-                        experienceId: metadata.experienceId,
-                        variantIndex: metadata.variantIndex
-                    )
-                    Task { try? await client.trackClick(payload) }
+                    if client.hasConsent(method: "trackClick") {
+                        let metadata = TrackingMetadata(entry: entry, personalization: personalization)
+                        let payload = TrackClickPayload(
+                            componentId: metadata.componentId,
+                            experienceId: metadata.experienceId,
+                            variantIndex: metadata.variantIndex
+                        )
+                        Task { try? await client.trackClick(payload) }
+                    }
                     onTap?(entry)
                 })
         } else {

@@ -386,24 +386,6 @@
       const viewEventDialogs = new Map()
       const hoverEventDialogs = new Map()
       let rawEventCount = 0
-      let currentConsent
-      let currentProfile
-      let flagSubscription
-
-      function syncFlagSubscription() {
-        const shouldSubscribe = currentConsent === true && currentProfile !== undefined
-
-        if (!shouldSubscribe) {
-          flagSubscription?.unsubscribe()
-          flagSubscription = undefined
-          return
-        }
-
-        if (flagSubscription) return
-
-        flagSubscription = contentfulOptimization.states.flag('boolean').subscribe(() => undefined)
-      }
-
       function isViewHeartbeatEvent(event) {
         return (
           event?.type === 'component' &&
@@ -529,8 +511,6 @@
 
         contentfulOptimization.tracking.clearElement('views', element)
         manualViewEntryElements.set(element, [entry, selectedOptimization])
-
-        if (currentConsent !== true) return
 
         contentfulOptimization.tracking.enableElement('views', element, {
           data: {
@@ -695,20 +675,7 @@
 
       // Subscribe to consent state
       contentfulOptimization.states.consent.subscribe(async (consent) => {
-        currentConsent = consent
         toggleConsent(consent)
-        syncFlagSubscription()
-
-        manualViewEntryElements.forEach((settings, element) => {
-          if (consent) {
-            const [entry, selectedOptimization] = settings
-
-            enableManualViewTracking(element, entry, selectedOptimization)
-            return
-          }
-
-          contentfulOptimization.tracking.clearElement('views', element)
-        })
       })
 
       // Subscribe to the event stream
@@ -780,10 +747,10 @@
       })
 
       contentfulOptimization.states.profile.subscribe((profile) => {
-        currentProfile = profile
         toggleIdentity(Boolean(profile?.traits && Object.keys(profile.traits).length))
-        syncFlagSubscription()
       })
+
+      contentfulOptimization.states.flag('boolean').subscribe(() => undefined)
 
       // Emit the initial page event after subscribers are attached so E2E surfaces reflect it.
       void contentfulOptimization.page()

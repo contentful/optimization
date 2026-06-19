@@ -94,6 +94,10 @@ val thirdPartyNoticesFile =
                 "build/reports/third-party-notices/android-published-third-party-notices.txt",
             ),
         )
+val requireThirdPartyNotices =
+    providers.gradleProperty("contentful.optimization.requireThirdPartyNotices")
+        .map { it.toBoolean() }
+        .orElse(false)
 val licenseFile = repoRoot.resolve("LICENSE")
 val generatedThirdPartyNoticesAssetsDir =
     layout.buildDirectory.dir("generated/third-party-notices/assets")
@@ -102,9 +106,19 @@ val copyThirdPartyNotices = tasks.register("copyThirdPartyNotices") {
         it.file("THIRD_PARTY_NOTICES.txt")
     }
     val licenseOutputFile = generatedThirdPartyNoticesAssetsDir.map { it.file("LICENSE") }
+    val existingThirdPartyNoticesFile = providers.provider {
+        thirdPartyNoticesFile.get().takeIf { it.isFile }
+    }
 
-    inputs.file(thirdPartyNoticesFile)
+    inputs.property("thirdPartyNoticesFilePath", thirdPartyNoticesFile.map { it.absolutePath })
+    inputs.property("requireThirdPartyNotices", requireThirdPartyNotices)
+    inputs.file(existingThirdPartyNoticesFile)
+        .withPropertyName("thirdPartyNoticesFile")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+        .optional(true)
     inputs.file(licenseFile)
+        .withPropertyName("licenseFile")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
     outputs.files(noticesOutputFile, licenseOutputFile)
 
     doLast {
@@ -113,14 +127,20 @@ val copyThirdPartyNotices = tasks.register("copyThirdPartyNotices") {
         val noticesTargetFile = noticesOutputFile.get().asFile
         val licenseTargetFile = licenseOutputFile.get().asFile
 
-        check(noticesFile.isFile) {
-            "Missing $noticesFile. Run pnpm notices:generate:android before publishing."
+        outputDir.deleteRecursively()
+
+        if (!noticesFile.isFile) {
+            check(!requireThirdPartyNotices.get()) {
+                "Missing $noticesFile. Run pnpm notices:generate:android before publishing."
+            }
+            logger.lifecycle("Skipping Android third-party notices asset because $noticesFile does not exist.")
+            return@doLast
         }
+
         check(licenseFile.isFile) {
             "Missing $licenseFile."
         }
 
-        outputDir.deleteRecursively()
         outputDir.mkdirs()
         noticesFile.copyTo(noticesTargetFile, overwrite = true)
         licenseFile.copyTo(licenseTargetFile, overwrite = true)
@@ -158,7 +178,9 @@ tasks.matching {
         it.name == "publishAndReleaseToMavenCentral" ||
         it.name.startsWith("publishMavenPublicationTo")
 }.configureEach {
-    dependsOn(verifyThirdPartyNoticesInReleaseAar)
+    if (requireThirdPartyNotices.get()) {
+        dependsOn(verifyThirdPartyNoticesInReleaseAar)
+    }
 }
 
 // Maven Central publishing via the Sonatype Central Portal. The vanniktech plugin configures the

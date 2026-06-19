@@ -6,7 +6,7 @@ import {
   type OptimizationRootSdkConfig,
   type OnStatesReady as SharedOnStatesReady,
   type TrackEntryInteractionOptions as SharedTrackEntryInteractionOptions,
-} from '@contentful/optimization-web/presentation'
+} from '@contentful/optimization-web/sdk-support'
 import { useLayoutEffect, useRef, useState, type PropsWithChildren, type ReactElement } from 'react'
 
 import { OptimizationContext, type OptimizationSdk } from '../context/OptimizationContext'

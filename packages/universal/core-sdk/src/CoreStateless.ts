@@ -7,7 +7,7 @@ import type { BlockedEvent } from './BlockedEvent'
 import type { CoreStatelessApiConfig } from './CoreApiConfig'
 import CoreBase, { type CoreConfig } from './CoreBase'
 import { CoreStatelessRequest, type CoreStatelessForRequestOptions } from './CoreStatelessRequest'
-import { DEFAULT_ALLOWED_EVENT_TYPES, type EventType } from './EventType'
+import { DEFAULT_ALLOWED_EVENT_TYPES, type AllowedEventType } from './EventType'
 import type { EventBuilderConfig } from './events'
 import { normalizeExplicitLocale } from './locale'
 
@@ -55,7 +55,7 @@ export interface CoreStatelessConfig extends CoreConfig {
   /**
    * Allow-listed event type strings permitted when request event consent is not granted.
    */
-  allowedEventTypes?: EventType[]
+  allowedEventTypes?: AllowedEventType[]
 
   /**
    * Callback invoked whenever an event call is blocked by consent.
@@ -72,7 +72,7 @@ export type {
   StatelessNonStickyTrackViewPayload,
   StatelessStickyTrackViewPayload,
 } from './CoreStatelessRequest'
-export type { EventType } from './EventType'
+export type { AllowedEventType, EventType } from './EventType'
 
 const hasDefinedValues = (record: Record<string, unknown>): boolean =>
   Object.values(record).some((value) => value !== undefined)
@@ -114,7 +114,7 @@ const createStatelessInsightsApiConfig = (
  * host application, not the results of those calls.
  */
 class CoreStateless extends CoreBase {
-  readonly allowedEventTypes: EventType[]
+  readonly allowedEventTypes: AllowedEventType[]
   readonly onEventBlocked?: CoreStatelessConfig['onEventBlocked']
 
   constructor(config: CoreStatelessConfig) {

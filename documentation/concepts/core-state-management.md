@@ -113,10 +113,10 @@ change Core state or event streams are:
 | `trackClick(payload)`               | Sends an Insights event.                                                                              |
 | `trackHover(payload)`               | Sends an Insights event.                                                                              |
 | `trackFlagView(payload)`            | Sends an Insights event recording a Custom Flag observation.                                          |
-| `getFlag(name)`                     | Resolves a Custom Flag value from `changes`; emits a flag view event when the resolved value changes. |
-| `states.flag(name).current`         | Reads the current Custom Flag value and emits a flag view event for that read.                        |
-| `states.flag(name).subscribe()`     | Subscribes to distinct Custom Flag values and emits a flag view event for each delivered value.       |
-| `states.flag(name).subscribeOnce()` | Waits for the first non-nullish Custom Flag value and emits a flag view event for that value.         |
+| `getFlag(name)`                     | Resolves a Custom Flag value from `changes`; emits a deduped flag view event for the resolved value.  |
+| `states.flag(name).current`         | Reads the current Custom Flag value and emits a deduped flag view event for that value.               |
+| `states.flag(name).subscribe()`     | Subscribes to distinct Custom Flag values and emits deduped flag view events for delivered values.    |
+| `states.flag(name).subscribeOnce()` | Waits for the first non-nullish Custom Flag value and emits a deduped flag view event for that value. |
 | `reset()`                           | Clears `blockedEvent`, `event`, `changes`, `profile`, and `selectedOptimizations` in a single batch.  |
 | `flush()`                           | Triggers immediate queue flushes without writing to any signal directly.                              |
 | `destroy()`                         | Flushes both queues and releases the singleton lock.                                                  |
@@ -181,7 +181,9 @@ via the `allowedEventTypes` configuration option.
 Calling `consent(true)` unblocks all gated events going forward and grants durable
 profile-continuity persistence consent. Calling `consent({ events: true, persistence: false })`
 allows event emission while keeping profile continuity session-only. Blocked events are not replayed
-after consent is granted.
+after consent is granted. Current-state SDK surfaces, such as automatic page or screen trackers and
+active flag subscriptions, may emit a fresh event after consent when the same page, screen, or flag
+value is still current and has not already produced an accepted event.
 
 ## What consumers receive: the `states` surface
 
@@ -300,10 +302,12 @@ const darkModeSubscription = sdk.states.flag('dark-mode').subscribe((value) => {
 })
 ```
 
-`states.flag(name).subscribe()` suppresses duplicate emitted values using deep equality and emits a
-flag view event for each delivered value. `states.flag(name).current` represents a direct read, so
-each `current` read emits a flag view event. `getFlag(name)` is nonreactive and deduplicates flag
-view events when repeated calls resolve the same value.
+`states.flag(name).subscribe()` suppresses duplicate emitted values using deep equality and attempts
+to emit a flag view event for each delivered value. `states.flag(name).current` represents a direct
+read, and `getFlag(name)` is nonreactive. All flag-view paths deduplicate accepted flag-view
+signatures, so repeated reads of the same value for the same active profile do not emit duplicate
+flag-view events. A read blocked before consent does not count as accepted, so the current flag
+value can still produce a fresh flag-view event after consent is granted.
 
 If you forward Custom Flag values to a third-party analytics destination, use the same flag read or
 render path that your application already owns. Adding a `states.flag(name)` subscription only for

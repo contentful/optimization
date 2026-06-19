@@ -1,7 +1,11 @@
 import { parse } from 'dotenv'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 
-const env = parse(readFileSync('.env'))
+const ENV_FILE = '.env'
+const EXAMPLE_ENV_FILE = '.env.example'
+
+const envFile = existsSync(ENV_FILE) ? ENV_FILE : EXAMPLE_ENV_FILE
+const env = parse(readFileSync(envFile))
 
 const entries = Object.keys(env)
   .map((k) => `  ${k}: ${JSON.stringify(env[k])}`)

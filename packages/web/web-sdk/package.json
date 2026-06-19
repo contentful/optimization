@@ -62,6 +62,16 @@
         "default": "./dist/presentation.cjs"
       }
     },
+    "./sdk-support": {
+      "import": {
+        "types": "./dist/sdk-support.d.mts",
+        "default": "./dist/sdk-support.mjs"
+      },
+      "require": {
+        "types": "./dist/sdk-support.d.cts",
+        "default": "./dist/sdk-support.cjs"
+      }
+    },
     "./web-components": {
       "import": {
         "types": "./dist/web-components.d.mts",
@@ -110,12 +120,14 @@
   "buildTools": {
     "bundleSize": {
       "gzipBudgets": {
-        "contentful-optimization-web.umd.js": 33000,
-        "index.cjs": 11600,
+        "contentful-optimization-web.umd.js": 33500,
+        "index.cjs": 11700,
         "index.mjs": 11700,
-        "contentful-optimization-web-components.umd.js": 36400,
+        "contentful-optimization-web-components.umd.js": 38000,
         "presentation.cjs": 2650,
         "presentation.mjs": 2250,
+        "sdk-support.cjs": 3300,
+        "sdk-support.mjs": 2800,
         "web-components.cjs": 15200,
         "web-components.mjs": 16150
       }

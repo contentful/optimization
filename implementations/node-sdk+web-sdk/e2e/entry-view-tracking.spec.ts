@@ -76,6 +76,21 @@ test.describe('entry view tracking', () => {
       ).toBeVisible()
     })
 
+    test('same-route page event is not duplicated by repeated consent acceptance', async ({
+      page,
+    }) => {
+      const pageEvents = page
+        .getByRole('listitem')
+        .filter({ has: page.getByRole('button', { name: 'page' }) })
+
+      await expect(pageEvents).toHaveCount(1)
+
+      await page.getByRole('button', { name: 'Reject Consent' }).click()
+      await page.getByRole('button', { name: 'Accept Consent' }).click()
+
+      await expect(pageEvents).toHaveCount(1)
+    })
+
     test('entry view events have been emitted', async ({ page }) => {
       for (const entryId of Object.keys(variantEntryTexts)) {
         const entryText = variantEntryTexts[entryId]

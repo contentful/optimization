@@ -53,4 +53,31 @@ class OptimizationConfigTest {
         assertEquals("anonymous-id", defaults.getString("anonymousId"))
     }
 
+    @Test
+    fun `serializes allowed event types`() {
+        val config = OptimizationConfig(
+            clientId = "test-client",
+            allowedEventTypes = listOf("identify", "screen", "flag"),
+        )
+
+        val allowedEventTypes = JSONObject(config.toJSON()).getJSONArray("allowedEventTypes")
+
+        assertEquals(3, allowedEventTypes.length())
+        assertEquals("identify", allowedEventTypes.getString(0))
+        assertEquals("screen", allowedEventTypes.getString(1))
+        assertEquals("flag", allowedEventTypes.getString(2))
+    }
+
+    @Test
+    fun `serializes empty allowed event types`() {
+        val config = OptimizationConfig(
+            clientId = "test-client",
+            allowedEventTypes = emptyList(),
+        )
+
+        val allowedEventTypes = JSONObject(config.toJSON()).getJSONArray("allowedEventTypes")
+
+        assertEquals(0, allowedEventTypes.length())
+    }
+
 }

@@ -41,8 +41,20 @@ rs.mock('@contentful/optimization-core/logger', () => ({
 }))
 
 const mockTrackView = rs.fn().mockResolvedValue(undefined)
+const mockHasConsent = rs.fn(() => true)
+const mockConsentObservable = {
+  current: undefined,
+  subscribe: rs.fn((next: (value: boolean | undefined) => void) => {
+    next(undefined)
+    return { unsubscribe: rs.fn() }
+  }),
+}
 
 const mockOptimization = {
+  hasConsent: mockHasConsent,
+  states: {
+    consent: mockConsentObservable,
+  },
   trackView: mockTrackView,
 }
 
@@ -80,6 +92,10 @@ rs.mock('react', () => ({
     if (!ref) throw new Error('ref not found')
     return ref
   },
+  useSyncExternalStore: (
+    _subscribe: (onStoreChange: () => void) => () => void,
+    getSnapshot: () => unknown,
+  ) => getSnapshot(),
 }))
 
 function resetHookState(): void {
@@ -122,6 +138,7 @@ function getCallArg(callIndex: number): Record<string, unknown> {
 describe('useViewportTracking', () => {
   beforeEach(() => {
     rs.clearAllMocks()
+    mockHasConsent.mockReturnValue(true)
     resetHookState()
     scrollContextValue = { scrollY: 0, viewportHeight: 800 }
     rs.useFakeTimers()
@@ -170,6 +187,25 @@ describe('useViewportTracking', () => {
 
       rs.advanceTimersByTime(3000)
 
+      expect(mockTrackView).not.toHaveBeenCalled()
+    })
+
+    it('should not build or send view events before trackView is allowed', async () => {
+      mockHasConsent.mockReturnValue(false)
+      const { useViewportTracking } = await import('./useViewportTracking')
+      const entry = createMockEntry('entry-blocked')
+
+      const { onLayout } = useViewportTracking({
+        entry,
+        dwellTimeMs: 100,
+        minVisibleRatio: 0.5,
+      })
+
+      onLayout(createLayoutEvent())
+
+      rs.advanceTimersByTime(1000)
+
+      expect(mockHasConsent).toHaveBeenCalledWith('trackView')
       expect(mockTrackView).not.toHaveBeenCalled()
     })
   })

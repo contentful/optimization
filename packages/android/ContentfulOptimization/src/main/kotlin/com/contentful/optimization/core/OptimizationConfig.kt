@@ -31,6 +31,7 @@ data class OptimizationConfig(
     val locale: String? = null,
     var defaults: StorageDefaults? = null,
     val debug: Boolean = false,
+    val allowedEventTypes: List<String>? = null,
 ) {
     fun normalizedLocale(): String? =
         locale?.let { normalizeExplicitLocale(it, "locale") }
@@ -42,6 +43,7 @@ data class OptimizationConfig(
         experienceBaseUrl?.let { obj.put("experienceBaseUrl", it) }
         insightsBaseUrl?.let { obj.put("insightsBaseUrl", it) }
         normalizedLocale()?.let { obj.put("locale", it) }
+        allowedEventTypes?.let { obj.put("allowedEventTypes", org.json.JSONArray(it)) }
 
         if (defaults != null || anonymousId != null) {
             val defaultsObj = JSONObject()

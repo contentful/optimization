@@ -3,7 +3,7 @@ import type { ResolvedData } from '@contentful/optimization-web/core-sdk'
 import {
   OptimizedEntryController,
   type OptimizedEntrySnapshot,
-} from '@contentful/optimization-web/presentation'
+} from '@contentful/optimization-web/sdk-support'
 import type { Entry, EntrySkeletonType } from 'contentful'
 import { useEffect, useMemo, useState } from 'react'
 import { useLiveUpdates } from '../hooks/useLiveUpdates'

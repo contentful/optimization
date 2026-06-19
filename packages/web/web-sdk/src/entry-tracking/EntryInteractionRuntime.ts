@@ -31,7 +31,15 @@ const ENTRY_INTERACTIONS: EntryInteraction[] = ['clicks', 'views', 'hovers']
 
 type EntryInteractionRuntimeCore = EntryClickTrackingCore &
   EntryViewTrackingCore &
-  EntryHoverTrackingCore
+  EntryHoverTrackingCore & {
+    hasConsent: (name: string) => boolean
+  }
+
+const ENTRY_INTERACTION_CONSENT_METHODS: Readonly<Record<EntryInteraction, string>> = {
+  clicks: 'trackClick',
+  views: 'trackView',
+  hovers: 'trackHover',
+}
 
 interface EntryInteractionElementOverride<TOptions> {
   enabled: boolean
@@ -62,10 +70,13 @@ interface EntryInteractionDetectorMap {
  * @remarks
  * Owns shared registry/observer dependencies and exposes an imperative
  * tracking API that can enable, disable, observe, and unobserve interactions.
+ * Automatic view and hover timers start only after Core allows the underlying
+ * event type by consent or `allowedEventTypes`.
  *
  * @internal
  */
 export class EntryInteractionRuntime {
+  private readonly core: EntryInteractionRuntimeCore
   private readonly entryInteractionDetectors: EntryInteractionDetectorMap
   private readonly entryElementRegistry: EntryElementRegistry
   private readonly entryExistenceObserver: ElementExistenceObserver
@@ -97,12 +108,12 @@ export class EntryInteractionRuntime {
     views: false,
     hovers: false,
   }
-  private autoTrackingAllowed = true
 
   public constructor(
     core: EntryInteractionRuntimeCore,
     autoTrackEntryInteraction?: AutoTrackEntryInteractionOptions,
   ) {
+    this.core = core
     this.entryExistenceObserver = new ElementExistenceObserver()
     this.entryElementRegistry = new EntryElementRegistry(this.entryExistenceObserver)
 
@@ -148,8 +159,7 @@ export class EntryInteractionRuntime {
     this.entryExistenceObserver.disconnect()
   }
 
-  public syncAutoTrackedEntryInteractions(hasConsent: boolean): void {
-    this.autoTrackingAllowed = hasConsent
+  public syncAutoTrackedEntryInteractions(): void {
     this.reconcileAllInteractions()
   }
 
@@ -160,8 +170,10 @@ export class EntryInteractionRuntime {
   }
 
   private reconcileInteraction(interaction: EntryInteraction, restart = false): void {
-    const shouldAutoTrack = this.autoTrack[interaction] && this.autoTrackingAllowed
-    const shouldRun = shouldAutoTrack || this.hasEnabledElementOverrides(interaction)
+    const shouldAutoTrack = this.isAutoTrackingInteractionEnabled(interaction)
+    const shouldRun =
+      this.isInteractionAllowed(interaction) &&
+      (shouldAutoTrack || this.hasEnabledElementOverrides(interaction))
 
     if (!shouldRun) {
       if (this.isInteractionRunning[interaction]) {
@@ -278,6 +290,12 @@ export class EntryInteractionRuntime {
     return false
   }
 
+  private isAutoTrackingInteractionEnabled(interaction: EntryInteraction): boolean {
+    if (interaction === 'clicks') return this.autoTrack.clicks
+    if (interaction === 'views') return this.autoTrack.views
+    return this.autoTrack.hovers
+  }
+
   private applyElementOverrides(interaction: EntryElementInteraction): void {
     const detector = this.getDetector(interaction)
     const overrides = this.getElementOverrides(interaction)
@@ -302,6 +320,10 @@ export class EntryInteractionRuntime {
     interaction: EntryElementInteraction,
   ): EntryInteractionElementOverrideMap[EntryElementInteraction] {
     return this.elementOverrides[interaction]
+  }
+
+  private isInteractionAllowed(interaction: EntryInteraction): boolean {
+    return this.core.hasConsent(ENTRY_INTERACTION_CONSENT_METHODS[interaction])
   }
 
   private enableTracking<TInteraction extends EntryInteraction>(

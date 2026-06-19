@@ -1,6 +1,10 @@
 import { rs } from '@rstest/core'
 import { StrictMode } from 'react'
-import { createOptimizationSdk, renderWithOptimizationProviders } from '../test/sdkTestUtils'
+import {
+  createMutableCloningObservable,
+  createOptimizationSdk,
+  renderWithOptimizationProviders,
+} from '../test/sdkTestUtils'
 import type { AutoPagePayload } from './types'
 import { resetAutoPageEmitterState, useAutoPageEmitter } from './useAutoPageEmitter'
 
@@ -30,7 +34,7 @@ describe('useAutoPageEmitter', () => {
   })
 
   it('emits on first eligible render', async () => {
-    const page = rs.fn(async () => {
+    const page = rs.fn(async (_payload?: AutoPagePayload) => {
       await Promise.resolve()
       return undefined
     })
@@ -46,7 +50,7 @@ describe('useAutoPageEmitter', () => {
   })
 
   it('emits on route changes', async () => {
-    const page = rs.fn(async () => {
+    const page = rs.fn(async (_payload?: AutoPagePayload) => {
       await Promise.resolve()
       return undefined
     })
@@ -78,6 +82,35 @@ describe('useAutoPageEmitter', () => {
     const second = await renderWithOptimizationProviders(<TestAutoPageEmitter routeKey="/" />, sdk)
 
     expect(page).toHaveBeenCalledTimes(1)
+
+    await second.unmount()
+  })
+
+  it('tracks identical route keys independently for different SDK instances', async () => {
+    const firstPage = rs.fn(async () => {
+      await Promise.resolve()
+      return undefined
+    })
+    const secondPage = rs.fn(async () => {
+      await Promise.resolve()
+      return undefined
+    })
+    const firstSdk = createOptimizationSdk({ page: firstPage })
+    const secondSdk = createOptimizationSdk({ page: secondPage })
+    const first = await renderWithOptimizationProviders(
+      <TestAutoPageEmitter routeKey="/" />,
+      firstSdk,
+    )
+
+    await first.unmount()
+
+    const second = await renderWithOptimizationProviders(
+      <TestAutoPageEmitter routeKey="/" />,
+      secondSdk,
+    )
+
+    expect(firstPage).toHaveBeenCalledTimes(1)
+    expect(secondPage).toHaveBeenCalledTimes(1)
 
     await second.unmount()
   })
@@ -192,5 +225,60 @@ describe('useAutoPageEmitter', () => {
     expect(page).not.toHaveBeenCalled()
 
     await rendered.unmount()
+  })
+
+  it('skips sdk calls while page tracking is not allowed and emits the current route once allowed', async () => {
+    let pageTrackingAllowed = false
+    const consent = createMutableCloningObservable<boolean | undefined>(undefined)
+    const page = rs.fn(async () => {
+      await Promise.resolve()
+      return undefined
+    })
+    const sdk = createOptimizationSdk({
+      hasConsent: () => pageTrackingAllowed,
+      page,
+      states: {
+        consent: consent.observable,
+      },
+    })
+    const rendered = await renderWithOptimizationProviders(
+      <TestAutoPageEmitter routeKey="/blocked" />,
+      sdk,
+    )
+
+    expect(page).not.toHaveBeenCalled()
+
+    pageTrackingAllowed = true
+    await consent.emit(true)
+
+    expect(page).toHaveBeenCalledTimes(1)
+    expect(page).toHaveBeenCalledWith({})
+
+    await rendered.unmount()
+  })
+
+  it('treats offline queued page events as accepted for route deduplication', async () => {
+    const page = rs.fn(async (_payload?: AutoPagePayload) => {
+      await Promise.resolve()
+      return undefined
+    })
+    const sdk = createOptimizationSdk({
+      page,
+    })
+    const first = await renderWithOptimizationProviders(
+      <TestAutoPageEmitter routeKey="/offline" />,
+      sdk,
+    )
+
+    await first.unmount()
+
+    const second = await renderWithOptimizationProviders(
+      <TestAutoPageEmitter routeKey="/offline" />,
+      sdk,
+    )
+
+    expect(page).toHaveBeenCalledTimes(1)
+
+    await second.unmount()
   })
 })

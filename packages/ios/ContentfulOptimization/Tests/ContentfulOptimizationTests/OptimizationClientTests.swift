@@ -90,6 +90,32 @@ final class OptimizationClientTests: XCTestCase {
         XCTAssertNil(try config.normalizedLocale())
     }
 
+    func testConfigToJSONSerializesAllowedEventTypes() throws {
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            allowedEventTypes: ["identify", "screen", "flag"]
+        )
+
+        let json = try config.toJSON()
+        let data = json.data(using: .utf8)!
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        XCTAssertEqual(dict["allowedEventTypes"] as? [String], ["identify", "screen", "flag"])
+    }
+
+    func testConfigToJSONSerializesEmptyAllowedEventTypes() throws {
+        let config = OptimizationConfig(
+            clientId: "test-client",
+            allowedEventTypes: []
+        )
+
+        let json = try config.toJSON()
+        let data = json.data(using: .utf8)!
+        let dict = try JSONSerialization.jsonObject(with: data) as! [String: Any]
+
+        XCTAssertEqual(dict["allowedEventTypes"] as? [String], [])
+    }
+
     func testConfigToJSONRejectsInvalidLocale() throws {
         let config = OptimizationConfig(
             clientId: "test-client",
@@ -1128,11 +1154,43 @@ final class OptimizationClientTests: XCTestCase {
         XCTAssertEqual(ScrollContext.coordinateSpaceName, "optimization-scroll")
     }
 
+    func testScreenTrackingStateTracksCurrentScreenOnceWhenAllowed() {
+        var state = ScreenTrackingState()
+
+        XCTAssertFalse(state.shouldTrack("Home", trackingAllowed: false))
+        XCTAssertTrue(state.shouldTrack("Home", trackingAllowed: true))
+
+        state.markAccepted("Home")
+
+        XCTAssertFalse(state.shouldTrack("Home", trackingAllowed: true))
+        XCTAssertTrue(state.shouldTrack("Details", trackingAllowed: true))
+    }
+
+    func testScreenTrackingStateSuppressesInFlightScreen() {
+        var state = ScreenTrackingState()
+
+        XCTAssertTrue(state.shouldTrack("Home", trackingAllowed: true))
+        state.markInFlight("Home")
+        XCTAssertFalse(state.shouldTrack("Home", trackingAllowed: true))
+        state.clearInFlight("Home")
+        XCTAssertTrue(state.shouldTrack("Home", trackingAllowed: true))
+    }
+
     // MARK: - Phase 3: ViewTrackingController Tests
 
     @MainActor
-    func testViewTrackingControllerInitiallyInvisible() {
+    private func makeViewTrackingClient(consent: Bool = true) -> OptimizationClient {
         let client = OptimizationClient()
+        try! client.initialize(config: OptimizationConfig(
+            clientId: "test-client",
+            defaults: StorageDefaults(consent: consent)
+        ))
+        return client
+    }
+
+    @MainActor
+    func testViewTrackingControllerInitiallyInvisible() {
+        let client = makeViewTrackingClient()
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
@@ -1146,7 +1204,7 @@ final class OptimizationClientTests: XCTestCase {
 
     @MainActor
     func testViewTrackingControllerBecomesVisibleAboveThreshold() {
-        let client = OptimizationClient()
+        let client = makeViewTrackingClient()
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
@@ -1165,7 +1223,7 @@ final class OptimizationClientTests: XCTestCase {
 
     @MainActor
     func testViewTrackingControllerStaysInvisibleBelowThreshold() {
-        let client = OptimizationClient()
+        let client = makeViewTrackingClient()
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
@@ -1183,8 +1241,26 @@ final class OptimizationClientTests: XCTestCase {
     }
 
     @MainActor
+    func testViewTrackingControllerStaysInvisibleWithoutConsent() {
+        let client = makeViewTrackingClient(consent: false)
+        let controller = ViewTrackingController(
+            client: client,
+            entry: ["sys": ["id": "test"]],
+            personalization: nil,
+            threshold: 0.8,
+            viewTimeMs: 2000,
+            viewDurationUpdateIntervalMs: 5000
+        )
+
+        controller.updateVisibility(
+            elementY: 0, elementHeight: 100, scrollY: 0, viewportHeight: 500
+        )
+        XCTAssertFalse(controller.isVisible)
+    }
+
+    @MainActor
     func testViewTrackingControllerBecomesInvisibleOnDisappear() {
-        let client = OptimizationClient()
+        let client = makeViewTrackingClient()
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
@@ -1205,7 +1281,7 @@ final class OptimizationClientTests: XCTestCase {
 
     @MainActor
     func testViewTrackingControllerResetsOnNewCycle() {
-        let client = OptimizationClient()
+        let client = makeViewTrackingClient()
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
@@ -1232,7 +1308,7 @@ final class OptimizationClientTests: XCTestCase {
 
     @MainActor
     func testViewTrackingControllerPauseAndResume() {
-        let client = OptimizationClient()
+        let client = makeViewTrackingClient()
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
@@ -1259,7 +1335,7 @@ final class OptimizationClientTests: XCTestCase {
 
     @MainActor
     func testViewTrackingControllerVisibilityWithPartialOverlap() {
-        let client = OptimizationClient()
+        let client = makeViewTrackingClient()
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],
@@ -1286,7 +1362,7 @@ final class OptimizationClientTests: XCTestCase {
 
     @MainActor
     func testViewTrackingControllerZeroHeightIgnored() {
-        let client = OptimizationClient()
+        let client = makeViewTrackingClient()
         let controller = ViewTrackingController(
             client: client,
             entry: ["sys": ["id": "test"]],

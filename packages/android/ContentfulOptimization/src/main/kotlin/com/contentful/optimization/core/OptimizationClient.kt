@@ -24,6 +24,11 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
+internal data class EventEmissionResult(
+    val accepted: Boolean,
+    val data: Map<String, Any>?,
+)
+
 class OptimizationClient(private val applicationContext: Context) {
 
     private val _state = MutableStateFlow(OptimizationState.EMPTY)
@@ -143,6 +148,24 @@ class OptimizationClient(private val applicationContext: Context) {
         }
     }
 
+    internal suspend fun screenWithEmissionResult(
+        name: String,
+        properties: Map<String, Any>? = null,
+    ): EventEmissionResult {
+        val result = bridgeCallAsyncJSON("screenWithEmissionResult") {
+            val obj = JSONObject()
+            obj.put("name", name)
+            properties?.let { obj.put("properties", JSONObject(it)) }
+            obj.toString()
+        } ?: return EventEmissionResult(accepted = false, data = null)
+
+        @Suppress("UNCHECKED_CAST")
+        return EventEmissionResult(
+            accepted = result["accepted"] as? Boolean ?: false,
+            data = result["data"] as? Map<String, Any>,
+        )
+    }
+
     suspend fun flush() {
         bridgeCallAsyncVoid("flush", "")
     }
@@ -247,6 +270,15 @@ class OptimizationClient(private val applicationContext: Context) {
     }
 
     fun getState(): OptimizationState = _state.value
+
+    fun hasConsent(method: String): Boolean {
+        if (!_isInitialized.value) return false
+        val escapedMethod = escapeForJS(method)
+        val result = runBlocking(bridge.quickJsDispatcher) {
+            bridge.callSync("hasConsent", "'$escapedMethod'")
+        }
+        return result == "true"
+    }
 
     // MARK: - Preview Panel
 

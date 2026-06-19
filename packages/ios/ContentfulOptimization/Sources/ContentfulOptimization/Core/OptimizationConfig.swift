@@ -59,6 +59,7 @@ public struct OptimizationConfig {
     /// Default SDK locale used for Experience API requests and event context.
     public let locale: String?
     public var defaults: StorageDefaults?
+    public let allowedEventTypes: [String]?
 
     /// When `true`, the SDK emits detailed diagnostic logs via `os.Logger`
     /// under the subsystem `com.contentful.optimization`.
@@ -72,7 +73,8 @@ public struct OptimizationConfig {
         insightsBaseUrl: String? = nil,
         locale: String? = nil,
         defaults: StorageDefaults? = nil,
-        debug: Bool = false
+        debug: Bool = false,
+        allowedEventTypes: [String]? = nil
     ) {
         self.clientId = clientId
         self.environment = environment
@@ -81,6 +83,7 @@ public struct OptimizationConfig {
         self.locale = locale
         self.defaults = defaults
         self.debug = debug
+        self.allowedEventTypes = allowedEventTypes
     }
 
     /// Normalizes the SDK locale for Experience API requests and event context.
@@ -106,6 +109,9 @@ public struct OptimizationConfig {
         }
         if let locale = try normalizedLocale() {
             dict["locale"] = locale
+        }
+        if let allowedEventTypes {
+            dict["allowedEventTypes"] = allowedEventTypes
         }
         if defaults != nil || anonymousId != nil {
             var defaultsDict: [String: Any] = [:]
