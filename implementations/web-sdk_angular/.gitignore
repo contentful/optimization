@@ -11,8 +11,8 @@ dist/
 .env
 .env*.local
 
-# generated from .env by generate:e2e-env
-src/environments/environment.e2e.ts
+# generated from .env by generate:env
+src/environments/
 
 
 # logs produced by launch-reference-app.sh

@@ -4,9 +4,9 @@ import {
   provideZonelessChangeDetection,
 } from '@angular/core'
 import { provideRouter } from '@angular/router'
-import { environment } from '../environments/environment'
 import { routes } from './app.routes'
 import { provideContentfulOptimizationConfig, resolveLogLevel } from './config'
+import { environment } from './environment'
 
 export const appConfig: ApplicationConfig = {
   providers: [
