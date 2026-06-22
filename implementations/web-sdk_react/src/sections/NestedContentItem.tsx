@@ -70,7 +70,7 @@ export function NestedContentItem({ entry }: NestedContentItemProps): JSX.Elemen
       </div>
 
       {nestedEntries.filter(isEntry).length > 0 ? (
-        <div className="nested-children">
+        <div className="entry-card__nested-children">
           {nestedEntries.filter(isEntry).map((nestedEntry) => (
             <NestedContentItem key={nestedEntry.sys.id} entry={nestedEntry} />
           ))}

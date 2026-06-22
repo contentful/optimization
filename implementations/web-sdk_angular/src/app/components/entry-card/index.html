@@ -63,7 +63,7 @@
       Trigger entry click tracking from descendant button
     </button>
     } @if (nestedEntries().length > 0) {
-    <div class="nested-children">
+    <div class="entry-card__nested-children">
       @for (child of nestedEntries(); track child.sys.id) {
       <app-entry-card [entry]="child" />
       }

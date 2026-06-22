@@ -1,6 +1,19 @@
-/* ============================================================
-   Reference UI — shared stylesheet for web SDK implementations
-   ============================================================ */
+/*
+ * reference-theme.css
+ *
+ * Shared theme for all web SDK reference implementations
+ * (react-web-sdk, web-sdk_react, web-sdk_angular).
+ *
+ * Defines the common visual design — reset, design tokens, app shell layout,
+ * control panel, tracking log, entry card, and utility classes — so every
+ * implementation looks and behaves consistently without duplicating CSS.
+ *
+ * Distribution: each implementation copies this file at build time via its
+ * `copy:css` script. Rsbuild implementations serve it as /reference-theme.css
+ * (linked from index.html); Angular includes it as src/styles.css.
+ *
+ * Edit assets/reference-theme.css only. Never edit the copied outputs directly.
+ */
 
 /* Reset */
 
