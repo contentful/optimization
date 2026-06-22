@@ -1,7 +1,7 @@
+import { pages } from 'e2e-web/src/fixtures'
 import { type JSX, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ControlPanel } from '../components/ControlPanel'
-import { PAGE_TWO_AUTO_ENTRY_ID, PAGE_TWO_MANUAL_ENTRY_ID } from '../config/entries'
 import { HOME_PATH } from '../config/routes'
 import { useAnalytics } from '../optimization/hooks/useAnalytics'
 import { ContentEntry } from '../sections/ContentEntry'
@@ -17,8 +17,8 @@ export function PageTwoPage({
   onToggleGlobalLiveUpdates,
 }: PageTwoPageProps): JSX.Element {
   const { trackView } = useAnalytics()
-  const pageTwoAutoEntry = entriesById.get(PAGE_TWO_AUTO_ENTRY_ID)
-  const pageTwoManualEntry = entriesById.get(PAGE_TWO_MANUAL_ENTRY_ID)
+  const pageTwoAutoEntry = entriesById.get(pages.pageTwo.auto)
+  const pageTwoManualEntry = entriesById.get(pages.pageTwo.manual)
 
   useEffect(() => {
     void trackView({

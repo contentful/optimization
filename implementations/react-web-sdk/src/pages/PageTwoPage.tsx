@@ -1,18 +1,18 @@
 import { useOptimization } from '@contentful/optimization-react-web'
+import { pages } from 'e2e-web/src/fixtures'
 import type { JSX } from 'react'
 import { useEffect } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
 import type { AppOutletContext } from '../App'
 import { ControlPanel } from '../components/ControlPanel'
-import { PAGE_TWO_AUTO_ENTRY_ID, PAGE_TWO_MANUAL_ENTRY_ID } from '../config/entries'
 import { HOME_PATH } from '../config/routes'
 import { ContentEntry } from '../sections/ContentEntry'
 
 export function PageTwoPage(): JSX.Element {
   const { entriesById, onToggleGlobalLiveUpdates } = useOutletContext<AppOutletContext>()
   const sdk = useOptimization()
-  const pageTwoAutoEntry = entriesById.get(PAGE_TWO_AUTO_ENTRY_ID)
-  const pageTwoManualEntry = entriesById.get(PAGE_TWO_MANUAL_ENTRY_ID)
+  const pageTwoAutoEntry = entriesById.get(pages.pageTwo.auto)
+  const pageTwoManualEntry = entriesById.get(pages.pageTwo.manual)
 
   useEffect(() => {
     void sdk.trackView({

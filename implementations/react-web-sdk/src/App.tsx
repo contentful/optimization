@@ -1,8 +1,8 @@
 import { useOptimizationContext } from '@contentful/optimization-react-web'
+import { pages } from 'e2e-web/src/fixtures'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useOutletContext } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
-import { ENTRY_IDS, LIVE_UPDATES_ENTRY_ID } from './config/entries'
 import { HOME_PATH, PAGE_TWO_PATH } from './config/routes'
 import { fetchEntries, getContentfulConfigError } from './services/contentfulClient'
 import type { ContentEntry } from './types/contentful'
@@ -53,13 +53,13 @@ export default function App(): JSX.Element {
       return
     }
 
-    void fetchEntries(ENTRY_IDS).then((nextEntries) => {
+    void fetchEntries(pages.home.ids).then((nextEntries) => {
       setEntries(nextEntries)
     })
   }, [isReady, sdk])
 
   const entriesById = useMemo(() => toEntryMap(entries), [entries])
-  const liveUpdatesBaselineEntry = entriesById.get(LIVE_UPDATES_ENTRY_ID)
+  const liveUpdatesBaselineEntry = entriesById.get(pages.home.liveUpdates)
 
   if (error) {
     return <p data-testid="sdk-error">{error.message}</p>

@@ -1,9 +1,8 @@
-import { clickScenarios } from 'e2e-web/src/fixtures'
+import { clickScenarios, pages } from 'e2e-web/src/fixtures'
 import type { JSX } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import type { AppOutletContext } from '../App'
 import { ControlPanel } from '../components/ControlPanel'
-import { AUTO_OBSERVED_ENTRY_IDS, MANUALLY_OBSERVED_ENTRY_IDS } from '../config/entries'
 import { ContentEntry } from '../sections/ContentEntry'
 import { LiveUpdatesExampleEntry } from '../sections/LiveUpdatesExampleEntry'
 import { NestedContentEntry } from '../sections/NestedContentEntry'
@@ -16,7 +15,7 @@ interface AutoObservedEntriesProps {
 function AutoObservedEntries({ entriesById }: AutoObservedEntriesProps): JSX.Element {
   return (
     <div className="entry-grid" id="auto-observed">
-      {AUTO_OBSERVED_ENTRY_IDS.map((entryId) => {
+      {pages.home.auto.map((entryId) => {
         const entry = entriesById.get(entryId)
         if (!entry) {
           return null
@@ -46,7 +45,7 @@ interface ManuallyObservedEntriesProps {
 function ManuallyObservedEntries({ entriesById }: ManuallyObservedEntriesProps): JSX.Element {
   return (
     <div className="entry-grid" id="manually-observed">
-      {MANUALLY_OBSERVED_ENTRY_IDS.map((entryId) => {
+      {pages.home.manual.map((entryId) => {
         const entry = entriesById.get(entryId)
         if (!entry) {
           return null

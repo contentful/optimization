@@ -1,12 +1,7 @@
+import { pages } from 'e2e-web/src/fixtures'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
-import {
-  ENTRY_IDS,
-  LIVE_UPDATES_ENTRY_ID,
-  PAGE_TWO_AUTO_ENTRY_ID,
-  PAGE_TWO_MANUAL_ENTRY_ID,
-} from './config/entries'
 import { HOME_PATH, PAGE_TWO_PATH } from './config/routes'
 import { useOptimization } from './optimization/hooks/useOptimization'
 import { HomePage } from './pages/HomePage'
@@ -48,7 +43,7 @@ export default function App({ onToggleGlobalLiveUpdates }: AppProps): JSX.Elemen
       return
     }
 
-    void fetchEntries(ENTRY_IDS)
+    void fetchEntries(pages.home.ids)
       .then((nextEntries) => {
         setEntries(nextEntries)
         setEntriesError(
@@ -65,9 +60,9 @@ export default function App({ onToggleGlobalLiveUpdates }: AppProps): JSX.Elemen
   }, [sdk])
 
   const entriesById = useMemo(() => toEntryMap(entries), [entries])
-  const liveUpdatesBaselineEntry = entriesById.get(LIVE_UPDATES_ENTRY_ID)
+  const liveUpdatesBaselineEntry = entriesById.get(pages.home.liveUpdates)
   const hasPageTwoEntries =
-    entriesById.has(PAGE_TWO_AUTO_ENTRY_ID) && entriesById.has(PAGE_TWO_MANUAL_ENTRY_ID)
+    entriesById.has(pages.pageTwo.auto) && entriesById.has(pages.pageTwo.manual)
 
   if (error) {
     return <p>{error.message}</p>

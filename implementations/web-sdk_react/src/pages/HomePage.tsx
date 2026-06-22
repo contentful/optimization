@@ -1,7 +1,6 @@
-import { clickScenarios } from 'e2e-web/src/fixtures'
+import { clickScenarios, pages } from 'e2e-web/src/fixtures'
 import type { JSX } from 'react'
 import { ControlPanel } from '../components/ControlPanel'
-import { AUTO_OBSERVED_ENTRY_IDS, MANUALLY_OBSERVED_ENTRY_IDS } from '../config/entries'
 import { ContentEntry } from '../sections/ContentEntry'
 import { LiveUpdatesExampleEntry } from '../sections/LiveUpdatesExampleEntry'
 import { NestedContentEntry } from '../sections/NestedContentEntry'
@@ -61,7 +60,7 @@ export function HomePage({
             <h2>Auto Observed Entries</h2>
           </header>
           <div className="entry-grid" id="auto-observed">
-            {AUTO_OBSERVED_ENTRY_IDS.map((entryId) => {
+            {pages.home.auto.map((entryId) => {
               const entry = entriesById.get(entryId)
               if (!entry) {
                 return null
@@ -88,7 +87,7 @@ export function HomePage({
             <h2>Manually Observed Entries</h2>
           </header>
           <div className="entry-grid" id="manually-observed">
-            {MANUALLY_OBSERVED_ENTRY_IDS.map((entryId) => {
+            {pages.home.manual.map((entryId) => {
               const entry = entriesById.get(entryId)
               if (!entry) {
                 return null
