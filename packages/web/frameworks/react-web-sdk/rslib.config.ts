@@ -21,21 +21,47 @@ const common = {
   },
 } as const
 
+const CLIENT_DIRECTIVE = "'use client';"
+
+const reactClientEntries = {
+  index: './src/index.ts',
+  'router/next-app': './src/router/next-app.tsx',
+  'router/next-pages': './src/router/next-pages.tsx',
+  'router/react-router': './src/router/react-router.tsx',
+  'router/tanstack-router': './src/router/tanstack-router.tsx',
+} as const
+
+const supportEntries = {
+  logger: './src/logger.ts',
+  'web-sdk': './src/web-sdk.ts',
+  'core-sdk': './src/core-sdk.ts',
+  'api-client': './src/api-client.ts',
+  'api-schemas': './src/api-schemas.ts',
+} as const
+
+const esmOutput = {
+  distPath: { root: 'dist' },
+  filename: { js: '[name].mjs' },
+  sourceMap: true,
+  minify: true,
+} as const
+
+const cjsOutput = {
+  distPath: { root: 'dist' },
+  filename: { js: '[name].cjs' },
+  sourceMap: true,
+  cleanDistPath: false,
+  minify: true,
+} as const
+
+const bundledDts = {
+  bundle: true,
+  build: false,
+} as const
+
 export default defineConfig({
   plugins: [pluginReact()],
   source: {
-    entry: {
-      index: './src/index.ts',
-      logger: './src/logger.ts',
-      'web-sdk': './src/web-sdk.ts',
-      'core-sdk': './src/core-sdk.ts',
-      'api-client': './src/api-client.ts',
-      'api-schemas': './src/api-schemas.ts',
-      'router/next-app': './src/router/next-app.tsx',
-      'router/next-pages': './src/router/next-pages.tsx',
-      'router/react-router': './src/router/react-router.tsx',
-      'router/tanstack-router': './src/router/tanstack-router.tsx',
-    },
     tsconfigPath: './tsconfig.build.json',
     define: {
       __OPTIMIZATION_VERSION__: JSON.stringify(process.env.RELEASE_VERSION ?? '0.0.0'),
@@ -63,17 +89,33 @@ export default defineConfig({
     {
       ...common,
       format: 'esm',
+      banner: { js: CLIENT_DIRECTIVE },
+      source: {
+        entry: reactClientEntries,
+      },
       output: {
-        distPath: { root: 'dist' },
-        filename: { js: '[name].mjs' },
-        sourceMap: true,
+        ...esmOutput,
         cleanDistPath: true,
-        minify: true,
       },
-      dts: {
-        bundle: true,
-        build: false,
+      dts: bundledDts,
+      redirect: {
+        dts: { path: false },
       },
+      tools: {
+        rspack: maybeEnableRsDoctor,
+      },
+    },
+    {
+      ...common,
+      format: 'esm',
+      source: {
+        entry: supportEntries,
+      },
+      output: {
+        ...esmOutput,
+        cleanDistPath: false,
+      },
+      dts: bundledDts,
       redirect: {
         dts: { path: false },
       },
@@ -84,13 +126,23 @@ export default defineConfig({
     {
       ...common,
       format: 'cjs',
-      output: {
-        distPath: { root: 'dist' },
-        filename: { js: '[name].cjs' },
-        sourceMap: true,
-        cleanDistPath: false,
-        minify: true,
+      banner: { js: CLIENT_DIRECTIVE },
+      source: {
+        entry: reactClientEntries,
       },
+      output: cjsOutput,
+      dts: false,
+      tools: {
+        rspack: maybeEnableRsDoctor,
+      },
+    },
+    {
+      ...common,
+      format: 'cjs',
+      source: {
+        entry: supportEntries,
+      },
+      output: cjsOutput,
       dts: false,
       tools: {
         rspack: maybeEnableRsDoctor,

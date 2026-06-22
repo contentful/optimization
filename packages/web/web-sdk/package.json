@@ -124,12 +124,12 @@
         "index.cjs": 11700,
         "index.mjs": 11700,
         "contentful-optimization-web-components.umd.js": 38000,
-        "presentation.cjs": 2650,
-        "presentation.mjs": 2250,
+        "presentation.cjs": 2800,
+        "presentation.mjs": 2400,
         "sdk-support.cjs": 3300,
         "sdk-support.mjs": 2800,
-        "web-components.cjs": 15200,
-        "web-components.mjs": 16150
+        "web-components.cjs": 15400,
+        "web-components.mjs": 16400
       }
     }
   },

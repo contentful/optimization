@@ -1,3 +1,5 @@
+'use client'
+
 import { useCallback, useMemo, type ReactElement } from 'react'
 import { useLocation, useMatches, type Location, type UIMatch } from 'react-router-dom'
 import { buildAutoPagePayload } from '../auto-page/pagePayload'

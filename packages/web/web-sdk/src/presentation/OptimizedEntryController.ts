@@ -4,7 +4,16 @@ import type { Entry, EntrySkeletonType } from 'contentful'
 
 const BASELINE_REVEAL_TIMEOUT_MS = 5000
 
-type HostAttributeValue = string | boolean | number | undefined
+export type OptimizedEntryHostAttributeValue = string | boolean | number | undefined
+export interface OptimizedEntryTrackingAttributeOptions {
+  readonly clickable?: boolean
+  readonly hoverDurationUpdateIntervalMs?: number
+  readonly trackClicks?: boolean
+  readonly trackHovers?: boolean
+  readonly trackViews?: boolean
+  readonly viewDurationUpdateIntervalMs?: number
+}
+export type OptimizedEntryTrackingAttributes = Record<string, OptimizedEntryHostAttributeValue>
 export type OptimizedEntryLoadingTargetDisplay = 'block' | 'inline'
 
 export const OPTIMIZED_ENTRY_HOST_DISPLAY = 'contents'
@@ -35,7 +44,7 @@ export interface OptimizedEntrySdk {
 export interface OptimizedEntrySnapshot {
   readonly canOptimize: boolean
   readonly entry: Entry
-  readonly hostAttributes: Record<string, HostAttributeValue>
+  readonly hostAttributes: OptimizedEntryTrackingAttributes
   readonly isLoading: boolean
   readonly isReady: boolean
   readonly loadingPresentation: {
@@ -162,19 +171,11 @@ function resolveDuplicationScope(
   return candidate.trim() ? candidate : undefined
 }
 
-function resolveTrackingAttributes(
+export function resolveOptimizedEntryTrackingAttributes(
   baselineEntry: Entry,
   resolvedData: ResolvedData<EntrySkeletonType>,
-  options: Pick<
-    NormalizedOptimizedEntryControllerOptions,
-    | 'clickable'
-    | 'hoverDurationUpdateIntervalMs'
-    | 'trackClicks'
-    | 'trackHovers'
-    | 'trackViews'
-    | 'viewDurationUpdateIntervalMs'
-  >,
-): Record<string, HostAttributeValue> {
+  options: OptimizedEntryTrackingAttributeOptions = {},
+): OptimizedEntryTrackingAttributes {
   const {
     selectedOptimization,
     entry: {
@@ -215,8 +216,8 @@ function isExperienceRequestSettled(state: ExperienceRequestStateLike): boolean 
 }
 
 function areHostAttributesEqual(
-  left: Record<string, HostAttributeValue>,
-  right: Record<string, HostAttributeValue>,
+  left: OptimizedEntryTrackingAttributes,
+  right: OptimizedEntryTrackingAttributes,
 ): boolean {
   const leftKeys = Object.keys(left)
   const rightKeys = Object.keys(right)
@@ -348,33 +349,54 @@ export class OptimizedEntryController {
       return
     }
 
-    this.subscriptions = [
-      sdk.states.selectedOptimizations.subscribe((selectedOptimizations) => {
-        if (this.shouldLiveUpdate()) {
-          this.selectedOptimizations = selectedOptimizations
-          this.updateSnapshot()
-          return
-        }
+    const { states } = sdk
+    const { canOptimize, experienceRequestState, selectedOptimizations } = states
+    const { current: currentSelectedOptimizations } = selectedOptimizations
+    const { current: currentCanOptimize } = canOptimize
+    const { current: currentExperienceRequestState } = experienceRequestState
 
-        if (this.selectedOptimizations === undefined && selectedOptimizations !== undefined) {
-          this.selectedOptimizations = selectedOptimizations
+    this.acceptSelectedOptimizations(currentSelectedOptimizations)
+    this.canOptimize = currentCanOptimize
+    this.hasExperienceRequestSettled = isExperienceRequestSettled(currentExperienceRequestState)
+
+    this.subscriptions = [
+      selectedOptimizations.subscribe((nextSelectedOptimizations) => {
+        if (this.acceptSelectedOptimizations(nextSelectedOptimizations)) {
           this.updateSnapshot()
         }
       }),
-      sdk.states.canOptimize.subscribe((canOptimize) => {
-        this.canOptimize = canOptimize
+      canOptimize.subscribe((nextCanOptimize) => {
+        this.canOptimize = nextCanOptimize
         this.updateSnapshot()
       }),
-      sdk.states.experienceRequestState.subscribe((state) => {
+      experienceRequestState.subscribe((state) => {
         this.hasExperienceRequestSettled = isExperienceRequestSettled(state)
         this.updateSnapshot()
       }),
     ]
   }
 
+  private acceptSelectedOptimizations(
+    selectedOptimizations: SelectedOptimizationArray | undefined,
+  ): boolean {
+    if (this.shouldLiveUpdate()) {
+      this.selectedOptimizations = selectedOptimizations
+      return true
+    }
+
+    if (this.selectedOptimizations === undefined && selectedOptimizations !== undefined) {
+      this.selectedOptimizations = selectedOptimizations
+      return true
+    }
+
+    return false
+  }
+
   private resolveIsLoading(): boolean {
     const requiresOptimization = hasOptimizationReferences(this.options.baselineEntry)
-    const isContentReady = !requiresOptimization || this.hasExperienceRequestSettled
+    const hasResolvedOptimizations = this.selectedOptimizations !== undefined
+    const isContentReady =
+      !requiresOptimization || this.hasExperienceRequestSettled || hasResolvedOptimizations
 
     return !isContentReady
   }
@@ -400,7 +422,11 @@ export class OptimizedEntryController {
       entry: resolvedData.entry,
       hostAttributes: showLoadingFallback
         ? {}
-        : resolveTrackingAttributes(this.options.baselineEntry, resolvedData, this.options),
+        : resolveOptimizedEntryTrackingAttributes(
+            this.options.baselineEntry,
+            resolvedData,
+            this.options,
+          ),
       isLoading,
       isReady: this.options.isPresentationReady,
       loadingPresentation: {

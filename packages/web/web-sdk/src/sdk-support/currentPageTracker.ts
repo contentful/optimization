@@ -48,6 +48,14 @@ export class CurrentPageTracker {
     })
   }
 
+  hasAccepted(): boolean {
+    return this.tracker.hasAccepted()
+  }
+
+  markAccepted(routeKey: string): void {
+    this.tracker.markAccepted(routeKey)
+  }
+
   reset(): void {
     this.tracker.reset()
   }

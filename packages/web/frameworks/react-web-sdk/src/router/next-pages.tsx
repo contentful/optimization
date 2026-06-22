@@ -1,8 +1,10 @@
+'use client'
+
 import { useRouter, type NextRouter } from 'next/router'
 import { useCallback, useMemo, type ReactElement } from 'react'
 import { buildAutoPagePayload } from '../auto-page/pagePayload'
 import type { AutoPagePayload, AutoPagePayloadOptions } from '../auto-page/types'
-import { useAutoPageEmitter } from '../auto-page/useAutoPageEmitter'
+import { useAutoPageEmitter, type InitialAutoPageEvent } from '../auto-page/useAutoPageEmitter'
 
 function splitAsPath(asPath: string): { path: string; search: string } {
   const queryIndex = asPath.indexOf('?')
@@ -44,9 +46,12 @@ export interface NextPagesAutoPageContext {
   readonly router: NextRouter
 }
 
-export interface NextPagesAutoPageTrackerProps extends AutoPagePayloadOptions<NextPagesAutoPageContext> {}
+export interface NextPagesAutoPageTrackerProps extends AutoPagePayloadOptions<NextPagesAutoPageContext> {
+  readonly initialPageEvent?: InitialAutoPageEvent
+}
 
 export function NextPagesAutoPageTracker({
+  initialPageEvent,
   pagePayload,
   getPagePayload,
 }: NextPagesAutoPageTrackerProps): ReactElement | null {
@@ -86,7 +91,7 @@ export function NextPagesAutoPageTracker({
     [asPath, getPagePayload, pagePayload, pathname, query, routeKey, router, routerPayload],
   )
 
-  useAutoPageEmitter({ enabled: isReady, routeKey, buildPayload })
+  useAutoPageEmitter({ enabled: isReady, initialPageEvent, routeKey, buildPayload })
 
   return null
 }

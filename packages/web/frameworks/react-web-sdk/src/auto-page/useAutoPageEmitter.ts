@@ -11,6 +11,8 @@ export interface AutoPageEmissionMetadata {
   readonly isInitialEmission: boolean
 }
 
+export type InitialAutoPageEvent = 'emit' | 'skip'
+
 export interface UseAutoPageEmitterArgs {
   /**
    * When `false` the emitter is inert. Adapters that depend on a router being
@@ -24,6 +26,11 @@ export interface UseAutoPageEmitterArgs {
    * double-effect invocations.
    */
   readonly routeKey: string
+  /**
+   * Controls the first route emission. Next.js SSR integrations can use
+   * `skip` when the server already emitted the same page event.
+   */
+  readonly initialPageEvent?: InitialAutoPageEvent
   /**
    * Builds the page event payload to emit. Called only when an emission would
    * actually happen (after the dedup check), so it never runs more than once
@@ -44,6 +51,7 @@ export interface UseAutoPageEmitterArgs {
  */
 export function useAutoPageEmitter({
   enabled,
+  initialPageEvent = 'emit',
   routeKey,
   buildPayload,
 }: UseAutoPageEmitterArgs): void {
@@ -57,13 +65,18 @@ export function useAutoPageEmitter({
 
     const tracker = getCurrentPageTracker(sdk)
 
+    if (initialPageEvent === 'skip' && !tracker.hasAccepted()) {
+      tracker.markAccepted(routeKey)
+      return
+    }
+
     void tracker
       .emitIfNeeded(sdk, {
         buildPayload,
         routeKey,
       })
       .catch(() => undefined)
-  }, [buildPayload, consent, enabled, routeKey, sdk])
+  }, [buildPayload, consent, enabled, initialPageEvent, routeKey, sdk])
 }
 
 export function resetAutoPageEmitterState(): void {

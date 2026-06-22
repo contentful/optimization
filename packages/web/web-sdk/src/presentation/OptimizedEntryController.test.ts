@@ -240,6 +240,34 @@ describe('OptimizedEntryController', () => {
     controller.disconnect()
   })
 
+  it('renders server-seeded optimizations without waiting for a client page request', () => {
+    const runtime = createSdk((entry, selectedOptimizations) => ({
+      entry: selectedOptimizations ? variantA : entry,
+      selectedOptimization: selectedOptimizations?.[0],
+    }))
+    runtime.selectedOptimizations.emit(variantOneState)
+    const controller = new OptimizedEntryController({
+      isPresentationReady: true,
+      baselineEntry: optimizedBaseline,
+      sdk: runtime.sdk,
+      isSdkStateReady: true,
+    })
+
+    controller.connect()
+
+    expect(controller.getSnapshot()).toMatchObject({
+      entry: variantA,
+      isLoading: false,
+      hostAttributes: {
+        'data-ctfl-baseline-id': 'optimized-baseline',
+        'data-ctfl-entry-id': 'variant-a',
+      },
+      selectedOptimizations: variantOneState,
+    })
+
+    controller.disconnect()
+  })
+
   it('reveals baseline presentation after the loading timeout', async () => {
     rs.useFakeTimers()
     const runtime = createSdk((entry) => ({ entry }))

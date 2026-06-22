@@ -1,3 +1,5 @@
+'use client'
+
 import { useRouter, useRouterState, type AnyRouter, type RouterState } from '@tanstack/react-router'
 import { useCallback, useMemo, type ReactElement } from 'react'
 import { buildAutoPagePayload } from '../auto-page/pagePayload'

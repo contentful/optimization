@@ -155,6 +155,35 @@ describe('NextAppAutoPageTracker', () => {
     await rendered.unmount()
   })
 
+  it('can skip only the initial render emission', async () => {
+    const page = rs.fn(async () => {
+      await Promise.resolve()
+      return undefined
+    })
+    const sdk = createOptimizationSdk({ page })
+    const rendered = await renderTracker(<NextAppAutoPageTracker initialPageEvent="skip" />, sdk)
+
+    expect(page).not.toHaveBeenCalled()
+
+    routeState.pathname = '/products'
+    const { pathname } = routeState
+    currentPathname = pathname
+
+    await rendered.rerender(<NextAppAutoPageTracker initialPageEvent="skip" />)
+
+    expect(page).toHaveBeenCalledTimes(1)
+    expect(page).toHaveBeenCalledWith({
+      properties: {
+        path: '/products',
+        query: {},
+        search: '',
+        url: `${window.location.origin}/products`,
+      },
+    })
+
+    await rendered.unmount()
+  })
+
   it('merges static and dynamic payloads for each emission', async () => {
     const page = rs.fn(async () => {
       await Promise.resolve()

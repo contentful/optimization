@@ -1,4 +1,4 @@
-# Integrating the Optimization SDK in a Next.js app (SSR-primary)
+# Integrating the Optimization SDK in a Next.js app (SSR)
 
 Use this guide when you want to add personalization to a Next.js App Router application where the
 server is the single source of truth for which variant to show. The Node SDK resolves entries
@@ -18,14 +18,11 @@ instead.
 - [The integration flow](#the-integration-flow)
 - [1. Install the packages](#1-install-the-packages)
 - [2. Create the Node SDK singleton](#2-create-the-node-sdk-singleton)
-- [3. Set up the anonymous ID cookie in middleware](#3-set-up-the-anonymous-id-cookie-in-middleware)
+- [3. Set up the anonymous ID cookie in proxy](#3-set-up-the-anonymous-id-cookie-in-proxy)
 - [4. Resolve entries in a Server Component](#4-resolve-entries-in-a-server-component)
   - [Add data attributes for client-side tracking](#add-data-attributes-for-client-side-tracking)
-- [5. Load the React Web SDK on the client only](#5-load-the-react-web-sdk-on-the-client-only)
-  - [Why `ssr: false` is required](#why-ssr-false-is-required)
-  - [Add the page tracker](#add-the-page-tracker)
-- [6. Mount the client provider in your layout](#6-mount-the-client-provider-in-your-layout)
-- [7. Handle consent and identify from client components](#7-handle-consent-and-identify-from-client-components)
+- [5. Mount the React Web SDK in your layout](#5-mount-the-react-web-sdk-in-your-layout)
+- [6. Handle consent and identify from client components](#6-handle-consent-and-identify-from-client-components)
 - [Forward optimization context to third-party analytics](#forward-optimization-context-to-third-party-analytics)
 - [Understand when personalization updates](#understand-when-personalization-updates)
 - [Caching considerations](#caching-considerations)
@@ -37,11 +34,10 @@ instead.
 
 ## Scope and capabilities
 
-The SSR-primary pattern uses two packages together:
+The SSR pattern uses two packages together:
 
-- `@contentful/optimization-node` — stateless, server-side. Runs in Server Components, middleware,
-  and Edge Runtime. Resolves which entry variant to render before the HTML response leaves the
-  server.
+- `@contentful/optimization-node` — stateless, server-side. Runs in Server Components and Edge
+  Runtime proxy. Resolves which entry variant to render before the HTML response leaves the server.
 - `@contentful/optimization-react-web` — stateful, browser-side. Initializes after hydration and
   handles page view tracking, entry interaction tracking, consent, and identify. It never resolves
   entry variants in this pattern.
@@ -53,9 +49,9 @@ What this setup gives you:
 - SEO-friendly rendering. The search engine sees the resolved personalized content.
 - Minimal client JavaScript. Content rendering requires no client-side JavaScript. Only tracking and
   interactive controls require hydration.
-- No Next.js-specific SDK wrapper. The Node SDK works in Server Components and Edge Runtime
-  middleware out of the box. The React Web SDK works in Client Components. No additional framework
-  glue is required.
+- No Next.js-specific SDK wrapper. The Node SDK works in Server Components and Edge Runtime proxy
+  out of the box. The React Web SDK works in Client Components. No additional framework glue is
+  required.
 
 What it does not give you:
 
@@ -66,32 +62,32 @@ What it does not give you:
 
 ## The integration flow
 
-| Concern                             | Where it runs             | SDK used                                 |
-| ----------------------------------- | ------------------------- | ---------------------------------------- |
-| Anonymous ID cookie lifecycle       | Middleware (Edge Runtime) | Node SDK                                 |
-| Profile resolution and variant pick | Server Component          | Node SDK (`requestOptimization.page()`)  |
-| Entry variant resolution            | Server Component          | Node SDK (`sdk.resolveOptimizedEntry()`) |
-| HTML rendering                      | Server Component          | None (plain React)                       |
-| Page view tracking                  | Client (after hydration)  | React Web SDK (`NextAppAutoPageTracker`) |
-| Entry interaction tracking          | Client (after hydration)  | React Web SDK (`trackEntryInteraction`)  |
-| Consent management                  | Client (after hydration)  | React Web SDK (`sdk.consent()`)          |
-| User identification                 | Client (after hydration)  | React Web SDK (`sdk.identify()`)         |
+| Concern                             | Where it runs            | SDK used                                 |
+| ----------------------------------- | ------------------------ | ---------------------------------------- |
+| Anonymous ID cookie lifecycle       | Proxy (Edge Runtime)     | Node SDK                                 |
+| Profile resolution and variant pick | Server Component         | Node SDK (`requestOptimization.page()`)  |
+| Entry variant resolution            | Server Component         | Node SDK (`sdk.resolveOptimizedEntry()`) |
+| HTML rendering                      | Server Component         | None (plain React)                       |
+| Page view tracking                  | Client (after hydration) | React Web SDK (`NextAppAutoPageTracker`) |
+| Entry interaction tracking          | Client (after hydration) | React Web SDK (`trackEntryInteraction`)  |
+| Consent management                  | Client (after hydration) | React Web SDK (`sdk.consent()`)          |
+| User identification                 | Client (after hydration) | React Web SDK (`sdk.identify()`)         |
 
 In practice, the integration follows this sequence:
 
-1. Create one Node SDK instance shared across Server Components and middleware.
-2. Use Next.js middleware to maintain the anonymous ID cookie when application policy permits
-   profile continuity.
+1. Create one Node SDK instance shared across Server Components and proxy.
+2. Use Next.js proxy to maintain the anonymous ID cookie when application policy permits profile
+   continuity.
 3. In Server Components, bind request-scoped consent with `sdk.forRequest()`; the examples below use
    accepted consent for a default-on policy.
-4. Load the React Web SDK with `next/dynamic` and `ssr: false` so it only runs in the browser.
-5. Mount the React Web SDK provider and page tracker in a `'use client'` wrapper in your layout.
-6. Use Client Components for consent, identify, and any interactive SDK controls.
+4. Import the React Web SDK's Next-compatible client entrypoints directly in your layout.
+5. Mount the React Web SDK provider and page tracker in the App Router layout.
+6. Use React SDK hooks from Client Components for consent, identify, and any interactive SDK
+   controls.
 
-The SSR-primary reference implementation in this repository shows that pattern in a working
-application:
+The SSR reference implementation in this repository shows that pattern in a working application:
 
-- [`implementations/react-web-sdk+node-sdk_nextjs-ssr`](../../implementations/react-web-sdk+node-sdk_nextjs-ssr/README.md)
+- [`implementations/nextjs-sdk_ssr`](../../implementations/nextjs-sdk_ssr/README.md)
 
 ## 1. Install the packages
 
@@ -138,18 +134,17 @@ Experience API responses and events should use the same language. Merge tags tha
 localized profile fields such as `location.city` and `location.country` then resolve in a language
 consistent with the rendered content.
 
-## 3. Set up the anonymous ID cookie in middleware
+## 3. Set up the anonymous ID cookie in proxy
 
-Next.js middleware runs on the Edge Runtime before every request reaches a Server Component. Use it
-to ensure the anonymous ID cookie exists and is populated before the Server Component tries to read
-it.
+Next.js proxy runs on the Edge Runtime before every request reaches a Server Component. Use it to
+ensure the anonymous ID cookie exists and is populated before the Server Component tries to read it.
 
 ```ts
 import { APP_LOCALE, sdk } from '@/lib/optimization-server'
 import { ANONYMOUS_ID_COOKIE } from '@contentful/optimization-node/constants'
 import { type NextRequest, NextResponse } from 'next/server'
 
-export async function middleware(request: NextRequest): Promise<NextResponse> {
+export async function proxy(request: NextRequest): Promise<NextResponse> {
   const response = NextResponse.next()
 
   const anonymousId = request.cookies.get(ANONYMOUS_ID_COOKIE)?.value
@@ -195,7 +190,7 @@ Web SDK. Using the same name means that after hydration, the Web SDK reads the s
 from `document.cookie` and continues the same profile journey the server started.
 
 Do not mark this cookie as `HttpOnly`. The Web SDK reads it from the browser. The example uses a
-default-on policy, so middleware binds accepted event and persistence consent before calling
+default-on policy, so proxy binds accepted event and persistence consent before calling
 `requestOptimization.page()`. If application policy depends on user choice, read that state before
 the SDK call and clear the shared anonymous ID cookie when profile continuity is not permitted.
 
@@ -299,143 +294,52 @@ payloads. When the server has selected optimization context available, also rend
 `data-ctfl-optimization-id`, `data-ctfl-sticky`, and `data-ctfl-variant-index` so client-side
 interaction events can carry the same optimization identifiers.
 
-## 5. Load the React Web SDK on the client only
+## 5. Mount the React Web SDK in your layout
 
-The React Web SDK depends on browser APIs (`localStorage`, `document.cookie`,
-`IntersectionObserver`). These APIs are not available during server rendering in Next.js. Importing
-the package in a Server Component causes a runtime error.
-
-Use `next/dynamic` with `ssr: false` to prevent the SDK from loading during server rendering:
-
-```tsx
-// components/ClientProviderWrapper.tsx
-'use client'
-
-import dynamic from 'next/dynamic'
-import { Suspense, type ReactNode } from 'react'
-
-const OptimizationRoot = dynamic(
-  () =>
-    import('@contentful/optimization-react-web').then((mod) => ({
-      default: mod.OptimizationRoot,
-    })),
-  { ssr: false },
-)
-```
-
-The `'use client'` directive is required. `next/dynamic` is a Client Component feature, and the
-import of `@contentful/optimization-react-web` must not reach Server Component module graph
-resolution.
-
-### Why `ssr: false` is required
-
-Next.js tries to pre-render Client Components on the server (a technique sometimes called
-server-side rendering of client components). Without `ssr: false`, Next.js attempts to render
-`OptimizationRoot` on the server and fails because the package accesses browser globals at import
-time.
-
-`ssr: false` tells Next.js to skip server rendering for `OptimizationRoot` entirely. The SDK
-initializes only after JavaScript loads in the browser. Provider-owned initialization still happens
-outside React render and gates children until readiness; in normal browser rendering it uses
-layout-effect scheduling so ready children can mount before first visible client paint.
-
-### Add the page tracker
-
-Mount `NextAppAutoPageTracker` inside `OptimizationRoot` to emit `page()` events automatically
-whenever the App Router pathname changes:
-
-```tsx
-const NextAppAutoPageTracker = dynamic(
-  () =>
-    import('@contentful/optimization-react-web/router/next-app').then((mod) => ({
-      default: mod.NextAppAutoPageTracker,
-    })),
-  { ssr: false },
-)
-```
-
-Wrap the tracker in `<Suspense>` to prevent it from blocking the initial render. If local
-diagnostics need SDK state subscriptions that are attached as soon as SDK state exists and before
-the first automatically emitted `page()` event, use `OptimizationRoot`'s `onStatesReady` prop to
-subscribe to `states.eventStream` or `states.blockedEventStream`.
-
-## 6. Mount the client provider in your layout
-
-Assemble the client wrapper component and use it in `app/layout.tsx`:
-
-```tsx
-// components/ClientProviderWrapper.tsx
-'use client'
-
-import dynamic from 'next/dynamic'
-import { Suspense, type ReactNode } from 'react'
-
-const OptimizationRoot = dynamic(
-  () =>
-    import('@contentful/optimization-react-web').then((mod) => ({
-      default: mod.OptimizationRoot,
-    })),
-  { ssr: false },
-)
-
-const NextAppAutoPageTracker = dynamic(
-  () =>
-    import('@contentful/optimization-react-web/router/next-app').then((mod) => ({
-      default: mod.NextAppAutoPageTracker,
-    })),
-  { ssr: false },
-)
-
-export function ClientProviderWrapper({
-  children,
-  appLocale,
-}: {
-  children: ReactNode
-  appLocale: string
-}) {
-  return (
-    <OptimizationRoot
-      clientId={process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID ?? ''}
-      environment={process.env.NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main'}
-      defaults={{ consent: true }}
-      locale={appLocale}
-      trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
-      logLevel="error"
-    >
-      <Suspense>
-        <NextAppAutoPageTracker />
-      </Suspense>
-      {children}
-    </OptimizationRoot>
-  )
-}
-```
+The React Web SDK root entry and Next App Router tracker entry are client entrypoints. Next App
+Router can import them directly from a Server Component layout and render them as Client Components;
+you do not need a local wrapper or `next/dynamic` shim.
 
 ```tsx
 // app/layout.tsx
-import { ClientProviderWrapper } from '@/components/ClientProviderWrapper'
 import { APP_LOCALE } from '@/lib/optimization-server'
+import { OptimizationRoot } from '@contentful/optimization-react-web'
+import { NextAppAutoPageTracker } from '@contentful/optimization-react-web/router/next-app'
+import { Suspense, type ReactNode } from 'react'
 
 function getHtmlLang(locale: string | undefined): string {
   return locale?.split('-')[0] ?? 'en'
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   const htmlLang = getHtmlLang(APP_LOCALE)
 
   return (
     <html lang={htmlLang}>
       <body>
-        <ClientProviderWrapper appLocale={APP_LOCALE}>{children}</ClientProviderWrapper>
+        <OptimizationRoot
+          clientId={process.env.NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID ?? ''}
+          environment={process.env.NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT ?? 'main'}
+          defaults={{ consent: true }}
+          locale={APP_LOCALE}
+          trackEntryInteraction={{ views: true, clicks: true, hovers: true }}
+          logLevel="error"
+        >
+          <Suspense>
+            <NextAppAutoPageTracker />
+          </Suspense>
+          {children}
+        </OptimizationRoot>
       </body>
     </html>
   )
 }
 ```
 
-`layout.tsx` itself is a Server Component. `ClientProviderWrapper` is a Client Component, which is
-correct — React's composition model allows a Server Component to render a Client Component as a
-child.
+Wrap `NextAppAutoPageTracker` in `<Suspense>` because it uses App Router navigation hooks. If local
+diagnostics need SDK state subscriptions that are attached as soon as SDK state exists and before
+the first automatically emitted `page()` event, use `OptimizationRoot`'s `onStatesReady` prop to
+subscribe to `states.eventStream` or `states.blockedEventStream`.
 
 Environment variables exposed to client code in Next.js must use the `NEXT_PUBLIC_` prefix. The Node
 SDK on the server reads variables without that prefix. Keep them separate in your `.env` file:
@@ -450,22 +354,26 @@ NEXT_PUBLIC_OPTIMIZATION_CLIENT_ID="your-client-id"
 NEXT_PUBLIC_OPTIMIZATION_ENVIRONMENT="main"
 ```
 
-## 7. Handle consent and identify from client components
+## 6. Handle consent and identify from client components
 
 With a default-on policy, no consent UI is required. The server examples above bind
 `consent: { events: true, persistence: true }`, and the browser provider seeds
 `defaults={{ consent: true }}` so client-side page and interaction tracking can emit immediately.
 
 If application policy depends on user choice, keep server request consent, the anonymous ID cookie,
-and browser SDK consent aligned from a Client Component that subscribes to SDK state and exposes the
-controls:
+and browser SDK consent aligned from a Client Component that reads SDK state through React SDK hooks
+and exposes the controls:
 
 ```tsx
 // components/InteractiveControls.tsx
 'use client'
 
-import { useOptimizationContext } from '@contentful/optimization-react-web'
-import { useEffect, useState } from 'react'
+import {
+  useConsentState,
+  useOptimizationActions,
+  useProfileState,
+} from '@contentful/optimization-react-web'
+import { useEffect, useMemo } from 'react'
 
 const APP_PERSONALIZATION_CONSENT_COOKIE = 'app-personalization-consent'
 
@@ -475,33 +383,33 @@ function setAppConsentCookie(consented: boolean): void {
 }
 
 export function InteractiveControls() {
-  const { sdk, isReady } = useOptimizationContext()
-  const [consent, setConsent] = useState<boolean | undefined>(undefined)
+  const { consent: setConsent, identify, reset } = useOptimizationActions()
+  const consent = useConsentState()
+  const profile = useProfileState()
 
   useEffect(() => {
-    if (!sdk || !isReady) return
+    if (typeof consent === 'boolean') setAppConsentCookie(consent)
+  }, [consent])
 
-    const sub = sdk.states.consent.subscribe((value) => {
-      setConsent(value)
-      if (typeof value === 'boolean') setAppConsentCookie(value)
-    })
-
-    return () => sub.unsubscribe()
-  }, [sdk, isReady])
-
-  if (!sdk || !isReady) return null
+  const isIdentified = useMemo(
+    () => profile !== undefined && Boolean(profile.traits.identified),
+    [profile],
+  )
 
   return (
     <div>
       <button
         onClick={() => {
-          sdk.consent(consent !== true)
+          setConsent(consent !== true)
         }}
       >
         {consent === true ? 'Reject consent' : 'Accept consent'}
       </button>
-      <button onClick={() => sdk.identify({ userId: 'user-123' })}>Identify</button>
-      <button onClick={() => sdk.reset()}>Reset profile</button>
+      {!isIdentified ? (
+        <button onClick={() => void identify({ userId: 'user-123' })}>Identify</button>
+      ) : (
+        <button onClick={() => reset()}>Reset profile</button>
+      )}
     </div>
   )
 }
@@ -524,10 +432,10 @@ Use this optional step when your Next.js app already sends events to a tag manag
 platform, or analytics destination. The Optimization SDK still sends events to Contentful. Your
 application decides which approved Contentful context, if any, should also be forwarded.
 
-| Reporting need                             | SSR-primary handoff                                                                      |
+| Reporting need                             | SSR handoff                                                                              |
 | ------------------------------------------ | ---------------------------------------------------------------------------------------- |
 | Server-rendered first-paint attribution    | Use request-local `OptimizationData` and `selectedOptimization` in the Server Component. |
-| Hydrated page and entry interaction events | Register one React Web `states.eventStream` subscription from `onStatesReady`.           |
+| Hydrated page and entry interaction events | Register one React Web `states.eventStream` subscription with `onStatesReady`.           |
 | Business event attribution                 | Add Contentful fields in the server action or Client Component handler that owns it.     |
 | Consent or duplicate-delivery verification | Use `states.blockedEventStream`, `messageId` dedupe, and destination debuggers.          |
 
@@ -536,8 +444,8 @@ request-local SDK data; hydrated client activity uses a live React Web subscript
 queue. If a tag or analytics library loads after hydration, buffer forwarded payloads in application
 code with an explicit size, TTL, and drop policy.
 
-For hydrated activity, add the subscription to the client provider wrapper that already mounts
-`OptimizationRoot`:
+For hydrated activity, attach the subscription through `OptimizationRoot`'s `onStatesReady`
+callback:
 
 ```tsx
 <OptimizationRoot
@@ -611,28 +519,27 @@ must be excluded from those caches or must vary on the full profile state.
 Keep this boundary strict throughout the application:
 
 - Server Components import only from `@contentful/optimization-node`.
-- Client Components (`'use client'`) import only from `@contentful/optimization-react-web`.
+- Server Component layouts may render exported React SDK Client Components such as
+  `OptimizationRoot` and `NextAppAutoPageTracker` from the SDK's Next-compatible client entrypoints.
+- Application components that call React SDK hooks or actions must be Client Components and begin
+  with `'use client'`.
 
-Mixing them causes runtime errors or bundling failures. The most common mistake is importing a React
-Web SDK hook at the top of a file that is later resolved as a Server Component. If you see an error
-about browser globals in a server context, trace the import chain back to a file missing the
-`'use client'` directive.
-
-A practical rule: any file that imports from `@contentful/optimization-react-web` must begin with
-`'use client'`, or it must only be imported by files that do.
+Do not call React SDK hooks or import browser-only Web SDK support modules from Server Components.
+The most common mistake is importing a React Web SDK hook at the top of a file that is later
+resolved as a Server Component. If you see an error about browser globals in a server context, trace
+the import chain back to an application component that should be marked with `'use client'`.
 
 ## Reference implementations to compare against
 
-- [`implementations/react-web-sdk+node-sdk_nextjs-ssr`](../../implementations/react-web-sdk+node-sdk_nextjs-ssr/README.md):
-  working Next.js App Router application using the SSR-primary pattern. The server resolves all
-  entries, the client handles tracking and interactive controls only.
-  - [`middleware.ts`](../../implementations/react-web-sdk+node-sdk_nextjs-ssr/middleware.ts): Edge
-    Runtime cookie lifecycle
-  - [`lib/optimization-server.ts`](../../implementations/react-web-sdk+node-sdk_nextjs-ssr/lib/optimization-server.ts):
+- [`implementations/nextjs-sdk_ssr`](../../implementations/nextjs-sdk_ssr/README.md): working
+  Next.js App Router application using the SSR pattern. The server resolves all entries, the client
+  handles tracking and interactive controls only.
+  - [`proxy.ts`](../../implementations/nextjs-sdk_ssr/proxy.ts): Edge Runtime cookie lifecycle
+  - [`lib/optimization-server.ts`](../../implementations/nextjs-sdk_ssr/lib/optimization-server.ts):
     Node SDK singleton
-  - [`app/page.tsx`](../../implementations/react-web-sdk+node-sdk_nextjs-ssr/app/page.tsx): Server
-    Component fetching entries and resolving variants
-  - [`components/ClientProviderWrapper.tsx`](../../implementations/react-web-sdk+node-sdk_nextjs-ssr/components/ClientProviderWrapper.tsx):
-    dynamic React Web SDK provider
-  - [`components/InteractiveControls.tsx`](../../implementations/react-web-sdk+node-sdk_nextjs-ssr/components/InteractiveControls.tsx):
+  - [`app/page.tsx`](../../implementations/nextjs-sdk_ssr/app/page.tsx): Server Component fetching
+    entries and resolving variants
+  - [`app/layout.tsx`](../../implementations/nextjs-sdk_ssr/app/layout.tsx): Server Component layout
+    rendering `OptimizationRoot` and `NextAppAutoPageTracker` directly
+  - [`components/InteractiveControls.tsx`](../../implementations/nextjs-sdk_ssr/components/InteractiveControls.tsx):
     Client Component for consent, identify, and reset

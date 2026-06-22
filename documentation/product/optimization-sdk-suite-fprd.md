@@ -348,7 +348,7 @@ The suite must support these application and validation workflows:
 - Server personalization across Node, Express, and NestJS with request-scoped profile evaluation,
   middleware or route integration, SSR support, event delivery, and browser follow-up tracking where
   applicable.
-- Meta-framework reference patterns for Next.js, Nuxt.js, and SvelteKit across CSR, SSR-primary,
+- Meta-framework reference patterns for Next.js, Nuxt.js, and SvelteKit across CSR, SSR,
   prerendering where compatible with personalization constraints, and hybrid takeover modalities.
 - Mobile framework-facing personalization through React Native APIs with provider setup, optimized
   entries, screen tracking, interaction tracking, offline behavior, preview, and analytics handoff.

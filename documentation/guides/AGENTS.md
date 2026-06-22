@@ -6,7 +6,7 @@ Applies to public integration guides under `documentation/guides/`.
 
 - Directory README: keep `Choosing the right SDK` under `## Start here`; list implementation guides
   under `## Integration guides` in platform/layer order: Node, Web, React Web, React Native, iOS
-  SwiftUI, iOS UIKit, Next.js SSR-primary, Next.js hybrid SSR + CSR takeover.
+  SwiftUI, iOS UIKit, Next.js SSR, Next.js hybrid.
 - Implementation guide H1 format:
   `# Integrating the Optimization <SDK name> SDK in a <runtime> app`.
 - Open with the reader goal, usually `Use this guide when...`, then place the collapsible TOC before
