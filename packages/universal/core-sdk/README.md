@@ -211,6 +211,15 @@ optimization overrides, and map Contentful entries for local authoring workflows
 Application code must not use preview support directly unless it is building a first-party preview
 surface.
 
+## SDK support
+
+SDK integration helpers live under the internal [`sdk-support`](./src/sdk-support/README.md) entry.
+They are used by first-party runtime and framework SDKs to coordinate consent-aware automatic page
+and screen tracking.
+
+Application code must not use SDK support directly. Use the public event methods documented by the
+runtime SDK, such as `page()` and `screen()`.
+
 ## Related
 
 - [Choosing the right SDK](https://contentful.github.io/optimization/documents/Documentation.Guides.choosing-the-right-sdk.html) -
@@ -222,3 +231,4 @@ surface.
 - [Optimization React Native SDK](../../react-native-sdk/README.md) - mobile SDK built on
   `CoreStateful`
 - [Core preview support](./src/preview-support/README.md) - internal preview helper entry
+- [Core SDK support](./src/sdk-support/README.md) - internal SDK helper entry

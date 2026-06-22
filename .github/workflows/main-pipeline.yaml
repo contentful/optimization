@@ -873,33 +873,6 @@ jobs:
           name: android-apks
           path: android-apks
 
-      - name: AVD cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
-        id: avd-cache
-        with:
-          path: |
-            ~/.android/avd/*
-            ~/.android/adb*
-          key: avd-${{ env.API_LEVEL }}-${{ env.ARCH }}-${{ env.TARGET }}-${{ env.PROFILE }}
-
-      - name: Create AVD and generate snapshot for caching
-        if: steps.avd-cache.outputs.cache-hit != 'true'
-        uses: reactivecircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a # v2.37.0
-        with:
-          api-level: ${{ env.API_LEVEL }}
-          arch: ${{ env.ARCH }}
-          target: ${{ env.TARGET }}
-          profile: ${{ env.PROFILE }}
-          avd-name: test
-          force-avd-creation: false
-          emulator-boot-timeout: 600
-          cores: 3
-          ram-size: 6144M
-          disk-size: 8G
-          disable-animations: false
-          emulator-options: ${{ env.EMULATOR_OPTIONS }}
-          script: echo "Generated AVD snapshot for caching."
-
       - name: Start Mock Server
         run: |
           pnpm --dir lib/mocks serve > /tmp/mock-server.log 2>&1 &
@@ -918,7 +891,7 @@ jobs:
             exit 1
           fi
 
-      - name: Run Maestro E2E (emulator, warm boot from cached snapshot)
+      - name: Run Maestro E2E (emulator, clean boot)
         uses: reactivecircus/android-emulator-runner@e89f39f1abbbd05b1113a29cf4db69e7540cae5a # v2.37.0
         with:
           api-level: ${{ env.API_LEVEL }}
@@ -932,7 +905,7 @@ jobs:
           ram-size: 6144M
           disk-size: 8G
           disable-animations: true
-          emulator-options: ${{ env.EMULATOR_OPTIONS }} -no-snapshot-save
+          emulator-options: ${{ env.EMULATOR_OPTIONS }} -no-snapshot-load -no-snapshot-save
           script: |
             echo "Installing Maestro CLI ($MAESTRO_VERSION)..."
             curl -Ls "https://get.maestro.mobile.dev" | bash
@@ -940,11 +913,6 @@ jobs:
             echo "Removing any cached install of ${{ matrix.package }} to avoid signature mismatches from the cached AVD..."
             adb uninstall ${{ matrix.package }} >/dev/null 2>&1 || true
             adb install -r android-apks/${{ matrix.apk }}
-            echo "Setting up adb reverse (harmless localhost fallback; the apps use 10.0.2.2)..."
-            adb reverse tcp:8000 tcp:8000 || echo "::warning::adb reverse failed; apps use 10.0.2.2 so continuing"
-            sleep 3
-            echo "Verifying the host mock is reachable from the emulator via 10.0.2.2..."
-            adb shell "for i in 1 2 3 4 5 6 7 8 9 10; do toybox nc -z 10.0.2.2 8000 2>/dev/null && echo 'Mock server reachable via 10.0.2.2' && exit 0; sleep 1; done; echo '::warning::mock 10.0.2.2 verification timed out'"
             echo "Starting background logcat capture (diagnostics on failure)..."
             adb logcat -c || true
             nohup adb logcat -v threadtime > /tmp/android-logcat.txt 2>&1 &
@@ -959,7 +927,9 @@ jobs:
           echo "=== Maestro test output tree (~/.maestro/tests) ==="
           ls -la "$HOME/.maestro/tests" 2>/dev/null || echo "No Maestro test output found"
           echo "=== logcat ANR / crash lines ==="
-          grep -nE "ANR in|FATAL EXCEPTION|not responding|lowmemorykiller|Process .* died|Low on memory" /tmp/android-logcat.txt 2>/dev/null | head -60 || echo "No logcat captured"
+          grep -nE "ANR in|FATAL EXCEPTION|not responding|Unable to clear state|pm list packages|PackageManager|device offline|lowmemorykiller|Process .* died|Low on memory" /tmp/android-logcat.txt 2>/dev/null | head -80 || echo "No logcat captured"
+          echo "=== Maestro system failure signals ==="
+          grep -R -nE "Process system isn.t responding|Application isn.t responding|android:id/aerr_(close|wait)|Unable to clear state|pm list packages|device offline" "$HOME/.maestro/tests" 2>/dev/null | head -80 || echo "No Maestro system failure signals found"
 
       - name: Stop Mock Server
         if: always()
@@ -1117,12 +1087,12 @@ jobs:
         uses: android-actions/setup-android@40fd30fb8d7440372e1316f5d1809ec01dcd3699 # v4.0.1
 
       # Smoke-test packaging: assemble the AAR + sources/javadoc/POM the release would publish
-      # (no Central access, no signing) so packaging breaks are caught on PRs.
+      # (no Central access, no signing) so packaging breaks are caught on PRs. Release publishing
+      # separately generates and requires Android third-party notices.
       - name: Verify Maven publishing assembles
         working-directory: packages/android/ContentfulOptimization
         run: |
           ./gradlew publishToMavenLocal -Pcontentful.optimization.version=0.0.0-ci \
-            -Pcontentful.optimization.thirdPartyNoticesFile=THIRD_PARTY_NOTICES.txt \
             --no-configuration-cache --no-daemon --console=plain
 
   e2e-react-native-android:

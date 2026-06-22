@@ -113,6 +113,7 @@ object OptimizationManager {
      * Tear down for testing or hot-reloads. Production apps don't normally call this.
      */
     fun resetForTesting() {
+        ScreenTracker.resetForTesting()
         clientRef.getAndSet(null)?.let { c ->
             runBlocking(Dispatchers.Default) {
                 try {

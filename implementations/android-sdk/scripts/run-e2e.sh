@@ -161,6 +161,14 @@ log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
+warn_or_fail_ci() {
+    if [[ "$CI" == "true" ]]; then
+        log_error "$1"
+        exit 1
+    fi
+    log_warn "$1"
+}
+
 resolve_maestro_bin() {
     if command -v maestro &>/dev/null; then
         MAESTRO_BIN="$(command -v maestro)"
@@ -358,6 +366,24 @@ wait_for_emulator_boot() {
     exit 1
 }
 
+wait_for_package_manager() {
+    local max_attempts="${1:-60}"
+    local attempt=0
+
+    log_info "Waiting for PackageManager to respond..."
+    while [[ $attempt -lt $max_attempts ]]; do
+        if adb shell cmd package list packages >/dev/null 2>&1; then
+            log_info "PackageManager is responsive"
+            return 0
+        fi
+        sleep 2
+        ((attempt++))
+    done
+
+    log_error "PackageManager did not respond after $((max_attempts * 2)) seconds"
+    exit 1
+}
+
 list_headless_qemu_pids() {
     # An Android emulator is "headless" when EITHER of these is true:
     #   - it is running the `qemu-system-*-headless` binary
@@ -480,6 +506,15 @@ start_mock_server() {
 }
 
 setup_adb() {
+    wait_for_package_manager
+
+    log_info "Dismissing keyguard and restoring emulator network state..."
+    adb shell wm dismiss-keyguard >/dev/null 2>&1 || true
+    adb shell input keyevent 82 >/dev/null 2>&1 || true
+    adb shell cmd connectivity airplane-mode disable >/dev/null 2>&1 || true
+    adb shell svc wifi enable >/dev/null 2>&1 || true
+    adb shell svc data enable >/dev/null 2>&1 || true
+
     # The apps reach the host mock via the emulator host alias 10.0.2.2 (AppConfig),
     # which needs no adb forward and survives adb-daemon restarts. We still set an
     # adb reverse as a harmless localhost fallback, then verify the 10.0.2.2 path the
@@ -489,10 +524,19 @@ setup_adb() {
         log_warn "adb reverse failed; apps use 10.0.2.2 so continuing"
 
     log_info "Verifying host mock is reachable from the emulator via 10.0.2.2..."
-    if adb shell "toybox nc -z 10.0.2.2 ${MOCK_SERVER_PORT}" 2>/dev/null; then
+    local mock_reachable="false"
+    local attempt
+    for attempt in $(seq 1 30); do
+        if adb shell "toybox nc -z 10.0.2.2 ${MOCK_SERVER_PORT} 2>/dev/null || nc -z 10.0.2.2 ${MOCK_SERVER_PORT} 2>/dev/null" >/dev/null 2>&1; then
+            mock_reachable="true"
+            break
+        fi
+        sleep 1
+    done
+    if [[ "$mock_reachable" == "true" ]]; then
         log_info "Host mock reachable at 10.0.2.2:${MOCK_SERVER_PORT}"
     else
-        log_warn "Could not confirm 10.0.2.2:${MOCK_SERVER_PORT} from the emulator; continuing"
+        warn_or_fail_ci "Could not confirm 10.0.2.2:${MOCK_SERVER_PORT} from the emulator"
     fi
 
     if [[ "$DISABLE_EMULATOR_ANIMATIONS" == "true" ]]; then
@@ -506,6 +550,12 @@ setup_adb() {
         done
     fi
 
+    if adb shell settings put system screen_off_timeout 2147483647 > /dev/null 2>&1; then
+        log_info "Set screen_off_timeout to stay awake during Maestro"
+    else
+        warn_or_fail_ci "Could not set screen_off_timeout"
+    fi
+
     # Suppress system ANR/crash dialogs. On a loaded/headless emulator the Pixel
     # Launcher can ANR, and its "isn't responding" dialog overlays the app under
     # test — Maestro then resolves its accessibility tree against the dialog window
@@ -514,7 +564,13 @@ setup_adb() {
     if adb shell settings put global hide_error_dialogs 1 > /dev/null 2>&1; then
         log_info "Suppressed system ANR/crash dialogs (hide_error_dialogs=1)"
     else
-        log_warn "Could not set hide_error_dialogs=1; continuing"
+        warn_or_fail_ci "Could not set hide_error_dialogs=1"
+    fi
+
+    local hide_error_dialogs
+    hide_error_dialogs="$(adb shell settings get global hide_error_dialogs 2>/dev/null | tr -d '\r' || true)"
+    if [[ "$hide_error_dialogs" != "1" ]]; then
+        warn_or_fail_ci "hide_error_dialogs verification failed (value: ${hide_error_dialogs:-unset})"
     fi
 }
 

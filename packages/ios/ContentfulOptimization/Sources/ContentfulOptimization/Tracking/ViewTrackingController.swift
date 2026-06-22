@@ -116,6 +116,12 @@ public final class ViewTrackingController {
         scrollY: CGFloat,
         viewportHeight: CGFloat
     ) {
+        guard client?.hasConsent(method: "trackView") == true else {
+            if isVisible {
+                onBecameInvisible()
+            }
+            return
+        }
         guard elementHeight > 0 else { return }
 
         // Store for re-evaluation after resume
@@ -230,6 +236,8 @@ public final class ViewTrackingController {
 
     private func emitEvent() {
         guard let client = client, let viewId = viewId else { return }
+        guard client.hasConsent(method: "trackView") else { return }
+
         let payload = TrackViewPayload(
             componentId: metadata.componentId,
             viewId: viewId,

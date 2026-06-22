@@ -10,6 +10,7 @@ export type OptimizationSdk = Pick<
   | 'destroy'
   | 'getFlag'
   | 'getMergeTagValue'
+  | 'hasConsent'
   | 'identify'
   | 'locale'
   | 'page'

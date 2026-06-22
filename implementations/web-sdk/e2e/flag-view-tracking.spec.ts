@@ -24,28 +24,20 @@ test.describe('flag view tracking', () => {
     await expect(flagAccessEvents).toHaveCount(0)
   })
 
-  test('emits flag view events after consent and profile updates', async ({ page }) => {
+  test('emits flag view events after consented profile updates', async ({ page }) => {
     const flagAccessEvents = getFlagAccessEvents(page)
     const baselineFlagEventCount = await flagAccessEvents.count()
 
     await page.getByRole('button', { name: 'Accept Consent' }).click()
-
-    await expect
-      .poll(async () => await flagAccessEvents.count(), {
-        message: 'consented flag subscription should append a flag view event',
-      })
-      .toBeGreaterThan(baselineFlagEventCount)
-
-    const afterConsentFlagEventCount = await flagAccessEvents.count()
 
     await page.getByRole('button', { name: 'Identify' }).click()
     await expect(page.getByRole('button', { name: 'Reset Profile' })).toBeVisible()
 
     await expect
       .poll(async () => await flagAccessEvents.count(), {
-        message: 'profile updates should append additional flag view events',
+        message: 'consented profile updates should append flag view events',
       })
-      .toBeGreaterThan(afterConsentFlagEventCount)
+      .toBeGreaterThan(baselineFlagEventCount)
 
     const latestFlagAccessEvent = flagAccessEvents.last()
 

@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.testTagsAsResourceId
 import com.contentful.optimization.app.screens.MainScreen
 import com.contentful.optimization.compose.OptimizationRoot
 import com.contentful.optimization.core.OptimizationConfig
+import com.contentful.optimization.core.StorageDefaults
 import com.contentful.optimization.preview.PreviewPanelConfig
 import com.contentful.optimization.shared.AppConfig
 import com.contentful.optimization.shared.MockPreviewContentfulClient
@@ -47,6 +48,7 @@ class MainActivity : ComponentActivity() {
                         experienceBaseUrl = AppConfig.experienceBaseUrl,
                         insightsBaseUrl = AppConfig.insightsBaseUrl,
                         locale = AppConfig.defaultContentfulLocale,
+                        defaults = StorageDefaults(consent = true),
                         debug = true,
                     ),
                     trackViews = true,

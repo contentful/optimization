@@ -11,6 +11,17 @@ import type {
 export type EventType = InsightsEventType | ExperienceEventType
 
 /**
+ * Event admission selectors accepted by `allowedEventTypes`.
+ *
+ * @remarks
+ * `EventType` values are API wire event types. Additional selector values,
+ * such as `flag`, narrow consent admission without changing emitted payloads.
+ *
+ * @public
+ */
+export type AllowedEventType = EventType | 'flag'
+
+/**
  * Default Core event types allowed before event consent is granted.
  *
  * @remarks

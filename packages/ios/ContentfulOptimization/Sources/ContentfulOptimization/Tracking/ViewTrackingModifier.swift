@@ -13,6 +13,7 @@ struct ViewTrackingModifier: ViewModifier {
 
     @Environment(\.scrollContext) private var scrollContext
     @State private var controller: ViewTrackingController?
+    @State private var lastFrame: CGRect?
 
     func body(content: Content) -> some View {
         if enabled {
@@ -21,11 +22,10 @@ struct ViewTrackingModifier: ViewModifier {
                     .onGeometryChange(for: CGRect.self) { proxy in
                         proxy.frame(in: .named(ScrollContext.coordinateSpaceName))
                     } action: { _, newFrame in
-                        initControllerIfNeeded()
                         performVisibilityCheck(frame: newFrame)
                     }
-                    .onAppear {
-                        initControllerIfNeeded()
+                    .onChange(of: client.state.consent) { _ in
+                        performLastVisibilityCheck()
                     }
                     .onDisappear {
                         controller?.onDisappear()
@@ -42,6 +42,9 @@ struct ViewTrackingModifier: ViewModifier {
                                 .onChange(of: scrollContext) { _ in
                                     performVisibilityCheck(frame: geo.frame(in: .named(ScrollContext.coordinateSpaceName)))
                                 }
+                                .onChange(of: client.state.consent) { _ in
+                                    performVisibilityCheck(frame: geo.frame(in: .named(ScrollContext.coordinateSpaceName)))
+                                }
                         }
                     )
                     .onDisappear {
@@ -54,6 +57,12 @@ struct ViewTrackingModifier: ViewModifier {
     }
 
     private func initControllerIfNeeded() {
+        guard client.hasConsent(method: "trackView") else {
+            controller?.onDisappear()
+            controller = nil
+            return
+        }
+
         if controller == nil {
             controller = ViewTrackingController(
                 client: client,
@@ -67,6 +76,8 @@ struct ViewTrackingModifier: ViewModifier {
     }
 
     private func performVisibilityCheck(frame: CGRect) {
+        lastFrame = frame
+        initControllerIfNeeded()
         guard let controller = controller else { return }
         let vpHeight = scrollContext?.viewportHeight ?? 0
         controller.updateVisibility(
@@ -75,5 +86,11 @@ struct ViewTrackingModifier: ViewModifier {
             scrollY: scrollContext?.scrollY ?? 0,
             viewportHeight: vpHeight > 0 ? vpHeight : ViewTrackingController.fallbackViewportHeight
         )
+    }
+
+    private func performLastVisibilityCheck() {
+        guard let lastFrame else { return }
+
+        performVisibilityCheck(frame: lastFrame)
     }
 }

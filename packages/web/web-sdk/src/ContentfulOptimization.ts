@@ -336,7 +336,7 @@ class ContentfulOptimization extends CoreStateful {
         consent: { value },
       } = signals
 
-      this.entryInteractionRuntime.syncAutoTrackedEntryInteractions(!!value)
+      this.entryInteractionRuntime.syncAutoTrackedEntryInteractions()
       LocalStore.consent = value
     })
 

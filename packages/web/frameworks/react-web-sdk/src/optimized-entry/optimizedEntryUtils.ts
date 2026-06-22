@@ -1,4 +1,4 @@
-import type { OptimizedEntryLoadingTargetDisplay } from '@contentful/optimization-web/presentation'
+import type { OptimizedEntryLoadingTargetDisplay } from '@contentful/optimization-web/sdk-support'
 import type { Entry } from 'contentful'
 import type { CSSProperties, ReactNode } from 'react'
 

@@ -70,7 +70,7 @@ export default function App(): JSX.Element {
   }, [isReady, sdk])
 
   useEffect(() => {
-    if (!sdk || !isReady || consent !== true || profile === undefined) {
+    if (!sdk || !isReady) {
       return
     }
 
@@ -79,7 +79,7 @@ export default function App(): JSX.Element {
     return () => {
       sub.unsubscribe()
     }
-  }, [consent, profile?.id, isReady, sdk])
+  }, [isReady, sdk])
 
   useEffect(() => {
     if (!sdk || !isReady) {

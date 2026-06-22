@@ -58,7 +58,7 @@ export default function App({
   }, [location.pathname, sdk])
 
   useEffect(() => {
-    if (sdk === undefined || consent !== true || profile === undefined) {
+    if (sdk === undefined) {
       return
     }
 
@@ -67,7 +67,7 @@ export default function App({
     return () => {
       subscription.unsubscribe()
     }
-  }, [consent, profile?.id, sdk])
+  }, [sdk])
 
   useEffect(() => {
     if (sdk === undefined) {

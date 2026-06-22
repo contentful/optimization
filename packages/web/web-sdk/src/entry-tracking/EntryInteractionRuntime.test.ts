@@ -36,7 +36,10 @@ const createDetectorMocks = <TStartOptions, TElementOptions>(): DetectorMocks<
   clearElement: rs.fn(),
 })
 
-function createRuntime(autoTrack?: { clicks?: boolean; hovers?: boolean; views?: boolean }): {
+function createRuntime(
+  autoTrack?: { clicks?: boolean; hovers?: boolean; views?: boolean },
+  hasConsent: (name: string) => boolean = () => true,
+): {
   runtime: EntryInteractionRuntime
   clickDetector: DetectorMocks<undefined, { data?: unknown }>
   hoverDetector: DetectorMocks<
@@ -69,6 +72,7 @@ function createRuntime(autoTrack?: { clicks?: boolean; hovers?: boolean; views?:
     trackClick: rs.fn().mockResolvedValue(undefined),
     trackHover: rs.fn().mockResolvedValue(undefined),
     trackView: rs.fn().mockResolvedValue(undefined),
+    hasConsent: rs.fn(hasConsent),
   }
   const clickDetector = createDetectorMocks<undefined, { data?: unknown }>()
   const hoverDetector = createDetectorMocks<
@@ -208,21 +212,45 @@ describe('EntryInteractionRuntime', () => {
   })
 
   it('syncs auto-tracked interactions with consent state', () => {
-    const { clickDetector, hoverDetector, runtime, viewDetector } = createRuntime({
-      clicks: true,
-      hovers: true,
-      views: true,
-    })
+    let allowed = true
+    const { clickDetector, hoverDetector, runtime, viewDetector } = createRuntime(
+      {
+        clicks: true,
+        hovers: true,
+        views: true,
+      },
+      () => allowed,
+    )
 
-    runtime.syncAutoTrackedEntryInteractions(true)
+    runtime.syncAutoTrackedEntryInteractions()
     expect(clickDetector.start).toHaveBeenCalledTimes(1)
     expect(hoverDetector.start).toHaveBeenCalledTimes(1)
     expect(viewDetector.start).toHaveBeenCalledTimes(1)
 
-    runtime.syncAutoTrackedEntryInteractions(false)
+    allowed = false
+    runtime.syncAutoTrackedEntryInteractions()
     expect(clickDetector.stop).toHaveBeenCalledTimes(1)
     expect(hoverDetector.stop).toHaveBeenCalledTimes(1)
     expect(viewDetector.stop).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps forced element interactions stopped until their event type is allowed', () => {
+    let allowed = false
+    const { clickDetector, runtime } = createRuntime(
+      {
+        clicks: false,
+      },
+      (name) => name !== 'trackClick' || allowed,
+    )
+    const element = document.createElement('div')
+
+    runtime.tracking.enableElement('clicks', element, { data: { entryId: 'entry-1' } })
+    expect(clickDetector.start).not.toHaveBeenCalled()
+
+    allowed = true
+    runtime.syncAutoTrackedEntryInteractions()
+    expect(clickDetector.start).toHaveBeenCalledTimes(1)
+    expect(clickDetector.setAuto).toHaveBeenCalledWith(false)
   })
 
   it('does not start or stop interactions when auto-tracking is disabled', () => {
@@ -232,8 +260,8 @@ describe('EntryInteractionRuntime', () => {
       views: false,
     })
 
-    runtime.syncAutoTrackedEntryInteractions(true)
-    runtime.syncAutoTrackedEntryInteractions(false)
+    runtime.syncAutoTrackedEntryInteractions()
+    runtime.syncAutoTrackedEntryInteractions()
 
     expect(clickDetector.start).not.toHaveBeenCalled()
     expect(hoverDetector.start).not.toHaveBeenCalled()

@@ -62,6 +62,7 @@ interface RenderResponseOptions {
   readonly appConsent: boolean | undefined
   readonly appLocale: string
   readonly id?: string
+  readonly optimizationData?: OptimizationData
   readonly userId?: string
 }
 
@@ -127,7 +128,7 @@ function getAppConsentFromCookies(cookies: unknown): boolean | undefined {
 
 function respond(
   res: Response,
-  { appConsent, appLocale, id, userId }: RenderResponseOptions,
+  { appConsent, appLocale, id, optimizationData, userId }: RenderResponseOptions,
 ): void {
   if (appConsent === true && id) {
     res.cookie(ANONYMOUS_ID_COOKIE, id, {
@@ -143,6 +144,7 @@ function respond(
     appConsent: appConsent ?? null,
     appLocale,
     identified: userId,
+    optimizationData: optimizationData ?? null,
   })
 }
 
@@ -194,6 +196,7 @@ app.get('/', limiter, async (req, res) => {
     appConsent,
     appLocale,
     id: optimizationData?.profile.id,
+    optimizationData,
   })
 })
 app.get('/smoke-test', limiter, (_, res) => {
@@ -201,6 +204,7 @@ app.get('/smoke-test', limiter, (_, res) => {
     appConsent: null,
     config,
     appLocale: APP_LOCALE,
+    optimizationData: null,
   })
 })
 app.get('/user/:id', limiter, async (req, res) => {
@@ -213,6 +217,7 @@ app.get('/user/:id', limiter, async (req, res) => {
     appConsent,
     appLocale,
     id: optimizationData?.profile.id,
+    optimizationData,
     userId,
   })
 })

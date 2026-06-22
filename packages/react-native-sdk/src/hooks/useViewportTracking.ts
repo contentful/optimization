@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { AppState, Dimensions, type LayoutChangeEvent } from 'react-native'
 import { useOptimization } from '../context/OptimizationContext'
 import { useScrollContext } from '../context/OptimizationScrollContext'
+import { useOptimizationConsentState } from './useOptimizationConsentState'
 
 const logger = createScopedLogger('RN:ViewportTracking')
 
@@ -205,6 +206,8 @@ function getRemainingMsUntilNextFire(
  * A new visibility cycle (with a fresh `viewId`) starts each time the tracked
  * entry transitions from invisible to visible. Time accumulation pauses when
  * the app moves to the background.
+ * If `trackView` is blocked by consent, visibility timing starts only after
+ * Core allows the event type.
  *
  * @example
  * ```tsx
@@ -234,13 +237,13 @@ export function useViewportTracking({
   viewDurationUpdateIntervalMs = DEFAULT_VIEW_DURATION_UPDATE_INTERVAL_MS,
 }: UseViewportTrackingOptions): UseViewportTrackingReturn {
   const contentfulOptimization = useOptimization()
+  const consent = useOptimizationConsentState(contentfulOptimization)
+  const viewTrackingAllowed = contentfulOptimization.hasConsent('trackView')
+  const {
+    sys: { id: entryId },
+  } = entry
 
   const scrollContext = useScrollContext()
-
-  const { componentId, experienceId, variantIndex, sticky } = extractTrackingMetadata(
-    entry,
-    selectedOptimization,
-  )
 
   const [screenHeight, setScreenHeight] = useState(Dimensions.get('window').height)
 
@@ -263,37 +266,27 @@ export function useViewportTracking({
 
   const optimizationRef = useRef(contentfulOptimization)
   optimizationRef.current = contentfulOptimization
+  const viewTrackingAllowedRef = useRef(viewTrackingAllowed)
+  viewTrackingAllowedRef.current = viewTrackingAllowed
+  const entryRef = useRef(entry)
+  entryRef.current = entry
+  const selectedOptimizationRef = useRef(selectedOptimization)
+  selectedOptimizationRef.current = selectedOptimization
 
-  const componentIdRef = useRef(componentId)
-  componentIdRef.current = componentId
-  const experienceIdRef = useRef(experienceId)
-  experienceIdRef.current = experienceId
-  const variantIndexRef = useRef(variantIndex)
-  variantIndexRef.current = variantIndex
-  const stickyRef = useRef(sticky)
-  stickyRef.current = sticky
   const stickySuccessRef = useRef(false)
   const stickyInFlightRef = useRef(false)
-  const stickyIdentityRef = useRef<string | null>(null)
-
-  const stickyIdentity = `${componentId}::${experienceId ?? ''}::${variantIndex}::${sticky === true ? '1' : '0'}`
 
   useEffect(() => {
-    if (stickyIdentityRef.current === stickyIdentity) return
-
-    stickyIdentityRef.current = stickyIdentity
     stickySuccessRef.current = false
     stickyInFlightRef.current = false
-  }, [stickyIdentity])
+  }, [entry, selectedOptimization])
 
-  logger.debug(
-    `Hook initialized for ${componentId} (experienceId: ${experienceId}, variantIndex: ${variantIndex})`,
-  )
+  logger.debug(`Hook initialized for ${entryId}`)
 
   useEffect(() => {
-    logger.debug(`Hook mounted/updated for ${componentId}`)
+    logger.debug(`Hook mounted/updated for ${entryId}`)
     return () => {
-      logger.debug(`Hook unmounting for ${componentId}`)
+      logger.debug(`Hook unmounting for ${entryId}`)
     }
   }, [])
 
@@ -305,21 +298,27 @@ export function useViewportTracking({
   }, [])
 
   const emitViewEvent = useCallback(() => {
+    if (!viewTrackingAllowedRef.current) return
+
     const { current: cycle } = cycleRef
     const now = Date.now()
     flushAccumulatedTime(cycle, now)
 
     const viewId = cycle.viewId ?? createViewId()
     const durationMs = Math.max(0, Math.round(cycle.accumulatedMs))
+    const { componentId, experienceId, variantIndex, sticky } = extractTrackingMetadata(
+      entryRef.current,
+      selectedOptimizationRef.current,
+    )
 
     cycle.attempts += 1
 
     logger.info(
-      `Emitting view event #${cycle.attempts} for ${componentIdRef.current} (viewDurationMs=${durationMs}, viewId=${viewId})`,
+      `Emitting view event #${cycle.attempts} for ${componentId} (viewDurationMs=${durationMs}, viewId=${viewId})`,
     )
 
     const shouldSendSticky =
-      stickyRef.current === true && !stickySuccessRef.current && !stickyInFlightRef.current
+      sticky === true && !stickySuccessRef.current && !stickyInFlightRef.current
 
     if (shouldSendSticky) {
       stickyInFlightRef.current = true
@@ -328,10 +327,10 @@ export function useViewportTracking({
     void (async () => {
       try {
         const data = await optimizationRef.current.trackView({
-          componentId: componentIdRef.current,
+          componentId,
           viewId,
-          experienceId: experienceIdRef.current,
-          variantIndex: variantIndexRef.current,
+          experienceId,
+          variantIndex,
           viewDurationMs: durationMs,
           sticky: shouldSendSticky ? true : undefined,
         })
@@ -340,10 +339,7 @@ export function useViewportTracking({
           stickySuccessRef.current = true
         }
       } catch (error) {
-        logger.error(
-          `Failed to emit view event for ${componentIdRef.current} (viewId=${viewId})`,
-          error,
-        )
+        logger.error(`Failed to emit view event for ${componentId} (viewId=${viewId})`, error)
       } finally {
         if (shouldSendSticky) {
           stickyInFlightRef.current = false
@@ -376,7 +372,7 @@ export function useViewportTracking({
     }
 
     logger.debug(
-      `Scheduling next fire for ${componentIdRef.current} in ${remainingMs}ms (attempt #${cycle.attempts + 1})`,
+      `Scheduling next fire for ${entryId} in ${remainingMs}ms (attempt #${cycle.attempts + 1})`,
     )
 
     fireTimerRef.current = setTimeout(() => {
@@ -389,7 +385,7 @@ export function useViewportTracking({
   }, [clearFireTimer, dwellTimeMs, emitViewEvent, viewDurationUpdateIntervalMs])
 
   const onVisibilityStart = useCallback(() => {
-    if (!enabled) return
+    if (!enabled || !viewTrackingAllowedRef.current) return
 
     const { current: cycle } = cycleRef
     const now = Date.now()
@@ -398,7 +394,7 @@ export function useViewportTracking({
     cycle.viewId = createViewId()
     cycle.visibleSince = now
 
-    logger.info(`Visibility cycle started for ${componentIdRef.current} (id=${cycle.viewId})`)
+    logger.info(`Visibility cycle started for ${entryId} (id=${cycle.viewId})`)
 
     scheduleNextFire()
   }, [enabled, scheduleNextFire])
@@ -411,14 +407,10 @@ export function useViewportTracking({
     pauseAccumulation(cycle, now)
 
     if (cycle.viewId !== null && cycle.attempts > 0) {
-      logger.info(
-        `Visibility ended for ${componentIdRef.current} after ${cycle.attempts} events, emitting final`,
-      )
+      logger.info(`Visibility ended for ${entryId} after ${cycle.attempts} events, emitting final`)
       emitViewEvent()
     } else {
-      logger.debug(
-        `Visibility ended for ${componentIdRef.current} before dwell requirement, no final event`,
-      )
+      logger.debug(`Visibility ended for ${entryId} before dwell requirement, no final event`)
     }
 
     resetCycleState(cycle)
@@ -427,7 +419,7 @@ export function useViewportTracking({
   const canCheckVisibility = useCallback((): boolean => {
     const { current: dimensions } = dimensionsRef
     if (!dimensions) {
-      logger.debug(`${componentId} has no dimensions yet`)
+      logger.debug(`${entryId} has no dimensions yet`)
       return false
     }
 
@@ -435,15 +427,15 @@ export function useViewportTracking({
       const context = scrollContext
         ? '(waiting for ScrollView layout)'
         : '(waiting for screen dimensions)'
-      logger.debug(`${componentId} viewport height is 0 ${context}`)
+      logger.debug(`${entryId} viewport height is 0 ${context}`)
       return false
     }
 
     return true
-  }, [componentId, viewportHeight, scrollContext])
+  }, [entryId, viewportHeight, scrollContext])
 
   const checkVisibility = useCallback(() => {
-    logger.debug(`checkVisibility called for ${componentId}`)
+    logger.debug(`checkVisibility called for ${entryId}`)
 
     if (!canCheckVisibility()) {
       return
@@ -467,36 +459,36 @@ export function useViewportTracking({
 
     const contextType = scrollContext ? '(ScrollView)' : '(non-scrollable)'
     logger.debug(
-      `${componentId} visibility check ${contextType}:
+      `${entryId} visibility check ${contextType}:
   Element: y=${elementY.toFixed(0)}, bottom=${elementBottom.toFixed(0)}
   Viewport: scrollY=${scrollY.toFixed(0)}, height=${viewportHeight.toFixed(0)}, top=${viewportTop.toFixed(0)}, bottom=${viewportBottom.toFixed(0)}
   Visible: height=${visibleHeight.toFixed(0)}, ratio=${visibilityRatio.toFixed(2)}, minVisibleRatio=${minVisibleRatio}`,
     )
 
-    const isNowVisible = visibilityRatio >= minVisibleRatio
+    const isNowVisible = viewTrackingAllowedRef.current && visibilityRatio >= minVisibleRatio
     const { current: wasVisible } = isVisibleRef
     isVisibleRef.current = isNowVisible
 
     if (isNowVisible && !wasVisible) {
-      logger.info(`${componentId} transitioned from invisible to visible`)
+      logger.info(`${entryId} transitioned from invisible to visible`)
       onVisibilityStart()
     } else if (!isNowVisible && wasVisible) {
       logger.info(
-        `${componentId} became invisible (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%)`,
+        `${entryId} became invisible (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%)`,
       )
       onVisibilityEnd()
     } else if (!isNowVisible) {
       logger.debug(
-        `${componentId} is not visible enough (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%)`,
+        `${entryId} is not visible enough (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%)`,
       )
     } else {
       logger.debug(
-        `${componentId} remains visible (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%)`,
+        `${entryId} remains visible (${(visibilityRatio * PERCENTAGE_MULTIPLIER).toFixed(1)}%)`,
       )
     }
   }, [
     canCheckVisibility,
-    componentId,
+    entryId,
     minVisibleRatio,
     scrollY,
     viewportHeight,
@@ -513,18 +505,18 @@ export function useViewportTracking({
         },
       } = event
       logger.debug(
-        `Layout for ${componentId}: y=${y}, height=${height} (position within ScrollView content)`,
+        `Layout for ${entryId}: y=${y}, height=${height} (position within ScrollView content)`,
       )
       dimensionsRef.current = { y, height }
 
       checkVisibility()
     },
-    [componentId, checkVisibility],
+    [entryId, checkVisibility],
   )
 
   useEffect(() => {
     checkVisibility()
-  }, [scrollY, viewportHeight, checkVisibility])
+  }, [consent, scrollY, viewportHeight, viewTrackingAllowed, checkVisibility])
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
@@ -537,7 +529,7 @@ export function useViewportTracking({
           pauseAccumulation(cycle, now)
 
           if (cycle.attempts > 0) {
-            logger.info(`App backgrounded, emitting final event for ${componentIdRef.current}`)
+            logger.info(`App backgrounded, emitting final event for ${entryId}`)
             emitViewEvent()
             resetCycleState(cycle)
             isVisibleRef.current = false

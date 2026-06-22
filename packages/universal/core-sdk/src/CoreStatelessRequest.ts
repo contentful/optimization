@@ -9,7 +9,7 @@ import {
 import { createScopedLogger } from '@contentful/optimization-api-client/logger'
 import type CoreStateless from './CoreStateless'
 import type { CoreStatelessInsightsOptions, CoreStatelessRequestOptions } from './CoreStateless'
-import type { EventType } from './EventType'
+import type { AllowedEventType } from './EventType'
 import { PartialProfile, type OptimizationData } from './api-schemas'
 import type {
   ClickBuilderArgs,
@@ -267,7 +267,7 @@ export class CoreStatelessRequest {
   }
 
   async trackFlagView(payload: StatelessInsightsPayload<FlagViewBuilderArgs>): Promise<void> {
-    if (!this.hasConsent('component')) {
+    if (!this.hasConsent('flag', 'component')) {
       this.reportBlockedEvent('trackFlagView', [payload])
       return
     }
@@ -287,8 +287,11 @@ export class CoreStatelessRequest {
     }
   }
 
-  private hasConsent(eventType: EventType): boolean {
-    return this.requestEventConsent === true || this.core.allowedEventTypes.includes(eventType)
+  private hasConsent(...eventTypes: AllowedEventType[]): boolean {
+    return (
+      this.requestEventConsent === true ||
+      eventTypes.some((eventType) => this.core.allowedEventTypes.includes(eventType))
+    )
   }
 
   private async sendExperienceEvent(

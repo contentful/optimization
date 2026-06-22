@@ -1,7 +1,7 @@
 import {
   OPTIMIZED_ENTRY_HOST_DISPLAY,
   resolveOptimizedEntryNestingState,
-} from '@contentful/optimization-web/presentation'
+} from '@contentful/optimization-web/sdk-support'
 import type { Entry } from 'contentful'
 import { createContext, useContext, useEffect, useMemo, useRef, type JSX } from 'react'
 import { createScopedLogger } from '../logger'

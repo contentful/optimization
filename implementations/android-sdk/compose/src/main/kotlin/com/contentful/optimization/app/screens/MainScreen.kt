@@ -44,12 +44,11 @@ fun MainScreen() {
     var entries by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
     var showNavigationTest by remember { mutableStateOf(false) }
     var showLiveUpdatesTest by remember { mutableStateOf(false) }
-    var flagSubscribed by remember { mutableStateOf(false) }
     var viewportHeight by remember { mutableStateOf(0f) }
 
     LaunchedEffect(Unit) {
         EventStore.subscribe(client.events, scope)
-        client.consent(true)
+        client.subscribeToFlag("boolean")
         try { client.page(mapOf("url" to "app")) } catch (_: Exception) {}
     }
 
@@ -71,10 +70,6 @@ fun MainScreen() {
                 AppConfig.entryIds,
                 AppConfig.defaultContentfulLocale,
             )
-            if (!flagSubscribed) {
-                flagSubscribed = true
-                client.subscribeToFlag("boolean")
-            }
         }
     }
 
@@ -123,7 +118,6 @@ fun MainScreen() {
             if (entries.isEmpty()) {
                 Text("Loading...")
             } else {
-    
                 val scrollContext = remember(viewportHeight) {
                     ScrollContext(scrollY = 0f, viewportHeight = viewportHeight)
                 }

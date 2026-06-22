@@ -193,6 +193,38 @@ class ViewTrackingControllerTest {
         cleanup(controller)
     }
 
+    @Test
+    fun `reevaluating after tracking becomes allowed starts a fresh visible cycle from last geometry`() = runTest {
+        val recorded = mutableListOf<TrackViewPayload>()
+        var trackingAllowed = false
+        val controller = makeController(
+            scope = this,
+            onTrackView = { recorded.add(it) },
+            isTrackingAllowed = { trackingAllowed },
+            clock = { testScheduler.currentTime },
+        )
+
+        controller.updateVisibility(0f, 100f, 0f, 200f)
+        advanceTimeBy(2_001L)
+        runCurrent()
+
+        assertEquals(false, controller.isVisible)
+        assertTrue("expected no pre-consent trackView calls, got $recorded", recorded.isEmpty())
+
+        trackingAllowed = true
+        controller.reevaluateVisibility()
+
+        assertEquals(true, controller.isVisible)
+
+        advanceTimeBy(2_001L)
+        runCurrent()
+
+        assertEquals("expected one post-consent current-visibility event", 1, recorded.size)
+        assertEquals(TEST_ENTRY_ID, recorded.single().componentId)
+
+        cleanup(controller)
+    }
+
     /**
      * Regression test pinning the current 0.8/0.8 symmetric threshold behavior. This was the
      * shape of the failure on the views CI x86_64 emulator: at t≈+1s the test's
@@ -259,6 +291,7 @@ class ViewTrackingControllerTest {
         clock: () -> Long,
         entry: Map<String, Any> = mapOf("sys" to mapOf("id" to TEST_ENTRY_ID)),
         personalization: Map<String, Any>? = null,
+        isTrackingAllowed: () -> Boolean = { true },
         threshold: Double = 0.8,
         viewTimeMs: Int = 2_000,
         viewDurationUpdateIntervalMs: Int = 5_000,
@@ -270,6 +303,7 @@ class ViewTrackingControllerTest {
         entry = entry,
         personalization = personalization,
         onTrackView = onTrackView,
+        isTrackingAllowed = isTrackingAllowed,
         threshold = threshold,
         viewTimeMs = viewTimeMs,
         viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs,

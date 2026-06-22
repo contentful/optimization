@@ -1,14 +1,45 @@
 import type { Properties } from '@contentful/optimization-core/api-schemas'
+import {
+  AcceptedCurrentStateTracker,
+  screenWithEmissionResult,
+} from '@contentful/optimization-core/sdk-support'
 import type React from 'react'
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import * as z from 'zod/mini'
-import { useScreenTrackingCallback } from '../hooks/useScreenTracking'
+import { useOptimization } from '../context/OptimizationContext'
+import { useOptimizationConsentState } from '../hooks/useOptimizationConsentState'
 
 /**
  * @internal
  */
 function paramsToJson(params: Record<string, unknown>): z.core.util.JSONType {
   return z.json().parse(JSON.parse(JSON.stringify(params)))
+}
+
+interface ScreenTrackingDescriptor {
+  readonly properties: Properties
+  readonly routeKey: string
+}
+
+/**
+ * @internal
+ */
+export function createScreenTrackingDescriptor(
+  screenName: string,
+  params: Record<string, unknown> | undefined,
+  includeParams: boolean,
+): ScreenTrackingDescriptor {
+  const jsonParams = includeParams && params ? paramsToJson(params) : undefined
+  const routeKey =
+    jsonParams === undefined ? screenName : `${screenName}:${JSON.stringify(jsonParams)}`
+
+  return {
+    routeKey,
+    properties: {
+      name: screenName,
+      ...(jsonParams === undefined ? {} : { params: jsonParams }),
+    },
+  }
 }
 
 /**
@@ -111,20 +142,34 @@ export function OptimizationNavigationContainer({
   onReady: userOnReady,
   includeParams = false,
 }: OptimizationNavigationContainerProps): React.ReactNode {
-  const trackScreenView = useScreenTrackingCallback()
+  const contentfulOptimization = useOptimization()
+  const consent = useOptimizationConsentState(contentfulOptimization)
   const navigationRef = useRef<NavigationContainerRef>(null)
-  const routeNameRef = useRef<string | undefined>(undefined)
+  const routeKeyRef = useRef<string | undefined>(undefined)
+  const screenTrackingStateRef = useRef(new AcceptedCurrentStateTracker<string>())
 
   const trackScreen = useCallback(
     (screenName: string, params?: Record<string, unknown>) => {
-      const properties: Properties = {
-        name: screenName,
-        ...(includeParams && params ? { params: paramsToJson(params) } : {}),
-      }
+      const { properties, routeKey } = createScreenTrackingDescriptor(
+        screenName,
+        params,
+        includeParams,
+      )
 
-      trackScreenView(screenName, properties)
+      void screenTrackingStateRef.current
+        .emitIfNeeded({
+          key: routeKey,
+          isAllowed: contentfulOptimization.hasConsent('screen'),
+          emit: async () =>
+            await screenWithEmissionResult(contentfulOptimization, {
+              name: screenName,
+              properties,
+              screen: { name: screenName },
+            }),
+        })
+        .catch(() => undefined)
     },
-    [includeParams, trackScreenView],
+    [contentfulOptimization, includeParams],
   )
 
   const handleReady = useCallback(() => {
@@ -132,32 +177,54 @@ export function OptimizationNavigationContainer({
 
     if (currentRoute) {
       const { name: initialRouteName, params } = currentRoute
-      routeNameRef.current = initialRouteName
+      if (contentfulOptimization.hasConsent('screen')) {
+        const { routeKey } = createScreenTrackingDescriptor(initialRouteName, params, includeParams)
+        routeKeyRef.current = routeKey
+      }
       trackScreen(initialRouteName, params)
     }
 
     userOnReady?.()
-  }, [trackScreen, userOnReady])
+  }, [contentfulOptimization, includeParams, trackScreen, userOnReady])
 
   const handleStateChange = useCallback(
     (state: NavigationState | undefined) => {
-      const { current: previousRouteName } = routeNameRef
+      const { current: previousRouteKey } = routeKeyRef
       const currentRoute = navigationRef.current?.getCurrentRoute()
 
       if (currentRoute) {
         const { name: currentRouteName, params } = currentRoute
+        if (!contentfulOptimization.hasConsent('screen')) {
+          routeKeyRef.current = undefined
+          userOnStateChange?.(state)
+          return
+        }
 
-        if (previousRouteName !== currentRouteName) {
+        const { routeKey: currentRouteKey } = createScreenTrackingDescriptor(
+          currentRouteName,
+          params,
+          includeParams,
+        )
+
+        if (previousRouteKey !== currentRouteKey) {
           trackScreen(currentRouteName, params)
         }
 
-        routeNameRef.current = currentRouteName
+        routeKeyRef.current = currentRouteKey
       }
 
       userOnStateChange?.(state)
     },
-    [trackScreen, userOnStateChange],
+    [contentfulOptimization, includeParams, trackScreen, userOnStateChange],
   )
+
+  useEffect(() => {
+    const currentRoute = navigationRef.current?.getCurrentRoute()
+    if (!currentRoute) return
+
+    const { name, params } = currentRoute
+    trackScreen(name, params)
+  }, [consent, trackScreen])
 
   return children({
     ref: navigationRef,

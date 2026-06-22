@@ -7,7 +7,6 @@ final class MainViewController: UIViewController {
     private let client: OptimizationClient
     private var entries: [[String: Any]] = []
     private var firstAppearHandled = false
-    private var flagSubscribed = false
     private var cancellables = Set<AnyCancellable>()
 
     private let identifyButton = UIButton(type: .system)
@@ -39,6 +38,7 @@ final class MainViewController: UIViewController {
 
         EventStore.shared.subscribe(to: client.eventPublisher)
         analyticsView.bind(to: EventStore.shared)
+        client.subscribeToFlag("boolean")
 
         client.$state
             .map { $0.profile }
@@ -52,12 +52,6 @@ final class MainViewController: UIViewController {
                 guard let self else { return }
                 self.updateIdentifyControls(profile: profile)
                 guard profile != nil else { return }
-                // Subscribe to the `boolean` flag once a profile (and consent)
-                // is available so a flag-view `component` event is emitted.
-                if !self.flagSubscribed {
-                    self.flagSubscribed = true
-                    self.client.subscribeToFlag("boolean")
-                }
                 Task { @MainActor in
                     let fetched = await ContentfulFetcher.fetchEntries(
                         ids: AppConfig.entryIds,
@@ -75,7 +69,6 @@ final class MainViewController: UIViewController {
         guard !firstAppearHandled else { return }
         firstAppearHandled = true
 
-        client.consent(true)
         Task { @MainActor in
             _ = try? await client.page(properties: ["url": "app"])
         }

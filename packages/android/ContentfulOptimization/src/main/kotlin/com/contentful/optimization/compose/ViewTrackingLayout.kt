@@ -3,6 +3,9 @@ package com.contentful.optimization.compose
 import android.content.res.Resources
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -21,6 +24,9 @@ fun Modifier.trackViews(
     enabled: Boolean,
     client: OptimizationClient,
 ): Modifier {
+    val state by client.state.collectAsState()
+    val trackingAllowed = state.consent == true || client.hasConsent("trackView")
+
     if (!enabled) return this
 
     val scrollContext = LocalScrollContext.current
@@ -39,6 +45,14 @@ fun Modifier.trackViews(
         onDispose {
             controller.onDisappear()
             controller.destroy()
+        }
+    }
+
+    LaunchedEffect(controller, trackingAllowed) {
+        if (trackingAllowed) {
+            controller.reevaluateVisibility()
+        } else {
+            controller.onDisappear()
         }
     }
 

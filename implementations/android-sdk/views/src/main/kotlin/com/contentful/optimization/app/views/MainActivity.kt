@@ -15,6 +15,7 @@ import com.contentful.optimization.app.views.components.NestedContentEntryViewBi
 import com.contentful.optimization.app.views.components.isNestedContent
 import com.contentful.optimization.app.views.support.setTestTag
 import com.contentful.optimization.core.OptimizationConfig
+import com.contentful.optimization.core.StorageDefaults
 import com.contentful.optimization.preview.PreviewPanelConfig
 import com.contentful.optimization.shared.AppConfig
 import com.contentful.optimization.shared.ContentfulFetcher
@@ -70,6 +71,7 @@ class MainActivity : AppCompatActivity() {
                 experienceBaseUrl = AppConfig.experienceBaseUrl,
                 insightsBaseUrl = AppConfig.insightsBaseUrl,
                 locale = AppConfig.defaultContentfulLocale,
+                defaults = StorageDefaults(consent = true),
                 debug = true,
             ),
             trackViews = true,
@@ -117,7 +119,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, LiveUpdatesTestActivity::class.java))
         }
 
-        // Mirrors MainScreen.LaunchedEffect(Unit): subscribe events, consent, page, optional
+        // Mirrors MainScreen.LaunchedEffect(Unit): subscribe events, flag, page, optional
         // offline. The Compose impl gates rendering on `client.isInitialized` via
         // OptimizationRoot, so its content's LaunchedEffects always see an initialized client.
         // The Views impl renders immediately, so we wait for init here before driving the SDK —
@@ -125,7 +127,7 @@ class MainActivity : AppCompatActivity() {
         EventStore.subscribe(client.events, lifecycleScope)
         lifecycleScope.launch {
             client.isInitialized.first { it }
-            client.consent(true)
+            client.subscribeToFlag("boolean")
             try {
                 client.page(mapOf("url" to "app"))
             } catch (_: Exception) {
@@ -154,7 +156,6 @@ class MainActivity : AppCompatActivity() {
                 // diffing keeps existing nodes when the data is identical.
                 if (entriesLoaded) return@collect
                 entriesLoaded = true
-                client.subscribeToFlag("boolean")
                 val entries = ContentfulFetcher.fetchEntries(
                     AppConfig.entryIds,
                     AppConfig.defaultContentfulLocale,

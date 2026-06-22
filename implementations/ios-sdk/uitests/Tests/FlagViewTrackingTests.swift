@@ -5,11 +5,9 @@ import XCTest
 /// Verifies that when an app subscribes to a flag through the SDK, the SDK emits a
 /// view event for that flag so the value's exposure can be measured downstream.
 ///
-/// Platform note: the pseudocode contract subscribes to the `boolean` flag on app
-/// launch and asserts a view event for it. The iOS implementation app shells
-/// (`swiftui`/`uikit`) do not currently call `sdk.states.flag("boolean").subscribe()`,
-/// so the `event-count-boolean` stats label is not produced. See the report for this
-/// app-side gap.
+/// Platform note: both iOS implementation app shells subscribe to the `boolean`
+/// flag on launch through the native SDK wrapper so this E2E test can assert
+/// the SDK-emitted flag view event without app-level consent workarounds.
 final class FlagViewTrackingTests: XCTestCase {
     let app = XCUIApplication()
 

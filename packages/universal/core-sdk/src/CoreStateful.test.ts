@@ -6,6 +6,7 @@ import CoreStateful, {
 import type { ChangeArray } from './api-schemas'
 import type { TrackBuilderArgs, ViewBuilderArgs } from './events'
 import type { QueueFlushFailureContext } from './lib/queue'
+import { pageWithEmissionResult, screenWithEmissionResult } from './sdk-support'
 import { batch, signalFns, signals } from './signals'
 import { PREVIEW_PANEL_SIGNAL_FNS_SYMBOL, PREVIEW_PANEL_SIGNALS_SYMBOL } from './symbols'
 import { mergeTagEntry } from './test/fixtures/mergeTagEntry'
@@ -39,6 +40,21 @@ const OTHER_FLAG_CHANGE: ChangeArray[number] = {
 }
 
 const FLAG_CHANGES: ChangeArray = [DARK_MODE_CHANGE, OTHER_FLAG_CHANGE]
+
+async function flushMicrotasks(): Promise<void> {
+  await Promise.resolve()
+  await Promise.resolve()
+  await Promise.resolve()
+}
+
+function createDeferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolveDeferred: () => void = () => undefined
+  const promise = new Promise<void>((resolve) => {
+    resolveDeferred = resolve
+  })
+
+  return { promise, resolve: resolveDeferred }
+}
 
 class CoreStatefulTestHarness extends CoreStateful {
   getOnlineState(): boolean {
@@ -548,6 +564,278 @@ describe('CoreStateful blocked event handling', () => {
     })
   })
 
+  it('does not let pre-consent getFlag retrievals suppress consented same-value tracking', () => {
+    const core = createCoreStateful({
+      defaults: {
+        profile: profileFixture,
+      },
+    })
+    const trackFlagView = rs.spyOn(core, 'trackFlagView').mockResolvedValue(undefined)
+
+    signals.changes.value = FLAG_CHANGES
+
+    expect(core.getFlag('dark-mode')).toBe(true)
+    expect(trackFlagView).not.toHaveBeenCalled()
+
+    core.consent(true)
+    expect(core.getFlag('dark-mode')).toBe(true)
+
+    expect(trackFlagView).toHaveBeenCalledTimes(1)
+    expect(trackFlagView).toHaveBeenCalledWith({
+      componentId: 'dark-mode',
+      experienceId: 'experience-id',
+      variantIndex: 0,
+    })
+  })
+
+  it('allows flag views without allowing entry views when the flag selector is allow-listed', async () => {
+    const blockedEvents: BlockedEvent[] = []
+    const core = createCoreStateful({
+      allowedEventTypes: ['flag'],
+      defaults: {
+        profile: profileFixture,
+      },
+      onEventBlocked: (event) => blockedEvents.push(event),
+    })
+    const events: unknown[] = []
+    core.interceptors.event.add((event) => {
+      events.push(event)
+      return event
+    })
+
+    await core.trackView({
+      componentId: 'entry-card',
+      viewDurationMs: 100,
+      viewId: 'entry-card-view',
+    })
+    await core.trackFlagView({ componentId: 'dark-mode' })
+
+    expect(blockedEvents.map((event) => event.method)).toEqual(['trackView'])
+    expect(events).toEqual([
+      expect.objectContaining({
+        componentId: 'dark-mode',
+        componentType: 'Variable',
+        type: 'component',
+      }),
+    ])
+  })
+
+  it('keeps component allow-list compatibility for entry views and flag views', async () => {
+    const blockedEvents: BlockedEvent[] = []
+    const core = createCoreStateful({
+      allowedEventTypes: ['component'],
+      defaults: {
+        profile: profileFixture,
+      },
+      onEventBlocked: (event) => blockedEvents.push(event),
+    })
+    const events: unknown[] = []
+    core.interceptors.event.add((event) => {
+      events.push(event)
+      return event
+    })
+
+    await core.trackView({
+      componentId: 'entry-card',
+      viewDurationMs: 100,
+      viewId: 'entry-card-view',
+    })
+    await core.trackFlagView({ componentId: 'dark-mode' })
+
+    expect(blockedEvents).toEqual([])
+    expect(events).toEqual([
+      expect.objectContaining({
+        componentId: 'entry-card',
+        componentType: 'Entry',
+        type: 'component',
+      }),
+      expect.objectContaining({
+        componentId: 'dark-mode',
+        componentType: 'Variable',
+        type: 'component',
+      }),
+    ])
+  })
+
+  it('does not let pre-profile getFlag retrievals suppress same-value tracking after profile is available', () => {
+    const core = createCoreStateful({
+      defaults: {
+        consent: true,
+      },
+    })
+    const trackFlagView = rs.spyOn(core, 'trackFlagView').mockResolvedValue(undefined)
+
+    signals.changes.value = FLAG_CHANGES
+
+    expect(core.getFlag('dark-mode')).toBe(true)
+    expect(trackFlagView).not.toHaveBeenCalled()
+
+    signals.profile.value = profileFixture
+    expect(core.getFlag('dark-mode')).toBe(true)
+
+    expect(trackFlagView).toHaveBeenCalledTimes(1)
+  })
+
+  it('tracks the same flag value again for a different profile', async () => {
+    const core = createCoreStateful({
+      defaults: {
+        consent: true,
+        profile: profileFixture,
+      },
+    })
+    const trackFlagView = rs.spyOn(core, 'trackFlagView').mockResolvedValue(undefined)
+
+    signals.changes.value = FLAG_CHANGES
+
+    expect(core.getFlag('dark-mode')).toBe(true)
+    await flushMicrotasks()
+
+    signals.profile.value = { ...profileFixture, id: 'profile-id-2' }
+    expect(core.getFlag('dark-mode')).toBe(true)
+
+    expect(trackFlagView).toHaveBeenCalledTimes(2)
+  })
+
+  it('emits current active flag subscriptions when flag tracking becomes allowed without re-emitting values', async () => {
+    const core = createCoreStateful({
+      defaults: {
+        profile: profileFixture,
+      },
+    })
+    const trackFlagView = rs.spyOn(core, 'trackFlagView').mockResolvedValue(undefined)
+    const values: Array<boolean | undefined> = []
+
+    signals.changes.value = FLAG_CHANGES
+    const subscription = core.states.flag('dark-mode').subscribe((value) => {
+      values.push(value === undefined ? undefined : Boolean(value))
+    })
+
+    expect(values).toEqual([true])
+    expect(trackFlagView).not.toHaveBeenCalled()
+
+    core.consent(true)
+
+    expect(values).toEqual([true])
+    expect(trackFlagView).toHaveBeenCalledTimes(1)
+    expect(trackFlagView).toHaveBeenCalledWith({
+      componentId: 'dark-mode',
+      experienceId: 'experience-id',
+      variantIndex: 0,
+    })
+
+    await flushMicrotasks()
+    core.consent(false)
+    core.consent(true)
+
+    expect(trackFlagView).toHaveBeenCalledTimes(1)
+
+    subscription.unsubscribe()
+  })
+
+  it('tracks a flag again when the accepted value changes away and back', async () => {
+    const core = createCoreStateful({
+      defaults: {
+        consent: true,
+        profile: profileFixture,
+      },
+    })
+    const trackFlagView = rs.spyOn(core, 'trackFlagView').mockResolvedValue(undefined)
+
+    signals.changes.value = FLAG_CHANGES
+    expect(core.getFlag('dark-mode')).toBe(true)
+    await flushMicrotasks()
+
+    signals.changes.value = [
+      {
+        ...DARK_MODE_CHANGE,
+        value: false,
+      },
+      OTHER_FLAG_CHANGE,
+    ]
+    expect(core.getFlag('dark-mode')).toBe(false)
+    await flushMicrotasks()
+
+    signals.changes.value = FLAG_CHANGES
+    expect(core.getFlag('dark-mode')).toBe(true)
+
+    expect(trackFlagView).toHaveBeenCalledTimes(3)
+  })
+
+  it('dedupes accepted object flag values by deep equality', async () => {
+    const core = createCoreStateful({
+      defaults: {
+        consent: true,
+        profile: profileFixture,
+      },
+    })
+    const trackFlagView = rs.spyOn(core, 'trackFlagView').mockResolvedValue(undefined)
+
+    signals.changes.value = [
+      {
+        key: 'object-flag',
+        type: 'Variable',
+        value: { a: 1, b: 2 },
+        meta: {
+          experienceId: 'experience-id',
+          variantIndex: 0,
+        },
+      },
+    ]
+    expect(core.getFlag('object-flag')).toEqual({ a: 1, b: 2 })
+    await flushMicrotasks()
+
+    signals.changes.value = [
+      {
+        key: 'object-flag',
+        type: 'Variable',
+        value: { b: 2, a: 1 },
+        meta: {
+          experienceId: 'experience-id',
+          variantIndex: 0,
+        },
+      },
+    ]
+    expect(core.getFlag('object-flag')).toEqual({ b: 2, a: 1 })
+
+    expect(trackFlagView).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the newest accepted flag tracking signature when older sends resolve later', async () => {
+    const core = createCoreStateful({
+      defaults: {
+        consent: true,
+        profile: profileFixture,
+      },
+    })
+    const firstSend = createDeferred()
+    const secondSend = createDeferred()
+    const trackFlagView = rs
+      .spyOn(core, 'trackFlagView')
+      .mockReturnValueOnce(firstSend.promise)
+      .mockReturnValueOnce(secondSend.promise)
+      .mockResolvedValue(undefined)
+
+    signals.changes.value = FLAG_CHANGES
+    expect(core.getFlag('dark-mode')).toBe(true)
+
+    signals.changes.value = [
+      {
+        ...DARK_MODE_CHANGE,
+        value: false,
+      },
+      OTHER_FLAG_CHANGE,
+    ]
+    expect(core.getFlag('dark-mode')).toBe(false)
+
+    secondSend.resolve()
+    await flushMicrotasks()
+    firstSend.resolve()
+    await flushMicrotasks()
+
+    expect(core.getFlag('dark-mode')).toBe(false)
+    expect(trackFlagView).toHaveBeenCalledTimes(2)
+  })
+
   it('exposes key-scoped flag observables and tracks distinct value retrievals', () => {
     const core = createCoreStateful({
       defaults: {
@@ -606,6 +894,45 @@ describe('CoreStateful blocked event handling', () => {
     })
 
     subscription.unsubscribe()
+  })
+
+  it('reports accepted page emission results for offline queued events', async () => {
+    const core = createCoreStatefulHarness({
+      allowedEventTypes: ['page'],
+    })
+
+    core.setOnlineState(false)
+
+    await expect(pageWithEmissionResult(core, {})).resolves.toEqual({ accepted: true })
+  })
+
+  it('reports blocked screen emission results without calling Experience', async () => {
+    const core = createCoreStateful()
+    const upsertProfile = rs.spyOn(core.api.experience, 'upsertProfile').mockResolvedValue({
+      changes: [],
+      selectedOptimizations: [],
+      profile: profileFixture,
+    })
+
+    await expect(
+      screenWithEmissionResult(core, { name: 'Home', properties: {}, screen: { name: 'Home' } }),
+    ).resolves.toEqual({ accepted: false })
+
+    expect(upsertProfile).not.toHaveBeenCalled()
+  })
+
+  it('returns Experience data for accepted screen emission results', async () => {
+    const core = createCoreStateful({ defaults: { consent: true } })
+    const data = {
+      changes: [],
+      selectedOptimizations: [],
+      profile: profileFixture,
+    }
+    rs.spyOn(core.api.experience, 'upsertProfile').mockResolvedValue(data)
+
+    await expect(
+      screenWithEmissionResult(core, { name: 'Home', properties: {}, screen: { name: 'Home' } }),
+    ).resolves.toEqual({ accepted: true, data })
   })
 
   it('exposes preview panel states and preserves them on reset', () => {

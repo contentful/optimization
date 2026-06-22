@@ -15,6 +15,7 @@ import {
   createExperienceDefinitions,
   createExperienceNameMap,
 } from '@contentful/optimization-core/preview-support'
+import { screenWithEmissionResult } from '@contentful/optimization-core/sdk-support'
 import { computePreviewModel, transformOverrides } from './previewStateHelpers'
 
 type ResolveOptimizedEntryArgs = Parameters<CoreStateful['resolveOptimizedEntry']>
@@ -100,10 +101,16 @@ interface Bridge {
   ) => void
   getProfile: () => string | null
   getState: () => string
+  hasConsent: (method: string) => boolean
   destroy: () => void
 
   // Async with callbacks
   screen: (
+    payload: { name: string; properties?: ScreenProperties },
+    onSuccess: (json: string) => void,
+    onError: (error: string) => void,
+  ) => void
+  screenWithEmissionResult: (
     payload: { name: string; properties?: ScreenProperties },
     onSuccess: (json: string) => void,
     onError: (error: string) => void,
@@ -302,6 +309,24 @@ const bridge: Bridge = {
       })
   },
 
+  screenWithEmissionResult(payload, onSuccess, onError) {
+    if (!instance) {
+      onError('SDK not initialized. Call initialize() first.')
+      return
+    }
+
+    screenWithEmissionResult(instance, {
+      name: payload.name,
+      properties: payload.properties ?? {},
+    })
+      .then((result) => {
+        onSuccess(JSON.stringify(result))
+      })
+      .catch((err: unknown) => {
+        onError(err instanceof Error ? err.message : String(err))
+      })
+  },
+
   flush(onSuccess, onError) {
     if (!instance) {
       onError('SDK not initialized. Call initialize() first.')
@@ -373,7 +398,8 @@ const bridge: Bridge = {
   flag(name: string) {
     if (!instance) return
     // Subscribing to the flag observable emits a `component` flag-view event
-    // through the core event stream (and again on each distinct value change).
+    // through the core event stream; one-off flag reads are not marked tracked
+    // until their flag-view event is actually accepted.
     flagSubscriptions.push(instance.states.flag(name).subscribe(() => undefined))
   },
 
@@ -497,6 +523,10 @@ const bridge: Bridge = {
       selectedPersonalizations: signals.selectedOptimizations.value ?? null,
     }
     return JSON.stringify(state)
+  },
+
+  hasConsent(method: string): boolean {
+    return instance?.hasConsent(method) ?? false
   },
 
   destroy() {

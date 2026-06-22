@@ -89,7 +89,17 @@ describe('CoreStateful detached states', () => {
     expect(flagValues).toEqual([undefined, true])
     expect(flagOnceValues).toEqual([true])
     expect(onceValues).toEqual([false])
-    expect(trackFlagView).toHaveBeenCalledTimes(4)
+    expect(trackFlagView).toHaveBeenCalledTimes(2)
+    expect(trackFlagView).toHaveBeenNthCalledWith(1, {
+      componentId: 'dark-mode',
+      experienceId: undefined,
+      variantIndex: undefined,
+    })
+    expect(trackFlagView).toHaveBeenNthCalledWith(2, {
+      componentId: 'dark-mode',
+      experienceId: 'experience-id',
+      variantIndex: 0,
+    })
 
     canOptimizeSubscription.unsubscribe()
     flagSubscription.unsubscribe()

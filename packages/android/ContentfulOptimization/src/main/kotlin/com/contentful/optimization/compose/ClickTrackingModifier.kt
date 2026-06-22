@@ -21,16 +21,18 @@ fun Modifier.trackClicks(
 
     val scope = rememberCoroutineScope()
     return this.clickable {
-        val metadata = TrackingMetadata(entry, personalization)
-        val payload = TrackClickPayload(
-            componentId = metadata.componentId,
-            experienceId = metadata.experienceId,
-            variantIndex = metadata.variantIndex,
-        )
-        scope.launch {
-            try {
-                client.trackClick(payload)
-            } catch (_: Exception) {
+        if (client.hasConsent("trackClick")) {
+            val metadata = TrackingMetadata(entry, personalization)
+            val payload = TrackClickPayload(
+                componentId = metadata.componentId,
+                experienceId = metadata.experienceId,
+                variantIndex = metadata.variantIndex,
+            )
+            scope.launch {
+                try {
+                    client.trackClick(payload)
+                } catch (_: Exception) {
+                }
             }
         }
         onTap?.invoke(entry)

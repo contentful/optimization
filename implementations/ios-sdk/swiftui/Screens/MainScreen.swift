@@ -84,7 +84,10 @@ struct MainScreen: View {
             // subscription (e.g. in a child view's onAppear) would miss it —
             // `eventPublisher` is a PassthroughSubject and does not buffer.
             EventStore.shared.subscribe(to: client.eventPublisher)
-            client.consent(true)
+            if !flagSubscribed {
+                flagSubscribed = true
+                client.subscribeToFlag("boolean")
+            }
             _ = try? await client.page(properties: ["url": "app"])
         }
         .onReceive(
@@ -98,13 +101,6 @@ struct MainScreen: View {
                 }
         ) { profile in
             guard profile != nil else { return }
-            // Subscribe to the `boolean` flag once a profile (and consent) is
-            // available so a flag-view `component` event is emitted — mirrors
-            // the React Native app's gated `sdk.states.flag(...).subscribe(...)`.
-            if !flagSubscribed {
-                flagSubscribed = true
-                client.subscribeToFlag("boolean")
-            }
             Task {
                 entries = await ContentfulFetcher.fetchEntries(
                     ids: AppConfig.entryIds,

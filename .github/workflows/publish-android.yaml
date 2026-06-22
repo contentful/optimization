@@ -100,6 +100,7 @@ jobs:
         run: |
           ./gradlew publishToMavenLocal \
             -Pcontentful.optimization.version="$RELEASE_VERSION" \
+            -Pcontentful.optimization.requireThirdPartyNotices=true \
             --no-configuration-cache --no-daemon --console=plain
 
       # Build the signed AAR (+ sources/javadoc/POM) and publish+release it to Maven Central via the
@@ -119,4 +120,5 @@ jobs:
         run: |
           ./gradlew publishAndReleaseToMavenCentral \
             -Pcontentful.optimization.version="$RELEASE_VERSION" \
+            -Pcontentful.optimization.requireThirdPartyNotices=true \
             --no-configuration-cache --no-daemon --stacktrace

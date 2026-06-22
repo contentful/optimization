@@ -31,6 +31,7 @@ class ViewTrackingController internal constructor(
     entry: Map<String, Any>,
     personalization: Map<String, Any>?,
     private val onTrackView: suspend (TrackViewPayload) -> Unit,
+    private val isTrackingAllowed: () -> Boolean = { true },
     private val threshold: Double = 0.8,
     private val viewTimeMs: Int = 2000,
     private val viewDurationUpdateIntervalMs: Int = 5000,
@@ -55,6 +56,7 @@ class ViewTrackingController internal constructor(
         entry = entry,
         personalization = personalization,
         onTrackView = { payload -> client.trackView(payload) },
+        isTrackingAllowed = { client.hasConsent("trackView") },
         threshold = threshold,
         viewTimeMs = viewTimeMs,
         viewDurationUpdateIntervalMs = viewDurationUpdateIntervalMs,
@@ -94,6 +96,13 @@ class ViewTrackingController internal constructor(
         lastScrollY = scrollY
         lastViewportHeight = viewportHeight
 
+        if (!isTrackingAllowed()) {
+            if (isVisible) {
+                onBecameInvisible()
+            }
+            return
+        }
+
         val visibleTop = maxOf(elementY, scrollY)
         val visibleBottom = minOf(elementY + elementHeight, scrollY + viewportHeight)
         val visibleHeight = maxOf(0f, visibleBottom - visibleTop)
@@ -114,6 +123,10 @@ class ViewTrackingController internal constructor(
             }
             onBecameInvisible()
         }
+    }
+
+    fun reevaluateVisibility() {
+        updateVisibility(lastElementY, lastElementHeight, lastScrollY, lastViewportHeight)
     }
 
     fun onDisappear() {
@@ -207,6 +220,8 @@ class ViewTrackingController internal constructor(
     }
 
     private fun emitEvent() {
+        if (!isTrackingAllowed()) return
+
         val currentViewId = viewId ?: return
         val payload = TrackViewPayload(
             componentId = metadata.componentId,

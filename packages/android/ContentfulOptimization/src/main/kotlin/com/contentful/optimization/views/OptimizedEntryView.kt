@@ -72,6 +72,7 @@ class OptimizedEntryView @JvmOverloads constructor(
     private var trackingScope: CoroutineScope? = null
     private var personalizationJob: Job? = null
     private var previewJob: Job? = null
+    private var consentJob: Job? = null
 
     private var controller: ViewTrackingController? = null
     private var lockedPersonalizations: List<Map<String, Any>>? = null
@@ -139,6 +140,7 @@ class OptimizedEntryView @JvmOverloads constructor(
         trackingScope = null
         personalizationJob = null
         previewJob = null
+        consentJob = null
     }
 
     private fun restartObservation() {
@@ -155,6 +157,7 @@ class OptimizedEntryView @JvmOverloads constructor(
         controllerPersonalization = null
         personalizationJob?.cancel()
         previewJob?.cancel()
+        consentJob?.cancel()
 
         @Suppress("UNCHECKED_CAST")
         val fields = entry["fields"] as? Map<String, Any>
@@ -200,6 +203,13 @@ class OptimizedEntryView @JvmOverloads constructor(
                 }
             }
         }
+
+        consentJob = scope.launch {
+            client.state.collect {
+                lastResult?.let { result -> attachController(result) }
+                updateVisibility()
+            }
+        }
     }
 
     private fun publishResult(result: PersonalizedResult) {
@@ -216,6 +226,17 @@ class OptimizedEntryView @JvmOverloads constructor(
 
     private fun attachController(result: PersonalizedResult) {
         if (!resolveTrackViews()) return
+        val client = OptimizationManager.client
+        if (!client.hasConsent("trackView")) {
+            controller?.let {
+                it.onDisappear()
+                it.destroy()
+            }
+            controller = null
+            controllerEntry = null
+            controllerPersonalization = null
+            return
+        }
         val entry = entry ?: return
         val newPersonalization = result.personalization
         @Suppress("UNCHECKED_CAST")
@@ -243,7 +264,7 @@ class OptimizedEntryView @JvmOverloads constructor(
             it.destroy()
         }
         controller = ViewTrackingController(
-            client = OptimizationManager.client,
+            client = client,
             entry = entry,
             personalization = newPersonalization,
             threshold = threshold,
@@ -280,18 +301,22 @@ class OptimizedEntryView @JvmOverloads constructor(
     private fun fireTrackClick() {
         if (!resolveTrackTaps()) return
         val entry = entry ?: return
-        val scope = trackingScope ?: return
-        val metadata = TrackingMetadata(entry, lastResult?.personalization)
-        scope.launch {
-            try {
-                OptimizationManager.client.trackClick(
-                    TrackClickPayload(
-                        componentId = metadata.componentId,
-                        experienceId = metadata.experienceId,
-                        variantIndex = metadata.variantIndex,
-                    ),
-                )
-            } catch (_: Exception) {
+        if (OptimizationManager.client.hasConsent("trackClick")) {
+            val scope = trackingScope
+            if (scope != null) {
+                val metadata = TrackingMetadata(entry, lastResult?.personalization)
+                scope.launch {
+                    try {
+                        OptimizationManager.client.trackClick(
+                            TrackClickPayload(
+                                componentId = metadata.componentId,
+                                experienceId = metadata.experienceId,
+                                variantIndex = metadata.variantIndex,
+                            ),
+                        )
+                    } catch (_: Exception) {
+                    }
+                }
             }
         }
         onTap?.invoke(entry)
