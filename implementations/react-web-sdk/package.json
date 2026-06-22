@@ -6,7 +6,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "copy:css": "cp ../../assets/reference-theme.css ./public/reference-theme.css",
+    "copy:css": "cp ../../lib/e2e-web/reference-theme.css ./public/reference-theme.css",
     "dev": "pnpm copy:css && rsbuild dev",
     "build": "pnpm copy:css && rsbuild build",
     "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage ./playwright-report ./test-results .tsbuildinfo",
