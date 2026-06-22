@@ -5,7 +5,7 @@
   "description": "Reference implementation of @contentful/optimization-web for Angular applications.",
   "license": "MIT",
   "scripts": {
-    "copy:css": "cp ../../assets/reference-ui.css ./src/reference-ui.css",
+    "copy:css": "cp ../../assets/reference-ui.css ./src/styles.css",
     "generate:env": "pnpm exec tsx scripts/generate-env.ts",
     "dev": "pnpm copy:css && pnpm generate:env && ng serve",
     "build": "pnpm copy:css && ng build",

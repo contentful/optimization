@@ -31,7 +31,6 @@ function timeAgo(firedAt: number, now: number): string {
 @Component({
   selector: 'app-tracking-log',
   templateUrl: './index.html',
-  styleUrl: './index.scss',
 })
 export class TrackingLog {
   private readonly optimization = inject(NgContentfulOptimization)

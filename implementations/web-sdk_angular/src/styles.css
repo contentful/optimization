@@ -176,7 +176,8 @@ main {
   min-width: 0;
 }
 
-main.preview-panel-open {
+main.preview-panel-open,
+.app-main.preview-panel-open {
   padding-right: 28rem;
 }
 

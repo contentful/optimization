@@ -212,6 +212,13 @@ export function HomePage(): JSX.Element {
 
   return (
     <>
+      <div className="page-header">
+        <h1>React Web SDK</h1>
+        <p className="page-header__sub">
+          Reference implementation of @contentful/optimization-react-web
+        </p>
+      </div>
+
       <section className="control-panel" id="utility-panel">
         <h2 className="control-panel__title">Utilities</h2>
         <UtilitiesGrid

@@ -177,6 +177,11 @@ export function HomePage({
 
   return (
     <>
+      <div className="page-header">
+        <h1>Web SDK + React</h1>
+        <p className="page-header__sub">Reference implementation of @contentful/optimization-web</p>
+      </div>
+
       <section className="control-panel" id="utility-panel">
         <h2 className="control-panel__title">Utilities</h2>
         <UtilitiesGrid
