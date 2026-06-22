@@ -12,7 +12,7 @@
  * `copy:css` script. Rsbuild implementations serve it as /reference-theme.css
  * (linked from index.html); Angular includes it as src/styles.css.
  *
- * Edit this file only. Never edit the copied outputs directly.
+ * Edit assets/reference-theme.css only. Never edit the copied outputs directly.
  */
 
 /* Reset */
