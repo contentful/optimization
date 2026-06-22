@@ -3,7 +3,6 @@ import { pages } from 'e2e-web/src/fixtures'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useOutletContext } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
-import { HOME_PATH, PAGE_TWO_PATH } from './config/routes'
 import { fetchEntries, getContentfulConfigError } from './services/contentfulClient'
 import type { ContentEntry } from './types/contentful'
 
@@ -79,10 +78,10 @@ export default function App(): JSX.Element {
   return (
     <div className="app-shell">
       <nav className="app-nav">
-        <Link data-testid="link-home" to={HOME_PATH}>
+        <Link data-testid="link-home" to={pages.home.path}>
           Home
         </Link>
-        <Link data-testid="link-page-two" to={PAGE_TWO_PATH}>
+        <Link data-testid="link-page-two" to={pages.pageTwo.path}>
           Page Two
         </Link>
       </nav>

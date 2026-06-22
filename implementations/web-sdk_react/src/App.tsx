@@ -2,7 +2,6 @@ import { pages } from 'e2e-web/src/fixtures'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
-import { HOME_PATH, PAGE_TWO_PATH } from './config/routes'
 import { useOptimization } from './optimization/hooks/useOptimization'
 import { HomePage } from './pages/HomePage'
 import { PageTwoPage } from './pages/PageTwoPage'
@@ -91,10 +90,10 @@ export default function App({ onToggleGlobalLiveUpdates }: AppProps): JSX.Elemen
   return (
     <div className="app-shell">
       <nav className="app-nav">
-        <Link data-testid="link-home" to={HOME_PATH}>
+        <Link data-testid="link-home" to={pages.home.path}>
           Home
         </Link>
-        <Link data-testid="link-page-two" to={PAGE_TWO_PATH}>
+        <Link data-testid="link-page-two" to={pages.pageTwo.path}>
           Page Two
         </Link>
       </nav>
@@ -106,7 +105,7 @@ export default function App({ onToggleGlobalLiveUpdates }: AppProps): JSX.Elemen
         <main className="app-main">
           <Routes>
             <Route
-              path={HOME_PATH}
+              path={pages.home.path}
               element={
                 <HomePage
                   entriesById={entriesById}
@@ -116,7 +115,7 @@ export default function App({ onToggleGlobalLiveUpdates }: AppProps): JSX.Elemen
               }
             />
             <Route
-              path={PAGE_TWO_PATH}
+              path={pages.pageTwo.path}
               element={
                 <PageTwoPage
                   entriesById={entriesById}
@@ -124,7 +123,7 @@ export default function App({ onToggleGlobalLiveUpdates }: AppProps): JSX.Elemen
                 />
               }
             />
-            <Route path="*" element={<Navigate replace to={HOME_PATH} />} />
+            <Route path="*" element={<Navigate replace to={pages.home.path} />} />
           </Routes>
         </main>
       </div>

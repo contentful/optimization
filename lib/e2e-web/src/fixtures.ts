@@ -25,12 +25,14 @@ const homeManual = [
 
 export const pages = {
   home: {
+    path: '/',
     ids: [...new Set([...homeAuto, ...homeManual])] as const,
     auto: homeAuto,
     manual: homeManual,
     liveUpdates: '2Z2WLOx07InSewC3LUB3eX' as const,
   },
   pageTwo: {
+    path: '/page-two',
     ids: [pageTwoAuto, pageTwoManual] as const,
     auto: pageTwoAuto,
     manual: pageTwoManual,

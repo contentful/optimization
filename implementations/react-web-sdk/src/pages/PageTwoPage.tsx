@@ -5,7 +5,6 @@ import { useEffect } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
 import type { AppOutletContext } from '../App'
 import { ControlPanel } from '../components/ControlPanel'
-import { HOME_PATH } from '../config/routes'
 import { ContentEntry } from '../sections/ContentEntry'
 
 export function PageTwoPage(): JSX.Element {
@@ -33,7 +32,7 @@ export function PageTwoPage(): JSX.Element {
   return (
     <div data-testid="page-two-view">
       <div className="page-header">
-        <Link data-testid="link-back-home" to={HOME_PATH}>
+        <Link data-testid="link-back-home" to={pages.home.path}>
           Back to Home
         </Link>
         <h1>Page Two</h1>

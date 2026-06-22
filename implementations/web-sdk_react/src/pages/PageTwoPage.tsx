@@ -2,7 +2,6 @@ import { pages } from 'e2e-web/src/fixtures'
 import { type JSX, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ControlPanel } from '../components/ControlPanel'
-import { HOME_PATH } from '../config/routes'
 import { useAnalytics } from '../optimization/hooks/useAnalytics'
 import { ContentEntry } from '../sections/ContentEntry'
 import type { ContentfulEntry } from '../types/contentful'
@@ -39,7 +38,7 @@ export function PageTwoPage({
   return (
     <div data-testid="page-two-view">
       <div className="page-header">
-        <Link data-testid="link-back-home" to={HOME_PATH}>
+        <Link data-testid="link-back-home" to={pages.home.path}>
           Back to Home
         </Link>
         <h1>Page Two</h1>
