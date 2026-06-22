@@ -203,7 +203,7 @@ main.preview-panel-open,
   border-bottom: 1px solid var(--color-border);
 }
 
-.page-header__sub {
+.page-header__subtitle {
   font-size: 0.875rem;
   color: var(--color-text-muted);
   margin-top: 0.25rem;
@@ -233,14 +233,14 @@ main.preview-panel-open,
   margin: 0;
 }
 
-.sections-row {
+.sections-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
   align-items: stretch;
 }
 
-.sections-row--two {
+.sections-grid--split {
   grid-template-columns: repeat(2, 1fr);
   align-items: start;
 }
@@ -299,7 +299,7 @@ main.preview-panel-open,
   margin-bottom: 0.5rem;
 }
 
-.control-panel__table {
+.control-panel__fields {
   display: grid;
   grid-template-columns: 9rem 5rem auto;
   gap: 0.4rem 1.5rem;

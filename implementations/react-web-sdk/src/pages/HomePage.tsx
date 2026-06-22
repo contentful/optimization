@@ -48,7 +48,7 @@ function UtilitiesGrid({
   setPreviewPanelVisible,
 }: UtilitiesGridProps): JSX.Element {
   return (
-    <div className="control-panel__table">
+    <div className="control-panel__fields">
       <span className="control-panel__row-label">Consent</span>
       <span className="control-panel__row-value" data-testid="consent-status">
         {consentLabel(consent)}
@@ -214,7 +214,7 @@ export function HomePage(): JSX.Element {
     <>
       <div className="page-header">
         <h1>React Web SDK</h1>
-        <p className="page-header__sub">
+        <p className="page-header__subtitle">
           Reference implementation of @contentful/optimization-react-web
         </p>
       </div>
@@ -244,7 +244,7 @@ export function HomePage(): JSX.Element {
           </p>
         </header>
         {liveUpdatesBaselineEntry ? (
-          <div className="sections-row" data-testid="live-updates-examples">
+          <div className="sections-grid" data-testid="live-updates-examples">
             <section data-testid="live-updates-default">
               <h3>Default (inherits global setting)</h3>
               <LiveUpdatesExampleEntry
@@ -276,7 +276,7 @@ export function HomePage(): JSX.Element {
         )}
       </section>
 
-      <div className="sections-row sections-row--two">
+      <div className="sections-grid sections-grid--split">
         <section className="page-section">
           <header className="page-section__header">
             <h2>Auto Observed Entries</h2>

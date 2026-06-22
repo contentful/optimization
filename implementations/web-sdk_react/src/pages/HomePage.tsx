@@ -62,7 +62,7 @@ function UtilitiesGrid({
   onTogglePreviewPanel,
 }: UtilitiesGridProps): JSX.Element {
   return (
-    <div className="control-panel__table">
+    <div className="control-panel__fields">
       <span className="control-panel__row-label">Consent</span>
       <span className="control-panel__row-value" data-testid="consent-status">
         {consentLabel(consent)}
@@ -179,7 +179,9 @@ export function HomePage({
     <>
       <div className="page-header">
         <h1>Web SDK + React</h1>
-        <p className="page-header__sub">Reference implementation of @contentful/optimization-web</p>
+        <p className="page-header__subtitle">
+          Reference implementation of @contentful/optimization-web
+        </p>
       </div>
 
       <section className="control-panel" id="utility-panel">
@@ -206,7 +208,7 @@ export function HomePage({
             per-component control is available through the <code>liveUpdates</code> prop.
           </p>
         </header>
-        <div className="sections-row" data-testid="live-updates-examples">
+        <div className="sections-grid" data-testid="live-updates-examples">
           <LiveUpdatesExampleEntry
             baselineEntry={liveUpdatesBaselineEntry}
             testIdPrefix="live-default"
@@ -224,7 +226,7 @@ export function HomePage({
         </div>
       </section>
 
-      <div className="sections-row sections-row--two">
+      <div className="sections-grid sections-grid--split">
         <section className="page-section">
           <header className="page-section__header">
             <h2>Auto Observed Entries</h2>

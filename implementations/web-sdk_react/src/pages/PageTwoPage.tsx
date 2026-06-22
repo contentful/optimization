@@ -40,7 +40,7 @@ export function PageTwoPage({ consent, entriesById, isIdentified }: PageTwoPageP
           Back to Home
         </Link>
         <h1>Page Two</h1>
-        <p className="page-header__sub">
+        <p className="page-header__subtitle">
           Demo route for SPA navigation, route context (<code>/page-two</code>), and
           conversion-style tracking.
         </p>
@@ -48,7 +48,7 @@ export function PageTwoPage({ consent, entriesById, isIdentified }: PageTwoPageP
 
       <section className="control-panel" data-testid="page-two-status">
         <h2 className="control-panel__title">Status</h2>
-        <div className="control-panel__table">
+        <div className="control-panel__fields">
           <span className="control-panel__row-label">Identified</span>
           <span className="control-panel__row-value">{isIdentified ? 'Yes' : 'No'}</span>
           <span />
@@ -68,7 +68,7 @@ export function PageTwoPage({ consent, entriesById, isIdentified }: PageTwoPageP
         </div>
       </section>
 
-      <div className="sections-row sections-row--two" data-testid="page-two-optimization">
+      <div className="sections-grid sections-grid--split" data-testid="page-two-optimization">
         <section className="page-section">
           <header className="page-section__header">
             <h2>Auto-observed</h2>
