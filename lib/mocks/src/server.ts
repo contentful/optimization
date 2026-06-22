@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers -- testing */
 
 import { createServer } from '@mswjs/http-middleware'
+import { HttpResponse, http } from 'msw'
 import { getHandlers as getContentfulHandlers } from './contentful-handlers'
 import { getHandlers as getExperienceHandlers } from './experience-handlers'
 import { getHandlers as getInsightsHandlers } from './insights-handlers'
@@ -19,6 +20,7 @@ const EXPERIENCE_BASE_URL =
 const INSIGHTS_BASE_URL = process.env.INSIGHTS_BASE_URL ?? `${BASE_HOST}:${PORT}${INSIGHTS_PATH}`
 
 const app = createServer(
+  http.get('*/health', () => HttpResponse.text('ok')),
   ...getContentfulHandlers(`*${CONTENTFUL_PATH}`),
   ...getExperienceHandlers(`*${EXPERIENCE_PATH}`),
   ...getInsightsHandlers(`*${INSIGHTS_PATH}`),

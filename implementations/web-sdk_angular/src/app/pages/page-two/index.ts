@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core'
+import { RouterLink } from '@angular/router'
 import { ControlPanel } from '../../components/control-panel'
 import { EntryCard } from '../../components/entry-card'
 import { FIXTURES } from '../../fixtures'
@@ -10,7 +11,7 @@ const PAGE_TWO_COMPONENT_ID = 'page-two-conversion'
 
 @Component({
   selector: 'app-page-two',
-  imports: [EntryCard, ControlPanel],
+  imports: [EntryCard, ControlPanel, RouterLink],
   templateUrl: './index.html',
   host: { style: 'display: contents' },
 })

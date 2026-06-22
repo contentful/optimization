@@ -24,6 +24,12 @@ function isConsentAccepted(consent: boolean | undefined): boolean {
   return consent === true
 }
 
+function consentLabel(consent: boolean | undefined): string {
+  if (consent === true) return 'Yes'
+  if (consent === false) return 'No'
+  return 'undefined'
+}
+
 const AUTO_OBSERVED_CLICK_SCENARIO_BY_ENTRY_ID: Readonly<Record<string, EntryClickScenario>> = {
   '4ib0hsHWoSOnCVdDkizE8d': 'direct',
   xFwgG3oNaOcjzWiGe4vXo: 'descendant',
@@ -50,7 +56,16 @@ export function HomePage({
       <section id="utility-panel">
         <h2>Utilities</h2>
 
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'auto auto auto',
+            alignItems: 'center',
+            gap: '0.35rem 0.75rem',
+          }}
+        >
+          <span>Consent</span>
+          <span data-testid="consent-status">{consentLabel(consent)}</span>
           {isConsentAccepted(consent) ? (
             <button
               data-testid="unconsent-button"
@@ -59,7 +74,7 @@ export function HomePage({
               }}
               type="button"
             >
-              Reject Consent
+              Revoke
             </button>
           ) : (
             <button
@@ -69,46 +84,54 @@ export function HomePage({
               }}
               type="button"
             >
-              Accept Consent
+              Grant
             </button>
           )}
 
+          <span>Identified</span>
+          <span data-testid="identified-status">{isIdentified ? 'Yes' : 'No'}</span>
           {!isIdentified ? (
-            <button data-testid="live-updates-identify-button" onClick={onIdentify} type="button">
+            <button data-testid="identify-button" onClick={onIdentify} type="button">
               Identify
             </button>
           ) : (
-            <button data-testid="live-updates-reset-button" onClick={onReset} type="button">
-              Reset Profile
+            <button data-testid="reset-button" onClick={onReset} type="button">
+              Reset
             </button>
           )}
 
+          <span data-testid="live-updates-status">Live updates</span>
+          <span data-testid="global-live-updates-status">{globalLiveUpdates ? 'ON' : 'OFF'}</span>
           <button
             data-testid="toggle-global-live-updates-button"
             onClick={onToggleGlobalLiveUpdates}
             type="button"
           >
-            {`Global: ${globalLiveUpdates ? 'ON' : 'OFF'}`}
+            {globalLiveUpdates ? 'OFF' : 'ON'}
           </button>
 
-          <button
-            data-testid="simulate-preview-panel-button"
-            onClick={() => {
-              liveUpdatesContext?.togglePreviewPanel()
-            }}
-            type="button"
-          >
-            {isPreviewPanelOpen ? 'Close Preview Panel' : 'Open Preview Panel'}
-          </button>
+          {ENABLE_PREVIEW_PANEL ? (
+            <>
+              <span>Preview panel</span>
+              <span data-testid="preview-panel-status">
+                {isPreviewPanelOpen ? 'Open' : 'Closed'}
+              </span>
+              <button
+                data-testid="simulate-preview-panel-button"
+                onClick={() => {
+                  liveUpdatesContext?.togglePreviewPanel()
+                }}
+                type="button"
+              >
+                {isPreviewPanelOpen ? 'Close Preview Panel' : 'Open Preview Panel'}
+              </button>
+            </>
+          ) : null}
+
+          <span>Active optimizations</span>
+          <span data-testid="selected-optimizations-count">{selectedOptimizationCount}</span>
+          <span />
         </div>
-
-        <p data-testid="consent-status">Consent: {String(consent)}</p>
-        <p data-testid="selected-optimizations-count">
-          Selected Optimizations: {selectedOptimizationCount}
-        </p>
-        <p data-testid="identified-status">{isIdentified ? 'Yes' : 'No'}</p>
-        <p data-testid="global-live-updates-status">{globalLiveUpdates ? 'ON' : 'OFF'}</p>
-        <p data-testid="preview-panel-status">{isPreviewPanelOpen ? 'Open' : 'Closed'}</p>
       </section>
 
       <section>
@@ -118,31 +141,20 @@ export function HomePage({
           per-component control is available through the <code>liveUpdates</code> prop.
         </p>
         <div data-testid="live-updates-examples" style={{ display: 'grid', gap: 16 }}>
-          <section data-testid="live-updates-default">
-            <h3>Default (inherits global setting)</h3>
-            <LiveUpdatesExampleEntry
-              baselineEntry={liveUpdatesBaselineEntry}
-              testIdPrefix="live-default"
-            />
-          </section>
-
-          <section data-testid="live-updates-enabled">
-            <h3>Always On (liveUpdates=true)</h3>
-            <LiveUpdatesExampleEntry
-              baselineEntry={liveUpdatesBaselineEntry}
-              liveUpdates={true}
-              testIdPrefix="live-enabled"
-            />
-          </section>
-
-          <section data-testid="live-updates-locked">
-            <h3>Locked (liveUpdates=false)</h3>
-            <LiveUpdatesExampleEntry
-              baselineEntry={liveUpdatesBaselineEntry}
-              liveUpdates={false}
-              testIdPrefix="live-locked"
-            />
-          </section>
+          <LiveUpdatesExampleEntry
+            baselineEntry={liveUpdatesBaselineEntry}
+            testIdPrefix="live-default"
+          />
+          <LiveUpdatesExampleEntry
+            baselineEntry={liveUpdatesBaselineEntry}
+            liveUpdates={true}
+            testIdPrefix="live-enabled"
+          />
+          <LiveUpdatesExampleEntry
+            baselineEntry={liveUpdatesBaselineEntry}
+            liveUpdates={false}
+            testIdPrefix="live-locked"
+          />
         </div>
       </section>
 

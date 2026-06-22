@@ -1,21 +1,22 @@
 <section class="control-panel">
-  <h2 class="control-panel__title">SDK state</h2>
+  <h2 class="control-panel__title">Utilities</h2>
 
   <div class="control-panel__table">
     <span
       class="control-panel__row-label"
-      data-testid="consent-status"
       data-tooltip="SDK tracking is active only when consent is true"
       >Consent</span
     >
-    <span class="control-panel__row-value">{{ consent() ?? 'undefined' }}</span>
+    <span class="control-panel__row-value" data-testid="consent-status"
+      >{{ consent() === true ? 'Yes' : consent() === false ? 'No' : 'undefined' }}</span
+    >
     @if (consent() === true) {
     <button
       class="btn btn--danger btn--sm"
       data-testid="unconsent-button"
       (click)="toggleConsent()"
     >
-      Withdraw
+      Revoke
     </button>
     } @else {
     <button
@@ -29,11 +30,12 @@
 
     <span
       class="control-panel__row-label"
-      data-testid="identified-status"
       data-tooltip="User has been identified with a profile via the identify() call"
       >Identified</span
     >
-    <span class="control-panel__row-value">{{ isIdentified() ? 'Yes' : 'No' }}</span>
+    <span class="control-panel__row-value" data-testid="identified-status"
+      >{{ isIdentified() ? 'Yes' : 'No' }}</span
+    >
     @if (isIdentified()) {
     <button class="btn btn--danger btn--sm" data-testid="reset-button" (click)="reset()">
       Reset
@@ -50,14 +52,14 @@
       data-tooltip="When ON, entries re-resolve and rerender on profile changes"
       >Live updates</span
     >
-    <span class="control-panel__row-value"
+    <span class="control-panel__row-value" data-testid="global-live-updates-status"
       >{{ liveUpdatesService.globalLiveUpdates() ? 'ON' : 'OFF' }}</span
     >
     <button
       class="btn btn--sm"
       [class.btn--secondary]="!liveUpdatesService.globalLiveUpdates()"
       [class.btn--danger]="liveUpdatesService.globalLiveUpdates()"
-      data-testid="live-updates-toggle"
+      data-testid="toggle-global-live-updates-button"
       (click)="liveUpdatesService.toggle()"
     >
       {{ liveUpdatesService.globalLiveUpdates() ? 'OFF' : 'ON' }}
@@ -65,14 +67,19 @@
 
     <span
       class="control-panel__row-label"
-      data-testid="preview-panel-status"
       data-tooltip="Contentful preview panel is open — forces live updates regardless of the global toggle"
       >Preview panel</span
     >
-    <span class="control-panel__row-value"
+    <span class="control-panel__row-value" data-testid="preview-panel-status"
       >{{ liveUpdatesService.previewPanelVisible() ? 'Open' : 'Closed' }}</span
     >
-    <span></span>
+    <button
+      class="btn btn--sm btn--secondary"
+      data-testid="simulate-preview-panel-button"
+      (click)="liveUpdatesService.togglePreviewPanel()"
+    >
+      {{ liveUpdatesService.previewPanelVisible() ? 'Close Preview Panel' : 'Open Preview Panel' }}
+    </button>
 
     <span
       class="control-panel__row-label"
@@ -85,11 +92,12 @@
 
     <span
       class="control-panel__row-label"
-      data-testid="selected-optimizations-count"
       data-tooltip="Number of selected optimization variants currently applied"
       >Active optimizations</span
     >
-    <span class="control-panel__row-value">{{ optimizationCount() }}</span>
+    <span class="control-panel__row-value" data-testid="selected-optimizations-count"
+      >{{ optimizationCount() }}</span
+    >
     <span></span>
   </div>
 

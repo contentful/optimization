@@ -1,18 +1,43 @@
 <section class="tracking-log" data-testid="analytics-events-container">
-  <h2 class="tracking-log__title">Tracking</h2>
+  <div class="tracking-log__header">
+    <h2>Tracking</h2>
+    <span class="tracking-log__badge"
+      ><span data-testid="raw-events-count">{{ rawEventsDisplay() }}</span> events</span
+    >
+  </div>
   @let events = displayEvents(); @if (events.length === 0) {
   <p class="tracking-log__empty" data-testid="no-events-message">No events tracked yet</p>
   } @else {
   <table class="tracking-log__table">
+    <thead class="tracking-log__thead">
+      <tr>
+        <th>Type</th>
+        <th>Value</th>
+        <th>Dur</th>
+        <th>Age</th>
+        <th></th>
+      </tr>
+    </thead>
     @for (event of events; track event.key) {
-    <tr [attr.data-testid]="event.testId">
-      <td class="tracking-log__time">{{ event.timeAgo }}</td>
+    <tr
+      [attr.data-testid]="event.testId"
+      [attr.data-hover-id]="event.hoverId ?? null"
+      [attr.data-hover-duration-ms]="event.hoverDurationMs ?? null"
+      [attr.data-view-duration-ms]="event.viewDurationMs ?? null"
+      [attr.data-page-url]="event.type === 'page' ? event.value : null"
+    >
       <td>
         <span class="tracking-log__type tracking-log__type--{{ event.type }}"
           >{{ event.type }}</span
         >
       </td>
       <td class="tracking-log__label">{{ event.value }}</td>
+      <td class="tracking-log__duration">
+        @if (event.hoverDurationMs !== undefined) { {{ (event.hoverDurationMs / 1000).toFixed(1) }}s
+        } @else if (event.viewDurationMs !== undefined) { {{ (event.viewDurationMs /
+        1000).toFixed(1) }}s }
+      </td>
+      <td class="tracking-log__time">{{ event.time }}</td>
       <td class="tracking-log__count">@if (event.count > 1) { ×{{ event.count }} }</td>
     </tr>
     }

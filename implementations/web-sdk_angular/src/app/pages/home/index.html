@@ -13,10 +13,10 @@
     <h2>Live updates</h2>
   </header>
   @let liveEntry = entryFor(liveUpdatesEntryId); @if (liveEntry) {
-  <div class="sections-row">
-    <app-entry-card [entry]="liveEntry" />
-    <app-entry-card [entry]="liveEntry" [liveUpdates]="true" />
-    <app-entry-card [entry]="liveEntry" [liveUpdates]="false" />
+  <div class="sections-row" data-testid="live-updates-examples">
+    <app-entry-card [entry]="liveEntry" testId="live-default" />
+    <app-entry-card [entry]="liveEntry" [liveUpdates]="true" testId="live-enabled" />
+    <app-entry-card [entry]="liveEntry" [liveUpdates]="false" testId="live-locked" />
   </div>
   }
 </section>
@@ -24,7 +24,7 @@
 <div class="sections-row sections-row--two">
   <section class="page-section">
     <header class="page-section__header">
-      <h2>Auto-observed</h2>
+      <h2>Auto Observed Entries</h2>
     </header>
     <div id="auto-observed" class="entry-grid">
       @for (id of autoIds; track id) { @let entry = entryFor(id); @if (entry) {
@@ -35,7 +35,7 @@
 
   <section class="page-section">
     <header class="page-section__header">
-      <h2>Manually-observed</h2>
+      <h2>Manually Observed Entries</h2>
     </header>
     <div id="manually-observed" class="entry-grid">
       @for (id of manualIds; track id) { @let entry = entryFor(id); @if (entry) {

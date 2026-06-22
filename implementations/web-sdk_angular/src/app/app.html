@@ -12,7 +12,7 @@
   <aside class="app-sidebar">
     <app-tracking-log />
   </aside>
-  <main>
+  <main [class.preview-panel-open]="previewPanelOpen()">
     <router-outlet />
   </main>
 </div>

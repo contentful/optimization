@@ -17,14 +17,20 @@
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.json",
             "assets": [],
-            "styles": ["src/styles.css"]
+            "styles": ["src/styles.css"],
+            "allowedCommonJsDependencies": [
+              "lodash",
+              "contentful-sdk-core",
+              "qs",
+              "json-stringify-safe"
+            ]
           },
           "configurations": {
             "production": {
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kB",
+                  "maximumWarning": "600kB",
                   "maximumError": "1MB"
                 }
               ],

@@ -143,44 +143,69 @@ export default function App({
   }
 
   return (
-    <main style={{ display: 'grid', gap: 24 }}>
-      <nav style={{ display: 'flex', gap: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <nav
+        style={{
+          display: 'flex',
+          gap: 16,
+          padding: '12px 24px',
+          borderBottom: '1px solid #e5e7eb',
+          flexShrink: 0,
+        }}
+      >
         <Link data-testid="link-home" to={HOME_PATH}>
           Home
         </Link>
         <Link data-testid="link-page-two" to={PAGE_TWO_PATH}>
-          Go to Page Two
+          Page Two
         </Link>
       </nav>
 
-      <Routes>
-        <Route
-          path={HOME_PATH}
-          element={
-            <HomePage
-              consent={consent}
-              entriesById={entriesById}
-              globalLiveUpdates={globalLiveUpdates}
-              isIdentified={isIdentified}
-              liveUpdatesBaselineEntry={liveUpdatesBaselineEntry}
-              selectedOptimizationCount={selectedOptimizationCount}
-              onConsentChange={handleConsent}
-              onIdentify={handleIdentify}
-              onReset={handleReset}
-              onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates}
+      <div
+        style={{
+          flex: 1,
+          display: 'grid',
+          gridTemplateColumns: '280px 1fr',
+          minHeight: 0,
+          overflow: 'hidden',
+        }}
+      >
+        <aside style={{ borderRight: '1px solid #e5e7eb', overflowY: 'auto' }}>
+          <AnalyticsEventDisplay />
+        </aside>
+        <main style={{ padding: 24, overflowY: 'auto' }}>
+          <Routes>
+            <Route
+              path={HOME_PATH}
+              element={
+                <HomePage
+                  consent={consent}
+                  entriesById={entriesById}
+                  globalLiveUpdates={globalLiveUpdates}
+                  isIdentified={isIdentified}
+                  liveUpdatesBaselineEntry={liveUpdatesBaselineEntry}
+                  selectedOptimizationCount={selectedOptimizationCount}
+                  onConsentChange={handleConsent}
+                  onIdentify={handleIdentify}
+                  onReset={handleReset}
+                  onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates}
+                />
+              }
             />
-          }
-        />
-        <Route
-          path={PAGE_TWO_PATH}
-          element={
-            <PageTwoPage consent={consent} entriesById={entriesById} isIdentified={isIdentified} />
-          }
-        />
-        <Route path="*" element={<Navigate replace to={HOME_PATH} />} />
-      </Routes>
-
-      <AnalyticsEventDisplay />
-    </main>
+            <Route
+              path={PAGE_TWO_PATH}
+              element={
+                <PageTwoPage
+                  consent={consent}
+                  entriesById={entriesById}
+                  isIdentified={isIdentified}
+                />
+              }
+            />
+            <Route path="*" element={<Navigate replace to={HOME_PATH} />} />
+          </Routes>
+        </main>
+      </div>
+    </div>
   )
 }

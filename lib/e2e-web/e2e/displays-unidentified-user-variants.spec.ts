@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test'
 
 test.describe('unidentified user', () => {
+  test.use({ storageState: { cookies: [], origins: [] } })
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')

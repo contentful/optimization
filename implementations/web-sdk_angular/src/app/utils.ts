@@ -1,4 +1,4 @@
-import { DestroyRef, inject, signal, type Signal } from '@angular/core'
+import { DestroyRef, effect, inject, signal, type Signal } from '@angular/core'
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -8,14 +8,35 @@ export interface SdkObservable<T> {
   subscribe: (fn: (v: T) => void) => { unsubscribe: () => void }
 }
 
-export function fromSdkState<T>(obs: SdkObservable<T>): Signal<T | undefined> {
+export function fromSdkState<T>(
+  source: SdkObservable<T> | (() => SdkObservable<T> | undefined),
+): Signal<T | undefined> {
   const s = signal<T | undefined>(undefined)
   const destroyRef = inject(DestroyRef)
-  const sub = obs.subscribe((v) => {
-    s.set(v)
-  })
-  destroyRef.onDestroy(() => {
-    sub.unsubscribe()
-  })
+
+  if (typeof source === 'function') {
+    let sub: { unsubscribe: () => void } | undefined = undefined
+
+    effect(() => {
+      sub?.unsubscribe()
+      sub = undefined
+      s.set(undefined)
+      const obs = source()
+      if (obs)
+        sub = obs.subscribe((v) => {
+          s.set(v)
+        })
+    })
+
+    destroyRef.onDestroy(() => sub?.unsubscribe())
+  } else {
+    const sub = source.subscribe((v) => {
+      s.set(v)
+    })
+    destroyRef.onDestroy(() => {
+      sub.unsubscribe()
+    })
+  }
+
   return s.asReadonly()
 }

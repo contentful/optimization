@@ -1,8 +1,7 @@
-import { computed, inject, Injectable, type OnDestroy, type Signal } from '@angular/core'
+import { inject, Injectable, type OnDestroy, type Signal } from '@angular/core'
 import { NavigationEnd, Router } from '@angular/router'
 import ContentfulOptimization from '@contentful/optimization-web'
-import type { SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
-import { Profile } from '@contentful/optimization-web/api-schemas'
+import type { Profile, SelectedOptimizationArray } from '@contentful/optimization-web/api-schemas'
 import type { Subscription } from 'rxjs'
 import { filter } from 'rxjs/operators'
 import type { NgContentfulOptimizationConfig } from '../config'
@@ -81,13 +80,7 @@ export class NgContentfulOptimization implements OnDestroy {
 
     this.consent = fromSdkState(this.sdk.states.consent)
 
-    const rawProfile = fromSdkState<unknown>(this.sdk.states.profile)
-    this.profile = computed(() => {
-      const result = Profile.safeParse(rawProfile())
-      if (!result.success) return undefined
-      // anonymous profiles exist after reset — only expose when the user is identified
-      return result.data.traits.identified ? result.data : undefined
-    })
+    this.profile = fromSdkState(this.sdk.states.profile)
 
     this.selectedOptimizations = fromSdkState(this.sdk.states.selectedOptimizations)
 

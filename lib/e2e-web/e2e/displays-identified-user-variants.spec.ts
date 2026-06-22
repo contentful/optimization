@@ -1,21 +1,23 @@
 import { expect, test } from '@playwright/test'
 
 test.describe('identified user', () => {
+  test.use({ storageState: { cookies: [], origins: [] } })
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
 
     await page.getByTestId('consent-button').click()
-    await expect(page.getByTestId('consent-status')).toHaveText('Consent: true')
+    await expect(page.getByTestId('consent-status')).toHaveText('Yes')
 
-    await page.getByTestId('live-updates-identify-button').click()
-    await expect(page.getByTestId('live-updates-reset-button')).toBeVisible()
+    await page.getByTestId('identify-button').click()
+    await expect(page.getByTestId('reset-button')).toBeVisible()
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
-    await expect(page.getByTestId('live-updates-reset-button')).toBeVisible()
+    await expect(page.getByTestId('reset-button')).toBeVisible()
   })
 
   test('displays common variants', async ({ page }) => {
@@ -70,14 +72,14 @@ test.describe('identified user', () => {
   })
 
   test('reset persists unidentified state across reload', async ({ page }) => {
-    await page.getByTestId('live-updates-reset-button').click()
-    await expect(page.getByTestId('live-updates-identify-button')).toBeVisible()
+    await page.getByTestId('reset-button').click()
+    await expect(page.getByTestId('identify-button')).toBeVisible()
 
     await page.reload()
     await page.waitForLoadState('domcontentloaded')
     await expect(page.getByRole('heading', { name: 'Utilities' })).toBeVisible()
 
-    await expect(page.getByTestId('live-updates-identify-button')).toBeVisible()
+    await expect(page.getByTestId('identify-button')).toBeVisible()
     await expect(
       page.getByText('This is a baseline content entry for all identified or unidentified users.'),
     ).toBeVisible()
