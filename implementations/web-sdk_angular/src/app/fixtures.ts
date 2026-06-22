@@ -1,6 +1,5 @@
 import type { EntryClickScenario } from 'e2e-web/src/fixtures'
 
-export { FIXTURES } from 'e2e-web/src/fixtures'
 export type { EntryClickScenario }
 
 export type LiveMode = 'live-on' | 'live-off' | 'live-always-on' | 'live-always-off'

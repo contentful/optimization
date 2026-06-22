@@ -1,4 +1,4 @@
-import { FIXTURES } from 'e2e-web/src/fixtures'
+import { pages } from 'e2e-web/src/fixtures'
 
 const {
   home: {
@@ -8,7 +8,7 @@ const {
     liveUpdates: LIVE_UPDATES_ENTRY_ID,
   },
   pageTwo: { auto: PAGE_TWO_AUTO_ENTRY_ID, manual: PAGE_TWO_MANUAL_ENTRY_ID },
-} = FIXTURES
+} = pages
 
 export {
   AUTO_OBSERVED_ENTRY_IDS,

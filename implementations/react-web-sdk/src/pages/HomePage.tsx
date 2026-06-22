@@ -1,4 +1,4 @@
-import { FIXTURES } from 'e2e-web/src/fixtures'
+import { clickScenarios } from 'e2e-web/src/fixtures'
 import type { JSX } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import type { AppOutletContext } from '../App'
@@ -8,8 +8,6 @@ import { ContentEntry } from '../sections/ContentEntry'
 import { LiveUpdatesExampleEntry } from '../sections/LiveUpdatesExampleEntry'
 import { NestedContentEntry } from '../sections/NestedContentEntry'
 import type { ContentEntry as ContentEntryType } from '../types/contentful'
-
-const { clickScenarios } = FIXTURES
 
 interface AutoObservedEntriesProps {
   entriesById: Map<string, ContentEntryType>

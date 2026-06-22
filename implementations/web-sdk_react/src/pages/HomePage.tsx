@@ -1,4 +1,4 @@
-import { FIXTURES } from 'e2e-web/src/fixtures'
+import { clickScenarios } from 'e2e-web/src/fixtures'
 import type { JSX } from 'react'
 import { ControlPanel } from '../components/ControlPanel'
 import { AUTO_OBSERVED_ENTRY_IDS, MANUALLY_OBSERVED_ENTRY_IDS } from '../config/entries'
@@ -6,8 +6,6 @@ import { ContentEntry } from '../sections/ContentEntry'
 import { LiveUpdatesExampleEntry } from '../sections/LiveUpdatesExampleEntry'
 import { NestedContentEntry } from '../sections/NestedContentEntry'
 import type { ContentfulEntry } from '../types/contentful'
-
-const { clickScenarios } = FIXTURES
 
 interface HomePageProps {
   entriesById: Map<string, ContentfulEntry>

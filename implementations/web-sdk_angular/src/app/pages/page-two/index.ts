@@ -1,8 +1,8 @@
 import { Component, inject } from '@angular/core'
 import { RouterLink } from '@angular/router'
+import { pages } from 'e2e-web/src/fixtures'
 import { ControlPanel } from '../../components/control-panel'
 import { EntryCard } from '../../components/entry-card'
-import { FIXTURES } from '../../fixtures'
 import type { ContentfulEntry } from '../../services/contentful-client'
 import { NgContentfulClient } from '../../services/contentful-client'
 import { NgContentfulOptimization } from '../../services/optimization'
@@ -19,14 +19,14 @@ export class PageTwo {
   private readonly optimization = inject(NgContentfulOptimization)
   private readonly contentfulClient = inject(NgContentfulClient)
 
-  protected readonly entries = this.contentfulClient.loadEntries(FIXTURES.pageTwo.ids)
+  protected readonly entries = this.contentfulClient.loadEntries(pages.pageTwo.ids)
 
   protected autoEntry(): ContentfulEntry | undefined {
-    return this.entries.value()?.get(FIXTURES.pageTwo.auto)
+    return this.entries.value()?.get(pages.pageTwo.auto)
   }
 
   protected manualEntry(): ContentfulEntry | undefined {
-    return this.entries.value()?.get(FIXTURES.pageTwo.manual)
+    return this.entries.value()?.get(pages.pageTwo.manual)
   }
 
   protected readonly trackConversion = (): void => {
