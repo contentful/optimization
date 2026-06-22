@@ -1,6 +1,7 @@
 import { OptimizationRoot } from '@contentful/optimization-react-web'
 import { createScopedLogger } from '@contentful/optimization-react-web/logger'
 import { ReactRouterAutoPageTracker } from '@contentful/optimization-react-web/router/react-router'
+import 'e2e-web/src/theme.css'
 import { type ReactElement, StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, Navigate, Outlet, RouterProvider } from 'react-router-dom'

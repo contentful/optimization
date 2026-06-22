@@ -5,15 +5,14 @@
   "description": "Reference implementation of @contentful/optimization-web for Angular applications.",
   "license": "MIT",
   "scripts": {
-    "copy:css": "cp ../../lib/e2e-web/reference-theme.css ./src/styles.css",
     "generate:env": "pnpm exec tsx scripts/generate-env.ts",
-    "dev": "pnpm copy:css && pnpm generate:env && ng serve",
-    "build": "pnpm copy:css && ng build",
+    "dev": "pnpm generate:env && ng serve",
+    "build": "ng build",
     "clean": "rimraf ./dist",
     "serve": "pnpm serve:mocks && pnpm serve:app",
     "serve:mocks": "pm2 start --name web-sdk_angular-mocks \"pnpm --dir ../../lib/mocks serve\"",
     "serve:mocks:stop": "pm2 stop web-sdk_angular-mocks && pm2 delete web-sdk_angular-mocks",
-    "serve:e2e": "pnpm copy:css && pnpm dev",
+    "serve:e2e": "pnpm dev",
     "serve:app": "pm2 start --name web-sdk_angular-app \"pnpm dev\"",
     "serve:app:stop": "pm2 stop web-sdk_angular-app && pm2 delete web-sdk_angular-app",
     "serve:stop": "pnpm serve:app:stop && pnpm serve:mocks:stop",
@@ -37,6 +36,7 @@
     "tslib": "^2.8.1"
   },
   "devDependencies": {
+    "e2e-web": "file:../../lib/e2e-web",
     "@angular/build": "^22.0.0",
     "@angular/cli": "^22.0.0",
     "@angular/compiler-cli": "^22.0.0",

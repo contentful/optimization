@@ -6,15 +6,14 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "copy:css": "cp ../../lib/e2e-web/reference-theme.css ./public/reference-theme.css",
-    "dev": "pnpm copy:css && rsbuild dev",
-    "build": "pnpm copy:css && rsbuild build",
+    "dev": "rsbuild dev",
+    "build": "rsbuild build",
     "clean": "rimraf ./.rsdoctor ./.rslib ./dist ./coverage ./playwright-report ./test-results .tsbuildinfo",
     "preview": "pnpm serve:mocks && rsbuild preview",
     "serve": "pnpm serve:mocks && pnpm serve:app",
     "serve:app": "pnpm build && pm2 start --name react-web-sdk-app \"pnpm preview\"",
     "serve:app:stop": "pm2 stop react-web-sdk-app && pm2 delete react-web-sdk-app",
-    "serve:e2e": "pnpm copy:css && rsbuild build && rsbuild preview",
+    "serve:e2e": "rsbuild build && rsbuild preview",
     "serve:mocks": "pm2 start --name react-web-sdk-mocks \"pnpm --dir ../../lib/mocks serve\"",
     "serve:mocks:stop": "pm2 stop react-web-sdk-mocks && pm2 delete react-web-sdk-mocks",
     "serve:stop": "pnpm serve:app:stop && pnpm serve:mocks:stop",
@@ -39,6 +38,7 @@
     "react-router-dom": "7.14.1"
   },
   "devDependencies": {
+    "e2e-web": "file:../../lib/e2e-web",
     "@playwright/test": "1.58.2",
     "@rsbuild/core": "1.7.3",
     "@rsbuild/plugin-react": "1.4.5",
