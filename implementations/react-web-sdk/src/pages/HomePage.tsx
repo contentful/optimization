@@ -1,18 +1,13 @@
+import { FIXTURES } from 'e2e-web/src/fixtures'
 import type { JSX } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import type { AppOutletContext } from '../App'
 import { ControlPanel } from '../components/ControlPanel'
 import { AUTO_OBSERVED_ENTRY_IDS, MANUALLY_OBSERVED_ENTRY_IDS } from '../config/entries'
-import { type EntryClickScenario, ContentEntry } from '../sections/ContentEntry'
+import { ContentEntry } from '../sections/ContentEntry'
 import { LiveUpdatesExampleEntry } from '../sections/LiveUpdatesExampleEntry'
 import { NestedContentEntry } from '../sections/NestedContentEntry'
 import type { ContentEntry as ContentEntryType } from '../types/contentful'
-
-const AUTO_OBSERVED_CLICK_SCENARIO_BY_ENTRY_ID: Readonly<Record<string, EntryClickScenario>> = {
-  '4ib0hsHWoSOnCVdDkizE8d': 'direct',
-  xFwgG3oNaOcjzWiGe4vXo: 'descendant',
-  '2Z2WLOx07InSewC3LUB3eX': 'ancestor',
-}
 
 interface AutoObservedEntriesProps {
   entriesById: Map<string, ContentEntryType>
@@ -34,7 +29,7 @@ function AutoObservedEntries({ entriesById }: AutoObservedEntriesProps): JSX.Ele
         return (
           <ContentEntry
             key={entry.sys.id}
-            clickScenario={AUTO_OBSERVED_CLICK_SCENARIO_BY_ENTRY_ID[entry.sys.id]}
+            clickScenario={FIXTURES.home.clickScenarios[entry.sys.id]}
             entry={entry}
             viewTracking="auto"
           />

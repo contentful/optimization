@@ -1,7 +1,7 @@
+import { FIXTURES } from 'e2e-web/src/fixtures'
 import type { JSX } from 'react'
 import { ControlPanel } from '../components/ControlPanel'
 import { AUTO_OBSERVED_ENTRY_IDS, MANUALLY_OBSERVED_ENTRY_IDS } from '../config/entries'
-import type { EntryClickScenario } from '../sections/ContentEntry'
 import { ContentEntry } from '../sections/ContentEntry'
 import { LiveUpdatesExampleEntry } from '../sections/LiveUpdatesExampleEntry'
 import { NestedContentEntry } from '../sections/NestedContentEntry'
@@ -11,12 +11,6 @@ interface HomePageProps {
   entriesById: Map<string, ContentfulEntry>
   liveUpdatesBaselineEntry: ContentfulEntry
   onToggleGlobalLiveUpdates: () => void
-}
-
-const AUTO_OBSERVED_CLICK_SCENARIO_BY_ENTRY_ID: Readonly<Record<string, EntryClickScenario>> = {
-  '4ib0hsHWoSOnCVdDkizE8d': 'direct',
-  xFwgG3oNaOcjzWiGe4vXo: 'descendant',
-  '2Z2WLOx07InSewC3LUB3eX': 'ancestor',
 }
 
 export function HomePage({
@@ -80,7 +74,7 @@ export function HomePage({
               return (
                 <ContentEntry
                   key={entry.sys.id}
-                  clickScenario={AUTO_OBSERVED_CLICK_SCENARIO_BY_ENTRY_ID[entry.sys.id]}
+                  clickScenario={FIXTURES.home.clickScenarios[entry.sys.id]}
                   entry={entry}
                   observation="auto"
                 />

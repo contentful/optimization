@@ -1,10 +1,11 @@
 import { OptimizedEntry, useOptimization } from '@contentful/optimization-react-web'
+import type { EntryClickScenario } from 'e2e-web/src/fixtures'
 import type { JSX } from 'react'
 import { useEffect, useRef } from 'react'
 import { RichTextRenderer } from '../components/RichTextRenderer'
 import type { ContentEntry as ContentEntryType, RichTextDocument } from '../types/contentful'
 
-export type EntryClickScenario = 'direct' | 'descendant' | 'ancestor'
+export type { EntryClickScenario }
 type ViewTrackingMode = 'auto' | 'manual'
 
 interface ContentEntryProps {

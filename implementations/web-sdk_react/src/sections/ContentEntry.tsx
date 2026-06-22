@@ -1,3 +1,4 @@
+import type { EntryClickScenario } from 'e2e-web/src/fixtures'
 import { type JSX, type RefObject, useEffect, useMemo, useRef } from 'react'
 import { RichTextRenderer } from '../components/RichTextRenderer'
 import { useOptimization } from '../optimization/hooks/useOptimization'
@@ -5,13 +6,13 @@ import { useOptimizationResolver } from '../optimization/hooks/useOptimizationRe
 import type { ContentfulEntry, RichTextDocument } from '../types/contentful'
 import { isRecord } from '../utils/typeGuards'
 
+export type { EntryClickScenario }
+
 interface ContentEntryProps {
   clickScenario?: EntryClickScenario
   entry: ContentfulEntry
   observation: 'auto' | 'manual'
 }
-
-export type EntryClickScenario = 'direct' | 'descendant' | 'ancestor'
 
 type ObservationMode = ContentEntryProps['observation']
 

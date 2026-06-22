@@ -1,19 +1,20 @@
-export const AUTO_OBSERVED_ENTRY_IDS = [
-  '1JAU028vQ7v6nB2swl3NBo',
-  '1MwiFl4z7gkwqGYdvCmr8c',
-  '4ib0hsHWoSOnCVdDkizE8d',
-  'xFwgG3oNaOcjzWiGe4vXo',
-  '2Z2WLOx07InSewC3LUB3eX',
-] as const
+import { FIXTURES } from 'e2e-web/src/fixtures'
 
-export const MANUALLY_OBSERVED_ENTRY_IDS = [
-  '5XHssysWUDECHzKLzoIsg1',
-  '6zqoWXyiSrf0ja7I2WGtYj',
-  '7pa5bOx8Z9NmNcr7mISvD',
-] as const
+const {
+  home: {
+    auto: AUTO_OBSERVED_ENTRY_IDS,
+    manual: MANUALLY_OBSERVED_ENTRY_IDS,
+    ids: ENTRY_IDS,
+    liveUpdates: LIVE_UPDATES_ENTRY_ID,
+  },
+  pageTwo: { auto: PAGE_TWO_AUTO_ENTRY_ID, manual: PAGE_TWO_MANUAL_ENTRY_ID },
+} = FIXTURES
 
-export const ENTRY_IDS = [...AUTO_OBSERVED_ENTRY_IDS, ...MANUALLY_OBSERVED_ENTRY_IDS] as const
-
-export const LIVE_UPDATES_ENTRY_ID = '2Z2WLOx07InSewC3LUB3eX' as const
-export const PAGE_TWO_AUTO_ENTRY_ID = '2Z2WLOx07InSewC3LUB3eX' as const
-export const PAGE_TWO_MANUAL_ENTRY_ID = '5XHssysWUDECHzKLzoIsg1' as const
+export {
+  AUTO_OBSERVED_ENTRY_IDS,
+  ENTRY_IDS,
+  LIVE_UPDATES_ENTRY_ID,
+  MANUALLY_OBSERVED_ENTRY_IDS,
+  PAGE_TWO_AUTO_ENTRY_ID,
+  PAGE_TWO_MANUAL_ENTRY_ID,
+}
