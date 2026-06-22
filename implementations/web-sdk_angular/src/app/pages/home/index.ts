@@ -25,5 +25,5 @@ export class Home {
     return this.entries.value()?.get(id)
   }
 
-  protected readonly CLICK_SCENARIOS = CLICK_SCENARIOS
+  protected readonly clickScenarios = CLICK_SCENARIOS
 }

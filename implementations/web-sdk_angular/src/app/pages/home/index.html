@@ -28,7 +28,7 @@
     </header>
     <div id="auto-observed" class="entry-grid">
       @for (id of autoIds; track id) { @let entry = entryFor(id); @if (entry) {
-      <app-entry-card [entry]="entry" [clickScenario]="CLICK_SCENARIOS[id]" />
+      <app-entry-card [entry]="entry" [clickScenario]="clickScenarios[id]" />
       } }
     </div>
   </section>
