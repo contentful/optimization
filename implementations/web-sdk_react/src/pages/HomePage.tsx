@@ -36,6 +36,126 @@ const AUTO_OBSERVED_CLICK_SCENARIO_BY_ENTRY_ID: Readonly<Record<string, EntryCli
   '2Z2WLOx07InSewC3LUB3eX': 'ancestor',
 }
 
+interface UtilitiesGridProps {
+  consent: boolean | undefined
+  globalLiveUpdates: boolean
+  isIdentified: boolean
+  isPreviewPanelOpen: boolean
+  selectedOptimizationCount: number
+  onConsentChange: (accepted: boolean) => void
+  onIdentify: () => void
+  onReset: () => void
+  onToggleGlobalLiveUpdates: () => void
+  onTogglePreviewPanel: () => void
+}
+
+function UtilitiesGrid({
+  consent,
+  globalLiveUpdates,
+  isIdentified,
+  isPreviewPanelOpen,
+  selectedOptimizationCount,
+  onConsentChange,
+  onIdentify,
+  onReset,
+  onToggleGlobalLiveUpdates,
+  onTogglePreviewPanel,
+}: UtilitiesGridProps): JSX.Element {
+  return (
+    <div className="control-panel__table">
+      <span className="control-panel__row-label">Consent</span>
+      <span className="control-panel__row-value" data-testid="consent-status">
+        {consentLabel(consent)}
+      </span>
+      {isConsentAccepted(consent) ? (
+        <button
+          className="btn btn--danger btn--sm"
+          data-testid="unconsent-button"
+          onClick={() => {
+            onConsentChange(false)
+          }}
+          type="button"
+        >
+          Revoke
+        </button>
+      ) : (
+        <button
+          className="btn btn--secondary btn--sm"
+          data-testid="consent-button"
+          onClick={() => {
+            onConsentChange(true)
+          }}
+          type="button"
+        >
+          Grant
+        </button>
+      )}
+
+      <span className="control-panel__row-label">Identified</span>
+      <span className="control-panel__row-value" data-testid="identified-status">
+        {isIdentified ? 'Yes' : 'No'}
+      </span>
+      {!isIdentified ? (
+        <button
+          className="btn btn--secondary btn--sm"
+          data-testid="identify-button"
+          onClick={onIdentify}
+          type="button"
+        >
+          Identify
+        </button>
+      ) : (
+        <button
+          className="btn btn--danger btn--sm"
+          data-testid="reset-button"
+          onClick={onReset}
+          type="button"
+        >
+          Reset
+        </button>
+      )}
+
+      <span className="control-panel__row-label" data-testid="live-updates-status">
+        Live updates
+      </span>
+      <span className="control-panel__row-value" data-testid="global-live-updates-status">
+        {globalLiveUpdates ? 'ON' : 'OFF'}
+      </span>
+      <button
+        className={`btn btn--sm ${globalLiveUpdates ? 'btn--danger' : 'btn--secondary'}`}
+        data-testid="toggle-global-live-updates-button"
+        onClick={onToggleGlobalLiveUpdates}
+        type="button"
+      >
+        {globalLiveUpdates ? 'OFF' : 'ON'}
+      </button>
+
+      {ENABLE_PREVIEW_PANEL ? (
+        <>
+          <span className="control-panel__row-label">Preview panel</span>
+          <span className="control-panel__row-value" data-testid="preview-panel-status">
+            {isPreviewPanelOpen ? 'Open' : 'Closed'}
+          </span>
+          <button
+            className="btn btn--sm btn--secondary"
+            data-testid="simulate-preview-panel-button"
+            onClick={onTogglePreviewPanel}
+            type="button"
+          >
+            {isPreviewPanelOpen ? 'Close Preview Panel' : 'Open Preview Panel'}
+          </button>
+        </>
+      ) : null}
+
+      <span className="control-panel__row-label">Active optimizations</span>
+      <span className="control-panel__row-value" data-testid="selected-optimizations-count">
+        {selectedOptimizationCount}
+      </span>
+      <span />
+    </div>
+  )
+}
+
 export function HomePage({
   consent,
   entriesById,
@@ -51,96 +171,37 @@ export function HomePage({
   const liveUpdatesContext = useLiveUpdates()
   const isPreviewPanelOpen = liveUpdatesContext?.previewPanelVisible === true
 
+  const handleTogglePreviewPanel = (): void => {
+    liveUpdatesContext?.togglePreviewPanel()
+  }
+
   return (
     <>
-      <section id="utility-panel">
-        <h2>Utilities</h2>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'auto auto auto',
-            alignItems: 'center',
-            gap: '0.35rem 0.75rem',
-          }}
-        >
-          <span>Consent</span>
-          <span data-testid="consent-status">{consentLabel(consent)}</span>
-          {isConsentAccepted(consent) ? (
-            <button
-              data-testid="unconsent-button"
-              onClick={() => {
-                onConsentChange(false)
-              }}
-              type="button"
-            >
-              Revoke
-            </button>
-          ) : (
-            <button
-              data-testid="consent-button"
-              onClick={() => {
-                onConsentChange(true)
-              }}
-              type="button"
-            >
-              Grant
-            </button>
-          )}
-
-          <span>Identified</span>
-          <span data-testid="identified-status">{isIdentified ? 'Yes' : 'No'}</span>
-          {!isIdentified ? (
-            <button data-testid="identify-button" onClick={onIdentify} type="button">
-              Identify
-            </button>
-          ) : (
-            <button data-testid="reset-button" onClick={onReset} type="button">
-              Reset
-            </button>
-          )}
-
-          <span data-testid="live-updates-status">Live updates</span>
-          <span data-testid="global-live-updates-status">{globalLiveUpdates ? 'ON' : 'OFF'}</span>
-          <button
-            data-testid="toggle-global-live-updates-button"
-            onClick={onToggleGlobalLiveUpdates}
-            type="button"
-          >
-            {globalLiveUpdates ? 'OFF' : 'ON'}
-          </button>
-
-          {ENABLE_PREVIEW_PANEL ? (
-            <>
-              <span>Preview panel</span>
-              <span data-testid="preview-panel-status">
-                {isPreviewPanelOpen ? 'Open' : 'Closed'}
-              </span>
-              <button
-                data-testid="simulate-preview-panel-button"
-                onClick={() => {
-                  liveUpdatesContext?.togglePreviewPanel()
-                }}
-                type="button"
-              >
-                {isPreviewPanelOpen ? 'Close Preview Panel' : 'Open Preview Panel'}
-              </button>
-            </>
-          ) : null}
-
-          <span>Active optimizations</span>
-          <span data-testid="selected-optimizations-count">{selectedOptimizationCount}</span>
-          <span />
-        </div>
+      <section className="control-panel" id="utility-panel">
+        <h2 className="control-panel__title">Utilities</h2>
+        <UtilitiesGrid
+          consent={consent}
+          globalLiveUpdates={globalLiveUpdates}
+          isIdentified={isIdentified}
+          isPreviewPanelOpen={isPreviewPanelOpen}
+          selectedOptimizationCount={selectedOptimizationCount}
+          onConsentChange={onConsentChange}
+          onIdentify={onIdentify}
+          onReset={onReset}
+          onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates}
+          onTogglePreviewPanel={handleTogglePreviewPanel}
+        />
       </section>
 
-      <section>
-        <h2>Live Updates</h2>
-        <p>
-          Toggle global live updates and identify the user to verify how entries update. Optional
-          per-component control is available through the <code>liveUpdates</code> prop.
-        </p>
-        <div data-testid="live-updates-examples" style={{ display: 'grid', gap: 16 }}>
+      <section className="page-section" data-testid="live-updates-section">
+        <header className="page-section__header">
+          <h2>Live Updates</h2>
+          <p>
+            Toggle global live updates and identify the user to verify how entries update. Optional
+            per-component control is available through the <code>liveUpdates</code> prop.
+          </p>
+        </header>
+        <div className="sections-row" data-testid="live-updates-examples">
           <LiveUpdatesExampleEntry
             baselineEntry={liveUpdatesBaselineEntry}
             testIdPrefix="live-default"
@@ -158,44 +219,50 @@ export function HomePage({
         </div>
       </section>
 
-      <section>
-        <h2>Auto Observed Entries</h2>
-        <div id="auto-observed" style={{ display: 'grid', gap: 16 }}>
-          {AUTO_OBSERVED_ENTRY_IDS.map((entryId) => {
-            const entry = entriesById.get(entryId)
-            if (!entry) {
-              return null
-            }
+      <div className="sections-row sections-row--two">
+        <section className="page-section">
+          <header className="page-section__header">
+            <h2>Auto Observed Entries</h2>
+          </header>
+          <div className="entry-grid" id="auto-observed">
+            {AUTO_OBSERVED_ENTRY_IDS.map((entryId) => {
+              const entry = entriesById.get(entryId)
+              if (!entry) {
+                return null
+              }
 
-            if (entry.sys.contentType.sys.id === 'nestedContent') {
-              return <NestedContentEntry key={entry.sys.id} entry={entry} />
-            }
+              if (entry.sys.contentType.sys.id === 'nestedContent') {
+                return <NestedContentEntry key={entry.sys.id} entry={entry} />
+              }
 
-            return (
-              <ContentEntry
-                key={entry.sys.id}
-                clickScenario={AUTO_OBSERVED_CLICK_SCENARIO_BY_ENTRY_ID[entry.sys.id]}
-                entry={entry}
-                observation="auto"
-              />
-            )
-          })}
-        </div>
-      </section>
+              return (
+                <ContentEntry
+                  key={entry.sys.id}
+                  clickScenario={AUTO_OBSERVED_CLICK_SCENARIO_BY_ENTRY_ID[entry.sys.id]}
+                  entry={entry}
+                  observation="auto"
+                />
+              )
+            })}
+          </div>
+        </section>
 
-      <section>
-        <h2>Manually Observed Entries</h2>
-        <div id="manually-observed" style={{ display: 'grid', gap: 16 }}>
-          {MANUALLY_OBSERVED_ENTRY_IDS.map((entryId) => {
-            const entry = entriesById.get(entryId)
-            if (!entry) {
-              return null
-            }
+        <section className="page-section">
+          <header className="page-section__header">
+            <h2>Manually Observed Entries</h2>
+          </header>
+          <div className="entry-grid" id="manually-observed">
+            {MANUALLY_OBSERVED_ENTRY_IDS.map((entryId) => {
+              const entry = entriesById.get(entryId)
+              if (!entry) {
+                return null
+              }
 
-            return <ContentEntry key={entry.sys.id} entry={entry} observation="manual" />
-          })}
-        </div>
-      </section>
+              return <ContentEntry key={entry.sys.id} entry={entry} observation="manual" />
+            })}
+          </div>
+        </section>
+      </div>
     </>
   )
 }

@@ -143,16 +143,8 @@ export default function App({
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      <nav
-        style={{
-          display: 'flex',
-          gap: 16,
-          padding: '12px 24px',
-          borderBottom: '1px solid #e5e7eb',
-          flexShrink: 0,
-        }}
-      >
+    <div className="app-shell">
+      <nav className="app-nav">
         <Link data-testid="link-home" to={HOME_PATH}>
           Home
         </Link>
@@ -161,19 +153,11 @@ export default function App({
         </Link>
       </nav>
 
-      <div
-        style={{
-          flex: 1,
-          display: 'grid',
-          gridTemplateColumns: '280px 1fr',
-          minHeight: 0,
-          overflow: 'hidden',
-        }}
-      >
-        <aside style={{ borderRight: '1px solid #e5e7eb', overflowY: 'auto' }}>
+      <div className="app-body">
+        <aside className="app-sidebar">
           <AnalyticsEventDisplay />
         </aside>
-        <main style={{ padding: 24, overflowY: 'auto' }}>
+        <main className="app-main">
           <Routes>
             <Route
               path={HOME_PATH}

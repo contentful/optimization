@@ -17,7 +17,7 @@
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.json",
             "assets": [],
-            "styles": ["src/styles.css"],
+            "styles": ["src/reference-ui.css"],
             "allowedCommonJsDependencies": [
               "lodash",
               "contentful-sdk-core",

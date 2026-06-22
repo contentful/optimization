@@ -34,47 +34,67 @@ export function PageTwoPage({ consent, entriesById, isIdentified }: PageTwoPageP
   }
 
   return (
-    <section data-testid="page-two-view" style={{ display: 'grid', gap: 16 }}>
-      <Link data-testid="link-back-home" to={HOME_PATH}>
-        Back to Home
-      </Link>
-      <h2>Page Two</h2>
-      <p>
-        Demo route for SPA navigation, route context (<code>/page-two</code>), and conversion-style
-        tracking.
-      </p>
+    <div data-testid="page-two-view">
+      <div className="page-header">
+        <Link data-testid="link-back-home" to={HOME_PATH}>
+          Back to Home
+        </Link>
+        <h1>Page Two</h1>
+        <p className="page-header__sub">
+          Demo route for SPA navigation, route context (<code>/page-two</code>), and
+          conversion-style tracking.
+        </p>
+      </div>
 
-      <section data-testid="page-two-status" style={{ display: 'grid', gap: 2 }}>
-        <p>{`Identified: ${isIdentified ? 'Yes' : 'No'}`}</p>
-        <p>{`Consent: ${String(consent)}`}</p>
+      <section className="control-panel" data-testid="page-two-status">
+        <h2 className="control-panel__title">Status</h2>
+        <div className="control-panel__table">
+          <span className="control-panel__row-label">Identified</span>
+          <span className="control-panel__row-value">{isIdentified ? 'Yes' : 'No'}</span>
+          <span />
+          <span className="control-panel__row-label">Consent</span>
+          <span className="control-panel__row-value">{String(consent)}</span>
+          <span />
+        </div>
+        <div className="control-panel__actions">
+          <button
+            className="btn btn--secondary btn--sm"
+            data-testid="track-conversion-button"
+            onClick={handleDemoCta}
+            type="button"
+          >
+            Trigger Page Two CTA Event
+          </button>
+        </div>
       </section>
 
-      <section data-testid="page-two-optimization" style={{ display: 'grid', gap: 12 }}>
-        <h3>Page Two Optimized Content</h3>
-        {pageTwoAutoEntry ? (
-          <div>
-            <p>Auto tracked example</p>
-            <ContentEntry entry={pageTwoAutoEntry} observation="auto" />
+      <div className="sections-row sections-row--two" data-testid="page-two-optimization">
+        <section className="page-section">
+          <header className="page-section__header">
+            <h2>Auto-observed</h2>
+          </header>
+          <div className="entry-grid">
+            {pageTwoAutoEntry ? (
+              <ContentEntry entry={pageTwoAutoEntry} observation="auto" />
+            ) : (
+              <p>Auto tracked entry is unavailable.</p>
+            )}
           </div>
-        ) : (
-          <p>Auto tracked entry is unavailable.</p>
-        )}
+        </section>
 
-        {pageTwoManualEntry ? (
-          <div>
-            <p>Manual tracked example</p>
-            <ContentEntry entry={pageTwoManualEntry} observation="manual" />
+        <section className="page-section">
+          <header className="page-section__header">
+            <h2>Manually-observed</h2>
+          </header>
+          <div className="entry-grid">
+            {pageTwoManualEntry ? (
+              <ContentEntry entry={pageTwoManualEntry} observation="manual" />
+            ) : (
+              <p>Manual tracked entry is unavailable.</p>
+            )}
           </div>
-        ) : (
-          <p>Manual tracked entry is unavailable.</p>
-        )}
-      </section>
-      <section data-testid="page-two-conversion" style={{ display: 'grid', gap: 8 }}>
-        <h3>Conversion Step Demo</h3>
-        <button data-testid="track-conversion-button" onClick={handleDemoCta} type="button">
-          Trigger Page Two CTA Event
-        </button>
-      </section>
-    </section>
+        </section>
+      </div>
+    </div>
   )
 }

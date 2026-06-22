@@ -163,6 +163,7 @@ function renderContentContainer({
       {...autoTrackingAttributes}
       {...manualTrackingAttributes}
       {...directClickScenarioAttributes}
+      className="entry-card"
       data-testid={`content-${baselineEntryId}`}
     >
       <div data-testid={`entry-text-${baselineEntryId}`} aria-label={fullLabel}>

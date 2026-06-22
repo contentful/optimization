@@ -93,6 +93,7 @@ export function ContentEntry({
                     }
                   : undefined
               }
+              className="entry-card"
               data-ctfl-entry-id={asCf.sys.id}
               data-testid={`content-${entry.sys.id}`}
             >

@@ -57,6 +57,7 @@ export function NestedContentItem({ entry }: NestedContentItemProps): JSX.Elemen
 
   return (
     <div
+      className="entry-card"
       data-ctfl-entry-id={resolvedEntry.sys.id}
       data-ctfl-baseline-id={entry.sys.id}
       data-ctfl-optimization-id={experienceId}
@@ -68,9 +69,13 @@ export function NestedContentItem({ entry }: NestedContentItemProps): JSX.Elemen
         <p>{`[Entry: ${resolvedEntry.sys.id}]`}</p>
       </div>
 
-      {nestedEntries.filter(isEntry).map((nestedEntry) => (
-        <NestedContentItem key={nestedEntry.sys.id} entry={nestedEntry} />
-      ))}
+      {nestedEntries.filter(isEntry).length > 0 ? (
+        <div className="nested-children">
+          {nestedEntries.filter(isEntry).map((nestedEntry) => (
+            <NestedContentItem key={nestedEntry.sys.id} entry={nestedEntry} />
+          ))}
+        </div>
+      ) : null}
     </div>
   )
 }

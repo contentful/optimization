@@ -48,11 +48,14 @@ function UtilitiesGrid({
   setPreviewPanelVisible,
 }: UtilitiesGridProps): JSX.Element {
   return (
-    <div className="control-grid">
-      <span>Consent</span>
-      <span data-testid="consent-status">{consentLabel(consent)}</span>
+    <div className="control-panel__table">
+      <span className="control-panel__row-label">Consent</span>
+      <span className="control-panel__row-value" data-testid="consent-status">
+        {consentLabel(consent)}
+      </span>
       {consent === true ? (
         <button
+          className="btn btn--danger btn--sm"
           data-testid="unconsent-button"
           onClick={() => {
             onConsentChange(false)
@@ -63,6 +66,7 @@ function UtilitiesGrid({
         </button>
       ) : (
         <button
+          className="btn btn--secondary btn--sm"
           data-testid="consent-button"
           onClick={() => {
             onConsentChange(true)
@@ -73,21 +77,36 @@ function UtilitiesGrid({
         </button>
       )}
 
-      <span>Identified</span>
-      <span data-testid="identified-status">{isIdentified ? 'Yes' : 'No'}</span>
+      <span className="control-panel__row-label">Identified</span>
+      <span className="control-panel__row-value" data-testid="identified-status">
+        {isIdentified ? 'Yes' : 'No'}
+      </span>
       {!isIdentified ? (
-        <button data-testid="identify-button" onClick={onIdentify} type="button">
+        <button
+          className="btn btn--secondary btn--sm"
+          data-testid="identify-button"
+          onClick={onIdentify}
+          type="button"
+        >
           Identify
         </button>
       ) : (
-        <button data-testid="reset-button" onClick={onReset} type="button">
+        <button
+          className="btn btn--danger btn--sm"
+          data-testid="reset-button"
+          onClick={onReset}
+          type="button"
+        >
           Reset
         </button>
       )}
 
-      <span>Live updates</span>
-      <span data-testid="global-live-updates-status">{globalLiveUpdates ? 'ON' : 'OFF'}</span>
+      <span className="control-panel__row-label">Live updates</span>
+      <span className="control-panel__row-value" data-testid="global-live-updates-status">
+        {globalLiveUpdates ? 'ON' : 'OFF'}
+      </span>
       <button
+        className={`btn btn--sm ${globalLiveUpdates ? 'btn--danger' : 'btn--secondary'}`}
         data-testid="toggle-global-live-updates-button"
         onClick={onToggleGlobalLiveUpdates}
         type="button"
@@ -95,24 +114,29 @@ function UtilitiesGrid({
         {globalLiveUpdates ? 'OFF' : 'ON'}
       </button>
 
-      <span>Preview panel</span>
-      <span data-testid="preview-panel-status">{previewPanelVisible ? 'Open' : 'Closed'}</span>
+      <span className="control-panel__row-label">Preview panel</span>
+      <span className="control-panel__row-value" data-testid="preview-panel-status">
+        {previewPanelVisible ? 'Open' : 'Closed'}
+      </span>
       {ENABLE_PREVIEW_PANEL ? (
         <button
+          className="btn btn--sm btn--secondary"
           data-testid="simulate-preview-panel-button"
           onClick={() => {
             setPreviewPanelVisible(!previewPanelVisible)
           }}
           type="button"
         >
-          {previewPanelVisible ? 'Close' : 'Open'}
+          {previewPanelVisible ? 'Close Preview Panel' : 'Open Preview Panel'}
         </button>
       ) : (
         <span />
       )}
 
-      <span>Active optimizations</span>
-      <span data-testid="selected-optimizations-count">{selectedOptimizationCount}</span>
+      <span className="control-panel__row-label">Active optimizations</span>
+      <span className="control-panel__row-value" data-testid="selected-optimizations-count">
+        {selectedOptimizationCount}
+      </span>
       <span />
     </div>
   )
@@ -124,7 +148,7 @@ interface AutoObservedEntriesProps {
 
 function AutoObservedEntries({ entriesById }: AutoObservedEntriesProps): JSX.Element {
   return (
-    <div className="section-stack" id="auto-observed">
+    <div className="entry-grid" id="auto-observed">
       {AUTO_OBSERVED_ENTRY_IDS.map((entryId) => {
         const entry = entriesById.get(entryId)
         if (!entry) {
@@ -154,7 +178,7 @@ interface ManuallyObservedEntriesProps {
 
 function ManuallyObservedEntries({ entriesById }: ManuallyObservedEntriesProps): JSX.Element {
   return (
-    <div className="section-stack" id="manually-observed">
+    <div className="entry-grid" id="manually-observed">
       {MANUALLY_OBSERVED_ENTRY_IDS.map((entryId) => {
         const entry = entriesById.get(entryId)
         if (!entry) {
@@ -188,8 +212,8 @@ export function HomePage(): JSX.Element {
 
   return (
     <>
-      <section id="utility-panel">
-        <h2>Utilities</h2>
+      <section className="control-panel" id="utility-panel">
+        <h2 className="control-panel__title">Utilities</h2>
         <UtilitiesGrid
           consent={consent}
           globalLiveUpdates={globalLiveUpdates}
@@ -204,14 +228,16 @@ export function HomePage(): JSX.Element {
         />
       </section>
 
-      <section>
-        <h2>Live Updates</h2>
-        <p>
-          Toggle global live updates and identify the user to verify how entries update. Optional
-          per-component control is available through the <code>liveUpdates</code> prop.
-        </p>
+      <section className="page-section" data-testid="live-updates-section">
+        <header className="page-section__header">
+          <h2>Live Updates</h2>
+          <p>
+            Toggle global live updates and identify the user to verify how entries update. Optional
+            per-component control is available through the <code>liveUpdates</code> prop.
+          </p>
+        </header>
         {liveUpdatesBaselineEntry ? (
-          <div className="section-stack" data-testid="live-updates-examples">
+          <div className="sections-row" data-testid="live-updates-examples">
             <section data-testid="live-updates-default">
               <h3>Default (inherits global setting)</h3>
               <LiveUpdatesExampleEntry
@@ -243,15 +269,21 @@ export function HomePage(): JSX.Element {
         )}
       </section>
 
-      <section>
-        <h2>Auto Observed Entries</h2>
-        <AutoObservedEntries entriesById={entriesById} />
-      </section>
+      <div className="sections-row sections-row--two">
+        <section className="page-section">
+          <header className="page-section__header">
+            <h2>Auto Observed Entries</h2>
+          </header>
+          <AutoObservedEntries entriesById={entriesById} />
+        </section>
 
-      <section>
-        <h2>Manually Observed Entries</h2>
-        <ManuallyObservedEntries entriesById={entriesById} />
-      </section>
+        <section className="page-section">
+          <header className="page-section__header">
+            <h2>Manually Observed Entries</h2>
+          </header>
+          <ManuallyObservedEntries entriesById={entriesById} />
+        </section>
+      </div>
     </>
   )
 }

@@ -63,7 +63,11 @@ export function LiveUpdatesExampleEntry({
   const fullLabel = `${text} [Entry: ${resolvedEntry.sys.id}]`
 
   return (
-    <div data-testid={`content-${testIdPrefix}`} data-test-entry-id={resolvedEntry.sys.id}>
+    <div
+      className="entry-card"
+      data-testid={`content-${testIdPrefix}`}
+      data-test-entry-id={resolvedEntry.sys.id}
+    >
       <p data-testid={`entry-text-${testIdPrefix}`} aria-label={fullLabel}>
         {text}
       </p>
