@@ -1,5 +1,5 @@
 import { useOptimization } from '@contentful/optimization-react-web'
-import { pages } from 'e2e-web/src/fixtures'
+import { PAGES } from 'e2e-web/src/fixtures'
 import type { JSX } from 'react'
 import { useEffect } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
@@ -10,8 +10,8 @@ import { ContentEntry } from '../sections/ContentEntry'
 export function PageTwoPage(): JSX.Element {
   const { entriesById, onToggleGlobalLiveUpdates } = useOutletContext<AppOutletContext>()
   const sdk = useOptimization()
-  const pageTwoAutoEntry = entriesById.get(pages.pageTwo.auto)
-  const pageTwoManualEntry = entriesById.get(pages.pageTwo.manual)
+  const pageTwoAutoEntry = entriesById.get(PAGES.pageTwo.auto)
+  const pageTwoManualEntry = entriesById.get(PAGES.pageTwo.manual)
 
   useEffect(() => {
     void sdk.trackView({
@@ -32,7 +32,7 @@ export function PageTwoPage(): JSX.Element {
   return (
     <div data-testid="page-two-view">
       <div className="page-header">
-        <Link data-testid="link-back-home" to={pages.home.path}>
+        <Link data-testid="link-back-home" to={PAGES.home.path}>
           Back to Home
         </Link>
         <h1>Page Two</h1>

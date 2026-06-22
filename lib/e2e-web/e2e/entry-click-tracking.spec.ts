@@ -1,4 +1,5 @@
 import { type Page, expect, test } from '@playwright/test'
+import { CLICK_SCENARIO_IDS } from '../src/fixtures'
 
 interface ClickScenario {
   name: string
@@ -9,17 +10,17 @@ interface ClickScenario {
 const clickScenarios: ClickScenario[] = [
   {
     name: 'direct entry click target',
-    entryTestId: 'content-4ib0hsHWoSOnCVdDkizE8d',
-    clickTargetTestId: 'content-4ib0hsHWoSOnCVdDkizE8d',
+    entryTestId: `content-${CLICK_SCENARIO_IDS.direct}`,
+    clickTargetTestId: `content-${CLICK_SCENARIO_IDS.direct}`,
   },
   {
     name: 'clickable descendant button',
-    entryTestId: 'content-xFwgG3oNaOcjzWiGe4vXo',
+    entryTestId: `content-${CLICK_SCENARIO_IDS.descendant}`,
     clickTargetTestId: 'entry-click-descendant-button',
   },
   {
     name: 'clickable ancestor wrapper',
-    entryTestId: 'content-2Z2WLOx07InSewC3LUB3eX',
+    entryTestId: `content-${CLICK_SCENARIO_IDS.ancestor}`,
     clickTargetTestId: 'entry-click-ancestor-wrapper',
   },
 ]

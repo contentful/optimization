@@ -1,7 +1,7 @@
 import { OptimizationRoot } from '@contentful/optimization-react-web'
 import { createScopedLogger } from '@contentful/optimization-react-web/logger'
 import { ReactRouterAutoPageTracker } from '@contentful/optimization-react-web/router/react-router'
-import { pages } from 'e2e-web/src/fixtures'
+import { PAGES } from 'e2e-web/src/fixtures'
 import 'e2e-web/src/theme.css'
 import { type ReactElement, StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -87,7 +87,7 @@ function RootLayout(): ReactElement {
 
 const router = createBrowserRouter([
   {
-    path: pages.home.path,
+    path: PAGES.home.path,
     element: <RootLayout />,
     children: [
       {
@@ -95,7 +95,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <HomePage /> },
           { path: 'page-two', element: <PageTwoPage /> },
-          { path: '*', element: <Navigate replace to={pages.home.path} /> },
+          { path: '*', element: <Navigate replace to={PAGES.home.path} /> },
         ],
       },
     ],

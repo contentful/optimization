@@ -1,4 +1,4 @@
-import { clickScenarios, pages } from 'e2e-web/src/fixtures'
+import { CLICK_SCENARIOS, PAGES } from 'e2e-web/src/fixtures'
 import type { JSX } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import type { AppOutletContext } from '../App'
@@ -15,7 +15,7 @@ interface AutoObservedEntriesProps {
 function AutoObservedEntries({ entriesById }: AutoObservedEntriesProps): JSX.Element {
   return (
     <div className="entry-grid" id="auto-observed">
-      {pages.home.auto.map((entryId) => {
+      {PAGES.home.auto.map((entryId) => {
         const entry = entriesById.get(entryId)
         if (!entry) {
           return null
@@ -28,7 +28,7 @@ function AutoObservedEntries({ entriesById }: AutoObservedEntriesProps): JSX.Ele
         return (
           <ContentEntry
             key={entry.sys.id}
-            clickScenario={clickScenarios[entry.sys.id]}
+            clickScenario={CLICK_SCENARIOS[entry.sys.id]}
             entry={entry}
             viewTracking="auto"
           />
@@ -45,7 +45,7 @@ interface ManuallyObservedEntriesProps {
 function ManuallyObservedEntries({ entriesById }: ManuallyObservedEntriesProps): JSX.Element {
   return (
     <div className="entry-grid" id="manually-observed">
-      {pages.home.manual.map((entryId) => {
+      {PAGES.home.manual.map((entryId) => {
         const entry = entriesById.get(entryId)
         if (!entry) {
           return null

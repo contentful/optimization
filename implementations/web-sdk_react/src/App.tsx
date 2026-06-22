@@ -1,4 +1,4 @@
-import { pages } from 'e2e-web/src/fixtures'
+import { PAGES } from 'e2e-web/src/fixtures'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
@@ -42,7 +42,7 @@ export default function App({ onToggleGlobalLiveUpdates }: AppProps): JSX.Elemen
       return
     }
 
-    void fetchEntries(pages.home.ids)
+    void fetchEntries(PAGES.home.ids)
       .then((nextEntries) => {
         setEntries(nextEntries)
         setEntriesError(
@@ -59,9 +59,9 @@ export default function App({ onToggleGlobalLiveUpdates }: AppProps): JSX.Elemen
   }, [sdk])
 
   const entriesById = useMemo(() => toEntryMap(entries), [entries])
-  const liveUpdatesBaselineEntry = entriesById.get(pages.home.liveUpdates)
+  const liveUpdatesBaselineEntry = entriesById.get(PAGES.home.liveUpdates)
   const hasPageTwoEntries =
-    entriesById.has(pages.pageTwo.auto) && entriesById.has(pages.pageTwo.manual)
+    entriesById.has(PAGES.pageTwo.auto) && entriesById.has(PAGES.pageTwo.manual)
 
   if (error) {
     return <p>{error.message}</p>
@@ -90,10 +90,10 @@ export default function App({ onToggleGlobalLiveUpdates }: AppProps): JSX.Elemen
   return (
     <div className="app-shell">
       <nav className="app-nav">
-        <Link data-testid="link-home" to={pages.home.path}>
+        <Link data-testid="link-home" to={PAGES.home.path}>
           Home
         </Link>
-        <Link data-testid="link-page-two" to={pages.pageTwo.path}>
+        <Link data-testid="link-page-two" to={PAGES.pageTwo.path}>
           Page Two
         </Link>
       </nav>
@@ -105,7 +105,7 @@ export default function App({ onToggleGlobalLiveUpdates }: AppProps): JSX.Elemen
         <main className="app-main">
           <Routes>
             <Route
-              path={pages.home.path}
+              path={PAGES.home.path}
               element={
                 <HomePage
                   entriesById={entriesById}
@@ -115,7 +115,7 @@ export default function App({ onToggleGlobalLiveUpdates }: AppProps): JSX.Elemen
               }
             />
             <Route
-              path={pages.pageTwo.path}
+              path={PAGES.pageTwo.path}
               element={
                 <PageTwoPage
                   entriesById={entriesById}
@@ -123,7 +123,7 @@ export default function App({ onToggleGlobalLiveUpdates }: AppProps): JSX.Elemen
                 />
               }
             />
-            <Route path="*" element={<Navigate replace to={pages.home.path} />} />
+            <Route path="*" element={<Navigate replace to={PAGES.home.path} />} />
           </Routes>
         </main>
       </div>

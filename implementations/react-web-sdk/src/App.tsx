@@ -1,5 +1,5 @@
 import { useOptimizationContext } from '@contentful/optimization-react-web'
-import { pages } from 'e2e-web/src/fixtures'
+import { PAGES } from 'e2e-web/src/fixtures'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useOutletContext } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
@@ -52,13 +52,13 @@ export default function App(): JSX.Element {
       return
     }
 
-    void fetchEntries(pages.home.ids).then((nextEntries) => {
+    void fetchEntries(PAGES.home.ids).then((nextEntries) => {
       setEntries(nextEntries)
     })
   }, [isReady, sdk])
 
   const entriesById = useMemo(() => toEntryMap(entries), [entries])
-  const liveUpdatesBaselineEntry = entriesById.get(pages.home.liveUpdates)
+  const liveUpdatesBaselineEntry = entriesById.get(PAGES.home.liveUpdates)
 
   if (error) {
     return <p data-testid="sdk-error">{error.message}</p>
@@ -78,10 +78,10 @@ export default function App(): JSX.Element {
   return (
     <div className="app-shell">
       <nav className="app-nav">
-        <Link data-testid="link-home" to={pages.home.path}>
+        <Link data-testid="link-home" to={PAGES.home.path}>
           Home
         </Link>
-        <Link data-testid="link-page-two" to={pages.pageTwo.path}>
+        <Link data-testid="link-page-two" to={PAGES.pageTwo.path}>
           Page Two
         </Link>
       </nav>
