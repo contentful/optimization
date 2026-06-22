@@ -30,7 +30,7 @@ export function PageTwoPage(): JSX.Element {
   }
 
   return (
-    <section data-testid="page-two-view" style={{ display: 'grid', gap: 16 }}>
+    <section className="section-stack" data-testid="page-two-view">
       <h2>Page Two</h2>
       <p>
         Demo route for SPA navigation, route context (<code>/page-two</code>), and conversion-style
@@ -65,7 +65,7 @@ export function PageTwoPage(): JSX.Element {
 
       <section data-testid="page-two-conversion" style={{ display: 'grid', gap: 8 }}>
         <h3>Conversion Step Demo</h3>
-        <button data-testid="page-two-demo-cta" onClick={handleDemoCta} type="button">
+        <button data-testid="track-conversion-button" onClick={handleDemoCta} type="button">
           Trigger Page Two CTA Event
         </button>
       </section>

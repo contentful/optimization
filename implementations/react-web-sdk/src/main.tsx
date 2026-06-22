@@ -10,6 +10,7 @@ import { HOME_PATH } from './config/routes'
 import { HomePage } from './pages/HomePage'
 import { PageTwoPage } from './pages/PageTwoPage'
 import { getContentfulClient } from './services/contentfulClient'
+import './styles.css'
 
 const CLIENT_ID = import.meta.env.PUBLIC_NINETAILED_CLIENT_ID?.trim() ?? 'mock-client-id'
 const ENVIRONMENT = import.meta.env.PUBLIC_NINETAILED_ENVIRONMENT?.trim() ?? 'main'

@@ -93,6 +93,7 @@ export function ContentEntry({
                     }
                   : undefined
               }
+              data-ctfl-entry-id={asCf.sys.id}
               data-testid={`content-${entry.sys.id}`}
             >
               <div data-testid={`entry-text-${entry.sys.id}`} aria-label={fullLabel}>

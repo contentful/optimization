@@ -133,18 +133,24 @@ export default function App(): JSX.Element {
   }
 
   return (
-    <main style={{ display: 'grid', gap: 24 }}>
-      <nav style={{ display: 'flex', gap: 12 }}>
+    <div className="app-shell">
+      <nav className="app-nav">
         <Link data-testid="link-home" to={HOME_PATH}>
           Home
         </Link>
         <Link data-testid="link-page-two" to={PAGE_TWO_PATH}>
-          Go to Page Two
+          Page Two
         </Link>
       </nav>
 
-      <Outlet context={appOutletContext} />
-      <AnalyticsEventDisplay />
-    </main>
+      <div className="app-body">
+        <aside className="app-sidebar">
+          <AnalyticsEventDisplay />
+        </aside>
+        <main className="app-main">
+          <Outlet context={appOutletContext} />
+        </main>
+      </div>
+    </div>
   )
 }

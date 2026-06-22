@@ -1,10 +1,24 @@
 import { useOptimizationContext } from '@contentful/optimization-react-web'
-import { type JSX, useEffect, useRef, useState } from 'react'
+import { type JSX, useEffect, useReducer, useRef, useState } from 'react'
 import { isRecord } from '../utils/typeGuards'
+
+const MS_PER_SECOND = 1000
+const SECONDS_PER_MINUTE = 60
+const MINUTES_PER_HOUR = 60
+const TICK_INTERVAL_SECONDS = 5
+
+function timeAgo(firedAt: number): string {
+  const s = Math.floor((Date.now() - firedAt) / MS_PER_SECOND)
+  if (s < SECONDS_PER_MINUTE) return `${s}s`
+  const m = Math.floor(s / SECONDS_PER_MINUTE)
+  if (m < MINUTES_PER_HOUR) return `${m}m`
+  return `${Math.floor(m / MINUTES_PER_HOUR)}h`
+}
 
 interface AnalyticsEvent {
   id: string
   componentId?: string
+  firedAt: number
   hoverId?: string
   viewId?: string
   hoverDurationMs?: number
@@ -48,6 +62,7 @@ function toAnalyticsEvent(event: unknown, id: string): AnalyticsEvent | undefine
   return {
     id,
     componentId,
+    firedAt: Date.now(),
     hoverId,
     viewId,
     hoverDurationMs,
@@ -102,16 +117,57 @@ function upsertAnalyticsEvent(
   }
 
   const updated = [...previous]
-  updated[existingIndex] = { ...nextEvent, id: previous[existingIndex].id }
+  updated[existingIndex] = {
+    ...nextEvent,
+    id: previous[existingIndex].id,
+    firedAt: previous[existingIndex].firedAt,
+  }
 
   return updated
+}
+
+const BADGE_COLORS: Record<string, { background: string; color: string }> = {
+  page: { background: '#dbeafe', color: '#1d4ed8' },
+  view: { background: '#dcfce7', color: '#15803d' },
+  comp: { background: '#d1fae5', color: '#065f46' },
+  hover: { background: '#f3e8ff', color: '#7e22ce' },
+}
+const BADGE_FALLBACK = { background: '#e5e7eb', color: '#374151' }
+
+function toBadgeType(event: AnalyticsEvent): string {
+  if (event.type === 'component') return event.viewId ? 'view' : 'comp'
+  if (event.type === 'component_hover') return 'hover'
+  return event.type
+}
+
+function toTestId(event: AnalyticsEvent): string {
+  if (event.viewId) return `event-view-${event.viewId}`
+  if (event.hoverId) return `event-${event.type}-hover-${event.hoverId}`
+  if (event.componentId) return `event-${event.type}-${event.componentId}`
+  return `event-${event.type}-${event.id}`
+}
+
+function toValue(event: AnalyticsEvent): string {
+  return event.componentId ?? event.pageUrl ?? event.type
+}
+
+function toDuration(event: AnalyticsEvent): number | undefined {
+  return event.hoverDurationMs ?? event.viewDurationMs
 }
 
 export function AnalyticsEventDisplay(): JSX.Element {
   const { sdk, isReady } = useOptimizationContext()
   const [events, setEvents] = useState<AnalyticsEvent[]>([])
   const [rawEventsCount, setRawEventsCount] = useState(0)
+  const [, tick] = useReducer((n: number) => n + 1, 0)
   const nextId = useRef(0)
+
+  useEffect(() => {
+    const id = setInterval(tick, MS_PER_SECOND * TICK_INTERVAL_SECONDS)
+    return () => {
+      clearInterval(id)
+    }
+  }, [])
 
   useEffect(() => {
     if (!isReady || sdk === undefined) {
@@ -139,39 +195,131 @@ export function AnalyticsEventDisplay(): JSX.Element {
   }, [isReady, sdk])
 
   return (
-    <section data-testid="analytics-events-container">
-      <h2>Analytics Events</h2>
-      <p data-testid="events-count">Events: {events.length}</p>
-      <p data-testid="raw-events-count">Raw Events: {rawEventsCount}</p>
+    <section data-testid="analytics-events-container" style={{ padding: '1rem' }}>
+      <div
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}
+      >
+        <h2 style={{ margin: 0 }}>Tracking</h2>
+        <span
+          style={{
+            fontSize: '0.7rem',
+            fontWeight: 600,
+            background: '#e5e7eb',
+            color: '#6b7280',
+            padding: '0.15rem 0.5rem',
+            borderRadius: 999,
+            whiteSpace: 'nowrap',
+          }}
+        >
+          <span data-testid="raw-events-count">{rawEventsCount}</span> events
+        </span>
+      </div>
+      <p data-testid="events-count" style={{ display: 'none' }}>
+        {events.length}
+      </p>
       {events.length === 0 ? <p data-testid="no-events-message">No events tracked yet</p> : null}
 
-      <ul>
-        {events.map((event) => {
-          const testId = event.viewId
-            ? `event-view-${event.viewId}`
-            : event.hoverId
-              ? `event-${event.type}-hover-${event.hoverId}`
-              : event.componentId
-                ? `event-${event.type}-${event.componentId}`
-                : `event-${event.type}-${event.id}`
+      {events.length > 0 ? (
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.775rem' }}>
+          <thead>
+            <tr>
+              {['Type', 'Value', 'Dur', 'Age', ''].map((h) => (
+                <th
+                  key={h}
+                  style={{
+                    fontSize: '0.6rem',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    color: '#9ca3af',
+                    padding: '0 0.4rem 0.35rem 0',
+                    textAlign: 'left',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {events.map((event) => {
+              const badgeType = toBadgeType(event)
+              const badgeStyle = BADGE_COLORS[badgeType] ?? BADGE_FALLBACK
+              const duration = toDuration(event)
 
-          const label = event.componentId
-            ? typeof event.viewDurationMs === 'number'
-              ? `${event.type} - Entry/Flag: ${event.componentId} - Duration: ${event.viewDurationMs}ms`
-              : typeof event.hoverDurationMs === 'number'
-                ? `${event.type} - Entry/Flag: ${event.componentId} - Hover Duration: ${event.hoverDurationMs}ms`
-                : `${event.type} - Entry/Flag: ${event.componentId}`
-            : event.pageUrl
-              ? `${event.type} - URL: ${event.pageUrl}`
-              : event.type
-
-          return (
-            <li key={event.id} data-testid={testId}>
-              {label}
-            </li>
-          )
-        })}
-      </ul>
+              return (
+                <tr
+                  key={event.id}
+                  data-hover-duration-ms={event.hoverDurationMs}
+                  data-hover-id={event.hoverId}
+                  data-page-url={event.pageUrl}
+                  data-testid={toTestId(event)}
+                  style={{ verticalAlign: 'baseline' }}
+                >
+                  <td
+                    style={{
+                      padding: '0.15rem 0.4rem 0.15rem 0',
+                      whiteSpace: 'nowrap',
+                      fontSize: '0.7rem',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: '0.65rem',
+                        fontWeight: 600,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                        padding: '0.1rem 0.35rem',
+                        borderRadius: 4,
+                        whiteSpace: 'nowrap',
+                        ...badgeStyle,
+                      }}
+                    >
+                      {badgeType}
+                    </span>
+                  </td>
+                  <td
+                    style={{
+                      padding: '0.15rem 0.4rem 0.15rem 0',
+                      color: '#6b7280',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      maxWidth: 200,
+                    }}
+                  >
+                    {toValue(event)}
+                  </td>
+                  <td
+                    style={{
+                      padding: '0.15rem 0.4rem 0.15rem 0',
+                      fontSize: '0.7rem',
+                      color: '#6b7280',
+                      whiteSpace: 'nowrap',
+                      opacity: 0.7,
+                    }}
+                  >
+                    {duration !== undefined ? `${(duration / MS_PER_SECOND).toFixed(1)}s` : null}
+                  </td>
+                  <td
+                    style={{
+                      padding: '0.15rem 0.4rem 0.15rem 0',
+                      fontSize: '0.65rem',
+                      color: '#6b7280',
+                      whiteSpace: 'nowrap',
+                      opacity: 0.5,
+                    }}
+                  >
+                    {timeAgo(event.firedAt)}
+                  </td>
+                  <td />
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      ) : null}
     </section>
   )
 }
