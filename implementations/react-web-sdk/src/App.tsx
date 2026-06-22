@@ -1,5 +1,4 @@
 import { useOptimizationContext } from '@contentful/optimization-react-web'
-import type { Profile } from '@contentful/optimization-react-web/api-schemas'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useOutletContext } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
@@ -13,23 +12,10 @@ interface OutletContext {
 }
 
 export interface AppOutletContext {
-  consent: boolean | undefined
   entriesById: Map<string, ContentEntry>
-  isIdentified: boolean
   liveUpdatesBaselineEntry: ContentEntry | undefined
   selectedOptimizationCount: number
-  onConsentChange: (accepted: boolean) => void
-  onIdentify: () => void
-  onReset: () => void
   onToggleGlobalLiveUpdates: () => void
-}
-
-function isIdentifiedProfile(profile: Profile | undefined): boolean {
-  if (profile === undefined) {
-    return false
-  }
-
-  return Boolean(profile.traits.identified)
 }
 
 function toEntryMap(entries: ContentEntry[]): Map<string, ContentEntry> {
@@ -40,8 +26,6 @@ export default function App(): JSX.Element {
   const { sdk, isReady, error } = useOptimizationContext()
   const { onToggleGlobalLiveUpdates } = useOutletContext<OutletContext>()
 
-  const [consent, setConsent] = useState<boolean | undefined>(undefined)
-  const [profile, setProfile] = useState<Profile | undefined>(undefined)
   const [selectedOptimizationCount, setSelectedOptimizationCount] = useState(0)
   const [entries, setEntries] = useState<ContentEntry[]>([])
 
@@ -50,34 +34,12 @@ export default function App(): JSX.Element {
       return
     }
 
-    const consentSub = sdk.states.consent.subscribe((value: boolean | undefined) => {
-      setConsent(value)
-    })
-
-    const profileSub = sdk.states.profile.subscribe((value: Profile | undefined) => {
-      setProfile(value)
-    })
-
     const selectedOptSub = sdk.states.selectedOptimizations.subscribe((value) => {
       setSelectedOptimizationCount(Array.isArray(value) ? value.length : 0)
     })
 
     return () => {
-      consentSub.unsubscribe()
-      profileSub.unsubscribe()
       selectedOptSub.unsubscribe()
-    }
-  }, [isReady, sdk])
-
-  useEffect(() => {
-    if (!sdk || !isReady) {
-      return
-    }
-
-    const sub = sdk.states.flag('boolean').subscribe(() => undefined)
-
-    return () => {
-      sub.unsubscribe()
     }
   }, [isReady, sdk])
 
@@ -96,7 +58,6 @@ export default function App(): JSX.Element {
     })
   }, [isReady, sdk])
 
-  const isIdentified = useMemo(() => isIdentifiedProfile(profile), [profile])
   const entriesById = useMemo(() => toEntryMap(entries), [entries])
   const liveUpdatesBaselineEntry = entriesById.get(LIVE_UPDATES_ENTRY_ID)
 
@@ -108,27 +69,10 @@ export default function App(): JSX.Element {
     return <p data-testid="sdk-loading">Loading SDK...</p>
   }
 
-  const handleIdentify = (): void => {
-    void sdk.identify({ userId: 'charles', traits: { identified: true } })
-  }
-
-  const handleReset = (): void => {
-    sdk.reset()
-  }
-
-  const handleConsent = (accepted: boolean): void => {
-    sdk.consent(accepted)
-  }
-
   const appOutletContext: AppOutletContext = {
-    consent,
     entriesById,
-    isIdentified,
     liveUpdatesBaselineEntry,
     selectedOptimizationCount,
-    onConsentChange: handleConsent,
-    onIdentify: handleIdentify,
-    onReset: handleReset,
     onToggleGlobalLiveUpdates,
   }
 

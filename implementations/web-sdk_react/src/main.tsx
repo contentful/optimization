@@ -15,12 +15,7 @@ function RootApp(): React.JSX.Element {
     setGlobalLiveUpdates((previous) => !previous)
   }, [])
 
-  const app = (
-    <App
-      globalLiveUpdates={globalLiveUpdates}
-      onToggleGlobalLiveUpdates={handleToggleGlobalLiveUpdates}
-    />
-  )
+  const app = <App onToggleGlobalLiveUpdates={handleToggleGlobalLiveUpdates} />
 
   if (!isReady || sdk === undefined) {
     return app

@@ -1,5 +1,6 @@
 import { type JSX, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { ControlPanel } from '../components/ControlPanel'
 import { PAGE_TWO_AUTO_ENTRY_ID, PAGE_TWO_MANUAL_ENTRY_ID } from '../config/entries'
 import { HOME_PATH } from '../config/routes'
 import { useAnalytics } from '../optimization/hooks/useAnalytics'
@@ -7,12 +8,14 @@ import { ContentEntry } from '../sections/ContentEntry'
 import type { ContentfulEntry } from '../types/contentful'
 
 interface PageTwoPageProps {
-  consent: boolean | undefined
   entriesById: Map<string, ContentfulEntry>
-  isIdentified: boolean
+  onToggleGlobalLiveUpdates: () => void
 }
 
-export function PageTwoPage({ consent, entriesById, isIdentified }: PageTwoPageProps): JSX.Element {
+export function PageTwoPage({
+  entriesById,
+  onToggleGlobalLiveUpdates,
+}: PageTwoPageProps): JSX.Element {
   const { trackView } = useAnalytics()
   const pageTwoAutoEntry = entriesById.get(PAGE_TWO_AUTO_ENTRY_ID)
   const pageTwoManualEntry = entriesById.get(PAGE_TWO_MANUAL_ENTRY_ID)
@@ -46,27 +49,10 @@ export function PageTwoPage({ consent, entriesById, isIdentified }: PageTwoPageP
         </p>
       </div>
 
-      <section className="control-panel" data-testid="page-two-status">
-        <h2 className="control-panel__title">Status</h2>
-        <div className="control-panel__fields">
-          <span className="control-panel__row-label">Identified</span>
-          <span className="control-panel__row-value">{isIdentified ? 'Yes' : 'No'}</span>
-          <span />
-          <span className="control-panel__row-label">Consent</span>
-          <span className="control-panel__row-value">{String(consent)}</span>
-          <span />
-        </div>
-        <div className="control-panel__actions">
-          <button
-            className="btn btn--secondary btn--sm"
-            data-testid="track-conversion-button"
-            onClick={handleDemoCta}
-            type="button"
-          >
-            Trigger Page Two CTA Event
-          </button>
-        </div>
-      </section>
+      <ControlPanel
+        onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates}
+        onTrackConversion={handleDemoCta}
+      />
 
       <div className="sections-grid sections-grid--split" data-testid="page-two-optimization">
         <section className="page-section">

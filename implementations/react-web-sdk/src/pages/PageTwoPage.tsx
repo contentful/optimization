@@ -3,12 +3,13 @@ import type { JSX } from 'react'
 import { useEffect } from 'react'
 import { Link, useOutletContext } from 'react-router-dom'
 import type { AppOutletContext } from '../App'
+import { ControlPanel } from '../components/ControlPanel'
 import { PAGE_TWO_AUTO_ENTRY_ID, PAGE_TWO_MANUAL_ENTRY_ID } from '../config/entries'
 import { HOME_PATH } from '../config/routes'
 import { ContentEntry } from '../sections/ContentEntry'
 
 export function PageTwoPage(): JSX.Element {
-  const { consent, entriesById, isIdentified } = useOutletContext<AppOutletContext>()
+  const { entriesById, onToggleGlobalLiveUpdates } = useOutletContext<AppOutletContext>()
   const sdk = useOptimization()
   const pageTwoAutoEntry = entriesById.get(PAGE_TWO_AUTO_ENTRY_ID)
   const pageTwoManualEntry = entriesById.get(PAGE_TWO_MANUAL_ENTRY_ID)
@@ -42,27 +43,10 @@ export function PageTwoPage(): JSX.Element {
         </p>
       </div>
 
-      <section data-testid="page-two-status" className="control-panel">
-        <h2 className="control-panel__title">Status</h2>
-        <div className="control-panel__fields">
-          <span className="control-panel__row-label">Identified</span>
-          <span className="control-panel__row-value">{isIdentified ? 'Yes' : 'No'}</span>
-          <span />
-          <span className="control-panel__row-label">Consent</span>
-          <span className="control-panel__row-value">{String(consent)}</span>
-          <span />
-        </div>
-        <div className="control-panel__actions">
-          <button
-            className="btn btn--secondary btn--sm"
-            data-testid="track-conversion-button"
-            onClick={handleDemoCta}
-            type="button"
-          >
-            Trigger Page Two CTA Event
-          </button>
-        </div>
-      </section>
+      <ControlPanel
+        onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates}
+        onTrackConversion={handleDemoCta}
+      />
 
       <div className="sections-grid sections-grid--split" data-testid="page-two-optimization">
         <section className="page-section">

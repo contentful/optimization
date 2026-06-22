@@ -1,4 +1,3 @@
-import type { Profile } from '@contentful/optimization-web/api-schemas'
 import { type JSX, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AnalyticsEventDisplay } from './components/AnalyticsEventDisplay'
@@ -10,41 +9,22 @@ import {
 } from './config/entries'
 import { HOME_PATH, PAGE_TWO_PATH } from './config/routes'
 import { useOptimization } from './optimization/hooks/useOptimization'
-import { useOptimizationState } from './optimization/hooks/useOptimizationState'
 import { HomePage } from './pages/HomePage'
 import { PageTwoPage } from './pages/PageTwoPage'
 import { fetchEntries, getContentfulConfigError } from './services/contentfulClient'
 import type { ContentfulEntry } from './types/contentful'
 
 interface AppProps {
-  globalLiveUpdates: boolean
   onToggleGlobalLiveUpdates: () => void
-}
-
-function isIdentifiedProfile(profile: Profile | undefined): boolean {
-  if (profile === undefined) {
-    return false
-  }
-
-  const { traits } = profile
-  return Boolean(traits.identified)
-}
-
-function hasEntries(entries: ContentfulEntry[]): boolean {
-  return entries.length > 0
 }
 
 function toEntryMap(entries: ContentfulEntry[]): Map<string, ContentfulEntry> {
   return new Map(entries.map((entry) => [entry.sys.id, entry]))
 }
 
-export default function App({
-  globalLiveUpdates,
-  onToggleGlobalLiveUpdates,
-}: AppProps): JSX.Element {
+export default function App({ onToggleGlobalLiveUpdates }: AppProps): JSX.Element {
   const location = useLocation()
   const { sdk, error } = useOptimization()
-  const { consent, profile, selectedOptimizations } = useOptimizationState(sdk?.states)
 
   const [entries, setEntries] = useState<ContentfulEntry[]>([])
   const [entriesError, setEntriesError] = useState<string | null>(null)
@@ -56,18 +36,6 @@ export default function App({
 
     void sdk.page({ properties: { url: location.pathname } })
   }, [location.pathname, sdk])
-
-  useEffect(() => {
-    if (sdk === undefined) {
-      return
-    }
-
-    const subscription = sdk.states.flag('boolean').subscribe(() => undefined)
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [sdk])
 
   useEffect(() => {
     if (sdk === undefined) {
@@ -96,12 +64,7 @@ export default function App({
       })
   }, [sdk])
 
-  const isIdentified = useMemo(() => isIdentifiedProfile(profile), [profile])
   const entriesById = useMemo(() => toEntryMap(entries), [entries])
-  const selectedOptimizationCount = useMemo(
-    () => (Array.isArray(selectedOptimizations) ? selectedOptimizations.length : 0),
-    [selectedOptimizations],
-  )
   const liveUpdatesBaselineEntry = entriesById.get(LIVE_UPDATES_ENTRY_ID)
   const hasPageTwoEntries =
     entriesById.has(PAGE_TWO_AUTO_ENTRY_ID) && entriesById.has(PAGE_TWO_MANUAL_ENTRY_ID)
@@ -118,7 +81,7 @@ export default function App({
     return <p>{entriesError}</p>
   }
 
-  if (!hasEntries(entries)) {
+  if (entries.length === 0) {
     return <p>Loading entries...</p>
   }
 
@@ -128,18 +91,6 @@ export default function App({
 
   if (!hasPageTwoEntries) {
     return <p>Page Two demo entries are missing from fetched entries.</p>
-  }
-
-  const handleIdentify = (): void => {
-    void sdk.identify({ userId: 'charles', traits: { identified: true } })
-  }
-
-  const handleReset = (): void => {
-    sdk.reset()
-  }
-
-  const handleConsent = (accepted: boolean): void => {
-    sdk.consent(accepted)
   }
 
   return (
@@ -163,15 +114,8 @@ export default function App({
               path={HOME_PATH}
               element={
                 <HomePage
-                  consent={consent}
                   entriesById={entriesById}
-                  globalLiveUpdates={globalLiveUpdates}
-                  isIdentified={isIdentified}
                   liveUpdatesBaselineEntry={liveUpdatesBaselineEntry}
-                  selectedOptimizationCount={selectedOptimizationCount}
-                  onConsentChange={handleConsent}
-                  onIdentify={handleIdentify}
-                  onReset={handleReset}
                   onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates}
                 />
               }
@@ -180,9 +124,8 @@ export default function App({
               path={PAGE_TWO_PATH}
               element={
                 <PageTwoPage
-                  consent={consent}
                   entriesById={entriesById}
-                  isIdentified={isIdentified}
+                  onToggleGlobalLiveUpdates={onToggleGlobalLiveUpdates}
                 />
               }
             />
