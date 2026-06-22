@@ -1,10 +1,10 @@
 export type EntryClickScenario = 'direct' | 'descendant' | 'ancestor'
 
-const clickScenarios: Record<string, EntryClickScenario> = {
+const clickScenarios = {
   '4ib0hsHWoSOnCVdDkizE8d': 'direct',
   xFwgG3oNaOcjzWiGe4vXo: 'descendant',
   '2Z2WLOx07InSewC3LUB3eX': 'ancestor',
-}
+} satisfies Record<string, EntryClickScenario>
 
 const pageTwoAuto = '2Z2WLOx07InSewC3LUB3eX' as const
 const pageTwoManual = '5XHssysWUDECHzKLzoIsg1' as const
@@ -24,12 +24,12 @@ const homeManual = [
 ] as const
 
 export const FIXTURES = {
+  clickScenarios,
   home: {
     ids: [...new Set([...homeAuto, ...homeManual])] as const,
     auto: homeAuto,
     manual: homeManual,
     liveUpdates: '2Z2WLOx07InSewC3LUB3eX' as const,
-    clickScenarios,
   },
   pageTwo: {
     ids: [pageTwoAuto, pageTwoManual] as const,

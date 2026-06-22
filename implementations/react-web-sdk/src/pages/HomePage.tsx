@@ -9,6 +9,8 @@ import { LiveUpdatesExampleEntry } from '../sections/LiveUpdatesExampleEntry'
 import { NestedContentEntry } from '../sections/NestedContentEntry'
 import type { ContentEntry as ContentEntryType } from '../types/contentful'
 
+const { clickScenarios } = FIXTURES
+
 interface AutoObservedEntriesProps {
   entriesById: Map<string, ContentEntryType>
 }
@@ -29,7 +31,7 @@ function AutoObservedEntries({ entriesById }: AutoObservedEntriesProps): JSX.Ele
         return (
           <ContentEntry
             key={entry.sys.id}
-            clickScenario={FIXTURES.home.clickScenarios[entry.sys.id]}
+            clickScenario={clickScenarios[entry.sys.id]}
             entry={entry}
             viewTracking="auto"
           />

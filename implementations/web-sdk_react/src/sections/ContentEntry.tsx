@@ -6,8 +6,6 @@ import { useOptimizationResolver } from '../optimization/hooks/useOptimizationRe
 import type { ContentfulEntry, RichTextDocument } from '../types/contentful'
 import { isRecord } from '../utils/typeGuards'
 
-export type { EntryClickScenario }
-
 interface ContentEntryProps {
   clickScenario?: EntryClickScenario
   entry: ContentfulEntry

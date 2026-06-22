@@ -5,7 +5,6 @@ import { useEffect, useRef } from 'react'
 import { RichTextRenderer } from '../components/RichTextRenderer'
 import type { ContentEntry as ContentEntryType, RichTextDocument } from '../types/contentful'
 
-export type { EntryClickScenario }
 type ViewTrackingMode = 'auto' | 'manual'
 
 interface ContentEntryProps {
