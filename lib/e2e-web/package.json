@@ -5,7 +5,7 @@
   "description": "Shared Playwright E2E suite for CSR web SDK implementations.",
   "license": "MIT",
   "exports": {
-    ".": "./src/fixtures.ts",
+    ".": "./src/index.ts",
     "./theme.css": "./src/theme.css"
   },
   "scripts": {

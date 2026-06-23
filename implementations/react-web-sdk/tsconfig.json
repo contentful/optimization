@@ -15,10 +15,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "paths": {
-      "e2e-web": ["../../lib/e2e-web/src/fixtures.ts"]
-    }
+    "forceConsistentCasingInFileNames": true
   },
   "include": ["src"]
 }
